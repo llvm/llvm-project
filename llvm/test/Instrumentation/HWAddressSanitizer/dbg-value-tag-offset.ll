@@ -6,23 +6,19 @@ target triple = "aarch64-unknown-linux-android24"
 define dso_local void @f() sanitize_hwaddress !dbg !14 {
   %a1 = alloca i32, align 4
   %a2 = alloca i32, align 4
-  %1 = bitcast i32* %a1 to i8*, !dbg !21
-  %2 = bitcast i32* %a2 to i8*, !dbg !21
-; CHECK: {{[ ]*}}[[BITCASTa1:.*]] = bitcast { i32, [12 x i8] }* %a1 to i32*
-; CHECK: {{[ ]*}}[[BITCASTa2:.*]] = bitcast { i32, [12 x i8] }* %a2 to i32*
 ; CHECK: call void @llvm.dbg.value(metadata i32 1, {{.*}}, metadata !DIExpression())
   call void @llvm.dbg.value(metadata i32 1, metadata !20, metadata !DIExpression()), !dbg !22
-  store i32 1, i32* %a2, align 4, !dbg !23, !tbaa !24
-; CHECK: call void @llvm.dbg.value(metadata i32* {{.*}}[[BITCASTa1]], {{.*}} metadata !DIExpression(DW_OP_LLVM_tag_offset, 0, DW_OP_deref))
-  call void @llvm.dbg.value(metadata i32* %a1, metadata !18, metadata !DIExpression(DW_OP_deref)), !dbg !22
-  call void @use(i8* nonnull %1), !dbg !28
-; CHECK: call void @llvm.dbg.value(metadata i32* {{.*}}[[BITCASTa2]], {{.*}} metadata !DIExpression(DW_OP_LLVM_tag_offset, 128, DW_OP_deref))
-  call void @llvm.dbg.value(metadata i32* %a2, metadata !20, metadata !DIExpression(DW_OP_deref)), !dbg !22
-  call void @use(i8* nonnull %2), !dbg !29
+  store i32 1, ptr %a2, align 4, !dbg !23, !tbaa !24
+; CHECK: call void @llvm.dbg.value(metadata ptr %a1, {{.*}} metadata !DIExpression(DW_OP_LLVM_tag_offset, 0, DW_OP_deref))
+  call void @llvm.dbg.value(metadata ptr %a1, metadata !18, metadata !DIExpression(DW_OP_deref)), !dbg !22
+  call void @use(ptr nonnull %a1), !dbg !28
+; CHECK: call void @llvm.dbg.value(metadata ptr %a2, {{.*}} metadata !DIExpression(DW_OP_LLVM_tag_offset, 128, DW_OP_deref))
+  call void @llvm.dbg.value(metadata ptr %a2, metadata !20, metadata !DIExpression(DW_OP_deref)), !dbg !22
+  call void @use(ptr nonnull %a2), !dbg !29
   ret void, !dbg !30
 }
 
-declare !dbg !5 void @use(i8*)
+declare !dbg !5 void @use(ptr)
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 

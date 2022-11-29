@@ -11,9 +11,9 @@ entry:
   ret void
 }
 
-@__call_foo = global void ()* @_ZL3foov, section ".preinit_array", align 8
-@__call_foo_2 = global void ()* @_ZL3foov, section ".init_array", align 8
-@__call_foo_3 = global void ()* @_ZL3foov, section ".fini_array", align 8
+@__call_foo = global ptr @_ZL3foov, section ".preinit_array", align 8
+@__call_foo_2 = global ptr @_ZL3foov, section ".init_array", align 8
+@__call_foo_3 = global ptr @_ZL3foov, section ".fini_array", align 8
 
 ; CHECK-NOT: asan_gen{{.*}}__call_foo
 
@@ -21,7 +21,7 @@ entry:
 define i32 @main() #0 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   ret i32 0
 }
 

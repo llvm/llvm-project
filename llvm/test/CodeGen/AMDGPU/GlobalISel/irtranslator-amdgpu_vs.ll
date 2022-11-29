@@ -27,7 +27,7 @@ define amdgpu_vs void @test_f32(float %arg0) {
   ret void
 }
 
-define amdgpu_vs void @test_ptr2_inreg(i32 addrspace(4)* inreg %arg0) {
+define amdgpu_vs void @test_ptr2_inreg(ptr addrspace(4) inreg %arg0) {
   ; CHECK-LABEL: name: test_ptr2_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr2, $sgpr3
@@ -37,11 +37,11 @@ define amdgpu_vs void @test_ptr2_inreg(i32 addrspace(4)* inreg %arg0) {
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (volatile invariant load (s32) from %ir.arg0, addrspace 4)
   ; CHECK-NEXT:   S_ENDPGM 0
-  %tmp0 = load volatile i32, i32 addrspace(4)* %arg0
+  %tmp0 = load volatile i32, ptr addrspace(4) %arg0
   ret void
 }
 
-define amdgpu_vs void @test_sgpr_alignment0(float inreg %arg0, i32 addrspace(4)* inreg %arg1) {
+define amdgpu_vs void @test_sgpr_alignment0(float inreg %arg0, ptr addrspace(4) inreg %arg1) {
   ; CHECK-LABEL: name: test_sgpr_alignment0
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4
@@ -54,7 +54,7 @@ define amdgpu_vs void @test_sgpr_alignment0(float inreg %arg0, i32 addrspace(4)*
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (volatile invariant load (s32) from %ir.arg1, addrspace 4)
   ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 32, 15, [[COPY]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), 0, 0
   ; CHECK-NEXT:   S_ENDPGM 0
-  %tmp0 = load volatile i32, i32 addrspace(4)* %arg1
+  %tmp0 = load volatile i32, ptr addrspace(4) %arg1
   call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %arg0, float undef, float undef, float undef, i1 false, i1 false) #0
   ret void
 }

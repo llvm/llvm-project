@@ -709,8 +709,7 @@ private:
 
   ArrayRef<unsigned> getUnavailableRegisters() const override {
     return makeArrayRef(kUnavailableRegisters,
-                        sizeof(kUnavailableRegisters) /
-                            sizeof(kUnavailableRegisters[0]));
+                        std::size(kUnavailableRegisters));
   }
 
   bool allowAsBackToBack(const Instruction &Instr) const override {

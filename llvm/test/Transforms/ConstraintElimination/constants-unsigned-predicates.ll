@@ -52,7 +52,7 @@ define i1 @test_ult_gep_2(ptr %base) {
 ; CHECK-LABEL: @test_ult_gep_2(
 ; CHECK-NEXT:    [[GEP_SUB_1:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i8 -1
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[BASE]], [[GEP_SUB_1]]
-; CHECK-NEXT:    ret i1 [[C_1]]
+; CHECK-NEXT:    ret i1 false
 ;
   %gep.sub.1 = getelementptr inbounds i8, ptr %base, i8 -1
   %c.1 = icmp ult ptr %base, %gep.sub.1

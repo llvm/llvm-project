@@ -19,6 +19,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Pass.h"
+#include <optional>
 
 namespace llvm {
 
@@ -452,7 +453,7 @@ public:
   // dependencies at runtime. There are is a vectorization-preventing dependency
   // if any pointer-difference is <u VF * InterleaveCount * access size. Returns
   // None if pointer-difference checks cannot be used.
-  Optional<ArrayRef<PointerDiffInfo>> getDiffChecks() const {
+  std::optional<ArrayRef<PointerDiffInfo>> getDiffChecks() const {
     if (!CanUseDiffCheck)
       return None;
     return {DiffChecks};

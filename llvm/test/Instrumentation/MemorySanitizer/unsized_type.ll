@@ -5,12 +5,12 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
+declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 declare i1 @llvm.coro.alloc(token)
 
 define void @foo() sanitize_memory {
 entry:
-  %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %dyn.alloc.reqd = call i1  @llvm.coro.alloc(token %id)
   ret void
 }

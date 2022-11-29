@@ -750,7 +750,7 @@ func.func @dont_duplicate_read(
 // -----
 
 // CHECK-PROP:   func @dedup
-func.func @dedup(%laneid: index, %v0: vector<4xf32>, %v1: vector<4xf32>) 
+func.func @dedup(%laneid: index, %v0: vector<4xf32>, %v1: vector<4xf32>)
     -> (vector<1xf32>, vector<1xf32>) {
 
   // CHECK-PROP: %[[SINGLE_RES:.*]] = vector.warp_execute_on_lane_0{{.*}} -> (vector<1xf32>) {
@@ -772,7 +772,7 @@ func.func @dedup(%laneid: index, %v0: vector<4xf32>, %v1: vector<4xf32>)
 // -----
 
 // CHECK-SCF-IF:   func @warp_execute_has_broadcast_semantics
-func.func @warp_execute_has_broadcast_semantics(%laneid: index, %s0: f32, %v0: vector<f32>, %v1: vector<1xf32>, %v2: vector<1x1xf32>) 
+func.func @warp_execute_has_broadcast_semantics(%laneid: index, %s0: f32, %v0: vector<f32>, %v1: vector<1xf32>, %v2: vector<1x1xf32>)
     -> (f32, vector<f32>, vector<1xf32>, vector<1x1xf32>) {
   // CHECK-SCF-IF-DAG: %[[C0:.*]] = arith.constant 0 : index
 
@@ -818,7 +818,7 @@ func.func @warp_execute_has_broadcast_semantics(%laneid: index, %s0: f32, %v0: v
 
 // CHECK-SCF-IF:   func @warp_execute_nd_distribute
 // CHECK-SCF-IF-SAME: (%[[LANEID:.*]]: index
-func.func @warp_execute_nd_distribute(%laneid: index, %v0: vector<1x64x1xf32>, %v1: vector<1x2x128xf32>) 
+func.func @warp_execute_nd_distribute(%laneid: index, %v0: vector<1x64x1xf32>, %v1: vector<1x2x128xf32>)
     -> (vector<1x64x1xf32>, vector<1x2x128xf32>) {
   // CHECK-SCF-IF-DAG: %[[C0:.*]] = arith.constant 0 : index
 

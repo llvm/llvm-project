@@ -116,7 +116,7 @@ def OpAsmOpInterface : OpInterface<"OpAsmOpInterface"> {
 /// This parameter represents a handle to a resource that is encoded into the
 /// "dialect_resources" section of the assembly format. This parameter expects a
 /// C++ `handleType` that derives from `AsmDialectResourceHandleBase` and
-/// implements a derived handle to the desired resource type. 
+/// implements a derived handle to the desired resource type.
 class ResourceHandleParameter<string handleType, string desc = "">
     : AttrOrTypeParameter<handleType, desc> {
   let parser = "$_parser.parseResourceHandle<" # handleType # ">()";

@@ -741,8 +741,11 @@ static bool PrintResults(LeakReport &report) {
 }
 
 static bool CheckForLeaks() {
-  if (&__lsan_is_turned_off && __lsan_is_turned_off())
+  if (&__lsan_is_turned_off && __lsan_is_turned_off()) {
+    VReport(1, "LeakSanitizer is disabled");
     return false;
+  }
+  VReport(1, "LeakSanitizer: checking for leaks");
   // Inside LockStuffAndStopTheWorld we can't run symbolizer, so we can't match
   // suppressions. However if a stack id was previously suppressed, it should be
   // suppressed in future checks as well.

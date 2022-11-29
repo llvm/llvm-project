@@ -84,7 +84,7 @@ func.func @entry() {
   %dense_ret = call @conv_2d_nhwc_hwcf(%in2D_nhwc, %filter2D_nhwc, %out2D_nhwc) : (tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32>)
   %CCCC_ret = call @conv_2d_nhwc_hwcf_CCCC(%in2D_nhwc_CCCC, %filter2D_nhwc_CCCC) : (tensor<?x?x?x?xf32, #CCCC>, tensor<?x?x?x?xf32, #CCCC>) -> (tensor<?x?x?x?xf32, #CCCC>)
   %CDCD_ret = call @conv_2d_nhwc_hwcf_CDCD(%in2D_nhwc_CDCD, %filter2D_nhwc_CDCD) : (tensor<?x?x?x?xf32, #CDCD>, tensor<?x?x?x?xf32, #CDCD>) -> (tensor<?x?x?x?xf32, #CDCD>)
-  
+
   // CHECK:     ( ( ( ( 108 ), ( 124 ), ( 124 ), ( 124 ), ( 108 ), ( 108 ) ),
   // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
   // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
@@ -159,7 +159,7 @@ func.func @entry() {
   bufferization.dealloc_tensor %in2D_nhwc : tensor<?x?x?x?xf32>
   bufferization.dealloc_tensor %filter2D_nhwc : tensor<?x?x?x?xf32>
   bufferization.dealloc_tensor %out2D_nhwc : tensor<?x?x?x?xf32>
-  
+
   bufferization.dealloc_tensor %in2D_nhwc_CDCD : tensor<?x?x?x?xf32, #CDCD>
   bufferization.dealloc_tensor %filter2D_nhwc_CDCD : tensor<?x?x?x?xf32, #CDCD>
   bufferization.dealloc_tensor %in2D_nhwc_CCCC : tensor<?x?x?x?xf32, #CCCC>
@@ -167,6 +167,6 @@ func.func @entry() {
 
   bufferization.dealloc_tensor %CCCC_ret : tensor<?x?x?x?xf32, #CCCC>
   bufferization.dealloc_tensor %CDCD_ret : tensor<?x?x?x?xf32, #CDCD>
-  
+
   return
 }

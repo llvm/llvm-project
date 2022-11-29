@@ -92,9 +92,22 @@ static bool contractSupportsMMAMatrixType(vector::ContractionOp contract,
   return true;
 }
 
+// Return true if the given map represents a transposed matrix load,
+// i.e. (d0, d1, ...) -> (dn-1, dn-2).
+static bool isTransposeMatrixLoadMap(OpBuilder &b, AffineMap permutationMap) {
+  auto nDim = permutationMap.getNumDims();
+  if (nDim < 2)
+    return false;
+
+  AffineExpr innerDim = b.getAffineDimExpr(nDim - 1);
+  AffineExpr outerDim = b.getAffineDimExpr(nDim - 2);
+  return permutationMap ==
+         AffineMap::get(nDim, 0, {innerDim, outerDim}, b.getContext());
+}
+
 // Return the stide for the dimension 0 of |type| if it is a memref and has a
 // constant stride.
-static llvm::Optional<int64_t>
+static std::optional<int64_t>
 getMemrefConstantHorizontalStride(ShapedType type) {
   auto memrefType = type.dyn_cast<MemRefType>();
   if (!memrefType)
@@ -129,9 +142,9 @@ static bool transferReadSupportsMMAMatrixType(vector::TransferReadOp readOp,
                                           readOp.getContext());
 
   if (!useNvGpu) {
-    // TODO: Support transpose once it is added to GPU dialect ops.
-    // For now we only support (d0, d1) -> (d0, d1) and (d0, d1) -> (0, d1).
-    return map.isMinorIdentity() || map == broadcastInnerDim;
+    bool result = map.isMinorIdentity() || map == broadcastInnerDim ||
+                  isTransposeMatrixLoadMap(b, map);
+    return result;
   }
 
   return true;
@@ -172,7 +185,7 @@ static bool broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
 
 /// Return the MMA elementwise enum associated with `op` if it is supported.
 /// Return `llvm::None` otherwise.
-static llvm::Optional<gpu::MMAElementwiseOp>
+static std::optional<gpu::MMAElementwiseOp>
 convertElementwiseOpToMMA(Operation *op) {
   if (isa<arith::AddFOp>(op))
     return gpu::MMAElementwiseOp::ADDF;
@@ -431,7 +444,7 @@ static void convertTransferReadOp(vector::TransferReadOp op,
                                   llvm::DenseMap<Value, Value> &valueMapping) {
   assert(op.getTransferRank() > 0 && "unexpected 0-d transfer");
   assert(transferReadSupportsMMAMatrixType(op, /*useNvGpu=*/false));
-  Optional<int64_t> stride =
+  std::optional<int64_t> stride =
       getMemrefConstantHorizontalStride(op.getShapedType());
   AffineMap map = op.getPermutationMap();
   // Handle broadcast by setting the stride to 0.
@@ -445,16 +458,17 @@ static void convertTransferReadOp(vector::TransferReadOp op,
       gpu::MMAMatrixType::get(op.getVectorType().getShape(),
                               op.getVectorType().getElementType(), fragType);
   OpBuilder b(op);
+  bool isTranspose = isTransposeMatrixLoadMap(b, map);
   Value load = b.create<gpu::SubgroupMmaLoadMatrixOp>(
       op.getLoc(), type, op.getSource(), op.getIndices(),
-      b.getIndexAttr(*stride));
+      b.getIndexAttr(*stride), isTranspose ? b.getUnitAttr() : UnitAttr());
   valueMapping[op.getResult()] = load;
 }
 
 static void convertTransferWriteOp(vector::TransferWriteOp op,
                                    llvm::DenseMap<Value, Value> &valueMapping) {
   assert(transferWriteSupportsMMAMatrixType(op));
-  Optional<int64_t> stride =
+  std::optional<int64_t> stride =
       getMemrefConstantHorizontalStride(op.getShapedType());
   assert(stride);
   OpBuilder b(op);

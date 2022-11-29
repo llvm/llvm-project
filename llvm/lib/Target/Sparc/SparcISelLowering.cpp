@@ -770,7 +770,10 @@ bool SparcTargetLowering::IsEligibleForTailCallOptimization(
     return false;
 
   // Do not tail call opt if the stack is used to pass parameters.
-  if (CCInfo.getNextStackOffset() != 0)
+  // 64-bit targets have a slightly higher limit since the ABI requires
+  // to allocate some space even when all the parameters fit inside registers.
+  unsigned StackOffsetLimit = Subtarget->is64Bit() ? 48 : 0;
+  if (CCInfo.getNextStackOffset() > StackOffsetLimit)
     return false;
 
   // Do not tail call opt if either the callee or caller returns
@@ -1189,20 +1192,21 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   SDValue Chain = CLI.Chain;
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
-  // Sparc target does not yet support tail call optimization.
-  CLI.IsTailCall = false;
-
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CLI.CallConv, CLI.IsVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
   CCInfo.AnalyzeCallOperands(CLI.Outs, CC_Sparc64);
 
+  CLI.IsTailCall = CLI.IsTailCall && IsEligibleForTailCallOptimization(
+                                         CCInfo, CLI, DAG.getMachineFunction());
+
   // Get the size of the outgoing arguments stack space requirement.
   // The stack offset computed by CC_Sparc64 includes all arguments.
   // Called functions expect 6 argument words to exist in the stack frame, used
   // or not.
-  unsigned ArgsSize = std::max(6*8u, CCInfo.getNextStackOffset());
+  unsigned StackReserved = 6 * 8u;
+  unsigned ArgsSize = std::max(StackReserved, CCInfo.getNextStackOffset());
 
   // Keep stack frames 16-byte aligned.
   ArgsSize = alignTo(ArgsSize, 16);
@@ -1211,10 +1215,13 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   if (CLI.IsVarArg)
     fixupVariableFloatArgs(ArgLocs, CLI.Outs);
 
+  assert(!CLI.IsTailCall || ArgsSize == StackReserved);
+
   // Adjust the stack pointer to make room for the arguments.
   // FIXME: Use hasReservedCallFrame to avoid %sp adjustments around all calls
   // with more than 6 arguments.
-  Chain = DAG.getCALLSEQ_START(Chain, ArgsSize, 0, DL);
+  if (!CLI.IsTailCall)
+    Chain = DAG.getCALLSEQ_START(Chain, ArgsSize, 0, DL);
 
   // Collect the set of registers to pass to the function and their values.
   // This will be emitted as a sequence of CopyToReg nodes glued to the call
@@ -1274,10 +1281,16 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
             DAG.getLoad(MVT::i64, DL, Store, HiPtrOff, MachinePointerInfo());
         SDValue Lo64 =
             DAG.getLoad(MVT::i64, DL, Store, LoPtrOff, MachinePointerInfo());
-        RegsToPass.push_back(std::make_pair(toCallerWindow(VA.getLocReg()),
-                                            Hi64));
-        RegsToPass.push_back(std::make_pair(toCallerWindow(VA.getLocReg()+1),
-                                            Lo64));
+
+        Register HiReg = VA.getLocReg();
+        Register LoReg = VA.getLocReg() + 1;
+        if (!CLI.IsTailCall) {
+          HiReg = toCallerWindow(HiReg);
+          LoReg = toCallerWindow(LoReg);
+        }
+
+        RegsToPass.push_back(std::make_pair(HiReg, Hi64));
+        RegsToPass.push_back(std::make_pair(LoReg, Lo64));
         continue;
       }
 
@@ -1298,7 +1311,11 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
           ++i;
         }
       }
-      RegsToPass.push_back(std::make_pair(toCallerWindow(VA.getLocReg()), Arg));
+
+      Register Reg = VA.getLocReg();
+      if (!CLI.IsTailCall)
+        Reg = toCallerWindow(Reg);
+      RegsToPass.push_back(std::make_pair(Reg, Arg));
       continue;
     }
 
@@ -1366,6 +1383,10 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
     Ops.push_back(InGlue);
 
   // Now the call itself.
+  if (CLI.IsTailCall) {
+    DAG.getMachineFunction().getFrameInfo().setHasTailCall();
+    return DAG.getNode(SPISD::TAIL_CALL, DL, MVT::Other, Ops);
+  }
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   Chain = DAG.getNode(SPISD::CALL, DL, NodeTys, Ops);
   InGlue = Chain.getValue(1);

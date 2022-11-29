@@ -121,7 +121,7 @@ def ConstantOp : Complex_Op<"constant", [
   let assemblyFormat = "$value attr-dict `:` type($complex)";
   let hasFolder = 1;
   let hasVerifier = 1;
-  
+
   let extraClassDeclaration = [{
     /// Returns true if a constant operation can be built with the given value
     /// and result type.

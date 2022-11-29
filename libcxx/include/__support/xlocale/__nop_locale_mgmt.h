@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
-#define _LIBCPP_SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
+#ifndef _LIBCPP___SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
+#define _LIBCPP___SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
 
 #include <__config>
 
@@ -55,4 +55,4 @@ uselocale(locale_t) {
 } // extern "C"
 #endif
 
-#endif // _LIBCPP_SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
+#endif // _LIBCPP___SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H

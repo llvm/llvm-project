@@ -101,13 +101,13 @@ template <class ELFT> struct LLDRelocationResolver<Elf_Rel_Impl<ELFT, false>> {
 // to llvm since it has no idea about InputSection.
 template <class ELFT>
 template <class RelTy>
-Optional<RelocAddrEntry>
+std::optional<RelocAddrEntry>
 LLDDwarfObj<ELFT>::findAux(const InputSectionBase &sec, uint64_t pos,
                            ArrayRef<RelTy> rels) const {
   auto it =
       partition_point(rels, [=](const RelTy &a) { return a.r_offset < pos; });
   if (it == rels.end() || it->r_offset != pos)
-    return None;
+    return std::nullopt;
   const RelTy &rel = *it;
 
   const ObjFile<ELFT> *file = sec.getFile<ELFT>();
@@ -132,8 +132,8 @@ LLDDwarfObj<ELFT>::findAux(const InputSectionBase &sec, uint64_t pos,
 }
 
 template <class ELFT>
-Optional<RelocAddrEntry> LLDDwarfObj<ELFT>::find(const llvm::DWARFSection &s,
-                                                 uint64_t pos) const {
+std::optional<RelocAddrEntry>
+LLDDwarfObj<ELFT>::find(const llvm::DWARFSection &s, uint64_t pos) const {
   auto &sec = static_cast<const LLDDWARFSection &>(s);
   const RelsOrRelas<ELFT> rels = sec.sec->template relsOrRelas<ELFT>();
   if (rels.areRelocsRel())

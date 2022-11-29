@@ -11,9 +11,9 @@
 ; PREGFX10: s_nop 1
 ; VI-OPT: v_mov_b32_dpp v0, v0 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x02,0x00,0x7e,0x00,0x01,0x08,0x11]
 ; VI-NOOPT: v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x02,0x00,0x7e,0x01,0x01,0x08,0x11]
-define amdgpu_kernel void @dpp_test(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @dpp_test(ptr addrspace(1) %out, i32 %in) {
   %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %in, i32 1, i32 1, i32 1, i1 1) #0
-  store i32 %tmp0, i32 addrspace(1)* %out
+  store i32 %tmp0, ptr addrspace(1) %out
   ret void
 }
 
@@ -26,10 +26,10 @@ define amdgpu_kernel void @dpp_test(i32 addrspace(1)* %out, i32 %in) {
 ; PREGFX10: s_nop 1
 ; VI-OPT: v_mov_b32_dpp v{{[0-9]+}}, [[VGPR0]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:1
 ; VI-NOOPT: v_mov_b32_dpp v{{[0-9]+}}, [[VGPR1]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:1
-define amdgpu_kernel void @dpp_wait_states(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @dpp_wait_states(ptr addrspace(1) %out, i32 %in) {
   %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %in, i32 1, i32 1, i32 1, i1 1) #0
   %tmp1 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %tmp0, i32 1, i32 1, i32 1, i1 1) #0
-  store i32 %tmp1, i32 addrspace(1)* %out
+  store i32 %tmp1, ptr addrspace(1) %out
   ret void
 }
 
@@ -43,17 +43,17 @@ define amdgpu_kernel void @dpp_wait_states(i32 addrspace(1)* %out, i32 %in) {
 ; VI: v_mov_b32_dpp [[VGPR1:v[0-9]+]], [[VGPR0]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:1
 ; PREGFX10: s_nop 1
 ; VI: v_mov_b32_dpp v{{[0-9]+}}, [[VGPR1]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:1
-define amdgpu_kernel void @dpp_first_in_bb(float addrspace(1)* %out, float addrspace(1)* %in, float %cond, float %a, float %b) {
+define amdgpu_kernel void @dpp_first_in_bb(ptr addrspace(1) %out, ptr addrspace(1) %in, float %cond, float %a, float %b) {
   %cmp = fcmp oeq float %cond, 0.0
   br i1 %cmp, label %if, label %else
 
 if:
-  %out_val = load float, float addrspace(1)* %out
+  %out_val = load float, ptr addrspace(1) %out
   %if_val = fadd float %a, %out_val
   br label %endif
 
 else:
-  %in_val = load float, float addrspace(1)* %in
+  %in_val = load float, ptr addrspace(1) %in
   %else_val = fadd float %b, %in_val
   br label %endif
 
@@ -64,16 +64,16 @@ endif:
   %tmp1 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %tmp0, i32 1, i32 1, i32 1, i1 1) #0
   %tmp2 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %tmp1, i32 1, i32 1, i32 1, i1 1) #0
   %tmp_float = bitcast i32 %tmp2 to float
-  store float %tmp_float, float addrspace(1)* %out
+  store float %tmp_float, ptr addrspace(1) %out
   ret void
 }
 
 ; VI-LABEL: {{^}}mov_dpp64_test:
 ; VI: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; VI: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
-define amdgpu_kernel void @mov_dpp64_test(i64 addrspace(1)* %out, i64 %in1) {
+define amdgpu_kernel void @mov_dpp64_test(ptr addrspace(1) %out, i64 %in1) {
   %tmp0 = call i64 @llvm.amdgcn.mov.dpp.i64(i64 %in1, i32 1, i32 1, i32 1, i1 0) #0
-  store i64 %tmp0, i64 addrspace(1)* %out
+  store i64 %tmp0, ptr addrspace(1) %out
   ret void
 }
 
@@ -85,9 +85,9 @@ define amdgpu_kernel void @mov_dpp64_test(i64 addrspace(1)* %out, i64 %in1) {
 ; VI-OPT-DAG: v_mov_b32_dpp v[[OLD_LO]], v[[OLD_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; VI-OPT-DAG: v_mov_b32_dpp v[[OLD_HI]], v[[OLD_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; VI-NOOPT-COUNT-2: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
-define amdgpu_kernel void @mov_dpp64_imm_test(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @mov_dpp64_imm_test(ptr addrspace(1) %out) {
   %tmp0 = call i64 @llvm.amdgcn.mov.dpp.i64(i64 123451234512345, i32 1, i32 1, i32 1, i1 0) #0
-  store i64 %tmp0, i64 addrspace(1)* %out
+  store i64 %tmp0, ptr addrspace(1) %out
   ret void
 }
 

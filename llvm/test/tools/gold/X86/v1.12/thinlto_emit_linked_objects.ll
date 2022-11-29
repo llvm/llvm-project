@@ -1,5 +1,5 @@
-; RUN: rm -f %t*.o.thinlto.bc
-; RUN: rm -f %t*.o.imports
+; RUN: rm -f ptr.o.thinlto.bc
+; RUN: rm -f ptr.o.imports
 
 ; First generate bitcode with a module summary index for each file
 ; RUN: opt -module-summary %s -o %t1.o

@@ -35,13 +35,13 @@ define i32 @func2() sanitize_thread {
   ; CHECK: ret i32 0
 }
 
-define i32 @func3(i32* %p) sanitize_thread {
-  %a = load i32, i32* %p
+define i32 @func3(ptr %p) sanitize_thread {
+  %a = load i32, ptr %p
   ret i32 %a
-  ; CHECK: define i32 @func3(i32* %p)
+  ; CHECK: define i32 @func3(ptr %p)
   ; CHECK: call void @__tsan_func_entry
   ; CHECK: call void @__tsan_read4
-  ; CHECK: %a = load i32, i32* %p
+  ; CHECK: %a = load i32, ptr %p
   ; CHECK: call void @__tsan_func_exit()
   ; CHECK: ret i32 %a
 }

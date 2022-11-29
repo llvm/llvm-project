@@ -8,19 +8,19 @@ target triple = "x86_64-unknown-linux-gnu"
 declare i16 @custom_varargs(i64, ...)
 
 ; CHECK-LABEL: @call_custom_varargs.dfsan
-define void @call_custom_varargs(i8* %buf) {
+define void @call_custom_varargs(ptr %buf) {
   ;; All arguments have an annotation.  Check that the transformed function
   ;; preserves each annotation.
 
-  ; CHECK: call zeroext i16 (i64, i[[#SBITS]], i[[#SBITS]]*, i[[#SBITS]]*, ...)
+  ; CHECK: call zeroext i16 (i64, i[[#SBITS]], ptr, ptr, ...)
   ; CHECK-SAME: @__dfsw_custom_varargs
   ; CHECK-SAME: i64 signext 200
-  ; CHECK-SAME: i8* nonnull
+  ; CHECK-SAME: ptr nonnull
   ; CHECK-SAME: i64 zeroext 20
   ; CHECK-SAME: i32 signext 1
   %call = call zeroext i16 (i64, ...) @custom_varargs(
     i64 signext 200,
-    i8* nonnull %buf,
+    ptr nonnull %buf,
     i64 zeroext 20,
     i32 signext 1
   )

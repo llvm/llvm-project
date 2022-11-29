@@ -12,8 +12,8 @@ target triple = "x86_64-pc-windows-msvc"
 define void @main() {
 entry:
   %array4096 = alloca [4096 x i8]
-  call void @foo([4096 x i8]* %array4096)
+  call void @foo(ptr %array4096)
   ret void
 }
 
-declare void @foo([4096 x i8]*)
+declare void @foo(ptr)

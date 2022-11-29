@@ -16,37 +16,37 @@ entry:
   %k = alloca i32, align 4
   %g = alloca i64, align 8
   %i = alloca i64, align 8
-  store i64 %blah, i64* %blah.addr, align 8
-  store i64 %limit, i64* %limit.addr, align 8
-  store i32 1, i32* %k, align 4
-  store i64 0, i64* %i, align 8
+  store i64 %blah, ptr %blah.addr, align 8
+  store i64 %limit, ptr %limit.addr, align 8
+  store i32 1, ptr %k, align 4
+  store i64 0, ptr %i, align 8
   br label %for.cond
 
 for.cond:
-  %0 = load i64, i64* %i, align 8
-  %1 = load i64, i64* %limit.addr, align 8
+  %0 = load i64, ptr %i, align 8
+  %1 = load i64, ptr %limit.addr, align 8
   %cmp = icmp ult i64 %0, %1
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:
-  %2 = load i64, i64* %g, align 8
+  %2 = load i64, ptr %g, align 8
   ret i64 %2
 
 for.body:
-  %3 = load i64, i64* %blah.addr, align 8
-  %4 = load i32, i32* %k, align 4
+  %3 = load i64, ptr %blah.addr, align 8
+  %4 = load i32, ptr %k, align 4
   %conv = zext i32 %4 to i64
   %and = and i64 %conv, %3
   %conv1 = trunc i64 %and to i32
-  store i32 %conv1, i32* %k, align 4
-  %5 = load i32, i32* %k, align 4
+  store i32 %conv1, ptr %k, align 4
+  %5 = load i32, ptr %k, align 4
   %conv2 = zext i32 %5 to i64
-  %6 = load i64, i64* %g, align 8
+  %6 = load i64, ptr %g, align 8
   %add = add i64 %6, %conv2
-  store i64 %add, i64* %g, align 8
-  %7 = load i64, i64* %i, align 8
+  store i64 %add, ptr %g, align 8
+  %7 = load i64, ptr %i, align 8
   %inc = add i64 %7, 1
-  store i64 %inc, i64* %i, align 8
+  store i64 %inc, ptr %i, align 8
   br label %for.cond
 }
 

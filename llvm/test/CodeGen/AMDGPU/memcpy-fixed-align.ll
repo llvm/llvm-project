@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+enable-flat-scratch < %s | FileCheck %s -check-prefix=FLATSCR
 
 ; Make sure there's no assertion from passing a 0 alignment value
-define void @memcpy_fixed_align(i8 addrspace(5)*  %dst, i8 addrspace(1)* %src) {
+define void @memcpy_fixed_align(ptr addrspace(5)  %dst, ptr addrspace(1) %src) {
 ; MUBUF-LABEL: memcpy_fixed_align:
 ; MUBUF:       ; %bb.0:
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -49,12 +49,11 @@ define void @memcpy_fixed_align(i8 addrspace(5)*  %dst, i8 addrspace(1)* %src) {
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca [40 x i8], addrspace(5)
-  %cast = bitcast [40 x i8] addrspace(5)* %alloca to i8 addrspace(5)*
-  call void @llvm.memcpy.p5i8.p1i8.i64(i8 addrspace(5)* align 4 dereferenceable(40) %cast, i8 addrspace(1)* align 4 dereferenceable(40) %src, i64 40, i1 false)
-  call void asm sideeffect "; use $0", "s"([40 x i8] addrspace(5)* %alloca) #0
+  call void @llvm.memcpy.p5.p1.i64(ptr addrspace(5) align 4 dereferenceable(40) %alloca, ptr addrspace(1) align 4 dereferenceable(40) %src, i64 40, i1 false)
+  call void asm sideeffect "; use $0", "s"(ptr addrspace(5) %alloca) #0
   ret void
 }
 
-declare void @llvm.memcpy.p5i8.p1i8.i64(i8 addrspace(5)* noalias nocapture writeonly, i8 addrspace(1)* noalias nocapture readonly, i64, i1 immarg) #0
+declare void @llvm.memcpy.p5.p1.i64(ptr addrspace(5) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i64, i1 immarg) #0
 
 attributes #0 = { argmemonly nounwind willreturn }

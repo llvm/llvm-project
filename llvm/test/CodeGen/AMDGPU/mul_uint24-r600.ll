@@ -2,7 +2,7 @@
 ; RUN: llc -march=r600 -mcpu=cayman < %s | FileCheck -check-prefixes=CM %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefixes=EG %s
 
-define amdgpu_kernel void @test_umul24_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) {
+define amdgpu_kernel void @test_umul24_i32(ptr addrspace(1) %out, i32 %a, i32 %b) {
 ; CM-LABEL: test_umul24_i32:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 7, @4, KC0[CB0:0-32], KC1[]
@@ -38,12 +38,12 @@ entry:
   %1 = shl i32 %b, 8
   %b_24 = lshr i32 %1, 8
   %2 = mul i32 %a_24, %b_24
-  store i32 %2, i32 addrspace(1)* %out
+  store i32 %2, ptr addrspace(1) %out
   ret void
 }
 
 ; The result must be sign-extended.
-define amdgpu_kernel void @test_umul24_i16_sext(i32 addrspace(1)* %out, i16 %a, i16 %b) {
+define amdgpu_kernel void @test_umul24_i16_sext(ptr addrspace(1) %out, i16 %a, i16 %b) {
 ; CM-LABEL: test_umul24_i16_sext:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 0, @10, KC0[], KC1[]
@@ -88,12 +88,12 @@ define amdgpu_kernel void @test_umul24_i16_sext(i32 addrspace(1)* %out, i16 %a, 
 entry:
   %mul = mul i16 %a, %b
   %ext = sext i16 %mul to i32
-  store i32 %ext, i32 addrspace(1)* %out
+  store i32 %ext, ptr addrspace(1) %out
   ret void
 }
 
 ; The result must be sign-extended.
-define amdgpu_kernel void @test_umul24_i8(i32 addrspace(1)* %out, i8 %a, i8 %b) {
+define amdgpu_kernel void @test_umul24_i8(ptr addrspace(1) %out, i8 %a, i8 %b) {
 ; CM-LABEL: test_umul24_i8:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 0, @10, KC0[], KC1[]
@@ -138,11 +138,11 @@ define amdgpu_kernel void @test_umul24_i8(i32 addrspace(1)* %out, i8 %a, i8 %b) 
 entry:
   %mul = mul i8 %a, %b
   %ext = sext i8 %mul to i32
-  store i32 %ext, i32 addrspace(1)* %out
+  store i32 %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_umulhi24_i32_i64(i32 addrspace(1)* %out, i32 %a, i32 %b) {
+define amdgpu_kernel void @test_umulhi24_i32_i64(ptr addrspace(1) %out, i32 %a, i32 %b) {
 ; CM-LABEL: test_umulhi24_i32_i64:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 5, @4, KC0[CB0:0-32], KC1[]
@@ -175,11 +175,11 @@ entry:
   %mul48 = mul i64 %a.24.i64, %b.24.i64
   %mul48.hi = lshr i64 %mul48, 32
   %mul24hi = trunc i64 %mul48.hi to i32
-  store i32 %mul24hi, i32 addrspace(1)* %out
+  store i32 %mul24hi, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_umulhi24(i32 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_kernel void @test_umulhi24(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; CM-LABEL: test_umulhi24:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 5, @4, KC0[CB0:0-32], KC1[]
@@ -210,12 +210,12 @@ entry:
   %mul48 = mul i64 %a.24, %b.24
   %mul48.hi = lshr i64 %mul48, 32
   %mul24.hi = trunc i64 %mul48.hi to i32
-  store i32 %mul24.hi, i32 addrspace(1)* %out
+  store i32 %mul24.hi, ptr addrspace(1) %out
   ret void
 }
 
 ; Multiply with 24-bit inputs and 64-bit output.
-define amdgpu_kernel void @test_umul24_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
+define amdgpu_kernel void @test_umul24_i64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; CM-LABEL: test_umul24_i64:
 ; CM:       ; %bb.0: ; %entry
 ; CM-NEXT:    ALU 12, @4, KC0[CB0:0-32], KC1[]
@@ -257,6 +257,6 @@ entry:
   %tmp1 = shl i64 %b, 40
   %b_24 = lshr i64 %tmp1, 40
   %tmp2 = mul i64 %a_24, %b_24
-  store i64 %tmp2, i64 addrspace(1)* %out
+  store i64 %tmp2, ptr addrspace(1) %out
   ret void
 }

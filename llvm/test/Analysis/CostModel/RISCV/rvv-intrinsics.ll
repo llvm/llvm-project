@@ -15,7 +15,7 @@ define void @unsupported_fp_ops(<vscale x 4 x float> %vec, i32 %extraarg) {
 
 define void @powi(<vscale x 4 x float> %vec) {
 ; CHECK-LABEL: 'powi'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %powi = call <vscale x 4 x float> @llvm.powi.nxv4f32.i32(<vscale x 4 x float> %vec, i32 42)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %powi = call <vscale x 4 x float> @llvm.powi.nxv4f32.i32(<vscale x 4 x float> %vec, i32 42)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %powi = call <vscale x 4 x float> @llvm.powi.nxv4f32.i32(<vscale x 4 x float> %vec, i32 42)

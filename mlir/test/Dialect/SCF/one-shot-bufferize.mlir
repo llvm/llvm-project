@@ -574,8 +574,8 @@ func.func @parallel_insert_slice_no_conflict(
 //  CHECK-SAME:     %[[arg1:.*]]: memref<?xf32, strided{{.*}}>,
 //  CHECK-SAME:     %[[arg2:.*]]: memref<?xf32, strided{{.*}}>
 func.func @parallel_insert_slice_with_conflict(
-    %idx: index, 
-    %idx2: index, 
+    %idx: index,
+    %idx2: index,
     %arg1: tensor<?xf32> {bufferization.writable = true},
     %arg2: tensor<?xf32> {bufferization.writable = true}) -> (f32, f32)
 {
@@ -872,7 +872,7 @@ func.func @scf_while_buffer_type_mismatch(%sz: index, %sz2: index) -> f32 {
 // -----
 
 // CHECK-LABEL: func @non_tensor_for_arg
-func.func @non_tensor_for_arg(%A : tensor<?xf32> {bufferization.writable = true}) 
+func.func @non_tensor_for_arg(%A : tensor<?xf32> {bufferization.writable = true})
     -> tensor<?xf32> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -888,7 +888,7 @@ func.func @non_tensor_for_arg(%A : tensor<?xf32> {bufferization.writable = true}
 // -----
 
 // This is a regression test. Just check that the IR bufferizes.
-  
+
 // CHECK-LABEL: func @buffer_type_of_collapse_shape
 func.func @buffer_type_of_collapse_shape(%arg0: tensor<f64>) {
   %true = arith.constant true
@@ -906,10 +906,10 @@ func.func @buffer_type_of_collapse_shape(%arg0: tensor<f64>) {
 // -----
 
 // This is a regression test. Just check that the IR bufferizes.
-  
+
 // CHECK-LABEL: func @non_block_argument_yield
 func.func @non_block_argument_yield() {
-  %true = arith.constant true 
+  %true = arith.constant true
   %0 = bufferization.alloc_tensor() : tensor<i32>
   %1 = scf.while (%arg0 = %0) : (tensor<i32>) -> (tensor<i32>) {
     scf.condition(%true) %arg0 : tensor<i32>

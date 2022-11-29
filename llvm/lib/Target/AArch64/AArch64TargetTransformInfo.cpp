@@ -1918,12 +1918,6 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::BITCAST, MVT::nxv2i16, MVT::nxv2f16, 0 },
     { ISD::BITCAST, MVT::nxv4i16, MVT::nxv4f16, 0 },
     { ISD::BITCAST, MVT::nxv2i32, MVT::nxv2f32, 0 },
-
-    // Zero extends from nxvmi1 to nxvmiN.
-    { ISD::ZERO_EXTEND, MVT::nxv2i64, MVT::nxv2i1, 1 },
-    { ISD::ZERO_EXTEND, MVT::nxv4i32, MVT::nxv4i1, 1 },
-    { ISD::ZERO_EXTEND, MVT::nxv8i16, MVT::nxv8i1, 1 },
-    { ISD::ZERO_EXTEND, MVT::nxv16i8, MVT::nxv16i1, 1 },
   };
 
   if (const auto *Entry = ConvertCostTableLookup(ConversionTbl, ISD,
@@ -2171,6 +2165,18 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
           Cost *= 4;
         return Cost;
       } else {
+        // If one of the operands is a uniform constant then the cost for each
+        // element is Cost for insertion, extraction and division.
+        // Insertion cost = 2, Extraction Cost = 2, Division = cost for the
+        // operation with scalar type
+        if ((Op1Info.isConstant() && Op1Info.isUniform()) ||
+            (Op2Info.isConstant() && Op2Info.isUniform())) {
+          if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
+            InstructionCost DivCost = BaseT::getArithmeticInstrCost(
+                Opcode, Ty->getScalarType(), CostKind, Op1Info, Op2Info);
+            return (4 + DivCost) * VTy->getNumElements();
+          }
+        }
         // On AArch64, without SVE, vector divisions are expanded
         // into scalar divisions of each pair of elements.
         Cost += getArithmeticInstrCost(Instruction::ExtractElement, Ty,

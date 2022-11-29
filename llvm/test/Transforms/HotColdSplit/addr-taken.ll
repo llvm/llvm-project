@@ -19,8 +19,8 @@ exit:
   ret void
 }
 
-@take_addr_of_foo = global void ()* @foo
-@take_addr_of_bar = global void ()* @bar
+@take_addr_of_foo = global ptr @foo
+@take_addr_of_bar = global ptr @bar
 
 ; CHECK: attributes #[[outlined_func_attr]] = {
 ; CHECK-SAME: cold
