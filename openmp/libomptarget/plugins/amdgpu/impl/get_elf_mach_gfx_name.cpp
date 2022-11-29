@@ -11,6 +11,7 @@
 // identifier) and contains more up to date values for the enum checked here.
 // rtl.cpp uses the system elf.h.
 #include "llvm/BinaryFormat/ELF.h"
+using namespace llvm::ELF;
 
 const char *get_elf_mach_gfx_name(uint32_t EFlags) {
   using namespace llvm::ELF;
@@ -77,4 +78,9 @@ const char *get_elf_mach_gfx_name(uint32_t EFlags) {
   default:
     return "--unknown gfx";
   }
+}
+
+const uint16_t implicitArgsSize(uint16_t Version) {
+  return Version < ELFABIVERSION_AMDGPU_HSA_V5 ? IMPLICITARGS::COV4_SIZE
+                                               : IMPLICITARGS::COV5_SIZE;
 }
