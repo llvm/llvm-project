@@ -154,8 +154,8 @@ static void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
   DiagOpts.ShowCarets = false;
   // Don't write out diagnostic file.
   DiagOpts.DiagnosticSerializationFile.clear();
-  // Don't emit warnings as errors (and all other warnings too).
-  DiagOpts.IgnoreWarnings = true;
+  // Don't treat warnings as errors.
+  DiagOpts.Warnings.push_back("no-error");
 }
 
 struct IncludeTreePPCallbacks : public PPCallbacks {
