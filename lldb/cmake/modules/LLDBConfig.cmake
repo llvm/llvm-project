@@ -102,7 +102,13 @@ if(LLDB_BUILD_FRAMEWORK)
   set(LLDB_FRAMEWORK_VERSION A CACHE STRING "LLDB.framework version (default is A)")
   set(LLDB_FRAMEWORK_BUILD_DIR bin CACHE STRING "Output directory for LLDB.framework")
   set(LLDB_FRAMEWORK_INSTALL_DIR Library/Frameworks CACHE STRING "Install directory for LLDB.framework")
-  set(LLDB_FRAMEWORK_COPY_SWIFT_RESOURCES 1 CACHE BOOL "Copy the Swift headers into the resource directory of the LLDB.framework")
+  if (LLDB_ENABLE_SWIFT_SUPPORT)
+    set(should_copy_swift_resources ON)
+  else()
+    set(should_copy_swift_resources OFF)
+  endif()
+
+  set(LLDB_FRAMEWORK_COPY_SWIFT_RESOURCES ${should_copy_swift_resources} CACHE BOOL "Copy the Swift headers into the resource directory of the LLDB.framework")
 
   get_filename_component(LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR ${LLDB_FRAMEWORK_BUILD_DIR} ABSOLUTE
     BASE_DIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR})
