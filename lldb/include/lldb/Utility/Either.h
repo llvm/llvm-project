@@ -19,10 +19,11 @@ private:
   enum class Selected { One, Two };
 
   Selected m_selected;
-  union {
+  // FIXME: This broke when CompilerType added an std::weak_ptr.
+  //union {
     T1 m_t1;
     T2 m_t2;
-  };
+  //};
 
 public:
   Either(const T1 &t1) {
@@ -112,16 +113,17 @@ public:
     return *this;
   }
 
-  ~Either() {
-    switch (m_selected) {
-    case Selected::One:
-      m_t1.T1::~T1();
-      break;
-    case Selected::Two:
-      m_t2.T2::~T2();
-      break;
-    }
-  }
+  // FIXME: This broke when CompilerType added an std::weak_ptr.
+  // ~Either() {
+  //   switch (m_selected) {
+  //   case Selected::One:
+  //     m_t1.T1::~T1();
+  //     break;
+  //   case Selected::Two:
+  //     m_t2.T2::~T2();
+  //     break;
+  //   }
+  // }
 };
 
 } // namespace lldb_utility

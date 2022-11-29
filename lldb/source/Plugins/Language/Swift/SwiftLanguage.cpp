@@ -784,9 +784,8 @@ SwiftLanguage::GetHardcodedSynthetics() {
               bool is_imported = false;
 
               if (type.IsValid()) {
-                TypeSystemSwift *swift_ast_ctx =
-                    llvm::dyn_cast_or_null<TypeSystemSwift>(
-                        type.GetTypeSystem());
+                auto swift_ast_ctx =
+                    type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
                 if (swift_ast_ctx && swift_ast_ctx->IsImportedType(
                                          type.GetOpaqueQualType(), nullptr))
                   is_imported = true;
@@ -961,9 +960,8 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
           auto as_decl = m_result.GetAs<swift::Decl *>();
 
           if (as_type.hasValue() && as_type.getValue()) {
-            TypeSystem *type_system = as_type->GetTypeSystem();
-            if (TypeSystemSwift *swift_ast_ctx =
-                    llvm::dyn_cast_or_null<TypeSystemSwift>(type_system))
+            if (auto swift_ast_ctx = as_type->GetTypeSystem()
+                                         .dyn_cast_or_null<TypeSystemSwift>())
               swift_ast_ctx->DumpTypeDescription(
                   as_type->GetOpaqueQualType(), &stream,
                   print_help_if_available, true, eDescriptionLevelFull,
@@ -1293,7 +1291,7 @@ LazyBool SwiftLanguage::IsLogicalTrue(ValueObject &valobj, Status &error) {
   auto swift_ty = GetCanonicalSwiftType(valobj.GetCompilerType());
   CompilerType valobj_type = ToCompilerType(swift_ty);
   Flags type_flags(valobj_type.GetTypeInfo());
-  if (llvm::isa<TypeSystemSwift>(valobj_type.GetTypeSystem())) {
+  if (valobj_type.GetTypeSystem().isa_and_nonnull<TypeSystemSwift>()) {
     if (type_flags.AllSet(eTypeIsStructUnion) &&
         valobj_type.GetTypeName() == g_SwiftBool) {
       ValueObjectSP your_value_sp(valobj.GetChildMemberWithName(g_value, true));

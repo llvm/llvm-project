@@ -553,8 +553,8 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
     return;
 
   {
-    auto *swift_type_system = llvm::dyn_cast_or_null<TypeSystemSwift>(
-        imported_self_type.GetTypeSystem());
+    auto swift_type_system =
+        imported_self_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
     if (!swift_type_system)
       return;
 
@@ -567,8 +567,8 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   }
 
   {
-    auto *swift_type_system = llvm::dyn_cast_or_null<TypeSystemSwift>(
-        imported_self_type.GetTypeSystem());
+    auto swift_type_system =
+        imported_self_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
     if (!swift_type_system)
       return;
 
@@ -1007,8 +1007,8 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
 
   auto compiler_type = variable.GetType();
   // Add the persistent variable as a typeref compiler type.
-  if (auto *swift_ast_ctx =
-          llvm::dyn_cast<SwiftASTContext>(compiler_type.GetTypeSystem())) {
+  if (auto swift_ast_ctx =
+          compiler_type.GetTypeSystem().dyn_cast_or_null<SwiftASTContext>()) {
     variable.SetType(
         swift_ast_ctx->GetTypeRefType(compiler_type.GetOpaqueQualType()));
   }
@@ -1050,8 +1050,8 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
 
       actual_type =
           ToCompilerType(transformed_type->mapTypeOutOfContext().getPointer());
-      auto *swift_ast_ctx =
-          llvm::cast<SwiftASTContext>(actual_type.GetTypeSystem());
+      auto swift_ast_ctx =
+          actual_type.GetTypeSystem().dyn_cast_or_null<SwiftASTContext>();
 
       actual_type =
           swift_ast_ctx->GetTypeRefType(actual_type.GetOpaqueQualType());
@@ -1120,8 +1120,8 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
       // Transform the variable metadata to a typeref type if necessary.
       auto compiler_type =
           variable_metadata->m_persistent_variable_sp->GetCompilerType();
-      if (auto *swift_ast_ctx =
-              llvm::dyn_cast<SwiftASTContext>(compiler_type.GetTypeSystem())) {
+      if (auto swift_ast_ctx = compiler_type.GetTypeSystem()
+                                   .dyn_cast_or_null<SwiftASTContext>()) {
         variable_metadata->m_persistent_variable_sp->SetCompilerType(
             swift_ast_ctx->GetTypeRefType(compiler_type.GetOpaqueQualType()));
       }

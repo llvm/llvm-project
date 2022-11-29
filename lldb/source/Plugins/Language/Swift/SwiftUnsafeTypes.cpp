@@ -79,8 +79,7 @@ lldb::addr_t SwiftUnsafeType::GetAddress(llvm::StringRef child_name) {
     return false;
   }
 
-  auto *type_system =
-      llvm::dyn_cast_or_null<TypeSystemSwift>(type.GetTypeSystem());
+  auto type_system = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!type_system) {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get {1} type system.", __FUNCTION__,
@@ -249,8 +248,7 @@ bool SwiftUnsafeRawBufferPointer::Update() {
       return false;
     }
 
-    auto *type_system =
-        llvm::dyn_cast_or_null<TypeSystemSwift>(type.GetTypeSystem());
+    auto type_system = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
     if (!type_system) {
       LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                "{0}: Couldn't get {1} type system.", __FUNCTION__,
@@ -312,8 +310,7 @@ bool SwiftUnsafePointer::Update() {
     return false;
   }
 
-  auto *type_system =
-      llvm::dyn_cast_or_null<TypeSystemSwift>(type.GetTypeSystem());
+  auto type_system = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!type_system) {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get {1} type system.", __FUNCTION__,
@@ -365,8 +362,7 @@ std::unique_ptr<SwiftUnsafeType> SwiftUnsafeType::Create(ValueObject &valobj) {
       return nullptr;
     }
 
-    auto *type_system =
-        llvm::dyn_cast_or_null<TypeSystemSwift>(type.GetTypeSystem());
+    auto type_system = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
     if (!type_system) {
       LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                "{0}: Couldn't get {1} type system.", __FUNCTION__,

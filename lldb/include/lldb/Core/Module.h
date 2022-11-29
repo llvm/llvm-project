@@ -811,7 +811,7 @@ public:
 
   bool GetIsDynamicLinkEditor();
 
-  llvm::Expected<TypeSystem &>
+  llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language);
 
   // Special error functions that can do printf style formatting that will
@@ -909,7 +909,7 @@ public:
 
   /// Call \p callback for each \p TypeSystem in this \p Module.
   /// Return true from callback to keep iterating, false to stop iterating.
-  void ForEachTypeSystem(std::function<bool(TypeSystem *)> const &callback);
+  void ForEachTypeSystem(llvm::function_ref<bool(lldb::TypeSystemSP)> callback);
 
   std::vector<lldb::DataBufferSP> GetASTData(lldb::LanguageType language);
 

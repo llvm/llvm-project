@@ -239,7 +239,9 @@ public:
           llvm::consumeError(ts.takeError());
           continue;
         }
-        auto *swift_ts = static_cast<TypeSystemSwift *>(&*ts);
+        auto swift_ts = llvm::dyn_cast_or_null<TypeSystemSwift>(ts->get());
+        if (!swift_ts)
+          continue;
         clang_type_sp = swift_ts->GetTypeSystemSwiftTypeRef().LookupClangType(name);
         if (clang_type_sp)
           break;
@@ -257,8 +259,8 @@ public:
     CompilerType compiler_type = clang_type_sp->GetFullCompilerType();
 
     // Filter our non-Clang types.
-    auto *type_system =
-        llvm::dyn_cast_or_null<TypeSystemClang>(compiler_type.GetTypeSystem());
+    auto type_system =
+        compiler_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
     if (!type_system)
       return;
 
