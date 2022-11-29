@@ -186,10 +186,10 @@ namespace DeprecatedVolatile {
     --n; // cxx20-warning {{decrement of object of volatile-qualified type 'volatile int' is deprecated}}
     n++; // cxx20-warning {{increment of object of volatile-qualified type 'volatile int' is deprecated}}
     n--; // cxx20-warning {{decrement of object of volatile-qualified type 'volatile int' is deprecated}}
-    n += 5; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
-    n *= 3; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
-    n /= 2; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
-    n %= 42; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
+    n += 5; // undeprecated as a DR in C++23
+    n *= 3; // undeprecated as a DR in C++23
+    n /= 2; // undeprecated as a DR in C++23
+    n %= 42; // undeprecated as a DR in C++23
     n &= 2; // undeprecated as a DR in C++23
     n |= 2; // undeprecated as a DR in C++23
     n ^= 2; // undeprecated as a DR in C++23
