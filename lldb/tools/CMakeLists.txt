@@ -23,5 +23,7 @@ if (LLDB_CAN_USE_LLDB_SERVER)
 endif()
 
 # BEGIN Swift Mods
-add_subdirectory(repl/swift)
+if (LLDB_ENABLE_SWIFT_SUPPORT)
+  add_subdirectory(repl/swift)
+endif()
 # END Swift Mods
