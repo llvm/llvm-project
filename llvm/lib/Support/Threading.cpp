@@ -14,7 +14,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Config/config.h"
-#include "llvm/Support/Host.h"
+#include "llvm/Config/llvm-config.h"
 
 #include <cassert>
 #include <errno.h>
@@ -45,13 +45,16 @@ unsigned llvm::ThreadPoolStrategy::compute_thread_count() const {
   return 1;
 }
 
+// Unknown if threading turned off
+int llvm::get_physical_cores() { return -1; }
+
 #else
 
 static int computeHostNumHardwareThreads();
 
 unsigned llvm::ThreadPoolStrategy::compute_thread_count() const {
-  int MaxThreadCount = UseHyperThreads ? computeHostNumHardwareThreads()
-                                       : sys::getHostNumPhysicalCores();
+  int MaxThreadCount =
+      UseHyperThreads ? computeHostNumHardwareThreads() : get_physical_cores();
   if (MaxThreadCount <= 0)
     MaxThreadCount = 1;
   if (ThreadsRequested == 0)
