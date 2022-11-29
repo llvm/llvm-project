@@ -4,7 +4,7 @@
 // operands are not valid for this GPU or mode
 
 image_atomic_add v252, v2, s[8:15]
-// CHECK: error: operands are not valid for this GPU or mode
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 // CHECK-NEXT:{{^}}image_atomic_add v252, v2, s[8:15]
 // CHECK-NEXT:{{^}}^
 
@@ -12,7 +12,7 @@ image_atomic_add v252, v2, s[8:15]
 // duplicate data format
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_DATA_FORMAT_32,BUF_DATA_FORMAT_8]
-// CHECK: error: duplicate data format
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: duplicate data format
 // CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_DATA_FORMAT_32,BUF_DATA_FORMAT_8]
 // CHECK-NEXT:{{^}}                                                                                ^
 
@@ -20,7 +20,7 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_DATA_FORMAT_32,
 // duplicate numeric format
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_NUM_FORMAT_UINT,BUF_NUM_FORMAT_FLOAT]
-// CHECK: error: duplicate numeric format
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: duplicate numeric format
 // CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_NUM_FORMAT_UINT,BUF_NUM_FORMAT_FLOAT]
 // CHECK-NEXT:{{^}}                                                                                 ^
 
@@ -36,12 +36,12 @@ v_bfe_u32 v0, 1+(100, v1, v2
 // expected a 12-bit signed offset
 
 global_load_dword v1, v[3:4] off, offset:-4097
-// CHECK: error: expected a 12-bit signed offset
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 12-bit signed offset
 // CHECK-NEXT:{{^}}global_load_dword v1, v[3:4] off, offset:-4097
 // CHECK-NEXT:{{^}}                                  ^
 
 scratch_load_dword v0, v1, off offset:-2049 glc slc
-// CHECK: error: expected a 12-bit signed offset
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 12-bit signed offset
 // CHECK-NEXT:{{^}}scratch_load_dword v0, v1, off offset:-2049 glc slc
 // CHECK-NEXT:{{^}}                               ^
 
@@ -49,7 +49,7 @@ scratch_load_dword v0, v1, off offset:-2049 glc slc
 // expected a 16-bit signed jump offset
 
 s_branch 0x10000
-// CHECK: error: expected a 16-bit signed jump offset
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 16-bit signed jump offset
 // CHECK-NEXT:{{^}}s_branch 0x10000
 // CHECK-NEXT:{{^}}         ^
 
@@ -57,7 +57,7 @@ s_branch 0x10000
 // expected a 2-bit lane id
 
 ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, 4, 1, 2, 3)
-// CHECK: error: expected a 2-bit lane id
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 2-bit lane id
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, 4, 1, 2, 3)
 // CHECK-NEXT:{{^}}                                                ^
 
@@ -65,17 +65,17 @@ ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, 4, 1, 2, 3)
 // expected a 20-bit unsigned offset
 
 s_atc_probe_buffer 0x1, s[8:11], -1
-// CHECK: error: expected a 20-bit unsigned offset
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 20-bit unsigned offset
 // CHECK-NEXT:{{^}}s_atc_probe_buffer 0x1, s[8:11], -1
 // CHECK-NEXT:{{^}}                                 ^
 
 s_atc_probe_buffer 0x1, s[8:11], 0xFFFFFFFFFFF00000
-// CHECK: error: expected a 20-bit unsigned offset
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 20-bit unsigned offset
 // CHECK-NEXT:{{^}}s_atc_probe_buffer 0x1, s[8:11], 0xFFFFFFFFFFF00000
 // CHECK-NEXT:{{^}}                                 ^
 
 s_buffer_atomic_swap s5, s[4:7], 0x1FFFFF
-// CHECK: error: expected a 20-bit unsigned offset
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 20-bit unsigned offset
 // CHECK-NEXT:{{^}}s_buffer_atomic_swap s5, s[4:7], 0x1FFFFF
 // CHECK-NEXT:{{^}}                                 ^
 
@@ -83,12 +83,12 @@ s_buffer_atomic_swap s5, s[4:7], 0x1FFFFF
 // expected a 21-bit signed offset
 
 s_atc_probe 0x7, s[4:5], 0x1FFFFF
-// CHECK: error: expected a 21-bit signed offset
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 21-bit signed offset
 // CHECK-NEXT:{{^}}s_atc_probe 0x7, s[4:5], 0x1FFFFF
 // CHECK-NEXT:{{^}}                         ^
 
 s_atomic_swap s5, s[2:3], 0x1FFFFF
-// CHECK: error: expected a 21-bit signed offset
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 21-bit signed offset
 // CHECK-NEXT:{{^}}s_atomic_swap s5, s[2:3], 0x1FFFFF
 // CHECK-NEXT:{{^}}                          ^
 
@@ -96,12 +96,12 @@ s_atomic_swap s5, s[2:3], 0x1FFFFF
 // expected a 2-bit value
 
 v_mov_b32_dpp v5, v1 quad_perm:[3,2,1,4] row_mask:0x0 bank_mask:0x0
-// CHECK: error: expected a 2-bit value
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 2-bit value
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 quad_perm:[3,2,1,4] row_mask:0x0 bank_mask:0x0
 // CHECK-NEXT:{{^}}                                      ^
 
 v_mov_b32_dpp v5, v1 quad_perm:[3,-1,1,3] row_mask:0x0 bank_mask:0x0
-// CHECK: error: expected a 2-bit value
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 2-bit value
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 quad_perm:[3,-1,1,3] row_mask:0x0 bank_mask:0x0
 // CHECK-NEXT:{{^}}                                  ^
 
@@ -109,12 +109,12 @@ v_mov_b32_dpp v5, v1 quad_perm:[3,-1,1,3] row_mask:0x0 bank_mask:0x0
 // expected a 3-bit value
 
 v_mov_b32_dpp v5, v1 dpp8:[-1,1,2,3,4,5,6,7]
-// CHECK: error: expected a 3-bit value
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 3-bit value
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 dpp8:[-1,1,2,3,4,5,6,7]
 // CHECK-NEXT:{{^}}                           ^
 
 v_mov_b32_dpp v5, v1 dpp8:[0,1,2,8,4,5,6,7]
-// CHECK: error: expected a 3-bit value
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 3-bit value
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 dpp8:[0,1,2,8,4,5,6,7]
 // CHECK-NEXT:{{^}}                                 ^
 
@@ -122,7 +122,7 @@ v_mov_b32_dpp v5, v1 dpp8:[0,1,2,8,4,5,6,7]
 // expected a 5-character mask
 
 ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "ppii")
-// CHECK: error: expected a 5-character mask
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 5-character mask
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "ppii")
 // CHECK-NEXT:{{^}}                                                   ^
 
@@ -130,12 +130,12 @@ ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "ppii")
 // expected a closing parentheses
 
 ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, 0, 1, 2, 3
-// CHECK: error: expected a closing parentheses
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing parentheses
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, 0, 1, 2, 3
 // CHECK-NEXT:{{^}}                                                          ^
 
 ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, 0, 1, 2, 3, 4)
-// CHECK: error: expected a closing parentheses
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing parentheses
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, 0, 1, 2, 3, 4)
 // CHECK-NEXT:{{^}}                                                          ^
 
@@ -143,12 +143,12 @@ ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, 0, 1, 2, 3, 4)
 // expected a closing parenthesis
 
 s_sendmsg sendmsg(2, 2, 0, 0)
-// CHECK: error: expected a closing parenthesis
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing parenthesis
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(2, 2, 0, 0)
 // CHECK-NEXT:{{^}}                         ^
 
 s_waitcnt vmcnt(0
-// CHECK: error: expected a closing parenthesis
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing parenthesis
 // CHECK-NEXT:{{^}}s_waitcnt vmcnt(0
 // CHECK-NEXT:{{^}}                 ^
 
@@ -156,52 +156,52 @@ s_waitcnt vmcnt(0
 // expected a closing square bracket
 
 s_mov_b32 s1, s[0 1
-// CHECK: error: expected a closing square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket
 // CHECK-NEXT:{{^}}s_mov_b32 s1, s[0 1
 // CHECK-NEXT:{{^}}                  ^
 
 s_mov_b32 s1, s[0 s0
-// CHECK: error: expected a closing square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket
 // CHECK-NEXT:{{^}}s_mov_b32 s1, s[0 s0
 // CHECK-NEXT:{{^}}                  ^
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_DATA_FORMAT_32,BUF_NUM_FORMAT_FLOAT,BUF_DATA_FORMAT_8]
-// CHECK: error: expected a closing square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket
 // CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_DATA_FORMAT_32,BUF_NUM_FORMAT_FLOAT,BUF_DATA_FORMAT_8]
 // CHECK-NEXT:{{^}}                                                                                                    ^
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_NUM_FORMAT_UINT
-// CHECK: error: expected a closing square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket
 // CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_NUM_FORMAT_UINT
 // CHECK-NEXT:{{^}}                                                                                ^
 
 v_max3_f16 v5, v1, v2, v3 op_sel:[1,1,1,1 1
-// CHECK: error: expected a closing square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket
 // CHECK-NEXT:{{^}}v_max3_f16 v5, v1, v2, v3 op_sel:[1,1,1,1 1
 // CHECK-NEXT:{{^}}                                          ^
 
 v_max3_f16 v5, v1, v2, v3 op_sel:[1,1,1,1,
-// CHECK: error: expected a closing square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket
 // CHECK-NEXT:{{^}}v_max3_f16 v5, v1, v2, v3 op_sel:[1,1,1,1,
 // CHECK-NEXT:{{^}}                                         ^
 
 v_max3_f16 v5, v1, v2, v3 op_sel:[1,1,1,1[
-// CHECK: error: expected a closing square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket
 // CHECK-NEXT:{{^}}v_max3_f16 v5, v1, v2, v3 op_sel:[1,1,1,1[
 // CHECK-NEXT:{{^}}                                         ^
 
 v_pk_add_u16 v1, v2, v3 op_sel:[0,0,0,0,0]
-// CHECK: error: expected a closing square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket
 // CHECK-NEXT:{{^}}v_pk_add_u16 v1, v2, v3 op_sel:[0,0,0,0,0]
 // CHECK-NEXT:{{^}}                                       ^
 
 v_mov_b32_dpp v5, v1 dpp8:[0,1,2,3,4,5,6,7)
-// CHECK: error: expected a closing square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 dpp8:[0,1,2,3,4,5,6,7)
 // CHECK-NEXT:{{^}}                                          ^
 
 v_mov_b32_dpp v5, v1 quad_perm:[3,2,1,0) row_mask:0x0 bank_mask:0x0
-// CHECK: error: expected a closing square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 quad_perm:[3,2,1,0) row_mask:0x0 bank_mask:0x0
 // CHECK-NEXT:{{^}}                                       ^
 
@@ -209,12 +209,12 @@ v_mov_b32_dpp v5, v1 quad_perm:[3,2,1,0) row_mask:0x0 bank_mask:0x0
 // expected a colon
 
 ds_swizzle_b32 v8, v2 offset
-// CHECK: error: expected a colon
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a colon
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset
 // CHECK-NEXT:{{^}}                            ^
 
 ds_swizzle_b32 v8, v2 offset-
-// CHECK: error: expected a colon
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a colon
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset-
 // CHECK-NEXT:{{^}}                            ^
 
@@ -222,32 +222,32 @@ ds_swizzle_b32 v8, v2 offset-
 // expected a comma
 
 ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM
-// CHECK: error: expected a comma
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a comma
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM
 // CHECK-NEXT:{{^}}                                              ^
 
 ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, 0, 1, 2)
-// CHECK: error: expected a comma
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a comma
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, 0, 1, 2)
 // CHECK-NEXT:{{^}}                                                       ^
 
 s_setreg_b32  hwreg(1,2 3), s2
-// CHECK: error: expected a comma
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a comma
 // CHECK-NEXT:{{^}}s_setreg_b32  hwreg(1,2 3), s2
 // CHECK-NEXT:{{^}}                        ^
 
 v_pk_add_u16 v1, v2, v3 op_sel:[0 0]
-// CHECK: error: expected a comma
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a comma
 // CHECK-NEXT:{{^}}v_pk_add_u16 v1, v2, v3 op_sel:[0 0]
 // CHECK-NEXT:{{^}}                                  ^
 
 v_mov_b32_dpp v5, v1 dpp8:[0,1,2,3,4,5,6]
-// CHECK: error: expected a comma
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a comma
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 dpp8:[0,1,2,3,4,5,6]
 // CHECK-NEXT:{{^}}                                        ^
 
 v_mov_b32_dpp v5, v1 quad_perm:[3,2] row_mask:0x0 bank_mask:0x0
-// CHECK: error: expected a comma
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a comma
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 quad_perm:[3,2] row_mask:0x0 bank_mask:0x0
 // CHECK-NEXT:{{^}}                                   ^
 
@@ -255,7 +255,7 @@ v_mov_b32_dpp v5, v1 quad_perm:[3,2] row_mask:0x0 bank_mask:0x0
 // expected a comma or a closing parenthesis
 
 s_setreg_b32  hwreg(1 2,3), s2
-// CHECK: error: expected a comma or a closing parenthesis
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a comma or a closing parenthesis
 // CHECK-NEXT:{{^}}s_setreg_b32  hwreg(1 2,3), s2
 // CHECK-NEXT:{{^}}                      ^
 
@@ -263,22 +263,22 @@ s_setreg_b32  hwreg(1 2,3), s2
 // expected a comma or a closing square bracket
 
 s_mov_b64 s[10:11], [s0
-// CHECK: error: expected a comma or a closing square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a comma or a closing square bracket
 // CHECK-NEXT:{{^}}s_mov_b64 s[10:11], [s0
 // CHECK-NEXT:{{^}}                       ^
 
 s_mov_b64 s[10:11], [s0,s1
-// CHECK: error: expected a comma or a closing square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a comma or a closing square bracket
 // CHECK-NEXT:{{^}}s_mov_b64 s[10:11], [s0,s1
 // CHECK-NEXT:{{^}}                          ^
 
 image_load_mip v[253:255], [v255, v254 dmask:0xe dim:1D
-// CHECK: error: expected a comma or a closing square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a comma or a closing square bracket
 // CHECK-NEXT:{{^}}image_load_mip v[253:255], [v255, v254 dmask:0xe dim:1D
 // CHECK-NEXT:{{^}}                                       ^
 
 image_load_mip v[253:255], [v255, v254
-// CHECK: error: expected a comma or a closing square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a comma or a closing square bracket
 // CHECK-NEXT:{{^}}image_load_mip v[253:255], [v255, v254
 // CHECK-NEXT:{{^}}                                      ^
 
@@ -286,22 +286,22 @@ image_load_mip v[253:255], [v255, v254
 // expected a counter name
 
 s_waitcnt vmcnt(0) & expcnt(0) & 1
-// CHECK: error: expected a counter name
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a counter name
 // CHECK-NEXT:{{^}}s_waitcnt vmcnt(0) & expcnt(0) & 1
 // CHECK-NEXT:{{^}}                                 ^
 
 s_waitcnt vmcnt(0) & expcnt(0) & lgkmcnt(0)&
-// CHECK: error: expected a counter name
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a counter name
 // CHECK-NEXT:{{^}}s_waitcnt vmcnt(0) & expcnt(0) & lgkmcnt(0)&
 // CHECK-NEXT:{{^}}                                            ^
 
 s_waitcnt vmcnt(0) & expcnt(0) 1
-// CHECK: error: expected a counter name
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a counter name
 // CHECK-NEXT:{{^}}s_waitcnt vmcnt(0) & expcnt(0) 1
 // CHECK-NEXT:{{^}}                               ^
 
 s_waitcnt vmcnt(0), expcnt(0), lgkmcnt(0),
-// CHECK: error: expected a counter name
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a counter name
 // CHECK-NEXT:{{^}}s_waitcnt vmcnt(0), expcnt(0), lgkmcnt(0),
 // CHECK-NEXT:{{^}}                                          ^
 
@@ -309,7 +309,7 @@ s_waitcnt vmcnt(0), expcnt(0), lgkmcnt(0),
 // expected a format string
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[]
-// CHECK: error: expected a format string
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a format string
 // CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[]
 // CHECK-NEXT:{{^}}                                                             ^
 
@@ -317,7 +317,7 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[]
 // expected a left parenthesis
 
 s_waitcnt vmcnt(0) & expcnt(0) & x
-// CHECK: error: expected a left parenthesis
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a left parenthesis
 // CHECK-NEXT:{{^}}s_waitcnt vmcnt(0) & expcnt(0) & x
 // CHECK-NEXT:{{^}}                                  ^
 
@@ -325,7 +325,7 @@ s_waitcnt vmcnt(0) & expcnt(0) & x
 // expected a left square bracket
 
 v_pk_add_u16 v1, v2, v3 op_sel:
-// CHECK: error: expected a left square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a left square bracket
 // CHECK-NEXT:{{^}}v_pk_add_u16 v1, v2, v3 op_sel:
 // CHECK-NEXT:{{^}}                               ^
 
@@ -333,12 +333,12 @@ v_pk_add_u16 v1, v2, v3 op_sel:
 // expected a register
 
 image_load v[0:3], [v4, v5, 6], s[8:15] dmask:0xf dim:3D unorm
-// CHECK: error: expected a register
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a register
 // CHECK-NEXT:{{^}}image_load v[0:3], [v4, v5, 6], s[8:15] dmask:0xf dim:3D unorm
 // CHECK-NEXT:{{^}}                            ^
 
 image_load v[0:3], [v4, v5, v], s[8:15] dmask:0xf dim:3D unorm
-// CHECK: error: expected a register
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a register
 // CHECK-NEXT:{{^}}image_load v[0:3], [v4, v5, v], s[8:15] dmask:0xf dim:3D unorm
 // CHECK-NEXT:{{^}}                            ^
 
@@ -346,7 +346,7 @@ image_load v[0:3], [v4, v5, v], s[8:15] dmask:0xf dim:3D unorm
 // expected a register or a list of registers
 
 s_mov_b32 s1, [s0, 1
-// CHECK: error: expected a register or a list of registers
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a register or a list of registers
 // CHECK-NEXT:{{^}}s_mov_b32 s1, [s0, 1
 // CHECK-NEXT:{{^}}                   ^
 
@@ -354,7 +354,7 @@ s_mov_b32 s1, [s0, 1
 // expected a single 32-bit register
 
 s_mov_b64 s[10:11], [s0,s[2:3]]
-// CHECK: error: expected a single 32-bit register
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a single 32-bit register
 // CHECK-NEXT:{{^}}s_mov_b64 s[10:11], [s0,s[2:3]]
 // CHECK-NEXT:{{^}}                        ^
 
@@ -362,7 +362,7 @@ s_mov_b64 s[10:11], [s0,s[2:3]]
 // expected a string
 
 ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, pppii)
-// CHECK: error: expected a string
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a string
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, pppii)
 // CHECK-NEXT:{{^}}                                                   ^
 
@@ -370,7 +370,7 @@ ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, pppii)
 // expected a swizzle mode
 
 ds_swizzle_b32 v8, v2 offset:swizzle(XXX,1)
-// CHECK: error: expected a swizzle mode
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a swizzle mode
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(XXX,1)
 // CHECK-NEXT:{{^}}                                     ^
 
@@ -378,37 +378,37 @@ ds_swizzle_b32 v8, v2 offset:swizzle(XXX,1)
 // expected absolute expression
 
 s_waitcnt vmcnt(x)
-// CHECK: error: expected absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected absolute expression
 // CHECK-NEXT:{{^}}s_waitcnt vmcnt(x)
 // CHECK-NEXT:{{^}}                ^
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], format:[BUF_DATA_FORMAT_32]
-// CHECK: error: expected absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected absolute expression
 // CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], format:[BUF_DATA_FORMAT_32]
 // CHECK-NEXT:{{^}}                                                         ^
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format: offset:52
-// CHECK: error: expected absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected absolute expression
 // CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format: offset:52
 // CHECK-NEXT:{{^}}                                                             ^
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:BUF_NUM_FORMAT_UINT]
-// CHECK: error: expected absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected absolute expression
 // CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:BUF_NUM_FORMAT_UINT]
 // CHECK-NEXT:{{^}}                                                            ^
 
 v_mov_b32_dpp v5, v1 dpp8:[0,1,2,x,4,5,6,7]
-// CHECK: error: expected absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected absolute expression
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 dpp8:[0,1,2,x,4,5,6,7]
 // CHECK-NEXT:{{^}}                                 ^
 
 v_mov_b32_dpp v5, v1 quad_perm:[3,x,1,0] row_mask:0x0 bank_mask:0x0
-// CHECK: error: expected absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected absolute expression
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 quad_perm:[3,x,1,0] row_mask:0x0 bank_mask:0x0
 // CHECK-NEXT:{{^}}                                  ^
 
 v_mov_b32_dpp v5, v1 row_share:x row_mask:0x0 bank_mask:0x0
-// CHECK: error: expected absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected absolute expression
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 row_share:x row_mask:0x0 bank_mask:0x0
 // CHECK-NEXT:{{^}}                               ^
 
@@ -416,7 +416,7 @@ v_mov_b32_dpp v5, v1 row_share:x row_mask:0x0 bank_mask:0x0
 // expected a message name or an absolute expression
 
 s_sendmsg sendmsg(MSG_GSX, GS_OP_CUT, 0)
-// CHECK: error: expected a message name or an absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a message name or an absolute expression
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(MSG_GSX, GS_OP_CUT, 0)
 // CHECK-NEXT:{{^}}                  ^
 
@@ -424,7 +424,7 @@ s_sendmsg sendmsg(MSG_GSX, GS_OP_CUT, 0)
 // expected a register name or an absolute expression
 
 s_setreg_b32  hwreg(HW_REG_WRONG), s2
-// CHECK: error: expected a register name or an absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a register name or an absolute expression
 // CHECK-NEXT:{{^}}s_setreg_b32  hwreg(HW_REG_WRONG), s2
 // CHECK-NEXT:{{^}}                    ^
 
@@ -432,7 +432,7 @@ s_setreg_b32  hwreg(HW_REG_WRONG), s2
 // expected a sendmsg macro or an absolute expression
 
 s_sendmsg undef
-// CHECK: error: expected a sendmsg macro or an absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a sendmsg macro or an absolute expression
 // CHECK-NEXT:{{^}}s_sendmsg undef
 // CHECK-NEXT:{{^}}          ^
 
@@ -440,7 +440,7 @@ s_sendmsg undef
 // expected a swizzle macro or an absolute expression
 
 ds_swizzle_b32 v8, v2 offset:SWZ(QUAD_PERM, 0, 1, 2, 3)
-// CHECK: error: expected a swizzle macro or an absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a swizzle macro or an absolute expression
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:SWZ(QUAD_PERM, 0, 1, 2, 3)
 // CHECK-NEXT:{{^}}                             ^
 
@@ -448,7 +448,7 @@ ds_swizzle_b32 v8, v2 offset:SWZ(QUAD_PERM, 0, 1, 2, 3)
 // expected a hwreg macro or an absolute expression
 
 s_setreg_b32 undef, s2
-// CHECK: error: expected a hwreg macro or an absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a hwreg macro or an absolute expression
 // CHECK-NEXT:{{^}}s_setreg_b32 undef, s2
 // CHECK-NEXT:{{^}}             ^
 
@@ -456,7 +456,7 @@ s_setreg_b32 undef, s2
 // expected an 11-bit unsigned offset
 
 flat_atomic_cmpswap v0, v[1:2], v[3:4] offset:4095 glc
-// CHECK: error: expected a 11-bit unsigned offset
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 11-bit unsigned offset
 // CHECK-NEXT:{{^}}flat_atomic_cmpswap v0, v[1:2], v[3:4] offset:4095 glc
 // CHECK-NEXT:{{^}}                                       ^
 
@@ -464,22 +464,22 @@ flat_atomic_cmpswap v0, v[1:2], v[3:4] offset:4095 glc
 // expected an absolute expression
 
 v_ceil_f32 v1, abs(u)
-// CHECK: error: expected an absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected an absolute expression
 // CHECK-NEXT:{{^}}v_ceil_f32 v1, abs(u)
 // CHECK-NEXT:{{^}}                   ^
 
 v_ceil_f32 v1, neg(u)
-// CHECK: error: expected an absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected an absolute expression
 // CHECK-NEXT:{{^}}v_ceil_f32 v1, neg(u)
 // CHECK-NEXT:{{^}}                   ^
 
 v_ceil_f32 v1, |u|
-// CHECK: error: expected an absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected an absolute expression
 // CHECK-NEXT:{{^}}v_ceil_f32 v1, |u|
 // CHECK-NEXT:{{^}}                ^
 
 v_mov_b32_sdwa v1, sext(u)
-// CHECK: error: expected an absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected an absolute expression
 // CHECK-NEXT:{{^}}v_mov_b32_sdwa v1, sext(u)
 // CHECK-NEXT:{{^}}                        ^
 
@@ -487,17 +487,17 @@ v_mov_b32_sdwa v1, sext(u)
 // expected an identifier
 
 v_mov_b32_sdwa v5, v1 dst_sel:
-// CHECK: error: expected an identifier
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected an identifier
 // CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_sel:
 // CHECK-NEXT:{{^}}                              ^
 
 v_mov_b32_sdwa v5, v1 dst_sel:0
-// CHECK: error: expected an identifier
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected an identifier
 // CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_sel:0
 // CHECK-NEXT:{{^}}                              ^
 
 v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:[UNUSED_PAD]
-// CHECK: error: expected an identifier
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected an identifier
 // CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:[UNUSED_PAD]
 // CHECK-NEXT:{{^}}                                               ^
 
@@ -505,12 +505,12 @@ v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:[UNUSED_PAD]
 // expected an opening square bracket
 
 v_mov_b32_dpp v5, v1 dpp8:(0,1,2,3,4,5,6,7)
-// CHECK: error: expected an opening square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected an opening square bracket
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 dpp8:(0,1,2,3,4,5,6,7)
 // CHECK-NEXT:{{^}}                          ^
 
 v_mov_b32_dpp v5, v1 quad_perm:(3,2,1,0) row_mask:0x0 bank_mask:0x0
-// CHECK: error: expected an opening square bracket
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected an opening square bracket
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 quad_perm:(3,2,1,0) row_mask:0x0 bank_mask:0x0
 // CHECK-NEXT:{{^}}                               ^
 
@@ -518,7 +518,7 @@ v_mov_b32_dpp v5, v1 quad_perm:(3,2,1,0) row_mask:0x0 bank_mask:0x0
 // expected an operation name or an absolute expression
 
 s_sendmsg sendmsg(MSG_GS, GS_OP_CUTX, 0)
-// CHECK: error: expected an operation name or an absolute expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected an operation name or an absolute expression
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(MSG_GS, GS_OP_CUTX, 0)
 // CHECK-NEXT:{{^}}                          ^
 
@@ -526,7 +526,7 @@ s_sendmsg sendmsg(MSG_GS, GS_OP_CUTX, 0)
 // failed parsing operand.
 
 v_ceil_f16 v0, abs(neg(1))
-// CHECK: error: failed parsing operand.
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: failed parsing operand.
 // CHECK-NEXT:{{^}}v_ceil_f16 v0, abs(neg(1))
 // CHECK-NEXT:{{^}}                   ^
 
@@ -534,7 +534,7 @@ v_ceil_f16 v0, abs(neg(1))
 // first register index should not exceed second index
 
 s_mov_b64 s[10:11], s[1:0]
-// CHECK: error: first register index should not exceed second index
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: first register index should not exceed second index
 // CHECK-NEXT:{{^}}s_mov_b64 s[10:11], s[1:0]
 // CHECK-NEXT:{{^}}                      ^
 
@@ -542,17 +542,17 @@ s_mov_b64 s[10:11], s[1:0]
 // group size must be a power of two
 
 ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,3,1)
-// CHECK: error: group size must be a power of two
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: group size must be a power of two
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,3,1)
 // CHECK-NEXT:{{^}}                                               ^
 
 ds_swizzle_b32 v8, v2 offset:swizzle(REVERSE,3)
-// CHECK: error: group size must be a power of two
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: group size must be a power of two
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(REVERSE,3)
 // CHECK-NEXT:{{^}}                                             ^
 
 ds_swizzle_b32 v8, v2 offset:swizzle(SWAP,3)
-// CHECK: error: group size must be a power of two
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: group size must be a power of two
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(SWAP,3)
 // CHECK-NEXT:{{^}}                                          ^
 
@@ -560,7 +560,7 @@ ds_swizzle_b32 v8, v2 offset:swizzle(SWAP,3)
 // group size must be in the interval [1,16]
 
 ds_swizzle_b32 v8, v2 offset:swizzle(SWAP,0)
-// CHECK: error: group size must be in the interval [1,16]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: group size must be in the interval [1,16]
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(SWAP,0)
 // CHECK-NEXT:{{^}}                                          ^
 
@@ -568,7 +568,7 @@ ds_swizzle_b32 v8, v2 offset:swizzle(SWAP,0)
 // group size must be in the interval [2,32]
 
 ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,1,0)
-// CHECK: error: group size must be in the interval [2,32]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: group size must be in the interval [2,32]
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,1,0)
 // CHECK-NEXT:{{^}}                                               ^
 
@@ -576,7 +576,7 @@ ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,1,0)
 // image address size does not match dim and a16
 
 image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D
-// CHECK: error: image address size does not match dim and a16
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: image address size does not match dim and a16
 // CHECK-NEXT:{{^}}image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D
 // CHECK-NEXT:{{^}}^
 
@@ -584,7 +584,7 @@ image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D
 // image data size does not match dmask, d16 and tfe
 
 image_load v[0:1], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D
-// CHECK: error: image data size does not match dmask, d16 and tfe
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: image data size does not match dmask, d16 and tfe
 // CHECK-NEXT:{{^}}image_load v[0:1], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D
 // CHECK-NEXT:{{^}}^
 
@@ -592,7 +592,7 @@ image_load v[0:1], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D
 // instruction must use glc
 
 flat_atomic_cmpswap v0, v[1:2], v[3:4] offset:2047
-// CHECK: error: instruction must use glc
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use glc
 // CHECK-NEXT:{{^}}flat_atomic_cmpswap v0, v[1:2], v[3:4] offset:2047
 // CHECK-NEXT:{{^}}^
 
@@ -600,7 +600,7 @@ flat_atomic_cmpswap v0, v[1:2], v[3:4] offset:2047
 // instruction not supported on this GPU
 
 s_cbranch_join 1
-// CHECK: error: instruction not supported on this GPU
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // CHECK-NEXT:{{^}}s_cbranch_join 1
 // CHECK-NEXT:{{^}}^
 
@@ -608,7 +608,7 @@ s_cbranch_join 1
 // invalid bit offset: only 5-bit values are legal
 
 s_getreg_b32  s2, hwreg(3,32,32)
-// CHECK: error: invalid bit offset: only 5-bit values are legal
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid bit offset: only 5-bit values are legal
 // CHECK-NEXT:{{^}}s_getreg_b32  s2, hwreg(3,32,32)
 // CHECK-NEXT:{{^}}                          ^
 
@@ -616,7 +616,7 @@ s_getreg_b32  s2, hwreg(3,32,32)
 // invalid bitfield width: only values from 1 to 32 are legal
 
 s_setreg_b32  hwreg(3,0,33), s2
-// CHECK: error: invalid bitfield width: only values from 1 to 32 are legal
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid bitfield width: only values from 1 to 32 are legal
 // CHECK-NEXT:{{^}}s_setreg_b32  hwreg(3,0,33), s2
 // CHECK-NEXT:{{^}}                        ^
 
@@ -624,7 +624,7 @@ s_setreg_b32  hwreg(3,0,33), s2
 // invalid code of hardware register: only 6-bit values are legal
 
 s_setreg_b32  hwreg(0x40), s2
-// CHECK: error: invalid code of hardware register: only 6-bit values are legal
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid code of hardware register: only 6-bit values are legal
 // CHECK-NEXT:{{^}}s_setreg_b32  hwreg(0x40), s2
 // CHECK-NEXT:{{^}}                    ^
 
@@ -632,7 +632,7 @@ s_setreg_b32  hwreg(0x40), s2
 // invalid counter name x
 
 s_waitcnt vmcnt(0) & expcnt(0) x(0)
-// CHECK: error: invalid counter name x
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid counter name x
 // CHECK-NEXT:{{^}}s_waitcnt vmcnt(0) & expcnt(0) x(0)
 // CHECK-NEXT:{{^}}                               ^
 
@@ -640,17 +640,17 @@ s_waitcnt vmcnt(0) & expcnt(0) x(0)
 // invalid dim value
 
 image_load v[0:1], v0, s[0:7] dmask:0x9 dim:1 D
-// CHECK: error: invalid dim value
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid dim value
 // CHECK-NEXT:{{^}}image_load v[0:1], v0, s[0:7] dmask:0x9 dim:1 D
 // CHECK-NEXT:{{^}}                                            ^
 
 image_atomic_xor v4, v32, s[96:103] dmask:0x1 dim:, glc
-// CHECK: error: invalid dim value
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid dim value
 // CHECK-NEXT:{{^}}image_atomic_xor v4, v32, s[96:103] dmask:0x1 dim:, glc
 // CHECK-NEXT:{{^}}                                                  ^
 
 image_load v[0:1], v0, s[0:7] dmask:0x9 dim:7D
-// CHECK: error: invalid dim value
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid dim value
 // CHECK-NEXT:{{^}}image_load v[0:1], v0, s[0:7] dmask:0x9 dim:7D
 // CHECK-NEXT:{{^}}                                            ^
 
@@ -658,7 +658,7 @@ image_load v[0:1], v0, s[0:7] dmask:0x9 dim:7D
 // invalid dst_sel value
 
 v_mov_b32_sdwa v5, v1 dst_sel:WORD
-// CHECK: error: invalid dst_sel value
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid dst_sel value
 // CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_sel:WORD
 // CHECK-NEXT:{{^}}                              ^
 
@@ -666,7 +666,7 @@ v_mov_b32_sdwa v5, v1 dst_sel:WORD
 // invalid dst_unused value
 
 v_mov_b32_sdwa v5, v1 dst_unused:UNUSED
-// CHECK: error: invalid dst_unused value
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid dst_unused value
 // CHECK-NEXT:{{^}}v_mov_b32_sdwa v5, v1 dst_unused:UNUSED
 // CHECK-NEXT:{{^}}                                 ^
 
@@ -674,12 +674,12 @@ v_mov_b32_sdwa v5, v1 dst_unused:UNUSED
 // invalid exp target
 
 exp invalid_target_10 v3, v2, v1, v0
-// CHECK: error: invalid exp target
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid exp target
 // CHECK-NEXT:{{^}}exp invalid_target_10 v3, v2, v1, v0
 // CHECK-NEXT:{{^}}    ^
 
 exp pos00 v3, v2, v1, v0
-// CHECK: error: invalid exp target
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid exp target
 // CHECK-NEXT:{{^}}exp pos00 v3, v2, v1, v0
 // CHECK-NEXT:{{^}}    ^
 
@@ -687,7 +687,7 @@ exp pos00 v3, v2, v1, v0
 // invalid immediate: only 16-bit values are legal
 
 s_setreg_b32  0x1f803, s2
-// CHECK: error: invalid immediate: only 16-bit values are legal
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid immediate: only 16-bit values are legal
 // CHECK-NEXT:{{^}}s_setreg_b32  0x1f803, s2
 // CHECK-NEXT:{{^}}              ^
 
@@ -695,7 +695,7 @@ s_setreg_b32  0x1f803, s2
 // invalid instruction
 
 v_dot_f32_f16 v0, v1, v2
-// CHECK: error: invalid instruction
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid instruction
 // CHECK-NEXT:{{^}}v_dot_f32_f16 v0, v1, v2
 // CHECK-NEXT:{{^}}^
 
@@ -703,7 +703,7 @@ v_dot_f32_f16 v0, v1, v2
 // invalid interpolation attribute
 
 v_interp_p2_f32 v0, v1, att
-// CHECK: error: invalid interpolation attribute
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid interpolation attribute
 // CHECK-NEXT:{{^}}v_interp_p2_f32 v0, v1, att
 // CHECK-NEXT:{{^}}                        ^
 
@@ -711,7 +711,7 @@ v_interp_p2_f32 v0, v1, att
 // invalid interpolation slot
 
 v_interp_mov_f32 v8, p1, attr0.x
-// CHECK: error: invalid interpolation slot
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid interpolation slot
 // CHECK-NEXT:{{^}}v_interp_mov_f32 v8, p1, attr0.x
 // CHECK-NEXT:{{^}}                     ^
 
@@ -719,7 +719,7 @@ v_interp_mov_f32 v8, p1, attr0.x
 // invalid mask
 
 ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "pppi2")
-// CHECK: error: invalid mask
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid mask
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "pppi2")
 // CHECK-NEXT:{{^}}                                                   ^
 
@@ -727,7 +727,7 @@ ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "pppi2")
 // invalid message id
 
 s_sendmsg sendmsg(-1)
-// CHECK: error: invalid message id
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid message id
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(-1)
 // CHECK-NEXT:{{^}}                  ^
 
@@ -735,12 +735,12 @@ s_sendmsg sendmsg(-1)
 // invalid message stream id
 
 s_sendmsg sendmsg(2, 2, 4)
-// CHECK: error: invalid message stream id
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid message stream id
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(2, 2, 4)
 // CHECK-NEXT:{{^}}                        ^
 
 s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 4)
-// CHECK: error: invalid message stream id
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid message stream id
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 4)
 // CHECK-NEXT:{{^}}                                     ^
 
@@ -748,7 +748,7 @@ s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 4)
 // invalid mul value.
 
 v_cvt_f64_i32 v[5:6], s1 mul:3
-// CHECK: error: invalid mul value.
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid mul value.
 // CHECK-NEXT:{{^}}v_cvt_f64_i32 v[5:6], s1 mul:3
 // CHECK-NEXT:{{^}}                         ^
 
@@ -756,7 +756,7 @@ v_cvt_f64_i32 v[5:6], s1 mul:3
 // invalid or missing interpolation attribute channel
 
 v_interp_p2_f32 v0, v1, attr0.q
-// CHECK: error: invalid or missing interpolation attribute channel
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid or missing interpolation attribute channel
 // CHECK-NEXT:{{^}}v_interp_p2_f32 v0, v1, attr0.q
 // CHECK-NEXT:{{^}}                        ^
 
@@ -764,7 +764,7 @@ v_interp_p2_f32 v0, v1, attr0.q
 // invalid or missing interpolation attribute number
 
 v_interp_p2_f32 v7, v1, attr.x
-// CHECK: error: invalid or missing interpolation attribute number
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid or missing interpolation attribute number
 // CHECK-NEXT:{{^}}v_interp_p2_f32 v7, v1, attr.x
 // CHECK-NEXT:{{^}}                        ^
 
@@ -772,7 +772,7 @@ v_interp_p2_f32 v7, v1, attr.x
 // invalid op_sel operand
 
 v_permlane16_b32 v5, v1, s2, s3 op_sel:[0, 0, 0, 1]
-// CHECK: error: invalid op_sel operand
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel operand
 // CHECK-NEXT:{{^}}v_permlane16_b32 v5, v1, s2, s3 op_sel:[0, 0, 0, 1]
 // CHECK-NEXT:{{^}}                                ^
 
@@ -780,7 +780,7 @@ v_permlane16_b32 v5, v1, s2, s3 op_sel:[0, 0, 0, 1]
 // invalid op_sel value.
 
 v_pk_add_u16 v1, v2, v3 op_sel:[-1,0]
-// CHECK: error: invalid op_sel value.
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid op_sel value.
 // CHECK-NEXT:{{^}}v_pk_add_u16 v1, v2, v3 op_sel:[-1,0]
 // CHECK-NEXT:{{^}}                                ^
 
@@ -788,42 +788,42 @@ v_pk_add_u16 v1, v2, v3 op_sel:[-1,0]
 // invalid operand (violates constant bus restrictions)
 
 v_ashrrev_i64 v[0:1], 0x100, s[0:1]
-// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 // CHECK-NEXT:{{^}}v_ashrrev_i64 v[0:1], 0x100, s[0:1]
 // CHECK-NEXT:{{^}}                             ^
 
 v_ashrrev_i64 v[0:1], s3, s[0:1]
-// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 // CHECK-NEXT:{{^}}v_ashrrev_i64 v[0:1], s3, s[0:1]
 // CHECK-NEXT:{{^}}                          ^
 
 v_bfe_u32 v0, s1, 0x3039, s2
-// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 // CHECK-NEXT:{{^}}v_bfe_u32 v0, s1, 0x3039, s2
 // CHECK-NEXT:{{^}}                          ^
 
 v_bfe_u32 v0, s1, s2, s3
-// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 // CHECK-NEXT:{{^}}v_bfe_u32 v0, s1, s2, s3
 // CHECK-NEXT:{{^}}                      ^
 
 v_div_fmas_f32 v5, s3, 0x123, v3
-// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 // CHECK-NEXT:{{^}}v_div_fmas_f32 v5, s3, 0x123, v3
 // CHECK-NEXT:{{^}}                       ^
 
 v_div_fmas_f32 v5, s3, v3, 0x123
-// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 // CHECK-NEXT:{{^}}v_div_fmas_f32 v5, s3, v3, 0x123
 // CHECK-NEXT:{{^}}                           ^
 
 v_div_fmas_f32 v5, 0x123, v3, s3
-// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 // CHECK-NEXT:{{^}}v_div_fmas_f32 v5, 0x123, v3, s3
 // CHECK-NEXT:{{^}}                              ^
 
 v_div_fmas_f32 v5, s3, s4, v3
-// CHECK: error: invalid operand (violates constant bus restrictions)
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 // CHECK-NEXT:{{^}}v_div_fmas_f32 v5, s3, s4, v3
 // CHECK-NEXT:{{^}}                       ^
 
@@ -831,17 +831,17 @@ v_div_fmas_f32 v5, s3, s4, v3
 // invalid operand for instruction
 
 buffer_load_dword v[5:6], off, s[8:11], s3 tfe lds
-// CHECK: error: invalid operand for instruction
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT:{{^}}buffer_load_dword v[5:6], off, s[8:11], s3 tfe lds
 // CHECK-NEXT:{{^}}                                               ^
 
 exp mrt0 0x12345678, v0, v0, v0
-// CHECK: error: invalid operand for instruction
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT:{{^}}exp mrt0 0x12345678, v0, v0, v0
 // CHECK-NEXT:{{^}}         ^
 
 v_cmp_eq_f32 s[0:1], private_base, s0
-// CHECK: error: invalid operand for instruction
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT:{{^}}v_cmp_eq_f32 s[0:1], private_base, s0
 // CHECK-NEXT:{{^}}             ^
 
@@ -849,7 +849,7 @@ v_cmp_eq_f32 s[0:1], private_base, s0
 // invalid operation id
 
 s_sendmsg sendmsg(15, -1)
-// CHECK: error: invalid operation id
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operation id
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(15, -1)
 // CHECK-NEXT:{{^}}                      ^
 
@@ -857,7 +857,7 @@ s_sendmsg sendmsg(15, -1)
 // invalid or unsupported register size
 
 s_mov_b64 s[0:17], -1
-// CHECK: error: invalid or unsupported register size
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid or unsupported register size
 // CHECK-NEXT:{{^}}s_mov_b64 s[0:17], -1
 // CHECK-NEXT:{{^}}          ^
 
@@ -865,7 +865,7 @@ s_mov_b64 s[0:17], -1
 // invalid register alignment
 
 s_load_dwordx4 s[1:4], s[2:3], s4
-// CHECK: error: invalid register alignment
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
 // CHECK-NEXT:{{^}}s_load_dwordx4 s[1:4], s[2:3], s4
 // CHECK-NEXT:{{^}}               ^
 
@@ -873,12 +873,12 @@ s_load_dwordx4 s[1:4], s[2:3], s4
 // invalid register index
 
 s_mov_b32 s1, s[0:-1]
-// CHECK: error: invalid register index
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register index
 // CHECK-NEXT:{{^}}s_mov_b32 s1, s[0:-1]
 // CHECK-NEXT:{{^}}                  ^
 
 v_add_f64 v[0:1], v[0:1], v[0xF00000001:0x2]
-// CHECK: error: invalid register index
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register index
 // CHECK-NEXT:{{^}}v_add_f64 v[0:1], v[0:1], v[0xF00000001:0x2]
 // CHECK-NEXT:{{^}}                            ^
 
@@ -886,7 +886,7 @@ v_add_f64 v[0:1], v[0:1], v[0xF00000001:0x2]
 // invalid register name
 
 s_mov_b64 s[10:11], [x0,s1]
-// CHECK: error: invalid register name
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register name
 // CHECK-NEXT:{{^}}s_mov_b64 s[10:11], [x0,s1]
 // CHECK-NEXT:{{^}}                     ^
 
@@ -894,12 +894,12 @@ s_mov_b64 s[10:11], [x0,s1]
 // invalid row_share value
 
 v_mov_b32_dpp v5, v1 row_share:16 row_mask:0x0 bank_mask:0x0
-// CHECK: error: invalid row_share value
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid row_share value
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 row_share:16 row_mask:0x0 bank_mask:0x0
 // CHECK-NEXT:{{^}}                               ^
 
 v_mov_b32_dpp v5, v1 row_share:-1 row_mask:0x0 bank_mask:0x0
-// CHECK: error: invalid row_share value
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid row_share value
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 row_share:-1 row_mask:0x0 bank_mask:0x0
 // CHECK-NEXT:{{^}}                               ^
 
@@ -907,7 +907,7 @@ v_mov_b32_dpp v5, v1 row_share:-1 row_mask:0x0 bank_mask:0x0
 // invalid syntax, expected 'neg' modifier
 
 v_ceil_f32 v0, --1
-// CHECK: error: invalid syntax, expected 'neg' modifier
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid syntax, expected 'neg' modifier
 // CHECK-NEXT:{{^}}v_ceil_f32 v0, --1
 // CHECK-NEXT:{{^}}               ^
 
@@ -915,7 +915,7 @@ v_ceil_f32 v0, --1
 // lane id must be in the interval [0,group size - 1]
 
 ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,2,-1)
-// CHECK: error: lane id must be in the interval [0,group size - 1]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: lane id must be in the interval [0,group size - 1]
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,2,-1)
 // CHECK-NEXT:{{^}}                                                 ^
 
@@ -923,22 +923,22 @@ ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,2,-1)
 // lds_direct cannot be used with this instruction
 
 v_ashrrev_i16 v0, lds_direct, v0
-// CHECK: error: lds_direct cannot be used with this instruction
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: lds_direct cannot be used with this instruction
 // CHECK-NEXT:{{^}}v_ashrrev_i16 v0, lds_direct, v0
 // CHECK-NEXT:{{^}}                  ^
 
 v_ashrrev_i16 v0, v1, lds_direct
-// CHECK: error: lds_direct cannot be used with this instruction
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: lds_direct cannot be used with this instruction
 // CHECK-NEXT:{{^}}v_ashrrev_i16 v0, v1, lds_direct
 // CHECK-NEXT:{{^}}                      ^
 
 v_mov_b32_sdwa v1, src_lds_direct dst_sel:DWORD
-// CHECK: error: lds_direct cannot be used with this instruction
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: lds_direct cannot be used with this instruction
 // CHECK-NEXT:{{^}}v_mov_b32_sdwa v1, src_lds_direct dst_sel:DWORD
 // CHECK-NEXT:{{^}}                   ^
 
 v_add_f32_sdwa v5, v1, lds_direct dst_sel:DWORD
-// CHECK: error: lds_direct cannot be used with this instruction
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: lds_direct cannot be used with this instruction
 // CHECK-NEXT:{{^}}v_add_f32_sdwa v5, v1, lds_direct dst_sel:DWORD
 // CHECK-NEXT:{{^}}                       ^
 
@@ -946,7 +946,7 @@ v_add_f32_sdwa v5, v1, lds_direct dst_sel:DWORD
 // lds_direct may be used as src0 only
 
 v_add_f32 v5, v1, lds_direct
-// CHECK: error: lds_direct may be used as src0 only
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: lds_direct may be used as src0 only
 // CHECK-NEXT:{{^}}v_add_f32 v5, v1, lds_direct
 // CHECK-NEXT:{{^}}                  ^
 
@@ -954,7 +954,7 @@ v_add_f32 v5, v1, lds_direct
 // message does not support operations
 
 s_sendmsg sendmsg(MSG_GS_ALLOC_REQ, 0)
-// CHECK: error: message does not support operations
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: message does not support operations
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(MSG_GS_ALLOC_REQ, 0)
 // CHECK-NEXT:{{^}}                                    ^
 
@@ -962,7 +962,7 @@ s_sendmsg sendmsg(MSG_GS_ALLOC_REQ, 0)
 // message operation does not support streams
 
 s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP, 0)
-// CHECK: error: message operation does not support streams
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: message operation does not support streams
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP, 0)
 // CHECK-NEXT:{{^}}                                          ^
 
@@ -970,7 +970,7 @@ s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP, 0)
 // missing message operation
 
 s_sendmsg sendmsg(MSG_SYSMSG)
-// CHECK: error: missing message operation
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: missing message operation
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(MSG_SYSMSG)
 // CHECK-NEXT:{{^}}                  ^
 
@@ -978,12 +978,12 @@ s_sendmsg sendmsg(MSG_SYSMSG)
 // missing register index
 
 s_mov_b64 s[10:11], [s
-// CHECK: error: missing register index
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: missing register index
 // CHECK-NEXT:{{^}}s_mov_b64 s[10:11], [s
 // CHECK-NEXT:{{^}}                      ^
 
 s_mov_b64 s[10:11], [s,s1]
-// CHECK: error: missing register index
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: missing register index
 // CHECK-NEXT:{{^}}s_mov_b64 s[10:11], [s,s1]
 // CHECK-NEXT:{{^}}                      ^
 
@@ -991,12 +991,12 @@ s_mov_b64 s[10:11], [s,s1]
 // not a valid operand.
 
 s_branch offset:1
-// CHECK: error: not a valid operand.
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // CHECK-NEXT:{{^}}s_branch offset:1
 // CHECK-NEXT:{{^}}         ^
 
 v_mov_b32 v0, v0 row_bcast:0
-// CHECK: error: not a valid operand.
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // CHECK-NEXT:{{^}}v_mov_b32 v0, v0 row_bcast:0
 // CHECK-NEXT:{{^}}                 ^
 
@@ -1004,47 +1004,47 @@ v_mov_b32 v0, v0 row_bcast:0
 // only one unique literal operand is allowed
 
 s_and_b32 s2, 0x12345678, 0x12345679
-// CHECK: error: only one unique literal operand is allowed
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}s_and_b32 s2, 0x12345678, 0x12345679
 // CHECK-NEXT:{{^}}                          ^
 
 v_add_f64 v[0:1], 1.23456, -abs(1.2345)
-// CHECK: error: only one unique literal operand is allowed
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}v_add_f64 v[0:1], 1.23456, -abs(1.2345)
 // CHECK-NEXT:{{^}}                                ^
 
 v_min3_i16 v5, 0x5678, 0x5678, 0x5679
-// CHECK: error: only one unique literal operand is allowed
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}v_min3_i16 v5, 0x5678, 0x5678, 0x5679
 // CHECK-NEXT:{{^}}                               ^
 
 v_pk_add_f16 v1, 25.0, 25.1
-// CHECK: error: only one unique literal operand is allowed
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}v_pk_add_f16 v1, 25.0, 25.1
 // CHECK-NEXT:{{^}}                       ^
 
 v_fma_mix_f32 v5, 0x7c, 0x7b, 1
-// CHECK: error: only one unique literal operand is allowed
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}v_fma_mix_f32 v5, 0x7c, 0x7b, 1
 // CHECK-NEXT:{{^}}                        ^
 
 v_pk_add_i16 v5, 0x7c, 0x4000
-// CHECK: error: only one unique literal operand is allowed
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}v_pk_add_i16 v5, 0x7c, 0x4000
 // CHECK-NEXT:{{^}}                       ^
 
 v_pk_add_i16 v5, 0x4400, 0x4000
-// CHECK: error: only one unique literal operand is allowed
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}v_pk_add_i16 v5, 0x4400, 0x4000
 // CHECK-NEXT:{{^}}                         ^
 
 v_bfe_u32 v0, v2, 123, undef
-// CHECK: error: only one unique literal operand is allowed
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}v_bfe_u32 v0, v2, 123, undef
 // CHECK-NEXT:{{^}}                       ^
 
 v_bfe_u32 v0, v2, undef, 123
-// CHECK: error: only one unique literal operand is allowed
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}v_bfe_u32 v0, v2, undef, 123
 // CHECK-NEXT:{{^}}                         ^
 
@@ -1052,7 +1052,7 @@ v_bfe_u32 v0, v2, undef, 123
 // out of bounds interpolation attribute number
 
 v_interp_p1_f32 v0, v1, attr64.w
-// CHECK: error: out of bounds interpolation attribute number
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: out of bounds interpolation attribute number
 // CHECK-NEXT:{{^}}v_interp_p1_f32 v0, v1, attr64.w
 // CHECK-NEXT:{{^}}                        ^
 
@@ -1060,7 +1060,7 @@ v_interp_p1_f32 v0, v1, attr64.w
 // out of range format
 
 tbuffer_load_format_d16_x v0, off, s[0:3], format:-1, 0
-// CHECK: error: out of range format
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: out of range format
 // CHECK-NEXT:{{^}}tbuffer_load_format_d16_x v0, off, s[0:3], format:-1, 0
 // CHECK-NEXT:{{^}}                                           ^
 
@@ -1068,12 +1068,12 @@ tbuffer_load_format_d16_x v0, off, s[0:3], format:-1, 0
 // register does not fit in the list
 
 s_mov_b64 s[10:11], [exec,exec_lo]
-// CHECK: error: register does not fit in the list
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: register does not fit in the list
 // CHECK-NEXT:{{^}}s_mov_b64 s[10:11], [exec,exec_lo]
 // CHECK-NEXT:{{^}}                          ^
 
 s_mov_b64 s[10:11], [exec_lo,exec]
-// CHECK: error: register does not fit in the list
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: register does not fit in the list
 // CHECK-NEXT:{{^}}s_mov_b64 s[10:11], [exec_lo,exec]
 // CHECK-NEXT:{{^}}                             ^
 
@@ -1081,22 +1081,22 @@ s_mov_b64 s[10:11], [exec_lo,exec]
 // register index is out of range
 
 s_add_i32 s106, s0, s1
-// CHECK: error: register index is out of range
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: register index is out of range
 // CHECK-NEXT:{{^}}s_add_i32 s106, s0, s1
 // CHECK-NEXT:{{^}}          ^
 
 s_load_dwordx16 s[100:115], s[2:3], s4
-// CHECK: error: register index is out of range
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: register index is out of range
 // CHECK-NEXT:{{^}}s_load_dwordx16 s[100:115], s[2:3], s4
 // CHECK-NEXT:{{^}}                ^
 
 s_mov_b32 ttmp16, 0
-// CHECK: error: register index is out of range
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: register index is out of range
 // CHECK-NEXT:{{^}}s_mov_b32 ttmp16, 0
 // CHECK-NEXT:{{^}}          ^
 
 v_add_nc_i32 v256, v0, v1
-// CHECK: error: register index is out of range
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: register index is out of range
 // CHECK-NEXT:{{^}}v_add_nc_i32 v256, v0, v1
 // CHECK-NEXT:{{^}}             ^
 
@@ -1104,12 +1104,12 @@ v_add_nc_i32 v256, v0, v1
 // register not available on this GPU
 
 s_and_b32     ttmp9, tma_hi, 0x0000ffff
-// CHECK: error: register not available on this GPU
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
 // CHECK-NEXT:{{^}}s_and_b32     ttmp9, tma_hi, 0x0000ffff
 // CHECK-NEXT:{{^}}                     ^
 
 s_mov_b32 flat_scratch, -1
-// CHECK: error: register not available on this GPU
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
 // CHECK-NEXT:{{^}}s_mov_b32 flat_scratch, -1
 // CHECK-NEXT:{{^}}          ^
 
@@ -1117,7 +1117,7 @@ s_mov_b32 flat_scratch, -1
 // registers in a list must be of the same kind
 
 s_mov_b64 s[10:11], [a0,v1]
-// CHECK: error: registers in a list must be of the same kind
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: registers in a list must be of the same kind
 // CHECK-NEXT:{{^}}s_mov_b64 s[10:11], [a0,v1]
 // CHECK-NEXT:{{^}}                        ^
 
@@ -1125,17 +1125,17 @@ s_mov_b64 s[10:11], [a0,v1]
 // registers in a list must have consecutive indices
 
 s_mov_b64 s[10:11], [a0,a2]
-// CHECK: error: registers in a list must have consecutive indices
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: registers in a list must have consecutive indices
 // CHECK-NEXT:{{^}}s_mov_b64 s[10:11], [a0,a2]
 // CHECK-NEXT:{{^}}                        ^
 
 s_mov_b64 s[10:11], [s0,s0]
-// CHECK: error: registers in a list must have consecutive indices
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: registers in a list must have consecutive indices
 // CHECK-NEXT:{{^}}s_mov_b64 s[10:11], [s0,s0]
 // CHECK-NEXT:{{^}}                        ^
 
 s_mov_b64 s[10:11], [s2,s1]
-// CHECK: error: registers in a list must have consecutive indices
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: registers in a list must have consecutive indices
 // CHECK-NEXT:{{^}}s_mov_b64 s[10:11], [s2,s1]
 // CHECK-NEXT:{{^}}                        ^
 
@@ -1143,17 +1143,17 @@ s_mov_b64 s[10:11], [s2,s1]
 // source operand must be a VGPR
 
 v_movrels_b32_sdwa v0, 1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD
-// CHECK: error: source operand must be a VGPR
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: source operand must be a VGPR
 // CHECK-NEXT:{{^}}v_movrels_b32_sdwa v0, 1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD
 // CHECK-NEXT:{{^}}                       ^
 
 v_movrels_b32_sdwa v0, s0
-// CHECK: error: source operand must be a VGPR
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: source operand must be a VGPR
 // CHECK-NEXT:{{^}}v_movrels_b32_sdwa v0, s0
 // CHECK-NEXT:{{^}}                       ^
 
 v_movrels_b32_sdwa v0, shared_base
-// CHECK: error: source operand must be a VGPR
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: source operand must be a VGPR
 // CHECK-NEXT:{{^}}v_movrels_b32_sdwa v0, shared_base
 // CHECK-NEXT:{{^}}                       ^
 
@@ -1161,7 +1161,7 @@ v_movrels_b32_sdwa v0, shared_base
 // specified hardware register is not supported on this GPU
 
 s_getreg_b32 s2, hwreg(HW_REG_SHADER_CYCLES)
-// CHECK: error: specified hardware register is not supported on this GPU
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
 // CHECK-NEXT:{{^}}s_getreg_b32 s2, hwreg(HW_REG_SHADER_CYCLES)
 // CHECK-NEXT:{{^}}                       ^
 
@@ -1169,22 +1169,22 @@ s_getreg_b32 s2, hwreg(HW_REG_SHADER_CYCLES)
 // too few operands for instruction
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7]
-// CHECK: error: too few operands for instruction
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: too few operands for instruction
 // CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7]
 // CHECK-NEXT:{{^}}^
 
 v_add_f32_e64 v0, v1
-// CHECK: error: too few operands for instruction
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: too few operands for instruction
 // CHECK-NEXT:{{^}}v_add_f32_e64 v0, v1
 // CHECK-NEXT:{{^}}^
 
 buffer_load_dword off, s[8:11], s3
-// CHECK: error: too few operands for instruction
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: too few operands for instruction
 // CHECK-NEXT:{{^}}buffer_load_dword off, s[8:11], s3
 // CHECK-NEXT:{{^}}^
 
 buffer_load_dword off, s[8:11], s3 offset:1
-// CHECK: error: too few operands for instruction
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: too few operands for instruction
 // CHECK-NEXT:{{^}}buffer_load_dword off, s[8:11], s3 offset:1
 // CHECK-NEXT:{{^}}^
 
@@ -1192,7 +1192,7 @@ buffer_load_dword off, s[8:11], s3 offset:1
 // too large value for expcnt
 
 s_waitcnt expcnt(8)
-// CHECK: error: too large value for expcnt
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: too large value for expcnt
 // CHECK-NEXT:{{^}}s_waitcnt expcnt(8)
 // CHECK-NEXT:{{^}}                 ^
 
@@ -1200,7 +1200,7 @@ s_waitcnt expcnt(8)
 // too large value for lgkmcnt
 
 s_waitcnt lgkmcnt(64)
-// CHECK: error: too large value for lgkmcnt
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: too large value for lgkmcnt
 // CHECK-NEXT:{{^}}s_waitcnt lgkmcnt(64)
 // CHECK-NEXT:{{^}}                  ^
 
@@ -1208,7 +1208,7 @@ s_waitcnt lgkmcnt(64)
 // too large value for vmcnt
 
 s_waitcnt vmcnt(64)
-// CHECK: error: too large value for vmcnt
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: too large value for vmcnt
 // CHECK-NEXT:{{^}}s_waitcnt vmcnt(64)
 // CHECK-NEXT:{{^}}                ^
 
@@ -1216,47 +1216,47 @@ s_waitcnt vmcnt(64)
 // unknown token in expression
 
 ds_swizzle_b32 v8, v2 offset:
-// CHECK: error: unknown token in expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:
 // CHECK-NEXT:{{^}}                             ^
 
 s_sendmsg sendmsg(1 -)
-// CHECK: error: unknown token in expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 // CHECK-NEXT:{{^}}s_sendmsg sendmsg(1 -)
 // CHECK-NEXT:{{^}}                     ^
 
 tbuffer_load_format_d16_x v0, off, s[0:3], format:1,, s0
-// CHECK: error: unknown token in expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 // CHECK-NEXT:{{^}}tbuffer_load_format_d16_x v0, off, s[0:3], format:1,, s0
 // CHECK-NEXT:{{^}}                                                    ^
 
 tbuffer_load_format_d16_x v0, off, s[0:3], format:1:, s0
-// CHECK: error: unknown token in expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 // CHECK-NEXT:{{^}}tbuffer_load_format_d16_x v0, off, s[0:3], format:1:, s0
 // CHECK-NEXT:{{^}}                                                   ^
 
 v_pk_add_u16 v1, v2, v3 op_sel:[
-// CHECK: error: unknown token in expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 // CHECK-NEXT:{{^}}v_pk_add_u16 v1, v2, v3 op_sel:[
 // CHECK-NEXT:{{^}}                                ^
 
 v_pk_add_u16 v1, v2, v3 op_sel:[,0]
-// CHECK: error: unknown token in expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 // CHECK-NEXT:{{^}}v_pk_add_u16 v1, v2, v3 op_sel:[,0]
 // CHECK-NEXT:{{^}}                                ^
 
 v_pk_add_u16 v1, v2, v3 op_sel:[,]
-// CHECK: error: unknown token in expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 // CHECK-NEXT:{{^}}v_pk_add_u16 v1, v2, v3 op_sel:[,]
 // CHECK-NEXT:{{^}}                                ^
 
 v_pk_add_u16 v1, v2, v3 op_sel:[0,]
-// CHECK: error: unknown token in expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 // CHECK-NEXT:{{^}}v_pk_add_u16 v1, v2, v3 op_sel:[0,]
 // CHECK-NEXT:{{^}}                                  ^
 
 v_pk_add_u16 v1, v2, v3 op_sel:[]
-// CHECK: error: unknown token in expression
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 // CHECK-NEXT:{{^}}v_pk_add_u16 v1, v2, v3 op_sel:[]
 // CHECK-NEXT:{{^}}                                ^
 
@@ -1264,7 +1264,7 @@ v_pk_add_u16 v1, v2, v3 op_sel:[]
 // unsupported format
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_DATA_FORMAT]
-// CHECK: error: unsupported format
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: unsupported format
 // CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_DATA_FORMAT]
 // CHECK-NEXT:{{^}}                                                             ^
 
@@ -1272,7 +1272,7 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_DATA_FORMAT]
 // expected vertical bar
 
 v_ceil_f32 v1, |1+1|
-// CHECK: error: expected vertical bar
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected vertical bar
 // CHECK-NEXT:{{^}}v_ceil_f32 v1, |1+1|
 // CHECK-NEXT:{{^}}                 ^
 
@@ -1280,7 +1280,7 @@ v_ceil_f32 v1, |1+1|
 // expected left paren after neg
 
 v_ceil_f32 v1, neg-(v2)
-// CHECK: error: expected left paren after neg
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected left paren after neg
 // CHECK-NEXT:{{^}}v_ceil_f32 v1, neg-(v2)
 // CHECK-NEXT:{{^}}                  ^
 
@@ -1288,7 +1288,7 @@ v_ceil_f32 v1, neg-(v2)
 // expected left paren after abs
 
 v_ceil_f32 v1, abs-(v2)
-// CHECK: error: expected left paren after abs
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected left paren after abs
 // CHECK-NEXT:{{^}}v_ceil_f32 v1, abs-(v2)
 // CHECK-NEXT:{{^}}                  ^
 
@@ -1296,7 +1296,7 @@ v_ceil_f32 v1, abs-(v2)
 // expected left paren after sext
 
 v_cmpx_f_i32_sdwa sext[v1], v2 src0_sel:DWORD src1_sel:DWORD
-// CHECK: error: expected left paren after sext
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected left paren after sext
 // CHECK-NEXT:{{^}}v_cmpx_f_i32_sdwa sext[v1], v2 src0_sel:DWORD src1_sel:DWORD
 // CHECK-NEXT:{{^}}                      ^
 
@@ -1304,17 +1304,17 @@ v_cmpx_f_i32_sdwa sext[v1], v2 src0_sel:DWORD src1_sel:DWORD
 // expected closing parentheses
 
 v_ceil_f32 v1, abs(v2]
-// CHECK: error: expected closing parentheses
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected closing parentheses
 // CHECK-NEXT:{{^}}v_ceil_f32 v1, abs(v2]
 // CHECK-NEXT:{{^}}                     ^
 
 v_ceil_f32 v1, neg(v2]
-// CHECK: error: expected closing parentheses
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected closing parentheses
 // CHECK-NEXT:{{^}}v_ceil_f32 v1, neg(v2]
 // CHECK-NEXT:{{^}}                     ^
 
 v_cmpx_f_i32_sdwa sext(v1], v2 src0_sel:DWORD src1_sel:DWORD
-// CHECK: error: expected closing parentheses
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected closing parentheses
 // CHECK-NEXT:{{^}}v_cmpx_f_i32_sdwa sext(v1], v2 src0_sel:DWORD src1_sel:DWORD
 // CHECK-NEXT:{{^}}                         ^
 
@@ -1322,7 +1322,7 @@ v_cmpx_f_i32_sdwa sext(v1], v2 src0_sel:DWORD src1_sel:DWORD
 // expected a left parentheses
 
 ds_swizzle_b32 v8, v2 offset:swizzle[QUAD_PERM, 0, 1, 2, 3]
-// CHECK: error: expected a left parentheses
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a left parentheses
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:swizzle[QUAD_PERM, 0, 1, 2, 3]
 // CHECK-NEXT:{{^}}                                    ^
 
@@ -1330,7 +1330,7 @@ ds_swizzle_b32 v8, v2 offset:swizzle[QUAD_PERM, 0, 1, 2, 3]
 // expected an absolute expression or a label
 
 s_branch 1+x
-// CHECK: error: expected an absolute expression or a label
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected an absolute expression or a label
 // CHECK-NEXT:{{^}}s_branch 1+x
 // CHECK-NEXT:{{^}}         ^
 
@@ -1338,7 +1338,7 @@ s_branch 1+x
 // expected a 16-bit offset
 
 ds_swizzle_b32 v8, v2 offset:0x10000
-// CHECK: error: expected a 16-bit offset
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 16-bit offset
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:0x10000
 // CHECK-NEXT:{{^}}                             ^
 
@@ -1346,7 +1346,7 @@ ds_swizzle_b32 v8, v2 offset:0x10000
 // not a valid operand
 
 v_cndmask_b32_sdwa v5, v1, sext(v2), vcc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:BYTE_0 src1_sel:WORD_0
-// CHECK: error: not a valid operand.
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // CHECK-NEXT:{{^}}v_cndmask_b32_sdwa v5, v1, sext(v2), vcc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:BYTE_0 src1_sel:WORD_0
 // CHECK-NEXT:{{^}}                           ^
 
@@ -1354,6 +1354,6 @@ v_cndmask_b32_sdwa v5, v1, sext(v2), vcc dst_sel:DWORD dst_unused:UNUSED_PRESERV
 // TFE modifier has no meaning for store instructions
 
 buffer_store_dword v[1:2], off, s[12:15], s4 tfe
-// CHECK: error: TFE modifier has no meaning for store instructions
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: TFE modifier has no meaning for store instructions
 // CHECK-NEXT:{{^}}buffer_store_dword v[1:2], off, s[12:15], s4 tfe
 // CHECK-NEXT:{{^}}                                             ^
