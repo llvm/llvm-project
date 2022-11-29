@@ -5,10 +5,11 @@ Test lldb-dap terminated event
 import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
-import re
 import json
+import re
+
+import lldbdap_testcase
+from lldbsuite.test import lldbutil
 
 
 class TestDAP_terminatedEvent(lldbdap_testcase.DAPTestCaseBase):
