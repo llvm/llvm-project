@@ -130,7 +130,8 @@ public:
 
     // Find all live variables just before the call to the control point.
     LivenessAnalysis LA(OldCtrlPointCall->getFunction());
-    const std::set<Value *> LiveVals = LA.getLiveVarsBefore(OldCtrlPointCall);
+    const std::vector<Value *> LiveVals =
+        LA.getLiveVarsBefore(OldCtrlPointCall);
     if (LiveVals.size() == 0) {
       Context.emitError(
           "The interpreter loop has no live variables!\n"

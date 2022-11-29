@@ -45,7 +45,7 @@ public:
       return false;
     }
 
-    std::map<Instruction *, std::set<Value *>> SMCalls;
+    std::map<Instruction *, std::vector<Value *>> SMCalls;
     for (Function &F : M) {
       if (F.empty()) // skip declarations.
         continue;
@@ -65,7 +65,7 @@ public:
     Value *Shadow = ConstantInt::get(Type::getInt32Ty(Context), 0);
     for (auto It : SMCalls) {
       Instruction *I = cast<Instruction>(It.first);
-      const std::set<Value *> L = It.second;
+      const std::vector<Value *> L = It.second;
 
       IRBuilder<> Bldr(I);
       Value *SMID = ConstantInt::get(Type::getInt64Ty(Context), Count);

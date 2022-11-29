@@ -69,6 +69,10 @@ LivenessAnalysis::LivenessAnalysis(Function *Func) {
   // Compute defs and uses for each instruction.
   std::map<Instruction *, std::set<Value *>> Defs;
   std::map<Instruction *, std::set<Value *>> Uses;
+
+  // Create a domniator tree so we can later sort the live variables.
+  DT = DominatorTree(*Func);
+
   for (BasicBlock &BB : *Func) {
     for (Instruction &I : BB) {
       // Record what this instruction defines.
@@ -172,8 +176,19 @@ LivenessAnalysis::LivenessAnalysis(Function *Func) {
   } while (Changed); // Until a fixed-point.
 }
 
-std::set<Value *> LivenessAnalysis::getLiveVarsBefore(Instruction *I) {
-  return In[I];
+std::vector<Value *> LivenessAnalysis::getLiveVarsBefore(Instruction *I) {
+  std::set<Value *> Res = In[I];
+  // Sort the live variables by order of appearance using a dominator tree. The
+  // order is important for frame construction during deoptimisation: since live
+  // variables may reference other live variables they need to be proceesed in
+  // the order they appear in the module.
+  std::vector<Value *> Sorted(Res.begin(), Res.end());
+  std::sort(Sorted.begin(), Sorted.end(), [this](Value *A, Value *B) {
+    if (isa<Instruction>(B))
+      return DT.dominates(A, cast<Instruction>(B));
+    return false;
+  });
+  return Sorted;
 }
 
 } // namespace llvm
