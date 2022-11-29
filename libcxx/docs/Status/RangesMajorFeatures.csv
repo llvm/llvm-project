@@ -1,0 +1,4 @@
+Standard,Name,Assignee,CL,Status
+C++23,`ranges::to <https://wg21.link/P1206R7>`_,Unassigned,No patch yet,Not started
+C++23,`Pipe support for user-defined range adaptors <https://wg21.link/P2387R3>`_,Unassigned,No patch yet,Not started
+C++23,`Formatting Ranges <https://wg21.link/P2286R8>`_,Mark de Wever,Various,In progress
