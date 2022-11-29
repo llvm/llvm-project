@@ -198,7 +198,9 @@ public:
 
   GlobalValue(const GlobalValue &) = delete;
 
-  unsigned getAddressSpace() const;
+  unsigned getAddressSpace() const {
+    return getType()->getAddressSpace();
+  }
 
   enum class UnnamedAddr {
     None,
