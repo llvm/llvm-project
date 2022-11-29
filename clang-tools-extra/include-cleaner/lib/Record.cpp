@@ -99,6 +99,8 @@ public:
       recordMacroRef(MacroNameTok, *MI, RefType::Ambiguous);
   }
 
+  using PPCallbacks::Elifdef;
+  using PPCallbacks::Elifndef;
   void Elifdef(SourceLocation Loc, const Token &MacroNameTok,
                const MacroDefinition &MD) override {
     if (!Active)
@@ -106,7 +108,6 @@ public:
     if (const auto *MI = MD.getMacroInfo())
       recordMacroRef(MacroNameTok, *MI, RefType::Ambiguous);
   }
-
   void Elifndef(SourceLocation Loc, const Token &MacroNameTok,
                 const MacroDefinition &MD) override {
     if (!Active)
