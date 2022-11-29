@@ -67,6 +67,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/ProfiledCallGraph.h"
@@ -424,10 +425,11 @@ class SampleProfileLoader final
 public:
   SampleProfileLoader(
       StringRef Name, StringRef RemapName, ThinOrFullLTOPhase LTOPhase,
+      IntrusiveRefCntPtr<vfs::FileSystem> FS,
       std::function<AssumptionCache &(Function &)> GetAssumptionCache,
       std::function<TargetTransformInfo &(Function &)> GetTargetTransformInfo,
       std::function<const TargetLibraryInfo &(Function &)> GetTLI)
-      : SampleProfileLoaderBaseImpl(std::string(Name), std::string(RemapName)),
+      : SampleProfileLoaderBaseImpl(std::string(Name), std::string(RemapName), FS),
         GetAC(std::move(GetAssumptionCache)),
         GetTTI(std::move(GetTargetTransformInfo)), GetTLI(std::move(GetTLI)),
         LTOPhase(LTOPhase),
@@ -1918,7 +1920,7 @@ bool SampleProfileLoader::doInitialization(Module &M,
   auto &Ctx = M.getContext();
 
   auto ReaderOrErr = SampleProfileReader::create(
-      Filename, Ctx, FSDiscriminatorPass::Base, RemappingFilename);
+      Filename, Ctx, *FS, FSDiscriminatorPass::Base, RemappingFilename);
   if (std::error_code EC = ReaderOrErr.getError()) {
     std::string Msg = "Could not open profile: " + EC.message();
     Ctx.diagnose(DiagnosticInfoSampleProfile(Filename, Msg));
@@ -2157,11 +2159,14 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
 
+  if (!FS)
+    FS = vfs::getRealFileSystem();
+
   SampleProfileLoader SampleLoader(
       ProfileFileName.empty() ? SampleProfileFile : ProfileFileName,
       ProfileRemappingFileName.empty() ? SampleProfileRemappingFile
                                        : ProfileRemappingFileName,
-      LTOPhase, GetAssumptionCache, GetTTI, GetTLI);
+      LTOPhase, FS, GetAssumptionCache, GetTTI, GetTLI);
 
   if (!SampleLoader.doInitialization(M, &FAM))
     return PreservedAnalyses::all();

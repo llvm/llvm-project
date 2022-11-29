@@ -37,6 +37,7 @@
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/GenericDomTree.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseUtil.h"
@@ -80,8 +81,9 @@ extern cl::opt<bool> SampleProfileInferEntryCount;
 
 template <typename BT> class SampleProfileLoaderBaseImpl {
 public:
-  SampleProfileLoaderBaseImpl(std::string Name, std::string RemapName)
-      : Filename(Name), RemappingFilename(RemapName) {}
+  SampleProfileLoaderBaseImpl(std::string Name, std::string RemapName,
+                              IntrusiveRefCntPtr<vfs::FileSystem> FS)
+      : Filename(Name), RemappingFilename(RemapName), FS(FS) {}
   void dump() { Reader->dump(); }
 
   using InstructionT = typename afdo_detail::IRTraits<BT>::InstructionT;
@@ -215,6 +217,9 @@ protected:
 
   /// Name of the profile remapping file to load.
   std::string RemappingFilename;
+
+  /// VirtualFileSystem to load profile files from.
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
 
   /// Profile Summary Info computed from sample profile.
   ProfileSummaryInfo *PSI = nullptr;

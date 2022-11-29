@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <cstdint>
 #include <string>
 
@@ -58,7 +59,8 @@ private:
 class PGOInstrumentationUse : public PassInfoMixin<PGOInstrumentationUse> {
 public:
   PGOInstrumentationUse(std::string Filename = "",
-                        std::string RemappingFilename = "", bool IsCS = false);
+                        std::string RemappingFilename = "", bool IsCS = false,
+                        IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
@@ -67,6 +69,7 @@ private:
   std::string ProfileRemappingFileName;
   // If this is a context sensitive instrumentation.
   bool IsCS;
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
 };
 
 /// The indirect function call promotion pass.

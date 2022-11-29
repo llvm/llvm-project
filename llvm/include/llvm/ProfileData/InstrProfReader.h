@@ -26,6 +26,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -183,7 +184,8 @@ public:
   /// Factory method to create an appropriately typed reader for the given
   /// instrprof file.
   static Expected<std::unique_ptr<InstrProfReader>>
-  create(const Twine &Path, const InstrProfCorrelator *Correlator = nullptr);
+  create(const Twine &Path, vfs::FileSystem &FS,
+         const InstrProfCorrelator *Correlator = nullptr);
 
   static Expected<std::unique_ptr<InstrProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer,
@@ -679,7 +681,8 @@ public:
 
   /// Factory method to create an indexed reader.
   static Expected<std::unique_ptr<IndexedInstrProfReader>>
-  create(const Twine &Path, const Twine &RemappingPath = "");
+  create(const Twine &Path, vfs::FileSystem &FS,
+         const Twine &RemappingPath = "");
 
   static Expected<std::unique_ptr<IndexedInstrProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer,
