@@ -13,14 +13,24 @@ define <8 x i32> @fixed_bitselect_v8i32(ptr %pre_cond_ptr, ptr %left_ptr, ptr %r
 ; CHECK-LABEL: fixed_bitselect_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NEXT:    ldp q0, q2, [x0]
-; CHECK-NEXT:    ldp q3, q1, [x1]
-; CHECK-NEXT:    ldp q5, q6, [x2]
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI0_0]
-; CHECK-NEXT:    sub z2.s, z4.s, z2.s
-; CHECK-NEXT:    sub z0.s, z4.s, z0.s
-; CHECK-NEXT:    bsl v0.16b, v3.16b, v5.16b
-; CHECK-NEXT:    bif v1.16b, v6.16b, v2.16b
+; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    adrp x8, .LCPI0_1
+; CHECK-NEXT:    ldp q3, q4, [x1]
+; CHECK-NEXT:    sub z6.s, z2.s, z1.s
+; CHECK-NEXT:    sub z2.s, z2.s, z0.s
+; CHECK-NEXT:    and z3.d, z6.d, z3.d
+; CHECK-NEXT:    ldp q7, q16, [x2]
+; CHECK-NEXT:    and z2.d, z2.d, z4.d
+; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI0_1]
+; CHECK-NEXT:    add z1.s, z1.s, z5.s
+; CHECK-NEXT:    add z0.s, z0.s, z5.s
+; CHECK-NEXT:    and z4.d, z0.d, z16.d
+; CHECK-NEXT:    and z0.d, z1.d, z7.d
+; CHECK-NEXT:    orr z0.d, z0.d, z3.d
+; CHECK-NEXT:    orr z1.d, z4.d, z2.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
   %pre_cond = load <8 x i32>, ptr %pre_cond_ptr
   %left = load <8 x i32>, ptr %left_ptr
