@@ -512,6 +512,9 @@ bool isVOPD(unsigned Opc);
 LLVM_READNONE
 bool isMAC(unsigned Opc);
 
+LLVM_READNONE
+bool isPermlane16(unsigned Opc);
+
 namespace VOPD {
 
 enum Component : unsigned {

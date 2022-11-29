@@ -455,6 +455,13 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_DOT8C_I32_I4_e64_vi;
 }
 
+bool isPermlane16(unsigned Opc) {
+  return Opc == AMDGPU::V_PERMLANE16_B32_gfx10 ||
+         Opc == AMDGPU::V_PERMLANEX16_B32_gfx10 ||
+         Opc == AMDGPU::V_PERMLANE16_B32_e64_gfx11 ||
+         Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx11;
+}
+
 bool isTrue16Inst(unsigned Opc) {
   const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
   return Info ? Info->IsTrue16 : false;
