@@ -29,7 +29,7 @@ void f() {
 
 }
 
-namespace dr2635 { // dr2635: yes
+namespace dr2635 { // dr2635: 16
 template<typename T>
 concept UnaryC = true;
 template<typename T, typename U>
