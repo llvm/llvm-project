@@ -165,4 +165,21 @@ module polymorphic_test
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTc1{tmp:!fir.char<1,2>}>> {fir.bindc_name = "c"}) {
 ! CHECK: %{{.*}} = fir.dispatch "get_tmp"(%[[ARG0]] : !fir.class<!fir.type<_QMpolymorphic_testTc1{tmp:!fir.char<1,2>}>>) (%{{.*}}, %{{.*}}, %[[ARG0]] : !fir.ref<!fir.char<1,2>>, index, !fir.class<!fir.type<_QMpolymorphic_testTc1{tmp:!fir.char<1,2>}>>) -> !fir.boxchar<1> {pass_arg_pos = 2 : i32}
 
+  subroutine sub_with_type_array(a)
+    type(p1) :: a(:)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPsub_with_type_array(%{{.*}}: !fir.box<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>> {fir.bindc_name = "a"})
+
+  subroutine call_sub_with_type_array(p)
+    class(p1), pointer :: p(:)
+    call sub_with_type_array(p)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPcall_sub_with_type_array(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>> {fir.bindc_name = "p"}) {
+! CHECK: %[[CLASS:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>>
+! CHECK: %[[REBOX:.*]] = fir.rebox %[[CLASS]] : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>) -> !fir.box<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
+! CHECK: fir.call @_QMpolymorphic_testPsub_with_type_array(%[[REBOX]]) {{.*}} : (!fir.box<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>) -> ()
+
 end module
