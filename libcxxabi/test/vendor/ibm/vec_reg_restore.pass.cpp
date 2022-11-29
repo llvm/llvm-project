@@ -18,13 +18,17 @@
 // unwinding. Non-volatile GRs, FRs, and VRs clobbered by the function are
 // saved on the stack and the numbers of saved registers are available in the
 // traceback table. Registers are saved from high number to low consecutively,
-// e.g., if n VRs are saved, the order on the stack will be VR63, VR62, ...,
-// VR63-n+1. This test cases checks the unwinder gets to the location of saved
+// e.g., if n VRs are saved, the order on the stack will be VR31, VR30, ...,
+// VR31-n+1. This test cases checks the unwinder gets to the location of saved
 // VRs which should be 16-byte aligned and restores them correctly based on
 // the number specified in the traceback table. To simplify, only the 2 high
 // numbered VRs are checked. Because PowerPC CPUs do not have instructions to
-// assign a literal value to a VR directly until Power10, the value is
-// assigned to a GR and then from the GR to a VR in the code.
+// assign a literal value to a VR directly until Power10, and the instructions
+// to assign to a VR from a GR and vice versa are not available until Power8,
+// vector instructions available on Power7 are used to facilitate the test
+// so that it can run on all supported PowerPC architectures. In the code
+// below, VR31 is equivalent to VS63, VR30 is equivalent to VS62 (see PowerPC
+// documents for details).
 //
 
 #include <cstdlib>
@@ -39,64 +43,52 @@ int __attribute__((noinline)) test2(int i)
 }
 
 int __attribute__((noinline)) test(int i) {
-  // Clobber VR63 and VR62 in the function body.
-  // Set VR63=100.
-  asm volatile("li 30, 100\n\t"
-               "mtvsrd 63, 30\n\t"
-               :
-               :
-               :  "v31", "r30");
-  // Set VR62=200.
-  asm volatile("li 29, 200\n\t"
-               "mtvsrd 62, 29\n\t"
-               :
-               :
-               :  "v30", "r29");
+  // Clobber VS63 and VS62 in the function body.
+  // Set VS63 to 16 bytes each with value 9
+  asm volatile("vspltisb 31, 9" : : : "v31");
+
+  // Set VS62 to 16 bytes each with value 12
+  asm volatile("vspltisb 30, 12" : : : "v30");
   return test2(i);
 }
+#define cmpVS63(vec, result)                                                                                           \
+  {                                                                                                                    \
+    vector unsigned char gbg;                                                                                          \
+    asm volatile("vcmpequb. %[gbg], 31, %[veca];"                                                                      \
+                 "mfocrf %[res], 2;"                                                                                   \
+                 "rlwinm %[res], %[res], 25, 31, 31"                                                                   \
+                 : [res] "=r"(result), [gbg] "=v"(gbg)                                                                 \
+                 : [veca] "v"(vec)                                                                                     \
+                 : "cr6");                                                                                             \
+  }
 
-// Return the value of VR63 in 'output'.
-#define getFirstValue(output) \
-   asm volatile( "mfvsrd 4, 63\n\t" \
-                 "std 4, %[d]" \
-          : [d] "=rm"(output) \
-          : \
-          : )
-// Return the value of VR62 in 'output'.
-#define getSecondValue(output) \
-   asm volatile( "mfvsrd 4, 62\n\t" \
-                 "std 4, %[d]" \
-          : [d] "=rm"(output) \
-          : \
-          : )
-
+#define cmpVS62(vec, result)                                                                                           \
+  {                                                                                                                    \
+    vector unsigned char gbg;                                                                                          \
+    asm volatile("vcmpequb. %[gbg], 30, %[veca];"                                                                      \
+                 "mfocrf %[res], 2;"                                                                                   \
+                 "rlwinm %[res], %[res], 25, 31, 31"                                                                   \
+                 : [res] "=r"(result), [gbg] "=v"(gbg)                                                                 \
+                 : [veca] "v"(vec)                                                                                     \
+                 : "cr6");                                                                                             \
+  }
 int main(int, char**) {
-  // Set VR63=1.
-  asm volatile("li 30, 1\n\t"
-               "mtvsrd 63, 30\n\t"
-               :
-               :
-               :  "v31", "r30");
-  // Set VR62=1.
-  asm volatile("li 29, 2\n\t"
-               "mtvsrd 62, 29\n\t"
-               :
-               :
-               :  "v30", "r29");
-  long long old;
-  long long old2;
-  getFirstValue(old);
-  getSecondValue(old2);
+  // Set VS63 to 16 bytes each with value 1
+  asm volatile("vspltisb 31, 1" : : : "v31");
+
+  // Set VS62 to 16 bytes each with value 2
+  asm volatile("vspltisb 30, 2" : : : "v30");
+  vector unsigned long long expectedVS63Value = {0x101010101010101, 0x101010101010101};
+  vector unsigned long long expectedVS62Value = {0x202020202020202, 0x202020202020202};
   try {
     test(4);
   } catch (int num) {
-    long long new_value;
-    long long new_value2;
-    getFirstValue(new_value);
-    getSecondValue(new_value2);
-    // If the unwinder restores VR63 and VR62 correctly, they should contain
-    // 1 and 2 respectively instead of 100 and 200.
-    assert(old == new_value && old2 == new_value2);
+    // If the unwinder restores VS63 and VS62 correctly, they should contain
+    // 0x01's and 0x02's respectively instead of 0x09's and 0x12's.
+    bool isEqualVS63, isEqualVS62;
+    cmpVS63(expectedVS63Value, isEqualVS63);
+    cmpVS62(expectedVS62Value, isEqualVS62);
+    assert(isEqualVS63 && isEqualVS62);
   }
   return 0;
 }
