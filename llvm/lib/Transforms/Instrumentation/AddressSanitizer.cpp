@@ -1572,7 +1572,7 @@ Instruction *AddressSanitizer::instrumentAMDGPUAddress(
   Value *IsShared = IRB.CreateCall(AMDGPUAddressShared, {AddrLong});
   Value *IsPrivate = IRB.CreateCall(AMDGPUAddressPrivate, {AddrLong});
   Value *IsSharedOrPrivate = IRB.CreateOr(IsShared, IsPrivate);
-  Value *Cmp = IRB.CreateICmpNE(IRB.getTrue(), IsSharedOrPrivate);
+  Value *Cmp = IRB.CreateNot(IsSharedOrPrivate);
   Value *AddrSpaceZeroLanding =
       SplitBlockAndInsertIfThen(Cmp, InsertBefore, false);
   InsertBefore = cast<Instruction>(AddrSpaceZeroLanding);
@@ -1620,11 +1620,10 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
       IntegerType::get(*C, std::max(8U, TypeSize >> Mapping.Scale));
   Type *ShadowPtrTy = PointerType::get(ShadowTy, 0);
   Value *ShadowPtr = memToShadow(AddrLong, IRB);
-  Value *CmpVal = Constant::getNullValue(ShadowTy);
   Value *ShadowValue =
       IRB.CreateLoad(ShadowTy, IRB.CreateIntToPtr(ShadowPtr, ShadowPtrTy));
 
-  Value *Cmp = IRB.CreateICmpNE(ShadowValue, CmpVal);
+  Value *Cmp = IRB.CreateIsNotNull(ShadowValue);
   size_t Granularity = 1ULL << Mapping.Scale;
   Instruction *CrashTerm = nullptr;
 
