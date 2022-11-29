@@ -56,7 +56,7 @@ if (OPENMP_ENABLE_LIBOMPTARGET_PROFILING)
   target_link_libraries(omptarget PRIVATE LLVMSupport)
 endif()
 
-find_library(LLVM_OFFLOAD_ARCH LLVMOffloadArch HINTS ${LLVM_LIBRARY_DIR} REQUIRED)
+find_library(LLVM_OFFLOAD_ARCH LLVMOffloadArch HINTS ${LLVM_LIBRARY_DIR} ${LLVM_BINARY_DIR} PATH_SUFFIXES lib REQUIRED)
 
 target_include_directories(omptarget PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})
 
