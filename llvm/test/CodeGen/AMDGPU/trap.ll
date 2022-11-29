@@ -31,11 +31,11 @@ declare void @llvm.debugtrap() #1
 
 ; MESA-TRAP: .section .AMDGPU.config
 ; MESA-TRAP:  .long   47180
-; MESA-TRAP-NEXT: .long   204
+; MESA-TRAP-NEXT: .long   208
 
 ; NOMESA-TRAP: .section .AMDGPU.config
 ; NOMESA-TRAP:  .long   47180
-; NOMESA-TRAP-NEXT: .long   140
+; NOMESA-TRAP-NEXT: .long   144
 
 ; GCN-LABEL: {{^}}hsa_trap:
 ; HSA-TRAP: enable_trap_handler = 0
