@@ -3690,12 +3690,12 @@ defm amdgpu_ieee : BoolOption<"m", "amdgpu-ieee",
   NegFlag<SetFalse, [CC1Option]>>, Group<m_Group>;
 
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
-  HelpText<"Specify code object ABI version. Defaults to 5. (AMDGPU only)">,
+  HelpText<"Specify code object ABI version. Defaults to 4. (AMDGPU only)">,
   Flags<[CC1Option]>,
   Values<"none,2,3,4,5">,
   NormalizedValuesScope<"TargetOptions">,
   NormalizedValues<["COV_None", "COV_2", "COV_3", "COV_4", "COV_5"]>,
-  MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_5">;
+  MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_4">;
 
 defm code_object_v3_legacy : SimpleMFlag<"code-object-v3",
   "Legacy option to specify code object ABI V3",
