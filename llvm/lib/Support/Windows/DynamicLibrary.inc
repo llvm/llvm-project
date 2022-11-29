@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Windows/WindowsSupport.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Windows/WindowsSupport.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <psapi.h>
@@ -21,13 +21,12 @@
 //===          and must not be UNIX code.
 //===----------------------------------------------------------------------===//
 
-
 DynamicLibrary::HandleSet::~HandleSet() {
   for (void *Handle : llvm::reverse(Handles))
     FreeLibrary(HMODULE(Handle));
 
   // 'Process' should not be released on Windows.
-  assert((!Process || Process==this) && "Bad Handle");
+  assert((!Process || Process == this) && "Bad Handle");
   // llvm_shutdown called, Return to default
   DynamicLibrary::SearchOrder = DynamicLibrary::SO_Linker;
 }
@@ -51,7 +50,7 @@ void *DynamicLibrary::HandleSet::DLOpen(const char *File, std::string *Err) {
     return &DynamicLibrary::Invalid;
   }
 
-  return reinterpret_cast<void*>(Handle);
+  return reinterpret_cast<void *>(Handle);
 }
 
 static DynamicLibrary::HandleSet *IsOpenedHandlesInstance(void *Handle) {
@@ -60,7 +59,7 @@ static DynamicLibrary::HandleSet *IsOpenedHandlesInstance(void *Handle) {
 }
 
 void DynamicLibrary::HandleSet::DLClose(void *Handle) {
-  if (HandleSet* HS = IsOpenedHandlesInstance(Handle))
+  if (HandleSet *HS = IsOpenedHandlesInstance(Handle))
     HS->Process = nullptr; // Just drop the *Process* handle.
   else
     FreeLibrary((HMODULE)Handle);
@@ -75,7 +74,7 @@ static bool GetProcessModules(HANDLE H, DWORD &Bytes, HMODULE *Data = nullptr) {
 #else
       !EnumProcessModules(H, Data, Bytes, &Bytes)
 #endif
-     ) {
+  ) {
     std::string Err;
     if (MakeErrMsg(&Err, "EnumProcessModules failure"))
       llvm::errs() << Err << "\n";
@@ -85,7 +84,7 @@ static bool GetProcessModules(HANDLE H, DWORD &Bytes, HMODULE *Data = nullptr) {
 }
 
 void *DynamicLibrary::HandleSet::DLSym(void *Handle, const char *Symbol) {
-  HandleSet* HS = IsOpenedHandlesInstance(Handle);
+  HandleSet *HS = IsOpenedHandlesInstance(Handle);
   if (!HS)
     return (void *)uintptr_t(GetProcAddress((HMODULE)Handle, Symbol));
 
@@ -128,7 +127,7 @@ void *DynamicLibrary::HandleSet::DLSym(void *Handle, const char *Symbol) {
 
   // Try EXE first, mirroring what dlsym(dlopen(NULL)) does.
   if (FARPROC Ptr = GetProcAddress(HMODULE(Handles.front()), Symbol))
-    return (void *) uintptr_t(Ptr);
+    return (void *)uintptr_t(Ptr);
 
   if (Handles.size() > 1) {
     // This is different behaviour than what Posix dlsym(dlopen(NULL)) does.
@@ -137,19 +136,20 @@ void *DynamicLibrary::HandleSet::DLSym(void *Handle, const char *Symbol) {
     // symbols from ucrt.dll first, but iterating NOT in reverse here would
     // mean that the msvc.dll versions would be returned.
 
-    for (auto I = Handles.rbegin(), E = Handles.rend()-1; I != E; ++I) {
+    for (auto I = Handles.rbegin(), E = Handles.rend() - 1; I != E; ++I) {
       if (FARPROC Ptr = GetProcAddress(HMODULE(*I), Symbol))
-        return (void *) uintptr_t(Ptr);
+        return (void *)uintptr_t(Ptr);
     }
   }
   return nullptr;
 }
 
-
 // Stack probing routines are in the support library (e.g. libgcc), but we don't
 // have dynamic linking on windows. Provide a hook.
-#define EXPLICIT_SYMBOL(SYM)                    \
-  extern "C" { extern void *SYM; }
+#define EXPLICIT_SYMBOL(SYM)                                                   \
+  extern "C" {                                                                 \
+  extern void *SYM;                                                            \
+  }
 #define EXPLICIT_SYMBOL2(SYMFROM, SYMTO) EXPLICIT_SYMBOL(SYMTO)
 
 #ifdef _M_IX86

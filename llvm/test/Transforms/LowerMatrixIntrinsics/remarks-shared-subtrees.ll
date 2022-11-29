@@ -89,25 +89,25 @@
 ; STDERR-NEXT:     column.major.load.2x15.double(addr %arg3, scalar))),
 ; STDERR-NEXT:   addr %arg2,
 ; STDERR-NEXT:   10)
-define void @test_2leafs(double* %arg1, double* %arg2, double* %arg3, i64 %stride) !dbg !8 {
+define void @test_2leafs(ptr %arg1, ptr %arg2, ptr %arg3, i64 %stride) !dbg !8 {
 bb:
-  %shared.load = tail call <8 x double> @llvm.matrix.column.major.load.v8f64.p0f64(double* %arg1, i64 %stride, i1 false, i32 2, i32 4), !dbg !10
-  %shared.load.2 = tail call <30 x double> @llvm.matrix.column.major.load.v30f64.p0f64(double* %arg3, i64 %stride, i1 false, i32 2, i32 15), !dbg !10
+  %shared.load = tail call <8 x double> @llvm.matrix.column.major.load.v8f64.p0(ptr %arg1, i64 %stride, i1 false, i32 2, i32 4), !dbg !10
+  %shared.load.2 = tail call <30 x double> @llvm.matrix.column.major.load.v30f64.p0(ptr %arg3, i64 %stride, i1 false, i32 2, i32 15), !dbg !10
   %tmp17 = tail call <8 x double> @llvm.matrix.transpose.v8f64(<8 x double> %shared.load, i32 2, i32 4), !dbg !10
-  tail call void @llvm.matrix.column.major.store.v8f64.p0f64(<8 x double> %tmp17, double* %arg3, i64 10, i1 false, i32 4, i32 2), !dbg !10
-  %tmp18 = tail call <60 x double> @llvm.matrix.column.major.load.v60f64.p0f64(double* %arg2, i64 20, i1 false, i32 4, i32 15), !dbg !11
+  tail call void @llvm.matrix.column.major.store.v8f64.p0(<8 x double> %tmp17, ptr %arg3, i64 10, i1 false, i32 4, i32 2), !dbg !10
+  %tmp18 = tail call <60 x double> @llvm.matrix.column.major.load.v60f64.p0(ptr %arg2, i64 20, i1 false, i32 4, i32 15), !dbg !11
   %tmp48 = tail call <60 x double> @llvm.matrix.multiply.v60f64.v8f64.v30f64(<8 x double> %tmp17, <30 x double> %shared.load.2, i32 4, i32 2, i32 15), !dbg !11
   %tmp49 = fsub <60 x double> %tmp18, %tmp48, !dbg !11
-  tail call void @llvm.matrix.column.major.store.v60f64.p0f64(<60 x double> %tmp49, double* %arg2, i64 10, i1 false, i32 4, i32 15), !dbg !11
+  tail call void @llvm.matrix.column.major.store.v60f64.p0(<60 x double> %tmp49, ptr %arg2, i64 10, i1 false, i32 4, i32 15), !dbg !11
   ret void
 }
 
 declare <8 x double> @llvm.matrix.transpose.v8f64(<8 x double>, i32 immarg, i32 immarg)
-declare <8 x double> @llvm.matrix.column.major.load.v8f64.p0f64(double*, i64, i1 immarg, i32 immarg, i32 immarg)
-declare <30 x double> @llvm.matrix.column.major.load.v30f64.p0f64(double*, i64, i1 immarg, i32 immarg, i32 immarg)
-declare <60 x double> @llvm.matrix.column.major.load.v60f64.p0f64(double*, i64, i1 immarg, i32 immarg, i32 immarg)
-declare void @llvm.matrix.column.major.store.v60f64.p0f64(<60 x double>, double* writeonly, i64, i1 immarg, i32 immarg, i32 immarg)
-declare void @llvm.matrix.column.major.store.v8f64.p0f64(<8 x double>, double* writeonly, i64, i1 immarg, i32 immarg, i32 immarg)
+declare <8 x double> @llvm.matrix.column.major.load.v8f64.p0(ptr, i64, i1 immarg, i32 immarg, i32 immarg)
+declare <30 x double> @llvm.matrix.column.major.load.v30f64.p0(ptr, i64, i1 immarg, i32 immarg, i32 immarg)
+declare <60 x double> @llvm.matrix.column.major.load.v60f64.p0(ptr, i64, i1 immarg, i32 immarg, i32 immarg)
+declare void @llvm.matrix.column.major.store.v60f64.p0(<60 x double>, ptr writeonly, i64, i1 immarg, i32 immarg, i32 immarg)
+declare void @llvm.matrix.column.major.store.v8f64.p0(<8 x double>, ptr writeonly, i64, i1 immarg, i32 immarg, i32 immarg)
 declare <60 x double> @llvm.matrix.multiply.v60f64.v8f64.v30f64(<8 x double>, <30 x double>, i32 immarg, i32 immarg, i32 immarg)
 
 !llvm.module.flags = !{!0, !1, !2, !3}

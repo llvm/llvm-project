@@ -231,6 +231,11 @@ constexpr bool llvm_is_multithreaded() { return LLVM_ENABLE_THREADS; }
   /// Returns how many physical CPUs or NUMA groups the system has.
   unsigned get_cpus();
 
+  /// Returns how many physical cores (as opposed to logical cores returned from
+  /// thread::hardware_concurrency(), which includes hyperthreads).
+  /// Returns -1 if unknown for the current host system.
+  int get_physical_cores();
+
   enum class ThreadPriority {
     /// Lower the current thread's priority as much as possible. Can be used
     /// for long-running tasks that are not time critical; more energy-

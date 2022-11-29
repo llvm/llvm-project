@@ -1,8 +1,5 @@
 // RUN: %clangxx_memprof -O0 %s -o %t
 // RUN: %env_memprof_opts=print_text=true:log_path=stderr:allocator_may_return_null=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-SUMMARY
-// Errors should be printed to stderr even if the log_path set to a file.
-// RUN: rm -f %t.log.*
-// RUN: %env_memprof_opts=print_text=true:log_path=%t.log:allocator_may_return_null=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-SUMMARY
 // RUN: %env_memprof_opts=print_text=true:log_path=stderr:allocator_may_return_null=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-NULL
 // Test print_summary
 // RUN: %env_memprof_opts=print_text=true:log_path=stderr:allocator_may_return_null=0:print_summary=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOSUMMARY

@@ -35,8 +35,8 @@ define amdgpu_ps float @load_constant32bit_vgpr_offset(i32 %arg) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 entry:
-  %gep = getelementptr <{ [4294967295 x float] }>, <{ [4294967295 x float] }> addrspace(6)* null, i32 0, i32 0, i32 %arg
-  %load = load float, float addrspace(6)* %gep, align 4
+  %gep = getelementptr <{ [4294967295 x float] }>, ptr addrspace(6) null, i32 0, i32 0, i32 %arg
+  %load = load float, ptr addrspace(6) %gep, align 4
   ret float %load
 }
 
@@ -49,13 +49,13 @@ define amdgpu_ps i32 @load_constant32bit_sgpr_offset(i32 inreg %arg) {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-  %gep = getelementptr <{ [4294967295 x i32] }>, <{ [4294967295 x i32] }> addrspace(6)* null, i32 0, i32 0, i32 %arg
-  %load = load i32, i32 addrspace(6)* %gep, align 4
+  %gep = getelementptr <{ [4294967295 x i32] }>, ptr addrspace(6) null, i32 0, i32 0, i32 %arg
+  %load = load i32, ptr addrspace(6) %gep, align 4
   ret i32 %load
 }
 
 ; This gets split during regbankselect
-define amdgpu_ps <8 x float> @load_constant32bit_vgpr_v8f32(<8 x float> addrspace(6)* %arg) {
+define amdgpu_ps <8 x float> @load_constant32bit_vgpr_v8f32(ptr addrspace(6) %arg) {
 ; GFX6-LABEL: load_constant32bit_vgpr_v8f32:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    v_mov_b32_e32 v4, v0
@@ -88,6 +88,6 @@ define amdgpu_ps <8 x float> @load_constant32bit_vgpr_v8f32(<8 x float> addrspac
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 entry:
-  %load = load <8 x float>, <8 x float> addrspace(6)* %arg, align 32
+  %load = load <8 x float>, ptr addrspace(6) %arg, align 32
   ret <8 x float> %load
 }

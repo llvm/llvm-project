@@ -31,7 +31,7 @@ bb8:                                              ; preds = %bb12
 bb12:                                             ; preds = %bb8, %bb5
   %tmp13 = phi i32 [ 1, %bb5 ], [ %tmp9, %bb8 ]
   %tmp14 = add nuw nsw i32 %tmp13, 1
-  %tmp15 = load atomic i32, i32 addrspace(1)* undef unordered, align 8
+  %tmp15 = load atomic i32, ptr addrspace(1) undef unordered, align 8
   %tmp16 = icmp ult i32 %tmp14, %tmp6
   br i1 %tmp16, label %bb8, label %bb17
 

@@ -13,14 +13,14 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare dso_local [1 x i8*]* @foo();
-declare dso_local [1 x i8*]* @bar();
+declare dso_local ptr @foo();
+declare dso_local ptr @bar();
 
 define dso_local i32 @main() {
-  %p1 = call [1 x i8*]* @foo()
-  %p2 = call [1 x i8*]* @bar()
-  %v1 = ptrtoint [1 x i8*]* %p1 to i32
-  %v2 = ptrtoint [1 x i8*]* %p2 to i32
+  %p1 = call ptr @foo()
+  %p2 = call ptr @bar()
+  %v1 = ptrtoint ptr %p1 to i32
+  %v2 = ptrtoint ptr %p2 to i32
   %v3 = add i32 %v1, %v2
   ret i32 %v3
 }

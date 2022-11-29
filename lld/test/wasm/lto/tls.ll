@@ -13,7 +13,7 @@ target triple = "wasm32-unknown-emscripten"
 @tls_int = dso_local thread_local global i32 99
 
 define i32 @get_tls() #0 {
-  %val = load i32, i32* @tls_int
+  %val = load i32, ptr @tls_int
   ret i32 %val
 }
 

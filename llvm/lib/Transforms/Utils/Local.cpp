@@ -80,6 +80,7 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -2048,7 +2049,7 @@ Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
 }
 
 /// A replacement for a dbg.value expression.
-using DbgValReplacement = Optional<DIExpression *>;
+using DbgValReplacement = std::optional<DIExpression *>;
 
 /// Point debug users of \p From to \p To using exprs given by \p RewriteExpr,
 /// possibly moving/undefing users to prevent use-before-def. Returns true if

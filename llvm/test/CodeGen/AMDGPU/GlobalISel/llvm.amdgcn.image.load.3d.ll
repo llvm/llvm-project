@@ -35,7 +35,7 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw(<8 x i32> inreg %rsrc, i32 %s, 
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %r) {
+define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %t, i32 %r) {
 ; GFX6-LABEL: load_3d_v4f32_xyzw_tfe:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_mov_b32_e32 v5, v0
@@ -121,11 +121,11 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe(<8 x i32> inreg %rsrc, i32 
   %v = call { <4 x float>, i32 } @llvm.amdgcn.image.load.3d.sl_v4f32i32s.i32(i32 15, i32 %s, i32 %t, i32 %r, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue { <4 x float>, i32 } %v, 0
   %v.err = extractvalue { <4 x float>, i32 } %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
-define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %r) {
+define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe_lwe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %t, i32 %r) {
 ; GFX6-LABEL: load_3d_v4f32_xyzw_tfe_lwe:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_mov_b32_e32 v5, v0
@@ -211,7 +211,7 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe_lwe(<8 x i32> inreg %rsrc, 
   %v = call { <4 x float>, i32 } @llvm.amdgcn.image.load.3d.sl_v4f32i32s.i32(i32 15, i32 %s, i32 %t, i32 %r, <8 x i32> %rsrc, i32 3, i32 0)
   %v.vec = extractvalue { <4 x float>, i32 } %v, 0
   %v.err = extractvalue { <4 x float>, i32 } %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 

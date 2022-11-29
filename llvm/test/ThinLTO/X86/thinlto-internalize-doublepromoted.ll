@@ -27,7 +27,6 @@ target triple = "x86_64-apple-macosx10.15.0"
 
 ; CHECK: define hidden void @foo.llvm.123()
 define hidden void @foo.llvm.123() {
-  %1 = getelementptr inbounds [10 x i8], [10 x i8]* @switch.table.foo.llvm.123, i64 0, i64 0
-  store i8 1, i8* %1, align 8
+  store i8 1, ptr @switch.table.foo.llvm.123, align 8
   ret void
 }

@@ -241,6 +241,9 @@ public:
         elog("-{0} requires -DCLANGD_TIDY_CHECKS!", CheckTidyTime.ArgStr);
         return false;
       }
+      #ifndef NDEBUG
+      elog("Timing clang-tidy checks in asserts-mode is not representative!");
+      #endif
       checkTidyTimes();
     }
 

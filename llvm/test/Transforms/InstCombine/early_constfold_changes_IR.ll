@@ -1,5 +1,5 @@
 ; This run line verifies that we get the expected constant fold.
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 define i32 @foo(i32 %arg) #0 {
 ; CHECK-LABEL: @foo(

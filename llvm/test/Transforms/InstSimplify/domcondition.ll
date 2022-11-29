@@ -7,11 +7,9 @@ define i32 @xor_domcondition(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[XOR]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %cmp = icmp eq i32 %x, %y
@@ -32,11 +30,9 @@ define i32 @sub_domcondition(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[SUB]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %cmp = icmp eq i32 %x, %y
@@ -57,10 +53,9 @@ define i32 @udiv_domcondition(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[UDIV:%.*]] = udiv i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[UDIV]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ 1, [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
@@ -82,10 +77,9 @@ define i32 @sdiv_domcondition(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[SDIV]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ 1, [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
@@ -107,11 +101,9 @@ define i32 @urem_domcondition(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[UREM:%.*]] = urem i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[UREM]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %cmp = icmp eq i32 %x, %y
@@ -132,11 +124,9 @@ define i32 @srem_domcondition(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[SREM:%.*]] = srem i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[SREM]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %cmp = icmp eq i32 %x, %y
@@ -158,10 +148,9 @@ define i32 @and_domcondition(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[AND]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[Y]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
@@ -184,10 +173,9 @@ define i32 @or_domcondition(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[OR]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[Y]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:

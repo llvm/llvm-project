@@ -96,7 +96,7 @@ define amdgpu_kernel void @s_trig_preop_f64(double %a, i32 %b) {
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %result = call double @llvm.amdgcn.trig.preop.f64(double %a, i32 %b)
-  store volatile double %result, double* undef
+  store volatile double %result, ptr undef
   ret void
 }
 
@@ -129,7 +129,7 @@ define amdgpu_kernel void @s_trig_preop_f64_imm(double %a, i32 %b) {
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %result = call double @llvm.amdgcn.trig.preop.f64(double %a, i32 7)
-  store volatile double %result, double* undef
+  store volatile double %result, ptr undef
   ret void
 }
 

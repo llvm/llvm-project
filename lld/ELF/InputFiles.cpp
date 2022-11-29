@@ -187,7 +187,7 @@ InputFile::InputFile(Kind k, MemoryBufferRef m)
     ++nextGroupId;
 }
 
-Optional<MemoryBufferRef> elf::readFile(StringRef path) {
+std::optional<MemoryBufferRef> elf::readFile(StringRef path) {
   llvm::TimeTraceScope timeScope("Load input files", path);
 
   // The --chroot option changes our virtual root directory.
@@ -202,7 +202,7 @@ Optional<MemoryBufferRef> elf::readFile(StringRef path) {
                                        /*RequiresNullTerminator=*/false);
   if (auto ec = mbOrErr.getError()) {
     error("cannot open " + path + ": " + ec.message());
-    return None;
+    return std::nullopt;
   }
 
   MemoryBufferRef mbref = (*mbOrErr)->getMemBufferRef();
@@ -308,11 +308,11 @@ static std::string getSrcMsgAux(ObjFile<ELFT> &file, const Symbol &sym,
                                 InputSectionBase &sec, uint64_t offset) {
   // In DWARF, functions and variables are stored to different places.
   // First, look up a function for a given offset.
-  if (Optional<DILineInfo> info = file.getDILineInfo(&sec, offset))
+  if (std::optional<DILineInfo> info = file.getDILineInfo(&sec, offset))
     return createFileLineMsg(info->FileName, info->Line);
 
   // If it failed, look up again as a variable.
-  if (Optional<std::pair<std::string, unsigned>> fileLine =
+  if (std::optional<std::pair<std::string, unsigned>> fileLine =
           file.getVariableLoc(sym.getName()))
     return createFileLineMsg(fileLine->first, fileLine->second);
 
@@ -357,9 +357,9 @@ StringRef InputFile::getNameForScript() const {
 static void addDependentLibrary(StringRef specifier, const InputFile *f) {
   if (!config->dependentLibraries)
     return;
-  if (Optional<std::string> s = searchLibraryBaseName(specifier))
+  if (std::optional<std::string> s = searchLibraryBaseName(specifier))
     ctx.driver.addFile(saver().save(*s), /*withLOption=*/true);
-  else if (Optional<std::string> s = findFromSearchPaths(specifier))
+  else if (std::optional<std::string> s = findFromSearchPaths(specifier))
     ctx.driver.addFile(saver().save(*s), /*withLOption=*/true);
   else if (fs::exists(specifier))
     ctx.driver.addFile(specifier, /*withLOption=*/false);
@@ -423,7 +423,7 @@ template <class ELFT> DWARFCache *ObjFile<ELFT>::getDwarf() {
 // Returns the pair of file name and line number describing location of data
 // object (variable, array, etc) definition.
 template <class ELFT>
-Optional<std::pair<std::string, unsigned>>
+std::optional<std::pair<std::string, unsigned>>
 ObjFile<ELFT>::getVariableLoc(StringRef name) {
   return getDwarf()->getVariableLoc(name);
 }
@@ -431,8 +431,8 @@ ObjFile<ELFT>::getVariableLoc(StringRef name) {
 // Returns source line information for a given offset
 // using DWARF debug info.
 template <class ELFT>
-Optional<DILineInfo> ObjFile<ELFT>::getDILineInfo(InputSectionBase *s,
-                                                  uint64_t offset) {
+std::optional<DILineInfo> ObjFile<ELFT>::getDILineInfo(InputSectionBase *s,
+                                                       uint64_t offset) {
   // Detect SectionIndex for specified section.
   uint64_t sectionIndex = object::SectionedAddress::UndefSection;
   ArrayRef<InputSectionBase *> sections = s->file->getSections();
@@ -1775,21 +1775,18 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
   const ArrayRef<typename ELFT::Sym> eSyms = this->getELFSyms<ELFT>();
   numSymbols = eSyms.size();
   symbols = std::make_unique<Symbol *[]>(numSymbols);
-  for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i)
-    if (eSyms[i].st_shndx != SHN_UNDEF)
-      symbols[i] = symtab.insert(CHECK(eSyms[i].getName(stringTable), this));
 
-  // Replace existing symbols with LazyObject symbols.
-  //
   // resolve() may trigger this->extract() if an existing symbol is an undefined
   // symbol. If that happens, this function has served its purpose, and we can
   // exit from the loop early.
-  for (Symbol *sym : getGlobalSymbols())
-    if (sym) {
-      sym->resolve(LazyObject{*this});
-      if (!lazy)
-        return;
-    }
+  for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
+    if (eSyms[i].st_shndx == SHN_UNDEF)
+      continue;
+    symbols[i] = symtab.insert(CHECK(eSyms[i].getName(stringTable), this));
+    symbols[i]->resolve(LazyObject{*this});
+    if (!lazy)
+      break;
+  }
 }
 
 bool InputFile::shouldExtractForCommon(StringRef name) {

@@ -17,20 +17,20 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Check that __sanitizer_cov call has !dgb pointing to the beginning
 ; of appropriate basic blocks.
 ; CHECK-LABEL:_Z3fooPi
-; CHECK: call void @__sanitizer_cov{{.*}}(i32*{{.*}}) #{{.*}}, !dbg [[A:!.*]]
-; CHECK: call void @__sanitizer_cov{{.*}}(i32*{{.*}}) #{{.*}}, !dbg [[B:!.*]]
+; CHECK: call void @__sanitizer_cov{{.*}}(ptr{{.*}}) #{{.*}}, !dbg [[A:!.*]]
+; CHECK: call void @__sanitizer_cov{{.*}}(ptr{{.*}}) #{{.*}}, !dbg [[B:!.*]]
 ; CHECK: ret void
 ; CHECK: [[A]] = !DILocation(line: 1, scope: !{{.*}})
 ; CHECK: [[B]] = !DILocation(line: 3, column: 5, scope: !{{.*}})
 
-define void @_Z3fooPi(i32* %a) #0 !dbg !4 {
+define void @_Z3fooPi(ptr %a) #0 !dbg !4 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32* %a, i64 0, metadata !11, metadata !DIExpression()), !dbg !15
-  %tobool = icmp eq i32* %a, null, !dbg !16
+  tail call void @llvm.dbg.value(metadata ptr %a, i64 0, metadata !11, metadata !DIExpression()), !dbg !15
+  %tobool = icmp eq ptr %a, null, !dbg !16
   br i1 %tobool, label %if.end, label %if.then, !dbg !16
 
 if.then:                                          ; preds = %entry
-  store i32 0, i32* %a, align 4, !dbg !18, !tbaa !19
+  store i32 0, ptr %a, align 4, !dbg !18, !tbaa !19
   br label %if.end, !dbg !18
 
 if.end:                                           ; preds = %entry, %if.then

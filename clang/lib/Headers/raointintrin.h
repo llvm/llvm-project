@@ -191,7 +191,7 @@ static __inline__ void __DEFAULT_FN_ATTRS _aor_i64(long long *__A,
 ///    A 64-bit integer value.
 ///
 /// \code{.operation}
-/// MEM[__A+63:__A] := MEM[__A+63:__A] AOR __B[63:0]
+/// MEM[__A+63:__A] := MEM[__A+63:__A] XOR __B[63:0]
 /// \endcode
 static __inline__ void __DEFAULT_FN_ATTRS _axor_i64(long long *__A,
                                                     long long __B) {

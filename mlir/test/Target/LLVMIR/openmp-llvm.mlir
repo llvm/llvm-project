@@ -2368,7 +2368,7 @@ llvm.func @omp_taskgroup(%x: i32, %y: i32, %zaddr: !llvm.ptr<i32>) {
 }
 
 // CHECK-LABEL: define void @omp_taskgroup(
-// CHECK-SAME:                             i32 %[[x:.+]], i32 %[[y:.+]], ptr %[[zaddr:.+]]) 
+// CHECK-SAME:                             i32 %[[x:.+]], i32 %[[y:.+]], ptr %[[zaddr:.+]])
 // CHECK:         br label %[[entry:[^,]+]]
 // CHECK:       [[entry]]:
 // CHECK:         %[[omp_global_thread_num:.+]] = call i32 @__kmpc_global_thread_num(ptr @{{.+}})
@@ -2409,7 +2409,7 @@ llvm.func @omp_taskgroup_task(%x: i32, %y: i32, %zaddr: !llvm.ptr<i32>) {
 }
 
 // CHECK-LABEL: define void @omp_taskgroup_task(
-// CHECK-SAME:                                  i32 %[[x:.+]], i32 %[[y:.+]], ptr %[[zaddr:.+]]) 
+// CHECK-SAME:                                  i32 %[[x:.+]], i32 %[[y:.+]], ptr %[[zaddr:.+]])
 // CHECK:         %[[structArg:.+]] = alloca { i32, i32, ptr }, align 8
 // CHECK:         br label %[[entry:[^,]+]]
 // CHECK:       [[entry]]:                                            ; preds = %3

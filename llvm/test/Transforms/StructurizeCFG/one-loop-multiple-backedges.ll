@@ -3,7 +3,7 @@
 
 ; CHECK-NOT: br i1 true
 
-define void @blam(i32 addrspace(1)* nocapture %arg, float %arg1, float %arg2) {
+define void @blam(ptr addrspace(1) nocapture %arg, float %arg1, float %arg2) {
 ; CHECK-LABEL: @blam(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
@@ -29,7 +29,7 @@ define void @blam(i32 addrspace(1)* nocapture %arg, float %arg1, float %arg2) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP9]], [[BB7]] ], [ true, [[FLOW]] ]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[BB10:%.*]], label [[BB3]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    store i32 [[TMP3]], i32 addrspace(1)* [[ARG:%.*]], align 4
+; CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[ARG:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -53,6 +53,6 @@ bb7:                                              ; preds = %bb5, %bb3
 
 bb10:                                             ; preds = %bb7, %bb5
   %tmp11 = phi i32 [ 15, %bb5 ], [ 255, %bb7 ]
-  store i32 %tmp11, i32 addrspace(1)* %arg, align 4
+  store i32 %tmp11, ptr addrspace(1) %arg, align 4
   ret void
 }

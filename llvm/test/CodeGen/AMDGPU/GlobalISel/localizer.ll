@@ -64,21 +64,21 @@ entry:
   br i1 %cond, label %bb0, label %bb1
 
 bb0:
-  store volatile i32 123, i32 addrspace(1)* undef
-  store volatile i32 456, i32 addrspace(1)* undef
-  store volatile i32 999, i32 addrspace(1)* undef
-  store volatile i32 1000, i32 addrspace(1)* undef
-  store volatile i32 455, i32 addrspace(1)* undef
-  store volatile i32 23526, i32 addrspace(1)* undef
+  store volatile i32 123, ptr addrspace(1) undef
+  store volatile i32 456, ptr addrspace(1) undef
+  store volatile i32 999, ptr addrspace(1) undef
+  store volatile i32 1000, ptr addrspace(1) undef
+  store volatile i32 455, ptr addrspace(1) undef
+  store volatile i32 23526, ptr addrspace(1) undef
   br label %bb2
 
 bb1:
-  store volatile i32 23526, i32 addrspace(1)* undef
-  store volatile i32 455, i32 addrspace(1)* undef
-  store volatile i32 1000, i32 addrspace(1)* undef
-  store volatile i32 456, i32 addrspace(1)* undef
-  store volatile i32 999, i32 addrspace(1)* undef
-  store volatile i32 123, i32 addrspace(1)* undef
+  store volatile i32 23526, ptr addrspace(1) undef
+  store volatile i32 455, ptr addrspace(1) undef
+  store volatile i32 1000, ptr addrspace(1) undef
+  store volatile i32 456, ptr addrspace(1) undef
+  store volatile i32 999, ptr addrspace(1) undef
+  store volatile i32 123, ptr addrspace(1) undef
   br label %bb2
 
 bb2:
@@ -146,13 +146,13 @@ entry:
   br i1 %cond, label %bb0, label %bb1
 
 bb0:
-  store volatile i32 0, i32 addrspace(1)* @gv0
-  store volatile i32 1, i32 addrspace(1)* @gv1
+  store volatile i32 0, ptr addrspace(1) @gv0
+  store volatile i32 1, ptr addrspace(1) @gv1
   br label %bb2
 
 bb1:
-  store volatile i32 0, i32 addrspace(1)* @gv2
-  store volatile i32 1, i32 addrspace(1)* @gv3
+  store volatile i32 0, ptr addrspace(1) @gv2
+  store volatile i32 1, ptr addrspace(1) @gv3
   br label %bb2
 
 bb2:
@@ -214,13 +214,13 @@ entry:
   br i1 %cond, label %bb0, label %bb1
 
 bb0:
-  store volatile i32 0, i32 addrspace(1)* @static.gv0
-  store volatile i32 1, i32 addrspace(1)* @static.gv1
+  store volatile i32 0, ptr addrspace(1) @static.gv0
+  store volatile i32 1, ptr addrspace(1) @static.gv1
   br label %bb2
 
 bb1:
-  store volatile i32 0, i32 addrspace(1)* @static.gv2
-  store volatile i32 1, i32 addrspace(1)* @static.gv3
+  store volatile i32 0, ptr addrspace(1) @static.gv2
+  store volatile i32 1, ptr addrspace(1) @static.gv3
   br label %bb2
 
 bb2:
@@ -228,7 +228,7 @@ bb2:
 }
 
 ; This would crash from using the wrong insert point
-define void @sink_null_insert_pt(i32 addrspace(4)* %arg0) {
+define void @sink_null_insert_pt(ptr addrspace(4) %arg0) {
 ; GFX9-LABEL: sink_null_insert_pt:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -255,7 +255,7 @@ define void @sink_null_insert_pt(i32 addrspace(4)* %arg0) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %load0 = load volatile i32, i32 addrspace(1)* null, align 4
+  %load0 = load volatile i32, ptr addrspace(1) null, align 4
   br label %bb1
 
 bb1:

@@ -21,7 +21,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "moduleutils"
 
-static void appendToGlobalArray(const char *Array, Module &M, Function *F,
+static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
                                 int Priority, Constant *Data) {
   IRBuilder<> IRB(M.getContext());
   FunctionType *FnTy = FunctionType::get(IRB.getVoidTy(), false);
@@ -31,7 +31,7 @@ static void appendToGlobalArray(const char *Array, Module &M, Function *F,
   SmallVector<Constant *, 16> CurrentCtors;
   StructType *EltTy = StructType::get(
       IRB.getInt32Ty(), PointerType::getUnqual(FnTy), IRB.getInt8PtrTy());
-  if (GlobalVariable *GVCtor = M.getNamedGlobal(Array)) {
+  if (GlobalVariable *GVCtor = M.getNamedGlobal(ArrayName)) {
     if (Constant *Init = GVCtor->getInitializer()) {
       unsigned n = Init->getNumOperands();
       CurrentCtors.reserve(n + 1);
@@ -59,7 +59,7 @@ static void appendToGlobalArray(const char *Array, Module &M, Function *F,
   // Create the new global variable and replace all uses of
   // the old global variable with the new one.
   (void)new GlobalVariable(M, NewInit->getType(), false,
-                           GlobalValue::AppendingLinkage, NewInit, Array);
+                           GlobalValue::AppendingLinkage, NewInit, ArrayName);
 }
 
 void llvm::appendToGlobalCtors(Module &M, Function *F, int Priority, Constant *Data) {

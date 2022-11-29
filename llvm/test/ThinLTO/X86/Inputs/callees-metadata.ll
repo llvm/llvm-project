@@ -1,11 +1,11 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@fptr = internal unnamed_addr global i32 (i32)* @f2, align 8
+@fptr = internal unnamed_addr global ptr @f2, align 8
 
 define dso_local i32 @foo(i32 %x) local_unnamed_addr {
 entry:
-  %0 = load i32 (i32)*, i32 (i32)** @fptr, align 8
+  %0 = load ptr, ptr @fptr, align 8
   %call = tail call i32 %0(i32 %x), !callees !0
   ret i32 %call
 }
@@ -16,7 +16,7 @@ entry:
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  store i32 (i32)* @f1, i32 (i32)** @fptr, align 8
+  store ptr @f1, ptr @fptr, align 8
   %sub.i = add nsw i32 %x, -1
   br label %if.end
 
@@ -31,4 +31,4 @@ entry:
   ret i32 %sub
 }
 
-!0 = !{i32 (i32)* @f1, i32 (i32)* @f2}
+!0 = !{ptr @f1, ptr @f2}

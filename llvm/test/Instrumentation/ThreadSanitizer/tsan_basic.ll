@@ -3,75 +3,74 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-define i32 @read_4_bytes(i32* %a) sanitize_thread {
+define i32 @read_4_bytes(ptr %a) sanitize_thread {
 entry:
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   ret i32 %tmp1
 }
 
-; CHECK: @llvm.used = appending global [1 x i8*] [i8* bitcast (void ()* @tsan.module_ctor to i8*)]
+; CHECK: @llvm.used = appending global [1 x ptr] [ptr @tsan.module_ctor]
 ; CHECK: @llvm.global_ctors = {{.*}}@tsan.module_ctor
 
-; CHECK: define i32 @read_4_bytes(i32* %a)
-; CHECK:        call void @__tsan_func_entry(i8* %0)
-; CHECK-NEXT:   %1 = bitcast i32* %a to i8*
-; CHECK-NEXT:   call void @__tsan_read4(i8* %1)
-; CHECK-NEXT:   %tmp1 = load i32, i32* %a, align 4
+; CHECK: define i32 @read_4_bytes(ptr %a)
+; CHECK:        call void @__tsan_func_entry(ptr %0)
+; CHECK-NEXT:   call void @__tsan_read4(ptr %a)
+; CHECK-NEXT:   %tmp1 = load i32, ptr %a, align 4
 ; CHECK-NEXT:   call void @__tsan_func_exit()
 ; CHECK: ret i32
 
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1)
-declare void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1)
-declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1)
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
-declare void @llvm.memset.inline.p0i8.i64(i8* nocapture, i8, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1)
+declare void @llvm.memcpy.inline.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1)
+declare void @llvm.memmove.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1)
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1)
+declare void @llvm.memset.inline.p0.i64(ptr nocapture, i8, i64, i1)
 
 
 ; Check that tsan converts mem intrinsics back to function calls.
 
-define void @MemCpyTest(i8* nocapture %x, i8* nocapture %y) sanitize_thread {
+define void @MemCpyTest(ptr nocapture %x, ptr nocapture %y) sanitize_thread {
 entry:
-    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %x, i8* align 4 %y, i64 16, i1 false)
+    tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x, ptr align 4 %y, i64 16, i1 false)
     ret void
 ; CHECK: define void @MemCpyTest
-; CHECK: call i8* @__tsan_memcpy
+; CHECK: call ptr @__tsan_memcpy
 ; CHECK: ret void
 }
 
-define void @MemCpyInlineTest(i8* nocapture %x, i8* nocapture %y) sanitize_thread {
+define void @MemCpyInlineTest(ptr nocapture %x, ptr nocapture %y) sanitize_thread {
 entry:
-    tail call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* align 4 %x, i8* align 4 %y, i64 16, i1 false)
+    tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 4 %x, ptr align 4 %y, i64 16, i1 false)
     ret void
 ; CHECK: define void @MemCpyInlineTest
-; CHECK: call i8* @__tsan_memcpy
+; CHECK: call ptr @__tsan_memcpy
 ; CHECK: ret void
 }
 
-define void @MemMoveTest(i8* nocapture %x, i8* nocapture %y) sanitize_thread {
+define void @MemMoveTest(ptr nocapture %x, ptr nocapture %y) sanitize_thread {
 entry:
-    tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %x, i8* align 4 %y, i64 16, i1 false)
+    tail call void @llvm.memmove.p0.p0.i64(ptr align 4 %x, ptr align 4 %y, i64 16, i1 false)
     ret void
 ; CHECK: define void @MemMoveTest
-; CHECK: call i8* @__tsan_memmove
+; CHECK: call ptr @__tsan_memmove
 ; CHECK: ret void
 }
 
-define void @MemSetTest(i8* nocapture %x) sanitize_thread {
+define void @MemSetTest(ptr nocapture %x) sanitize_thread {
 entry:
-    tail call void @llvm.memset.p0i8.i64(i8* align 4 %x, i8 77, i64 16, i1 false)
+    tail call void @llvm.memset.p0.i64(ptr align 4 %x, i8 77, i64 16, i1 false)
     ret void
 ; CHECK: define void @MemSetTest
-; CHECK: call i8* @__tsan_memset
+; CHECK: call ptr @__tsan_memset
 ; CHECK: ret void
 }
 
-define void @MemSetInlineTest(i8* nocapture %x) sanitize_thread {
+define void @MemSetInlineTest(ptr nocapture %x) sanitize_thread {
 entry:
-    tail call void @llvm.memset.inline.p0i8.i64(i8* align 4 %x, i8 77, i64 16, i1 false)
+    tail call void @llvm.memset.inline.p0.i64(ptr align 4 %x, i8 77, i64 16, i1 false)
     ret void
 ; CHECK: define void @MemSetInlineTest
-; CHECK: call i8* @__tsan_memset
+; CHECK: call ptr @__tsan_memset
 ; CHECK: ret void
 }
 
@@ -79,12 +78,12 @@ entry:
 ; CHECK-NOT: __tsan_read
 ; CHECK-NOT: __tsan_write
 ; CHECK: ret
-define void @SwiftError(i8** swifterror) sanitize_thread {
-  %swifterror_ptr_value = load i8*, i8** %0
-  store i8* null, i8** %0
-  %swifterror_addr = alloca swifterror i8*
-  %swifterror_ptr_value_2 = load i8*, i8** %swifterror_addr
-  store i8* null, i8** %swifterror_addr
+define void @SwiftError(ptr swifterror) sanitize_thread {
+  %swifterror_ptr_value = load ptr, ptr %0
+  store ptr null, ptr %0
+  %swifterror_addr = alloca swifterror ptr
+  %swifterror_ptr_value_2 = load ptr, ptr %swifterror_addr
+  store ptr null, ptr %swifterror_addr
   ret void
 }
 
@@ -92,20 +91,20 @@ define void @SwiftError(i8** swifterror) sanitize_thread {
 ; CHECK-NOT: __tsan_read
 ; CHECK-NOT: __tsan_write
 ; CHECK: ret
-define void @SwiftErrorCall(i8** swifterror) sanitize_thread {
-  %swifterror_addr = alloca swifterror i8*
-  store i8* null, i8** %0
-  call void @SwiftError(i8** %0)
+define void @SwiftErrorCall(ptr swifterror) sanitize_thread {
+  %swifterror_addr = alloca swifterror ptr
+  store ptr null, ptr %0
+  call void @SwiftError(ptr %0)
   ret void
 }
 
-; CHECK-LABEL: @NakedTest(i32* %a)
+; CHECK-LABEL: @NakedTest(ptr %a)
 ; CHECK-NEXT:   call void @foo()
-; CHECK-NEXT:   %tmp1 = load i32, i32* %a, align 4
+; CHECK-NEXT:   %tmp1 = load i32, ptr %a, align 4
 ; CHECK-NEXT:   ret i32 %tmp1
-define i32 @NakedTest(i32* %a) naked sanitize_thread {
+define i32 @NakedTest(ptr %a) naked sanitize_thread {
   call void @foo()
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   ret i32 %tmp1
 }
 

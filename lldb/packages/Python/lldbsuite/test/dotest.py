@@ -849,14 +849,14 @@ def checkDebugServerSupport():
     skip_msg = "Skipping %s tests, as they are not compatible with remote testing on this platform"
     if lldbplatformutil.platformIsDarwin():
         configuration.skip_categories.append("llgs")
-        if configuration.lldb_platform_name:
+        if lldb.remote_platform:
             # <rdar://problem/34539270>
             configuration.skip_categories.append("debugserver")
             if configuration.verbose:
                 print(skip_msg%"debugserver");
     else:
         configuration.skip_categories.append("debugserver")
-        if configuration.lldb_platform_name and lldbplatformutil.getPlatform() == "windows":
+        if lldb.remote_platform and lldbplatformutil.getPlatform() == "windows":
             configuration.skip_categories.append("llgs")
             if configuration.verbose:
                 print(skip_msg%"lldb-server");
@@ -890,14 +890,6 @@ def run_suite():
     import lldb
     lldb.SBDebugger.Initialize()
     lldb.SBDebugger.PrintStackTraceOnError()
-
-    checkLibcxxSupport()
-    checkLibstdcxxSupport()
-    checkWatchpointSupport()
-    checkDebugInfoSupport()
-    checkDebugServerSupport()
-    checkObjcSupport()
-    checkForkVForkSupport()
 
     # Use host platform by default.
     lldb.remote_platform = None
@@ -957,8 +949,16 @@ def run_suite():
     # Note that it's not dotest's job to clean this directory.
     lldbutil.mkdir_p(configuration.test_build_dir)
 
+    checkLibcxxSupport()
+    checkLibstdcxxSupport()
+    checkWatchpointSupport()
+    checkDebugInfoSupport()
+    checkDebugServerSupport()
+    checkObjcSupport()
+    checkForkVForkSupport()
+
     skipped_categories_list = ", ".join(configuration.skip_categories)
-    print("Skipping the following test categories: {}".format(skipped_categories_list))
+    print("Skipping the following test categories: {}".format(configuration.skip_categories))
 
     for testdir in configuration.testdirs:
         for (dirpath, dirnames, filenames) in os.walk(testdir):

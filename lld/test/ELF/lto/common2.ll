@@ -12,7 +12,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @b = common hidden global i32 0, align 4
 define i32 @f() {
-  %t = load i32, i32* @b, align 4
+  %t = load i32, ptr @b, align 4
   ret i32 %t
 }
 ; CHECK-DAG: @b = internal global i32 0, align 4

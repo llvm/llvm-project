@@ -201,12 +201,12 @@ func.func @entry() {
   %v2 = vector.transfer_read %2[%c0, %c0, %c0], %zero
       : tensor<?x?x?xf32>, vector<6x6x6xf32>
   vector.print %v2 : vector<6x6x6xf32>
-  
+
   // Free the resources
   bufferization.dealloc_tensor %in3D : tensor<?x?x?xf32>
   bufferization.dealloc_tensor %filter3D : tensor<?x?x?xf32>
   bufferization.dealloc_tensor %out3D : tensor<?x?x?xf32>
-  
+
   bufferization.dealloc_tensor %in3D_CDC : tensor<?x?x?xf32, #CDC>
   bufferization.dealloc_tensor %filter3D_CDC : tensor<?x?x?xf32, #CDC>
   bufferization.dealloc_tensor %in3D_CCC : tensor<?x?x?xf32, #CCC>

@@ -5625,7 +5625,7 @@ class MVE_VFMAMLA_qr<string iname, string suffix,
 
 multiclass MVE_VMLA_qr_multi<string iname, MVEVectorVTInfo VTI,
                              bit scalar_addend> {
-  def "": MVE_VFMAMLA_qr<iname, VTI.Suffix, VTI.Unsigned, VTI.Size,
+  def "": MVE_VFMAMLA_qr<iname, VTI.Suffix, 0b0, VTI.Size,
                          scalar_addend, VTI.Size>;
   defvar Inst = !cast<Instruction>(NAME);
   defvar pred_int = !cast<Intrinsic>("int_arm_mve_" # iname # "_n_predicated");
@@ -5635,10 +5635,7 @@ multiclass MVE_VMLA_qr_multi<string iname, MVEVectorVTInfo VTI,
   defvar s    = (i32 rGPR:$s);
   defvar pred = (VTI.Pred VCCR:$pred);
 
-  // The signed and unsigned variants of this instruction have different
-  // encodings, but they're functionally identical. For the sake of
-  // determinism, we generate only the unsigned variant.
-  if VTI.Unsigned then let Predicates = [HasMVEInt] in {
+  let Predicates = [HasMVEInt] in {
     if scalar_addend then {
       def : Pat<(VTI.Vec (add (mul v1, v2), vs)),
                 (VTI.Vec (Inst v1, v2, s))>;
@@ -5652,19 +5649,13 @@ multiclass MVE_VMLA_qr_multi<string iname, MVEVectorVTInfo VTI,
   }
 }
 
-defm MVE_VMLA_qr_s8   : MVE_VMLA_qr_multi<"vmla", MVE_v16s8, 0b0>;
-defm MVE_VMLA_qr_s16  : MVE_VMLA_qr_multi<"vmla", MVE_v8s16, 0b0>;
-defm MVE_VMLA_qr_s32  : MVE_VMLA_qr_multi<"vmla", MVE_v4s32, 0b0>;
-defm MVE_VMLA_qr_u8   : MVE_VMLA_qr_multi<"vmla", MVE_v16u8, 0b0>;
-defm MVE_VMLA_qr_u16  : MVE_VMLA_qr_multi<"vmla", MVE_v8u16, 0b0>;
-defm MVE_VMLA_qr_u32  : MVE_VMLA_qr_multi<"vmla", MVE_v4u32, 0b0>;
+defm MVE_VMLA_qr_i8   : MVE_VMLA_qr_multi<"vmla", MVE_v16i8, 0b0>;
+defm MVE_VMLA_qr_i16  : MVE_VMLA_qr_multi<"vmla", MVE_v8i16, 0b0>;
+defm MVE_VMLA_qr_i32  : MVE_VMLA_qr_multi<"vmla", MVE_v4i32, 0b0>;
 
-defm MVE_VMLAS_qr_s8  : MVE_VMLA_qr_multi<"vmlas", MVE_v16s8, 0b1>;
-defm MVE_VMLAS_qr_s16 : MVE_VMLA_qr_multi<"vmlas", MVE_v8s16, 0b1>;
-defm MVE_VMLAS_qr_s32 : MVE_VMLA_qr_multi<"vmlas", MVE_v4s32, 0b1>;
-defm MVE_VMLAS_qr_u8  : MVE_VMLA_qr_multi<"vmlas", MVE_v16u8, 0b1>;
-defm MVE_VMLAS_qr_u16 : MVE_VMLA_qr_multi<"vmlas", MVE_v8u16, 0b1>;
-defm MVE_VMLAS_qr_u32 : MVE_VMLA_qr_multi<"vmlas", MVE_v4u32, 0b1>;
+defm MVE_VMLAS_qr_i8  : MVE_VMLA_qr_multi<"vmlas", MVE_v16i8, 0b1>;
+defm MVE_VMLAS_qr_i16 : MVE_VMLA_qr_multi<"vmlas", MVE_v8i16, 0b1>;
+defm MVE_VMLAS_qr_i32 : MVE_VMLA_qr_multi<"vmlas", MVE_v4i32, 0b1>;
 
 multiclass MVE_VFMA_qr_multi<string iname, MVEVectorVTInfo VTI,
                              bit scalar_addend> {

@@ -167,7 +167,7 @@ define void @sunken_vmovl(i8* noalias %pTarget, i16 signext %iTargetStride, i8* 
 ; CHECK-NEXT:    vmovlb.u8 q2, q2
 ; CHECK-NEXT:    vmul.i16 q3, q2, q3
 ; CHECK-NEXT:    vldrb.u16 q2, [r0], #8
-; CHECK-NEXT:    vmla.u16 q3, q1, r3
+; CHECK-NEXT:    vmla.i16 q3, q1, r3
 ; CHECK-NEXT:    vldrb.u16 q1, [r2], #8
 ; CHECK-NEXT:    vshr.u16 q3, q3, #8
 ; CHECK-NEXT:    vstrb.16 q3, [r0, #-16]

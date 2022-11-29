@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn | llvm-dis
+; RUN: opt < %s -passes=gvn | llvm-dis
 
 	%struct.PerlInterpreter = type { i8 }
 @PL_sv_count = external global i32		; <i32*> [#uses=2]

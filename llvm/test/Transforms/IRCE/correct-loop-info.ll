@@ -10,7 +10,7 @@
 ; were incorrectly updating LI when the split loop is a subloop as in the case below.
 source_filename = "correct-loop-info.ll"
 
-define void @baz() personality i32* ()* @ham {
+define void @baz() personality ptr @ham {
 ; CHECK-LABEL: @baz(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[EXIT_PRELOOP_AT:%.*]] = call i32 @llvm.smax.i32(i32 undef, i32 -1)
@@ -50,15 +50,15 @@ define void @baz() personality i32* ()* @ham {
 ; CHECK-NEXT:    [[INDVAR_END1:%.*]] = phi i32 [ [[INDVAR_END]], [[MAINLOOP]] ], [ [[TMP6_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
 ; CHECK-NEXT:    br label [[POSTLOOP:%.*]]
 ; CHECK:       outer_exiting.loopexit:
-; CHECK-NEXT:    [[LPAD_LOOPEXIT:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[LPAD_LOOPEXIT:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    br label [[OUTER_EXITING:%.*]]
 ; CHECK:       outer_exiting.loopexit.split-lp.loopexit:
-; CHECK-NEXT:    [[LPAD_LOOPEXIT2:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[LPAD_LOOPEXIT2:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    br label [[OUTER_EXITING_LOOPEXIT_SPLIT_LP:%.*]]
 ; CHECK:       outer_exiting.loopexit.split-lp.loopexit.split-lp:
-; CHECK-NEXT:    [[LPAD_LOOPEXIT_SPLIT_LP3:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[LPAD_LOOPEXIT_SPLIT_LP3:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    br label [[OUTER_EXITING_LOOPEXIT_SPLIT_LP]]
 ; CHECK:       outer_exiting.loopexit.split-lp:
@@ -147,7 +147,7 @@ bb8:                                              ; preds = %bb5
   br i1 %tmp9, label %innerheader, label %bb13
 
 outer_exiting:                                             ; preds = %innerheader
-  %tmp11 = landingpad { i8*, i32 }
+  %tmp11 = landingpad { ptr, i32 }
   cleanup
   switch i32 undef, label %exit2 [
   i32 142, label %bb14
@@ -173,7 +173,7 @@ exit2:                                             ; preds = %outer_exiting
   ret void
 }
 
-declare i32* @ham()
+declare ptr @ham()
 
 declare void @pluto()
 

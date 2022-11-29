@@ -79,6 +79,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -208,7 +209,7 @@ assignSections(MachineFunction &MF,
   // This variable stores the section ID of the cluster containing eh_pads (if
   // all eh_pads are one cluster). If more than one cluster contain eh_pads, we
   // set it equal to ExceptionSectionID.
-  Optional<MBBSectionID> EHPadsSectionID;
+  std::optional<MBBSectionID> EHPadsSectionID;
 
   for (auto &MBB : MF) {
     // With the 'all' option, every basic block is placed in a unique section.

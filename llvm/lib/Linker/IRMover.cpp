@@ -1244,6 +1244,11 @@ void IRLinker::linkNamedMDNodes() {
                     DstM.getModuleIdentifier() + "' is not\n");
       continue;
     }
+    // The stats are computed per module and will all be merged in the binary.
+    // Importing the metadata will cause duplication of the stats.
+    if (IsPerformingImport && NMD.getName() == "llvm.stats")
+      continue;
+
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
     // Add Src elements into Dest node.
     for (const MDNode *Op : NMD.operands())

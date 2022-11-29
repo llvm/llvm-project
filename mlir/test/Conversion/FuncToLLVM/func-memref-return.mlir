@@ -90,7 +90,7 @@ func.func @check_memref_func_call(%in : memref<10xi8>) -> memref<20xi8> {
 // -----
 
 // BAREPTR-LABEL: func @check_return(
-// BAREPTR-SAME: %{{.*}}: memref<?xi8>) -> memref<?xi8> 
+// BAREPTR-SAME: %{{.*}}: memref<?xi8>) -> memref<?xi8>
 func.func @check_return(%in : memref<?xi8>) -> memref<?xi8> {
   // BAREPTR: llvm.return {{.*}} : !llvm.struct<(ptr<i8>, ptr<i8>, i64, array<1 x i64>, array<1 x i64>)>
   return %in : memref<?xi8>

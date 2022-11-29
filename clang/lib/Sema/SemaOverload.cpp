@@ -1316,6 +1316,17 @@ bool Sema::IsOverload(FunctionDecl *New, FunctionDecl *Old,
         (!SameTemplateParameterList || !SameReturnType))
       return true;
   }
+
+  if (ConsiderRequiresClauses) {
+    Expr *NewRC = New->getTrailingRequiresClause(),
+         *OldRC = Old->getTrailingRequiresClause();
+    if ((NewRC != nullptr) != (OldRC != nullptr))
+      return true;
+
+    if (NewRC && !AreConstraintExpressionsEqual(Old, OldRC, New, NewRC))
+        return true;
+  }
+
   // If the function is a class member, its signature includes the
   // cv-qualifiers (if any) and ref-qualifier (if any) on the function itself.
   //
@@ -1332,14 +1343,15 @@ bool Sema::IsOverload(FunctionDecl *New, FunctionDecl *Old,
       if (!UseMemberUsingDeclRules &&
           (OldMethod->getRefQualifier() == RQ_None ||
            NewMethod->getRefQualifier() == RQ_None)) {
-        // C++0x [over.load]p2:
-        //   - Member function declarations with the same name and the same
-        //     parameter-type-list as well as member function template
-        //     declarations with the same name, the same parameter-type-list, and
-        //     the same template parameter lists cannot be overloaded if any of
-        //     them, but not all, have a ref-qualifier (8.3.5).
+        // C++20 [over.load]p2:
+        //   - Member function declarations with the same name, the same
+        //     parameter-type-list, and the same trailing requires-clause (if
+        //     any), as well as member function template declarations with the
+        //     same name, the same parameter-type-list, the same trailing
+        //     requires-clause (if any), and the same template-head, cannot be
+        //     overloaded if any of them, but not all, have a ref-qualifier.
         Diag(NewMethod->getLocation(), diag::err_ref_qualifier_overload)
-          << NewMethod->getRefQualifier() << OldMethod->getRefQualifier();
+            << NewMethod->getRefQualifier() << OldMethod->getRefQualifier();
         Diag(OldMethod->getLocation(), diag::note_previous_declaration);
       }
       return true;
@@ -1400,23 +1412,6 @@ bool Sema::IsOverload(FunctionDecl *New, FunctionDecl *Old,
         if (NewTarget != OldTarget)
           return true;
       }
-    }
-  }
-
-  if (ConsiderRequiresClauses) {
-    Expr *NewRC = New->getTrailingRequiresClause(),
-         *OldRC = Old->getTrailingRequiresClause();
-    if ((NewRC != nullptr) != (OldRC != nullptr))
-      // RC are most certainly different - these are overloads.
-      return true;
-
-    if (NewRC) {
-      llvm::FoldingSetNodeID NewID, OldID;
-      NewRC->Profile(NewID, Context, /*Canonical=*/true);
-      OldRC->Profile(OldID, Context, /*Canonical=*/true);
-      if (NewID != OldID)
-        // RCs are not equivalent - these are overloads.
-        return true;
     }
   }
 
@@ -14425,12 +14420,17 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         // Convert the arguments.
         CXXMethodDecl *Method = cast<CXXMethodDecl>(FnDecl);
         SmallVector<Expr *, 2> MethodArgs;
-        ExprResult Arg0 = PerformObjectArgumentInitialization(
-            Args[0], /*Qualifier=*/nullptr, Best->FoundDecl, Method);
-        if (Arg0.isInvalid())
-          return ExprError();
 
-        MethodArgs.push_back(Arg0.get());
+        // Handle 'this' parameter if the selected function is not static.
+        if (Method->isInstance()) {
+          ExprResult Arg0 = PerformObjectArgumentInitialization(
+              Args[0], /*Qualifier=*/nullptr, Best->FoundDecl, Method);
+          if (Arg0.isInvalid())
+            return ExprError();
+
+          MethodArgs.push_back(Arg0.get());
+        }
+
         bool IsError = PrepareArgumentsForCallToObjectOfClassType(
             *this, MethodArgs, Method, ArgExpr, LLoc);
         if (IsError)
@@ -14450,9 +14450,16 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         ExprValueKind VK = Expr::getValueKindForType(ResultTy);
         ResultTy = ResultTy.getNonLValueExprType(Context);
 
-        CXXOperatorCallExpr *TheCall = CXXOperatorCallExpr::Create(
-            Context, OO_Subscript, FnExpr.get(), MethodArgs, ResultTy, VK, RLoc,
-            CurFPFeatureOverrides());
+        CallExpr *TheCall;
+        if (Method->isInstance())
+          TheCall = CXXOperatorCallExpr::Create(
+              Context, OO_Subscript, FnExpr.get(), MethodArgs, ResultTy, VK,
+              RLoc, CurFPFeatureOverrides());
+        else
+          TheCall =
+              CallExpr::Create(Context, FnExpr.get(), MethodArgs, ResultTy, VK,
+                               RLoc, CurFPFeatureOverrides());
+
         if (CheckCallReturnType(FnDecl->getReturnType(), LLoc, TheCall, FnDecl))
           return ExprError();
 

@@ -15,7 +15,7 @@
 
 include "mlir/IR/EnumAttr.td"
 
-def LayoutMapOption : I32EnumAttr<"LayoutMapOption", 
+def LayoutMapOption : I32EnumAttr<"LayoutMapOption",
                                   "option for map layout", [
   I32EnumAttrCase<"InferLayoutMap", 0>,
   I32EnumAttrCase<"IdentityLayoutMap", 1>,

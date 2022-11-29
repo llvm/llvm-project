@@ -2,11 +2,11 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @test1(i32* ()*) {
+define void @test1(ptr) {
 entry:
-  %1 = call i32* %0() #0
+  %1 = call ptr %0() #0
   fence syncscope("singlethread") seq_cst
-  %2 = load i32, i32* %1, align 4
+  %2 = load i32, ptr %1, align 4
   fence syncscope("singlethread") seq_cst
   %3 = icmp eq i32 %2, 0
   br i1 %3, label %fail, label %pass
@@ -19,9 +19,9 @@ pass:                                             ; preds = %fail, %top
 }
 
 ; CHECK-LABEL: @test1(
-; CHECK:  %[[call:.*]] = call i32* %0()
+; CHECK:  %[[call:.*]] = call ptr %0()
 ; CHECK:  fence syncscope("singlethread") seq_cst
-; CHECK:  load i32, i32* %[[call]], align 4
+; CHECK:  load i32, ptr %[[call]], align 4
 ; CHECK:  fence syncscope("singlethread") seq_cst
 
 

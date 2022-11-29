@@ -214,7 +214,7 @@ main_body:
 define amdgpu_ps void @s_buffer_load_index_across_bb(<4 x i32> inreg %desc, i32 %index) {
 main_body:
   %tmp = shl i32 %index, 4
-  store i32 %tmp, i32 addrspace(1)* @gv
+  store i32 %tmp, ptr addrspace(1) @gv
   br label %bb1
 
 bb1:                                              ; preds = %main_body

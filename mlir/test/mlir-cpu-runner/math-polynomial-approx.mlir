@@ -9,25 +9,25 @@
 // Tanh.
 // -------------------------------------------------------------------------- //
 
-func.func @tanh_f32(%a : f32) { 
+func.func @tanh_f32(%a : f32) {
   %r = math.tanh %a : f32
   vector.print %r : f32
   return
 }
 
-func.func @tanh_4xf32(%a : vector<4xf32>) { 
+func.func @tanh_4xf32(%a : vector<4xf32>) {
   %r = math.tanh %a : vector<4xf32>
   vector.print %r : vector<4xf32>
   return
 }
 
-func.func @tanh_8xf32(%a : vector<8xf32>) { 
+func.func @tanh_8xf32(%a : vector<8xf32>) {
   %r = math.tanh %a : vector<8xf32>
   vector.print %r : vector<8xf32>
   return
 }
 
-func.func @tanh() { 
+func.func @tanh() {
   // CHECK: 0.848284
   %f0 = arith.constant 1.25 : f32
   call @tanh_f32(%f0) : (f32) -> ()
@@ -51,25 +51,25 @@ func.func @tanh() {
 // Log.
 // -------------------------------------------------------------------------- //
 
-func.func @log_f32(%a : f32) { 
+func.func @log_f32(%a : f32) {
   %r = math.log %a : f32
   vector.print %r : f32
   return
 }
 
-func.func @log_4xf32(%a : vector<4xf32>) { 
+func.func @log_4xf32(%a : vector<4xf32>) {
   %r = math.log %a : vector<4xf32>
   vector.print %r : vector<4xf32>
   return
 }
 
-func.func @log_8xf32(%a : vector<8xf32>) { 
+func.func @log_8xf32(%a : vector<8xf32>) {
   %r = math.log %a : vector<8xf32>
   vector.print %r : vector<8xf32>
   return
 }
 
-func.func @log() { 
+func.func @log() {
   // CHECK: 2.64704
   %f1 = arith.constant 14.112233 : f32
   call @log_f32(%f1) : (f32) -> ()
@@ -101,19 +101,19 @@ func.func @log() {
   return
 }
 
-func.func @log2_f32(%a : f32) { 
+func.func @log2_f32(%a : f32) {
   %r = math.log2 %a : f32
   vector.print %r : f32
   return
 }
 
-func.func @log2_4xf32(%a : vector<4xf32>) { 
+func.func @log2_4xf32(%a : vector<4xf32>) {
   %r = math.log2 %a : vector<4xf32>
   vector.print %r : vector<4xf32>
   return
 }
 
-func.func @log2_8xf32(%a : vector<8xf32>) { 
+func.func @log2_8xf32(%a : vector<8xf32>) {
   %r = math.log2 %a : vector<8xf32>
   vector.print %r : vector<8xf32>
   return
@@ -151,19 +151,19 @@ func.func @log2() {
   return
 }
 
-func.func @log1p_f32(%a : f32) { 
+func.func @log1p_f32(%a : f32) {
   %r = math.log1p %a : f32
   vector.print %r : f32
   return
 }
 
-func.func @log1p_4xf32(%a : vector<4xf32>) { 
+func.func @log1p_4xf32(%a : vector<4xf32>) {
   %r = math.log1p %a : vector<4xf32>
   vector.print %r : vector<4xf32>
   return
 }
 
-func.func @log1p_8xf32(%a : vector<8xf32>) { 
+func.func @log1p_8xf32(%a : vector<8xf32>) {
   %r = math.log1p %a : vector<8xf32>
   vector.print %r : vector<8xf32>
   return
@@ -205,13 +205,13 @@ func.func @log1p() {
 // -------------------------------------------------------------------------- //
 // Erf.
 // -------------------------------------------------------------------------- //
-func.func @erf_f32(%a : f32) { 
+func.func @erf_f32(%a : f32) {
   %r = math.erf %a : f32
   vector.print %r : f32
   return
 }
 
-func.func @erf_4xf32(%a : vector<4xf32>) { 
+func.func @erf_4xf32(%a : vector<4xf32>) {
   %r = math.erf %a : vector<4xf32>
   vector.print %r : vector<4xf32>
   return
@@ -276,13 +276,13 @@ func.func @erf() {
 // -------------------------------------------------------------------------- //
 // Exp.
 // -------------------------------------------------------------------------- //
-func.func @exp_f32(%a : f32) { 
+func.func @exp_f32(%a : f32) {
   %r = math.exp %a : f32
   vector.print %r : f32
   return
 }
 
-func.func @exp_4xf32(%a : vector<4xf32>) { 
+func.func @exp_4xf32(%a : vector<4xf32>) {
   %r = math.exp %a : vector<4xf32>
   vector.print %r : vector<4xf32>
   return
@@ -301,7 +301,7 @@ func.func @exp() {
   %zero = arith.constant 0.0 : f32
   call @exp_f32(%zero) : (f32) -> ()
 
-  // CHECK: 1.17549e-38, 1.38879e-11, 7.20049e+10, inf 
+  // CHECK: 1.17549e-38, 1.38879e-11, 7.20049e+10, inf
   %special_vec = arith.constant dense<[-89.0, -25.0, 25.0, 89.0]> : vector<4xf32>
   call @exp_4xf32(%special_vec) : (vector<4xf32>) -> ()
 
@@ -320,25 +320,25 @@ func.func @exp() {
   return
 }
 
-func.func @expm1_f32(%a : f32) { 
+func.func @expm1_f32(%a : f32) {
   %r = math.expm1 %a : f32
   vector.print %r : f32
   return
 }
 
-func.func @expm1_3xf32(%a : vector<3xf32>) { 
+func.func @expm1_3xf32(%a : vector<3xf32>) {
   %r = math.expm1 %a : vector<3xf32>
   vector.print %r : vector<3xf32>
   return
 }
 
-func.func @expm1_4xf32(%a : vector<4xf32>) { 
+func.func @expm1_4xf32(%a : vector<4xf32>) {
   %r = math.expm1 %a : vector<4xf32>
   vector.print %r : vector<4xf32>
   return
 }
 
-func.func @expm1_8xf32(%a : vector<8xf32>) { 
+func.func @expm1_8xf32(%a : vector<8xf32>) {
   %r = math.expm1 %a : vector<8xf32>
   vector.print %r : vector<8xf32>
   return
@@ -378,13 +378,13 @@ func.func @expm1() {
 // -------------------------------------------------------------------------- //
 // Sin.
 // -------------------------------------------------------------------------- //
-func.func @sin_f32(%a : f32) { 
+func.func @sin_f32(%a : f32) {
   %r = math.sin %a : f32
   vector.print %r : f32
   return
 }
 
-func.func @sin_3xf32(%a : vector<3xf32>) { 
+func.func @sin_3xf32(%a : vector<3xf32>) {
   %r = math.sin %a : vector<3xf32>
   vector.print %r : vector<3xf32>
   return
@@ -421,13 +421,13 @@ func.func @sin() {
 // -------------------------------------------------------------------------- //
 // cos.
 // -------------------------------------------------------------------------- //
-func.func @cos_f32(%a : f32) { 
+func.func @cos_f32(%a : f32) {
   %r = math.cos %a : f32
   vector.print %r : f32
   return
 }
 
-func.func @cos_3xf32(%a : vector<3xf32>) { 
+func.func @cos_3xf32(%a : vector<3xf32>) {
   %r = math.cos %a : vector<3xf32>
   vector.print %r : vector<3xf32>
   return
@@ -464,7 +464,7 @@ func.func @cos() {
 // -------------------------------------------------------------------------- //
 // Atan.
 // -------------------------------------------------------------------------- //
-func.func @atan_f32(%a : f32) { 
+func.func @atan_f32(%a : f32) {
   %r = math.atan %a : f32
   vector.print %r : f32
   return
@@ -506,7 +506,7 @@ func.func @atan() {
 // -------------------------------------------------------------------------- //
 // Atan2.
 // -------------------------------------------------------------------------- //
-func.func @atan2_f32(%a : f32, %b : f32) { 
+func.func @atan2_f32(%a : f32, %b : f32) {
   %r = math.atan2 %a, %b : f32
   vector.print %r : f32
   return

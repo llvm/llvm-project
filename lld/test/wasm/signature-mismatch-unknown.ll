@@ -18,10 +18,10 @@ declare dso_local void @ret32()
 
 ; Simply taking the address of the function should *not* generate the
 ; the signature mismatch warning.
-@ptr = dso_local global i8* bitcast (void ()* @ret32 to i8*), align 8
+@ptr = dso_local global ptr @ret32, align 8
 
 define hidden void @_start() local_unnamed_addr {
-  %addr = load i32 ()*, i32 ()** bitcast (i8** @ptr to i32 ()**), align 8
+  %addr = load ptr, ptr @ptr, align 8
   call i32 %addr()
   ret void
 }

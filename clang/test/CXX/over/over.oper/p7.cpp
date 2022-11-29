@@ -5,14 +5,19 @@
 
 struct Functor {
   static int operator()(int a, int b);
-  // cxx11-warning@-1 {{is a C++2b extension}}
-  // precxx2b-warning@-2 {{declaring overloaded 'operator()' as 'static' is a C++2b extension}}
+  static int operator[](int a1);
+  // cxx11-warning@-2 {{declaring overloaded 'operator()' as 'static' is a C++2b extension}}
+  // cxx11-warning@-2 {{declaring overloaded 'operator[]' as 'static' is a C++2b extension}}
+  // precxx2b-warning@-4 {{incompatible with C++ standards before C++2b}}
+  // precxx2b-warning@-4 {{incompatible with C++ standards before C++2b}}
 };
 
 struct InvalidParsing1 {
   extern int operator()(int a, int b);  // expected-error {{storage class specified}}
+  extern int operator[](int a1);  // expected-error {{storage class specified}}
 };
 
 struct InvalidParsing2 {
   extern static int operator()(int a, int b);  // expected-error {{storage class specified}} // expected-error {{cannot combine with previous 'extern' declaration specifier}}
+  extern static int operator[](int a);  // expected-error {{storage class specified}} // expected-error {{cannot combine with previous 'extern' declaration specifier}}
 };

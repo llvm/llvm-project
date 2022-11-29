@@ -413,7 +413,7 @@ module {
     %1 = sparse_tensor.values %A : tensor<4x4xi8, #DCSR> to memref<?xi8>
     %2 = vector.transfer_read %1[%c0], %du: memref<?xi8>, vector<16xi8>
     vector.print %2 : vector<16xi8>
-  
+
     return
   }
 

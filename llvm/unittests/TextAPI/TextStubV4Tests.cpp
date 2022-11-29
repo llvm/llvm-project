@@ -143,12 +143,9 @@ TEST(TBDv4, ReadFile) {
       {SymbolKind::GlobalSymbol, "_symD", false, false},
   };
 
-  EXPECT_EQ(sizeof(ExpectedExportedSymbols) / sizeof(ExportedSymbol),
-            Exports.size());
-  EXPECT_EQ(sizeof(ExpectedReexportedSymbols) / sizeof(ExportedSymbol),
-            Reexports.size());
-  EXPECT_EQ(sizeof(ExpectedUndefinedSymbols) / sizeof(ExportedSymbol),
-            Undefineds.size());
+  EXPECT_EQ(std::size(ExpectedExportedSymbols), Exports.size());
+  EXPECT_EQ(std::size(ExpectedReexportedSymbols), Reexports.size());
+  EXPECT_EQ(std::size(ExpectedUndefinedSymbols), Undefineds.size());
   EXPECT_TRUE(std::equal(Exports.begin(), Exports.end(),
                          std::begin(ExpectedExportedSymbols)));
   EXPECT_TRUE(std::equal(Reexports.begin(), Reexports.end(),
@@ -313,12 +310,9 @@ TEST(TBDv4, ReadMultipleDocuments) {
       {SymbolKind::GlobalSymbol, "_symD", false, false},
   };
 
-  EXPECT_EQ(sizeof(ExpectedExportedSymbols) / sizeof(ExportedSymbol),
-            Exports.size());
-  EXPECT_EQ(sizeof(ExpectedReexportedSymbols) / sizeof(ExportedSymbol),
-            Reexports.size());
-  EXPECT_EQ(sizeof(ExpectedUndefinedSymbols) / sizeof(ExportedSymbol),
-            Undefineds.size());
+  EXPECT_EQ(std::size(ExpectedExportedSymbols), Exports.size());
+  EXPECT_EQ(std::size(ExpectedReexportedSymbols), Reexports.size());
+  EXPECT_EQ(std::size(ExpectedUndefinedSymbols), Undefineds.size());
   EXPECT_TRUE(std::equal(Exports.begin(), Exports.end(),
                          std::begin(ExpectedExportedSymbols)));
   EXPECT_TRUE(std::equal(Reexports.begin(), Reexports.end(),

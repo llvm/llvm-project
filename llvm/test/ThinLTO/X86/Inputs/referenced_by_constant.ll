@@ -10,13 +10,13 @@ define internal void @localreferencedbyglobal() {
     ret void
 }
 
-@someglobal = internal unnamed_addr constant i8* bitcast (void ()* @referencedbyglobal to i8*)
-@someglobal2 = internal unnamed_addr constant i8* bitcast (void ()* @localreferencedbyglobal to i8*)
-@ptr = global i8** null
-@ptr2 = global i8** null
+@someglobal = internal unnamed_addr constant ptr @referencedbyglobal
+@someglobal2 = internal unnamed_addr constant ptr @localreferencedbyglobal
+@ptr = global ptr null
+@ptr2 = global ptr null
 
 define  void @bar() #0 align 2 {
-  store i8** getelementptr inbounds (i8*, i8** @someglobal, i64 0) , i8*** @ptr, align 8
-  store i8** getelementptr inbounds (i8*, i8** @someglobal2, i64 0) , i8*** @ptr2, align 8
+  store ptr @someglobal , ptr @ptr, align 8
+  store ptr @someglobal2 , ptr @ptr2, align 8
   ret void
 }

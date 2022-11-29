@@ -49,6 +49,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -311,7 +312,7 @@ public:
   /// The node works much like an optional in order to lazily populate the
   /// edges of each node. Until populated, there are no edges. Once populated,
   /// you can access the edges by dereferencing the node or using the `->`
-  /// operator as if the node was an `Optional<EdgeSequence>`.
+  /// operator as if the node was an `std::optional<EdgeSequence>`.
   class Node {
     friend class LazyCallGraph;
     friend class LazyCallGraph::RefSCC;
@@ -378,7 +379,7 @@ public:
     int DFSNumber = 0;
     int LowLink = 0;
 
-    Optional<EdgeSequence> Edges;
+    std::optional<EdgeSequence> Edges;
 
     /// Basic constructor implements the scanning of F into Edges and
     /// EdgeIndexMap.

@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel -amdgpu-codegenprepare-disable-idiv-expansion=1 -amdgpu-bypass-slow-div=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -global-isel -amdgpu-codegenprepare-disable-idiv-expansion=1 -amdgpu-bypass-slow-div=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10 %s
 
-define amdgpu_kernel void @udivrem_i32(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 %x, i32 %y) {
+define amdgpu_kernel void @udivrem_i32(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i32 %x, i32 %y) {
 ; GFX8-LABEL: udivrem_i32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
@@ -103,13 +103,13 @@ define amdgpu_kernel void @udivrem_i32(i32 addrspace(1)* %out0, i32 addrspace(1)
 ; GFX10-NEXT:    global_store_dword v2, v1, s[2:3]
 ; GFX10-NEXT:    s_endpgm
   %div = udiv i32 %x, %y
-  store i32 %div, i32 addrspace(1)* %out0
+  store i32 %div, ptr addrspace(1) %out0
   %rem = urem i32 %x, %y
-  store i32 %rem, i32 addrspace(1)* %out1
+  store i32 %rem, ptr addrspace(1) %out1
   ret void
 }
 
-define amdgpu_kernel void @udivrem_i64(i64 addrspace(1)* %out0, i64 addrspace(1)* %out1, i64 %x, i64 %y) {
+define amdgpu_kernel void @udivrem_i64(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i64 %x, i64 %y) {
 ; GFX8-LABEL: udivrem_i64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx8 s[4:11], s[4:5], 0x0
@@ -519,13 +519,13 @@ define amdgpu_kernel void @udivrem_i64(i64 addrspace(1)* %out0, i64 addrspace(1)
 ; GFX10-NEXT:    global_store_dwordx2 v7, v[2:3], s[6:7]
 ; GFX10-NEXT:    s_endpgm
   %div = udiv i64 %x, %y
-  store i64 %div, i64 addrspace(1)* %out0
+  store i64 %div, ptr addrspace(1) %out0
   %rem = urem i64 %x, %y
-  store i64 %rem, i64 addrspace(1)* %out1
+  store i64 %rem, ptr addrspace(1) %out1
   ret void
 }
 
-define amdgpu_kernel void @udivrem_v2i32(<2 x i32> addrspace(1)* %out0, <2 x i32> addrspace(1)* %out1, <2 x i32> %x, <2 x i32> %y) {
+define amdgpu_kernel void @udivrem_v2i32(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <2 x i32> %x, <2 x i32> %y) {
 ; GFX8-LABEL: udivrem_v2i32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx8 s[4:11], s[4:5], 0x0
@@ -682,13 +682,13 @@ define amdgpu_kernel void @udivrem_v2i32(<2 x i32> addrspace(1)* %out0, <2 x i32
 ; GFX10-NEXT:    global_store_dwordx2 v8, v[2:3], s[6:7]
 ; GFX10-NEXT:    s_endpgm
   %div = udiv <2 x i32> %x, %y
-  store <2 x i32> %div, <2 x i32> addrspace(1)* %out0
+  store <2 x i32> %div, ptr addrspace(1) %out0
   %rem = urem <2 x i32> %x, %y
-  store <2 x i32> %rem, <2 x i32> addrspace(1)* %out1
+  store <2 x i32> %rem, ptr addrspace(1) %out1
   ret void
 }
 
-define amdgpu_kernel void @udivrem_v4i32(<4 x i32> addrspace(1)* %out0, <4 x i32> addrspace(1)* %out1, <4 x i32> %x, <4 x i32> %y) {
+define amdgpu_kernel void @udivrem_v4i32(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <4 x i32> %x, <4 x i32> %y) {
 ; GFX8-LABEL: udivrem_v4i32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x10
@@ -976,13 +976,13 @@ define amdgpu_kernel void @udivrem_v4i32(<4 x i32> addrspace(1)* %out0, <4 x i32
 ; GFX10-NEXT:    global_store_dwordx4 v8, v[4:7], s[6:7]
 ; GFX10-NEXT:    s_endpgm
   %div = udiv <4 x i32> %x, %y
-  store <4 x i32> %div, <4 x i32> addrspace(1)* %out0
+  store <4 x i32> %div, ptr addrspace(1) %out0
   %rem = urem <4 x i32> %x, %y
-  store <4 x i32> %rem, <4 x i32> addrspace(1)* %out1
+  store <4 x i32> %rem, ptr addrspace(1) %out1
   ret void
 }
 
-define amdgpu_kernel void @udivrem_v2i64(<2 x i64> addrspace(1)* %out0, <2 x i64> addrspace(1)* %out1, <2 x i64> %x, <2 x i64> %y) {
+define amdgpu_kernel void @udivrem_v2i64(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <2 x i64> %x, <2 x i64> %y) {
 ; GFX8-LABEL: udivrem_v2i64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x10
@@ -1776,13 +1776,13 @@ define amdgpu_kernel void @udivrem_v2i64(<2 x i64> addrspace(1)* %out0, <2 x i64
 ; GFX10-NEXT:    global_store_dwordx4 v9, v[4:7], s[6:7]
 ; GFX10-NEXT:    s_endpgm
   %div = udiv <2 x i64> %x, %y
-  store <2 x i64> %div, <2 x i64> addrspace(1)* %out0
+  store <2 x i64> %div, ptr addrspace(1) %out0
   %rem = urem <2 x i64> %x, %y
-  store <2 x i64> %rem, <2 x i64> addrspace(1)* %out1
+  store <2 x i64> %rem, ptr addrspace(1) %out1
   ret void
 }
 
-define amdgpu_kernel void @udiv_i8(i8 addrspace(1)* %out0, i8 addrspace(1)* %out1, i8 %x, i8 %y) {
+define amdgpu_kernel void @udiv_i8(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i8 %x, i8 %y) {
 ; GFX8-LABEL: udiv_i8:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dword s6, s[4:5], 0x10
@@ -1888,13 +1888,13 @@ define amdgpu_kernel void @udiv_i8(i8 addrspace(1)* %out0, i8 addrspace(1)* %out
 ; GFX10-NEXT:    global_store_byte v2, v1, s[2:3]
 ; GFX10-NEXT:    s_endpgm
   %div = udiv i8 %x, %y
-  store i8 %div, i8 addrspace(1)* %out0
+  store i8 %div, ptr addrspace(1) %out0
   %rem = urem i8 %x, %y
-  store i8 %rem, i8 addrspace(1)* %out1
+  store i8 %rem, ptr addrspace(1) %out1
   ret void
 }
 
-define amdgpu_kernel void @udivrem_v2i8(<2 x i8> addrspace(1)* %out0, <2 x i8> addrspace(1)* %out1, <2 x i8> %x, <2 x i8> %y) {
+define amdgpu_kernel void @udivrem_v2i8(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <2 x i8> %x, <2 x i8> %y) {
 ; GFX8-LABEL: udivrem_v2i8:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dword s0, s[4:5], 0x10
@@ -2085,13 +2085,13 @@ define amdgpu_kernel void @udivrem_v2i8(<2 x i8> addrspace(1)* %out0, <2 x i8> a
 ; GFX10-NEXT:    global_store_short v1, v2, s[6:7]
 ; GFX10-NEXT:    s_endpgm
   %div = udiv <2 x i8> %x, %y
-  store <2 x i8> %div, <2 x i8> addrspace(1)* %out0
+  store <2 x i8> %div, ptr addrspace(1) %out0
   %rem = urem <2 x i8> %x, %y
-  store <2 x i8> %rem, <2 x i8> addrspace(1)* %out1
+  store <2 x i8> %rem, ptr addrspace(1) %out1
   ret void
 }
 
-define amdgpu_kernel void @udiv_i16(i16 addrspace(1)* %out0, i16 addrspace(1)* %out1, i16 %x, i16 %y) {
+define amdgpu_kernel void @udiv_i16(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i16 %x, i16 %y) {
 ; GFX8-LABEL: udiv_i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dword s6, s[4:5], 0x10
@@ -2197,13 +2197,13 @@ define amdgpu_kernel void @udiv_i16(i16 addrspace(1)* %out0, i16 addrspace(1)* %
 ; GFX10-NEXT:    global_store_short v2, v1, s[2:3]
 ; GFX10-NEXT:    s_endpgm
   %div = udiv i16 %x, %y
-  store i16 %div, i16 addrspace(1)* %out0
+  store i16 %div, ptr addrspace(1) %out0
   %rem = urem i16 %x, %y
-  store i16 %rem, i16 addrspace(1)* %out1
+  store i16 %rem, ptr addrspace(1) %out1
   ret void
 }
 
-define amdgpu_kernel void @udivrem_v2i16(<2 x i16> addrspace(1)* %out0, <2 x i16> addrspace(1)* %out1, <2 x i16> %x, <2 x i16> %y) {
+define amdgpu_kernel void @udivrem_v2i16(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <2 x i16> %x, <2 x i16> %y) {
 ; GFX8-LABEL: udivrem_v2i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x10
@@ -2388,13 +2388,13 @@ define amdgpu_kernel void @udivrem_v2i16(<2 x i16> addrspace(1)* %out0, <2 x i16
 ; GFX10-NEXT:    global_store_dword v1, v2, s[6:7]
 ; GFX10-NEXT:    s_endpgm
   %div = udiv <2 x i16> %x, %y
-  store <2 x i16> %div, <2 x i16> addrspace(1)* %out0
+  store <2 x i16> %div, ptr addrspace(1) %out0
   %rem = urem <2 x i16> %x, %y
-  store <2 x i16> %rem, <2 x i16> addrspace(1)* %out1
+  store <2 x i16> %rem, ptr addrspace(1) %out1
   ret void
 }
 
-define amdgpu_kernel void @udivrem_i3(i3 addrspace(1)* %out0, i3 addrspace(1)* %out1, i3 %x, i3 %y) {
+define amdgpu_kernel void @udivrem_i3(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i3 %x, i3 %y) {
 ; GFX8-LABEL: udivrem_i3:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dword s6, s[4:5], 0x10
@@ -2506,13 +2506,13 @@ define amdgpu_kernel void @udivrem_i3(i3 addrspace(1)* %out0, i3 addrspace(1)* %
 ; GFX10-NEXT:    global_store_byte v2, v1, s[2:3]
 ; GFX10-NEXT:    s_endpgm
   %div = udiv i3 %x, %y
-  store i3 %div, i3 addrspace(1)* %out0
+  store i3 %div, ptr addrspace(1) %out0
   %rem = urem i3 %x, %y
-  store i3 %rem, i3 addrspace(1)* %out1
+  store i3 %rem, ptr addrspace(1) %out1
   ret void
 }
 
-define amdgpu_kernel void @udivrem_i27(i27 addrspace(1)* %out0, i27 addrspace(1)* %out1, i27 %x, i27 %y) {
+define amdgpu_kernel void @udivrem_i27(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i27 %x, i27 %y) {
 ; GFX8-LABEL: udivrem_i27:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
@@ -2624,8 +2624,8 @@ define amdgpu_kernel void @udivrem_i27(i27 addrspace(1)* %out0, i27 addrspace(1)
 ; GFX10-NEXT:    global_store_dword v2, v1, s[2:3]
 ; GFX10-NEXT:    s_endpgm
   %div = udiv i27 %x, %y
-  store i27 %div, i27 addrspace(1)* %out0
+  store i27 %div, ptr addrspace(1) %out0
   %rem = urem i27 %x, %y
-  store i27 %rem, i27 addrspace(1)* %out1
+  store i27 %rem, ptr addrspace(1) %out1
   ret void
 }

@@ -421,7 +421,7 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
     affine form through explicit linearization:
 
     ```mlir
-    affine_map<(d0, ... dN)[offset, stride0, ... strideN] -> 
+    affine_map<(d0, ... dN)[offset, stride0, ... strideN] ->
                 (offset + d0 * stride0 + ... dN * strideN)>
     ```
 
