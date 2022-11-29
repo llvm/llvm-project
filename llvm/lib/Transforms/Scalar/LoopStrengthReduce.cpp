@@ -124,6 +124,7 @@
 #include <limits>
 #include <map>
 #include <numeric>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -6614,7 +6615,7 @@ static llvm::PHINode *GetInductionVariable(const Loop &L, ScalarEvolution &SE,
   return nullptr;
 }
 
-static Optional<std::pair<PHINode *, std::pair<PHINode *, const SCEV *>>>
+static std::optional<std::pair<PHINode *, std::pair<PHINode *, const SCEV *>>>
 canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
                       const LoopInfo &LI) {
   if (!L->isInnermost()) {

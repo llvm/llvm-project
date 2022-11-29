@@ -23,7 +23,7 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-apple-macosx10.11.0"
 
 define void @globalfunc1(i32 %arg) {
-  %x = call i1 @llvm.type.test(i8* undef, metadata !"typeid1")
+  %x = call i1 @llvm.type.test(ptr undef, metadata !"typeid1")
   %tmp = add i32 %arg, 0, !metadata !2
   ret void
 }
@@ -34,7 +34,7 @@ define void @globalfunc1(i32 %arg) {
 ; These function are not imported and so we don't want to load their metadata.
 
 define void @globalfunc2(i32 %arg) {
-  %x = call i1 @llvm.type.test(i8* undef, metadata !"typeid1")
+  %x = call i1 @llvm.type.test(ptr undef, metadata !"typeid1")
   %tmp = add i32 %arg, 0, !metadata !1
   ret void
 }
@@ -44,7 +44,7 @@ define void @globalfunc3(i32 %arg) {
   ret void
 }
 
-declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
+declare i1 @llvm.type.test(ptr %ptr, metadata %bitset) nounwind readnone
 
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
 !2 = !{!"Hello World"}

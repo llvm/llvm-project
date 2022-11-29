@@ -1209,7 +1209,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
-      setOperationAction(ISD::ZERO_EXTEND, VT, Custom);
 
       setOperationAction(ISD::UMUL_LOHI, VT, Expand);
       setOperationAction(ISD::SMUL_LOHI, VT, Expand);
@@ -1399,6 +1398,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
 
     if (Subtarget->forceStreamingCompatibleSVE()) {
+      setTruncStoreAction(MVT::v2f32, MVT::v2f16, Custom);
+      setTruncStoreAction(MVT::v4f32, MVT::v4f16, Custom);
+      setTruncStoreAction(MVT::v8f32, MVT::v8f16, Custom);
+      setTruncStoreAction(MVT::v1f64, MVT::v1f16, Custom);
+      setTruncStoreAction(MVT::v2f64, MVT::v2f16, Custom);
+      setTruncStoreAction(MVT::v4f64, MVT::v4f16, Custom);
+      setTruncStoreAction(MVT::v1f64, MVT::v1f32, Custom);
+      setTruncStoreAction(MVT::v2f64, MVT::v2f32, Custom);
+      setTruncStoreAction(MVT::v4f64, MVT::v4f32, Custom);
       for (MVT VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v2i32,
                      MVT::v4i32, MVT::v1i64, MVT::v2i64})
         addTypeForStreamingSVE(VT);
@@ -1658,6 +1666,19 @@ void AArch64TargetLowering::addTypeForStreamingSVE(MVT VT) {
   setOperationAction(ISD::FROUND, VT, Custom);
   setOperationAction(ISD::FROUNDEVEN, VT, Custom);
   setOperationAction(ISD::FTRUNC, VT, Custom);
+  setOperationAction(ISD::CTLZ, VT, Custom);
+  setOperationAction(ISD::CTPOP, VT, Custom);
+  if (VT.isFloatingPoint()) {
+    setCondCodeAction(ISD::SETO, VT, Expand);
+    setCondCodeAction(ISD::SETOLT, VT, Expand);
+    setCondCodeAction(ISD::SETOLE, VT, Expand);
+    setCondCodeAction(ISD::SETULT, VT, Expand);
+    setCondCodeAction(ISD::SETULE, VT, Expand);
+    setCondCodeAction(ISD::SETUGE, VT, Expand);
+    setCondCodeAction(ISD::SETUGT, VT, Expand);
+    setCondCodeAction(ISD::SETUEQ, VT, Expand);
+    setCondCodeAction(ISD::SETONE, VT, Expand);
+  }
 }
 
 void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
@@ -1673,9 +1694,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   if (VT.isFloatingPoint()) {
     setCondCodeAction(ISD::SETO, VT, Expand);
     setCondCodeAction(ISD::SETOLT, VT, Expand);
-    setCondCodeAction(ISD::SETLT, VT, Expand);
     setCondCodeAction(ISD::SETOLE, VT, Expand);
-    setCondCodeAction(ISD::SETLE, VT, Expand);
     setCondCodeAction(ISD::SETULT, VT, Expand);
     setCondCodeAction(ISD::SETULE, VT, Expand);
     setCondCodeAction(ISD::SETUGE, VT, Expand);
@@ -5617,26 +5636,6 @@ static SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) {
   return SDValue();
 }
 
-SDValue AArch64TargetLowering::LowerZERO_EXTEND(SDValue Op, SelectionDAG &DAG) const {
-  assert(Op->getOpcode() == ISD::ZERO_EXTEND && "Expected ZERO_EXTEND");
-
-  if (Op.getValueType().isFixedLengthVector())
-    return LowerFixedLengthVectorIntExtendToSVE(Op, DAG);
-
-  // Try to lower to VSELECT to allow zext to transform into
-  // a predicated instruction like add, sub or mul.
-  SDValue Value = Op->getOperand(0);
-  if (!Value->getValueType(0).isScalableVector() ||
-      Value->getValueType(0).getScalarType() != MVT::i1)
-    return SDValue();
-
-  SDLoc DL = SDLoc(Op);
-  EVT VT = Op->getValueType(0);
-  SDValue Ones = DAG.getConstant(1, DL, VT);
-  SDValue Zeros = DAG.getConstant(0, DL, VT);
-  return DAG.getNode(ISD::VSELECT, DL, VT, Value, Ones, Zeros);
-}
-
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
@@ -5849,9 +5848,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVSCALE(Op, DAG);
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
-    return LowerFixedLengthVectorIntExtendToSVE(Op, DAG);
   case ISD::ZERO_EXTEND:
-    return LowerZERO_EXTEND(Op, DAG);
+    return LowerFixedLengthVectorIntExtendToSVE(Op, DAG);
   case ISD::SIGN_EXTEND_INREG: {
     // Only custom lower when ExtraVT has a legal byte based element type.
     EVT ExtraVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
@@ -8462,7 +8460,9 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
 
   assert(!IsParity && "ISD::PARITY of vector types not supported");
 
-  if (VT.isScalableVector() || useSVEForFixedLengthVectorVT(VT))
+  if (VT.isScalableVector() ||
+      useSVEForFixedLengthVectorVT(VT,
+                                   Subtarget->forceStreamingCompatibleSVE()))
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::CTPOP_MERGE_PASSTHRU);
 
   assert((VT == MVT::v1i64 || VT == MVT::v2i64 || VT == MVT::v2i32 ||
@@ -11961,6 +11961,11 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
 
   // Try to build a simple constant vector.
   Op = NormalizeBuildVector(Op, DAG);
+  // Thought this might return a non-BUILD_VECTOR (e.g. CONCAT_VECTORS), if so,
+  // abort.
+  if (Op.getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
   if (VT.isInteger()) {
     // Certain vector constants, used to express things like logical NOT and
     // arithmetic NEG, are passed through unmodified.  This allows special
@@ -15654,8 +15659,8 @@ static SDValue tryCombineToEXTR(SDNode *N,
                      DAG.getConstant(ShiftRHS, DL, MVT::i64));
 }
 
-static SDValue tryCombineToBSL(SDNode *N,
-                                TargetLowering::DAGCombinerInfo &DCI) {
+static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                               const AArch64TargetLowering &TLI) {
   EVT VT = N->getValueType(0);
   SelectionDAG &DAG = DCI.DAG;
   SDLoc DL(N);
@@ -15665,7 +15670,11 @@ static SDValue tryCombineToBSL(SDNode *N,
 
   // The combining code currently only works for NEON vectors. In particular,
   // it does not work for SVE when dealing with vectors wider than 128 bits.
-  if (!VT.is64BitVector() && !VT.is128BitVector())
+  // It also doesn't work for streaming mode because it causes generating
+  // bsl instructions that are invalid in streaming mode.
+  if (TLI.useSVEForFixedLengthVectorVT(
+          VT,
+          DAG.getSubtarget<AArch64Subtarget>().forceStreamingCompatibleSVE()))
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
@@ -15823,7 +15832,8 @@ static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
 }
 
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
-                                const AArch64Subtarget *Subtarget) {
+                                const AArch64Subtarget *Subtarget,
+                                const AArch64TargetLowering &TLI) {
   SelectionDAG &DAG = DCI.DAG;
   EVT VT = N->getValueType(0);
 
@@ -15837,7 +15847,7 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (SDValue Res = tryCombineToEXTR(N, DCI))
     return Res;
 
-  if (SDValue Res = tryCombineToBSL(N, DCI))
+  if (SDValue Res = tryCombineToBSL(N, DCI, TLI))
     return Res;
 
   return SDValue();
@@ -20893,7 +20903,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FDIV:
     return performFDivCombine(N, DAG, DCI, Subtarget);
   case ISD::OR:
-    return performORCombine(N, DCI, Subtarget);
+    return performORCombine(N, DCI, Subtarget, *this);
   case ISD::AND:
     return performANDCombine(N, DCI);
   case ISD::INTRINSIC_WO_CHAIN:

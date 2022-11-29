@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -jump-threading | FileCheck %s
+; RUN: opt -S < %s -passes=jump-threading | FileCheck %s
 ; CHECK-LABEL: @foo
 ; CHECK: bb6:
 ; CHECK-NEXT: ret void

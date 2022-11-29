@@ -1638,7 +1638,9 @@ let SubtargetPredicate = isGFX10GFX11 in {
 
 let SubtargetPredicate = isGFX11Plus in {
   def S_WAIT_EVENT : SOPP_Pseudo<"s_wait_event", (ins s16imm:$simm16),
-                                 "$simm16">;
+                                 "$simm16"> {
+                                   let hasSideEffects = 1;
+                                 }
   def S_DELAY_ALU : SOPP_Pseudo<"s_delay_alu", (ins DELAY_FLAG:$simm16),
                                 "$simm16">;
 } // End SubtargetPredicate = isGFX11Plus
@@ -1703,6 +1705,10 @@ def : GCNPat<
   (S_SEXT_I32_I16 $src)
 >;
 
+def : GCNPat <
+  (int_amdgcn_s_wait_event_export_ready),
+    (S_WAIT_EVENT (i16 0))
+>;
 
 //===----------------------------------------------------------------------===//
 // SOP2 Patterns

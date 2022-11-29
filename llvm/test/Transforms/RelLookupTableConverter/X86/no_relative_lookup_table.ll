@@ -10,43 +10,43 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @.str.2 = private unnamed_addr constant [4 x i8] c"two\00", align 1
 @.str.3 = private unnamed_addr constant [8 x i8] c"default\00", align 1
 
-@switch.table.string_table = private unnamed_addr constant [3 x i8*]
+@switch.table.string_table = private unnamed_addr constant [3 x ptr]
                              [
-                              i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0),
-                              i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i64 0, i64 0),
-                              i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.2, i64 0, i64 0)
+                              ptr @.str,
+                              ptr @.str.1,
+                              ptr @.str.2
                              ], align 8
 
 ; Switch lookup table
-; CHECK: @switch.table.string_table = private unnamed_addr constant [3 x i8*]
+; CHECK: @switch.table.string_table = private unnamed_addr constant [3 x ptr]
 ; CHECK-SAME: [
-; CHECK-SAME: i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0),
-; CHECK-SAME: i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i64 0, i64 0),
-; CHECK-SAME: i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.2, i64 0, i64 0)
+; CHECK-SAME: ptr @.str,
+; CHECK-SAME: ptr @.str.1,
+; CHECK-SAME: ptr @.str.2
 ; CHECK-SAME: ], align 8
 
 ; ; Relative switch lookup table for strings
-define i8* @string_table(i32 %cond) {
+define ptr @string_table(i32 %cond) {
   ; CHECK-LABEL: @string_table(
   ; CHECK-NEXT:  entry:
   ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[COND:%.*]], 3
   ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
   ; CHECK:       switch.lookup:
-  ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i8*], [3 x i8*]* @switch.table.string_table, i32 0, i32 [[COND]]
-  ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8*, i8** [[SWITCH_GEP]], align 8
-  ; CHECK-NEXT:    ret i8* [[SWITCH_LOAD]]
+  ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x ptr], ptr @switch.table.string_table, i32 0, i32 [[COND]]
+  ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load ptr, ptr [[SWITCH_GEP]], align 8
+  ; CHECK-NEXT:    ret ptr [[SWITCH_LOAD]]
   ; CHECK:       return:
-  ; CHECK-NEXT:    ret i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.3, i64 0, i64 0)
+  ; CHECK-NEXT:    ret ptr @.str.3
 
 entry:
   %0 = icmp ult i32 %cond, 3
   br i1 %0, label %switch.lookup, label %return
 
 switch.lookup:                                    ; preds = %entry
-  %switch.gep = getelementptr inbounds [3 x i8*], [3 x i8*]* @switch.table.string_table, i32 0, i32 %cond
-  %switch.load = load i8*, i8** %switch.gep, align 8
-  ret i8* %switch.load
+  %switch.gep = getelementptr inbounds [3 x ptr], ptr @switch.table.string_table, i32 0, i32 %cond
+  %switch.load = load ptr, ptr %switch.gep, align 8
+  ret ptr %switch.load
 
 return:                                           ; preds = %entry
-  ret i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.3, i64 0, i64 0)
+  ret ptr @.str.3
 }

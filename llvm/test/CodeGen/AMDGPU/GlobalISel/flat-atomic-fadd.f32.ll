@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx940 -verify-machineinstrs -stop-after=instruction-select < %s | FileCheck -check-prefix=GFX940 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -stop-after=instruction-select < %s | FileCheck -check-prefix=GFX11 %s
 
-define amdgpu_ps void @flat_atomic_fadd_f32_no_rtn_intrinsic(float* %ptr, float %data) {
+define amdgpu_ps void @flat_atomic_fadd_f32_no_rtn_intrinsic(ptr %ptr, float %data) {
   ; GFX940-LABEL: name: flat_atomic_fadd_f32_no_rtn_intrinsic
   ; GFX940: bb.1 (%ir-block.0):
   ; GFX940-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -23,11 +23,11 @@ define amdgpu_ps void @flat_atomic_fadd_f32_no_rtn_intrinsic(float* %ptr, float 
   ; GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX11-NEXT:   FLAT_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (volatile dereferenceable load store (s32) on %ir.ptr)
   ; GFX11-NEXT:   S_ENDPGM 0
-  %ret = call float @llvm.amdgcn.flat.atomic.fadd.f32.p1f32.f32(float* %ptr, float %data)
+  %ret = call float @llvm.amdgcn.flat.atomic.fadd.f32.p1.f32(ptr %ptr, float %data)
   ret void
 }
 
-define amdgpu_ps float @flat_atomic_fadd_f32_rtn_intrinsic(float* %ptr, float %data) {
+define amdgpu_ps float @flat_atomic_fadd_f32_rtn_intrinsic(ptr %ptr, float %data) {
   ; GFX940-LABEL: name: flat_atomic_fadd_f32_rtn_intrinsic
   ; GFX940: bb.1 (%ir-block.0):
   ; GFX940-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -50,11 +50,11 @@ define amdgpu_ps float @flat_atomic_fadd_f32_rtn_intrinsic(float* %ptr, float %d
   ; GFX11-NEXT:   [[FLAT_ATOMIC_ADD_F32_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_F32_RTN [[REG_SEQUENCE]], [[COPY2]], 0, 1, implicit $exec, implicit $flat_scr :: (volatile dereferenceable load store (s32) on %ir.ptr)
   ; GFX11-NEXT:   $vgpr0 = COPY [[FLAT_ATOMIC_ADD_F32_RTN]]
   ; GFX11-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
-  %ret = call float @llvm.amdgcn.flat.atomic.fadd.f32.p1f32.f32(float* %ptr, float %data)
+  %ret = call float @llvm.amdgcn.flat.atomic.fadd.f32.p1.f32(ptr %ptr, float %data)
   ret float %ret
 }
 
-define amdgpu_ps void @flat_atomic_fadd_f32_no_rtn_atomicrmw(float* %ptr, float %data) #0 {
+define amdgpu_ps void @flat_atomic_fadd_f32_no_rtn_atomicrmw(ptr %ptr, float %data) #0 {
   ; GFX940-LABEL: name: flat_atomic_fadd_f32_no_rtn_atomicrmw
   ; GFX940: bb.1 (%ir-block.0):
   ; GFX940-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -75,11 +75,11 @@ define amdgpu_ps void @flat_atomic_fadd_f32_no_rtn_atomicrmw(float* %ptr, float 
   ; GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX11-NEXT:   FLAT_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr)
   ; GFX11-NEXT:   S_ENDPGM 0
-  %ret = atomicrmw fadd float* %ptr, float %data syncscope("wavefront") monotonic
+  %ret = atomicrmw fadd ptr %ptr, float %data syncscope("wavefront") monotonic
   ret void
 }
 
-define amdgpu_ps float @flat_atomic_fadd_f32_rtn_atomicrmw(float* %ptr, float %data) #0 {
+define amdgpu_ps float @flat_atomic_fadd_f32_rtn_atomicrmw(ptr %ptr, float %data) #0 {
   ; GFX940-LABEL: name: flat_atomic_fadd_f32_rtn_atomicrmw
   ; GFX940: bb.1 (%ir-block.0):
   ; GFX940-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
@@ -102,10 +102,10 @@ define amdgpu_ps float @flat_atomic_fadd_f32_rtn_atomicrmw(float* %ptr, float %d
   ; GFX11-NEXT:   [[FLAT_ATOMIC_ADD_F32_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_F32_RTN [[REG_SEQUENCE]], [[COPY2]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr)
   ; GFX11-NEXT:   $vgpr0 = COPY [[FLAT_ATOMIC_ADD_F32_RTN]]
   ; GFX11-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
-  %ret = atomicrmw fadd float* %ptr, float %data syncscope("wavefront") monotonic
+  %ret = atomicrmw fadd ptr %ptr, float %data syncscope("wavefront") monotonic
   ret float %ret
 }
 
-declare float @llvm.amdgcn.flat.atomic.fadd.f32.p1f32.f32(float*, float)
+declare float @llvm.amdgcn.flat.atomic.fadd.f32.p1.f32(ptr, float)
 
 attributes #0 = {"amdgpu-unsafe-fp-atomics"="true" }

@@ -7,15 +7,15 @@
 ; CHECK: CUBE * T{{[0-9]}}.W
 define amdgpu_ps void @cube() {
 main_body:
-  %tmp = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 9)
+  %tmp = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 9)
   %tmp1 = extractelement <4 x float> %tmp, i32 3
-  %tmp2 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 9)
+  %tmp2 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 9)
   %tmp3 = extractelement <4 x float> %tmp2, i32 0
   %tmp4 = fdiv float %tmp3, %tmp1
-  %tmp5 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 9)
+  %tmp5 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 9)
   %tmp6 = extractelement <4 x float> %tmp5, i32 1
   %tmp7 = fdiv float %tmp6, %tmp1
-  %tmp8 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 9)
+  %tmp8 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 9)
   %tmp9 = extractelement <4 x float> %tmp8, i32 2
   %tmp10 = fdiv float %tmp9, %tmp1
   %tmp11 = insertelement <4 x float> undef, float %tmp4, i32 0

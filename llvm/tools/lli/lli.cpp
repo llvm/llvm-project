@@ -70,6 +70,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include <cerrno>
+#include <optional>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
@@ -844,7 +845,7 @@ int runOrcJIT(const char *ProgName) {
 
   // Get TargetTriple and DataLayout from the main module if they're explicitly
   // set.
-  Optional<Triple> TT;
+  std::optional<Triple> TT;
   Optional<DataLayout> DL;
   MainModule.withModuleDo([&](Module &M) {
       if (!M.getTargetTriple().empty())

@@ -22,8 +22,8 @@
 ; RO-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 0
 define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
   %alloca = alloca i32, addrspace(5)
-  %cast = addrspacecast i32 addrspace(5)* %alloca to i32*
-  store volatile i32 0, i32* %cast
+  %cast = addrspacecast ptr addrspace(5) %alloca to ptr
+  store volatile i32 0, ptr %cast
   ret void
 }
 
@@ -47,7 +47,7 @@ define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
 ; RO-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 0
 define amdgpu_kernel void @stack_object_in_kernel_no_calls() {
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
   ret void
 }
 

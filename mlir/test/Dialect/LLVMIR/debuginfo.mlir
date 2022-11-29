@@ -21,38 +21,36 @@
   sizeInBits = 32, encoding = DW_ATE_signed
 >
 
-// CHECK-DAG: #[[PTR0:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT0]], sizeInBits = 0, alignInBits = 0, offsetInBits = 0>
+// CHECK-DAG: #[[PTR0:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT0]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4>
 #ptr0 = #llvm.di_derived_type<
   tag = DW_TAG_pointer_type, baseType = #int0,
-  sizeInBits = 0, alignInBits = 0, offsetInBits = 0
+  sizeInBits = 64, alignInBits = 32, offsetInBits = 4
 >
 
-// CHECK-DAG: #[[PTR1:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "ptr1", baseType = #[[INT0]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4>
+// CHECK-DAG: #[[PTR1:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "ptr1", baseType = #[[INT0]]>
 #ptr1 = #llvm.di_derived_type<
   // Specify the name parameter.
-  tag = DW_TAG_pointer_type, name = "ptr1", baseType = #int0,
-  sizeInBits = 64, alignInBits = 32, offsetInBits = 4
+  tag = DW_TAG_pointer_type, name = "ptr1", baseType = #int0
 >
 
 // CHECK-DAG: #[[COMP0:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array0", line = 10, sizeInBits = 128, alignInBits = 32>
 #comp0 = #llvm.di_composite_type<
-  // Omit optional parameters.
   tag = DW_TAG_array_type, name = "array0",
   line = 10, sizeInBits = 128, alignInBits = 32
 >
 
-// CHECK-DAG: #[[COMP1:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array1", file = #[[FILE]], line = 0, scope = #[[FILE]], baseType = #[[INT0]], sizeInBits = 0, alignInBits = 0, elements = #llvm.di_subrange<count = 4 : i64>>
+// CHECK-DAG: #[[COMP1:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array1", file = #[[FILE]], scope = #[[FILE]], baseType = #[[INT0]], elements = #llvm.di_subrange<count = 4 : i64>>
 #comp1 = #llvm.di_composite_type<
   tag = DW_TAG_array_type, name = "array1", file = #file,
-  line = 0, scope = #file, baseType = #int0, sizeInBits = 0, alignInBits = 0,
+  scope = #file, baseType = #int0,
   // Specify the subrange count.
   elements = #llvm.di_subrange<count = 4>
 >
 
-// CHECK-DAG: #[[COMP2:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array2", file = #[[FILE]], line = 0, scope = #[[FILE]], baseType = #[[INT0]], sizeInBits = 0, alignInBits = 0, elements = #llvm.di_subrange<lowerBound = 0 : i64, upperBound = 4 : i64, stride = 1 : i64>>
+// CHECK-DAG: #[[COMP2:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array2", file = #[[FILE]], scope = #[[FILE]], baseType = #[[INT0]], elements = #llvm.di_subrange<lowerBound = 0 : i64, upperBound = 4 : i64, stride = 1 : i64>>
 #comp2 = #llvm.di_composite_type<
   tag = DW_TAG_array_type, name = "array2", file = #file,
-  line = 0, scope = #file, baseType = #int0, sizeInBits = 0, alignInBits = 0,
+  scope = #file, baseType = #int0,
   // Specify the subrange bounds.
   elements = #llvm.di_subrange<lowerBound = 0, upperBound = 4, stride = 1>
 >
@@ -74,23 +72,29 @@
   file = #file, line = 3, scopeLine = 3, subprogramFlags = "Definition|Optimized", type = #spType0
 >
 
-// CHECK-DAG: #[[SP1:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[FILE]], name = "value", file = #[[FILE]], line = 4, scopeLine = 4, subprogramFlags = Definition, type = #[[SPTYPE1]]>
+// CHECK-DAG: #[[SP1:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[FILE]], name = "value", file = #[[FILE]], subprogramFlags = Definition, type = #[[SPTYPE1]]>
 #sp1 = #llvm.di_subprogram<
   // Omit the optional linkageName parameter.
   compileUnit = #cu, scope = #file, name = "value",
-  file = #file, line = 4, scopeLine = 4, subprogramFlags = "Definition", type = #spType1
+  file = #file, subprogramFlags = "Definition", type = #spType1
 >
 
-// CHECK-DAG: #[[VAR0:.*]] = #llvm.di_local_variable<scope = #[[SP0]], name = "arg", file = #[[FILE]], line = 6, arg = 1, alignInBits = 0, type = #[[INT0]]>
+// CHECK-DAG: #[[BLOCK0:.*]] = #llvm.di_lexical_block<scope = #[[SP0]], line = 1, column = 2>
+#block0 = #llvm.di_lexical_block<scope = #sp0, line = 1, column = 2>
+
+// CHECK-DAG: #[[BLOCK1:.*]] = #llvm.di_lexical_block<scope = #[[SP1]]>
+#block1 = #llvm.di_lexical_block<scope = #sp1>
+
+// CHECK-DAG: #[[VAR0:.*]] = #llvm.di_local_variable<scope = #[[BLOCK0]], name = "alloc", file = #[[FILE]], line = 6, arg = 1, alignInBits = 32, type = #[[INT0]]>
 #var0 = #llvm.di_local_variable<
-  scope = #sp0, name = "arg", file = #file,
-  line = 6, arg = 1, alignInBits = 0, type = #int0
+  scope = #block0, name = "alloc", file = #file,
+  line = 6, arg = 1, alignInBits = 32, type = #int0
 >
 
-// CHECK-DAG: #[[VAR1:.*]] = #llvm.di_local_variable<scope = #[[SP1]], name = "arg", file = #[[FILE]], line = 7, arg = 2, alignInBits = 0, type = #[[INT1]]>
+// CHECK-DAG: #[[VAR1:.*]] = #llvm.di_local_variable<scope = #[[BLOCK1]], name = "arg">
 #var1 = #llvm.di_local_variable<
-  scope = #sp1, name = "arg", file = #file,
-  line = 7, arg = 2, alignInBits = 0, type = #int1
+  // Omit the optional parameters.
+  scope = #block1, name = "arg"
 >
 
 // CHECK: llvm.func @addr(%[[ARG:.*]]: i64)
@@ -99,16 +103,16 @@ llvm.func @addr(%arg: i64) {
   %allocCount = llvm.mlir.constant(1 : i32) : i32
   %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr<i64>
 
-  // CHECK: llvm.dbg.addr #[[VAR0]] = %[[ALLOC]]
-  // CHECK: llvm.dbg.declare #[[VAR0]] = %[[ALLOC]]
-  llvm.dbg.addr #var0 = %alloc : !llvm.ptr<i64>
-  llvm.dbg.declare #var0 = %alloc : !llvm.ptr<i64>
+  // CHECK: llvm.intr.dbg.addr #[[VAR0]] = %[[ALLOC]]
+  // CHECK: llvm.intr.dbg.declare #[[VAR0]] = %[[ALLOC]]
+  llvm.intr.dbg.addr #var0 = %alloc : !llvm.ptr<i64>
+  llvm.intr.dbg.declare #var0 = %alloc : !llvm.ptr<i64>
   llvm.return
 }
 
 // CHECK: llvm.func @value(%[[ARG:.*]]: i32)
 llvm.func @value(%arg: i32) -> i32 {
-  // CHECK: llvm.dbg.value #[[VAR1]] = %[[ARG]]
-  llvm.dbg.value #var1 = %arg : i32
+  // CHECK: llvm.intr.dbg.value #[[VAR1]] = %[[ARG]]
+  llvm.intr.dbg.value #var1 = %arg : i32
   llvm.return %arg : i32
 }

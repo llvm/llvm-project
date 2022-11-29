@@ -758,6 +758,7 @@ public:
 
     use_iterator() = default;
     use_iterator(const use_iterator &I) = default;
+    use_iterator &operator=(const use_iterator &) = default;
 
     bool operator==(const use_iterator &x) const { return Op == x.Op; }
     bool operator!=(const use_iterator &x) const {

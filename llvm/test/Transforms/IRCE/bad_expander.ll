@@ -47,7 +47,7 @@ guarded:
 ; safe to expand it to preheader: if we exit by maybe_exit condition, it is
 ; unsafe to execute it there.
 
-define void @test_02(i64* %p1, i64* %p2, i1 %maybe_exit) {
+define void @test_02(ptr %p1, ptr %p2, i1 %maybe_exit) {
 
 ; CHECK-LABEL: test_02
 ; CHECK-NOT:   preloop
@@ -57,8 +57,8 @@ define void @test_02(i64* %p1, i64* %p2, i1 %maybe_exit) {
 
 
 entry:
-  %num = load i64, i64* %p1, align 4, !range !0
-  %denom = load i64, i64* %p2, align 4, !range !0
+  %num = load i64, ptr %p1, align 4, !range !0
+  %denom = load i64, ptr %p2, align 4, !range !0
   br label %loop
 
 exit:                                       ; preds = %guarded, %loop
@@ -75,19 +75,19 @@ range_check:
   br i1 %rc, label %guarded, label %exit
 
 guarded:
-  %gep = getelementptr i64, i64* %p1, i64 %iv.next
-  %loaded = load i64, i64* %gep, align 4
+  %gep = getelementptr i64, ptr %p1, i64 %iv.next
+  %loaded = load i64, ptr %gep, align 4
   %tmp7 = icmp slt i64 %iv.next, 1000
   br i1 %tmp7, label %loop, label %exit
 }
 
-define void @test_03(i64* %p1, i64* %p2, i1 %maybe_exit) {
+define void @test_03(ptr %p1, ptr %p2, i1 %maybe_exit) {
 
 ; Show that IRCE would hit test_02 if the division was safe (denom not zero).
 
 ; CHECK-LABEL: test_03
 ; CHECK:       entry:
-; CHECK-NEXT:    %num = load i64, i64* %p1, align 4
+; CHECK-NEXT:    %num = load i64, ptr %p1, align 4
 ; CHECK-NEXT:    [[DIV:%[^ ]+]] = udiv i64 %num, 13
 ; CHECK-NEXT:    [[DIV_MINUS_1:%[^ ]+]] = add nsw i64 [[DIV]], -1
 ; CHECK-NEXT:    %exit.mainloop.at = call i64 @llvm.smax.i64(i64 [[DIV_MINUS_1]], i64 0)
@@ -101,15 +101,15 @@ define void @test_03(i64* %p1, i64* %p2, i1 %maybe_exit) {
 ; CHECK-NEXT:    %or.cond = select i1 %maybe_exit, i1 true, i1 false
 ; CHECK-NEXT:    br i1 %or.cond, label %guarded, label %exit.loopexit1
 ; CHECK:       guarded:
-; CHECK-NEXT:    %gep = getelementptr i64, i64* %p1, i64 %iv.next
-; CHECK-NEXT:    %loaded = load i64, i64* %gep, align 4
+; CHECK-NEXT:    %gep = getelementptr i64, ptr %p1, i64 %iv.next
+; CHECK-NEXT:    %loaded = load i64, ptr %gep, align 4
 ; CHECK-NEXT:    %tmp7 = icmp slt i64 %iv.next, 1000
 ; CHECK-NEXT:    [[EXIT_MAIN_LOOP:%[^ ]+]] = icmp slt i64 %iv.next, %exit.mainloop.at
 ; CHECK-NEXT:    br i1 [[EXIT_MAIN_LOOP]], label %loop, label %main.exit.selector
 ; CHECK:       postloop
 
 entry:
-  %num = load i64, i64* %p1, align 4, !range !0
+  %num = load i64, ptr %p1, align 4, !range !0
   br label %loop
 
 exit:                                       ; preds = %guarded, %loop
@@ -126,8 +126,8 @@ range_check:
   br i1 %rc, label %guarded, label %exit
 
 guarded:
-  %gep = getelementptr i64, i64* %p1, i64 %iv.next
-  %loaded = load i64, i64* %gep, align 4
+  %gep = getelementptr i64, ptr %p1, i64 %iv.next
+  %loaded = load i64, ptr %gep, align 4
   %tmp7 = icmp slt i64 %iv.next, 1000
   br i1 %tmp7, label %loop, label %exit
 }

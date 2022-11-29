@@ -1,4 +1,4 @@
-; RUN: opt -S -gvn-hoist < %s | FileCheck %s
+; RUN: opt -S -passes=gvn-hoist < %s | FileCheck %s
 
 ; Check that the call and fcmp are hoisted.
 ; CHECK-LABEL: define void @fun(

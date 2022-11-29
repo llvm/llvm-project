@@ -10,6 +10,6 @@ target triple = "wasm32-unknown-unknown-wasm"
 @foo = hidden global i32 1
 
 define void @_start() {
-  %1 = load atomic i32, i32* @foo unordered, align 4
+  %1 = load atomic i32, ptr @foo unordered, align 4
   ret void
 }

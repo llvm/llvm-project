@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -jump-threading -jump-threading-across-loop-headers | FileCheck %s
+; RUN: opt -S < %s -passes=jump-threading -jump-threading-across-loop-headers | FileCheck %s
 
 ; CHECK-LABEL: @foo
 ; Just check that we don't hang on this test.

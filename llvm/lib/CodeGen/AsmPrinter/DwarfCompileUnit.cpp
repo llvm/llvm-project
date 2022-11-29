@@ -36,6 +36,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <iterator>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -203,7 +204,7 @@ void DwarfCompileUnit::addLocationAttribute(
     DIE *VariableDIE, const DIGlobalVariable *GV, ArrayRef<GlobalExpr> GlobalExprs) {
   bool addToAccelTable = false;
   DIELoc *Loc = nullptr;
-  Optional<unsigned> NVPTXAddressSpace;
+  std::optional<unsigned> NVPTXAddressSpace;
   std::unique_ptr<DIEDwarfExpression> DwarfExpr;
   for (const auto &GE : GlobalExprs) {
     const GlobalVariable *Global = GE.Var;
@@ -340,7 +341,7 @@ void DwarfCompileUnit::addLocationAttribute(
     // correctly interpret address space of the variable address.
     const unsigned NVPTX_ADDR_global_space = 5;
     addUInt(*VariableDIE, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
-            NVPTXAddressSpace ? *NVPTXAddressSpace : NVPTX_ADDR_global_space);
+            NVPTXAddressSpace.value_or(NVPTX_ADDR_global_space));
   }
   if (Loc)
     addBlock(*VariableDIE, dwarf::DW_AT_location, DwarfExpr->finalize());
@@ -847,7 +848,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
   if (!DV.hasFrameIndexExprs())
     return VariableDie;
 
-  Optional<unsigned> NVPTXAddressSpace;
+  std::optional<unsigned> NVPTXAddressSpace;
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   for (const auto &Fragment : DV.getFrameIndexExprs()) {
@@ -895,7 +896,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     // correctly interpret address space of the variable address.
     const unsigned NVPTX_ADDR_local_space = 6;
     addUInt(*VariableDie, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
-            NVPTXAddressSpace ? *NVPTXAddressSpace : NVPTX_ADDR_local_space);
+            NVPTXAddressSpace.value_or(NVPTX_ADDR_local_space));
   }
   addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
   if (DwarfExpr.TagOffset)

@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -S | FileCheck %s
 ; This testcase tests insertion of no-cost phis.  That is,
 ; when the value is already available in every predecessor,
 ; and we just need to insert a phi node to merge the available values.

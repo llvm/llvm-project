@@ -84,7 +84,7 @@ transform.sequence failures(propagate) {
 //     CHECK:     %[[INS:.*]] = tensor.insert_slice %[[PR]] into %[[ARG3]][0, 0] [%[[D3]], %[[D4]]] [1, 1] : tensor<?x?xf32> into tensor<5x?xf32>
 //     CHECK:     scf.yield {{.*}} : tensor<5x?xf32>
 //     CHECK:   }
-//     CHECK:   linalg.generic 
+//     CHECK:   linalg.generic
 //     CHECK:   return
 
 // -----

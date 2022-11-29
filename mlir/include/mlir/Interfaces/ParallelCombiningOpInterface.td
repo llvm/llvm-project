@@ -19,8 +19,8 @@ def ParallelCombiningOpInterface : OpInterface<"ParallelCombiningOpInterface"> {
   let description = [{
     A parallel combining op is an op with a region.
 
-    This is useful as a terminator to parallel operations that iterate over 
-    some set and return tensors while avoiding tight coupling between the 
+    This is useful as a terminator to parallel operations that iterate over
+    some set and return tensors while avoiding tight coupling between the
     iterating op, the combining op and the individual subtensor producing ops.
   }];
   let cppNamespace = "::mlir";

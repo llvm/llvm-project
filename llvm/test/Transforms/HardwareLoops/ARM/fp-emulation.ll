@@ -16,15 +16,15 @@
 ; CHECK-FP: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-FP: br i1 [[CMP]], label %while.body, label %cleanup.loopexit
 
-define void @test_fptosi(i32 %n, i32** %g, double** %d) {
+define void @test_fptosi(i32 %n, ptr %g, ptr %d) {
 entry:
   %n.off = add i32 %n, -1
   %0 = icmp ult i32 %n.off, 500
   br i1 %0, label %while.body.lr.ph, label %cleanup
 
 while.body.lr.ph:
-  %1 = load double*, double** %d, align 4
-  %2 = load i32*, i32** %g, align 4
+  %1 = load ptr, ptr %d, align 4
+  %2 = load ptr, ptr %g, align 4
   br label %while.body
 
 while.body:
@@ -34,11 +34,11 @@ while.body:
   br i1 %tobool, label %if.end4, label %if.then2
 
 if.then2:
-  %arrayidx = getelementptr inbounds double, double* %1, i32 %i.012
-  %3 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %1, i32 %i.012
+  %3 = load double, ptr %arrayidx, align 8
   %conv = fptosi double %3 to i32
-  %arrayidx3 = getelementptr inbounds i32, i32* %2, i32 %i.012
-  store i32 %conv, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %2, i32 %i.012
+  store i32 %conv, ptr %arrayidx3, align 4
   br label %if.end4
 
 if.end4:
@@ -67,15 +67,15 @@ cleanup:
 
 ; CHECK-SOFT-NOT: call i32 @llvm.start.loop.iterations
 
-define void @test_fptoui(i32 %n, i32** %g, double** %d) {
+define void @test_fptoui(i32 %n, ptr %g, ptr %d) {
 entry:
   %n.off = add i32 %n, -1
   %0 = icmp ult i32 %n.off, 500
   br i1 %0, label %while.body.lr.ph, label %cleanup
 
 while.body.lr.ph:
-  %1 = load double*, double** %d, align 4
-  %2 = load i32*, i32** %g, align 4
+  %1 = load ptr, ptr %d, align 4
+  %2 = load ptr, ptr %g, align 4
   br label %while.body
 
 while.body:
@@ -85,11 +85,11 @@ while.body:
   br i1 %tobool, label %if.end4, label %if.then2
 
 if.then2:
-  %arrayidx = getelementptr inbounds double, double* %1, i32 %i.012
-  %3 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %1, i32 %i.012
+  %3 = load double, ptr %arrayidx, align 8
   %conv = fptoui double %3 to i32
-  %arrayidx3 = getelementptr inbounds i32, i32* %2, i32 %i.012
-  store i32 %conv, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %2, i32 %i.012
+  store i32 %conv, ptr %arrayidx3, align 4
   br label %if.end4
 
 if.end4:
@@ -116,15 +116,15 @@ cleanup:
 ; CHECK: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK: br i1 [[CMP]], label %while.body, label %cleanup.loopexit
 
-define void @load_store_float(i32 %n, double** %d, double** %g) {
+define void @load_store_float(i32 %n, ptr %d, ptr %g) {
 entry:
   %n.off = add i32 %n, -1
   %0 = icmp ult i32 %n.off, 500
   br i1 %0, label %while.body.lr.ph, label %cleanup
 
 while.body.lr.ph:
-  %1 = load double*, double** %d, align 4
-  %2 = load double*, double** %g, align 4
+  %1 = load ptr, ptr %d, align 4
+  %2 = load ptr, ptr %g, align 4
   br label %while.body
 
 while.body:
@@ -134,10 +134,10 @@ while.body:
   br i1 %tobool, label %if.end4, label %if.then2
 
 if.then2:
-  %arrayidx = getelementptr inbounds double, double* %1, i32 %i.012
-  %3 = load double, double* %arrayidx, align 8
-  %arrayidx3 = getelementptr inbounds double, double* %2, i32 %i.012
-  store double %3, double* %arrayidx3, align 8
+  %arrayidx = getelementptr inbounds double, ptr %1, i32 %i.012
+  %3 = load double, ptr %arrayidx, align 8
+  %arrayidx3 = getelementptr inbounds double, ptr %2, i32 %i.012
+  store double %3, ptr %arrayidx3, align 8
   br label %if.end4
 
 if.end4:
@@ -167,15 +167,15 @@ cleanup:
 ; CHECK-FP: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-FP: br i1 [[CMP]], label %while.body, label %cleanup.loopexit
 
-define void @fp_add(i32 %n, float** %d, float** %g) {
+define void @fp_add(i32 %n, ptr %d, ptr %g) {
 entry:
   %n.off = add i32 %n, -1
   %0 = icmp ult i32 %n.off, 500
   br i1 %0, label %while.body.lr.ph, label %cleanup
 
 while.body.lr.ph:
-  %1 = load float*, float** %d, align 4
-  %2 = load float*, float** %g, align 4
+  %1 = load ptr, ptr %d, align 4
+  %2 = load ptr, ptr %g, align 4
   br label %while.body
 
 while.body:
@@ -185,12 +185,12 @@ while.body:
   br i1 %tobool, label %if.end4, label %if.then2
 
 if.then2:
-  %arrayidx = getelementptr inbounds float, float* %1, i32 %i.012
-  %3 = load float, float* %arrayidx, align 4
-  %arrayidx3 = getelementptr inbounds float, float* %2, i32 %i.012
-  %4 = load float, float* %arrayidx3, align 4
+  %arrayidx = getelementptr inbounds float, ptr %1, i32 %i.012
+  %3 = load float, ptr %arrayidx, align 4
+  %arrayidx3 = getelementptr inbounds float, ptr %2, i32 %i.012
+  %4 = load float, ptr %arrayidx3, align 4
   %add = fadd float %3, %4
-  store float %add, float* %arrayidx3, align 4
+  store float %add, ptr %arrayidx3, align 4
   br label %if.end4
 
 if.end4:

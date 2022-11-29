@@ -2076,8 +2076,6 @@ private:
   typedef SmallVector<Stmt*, 32> StmtVector;
   /// A SmallVector of expressions, with stack size 12 (the maximum used.)
   typedef SmallVector<Expr*, 12> ExprVector;
-  /// A SmallVector of types.
-  typedef SmallVector<ParsedType, 12> TypeVector;
 
   StmtResult
   ParseStatement(SourceLocation *TrailingElseLoc = nullptr,

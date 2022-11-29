@@ -306,6 +306,21 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FREM, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
+  if (Subtarget->has16BitInsts())
+    setOperationAction(ISD::IS_FPCLASS, {MVT::f16, MVT::f32, MVT::f64}, Legal);
+  else
+    setOperationAction(ISD::IS_FPCLASS, {MVT::f32, MVT::f64}, Legal);
+
+  // FIXME: These IS_FPCLASS vector fp types are marked custom so it reaches
+  // scalarization code. Can be removed when IS_FPCLASS expand isn't called by
+  // default unless marked custom/legal.
+  setOperationAction(
+      ISD::IS_FPCLASS,
+      {MVT::v2f16, MVT::v3f16, MVT::v4f16, MVT::v16f16, MVT::v2f32, MVT::v3f32,
+       MVT::v4f32, MVT::v5f32, MVT::v6f32, MVT::v7f32, MVT::v8f32, MVT::v16f32,
+       MVT::v2f64, MVT::v3f64, MVT::v4f64, MVT::v8f64, MVT::v16f64},
+      Custom);
+
   // Expand to fneg + fadd.
   setOperationAction(ISD::FSUB, MVT::f64, Expand);
 

@@ -12,12 +12,12 @@
 ; from second module is preempted and converted to available_externally and
 ; removed from comdat.
 ; IMPORT1: @g_private = private global i32 43, comdat($g)
-; IMPORT1: define weak_odr i32 @f(i8* %0) unnamed_addr [[ATTR:#[0-9]+]] comdat {
+; IMPORT1: define weak_odr i32 @f(ptr %0) unnamed_addr [[ATTR:#[0-9]+]] comdat {
 ; IMPORT1: define weak_odr i32 @g() unnamed_addr [[ATTR]] comdat {
 ; IMPORT1: define internal void @g_internal() unnamed_addr comdat($g) {
 
 ; IMPORT2: @g_private = available_externally dso_local global i32 41{{$}}
-; IMPORT2: define available_externally i32 @f(i8* %0) unnamed_addr [[ATTR:#[0-9]+]] {
+; IMPORT2: define available_externally i32 @f(ptr %0) unnamed_addr [[ATTR:#[0-9]+]] {
 ; IMPORT2: define available_externally i32 @g() unnamed_addr [[ATTR]] {
 ; IMPORT2: define available_externally dso_local void @g_internal() unnamed_addr {
 
@@ -41,7 +41,7 @@ $g = comdat any
 
 @g_private = private global i32 43, comdat($g)
 
-define linkonce_odr i32 @f(i8*) unnamed_addr comdat {
+define linkonce_odr i32 @f(ptr) unnamed_addr comdat {
     ret i32 43
 }
 

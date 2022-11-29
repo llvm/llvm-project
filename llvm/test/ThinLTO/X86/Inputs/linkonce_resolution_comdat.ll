@@ -6,7 +6,7 @@ $g = comdat any
 
 @g_private = private global i32 41, comdat($g)
 
-define linkonce_odr i32 @f(i8*) unnamed_addr comdat($f) {
+define linkonce_odr i32 @f(ptr) unnamed_addr comdat($f) {
     ret i32 41
 }
 
@@ -19,6 +19,6 @@ define internal void @g_internal() unnamed_addr comdat($g) {
 }
 
 define i32 @h() {
-    %i = call i32 @f(i8* null)
+    %i = call i32 @f(ptr null)
     ret i32 %i
 }

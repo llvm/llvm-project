@@ -6,20 +6,20 @@ target triple = "x86_64-apple-macosx10.12.0"
 define void @scan() #0 !dbg !12 {
 entry:
   %entry1 = alloca i1, align 8
-  call void @llvm.dbg.declare(metadata i1* %entry1, metadata !18, metadata !19), !dbg !20
-  store i1 0, i1* %entry1, align 8, !dbg !20
+  call void @llvm.dbg.declare(metadata ptr %entry1, metadata !18, metadata !19), !dbg !20
+  store i1 0, ptr %entry1, align 8, !dbg !20
   br label %for.cond, !dbg !20
 
 for.cond:
 ; CHECK: %[[PHI:.*]] = phi i1 [ false, %entry ], [ %0, %for.cond ]
-  %entryN = load i1, i1* %entry1, align 8, !dbg !20
+  %entryN = load i1, ptr %entry1, align 8, !dbg !20
 ; CHECK: call void @llvm.dbg.value(metadata i1 %[[PHI]],
 ; CHECK-SAME:                      metadata !DIExpression())
   %0 = add i1 %entryN, 1
 ; CHECK: %0 = add i1 %[[PHI]], true
 ; CHECK: call void @llvm.dbg.value(metadata i1 %0,
 ; CHECK-SAME:                      metadata !DIExpression())
-  store i1 %0, i1* %entry1, align 8, !dbg !20
+  store i1 %0, ptr %entry1, align 8, !dbg !20
   br label %for.cond, !dbg !20
 }
 

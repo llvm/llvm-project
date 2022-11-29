@@ -1,5 +1,5 @@
 ; This test checks if debug loc is propagated to load/store created by GVN/Instcombine.
-; RUN: opt < %s -gvn -S | FileCheck %s --check-prefixes=ALL
+; RUN: opt < %s -passes=gvn -S | FileCheck %s --check-prefixes=ALL
 ; RUN: opt < %s -gvn -instcombine -S | FileCheck %s --check-prefixes=ALL
 
 ; struct node {

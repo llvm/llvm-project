@@ -38,7 +38,7 @@ define amdgpu_kernel void @test_wave32(i32 %arg0, [8 x i32], i32 %saved) {
 entry:
   %cond = icmp eq i32 %arg0, 0
   %break = call i32 @llvm.amdgcn.if.break.i32(i1 %cond, i32 %saved)
-  store volatile i32 %break, i32 addrspace(1)* undef
+  store volatile i32 %break, ptr addrspace(1) undef
   ret void
 }
 

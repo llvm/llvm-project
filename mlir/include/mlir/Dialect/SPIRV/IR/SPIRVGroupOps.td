@@ -17,6 +17,69 @@
 
 // -----
 
+def SPIRV_GroupFMulKHROp : SPIRV_KhrVendorOp<"GroupFMul", [Pure,
+                               AllTypesMatch<["x", "result"]>]> {
+  let summary = [{
+    A floating-point multiplication group operation specified for all values of
+    'X' specified by invocations in the group.
+  }];
+
+  let description = [{
+    Behavior is undefined if not all invocations of this module within
+    'Execution' reach this point of execution.
+
+    Behavior is undefined unless all invocations within 'Execution' execute the
+    same dynamic instance of this instruction.
+
+    'Result Type' must be a scalar or vector of floating-point type.
+
+    'Execution' is a Scope. It must be either Workgroup or Subgroup.
+
+    The identity I for 'Operation' is 1.
+
+    The type of 'X' must be the same as 'Result Type'.
+
+
+    <!-- End of AutoGen section -->
+
+    ```
+    scope ::= `"Workgroup"` | `"Subgroup"`
+    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
+    op ::= ssa-id `=` `spirv.KHR.GroupFMul` scope operation ssa-use
+                            `:` float-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %0 = spirv.KHR.GroupFMul <Workgroup> <Reduce> %value : f32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupUniformArithmeticKHR]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_GroupOperationAttr:$group_operation,
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$x
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope $group_operation operands attr-dict `:` type($x)
+  }];
+}
+
+// -----
+
 def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
                               [Pure,
                                AllTypesMatch<["value", "result"]>]> {
@@ -93,56 +156,564 @@ def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
 
 // -----
 
-def SPIRV_KHRSubgroupBallotOp : SPIRV_KhrVendorOp<"SubgroupBallot", []> {
-  let summary = "See extension SPV_KHR_shader_ballot";
+def SPIRV_GroupFAddOp : SPIRV_Op<"GroupFAdd", [Pure,
+                               AllTypesMatch<["x", "result"]>]> {
+  let summary = [{
+    A floating-point add group operation specified for all values of X
+    specified by invocations in the group.
+  }];
 
   let description = [{
-    Computes a bitfield value combining the Predicate value from all invocations
-    in the current Subgroup that execute the same dynamic instance of this
-    instruction. The bit is set to one if the corresponding invocation is active
-    and the predicate is evaluated to true; otherwise, it is set to zero.
+    Behavior is undefined if not all invocations of this module within
+    Execution reach this point of execution.
 
-    Predicate must be a Boolean type.
+    Behavior is undefined unless all invocations within Execution execute
+    the same dynamic instance of this instruction.
 
-    Result Type must be a 4 component vector of 32 bit integer types.
+    Result Type  must be a scalar or vector of floating-point type.
 
-    Result is a set of bitfields where the first invocation is represented in bit
-    0 of the first vector component and the last (up to SubgroupSize) is the
-    higher bit number of the last bitmask needed to represent all bits of the
-    subgroup invocations.
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+    The identity I for Operation is 0.
+
+     The type of X must be the same as Result Type.
 
     <!-- End of AutoGen section -->
 
     ```
-    subgroup-ballot-op ::= ssa-id `=` `spirv.KHR.SubgroupBallot`
-                                ssa-use `:` `vector` `<` 4 `x` `i32` `>`
-    ```
+    scope ::= `"Workgroup"` | `"Subgroup"`
+    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
+    op ::= ssa-id `=` `spirv.GroupFAdd` scope operation ssa-use
+                            `:` float-type
+    ```mlir
 
     #### Example:
 
-    ```mlir
-    %0 = spirv.KHR.SubgroupBallot %predicate : vector<4xi32>
+    ```
+    %0 = spirv.GroupFAdd <Workgroup> <Reduce> %value : f32
     ```
   }];
 
   let availability = [
     MinVersion<SPIRV_V_1_0>,
     MaxVersion<SPIRV_V_1_6>,
-    Extension<[SPV_KHR_shader_ballot]>,
-    Capability<[SPIRV_C_SubgroupBallotKHR]>
+    Extension<[]>,
+    Capability<[SPIRV_C_Groups]>
   ];
 
   let arguments = (ins
-    SPIRV_Bool:$predicate
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_GroupOperationAttr:$group_operation,
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$x
   );
 
   let results = (outs
-    SPIRV_Int32Vec4:$result
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$result
   );
 
-  let hasVerifier = 0;
+  let assemblyFormat = [{
+    $execution_scope $group_operation operands attr-dict `:` type($x)
+  }];
+}
 
-  let assemblyFormat = "$predicate attr-dict `:` type($result)";
+// -----
+
+def SPIRV_GroupFMaxOp : SPIRV_Op<"GroupFMax", [Pure,
+                               AllTypesMatch<["x", "result"]>]> {
+  let summary = [{
+    A floating-point maximum group operation specified for all values of X
+    specified by invocations in the group.
+  }];
+
+  let description = [{
+    Behavior is undefined if not all invocations of this module within
+    Execution reach this point of execution.
+
+    Behavior is undefined unless all invocations within Execution execute
+    the same dynamic instance of this instruction.
+
+    Result Type  must be a scalar or vector of floating-point type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+    The identity I for Operation is -INF.
+
+     The type of X must be the same as Result Type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    scope ::= `"Workgroup"` | `"Subgroup"`
+    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
+    op ::= ssa-id `=` `spirv.GroupFMax` scope operation ssa-use
+                            `:` float-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %0 = spirv.GroupFMax <Workgroup> <Reduce> %value : f32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Groups]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_GroupOperationAttr:$group_operation,
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$x
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope $group_operation operands attr-dict `:` type($x)
+  }];
+}
+
+// -----
+
+def SPIRV_GroupFMinOp : SPIRV_Op<"GroupFMin", [Pure,
+                               AllTypesMatch<["x", "result"]>]> {
+  let summary = [{
+    A floating-point minimum group operation specified for all values of X
+    specified by invocations in the group.
+  }];
+
+  let description = [{
+    Behavior is undefined if not all invocations of this module within
+    Execution reach this point of execution.
+
+    Behavior is undefined unless all invocations within Execution execute
+    the same dynamic instance of this instruction.
+
+    Result Type  must be a scalar or vector of floating-point type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+    The identity I for Operation is +INF.
+
+     The type of X must be the same as Result Type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    scope ::= `"Workgroup"` | `"Subgroup"`
+    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
+    op ::= ssa-id `=` `spirv.GroupFMin` scope operation ssa-use
+                            `:` float-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %0 = spirv.GroupFMin <Workgroup> <Reduce> %value : f32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Groups]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_GroupOperationAttr:$group_operation,
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$x
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope $group_operation operands attr-dict `:` type($x)
+  }];
+}
+
+// -----
+
+def SPIRV_GroupIAddOp : SPIRV_Op<"GroupIAdd", [Pure,
+                               AllTypesMatch<["x", "result"]>]> {
+  let summary = [{
+    An integer add group operation specified for all values of X specified
+    by invocations in the group.
+  }];
+
+  let description = [{
+    Behavior is undefined if not all invocations of this module within
+    Execution reach this point of execution.
+
+    Behavior is undefined unless all invocations within Execution execute
+    the same dynamic instance of this instruction.
+
+    Result Type  must be a scalar or vector of integer type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+    The identity I for Operation is 0.
+
+     The type of X must be the same as Result Type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    scope ::= `"Workgroup"` | `"Subgroup"`
+    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
+    op ::= ssa-id `=` `spirv.GroupIAdd` scope operation ssa-use
+                            `:` integer-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %0 = spirv.GroupIAdd <Workgroup> <Reduce> %value : i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Groups]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_GroupOperationAttr:$group_operation,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$x
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope $group_operation operands attr-dict `:` type($x)
+  }];
+}
+
+// -----
+
+def SPIRV_GroupIMulKHROp : SPIRV_KhrVendorOp<"GroupIMul", [Pure,
+                               AllTypesMatch<["x", "result"]>]> {
+  let summary = [{
+    An integer multiplication group operation specified for all values of 'X'
+    specified by invocations in the group.
+  }];
+
+  let description = [{
+    Behavior is undefined if not all invocations of this module within
+    'Execution' reach this point of execution.
+
+    Behavior is undefined unless all invocations within 'Execution' execute the
+    same dynamic instance of this instruction.
+
+    'Result Type' must be a scalar or vector of integer type.
+
+    'Execution' is a Scope. It must be either Workgroup or Subgroup.
+
+    The identity I for 'Operation' is 1.
+
+    The type of 'X' must be the same as 'Result Type'.
+
+
+    <!-- End of AutoGen section -->
+
+    ```
+    scope ::= `"Workgroup"` | `"Subgroup"`
+    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
+    op ::= ssa-id `=` `spirv.KHR.GroupIMul` scope operation ssa-use
+                            `:` integer-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %0 = spirv.KHR.GroupIMul <Workgroup> <Reduce> %value : i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupUniformArithmeticKHR]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_GroupOperationAttr:$group_operation,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$x
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope $group_operation operands attr-dict `:` type($x)
+  }];
+}
+
+// -----
+
+def SPIRV_GroupSMaxOp : SPIRV_Op<"GroupSMax", [Pure,
+                               AllTypesMatch<["x", "result"]>]> {
+  let summary = [{
+    A signed integer maximum group operation specified for all values of X
+    specified by invocations in the group.
+  }];
+
+  let description = [{
+    Behavior is undefined if not all invocations of this module within
+    Execution reach this point of execution.
+
+    Behavior is undefined unless all invocations within Execution execute
+    the same dynamic instance of this instruction.
+
+    Result Type  must be a scalar or vector of integer type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+    The identity I for Operation is INT_MIN when X is 32 bits wide and
+    LONG_MIN when X is 64 bits wide.
+
+     The type of X must be the same as Result Type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    scope ::= `"Workgroup"` | `"Subgroup"`
+    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
+    op ::= ssa-id `=` `spirv.GroupSMax` scope operation ssa-use
+                            `:` integer-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %0 = spirv.GroupSMax <Workgroup> <Reduce> %value : i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Groups]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_GroupOperationAttr:$group_operation,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$x
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope $group_operation operands attr-dict `:` type($x)
+  }];
+}
+
+// -----
+
+def SPIRV_GroupSMinOp : SPIRV_Op<"GroupSMin", [Pure,
+                               AllTypesMatch<["x", "result"]>]> {
+  let summary = [{
+    A signed integer minimum group operation specified for all values of X
+    specified by invocations in the group.
+  }];
+
+  let description = [{
+    Behavior is undefined if not all invocations of this module within
+    Execution reach this point of execution.
+
+    Behavior is undefined unless all invocations within Execution execute
+    the same dynamic instance of this instruction.
+
+    Result Type  must be a scalar or vector of integer type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+    The identity I for Operation is INT_MAX when X is 32 bits wide and
+    LONG_MAX when X is 64 bits wide.
+
+     The type of X must be the same as Result Type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    scope ::= `"Workgroup"` | `"Subgroup"`
+    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
+    op ::= ssa-id `=` `spirv.GroupSMin` scope operation ssa-use
+                            `:` integer-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %0 = spirv.GroupSMin <Workgroup> <Reduce> %value : i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Groups]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_GroupOperationAttr:$group_operation,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$x
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope $group_operation operands attr-dict `:` type($x)
+  }];
+}
+
+// -----
+
+def SPIRV_GroupUMaxOp : SPIRV_Op<"GroupUMax", [Pure,
+                               AllTypesMatch<["x", "result"]>]> {
+  let summary = [{
+    An unsigned integer maximum group operation specified for all values of
+    X specified by invocations in the group.
+  }];
+
+  let description = [{
+    Behavior is undefined if not all invocations of this module within
+    Execution reach this point of execution.
+
+    Behavior is undefined unless all invocations within Execution execute
+    the same dynamic instance of this instruction.
+
+    Result Type  must be a scalar or vector of integer type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+    The identity I for Operation is 0.
+
+     The type of X must be the same as Result Type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    scope ::= `"Workgroup"` | `"Subgroup"`
+    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
+    op ::= ssa-id `=` `spirv.GroupUMax` scope operation ssa-use
+                            `:` integer-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %0 = spirv.GroupUMax <Workgroup> <Reduce> %value : i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Groups]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_GroupOperationAttr:$group_operation,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$x
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope $group_operation operands attr-dict `:` type($x)
+  }];
+}
+
+// -----
+
+def SPIRV_GroupUMinOp : SPIRV_Op<"GroupUMin", [Pure,
+                               AllTypesMatch<["x", "result"]>]> {
+  let summary = [{
+    An unsigned integer minimum group operation specified for all values of
+    X specified by invocations in the group.
+  }];
+
+  let description = [{
+    Behavior is undefined if not all invocations of this module within
+    Execution reach this point of execution.
+
+    Behavior is undefined unless all invocations within Execution execute
+    the same dynamic instance of this instruction.
+
+    Result Type  must be a scalar or vector of integer type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+    The identity I for Operation is UINT_MAX when X is 32 bits wide and
+    ULONG_MAX when X is 64 bits wide.
+
+     The type of X must be the same as Result Type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    scope ::= `"Workgroup"` | `"Subgroup"`
+    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
+    op ::= ssa-id `=` `spirv.GroupUMin` scope operation ssa-use
+                            `:` integer-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %0 = spirv.GroupUMin <Workgroup> <Reduce> %value : i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Groups]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_GroupOperationAttr:$group_operation,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$x
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope $group_operation operands attr-dict `:` type($x)
+  }];
 }
 
 // -----
@@ -243,6 +814,60 @@ def SPIRV_INTELSubgroupBlockWriteOp : SPIRV_IntelVendorOp<"SubgroupBlockWrite", 
   );
 
   let results = (outs);
+}
+
+// -----
+
+def SPIRV_KHRSubgroupBallotOp : SPIRV_KhrVendorOp<"SubgroupBallot", []> {
+  let summary = "See extension SPV_KHR_shader_ballot";
+
+  let description = [{
+    Computes a bitfield value combining the Predicate value from all invocations
+    in the current Subgroup that execute the same dynamic instance of this
+    instruction. The bit is set to one if the corresponding invocation is active
+    and the predicate is evaluated to true; otherwise, it is set to zero.
+
+    Predicate must be a Boolean type.
+
+    Result Type must be a 4 component vector of 32 bit integer types.
+
+    Result is a set of bitfields where the first invocation is represented in bit
+    0 of the first vector component and the last (up to SubgroupSize) is the
+    higher bit number of the last bitmask needed to represent all bits of the
+    subgroup invocations.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    subgroup-ballot-op ::= ssa-id `=` `spirv.KHR.SubgroupBallot`
+                                ssa-use `:` `vector` `<` 4 `x` `i32` `>`
+    ```
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.KHR.SubgroupBallot %predicate : vector<4xi32>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_KHR_shader_ballot]>,
+    Capability<[SPIRV_C_SubgroupBallotKHR]>
+  ];
+
+  let arguments = (ins
+    SPIRV_Bool:$predicate
+  );
+
+  let results = (outs
+    SPIRV_Int32Vec4:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = "$predicate attr-dict `:` type($result)";
 }
 
 // -----

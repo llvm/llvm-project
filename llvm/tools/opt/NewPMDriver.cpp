@@ -153,6 +153,7 @@ static cl::opt<std::string> FullLinkTimeOptimizationLastEPPipeline(
              "the FullLinkTimeOptimizationLast extension point into default "
              "pipelines"),
     cl::Hidden);
+/// @}}
 
 static cl::opt<bool> DisablePipelineVerification(
     "disable-pipeline-verification",
@@ -161,29 +162,57 @@ static cl::opt<bool> DisablePipelineVerification(
              "-print-pipeline-passes can be used to create a pipeline."),
     cl::Hidden);
 
-// Individual pipeline tuning options.
-extern cl::opt<bool> DisableLoopUnrolling;
 
-namespace llvm {
-extern cl::opt<PGOKind> PGOKindFlag;
-extern cl::opt<std::string> ProfileFile;
-extern cl::opt<CSPGOKind> CSPGOKindFlag;
-extern cl::opt<std::string> CSProfileGenFile;
-extern cl::opt<bool> DisableBasicAA;
-extern cl::opt<bool> PrintPipelinePasses;
-} // namespace llvm
+static cl::opt<PGOKind>
+    PGOKindFlag("pgo-kind", cl::init(NoPGO), cl::Hidden,
+                cl::desc("The kind of profile guided optimization"),
+                cl::values(clEnumValN(NoPGO, "nopgo", "Do not use PGO."),
+                           clEnumValN(InstrGen, "pgo-instr-gen-pipeline",
+                                      "Instrument the IR to generate profile."),
+                           clEnumValN(InstrUse, "pgo-instr-use-pipeline",
+                                      "Use instrumented profile to guide PGO."),
+                           clEnumValN(SampleUse, "pgo-sample-use-pipeline",
+                                      "Use sampled profile to guide PGO.")));
+static cl::opt<std::string> ProfileFile("profile-file",
+                                 cl::desc("Path to the profile."), cl::Hidden);
+
+static cl::opt<CSPGOKind> CSPGOKindFlag(
+    "cspgo-kind", cl::init(NoCSPGO), cl::Hidden,
+    cl::desc("The kind of context sensitive profile guided optimization"),
+    cl::values(
+        clEnumValN(NoCSPGO, "nocspgo", "Do not use CSPGO."),
+        clEnumValN(
+            CSInstrGen, "cspgo-instr-gen-pipeline",
+            "Instrument (context sensitive) the IR to generate profile."),
+        clEnumValN(
+            CSInstrUse, "cspgo-instr-use-pipeline",
+            "Use instrumented (context sensitive) profile to guide PGO.")));
+
+static cl::opt<std::string> CSProfileGenFile(
+    "cs-profilegen-file",
+    cl::desc("Path to the instrumented context sensitive profile."),
+    cl::Hidden);
 
 static cl::opt<std::string>
     ProfileRemappingFile("profile-remapping-file",
                          cl::desc("Path to the profile remapping file."),
                          cl::Hidden);
+
 static cl::opt<bool> DebugInfoForProfiling(
-    "new-pm-debug-info-for-profiling", cl::init(false), cl::Hidden,
+    "debug-info-for-profiling", cl::init(false), cl::Hidden,
     cl::desc("Emit special debug info to enable PGO profile generation."));
+
 static cl::opt<bool> PseudoProbeForProfiling(
-    "new-pm-pseudo-probe-for-profiling", cl::init(false), cl::Hidden,
+    "pseudo-probe-for-profiling", cl::init(false), cl::Hidden,
     cl::desc("Emit pseudo probes to enable PGO profile generation."));
-/// @}}
+
+static cl::opt<bool> DisableLoopUnrolling(
+    "disable-loop-unrolling",
+    cl::desc("Disable loop unrolling in all relevant passes"), cl::init(false));
+
+namespace llvm {
+extern cl::opt<bool> PrintPipelinePasses;
+} // namespace llvm
 
 template <typename PassManagerT>
 bool tryParsePipelineText(PassBuilder &PB,

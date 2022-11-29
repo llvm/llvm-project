@@ -18,7 +18,7 @@ declare i32 @llvm.amdgcn.icmp.i64(i64, i64, i32) #0
 declare i32 @llvm.amdgcn.icmp.i16(i16, i16, i32) #0
 declare i32 @llvm.amdgcn.icmp.i1(i1, i1, i32) #0
 
-define amdgpu_kernel void @v_icmp_i32_eq(i32 addrspace(1)* %out, i32 %src) {
+define amdgpu_kernel void @v_icmp_i32_eq(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_eq:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -70,11 +70,11 @@ define amdgpu_kernel void @v_icmp_i32_eq(i32 addrspace(1)* %out, i32 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 32)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i32(i32 addrspace(1)* %out, i32 %src) {
+define amdgpu_kernel void @v_icmp_i32(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_endpgm
@@ -100,11 +100,11 @@ define amdgpu_kernel void @v_icmp_i32(i32 addrspace(1)* %out, i32 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v0, v0, s[0:1]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 30)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i32_ne(i32 addrspace(1)* %out, i32 %src) {
+define amdgpu_kernel void @v_icmp_i32_ne(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_ne:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -156,11 +156,11 @@ define amdgpu_kernel void @v_icmp_i32_ne(i32 addrspace(1)* %out, i32 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 33)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i32_ugt(i32 addrspace(1)* %out, i32 %src) {
+define amdgpu_kernel void @v_icmp_i32_ugt(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_ugt:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -212,11 +212,11 @@ define amdgpu_kernel void @v_icmp_i32_ugt(i32 addrspace(1)* %out, i32 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 34)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i32_uge(i32 addrspace(1)* %out, i32 %src) {
+define amdgpu_kernel void @v_icmp_i32_uge(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_uge:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -268,11 +268,11 @@ define amdgpu_kernel void @v_icmp_i32_uge(i32 addrspace(1)* %out, i32 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 35)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i32_ult(i32 addrspace(1)* %out, i32 %src) {
+define amdgpu_kernel void @v_icmp_i32_ult(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_ult:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -324,11 +324,11 @@ define amdgpu_kernel void @v_icmp_i32_ult(i32 addrspace(1)* %out, i32 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 36)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i32_ule(i32 addrspace(1)* %out, i32 %src) {
+define amdgpu_kernel void @v_icmp_i32_ule(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_ule:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -380,11 +380,11 @@ define amdgpu_kernel void @v_icmp_i32_ule(i32 addrspace(1)* %out, i32 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 37)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i32_sgt(i32 addrspace(1)* %out, i32 %src) #1 {
+define amdgpu_kernel void @v_icmp_i32_sgt(ptr addrspace(1) %out, i32 %src) #1 {
 ; SDAG-GFX11-LABEL: v_icmp_i32_sgt:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -436,11 +436,11 @@ define amdgpu_kernel void @v_icmp_i32_sgt(i32 addrspace(1)* %out, i32 %src) #1 {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 38)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i32_sge(i32 addrspace(1)* %out, i32 %src) {
+define amdgpu_kernel void @v_icmp_i32_sge(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_sge:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -492,11 +492,11 @@ define amdgpu_kernel void @v_icmp_i32_sge(i32 addrspace(1)* %out, i32 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 39)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i32_slt(i32 addrspace(1)* %out, i32 %src) {
+define amdgpu_kernel void @v_icmp_i32_slt(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_slt:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -548,11 +548,11 @@ define amdgpu_kernel void @v_icmp_i32_slt(i32 addrspace(1)* %out, i32 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 40)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i32_sle(i32 addrspace(1)* %out, i32 %src) {
+define amdgpu_kernel void @v_icmp_i32_sle(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i32_sle:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -604,11 +604,11 @@ define amdgpu_kernel void @v_icmp_i32_sle(i32 addrspace(1)* %out, i32 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 41)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i64_eq(i32 addrspace(1)* %out, i64 %src) {
+define amdgpu_kernel void @v_icmp_i64_eq(ptr addrspace(1) %out, i64 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i64_eq:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -656,11 +656,11 @@ define amdgpu_kernel void @v_icmp_i64_eq(i32 addrspace(1)* %out, i64 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 32)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i64_ne(i32 addrspace(1)* %out, i64 %src) {
+define amdgpu_kernel void @v_icmp_i64_ne(ptr addrspace(1) %out, i64 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i64_ne:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -708,11 +708,11 @@ define amdgpu_kernel void @v_icmp_i64_ne(i32 addrspace(1)* %out, i64 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 33)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_u64_ugt(i32 addrspace(1)* %out, i64 %src) {
+define amdgpu_kernel void @v_icmp_u64_ugt(ptr addrspace(1) %out, i64 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_u64_ugt:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -760,11 +760,11 @@ define amdgpu_kernel void @v_icmp_u64_ugt(i32 addrspace(1)* %out, i64 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 34)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_u64_uge(i32 addrspace(1)* %out, i64 %src) {
+define amdgpu_kernel void @v_icmp_u64_uge(ptr addrspace(1) %out, i64 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_u64_uge:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -812,11 +812,11 @@ define amdgpu_kernel void @v_icmp_u64_uge(i32 addrspace(1)* %out, i64 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 35)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_u64_ult(i32 addrspace(1)* %out, i64 %src) {
+define amdgpu_kernel void @v_icmp_u64_ult(ptr addrspace(1) %out, i64 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_u64_ult:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -864,11 +864,11 @@ define amdgpu_kernel void @v_icmp_u64_ult(i32 addrspace(1)* %out, i64 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 36)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_u64_ule(i32 addrspace(1)* %out, i64 %src) {
+define amdgpu_kernel void @v_icmp_u64_ule(ptr addrspace(1) %out, i64 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_u64_ule:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -916,11 +916,11 @@ define amdgpu_kernel void @v_icmp_u64_ule(i32 addrspace(1)* %out, i64 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 37)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i64_sgt(i32 addrspace(1)* %out, i64 %src) {
+define amdgpu_kernel void @v_icmp_i64_sgt(ptr addrspace(1) %out, i64 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i64_sgt:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -968,11 +968,11 @@ define amdgpu_kernel void @v_icmp_i64_sgt(i32 addrspace(1)* %out, i64 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 38)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i64_sge(i32 addrspace(1)* %out, i64 %src) {
+define amdgpu_kernel void @v_icmp_i64_sge(ptr addrspace(1) %out, i64 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i64_sge:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -1020,11 +1020,11 @@ define amdgpu_kernel void @v_icmp_i64_sge(i32 addrspace(1)* %out, i64 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 39)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i64_slt(i32 addrspace(1)* %out, i64 %src) {
+define amdgpu_kernel void @v_icmp_i64_slt(ptr addrspace(1) %out, i64 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i64_slt:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -1072,11 +1072,11 @@ define amdgpu_kernel void @v_icmp_i64_slt(i32 addrspace(1)* %out, i64 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 40)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i64_sle(i32 addrspace(1)* %out, i64 %src) {
+define amdgpu_kernel void @v_icmp_i64_sle(ptr addrspace(1) %out, i64 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i64_sle:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -1124,11 +1124,11 @@ define amdgpu_kernel void @v_icmp_i64_sle(i32 addrspace(1)* %out, i64 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i64(i64 %src, i64 100, i32 41)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i16_eq(i32 addrspace(1)* %out, i16 %src) {
+define amdgpu_kernel void @v_icmp_i16_eq(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_eq:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -1180,11 +1180,11 @@ define amdgpu_kernel void @v_icmp_i16_eq(i32 addrspace(1)* %out, i16 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 32)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i16(i32 addrspace(1)* %out, i16 %src) {
+define amdgpu_kernel void @v_icmp_i16(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_endpgm
@@ -1210,11 +1210,11 @@ define amdgpu_kernel void @v_icmp_i16(i32 addrspace(1)* %out, i16 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v0, v0, s[0:1]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 30)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i16_ne(i32 addrspace(1)* %out, i16 %src) {
+define amdgpu_kernel void @v_icmp_i16_ne(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_ne:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -1266,11 +1266,11 @@ define amdgpu_kernel void @v_icmp_i16_ne(i32 addrspace(1)* %out, i16 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 33)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i16_ugt(i32 addrspace(1)* %out, i16 %src) {
+define amdgpu_kernel void @v_icmp_i16_ugt(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_ugt:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -1322,11 +1322,11 @@ define amdgpu_kernel void @v_icmp_i16_ugt(i32 addrspace(1)* %out, i16 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 34)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i16_uge(i32 addrspace(1)* %out, i16 %src) {
+define amdgpu_kernel void @v_icmp_i16_uge(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_uge:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -1378,11 +1378,11 @@ define amdgpu_kernel void @v_icmp_i16_uge(i32 addrspace(1)* %out, i16 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 35)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i16_ult(i32 addrspace(1)* %out, i16 %src) {
+define amdgpu_kernel void @v_icmp_i16_ult(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_ult:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -1434,11 +1434,11 @@ define amdgpu_kernel void @v_icmp_i16_ult(i32 addrspace(1)* %out, i16 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 36)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i16_ule(i32 addrspace(1)* %out, i16 %src) {
+define amdgpu_kernel void @v_icmp_i16_ule(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_ule:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -1490,11 +1490,11 @@ define amdgpu_kernel void @v_icmp_i16_ule(i32 addrspace(1)* %out, i16 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 37)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i16_sgt(i32 addrspace(1)* %out, i16 %src) #1 {
+define amdgpu_kernel void @v_icmp_i16_sgt(ptr addrspace(1) %out, i16 %src) #1 {
 ; SDAG-GFX11-LABEL: v_icmp_i16_sgt:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -1546,11 +1546,11 @@ define amdgpu_kernel void @v_icmp_i16_sgt(i32 addrspace(1)* %out, i16 %src) #1 {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 38)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i16_sge(i32 addrspace(1)* %out, i16 %src) {
+define amdgpu_kernel void @v_icmp_i16_sge(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_sge:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -1602,11 +1602,11 @@ define amdgpu_kernel void @v_icmp_i16_sge(i32 addrspace(1)* %out, i16 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 39)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i16_slt(i32 addrspace(1)* %out, i16 %src) {
+define amdgpu_kernel void @v_icmp_i16_slt(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_slt:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -1658,11 +1658,11 @@ define amdgpu_kernel void @v_icmp_i16_slt(i32 addrspace(1)* %out, i16 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 40)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i16_sle(i32 addrspace(1)* %out, i16 %src) {
+define amdgpu_kernel void @v_icmp_i16_sle(ptr addrspace(1) %out, i16 %src) {
 ; SDAG-GFX11-LABEL: v_icmp_i16_sle:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_clause 0x1
@@ -1714,11 +1714,11 @@ define amdgpu_kernel void @v_icmp_i16_sle(i32 addrspace(1)* %out, i16 %src) {
 ; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 41)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_icmp_i1_ne0(i32 addrspace(1)* %out, i32 %a, i32 %b) {
+define amdgpu_kernel void @v_icmp_i1_ne0(ptr addrspace(1) %out, i32 %a, i32 %b) {
 ; GFX11-LABEL: v_icmp_i1_ne0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -1751,11 +1751,11 @@ define amdgpu_kernel void @v_icmp_i1_ne0(i32 addrspace(1)* %out, i32 %a, i32 %b)
   %c1 = icmp ugt i32 %b, 2
   %src = and i1 %c0, %c1
   %result = call i32 @llvm.amdgcn.icmp.i1(i1 %src, i1 false, i32 33)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_ps void @test_intr_icmp_i32_invalid_cc(i32 addrspace(1)* %out, i32 %src) {
+define amdgpu_ps void @test_intr_icmp_i32_invalid_cc(ptr addrspace(1) %out, i32 %src) {
 ; SDAG-GFX11-LABEL: test_intr_icmp_i32_invalid_cc:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_endpgm
@@ -1775,7 +1775,7 @@ define amdgpu_ps void @test_intr_icmp_i32_invalid_cc(i32 addrspace(1)* %out, i32
 ; GISEL-GFX10-NEXT:    global_store_dword v[0:1], v0, off
 ; GISEL-GFX10-NEXT:    s_endpgm
   %result = call i32 @llvm.amdgcn.icmp.i32(i32 %src, i32 100, i32 9999)
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 

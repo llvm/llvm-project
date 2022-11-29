@@ -1,6 +1,6 @@
 ; Tests to make sure that loads and stores in a diamond get merged
 ; Loads are hoisted into the header. Stores sunks into the footer.
-; RUN: opt -gvn-hoist -S < %s | FileCheck %s
+; RUN: opt -passes=gvn-hoist -S < %s | FileCheck %s
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 %struct.node = type { i64, %struct.node*, %struct.node*, %struct.node*, i64, %struct.arc*, i64, i64, i64 }

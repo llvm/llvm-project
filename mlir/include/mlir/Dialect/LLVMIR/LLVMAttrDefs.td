@@ -175,12 +175,12 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     LLVM_DITagParameter:$tag,
     "StringAttr":$name,
     OptionalParameter<"DIFileAttr">:$file,
-    "uint32_t":$line,
+    OptionalParameter<"uint32_t">:$line,
     OptionalParameter<"DIScopeAttr">:$scope,
     OptionalParameter<"DITypeAttr">:$baseType,
     OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags,
-    "uint64_t":$sizeInBits,
-    "uint64_t":$alignInBits,
+    OptionalParameter<"uint64_t">:$sizeInBits,
+    OptionalParameter<"uint64_t">:$alignInBits,
     OptionalArrayRefParameter<"DINodeAttr">:$elements
   );
   let assemblyFormat = "`<` struct(params) `>`";
@@ -197,9 +197,9 @@ def LLVM_DIDerivedTypeAttr : LLVM_Attr<"DIDerivedType", "di_derived_type", [
     LLVM_DITagParameter:$tag,
     OptionalParameter<"StringAttr">:$name,
     "DITypeAttr":$baseType,
-    "uint64_t":$sizeInBits,
-    "uint32_t":$alignInBits,
-    "uint64_t":$offsetInBits
+    OptionalParameter<"uint64_t">:$sizeInBits,
+    OptionalParameter<"uint32_t">:$alignInBits,
+    OptionalParameter<"uint64_t">:$offsetInBits
   );
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -228,8 +228,8 @@ def LLVM_DILexicalBlockAttr : LLVM_Attr<"DILexicalBlock", "di_lexical_block", [
   let parameters = (ins
     "DIScopeAttr":$scope,
     OptionalParameter<"DIFileAttr">:$file,
-    "unsigned":$line,
-    "unsigned":$column
+    OptionalParameter<"unsigned">:$line,
+    OptionalParameter<"unsigned">:$column
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
@@ -274,11 +274,11 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
   let parameters = (ins
     "DIScopeAttr":$scope,
     "StringAttr":$name,
-    "DIFileAttr":$file,
-    "unsigned":$line,
-    "unsigned":$arg,
-    "unsigned":$alignInBits,
-    "DITypeAttr":$type
+    OptionalParameter<"DIFileAttr">:$file,
+    OptionalParameter<"unsigned">:$line,
+    OptionalParameter<"unsigned">:$arg,
+    OptionalParameter<"unsigned">:$alignInBits,
+    OptionalParameter<"DITypeAttr">:$type
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
@@ -307,8 +307,8 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram", [
     "StringAttr":$name,
     OptionalParameter<"StringAttr">:$linkageName,
     "DIFileAttr":$file,
-    "unsigned":$line,
-    "unsigned":$scopeLine,
+    OptionalParameter<"unsigned">:$line,
+    OptionalParameter<"unsigned">:$scopeLine,
     "DISubprogramFlags":$subprogramFlags,
     OptionalParameter<"DISubroutineTypeAttr">:$type
   );

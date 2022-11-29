@@ -21,6 +21,7 @@
 #include "AVRISelLowering.h"
 #include "AVRInstrInfo.h"
 #include "AVRSelectionDAGInfo.h"
+#include "MCTargetDesc/AVRMCTargetDesc.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AVRGenSubtargetInfo.inc"
@@ -101,6 +102,13 @@ public:
   /// Get GPR aliases.
   int getRegTmpIndex() const { return hasTinyEncoding() ? 16 : 0; }
   int getRegZeroIndex() const { return hasTinyEncoding() ? 17 : 1; }
+
+  Register getTmpRegister() const {
+    return hasTinyEncoding() ? AVR::R16 : AVR::R0;
+  }
+  Register getZeroRegister() const {
+    return hasTinyEncoding() ? AVR::R17 : AVR::R1;
+  }
 
 private:
   /// The ELF e_flags architecture.

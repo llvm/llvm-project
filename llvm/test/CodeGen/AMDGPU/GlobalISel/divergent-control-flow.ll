@@ -23,7 +23,7 @@ entry:
   br i1 %c, label %if.true, label %endif
 
 if.true:
-  %val = load volatile i32, i32 addrspace(1)* undef
+  %val = load volatile i32, ptr addrspace(1) undef
   br label %endif
 
 endif:
@@ -55,7 +55,7 @@ endif:
   ret i32 %v
 
 if.true:
-  %val = load volatile i32, i32 addrspace(1)* undef
+  %val = load volatile i32, ptr addrspace(1) undef
   br label %endif
 }
 
@@ -81,7 +81,7 @@ entry:
   br i1 %c, label %if.true, label %endif
 
 if.true:
-  %val = load volatile i32, i32 addrspace(1)* undef
+  %val = load volatile i32, ptr addrspace(1) undef
   br label %endif
 
 endif:
@@ -90,7 +90,7 @@ endif:
 }
 
 ; Make sure and 1 is inserted on llvm.amdgcn.if
-define i32 @divergent_if_nonboolean_condition1(i32 addrspace(1)* %ptr) {
+define i32 @divergent_if_nonboolean_condition1(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: divergent_if_nonboolean_condition1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -109,12 +109,12 @@ define i32 @divergent_if_nonboolean_condition1(i32 addrspace(1)* %ptr) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %value = load i32, i32 addrspace(1)* %ptr
+  %value = load i32, ptr addrspace(1) %ptr
   %c = trunc i32 %value to i1
   br i1 %c, label %if.true, label %endif
 
 if.true:
-  %val = load volatile i32, i32 addrspace(1)* undef
+  %val = load volatile i32, ptr addrspace(1) undef
   br label %endif
 
 endif:
@@ -123,7 +123,7 @@ endif:
 }
 
 @external_constant = external addrspace(4) constant i32, align 4
-@const.ptr = external addrspace(4) constant float*, align 4
+@const.ptr = external addrspace(4) constant ptr, align 4
 
 ; Make sure this case compiles. G_ICMP was mis-mapped due to having
 ; the result register class constrained by llvm.amdgcn.if lowering.
@@ -167,13 +167,13 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 bb:
-  %tmp = load i32, i32 addrspace(4)* @external_constant
+  %tmp = load i32, ptr addrspace(4) @external_constant
   %tmp1 = icmp ne i32 %tmp, 0
   br i1 %tmp1, label %bb12, label %bb2
 
 bb2:
-  %ptr = load float*, float* addrspace(4)* @const.ptr
-  %tmp4 = load float, float* %ptr, align 4
+  %ptr = load ptr, ptr addrspace(4) @const.ptr
+  %tmp4 = load float, ptr %ptr, align 4
   %tmp5 = fcmp olt float %tmp4, 1.0
   %tmp6 = or i1 %tmp5, false
   br i1 %tmp6, label %bb8, label %bb7
@@ -187,7 +187,7 @@ bb8:
   br i1 %tmp10, label %bb11, label %bb12
 
 bb11:
-  store float 4.0, float addrspace(5)* undef, align 4
+  store float 4.0, ptr addrspace(5) undef, align 4
   br label %bb12
 
 bb12:
@@ -235,7 +235,7 @@ bb1:
   br i1 %cmp0, label %bb4, label %bb9
 
 bb4:
-  %load = load volatile i32, i32 addrspace(1)* undef, align 4
+  %load = load volatile i32, ptr addrspace(1) undef, align 4
   %cmp1 = icmp slt i32 %tmp, %load
   br i1 %cmp1, label %bb1, label %bb9
 

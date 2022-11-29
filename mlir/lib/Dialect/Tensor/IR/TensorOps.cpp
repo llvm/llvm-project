@@ -3238,6 +3238,26 @@ void PackOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getResult(), "pack");
 }
 
+void PackOp::build(OpBuilder &builder, OperationState &state, Value source,
+                   Value dest, ArrayRef<int64_t> innerDimsPos,
+                   ArrayRef<OpFoldResult> innerTiles,
+                   Optional<Value> paddingValue,
+                   ArrayRef<int64_t> outerDimsPerm) {
+  assert(innerDimsPos.size() == innerTiles.size() &&
+         "number of tile sizes specified must match the specified number of "
+         "original dimensions to be tiled");
+  SmallVector<int64_t> staticTileSizes;
+  SmallVector<Value> dynamicTileSizes;
+  dispatchIndexOpFoldResults(innerTiles, dynamicTileSizes, staticTileSizes,
+                             ShapedType::kDynamic);
+  build(builder, state, dest.getType(), source, dest,
+        paddingValue ? paddingValue.value() : nullptr,
+        outerDimsPerm.empty() ? nullptr
+                              : builder.getDenseI64ArrayAttr(outerDimsPerm),
+        builder.getDenseI64ArrayAttr(innerDimsPos), dynamicTileSizes,
+        builder.getDenseI64ArrayAttr(staticTileSizes));
+}
+
 LogicalResult
 PackOp::reifyResultShapes(OpBuilder &builder,
                           ReifiedRankedShapedTypeDims &reifiedReturnShapes) {

@@ -1,4 +1,4 @@
-; RUN: opt -gvn -S < %s | FileCheck %s
+; RUN: opt -passes=gvn -S < %s | FileCheck %s
 
 ; Check that the redundant load from %if.then is removed.
 ; Also, check that the debug location associated to load %0 still refers to

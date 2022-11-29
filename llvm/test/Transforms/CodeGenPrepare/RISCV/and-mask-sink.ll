@@ -18,7 +18,7 @@ define i32 @and_sink1(i32 %a, i1 %c) {
 ; NOZBS-NEXT:    br label [[BB0:%.*]]
 ; NOZBS:       bb0:
 ; NOZBS-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; NOZBS-NEXT:    store i32 0, i32* @A, align 4
+; NOZBS-NEXT:    store i32 0, ptr @A, align 4
 ; NOZBS-NEXT:    br i1 [[CMP]], label [[BB0]], label [[BB2:%.*]]
 ; NOZBS:       bb2:
 ; NOZBS-NEXT:    ret i32 0
@@ -28,7 +28,7 @@ define i32 @and_sink1(i32 %a, i1 %c) {
 ; ZBS:       bb0:
 ; ZBS-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 2048
 ; ZBS-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
-; ZBS-NEXT:    store i32 0, i32* @A, align 4
+; ZBS-NEXT:    store i32 0, ptr @A, align 4
 ; ZBS-NEXT:    br i1 [[CMP]], label [[BB0]], label [[BB2:%.*]]
 ; ZBS:       bb2:
 ; ZBS-NEXT:    ret i32 0
@@ -37,7 +37,7 @@ define i32 @and_sink1(i32 %a, i1 %c) {
   br label %bb0
 bb0:
   %cmp = icmp eq i32 %and, 0
-  store i32 0, i32* @A
+  store i32 0, ptr @A
   br i1 %cmp, label %bb0, label %bb2
 bb2:
   ret i32 0
@@ -50,7 +50,7 @@ define i32 @and_sink2(i32 %a) {
 ; CHECK-NEXT:    br label [[BB0:%.*]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    store i32 0, i32* @A, align 4
+; CHECK-NEXT:    store i32 0, ptr @A, align 4
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB0]], label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    ret i32 0
@@ -59,7 +59,7 @@ define i32 @and_sink2(i32 %a) {
   br label %bb0
 bb0:
   %cmp = icmp eq i32 %and, 0
-  store i32 0, i32* @A
+  store i32 0, ptr @A
   br i1 %cmp, label %bb0, label %bb2
 bb2:
   ret i32 0
@@ -72,7 +72,7 @@ define i32 @and_sink3(i32 %a) {
 ; CHECK-NEXT:    br label [[BB0:%.*]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    store i32 0, i32* @A, align 4
+; CHECK-NEXT:    store i32 0, ptr @A, align 4
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB0]], label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    ret i32 0
@@ -81,7 +81,7 @@ define i32 @and_sink3(i32 %a) {
   br label %bb0
 bb0:
   %cmp = icmp eq i32 %and, 0
-  store i32 0, i32* @A
+  store i32 0, ptr @A
   br i1 %cmp, label %bb0, label %bb2
 bb2:
   ret i32 0
