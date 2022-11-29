@@ -191,11 +191,11 @@ namespace std {
   template <> struct hash<u32string_view>;
   template <> struct hash<wstring_view>;
 
-  constexpr basic_string_view<char>     operator "" sv( const char *str,     size_t len ) noexcept;
-  constexpr basic_string_view<wchar_t>  operator "" sv( const wchar_t *str,  size_t len ) noexcept;
-  constexpr basic_string_view<char8_t>  operator "" sv( const char8_t *str,  size_t len ) noexcept; // C++20
-  constexpr basic_string_view<char16_t> operator "" sv( const char16_t *str, size_t len ) noexcept;
-  constexpr basic_string_view<char32_t> operator "" sv( const char32_t *str, size_t len ) noexcept;
+  constexpr basic_string_view<char>     operator "" sv(const char *str,     size_t len) noexcept;
+  constexpr basic_string_view<wchar_t>  operator "" sv(const wchar_t *str,  size_t len) noexcept;
+  constexpr basic_string_view<char8_t>  operator "" sv(const char8_t *str,  size_t len) noexcept; // C++20
+  constexpr basic_string_view<char16_t> operator "" sv(const char16_t *str, size_t len) noexcept;
+  constexpr basic_string_view<char32_t> operator "" sv(const char32_t *str, size_t len) noexcept;
 
 }  // namespace std
 
@@ -259,18 +259,18 @@ template<class _CharT, class _Traits>
 class basic_string_view {
 public:
     // types
-    typedef _Traits                                    traits_type;
-    typedef _CharT                                     value_type;
-    typedef _CharT*                                    pointer;
-    typedef const _CharT*                              const_pointer;
-    typedef _CharT&                                    reference;
-    typedef const _CharT&                              const_reference;
-    typedef const_pointer                              const_iterator; // See [string.view.iterators]
-    typedef const_iterator                             iterator;
-    typedef _VSTD::reverse_iterator<const_iterator>    const_reverse_iterator;
-    typedef const_reverse_iterator                     reverse_iterator;
-    typedef size_t                                     size_type;
-    typedef ptrdiff_t                                  difference_type;
+    using traits_type            = _Traits;
+    using value_type             = _CharT;
+    using pointer                = _CharT*;
+    using const_pointer          = const _CharT*;
+    using reference              = _CharT&;
+    using const_reference        = const _CharT&;
+    using const_iterator         = const_pointer; // See [string.view.iterators]
+    using iterator               = const_iterator;
+    using const_reverse_iterator = _VSTD::reverse_iterator<const_iterator>;
+    using reverse_iterator       = const_reverse_iterator;
+    using size_type              = size_t;
+    using difference_type        = ptrdiff_t;
     static _LIBCPP_CONSTEXPR const size_type npos = -1; // size_type(-1);
 
     static_assert((!is_array<value_type>::value), "Character type of basic_string_view must not be an array");
@@ -281,7 +281,7 @@ public:
 
     // [string.view.cons], construct/copy
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
-    basic_string_view() _NOEXCEPT : __data_ (nullptr), __size_(0) {}
+    basic_string_view() _NOEXCEPT : __data_(nullptr), __size_(0) {}
 
     _LIBCPP_INLINE_VISIBILITY
     basic_string_view(const basic_string_view&) _NOEXCEPT = default;
@@ -450,10 +450,10 @@ public:
 
     _LIBCPP_CONSTEXPR_SINCE_CXX14 int compare(basic_string_view __sv) const _NOEXCEPT
     {
-        size_type __rlen = _VSTD::min( size(), __sv.size());
+        size_type __rlen = _VSTD::min(size(), __sv.size());
         int __retval = _Traits::compare(data(), __sv.data(), __rlen);
-        if ( __retval == 0 ) // first __rlen chars matched
-            __retval = size() == __sv.size() ? 0 : ( size() < __sv.size() ? -1 : 1 );
+        if (__retval == 0) // first __rlen chars matched
+            __retval = size() == __sv.size() ? 0 : (size() < __sv.size() ? -1 : 1);
         return __retval;
     }
 
@@ -748,7 +748,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
 bool operator==(basic_string_view<_CharT, _Traits> __lhs,
                 basic_string_view<_CharT, _Traits> __rhs) _NOEXCEPT
 {
-    if ( __lhs.size() != __rhs.size()) return false;
+    if (__lhs.size() != __rhs.size()) return false;
     return __lhs.compare(__rhs) == 0;
 }
 
@@ -759,7 +759,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
 bool operator==(basic_string_view<_CharT, _Traits> __lhs,
                 __type_identity_t<basic_string_view<_CharT, _Traits> > __rhs) _NOEXCEPT
 {
-    if ( __lhs.size() != __rhs.size()) return false;
+    if (__lhs.size() != __rhs.size()) return false;
     return __lhs.compare(__rhs) == 0;
 }
 
@@ -770,7 +770,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
 bool operator==(__type_identity_t<basic_string_view<_CharT, _Traits> > __lhs,
                 basic_string_view<_CharT, _Traits> __rhs) _NOEXCEPT
 {
-    if ( __lhs.size() != __rhs.size()) return false;
+    if (__lhs.size() != __rhs.size()) return false;
     return __lhs.compare(__rhs) == 0;
 }
 #endif // _LIBCPP_STD_VER > 17
@@ -814,7 +814,7 @@ template<class _CharT, class _Traits>
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
 bool operator!=(basic_string_view<_CharT, _Traits> __lhs, basic_string_view<_CharT, _Traits> __rhs) _NOEXCEPT
 {
-    if ( __lhs.size() != __rhs.size())
+    if (__lhs.size() != __rhs.size())
         return true;
     return __lhs.compare(__rhs) != 0;
 }
@@ -824,7 +824,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
 bool operator!=(basic_string_view<_CharT, _Traits> __lhs,
                 __type_identity_t<basic_string_view<_CharT, _Traits> > __rhs) _NOEXCEPT
 {
-    if ( __lhs.size() != __rhs.size())
+    if (__lhs.size() != __rhs.size())
         return true;
     return __lhs.compare(__rhs) != 0;
 }
@@ -834,7 +834,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
 bool operator!=(__type_identity_t<basic_string_view<_CharT, _Traits> > __lhs,
                 basic_string_view<_CharT, _Traits> __rhs) _NOEXCEPT
 {
-    if ( __lhs.size() != __rhs.size())
+    if (__lhs.size() != __rhs.size())
         return true;
     return __lhs.compare(__rhs) != 0;
 }

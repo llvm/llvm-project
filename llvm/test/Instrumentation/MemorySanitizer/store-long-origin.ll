@@ -7,9 +7,9 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Test origin for longer stores.
 
-define void @Store8(i64* nocapture %p, i64 %x) sanitize_memory {
+define void @Store8(ptr nocapture %p, i64 %x) sanitize_memory {
 entry:
-  store i64 %x, i64* %p, align 8
+  store i64 %x, ptr %p, align 8
   ret void
 }
 
@@ -20,9 +20,9 @@ entry:
 ; CHECK: store i64 {{.*}}, align 8
 ; CHECK: ret void
 
-define void @Store8_align4(i64* nocapture %p, i64 %x) sanitize_memory {
+define void @Store8_align4(ptr nocapture %p, i64 %x) sanitize_memory {
 entry:
-  store i64 %x, i64* %p, align 4
+  store i64 %x, ptr %p, align 4
   ret void
 }
 
@@ -30,16 +30,16 @@ entry:
 ; CHECK-LABEL: define void @Store8_align4(
 ; CHECK: store i64 {{.*}}, align 4
 ; CHECK: store i32 {{.*}}, align 4
-; CHECK: getelementptr i32, i32* {{.*}}, i32 1
+; CHECK: getelementptr i32, ptr {{.*}}, i32 1
 ; CHECK: store i32 {{.*}}, align 4
 ; CHECK: store i64 {{.*}}, align 4
 ; CHECK: ret void
 
 %struct.S = type { i32, i32, i32 }
 
-define void @StoreAgg(%struct.S* nocapture %p, %struct.S %x) sanitize_memory {
+define void @StoreAgg(ptr nocapture %p, %struct.S %x) sanitize_memory {
 entry:
-  store %struct.S %x, %struct.S* %p, align 4
+  store %struct.S %x, ptr %p, align 4
   ret void
 }
 
@@ -47,17 +47,17 @@ entry:
 ; CHECK-LABEL: define void @StoreAgg(
 ; CHECK: store { i32, i32, i32 }  {{.*}}, align 4
 ; CHECK: store i32 {{.*}}, align 4
-; CHECK: getelementptr i32, i32* {{.*}}, i32 1
+; CHECK: getelementptr i32, ptr {{.*}}, i32 1
 ; CHECK: store i32 {{.*}}, align 4
-; CHECK: getelementptr i32, i32* {{.*}}, i32 2
+; CHECK: getelementptr i32, ptr {{.*}}, i32 2
 ; CHECK: store i32 {{.*}}, align 4
 ; CHECK: store %struct.S {{.*}}, align 4
 ; CHECK: ret void
 
 
-define void @StoreAgg8(%struct.S* nocapture %p, %struct.S %x) sanitize_memory {
+define void @StoreAgg8(ptr nocapture %p, %struct.S %x) sanitize_memory {
 entry:
-  store %struct.S %x, %struct.S* %p, align 8
+  store %struct.S %x, ptr %p, align 8
   ret void
 }
 
@@ -65,16 +65,16 @@ entry:
 ; CHECK-LABEL: define void @StoreAgg8(
 ; CHECK: store { i32, i32, i32 }  {{.*}}, align 8
 ; CHECK: store i64 {{.*}}, align 8
-; CHECK: getelementptr i32, i32* {{.*}}, i32 2
+; CHECK: getelementptr i32, ptr {{.*}}, i32 2
 ; CHECK: store i32 {{.*}}, align 8
 ; CHECK: store %struct.S {{.*}}, align 8
 ; CHECK: ret void
 
 
 %struct.Q = type { i64, i64, i64 }
-define void @StoreAgg24(%struct.Q* nocapture %p, %struct.Q %x) sanitize_memory {
+define void @StoreAgg24(ptr nocapture %p, %struct.Q %x) sanitize_memory {
 entry:
-  store %struct.Q %x, %struct.Q* %p, align 8
+  store %struct.Q %x, ptr %p, align 8
   ret void
 }
 
@@ -82,9 +82,9 @@ entry:
 ; CHECK-LABEL: define void @StoreAgg24(
 ; CHECK: store { i64, i64, i64 }  {{.*}}, align 8
 ; CHECK: store i64 {{.*}}, align 8
-; CHECK: getelementptr i64, i64* {{.*}}, i32 1
+; CHECK: getelementptr i64, ptr {{.*}}, i32 1
 ; CHECK: store i64 {{.*}}, align 8
-; CHECK: getelementptr i64, i64* {{.*}}, i32 2
+; CHECK: getelementptr i64, ptr {{.*}}, i32 2
 ; CHECK: store i64 {{.*}}, align 8
 ; CHECK: store %struct.Q {{.*}}, align 8
 ; CHECK: ret void

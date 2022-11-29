@@ -47,7 +47,7 @@ func.func @sparse_push_back(%arg0: memref<?xindex>, %arg1: memref<?xf64>, %arg2:
 //       CHECK:   } do {
 //       CHECK:     ^bb0(%[[I2:.*]]: index):
 //       CHECK:     scf.yield %[[I2]] : index
-//       CHECK:   }  
+//       CHECK:   }
 //       CHECK:  %[[M2:.*]] = memref.realloc %[[B]](%[[P2]])
 //       CHECK:  scf.yield %[[M2]] : memref<?xf64>
 //       CHECK: } else {

@@ -304,6 +304,8 @@ Bug Fixes
 - GNU attributes being applied prior to standard attributes would be handled
   improperly, which was corrected to match the behaviour exhibited by GCC.
   `Issue 58229 <https://github.com/llvm/llvm-project/issues/58229>`_
+- The builtin type trait ``__is_aggregate`` now returns ``true`` for arrays of incomplete
+  types in accordance with the suggested fix for `LWG3823 https://cplusplus.github.io/LWG/issue3823`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -401,6 +403,8 @@ Improvements to Clang's diagnostics
   PCH or modules. When Clang hits this limit, it now produces notes mentioning
   which header and source files are consuming large amounts of this space.
   ``#pragma clang __debug sloc_usage`` can also be used to request this report.
+- Clang no longer permits the keyword 'bool' in a concept declaration as a
+  concepts-ts compatibility extension.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -648,17 +652,21 @@ C++20 Feature Support
   ([temp.func.order]p6.2.1 is not implemented, matching GCC).
 - Implemented `P0857R0 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/p0857r0.html>`_,
   which specifies constrained lambdas and constrained template *template-parameter*\s.
+- Required parameter pack to be provided at the end of the concept parameter list. This
+  fixes `Issue 48182 <https://github.com/llvm/llvm-project/issues/48182>`_.
 
 - Do not hide templated base members introduced via using-decl in derived class
   (useful specially for constrained members). Fixes `GH50886 <https://github.com/llvm/llvm-project/issues/50886>`_.
+- Implemented CWG2635 as a Defect Report, which prohibits structured bindings from being constrained.
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 - Support label at end of compound statement (`P2324 <https://wg21.link/p2324r2>`_).
-- Implemented `P1169R4: static operator() <https://wg21.link/P1169R4>`_.
+- Implemented `P1169R4: static operator() <https://wg21.link/P1169R4>`_ and `P2589R1: static operator[] <https://wg21.link/P2589R1>`_.
 - Implemented "char8_t Compatibility and Portability Fix" (`P2513R3 <https://wg21.link/P2513R3>`_).
-  This Change was applied to C++20 as a Defect Report.
+  This change was applied to C++20 as a Defect Report.
+- Implemented "Permitting static constexpr variables in constexpr functions" (`P2647R1 <https://wg21.link/P2647R1>_`).
 
 CUDA/HIP Language Changes in Clang
 ----------------------------------

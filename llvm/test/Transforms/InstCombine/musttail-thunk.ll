@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 ; RUN: opt -debugify-each -instcombine -S < %s | FileCheck %s
 
 ; These are both direct calls, but make sure instcombine leaves the casts

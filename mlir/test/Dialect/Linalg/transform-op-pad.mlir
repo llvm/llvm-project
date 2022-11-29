@@ -42,7 +42,7 @@ transform.sequence failures(propagate) {
 func.func @pad(%arg0: tensor<24x12xf32>,
                %arg1: tensor<12x25xf32>,
                %arg2: tensor<24x25xf32>) -> tensor<24x25xf32> {
-  // expected-note @below {{when applied to this op}} 
+  // expected-note @below {{when applied to this op}}
   %0 = linalg.matmul ins(%arg0, %arg1 : tensor<24x12xf32>, tensor<12x25xf32>) outs(%arg2 : tensor<24x25xf32>) -> tensor<24x25xf32>
   func.return %0 : tensor<24x25xf32>
 }

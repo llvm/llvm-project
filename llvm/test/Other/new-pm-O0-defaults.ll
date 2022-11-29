@@ -13,7 +13,7 @@
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager -enable-matrix \
 ; RUN:     -passes='default<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-MATRIX,CHECK-CORO
-; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager -new-pm-debug-info-for-profiling \
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager -debug-info-for-profiling \
 ; RUN:     -passes='default<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DIS,CHECK-CORO
 ; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager \

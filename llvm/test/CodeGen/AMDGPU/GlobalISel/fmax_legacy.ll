@@ -229,7 +229,7 @@ define float @v_test_fmax_legacy_ule_f32_multi_use(float %a, float %b) {
   %cmp = fcmp ogt float %a, %b
   %val0 = select i1 %cmp, float %a, float %b
   %val1 = zext i1 %cmp to i32
-  store i32 %val1, i32 addrspace(3)* undef
+  store i32 %val1, ptr addrspace(3) undef
   ret float %val0
 }
 

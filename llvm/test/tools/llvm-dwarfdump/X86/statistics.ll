@@ -69,7 +69,7 @@ source_filename = "/tmp/quality.cpp"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
 
-%struct.S = type { i8 (i32)* }
+%struct.S = type { ptr }
 
 @GlobalConst = global i32 42, align 4, !dbg !0
 @Global = global i32 0, align 4, !dbg !6
@@ -79,11 +79,11 @@ target triple = "x86_64-apple-macosx10.12.0"
 define i32 @_Z6squarei(i32 %i) #0 !dbg !20 {
 entry:
   %i.addr = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
+  store i32 %i, ptr %i.addr, align 4
   ; Modified to loose debug info for i here.
-  call void @llvm.dbg.declare(metadata i32* undef, metadata !23, metadata !24), !dbg !25
-  %0 = load i32, i32* %i.addr, align 4, !dbg !26
-  %1 = load i32, i32* %i.addr, align 4, !dbg !27
+  call void @llvm.dbg.declare(metadata ptr undef, metadata !23, metadata !24), !dbg !25
+  %0 = load i32, ptr %i.addr, align 4, !dbg !26
+  %1 = load i32, ptr %i.addr, align 4, !dbg !27
   %mul = mul nsw i32 %0, %1, !dbg !28
   ret i32 %mul, !dbg !29
 }
@@ -96,22 +96,22 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 define i32 @_Z4cubei(i32 %i) #2 !dbg !30 {
 entry:
   %i.addr.i = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %i.addr.i, metadata !23, metadata !24), !dbg !31
+  call void @llvm.dbg.declare(metadata ptr %i.addr.i, metadata !23, metadata !24), !dbg !31
   %i.addr = alloca i32, align 4
   %squared = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %i.addr, metadata !33, metadata !24), !dbg !34
-  %0 = load i32, i32* %i.addr, align 4, !dbg !37
-  store i32 %0, i32* %i.addr.i, align 4
-  %1 = load i32, i32* %i.addr.i, align 4, !dbg !38
-  %2 = load i32, i32* %i.addr.i, align 4, !dbg !39
+  store i32 %i, ptr %i.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %i.addr, metadata !33, metadata !24), !dbg !34
+  %0 = load i32, ptr %i.addr, align 4, !dbg !37
+  store i32 %0, ptr %i.addr.i, align 4
+  %1 = load i32, ptr %i.addr.i, align 4, !dbg !38
+  %2 = load i32, ptr %i.addr.i, align 4, !dbg !39
   %mul.i = mul nsw i32 %1, %2, !dbg !40
   ; Modified to cover only about 50% of the lexical scope.
   call void @llvm.dbg.value(metadata i32 %mul.i, metadata !35, metadata !24), !dbg !36
-  store i32 %mul.i, i32* %squared, align 4, !dbg !36
-  %3 = load i32, i32* %squared, align 4, !dbg !41
+  store i32 %mul.i, ptr %squared, align 4, !dbg !36
+  %3 = load i32, ptr %squared, align 4, !dbg !41
   call void @llvm.dbg.value(metadata i32 %3, metadata !35, metadata !24), !dbg !36
-  %4 = load i32, i32* %i.addr, align 4, !dbg !42
+  %4 = load i32, ptr %i.addr, align 4, !dbg !42
   %mul = mul nsw i32 %3, %4, !dbg !43
   ret i32 %mul, !dbg !44
 }
@@ -121,21 +121,21 @@ define dso_local i32 @_Z3booii(i32 %0, i32 %1) !dbg !52 {
 entry:
   %.addr = alloca i32, align 4
   %.addr1 = alloca i32, align 4
-  store i32 %0, i32* %.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %.addr, metadata !55, metadata !DIExpression()), !dbg !56
-  store i32 %1, i32* %.addr1, align 4
-  call void @llvm.dbg.declare(metadata i32* %.addr1, metadata !57, metadata !DIExpression()), !dbg !58
+  store i32 %0, ptr %.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %.addr, metadata !55, metadata !DIExpression()), !dbg !56
+  store i32 %1, ptr %.addr1, align 4
+  call void @llvm.dbg.declare(metadata ptr %.addr1, metadata !57, metadata !DIExpression()), !dbg !58
   ret i32 0, !dbg !58
 }
 
 %struct.T = type { i8 }
 
-define void @_ZN1T5emptyEv(%struct.T* %this) #2 !dbg !59 {
+define void @_ZN1T5emptyEv(ptr %this) #2 !dbg !59 {
 entry:
-  %this.addr = alloca %struct.T*, align 8
-  store %struct.T* %this, %struct.T** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.T** %this.addr, metadata !67, metadata !DIExpression()), !dbg !69
-  %this1 = load %struct.T*, %struct.T** %this.addr, align 8
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !67, metadata !DIExpression()), !dbg !69
+  %this1 = load ptr, ptr %this.addr, align 8
   ret void, !dbg !70
 }
 

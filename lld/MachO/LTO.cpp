@@ -57,7 +57,7 @@ static lto::Config createConfig() {
 // If `originalPath` exists, hardlinks `path` to `originalPath`. If that fails,
 // or `originalPath` is not set, saves `buffer` to `path`.
 static void saveOrHardlinkBuffer(StringRef buffer, const Twine &path,
-                                 Optional<StringRef> originalPath) {
+                                 std::optional<StringRef> originalPath) {
   if (originalPath) {
     auto err = fs::create_hard_link(*originalPath, path);
     if (!err)
@@ -168,7 +168,7 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
     // not use the cached MemoryBuffer directly to ensure dsymutil does not
     // race with the cache pruner.
     StringRef objBuf;
-    Optional<StringRef> cachePath = llvm::None;
+    std::optional<StringRef> cachePath = llvm::None;
     if (files[i]) {
       objBuf = files[i]->getBuffer();
       cachePath = files[i]->getBufferIdentifier();

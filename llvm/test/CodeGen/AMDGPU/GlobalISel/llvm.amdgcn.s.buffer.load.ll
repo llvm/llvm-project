@@ -5105,5 +5105,5 @@ declare <32 x i16> @llvm.amdgcn.s.buffer.load.v32i16(<4 x i32>, i32, i32 immarg)
 declare <4 x i64> @llvm.amdgcn.s.buffer.load.v4i64(<4 x i32>, i32, i32 immarg)
 declare <8 x i64> @llvm.amdgcn.s.buffer.load.v8i64(<4 x i32>, i32, i32 immarg)
 
-declare <4 x i8 addrspace(1)*> @llvm.amdgcn.s.buffer.load.v4p1i8(<4 x i32>, i32, i32 immarg)
-declare <8 x i8 addrspace(1)*> @llvm.amdgcn.s.buffer.load.v8p1i8(<4 x i32>, i32, i32 immarg)
+declare <4 x ptr addrspace(1)> @llvm.amdgcn.s.buffer.load.v4p1(<4 x i32>, i32, i32 immarg)
+declare <8 x ptr addrspace(1)> @llvm.amdgcn.s.buffer.load.v8p1(<4 x i32>, i32, i32 immarg)

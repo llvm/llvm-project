@@ -105,6 +105,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -1228,7 +1229,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     if (Arg && FuncInfo.getArgumentFrameIndex(Arg) != INT_MAX)
       return true;
 
-    Optional<MachineOperand> Op;
+    std::optional<MachineOperand> Op;
     if (Register Reg = lookUpRegForValue(Address))
       Op = MachineOperand::CreateReg(Reg, false);
 

@@ -1,4 +1,4 @@
-; RUN: opt -S -gvn-hoist < %s | FileCheck %s
+; RUN: opt -S -passes=gvn-hoist < %s | FileCheck %s
 
 ; Checking gvn-hoist in case of indirect branches.
 

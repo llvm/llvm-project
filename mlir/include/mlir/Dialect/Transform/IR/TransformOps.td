@@ -54,7 +54,7 @@ def AlternativesOp : TransformDialectOp<"alternatives",
     remaining alternatives. Note that the payload IR outside of the given scope
     is not necessarily in the valid state, or even accessible to the
     transformation.
-    
+
     The changes to the IR within the scope performed by transforms in the failed
     alternative region are reverted before attempting the next region.
     Practically, this is achieved by cloning the scope. Therefore it is advised
@@ -146,7 +146,7 @@ def ForeachOp : TransformDialectOp<"foreach",
   let arguments = (ins TransformTypeInterface:$target);
   let results = (outs Variadic<TransformTypeInterface>:$results);
   let regions = (region SizedRegion<1>:$body);
-  let assemblyFormat = 
+  let assemblyFormat =
     "$target `:` type($target) (`->` type($results)^)? $body attr-dict";
   let hasVerifier = 1;
 
@@ -238,7 +238,7 @@ def SplitHandlesOp : TransformDialectOp<"split_handles",
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Splits handles from a union of payload ops to a list";
   let description = [{
-    Creates `num_result_handles` transform IR handles extracted from the 
+    Creates `num_result_handles` transform IR handles extracted from the
     `handle` operand. The resulting Payload IR operation handles are listed
     in the same order as the operations appear in the source `handle`.
     This is useful for ensuring a statically known number of operations are
@@ -246,7 +246,7 @@ def SplitHandlesOp : TransformDialectOp<"split_handles",
     that can be further manipulated in isolation.
 
     This operation succeeds and returns `num_result_handles` if the statically
-    specified `num_result_handles` corresponds to the dynamic number of 
+    specified `num_result_handles` corresponds to the dynamic number of
     operations contained in the source `handle`. Otherwise it silently fails.
   }];
 
@@ -259,7 +259,7 @@ def SplitHandlesOp : TransformDialectOp<"split_handles",
   ];
 
   let assemblyFormat = [{
-    $handle `in` `[` $num_result_handles `]` 
+    $handle `in` `[` $num_result_handles `]`
     attr-dict `:` functional-type(operands, results)
   }];
 }
@@ -286,7 +286,7 @@ def PDLMatchOp : TransformDialectOp<"pdl_match",
   }];
 
   let arguments = (ins
-    Arg<TransformTypeInterface, "Payload IR scope to match within">:$root, 
+    Arg<TransformTypeInterface, "Payload IR scope to match within">:$root,
     SymbolRefAttr:$pattern_name);
   let results = (outs
     Res<TransformTypeInterface, "Handle to the matched Payload IR ops">:$matched);
@@ -335,7 +335,7 @@ def ReplicateOp : TransformDialectOp<"replicate",
 
     This transformation is useful to "align" the sizes of payload IR lists
     before a transformation that expects, e.g., identically-sized lists. For
-    example, a transformation may be parameterized by same notional per-target 
+    example, a transformation may be parameterized by same notional per-target
     size computed at runtime and supplied as another handle, the replication
     allows this size to be computed only once and used for every target instead
     of replicating the computation itself.
@@ -488,7 +488,7 @@ def YieldOp : TransformDialectOp<"yield", [Terminator]> {
     any transformation on the payload IR and is used for flow purposes only.
   }];
 
-  let arguments = (ins 
+  let arguments = (ins
     Arg<Variadic<TransformTypeInterface>, "Operation handles yielded back to the parent",
         [TransformMappingRead]>:$operands);
   let assemblyFormat = "operands attr-dict (`:` type($operands)^)?";

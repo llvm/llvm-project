@@ -27,7 +27,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/StaticAnalyzer/Checkers/LocalCheckers.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"

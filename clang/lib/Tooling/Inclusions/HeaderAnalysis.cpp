@@ -64,4 +64,28 @@ bool isSelfContainedHeader(const FileEntry *FE, const SourceManager &SM,
       const_cast<SourceManager &>(SM).getMemoryBufferForFileOrNone(FE).value_or(
           llvm::MemoryBufferRef()));
 }
+
+llvm::Optional<StringRef> parseIWYUPragma(const char *Text) {
+  // Skip the comment start, // or /*.
+  if (Text[0] != '/' || (Text[1] != '/' && Text[1] != '*'))
+    return llvm::None;
+  bool BlockComment = Text[1] == '*';
+  Text += 2;
+
+  // Per spec, direcitves are whitespace- and case-sensitive.
+  constexpr llvm::StringLiteral IWYUPragma = " IWYU pragma: ";
+  if (strncmp(Text, IWYUPragma.data(), IWYUPragma.size()))
+    return llvm::None;
+  Text += IWYUPragma.size();
+  const char *End = Text;
+  while (*End != 0 && *End != '\n')
+    ++End;
+  StringRef Rest(Text, End - Text);
+  // Strip off whitespace and comment markers to avoid confusion. This isn't
+  // fully-compatible with IWYU, which splits into whitespace-delimited tokens.
+  if (BlockComment)
+    Rest.consume_back("*/");
+  return Rest.trim();
+}
+
 } // namespace clang::tooling

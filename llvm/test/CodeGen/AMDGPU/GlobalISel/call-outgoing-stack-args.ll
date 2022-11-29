@@ -7,7 +7,7 @@
 ; tests are unified.
 
 declare hidden void @external_void_func_v16i32_v16i32_v4i32(<16 x i32>, <16 x i32>, <4 x i32>) #0
-declare hidden void @external_void_func_byval([16 x i32] addrspace(5)* byval([16 x i32])) #0
+declare hidden void @external_void_func_byval(ptr addrspace(5) byval([16 x i32])) #0
 
 define amdgpu_kernel void @kernel_caller_stack() {
 ; MUBUF-LABEL: kernel_caller_stack:
@@ -173,6 +173,7 @@ define amdgpu_kernel void @kernel_caller_byval() {
 ; FLATSCR-NEXT:    s_mov_b32 s2, 0
 ; FLATSCR-NEXT:    s_mov_b32 vcc_lo, 0
 ; FLATSCR-NEXT:    s_mov_b32 vcc_hi, 0
+; FLATSCR-NEXT:    s_mov_b32 s40, 0
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s11 offset:24
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s10 offset:32
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s9 offset:40
@@ -187,7 +188,6 @@ define amdgpu_kernel void @kernel_caller_byval() {
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s2 offset:112
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], vcc_lo offset:120
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], vcc_hi offset:128
-; FLATSCR-NEXT:    s_mov_b32 s40, 0
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s40 offset:8
 ; FLATSCR-NEXT:    s_mov_b32 s39, 0
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[2:3], off, s39 offset:16
@@ -226,9 +226,8 @@ define amdgpu_kernel void @kernel_caller_byval() {
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    s_endpgm
   %alloca = alloca [16 x i32], align 4, addrspace(5)
-  %cast = bitcast [16 x i32] addrspace(5)* %alloca to i8 addrspace(5)*
-  call void @llvm.memset.p5i8.i32(i8 addrspace(5)* align 4 %cast, i8 0, i32 128, i1 false)
-  call void @external_void_func_byval([16 x i32] addrspace(5)* byval([16 x i32]) %alloca)
+  call void @llvm.memset.p5.i32(ptr addrspace(5) align 4 %alloca, i8 0, i32 128, i1 false)
+  call void @external_void_func_byval(ptr addrspace(5) byval([16 x i32]) %alloca)
   ret void
 }
 
@@ -302,7 +301,7 @@ define void @func_caller_stack() {
   ret void
 }
 
-define void @func_caller_byval([16 x i32] addrspace(5)* %argptr) {
+define void @func_caller_byval(ptr addrspace(5) %argptr) {
 ; MUBUF-LABEL: func_caller_byval:
 ; MUBUF:       ; %bb.0:
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -431,12 +430,11 @@ define void @func_caller_byval([16 x i32] addrspace(5)* %argptr) {
 ; FLATSCR-NEXT:    s_mov_b64 exec, s[0:1]
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
-  %cast = bitcast [16 x i32] addrspace(5)* %argptr to i8 addrspace(5)*
-  call void @external_void_func_byval([16 x i32] addrspace(5)* byval([16 x i32]) %argptr)
+  call void @external_void_func_byval(ptr addrspace(5) byval([16 x i32]) %argptr)
   ret void
 }
 
-declare void @llvm.memset.p5i8.i32(i8 addrspace(5)* nocapture writeonly, i8, i32, i1 immarg) #1
+declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture writeonly, i8, i32, i1 immarg) #1
 
 attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #1 = { argmemonly nofree nounwind willreturn writeonly }

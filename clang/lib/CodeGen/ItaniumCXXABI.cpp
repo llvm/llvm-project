@@ -4675,13 +4675,16 @@ void ItaniumCXXABI::emitBeginCatch(CodeGenFunction &CGF,
 ///   void @__clang_call_terminate(i8* %exn) nounwind noreturn
 /// This code is used only in C++.
 static llvm::FunctionCallee getClangCallTerminateFn(CodeGenModule &CGM) {
-  llvm::FunctionType *fnTy =
-    llvm::FunctionType::get(CGM.VoidTy, CGM.Int8PtrTy, /*isVarArg=*/false);
+  ASTContext &C = CGM.getContext();
+  const CGFunctionInfo &FI = CGM.getTypes().arrangeBuiltinFunctionDeclaration(
+      C.VoidTy, {C.getPointerType(C.CharTy)});
+  llvm::FunctionType *fnTy = CGM.getTypes().GetFunctionType(FI);
   llvm::FunctionCallee fnRef = CGM.CreateRuntimeFunction(
       fnTy, "__clang_call_terminate", llvm::AttributeList(), /*Local=*/true);
   llvm::Function *fn =
       cast<llvm::Function>(fnRef.getCallee()->stripPointerCasts());
   if (fn->empty()) {
+    CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, fn, /*IsThunk=*/false);
     fn->setDoesNotThrow();
     fn->setDoesNotReturn();
 

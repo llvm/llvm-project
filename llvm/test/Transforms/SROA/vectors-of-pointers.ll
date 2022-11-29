@@ -1,4 +1,4 @@
-; RUN: opt < %s -sroa
+; RUN: opt < %s -passes=sroa
 
 ; Make sure we don't crash on this one.
 

@@ -6,11 +6,11 @@
 ; CHECK-NOT: constrained Loop
 
 define void @multiple_access_no_preloop(
-    i32* %arr_a, i32* %a_len_ptr, i32* %arr_b, i32* %b_len_ptr, i32 %n) {
+    ptr %arr_a, ptr %a_len_ptr, ptr %arr_b, ptr %b_len_ptr, i32 %n) {
 
  entry:
-  %len.a = load i32, i32* %a_len_ptr, !range !0
-  %len.b = load i32, i32* %b_len_ptr, !range !0
+  %len.a = load i32, ptr %a_len_ptr, !range !0
+  %len.b = load i32, ptr %b_len_ptr, !range !0
   %first.itr.check = icmp sgt i32 %n, 0
   br i1 %first.itr.check, label %loop, label %exit
 
@@ -21,14 +21,14 @@ define void @multiple_access_no_preloop(
   br i1 %abc.a, label %in.bounds.a, label %out.of.bounds, !prof !1
 
  in.bounds.a:
-  %addr.a = getelementptr i32, i32* %arr_a, i32 %idx
-  store i32 0, i32* %addr.a
+  %addr.a = getelementptr i32, ptr %arr_a, i32 %idx
+  store i32 0, ptr %addr.a
   %abc.b = icmp slt i32 %idx, %len.b
   br i1 %abc.b, label %in.bounds.b, label %out.of.bounds, !prof !1
 
  in.bounds.b:
-  %addr.b = getelementptr i32, i32* %arr_b, i32 %idx
-  store i32 -1, i32* %addr.b
+  %addr.b = getelementptr i32, ptr %arr_b, i32 %idx
+  store i32 -1, ptr %addr.b
   %next = icmp slt i32 %idx.next, %n
   br i1 %next, label %loop, label %exit
 

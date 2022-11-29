@@ -115,7 +115,7 @@ func.func @entry() {
   bufferization.dealloc_tensor %in1D_nwc : tensor<?x?x?xf32>
   bufferization.dealloc_tensor %filter1D_nwc : tensor<?x?x?xf32>
   bufferization.dealloc_tensor %out1D_nwc : tensor<?x?x?xf32>
-  
+
   bufferization.dealloc_tensor %in1D_nwc_CDC : tensor<?x?x?xf32, #CDC>
   bufferization.dealloc_tensor %filter1D_nwc_CDC : tensor<?x?x?xf32, #CDC>
   bufferization.dealloc_tensor %in1D_nwc_CCC : tensor<?x?x?xf32, #CCC>
@@ -123,6 +123,6 @@ func.func @entry() {
 
   bufferization.dealloc_tensor %CCC_ret : tensor<?x?x?xf32, #CCC>
   bufferization.dealloc_tensor %CDC_ret : tensor<?x?x?xf32, #CDC>
-  
+
   return
 }

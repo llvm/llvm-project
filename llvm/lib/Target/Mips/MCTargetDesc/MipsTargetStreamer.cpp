@@ -899,9 +899,9 @@ void MipsTargetELFStreamer::finish() {
   MCSection &BSSSection = *OFI.getBSSSection();
   MCA.registerSection(BSSSection);
 
-  TextSection.setAlignment(std::max(Align(16), TextSection.getAlign()));
-  DataSection.setAlignment(std::max(Align(16), DataSection.getAlign()));
-  BSSSection.setAlignment(std::max(Align(16), BSSSection.getAlign()));
+  TextSection.ensureMinAlignment(Align(16));
+  DataSection.ensureMinAlignment(Align(16));
+  BSSSection.ensureMinAlignment(Align(16));
 
   if (RoundSectionSizes) {
     // Make sections sizes a multiple of the alignment. This is useful for

@@ -584,8 +584,7 @@ void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst)
 
   // Update the maximum alignment on the current section if necessary.
   MCSection *Sec = OS.getCurrentSectionOnly();
-  if (Sec->getAlign() < AlignBoundary)
-    Sec->setAlignment(AlignBoundary);
+  Sec->ensureMinAlignment(AlignBoundary);
 }
 
 Optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {

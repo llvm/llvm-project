@@ -41,6 +41,7 @@
 
 #include <functional>
 #include <map>
+#include <optional>
 #include <system_error>
 
 using namespace llvm;
@@ -157,7 +158,7 @@ private:
 
   /// The coverage data path to be remapped from, and the source path to be
   /// remapped to, when using -path-equivalence.
-  Optional<std::pair<std::string, std::string>> PathRemapping;
+  std::optional<std::pair<std::string, std::string>> PathRemapping;
 
   /// File status cache used when finding the same file.
   StringMap<Optional<sys::fs::file_status>> FileStatusCache;

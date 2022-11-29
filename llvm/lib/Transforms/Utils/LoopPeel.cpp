@@ -42,6 +42,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -163,7 +164,7 @@ public:
   Optional<unsigned> calculateIterationsToPeel();
 
 protected:
-  using PeelCounter = Optional<unsigned>;
+  using PeelCounter = std::optional<unsigned>;
   const PeelCounter Unknown = None;
 
   // Add 1 respecting Unknown and return Unknown if result over MaxIterations

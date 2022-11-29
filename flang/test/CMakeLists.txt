@@ -100,3 +100,11 @@ else()
     PARAMS ${FLANG_TEST_PARAMS}
     DEPENDS ${FLANG_TEST_DEPENDS})
 endif()
+
+# To modify the default target triple for flang tests.
+if (DEFINED FLANG_TEST_TARGET_TRIPLE)
+  if (NOT DEFINED LLVM_TARGET_TRIPLE_ENV OR LLVM_TARGET_TRIPLE_ENV STREQUAL "")
+    message(FATAL_ERROR "LLVM_TARGET_TRIPLE_ENV must also be defined in order "
+                        "to use FLANG_TEST_TARGET_TRIPLE.")
+  endif()
+endif()

@@ -23,7 +23,6 @@
 #include "lld/Common/Timer.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Magic.h"
@@ -52,6 +51,7 @@
 #include <algorithm>
 #include <future>
 #include <memory>
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -393,7 +393,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
       parseAlternateName(arg->getValue());
       break;
     case OPT_defaultlib:
-      if (Optional<StringRef> path = findLib(arg->getValue()))
+      if (std::optional<StringRef> path = findLib(arg->getValue()))
         enqueuePath(*path, false, false);
       break;
     case OPT_entry:
@@ -474,22 +474,22 @@ StringRef LinkerDriver::doFindFile(StringRef filename) {
   return filename;
 }
 
-static Optional<sys::fs::UniqueID> getUniqueID(StringRef path) {
+static std::optional<sys::fs::UniqueID> getUniqueID(StringRef path) {
   sys::fs::UniqueID ret;
   if (sys::fs::getUniqueID(path, ret))
-    return None;
+    return std::nullopt;
   return ret;
 }
 
 // Resolves a file path. This never returns the same path
 // (in that case, it returns None).
-Optional<StringRef> LinkerDriver::findFile(StringRef filename) {
+std::optional<StringRef> LinkerDriver::findFile(StringRef filename) {
   StringRef path = doFindFile(filename);
 
-  if (Optional<sys::fs::UniqueID> id = getUniqueID(path)) {
+  if (std::optional<sys::fs::UniqueID> id = getUniqueID(path)) {
     bool seen = !visitedFiles.insert(*id).second;
     if (seen)
-      return None;
+      return std::nullopt;
   }
 
   if (path.endswith_insensitive(".lib"))
@@ -526,19 +526,19 @@ StringRef LinkerDriver::doFindLib(StringRef filename) {
 // Resolves a library path. /nodefaultlib options are taken into
 // consideration. This never returns the same path (in that case,
 // it returns None).
-Optional<StringRef> LinkerDriver::findLib(StringRef filename) {
+std::optional<StringRef> LinkerDriver::findLib(StringRef filename) {
   if (config->noDefaultLibAll)
-    return None;
+    return std::nullopt;
   if (!visitedLibs.insert(filename.lower()).second)
-    return None;
+    return std::nullopt;
 
   StringRef path = doFindLib(filename);
   if (config->noDefaultLibs.count(path.lower()))
-    return None;
+    return std::nullopt;
 
-  if (Optional<sys::fs::UniqueID> id = getUniqueID(path))
+  if (std::optional<sys::fs::UniqueID> id = getUniqueID(path))
     if (!visitedFiles.insert(*id).second)
-      return None;
+      return std::nullopt;
   return path;
 }
 
@@ -1320,7 +1320,7 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
   AutoExporter exporter(excludedSymbols);
 
   for (auto *arg : args.filtered(OPT_wholearchive_file))
-    if (Optional<StringRef> path = doFindFile(arg->getValue()))
+    if (std::optional<StringRef> path = doFindFile(arg->getValue()))
       exporter.addWholeArchive(*path);
 
   for (auto *arg : args.filtered(OPT_exclude_symbols)) {
@@ -1358,7 +1358,7 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
 // /linkrepro and /reproduce are very similar, but /linkrepro takes a directory
 // name while /reproduce takes a full path. We have /linkrepro for compatibility
 // with Microsoft link.exe.
-Optional<std::string> getReproduceFile(const opt::InputArgList &args) {
+std::optional<std::string> getReproduceFile(const opt::InputArgList &args) {
   if (auto *arg = args.getLastArg(OPT_reproduce))
     return std::string(arg->getValue());
 
@@ -1373,7 +1373,7 @@ Optional<std::string> getReproduceFile(const opt::InputArgList &args) {
   if (auto *path = getenv("LLD_REPRODUCE"))
     return std::string(path);
 
-  return None;
+  return std::nullopt;
 }
 
 static std::unique_ptr<llvm::vfs::FileSystem>
@@ -1482,7 +1482,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
                                   " (use --error-limit=0 to see all errors)";
 
   // Handle /linkrepro and /reproduce.
-  if (Optional<std::string> path = getReproduceFile(args)) {
+  if (std::optional<std::string> path = getReproduceFile(args)) {
     Expected<std::unique_ptr<TarWriter>> errOrWriter =
         TarWriter::create(*path, sys::path::stem(*path));
 
@@ -1733,7 +1733,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /opt.
   bool doGC = debug == DebugKind::None || args.hasArg(OPT_profile);
-  Optional<ICFLevel> icfLevel;
+  std::optional<ICFLevel> icfLevel;
   if (args.hasArg(OPT_profile))
     icfLevel = ICFLevel::None;
   unsigned tailMerge = 1;
@@ -1951,8 +1951,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   std::set<sys::fs::UniqueID> wholeArchives;
   for (auto *arg : args.filtered(OPT_wholearchive_file))
-    if (Optional<StringRef> path = doFindFile(arg->getValue()))
-      if (Optional<sys::fs::UniqueID> id = getUniqueID(*path))
+    if (std::optional<StringRef> path = doFindFile(arg->getValue()))
+      if (std::optional<sys::fs::UniqueID> id = getUniqueID(*path))
         wholeArchives.insert(*id);
 
   // A predicate returning true if a given path is an argument for
@@ -1962,7 +1962,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   auto isWholeArchive = [&](StringRef path) -> bool {
     if (args.hasArg(OPT_wholearchive_flag))
       return true;
-    if (Optional<sys::fs::UniqueID> id = getUniqueID(path))
+    if (std::optional<sys::fs::UniqueID> id = getUniqueID(path))
       return wholeArchives.count(*id);
     return false;
   };
@@ -1984,11 +1984,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       inLib = true;
       break;
     case OPT_wholearchive_file:
-      if (Optional<StringRef> path = findFile(arg->getValue()))
+      if (std::optional<StringRef> path = findFile(arg->getValue()))
         enqueuePath(*path, true, inLib);
       break;
     case OPT_INPUT:
-      if (Optional<StringRef> path = findFile(arg->getValue()))
+      if (std::optional<StringRef> path = findFile(arg->getValue()))
         enqueuePath(*path, isWholeArchive(*path), inLib);
       break;
     default:
@@ -2014,7 +2014,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Process files specified as /defaultlib. These must be processed after
   // addWinSysRootLibSearchPaths(), which is why they are in a separate loop.
   for (auto *arg : args.filtered(OPT_defaultlib))
-    if (Optional<StringRef> path = findLib(arg->getValue()))
+    if (std::optional<StringRef> path = findLib(arg->getValue()))
       enqueuePath(*path, false, false);
   run();
   if (errorCount())

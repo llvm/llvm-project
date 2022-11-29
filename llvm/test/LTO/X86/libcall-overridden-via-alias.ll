@@ -51,13 +51,13 @@ target triple = "x86_64-unknown-linux-gnu"
 @src = global float 0x40091EB860000000, align 4
 @dst = common global float 0.000000e+00, align 4
 
-@logf = alias float (float), float (float)* @fname
+@logf = alias float (float), ptr @fname
 
 define i32 @main() local_unnamed_addr {
 entry:
-  %0 = load volatile float, float* @src, align 4
+  %0 = load volatile float, ptr @src, align 4
   %1 = tail call float @llvm.log.f32(float %0)
-  store volatile float %1, float* @dst, align 4
+  store volatile float %1, ptr @dst, align 4
   ret i32 0
 }
 

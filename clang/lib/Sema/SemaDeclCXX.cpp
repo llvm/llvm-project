@@ -760,11 +760,16 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   // C++17 [dcl.dcl]/8:
   //   The decl-specifier-seq shall contain only the type-specifier auto
   //   and cv-qualifiers.
-  // C++2a [dcl.dcl]/8:
+  // C++20 [dcl.dcl]/8:
   //   If decl-specifier-seq contains any decl-specifier other than static,
   //   thread_local, auto, or cv-qualifiers, the program is ill-formed.
+  // C++2b [dcl.pre]/6:
+  //   Each decl-specifier in the decl-specifier-seq shall be static,
+  //   thread_local, auto (9.2.9.6 [dcl.spec.auto]), or a cv-qualifier.
   auto &DS = D.getDeclSpec();
   {
+    // Note: While constrained-auto needs to be checked, we do so separately so
+    // we can emit a better diagnostic.
     SmallVector<StringRef, 8> BadSpecifiers;
     SmallVector<SourceLocation, 8> BadSpecifierLocs;
     SmallVector<StringRef, 8> CPlusPlus20Specifiers;
@@ -791,6 +796,7 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
       BadSpecifiers.push_back("inline");
       BadSpecifierLocs.push_back(DS.getInlineSpecLoc());
     }
+
     if (!BadSpecifiers.empty()) {
       auto &&Err = Diag(BadSpecifierLocs.front(), diag::err_decomp_decl_spec);
       Err << (int)BadSpecifiers.size()
@@ -849,6 +855,20 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     // shouldn't be called for such a type.
     if (R->isFunctionType())
       D.setInvalidType();
+  }
+
+  // Constrained auto is prohibited by [decl.pre]p6, so check that here.
+  if (DS.isConstrainedAuto()) {
+    TemplateIdAnnotation *TemplRep = DS.getRepAsTemplateId();
+    assert(TemplRep->Kind == TNK_Concept_template &&
+           "No other template kind should be possible for a constrained auto");
+
+    SourceRange TemplRange{TemplRep->TemplateNameLoc,
+                           TemplRep->RAngleLoc.isValid()
+                               ? TemplRep->RAngleLoc
+                               : TemplRep->TemplateNameLoc};
+    Diag(TemplRep->TemplateNameLoc, diag::err_decomp_decl_constraint)
+        << TemplRange << FixItHint::CreateRemoval(TemplRange);
   }
 
   // Build the BindingDecls.
@@ -15995,10 +16015,11 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
   //       function allowed to be static is the call operator function.
   if (CXXMethodDecl *MethodDecl = dyn_cast<CXXMethodDecl>(FnDecl)) {
     if (MethodDecl->isStatic()) {
-      if (Op == OO_Call)
+      if (Op == OO_Call || Op == OO_Subscript)
         Diag(FnDecl->getLocation(),
-             (LangOpts.CPlusPlus2b ? diag::ext_operator_overload_static
-                                   : diag::err_call_operator_overload_static))
+             (LangOpts.CPlusPlus2b
+                  ? diag::warn_cxx20_compat_operator_overload_static
+                  : diag::ext_operator_overload_static))
             << FnDecl;
       else
         return Diag(FnDecl->getLocation(), diag::err_operator_overload_static)
