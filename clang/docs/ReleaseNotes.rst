@@ -305,7 +305,7 @@ Bug Fixes
   improperly, which was corrected to match the behaviour exhibited by GCC.
   `Issue 58229 <https://github.com/llvm/llvm-project/issues/58229>`_
 - The builtin type trait ``__is_aggregate`` now returns ``true`` for arrays of incomplete
-  types in accordance with the suggested fix for `LWG3823 https://cplusplus.github.io/LWG/issue3823`_
+  types in accordance with the suggested fix for `LWG3823 <https://cplusplus.github.io/LWG/issue3823>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
