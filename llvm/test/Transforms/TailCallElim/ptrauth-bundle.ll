@@ -1,4 +1,4 @@
-; RUN: opt < %s -tailcallelim -verify-dom-info -S | FileCheck %s
+; RUN: opt < %s -passes=tailcallelim -verify-dom-info -S | FileCheck %s
 ; Check that the "ptrauth" operand bundle doesn't prevent tail calls.
 
 define i64 @f_1(i64 %x, ptr %f_0) {
