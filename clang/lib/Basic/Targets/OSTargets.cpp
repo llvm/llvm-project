@@ -67,48 +67,23 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     return;
   }
 
-  // Set the appropriate OS version define.
-  if (Triple.isiOS()) {
-    assert(OsVersion < VersionTuple(100) && "Invalid version!");
-    char Str[7];
-    if (OsVersion.getMajor() < 10) {
-      Str[0] = '0' + OsVersion.getMajor();
-      Str[1] = '0' + (OsVersion.getMinor().value_or(0) / 10);
-      Str[2] = '0' + (OsVersion.getMinor().value_or(0) % 10);
-      Str[3] = '0' + (OsVersion.getSubminor().value_or(0) / 10);
-      Str[4] = '0' + (OsVersion.getSubminor().value_or(0) % 10);
-      Str[5] = '\0';
-    } else {
-      // Handle versions >= 10.
-      Str[0] = '0' + (OsVersion.getMajor() / 10);
-      Str[1] = '0' + (OsVersion.getMajor() % 10);
-      Str[2] = '0' + (OsVersion.getMinor().value_or(0) / 10);
-      Str[3] = '0' + (OsVersion.getMinor().value_or(0) % 10);
-      Str[4] = '0' + (OsVersion.getSubminor().value_or(0) / 10);
-      Str[5] = '0' + (OsVersion.getSubminor().value_or(0) % 10);
-      Str[6] = '\0';
-    }
-    if (Triple.isTvOS())
-      Builder.defineMacro("__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__", Str);
-    else
-      Builder.defineMacro("__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__",
-                          Str);
-
-  } else if (Triple.isWatchOS()) {
-    assert(OsVersion < VersionTuple(10) && "Invalid version!");
-    char Str[6];
+  assert(OsVersion < VersionTuple(100) && "Invalid version!");
+  char Str[7];
+  if (Triple.isMacOSX() && OsVersion < VersionTuple(10, 10)) {
+    Str[0] = '0' + (OsVersion.getMajor() / 10);
+    Str[1] = '0' + (OsVersion.getMajor() % 10);
+    Str[2] = '0' + std::min(OsVersion.getMinor().value_or(0), 9U);
+    Str[3] = '0' + std::min(OsVersion.getSubminor().value_or(0), 9U);
+    Str[4] = '\0';
+  } else if (!Triple.isMacOSX() && OsVersion.getMajor() < 10) {
     Str[0] = '0' + OsVersion.getMajor();
     Str[1] = '0' + (OsVersion.getMinor().value_or(0) / 10);
     Str[2] = '0' + (OsVersion.getMinor().value_or(0) % 10);
     Str[3] = '0' + (OsVersion.getSubminor().value_or(0) / 10);
     Str[4] = '0' + (OsVersion.getSubminor().value_or(0) % 10);
     Str[5] = '\0';
-    Builder.defineMacro("__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__", Str);
-  } else if (Triple.isDriverKit()) {
-    assert(OsVersion.getMajor() < 100 &&
-           OsVersion.getMinor().value_or(0) < 100 &&
-           OsVersion.getSubminor().value_or(0) < 100 && "Invalid version!");
-    char Str[7];
+  } else {
+    // Handle versions >= 10.
     Str[0] = '0' + (OsVersion.getMajor() / 10);
     Str[1] = '0' + (OsVersion.getMajor() % 10);
     Str[2] = '0' + (OsVersion.getMinor().value_or(0) / 10);
@@ -116,30 +91,20 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     Str[4] = '0' + (OsVersion.getSubminor().value_or(0) / 10);
     Str[5] = '0' + (OsVersion.getSubminor().value_or(0) % 10);
     Str[6] = '\0';
+  }
+
+  // Set the appropriate OS version define.
+  if (Triple.isTvOS()) {
+    Builder.defineMacro("__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__", Str);
+  } else if (Triple.isiOS()) {
+    Builder.defineMacro("__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__", Str);
+  } else if (Triple.isWatchOS()) {
+    Builder.defineMacro("__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__", Str);
+  } else if (Triple.isDriverKit()) {
+    assert(OsVersion.getMinor().value_or(0) < 100 &&
+           OsVersion.getSubminor().value_or(0) < 100 && "Invalid version!");
     Builder.defineMacro("__ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__", Str);
   } else if (Triple.isMacOSX()) {
-    // Note that the Driver allows versions which aren't representable in the
-    // define (because we only get a single digit for the minor and micro
-    // revision numbers). So, we limit them to the maximum representable
-    // version.
-    assert(OsVersion < VersionTuple(100) && "Invalid version!");
-    char Str[7];
-    if (OsVersion < VersionTuple(10, 10)) {
-      Str[0] = '0' + (OsVersion.getMajor() / 10);
-      Str[1] = '0' + (OsVersion.getMajor() % 10);
-      Str[2] = '0' + std::min(OsVersion.getMinor().value_or(0), 9U);
-      Str[3] = '0' + std::min(OsVersion.getSubminor().value_or(0), 9U);
-      Str[4] = '\0';
-    } else {
-      // Handle versions > 10.9.
-      Str[0] = '0' + (OsVersion.getMajor() / 10);
-      Str[1] = '0' + (OsVersion.getMajor() % 10);
-      Str[2] = '0' + (OsVersion.getMinor().value_or(0) / 10);
-      Str[3] = '0' + (OsVersion.getMinor().value_or(0) % 10);
-      Str[4] = '0' + (OsVersion.getSubminor().value_or(0) / 10);
-      Str[5] = '0' + (OsVersion.getSubminor().value_or(0) % 10);
-      Str[6] = '\0';
-    }
     Builder.defineMacro("__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__", Str);
   }
 
