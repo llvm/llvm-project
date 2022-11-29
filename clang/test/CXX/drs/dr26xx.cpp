@@ -14,7 +14,7 @@ using enum E; // expected-error {{unknown type name E}}
 }
 }
 
-namespace dr2628 { // dr2628: yes
+namespace dr2628 { // dr2628: yes open
 
 template <bool A = false, bool B = false>
 struct foo {
@@ -77,4 +77,14 @@ class X {
   int m;
 };
 int i0 = f<X>(0);   //expected-error {{no matching function for call to 'f'}}
+}
+
+namespace dr2654 { // dr2654: 16
+void f() {
+    int neck, tail;
+    volatile int brachiosaur;
+    brachiosaur += neck;                // OK
+    brachiosaur -= neck;                // OK
+    brachiosaur |= neck;                // OK
+}
 }
