@@ -509,6 +509,9 @@ int getVOPDFull(unsigned OpX, unsigned OpY);
 LLVM_READONLY
 bool isVOPD(unsigned Opc);
 
+LLVM_READNONE
+bool isMAC(unsigned Opc);
+
 namespace VOPD {
 
 enum Component : unsigned {

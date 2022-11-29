@@ -434,6 +434,27 @@ bool isVOPD(unsigned Opc) {
   return AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src0X);
 }
 
+bool isMAC(unsigned Opc) {
+  return Opc == AMDGPU::V_MAC_F32_e64_gfx6_gfx7 ||
+         Opc == AMDGPU::V_MAC_F32_e64_gfx10 ||
+         Opc == AMDGPU::V_MAC_F32_e64_vi ||
+         Opc == AMDGPU::V_MAC_LEGACY_F32_e64_gfx6_gfx7 ||
+         Opc == AMDGPU::V_MAC_LEGACY_F32_e64_gfx10 ||
+         Opc == AMDGPU::V_MAC_F16_e64_vi ||
+         Opc == AMDGPU::V_FMAC_F64_e64_gfx90a ||
+         Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
+         Opc == AMDGPU::V_FMAC_F32_e64_gfx11 ||
+         Opc == AMDGPU::V_FMAC_F32_e64_vi ||
+         Opc == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
+         Opc == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
+         Opc == AMDGPU::V_FMAC_F16_e64_gfx10 ||
+         Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx11 ||
+         Opc == AMDGPU::V_DOT2C_F32_F16_e64_vi ||
+         Opc == AMDGPU::V_DOT2C_I32_I16_e64_vi ||
+         Opc == AMDGPU::V_DOT4C_I32_I8_e64_vi ||
+         Opc == AMDGPU::V_DOT8C_I32_I4_e64_vi;
+}
+
 bool isTrue16Inst(unsigned Opc) {
   const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
   return Info ? Info->IsTrue16 : false;
