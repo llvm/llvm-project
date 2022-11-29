@@ -304,6 +304,8 @@ Bug Fixes
 - GNU attributes being applied prior to standard attributes would be handled
   improperly, which was corrected to match the behaviour exhibited by GCC.
   `Issue 58229 <https://github.com/llvm/llvm-project/issues/58229>`_
+- The builtin type trait ``__is_aggregate`` now returns ``true`` for arrays of incomplete
+  types in accordance with the suggested fix for `LWG3823 https://cplusplus.github.io/LWG/issue3823`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -661,7 +663,7 @@ C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 - Support label at end of compound statement (`P2324 <https://wg21.link/p2324r2>`_).
-- Implemented `P1169R4: static operator() <https://wg21.link/P1169R4>`_.
+- Implemented `P1169R4: static operator() <https://wg21.link/P1169R4>`_ and `P2589R1: static operator[] <https://wg21.link/P2589R1>`_.
 - Implemented "char8_t Compatibility and Portability Fix" (`P2513R3 <https://wg21.link/P2513R3>`_).
   This change was applied to C++20 as a Defect Report.
 - Implemented "Permitting static constexpr variables in constexpr functions" (`P2647R1 <https://wg21.link/P2647R1>_`).

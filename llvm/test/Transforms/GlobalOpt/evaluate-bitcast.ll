@@ -1,4 +1,4 @@
-; RUN: opt -globalopt -instcombine %s -S -o - | FileCheck %s
+; RUN: opt -passes=globalopt,instcombine %s -S -o - | FileCheck %s
 
 ; Static constructor should have been optimized out
 ; CHECK:       i32 @main

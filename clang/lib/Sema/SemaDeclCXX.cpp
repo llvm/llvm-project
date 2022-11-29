@@ -16015,10 +16015,11 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
   //       function allowed to be static is the call operator function.
   if (CXXMethodDecl *MethodDecl = dyn_cast<CXXMethodDecl>(FnDecl)) {
     if (MethodDecl->isStatic()) {
-      if (Op == OO_Call)
+      if (Op == OO_Call || Op == OO_Subscript)
         Diag(FnDecl->getLocation(),
-             (LangOpts.CPlusPlus2b ? diag::ext_operator_overload_static
-                                   : diag::err_call_operator_overload_static))
+             (LangOpts.CPlusPlus2b
+                  ? diag::warn_cxx20_compat_operator_overload_static
+                  : diag::ext_operator_overload_static))
             << FnDecl;
       else
         return Diag(FnDecl->getLocation(), diag::err_operator_overload_static)

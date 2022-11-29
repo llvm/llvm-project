@@ -372,7 +372,10 @@ public:
   SmallVector<Value> convertValues(ArrayRef<llvm::Value *> values);
 
   /// Converts `value` to an integer attribute. Asserts if the conversion fails.
-  IntegerAttr matchIntegerAttr(Value value);
+  IntegerAttr matchIntegerAttr(llvm::Value *value);
+
+  /// Converts `value` to a local variable attribute.
+  DILocalVariableAttr matchLocalVariableAttr(llvm::Value *value);
 
   /// Translates the debug location.
   Location translateLoc(llvm::DILocation *loc) {
@@ -852,6 +855,12 @@ Value Importer::convertConstantExpr(llvm::Constant *constant) {
 }
 
 Value Importer::convertValue(llvm::Value *value) {
+  // A value may be wrapped as metadata, for example, when passed to a debug
+  // intrinsic. Unwrap these values before the conversion.
+  if (auto *nodeAsVal = dyn_cast<llvm::MetadataAsValue>(value))
+    if (auto *node = dyn_cast<llvm::ValueAsMetadata>(nodeAsVal->getMetadata()))
+      value = node->getValue();
+
   // Return the mapped value if it has been converted before.
   if (valueMapping.count(value))
     return lookupValue(value);
@@ -872,12 +881,18 @@ SmallVector<Value> Importer::convertValues(ArrayRef<llvm::Value *> values) {
   return remapped;
 }
 
-IntegerAttr Importer::matchIntegerAttr(Value value) {
+IntegerAttr Importer::matchIntegerAttr(llvm::Value *value) {
   IntegerAttr integerAttr;
-  bool success = matchPattern(value, m_Constant(&integerAttr));
+  bool success = matchPattern(convertValue(value), m_Constant(&integerAttr));
   assert(success && "expected a constant value");
   (void)success;
   return integerAttr;
+}
+
+DILocalVariableAttr Importer::matchLocalVariableAttr(llvm::Value *value) {
+  auto *nodeAsVal = cast<llvm::MetadataAsValue>(value);
+  auto *node = cast<llvm::DILocalVariable>(nodeAsVal->getMetadata());
+  return debugImporter.translate(node);
 }
 
 LogicalResult

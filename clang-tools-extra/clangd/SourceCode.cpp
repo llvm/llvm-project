@@ -1063,6 +1063,40 @@ llvm::Error reformatEdit(Edit &E, const format::FormatStyle &Style) {
   return llvm::Error::success();
 }
 
+// Workaround for editors that have buggy handling of newlines at end of file.
+//
+// The editor is supposed to expose document contents over LSP as an exact
+// string, with whitespace and newlines well-defined. But internally many
+// editors treat text as an array of lines, and there can be ambiguity over
+// whether the last line ends with a newline or not.
+//
+// This confusion can lead to incorrect edits being sent. Failing to apply them
+// is catastrophic: we're desynced, LSP has no mechanism to get back in sync.
+// We apply a heuristic to avoid this state.
+//
+// If our current view of an N-line file does *not* end in a newline, but the
+// editor refers to the start of the next line (an impossible location), then
+// we silently add a newline to make this valid.
+// We will still validate that the rangeLength is correct, *including* the
+// inferred newline.
+//
+// See https://github.com/neovim/neovim/issues/17085
+static void inferFinalNewline(llvm::Expected<size_t> &Err,
+                              std::string &Contents, const Position &Pos) {
+  if (Err)
+    return;
+  if (!Contents.empty() && Contents.back() == '\n')
+    return;
+  if (Pos.character != 0)
+    return;
+  if (Pos.line != llvm::count(Contents, '\n') + 1)
+    return;
+  log("Editor sent invalid change coordinates, inferring newline at EOF");
+  Contents.push_back('\n');
+  consumeError(Err.takeError());
+  Err = Contents.size();
+}
+
 llvm::Error applyChange(std::string &Contents,
                         const TextDocumentContentChangeEvent &Change) {
   if (!Change.range) {
@@ -1072,11 +1106,13 @@ llvm::Error applyChange(std::string &Contents,
 
   const Position &Start = Change.range->start;
   llvm::Expected<size_t> StartIndex = positionToOffset(Contents, Start, false);
+  inferFinalNewline(StartIndex, Contents, Start);
   if (!StartIndex)
     return StartIndex.takeError();
 
   const Position &End = Change.range->end;
   llvm::Expected<size_t> EndIndex = positionToOffset(Contents, End, false);
+  inferFinalNewline(EndIndex, Contents, End);
   if (!EndIndex)
     return EndIndex.takeError();
 

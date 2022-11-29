@@ -437,18 +437,14 @@ define i64 @combine_mul_umul_lohi_i64(i64 %a, i64 %b) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    mulq %rsi
-; SSE-NEXT:    imulq %rsi, %rdi
-; SSE-NEXT:    xorq %rdx, %rdi
-; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    xorq %rdx, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_mul_umul_lohi_i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movq %rdi, %rax
 ; AVX-NEXT:    mulq %rsi
-; AVX-NEXT:    imulq %rsi, %rdi
-; AVX-NEXT:    xorq %rdx, %rdi
-; AVX-NEXT:    movq %rdi, %rax
+; AVX-NEXT:    xorq %rdx, %rax
 ; AVX-NEXT:    retq
   %a128 = zext i64 %a to i128
   %b128 = zext i64 %b to i128
@@ -465,18 +461,14 @@ define i64 @combine_mul_smul_lohi_commute_i64(i64 %a, i64 %b) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    imulq %rsi
-; SSE-NEXT:    imulq %rdi, %rsi
-; SSE-NEXT:    xorq %rdx, %rsi
-; SSE-NEXT:    movq %rsi, %rax
+; SSE-NEXT:    xorq %rdx, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_mul_smul_lohi_commute_i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movq %rdi, %rax
 ; AVX-NEXT:    imulq %rsi
-; AVX-NEXT:    imulq %rdi, %rsi
-; AVX-NEXT:    xorq %rdx, %rsi
-; AVX-NEXT:    movq %rsi, %rax
+; AVX-NEXT:    xorq %rdx, %rax
 ; AVX-NEXT:    retq
   %a128 = sext i64 %a to i128
   %b128 = sext i64 %b to i128
@@ -491,22 +483,18 @@ define i64 @combine_mul_smul_lohi_commute_i64(i64 %a, i64 %b) {
 define i64 @combine_mul_umul_lohi_const_i64(i64 %h) {
 ; SSE-LABEL: combine_mul_umul_lohi_const_i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movabsq $-4265267296055464877, %rcx # imm = 0xC4CEB9FE1A85EC53
 ; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    movabsq $-4265267296055464877, %rcx # imm = 0xC4CEB9FE1A85EC53
 ; SSE-NEXT:    mulq %rcx
-; SSE-NEXT:    imulq %rdi, %rcx
-; SSE-NEXT:    xorq %rdx, %rcx
-; SSE-NEXT:    movq %rcx, %rax
+; SSE-NEXT:    xorq %rdx, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_mul_umul_lohi_const_i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movabsq $-4265267296055464877, %rcx # imm = 0xC4CEB9FE1A85EC53
 ; AVX-NEXT:    movq %rdi, %rax
+; AVX-NEXT:    movabsq $-4265267296055464877, %rcx # imm = 0xC4CEB9FE1A85EC53
 ; AVX-NEXT:    mulq %rcx
-; AVX-NEXT:    imulq %rdi, %rcx
-; AVX-NEXT:    xorq %rdx, %rcx
-; AVX-NEXT:    movq %rcx, %rax
+; AVX-NEXT:    xorq %rdx, %rax
 ; AVX-NEXT:    retq
   %h128 = zext i64 %h to i128
   %m128 = mul nuw i128 %h128, 14181476777654086739
@@ -520,30 +508,26 @@ define i64 @combine_mul_umul_lohi_const_i64(i64 %h) {
 define i64 @combine_mul_smul_lohi_const_i64(i64 %h) {
 ; SSE-LABEL: combine_mul_smul_lohi_const_i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movq %rdi, %rsi
-; SSE-NEXT:    sarq $63, %rsi
-; SSE-NEXT:    movabsq $-4265267296055464877, %rcx # imm = 0xC4CEB9FE1A85EC53
 ; SSE-NEXT:    movq %rdi, %rax
-; SSE-NEXT:    mulq %rcx
-; SSE-NEXT:    imulq %rcx, %rsi
-; SSE-NEXT:    addq %rdx, %rsi
-; SSE-NEXT:    imulq %rdi, %rcx
-; SSE-NEXT:    xorq %rsi, %rcx
-; SSE-NEXT:    movq %rcx, %rax
+; SSE-NEXT:    movq %rdi, %rcx
+; SSE-NEXT:    sarq $63, %rcx
+; SSE-NEXT:    movabsq $-4265267296055464877, %rsi # imm = 0xC4CEB9FE1A85EC53
+; SSE-NEXT:    mulq %rsi
+; SSE-NEXT:    imulq %rsi, %rcx
+; SSE-NEXT:    addq %rdx, %rcx
+; SSE-NEXT:    xorq %rcx, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_mul_smul_lohi_const_i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movq %rdi, %rsi
-; AVX-NEXT:    sarq $63, %rsi
-; AVX-NEXT:    movabsq $-4265267296055464877, %rcx # imm = 0xC4CEB9FE1A85EC53
 ; AVX-NEXT:    movq %rdi, %rax
-; AVX-NEXT:    mulq %rcx
-; AVX-NEXT:    imulq %rcx, %rsi
-; AVX-NEXT:    addq %rdx, %rsi
-; AVX-NEXT:    imulq %rdi, %rcx
-; AVX-NEXT:    xorq %rsi, %rcx
-; AVX-NEXT:    movq %rcx, %rax
+; AVX-NEXT:    movq %rdi, %rcx
+; AVX-NEXT:    sarq $63, %rcx
+; AVX-NEXT:    movabsq $-4265267296055464877, %rsi # imm = 0xC4CEB9FE1A85EC53
+; AVX-NEXT:    mulq %rsi
+; AVX-NEXT:    imulq %rsi, %rcx
+; AVX-NEXT:    addq %rdx, %rcx
+; AVX-NEXT:    xorq %rcx, %rax
 ; AVX-NEXT:    retq
   %h128 = sext i64 %h to i128
   %m128 = mul nsw i128 %h128, 14181476777654086739

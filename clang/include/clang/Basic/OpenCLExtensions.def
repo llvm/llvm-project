@@ -94,12 +94,6 @@ OPENCL_EXTENSION(__cl_clang_bitfields, true, 100)
 OPENCL_EXTENSION(cl_amd_media_ops, true, 100)
 OPENCL_EXTENSION(cl_amd_media_ops2, true, 100)
 
-// ARM OpenCL extensions
-OPENCL_EXTENSION(cl_arm_integer_dot_product_int8, true, 120)
-OPENCL_EXTENSION(cl_arm_integer_dot_product_accumulate_int8, true, 120)
-OPENCL_EXTENSION(cl_arm_integer_dot_product_accumulate_int16, true, 120)
-OPENCL_EXTENSION(cl_arm_integer_dot_product_accumulate_saturate_int8, true, 120)
-
 // Intel OpenCL extensions
 OPENCL_EXTENSION(cl_intel_subgroups, true, 120)
 OPENCL_EXTENSION(cl_intel_subgroups_short, true, 120)

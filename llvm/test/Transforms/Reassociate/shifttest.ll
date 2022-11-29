@@ -1,6 +1,6 @@
 ; With shl->mul reassociation, we can see that this is (shl A, 9) * A
 ;
-; RUN: opt < %s -reassociate -instcombine -S |\
+; RUN: opt < %s -passes=reassociate,instcombine -S |\
 ; RUN:    grep "shl .*, 9"
 
 define i32 @test(i32 %A, i32 %B) {

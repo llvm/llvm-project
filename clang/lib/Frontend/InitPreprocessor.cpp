@@ -695,7 +695,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_implicit_move", "202011L");
     Builder.defineMacro("__cpp_size_t_suffix", "202011L");
     Builder.defineMacro("__cpp_if_consteval", "202106L");
-    Builder.defineMacro("__cpp_multidimensional_subscript", "202110L");
+    Builder.defineMacro("__cpp_multidimensional_subscript", "202211L");
   }
 
   // We provide those C++2b features as extensions in earlier language modes, so
