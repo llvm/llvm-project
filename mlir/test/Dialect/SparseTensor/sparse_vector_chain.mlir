@@ -84,7 +84,7 @@
 // CHECK:             } attributes {"Emitted from" = "linalg.generic"}
 // CHECK:             %[[VAL_59:.*]] = vector.insertelement %[[VAL_60:.*]]#2, %[[VAL_4]]{{\[}}%[[VAL_6]] : index] : vector<8xf64>
 // CHECK:             %[[VAL_61:.*]] = scf.for %[[VAL_62:.*]] = %[[VAL_60]]#0 to %[[VAL_21]] step %[[VAL_3]] iter_args(%[[VAL_63:.*]] = %[[VAL_59]]) -> (vector<8xf64>) {
-// CHECK:               %[[VAL_64:.*]] = affine.min #map2(%[[VAL_21]], %[[VAL_62]]){{\[}}%[[VAL_3]]]
+// CHECK:               %[[VAL_64:.*]] = affine.min #map(%[[VAL_21]], %[[VAL_62]]){{\[}}%[[VAL_3]]]
 // CHECK:               %[[VAL_65:.*]] = vector.create_mask %[[VAL_64]] : vector<8xi1>
 // CHECK:               %[[VAL_66:.*]] = vector.maskedload %[[VAL_10]]{{\[}}%[[VAL_62]]], %[[VAL_65]], %[[VAL_4]] : memref<?xf64>, vector<8xi1>, vector<8xf64> into vector<8xf64>
 // CHECK:               %[[VAL_67:.*]] = arith.addf %[[VAL_63]], %[[VAL_66]] : vector<8xf64>
@@ -92,7 +92,7 @@
 // CHECK:               scf.yield %[[VAL_68]] : vector<8xf64>
 // CHECK:             } {"Emitted from" = "linalg.generic"}
 // CHECK:             %[[VAL_69:.*]] = scf.for %[[VAL_70:.*]] = %[[VAL_60]]#1 to %[[VAL_23]] step %[[VAL_3]] iter_args(%[[VAL_71:.*]] = %[[VAL_61]]) -> (vector<8xf64>) {
-// CHECK:               %[[VAL_73:.*]] = affine.min #map2(%[[VAL_23]], %[[VAL_70]]){{\[}}%[[VAL_3]]]
+// CHECK:               %[[VAL_73:.*]] = affine.min #map(%[[VAL_23]], %[[VAL_70]]){{\[}}%[[VAL_3]]]
 // CHECK:               %[[VAL_74:.*]] = vector.create_mask %[[VAL_73]] : vector<8xi1>
 // CHECK:               %[[VAL_75:.*]] = vector.maskedload %[[VAL_13]]{{\[}}%[[VAL_70]]], %[[VAL_74]], %[[VAL_4]] : memref<?xf64>, vector<8xi1>, vector<8xf64> into vector<8xf64>
 // CHECK:               %[[VAL_76:.*]] = arith.addf %[[VAL_71]], %[[VAL_75]] : vector<8xf64>
