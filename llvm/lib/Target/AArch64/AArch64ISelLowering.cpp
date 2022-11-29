@@ -1398,6 +1398,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
 
     if (Subtarget->forceStreamingCompatibleSVE()) {
+      setTruncStoreAction(MVT::v2f32, MVT::v2f16, Custom);
+      setTruncStoreAction(MVT::v4f32, MVT::v4f16, Custom);
+      setTruncStoreAction(MVT::v8f32, MVT::v8f16, Custom);
+      setTruncStoreAction(MVT::v1f64, MVT::v1f16, Custom);
+      setTruncStoreAction(MVT::v2f64, MVT::v2f16, Custom);
+      setTruncStoreAction(MVT::v4f64, MVT::v4f16, Custom);
+      setTruncStoreAction(MVT::v1f64, MVT::v1f32, Custom);
+      setTruncStoreAction(MVT::v2f64, MVT::v2f32, Custom);
+      setTruncStoreAction(MVT::v4f64, MVT::v4f32, Custom);
       for (MVT VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v2i32,
                      MVT::v4i32, MVT::v1i64, MVT::v2i64})
         addTypeForStreamingSVE(VT);
