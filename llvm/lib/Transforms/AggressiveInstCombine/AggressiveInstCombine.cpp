@@ -610,6 +610,7 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I) {
 /// shift amount, zero extend type and loadSize.
 struct LoadOps {
   LoadInst *Root = nullptr;
+  LoadInst *RootInsert = nullptr;
   bool FoundRoot = false;
   uint64_t LoadSize = 0;
   Value *Shift = nullptr;
@@ -675,16 +676,6 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
       Load2Ptr->stripAndAccumulateConstantOffsets(DL, Offset2,
                                                   /* AllowNonInbounds */ true);
 
-  // Make sure Load with lower Offset is at LI1
-  bool Reverse = false;
-  if (Offset2.slt(Offset1)) {
-    std::swap(LI1, LI2);
-    std::swap(ShAmt1, ShAmt2);
-    std::swap(Offset1, Offset2);
-    std::swap(Load1Ptr, Load2Ptr);
-    Reverse = true;
-  }
-
   // Verify if both loads have same base pointers and load sizes are same.
   uint64_t LoadSize1 = LI1->getType()->getPrimitiveSizeInBits();
   uint64_t LoadSize2 = LI2->getType()->getPrimitiveSizeInBits();
@@ -695,18 +686,34 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   if (LoadSize1 < 8 || !isPowerOf2_64(LoadSize1))
     return false;
 
-  // TODO: Alias Analysis to check for stores b/w the loads.
-  // Currently bail out if there are stores b/w the loads.
-  LoadInst *Start = LI1, *End = LI2;
-  if (!LI1->comesBefore(LI2))
+  // Alias Analysis to check for stores b/w the loads.
+  LoadInst *Start = LOps.FoundRoot ? LOps.RootInsert : LI1, *End = LI2;
+  MemoryLocation Loc;
+  if (!Start->comesBefore(End)) {
     std::swap(Start, End);
+    Loc = MemoryLocation::get(End);
+    if (LOps.FoundRoot)
+      Loc = Loc.getWithNewSize(LOps.LoadSize);
+  } else
+    Loc = MemoryLocation::get(End);
   unsigned NumScanned = 0;
   for (Instruction &Inst :
        make_range(Start->getIterator(), End->getIterator())) {
-    if (Inst.mayWriteToMemory())
+    if (Inst.mayWriteToMemory() && isModSet(AA.getModRefInfo(&Inst, Loc)))
       return false;
     if (++NumScanned > MaxInstrsToScan)
       return false;
+  }
+
+  // Make sure Load with lower Offset is at LI1
+  bool Reverse = false;
+  if (Offset2.slt(Offset1)) {
+    std::swap(LI1, LI2);
+    std::swap(ShAmt1, ShAmt2);
+    std::swap(Offset1, Offset2);
+    std::swap(Load1Ptr, Load2Ptr);
+    std::swap(LoadSize1, LoadSize2);
+    Reverse = true;
   }
 
   // Big endian swap the shifts
@@ -746,6 +753,7 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
     AATags1 = LI1->getAAMetadata();
   }
   LOps.LoadSize = LoadSize1 + LoadSize2;
+  LOps.RootInsert = Start;
 
   // Concatenate the AATags of the Merged Loads.
   LOps.AATags = AATags1.concat(AATags2);
@@ -781,9 +789,15 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   if (!Allowed || !Fast)
     return false;
 
+  // Make sure the Load pointer of type GEP/non-GEP is above insert point
+  Instruction *Inst = dyn_cast<Instruction>(LI1->getPointerOperand());
+  if (Inst && Inst->getParent() == LI1->getParent() &&
+      !Inst->comesBefore(LOps.RootInsert))
+    Inst->moveBefore(LOps.RootInsert);
+
   // New load can be generated
   Value *Load1Ptr = LI1->getPointerOperand();
-  Builder.SetInsertPoint(LI1);
+  Builder.SetInsertPoint(LOps.RootInsert);
   Value *NewPtr = Builder.CreateBitCast(Load1Ptr, WiderType->getPointerTo(AS));
   NewLoad = Builder.CreateAlignedLoad(WiderType, NewPtr, LI1->getAlign(),
                                       LI1->isVolatile(), "");
