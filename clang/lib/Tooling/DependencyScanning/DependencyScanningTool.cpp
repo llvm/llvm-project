@@ -305,6 +305,14 @@ void IncludeTreePPConsumer::finalize(CompilerInstance &CI) {
     if (!addFile(FilePath))
       return;
   }
+  // Add profile files.
+  // FIXME: Do not have the logic here to determine which path should be set
+  // but ideally only the path needed for the compilation is set and we already
+  // checked the file needed exists. Just try load and ignore errors.
+  addFile(CI.getCodeGenOpts().ProfileInstrumentUsePath,
+          /*IgnoreFileError=*/true);
+  addFile(CI.getCodeGenOpts().SampleProfileFile, /*IgnoreFileError=*/true);
+  addFile(CI.getCodeGenOpts().ProfileRemappingFile, /*IgnoreFileError=*/true);
 
   StringRef Sysroot = CI.getHeaderSearchOpts().Sysroot;
   if (!Sysroot.empty()) {

@@ -209,6 +209,11 @@ static void updateCompilerInvocation(CompilerInvocation &Invocation,
   auto &CodeGenOpts = Invocation.getCodeGenOpts();
   Mapper.mapInPlaceOrClear(CodeGenOpts.DebugCompilationDir);
   Mapper.mapInPlaceOrClear(CodeGenOpts.CoverageCompilationDir);
+
+  // Handle coverage mappings.
+  Mapper.mapInPlaceOrClear(CodeGenOpts.ProfileInstrumentUsePath);
+  Mapper.mapInPlaceOrClear(CodeGenOpts.SampleProfileFile);
+  Mapper.mapInPlaceOrClear(CodeGenOpts.ProfileRemappingFile);
 }
 
 Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
