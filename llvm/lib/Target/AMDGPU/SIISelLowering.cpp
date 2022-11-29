@@ -12670,8 +12670,7 @@ Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   const Align CacheLineAlign = Align(64);
 
   // Pre-GFX10 target did not benefit from loop alignment
-  if (!ML || DisableLoopAlignment ||
-      (getSubtarget()->getGeneration() < AMDGPUSubtarget::GFX10) ||
+  if (!ML || DisableLoopAlignment || !getSubtarget()->hasInstPrefetch() ||
       getSubtarget()->hasInstFwdPrefetchBug())
     return PrefAlign;
 
