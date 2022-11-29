@@ -4242,8 +4242,8 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
   }
 
   // op_sel[0:1] must be 0 for v_dot2_bf16_bf16 and v_dot2_f16_f16 (VOP3 Dot).
-  if ((TSFlags & SIInstrFlags::IsDOT) && (TSFlags & SIInstrFlags::VOP3) &&
-      !(TSFlags & SIInstrFlags::VOP3P)) {
+  if (isGFX11Plus() && (TSFlags & SIInstrFlags::IsDOT) &&
+      (TSFlags & SIInstrFlags::VOP3) && !(TSFlags & SIInstrFlags::VOP3P)) {
     int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
     unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
     if (OpSel & 3)
@@ -8228,17 +8228,7 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
   // it has src2 register operand that is tied to dst operand
   // we don't allow modifiers for this operand in assembler so src2_modifiers
   // should be 0.
-  if (Opc == AMDGPU::V_MAC_F32_e64_gfx6_gfx7 ||
-      Opc == AMDGPU::V_MAC_F32_e64_gfx10 || Opc == AMDGPU::V_MAC_F32_e64_vi ||
-      Opc == AMDGPU::V_MAC_LEGACY_F32_e64_gfx6_gfx7 ||
-      Opc == AMDGPU::V_MAC_LEGACY_F32_e64_gfx10 ||
-      Opc == AMDGPU::V_MAC_F16_e64_vi || Opc == AMDGPU::V_FMAC_F64_e64_gfx90a ||
-      Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
-      Opc == AMDGPU::V_FMAC_F32_e64_gfx11 || Opc == AMDGPU::V_FMAC_F32_e64_vi ||
-      Opc == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
-      Opc == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
-      Opc == AMDGPU::V_FMAC_F16_e64_gfx10 ||
-      Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx11) {
+  if (isMAC(Opc)) {
     auto it = Inst.begin();
     std::advance(it, AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers));
     it = Inst.insert(it, MCOperand::createImm(0)); // no modifiers for src2
