@@ -371,7 +371,8 @@ void __asan_unpoison_stack_memory(uptr addr, uptr size) {
 }
 
 static void FixUnalignedStorage(uptr storage_beg, uptr storage_end,
-                                uptr &old_end, uptr &new_end) {
+                                uptr &old_beg, uptr &old_end, uptr &new_beg,
+                                uptr &new_end) {
   constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
   if (UNLIKELY(!AddrIsAlignedByGranularity(storage_end))) {
     uptr end_down = RoundDownTo(storage_end, granularity);
@@ -379,8 +380,12 @@ static void FixUnalignedStorage(uptr storage_beg, uptr storage_end,
     // unpoisoned byte, because we can't poison the prefix anyway. Don't call
     // AddressIsPoisoned at all if container changes does not affect the last
     // granule at all.
-    if (Max(old_end, new_end) > end_down && !AddressIsPoisoned(storage_end)) {
+    if ((((old_end != new_end) && Max(old_end, new_end) > end_down) ||
+         ((old_beg != new_beg) && Max(old_beg, new_beg) > end_down)) &&
+        !AddressIsPoisoned(storage_end)) {
+      old_beg = Min(end_down, old_beg);
       old_end = Min(end_down, old_end);
+      new_beg = Min(end_down, new_beg);
       new_end = Min(end_down, new_end);
     }
   }
@@ -390,12 +395,14 @@ static void FixUnalignedStorage(uptr storage_beg, uptr storage_end,
     uptr beg_up = RoundUpTo(storage_beg, granularity);
     // The first unaligned granule needs special handling only if we had bytes
     // there before and will have none after.
-    if (storage_beg == new_end && storage_beg != old_end &&
-        storage_beg < beg_up) {
+    if ((new_beg == new_end || new_beg >= beg_up) && old_beg != old_end &&
+        old_beg < beg_up) {
       // Keep granule prefix outside of the storage unpoisoned.
       uptr beg_down = RoundDownTo(storage_beg, granularity);
       *(u8 *)MemToShadow(beg_down) = storage_beg - beg_down;
+      old_beg = Max(beg_up, old_beg);
       old_end = Max(beg_up, old_end);
+      new_beg = Max(beg_up, new_beg);
       new_end = Max(beg_up, new_end);
     }
   }
@@ -413,6 +420,8 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
   uptr storage_end = reinterpret_cast<uptr>(end_p);
   uptr old_end = reinterpret_cast<uptr>(old_mid_p);
   uptr new_end = reinterpret_cast<uptr>(new_mid_p);
+  uptr old_beg = storage_beg;
+  uptr new_beg = storage_beg;
   uptr granularity = ASAN_SHADOW_GRANULARITY;
   if (!(storage_beg <= old_end && storage_beg <= new_end &&
         old_end <= storage_end && new_end <= storage_end)) {
@@ -426,7 +435,8 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
   if (old_end == new_end)
     return;  // Nothing to do here.
 
-  FixUnalignedStorage(storage_beg, storage_end, old_end, new_end);
+  FixUnalignedStorage(storage_beg, storage_end, old_beg, old_end, new_beg,
+                      new_end);
 
   uptr a = RoundDownTo(Min(old_end, new_end), granularity);
   uptr c = RoundUpTo(Max(old_end, new_end), granularity);
@@ -499,13 +509,8 @@ void __sanitizer_annotate_double_ended_contiguous_container(
       (old_beg == new_beg && old_end == new_end))
     return;  // Nothing to do here.
 
-  // Right now, the function does not support:
-  // - unaligned storage beginning
-  // - situations when container ends in the middle of granule
-  // (storage_end is unaligned by granularity)
-  //  and shares that granule with a different object.
-  if (!AddrIsAlignedByGranularity(storage_beg))
-    return;
+  FixUnalignedStorage(storage_beg, storage_end, old_beg, old_end, new_beg,
+                      new_end);
 
   if (old_beg == old_end) {
     old_beg = old_end = new_beg;
