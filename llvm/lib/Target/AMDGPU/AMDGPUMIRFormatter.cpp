@@ -23,10 +23,6 @@ bool AMDGPUMIRFormatter::parseCustomPseudoSourceValue(
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   const AMDGPUTargetMachine &TM =
       static_cast<const AMDGPUTargetMachine &>(MF.getTarget());
-  if (Src == "ImageResource") {
-    PSV = MFI->getImagePSV(TM);
-    return false;
-  }
   if (Src == "GWSResource") {
     PSV = MFI->getGWSPSV(TM);
     return false;
