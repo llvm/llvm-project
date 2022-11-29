@@ -1615,8 +1615,6 @@ def S_SET_GPR_IDX_MODE : SOPP_Pseudo<"s_set_gpr_idx_mode", (ins GPRIdxMode:$simm
 }
 
 let SubtargetPredicate = isGFX10Plus in {
-  def S_INST_PREFETCH :
-    SOPP_Pseudo<"s_inst_prefetch", (ins s16imm:$simm16), "$simm16">;
   def S_CLAUSE :
     SOPP_Pseudo<"s_clause", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_IDLE :
@@ -1638,6 +1636,8 @@ let SubtargetPredicate = isGFX10Plus in {
 } // End SubtargetPredicate = isGFX10Plus
 
 let SubtargetPredicate = isGFX10GFX11 in {
+  def S_INST_PREFETCH :
+    SOPP_Pseudo<"s_inst_prefetch", (ins s16imm:$simm16), "$simm16">;
   def S_WAITCNT_DEPCTR :
     SOPP_Pseudo <"s_waitcnt_depctr" , (ins DepCtrImm:$simm16), "$simm16">;
 } // End SubtargetPredicate = isGFX10GFX11
@@ -2433,7 +2433,7 @@ multiclass SOPP_Real_With_Relaxation_gfx11_gfx12<bits<7>op> :
 defm S_SETKILL                    : SOPP_Real_32_gfx11_gfx12<0x001>;
 defm S_SETHALT                    : SOPP_Real_32_gfx11_gfx12<0x002>;
 defm S_SLEEP                      : SOPP_Real_32_gfx11_gfx12<0x003>;
-defm S_SET_INST_PREFETCH_DISTANCE : SOPP_Real_32_Renamed_gfx11_gfx12<0x004, S_INST_PREFETCH, "s_set_inst_prefetch_distance">;
+defm S_SET_INST_PREFETCH_DISTANCE : SOPP_Real_32_Renamed_gfx11<0x004, S_INST_PREFETCH, "s_set_inst_prefetch_distance">;
 defm S_CLAUSE                     : SOPP_Real_32_gfx11_gfx12<0x005>;
 defm S_DELAY_ALU                  : SOPP_Real_32_gfx11_gfx12<0x007>;
 defm S_WAITCNT_DEPCTR             : SOPP_Real_32_gfx11<0x008>;
