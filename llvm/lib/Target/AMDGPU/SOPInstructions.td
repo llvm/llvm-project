@@ -1160,12 +1160,12 @@ let SubtargetPredicate = isGFX10Plus in {
       "$simm16"> {
     let has_sdst = 0;
   }
-
-  def S_SUBVECTOR_LOOP_BEGIN : SOPK_32_BR<"s_subvector_loop_begin">;
-  def S_SUBVECTOR_LOOP_END   : SOPK_32_BR<"s_subvector_loop_end">;
 } // End SubtargetPredicate = isGFX10Plus
 
 let SubtargetPredicate = isGFX10GFX11 in {
+  def S_SUBVECTOR_LOOP_BEGIN : SOPK_32_BR<"s_subvector_loop_begin">;
+  def S_SUBVECTOR_LOOP_END   : SOPK_32_BR<"s_subvector_loop_end">;
+
   def S_WAITCNT_VSCNT   : SOPK_WAITCNT<"s_waitcnt_vscnt">;
   def S_WAITCNT_VMCNT   : SOPK_WAITCNT<"s_waitcnt_vmcnt">;
   def S_WAITCNT_EXPCNT  : SOPK_WAITCNT<"s_waitcnt_expcnt">;
@@ -2269,8 +2269,8 @@ defm S_GETREG_B32           : SOPK_Real32_gfx11_gfx12<0x011>;
 defm S_SETREG_B32           : SOPK_Real32_gfx11_gfx12<0x012>;
 defm S_SETREG_IMM32_B32     : SOPK_Real64_gfx11_gfx12<0x013>;
 defm S_CALL_B64             : SOPK_Real32_gfx11_gfx12<0x014>;
-defm S_SUBVECTOR_LOOP_BEGIN : SOPK_Real32_gfx11_gfx12<0x016>;
-defm S_SUBVECTOR_LOOP_END   : SOPK_Real32_gfx11_gfx12<0x017>;
+defm S_SUBVECTOR_LOOP_BEGIN : SOPK_Real32_gfx11<0x016>;
+defm S_SUBVECTOR_LOOP_END   : SOPK_Real32_gfx11<0x017>;
 defm S_WAITCNT_VSCNT        : SOPK_Real32_gfx11_gfx12<0x018>;
 defm S_WAITCNT_VMCNT        : SOPK_Real32_gfx11_gfx12<0x019>;
 defm S_WAITCNT_EXPCNT       : SOPK_Real32_gfx11_gfx12<0x01a>;
