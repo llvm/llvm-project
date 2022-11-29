@@ -567,6 +567,7 @@ let SubtargetPredicate = isGFX9Only in {
 } // End SubtargetPredicate = isGFX9Only
 
 class VOPProfile_Base_CVT_F32_F8<ValueType vt> : VOPProfileI2F <vt, i32> {
+  let HasExtDPP = 1;
   let HasExtSDWA = 1;
   let HasExtSDWA9 = 1;
   let HasExt = 1;
@@ -589,7 +590,7 @@ let SubtargetPredicate = HasFP8Insts, mayRaiseFPException = 0,
   defm V_CVT_PK_F32_BF8 : VOP1Inst<"v_cvt_pk_f32_bf8", VOPProfileCVT_PK_F32_F8>;
 }
 
-class Cvt_F32_F8_Pat<SDPatternOperator node, int index,
+class Cvt_F32_F8_Pat_sdwa<SDPatternOperator node, int index,
     VOP1_Pseudo inst_e32, VOP1_SDWA_Pseudo inst_sdwa> : GCNPat<
     (f32 (node i32:$src, index)),
     !if (index,
@@ -597,11 +598,13 @@ class Cvt_F32_F8_Pat<SDPatternOperator node, int index,
          (inst_e32 $src))
 >;
 
-foreach Index = [0, 1, 2, 3] in {
-  def : Cvt_F32_F8_Pat<int_amdgcn_cvt_f32_fp8, Index,
-                       V_CVT_F32_FP8_e32, V_CVT_F32_FP8_sdwa>;
-  def : Cvt_F32_F8_Pat<int_amdgcn_cvt_f32_bf8, Index,
-                       V_CVT_F32_BF8_e32, V_CVT_F32_BF8_sdwa>;
+let SubtargetPredicate = isGFX9Only in {
+  foreach Index = [0, 1, 2, 3] in {
+    def : Cvt_F32_F8_Pat_sdwa<int_amdgcn_cvt_f32_fp8, Index,
+                              V_CVT_F32_FP8_e32, V_CVT_F32_FP8_sdwa>;
+    def : Cvt_F32_F8_Pat_sdwa<int_amdgcn_cvt_f32_bf8, Index,
+                              V_CVT_F32_BF8_e32, V_CVT_F32_BF8_sdwa>;
+  }
 }
 
 class Cvt_PK_F32_F8_Pat<SDPatternOperator node, int index,
@@ -612,11 +615,77 @@ class Cvt_PK_F32_F8_Pat<SDPatternOperator node, int index,
          (inst_e32 $src))
 >;
 
-foreach Index = [0, -1] in {
-  def : Cvt_PK_F32_F8_Pat<int_amdgcn_cvt_pk_f32_fp8, Index,
-                          V_CVT_PK_F32_FP8_e32, V_CVT_PK_F32_FP8_sdwa>;
-  def : Cvt_PK_F32_F8_Pat<int_amdgcn_cvt_pk_f32_bf8, Index,
-                          V_CVT_PK_F32_BF8_e32, V_CVT_PK_F32_BF8_sdwa>;
+let SubtargetPredicate = isGFX9Only in {
+  foreach Index = [0, -1] in {
+    def : Cvt_PK_F32_F8_Pat<int_amdgcn_cvt_pk_f32_fp8, Index,
+                            V_CVT_PK_F32_FP8_e32, V_CVT_PK_F32_FP8_sdwa>;
+    def : Cvt_PK_F32_F8_Pat<int_amdgcn_cvt_pk_f32_bf8, Index,
+                            V_CVT_PK_F32_BF8_e32, V_CVT_PK_F32_BF8_sdwa>;
+  }
+}
+
+// Similar to VOPProfile_Base_CVT_F32_F8, but for VOP3 instructions.
+class VOPProfile_Base_CVT_F32_F8_OpSel<ValueType vt> : VOPProfile<[vt, i32, i32, untyped]> {
+  let InsVOP3OpSel = (ins Src0Mod:$src0_modifiers, Src0RC64:$src0,
+                          Src1Mod:$src1_modifiers, Src1RC64:$src1,
+                          clampmod:$clamp, omod:$omod, op_sel0:$op_sel);
+  let AsmVOP3OpSel = !subst(", $src1_modifiers", "", getAsmVOP3OpSel<2, 0, 0, 1, 1, 0>.ret);
+
+  let HasOpSel = 1;
+  let HasExtVOP3DPP = 0;
+}
+
+class VOPProfile_Base_CVT_F32_F8_OpSel_DPP<ValueType vt> : VOPProfile_Base_CVT_F32_F8_OpSel<vt> {
+  let HasExtDPP = 1;
+  let HasExtVOP3DPP = 1;
+
+  let Src1VOP3DPP = Src1RC64;
+  let AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3OpSel>.ret;
+  let AsmVOP3DPP16 = getAsmVOP3DPP16<AsmVOP3OpSel>.ret;
+}
+
+let SubtargetPredicate = isGFX12Plus, mayRaiseFPException = 0,
+    SchedRW = [WriteFloatCvt] in {
+  defm V_CVT_F32_FP8_OP_SEL    : VOP1Inst<"v_cvt_f32_fp8_op_sel", VOPProfile_Base_CVT_F32_F8_OpSel_DPP<f32>>;
+  defm V_CVT_F32_BF8_OP_SEL    : VOP1Inst<"v_cvt_f32_bf8_op_sel", VOPProfile_Base_CVT_F32_F8_OpSel_DPP<f32>>;
+  defm V_CVT_PK_F32_FP8_OP_SEL : VOP1Inst<"v_cvt_pk_f32_fp8_op_sel", VOPProfile_Base_CVT_F32_F8_OpSel<v2f32>>;
+  defm V_CVT_PK_F32_BF8_OP_SEL : VOP1Inst<"v_cvt_pk_f32_bf8_op_sel", VOPProfile_Base_CVT_F32_F8_OpSel<v2f32>>;
+}
+
+class Cvt_F32_F8_Pat_OpSel<SDPatternOperator node, bits<2> index,
+    VOP1_Pseudo inst_e32, VOP3_Pseudo inst_e64> : GCNPat<
+    (f32 (node i32:$src, index)),
+    !if (index,
+         (inst_e64 !if(index{0}, SRCMODS.OP_SEL_0, SRCMODS.OP_SEL_1), $src,
+                   !if(index{1}, SRCMODS.OP_SEL_0, SRCMODS.OP_SEL_1), (i32 0),
+                   0, 0, 0),
+         (inst_e32 $src))
+>;
+
+let SubtargetPredicate = isGFX12Plus in {
+  foreach Index = [0, 1, 2, 3] in {
+    def : Cvt_F32_F8_Pat_OpSel<int_amdgcn_cvt_f32_fp8, Index,
+                               V_CVT_F32_FP8_e32, V_CVT_F32_FP8_OP_SEL_e64>;
+    def : Cvt_F32_F8_Pat_OpSel<int_amdgcn_cvt_f32_bf8, Index,
+                               V_CVT_F32_BF8_e32, V_CVT_F32_BF8_OP_SEL_e64>;
+  }
+}
+
+class Cvt_PK_F32_F8_Pat_OpSel<SDPatternOperator node, int index,
+    VOP1_Pseudo inst_e32, VOP3_Pseudo inst_e64> : GCNPat<
+    (v2f32 (node i32:$src, index)),
+    !if (index,
+         (inst_e64 SRCMODS.OP_SEL_0, $src, 0, $src, 0, 0, SRCMODS.NONE),
+         (inst_e32 $src))
+>;
+
+let SubtargetPredicate = isGFX12Plus in {
+  foreach Index = [0, -1] in {
+    def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_fp8, Index,
+                                  V_CVT_PK_F32_FP8_e32, V_CVT_PK_F32_FP8_OP_SEL_e64>;
+    def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_bf8, Index,
+                                  V_CVT_PK_F32_BF8_e32, V_CVT_PK_F32_BF8_OP_SEL_e64>;
+  }
 }
 
 let SubtargetPredicate = isGFX10Plus in {
@@ -791,6 +860,13 @@ multiclass VOP1_Real_NO_VOP3_with_name_gfx11<bits<9> op, string opName,
                     Requires<[isGFX11Plus]>;
 }
 
+multiclass VOP1_Real_NO_VOP3_with_name_gfx12<bits<9> op, string opName,
+                                             string asmName> {
+  defm NAME : VOP1_Real_e32_with_name<GFX12Gen, op, opName, asmName>,
+              VOP1_Real_dpp_with_name<GFX12Gen, op, opName, asmName>,
+              VOP1_Real_dpp8_with_name<GFX12Gen, op, opName, asmName>;
+}
+
 multiclass VOP1_Real_FULL_with_name<GFXGen Gen, bits<9> op, string opName,
                                          string asmName> :
   VOP1_Real_e32_with_name<Gen, op, opName, asmName>,
@@ -816,6 +892,25 @@ multiclass VOP1Only_Real_gfx11_gfx12<bits<9> op> :
 
 multiclass VOP1_Real_FULL_gfx11_gfx12<bits<9> op> :
   VOP1_Real_FULL<GFX11Gen, op>, VOP1_Real_FULL<GFX12Gen, op>;
+
+multiclass VOP1_Real_NO_DPP_OP_SEL_with_name<GFXGen Gen, bits<9> op,
+                                             string opName, string asmName> :
+  VOP1_Real_e32_with_name<Gen, op, opName, asmName>,
+  VOP3_Real_with_name<Gen, {0, 1, 1, op{6-0}}, opName, asmName>;
+
+// Define VOP1 instructions using the pseudo instruction with its old profile and
+// VOP3 using the OpSel profile for the pseudo instruction.
+defm V_CVT_F32_FP8      : VOP1_Real_NO_VOP3_with_name_gfx12<0x06c, "V_CVT_F32_FP8", "v_cvt_f32_fp8">;
+defm V_CVT_F32_FP8      : VOP1_Realtriple_e64_with_name<GFX12Gen, 0x06c, "V_CVT_F32_FP8_OP_SEL", "v_cvt_f32_fp8">;
+
+defm V_CVT_F32_BF8      : VOP1_Real_NO_VOP3_with_name_gfx12<0x06d, "V_CVT_F32_BF8", "v_cvt_f32_bf8">;
+defm V_CVT_F32_BF8      : VOP1_Realtriple_e64_with_name<GFX12Gen, 0x06d, "V_CVT_F32_BF8_OP_SEL", "v_cvt_f32_bf8">;
+
+defm V_CVT_PK_F32_FP8   : VOP1_Real_e32_with_name<GFX12Gen, 0x06e, "V_CVT_PK_F32_FP8", "v_cvt_pk_f32_fp8">;
+defm V_CVT_PK_F32_FP8   : VOP3_Real_with_name<GFX12Gen, 0x1ee, "V_CVT_PK_F32_FP8_OP_SEL", "v_cvt_pk_f32_fp8">;
+
+defm V_CVT_PK_F32_BF8   : VOP1_Real_e32_with_name<GFX12Gen, 0x06f, "V_CVT_PK_F32_BF8", "v_cvt_pk_f32_bf8">;
+defm V_CVT_PK_F32_BF8   : VOP3_Real_with_name<GFX12Gen, 0x1ef, "V_CVT_PK_F32_BF8_OP_SEL", "v_cvt_pk_f32_bf8">;
 
 defm V_CVT_NEAREST_I32_F32 : VOP1_Real_FULL_with_name_gfx11_gfx12<0x00c,
   "V_CVT_RPI_I32_F32", "v_cvt_nearest_i32_f32">;
