@@ -1077,11 +1077,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     return true;
   }
   case Intrinsic::amdgcn_buffer_atomic_fadd: {
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-
-    const GCNTargetMachine &TM =
-        static_cast<const GCNTargetMachine &>(getTargetMachine());
-
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getOperand(0)->getType());
     Info.fallbackAddressSpace = AMDGPUAS::BUFFER_FAT_POINTER;
