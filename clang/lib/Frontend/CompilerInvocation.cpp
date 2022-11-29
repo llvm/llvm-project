@@ -1303,11 +1303,79 @@ static std::string serializeXRayInstrumentationBundle(const XRayInstrSet &S) {
   return Buffer;
 }
 
+static IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+createBaseFS(const FileSystemOptions &FSOpts, const CASOptions &CASOpts,
+             DiagnosticsEngine &Diags,
+             std::shared_ptr<llvm::cas::ObjectStore> OverrideCAS) {
+  if (FSOpts.CASFileSystemRootID.empty())
+    return llvm::vfs::getRealFileSystem();
+
+  // If no CAS was provided, create one with CASOptions.
+  std::shared_ptr<llvm::cas::ObjectStore> CAS = std::move(OverrideCAS);
+  if (!CAS)
+    CAS = CASOpts.getOrCreateObjectStore(Diags);
+
+  // Helper for creating a valid (but empty) CASFS if an error is encountered.
+  auto makeEmptyCASFS = [&CAS]() {
+    // Try to use the configured CAS, if any.
+    Optional<llvm::cas::CASID> EmptyRootID;
+    if (CAS) {
+      llvm::cas::TreeSchema Schema(*CAS);
+      // If we cannot create an empty tree, fall back to creating an empty
+      // in-memory CAS.
+      if (llvm::Error E = Schema.create(None).moveInto(EmptyRootID)) {
+        consumeError(std::move(E));
+        CAS = nullptr;
+      }
+    }
+    // Create an empty in-memory CAS with an empty tree.
+    if (!CAS) {
+      CAS = llvm::cas::createInMemoryCAS();
+      llvm::cas::TreeSchema Schema(*CAS);
+      EmptyRootID = llvm::cantFail(Schema.create(None));
+    }
+    return llvm::cantFail(
+        llvm::cas::createCASFileSystem(std::move(CAS), *EmptyRootID));
+  };
+
+  // CAS couldn't be created. The error was already reported to Diags.
+  if (!CAS)
+    return makeEmptyCASFS();
+
+  StringRef RootIDString = FSOpts.CASFileSystemRootID;
+  Expected<llvm::cas::CASID> RootID = CAS->parseID(RootIDString);
+  if (!RootID) {
+    llvm::consumeError(RootID.takeError());
+    Diags.Report(diag::err_cas_cannot_parse_root_id) << RootIDString;
+    return makeEmptyCASFS();
+  }
+
+  Expected<std::unique_ptr<llvm::vfs::FileSystem>> ExpectedFS =
+      llvm::cas::createCASFileSystem(std::move(CAS), *RootID);
+  if (!ExpectedFS) {
+    llvm::consumeError(ExpectedFS.takeError());
+    Diags.Report(diag::err_cas_filesystem_cannot_be_initialized)
+        << RootIDString;
+    return makeEmptyCASFS();
+  }
+  std::unique_ptr<llvm::vfs::FileSystem> FS = std::move(*ExpectedFS);
+
+  // Try to change directories.
+  StringRef CWD = FSOpts.CASFileSystemWorkingDirectory;
+  if (!CWD.empty())
+    if (std::error_code EC = FS->setCurrentWorkingDirectory(CWD))
+      Diags.Report(diag::err_cas_filesystem_cannot_set_working_directory)
+          << CWD;
+
+  return std::move(FS);
+}
+
 // Set the profile kind using fprofile-instrument-use-path.
 static void setPGOUseInstrumentor(CodeGenOptions &Opts,
                                   const Twine &ProfileName,
+                                  llvm::vfs::FileSystem &FS,
                                   DiagnosticsEngine &Diags) {
-  auto ReaderOrErr = llvm::IndexedInstrProfReader::create(ProfileName);
+  auto ReaderOrErr = llvm::IndexedInstrProfReader::create(ProfileName, FS);
   if (auto E = ReaderOrErr.takeError()) {
     unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
                                             "Error in reading profile %0: %1");
@@ -1673,7 +1741,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                                           DiagnosticsEngine &Diags,
                                           const llvm::Triple &T,
                                           const std::string &OutputFile,
-                                          const LangOptions &LangOptsRef) {
+                                          const LangOptions &LangOptsRef,
+                                          const FileSystemOptions &FSOpts,
+                                          const CASOptions &CASOpts) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
   unsigned OptimizationLevel = getOptimizationLevel(Args, IK, Diags);
@@ -1818,8 +1888,10 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
             : codegenoptions::DebugTemplateNamesKind::Mangled);
   }
 
-  if (!Opts.ProfileInstrumentUsePath.empty())
-    setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath, Diags);
+  if (!Opts.ProfileInstrumentUsePath.empty()) {
+    auto FS = createBaseFS(FSOpts, CASOpts, Diags, nullptr);
+    setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath, *FS, Diags);
+  }
 
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
     Opts.TimePasses = true;
@@ -4782,7 +4854,8 @@ bool CompilerInvocation::CreateFromArgsImpl(
     Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
 
   ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags, T,
-                   Res.getFrontendOpts().OutputFile, LangOpts);
+                   Res.getFrontendOpts().OutputFile, LangOpts,
+                   Res.getFileSystemOpts(), Res.getCASOpts());
 
   // FIXME: Override value name discarding when asan or msan is used because the
   // backend passes depend on the name of the alloca in order to print out
@@ -5040,79 +5113,14 @@ void CompilerInvocation::clearImplicitModuleBuildOptions() {
   getHeaderSearchOpts().ModuleCachePruneAfter = 31 * 24 * 60 * 60;
 }
 
-static IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-createBaseFS(const CompilerInvocation &Invocation, DiagnosticsEngine &Diags,
-             std::shared_ptr<llvm::cas::ObjectStore> OverrideCAS) {
-  const FileSystemOptions &FSOpts = Invocation.getFileSystemOpts();
-  if (FSOpts.CASFileSystemRootID.empty())
-    return llvm::vfs::getRealFileSystem();
-
-  // If no CAS was provided, create one with CASOptions.
-  std::shared_ptr<llvm::cas::ObjectStore> CAS = std::move(OverrideCAS);
-  if (!CAS)
-    CAS = Invocation.getCASOpts().getOrCreateObjectStore(Diags);
-
-  // Helper for creating a valid (but empty) CASFS if an error is encountered.
-  auto makeEmptyCASFS = [&CAS]() {
-    // Try to use the configured CAS, if any.
-    Optional<llvm::cas::CASID> EmptyRootID;
-    if (CAS) {
-      llvm::cas::TreeSchema Schema(*CAS);
-      // If we cannot create an empty tree, fall back to creating an empty
-      // in-memory CAS.
-      if (llvm::Error E = Schema.create(None).moveInto(EmptyRootID)) {
-        consumeError(std::move(E));
-        CAS = nullptr;
-      }
-    }
-    // Create an empty in-memory CAS with an empty tree.
-    if (!CAS) {
-      CAS = llvm::cas::createInMemoryCAS();
-      llvm::cas::TreeSchema Schema(*CAS);
-      EmptyRootID = llvm::cantFail(Schema.create(None));
-    }
-    return llvm::cantFail(
-        llvm::cas::createCASFileSystem(std::move(CAS), *EmptyRootID));
-  };
-
-  // CAS couldn't be created. The error was already reported to Diags.
-  if (!CAS)
-    return makeEmptyCASFS();
-
-  StringRef RootIDString = FSOpts.CASFileSystemRootID;
-  Expected<llvm::cas::CASID> RootID = CAS->parseID(RootIDString);
-  if (!RootID) {
-    llvm::consumeError(RootID.takeError());
-    Diags.Report(diag::err_cas_cannot_parse_root_id) << RootIDString;
-    return makeEmptyCASFS();
-  }
-
-  Expected<std::unique_ptr<llvm::vfs::FileSystem>> ExpectedFS =
-      llvm::cas::createCASFileSystem(std::move(CAS), *RootID);
-  if (!ExpectedFS) {
-    llvm::consumeError(ExpectedFS.takeError());
-    Diags.Report(diag::err_cas_filesystem_cannot_be_initialized)
-        << RootIDString;
-    return makeEmptyCASFS();
-  }
-  std::unique_ptr<llvm::vfs::FileSystem> FS = std::move(*ExpectedFS);
-
-  // Try to change directories.
-  StringRef CWD = FSOpts.CASFileSystemWorkingDirectory;
-  if (!CWD.empty())
-    if (std::error_code EC = FS->setCurrentWorkingDirectory(CWD))
-      Diags.Report(diag::err_cas_filesystem_cannot_set_working_directory)
-          << CWD;
-
-  return std::move(FS);
-}
-
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 clang::createVFSFromCompilerInvocation(
     const CompilerInvocation &CI, DiagnosticsEngine &Diags,
     std::shared_ptr<llvm::cas::ObjectStore> OverrideCAS) {
-  return createVFSFromCompilerInvocation(
-      CI, Diags, createBaseFS(CI, Diags, std::move(OverrideCAS)));
+  return createVFSFromCompilerInvocation(CI, Diags,
+                                         createBaseFS(CI.getFileSystemOpts(),
+                                                      CI.getCASOpts(), Diags,
+                                                      std::move(OverrideCAS)));
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
