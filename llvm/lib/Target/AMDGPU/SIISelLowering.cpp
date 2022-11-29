@@ -987,12 +987,11 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     const GCNTargetMachine &TM =
         static_cast<const GCNTargetMachine &>(getTargetMachine());
 
-    if (RsrcIntr->IsImage) {
-      Info.ptrVal = MFI->getImagePSV(TM);
+    // TODO: Should images get their own address space?
+    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_FAT_POINTER;
+
+    if (RsrcIntr->IsImage)
       Info.align.reset();
-    } else {
-      Info.fallbackAddressSpace = AMDGPUAS::BUFFER_FAT_POINTER;
-    }
 
     Info.flags |= MachineMemOperand::MODereferenceable;
     if (ME.onlyReadsMemory()) {
@@ -1121,7 +1120,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     const GCNTargetMachine &TM =
         static_cast<const GCNTargetMachine &>(getTargetMachine());
 
-    Info.ptrVal = MFI->getImagePSV(TM);
+    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_FAT_POINTER;
     Info.align.reset();
     Info.flags |= MachineMemOperand::MOLoad |
                   MachineMemOperand::MODereferenceable;

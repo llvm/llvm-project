@@ -58,19 +58,6 @@ public:
   }
 };
 
-class AMDGPUImagePseudoSourceValue final : public AMDGPUPseudoSourceValue {
-public:
-  // TODO: Is the img rsrc useful?
-  explicit AMDGPUImagePseudoSourceValue(const AMDGPUTargetMachine &TM)
-      : AMDGPUPseudoSourceValue(PSVImage, TM) {}
-
-  static bool classof(const PseudoSourceValue *V) {
-    return V->kind() == PSVImage;
-  }
-
-  void printCustom(raw_ostream &OS) const override { OS << "ImageResource"; }
-};
-
 class AMDGPUGWSResourcePseudoSourceValue final : public AMDGPUPseudoSourceValue {
 public:
   explicit AMDGPUGWSResourcePseudoSourceValue(const AMDGPUTargetMachine &TM)
@@ -381,7 +368,6 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   // unit. Minimum - first, maximum - second.
   std::pair<unsigned, unsigned> WavesPerEU = {0, 0};
 
-  const AMDGPUImagePseudoSourceValue ImagePSV;
   const AMDGPUGWSResourcePseudoSourceValue GWSResourcePSV;
 
 private:
@@ -931,11 +917,6 @@ public:
       return ArgInfo.WorkGroupIDZ.getRegister();
     }
     llvm_unreachable("unexpected dimension");
-  }
-
-  const AMDGPUImagePseudoSourceValue *
-  getImagePSV(const AMDGPUTargetMachine &TM) {
-    return &ImagePSV;
   }
 
   const AMDGPUGWSResourcePseudoSourceValue *

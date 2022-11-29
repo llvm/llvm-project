@@ -32,7 +32,7 @@ body: |
     %16.sub5:sgpr_256 = COPY %16.sub0
     %16.sub6:sgpr_256 = COPY %16.sub0
     %16.sub7:sgpr_256 = COPY %16.sub0
-    IMAGE_STORE_V4_V2_gfx10 %27, %26, %16, 0, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s32) into custom "ImageResource")
+    IMAGE_STORE_V4_V2_gfx10 %27, %26, %16, 0, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), addrspace 7)
     S_CBRANCH_SCC1 %bb.2, implicit undef $scc
     S_BRANCH %bb.1
 
@@ -41,7 +41,7 @@ body: |
     %30.sub2:vreg_128 = COPY %30.sub1
     %30.sub3:vreg_128 = COPY %30.sub1
     %26.sub1:vreg_64 = COPY %30.sub1
-    IMAGE_STORE_V4_V2_gfx10 %30, %26, %16, 0, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s32) into custom "ImageResource")
+    IMAGE_STORE_V4_V2_gfx10 %30, %26, %16, 0, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), addrspace 7)
 
   bb.2:
     S_ENDPGM 0
