@@ -10,7 +10,7 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-#include "src/string/string_utils.h" // For strdup.
+#include "src/string/allocating_string_utils.h" // For strdup.
 
 #include <errno.h>
 #include <linux/limits.h> // This is safe to include without any name pollution.
