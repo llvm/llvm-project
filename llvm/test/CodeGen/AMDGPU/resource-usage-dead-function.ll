@@ -21,7 +21,7 @@ define internal fastcc void @unreachable() {
 ; GCN: s_endpgm
 
 ; GCN: .amdhsa_private_segment_fixed_size 0
-; GCN-NOT: .amdhsa_uses_dynamic_stack 0
+; GCN: .amdhsa_uses_dynamic_stack 0
 ; GCN-V5: .amdhsa_uses_dynamic_stack 0
 define amdgpu_kernel void @entry() {
 bb0:

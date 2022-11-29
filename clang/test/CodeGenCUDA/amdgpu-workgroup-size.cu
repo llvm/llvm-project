@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-amd-amdhsa \
-// RUN:     -fcuda-is-device -emit-llvm -o - -x hip %s \
+// RUN:     -fcuda-is-device -mcode-object-version=4 -emit-llvm -o - -x hip %s \
 // RUN:     | FileCheck -check-prefix=PRECOV5 %s
 
 

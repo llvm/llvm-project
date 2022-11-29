@@ -583,13 +583,13 @@ void test_get_local_id(int d, global int *out)
 }
 
 // CHECK-LABEL: @test_get_workgroup_size(
-// CHECK: call align 4 dereferenceable(64) i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
-// CHECK: getelementptr i8, i8 addrspace(4)* %{{.*}}, i64 4
+// CHECK: call align 8 dereferenceable(256) i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
+// CHECK: getelementptr i8, i8 addrspace(4)* %{{.*}}, i64 12
 // CHECK: load i16, i16 addrspace(4)* %{{.*}}, align 4, !range [[$WS_RANGE:![0-9]*]], !invariant.load
-// CHECK: getelementptr i8, i8 addrspace(4)* %{{.*}}, i64 6
+// CHECK: getelementptr i8, i8 addrspace(4)* %{{.*}}, i64 14
 // CHECK: load i16, i16 addrspace(4)* %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load
-// CHECK: getelementptr i8, i8 addrspace(4)* %{{.*}}, i64 8
-// CHECK: load i16, i16 addrspace(4)* %{{.*}}, align 4, !range [[$WS_RANGE:![0-9]*]], !invariant.load
+// CHECK: getelementptr i8, i8 addrspace(4)* %{{.*}}, i64 16
+// CHECK: load i16, i16 addrspace(4)* %{{.*}}, align 8, !range [[$WS_RANGE:![0-9]*]], !invariant.load
 void test_get_workgroup_size(int d, global int *out)
 {
 	switch (d) {
