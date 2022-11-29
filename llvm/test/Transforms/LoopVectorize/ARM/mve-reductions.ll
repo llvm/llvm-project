@@ -803,7 +803,7 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
   ret i64 %r.0.lcssa
 }
 
-; 4x to use VMLA.u32
+; 4x to use VMLA.i32
 define i32 @mla_i32_i32(i32* nocapture readonly %x, i32* nocapture readonly %y, i32 %n) #0 {
 ; CHECK-LABEL: @mla_i32_i32(
 ; CHECK-NEXT:  entry:
@@ -856,7 +856,7 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
   ret i32 %r.0.lcssa
 }
 
-; 8x to use VMLA.u16
+; 8x to use VMLA.i16
 define i32 @mla_i16_i32(i16* nocapture readonly %x, i16* nocapture readonly %y, i32 %n) #0 {
 ; CHECK-LABEL: @mla_i16_i32(
 ; CHECK-NEXT:  entry:
@@ -913,7 +913,7 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
   ret i32 %r.0.lcssa
 }
 
-; 16x to use VMLA.u8
+; 16x to use VMLA.i8
 define i32 @mla_i8_i32(i8* nocapture readonly %x, i8* nocapture readonly %y, i32 %n) #0 {
 ; CHECK-LABEL: @mla_i8_i32(
 ; CHECK-NEXT:  entry:
@@ -970,7 +970,7 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
   ret i32 %r.0.lcssa
 }
 
-; 8x to use VMLA.u16
+; 8x to use VMLA.i16
 define signext i16 @mla_i16_i16(i16* nocapture readonly %x, i16* nocapture readonly %y, i32 %n) #0 {
 ; CHECK-LABEL: @mla_i16_i16(
 ; CHECK-NEXT:  entry:
@@ -1023,7 +1023,7 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
   ret i16 %r.0.lcssa
 }
 
-; 16x to use VMLA.u8
+; 16x to use VMLA.i8
 define signext i16 @mla_i8_i16(i8* nocapture readonly %x, i8* nocapture readonly %y, i32 %n) #0 {
 ; CHECK-LABEL: @mla_i8_i16(
 ; CHECK-NEXT:  entry:
@@ -1080,7 +1080,7 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
   ret i16 %r.0.lcssa
 }
 
-; 16x to use VMLA.u8
+; 16x to use VMLA.i8
 define zeroext i8 @mla_i8_i8(i8* nocapture readonly %x, i8* nocapture readonly %y, i32 %n) #0 {
 ; CHECK-LABEL: @mla_i8_i8(
 ; CHECK-NEXT:  entry:
@@ -1430,7 +1430,7 @@ exit:
   ret i32 %ret.lcssa
 }
 
-; 16x to use VMLA.u8, same as mla_i8_i32 with multiple uses of the ext `add(mul(x, x))`
+; 16x to use VMLA.i8, same as mla_i8_i32 with multiple uses of the ext `add(mul(x, x))`
 define i32 @mla_i8_i32_multiuse(i8* nocapture readonly %x, i8* nocapture readonly %y, i32 %n) #0 {
 ; CHECK-LABEL: @mla_i8_i32_multiuse(
 ; CHECK-NEXT:  entry:
