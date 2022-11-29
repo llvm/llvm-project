@@ -310,6 +310,38 @@ TEST(InstModificationIRStrategyTest, DidntShuffleFRem) {
   VerfyDivDidntShuffle(Source);
 }
 
+TEST(SinkInstructionStrategy, Operand) {
+  LLVMContext Ctx;
+  StringRef Source = "\n\
+      define i32 @test(i1 %C1, i1 %C2, i1 %C3, i32 %I, i32 %J) { \n\
+        Entry:  \n\
+          %I100 = add i32 %I, 100  \n\
+          switch i32 %I100, label %BB0 [ \n\
+            i32 42, label %BB1  \n\
+          ] \n\
+        BB0:  \n\
+          %IAJ = add i32 %I, %J  \n\
+          %ISJ = sub i32 %I, %J  \n\
+          br label %Exit  \n\
+        BB1:  \n\
+          %IJ = mul i32 %I, %J  \n\
+          %C = and i1 %C2, %C3  \n\
+          br i1 %C, label %BB0, label %Exit  \n\
+        Exit:  \n\
+          ret i32 %I  \n\
+      }";
+  auto Mutator = createMutator<SinkInstructionStrategy>();
+  ASSERT_TRUE(Mutator);
+
+  auto M = parseAssembly(Source.data(), Ctx);
+  std::mt19937 mt(Seed);
+  std::uniform_int_distribution<int> RandInt(INT_MIN, INT_MAX);
+  for (int i = 0; i < 100; i++) {
+    Mutator->mutateModule(*M, RandInt(mt), Source.size(), Source.size() + 1024);
+    EXPECT_FALSE(verifyModule(*M, &errs()));
+  }
+}
+
 static void VerifyBlockShuffle(StringRef Source) {
   LLVMContext Ctx;
   auto Mutator = createMutator<ShuffleBlockStrategy>();

@@ -118,6 +118,19 @@ public:
   void mutate(Instruction &Inst, RandomIRBuilder &IB) override;
 };
 
+/// Strategy to select a random instruction and add a new sink (user) to it to
+/// increate data dependency.
+class SinkInstructionStrategy : public IRMutationStrategy {
+public:
+  uint64_t getWeight(size_t CurrentSize, size_t MaxSize,
+                     uint64_t CurrentWeight) override {
+    return 2;
+  }
+
+  void mutate(Function &F, RandomIRBuilder &IB) override;
+  void mutate(BasicBlock &BB, RandomIRBuilder &IB) override;
+};
+
 /// Strategy to randomly select a block and shuffle the operations without
 /// affecting data dependency.
 class ShuffleBlockStrategy : public IRMutationStrategy {

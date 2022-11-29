@@ -299,6 +299,29 @@ void InstModificationIRStrategy::mutate(Instruction &Inst,
     RS.getSelection()();
 }
 
+void SinkInstructionStrategy::mutate(Function &F, RandomIRBuilder &IB) {
+  for (BasicBlock &BB : F) {
+    this->mutate(BB, IB);
+  }
+}
+void SinkInstructionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
+  SmallVector<Instruction *, 32> Insts;
+  for (auto I = BB.getFirstInsertionPt(), E = BB.end(); I != E; ++I)
+    Insts.push_back(&*I);
+  if (Insts.size() < 1)
+    return;
+  // Choose an Instruction to mutate.
+  uint64_t Idx = uniform<uint64_t>(IB.Rand, 0, Insts.size() - 1);
+  Instruction *Inst = Insts[Idx];
+  // `Idx + 1` so we don't sink to ourselves.
+  auto InstsAfter = makeArrayRef(Insts).slice(Idx + 1);
+  LLVMContext &C = BB.getParent()->getParent()->getContext();
+  // Don't sink terminators, void function calls, etc.
+  if (Inst->getType() != Type::getVoidTy(C))
+    // Find a new sink and wire up the results of the operation.
+    IB.connectToSink(BB, InstsAfter, Inst);
+}
+
 void ShuffleBlockStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
 
   SmallPtrSet<Instruction *, 8> AliveInsts;
