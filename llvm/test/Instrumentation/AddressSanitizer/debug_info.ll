@@ -13,13 +13,13 @@ define i32 @_Z3zzzi(i32 %p) nounwind uwtable sanitize_address !dbg !12 {
 entry:
   %p.addr = alloca i32, align 4
   %r = alloca i32, align 4
-  store volatile i32 %p, i32* %p.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %p.addr, metadata !17, metadata !DIExpression()), !dbg !18
-  call void @llvm.dbg.declare(metadata i32* %r, metadata !19, metadata !DIExpression()), !dbg !21
-  %0 = load i32, i32* %p.addr, align 4, !dbg !21
+  store volatile i32 %p, ptr %p.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %p.addr, metadata !17, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %r, metadata !19, metadata !DIExpression()), !dbg !21
+  %0 = load i32, ptr %p.addr, align 4, !dbg !21
   %add = add nsw i32 %0, 1, !dbg !21
-  store volatile i32 %add, i32* %r, align 4, !dbg !21
-  %1 = load i32, i32* %r, align 4, !dbg !22
+  store volatile i32 %add, ptr %r, align 4, !dbg !21
+  %1 = load i32, ptr %r, align 4, !dbg !22
   ret i32 %1, !dbg !22
 }
 
@@ -28,8 +28,8 @@ entry:
 ; Note: these dbg.declares used to contain `ptrtoint` operands. The instruction
 ; selector would then decline to put the variable in the MachineFunction side
 ; table. Check that the dbg.declares have `alloca` operands.
-;   CHECK: call void @llvm.dbg.declare(metadata i8* [[MyAlloca]], metadata ![[ARG_ID:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 32))
-;   CHECK: call void @llvm.dbg.declare(metadata i8* [[MyAlloca]], metadata ![[VAR_ID:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 48))
+;   CHECK: call void @llvm.dbg.declare(metadata ptr [[MyAlloca]], metadata ![[ARG_ID:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 32))
+;   CHECK: call void @llvm.dbg.declare(metadata ptr [[MyAlloca]], metadata ![[VAR_ID:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 48))
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 

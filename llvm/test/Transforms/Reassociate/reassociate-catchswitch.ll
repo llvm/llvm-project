@@ -1,14 +1,14 @@
 ; Catchswitch is interesting because reassociate previously tried to insert
 ; into the catchswitch block, which is impossible.
 ;
-; RUN: opt -reassociate -disable-output < %s
+; RUN: opt -passes=reassociate -disable-output < %s
 ;
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 source_filename = "catchswitch.cpp"
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.11.0"
 
-define dso_local void @"?f@@YAX_N@Z"(i1 %b) local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define dso_local void @"?f@@YAX_N@Z"(i1 %b) local_unnamed_addr #0 personality ptr @__CxxFrameHandler3 {
 entry:
   br i1 %b, label %if.then, label %if.else
 
@@ -25,7 +25,7 @@ catch.dispatch:                                   ; preds = %if.else, %if.then
   %0 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null, i32 64, i8* null]
+  %1 = catchpad within %0 [ptr null, i32 64, ptr null]
   %blech = sub nsw i32 5, %z.0
   %sub = sub nsw i32 %blech, %z.0
   call void @"?use@@YAXHH@Z"(i32 %z.0, i32 %sub) [ "funclet"(token %1) ]

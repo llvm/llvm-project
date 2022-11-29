@@ -9,11 +9,11 @@ entry:
 ; CHECK-LABEL: @constant_load
 ; CHECK-NOT: load
 ;
-; CHECK:   %[[LOAD_ADDR:[^ ]*]] = ptrtoint i32 addrspace(4)* %a to i64
+; CHECK:   %[[LOAD_ADDR:[^ ]*]] = ptrtoint ptr addrspace(4) %a to i64
 ; CHECK:   lshr i64 %[[LOAD_ADDR]], 3
 ; CHECK:   add i64 %{{.*}}, 2147450880
 ; CHECK:   %[[LOAD_SHADOW_PTR:[^ ]*]] = inttoptr
-; CHECK:   %[[LOAD_SHADOW:[^ ]*]] = load i8, i8* %[[LOAD_SHADOW_PTR]]
+; CHECK:   %[[LOAD_SHADOW:[^ ]*]] = load i8, ptr %[[LOAD_SHADOW_PTR]]
 ; CHECK:   icmp ne i8
 ; CHECK:   br i1 %{{.*}}, label %{{.*}}, label %{{.*}}
 ;
@@ -27,10 +27,10 @@ entry:
 ; CHECK:   unreachable
 ;
 ; The actual load.
-; CHECK:   load i32, i32 addrspace(4)* %a
+; CHECK:   load i32, ptr addrspace(4) %a
 ; CHECK:   ret void
 
-  %a = getelementptr inbounds [2 x i32], [2 x i32]  addrspace(4)* @x, i64 0, i64 %i
-  %q = load i32, i32 addrspace(4)* %a, align 4
+  %a = getelementptr inbounds [2 x i32], ptr  addrspace(4) @x, i64 0, i64 %i
+  %q = load i32, ptr addrspace(4) %a, align 4
   ret void
 }

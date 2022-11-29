@@ -4,7 +4,7 @@
 func.func @test_default_init() -> () {
   // CHECK: a -> 0
   "test.foo"() {tag = "a"} : () -> ()
-  return 
+  return
 }
 
 // -----
@@ -15,7 +15,7 @@ func.func @test_one_join() -> () {
   "test.foo"() {tag = "a"} : () -> ()
   // CHECK: b -> 1
   "test.foo"() {tag = "b", foo = 1 : ui64} : () -> ()
-  return 
+  return
 }
 
 // -----
@@ -28,7 +28,7 @@ func.func @test_two_join() -> () {
   "test.foo"() {tag = "b", foo = 1 : ui64} : () -> ()
   // CHECK: c -> 0
   "test.foo"() {tag = "c", foo = 1 : ui64} : () -> ()
-  return 
+  return
 }
 
 // -----

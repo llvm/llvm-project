@@ -13,19 +13,19 @@
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 
-define float @globalfunc1(i32*, float*) {
-  %3 = load i32, i32* %0, align 4, !tbaa !0
+define float @globalfunc1(ptr, ptr) {
+  %3 = load i32, ptr %0, align 4, !tbaa !0
   %4 = sitofp i32 %3 to float
-  %5 = load float, float* %1, align 4, !tbaa !4
+  %5 = load float, ptr %1, align 4, !tbaa !4
   %6 = fadd float %4, %5
   ret float %6
 }
 
 ; We need a second function for force the metadata to be emitted in the global block
-define float @globalfunc2(i32*, float*) {
-  %3 = load i32, i32* %0, align 4, !tbaa !0
+define float @globalfunc2(ptr, ptr) {
+  %3 = load i32, ptr %0, align 4, !tbaa !0
   %4 = sitofp i32 %3 to float
-  %5 = load float, float* %1, align 4, !tbaa !4
+  %5 = load float, ptr %1, align 4, !tbaa !4
   %6 = fadd float %4, %5
   ret float %6
 }

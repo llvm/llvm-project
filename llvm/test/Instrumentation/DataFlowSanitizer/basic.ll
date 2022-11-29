@@ -14,38 +14,38 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 
-define i8 @load(i8* %p) {
+define i8 @load(ptr %p) {
   ; CHECK-LABEL: define i8 @load.dfsan
   ; CHECK: xor i64 {{.*}}, [[SHADOW_XOR_MASK]]
   ; CHECK: ret i8 %a
-  %a = load i8, i8* %p
+  %a = load i8, ptr %p
   ret i8 %a
 }
 
-define void @store(i8* %p) {
+define void @store(ptr %p) {
   ; CHECK-LABEL: define void @store.dfsan
   ; CHECK: xor i64 {{.*}}, [[SHADOW_XOR_MASK]]
   ; CHECK: ret void
-  store i8 0, i8* %p
+  store i8 0, ptr %p
   ret void
 }
 
-; CHECK: declare void @__dfsan_load_callback(i[[#SBITS]], i8*)
-; CHECK: declare void @__dfsan_store_callback(i[[#SBITS]], i8*)
-; CHECK: declare void @__dfsan_mem_transfer_callback(i[[#SBITS]]*, i64)
+; CHECK: declare void @__dfsan_load_callback(i[[#SBITS]], ptr)
+; CHECK: declare void @__dfsan_store_callback(i[[#SBITS]], ptr)
+; CHECK: declare void @__dfsan_mem_transfer_callback(ptr, i64)
 ; CHECK: declare void @__dfsan_cmp_callback(i[[#SBITS]])
 
 ; CHECK: ; Function Attrs: nounwind memory(read)
-; CHECK-NEXT: declare zeroext i[[#SBITS]] @__dfsan_union_load(i[[#SBITS]]*, i64)
+; CHECK-NEXT: declare zeroext i[[#SBITS]] @__dfsan_union_load(ptr, i64)
 
 ; CHECK: ; Function Attrs: nounwind memory(read)
-; CHECK-NEXT: declare zeroext i64 @__dfsan_load_label_and_origin(i8*, i64)
+; CHECK-NEXT: declare zeroext i64 @__dfsan_load_label_and_origin(ptr, i64)
 
-; CHECK: declare void @__dfsan_unimplemented(i8*)
-; CHECK: declare void @__dfsan_set_label(i[[#SBITS]] zeroext, i32 zeroext, i8*, i64)
+; CHECK: declare void @__dfsan_unimplemented(ptr)
+; CHECK: declare void @__dfsan_set_label(i[[#SBITS]] zeroext, i32 zeroext, ptr, i64)
 ; CHECK: declare void @__dfsan_nonzero_label()
-; CHECK: declare void @__dfsan_vararg_wrapper(i8*)
+; CHECK: declare void @__dfsan_vararg_wrapper(ptr)
 ; CHECK: declare zeroext i32 @__dfsan_chain_origin(i32 zeroext)
 ; CHECK: declare zeroext i32 @__dfsan_chain_origin_if_tainted(i[[#SBITS]] zeroext, i32 zeroext)
-; CHECK: declare void @__dfsan_mem_origin_transfer(i8*, i8*, i64)
-; CHECK: declare void @__dfsan_maybe_store_origin(i[[#SBITS]] zeroext, i8*, i64, i32 zeroext)
+; CHECK: declare void @__dfsan_mem_origin_transfer(ptr, ptr, i64)
+; CHECK: declare void @__dfsan_maybe_store_origin(i[[#SBITS]] zeroext, ptr, i64, i32 zeroext)

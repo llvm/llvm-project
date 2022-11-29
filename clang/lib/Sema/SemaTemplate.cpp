@@ -5981,8 +5981,12 @@ bool Sema::CheckTemplateArgumentList(
       // A non-expanded parameter pack before the end of the parameter list
       // only occurs for an ill-formed template parameter list, unless we've
       // got a partial argument list for a function template, so just bail out.
-      if (Param + 1 != ParamEnd)
+      if (Param + 1 != ParamEnd) {
+        assert(
+            (Template->getMostRecentDecl()->getKind() != Decl::Kind::Concept) &&
+            "Concept templates must have parameter packs at the end.");
         return true;
+      }
 
       SugaredConverted.push_back(
           TemplateArgument::CreatePackCopy(Context, SugaredArgumentPack));
@@ -8922,17 +8926,33 @@ Decl *Sema::ActOnConceptDefinition(Scope *S,
     return nullptr;
   }
 
-  if (TemplateParameterLists.front()->size() == 0) {
+  TemplateParameterList *Params = TemplateParameterLists.front();
+
+  if (Params->size() == 0) {
     Diag(NameLoc, diag::err_concept_no_parameters);
     return nullptr;
+  }
+
+  // Ensure that the parameter pack, if present, is the last parameter in the
+  // template.
+  for (TemplateParameterList::const_iterator ParamIt = Params->begin(),
+                                             ParamEnd = Params->end();
+       ParamIt != ParamEnd; ++ParamIt) {
+    Decl const *Param = *ParamIt;
+    if (Param->isParameterPack()) {
+      if (++ParamIt == ParamEnd)
+        break;
+      Diag(Param->getLocation(),
+           diag::err_template_param_pack_must_be_last_template_parameter);
+      return nullptr;
+    }
   }
 
   if (DiagnoseUnexpandedParameterPack(ConstraintExpr))
     return nullptr;
 
-  ConceptDecl *NewDecl = ConceptDecl::Create(Context, DC, NameLoc, Name,
-                                             TemplateParameterLists.front(),
-                                             ConstraintExpr);
+  ConceptDecl *NewDecl =
+      ConceptDecl::Create(Context, DC, NameLoc, Name, Params, ConstraintExpr);
 
   if (NewDecl->hasAssociatedConstraints()) {
     // C++2a [temp.concept]p4:

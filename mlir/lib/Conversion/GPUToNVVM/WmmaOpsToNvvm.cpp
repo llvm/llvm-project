@@ -77,6 +77,10 @@ struct WmmaLoadOpToNVVMLowering
     if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)))
       return failure();
 
+    // TODO: Support transposed mma loads.
+    if (subgroupMmaLoadMatrixOp.getTranspose())
+      return failure();
+
     // Get the shape of the MMAMatrix type being returned. The shape will
     // choose which intrinsic this op will be lowered to.
     gpu::MMAMatrixType retType =

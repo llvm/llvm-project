@@ -524,8 +524,8 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  2      9     1.50    *                   vpblendd	$11, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  2      1     2.00                        vpblendvb	%ymm3, %ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  2      8     2.00    *                   vpblendvb	%ymm3, (%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      2     0.33                        vpblendw	$11, %ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      9     0.50    *                   vpblendw	$11, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  2      1     0.67                        vpblendw	$11, %ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      8     0.67    *                   vpblendw	$11, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.50                        vpbroadcastb	%xmm0, %xmm0
 # CHECK-NEXT:  2      8     1.00    *                   vpbroadcastb	(%rax), %xmm0
 # CHECK-NEXT:  2      2     1.00                        vpbroadcastb	%xmm0, %ymm0
@@ -778,7 +778,7 @@ vpxor           (%rax), %ymm1, %ymm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 66.50  66.50   -      -      -      -      -     119.50 238.50 158.00 66.00   -
+# CHECK-NEXT: 66.50  66.50   -      -      -      -      -     120.17 239.17 158.00 66.67   -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -846,8 +846,8 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.50   1.50    -      -      -     vpblendd	$11, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpblendvb	%ymm3, %ymm0, %ymm1, %ymm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     2.00    -      -      -      -     vpblendvb	%ymm3, (%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33    -     0.33    -     vpblendw	$11, %ymm0, %ymm1, %ymm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.33   0.33    -     0.33    -     vpblendw	$11, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67    -     0.67    -     vpblendw	$11, %ymm0, %ymm1, %ymm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.67   0.67    -     0.67    -     vpblendw	$11, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -     vpbroadcastb	%xmm0, %xmm0
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     1.00   1.00    -      -     vpbroadcastb	(%rax), %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -     vpbroadcastb	%xmm0, %ymm0

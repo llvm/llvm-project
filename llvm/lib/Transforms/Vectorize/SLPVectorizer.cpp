@@ -94,6 +94,7 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <tuple>
@@ -10042,9 +10043,12 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
         }
 
         // In addition to the cases handle just above, we need to prevent
-        // allocas from moving below a stacksave.  The stackrestore case
-        // is currently thought to be conservatism.
-        if (isa<AllocaInst>(BundleMember->Inst)) {
+        // allocas and loads/stores from moving below a stacksave or a
+        // stackrestore. Avoiding moving allocas below stackrestore is currently
+        // thought to be conservatism. Moving loads/stores below a stackrestore
+        // can lead to incorrect code.
+        if (isa<AllocaInst>(BundleMember->Inst) ||
+            BundleMember->Inst->mayReadOrWriteMemory()) {
           for (Instruction *I = BundleMember->Inst->getNextNode();
                I != ScheduleEnd; I = I->getNextNode()) {
             if (!match(I, m_Intrinsic<Intrinsic::stacksave>()) &&
@@ -12797,7 +12801,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       return true;
     if (Opcodes1.size() > Opcodes2.size())
       return false;
-    Optional<bool> ConstOrder;
+    std::optional<bool> ConstOrder;
     for (int I = 0, E = Opcodes1.size(); I < E; ++I) {
       // Undefs are compatible with any other value.
       if (isa<UndefValue>(Opcodes1[I]) || isa<UndefValue>(Opcodes2[I])) {

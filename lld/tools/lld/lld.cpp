@@ -41,6 +41,7 @@
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/Process.h"
 #include <cstdlib>
+#include <optional>
 
 using namespace lld;
 using namespace llvm;
@@ -228,7 +229,7 @@ int lld_main(int argc, char **argv) {
     return lldMain(argc, const_cast<const char **>(argv), llvm::outs(),
                    llvm::errs());
 
-  Optional<int> mainRet;
+  std::optional<int> mainRet;
   CrashRecoveryContext::Enable();
 
   for (unsigned i = inTestVerbosity(); i > 0; --i) {

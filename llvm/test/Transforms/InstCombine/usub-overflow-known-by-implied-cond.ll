@@ -123,8 +123,7 @@ define i32 @test5(i32 %a, i32 %b) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 false, label [[BB3]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[SUB1:%.*]] = sub nuw i32 [[A]], [[B]]
-; CHECK-NEXT:    ret i32 [[SUB1]]
+; CHECK-NEXT:    ret i32 0
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i32 0
 ;

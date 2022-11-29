@@ -28,12 +28,12 @@ define hidden i32 @__cxa_atexit(i32 %func, i32 %arg, i32 %dso_handle) {
   ret i32 0
 }
 
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [
-  { i32, void ()*, i8* } { i32 1, void ()* @func1, i8* null }
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [
+  { i32, ptr, ptr } { i32 1, ptr @func1, ptr null }
 ]
 
-@llvm.global_dtors = appending global [1 x { i32, void ()*, i8* }] [
-  { i32, void ()*, i8* } { i32 1, void ()* @func2, i8* null }
+@llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [
+  { i32, ptr, ptr } { i32 1, ptr @func2, ptr null }
 ]
 
 ; Check that we have exactly the needed exports: `memory` because that's

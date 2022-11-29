@@ -8,12 +8,10 @@ unittest("MCJITTests") {
     "//llvm/lib/ExecutionEngine/RuntimeDyld",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:NativeTarget",
-    "//llvm/lib/Transforms/IPO",
-    "//llvm/lib/Transforms/InstCombine",
-    "//llvm/lib/Transforms/Scalar",
   ]
   sources = [
     "MCJITCAPITest.cpp",

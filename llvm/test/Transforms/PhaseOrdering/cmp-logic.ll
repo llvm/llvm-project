@@ -136,10 +136,8 @@ define i32 @PR56119(i32 %e.coerce) {
 ;
 entry:
   %e = alloca %struct.a, align 4
-  %coerce.dive = getelementptr inbounds %struct.a, ptr %e, i32 0, i32 0
-  store i32 %e.coerce, ptr %coerce.dive, align 4
-  %b = getelementptr inbounds %struct.a, ptr %e, i32 0, i32 0
-  %0 = load i32, ptr %b, align 4
+  store i32 %e.coerce, ptr %e, align 4
+  %0 = load i32, ptr %e, align 4
   %conv = trunc i32 %0 to i8
   %conv1 = trunc i64 -1 to i8
   %conv2 = zext i8 %conv to i32

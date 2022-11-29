@@ -756,7 +756,7 @@ void COFFDumper::printPEHeader(const PEHeader *Hdr) {
     };
 
     for (uint32_t i = 0; i < Hdr->NumberOfRvaAndSize; ++i)
-      if (i < sizeof(directory) / sizeof(char *))
+      if (i < std::size(directory))
         printDataDirectory(i, directory[i]);
       else
         printDataDirectory(i, "Unknown");

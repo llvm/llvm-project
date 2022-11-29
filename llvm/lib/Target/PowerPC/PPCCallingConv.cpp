@@ -120,7 +120,7 @@ static bool CC_PPC32_SPE_CustomSplitFP64(unsigned &ValNo, MVT &ValVT,
     return false;
 
   unsigned i;
-  for (i = 0; i < sizeof(HiRegList) / sizeof(HiRegList[0]); ++i)
+  for (i = 0; i < std::size(HiRegList); ++i)
     if (HiRegList[i] == Reg)
       break;
 
@@ -149,7 +149,7 @@ static bool CC_PPC32_SPE_RetF64(unsigned &ValNo, MVT &ValVT,
     return false;
 
   unsigned i;
-  for (i = 0; i < sizeof(HiRegList) / sizeof(HiRegList[0]); ++i)
+  for (i = 0; i < std::size(HiRegList); ++i)
     if (HiRegList[i] == Reg)
       break;
 

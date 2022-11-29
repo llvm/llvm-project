@@ -33,6 +33,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <map>
+#include <optional>
 using namespace llvm;
 
 #define DEBUG_TYPE "clone-function"
@@ -136,7 +137,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   // duplicate instructions and then freeze them in the MD map. We also record
   // information about dbg.value and dbg.declare to avoid duplicating the
   // types.
-  Optional<DebugInfoFinder> DIFinder;
+  std::optional<DebugInfoFinder> DIFinder;
 
   // Track the subprogram attachment that needs to be cloned to fine-tune the
   // mapping within the same module.

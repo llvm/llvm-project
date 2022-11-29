@@ -12,7 +12,6 @@
 #include <cstdint>
 #include <variant>
 
-#include "EmulateInstructionRISCV.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Optional.h"
 

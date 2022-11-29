@@ -91,16 +91,9 @@ ParseResult mlir::parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
     DenseI64ArrayAttr &integers) {
-  if (failed(parser.parseLSquare()))
-    return failure();
-  // 0-D.
-  if (succeeded(parser.parseOptionalRSquare())) {
-    integers = parser.getBuilder().getDenseI64ArrayAttr({});
-    return success();
-  }
 
   SmallVector<int64_t, 4> integerVals;
-  while (true) {
+  auto parseIntegerOrValue = [&]() {
     OpAsmParser::UnresolvedOperand operand;
     auto res = parser.parseOptionalOperand(operand);
     if (res.has_value() && succeeded(res.value())) {
@@ -109,17 +102,16 @@ ParseResult mlir::parseDynamicIndexList(
     } else {
       int64_t integer;
       if (failed(parser.parseInteger(integer)))
-        return parser.emitError(parser.getNameLoc())
-               << "expected SSA value or integer";
+        return failure();
       integerVals.push_back(integer);
     }
-
-    if (succeeded(parser.parseOptionalComma()))
-      continue;
-    if (failed(parser.parseRSquare()))
-      return failure();
-    break;
-  }
+    return success();
+  };
+  if (parser.parseCommaSeparatedList(OpAsmParser::Delimiter::Square,
+                                     parseIntegerOrValue,
+                                     " in dynamic index list"))
+    return parser.emitError(parser.getNameLoc())
+           << "expected SSA value or integer";
   integers = parser.getBuilder().getDenseI64ArrayAttr(integerVals);
   return success();
 }

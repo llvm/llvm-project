@@ -105,7 +105,7 @@ void CSKYAsmPrinter::emitCustomConstantPool(const MachineInstr *MI) {
 
   // If this is the first entry of the pool, mark it.
   if (!InConstantPool) {
-    OutStreamer->emitValueToAlignment(4);
+    OutStreamer->emitValueToAlignment(Align(4));
     InConstantPool = true;
   }
 

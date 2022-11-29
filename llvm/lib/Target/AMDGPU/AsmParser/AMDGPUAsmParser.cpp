@@ -1819,13 +1819,6 @@ public:
   OperandMatchResultTy parseVOPD(OperandVector &Operands);
 };
 
-struct OptionalOperand {
-  const char *Name;
-  AMDGPUOperand::ImmTy Type;
-  bool IsBit;
-  bool (*ConvertResult)(int64_t&);
-};
-
 } // end anonymous namespace
 
 // May be called with integer type with equivalent bitwidth.

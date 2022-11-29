@@ -525,7 +525,7 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     1.00                        vpblendvb	%ymm3, %ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  1      8     1.00    *                   vpblendvb	%ymm3, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.33                        vpblendw	$11, %ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      8     0.33    *                   vpblendw	$11, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      8     0.33    *                   vpblendw	$11, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.50                        vpbroadcastb	%xmm0, %xmm0
 # CHECK-NEXT:  2      8     1.00    *                   vpbroadcastb	(%rax), %xmm0
 # CHECK-NEXT:  1      2     0.50                        vpbroadcastb	%xmm0, %ymm0

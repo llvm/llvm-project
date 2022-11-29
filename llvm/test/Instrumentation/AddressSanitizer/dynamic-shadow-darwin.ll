@@ -13,18 +13,18 @@
 ; // macOS does use dynamic shadow placement on arm64
 ; RUN: opt -passes=asan -mtriple=arm64-apple-macosx --data-layout="e-m:o-i64:64-i128:128-n32:64-S128" -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-DYNAMIC -DPTR_SIZE=64
 
-define i32 @test_load(i32* %a) sanitize_address {
+define i32 @test_load(ptr %a) sanitize_address {
 ; First instrumentation in the function must be to load the dynamic shadow
 ; address into a local variable.
 ; CHECK-LABEL: @test_load
 ; CHECK: entry:
-; CHECK-DYNAMIC-NEXT: %[[SHADOW:[^ ]*]] = load i[[PTR_SIZE]], i[[PTR_SIZE]]* @__asan_shadow_memory_dynamic_address
+; CHECK-DYNAMIC-NEXT: %[[SHADOW:[^ ]*]] = load i[[PTR_SIZE]], ptr @__asan_shadow_memory_dynamic_address
 ; CHECK-NONDYNAMIC-NOT: __asan_shadow_memory_dynamic_address
 
 ; Shadow address is loaded and added into the whole offset computation.
 ; CHECK-DYNAMIC: add i[[PTR_SIZE]] %{{.*}}, %[[SHADOW]]
 
 entry:
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   ret i32 %tmp1
 }

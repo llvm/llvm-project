@@ -3466,7 +3466,7 @@ AArch64AsmParser::tryParseMatrixRegister(OperandVector &Operands) {
   StringRef Tail = Name.drop_front(DotPosition);
   StringRef RowOrColumn = Head.take_back();
 
-  MatrixKind Kind = StringSwitch<MatrixKind>(RowOrColumn)
+  MatrixKind Kind = StringSwitch<MatrixKind>(RowOrColumn.lower())
                         .Case("h", MatrixKind::Row)
                         .Case("v", MatrixKind::Col)
                         .Default(MatrixKind::Tile);

@@ -15,12 +15,12 @@ target triple = "x86_64-unknown-linux-gnu"
 @__start_foo_section = external global i32
 @__stop_bar_section = external global i32
 
-define hidden i32* @use1() {
-  ret i32* @__start_foo_section
+define hidden ptr @use1() {
+  ret ptr @__start_foo_section
 }
 
-define i32* @use2() {
-  ret i32* @__stop_bar_section
+define ptr @use2() {
+  ret ptr @__stop_bar_section
 }
 
 ; CHECK-NOT: zed_section

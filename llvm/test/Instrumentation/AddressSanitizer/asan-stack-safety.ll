@@ -7,8 +7,7 @@
 define i32 @load() sanitize_address {
   %buf = alloca [10 x i8], align 1
   ; NOSAFETY: call i64 @__asan_stack_malloc
-  %arrayidx = getelementptr inbounds [10 x i8], [10 x i8]* %buf, i64 0, i64 0
-  %1 = load i8, i8* %arrayidx, align 1
+  %1 = load i8, ptr %buf, align 1
   ; NOSAFETY: call void @__asan_load1
   ret i32 0
 }
@@ -17,8 +16,7 @@ define i32 @load() sanitize_address {
 define i32 @store() sanitize_address {
   %buf = alloca [10 x i8], align 1
   ; NOSAFETY: call i64 @__asan_stack_malloc
-  %arrayidx = getelementptr inbounds [10 x i8], [10 x i8]* %buf, i64 0, i64 0
-  store i8 0, i8* %arrayidx
+  store i8 0, ptr %buf
   ; NOSAFETY: call void @__asan_store1
   ret i32 0
 }
@@ -27,11 +25,10 @@ define i32 @store() sanitize_address {
 define i32 @unsafe_alloca(i32 %i) sanitize_address {
   %buf.sroa.0 = alloca [10 x i8], align 4
   ; CHECK: call i64 @__asan_stack_malloc
-  %ptr = getelementptr [10 x i8], [10 x i8]* %buf.sroa.0, i32 %i, i32 0
-  store volatile i8 0, i8* %ptr, align 4
+  %ptr = getelementptr [10 x i8], ptr %buf.sroa.0, i32 %i, i32 0
+  store volatile i8 0, ptr %ptr, align 4
   ; CHECK: call void @__asan_store1
-  %ptr2 = getelementptr [10 x i8], [10 x i8]* %buf.sroa.0, i32 0, i32 0
-  store volatile i8 0, i8* %ptr2, align 4
+  store volatile i8 0, ptr %buf.sroa.0, align 4
   ; NOSAFETY: call void @__asan_store1
   ret i32 0
 }
@@ -40,8 +37,7 @@ define i32 @unsafe_alloca(i32 %i) sanitize_address {
 define void @atomicrmw() sanitize_address {
   %buf = alloca [10 x i8], align 1
   ; NOSAFETY: call i64 @__asan_stack_malloc
-  %arrayidx = getelementptr inbounds [10 x i8], [10 x i8]* %buf, i64 0, i64 0
-  %1 = atomicrmw add i8* %arrayidx, i8 1 seq_cst
+  %1 = atomicrmw add ptr %buf, i8 1 seq_cst
   ; NOSAFETY: call void @__asan_store1
   ret void
 }
@@ -50,8 +46,7 @@ define void @atomicrmw() sanitize_address {
 define void @cmpxchg(i8 %compare_to, i8 %new_value) sanitize_address {
   %buf = alloca [10 x i8], align 1
   ; NOSAFETY: call i64 @__asan_stack_malloc
-  %arrayidx = getelementptr inbounds [10 x i8], [10 x i8]* %buf, i64 0, i64 0
-  %1 = cmpxchg i8* %arrayidx, i8 %compare_to, i8 %new_value seq_cst seq_cst
+  %1 = cmpxchg ptr %buf, i8 %compare_to, i8 %new_value seq_cst seq_cst
   ; NOSAFETY: call void @__asan_store1
   ret void
 }

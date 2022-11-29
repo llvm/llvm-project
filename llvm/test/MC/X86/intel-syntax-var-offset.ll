@@ -30,20 +30,20 @@
 ; CHECK:	mov	rdx, offset X
 ; CHECK:	mov	qword ptr [PX], rdx
 
-@PZ = common dso_local global i8* null, align 8
+@PZ = common dso_local global ptr null, align 8
 @Z = common dso_local global [4 x i8] zeroinitializer, align 1
 @X = common dso_local global [4 x i8] zeroinitializer, align 1
-@PX = common dso_local global i8* null, align 8
+@PX = common dso_local global ptr null, align 8
 @Y = common dso_local global [4 x i8] zeroinitializer, align 1
-@PY = common dso_local global i8* null, align 8
+@PY = common dso_local global ptr null, align 8
 
-define dso_local i8* @test057(i64 %x) {
+define dso_local ptr @test057(i64 %x) {
 entry:
   %x.addr = alloca i64, align 8
-  store i64 %x, i64* %x.addr, align 8
-  %0 = call i8* asm "movq $1, %rax;movq %rax, $0;pushq $$Y;popq %rcx;movq %rcx, PY;movq $$X, %rdx;movq %rdx, PX;", "=r,im,~{rax},~{rcx},~{rdx},~{dirflag},~{fpsr},~{flags}"(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @Z, i32 0, i32 0))
-  store i8* %0, i8** @PZ, align 8
-  %1 = load i8*, i8** @PZ, align 8
-  ret i8* %1
+  store i64 %x, ptr %x.addr, align 8
+  %0 = call ptr asm "movq $1, %rax;movq %rax, $0;pushq $$Y;popq %rcx;movq %rcx, PY;movq $$X, %rdx;movq %rdx, PX;", "=r,im,~{rax},~{rcx},~{rdx},~{dirflag},~{fpsr},~{flags}"(ptr @Z)
+  store ptr %0, ptr @PZ, align 8
+  %1 = load ptr, ptr @PZ, align 8
+  ret ptr %1
 }
 

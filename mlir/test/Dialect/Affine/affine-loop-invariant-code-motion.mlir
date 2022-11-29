@@ -136,9 +136,9 @@ func.func @invariant_code_inside_affine_if() {
   // CHECK-NEXT: %[[cst:.*]] = arith.constant 8.000000e+00 : f32
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT: affine.apply #map{{[0-9]*}}(%arg0)
-  // CHECK-NEXT: affine.if 
+  // CHECK-NEXT: affine.if
   // CHECK-NEXT: arith.addf %[[cst]], %[[cst]] : f32
-  // CHECK-NEXT: affine.store 
+  // CHECK-NEXT: affine.store
   // CHECK-NEXT: }
 
 
@@ -170,7 +170,7 @@ func.func @dependent_stores() {
 
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:   affine.store %[[mul]]
-  // CHECK-NEXT:   affine.store 
+  // CHECK-NEXT:   affine.store
 
   return
 }
@@ -227,8 +227,8 @@ func.func @load_dependent_store() {
   // CHECK-NEXT: arith.addf %[[cst]], %[[cst_0]] : f32
   // CHECK-NEXT: arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT: affine.for 
-  // CHECK-NEXT:   affine.store 
+  // CHECK-NEXT: affine.for
+  // CHECK-NEXT:   affine.store
   // CHECK-NEXT:   affine.load
 
   return
@@ -284,7 +284,7 @@ func.func @invariant_affine_if() {
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT: }
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT: affine.if 
+  // CHECK-NEXT: affine.if
   // CHECK-NEXT: arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.store
   // CHECK-NEXT: }
@@ -312,9 +312,9 @@ func.func @invariant_affine_if2() {
   // CHECK-NEXT: %[[cst:.*]] = arith.constant 8.000000e+00 : f32
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT: affine.if 
+  // CHECK-NEXT: affine.if
   // CHECK-NEXT:   arith.addf %[[cst]], %[[cst]] : f32
-  // CHECK-NEXT:   affine.store 
+  // CHECK-NEXT:   affine.store
   // CHECK-NEXT: }
   // CHECK-NEXT: }
 
@@ -343,10 +343,10 @@ func.func @invariant_affine_nested_if() {
   // CHECK-NEXT: %[[cst:.*]] = arith.constant 8.000000e+00 : f32
   // CHECK-NEXT: affine.for %[[arg0:.*]] = 0 to 10 {
   // CHECK-NEXT: affine.for %[[arg1:.*]] = 0 to 10 {
-  // CHECK-NEXT: affine.if 
+  // CHECK-NEXT: affine.if
   // CHECK-NEXT: arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.store {{.*}}[%[[arg0]]] : memref<10xf32>
-  // CHECK-NEXT: affine.if 
+  // CHECK-NEXT: affine.if
   // CHECK-NEXT: affine.store {{.*}}[%[[arg1]]] : memref<10xf32>
   // CHECK-NEXT: }
   // CHECK-NEXT: }
@@ -379,10 +379,10 @@ func.func @invariant_affine_nested_if_else() {
   // CHECK-NEXT: %[[cst:.*]] = arith.constant 8.000000e+00 : f32
   // CHECK-NEXT: affine.for %[[arg0:.*]] = 0 to 10 {
   // CHECK-NEXT: affine.for %[[arg1:.*]] = 0 to 10 {
-  // CHECK-NEXT: affine.if 
+  // CHECK-NEXT: affine.if
   // CHECK-NEXT: arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.store {{.*}}[%[[arg0]]] : memref<10xf32>
-  // CHECK-NEXT: affine.if 
+  // CHECK-NEXT: affine.if
   // CHECK-NEXT: affine.store {{.*}}[%[[arg0]]] : memref<10xf32>
   // CHECK-NEXT: } else {
   // CHECK-NEXT: affine.store {{.*}}[%[[arg1]]] : memref<10xf32>
@@ -420,10 +420,10 @@ func.func @invariant_affine_nested_if_else2() {
   // CHECK-NEXT: affine.for %[[arg0:.*]] = 0 to 10 {
   // CHECK-NEXT: }
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT: affine.if 
+  // CHECK-NEXT: affine.if
   // CHECK-NEXT: arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.load {{.*}}[%[[arg0]]] : memref<10xf32>
-  // CHECK-NEXT: affine.if 
+  // CHECK-NEXT: affine.if
   // CHECK-NEXT: affine.store {{.*}}[%[[arg0]]] : memref<10xf32>
   // CHECK-NEXT: } else {
   // CHECK-NEXT: affine.load {{.*}}[%[[arg0]]] : memref<10xf32>
@@ -456,10 +456,10 @@ func.func @invariant_affine_nested_if2() {
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT: }
   // CHECK-NEXT: affine.for %[[arg0:.*]] = 0 to 10 {
-  // CHECK-NEXT: affine.if 
+  // CHECK-NEXT: affine.if
   // CHECK-NEXT: arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.load {{.*}}[%[[arg0]]] : memref<10xf32>
-  // CHECK-NEXT: affine.if 
+  // CHECK-NEXT: affine.if
   // CHECK-NEXT: affine.load {{.*}}[%[[arg0]]] : memref<10xf32>
   // CHECK-NEXT: }
   // CHECK-NEXT: }
@@ -489,7 +489,7 @@ func.func @invariant_affine_for_inside_affine_if() {
   // CHECK-NEXT: %[[cst:.*]] = arith.constant 8.000000e+00 : f32
   // CHECK-NEXT: affine.for %[[arg0:.*]] = 0 to 10 {
   // CHECK-NEXT: affine.for %[[arg1:.*]] = 0 to 10 {
-  // CHECK-NEXT: affine.if 
+  // CHECK-NEXT: affine.if
   // CHECK-NEXT: arith.addf %[[cst]], %[[cst]] : f32
   // CHECK-NEXT: affine.store {{.*}}[%[[arg0]]] : memref<10xf32>
   // CHECK-NEXT: affine.for %[[arg2:.*]] = 0 to 10 {
@@ -516,7 +516,7 @@ func.func @invariant_constant_and_load() {
   // CHECK: memref.alloc() : memref<100xf32>
   // CHECK-NEXT: memref.alloc() : memref<100xf32>
   // CHECK-NEXT: arith.constant 0 : index
-  // CHECK-NEXT: affine.load 
+  // CHECK-NEXT: affine.load
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 5 {
   // CHECK-NEXT:  affine.store
 
@@ -542,7 +542,7 @@ func.func @nested_load_store_same_memref() {
   // CHECK-NEXT: arith.constant 0 : index
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:   affine.load
-  // CHECK-NEXT:   affine.for 
+  // CHECK-NEXT:   affine.for
   // CHECK-NEXT:    affine.store %[[cst]]
 
 

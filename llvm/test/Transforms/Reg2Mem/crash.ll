@@ -13,13 +13,13 @@ declare void @f4_()
 
 declare void @_Z12xxxdtsP10xxxpq()
 
-define hidden void @_ZN12xxxyzIi9xxxwLi29ELi0EE4f3NewES0_i() ssp align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_sj0 to i8*) {
+define hidden void @_ZN12xxxyzIi9xxxwLi29ELi0EE4f3NewES0_i() ssp align 2 personality ptr @__gxx_personality_sj0 {
 bb:
   invoke void @f4_()
           to label %bb1 unwind label %.thread
 
 .thread:                                          ; preds = %bb
-  %tmp = landingpad { i8*, i32 }
+  %tmp = landingpad { ptr, i32 }
           cleanup
   br label %bb13
 
@@ -32,14 +32,14 @@ bb1:                                              ; preds = %bb
           to label %bb6 unwind label %bb2
 
 bb2:                                              ; preds = %.noexc
-  %tmp3 = landingpad { i8*, i32 }
+  %tmp3 = landingpad { ptr, i32 }
           cleanup
   invoke void @f3()
           to label %.body unwind label %bb4
 
 bb4:                                              ; preds = %bb2
-  %tmp5 = landingpad { i8*, i32 }
-          catch i8* null
+  %tmp5 = landingpad { ptr, i32 }
+          catch ptr null
   unreachable
 
 bb6:                                              ; preds = %.noexc
@@ -54,13 +54,13 @@ bb7:                                              ; preds = %_ZN6xxxdIN12xxxyzIi
   ret void
 
 bb8:                                              ; preds = %_ZN6xxxdIN12xxxyzIi9xxxwLi29ELi0EE4fr1jS3_.exit
-  %tmp9 = landingpad { i8*, i32 }
+  %tmp9 = landingpad { ptr, i32 }
           cleanup
   br label %_ZN10xxxpqdlev.exit
 
 bb10:                                             ; preds = %bb6, %bb1
   %.1 = phi i1 [ true, %bb1 ], [ false, %bb6 ]
-  %tmp11 = landingpad { i8*, i32 }
+  %tmp11 = landingpad { ptr, i32 }
           cleanup
   br label %.body
 
@@ -77,11 +77,11 @@ bb13:                                             ; preds = %bb12, %.thread
           to label %_ZN10xxxpqdlev.exit unwind label %bb14
 
 _ZN10xxxpqdlev.exit:                              ; preds = %bb13, %bb12, %bb8
-  resume { i8*, i32 } undef
+  resume { ptr, i32 } undef
 
 bb14:                                             ; preds = %bb13, %.body
-  %tmp15 = landingpad { i8*, i32 }
-          catch i8* null
+  %tmp15 = landingpad { ptr, i32 }
+          catch ptr null
   unreachable
 }
 

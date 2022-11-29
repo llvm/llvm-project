@@ -4,10 +4,10 @@
 // CHECK: #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 // CHECK-LABEL: @broadcast_resize_nearest_fp
 func.func @broadcast_resize_nearest_fp(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x15x13x7xf32> {
-  // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0 
+  // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0
   // CHECK-SAME{literal}: [[0], [1, 2, 3]]
   // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x15x13x7xf32>
-  // CHECK: %[[GENERIC:.+]] = linalg.generic 
+  // CHECK: %[[GENERIC:.+]] = linalg.generic
   // CHECK-SAME: indexing_maps = [#map, #map1]
   // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
   // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xf32>)
@@ -29,7 +29,7 @@ func.func @broadcast_resize_bilinear_fp(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3
   // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0
   // CHECK-SAME{literal}: [[0], [1, 2, 3]]
   // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x15x13x7xf32>
-  // CHECK: %[[GENERIC:.+]] = linalg.generic 
+  // CHECK: %[[GENERIC:.+]] = linalg.generic
   // CHECK-SAME: indexing_maps = [#map, #map1]
   // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
   // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xf32>)
@@ -51,7 +51,7 @@ func.func @broadcast_resize_nearest_i8(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x1
   // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0
   // CHECK-SAME{literal}: [[0], [1, 2, 3]]
   // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x15x13x7xi8>
-  // CHECK: %[[GENERIC:.+]] = linalg.generic 
+  // CHECK: %[[GENERIC:.+]] = linalg.generic
   // CHECK-SAME: indexing_maps = [#map, #map1]
   // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
   // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xi8>)
@@ -70,16 +70,16 @@ func.func @broadcast_resize_nearest_i8(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x1
 // CHECK: #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 // CHECK-LABEL: @broadcast_resize_nearest_i32
 func.func @broadcast_resize_nearest_i32(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x15x13x7xi32> {
-  // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0 
+  // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0
   // CHECK-SAME{literal}: [[0], [1, 2, 3]]
   // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x15x13x7xi32>
-  // CHECK: %[[GENERIC:.+]] = linalg.generic 
+  // CHECK: %[[GENERIC:.+]] = linalg.generic
   // CHECK-SAME: indexing_maps = [#map, #map1]
   // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
   // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xi8>)
   // CHECK-SAME: outs(%[[EMPTY]] : tensor<3x15x13x7xi32>)
   // CHECK-NEXT: ^bb0(%[[IN:.+]]: i8, %[[OUT:.+]]: i32):
-  // CHECK:   %[[EXT:.+]] = arith.extsi %[[IN]] : i8 to i32 
+  // CHECK:   %[[EXT:.+]] = arith.extsi %[[IN]] : i8 to i32
   // CHECK:   linalg.yield %[[EXT]]
   %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [2, 2, 1, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x1x7xi8>) -> tensor<3x15x13x7xi32>
 
@@ -96,13 +96,13 @@ func.func @broadcast_resize_bilinear_i32(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3
   // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0
   // CHECK-SAME{literal}: [[0], [1, 2, 3]]
   // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x15x13x7xi32>
-  // CHECK: %[[GENERIC:.+]] = linalg.generic 
+  // CHECK: %[[GENERIC:.+]] = linalg.generic
   // CHECK-SAME: indexing_maps = [#map, #map1]
   // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
   // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xi8>)
   // CHECK-SAME: outs(%[[EMPTY]] : tensor<3x15x13x7xi32>)
   // CHECK-NEXT: ^bb0(%[[IN:.+]]: i8, %[[OUT:.+]]: i32):
-  // CHECK: %[[EXT:.+]] = arith.extsi %[[IN]] : i8 to i32 
+  // CHECK: %[[EXT:.+]] = arith.extsi %[[IN]] : i8 to i32
   // CHECK-DAG: %[[C2:.+]] = arith.constant 2 : i32
   // CHECK: %[[MUL1:.+]] = arith.muli %[[EXT]], %[[C2]] : i32
   // CHECK-DAG: %[[C1:.+]] = arith.constant 1 : i32

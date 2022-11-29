@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt
+; RUN: opt < %s -passes=globalopt
 
 @V = global float 1.200000e+01          ; <float*> [#uses=1]
 @G = internal global i32* null          ; <i32**> [#uses=2]

@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -S | FileCheck %s
 ; CHECK: {{^}}for.body:
 ; CHECK-NEXT: [[VREG1:%[^ ]+]] = phi{{.*}}[[VREG2:%[^ ]+]],{{.*}}%.sink,
 ; CHECK-NOT: !dbg

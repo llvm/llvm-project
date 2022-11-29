@@ -1013,7 +1013,7 @@ def PDLInterp_CreateRangeOp : PDLInterp_Op<"create_range", [Pure]> {
 
     // Construct a range of types.
     %typeRange = pdl_interp.create_range %inputType, %inputRange : !pdl.type, !pdl.range<type>
-    
+
     // Construct an empty range of types.
     %valueRange = pdl_interp.create_range : !pdl.range<type>
     ```

@@ -1952,19 +1952,16 @@ public:
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their scalar values.
 class VPScalarIVStepsRecipe : public VPRecipeBase, public VPValue {
-  /// Scalar type to use for the generated values.
-  Type *Ty;
   /// If not nullptr, truncate the generated values to TruncToTy.
   Type *TruncToTy;
   const InductionDescriptor &IndDesc;
 
 public:
-  VPScalarIVStepsRecipe(Type *Ty, const InductionDescriptor &IndDesc,
+  VPScalarIVStepsRecipe(const InductionDescriptor &IndDesc,
                         VPValue *CanonicalIV, VPValue *Start, VPValue *Step,
                         Type *TruncToTy)
       : VPRecipeBase(VPScalarIVStepsSC, {CanonicalIV, Start, Step}),
-        VPValue(nullptr, this), Ty(Ty), TruncToTy(TruncToTy), IndDesc(IndDesc) {
-  }
+        VPValue(nullptr, this), TruncToTy(TruncToTy), IndDesc(IndDesc) {}
 
   ~VPScalarIVStepsRecipe() override = default;
 

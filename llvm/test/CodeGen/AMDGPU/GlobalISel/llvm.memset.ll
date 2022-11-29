@@ -2,9 +2,9 @@
 ; RUN: llc -global-isel -march=amdgcn -verify-machineinstrs -amdgpu-mem-intrinsic-expand-size=3 %s -o - | FileCheck -check-prefix=LOOP %s
 ; RUN: llc -global-isel -march=amdgcn -verify-machineinstrs -amdgpu-mem-intrinsic-expand-size=5 %s -o - | FileCheck -check-prefix=UNROLL %s
 
-declare void @llvm.memset.p1i8.i32(i8 addrspace(1)*, i8, i32, i1)
+declare void @llvm.memset.p1.i32(ptr addrspace(1), i8, i32, i1)
 
-define amdgpu_cs void @memset_p1i8(i8 addrspace(1)* %dst, i8 %val) {
+define amdgpu_cs void @memset_p1i8(ptr addrspace(1) %dst, i8 %val) {
 ; LOOP-LABEL: memset_p1i8:
 ; LOOP:       ; %bb.0: ; %loadstoreloop.preheader
 ; LOOP-NEXT:    s_mov_b64 s[0:1], 0
@@ -34,6 +34,6 @@ define amdgpu_cs void @memset_p1i8(i8 addrspace(1)* %dst, i8 %val) {
 ; UNROLL-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64 offset:2
 ; UNROLL-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64 offset:3
 ; UNROLL-NEXT:    s_endpgm
-  call void @llvm.memset.p1i8.i32(i8 addrspace(1)* %dst, i8 %val, i32 4, i1 false)
+  call void @llvm.memset.p1.i32(ptr addrspace(1) %dst, i8 %val, i32 4, i1 false)
   ret void
 }

@@ -650,8 +650,7 @@ void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
 
   // Update the maximum alignment on the current section if necessary.
   MCSection *CurSec = getCurrentSectionOnly();
-  if (CurSec->getAlign() < Alignment)
-    CurSec->setAlignment(Alignment);
+  CurSec->ensureMinAlignment(Alignment);
 }
 
 void MCObjectStreamer::emitCodeAlignment(Align Alignment,

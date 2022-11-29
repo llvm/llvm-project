@@ -10,25 +10,25 @@ define i64 @PR36760(i64 %a) {
 entry:
   %retval = alloca i64, align 8
   %a.addr = alloca i64, align 8
-  store i64 %a, i64* %a.addr, align 8
-  %0 = load i64, i64* %a.addr, align 8
+  store i64 %a, ptr %a.addr, align 8
+  %0 = load i64, ptr %a.addr, align 8
   %cmp = icmp slt i64 %0, 0
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  store i64 0, i64* %retval, align 8
+  store i64 0, ptr %retval, align 8
   br label %return
 
 if.end:
-  %1 = load i64, i64* %a.addr, align 8
+  %1 = load i64, ptr %a.addr, align 8
   %shr = ashr i64 %1, 63
-  %2 = load i64, i64* %a.addr, align 8
+  %2 = load i64, ptr %a.addr, align 8
   %xor = xor i64 %shr, %2
-  store i64 %xor, i64* %retval, align 8
+  store i64 %xor, ptr %retval, align 8
   br label %return
 
 return:
-  %3 = load i64, i64* %retval, align 8
+  %3 = load i64, ptr %retval, align 8
   ret i64 %3
 }
 
@@ -42,24 +42,24 @@ define i64 @PR36760_2(i64 %a) #0 {
 entry:
   %retval = alloca i64, align 8
   %a.addr = alloca i64, align 8
-  store i64 %a, i64* %a.addr, align 8
-  %0 = load i64, i64* %a.addr, align 8
+  store i64 %a, ptr %a.addr, align 8
+  %0 = load i64, ptr %a.addr, align 8
   %cmp = icmp sge i64 %0, 0
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i64 0, i64* %retval, align 8
+  store i64 0, ptr %retval, align 8
   br label %return
 
 if.end:                                           ; preds = %entry
-  %1 = load i64, i64* %a.addr, align 8
+  %1 = load i64, ptr %a.addr, align 8
   %shr = ashr i64 %1, 63
-  %2 = load i64, i64* %a.addr, align 8
+  %2 = load i64, ptr %a.addr, align 8
   %xor = xor i64 %shr, %2
-  store i64 %xor, i64* %retval, align 8
+  store i64 %xor, ptr %retval, align 8
   br label %return
 
 return:                                           ; preds = %if.end, %if.then
-  %3 = load i64, i64* %retval, align 8
+  %3 = load i64, ptr %retval, align 8
   ret i64 %3
 }

@@ -120,9 +120,8 @@ bb:
   store ptr %arg, ptr %i, align 8, !tbaa !9
   store i64 %arg1, ptr %i2, align 8, !tbaa !15
   %i3 = load ptr, ptr %i, align 8
-  %i4 = getelementptr inbounds %t0, ptr %i3, i32 0, i32 0
   %i5 = load i64, ptr %i2, align 8, !tbaa !15
-  %i6 = call noundef nonnull align 4 dereferenceable(4) ptr @widget(ptr noundef nonnull align 4 dereferenceable(8) %i4, i64 noundef %i5) #3
+  %i6 = call noundef nonnull align 4 dereferenceable(4) ptr @widget(ptr noundef nonnull align 4 dereferenceable(8) %i3, i64 noundef %i5) #3
   ret ptr %i6
 }
 

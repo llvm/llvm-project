@@ -4960,6 +4960,17 @@ bool AArch64InstrInfo::isAssociativeAndCommutative(
     return Inst.getParent()->getParent()->getTarget().Options.UnsafeFPMath ||
            (Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
             Inst.getFlag(MachineInstr::MIFlag::FmNsz));
+  case AArch64::ADDXrr:
+  case AArch64::ANDXrr:
+  case AArch64::ORRXrr:
+  case AArch64::EORXrr:
+  case AArch64::EONXrr:
+  case AArch64::ADDWrr:
+  case AArch64::ANDWrr:
+  case AArch64::ORRWrr:
+  case AArch64::EORWrr:
+  case AArch64::EONWrr:
+    return true;
   default:
     return false;
   }
