@@ -1153,10 +1153,11 @@ static void genComponentByComponentAssignment(fir::FirOpBuilder &builder,
                                                    fromCoor, indices);
     }
     if (auto fieldEleTy = fir::unwrapSequenceType(lFieldTy);
-        fieldEleTy.isa<fir::BoxType>()) {
-      assert(
-          fieldEleTy.cast<fir::BoxType>().getEleTy().isa<fir::PointerType>() &&
-          "allocatable members require deep copy");
+        fieldEleTy.isa<fir::BaseBoxType>()) {
+      assert(fieldEleTy.cast<fir::BaseBoxType>()
+                 .getEleTy()
+                 .isa<fir::PointerType>() &&
+             "allocatable members require deep copy");
       auto fromPointerValue = builder.create<fir::LoadOp>(loc, fromCoor);
       auto castTo = builder.createConvert(loc, fieldEleTy, fromPointerValue);
       builder.create<fir::StoreOp>(loc, castTo, toCoor);
@@ -1201,8 +1202,8 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
   // Box operands may be polymorphic, it is not entirely clear from 10.2.1.3
   // if the assignment is performed on the dynamic of declared type. Use the
   // runtime assuming it is performed on the dynamic type.
-  bool hasBoxOperands = fir::getBase(lhs).getType().isa<fir::BoxType>() ||
-                        fir::getBase(rhs).getType().isa<fir::BoxType>();
+  bool hasBoxOperands = fir::getBase(lhs).getType().isa<fir::BaseBoxType>() ||
+                        fir::getBase(rhs).getType().isa<fir::BaseBoxType>();
   auto recTy = baseTy.dyn_cast<fir::RecordType>();
   assert(recTy && "must be a record type");
   if (hasBoxOperands || !recordTypeCanBeMemCopied(recTy)) {
