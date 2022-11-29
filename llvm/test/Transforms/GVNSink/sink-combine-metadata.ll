@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn-sink -S | FileCheck %s
+; RUN: opt < %s -passes=gvn-sink -S | FileCheck %s
 
 ; Check that nonnull metadata for non-dominating loads is not propagated.
 ; CHECK-LABEL: @test1(

@@ -1,4 +1,4 @@
-; RUN: opt -gvn-hoist -newgvn -gvn-hoist  -S < %s | FileCheck %s
+; RUN: opt -passes='function(gvn-hoist),function(newgvn),function(gvn-hoist)'  -S < %s | FileCheck %s
 ; Test to demonstrate that newgvn creates opportunities for
 ; more gvn-hoist when sibling branches contain identical expressions.
 
