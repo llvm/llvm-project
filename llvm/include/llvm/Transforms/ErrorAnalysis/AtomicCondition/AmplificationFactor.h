@@ -104,6 +104,49 @@ AFProduct **fAFFlattenAFComponentsPath(AFProduct *ProductObject) {
   return ProductPath;
 }
 
+// Function to write NumObjects number of AFProducts from ObjectPointerList into
+// file with descriptor FP.
+void fAFStoreAFProducts(FILE *FP, AFProduct **ObjectPointerList, uint64_t NumObjects) {
+  assert(FP != NULL && "File descriptor is NULL.");
+  assert(ObjectPointerList != NULL && "ObjectPointerList is NULL");
+
+  fprintf(FP, "{\n");
+
+  fprintf(FP, "\t\"AFs\": [\n");
+  for (uint64_t J = 0; J < NumObjects; ++J) {
+    AFProduct **ProductPath= fAFFlattenAFComponentsPath(ObjectPointerList[J]);
+    if (fprintf(FP,
+                "\t\t{\n"
+                "\t\t\t\"ProductItemId\": %d,\n"
+                "\t\t\t\"ACItemId\":%d,\n"
+                "\t\t\t\"ACItemString\": \"%s\",\n"
+                "\t\t\t\"ProductTailItemId\": %d,\n"
+                "\t\t\t\"Input\": \"%s\",\n"
+                "\t\t\t\"AF\": %lf,\n",
+                ObjectPointerList[J]->ItemId,
+                ObjectPointerList[J]->Factor->ItemId,
+                ObjectPointerList[J]->Factor->ResultVar,
+                ObjectPointerList[J]->
+                        ProductTail!=NULL?ObjectPointerList[J]->ProductTail->ItemId:
+                    -1,
+                ObjectPointerList[J]->Input,
+                ObjectPointerList[J]->AF) > 0) {
+
+      fprintf(FP, "\t\t\t\"Path(AFProductIds)\": [%d", ProductPath[0]->ItemId);
+      for (int K = 1; K < ObjectPointerList[J]->Height; ++K)
+        fprintf(FP, ", %d", ProductPath[K]->ItemId);
+
+      if ((uint64_t)J == NumObjects-1)
+        fprintf(FP, "]\n\t\t}\n");
+      else
+        fprintf(FP, "]\n\t\t},\n");
+    }
+  }
+  fprintf(FP, "\t]\n");
+
+  fprintf(FP, "}\n");
+}
+
 /* ---------------------------------- AFItem ---------------------------------*/
 
 struct AFItem {
@@ -123,8 +166,8 @@ void fAFCreateAFItem(AFItem **AddressToAllocateAt) {
   return ;
 }
 
-// Function to write NumObjects from ObjectPointerList into file with descriptor
-// FP.
+// Function to write NumObjects number of AFItems from ObjectPointerList into
+// file with descriptor FP.
 void fAFStoreAFItems(FILE *FP, AFItem **ObjectPointerList, uint64_t NumObjects) {
   assert(FP != NULL && "File descriptor is NULL.");
   assert(ObjectPointerList != NULL && "ObjectPointerList is NULL");
@@ -279,8 +322,8 @@ void fAFStoreInFile(AFItem **ObjectToStore) {
                         ProductTail!=NULL?(*ObjectToStore)->Components[J]->ProductTail->ItemId:
                     -1,
                 (*ObjectToStore)->Components[J]->Input,
-                (*ObjectToStore)->Components[J]->AF) > 0) {
-
+                isnan((*ObjectToStore)->Components[J]->AF)?-1.0:
+                                                           (*ObjectToStore)->Components[J]->AF) > 0) {
       fprintf(FP, "\t\t\t\"Path(AFProductIds)\": [%d", ProductPath[0]->ItemId);
       for (int K = 1; K < (*ObjectToStore)->Components[J]->Height; ++K)
         fprintf(FP, ", %d", ProductPath[K]->ItemId);
@@ -560,6 +603,20 @@ void fAFPrintTopFromAllAmplificationPaths() {
   }
   printf("\n");
   printf("Printed Top Amplification Paths\n");
+
+  char File[5000];
+  fAFGenerateFileString(File, "SortedAFs_", ".json");
+
+  // Table Output
+  FILE *FP;
+  if((FP = fopen(File, "w")) != NULL) {
+    fAFStoreAFProducts(FP, Paths, AFComponentCounter);
+    fclose(FP);
+  } else {
+    printf("%s cannot be opened.\n", File);
+  }
+
+  printf("Ranked AF Paths written to file: %s\n", File);
 }
 
 void fAFStoreAFs() {
