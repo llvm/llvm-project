@@ -16,7 +16,6 @@
 
 // RUN: rm -rf %T/testroot-custom-triple
 // RUN: mkdir -p %T/testroot-custom-triple/bin
-// RUN: ln -s %clang %T/testroot-custom-triple/bin/x86_64-w64-mingw32foo-clang
 // RUN: ln -s %clang %T/testroot-custom-triple/bin/clang
 // RUN: ln -s %S/Inputs/mingw_ubuntu_posix_tree/usr/x86_64-w64-mingw32 %T/testroot-custom-triple/x86_64-w64-mingw32foo
 
@@ -61,6 +60,5 @@
 // If the user calls clang with a custom literal triple, make sure this maps
 // to sysroots with the matching spelling.
 
-// RUN: %T/testroot-custom-triple/bin/x86_64-w64-mingw32foo-clang -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CUSTOM_TRIPLE %s
 // RUN: %T/testroot-custom-triple/bin/clang --target=x86_64-w64-mingw32foo -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CUSTOM_TRIPLE %s
 // CHECK_TESTROOT_CUSTOM_TRIPLE: "{{[^"]+}}/testroot-custom-triple{{/|\\\\}}x86_64-w64-mingw32foo{{/|\\\\}}include"
