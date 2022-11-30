@@ -870,19 +870,27 @@ public:
 
 } // end namespace detail
 
-/// zip iterator for two or more iteratable types.
+/// zip iterator for two or more iteratable types. Iteration continues until the
+/// end of the *shortest* iteratee is reached.
 template <typename T, typename U, typename... Args>
 detail::zippy<detail::zip_shortest, T, U, Args...> zip(T &&t, U &&u,
-                                                       Args &&... args) {
+                                                       Args &&...args) {
   return detail::zippy<detail::zip_shortest, T, U, Args...>(
       std::forward<T>(t), std::forward<U>(u), std::forward<Args>(args)...);
 }
 
 /// zip iterator that, for the sake of efficiency, assumes the first iteratee to
-/// be the shortest.
+/// be the shortest. Iteration continues until the end of the first iteratee is
+/// reached. In builds with assertions on, we check that the assumption about
+/// the first iteratee being the shortest holds.
 template <typename T, typename U, typename... Args>
 detail::zippy<detail::zip_first, T, U, Args...> zip_first(T &&t, U &&u,
-                                                          Args &&... args) {
+                                                          Args &&...args) {
+  assert(std::distance(adl_begin(t), adl_end(t)) <=
+             std::min({std::distance(adl_begin(u), adl_end(u)),
+                       std::distance(adl_begin(args), adl_end(args))...}) &&
+         "First iteratee is not the shortest");
+
   return detail::zippy<detail::zip_first, T, U, Args...>(
       std::forward<T>(t), std::forward<U>(u), std::forward<Args>(args)...);
 }
