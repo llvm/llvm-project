@@ -2710,6 +2710,19 @@ private:
             [&](const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
               if (Fortran::evaluate::IsProcedure(assign.rhs))
                 TODO(loc, "procedure pointer assignment");
+
+              std::optional<Fortran::evaluate::DynamicType> lhsType =
+                  assign.lhs.GetType();
+              // Delegate pointer association to unlimited polymorphic pointer
+              // to the runtime. element size, type code, attribute and of
+              // course base_addr might need to be updated.
+              if (lhsType && lhsType->IsUnlimitedPolymorphic()) {
+                mlir::Value lhs = genExprMutableBox(loc, assign.lhs).getAddr();
+                mlir::Value rhs = genExprMutableBox(loc, assign.rhs).getAddr();
+                Fortran::lower::genPointerAssociate(*builder, loc, lhs, rhs);
+                return;
+              }
+
               llvm::SmallVector<mlir::Value> lbounds;
               for (const Fortran::evaluate::ExtentExpr &lbExpr : lbExprs)
                 lbounds.push_back(
