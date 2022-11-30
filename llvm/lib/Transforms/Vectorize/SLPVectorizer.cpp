@@ -4083,7 +4083,7 @@ void BoUpSLP::reorderTopToBottom() {
     SmallVector<OrdersType, 1> ExternalUserReorderIndices =
         findExternalStoreUsersReorderIndices(TE.get());
     if (!ExternalUserReorderIndices.empty()) {
-      VFToOrderedEntries[TE->Scalars.size()].insert(TE.get());
+      VFToOrderedEntries[TE->getVectorFactor()].insert(TE.get());
       ExternalUserReorderMap.try_emplace(TE.get(),
                                          std::move(ExternalUserReorderIndices));
     }
@@ -4103,7 +4103,7 @@ void BoUpSLP::reorderTopToBottom() {
           OpcodeMask.set(Lane);
       // If this pattern is supported by the target then we consider the order.
       if (TTIRef.isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask)) {
-        VFToOrderedEntries[TE->Scalars.size()].insert(TE.get());
+        VFToOrderedEntries[TE->getVectorFactor()].insert(TE.get());
         AltShufflesToOrders.try_emplace(TE.get(), OrdersType());
       }
       // TODO: Check the reverse order too.
@@ -4141,7 +4141,7 @@ void BoUpSLP::reorderTopToBottom() {
   });
 
   // Reorder the graph nodes according to their vectorization factor.
-  for (unsigned VF = VectorizableTree.front()->Scalars.size(); VF > 1;
+  for (unsigned VF = VectorizableTree.front()->getVectorFactor(); VF > 1;
        VF /= 2) {
     auto It = VFToOrderedEntries.find(VF);
     if (It == VFToOrderedEntries.end())

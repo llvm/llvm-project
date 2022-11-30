@@ -65,7 +65,7 @@ void writeBitcode(ReducerWorkItem &M, raw_ostream &OutStream);
 void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx,
                  const char *ToolName);
 
-bool isReduced(ReducerWorkItem &M, TestRunner &Test) {
+bool isReduced(ReducerWorkItem &M, const TestRunner &Test) {
   const bool UseBitcode = Test.inputIsBitcode() || TmpFilesAsBitcode;
 
   SmallString<128> CurrentFilepath;
@@ -134,11 +134,11 @@ static bool increaseGranularity(std::vector<Chunk> &Chunks) {
 // Check if \p ChunkToCheckForUninterestingness is interesting. Returns the
 // modified module if the chunk resulted in a reduction.
 static std::unique_ptr<ReducerWorkItem>
-CheckChunk(Chunk &ChunkToCheckForUninterestingness,
-           std::unique_ptr<ReducerWorkItem> Clone, TestRunner &Test,
+CheckChunk(const Chunk &ChunkToCheckForUninterestingness,
+           std::unique_ptr<ReducerWorkItem> Clone, const TestRunner &Test,
            ReductionFunc ExtractChunksFromModule,
-           DenseSet<Chunk> &UninterestingChunks,
-           std::vector<Chunk> &ChunksStillConsideredInteresting) {
+           const DenseSet<Chunk> &UninterestingChunks,
+           const std::vector<Chunk> &ChunksStillConsideredInteresting) {
   // Take all of ChunksStillConsideredInteresting chunks, except those we've
   // already deemed uninteresting (UninterestingChunks) but didn't remove
   // from ChunksStillConsideredInteresting yet, and additionally ignore
