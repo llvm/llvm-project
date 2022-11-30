@@ -280,6 +280,12 @@ bool isAllocatableType(mlir::Type ty);
 /// e.g. !fir.box<!fir.type<derived>>
 bool isBoxedRecordType(mlir::Type ty);
 
+/// Return true iff `ty` is a !fir.ref<!fir.box<T>> type.
+bool isRefBoxType(mlir::Type ty);
+
+/// Return true iff `ty` is !fir.box<none> type.
+bool isOpaqueDescType(mlir::Type ty);
+
 /// Return true iff `ty` is the type of an polymorphic entity or
 /// value.
 bool isPolymorphicType(mlir::Type ty);
