@@ -95,17 +95,18 @@ public:
 
   void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
 
-  uint64_t getPointerWidthV(unsigned AddrSpace) const override {
+  uint64_t getPointerWidthV(LangAS AS) const override {
     if (isR600(getTriple()))
       return 32;
+    unsigned TargetAS = getTargetAddressSpace(AS);
 
-    if (AddrSpace == Private || AddrSpace == Local)
+    if (TargetAS == Private || TargetAS == Local)
       return 32;
 
     return 64;
   }
 
-  uint64_t getPointerAlignV(unsigned AddrSpace) const override {
+  uint64_t getPointerAlignV(LangAS AddrSpace) const override {
     return getPointerWidthV(AddrSpace);
   }
 
