@@ -1338,6 +1338,20 @@ class PseudoMaskedAMUMinUMax
 def PseudoMaskedAtomicLoadUMax32 : PseudoMaskedAMUMinUMax;
 def PseudoMaskedAtomicLoadUMin32 : PseudoMaskedAMUMinUMax;
 
+class PseudoMaskedAMMinMax
+    : Pseudo<(outs GPR:$res, GPR:$scratch1, GPR:$scratch2),
+             (ins GPR:$addr, GPR:$incr, GPR:$mask, grlenimm:$sextshamt,
+              grlenimm:$ordering)> {
+  let Constraints = "@earlyclobber $res,@earlyclobber $scratch1,"
+                    "@earlyclobber $scratch2";
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+}
+
+def PseudoMaskedAtomicLoadMax32 : PseudoMaskedAMMinMax;
+def PseudoMaskedAtomicLoadMin32 : PseudoMaskedAMMinMax;
+
 /// Compare and exchange
 
 class PseudoCmpXchg
@@ -1361,6 +1375,12 @@ def PseudoMaskedCmpXchg32
   let mayStore = 1;
   let hasSideEffects = 0;
 }
+
+class PseudoMaskedAMMinMaxPat<Intrinsic intrin, Pseudo AMInst>
+    : Pat<(intrin GPR:$addr, GPR:$incr, GPR:$mask, GPR:$shiftamt,
+           timm:$ordering),
+          (AMInst GPR:$addr, GPR:$incr, GPR:$mask, GPR:$shiftamt,
+           timm:$ordering)>;
 
 class AtomicPat<Intrinsic intrin, Pseudo AMInst>
     : Pat<(intrin GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering),
@@ -1410,6 +1430,15 @@ def : Pat<(atomic_load_umax_32 GPR:$rj, GPR:$rk),
 def : Pat<(atomic_load_umax_64 GPR:$rj, GPR:$rk),
           (AMMAX_DB_DU GPR:$rk, GPR:$rj)>;
 
+def : Pat<(atomic_load_min_32 GPR:$rj, GPR:$rk),
+          (AMMIN_DB_W GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_min_64 GPR:$rj, GPR:$rk),
+          (AMMIN_DB_D GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_max_32 GPR:$rj, GPR:$rk),
+          (AMMAX_DB_W GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_max_64 GPR:$rj, GPR:$rk),
+          (AMMAX_DB_D GPR:$rk, GPR:$rj)>;
+
 def : AtomicPat<int_loongarch_masked_atomicrmw_umax_i64,
                 PseudoMaskedAtomicLoadUMax32>;
 def : AtomicPat<int_loongarch_masked_atomicrmw_umin_i64,
@@ -1423,6 +1452,11 @@ def : Pat<(int_loongarch_masked_cmpxchg_i64
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering)>;
 def : Pat<(atomic_cmp_swap_32 GPR:$addr, GPR:$cmp, GPR:$new),
           (PseudoCmpXchg32 GPR:$addr, GPR:$cmp, GPR:$new)>;
+
+def : PseudoMaskedAMMinMaxPat<int_loongarch_masked_atomicrmw_max_i64,
+                              PseudoMaskedAtomicLoadMax32>;
+def : PseudoMaskedAMMinMaxPat<int_loongarch_masked_atomicrmw_min_i64,
+                              PseudoMaskedAtomicLoadMin32>;
 } // Predicates = [IsLA64]
 
 defm : PseudoBinPat<"atomic_load_nand_32", PseudoAtomicLoadNand32>;
