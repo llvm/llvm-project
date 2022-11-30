@@ -1978,9 +1978,9 @@ ExprResult TemplateInstantiator::TransformCXXDefaultArgExpr(
   assert(!cast<FunctionDecl>(E->getParam()->getDeclContext())->
              getDescribedFunctionTemplate() &&
          "Default arg expressions are never formed in dependent cases.");
-  return SemaRef.BuildCXXDefaultArgExpr(
-      E->getUsedLocation(), cast<FunctionDecl>(E->getParam()->getDeclContext()),
-      E->getParam());
+  return SemaRef.BuildCXXDefaultArgExpr(E->getUsedLocation(),
+                           cast<FunctionDecl>(E->getParam()->getDeclContext()),
+                                        E->getParam());
 }
 
 template<typename Fn>
@@ -3407,8 +3407,6 @@ bool Sema::InstantiateInClassInitializer(
   ContextRAII SavedContext(*this, Instantiation->getParent());
   EnterExpressionEvaluationContext EvalContext(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
-  ExprEvalContexts.back().DelayedDefaultInitializationContext = {
-      PointOfInstantiation, Instantiation, CurContext};
 
   LocalInstantiationScope Scope(*this, true);
 

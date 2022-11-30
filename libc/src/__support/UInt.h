@@ -97,9 +97,6 @@ template <size_t Bits> struct UInt {
 
   // Add x to this number and store the result in this number.
   // Returns the carry value produced by the addition operation.
-  // To prevent overflow from intermediate results, we use the following
-  // property of unsigned integers:
-  //   x + (~x) = 2^(sizeof(x)) - 1.
   constexpr uint64_t add(const UInt<Bits> &x) {
     SumCarry<uint64_t> s{0, 0};
     for (size_t i = 0; i < WordCount; ++i) {
@@ -119,48 +116,33 @@ template <size_t Bits> struct UInt {
     return result;
   }
 
-  constexpr UInt<Bits> operator+=(const UInt<Bits> &other) {
+  constexpr UInt<Bits> &operator+=(const UInt<Bits> &other) {
     add(other); // Returned carry value is ignored.
     return *this;
   }
 
   // Subtract x to this number and store the result in this number.
   // Returns the carry value produced by the subtraction operation.
-  // To prevent overflow from intermediate results, we use the following
-  // property of unsigned integers:
-  //   x + (~x) = 2^(sizeof(x)) - 1,
-  // So:
-  //   -x = ((~x) + 1) + (-2^(sizeof(x))),
-  // where 2^(sizeof(x)) is represented by the carry bit.
   constexpr uint64_t sub(const UInt<Bits> &x) {
-    bool carry = false;
+    DiffBorrow<uint64_t> d{0, 0};
     for (size_t i = 0; i < WordCount; ++i) {
-      if (!carry) {
-        if (val[i] >= x.val[i])
-          val[i] -= x.val[i];
-        else {
-          val[i] += (~x.val[i]) + 1;
-          carry = true;
-        }
-      } else {
-        if (val[i] > x.val[i]) {
-          val[i] -= x.val[i] + 1;
-          carry = false;
-        } else
-          val[i] += ~x.val[i];
-      }
+      d = sub_with_borrow(val[i], x.val[i], d.borrow);
+      val[i] = d.diff;
     }
-    return carry ? 1 : 0;
+    return d.borrow;
   }
 
   constexpr UInt<Bits> operator-(const UInt<Bits> &other) const {
-    UInt<Bits> result(*this);
-    result.sub(other);
-    // TODO(lntue): Set overflow flag / errno when carry is true.
+    UInt<Bits> result;
+    DiffBorrow<uint64_t> d{0, 0};
+    for (size_t i = 0; i < WordCount; ++i) {
+      d = sub_with_borrow(val[i], other.val[i], d.borrow);
+      result.val[i] = d.diff;
+    }
     return result;
   }
 
-  constexpr UInt<Bits> operator-=(const UInt<Bits> &other) {
+  constexpr UInt<Bits> &operator-=(const UInt<Bits> &other) {
     // TODO(lntue): Set overflow flag / errno when carry is true.
     sub(other);
     return *this;

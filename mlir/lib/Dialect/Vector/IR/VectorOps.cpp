@@ -221,10 +221,8 @@ bool mlir::vector::isDisjointTransferSet(VectorTransferOpInterface transferA,
 static LogicalResult incSlicePosition(MutableArrayRef<int64_t> position,
                                       ArrayRef<int64_t> shape,
                                       ArrayRef<int64_t> offsets) {
-  assert(position.size() == shape.size());
-  assert(position.size() == offsets.size());
   for (auto [posInDim, dimSize, offsetInDim] :
-       llvm::reverse(llvm::zip(position, shape, offsets))) {
+       llvm::reverse(llvm::zip_equal(position, shape, offsets))) {
     ++posInDim;
     if (posInDim < dimSize + offsetInDim)
       return success();
