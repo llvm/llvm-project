@@ -3,7 +3,7 @@
 
 // Run in C mode as wide multichar literals are not valid in C++
 
-// XFAIL: hexagon
+// XFAIL: target=hexagon-{{.*}}
 // Hexagon aligns arrays of size 8+ bytes to a 64-bit boundary, which fails
 // the first check line with "align 1".
 
