@@ -174,6 +174,11 @@ void AddTargetFeature(const llvm::opt::ArgList &Args,
 std::string getCPUName(const Driver &D, const llvm::opt::ArgList &Args,
                        const llvm::Triple &T, bool FromAs = false);
 
+void getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
+                       const llvm::opt::ArgList &Args,
+                       llvm::opt::ArgStringList &CmdArgs, bool ForAS,
+                       bool IsAux = false);
+
 /// Iterate \p Args and convert -mxxx to +xxx and -mno-xxx to -xxx and
 /// append it to \p Features.
 ///
