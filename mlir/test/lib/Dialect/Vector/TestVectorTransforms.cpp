@@ -820,6 +820,38 @@ struct TestVectorExtractStridedSliceLowering
   }
 };
 
+struct TestCreateVectorBroadcast
+    : public PassWrapper<TestCreateVectorBroadcast,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestCreateVectorBroadcast)
+
+  StringRef getArgument() const final { return "test-create-vector-broadcast"; }
+  StringRef getDescription() const final {
+    return "Test optimization transformations for transfer ops";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<vector::VectorDialect>();
+  }
+
+  void runOnOperation() override {
+    getOperation()->walk([](Operation *op) {
+      if (op->getName().getStringRef() != "test_create_broadcast")
+        return;
+      auto targetShape =
+          op->getResult(0).getType().cast<VectorType>().getShape();
+      auto arrayAttr =
+          op->getAttr("broadcast_dims").cast<DenseI64ArrayAttr>().asArrayRef();
+      llvm::SetVector<int64_t> broadcastedDims;
+      broadcastedDims.insert(arrayAttr.begin(), arrayAttr.end());
+      OpBuilder b(op);
+      Value bcast = vector::BroadcastOp::createOrFoldBroadcastOp(
+          b, op->getOperand(0), targetShape, broadcastedDims);
+      op->getResult(0).replaceAllUsesWith(bcast);
+      op->erase();
+    });
+  }
+};
+
 } // namespace
 
 namespace mlir {
@@ -856,6 +888,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorDistribution>();
 
   PassRegistration<TestVectorExtractStridedSliceLowering>();
+
+  PassRegistration<TestCreateVectorBroadcast>();
 }
 } // namespace test
 } // namespace mlir
