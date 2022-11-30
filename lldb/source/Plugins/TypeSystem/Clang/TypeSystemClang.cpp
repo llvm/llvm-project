@@ -759,22 +759,7 @@ void TypeSystemClang::CreateASTContext() {
 
 TypeSystemClang *TypeSystemClang::GetASTContext(clang::ASTContext *ast) {
   TypeSystemClang *clang_ast = GetASTMap().Lookup(ast);
-  // BEGIN SWIFT
-  // FIXME: rdar://102525085
-  // The following code existed only on swift-lldb. Presumably it's a
-  // hack to wrap the clang::ASTContext owned by a ClangImporter in a
-  // TypeSystemClang.
-  if (!clang_ast) {
-    /// rdar://102525085
-    auto ts = std::make_shared<TypeSystemClang>(
-        "ASTContext from TypeSystemClang::GetASTContext", *ast);
-    static std::vector<std::shared_ptr<TypeSystemClang>> g_adhoc_typesystems;
-    g_adhoc_typesystems.push_back(ts);
-
-    GetASTMap().Insert(ast, ts.get());
-    clang_ast = ts.get();
-  }
-  // END SWIFT
+  lldbassert(clang_ast && "Orphaned clang::ASTContext");
   return clang_ast;
 }
 

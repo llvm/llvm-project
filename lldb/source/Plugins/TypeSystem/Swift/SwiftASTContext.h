@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Target/TargetOptions.h"
+#include <memory>
 
 namespace swift {
 enum class IRGenDebugInfoLevel : unsigned;
@@ -863,7 +864,9 @@ protected:
   /// Owned by the AST.
   swift::MemoryBufferSerializedModuleLoader *m_memory_buffer_module_loader =
       nullptr;
-  swift::ClangImporter *m_clang_importer = nullptr;
+  swift::ClangImporter *m_clangimporter = nullptr;
+  /// Wraps the clang::ASTContext owned by ClangImporter.
+  std::shared_ptr<TypeSystemClang> m_clangimporter_typesystem;
   SwiftModuleMap m_swift_module_cache;
   SwiftTypeFromMangledNameMap m_mangled_name_to_type_map;
   SwiftMangledNameFromTypeMap m_type_to_mangled_name_map;
