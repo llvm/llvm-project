@@ -11,23 +11,23 @@ entry:
 
 ; CHECK: {{^}}kernel:
 ; GCN-NOT: s_swappc_b64
-define amdgpu_kernel void @kernel(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @kernel(ptr addrspace(1) %out) {
 entry:
   %tmp0 = call i32 @func(i32 1)
-  store i32 %tmp0, i32 addrspace(1)* %out
+  store i32 %tmp0, ptr addrspace(1) %out
   ret void
 }
 
 ; CHECK: func_alias
 ; R600-NOT: func_alias
-@func_alias = alias i32 (i32), i32 (i32)* @func
+@func_alias = alias i32 (i32), ptr @func
 
 ; CHECK-NOT: {{^}}kernel3:
 ; GCN-NOT: s_swappc_b64
 ; R600: {{^}}kernel3:
-define amdgpu_kernel void @kernel3(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @kernel3(ptr addrspace(1) %out) {
 entry:
   %tmp0 = call i32 @func_alias(i32 1)
-  store i32 %tmp0, i32 addrspace(1)* %out
+  store i32 %tmp0, ptr addrspace(1) %out
   ret void
 }
