@@ -761,10 +761,10 @@ global_store_d16_hi_b8 v1, v2, s[104:105]
 global_store_dword_addtid v1, off offset:16 glc slc dlc
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-image_bvh64_intersect_ray v[252:255], v[240:255], ttmp[12:15] a16
+image_bvh64_intersect_ray v[252:255], v[247:255], ttmp[12:15] a16
 // GFX1010: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-image_bvh_intersect_ray v[252:255], v[1:16], s[8:11]
+image_bvh_intersect_ray v[252:255], v[1:11], s[8:11]
 // GFX1010: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 image_msaa_load v14, [v204,v11,v14,v19], s[40:47] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY

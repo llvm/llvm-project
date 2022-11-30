@@ -187,9 +187,7 @@ public:
     FileID HashFID = SM.getFileID(HashLoc);
     int HashLine = SM.getLineNumber(HashFID, SM.getFileOffset(HashLoc));
     checkForExport(HashFID, HashLine, File ? &File->getFileEntry() : nullptr);
-
-    if (InMainFile && LastPragmaKeepInMainFileLine == HashLine)
-      Out->ShouldKeep.insert(HashLine);
+    checkForKeep(HashLine);
   }
 
   void checkForExport(FileID IncludingFile, int HashLine,
@@ -211,6 +209,18 @@ public:
     }
     if (!Top.Block) // Pop immediately for single-line export pragma.
       ExportStack.pop_back();
+  }
+
+  void checkForKeep(int HashLine) {
+    if (!InMainFile || KeepStack.empty())
+      return;
+    KeepPragma &Top = KeepStack.back();
+    // Check if the current include is covered by a keep pragma.
+    if ((Top.Block && HashLine > Top.SeenAtLine) || Top.SeenAtLine == HashLine)
+      Out->ShouldKeep.insert(HashLine);
+
+    if (!Top.Block)
+      KeepStack.pop_back(); // Pop immediately for single-line keep pragma.
   }
 
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
@@ -257,23 +267,14 @@ public:
     }
 
     if (InMainFile) {
-      if (!Pragma->startswith("keep"))
-        return false;
-      // Given:
-      //
-      // #include "foo.h"
-      // #include "bar.h" // IWYU pragma: keep
-      //
-      // The order in which the callbacks will be triggered:
-      //
-      // 1. InclusionDirective("foo.h")
-      // 2. handleCommentInMainFile("// IWYU pragma: keep")
-      // 3. InclusionDirective("bar.h")
-      //
-      // This code stores the last location of "IWYU pragma: keep" comment in
-      // the main file, so that when next InclusionDirective is called, it will
-      // know that the next inclusion is behind the IWYU pragma.
-      LastPragmaKeepInMainFileLine = CommentLine;
+      if (Pragma->startswith("keep")) {
+        KeepStack.push_back({CommentLine, false});
+      } else if (Pragma->starts_with("begin_keep")) {
+        KeepStack.push_back({CommentLine, true});
+      } else if (Pragma->starts_with("end_keep") && !KeepStack.empty()) {
+        assert(KeepStack.back().Block);
+        KeepStack.pop_back();
+      }
     }
     return false;
   }
@@ -288,8 +289,7 @@ private:
   llvm::BumpPtrAllocator Arena;
   /// Intern table for strings. Contents are on the arena.
   llvm::StringSaver UniqueStrings;
-  // Track the last line "IWYU pragma: keep" was seen in the main file, 1-based.
-  int LastPragmaKeepInMainFileLine = -1;
+
   struct ExportPragma {
     // The line number where we saw the begin_exports or export pragma.
     int SeenAtLine = 0; // 1-based line number.
@@ -303,6 +303,16 @@ private:
   };
   // A stack for tracking all open begin_exports or single-line export.
   std::vector<ExportPragma> ExportStack;
+
+  struct KeepPragma {
+    // The line number where we saw the begin_keep or keep pragma.
+    int SeenAtLine = 0; // 1-based line number.
+    // true if it is a block begin/end_keep pragma; false if it is a
+    // single-line keep pragma.
+    bool Block = false;
+  };
+  // A stack for tracking all open begin_keep pragmas or single-line keeps.
+  std::vector<KeepPragma> KeepStack;
 };
 
 void PragmaIncludes::record(const CompilerInstance &CI) {

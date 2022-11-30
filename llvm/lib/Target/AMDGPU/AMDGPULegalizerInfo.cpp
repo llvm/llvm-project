@@ -5446,7 +5446,7 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     Opcode = AMDGPU::getMIMGOpcode(
         BaseOpcodes[Is64][IsA16],
         IsGFX11Plus ? AMDGPU::MIMGEncGfx11Default : AMDGPU::MIMGEncGfx10Default,
-        NumVDataDwords, PowerOf2Ceil(NumVAddrDwords));
+        NumVDataDwords, NumVAddrDwords);
   }
   assert(Opcode != -1);
 
