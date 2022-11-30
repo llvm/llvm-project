@@ -2379,12 +2379,21 @@ multiclass VPseudoVGTR_VV_VX_VI<Operand ImmType = simm5, string Constraint = "">
 }
 
 multiclass VPseudoVSALU_VV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
-  defm "" : VPseudoBinaryV_VV<Constraint>,
-            Sched<[WriteVSALUV, ReadVSALUV, ReadVSALUV, ReadVMask]>;
-  defm "" : VPseudoBinaryV_VX<Constraint>,
-            Sched<[WriteVSALUX, ReadVSALUV, ReadVSALUX, ReadVMask]>;
-  defm "" : VPseudoBinaryV_VI<ImmType, Constraint>,
-            Sched<[WriteVSALUI, ReadVSALUV, ReadVMask]>;
+  foreach m = MxList in {
+    defvar mx = m.MX;
+    defvar WriteVSALUV_MX = !cast<SchedWrite>("WriteVSALUV_" # mx);
+    defvar WriteVSALUX_MX = !cast<SchedWrite>("WriteVSALUX_" # mx);
+    defvar WriteVSALUI_MX = !cast<SchedWrite>("WriteVSALUI_" # mx);
+    defvar ReadVSALUV_MX = !cast<SchedRead>("ReadVSALUV_" # mx);
+    defvar ReadVSALUX_MX = !cast<SchedRead>("ReadVSALUX_" # mx);
+
+    defm "" : VPseudoBinaryV_VV_LMUL<m, Constraint>,
+              Sched<[WriteVSALUV_MX, ReadVSALUV_MX, ReadVSALUV_MX, ReadVMask]>;
+    defm "" : VPseudoBinaryV_VX_LMUL<m, Constraint>,
+              Sched<[WriteVSALUX_MX, ReadVSALUV_MX, ReadVSALUX_MX, ReadVMask]>;
+    defm "" : VPseudoBinaryV_VI_LMUL<ImmType, m, Constraint>,
+              Sched<[WriteVSALUI_MX, ReadVSALUV_MX, ReadVMask]>;
+  }
 }
 
 
@@ -2407,12 +2416,21 @@ multiclass VPseudoVSHT_VV_VX_VI<Operand ImmType = simm5, string Constraint = "">
 }
 
 multiclass VPseudoVSSHT_VV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
-  defm "" : VPseudoBinaryV_VV<Constraint>,
-            Sched<[WriteVSShiftV, ReadVSShiftV, ReadVSShiftV, ReadVMask]>;
-  defm "" : VPseudoBinaryV_VX<Constraint>,
-            Sched<[WriteVSShiftX, ReadVSShiftV, ReadVSShiftX, ReadVMask]>;
-  defm "" : VPseudoBinaryV_VI<ImmType, Constraint>,
-            Sched<[WriteVSShiftI, ReadVSShiftV, ReadVMask]>;
+  foreach m = MxList in {
+    defvar mx = m.MX;
+    defvar WriteVSShiftV_MX = !cast<SchedWrite>("WriteVSShiftV_" # mx);
+    defvar WriteVSShiftX_MX = !cast<SchedWrite>("WriteVSShiftX_" # mx);
+    defvar WriteVSShiftI_MX = !cast<SchedWrite>("WriteVSShiftI_" # mx);
+    defvar ReadVSShiftV_MX = !cast<SchedRead>("ReadVSShiftV_" # mx);
+    defvar ReadVSShiftX_MX = !cast<SchedRead>("ReadVSShiftX_" # mx);
+
+    defm "" : VPseudoBinaryV_VV_LMUL<m, Constraint>,
+              Sched<[WriteVSShiftV_MX, ReadVSShiftV_MX, ReadVSShiftV_MX, ReadVMask]>;
+    defm "" : VPseudoBinaryV_VX_LMUL<m, Constraint>,
+              Sched<[WriteVSShiftX_MX, ReadVSShiftV_MX, ReadVSShiftX_MX, ReadVMask]>;
+    defm "" : VPseudoBinaryV_VI_LMUL<ImmType, m, Constraint>,
+              Sched<[WriteVSShiftI_MX, ReadVSShiftV_MX, ReadVMask]>;
+  }
 }
 
 multiclass VPseudoVALU_VV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
@@ -2434,24 +2452,48 @@ multiclass VPseudoVALU_VV_VX_VI<Operand ImmType = simm5, string Constraint = "">
 }
 
 multiclass VPseudoVSALU_VV_VX {
-  defm "" : VPseudoBinaryV_VV,
-            Sched<[WriteVSALUV, ReadVSALUV, ReadVSALUV, ReadVMask]>;
-  defm "" : VPseudoBinaryV_VX,
-            Sched<[WriteVSALUX, ReadVSALUV, ReadVSALUX, ReadVMask]>;
+  foreach m = MxList in {
+    defvar mx = m.MX;
+    defvar WriteVSALUV_MX = !cast<SchedWrite>("WriteVSALUV_" # mx);
+    defvar WriteVSALUX_MX = !cast<SchedWrite>("WriteVSALUX_" # mx);
+    defvar ReadVSALUV_MX = !cast<SchedRead>("ReadVSALUV_" # mx);
+    defvar ReadVSALUX_MX = !cast<SchedRead>("ReadVSALUX_" # mx);
+
+    defm "" : VPseudoBinaryV_VV_LMUL<m>,
+              Sched<[WriteVSALUV_MX, ReadVSALUV_MX, ReadVSALUV_MX, ReadVMask]>;
+    defm "" : VPseudoBinaryV_VX_LMUL<m>,
+              Sched<[WriteVSALUX_MX, ReadVSALUV_MX, ReadVSALUX_MX, ReadVMask]>;
+  }
 }
 
 multiclass VPseudoVSMUL_VV_VX {
-  defm "" : VPseudoBinaryV_VV,
-            Sched<[WriteVSMulV, ReadVSMulV, ReadVSMulV, ReadVMask]>;
-  defm "" : VPseudoBinaryV_VX,
-            Sched<[WriteVSMulX, ReadVSMulV, ReadVSMulX, ReadVMask]>;
+  foreach m = MxList in {
+    defvar mx = m.MX;
+    defvar WriteVSMulV_MX = !cast<SchedWrite>("WriteVSMulV_" # mx);
+    defvar WriteVSMulX_MX = !cast<SchedWrite>("WriteVSMulX_" # mx);
+    defvar ReadVSMulV_MX = !cast<SchedRead>("ReadVSMulV_" # mx);
+    defvar ReadVSMulX_MX = !cast<SchedRead>("ReadVSMulX_" # mx);
+
+    defm "" : VPseudoBinaryV_VV_LMUL<m>,
+              Sched<[WriteVSMulV_MX, ReadVSMulV_MX, ReadVSMulV_MX, ReadVMask]>;
+    defm "" : VPseudoBinaryV_VX_LMUL<m>,
+              Sched<[WriteVSMulX_MX, ReadVSMulV_MX, ReadVSMulX_MX, ReadVMask]>;
+  }
 }
 
 multiclass VPseudoVAALU_VV_VX {
-  defm "" : VPseudoBinaryV_VV,
-            Sched<[WriteVAALUV, ReadVAALUV, ReadVAALUV, ReadVMask]>;
-  defm "" : VPseudoBinaryV_VX,
-            Sched<[WriteVAALUX, ReadVAALUV, ReadVAALUX, ReadVMask]>;
+  foreach m = MxList in {
+    defvar mx = m.MX;
+    defvar WriteVAALUV_MX = !cast<SchedWrite>("WriteVAALUV_" # mx);
+    defvar WriteVAALUX_MX = !cast<SchedWrite>("WriteVAALUX_" # mx);
+    defvar ReadVAALUV_MX = !cast<SchedRead>("ReadVAALUV_" # mx);
+    defvar ReadVAALUX_MX = !cast<SchedRead>("ReadVAALUX_" # mx);
+
+    defm "" : VPseudoBinaryV_VV_LMUL<m>,
+              Sched<[WriteVAALUV_MX, ReadVAALUV_MX, ReadVAALUV_MX, ReadVMask]>;
+    defm "" : VPseudoBinaryV_VX_LMUL<m>,
+              Sched<[WriteVAALUX_MX, ReadVAALUV_MX, ReadVAALUX_MX, ReadVMask]>;
+  }
 }
 
 multiclass VPseudoVMINMAX_VV_VX {
@@ -2777,12 +2819,21 @@ multiclass VPseudoVCALUM_V_X<string Constraint> {
 }
 
 multiclass VPseudoVNCLP_WV_WX_WI {
-  defm "" : VPseudoBinaryV_WV,
-            Sched<[WriteVNClipV, ReadVNClipV, ReadVNClipV, ReadVMask]>;
-  defm "" : VPseudoBinaryV_WX,
-            Sched<[WriteVNClipX, ReadVNClipV, ReadVNClipX, ReadVMask]>;
-  defm "" : VPseudoBinaryV_WI,
-            Sched<[WriteVNClipI, ReadVNClipV, ReadVMask]>;
+  foreach m = MxListW in {
+    defvar mx = m.MX;
+    defvar WriteVNClipV_MX = !cast<SchedWrite>("WriteVNClipV_" # mx);
+    defvar WriteVNClipX_MX = !cast<SchedWrite>("WriteVNClipX_" # mx);
+    defvar WriteVNClipI_MX = !cast<SchedWrite>("WriteVNClipI_" # mx);
+    defvar ReadVNClipV_MX = !cast<SchedRead>("ReadVNClipV_" # mx);
+    defvar ReadVNClipX_MX = !cast<SchedRead>("ReadVNClipX_" # mx);
+
+    defm "" : VPseudoBinaryV_WV_LMUL<m>,
+              Sched<[WriteVNClipV_MX, ReadVNClipV_MX, ReadVNClipV_MX, ReadVMask]>;
+    defm "" : VPseudoBinaryV_WX_LMUL<m>,
+              Sched<[WriteVNClipX_MX, ReadVNClipV_MX, ReadVNClipX_MX, ReadVMask]>;
+    defm "" : VPseudoBinaryV_WI_LMUL<m>,
+              Sched<[WriteVNClipI_MX, ReadVNClipV_MX, ReadVMask]>;
+  }
 }
 
 multiclass VPseudoVNSHT_WV_WX_WI {
