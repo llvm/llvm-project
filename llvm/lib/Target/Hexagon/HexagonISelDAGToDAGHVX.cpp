@@ -2793,8 +2793,7 @@ void HexagonDAGToDAGISel::ppHvxShuffleOfShuffle(std::vector<SDNode *> &&Nodes) {
 
     // The source must be a pair. This should be guaranteed here,
     // but check just in case.
-    EVT SrcTy = V0A->Src.getValueType();
-    assert(SrcTy.getSizeInBits() == 16 * HwLen);
+    assert(V0A->Src.getValueType().getSizeInBits() == 16 * HwLen);
 
     MapType OpMap = {
         {V0.getOperand(0), V0A->HalfIdx * HwLen},
