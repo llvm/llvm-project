@@ -397,11 +397,11 @@ define i32 @select_udiv_3(i1 zeroext %cond, i32 %a) {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    bnez a0, .LBB19_2
 ; RV32-NEXT:  # %bb.1: # %entry
-; RV32-NEXT:    srli a0, a1, 1
-; RV32-NEXT:    lui a1, 199729
-; RV32-NEXT:    addi a1, a1, -975
-; RV32-NEXT:    mulhu a0, a0, a1
-; RV32-NEXT:    srli a1, a0, 2
+; RV32-NEXT:    srli a1, a1, 1
+; RV32-NEXT:    lui a0, 199729
+; RV32-NEXT:    addi a0, a0, -975
+; RV32-NEXT:    mulhu a1, a1, a0
+; RV32-NEXT:    srli a1, a1, 2
 ; RV32-NEXT:  .LBB19_2: # %entry
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    ret
@@ -413,8 +413,8 @@ define i32 @select_udiv_3(i1 zeroext %cond, i32 %a) {
 ; RV64-NEXT:    srliw a0, a1, 1
 ; RV64-NEXT:    lui a1, 199729
 ; RV64-NEXT:    addiw a1, a1, -975
-; RV64-NEXT:    mul a0, a0, a1
-; RV64-NEXT:    srli a1, a0, 34
+; RV64-NEXT:    mul a1, a0, a1
+; RV64-NEXT:    srli a1, a1, 34
 ; RV64-NEXT:  .LBB19_2: # %entry
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:    ret
