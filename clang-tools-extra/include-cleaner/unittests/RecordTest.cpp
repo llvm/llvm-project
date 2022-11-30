@@ -134,7 +134,7 @@ MATCHER_P(spelled, S, "") { return arg.Spelled == S; }
 TEST_F(RecordPPTest, CapturesIncludes) {
   llvm::Annotations MainFile(R"cpp(
     $H^#include "./header.h"
-    $M^#include "missing.h"
+    $M^#include <missing.h>
   )cpp");
   Inputs.Code = MainFile.code();
   Inputs.ExtraFiles["header.h"] = "";
@@ -151,6 +151,7 @@ TEST_F(RecordPPTest, CapturesIncludes) {
             AST.sourceManager().getComposedLoc(
                 AST.sourceManager().getMainFileID(), MainFile.point("H")));
   EXPECT_EQ(H.Resolved, AST.fileManager().getFile("header.h").get());
+  EXPECT_FALSE(H.Angled);
 
   auto &M = Recorded.Includes.all().back();
   EXPECT_EQ(M.Line, 3u);
@@ -158,6 +159,7 @@ TEST_F(RecordPPTest, CapturesIncludes) {
             AST.sourceManager().getComposedLoc(
                 AST.sourceManager().getMainFileID(), MainFile.point("M")));
   EXPECT_EQ(M.Resolved, nullptr);
+  EXPECT_TRUE(M.Angled);
 }
 
 TEST_F(RecordPPTest, CapturesMacroRefs) {

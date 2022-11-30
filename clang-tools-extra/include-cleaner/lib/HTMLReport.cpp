@@ -416,7 +416,7 @@ private:
 
     for (const auto *I : R.Includes) {
       OS << "<tr><th>Included</th><td>";
-      escapeString(I->Spelled);
+      escapeString(I->quote());
       OS << ", <a href='#line" << I->Line << "'>line " << I->Line << "</a>";
       OS << "</td></tr>";
     }

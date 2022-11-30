@@ -133,6 +133,8 @@ struct Include {
                                        // nullptr if the header was not found
   SourceLocation HashLocation;         // of hash in #include <vector>
   unsigned Line = 0;                   // 1-based line number for #include
+  bool Angled = false;                 // True if spelled with <angle> quotes.
+  std::string quote() const;           // e.g. <vector>
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Include &);
 
