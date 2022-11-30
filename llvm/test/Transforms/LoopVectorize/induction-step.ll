@@ -196,3 +196,38 @@ for.body:
 for.end:
   ret void
 }
+
+; CHECK-LABEL: @iv_no_binary_op_in_descriptor(
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %vector.ph ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[DST:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    store <8 x i64> [[VEC_IND]], ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP3]], label %middle.block, label [[VECTOR_BODY]]
+
+define void @iv_no_binary_op_in_descriptor(i1 %c, ptr %dst) {
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next.p, %loop.latch ]
+  %gep = getelementptr inbounds i64, ptr %dst, i64 %iv
+  store i64 %iv, ptr %gep, align 8
+  %iv.next = add i64 %iv, 1
+  br label %loop.latch
+
+loop.latch:
+  %iv.next.p = phi i64 [ %iv.next, %loop.header ]
+  %exitcond.not = icmp eq i64 %iv.next.p, 1000
+  br i1 %exitcond.not, label %exit, label %loop.header
+
+exit:
+  ret void
+}
