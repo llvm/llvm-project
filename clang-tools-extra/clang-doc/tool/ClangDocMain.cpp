@@ -264,13 +264,13 @@ Example usage for a project using a compile commands database:
 
       // Add a reference to this Info in the Index
       {
-        std::lock_guard Guard(IndexMutex);
+        std::lock_guard<llvm::sys::Mutex> Guard(IndexMutex);
         clang::doc::Generator::addInfoToIndex(CDCtx.Idx, Reduced.get().get());
       }
 
       // Save in the result map (needs a lock due to threaded access).
       {
-        std::lock_guard Guard(USRToInfoMutex);
+        std::lock_guard<llvm::sys::Mutex> Guard(USRToInfoMutex);
         USRToInfo[Group.getKey()] = std::move(Reduced.get());
       }
     });
