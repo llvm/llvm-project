@@ -33,3 +33,15 @@ s_cbranch_cdbgsys_or_user 0
 
 s_cbranch_cdbgsys_and_user 0
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_fmac_legacy_f32 v0, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot2c_f32_f16 v0, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dual_max_f32 v0, v1, v2 :: v_dual_max_f32 v3, v4, v5
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dual_min_f32 v0, v1, v2 :: v_dual_min_f32 v3, v4, v5
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
