@@ -1,5 +1,5 @@
 // REQUIRES: crash-recovery, shell
-// UNSUPPORTED: ms-sdk, ps4
+// UNSUPPORTED: ms-sdk, target={{.*-ps4}}
 
 // FIXME: Canonicalizing paths to remove relative traversal components
 // currenty fails a unittest on windows and is disable by default.
