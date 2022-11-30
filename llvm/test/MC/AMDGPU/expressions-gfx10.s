@@ -55,19 +55,19 @@ v_lshlrev_b64 v[5:6], u-1, v[2:3]
 //===----------------------------------------------------------------------===//
 
 s_sub_u32 s0, 123, u
-// NOGFX10: error: only one unique literal operand is allowed
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 
 s_sub_u32 s0, u, u
-// NOGFX10: error: only one unique literal operand is allowed
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 
 s_sub_u32 s0, u, u1
-// NOGFX10: error: only one unique literal operand is allowed
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 
 v_bfe_u32 v0, v2, 123, u
-// NOGFX10: error: only one unique literal operand is allowed
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 
 v_bfe_u32 v0, v2, u, u
-// NOGFX10: error: only one unique literal operand is allowed
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 
 v_bfe_u32 v0, v2, u, u1
-// NOGFX10: error: only one unique literal operand is allowed
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed

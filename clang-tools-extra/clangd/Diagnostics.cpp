@@ -331,7 +331,6 @@ void setTags(clangd::Diag &D) {
       diag::warn_deprecated,
       diag::warn_deprecated_altivec_src_compat,
       diag::warn_deprecated_comma_subscript,
-      diag::warn_deprecated_compound_assign_volatile,
       diag::warn_deprecated_copy,
       diag::warn_deprecated_copy_with_dtor,
       diag::warn_deprecated_copy_with_user_provided_copy,

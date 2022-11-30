@@ -788,6 +788,8 @@ public:
     return getGeneration() < SEA_ISLANDS;
   }
 
+  bool hasInstPrefetch() const { return getGeneration() >= GFX10; }
+
   bool hasPrefetch() const { return GFX12Insts; }
 
   bool hasVectorPrefetch() const { return false; }

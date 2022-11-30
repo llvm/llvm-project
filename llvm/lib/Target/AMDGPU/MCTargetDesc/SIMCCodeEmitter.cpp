@@ -503,6 +503,10 @@ void SIMCCodeEmitter::getAVOperandEncoding(const MCInst &MI, unsigned OpNo,
       MRI.getRegClass(AMDGPU::AReg_192RegClassID).contains(Reg) ||
       MRI.getRegClass(AMDGPU::AReg_224RegClassID).contains(Reg) ||
       MRI.getRegClass(AMDGPU::AReg_256RegClassID).contains(Reg) ||
+      MRI.getRegClass(AMDGPU::AReg_288RegClassID).contains(Reg) ||
+      MRI.getRegClass(AMDGPU::AReg_320RegClassID).contains(Reg) ||
+      MRI.getRegClass(AMDGPU::AReg_352RegClassID).contains(Reg) ||
+      MRI.getRegClass(AMDGPU::AReg_384RegClassID).contains(Reg) ||
       MRI.getRegClass(AMDGPU::AReg_512RegClassID).contains(Reg) ||
       MRI.getRegClass(AMDGPU::AGPR_LO16RegClassID).contains(Reg))
     Enc |= 512;
