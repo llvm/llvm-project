@@ -4142,6 +4142,7 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
     case swift::DeclKind::EnumCase:
     case swift::DeclKind::IfConfig:
     case swift::DeclKind::Param:
+    case swift::DeclKind::Macro:
     case swift::DeclKind::Module:
     case swift::DeclKind::MissingMember:
       break;
@@ -5232,6 +5233,7 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Module:
+  case swift::TypeKind::ElementArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::Pack:
@@ -5421,6 +5423,7 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::Metatype:
   case swift::TypeKind::Module:
   case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::ElementArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::UnboundGeneric:
@@ -5886,6 +5889,7 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
 
   case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::ElementArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::BuiltinRawPointer:
   case swift::TypeKind::BuiltinNativeObject:
@@ -6030,8 +6034,10 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype:
   case swift::TypeKind::PrimaryArchetype:
-  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::ElementArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
+  case swift::TypeKind::OpenedArchetype:
+
     return 0;
 
   case swift::TypeKind::LValue: {
@@ -6170,9 +6176,10 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::Metatype:
     return 0;
 
-  case swift::TypeKind::PrimaryArchetype:
-  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::ElementArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::LValue:
@@ -6471,9 +6478,10 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
   case swift::TypeKind::Metatype:
     break;
 
-  case swift::TypeKind::PrimaryArchetype:
-  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::ElementArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::LValue:
@@ -6551,9 +6559,10 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::Class:
   case swift::TypeKind::Protocol:
   case swift::TypeKind::Metatype:
-  case swift::TypeKind::PrimaryArchetype:
-  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::ElementArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::ProtocolComposition:
@@ -6911,9 +6920,10 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::Metatype:
     break;
 
-  case swift::TypeKind::PrimaryArchetype:
-  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::ElementArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
     break;
@@ -7151,9 +7161,10 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::Metatype:
       break;
 
-    case swift::TypeKind::PrimaryArchetype:
-    case swift::TypeKind::OpenedArchetype:
+    case swift::TypeKind::ElementArchetype:
     case swift::TypeKind::OpaqueTypeArchetype:
+    case swift::TypeKind::OpenedArchetype:
+    case swift::TypeKind::PrimaryArchetype:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
       break;
@@ -7419,9 +7430,10 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::BuiltinNativeObject:
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinBridgeObject:
-  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::ElementArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::PrimaryArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::GenericTypeParam:
