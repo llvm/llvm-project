@@ -420,9 +420,6 @@ enum Offset : unsigned { // Offset, (5) [10:6]
   OFFSET_MASK_ = (((1 << OFFSET_WIDTH_) - 1) << OFFSET_SHIFT_),
 
   OFFSET_MEM_VIOL = 8,
-
-  OFFSET_SRC_SHARED_BASE = 16,
-  OFFSET_SRC_PRIVATE_BASE = 0
 };
 
 enum WidthMinusOne : unsigned { // WidthMinusOne, (5) [15:11]
@@ -430,9 +427,6 @@ enum WidthMinusOne : unsigned { // WidthMinusOne, (5) [15:11]
   WIDTH_M1_SHIFT_ = 11,
   WIDTH_M1_WIDTH_ = 5,
   WIDTH_M1_MASK_ = (((1 << WIDTH_M1_WIDTH_) - 1) << WIDTH_M1_SHIFT_),
-
-  WIDTH_M1_SRC_SHARED_BASE = 15,
-  WIDTH_M1_SRC_PRIVATE_BASE = 15
 };
 
 // Some values from WidthMinusOne mapped into Width domain.

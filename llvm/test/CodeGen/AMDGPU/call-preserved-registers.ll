@@ -104,11 +104,11 @@ define hidden void @void_func_void_clobber_vcc() #2 {
 ; GCN-NEXT: s_addc_u32
 ; GCN-NEXT: s_swappc_b64
 ; GCN: s_mov_b64 vcc, s[34:35]
-define amdgpu_kernel void @test_call_void_func_void_clobber_vcc(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test_call_void_func_void_clobber_vcc(ptr addrspace(1) %out) #0 {
   %vcc = call i64 asm sideeffect "; def $0", "={vcc}"()
   call void @void_func_void_clobber_vcc()
-  %val0 = load volatile i32, i32 addrspace(1)* undef
-  %val1 = load volatile i32, i32 addrspace(1)* undef
+  %val0 = load volatile i32, ptr addrspace(1) undef
+  %val1 = load volatile i32, ptr addrspace(1) undef
   call void asm sideeffect "; use $0", "{vcc}"(i64 %vcc)
   ret void
 }
@@ -117,7 +117,7 @@ define amdgpu_kernel void @test_call_void_func_void_clobber_vcc(i32 addrspace(1)
 ; GCN: s_mov_b32 s33, s31
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_mov_b32 s31, s33
-define amdgpu_kernel void @test_call_void_func_void_mayclobber_s31(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test_call_void_func_void_mayclobber_s31(ptr addrspace(1) %out) #0 {
   %s31 = call i32 asm sideeffect "; def $0", "={s31}"()
   call void @external_void_func_void()
   call void asm sideeffect "; use $0", "{s31}"(i32 %s31)
@@ -128,7 +128,7 @@ define amdgpu_kernel void @test_call_void_func_void_mayclobber_s31(i32 addrspace
 ; GCN: v_mov_b32_e32 v40, v31
 ; GCN: s_swappc_b64
 ; GCN-NEXT: v_mov_b32_e32 v31, v40
-define amdgpu_kernel void @test_call_void_func_void_mayclobber_v31(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test_call_void_func_void_mayclobber_v31(ptr addrspace(1) %out) #0 {
   %v31 = call i32 asm sideeffect "; def $0", "={v31}"()
   call void @external_void_func_void()
   call void asm sideeffect "; use $0", "{v31}"(i32 %v31)
@@ -154,7 +154,7 @@ define amdgpu_kernel void @test_call_void_func_void_mayclobber_v31(i32 addrspace
 ; GCN-NEXT: ;;#ASMEND
 ; GCN-NOT: s33
 ; GCN-NEXT: s_endpgm
-define amdgpu_kernel void @test_call_void_func_void_preserves_s33(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test_call_void_func_void_preserves_s33(ptr addrspace(1) %out) #0 {
   %s33 = call i32 asm sideeffect "; def $0", "={s33}"()
   call void @external_void_func_void()
   call void asm sideeffect "; use $0", "{s33}"(i32 %s33)
@@ -187,7 +187,7 @@ define amdgpu_kernel void @test_call_void_func_void_preserves_s33(i32 addrspace(
 ; GCN-NEXT: ; use s34
 ; GCN-NEXT: ;;#ASMEND
 ; GCN-NEXT: s_endpgm
-define amdgpu_kernel void @test_call_void_func_void_preserves_s34(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test_call_void_func_void_preserves_s34(ptr addrspace(1) %out) #0 {
   %s34 = call i32 asm sideeffect "; def $0", "={s34}"()
   call void @external_void_func_void()
   call void asm sideeffect "; use $0", "{s34}"(i32 %s34)
@@ -219,7 +219,7 @@ define amdgpu_kernel void @test_call_void_func_void_preserves_s34(i32 addrspace(
 ; GCN-NEXT: ; use v40
 ; GCN-NEXT: ;;#ASMEND
 ; GCN-NEXT: s_endpgm
-define amdgpu_kernel void @test_call_void_func_void_preserves_v40(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test_call_void_func_void_preserves_v40(ptr addrspace(1) %out) #0 {
   %v40 = call i32 asm sideeffect "; def $0", "={v40}"()
   call void @external_void_func_void()
   call void asm sideeffect "; use $0", "{v40}"(i32 %v40)

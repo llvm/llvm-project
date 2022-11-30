@@ -384,5 +384,36 @@ void hlfir::ConcatOp::build(mlir::OpBuilder &builder,
   build(builder, result, resultType, strings, len);
 }
 
+//===----------------------------------------------------------------------===//
+// AssociateOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::AssociateOp::build(mlir::OpBuilder &builder,
+                               mlir::OperationState &result, mlir::Value source,
+                               llvm::StringRef uniq_name, mlir::Value shape,
+                               mlir::ValueRange typeparams,
+                               fir::FortranVariableFlagsAttr fortran_attrs) {
+  auto nameAttr = builder.getStringAttr(uniq_name);
+  // TODO: preserve polymorphism of polymorphic expr.
+  mlir::Type firVarType = fir::ReferenceType::get(
+      getFortranElementOrSequenceType(source.getType()));
+  mlir::Type hlfirVariableType =
+      DeclareOp::getHLFIRVariableType(firVarType, /*hasExplicitLbs=*/false);
+  mlir::Type i1Type = builder.getI1Type();
+  build(builder, result, {hlfirVariableType, firVarType, i1Type}, source, shape,
+        typeparams, nameAttr, fortran_attrs);
+}
+
+//===----------------------------------------------------------------------===//
+// EndAssociateOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::EndAssociateOp::build(mlir::OpBuilder &builder,
+                                  mlir::OperationState &result,
+                                  hlfir::AssociateOp associate) {
+  return build(builder, result, associate.getFirBase(),
+               associate.getMustFreeStrorageFlag());
+}
+
 #define GET_OP_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"

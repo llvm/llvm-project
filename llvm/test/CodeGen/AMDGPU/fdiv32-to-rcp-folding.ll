@@ -14,10 +14,10 @@
 ; GCN-FLUSH:      v_rcp_f32_e32 [[OUT:v[0-9]+]], [[VAL]]
 
 ; GCN:            global_store_dword v{{[0-9]+}}, [[OUT]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @div_1_by_x_25ulp(float addrspace(1)* %arg) {
-  %load = load float, float addrspace(1)* %arg, align 4
+define amdgpu_kernel void @div_1_by_x_25ulp(ptr addrspace(1) %arg) {
+  %load = load float, ptr addrspace(1) %arg, align 4
   %div = fdiv float 1.000000e+00, %load, !fpmath !0
-  store float %div, float addrspace(1)* %arg, align 4
+  store float %div, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -34,10 +34,10 @@ define amdgpu_kernel void @div_1_by_x_25ulp(float addrspace(1)* %arg) {
 ; GCN-FLUSH:      v_rcp_f32_e64 [[OUT:v[0-9]+]], -[[VAL]]
 
 ; GCN:            global_store_dword v{{[0-9]+}}, [[OUT]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @div_minus_1_by_x_25ulp(float addrspace(1)* %arg) {
-  %load = load float, float addrspace(1)* %arg, align 4
+define amdgpu_kernel void @div_minus_1_by_x_25ulp(ptr addrspace(1) %arg) {
+  %load = load float, ptr addrspace(1) %arg, align 4
   %div = fdiv float -1.000000e+00, %load, !fpmath !0
-  store float %div, float addrspace(1)* %arg, align 4
+  store float %div, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -54,11 +54,11 @@ define amdgpu_kernel void @div_minus_1_by_x_25ulp(float addrspace(1)* %arg) {
 ; GCN-FLUSH:      v_rcp_f32_e64 [[OUT:v[0-9]+]], -[[VAL]]
 
 ; GCN:            global_store_dword v{{[0-9]+}}, [[OUT]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @div_1_by_minus_x_25ulp(float addrspace(1)* %arg) {
-  %load = load float, float addrspace(1)* %arg, align 4
+define amdgpu_kernel void @div_1_by_minus_x_25ulp(ptr addrspace(1) %arg) {
+  %load = load float, ptr addrspace(1) %arg, align 4
   %neg = fneg float %load
   %div = fdiv float 1.000000e+00, %neg, !fpmath !0
-  store float %div, float addrspace(1)* %arg, align 4
+  store float %div, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -75,11 +75,11 @@ define amdgpu_kernel void @div_1_by_minus_x_25ulp(float addrspace(1)* %arg) {
 ; GCN-FLUSH:      v_rcp_f32_e32 [[OUT:v[0-9]+]], [[VAL]]
 
 ; GCN:            global_store_dword v{{[0-9]+}}, [[OUT]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @div_minus_1_by_minus_x_25ulp(float addrspace(1)* %arg) {
-  %load = load float, float addrspace(1)* %arg, align 4
+define amdgpu_kernel void @div_minus_1_by_minus_x_25ulp(ptr addrspace(1) %arg) {
+  %load = load float, ptr addrspace(1) %arg, align 4
   %neg = fsub float -0.000000e+00, %load
   %div = fdiv float -1.000000e+00, %neg, !fpmath !0
-  store float %div, float addrspace(1)* %arg, align 4
+  store float %div, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -113,10 +113,10 @@ define amdgpu_kernel void @div_minus_1_by_minus_x_25ulp(float addrspace(1)* %arg
 ; GCN-FLUSH:      v_rcp_f32_e32
 ; GCN-FLUSH:      v_rcp_f32_e32 v[[OUT3:[0-9]+]], s[[VAL3]]
 ; GCN-FLUSH:      global_store_dwordx4 v{{[0-9]+}}, v[[[OUT0]]:[[OUT3]]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @div_v4_1_by_x_25ulp(<4 x float> addrspace(1)* %arg) {
-  %load = load <4 x float>, <4 x float> addrspace(1)* %arg, align 16
+define amdgpu_kernel void @div_v4_1_by_x_25ulp(ptr addrspace(1) %arg) {
+  %load = load <4 x float>, ptr addrspace(1) %arg, align 16
   %div = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, %load, !fpmath !0
-  store <4 x float> %div, <4 x float> addrspace(1)* %arg, align 16
+  store <4 x float> %div, ptr addrspace(1) %arg, align 16
   ret void
 }
 
@@ -149,10 +149,10 @@ define amdgpu_kernel void @div_v4_1_by_x_25ulp(<4 x float> addrspace(1)* %arg) {
 ; GCN-FLUSH:      v_rcp_f32_e64
 ; GCN-FLUSH:      v_rcp_f32_e64
 ; GCN-FLUSH:      v_rcp_f32_e64 v[[OUT3:[0-9]+]], -s[[VAL3]]
-define amdgpu_kernel void @div_v4_minus_1_by_x_25ulp(<4 x float> addrspace(1)* %arg) {
-  %load = load <4 x float>, <4 x float> addrspace(1)* %arg, align 16
+define amdgpu_kernel void @div_v4_minus_1_by_x_25ulp(ptr addrspace(1) %arg) {
+  %load = load <4 x float>, ptr addrspace(1) %arg, align 16
   %div = fdiv <4 x float> <float -1.000000e+00, float -1.000000e+00, float -1.000000e+00, float -1.000000e+00>, %load, !fpmath !0
-  store <4 x float> %div, <4 x float> addrspace(1)* %arg, align 16
+  store <4 x float> %div, ptr addrspace(1) %arg, align 16
   ret void
 }
 
@@ -186,11 +186,11 @@ define amdgpu_kernel void @div_v4_minus_1_by_x_25ulp(<4 x float> addrspace(1)* %
 ; GCN-FLUSH:      v_rcp_f32_e64
 ; GCN-FLUSH:      v_rcp_f32_e64 v[[OUT3:[0-9]+]], -s[[VAL3]]
 ; GCN-FLUSH:      global_store_dwordx4 v{{[0-9]+}}, v[[[OUT0]]:[[OUT3]]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @div_v4_1_by_minus_x_25ulp(<4 x float> addrspace(1)* %arg) {
-  %load = load <4 x float>, <4 x float> addrspace(1)* %arg, align 16
+define amdgpu_kernel void @div_v4_1_by_minus_x_25ulp(ptr addrspace(1) %arg) {
+  %load = load <4 x float>, ptr addrspace(1) %arg, align 16
   %neg = fneg <4 x float> %load
   %div = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, %neg, !fpmath !0
-  store <4 x float> %div, <4 x float> addrspace(1)* %arg, align 16
+  store <4 x float> %div, ptr addrspace(1) %arg, align 16
   ret void
 }
 
@@ -224,11 +224,11 @@ define amdgpu_kernel void @div_v4_1_by_minus_x_25ulp(<4 x float> addrspace(1)* %
 ; GCN-FLUSH:      v_rcp_f32_e32
 ; GCN-FLUSH:      v_rcp_f32_e32 v[[OUT3:[0-9]+]], s[[VAL3]]
 ; GCN-FLUSH:      global_store_dwordx4 v{{[0-9]+}}, v[[[OUT0]]:[[OUT3]]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @div_v4_minus_1_by_minus_x_25ulp(<4 x float> addrspace(1)* %arg) {
-  %load = load <4 x float>, <4 x float> addrspace(1)* %arg, align 16
+define amdgpu_kernel void @div_v4_minus_1_by_minus_x_25ulp(ptr addrspace(1) %arg) {
+  %load = load <4 x float>, ptr addrspace(1) %arg, align 16
   %neg = fneg <4 x float> %load
   %div = fdiv <4 x float> <float -1.000000e+00, float -1.000000e+00, float -1.000000e+00, float -1.000000e+00>, %neg, !fpmath !0
-  store <4 x float> %div, <4 x float> addrspace(1)* %arg, align 16
+  store <4 x float> %div, ptr addrspace(1) %arg, align 16
   ret void
 }
 
@@ -268,10 +268,10 @@ define amdgpu_kernel void @div_v4_minus_1_by_minus_x_25ulp(<4 x float> addrspace
 ; GCN-FLUSH-NOT:  v_div
 
 ; GCN:            global_store_dwordx4
-define amdgpu_kernel void @div_v4_c_by_x_25ulp(<4 x float> addrspace(1)* %arg) {
-  %load = load <4 x float>, <4 x float> addrspace(1)* %arg, align 16
+define amdgpu_kernel void @div_v4_c_by_x_25ulp(ptr addrspace(1) %arg) {
+  %load = load <4 x float>, ptr addrspace(1) %arg, align 16
   %div = fdiv <4 x float> <float 2.000000e+00, float 1.000000e+00, float -1.000000e+00, float -2.000000e+00>, %load, !fpmath !0
-  store <4 x float> %div, <4 x float> addrspace(1)* %arg, align 16
+  store <4 x float> %div, ptr addrspace(1) %arg, align 16
   ret void
 }
 
@@ -311,11 +311,11 @@ define amdgpu_kernel void @div_v4_c_by_x_25ulp(<4 x float> addrspace(1)* %arg) {
 ; GCN-FLUSH-NOT:  v_div
 
 ; GCN:            global_store_dwordx4
-define amdgpu_kernel void @div_v4_c_by_minus_x_25ulp(<4 x float> addrspace(1)* %arg) {
-  %load = load <4 x float>, <4 x float> addrspace(1)* %arg, align 16
+define amdgpu_kernel void @div_v4_c_by_minus_x_25ulp(ptr addrspace(1) %arg) {
+  %load = load <4 x float>, ptr addrspace(1) %arg, align 16
   %neg = fneg <4 x float> %load
   %div = fdiv <4 x float> <float 2.000000e+00, float 1.000000e+00, float -1.000000e+00, float -2.000000e+00>, %neg, !fpmath !0
-  store <4 x float> %div, <4 x float> addrspace(1)* %arg, align 16
+  store <4 x float> %div, ptr addrspace(1) %arg, align 16
   ret void
 }
 
@@ -337,10 +337,10 @@ define amdgpu_kernel void @div_v4_c_by_minus_x_25ulp(<4 x float> addrspace(1)* %
 ; GCN-FLUSH:      v_mul_f32_e32 [[OUT:v[0-9]+]], [[SCALE]], [[RCP]]
 
 ; GCN:            global_store_dword v{{[0-9]+}}, [[OUT]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @div_v_by_x_25ulp(float addrspace(1)* %arg, float %num) {
-  %load = load float, float addrspace(1)* %arg, align 4
+define amdgpu_kernel void @div_v_by_x_25ulp(ptr addrspace(1) %arg, float %num) {
+  %load = load float, ptr addrspace(1) %arg, align 4
   %div = fdiv float %num, %load, !fpmath !0
-  store float %div, float addrspace(1)* %arg, align 4
+  store float %div, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -348,10 +348,10 @@ define amdgpu_kernel void @div_v_by_x_25ulp(float addrspace(1)* %arg, float %num
 ; GCN: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x0
 ; GCN: v_rcp_f32_e32 [[RCP:v[0-9]+]], [[VAL]]
 ; GCN: global_store_dword v{{[0-9]+}}, [[RCP]], s{{\[[0-9]:[0-9]+\]}}
-define amdgpu_kernel void @div_1_by_x_fast(float addrspace(1)* %arg) {
-  %load = load float, float addrspace(1)* %arg, align 4
+define amdgpu_kernel void @div_1_by_x_fast(ptr addrspace(1) %arg) {
+  %load = load float, ptr addrspace(1) %arg, align 4
   %div = fdiv fast float 1.000000e+00, %load, !fpmath !0
-  store float %div, float addrspace(1)* %arg, align 4
+  store float %div, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -359,10 +359,10 @@ define amdgpu_kernel void @div_1_by_x_fast(float addrspace(1)* %arg) {
 ; GCN: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x0
 ; GCN: v_rcp_f32_e64 [[RCP:v[0-9]+]], -[[VAL]]
 ; GCN: global_store_dword v{{[0-9]+}}, [[RCP]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @div_minus_1_by_x_fast(float addrspace(1)* %arg) {
-  %load = load float, float addrspace(1)* %arg, align 4
+define amdgpu_kernel void @div_minus_1_by_x_fast(ptr addrspace(1) %arg) {
+  %load = load float, ptr addrspace(1) %arg, align 4
   %div = fdiv fast float -1.000000e+00, %load, !fpmath !0
-  store float %div, float addrspace(1)* %arg, align 4
+  store float %div, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -370,11 +370,11 @@ define amdgpu_kernel void @div_minus_1_by_x_fast(float addrspace(1)* %arg) {
 ; GCN: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x0
 ; GCN: v_rcp_f32_e64 [[RCP:v[0-9]+]], -[[VAL]]
 ; GCN: global_store_dword v{{[0-9]+}}, [[RCP]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @div_1_by_minus_x_fast(float addrspace(1)* %arg) {
-  %load = load float, float addrspace(1)* %arg, align 4
+define amdgpu_kernel void @div_1_by_minus_x_fast(ptr addrspace(1) %arg) {
+  %load = load float, ptr addrspace(1) %arg, align 4
   %neg = fneg float %load, !fpmath !0
   %div = fdiv fast float 1.000000e+00, %neg
-  store float %div, float addrspace(1)* %arg, align 4
+  store float %div, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -382,11 +382,11 @@ define amdgpu_kernel void @div_1_by_minus_x_fast(float addrspace(1)* %arg) {
 ; GCN: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x0
 ; GCN: v_rcp_f32_e32 [[RCP:v[0-9]+]], [[VAL]]
 ; GCN: global_store_dword v{{[0-9]+}}, [[RCP]], s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @div_minus_1_by_minus_x_fast(float addrspace(1)* %arg) {
-  %load = load float, float addrspace(1)* %arg, align 4
+define amdgpu_kernel void @div_minus_1_by_minus_x_fast(ptr addrspace(1) %arg) {
+  %load = load float, ptr addrspace(1) %arg, align 4
   %neg = fsub float -0.000000e+00, %load, !fpmath !0
   %div = fdiv fast float -1.000000e+00, %neg
-  store float %div, float addrspace(1)* %arg, align 4
+  store float %div, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -396,10 +396,10 @@ define amdgpu_kernel void @div_minus_1_by_minus_x_fast(float addrspace(1)* %arg)
 ; GCN-DAG: v_div_scale_f32
 ; GCN:     v_div_fmas_f32
 ; GCN:     v_div_fixup_f32
-define amdgpu_kernel void @div_1_by_x_correctly_rounded(float addrspace(1)* %arg) {
-  %load = load float, float addrspace(1)* %arg, align 4
+define amdgpu_kernel void @div_1_by_x_correctly_rounded(ptr addrspace(1) %arg) {
+  %load = load float, ptr addrspace(1) %arg, align 4
   %div = fdiv float 1.000000e+00, %load
-  store float %div, float addrspace(1)* %arg, align 4
+  store float %div, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -409,10 +409,10 @@ define amdgpu_kernel void @div_1_by_x_correctly_rounded(float addrspace(1)* %arg
 ; GCN-DAG: v_div_scale_f32
 ; GCN:     v_div_fmas_f32
 ; GCN:     v_div_fixup_f32
-define amdgpu_kernel void @div_minus_1_by_x_correctly_rounded(float addrspace(1)* %arg) {
-  %load = load float, float addrspace(1)* %arg, align 4
+define amdgpu_kernel void @div_minus_1_by_x_correctly_rounded(ptr addrspace(1) %arg) {
+  %load = load float, ptr addrspace(1) %arg, align 4
   %div = fdiv float -1.000000e+00, %load
-  store float %div, float addrspace(1)* %arg, align 4
+  store float %div, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -422,11 +422,11 @@ define amdgpu_kernel void @div_minus_1_by_x_correctly_rounded(float addrspace(1)
 ; GCN-DAG: v_div_scale_f32
 ; GCN:     v_div_fmas_f32
 ; GCN:     v_div_fixup_f32
-define amdgpu_kernel void @div_1_by_minus_x_correctly_rounded(float addrspace(1)* %arg) {
-  %load = load float, float addrspace(1)* %arg, align 4
+define amdgpu_kernel void @div_1_by_minus_x_correctly_rounded(ptr addrspace(1) %arg) {
+  %load = load float, ptr addrspace(1) %arg, align 4
   %neg = fsub float -0.000000e+00, %load
   %div = fdiv float 1.000000e+00, %neg
-  store float %div, float addrspace(1)* %arg, align 4
+  store float %div, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -436,11 +436,11 @@ define amdgpu_kernel void @div_1_by_minus_x_correctly_rounded(float addrspace(1)
 ; GCN-DAG: v_div_scale_f32
 ; GCN:     v_div_fmas_f32
 ; GCN:     v_div_fixup_f32
-define amdgpu_kernel void @div_minus_1_by_minus_x_correctly_rounded(float addrspace(1)* %arg) {
-  %load = load float, float addrspace(1)* %arg, align 4
+define amdgpu_kernel void @div_minus_1_by_minus_x_correctly_rounded(ptr addrspace(1) %arg) {
+  %load = load float, ptr addrspace(1) %arg, align 4
   %neg = fsub float -0.000000e+00, %load
   %div = fdiv float -1.000000e+00, %neg
-  store float %div, float addrspace(1)* %arg, align 4
+  store float %div, ptr addrspace(1) %arg, align 4
   ret void
 }
 

@@ -12,7 +12,7 @@ define amdgpu_hs void @main([0 x i8] addrspace(6)* inreg %arg) {
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
-  ; GCN-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFEN [[COPY]], [[DEF1]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
+  ; GCN-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFEN [[COPY]], [[DEF1]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 7)
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub2
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub1
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub0
@@ -21,7 +21,7 @@ define amdgpu_hs void @main([0 x i8] addrspace(6)* inreg %arg) {
   ; GCN-NEXT:   [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
   ; GCN-NEXT:   [[DEF3:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
-  ; GCN-NEXT:   BUFFER_STORE_DWORDX3_OFFEN_exact killed [[COPY4]], [[COPY5]], [[DEF3]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable store (s96), align 1, addrspace 4)
+  ; GCN-NEXT:   BUFFER_STORE_DWORDX3_OFFEN_exact killed [[COPY4]], [[COPY5]], [[DEF3]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable store (s96), align 1, addrspace 7)
   ; GCN-NEXT:   S_ENDPGM 0
 main_body:
   %tmp25 = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32> undef, i32 undef, i32 0, i32 0)
