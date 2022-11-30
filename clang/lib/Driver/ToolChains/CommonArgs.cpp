@@ -519,8 +519,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   }
 
   const char *PluginOptPrefix = IsOSAIX ? "-bplugin_opt:" : "-plugin-opt=";
-  const char *mcpuOptPrefix = IsOSAIX ? "-mcpu=" : "mcpu=";
-  const char *OptLevelPrefix = IsOSAIX ? "-O" : "O";
+  const char *ExtraDash = IsOSAIX ? "-" : "";
 
   // Note, this solution is far from perfect, better to encode it into IR
   // metadata, but this may not be worth it, since it looks like aranges is on
@@ -537,7 +536,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   std::string CPU = getCPUName(D, Args, ToolChain.getTriple());
   if (!CPU.empty())
     CmdArgs.push_back(
-        Args.MakeArgString(Twine(PluginOptPrefix) + mcpuOptPrefix + CPU));
+        Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "mcpu=" + CPU));
 
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     // The optimization level matches
@@ -556,7 +555,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
       OOpt = "0";
     if (!OOpt.empty())
       CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + OptLevelPrefix + OOpt));
+          Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "O" + OOpt));
   }
 
   if (Args.hasArg(options::OPT_gsplit_dwarf))
@@ -650,24 +649,25 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   auto *ProfileUseArg = getLastProfileUseArg(Args);
 
   if (CSPGOGenerateArg) {
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine(PluginOptPrefix) + "cs-profile-generate"));
+    CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash +
+                                         "cs-profile-generate"));
     if (CSPGOGenerateArg->getOption().matches(
             options::OPT_fcs_profile_generate_EQ)) {
       SmallString<128> Path(CSPGOGenerateArg->getValue());
       llvm::sys::path::append(Path, "default_%m.profraw");
-      CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
+      CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash +
                                            "cs-profile-path=" + Path));
     } else
-      CmdArgs.push_back(Args.MakeArgString(
-          Twine(PluginOptPrefix) + "cs-profile-path=default_%m.profraw"));
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash +
+                             "cs-profile-path=default_%m.profraw"));
   } else if (ProfileUseArg) {
     SmallString<128> Path(
         ProfileUseArg->getNumValues() == 0 ? "" : ProfileUseArg->getValue());
     if (Path.empty() || llvm::sys::fs::is_directory(Path))
       llvm::sys::path::append(Path, "default.profdata");
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine(PluginOptPrefix) + "cs-profile-path=" + Path));
+    CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash +
+                                         "cs-profile-path=" + Path));
   }
 
   // This controls whether or not we perform JustMyCode instrumentation.
