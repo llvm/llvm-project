@@ -90,6 +90,7 @@ Because the device code is stored inside a fat binary, it can be difficult to
 inspect the resulting code. This can be done using the following utilities:
 
 .. code-block:: sh
+
    $> llvm-ar x libcgpu.a strcmp.cpp.o
    $> clang-offload-packager strcmp.cpp.o --image=arch=gfx90a,file=gfx90a.bc
    $> opt -S out.bc
