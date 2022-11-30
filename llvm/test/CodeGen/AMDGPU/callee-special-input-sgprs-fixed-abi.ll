@@ -37,10 +37,13 @@ define amdgpu_kernel void @kern_indirect_use_queue_ptr(i32) #1 {
 
 ; GCN-LABEL: {{^}}use_queue_ptr_addrspacecast:
 ; CIVI: s_load_dword [[APERTURE_LOAD:s[0-9]+]], s[6:7], 0x10
-; GFX9: s_getreg_b32 [[APERTURE_LOAD:s[0-9]+]]
 ; CIVI: v_mov_b32_e32 v[[LO:[0-9]+]], 16
-; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[APERTURE_LOAD]]
-; GFX9: {{flat|global}}_store_dword v{{\[[0-9]+}}:[[HI]]]
+; CIVI-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[APERTURE_LOAD]]
+
+; GFX9: s_mov_b64 s[{{[0-9]+}}:[[HI:[0-9]+]]], src_shared_base
+; GFX9-DAG: v_mov_b32_e32 v[[VGPR_HI:[0-9]+]], s[[HI]]
+; GFX9: {{flat|global}}_store_dword v{{\[[0-9]+}}:[[VGPR_HI]]]
+
 ; CIVI: {{flat|global}}_store_dword v[[[LO]]:[[HI]]]
 define hidden void @use_queue_ptr_addrspacecast() #1 {
   %asc = addrspacecast ptr addrspace(3) inttoptr (i32 16 to ptr addrspace(3)) to ptr

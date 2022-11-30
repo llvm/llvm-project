@@ -104,3 +104,39 @@ v_fma_mixlo_f16_e64_dpp v5, v1, 1, v4 dpp8:[7,6,5,4,3,2,1,0]
 
 buffer_store_d16_hi_format_x v[1:2], off, s[12:15], s4 offset:4095 glc slc dlc tfe
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: TFE modifier has no meaning for store instructions
+
+v_fmac_f16_e64_dpp v5, -16, v3 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fmac_f16_e64_dpp v5, v2, s3 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fmac_f16_e64_dpp v5, v2, 0x1234 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fmac_f16_e64_dpp v5, 0x1234, v3 quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fmac_f16_e64_dpp v5, s2, v3 quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fmac_f16_e64_dpp v5, v2, 1.0 quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fmac_f32_e64_dpp v5, s2, v3 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fmac_f32_e64_dpp v5, 0x1234, v3 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fmac_f32_e64_dpp v5, v2, 1 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fmac_f32_e64_dpp v5, -1.0, v3 quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fmac_f32_e64_dpp v5, v2, s3 quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_fmac_f32_e64_dpp v5, v2, 0x1234 quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

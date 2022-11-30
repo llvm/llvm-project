@@ -177,6 +177,8 @@ HANDLE_TARGET_OPCODE(FAULTING_OP)
 /// second operand is an immediate denoting the opcode of the original
 /// instruction.  The rest of the operands are the operands of the
 /// original instruction.
+/// PATCHABLE_OP can be used as second operand to only insert a nop of
+/// required size.
 HANDLE_TARGET_OPCODE(PATCHABLE_OP)
 
 /// This is a marker instruction which gets translated into a nop sled, useful
