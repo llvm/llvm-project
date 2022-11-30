@@ -34,11 +34,6 @@ def CorePfmCounters : ProcPfmCounters {
 }
 def : PfmCountersBinding<"yonah", CorePfmCounters>;
 def : PfmCountersBinding<"prescott", CorePfmCounters>;
-def : PfmCountersBinding<"core2", CorePfmCounters>;
-def : PfmCountersBinding<"penryn", CorePfmCounters>;
-def : PfmCountersBinding<"nehalem", CorePfmCounters>;
-def : PfmCountersBinding<"corei7", CorePfmCounters>;
-def : PfmCountersBinding<"westmere", CorePfmCounters>;
 
 def AtomPfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;
@@ -62,6 +57,35 @@ def KnightPfmCounters : ProcPfmCounters {
 }
 def : PfmCountersBinding<"knl", KnightPfmCounters>;
 def : PfmCountersBinding<"knm", KnightPfmCounters>;
+
+def Core2PfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = PfmCounter<"uops_retired:any">;
+  let IssueCounters = [
+    PfmIssueCounter<"SBPort0",  "rs_uops_dispatched_cycles:port_0">,
+    PfmIssueCounter<"SBPort1",  "rs_uops_dispatched_cycles:port_1">,
+    PfmIssueCounter<"SBPort23", "rs_uops_dispatched_cycles:port_2 + rs_uops_dispatched_cycles:port_3">,
+    PfmIssueCounter<"SBPort4",  "rs_uops_dispatched_cycles:port_4">,
+    PfmIssueCounter<"SBPort5",  "rs_uops_dispatched_cycles:port_5">
+  ];
+}
+def : PfmCountersBinding<"core2", Core2PfmCounters>;
+def : PfmCountersBinding<"penryn", Core2PfmCounters>;
+
+def NehalemPfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = PfmCounter<"uops_retired:any">;
+  let IssueCounters = [
+    PfmIssueCounter<"SBPort0",  "uops_executed:port0">,
+    PfmIssueCounter<"SBPort1",  "uops_executed:port1">,
+    PfmIssueCounter<"SBPort23", "uops_executed:port2_core + uops_executed:port3_core">,
+    PfmIssueCounter<"SBPort4",  "uops_executed:port4_core">,
+    PfmIssueCounter<"SBPort5",  "uops_executed:port5">
+  ];
+}
+def : PfmCountersBinding<"nehalem", NehalemPfmCounters>;
+def : PfmCountersBinding<"corei7", NehalemPfmCounters>;
+def : PfmCountersBinding<"westmere", NehalemPfmCounters>;
 
 def SandyBridgePfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;

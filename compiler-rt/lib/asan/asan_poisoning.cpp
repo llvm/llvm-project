@@ -371,7 +371,8 @@ void __asan_unpoison_stack_memory(uptr addr, uptr size) {
 }
 
 static void FixUnalignedStorage(uptr storage_beg, uptr storage_end,
-                                uptr &old_end, uptr &new_end) {
+                                uptr &old_beg, uptr &old_end, uptr &new_beg,
+                                uptr &new_end) {
   constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
   if (UNLIKELY(!AddrIsAlignedByGranularity(storage_end))) {
     uptr end_down = RoundDownTo(storage_end, granularity);
@@ -379,8 +380,12 @@ static void FixUnalignedStorage(uptr storage_beg, uptr storage_end,
     // unpoisoned byte, because we can't poison the prefix anyway. Don't call
     // AddressIsPoisoned at all if container changes does not affect the last
     // granule at all.
-    if (Max(old_end, new_end) > end_down && !AddressIsPoisoned(storage_end)) {
+    if ((((old_end != new_end) && Max(old_end, new_end) > end_down) ||
+         ((old_beg != new_beg) && Max(old_beg, new_beg) > end_down)) &&
+        !AddressIsPoisoned(storage_end)) {
+      old_beg = Min(end_down, old_beg);
       old_end = Min(end_down, old_end);
+      new_beg = Min(end_down, new_beg);
       new_end = Min(end_down, new_end);
     }
   }
@@ -390,12 +395,14 @@ static void FixUnalignedStorage(uptr storage_beg, uptr storage_end,
     uptr beg_up = RoundUpTo(storage_beg, granularity);
     // The first unaligned granule needs special handling only if we had bytes
     // there before and will have none after.
-    if (storage_beg == new_end && storage_beg != old_end &&
-        storage_beg < beg_up) {
+    if ((new_beg == new_end || new_beg >= beg_up) && old_beg != old_end &&
+        old_beg < beg_up) {
       // Keep granule prefix outside of the storage unpoisoned.
       uptr beg_down = RoundDownTo(storage_beg, granularity);
       *(u8 *)MemToShadow(beg_down) = storage_beg - beg_down;
+      old_beg = Max(beg_up, old_beg);
       old_end = Max(beg_up, old_end);
+      new_beg = Max(beg_up, new_beg);
       new_end = Max(beg_up, new_end);
     }
   }
@@ -413,6 +420,8 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
   uptr storage_end = reinterpret_cast<uptr>(end_p);
   uptr old_end = reinterpret_cast<uptr>(old_mid_p);
   uptr new_end = reinterpret_cast<uptr>(new_mid_p);
+  uptr old_beg = storage_beg;
+  uptr new_beg = storage_beg;
   uptr granularity = ASAN_SHADOW_GRANULARITY;
   if (!(storage_beg <= old_end && storage_beg <= new_end &&
         old_end <= storage_end && new_end <= storage_end)) {
@@ -426,7 +435,8 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
   if (old_end == new_end)
     return;  // Nothing to do here.
 
-  FixUnalignedStorage(storage_beg, storage_end, old_end, new_end);
+  FixUnalignedStorage(storage_beg, storage_end, old_beg, old_end, new_beg,
+                      new_end);
 
   uptr a = RoundDownTo(Min(old_end, new_end), granularity);
   uptr c = RoundUpTo(Max(old_end, new_end), granularity);
@@ -483,11 +493,9 @@ void __sanitizer_annotate_double_ended_contiguous_container(
 
   constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
 
-  if (!(storage_beg <= new_beg && new_beg <= storage_end) ||
-      !(storage_beg <= new_end && new_end <= storage_end) ||
-      !(storage_beg <= old_beg && old_beg <= storage_end) ||
-      !(storage_beg <= old_end && old_end <= storage_end) ||
-      !(old_beg <= old_end && new_beg <= new_end)) {
+  if (!(old_beg <= old_end && new_beg <= new_end) ||
+      !(storage_beg <= new_beg && new_end <= storage_end) ||
+      !(storage_beg <= old_beg && old_end <= storage_end)) {
     GET_STACK_TRACE_FATAL_HERE;
     ReportBadParamsToAnnotateDoubleEndedContiguousContainer(
         storage_beg, storage_end, old_beg, old_end, new_beg, new_end, &stack);
@@ -499,105 +507,72 @@ void __sanitizer_annotate_double_ended_contiguous_container(
       (old_beg == new_beg && old_end == new_end))
     return;  // Nothing to do here.
 
-  // Right now, the function does not support:
-  // - unaligned storage beginning
-  // - situations when container ends in the middle of granule
-  // (storage_end is unaligned by granularity)
-  //  and shares that granule with a different object.
-  if (!AddrIsAlignedByGranularity(storage_beg))
-    return;
+  FixUnalignedStorage(storage_beg, storage_end, old_beg, old_end, new_beg,
+                      new_end);
 
-  if (old_beg == old_end) {
-    old_beg = old_end = new_beg;
-  } else if (new_end <= old_beg || old_end <= new_beg || new_beg == new_end) {
-    // Poisoining whole memory.
-    uptr a = RoundDownTo(old_beg, granularity);
-    uptr b = RoundUpTo(old_end, granularity);
-    PoisonShadow(a, b - a, kAsanContiguousContainerOOBMagic);
-
-    old_beg = old_end = new_beg;
-  }
-
-  if (old_beg != new_beg) {
-    // There are two situations: we are poisoning or unpoisoning.
-    // WARNING: at the moment we do not poison prefixes of blocks described by
-    // one byte in shadow memory, so we have to unpoison prefixes of blocks with
-    // content. Up to (granularity - 1) bytes not-in-use may not be poisoned.
-
-    if (new_beg < old_beg) {  // We are unpoisoning
-      uptr a = RoundDownTo(new_beg, granularity);
-      uptr c = RoundDownTo(old_beg, granularity);
-      // State at the moment is:
-      // [storage_beg, a] is poisoned and should remain like that.
-      // [a, c] is poisoned as well (interval may be empty if new_beg
-      // and old_beg are in the same block). If the container is not
-      // empty, first element starts somewhere in [c, c+granularity]. Because we
-      // do not poison prefixes, memory [c, container_end] is not poisoned and
-      // we won't change it. If container is empty, we have to unpoison memory
-      // for elements after c, so [c, container_end]
-      PoisonShadow(a, c - a, 0);
-      if (old_beg == old_end &&
-          !AddrIsAlignedByGranularity(old_beg)) {  // was empty && ends in the
-                                                   // middle of a block
-        *(u8 *)MemToShadow(c) = static_cast<u8>(old_end - c);
-      }
-      // else: we cannot poison prefix of a block with elements or there is
-      // nothing to poison.
-    } else {  // we are poisoning as beginning moved further in memory
+  // Handle non-intersecting new/old containers separately have simpler
+  // intersecting case.
+  if (old_beg == old_end || new_beg == new_end || new_end <= old_beg ||
+      old_end <= new_beg) {
+    if (old_beg != old_end) {
+      // Poisoning the old container.
       uptr a = RoundDownTo(old_beg, granularity);
-      uptr c = RoundDownTo(new_beg, granularity);
-      // State at the moment is:
-      // [storage_beg, a] is poisoned and should remain like that.
-      // [a, c] is not poisoned (interval may be empty if new_beg and
-      // old_beg are in the same block) [c, container_end] is not
-      // poisoned. If there are remaining elements in the container:
-      //   We have to poison [a, c], but because we do not poison prefixes, we
-      //   cannot poison memory after c (even that there are not elements of the
-      //   container). Up to granularity-1 unused bytes will not be poisoned.
-      // Otherwise:
-      //   We have to poison the last byte as well.
-      PoisonShadow(a, c - a, kAsanContiguousContainerOOBMagic);
-      if (new_beg == old_end &&
-          !AddrIsAlignedByGranularity(new_beg)) {  // is empty && ends in the
-                                                   // middle of a block
-        *(u8 *)MemToShadow(c) =
-            static_cast<u8>(kAsanContiguousContainerOOBMagic);
-      }
+      uptr b = RoundUpTo(old_end, granularity);
+      PoisonShadow(a, b - a, kAsanContiguousContainerOOBMagic);
     }
 
-    old_beg = new_beg;
+    if (new_beg != new_end) {
+      // Unpoisoning the new container.
+      uptr a = RoundDownTo(new_beg, granularity);
+      uptr b = RoundDownTo(new_end, granularity);
+      PoisonShadow(a, b - a, 0);
+      if (!AddrIsAlignedByGranularity(new_end))
+        *(u8 *)MemToShadow(b) = static_cast<u8>(new_end - b);
+    }
+
+    return;
   }
 
-  if (old_end != new_end) {
-    if (old_end < new_end) {  // We are unpoisoning memory
-      uptr a = RoundDownTo(old_end, granularity);
-      uptr c = RoundDownTo(new_end, granularity);
-      // State at the moment is:
-      // if container_beg < a : [container_beg, a] is correct and we will not be
-      // changing it. else [a, container_beg] cannot be poisoned, so we do not
-      // have to think about it. we have to makr as unpoisoned [a, c]. [c, end]
-      // is correctly poisoned.
-      PoisonShadow(a, c - a, 0);
-      if (!AddrIsAlignedByGranularity(
-              new_end))  // ends in the middle of a block
-        *(u8 *)MemToShadow(c) = static_cast<u8>(new_end - c);
-    } else {  // We are poisoning memory
+  // Intersection of old and new containers is not empty.
+  CHECK_LT(new_beg, old_end);
+  CHECK_GT(new_end, old_beg);
+
+  if (new_beg < old_beg) {
+    // Round down because we can't poison prefixes.
+    uptr a = RoundDownTo(new_beg, granularity);
+    // Round down and ignore the [c, old_beg) as its state defined by unchanged
+    // [old_beg, old_end).
+    uptr c = RoundDownTo(old_beg, granularity);
+    PoisonShadow(a, c - a, 0);
+  } else if (new_beg > old_beg) {
+    // Round down and poison [a, old_beg) because it was unpoisoned only as a
+    // prefix.
+    uptr a = RoundDownTo(old_beg, granularity);
+    // Round down and ignore the [c, new_beg) as its state defined by unchanged
+    // [new_beg, old_end).
+    uptr c = RoundDownTo(new_beg, granularity);
+
+    PoisonShadow(a, c - a, kAsanContiguousContainerOOBMagic);
+  }
+
+  if (new_end > old_end) {
+    // Round down to poison the prefix.
+    uptr a = RoundDownTo(old_end, granularity);
+    // Round down and handle remainder below.
+    uptr c = RoundDownTo(new_end, granularity);
+    PoisonShadow(a, c - a, 0);
+    if (!AddrIsAlignedByGranularity(new_end))
+      *(u8 *)MemToShadow(c) = static_cast<u8>(new_end - c);
+  } else if (new_end < old_end) {
+    // Round up and handle remained below.
+    uptr a2 = RoundUpTo(new_end, granularity);
+    // Round up to poison entire granule as we had nothing in [old_end, c2).
+    uptr c2 = RoundUpTo(old_end, granularity);
+    PoisonShadow(a2, c2 - a2, kAsanContiguousContainerOOBMagic);
+
+    if (!AddrIsAlignedByGranularity(new_end)) {
       uptr a = RoundDownTo(new_end, granularity);
-      // State at the moment is:
-      // [storage_beg, a] is correctly annotated
-      // if container is empty after the removal, then a < container_beg and we
-      // will have to poison memory which is adressable only because we are not
-      // poisoning prefixes.
-      uptr a2 = RoundUpTo(new_end, granularity);
-      uptr c2 = RoundUpTo(old_end, granularity);
-      PoisonShadow(a2, c2 - a2, kAsanContiguousContainerOOBMagic);
-      if (!AddrIsAlignedByGranularity(
-              new_end)) {        // Starts in the middle of the block
-        if (new_end == old_beg)  // empty
-          *(u8 *)MemToShadow(a) = kAsanContiguousContainerOOBMagic;
-        else  // not empty
-          *(u8 *)MemToShadow(a) = static_cast<u8>(new_end - a);
-      }
+      *(u8 *)MemToShadow(a) = static_cast<u8>(new_end - a);
     }
   }
 }

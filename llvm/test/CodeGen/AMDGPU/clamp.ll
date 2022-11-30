@@ -5,7 +5,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12 %s
 
-define amdgpu_kernel void @v_clamp_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -74,17 +74,17 @@ define amdgpu_kernel void @v_clamp_f32(float addrspace(1)* %out, float addrspace
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %max = call float @llvm.maxnum.f32(float %a, float 0.0)
   %med = call float @llvm.minnum.f32(float %max, float 1.0)
 
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_neg_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_neg_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_neg_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -153,18 +153,18 @@ define amdgpu_kernel void @v_clamp_neg_f32(float addrspace(1)* %out, float addrs
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %fneg.a = fneg float %a
   %max = call float @llvm.maxnum.f32(float %fneg.a, float 0.0)
   %med = call float @llvm.minnum.f32(float %max, float 1.0)
 
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_negabs_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_negabs_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_negabs_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -233,20 +233,20 @@ define amdgpu_kernel void @v_clamp_negabs_f32(float addrspace(1)* %out, float ad
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %fabs.a = call float @llvm.fabs.f32(float %a)
   %fneg.fabs.a = fneg float %fabs.a
 
   %max = call float @llvm.maxnum.f32(float %fneg.fabs.a, float 0.0)
   %med = call float @llvm.minnum.f32(float %max, float 1.0)
 
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_negzero_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_negzero_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_negzero_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -325,20 +325,20 @@ define amdgpu_kernel void @v_clamp_negzero_f32(float addrspace(1)* %out, float a
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %add = fadd nnan float %a, 0.5
   %max = call float @llvm.maxnum.f32(float %add, float -0.0)
   %med = call float @llvm.minnum.f32(float %max, float 1.0)
 
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
 ; FIXME: Weird inconsistency in how -0.0 is treated. Accepted if clamp
 ; matched through med3, not if directly. Is this correct?
-define amdgpu_kernel void @v_clamp_negzero_maybe_snan_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_negzero_maybe_snan_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_negzero_maybe_snan_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -417,17 +417,17 @@ define amdgpu_kernel void @v_clamp_negzero_maybe_snan_f32(float addrspace(1)* %o
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %max = call float @llvm.maxnum.f32(float %a, float -0.0)
   %med = call float @llvm.minnum.f32(float %max, float 1.0)
 
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_multi_use_max_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_multi_use_max_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_multi_use_max_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -519,18 +519,18 @@ define amdgpu_kernel void @v_clamp_multi_use_max_f32(float addrspace(1)* %out, f
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %max = call float @llvm.maxnum.f32(float %a, float 0.0)
   %med = call float @llvm.minnum.f32(float %max, float 1.0)
 
-  store float %med, float addrspace(1)* %out.gep
-  store volatile float %max, float addrspace(1)* undef
+  store float %med, ptr addrspace(1) %out.gep
+  store volatile float %max, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_f16(half addrspace(1)* %out, half addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_f16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -600,17 +600,17 @@ define amdgpu_kernel void @v_clamp_f16(half addrspace(1)* %out, half addrspace(1
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr half, half addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr half, half addrspace(1)* %out, i32 %tid
-  %a = load half, half addrspace(1)* %gep0
+  %gep0 = getelementptr half, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr half, ptr addrspace(1) %out, i32 %tid
+  %a = load half, ptr addrspace(1) %gep0
   %max = call half @llvm.maxnum.f16(half %a, half 0.0)
   %med = call half @llvm.minnum.f16(half %max, half 1.0)
 
-  store half %med, half addrspace(1)* %out.gep
+  store half %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_neg_f16(half addrspace(1)* %out, half addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_neg_f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_neg_f16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -680,18 +680,18 @@ define amdgpu_kernel void @v_clamp_neg_f16(half addrspace(1)* %out, half addrspa
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr half, half addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr half, half addrspace(1)* %out, i32 %tid
-  %a = load half, half addrspace(1)* %gep0
+  %gep0 = getelementptr half, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr half, ptr addrspace(1) %out, i32 %tid
+  %a = load half, ptr addrspace(1) %gep0
   %fneg.a = fsub half -0.0, %a
   %max = call half @llvm.maxnum.f16(half %fneg.a, half 0.0)
   %med = call half @llvm.minnum.f16(half %max, half 1.0)
 
-  store half %med, half addrspace(1)* %out.gep
+  store half %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_negabs_f16(half addrspace(1)* %out, half addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_negabs_f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_negabs_f16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -761,20 +761,20 @@ define amdgpu_kernel void @v_clamp_negabs_f16(half addrspace(1)* %out, half addr
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr half, half addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr half, half addrspace(1)* %out, i32 %tid
-  %a = load half, half addrspace(1)* %gep0
+  %gep0 = getelementptr half, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr half, ptr addrspace(1) %out, i32 %tid
+  %a = load half, ptr addrspace(1) %gep0
   %fabs.a = call half @llvm.fabs.f16(half %a)
   %fneg.fabs.a = fsub half -0.0, %fabs.a
 
   %max = call half @llvm.maxnum.f16(half %fneg.fabs.a, half 0.0)
   %med = call half @llvm.minnum.f16(half %max, half 1.0)
 
-  store half %med, half addrspace(1)* %out.gep
+  store half %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_f64(double addrspace(1)* %out, double addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_f64(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_f64:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -843,17 +843,17 @@ define amdgpu_kernel void @v_clamp_f64(double addrspace(1)* %out, double addrspa
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr double, double addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr double, double addrspace(1)* %out, i32 %tid
-  %a = load double, double addrspace(1)* %gep0
+  %gep0 = getelementptr double, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr double, ptr addrspace(1) %out, i32 %tid
+  %a = load double, ptr addrspace(1) %gep0
   %max = call double @llvm.maxnum.f64(double %a, double 0.0)
   %med = call double @llvm.minnum.f64(double %max, double 1.0)
 
-  store double %med, double addrspace(1)* %out.gep
+  store double %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_neg_f64(double addrspace(1)* %out, double addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_neg_f64(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_neg_f64:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -922,18 +922,18 @@ define amdgpu_kernel void @v_clamp_neg_f64(double addrspace(1)* %out, double add
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr double, double addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr double, double addrspace(1)* %out, i32 %tid
-  %a = load double, double addrspace(1)* %gep0
+  %gep0 = getelementptr double, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr double, ptr addrspace(1) %out, i32 %tid
+  %a = load double, ptr addrspace(1) %gep0
   %fneg.a = fsub double -0.0, %a
   %max = call double @llvm.maxnum.f64(double %fneg.a, double 0.0)
   %med = call double @llvm.minnum.f64(double %max, double 1.0)
 
-  store double %med, double addrspace(1)* %out.gep
+  store double %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_negabs_f64(double addrspace(1)* %out, double addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_negabs_f64(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_negabs_f64:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1002,20 +1002,20 @@ define amdgpu_kernel void @v_clamp_negabs_f64(double addrspace(1)* %out, double 
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr double, double addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr double, double addrspace(1)* %out, i32 %tid
-  %a = load double, double addrspace(1)* %gep0
+  %gep0 = getelementptr double, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr double, ptr addrspace(1) %out, i32 %tid
+  %a = load double, ptr addrspace(1) %gep0
   %fabs.a = call double @llvm.fabs.f64(double %a)
   %fneg.fabs.a = fsub double -0.0, %fabs.a
 
   %max = call double @llvm.maxnum.f64(double %fneg.fabs.a, double 0.0)
   %med = call double @llvm.minnum.f64(double %max, double 1.0)
 
-  store double %med, double addrspace(1)* %out.gep
+  store double %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_med3_aby_negzero_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_med3_aby_negzero_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_med3_aby_negzero_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1087,15 +1087,15 @@ define amdgpu_kernel void @v_clamp_med3_aby_negzero_f32(float addrspace(1)* %out
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %med = call float @llvm.amdgcn.fmed3.f32(float -0.0, float 1.0, float %a)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_med3_aby_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_med3_aby_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_med3_aby_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1164,15 +1164,15 @@ define amdgpu_kernel void @v_clamp_med3_aby_f32(float addrspace(1)* %out, float 
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float %a)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_med3_bay_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_med3_bay_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_med3_bay_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1241,15 +1241,15 @@ define amdgpu_kernel void @v_clamp_med3_bay_f32(float addrspace(1)* %out, float 
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %med = call float @llvm.amdgcn.fmed3.f32(float 1.0, float 0.0, float %a)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_med3_yab_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_med3_yab_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_med3_yab_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1318,15 +1318,15 @@ define amdgpu_kernel void @v_clamp_med3_yab_f32(float addrspace(1)* %out, float 
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %med = call float @llvm.amdgcn.fmed3.f32(float %a, float 0.0, float 1.0)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_med3_yba_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_med3_yba_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_med3_yba_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1395,15 +1395,15 @@ define amdgpu_kernel void @v_clamp_med3_yba_f32(float addrspace(1)* %out, float 
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %med = call float @llvm.amdgcn.fmed3.f32(float %a, float 1.0, float 0.0)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_med3_ayb_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_med3_ayb_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_med3_ayb_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1472,15 +1472,15 @@ define amdgpu_kernel void @v_clamp_med3_ayb_f32(float addrspace(1)* %out, float 
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float %a, float 1.0)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_med3_bya_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_med3_bya_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_med3_bya_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1549,15 +1549,15 @@ define amdgpu_kernel void @v_clamp_med3_bya_f32(float addrspace(1)* %out, float 
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %med = call float @llvm.amdgcn.fmed3.f32(float 1.0, float %a, float 0.0)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_constants_to_one_f32(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @v_clamp_constants_to_one_f32(ptr addrspace(1) %out) #0 {
 ; GFX6-LABEL: v_clamp_constants_to_one_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1609,13 +1609,13 @@ define amdgpu_kernel void @v_clamp_constants_to_one_f32(float addrspace(1)* %out
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
   %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float 4.0)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_constants_to_zero_f32(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @v_clamp_constants_to_zero_f32(ptr addrspace(1) %out) #0 {
 ; GFX6-LABEL: v_clamp_constants_to_zero_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1666,13 +1666,13 @@ define amdgpu_kernel void @v_clamp_constants_to_zero_f32(float addrspace(1)* %ou
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
   %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float -4.0)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_constant_preserve_f32(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @v_clamp_constant_preserve_f32(ptr addrspace(1) %out) #0 {
 ; GFX6-LABEL: v_clamp_constant_preserve_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1724,13 +1724,13 @@ define amdgpu_kernel void @v_clamp_constant_preserve_f32(float addrspace(1)* %ou
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
   %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float 0.5)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_constant_preserve_denorm_f32(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @v_clamp_constant_preserve_denorm_f32(ptr addrspace(1) %out) #0 {
 ; GFX6-LABEL: v_clamp_constant_preserve_denorm_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1782,13 +1782,13 @@ define amdgpu_kernel void @v_clamp_constant_preserve_denorm_f32(float addrspace(
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
   %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float bitcast (i32 8388607 to float))
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_constant_qnan_f32(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @v_clamp_constant_qnan_f32(ptr addrspace(1) %out) #0 {
 ; GFX6-LABEL: v_clamp_constant_qnan_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1839,13 +1839,13 @@ define amdgpu_kernel void @v_clamp_constant_qnan_f32(float addrspace(1)* %out) #
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
   %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float 0x7FF8000000000000)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_constant_snan_f32(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @v_clamp_constant_snan_f32(ptr addrspace(1) %out) #0 {
 ; GFX6-LABEL: v_clamp_constant_snan_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1896,9 +1896,9 @@ define amdgpu_kernel void @v_clamp_constant_snan_f32(float addrspace(1)* %out) #
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
   %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float bitcast (i32 2139095041 to float))
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -1906,7 +1906,7 @@ define amdgpu_kernel void @v_clamp_constant_snan_f32(float addrspace(1)* %out) #
 ; Test non-default behaviors enabling snans and disabling dx10_clamp
 ; ---------------------------------------------------------------------
 
-define amdgpu_kernel void @v_clamp_f32_no_dx10_clamp(float addrspace(1)* %out, float addrspace(1)* %aptr) #2 {
+define amdgpu_kernel void @v_clamp_f32_no_dx10_clamp(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #2 {
 ; GFX6-LABEL: v_clamp_f32_no_dx10_clamp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1980,18 +1980,18 @@ define amdgpu_kernel void @v_clamp_f32_no_dx10_clamp(float addrspace(1)* %out, f
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %a.nnan = fadd nnan float %a, 0.5
   %max = call float @llvm.maxnum.f32(float %a.nnan, float 0.0)
   %med = call float @llvm.minnum.f32(float %max, float 1.0)
 
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_f32_snan_dx10clamp(float addrspace(1)* %out, float addrspace(1)* %aptr) #3 {
+define amdgpu_kernel void @v_clamp_f32_snan_dx10clamp(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #3 {
 ; GFX6-LABEL: v_clamp_f32_snan_dx10clamp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2060,18 +2060,18 @@ define amdgpu_kernel void @v_clamp_f32_snan_dx10clamp(float addrspace(1)* %out, 
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %add = fadd float %a, 0.5
   %max = call float @llvm.maxnum.f32(float %add, float 0.0)
   %med = call float @llvm.minnum.f32(float %max, float 1.0)
 
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_f32_snan_no_dx10clamp(float addrspace(1)* %out, float addrspace(1)* %aptr) #4 {
+define amdgpu_kernel void @v_clamp_f32_snan_no_dx10clamp(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #4 {
 ; GFX6-LABEL: v_clamp_f32_snan_no_dx10clamp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2145,17 +2145,17 @@ define amdgpu_kernel void @v_clamp_f32_snan_no_dx10clamp(float addrspace(1)* %ou
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %max = call float @llvm.maxnum.f32(float %a, float 0.0)
   %med = call float @llvm.minnum.f32(float %max, float 1.0)
 
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_f32_snan_no_dx10clamp_nnan_src(float addrspace(1)* %out, float addrspace(1)* %aptr) #4 {
+define amdgpu_kernel void @v_clamp_f32_snan_no_dx10clamp_nnan_src(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #4 {
 ; GFX6-LABEL: v_clamp_f32_snan_no_dx10clamp_nnan_src:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2229,18 +2229,18 @@ define amdgpu_kernel void @v_clamp_f32_snan_no_dx10clamp_nnan_src(float addrspac
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %add  = fadd nnan float %a, 1.0
   %max = call float @llvm.maxnum.f32(float %add, float 0.0)
   %med = call float @llvm.minnum.f32(float %max, float 1.0)
 
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_med3_aby_f32_no_dx10_clamp(float addrspace(1)* %out, float addrspace(1)* %aptr) #2 {
+define amdgpu_kernel void @v_clamp_med3_aby_f32_no_dx10_clamp(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #2 {
 ; GFX6-LABEL: v_clamp_med3_aby_f32_no_dx10_clamp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2309,15 +2309,15 @@ define amdgpu_kernel void @v_clamp_med3_aby_f32_no_dx10_clamp(float addrspace(1)
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float %a)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_med3_bay_f32_no_dx10_clamp(float addrspace(1)* %out, float addrspace(1)* %aptr) #2 {
+define amdgpu_kernel void @v_clamp_med3_bay_f32_no_dx10_clamp(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #2 {
 ; GFX6-LABEL: v_clamp_med3_bay_f32_no_dx10_clamp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2386,15 +2386,15 @@ define amdgpu_kernel void @v_clamp_med3_bay_f32_no_dx10_clamp(float addrspace(1)
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %med = call float @llvm.amdgcn.fmed3.f32(float 1.0, float 0.0, float %a)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_med3_yab_f32_no_dx10_clamp(float addrspace(1)* %out, float addrspace(1)* %aptr) #2 {
+define amdgpu_kernel void @v_clamp_med3_yab_f32_no_dx10_clamp(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #2 {
 ; GFX6-LABEL: v_clamp_med3_yab_f32_no_dx10_clamp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2463,15 +2463,15 @@ define amdgpu_kernel void @v_clamp_med3_yab_f32_no_dx10_clamp(float addrspace(1)
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %med = call float @llvm.amdgcn.fmed3.f32(float %a, float 0.0, float 1.0)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_med3_yba_f32_no_dx10_clamp(float addrspace(1)* %out, float addrspace(1)* %aptr) #2 {
+define amdgpu_kernel void @v_clamp_med3_yba_f32_no_dx10_clamp(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #2 {
 ; GFX6-LABEL: v_clamp_med3_yba_f32_no_dx10_clamp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2540,15 +2540,15 @@ define amdgpu_kernel void @v_clamp_med3_yba_f32_no_dx10_clamp(float addrspace(1)
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %med = call float @llvm.amdgcn.fmed3.f32(float %a, float 1.0, float 0.0)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_med3_ayb_f32_no_dx10_clamp(float addrspace(1)* %out, float addrspace(1)* %aptr) #2 {
+define amdgpu_kernel void @v_clamp_med3_ayb_f32_no_dx10_clamp(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #2 {
 ; GFX6-LABEL: v_clamp_med3_ayb_f32_no_dx10_clamp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2617,15 +2617,15 @@ define amdgpu_kernel void @v_clamp_med3_ayb_f32_no_dx10_clamp(float addrspace(1)
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float %a, float 1.0)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_med3_bya_f32_no_dx10_clamp(float addrspace(1)* %out, float addrspace(1)* %aptr) #2 {
+define amdgpu_kernel void @v_clamp_med3_bya_f32_no_dx10_clamp(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #2 {
 ; GFX6-LABEL: v_clamp_med3_bya_f32_no_dx10_clamp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2694,15 +2694,15 @@ define amdgpu_kernel void @v_clamp_med3_bya_f32_no_dx10_clamp(float addrspace(1)
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %med = call float @llvm.amdgcn.fmed3.f32(float 1.0, float %a, float 0.0)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_constant_qnan_f32_no_dx10_clamp(float addrspace(1)* %out) #2 {
+define amdgpu_kernel void @v_clamp_constant_qnan_f32_no_dx10_clamp(ptr addrspace(1) %out) #2 {
 ; GFX6-LABEL: v_clamp_constant_qnan_f32_no_dx10_clamp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -2754,13 +2754,13 @@ define amdgpu_kernel void @v_clamp_constant_qnan_f32_no_dx10_clamp(float addrspa
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
   %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float 0x7FF8000000000000)
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_constant_snan_f32_no_dx10_clamp(float addrspace(1)* %out) #2 {
+define amdgpu_kernel void @v_clamp_constant_snan_f32_no_dx10_clamp(ptr addrspace(1) %out) #2 {
 ; GFX6-LABEL: v_clamp_constant_snan_f32_no_dx10_clamp:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -2812,13 +2812,13 @@ define amdgpu_kernel void @v_clamp_constant_snan_f32_no_dx10_clamp(float addrspa
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
   %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float bitcast (i32 2139095041 to float))
-  store float %med, float addrspace(1)* %out.gep
+  store float %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_v2f16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2895,17 +2895,17 @@ define amdgpu_kernel void @v_clamp_v2f16(<2 x half> addrspace(1)* %out, <2 x hal
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> zeroinitializer)
   %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
 
-  store <2 x half> %med, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_v2f16_undef_elt(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_v2f16_undef_elt(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_v2f16_undef_elt:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2993,17 +2993,17 @@ define amdgpu_kernel void @v_clamp_v2f16_undef_elt(<2 x half> addrspace(1)* %out
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half undef, half 0.0>)
   %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half undef>)
 
-  store <2 x half> %med, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_v2f16_not_zero(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_v2f16_not_zero(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_v2f16_not_zero:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3093,17 +3093,17 @@ define amdgpu_kernel void @v_clamp_v2f16_not_zero(<2 x half> addrspace(1)* %out,
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half 2.0, half 0.0>)
   %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
 
-  store <2 x half> %med, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_v2f16_not_one(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_v2f16_not_one(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_v2f16_not_one:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3192,17 +3192,17 @@ define amdgpu_kernel void @v_clamp_v2f16_not_one(<2 x half> addrspace(1)* %out, 
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half 0.0, half 0.0>)
   %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 0.0, half 1.0>)
 
-  store <2 x half> %med, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_neg_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_neg_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_neg_v2f16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3280,18 +3280,18 @@ define amdgpu_kernel void @v_clamp_neg_v2f16(<2 x half> addrspace(1)* %out, <2 x
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %fneg.a = fsub <2 x half> <half -0.0, half -0.0>, %a
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %fneg.a, <2 x half> zeroinitializer)
   %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
 
-  store <2 x half> %med, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_negabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_negabs_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_negabs_v2f16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3374,20 +3374,20 @@ define amdgpu_kernel void @v_clamp_negabs_v2f16(<2 x half> addrspace(1)* %out, <
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %fabs.a = call <2 x half> @llvm.fabs.v2f16(<2 x half> %a)
   %fneg.fabs.a = fsub <2 x half> <half -0.0, half -0.0>, %fabs.a
 
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %fneg.fabs.a, <2 x half> zeroinitializer)
   %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
 
-  store <2 x half> %med, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_neglo_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_neglo_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_neglo_v2f16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3465,20 +3465,20 @@ define amdgpu_kernel void @v_clamp_neglo_v2f16(<2 x half> addrspace(1)* %out, <2
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %lo = extractelement <2 x half> %a, i32 0
   %neg.lo = fsub half -0.0, %lo
   %neg.lo.vec = insertelement <2 x half> %a, half %neg.lo, i32 0
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %neg.lo.vec, <2 x half> zeroinitializer)
   %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
 
-  store <2 x half> %med, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_neghi_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_neghi_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_neghi_v2f16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3555,20 +3555,20 @@ define amdgpu_kernel void @v_clamp_neghi_v2f16(<2 x half> addrspace(1)* %out, <2
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %hi = extractelement <2 x half> %a, i32 1
   %neg.hi = fsub half -0.0, %hi
   %neg.hi.vec = insertelement <2 x half> %a, half %neg.hi, i32 1
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %neg.hi.vec, <2 x half> zeroinitializer)
   %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
 
-  store <2 x half> %med, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_v2f16_shuffle(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_v2f16_shuffle(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_v2f16_shuffle:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3645,18 +3645,18 @@ define amdgpu_kernel void @v_clamp_v2f16_shuffle(<2 x half> addrspace(1)* %out, 
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %shuf = shufflevector <2 x half> %a, <2 x half> undef, <2 x i32> <i32 1, i32 0>
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %shuf, <2 x half> zeroinitializer)
   %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
 
-  store <2 x half> %med, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_v2f16_undef_limit_elts0(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_v2f16_undef_limit_elts0(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_v2f16_undef_limit_elts0:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3743,17 +3743,17 @@ define amdgpu_kernel void @v_clamp_v2f16_undef_limit_elts0(<2 x half> addrspace(
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half 0.0, half undef>)
   %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half undef, half 1.0>)
 
-  store <2 x half> %med, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_v2f16_undef_limit_elts1(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_clamp_v2f16_undef_limit_elts1(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; GFX6-LABEL: v_clamp_v2f16_undef_limit_elts1:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3841,17 +3841,17 @@ define amdgpu_kernel void @v_clamp_v2f16_undef_limit_elts1(<2 x half> addrspace(
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %a = load <2 x half>, <2 x half> addrspace(1)* %gep0
+  %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x half>, ptr addrspace(1) %gep0
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half undef, half 0.0>)
   %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half undef>)
 
-  store <2 x half> %med, <2 x half> addrspace(1)* %out.gep
+  store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_diff_source_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0
+define amdgpu_kernel void @v_clamp_diff_source_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0
 ; GFX6-LABEL: v_clamp_diff_source_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -3939,19 +3939,18 @@ define amdgpu_kernel void @v_clamp_diff_source_f32(float addrspace(1)* %out, flo
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 {
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 0
-  %gep1 = getelementptr float, float addrspace(1)* %aptr, i32 1
-  %gep2 = getelementptr float, float addrspace(1)* %aptr, i32 2
-  %l0 = load float, float addrspace(1)* %gep0
-  %l1 = load float, float addrspace(1)* %gep1
-  %l2 = load float, float addrspace(1)* %gep2
+  %gep1 = getelementptr float, ptr addrspace(1) %aptr, i32 1
+  %gep2 = getelementptr float, ptr addrspace(1) %aptr, i32 2
+  %l0 = load float, ptr addrspace(1) %aptr
+  %l1 = load float, ptr addrspace(1) %gep1
+  %l2 = load float, ptr addrspace(1) %gep2
   %a = fadd nsz float %l0, %l1
   %b = fadd nsz float %l0, %l2
   %res = call nsz float @llvm.maxnum.f32(float %a, float %b)
   %max = call nsz float @llvm.maxnum.f32(float %res, float 0.0)
   %min = call nsz float @llvm.minnum.f32(float %max, float 1.0)
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 3
-  store float %min, float addrspace(1)* %out.gep
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 3
+  store float %min, ptr addrspace(1) %out.gep
   ret void
 }
 

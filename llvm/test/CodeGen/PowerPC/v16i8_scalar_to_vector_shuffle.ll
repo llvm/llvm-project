@@ -184,11 +184,12 @@ define <16 x i8> @test_none_v16i8(i8 %arg, ptr nocapture noundef readonly %b) {
 ; CHECK-LE-P8-LABEL: test_none_v16i8:
 ; CHECK-LE-P8:       # %bb.0: # %entry
 ; CHECK-LE-P8-NEXT:    addis r5, r2, .LCPI2_0@toc@ha
-; CHECK-LE-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r4
 ; CHECK-LE-P8-NEXT:    mtvsrd v4, r3
 ; CHECK-LE-P8-NEXT:    addi r5, r5, .LCPI2_0@toc@l
-; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r5
-; CHECK-LE-P8-NEXT:    xxswapd v3, vs0
+; CHECK-LE-P8-NEXT:    lxvd2x vs1, 0, r5
+; CHECK-LE-P8-NEXT:    xxswapd v2, vs0
+; CHECK-LE-P8-NEXT:    xxswapd v3, vs1
 ; CHECK-LE-P8-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-LE-P8-NEXT:    blr
 ;
@@ -431,11 +432,12 @@ define <16 x i8> @test_none_v8i16(i16 %arg, ptr nocapture noundef readonly %b) {
 ; CHECK-LE-P8-LABEL: test_none_v8i16:
 ; CHECK-LE-P8:       # %bb.0: # %entry
 ; CHECK-LE-P8-NEXT:    addis r5, r2, .LCPI5_0@toc@ha
-; CHECK-LE-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r4
 ; CHECK-LE-P8-NEXT:    mtvsrd v4, r3
 ; CHECK-LE-P8-NEXT:    addi r5, r5, .LCPI5_0@toc@l
-; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r5
-; CHECK-LE-P8-NEXT:    xxswapd v3, vs0
+; CHECK-LE-P8-NEXT:    lxvd2x vs1, 0, r5
+; CHECK-LE-P8-NEXT:    xxswapd v2, vs0
+; CHECK-LE-P8-NEXT:    xxswapd v3, vs1
 ; CHECK-LE-P8-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-LE-P8-NEXT:    blr
 ;

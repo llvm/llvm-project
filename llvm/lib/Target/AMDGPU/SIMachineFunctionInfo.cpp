@@ -32,8 +32,6 @@ using namespace llvm;
 SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   : AMDGPUMachineFunction(MF),
     Mode(MF.getFunction(), MF.getSubtarget<GCNSubtarget>()),
-    BufferPSV(static_cast<const AMDGPUTargetMachine &>(MF.getTarget())),
-    ImagePSV(static_cast<const AMDGPUTargetMachine &>(MF.getTarget())),
     GWSResourcePSV(static_cast<const AMDGPUTargetMachine &>(MF.getTarget())),
     GlobalRegisterPSV(static_cast<const AMDGPUTargetMachine &>(MF.getTarget())),
     PrivateSegmentBuffer(false),

@@ -11,7 +11,7 @@ if(LLVM_BUILD_INSTRUMENTED)
   add_lit_testsuite(generate-profraw "Generating clang PGO data"
     ${CMAKE_CURRENT_BINARY_DIR}/pgo-data/
     EXCLUDE_FROM_CHECK_ALL
-    DEPENDS clang clear-profraw
+    DEPENDS clang clear-profraw ${CLANG_PERF_TRAINING_DEPS}
     )
 
   add_custom_target(clear-profraw

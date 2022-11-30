@@ -56,3 +56,9 @@
 // RUN: grep '__ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__' %t | grep '1900' | count 1
 // RUN: not grep '__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__' %t
 // RUN: not grep '__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__' %t
+
+// RUN: %clang_cc1 -triple arm64-apple-ios99.99.99 -dM -E %s | FileCheck --check-prefix=IOS99 %s
+// IOS99: __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ 999999
+
+// RUN: %clang_cc1 -triple arm64-apple-watchos99.9 -dM -E %s | FileCheck --check-prefix=WATCHOS99 %s
+// WATCHOS99: __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ 990900

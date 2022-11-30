@@ -91,6 +91,7 @@ Using Clang Tools
    ClangOffloadBundler
    ClangOffloadWrapper
    ClangOffloadPackager
+   ClangRepl
 
 Design Documents
 ================

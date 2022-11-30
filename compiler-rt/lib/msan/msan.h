@@ -65,98 +65,29 @@ const MappingDesc kMemoryLayout[] = {
 
 #elif SANITIZER_LINUX && defined(__aarch64__)
 
-// The mapping describes both 39-bits, 42-bits, and 48-bits VMA.  AArch64
-// maps:
-// - 0x0000000000000-0x0000010000000: 39/42/48-bits program own segments
-// - 0x0005500000000-0x0005600000000: 39-bits PIE program segments
-// - 0x0007f80000000-0x0007fffffffff: 39-bits libraries segments
-// - 0x002aa00000000-0x002ab00000000: 42-bits PIE program segments
-// - 0x003ff00000000-0x003ffffffffff: 42-bits libraries segments
-// - 0x0aaaaa0000000-0x0aaab00000000: 48-bits PIE program segments
-// - 0xffff000000000-0x1000000000000: 48-bits libraries segments
-// It is fragmented in multiples segments to increase the memory available
-// on 42-bits (12.21% of total VMA available for 42-bits and 13.28 for
-// 39 bits). The 48-bits segments only cover the usual PIE/default segments
-// plus some more segments (262144GB total, 0.39% total VMA).
+// The mapping assumes 48-bit VMA. AArch64 maps:
+// - 0x0000000000000-0x0100000000000: 39/42/48-bits program own segments
+// - 0x0a00000000000-0x0b00000000000: 48-bits PIE program segments
+//   Ideally, this would extend to 0x0c00000000000 (2^45 bytes - the
+//   maximum ASLR region for 48-bit VMA) but it is too hard to fit in
+//   the larger app/shadow/origin regions.
+// - 0x0e00000000000-0x1000000000000: 48-bits libraries segments
 const MappingDesc kMemoryLayout[] = {
-    {0x00000000000ULL, 0x01000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x01000000000ULL, 0x02000000000ULL, MappingDesc::SHADOW, "shadow-2"},
-    {0x02000000000ULL, 0x03000000000ULL, MappingDesc::ORIGIN, "origin-2"},
-    {0x03000000000ULL, 0x04000000000ULL, MappingDesc::SHADOW, "shadow-1"},
-    {0x04000000000ULL, 0x05000000000ULL, MappingDesc::ORIGIN, "origin-1"},
-    {0x05000000000ULL, 0x06000000000ULL, MappingDesc::APP, "app-1"},
-    {0x06000000000ULL, 0x07000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x07000000000ULL, 0x08000000000ULL, MappingDesc::APP, "app-2"},
-    {0x08000000000ULL, 0x09000000000ULL, MappingDesc::INVALID, "invalid"},
-    // The mappings below are used only for 42-bits VMA.
-    {0x09000000000ULL, 0x0A000000000ULL, MappingDesc::SHADOW, "shadow-3"},
-    {0x0A000000000ULL, 0x0B000000000ULL, MappingDesc::ORIGIN, "origin-3"},
-    {0x0B000000000ULL, 0x0F000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x0F000000000ULL, 0x10000000000ULL, MappingDesc::APP, "app-3"},
-    {0x10000000000ULL, 0x11000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x11000000000ULL, 0x12000000000ULL, MappingDesc::APP, "app-4"},
-    {0x12000000000ULL, 0x17000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x17000000000ULL, 0x18000000000ULL, MappingDesc::SHADOW, "shadow-4"},
-    {0x18000000000ULL, 0x19000000000ULL, MappingDesc::ORIGIN, "origin-4"},
-    {0x19000000000ULL, 0x20000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x20000000000ULL, 0x21000000000ULL, MappingDesc::APP, "app-5"},
-    {0x21000000000ULL, 0x26000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x26000000000ULL, 0x27000000000ULL, MappingDesc::SHADOW, "shadow-5"},
-    {0x27000000000ULL, 0x28000000000ULL, MappingDesc::ORIGIN, "origin-5"},
-    {0x28000000000ULL, 0x29000000000ULL, MappingDesc::SHADOW, "shadow-7"},
-    {0x29000000000ULL, 0x2A000000000ULL, MappingDesc::ORIGIN, "origin-7"},
-    {0x2A000000000ULL, 0x2B000000000ULL, MappingDesc::APP, "app-6"},
-    {0x2B000000000ULL, 0x2C000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x2C000000000ULL, 0x2D000000000ULL, MappingDesc::SHADOW, "shadow-6"},
-    {0x2D000000000ULL, 0x2E000000000ULL, MappingDesc::ORIGIN, "origin-6"},
-    {0x2E000000000ULL, 0x2F000000000ULL, MappingDesc::APP, "app-7"},
-    {0x2F000000000ULL, 0x39000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x39000000000ULL, 0x3A000000000ULL, MappingDesc::SHADOW, "shadow-9"},
-    {0x3A000000000ULL, 0x3B000000000ULL, MappingDesc::ORIGIN, "origin-9"},
-    {0x3B000000000ULL, 0x3C000000000ULL, MappingDesc::APP, "app-8"},
-    {0x3C000000000ULL, 0x3D000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x3D000000000ULL, 0x3E000000000ULL, MappingDesc::SHADOW, "shadow-8"},
-    {0x3E000000000ULL, 0x3F000000000ULL, MappingDesc::ORIGIN, "origin-8"},
-    {0x3F000000000ULL, 0x40000000000ULL, MappingDesc::APP, "app-9"},
-    // The mappings below are used only for 48-bits VMA.
-    // TODO(unknown): 48-bit mapping ony covers the usual PIE, non-PIE
-    // segments and some more segments totalizing 262144GB of VMA (which cover
-    // only 0.32% of all 48-bit VMA). Memory availability can be increase by
-    // adding multiple application segments like 39 and 42 mapping.
-    {0x0040000000000ULL, 0x0041000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x0041000000000ULL, 0x0042000000000ULL, MappingDesc::APP, "app-10"},
-    {0x0042000000000ULL, 0x0047000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x0047000000000ULL, 0x0048000000000ULL, MappingDesc::SHADOW, "shadow-10"},
-    {0x0048000000000ULL, 0x0049000000000ULL, MappingDesc::ORIGIN, "origin-10"},
-    {0x0049000000000ULL, 0x0050000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x0050000000000ULL, 0x0051000000000ULL, MappingDesc::APP, "app-11"},
-    {0x0051000000000ULL, 0x0056000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x0056000000000ULL, 0x0057000000000ULL, MappingDesc::SHADOW, "shadow-11"},
-    {0x0057000000000ULL, 0x0058000000000ULL, MappingDesc::ORIGIN, "origin-11"},
-    {0x0058000000000ULL, 0x0059000000000ULL, MappingDesc::APP, "app-12"},
-    {0x0059000000000ULL, 0x005E000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x005E000000000ULL, 0x005F000000000ULL, MappingDesc::SHADOW, "shadow-12"},
-    {0x005F000000000ULL, 0x0060000000000ULL, MappingDesc::ORIGIN, "origin-12"},
-    {0x0060000000000ULL, 0x0061000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x0061000000000ULL, 0x0062000000000ULL, MappingDesc::APP, "app-13"},
-    {0x0062000000000ULL, 0x0067000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x0067000000000ULL, 0x0068000000000ULL, MappingDesc::SHADOW, "shadow-13"},
-    {0x0068000000000ULL, 0x0069000000000ULL, MappingDesc::ORIGIN, "origin-13"},
-    {0x0069000000000ULL, 0x0AAAAA0000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x0AAAAA0000000ULL, 0x0AAAB00000000ULL, MappingDesc::APP, "app-14"},
-    {0x0AAAB00000000ULL, 0x0AACAA0000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x0AACAA0000000ULL, 0x0AACB00000000ULL, MappingDesc::SHADOW, "shadow-14"},
-    {0x0AACB00000000ULL, 0x0AADAA0000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x0AADAA0000000ULL, 0x0AADB00000000ULL, MappingDesc::ORIGIN, "origin-14"},
-    {0x0AADB00000000ULL, 0x0FF9F00000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x0FF9F00000000ULL, 0x0FFA000000000ULL, MappingDesc::SHADOW, "shadow-15"},
-    {0x0FFA000000000ULL, 0x0FFAF00000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x0FFAF00000000ULL, 0x0FFB000000000ULL, MappingDesc::ORIGIN, "origin-15"},
-    {0x0FFB000000000ULL, 0x0FFFF00000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x0FFFF00000000ULL, 0x1000000000000ULL, MappingDesc::APP, "app-15"},
+    {0X0000000000000, 0X0100000000000, MappingDesc::APP, "app-10-13"},
+    {0X0100000000000, 0X0200000000000, MappingDesc::SHADOW, "shadow-14"},
+    {0X0200000000000, 0X0300000000000, MappingDesc::INVALID, "invalid"},
+    {0X0300000000000, 0X0400000000000, MappingDesc::ORIGIN, "origin-14"},
+    {0X0400000000000, 0X0600000000000, MappingDesc::SHADOW, "shadow-15"},
+    {0X0600000000000, 0X0800000000000, MappingDesc::ORIGIN, "origin-15"},
+    {0X0800000000000, 0X0A00000000000, MappingDesc::INVALID, "invalid"},
+    {0X0A00000000000, 0X0B00000000000, MappingDesc::APP, "app-14"},
+    {0X0B00000000000, 0X0C00000000000, MappingDesc::SHADOW, "shadow-10-13"},
+    {0X0C00000000000, 0X0D00000000000, MappingDesc::INVALID, "invalid"},
+    {0X0D00000000000, 0X0E00000000000, MappingDesc::ORIGIN, "origin-10-13"},
+    {0X0E00000000000, 0X1000000000000, MappingDesc::APP, "app-15"},
 };
-# define MEM_TO_SHADOW(mem) ((uptr)mem ^ 0x6000000000ULL)
-# define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x1000000000ULL)
+# define MEM_TO_SHADOW(mem) ((uptr)mem ^ 0xB00000000000ULL)
+# define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x200000000000ULL)
 
 #elif SANITIZER_LINUX && SANITIZER_PPC64
 const MappingDesc kMemoryLayout[] = {

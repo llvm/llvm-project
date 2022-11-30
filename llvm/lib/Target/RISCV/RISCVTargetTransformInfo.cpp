@@ -31,6 +31,27 @@ static cl::opt<unsigned> SLPMaxVF(
         "SLP vectorizer.  Defaults to 1 which disables SLP."),
     cl::init(1), cl::Hidden);
 
+InstructionCost RISCVTTIImpl::getLMULCost(MVT VT) {
+  // TODO: Here assume reciprocal throughput is 1 for LMUL_1, it is
+  // implementation-defined.
+  if (!VT.isVector())
+    return InstructionCost::getInvalid();
+  unsigned Cost;
+  if (VT.isScalableVector()) {
+    unsigned LMul;
+    bool Fractional;
+    std::tie(LMul, Fractional) =
+        RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(VT));
+    if (Fractional)
+      Cost = 1;
+    else
+      Cost = LMul;
+  } else {
+    Cost = VT.getSizeInBits() / ST->getRealMinVLen();
+  }
+  return std::max<unsigned>(Cost, 1);
+}
+
 InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
                                             TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy() &&
@@ -253,6 +274,44 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         return LT.first * 9;
       return LT.first * 6;
     }
+  }
+
+  if (isa<FixedVectorType>(Tp) && Kind == TargetTransformInfo::SK_Broadcast) {
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+    bool HasScalar = (Args.size() > 0) && (Operator::getOpcode(Args[0]) ==
+                                           Instruction::InsertElement);
+    if (LT.second.getScalarSizeInBits() == 1) {
+      if (HasScalar) {
+        // Example sequence:
+        //   andi a0, a0, 1
+        //   vsetivli zero, 2, e8, mf8, ta, ma (ignored)
+        //   vmv.v.x v8, a0
+        //   vmsne.vi v0, v8, 0
+        return LT.first * getLMULCost(LT.second) * 3;
+      }
+      // Example sequence:
+      //   vsetivli  zero, 2, e8, mf8, ta, mu (ignored)
+      //   vmv.v.i v8, 0
+      //   vmerge.vim      v8, v8, 1, v0
+      //   vmv.x.s a0, v8
+      //   andi    a0, a0, 1
+      //   vmv.v.x v8, a0
+      //   vmsne.vi  v0, v8, 0
+
+      return LT.first * getLMULCost(LT.second) * 6;
+    }
+
+    if (HasScalar) {
+      // Example sequence:
+      //   vmv.v.x v8, a0
+      return LT.first * getLMULCost(LT.second);
+    }
+
+    // Example sequence:
+    //   vrgather.vi     v9, v8, 0
+    // TODO: vrgather could be slower than vmv.v.x. It is
+    // implementation-dependent.
+    return LT.first * getLMULCost(LT.second);
   }
 
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);

@@ -59,7 +59,7 @@ void testAllocForSizeThrows() {
   if (maxSize != sizeTypeMax) {
     // Test that allocating size_t(~0) throws bad alloc.
     try {
-      a.allocate(sizeTypeMax);
+      (void)a.allocate(sizeTypeMax);
       assert(false);
     } catch (const std::exception&) {
     }
@@ -67,7 +67,7 @@ void testAllocForSizeThrows() {
     // Test that allocating even one more than the max size does throw.
     size_t overSize = maxSize + 1;
     try {
-      a.allocate(overSize);
+      (void)a.allocate(overSize);
       assert(false);
     } catch (const std::exception&) {
     }

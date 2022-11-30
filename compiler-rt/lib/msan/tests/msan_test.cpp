@@ -1687,6 +1687,21 @@ TEST(MemorySanitizer, stpcpy) {
   EXPECT_NOT_POISONED(y[2]);
 }
 
+TEST(MemorySanitizer, stpncpy) {
+  char *x = new char[3];
+  char *y = new char[5];
+  x[0] = 'a';
+  x[1] = *GetPoisoned<char>(1, 1);
+  x[2] = '\0';
+  char *res = stpncpy(y, x, 4);
+  ASSERT_EQ(res, y + 2);
+  EXPECT_NOT_POISONED(y[0]);
+  EXPECT_POISONED(y[1]);
+  EXPECT_NOT_POISONED(y[2]);
+  EXPECT_NOT_POISONED(y[3]);
+  EXPECT_POISONED(y[4]);
+}
+
 TEST(MemorySanitizer, strcat) {
   char a[10];
   char b[] = "def";

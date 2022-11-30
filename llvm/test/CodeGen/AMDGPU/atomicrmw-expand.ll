@@ -134,17 +134,15 @@ define float @syncscope_workgroup_rtn(float* %addr, float %val) #0 {
 ; GFX90A-LABEL: syncscope_workgroup_rtn:
 ; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_SH_MEM_BASES, 16, 16)
-; GFX90A-NEXT:    s_lshl_b32 s4, s4, 16
-; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v1
+; GFX90A-NEXT:    s_mov_b64 s[4:5], src_shared_base
+; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GFX90A-NEXT:    ; implicit-def: $vgpr3
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX90A-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execz .LBB1_6
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.check.private
-; GFX90A-NEXT:    s_getreg_b32 s6, hwreg(HW_REG_SH_MEM_BASES, 0, 16)
-; GFX90A-NEXT:    s_lshl_b32 s6, s6, 16
-; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s6, v1
+; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
+; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s7, v1
 ; GFX90A-NEXT:    ; implicit-def: $vgpr3
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GFX90A-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
@@ -206,9 +204,8 @@ define void @syncscope_workgroup_nortn(float* %addr, float %val) #0 {
 ; GFX908-LABEL: syncscope_workgroup_nortn:
 ; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_SH_MEM_BASES, 16, 16)
-; GFX908-NEXT:    s_lshl_b32 s4, s4, 16
-; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v1
+; GFX908-NEXT:    s_mov_b64 s[4:5], src_shared_base
+; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GFX908-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX908-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX908-NEXT:    s_cbranch_execnz .LBB2_3
@@ -220,9 +217,8 @@ define void @syncscope_workgroup_nortn(float* %addr, float %val) #0 {
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ; GFX908-NEXT:  .LBB2_3: ; %atomicrmw.check.private
-; GFX908-NEXT:    s_getreg_b32 s6, hwreg(HW_REG_SH_MEM_BASES, 0, 16)
-; GFX908-NEXT:    s_lshl_b32 s6, s6, 16
-; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s6, v1
+; GFX908-NEXT:    s_mov_b64 s[6:7], src_private_base
+; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s7, v1
 ; GFX908-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GFX908-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
 ; GFX908-NEXT:    s_cbranch_execz .LBB2_5
@@ -260,9 +256,8 @@ define void @syncscope_workgroup_nortn(float* %addr, float %val) #0 {
 ; GFX90A-LABEL: syncscope_workgroup_nortn:
 ; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_SH_MEM_BASES, 16, 16)
-; GFX90A-NEXT:    s_lshl_b32 s4, s4, 16
-; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v1
+; GFX90A-NEXT:    s_mov_b64 s[4:5], src_shared_base
+; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX90A-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB2_3
@@ -274,9 +269,8 @@ define void @syncscope_workgroup_nortn(float* %addr, float %val) #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ; GFX90A-NEXT:  .LBB2_3: ; %atomicrmw.check.private
-; GFX90A-NEXT:    s_getreg_b32 s6, hwreg(HW_REG_SH_MEM_BASES, 0, 16)
-; GFX90A-NEXT:    s_lshl_b32 s6, s6, 16
-; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s6, v1
+; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
+; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s7, v1
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GFX90A-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
 ; GFX90A-NEXT:    s_cbranch_execz .LBB2_5
