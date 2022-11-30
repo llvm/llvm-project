@@ -4555,6 +4555,10 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
     if (match(TrueVal, m_One()) && match(FalseVal, m_ZeroInt()))
       return Cond;
 
+    // (X || Y) ? X : Y --> X (commuted 2 ways)
+    if (match(Cond, m_c_LogicalOr(m_Specific(TrueVal), m_Specific(FalseVal))))
+      return TrueVal;
+
     // (X || Y) ? false : X --> false (commuted 2 ways)
     if (match(Cond, m_c_LogicalOr(m_Specific(FalseVal), m_Value())) &&
         match(TrueVal, m_ZeroInt()))

@@ -103,6 +103,8 @@ static inline void inline_memmove(Ptr dst, CPtr src, size_t count) {
   }
 #elif defined(LLVM_LIBC_ARCH_ARM)
   return inline_memmove_embedded_tiny(dst, src, count);
+#elif defined(LLVM_LIBC_ARCH_GPU)
+  return inline_memmove_embedded_tiny(dst, src, count);
 #else
 #error "Unsupported platform"
 #endif

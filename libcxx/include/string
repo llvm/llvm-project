@@ -1430,21 +1430,20 @@ public:
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type copy(value_type* __s, size_type __n, size_type __pos = 0) const;
 
-    // TODO: Maybe don't pass in the allocator. See https://llvm.org/PR57190
 #if _LIBCPP_STD_VER <= 20
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     basic_string substr(size_type __pos = 0, size_type __n = npos) const {
-      return basic_string(*this, __pos, __n, __alloc());
+      return basic_string(*this, __pos, __n);
     }
 #else
     _LIBCPP_HIDE_FROM_ABI constexpr
     basic_string substr(size_type __pos = 0, size_type __n = npos) const& {
-      return basic_string(*this, __pos, __n, __alloc());
+      return basic_string(*this, __pos, __n);
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr
     basic_string substr(size_type __pos = 0, size_type __n = npos) && {
-      return basic_string(std::move(*this), __pos, __n, __alloc());
+      return basic_string(std::move(*this), __pos, __n);
     }
 #endif
 

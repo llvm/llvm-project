@@ -682,6 +682,7 @@ void HexagonDAGToDAGISel::SelectIntrinsicWOChain(SDNode *N) {
 
   SDValue V = N->getOperand(1);
   SDValue U;
+  // Splat intrinsics.
   if (keepsLowBits(V, Bits, U)) {
     SDValue R = CurDAG->getNode(N->getOpcode(), SDLoc(N), N->getValueType(0),
                                 N->getOperand(0), U);
@@ -697,14 +698,14 @@ void HexagonDAGToDAGISel::SelectExtractSubvector(SDNode *N) {
   MVT ResTy = N->getValueType(0).getSimpleVT();
   auto IdxN = cast<ConstantSDNode>(N->getOperand(1));
   unsigned Idx = IdxN->getZExtValue();
-#ifndef NDEBUG
-  MVT InpTy = Inp.getValueType().getSimpleVT();
+
+  [[maybe_unused]] MVT InpTy = Inp.getValueType().getSimpleVT();
+  [[maybe_unused]] unsigned ResLen = ResTy.getVectorNumElements();
   assert(InpTy.getVectorElementType() == ResTy.getVectorElementType());
-  unsigned ResLen = ResTy.getVectorNumElements();
   assert(2 * ResLen == InpTy.getVectorNumElements());
   assert(ResTy.getSizeInBits() == 32);
   assert(Idx == 0 || Idx == ResLen);
-#endif
+
   unsigned SubReg = Idx == 0 ? Hexagon::isub_lo : Hexagon::isub_hi;
   SDValue Ext = CurDAG->getTargetExtractSubreg(SubReg, SDLoc(N), ResTy, Inp);
 
@@ -904,13 +905,12 @@ void HexagonDAGToDAGISel::Select(SDNode *N) {
     return N->setNodeId(-1);  // Already selected.
 
   auto isHvxOp = [this](SDNode *N) {
-    auto &HST = MF->getSubtarget<HexagonSubtarget>();
     for (unsigned i = 0, e = N->getNumValues(); i != e; ++i) {
-      if (HST.isHVXVectorType(N->getValueType(i), true))
+      if (HST->isHVXVectorType(N->getValueType(i), true))
         return true;
     }
     for (SDValue I : N->ops()) {
-      if (HST.isHVXVectorType(I.getValueType(), true))
+      if (HST->isHVXVectorType(I.getValueType(), true))
         return true;
     }
     return false;
@@ -1258,13 +1258,16 @@ void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
 void HexagonDAGToDAGISel::PreprocessISelDAG() {
   // Repack all nodes before calling each preprocessing function,
   // because each of them can modify the set of nodes.
-  auto getNodes = [this] () -> std::vector<SDNode*> {
-    std::vector<SDNode*> T;
+  auto getNodes = [this]() -> std::vector<SDNode *> {
+    std::vector<SDNode *> T;
     T.reserve(CurDAG->allnodes_size());
     for (SDNode &N : CurDAG->allnodes())
       T.push_back(&N);
     return T;
   };
+
+  if (HST->useHVXOps())
+    PreprocessHvxISelDAG();
 
   // Transform: (or (select c x 0) z)  ->  (select c (or x z) z)
   //            (or (select c 0 y) z)  ->  (select c z (or y z))

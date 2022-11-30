@@ -159,6 +159,20 @@ else()
 endif()
 
 # Function to set compiler features for use in lit.
+function(update_test_compiler_features)
+  set(FEATURES "[")
+  set(first TRUE)
+  foreach(feat IN LISTS OPENMP_TEST_COMPILER_FEATURE_LIST)
+    if (NOT first)
+      string(APPEND FEATURES ", ")
+    endif()
+    set(first FALSE)
+    string(APPEND FEATURES "'${feat}'")
+  endforeach()
+  string(APPEND FEATURES "]")
+  set(OPENMP_TEST_COMPILER_FEATURES ${FEATURES} PARENT_SCOPE)
+endfunction()
+
 function(set_test_compiler_features)
   if ("${OPENMP_TEST_COMPILER_ID}" STREQUAL "GNU")
     set(comp "gcc")
@@ -168,9 +182,10 @@ function(set_test_compiler_features)
     # Just use the lowercase of the compiler ID as fallback.
     string(TOLOWER "${OPENMP_TEST_COMPILER_ID}" comp)
   endif()
-  set(OPENMP_TEST_COMPILER_FEATURES "['${comp}', '${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR}', '${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR}', '${comp}-${OPENMP_TEST_COMPILER_VERSION}']" PARENT_SCOPE)
+  set(OPENMP_TEST_COMPILER_FEATURE_LIST ${comp} ${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR} ${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR} ${comp}-${OPENMP_TEST_COMPILER_VERSION} PARENT_SCOPE)
 endfunction()
 set_test_compiler_features()
+update_test_compiler_features()
 
 # Function to add a testsuite for an OpenMP runtime library.
 function(add_openmp_testsuite target comment)

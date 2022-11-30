@@ -93,6 +93,7 @@ public:
   /// Creates a new function from a code range.
   template <typename... Ts>
   Function *createFunction(const FunctionDecl *Def, Ts &&... Args) {
+    Def = Def->getCanonicalDecl();
     auto *Func = new Function(*this, Def, std::forward<Ts>(Args)...);
     Funcs.insert({Def, std::unique_ptr<Function>(Func)});
     return Func;

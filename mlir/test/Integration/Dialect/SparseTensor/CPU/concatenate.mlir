@@ -14,6 +14,10 @@
 #MAT_C_C = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
 #MAT_D_C = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
 #MAT_C_D = #sparse_tensor.encoding<{dimLevelType = ["compressed", "dense"]}>
+#MAT_D_D = #sparse_tensor.encoding<{
+  dimLevelType = ["dense", "dense"],
+  dimOrdering = affine_map<(i,j) -> (j,i)>
+}>
 
 #MAT_C_C_P = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed", "compressed" ],
@@ -47,6 +51,13 @@ module {
     %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 0 : index}
          : tensor<2x4xf64, #MAT_C_C>, tensor<3x4xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C> to tensor<9x4xf64>
     return %0 : tensor<9x4xf64>
+  }
+
+  // Concats all sparse matrices (with different encodings) to a annotated all dense matrix.
+  func.func @concat_sparse_annotated_dense(%arg0: tensor<2x4xf64, #MAT_C_C>, %arg1: tensor<3x4xf64, #MAT_C_D>, %arg2: tensor<4x4xf64, #MAT_D_C>) -> tensor<9x4xf64, #MAT_D_D> {
+    %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 0 : index}
+         : tensor<2x4xf64, #MAT_C_C>, tensor<3x4xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C> to tensor<9x4xf64, #MAT_D_D>
+    return %0 : tensor<9x4xf64, #MAT_D_D>
   }
 
   // Concats mix sparse and dense matrices to a sparse matrix
@@ -210,6 +221,20 @@ module {
 
     %v = vector.transfer_read %A[%c0, %c0], %du: tensor<9x4xf64>, vector<9x4xf64>
     vector.print %v : vector<9x4xf64>
+
+    return
+  }
+
+  func.func @dump_mat_annotated_dense_9x4(%A: tensor<9x4xf64, #MAT_D_D>) {
+    %c0 = arith.constant 0 : index
+    %du = arith.constant -1.0 : f64
+
+    %n = sparse_tensor.number_of_entries %A : tensor<9x4xf64, #MAT_D_D>
+    vector.print %n : index
+
+    %1 = sparse_tensor.values %A : tensor<9x4xf64, #MAT_D_D> to memref<?xf64>
+    %2 = vector.transfer_read %1[%c0], %du: memref<?xf64>, vector<36xf64>
+    vector.print %2 : vector<36xf64>
 
     return
   }
@@ -421,6 +446,13 @@ module {
                : (tensor<4x2xf64>, tensor<4x3xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C>) -> tensor<?x?xf64, #MAT_C_C>
     call @dump_mat_dyn(%16) : (tensor<?x?xf64, #MAT_C_C>) -> ()
 
+    // CHECK-NEXT: 36
+    // CHECK-NEXT: ( 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 2, 0, 0.5, 5, 0, 3.5, 5, 0.5, 3, 0, 1, 0, 2, 1.5, 0, 2, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0 )
+    %17 = call @concat_sparse_annotated_dense(%sm24cc, %sm34cd, %sm44dc)
+               : (tensor<2x4xf64, #MAT_C_C>, tensor<3x4xf64, #MAT_C_D>, tensor<4x4xf64, #MAT_D_C>) -> tensor<9x4xf64, #MAT_D_D>
+    call @dump_mat_annotated_dense_9x4(%17) : (tensor<9x4xf64, #MAT_D_D>) -> ()
+
+
     // Release resources.
     bufferization.dealloc_tensor %sm24cc  : tensor<2x4xf64, #MAT_C_C>
     bufferization.dealloc_tensor %sm34cd  : tensor<3x4xf64, #MAT_C_D>
@@ -449,6 +481,7 @@ module {
     bufferization.dealloc_tensor %14 : tensor<4x9xf64, #MAT_C_C>
     bufferization.dealloc_tensor %15 : tensor<4x9xf64>
     bufferization.dealloc_tensor %16 : tensor<?x?xf64, #MAT_C_C>
+    bufferization.dealloc_tensor %17 : tensor<9x4xf64, #MAT_D_D>
     return
   }
 }

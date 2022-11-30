@@ -11,7 +11,7 @@ declare <3 x half> @llvm.canonicalize.v3f16(<3 x half>) #0
 declare <4 x half> @llvm.canonicalize.v4f16(<4 x half>) #0
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
-define amdgpu_kernel void @test_fold_canonicalize_undef_value_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_undef_value_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_undef_value_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -40,11 +40,11 @@ define amdgpu_kernel void @test_fold_canonicalize_undef_value_f16(half addrspace
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half undef)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_var_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_var_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: v_test_canonicalize_var_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -81,13 +81,13 @@ define amdgpu_kernel void @v_test_canonicalize_var_f16(half addrspace(1)* %out) 
 ; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
-  %val = load half, half addrspace(1)* %out
+  %val = load half, ptr addrspace(1) %out
   %canonicalized = call half @llvm.canonicalize.f16(half %val)
-  store half %canonicalized, half addrspace(1)* undef
+  store half %canonicalized, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @s_test_canonicalize_var_f16(half addrspace(1)* %out, i16 zeroext %val.arg) #1 {
+define amdgpu_kernel void @s_test_canonicalize_var_f16(ptr addrspace(1) %out, i16 zeroext %val.arg) #1 {
 ; VI-LABEL: s_test_canonicalize_var_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[0:1], 0x2c
@@ -123,7 +123,7 @@ define amdgpu_kernel void @s_test_canonicalize_var_f16(half addrspace(1)* %out, 
 ; CI-NEXT:    s_endpgm
   %val = bitcast i16 %val.arg to half
   %canonicalized = call half @llvm.canonicalize.f16(half %val)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
@@ -158,7 +158,7 @@ define <2 x half> @v_test_canonicalize_build_vector_v2f16(half %lo, half %hi) #1
   ret <2 x half> %canonicalized
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fabs_var_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fabs_var_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: v_test_canonicalize_fabs_var_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -195,14 +195,14 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f16(half addrspace(1)* %
 ; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
-  %val = load half, half addrspace(1)* %out
+  %val = load half, ptr addrspace(1) %out
   %val.fabs = call half @llvm.fabs.f16(half %val)
   %canonicalized = call half @llvm.canonicalize.f16(half %val.fabs)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: v_test_canonicalize_fneg_fabs_var_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -239,15 +239,15 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f16(half addrspace(
 ; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
-  %val = load half, half addrspace(1)* %out
+  %val = load half, ptr addrspace(1) %out
   %val.fabs = call half @llvm.fabs.f16(half %val)
   %val.fabs.fneg = fneg half %val.fabs
   %canonicalized = call half @llvm.canonicalize.f16(half %val.fabs.fneg)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fneg_var_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fneg_var_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: v_test_canonicalize_fneg_var_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -284,14 +284,14 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_f16(half addrspace(1)* %
 ; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
-  %val = load half, half addrspace(1)* %out
+  %val = load half, ptr addrspace(1) %out
   %val.fneg = fneg half %val
   %canonicalized = call half @llvm.canonicalize.f16(half %val.fneg)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(half addrspace(1)* %out) #2 {
+define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(ptr addrspace(1) %out) #2 {
 ; VI-LABEL: v_test_no_denormals_canonicalize_fneg_var_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -328,14 +328,14 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(half ad
 ; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
-  %val = load half, half addrspace(1)* %out
+  %val = load half, ptr addrspace(1) %out
   %val.fneg = fneg half %val
   %canonicalized = call half @llvm.canonicalize.f16(half %val.fneg)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_fabs_var_f16(half addrspace(1)* %out) #2 {
+define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_fabs_var_f16(ptr addrspace(1) %out) #2 {
 ; VI-LABEL: v_test_no_denormals_canonicalize_fneg_fabs_var_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -372,15 +372,15 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_fabs_var_f16(ha
 ; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
-  %val = load half, half addrspace(1)* %out
+  %val = load half, ptr addrspace(1) %out
   %val.fabs = call half @llvm.fabs.f16(half %val)
   %val.fabs.fneg = fneg half %val.fabs
   %canonicalized = call half @llvm.canonicalize.f16(half %val.fabs.fneg)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_p0_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_p0_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_p0_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -409,11 +409,11 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_f16(half addrspace(1)* %out
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0.0)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_n0_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_n0_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_n0_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -443,11 +443,11 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_f16(half addrspace(1)* %out
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half -0.0)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_p1_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_p1_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_p1_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -477,11 +477,11 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_f16(half addrspace(1)* %out
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 1.0)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_n1_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_n1_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_n1_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -511,11 +511,11 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_f16(half addrspace(1)* %out
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half -1.0)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_literal_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_literal_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_literal_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -545,11 +545,11 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_f16(half addrspace(1)*
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 16.0)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal0_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal0_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_default_denormals_fold_canonicalize_denormal0_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -579,11 +579,11 @@ define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal0_f1
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xH03FF)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f16(half addrspace(1)* %out) #3 {
+define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f16(ptr addrspace(1) %out) #3 {
 ; VI-LABEL: test_denormals_fold_canonicalize_denormal0_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -613,11 +613,11 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f16(half a
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xH03FF)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal1_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal1_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_default_denormals_fold_canonicalize_denormal1_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -647,11 +647,11 @@ define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal1_f1
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xH83FF)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f16(half addrspace(1)* %out) #3 {
+define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f16(ptr addrspace(1) %out) #3 {
 ; VI-LABEL: test_denormals_fold_canonicalize_denormal1_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -681,11 +681,11 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f16(half a
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xH83FF)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_qnan_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -715,11 +715,11 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_f16(half addrspace(1)* %o
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xH7C00)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_qnan_value_neg1_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -749,11 +749,11 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f16(half addrs
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half bitcast (i16 -1 to half))
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_qnan_value_neg2_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -783,11 +783,11 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f16(half addrs
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half bitcast (i16 -2 to half))
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_snan0_value_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -817,11 +817,11 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f16(half addrspace
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xH7C01)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_snan1_value_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -851,11 +851,11 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f16(half addrspace
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xH7DFF)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_snan2_value_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -885,11 +885,11 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f16(half addrspace
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xHFDFF)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f16(half addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_snan3_value_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -919,11 +919,11 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f16(half addrspace
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xHFC01)
-  store half %canonicalized, half addrspace(1)* %out
+  store half %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_var_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_var_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: v_test_canonicalize_var_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -979,14 +979,14 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f16(<2 x half> addrspace(1)
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %val = load <2 x half>, <2 x half> addrspace(1)* %gep
+  %gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %val = load <2 x half>, ptr addrspace(1) %gep
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %val)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: v_test_canonicalize_fabs_var_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1043,15 +1043,15 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2f16(<2 x half> addrspa
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %val = load <2 x half>, <2 x half> addrspace(1)* %gep
+  %gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %val = load <2 x half>, ptr addrspace(1) %gep
   %val.fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %val.fabs)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: v_test_canonicalize_fneg_fabs_var_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1109,16 +1109,16 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(<2 x half> ad
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %val = load <2 x half>, <2 x half> addrspace(1)* %gep
+  %gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %val = load <2 x half>, ptr addrspace(1) %gep
   %val.fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
   %val.fabs.fneg = fneg <2 x half> %val.fabs
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %val.fabs.fneg)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: v_test_canonicalize_fneg_var_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1175,15 +1175,15 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(<2 x half> addrspa
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
-  %val = load <2 x half>, <2 x half> addrspace(1)* %gep
+  %gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
+  %val = load <2 x half>, ptr addrspace(1) %gep
   %fneg.val = fneg <2 x half> %val
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %fneg.val)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_test_canonicalize_var_v2f16(<2 x half> addrspace(1)* %out, i32 zeroext %val.arg) #1 {
+define amdgpu_kernel void @s_test_canonicalize_var_v2f16(ptr addrspace(1) %out, i32 zeroext %val.arg) #1 {
 ; VI-LABEL: s_test_canonicalize_var_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[0:1], 0x2c
@@ -1229,11 +1229,11 @@ define amdgpu_kernel void @s_test_canonicalize_var_v2f16(<2 x half> addrspace(1)
 ; CI-NEXT:    s_endpgm
   %val = bitcast i32 %val.arg to <2 x half>
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %val)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_p0_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_p0_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_p0_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1262,11 +1262,11 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_v2f16(<2 x half> addrspace(
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> zeroinitializer)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_n0_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_n0_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_n0_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1296,11 +1296,11 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_v2f16(<2 x half> addrspace(
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half -0.0, half -0.0>)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_p1_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_p1_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_p1_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1330,11 +1330,11 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_v2f16(<2 x half> addrspace(
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 1.0, half 1.0>)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_n1_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_n1_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_n1_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1364,11 +1364,11 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_v2f16(<2 x half> addrspace(
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half -1.0, half -1.0>)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_literal_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_literal_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_literal_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1398,11 +1398,11 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_v2f16(<2 x half> addrs
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 16.0, half 16.0>)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_no_denormals_fold_canonicalize_denormal0_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1432,11 +1432,11 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_v2f16(<
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xH03FF, half 0xH03FF>)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_v2f16(<2 x half> addrspace(1)* %out) #3 {
+define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_v2f16(ptr addrspace(1) %out) #3 {
 ; VI-LABEL: test_denormals_fold_canonicalize_denormal0_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1466,11 +1466,11 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_v2f16(<2 x
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xH03FF, half 0xH03FF>)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_no_denormals_fold_canonicalize_denormal1_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1500,11 +1500,11 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_v2f16(<
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xH83FF, half 0xH83FF>)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_v2f16(<2 x half> addrspace(1)* %out) #3 {
+define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_v2f16(ptr addrspace(1) %out) #3 {
 ; VI-LABEL: test_denormals_fold_canonicalize_denormal1_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1534,11 +1534,11 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_v2f16(<2 x
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xH83FF, half 0xH83FF>)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_qnan_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1568,11 +1568,11 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_v2f16(<2 x half> addrspac
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xH7C00, half 0xH7C00>)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_qnan_value_neg1_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1602,11 +1602,11 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_v2f16(<2 x hal
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> bitcast (i32 -1 to <2 x half>))
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_qnan_value_neg2_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1636,11 +1636,11 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_v2f16(<2 x hal
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half bitcast (i16 -2 to half), half bitcast (i16 -2 to half)>)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan0_value_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan0_value_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_snan0_value_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1670,11 +1670,11 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_v2f16(<2 x half> a
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xH7C01, half 0xH7C01>)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan1_value_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan1_value_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_snan1_value_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1704,11 +1704,11 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_v2f16(<2 x half> a
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xH7DFF, half 0xH7DFF>)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan2_value_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan2_value_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_snan2_value_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1738,11 +1738,11 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_v2f16(<2 x half> a
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xHFDFF, half 0xHFDFF>)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_fold_canonicalize_snan3_value_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_fold_canonicalize_snan3_value_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_snan3_value_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1772,7 +1772,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_v2f16(<2 x half> a
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xHFC01, half 0xHFC01>)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
@@ -1842,7 +1842,7 @@ define <4 x half> @v_test_canonicalize_var_v4f16(<4 x half> %val) #1 {
   ret <4 x half> %canonicalized
 }
 
-define amdgpu_kernel void @s_test_canonicalize_undef_v2f16(<2 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @s_test_canonicalize_undef_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: s_test_canonicalize_undef_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1871,7 +1871,7 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v2f16(<2 x half> addrspace(
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> undef)
-  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 
@@ -2080,7 +2080,7 @@ define <2 x half> @v_test_canonicalize_k_reg_v2f16(half %val) #1 {
   ret <2 x half> %canonicalized
 }
 
-define amdgpu_kernel void @s_test_canonicalize_undef_v4f16(<4 x half> addrspace(1)* %out) #1 {
+define amdgpu_kernel void @s_test_canonicalize_undef_v4f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: s_test_canonicalize_undef_v4f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -2112,7 +2112,7 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v4f16(<4 x half> addrspace(
 ; CI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
   %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> undef)
-  store <4 x half> %canonicalized, <4 x half> addrspace(1)* %out
+  store <4 x half> %canonicalized, ptr addrspace(1) %out
   ret void
 }
 

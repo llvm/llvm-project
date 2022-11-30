@@ -233,8 +233,13 @@ bool ByteCodeStmtGen<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
       return this->emitRet(*ReturnType, RS);
     } else {
       // RVO - construct the value in the return location.
+      if (!this->emitRVOPtr(RE))
+        return false;
       if (!this->visitInitializer(RE))
         return false;
+      if (!this->emitPopPtr(RE))
+        return false;
+
       this->emitCleanup();
       return this->emitRetVoid(RS);
     }

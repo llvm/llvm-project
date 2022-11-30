@@ -6,7 +6,7 @@
 define amdgpu_kernel void @test_call_undef() #0 {
   %val = call i32 undef(i32 1)
   %op = add i32 %val, 1
-  store volatile i32 %op, i32 addrspace(1)* undef
+  store volatile i32 %op, ptr addrspace(1) undef
   ret void
 }
 
@@ -26,7 +26,7 @@ define i32 @test_tail_call_undef() #0 {
 define amdgpu_kernel void @test_call_null() #0 {
   %val = call i32 null(i32 1)
   %op = add i32 %val, 1
-  store volatile i32 %op, i32 addrspace(1)* null
+  store volatile i32 %op, ptr addrspace(1) null
   ret void
 }
 

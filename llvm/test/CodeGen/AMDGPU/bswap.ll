@@ -15,7 +15,7 @@ declare <2 x i64> @llvm.bswap.v2i64(<2 x i64>) nounwind readnone
 declare <4 x i64> @llvm.bswap.v4i64(<4 x i64>) nounwind readnone
 declare i48 @llvm.bswap.i48(i48) #1
 
-define amdgpu_kernel void @test_bswap_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_bswap_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -45,13 +45,13 @@ define amdgpu_kernel void @test_bswap_i32(i32 addrspace(1)* %out, i32 addrspace(
 ; VI-NEXT:    v_perm_b32 v0, 0, s2, v0
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
-  %val = load i32, i32 addrspace(1)* %in, align 4
+  %val = load i32, ptr addrspace(1) %in, align 4
   %bswap = call i32 @llvm.bswap.i32(i32 %val) nounwind readnone
-  store i32 %bswap, i32 addrspace(1)* %out, align 4
+  store i32 %bswap, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_bswap_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_bswap_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_v2i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -85,13 +85,13 @@ define amdgpu_kernel void @test_bswap_v2i32(<2 x i32> addrspace(1)* %out, <2 x i
 ; VI-NEXT:    v_perm_b32 v0, 0, s2, v0
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
-  %val = load <2 x i32>, <2 x i32> addrspace(1)* %in, align 8
+  %val = load <2 x i32>, ptr addrspace(1) %in, align 8
   %bswap = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %val) nounwind readnone
-  store <2 x i32> %bswap, <2 x i32> addrspace(1)* %out, align 8
+  store <2 x i32> %bswap, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @test_bswap_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_bswap_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_v4i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -133,13 +133,13 @@ define amdgpu_kernel void @test_bswap_v4i32(<4 x i32> addrspace(1)* %out, <4 x i
 ; VI-NEXT:    v_perm_b32 v0, 0, s8, v0
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
-  %val = load <4 x i32>, <4 x i32> addrspace(1)* %in, align 16
+  %val = load <4 x i32>, ptr addrspace(1) %in, align 16
   %bswap = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %val) nounwind readnone
-  store <4 x i32> %bswap, <4 x i32> addrspace(1)* %out, align 16
+  store <4 x i32> %bswap, ptr addrspace(1) %out, align 16
   ret void
 }
 
-define amdgpu_kernel void @test_bswap_v8i32(<8 x i32> addrspace(1)* %out, <8 x i32> addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_bswap_v8i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_v8i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
@@ -199,13 +199,13 @@ define amdgpu_kernel void @test_bswap_v8i32(<8 x i32> addrspace(1)* %out, <8 x i
 ; VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[12:15], 0 offset:16
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[12:15], 0
 ; VI-NEXT:    s_endpgm
-  %val = load <8 x i32>, <8 x i32> addrspace(1)* %in, align 32
+  %val = load <8 x i32>, ptr addrspace(1) %in, align 32
   %bswap = call <8 x i32> @llvm.bswap.v8i32(<8 x i32> %val) nounwind readnone
-  store <8 x i32> %bswap, <8 x i32> addrspace(1)* %out, align 32
+  store <8 x i32> %bswap, ptr addrspace(1) %out, align 32
   ret void
 }
 
-define amdgpu_kernel void @test_bswap_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_bswap_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -239,13 +239,13 @@ define amdgpu_kernel void @test_bswap_i64(i64 addrspace(1)* %out, i64 addrspace(
 ; VI-NEXT:    v_perm_b32 v0, 0, s3, v0
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
-  %val = load i64, i64 addrspace(1)* %in, align 8
+  %val = load i64, ptr addrspace(1) %in, align 8
   %bswap = call i64 @llvm.bswap.i64(i64 %val) nounwind readnone
-  store i64 %bswap, i64 addrspace(1)* %out, align 8
+  store i64 %bswap, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @test_bswap_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64> addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_bswap_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_v2i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -287,13 +287,13 @@ define amdgpu_kernel void @test_bswap_v2i64(<2 x i64> addrspace(1)* %out, <2 x i
 ; VI-NEXT:    v_perm_b32 v0, 0, s9, v0
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
-  %val = load <2 x i64>, <2 x i64> addrspace(1)* %in, align 16
+  %val = load <2 x i64>, ptr addrspace(1) %in, align 16
   %bswap = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %val) nounwind readnone
-  store <2 x i64> %bswap, <2 x i64> addrspace(1)* %out, align 16
+  store <2 x i64> %bswap, ptr addrspace(1) %out, align 16
   ret void
 }
 
-define amdgpu_kernel void @test_bswap_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @test_bswap_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: test_bswap_v4i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
@@ -353,9 +353,9 @@ define amdgpu_kernel void @test_bswap_v4i64(<4 x i64> addrspace(1)* %out, <4 x i
 ; VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[12:15], 0 offset:16
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[12:15], 0
 ; VI-NEXT:    s_endpgm
-  %val = load <4 x i64>, <4 x i64> addrspace(1)* %in, align 32
+  %val = load <4 x i64>, ptr addrspace(1) %in, align 32
   %bswap = call <4 x i64> @llvm.bswap.v4i64(<4 x i64> %val) nounwind readnone
-  store <4 x i64> %bswap, <4 x i64> addrspace(1)* %out, align 32
+  store <4 x i64> %bswap, ptr addrspace(1) %out, align 32
   ret void
 }
 

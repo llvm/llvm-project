@@ -3,19 +3,19 @@
 
 ; FUNC-LABEL: {{^}}v_safe_fsqrt_f64:
 ; GCN: v_sqrt_f64_e32 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @v_safe_fsqrt_f64(double addrspace(1)* %out, double addrspace(1)* %in) #1 {
-  %r0 = load double, double addrspace(1)* %in
+define amdgpu_kernel void @v_safe_fsqrt_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
+  %r0 = load double, ptr addrspace(1) %in
   %r1 = call double @llvm.sqrt.f64(double %r0)
-  store double %r1, double addrspace(1)* %out
+  store double %r1, ptr addrspace(1) %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}v_unsafe_fsqrt_f64:
 ; GCN: v_sqrt_f64_e32 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @v_unsafe_fsqrt_f64(double addrspace(1)* %out, double addrspace(1)* %in) #2 {
-  %r0 = load double, double addrspace(1)* %in
+define amdgpu_kernel void @v_unsafe_fsqrt_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #2 {
+  %r0 = load double, ptr addrspace(1) %in
   %r1 = call double @llvm.sqrt.f64(double %r0)
-  store double %r1, double addrspace(1)* %out
+  store double %r1, ptr addrspace(1) %out
   ret void
 }
 

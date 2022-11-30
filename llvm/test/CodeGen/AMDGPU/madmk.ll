@@ -12,18 +12,18 @@ declare float @llvm.fabs.f32(float) nounwind readnone
 ; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN: v_mac_f32_e32 [[VB]], 0x41200000, [[VA]]
-define amdgpu_kernel void @madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #0 {
+define amdgpu_kernel void @madmk_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
-  %a = load volatile float, float addrspace(1)* %gep.0, align 4
-  %b = load volatile float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, ptr addrspace(1) %gep.0, align 4
+  %b = load volatile float, ptr addrspace(1) %gep.1, align 4
 
   %mul = fmul float %a, 10.0
   %madmk = fadd float %mul, %b
-  store float %madmk, float addrspace(1)* %out.gep, align 4
+  store float %madmk, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
@@ -34,27 +34,27 @@ define amdgpu_kernel void @madmk_f32(float addrspace(1)* noalias %out, float add
 ; GCN-DAG: v_mac_f32_e32 [[VB]], 0x41200000, [[VA]]
 ; GCN-DAG: v_mac_f32_e32 [[VC]], 0x41200000, [[VA]]
 ; GCN: s_endpgm
-define amdgpu_kernel void @madmk_2_use_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #0 {
+define amdgpu_kernel void @madmk_2_use_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
-  %in.gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %in.gep.1 = getelementptr float, float addrspace(1)* %in.gep.0, i32 1
-  %in.gep.2 = getelementptr float, float addrspace(1)* %in.gep.0, i32 2
+  %in.gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %in.gep.1 = getelementptr float, ptr addrspace(1) %in.gep.0, i32 1
+  %in.gep.2 = getelementptr float, ptr addrspace(1) %in.gep.0, i32 2
 
-  %out.gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %out.gep.1 = getelementptr float, float addrspace(1)* %in.gep.0, i32 1
+  %out.gep.0 = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %out.gep.1 = getelementptr float, ptr addrspace(1) %in.gep.0, i32 1
 
-  %a = load volatile float, float addrspace(1)* %in.gep.0, align 4
-  %b = load volatile float, float addrspace(1)* %in.gep.1, align 4
-  %c = load volatile float, float addrspace(1)* %in.gep.2, align 4
+  %a = load volatile float, ptr addrspace(1) %in.gep.0, align 4
+  %b = load volatile float, ptr addrspace(1) %in.gep.1, align 4
+  %c = load volatile float, ptr addrspace(1) %in.gep.2, align 4
 
   %mul0 = fmul float %a, 10.0
   %mul1 = fmul float %a, 10.0
   %madmk0 = fadd float %mul0, %b
   %madmk1 = fadd float %mul1, %c
 
-  store float %madmk0, float addrspace(1)* %out.gep.0, align 4
-  store float %madmk1, float addrspace(1)* %out.gep.1, align 4
+  store float %madmk0, ptr addrspace(1) %out.gep.0, align 4
+  store float %madmk1, ptr addrspace(1) %out.gep.1, align 4
   ret void
 }
 
@@ -63,18 +63,18 @@ define amdgpu_kernel void @madmk_2_use_f32(float addrspace(1)* noalias %out, flo
 ; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN: v_mac_f32_e32 [[VB]], 4.0, [[VA]]
-define amdgpu_kernel void @madmk_inline_imm_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #0 {
+define amdgpu_kernel void @madmk_inline_imm_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
-  %a = load volatile float, float addrspace(1)* %gep.0, align 4
-  %b = load volatile float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, ptr addrspace(1) %gep.0, align 4
+  %b = load volatile float, ptr addrspace(1) %gep.1, align 4
 
   %mul = fmul float %a, 4.0
   %madmk = fadd float %mul, %b
-  store float %madmk, float addrspace(1)* %out.gep, align 4
+  store float %madmk, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
@@ -82,13 +82,13 @@ define amdgpu_kernel void @madmk_inline_imm_f32(float addrspace(1)* noalias %out
 ; GCN-NOT: v_madmk_f32
 ; GCN: v_mac_f32_e32
 ; GCN: s_endpgm
-define amdgpu_kernel void @s_s_madmk_f32(float addrspace(1)* noalias %out, [8 x i32], float %a, [8 x i32], float %b) #0 {
+define amdgpu_kernel void @s_s_madmk_f32(ptr addrspace(1) noalias %out, [8 x i32], float %a, [8 x i32], float %b) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
   %mul = fmul float %a, 10.0
   %madmk = fadd float %mul, %b
-  store float %madmk, float addrspace(1)* %out.gep, align 4
+  store float %madmk, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
@@ -98,15 +98,15 @@ define amdgpu_kernel void @s_s_madmk_f32(float addrspace(1)* noalias %out, [8 x 
 ; GCN: v_mov_b32_e32 [[VREG2:v[0-9]+]], [[SREG]]
 ; GCN: v_mac_f32_e32 [[VREG2]], 0x41200000, [[VREG1]]
 ; GCN: s_endpgm
-define amdgpu_kernel void @v_s_madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in, float %b) #0 {
+define amdgpu_kernel void @v_s_madmk_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in, float %b) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep.0, align 4
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep.0, align 4
 
   %mul = fmul float %a, 10.0
   %madmk = fadd float %mul, %b
-  store float %madmk, float addrspace(1)* %out.gep, align 4
+  store float %madmk, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
@@ -114,15 +114,15 @@ define amdgpu_kernel void @v_s_madmk_f32(float addrspace(1)* noalias %out, float
 ; GCN-NOT: v_madmk_f32
 ; GCN: v_mac_f32_e32
 ; GCN: s_endpgm
-define amdgpu_kernel void @scalar_vector_madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in, float %a) #0 {
+define amdgpu_kernel void @scalar_vector_madmk_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in, float %a) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %b = load float, float addrspace(1)* %gep.0, align 4
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %b = load float, ptr addrspace(1) %gep.0, align 4
 
   %mul = fmul float %a, 10.0
   %madmk = fadd float %mul, %b
-  store float %madmk, float addrspace(1)* %out.gep, align 4
+  store float %madmk, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
@@ -131,20 +131,20 @@ define amdgpu_kernel void @scalar_vector_madmk_f32(float addrspace(1)* noalias %
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN-DAG: s_mov_b32 [[SK:s[0-9]+]], 0x41200000
 ; GCN: v_mad_f32 {{v[0-9]+}}, |[[VA]]|, [[SK]], [[VB]]
-define amdgpu_kernel void @no_madmk_src0_modifier_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #0 {
+define amdgpu_kernel void @no_madmk_src0_modifier_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
-  %a = load volatile float, float addrspace(1)* %gep.0, align 4
-  %b = load volatile float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, ptr addrspace(1) %gep.0, align 4
+  %b = load volatile float, ptr addrspace(1) %gep.1, align 4
 
   %a.fabs = call float @llvm.fabs.f32(float %a) nounwind readnone
 
   %mul = fmul float %a.fabs, 10.0
   %madmk = fadd float %mul, %b
-  store float %madmk, float addrspace(1)* %out.gep, align 4
+  store float %madmk, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
@@ -152,20 +152,20 @@ define amdgpu_kernel void @no_madmk_src0_modifier_f32(float addrspace(1)* noalia
 ; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN: v_mad_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{[sv][0-9]+}}, |{{v[0-9]+}}|
-define amdgpu_kernel void @no_madmk_src2_modifier_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #0 {
+define amdgpu_kernel void @no_madmk_src2_modifier_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
-  %a = load volatile float, float addrspace(1)* %gep.0, align 4
-  %b = load volatile float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, ptr addrspace(1) %gep.0, align 4
+  %b = load volatile float, ptr addrspace(1) %gep.1, align 4
 
   %b.fabs = call float @llvm.fabs.f32(float %b) nounwind readnone
 
   %mul = fmul float %a, 10.0
   %madmk = fadd float %mul, %b.fabs
-  store float %madmk, float addrspace(1)* %out.gep, align 4
+  store float %madmk, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 
@@ -173,16 +173,16 @@ define amdgpu_kernel void @no_madmk_src2_modifier_f32(float addrspace(1)* noalia
 ; GCN: buffer_load_dword [[A:v[0-9]+]]
 ; GCN: s_mov_b32 [[SK:s[0-9]+]], 0x41200000
 ; GCN: v_mad_f32 {{v[0-9]+}}, [[A]], [[SK]], 2.0
-define amdgpu_kernel void @madmk_add_inline_imm_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #0 {
+define amdgpu_kernel void @madmk_add_inline_imm_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
-  %a = load float, float addrspace(1)* %gep.0, align 4
+  %a = load float, ptr addrspace(1) %gep.0, align 4
 
   %mul = fmul float %a, 10.0
   %madmk = fadd float %mul, 2.0
-  store float %madmk, float addrspace(1)* %out.gep, align 4
+  store float %madmk, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 

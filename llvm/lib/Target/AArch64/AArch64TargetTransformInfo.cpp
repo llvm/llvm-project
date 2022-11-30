@@ -1563,8 +1563,11 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
   };
 
   // Exit early if DstTy is not a vector type whose elements are at least
-  // 16-bits wide.
-  if (!DstTy->isVectorTy() || DstTy->getScalarSizeInBits() < 16)
+  // 16-bits wide. SVE doesn't generally have the same set of instructions to
+  // perform an extend with the add/sub/mul. There are SMULLB style
+  // instructions, but they operate on top/bottom, requiring some sort of lane
+  // interleaving to be used with zext/sext.
+  if (!useNeonVector(DstTy) || DstTy->getScalarSizeInBits() < 16)
     return false;
 
   // Determine if the operation has a widening variant. We consider both the
