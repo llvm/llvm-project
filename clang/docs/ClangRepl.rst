@@ -21,7 +21,7 @@ Clang-Repl Usage
 ================
 
 
-.. code-block:: c++
+.. code-block:: text
 
   clang-repl> #include <iostream>
   clang-repl> int f() { std::cout << "Hello Interpreted World!\n"; return 0; }
