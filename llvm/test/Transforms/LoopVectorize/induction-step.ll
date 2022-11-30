@@ -13,7 +13,7 @@
 
 ; CHECK-LABEL: @induction_with_global(
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @int_inc, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @int_inc, align 4
 ; CHECK:       vector.ph:
 ; CHECK:         [[DOTSPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 %init, i32 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
@@ -29,10 +29,9 @@
 ; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK-NEXT:    %vec.ind = phi <8 x i32> [ [[INDUCTION4]], %vector.ph ], [ %vec.ind.next, %vector.body ]
 ; CHECK:         [[TMP8:%.*]] = add i64 %index, 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[TMP9]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[TMP10]] to <8 x i32>*
-; CHECK-NEXT:    store <8 x i32> %vec.ind, <8 x i32>* [[TMP11]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i32 0
+; CHECK-NEXT:    store <8 x i32> %vec.ind, ptr [[TMP10]], align 4
 ; CHECK:         %index.next = add nuw i64 %index, 8
 ; CHECK-NEXT:    %vec.ind.next = add <8 x i32> %vec.ind, [[DOTSPLAT6]]
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
@@ -42,21 +41,21 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @int_inc = common global i32 0, align 4
 
-define i32 @induction_with_global(i32 %init, i32* noalias nocapture %A, i32 %N) {
+define i32 @induction_with_global(i32 %init, ptr noalias nocapture %A, i32 %N) {
 entry:
   %cmp4 = icmp sgt i32 %N, 0
   br i1 %cmp4, label %for.body.lr.ph, label %for.end
 
 for.body.lr.ph:                                   ; preds = %entry
-  %0 = load i32, i32* @int_inc, align 4
+  %0 = load i32, ptr @int_inc, align 4
   %1 = mul i32 %0, %N
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %x.05 = phi i32 [ %init, %for.body.lr.ph ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %x.05, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %x.05, ptr %arrayidx, align 4
   %add = add nsw i32 %0, %x.05
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
@@ -100,15 +99,14 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK-NEXT:    %vec.ind = phi <8 x i32> [ [[INDUCTION4]], %vector.ph ], [ %vec.ind.next, %vector.body ]
 ; CHECK:         [[TMP6:%.*]] = add i64 %index, 0
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[TMP8]] to <8 x i32>*
-; CHECK-NEXT:    store <8 x i32> %vec.ind, <8 x i32>* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
+; CHECK-NEXT:    store <8 x i32> %vec.ind, ptr [[TMP8]], align 4
 ; CHECK:         %index.next = add nuw i64 %index, 8
 ; CHECK-NEXT:    %vec.ind.next = add <8 x i32> %vec.ind, [[DOTSPLAT6]]
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 
-define i32 @induction_with_loop_inv(i32 %init, i32* noalias nocapture %A, i32 %N, i32 %M) {
+define i32 @induction_with_loop_inv(i32 %init, ptr noalias nocapture %A, i32 %N, i32 %M) {
 entry:
   %cmp10 = icmp sgt i32 %M, 0
   br i1 %cmp10, label %for.cond1.preheader.lr.ph, label %for.end6
@@ -129,8 +127,8 @@ for.body3.preheader:                              ; preds = %for.cond1.preheader
 for.body3:                                        ; preds = %for.body3.preheader, %for.body3
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body3 ], [ 0, %for.body3.preheader ]
   %x.18 = phi i32 [ %add, %for.body3 ], [ %x.011, %for.body3.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %x.18, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %x.18, ptr %arrayidx, align 4
   %add = add nsw i32 %x.18, %j.012
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
@@ -173,24 +171,23 @@ for.end6:                                         ; preds = %for.end6.loopexit, 
 ; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK:         [[VEC_IND10:%.*]] = phi <8 x i32> [ [[INDUCTION7]], %vector.ph ], [ [[VEC_IND_NEXT11:%.*]], %vector.body ]
 ; CHECK:         [[TMP6:%.*]] = add i64 %index, 0
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[TMP8]] to <8 x i32>*
-; CHECK-NEXT:    store <8 x i32> [[VEC_IND10]], <8 x i32>* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
+; CHECK-NEXT:    store <8 x i32> [[VEC_IND10]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    %index.next = add nuw i64 %index, 8
 ; CHECK:         [[VEC_IND_NEXT11]] = add <8 x i32> [[VEC_IND10]], [[DOTSPLAT9]]
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 
-define void @non_primary_iv_loop_inv_trunc(i32* %a, i64 %n, i64 %step) {
+define void @non_primary_iv_loop_inv_trunc(ptr %a, i64 %n, i64 %step) {
 entry:
   br label %for.body
 
 for.body:
   %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
   %j = phi i64 [ %j.next, %for.body ], [ 0, %entry ]
-  %tmp0 = getelementptr inbounds i32, i32* %a, i64 %i
+  %tmp0 = getelementptr inbounds i32, ptr %a, i64 %i
   %tmp1 = trunc i64 %j to i32
-  store i32 %tmp1, i32* %tmp0, align 4
+  store i32 %tmp1, ptr %tmp0, align 4
   %i.next = add nuw nsw i64 %i, 1
   %j.next = add nuw nsw i64 %j, %step
   %cond = icmp slt i64 %i.next, %n
