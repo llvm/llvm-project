@@ -1591,23 +1591,25 @@ TEST(TargetParserTest, testAArch64Extension) {
 
 TEST(TargetParserTest, AArch64ExtensionFeatures) {
   std::vector<uint64_t> Extensions = {
-      AArch64::AEK_CRC,     AArch64::AEK_LSE,      AArch64::AEK_RDM,
-      AArch64::AEK_CRYPTO,  AArch64::AEK_SM4,      AArch64::AEK_SHA3,
-      AArch64::AEK_SHA2,    AArch64::AEK_AES,      AArch64::AEK_DOTPROD,
-      AArch64::AEK_FP,      AArch64::AEK_SIMD,     AArch64::AEK_FP16,
-      AArch64::AEK_FP16FML, AArch64::AEK_PROFILE,  AArch64::AEK_RAS,
-      AArch64::AEK_SVE,     AArch64::AEK_SVE2,     AArch64::AEK_SVE2AES,
-      AArch64::AEK_SVE2SM4, AArch64::AEK_SVE2SHA3, AArch64::AEK_SVE2BITPERM,
-      AArch64::AEK_RCPC,    AArch64::AEK_RAND,     AArch64::AEK_MTE,
-      AArch64::AEK_SSBS,    AArch64::AEK_SB,       AArch64::AEK_PREDRES,
-      AArch64::AEK_BF16,    AArch64::AEK_I8MM,     AArch64::AEK_F32MM,
-      AArch64::AEK_F64MM,   AArch64::AEK_TME,      AArch64::AEK_LS64,
-      AArch64::AEK_BRBE,    AArch64::AEK_PAUTH,    AArch64::AEK_FLAGM,
+      AArch64::AEK_CRC,     AArch64::AEK_LSE,       AArch64::AEK_RDM,
+      AArch64::AEK_CRYPTO,  AArch64::AEK_SM4,       AArch64::AEK_SHA3,
+      AArch64::AEK_SHA2,    AArch64::AEK_AES,       AArch64::AEK_DOTPROD,
+      AArch64::AEK_FP,      AArch64::AEK_SIMD,      AArch64::AEK_FP16,
+      AArch64::AEK_FP16FML, AArch64::AEK_PROFILE,   AArch64::AEK_RAS,
+      AArch64::AEK_SVE,     AArch64::AEK_SVE2,      AArch64::AEK_SVE2AES,
+      AArch64::AEK_SVE2SM4, AArch64::AEK_SVE2SHA3,  AArch64::AEK_SVE2BITPERM,
+      AArch64::AEK_RCPC,    AArch64::AEK_RAND,      AArch64::AEK_MTE,
+      AArch64::AEK_SSBS,    AArch64::AEK_SB,        AArch64::AEK_PREDRES,
+      AArch64::AEK_BF16,    AArch64::AEK_I8MM,      AArch64::AEK_F32MM,
+      AArch64::AEK_F64MM,   AArch64::AEK_TME,       AArch64::AEK_LS64,
+      AArch64::AEK_BRBE,    AArch64::AEK_PAUTH,     AArch64::AEK_FLAGM,
       AArch64::AEK_SME,     AArch64::AEK_SMEF64F64, AArch64::AEK_SMEI16I64,
-      AArch64::AEK_SME2,    AArch64::AEK_HBC,      AArch64::AEK_MOPS,
-      AArch64::AEK_PERFMON, AArch64::AEK_SVE2p1,   AArch64::AEK_SME2p1,
+      AArch64::AEK_SME2,    AArch64::AEK_HBC,       AArch64::AEK_MOPS,
+      AArch64::AEK_PERFMON, AArch64::AEK_SVE2p1,    AArch64::AEK_SME2p1,
       AArch64::AEK_B16B16,  AArch64::AEK_SMEF16F16, AArch64::AEK_CSSC,
-      AArch64::AEK_RCPC3};
+      AArch64::AEK_RCPC3,   AArch64::AEK_THE,       AArch64::AEK_D128,
+      AArch64::AEK_LSE128,
+  };
 
   std::vector<StringRef> Features;
 
@@ -1674,6 +1676,9 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+perfmon"));
   EXPECT_TRUE(llvm::is_contained(Features, "+cssc"));
   EXPECT_TRUE(llvm::is_contained(Features, "+rcpc3"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+the"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+d128"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+lse128"));
 
   // Assuming we listed every extension above, this should produce the same
   // result. (note that AEK_NONE doesn't have a name so it won't be in the

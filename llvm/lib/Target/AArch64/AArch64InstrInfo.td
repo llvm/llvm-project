@@ -234,8 +234,14 @@ def HasMOPS          : Predicate<"Subtarget->hasMOPS()">,
                        AssemblerPredicateWithAll<(all_of FeatureMOPS), "mops">;
 def HasITE           : Predicate<"Subtarget->hasITE()">,
                        AssemblerPredicateWithAll<(all_of FeatureITE), "ite">;
+def HasTHE           : Predicate<"Subtarget->hasTHE()">,
+                       AssemblerPredicateWithAll<(all_of FeatureTHE), "the">;
 def HasRCPC3         : Predicate<"Subtarget->hasRCPC3()">,
-                       AssemblerPredicate<(all_of FeatureRCPC3), "rcpc3">;
+                       AssemblerPredicateWithAll<(all_of FeatureRCPC3), "rcpc3">;
+def HasLSE128        : Predicate<"Subtarget->hasLSE128()">,
+                       AssemblerPredicateWithAll<(all_of FeatureLSE128), "lse128">;
+def HasD128          : Predicate<"Subtarget->hasD128()">,
+                       AssemblerPredicateWithAll<(all_of FeatureD128), "d128">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -8513,6 +8519,11 @@ def : Pat<(AArch64AssertZExtBool GPR32:$op),
 //===----------------------------===//
 // 2022 Architecture Extensions:
 //===----------------------------===//
+defm RCW     : ReadCheckWriteCompareAndSwap;
+
+defm RCWCLR  : ReadCheckWriteOperation<0b001, "clr">;
+defm RCWSET  : ReadCheckWriteOperation<0b011, "set">;
+defm RCWSWP  : ReadCheckWriteOperation<0b010, "swp">;
 
 //===----------------------------------------------------------------------===//
 // General Data-Processing Instructions (FEAT_V94_DP)
@@ -8549,6 +8560,24 @@ def RPRFM:
   // Fail, the decoder should attempt to decode RPRFM. This requires setting
   // the decoder namespace to "Fallback".
   let DecoderNamespace = "Fallback";
+}
+
+//===----------------------------------------------------------------------===//
+// 128-bit Atomics (FEAT_LSE128)
+//===----------------------------------------------------------------------===//
+let Predicates = [HasLSE128] in {
+  def SWPP     : LSE128Base<0b000, 0b00, 0b1, "swpp">;
+  def SWPPA    : LSE128Base<0b000, 0b10, 0b1, "swppa">;
+  def SWPPAL   : LSE128Base<0b000, 0b11, 0b1, "swppal">;
+  def SWPPL    : LSE128Base<0b000, 0b01, 0b1, "swppl">;
+  def LDCLRP   : LSE128Base<0b001, 0b00, 0b0, "ldclrp">;
+  def LDCLRPA  : LSE128Base<0b001, 0b10, 0b0, "ldclrpa">;
+  def LDCLRPAL : LSE128Base<0b001, 0b11, 0b0, "ldclrpal">;
+  def LDCLRPL  : LSE128Base<0b001, 0b01, 0b0, "ldclrpl">;
+  def LDSETP   : LSE128Base<0b011, 0b00, 0b0, "ldsetp">;
+  def LDSETPA  : LSE128Base<0b011, 0b10, 0b0, "ldsetpa">;
+  def LDSETPAL : LSE128Base<0b011, 0b11, 0b0, "ldsetpal">;
+  def LDSETPL  : LSE128Base<0b011, 0b01, 0b0, "ldsetpl">;
 }
 
 //===----------------------------------------------------------------------===//
@@ -8597,6 +8626,79 @@ let Predicates = [HasRCPC3, HasNEON] in {
   // Aliases for when offset=0
   def : InstAlias<"stl1\t$Vt$Q, [$Rn, #0]", (STL1 VecListOned:$Vt, VectorIndexD:$Q, GPR64sp:$Rn)>;
 }
+
+//===----------------------------------------------------------------------===//
+// 128-bit System Instructions (FEAT_SYSINSTR128)
+//===----------------------------------------------------------------------===//
+let Predicates = [HasD128] in {
+  def SYSPxt  : SystemPXtI<0, "sysp">;
+
+  def SYSPxt_XZR
+    : BaseSystemI<0, (outs),
+        (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, SyspXzrPairOperand:$xzr_pair),
+        "sysp", "\t$op1, $Cn, $Cm, $op2, $xzr_pair">,
+      Sched<[WriteSys]>
+  {
+    // Had to use a custom decoder because tablegen interprets this as having 4 fields (why?)
+    // and therefore autogenerates a decoder that builds an MC representation that has 4 fields
+    // (decodeToMCInst), but when printing we expect the MC representation to have 5 fields (one
+    // extra for the XZR) because AArch64InstPrinter::printInstruction in AArch64GenAsmWriter.inc
+    // is based off of the asm template (maybe) and therefore wants to print 5 operands.
+    // I could add a bits<5> xzr_pair. But without a way to constrain it to 0b11111 here it would
+    // overlap with the main SYSP instruction.
+    let DecoderMethod = "DecodeSyspXzrInstruction";
+    bits<3> op1;
+    bits<4> Cn;
+    bits<4> Cm;
+    bits<3> op2;
+    let Inst{22}    = 0b1; // override BaseSystemI
+    let Inst{20-19} = 0b01;
+    let Inst{18-16} = op1;
+    let Inst{15-12} = Cn;
+    let Inst{11-8}  = Cm;
+    let Inst{7-5}   = op2;
+    let Inst{4-0}   = 0b11111;
+  }
+
+  def : InstAlias<"sysp $op1, $Cn, $Cm, $op2",
+                  (SYSPxt_XZR imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, XZR)>;
+}
+
+//---
+// 128-bit System Registers (FEAT_SYSREG128)
+//---
+
+// Instruction encoding:
+//
+//          31       22|21|20|19|18 16|15 12|11 8|7 5|4 0
+// MRRS      1101010101| 1| 1|o0|  op1|   Cn|  Cm|op2| Rt
+// MSRR      1101010101| 0| 1|o0|  op1|   Cn|  Cm|op2| Rt
+
+// Instruction syntax:
+//
+// MRRS <Xt>, <Xt+1>, <sysreg|S<op0>_<op1>_<Cn>_<Cm>_<op2>>
+// MSRR <sysreg|S<op0>_<op1>_<Cn>_<Cm>_<op2>>, <Xt>, <Xt+1>
+//
+// ...where t is even (X0, X2, etc).
+
+let Predicates = [HasD128] in {
+  def MRRS : RtSystemI128<1,
+    (outs MrrsMssrPairClassOperand:$Rt), (ins mrs_sysreg_op:$systemreg),
+    "mrrs", "\t$Rt, $systemreg">
+  {
+    bits<16> systemreg;
+    let Inst{20-5} = systemreg;
+  }
+
+  def MSRR : RtSystemI128<0,
+    (outs),  (ins msr_sysreg_op:$systemreg, MrrsMssrPairClassOperand:$Rt),
+    "msrr", "\t$systemreg, $Rt">
+  {
+    bits<16> systemreg;
+    let Inst{20-5} = systemreg;
+  }
+}
+
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"
