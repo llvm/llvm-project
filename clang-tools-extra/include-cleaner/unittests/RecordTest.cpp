@@ -11,9 +11,7 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Testing/TestAST.h"
-#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Annotations.h"
 #include "gmock/gmock.h"
@@ -21,7 +19,6 @@
 
 namespace clang::include_cleaner {
 namespace {
-using testing::ElementsAre;
 using testing::ElementsAreArray;
 using testing::IsEmpty;
 
@@ -256,31 +253,6 @@ TEST_F(RecordPPTest, CapturesConditionalMacroRefs) {
     RefOffsets.push_back(Off);
   }
   EXPECT_THAT(RefOffsets, ElementsAreArray(MainFile.points()));
-}
-
-// Matches an Include* on the specified line;
-MATCHER_P(line, N, "") { return arg->Line == (unsigned)N; }
-
-TEST(RecordedIncludesTest, Match) {
-  // We're using synthetic data, but need a FileManager to obtain FileEntry*s.
-  // Ensure it doesn't do any actual IO.
-  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  FileManager FM(FileSystemOptions{});
-  const FileEntry *A = FM.getVirtualFile("/path/a", /*Size=*/0, time_t{});
-  const FileEntry *B = FM.getVirtualFile("/path/b", /*Size=*/0, time_t{});
-
-  RecordedPP::RecordedIncludes Includes;
-  Includes.add(Include{"a", A, SourceLocation(), 1});
-  Includes.add(Include{"a2", A, SourceLocation(), 2});
-  Includes.add(Include{"b", B, SourceLocation(), 3});
-  Includes.add(Include{"vector", B, SourceLocation(), 4});
-  Includes.add(Include{"vector", B, SourceLocation(), 5});
-  Includes.add(Include{"missing", nullptr, SourceLocation(), 6});
-
-  EXPECT_THAT(Includes.match(A), ElementsAre(line(1), line(2)));
-  EXPECT_THAT(Includes.match(B), ElementsAre(line(3), line(4), line(5)));
-  EXPECT_THAT(Includes.match(*tooling::stdlib::Header::named("<vector>")),
-              ElementsAre(line(4), line(5)));
 }
 
 class PragmaIncludeTest : public ::testing::Test {
