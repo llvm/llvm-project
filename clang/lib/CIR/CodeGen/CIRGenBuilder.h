@@ -9,6 +9,8 @@
 #ifndef LLVM_CLANG_LIB_CIR_CIRGENBUILDER_H
 #define LLVM_CLANG_LIB_CIR_CIRGENBUILDER_H
 
+#include "Address.h"
+
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/FPEnv.h"
 
@@ -26,6 +28,11 @@ class CIRGenBuilderTy : public mlir::OpBuilder {
 
 public:
   CIRGenBuilderTy(mlir::MLIRContext &C) : mlir::OpBuilder(&C) {}
+
+  //
+  // Floating point specific helpers
+  // -------------------------------
+  //
 
   /// Enable/Disable use of constrained floating point math. When enabled the
   /// CreateF<op>() calls instead create constrained floating point intrinsic
@@ -73,12 +80,33 @@ public:
     return DefaultConstrainedRounding;
   }
 
-  mlir::Value CreateFPExt(mlir::Value V, mlir::Type DestType) {
+  //
+  // Operation creation helpers
+  // --------------------------
+  //
+
+  mlir::Value createFPExt(mlir::Value v, mlir::Type destType) {
     if (getIsFPConstrained())
       llvm_unreachable("constrainedfp NYI");
 
-    return create<mlir::cir::CastOp>(V.getLoc(), DestType,
-                                     mlir::cir::CastKind::floating, V);
+    return create<mlir::cir::CastOp>(v.getLoc(), destType,
+                                     mlir::cir::CastKind::floating, v);
+  }
+
+  cir::Address createElementBitCast(mlir::Location loc, cir::Address addr,
+                                    mlir::Type destType) {
+    if (destType == addr.getElementType())
+      return addr;
+
+    auto newPtrType = mlir::cir::PointerType::get(getContext(), destType);
+    auto cast = create<mlir::cir::CastOp>(
+        loc, newPtrType, mlir::cir::CastKind::bitcast, addr.getPointer());
+    return Address(cast, addr.getElementType(), addr.getAlignment());
+  }
+
+  mlir::Value createLoad(mlir::Location loc, Address addr) {
+    return create<mlir::cir::LoadOp>(loc, addr.getElementType(),
+                                     addr.getPointer());
   }
 };
 
