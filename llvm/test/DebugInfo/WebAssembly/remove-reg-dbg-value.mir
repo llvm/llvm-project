@@ -1,0 +1,50 @@
+# RUN: llc -run-pass wasm-debug-fixup %s -o - | FileCheck %s
+
+# Test if '#DEBUG_VALUE' comments for target indices are printed correctly.
+
+--- |
+  target triple = "wasm32-unknown-unknown"
+
+  define void @test_remove_dangling_reg_dbg_value() !dbg !5 {
+    call void @llvm.dbg.value(metadata i32 0, metadata !9, metadata !DIExpression()), !dbg !10
+    call void @llvm.dbg.value(metadata i32 0, metadata !11, metadata !DIExpression()), !dbg !10
+    ret void
+  }
+
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3, !4}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "test.c", directory: "")
+  !2 = !{i32 7, !"Dwarf Version", i32 5}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = !{i32 1, !"wchar_size", i32 4}
+  !5 = distinct !DISubprogram(name: "test_dbg_value_comment", scope: !1, file: !1, line: 1, type: !6, scopeLine: 1, unit: !0)
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{!8}
+  !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !9 = !DILocalVariable(name: "var0", scope: !5, file: !1, line: 2, type: !8)
+  !10 = !DILocation(line: 0, scope: !5)
+  !11 = !DILocalVariable(name: "var1", scope: !5, file: !1, line: 2, type: !8)
+...
+
+---
+# CHECK-LABEL: name: test_remove_dangling_reg_dbg_value
+name: test_remove_dangling_reg_dbg_value
+liveins:
+  - { reg: '$arguments' }
+body: |
+  ; CHECK: bb.0:
+  ; CHECK: DBG_VALUE $noreg, $noreg, !9, !DIExpression(), debug-location !10
+  ; CHECK-NEXT: DBG_VALUE target-index(wasm-local) + 1, $noreg, !11, !DIExpression(), debug-location !10
+  ; CHECK-NEXT: RETURN
+  bb.0:
+    liveins: $arguments
+    ; This %3 is a danling register and will turn to $noreg
+    DBG_VALUE %3:i32, $noreg, !9, !DIExpression(), debug-location !10
+    ; This debug info will remain the same, because it's in a local
+    DBG_VALUE target-index(wasm-local) + 1, $noreg, !11, !DIExpression(), debug-location !10
+    RETURN implicit-def dead $arguments
+...
