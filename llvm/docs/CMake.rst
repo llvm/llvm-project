@@ -967,7 +967,7 @@ include
   LLVMConfig.cmake).
 
 ``LLVM_DEFINITIONS``
-  A list of preprocessor defines that should be used when building against LLVM.
+  A single string argument containing preprocessor defines (with `-D` prefix) that should be used when building against LLVM. Users must convert it to list before use (eg. `separate_arguments()`).
 
 ``LLVM_ENABLE_ASSERTIONS``
   This is set to ON if LLVM was built with assertions, otherwise OFF.
