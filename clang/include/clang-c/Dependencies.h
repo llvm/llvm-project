@@ -175,11 +175,45 @@ typedef enum {
 } CXDependencyMode;
 
 /**
+ * Options used to construct a \c CXDependencyScannerService.
+ */
+typedef struct CXOpaqueDependencyScannerServiceOptions
+    *CXDependencyScannerServiceOptions;
+
+/**
+ * Creates a default set of service options.
+ * Must be disposed with \c
+ * clang_experimental_DependencyScannerServiceOptions_dispose.
+ */
+CINDEX_LINKAGE CXDependencyScannerServiceOptions
+clang_experimental_DependencyScannerServiceOptions_create();
+
+/**
+ * Dispose of a \c CXDependencyScannerServiceOptions object.
+ */
+CINDEX_LINKAGE void clang_experimental_DependencyScannerServiceOptions_dispose(
+    CXDependencyScannerServiceOptions);
+
+/**
+ * Specify a \c CXDependencyMode in the given options.
+ */
+CINDEX_LINKAGE void
+clang_experimental_DependencyScannerServiceOptions_setDependencyMode(
+    CXDependencyScannerServiceOptions Opts, CXDependencyMode Mode);
+
+/**
+ * See \c clang_experimental_DependencyScannerService_create_v1.
+ */
+CINDEX_LINKAGE CXDependencyScannerService
+clang_experimental_DependencyScannerService_create_v0(CXDependencyMode Format);
+
+/**
  * Create a \c CXDependencyScannerService object.
  * Must be disposed with \c clang_DependencyScannerService_dispose().
  */
 CINDEX_LINKAGE CXDependencyScannerService
-clang_experimental_DependencyScannerService_create_v0(CXDependencyMode Format);
+clang_experimental_DependencyScannerService_create_v1(
+    CXDependencyScannerServiceOptions Opts);
 
 /**
  * Dispose of a \c CXDependencyScannerService object.

@@ -25,6 +25,18 @@
 using namespace clang;
 using namespace clang::tooling::dependencies;
 
+namespace {
+struct DependencyScannerServiceOptions {
+  ScanningOutputFormat Format = ScanningOutputFormat::Full;
+  CASOptions CASOpts;
+  std::shared_ptr<cas::ObjectStore> CAS;
+  std::shared_ptr<cas::ActionCache> Cache;
+};
+} // end anonymous namespace
+
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DependencyScannerServiceOptions,
+                                   CXDependencyScannerServiceOptions)
+
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DependencyScanningService,
                                    CXDependencyScannerService)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DependencyScanningWorker,
@@ -67,6 +79,21 @@ void clang_experimental_ModuleDependencySet_dispose(
   delete MDS;
 }
 
+CXDependencyScannerServiceOptions
+clang_experimental_DependencyScannerServiceOptions_create() {
+  return wrap(new DependencyScannerServiceOptions);
+}
+
+void clang_experimental_DependencyScannerServiceOptions_dispose(
+    CXDependencyScannerServiceOptions Opts) {
+  delete unwrap(Opts);
+}
+
+void clang_experimental_DependencyScannerServiceOptions_setDependencyMode(
+    CXDependencyScannerServiceOptions Opts, CXDependencyMode Mode) {
+  unwrap(Opts)->Format = unwrap(Mode);
+}
+
 CXDependencyScannerService
 clang_experimental_DependencyScannerService_create_v0(CXDependencyMode Format) {
   // FIXME: Pass default CASOpts and nullptr as CachingOnDiskFileSystem now.
@@ -75,6 +102,18 @@ clang_experimental_DependencyScannerService_create_v0(CXDependencyMode Format) {
   return wrap(new DependencyScanningService(
       ScanningMode::DependencyDirectivesScan, unwrap(Format), CASOpts,
       /*ActionCache=*/nullptr, FS,
+      /*ReuseFilemanager=*/false));
+}
+
+CXDependencyScannerService
+clang_experimental_DependencyScannerService_create_v1(
+    CXDependencyScannerServiceOptions Opts) {
+  // FIXME: Pass default CASOpts and nullptr as CachingOnDiskFileSystem now.
+  CASOptions CASOpts;
+  IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
+  return wrap(new DependencyScanningService(
+      ScanningMode::DependencyDirectivesScan, unwrap(Opts)->Format,
+      CASOpts, /*ActionCache=*/nullptr, std::move(FS),
       /*ReuseFilemanager=*/false));
 }
 
