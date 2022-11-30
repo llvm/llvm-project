@@ -19,6 +19,7 @@
 #include "mlir/Dialect/SCF/Transforms/TileUsingInterface.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/StringSet.h"
@@ -881,6 +882,64 @@ transform::PromoteOp::applyToOne(linalg::LinalgOp target,
     return DiagnosedSilenceableFailure(reportUnknownTransformError(target));
   results.push_back(target);
   return DiagnosedSilenceableFailure(success());
+}
+
+//===----------------------------------------------------------------------===//
+// ReplaceOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::ReplaceOp::apply(TransformResults &transformResults,
+                            TransformState &state) {
+  ArrayRef<Operation *> payload = state.getPayloadOps(getTarget());
+
+  // Check for invalid targets.
+  for (Operation *target : payload) {
+    if (target->getNumOperands() > 0)
+      return emitDefiniteFailure() << "expected target without operands";
+    if (!target->hasTrait<IsIsolatedFromAbove>() && target->getNumRegions() > 0)
+      return emitDefiniteFailure()
+             << "expected target that is isloated from above";
+  }
+
+  // Clone and replace.
+  IRRewriter rewriter(getContext());
+  Operation *pattern = &getBodyRegion().front().front();
+  SmallVector<Operation *> replacements;
+  for (Operation *target : payload) {
+    if (getOperation()->isAncestor(target))
+      continue;
+    rewriter.setInsertionPoint(target);
+    Operation *replacement = rewriter.clone(*pattern);
+    rewriter.replaceOp(target, replacement->getResults());
+    replacements.push_back(replacement);
+  }
+  transformResults.set(getReplacement().cast<OpResult>(), replacements);
+  return DiagnosedSilenceableFailure(success());
+}
+
+void transform::ReplaceOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getTarget(), effects);
+  producesHandle(getReplacement(), effects);
+  modifiesPayload(effects);
+}
+
+LogicalResult transform::ReplaceOp::verify() {
+  if (!getBodyRegion().hasOneBlock())
+    return emitOpError() << "expected one block";
+  if (std::distance(getBodyRegion().front().begin(),
+                    getBodyRegion().front().end()) != 1)
+    return emitOpError() << "expected one operation in block";
+  Operation *replacement = &getBodyRegion().front().front();
+  if (replacement->getNumOperands() > 0)
+    return replacement->emitOpError()
+           << "expected replacement without operands";
+  if (!replacement->hasTrait<IsIsolatedFromAbove>() &&
+      replacement->getNumRegions() > 0)
+    return replacement->emitOpError()
+           << "expect op that is isolated from above";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
