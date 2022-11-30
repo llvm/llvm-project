@@ -648,12 +648,14 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
+  // FIXME: Improve modeling for canonical IV start values in the epilogue loop.
   if (CanonicalIVStartValue) {
     VPValue *VPV = getOrAddExternalDef(CanonicalIVStartValue);
     auto *IV = getCanonicalIV();
     assert(all_of(IV->users(),
                   [](const VPUser *U) {
-                    if (isa<VPScalarIVStepsRecipe>(U))
+                    if (isa<VPScalarIVStepsRecipe>(U) ||
+                        isa<VPDerivedIVRecipe>(U))
                       return true;
                     auto *VPI = cast<VPInstruction>(U);
                     return VPI->getOpcode() ==

@@ -17,7 +17,7 @@ define void @print_call_and_memory(i64 %n, float* noalias %y, float* noalias %x)
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr ir<%y>, vp<[[STEPS]]>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%arrayidx>
 ; CHECK-NEXT:   WIDEN-CALL ir<%call> = call @llvm.sqrt.f32(ir<%lv>)
@@ -64,7 +64,7 @@ define void @print_widen_gep_and_select(i64 %n, float* noalias %y, float* noalia
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi %iv.next, 0, ir<1>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   WIDEN-GEP Inv[Var] ir<%arrayidx> = getelementptr ir<%y>, ir<%iv>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%arrayidx>
 ; CHECK-NEXT:   WIDEN ir<%cmp> = icmp eq ir<%arrayidx>, ir<%z>
@@ -115,7 +115,7 @@ define float @print_reduction(i64 %n, float* noalias %y) {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%red> = phi ir<0.000000e+00>, ir<%red.next>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr ir<%y>, vp<[[STEPS]]>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%arrayidx>
 ; CHECK-NEXT:   REDUCE ir<%red.next> = ir<%red> + fast reduce.fadd (ir<%lv>)
@@ -160,7 +160,7 @@ define void @print_reduction_with_invariant_store(i64 %n, float* noalias %y, flo
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%red> = phi ir<0.000000e+00>, ir<%red.next>
-; CHECK-NEXT:   vp<[[IV:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; CHECK-NEXT:   vp<[[IV:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr ir<%y>, vp<[[IV]]>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%arrayidx>
 ; CHECK-NEXT:   REDUCE ir<%red.next> = ir<%red> + fast reduce.fadd (ir<%lv>) (with final reduction value stored in invariant address sank outside of loop)
@@ -204,7 +204,7 @@ define void @print_replicate_predicated_phi(i64 %n, i64* %x) {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-INDUCTION %i = phi 0, %i.next, ir<1>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ult ir<%i>, ir<5>
 ; CHECK-NEXT: Successor(s): if.then
 ; CHECK-EMPTY:
@@ -282,7 +282,8 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<4>
+; CHECK-NEXT:   vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * ir<4>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<4>
 ; CHECK-NEXT:   CLONE ir<%gep.AB.0> = getelementptr ir<@AB>, ir<0>, vp<[[STEPS]]>
 ; CHECK-NEXT:   INTERLEAVE-GROUP with factor 4 at %AB.0, ir<%gep.AB.0>
 ; CHECK-NEXT:     ir<%AB.0> = load from index 0
@@ -349,7 +350,7 @@ define float @print_fmuladd_strict(float* %a, float* %b, i64 %n) {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%sum.07> = phi ir<0.000000e+00>, ir<%muladd>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr ir<%a>, vp<[[STEPS]]>
 ; CHECK-NEXT:   WIDEN ir<%l.a> = load ir<%arrayidx>
 ; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr ir<%b>, vp<[[STEPS]]>
@@ -398,7 +399,7 @@ define void @debug_loc_vpinstruction(i32* nocapture %asd, i32* nocapture %bsd) !
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:    vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; CHECK-NEXT:    vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:    CLONE ir<%isd> = getelementptr ir<%asd>, vp<[[STEPS]]>
 ; CHECK-NEXT:    WIDEN ir<%lsd> = load ir<%isd>
 ; CHECK-NEXT:    WIDEN ir<%psd> = add ir<%lsd>, ir<23>
@@ -496,7 +497,8 @@ define void @print_expand_scev(i64 %y, i8* %ptr) {
 ; CHECK-NEXT:     WIDEN-INDUCTION\l" +
 ; CHECK-NEXT:     "  %iv = phi %iv.next, 0\l" +
 ; CHECK-NEXT:     "  ir<%v2>, vp<[[EXP_SCEV]]>
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, vp<[[EXP_SCEV]]>
+; CHECK-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * vp<[[EXP_SCEV]]>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, vp<[[EXP_SCEV]]>
 ; CHECK-NEXT:     WIDEN ir<%v3> = add ir<%v2>, ir<1>
 ; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE store ir<%v3>, ir<%gep>
@@ -542,7 +544,7 @@ define i32 @print_exit_value(i8* %ptr, i32 %off) {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
-; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     WIDEN ir<%add> = add ir<%iv>, ir<%off>
 ; CHECK-NEXT:     WIDEN store ir<%gep>, ir<0>
