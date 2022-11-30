@@ -1079,6 +1079,31 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
 
+
+  auto getConstantMatCost =
+    [&](unsigned Operand, TTI::OperandValueInfo OpInfo) -> InstructionCost {
+    if (OpInfo.isUniform() && TLI->canSplatOperand(Opcode, Operand))
+      // Two sub-cases:
+      // * Has a 5 bit immediate operand which can be splatted.
+      // * Has a larger immediate which must be materialized in scalar register
+      // We return 0 for both as we currently ignore the cost of materializing
+      // scalar constants in GPRs.
+      return 0;
+
+    // Add a cost of address generation + the cost of the vector load. The
+    // address is expected to be a PC relative offset to a constant pool entry
+    // using auipc/addi.
+    return 2 + getMemoryOpCost(Instruction::Load, Ty, DL.getABITypeAlign(Ty),
+                               /*AddressSpace=*/0, CostKind);
+  };
+
+  // Add the cost of materializing any constant vectors required.
+  InstructionCost ConstantMatCost = 0;
+  if (Op1Info.isConstant())
+    ConstantMatCost += getConstantMatCost(0, Op1Info);
+  if (Op2Info.isConstant())
+    ConstantMatCost += getConstantMatCost(1, Op2Info);
+
   switch (TLI->InstructionOpcodeToISD(Opcode)) {
   case ISD::ADD:
   case ISD::SUB:
@@ -1095,13 +1120,12 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   case ISD::FSUB:
   case ISD::FMUL:
   case ISD::FNEG: {
-    // TODO: Add the cost of materializing any constant vectors required since
-    // we otherwise treat constants as no-cost.
     // TODO: We should be accounting for LMUL and scaling costs for LMUL > 1.
-    return LT.first * 1;
+    return ConstantMatCost + LT.first * 1;
   }
   default:
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+    return ConstantMatCost +
+           BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
   }
 }
