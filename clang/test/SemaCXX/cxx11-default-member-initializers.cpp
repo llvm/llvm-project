@@ -12,3 +12,13 @@ namespace PR31692 {
   // A::X can now be default-constructed.
   static_assert(__is_constructible(A::X), "");
 }
+
+
+struct S {
+} constexpr s;
+struct C {
+  C(S);
+};
+class MemInit {
+  C m = s;
+};
