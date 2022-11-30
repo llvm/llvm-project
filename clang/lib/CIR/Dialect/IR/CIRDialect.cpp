@@ -1363,19 +1363,26 @@ void AwaitOp::build(OpBuilder &builder, OperationState &result,
                     function_ref<void(OpBuilder &, Location)> readyBuilder,
                     function_ref<void(OpBuilder &, Location)> suspendBuilder,
                     function_ref<void(OpBuilder &, Location)> resumeBuilder) {
-  OpBuilder::InsertionGuard guard(builder);
+  {
+    OpBuilder::InsertionGuard guard(builder);
+    Region *readyRegion = result.addRegion();
+    builder.createBlock(readyRegion);
+    readyBuilder(builder, result.location);
+  }
 
-  Region *readyRegion = result.addRegion();
-  builder.createBlock(readyRegion);
-  readyBuilder(builder, result.location);
+  {
+    OpBuilder::InsertionGuard guard(builder);
+    Region *suspendRegion = result.addRegion();
+    builder.createBlock(suspendRegion);
+    suspendBuilder(builder, result.location);
+  }
 
-  Region *suspendRegion = result.addRegion();
-  builder.createBlock(suspendRegion);
-  suspendBuilder(builder, result.location);
-
-  Region *resumeRegion = result.addRegion();
-  builder.createBlock(resumeRegion);
-  resumeBuilder(builder, result.location);
+  {
+    OpBuilder::InsertionGuard guard(builder);
+    Region *resumeRegion = result.addRegion();
+    builder.createBlock(resumeRegion);
+    resumeBuilder(builder, result.location);
+  }
 }
 
 /// Given the region at `index`, or the parent operation if `index` is None,
