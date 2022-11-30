@@ -312,11 +312,56 @@ extern "C++" {
 #include <stdlib.h>
 #include <type_traits>
 
-// signbit
+
+#    ifdef fpclassify
+#      undef fpclassify
+#    endif
 
 #    ifdef signbit
 #      undef signbit
-#    endif // signbit
+#    endif
+
+#    ifdef isfinite
+#      undef isfinite
+#    endif
+
+#    ifdef isinf
+#      undef isinf
+#    endif
+
+#    ifdef isnan
+#      undef isnan
+#    endif
+
+#    ifdef isnormal
+#      undef isnormal
+#    endif
+
+#    ifdef isgreater
+#      undef isgreater
+#    endif
+
+#    ifdef isgreaterequal
+#      undef isgreaterequal
+#    endif
+
+#    ifdef isless
+#      undef isless
+#    endif
+
+#    ifdef islessequal
+#      undef islessequal
+#    endif
+
+#    ifdef islessgreater
+#      undef islessgreater
+#    endif
+
+#    ifdef isunordered
+#      undef isunordered
+#    endif
+
+// signbit
 
 template <class _A1, std::__enable_if_t<std::is_floating_point<_A1>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
@@ -335,10 +380,6 @@ inline _LIBCPP_HIDE_FROM_ABI bool signbit(_A1) _NOEXCEPT {
 
 // fpclassify
 
-#    ifdef fpclassify
-#      undef fpclassify
-#    endif // fpclassify
-
 template <class _A1, std::__enable_if_t<std::is_floating_point<_A1>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI int fpclassify(_A1 __x) _NOEXCEPT {
   return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL, FP_ZERO, __x);
@@ -349,10 +390,10 @@ inline _LIBCPP_HIDE_FROM_ABI int fpclassify(_A1 __x) _NOEXCEPT {
   return __x == 0 ? FP_ZERO : FP_NORMAL;
 }
 
-// isfinite
+// The MSVC runtime already provides these functions as templates
+#ifndef _LIBCPP_MSVCRT
 
-#    ifdef isfinite
-#      undef isfinite
+// isfinite
 
 template <class _A1,
           std::__enable_if_t<std::is_arithmetic<_A1>::value && std::numeric_limits<_A1>::has_infinity, int> = 0>
@@ -366,12 +407,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool isfinite(_A1) _NOEXCEPT {
   return true;
 }
 
-#    endif // isfinite
-
 // isinf
-
-#    ifdef isinf
-#      undef isinf
 
 template <class _A1,
           std::__enable_if_t<std::is_arithmetic<_A1>::value && std::numeric_limits<_A1>::has_infinity, int> = 0>
@@ -394,12 +430,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool isinf(double __x) _
 inline _LIBCPP_HIDE_FROM_ABI bool isinf(long double __x) _NOEXCEPT { return __builtin_isinf(__x); }
 #      endif
 
-#    endif // isinf
-
 // isnan
-
-#    ifdef isnan
-#      undef isnan
 
 template <class _A1, std::__enable_if_t<std::is_floating_point<_A1>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI bool isnan(_A1 __x) _NOEXCEPT {
@@ -419,12 +450,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool isnan(double __x) _
 inline _LIBCPP_HIDE_FROM_ABI bool isnan(long double __x) _NOEXCEPT { return __builtin_isnan(__x); }
 #      endif
 
-#    endif // isnan
-
 // isnormal
-
-#    ifdef isnormal
-#      undef isnormal
 
 template <class _A1, std::__enable_if_t<std::is_floating_point<_A1>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI bool isnormal(_A1 __x) _NOEXCEPT {
@@ -436,12 +462,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool isnormal(_A1 __x) _NOEXCEPT {
   return __x != 0;
 }
 
-#    endif // isnormal
-
 // isgreater
-
-#    ifdef isgreater
-#      undef isgreater
 
 template <class _A1,
           class _A2,
@@ -451,12 +472,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool isgreater(_A1 __x, _A2 __y) _NOEXCEPT {
   return __builtin_isgreater((type)__x, (type)__y);
 }
 
-#    endif // isgreater
-
 // isgreaterequal
-
-#    ifdef isgreaterequal
-#      undef isgreaterequal
 
 template <class _A1,
           class _A2,
@@ -466,12 +482,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool isgreaterequal(_A1 __x, _A2 __y) _NOEXCEPT {
   return __builtin_isgreaterequal((type)__x, (type)__y);
 }
 
-#    endif // isgreaterequal
-
 // isless
-
-#    ifdef isless
-#      undef isless
 
 template <class _A1,
           class _A2,
@@ -481,12 +492,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool isless(_A1 __x, _A2 __y) _NOEXCEPT {
   return __builtin_isless((type)__x, (type)__y);
 }
 
-#    endif // isless
-
 // islessequal
-
-#    ifdef islessequal
-#      undef islessequal
 
 template <class _A1,
           class _A2,
@@ -496,12 +502,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool islessequal(_A1 __x, _A2 __y) _NOEXCEPT {
   return __builtin_islessequal((type)__x, (type)__y);
 }
 
-#    endif // islessequal
-
 // islessgreater
-
-#    ifdef islessgreater
-#      undef islessgreater
 
 template <class _A1,
           class _A2,
@@ -511,12 +512,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool islessgreater(_A1 __x, _A2 __y) _NOEXCEPT {
   return __builtin_islessgreater((type)__x, (type)__y);
 }
 
-#    endif // islessgreater
-
 // isunordered
-
-#    ifdef isunordered
-#      undef isunordered
 
 template <class _A1,
           class _A2,
@@ -526,7 +522,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool isunordered(_A1 __x, _A2 __y) _NOEXCEPT {
   return __builtin_isunordered((type)__x, (type)__y);
 }
 
-#    endif // isunordered
+#endif // _LIBCPP_MSVCRT
 
 // abs
 //
