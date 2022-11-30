@@ -23,52 +23,6 @@ public:
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// AffineGetParentForOp
-//===----------------------------------------------------------------------===//
-
-DiagnosedSilenceableFailure
-transform::AffineGetParentForOp::apply(transform::TransformResults &results,
-                                       transform::TransformState &state) {
-  SetVector<Operation *> parents;
-  for (Operation *target : state.getPayloadOps(getTarget())) {
-    AffineForOp loop;
-    Operation *current = target;
-    for (unsigned i = 0, e = getNumLoops(); i < e; ++i) {
-      loop = current->getParentOfType<AffineForOp>();
-      if (!loop) {
-        DiagnosedSilenceableFailure diag = emitSilenceableError()
-                                           << "could not find an '"
-                                           << AffineForOp::getOperationName()
-                                           << "' parent";
-        diag.attachNote(target->getLoc()) << "target op";
-        results.set(getResult().cast<OpResult>(), {});
-        return diag;
-      }
-      current = loop;
-    }
-    parents.insert(loop);
-  }
-  results.set(getResult().cast<OpResult>(), parents.getArrayRef());
-  return DiagnosedSilenceableFailure::success();
-}
-
-//===----------------------------------------------------------------------===//
-// LoopUnrollOp
-//===----------------------------------------------------------------------===//
-
-DiagnosedSilenceableFailure
-transform::AffineLoopUnrollOp::applyToOne(AffineForOp target,
-                                          SmallVector<Operation *> &results,
-                                          transform::TransformState &state) {
-  if (failed(loopUnrollByFactor(target, getFactor()))) {
-    Diagnostic diag(target->getLoc(), DiagnosticSeverity::Note);
-    diag << "op failed to unroll";
-    return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
-  }
-  return DiagnosedSilenceableFailure(success());
-}
-
-//===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//
 
