@@ -2292,6 +2292,9 @@ multiclass SOPK_Real64_gfx10<bits<5> op> {
                Select_gfx10<ps.Mnemonic>;
 }
 
+multiclass SOPK_Real32_gfx10_gfx11<bits<5> op> :
+  SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>;
+
 multiclass SOPK_Real32_gfx10_gfx11_gfx12<bits<5> op> :
   SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11_gfx12<op>;
 
@@ -2326,6 +2329,9 @@ multiclass SOPK_Real32_gfx6_gfx7_gfx10<bits<5> op> :
 multiclass SOPK_Real64_gfx6_gfx7_gfx10<bits<5> op> :
   SOPK_Real64_gfx6_gfx7<op>, SOPK_Real64_gfx10<op>;
 
+multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11<bits<5> op> :
+  SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10_gfx11<op>;
+
 multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<bits<5> op> :
   SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10_gfx11_gfx12<op>;
 
@@ -2333,18 +2339,18 @@ defm S_CBRANCH_I_FORK : SOPK_Real32_gfx6_gfx7<0x011>;
 
 defm S_MOVK_I32         : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x000>;
 defm S_CMOVK_I32        : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x002>;
-defm S_CMPK_EQ_I32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x003>;
-defm S_CMPK_LG_I32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x004>;
-defm S_CMPK_GT_I32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x005>;
-defm S_CMPK_GE_I32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x006>;
-defm S_CMPK_LT_I32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x007>;
-defm S_CMPK_LE_I32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x008>;
-defm S_CMPK_EQ_U32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x009>;
-defm S_CMPK_LG_U32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x00a>;
-defm S_CMPK_GT_U32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x00b>;
-defm S_CMPK_GE_U32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x00c>;
-defm S_CMPK_LT_U32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x00d>;
-defm S_CMPK_LE_U32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x00e>;
+defm S_CMPK_EQ_I32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x003>;
+defm S_CMPK_LG_I32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x004>;
+defm S_CMPK_GT_I32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x005>;
+defm S_CMPK_GE_I32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x006>;
+defm S_CMPK_LT_I32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x007>;
+defm S_CMPK_LE_I32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x008>;
+defm S_CMPK_EQ_U32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x009>;
+defm S_CMPK_LG_U32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x00a>;
+defm S_CMPK_GT_U32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x00b>;
+defm S_CMPK_GE_U32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x00c>;
+defm S_CMPK_LT_U32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x00d>;
+defm S_CMPK_LE_U32      : SOPK_Real32_gfx6_gfx7_gfx10_gfx11<0x00e>;
 defm S_ADDK_I32         : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x00f>;
 defm S_MULK_I32         : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x010>;
 defm S_GETREG_B32       : SOPK_Real32_gfx6_gfx7_gfx10<0x012>;
