@@ -1748,13 +1748,6 @@ llvm::SetVector<int64_t> BroadcastOp::computeBroadcastedUnitDims() {
                                       getVectorType().getShape());
 }
 
-static bool allBitsSet(llvm::SmallBitVector &bv, int64_t lb, int64_t ub) {
-  for (int64_t i = lb; i < ub; ++i)
-    if (!bv.test(i))
-      return false;
-  return true;
-}
-
 /// Broadcast `value` to a vector of `dstShape`, knowing that exactly the
 /// `broadcastedDims` dimensions in the dstShape are broadcasted.
 /// This requires (and asserts) that the broadcast is free of dim-1
