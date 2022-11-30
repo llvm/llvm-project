@@ -63,3 +63,6 @@ ds_add_gs_reg_rtn v[0:1], v2 gds
 
 ds_sub_gs_reg_rtn v[0:1], v2 gds
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_wrap_rtn_b32 v0, v1, v2, v3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

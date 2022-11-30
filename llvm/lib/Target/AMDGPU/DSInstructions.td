@@ -1365,6 +1365,9 @@ defm DS_READ_ADDTID_B32  : DS_Real_gfx10<0x0b1>;
 multiclass DS_Real_gfx10_gfx11_gfx12<bits<8> op> :
   DS_Real_gfx10<op>, DS_Real_gfx11<op>, DS_Real_gfx12<op>;
 
+multiclass DS_Real_gfx10_gfx11<bits<8> op> :
+  DS_Real_gfx10<op>, DS_Real_gfx11<op>;
+
 defm DS_ADD_F32          : DS_Real_gfx10_gfx11_gfx12<0x015>;
 defm DS_ADD_SRC2_F32     : DS_Real_gfx10<0x095>;
 defm DS_PERMUTE_B32      : DS_Real_gfx10_gfx11_gfx12<0x0b2>;
@@ -1384,12 +1387,15 @@ let AssemblerPredicate = isGFX7Only, DecoderNamespace = "GFX7" in {
 multiclass DS_Real_gfx7_gfx10_gfx11_gfx12<bits<8> op> :
   DS_Real_gfx7<op>, DS_Real_gfx10_gfx11_gfx12<op>;
 
+multiclass DS_Real_gfx7_gfx10_gfx11<bits<8> op> :
+  DS_Real_gfx7<op>, DS_Real_gfx10_gfx11<op>;
+
 multiclass DS_Real_gfx7_gfx10<bits<8> op> :
   DS_Real_gfx7<op>, DS_Real_gfx10<op>;
 
 // FIXME-GFX7: Add tests when upstreaming this part.
 defm DS_GWS_SEMA_RELEASE_ALL : DS_Real_gfx7_gfx10_gfx11_gfx12<0x018>;
-defm DS_WRAP_RTN_B32         : DS_Real_gfx7_gfx10_gfx11_gfx12<0x034>;
+defm DS_WRAP_RTN_B32         : DS_Real_gfx7_gfx10_gfx11<0x034>;
 defm DS_CONDXCHG32_RTN_B64   : DS_Real_gfx7_gfx10_gfx11_gfx12<0x07e>;
 defm DS_WRITE_B96            : DS_Real_gfx7_gfx10<0x0de>;
 defm DS_WRITE_B128           : DS_Real_gfx7_gfx10<0x0df>;
