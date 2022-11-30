@@ -270,7 +270,6 @@ define i32 @test7(i1 %c1) {
 ; CHECK-NEXT:    [[P_SROA_SPECULATED:%.*]] = phi i32 [ 0, [[GOOD]] ], [ [[P_SROA_SPECULATE_LOAD_BAD]], [[BAD]] ]
 ; CHECK-NEXT:    ret i32 [[P_SROA_SPECULATED]]
 ;
-
 entry:
   %X = alloca i32
   br i1 %c1, label %good, label %bad
@@ -293,6 +292,7 @@ exit:
 define i32 @test8(i32 %b, ptr %ptr) {
 ; Ensure that we rewrite allocas to the used type when that use is hidden by
 ; a PHI that can be speculated.
+;
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp ne i32 [[B:%.*]], 0
@@ -306,7 +306,6 @@ define i32 @test8(i32 %b, ptr %ptr) {
 ; CHECK-NEXT:    [[PHI_SROA_SPECULATED:%.*]] = phi i32 [ undef, [[ELSE]] ], [ [[PHI_SROA_SPECULATE_LOAD_THEN]], [[THEN]] ]
 ; CHECK-NEXT:    ret i32 [[PHI_SROA_SPECULATED]]
 ;
-
 entry:
   %f = alloca float
   %test = icmp ne i32 %b, 0
@@ -326,6 +325,7 @@ exit:
 
 define i32 @test9(i32 %b, ptr %ptr) {
 ; Same as @test8 but for a select rather than a PHI node.
+;
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 0, ptr [[PTR:%.*]], align 4
@@ -334,7 +334,6 @@ define i32 @test9(i32 %b, ptr %ptr) {
 ; CHECK-NEXT:    [[LOADED_SROA_SPECULATED:%.*]] = select i1 [[TEST]], i32 undef, i32 [[LOADED_SROA_SPECULATE_LOAD_FALSE]]
 ; CHECK-NEXT:    ret i32 [[LOADED_SROA_SPECULATED]]
 ;
-
 entry:
   %f = alloca float
   store i32 0, ptr %ptr
@@ -348,6 +347,7 @@ define float @test10(i32 %b, ptr %ptr) {
 ; Don't try to promote allocas which are not elligible for it even after
 ; rewriting due to the necessity of inserting bitcasts when speculating a PHI
 ; node.
+;
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F:%.*]] = alloca double, align 8
@@ -364,7 +364,6 @@ define float @test10(i32 %b, ptr %ptr) {
 ; CHECK-NEXT:    [[PHI_SROA_SPECULATED:%.*]] = phi float [ [[F_0_PHI_SROA_SPECULATE_LOAD_ELSE]], [[ELSE]] ], [ [[PHI_SROA_SPECULATE_LOAD_THEN]], [[THEN]] ]
 ; CHECK-NEXT:    ret float [[PHI_SROA_SPECULATED]]
 ;
-
 entry:
   %f = alloca double
   store double 0.0, ptr %f
@@ -385,6 +384,7 @@ exit:
 
 define float @test11(i32 %b, ptr %ptr) {
 ; Same as @test10 but for a select rather than a PHI node.
+;
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F:%.*]] = alloca double, align 8
@@ -396,7 +396,6 @@ define float @test11(i32 %b, ptr %ptr) {
 ; CHECK-NEXT:    [[LOADED_SROA_SPECULATED:%.*]] = select i1 [[TEST]], float [[F_0_LOADED_SROA_SPECULATE_LOAD_TRUE]], float [[LOADED_SROA_SPECULATE_LOAD_FALSE]]
 ; CHECK-NEXT:    ret float [[LOADED_SROA_SPECULATED]]
 ;
-
 entry:
   %f = alloca double
   store double 0.0, ptr %f
@@ -410,11 +409,11 @@ entry:
 define i32 @test12(i32 %x, ptr %p, i1 %c1) {
 ; Ensure we don't crash or fail to nuke dead selects of allocas if no load is
 ; never found.
+;
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
-
 entry:
   %a = alloca i32
   store i32 %x, ptr %a
@@ -426,6 +425,7 @@ entry:
 define i32 @test13(i32 %x, ptr %p, i1 %c1) {
 ; Ensure we don't crash or fail to nuke dead phis of allocas if no load is ever
 ; found.
+;
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -434,7 +434,6 @@ define i32 @test13(i32 %x, ptr %p, i1 %c1) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
-
 entry:
   %a = alloca i32
   store i32 %x, ptr %a
@@ -453,6 +452,7 @@ define i32 @test14(i1 %b1, i1 %b2, ptr %ptr) {
 ; Check for problems when there are both selects and phis and one is
 ; speculatable toward promotion but the other is not. That should block all of
 ; the speculation.
+;
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F:%.*]] = alloca i32, align 4
@@ -474,7 +474,6 @@ define i32 @test14(i1 %b1, i1 %b2, ptr %ptr) {
 ; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[F_LOADED]], [[G_LOADED]]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
-
 entry:
   %f = alloca i32
   %g = alloca i32
@@ -502,6 +501,7 @@ exit:
 define void @PR13905(i1 %c1, i1 %c2, i1 %c3) {
 ; Check a pattern where we have a chain of dead phi nodes to ensure they are
 ; deleted and promotion can proceed.
+;
 ; CHECK-LABEL: @PR13905(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LOOP1:%.*]], label [[EXIT:%.*]]
@@ -513,7 +513,6 @@ define void @PR13905(i1 %c1, i1 %c2, i1 %c3) {
 ; CHECK-NEXT:    [[PHI2:%.*]] = phi ptr [ poison, [[LOOP2]] ], [ null, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %h = alloca i32
   store i32 0, ptr %h
@@ -535,6 +534,7 @@ define i32 @PR13906(i1 %c1, i1 %c2) {
 ; Another pattern which can lead to crashes due to failing to clear out dead
 ; PHI nodes or select nodes. This triggers subtly differently from the above
 ; cases because the PHI node is (recursively) alive, but the select is dead.
+;
 ; CHECK-LABEL: @PR13906(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
@@ -543,7 +543,6 @@ define i32 @PR13906(i1 %c1, i1 %c2) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ;
-
 entry:
   %c = alloca i32
   store i32 0, ptr %c
@@ -559,6 +558,13 @@ if.then:
 }
 
 define i64 @PR14132(i1 %flag) {
+; Here we form a PHI-node by promoting the pointer alloca first, and then in
+; order to promote the other two allocas, we speculate the load of the
+; now-phi-node-pointer. In doing so we end up loading a 64-bit value from an i8
+; alloca. While this is a bit dubious, we were asserting on trying to
+; rewrite it. The trick is that the code using the value may carefully take
+; steps to only use the not-undef bits, and so we need to at least loosely
+; support this..
 ; CHECK-LABEL: @PR14132(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
@@ -569,13 +575,6 @@ define i64 @PR14132(i1 %flag) {
 ; CHECK-NEXT:    [[PTR_0_SROA_SPECULATED:%.*]] = phi i64 [ [[B_0_LOAD_EXT]], [[IF_THEN]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i64 [[PTR_0_SROA_SPECULATED]]
 ;
-; Here we form a PHI-node by promoting the pointer alloca first, and then in
-; order to promote the other two allocas, we speculate the load of the
-; now-phi-node-pointer. In doing so we end up loading a 64-bit value from an i8
-; alloca. While this is a bit dubious, we were asserting on trying to
-; rewrite it. The trick is that the code using the value may carefully take
-; steps to only use the not-undef bits, and so we need to at least loosely
-; support this..
 entry:
   %a = alloca i64, align 8
   %b = alloca i8, align 8
@@ -598,6 +597,9 @@ if.end:
 }
 
 define float @PR16687(i64 %x, i1 %flag) {
+; Check that even when we try to speculate the same phi twice (in two slices)
+; on an otherwise promotable construct, we don't get ahead of ourselves and try
+; to promote one of the slices prior to speculating it.
 ; CHECK-LABEL: @PR16687(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[X:%.*]] to i32
@@ -614,10 +616,6 @@ define float @PR16687(i64 %x, i1 %flag) {
 ; CHECK-NEXT:    [[A_PHI_F_SROA_SPECULATED:%.*]] = phi float [ [[TMP0]], [[THEN]] ], [ [[TMP1]], [[ELSE]] ]
 ; CHECK-NEXT:    ret float [[A_PHI_F_SROA_SPECULATED]]
 ;
-; Check that even when we try to speculate the same phi twice (in two slices)
-; on an otherwise promotable construct, we don't get ahead of ourselves and try
-; to promote one of the slices prior to speculating it.
-
 entry:
   %a = alloca i64, align 8
   store i64 %x, ptr %a

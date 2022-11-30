@@ -152,7 +152,6 @@ entry:
 !0  = !{!"branch_weights", i32 1,  i32 99}
 
 ; Ensure that the branch metadata is reversed to match the reversals above.
-; CHECK: !0 = {{.*}} i32 1, i32 99}
 
 declare void @llvm.lifetime.start.p0(i64, ptr )
 declare void @llvm.lifetime.end.p0(i64, ptr)
