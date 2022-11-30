@@ -1722,7 +1722,7 @@ defm V_CMP_LE_U32     : VOPC_Real_gfx11_gfx12<0x04b>;
 defm V_CMP_GT_U32     : VOPC_Real_gfx11_gfx12<0x04c>;
 defm V_CMP_NE_U32     : VOPC_Real_gfx11_gfx12<0x04d>;
 defm V_CMP_GE_U32     : VOPC_Real_gfx11_gfx12<0x04e>;
-defm V_CMP_T_U32      : VOPC_Real_gfx11_gfx12<0x04f>;
+defm V_CMP_T_U32      : VOPC_Real_gfx11<0x04f>;
 
 defm V_CMP_F_I64      : VOPC_Real_gfx11<0x050>;
 defm V_CMP_LT_I64     : VOPC_Real_gfx11_gfx12<0x051>;
