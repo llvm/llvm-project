@@ -115,7 +115,7 @@ define i1 @test_class_isnan_f32(float %x) {
 
 define i1 @test_class_isnan_f32_strict(float %x) {
 ; CHECK-LABEL: @test_class_isnan_f32_strict(
-; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 3) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 3) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.is.fpclass.f32(float %x, i32 3) strictfp
@@ -133,7 +133,7 @@ define i1 @test_class_is_p0_n0_f32(float %x) {
 
 define i1 @test_class_is_p0_n0_f32_strict(float %x) {
 ; CHECK-LABEL: @test_class_is_p0_n0_f32_strict(
-; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96) #[[ATTR2]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96) #[[ATTR1]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.is.fpclass.f32(float %x, i32 96) strictfp
@@ -391,7 +391,89 @@ define i1 @test_class_is_nan_other_nnan_src(float %x) {
   ret i1 %class
 }
 
+; --------------------------------------------------------------------
+; Negation of llvm.is.fpclass
+; --------------------------------------------------------------------
+
+define i1 @test_class_not_is_nan(float %x) {
+; CHECK-LABEL: @test_class_not_is_nan(
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 3)
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CLASS]], true
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %class = call i1 @llvm.is.fpclass.f32(float %x, i32 3)
+  %not = xor i1 %class, true
+  ret i1 %not
+}
+
+define i1 @test_class_not_is_nan_multi_use(float %x, ptr %ptr) {
+; CHECK-LABEL: @test_class_not_is_nan_multi_use(
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 3)
+; CHECK-NEXT:    store i1 [[CLASS]], ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CLASS]], true
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %class = call i1 @llvm.is.fpclass.f32(float %x, i32 3)
+  store i1 %class, ptr %ptr
+  %not = xor i1 %class, true
+  ret i1 %not
+}
+
+define i1 @test_class_not_is_inf_nan(float %x) {
+; CHECK-LABEL: @test_class_not_is_inf_nan(
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 519)
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CLASS]], true
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %class = call i1 @llvm.is.fpclass.f32(float %x, i32 519)
+  %not = xor i1 %class, true
+  ret i1 %not
+}
+
+define i1 @test_class_not_is_normal(float %x) {
+; CHECK-LABEL: @test_class_not_is_normal(
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 264)
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CLASS]], true
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %class = call i1 @llvm.is.fpclass.f32(float %x, i32 264)
+  %not = xor i1 %class, true
+  ret i1 %not
+}
+
+define i1 @test_class_xor_false(float %x) {
+; CHECK-LABEL: @test_class_xor_false(
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 33)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %class = call i1 @llvm.is.fpclass.f32(float %x, i32 33)
+  %not = xor i1 %class, false
+  ret i1 %not
+}
+
+define <2 x i1> @test_class_not_vector(<2 x float> %x) {
+; CHECK-LABEL: @test_class_not_vector(
+; CHECK-NEXT:    [[CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[X:%.*]], i32 33)
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[CLASS]], <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> [[NOT]]
+;
+  %class = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %x, i32 33)
+  %not = xor <2 x i1> %class, <i1 true, i1 true>
+  ret <2 x i1> %not
+}
+
+define <2 x i1> @test_class_xor_vector(<2 x float> %x) {
+; CHECK-LABEL: @test_class_xor_vector(
+; CHECK-NEXT:    [[CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[X:%.*]], i32 33)
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[CLASS]], <i1 true, i1 false>
+; CHECK-NEXT:    ret <2 x i1> [[NOT]]
+;
+  %class = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %x, i32 33)
+  %not = xor <2 x i1> %class, <i1 true, i1 false>
+  ret <2 x i1> %not
+}
 
 
 declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
 declare i1 @llvm.is.fpclass.f64(double, i32 immarg)
+declare <2 x i1> @llvm.is.fpclass.v2f32(<2 x float>, i32 immarg)
