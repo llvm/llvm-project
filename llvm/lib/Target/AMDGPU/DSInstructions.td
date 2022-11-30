@@ -1394,7 +1394,7 @@ multiclass DS_Real_gfx7_gfx10<bits<8> op> :
   DS_Real_gfx7<op>, DS_Real_gfx10<op>;
 
 // FIXME-GFX7: Add tests when upstreaming this part.
-defm DS_GWS_SEMA_RELEASE_ALL : DS_Real_gfx7_gfx10_gfx11_gfx12<0x018>;
+defm DS_GWS_SEMA_RELEASE_ALL : DS_Real_gfx7_gfx10_gfx11<0x018>;
 defm DS_WRAP_RTN_B32         : DS_Real_gfx7_gfx10_gfx11<0x034>;
 defm DS_CONDXCHG32_RTN_B64   : DS_Real_gfx7_gfx10_gfx11_gfx12<0x07e>;
 defm DS_WRITE_B96            : DS_Real_gfx7_gfx10<0x0de>;
@@ -1415,6 +1415,9 @@ let AssemblerPredicate = isGFX6GFX7, DecoderNamespace = "GFX6GFX7" in {
 
 multiclass DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op> :
   DS_Real_gfx6_gfx7<op>, DS_Real_gfx10_gfx11_gfx12<op>;
+
+multiclass DS_Real_gfx6_gfx7_gfx10_gfx11<bits<8> op> :
+  DS_Real_gfx6_gfx7<op>, DS_Real_gfx10_gfx11<op>;
 
 multiclass DS_Real_gfx6_gfx7_gfx10<bits<8> op> :
   DS_Real_gfx6_gfx7<op>, DS_Real_gfx10<op>;
@@ -1442,11 +1445,11 @@ defm DS_CMPST_F32           : DS_Real_gfx6_gfx7_gfx10<0x011>;
 defm DS_MIN_F32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x012>;
 defm DS_MAX_F32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x013>;
 defm DS_NOP                 : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x014>;
-defm DS_GWS_INIT            : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x019>;
-defm DS_GWS_SEMA_V          : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x01a>;
-defm DS_GWS_SEMA_BR         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x01b>;
-defm DS_GWS_SEMA_P          : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x01c>;
-defm DS_GWS_BARRIER         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x01d>;
+defm DS_GWS_INIT            : DS_Real_gfx6_gfx7_gfx10_gfx11<0x019>;
+defm DS_GWS_SEMA_V          : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01a>;
+defm DS_GWS_SEMA_BR         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01b>;
+defm DS_GWS_SEMA_P          : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01c>;
+defm DS_GWS_BARRIER         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01d>;
 
 defm DS_WRITE_B8            : DS_Real_gfx6_gfx7_gfx10<0x01e>;
 defm DS_WRITE_B16           : DS_Real_gfx6_gfx7_gfx10<0x01f>;
@@ -1485,7 +1488,7 @@ defm DS_READ_U16            : DS_Real_gfx6_gfx7_gfx10<0x03c>;
 
 defm DS_CONSUME             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x03d>;
 defm DS_APPEND              : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x03e>;
-defm DS_ORDERED_COUNT       : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x03f>;
+defm DS_ORDERED_COUNT       : DS_Real_gfx6_gfx7_gfx10_gfx11<0x03f>;
 defm DS_ADD_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x040>;
 defm DS_SUB_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x041>;
 defm DS_RSUB_U64            : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x042>;
