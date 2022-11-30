@@ -172,6 +172,11 @@ public:
   }
   bool hasLValue() const { return HasLV; }
 
+  LValue getKnownLValue() const {
+    assert(HasLV && !IsUsed);
+    return LV;
+  }
+
   RValue getKnownRValue() const {
     assert(!HasLV && !IsUsed);
     return RV;

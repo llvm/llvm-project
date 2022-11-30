@@ -80,11 +80,11 @@ class ClangToCIRArgMapping {
 
   /// Arguments of CIR function corresponding to single Clang argument.
   struct CIRArgs {
-    unsigned PaddingArgIndex;
+    unsigned PaddingArgIndex = 0;
     // Argument is expanded to CIR arguments at positions
     // [FirstArgIndex, FirstArgIndex + NumberOfArgs).
-    unsigned FirstArgIndex;
-    unsigned NumberOfArgs;
+    unsigned FirstArgIndex = 0;
+    unsigned NumberOfArgs = 0;
 
     CIRArgs()
         : PaddingArgIndex(InvalidIndex), FirstArgIndex(InvalidIndex),
@@ -156,6 +156,8 @@ void ClangToCIRArgMapping::construct(const ASTContext &Context,
         // TODO(cir): we might not want to break it this early, revisit this
         // once we have a better ABI lowering story.
         CIRArgs.NumberOfArgs = STy.getMembers().size();
+        assert(CIRArgs.NumberOfArgs == 1 &&
+               "Initial CIR codegen is not the place to split arguments");
       } else {
         CIRArgs.NumberOfArgs = 1;
       }
@@ -281,6 +283,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
                                  const CallArgList &CallArgs,
                                  mlir::cir::CallOp *callOrInvoke,
                                  bool IsMustTail, SourceLocation Loc) {
+  auto builder = CGM.getBuilder();
   // FIXME: We no longer need the types from CallArgs; lift up and simplify
 
   assert(Callee.isOrdinary() || Callee.isVirtual());
@@ -331,6 +334,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   // When passing arguments using temporary allocas, we need to add the
   // appropriate lifetime markers. This vector keeps track of all the lifetime
   // markers that need to be ended right after the call.
+  assert(!UnimplementedFeature::shouldEmitLifetimeMarkers() && "NYI");
 
   // Translate all of the arguments as necessary to match the CIR lowering.
   assert(CallInfo.arg_size() == CallArgs.size() &&
@@ -417,8 +421,9 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
   // Emit the actual call op.
   auto callLoc = CGM.getLoc(Loc);
-  auto theCall = CGM.getBuilder().create<mlir::cir::CallOp>(callLoc, CalleePtr,
-                                                            CIRCallArgs);
+  assert(builder.getInsertionBlock() && "expected valid basic block");
+  auto theCall =
+      builder.create<mlir::cir::CallOp>(callLoc, CalleePtr, CIRCallArgs);
 
   if (callOrInvoke)
     callOrInvoke = &theCall;
