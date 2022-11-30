@@ -83,7 +83,7 @@ bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 bool CheckInit(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 /// Checks if a method can be called.
-bool CheckCallable(InterpState &S, CodePtr OpPC, Function *F);
+bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F);
 
 /// Checks the 'this' pointer.
 bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This);
@@ -1243,8 +1243,10 @@ inline bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
     if (!CheckInvoke(S, PC, NewFrame->getThis())) {
       return false;
     }
-    // TODO: CheckCallable
   }
+
+  if (!CheckCallable(S, PC, Func))
+    return false;
 
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
