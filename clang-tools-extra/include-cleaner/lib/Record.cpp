@@ -46,6 +46,7 @@ public:
     I.Resolved = File ? &File->getFileEntry() : nullptr;
     I.Line = SM.getSpellingLineNumber(Hash);
     I.Spelled = SpelledFilename;
+    I.Angled = IsAngled;
     Recorded.Includes.add(I);
   }
 

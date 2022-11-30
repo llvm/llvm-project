@@ -39,7 +39,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Header &H) {
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Include &I) {
-  return OS << I.Line << ": " << I.Spelled << " => "
+  return OS << I.Line << ": " << I.quote() << " => "
             << (I.Resolved ? I.Resolved->getName() : "<missing>");
 }
 
@@ -64,4 +64,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, RefType T) {
   llvm_unreachable("Unexpected RefType");
 }
 
+std::string Include::quote() const {
+  return (llvm::StringRef(Angled ? "<" : "\"") + Spelled +
+          (Angled ? ">" : "\""))
+      .str();
+}
 } // namespace clang::include_cleaner
