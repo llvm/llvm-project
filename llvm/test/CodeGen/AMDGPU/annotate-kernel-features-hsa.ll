@@ -431,7 +431,7 @@ define amdgpu_kernel void @use_group_to_flat_addrspacecast(i32 addrspace(3)* %pt
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_group_to_flat_addrspacecast
-; ATTRIBUTOR_HSA-SAME: (i32 addrspace(3)* [[PTR:%.*]]) #[[ATTR12:[0-9]+]] {
+; ATTRIBUTOR_HSA-SAME: (i32 addrspace(3)* [[PTR:%.*]]) #[[ATTR11]] {
 ; ATTRIBUTOR_HSA-NEXT:    [[STOF:%.*]] = addrspacecast i32 addrspace(3)* [[PTR]] to i32*
 ; ATTRIBUTOR_HSA-NEXT:    store volatile i32 0, i32* [[STOF]], align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
@@ -449,7 +449,7 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(i32 addrspace(5)* %
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_private_to_flat_addrspacecast
-; ATTRIBUTOR_HSA-SAME: (i32 addrspace(5)* [[PTR:%.*]]) #[[ATTR12]] {
+; ATTRIBUTOR_HSA-SAME: (i32 addrspace(5)* [[PTR:%.*]]) #[[ATTR11]] {
 ; ATTRIBUTOR_HSA-NEXT:    [[STOF:%.*]] = addrspacecast i32 addrspace(5)* [[PTR]] to i32*
 ; ATTRIBUTOR_HSA-NEXT:    store volatile i32 0, i32* [[STOF]], align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
@@ -541,7 +541,7 @@ define amdgpu_kernel void @use_is_shared(i8* %ptr) #1 {
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_is_shared
-; ATTRIBUTOR_HSA-SAME: (i8* [[PTR:%.*]]) #[[ATTR12]] {
+; ATTRIBUTOR_HSA-SAME: (i8* [[PTR:%.*]]) #[[ATTR11]] {
 ; ATTRIBUTOR_HSA-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(i8* [[PTR]])
 ; ATTRIBUTOR_HSA-NEXT:    [[EXT:%.*]] = zext i1 [[IS_SHARED]] to i32
 ; ATTRIBUTOR_HSA-NEXT:    store i32 [[EXT]], i32 addrspace(1)* undef, align 4
@@ -562,7 +562,7 @@ define amdgpu_kernel void @use_is_private(i8* %ptr) #1 {
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_is_private
-; ATTRIBUTOR_HSA-SAME: (i8* [[PTR:%.*]]) #[[ATTR12]] {
+; ATTRIBUTOR_HSA-SAME: (i8* [[PTR:%.*]]) #[[ATTR11]] {
 ; ATTRIBUTOR_HSA-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(i8* [[PTR]])
 ; ATTRIBUTOR_HSA-NEXT:    [[EXT:%.*]] = zext i1 [[IS_PRIVATE]] to i32
 ; ATTRIBUTOR_HSA-NEXT:    store i32 [[EXT]], i32 addrspace(1)* undef, align 4
@@ -657,6 +657,5 @@ attributes #1 = { nounwind }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR8]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR9]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workitem-id-x" "uniform-work-group-size"="false" }
 ; ATTRIBUTOR_HSA: attributes #[[ATTR10]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR11]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; ATTRIBUTOR_HSA: attributes #[[ATTR12]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; ATTRIBUTOR_HSA: attributes #[[ATTR11]] = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
 ;.
