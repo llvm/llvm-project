@@ -164,6 +164,14 @@ should be at a path something like:
 You can feed that file into the LLVM_PROFDATA_FILE option when you build your
 optimized compiler.
 
+It may be necessary to build additional targets before running perf training, such as
+builtins and runtime libraries. You can use the :code:`CLANG_PERF_TRAINING_DEPS` CMake
+variable for that purpose:
+
+.. code-block:: cmake
+
+  set(CLANG_PERF_TRAINING_DEPS builtins runtimes CACHE STRING "")
+
 The PGO cache has a slightly different stage naming scheme than other
 multi-stage builds. It generates three stages: stage1, stage2-instrumented, and
 stage2. Both of the stage2 builds are built using the stage1 compiler.

@@ -110,7 +110,6 @@ protected:
 
 private:
   std::pair<SDValue, SDValue> foldFrameIndex(SDValue N) const;
-  bool isNoNanSrc(SDValue N) const;
   bool isInlineImmediate(const SDNode *N, bool Negated = false) const;
   bool isNegInlineImmediate(const SDNode *N) const {
     return isInlineImmediate(N, true);

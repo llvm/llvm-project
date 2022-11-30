@@ -10,7 +10,7 @@ declare i32 @llvm.fshl.i32(i32, i32, i32) nounwind readnone
 declare <2 x i32> @llvm.fshl.v2i32(<2 x i32>, <2 x i32>, <2 x i32>) nounwind readnone
 declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>) nounwind readnone
 
-define amdgpu_kernel void @fshl_i32(i32 addrspace(1)* %in, i32 %x, i32 %y, i32 %z) {
+define amdgpu_kernel void @fshl_i32(ptr addrspace(1) %in, i32 %x, i32 %y, i32 %z) {
 ; SI-LABEL: fshl_i32:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -105,11 +105,11 @@ define amdgpu_kernel void @fshl_i32(i32 addrspace(1)* %in, i32 %x, i32 %y, i32 %
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %z)
-  store i32 %0, i32 addrspace(1)* %in
+  store i32 %0, ptr addrspace(1) %in
   ret void
 }
 
-define amdgpu_kernel void @fshl_i32_imm(i32 addrspace(1)* %in, i32 %x, i32 %y) {
+define amdgpu_kernel void @fshl_i32_imm(ptr addrspace(1) %in, i32 %x, i32 %y) {
 ; SI-LABEL: fshl_i32_imm:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -176,11 +176,11 @@ define amdgpu_kernel void @fshl_i32_imm(i32 addrspace(1)* %in, i32 %x, i32 %y) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 7)
-  store i32 %0, i32 addrspace(1)* %in
+  store i32 %0, ptr addrspace(1) %in
   ret void
 }
 
-define amdgpu_kernel void @fshl_v2i32(<2 x i32> addrspace(1)* %in, <2 x i32> %x, <2 x i32> %y, <2 x i32> %z) {
+define amdgpu_kernel void @fshl_v2i32(ptr addrspace(1) %in, <2 x i32> %x, <2 x i32> %y, <2 x i32> %z) {
 ; SI-LABEL: fshl_v2i32:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xb
@@ -307,11 +307,11 @@ define amdgpu_kernel void @fshl_v2i32(<2 x i32> addrspace(1)* %in, <2 x i32> %x,
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %z)
-  store <2 x i32> %0, <2 x i32> addrspace(1)* %in
+  store <2 x i32> %0, ptr addrspace(1) %in
   ret void
 }
 
-define amdgpu_kernel void @fshl_v2i32_imm(<2 x i32> addrspace(1)* %in, <2 x i32> %x, <2 x i32> %y) {
+define amdgpu_kernel void @fshl_v2i32_imm(ptr addrspace(1) %in, <2 x i32> %x, <2 x i32> %y) {
 ; SI-LABEL: fshl_v2i32_imm:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xb
@@ -393,11 +393,11 @@ define amdgpu_kernel void @fshl_v2i32_imm(<2 x i32> addrspace(1)* %in, <2 x i32>
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> <i32 7, i32 9>)
-  store <2 x i32> %0, <2 x i32> addrspace(1)* %in
+  store <2 x i32> %0, ptr addrspace(1) %in
   ret void
 }
 
-define amdgpu_kernel void @fshl_v4i32(<4 x i32> addrspace(1)* %in, <4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+define amdgpu_kernel void @fshl_v4i32(ptr addrspace(1) %in, <4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; SI-LABEL: fshl_v4i32:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0xd
@@ -584,11 +584,11 @@ define amdgpu_kernel void @fshl_v4i32(<4 x i32> addrspace(1)* %in, <4 x i32> %x,
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z)
-  store <4 x i32> %0, <4 x i32> addrspace(1)* %in
+  store <4 x i32> %0, ptr addrspace(1) %in
   ret void
 }
 
-define amdgpu_kernel void @fshl_v4i32_imm(<4 x i32> addrspace(1)* %in, <4 x i32> %x, <4 x i32> %y) {
+define amdgpu_kernel void @fshl_v4i32_imm(ptr addrspace(1) %in, <4 x i32> %x, <4 x i32> %y) {
 ; SI-LABEL: fshl_v4i32_imm:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0xd
@@ -690,12 +690,12 @@ define amdgpu_kernel void @fshl_v4i32_imm(<4 x i32> addrspace(1)* %in, <4 x i32>
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 1, i32 7, i32 9, i32 33>)
-  store <4 x i32> %0, <4 x i32> addrspace(1)* %in
+  store <4 x i32> %0, ptr addrspace(1) %in
   ret void
 }
 
 ; (a ^ b) | a --> a | b
-define amdgpu_kernel void @orxor2or1(i32 addrspace(1)* %in, i32 %a, i32 %b) {
+define amdgpu_kernel void @orxor2or1(ptr addrspace(1) %in, i32 %a, i32 %b) {
 ; SI-LABEL: orxor2or1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -786,6 +786,6 @@ define amdgpu_kernel void @orxor2or1(i32 addrspace(1)* %in, i32 %a, i32 %b) {
   %fshl = call i32 @llvm.fshl.i32(i32 %or, i32 %xor, i32 7)
   %cond = icmp eq i32 %fshl, 0
   %r = select i1 %cond, i32 %a, i32 %b
-  store i32 %r, i32 addrspace(1)* %in
+  store i32 %r, ptr addrspace(1) %in
   ret void
 }

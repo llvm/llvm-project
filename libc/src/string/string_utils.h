@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Standalone string utility functions. Utilities requiring memory allocations
+// should be placed in allocating_string_utils.h intead.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LIBC_SRC_STRING_STRING_UTILS_H
 #define LIBC_SRC_STRING_STRING_UTILS_H
@@ -14,7 +19,6 @@
 #include "src/string/memory_utils/bzero_implementations.h"
 #include "src/string/memory_utils/memcpy_implementations.h"
 #include <stddef.h> // For size_t
-#include <stdlib.h> // For malloc and free
 
 namespace __llvm_libc {
 namespace internal {
@@ -97,17 +101,6 @@ static inline size_t strlcpy(char *__restrict dst, const char *__restrict src,
   inline_memcpy(dst, src, n);
   inline_bzero(dst + n, size - n);
   return len;
-}
-
-inline char *strdup(const char *src) {
-  if (src == nullptr)
-    return nullptr;
-  size_t len = string_length(src) + 1;
-  char *newstr = reinterpret_cast<char *>(::malloc(len));
-  if (newstr == nullptr)
-    return nullptr;
-  inline_memcpy(newstr, src, len);
-  return newstr;
 }
 
 } // namespace internal

@@ -21,9 +21,9 @@
 ; R600-DAG: SETGE
 ; R600-DAG: CNDE
 ; R600-DAG: ADD
-define amdgpu_kernel void @round_f32(float addrspace(1)* %out, float %x) #0 {
+define amdgpu_kernel void @round_f32(ptr addrspace(1) %out, float %x) #0 {
   %result = call float @llvm.round.f32(float %x) #1
-  store float %result, float addrspace(1)* %out
+  store float %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -35,27 +35,27 @@ define amdgpu_kernel void @round_f32(float addrspace(1)* %out, float %x) #0 {
 ; FUNC-LABEL: {{^}}round_v2f32:
 ; GCN: s_endpgm
 ; R600: CF_END
-define amdgpu_kernel void @round_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %in) #0 {
+define amdgpu_kernel void @round_v2f32(ptr addrspace(1) %out, <2 x float> %in) #0 {
   %result = call <2 x float> @llvm.round.v2f32(<2 x float> %in) #1
-  store <2 x float> %result, <2 x float> addrspace(1)* %out
+  store <2 x float> %result, ptr addrspace(1) %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}round_v4f32:
 ; GCN: s_endpgm
 ; R600: CF_END
-define amdgpu_kernel void @round_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %in) #0 {
+define amdgpu_kernel void @round_v4f32(ptr addrspace(1) %out, <4 x float> %in) #0 {
   %result = call <4 x float> @llvm.round.v4f32(<4 x float> %in) #1
-  store <4 x float> %result, <4 x float> addrspace(1)* %out
+  store <4 x float> %result, ptr addrspace(1) %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}round_v8f32:
 ; GCN: s_endpgm
 ; R600: CF_END
-define amdgpu_kernel void @round_v8f32(<8 x float> addrspace(1)* %out, <8 x float> %in) #0 {
+define amdgpu_kernel void @round_v8f32(ptr addrspace(1) %out, <8 x float> %in) #0 {
   %result = call <8 x float> @llvm.round.v8f32(<8 x float> %in) #1
-  store <8 x float> %result, <8 x float> addrspace(1)* %out
+  store <8 x float> %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -72,11 +72,11 @@ define amdgpu_kernel void @round_v8f32(<8 x float> addrspace(1)* %out, <8 x floa
 ; GFX89: v_cndmask_b32_e32 [[SEL:v[0-9]+]], 0, [[COPYSIGN]]
 ; GFX89: v_add_f16_e32 [[RESULT:v[0-9]+]], [[TRUNC]], [[SEL]]
 ; GFX89: buffer_store_short [[RESULT]]
-define amdgpu_kernel void @round_f16(half addrspace(1)* %out, i32 %x.arg) #0 {
+define amdgpu_kernel void @round_f16(ptr addrspace(1) %out, i32 %x.arg) #0 {
   %x.arg.trunc = trunc i32 %x.arg to i16
   %x = bitcast i16 %x.arg.trunc to half
   %result = call half @llvm.round.f16(half %x) #1
-  store half %result, half addrspace(1)* %out
+  store half %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -88,10 +88,10 @@ define amdgpu_kernel void @round_f16(half addrspace(1)* %out, i32 %x.arg) #0 {
 ; GFX89: v_bfi_b32 [[COPYSIGN1:v[0-9]+]], [[K]], [[BFI_K]],
 
 ; GFX9: v_pack_b32_f16
-define amdgpu_kernel void @round_v2f16(<2 x half> addrspace(1)* %out, i32 %in.arg) #0 {
+define amdgpu_kernel void @round_v2f16(ptr addrspace(1) %out, i32 %in.arg) #0 {
   %in = bitcast i32 %in.arg to <2 x half>
   %result = call <2 x half> @llvm.round.v2f16(<2 x half> %in)
-  store <2 x half> %result, <2 x half> addrspace(1)* %out
+  store <2 x half> %result, ptr addrspace(1) %out
   ret void
 }
 

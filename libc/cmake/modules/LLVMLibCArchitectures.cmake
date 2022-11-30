@@ -2,7 +2,10 @@
 # Architecture definitions
 # ------------------------------------------------------------------------------
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^mips")
+if(LIBC_TARGET_OS MATCHES "gpu")
+  set(LIBC_TARGET_ARCHITECTURE_IS_GPU TRUE)
+  set(LIBC_TARGET_ARCHITECTURE "gpu")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^mips")
   set(LIBC_TARGET_ARCHITECTURE_IS_MIPS TRUE)
   set(LIBC_TARGET_ARCHITECTURE "mips")
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")

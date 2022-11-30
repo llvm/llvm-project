@@ -192,4 +192,31 @@ module polymorphic_test
     a = p3(b)
   end subroutine
 
+  subroutine takes_p1(p)
+    class(p1), intent(in) :: p
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPtakes_p1
+
+  subroutine no_reassoc_poly_value(a, i)
+    class(p1), intent(in) :: a(:)
+    integer :: i
+    call takes_p1((a(i)))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPno_reassoc_poly_value(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>> {fir.bindc_name = "a"}, %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i"}) {
+! CHECK:  %[[TEMP:.*]] = fir.alloca !fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>
+! CHECK:  %[[LOADED_I:.*]] = fir.load %[[I]] : !fir.ref<i32>
+! CHECK:  %[[I_I64:.*]] = fir.convert %[[LOADED_I]] : (i32) -> i64
+! CHECK:  %[[C1:.*]] = arith.constant 1 : i64
+! CHECK:  %[[IDX:.*]] = arith.subi %[[I_I64]], %[[C1]] : i64
+! CHECK:  %[[COORD:.*]] = fir.coordinate_of %[[ARG0]], %[[IDX]] : (!fir.class<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>, i64) -> !fir.ref<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK:  %[[TDESC:.*]] = fir.box_tdesc %[[ARG0]] : (!fir.class<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>) -> !fir.tdesc<none>
+! CHECK:  %[[NO_REASSOC:.*]] = fir.no_reassoc %[[COORD]] : !fir.ref<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK:  %[[LOAD:.*]] = fir.load %[[NO_REASSOC]] : !fir.ref<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK:  fir.store %[[LOAD]] to %[[TEMP]] : !fir.ref<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK:  %[[EMBOX:.*]] = fir.embox %[[TEMP]] tdesc %[[TDESC]] : (!fir.ref<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.tdesc<none>) -> !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK:  fir.call @_QMpolymorphic_testPtakes_p1(%[[EMBOX]]) {{.*}} : (!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> ()
+
 end module

@@ -35,6 +35,11 @@
 #include <raointintrin.h>
 #endif
 
+#if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
+    defined(__CMPCCXADD__)
+#include <cmpccxaddintrin.h>
+#endif
+
 #if defined(__i386__)
 #define __SAVE_GPRBX "mov {%%ebx, %%eax |eax, ebx};"
 #define __RESTORE_GPRBX "mov {%%eax, %%ebx |ebx, eax};"

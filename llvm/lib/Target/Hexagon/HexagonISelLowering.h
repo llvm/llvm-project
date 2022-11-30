@@ -582,7 +582,14 @@ private:
                                 SelectionDAG &DAG) const;
   void ReplaceHvxNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                              SelectionDAG &DAG) const;
-  SDValue PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+
+  SDValue combineTruncateBeforeLegal(SDValue Op, DAGCombinerInfo &DCI) const;
+  SDValue combineConcatVectorsBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
+      const;
+  SDValue combineVectorShuffleBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
+      const;
+
+  SDValue PerformHvxDAGCombine(SDNode * N, DAGCombinerInfo & DCI) const;
 };
 
 } // end namespace llvm

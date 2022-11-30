@@ -395,17 +395,53 @@ TEST(ZipIteratorTest, Basic) {
   const SmallVector<unsigned, 6> pi{3, 1, 4, 1, 5, 9};
   SmallVector<bool, 6> odd{1, 1, 0, 1, 1, 1};
   const char message[] = "yynyyy\0";
+  std::array<int, 2> shortArr = {42, 43};
 
   for (auto tup : zip(pi, odd, message)) {
     EXPECT_EQ(get<0>(tup) & 0x01, get<1>(tup));
     EXPECT_EQ(get<0>(tup) & 0x01 ? 'y' : 'n', get<2>(tup));
   }
 
-  // note the rvalue
+  // Note the rvalue.
   for (auto tup : zip(pi, SmallVector<bool, 0>{1, 1, 0, 1, 1})) {
     EXPECT_EQ(get<0>(tup) & 0x01, get<1>(tup));
   }
+
+  // Iterate until we run out elements in the *shortest* range.
+  for (auto [idx, elem] : enumerate(zip(odd, shortArr))) {
+    EXPECT_LT(idx, static_cast<size_t>(2));
+  }
+  for (auto [idx, elem] : enumerate(zip(shortArr, odd))) {
+    EXPECT_LT(idx, static_cast<size_t>(2));
+  }
 }
+
+TEST(ZipIteratorTest, ZipEqualBasic) {
+  const SmallVector<unsigned, 6> pi = {3, 1, 4, 1, 5, 8};
+  const SmallVector<bool, 6> vals = {1, 1, 0, 1, 1, 0};
+  unsigned iters = 0;
+
+  for (auto [lhs, rhs] : zip_equal(vals, pi)) {
+    EXPECT_EQ(lhs, rhs & 0x01);
+    ++iters;
+  }
+
+  EXPECT_EQ(iters, 6u);
+}
+
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+// Check that an assertion is triggered when ranges passed to `zip_equal` differ
+// in length.
+TEST(ZipIteratorTest, ZipEqualNotEqual) {
+  const SmallVector<unsigned, 6> pi = {3, 1, 4, 1, 5, 8};
+  const SmallVector<bool, 2> vals = {1, 1};
+
+  EXPECT_DEATH(zip_equal(pi, vals), "Iteratees do not have equal length");
+  EXPECT_DEATH(zip_equal(vals, pi), "Iteratees do not have equal length");
+  EXPECT_DEATH(zip_equal(pi, pi, vals), "Iteratees do not have equal length");
+  EXPECT_DEATH(zip_equal(vals, vals, pi), "Iteratees do not have equal length");
+}
+#endif
 
 TEST(ZipIteratorTest, ZipFirstBasic) {
   using namespace std;
@@ -419,6 +455,21 @@ TEST(ZipIteratorTest, ZipFirstBasic) {
 
   EXPECT_EQ(iters, 4u);
 }
+
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+// Make sure that we can detect when the first range is not the shortest.
+TEST(ZipIteratorTest, ZipFirstNotShortest) {
+  const std::array<unsigned, 6> longer = {};
+  const std::array<unsigned, 4> shorter = {};
+
+  EXPECT_DEATH(zip_first(longer, shorter),
+               "First iteratee is not the shortest");
+  EXPECT_DEATH(zip_first(longer, shorter, longer),
+               "First iteratee is not the shortest");
+  EXPECT_DEATH(zip_first(longer, longer, shorter),
+               "First iteratee is not the shortest");
+}
+#endif
 
 TEST(ZipIteratorTest, ZipLongestBasic) {
   using namespace std;

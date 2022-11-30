@@ -66,11 +66,11 @@ define dso_local <4 x i16> @shufflevector_combine(<4 x i32> %0) #0 {
 ; BE-LABEL: shufflevector_combine:
 ; BE:       # %bb.0: # %newFuncRoot
 ; BE-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
-; BE-NEXT:    xxlxor vs0, vs0, vs0
+; BE-NEXT:    xxlxor vs1, vs1, vs1
 ; BE-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; BE-NEXT:    lxv vs1, 0(r3)
+; BE-NEXT:    lxv vs0, 0(r3)
 ; BE-NEXT:    li r3, 0
-; BE-NEXT:    xxperm v2, vs0, vs1
+; BE-NEXT:    xxperm v2, vs1, vs0
 ; BE-NEXT:    vinsw v2, r3, 8
 ; BE-NEXT:    vpkuwum v2, v2, v2
 ; BE-NEXT:    blr

@@ -7833,10 +7833,10 @@ define <2 x double> @constrained_vector_uitofp_v2f64_v2i16(<2 x i16> %x) #0 {
 ; PC64LE9-LABEL: constrained_vector_uitofp_v2f64_v2i16:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI173_0@toc@ha
-; PC64LE9-NEXT:    xxlxor 0, 0, 0
+; PC64LE9-NEXT:    xxlxor 1, 1, 1
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI173_0@toc@l
-; PC64LE9-NEXT:    lxv 1, 0(3)
-; PC64LE9-NEXT:    xxperm 34, 0, 1
+; PC64LE9-NEXT:    lxv 0, 0(3)
+; PC64LE9-NEXT:    xxperm 34, 1, 0
 ; PC64LE9-NEXT:    xvcvuxddp 34, 34
 ; PC64LE9-NEXT:    blr
 entry:

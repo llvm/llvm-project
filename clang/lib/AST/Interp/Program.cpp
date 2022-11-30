@@ -204,7 +204,8 @@ llvm::Optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
 }
 
 Function *Program::getFunction(const FunctionDecl *F) {
-  F = F->getDefinition();
+  F = F->getCanonicalDecl();
+  assert(F);
   auto It = Funcs.find(F);
   return It == Funcs.end() ? nullptr : It->second.get();
 }

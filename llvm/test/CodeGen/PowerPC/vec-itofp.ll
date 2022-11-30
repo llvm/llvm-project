@@ -203,13 +203,13 @@ define void @test2(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ;
 ; CHECK-P9-LABEL: test2:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lxv vs1, 0(r4)
+; CHECK-P9-NEXT:    lxv vs0, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI2_0@toc@ha
-; CHECK-P9-NEXT:    xxlxor vs0, vs0, vs0
+; CHECK-P9-NEXT:    xxlxor vs2, vs2, vs2
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI2_0@toc@l
-; CHECK-P9-NEXT:    lxv vs2, 0(r4)
-; CHECK-P9-NEXT:    xxperm vs1, vs0, vs2
-; CHECK-P9-NEXT:    xvcvuxddp vs0, vs1
+; CHECK-P9-NEXT:    lxv vs1, 0(r4)
+; CHECK-P9-NEXT:    xxperm vs0, vs2, vs1
+; CHECK-P9-NEXT:    xvcvuxddp vs0, vs0
 ; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    blr
 ;

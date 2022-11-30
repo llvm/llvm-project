@@ -1681,5 +1681,43 @@ TEST(InstructionsTest, AllocaInst) {
   EXPECT_EQ(H.getAllocationSizeInBits(DL), TypeSize::getFixed(160));
 }
 
+TEST(InstructionsTest, InsertAtBegin) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @f(i32 %a, i32 %b) {
+     entry:
+       ret void
+    }
+)");
+  Function *F = &*M->begin();
+  Argument *ArgA = F->getArg(0);
+  Argument *ArgB = F->getArg(1);
+  BasicBlock *BB = &*F->begin();
+  Instruction *Ret = &*BB->begin();
+  Instruction *I = BinaryOperator::CreateAdd(ArgA, ArgB);
+  auto It = I->insertAt(BB, BB->begin());
+  EXPECT_EQ(&*It, I);
+  EXPECT_EQ(I->getNextNode(), Ret);
+}
+
+TEST(InstructionsTest, InsertAtEnd) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @f(i32 %a, i32 %b) {
+     entry:
+       ret void
+    }
+)");
+  Function *F = &*M->begin();
+  Argument *ArgA = F->getArg(0);
+  Argument *ArgB = F->getArg(1);
+  BasicBlock *BB = &*F->begin();
+  Instruction *Ret = &*BB->begin();
+  Instruction *I = BinaryOperator::CreateAdd(ArgA, ArgB);
+  auto It = I->insertAt(BB, BB->end());
+  EXPECT_EQ(&*It, I);
+  EXPECT_EQ(Ret->getNextNode(), I);
+}
+
 } // end anonymous namespace
 } // end namespace llvm
