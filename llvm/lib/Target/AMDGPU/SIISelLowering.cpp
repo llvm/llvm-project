@@ -982,11 +982,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     if (ME.doesNotAccessMemory())
       return false;
 
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-
-    const GCNTargetMachine &TM =
-        static_cast<const GCNTargetMachine &>(getTargetMachine());
-
     // TODO: Should images get their own address space?
     Info.fallbackAddressSpace = AMDGPUAS::BUFFER_FAT_POINTER;
 
@@ -1113,12 +1108,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     return true;
   }
   case Intrinsic::amdgcn_image_bvh_intersect_ray: {
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType()); // XXX: what is correct VT?
-
-    const GCNTargetMachine &TM =
-        static_cast<const GCNTargetMachine &>(getTargetMachine());
 
     Info.fallbackAddressSpace = AMDGPUAS::BUFFER_FAT_POINTER;
     Info.align.reset();
