@@ -22,7 +22,7 @@ int make_error_condition; // It's important that this comes before <system_error
 
 #include "test_macros.h"
 
-namespace user {
+namespace User {
   enum Err {};
 
   std::error_condition make_error_condition(Err) { return std::error_condition(42, std::generic_category()); }
@@ -30,12 +30,12 @@ namespace user {
 
 namespace std {
   template <>
-  struct is_error_condition_enum<user::Err> : true_type {};
+  struct is_error_condition_enum<User::Err> : true_type {};
 }
 
 int main(int, char**) {
   std::error_condition e;
-  e = user::Err();
+  e = User::Err();
   assert(e.value() == 42);
   assert(e.category() == std::generic_category());
   return 0;
