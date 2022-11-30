@@ -682,9 +682,16 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
                     bool SerializeDiags, bool DependencyFile,
                     ArrayRef<std::string> DepTargets, std::string OutputPath,
                     Optional<std::string> ModuleName = None) {
+  CXDependencyScannerServiceOptions Opts =
+      clang_experimental_DependencyScannerServiceOptions_create();
+  auto CleanupOpts = llvm::make_scope_exit([&] {
+    clang_experimental_DependencyScannerServiceOptions_dispose(Opts);
+  });
+  clang_experimental_DependencyScannerServiceOptions_setDependencyMode(
+      Opts, CXDependencyMode_Full);
+
   CXDependencyScannerService Service =
-      clang_experimental_DependencyScannerService_create_v0(
-          CXDependencyMode_Full);
+      clang_experimental_DependencyScannerService_create_v1(Opts);
   CXDependencyScannerWorker Worker =
       clang_experimental_DependencyScannerWorker_create_v0(Service);
   auto DisposeWorkerAndService = llvm::make_scope_exit([&]() {
