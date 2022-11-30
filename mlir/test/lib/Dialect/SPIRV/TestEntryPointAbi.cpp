@@ -59,7 +59,7 @@ void TestSpirvEntryPointABIPass::runOnOperation() {
                                              workgroupSize.end());
     workgroupSizeVec.resize(3, 1);
     gpuFunc->setAttr(attrName,
-                     spirv::getEntryPointABIAttr(workgroupSizeVec, context));
+                     spirv::getEntryPointABIAttr(context, workgroupSizeVec));
   }
 }
 
