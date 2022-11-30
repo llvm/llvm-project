@@ -1,4 +1,3 @@
-; RUN: opt -S -pass-remarks=openmp-opt -attributor -openmp-opt-cgscc -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -S -pass-remarks=openmp-opt -passes='attributor,cgscc(openmp-opt-cgscc)' -disable-output < %s 2>&1 | FileCheck %s
 ; ModuleID = 'parallel_deletion_remarks.ll'
 source_filename = "parallel_deletion_remarks.c"
