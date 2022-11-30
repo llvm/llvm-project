@@ -13,7 +13,6 @@ define i32 @test0() {
 ; CHECK-NEXT:    [[SUM1:%.*]] = add i32 0, [[V2_INT]]
 ; CHECK-NEXT:    ret i32 [[SUM1]]
 ;
-
 entry:
   %a1 = alloca i32
   %a2 = alloca float
@@ -42,7 +41,6 @@ define i32 @test1() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i32 0
 ;
-
 entry:
   %X = alloca { i32, float }
   %Y = getelementptr { i32, float }, ptr %X, i64 0, i32 0
@@ -58,7 +56,6 @@ define i64 @test2(i64 %X) {
 ; CHECK:       L2:
 ; CHECK-NEXT:    ret i64 [[X:%.*]]
 ;
-
 entry:
   %A = alloca [8 x i8]
   store i64 %X, ptr %A
@@ -76,7 +73,6 @@ define i64 @test2_addrspacecast(i64 %X) {
 ; CHECK:       L2:
 ; CHECK-NEXT:    ret i64 [[X:%.*]]
 ;
-
 entry:
   %A = alloca [8 x i8]
   %B = addrspacecast ptr %A to ptr addrspace(1)
@@ -95,7 +91,6 @@ define i64 @test2_addrspacecast_gep(i64 %X, i16 %idx) {
 ; CHECK:       L2:
 ; CHECK-NEXT:    ret i64 [[X:%.*]]
 ;
-
 entry:
   %A = alloca [256 x i8]
   %B = addrspacecast ptr %A to ptr addrspace(1)
@@ -122,7 +117,6 @@ define i64 @test2_addrspacecast_gep_offset(i64 %X) {
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_30_Z:%.*]] = load i64, ptr [[A_SROA_0]], align 1
 ; CHECK-NEXT:    ret i64 [[A_SROA_0_0_A_SROA_0_30_Z]]
 ;
-
 entry:
   %A = alloca [256 x i8]
   %B = addrspacecast ptr %A to ptr addrspace(1)
@@ -235,7 +229,6 @@ define void @test3(ptr %dst, ptr align 8 %src) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_31_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_31]], i32 85, i1 false), !tbaa [[TBAA59]]
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %a = alloca [300 x i8]
 
@@ -371,7 +364,6 @@ define void @test4(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_7_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_7]], i32 40, i1 false), !tbaa [[TBAA7]]
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %a = alloca [100 x i8]
 
@@ -406,7 +398,6 @@ define i16 @test5() {
 ; CHECK-NEXT:    [[A_SROA_0_2_EXTRACT_TRUNC:%.*]] = trunc i32 [[A_SROA_0_2_EXTRACT_SHIFT]] to i16
 ; CHECK-NEXT:    ret i16 [[A_SROA_0_2_EXTRACT_TRUNC]]
 ;
-
 entry:
   %a = alloca [4 x i8]
   store float 0.0, ptr %a
@@ -423,7 +414,6 @@ define i16 @test5_multi_addrspace_access() {
 ; CHECK-NEXT:    [[A_SROA_0_2_EXTRACT_TRUNC:%.*]] = trunc i32 [[A_SROA_0_2_EXTRACT_SHIFT]] to i16
 ; CHECK-NEXT:    ret i16 [[A_SROA_0_2_EXTRACT_TRUNC]]
 ;
-
 entry:
   %a = alloca [4 x i8]
   %fptr.as1 = addrspacecast ptr %a to ptr addrspace(1)
@@ -441,7 +431,6 @@ define i32 @test6() {
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VAL:%.*]] = load i32, ptr [[A_SROA_0]], align 4
 ; CHECK-NEXT:    ret i32 [[A_SROA_0_0_A_SROA_0_0_VAL]]
 ;
-
 entry:
   %a = alloca [4 x i8]
   call void @llvm.memset.p0.i32(ptr %a, i8 42, i32 4, i1 true)
@@ -459,7 +448,6 @@ define void @test7(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    store volatile i32 [[A_SROA_0_0_A_SROA_0_0_COPYLOAD1]], ptr [[DST:%.*]], align 1, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %a = alloca [4 x i8]
   call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %src, i32 4, i1 true), !tbaa !0
@@ -508,6 +496,7 @@ define i64 @test9() {
 ; weird bit casts and types. This is valid IR due to the alignment and masking
 ; off the bits past the end of the alloca.
 ;
+;
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_3_0_INSERT_EXT:%.*]] = zext i8 26 to i64
@@ -524,7 +513,6 @@ define i64 @test9() {
 ; CHECK-NEXT:    [[RESULT:%.*]] = and i64 [[A_SROA_0_0_INSERT_INSERT]], 16777215
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
-
 entry:
   %a = alloca { [3 x i8] }, align 8
   store i8 0, ptr %a, align 1
@@ -543,7 +531,6 @@ define ptr @test10() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr null to i64
 ; CHECK-NEXT:    ret ptr null
 ;
-
 entry:
   %a = alloca [8 x i8]
   call void @llvm.memset.p0.i32(ptr %a, i8 0, i32 8, i1 false)
@@ -560,7 +547,6 @@ define i32 @test11(i1 %c1) {
 ; CHECK:       bad:
 ; CHECK-NEXT:    ret i32 poison
 ;
-
 entry:
   %X = alloca i32
   br i1 %c1, label %good, label %bad
@@ -580,6 +566,7 @@ bad:
 define i8 @test12() {
 ; We fully promote these to the i24 load or store size, resulting in just masks
 ; and other operations that instcombine will fold, but no alloca.
+;
 ;
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  entry:
@@ -603,7 +590,6 @@ define i8 @test12() {
 ; CHECK-NEXT:    [[BSUM1:%.*]] = add i8 [[BSUM0]], [[B_SROA_3_0_EXTRACT_TRUNC]]
 ; CHECK-NEXT:    ret i8 [[BSUM1]]
 ;
-
 entry:
   %a = alloca [3 x i8]
   %b = alloca [3 x i8]
@@ -630,13 +616,13 @@ entry:
 define i32 @test13() {
 ; Ensure we don't crash and handle undefined loads that straddle the end of the
 ; allocation.
+;
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_2_2_LOAD_EXT:%.*]] = zext i8 0 to i16
 ; CHECK-NEXT:    [[RET:%.*]] = zext i16 [[A_SROA_2_2_LOAD_EXT]] to i32
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
-
 entry:
   %a = alloca [3 x i8], align 2
   store i8 0, ptr %a
@@ -657,11 +643,11 @@ define void @test14(...) nounwind uwtable {
 ; also gain enough data to prove they must be dead allocas due to GEPs that walk
 ; across two adjacent allocas. Test that we don't try to promote or otherwise
 ; do bad things to these dead allocas, they should just be removed.
+;
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %a = alloca %test14.struct
   %p = alloca ptr
@@ -683,13 +669,13 @@ define i32 @test15(i1 %flag) nounwind uwtable {
 ; Ensure that when there are dead instructions using an alloca that are not
 ; loads or stores we still delete them during partitioning and rewriting.
 ; Otherwise we'll go to promote them while thy still have unpromotable uses.
+;
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
-
 entry:
   %l0 = alloca i64
   %l1 = alloca i64
@@ -722,13 +708,13 @@ loop:
 
 define void @test16(ptr %src, ptr %dst) {
 ; Ensure that we can promote an alloca of [3 x i8] to an i24 SSA value.
+;
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i24, ptr [[SRC:%.*]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    store i24 0, ptr [[DST:%.*]], align 1, !tbaa [[TBAA5]]
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %a = alloca [3 x i8]
   call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %src, i32 4, i1 false), !tbaa !0
@@ -740,6 +726,7 @@ entry:
 define void @test17(ptr %src, ptr %dst) {
 ; Ensure that we can rewrite unpromotable memcpys which extend past the end of
 ; the alloca.
+;
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca [3 x i8], align 1
@@ -747,7 +734,6 @@ define void @test17(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DST:%.*]], ptr [[A]], i32 4, i1 true), !tbaa [[TBAA3]]
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %a = alloca [3 x i8]
   call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %src, i32 4, i1 true), !tbaa !0
@@ -759,6 +745,7 @@ define void @test18(ptr %src, ptr %dst, i32 %size) {
 ; Preserve transfer intrinsics with a variable size, even if they overlap with
 ; fixed size operations. Further, continue to split and promote allocas preceding
 ; the variable sized intrinsic.
+;
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_33:%.*]] = alloca [34 x i8], align 1
@@ -773,7 +760,6 @@ define void @test18(ptr %src, ptr %dst, i32 %size) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DST]], ptr align 1 [[A_SROA_33]], i32 [[SIZE]], i1 false), !tbaa [[TBAA11]]
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %a = alloca [42 x i8]
   call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %src, i32 8, i1 false), !tbaa !0
@@ -793,6 +779,7 @@ define i64 @test19(ptr %x) {
 ; pointers in such a way that we try to GEP through the opaque type. Previously,
 ; a check for an unsized type was missing and this crashed. Ensure it behaves
 ; reasonably now.
+;
 ; CHECK-LABEL: @test19(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i64, ptr [[X:%.*]], align 1
@@ -800,7 +787,6 @@ define i64 @test19(ptr %x) {
 ; CHECK-NEXT:    [[A_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[A_SROA_2_0_X_SROA_IDX]], align 1
 ; CHECK-NEXT:    ret i64 [[A_SROA_0_0_COPYLOAD]]
 ;
-
 entry:
   %a = alloca { i64, ptr }
   call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %x, i32 16, i1 false)
@@ -816,6 +802,7 @@ define i64 @test19_addrspacecast(ptr %x) {
 ; pointers in such a way that we try to GEP through the opaque type. Previously,
 ; a check for an unsized type was missing and this crashed. Ensure it behaves
 ; reasonably now.
+;
 ; CHECK-LABEL: @test19_addrspacecast(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAST1:%.*]] = addrspacecast ptr [[X:%.*]] to ptr addrspace(1)
@@ -824,7 +811,6 @@ define i64 @test19_addrspacecast(ptr %x) {
 ; CHECK-NEXT:    [[A_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr addrspace(1) [[A_SROA_2_0_CAST1_SROA_IDX]], align 1
 ; CHECK-NEXT:    ret i64 [[A_SROA_0_0_COPYLOAD]]
 ;
-
 entry:
   %a = alloca { i64, ptr }
   %cast1 = addrspacecast ptr %x to ptr addrspace(1)
@@ -837,13 +823,13 @@ entry:
 define i32 @test20() {
 ; Ensure we can track negative offsets (before the beginning of the alloca) and
 ; negative relative offsets from offsets starting past the end of the alloca.
+;
 ; CHECK-LABEL: @test20(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUM1:%.*]] = add i32 1, 2
 ; CHECK-NEXT:    [[SUM2:%.*]] = add i32 [[SUM1]], 3
 ; CHECK-NEXT:    ret i32 [[SUM2]]
 ;
-
 entry:
   %a = alloca [3 x i32]
   store i32 1, ptr %a
@@ -868,12 +854,12 @@ define i8 @test21() {
 ; Test allocations and offsets which border on overflow of the int64_t used
 ; internally. This is really awkward to really test as LLVM doesn't really
 ; support such extreme constructs cleanly.
+;
 ; CHECK-LABEL: @test21(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RESULT:%.*]] = or i8 -1, -1
 ; CHECK-NEXT:    ret i8 [[RESULT]]
 ;
-
 entry:
   %a = alloca [2305843009213693951 x i8]
   %gep0 = getelementptr [2305843009213693951 x i8], ptr %a, i64 0, i64 2305843009213693949
@@ -898,11 +884,11 @@ entry:
 define void @PR13916.1() {
 ; Ensure that we handle overlapping memcpy intrinsics correctly, especially in
 ; the case where there is a directly identical value for both source and dest.
+;
 ; CHECK-LABEL: @PR13916.1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %a = alloca i8
   call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %a, i32 1, i1 false)
@@ -914,6 +900,7 @@ define void @PR13916.2(i1 %c1) {
 ; Check whether we continue to handle them correctly when they start off with
 ; different pointer value chains, but during rewriting we coalesce them into the
 ; same value.
+;
 ; CHECK-LABEL: @PR13916.2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
@@ -922,7 +909,6 @@ define void @PR13916.2(i1 %c1) {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %a = alloca %PR13916.struct, align 1
   br i1 %c1, label %if.then, label %if.end
@@ -940,6 +926,7 @@ define void @PR13990(i1 %c1, i1 %c2, i1 %c3, i1 %c4, ptr %ptr) {
 ; Ensure we can handle cases where processing one alloca causes the other
 ; alloca to become dead and get deleted. This might crash or fail under
 ; Valgrind if we regress.
+;
 ; CHECK-LABEL: @PR13990(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
@@ -952,7 +939,6 @@ define void @PR13990(i1 %c1, i1 %c2, i1 %c3, i1 %c4, ptr %ptr) {
 ; CHECK:       bb4:
 ; CHECK-NEXT:    unreachable
 ;
-
 entry:
   %tmp1 = alloca ptr
   %tmp2 = alloca ptr
@@ -977,11 +963,11 @@ define double @PR13969(double %x) {
 ; Check that we detect when promotion will un-escape an alloca and iterate to
 ; re-try running SROA over that alloca. Without that, the two allocas that are
 ; stored into a dead alloca don't get rewritten and promoted.
+;
 ; CHECK-LABEL: @PR13969(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret double [[X:%.*]]
 ;
-
 entry:
   %a = alloca double
   %b = alloca ptr
@@ -1003,13 +989,13 @@ define void @PR14034(ptr %ptr, ptr %ptr2) {
 ; This test case tries to form GEPs into the empty leading struct members, and
 ; subsequently crashed (under valgrind) before we fixed the PR. The important
 ; thing is to handle empty structs gracefully.
+;
 ; CHECK-LABEL: @PR14034(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [12 x i8], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[PTR2:%.*]], ptr align 8 [[A_SROA_0]], i32 12, i1 false)
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %a = alloca %PR14034.struct
   %list = getelementptr %PR14034.struct, ptr %a, i32 0, i32 2
@@ -1022,6 +1008,7 @@ entry:
 define i32 @test22(i32 %x) {
 ; Test that SROA and promotion is not confused by a grab bax mixture of pointer
 ; types involving wrapper aggregates and zero-length aggregate members.
+;
 ; CHECK-LABEL: @test22(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WRAP1:%.*]] = insertvalue [1 x { i32 }] poison, i32 [[X:%.*]], 0, 0
@@ -1043,7 +1030,6 @@ define i32 @test22(i32 %x) {
 ; CHECK-NEXT:    [[VALCAST2:%.*]] = bitcast float [[UNWRAP2]] to i32
 ; CHECK-NEXT:    ret i32 [[VALCAST2]]
 ;
-
 entry:
   %a1 = alloca { { [1 x { i32 }] } }
   %a2 = alloca { {}, { float }, [0 x i8] }
@@ -1085,6 +1071,7 @@ define void @PR14059.1(ptr %d) {
 ; whole-alloca operations, and perform the appropriate bitcasting on the
 ; *values* rather than the pointers. When this works, partial reads and writes
 ; via integers can be promoted away.
+;
 ; CHECK-LABEL: @PR14059.1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double undef to i64
@@ -1112,7 +1099,6 @@ define void @PR14059.1(ptr %d) {
 ; CHECK-NEXT:    store double [[ADD_R_I]], ptr [[D]], align 8
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %X.sroa.0.i = alloca double, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %X.sroa.0.i)
@@ -1148,6 +1134,7 @@ define i64 @PR14059.2(ptr %phi) {
 ; underlying alloca has smaller components that are accessed independently. This
 ; shows up particularly with ABI lowering patterns coming out of Clang that rely
 ; on the particular register placement of a single large integer return value.
+;
 ; CHECK-LABEL: @PR14059.2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PHI_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[PHI:%.*]], i32 0, i32 0
@@ -1165,7 +1152,6 @@ define i64 @PR14059.2(ptr %phi) {
 ; CHECK-NEXT:    [[RETVAL_SROA_0_0_INSERT_INSERT:%.*]] = or i64 [[RETVAL_SROA_0_0_INSERT_MASK]], [[RETVAL_SROA_0_0_INSERT_EXT]]
 ; CHECK-NEXT:    ret i64 [[RETVAL_SROA_0_0_INSERT_INSERT]]
 ;
-
 entry:
   %retval = alloca { float, float }, align 4
 
@@ -1189,6 +1175,7 @@ define void @PR14105(ptr %ptr) {
 ; Ensure that when rewriting the GEP index '-1' for this alloca we preserve is
 ; sign as negative. We use a volatile memcpy to ensure promotion never actually
 ; occurs.
+;
 ; CHECK-LABEL: @PR14105(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [16 x i8], align 8
@@ -1196,7 +1183,6 @@ define void @PR14105(ptr %ptr) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[GEP]], ptr align 8 [[A_SROA_0]], i32 16, i1 true)
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %a = alloca { [16 x i8] }, align 8
 
@@ -1208,6 +1194,7 @@ entry:
 
 define void @PR14105_as1(ptr addrspace(1) %ptr) {
 ; Make sure this the right address space pointer is used for type check.
+;
 ; CHECK-LABEL: @PR14105_as1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca { [16 x i8] }, align 8
@@ -1215,7 +1202,6 @@ define void @PR14105_as1(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i32(ptr addrspace(1) align 8 [[GEP]], ptr align 8 [[A]], i32 16, i1 true)
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %a = alloca { [16 x i8] }, align 8
   %gep = getelementptr inbounds { [16 x i8] }, ptr addrspace(1) %ptr, i64 -1
@@ -1226,12 +1212,12 @@ entry:
 define void @PR14465() {
 ; Ensure that we don't crash when analyzing a alloca larger than the maximum
 ; integer type width (MAX_INT_BITS) supported by llvm (1048576*32 > (1<<23)-1).
+;
 ; CHECK-LABEL: @PR14465(
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca [1048576 x i32], align 16
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[STACK]], i8 -2, i64 4194304, i1 false)
 ; CHECK-NEXT:    ret void
 ;
-
   %stack = alloca [1048576 x i32], align 16
   call void @llvm.memset.p0.i64(ptr align 16 %stack, i8 -2, i64 4194304, i1 false)
   ret void
@@ -1244,6 +1230,7 @@ define void @PR14548(i1 %x) {
 ; iteratively.
 ; Note that we don't do a particularly good *job* of handling these mixtures,
 ; but the hope is that this is very rare.
+;
 ; CHECK-LABEL: @PR14548(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i8, align 8
@@ -1256,7 +1243,6 @@ define void @PR14548(i1 %x) {
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_BAZ:%.*]] = load i1, ptr [[A_SROA_0]], align 8
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %a = alloca <{ i1 }>, align 8
   %b = alloca <{ i1 }>, align 8
@@ -1274,6 +1260,7 @@ entry:
 define <3 x i8> @PR14572.1(i32 %x) {
 ; Ensure that a split integer store which is wider than the type size of the
 ; alloca (relying on the alloc size padding) doesn't trigger an assert.
+;
 ; CHECK-LABEL: @PR14572.1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[X:%.*]] to i24
@@ -1282,7 +1269,6 @@ define <3 x i8> @PR14572.1(i32 %x) {
 ; CHECK-NEXT:    [[A_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[A_SROA_2_0_EXTRACT_SHIFT]] to i8
 ; CHECK-NEXT:    ret <3 x i8> [[TMP0]]
 ;
-
 entry:
   %a = alloca <3 x i8>, align 4
 
@@ -1294,6 +1280,7 @@ entry:
 define i32 @PR14572.2(<3 x i8> %x) {
 ; Ensure that a split integer load which is wider than the type size of the
 ; alloca (relying on the alloc size padding) doesn't trigger an assert.
+;
 ; CHECK-LABEL: @PR14572.2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <3 x i8> [[X:%.*]] to i24
@@ -1306,7 +1293,6 @@ define i32 @PR14572.2(<3 x i8> %x) {
 ; CHECK-NEXT:    [[A_0_INSERT_INSERT:%.*]] = or i32 [[A_0_INSERT_MASK]], [[A_0_INSERT_EXT]]
 ; CHECK-NEXT:    ret i32 [[A_0_INSERT_INSERT]]
 ;
-
 entry:
   %a = alloca <3 x i8>, align 4
 
@@ -1318,6 +1304,7 @@ entry:
 define i32 @PR14601(i32 %x) {
 ; Don't try to form a promotable integer alloca when there is a variable length
 ; memory intrinsic.
+;
 ; CHECK-LABEL: @PR14601(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -1325,7 +1312,6 @@ define i32 @PR14601(i32 %x) {
 ; CHECK-NEXT:    [[A_0_V:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[A_0_V]]
 ;
-
 entry:
   %a = alloca i32
 
@@ -1340,6 +1326,7 @@ define void @PR15674(ptr %data, ptr %src, i32 %size) {
 ; beginning of the array. Ensure that the final integer store, despite being
 ; convertable to the integer type that we end up promoting this alloca toward,
 ; doesn't get widened to a full alloca store.
+;
 ; CHECK-LABEL: @PR15674(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP_SROA_0:%.*]] = alloca i32, align 4
@@ -1375,7 +1362,6 @@ define void @PR15674(ptr %data, ptr %src, i32 %size) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DATA:%.*]], ptr align 4 [[TMP_SROA_0]], i32 [[SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %tmp = alloca [4 x i8], align 1
 
@@ -1426,7 +1412,6 @@ define void @PR15805(i1 %a, i1 %b) {
 ; CHECK-NEXT:    [[COND_SROA_SPECULATED:%.*]] = select i1 [[B:%.*]], i64 undef, i64 undef
 ; CHECK-NEXT:    ret void
 ;
-
   %c = alloca i64, align 8
   %p.0.c = select i1 %a, ptr %c, ptr %c
   %cond.in = select i1 %b, ptr %p.0.c, ptr %c
@@ -1439,6 +1424,7 @@ define void @PR15805.1(i1 %a, i1 %b, i1 %c2) {
 ; of looping unreachable code. This helps ensure that we aren't sensitive to the
 ; order in which the uses of the alloca are visited.
 ;
+;
 ; CHECK-LABEL: @PR15805.1(
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       loop:
@@ -1447,7 +1433,6 @@ define void @PR15805.1(i1 %a, i1 %b, i1 %c2) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
-
   %c = alloca i64, align 8
   br label %exit
 
@@ -1466,6 +1451,7 @@ define void @PR16651.1(ptr %a) {
 ; lowering to integer loads and stores of a width other than that of the original
 ; memcpy.
 ;
+;
 ; CHECK-LABEL: @PR16651.1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B_SROA_0:%.*]] = alloca i16, align 4
@@ -1482,7 +1468,6 @@ define void @PR16651.1(ptr %a) {
 ; CHECK-NEXT:    [[B_SROA_1_0_B_SROA_1_2_:%.*]] = load i8, ptr [[B_SROA_1]], align 2
 ; CHECK-NEXT:    unreachable
 ;
-
 entry:
   %b = alloca i32, align 4
   call void @llvm.memcpy.p0.p0.i32(ptr align 4 %b, ptr align 4 %a, i32 4, i1 true)
@@ -1497,6 +1482,7 @@ define void @PR16651.2(<2 x float> %val, i1 %c1) {
 ; analyzing whether we could form a vector promotion because that code didn't
 ; bail on select instructions.
 ;
+;
 ; CHECK-LABEL: @PR16651.2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TV1_SROA_0:%.*]] = alloca <2 x float>, align 8
@@ -1505,7 +1491,6 @@ define void @PR16651.2(<2 x float> %val, i1 %c1) {
 ; CHECK-NEXT:    [[COND105_I_I:%.*]] = load float, ptr [[COND105_IN_I_I]], align 8
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %tv1 = alloca { <2 x float>, <2 x float> }, align 8
   %0 = getelementptr { <2 x float>, <2 x float> }, ptr %tv1, i64 0, i32 1
@@ -1551,7 +1536,6 @@ define void @test24(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    store volatile i64 [[A_0_COPYLOAD1]], ptr [[DST:%.*]], align 1, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %a = alloca i64, align 16
   call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %src, i32 8, i1 true), !tbaa !0
@@ -1567,6 +1551,7 @@ define float @test25() {
 ; an integer load and store. SROA needs to be extremely powerful to correctly
 ; handle these cases and form splitable and promotable SSA values.
 ;
+;
 ; CHECK-LABEL: @test25(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 0 to float
@@ -1574,7 +1559,6 @@ define float @test25() {
 ; CHECK-NEXT:    [[RET:%.*]] = fadd float [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-
 entry:
   %a = alloca i64
   %b = alloca i64
@@ -1596,6 +1580,7 @@ entry:
 define void @test26() {
 ; Test a case of splitting up loads and stores against a globals.
 ;
+;
 ; CHECK-LABEL: @test26(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[V13:%.*]] = load i32, ptr @complex1, align 4
@@ -1609,7 +1594,6 @@ define void @test26() {
 ; CHECK-NEXT:    store i32 [[TMP3]], ptr getelementptr inbounds (i8, ptr @complex2, i64 4), align 4
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %a = alloca i64
   %a.gep2 = getelementptr [2 x float], ptr %a, i32 0, i32 1
@@ -1630,6 +1614,7 @@ define float @test27() {
 ; is a particularly challenging one because the load and store both point into
 ; the alloca SROA is processing, and they overlap but at an offset.
 ;
+;
 ; CHECK-LABEL: @test27(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 0 to float
@@ -1637,7 +1622,6 @@ define float @test27() {
 ; CHECK-NEXT:    [[RET:%.*]] = fadd float [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-
 entry:
   %a = alloca [12 x i8]
   %gep2 = getelementptr [12 x i8], ptr %a, i32 0, i32 4
@@ -1660,6 +1644,7 @@ define i32 @PR22093() {
 ; this alloca we need to handle it specially to ensure the splits line up
 ; properly for rewriting.
 ;
+;
 ; CHECK-LABEL: @PR22093(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i16, align 4
@@ -1678,7 +1663,6 @@ define i32 @PR22093() {
 ; CHECK-NEXT:    [[A_SROA_3_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[A_SROA_3_0_EXTRACT_SHIFT]] to i16
 ; CHECK-NEXT:    ret i32 [[A_SROA_0_0_INSERT_INSERT]]
 ;
-
 entry:
   %a = alloca i32
   store volatile i16 42, ptr %a
@@ -1695,6 +1679,7 @@ define void @PR22093.2() {
 ; splits. Because this makes the load unsplittable, we also have to go back and
 ; remove the first store from the presplit candidates as its load won't be
 ; presplit.
+;
 ;
 ; CHECK-LABEL: @PR22093.2(
 ; CHECK-NEXT:  entry:
@@ -1720,7 +1705,6 @@ define void @PR22093.2() {
 ; CHECK-NEXT:    [[A_SROA_5_4_EXTRACT_TRUNC:%.*]] = trunc i32 [[A_SROA_5_4_EXTRACT_SHIFT]] to i24
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %a = alloca i64
   store volatile i16 42, ptr %a
@@ -1752,6 +1736,7 @@ define i16 @PR24463() {
 ; rewrite of the uses of the alloca, but where one of the integers in that is
 ; a sub-integer that requires extraction *and* extends past the end of the
 ; alloca. SROA can split the alloca to avoid shift or trunc.
+;
 ;
 ; CHECK-LABEL: @PR24463(
 ; CHECK-NEXT:  entry:
@@ -1856,6 +1841,7 @@ declare void @callee48(i48 %a)
 define void @test28(i64 %v) #0 {
 ; SROA should split the first i64 store to avoid additional and/or instructions
 ; when storing into i32 fields
+;
 ; CHECK-LABEL: @test28(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[T_SROA_0_8_EXTRACT_TRUNC:%.*]] = trunc i64 [[V:%.*]] to i32
@@ -1863,7 +1849,6 @@ define void @test28(i64 %v) #0 {
 ; CHECK-NEXT:    [[T_SROA_2_8_EXTRACT_TRUNC:%.*]] = trunc i64 [[T_SROA_2_8_EXTRACT_SHIFT]] to i32
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %t = alloca { i64, i32, i32 }
 
@@ -1907,7 +1892,6 @@ define void @test29(i32 %num, i32 %tid) {
 ; CHECK:       bb7:
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   %ra = alloca [10 x float], align 4
   call void @llvm.lifetime.start.isVoid.i64.p0(i64 40, ptr nonnull %ra)
