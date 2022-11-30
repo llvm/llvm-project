@@ -2325,6 +2325,10 @@ getIntrinsicForMaskedAtomicRMWBinOp(unsigned GRLen,
       return Intrinsic::loongarch_masked_atomicrmw_umax_i64;
     case AtomicRMWInst::UMin:
       return Intrinsic::loongarch_masked_atomicrmw_umin_i64;
+    case AtomicRMWInst::Max:
+      return Intrinsic::loongarch_masked_atomicrmw_max_i64;
+    case AtomicRMWInst::Min:
+      return Intrinsic::loongarch_masked_atomicrmw_min_i64;
       // TODO: support other AtomicRMWInst.
     }
   }
@@ -2396,8 +2400,24 @@ Value *LoongArchTargetLowering::emitMaskedAtomicRMWIntrinsic(
 
   Value *Result;
 
-  Result =
-      Builder.CreateCall(LlwOpScwLoop, {AlignedAddr, Incr, Mask, Ordering});
+  // Must pass the shift amount needed to sign extend the loaded value prior
+  // to performing a signed comparison for min/max. ShiftAmt is the number of
+  // bits to shift the value into position. Pass GRLen-ShiftAmt-ValWidth, which
+  // is the number of bits to left+right shift the value in order to
+  // sign-extend.
+  if (AI->getOperation() == AtomicRMWInst::Min ||
+      AI->getOperation() == AtomicRMWInst::Max) {
+    const DataLayout &DL = AI->getModule()->getDataLayout();
+    unsigned ValWidth =
+        DL.getTypeStoreSizeInBits(AI->getValOperand()->getType());
+    Value *SextShamt =
+        Builder.CreateSub(Builder.getIntN(GRLen, GRLen - ValWidth), ShiftAmt);
+    Result = Builder.CreateCall(LlwOpScwLoop,
+                                {AlignedAddr, Incr, Mask, SextShamt, Ordering});
+  } else {
+    Result =
+        Builder.CreateCall(LlwOpScwLoop, {AlignedAddr, Incr, Mask, Ordering});
+  }
 
   if (GRLen == 64)
     Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
