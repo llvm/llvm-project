@@ -26,11 +26,11 @@ void test(size_t initial_buffer_size) {
   auto mono1 = std::pmr::monotonic_buffer_resource(initial_buffer_size, std::pmr::new_delete_resource());
   assert(globalMemCounter.checkNewCalledEq(0));
 
-  mono1.allocate(1, 1);
+  (void)mono1.allocate(1, 1);
   ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(globalMemCounter.checkNewCalledEq(1));
   ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(globalMemCounter.checkLastNewSizeGe(initial_buffer_size));
 
-  mono1.allocate(initial_buffer_size - 1, 1);
+  (void)mono1.allocate(initial_buffer_size - 1, 1);
   ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(globalMemCounter.checkNewCalledEq(1));
 }
 

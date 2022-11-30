@@ -76,24 +76,24 @@ define <4 x float> @test4elt(i32 %a.coerce) local_unnamed_addr #1 {
 ;
 ; CHECK-P9-LABEL: test4elt:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    mtfprwz f1, r3
+; CHECK-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
-; CHECK-P9-NEXT:    xxlxor vs0, vs0, vs0
+; CHECK-P9-NEXT:    xxlxor vs2, vs2, vs2
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI1_0@toc@l
-; CHECK-P9-NEXT:    lxv vs2, 0(r3)
-; CHECK-P9-NEXT:    xxperm vs1, vs0, vs2
-; CHECK-P9-NEXT:    xvcvuxwsp v2, vs1
+; CHECK-P9-NEXT:    lxv vs1, 0(r3)
+; CHECK-P9-NEXT:    xxperm vs0, vs2, vs1
+; CHECK-P9-NEXT:    xvcvuxwsp v2, vs0
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test4elt:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mtfprwz f1, r3
+; CHECK-BE-NEXT:    mtfprwz f0, r3
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
-; CHECK-BE-NEXT:    xxlxor vs0, vs0, vs0
+; CHECK-BE-NEXT:    xxlxor vs2, vs2, vs2
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI1_0@toc@l
-; CHECK-BE-NEXT:    lxv vs2, 0(r3)
-; CHECK-BE-NEXT:    xxperm vs1, vs0, vs2
-; CHECK-BE-NEXT:    xvcvuxwsp v2, vs1
+; CHECK-BE-NEXT:    lxv vs1, 0(r3)
+; CHECK-BE-NEXT:    xxperm vs0, vs2, vs1
+; CHECK-BE-NEXT:    xvcvuxwsp v2, vs0
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = bitcast i32 %a.coerce to <4 x i8>

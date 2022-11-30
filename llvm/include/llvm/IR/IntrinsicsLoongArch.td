@@ -41,6 +41,8 @@ defm int_loongarch_masked_atomicrmw_sub : MaskedAtomicRMWIntrinsics;
 defm int_loongarch_masked_atomicrmw_nand : MaskedAtomicRMWIntrinsics;
 defm int_loongarch_masked_atomicrmw_umax : MaskedAtomicRMWIntrinsics;
 defm int_loongarch_masked_atomicrmw_umin : MaskedAtomicRMWIntrinsics;
+defm int_loongarch_masked_atomicrmw_max : MaskedAtomicRMWFiveOpIntrinsics;
+defm int_loongarch_masked_atomicrmw_min : MaskedAtomicRMWFiveOpIntrinsics;
 
 // @llvm.loongarch.masked.cmpxchg.i64.<p>(
 //   ptr addr, grlen cmpval, grlen newval, grlen mask, grlenimm ordering)

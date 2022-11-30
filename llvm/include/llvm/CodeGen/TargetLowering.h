@@ -1052,6 +1052,10 @@ public:
     // value representing memory location
     PointerUnion<const Value *, const PseudoSourceValue *> ptrVal;
 
+    // Fallback address space for use if ptrVal is nullptr. None means unknown
+    // address space.
+    Optional<unsigned> fallbackAddressSpace;
+
     int          offset = 0;       // offset off of ptrVal
     uint64_t     size = 0;         // the size of the memory location
                                    // (taken from memVT if zero)

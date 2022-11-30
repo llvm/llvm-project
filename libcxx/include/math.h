@@ -312,11 +312,56 @@ extern "C++" {
 #include <stdlib.h>
 #include <type_traits>
 
-// signbit
+
+#    ifdef fpclassify
+#      undef fpclassify
+#    endif
 
 #    ifdef signbit
 #      undef signbit
-#    endif // signbit
+#    endif
+
+#    ifdef isfinite
+#      undef isfinite
+#    endif
+
+#    ifdef isinf
+#      undef isinf
+#    endif
+
+#    ifdef isnan
+#      undef isnan
+#    endif
+
+#    ifdef isnormal
+#      undef isnormal
+#    endif
+
+#    ifdef isgreater
+#      undef isgreater
+#    endif
+
+#    ifdef isgreaterequal
+#      undef isgreaterequal
+#    endif
+
+#    ifdef isless
+#      undef isless
+#    endif
+
+#    ifdef islessequal
+#      undef islessequal
+#    endif
+
+#    ifdef islessgreater
+#      undef islessgreater
+#    endif
+
+#    ifdef isunordered
+#      undef isunordered
+#    endif
+
+// signbit
 
 template <class _A1, std::__enable_if_t<std::is_floating_point<_A1>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
@@ -335,10 +380,6 @@ inline _LIBCPP_HIDE_FROM_ABI bool signbit(_A1) _NOEXCEPT {
 
 // fpclassify
 
-#    ifdef fpclassify
-#      undef fpclassify
-#    endif // fpclassify
-
 template <class _A1, std::__enable_if_t<std::is_floating_point<_A1>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI int fpclassify(_A1 __x) _NOEXCEPT {
   return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL, FP_ZERO, __x);
@@ -349,10 +390,10 @@ inline _LIBCPP_HIDE_FROM_ABI int fpclassify(_A1 __x) _NOEXCEPT {
   return __x == 0 ? FP_ZERO : FP_NORMAL;
 }
 
-// isfinite
+// The MSVC runtime already provides these functions as templates
+#ifndef _LIBCPP_MSVCRT
 
-#    ifdef isfinite
-#      undef isfinite
+// isfinite
 
 template <class _A1,
           std::__enable_if_t<std::is_arithmetic<_A1>::value && std::numeric_limits<_A1>::has_infinity, int> = 0>
@@ -366,12 +407,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool isfinite(_A1) _NOEXCEPT {
   return true;
 }
 
-#    endif // isfinite
-
 // isinf
-
-#    ifdef isinf
-#      undef isinf
 
 template <class _A1,
           std::__enable_if_t<std::is_arithmetic<_A1>::value && std::numeric_limits<_A1>::has_infinity, int> = 0>
@@ -394,12 +430,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool isinf(double __x) _
 inline _LIBCPP_HIDE_FROM_ABI bool isinf(long double __x) _NOEXCEPT { return __builtin_isinf(__x); }
 #      endif
 
-#    endif // isinf
-
 // isnan
-
-#    ifdef isnan
-#      undef isnan
 
 template <class _A1, std::__enable_if_t<std::is_floating_point<_A1>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI bool isnan(_A1 __x) _NOEXCEPT {
@@ -419,12 +450,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool isnan(double __x) _
 inline _LIBCPP_HIDE_FROM_ABI bool isnan(long double __x) _NOEXCEPT { return __builtin_isnan(__x); }
 #      endif
 
-#    endif // isnan
-
 // isnormal
-
-#    ifdef isnormal
-#      undef isnormal
 
 template <class _A1, std::__enable_if_t<std::is_floating_point<_A1>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI bool isnormal(_A1 __x) _NOEXCEPT {
@@ -436,12 +462,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool isnormal(_A1 __x) _NOEXCEPT {
   return __x != 0;
 }
 
-#    endif // isnormal
-
 // isgreater
-
-#    ifdef isgreater
-#      undef isgreater
 
 template <class _A1,
           class _A2,
@@ -451,12 +472,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool isgreater(_A1 __x, _A2 __y) _NOEXCEPT {
   return __builtin_isgreater((type)__x, (type)__y);
 }
 
-#    endif // isgreater
-
 // isgreaterequal
-
-#    ifdef isgreaterequal
-#      undef isgreaterequal
 
 template <class _A1,
           class _A2,
@@ -466,12 +482,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool isgreaterequal(_A1 __x, _A2 __y) _NOEXCEPT {
   return __builtin_isgreaterequal((type)__x, (type)__y);
 }
 
-#    endif // isgreaterequal
-
 // isless
-
-#    ifdef isless
-#      undef isless
 
 template <class _A1,
           class _A2,
@@ -481,12 +492,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool isless(_A1 __x, _A2 __y) _NOEXCEPT {
   return __builtin_isless((type)__x, (type)__y);
 }
 
-#    endif // isless
-
 // islessequal
-
-#    ifdef islessequal
-#      undef islessequal
 
 template <class _A1,
           class _A2,
@@ -496,12 +502,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool islessequal(_A1 __x, _A2 __y) _NOEXCEPT {
   return __builtin_islessequal((type)__x, (type)__y);
 }
 
-#    endif // islessequal
-
 // islessgreater
-
-#    ifdef islessgreater
-#      undef islessgreater
 
 template <class _A1,
           class _A2,
@@ -511,12 +512,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool islessgreater(_A1 __x, _A2 __y) _NOEXCEPT {
   return __builtin_islessgreater((type)__x, (type)__y);
 }
 
-#    endif // islessgreater
-
 // isunordered
-
-#    ifdef isunordered
-#      undef isunordered
 
 template <class _A1,
           class _A2,
@@ -526,7 +522,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool isunordered(_A1 __x, _A2 __y) _NOEXCEPT {
   return __builtin_isunordered((type)__x, (type)__y);
 }
 
-#    endif // isunordered
+#endif // _LIBCPP_MSVCRT
 
 // abs
 //
@@ -539,44 +535,44 @@ inline _LIBCPP_HIDE_FROM_ABI bool isunordered(_A1 __x, _A2 __y) _NOEXCEPT {
 // acos
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       acos(float __x) _NOEXCEPT       {return ::acosf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double acos(long double __x) _NOEXCEPT {return ::acosl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       acos(float __x) _NOEXCEPT       {return __builtin_acosf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double acos(long double __x) _NOEXCEPT {return __builtin_acosl(__x);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-acos(_A1 __x) _NOEXCEPT {return ::acos((double)__x);}
+acos(_A1 __x) _NOEXCEPT {return __builtin_acos((double)__x);}
 
 // asin
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       asin(float __x) _NOEXCEPT       {return ::asinf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double asin(long double __x) _NOEXCEPT {return ::asinl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       asin(float __x) _NOEXCEPT       {return __builtin_asinf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double asin(long double __x) _NOEXCEPT {return __builtin_asinl(__x);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-asin(_A1 __x) _NOEXCEPT {return ::asin((double)__x);}
+asin(_A1 __x) _NOEXCEPT {return __builtin_asin((double)__x);}
 
 // atan
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       atan(float __x) _NOEXCEPT       {return ::atanf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double atan(long double __x) _NOEXCEPT {return ::atanl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       atan(float __x) _NOEXCEPT       {return __builtin_atanf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double atan(long double __x) _NOEXCEPT {return __builtin_atanl(__x);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-atan(_A1 __x) _NOEXCEPT {return ::atan((double)__x);}
+atan(_A1 __x) _NOEXCEPT {return __builtin_atan((double)__x);}
 
 // atan2
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       atan2(float __y, float __x) _NOEXCEPT             {return ::atan2f(__y, __x);}
-inline _LIBCPP_HIDE_FROM_ABI long double atan2(long double __y, long double __x) _NOEXCEPT {return ::atan2l(__y, __x);}
+inline _LIBCPP_HIDE_FROM_ABI float       atan2(float __y, float __x) _NOEXCEPT             {return __builtin_atan2f(__y, __x);}
+inline _LIBCPP_HIDE_FROM_ABI long double atan2(long double __y, long double __x) _NOEXCEPT {return __builtin_atan2l(__y, __x);}
 #    endif
 
 template <class _A1, class _A2>
@@ -598,80 +594,80 @@ atan2(_A1 __y, _A2 __x) _NOEXCEPT
 // ceil
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       ceil(float __x) _NOEXCEPT       {return ::ceilf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double ceil(long double __x) _NOEXCEPT {return ::ceill(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       ceil(float __x) _NOEXCEPT       {return __builtin_ceilf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double ceil(long double __x) _NOEXCEPT {return __builtin_ceill(__x);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-ceil(_A1 __x) _NOEXCEPT {return ::ceil((double)__x);}
+ceil(_A1 __x) _NOEXCEPT {return __builtin_ceil((double)__x);}
 
 // cos
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       cos(float __x) _NOEXCEPT       {return ::cosf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double cos(long double __x) _NOEXCEPT {return ::cosl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       cos(float __x) _NOEXCEPT       {return __builtin_cosf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double cos(long double __x) _NOEXCEPT {return __builtin_cosl(__x);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-cos(_A1 __x) _NOEXCEPT {return ::cos((double)__x);}
+cos(_A1 __x) _NOEXCEPT {return __builtin_cos((double)__x);}
 
 // cosh
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       cosh(float __x) _NOEXCEPT       {return ::coshf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double cosh(long double __x) _NOEXCEPT {return ::coshl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       cosh(float __x) _NOEXCEPT       {return __builtin_coshf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double cosh(long double __x) _NOEXCEPT {return __builtin_coshl(__x);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-cosh(_A1 __x) _NOEXCEPT {return ::cosh((double)__x);}
+cosh(_A1 __x) _NOEXCEPT {return __builtin_cosh((double)__x);}
 
 // exp
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       exp(float __x) _NOEXCEPT       {return ::expf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double exp(long double __x) _NOEXCEPT {return ::expl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       exp(float __x) _NOEXCEPT       {return __builtin_expf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double exp(long double __x) _NOEXCEPT {return __builtin_expl(__x);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-exp(_A1 __x) _NOEXCEPT {return ::exp((double)__x);}
+exp(_A1 __x) _NOEXCEPT {return __builtin_exp((double)__x);}
 
 // fabs
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       fabs(float __x) _NOEXCEPT       {return ::fabsf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double fabs(long double __x) _NOEXCEPT {return ::fabsl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       fabs(float __x) _NOEXCEPT       {return __builtin_fabsf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double fabs(long double __x) _NOEXCEPT {return __builtin_fabsl(__x);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-fabs(_A1 __x) _NOEXCEPT {return ::fabs((double)__x);}
+fabs(_A1 __x) _NOEXCEPT {return __builtin_fabs((double)__x);}
 
 // floor
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       floor(float __x) _NOEXCEPT       {return ::floorf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double floor(long double __x) _NOEXCEPT {return ::floorl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       floor(float __x) _NOEXCEPT       {return __builtin_floorf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double floor(long double __x) _NOEXCEPT {return __builtin_floorl(__x);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-floor(_A1 __x) _NOEXCEPT {return ::floor((double)__x);}
+floor(_A1 __x) _NOEXCEPT {return __builtin_floor((double)__x);}
 
 // fmod
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       fmod(float __x, float __y) _NOEXCEPT             {return ::fmodf(__x, __y);}
-inline _LIBCPP_HIDE_FROM_ABI long double fmod(long double __x, long double __y) _NOEXCEPT {return ::fmodl(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI float       fmod(float __x, float __y) _NOEXCEPT             {return __builtin_fmodf(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI long double fmod(long double __x, long double __y) _NOEXCEPT {return __builtin_fmodl(__x, __y);}
 #    endif
 
 template <class _A1, class _A2>
@@ -693,63 +689,63 @@ fmod(_A1 __x, _A2 __y) _NOEXCEPT
 // frexp
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       frexp(float __x, int* __e) _NOEXCEPT       {return ::frexpf(__x, __e);}
-inline _LIBCPP_HIDE_FROM_ABI long double frexp(long double __x, int* __e) _NOEXCEPT {return ::frexpl(__x, __e);}
+inline _LIBCPP_HIDE_FROM_ABI float       frexp(float __x, int* __e) _NOEXCEPT       {return __builtin_frexpf(__x, __e);}
+inline _LIBCPP_HIDE_FROM_ABI long double frexp(long double __x, int* __e) _NOEXCEPT {return __builtin_frexpl(__x, __e);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-frexp(_A1 __x, int* __e) _NOEXCEPT {return ::frexp((double)__x, __e);}
+frexp(_A1 __x, int* __e) _NOEXCEPT {return __builtin_frexp((double)__x, __e);}
 
 // ldexp
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       ldexp(float __x, int __e) _NOEXCEPT       {return ::ldexpf(__x, __e);}
-inline _LIBCPP_HIDE_FROM_ABI long double ldexp(long double __x, int __e) _NOEXCEPT {return ::ldexpl(__x, __e);}
+inline _LIBCPP_HIDE_FROM_ABI float       ldexp(float __x, int __e) _NOEXCEPT       {return __builtin_ldexpf(__x, __e);}
+inline _LIBCPP_HIDE_FROM_ABI long double ldexp(long double __x, int __e) _NOEXCEPT {return __builtin_ldexpl(__x, __e);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-ldexp(_A1 __x, int __e) _NOEXCEPT {return ::ldexp((double)__x, __e);}
+ldexp(_A1 __x, int __e) _NOEXCEPT {return __builtin_ldexp((double)__x, __e);}
 
 // log
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       log(float __x) _NOEXCEPT       {return ::logf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double log(long double __x) _NOEXCEPT {return ::logl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       log(float __x) _NOEXCEPT       {return __builtin_logf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double log(long double __x) _NOEXCEPT {return __builtin_logl(__x);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-log(_A1 __x) _NOEXCEPT {return ::log((double)__x);}
+log(_A1 __x) _NOEXCEPT {return __builtin_log((double)__x);}
 
 // log10
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       log10(float __x) _NOEXCEPT       {return ::log10f(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double log10(long double __x) _NOEXCEPT {return ::log10l(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       log10(float __x) _NOEXCEPT       {return __builtin_log10f(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double log10(long double __x) _NOEXCEPT {return __builtin_log10l(__x);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-log10(_A1 __x) _NOEXCEPT {return ::log10((double)__x);}
+log10(_A1 __x) _NOEXCEPT {return __builtin_log10((double)__x);}
 
 // modf
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       modf(float __x, float* __y) _NOEXCEPT             {return ::modff(__x, __y);}
-inline _LIBCPP_HIDE_FROM_ABI long double modf(long double __x, long double* __y) _NOEXCEPT {return ::modfl(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI float       modf(float __x, float* __y) _NOEXCEPT             {return __builtin_modff(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI long double modf(long double __x, long double* __y) _NOEXCEPT {return __builtin_modfl(__x, __y);}
 #    endif
 
 // pow
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       pow(float __x, float __y) _NOEXCEPT             {return ::powf(__x, __y);}
-inline _LIBCPP_HIDE_FROM_ABI long double pow(long double __x, long double __y) _NOEXCEPT {return ::powl(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI float       pow(float __x, float __y) _NOEXCEPT             {return __builtin_powf(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI long double pow(long double __x, long double __y) _NOEXCEPT {return __builtin_powl(__x, __y);}
 #    endif
 
 template <class _A1, class _A2>
@@ -771,102 +767,102 @@ pow(_A1 __x, _A2 __y) _NOEXCEPT
 // sin
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       sin(float __x) _NOEXCEPT       {return ::sinf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double sin(long double __x) _NOEXCEPT {return ::sinl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       sin(float __x) _NOEXCEPT       {return __builtin_sinf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double sin(long double __x) _NOEXCEPT {return __builtin_sinl(__x);}
 #endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-sin(_A1 __x) _NOEXCEPT {return ::sin((double)__x);}
+sin(_A1 __x) _NOEXCEPT {return __builtin_sin((double)__x);}
 
 // sinh
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       sinh(float __x) _NOEXCEPT       {return ::sinhf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double sinh(long double __x) _NOEXCEPT {return ::sinhl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       sinh(float __x) _NOEXCEPT       {return __builtin_sinhf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double sinh(long double __x) _NOEXCEPT {return __builtin_sinhl(__x);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-sinh(_A1 __x) _NOEXCEPT {return ::sinh((double)__x);}
+sinh(_A1 __x) _NOEXCEPT {return __builtin_sinh((double)__x);}
 
 // sqrt
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       sqrt(float __x) _NOEXCEPT       {return ::sqrtf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double sqrt(long double __x) _NOEXCEPT {return ::sqrtl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       sqrt(float __x) _NOEXCEPT       {return __builtin_sqrtf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double sqrt(long double __x) _NOEXCEPT {return __builtin_sqrtl(__x);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-sqrt(_A1 __x) _NOEXCEPT {return ::sqrt((double)__x);}
+sqrt(_A1 __x) _NOEXCEPT {return __builtin_sqrt((double)__x);}
 
 // tan
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       tan(float __x) _NOEXCEPT       {return ::tanf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double tan(long double __x) _NOEXCEPT {return ::tanl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       tan(float __x) _NOEXCEPT       {return __builtin_tanf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double tan(long double __x) _NOEXCEPT {return __builtin_tanl(__x);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-tan(_A1 __x) _NOEXCEPT {return ::tan((double)__x);}
+tan(_A1 __x) _NOEXCEPT {return __builtin_tan((double)__x);}
 
 // tanh
 
 #    if !defined(__sun__)
-inline _LIBCPP_HIDE_FROM_ABI float       tanh(float __x) _NOEXCEPT       {return ::tanhf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double tanh(long double __x) _NOEXCEPT {return ::tanhl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       tanh(float __x) _NOEXCEPT       {return __builtin_tanhf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double tanh(long double __x) _NOEXCEPT {return __builtin_tanhl(__x);}
 #    endif
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-tanh(_A1 __x) _NOEXCEPT {return ::tanh((double)__x);}
+tanh(_A1 __x) _NOEXCEPT {return __builtin_tanh((double)__x);}
 
 // acosh
 
-inline _LIBCPP_HIDE_FROM_ABI float       acosh(float __x) _NOEXCEPT       {return ::acoshf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double acosh(long double __x) _NOEXCEPT {return ::acoshl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       acosh(float __x) _NOEXCEPT       {return __builtin_acoshf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double acosh(long double __x) _NOEXCEPT {return __builtin_acoshl(__x);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-acosh(_A1 __x) _NOEXCEPT {return ::acosh((double)__x);}
+acosh(_A1 __x) _NOEXCEPT {return __builtin_acosh((double)__x);}
 
 // asinh
 
-inline _LIBCPP_HIDE_FROM_ABI float       asinh(float __x) _NOEXCEPT       {return ::asinhf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double asinh(long double __x) _NOEXCEPT {return ::asinhl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       asinh(float __x) _NOEXCEPT       {return __builtin_asinhf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double asinh(long double __x) _NOEXCEPT {return __builtin_asinhl(__x);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-asinh(_A1 __x) _NOEXCEPT {return ::asinh((double)__x);}
+asinh(_A1 __x) _NOEXCEPT {return __builtin_asinh((double)__x);}
 
 // atanh
 
-inline _LIBCPP_HIDE_FROM_ABI float       atanh(float __x) _NOEXCEPT       {return ::atanhf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double atanh(long double __x) _NOEXCEPT {return ::atanhl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       atanh(float __x) _NOEXCEPT       {return __builtin_atanhf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double atanh(long double __x) _NOEXCEPT {return __builtin_atanhl(__x);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-atanh(_A1 __x) _NOEXCEPT {return ::atanh((double)__x);}
+atanh(_A1 __x) _NOEXCEPT {return __builtin_atanh((double)__x);}
 
 // cbrt
 
-inline _LIBCPP_HIDE_FROM_ABI float       cbrt(float __x) _NOEXCEPT       {return ::cbrtf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double cbrt(long double __x) _NOEXCEPT {return ::cbrtl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       cbrt(float __x) _NOEXCEPT       {return __builtin_cbrtf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double cbrt(long double __x) _NOEXCEPT {return __builtin_cbrtl(__x);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-cbrt(_A1 __x) _NOEXCEPT {return ::cbrt((double)__x);}
+cbrt(_A1 __x) _NOEXCEPT {return __builtin_cbrt((double)__x);}
 
 // copysign
 
@@ -923,48 +919,48 @@ typename std::__enable_if_t
 
 // erf
 
-inline _LIBCPP_HIDE_FROM_ABI float       erf(float __x) _NOEXCEPT       {return ::erff(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double erf(long double __x) _NOEXCEPT {return ::erfl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       erf(float __x) _NOEXCEPT       {return __builtin_erff(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double erf(long double __x) _NOEXCEPT {return __builtin_erfl(__x);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-erf(_A1 __x) _NOEXCEPT {return ::erf((double)__x);}
+erf(_A1 __x) _NOEXCEPT {return __builtin_erf((double)__x);}
 
 // erfc
 
-inline _LIBCPP_HIDE_FROM_ABI float       erfc(float __x) _NOEXCEPT       {return ::erfcf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double erfc(long double __x) _NOEXCEPT {return ::erfcl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       erfc(float __x) _NOEXCEPT       {return __builtin_erfcf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double erfc(long double __x) _NOEXCEPT {return __builtin_erfcl(__x);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-erfc(_A1 __x) _NOEXCEPT {return ::erfc((double)__x);}
+erfc(_A1 __x) _NOEXCEPT {return __builtin_erfc((double)__x);}
 
 // exp2
 
-inline _LIBCPP_HIDE_FROM_ABI float       exp2(float __x) _NOEXCEPT       {return ::exp2f(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double exp2(long double __x) _NOEXCEPT {return ::exp2l(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       exp2(float __x) _NOEXCEPT       {return __builtin_exp2f(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double exp2(long double __x) _NOEXCEPT {return __builtin_exp2l(__x);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-exp2(_A1 __x) _NOEXCEPT {return ::exp2((double)__x);}
+exp2(_A1 __x) _NOEXCEPT {return __builtin_exp2((double)__x);}
 
 // expm1
 
-inline _LIBCPP_HIDE_FROM_ABI float       expm1(float __x) _NOEXCEPT       {return ::expm1f(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double expm1(long double __x) _NOEXCEPT {return ::expm1l(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       expm1(float __x) _NOEXCEPT       {return __builtin_expm1f(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double expm1(long double __x) _NOEXCEPT {return __builtin_expm1l(__x);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-expm1(_A1 __x) _NOEXCEPT {return ::expm1((double)__x);}
+expm1(_A1 __x) _NOEXCEPT {return __builtin_expm1((double)__x);}
 
 // fdim
 
-inline _LIBCPP_HIDE_FROM_ABI float       fdim(float __x, float __y) _NOEXCEPT             {return ::fdimf(__x, __y);}
-inline _LIBCPP_HIDE_FROM_ABI long double fdim(long double __x, long double __y) _NOEXCEPT {return ::fdiml(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI float       fdim(float __x, float __y) _NOEXCEPT             {return __builtin_fdimf(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI long double fdim(long double __x, long double __y) _NOEXCEPT {return __builtin_fdiml(__x, __y);}
 
 template <class _A1, class _A2>
 inline _LIBCPP_HIDE_FROM_ABI
@@ -1013,8 +1009,8 @@ fma(_A1 __x, _A2 __y, _A3 __z) _NOEXCEPT
 
 // fmax
 
-inline _LIBCPP_HIDE_FROM_ABI float       fmax(float __x, float __y) _NOEXCEPT             {return ::fmaxf(__x, __y);}
-inline _LIBCPP_HIDE_FROM_ABI long double fmax(long double __x, long double __y) _NOEXCEPT {return ::fmaxl(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI float       fmax(float __x, float __y) _NOEXCEPT             {return __builtin_fmaxf(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI long double fmax(long double __x, long double __y) _NOEXCEPT {return __builtin_fmaxl(__x, __y);}
 
 template <class _A1, class _A2>
 inline _LIBCPP_HIDE_FROM_ABI
@@ -1034,8 +1030,8 @@ fmax(_A1 __x, _A2 __y) _NOEXCEPT
 
 // fmin
 
-inline _LIBCPP_HIDE_FROM_ABI float       fmin(float __x, float __y) _NOEXCEPT             {return ::fminf(__x, __y);}
-inline _LIBCPP_HIDE_FROM_ABI long double fmin(long double __x, long double __y) _NOEXCEPT {return ::fminl(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI float       fmin(float __x, float __y) _NOEXCEPT             {return __builtin_fminf(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI long double fmin(long double __x, long double __y) _NOEXCEPT {return __builtin_fminl(__x, __y);}
 
 template <class _A1, class _A2>
 inline _LIBCPP_HIDE_FROM_ABI
@@ -1055,8 +1051,8 @@ fmin(_A1 __x, _A2 __y) _NOEXCEPT
 
 // hypot
 
-inline _LIBCPP_HIDE_FROM_ABI float       hypot(float __x, float __y) _NOEXCEPT             {return ::hypotf(__x, __y);}
-inline _LIBCPP_HIDE_FROM_ABI long double hypot(long double __x, long double __y) _NOEXCEPT {return ::hypotl(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI float       hypot(float __x, float __y) _NOEXCEPT             {return __builtin_hypotf(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI long double hypot(long double __x, long double __y) _NOEXCEPT {return __builtin_hypotl(__x, __y);}
 
 template <class _A1, class _A2>
 inline _LIBCPP_HIDE_FROM_ABI
@@ -1076,23 +1072,23 @@ hypot(_A1 __x, _A2 __y) _NOEXCEPT
 
 // ilogb
 
-inline _LIBCPP_HIDE_FROM_ABI int ilogb(float __x) _NOEXCEPT       {return ::ilogbf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI int ilogb(long double __x) _NOEXCEPT {return ::ilogbl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI int ilogb(float __x) _NOEXCEPT       {return __builtin_ilogbf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI int ilogb(long double __x) _NOEXCEPT {return __builtin_ilogbl(__x);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, int>::type
-ilogb(_A1 __x) _NOEXCEPT {return ::ilogb((double)__x);}
+ilogb(_A1 __x) _NOEXCEPT {return __builtin_ilogb((double)__x);}
 
 // lgamma
 
-inline _LIBCPP_HIDE_FROM_ABI float       lgamma(float __x) _NOEXCEPT       {return ::lgammaf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double lgamma(long double __x) _NOEXCEPT {return ::lgammal(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       lgamma(float __x) _NOEXCEPT       {return __builtin_lgammaf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double lgamma(long double __x) _NOEXCEPT {return __builtin_lgammal(__x);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-lgamma(_A1 __x) _NOEXCEPT {return ::lgamma((double)__x);}
+lgamma(_A1 __x) _NOEXCEPT {return __builtin_lgamma((double)__x);}
 
 // llrint
 
@@ -1134,33 +1130,33 @@ llround(_A1 __x) _NOEXCEPT
 
 // log1p
 
-inline _LIBCPP_HIDE_FROM_ABI float       log1p(float __x) _NOEXCEPT       {return ::log1pf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double log1p(long double __x) _NOEXCEPT {return ::log1pl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       log1p(float __x) _NOEXCEPT       {return __builtin_log1pf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double log1p(long double __x) _NOEXCEPT {return __builtin_log1pl(__x);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-log1p(_A1 __x) _NOEXCEPT {return ::log1p((double)__x);}
+log1p(_A1 __x) _NOEXCEPT {return __builtin_log1p((double)__x);}
 
 // log2
 
-inline _LIBCPP_HIDE_FROM_ABI float       log2(float __x) _NOEXCEPT       {return ::log2f(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double log2(long double __x) _NOEXCEPT {return ::log2l(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       log2(float __x) _NOEXCEPT       {return __builtin_log2f(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double log2(long double __x) _NOEXCEPT {return __builtin_log2l(__x);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-log2(_A1 __x) _NOEXCEPT {return ::log2((double)__x);}
+log2(_A1 __x) _NOEXCEPT {return __builtin_log2((double)__x);}
 
 // logb
 
-inline _LIBCPP_HIDE_FROM_ABI float       logb(float __x) _NOEXCEPT       {return ::logbf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double logb(long double __x) _NOEXCEPT {return ::logbl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       logb(float __x) _NOEXCEPT       {return __builtin_logbf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double logb(long double __x) _NOEXCEPT {return __builtin_logbl(__x);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-logb(_A1 __x) _NOEXCEPT {return ::logb((double)__x);}
+logb(_A1 __x) _NOEXCEPT {return __builtin_logb((double)__x);}
 
 // lrint
 
@@ -1204,18 +1200,18 @@ lround(_A1 __x) _NOEXCEPT
 
 // nearbyint
 
-inline _LIBCPP_HIDE_FROM_ABI float       nearbyint(float __x) _NOEXCEPT       {return ::nearbyintf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double nearbyint(long double __x) _NOEXCEPT {return ::nearbyintl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       nearbyint(float __x) _NOEXCEPT       {return __builtin_nearbyintf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double nearbyint(long double __x) _NOEXCEPT {return __builtin_nearbyintl(__x);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-nearbyint(_A1 __x) _NOEXCEPT {return ::nearbyint((double)__x);}
+nearbyint(_A1 __x) _NOEXCEPT {return __builtin_nearbyint((double)__x);}
 
 // nextafter
 
-inline _LIBCPP_HIDE_FROM_ABI float       nextafter(float __x, float __y) _NOEXCEPT             {return ::nextafterf(__x, __y);}
-inline _LIBCPP_HIDE_FROM_ABI long double nextafter(long double __x, long double __y) _NOEXCEPT {return ::nextafterl(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI float       nextafter(float __x, float __y) _NOEXCEPT             {return __builtin_nextafterf(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI long double nextafter(long double __x, long double __y) _NOEXCEPT {return __builtin_nextafterl(__x, __y);}
 
 template <class _A1, class _A2>
 inline _LIBCPP_HIDE_FROM_ABI
@@ -1235,18 +1231,18 @@ nextafter(_A1 __x, _A2 __y) _NOEXCEPT
 
 // nexttoward
 
-inline _LIBCPP_HIDE_FROM_ABI float       nexttoward(float __x, long double __y) _NOEXCEPT       {return ::nexttowardf(__x, __y);}
-inline _LIBCPP_HIDE_FROM_ABI long double nexttoward(long double __x, long double __y) _NOEXCEPT {return ::nexttowardl(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI float       nexttoward(float __x, long double __y) _NOEXCEPT       {return __builtin_nexttowardf(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI long double nexttoward(long double __x, long double __y) _NOEXCEPT {return __builtin_nexttowardl(__x, __y);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-nexttoward(_A1 __x, long double __y) _NOEXCEPT {return ::nexttoward((double)__x, __y);}
+nexttoward(_A1 __x, long double __y) _NOEXCEPT {return __builtin_nexttoward((double)__x, __y);}
 
 // remainder
 
-inline _LIBCPP_HIDE_FROM_ABI float       remainder(float __x, float __y) _NOEXCEPT             {return ::remainderf(__x, __y);}
-inline _LIBCPP_HIDE_FROM_ABI long double remainder(long double __x, long double __y) _NOEXCEPT {return ::remainderl(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI float       remainder(float __x, float __y) _NOEXCEPT             {return __builtin_remainderf(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI long double remainder(long double __x, long double __y) _NOEXCEPT {return __builtin_remainderl(__x, __y);}
 
 template <class _A1, class _A2>
 inline _LIBCPP_HIDE_FROM_ABI
@@ -1266,8 +1262,8 @@ remainder(_A1 __x, _A2 __y) _NOEXCEPT
 
 // remquo
 
-inline _LIBCPP_HIDE_FROM_ABI float       remquo(float __x, float __y, int* __z) _NOEXCEPT             {return ::remquof(__x, __y, __z);}
-inline _LIBCPP_HIDE_FROM_ABI long double remquo(long double __x, long double __y, int* __z) _NOEXCEPT {return ::remquol(__x, __y, __z);}
+inline _LIBCPP_HIDE_FROM_ABI float       remquo(float __x, float __y, int* __z) _NOEXCEPT             {return __builtin_remquof(__x, __y, __z);}
+inline _LIBCPP_HIDE_FROM_ABI long double remquo(long double __x, long double __y, int* __z) _NOEXCEPT {return __builtin_remquol(__x, __y, __z);}
 
 template <class _A1, class _A2>
 inline _LIBCPP_HIDE_FROM_ABI
@@ -1325,33 +1321,33 @@ round(_A1 __x) _NOEXCEPT
 
 // scalbln
 
-inline _LIBCPP_HIDE_FROM_ABI float       scalbln(float __x, long __y) _NOEXCEPT       {return ::scalblnf(__x, __y);}
-inline _LIBCPP_HIDE_FROM_ABI long double scalbln(long double __x, long __y) _NOEXCEPT {return ::scalblnl(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI float       scalbln(float __x, long __y) _NOEXCEPT       {return __builtin_scalblnf(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI long double scalbln(long double __x, long __y) _NOEXCEPT {return __builtin_scalblnl(__x, __y);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-scalbln(_A1 __x, long __y) _NOEXCEPT {return ::scalbln((double)__x, __y);}
+scalbln(_A1 __x, long __y) _NOEXCEPT {return __builtin_scalbln((double)__x, __y);}
 
 // scalbn
 
-inline _LIBCPP_HIDE_FROM_ABI float       scalbn(float __x, int __y) _NOEXCEPT       {return ::scalbnf(__x, __y);}
-inline _LIBCPP_HIDE_FROM_ABI long double scalbn(long double __x, int __y) _NOEXCEPT {return ::scalbnl(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI float       scalbn(float __x, int __y) _NOEXCEPT       {return __builtin_scalbnf(__x, __y);}
+inline _LIBCPP_HIDE_FROM_ABI long double scalbn(long double __x, int __y) _NOEXCEPT {return __builtin_scalbnl(__x, __y);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-scalbn(_A1 __x, int __y) _NOEXCEPT {return ::scalbn((double)__x, __y);}
+scalbn(_A1 __x, int __y) _NOEXCEPT {return __builtin_scalbn((double)__x, __y);}
 
 // tgamma
 
-inline _LIBCPP_HIDE_FROM_ABI float       tgamma(float __x) _NOEXCEPT       {return ::tgammaf(__x);}
-inline _LIBCPP_HIDE_FROM_ABI long double tgamma(long double __x) _NOEXCEPT {return ::tgammal(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float       tgamma(float __x) _NOEXCEPT       {return __builtin_tgammaf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double tgamma(long double __x) _NOEXCEPT {return __builtin_tgammal(__x);}
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
-tgamma(_A1 __x) _NOEXCEPT {return ::tgamma((double)__x);}
+tgamma(_A1 __x) _NOEXCEPT {return __builtin_tgamma((double)__x);}
 
 // trunc
 

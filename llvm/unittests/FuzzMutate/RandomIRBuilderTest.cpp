@@ -13,6 +13,7 @@
 #include "llvm/FuzzMutate/IRMutator.h"
 #include "llvm/FuzzMutate/OpDescriptor.h"
 #include "llvm/FuzzMutate/Operations.h"
+#include "llvm/FuzzMutate/Random.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -289,6 +290,51 @@ TEST(RandomIRBuilderTest, SwiftError) {
   for (int i = 0; i < 10; ++i) {
     Value *V = IB.findOrCreateSource(BB, {Alloca}, {}, Descr.SourcePreds[0]);
     ASSERT_FALSE(isa<AllocaInst>(V));
+  }
+}
+
+TEST(RandomIRBuilderTest, dontConnectToSwitch) {
+  // Check that we never put anything into switch's case branch
+  // If we accidently put a variable, the module is invalid.
+  LLVMContext Ctx;
+  const char *SourceCode = "\n\
+    define void @test(i1 %C1, i1 %C2, i32 %I, i32 %J) { \n\
+    Entry:  \n\
+      %I.1 = add i32 %I, 42 \n\
+      %J.1 = add i32 %J, 42 \n\
+      %IJ = add i32 %I, %J \n\
+      switch i32 %I, label %Default [ \n\
+        i32 1, label %OnOne  \n\
+      ] \n\
+    Default:  \n\
+      %CIEqJ = icmp eq i32 %I.1, %J.1 \n\
+      %CISltJ = icmp slt i32 %I.1, %J.1 \n\
+      %CAnd = and i1 %C1, %C2 \n\
+      br i1 %CIEqJ, label %Default, label %Exit \n\
+    OnOne:  \n\
+      br i1 %C1, label %OnOne, label %Exit \n\
+    Exit:  \n\
+      ret void \n\
+    }";
+
+  std::vector<Type *> Types = {Type::getInt32Ty(Ctx), Type::getInt1Ty(Ctx)};
+  RandomIRBuilder IB(Seed, Types);
+  for (int i = 0; i < 20; i++) {
+    std::unique_ptr<Module> M = parseAssembly(SourceCode, Ctx);
+    Function &F = *M->getFunction("test");
+    auto RS = makeSampler(IB.Rand, make_pointer_range(F));
+    BasicBlock *BB = RS.getSelection();
+    SmallVector<Instruction *, 32> Insts;
+    for (auto I = BB->getFirstInsertionPt(), E = BB->end(); I != E; ++I)
+      Insts.push_back(&*I);
+    if (Insts.size() < 2)
+      continue;
+    // Choose an instruction and connect to later operations.
+    size_t IP = uniform<size_t>(IB.Rand, 1, Insts.size() - 1);
+    Instruction *Inst = Insts[IP - 1];
+    auto ConnectAfter = makeArrayRef(Insts).slice(IP);
+    IB.connectToSink(*BB, ConnectAfter, Inst);
+    ASSERT_FALSE(verifyModule(*M, &errs()));
   }
 }
 

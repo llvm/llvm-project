@@ -946,6 +946,37 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
     }
 
     return true;
+  } else if (const auto *Ctor = dyn_cast<CXXConstructExpr>(Initializer)) {
+    const ConstantArrayType *CAT =
+        Ctx.getASTContext().getAsConstantArrayType(Ctor->getType());
+    assert(CAT);
+    size_t NumElems = CAT->getSize().getZExtValue();
+    const Function *Func = getFunction(Ctor->getConstructor());
+    if (!Func || !Func->isConstexpr())
+      return false;
+
+    // FIXME(perf): We're calling the constructor once per array element here,
+    //   in the old intepreter we had a special-case for trivial constructors.
+    for (size_t I = 0; I != NumElems; ++I) {
+      if (!this->emitDupPtr(Initializer))
+        return false;
+      if (!this->emitConstUint64(I, Initializer))
+        return false;
+      if (!this->emitAddOffsetUint64(Initializer))
+        return false;
+      if (!this->emitNarrowPtr(Initializer))
+        return false;
+
+      // Constructor arguments.
+      for (const auto *Arg : Ctor->arguments()) {
+        if (!this->visit(Arg))
+          return false;
+      }
+
+      if (!this->emitCall(Func, Initializer))
+        return false;
+    }
+    return true;
   }
 
   assert(false && "Unknown expression for array initialization");
@@ -1071,8 +1102,13 @@ template <class Emitter>
 const Function *ByteCodeExprGen<Emitter>::getFunction(const FunctionDecl *FD) {
   assert(FD);
   const Function *Func = P.getFunction(FD);
+  bool IsBeingCompiled = Func && !Func->isFullyCompiled();
+  bool WasNotDefined = Func && !Func->hasBody();
 
-  if (!Func) {
+  if (IsBeingCompiled)
+    return Func;
+
+  if (!Func || WasNotDefined) {
     if (auto R = ByteCodeStmtGen<ByteCodeEmitter>(Ctx, P).compileFunc(FD))
       Func = *R;
     else {
@@ -1150,6 +1186,19 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     if (Func->isFullyCompiled() && !Func->isConstexpr())
       return false;
 
+    QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
+    Optional<PrimType> T = classify(ReturnType);
+
+    if (Func->hasRVO() && DiscardResult) {
+      // If we need to discard the return value but the function returns its
+      // value via an RVO pointer, we need to create one such pointer just
+      // for this call.
+      if (Optional<unsigned> LocalIndex = allocateLocal(E)) {
+        if (!this->emitGetPtrLocal(*LocalIndex, E))
+          return false;
+      }
+    }
+
     // Put arguments on the stack.
     for (const auto *Arg : E->arguments()) {
       if (!this->visit(Arg))
@@ -1162,13 +1211,8 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     if (!this->emitCall(Func, E))
       return false;
 
-    QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
-    if (DiscardResult && !ReturnType->isVoidType()) {
-      Optional<PrimType> T = classify(ReturnType);
-      if (T)
-        return this->emitPop(*T, E);
-      // TODO: This is a RVO function and we need to ignore the return value.
-    }
+    if (DiscardResult && !ReturnType->isVoidType() && T)
+      return this->emitPop(*T, E);
 
     return true;
   } else {

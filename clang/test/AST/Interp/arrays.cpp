@@ -185,6 +185,40 @@ namespace DefaultInit {
   }
 };
 
+class A {
+public:
+  int a;
+  constexpr A(int m = 2) : a(10 + m) {}
+};
+class AU {
+public:
+  int a;
+  constexpr AU() : a(5 / 0) {} // expected-warning {{division by zero is undefined}} \
+                               // expected-note {{division by zero}} \
+                               // ref-error {{never produces a constant expression}} \
+                               // ref-note 2{{division by zero}} \
+                               // ref-warning {{division by zero is undefined}}
+};
+class B {
+public:
+  A a[2];
+  constexpr B() {}
+};
+constexpr B b;
+static_assert(b.a[0].a == 12, "");
+static_assert(b.a[1].a == 12, "");
+
+class BU {
+public:
+  AU a[2];
+  constexpr BU() {} // expected-note {{in call to 'AU()'}} \
+                    // ref-note {{in call to 'AU()'}}
+};
+constexpr BU bu; // expected-error {{must be initialized by a constant expression}} \
+                 // expected-note {{in call to 'BU()'}} \
+                 // ref-error {{must be initialized by a constant expression}} \
+                 // ref-note {{in call to 'BU()'}}
+
 namespace IncDec {
   // FIXME: Pointer arithmethic needs to be supported in inc/dec
   //   unary operators

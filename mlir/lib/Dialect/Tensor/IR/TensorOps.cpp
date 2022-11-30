@@ -3170,6 +3170,8 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
     return op->emitError("invalid inner_dims_pos vector");
   if (isInvalidPackingPosSpecification(outerDimPerm, unpackedRank))
     return op->emitError("invalid outer_dims_perm vector");
+  if (!outerDimPerm.empty() && outerDimPerm.size() != unpackedRank)
+    return op->emitError("outer_dims_perm must be a permutation or empty");
 
   // Tiling factors must be less than or equal to the input rank for pack (or
   // output rank for unpack), and must match the number of `inner_dims_pos`.

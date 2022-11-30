@@ -34,8 +34,7 @@ class TargetRegisterClass;
 class AMDGPUPseudoSourceValue : public PseudoSourceValue {
 public:
   enum AMDGPUPSVKind : unsigned {
-    PSVBuffer = PseudoSourceValue::TargetCustom,
-    PSVImage,
+    PSVImage = PseudoSourceValue::TargetCustom,
     GWSResource
   };
 
@@ -57,31 +56,6 @@ public:
   bool mayAlias(const MachineFrameInfo *) const override {
     return true;
   }
-};
-
-class AMDGPUBufferPseudoSourceValue final : public AMDGPUPseudoSourceValue {
-public:
-  explicit AMDGPUBufferPseudoSourceValue(const AMDGPUTargetMachine &TM)
-      : AMDGPUPseudoSourceValue(PSVBuffer, TM) {}
-
-  static bool classof(const PseudoSourceValue *V) {
-    return V->kind() == PSVBuffer;
-  }
-
-  void printCustom(raw_ostream &OS) const override { OS << "BufferResource"; }
-};
-
-class AMDGPUImagePseudoSourceValue final : public AMDGPUPseudoSourceValue {
-public:
-  // TODO: Is the img rsrc useful?
-  explicit AMDGPUImagePseudoSourceValue(const AMDGPUTargetMachine &TM)
-      : AMDGPUPseudoSourceValue(PSVImage, TM) {}
-
-  static bool classof(const PseudoSourceValue *V) {
-    return V->kind() == PSVImage;
-  }
-
-  void printCustom(raw_ostream &OS) const override { OS << "ImageResource"; }
 };
 
 class AMDGPUGWSResourcePseudoSourceValue final : public AMDGPUPseudoSourceValue {
@@ -394,8 +368,6 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   // unit. Minimum - first, maximum - second.
   std::pair<unsigned, unsigned> WavesPerEU = {0, 0};
 
-  const AMDGPUBufferPseudoSourceValue BufferPSV;
-  const AMDGPUImagePseudoSourceValue ImagePSV;
   const AMDGPUGWSResourcePseudoSourceValue GWSResourcePSV;
 
 private:
@@ -945,16 +917,6 @@ public:
       return ArgInfo.WorkGroupIDZ.getRegister();
     }
     llvm_unreachable("unexpected dimension");
-  }
-
-  const AMDGPUBufferPseudoSourceValue *
-  getBufferPSV(const AMDGPUTargetMachine &TM) {
-    return &BufferPSV;
-  }
-
-  const AMDGPUImagePseudoSourceValue *
-  getImagePSV(const AMDGPUTargetMachine &TM) {
-    return &ImagePSV;
   }
 
   const AMDGPUGWSResourcePseudoSourceValue *

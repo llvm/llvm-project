@@ -5,7 +5,7 @@
 
 declare float @llvm.fabs.f32(float) #1
 
-define amdgpu_kernel void @fp_to_sint_i32(i32 addrspace(1)* %out, float %in) {
+define amdgpu_kernel void @fp_to_sint_i32(ptr addrspace(1) %out, float %in) {
 ; SI-LABEL: fp_to_sint_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -40,11 +40,11 @@ define amdgpu_kernel void @fp_to_sint_i32(i32 addrspace(1)* %out, float %in) {
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %conv = fptosi float %in to i32
-  store i32 %conv, i32 addrspace(1)* %out
+  store i32 %conv, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @fp_to_sint_i32_fabs(i32 addrspace(1)* %out, float %in) {
+define amdgpu_kernel void @fp_to_sint_i32_fabs(ptr addrspace(1) %out, float %in) {
 ; SI-LABEL: fp_to_sint_i32_fabs:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -80,11 +80,11 @@ define amdgpu_kernel void @fp_to_sint_i32_fabs(i32 addrspace(1)* %out, float %in
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %in.fabs = call float @llvm.fabs.f32(float %in)
   %conv = fptosi float %in.fabs to i32
-  store i32 %conv, i32 addrspace(1)* %out
+  store i32 %conv, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @fp_to_sint_v2i32(<2 x i32> addrspace(1)* %out, <2 x float> %in) {
+define amdgpu_kernel void @fp_to_sint_v2i32(ptr addrspace(1) %out, <2 x float> %in) {
 ; SI-LABEL: fp_to_sint_v2i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -125,11 +125,11 @@ define amdgpu_kernel void @fp_to_sint_v2i32(<2 x i32> addrspace(1)* %out, <2 x f
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %result = fptosi <2 x float> %in to <2 x i32>
-  store <2 x i32> %result, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @fp_to_sint_v4i32(<4 x i32> addrspace(1)* %out, <4 x float> addrspace(1)* %in) {
+define amdgpu_kernel void @fp_to_sint_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: fp_to_sint_v4i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -183,14 +183,14 @@ define amdgpu_kernel void @fp_to_sint_v4i32(<4 x i32> addrspace(1)* %out, <4 x f
 ; EG-NEXT:     FLT_TO_INT T0.X, PV.W,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %value = load <4 x float>, <4 x float> addrspace(1) * %in
+  %value = load <4 x float>, ptr addrspace(1) %in
   %result = fptosi <4 x float> %value to <4 x i32>
-  store <4 x i32> %result, <4 x i32> addrspace(1)* %out
+  store <4 x i32> %result, ptr addrspace(1) %out
   ret void
 }
 
 ; Check that the compiler doesn't crash with a "cannot select" error
-define amdgpu_kernel void @fp_to_sint_i64 (i64 addrspace(1)* %out, float %in) {
+define amdgpu_kernel void @fp_to_sint_i64 (ptr addrspace(1) %out, float %in) {
 ; SI-LABEL: fp_to_sint_i64:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -287,11 +287,11 @@ define amdgpu_kernel void @fp_to_sint_i64 (i64 addrspace(1)* %out, float %in) {
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
   %0 = fptosi float %in to i64
-  store i64 %0, i64 addrspace(1)* %out
+  store i64 %0, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @fp_to_sint_v2i64(<2 x i64> addrspace(1)* %out, <2 x float> %x) {
+define amdgpu_kernel void @fp_to_sint_v2i64(ptr addrspace(1) %out, <2 x float> %x) {
 ; SI-LABEL: fp_to_sint_v2i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -446,11 +446,11 @@ define amdgpu_kernel void @fp_to_sint_v2i64(<2 x i64> addrspace(1)* %out, <2 x f
 ; EG-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %conv = fptosi <2 x float> %x to <2 x i64>
-  store <2 x i64> %conv, <2 x i64> addrspace(1)* %out
+  store <2 x i64> %conv, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @fp_to_sint_v4i64(<4 x i64> addrspace(1)* %out, <4 x float> %x) {
+define amdgpu_kernel void @fp_to_sint_v4i64(ptr addrspace(1) %out, <4 x float> %x) {
 ; SI-LABEL: fp_to_sint_v4i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -733,11 +733,11 @@ define amdgpu_kernel void @fp_to_sint_v4i64(<4 x i64> addrspace(1)* %out, <4 x f
 ; EG-NEXT:     LSHR * T0.X, PV.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %conv = fptosi <4 x float> %x to <4 x i64>
-  store <4 x i64> %conv, <4 x i64> addrspace(1)* %out
+  store <4 x i64> %conv, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @fp_to_uint_f32_to_i1(i1 addrspace(1)* %out, float %in) #0 {
+define amdgpu_kernel void @fp_to_uint_f32_to_i1(ptr addrspace(1) %out, float %in) #0 {
 ; SI-LABEL: fp_to_uint_f32_to_i1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -783,11 +783,11 @@ define amdgpu_kernel void @fp_to_uint_f32_to_i1(i1 addrspace(1)* %out, float %in
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %conv = fptosi float %in to i1
-  store i1 %conv, i1 addrspace(1)* %out
+  store i1 %conv, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @fp_to_uint_fabs_f32_to_i1(i1 addrspace(1)* %out, float %in) #0 {
+define amdgpu_kernel void @fp_to_uint_fabs_f32_to_i1(ptr addrspace(1) %out, float %in) #0 {
 ; SI-LABEL: fp_to_uint_fabs_f32_to_i1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -834,11 +834,11 @@ define amdgpu_kernel void @fp_to_uint_fabs_f32_to_i1(i1 addrspace(1)* %out, floa
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %in.fabs = call float @llvm.fabs.f32(float %in)
   %conv = fptosi float %in.fabs to i1
-  store i1 %conv, i1 addrspace(1)* %out
+  store i1 %conv, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @fp_to_sint_f32_i16(i16 addrspace(1)* %out, float %in) #0 {
+define amdgpu_kernel void @fp_to_sint_f32_i16(ptr addrspace(1) %out, float %in) #0 {
 ; SI-LABEL: fp_to_sint_f32_i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -883,7 +883,7 @@ define amdgpu_kernel void @fp_to_sint_f32_i16(i16 addrspace(1)* %out, float %in)
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %sint = fptosi float %in to i16
-  store i16 %sint, i16 addrspace(1)* %out
+  store i16 %sint, ptr addrspace(1) %out
   ret void
 }
 

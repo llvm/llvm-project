@@ -601,7 +601,7 @@ class FunctionTestBuilder:
             else:
               # This means a previous RUN line produced a body for this function
               # that is different from the one produced by this current RUN line,
-              # so the body can't be common accross RUN lines. We use None to
+              # so the body can't be common across RUN lines. We use None to
               # indicate that.
               self._func_dict[prefix][func] = None
         else:

@@ -306,6 +306,11 @@ Bug Fixes
   `Issue 58229 <https://github.com/llvm/llvm-project/issues/58229>`_
 - The builtin type trait ``__is_aggregate`` now returns ``true`` for arrays of incomplete
   types in accordance with the suggested fix for `LWG3823 <https://cplusplus.github.io/LWG/issue3823>`_
+- Fix bug with using enum that could lead to enumerators being treated as if
+  they were part of an overload set. This fixes
+  `Issue 58067 <https://github.com/llvm/llvm-project/issues/58057>`_
+  `Issue 59014 <https://github.com/llvm/llvm-project/issues/59014>`_
+  `Issue 54746 <https://github.com/llvm/llvm-project/issues/54746>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -445,6 +450,10 @@ Non-comprehensive list of changes in this release
   It can be used to writing conditionally constexpr code that uses builtins.
 - The time profiler (using ``-ftime-trace`` option) now traces various constant
   evaluation events.
+- Clang can now generate a PCH when using ``-fdelayed-template-parsing`` for
+  code with templates containing loop hint pragmas, OpenMP pragmas, and
+  ``#pragma unused``.
+
 
 New Compiler Flags
 ------------------
@@ -609,6 +618,11 @@ C++ Language Changes in Clang
 - Implemented DR2358 allowing init captures in lambdas in default arguments.
 - implemented `DR2654 <https://wg21.link/cwg2654>`_ which undeprecates
   all compound assignements operations on volatile qualified variables.
+- Implemented DR2631. Invalid ``consteval`` calls in default arguments and default
+  member initializers are diagnosed when and if the default is used.
+  This Fixes `Issue 56379 <https://github.com/llvm/llvm-project/issues/56379>`_
+  and changes the value of ``std::source_location::current()``
+  used in default parameters calls compared to previous versions of Clang.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
