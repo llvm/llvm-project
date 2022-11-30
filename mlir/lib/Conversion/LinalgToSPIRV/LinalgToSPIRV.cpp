@@ -119,14 +119,14 @@ LogicalResult SingleWorkgroupReduction::matchAndRewrite(
 
   // Query the shader interface for local workgroup size to make sure the
   // invocation configuration fits with the input memref's shape.
-  DenseIntElementsAttr localSize = spirv::lookupLocalWorkGroupSize(genericOp);
-  if (!localSize)
+  DenseI32ArrayAttr workgroupSize = spirv::lookupLocalWorkGroupSize(genericOp);
+  if (!workgroupSize)
     return failure();
 
-  if ((*localSize.begin()).getSExtValue() != originalInputType.getDimSize(0))
+  if (workgroupSize.asArrayRef()[0] != originalInputType.getDimSize(0))
     return failure();
-  if (llvm::any_of(llvm::drop_begin(localSize.getValues<APInt>(), 1),
-                   [](const APInt &size) { return !size.isOneValue(); }))
+  if (llvm::any_of(workgroupSize.asArrayRef().drop_front(),
+                   [](int size) { return size != 1; }))
     return failure();
 
   // TODO: Query the target environment to make sure the current

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -spirv-lower-abi-attrs -verify-diagnostics %s -o - | FileCheck %s
+// RUN: mlir-opt -split-input-file -spirv-lower-abi-attrs %s | FileCheck %s
 
 module attributes {
   spirv.target_env = #spirv.target_env<
@@ -7,15 +7,17 @@ module attributes {
 
 // CHECK-LABEL: spirv.module
 spirv.module Logical GLSL450 {
-  // CHECK-DAG:    spirv.GlobalVariable [[VAR0:@.*]] bind(0, 0) : !spirv.ptr<!spirv.struct<(f32 [0])>, StorageBuffer>
-  // CHECK-DAG:    spirv.GlobalVariable [[VAR1:@.*]] bind(0, 1) : !spirv.ptr<!spirv.struct<(!spirv.array<12 x f32, stride=4> [0])>, StorageBuffer>
-  // CHECK:    spirv.func [[FN:@.*]]()
+  //  CHECK-DAG:    spirv.GlobalVariable [[VAR0:@.*]] bind(0, 0) : !spirv.ptr<!spirv.struct<(f32 [0])>, StorageBuffer>
+  //  CHECK-DAG:    spirv.GlobalVariable [[VAR1:@.*]] bind(0, 1) : !spirv.ptr<!spirv.struct<(!spirv.array<12 x f32, stride=4> [0])>, StorageBuffer>
+  //      CHECK:    spirv.func [[FN:@.*]]()
+  // We cannot generate SubgroupSize execution mode for Shader capability -- leave it alone.
+  // CHECK-SAME:      #spirv.entry_point_abi<subgroup_size = 64>
   spirv.func @kernel(
     %arg0: f32
            {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 0), StorageBuffer>},
     %arg1: !spirv.ptr<!spirv.struct<(!spirv.array<12 x f32>)>, StorageBuffer>
            {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 1)>}) "None"
-  attributes {spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[32, 1, 1]> : vector<3xi32>>} {
+  attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 1, 1], subgroup_size = 64>} {
     // CHECK: [[ARG1:%.*]] = spirv.mlir.addressof [[VAR1]]
     // CHECK: [[ADDRESSARG0:%.*]] = spirv.mlir.addressof [[VAR0]]
     // CHECK: [[CONST0:%.*]] = spirv.Constant 0 : i32

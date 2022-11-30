@@ -8,6 +8,7 @@ add_unittest(ClangIncludeCleanerUnitTests ClangIncludeCleanerTests
   AnalysisTest.cpp
   FindHeadersTest.cpp
   RecordTest.cpp
+  TypesTest.cpp
   WalkASTTest.cpp
 )
 

@@ -938,8 +938,10 @@ mlir::LogicalResult fir::ConvertOp::verify() {
       (inType.isa<fir::BoxProcType>() && outType.isa<fir::BoxProcType>()) ||
       (fir::isa_complex(inType) && fir::isa_complex(outType)) ||
       (fir::isBoxedRecordType(inType) && fir::isPolymorphicType(outType)) ||
-      (fir::isPolymorphicType(inType) && fir::isPolymorphicType(outType)))
+      (fir::isPolymorphicType(inType) && fir::isPolymorphicType(outType)) ||
+      (fir::isRefBoxType(inType) && fir::isOpaqueDescType(outType)))
     return mlir::success();
+  llvm::errs() << inType << " / " << outType << "\n";
   return emitOpError("invalid type conversion");
 }
 

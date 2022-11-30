@@ -36,7 +36,7 @@ module attributes {
     // CHECK-SAME: %[[ARG5:.*]]: i32 {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 5), StorageBuffer>}
     // CHECK-SAME: %[[ARG6:.*]]: i32 {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 6), StorageBuffer>}
     gpu.func @load_store_kernel(%arg0: memref<12x4xf32, #spirv.storage_class<StorageBuffer>>, %arg1: memref<12x4xf32, #spirv.storage_class<StorageBuffer>>, %arg2: memref<12x4xf32, #spirv.storage_class<StorageBuffer>>, %arg3: index, %arg4: index, %arg5: index, %arg6: index) kernel
-      attributes {spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[16, 1, 1]>: vector<3xi32>>} {
+      attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
       // CHECK: %[[ADDRESSWORKGROUPID:.*]] = spirv.mlir.addressof @[[$WORKGROUPIDVAR]]
       // CHECK: %[[WORKGROUPID:.*]] = spirv.Load "Input" %[[ADDRESSWORKGROUPID]]
       // CHECK: %[[WORKGROUPIDX:.*]] = spirv.CompositeExtract %[[WORKGROUPID]]{{\[}}0 : i32{{\]}}

@@ -19,8 +19,8 @@ define i32 @callee_half_in_regs(i32 %a, half %b) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    slli a1, a1, 16
-; RV32I-NEXT:    srli a0, a1, 16
+; RV32I-NEXT:    slli a0, a1, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __extendhfsf2@plt
 ; RV32I-NEXT:    call __fixsfsi@plt
 ; RV32I-NEXT:    add a0, s0, a0
@@ -35,8 +35,8 @@ define i32 @callee_half_in_regs(i32 %a, half %b) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    slli a1, a1, 48
-; RV64I-NEXT:    srli a0, a1, 48
+; RV64I-NEXT:    slli a0, a1, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __extendhfsf2@plt
 ; RV64I-NEXT:    call __fixsfdi@plt
 ; RV64I-NEXT:    addw a0, s0, a0

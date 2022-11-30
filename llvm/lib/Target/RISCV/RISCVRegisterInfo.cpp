@@ -162,22 +162,50 @@ bool RISCVRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
 }
 
 void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator MBBI,
+                                  MachineBasicBlock::iterator II,
                                   const DebugLoc &DL, Register DestReg,
-                                  Register SrcReg, int64_t Val,
+                                  Register SrcReg, StackOffset Offset,
                                   MachineInstr::MIFlag Flag,
                                   MaybeAlign RequiredAlign) const {
-  const uint64_t Align = RequiredAlign.valueOrOne().value();
-  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  const RISCVSubtarget &ST = MBB.getParent()->getSubtarget<RISCVSubtarget>();
+
+  if (DestReg == SrcReg && !Offset.getFixed() && !Offset.getScalable())
+    return;
+
+  MachineFunction &MF = *MBB.getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo *TII = ST.getInstrInfo();
 
+  bool KillSrcReg = false;
+
+  if (Offset.getScalable()) {
+    unsigned ScalableAdjOpc = RISCV::ADD;
+    int64_t ScalableValue = Offset.getScalable();
+    if (ScalableValue < 0) {
+      ScalableValue = -ScalableValue;
+      ScalableAdjOpc = RISCV::SUB;
+    }
+    // Get vlenb and multiply vlen with the number of vector registers.
+    Register ScratchReg = DestReg;
+    if (DestReg == SrcReg)
+      ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    TII->getVLENFactoredAmount(MF, MBB, II, DL, ScratchReg, ScalableValue, Flag);
+    BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
+      .addReg(SrcReg).addReg(ScratchReg, RegState::Kill)
+      .setMIFlag(Flag);
+    SrcReg = DestReg;
+    KillSrcReg = true;
+  }
+
+  int64_t Val = Offset.getFixed();
   if (DestReg == SrcReg && Val == 0)
     return;
 
+  const uint64_t Align = RequiredAlign.valueOrOne().value();
+
   if (isInt<12>(Val)) {
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADDI), DestReg)
-        .addReg(SrcReg)
+    BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrcReg))
         .addImm(Val)
         .setMIFlag(Flag);
     return;
@@ -194,11 +222,11 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
   if (Val > -4096 && Val <= (2 * MaxPosAdjStep)) {
     int64_t FirstAdj = Val < 0 ? -2048 : MaxPosAdjStep;
     Val -= FirstAdj;
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADDI), DestReg)
-        .addReg(SrcReg)
+    BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrcReg))
         .addImm(FirstAdj)
         .setMIFlag(Flag);
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADDI), DestReg)
+    BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), DestReg)
         .addReg(DestReg, RegState::Kill)
         .addImm(Val)
         .setMIFlag(Flag);
@@ -212,59 +240,11 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
   }
 
   Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-  TII->movImm(MBB, MBBI, DL, ScratchReg, Val, Flag);
-  BuildMI(MBB, MBBI, DL, TII->get(Opc), DestReg)
-      .addReg(SrcReg)
+  TII->movImm(MBB, II, DL, ScratchReg, Val, Flag);
+  BuildMI(MBB, II, DL, TII->get(Opc), DestReg)
+      .addReg(SrcReg, getKillRegState(KillSrcReg))
       .addReg(ScratchReg, RegState::Kill)
       .setMIFlag(Flag);
-}
-
-void RISCVRegisterInfo::adjustReg(MachineBasicBlock::iterator II, Register DestReg,
-                                  Register SrcReg, StackOffset Offset) const {
-
-  if (DestReg == SrcReg && !Offset.getFixed() && !Offset.getScalable())
-    return;
-
-  MachineInstr &MI = *II;
-  MachineFunction &MF = *MI.getParent()->getParent();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
-  const RISCVInstrInfo *TII = ST.getInstrInfo();
-  DebugLoc DL = MI.getDebugLoc();
-  MachineBasicBlock &MBB = *MI.getParent();
-
-  bool SrcRegIsKill = false;
-
-  if (Offset.getScalable()) {
-    unsigned ScalableAdjOpc = RISCV::ADD;
-    int64_t ScalableValue = Offset.getScalable();
-    if (ScalableValue < 0) {
-      ScalableValue = -ScalableValue;
-      ScalableAdjOpc = RISCV::SUB;
-    }
-    // Get vlenb and multiply vlen with the number of vector registers.
-    TII->getVLENFactoredAmount(MF, MBB, II, DL, DestReg, ScalableValue);
-    BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
-      .addReg(SrcReg).addReg(DestReg, RegState::Kill);
-    SrcReg = DestReg;
-    SrcRegIsKill = true;
-  }
-
-  if (Offset.getFixed()) {
-    // TODO: Merge this with FrameLowerings adjustReg which knows a few
-    // more tricks than this does for fixed offsets.
-    if (isInt<12>(Offset.getFixed())) {
-      BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), DestReg)
-        .addReg(SrcReg, getKillRegState(SrcRegIsKill))
-        .addImm(Offset.getFixed());
-    } else {
-      Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-      TII->movImm(MBB, II, DL, ScratchReg, Offset.getFixed());
-      BuildMI(MBB, II, DL, TII->get(RISCV::ADD), DestReg)
-        .addReg(SrcReg, getKillRegState(SrcRegIsKill))
-        .addReg(ScratchReg, RegState::Kill);
-    }
-  }
 }
 
 
@@ -325,7 +305,8 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       DestReg = MI.getOperand(0).getReg();
     else
       DestReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    adjustReg(II, DestReg, FrameReg, Offset);
+    adjustReg(*II->getParent(), II, DL, DestReg, FrameReg, Offset,
+              MachineInstr::NoFlags, None);
     MI.getOperand(FIOperandNum).ChangeToRegister(DestReg, /*IsDef*/false,
                                                  /*IsImp*/false,
                                                  /*IsKill*/true);
@@ -445,12 +426,12 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   // Add any two address hints after any copy hints.
   SmallSet<unsigned, 4> TwoAddrHints;
 
-  auto tryAddHint = [&](const MachineOperand &VRRegMO,
-                        const MachineOperand &MO) -> void {
+  auto tryAddHint = [&](const MachineOperand &VRRegMO, const MachineOperand &MO,
+                        bool NeedGPRC) -> void {
     Register Reg = MO.getReg();
     Register PhysReg =
         Register::isPhysicalRegister(Reg) ? Reg : Register(VRM->getPhys(Reg));
-    if (PhysReg) {
+    if (PhysReg && (!NeedGPRC || RISCV::GPRCRegClass.contains(PhysReg))) {
       assert(!MO.getSubReg() && !VRRegMO.getSubReg() && "Unexpected subreg!");
       if (!MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
         TwoAddrHints.insert(PhysReg);
@@ -460,10 +441,15 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   // For now we support the compressible instructions which can encode all
   // registers and have a single register source.
   // TODO: Add more compressed instructions.
-  auto isCompressible = [](const MachineInstr &MI) {
+  auto isCompressible = [](const MachineInstr &MI, bool &NeedGPRC) {
+    NeedGPRC = false;
     switch (MI.getOpcode()) {
     default:
       return false;
+    case RISCV::SRAI:
+    case RISCV::SRLI:
+      NeedGPRC = true;
+      return true;
     case RISCV::ADD:
     case RISCV::SLLI:
       return true;
@@ -475,16 +461,17 @@ bool RISCVRegisterInfo::getRegAllocationHints(
 
   for (auto &MO : MRI->reg_nodbg_operands(VirtReg)) {
     const MachineInstr &MI = *MO.getParent();
-    if (isCompressible(MI)) {
+    bool NeedGPRC;
+    if (isCompressible(MI, NeedGPRC)) {
       unsigned OpIdx = MI.getOperandNo(&MO);
       if (OpIdx == 0 && MI.getOperand(1).isReg()) {
-        tryAddHint(MO, MI.getOperand(1));
+        tryAddHint(MO, MI.getOperand(1), NeedGPRC);
         if (MI.isCommutable() && MI.getOperand(2).isReg())
-          tryAddHint(MO, MI.getOperand(2));
+          tryAddHint(MO, MI.getOperand(2), NeedGPRC);
       } else if (OpIdx == 1) {
-        tryAddHint(MO, MI.getOperand(0));
+        tryAddHint(MO, MI.getOperand(0), NeedGPRC);
       } else if (MI.isCommutable() && OpIdx == 2) {
-        tryAddHint(MO, MI.getOperand(0));
+        tryAddHint(MO, MI.getOperand(0), NeedGPRC);
       }
     }
   }

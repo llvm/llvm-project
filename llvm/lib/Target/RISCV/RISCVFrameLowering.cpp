@@ -297,7 +297,8 @@ void RISCVFrameLowering::adjustReg(MachineBasicBlock &MBB,
   // We must keep the stack pointer aligned through any intermediate
   // updates.
   const RISCVRegisterInfo &RI = *STI.getRegisterInfo();
-  RI.adjustReg(MBB, MBBI, DL, DestReg, SrcReg, Val, Flag, getStackAlign());
+  RI.adjustReg(MBB, MBBI, DL, DestReg, SrcReg, StackOffset::getFixed(Val),
+               Flag, getStackAlign());
 }
 
 // Returns the register used to hold the frame pointer.
@@ -328,39 +329,29 @@ void RISCVFrameLowering::adjustStackForRVV(MachineFunction &MF,
                                            MachineInstr::MIFlag Flag) const {
   assert(Amount != 0 && "Did not need to adjust stack pointer for RVV.");
 
-  const RISCVInstrInfo *TII = STI.getInstrInfo();
   const Register SPReg = getSPReg(STI);
 
   // Optimize compile time offset case
+  StackOffset Offset = StackOffset::getScalable(Amount);
   if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
     // 1. Multiply the number of v-slots by the (constant) length of register
     const int64_t VLENB = STI.getRealMinVLen() / 8;
     assert(Amount % 8 == 0 &&
            "Reserve the stack by the multiple of one vector size.");
     const int64_t NumOfVReg = Amount / 8;
-    const int64_t Offset = NumOfVReg * VLENB;
-    if (!isInt<32>(Offset)) {
+    const int64_t FixedOffset = NumOfVReg * VLENB;
+    if (!isInt<32>(FixedOffset)) {
       report_fatal_error(
         "Frame size outside of the signed 32-bit range not supported");
     }
-    adjustReg(MBB, MBBI, DL, SPReg, SPReg, Offset, Flag);
-    return;
+    Offset = StackOffset::getFixed(FixedOffset);
   }
 
-  unsigned Opc = RISCV::ADD;
-  if (Amount < 0) {
-    Amount = -Amount;
-    Opc = RISCV::SUB;
-  }
-  // 1. Multiply the number of v-slots to the length of registers
-  Register FactorRegister =
-      MF.getRegInfo().createVirtualRegister(&RISCV::GPRRegClass);
-  TII->getVLENFactoredAmount(MF, MBB, MBBI, DL, FactorRegister, Amount, Flag);
-  // 2. SP = SP - RVV stack size
-  BuildMI(MBB, MBBI, DL, TII->get(Opc), SPReg)
-      .addReg(SPReg)
-      .addReg(FactorRegister, RegState::Kill)
-      .setMIFlag(Flag);
+  const RISCVRegisterInfo &RI = *STI.getRegisterInfo();
+  // We must keep the stack pointer aligned through any intermediate
+  // updates.
+  RI.adjustReg(MBB, MBBI, DL, SPReg, SPReg, Offset,
+               Flag, getStackAlign());
 }
 
 void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
