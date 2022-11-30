@@ -45,3 +45,21 @@ v_dual_max_f32 v0, v1, v2 :: v_dual_max_f32 v3, v4, v5
 
 v_dual_min_f32 v0, v1, v2 :: v_dual_min_f32 v3, v4, v5
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_cmpstore_f32 v0, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_cmpstore_rtn_f32 v0, v1, v2, v3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_cmpstore_f64 v0, v[1:2], v[3:4]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_cmpstore_rtn_f64 v[0:1], v2, v[3:4], v[5:6]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_add_gs_reg_rtn v[0:1], v2 gds
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_sub_gs_reg_rtn v[0:1], v2 gds
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
