@@ -7605,9 +7605,10 @@ static Value *EmitSpecialRegisterBuiltin(CodeGenFunction &CGF,
                                          llvm::Type *ValueType,
                                          SpecialRegisterAccessKind AccessKind,
                                          StringRef SysReg = "") {
-  // write and register intrinsics only support 32 and 64 bit operations.
-  assert((RegisterType->isIntegerTy(32) || RegisterType->isIntegerTy(64))
-          && "Unsupported size for register.");
+  // write and register intrinsics only support 32, 64 and 128 bit operations.
+  assert((RegisterType->isIntegerTy(32) || RegisterType->isIntegerTy(64) ||
+          RegisterType->isIntegerTy(128)) &&
+         "Unsupported size for register.");
 
   CodeGen::CGBuilderTy &Builder = CGF.Builder;
   CodeGen::CodeGenModule &CGM = CGF.CGM;
@@ -10173,32 +10174,43 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rsr ||
       BuiltinID == clang::AArch64::BI__builtin_arm_rsr64 ||
+      BuiltinID == clang::AArch64::BI__builtin_arm_rsr128 ||
       BuiltinID == clang::AArch64::BI__builtin_arm_rsrp ||
       BuiltinID == clang::AArch64::BI__builtin_arm_wsr ||
       BuiltinID == clang::AArch64::BI__builtin_arm_wsr64 ||
+      BuiltinID == clang::AArch64::BI__builtin_arm_wsr128 ||
       BuiltinID == clang::AArch64::BI__builtin_arm_wsrp) {
 
     SpecialRegisterAccessKind AccessKind = Write;
     if (BuiltinID == clang::AArch64::BI__builtin_arm_rsr ||
         BuiltinID == clang::AArch64::BI__builtin_arm_rsr64 ||
+        BuiltinID == clang::AArch64::BI__builtin_arm_rsr128 ||
         BuiltinID == clang::AArch64::BI__builtin_arm_rsrp)
       AccessKind = VolatileRead;
 
     bool IsPointerBuiltin = BuiltinID == clang::AArch64::BI__builtin_arm_rsrp ||
                             BuiltinID == clang::AArch64::BI__builtin_arm_wsrp;
 
-    bool Is64Bit = BuiltinID != clang::AArch64::BI__builtin_arm_rsr &&
-                   BuiltinID != clang::AArch64::BI__builtin_arm_wsr;
+    bool Is32Bit = BuiltinID == clang::AArch64::BI__builtin_arm_rsr ||
+                   BuiltinID == clang::AArch64::BI__builtin_arm_wsr;
+
+    bool Is128Bit = BuiltinID == clang::AArch64::BI__builtin_arm_rsr128 ||
+                    BuiltinID == clang::AArch64::BI__builtin_arm_wsr128;
 
     llvm::Type *ValueType;
     llvm::Type *RegisterType = Int64Ty;
-    if (IsPointerBuiltin) {
-      ValueType = VoidPtrTy;
-    } else if (Is64Bit) {
-      ValueType = Int64Ty;
-    } else {
+    if (Is32Bit) {
       ValueType = Int32Ty;
-    }
+    } else if (Is128Bit) {
+      llvm::Type *Int128Ty =
+          llvm::IntegerType::getInt128Ty(CGM.getLLVMContext());
+      ValueType = Int128Ty;
+      RegisterType = Int128Ty;
+    } else if (IsPointerBuiltin) {
+      ValueType = VoidPtrTy;
+    } else {
+      ValueType = Int64Ty;
+    };
 
     return EmitSpecialRegisterBuiltin(*this, E, RegisterType, ValueType,
                                       AccessKind);
