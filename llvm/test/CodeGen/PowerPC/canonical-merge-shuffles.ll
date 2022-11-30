@@ -491,10 +491,10 @@ define dso_local <8 x i16> @testmrglb3(ptr nocapture readonly %a) local_unnamed_
 ; CHECK-P9-BE:       # %bb.0: # %entry
 ; CHECK-P9-BE-NEXT:    lxsd v2, 0(r3)
 ; CHECK-P9-BE-NEXT:    addis r3, r2, .LCPI12_0@toc@ha
-; CHECK-P9-BE-NEXT:    xxlxor vs0, vs0, vs0
+; CHECK-P9-BE-NEXT:    xxlxor vs1, vs1, vs1
 ; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI12_0@toc@l
-; CHECK-P9-BE-NEXT:    lxv vs1, 0(r3)
-; CHECK-P9-BE-NEXT:    xxperm v2, vs0, vs1
+; CHECK-P9-BE-NEXT:    lxv vs0, 0(r3)
+; CHECK-P9-BE-NEXT:    xxperm v2, vs1, vs0
 ; CHECK-P9-BE-NEXT:    blr
 ;
 ; CHECK-NOVSX-LABEL: testmrglb3:
