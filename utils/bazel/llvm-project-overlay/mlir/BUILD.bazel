@@ -2040,6 +2040,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AffineDialect",
+        ":AffineUtils",
         ":FuncDialect",
         ":IR",
         ":SCFDialect",
