@@ -2333,21 +2333,18 @@ static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
 /// variable on which to base the steps, \p Step is the size of the step.
 static void buildScalarSteps(Value *ScalarIV, Value *Step,
                              const InductionDescriptor &ID, VPValue *Def,
-                             Type *TruncToTy, VPTransformState &State) {
+                             VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
+
+  // Ensure step has the same type as that of scalar IV.
   Type *ScalarIVTy = ScalarIV->getType()->getScalarType();
-  if (TruncToTy) {
+  if (ScalarIVTy != Step->getType()) {
+    // TODO: Also use VPDerivedIVRecipe when only the step needs truncating, to
+    // avoid separate truncate here.
     assert(Step->getType()->isIntegerTy() &&
            "Truncation requires an integer step");
-    ScalarIV = State.Builder.CreateTrunc(ScalarIV, TruncToTy);
-    Step = State.Builder.CreateTrunc(Step, TruncToTy);
-    ScalarIVTy = ScalarIV->getType()->getScalarType();
+    Step = State.Builder.CreateTrunc(Step, ScalarIVTy);
   }
-
-  // We shouldn't have to build scalar steps if we aren't vectorizing.
-  // Get the value type and ensure it and the step have the same integer type.
-  assert(ScalarIVTy == Step->getType() &&
-         "Val and Step should have the same type");
 
   // We build scalar steps for both integer and floating-point induction
   // variables. Here, we determine the kind of arithmetic we will perform.
@@ -9533,6 +9530,32 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   }
 }
 
+void VPDerivedIVRecipe::execute(VPTransformState &State) {
+  assert(!State.Instance && "VPDerivedIVRecipe being replicated.");
+
+  // Fast-math-flags propagate from the original induction instruction.
+  IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
+  if (IndDesc.getInductionBinOp() &&
+      isa<FPMathOperator>(IndDesc.getInductionBinOp()))
+    State.Builder.setFastMathFlags(
+        IndDesc.getInductionBinOp()->getFastMathFlags());
+
+  Value *Step = State.get(getStepValue(), VPIteration(0, 0));
+  Value *CanonicalIV = State.get(getCanonicalIV(), VPIteration(0, 0));
+  Value *DerivedIV =
+      emitTransformedIndex(State.Builder, CanonicalIV,
+                           getStartValue()->getLiveInIRValue(), Step, IndDesc);
+  DerivedIV->setName("offset.idx");
+  if (ResultTy != DerivedIV->getType()) {
+    assert(Step->getType()->isIntegerTy() &&
+           "Truncation requires an integer step");
+    DerivedIV = State.Builder.CreateTrunc(DerivedIV, ResultTy);
+  }
+  assert(DerivedIV != CanonicalIV && "IV didn't need transforming?");
+
+  State.set(this, DerivedIV, VPIteration(0, 0));
+}
+
 void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "VPScalarIVStepsRecipe being replicated.");
 
@@ -9543,21 +9566,10 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     State.Builder.setFastMathFlags(
         IndDesc.getInductionBinOp()->getFastMathFlags());
 
+  Value *BaseIV = State.get(getOperand(0), VPIteration(0, 0));
   Value *Step = State.get(getStepValue(), VPIteration(0, 0));
-  auto CreateScalarIV = [&](Value *&Step) -> Value * {
-    Value *ScalarIV = State.get(getCanonicalIV(), VPIteration(0, 0));
-    auto *CanonicalIV = State.get(getParent()->getPlan()->getCanonicalIV(), 0);
-    if (!isCanonical() || CanonicalIV->getType() != Step->getType()) {
-      ScalarIV = emitTransformedIndex(State.Builder, ScalarIV,
-                                      getStartValue()->getLiveInIRValue(), Step,
-                                      IndDesc);
-      ScalarIV->setName("offset.idx");
-    }
-    return ScalarIV;
-  };
 
-  Value *ScalarIV = CreateScalarIV(Step);
-  buildScalarSteps(ScalarIV, Step, IndDesc, this, TruncToTy, State);
+  buildScalarSteps(BaseIV, Step, IndDesc, this, State);
 }
 
 void VPInterleaveRecipe::execute(VPTransformState &State) {

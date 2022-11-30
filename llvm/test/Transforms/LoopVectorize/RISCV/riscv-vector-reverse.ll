@@ -56,17 +56,18 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK:       <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:    EMIT vp<%3> = CANONICAL-INDUCTION
-; CHECK-NEXT:    vp<%4> = SCALAR-STEPS vp<%3>, ir<%n>, ir<-1>
-; CHECK-NEXT:    CLONE ir<%i.0> = add vp<%4>, ir<-1>
+; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:    vp<[[TRANS_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
+; CHECK-NEXT:    vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[TRANS_IV]]>, ir<-1>
+; CHECK-NEXT:    CLONE ir<%i.0> = add vp<[[SCALAR_STEPS]]>, ir<-1>
 ; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:    WIDEN ir<%1> = load ir<%arrayidx>
 ; CHECK-NEXT:    WIDEN ir<%add9> = add ir<%1>, ir<1>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr ir<%A>, ir<%idxprom>
 ; CHECK-NEXT:    WIDEN store ir<%arrayidx3>, ir<%add9>
-; CHECK-NEXT:    EMIT vp<%11> = VF * UF +(nuw) vp<%3>
-; CHECK-NEXT:    EMIT branch-on-count vp<%11> vp<%2>
+; CHECK-NEXT:    EMIT vp<[[IV_INC:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
+; CHECK-NEXT:    EMIT branch-on-count vp<[[IV_INC]]> vp<%2>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
@@ -187,17 +188,18 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK:       <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:    EMIT vp<%3> = CANONICAL-INDUCTION
-; CHECK-NEXT:    vp<%4> = SCALAR-STEPS vp<%3>, ir<%n>, ir<-1>
-; CHECK-NEXT:    CLONE ir<%i.0> = add vp<%4>, ir<-1>
+; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:    vp<[[TRANS_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
+; CHECK-NEXT:    vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[TRANS_IV]]>, ir<-1>
+; CHECK-NEXT:    CLONE ir<%i.0> = add vp<[[SCALAR_STEPS]]>, ir<-1>
 ; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:    WIDEN ir<%1> = load ir<%arrayidx>
 ; CHECK-NEXT:    WIDEN ir<%conv1> = fadd ir<%1>, ir<1.000000e+00>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr ir<%A>, ir<%idxprom>
 ; CHECK-NEXT:    WIDEN store ir<%arrayidx3>, ir<%conv1>
-; CHECK-NEXT:    EMIT vp<%11> = VF * UF +(nuw) vp<%3>
-; CHECK-NEXT:    EMIT branch-on-count vp<%11> vp<%2>
+; CHECK-NEXT:    EMIT vp<[[IV_INC:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
+; CHECK-NEXT:    EMIT branch-on-count vp<[[IV_INC]]> vp<%2>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
