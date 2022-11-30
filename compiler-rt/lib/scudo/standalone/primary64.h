@@ -691,7 +691,8 @@ private:
     const uptr GroupSize = (1U << GroupSizeLog);
     const uptr AllocatedUserEnd = Region->AllocatedUser + Region->RegionBeg;
     ReleaseRecorder Recorder(Region->RegionBeg, &Region->Data);
-    PageReleaseContext Context(BlockSize, RegionSize, /*NumberOfRegions=*/1U);
+    PageReleaseContext Context(BlockSize, Region->AllocatedUser,
+                               /*NumberOfRegions=*/1U);
 
     const uptr CompactPtrBase = getCompactPtrBaseByClassId(ClassId);
     auto DecompactPtr = [CompactPtrBase](CompactPtrT CompactPtr) {
