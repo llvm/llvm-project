@@ -3061,9 +3061,12 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
 
   // 4. Install the clang importer.
   if (clang_importer_ap) {
-    m_clang_importer = (swift::ClangImporter *)clang_importer_ap.get();
+    m_clangimporter = (swift::ClangImporter *)clang_importer_ap.get();
     m_ast_context_ap->addModuleLoader(std::move(clang_importer_ap),
                                       /*isClang=*/true);
+    m_clangimporter_typesystem = std::make_shared<TypeSystemClang>(
+        "ClangImporter-owned clang::ASTContext for '" + m_description,
+        m_clangimporter->getClangASTContext());
   }
 
   // Set up the required state for the evaluator in the TypeChecker.
@@ -3095,7 +3098,7 @@ swift::ClangImporter *SwiftASTContext::GetClangImporter() {
   VALID_OR_RETURN(nullptr);
 
   GetASTContext();
-  return m_clang_importer;
+  return m_clangimporter;
 }
 
 const swift::SearchPathOptions *SwiftASTContext::GetSearchPathOptions() const {
