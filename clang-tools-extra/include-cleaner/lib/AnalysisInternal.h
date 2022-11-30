@@ -85,7 +85,7 @@ llvm::SmallVector<Header> findHeaders(const SymbolLocation &Loc,
                                       const PragmaIncludes *PI);
 
 /// Write an HTML summary of the analysis to the given stream.
-void writeHTMLReport(FileID File, const RecordedPP::RecordedIncludes &Includes,
+void writeHTMLReport(FileID File, const Includes &,
                      llvm::ArrayRef<Decl *> Roots,
                      llvm::ArrayRef<SymbolReference> MacroRefs, ASTContext &Ctx,
                      HeaderSearch &HS, PragmaIncludes *PI,

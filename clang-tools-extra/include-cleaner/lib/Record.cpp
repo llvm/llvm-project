@@ -374,44 +374,6 @@ std::unique_ptr<ASTConsumer> RecordedAST::record() {
   return std::make_unique<Recorder>(this);
 }
 
-void RecordedPP::RecordedIncludes::add(const Include &I) {
-  unsigned Index = All.size();
-  All.push_back(I);
-  auto BySpellingIt = BySpelling.try_emplace(I.Spelled).first;
-  All.back().Spelled = BySpellingIt->first(); // Now we own the backing string.
-
-  BySpellingIt->second.push_back(Index);
-  if (I.Resolved)
-    ByFile[I.Resolved].push_back(Index);
-  ByLine[I.Line] = Index;
-}
-
-const Include *
-RecordedPP::RecordedIncludes::atLine(unsigned OneBasedIndex) const {
-  auto It = ByLine.find(OneBasedIndex);
-  return (It == ByLine.end()) ? nullptr : &All[It->second];
-}
-
-llvm::SmallVector<const Include *>
-RecordedPP::RecordedIncludes::match(Header H) const {
-  llvm::SmallVector<const Include *> Result;
-  switch (H.kind()) {
-  case Header::Physical:
-    for (unsigned I : ByFile.lookup(H.physical()))
-      Result.push_back(&All[I]);
-    break;
-  case Header::Standard:
-    for (unsigned I : BySpelling.lookup(H.standard().name().trim("<>")))
-      Result.push_back(&All[I]);
-    break;
-  case Header::Verbatim:
-    for (unsigned I : BySpelling.lookup(H.verbatim().trim("\"<>")))
-      Result.push_back(&All[I]);
-    break;
-  }
-  return Result;
-}
-
 std::unique_ptr<PPCallbacks> RecordedPP::record(const Preprocessor &PP) {
   return std::make_unique<PPRecorder>(*this, PP);
 }
