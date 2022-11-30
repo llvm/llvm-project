@@ -329,7 +329,6 @@ void RISCVFrameLowering::adjustStackForRVV(MachineFunction &MF,
                                            MachineInstr::MIFlag Flag) const {
   assert(Amount != 0 && "Did not need to adjust stack pointer for RVV.");
 
-  const RISCVInstrInfo *TII = STI.getInstrInfo();
   const Register SPReg = getSPReg(STI);
 
   // Optimize compile time offset case
@@ -348,20 +347,9 @@ void RISCVFrameLowering::adjustStackForRVV(MachineFunction &MF,
     return;
   }
 
-  unsigned Opc = RISCV::ADD;
-  if (Amount < 0) {
-    Amount = -Amount;
-    Opc = RISCV::SUB;
-  }
-  // 1. Multiply the number of v-slots to the length of registers
-  Register FactorRegister =
-      MF.getRegInfo().createVirtualRegister(&RISCV::GPRRegClass);
-  TII->getVLENFactoredAmount(MF, MBB, MBBI, DL, FactorRegister, Amount, Flag);
-  // 2. SP = SP - RVV stack size
-  BuildMI(MBB, MBBI, DL, TII->get(Opc), SPReg)
-      .addReg(SPReg)
-      .addReg(FactorRegister, RegState::Kill)
-      .setMIFlag(Flag);
+  const RISCVRegisterInfo &RI = *STI.getRegisterInfo();
+  RI.adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackOffset::getScalable(Amount),
+               Flag);
 }
 
 void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
