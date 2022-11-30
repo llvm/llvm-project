@@ -1725,13 +1725,9 @@ Optional<SmallVector<int64_t, 4>> FMAOp::getShapeForUnroll() {
 
 /// Return the dimensions of the result vector that were formerly ones in the
 /// source tensor and thus correspond to "dim-1" broadcasting.
-llvm::SetVector<int64_t> BroadcastOp::computeBroadcastedUnitDims() {
-  VectorType srcVectorType = getSourceType().dyn_cast<VectorType>();
-  // Scalar broadcast is without any unit dim broadcast.
-  if (!srcVectorType)
-    return {};
-  ArrayRef<int64_t> srcShape = srcVectorType.getShape();
-  ArrayRef<int64_t> dstShape = getVectorType().getShape();
+static llvm::SetVector<int64_t>
+computeBroadcastedUnitDims(ArrayRef<int64_t> srcShape,
+                           ArrayRef<int64_t> dstShape) {
   int64_t rankDiff = dstShape.size() - srcShape.size();
   int64_t dstDim = rankDiff;
   llvm::SetVector<int64_t> res;
@@ -1742,6 +1738,129 @@ llvm::SetVector<int64_t> BroadcastOp::computeBroadcastedUnitDims() {
     }
     ++dstDim;
   }
+  return res;
+}
+
+llvm::SetVector<int64_t> BroadcastOp::computeBroadcastedUnitDims() {
+  // Scalar broadcast is without any unit dim broadcast.
+  auto srcVectorType = getSourceType().dyn_cast<VectorType>();
+  if (!srcVectorType)
+    return {};
+  return ::computeBroadcastedUnitDims(srcVectorType.getShape(),
+                                      getVectorType().getShape());
+}
+
+static bool allBitsSet(llvm::SmallBitVector &bv, int64_t lb, int64_t ub) {
+  for (int64_t i = lb; i < ub; ++i)
+    if (!bv.test(i))
+      return false;
+  return true;
+}
+
+/// Broadcast `value` to a vector of `dstShape`, knowing that exactly the
+/// `broadcastedDims` dimensions in the dstShape are broadcasted.
+/// This requires (and asserts) that the broadcast is free of dim-1
+/// broadcasting.
+/// Since vector.broadcast only allows expanding leading dimensions, an extra
+/// vector.transpose may be inserted to make the broadcast possible.
+/// `value`, `dstShape` and `broadcastedDims` must be properly specified or
+/// the helper will assert. This means:
+///   1. `dstShape` must not be empty.
+///   2. `broadcastedDims` must be confined to [0 .. rank(value.getVectorType)]
+///   2. `dstShape` trimmed of the dimensions specified in `broadcastedDims`
+//       must match the `value` shape.
+Value BroadcastOp::createOrFoldBroadcastOp(
+    OpBuilder &b, Value value, ArrayRef<int64_t> dstShape,
+    const llvm::SetVector<int64_t> &broadcastedDims) {
+  assert(!dstShape.empty() && "unexpected empty dst shape");
+
+  // Well-formedness check.
+  SmallVector<int64_t> checkShape;
+  for (int i = 0, e = dstShape.size(); i < e; ++i) {
+    if (broadcastedDims.contains(i))
+      continue;
+    checkShape.push_back(dstShape[i]);
+  }
+  assert(broadcastedDims.size() == dstShape.size() - checkShape.size() &&
+         "ill-formed broadcastedDims contains values not confined to "
+         "destVectorShape");
+
+  Location loc = value.getLoc();
+  Type elementType = getElementTypeOrSelf(value.getType());
+  VectorType srcVectorType = value.getType().dyn_cast<VectorType>();
+  VectorType dstVectorType = VectorType::get(dstShape, elementType);
+
+  // Step 2. If scalar -> dstShape broadcast, just do it.
+  if (!srcVectorType) {
+    assert(checkShape.empty() &&
+           "ill-formed createOrFoldBroadcastOp arguments");
+    return b.createOrFold<vector::BroadcastOp>(loc, dstVectorType, value);
+  }
+
+  assert(srcVectorType.getShape().equals(checkShape) &&
+         "ill-formed createOrFoldBroadcastOp arguments");
+
+  // Step 3. Since vector.broadcast only allows creating leading dims,
+  //   vector -> dstShape broadcast may require a transpose.
+  // Traverse the dims in order and construct:
+  //   1. The leading entries of the broadcastShape that is guaranteed to be
+  //      achievable by a simple broadcast.
+  //   2. The induced permutation for the subsequent vector.transpose that will
+  //      bring us from `broadcastShape` back to he desired `dstShape`.
+  // If the induced permutation is not the identity, create a vector.transpose.
+  SmallVector<int64_t> broadcastShape, permutation(dstShape.size(), -1);
+  broadcastShape.reserve(dstShape.size());
+  // Consider the example:
+  //   srcShape     = 2x4
+  //   dstShape     = 1x2x3x4x5
+  //   broadcastedDims = [0, 2, 4]
+  //
+  // We want to build:
+  //   broadcastShape  = 1x3x5x2x4
+  //   permutation     = [0, 2, 4,                 1, 3]
+  //                      ---V---           -----V-----
+  //            leading broadcast part      src shape part
+  //
+  // Note that the trailing dims of broadcastShape are exactly the srcShape
+  // by construction.
+  // nextSrcShapeDim is used to keep track of where in the permutation the
+  // "src shape part" occurs.
+  int64_t nextSrcShapeDim = broadcastedDims.size();
+  for (int64_t i = 0, e = dstShape.size(); i < e; ++i) {
+    if (broadcastedDims.contains(i)) {
+      // 3.a. For each dim in the dst shape, if it is a broadcasted dim,
+      // bring it to the head of the broadcastShape.
+      // It will need to be permuted back from `broadcastShape.size() - 1` into
+      // position `i`.
+      broadcastShape.push_back(dstShape[i]);
+      permutation[i] = broadcastShape.size() - 1;
+    } else {
+      // 3.b. Otherwise, the dim is not broadcasted, it comes from the src
+      // shape and needs to be permuted into position `i`.
+      // Don't touch `broadcastShape` here, the whole srcShape will be
+      // appended after.
+      permutation[i] = nextSrcShapeDim++;
+    }
+  }
+  // 3.c. Append the srcShape.
+  llvm::append_range(broadcastShape, srcVectorType.getShape());
+
+  // Ensure there are no dim-1 broadcasts.
+  assert(::computeBroadcastedUnitDims(srcVectorType.getShape(), broadcastShape)
+             .empty() &&
+         "unexpected dim-1 broadcast");
+
+  VectorType broadcastType = VectorType::get(broadcastShape, elementType);
+  assert(vector::isBroadcastableTo(value.getType(), broadcastType) ==
+             vector::BroadcastableToResult::Success &&
+         "must be broadcastable");
+  Value res = b.createOrFold<vector::BroadcastOp>(loc, broadcastType, value);
+  // Step 4. If we find any dimension that indeed needs to be permuted,
+  // immediately return a new vector.transpose.
+  for (int64_t i = 0, e = permutation.size(); i < e; ++i)
+    if (permutation[i] != i)
+      return b.createOrFold<vector::TransposeOp>(loc, res, permutation);
+  // Otherwise return res.
   return res;
 }
 
