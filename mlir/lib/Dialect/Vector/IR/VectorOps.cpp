@@ -2386,7 +2386,7 @@ isIntegerArrayAttrConfinedToShape(OpType op, ArrayAttr arrayAttr,
                                   bool halfOpen = true, int64_t min = 0) {
   unsigned index = 0;
   for (auto [attr, maxDim] : llvm::zip_first(arrayAttr, shape)) {
-    int64_t val = attr.cast<IntegerAttr>().getInt();
+    int64_t val = attr.template cast<IntegerAttr>().getInt();
     int64_t max = maxDim;
     if (!halfOpen)
       max += 1;
@@ -2410,7 +2410,8 @@ static LogicalResult isSumOfIntegerArrayAttrConfinedToShape(
   assert(arrayAttr1.size() <= shape.size());
   assert(arrayAttr2.size() <= shape.size());
   unsigned index = 0;
-  for (auto it : llvm::zip(arrayAttr1, arrayAttr2, shape)) {
+  for (auto it :
+       llvm::zip(arrayAttr1, arrayAttr2, shape)) {
     auto val1 = std::get<0>(it).cast<IntegerAttr>().getInt();
     auto val2 = std::get<1>(it).cast<IntegerAttr>().getInt();
     int64_t max = std::get<2>(it);
