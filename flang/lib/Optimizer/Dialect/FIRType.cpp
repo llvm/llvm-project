@@ -274,6 +274,19 @@ bool isBoxedRecordType(mlir::Type ty) {
   return false;
 }
 
+bool isRefBoxType(mlir::Type ty) {
+  if (auto refTy = ty.dyn_cast<fir::ReferenceType>())
+    return refTy.getEleTy().isa<fir::BaseBoxType>();
+  return false;
+}
+
+bool isOpaqueDescType(mlir::Type ty) {
+  if (auto boxTy = ty.dyn_cast<fir::BoxType>())
+    if (boxTy.getEleTy().isa<mlir::NoneType>())
+      return true;
+  return false;
+}
+
 static bool isAssumedType(mlir::Type ty) {
   if (auto boxTy = ty.dyn_cast<fir::BoxType>()) {
     if (boxTy.getEleTy().isa<mlir::NoneType>())
