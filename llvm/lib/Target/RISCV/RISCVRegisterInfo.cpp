@@ -220,18 +220,19 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       .setMIFlag(Flag);
 }
 
-void RISCVRegisterInfo::adjustReg(MachineBasicBlock::iterator II, Register DestReg,
-                                  Register SrcReg, StackOffset Offset) const {
+void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator II,
+                                  const DebugLoc &DL, Register DestReg,
+                                  Register SrcReg, StackOffset Offset,
+                                  MachineInstr::MIFlag Flag) const {
 
   if (DestReg == SrcReg && !Offset.getFixed() && !Offset.getScalable())
     return;
 
-  MachineInstr &MI = *II;
-  MachineFunction &MF = *MI.getParent()->getParent();
+  MachineFunction &MF = *MBB.getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo *TII = ST.getInstrInfo();
-  DebugLoc DL = MI.getDebugLoc();
-  MachineBasicBlock &MBB = *MI.getParent();
 
   bool SrcRegIsKill = false;
 
@@ -243,16 +244,20 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock::iterator II, Register DestR
       ScalableAdjOpc = RISCV::SUB;
     }
     // Get vlenb and multiply vlen with the number of vector registers.
-    TII->getVLENFactoredAmount(MF, MBB, II, DL, DestReg, ScalableValue);
+    Register ScratchReg = DestReg;
+    if (DestReg == SrcReg)
+      ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    TII->getVLENFactoredAmount(MF, MBB, II, DL, ScratchReg, ScalableValue, Flag);
     BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
-      .addReg(SrcReg).addReg(DestReg, RegState::Kill);
+      .addReg(SrcReg).addReg(ScratchReg, RegState::Kill)
+      .setMIFlag(Flag);
     SrcReg = DestReg;
     SrcRegIsKill = true;
   }
 
   if (Offset.getFixed())
     adjustReg(MBB, II, DL, DestReg, SrcReg, Offset.getFixed(),
-              MachineInstr::NoFlags, None, SrcRegIsKill);
+              Flag, None, SrcRegIsKill);
 }
 
 
@@ -313,7 +318,8 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       DestReg = MI.getOperand(0).getReg();
     else
       DestReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    adjustReg(II, DestReg, FrameReg, Offset);
+    adjustReg(*II->getParent(), II, DL, DestReg, FrameReg, Offset,
+              MachineInstr::NoFlags);
     MI.getOperand(FIOperandNum).ChangeToRegister(DestReg, /*IsDef*/false,
                                                  /*IsImp*/false,
                                                  /*IsKill*/true);

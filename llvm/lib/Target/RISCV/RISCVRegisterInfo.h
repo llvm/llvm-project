@@ -49,8 +49,9 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
                  MaybeAlign RequiredAlign, bool KillSrcReg) const;
 
   // Update DestReg to have the value of SrcReg plus an Offset.
-  void adjustReg(MachineBasicBlock::iterator II, Register DestReg,
-                 Register SrcReg, StackOffset Offset) const;
+  void adjustReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator II,
+                 const DebugLoc &DL, Register DestReg, Register SrcReg,
+                 StackOffset Offset, MachineInstr::MIFlag Flag) const;
 
   bool eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
