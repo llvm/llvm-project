@@ -21,6 +21,7 @@
 #define LLVM_CLANG_C_DEPENDENCIES_H
 
 #include "clang-c/BuildSystem.h"
+#include "clang-c/CAS.h"
 #include "clang-c/CXDiagnostic.h"
 #include "clang-c/CXErrorCode.h"
 #include "clang-c/CXString.h"
@@ -200,6 +201,22 @@ CINDEX_LINKAGE void clang_experimental_DependencyScannerServiceOptions_dispose(
 CINDEX_LINKAGE void
 clang_experimental_DependencyScannerServiceOptions_setDependencyMode(
     CXDependencyScannerServiceOptions Opts, CXDependencyMode Mode);
+
+/**
+ * Specify a \c CXCASObjectStore in the given options. If an object store and
+ * action cache are available, the scanner will produce cached commands.
+ */
+CINDEX_LINKAGE void
+clang_experimental_DependencyScannerServiceOptions_setObjectStore(
+    CXDependencyScannerServiceOptions Opts, CXCASObjectStore CAS);
+
+/**
+ * Specify a \c CXCASActionCache in the given options. If an object store and
+ * action cache are available, the scanner will produce cached commands.
+ */
+CINDEX_LINKAGE void
+clang_experimental_DependencyScannerServiceOptions_setActionCache(
+    CXDependencyScannerServiceOptions Opts, CXCASActionCache Cache);
 
 /**
  * See \c clang_experimental_DependencyScannerService_create_v1.
