@@ -14,6 +14,7 @@
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Function.h" // To access function attributes.
 #include "llvm/IR/GlobalValue.h"
@@ -3412,41 +3413,56 @@ bool AArch64DAGToDAGISel::tryReadRegister(SDNode *N) {
   const auto *RegString = cast<MDString>(MD->getMD()->getOperand(0));
   SDLoc DL(N);
 
-  int Reg = getIntOperandFromRegisterString(RegString->getString());
-  if (Reg != -1) {
-    ReplaceNode(N, CurDAG->getMachineNode(
-                       AArch64::MRS, DL, N->getSimpleValueType(0), MVT::Other,
-                       CurDAG->getTargetConstant(Reg, DL, MVT::i32),
-                       N->getOperand(0)));
-    return true;
+  bool ReadIs128Bit = N->getOpcode() == AArch64ISD::MRRS;
+
+  unsigned Opcode64Bit = AArch64::MRS;
+  int Imm = getIntOperandFromRegisterString(RegString->getString());
+  if (Imm == -1) {
+    // No match, Use the sysreg mapper to map the remaining possible strings to
+    // the value for the register to be used for the instruction operand.
+    const auto *TheReg =
+        AArch64SysReg::lookupSysRegByName(RegString->getString());
+    if (TheReg && TheReg->Readable &&
+        TheReg->haveFeatures(Subtarget->getFeatureBits()))
+      Imm = TheReg->Encoding;
+    else
+      Imm = AArch64SysReg::parseGenericRegister(RegString->getString());
+
+    if (Imm == -1) {
+      // Still no match, see if this is "pc" or give up.
+      if (!ReadIs128Bit && RegString->getString() == "pc") {
+        Opcode64Bit = AArch64::ADR;
+        Imm = 0;
+      } else {
+        return false;
+      }
+    }
   }
 
-  // Use the sysreg mapper to map the remaining possible strings to the
-  // value for the register to be used for the instruction operand.
-  auto TheReg = AArch64SysReg::lookupSysRegByName(RegString->getString());
-  if (TheReg && TheReg->Readable &&
-      TheReg->haveFeatures(Subtarget->getFeatureBits()))
-    Reg = TheReg->Encoding;
-  else
-    Reg = AArch64SysReg::parseGenericRegister(RegString->getString());
+  SDValue InChain = N->getOperand(0);
+  SDValue SysRegImm = CurDAG->getTargetConstant(Imm, DL, MVT::i32);
+  if (!ReadIs128Bit) {
+    CurDAG->SelectNodeTo(N, Opcode64Bit, MVT::i64, MVT::Other /* Chain */,
+                         {SysRegImm, InChain});
+  } else {
+    SDNode *MRRS = CurDAG->getMachineNode(
+        AArch64::MRRS, DL,
+        {MVT::Untyped /* XSeqPair */, MVT::Other /* Chain */},
+        {SysRegImm, InChain});
 
-  if (Reg != -1) {
-    ReplaceNode(N, CurDAG->getMachineNode(
-                       AArch64::MRS, DL, N->getSimpleValueType(0), MVT::Other,
-                       CurDAG->getTargetConstant(Reg, DL, MVT::i32),
-                       N->getOperand(0)));
-    return true;
-  }
+    // Sysregs are not endian. The even register always contains the low half
+    // of the register.
+    SDValue Lo = CurDAG->getTargetExtractSubreg(AArch64::sube64, DL, MVT::i64,
+                                                SDValue(MRRS, 0));
+    SDValue Hi = CurDAG->getTargetExtractSubreg(AArch64::subo64, DL, MVT::i64,
+                                                SDValue(MRRS, 0));
+    SDValue OutChain = SDValue(MRRS, 1);
 
-  if (RegString->getString() == "pc") {
-    ReplaceNode(N, CurDAG->getMachineNode(
-                       AArch64::ADR, DL, N->getSimpleValueType(0), MVT::Other,
-                       CurDAG->getTargetConstant(0, DL, MVT::i32),
-                       N->getOperand(0)));
-    return true;
-  }
-
-  return false;
+    ReplaceUses(SDValue(N, 0), Lo);
+    ReplaceUses(SDValue(N, 1), Hi);
+    ReplaceUses(SDValue(N, 2), OutChain);
+  };
+  return true;
 }
 
 // Lower the write_register intrinsic to an MSR instruction node if the special
@@ -3458,60 +3474,75 @@ bool AArch64DAGToDAGISel::tryWriteRegister(SDNode *N) {
   const auto *RegString = cast<MDString>(MD->getMD()->getOperand(0));
   SDLoc DL(N);
 
-  int Reg = getIntOperandFromRegisterString(RegString->getString());
-  if (Reg != -1) {
-    ReplaceNode(
-        N, CurDAG->getMachineNode(AArch64::MSR, DL, MVT::Other,
-                                  CurDAG->getTargetConstant(Reg, DL, MVT::i32),
-                                  N->getOperand(2), N->getOperand(0)));
-    return true;
-  }
+  bool WriteIs128Bit = N->getOpcode() == AArch64ISD::MSRR;
 
-  // Check if the register was one of those allowed as the pstatefield value in
-  // the MSR (immediate) instruction. To accept the values allowed in the
-  // pstatefield for the MSR (immediate) instruction, we also require that an
-  // immediate value has been provided as an argument, we know that this is
-  // the case as it has been ensured by semantic checking.
-  auto PMapper = AArch64PState::lookupPStateByName(RegString->getString());
-  if (PMapper) {
-    assert (isa<ConstantSDNode>(N->getOperand(2))
-              && "Expected a constant integer expression.");
-    unsigned Reg = PMapper->Encoding;
-    uint64_t Immed = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
-    unsigned State;
-    if (Reg == AArch64PState::PAN || Reg == AArch64PState::UAO || Reg == AArch64PState::SSBS) {
-      assert(Immed < 2 && "Bad imm");
-      State = AArch64::MSRpstateImm1;
-    } else {
-      assert(Immed < 16 && "Bad imm");
-      State = AArch64::MSRpstateImm4;
+  if (!WriteIs128Bit) {
+    // Check if the register was one of those allowed as the pstatefield value
+    // in the MSR (immediate) instruction. To accept the values allowed in the
+    // pstatefield for the MSR (immediate) instruction, we also require that an
+    // immediate value has been provided as an argument, we know that this is
+    // the case as it has been ensured by semantic checking.
+    auto PMapper = AArch64PState::lookupPStateByName(RegString->getString());
+    if (PMapper) {
+      assert(isa<ConstantSDNode>(N->getOperand(2)) &&
+             "Expected a constant integer expression.");
+      unsigned Reg = PMapper->Encoding;
+      uint64_t Immed = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
+      unsigned State;
+      if (Reg == AArch64PState::PAN || Reg == AArch64PState::UAO ||
+          Reg == AArch64PState::SSBS) {
+        assert(Immed < 2 && "Bad imm");
+        State = AArch64::MSRpstateImm1;
+      } else {
+        assert(Immed < 16 && "Bad imm");
+        State = AArch64::MSRpstateImm4;
+      }
+      CurDAG->SelectNodeTo(
+          N, State, MVT::Other, CurDAG->getTargetConstant(Reg, DL, MVT::i32),
+          CurDAG->getTargetConstant(Immed, DL, MVT::i16), N->getOperand(0));
+      return true;
     }
-    ReplaceNode(N, CurDAG->getMachineNode(
-                       State, DL, MVT::Other,
-                       CurDAG->getTargetConstant(Reg, DL, MVT::i32),
-                       CurDAG->getTargetConstant(Immed, DL, MVT::i16),
-                       N->getOperand(0)));
-    return true;
   }
 
-  // Use the sysreg mapper to attempt to map the remaining possible strings
-  // to the value for the register to be used for the MSR (register)
-  // instruction operand.
-  auto TheReg = AArch64SysReg::lookupSysRegByName(RegString->getString());
-  if (TheReg && TheReg->Writeable &&
-      TheReg->haveFeatures(Subtarget->getFeatureBits()))
-    Reg = TheReg->Encoding;
-  else
-    Reg = AArch64SysReg::parseGenericRegister(RegString->getString());
-  if (Reg != -1) {
-    ReplaceNode(N, CurDAG->getMachineNode(
-                       AArch64::MSR, DL, MVT::Other,
-                       CurDAG->getTargetConstant(Reg, DL, MVT::i32),
-                       N->getOperand(2), N->getOperand(0)));
-    return true;
+  int Imm = getIntOperandFromRegisterString(RegString->getString());
+  if (Imm == -1) {
+    // Use the sysreg mapper to attempt to map the remaining possible strings
+    // to the value for the register to be used for the MSR (register)
+    // instruction operand.
+    auto TheReg = AArch64SysReg::lookupSysRegByName(RegString->getString());
+    if (TheReg && TheReg->Writeable &&
+        TheReg->haveFeatures(Subtarget->getFeatureBits()))
+      Imm = TheReg->Encoding;
+    else
+      Imm = AArch64SysReg::parseGenericRegister(RegString->getString());
+
+    if (Imm == -1)
+      return false;
   }
 
-  return false;
+  SDValue InChain = N->getOperand(0);
+  if (!WriteIs128Bit) {
+    CurDAG->SelectNodeTo(N, AArch64::MSR, MVT::Other,
+                         CurDAG->getTargetConstant(Imm, DL, MVT::i32),
+                         N->getOperand(2), InChain);
+  } else {
+    // No endian swap. The lower half always goes into the even subreg, and the
+    // higher half always into the odd supreg.
+    SDNode *Pair = CurDAG->getMachineNode(
+        TargetOpcode::REG_SEQUENCE, DL, MVT::Untyped /* XSeqPair */,
+        {CurDAG->getTargetConstant(AArch64::XSeqPairsClassRegClass.getID(), DL,
+                                   MVT::i32),
+         N->getOperand(2),
+         CurDAG->getTargetConstant(AArch64::sube64, DL, MVT::i32),
+         N->getOperand(3),
+         CurDAG->getTargetConstant(AArch64::subo64, DL, MVT::i32)});
+
+    CurDAG->SelectNodeTo(N, AArch64::MSRR, MVT::Other,
+                         CurDAG->getTargetConstant(Imm, DL, MVT::i32),
+                         SDValue(Pair, 0), InChain);
+  }
+
+  return true;
 }
 
 /// We've got special pseudo-instructions for these
@@ -3870,11 +3901,13 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     break;
 
   case ISD::READ_REGISTER:
+  case AArch64ISD::MRRS:
     if (tryReadRegister(Node))
       return;
     break;
 
   case ISD::WRITE_REGISTER:
+  case AArch64ISD::MSRR:
     if (tryWriteRegister(Node))
       return;
     break;
