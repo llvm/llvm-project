@@ -114,6 +114,7 @@ class SM_Load_Pseudo <string opName, RegisterClass baseClass,
               " $sdst, $sbase, " # offsets.Asm # "$cpol", []> {
   RegisterClass BaseClass = baseClass;
   let mayLoad = 1;
+  let isReMaterializable = 1;
   let mayStore = 0;
   let has_glc = 1;
   let has_dlc = 1;
