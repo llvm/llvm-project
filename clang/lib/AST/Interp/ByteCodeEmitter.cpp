@@ -163,10 +163,8 @@ static void emit(Program &P, std::vector<char> &Code, const T &Val,
   }
 
   if constexpr (!std::is_pointer_v<T>) {
-    // Construct the value directly into our storage vector.
-    size_t ValPos = Code.size();
-    Code.resize(Code.size() + Size);
-    new (Code.data() + ValPos) T(Val);
+    const char *Data = reinterpret_cast<const char *>(&Val);
+    Code.insert(Code.end(), Data, Data + Size);
   } else {
     uint32_t ID = P.getOrCreateNativePointer(Val);
     const char *Data = reinterpret_cast<const char *>(&ID);
