@@ -126,8 +126,15 @@ private:
 
   void CheckForPureSubprogram() const;
 
-  void CheckForBadIoComponent(
+  parser::Message *CheckForBadIoType(const evaluate::DynamicType &,
+      GenericKind::DefinedIo, parser::CharBlock) const;
+  void CheckForBadIoType(
       const SomeExpr &, GenericKind::DefinedIo, parser::CharBlock) const;
+  parser::Message *CheckForBadIoType(
+      const Symbol &, GenericKind::DefinedIo, parser::CharBlock) const;
+
+  void CheckNamelist(
+      const Symbol &, GenericKind::DefinedIo, parser::CharBlock) const;
 
   void Init(IoStmtKind s) {
     stmt_ = s;
