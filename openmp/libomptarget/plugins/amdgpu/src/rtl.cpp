@@ -124,10 +124,9 @@ public:
   uint32_t KernargSegmentSize;
   void *KernargRegion = nullptr;
   std::queue<int> FreeKernargSegments;
-  uint16_t CodeObjectVersion;
 
   uint32_t kernargSizeIncludingImplicit() {
-    return KernargSegmentSize + implicitArgsSize(CodeObjectVersion);
+    return KernargSegmentSize + sizeof(impl_implicit_args_t);
   }
 
   ~KernelArgPool() {
@@ -144,10 +143,8 @@ public:
   KernelArgPool(const KernelArgPool &) = delete;
   KernelArgPool(KernelArgPool &&) = delete;
 
-  KernelArgPool(uint32_t KernargSegmentSize, hsa_amd_memory_pool_t &MemoryPool,
-                uint16_t CodeObjectVersion)
-      : KernargSegmentSize(KernargSegmentSize),
-        CodeObjectVersion(CodeObjectVersion) {
+  KernelArgPool(uint32_t KernargSegmentSize, hsa_amd_memory_pool_t &MemoryPool)
+      : KernargSegmentSize(KernargSegmentSize) {
 
     // impl uses one pool per kernel for all gpus, with a fixed upper size
     // preserving that exact scheme here, including the queue<int>
@@ -231,16 +228,16 @@ struct KernelTy {
   KernelTy(llvm::omp::OMPTgtExecModeFlags ExecutionMode, int16_t ConstWgSize,
            int32_t DeviceId, void *CallStackAddr, const char *Name,
            uint32_t KernargSegmentSize,
-           hsa_amd_memory_pool_t &KernArgMemoryPool, uint16_t CodeObjectVersion)
+           hsa_amd_memory_pool_t &KernArgMemoryPool)
       : ExecutionMode(ExecutionMode), ConstWGSize(ConstWgSize),
         DeviceId(DeviceId), CallStackAddr(CallStackAddr), Name(Name) {
     DP("Construct kernelinfo: ExecMode %d\n", ExecutionMode);
 
     std::string N(Name);
     if (KernelArgPoolMap.find(N) == KernelArgPoolMap.end()) {
-      KernelArgPoolMap.insert(std::make_pair(
-          N, std::unique_ptr<KernelArgPool>(new KernelArgPool(
-                 KernargSegmentSize, KernArgMemoryPool, CodeObjectVersion))));
+      KernelArgPoolMap.insert(
+          std::make_pair(N, std::unique_ptr<KernelArgPool>(new KernelArgPool(
+                                KernargSegmentSize, KernArgMemoryPool))));
     }
   }
 };
@@ -477,7 +474,6 @@ public:
   std::vector<int> WarpSize;
   std::vector<std::string> GPUName;
   std::vector<std::string> TargetID;
-  uint16_t CodeObjectVersion;
 
   // OpenMP properties
   std::vector<int> NumTeams;
@@ -491,7 +487,6 @@ public:
 
   // Resource pools
   SignalPoolT FreeSignalPool;
-  std::vector<void *> PreallocatedDeviceHeap;
 
   bool HostcallRequired = false;
 
@@ -866,6 +861,7 @@ public:
            "Unexpected device id!");
     FuncGblEntries[DeviceId].emplace_back();
     FuncOrGblEntryTy &E = FuncGblEntries[DeviceId].back();
+    // KernelArgPoolMap.clear();
     E.Entries.clear();
     E.Table.EntriesBegin = E.Table.EntriesEnd = 0;
   }
@@ -1036,7 +1032,6 @@ public:
     SymbolInfoTable.resize(NumberOfDevices);
     DeviceCoarseGrainedMemoryPools.resize(NumberOfDevices);
     DeviceFineGrainedMemoryPools.resize(NumberOfDevices);
-    PreallocatedDeviceHeap.resize(NumberOfDevices);
 
     Err = setupDevicePools(HSAAgents);
     if (Err != HSA_STATUS_SUCCESS) {
@@ -1366,27 +1361,6 @@ static uint64_t acquireAvailablePacketId(hsa_queue_t *Queue) {
   return PacketId;
 }
 
-const uint16_t getCodeObjectVersionFromELF(__tgt_device_image *Image) {
-  char *ImageBegin = (char *)Image->ImageStart;
-  size_t ImageSize = (char *)Image->ImageEnd - ImageBegin;
-
-  StringRef Buffer = StringRef(ImageBegin, ImageSize);
-  auto ElfOrErr = ObjectFile::createELFObjectFile(MemoryBufferRef(Buffer, ""),
-                                                  /*InitContent=*/false);
-  if (!ElfOrErr) {
-    REPORT("Failed to load ELF: %s\n", toString(ElfOrErr.takeError()).c_str());
-    return 1;
-  }
-
-  if (const auto *ELFObj = dyn_cast<ELF64LEObjectFile>(ElfOrErr->get())) {
-    auto Header = ELFObj->getELFFile().getHeader();
-    uint16_t Version = (uint8_t)(Header.e_ident[EI_ABIVERSION]);
-    DP("ELFABIVERSION Version: %u\n", Version);
-    return Version;
-  }
-  return 0;
-}
-
 int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
                         ptrdiff_t *TgtOffsets, int32_t ArgNum, int32_t NumTeams,
                         int32_t ThreadLimit, uint64_t LoopTripcount) {
@@ -1464,7 +1438,6 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
     }
     uint64_t PacketId = acquireAvailablePacketId(Queue);
 
-    uint16_t CodeObjectVersion = DeviceInfo().CodeObjectVersion;
     const uint32_t Mask = Queue->size - 1; // size is a power of 2
     hsa_kernel_dispatch_packet_t *Packet =
         (hsa_kernel_dispatch_packet_t *)Queue->base_address + (PacketId & Mask);
@@ -2187,40 +2160,6 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
   return Res;
 }
 
-static void preAllocateHeapMemoryForCov5() {
-  void *DevPtr;
-  for (int I = 0; I < DeviceInfo().NumberOfDevices; I++) {
-    DevPtr = nullptr;
-    size_t PreAllocSize = 131072; // 128KB per device
-
-    hsa_amd_memory_pool_t MemoryPool =
-        DeviceInfo().DeviceCoarseGrainedMemoryPools[I];
-    hsa_status_t Err =
-        hsa_amd_memory_pool_allocate(MemoryPool, PreAllocSize, 0, &DevPtr);
-    if (Err != HSA_STATUS_SUCCESS) {
-      DP("Error allocating preallocated heap device memory: %s\n",
-         get_error_string(Err));
-    }
-
-    Err = hsa_amd_agents_allow_access(1, &DeviceInfo().HSAAgents[I], NULL,
-                                      DevPtr);
-    if (Err != HSA_STATUS_SUCCESS) {
-      DP("hsa allow_access_to_all_gpu_agents failed: %s\n",
-         get_error_string(Err));
-    }
-
-    uint64_t Rounded =
-        sizeof(uint32_t) * ((PreAllocSize + 3) / sizeof(uint32_t));
-    Err = hsa_amd_memory_fill(DevPtr, 0, Rounded / sizeof(uint32_t));
-    if (Err != HSA_STATUS_SUCCESS) {
-      DP("Error zero-initializing preallocated heap device memory:%s\n",
-         get_error_string(Err));
-    }
-
-    DeviceInfo().PreallocatedDeviceHeap[I] = DevPtr;
-  }
-}
-
 __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
                                                  __tgt_device_image *Image) {
   // This function loads the device image onto gpu[DeviceId] and does other
@@ -2254,12 +2193,6 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
 
   if (!elfMachineIdIsAmdgcn(Image))
     return NULL;
-
-  DeviceInfo().CodeObjectVersion = getCodeObjectVersionFromELF(Image);
-  if (DeviceInfo().CodeObjectVersion >=
-      llvm::ELF::ELFABIVERSION_AMDGPU_HSA_V5) {
-    preAllocateHeapMemoryForCov5();
-  }
 
   {
     auto Env =
@@ -2584,8 +2517,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
 
     KernelsList.push_back(KernelTy(ExecModeVal, WGSizeVal, DeviceId,
                                    CallStackAddr, E->name, KernargSegmentSize,
-                                   DeviceInfo().KernArgPool,
-                                   DeviceInfo().CodeObjectVersion));
+                                   DeviceInfo().KernArgPool));
     __tgt_offload_entry Entry = *E;
     Entry.addr = (void *)&KernelsList.back();
     DeviceInfo().addOffloadEntry(DeviceId, Entry);
