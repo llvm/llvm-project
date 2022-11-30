@@ -13,92 +13,144 @@ define void @alloc_v4i8(ptr %st_ptr) #0 {
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    add x0, sp, #12
 ; CHECK-NEXT:    bl def
-; CHECK-NEXT:    ldr s0, [sp, #12]
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    add x8, sp, #12
+; CHECK-NEXT:    ptrue p0.b, vl2
+; CHECK-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x8]
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    mov z2.b, z0.b[1]
 ; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov z1.h, z0.h[3]
-; CHECK-NEXT:    mov z2.h, z0.h[1]
-; CHECK-NEXT:    mov z0.h, z0.h[2]
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    fmov w10, s2
-; CHECK-NEXT:    strh w8, [sp]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    strh w9, [sp, #6]
-; CHECK-NEXT:    strh w10, [sp, #4]
-; CHECK-NEXT:    strh w8, [sp, #2]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    stp w8, w9, [sp]
 ; CHECK-NEXT:    ldr d0, [sp]
-; CHECK-NEXT:    st1b { z0.h }, p0, [x19]
+; CHECK-NEXT:    st1b { z0.s }, p0, [x19]
 ; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %alloc = alloca [4 x i8]
   call void @def(ptr %alloc)
   %load = load <4 x i8>, ptr %alloc
-  %strided.vec = shufflevector <4 x i8> %load, <4 x i8> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-  store <4 x i8> %strided.vec, ptr %st_ptr
+  %strided.vec = shufflevector <4 x i8> %load, <4 x i8> poison, <2 x i32> <i32 0, i32 2>
+  store <2 x i8> %strided.vec, ptr %st_ptr
   ret void
 }
 
 define void @alloc_v6i8(ptr %st_ptr) #0 {
 ; CHECK-LABEL: alloc_v6i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
-; CHECK-NEXT:    add x0, sp, #8
+; CHECK-NEXT:    add x0, sp, #24
 ; CHECK-NEXT:    bl def
+; CHECK-NEXT:    add x8, sp, #24
+; CHECK-NEXT:    ptrue p0.b, vl3
+; CHECK-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x8]
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    mov z2.b, z1.b[3]
+; CHECK-NEXT:    mov z3.b, z1.b[2]
+; CHECK-NEXT:    mov z0.b, z1.b[1]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    fmov w10, s3
+; CHECK-NEXT:    strh w8, [sp, #8]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    strh w9, [sp, #14]
+; CHECK-NEXT:    strh w10, [sp, #12]
+; CHECK-NEXT:    strh w8, [sp, #10]
+; CHECK-NEXT:    add x8, sp, #20
 ; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    mov z1.b, z0.b[4]
-; CHECK-NEXT:    mov z2.b, z0.b[5]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    fmov w10, s2
-; CHECK-NEXT:    mov z3.b, z0.b[3]
-; CHECK-NEXT:    mov z4.b, z0.b[1]
-; CHECK-NEXT:    mov z0.b, z0.b[2]
-; CHECK-NEXT:    strb w8, [sp]
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    strb w9, [sp, #5]
-; CHECK-NEXT:    fmov w9, s4
-; CHECK-NEXT:    strb w10, [sp, #4]
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    strb w8, [sp, #3]
-; CHECK-NEXT:    strb w9, [sp, #2]
-; CHECK-NEXT:    strb w10, [sp, #1]
-; CHECK-NEXT:    ldr d0, [sp]
-; CHECK-NEXT:    mov z1.h, z0.h[2]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    str w8, [x19]
-; CHECK-NEXT:    strh w9, [x19, #4]
-; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    st1b { z0.h }, p0, [x8]
+; CHECK-NEXT:    ldrh w8, [sp, #20]
+; CHECK-NEXT:    strb w10, [x19, #2]
+; CHECK-NEXT:    strh w8, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %alloc = alloca [6 x i8]
   call void @def(ptr %alloc)
   %load = load <6 x i8>, ptr %alloc
-  %strided.vec = shufflevector <6 x i8> %load, <6 x i8> poison, <6 x i32> <i32 0, i32 2, i32 1, i32 3, i32 5, i32 4>
-  store <6 x i8> %strided.vec, ptr %st_ptr
+  %strided.vec = shufflevector <6 x i8> %load, <6 x i8> poison, <3 x i32> <i32 1, i32 3, i32 5>
+  store <3 x i8> %strided.vec, ptr %st_ptr
   ret void
 }
+
+define void @alloc_v32i8(ptr %st_ptr) #0 {
+; CHECK-LABEL: alloc_v32i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #64
+; CHECK-NEXT:    stp x30, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    add x0, sp, #16
+; CHECK-NEXT:    bl def
+; CHECK-NEXT:    ldp q0, q1, [sp, #16]
+; CHECK-NEXT:    mov z2.b, z0.b[14]
+; CHECK-NEXT:    mov z3.b, z0.b[12]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    fmov w10, s3
+; CHECK-NEXT:    mov z4.b, z0.b[10]
+; CHECK-NEXT:    mov z5.b, z0.b[8]
+; CHECK-NEXT:    mov z6.b, z0.b[6]
+; CHECK-NEXT:    strb w8, [sp]
+; CHECK-NEXT:    fmov w8, s4
+; CHECK-NEXT:    strb w9, [sp, #7]
+; CHECK-NEXT:    fmov w9, s5
+; CHECK-NEXT:    strb w10, [sp, #6]
+; CHECK-NEXT:    fmov w10, s6
+; CHECK-NEXT:    mov z7.b, z0.b[4]
+; CHECK-NEXT:    mov z0.b, z0.b[2]
+; CHECK-NEXT:    strb w8, [sp, #5]
+; CHECK-NEXT:    fmov w8, s7
+; CHECK-NEXT:    strb w9, [sp, #4]
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    strb w10, [sp, #3]
+; CHECK-NEXT:    fmov w10, s1
+; CHECK-NEXT:    strb w8, [sp, #2]
+; CHECK-NEXT:    strb w9, [sp, #1]
+; CHECK-NEXT:    strb w10, [x19, #8]
+; CHECK-NEXT:    ldr q0, [sp]
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    str x8, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:    ret
+  %alloc = alloca [32 x i8]
+  call void @def(ptr %alloc)
+  %load = load <32 x i8>, ptr %alloc
+  %strided.vec = shufflevector <32 x i8> %load, <32 x i8> poison, <9 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16>
+  store <9 x i8> %strided.vec, ptr %st_ptr
+  ret void
+}
+
 
 define void @alloc_v8f64(ptr %st_ptr) #0 {
 ; CHECK-LABEL: alloc_v8f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #96
-; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #-32]! // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    sub sp, sp, #64
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x0, sp
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
-; CHECK-NEXT:    mov x20, sp
 ; CHECK-NEXT:    bl def
-; CHECK-NEXT:    ld2 { v0.2d, v1.2d }, [x20], #32
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
-; CHECK-NEXT:    ld2 { v2.2d, v3.2d }, [x20]
+; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    sub x8, x8, #2
+; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [sp]
+; CHECK-NEXT:    mov w9, #2
+; CHECK-NEXT:    cmp x8, #2
+; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    add x10, sp, #64
+; CHECK-NEXT:    lsl x8, x8, #3
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    add x9, sp, #64
+; CHECK-NEXT:    st1d { z0.d }, p0, [x10]
+; CHECK-NEXT:    ldr q2, [x9, x8]
 ; CHECK-NEXT:    stp q0, q2, [x19]
-; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #96
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %alloc = alloca [8 x double]
   call void @def(ptr %alloc)
