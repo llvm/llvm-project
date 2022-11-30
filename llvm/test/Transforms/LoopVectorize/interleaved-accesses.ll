@@ -762,9 +762,11 @@ define void @mixed_load3_store3(i32* nocapture %A) {
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <12 x i32> [[WIDE_VEC]], <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
 ; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <12 x i32> [[WIDE_VEC]], <12 x i32> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[STRIDED_VEC]], [[VEC_IND]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, i32* [[NEXT_GEP]], i64 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[STRIDED_VEC2]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[STRIDED_VEC3]], [[VEC_IND]]
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[NEXT_GEP]] to <12 x i32>*
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP3]], i64 -2
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to <12 x i32>*
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> [[TMP9]], <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
