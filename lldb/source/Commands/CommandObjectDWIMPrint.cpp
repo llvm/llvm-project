@@ -22,12 +22,11 @@ using namespace lldb;
 using namespace lldb_private;
 
 CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
-    : CommandObjectRaw(
-          interpreter, "dwim-print", "Print a variable or expression.",
-          "dwim-print [<variable-name> | <expression>]",
-          eCommandProcessMustBePaused | eCommandTryTargetAPILock |
-              eCommandRequiresFrame | eCommandProcessMustBeLaunched |
-              eCommandRequiresProcess) {}
+    : CommandObjectRaw(interpreter, "dwim-print",
+                       "Print a variable or expression.",
+                       "dwim-print [<variable-name> | <expression>]",
+                       eCommandProcessMustBePaused | eCommandTryTargetAPILock) {
+}
 
 bool CommandObjectDWIMPrint::DoExecute(StringRef expr,
                                        CommandReturnObject &result) {
@@ -40,14 +39,10 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef expr,
     return false;
   }
 
-  // eCommandRequiresFrame guarantees a frame.
-  StackFrame *frame = m_exe_ctx.GetFramePtr();
-  assert(frame);
-
   auto verbosity = GetDebugger().GetDWIMPrintVerbosity();
 
-  // First, try `expr` as the name of a variable.
-  {
+  // First, try `expr` as the name of a frame variable.
+  if (StackFrame *frame = m_exe_ctx.GetFramePtr()) {
     auto valobj_sp = frame->FindVariable(ConstString(expr));
     if (valobj_sp && valobj_sp->GetError().Success()) {
       if (verbosity == eDWIMPrintVerbosityFull)
@@ -60,12 +55,13 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef expr,
 
   // Second, also lastly, try `expr` as a source expression to evaluate.
   {
-    // eCommandRequiresProcess guarantees a target.
-    Target *target = m_exe_ctx.GetTargetPtr();
-    assert(target);
+    Target *target_ptr = m_exe_ctx.GetTargetPtr();
+    // Fallback to the dummy target, which can allow for expression evaluation.
+    Target &target = target_ptr ? *target_ptr : GetDummyTarget();
 
+    auto *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
     ValueObjectSP valobj_sp;
-    if (target->EvaluateExpression(expr, frame, valobj_sp) ==
+    if (target.EvaluateExpression(expr, exe_scope, valobj_sp) ==
         eExpressionCompleted) {
       if (verbosity != eDWIMPrintVerbosityNone)
         result.AppendMessageWithFormatv("note: ran `expression -- {0}`", expr);
