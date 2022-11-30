@@ -26,19 +26,29 @@ namespace llvm {
 class MachineInstr;
 
 class WebAssemblyDebugValueManager {
+  MachineInstr *Def;
   SmallVector<MachineInstr *, 1> DbgValues;
   Register CurrentReg;
+  SmallVector<MachineInstr *>
+  getSinkableDebugValues(MachineInstr *Insert) const;
 
 public:
   WebAssemblyDebugValueManager(MachineInstr *Def);
 
-  void move(MachineInstr *Insert);
-  void clone(MachineInstr *Insert, Register NewReg);
+  // Sink 'Def', and also sink its eligible DBG_VALUEs to the place before
+  // 'Insert'. Convert the original DBG_VALUEs into undefs.
+  void sink(MachineInstr *Insert);
+  // Clone 'Def' (optionally), and also clone its eligible DBG_VALUEs to the
+  // place before 'Insert'.
+  void cloneSink(MachineInstr *Insert, Register NewReg = Register(),
+                 bool CloneDef = true) const;
   // Update the register for Def and DBG_VALUEs.
   void updateReg(Register Reg);
   // Replace the current register in DBG_VALUEs with the given LocalId target
   // index.
   void replaceWithLocal(unsigned LocalId);
+  // Remove Def, and set its DBG_VALUEs to undef.
+  void removeDef();
 };
 
 } // end namespace llvm
