@@ -1283,11 +1283,8 @@ bool RISCVTargetLowering::
   return !XC;
 }
 
-bool RISCVTargetLowering::canSplatOperand(Instruction *I, int Operand) const {
-  if (!I->getType()->isVectorTy() || !Subtarget.hasVInstructions())
-    return false;
-
-  switch (I->getOpcode()) {
+bool RISCVTargetLowering::canSplatOperand(unsigned Opcode, int Operand) const {
+  switch (Opcode) {
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
@@ -1309,38 +1306,48 @@ bool RISCVTargetLowering::canSplatOperand(Instruction *I, int Operand) const {
   case Instruction::URem:
   case Instruction::SRem:
     return Operand == 1;
-  case Instruction::Call:
-    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-      switch (II->getIntrinsicID()) {
-      case Intrinsic::fma:
-      case Intrinsic::vp_fma:
-        return Operand == 0 || Operand == 1;
-      case Intrinsic::vp_shl:
-      case Intrinsic::vp_lshr:
-      case Intrinsic::vp_ashr:
-      case Intrinsic::vp_udiv:
-      case Intrinsic::vp_sdiv:
-      case Intrinsic::vp_urem:
-      case Intrinsic::vp_srem:
-        return Operand == 1;
-        // These intrinsics are commutative.
-      case Intrinsic::vp_add:
-      case Intrinsic::vp_mul:
-      case Intrinsic::vp_and:
-      case Intrinsic::vp_or:
-      case Intrinsic::vp_xor:
-      case Intrinsic::vp_fadd:
-      case Intrinsic::vp_fmul:
-        // These intrinsics have 'vr' versions.
-      case Intrinsic::vp_sub:
-      case Intrinsic::vp_fsub:
-      case Intrinsic::vp_fdiv:
-        return Operand == 0 || Operand == 1;
-      default:
-        return false;
-      }
-    }
+  default:
     return false;
+  }
+}
+
+
+bool RISCVTargetLowering::canSplatOperand(Instruction *I, int Operand) const {
+  if (!I->getType()->isVectorTy() || !Subtarget.hasVInstructions())
+    return false;
+
+  if (canSplatOperand(I->getOpcode(), Operand))
+    return true;
+
+  auto *II = dyn_cast<IntrinsicInst>(I);
+  if (!II)
+    return false;
+
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::fma:
+  case Intrinsic::vp_fma:
+    return Operand == 0 || Operand == 1;
+  case Intrinsic::vp_shl:
+  case Intrinsic::vp_lshr:
+  case Intrinsic::vp_ashr:
+  case Intrinsic::vp_udiv:
+  case Intrinsic::vp_sdiv:
+  case Intrinsic::vp_urem:
+  case Intrinsic::vp_srem:
+    return Operand == 1;
+    // These intrinsics are commutative.
+  case Intrinsic::vp_add:
+  case Intrinsic::vp_mul:
+  case Intrinsic::vp_and:
+  case Intrinsic::vp_or:
+  case Intrinsic::vp_xor:
+  case Intrinsic::vp_fadd:
+  case Intrinsic::vp_fmul:
+    // These intrinsics have 'vr' versions.
+  case Intrinsic::vp_sub:
+  case Intrinsic::vp_fsub:
+  case Intrinsic::vp_fdiv:
+    return Operand == 0 || Operand == 1;
   default:
     return false;
   }
