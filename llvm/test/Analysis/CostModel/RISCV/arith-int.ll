@@ -815,14 +815,14 @@ define void @add_of_constant() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = add <4 x i32> <i32 1, i32 1, i32 1, i32 1>, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = add <2 x i64> <i64 1, i64 1>, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = add <4 x i32> <i32 4096, i32 4096, i32 4096, i32 4096>, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = add <4 x i32> <i32 1, i32 1, i32 2, i32 1>, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = add <4 x i32> <i32 2, i32 1, i32 1, i32 1>, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = add <4 x i32> <i32 0, i32 1, i32 2, i32 3>, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = add <4 x i32> <i32 1, i32 2, i32 3, i32 4>, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = add <4 x i32> <i32 -1, i32 -2, i32 -3, i32 -4>, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = add <4 x i32> <i32 2, i32 4, i32 6, i32 8>, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = add <4 x i32> <i32 -1, i32 0, i32 2, i32 1>, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %15 = add <4 x i32> <i32 256, i32 4096, i32 57, i32 1>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %8 = add <4 x i32> <i32 1, i32 1, i32 2, i32 1>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %9 = add <4 x i32> <i32 2, i32 1, i32 1, i32 1>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %10 = add <4 x i32> <i32 0, i32 1, i32 2, i32 3>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %11 = add <4 x i32> <i32 1, i32 2, i32 3, i32 4>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %12 = add <4 x i32> <i32 -1, i32 -2, i32 -3, i32 -4>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %13 = add <4 x i32> <i32 2, i32 4, i32 6, i32 8>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %14 = add <4 x i32> <i32 -1, i32 0, i32 2, i32 1>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %15 = add <4 x i32> <i32 256, i32 4096, i32 57, i32 1>, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 
