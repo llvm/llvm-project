@@ -45,7 +45,7 @@ module attributes {
 // CHECK:        spirv.Return
 
 func.func @single_workgroup_reduction(%input: memref<16xi32, #spirv.storage_class<StorageBuffer>>, %output: memref<1xi32, #spirv.storage_class<StorageBuffer>>) attributes {
-  spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[16, 1, 1]>: vector<3xi32>>
+  spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>
 } {
   linalg.generic #single_workgroup_reduction_trait
       ins(%input : memref<16xi32, #spirv.storage_class<StorageBuffer>>)
@@ -104,7 +104,7 @@ module attributes {
     #spirv.vce<v1.3, [Shader, GroupNonUniformArithmetic], []>, #spirv.resource_limits<>>
 } {
 func.func @single_workgroup_reduction(%input: memref<16xi32, #spirv.storage_class<StorageBuffer>>, %output: memref<1xi32, #spirv.storage_class<StorageBuffer>>) attributes {
-  spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[32, 1, 1]>: vector<3xi32>>
+  spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 1, 1]>
 } {
   // expected-error @+1 {{failed to legalize operation 'linalg.generic'}}
   linalg.generic #single_workgroup_reduction_trait
@@ -135,7 +135,7 @@ module attributes {
     #spirv.vce<v1.3, [Shader, GroupNonUniformArithmetic], []>, #spirv.resource_limits<>>
 } {
 func.func @single_workgroup_reduction(%input: memref<16x8xi32, #spirv.storage_class<StorageBuffer>>, %output: memref<16xi32, #spirv.storage_class<StorageBuffer>>) attributes {
-  spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[16, 8, 1]>: vector<3xi32>>
+  spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 8, 1]>
 } {
   // expected-error @+1 {{failed to legalize operation 'linalg.generic'}}
   linalg.generic #single_workgroup_reduction_trait
