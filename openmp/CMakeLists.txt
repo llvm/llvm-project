@@ -87,6 +87,9 @@ endif()
 # to enable time profiling support in the OpenMP runtime.
 add_subdirectory(runtime)
 
+# Build libompd.so
+add_subdirectory(libompd)
+
 if (OPENMP_ENABLE_LIBOMPTARGET)
   # Check that the library can actually be built.
   if (APPLE OR WIN32)
@@ -111,9 +114,6 @@ if (OPENMP_ENABLE_OMPT_TOOLS)
 endif()
 
 option(OPENMP_MSVC_NAME_SCHEME "Build dll with MSVC naming scheme." OFF)
-
-# Build libompd.so
-add_subdirectory(libompd)
 
 # Build documentation
 add_subdirectory(docs)
