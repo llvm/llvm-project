@@ -297,7 +297,8 @@ void RISCVFrameLowering::adjustReg(MachineBasicBlock &MBB,
   // We must keep the stack pointer aligned through any intermediate
   // updates.
   const RISCVRegisterInfo &RI = *STI.getRegisterInfo();
-  RI.adjustReg(MBB, MBBI, DL, DestReg, SrcReg, Val, Flag, getStackAlign());
+  RI.adjustReg(MBB, MBBI, DL, DestReg, SrcReg, Val, Flag,
+               getStackAlign(), /*KillSrcReg=*/false);
 }
 
 // Returns the register used to hold the frame pointer.
