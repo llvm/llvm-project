@@ -1133,8 +1133,6 @@ multiclass MIMG_Gather_WQM <mimgopc op, AMDGPUSampleVariant sample>
 
 class MIMG_IntersectRay_Helper<bit Is64, bit A16> {
   int num_addrs = !if(Is64, !if(A16, 9, 12), !if(A16, 8, 11));
-  // TODO: MIMGAddrSize will choose VReg_512 which is a 16 register tuple,
-  // when we only need 9, 11 or 12 depending on A16 field and ptr size.
   RegisterClass RegClass = MIMGAddrSize<num_addrs, 0>.RegClass;
   int VAddrDwords = !srl(RegClass.Size, 5);
 
