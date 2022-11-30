@@ -232,9 +232,9 @@ define i64 @cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    li a0, 32
 ; RV32I-NEXT:    beqz s0, .LBB3_4
 ; RV32I-NEXT:  .LBB3_2:
-; RV32I-NEXT:    srli a0, s1, 27
-; RV32I-NEXT:    add a0, s4, a0
-; RV32I-NEXT:    lbu a0, 0(a0)
+; RV32I-NEXT:    srli s1, s1, 27
+; RV32I-NEXT:    add s1, s4, s1
+; RV32I-NEXT:    lbu a0, 0(s1)
 ; RV32I-NEXT:    j .LBB3_5
 ; RV32I-NEXT:  .LBB3_3:
 ; RV32I-NEXT:    srli a0, a0, 27

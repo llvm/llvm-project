@@ -426,12 +426,12 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   // Add any two address hints after any copy hints.
   SmallSet<unsigned, 4> TwoAddrHints;
 
-  auto tryAddHint = [&](const MachineOperand &VRRegMO,
-                        const MachineOperand &MO) -> void {
+  auto tryAddHint = [&](const MachineOperand &VRRegMO, const MachineOperand &MO,
+                        bool NeedGPRC) -> void {
     Register Reg = MO.getReg();
     Register PhysReg =
         Register::isPhysicalRegister(Reg) ? Reg : Register(VRM->getPhys(Reg));
-    if (PhysReg) {
+    if (PhysReg && (!NeedGPRC || RISCV::GPRCRegClass.contains(PhysReg))) {
       assert(!MO.getSubReg() && !VRRegMO.getSubReg() && "Unexpected subreg!");
       if (!MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
         TwoAddrHints.insert(PhysReg);
@@ -441,10 +441,15 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   // For now we support the compressible instructions which can encode all
   // registers and have a single register source.
   // TODO: Add more compressed instructions.
-  auto isCompressible = [](const MachineInstr &MI) {
+  auto isCompressible = [](const MachineInstr &MI, bool &NeedGPRC) {
+    NeedGPRC = false;
     switch (MI.getOpcode()) {
     default:
       return false;
+    case RISCV::SRAI:
+    case RISCV::SRLI:
+      NeedGPRC = true;
+      return true;
     case RISCV::ADD:
     case RISCV::SLLI:
       return true;
@@ -456,16 +461,17 @@ bool RISCVRegisterInfo::getRegAllocationHints(
 
   for (auto &MO : MRI->reg_nodbg_operands(VirtReg)) {
     const MachineInstr &MI = *MO.getParent();
-    if (isCompressible(MI)) {
+    bool NeedGPRC;
+    if (isCompressible(MI, NeedGPRC)) {
       unsigned OpIdx = MI.getOperandNo(&MO);
       if (OpIdx == 0 && MI.getOperand(1).isReg()) {
-        tryAddHint(MO, MI.getOperand(1));
+        tryAddHint(MO, MI.getOperand(1), NeedGPRC);
         if (MI.isCommutable() && MI.getOperand(2).isReg())
-          tryAddHint(MO, MI.getOperand(2));
+          tryAddHint(MO, MI.getOperand(2), NeedGPRC);
       } else if (OpIdx == 1) {
-        tryAddHint(MO, MI.getOperand(0));
+        tryAddHint(MO, MI.getOperand(0), NeedGPRC);
       } else if (MI.isCommutable() && OpIdx == 2) {
-        tryAddHint(MO, MI.getOperand(0));
+        tryAddHint(MO, MI.getOperand(0), NeedGPRC);
       }
     }
   }
