@@ -275,9 +275,15 @@ function(runtime_register_target name target)
     endif()
   endforeach()
 
-  foreach(target_name IN LISTS SUB_COMPONENTS SUB_INSTALL_TARGETS)
+  foreach(target_name IN LISTS SUB_COMPONENTS)
     set(${target_name}-${name} ${target_name})
     list(APPEND ${name}_extra_targets ${target_name}-${name})
+  endforeach()
+
+  foreach(target_name IN LISTS SUB_INSTALL_TARGETS)
+    set(${target_name}-${name} ${target_name})
+    set(${target_name}-${name}-stripped ${target_name}-stripped)
+    list(APPEND ${name}_extra_targets ${target_name}-${name} ${target_name}-${name}-stripped)
   endforeach()
 
   foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
