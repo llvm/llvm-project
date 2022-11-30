@@ -118,7 +118,15 @@ cl::opt<std::string> AIXSystemAssemblerPath(
     "lto-aix-system-assembler",
     cl::desc("Path to a system assembler, picked up on AIX only"),
     cl::value_desc("path"));
-}
+
+cl::opt<bool>
+    LTORunCSIRInstr("cs-profile-generate",
+                    cl::desc("Perform context sensitive PGO instrumentation"));
+
+cl::opt<std::string>
+    LTOCSIRProfile("cs-profile-path",
+                   cl::desc("Context sensitive profile file path"));
+} // namespace llvm
 
 LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
     : Context(Context), MergedModule(new Module("ld-temp.o", Context)),
@@ -131,6 +139,9 @@ LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
   Config.PreCodeGenPassesHook = [](legacy::PassManager &PM) {
     PM.add(createObjCARCContractPass());
   };
+
+  Config.RunCSIRInstr = LTORunCSIRInstr;
+  Config.CSIRProfile = LTOCSIRProfile;
 }
 
 LTOCodeGenerator::~LTOCodeGenerator() = default;
