@@ -382,9 +382,7 @@ define i1 @or_select_false_x_negative(i1 %x, i1 %y, i1 %z) {
 
 define i1 @select_or_same_op(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_or_same_op(
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[OR]], i1 [[X]], i1 [[Y]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[X:%.*]]
 ;
   %or = or i1 %x, %y
   %r = select i1 %or, i1 %x, i1 %y
@@ -394,9 +392,7 @@ define i1 @select_or_same_op(i1 %x, i1 %y) {
 
 define i1 @select_or_same_op_commute(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_or_same_op_commute(
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[OR]], i1 [[Y]], i1 [[X]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[Y:%.*]]
 ;
   %or = or i1 %x, %y
   %r = select i1 %or, i1 %y, i1 %x
@@ -406,9 +402,7 @@ define i1 @select_or_same_op_commute(i1 %x, i1 %y) {
 
 define <2 x i1> @select_or_same_op_vector1(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @select_or_same_op_vector1(
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[OR]], <2 x i1> [[X]], <2 x i1> [[Y]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> [[X:%.*]]
 ;
   %or = or <2 x i1> %x, %y
   %r = select <2 x i1> %or, <2 x i1> %x, <2 x i1> %y
@@ -418,9 +412,7 @@ define <2 x i1> @select_or_same_op_vector1(<2 x i1> %x, <2 x i1> %y) {
 
 define i1 @select_logic_or1_same_op(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_logic_or1_same_op(
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[OR]], i1 [[X]], i1 [[Y]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[X:%.*]]
 ;
   %or = select i1 %x, i1 true, i1 %y
   %r = select i1 %or, i1 %x, i1 %y
@@ -430,9 +422,7 @@ define i1 @select_logic_or1_same_op(i1 %x, i1 %y) {
 
 define i1 @select_logic_or2_same_op(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_logic_or2_same_op(
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[Y:%.*]], i1 true, i1 [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[OR]], i1 [[X]], i1 [[Y]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[X:%.*]]
 ;
   %or = select i1 %y, i1 true, i1 %x
   %r = select i1 %or, i1 %x, i1 %y
@@ -442,15 +432,15 @@ define i1 @select_logic_or2_same_op(i1 %x, i1 %y) {
 
 define <2 x i1> @select_or_same_op_vector2(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @select_or_same_op_vector2(
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[X:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[OR]], <2 x i1> [[X]], <2 x i1> [[Y]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> [[X:%.*]]
 ;
   %or = select <2 x i1> %x, <2 x i1> <i1 true, i1 true>, <2 x i1> %y
   %r = select <2 x i1> %or, <2 x i1> %x, <2 x i1> %y
   ret <2 x i1> %r
 }
 
+; TODO: this could transform to X
+; (X || Y) ? X : Y --> X
 
 define <2 x i1> @select_or_same_op_vector2_poison(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @select_or_same_op_vector2_poison(
