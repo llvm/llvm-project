@@ -4,16 +4,15 @@
 #
 # Find Lua and SWIG as a whole.
 
-if(LUA_LIBRARIES AND LUA_INCLUDE_DIR AND SWIG_EXECUTABLE)
+if(LUA_LIBRARIES AND LUA_INCLUDE_DIR AND LLDB_ENABLE_SWIG)
   set(LUAANDSWIG_FOUND TRUE)
 else()
   if (LLDB_ENABLE_SWIG)
     find_package(Lua 5.3 EXACT)
-    if(LUA_FOUND AND SWIG_FOUND)
+    if(LUA_FOUND)
       mark_as_advanced(
         LUA_LIBRARIES
-        LUA_INCLUDE_DIR
-        SWIG_EXECUTABLE)
+        LUA_INCLUDE_DIR)
     endif()
   else()
     message(STATUS "SWIG 3 or later is required for Lua support in LLDB but could not be found")
