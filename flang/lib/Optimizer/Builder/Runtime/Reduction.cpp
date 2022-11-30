@@ -576,6 +576,41 @@ void fir::runtime::genCountDim(fir::FirOpBuilder &builder, mlir::Location loc,
   builder.create<fir::CallOp>(loc, func, args);
 }
 
+/// Generate call to `Findloc` intrinsic runtime routine. This is the version
+/// that does not take a dim argument.
+void fir::runtime::genFindloc(fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Value resultBox, mlir::Value arrayBox,
+                              mlir::Value valBox, mlir::Value maskBox,
+                              mlir::Value kind, mlir::Value back) {
+  auto func = fir::runtime::getRuntimeFunc<mkRTKey(Findloc)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
+  auto args = fir::runtime::createArguments(builder, loc, fTy, resultBox,
+                                            arrayBox, valBox, kind, sourceFile,
+                                            sourceLine, maskBox, back);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+/// Generate call to `FindlocDim` intrinsic runtime routine. This is the version
+/// that takes a dim argument.
+void fir::runtime::genFindlocDim(fir::FirOpBuilder &builder, mlir::Location loc,
+                                 mlir::Value resultBox, mlir::Value arrayBox,
+                                 mlir::Value valBox, mlir::Value dim,
+                                 mlir::Value maskBox, mlir::Value kind,
+                                 mlir::Value back) {
+  auto func = fir::runtime::getRuntimeFunc<mkRTKey(FindlocDim)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(6));
+  auto args = fir::runtime::createArguments(
+      builder, loc, fTy, resultBox, arrayBox, valBox, kind, dim, sourceFile,
+      sourceLine, maskBox, back);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
 /// Generate call to `Maxloc` intrinsic runtime routine. This is the version
 /// that does not take a dim argument.
 void fir::runtime::genMaxloc(fir::FirOpBuilder &builder, mlir::Location loc,

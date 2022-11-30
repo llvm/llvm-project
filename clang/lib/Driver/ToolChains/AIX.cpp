@@ -250,6 +250,13 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-lm");
 
     CmdArgs.push_back("-lc");
+
+    if (Args.hasArg(options::OPT_pg)) {
+      CmdArgs.push_back(Args.MakeArgString((llvm::Twine("-L") + D.SysRoot) +
+                                           "/lib/profiled"));
+      CmdArgs.push_back(Args.MakeArgString((llvm::Twine("-L") + D.SysRoot) +
+                                           "/usr/lib/profiled"));
+    }
   }
 
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
