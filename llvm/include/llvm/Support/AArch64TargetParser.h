@@ -78,6 +78,9 @@ enum ArchExtKind : uint64_t {
   AEK_SMEF16F16 =   1ULL << 47, // FEAT_SMEF16F16
   AEK_CSSC =        1ULL << 48, // FEAT_CSSC
   AEK_RCPC3 =       1ULL << 49, // FEAT_LRCPC3
+  AEK_THE =         1ULL << 50, // FEAT_THE
+  AEK_D128 =        1ULL << 51, // FEAT_D128
+  AEK_LSE128 =      1ULL << 52, // FEAT_LSE128
 };
 
 enum class ArchKind {

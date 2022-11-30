@@ -262,6 +262,9 @@ DecodeWSeqPairsClassRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Addr,
 static DecodeStatus
 DecodeXSeqPairsClassRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Addr,
                                   const MCDisassembler *Decoder);
+static DecodeStatus DecodeSyspXzrInstruction(MCInst &Inst, uint32_t insn,
+                                             uint64_t Addr,
+                                             const MCDisassembler *Decoder);
 static DecodeStatus
 DecodeSVELogicalImmInstruction(MCInst &Inst, uint32_t insn, uint64_t Address,
                                const MCDisassembler *Decoder);
@@ -1890,6 +1893,26 @@ DecodeXSeqPairsClassRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Addr,
   return DecodeGPRSeqPairsClassRegisterClass(Inst,
                                              AArch64::XSeqPairsClassRegClassID,
                                              RegNo, Addr, Decoder);
+}
+
+static DecodeStatus DecodeSyspXzrInstruction(MCInst &Inst, uint32_t insn,
+                                             uint64_t Addr,
+                                             const MCDisassembler *Decoder) {
+  unsigned op1 = fieldFromInstruction(insn, 16, 3);
+  unsigned CRn = fieldFromInstruction(insn, 12, 4);
+  unsigned CRm = fieldFromInstruction(insn, 8, 4);
+  unsigned op2 = fieldFromInstruction(insn, 5, 3);
+  unsigned Rt = fieldFromInstruction(insn, 0, 5);
+  if (Rt != 0b11111)
+    return Fail;
+
+  Inst.addOperand(MCOperand::createImm(op1));
+  Inst.addOperand(MCOperand::createImm(CRn));
+  Inst.addOperand(MCOperand::createImm(CRm));
+  Inst.addOperand(MCOperand::createImm(op2));
+  DecodeGPR64RegisterClass(Inst, Rt, Addr, Decoder);
+
+  return Success;
 }
 
 static DecodeStatus
