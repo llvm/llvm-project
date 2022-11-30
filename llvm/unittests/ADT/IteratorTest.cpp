@@ -416,6 +416,33 @@ TEST(ZipIteratorTest, Basic) {
   }
 }
 
+TEST(ZipIteratorTest, ZipEqualBasic) {
+  const SmallVector<unsigned, 6> pi = {3, 1, 4, 1, 5, 8};
+  const SmallVector<bool, 6> vals = {1, 1, 0, 1, 1, 0};
+  unsigned iters = 0;
+
+  for (auto [lhs, rhs] : zip_equal(vals, pi)) {
+    EXPECT_EQ(lhs, rhs & 0x01);
+    ++iters;
+  }
+
+  EXPECT_EQ(iters, 6u);
+}
+
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+// Check that an assertion is triggered when ranges passed to `zip_equal` differ
+// in length.
+TEST(ZipIteratorTest, ZipEqualNotEqual) {
+  const SmallVector<unsigned, 6> pi = {3, 1, 4, 1, 5, 8};
+  const SmallVector<bool, 2> vals = {1, 1};
+
+  EXPECT_DEATH(zip_equal(pi, vals), "Iteratees do not have equal length");
+  EXPECT_DEATH(zip_equal(vals, pi), "Iteratees do not have equal length");
+  EXPECT_DEATH(zip_equal(pi, pi, vals), "Iteratees do not have equal length");
+  EXPECT_DEATH(zip_equal(vals, vals, pi), "Iteratees do not have equal length");
+}
+#endif
+
 TEST(ZipIteratorTest, ZipFirstBasic) {
   using namespace std;
   const SmallVector<unsigned, 6> pi{3, 1, 4, 1, 5, 9};
