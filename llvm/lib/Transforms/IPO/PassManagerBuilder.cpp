@@ -355,11 +355,6 @@ void PassManagerBuilder::populateModulePassManager(
     RunInliner = true;
   }
 
-  // Try to perform OpenMP specific optimizations. This is a (quick!) no-op if
-  // there are no OpenMP runtime calls present in the module.
-  if (OptLevel > 1)
-    MPM.add(createOpenMPOptCGSCCLegacyPass());
-
   MPM.add(createPostOrderFunctionAttrsLegacyPass());
 
   addFunctionSimplificationPasses(MPM);
