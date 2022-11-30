@@ -1183,7 +1183,7 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
   auto FloatSrcTy = SrcElementTy.cast<mlir::FloatType>();
   if (FloatDstTy.getWidth() < FloatSrcTy.getWidth())
     llvm_unreachable("truncation NYI");
-  return Builder.CreateFPExt(Src, DstTy);
+  return Builder.createFPExt(Src, DstTy);
 }
 
 LValue
