@@ -140,6 +140,11 @@ static cl::list<std::string> DependencyTargets(
 static cl::opt<bool> DeprecatedDriverCommand(
     "deprecated-driver-command",
     cl::desc("use a single driver command to build the tu (deprecated)"));
+static llvm::cl::opt<std::string>
+    CASPath("cas-path", llvm::cl::desc("Path for on-disk CAS."));
+static llvm::cl::opt<std::string>
+    CachePath("action-cache-path",
+              llvm::cl::desc("Path for on-disk action cache."));
 }
 } // anonymous namespace
 
@@ -681,6 +686,8 @@ static void printSymbolNameAndUSR(const clang::Module *Mod, raw_ostream &OS) {
 static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
                     bool SerializeDiags, bool DependencyFile,
                     ArrayRef<std::string> DepTargets, std::string OutputPath,
+                    Optional<std::string> CASPath,
+                    Optional<std::string> CachePath,
                     Optional<std::string> ModuleName = None) {
   CXDependencyScannerServiceOptions Opts =
       clang_experimental_DependencyScannerServiceOptions_create();
@@ -689,6 +696,36 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
   });
   clang_experimental_DependencyScannerServiceOptions_setDependencyMode(
       Opts, CXDependencyMode_Full);
+
+  CXString Error;
+  if (CASPath) {
+    CXCASObjectStore CAS = clang_experimental_cas_OnDiskObjectStore_create(
+        CASPath->c_str(), &Error);
+    auto CleanupCache = llvm::make_scope_exit(
+        [&] { clang_experimental_cas_ObjectStore_dispose(CAS); });
+    if (!CAS) {
+      llvm::errs() << "error: failed to create ObjectStore\n";
+      llvm::errs() << clang_getCString(Error) << "\n";
+      clang_disposeString(Error);
+      return 1;
+    }
+    clang_experimental_DependencyScannerServiceOptions_setObjectStore(Opts,
+                                                                      CAS);
+    if (CachePath) {
+      CXCASActionCache Cache = clang_experimental_cas_OnDiskActionCache_create(
+          CachePath->c_str(), &Error);
+      auto CleanupCache = llvm::make_scope_exit(
+          [&] { clang_experimental_cas_ActionCache_dispose(Cache); });
+      if (!Cache) {
+        llvm::errs() << "error: failed to create ActionCache\n";
+        llvm::errs() << clang_getCString(Error) << "\n";
+        clang_disposeString(Error);
+        return 1;
+      }
+      clang_experimental_DependencyScannerServiceOptions_setActionCache(Opts,
+                                                                        Cache);
+    }
+  }
 
   CXDependencyScannerService Service =
       clang_experimental_DependencyScannerService_create_v1(Opts);
@@ -1133,7 +1170,13 @@ int indextest_core_main(int argc, const char **argv) {
     }
     return aggregateDataAsJSON(storePath, PathRemapper, OS);
   }
-  
+
+  Optional<std::string> CASPath =
+      options::CASPath.empty() ? None : Optional<std::string>(options::CASPath);
+  Optional<std::string> CachePath =
+      options::CachePath.empty() ? None
+                                 : Optional<std::string>(options::CachePath);
+
   if (options::Action == ActionType::ScanDeps) {
     if (options::InputFiles.empty()) {
       errs() << "error: missing working directory\n";
@@ -1141,7 +1184,7 @@ int indextest_core_main(int argc, const char **argv) {
     }
     return scanDeps(CompArgs, options::InputFiles[0], options::SerializeDiags,
                     options::DependencyFile, options::DependencyTargets,
-                    options::OutputDir);
+                    options::OutputDir, CASPath, CachePath);
   }
 
   if (options::Action == ActionType::ScanDepsByModuleName) {
@@ -1156,7 +1199,8 @@ int indextest_core_main(int argc, const char **argv) {
     }
     return scanDeps(CompArgs, options::InputFiles[0], options::SerializeDiags,
                     options::DependencyFile, options::DependencyTargets,
-                    options::OutputDir, options::ModuleName);
+                    options::OutputDir, CASPath, CachePath,
+                    options::ModuleName);
   }
 
   if (options::Action == ActionType::WatchDir) {

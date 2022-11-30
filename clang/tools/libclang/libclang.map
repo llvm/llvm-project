@@ -472,10 +472,16 @@ LLVM_13 {
 
 LLVM_16 {
   global:
+    clang_experimental_cas_ActionCache_dispose;
+    clang_experimental_cas_ObjectStore_dispose;
+    clang_experimental_cas_OnDiskActionCache_create;
+    clang_experimental_cas_OnDiskObjectStore_create;
     clang_experimental_DependencyScannerService_create_v1;
     clang_experimental_DependencyScannerServiceOptions_create;
     clang_experimental_DependencyScannerServiceOptions_dispose;
+    clang_experimental_DependencyScannerServiceOptions_setActionCache;
     clang_experimental_DependencyScannerServiceOptions_setDependencyMode;
+    clang_experimental_DependencyScannerServiceOptions_setObjectStore;
     clang_experimental_DependencyScannerWorker_getFileDependencies_v5;
     clang_getUnqualifiedType;
     clang_getNonReferenceType;

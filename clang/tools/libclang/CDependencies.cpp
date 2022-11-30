@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CASUtils.h"
 #include "CXDiagnosticSetDiagnosticConsumer.h"
 #include "CXString.h"
 
@@ -94,6 +95,17 @@ void clang_experimental_DependencyScannerServiceOptions_setDependencyMode(
   unwrap(Opts)->Format = unwrap(Mode);
 }
 
+void clang_experimental_DependencyScannerServiceOptions_setObjectStore(
+    CXDependencyScannerServiceOptions Opts, CXCASObjectStore CAS) {
+  unwrap(Opts)->CAS = cas::unwrap(CAS)->CAS;
+  unwrap(Opts)->CASOpts.CASPath = cas::unwrap(CAS)->CASPath;
+}
+void clang_experimental_DependencyScannerServiceOptions_setActionCache(
+    CXDependencyScannerServiceOptions Opts, CXCASActionCache Cache) {
+  unwrap(Opts)->Cache = cas::unwrap(Cache)->Cache;
+  unwrap(Opts)->CASOpts.CachePath = cas::unwrap(Cache)->CachePath;
+}
+
 CXDependencyScannerService
 clang_experimental_DependencyScannerService_create_v0(CXDependencyMode Format) {
   // FIXME: Pass default CASOpts and nullptr as CachingOnDiskFileSystem now.
@@ -109,11 +121,18 @@ CXDependencyScannerService
 clang_experimental_DependencyScannerService_create_v1(
     CXDependencyScannerServiceOptions Opts) {
   // FIXME: Pass default CASOpts and nullptr as CachingOnDiskFileSystem now.
-  CASOptions CASOpts;
+  std::shared_ptr<llvm::cas::ObjectStore> CAS = unwrap(Opts)->CAS;
+  std::shared_ptr<llvm::cas::ActionCache> Cache = unwrap(Opts)->Cache;
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
+  if (CAS && Cache) {
+    assert(unwrap(Opts)->CASOpts.getKind() != CASOptions::UnknownCAS &&
+           "CAS and ActionCache must match CASOptions");
+    FS = llvm::cantFail(
+        llvm::cas::createCachingOnDiskFileSystem(std::move(CAS)));
+  }
   return wrap(new DependencyScanningService(
       ScanningMode::DependencyDirectivesScan, unwrap(Opts)->Format,
-      CASOpts, /*ActionCache=*/nullptr, std::move(FS),
+      unwrap(Opts)->CASOpts, std::move(Cache), std::move(FS),
       /*ReuseFilemanager=*/false));
 }
 
