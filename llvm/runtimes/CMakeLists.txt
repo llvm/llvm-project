@@ -484,8 +484,10 @@ if(runtimes)
     set(RUNTIMES_TEST_DEPENDS
         FileCheck
         count
+        llvm-cov
         llvm-nm
         llvm-objdump
+        llvm-profdata
         llvm-xray
         not
         obj2yaml
