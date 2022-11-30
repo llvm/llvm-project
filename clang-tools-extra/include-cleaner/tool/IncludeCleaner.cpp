@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AnalysisInternal.h"
+#include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -46,7 +47,48 @@ cl::opt<std::string> HTMLReportPath{
     cl::cat(IncludeCleaner),
 };
 
-class HTMLReportAction : public clang::ASTFrontendAction {
+enum class PrintStyle { Changes, Final };
+cl::opt<PrintStyle> Print{
+    "print",
+    cl::values(
+        clEnumValN(PrintStyle::Changes, "changes", "Print symbolic changes"),
+        clEnumValN(PrintStyle::Final, "", "Print final code")),
+    cl::ValueOptional,
+    cl::init(PrintStyle::Final),
+    cl::desc("Print the list of headers to insert and remove"),
+    cl::cat(IncludeCleaner),
+};
+
+cl::opt<bool> Edit{
+    "edit",
+    cl::desc("Apply edits to analyzed source files"),
+    cl::cat(IncludeCleaner),
+};
+
+cl::opt<bool> Insert{
+    "insert",
+    cl::desc("Allow header insertions"),
+    cl::init(true),
+};
+cl::opt<bool> Remove{
+    "remove",
+    cl::desc("Allow header removals"),
+    cl::init(true),
+};
+
+std::atomic<unsigned> Errors = ATOMIC_VAR_INIT(0);
+
+format::FormatStyle getStyle(llvm::StringRef Filename) {
+  auto S = format::getStyle(format::DefaultFormatStyle, Filename,
+                            format::DefaultFallbackStyle);
+  if (!S || !S->isCpp()) {
+    consumeError(S.takeError());
+    return format::getLLVMStyle();
+  }
+  return std::move(*S);
+}
+
+class Action : public clang::ASTFrontendAction {
   RecordedAST AST;
   RecordedPP PP;
   PragmaIncludes PI;
@@ -64,12 +106,59 @@ class HTMLReportAction : public clang::ASTFrontendAction {
   }
 
   void EndSourceFile() override {
+    if (!HTMLReportPath.empty())
+      writeHTML();
+
+    const auto &SM = getCompilerInstance().getSourceManager();
+    auto &HS = getCompilerInstance().getPreprocessor().getHeaderSearchInfo();
+    llvm::StringRef Path =
+        SM.getFileEntryForID(SM.getMainFileID())->tryGetRealPathName();
+    assert(!Path.empty() && "Main file path not known?");
+    llvm::StringRef Code = SM.getBufferData(SM.getMainFileID());
+
+    auto Results =
+        analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI, SM, HS);
+    if (!Insert)
+      Results.Missing.clear();
+    if (!Remove)
+      Results.Unused.clear();
+    std::string Final = fixIncludes(Results, Code, getStyle(Path));
+
+    if (Print.getNumOccurrences()) {
+      switch (Print) {
+      case PrintStyle::Changes:
+        for (const Include *I : Results.Unused)
+          llvm::outs() << "- " << I->quote() << "\n";
+        for (const auto &I : Results.Missing)
+          llvm::outs() << "+ " << I << "\n";
+        break;
+      case PrintStyle::Final:
+        llvm::outs() << Final;
+        break;
+      }
+    }
+
+    if (Edit) {
+      if (auto Err = llvm::writeToOutput(
+              Path, [&](llvm::raw_ostream &OS) -> llvm::Error {
+                OS << Final;
+                return llvm::Error::success();
+              })) {
+        llvm::errs() << "Failed to apply edits to " << Path << ": "
+                     << toString(std::move(Err)) << "\n";
+        ++Errors;
+      }
+    }
+  }
+
+  void writeHTML() {
     std::error_code EC;
     llvm::raw_fd_ostream OS(HTMLReportPath, EC);
     if (EC) {
       llvm::errs() << "Unable to write HTML report to " << HTMLReportPath
                    << ": " << EC.message() << "\n";
-      exit(1);
+      ++Errors;
+      return;
     }
     writeHTMLReport(
         AST.Ctx->getSourceManager().getMainFileID(), PP.Includes, AST.Roots,
@@ -93,20 +182,17 @@ int main(int argc, const char **argv) {
     return 1;
   }
 
-  std::unique_ptr<clang::tooling::FrontendActionFactory> Factory;
-  if (HTMLReportPath.getNumOccurrences()) {
-    if (OptionsParser->getSourcePathList().size() != 1) {
-      llvm::errs() << "-" << HTMLReportPath.ArgStr
-                   << " requires a single input file";
+  if (OptionsParser->getSourcePathList().size() != 1) {
+    std::vector<cl::Option *> IncompatibleFlags = {&HTMLReportPath, &Print};
+    for (const auto *Flag : IncompatibleFlags) {
+      if (Flag->getNumOccurrences())
+        llvm::errs() << "-" << Flag->ArgStr << " requires a single input file";
       return 1;
     }
-    Factory = clang::tooling::newFrontendActionFactory<HTMLReportAction>();
-  } else {
-    llvm::errs() << "Unimplemented\n";
-    return 1;
   }
-
+  auto Factory = clang::tooling::newFrontendActionFactory<Action>();
   return clang::tooling::ClangTool(OptionsParser->getCompilations(),
                                    OptionsParser->getSourcePathList())
-      .run(Factory.get());
+             .run(Factory.get()) ||
+         Errors != 0;
 }
