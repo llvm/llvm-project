@@ -134,6 +134,33 @@ foo:
   msr VTCR_EL2, x3
   msr VTTBR_EL2, x3
   msr SPSel, x3
+  msr AMAIR2_EL1, x3
+  msr AMAIR2_EL12, x3
+  msr AMAIR2_EL2, x3
+  msr AMAIR2_EL3, x3
+  msr MAIR2_EL1, x3
+  msr MAIR2_EL12, x3
+  msr MAIR2_EL2, x3
+  msr MAIR2_EL3, x3
+  msr PIRE0_EL1, x3
+  msr PIRE0_EL2, x3
+  msr PIR_EL1, x3
+  msr PIR_EL12, x3
+  msr PIR_EL2, x3
+  msr PIR_EL3, x3
+  msr S2PIR_EL2, x3
+  msr POR_EL0, x3
+  msr POR_EL1, x3
+  msr POR_EL12, x3
+  msr POR_EL2, x3
+  msr POR_EL3, x3
+  msr S2POR_EL1, x3
+  msr SCTLR2_EL1, x3
+  msr SCTLR2_EL12, x3
+  msr SCTLR2_EL2, x3
+  msr TCR2_EL1, x3
+  msr TCR2_EL12, x3
+  msr TCR2_EL2, x3
   msr S3_2_C11_C6_4, x1
   msr  S0_0_C0_C0_0, x0
   msr  S1_2_C3_C4_5, x2
@@ -213,6 +240,33 @@ foo:
 ; CHECK: msr VTCR_EL2, x3               ; encoding: [0x43,0x21,0x1c,0xd5]
 ; CHECK: msr VTTBR_EL2, x3              ; encoding: [0x03,0x21,0x1c,0xd5]
 ; CHECK: msr  SPSel, x3                 ; encoding: [0x03,0x42,0x18,0xd5]
+; CHECK: msr AMAIR2_EL1, x3             ; encoding: [0x23,0xa3,0x18,0xd5]
+; CHECK: msr AMAIR2_EL12, x3            ; encoding: [0x23,0xa3,0x1d,0xd5]
+; CHECK: msr AMAIR2_EL2, x3             ; encoding: [0x23,0xa3,0x1c,0xd5]
+; CHECK: msr AMAIR2_EL3, x3             ; encoding: [0x23,0xa3,0x1e,0xd5]
+; CHECK: msr MAIR2_EL1, x3              ; encoding: [0x23,0xa2,0x18,0xd5]
+; CHECK: msr MAIR2_EL12, x3             ; encoding: [0x23,0xa2,0x1d,0xd5]
+; CHECK: msr MAIR2_EL2, x3              ; encoding: [0x23,0xa1,0x1c,0xd5]
+; CHECK: msr MAIR2_EL3, x3              ; encoding: [0x23,0xa1,0x1e,0xd5]
+; CHECK: msr PIRE0_EL1, x3              ; encoding: [0x43,0xa2,0x18,0xd5]
+; CHECK: msr PIRE0_EL2, x3              ; encoding: [0x43,0xa2,0x1c,0xd5]
+; CHECK: msr PIR_EL1, x3                ; encoding: [0x63,0xa2,0x18,0xd5]
+; CHECK: msr PIR_EL12, x3               ; encoding: [0x63,0xa2,0x1d,0xd5]
+; CHECK: msr PIR_EL2, x3                ; encoding: [0x63,0xa2,0x1c,0xd5]
+; CHECK: msr PIR_EL3, x3                ; encoding: [0x63,0xa2,0x1e,0xd5]
+; CHECK: msr S2PIR_EL2, x3              ; encoding: [0xa3,0xa2,0x1c,0xd5]
+; CHECK: msr POR_EL0, x3                ; encoding: [0x83,0xa2,0x1b,0xd5]
+; CHECK: msr POR_EL1, x3                ; encoding: [0x83,0xa2,0x18,0xd5]
+; CHECK: msr POR_EL12, x3               ; encoding: [0x83,0xa2,0x1d,0xd5]
+; CHECK: msr POR_EL2, x3                ; encoding: [0x83,0xa2,0x1c,0xd5]
+; CHECK: msr POR_EL3, x3                ; encoding: [0x83,0xa2,0x1e,0xd5]
+; CHECK: msr S2POR_EL1, x3              ; encoding: [0xa3,0xa2,0x18,0xd5]
+; CHECK: msr SCTLR2_EL1, x3             ; encoding: [0x63,0x10,0x18,0xd5]
+; CHECK: msr SCTLR2_EL12, x3            ; encoding: [0x63,0x10,0x1d,0xd5]
+; CHECK: msr SCTLR2_EL2, x3             ; encoding: [0x63,0x10,0x1c,0xd5]
+; CHECK: msr TCR2_EL1, x3               ; encoding: [0x63,0x20,0x18,0xd5]
+; CHECK: msr TCR2_EL12, x3              ; encoding: [0x63,0x20,0x1d,0xd5]
+; CHECK: msr TCR2_EL2, x3               ; encoding: [0x63,0x20,0x1c,0xd5]
 ; CHECK: msr  S3_2_C11_C6_4, x1         ; encoding: [0x81,0xb6,0x1a,0xd5]
 ; CHECK: msr  S0_0_C0_C0_0, x0          ; encoding: [0x00,0x00,0x00,0xd5]
 ; CHECK: msr  S1_2_C3_C4_5, x2          ; encoding: [0xa2,0x34,0x0a,0xd5]
@@ -404,6 +458,33 @@ foo:
   mrs x3, DBGCLAIMSET_EL1
   mrs x3, DBGCLAIMCLR_EL1
   mrs x3, DBGAUTHSTATUS_EL1
+  mrs x3, AMAIR2_EL1
+  mrs x3, AMAIR2_EL12
+  mrs x3, AMAIR2_EL2
+  mrs x3, AMAIR2_EL3
+  mrs x3, MAIR2_EL1
+  mrs x3, MAIR2_EL12
+  mrs x3, MAIR2_EL2
+  mrs x3, MAIR2_EL3
+  mrs x3, PIRE0_EL1
+  mrs x3, PIRE0_EL2
+  mrs x3, PIR_EL1
+  mrs x3, PIR_EL12
+  mrs x3, PIR_EL2
+  mrs x3, PIR_EL3
+  mrs x3, S2PIR_EL2
+  mrs x3, POR_EL0
+  mrs x3, POR_EL1
+  mrs x3, POR_EL12
+  mrs x3, POR_EL2
+  mrs x3, POR_EL3
+  mrs x3, S2POR_EL1
+  mrs x3, SCTLR2_EL1
+  mrs x3, SCTLR2_EL12
+  mrs x3, SCTLR2_EL2
+  mrs x3, TCR2_EL1
+  mrs x3, TCR2_EL12
+  mrs x3, TCR2_EL2
   mrs x1, S3_2_C15_C6_4
   mrs x3, s3_3_c11_c1_4
   mrs x3, S3_3_c11_c1_4
@@ -590,6 +671,33 @@ foo:
 ; CHECK: mrs	x3, DBGCLAIMSET_EL1     ; encoding: [0xc3,0x78,0x30,0xd5]
 ; CHECK: mrs	x3, DBGCLAIMCLR_EL1     ; encoding: [0xc3,0x79,0x30,0xd5]
 ; CHECK: mrs	x3, DBGAUTHSTATUS_EL1   ; encoding: [0xc3,0x7e,0x30,0xd5]
+; CHECK: mrs x3, AMAIR2_EL1           ; encoding: [0x23,0xa3,0x38,0xd5]
+; CHECK: mrs x3, AMAIR2_EL12          ; encoding: [0x23,0xa3,0x3d,0xd5]
+; CHECK: mrs x3, AMAIR2_EL2           ; encoding: [0x23,0xa3,0x3c,0xd5]
+; CHECK: mrs x3, AMAIR2_EL3           ; encoding: [0x23,0xa3,0x3e,0xd5]
+; CHECK: mrs x3, MAIR2_EL1            ; encoding: [0x23,0xa2,0x38,0xd5]
+; CHECK: mrs x3, MAIR2_EL12           ; encoding: [0x23,0xa2,0x3d,0xd5]
+; CHECK: mrs x3, MAIR2_EL2            ; encoding: [0x23,0xa1,0x3c,0xd5]
+; CHECK: mrs x3, MAIR2_EL3            ; encoding: [0x23,0xa1,0x3e,0xd5]
+; CHECK: mrs x3, PIRE0_EL1            ; encoding: [0x43,0xa2,0x38,0xd5]
+; CHECK: mrs x3, PIRE0_EL2            ; encoding: [0x43,0xa2,0x3c,0xd5]
+; CHECK: mrs x3, PIR_EL1              ; encoding: [0x63,0xa2,0x38,0xd5]
+; CHECK: mrs x3, PIR_EL12             ; encoding: [0x63,0xa2,0x3d,0xd5]
+; CHECK: mrs x3, PIR_EL2              ; encoding: [0x63,0xa2,0x3c,0xd5]
+; CHECK: mrs x3, PIR_EL3              ; encoding: [0x63,0xa2,0x3e,0xd5]
+; CHECK: mrs x3, S2PIR_EL2            ; encoding: [0xa3,0xa2,0x3c,0xd5]
+; CHECK: mrs x3, POR_EL0              ; encoding: [0x83,0xa2,0x3b,0xd5]
+; CHECK: mrs x3, POR_EL1              ; encoding: [0x83,0xa2,0x38,0xd5]
+; CHECK: mrs x3, POR_EL12             ; encoding: [0x83,0xa2,0x3d,0xd5]
+; CHECK: mrs x3, POR_EL2              ; encoding: [0x83,0xa2,0x3c,0xd5]
+; CHECK: mrs x3, POR_EL3              ; encoding: [0x83,0xa2,0x3e,0xd5]
+; CHECK: mrs x3, S2POR_EL1            ; encoding: [0xa3,0xa2,0x38,0xd5]
+; CHECK: mrs x3, SCTLR2_EL1           ; encoding: [0x63,0x10,0x38,0xd5]
+; CHECK: mrs x3, SCTLR2_EL12          ; encoding: [0x63,0x10,0x3d,0xd5]
+; CHECK: mrs x3, SCTLR2_EL2           ; encoding: [0x63,0x10,0x3c,0xd5]
+; CHECK: mrs x3, TCR2_EL1             ; encoding: [0x63,0x20,0x38,0xd5]
+; CHECK: mrs x3, TCR2_EL12            ; encoding: [0x63,0x20,0x3d,0xd5]
+; CHECK: mrs x3, TCR2_EL2             ; encoding: [0x63,0x20,0x3c,0xd5]
 ; CHECK: mrs    x1, S3_2_C15_C6_4       ; encoding: [0x81,0xf6,0x3a,0xd5]
 ; CHECK: mrs	x3, S3_3_C11_C1_4       ; encoding: [0x83,0xb1,0x3b,0xd5]
 ; CHECK: mrs	x3, S3_3_C11_C1_4       ; encoding: [0x83,0xb1,0x3b,0xd5]
