@@ -9,14 +9,12 @@
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Testing/TestAST.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Testing/Support/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -53,27 +51,25 @@ public:
         }()) {}
 
   const Decl &findDecl(llvm::StringRef SymbolName) {
-    const NamedDecl *DeclToLocate;
-    struct MatchCB : public ast_matchers::MatchFinder::MatchCallback {
-      MatchCB(const NamedDecl *&Out) : Out(Out) {}
-      void run(const ast_matchers::MatchFinder::MatchResult &Result) override {
-        Out = Result.Nodes.getNodeAs<NamedDecl>("id");
-        assert(Out);
-        Out = llvm::cast<NamedDecl>(Out->getCanonicalDecl());
+    struct Visitor : RecursiveASTVisitor<Visitor> {
+      llvm::StringRef NameToFind;
+      const NamedDecl *Out = nullptr;
+      bool VisitNamedDecl(const NamedDecl *ND) {
+        if (ND->getName() == NameToFind) {
+          EXPECT_TRUE(Out == nullptr || Out == ND->getCanonicalDecl())
+              << "Found multiple matches for " << NameToFind;
+          Out = cast<NamedDecl>(ND->getCanonicalDecl());
+        }
+        return true;
       }
-      const NamedDecl *&Out;
-    } CB(DeclToLocate);
-    ast_matchers::MatchFinder Finder;
-    Finder.addMatcher(ast_matchers::namedDecl(
-                          ast_matchers::unless(ast_matchers::isImplicit()),
-                          ast_matchers::hasName(SymbolName))
-                          .bind("id"),
-                      &CB);
-    Finder.matchAST(AST.context());
-    if (!DeclToLocate)
+    };
+    Visitor V;
+    V.NameToFind = SymbolName;
+    V.TraverseDecl(AST.context().getTranslationUnitDecl());
+    if (!V.Out)
       ADD_FAILURE() << "Couldn't find any decls with name: " << SymbolName;
-    assert(DeclToLocate);
-    return *DeclToLocate;
+    assert(V.Out);
+    return *V.Out;
   }
 
   Macro findMacro(llvm::StringRef Name) {
