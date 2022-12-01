@@ -422,7 +422,12 @@ static const Attrs subprogramPrefixAttrs{Attr::ELEMENTAL, Attr::IMPURE,
 void ModFileWriter::PutSubprogram(const Symbol &symbol) {
   auto &details{symbol.get<SubprogramDetails>()};
   if (const Symbol * interface{details.moduleInterface()}) {
-    PutSubprogram(*interface);
+    const Scope *module{FindModuleContaining(interface->owner())};
+    if (module && module != &symbol.owner()) {
+      // Interface is in ancestor module
+    } else {
+      PutSubprogram(*interface);
+    }
   }
   auto attrs{symbol.attrs()};
   Attrs bindAttrs{};
