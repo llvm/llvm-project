@@ -769,6 +769,9 @@ public:
   mlir::LogicalResult buildFunctionBody(const clang::Stmt *Body);
   mlir::LogicalResult buildCoroutineBody(const CoroutineBodyStmt &S);
 
+  RValue buildCoawaitExpr(const CoawaitExpr &E,
+                          AggValueSlot aggSlot = AggValueSlot::ignored(),
+                          bool ignoreResult = false);
   RValue buildCoroutineIntrinsic(const CallExpr *E, unsigned int IID);
 
   // Build CIR for a statement. useCurrentScope should be true if no

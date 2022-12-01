@@ -62,7 +62,9 @@ public:
   void VisitGenericSelectionExpr(GenericSelectionExpr *GE) {
     llvm_unreachable("NYI");
   }
-  void VisitCoawaitExpr(CoawaitExpr *E) { llvm_unreachable("NYI"); }
+  void VisitCoawaitExpr(CoawaitExpr *E) {
+    CGF.buildCoawaitExpr(*E, Dest, IsResultUnused);
+  }
   void VisitCoyieldExpr(CoyieldExpr *E) { llvm_unreachable("NYI"); }
   void VisitUnaryCoawait(UnaryOperator *E) { llvm_unreachable("NYI"); }
   void VisitUnaryExtension(UnaryOperator *E) { llvm_unreachable("NYI"); }

@@ -76,7 +76,9 @@ public:
   mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *GE) {
     llvm_unreachable("NYI");
   }
-  mlir::Value VisitCoawaitExpr(CoawaitExpr *S) { llvm_unreachable("NYI"); }
+  mlir::Value VisitCoawaitExpr(CoawaitExpr *S) {
+    return CGF.buildCoawaitExpr(*S).getScalarVal();
+  }
   mlir::Value VisitCoyieldExpr(CoyieldExpr *S) { llvm_unreachable("NYI"); }
   mlir::Value VisitUnaryCoawait(const UnaryOperator *E) {
     llvm_unreachable("NYI");
