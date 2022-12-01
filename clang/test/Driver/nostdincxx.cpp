@@ -6,4 +6,4 @@
 #include <vector>
 
 // MSVC, PS4, PS5 have C++ headers in the same directory as C headers.
-// UNSUPPORTED: ms-sdk, target={{.*-ps(4|5)}}
+// UNSUPPORTED: ms-sdk, target={{.*-(ps4|ps5)}}
