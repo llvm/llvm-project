@@ -424,7 +424,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     return BaseImplRetVal;
 
   // Add any two address hints after any copy hints.
-  SmallSet<unsigned, 4> TwoAddrHints;
+  SmallSet<Register, 4> TwoAddrHints;
 
   auto tryAddHint = [&](const MachineOperand &VRRegMO, const MachineOperand &MO,
                         bool NeedGPRC) -> void {
