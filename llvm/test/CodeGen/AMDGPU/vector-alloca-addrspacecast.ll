@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-- -data-layout=A5 -passes=amdgpu-promote-alloca,sroa,instcombine < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgcn-- -data-layout=A5 -passes='amdgpu-promote-alloca,sroa,instcombine' < %s | FileCheck -check-prefix=OPT %s
 
 ; Should give up promoting alloca to vector with an addrspacecast.
 
