@@ -960,7 +960,7 @@ bool CheckInterfaceForGeneric(const characteristics::Procedure &proc,
            .AnyFatalError();
 }
 
-void CheckArguments(const characteristics::Procedure &proc,
+bool CheckArguments(const characteristics::Procedure &proc,
     evaluate::ActualArguments &actuals, evaluate::FoldingContext &context,
     const Scope &scope, bool treatingExternalAsImplicit,
     const evaluate::SpecificIntrinsic *intrinsic) {
@@ -980,21 +980,25 @@ void CheckArguments(const characteristics::Procedure &proc,
       if (auto *msgs{messages.messages()}) {
         msgs->Annex(std::move(buffer));
       }
-      return; // don't pile on
+      return false; // don't pile on
     }
   }
   if (explicitInterface) {
     auto buffer{
         CheckExplicitInterface(proc, actuals, context, scope, intrinsic)};
-    if (treatingExternalAsImplicit && !buffer.empty()) {
-      if (auto *msg{messages.Say(
-              "If the procedure's interface were explicit, this reference would be in error"_warn_en_US)}) {
-        buffer.AttachTo(*msg, parser::Severity::Because);
+    if (!buffer.empty()) {
+      if (treatingExternalAsImplicit && !buffer.empty()) {
+        if (auto *msg{messages.Say(
+                "If the procedure's interface were explicit, this reference would be in error"_warn_en_US)}) {
+          buffer.AttachTo(*msg, parser::Severity::Because);
+        }
       }
-    }
-    if (auto *msgs{messages.messages()}) {
-      msgs->Annex(std::move(buffer));
+      if (auto *msgs{messages.messages()}) {
+        msgs->Annex(std::move(buffer));
+      }
+      return false;
     }
   }
+  return true;
 }
 } // namespace Fortran::semantics
