@@ -203,12 +203,10 @@ convertSparseTensorType(Type type, SmallVectorImpl<Type> &fields) {
     return llvm::None;
   // Construct the basic types.
   auto *context = type.getContext();
-  unsigned idxWidth = enc.getIndexBitWidth();
-  unsigned ptrWidth = enc.getPointerBitWidth();
   RankedTensorType rType = type.cast<RankedTensorType>();
   Type indexType = IndexType::get(context);
-  Type idxType = idxWidth ? IntegerType::get(context, idxWidth) : indexType;
-  Type ptrType = ptrWidth ? IntegerType::get(context, ptrWidth) : indexType;
+  Type idxType = enc.getIndexType();
+  Type ptrType = enc.getPointerType();
   Type eltType = rType.getElementType();
   //
   // Sparse tensor storage scheme for rank-dimensional tensor is organized
@@ -268,21 +266,20 @@ static void allocSchemeForRank(OpBuilder &builder, Location loc,
       // Append linear x pointers, initialized to zero. Since each compressed
       // dimension initially already has a single zero entry, this maintains
       // the desired "linear + 1" length property at all times.
-      unsigned ptrWidth = getSparseTensorEncoding(rtp).getPointerBitWidth();
-      Type indexType = builder.getIndexType();
-      Type ptrType = ptrWidth ? builder.getIntegerType(ptrWidth) : indexType;
+      Type ptrType = getSparseTensorEncoding(rtp).getPointerType();
       Value ptrZero = constantZero(builder, loc, ptrType);
       createPushback(builder, loc, fields, field, ptrZero, linear);
       return;
     }
     if (isSingletonDim(rtp, r)) {
       return; // nothing to do
-    }         // Keep compounding the size, but nothing needs to be initialized
-      // at this level. We will eventually reach a compressed level or
-      // otherwise the values array for the from-here "all-dense" case.
-      assert(isDenseDim(rtp, r));
-      Value size = sizeAtStoredDim(builder, loc, rtp, fields, r);
-      linear = builder.create<arith::MulIOp>(loc, linear, size);
+    }
+    // Keep compounding the size, but nothing needs to be initialized
+    // at this level. We will eventually reach a compressed level or
+    // otherwise the values array for the from-here "all-dense" case.
+    assert(isDenseDim(rtp, r));
+    Value size = sizeAtStoredDim(builder, loc, rtp, fields, r);
+    linear = builder.create<arith::MulIOp>(loc, linear, size);
   }
   // Reached values array so prepare for an insertion.
   Value valZero = constantZero(builder, loc, rtp.getElementType());
@@ -315,13 +312,10 @@ static void createAllocFields(OpBuilder &builder, Location loc, Type type,
                               SmallVectorImpl<Value> &fields) {
   auto enc = getSparseTensorEncoding(type);
   assert(enc);
-  // Construct the basic types.
-  unsigned idxWidth = enc.getIndexBitWidth();
-  unsigned ptrWidth = enc.getPointerBitWidth();
   RankedTensorType rtp = type.cast<RankedTensorType>();
   Type indexType = builder.getIndexType();
-  Type idxType = idxWidth ? builder.getIntegerType(idxWidth) : indexType;
-  Type ptrType = ptrWidth ? builder.getIntegerType(ptrWidth) : indexType;
+  Type idxType = enc.getIndexType();
+  Type ptrType = enc.getPointerType();
   Type eltType = rtp.getElementType();
   auto shape = rtp.getShape();
   unsigned rank = shape.size();
@@ -622,9 +616,7 @@ static void genEndInsert(OpBuilder &builder, Location loc, RankedTensorType rtp,
       // TODO: avoid cleanup and keep compressed scheme consistent at all times?
       //
       if (d > 0) {
-        unsigned ptrWidth = getSparseTensorEncoding(rtp).getPointerBitWidth();
-        Type indexType = builder.getIndexType();
-        Type ptrType = ptrWidth ? builder.getIntegerType(ptrWidth) : indexType;
+        Type ptrType = getSparseTensorEncoding(rtp).getPointerType();
         Value mz = constantIndex(builder, loc, getMemSizesIndex(field));
         Value hi = genLoad(builder, loc, fields[memSizesIdx], mz);
         Value zero = constantIndex(builder, loc, 0);
