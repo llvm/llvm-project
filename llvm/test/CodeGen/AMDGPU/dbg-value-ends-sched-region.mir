@@ -49,29 +49,29 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF4:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF5:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF6:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF7:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF6:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF7:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF8:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
   ; CHECK-NEXT:   undef %11.sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef %17.sub0:vreg_64, %18:sreg_64_xexec = V_ADD_CO_U32_e64 [[DEF3]].sub0, [[DEF5]].sub0, 0, implicit $exec
-  ; CHECK-NEXT:   dead undef %17.sub1:vreg_64, dead %19:sreg_64_xexec = V_ADDC_U32_e64 [[DEF3]].sub1, [[DEF5]].sub1, %18, 0, implicit $exec
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[DEF]], 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   [[DEF7:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
-  ; CHECK-NEXT:   dead [[COPY2:%[0-9]+]]:vreg_64 = COPY [[DEF7]]
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
-  ; CHECK-NEXT:   dead [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[DEF1]]
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[DEF4]].sub1
+  ; CHECK-NEXT:   undef %17.sub0:vreg_64, %18:sreg_64_xexec = V_ADD_CO_U32_e64 [[DEF4]].sub0, [[DEF6]].sub0, 0, implicit $exec
+  ; CHECK-NEXT:   dead undef %17.sub1:vreg_64, dead %19:sreg_64_xexec = V_ADDC_U32_e64 [[DEF4]].sub1, [[DEF6]].sub1, %18, 0, implicit $exec
+  ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[DEF1]], 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   dead [[COPY2:%[0-9]+]]:vreg_64 = COPY [[DEF]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[DEF3]]
+  ; CHECK-NEXT:   dead [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[DEF5]].sub1
   ; CHECK-NEXT:   dead [[COPY6:%[0-9]+]]:vgpr_32 = COPY %11.sub0
-  ; CHECK-NEXT:   dead [[V_CMP_GT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_GT_I32_e64 4, [[DEF6]], implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2 [[COPY]], [[DEF7]], 288, 0, implicit $exec :: (store (s64), addrspace 1)
+  ; CHECK-NEXT:   dead [[V_CMP_GT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_GT_I32_e64 4, [[DEF7]], implicit $exec
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2 [[COPY]], [[DEF8]], 288, 0, implicit $exec :: (store (s64), addrspace 1)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
@@ -81,7 +81,7 @@ body:             |
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef [[DEF4]].sub1:vreg_64 = COPY [[COPY5]]
+  ; CHECK-NEXT:   undef [[DEF5]].sub1:vreg_64 = COPY [[COPY5]]
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
