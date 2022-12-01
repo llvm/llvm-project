@@ -333,8 +333,8 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV32-NEXT:    lb a0, 4(a0)
 ; RV32-NEXT:    lw a1, 0(s0)
 ; RV32-NEXT:    slli a0, a0, 10
-; RV32-NEXT:    srli a2, a1, 22
-; RV32-NEXT:    or s1, a2, a0
+; RV32-NEXT:    srli s1, a1, 22
+; RV32-NEXT:    or s1, s1, a0
 ; RV32-NEXT:    srli s2, a1, 11
 ; RV32-NEXT:    andi a0, a1, 2047
 ; RV32-NEXT:    li a1, 683

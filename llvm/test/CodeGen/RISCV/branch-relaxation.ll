@@ -2941,11 +2941,9 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li ra, 1
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    sd ra, 16(sp) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li t0, 5
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    sd t0, 8(sp) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li t1, 6
 ; CHECK-RV64-NEXT:    #NO_APP
@@ -3024,23 +3022,25 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li t6, 31
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    sext.w t0, t6
-; CHECK-RV64-NEXT:    sext.w ra, t5
-; CHECK-RV64-NEXT:    bne ra, t0, .LBB6_1
+; CHECK-RV64-NEXT:    sd t6, 8(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sext.w t6, t6
+; CHECK-RV64-NEXT:    sd t5, 16(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sext.w t5, t5
+; CHECK-RV64-NEXT:    bne t5, t6, .LBB6_1
 ; CHECK-RV64-NEXT:  # %bb.7: # %entry
-; CHECK-RV64-NEXT:    jump .LBB6_4, t0
+; CHECK-RV64-NEXT:    jump .LBB6_4, t5
 ; CHECK-RV64-NEXT:  .LBB6_1: # %cond_2
-; CHECK-RV64-NEXT:    sext.w t0, t4
-; CHECK-RV64-NEXT:    sext.w ra, t3
-; CHECK-RV64-NEXT:    bne ra, t0, .LBB6_2
+; CHECK-RV64-NEXT:    sext.w t5, t4
+; CHECK-RV64-NEXT:    sext.w t6, t3
+; CHECK-RV64-NEXT:    bne t6, t5, .LBB6_2
 ; CHECK-RV64-NEXT:  # %bb.9: # %cond_2
-; CHECK-RV64-NEXT:    jump .LBB6_5, t0
+; CHECK-RV64-NEXT:    jump .LBB6_5, t5
 ; CHECK-RV64-NEXT:  .LBB6_2: # %cond_3
-; CHECK-RV64-NEXT:    sext.w t0, t2
-; CHECK-RV64-NEXT:    sext.w ra, t1
-; CHECK-RV64-NEXT:    bne ra, t0, .LBB6_3
+; CHECK-RV64-NEXT:    sext.w t5, t2
+; CHECK-RV64-NEXT:    sext.w t6, t1
+; CHECK-RV64-NEXT:    bne t6, t5, .LBB6_3
 ; CHECK-RV64-NEXT:  # %bb.11: # %cond_3
-; CHECK-RV64-NEXT:    jump .LBB6_6, t0
+; CHECK-RV64-NEXT:    jump .LBB6_6, t5
 ; CHECK-RV64-NEXT:  .LBB6_3: # %space
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    .zero 1048576
@@ -3057,11 +3057,9 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # dest 3
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    ld ra, 16(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # reg use ra
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    ld t0, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # reg use t0
 ; CHECK-RV64-NEXT:    #NO_APP
@@ -3137,9 +3135,11 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # reg use t4
 ; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    ld t5, 16(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # reg use t5
 ; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    ld t6, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # reg use t6
 ; CHECK-RV64-NEXT:    #NO_APP

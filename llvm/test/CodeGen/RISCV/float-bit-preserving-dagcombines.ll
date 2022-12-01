@@ -195,8 +195,8 @@ define double @bitcast_double_xor(double %a1, double %a2) nounwind {
 ; RV32F-NEXT:    mv s1, a0
 ; RV32F-NEXT:    call __muldf3@plt
 ; RV32F-NEXT:    mv a2, a0
-; RV32F-NEXT:    lui a0, 524288
-; RV32F-NEXT:    xor a3, a1, a0
+; RV32F-NEXT:    lui a3, 524288
+; RV32F-NEXT:    xor a3, a1, a3
 ; RV32F-NEXT:    mv a0, s1
 ; RV32F-NEXT:    mv a1, s0
 ; RV32F-NEXT:    call __muldf3@plt
@@ -321,8 +321,8 @@ define double @bitcast_double_or(double %a1, double %a2) nounwind {
 ; RV32F-NEXT:    mv s1, a0
 ; RV32F-NEXT:    call __muldf3@plt
 ; RV32F-NEXT:    mv a2, a0
-; RV32F-NEXT:    lui a0, 524288
-; RV32F-NEXT:    or a3, a1, a0
+; RV32F-NEXT:    lui a3, 524288
+; RV32F-NEXT:    or a3, a1, a3
 ; RV32F-NEXT:    mv a0, s1
 ; RV32F-NEXT:    mv a1, s0
 ; RV32F-NEXT:    call __muldf3@plt
