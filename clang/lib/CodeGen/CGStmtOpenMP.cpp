@@ -5246,7 +5246,13 @@ void CodeGenFunction::EmitOMPTaskyieldDirective(
 }
 
 void CodeGenFunction::EmitOMPErrorDirective(const OMPErrorDirective &S) {
-  llvm_unreachable("CodeGen for 'omp error' is not supported yet.");
+  const OMPMessageClause *MC = S.getSingleClause<OMPMessageClause>();
+  Expr *ME = MC ? MC->getMessageString() : nullptr;
+  const OMPSeverityClause *SC = S.getSingleClause<OMPSeverityClause>();
+  bool IsFatal = false;
+  if (!SC || SC->getSeverityKind() == OMPC_SEVERITY_fatal)
+    IsFatal = true;
+  CGM.getOpenMPRuntime().emitErrorCall(*this, S.getBeginLoc(), ME, IsFatal);
 }
 
 void CodeGenFunction::EmitOMPBarrierDirective(const OMPBarrierDirective &S) {
