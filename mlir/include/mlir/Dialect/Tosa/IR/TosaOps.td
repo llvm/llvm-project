@@ -1519,7 +1519,23 @@ def Tosa_PadOp : Tosa_Op<"pad", [
   let summary = "Pads a tensor with value specified.";
 
   let description = [{
-    Pads a tensor along borders of each dimension with pad_value.
+    The `tosa.pad` operation pads a tensor along borders of each dimension with
+    `pad_const` (defaults to zero), given a padding configuration `padding`
+    specifying low and high values along the dimensions.
+
+    Example:
+
+    ```mlir
+    %0 = arith.constant dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>
+    "tosa.pad"(%arg0, %0)  : (tensor<1x2xf32>, tensor<2x2xi32>)  -> (tensor<4x9xf32>)
+    ```
+
+    Example 2:
+
+    ```mlir
+    %0 = arith.constant dense<[[-1, 2], [3, 4]]> : tensor<2x2xi32>
+    "tosa.pad"(%arg0, %0)  : (tensor<1x2xf32>, tensor<2x2xi32>)  -> (tensor<?x9xf32>)
+    ```
   }];
 
   let arguments = (ins
