@@ -310,6 +310,15 @@ public:
       return 0;
     }
   }
+
+  constexpr BlockInt get_block(int block_index) {
+    if (block_index >= 0) {
+      return get_positive_block(block_index);
+    } else {
+      return get_negative_block(-1 - block_index);
+    }
+  }
+
   constexpr size_t get_positive_blocks() {
     if (exponent >= -MANT_WIDTH) {
       const uint32_t idx =
