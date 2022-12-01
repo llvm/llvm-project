@@ -132,8 +132,8 @@ define i64 @load_i64(i64* %p) {
 ; RV64I-NEXT:    or a1, a1, a2
 ; RV64I-NEXT:    slli a3, a3, 16
 ; RV64I-NEXT:    slli a4, a4, 24
-; RV64I-NEXT:    or a2, a4, a3
-; RV64I-NEXT:    or a1, a2, a1
+; RV64I-NEXT:    or a3, a4, a3
+; RV64I-NEXT:    or a1, a3, a1
 ; RV64I-NEXT:    lbu a2, 5(a0)
 ; RV64I-NEXT:    lbu a3, 4(a0)
 ; RV64I-NEXT:    lbu a4, 6(a0)
