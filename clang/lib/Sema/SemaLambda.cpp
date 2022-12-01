@@ -887,11 +887,12 @@ VarDecl *Sema::createLambdaInitCaptureVarDecl(SourceLocation Loc,
   return NewVD;
 }
 
-void Sema::addInitCapture(LambdaScopeInfo *LSI, VarDecl *Var) {
+void Sema::addInitCapture(LambdaScopeInfo *LSI, VarDecl *Var,
+                          bool isReferenceType) {
   assert(Var->isInitCapture() && "init capture flag should be set");
-  LSI->addCapture(Var, /*isBlock*/false, Var->getType()->isReferenceType(),
-                  /*isNested*/false, Var->getLocation(), SourceLocation(),
-                  Var->getType(), /*Invalid*/false);
+  LSI->addCapture(Var, /*isBlock*/ false, isReferenceType,
+                  /*isNested*/ false, Var->getLocation(), SourceLocation(),
+                  Var->getType(), /*Invalid*/ false);
 }
 
 void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
@@ -1261,7 +1262,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     }
 
     if (C->Init.isUsable()) {
-      addInitCapture(LSI, cast<VarDecl>(Var));
+      addInitCapture(LSI, cast<VarDecl>(Var), C->Kind == LCK_ByRef);
     } else {
       TryCaptureKind Kind = C->Kind == LCK_ByRef ? TryCapture_ExplicitByRef :
                                                    TryCapture_ExplicitByVal;
