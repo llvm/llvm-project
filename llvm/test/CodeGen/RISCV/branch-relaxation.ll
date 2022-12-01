@@ -2653,3 +2653,600 @@ branch_2:
 
   ret void
 }
+
+define void @relax_jal_spill_32_restore_block_correspondence() {
+; CHECK-RV32-LABEL: relax_jal_spill_32_restore_block_correspondence:
+; CHECK-RV32:       # %bb.0: # %entry
+; CHECK-RV32-NEXT:    addi sp, sp, -64
+; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-RV32-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+; CHECK-RV32-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+; CHECK-RV32-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
+; CHECK-RV32-NEXT:    sw s2, 48(sp) # 4-byte Folded Spill
+; CHECK-RV32-NEXT:    sw s3, 44(sp) # 4-byte Folded Spill
+; CHECK-RV32-NEXT:    sw s4, 40(sp) # 4-byte Folded Spill
+; CHECK-RV32-NEXT:    sw s5, 36(sp) # 4-byte Folded Spill
+; CHECK-RV32-NEXT:    sw s6, 32(sp) # 4-byte Folded Spill
+; CHECK-RV32-NEXT:    sw s7, 28(sp) # 4-byte Folded Spill
+; CHECK-RV32-NEXT:    sw s8, 24(sp) # 4-byte Folded Spill
+; CHECK-RV32-NEXT:    sw s9, 20(sp) # 4-byte Folded Spill
+; CHECK-RV32-NEXT:    sw s10, 16(sp) # 4-byte Folded Spill
+; CHECK-RV32-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
+; CHECK-RV32-NEXT:    .cfi_offset ra, -4
+; CHECK-RV32-NEXT:    .cfi_offset s0, -8
+; CHECK-RV32-NEXT:    .cfi_offset s1, -12
+; CHECK-RV32-NEXT:    .cfi_offset s2, -16
+; CHECK-RV32-NEXT:    .cfi_offset s3, -20
+; CHECK-RV32-NEXT:    .cfi_offset s4, -24
+; CHECK-RV32-NEXT:    .cfi_offset s5, -28
+; CHECK-RV32-NEXT:    .cfi_offset s6, -32
+; CHECK-RV32-NEXT:    .cfi_offset s7, -36
+; CHECK-RV32-NEXT:    .cfi_offset s8, -40
+; CHECK-RV32-NEXT:    .cfi_offset s9, -44
+; CHECK-RV32-NEXT:    .cfi_offset s10, -48
+; CHECK-RV32-NEXT:    .cfi_offset s11, -52
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li ra, 1
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li t0, 5
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li t1, 6
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li t2, 7
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li s0, 8
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li s1, 9
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li a0, 10
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li a1, 11
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li a2, 12
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li a3, 13
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li a4, 14
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li a5, 15
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li a6, 16
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li a7, 17
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li s2, 18
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li s3, 19
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li s4, 20
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li s5, 21
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li s6, 22
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li s7, 23
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li s8, 24
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li s9, 25
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li s10, 26
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li s11, 27
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li t3, 28
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li t4, 29
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li t5, 30
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    li t6, 31
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    bne t5, t6, .LBB6_1
+; CHECK-RV32-NEXT:  # %bb.7: # %entry
+; CHECK-RV32-NEXT:    sw s11, 0(sp)
+; CHECK-RV32-NEXT:    jump .LBB6_8, s11
+; CHECK-RV32-NEXT:  .LBB6_1: # %cond_2
+; CHECK-RV32-NEXT:    bne t3, t4, .LBB6_2
+; CHECK-RV32-NEXT:  # %bb.9: # %cond_2
+; CHECK-RV32-NEXT:    sw s11, 0(sp)
+; CHECK-RV32-NEXT:    jump .LBB6_10, s11
+; CHECK-RV32-NEXT:  .LBB6_2: # %cond_3
+; CHECK-RV32-NEXT:    bne t1, t2, .LBB6_3
+; CHECK-RV32-NEXT:  # %bb.11: # %cond_3
+; CHECK-RV32-NEXT:    sw s11, 0(sp)
+; CHECK-RV32-NEXT:    jump .LBB6_12, s11
+; CHECK-RV32-NEXT:  .LBB6_3: # %space
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    .zero 1048576
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    j .LBB6_4
+; CHECK-RV32-NEXT:  .LBB6_8: # %dest_3
+; CHECK-RV32-NEXT:    lw s11, 0(sp)
+; CHECK-RV32-NEXT:  .LBB6_4: # %dest_1
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # dest 1
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    j .LBB6_5
+; CHECK-RV32-NEXT:  .LBB6_10: # %dest_3
+; CHECK-RV32-NEXT:    lw s11, 0(sp)
+; CHECK-RV32-NEXT:  .LBB6_5: # %dest_2
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # dest 2
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    j .LBB6_6
+; CHECK-RV32-NEXT:  .LBB6_12: # %dest_3
+; CHECK-RV32-NEXT:    lw s11, 0(sp)
+; CHECK-RV32-NEXT:  .LBB6_6: # %dest_3
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # dest 3
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use ra
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use t0
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use t1
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use t2
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use s0
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use s1
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use a0
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use a1
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use a2
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use a3
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use a4
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use a5
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use a6
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use a7
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use s2
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use s3
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use s4
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use s5
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use s6
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use s7
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use s8
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use s9
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use s10
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use s11
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use t3
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use t4
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use t5
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    # reg use t6
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    lw s4, 40(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    lw s5, 36(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    lw s6, 32(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    lw s7, 28(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    lw s8, 24(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    lw s9, 20(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    lw s10, 16(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    addi sp, sp, 64
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: relax_jal_spill_32_restore_block_correspondence:
+; CHECK-RV64:       # %bb.0: # %entry
+; CHECK-RV64-NEXT:    addi sp, sp, -128
+; CHECK-RV64-NEXT:    .cfi_def_cfa_offset 128
+; CHECK-RV64-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sd s2, 96(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sd s3, 88(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sd s4, 80(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sd s5, 72(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sd s6, 64(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sd s7, 56(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sd s8, 48(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sd s9, 40(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sd s10, 32(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sd s11, 24(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    .cfi_offset ra, -8
+; CHECK-RV64-NEXT:    .cfi_offset s0, -16
+; CHECK-RV64-NEXT:    .cfi_offset s1, -24
+; CHECK-RV64-NEXT:    .cfi_offset s2, -32
+; CHECK-RV64-NEXT:    .cfi_offset s3, -40
+; CHECK-RV64-NEXT:    .cfi_offset s4, -48
+; CHECK-RV64-NEXT:    .cfi_offset s5, -56
+; CHECK-RV64-NEXT:    .cfi_offset s6, -64
+; CHECK-RV64-NEXT:    .cfi_offset s7, -72
+; CHECK-RV64-NEXT:    .cfi_offset s8, -80
+; CHECK-RV64-NEXT:    .cfi_offset s9, -88
+; CHECK-RV64-NEXT:    .cfi_offset s10, -96
+; CHECK-RV64-NEXT:    .cfi_offset s11, -104
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li ra, 1
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    sd ra, 16(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li t0, 5
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    sd t0, 8(sp) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li t1, 6
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li t2, 7
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li s0, 8
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li s1, 9
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li a0, 10
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li a1, 11
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li a2, 12
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li a3, 13
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li a4, 14
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li a5, 15
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li a6, 16
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li a7, 17
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li s2, 18
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li s3, 19
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li s4, 20
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li s5, 21
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li s6, 22
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li s7, 23
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li s8, 24
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li s9, 25
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li s10, 26
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li s11, 27
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li t3, 28
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li t4, 29
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li t5, 30
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    li t6, 31
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    sext.w t0, t6
+; CHECK-RV64-NEXT:    sext.w ra, t5
+; CHECK-RV64-NEXT:    bne ra, t0, .LBB6_1
+; CHECK-RV64-NEXT:  # %bb.7: # %entry
+; CHECK-RV64-NEXT:    jump .LBB6_4, t0
+; CHECK-RV64-NEXT:  .LBB6_1: # %cond_2
+; CHECK-RV64-NEXT:    sext.w t0, t4
+; CHECK-RV64-NEXT:    sext.w ra, t3
+; CHECK-RV64-NEXT:    bne ra, t0, .LBB6_2
+; CHECK-RV64-NEXT:  # %bb.9: # %cond_2
+; CHECK-RV64-NEXT:    jump .LBB6_5, t0
+; CHECK-RV64-NEXT:  .LBB6_2: # %cond_3
+; CHECK-RV64-NEXT:    sext.w t0, t2
+; CHECK-RV64-NEXT:    sext.w ra, t1
+; CHECK-RV64-NEXT:    bne ra, t0, .LBB6_3
+; CHECK-RV64-NEXT:  # %bb.11: # %cond_3
+; CHECK-RV64-NEXT:    jump .LBB6_6, t0
+; CHECK-RV64-NEXT:  .LBB6_3: # %space
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    .zero 1048576
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:  .LBB6_4: # %dest_1
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # dest 1
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:  .LBB6_5: # %dest_2
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # dest 2
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:  .LBB6_6: # %dest_3
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # dest 3
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    ld ra, 16(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use ra
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    ld t0, 8(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use t0
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use t1
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use t2
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use s0
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use s1
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use a0
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use a1
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use a2
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use a3
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use a4
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use a5
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use a6
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use a7
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use s2
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use s3
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use s4
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use s5
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use s6
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use s7
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use s8
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use s9
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use s10
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use s11
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use t3
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use t4
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use t5
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    # reg use t6
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    ld s2, 96(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    ld s3, 88(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    ld s4, 80(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    ld s5, 72(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    ld s6, 64(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    ld s7, 56(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    ld s8, 48(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    ld s9, 40(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    ld s10, 32(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    ld s11, 24(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    addi sp, sp, 128
+; CHECK-RV64-NEXT:    ret
+entry:
+  %ra = call i32 asm sideeffect "addi ra, x0, 1", "={ra}"()
+  %t0 = call i32 asm sideeffect "addi t0, x0, 5", "={t0}"()
+  %t1 = call i32 asm sideeffect "addi t1, x0, 6", "={t1}"()
+  %t2 = call i32 asm sideeffect "addi t2, x0, 7", "={t2}"()
+  %s0 = call i32 asm sideeffect "addi s0, x0, 8", "={s0}"()
+  %s1 = call i32 asm sideeffect "addi s1, x0, 9", "={s1}"()
+  %a0 = call i32 asm sideeffect "addi a0, x0, 10", "={a0}"()
+  %a1 = call i32 asm sideeffect "addi a1, x0, 11", "={a1}"()
+  %a2 = call i32 asm sideeffect "addi a2, x0, 12", "={a2}"()
+  %a3 = call i32 asm sideeffect "addi a3, x0, 13", "={a3}"()
+  %a4 = call i32 asm sideeffect "addi a4, x0, 14", "={a4}"()
+  %a5 = call i32 asm sideeffect "addi a5, x0, 15", "={a5}"()
+  %a6 = call i32 asm sideeffect "addi a6, x0, 16", "={a6}"()
+  %a7 = call i32 asm sideeffect "addi a7, x0, 17", "={a7}"()
+  %s2 = call i32 asm sideeffect "addi s2, x0, 18", "={s2}"()
+  %s3 = call i32 asm sideeffect "addi s3, x0, 19", "={s3}"()
+  %s4 = call i32 asm sideeffect "addi s4, x0, 20", "={s4}"()
+  %s5 = call i32 asm sideeffect "addi s5, x0, 21", "={s5}"()
+  %s6 = call i32 asm sideeffect "addi s6, x0, 22", "={s6}"()
+  %s7 = call i32 asm sideeffect "addi s7, x0, 23", "={s7}"()
+  %s8 = call i32 asm sideeffect "addi s8, x0, 24", "={s8}"()
+  %s9 = call i32 asm sideeffect "addi s9, x0, 25", "={s9}"()
+  %s10 = call i32 asm sideeffect "addi s10, x0, 26", "={s10}"()
+  %s11 = call i32 asm sideeffect "addi s11, x0, 27", "={s11}"()
+  %t3 = call i32 asm sideeffect "addi t3, x0, 28", "={t3}"()
+  %t4 = call i32 asm sideeffect "addi t4, x0, 29", "={t4}"()
+  %t5 = call i32 asm sideeffect "addi t5, x0, 30", "={t5}"()
+  %t6 = call i32 asm sideeffect "addi t6, x0, 31", "={t6}"()
+
+  br label %cond_1
+
+cond_1:
+  %cmp1 = icmp eq i32 %t5, %t6
+  br i1 %cmp1, label %dest_1, label %cond_2
+
+cond_2:
+  %cmp2 = icmp eq i32 %t3, %t4
+  br i1 %cmp2, label %dest_2, label %cond_3
+
+cond_3:
+  %cmp3 = icmp eq i32 %t1, %t2
+  br i1 %cmp3, label %dest_3, label %space
+
+space:
+  call void asm sideeffect ".space 1048576", ""()
+  br label %dest_1
+
+dest_1:
+  call void asm sideeffect "# dest 1", ""()
+  br label %dest_2
+
+dest_2:
+  call void asm sideeffect "# dest 2", ""()
+  br label %dest_3
+
+dest_3:
+  call void asm sideeffect "# dest 3", ""()
+  br label %tail
+
+tail:
+  call void asm sideeffect "# reg use $0", "{ra}"(i32 %ra)
+  call void asm sideeffect "# reg use $0", "{t0}"(i32 %t0)
+  call void asm sideeffect "# reg use $0", "{t1}"(i32 %t1)
+  call void asm sideeffect "# reg use $0", "{t2}"(i32 %t2)
+  call void asm sideeffect "# reg use $0", "{s0}"(i32 %s0)
+  call void asm sideeffect "# reg use $0", "{s1}"(i32 %s1)
+  call void asm sideeffect "# reg use $0", "{a0}"(i32 %a0)
+  call void asm sideeffect "# reg use $0", "{a1}"(i32 %a1)
+  call void asm sideeffect "# reg use $0", "{a2}"(i32 %a2)
+  call void asm sideeffect "# reg use $0", "{a3}"(i32 %a3)
+  call void asm sideeffect "# reg use $0", "{a4}"(i32 %a4)
+  call void asm sideeffect "# reg use $0", "{a5}"(i32 %a5)
+  call void asm sideeffect "# reg use $0", "{a6}"(i32 %a6)
+  call void asm sideeffect "# reg use $0", "{a7}"(i32 %a7)
+  call void asm sideeffect "# reg use $0", "{s2}"(i32 %s2)
+  call void asm sideeffect "# reg use $0", "{s3}"(i32 %s3)
+  call void asm sideeffect "# reg use $0", "{s4}"(i32 %s4)
+  call void asm sideeffect "# reg use $0", "{s5}"(i32 %s5)
+  call void asm sideeffect "# reg use $0", "{s6}"(i32 %s6)
+  call void asm sideeffect "# reg use $0", "{s7}"(i32 %s7)
+  call void asm sideeffect "# reg use $0", "{s8}"(i32 %s8)
+  call void asm sideeffect "# reg use $0", "{s9}"(i32 %s9)
+  call void asm sideeffect "# reg use $0", "{s10}"(i32 %s10)
+  call void asm sideeffect "# reg use $0", "{s11}"(i32 %s11)
+  call void asm sideeffect "# reg use $0", "{t3}"(i32 %t3)
+  call void asm sideeffect "# reg use $0", "{t4}"(i32 %t4)
+  call void asm sideeffect "# reg use $0", "{t5}"(i32 %t5)
+  call void asm sideeffect "# reg use $0", "{t6}"(i32 %t6)
+
+  ret void
+}
