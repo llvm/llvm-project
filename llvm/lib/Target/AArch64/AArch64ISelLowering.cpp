@@ -13931,7 +13931,9 @@ bool AArch64TargetLowering::hasPairedLoad(EVT LoadedType,
 /// will generate when lowering accesses of the given type.
 unsigned AArch64TargetLowering::getNumInterleavedAccesses(
     VectorType *VecTy, const DataLayout &DL, bool UseScalable) const {
-  unsigned VecSize = UseScalable ? Subtarget->getMinSVEVectorSizeInBits() : 128;
+  unsigned VecSize = 128;
+  if (UseScalable)
+    VecSize = std::max(Subtarget->getMinSVEVectorSizeInBits(), 128u);
   return std::max<unsigned>(1, (DL.getTypeSizeInBits(VecTy) + 127) / VecSize);
 }
 
@@ -13952,6 +13954,10 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
 
   UseScalable = false;
 
+  // Ensure that the predicate for this number of elements is available.
+  if (Subtarget->hasSVE() && !getSVEPredPatternFromNumElements(NumElements))
+    return false;
+
   // Ensure the number of vector elements is greater than 1.
   if (NumElements < 2)
     return false;
@@ -13960,10 +13966,11 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
   if (ElSize != 8 && ElSize != 16 && ElSize != 32 && ElSize != 64)
     return false;
 
-  if (Subtarget->useSVEForFixedLengthVectors() &&
-      (VecSize % Subtarget->getMinSVEVectorSizeInBits() == 0 ||
-       (VecSize < Subtarget->getMinSVEVectorSizeInBits() &&
-        isPowerOf2_32(NumElements) && VecSize > 128))) {
+  if (Subtarget->forceStreamingCompatibleSVE() ||
+      (Subtarget->useSVEForFixedLengthVectors() &&
+       (VecSize % Subtarget->getMinSVEVectorSizeInBits() == 0 ||
+        (VecSize < Subtarget->getMinSVEVectorSizeInBits() &&
+         isPowerOf2_32(NumElements) && VecSize > 128)))) {
     UseScalable = true;
     return true;
   }
