@@ -500,7 +500,6 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   // them.
 
   // These functions all require the NoVRegs property.
-  disablePass(&MachineLateInstrsCleanupID);
   disablePass(&MachineCopyPropagationID);
   disablePass(&PostRAMachineSinkingID);
   disablePass(&PostRASchedulerID);

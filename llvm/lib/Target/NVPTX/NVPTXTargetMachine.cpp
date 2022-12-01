@@ -290,7 +290,6 @@ void NVPTXPassConfig::addIRPasses() {
   // of the PrologEpilogCodeInserter pass, so we emulate that behavior in the
   // NVPTXPrologEpilog pass (see NVPTXPrologEpilogPass.cpp).
   disablePass(&PrologEpilogCodeInserterID);
-  disablePass(&MachineLateInstrsCleanupID);
   disablePass(&MachineCopyPropagationID);
   disablePass(&TailDuplicateID);
   disablePass(&StackMapLivenessID);
