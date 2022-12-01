@@ -8,7 +8,9 @@
 # RUN:   --time-trace -o %t/test
 # RUN: llvm-objdump --syms --section-headers %t/test > %t/objdump
 ## Check that symbols in cstring sections aren't emitted
-# RUN: cat %t/objdump %t/map | FileCheck %s --implicit-check-not _hello_world
+## Also check that we don't have redundant EH_Frame symbols (regression test)
+# RUN: cat %t/objdump %t/map | FileCheck %s --implicit-check-not _hello_world \
+# RUN:   --implicit-check-not EH_Frame
 # RUN: FileCheck %s --check-prefix=MAPFILE < %t/test.time-trace
 
 # CHECK:      Sections:
@@ -44,15 +46,18 @@
 # CHECK-NEXT: 0x[[#%X,BSS]]       0x{{[0-9A-F]+}}   __DATA   __common
 
 # CHECK-NEXT: # Symbols:
-# CHECK-NEXT: # Address                Size        File   Name
-# CHECK-DAG:  0x[[#%X,MAIN]]           0x00000001  [  1]  _main
-# CHECK-DAG:  0x[[#%X,BAR]]            0x00000001  [  1]  _bar
-# CHECK-DAG:  0x[[#%X,FOO]]            0x00000001  [  2]  __ZTIN3foo3bar4MethE
-# CHECK-DAG:  0x[[#%X,HIWORLD]]        0x0000000E  [  3]  literal string: Hello world!\n
-# CHECK-DAG:  0x[[#%X,HIITSME]]        0x0000000F  [  3]  literal string: Hello, it's me
-# CHECK-DAG:  0x[[#%X,HIITSME + 0xf]]  0x0000000E  [  3]  literal string: Hello world!\n
-# CHECK-DAG:  0x[[#%X,NUMBER]]         0x00000001  [  1]  _number
-# CHECK-DAG:  0x[[#%X,UNWIND]]         0x0000103C  [  0]  compact unwind info
+# CHECK-NEXT: # Address                  Size        File   Name
+# CHECK-DAG:  0x[[#%X,MAIN]]             0x00000001  [  1]  _main
+# CHECK-DAG:  0x[[#%X,BAR]]              0x00000001  [  1]  _bar
+# CHECK-DAG:  0x[[#%X,FOO]]              0x00000001  [  2]  __ZTIN3foo3bar4MethE
+# CHECK-DAG:  0x[[#%X,HIWORLD]]          0x0000000E  [  3]  literal string: Hello world!\n
+# CHECK-DAG:  0x[[#%X,HIITSME]]          0x0000000F  [  3]  literal string: Hello, it's me
+# CHECK-DAG:  0x[[#%X,HIITSME + 0xf]]    0x0000000E  [  3]  literal string: Hello world!\n
+# CHECK-DAG:  0x[[#%X,NUMBER]]           0x00000001  [  1]  _number
+# CHECK-DAG:  0x[[#%X,UNWIND]]           0x0000103C  [  0]  compact unwind info
+## Note: ld64 prints "CIE" and "FDE for: <function>" instead of "EH_Frame".
+# CHECK-DAG:  0x[[#%X,EH_FRAME]]         0x00000018  [  1]  EH_Frame
+# CHECK-DAG:  0x[[#%X,EH_FRAME + 0x18]]  0x00000020  [  1]  EH_Frame
 
 # MAPFILE: "name":"Total Write map file"
 
