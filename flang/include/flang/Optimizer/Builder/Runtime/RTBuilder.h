@@ -20,7 +20,6 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Common/uint128.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
@@ -412,7 +411,7 @@ static mlir::func::FuncOp getRuntimeFunc(mlir::Location loc,
     return func;
   auto funTy = RuntimeEntry::getTypeModel()(builder.getContext());
   func = builder.createFunction(loc, name, funTy);
-  func->setAttr(FIROpsDialect::getFirRuntimeAttrName(), builder.getUnitAttr());
+  func->setAttr("fir.runtime", builder.getUnitAttr());
   return func;
 }
 
