@@ -267,4 +267,38 @@ module polymorphic_test
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
 ! CHECK: %{{.*}} = fir.call @_FortranAPointerNullifyDerived(%[[CONV_P]], %[[CONV_TDESC]], %[[C1]], %[[C0]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
 
+  subroutine up_input(a)
+    class(*), intent(in) :: a
+  end subroutine
+
+  subroutine pass_trivial_to_up()
+    call up_input('hello')
+    call up_input(1)
+    call up_input(2.5)
+    call up_input(.true.)
+    call up_input((-1.0,3))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPpass_trivial_to_up() {
+! CHECK: %[[CHAR:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,5>>
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[CHAR]] : (!fir.ref<!fir.char<1,5>>) -> !fir.class<!fir.char<1,5>>
+! CHECK: %[[CONVERT:.*]] = fir.convert %[[EMBOX]] : (!fir.class<!fir.char<1,5>>) -> !fir.class<none>
+! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[CONVERT]]) {{.*}} : (!fir.class<none>) -> ()
+
+! CHECK: %[[BOX_INT:.*]] = fir.embox %{{.*}} : (!fir.ref<i32>) -> !fir.class<i32>
+! CHECK: %[[UP:.*]] = fir.convert %[[BOX_INT]] : (!fir.class<i32>) -> !fir.class<none>
+! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[UP]]) {{.*}} : (!fir.class<none>) -> ()
+
+! CHECK: %[[BOX_REAL:.*]] = fir.embox %{{.*}} : (!fir.ref<f32>) -> !fir.class<f32>
+! CHECK: %[[UP:.*]] = fir.convert %[[BOX_REAL]] : (!fir.class<f32>) -> !fir.class<none>
+! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[UP]]) {{.*}} : (!fir.class<none>) -> ()
+
+! CHECK: %[[BOX_LOG:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.logical<4>>) -> !fir.class<!fir.logical<4>>
+! CHECK: %[[UP:.*]] = fir.convert %[[BOX_LOG]] : (!fir.class<!fir.logical<4>>) -> !fir.class<none>
+! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[UP]]) {{.*}} : (!fir.class<none>) -> ()
+
+! CHECK: %[[BOX_COMPLEX:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.complex<4>>) -> !fir.class<!fir.complex<4>>
+! CHECK: %[[UP:.*]] = fir.convert %[[BOX_COMPLEX]] : (!fir.class<!fir.complex<4>>) -> !fir.class<none>
+! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[UP]]) {{.*}} : (!fir.class<none>) -> ()
+
 end module
