@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
 #include <vector>
+#include <array>
 
 namespace llvm {
 
