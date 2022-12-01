@@ -5639,6 +5639,13 @@ private:
                                        builder.getContext(), charTy.getFKind()),
                                    seqTy.getDimension()));
       }
+      llvm::SmallVector<mlir::Value> lbounds;
+      llvm::SmallVector<mlir::Value> nonDeferredLenParams;
+      if (!slice) {
+        lbounds =
+            fir::factory::getNonDefaultLowerBounds(builder, loc, extMemref);
+        nonDeferredLenParams = fir::factory::getNonDeferredLenParams(extMemref);
+      }
       mlir::Value embox =
           memref.getType().isa<fir::BaseBoxType>()
               ? builder.create<fir::ReboxOp>(loc, boxTy, memref, shape, slice)
@@ -5647,7 +5654,9 @@ private:
                     .create<fir::EmboxOp>(loc, boxTy, memref, shape, slice,
                                           fir::getTypeParams(extMemref))
                     .getResult();
-      return [=](IterSpace) -> ExtValue { return fir::BoxValue(embox); };
+      return [=](IterSpace) -> ExtValue {
+        return fir::BoxValue(embox, lbounds, nonDeferredLenParams);
+      };
     }
     auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
     if (isReferentiallyOpaque()) {
