@@ -192,6 +192,8 @@ public:
   MCSectionELF *createRelocationSection(MCContext &Ctx,
                                         const MCSectionELF &Sec);
 
+  void createMemtagRelocs(MCAssembler &Asm);
+
   void writeSectionHeader(const MCAsmLayout &Layout,
                           const SectionIndexMapTy &SectionIndexMap,
                           const SectionOffsetsTy &SectionOffsets);
@@ -607,6 +609,23 @@ bool ELFWriter::isInSymtab(const MCAsmLayout &Layout, const MCSymbolELF &Symbol,
     return false;
 
   return true;
+}
+
+void ELFWriter::createMemtagRelocs(MCAssembler &Asm) {
+  MCSectionELF *MemtagRelocs = nullptr;
+  for (const MCSymbol &Sym : Asm.symbols()) {
+    const auto &SymE = cast<MCSymbolELF>(Sym);
+    if (!SymE.isMemtag())
+      continue;
+    if (MemtagRelocs == nullptr) {
+      MemtagRelocs = OWriter.TargetObjectWriter->getMemtagRelocsSection(Asm.getContext());
+      if (MemtagRelocs == nullptr)
+        report_fatal_error("Tagged globals are not available on this architecture.");
+      Asm.registerSection(*MemtagRelocs);
+    }
+    ELFRelocationEntry Rec(0, &SymE, ELF::R_AARCH64_NONE, 0, nullptr, 0);
+    OWriter.Relocations[MemtagRelocs].push_back(Rec);
+  }
 }
 
 void ELFWriter::computeSymbolTable(
@@ -1068,6 +1087,8 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
       Ctx.getELFSection(".strtab", ELF::SHT_STRTAB, 0);
   StringTableIndex = addToSectionTable(StrtabSection);
 
+  createMemtagRelocs(Asm);
+
   RevGroupMapTy RevGroupMap;
   SectionIndexMapTy SectionIndexMap;
 
@@ -1315,6 +1336,15 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
   // to the symbol itself.
   assert(Sym && "Expected a symbol");
   if (Sym->isUndefined())
+    return true;
+
+  // For memory-tagged symbols, ensure that the relocation uses the symbol. For
+  // tagged symbols, we emit an empty relocation (R_AARCH64_NONE) in a special
+  // section (SHT_AARCH64_MEMTAG_GLOBALS_STATIC) to indicate to the linker that
+  // this global needs to be tagged. In addition, the linker needs to know
+  // whether to emit a special addend when relocating `end` symbols, and this
+  // can only be determined by the attributes of the symbol itself.
+  if (Sym->isMemtag())
     return true;
 
   unsigned Binding = Sym->getBinding();
