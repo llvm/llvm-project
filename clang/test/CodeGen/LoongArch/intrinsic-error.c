@@ -3,10 +3,6 @@
 
 #include <larchintrin.h>
 
-int crc_w_d_w(long int a, int b) {
-  return __builtin_loongarch_crc_w_d_w(a, b); // expected-error {{this builtin requires target: loongarch64}}
-}
-
 void dbar(int a) {
   __builtin_loongarch_dbar(32768); // expected-error {{argument value 32768 is outside the valid range [0, 32767]}}
   __builtin_loongarch_dbar(-1); // expected-error {{argument value 4294967295 is outside the valid range [0, 32767]}}
@@ -29,4 +25,35 @@ void syscall(int a) {
   __builtin_loongarch_syscall(32769); // expected-error {{argument value 32769 is outside the valid range [0, 32767]}}
   __builtin_loongarch_syscall(-1); // expected-error {{argument value 4294967295 is outside the valid range [0, 32767]}}
   __builtin_loongarch_syscall(a); // expected-error {{argument to '__builtin_loongarch_syscall' must be a constant integer}}
+}
+
+int crc_w_b_w(char a, int b) {
+  return __builtin_loongarch_crc_w_b_w(a, b); // expected-error {{this builtin requires target: loongarch64}}
+}
+
+int crc_w_h_w(short a, int b) {
+  return __builtin_loongarch_crc_w_h_w(a, b); // expected-error {{this builtin requires target: loongarch64}}
+}
+
+int crc_w_w_w(int a, int b) {
+  return __builtin_loongarch_crc_w_w_w(a, b); // expected-error {{this builtin requires target: loongarch64}}
+}
+
+int crc_w_d_w(long int a, int b) {
+  return __builtin_loongarch_crc_w_d_w(a, b); // expected-error {{this builtin requires target: loongarch64}}
+}
+int crcc_w_b_w(char a, int b) {
+  return __builtin_loongarch_crcc_w_b_w(a, b); // expected-error {{this builtin requires target: loongarch64}}
+}
+
+int crcc_w_h_w(short a, int b) {
+  return __builtin_loongarch_crcc_w_h_w(a, b); // expected-error {{this builtin requires target: loongarch64}}
+}
+
+int crcc_w_w_w(int a, int b) {
+  return __builtin_loongarch_crcc_w_w_w(a, b); // expected-error {{this builtin requires target: loongarch64}}
+}
+
+int crcc_w_d_w(long int a, int b) {
+  return __builtin_loongarch_crcc_w_d_w(a, b); // expected-error {{this builtin requires target: loongarch64}}
 }
