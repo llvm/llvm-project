@@ -1074,3 +1074,16 @@ void ModuleList::ForEach(
       break;
   }
 }
+
+bool ModuleList::AnyOf(
+    std::function<bool(lldb_private::Module &module_sp)> const &callback)
+    const {
+  std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+  for (const auto &module_sp : m_modules) {
+    assert(module_sp != nullptr);
+    if (callback(*module_sp))
+      return true;
+  }
+
+  return false;
+}
