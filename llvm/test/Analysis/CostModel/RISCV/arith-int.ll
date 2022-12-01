@@ -17,9 +17,9 @@ define i32 @add() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I16 = add <vscale x 1 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I16 = add <vscale x 2 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I16 = add <vscale x 4 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I16 = add <vscale x 8 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV16I16 = add <vscale x 16 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV32I16 = add <vscale x 32 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV8I16 = add <vscale x 8 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV16I16 = add <vscale x 16 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV32I16 = add <vscale x 32 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1I32 = add <1 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = add <2 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = add <4 x i32> undef, undef
@@ -27,17 +27,17 @@ define i32 @add() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = add <16 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I32 = add <vscale x 1 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I32 = add <vscale x 2 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I32 = add <vscale x 4 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I32 = add <vscale x 8 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV16I32 = add <vscale x 16 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV4I32 = add <vscale x 4 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV8I32 = add <vscale x 8 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV16I32 = add <vscale x 16 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1I64 = add <1 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = add <2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = add <4 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = add <8 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I64 = add <vscale x 1 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I64 = add <vscale x 2 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I64 = add <vscale x 4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I64 = add <vscale x 8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV2I64 = add <vscale x 2 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV4I64 = add <vscale x 4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV8I64 = add <vscale x 8 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %I16 = add i16 undef, undef
@@ -97,9 +97,9 @@ define i32 @sub() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I16 = sub <vscale x 1 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I16 = sub <vscale x 2 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I16 = sub <vscale x 4 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I16 = sub <vscale x 8 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV16I16 = sub <vscale x 16 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV32I16 = sub <vscale x 32 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV8I16 = sub <vscale x 8 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV16I16 = sub <vscale x 16 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV32I16 = sub <vscale x 32 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1I32 = sub <1 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = sub <2 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = sub <4 x i32> undef, undef
@@ -107,17 +107,17 @@ define i32 @sub() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = sub <16 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I32 = sub <vscale x 1 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I32 = sub <vscale x 2 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I32 = sub <vscale x 4 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I32 = sub <vscale x 8 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV16I32 = sub <vscale x 16 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV4I32 = sub <vscale x 4 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV8I32 = sub <vscale x 8 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV16I32 = sub <vscale x 16 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1I64 = sub <1 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = sub <2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = sub <4 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = sub <8 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I64 = sub <vscale x 1 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I64 = sub <vscale x 2 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I64 = sub <vscale x 4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I64 = sub <vscale x 8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV2I64 = sub <vscale x 2 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV4I64 = sub <vscale x 4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV8I64 = sub <vscale x 8 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %I16 = sub i16 undef, undef
@@ -177,9 +177,9 @@ define i32 @mul() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I16 = mul <vscale x 1 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I16 = mul <vscale x 2 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I16 = mul <vscale x 4 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I16 = mul <vscale x 8 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV16I16 = mul <vscale x 16 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV32I16 = mul <vscale x 32 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV8I16 = mul <vscale x 8 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV16I16 = mul <vscale x 16 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV32I16 = mul <vscale x 32 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1I32 = mul <1 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = mul <2 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = mul <4 x i32> undef, undef
@@ -187,17 +187,17 @@ define i32 @mul() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = mul <16 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I32 = mul <vscale x 1 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I32 = mul <vscale x 2 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I32 = mul <vscale x 4 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I32 = mul <vscale x 8 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV16I32 = mul <vscale x 16 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV4I32 = mul <vscale x 4 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV8I32 = mul <vscale x 8 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV16I32 = mul <vscale x 16 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1I64 = mul <1 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = mul <2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = mul <4 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = mul <8 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I64 = mul <vscale x 1 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I64 = mul <vscale x 2 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I64 = mul <vscale x 4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I64 = mul <vscale x 8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV2I64 = mul <vscale x 2 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV4I64 = mul <vscale x 4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV8I64 = mul <vscale x 8 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %I16 = mul i16 undef, undef
@@ -257,9 +257,9 @@ define i32 @shl() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I16 = shl <vscale x 1 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I16 = shl <vscale x 2 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I16 = shl <vscale x 4 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I16 = shl <vscale x 8 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV16I16 = shl <vscale x 16 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV32I16 = shl <vscale x 32 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV8I16 = shl <vscale x 8 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV16I16 = shl <vscale x 16 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV32I16 = shl <vscale x 32 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1I32 = shl <1 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = shl <2 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = shl <4 x i32> undef, undef
@@ -267,17 +267,17 @@ define i32 @shl() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = shl <16 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I32 = shl <vscale x 1 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I32 = shl <vscale x 2 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I32 = shl <vscale x 4 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I32 = shl <vscale x 8 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV16I32 = shl <vscale x 16 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV4I32 = shl <vscale x 4 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV8I32 = shl <vscale x 8 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV16I32 = shl <vscale x 16 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1I64 = shl <1 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = shl <2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = shl <4 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = shl <8 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I64 = shl <vscale x 1 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I64 = shl <vscale x 2 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I64 = shl <vscale x 4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I64 = shl <vscale x 8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV2I64 = shl <vscale x 2 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV4I64 = shl <vscale x 4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV8I64 = shl <vscale x 8 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %I16 = shl i16 undef, undef
@@ -337,9 +337,9 @@ define i32 @lshr() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I16 = lshr <vscale x 1 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I16 = lshr <vscale x 2 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I16 = lshr <vscale x 4 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I16 = lshr <vscale x 8 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV16I16 = lshr <vscale x 16 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV32I16 = lshr <vscale x 32 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV8I16 = lshr <vscale x 8 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV16I16 = lshr <vscale x 16 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV32I16 = lshr <vscale x 32 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1I32 = lshr <1 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = lshr <2 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = lshr <4 x i32> undef, undef
@@ -347,17 +347,17 @@ define i32 @lshr() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = lshr <16 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I32 = lshr <vscale x 1 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I32 = lshr <vscale x 2 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I32 = lshr <vscale x 4 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I32 = lshr <vscale x 8 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV16I32 = lshr <vscale x 16 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV4I32 = lshr <vscale x 4 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV8I32 = lshr <vscale x 8 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV16I32 = lshr <vscale x 16 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1I64 = lshr <1 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = lshr <2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = lshr <4 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = lshr <8 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I64 = lshr <vscale x 1 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I64 = lshr <vscale x 2 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I64 = lshr <vscale x 4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I64 = lshr <vscale x 8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV2I64 = lshr <vscale x 2 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV4I64 = lshr <vscale x 4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV8I64 = lshr <vscale x 8 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %I16 = lshr i16 undef, undef
@@ -417,9 +417,9 @@ define i32 @ashr() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I16 = ashr <vscale x 1 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I16 = ashr <vscale x 2 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I16 = ashr <vscale x 4 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I16 = ashr <vscale x 8 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV16I16 = ashr <vscale x 16 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV32I16 = ashr <vscale x 32 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV8I16 = ashr <vscale x 8 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV16I16 = ashr <vscale x 16 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV32I16 = ashr <vscale x 32 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1I32 = ashr <1 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = ashr <2 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = ashr <4 x i32> undef, undef
@@ -427,17 +427,17 @@ define i32 @ashr() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = ashr <16 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I32 = ashr <vscale x 1 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I32 = ashr <vscale x 2 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I32 = ashr <vscale x 4 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I32 = ashr <vscale x 8 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV16I32 = ashr <vscale x 16 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV4I32 = ashr <vscale x 4 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV8I32 = ashr <vscale x 8 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV16I32 = ashr <vscale x 16 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1I64 = ashr <1 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = ashr <2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = ashr <4 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I64 = ashr <8 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV1I64 = ashr <vscale x 1 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV2I64 = ashr <vscale x 2 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV4I64 = ashr <vscale x 4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NXV8I64 = ashr <vscale x 8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NXV2I64 = ashr <vscale x 2 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NXV4I64 = ashr <vscale x 4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NXV8I64 = ashr <vscale x 8 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %I16 = ashr i16 undef, undef
