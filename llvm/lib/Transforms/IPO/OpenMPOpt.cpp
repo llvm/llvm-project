@@ -45,7 +45,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
@@ -5153,87 +5152,6 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   return PreservedAnalyses::all();
 }
 
-namespace {
-
-struct OpenMPOptCGSCCLegacyPass : public CallGraphSCCPass {
-  CallGraphUpdater CGUpdater;
-  static char ID;
-
-  OpenMPOptCGSCCLegacyPass() : CallGraphSCCPass(ID) {
-    initializeOpenMPOptCGSCCLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    CallGraphSCCPass::getAnalysisUsage(AU);
-  }
-
-  bool runOnSCC(CallGraphSCC &CGSCC) override {
-    if (!containsOpenMP(CGSCC.getCallGraph().getModule()))
-      return false;
-    if (DisableOpenMPOptimizations || skipSCC(CGSCC))
-      return false;
-
-    SmallVector<Function *, 16> SCC;
-    // If there are kernels in the module, we have to run on all SCC's.
-    for (CallGraphNode *CGN : CGSCC) {
-      Function *Fn = CGN->getFunction();
-      if (!Fn || Fn->isDeclaration())
-        continue;
-      SCC.push_back(Fn);
-    }
-
-    if (SCC.empty())
-      return false;
-
-    Module &M = CGSCC.getCallGraph().getModule();
-    KernelSet Kernels = getDeviceKernels(M);
-
-    CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
-    CGUpdater.initialize(CG, CGSCC);
-
-    // Maintain a map of functions to avoid rebuilding the ORE
-    DenseMap<Function *, std::unique_ptr<OptimizationRemarkEmitter>> OREMap;
-    auto OREGetter = [&OREMap](Function *F) -> OptimizationRemarkEmitter & {
-      std::unique_ptr<OptimizationRemarkEmitter> &ORE = OREMap[F];
-      if (!ORE)
-        ORE = std::make_unique<OptimizationRemarkEmitter>(F);
-      return *ORE;
-    };
-
-    AnalysisGetter AG;
-    SetVector<Function *> Functions(SCC.begin(), SCC.end());
-    BumpPtrAllocator Allocator;
-    OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG,
-                                  Allocator,
-                                  /*CGSCC*/ &Functions, Kernels);
-
-    unsigned MaxFixpointIterations =
-        (isOpenMPDevice(M)) ? SetFixpointIterations : 32;
-
-    AttributorConfig AC(CGUpdater);
-    AC.DefaultInitializeLiveInternals = false;
-    AC.IsModulePass = false;
-    AC.RewriteSignatures = false;
-    AC.MaxFixpointIterations = MaxFixpointIterations;
-    AC.OREGetter = OREGetter;
-    AC.PassName = DEBUG_TYPE;
-
-    Attributor A(Functions, InfoCache, AC);
-
-    OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
-    bool Result = OMPOpt.run(false);
-
-    if (PrintModuleAfterOptimizations)
-      LLVM_DEBUG(dbgs() << TAG << "Module after OpenMPOpt CGSCC Pass:\n" << M);
-
-    return Result;
-  }
-
-  bool doFinalization(CallGraph &CG) override { return CGUpdater.finalize(); }
-};
-
-} // end anonymous namespace
-
 KernelSet llvm::omp::getDeviceKernels(Module &M) {
   // TODO: Create a more cross-platform way of determining device kernels.
   NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
@@ -5276,16 +5194,4 @@ bool llvm::omp::isOpenMPDevice(Module &M) {
     return false;
 
   return true;
-}
-
-char OpenMPOptCGSCCLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(OpenMPOptCGSCCLegacyPass, "openmp-opt-cgscc",
-                      "OpenMP specific optimizations", false, false)
-INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
-INITIALIZE_PASS_END(OpenMPOptCGSCCLegacyPass, "openmp-opt-cgscc",
-                    "OpenMP specific optimizations", false, false)
-
-Pass *llvm::createOpenMPOptCGSCCLegacyPass() {
-  return new OpenMPOptCGSCCLegacyPass();
 }
