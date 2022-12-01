@@ -2322,6 +2322,8 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
   auto *Gep1 = cast<GetElementPtrInst>(Ptr1);
   if (Gep0->getPointerOperand() != Gep1->getPointerOperand())
     return std::nullopt;
+  if (Gep0->getSourceElementType() != Gep1->getSourceElementType())
+    return std::nullopt;
 
   Builder B(Gep0->getParent());
   int Scale = getSizeOf(Gep0->getSourceElementType(), Alloc);
