@@ -17,8 +17,50 @@ extern "C" {
 #if __loongarch_grlen == 64
 extern __inline int
     __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __crc_w_b_w(char _1, int _2) {
+  return (int)__builtin_loongarch_crc_w_b_w((char)_1, (int)_2);
+}
+
+extern __inline int
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __crc_w_h_w(short _1, int _2) {
+  return (int)__builtin_loongarch_crc_w_h_w((short)_1, (int)_2);
+}
+
+extern __inline int
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __crc_w_w_w(int _1, int _2) {
+  return (int)__builtin_loongarch_crc_w_w_w((int)_1, (int)_2);
+}
+
+extern __inline int
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
     __crc_w_d_w(long int _1, int _2) {
   return (int)__builtin_loongarch_crc_w_d_w((long int)_1, (int)_2);
+}
+
+extern __inline int
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __crcc_w_b_w(char _1, int _2) {
+  return (int)__builtin_loongarch_crcc_w_b_w((char)_1, (int)_2);
+}
+
+extern __inline int
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __crcc_w_h_w(short _1, int _2) {
+  return (int)__builtin_loongarch_crcc_w_h_w((short)_1, (int)_2);
+}
+
+extern __inline int
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __crcc_w_w_w(int _1, int _2) {
+  return (int)__builtin_loongarch_crcc_w_w_w((int)_1, (int)_2);
+}
+
+extern __inline int
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __crcc_w_d_w(long int _1, int _2) {
+  return (int)__builtin_loongarch_crcc_w_d_w((long int)_1, (int)_2);
 }
 #endif
 
