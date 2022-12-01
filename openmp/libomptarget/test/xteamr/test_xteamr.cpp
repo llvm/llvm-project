@@ -74,8 +74,22 @@ unsigned int ignore_times =
 #define _MAX_OVERLOAD_32_FCT _overload_to_extern_max_8x32
 #define _MIN_OVERLOAD_64_FCT _overload_to_extern_min_4x64
 #define _MIN_OVERLOAD_32_FCT _overload_to_extern_min_8x32
+#elif _XTEAM_NUM_THREADS == 128
+#define _SUM_OVERLOAD_64_FCT _overload_to_extern_sum_2x64
+#define _SUM_OVERLOAD_32_FCT _overload_to_extern_sum_4x32
+#define _MAX_OVERLOAD_64_FCT _overload_to_extern_max_2x64
+#define _MAX_OVERLOAD_32_FCT _overload_to_extern_max_4x32
+#define _MIN_OVERLOAD_64_FCT _overload_to_extern_min_2x64
+#define _MIN_OVERLOAD_32_FCT _overload_to_extern_min_4x32
+#elif _XTEAM_NUM_THREADS == 64
+#define _SUM_OVERLOAD_64_FCT _overload_to_extern_sum_1x64
+#define _SUM_OVERLOAD_32_FCT _overload_to_extern_sum_2x32
+#define _MAX_OVERLOAD_64_FCT _overload_to_extern_max_1x64
+#define _MAX_OVERLOAD_32_FCT _overload_to_extern_max_2x32
+#define _MIN_OVERLOAD_64_FCT _overload_to_extern_min_1x64
+#define _MIN_OVERLOAD_32_FCT _overload_to_extern_min_2x32
 #else
-#error Invalid value for _XTEAM_NUM_THREADS.  Must be 1024, 512, or 256
+#error Invalid value for _XTEAM_NUM_THREADS. Must be 1024, 512, 256, 128, or 64
 #endif
 
 // Question to Dhruva, should the limiter include the stride?
@@ -106,6 +120,7 @@ unsigned int ignore_times =
 
 //  Format of BIG_JUMP_LOOP depends on if we optimize for 0 index 1 stride
 #if _XTEAM_NUM_THREADS == 1024
+
 #ifdef __OPTIMIZE_INDEX0_STRIDE1
 #define _BIG_JUMP_LOOP(nteams, size, stride, offset)                           \
   for (int64_t i = k; i < size; i += nteams * 1024)
@@ -116,6 +131,7 @@ unsigned int ignore_times =
 #endif
 
 #elif _XTEAM_NUM_THREADS == 512
+
 #ifdef __OPTIMIZE_INDEX0_STRIDE1
 #define _BIG_JUMP_LOOP(nteams, size, stride, offset)                           \
   for (int64_t i = k; i < size; i += nteams * 512)
@@ -124,16 +140,41 @@ unsigned int ignore_times =
   for (int64_t i = ((k * stride) + offset); i < size;                          \
        i += (nteams * 512 * stride))
 #endif
-#else
+
+#elif _XTEAM_NUM_THREADS == 256 
+
 #ifdef __OPTIMIZE_INDEX0_STRIDE1
 #define _BIG_JUMP_LOOP(nteams, size, stride, offset)                           \
   for (int64_t i = k; i < size; i += nteams * 256)
 #else
 #define _BIG_JUMP_LOOP(nteams, size, stride, offset)                           \
   for (int64_t i = ((k * stride) + offset); i < size;                          \
-       i += (nteams * 256 * stride))
+       i += (nteams * 256* stride))
 #endif
-#endif // end  if _XTEAM_NUM_THREADS == 1024, elif, else
+
+#elif _XTEAM_NUM_THREADS == 128
+
+#ifdef __OPTIMIZE_INDEX0_STRIDE1
+#define _BIG_JUMP_LOOP(nteams, size, stride, offset)                           \
+  for (int64_t i = k; i < size; i += nteams * 128)
+#else
+#define _BIG_JUMP_LOOP(nteams, size, stride, offset)                           \
+  for (int64_t i = ((k * stride) + offset); i < size;                          \
+       i += (nteams * 128* stride))
+#endif
+
+#else
+
+#ifdef __OPTIMIZE_INDEX0_STRIDE1
+#define _BIG_JUMP_LOOP(nteams, size, stride, offset)                           \
+  for (int64_t i = k; i < size; i += nteams * 64)
+#else
+#define _BIG_JUMP_LOOP(nteams, size, stride, offset)                           \
+  for (int64_t i = ((k * stride) + offset); i < size;                          \
+       i += (nteams * 64 * stride))
+#endif
+
+#endif // end  if _XTEAM_NUM_THREADS == 1024, elif,elif ..  else
 #endif // if defined(__NVPTX__) && _XTEAM_NUM_THREADS == 1024 else
 
 unsigned int test_run_rc = 0;

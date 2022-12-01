@@ -177,6 +177,51 @@ T xteamr_shfl_xor(T var, const int lane_mask) {
   return xteamr_shfl_xor<_WSZ>(tag(), var, lane_mask);
 }
 
+/// Templated internal function used by extern intra-team reductions
+///
+/// \param  Template typename parameter T
+/// \param  Template parameter for number of waves, must be power of two
+/// \param  Template parameter for warp size, 32 o 64
+///
+/// \param  Input thread local (TLS) value for warp shfl reduce
+/// \param  Pointer to result value, also used in final reduction
+/// \param  Function pointer to TLS pair reduction function
+/// \param  Function pointer to LDS pair reduction function
+/// \param  Reduction null value, used for partial waves
+/// \param  The iteration value from 0 to (NumTeams*_NUM_THREADS)-1
+///
+template <typename T, const int32_t _NW, const int32_t _WSZ>
+__attribute__((flatten, always_inline)) void _iteam_reduction(
+    T val, T *r_ptr, void (*_rf)(T *, T),
+    void (*_rf_lds)(__XTEAM_SHARED_LDS T *, __XTEAM_SHARED_LDS T *),
+    const T rnv, const uint64_t k) {
+  constexpr uint32_t _NT = _NW * _WSZ;
+  const uint32_t omp_thread_num = k % _NT;
+  const uint32_t wave_num = omp_thread_num / _WSZ;
+  const uint32_t lane_num = omp_thread_num % _WSZ;
+  static __XTEAM_SHARED_LDS T xwave_lds[_NW];
+
+  // Binary reduce each wave, then copy to xwave_lds[wave_num]
+  for (unsigned int offset = _WSZ / 2; offset > 0; offset >>= 1)
+    (*_rf)(&val, xteamr_shfl_xor<T, _WSZ>(val, offset));
+  if (lane_num == 0)
+    xwave_lds[wave_num] = val;
+
+  // Binary reduce all wave values into wave_lds[0]
+  _OMP::synchronize::threadsAligned();
+  for (unsigned int offset = _NW / 2; offset > 0; offset >>= 1) {
+    if (omp_thread_num < offset)
+      (*_rf_lds)(&(xwave_lds[omp_thread_num]),
+                 &(xwave_lds[omp_thread_num + offset]));
+  }
+
+  // We only need xwave_lds[0] correct on thread 0.
+  if (omp_thread_num == 0)
+    *r_ptr = xwave_lds[0];
+
+  _OMP::synchronize::threadsAligned();
+}
+
 /// Templated internal function used by all extern typed reductions
 ///
 /// \param  Template typename parameter T
@@ -301,495 +346,1056 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
 //  number of waves in the team,and warpsize.
 //
 #define _EXT_ATTR extern "C" __attribute__((flatten, always_inline)) void
+#define _CD double _Complex
+#define _CF float _Complex
+#define _UI unsigned int
+#define _UL unsigned long
+#define _LDS volatile __attribute__((address_space(3)))
 _EXT_ATTR
-__kmpc_xteamr_d_16x64(double v, double *r_ptr, double *tvals, uint32_t *td_ptr,
-                      void (*_rf)(double *, double),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS double *,
-                                      __XTEAM_SHARED_LDS double *),
-                      const double iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<double, 16, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                   numteams);
+__kmpc_xteamr_d_16x64(double v, double *r_p, double *tvs, uint32_t *td,
+                      void (*rf)(double *, double),
+                      void (*rflds)(_LDS double *, _LDS double *),
+                      const double rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<double, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_f_16x64(float v, float *r_ptr, float *tvals, uint32_t *td_ptr,
-                      void (*_rf)(float *, float),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS float *,
-                                      __XTEAM_SHARED_LDS float *),
-                      const float iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<float, 16, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                  numteams);
-}
-
-_EXT_ATTR
-__kmpc_xteamr_cd_16x64(double _Complex v, double _Complex *r_ptr,
-                       double _Complex *tvals, uint32_t *td_ptr,
-                       void (*_rf)(double _Complex *, double _Complex),
-                       void (*_rf_lds)(__XTEAM_SHARED_LDS double _Complex *,
-                                       __XTEAM_SHARED_LDS double _Complex *),
-                       double _Complex iv, const uint64_t k,
-                       const uint32_t numteams) {
-  _xteam_reduction<double _Complex, 16, 64>(v, r_ptr, tvals, td_ptr, _rf,
-                                            _rf_lds, iv, k, numteams);
+__kmpc_iteamr_d_16x64(double v, double *r_p, void (*rf)(double *, double),
+                      void (*rflds)(_LDS double *, _LDS double *),
+                      const double rnv, const uint64_t k) {
+  _iteam_reduction<double, 16, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_cf_16x64(float _Complex v, float _Complex *r_ptr,
-                       float _Complex *tvals, uint32_t *td_ptr,
-                       void (*_rf)(float _Complex *, float _Complex),
-                       void (*_rf_lds)(__XTEAM_SHARED_LDS float _Complex *,
-                                       __XTEAM_SHARED_LDS float _Complex *),
-                       float _Complex iv, const uint64_t k,
-                       const uint32_t numteams) {
-  _xteam_reduction<float _Complex, 16, 64>(v, r_ptr, tvals, td_ptr, _rf,
-                                           _rf_lds, iv, k, numteams);
+__kmpc_xteamr_f_16x64(float v, float *r_p, float *tvs, uint32_t *td,
+                      void (*rf)(float *, float),
+                      void (*rflds)(_LDS float *, _LDS float *),
+                      const float rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<float, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_i_16x64(int v, int *r_ptr, int *tvals, uint32_t *td_ptr,
-                      void (*_rf)(int *, int),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS int *,
-                                      __XTEAM_SHARED_LDS int *),
-                      const int iv, const uint64_t k, const uint32_t numteams) {
-  _xteam_reduction<int, 16, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                numteams);
+__kmpc_iteamr_f_16x64(float v, float *r_p, void (*rf)(float *, float),
+                      void (*rflds)(_LDS float *, _LDS float *),
+                      const float rnv, const uint64_t k) {
+  _iteam_reduction<float, 16, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_ui_16x64(uint32_t v, uint32_t *r_ptr, uint32_t *tvals,
-                       uint32_t *td_ptr, void (*_rf)(uint32_t *, uint32_t),
-                       void (*_rf_lds)(__XTEAM_SHARED_LDS uint32_t *,
-                                       __XTEAM_SHARED_LDS uint32_t *),
-                       const uint32_t iv, const uint64_t k,
-                       const uint32_t numteams) {
-  _xteam_reduction<uint32_t, 16, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv,
-                                     k, numteams);
+__kmpc_xteamr_cd_16x64(_CD v, _CD *r_p, _CD *tvs, uint32_t *td,
+                       void (*rf)(_CD *, _CD),
+                       void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                       const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CD, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_l_16x64(long v, long *r_ptr, long *tvals, uint32_t *td_ptr,
-                      void (*_rf)(long *, long),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS long *,
-                                      __XTEAM_SHARED_LDS long *),
-                      const long iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<long, 16, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                 numteams);
+__kmpc_iteamr_cd_16x64(_CD v, _CD *r_p, void (*rf)(_CD *, _CD),
+                       void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                       const uint64_t k) {
+  _iteam_reduction<_CD, 16, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_ul_16x64(uint64_t v, uint64_t *r_ptr, uint64_t *tvals,
-                       uint32_t *td_ptr, void (*_rf)(uint64_t *, uint64_t),
-                       void (*_rf_lds)(__XTEAM_SHARED_LDS uint64_t *,
-                                       __XTEAM_SHARED_LDS uint64_t *),
-                       const uint64_t iv, const uint64_t k,
-                       const uint32_t numteams) {
-  _xteam_reduction<uint64_t, 16, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv,
-                                     k, numteams);
-}
-
-_EXT_ATTR
-__kmpc_xteamr_d_8x64(double v, double *r_ptr, double *tvals, uint32_t *td_ptr,
-                     void (*_rf)(double *, double),
-                     void (*_rf_lds)(__XTEAM_SHARED_LDS double *,
-                                     __XTEAM_SHARED_LDS double *),
-                     const double iv, const uint64_t k,
-                     const uint32_t numteams) {
-  _xteam_reduction<double, 8, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                  numteams);
+__kmpc_xteamr_cf_16x64(_CF v, _CF *r_p, _CF *tvs, uint32_t *td,
+                       void (*rf)(_CF *, _CF),
+                       void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                       const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CF, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_f_8x64(float v, float *r_ptr, float *tvals, uint32_t *td_ptr,
-                     void (*_rf)(float *, float),
-                     void (*_rf_lds)(__XTEAM_SHARED_LDS float *,
-                                     __XTEAM_SHARED_LDS float *),
-                     const float iv, const uint64_t k,
-                     const uint32_t numteams) {
-  _xteam_reduction<float, 8, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                 numteams);
+__kmpc_iteamr_cf_16x64(_CF v, _CF *r_p, void (*rf)(_CF *, _CF),
+                       void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                       const uint64_t k) {
+  _iteam_reduction<_CF, 16, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_cd_8x64(double _Complex v, double _Complex *r_ptr,
-                      double _Complex *tvals, uint32_t *td_ptr,
-                      void (*_rf)(double _Complex *, double _Complex),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS double _Complex *,
-                                      __XTEAM_SHARED_LDS double _Complex *),
-                      const double _Complex iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<double _Complex, 8, 64>(v, r_ptr, tvals, td_ptr, _rf,
-                                           _rf_lds, iv, k, numteams);
+__kmpc_xteamr_i_16x64(int v, int *r_p, int *tvs, uint32_t *td,
+                      void (*rf)(int *, int),
+                      void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<int, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_cf_8x64(float _Complex v, float _Complex *r_ptr,
-                      float _Complex *tvals, uint32_t *td_ptr,
-                      void (*_rf)(float _Complex *, float _Complex),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS float _Complex *,
-                                      __XTEAM_SHARED_LDS float _Complex *),
-                      const float _Complex iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<float _Complex, 8, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds,
-                                          iv, k, numteams);
+__kmpc_iteamr_i_16x64(int v, int *r_p, void (*rf)(int *, int),
+                      void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                      const uint64_t k) {
+  _iteam_reduction<int, 16, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_i_8x64(int v, int *r_ptr, int *tvals, uint32_t *td_ptr,
-                     void (*_rf)(int *, int),
-                     void (*_rf_lds)(__XTEAM_SHARED_LDS int *,
-                                     __XTEAM_SHARED_LDS int *),
-                     const int iv, const uint64_t k, const uint32_t numteams) {
-  _xteam_reduction<int, 8, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                               numteams);
+__kmpc_xteamr_ui_16x64(_UI v, _UI *r_p, _UI *tvs, uint32_t *td,
+                       void (*rf)(_UI *, _UI),
+                       void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                       const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UI, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_ui_8x64(uint32_t v, uint32_t *r_ptr, uint32_t *tvals,
-                      uint32_t *td_ptr, void (*_rf)(uint32_t *, uint32_t),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS uint32_t *,
-                                      __XTEAM_SHARED_LDS uint32_t *),
-                      const uint32_t iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<uint32_t, 8, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv,
-                                    k, numteams);
+__kmpc_iteamr_ui_16x64(_UI v, _UI *r_p, void (*rf)(_UI *, _UI),
+                       void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                       const uint64_t k) {
+  _iteam_reduction<_UI, 16, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_l_8x64(long v, long *r_ptr, long *tvals, uint32_t *td_ptr,
-                     void (*_rf)(long *, long),
-                     void (*_rf_lds)(__XTEAM_SHARED_LDS long *,
-                                     __XTEAM_SHARED_LDS long *),
-                     const long iv, const uint64_t k, const uint32_t numteams) {
-  _xteam_reduction<long, 8, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                numteams);
+__kmpc_xteamr_l_16x64(long v, long *r_p, long *tvs, uint32_t *td,
+                      void (*rf)(long *, long),
+                      void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<long, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_ul_8x64(uint64_t v, uint64_t *r_ptr, uint64_t *tvals,
-                      uint32_t *td_ptr, void (*_rf)(uint64_t *, uint64_t),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS uint64_t *,
-                                      __XTEAM_SHARED_LDS uint64_t *),
-                      const uint64_t iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<uint64_t, 8, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv,
-                                    k, numteams);
-}
-
-_EXT_ATTR
-__kmpc_xteamr_d_4x64(double v, double *r_ptr, double *tvals, uint32_t *td_ptr,
-                     void (*_rf)(double *, double),
-                     void (*_rf_lds)(__XTEAM_SHARED_LDS double *,
-                                     __XTEAM_SHARED_LDS double *),
-                     const double iv, const uint64_t k,
-                     const uint32_t numteams) {
-  _xteam_reduction<double, 4, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                  numteams);
+__kmpc_iteamr_l_16x64(long v, long *r_p, void (*rf)(long *, long),
+                      void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                      const uint64_t k) {
+  _iteam_reduction<long, 16, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_f_4x64(float v, float *r_ptr, float *tvals, uint32_t *td_ptr,
-                     void (*_rf)(float *, float),
-                     void (*_rf_lds)(__XTEAM_SHARED_LDS float *,
-                                     __XTEAM_SHARED_LDS float *),
-                     const float iv, const uint64_t k,
-                     const uint32_t numteams) {
-  _xteam_reduction<float, 4, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                 numteams);
+__kmpc_xteamr_ul_16x64(_UL v, _UL *r_p, _UL *tvs, uint32_t *td,
+                       void (*rf)(_UL *, _UL),
+                       void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                       const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UL, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_cd_4x64(double _Complex v, double _Complex *r_ptr,
-                      double _Complex *tvals, uint32_t *td_ptr,
-                      void (*_rf)(double _Complex *, double _Complex),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS double _Complex *,
-                                      __XTEAM_SHARED_LDS double _Complex *),
-                      const double _Complex iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<double _Complex, 4, 64>(v, r_ptr, tvals, td_ptr, _rf,
-                                           _rf_lds, iv, k, numteams);
+__kmpc_iteamr_ul_16x64(_UL v, _UL *r_p, void (*rf)(_UL *, _UL),
+                       void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                       const uint64_t k) {
+  _iteam_reduction<_UL, 16, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_cf_4x64(float _Complex v, float _Complex *r_ptr,
-                      float _Complex *tvals, uint32_t *td_ptr,
-                      void (*_rf)(float _Complex *, float _Complex),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS float _Complex *,
-                                      __XTEAM_SHARED_LDS float _Complex *),
-                      const float _Complex iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<float _Complex, 4, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds,
-                                          iv, k, numteams);
+__kmpc_xteamr_d_8x64(double v, double *r_p, double *tvs, uint32_t *td,
+                     void (*rf)(double *, double),
+                     void (*rflds)(_LDS double *, _LDS double *),
+                     const double rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<double, 8, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_i_4x64(int v, int *r_ptr, int *tvals, uint32_t *td_ptr,
-                     void (*_rf)(int *, int),
-                     void (*_rf_lds)(__XTEAM_SHARED_LDS int *,
-                                     __XTEAM_SHARED_LDS int *),
-                     const int iv, const uint64_t k, const uint32_t numteams) {
-  _xteam_reduction<int, 4, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                               numteams);
+__kmpc_iteamr_d_8x64(double v, double *r_p, void (*rf)(double *, double),
+                     void (*rflds)(_LDS double *, _LDS double *),
+                     const double rnv, const uint64_t k) {
+  _iteam_reduction<double, 8, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_ui_4x64(uint32_t v, uint32_t *r_ptr, uint32_t *tvals,
-                      uint32_t *td_ptr, void (*_rf)(uint32_t *, uint32_t),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS uint32_t *,
-                                      __XTEAM_SHARED_LDS uint32_t *),
-                      const uint32_t iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<uint32_t, 4, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv,
-                                    k, numteams);
+__kmpc_xteamr_f_8x64(float v, float *r_p, float *tvs, uint32_t *td,
+                     void (*rf)(float *, float),
+                     void (*rflds)(_LDS float *, _LDS float *), const float rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<float, 8, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_l_4x64(long v, long *r_ptr, long *tvals, uint32_t *td_ptr,
-                     void (*_rf)(long *, long),
-                     void (*_rf_lds)(__XTEAM_SHARED_LDS long *,
-                                     __XTEAM_SHARED_LDS long *),
-                     const long iv, const uint64_t k, const uint32_t numteams) {
-  _xteam_reduction<long, 4, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                numteams);
+__kmpc_iteamr_f_8x64(float v, float *r_p, void (*rf)(float *, float),
+                     void (*rflds)(_LDS float *, _LDS float *), const float rnv,
+                     const uint64_t k) {
+  _iteam_reduction<float, 8, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_ul_4x64(uint64_t v, uint64_t *r_ptr, uint64_t *tvals,
-                      uint32_t *td_ptr, void (*_rf)(uint64_t *, uint64_t),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS uint64_t *,
-                                      __XTEAM_SHARED_LDS uint64_t *),
-                      const uint64_t iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<uint64_t, 4, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv,
-                                    k, numteams);
-}
-
-_EXT_ATTR
-__kmpc_xteamr_d_32x32(double v, double *r_ptr, double *tvals, uint32_t *td_ptr,
-                      void (*_rf)(double *, double),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS double *,
-                                      __XTEAM_SHARED_LDS double *),
-                      const double iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<double, 32, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                   numteams);
+__kmpc_xteamr_cd_8x64(_CD v, _CD *r_p, _CD *tvs, uint32_t *td,
+                      void (*rf)(_CD *, _CD),
+                      void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CD, 8, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_f_32x32(float v, float *r_ptr, float *tvals, uint32_t *td_ptr,
-                      void (*_rf)(float *, float),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS float *,
-                                      __XTEAM_SHARED_LDS float *),
-                      const float iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<float, 32, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                  numteams);
+__kmpc_iteamr_cd_8x64(_CD v, _CD *r_p, void (*rf)(_CD *, _CD),
+                      void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_CD, 8, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_cd_32x32(double _Complex v, double _Complex *r_ptr,
-                       double _Complex *tvals, uint32_t *td_ptr,
-                       void (*_rf)(double _Complex *, double _Complex),
-                       void (*_rf_lds)(__XTEAM_SHARED_LDS double _Complex *,
-                                       __XTEAM_SHARED_LDS double _Complex *),
-                       const double _Complex iv, const uint64_t k,
-                       const uint32_t numteams) {
-  _xteam_reduction<double _Complex, 32, 32>(v, r_ptr, tvals, td_ptr, _rf,
-                                            _rf_lds, iv, k, numteams);
+__kmpc_xteamr_cf_8x64(_CF v, _CF *r_p, _CF *tvs, uint32_t *td,
+                      void (*rf)(_CF *, _CF),
+                      void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CF, 8, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_cf_32x32(float _Complex v, float _Complex *r_ptr,
-                       float _Complex *tvals, uint32_t *td_ptr,
-                       void (*_rf)(float _Complex *, float _Complex),
-                       void (*_rf_lds)(__XTEAM_SHARED_LDS float _Complex *,
-                                       __XTEAM_SHARED_LDS float _Complex *),
-                       const float _Complex iv, const uint64_t k,
-                       const uint32_t numteams) {
-  _xteam_reduction<float _Complex, 32, 32>(v, r_ptr, tvals, td_ptr, _rf,
-                                           _rf_lds, iv, k, numteams);
+__kmpc_iteamr_cf_8x64(_CF v, _CF *r_p, void (*rf)(_CF *, _CF),
+                      void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_CF, 8, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_i_32x32(int v, int *r_ptr, int *tvals, uint32_t *td_ptr,
-                      void (*_rf)(int *, int),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS int *,
-                                      __XTEAM_SHARED_LDS int *),
-                      const int iv, const uint64_t k, const uint32_t numteams) {
-  _xteam_reduction<int, 32, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                numteams);
+__kmpc_xteamr_i_8x64(int v, int *r_p, int *tvs, uint32_t *td,
+                     void (*rf)(int *, int),
+                     void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<int, 8, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_ui_32x32(uint32_t v, uint32_t *r_ptr, uint32_t *tvals,
-                       uint32_t *td_ptr, void (*_rf)(uint32_t *, uint32_t),
-                       void (*_rf_lds)(__XTEAM_SHARED_LDS uint32_t *,
-                                       __XTEAM_SHARED_LDS uint32_t *),
-                       const uint32_t iv, const uint64_t k,
-                       const uint32_t numteams) {
-  _xteam_reduction<uint32_t, 32, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv,
-                                     k, numteams);
+__kmpc_iteamr_i_8x64(int v, int *r_p, void (*rf)(int *, int),
+                     void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                     const uint64_t k) {
+  _iteam_reduction<int, 8, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_l_32x32(long v, long *r_ptr, long *tvals, uint32_t *td_ptr,
-                      void (*_rf)(long *, long),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS long *,
-                                      __XTEAM_SHARED_LDS long *),
-                      const long iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<long, 32, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                 numteams);
+__kmpc_xteamr_ui_8x64(_UI v, _UI *r_p, _UI *tvs, uint32_t *td,
+                      void (*rf)(_UI *, _UI),
+                      void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UI, 8, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_ul_32x32(uint64_t v, uint64_t *r_ptr, uint64_t *tvals,
-                       uint32_t *td_ptr, void (*_rf)(uint64_t *, uint64_t),
-                       void (*_rf_lds)(__XTEAM_SHARED_LDS uint64_t *,
-                                       __XTEAM_SHARED_LDS uint64_t *),
-                       const uint64_t iv, const uint64_t k,
-                       const uint32_t numteams) {
-  _xteam_reduction<uint64_t, 32, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv,
-                                     k, numteams);
-}
-
-_EXT_ATTR
-__kmpc_xteamr_d_16x32(double v, double *r_ptr, double *tvals, uint32_t *td_ptr,
-                      void (*_rf)(double *, double),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS double *,
-                                      __XTEAM_SHARED_LDS double *),
-                      const double iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<double, 16, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                   numteams);
+__kmpc_iteamr_ui_8x64(_UI v, _UI *r_p, void (*rf)(_UI *, _UI),
+                      void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_UI, 8, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_f_16x32(float v, float *r_ptr, float *tvals, uint32_t *td_ptr,
-                      void (*_rf)(float *, float),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS float *,
-                                      __XTEAM_SHARED_LDS float *),
-                      const float iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<float, 16, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                  numteams);
+__kmpc_xteamr_l_8x64(long v, long *r_p, long *tvs, uint32_t *td,
+                     void (*rf)(long *, long),
+                     void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<long, 8, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_cd_16x32(double _Complex v, double _Complex *r_ptr,
-                       double _Complex *tvals, uint32_t *td_ptr,
-                       void (*_rf)(double _Complex *, double _Complex),
-                       void (*_rf_lds)(__XTEAM_SHARED_LDS double _Complex *,
-                                       __XTEAM_SHARED_LDS double _Complex *),
-                       const double _Complex iv, const uint64_t k,
-                       const uint32_t numteams) {
-  _xteam_reduction<double _Complex, 16, 32>(v, r_ptr, tvals, td_ptr, _rf,
-                                            _rf_lds, iv, k, numteams);
+__kmpc_iteamr_l_8x64(long v, long *r_p, void (*rf)(long *, long),
+                     void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                     const uint64_t k) {
+  _iteam_reduction<long, 8, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_cf_16x32(float _Complex v, float _Complex *r_ptr,
-                       float _Complex *tvals, uint32_t *td_ptr,
-                       void (*_rf)(float _Complex *, float _Complex),
-                       void (*_rf_lds)(__XTEAM_SHARED_LDS float _Complex *,
-                                       __XTEAM_SHARED_LDS float _Complex *),
-                       const float _Complex iv, const uint64_t k,
-                       const uint32_t numteams) {
-  _xteam_reduction<float _Complex, 16, 32>(v, r_ptr, tvals, td_ptr, _rf,
-                                           _rf_lds, iv, k, numteams);
+__kmpc_xteamr_ul_8x64(_UL v, _UL *r_p, _UL *tvs, uint32_t *td,
+                      void (*rf)(_UL *, _UL),
+                      void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UL, 8, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_i_16x32(int v, int *r_ptr, int *tvals, uint32_t *td_ptr,
-                      void (*_rf)(int *, int),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS int *,
-                                      __XTEAM_SHARED_LDS int *),
-                      const int iv, const uint64_t k, const uint32_t numteams) {
-  _xteam_reduction<int, 16, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                numteams);
+__kmpc_iteamr_ul_8x64(_UL v, _UL *r_p, void (*rf)(_UL *, _UL),
+                      void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_UL, 8, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_ui_16x32(uint32_t v, uint32_t *r_ptr, uint32_t *tvals,
-                       uint32_t *td_ptr, void (*_rf)(uint32_t *, uint32_t),
-                       void (*_rf_lds)(__XTEAM_SHARED_LDS uint32_t *,
-                                       __XTEAM_SHARED_LDS uint32_t *),
-                       const uint32_t iv, const uint64_t k,
-                       const uint32_t numteams) {
-  _xteam_reduction<uint32_t, 16, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv,
-                                     k, numteams);
+__kmpc_xteamr_d_4x64(double v, double *r_p, double *tvs, uint32_t *td,
+                     void (*rf)(double *, double),
+                     void (*rflds)(_LDS double *, _LDS double *),
+                     const double rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<double, 4, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_l_16x32(long v, long *r_ptr, long *tvals, uint32_t *td_ptr,
-                      void (*_rf)(long *, long),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS long *,
-                                      __XTEAM_SHARED_LDS long *),
-                      const long iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<long, 16, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                 numteams);
+__kmpc_iteamr_d_4x64(double v, double *r_p, void (*rf)(double *, double),
+                     void (*rflds)(_LDS double *, _LDS double *),
+                     const double rnv, const uint64_t k) {
+  _iteam_reduction<double, 4, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_ul_16x32(uint64_t v, uint64_t *r_ptr, uint64_t *tvals,
-                       uint32_t *td_ptr, void (*_rf)(uint64_t *, uint64_t),
-                       void (*_rf_lds)(__XTEAM_SHARED_LDS uint64_t *,
-                                       __XTEAM_SHARED_LDS uint64_t *),
-                       const uint64_t iv, const uint64_t k,
-                       const uint32_t numteams) {
-  _xteam_reduction<uint64_t, 16, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv,
-                                     k, numteams);
-}
-
-_EXT_ATTR
-__kmpc_xteamr_d_8x32(double v, double *r_ptr, double *tvals, uint32_t *td_ptr,
-                     void (*_rf)(double *, double),
-                     void (*_rf_lds)(__XTEAM_SHARED_LDS double *,
-                                     __XTEAM_SHARED_LDS double *),
-                     const double iv, const uint64_t k,
-                     const uint32_t numteams) {
-  _xteam_reduction<double, 8, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                  numteams);
+__kmpc_xteamr_f_4x64(float v, float *r_p, float *tvs, uint32_t *td,
+                     void (*rf)(float *, float),
+                     void (*rflds)(_LDS float *, _LDS float *), const float rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<float, 4, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_f_8x32(float v, float *r_ptr, float *tvals, uint32_t *td_ptr,
-                     void (*_rf)(float *, float),
-                     void (*_rf_lds)(__XTEAM_SHARED_LDS float *,
-                                     __XTEAM_SHARED_LDS float *),
-                     const float iv, const uint64_t k,
-                     const uint32_t numteams) {
-  _xteam_reduction<float, 8, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                 numteams);
+__kmpc_iteamr_f_4x64(float v, float *r_p, void (*rf)(float *, float),
+                     void (*rflds)(_LDS float *, _LDS float *), const float rnv,
+                     const uint64_t k) {
+  _iteam_reduction<float, 4, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_cd_8x32(double _Complex v, double _Complex *r_ptr,
-                      double _Complex *tvals, uint32_t *td_ptr,
-                      void (*_rf)(double _Complex *, double _Complex),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS double _Complex *,
-                                      __XTEAM_SHARED_LDS double _Complex *),
-                      const double _Complex iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<double _Complex, 8, 32>(v, r_ptr, tvals, td_ptr, _rf,
-                                           _rf_lds, iv, k, numteams);
+__kmpc_xteamr_cd_4x64(_CD v, _CD *r_p, _CD *tvs, uint32_t *td,
+                      void (*rf)(_CD *, _CD),
+                      void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CD, 4, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_cf_8x32(float _Complex v, float _Complex *r_ptr,
-                      float _Complex *tvals, uint32_t *td_ptr,
-                      void (*_rf)(float _Complex *, float _Complex),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS float _Complex *,
-                                      __XTEAM_SHARED_LDS float _Complex *),
-                      const float _Complex iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<float _Complex, 8, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds,
-                                          iv, k, numteams);
+__kmpc_iteamr_cd_4x64(_CD v, _CD *r_p, void (*rf)(_CD *, _CD),
+                      void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_CD, 4, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_i_8x32(int v, int *r_ptr, int *tvals, uint32_t *td_ptr,
-                     void (*_rf)(int *, int),
-                     void (*_rf_lds)(__XTEAM_SHARED_LDS int *,
-                                     __XTEAM_SHARED_LDS int *),
-                     const int iv, const uint64_t k, const uint32_t numteams) {
-  _xteam_reduction<int, 8, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                               numteams);
+__kmpc_xteamr_cf_4x64(_CF v, _CF *r_p, _CF *tvs, uint32_t *td,
+                      void (*rf)(_CF *, _CF),
+                      void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CF, 4, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_ui_8x32(uint32_t v, uint32_t *r_ptr, uint32_t *tvals,
-                      uint32_t *td_ptr, void (*_rf)(uint32_t *, uint32_t),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS uint32_t *,
-                                      __XTEAM_SHARED_LDS uint32_t *),
-                      const uint32_t iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<uint32_t, 8, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv,
-                                    k, numteams);
+__kmpc_iteamr_cf_4x64(_CF v, _CF *r_p, void (*rf)(_CF *, _CF),
+                      void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_CF, 4, 64>(v, r_p, rf, rflds, rnv, k);
 }
 _EXT_ATTR
-__kmpc_xteamr_l_8x32(long v, long *r_ptr, long *tvals, uint32_t *td_ptr,
-                     void (*_rf)(long *, long),
-                     void (*_rf_lds)(__XTEAM_SHARED_LDS long *,
-                                     __XTEAM_SHARED_LDS long *),
-                     const long iv, const uint64_t k, const uint32_t numteams) {
-  _xteam_reduction<long, 8, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv, k,
-                                numteams);
+__kmpc_xteamr_i_4x64(int v, int *r_p, int *tvs, uint32_t *td,
+                     void (*rf)(int *, int),
+                     void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<int, 4, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
 }
 _EXT_ATTR
-__kmpc_xteamr_ul_8x32(uint64_t v, uint64_t *r_ptr, uint64_t *tvals,
-                      uint32_t *td_ptr, void (*_rf)(uint64_t *, uint64_t),
-                      void (*_rf_lds)(__XTEAM_SHARED_LDS uint64_t *,
-                                      __XTEAM_SHARED_LDS uint64_t *),
-                      const uint64_t iv, const uint64_t k,
-                      const uint32_t numteams) {
-  _xteam_reduction<uint64_t, 8, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv,
-                                    k, numteams);
+__kmpc_iteamr_i_4x64(int v, int *r_p, void (*rf)(int *, int),
+                     void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                     const uint64_t k) {
+  _iteam_reduction<int, 4, 64>(v, r_p, rf, rflds, rnv, k);
 }
+_EXT_ATTR
+__kmpc_xteamr_ui_4x64(_UI v, _UI *r_p, _UI *tvs, uint32_t *td,
+                      void (*rf)(_UI *, _UI),
+                      void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UI, 4, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_ui_4x64(_UI v, _UI *r_p, void (*rf)(_UI *, _UI),
+                      void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_UI, 4, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_l_4x64(long v, long *r_p, long *tvs, uint32_t *td,
+                     void (*rf)(long *, long),
+                     void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<long, 4, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_l_4x64(long v, long *r_p, void (*rf)(long *, long),
+                     void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                     const uint64_t k) {
+  _iteam_reduction<long, 4, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_ul_4x64(_UL v, _UL *r_p, _UL *tvs, uint32_t *td,
+                      void (*rf)(_UL *, _UL),
+                      void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UL, 4, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_ul_4x64(_UL v, _UL *r_p, void (*rf)(_UL *, _UL),
+                      void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_UL, 4, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_d_2x64(double v, double *r_p, double *tvs, uint32_t *td,
+                     void (*rf)(double *, double),
+                     void (*rflds)(_LDS double *, _LDS double *),
+                     const double rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<double, 2, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_d_2x64(double v, double *r_p, void (*rf)(double *, double),
+                     void (*rflds)(_LDS double *, _LDS double *),
+                     const double rnv, const uint64_t k) {
+  _iteam_reduction<double, 2, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_f_2x64(float v, float *r_p, float *tvs, uint32_t *td,
+                     void (*rf)(float *, float),
+                     void (*rflds)(_LDS float *, _LDS float *), const float rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<float, 2, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_f_2x64(float v, float *r_p, void (*rf)(float *, float),
+                     void (*rflds)(_LDS float *, _LDS float *), const float rnv,
+                     const uint64_t k) {
+  _iteam_reduction<float, 2, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_cd_2x64(_CD v, _CD *r_p, _CD *tvs, uint32_t *td,
+                      void (*rf)(_CD *, _CD),
+                      void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CD, 2, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_cd_2x64(_CD v, _CD *r_p, void (*rf)(_CD *, _CD),
+                      void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_CD, 2, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_cf_2x64(_CF v, _CF *r_p, _CF *tvs, uint32_t *td,
+                      void (*rf)(_CF *, _CF),
+                      void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CF, 2, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_cf_2x64(_CF v, _CF *r_p, void (*rf)(_CF *, _CF),
+                      void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_CF, 2, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_i_2x64(int v, int *r_p, int *tvs, uint32_t *td,
+                     void (*rf)(int *, int),
+                     void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<int, 2, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_i_2x64(int v, int *r_p, void (*rf)(int *, int),
+                     void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                     const uint64_t k) {
+  _iteam_reduction<int, 2, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_ui_2x64(_UI v, _UI *r_p, _UI *tvs, uint32_t *td,
+                      void (*rf)(_UI *, _UI),
+                      void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UI, 2, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_ui_2x64(_UI v, _UI *r_p, void (*rf)(_UI *, _UI),
+                      void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_UI, 2, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_l_2x64(long v, long *r_p, long *tvs, uint32_t *td,
+                     void (*rf)(long *, long),
+                     void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<long, 2, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_l_2x64(long v, long *r_p, void (*rf)(long *, long),
+                     void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                     const uint64_t k) {
+  _iteam_reduction<long, 2, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_ul_2x64(_UL v, _UL *r_p, _UL *tvs, uint32_t *td,
+                      void (*rf)(_UL *, _UL),
+                      void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UL, 2, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_ul_2x64(_UL v, _UL *r_p, void (*rf)(_UL *, _UL),
+                      void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_UL, 2, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_d_1x64(double v, double *r_p, double *tvs, uint32_t *td,
+                     void (*rf)(double *, double),
+                     void (*rflds)(_LDS double *, _LDS double *),
+                     const double rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<double, 1, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_d_1x64(double v, double *r_p, void (*rf)(double *, double),
+                     void (*rflds)(_LDS double *, _LDS double *),
+                     const double rnv, const uint64_t k) {
+  _iteam_reduction<double, 1, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_f_1x64(float v, float *r_p, float *tvs, uint32_t *td,
+                     void (*rf)(float *, float),
+                     void (*rflds)(_LDS float *, _LDS float *), const float rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<float, 1, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_f_1x64(float v, float *r_p, void (*rf)(float *, float),
+                     void (*rflds)(_LDS float *, _LDS float *), const float rnv,
+                     const uint64_t k) {
+  _iteam_reduction<float, 1, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_cd_1x64(_CD v, _CD *r_p, _CD *tvs, uint32_t *td,
+                      void (*rf)(_CD *, _CD),
+                      void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CD, 1, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_cd_1x64(_CD v, _CD *r_p, void (*rf)(_CD *, _CD),
+                      void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_CD, 1, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_cf_1x64(_CF v, _CF *r_p, _CF *tvs, uint32_t *td,
+                      void (*rf)(_CF *, _CF),
+                      void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CF, 1, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_cf_1x64(_CF v, _CF *r_p, void (*rf)(_CF *, _CF),
+                      void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_CF, 1, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_i_1x64(int v, int *r_p, int *tvs, uint32_t *td,
+                     void (*rf)(int *, int),
+                     void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<int, 1, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_i_1x64(int v, int *r_p, void (*rf)(int *, int),
+                     void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                     const uint64_t k) {
+  _iteam_reduction<int, 1, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_ui_1x64(_UI v, _UI *r_p, _UI *tvs, uint32_t *td,
+                      void (*rf)(_UI *, _UI),
+                      void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UI, 1, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_ui_1x64(_UI v, _UI *r_p, void (*rf)(_UI *, _UI),
+                      void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_UI, 1, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_l_1x64(long v, long *r_p, long *tvs, uint32_t *td,
+                     void (*rf)(long *, long),
+                     void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<long, 1, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_l_1x64(long v, long *r_p, void (*rf)(long *, long),
+                     void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                     const uint64_t k) {
+  _iteam_reduction<long, 1, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_ul_1x64(_UL v, _UL *r_p, _UL *tvs, uint32_t *td,
+                      void (*rf)(_UL *, _UL),
+                      void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UL, 1, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_ul_1x64(_UL v, _UL *r_p, void (*rf)(_UL *, _UL),
+                      void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_UL, 1, 64>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_d_32x32(double v, double *r_p, double *tvs, uint32_t *td,
+                      void (*rf)(double *, double),
+                      void (*rflds)(_LDS double *, _LDS double *),
+                      const double rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<double, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_d_32x32(double v, double *r_p, void (*rf)(double *, double),
+                      void (*rflds)(_LDS double *, _LDS double *),
+                      const double rnv, const uint64_t k) {
+  _iteam_reduction<double, 32, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_f_32x32(float v, float *r_p, float *tvs, uint32_t *td,
+                      void (*rf)(float *, float),
+                      void (*rflds)(_LDS float *, _LDS float *),
+                      const float rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<float, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_f_32x32(float v, float *r_p, void (*rf)(float *, float),
+                      void (*rflds)(_LDS float *, _LDS float *),
+                      const float rnv, const uint64_t k) {
+  _iteam_reduction<float, 32, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_cd_32x32(_CD v, _CD *r_p, _CD *tvs, uint32_t *td,
+                       void (*rf)(_CD *, _CD),
+                       void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                       const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CD, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_cd_32x32(_CD v, _CD *r_p, void (*rf)(_CD *, _CD),
+                       void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                       const uint64_t k) {
+  _iteam_reduction<_CD, 32, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_cf_32x32(_CF v, _CF *r_p, _CF *tvs, uint32_t *td,
+                       void (*rf)(_CF *, _CF),
+                       void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                       const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CF, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_cf_32x32(_CF v, _CF *r_p, void (*rf)(_CF *, _CF),
+                       void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                       const uint64_t k) {
+  _iteam_reduction<_CF, 32, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_i_32x32(int v, int *r_p, int *tvs, uint32_t *td,
+                      void (*rf)(int *, int),
+                      void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<int, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_i_32x32(int v, int *r_p, void (*rf)(int *, int),
+                      void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                      const uint64_t k) {
+  _iteam_reduction<int, 32, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_ui_32x32(_UI v, _UI *r_p, _UI *tvs, uint32_t *td,
+                       void (*rf)(_UI *, _UI),
+                       void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                       const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UI, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_ui_32x32(_UI v, _UI *r_p, void (*rf)(_UI *, _UI),
+                       void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                       const uint64_t k) {
+  _iteam_reduction<_UI, 32, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_l_32x32(long v, long *r_p, long *tvs, uint32_t *td,
+                      void (*rf)(long *, long),
+                      void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<long, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_l_32x32(long v, long *r_p, void (*rf)(long *, long),
+                      void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                      const uint64_t k) {
+  _iteam_reduction<long, 32, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_ul_32x32(_UL v, _UL *r_p, _UL *tvs, uint32_t *td,
+                       void (*rf)(_UL *, _UL),
+                       void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                       const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UL, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_ul_32x32(_UL v, _UL *r_p, void (*rf)(_UL *, _UL),
+                       void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                       const uint64_t k) {
+  _iteam_reduction<_UL, 32, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_d_16x32(double v, double *r_p, double *tvs, uint32_t *td,
+                      void (*rf)(double *, double),
+                      void (*rflds)(_LDS double *, _LDS double *),
+                      const double rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<double, 16, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_d_16x32(double v, double *r_p, void (*rf)(double *, double),
+                      void (*rflds)(_LDS double *, _LDS double *),
+                      const double rnv, const uint64_t k) {
+  _iteam_reduction<double, 16, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_f_16x32(float v, float *r_p, float *tvs, uint32_t *td,
+                      void (*rf)(float *, float),
+                      void (*rflds)(_LDS float *, _LDS float *),
+                      const float rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<float, 16, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_f_16x32(float v, float *r_p, void (*rf)(float *, float),
+                      void (*rflds)(_LDS float *, _LDS float *),
+                      const float rnv, const uint64_t k) {
+  _iteam_reduction<float, 16, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_cd_16x32(_CD v, _CD *r_p, _CD *tvs, uint32_t *td,
+                       void (*rf)(_CD *, _CD),
+                       void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                       const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CD, 16, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_cd_16x32(_CD v, _CD *r_p, void (*rf)(_CD *, _CD),
+                       void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                       const uint64_t k) {
+  _iteam_reduction<_CD, 16, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_cf_16x32(_CF v, _CF *r_p, _CF *tvs, uint32_t *td,
+                       void (*rf)(_CF *, _CF),
+                       void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                       const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CF, 16, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_cf_16x32(_CF v, _CF *r_p, void (*rf)(_CF *, _CF),
+                       void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                       const uint64_t k) {
+  _iteam_reduction<_CF, 16, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_i_16x32(int v, int *r_p, int *tvs, uint32_t *td,
+                      void (*rf)(int *, int),
+                      void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<int, 16, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_i_16x32(int v, int *r_p, void (*rf)(int *, int),
+                      void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                      const uint64_t k) {
+  _iteam_reduction<int, 16, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_ui_16x32(_UI v, _UI *r_p, _UI *tvs, uint32_t *td,
+                       void (*rf)(_UI *, _UI),
+                       void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                       const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UI, 16, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_ui_16x32(_UI v, _UI *r_p, void (*rf)(_UI *, _UI),
+                       void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                       const uint64_t k) {
+  _iteam_reduction<_UI, 16, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_l_16x32(long v, long *r_p, long *tvs, uint32_t *td,
+                      void (*rf)(long *, long),
+                      void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<long, 16, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_l_16x32(long v, long *r_p, void (*rf)(long *, long),
+                      void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                      const uint64_t k) {
+  _iteam_reduction<long, 16, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_ul_16x32(_UL v, _UL *r_p, _UL *tvs, uint32_t *td,
+                       void (*rf)(_UL *, _UL),
+                       void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                       const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UL, 16, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_ul_16x32(_UL v, _UL *r_p, void (*rf)(_UL *, _UL),
+                       void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                       const uint64_t k) {
+  _iteam_reduction<_UL, 16, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_d_8x32(double v, double *r_p, double *tvs, uint32_t *td,
+                     void (*rf)(double *, double),
+                     void (*rflds)(_LDS double *, _LDS double *),
+                     const double rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<double, 8, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_d_8x32(double v, double *r_p, void (*rf)(double *, double),
+                     void (*rflds)(_LDS double *, _LDS double *),
+                     const double rnv, const uint64_t k) {
+  _iteam_reduction<double, 8, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_f_8x32(float v, float *r_p, float *tvs, uint32_t *td,
+                     void (*rf)(float *, float),
+                     void (*rflds)(_LDS float *, _LDS float *), const float rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<float, 8, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_f_8x32(float v, float *r_p, void (*rf)(float *, float),
+                     void (*rflds)(_LDS float *, _LDS float *), const float rnv,
+                     const uint64_t k) {
+  _iteam_reduction<float, 8, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_cd_8x32(_CD v, _CD *r_p, _CD *tvs, uint32_t *td,
+                      void (*rf)(_CD *, _CD),
+                      void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CD, 8, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_cd_8x32(_CD v, _CD *r_p, void (*rf)(_CD *, _CD),
+                      void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_CD, 8, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_cf_8x32(_CF v, _CF *r_p, _CF *tvs, uint32_t *td,
+                      void (*rf)(_CF *, _CF),
+                      void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CF, 8, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_cf_8x32(_CF v, _CF *r_p, void (*rf)(_CF *, _CF),
+                      void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_CF, 8, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_i_8x32(int v, int *r_p, int *tvs, uint32_t *td,
+                     void (*rf)(int *, int),
+                     void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<int, 8, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_i_8x32(int v, int *r_p, void (*rf)(int *, int),
+                     void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                     const uint64_t k) {
+  _iteam_reduction<int, 8, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_ui_8x32(_UI v, _UI *r_p, _UI *tvs, uint32_t *td,
+                      void (*rf)(_UI *, _UI),
+                      void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UI, 8, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_ui_8x32(_UI v, _UI *r_p, void (*rf)(_UI *, _UI),
+                      void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_UI, 8, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_l_8x32(long v, long *r_p, long *tvs, uint32_t *td,
+                     void (*rf)(long *, long),
+                     void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<long, 8, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_l_8x32(long v, long *r_p, void (*rf)(long *, long),
+                     void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                     const uint64_t k) {
+  _iteam_reduction<long, 8, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_ul_8x32(_UL v, _UL *r_p, _UL *tvs, uint32_t *td,
+                      void (*rf)(_UL *, _UL),
+                      void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UL, 8, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_ul_8x32(_UL v, _UL *r_p, void (*rf)(_UL *, _UL),
+                      void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_UL, 8, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_d_4x32(double v, double *r_p, double *tvs, uint32_t *td,
+                     void (*rf)(double *, double),
+                     void (*rflds)(_LDS double *, _LDS double *),
+                     const double rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<double, 4, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_d_4x32(double v, double *r_p, void (*rf)(double *, double),
+                     void (*rflds)(_LDS double *, _LDS double *),
+                     const double rnv, const uint64_t k) {
+  _iteam_reduction<double, 4, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_f_4x32(float v, float *r_p, float *tvs, uint32_t *td,
+                     void (*rf)(float *, float),
+                     void (*rflds)(_LDS float *, _LDS float *), const float rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<float, 4, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_f_4x32(float v, float *r_p, void (*rf)(float *, float),
+                     void (*rflds)(_LDS float *, _LDS float *), const float rnv,
+                     const uint64_t k) {
+  _iteam_reduction<float, 4, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_cd_4x32(_CD v, _CD *r_p, _CD *tvs, uint32_t *td,
+                      void (*rf)(_CD *, _CD),
+                      void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CD, 4, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_cd_4x32(_CD v, _CD *r_p, void (*rf)(_CD *, _CD),
+                      void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_CD, 4, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_cf_4x32(_CF v, _CF *r_p, _CF *tvs, uint32_t *td,
+                      void (*rf)(_CF *, _CF),
+                      void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CF, 4, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_cf_4x32(_CF v, _CF *r_p, void (*rf)(_CF *, _CF),
+                      void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_CF, 4, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_i_4x32(int v, int *r_p, int *tvs, uint32_t *td,
+                     void (*rf)(int *, int),
+                     void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<int, 4, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_i_4x32(int v, int *r_p, void (*rf)(int *, int),
+                     void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                     const uint64_t k) {
+  _iteam_reduction<int, 4, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_ui_4x32(_UI v, _UI *r_p, _UI *tvs, uint32_t *td,
+                      void (*rf)(_UI *, _UI),
+                      void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UI, 4, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_ui_4x32(_UI v, _UI *r_p, void (*rf)(_UI *, _UI),
+                      void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_UI, 4, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_l_4x32(long v, long *r_p, long *tvs, uint32_t *td,
+                     void (*rf)(long *, long),
+                     void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<long, 4, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_l_4x32(long v, long *r_p, void (*rf)(long *, long),
+                     void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                     const uint64_t k) {
+  _iteam_reduction<long, 4, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_ul_4x32(_UL v, _UL *r_p, _UL *tvs, uint32_t *td,
+                      void (*rf)(_UL *, _UL),
+                      void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UL, 4, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_ul_4x32(_UL v, _UL *r_p, void (*rf)(_UL *, _UL),
+                      void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_UL, 4, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_d_2x32(double v, double *r_p, double *tvs, uint32_t *td,
+                     void (*rf)(double *, double),
+                     void (*rflds)(_LDS double *, _LDS double *),
+                     const double rnv, const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<double, 2, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_d_2x32(double v, double *r_p, void (*rf)(double *, double),
+                     void (*rflds)(_LDS double *, _LDS double *),
+                     const double rnv, const uint64_t k) {
+  _iteam_reduction<double, 2, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_f_2x32(float v, float *r_p, float *tvs, uint32_t *td,
+                     void (*rf)(float *, float),
+                     void (*rflds)(_LDS float *, _LDS float *), const float rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<float, 2, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_f_2x32(float v, float *r_p, void (*rf)(float *, float),
+                     void (*rflds)(_LDS float *, _LDS float *), const float rnv,
+                     const uint64_t k) {
+  _iteam_reduction<float, 2, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_cd_2x32(_CD v, _CD *r_p, _CD *tvs, uint32_t *td,
+                      void (*rf)(_CD *, _CD),
+                      void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CD, 2, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_cd_2x32(_CD v, _CD *r_p, void (*rf)(_CD *, _CD),
+                      void (*rflds)(_LDS _CD *, _LDS _CD *), const _CD rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_CD, 2, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_cf_2x32(_CF v, _CF *r_p, _CF *tvs, uint32_t *td,
+                      void (*rf)(_CF *, _CF),
+                      void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_CF, 2, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_cf_2x32(_CF v, _CF *r_p, void (*rf)(_CF *, _CF),
+                      void (*rflds)(_LDS _CF *, _LDS _CF *), const _CF rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_CF, 2, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_i_2x32(int v, int *r_p, int *tvs, uint32_t *td,
+                     void (*rf)(int *, int),
+                     void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<int, 2, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_i_2x32(int v, int *r_p, void (*rf)(int *, int),
+                     void (*rflds)(_LDS int *, _LDS int *), const int rnv,
+                     const uint64_t k) {
+  _iteam_reduction<int, 2, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_ui_2x32(_UI v, _UI *r_p, _UI *tvs, uint32_t *td,
+                      void (*rf)(_UI *, _UI),
+                      void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UI, 2, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_ui_2x32(_UI v, _UI *r_p, void (*rf)(_UI *, _UI),
+                      void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_UI, 2, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_l_2x32(long v, long *r_p, long *tvs, uint32_t *td,
+                     void (*rf)(long *, long),
+                     void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                     const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<long, 2, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_l_2x32(long v, long *r_p, void (*rf)(long *, long),
+                     void (*rflds)(_LDS long *, _LDS long *), const long rnv,
+                     const uint64_t k) {
+  _iteam_reduction<long, 2, 32>(v, r_p, rf, rflds, rnv, k);
+}
+_EXT_ATTR
+__kmpc_xteamr_ul_2x32(_UL v, _UL *r_p, _UL *tvs, uint32_t *td,
+                      void (*rf)(_UL *, _UL),
+                      void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                      const uint64_t k, const uint32_t nt) {
+  _xteam_reduction<_UL, 2, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+}
+_EXT_ATTR
+__kmpc_iteamr_ul_2x32(_UL v, _UL *r_p, void (*rf)(_UL *, _UL),
+                      void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
+                      const uint64_t k) {
+  _iteam_reduction<_UL, 2, 32>(v, r_p, rf, rflds, rnv, k);
+}
+#undef _CD
+#undef _CF
+#undef _UI
+#undef _UL
+#undef _LDS
 
 // Built-in pair reduction functions used as function pointers for
 // cross team reduction functions.
