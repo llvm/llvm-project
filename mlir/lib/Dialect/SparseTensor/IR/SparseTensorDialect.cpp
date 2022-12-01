@@ -41,6 +41,18 @@ static bool acceptBitWidth(unsigned bitWidth) {
   }
 }
 
+Type SparseTensorEncodingAttr::getPointerType() const {
+  unsigned ptrWidth = getPointerBitWidth();
+  Type indexType = IndexType::get(getContext());
+  return ptrWidth ? IntegerType::get(getContext(), ptrWidth) : indexType;
+}
+
+Type SparseTensorEncodingAttr::getIndexType() const {
+  unsigned idxWidth = getIndexBitWidth();
+  Type indexType = IndexType::get(getContext());
+  return idxWidth ? IntegerType::get(getContext(), idxWidth) : indexType;
+}
+
 Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
