@@ -363,9 +363,9 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    sw a0, 4(s0)
 ; RV32-NEXT:    srli a0, a3, 31
-; RV32-NEXT:    andi a1, a3, 1
-; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    andi a3, a3, 1
+; RV32-NEXT:    slli a3, a3, 1
+; RV32-NEXT:    or a0, a0, a3
 ; RV32-NEXT:    slli a2, a2, 2
 ; RV32-NEXT:    or a0, a0, a2
 ; RV32-NEXT:    sw a0, 8(s0)
@@ -513,9 +513,9 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32M-NEXT:    or a0, a1, a0
 ; RV32M-NEXT:    sw a0, 4(s0)
 ; RV32M-NEXT:    srli a0, a3, 31
-; RV32M-NEXT:    andi a1, a3, 1
-; RV32M-NEXT:    slli a1, a1, 1
-; RV32M-NEXT:    or a0, a0, a1
+; RV32M-NEXT:    andi a3, a3, 1
+; RV32M-NEXT:    slli a3, a3, 1
+; RV32M-NEXT:    or a0, a0, a3
 ; RV32M-NEXT:    slli a2, a2, 2
 ; RV32M-NEXT:    or a0, a0, a2
 ; RV32M-NEXT:    sw a0, 8(s0)

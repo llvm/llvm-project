@@ -622,9 +622,9 @@ define <4 x i16> @dont_fold_urem_power_of_two(<4 x i16> %x) nounwind {
 ; RV32I-NEXT:    call __umodsi3@plt
 ; RV32I-NEXT:    andi a1, s3, 63
 ; RV32I-NEXT:    andi a2, s2, 31
-; RV32I-NEXT:    andi a3, s1, 7
+; RV32I-NEXT:    andi s1, s1, 7
 ; RV32I-NEXT:    sh a0, 6(s0)
-; RV32I-NEXT:    sh a3, 4(s0)
+; RV32I-NEXT:    sh s1, 4(s0)
 ; RV32I-NEXT:    sh a2, 2(s0)
 ; RV32I-NEXT:    sh a1, 0(s0)
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -678,9 +678,9 @@ define <4 x i16> @dont_fold_urem_power_of_two(<4 x i16> %x) nounwind {
 ; RV64I-NEXT:    call __umoddi3@plt
 ; RV64I-NEXT:    andi a1, s3, 63
 ; RV64I-NEXT:    andi a2, s2, 31
-; RV64I-NEXT:    andi a3, s1, 7
+; RV64I-NEXT:    andi s1, s1, 7
 ; RV64I-NEXT:    sh a0, 6(s0)
-; RV64I-NEXT:    sh a3, 4(s0)
+; RV64I-NEXT:    sh s1, 4(s0)
 ; RV64I-NEXT:    sh a2, 2(s0)
 ; RV64I-NEXT:    sh a1, 0(s0)
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
@@ -708,10 +708,10 @@ define <4 x i16> @dont_fold_urem_power_of_two(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    mulw a3, a3, a6
 ; RV64IM-NEXT:    subw a2, a2, a3
 ; RV64IM-NEXT:    andi a1, a1, 63
-; RV64IM-NEXT:    andi a3, a5, 31
+; RV64IM-NEXT:    andi a5, a5, 31
 ; RV64IM-NEXT:    andi a4, a4, 7
 ; RV64IM-NEXT:    sh a4, 4(a0)
-; RV64IM-NEXT:    sh a3, 2(a0)
+; RV64IM-NEXT:    sh a5, 2(a0)
 ; RV64IM-NEXT:    sh a1, 0(a0)
 ; RV64IM-NEXT:    sh a2, 6(a0)
 ; RV64IM-NEXT:    ret
