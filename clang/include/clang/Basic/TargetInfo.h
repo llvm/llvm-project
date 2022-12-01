@@ -232,7 +232,6 @@ protected:
   unsigned char RegParmMax, SSERegParmMax;
   TargetCXXABI TheCXXABI;
   const LangASMap *AddrSpaceMap;
-  unsigned ProgramAddrSpace;
 
   mutable StringRef PlatformName;
   mutable VersionTuple PlatformMinVersion;
@@ -821,9 +820,6 @@ public:
   unsigned getIntMaxTWidth() const {
     return getTypeWidth(IntMaxType);
   }
-
-  /// Return the address space for functions for the given target.
-  unsigned getProgramAddressSpace() const { return ProgramAddrSpace; }
 
   // Return the size of unwind_word for this target.
   virtual unsigned getUnwindWordWidth() const {
