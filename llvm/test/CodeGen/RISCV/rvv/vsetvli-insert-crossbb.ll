@@ -185,15 +185,15 @@ define <vscale x 1 x double> @test5(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    bnez a2, .LBB4_3
 ; CHECK-NEXT:  # %bb.1: # %if.else
 ; CHECK-NEXT:    vfsub.vv v9, v8, v9
-; CHECK-NEXT:    andi a0, a1, 2
-; CHECK-NEXT:    beqz a0, .LBB4_4
+; CHECK-NEXT:    andi a1, a1, 2
+; CHECK-NEXT:    beqz a1, .LBB4_4
 ; CHECK-NEXT:  .LBB4_2: # %if.then4
 ; CHECK-NEXT:    vfmul.vv v8, v9, v8
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB4_3: # %if.then
 ; CHECK-NEXT:    vfadd.vv v9, v8, v9
-; CHECK-NEXT:    andi a0, a1, 2
-; CHECK-NEXT:    bnez a0, .LBB4_2
+; CHECK-NEXT:    andi a1, a1, 2
+; CHECK-NEXT:    bnez a1, .LBB4_2
 ; CHECK-NEXT:  .LBB4_4: # %if.else5
 ; CHECK-NEXT:    vfmul.vv v8, v8, v9
 ; CHECK-NEXT:    ret
@@ -504,8 +504,8 @@ define <vscale x 2 x i32> @test_vsetvli_x0_x0(<vscale x 2 x i32>* %x, <vscale x 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    andi a0, a3, 1
-; CHECK-NEXT:    beqz a0, .LBB9_2
+; CHECK-NEXT:    andi a3, a3, 1
+; CHECK-NEXT:    beqz a3, .LBB9_2
 ; CHECK-NEXT:  # %bb.1: # %if
 ; CHECK-NEXT:    vle16.v v10, (a1)
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
@@ -543,15 +543,15 @@ define <vscale x 2 x i32> @test_vsetvli_x0_x0_2(<vscale x 2 x i32>* %x, <vscale 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    andi a0, a4, 1
-; CHECK-NEXT:    beqz a0, .LBB10_2
+; CHECK-NEXT:    andi a4, a4, 1
+; CHECK-NEXT:    beqz a4, .LBB10_2
 ; CHECK-NEXT:  # %bb.1: # %if
 ; CHECK-NEXT:    vle16.v v10, (a1)
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vwadd.wv v9, v9, v10
 ; CHECK-NEXT:  .LBB10_2: # %if.end
-; CHECK-NEXT:    andi a0, a5, 1
-; CHECK-NEXT:    beqz a0, .LBB10_4
+; CHECK-NEXT:    andi a5, a5, 1
+; CHECK-NEXT:    beqz a5, .LBB10_4
 ; CHECK-NEXT:  # %bb.3: # %if2
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v10, (a2)
@@ -900,8 +900,8 @@ define <vscale x 2 x i32> @test_ratio_only_vmv_s_x(<vscale x 2 x i32>* %x, <vsca
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    andi a0, a2, 1
-; CHECK-NEXT:    beqz a0, .LBB20_2
+; CHECK-NEXT:    andi a2, a2, 1
+; CHECK-NEXT:    beqz a2, .LBB20_2
 ; CHECK-NEXT:  # %bb.1: # %if
 ; CHECK-NEXT:    vle16.v v9, (a1)
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
@@ -930,8 +930,8 @@ define <vscale x 2 x i32> @test_ratio_only_vmv_s_x2(<vscale x 2 x i32>* %x, <vsc
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    andi a1, a2, 1
-; CHECK-NEXT:    beqz a1, .LBB21_2
+; CHECK-NEXT:    andi a2, a2, 1
+; CHECK-NEXT:    beqz a2, .LBB21_2
 ; CHECK-NEXT:  # %bb.1: # %if
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    j .LBB21_3
