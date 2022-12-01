@@ -529,7 +529,7 @@ define i1 @gep_i16_sub_1_uge_inbounds(ptr %dst, ptr %lower) {
 ; CHECK-NEXT:    [[CMP_SUB_1:%.*]] = icmp ule ptr [[DST_SUB_1]], [[LOWER]]
 ; CHECK-NEXT:    [[DST_SUB_2:%.*]] = getelementptr inbounds i16, ptr [[DST_ADD_3]], i64 -2
 ; CHECK-NEXT:    [[CMP_SUB_2:%.*]] = icmp ule ptr [[DST_SUB_2]], [[DST]]
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 false, true
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 false, [[CMP_SUB_2]]
 ; CHECK-NEXT:    [[DST_SUB_3:%.*]] = getelementptr inbounds i16, ptr [[DST_ADD_3]], i64 -3
 ; CHECK-NEXT:    [[CMP_SUB_3:%.*]] = icmp ule ptr [[DST_SUB_3]], [[LOWER]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[CMP_SUB_3]]
