@@ -244,6 +244,46 @@ private:
   mlir::Location loc;
 };
 
+//===--------------------------------------------------------------------===//
+// Binary Operation implementation
+//===--------------------------------------------------------------------===//
+
+template <typename T>
+struct BinaryOp {
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         hlfir::Entity lhs, hlfir::Entity rhs) {
+    TODO(loc, "binary op implementation in HLFIR");
+  }
+};
+
+#undef GENBIN
+#define GENBIN(GenBinEvOp, GenBinTyCat, GenBinFirOp)                           \
+  template <int KIND>                                                          \
+  struct BinaryOp<Fortran::evaluate::GenBinEvOp<Fortran::evaluate::Type<       \
+      Fortran::common::TypeCategory::GenBinTyCat, KIND>>> {                    \
+    static hlfir::EntityWithAttributes gen(mlir::Location loc,                 \
+                                           fir::FirOpBuilder &builder,         \
+                                           hlfir::Entity lhs,                  \
+                                           hlfir::Entity rhs) {                \
+      return hlfir::EntityWithAttributes{                                      \
+          builder.create<GenBinFirOp>(loc, lhs, rhs)};                         \
+    }                                                                          \
+  };
+
+GENBIN(Add, Integer, mlir::arith::AddIOp)
+GENBIN(Add, Real, mlir::arith::AddFOp)
+GENBIN(Add, Complex, fir::AddcOp)
+GENBIN(Subtract, Integer, mlir::arith::SubIOp)
+GENBIN(Subtract, Real, mlir::arith::SubFOp)
+GENBIN(Subtract, Complex, fir::SubcOp)
+GENBIN(Multiply, Integer, mlir::arith::MulIOp)
+GENBIN(Multiply, Real, mlir::arith::MulFOp)
+GENBIN(Multiply, Complex, fir::MulcOp)
+GENBIN(Divide, Integer, mlir::arith::DivSIOp)
+GENBIN(Divide, Real, mlir::arith::DivFOp)
+GENBIN(Divide, Complex, fir::DivcOp)
+
 /// Lower Expr to HLFIR.
 class HlfirBuilder {
 public:
@@ -339,7 +379,13 @@ private:
   template <typename D, typename R, typename LO, typename RO>
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Operation<D, R, LO, RO> &op) {
-    TODO(getLoc(), "lowering binary op to HLFIR");
+    auto &builder = getBuilder();
+    mlir::Location loc = getLoc();
+    if (op.Rank() != 0)
+      TODO(loc, "elemental operations in HLFIR");
+    auto left = hlfir::loadTrivialScalar(loc, builder, gen(op.left()));
+    auto right = hlfir::loadTrivialScalar(loc, builder, gen(op.right()));
+    return BinaryOp<D>::gen(loc, builder, left, right);
   }
 
   template <int KIND>
