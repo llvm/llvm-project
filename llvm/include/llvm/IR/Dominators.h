@@ -196,8 +196,12 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
   /// Return true if value Def dominates all possible uses inside instruction
   /// User. Same comments as for the Use-based API apply.
   bool dominates(const Value *Def, const Instruction *User) const;
-  // Does not accept Value to avoid ambiguity with dominance checks between
-  // two basic blocks.
+
+  /// Returns true if Def would dominate a use in any instruction in BB.
+  /// If Def is an instruction in BB, then Def does not dominate BB.
+  ///
+  /// Does not accept Value to avoid ambiguity with dominance checks between
+  /// two basic blocks.
   bool dominates(const Instruction *Def, const BasicBlock *BB) const;
 
   /// Return true if an edge dominates a use.
