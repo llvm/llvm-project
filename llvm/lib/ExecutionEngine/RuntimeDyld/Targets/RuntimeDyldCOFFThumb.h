@@ -53,7 +53,7 @@ public:
     return 16; // 8-byte load instructions, 4-byte jump, 4-byte padding
   }
 
-  unsigned getStubAlignment() override { return 1; }
+  Align getStubAlignment() override { return Align(1); }
 
   Expected<object::relocation_iterator>
   processRelocationRef(unsigned SectionID,
