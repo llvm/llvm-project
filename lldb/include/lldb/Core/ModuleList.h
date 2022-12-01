@@ -464,6 +464,12 @@ public:
 
   static bool RemoveSharedModuleIfOrphaned(const Module *module_ptr);
 
+  /// Applies 'callback' to each module in this ModuleList.
+  /// If 'callback' returns false, iteration terminates.
+  /// The 'module_sp' passed to 'callback' is guaranteed to
+  /// be non-null.
+  ///
+  /// This function is thread-safe.
   void ForEach(std::function<bool(const lldb::ModuleSP &module_sp)> const
                    &callback) const;
 
