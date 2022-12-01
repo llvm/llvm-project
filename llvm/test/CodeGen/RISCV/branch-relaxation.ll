@@ -2788,14 +2788,14 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-RV32-NEXT:    .zero 1048576
 ; CHECK-RV32-NEXT:    #NO_APP
 ; CHECK-RV32-NEXT:    j .LBB6_4
-; CHECK-RV32-NEXT:  .LBB6_8: # %dest_3
+; CHECK-RV32-NEXT:  .LBB6_8: # %dest_1
 ; CHECK-RV32-NEXT:    lw s11, 0(sp)
 ; CHECK-RV32-NEXT:  .LBB6_4: # %dest_1
 ; CHECK-RV32-NEXT:    #APP
 ; CHECK-RV32-NEXT:    # dest 1
 ; CHECK-RV32-NEXT:    #NO_APP
 ; CHECK-RV32-NEXT:    j .LBB6_5
-; CHECK-RV32-NEXT:  .LBB6_10: # %dest_3
+; CHECK-RV32-NEXT:  .LBB6_10: # %dest_2
 ; CHECK-RV32-NEXT:    lw s11, 0(sp)
 ; CHECK-RV32-NEXT:  .LBB6_5: # %dest_2
 ; CHECK-RV32-NEXT:    #APP
