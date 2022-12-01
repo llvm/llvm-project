@@ -37,9 +37,9 @@ contains
   subroutine s1(x, y, z)
     logical :: x
     complex :: y, z
-    !ERROR: No intrinsic or user-defined OPERATOR(.A.) matches operand types COMPLEX(4) and COMPLEX(4)
+    !ERROR: Operands of .AND. must be LOGICAL; have COMPLEX(4) and COMPLEX(4)
     x = y .and. z
-    !ERROR: No intrinsic or user-defined OPERATOR(.A.) matches operand types COMPLEX(4) and COMPLEX(4)
+    !ERROR: Operands of .AND. must be LOGICAL; have COMPLEX(4) and COMPLEX(4)
     x = y .a. z
   end
 end

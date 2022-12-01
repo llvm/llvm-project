@@ -991,9 +991,8 @@ bool IsPolymorphicAllocatable(const Symbol &symbol) {
   return IsAllocatable(symbol) && IsPolymorphic(symbol);
 }
 
-std::optional<parser::MessageFormattedText> CheckAccessibleComponent(
+std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
     const Scope &scope, const Symbol &symbol) {
-  CHECK(symbol.owner().IsDerivedType()); // symbol must be a component
   if (symbol.attrs().test(Attr::PRIVATE)) {
     if (FindModuleFileContaining(scope)) {
       // Don't enforce component accessibility checks in module files;
@@ -1003,7 +1002,7 @@ std::optional<parser::MessageFormattedText> CheckAccessibleComponent(
         moduleScope{FindModuleContaining(symbol.owner())}) {
       if (!moduleScope->Contains(scope)) {
         return parser::MessageFormattedText{
-            "PRIVATE component '%s' is only accessible within module '%s'"_err_en_US,
+            "PRIVATE name '%s' is only accessible within module '%s'"_err_en_US,
             symbol.name(), moduleScope->GetName().value()};
       }
     }
