@@ -311,6 +311,11 @@ Bug Fixes
   `Issue 58067 <https://github.com/llvm/llvm-project/issues/58057>`_
   `Issue 59014 <https://github.com/llvm/llvm-project/issues/59014>`_
   `Issue 54746 <https://github.com/llvm/llvm-project/issues/54746>`_
+- Fix assert that triggers a crash during some types of list initialization that
+  generate a CXXTemporaryObjectExpr instead of a InitListExpr. This fixes
+  `Issue 58302 <https://github.com/llvm/llvm-project/issues/58302>`_
+  `Issue 58753 <https://github.com/llvm/llvm-project/issues/58753>`_
+  `Issue 59100 <https://github.com/llvm/llvm-project/issues/59100>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
