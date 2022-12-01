@@ -4,6 +4,8 @@
 target triple = "x86_64-unknown-linux-gnu"
 
 declare ptr @__memset_chk(ptr writeonly, i32, i64, i64) argmemonly
+declare ptr @__memcpy_chk(ptr writeonly, ptr readonly, i64, i64) argmemonly nounwind
+
 declare ptr @strncpy(ptr %dest, ptr %src, i64 %n) nounwind
 declare void @use(ptr)
 
@@ -104,5 +106,29 @@ define void @dse_strncpy_chk_test3(ptr noalias %out1, ptr noalias %out2, ptr noa
 ;
   %call = tail call ptr @strncpy(ptr %out1, ptr %in, i64 100)
   %call.2 = tail call ptr @__memset_chk(ptr %out2, i32 42, i64 100, i64 %n)
+  ret void
+}
+
+define void @dse_strncpy_memcpy_chk_test1(ptr noalias %out, ptr noalias %in, i64 %n) {
+; CHECK-LABEL: @dse_strncpy_memcpy_chk_test1(
+; CHECK-NEXT:    store i32 0, ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[CALL_1:%.*]] = tail call ptr @__memcpy_chk(ptr [[OUT]], ptr [[IN:%.*]], i64 100, i64 [[N:%.*]])
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr %out
+  %call.1 = tail call ptr @__memcpy_chk(ptr %out, ptr %in, i64 100, i64 %n)
+  ret void
+}
+
+define void @dse_strncpy_memcpy_chk_test2(ptr noalias %out, ptr noalias %in, i64 %n) {
+; CHECK-LABEL: @dse_strncpy_memcpy_chk_test2(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[OUT:%.*]], i64 100
+; CHECK-NEXT:    store i8 10, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[CALL_1:%.*]] = tail call ptr @__memcpy_chk(ptr [[OUT]], ptr [[IN:%.*]], i64 100, i64 [[N:%.*]])
+; CHECK-NEXT:    ret void
+;
+  %gep = getelementptr inbounds i8, ptr %out, i64 100
+  store i8 10, ptr %gep
+  %call.1 = tail call ptr @__memcpy_chk(ptr %out, ptr %in, i64 100, i64 %n)
   ret void
 }
