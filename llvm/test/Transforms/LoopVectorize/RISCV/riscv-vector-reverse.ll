@@ -37,7 +37,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %idxprom = zext i32 %i.0 to i64
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx = getelementptr inbounds i32, ptr %B, i64 %idxprom
 ; CHECK-NEXT:  LV: Found an estimated cost of 7 for VF vscale x 4 For instruction: %1 = load i32, ptr %arrayidx, align 4
-; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %add9 = add i32 %1, 1
+; CHECK-NEXT:  LV: Found an estimated cost of 2 for VF vscale x 4 For instruction: %add9 = add i32 %1, 1
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %idxprom
 ; CHECK-NEXT:  LV: Found an estimated cost of 7 for VF vscale x 4 For instruction: store i32 %add9, ptr %arrayidx3, align 4
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %cmp = icmp ugt i64 %indvars.iv, 1
@@ -56,18 +56,18 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK:       <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:    vp<[[TRANS_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
-; CHECK-NEXT:    vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[TRANS_IV]]>, ir<-1>
-; CHECK-NEXT:    CLONE ir<%i.0> = add vp<[[SCALAR_STEPS]]>, ir<-1>
+; CHECK-NEXT:    EMIT vp<%3> = CANONICAL-INDUCTION
+; CHECK-NEXT:    vp<%4> = DERIVED-IV ir<%n> + vp<%3> * ir<-1>
+; CHECK-NEXT:    vp<%5> = SCALAR-STEPS vp<%4>, ir<-1>
+; CHECK-NEXT:    CLONE ir<%i.0> = add vp<%5>, ir<-1>
 ; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:    WIDEN ir<%1> = load ir<%arrayidx>
 ; CHECK-NEXT:    WIDEN ir<%add9> = add ir<%1>, ir<1>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr ir<%A>, ir<%idxprom>
 ; CHECK-NEXT:    WIDEN store ir<%arrayidx3>, ir<%add9>
-; CHECK-NEXT:    EMIT vp<[[IV_INC:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
-; CHECK-NEXT:    EMIT branch-on-count vp<[[IV_INC]]> vp<%2>
+; CHECK-NEXT:    EMIT vp<%12> = VF * UF +(nuw) vp<%3>
+; CHECK-NEXT:    EMIT branch-on-count vp<%12> vp<%2>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
@@ -80,7 +80,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %idxprom = zext i32 %i.0 to i64
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx = getelementptr inbounds i32, ptr %B, i64 %idxprom
 ; CHECK-NEXT:  LV: Found an estimated cost of 7 for VF vscale x 4 For instruction: %1 = load i32, ptr %arrayidx, align 4
-; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %add9 = add i32 %1, 1
+; CHECK-NEXT:  LV: Found an estimated cost of 2 for VF vscale x 4 For instruction: %add9 = add i32 %1, 1
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %idxprom
 ; CHECK-NEXT:  LV: Found an estimated cost of 7 for VF vscale x 4 For instruction: store i32 %add9, ptr %arrayidx3, align 4
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %cmp = icmp ugt i64 %indvars.iv, 1
@@ -105,7 +105,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
 ; CHECK-NEXT:  LV: The target has 31 registers of RISCV::GPRRC register class
 ; CHECK-NEXT:  LV: The target has 32 registers of RISCV::VRRC register class
-; CHECK-NEXT:  LV: Loop cost is 22
+; CHECK-NEXT:  LV: Loop cost is 23
 ; CHECK-NEXT:  LV: IC is 2
 ; CHECK-NEXT:  LV: VF is vscale x 4
 ; CHECK-NEXT:  LV: Not Interleaving.
@@ -169,7 +169,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %idxprom = zext i32 %i.0 to i64
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
 ; CHECK-NEXT:  LV: Found an estimated cost of 7 for VF vscale x 4 For instruction: %1 = load float, ptr %arrayidx, align 4
-; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %conv1 = fadd float %1, 1.000000e+00
+; CHECK-NEXT:  LV: Found an estimated cost of 2 for VF vscale x 4 For instruction: %conv1 = fadd float %1, 1.000000e+00
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx3 = getelementptr inbounds float, ptr %A, i64 %idxprom
 ; CHECK-NEXT:  LV: Found an estimated cost of 7 for VF vscale x 4 For instruction: store float %conv1, ptr %arrayidx3, align 4
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %cmp = icmp ugt i64 %indvars.iv, 1
@@ -188,18 +188,18 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK:       <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:    vp<[[TRANS_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
-; CHECK-NEXT:    vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[TRANS_IV]]>, ir<-1>
-; CHECK-NEXT:    CLONE ir<%i.0> = add vp<[[SCALAR_STEPS]]>, ir<-1>
+; CHECK-NEXT:    EMIT vp<%3> = CANONICAL-INDUCTION
+; CHECK-NEXT:    vp<%4> = DERIVED-IV ir<%n> + vp<%3> * ir<-1>
+; CHECK-NEXT:    vp<%5> = SCALAR-STEPS vp<%4>, ir<-1>
+; CHECK-NEXT:    CLONE ir<%i.0> = add vp<%5>, ir<-1>
 ; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:    WIDEN ir<%1> = load ir<%arrayidx>
 ; CHECK-NEXT:    WIDEN ir<%conv1> = fadd ir<%1>, ir<1.000000e+00>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr ir<%A>, ir<%idxprom>
 ; CHECK-NEXT:    WIDEN store ir<%arrayidx3>, ir<%conv1>
-; CHECK-NEXT:    EMIT vp<[[IV_INC:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
-; CHECK-NEXT:    EMIT branch-on-count vp<[[IV_INC]]> vp<%2>
+; CHECK-NEXT:    EMIT vp<%12> = VF * UF +(nuw) vp<%3>
+; CHECK-NEXT:    EMIT branch-on-count vp<%12> vp<%2>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
@@ -212,7 +212,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %idxprom = zext i32 %i.0 to i64
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
 ; CHECK-NEXT:  LV: Found an estimated cost of 7 for VF vscale x 4 For instruction: %1 = load float, ptr %arrayidx, align 4
-; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %conv1 = fadd float %1, 1.000000e+00
+; CHECK-NEXT:  LV: Found an estimated cost of 2 for VF vscale x 4 For instruction: %conv1 = fadd float %1, 1.000000e+00
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx3 = getelementptr inbounds float, ptr %A, i64 %idxprom
 ; CHECK-NEXT:  LV: Found an estimated cost of 7 for VF vscale x 4 For instruction: store float %conv1, ptr %arrayidx3, align 4
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %cmp = icmp ugt i64 %indvars.iv, 1
@@ -237,7 +237,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
 ; CHECK-NEXT:  LV: The target has 31 registers of RISCV::GPRRC register class
 ; CHECK-NEXT:  LV: The target has 32 registers of RISCV::VRRC register class
-; CHECK-NEXT:  LV: Loop cost is 22
+; CHECK-NEXT:  LV: Loop cost is 23
 ; CHECK-NEXT:  LV: IC is 2
 ; CHECK-NEXT:  LV: VF is vscale x 4
 ; CHECK-NEXT:  LV: Not Interleaving.

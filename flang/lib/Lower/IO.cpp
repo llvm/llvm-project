@@ -27,7 +27,6 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Runtime/io-api.h"
@@ -168,8 +167,7 @@ static mlir::func::FuncOp getIORuntimeFunc(mlir::Location loc,
     return func;
   auto funTy = getTypeModel<E>()(builder.getContext());
   func = builder.createFunction(loc, name, funTy);
-  func->setAttr(fir::FIROpsDialect::getFirRuntimeAttrName(),
-                builder.getUnitAttr());
+  func->setAttr("fir.runtime", builder.getUnitAttr());
   func->setAttr("fir.io", builder.getUnitAttr());
   return func;
 }

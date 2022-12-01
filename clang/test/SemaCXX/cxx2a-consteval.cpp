@@ -1018,3 +1018,14 @@ void g() {
   (void)[](int i) consteval { return i; }(0);
 }
 }  // namespace GH50455
+
+namespace GH58302 {
+struct A {
+   consteval A(){}
+   consteval operator int() { return 1;}
+};
+
+int f() {
+   int x = A{};
+}
+}
