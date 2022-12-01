@@ -33,7 +33,7 @@
 // CHECK:           %[[VAL_12:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_5]]] : memref<?xindex>
 // CHECK:           %[[VAL_13:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_6]]] : memref<?xindex>
 // CHECK:           scf.for %[[VAL_14:.*]] = %[[VAL_12]] to %[[VAL_13]] step %[[VAL_1]] {
-// CHECK:             %[[VAL_15:.*]] = affine.min #map1(%[[VAL_13]], %[[VAL_14]]){{\[}}%[[VAL_1]]]
+// CHECK:             %[[VAL_15:.*]] = affine.min #map(%[[VAL_13]], %[[VAL_14]]){{\[}}%[[VAL_1]]]
 // CHECK:             %[[VAL_16:.*]] = vector.create_mask %[[VAL_15]] : vector<8xi1>
 // CHECK:             %[[VAL_17:.*]] = vector.maskedload %[[VAL_9]]{{\[}}%[[VAL_14]]], %[[VAL_16]], %[[VAL_3]] : memref<?xindex>, vector<8xi1>, vector<8xindex> into vector<8xindex>
 // CHECK:             %[[VAL_18:.*]] = vector.maskedload %[[VAL_10]]{{\[}}%[[VAL_14]]], %[[VAL_16]], %[[VAL_2]] : memref<?xi64>, vector<8xi1>, vector<8xi64> into vector<8xi64>
@@ -99,7 +99,7 @@ func.func @sparse_index_1d_conj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8
 // CHECK:             scf.yield %[[VAL_27]], %[[VAL_28]] : index, index
 // CHECK:           } attributes {"Emitted from" = "linalg.generic"}
 // CHECK:           scf.for %[[VAL_29:.*]] = %[[VAL_30:.*]]#1 to %[[VAL_1]] step %[[VAL_1]] {
-// CHECK:             %[[VAL_31:.*]] = affine.min #map1(%[[VAL_1]], %[[VAL_29]]){{\[}}%[[VAL_1]]]
+// CHECK:             %[[VAL_31:.*]] = affine.min #map(%[[VAL_1]], %[[VAL_29]]){{\[}}%[[VAL_1]]]
 // CHECK:             %[[VAL_32:.*]] = vector.create_mask %[[VAL_31]] : vector<8xi1>
 // CHECK:             %[[VAL_33:.*]] = vector.broadcast %[[VAL_29]] : index to vector<8xindex>
 // CHECK:             %[[VAL_34:.*]] = arith.addi %[[VAL_33]], %[[VAL_2]] : vector<8xindex>
