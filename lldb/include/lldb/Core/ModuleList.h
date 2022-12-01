@@ -490,7 +490,15 @@ public:
   void ForEach(std::function<bool(const lldb::ModuleSP &module_sp)> const
                    &callback) const;
 
+
   void ClearModuleDependentCaches();
+
+  /// Returns true if 'callback' returns true for one of the modules
+  /// in this ModuleList.
+  ///
+  /// This function is thread-safe.
+  bool AnyOf(
+      std::function<bool(lldb_private::Module &module)> const &callback) const;
 
 protected:
   // Class typedefs.
