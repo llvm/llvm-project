@@ -277,6 +277,14 @@ void CIRGenFunction::buildAggregateStore(mlir::Value Val, Address Dest,
   builder.create<mlir::cir::StoreOp>(*currSrcLoc, Val, Dest.getPointer());
 }
 
+static Address emitAddressAtOffset(CIRGenFunction &CGF, Address addr,
+                                   const ABIArgInfo &info) {
+  if (unsigned offset = info.getDirectOffset()) {
+    llvm_unreachable("NYI");
+  }
+  return addr;
+}
+
 RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
                                  const CIRGenCallee &Callee,
                                  ReturnValueSlot ReturnValue,
@@ -379,7 +387,58 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
         CIRCallArgs[FirstCIRArg] = V;
         break;
       }
-      assert(false && "this code path shouldn't be hit yet");
+
+      // FIXME: Avoid the conversion through memory if possible.
+      Address Src = Address::invalid();
+      if (!I->isAggregate()) {
+        llvm_unreachable("NYI");
+      } else {
+        Src = I->hasLValue() ? I->getKnownLValue().getAddress()
+                             : I->getKnownRValue().getAggregateAddress();
+      }
+
+      // If the value is offset in memory, apply the offset now.
+      Src = emitAddressAtOffset(*this, Src, ArgInfo);
+
+      // Fast-isel and the optimizer generally like scalar values better than
+      // FCAs, so we flatten them if this is safe to do for this argument.
+      auto STy = dyn_cast<mlir::cir::StructType>(ArgInfo.getCoerceToType());
+      if (STy && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened()) {
+        auto SrcTy = Src.getElementType();
+        // FIXME(cir): get proper location for each argument.
+        auto argLoc = CGM.getLoc(Loc);
+
+        // If the source type is smaller than the destination type of the
+        // coerce-to logic, copy the source value into a temp alloca the size
+        // of the destination type to allow loading all of it. The bits past
+        // the source value are left undef.
+        // FIXME(cir): add data layout info and compare sizes instead of
+        // matching the types.
+        //
+        // uint64_t SrcSize = CGM.getDataLayout().getTypeAllocSize(SrcTy);
+        // uint64_t DstSize = CGM.getDataLayout().getTypeAllocSize(STy);
+        // if (SrcSize < DstSize) {
+        if (SrcTy != STy)
+          llvm_unreachable("NYI");
+        else {
+          // FIXME(cir): this currently only runs when the types are different,
+          // but should be when alloc sizes are different, fix this as soon as
+          // datalayout gets introduced.
+          Src = builder.createElementBitCast(argLoc, Src, STy);
+        }
+
+        assert(NumCIRArgs == STy.getMembers().size());
+        // In LLVMGen: Still only pass the struct without any gaps but mark it
+        // as such somehow. In CIRGen: Emit a load from the "whole" struct,
+        // which shall be broken later by some lowering step into multiple
+        // loads.
+        assert(STy.getMembers().size() == 1 && "dont break up arguments here!");
+        CIRCallArgs[FirstCIRArg] = builder.createLoad(argLoc, Src);
+      } else {
+        llvm_unreachable("NYI");
+      }
+
+      break;
     }
     default:
       assert(false && "Only Direct support so far");
