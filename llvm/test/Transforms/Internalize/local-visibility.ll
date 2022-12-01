@@ -1,4 +1,4 @@
-; RUN: opt < %s -internalize -S | FileCheck %s
+; RUN: opt < %s -passes=internalize -S | FileCheck %s
 ; Internalized symbols should have default visibility.
 
 ; CHECK: @global = global i32 0

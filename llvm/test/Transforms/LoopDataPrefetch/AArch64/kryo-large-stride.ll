@@ -1,5 +1,3 @@
-; RUN: opt -mcpu=kryo -mtriple=aarch64-gnu-linux -loop-data-prefetch -max-prefetch-iters-ahead=1000 -S < %s | FileCheck %s --check-prefix=LARGE_PREFETCH --check-prefix=ALL
-; RUN: opt -mcpu=kryo -mtriple=aarch64-gnu-linux -loop-data-prefetch -S < %s | FileCheck %s --check-prefix=NO_LARGE_PREFETCH --check-prefix=ALL
 ; RUN: opt -mcpu=kryo -mtriple=aarch64-gnu-linux -passes=loop-data-prefetch -max-prefetch-iters-ahead=1000 -S < %s | FileCheck %s --check-prefix=LARGE_PREFETCH --check-prefix=ALL
 ; RUN: opt -mcpu=kryo -mtriple=aarch64-gnu-linux -passes=loop-data-prefetch -S < %s | FileCheck %s --check-prefix=NO_LARGE_PREFETCH --check-prefix=ALL
 
