@@ -1,7 +1,7 @@
 ; RUN: llc < %s > %t
 
 ; NVPTX does not support arbitrary integer types and has acceptable subset tested in NVPTX/APIntLoadStore.ll
-; UNSUPPORTED: nvptx
+; UNSUPPORTED: target=nvptx{{.*}}
 
 @i1_l = external global i1		; <i1*> [#uses=1]
 @i1_s = external global i1		; <i1*> [#uses=1]

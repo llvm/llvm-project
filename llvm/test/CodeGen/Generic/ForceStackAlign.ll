@@ -9,7 +9,7 @@
 ; XFAIL: sparc
 
 ; NVPTX cannot select dynamic_stackalloc
-; XFAIL: nvptx
+; XFAIL: target=nvptx{{.*}}
 
 define i32 @f(i8* %p) nounwind {
 entry:

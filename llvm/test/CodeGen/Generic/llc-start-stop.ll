@@ -1,5 +1,5 @@
 ; NVPTX customizes the list of passes so the test cannot find what it expects
-; XFAIL: nvptx
+; XFAIL: target=nvptx{{.*}}
 
 ; Note: -verify-machineinstrs is used in order to make this test compatible with EXPENSIVE_CHECKS.
 ; RUN: llc < %s -debug-pass=Structure -stop-after=loop-reduce -verify-machineinstrs -o /dev/null 2>&1 \
