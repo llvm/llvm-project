@@ -52,10 +52,12 @@
 #include "swift/Sema/IDETypeChecking.h"
 #include "swift/Serialization/Validation.h"
 #include "swift/SymbolGraphGen/SymbolGraphOptions.h"
+
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Driver.h"
+
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -995,21 +997,6 @@ static const char *getImportFailureString(swift::serialization::Status status) {
   }
 }
 
-/// Initialize the compiler invocation with it the search paths from a
-/// serialized AST.
-/// \returns true on success.
-static bool DeserializeCompilerFlags(swift::CompilerInvocation &invocation,
-                                     StringRef section_data_ref, StringRef name,
-                                     llvm::raw_ostream &error) {
-  auto result = invocation.loadFromSerializedAST(section_data_ref);
-  if (result == swift::serialization::Status::Valid)
-    return true;
-
-  error << "Could not deserialize " << name << ":\n"
-        << getImportFailureString(result) << "\n";
-  return false;
-}
-
 static void printASTValidationError(
     llvm::raw_ostream &errs,
     const swift::serialization::ValidationInfo &ast_info,
@@ -1056,6 +1043,7 @@ void SwiftASTContext::DiagnoseWarnings(Process &process, Module &module) const {
 /// \returns true if an error was encountered.
 static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
                                         Module &module,
+                                        bool discover_implicit_search_paths,
                                         const std::string &m_description,
                                         llvm::raw_ostream &error,
                                         bool &got_serialized_options,
@@ -1070,6 +1058,22 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
   if (ast_file_datas.empty())
     return false;
 
+  auto &search_path_options = invocation.getSearchPathOptions();
+  std::vector<std::string> import_search_paths;
+  llvm::StringSet<> known_import_search_paths;
+  for (auto &path : search_path_options.getImportSearchPaths()) {
+    import_search_paths.push_back(path);
+    known_import_search_paths.insert(path);
+  }
+
+  std::vector<swift::SearchPathOptions::FrameworkSearchPath>
+      framework_search_paths;
+  llvm::StringSet<> known_framework_search_paths;
+  for (auto &path : search_path_options.getFrameworkSearchPaths()) {
+    framework_search_paths.push_back(path);
+    known_framework_search_paths.insert(path.Path);
+  }
+  
   // An AST section consists of one or more AST modules, optionally
   // with headers. Iterate over all AST modules.
   for (auto ast_file_data_sp : ast_file_datas) {
@@ -1077,10 +1081,12 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
                         ast_file_data_sp->GetByteSize());
     swift::serialization::ValidationInfo info;
     for (; !buf.empty(); buf = buf.substr(info.bytes)) {
+      llvm::SmallVector<swift::serialization::SearchPath> searchPaths;
       swift::serialization::ExtendedValidationInfo extended_validation_info;
       info = swift::serialization::validateSerializedAST(
           buf, invocation.getSILOptions().EnableOSSAModules,
-          /*requiredSDK*/StringRef(), &extended_validation_info);
+          /*requiredSDK*/ StringRef(), /*requiresRevisionMatch*/ false,
+          &extended_validation_info, /*dependencies*/ nullptr, &searchPaths);
       bool invalid_ast = info.status != swift::serialization::Status::Valid;
       bool invalid_size = (info.bytes == 0) || (info.bytes > buf.size());
       bool invalid_name = info.name.empty();
@@ -1097,8 +1103,44 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
 
       found_swift_modules = true;
       StringRef moduleData = buf.substr(0, info.bytes);
-      got_serialized_options |=
-          DeserializeCompilerFlags(invocation, moduleData, info.name, error);
+
+      auto remap = [&](std::string path) {
+        ConstString remapped;
+        if (module.GetSourceMappingList().RemapPath(ConstString(path),
+                                                    remapped))
+          return remapped.GetStringRef().str();
+        return path;
+      };
+
+      /// Initialize the compiler invocation with it the search paths from a
+      /// serialized AST.
+      auto deserializeCompilerFlags = [&]() -> bool {
+        auto result = invocation.loadFromSerializedAST(moduleData);
+        if (result == swift::serialization::Status::Valid) {
+          if (discover_implicit_search_paths) {
+            for (auto &searchPath : searchPaths) {
+              std::string path = remap(searchPath.Path);
+              if (!searchPath.IsFramework) {
+                if (known_import_search_paths.insert(path).second)
+                  import_search_paths.push_back(path);
+              } else {
+                swift::SearchPathOptions::FrameworkSearchPath
+                    framework_search_path(path, searchPath.IsSystem);
+                if (known_framework_search_paths.insert(path).second)
+                  framework_search_paths.push_back(framework_search_path);
+              }
+            }
+          }
+          return true;
+        }
+
+        error << "Could not deserialize " << info.name << ":\n"
+              << getImportFailureString(result) << "\n";
+        return false;
+      };
+
+      got_serialized_options |= deserializeCompilerFlags();
+
       LOG_PRINTF(
           GetLog(LLDBLog::Types), "SDK path from module \"%s\" was \"%s\".",
           info.name.str().c_str(), invocation.getSDKPath().str().c_str());
@@ -1106,6 +1148,9 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
       invocation.setSDKPath("");
     }
   }
+
+  search_path_options.setImportSearchPaths(import_search_paths);
+  search_path_options.setFrameworkSearchPaths(framework_search_paths);
   return found_validation_errors;
 }
 
@@ -1513,9 +1558,12 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     bool got_serialized_options = false;
     llvm::SmallString<0> error;
     llvm::raw_svector_ostream errs(error);
-    if (DeserializeAllCompilerFlags(
-            swift_ast_sp->GetCompilerInvocation(), module, m_description, errs,
-            got_serialized_options, found_swift_modules)) {
+    // Implicit search paths will be discoverd by ValidateSecionModules().
+    bool discover_implicit_search_paths = false;
+    if (DeserializeAllCompilerFlags(swift_ast_sp->GetCompilerInvocation(),
+                                    module, discover_implicit_search_paths,
+                                    m_description, errs, got_serialized_options,
+                                    found_swift_modules)) {
       // Validation errors are not fatal for the context.
       swift_ast_sp->m_module_import_warnings.push_back(std::string(error));
     }
@@ -1821,9 +1869,9 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
   llvm::SmallString<0> error;
   llvm::raw_svector_ostream errs(error);
   swift::CompilerInvocation invocation;
-  if (DeserializeAllCompilerFlags(invocation, *module_sp, m_description, errs,
-                                  got_serialized_options,
-                                  found_swift_modules)) {
+  if (DeserializeAllCompilerFlags(
+          invocation, *module_sp, discover_implicit_search_paths, m_description,
+          errs, got_serialized_options, found_swift_modules)) {
     // TODO: After removing DeserializeAllCompilerFlags from
     //       CreateInstance(per-Module), errs will need to be
     //       collected here and surfaced.
@@ -1833,52 +1881,13 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
   module_search_paths.insert(module_search_paths.end(),
                              opts.getImportSearchPaths().begin(),
                              opts.getImportSearchPaths().end());
+  for (auto path:opts.getFrameworkSearchPaths())
+    framework_search_paths.push_back({path.Path, path.IsSystem});
   auto &clang_opts = invocation.getClangImporterOptions().ExtraArgs;
   for (const std::string &arg : clang_opts) {
     extra_clang_args.push_back(arg);
     LOG_VERBOSE_PRINTF(GetLog(LLDBLog::Types), "adding Clang argument \"%s\".",
                        arg.c_str());
-  }
-  // FIXME: Unfortunately this:
-  //
-  //   for (const auto &fwsp : opts.getFrameworkSearchPaths())
-  //    framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
-  //
-  // is insufficient, as ClangImporter can discover more framework
-  // search paths on the fly. Once a better solution is found,
-  // warmup_contexts can be retired (again).
-  {
-    SymbolFile *sym_file = module_sp->GetSymbolFile();
-    if (!sym_file)
-      return;
-    Status sym_file_error;
-    auto type_system_or_err =
-        sym_file->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
-    if (!type_system_or_err) {
-      llvm::consumeError(type_system_or_err.takeError());
-      return;
-    }
-    auto ts =
-        llvm::dyn_cast_or_null<TypeSystemSwift>(type_system_or_err->get());
-    if (!ts)
-      return;
-
-    SwiftASTContext *ast_context = ts->GetSwiftASTContext();
-    if (!ast_context || ast_context->HasErrors())
-      return;
-
-    if (discover_implicit_search_paths) {
-      const auto &opts = ast_context->GetSearchPathOptions();
-      for (const auto &isp : opts.getImportSearchPaths())
-        module_search_paths.push_back(isp);
-    }
-
-    if (use_all_compiler_flags ||
-        target.GetExecutableModulePointer() == module_sp.get()) {
-      const auto &opts = ast_context->GetSearchPathOptions();
-      for (const auto &fwsp : opts.getFrameworkSearchPaths())
-        framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
-    }
   }
 }
 
