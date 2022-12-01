@@ -90,7 +90,7 @@ const llvm::Optional<unsigned> llvm::thread::DefaultStackSize;
 
 #endif
 
-Optional<ThreadPoolStrategy>
+std::optional<ThreadPoolStrategy>
 llvm::get_threadpool_strategy(StringRef Num, ThreadPoolStrategy Default) {
   if (Num == "all")
     return llvm::hardware_concurrency();
@@ -98,7 +98,7 @@ llvm::get_threadpool_strategy(StringRef Num, ThreadPoolStrategy Default) {
     return Default;
   unsigned V;
   if (Num.getAsInteger(10, V))
-    return None; // malformed 'Num' value
+    return std::nullopt; // malformed 'Num' value
   if (V == 0)
     return Default;
 
