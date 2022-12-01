@@ -46,6 +46,9 @@ struct UnimplementedFeature {
   // Debug info
   static bool generateDebugInfo() { return false; }
 
+  // Coroutines
+  static bool unhandledException() { return false; }
+
   static bool capturedByInit() { return false; }
   static bool getASTAllocaAddressSpace() { return false; }
   static bool tryEmitAsConstant() { return false; }
