@@ -1,4 +1,4 @@
-; RUN: opt %s -sroa -verify -S -o - | FileCheck %s
+; RUN: opt %s -passes='sroa,verify' -S -o - | FileCheck %s
 ; ModuleID = 'test.c'
 ; Test that SROA updates the debug info correctly if an alloca was rewritten but
 ; not partitioned into multiple allocas.
@@ -8,7 +8,7 @@
 
 ;
 ; struct S { float f; };
-;  
+;
 ; float foo(struct S s) {
 ;   return s.f;
 ; }
