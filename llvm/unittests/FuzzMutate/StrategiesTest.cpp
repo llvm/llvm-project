@@ -311,8 +311,41 @@ TEST(InstModificationIRStrategyTest, DidntShuffleFRem) {
   VerfyDivDidntShuffle(Source);
 }
 
-TEST(InsertPHIStrategy, PHI) {
+template <class Strategy>
+static void mutateAndVerifyModule(StringRef Source, int repeat = 100) {
   LLVMContext Ctx;
+  auto Mutator = createMutator<Strategy>();
+  ASSERT_TRUE(Mutator);
+
+  auto M = parseAssembly(Source.data(), Ctx);
+  std::mt19937 mt(Seed);
+  std::uniform_int_distribution<int> RandInt(INT_MIN, INT_MAX);
+  for (int i = 0; i < repeat; i++) {
+    Mutator->mutateModule(*M, RandInt(mt), Source.size(), Source.size() + 1024);
+    ASSERT_FALSE(verifyModule(*M, &errs()));
+  }
+}
+
+TEST(InsertCFGStrategy, CFG) {
+  StringRef Source = "\n\
+      define i32 @test(i1 %C1, i1 %C2, i1 %C3, i16 %S1, i16 %S2, i32 %I1) { \n\
+        Entry:  \n\
+         %I2 = add i32 %I1, 1 \n\
+          %C = and i1 %C1, %C2 \n\
+        br label %Body \n\
+        Body: \n\
+         %IB = add i32 %I1, %I2 \n\
+          %CB = and i1 %C1, %C \n\
+        br label %Exit \n\
+        Exit: \n\
+          %IE = add i32 %IB, %I2 \n\
+          %CE = and i1 %CB, %C \n\
+         ret i32 %IE \n\
+      }";
+  mutateAndVerifyModule<InsertCFGStrategy>(Source);
+}
+
+TEST(InsertPHIStrategy, PHI) {
   StringRef Source = "\n\
         define void @test(i1 %C1, i1 %C2, i32 %I, double %FP) { \n\
         Entry:  \n\
@@ -339,16 +372,7 @@ TEST(InsertPHIStrategy, PHI) {
         Exit: ; pred Entry, OnOne \n\
           ret void \n\
         }";
-  auto Mutator = createMutator<InsertPHIStrategy>();
-  ASSERT_TRUE(Mutator);
-
-  auto M = parseAssembly(Source.data(), Ctx);
-  std::mt19937 mt(Seed);
-  std::uniform_int_distribution<int> RandInt(INT_MIN, INT_MAX);
-  for (int i = 0; i < 100; i++) {
-    Mutator->mutateModule(*M, RandInt(mt), Source.size(), Source.size() + 1024);
-    ASSERT_FALSE(verifyModule(*M, &errs()));
-  }
+  mutateAndVerifyModule<InsertPHIStrategy>(Source);
 }
 
 TEST(InsertPHIStrategy, PHIWithSameIncomingBlock) {
@@ -378,7 +402,6 @@ TEST(InsertPHIStrategy, PHIWithSameIncomingBlock) {
 }
 
 TEST(SinkInstructionStrategy, Operand) {
-  LLVMContext Ctx;
   StringRef Source = "\n\
       define i32 @test(i1 %C1, i1 %C2, i1 %C3, i32 %I, i32 %J) { \n\
         Entry:  \n\
@@ -397,16 +420,7 @@ TEST(SinkInstructionStrategy, Operand) {
         Exit:  \n\
           ret i32 %I  \n\
       }";
-  auto Mutator = createMutator<SinkInstructionStrategy>();
-  ASSERT_TRUE(Mutator);
-
-  auto M = parseAssembly(Source.data(), Ctx);
-  std::mt19937 mt(Seed);
-  std::uniform_int_distribution<int> RandInt(INT_MIN, INT_MAX);
-  for (int i = 0; i < 100; i++) {
-    Mutator->mutateModule(*M, RandInt(mt), Source.size(), Source.size() + 1024);
-    EXPECT_FALSE(verifyModule(*M, &errs()));
-  }
+  mutateAndVerifyModule<SinkInstructionStrategy>(Source);
 }
 
 static void VerifyBlockShuffle(StringRef Source) {
