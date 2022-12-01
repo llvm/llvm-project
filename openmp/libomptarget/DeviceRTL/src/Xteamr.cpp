@@ -207,7 +207,7 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
   const uint32_t wave_num = omp_thread_num / _WSZ;
   const uint32_t lane_num = omp_thread_num % _WSZ;
 
-  static __XTEAM_SHARED_LDS T xwave_lds[_NW + 1];
+  static __XTEAM_SHARED_LDS T xwave_lds[_NW];
 
 // Cuda may restrict max threads, so clear unused wave values
 #ifdef __NVPTX__
@@ -255,7 +255,6 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
     // All other teams exit the helper function.
 
     // To use TLS shfl reduce, copy team values to TLS val.
-    // NumTeams must be <= _NUM_THREADS here.
     val = (omp_thread_num < NumTeams) ? team_vals[omp_thread_num] : rnv;
 
     // Need sync here to prepare for TLS shfl reduce.
@@ -267,21 +266,26 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
     if (lane_num == 0)
       xwave_lds[wave_num] = val;
 
-    // To get final result, we know wave_lds[0] is done
-    // Sync needed here to ensure wave_lds[i!=0] are correct.
+    // Binary reduce all wave values into wave_lds[0]
     _OMP::synchronize::threadsAligned();
+    for (unsigned int offset = _NW / 2; offset > 0; offset >>= 1) {
+      if (omp_thread_num < offset)
+        (*_rf_lds)(&(xwave_lds[omp_thread_num]),
+                   &(xwave_lds[omp_thread_num + offset]));
+    }
 
-    // Typically only a few usable waves even for large GPUs.
-    // No gain parallelizing these last few reductions.
-    // So do reduction on thread 0 into lane 0's LDS val.
     if (omp_thread_num == 0) {
-      unsigned int usableWaves = ((NumTeams - 1) / _WSZ) + 1;
       // Reduce with the original result value.
-      xwave_lds[usableWaves] = *r_ptr;
-      for (unsigned int kk = 1; kk <= usableWaves; kk++)
-        (*_rf_lds)(&xwave_lds[0], &xwave_lds[kk]);
+      val = xwave_lds[0];
+      (*_rf)(&val, *r_ptr);
 
-      *r_ptr = xwave_lds[0];
+      // If more teams than threads, do non-parallel reduction of extra
+      // team_vals. This loop iterates only if NumTeams>_NT.
+      for (unsigned int offset = _NT; offset < NumTeams; offset++)
+        (*_rf)(&val, team_vals[offset]);
+
+      // Write over the external result value.
+      *r_ptr = val;
     }
 
     // This sync needed to prevent warps in last team from starting
