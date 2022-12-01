@@ -141,6 +141,12 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
       HasMovrel = true;
   }
 
+  AddressableLocalMemorySize = LocalMemorySize;
+
+  if (AMDGPU::isGFX10Plus(*this) &&
+      !getFeatureBits().test(AMDGPU::FeatureCuMode))
+    LocalMemorySize *= 2;
+
   // Don't crash on invalid devices.
   if (WavefrontSizeLog2 == 0)
     WavefrontSizeLog2 = 5;
@@ -304,19 +310,29 @@ bool GCNSubtarget::zeroesHigh16BitsOfDest(unsigned Opcode) const {
   }
 }
 
-unsigned AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
-  const Function &F) const {
-  if (NWaves == 1)
-    return getLocalMemorySize();
-  unsigned WorkGroupSize = getFlatWorkGroupSizes(F).second;
-  unsigned WorkGroupsPerCu = getMaxWorkGroupsPerCU(WorkGroupSize);
-  if (!WorkGroupsPerCu)
-    return 0;
-  unsigned MaxWaves = getMaxWavesPerEU();
-  return getLocalMemorySize() * MaxWaves / WorkGroupsPerCu / NWaves;
+// Returns the maximum per-workgroup LDS allocation size (in bytes) that still
+// allows the given function to achieve an occupancy of NWaves waves per
+// SIMD / EU, taking into account only the function's *maximum* workgroup size.
+unsigned
+AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
+                                                 const Function &F) const {
+  const unsigned WaveSize = getWavefrontSize();
+  const unsigned WorkGroupSize = getFlatWorkGroupSizes(F).second;
+  const unsigned WavesPerWorkgroup =
+      std::max(1u, (WorkGroupSize + WaveSize - 1) / WaveSize);
+
+  const unsigned WorkGroupsPerCU =
+      std::max(1u, (NWaves * getEUsPerCU()) / WavesPerWorkgroup);
+
+  return getLocalMemorySize() / WorkGroupsPerCU;
 }
 
 // FIXME: Should return min,max range.
+//
+// Returns the maximum occupancy, in number of waves per SIMD / EU, that can
+// be achieved when only the given function is running on the machine; and
+// taking into account the overall number of wave slots, the (maximum) workgroup
+// size, and the per-workgroup LDS allocation size.
 unsigned AMDGPUSubtarget::getOccupancyWithLocalMemSize(uint32_t Bytes,
   const Function &F) const {
   const unsigned MaxWorkGroupSize = getFlatWorkGroupSizes(F).second;
@@ -338,9 +354,12 @@ unsigned AMDGPUSubtarget::getOccupancyWithLocalMemSize(uint32_t Bytes,
 
   NumGroups = std::min(MaxWorkGroupsPerCu, NumGroups);
 
-  // Round to the number of waves.
-  const unsigned MaxGroupNumWaves = (MaxWorkGroupSize + WaveSize - 1) / WaveSize;
+  // Round to the number of waves per CU.
+  const unsigned MaxGroupNumWaves = divideCeil(MaxWorkGroupSize, WaveSize);
   unsigned MaxWaves = NumGroups * MaxGroupNumWaves;
+
+  // Number of waves per EU (SIMD).
+  MaxWaves = divideCeil(MaxWaves, getEUsPerCU());
 
   // Clamp to the maximum possible number of waves.
   MaxWaves = std::min(MaxWaves, getMaxWavesPerEU());

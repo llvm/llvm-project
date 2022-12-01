@@ -64,6 +64,7 @@ protected:
   unsigned EUsPerCU = 4;
   unsigned MaxWavesPerEU = 10;
   unsigned LocalMemorySize = 0;
+  unsigned AddressableLocalMemorySize = 0;
   char WavefrontSizeLog2 = 0;
 
 public:
@@ -208,6 +209,10 @@ public:
 
   unsigned getLocalMemorySize() const {
     return LocalMemorySize;
+  }
+
+  unsigned getAddressableLocalMemorySize() const {
+    return AddressableLocalMemorySize;
   }
 
   /// Number of SIMDs/EUs (execution units) per "CU" ("compute unit"), where the

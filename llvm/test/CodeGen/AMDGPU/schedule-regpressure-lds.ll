@@ -3,8 +3,7 @@
 
 ; Provide a long sequence of 32 vec4 load/store pairs that ought to be fully
 ; overlapped for latency hiding. Doing so requires using (at least) 128 VGPRs,
-; which currently looks to the scheduler like an occupancy reduction, even
-; though it's not. TODO: Fix!
+; which (incorrectly) used to look to the scheduler like an occupancy reduction.
 
 ; 6 kB of LDS, allows 10 workgroups
 @lds = internal addrspace(3) global [384 x <4 x i32>] undef
@@ -20,7 +19,7 @@ define internal void @copy(ptr addrspace(1) %src, i32 %ofs) alwaysinline {
 define amdgpu_cs void @test(ptr addrspace(1) %src) "amdgpu-flat-work-group-size"="32,32" {
 ; CHECK-LABEL: test:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_clause 0xa
+; CHECK-NEXT:    s_clause 0x1f
 ; CHECK-NEXT:    global_load_b128 v[2:5], v[0:1], off
 ; CHECK-NEXT:    global_load_b128 v[6:9], v[0:1], off offset:16
 ; CHECK-NEXT:    global_load_b128 v[10:13], v[0:1], off offset:32
@@ -32,81 +31,92 @@ define amdgpu_cs void @test(ptr addrspace(1) %src) "amdgpu-flat-work-group-size"
 ; CHECK-NEXT:    global_load_b128 v[34:37], v[0:1], off offset:128
 ; CHECK-NEXT:    global_load_b128 v[38:41], v[0:1], off offset:144
 ; CHECK-NEXT:    global_load_b128 v[42:45], v[0:1], off offset:160
-; CHECK-NEXT:    v_mov_b32_e32 v86, 0
-; CHECK-NEXT:    s_clause 0x8
 ; CHECK-NEXT:    global_load_b128 v[46:49], v[0:1], off offset:176
-; CHECK-NEXT:    global_load_b128 v[50:53], v[0:1], off offset:240
-; CHECK-NEXT:    global_load_b128 v[54:57], v[0:1], off offset:224
-; CHECK-NEXT:    global_load_b128 v[58:61], v[0:1], off offset:208
-; CHECK-NEXT:    global_load_b128 v[62:65], v[0:1], off offset:192
-; CHECK-NEXT:    global_load_b128 v[66:69], v[0:1], off offset:304
-; CHECK-NEXT:    global_load_b128 v[70:73], v[0:1], off offset:288
-; CHECK-NEXT:    global_load_b128 v[74:77], v[0:1], off offset:272
-; CHECK-NEXT:    global_load_b128 v[78:81], v[0:1], off offset:256
-; CHECK-NEXT:    s_waitcnt vmcnt(19)
-; CHECK-NEXT:    ds_store_b128 v86, v[2:5]
-; CHECK-NEXT:    s_waitcnt vmcnt(18)
-; CHECK-NEXT:    ds_store_b128 v86, v[6:9] offset:16
-; CHECK-NEXT:    s_waitcnt vmcnt(17)
-; CHECK-NEXT:    ds_store_b128 v86, v[10:13] offset:32
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    ds_store_b128 v86, v[14:17] offset:48
-; CHECK-NEXT:    s_waitcnt vmcnt(15)
-; CHECK-NEXT:    ds_store_b128 v86, v[18:21] offset:64
-; CHECK-NEXT:    s_waitcnt vmcnt(14)
-; CHECK-NEXT:    ds_store_b128 v86, v[22:25] offset:80
-; CHECK-NEXT:    s_waitcnt vmcnt(13)
-; CHECK-NEXT:    ds_store_b128 v86, v[26:29] offset:96
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    ds_store_b128 v86, v[30:33] offset:112
-; CHECK-NEXT:    s_waitcnt vmcnt(11)
-; CHECK-NEXT:    ds_store_b128 v86, v[34:37] offset:128
-; CHECK-NEXT:    s_waitcnt vmcnt(10)
-; CHECK-NEXT:    ds_store_b128 v86, v[38:41] offset:144
-; CHECK-NEXT:    s_waitcnt vmcnt(9)
-; CHECK-NEXT:    ds_store_b128 v86, v[42:45] offset:160
-; CHECK-NEXT:    s_clause 0xb
-; CHECK-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:368
-; CHECK-NEXT:    global_load_b128 v[6:9], v[0:1], off offset:352
-; CHECK-NEXT:    global_load_b128 v[10:13], v[0:1], off offset:336
-; CHECK-NEXT:    global_load_b128 v[14:17], v[0:1], off offset:320
-; CHECK-NEXT:    global_load_b128 v[18:21], v[0:1], off offset:432
-; CHECK-NEXT:    global_load_b128 v[22:25], v[0:1], off offset:416
-; CHECK-NEXT:    global_load_b128 v[26:29], v[0:1], off offset:400
-; CHECK-NEXT:    global_load_b128 v[30:33], v[0:1], off offset:384
-; CHECK-NEXT:    global_load_b128 v[34:37], v[0:1], off offset:464
-; CHECK-NEXT:    global_load_b128 v[38:41], v[0:1], off offset:448
-; CHECK-NEXT:    global_load_b128 v[42:45], v[0:1], off offset:480
-; CHECK-NEXT:    global_load_b128 v[82:85], v[0:1], off offset:496
+; CHECK-NEXT:    global_load_b128 v[50:53], v[0:1], off offset:192
+; CHECK-NEXT:    global_load_b128 v[54:57], v[0:1], off offset:208
+; CHECK-NEXT:    global_load_b128 v[58:61], v[0:1], off offset:224
+; CHECK-NEXT:    global_load_b128 v[62:65], v[0:1], off offset:240
+; CHECK-NEXT:    global_load_b128 v[66:69], v[0:1], off offset:256
+; CHECK-NEXT:    global_load_b128 v[70:73], v[0:1], off offset:272
+; CHECK-NEXT:    global_load_b128 v[74:77], v[0:1], off offset:288
+; CHECK-NEXT:    global_load_b128 v[78:81], v[0:1], off offset:304
+; CHECK-NEXT:    global_load_b128 v[82:85], v[0:1], off offset:320
+; CHECK-NEXT:    global_load_b128 v[86:89], v[0:1], off offset:336
+; CHECK-NEXT:    global_load_b128 v[90:93], v[0:1], off offset:352
+; CHECK-NEXT:    global_load_b128 v[94:97], v[0:1], off offset:368
+; CHECK-NEXT:    global_load_b128 v[98:101], v[0:1], off offset:384
+; CHECK-NEXT:    global_load_b128 v[102:105], v[0:1], off offset:400
+; CHECK-NEXT:    global_load_b128 v[106:109], v[0:1], off offset:416
+; CHECK-NEXT:    global_load_b128 v[110:113], v[0:1], off offset:432
+; CHECK-NEXT:    global_load_b128 v[114:117], v[0:1], off offset:448
+; CHECK-NEXT:    global_load_b128 v[118:121], v[0:1], off offset:464
+; CHECK-NEXT:    global_load_b128 v[122:125], v[0:1], off offset:480
+; CHECK-NEXT:    global_load_b128 v[126:129], v[0:1], off offset:496
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_waitcnt vmcnt(31)
+; CHECK-NEXT:    ds_store_b128 v0, v[2:5]
+; CHECK-NEXT:    s_waitcnt vmcnt(30)
+; CHECK-NEXT:    ds_store_b128 v0, v[6:9] offset:16
+; CHECK-NEXT:    s_waitcnt vmcnt(29)
+; CHECK-NEXT:    ds_store_b128 v0, v[10:13] offset:32
+; CHECK-NEXT:    s_waitcnt vmcnt(28)
+; CHECK-NEXT:    ds_store_b128 v0, v[14:17] offset:48
+; CHECK-NEXT:    s_waitcnt vmcnt(27)
+; CHECK-NEXT:    ds_store_b128 v0, v[18:21] offset:64
+; CHECK-NEXT:    s_waitcnt vmcnt(26)
+; CHECK-NEXT:    ds_store_b128 v0, v[22:25] offset:80
+; CHECK-NEXT:    s_waitcnt vmcnt(25)
+; CHECK-NEXT:    ds_store_b128 v0, v[26:29] offset:96
+; CHECK-NEXT:    s_waitcnt vmcnt(24)
+; CHECK-NEXT:    ds_store_b128 v0, v[30:33] offset:112
+; CHECK-NEXT:    s_waitcnt vmcnt(23)
+; CHECK-NEXT:    ds_store_b128 v0, v[34:37] offset:128
+; CHECK-NEXT:    s_waitcnt vmcnt(22)
+; CHECK-NEXT:    ds_store_b128 v0, v[38:41] offset:144
+; CHECK-NEXT:    s_waitcnt vmcnt(21)
+; CHECK-NEXT:    ds_store_b128 v0, v[42:45] offset:160
 ; CHECK-NEXT:    s_waitcnt vmcnt(20)
-; CHECK-NEXT:    ds_store_b128 v86, v[46:49] offset:176
+; CHECK-NEXT:    ds_store_b128 v0, v[46:49] offset:176
+; CHECK-NEXT:    s_waitcnt vmcnt(19)
+; CHECK-NEXT:    ds_store_b128 v0, v[50:53] offset:192
+; CHECK-NEXT:    s_waitcnt vmcnt(18)
+; CHECK-NEXT:    ds_store_b128 v0, v[54:57] offset:208
+; CHECK-NEXT:    s_waitcnt vmcnt(17)
+; CHECK-NEXT:    ds_store_b128 v0, v[58:61] offset:224
 ; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    ds_store_b128 v86, v[62:65] offset:192
-; CHECK-NEXT:    ds_store_b128 v86, v[58:61] offset:208
-; CHECK-NEXT:    ds_store_b128 v86, v[54:57] offset:224
-; CHECK-NEXT:    ds_store_b128 v86, v[50:53] offset:240
+; CHECK-NEXT:    ds_store_b128 v0, v[62:65] offset:240
+; CHECK-NEXT:    s_waitcnt vmcnt(15)
+; CHECK-NEXT:    ds_store_b128 v0, v[66:69] offset:256
+; CHECK-NEXT:    s_waitcnt vmcnt(14)
+; CHECK-NEXT:    ds_store_b128 v0, v[70:73] offset:272
+; CHECK-NEXT:    s_waitcnt vmcnt(13)
+; CHECK-NEXT:    ds_store_b128 v0, v[74:77] offset:288
 ; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    ds_store_b128 v86, v[78:81] offset:256
-; CHECK-NEXT:    ds_store_b128 v86, v[74:77] offset:272
-; CHECK-NEXT:    ds_store_b128 v86, v[70:73] offset:288
-; CHECK-NEXT:    ds_store_b128 v86, v[66:69] offset:304
+; CHECK-NEXT:    ds_store_b128 v0, v[78:81] offset:304
+; CHECK-NEXT:    s_waitcnt vmcnt(11)
+; CHECK-NEXT:    ds_store_b128 v0, v[82:85] offset:320
+; CHECK-NEXT:    s_waitcnt vmcnt(10)
+; CHECK-NEXT:    ds_store_b128 v0, v[86:89] offset:336
+; CHECK-NEXT:    s_waitcnt vmcnt(9)
+; CHECK-NEXT:    ds_store_b128 v0, v[90:93] offset:352
 ; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    ds_store_b128 v86, v[14:17] offset:320
-; CHECK-NEXT:    ds_store_b128 v86, v[10:13] offset:336
-; CHECK-NEXT:    ds_store_b128 v86, v[6:9] offset:352
-; CHECK-NEXT:    ds_store_b128 v86, v[2:5] offset:368
+; CHECK-NEXT:    ds_store_b128 v0, v[94:97] offset:368
+; CHECK-NEXT:    s_waitcnt vmcnt(7)
+; CHECK-NEXT:    ds_store_b128 v0, v[98:101] offset:384
+; CHECK-NEXT:    s_waitcnt vmcnt(6)
+; CHECK-NEXT:    ds_store_b128 v0, v[102:105] offset:400
+; CHECK-NEXT:    s_waitcnt vmcnt(5)
+; CHECK-NEXT:    ds_store_b128 v0, v[106:109] offset:416
 ; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    ds_store_b128 v86, v[30:33] offset:384
-; CHECK-NEXT:    ds_store_b128 v86, v[26:29] offset:400
-; CHECK-NEXT:    ds_store_b128 v86, v[22:25] offset:416
-; CHECK-NEXT:    ds_store_b128 v86, v[18:21] offset:432
+; CHECK-NEXT:    ds_store_b128 v0, v[110:113] offset:432
+; CHECK-NEXT:    s_waitcnt vmcnt(3)
+; CHECK-NEXT:    ds_store_b128 v0, v[114:117] offset:448
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-NEXT:    ds_store_b128 v86, v[38:41] offset:448
-; CHECK-NEXT:    ds_store_b128 v86, v[34:37] offset:464
+; CHECK-NEXT:    ds_store_b128 v0, v[118:121] offset:464
 ; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    ds_store_b128 v86, v[42:45] offset:480
+; CHECK-NEXT:    ds_store_b128 v0, v[122:125] offset:480
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_store_b128 v86, v[82:85] offset:496
+; CHECK-NEXT:    ds_store_b128 v0, v[126:129] offset:496
 ; CHECK-NEXT:    s_endpgm
   call void @copy(ptr addrspace(1) %src, i32 0)
   call void @copy(ptr addrspace(1) %src, i32 1)
