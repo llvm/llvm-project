@@ -247,7 +247,6 @@ define <4 x double> @load_v4f64_v4i32_zero(<4 x i32> %trigger, ptr %addr) {
 ; SSE-NEXT:    retq
 ; SSE-NEXT:  LBB3_1: ## %cond.load
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    xorps %xmm1, %xmm1
 ; SSE-NEXT:    testb $2, %al
 ; SSE-NEXT:    je LBB3_4
 ; SSE-NEXT:  LBB3_3: ## %cond.load1
@@ -1129,7 +1128,6 @@ define <8 x float> @load_v8f32_v8i1_zero(<8 x i1> %mask, ptr %addr) {
 ; SSE2-NEXT:    retq
 ; SSE2-NEXT:  LBB10_1: ## %cond.load
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:    testb $2, %al
 ; SSE2-NEXT:    je LBB10_4
 ; SSE2-NEXT:  LBB10_3: ## %cond.load1
@@ -1209,7 +1207,6 @@ define <8 x float> @load_v8f32_v8i1_zero(<8 x i1> %mask, ptr %addr) {
 ; SSE42-NEXT:    retq
 ; SSE42-NEXT:  LBB10_1: ## %cond.load
 ; SSE42-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE42-NEXT:    xorps %xmm1, %xmm1
 ; SSE42-NEXT:    testb $2, %al
 ; SSE42-NEXT:    je LBB10_4
 ; SSE42-NEXT:  LBB10_3: ## %cond.load1
@@ -2650,7 +2647,6 @@ define <8 x i32> @load_v8i32_v8i1_zero(<8 x i1> %mask, ptr %addr) {
 ; SSE2-NEXT:    retq
 ; SSE2-NEXT:  LBB20_1: ## %cond.load
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:    testb $2, %al
 ; SSE2-NEXT:    je LBB20_4
 ; SSE2-NEXT:  LBB20_3: ## %cond.load1
@@ -2730,7 +2726,6 @@ define <8 x i32> @load_v8i32_v8i1_zero(<8 x i1> %mask, ptr %addr) {
 ; SSE42-NEXT:    retq
 ; SSE42-NEXT:  LBB20_1: ## %cond.load
 ; SSE42-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE42-NEXT:    pxor %xmm1, %xmm1
 ; SSE42-NEXT:    testb $2, %al
 ; SSE42-NEXT:    je LBB20_4
 ; SSE42-NEXT:  LBB20_3: ## %cond.load1
