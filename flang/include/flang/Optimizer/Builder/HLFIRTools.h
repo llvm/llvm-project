@@ -23,6 +23,8 @@ class FirOpBuilder;
 
 namespace hlfir {
 
+class AssociateOp;
+
 /// Is this an SSA value type for the value of a Fortran expression?
 inline bool isFortranValueType(mlir::Type type) {
   return type.isa<hlfir::ExprType>() || fir::isa_trivial(type);
@@ -151,11 +153,39 @@ EntityWithAttributes genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
                                 llvm::StringRef name,
                                 fir::FortranVariableFlagsAttr flags);
 
+/// Generate an hlfir.associate to build a variable from an expression value.
+/// The type of the variable must be provided so that scalar logicals are
+/// properly typed when placed in memory.
+hlfir::AssociateOp genAssociateExpr(mlir::Location loc,
+                                    fir::FirOpBuilder &builder,
+                                    hlfir::Entity value,
+                                    mlir::Type variableType,
+                                    llvm::StringRef name);
+
+/// Get the raw address of a variable (simple fir.ref/fir.ptr, or fir.heap
+/// value). The returned value should be used with care, it does not contain any
+/// stride, shape, and type parameter information. For pointers and
+/// allocatables, this returns the address of the target.
+mlir::Value genVariableRawAddress(mlir::Location loc,
+                                  fir::FirOpBuilder &builder,
+                                  hlfir::Entity var);
+
+/// Get a fir.boxchar for character scalar or array variable (the shape is lost
+/// for arrays).
+mlir::Value genVariableBoxChar(mlir::Location loc, fir::FirOpBuilder &builder,
+                               hlfir::Entity var);
+
 /// If the entity is a variable, load its value (dereference pointers and
 /// allocatables if needed). Do nothing if the entity os already a variable or
 /// if it is not a scalar entity of numerical or logical type.
 Entity loadTrivialScalar(mlir::Location loc, fir::FirOpBuilder &builder,
                          Entity entity);
+
+/// If \p entity is a POINTER or ALLOCATABLE, dereference it and return the
+/// target entity. Return \p entity otherwise.
+hlfir::Entity derefPointersAndAllocatables(mlir::Location loc,
+                                           fir::FirOpBuilder &builder,
+                                           Entity entity);
 
 /// Compute the lower and upper bounds of an entity.
 llvm::SmallVector<std::pair<mlir::Value, mlir::Value>>

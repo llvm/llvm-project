@@ -424,7 +424,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     return BaseImplRetVal;
 
   // Add any two address hints after any copy hints.
-  SmallSet<unsigned, 4> TwoAddrHints;
+  SmallSet<Register, 4> TwoAddrHints;
 
   auto tryAddHint = [&](const MachineOperand &VRRegMO, const MachineOperand &MO,
                         bool NeedGPRC) -> void {
@@ -446,6 +446,9 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     switch (MI.getOpcode()) {
     default:
       return false;
+    case RISCV::ANDI:
+      NeedGPRC = true;
+      return MI.getOperand(2).isImm() && isInt<6>(MI.getOperand(2).getImm());
     case RISCV::SRAI:
     case RISCV::SRLI:
       NeedGPRC = true;

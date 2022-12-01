@@ -198,6 +198,16 @@ bool isa_fir_or_std_type(mlir::Type t) {
   return isa_fir_type(t) || isa_std_type(t);
 }
 
+mlir::Type getDerivedType(mlir::Type ty) {
+  return llvm::TypeSwitch<mlir::Type, mlir::Type>(ty)
+      .Case<fir::PointerType, fir::HeapType, fir::SequenceType>([](auto p) {
+        if (auto seq = p.getEleTy().template dyn_cast<fir::SequenceType>())
+          return seq.getEleTy();
+        return p.getEleTy();
+      })
+      .Default([](mlir::Type t) { return t; });
+}
+
 mlir::Type dyn_cast_ptrEleTy(mlir::Type t) {
   return llvm::TypeSwitch<mlir::Type, mlir::Type>(t)
       .Case<fir::ReferenceType, fir::PointerType, fir::HeapType,
@@ -271,19 +281,6 @@ bool isBoxedRecordType(mlir::Type ty) {
     mlir::Type innerType = boxTy.unwrapInnerType();
     return innerType && innerType.isa<fir::RecordType>();
   }
-  return false;
-}
-
-bool isRefBoxType(mlir::Type ty) {
-  if (auto refTy = ty.dyn_cast<fir::ReferenceType>())
-    return refTy.getEleTy().isa<fir::BaseBoxType>();
-  return false;
-}
-
-bool isOpaqueDescType(mlir::Type ty) {
-  if (auto boxTy = ty.dyn_cast<fir::BoxType>())
-    if (boxTy.getEleTy().isa<mlir::NoneType>())
-      return true;
   return false;
 }
 
@@ -511,7 +508,8 @@ fir::ClassType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                        mlir::Type eleTy) {
   if (eleTy.isa<fir::RecordType, fir::SequenceType, fir::HeapType,
                 fir::PointerType, mlir::NoneType, mlir::IntegerType,
-                mlir::FloatType>())
+                mlir::FloatType, fir::CharacterType, fir::LogicalType,
+                fir::ComplexType, mlir::ComplexType>())
     return mlir::success();
   return emitError() << "invalid element type\n";
 }

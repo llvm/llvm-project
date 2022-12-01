@@ -14,6 +14,7 @@
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Coarray.h"
+#include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertType.h"
@@ -1097,10 +1098,22 @@ private:
     Fortran::lower::pft::Evaluation &eval = getEval();
     setCurrentPosition(stmt.v.source);
     assert(stmt.typedCall && "Call was not analyzed");
-    // Call statement lowering shares code with function call lowering.
-    mlir::Value res = Fortran::lower::createSubroutineCall(
-        *this, *stmt.typedCall, explicitIterSpace, implicitIterSpace,
-        localSymbols, stmtCtx, /*isUserDefAssignment=*/false);
+    mlir::Value res{};
+    if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
+      llvm::Optional<mlir::Type> resultType = llvm::None;
+      if (stmt.typedCall->hasAlternateReturns())
+        resultType = builder->getIndexType();
+      auto hlfirRes = Fortran::lower::convertCallToHLFIR(
+          toLocation(), *this, *stmt.typedCall, resultType, localSymbols,
+          stmtCtx);
+      if (hlfirRes)
+        res = *hlfirRes;
+    } else {
+      // Call statement lowering shares code with function call lowering.
+      res = Fortran::lower::createSubroutineCall(
+          *this, *stmt.typedCall, explicitIterSpace, implicitIterSpace,
+          localSymbols, stmtCtx, /*isUserDefAssignment=*/false);
+    }
     if (!res)
       return; // "Normal" subroutine call.
     // Call with alternate return specifiers.
@@ -2718,7 +2731,8 @@ private:
               // course base_addr might need to be updated.
               if (lhsType && lhsType->IsUnlimitedPolymorphic()) {
                 mlir::Value lhs = genExprMutableBox(loc, assign.lhs).getAddr();
-                mlir::Value rhs = genExprMutableBox(loc, assign.rhs).getAddr();
+                mlir::Value rhs =
+                    fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));
                 Fortran::lower::genPointerAssociate(*builder, loc, lhs, rhs);
                 return;
               }

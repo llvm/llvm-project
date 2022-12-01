@@ -122,6 +122,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i64, Custom);
     setOperationAction(ISD::READ_REGISTER, MVT::i64, Custom);
     setOperationAction(ISD::WRITE_REGISTER, MVT::i64, Custom);
+    setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
   }
 
   static const ISD::CondCode FPCCToExpand[] = {
@@ -597,9 +598,16 @@ LoongArchTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
   switch (Op.getConstantOperandVal(1)) {
   default:
     return Op;
-  case Intrinsic::loongarch_crc_w_d_w: {
-    DAG.getContext()->emitError(
-        "llvm.loongarch.crc.w.d.w requires target: loongarch64");
+  case Intrinsic::loongarch_crc_w_b_w:
+  case Intrinsic::loongarch_crc_w_h_w:
+  case Intrinsic::loongarch_crc_w_w_w:
+  case Intrinsic::loongarch_crc_w_d_w:
+  case Intrinsic::loongarch_crcc_w_b_w:
+  case Intrinsic::loongarch_crcc_w_h_w:
+  case Intrinsic::loongarch_crcc_w_w_w:
+  case Intrinsic::loongarch_crcc_w_d_w: {
+    std::string Name = Op->getOperationName(0);
+    DAG.getContext()->emitError(Name + " requires target: loongarch64");
     return DAG.getMergeValues(
         {DAG.getUNDEF(Op.getValueType()), Op.getOperand(0)}, SDLoc(Op));
   }
@@ -935,19 +943,41 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   case ISD::INTRINSIC_W_CHAIN: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
+    EVT VT = N->getValueType(0);
+    SDValue Op2 = N->getOperand(2);
+    SDValue Op3 = N->getOperand(3);
 
     switch (N->getConstantOperandVal(1)) {
     default:
       llvm_unreachable("Unexpected Intrinsic.");
-    case Intrinsic::loongarch_crc_w_d_w: {
-      Results.push_back(DAG.getNode(
-          ISD::TRUNCATE, DL, N->getValueType(0),
-          DAG.getNode(
-              LoongArchISD::CRC_W_D_W, DL, MVT::i64, N->getOperand(2),
-              DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(3)))));
-      Results.push_back(N->getOperand(0));
-      break;
-    }
+#define CRC_CASE_EXT_BINARYOP(NAME, NODE)                                      \
+  case Intrinsic::loongarch_##NAME: {                                          \
+    Results.push_back(DAG.getNode(                                             \
+        ISD::TRUNCATE, DL, VT,                                                 \
+        DAG.getNode(LoongArchISD::NODE, DL, MVT::i64,                          \
+                    DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op2),           \
+                    DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op3))));        \
+    Results.push_back(N->getOperand(0));                                       \
+    break;                                                                     \
+  }
+      CRC_CASE_EXT_BINARYOP(crc_w_b_w, CRC_W_B_W)
+      CRC_CASE_EXT_BINARYOP(crc_w_h_w, CRC_W_H_W)
+      CRC_CASE_EXT_BINARYOP(crc_w_w_w, CRC_W_W_W)
+      CRC_CASE_EXT_BINARYOP(crcc_w_b_w, CRCC_W_B_W)
+      CRC_CASE_EXT_BINARYOP(crcc_w_h_w, CRCC_W_H_W)
+      CRC_CASE_EXT_BINARYOP(crcc_w_w_w, CRCC_W_W_W)
+
+#define CRC_CASE_EXT_UNARYOP(NAME, NODE)                                       \
+  case Intrinsic::loongarch_##NAME: {                                          \
+    Results.push_back(DAG.getNode(                                             \
+        ISD::TRUNCATE, DL, VT,                                                 \
+        DAG.getNode(LoongArchISD::NODE, DL, MVT::i64, Op2,                     \
+                    DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op3))));        \
+    Results.push_back(N->getOperand(0));                                       \
+    break;                                                                     \
+  }
+      CRC_CASE_EXT_UNARYOP(crc_w_d_w, CRC_W_D_W)
+      CRC_CASE_EXT_UNARYOP(crcc_w_d_w, CRCC_W_D_W)
     }
     break;
   }
@@ -1421,7 +1451,14 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(IBAR)
     NODE_NAME_CASE(BREAK)
     NODE_NAME_CASE(SYSCALL)
+    NODE_NAME_CASE(CRC_W_B_W)
+    NODE_NAME_CASE(CRC_W_H_W)
+    NODE_NAME_CASE(CRC_W_W_W)
     NODE_NAME_CASE(CRC_W_D_W)
+    NODE_NAME_CASE(CRCC_W_B_W)
+    NODE_NAME_CASE(CRCC_W_H_W)
+    NODE_NAME_CASE(CRCC_W_W_W)
+    NODE_NAME_CASE(CRCC_W_D_W)
   }
 #undef NODE_NAME_CASE
   return nullptr;

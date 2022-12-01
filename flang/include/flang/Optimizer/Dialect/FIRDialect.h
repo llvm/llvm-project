@@ -37,6 +37,11 @@ public:
   void printAttribute(mlir::Attribute attr,
                       mlir::DialectAsmPrinter &p) const override;
 
+  /// Return string name of fir.runtime attribute.
+  static constexpr llvm::StringRef getFirRuntimeAttrName() {
+    return "fir.runtime";
+  }
+
 private:
   // Register the Attributes of this dialect.
   void registerAttributes();

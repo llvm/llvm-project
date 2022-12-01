@@ -54,6 +54,7 @@ add_llvm_component_library(LLVMCodeGen
   EHContGuardCatchret.cpp
   ExecutionDomainFix.cpp
   ExpandLargeDivRem.cpp
+  ExpandLargeFpConvert.cpp
   ExpandMemCmp.cpp
   ExpandPostRAPseudos.cpp
   ExpandReductions.cpp
@@ -196,7 +197,6 @@ add_llvm_component_library(LLVMCodeGen
   RegisterBankInfo.cpp
   SafeStack.cpp
   SafeStackLayout.cpp
-  SanitizerBinaryMetadata.cpp
   ScheduleDAG.cpp
   ScheduleDAGInstrs.cpp
   ScheduleDAGPrinter.cpp

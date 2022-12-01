@@ -19661,9 +19661,6 @@ Value *CodeGenFunction::EmitLoongArchBuiltinExpr(unsigned BuiltinID,
   case LoongArch::BI__builtin_loongarch_dbar:
     ID = Intrinsic::loongarch_dbar;
     break;
-  case LoongArch::BI__builtin_loongarch_crc_w_d_w:
-    ID = Intrinsic::loongarch_crc_w_d_w;
-    break;
   case LoongArch::BI__builtin_loongarch_break:
     ID = Intrinsic::loongarch_break;
     break;
@@ -19672,6 +19669,30 @@ Value *CodeGenFunction::EmitLoongArchBuiltinExpr(unsigned BuiltinID,
     break;
   case LoongArch::BI__builtin_loongarch_syscall:
     ID = Intrinsic::loongarch_syscall;
+    break;
+  case LoongArch::BI__builtin_loongarch_crc_w_b_w:
+    ID = Intrinsic::loongarch_crc_w_b_w;
+    break;
+  case LoongArch::BI__builtin_loongarch_crc_w_h_w:
+    ID = Intrinsic::loongarch_crc_w_h_w;
+    break;
+  case LoongArch::BI__builtin_loongarch_crc_w_w_w:
+    ID = Intrinsic::loongarch_crc_w_w_w;
+    break;
+  case LoongArch::BI__builtin_loongarch_crc_w_d_w:
+    ID = Intrinsic::loongarch_crc_w_d_w;
+    break;
+  case LoongArch::BI__builtin_loongarch_crcc_w_b_w:
+    ID = Intrinsic::loongarch_crcc_w_b_w;
+    break;
+  case LoongArch::BI__builtin_loongarch_crcc_w_h_w:
+    ID = Intrinsic::loongarch_crcc_w_h_w;
+    break;
+  case LoongArch::BI__builtin_loongarch_crcc_w_w_w:
+    ID = Intrinsic::loongarch_crcc_w_w_w;
+    break;
+  case LoongArch::BI__builtin_loongarch_crcc_w_d_w:
+    ID = Intrinsic::loongarch_crcc_w_d_w;
     break;
     // TODO: Support more Intrinsics.
   }

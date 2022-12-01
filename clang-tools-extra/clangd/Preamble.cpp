@@ -571,6 +571,12 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
 
   elog("Could not build a preamble for file {0} version {1}: {2}", FileName,
        Inputs.Version, BuiltPreamble.getError().message());
+  for (const Diag &D : PreambleDiagnostics.take()) {
+    if (D.Severity < DiagnosticsEngine::Error)
+      continue;
+    // Not an ideal way to show errors, but better than nothing!
+    elog("  error: {0}", D.Message);
+  }
   return nullptr;
 }
 

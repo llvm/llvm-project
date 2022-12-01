@@ -1,6 +1,5 @@
 ; RUN: mlir-translate -import-llvm -mlir-print-debuginfo -split-input-file %s | FileCheck %s
 
-; CHECK: #[[$UNKNOWNLOC:.+]] = loc(unknown)
 ; CHECK-LABEL: @unknown(
 define i32 @unknown(i32 %0) {
 entry:
@@ -10,28 +9,35 @@ end:
   %1 = phi i32 [ %2, %next ]
   ret i32 %1
 next:
-  ; CHECK: = llvm.mul %{{.+}}, %{{.+}} : i32 loc(#[[$UNKNOWNLOC:.+]])
+  ; CHECK: = llvm.mul %{{.+}}, %{{.+}} : i32 loc(#[[UNKNOWNLOC:.+]])
   %2 = mul i32 %0, %0
   br label %end
 }
 
-; // -----
+; CHECK: #[[UNKNOWNLOC:.+]] = loc(unknown)
 
-; CHECK: #[[$SP:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "instruction_loc"
-; CHECK: #[[$CALLEE:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "callee"
+; // -----
 
 ; CHECK-LABEL: @instruction_loc
 define i32 @instruction_loc(i32 %arg1) {
-  ; CHECK llvm.add {{.*}} loc(#[[FILE_LOC:.*]])
+  ; CHECK: llvm.add {{.*}} loc(#[[FILE_LOC:.*]])
   %1 = add i32 %arg1, %arg1, !dbg !5
 
-  ; CHECK llvm.mul {{.*}} loc(#[[CALLSITE_LOC:.*]])
+  ; CHECK: llvm.mul {{.*}} loc(#[[CALLSITE_LOC:.*]])
   %2 = mul i32 %1, %1, !dbg !7
 
   ret i32 %2
 }
-; CHECK #[[FILE_LOC]] = loc(fused<#[[$SP]]>["debug-info.ll":1:2])
-; CHECK #[[CALLSITE_LOC]] = loc(fused<#[[$CALLEE]]>[callsite("debug-info.ll":7:4 at fused<#[[$SP]]>["debug-info.ll":2:2])])
+
+; CHECK-DAG: #[[RAW_FILE_LOC:.+]] = loc("debug-info.ll":1:2)
+; CHECK-DAG: #[[SP:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "instruction_loc"
+; CHECK-DAG: #[[CALLEE:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "callee"
+; CHECK-DAG: #[[FILE_LOC]] = loc(fused<#[[SP]]>[#[[RAW_FILE_LOC]]])
+; CHECK-DAG: #[[CALLEE_LOC:.+]] = loc("debug-info.ll":7:4)
+; CHECK-DAG: #[[RAW_CALLER_LOC:.+]] = loc("debug-info.ll":2:2)
+; CHECK-DAG: #[[CALLER_LOC:.+]] = loc(fused<#[[SP]]>[#[[RAW_CALLER_LOC]]])
+; CHECK-DAG: #[[RAW_CALLSITE_LOC:.+]] = loc(callsite(#[[CALLEE_LOC]] at #[[CALLER_LOC]]))
+; CHECK-DAG: #[[CALLSITE_LOC]] = loc(fused<#[[CALLEE]]>[#[[RAW_CALLSITE_LOC]]])
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
@@ -46,23 +52,22 @@ define i32 @instruction_loc(i32 %arg1) {
 
 ; // -----
 
-; CHECK: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
-; CHECK: #[[SP:.+]] = #llvm.di_subprogram<compileUnit =
-; CHECK: #[[$LB0:.+]] = #llvm.di_lexical_block<scope = #[[SP]]>
-; CHECK: #[[$LB1:.+]] = #llvm.di_lexical_block<scope = #[[SP]], file = #[[FILE]], line = 2, column = 2>
-
 ; CHECK-LABEL: @lexical_block
 define i32 @lexical_block(i32 %arg1) {
-  ; CHECK llvm.add {{.*}} loc(#[[LOC0:.*]])
+  ; CHECK: llvm.add {{.*}} loc(#[[LOC0:.*]])
   %1 = add i32 %arg1, %arg1, !dbg !6
 
-  ; CHECK llvm.mul {{.*}} loc(#[[LOC1:.*]])
+  ; CHECK: llvm.mul {{.*}} loc(#[[LOC1:.*]])
   %2 = mul i32 %arg1, %arg1, !dbg !7
 
   ret i32 %2
 }
-; CHECK #[[LOC0]] = loc(fused<#[[$LB0]]>["debug-info.ll":1:2])
-; CHECK #[[LOC1]] = loc(fused<#[[$LB1]]>["debug-info.ll":1:2])
+; CHECK: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
+; CHECK: #[[SP:.+]] = #llvm.di_subprogram<compileUnit =
+; CHECK: #[[LB0:.+]] = #llvm.di_lexical_block<scope = #[[SP]]>
+; CHECK: #[[LB1:.+]] = #llvm.di_lexical_block<scope = #[[SP]], file = #[[FILE]], line = 2, column = 2>
+; CHECK: #[[LOC0]] = loc(fused<#[[LB0]]>[{{.*}}])
+; CHECK: #[[LOC1]] = loc(fused<#[[LB1]]>[{{.*}}])
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
@@ -77,23 +82,22 @@ define i32 @lexical_block(i32 %arg1) {
 
 ; // -----
 
-; CHECK: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
-; CHECK: #[[SP:.+]] = #llvm.di_subprogram<compileUnit =
-; CHECK: #[[$LB0:.+]] = #llvm.di_lexical_block_file<scope = #[[SP]], discriminator = 0>
-; CHECK: #[[$LB1:.+]] = #llvm.di_lexical_block_file<scope = #[[SP]], file = #[[FILE]], discriminator = 0>
-
 ; CHECK-LABEL: @lexical_block_file
 define i32 @lexical_block_file(i32 %arg1) {
-  ; CHECK llvm.add {{.*}} loc(#[[LOC0:.*]])
+  ; CHECK: llvm.add {{.*}} loc(#[[LOC0:.*]])
   %1 = add i32 %arg1, %arg1, !dbg !6
 
-  ; CHECK llvm.mul {{.*}} loc(#[[LOC1:.*]])
+  ; CHECK: llvm.mul {{.*}} loc(#[[LOC1:.*]])
   %2 = mul i32 %arg1, %arg1, !dbg !7
 
   ret i32 %2
 }
-; CHECK #[[LOC0]] = loc(fused<#[[$LB0]]>["debug-info.ll":1:2]))
-; CHECK #[[LOC1]] = loc(fused<#[[$LB1]]>["debug-info.ll":2:2]))
+; CHECK: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
+; CHECK: #[[SP:.+]] = #llvm.di_subprogram<compileUnit =
+; CHECK: #[[LB0:.+]] = #llvm.di_lexical_block_file<scope = #[[SP]], discriminator = 0>
+; CHECK: #[[LB1:.+]] = #llvm.di_lexical_block_file<scope = #[[SP]], file = #[[FILE]], discriminator = 0>
+; CHECK: #[[LOC0]] = loc(fused<#[[LB0]]>[
+; CHECK: #[[LOC1]] = loc(fused<#[[LB1]]>[
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
@@ -206,13 +210,12 @@ define void @subprogram() !dbg !3 {
 
 ; // -----
 
-; CHECK: #[[$SP:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "func_loc", file = #{{.*}}, subprogramFlags = Definition>
-
 ; CHECK-LABEL: @func_loc
 define void @func_loc() !dbg !3 {
   ret void
 }
-; CHECK: loc(fused<#[[$SP]]>["func_loc"])
+; CHECK: #[[SP:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "func_loc", file = #{{.*}}, subprogramFlags = Definition>
+; CHECK: loc(fused<#[[SP]]>[
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
@@ -246,9 +249,9 @@ define void @intrinsic(i64 %0, ptr %1) {
   ret void
 }
 
-; CHECK: #[[LOC0]] = loc(fused<#[[$SP]]>["debug-info.ll":1:2])
-; CHECK: #[[LOC1]] = loc(fused<#[[$SP]]>["debug-info.ll":2:2])
-; CHECK: #[[LOC2]] = loc(fused<#[[$SP]]>["debug-info.ll":3:2])
+; CHECK: #[[LOC0]] = loc(fused<#[[$SP]]>[{{.*}}])
+; CHECK: #[[LOC1]] = loc(fused<#[[$SP]]>[{{.*}}])
+; CHECK: #[[LOC2]] = loc(fused<#[[$SP]]>[{{.*}}])
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 declare void @llvm.dbg.addr(metadata, metadata, metadata)

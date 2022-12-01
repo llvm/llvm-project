@@ -20,6 +20,7 @@
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Expand large div/rem
+; CHECK-NEXT:       Expand large fp convert
 ; CHECK-NEXT:       Convert i1 constants to i32/i64 if they are returned
 ; CHECK-NEXT:       Expand Atomic instructions
 ; CHECK-NEXT:     PPC Lower MASS Entries
@@ -206,7 +207,6 @@
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
-; CHECK-NEXT:       Machine Sanitizer Binary Metadata
 ; CHECK-NEXT:       PowerPC Expand Atomic
 ; CHECK-NEXT:       PowerPC Branch Selector
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis

@@ -129,7 +129,7 @@ spirv::getEntryPointABIAttr(MLIRContext *context,
     workgroupSizeAttr = DenseI32ArrayAttr::get(context, workgroupSize);
   }
   return spirv::EntryPointABIAttr::get(context, workgroupSizeAttr,
-                                       /*subgroupSize=*/llvm::None);
+                                       subgroupSize);
 }
 
 spirv::EntryPointABIAttr spirv::lookupEntryPointABI(Operation *op) {

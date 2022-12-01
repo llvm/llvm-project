@@ -90,7 +90,7 @@ public:
   /// Free up any resources associated with this TypeSystem.  Done before
   /// removing all the TypeSystems from the TypeSystemMap.
   virtual void Finalize() {}
- 
+
   virtual DWARFASTParser *GetDWARFParser() { return nullptr; }
   virtual PDBASTParser *GetPDBParser() { return nullptr; }
   virtual npdb::PdbAstBuilder *GetNativePDBParser() { return nullptr; }
@@ -516,8 +516,13 @@ public:
 
   virtual llvm::Optional<llvm::json::Value> ReportStatistics();
 
+  bool GetHasForcefullyCompletedTypes() const {
+    return m_has_forcefully_completed_types;
+  }
 protected:
   SymbolFile *m_sym_file = nullptr;
+  /// Used for reporting statistics.
+  bool m_has_forcefully_completed_types = false;
 };
 
 class TypeSystemMap {
@@ -541,6 +546,9 @@ public:
   GetTypeSystemForLanguage(lldb::LanguageType language, Target *target,
                            bool can_create);
 
+  /// Check all type systems in the map to see if any have forcefully completed
+  /// types;
+  bool GetHasForcefullyCompletedTypes() const;
 protected:
   typedef llvm::DenseMap<uint16_t, lldb::TypeSystemSP> collection;
   mutable std::mutex m_mutex; ///< A mutex to keep this object happy in

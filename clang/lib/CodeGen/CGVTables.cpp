@@ -1281,8 +1281,8 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
   if (!getCodeGenOpts().LTOUnit)
     return;
 
-  CharUnits PointerWidth =
-      Context.toCharUnitsFromBits(Context.getTargetInfo().getPointerWidth(0));
+  CharUnits PointerWidth = Context.toCharUnitsFromBits(
+      Context.getTargetInfo().getPointerWidth(LangAS::Default));
 
   typedef std::pair<const CXXRecordDecl *, unsigned> AddressPoint;
   std::vector<AddressPoint> AddressPoints;
