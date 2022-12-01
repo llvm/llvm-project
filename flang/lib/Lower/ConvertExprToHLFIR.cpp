@@ -17,6 +17,7 @@
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertConstant.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -283,6 +284,31 @@ GENBIN(Multiply, Complex, fir::MulcOp)
 GENBIN(Divide, Integer, mlir::arith::DivSIOp)
 GENBIN(Divide, Real, mlir::arith::DivFOp)
 GENBIN(Divide, Complex, fir::DivcOp)
+
+template <Fortran::common::TypeCategory TC, int KIND>
+struct BinaryOp<Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>>> {
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         hlfir::Entity lhs, hlfir::Entity rhs) {
+    mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
+                                               /*params=*/llvm::None);
+    return hlfir::EntityWithAttributes{
+        Fortran::lower::genPow(builder, loc, ty, lhs, rhs)};
+  }
+};
+
+template <Fortran::common::TypeCategory TC, int KIND>
+struct BinaryOp<
+    Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC, KIND>>> {
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         hlfir::Entity lhs, hlfir::Entity rhs) {
+    mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
+                                               /*params=*/llvm::None);
+    return hlfir::EntityWithAttributes{
+        Fortran::lower::genPow(builder, loc, ty, lhs, rhs)};
+  }
+};
 
 /// Lower Expr to HLFIR.
 class HlfirBuilder {
