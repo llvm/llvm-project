@@ -2749,7 +2749,6 @@ cc_library(
         ":GPUToVulkanTransforms",
         ":IndexToLLVM",
         ":LinalgToLLVM",
-        ":LinalgToSPIRV",
         ":LinalgToStandard",
         ":MathToFuncs",
         ":MathToLLVM",
@@ -6765,7 +6764,6 @@ cc_library(
         ":LinalgDialect",
         ":LinalgPassIncGen",
         ":LinalgToLLVM",
-        ":LinalgToSPIRV",
         ":LinalgToStandard",
         ":LinalgTransformOps",
         ":LinalgTransforms",
@@ -8120,31 +8118,6 @@ cc_library(
         ":Transforms",
         "//llvm:Core",
         "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "LinalgToSPIRV",
-    srcs = glob([
-        "lib/Conversion/LinalgToSPIRV/*.cpp",
-        "lib/Conversion/LinalgToSPIRV/*.h",
-    ]),
-    hdrs = glob([
-        "include/mlir/Conversion/LinalgToSPIRV/*.h",
-    ]),
-    includes = ["include"],
-    deps = [
-        ":ConversionPassIncGen",
-        ":DialectUtils",
-        ":FuncDialect",
-        ":IR",
-        ":LinalgDialect",
-        ":LinalgTransforms",
-        ":LinalgUtils",
-        ":Pass",
-        ":SPIRVConversion",
-        ":SPIRVDialect",
-        ":TransformUtils",
     ],
 )
 
