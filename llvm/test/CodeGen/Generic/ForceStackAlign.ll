@@ -6,7 +6,7 @@
 ; CHECK-LABEL: @g
 
 ; Stack realignment not supported.
-; XFAIL: sparc
+; XFAIL: target=sparc{{.*}}
 
 ; NVPTX cannot select dynamic_stackalloc
 ; XFAIL: target=nvptx{{.*}}

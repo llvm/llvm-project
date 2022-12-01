@@ -674,8 +674,8 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32MV-NEXT:    vslidedown.vi v10, v8, 2
 ; RV32MV-NEXT:    vmv.x.s a1, v10
 ; RV32MV-NEXT:    slli a2, a1, 1
-; RV32MV-NEXT:    sub a0, a2, a0
-; RV32MV-NEXT:    sw a0, 4(s2)
+; RV32MV-NEXT:    sub a2, a2, a0
+; RV32MV-NEXT:    sw a2, 4(s2)
 ; RV32MV-NEXT:    vslidedown.vi v10, v8, 4
 ; RV32MV-NEXT:    vmv.x.s a0, v10
 ; RV32MV-NEXT:    srli a2, a0, 30
@@ -782,8 +782,8 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV64MV-NEXT:    slli a2, a2, 2
 ; RV64MV-NEXT:    slli a3, a3, 31
 ; RV64MV-NEXT:    srli a3, a3, 62
-; RV64MV-NEXT:    or a1, a3, a2
-; RV64MV-NEXT:    sw a1, 8(a0)
+; RV64MV-NEXT:    or a2, a3, a2
+; RV64MV-NEXT:    sw a2, 8(a0)
 ; RV64MV-NEXT:    addi sp, s0, -64
 ; RV64MV-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; RV64MV-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload

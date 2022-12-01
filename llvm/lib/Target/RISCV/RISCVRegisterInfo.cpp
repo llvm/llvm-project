@@ -438,14 +438,21 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     }
   };
 
-  // For now we support the compressible instructions which can encode all
-  // registers and have a single register source.
-  // TODO: Add more compressed instructions.
+  // This is all of the compressible binary instructions. If an instruction
+  // needs GPRC register class operands \p NeedGPRC will be set to true.
   auto isCompressible = [](const MachineInstr &MI, bool &NeedGPRC) {
     NeedGPRC = false;
     switch (MI.getOpcode()) {
     default:
       return false;
+    case RISCV::AND:
+    case RISCV::OR:
+    case RISCV::XOR:
+    case RISCV::SUB:
+    case RISCV::ADDW:
+    case RISCV::SUBW:
+      NeedGPRC = true;
+      return true;
     case RISCV::ANDI:
       NeedGPRC = true;
       return MI.getOperand(2).isImm() && isInt<6>(MI.getOperand(2).getImm());
@@ -462,18 +469,35 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     }
   };
 
+  // Returns true if this operand is compressible. For non-registers it always
+  // returns true. Immediate range was already checked in isCompressible.
+  // For registers, it checks if the register is a GPRC register. reg-reg
+  // instructions that require GPRC need all register operands to be GPRC.
+  auto isCompressibleOpnd = [&](const MachineOperand &MO) {
+    if (!MO.isReg())
+      return true;
+    Register Reg = MO.getReg();
+    Register PhysReg =
+        Register::isPhysicalRegister(Reg) ? Reg : Register(VRM->getPhys(Reg));
+    return PhysReg && RISCV::GPRCRegClass.contains(PhysReg);
+  };
+
   for (auto &MO : MRI->reg_nodbg_operands(VirtReg)) {
     const MachineInstr &MI = *MO.getParent();
+    unsigned OpIdx = MI.getOperandNo(&MO);
     bool NeedGPRC;
     if (isCompressible(MI, NeedGPRC)) {
-      unsigned OpIdx = MI.getOperandNo(&MO);
       if (OpIdx == 0 && MI.getOperand(1).isReg()) {
-        tryAddHint(MO, MI.getOperand(1), NeedGPRC);
-        if (MI.isCommutable() && MI.getOperand(2).isReg())
+        if (!NeedGPRC || isCompressibleOpnd(MI.getOperand(2)))
+          tryAddHint(MO, MI.getOperand(1), NeedGPRC);
+        if (MI.isCommutable() && MI.getOperand(2).isReg() &&
+            (!NeedGPRC || isCompressibleOpnd(MI.getOperand(1))))
           tryAddHint(MO, MI.getOperand(2), NeedGPRC);
-      } else if (OpIdx == 1) {
+      } else if (OpIdx == 1 &&
+                 (!NeedGPRC || isCompressibleOpnd(MI.getOperand(2)))) {
         tryAddHint(MO, MI.getOperand(0), NeedGPRC);
-      } else if (MI.isCommutable() && OpIdx == 2) {
+      } else if (MI.isCommutable() && OpIdx == 2 &&
+                 (!NeedGPRC || isCompressibleOpnd(MI.getOperand(1)))) {
         tryAddHint(MO, MI.getOperand(0), NeedGPRC);
       }
     }

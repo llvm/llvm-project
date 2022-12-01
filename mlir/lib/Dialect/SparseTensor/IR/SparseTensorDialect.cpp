@@ -300,7 +300,10 @@ uint64_t mlir::sparse_tensor::toStoredDim(const SparseTensorEncodingAttr &enc,
     auto order = enc.getDimOrdering();
     if (order) {
       assert(order.isPermutation());
-      return order.getPermutedPosition(d);
+      auto maybePos =
+          order.getResultPosition(getAffineDimExpr(d, enc.getContext()));
+      assert(maybePos.has_value());
+      return *maybePos;
     }
   }
   return d;

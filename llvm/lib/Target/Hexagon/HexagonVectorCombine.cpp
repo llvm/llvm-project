@@ -1381,7 +1381,7 @@ auto HvxIdioms::processFxpMul(Instruction &In, const FxpOp &Op) const
       break;
   }
 
-  if (Results.back() == nullptr)
+  if (Results.empty() || Results.back() == nullptr)
     return nullptr;
 
   Value *Cat = HVC.concat(Builder, Results);
