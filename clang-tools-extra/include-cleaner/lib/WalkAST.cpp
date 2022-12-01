@@ -44,6 +44,12 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
     Callback(Loc, *cast<NamedDecl>(ND->getCanonicalDecl()), RT);
   }
 
+  NamedDecl *resolveType(QualType Type) {
+    if (Type->isPointerType())
+      Type = Type->getPointeeType();
+    return Type->getAsRecordDecl();
+  }
+
 public:
   ASTWalker(DeclCallback Callback) : Callback(Callback) {}
 
@@ -53,7 +59,12 @@ public:
   }
 
   bool VisitMemberExpr(MemberExpr *E) {
-    report(E->getMemberLoc(), E->getFoundDecl().getDecl());
+    // A member expr implies a usage of the class type
+    // (e.g., to prevent inserting a header of base class when using base
+    // members from a derived object).
+    // FIXME: support dependent types, e.g., "std::vector<T>().size()".
+    QualType Type = E->getBase()->IgnoreImpCasts()->getType();
+    report(E->getMemberLoc(), resolveType(Type));
     return true;
   }
 
