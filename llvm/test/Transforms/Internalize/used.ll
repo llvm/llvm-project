@@ -1,4 +1,3 @@
-; RUN: opt < %s -internalize -S | FileCheck %s
 ; RUN: opt < %s -passes=internalize -S | FileCheck %s
 
 @llvm.used = appending global [1 x void ()*] [void ()* @f], section "llvm.metadata"
