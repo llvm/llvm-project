@@ -2718,7 +2718,8 @@ private:
               // course base_addr might need to be updated.
               if (lhsType && lhsType->IsUnlimitedPolymorphic()) {
                 mlir::Value lhs = genExprMutableBox(loc, assign.lhs).getAddr();
-                mlir::Value rhs = genExprMutableBox(loc, assign.rhs).getAddr();
+                mlir::Value rhs =
+                    fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));
                 Fortran::lower::genPointerAssociate(*builder, loc, lhs, rhs);
                 return;
               }
