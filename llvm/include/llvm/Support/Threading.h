@@ -19,7 +19,6 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Compiler.h"
 #include <ciso646> // So we can check the C++ standard lib macros.
-#include <optional>
 
 #if defined(_MSC_VER)
 // MSVC's call_once implementation worked since VS 2015, which is the minimum
@@ -141,7 +140,7 @@ constexpr bool llvm_is_multithreaded() { return LLVM_ENABLE_THREADS; }
 
     /// Finds the CPU socket where a thread should go. Returns 'None' if the
     /// thread shall remain on the actual CPU socket.
-    std::optional<unsigned> compute_cpu_socket(unsigned ThreadPoolNum) const;
+    Optional<unsigned> compute_cpu_socket(unsigned ThreadPoolNum) const;
   };
 
   /// Build a strategy from a number of threads as a string provided in \p Num.
@@ -149,7 +148,7 @@ constexpr bool llvm_is_multithreaded() { return LLVM_ENABLE_THREADS; }
   /// strategy, we attempt to equally allocate the threads on all CPU sockets.
   /// "0" or an empty string will return the \p Default strategy.
   /// "all" for using all hardware threads.
-  std::optional<ThreadPoolStrategy>
+  Optional<ThreadPoolStrategy>
   get_threadpool_strategy(StringRef Num, ThreadPoolStrategy Default = {});
 
   /// Returns a thread strategy for tasks requiring significant memory or other
@@ -171,7 +170,7 @@ constexpr bool llvm_is_multithreaded() { return LLVM_ENABLE_THREADS; }
   /// If \p Num is invalid, returns a default strategy where one thread per
   /// hardware core is used.
   inline ThreadPoolStrategy heavyweight_hardware_concurrency(StringRef Num) {
-    std::optional<ThreadPoolStrategy> S =
+    Optional<ThreadPoolStrategy> S =
         get_threadpool_strategy(Num, heavyweight_hardware_concurrency());
     if (S)
       return *S;
