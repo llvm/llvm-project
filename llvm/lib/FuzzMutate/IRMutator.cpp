@@ -25,6 +25,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Scalar/DCE.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
 
@@ -297,6 +298,136 @@ void InstModificationIRStrategy::mutate(Instruction &Inst,
   auto RS = makeSampler(IB.Rand, Modifications);
   if (RS)
     RS.getSelection()();
+}
+
+/// Return a case value that is not already taken to make sure we don't have two
+/// cases with same value.
+static uint64_t getUniqueCaseValue(SmallSet<uint64_t, 4> &CasesTaken,
+                                   uint64_t MaxValue, RandomIRBuilder &IB) {
+  uint64_t tmp;
+  do {
+    tmp = uniform<uint64_t>(IB.Rand, 0, MaxValue);
+  } while (CasesTaken.count(tmp) != 0);
+  CasesTaken.insert(tmp);
+  return tmp;
+}
+
+void InsertCFGStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
+  SmallVector<Instruction *, 32> Insts;
+  for (auto I = BB.getFirstInsertionPt(), E = BB.end(); I != E; ++I)
+    Insts.push_back(&*I);
+  if (Insts.size() < 1)
+    return;
+
+  // Choose a point where we split the block.
+  uint64_t IP = uniform<uint64_t>(IB.Rand, 0, Insts.size() - 1);
+  auto InstsBeforeSplit = makeArrayRef(Insts).slice(0, IP);
+
+  // `Sink` inherits Blocks' terminator, `Source` will have a BranchInst
+  // directly jumps to `Sink`. Here, we have to create a new terminator for
+  // `Source`.
+  BasicBlock *Block = Insts[IP]->getParent();
+  BasicBlock *Source = Block;
+  BasicBlock *Sink = Block->splitBasicBlock(Insts[IP], "BB");
+
+  Function *F = BB.getParent();
+  LLVMContext &C = F->getParent()->getContext();
+  // A coin decides if it is branch or switch
+  if (uniform<uint64_t>(IB.Rand, 0, 1)) {
+    // Branch
+    BasicBlock *IfTrue = BasicBlock::Create(C, "T", F);
+    BasicBlock *IfFalse = BasicBlock::Create(C, "F", F);
+    Value *Cond =
+        IB.findOrCreateSource(*Source, InstsBeforeSplit, {},
+                              fuzzerop::onlyType(Type::getInt1Ty(C)), false);
+    BranchInst *Branch = BranchInst::Create(IfTrue, IfFalse, Cond);
+    // Remove the old terminator.
+    ReplaceInstWithInst(Source->getTerminator(), Branch);
+    // Connect these blocks to `Sink`
+    connectBlocksToSink({IfTrue, IfFalse}, Sink, IB);
+  } else {
+    // Switch
+    // Determine Integer type, it IS possible we use a boolean to switch.
+    auto RS =
+        makeSampler(IB.Rand, make_filter_range(IB.KnownTypes, [](Type *Ty) {
+                      return Ty->isIntegerTy();
+                    }));
+    assert(RS && "There is no integer type in all allowed types, is the "
+                 "setting correct?");
+    Type *Ty = RS.getSelection();
+    IntegerType *IntTy = cast<IntegerType>(Ty);
+
+    uint64_t BitSize = IntTy->getBitWidth();
+    uint64_t MaxCaseVal =
+        (BitSize >= 64) ? (uint64_t)-1 : ((uint64_t)1 << BitSize) - 1;
+    // Create Switch inst in Block
+    Value *Cond = IB.findOrCreateSource(*Source, InstsBeforeSplit, {},
+                                        fuzzerop::onlyType(IntTy), false);
+    BasicBlock *DefaultBlock = BasicBlock::Create(C, "SW_D", F);
+    uint64_t NumCases = uniform<uint64_t>(IB.Rand, 1, MaxNumCases);
+    NumCases = (NumCases > MaxCaseVal) ? MaxCaseVal + 1 : NumCases;
+    SwitchInst *Switch = SwitchInst::Create(Cond, DefaultBlock, NumCases);
+    // Remove the old terminator.
+    ReplaceInstWithInst(Source->getTerminator(), Switch);
+
+    // Create blocks, for each block assign a case value.
+    SmallVector<BasicBlock *, 4> Blocks({DefaultBlock});
+    SmallSet<uint64_t, 4> CasesTaken;
+    for (uint64_t i = 0; i < NumCases; i++) {
+      uint64_t CaseVal = getUniqueCaseValue(CasesTaken, MaxCaseVal, IB);
+      BasicBlock *CaseBlock = BasicBlock::Create(C, "SW_C", F);
+      ConstantInt *OnValue = ConstantInt::get(IntTy, CaseVal);
+      Switch->addCase(OnValue, CaseBlock);
+      Blocks.push_back(CaseBlock);
+    }
+
+    // Connect these blocks to `Sink`
+    connectBlocksToSink(Blocks, Sink, IB);
+  }
+}
+
+/// The caller has to guarantee that these blocks are "empty", i.e. it doesn't
+/// even have terminator.
+void InsertCFGStrategy::connectBlocksToSink(ArrayRef<BasicBlock *> Blocks,
+                                            BasicBlock *Sink,
+                                            RandomIRBuilder &IB) {
+  uint64_t DirectSinkIdx = uniform<uint64_t>(IB.Rand, 0, Blocks.size() - 1);
+  for (uint64_t i = 0; i < Blocks.size(); i++) {
+    // We have at least one block that directly goes to sink.
+    CFGToSink ToSink = (i == DirectSinkIdx)
+                           ? CFGToSink::DirectSink
+                           : static_cast<CFGToSink>(uniform<uint64_t>(
+                                 IB.Rand, 0, CFGToSink::EndOfCFGToLink - 1));
+    BasicBlock *BB = Blocks[i];
+    Function *F = BB->getParent();
+    LLVMContext &C = F->getParent()->getContext();
+    switch (ToSink) {
+    case CFGToSink::Return: {
+      Type *RetTy = F->getReturnType();
+      Value *RetValue = nullptr;
+      if (!RetTy->isVoidTy())
+        RetValue =
+            IB.findOrCreateSource(*BB, {}, {}, fuzzerop::onlyType(RetTy));
+      ReturnInst::Create(C, RetValue, BB);
+      break;
+    }
+    case CFGToSink::DirectSink: {
+      BranchInst::Create(Sink, BB);
+      break;
+    }
+    case CFGToSink::SinkOrSelfLoop: {
+      SmallVector<BasicBlock *, 2> Branches({Sink, BB});
+      // A coin decides which block is true branch.
+      uint64_t coin = uniform<uint64_t>(IB.Rand, 0, 1);
+      Value *Cond = IB.findOrCreateSource(
+          *BB, {}, {}, fuzzerop::onlyType(Type::getInt1Ty(C)), false);
+      BranchInst::Create(Branches[coin], Branches[1 - coin], Cond, BB);
+      break;
+    }
+    case CFGToSink::EndOfCFGToLink:
+      llvm_unreachable("EndOfCFGToLink executed, something's wrong.");
+    }
+  }
 }
 
 void InsertPHIStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
