@@ -13,7 +13,10 @@
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/CallInterface.h"
+#include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertConstant.h"
+#include "flang/Lower/ConvertType.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -281,7 +284,12 @@ private:
   template <typename T>
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::FunctionRef<T> &expr) {
-    TODO(getLoc(), "lowering funcRef to HLFIR");
+    mlir::Type resType =
+        Fortran::lower::TypeBuilder<T>::genType(getConverter(), expr);
+    return Fortran::lower::convertCallToHLFIR(getLoc(), getConverter(), expr,
+                                              resType, getSymMap(),
+                                              getStmtCtx())
+        .value();
   }
 
   template <typename T>
