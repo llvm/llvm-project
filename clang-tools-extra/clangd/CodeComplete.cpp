@@ -395,7 +395,8 @@ struct CodeCompletionBuilder {
         CodeCompletion::IncludeCandidate Include;
         Include.Header = ToInclude->first;
         if (ToInclude->second && ShouldInsert)
-          Include.Insertion = Includes.insert(ToInclude->first);
+          Include.Insertion = Includes.insert(
+              ToInclude->first, tooling::IncludeDirective::Include);
         Completion.Includes.push_back(std::move(Include));
       } else
         log("Failed to generate include insertion edits for adding header "
