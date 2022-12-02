@@ -70,7 +70,7 @@ protected:
 using LlvmLibcWrapperGenTest = WrapperGenTest;
 
 TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenAndGetNoErrors) {
-  llvm::Optional<llvm::StringRef> Redirects[] = {
+  std::optional<llvm::StringRef> Redirects[] = {
       llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
 
@@ -92,7 +92,7 @@ TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenAndGetNoErrors) {
 }
 
 TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnStrlen) {
-  llvm::Optional<llvm::StringRef> Redirects[] = {
+  std::optional<llvm::StringRef> Redirects[] = {
       llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
 
@@ -127,7 +127,7 @@ TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnStrlen) {
 }
 
 TEST_F(LlvmLibcWrapperGenTest, GenAliasForStrlen) {
-  llvm::Optional<llvm::StringRef> Redirects[] = {
+  std::optional<llvm::StringRef> Redirects[] = {
       llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
 
@@ -163,7 +163,7 @@ TEST_F(LlvmLibcWrapperGenTest, GenAliasForStrlen) {
 }
 
 TEST_F(LlvmLibcWrapperGenTest, DeclStrlenAliasUsingMangledNameFile) {
-  llvm::Optional<llvm::StringRef> Redirects[] = {
+  std::optional<llvm::StringRef> Redirects[] = {
       llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
 
@@ -216,7 +216,7 @@ TEST_F(LlvmLibcWrapperGenTest, DeclStrlenAliasUsingMangledNameFile) {
 
 TEST_F(LlvmLibcWrapperGenTest,
        RunWrapperGenOnStrlenWithMangledNameAndMangledNameFile) {
-  llvm::Optional<llvm::StringRef> Redirects[] = {
+  std::optional<llvm::StringRef> Redirects[] = {
       llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
 
@@ -250,7 +250,7 @@ TEST_F(LlvmLibcWrapperGenTest,
 }
 
 TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnBadFuncName) {
-  llvm::Optional<llvm::StringRef> Redirects[] = {
+  std::optional<llvm::StringRef> Redirects[] = {
       llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
 
@@ -282,7 +282,7 @@ TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnBadFuncName) {
 }
 
 TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnStrlenWithBadMangledNameFile) {
-  llvm::Optional<llvm::StringRef> Redirects[] = {
+  std::optional<llvm::StringRef> Redirects[] = {
       llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
 
@@ -316,7 +316,7 @@ TEST_F(LlvmLibcWrapperGenTest, RunWrapperGenOnStrlenWithBadMangledNameFile) {
 }
 
 TEST_F(LlvmLibcWrapperGenTest, RunWithMangledNameFileMissingLLVMLibcName) {
-  llvm::Optional<llvm::StringRef> Redirects[] = {
+  std::optional<llvm::StringRef> Redirects[] = {
       llvm::None, llvm::StringRef(STDOutFile.get().TmpName),
       llvm::StringRef(STDErrFile.get().TmpName)};
 
