@@ -9,7 +9,7 @@
 
 CONSTATTR UGEN(asin)
 
-REQUIRES_16BIT_INSTS CONSTATTR half
+CONSTATTR half
 MATH_MANGLE(asin)(half x)
 {
     // Computes arcsin(x).
