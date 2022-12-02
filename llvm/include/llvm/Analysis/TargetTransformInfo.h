@@ -552,22 +552,21 @@ public:
   /// intrinsics. This function will be called from the InstCombine pass every
   /// time a target-specific intrinsic is encountered.
   ///
-  /// \returns None to not do anything target specific or a value that will be
-  /// returned from the InstCombiner. It is possible to return null and stop
-  /// further processing of the intrinsic by returning nullptr.
-  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
-                                               IntrinsicInst &II) const;
+  /// \returns std::nullopt to not do anything target specific or a value that
+  /// will be returned from the InstCombiner. It is possible to return null and
+  /// stop further processing of the intrinsic by returning nullptr.
+  std::optional<Instruction *> instCombineIntrinsic(InstCombiner & IC,
+                                                    IntrinsicInst & II) const;
   /// Can be used to implement target-specific instruction combining.
   /// \see instCombineIntrinsic
-  Optional<Value *>
-  simplifyDemandedUseBitsIntrinsic(InstCombiner &IC, IntrinsicInst &II,
-                                   APInt DemandedMask, KnownBits &Known,
-                                   bool &KnownBitsComputed) const;
+  std::optional<Value *> simplifyDemandedUseBitsIntrinsic(
+      InstCombiner & IC, IntrinsicInst & II, APInt DemandedMask,
+      KnownBits & Known, bool &KnownBitsComputed) const;
   /// Can be used to implement target-specific instruction combining.
   /// \see instCombineIntrinsic
-  Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
-      InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
-      APInt &UndefElts2, APInt &UndefElts3,
+  std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
+      InstCombiner & IC, IntrinsicInst & II, APInt DemandedElts,
+      APInt & UndefElts, APInt & UndefElts2, APInt & UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) const;
   /// @}
@@ -971,7 +970,7 @@ public:
   unsigned getMinVectorRegisterBitWidth() const;
 
   /// \return The maximum value of vscale if the target specifies an
-  ///  architectural maximum vector length, and None otherwise.
+  ///  architectural maximum vector length, and std::nullopt otherwise.
   std::optional<unsigned> getMaxVScale() const;
 
   /// \return the value of vscale to tune the cost model for.
@@ -1028,10 +1027,10 @@ public:
   };
 
   /// \return The size of the cache level in bytes, if available.
-  Optional<unsigned> getCacheSize(CacheLevel Level) const;
+  std::optional<unsigned> getCacheSize(CacheLevel Level) const;
 
   /// \return The associativity of the cache level, if available.
-  Optional<unsigned> getCacheAssociativity(CacheLevel Level) const;
+  std::optional<unsigned> getCacheAssociativity(CacheLevel Level) const;
 
   /// \return How much before a load we should place the prefetch
   /// instruction.  This is currently measured in number of
@@ -1264,8 +1263,8 @@ public:
 
   /// A helper function to determine the type of reduction algorithm used
   /// for a given \p Opcode and set of FastMathFlags \p FMF.
-  static bool requiresOrderedReduction(Optional<FastMathFlags> FMF) {
-    return FMF != None && !(*FMF).allowReassoc();
+  static bool requiresOrderedReduction(std::optional<FastMathFlags> FMF) {
+    return FMF && !(*FMF).allowReassoc();
   }
 
   /// Calculate the cost of vector reduction intrinsics.
@@ -1293,7 +1292,7 @@ public:
   ///   allowed.
   ///
   InstructionCost getArithmeticReductionCost(
-      unsigned Opcode, VectorType *Ty, Optional<FastMathFlags> FMF,
+      unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   InstructionCost getMinMaxReductionCost(
@@ -1315,7 +1314,7 @@ public:
   /// ResTy vecreduce.opcode(ext(Ty A)).
   InstructionCost getExtendedReductionCost(
       unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
-      Optional<FastMathFlags> FMF,
+      std::optional<FastMathFlags> FMF,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// \returns The cost of Intrinsic instructions. Analyses the real arguments.
@@ -1369,11 +1368,10 @@ public:
                                            Type *ExpectedType) const;
 
   /// \returns The type to use in a loop expansion of a memcpy call.
-  Type *
-  getMemcpyLoopLoweringType(LLVMContext &Context, Value *Length,
-                            unsigned SrcAddrSpace, unsigned DestAddrSpace,
-                            unsigned SrcAlign, unsigned DestAlign,
-                            Optional<uint32_t> AtomicElementSize = None) const;
+  Type *getMemcpyLoopLoweringType(
+      LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
+      unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
+      std::optional<uint32_t> AtomicElementSize = std::nullopt) const;
 
   /// \param[out] OpsOut The operand types to copy RemainingBytes of memory.
   /// \param RemainingBytes The number of bytes to copy.
@@ -1385,7 +1383,7 @@ public:
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
       unsigned SrcAlign, unsigned DestAlign,
-      Optional<uint32_t> AtomicCpySize = None) const;
+      std::optional<uint32_t> AtomicCpySize = std::nullopt) const;
 
   /// \returns True if the two functions have compatible attributes for inlining
   /// purposes.
@@ -1610,15 +1608,14 @@ public:
                               DominatorTree *DT, LoopVectorizationLegality *LVL,
                               InterleavedAccessInfo *IAI) = 0;
   virtual PredicationStyle emitGetActiveLaneMask() = 0;
-  virtual Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
-                                                       IntrinsicInst &II) = 0;
-  virtual Optional<Value *>
-  simplifyDemandedUseBitsIntrinsic(InstCombiner &IC, IntrinsicInst &II,
-                                   APInt DemandedMask, KnownBits &Known,
-                                   bool &KnownBitsComputed) = 0;
-  virtual Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
-      InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
-      APInt &UndefElts2, APInt &UndefElts3,
+  virtual std::optional<Instruction *> instCombineIntrinsic(
+      InstCombiner &IC, IntrinsicInst &II) = 0;
+  virtual std::optional<Value *> simplifyDemandedUseBitsIntrinsic(
+      InstCombiner &IC, IntrinsicInst &II, APInt DemandedMask,
+      KnownBits & Known, bool &KnownBitsComputed) = 0;
+  virtual std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
+      InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts,
+      APInt &UndefElts, APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) = 0;
   virtual bool isLegalAddImmediate(int64_t Imm) = 0;
@@ -1727,8 +1724,9 @@ public:
   virtual bool shouldConsiderAddressTypePromotion(
       const Instruction &I, bool &AllowPromotionWithoutCommonHeader) = 0;
   virtual unsigned getCacheLineSize() const = 0;
-  virtual Optional<unsigned> getCacheSize(CacheLevel Level) const = 0;
-  virtual Optional<unsigned> getCacheAssociativity(CacheLevel Level) const = 0;
+  virtual std::optional<unsigned> getCacheSize(CacheLevel Level) const = 0;
+  virtual std::optional<unsigned> getCacheAssociativity(CacheLevel Level)
+      const = 0;
 
   /// \return How much before a load we should place the prefetch
   /// instruction.  This is currently measured in number of
@@ -1818,14 +1816,14 @@ public:
       bool UseMaskForCond = false, bool UseMaskForGaps = false) = 0;
   virtual InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                             Optional<FastMathFlags> FMF,
+                             std::optional<FastMathFlags> FMF,
                              TTI::TargetCostKind CostKind) = 0;
   virtual InstructionCost
   getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy, bool IsUnsigned,
                          TTI::TargetCostKind CostKind) = 0;
   virtual InstructionCost getExtendedReductionCost(
       unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
-      Optional<FastMathFlags> FMF,
+      std::optional<FastMathFlags> FMF,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) = 0;
   virtual InstructionCost getMulAccReductionCost(
       bool IsUnsigned, Type *ResTy, VectorType *Ty,
@@ -1846,17 +1844,16 @@ public:
   virtual unsigned getAtomicMemIntrinsicMaxElementSize() const = 0;
   virtual Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
                                                    Type *ExpectedType) = 0;
-  virtual Type *
-  getMemcpyLoopLoweringType(LLVMContext &Context, Value *Length,
-                            unsigned SrcAddrSpace, unsigned DestAddrSpace,
-                            unsigned SrcAlign, unsigned DestAlign,
-                            Optional<uint32_t> AtomicElementSize) const = 0;
+  virtual Type *getMemcpyLoopLoweringType(
+      LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
+      unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
+      std::optional<uint32_t> AtomicElementSize) const = 0;
 
   virtual void getMemcpyLoopResidualLoweringType(
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
       unsigned SrcAlign, unsigned DestAlign,
-      Optional<uint32_t> AtomicCpySize) const = 0;
+      std::optional<uint32_t> AtomicCpySize) const = 0;
   virtual bool areInlineCompatible(const Function *Caller,
                                    const Function *Callee) const = 0;
   virtual bool areTypesABICompatible(const Function *Caller,
@@ -2008,18 +2005,18 @@ public:
   PredicationStyle emitGetActiveLaneMask() override {
     return Impl.emitGetActiveLaneMask();
   }
-  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
-                                               IntrinsicInst &II) override {
+  std::optional<Instruction *>
+  instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) override {
     return Impl.instCombineIntrinsic(IC, II);
   }
-  Optional<Value *>
+  std::optional<Value *>
   simplifyDemandedUseBitsIntrinsic(InstCombiner &IC, IntrinsicInst &II,
                                    APInt DemandedMask, KnownBits &Known,
                                    bool &KnownBitsComputed) override {
     return Impl.simplifyDemandedUseBitsIntrinsic(IC, II, DemandedMask, Known,
                                                  KnownBitsComputed);
   }
-  Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
+  std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
       InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
       APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
@@ -2266,10 +2263,11 @@ public:
         I, AllowPromotionWithoutCommonHeader);
   }
   unsigned getCacheLineSize() const override { return Impl.getCacheLineSize(); }
-  Optional<unsigned> getCacheSize(CacheLevel Level) const override {
+  std::optional<unsigned> getCacheSize(CacheLevel Level) const override {
     return Impl.getCacheSize(Level);
   }
-  Optional<unsigned> getCacheAssociativity(CacheLevel Level) const override {
+  std::optional<unsigned>
+  getCacheAssociativity(CacheLevel Level) const override {
     return Impl.getCacheAssociativity(Level);
   }
 
@@ -2407,7 +2405,7 @@ public:
   }
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                             Optional<FastMathFlags> FMF,
+                             std::optional<FastMathFlags> FMF,
                              TTI::TargetCostKind CostKind) override {
     return Impl.getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
   }
@@ -2418,7 +2416,7 @@ public:
   }
   InstructionCost getExtendedReductionCost(
       unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
-      Optional<FastMathFlags> FMF,
+      std::optional<FastMathFlags> FMF,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) override {
     return Impl.getExtendedReductionCost(Opcode, IsUnsigned, ResTy, Ty, FMF,
                                          CostKind);
@@ -2461,7 +2459,7 @@ public:
   Type *getMemcpyLoopLoweringType(
       LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
       unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
-      Optional<uint32_t> AtomicElementSize) const override {
+      std::optional<uint32_t> AtomicElementSize) const override {
     return Impl.getMemcpyLoopLoweringType(Context, Length, SrcAddrSpace,
                                           DestAddrSpace, SrcAlign, DestAlign,
                                           AtomicElementSize);
@@ -2470,7 +2468,7 @@ public:
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
       unsigned SrcAlign, unsigned DestAlign,
-      Optional<uint32_t> AtomicCpySize) const override {
+      std::optional<uint32_t> AtomicCpySize) const override {
     Impl.getMemcpyLoopResidualLoweringType(OpsOut, Context, RemainingBytes,
                                            SrcAddrSpace, DestAddrSpace,
                                            SrcAlign, DestAlign, AtomicCpySize);
