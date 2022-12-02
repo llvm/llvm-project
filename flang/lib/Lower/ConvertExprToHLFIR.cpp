@@ -457,6 +457,36 @@ struct BinaryOp<Fortran::evaluate::Relational<
   }
 };
 
+template <int KIND>
+struct BinaryOp<Fortran::evaluate::LogicalOperation<KIND>> {
+  using Op = Fortran::evaluate::LogicalOperation<KIND>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    mlir::Type i1Type = builder.getI1Type();
+    mlir::Value i1Lhs = builder.createConvert(loc, i1Type, lhs);
+    mlir::Value i1Rhs = builder.createConvert(loc, i1Type, rhs);
+    switch (op.logicalOperator) {
+    case Fortran::evaluate::LogicalOperator::And:
+      return hlfir::EntityWithAttributes{
+          builder.create<mlir::arith::AndIOp>(loc, i1Lhs, i1Rhs)};
+    case Fortran::evaluate::LogicalOperator::Or:
+      return hlfir::EntityWithAttributes{
+          builder.create<mlir::arith::OrIOp>(loc, i1Lhs, i1Rhs)};
+    case Fortran::evaluate::LogicalOperator::Eqv:
+      return hlfir::EntityWithAttributes{builder.create<mlir::arith::CmpIOp>(
+          loc, mlir::arith::CmpIPredicate::eq, i1Lhs, i1Rhs)};
+    case Fortran::evaluate::LogicalOperator::Neqv:
+      return hlfir::EntityWithAttributes{builder.create<mlir::arith::CmpIOp>(
+          loc, mlir::arith::CmpIPredicate::ne, i1Lhs, i1Rhs)};
+    case Fortran::evaluate::LogicalOperator::Not:
+      // lib/evaluate expression for .NOT. is Fortran::evaluate::Not<KIND>.
+      llvm_unreachable(".NOT. is not a binary operator");
+    }
+  }
+};
+
 /// Lower Expr to HLFIR.
 class HlfirBuilder {
 public:
