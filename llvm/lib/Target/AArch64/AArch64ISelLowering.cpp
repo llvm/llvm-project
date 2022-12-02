@@ -14143,10 +14143,6 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
 
   UseScalable = false;
 
-  // Ensure that the predicate for this elemnts num is available.
-  if (Subtarget->hasSVE() && !getSVEPredPatternFromNumElements(NumElements))
-    return false;
-
   // Ensure the number of vector elements is greater than 1.
   if (NumElements < 2)
     return false;
@@ -14155,11 +14151,10 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
   if (ElSize != 8 && ElSize != 16 && ElSize != 32 && ElSize != 64)
     return false;
 
-  if (Subtarget->forceStreamingCompatibleSVE() ||
-      (Subtarget->useSVEForFixedLengthVectors() &&
-       (VecSize % Subtarget->getMinSVEVectorSizeInBits() == 0 ||
-        (VecSize < Subtarget->getMinSVEVectorSizeInBits() &&
-         isPowerOf2_32(NumElements) && VecSize > 128)))) {
+  if (Subtarget->useSVEForFixedLengthVectors() &&
+      (VecSize % Subtarget->getMinSVEVectorSizeInBits() == 0 ||
+       (VecSize < Subtarget->getMinSVEVectorSizeInBits() &&
+        isPowerOf2_32(NumElements) && VecSize > 128))) {
     UseScalable = true;
     return true;
   }
