@@ -323,3 +323,30 @@ subroutine logical_neqv(x, y, z)
 end subroutine
 ! CHECK-LABEL: func.func @_QPlogical_neqv(
 ! CHECK:  %[[VAL_10:.*]] = arith.cmpi ne
+
+subroutine cmplx_ctor(z, x, y)
+  complex :: z
+  real :: x, y
+  z = cmplx(x, y)
+end subroutine
+! CHECK-LABEL: func.func @_QPcmplx_ctor(
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}}x"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}y"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<f32>
+! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<f32>
+! CHECK:  %[[VAL_8:.*]] = fir.undefined !fir.complex<4>
+! CHECK:  %[[VAL_9:.*]] = fir.insert_value %[[VAL_8]], %[[VAL_6]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:  %[[VAL_10:.*]] = fir.insert_value %[[VAL_9]], %[[VAL_7]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+
+subroutine cmplx_ctor_2(z, x)
+  complex(8) :: z
+  real(8) :: x
+  z = cmplx(x, 1._8, kind=8)
+end subroutine
+! CHECK-LABEL: func.func @_QPcmplx_ctor_2(
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}}x"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
+! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<f64>
+! CHECK:  %[[VAL_5:.*]] = arith.constant 1.000000e+00 : f64
+! CHECK:  %[[VAL_6:.*]] = fir.undefined !fir.complex<8>
+! CHECK:  %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_4]], [0 : index] : (!fir.complex<8>, f64) -> !fir.complex<8>
+! CHECK:  %[[VAL_8:.*]] = fir.insert_value %[[VAL_7]], %[[VAL_5]], [1 : index] : (!fir.complex<8>, f64) -> !fir.complex<8>
