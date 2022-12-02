@@ -2155,13 +2155,13 @@ define i64 @test_ctpop_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    lui a2, 349525
 ; RV32I-NEXT:    addi s2, a2, 1365
 ; RV32I-NEXT:    and a0, a0, s2
-; RV32I-NEXT:    sub a0, a1, a0
-; RV32I-NEXT:    lui a1, 209715
-; RV32I-NEXT:    addi s3, a1, 819
-; RV32I-NEXT:    and a1, a0, s3
-; RV32I-NEXT:    srli a0, a0, 2
-; RV32I-NEXT:    and a0, a0, s3
-; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    sub a1, a1, a0
+; RV32I-NEXT:    lui a0, 209715
+; RV32I-NEXT:    addi s3, a0, 819
+; RV32I-NEXT:    and a0, a1, s3
+; RV32I-NEXT:    srli a1, a1, 2
+; RV32I-NEXT:    and a1, a1, s3
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    srli a1, a0, 4
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    lui a1, 61681
@@ -2174,11 +2174,11 @@ define i64 @test_ctpop_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    srli s5, a0, 24
 ; RV32I-NEXT:    srli a0, s0, 1
 ; RV32I-NEXT:    and a0, a0, s2
-; RV32I-NEXT:    sub a0, s0, a0
-; RV32I-NEXT:    and a1, a0, s3
-; RV32I-NEXT:    srli a0, a0, 2
-; RV32I-NEXT:    and a0, a0, s3
-; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    sub s0, s0, a0
+; RV32I-NEXT:    and a0, s0, s3
+; RV32I-NEXT:    srli s0, s0, 2
+; RV32I-NEXT:    and a1, s0, s3
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    srli a1, a0, 4
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    and a0, a0, s4
