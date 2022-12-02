@@ -46,7 +46,7 @@ private:
   void initSize();
 
 public:
-  StringTableBuilder(Kind K, unsigned Alignment = 1);
+  StringTableBuilder(Kind K, Align Alignment = Align(1));
   ~StringTableBuilder();
 
   /// Add a string to the builder. Returns the position of S in the
