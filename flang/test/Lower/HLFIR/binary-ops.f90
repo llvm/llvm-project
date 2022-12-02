@@ -193,3 +193,17 @@ end subroutine
 ! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.complex<4>>
 ! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAcpowi(%[[VAL_6]], %[[VAL_7]]) fastmath<contract> : (!fir.complex<4>, i32) -> !fir.complex<4>
+
+subroutine extremum(c, n, l)
+  integer(8), intent(in) :: l
+  integer(8) :: n
+  character(l) :: c
+  ! evaluate::Extremum is created by semantics while analyzing LEN().
+  n = len(c, 8)
+end subroutine
+! CHECK-LABEL: func.func @_QPextremum(
+! CHECK:  hlfir.declare {{.*}}c
+! CHECK:  %[[VAL_11:.*]] = arith.constant 0 : i64
+! CHECK:  %[[VAL_12:.*]] = fir.load %{{.*}} : !fir.ref<i64>
+! CHECK:  %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_11]], %[[VAL_12]] : i64
+! CHECK:  arith.select %[[VAL_13]], %[[VAL_11]], %[[VAL_12]] : i64
