@@ -192,10 +192,11 @@ std::set<const FileEntry *> GetAffectingModuleMaps(const HeaderSearch &HS,
 
   const ModuleMap &MM = HS.getModuleMap();
 
-  auto ProcessModuleOnce = [&](const Module *Mod) {
-    if (ProcessedModules.insert(Mod).second)
-      if (auto ModuleMapFile = MM.getModuleMapFileForUniquing(Mod))
-        ModuleMaps.insert(*ModuleMapFile);
+  auto ProcessModuleOnce = [&](const Module *M) {
+    for (const Module *Mod = M; Mod; Mod = Mod->Parent)
+      if (ProcessedModules.insert(Mod).second)
+        if (auto ModuleMapFile = MM.getModuleMapFileForUniquing(Mod))
+          ModuleMaps.insert(*ModuleMapFile);
   };
 
   for (const Module *CurrentModule : ModulesToProcess) {

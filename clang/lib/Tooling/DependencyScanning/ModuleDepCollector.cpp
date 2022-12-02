@@ -582,7 +582,8 @@ bool ModuleDepCollector::isPrebuiltModule(const Module *M) {
 
 static StringRef makeAbsoluteAndPreferred(CompilerInstance &CI, StringRef Path,
                                           SmallVectorImpl<char> &Storage) {
-  if (llvm::sys::path::is_absolute(Path))
+  if (llvm::sys::path::is_absolute(Path) &&
+      !llvm::sys::path::is_style_windows(llvm::sys::path::Style::native))
     return Path;
   Storage.assign(Path.begin(), Path.end());
   CI.getFileManager().makeAbsolutePath(Storage);
