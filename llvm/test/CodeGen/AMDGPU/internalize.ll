@@ -12,32 +12,32 @@
 
 ; OPT: define internal fastcc void @func_used_noinline(
 ; OPT-NONE: define fastcc void @func_used_noinline(
-define fastcc void @func_used_noinline(i32 addrspace(1)* %out, i32 %tid) #1 {
+define fastcc void @func_used_noinline(ptr addrspace(1) %out, i32 %tid) #1 {
 entry:
-  store volatile i32 %tid, i32 addrspace(1)* %out
+  store volatile i32 %tid, ptr addrspace(1) %out
   ret void
 }
 
 ; OPTNONE: define fastcc void @func_used_alwaysinline(
 ; OPT-NOT: @func_used_alwaysinline
-define fastcc void @func_used_alwaysinline(i32 addrspace(1)* %out, i32 %tid) #2 {
+define fastcc void @func_used_alwaysinline(ptr addrspace(1) %out, i32 %tid) #2 {
 entry:
-  store volatile i32 %tid, i32 addrspace(1)* %out
+  store volatile i32 %tid, ptr addrspace(1) %out
   ret void
 }
 
 ; OPTNONE: define void @func_unused(
 ; OPT-NOT: @func_unused
-define void @func_unused(i32 addrspace(1)* %out, i32 %tid) #1 {
+define void @func_unused(ptr addrspace(1) %out, i32 %tid) #1 {
 entry:
-  store volatile i32 %tid, i32 addrspace(1)* %out
+  store volatile i32 %tid, ptr addrspace(1) %out
   ret void
 }
 
 ; ALL: define amdgpu_kernel void @kernel_unused(
-define amdgpu_kernel void @kernel_unused(i32 addrspace(1)* %out) #1 {
+define amdgpu_kernel void @kernel_unused(ptr addrspace(1) %out) #1 {
 entry:
-  store volatile i32 1, i32 addrspace(1)* %out
+  store volatile i32 1, ptr addrspace(1) %out
   ret void
 }
 
@@ -49,8 +49,8 @@ entry:
 define amdgpu_kernel void @main_kernel() {
 entry:
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
-  tail call fastcc void @func_used_noinline(i32 addrspace(1)* @gvar_used, i32 %tid)
-  tail call fastcc void @func_used_alwaysinline(i32 addrspace(1)* @gvar_used, i32 %tid)
+  tail call fastcc void @func_used_noinline(ptr addrspace(1) @gvar_used, i32 %tid)
+  tail call fastcc void @func_used_alwaysinline(ptr addrspace(1) @gvar_used, i32 %tid)
   ret void
 }
 

@@ -33,20 +33,20 @@ declare float @llvm.fmuladd.f32(float, float, float) #0
 
 ; SI-DENORM: buffer_store_dword [[RESULT]]
 ; SI-STD: buffer_store_dword [[C]]
-define amdgpu_kernel void @combine_to_mad_f32_0(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_mad_f32_0(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr float, float addrspace(1)* %gep.0, i32 2
-  %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr float, ptr addrspace(1) %gep.0, i32 2
+  %gep.out = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
-  %a = load volatile float, float addrspace(1)* %gep.0
-  %b = load volatile float, float addrspace(1)* %gep.1
-  %c = load volatile float, float addrspace(1)* %gep.2
+  %a = load volatile float, ptr addrspace(1) %gep.0
+  %b = load volatile float, ptr addrspace(1) %gep.1
+  %c = load volatile float, ptr addrspace(1) %gep.2
 
   %mul = fmul float %a, %b
   %fma = fadd float %mul, %c
-  store float %fma, float addrspace(1)* %gep.out
+  store float %fma, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -72,26 +72,26 @@ define amdgpu_kernel void @combine_to_mad_f32_0(float addrspace(1)* noalias %out
 ; SI-STD-DAG: buffer_store_dword [[C]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-STD-DAG: buffer_store_dword [[D]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
 ; SI: s_endpgm
-define amdgpu_kernel void @combine_to_mad_f32_0_2use(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_mad_f32_0_2use(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr float, float addrspace(1)* %gep.0, i32 2
-  %gep.3 = getelementptr float, float addrspace(1)* %gep.0, i32 3
-  %gep.out.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %gep.out.1 = getelementptr float, float addrspace(1)* %gep.out.0, i32 1
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr float, ptr addrspace(1) %gep.0, i32 2
+  %gep.3 = getelementptr float, ptr addrspace(1) %gep.0, i32 3
+  %gep.out.0 = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %gep.out.1 = getelementptr float, ptr addrspace(1) %gep.out.0, i32 1
 
-  %a = load volatile float, float addrspace(1)* %gep.0
-  %b = load volatile float, float addrspace(1)* %gep.1
-  %c = load volatile float, float addrspace(1)* %gep.2
-  %d = load volatile float, float addrspace(1)* %gep.3
+  %a = load volatile float, ptr addrspace(1) %gep.0
+  %b = load volatile float, ptr addrspace(1) %gep.1
+  %c = load volatile float, ptr addrspace(1) %gep.2
+  %d = load volatile float, ptr addrspace(1) %gep.3
 
   %mul = fmul float %a, %b
   %fma0 = fadd float %mul, %c
   %fma1 = fadd float %mul, %d
 
-  store volatile float %fma0, float addrspace(1)* %gep.out.0
-  store volatile float %fma1, float addrspace(1)* %gep.out.1
+  store volatile float %fma0, ptr addrspace(1) %gep.out.0
+  store volatile float %fma1, ptr addrspace(1) %gep.out.1
   ret void
 }
 
@@ -109,20 +109,20 @@ define amdgpu_kernel void @combine_to_mad_f32_0_2use(float addrspace(1)* noalias
 
 ; SI-DENORM: buffer_store_dword [[RESULT]]
 ; SI-STD: buffer_store_dword [[C]]
-define amdgpu_kernel void @combine_to_mad_f32_1(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_mad_f32_1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr float, float addrspace(1)* %gep.0, i32 2
-  %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr float, ptr addrspace(1) %gep.0, i32 2
+  %gep.out = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
-  %a = load volatile float, float addrspace(1)* %gep.0
-  %b = load volatile float, float addrspace(1)* %gep.1
-  %c = load volatile float, float addrspace(1)* %gep.2
+  %a = load volatile float, ptr addrspace(1) %gep.0
+  %b = load volatile float, ptr addrspace(1) %gep.1
+  %c = load volatile float, ptr addrspace(1) %gep.2
 
   %mul = fmul float %a, %b
   %fma = fadd float %c, %mul
-  store float %fma, float addrspace(1)* %gep.out
+  store float %fma, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -139,20 +139,20 @@ define amdgpu_kernel void @combine_to_mad_f32_1(float addrspace(1)* noalias %out
 ; SI-DENORM-SLOWFMAF: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[TMP]], [[C]]
 
 ; SI: buffer_store_dword [[RESULT]]
-define amdgpu_kernel void @combine_to_mad_fsub_0_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_mad_fsub_0_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr float, float addrspace(1)* %gep.0, i32 2
-  %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr float, ptr addrspace(1) %gep.0, i32 2
+  %gep.out = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
-  %a = load volatile float, float addrspace(1)* %gep.0
-  %b = load volatile float, float addrspace(1)* %gep.1
-  %c = load volatile float, float addrspace(1)* %gep.2
+  %a = load volatile float, ptr addrspace(1) %gep.0
+  %b = load volatile float, ptr addrspace(1) %gep.1
+  %c = load volatile float, ptr addrspace(1) %gep.2
 
   %mul = fmul float %a, %b
   %fma = fsub float %mul, %c
-  store float %fma, float addrspace(1)* %gep.out
+  store float %fma, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -176,25 +176,25 @@ define amdgpu_kernel void @combine_to_mad_fsub_0_f32(float addrspace(1)* noalias
 ; SI-DAG: buffer_store_dword [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dword [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
 ; SI: s_endpgm
-define amdgpu_kernel void @combine_to_mad_fsub_0_f32_2use(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_mad_fsub_0_f32_2use(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr float, float addrspace(1)* %gep.0, i32 2
-  %gep.3 = getelementptr float, float addrspace(1)* %gep.0, i32 3
-  %gep.out.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %gep.out.1 = getelementptr float, float addrspace(1)* %gep.out.0, i32 1
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr float, ptr addrspace(1) %gep.0, i32 2
+  %gep.3 = getelementptr float, ptr addrspace(1) %gep.0, i32 3
+  %gep.out.0 = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %gep.out.1 = getelementptr float, ptr addrspace(1) %gep.out.0, i32 1
 
-  %a = load volatile float, float addrspace(1)* %gep.0
-  %b = load volatile float, float addrspace(1)* %gep.1
-  %c = load volatile float, float addrspace(1)* %gep.2
-  %d = load volatile float, float addrspace(1)* %gep.3
+  %a = load volatile float, ptr addrspace(1) %gep.0
+  %b = load volatile float, ptr addrspace(1) %gep.1
+  %c = load volatile float, ptr addrspace(1) %gep.2
+  %d = load volatile float, ptr addrspace(1) %gep.3
 
   %mul = fmul float %a, %b
   %fma0 = fsub float %mul, %c
   %fma1 = fsub float %mul, %d
-  store volatile float %fma0, float addrspace(1)* %gep.out.0
-  store volatile float %fma1, float addrspace(1)* %gep.out.1
+  store volatile float %fma0, ptr addrspace(1) %gep.out.0
+  store volatile float %fma1, ptr addrspace(1) %gep.out.1
   ret void
 }
 
@@ -211,20 +211,20 @@ define amdgpu_kernel void @combine_to_mad_fsub_0_f32_2use(float addrspace(1)* no
 ; SI-DENORM-SLOWFMAF: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[C]], [[TMP]]
 
 ; SI: buffer_store_dword [[RESULT]]
-define amdgpu_kernel void @combine_to_mad_fsub_1_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_mad_fsub_1_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr float, float addrspace(1)* %gep.0, i32 2
-  %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr float, ptr addrspace(1) %gep.0, i32 2
+  %gep.out = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
-  %a = load volatile float, float addrspace(1)* %gep.0
-  %b = load volatile float, float addrspace(1)* %gep.1
-  %c = load volatile float, float addrspace(1)* %gep.2
+  %a = load volatile float, ptr addrspace(1) %gep.0
+  %b = load volatile float, ptr addrspace(1) %gep.1
+  %c = load volatile float, ptr addrspace(1) %gep.2
 
   %mul = fmul float %a, %b
   %fma = fsub float %c, %mul
-  store float %fma, float addrspace(1)* %gep.out
+  store float %fma, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -248,25 +248,25 @@ define amdgpu_kernel void @combine_to_mad_fsub_1_f32(float addrspace(1)* noalias
 ; SI-DAG: buffer_store_dword [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dword [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
 ; SI: s_endpgm
-define amdgpu_kernel void @combine_to_mad_fsub_1_f32_2use(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_mad_fsub_1_f32_2use(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr float, float addrspace(1)* %gep.0, i32 2
-  %gep.3 = getelementptr float, float addrspace(1)* %gep.0, i32 3
-  %gep.out.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %gep.out.1 = getelementptr float, float addrspace(1)* %gep.out.0, i32 1
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr float, ptr addrspace(1) %gep.0, i32 2
+  %gep.3 = getelementptr float, ptr addrspace(1) %gep.0, i32 3
+  %gep.out.0 = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %gep.out.1 = getelementptr float, ptr addrspace(1) %gep.out.0, i32 1
 
-  %a = load volatile float, float addrspace(1)* %gep.0
-  %b = load volatile float, float addrspace(1)* %gep.1
-  %c = load volatile float, float addrspace(1)* %gep.2
-  %d = load volatile float, float addrspace(1)* %gep.3
+  %a = load volatile float, ptr addrspace(1) %gep.0
+  %b = load volatile float, ptr addrspace(1) %gep.1
+  %c = load volatile float, ptr addrspace(1) %gep.2
+  %d = load volatile float, ptr addrspace(1) %gep.3
 
   %mul = fmul float %a, %b
   %fma0 = fsub float %c, %mul
   %fma1 = fsub float %d, %mul
-  store volatile float %fma0, float addrspace(1)* %gep.out.0
-  store volatile float %fma1, float addrspace(1)* %gep.out.1
+  store volatile float %fma0, ptr addrspace(1) %gep.out.0
+  store volatile float %fma1, ptr addrspace(1) %gep.out.1
   ret void
 }
 
@@ -284,22 +284,22 @@ define amdgpu_kernel void @combine_to_mad_fsub_1_f32_2use(float addrspace(1)* no
 ; SI-DENORM-SLOWFMAF: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[TMP]], [[C]]
 
 ; SI: buffer_store_dword [[RESULT]]
-define amdgpu_kernel void @combine_to_mad_fsub_2_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_mad_fsub_2_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr float, float addrspace(1)* %gep.0, i32 2
-  %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr float, ptr addrspace(1) %gep.0, i32 2
+  %gep.out = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
-  %a = load volatile float, float addrspace(1)* %gep.0
-  %b = load volatile float, float addrspace(1)* %gep.1
-  %c = load volatile float, float addrspace(1)* %gep.2
+  %a = load volatile float, ptr addrspace(1) %gep.0
+  %b = load volatile float, ptr addrspace(1) %gep.1
+  %c = load volatile float, ptr addrspace(1) %gep.2
 
   %mul = fmul float %a, %b
   %mul.neg = fneg float %mul
   %fma = fsub float %mul.neg, %c
 
-  store float %fma, float addrspace(1)* %gep.out
+  store float %fma, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -323,27 +323,27 @@ define amdgpu_kernel void @combine_to_mad_fsub_2_f32(float addrspace(1)* noalias
 ; SI-DAG: buffer_store_dword [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dword [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
 ; SI: s_endpgm
-define amdgpu_kernel void @combine_to_mad_fsub_2_f32_2uses_neg(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_mad_fsub_2_f32_2uses_neg(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr float, float addrspace(1)* %gep.0, i32 2
-  %gep.3 = getelementptr float, float addrspace(1)* %gep.0, i32 3
-  %gep.out.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %gep.out.1 = getelementptr float, float addrspace(1)* %gep.out.0, i32 1
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr float, ptr addrspace(1) %gep.0, i32 2
+  %gep.3 = getelementptr float, ptr addrspace(1) %gep.0, i32 3
+  %gep.out.0 = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %gep.out.1 = getelementptr float, ptr addrspace(1) %gep.out.0, i32 1
 
-  %a = load volatile float, float addrspace(1)* %gep.0
-  %b = load volatile float, float addrspace(1)* %gep.1
-  %c = load volatile float, float addrspace(1)* %gep.2
-  %d = load volatile float, float addrspace(1)* %gep.3
+  %a = load volatile float, ptr addrspace(1) %gep.0
+  %b = load volatile float, ptr addrspace(1) %gep.1
+  %c = load volatile float, ptr addrspace(1) %gep.2
+  %d = load volatile float, ptr addrspace(1) %gep.3
 
   %mul = fmul float %a, %b
   %mul.neg = fneg float %mul
   %fma0 = fsub float %mul.neg, %c
   %fma1 = fsub float %mul.neg, %d
 
-  store volatile float %fma0, float addrspace(1)* %gep.out.0
-  store volatile float %fma1, float addrspace(1)* %gep.out.1
+  store volatile float %fma0, ptr addrspace(1) %gep.out.0
+  store volatile float %fma1, ptr addrspace(1) %gep.out.1
   ret void
 }
 
@@ -367,27 +367,27 @@ define amdgpu_kernel void @combine_to_mad_fsub_2_f32_2uses_neg(float addrspace(1
 ; SI-DAG: buffer_store_dword [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dword [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
 ; SI: s_endpgm
-define amdgpu_kernel void @combine_to_mad_fsub_2_f32_2uses_mul(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @combine_to_mad_fsub_2_f32_2uses_mul(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr float, float addrspace(1)* %gep.0, i32 2
-  %gep.3 = getelementptr float, float addrspace(1)* %gep.0, i32 3
-  %gep.out.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %gep.out.1 = getelementptr float, float addrspace(1)* %gep.out.0, i32 1
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr float, ptr addrspace(1) %gep.0, i32 2
+  %gep.3 = getelementptr float, ptr addrspace(1) %gep.0, i32 3
+  %gep.out.0 = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %gep.out.1 = getelementptr float, ptr addrspace(1) %gep.out.0, i32 1
 
-  %a = load volatile float, float addrspace(1)* %gep.0
-  %b = load volatile float, float addrspace(1)* %gep.1
-  %c = load volatile float, float addrspace(1)* %gep.2
-  %d = load volatile float, float addrspace(1)* %gep.3
+  %a = load volatile float, ptr addrspace(1) %gep.0
+  %b = load volatile float, ptr addrspace(1) %gep.1
+  %c = load volatile float, ptr addrspace(1) %gep.2
+  %d = load volatile float, ptr addrspace(1) %gep.3
 
   %mul = fmul float %a, %b
   %mul.neg = fneg float %mul
   %fma0 = fsub float %mul.neg, %c
   %fma1 = fsub float %mul, %d
 
-  store volatile float %fma0, float addrspace(1)* %gep.out.0
-  store volatile float %fma1, float addrspace(1)* %gep.out.1
+  store volatile float %fma0, ptr addrspace(1) %gep.out.0
+  store volatile float %fma1, ptr addrspace(1) %gep.out.1
   ret void
 }
 
@@ -412,26 +412,26 @@ define amdgpu_kernel void @combine_to_mad_fsub_2_f32_2uses_mul(float addrspace(1
 ; SI-DENORM: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[TMP1]], [[C]]
 
 ; SI: buffer_store_dword [[RESULT]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-define amdgpu_kernel void @aggressive_combine_to_mad_fsub_0_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @aggressive_combine_to_mad_fsub_0_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr float, float addrspace(1)* %gep.0, i32 2
-  %gep.3 = getelementptr float, float addrspace(1)* %gep.0, i32 3
-  %gep.4 = getelementptr float, float addrspace(1)* %gep.0, i32 4
-  %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr float, ptr addrspace(1) %gep.0, i32 2
+  %gep.3 = getelementptr float, ptr addrspace(1) %gep.0, i32 3
+  %gep.4 = getelementptr float, ptr addrspace(1) %gep.0, i32 4
+  %gep.out = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
-  %x = load volatile float, float addrspace(1)* %gep.0
-  %y = load volatile float, float addrspace(1)* %gep.1
-  %z = load volatile float, float addrspace(1)* %gep.2
-  %u = load volatile float, float addrspace(1)* %gep.3
-  %v = load volatile float, float addrspace(1)* %gep.4
+  %x = load volatile float, ptr addrspace(1) %gep.0
+  %y = load volatile float, ptr addrspace(1) %gep.1
+  %z = load volatile float, ptr addrspace(1) %gep.2
+  %u = load volatile float, ptr addrspace(1) %gep.3
+  %v = load volatile float, ptr addrspace(1) %gep.4
 
   %tmp0 = fmul float %u, %v
   %tmp1 = call float @llvm.fma.f32(float %x, float %y, float %tmp0) #0
   %tmp2 = fsub float %tmp1, %z
 
-  store float %tmp2, float addrspace(1)* %gep.out
+  store float %tmp2, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -455,26 +455,26 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_0_f32(float addrspace(
 
 ; SI: buffer_store_dword [[RESULT]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI: s_endpgm
-define amdgpu_kernel void @aggressive_combine_to_mad_fsub_1_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @aggressive_combine_to_mad_fsub_1_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr float, float addrspace(1)* %gep.0, i32 2
-  %gep.3 = getelementptr float, float addrspace(1)* %gep.0, i32 3
-  %gep.4 = getelementptr float, float addrspace(1)* %gep.0, i32 4
-  %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr float, ptr addrspace(1) %gep.0, i32 2
+  %gep.3 = getelementptr float, ptr addrspace(1) %gep.0, i32 3
+  %gep.4 = getelementptr float, ptr addrspace(1) %gep.0, i32 4
+  %gep.out = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
-  %x = load volatile float, float addrspace(1)* %gep.0
-  %y = load volatile float, float addrspace(1)* %gep.1
-  %z = load volatile float, float addrspace(1)* %gep.2
-  %u = load volatile float, float addrspace(1)* %gep.3
-  %v = load volatile float, float addrspace(1)* %gep.4
+  %x = load volatile float, ptr addrspace(1) %gep.0
+  %y = load volatile float, ptr addrspace(1) %gep.1
+  %z = load volatile float, ptr addrspace(1) %gep.2
+  %u = load volatile float, ptr addrspace(1) %gep.3
+  %v = load volatile float, ptr addrspace(1) %gep.4
 
   %tmp0 = fmul float %u, %v
   %tmp1 = call float @llvm.fma.f32(float %y, float %z, float %tmp0) #0
   %tmp2 = fsub float %x, %tmp1
 
-  store float %tmp2, float addrspace(1)* %gep.out
+  store float %tmp2, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -505,26 +505,26 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_1_f32(float addrspace(
 
 ; SI: buffer_store_dword [[RESULT]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI: s_endpgm
-define amdgpu_kernel void @aggressive_combine_to_mad_fsub_2_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @aggressive_combine_to_mad_fsub_2_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr float, float addrspace(1)* %gep.0, i32 2
-  %gep.3 = getelementptr float, float addrspace(1)* %gep.0, i32 3
-  %gep.4 = getelementptr float, float addrspace(1)* %gep.0, i32 4
-  %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr float, ptr addrspace(1) %gep.0, i32 2
+  %gep.3 = getelementptr float, ptr addrspace(1) %gep.0, i32 3
+  %gep.4 = getelementptr float, ptr addrspace(1) %gep.0, i32 4
+  %gep.out = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
-  %x = load volatile float, float addrspace(1)* %gep.0
-  %y = load volatile float, float addrspace(1)* %gep.1
-  %z = load volatile float, float addrspace(1)* %gep.2
-  %u = load volatile float, float addrspace(1)* %gep.3
-  %v = load volatile float, float addrspace(1)* %gep.4
+  %x = load volatile float, ptr addrspace(1) %gep.0
+  %y = load volatile float, ptr addrspace(1) %gep.1
+  %z = load volatile float, ptr addrspace(1) %gep.2
+  %u = load volatile float, ptr addrspace(1) %gep.3
+  %v = load volatile float, ptr addrspace(1) %gep.4
 
   %tmp0 = fmul float %u, %v
   %tmp1 = call float @llvm.fmuladd.f32(float %x, float %y, float %tmp0) #0
   %tmp2 = fsub float %tmp1, %z
 
-  store float %tmp2, float addrspace(1)* %gep.out
+  store float %tmp2, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -556,27 +556,27 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_2_f32(float addrspace(
 
 ; SI: buffer_store_dword [[RESULT]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI: s_endpgm
-define amdgpu_kernel void @aggressive_combine_to_mad_fsub_3_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
+define amdgpu_kernel void @aggressive_combine_to_mad_fsub_3_f32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
-  %gep.2 = getelementptr float, float addrspace(1)* %gep.0, i32 2
-  %gep.3 = getelementptr float, float addrspace(1)* %gep.0, i32 3
-  %gep.4 = getelementptr float, float addrspace(1)* %gep.0, i32 4
-  %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
+  %gep.2 = getelementptr float, ptr addrspace(1) %gep.0, i32 2
+  %gep.3 = getelementptr float, ptr addrspace(1) %gep.0, i32 3
+  %gep.4 = getelementptr float, ptr addrspace(1) %gep.0, i32 4
+  %gep.out = getelementptr float, ptr addrspace(1) %out, i32 %tid
 
-  %x = load volatile float, float addrspace(1)* %gep.0
-  %y = load volatile float, float addrspace(1)* %gep.1
-  %z = load volatile float, float addrspace(1)* %gep.2
-  %u = load volatile float, float addrspace(1)* %gep.3
-  %v = load volatile float, float addrspace(1)* %gep.4
+  %x = load volatile float, ptr addrspace(1) %gep.0
+  %y = load volatile float, ptr addrspace(1) %gep.1
+  %z = load volatile float, ptr addrspace(1) %gep.2
+  %u = load volatile float, ptr addrspace(1) %gep.3
+  %v = load volatile float, ptr addrspace(1) %gep.4
 
   ; nsz flag is needed since this combine may change sign of zero
   %tmp0 = fmul nsz float %u, %v
   %tmp1 = call nsz float @llvm.fmuladd.f32(float %y, float %z, float %tmp0) #0
   %tmp2 = fsub nsz float %x, %tmp1
 
-  store float %tmp2, float addrspace(1)* %gep.out
+  store float %tmp2, ptr addrspace(1) %gep.out
   ret void
 }
 
