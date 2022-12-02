@@ -190,30 +190,20 @@ std::set<const FileEntry *> GetAffectingModuleMaps(const HeaderSearch &HS,
     }
   }
 
-  while (!ModulesToProcess.empty()) {
-    auto *CurrentModule = ModulesToProcess.pop_back_val();
-    ProcessedModules.insert(CurrentModule);
+  const ModuleMap &MM = HS.getModuleMap();
 
-    Optional<FileEntryRef> ModuleMapFile =
-        HS.getModuleMap().getModuleMapFileForUniquing(CurrentModule);
-    if (!ModuleMapFile) {
-      continue;
-    }
+  auto ProcessModuleOnce = [&](const Module *Mod) {
+    if (ProcessedModules.insert(Mod).second)
+      if (auto ModuleMapFile = MM.getModuleMapFileForUniquing(Mod))
+        ModuleMaps.insert(*ModuleMapFile);
+  };
 
-    ModuleMaps.insert(*ModuleMapFile);
-
-    for (auto *ImportedModule : (CurrentModule)->Imports) {
-      if (!ImportedModule ||
-          ProcessedModules.find(ImportedModule) != ProcessedModules.end()) {
-        continue;
-      }
-      ModulesToProcess.push_back(ImportedModule);
-    }
-
+  for (const Module *CurrentModule : ModulesToProcess) {
+    ProcessModuleOnce(CurrentModule);
+    for (const Module *ImportedModule : CurrentModule->Imports)
+      ProcessModuleOnce(ImportedModule);
     for (const Module *UndeclaredModule : CurrentModule->UndeclaredUses)
-      if (UndeclaredModule &&
-          ProcessedModules.find(UndeclaredModule) == ProcessedModules.end())
-        ModulesToProcess.push_back(UndeclaredModule);
+      ProcessModuleOnce(UndeclaredModule);
   }
 
   return ModuleMaps;
