@@ -1796,6 +1796,32 @@ bool CodeGenModule::MayDropFunctionReturn(const ASTContext &Context,
   return ReturnType.isTriviallyCopyableType(Context);
 }
 
+static bool HasStrictReturn(const CodeGenModule &Module, QualType RetTy,
+                            const Decl *TargetDecl) {
+  // C++ explicitly makes returning undefined values UB. C's rule only applies
+  // to used values, so we never mark them noundef for now.
+  if (!Module.getLangOpts().CPlusPlus)
+    return false;
+  if (TargetDecl) {
+    if (const FunctionDecl *FDecl = dyn_cast<FunctionDecl>(TargetDecl)) {
+      if (FDecl->isExternC())
+        return false;
+    } else if (const VarDecl *VDecl = dyn_cast<VarDecl>(TargetDecl)) {
+      // Function pointer.
+      if (VDecl->isExternC())
+        return false;
+    }
+  }
+
+  // We don't want to be too aggressive with the return checking, unless
+  // it's explicit in the code opts or we're using an appropriate sanitizer.
+  // Try to respect what the programmer intended.
+  return Module.getCodeGenOpts().StrictReturn ||
+         !Module.MayDropFunctionReturn(Module.getContext(), RetTy) ||
+         Module.getLangOpts().Sanitize.has(SanitizerKind::Memory) ||
+         Module.getLangOpts().Sanitize.has(SanitizerKind::Return);
+}
+
 void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
                                                  bool HasOptnone,
                                                  bool AttrOnCallSite,
@@ -2325,27 +2351,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   const ABIArgInfo &RetAI = FI.getReturnInfo();
   const llvm::DataLayout &DL = getDataLayout();
 
-  // C++ explicitly makes returning undefined values UB. C's rule only applies
-  // to used values, so we never mark them noundef for now.
-  bool HasStrictReturn = getLangOpts().CPlusPlus;
-  if (TargetDecl && HasStrictReturn) {
-    if (const FunctionDecl *FDecl = dyn_cast<FunctionDecl>(TargetDecl))
-      HasStrictReturn &= !FDecl->isExternC();
-    else if (const VarDecl *VDecl = dyn_cast<VarDecl>(TargetDecl))
-      // Function pointer
-      HasStrictReturn &= !VDecl->isExternC();
-  }
-
-  // We don't want to be too aggressive with the return checking, unless
-  // it's explicit in the code opts or we're using an appropriate sanitizer.
-  // Try to respect what the programmer intended.
-  HasStrictReturn &= getCodeGenOpts().StrictReturn ||
-                     !MayDropFunctionReturn(getContext(), RetTy) ||
-                     getLangOpts().Sanitize.has(SanitizerKind::Memory) ||
-                     getLangOpts().Sanitize.has(SanitizerKind::Return);
-
   // Determine if the return type could be partially undef
-  if (CodeGenOpts.EnableNoundefAttrs && HasStrictReturn) {
+  if (CodeGenOpts.EnableNoundefAttrs &&
+      HasStrictReturn(*this, RetTy, TargetDecl)) {
     if (!RetTy->isVoidType() && RetAI.getKind() != ABIArgInfo::Indirect &&
         DetermineNoUndef(RetTy, getTypes(), DL, RetAI))
       RetAttrs.addAttribute(llvm::Attribute::NoUndef);
