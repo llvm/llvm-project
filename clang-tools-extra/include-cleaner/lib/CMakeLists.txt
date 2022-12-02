@@ -16,6 +16,7 @@ clang_target_link_libraries(clangIncludeCleaner
   clangBasic
   clangFormat
   clangLex
+  clangToolingCore
   clangToolingInclusions
   clangToolingInclusionsStdlib
   )

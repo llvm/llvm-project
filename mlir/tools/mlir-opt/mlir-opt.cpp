@@ -113,6 +113,7 @@ void registerTestRecursiveTypesPass();
 void registerTestSCFUtilsPass();
 void registerTestShapeMappingPass();
 void registerTestSliceAnalysisPass();
+void registerTestTensorCopyInsertionPass();
 void registerTestTensorTransforms();
 void registerTestTilingInterface();
 void registerTestTopologicalSortAnalysisPass();
@@ -216,6 +217,7 @@ void registerTestPasses() {
   mlir::test::registerTestSCFUtilsPass();
   mlir::test::registerTestShapeMappingPass();
   mlir::test::registerTestSliceAnalysisPass();
+  mlir::test::registerTestTensorCopyInsertionPass();
   mlir::test::registerTestTensorTransforms();
   mlir::test::registerTestTilingInterface();
   mlir::test::registerTestTopologicalSortAnalysisPass();

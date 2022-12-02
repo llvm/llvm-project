@@ -107,8 +107,7 @@ define void @dse_strncpy_chk_test3(ptr noalias %out1, ptr noalias %out2, ptr noa
 
 define void @dse_strncpy_memcpy_chk_test1(ptr noalias %out, ptr noalias %in, i64 %n) {
 ; CHECK-LABEL: @dse_strncpy_memcpy_chk_test1(
-; CHECK-NEXT:    store i32 0, ptr [[OUT:%.*]], align 4
-; CHECK-NEXT:    [[CALL_1:%.*]] = tail call ptr @__memcpy_chk(ptr [[OUT]], ptr [[IN:%.*]], i64 100, i64 [[N:%.*]])
+; CHECK-NEXT:    [[CALL_1:%.*]] = tail call ptr @__memcpy_chk(ptr [[OUT:%.*]], ptr [[IN:%.*]], i64 100, i64 [[N:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, ptr %out
