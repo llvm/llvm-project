@@ -290,6 +290,18 @@ void doWhileLoop(Test *a) {
   } while(0);
 }
 
+struct S {
+  int a;
+  id b;
+};
+
+@interface C
+@property S p;
+@end
+
+void test_list_init(C *c) {
+  c.p = {0, c.p.b};
+}
 
 @interface Test (Methods)
 @end
