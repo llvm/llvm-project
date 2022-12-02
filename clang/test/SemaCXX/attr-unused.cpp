@@ -10,7 +10,7 @@ void f() {
   ns_not_unused::Int_not_unused i1; // expected-warning {{unused variable}}
   ns_unused::Int_unused i0; // expected-warning {{'Int_unused' was marked unused but was used}}
 
-  union __attribute__((unused)) { // expected-warning {{'' was marked unused but was used}}
+  union __attribute__((unused)) { // expected-warning {{was marked unused but was used}}
     int i;
   };
   (void) i;
