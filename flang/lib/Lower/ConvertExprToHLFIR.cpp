@@ -506,6 +506,91 @@ struct BinaryOp<Fortran::evaluate::SetLength<KIND>> {
   }
 };
 
+//===--------------------------------------------------------------------===//
+// Unary Operation implementation
+//===--------------------------------------------------------------------===//
+
+template <typename T>
+struct UnaryOp {};
+
+template <int KIND>
+struct UnaryOp<Fortran::evaluate::Not<KIND>> {
+  using Op = Fortran::evaluate::Not<KIND>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs) {
+    mlir::Value one = builder.createBool(loc, true);
+    mlir::Value val = builder.createConvert(loc, builder.getI1Type(), lhs);
+    return hlfir::EntityWithAttributes{
+        builder.create<mlir::arith::XOrIOp>(loc, val, one)};
+  }
+};
+
+template <int KIND>
+struct UnaryOp<Fortran::evaluate::Negate<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, KIND>>> {
+  using Op = Fortran::evaluate::Negate<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs) {
+    // Like LLVM, integer negation is the binary op "0 - value"
+    mlir::Type type = Fortran::lower::getFIRType(
+        builder.getContext(), Fortran::common::TypeCategory::Integer, KIND,
+        /*params=*/llvm::None);
+    mlir::Value zero = builder.createIntegerConstant(loc, type, 0);
+    return hlfir::EntityWithAttributes{
+        builder.create<mlir::arith::SubIOp>(loc, zero, lhs)};
+  }
+};
+
+template <int KIND>
+struct UnaryOp<Fortran::evaluate::Negate<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Real, KIND>>> {
+  using Op = Fortran::evaluate::Negate<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Real, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs) {
+    return hlfir::EntityWithAttributes{
+        builder.create<mlir::arith::NegFOp>(loc, lhs)};
+  }
+};
+
+template <int KIND>
+struct UnaryOp<Fortran::evaluate::Negate<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex, KIND>>> {
+  using Op = Fortran::evaluate::Negate<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs) {
+    return hlfir::EntityWithAttributes{builder.create<fir::NegcOp>(loc, lhs)};
+  }
+};
+
+template <int KIND>
+struct UnaryOp<Fortran::evaluate::ComplexComponent<KIND>> {
+  using Op = Fortran::evaluate::ComplexComponent<KIND>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs) {
+    mlir::Value res = fir::factory::Complex{builder, loc}.extractComplexPart(
+        lhs, op.isImaginaryPart);
+    return hlfir::EntityWithAttributes{res};
+  }
+};
+
+template <typename T>
+struct UnaryOp<Fortran::evaluate::Parentheses<T>> {
+  using Op = Fortran::evaluate::Parentheses<T>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs) {
+    TODO(loc, "Parentheses lowering to HLFIR");
+  }
+};
+
 /// Lower Expr to HLFIR.
 class HlfirBuilder {
 public:
@@ -595,7 +680,12 @@ private:
   template <typename D, typename R, typename O>
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Operation<D, R, O> &op) {
-    TODO(getLoc(), "lowering unary op to HLFIR");
+    auto &builder = getBuilder();
+    mlir::Location loc = getLoc();
+    if (op.Rank() != 0)
+      TODO(loc, "elemental operations in HLFIR");
+    auto left = hlfir::loadTrivialScalar(loc, builder, gen(op.left()));
+    return UnaryOp<D>::gen(loc, builder, op.derived(), left);
   }
 
   template <typename D, typename R, typename LO, typename RO>
