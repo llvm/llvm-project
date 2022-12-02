@@ -228,12 +228,12 @@ return:
   ret i32 %retval.0
 }
 
-%0 = type { i32, i32* }
-%1 = type { i32*, i32, i32 }
+%0 = type { i32, ptr }
+%1 = type { ptr, i32, i32 }
 
 @global = external hidden constant [55 x %0], align 8
 
-define void @jt_multiple_jump_tables(%1* %arg, i32 %arg1, i32* %arg2) {
+define void @jt_multiple_jump_tables(ptr %arg, i32 %arg1, ptr %arg2) {
   ; CHECK-LABEL: name: jt_multiple_jump_tables
   ; CHECK: bb.1.bb:
   ; CHECK-NEXT:   liveins: $w1, $x0, $x2
@@ -816,17 +816,16 @@ define void @jt_multiple_jump_tables(%1* %arg, i32 %arg1, i32* %arg2) {
   ; CHECK-NEXT:   G_BR %bb.59
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.58.bb64:
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(p0) = COPY [[FRAME_INDEX]](p0)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $w0 = COPY [[COPY1]](s32)
-  ; CHECK-NEXT:   $x1 = COPY [[COPY5]](p0)
+  ; CHECK-NEXT:   $x1 = COPY [[FRAME_INDEX]](p0)
   ; CHECK-NEXT:   BL @baz, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $x1
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
-  ; CHECK-NEXT:   $x1 = COPY [[COPY5]](p0)
+  ; CHECK-NEXT:   $x1 = COPY [[FRAME_INDEX]](p0)
   ; CHECK-NEXT:   BL @wibble, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   G_BR %bb.59
   ; CHECK-NEXT: {{  $}}
@@ -1061,33 +1060,31 @@ bb56:                                             ; preds = %bb
 
 bb57:                                             ; preds = %bb56, %bb55, %bb54, %bb53, %bb52, %bb51, %bb50, %bb49, %bb48, %bb47, %bb46, %bb45, %bb44, %bb43, %bb42, %bb41, %bb40, %bb39, %bb38, %bb37, %bb36, %bb35, %bb34, %bb33, %bb32, %bb31, %bb30, %bb29, %bb28, %bb27, %bb26, %bb25, %bb24, %bb23, %bb22, %bb21, %bb20, %bb19, %bb18, %bb17, %bb16, %bb15, %bb14, %bb13, %bb12, %bb11, %bb10, %bb9, %bb8, %bb7, %bb6, %bb5, %bb4, %bb3, %bb
   %tmp58 = phi i64 [ 0, %bb ], [ 1, %bb3 ], [ 2, %bb4 ], [ 3, %bb5 ], [ 4, %bb6 ], [ 5, %bb7 ], [ 6, %bb8 ], [ 7, %bb9 ], [ 8, %bb10 ], [ 9, %bb11 ], [ 10, %bb12 ], [ 11, %bb13 ], [ 12, %bb14 ], [ 13, %bb15 ], [ 14, %bb16 ], [ 15, %bb17 ], [ 16, %bb18 ], [ 17, %bb19 ], [ 18, %bb20 ], [ 19, %bb21 ], [ 20, %bb22 ], [ 21, %bb23 ], [ 22, %bb24 ], [ 23, %bb25 ], [ 24, %bb26 ], [ 25, %bb27 ], [ 26, %bb28 ], [ 27, %bb29 ], [ 28, %bb30 ], [ 29, %bb31 ], [ 30, %bb32 ], [ 31, %bb33 ], [ 32, %bb34 ], [ 33, %bb35 ], [ 34, %bb36 ], [ 35, %bb37 ], [ 36, %bb38 ], [ 37, %bb39 ], [ 38, %bb40 ], [ 39, %bb41 ], [ 40, %bb42 ], [ 41, %bb43 ], [ 42, %bb44 ], [ 43, %bb45 ], [ 44, %bb46 ], [ 45, %bb47 ], [ 46, %bb48 ], [ 47, %bb49 ], [ 48, %bb50 ], [ 49, %bb51 ], [ 50, %bb52 ], [ 51, %bb53 ], [ 52, %bb54 ], [ 53, %bb55 ], [ 54, %bb56 ]
-  %tmp59 = getelementptr inbounds [55 x %0], [55 x %0]* @global, i64 0, i64 %tmp58, i32 1
-  %tmp60 = load i32*, i32** %tmp59, align 8
-  %tmp61 = call %1* @wibble(%1* %arg, i32* %tmp60)
+  %tmp59 = getelementptr inbounds [55 x %0], ptr @global, i64 0, i64 %tmp58, i32 1
+  %tmp60 = load ptr, ptr %tmp59, align 8
+  %tmp61 = call ptr @wibble(ptr %arg, ptr %tmp60)
   br label %bb68
 
 bb62:                                             ; preds = %bb69
-  %tmp63 = call %1* @wibble(%1* %arg, i32* nonnull %arg2)
+  %tmp63 = call ptr @wibble(ptr %arg, ptr nonnull %arg2)
   br label %bb68
 
 bb64:                                             ; preds = %bb69
-  %tmp65 = bitcast [16 x i32]* %tmp to i8*
-  %tmp66 = getelementptr inbounds [16 x i32], [16 x i32]* %tmp, i64 0, i64 0
-  call void @baz(i32 %arg1, i32* %tmp66)
-  %tmp67 = call %1* @wibble(%1* %arg, i32*  %tmp66)
+  call void @baz(i32 %arg1, ptr %tmp)
+  %tmp67 = call ptr @wibble(ptr %arg, ptr  %tmp)
   br label %bb68
 
 bb68:                                             ; preds = %bb64, %bb62, %bb57
   ret void
 
 bb69:                                             ; preds = %bb
-  %tmp70 = icmp eq i32* %arg2, null
+  %tmp70 = icmp eq ptr %arg2, null
   br i1 %tmp70, label %bb64, label %bb62
 }
 
-declare %1* @wibble(%1* returned, i32*)
+declare ptr @wibble(ptr returned, ptr)
 
-declare void @baz(i32, i32*)
+declare void @baz(i32, ptr)
 
 
 ; Check that with 2 jump tables, the phi node doesn't lose the edge from the
@@ -1120,7 +1117,7 @@ define void @jt_2_tables_phi_edge_from_second() {
   ; CHECK-NEXT:   [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
   ; CHECK-NEXT:   [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
   ; CHECK-NEXT:   [[C21:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load (s32) from `i32* undef`, align 8)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load (s32) from `ptr undef`, align 8)
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[LOAD]](s32), [[C]]
   ; CHECK-NEXT:   G_BRCOND [[ICMP]](s1), %bb.6
   ; CHECK-NEXT:   G_BR %bb.19
@@ -1249,7 +1246,7 @@ define void @jt_2_tables_phi_edge_from_second() {
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI [[C21]](s32), %bb.30, [[PHI]](s32), %bb.16
   ; CHECK-NEXT:   RET_ReallyLR
 entry:
-  %0 = load i32, i32* undef, align 8
+  %0 = load i32, ptr undef, align 8
   switch i32 %0, label %sw.default.i49 [
     i32 270, label %if.then
     i32 265, label %sw.bb14.i48
@@ -1379,7 +1376,7 @@ return:
   ret i32 %retval.0
 }
 
-define i64* @test_range_phi_switch_cycle() {
+define ptr @test_range_phi_switch_cycle() {
   ; CHECK-LABEL: name: test_range_phi_switch_cycle
   ; CHECK: bb.1.bb:
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
@@ -1437,11 +1434,11 @@ bb3:                                              ; preds = %bb1
   br label %bb1
 
 bb4:                                              ; preds = %bb1
-  %tmp5 = tail call i64* @ham(i32 %tmp)
+  %tmp5 = tail call ptr @ham(i32 %tmp)
   unreachable
 }
 
-declare i64* @ham(i32)
+declare ptr @ham(i32)
 
 define internal void @bar() unnamed_addr #1 {
   ; CHECK-LABEL: name: bar
