@@ -84,7 +84,7 @@ public:
   }
 
 private:
-  unsigned Size;
+  unsigned Size = UINT_MAX;
 };
 
 class CostPriority {
@@ -104,7 +104,7 @@ public:
   }
 
 private:
-  int Cost;
+  int Cost = INT_MAX;
 };
 
 class CostBenefitPriority {
@@ -170,8 +170,8 @@ public:
   }
 
 private:
-  int Cost;
-  int StaticBonusApplied;
+  int Cost = INT_MAX;
+  int StaticBonusApplied = 0;
   Optional<CostBenefitPair> CostBenefit;
 };
 
