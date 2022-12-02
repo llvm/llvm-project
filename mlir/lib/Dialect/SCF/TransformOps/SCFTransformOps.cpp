@@ -16,17 +16,10 @@
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 using namespace mlir;
-
-namespace {
-/// A simple pattern rewriter that implements no special logic.
-class SimpleRewriter : public PatternRewriter {
-public:
-  SimpleRewriter(MLIRContext *context) : PatternRewriter(context) {}
-};
-} // namespace
 
 //===----------------------------------------------------------------------===//
 // GetParentForOp
@@ -97,7 +90,7 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
   for (Operation *target : state.getPayloadOps(getTarget())) {
     Location location = target->getLoc();
     Operation *symbolTableOp = SymbolTable::getNearestSymbolTable(target);
-    SimpleRewriter rewriter(getContext());
+    TrivialPatternRewriter rewriter(getContext());
     scf::ExecuteRegionOp exec = wrapInExecuteRegion(rewriter, target);
     if (!exec) {
       DiagnosedSilenceableFailure diag = emitSilenceableError()
@@ -201,7 +194,7 @@ transform::LoopPipelineOp::applyToOne(scf::ForOp target,
                        getReadLatency());
       };
   scf::ForLoopPipeliningPattern pattern(options, target->getContext());
-  SimpleRewriter rewriter(getContext());
+  TrivialPatternRewriter rewriter(getContext());
   rewriter.setInsertionPoint(target);
   FailureOr<scf::ForOp> patternResult =
       pattern.returningMatchAndRewrite(target, rewriter);

@@ -19,6 +19,7 @@
 #include "mlir/Dialect/SCF/Transforms/TileUsingInterface.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformUtils.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -41,14 +42,6 @@ static SmallVector<unsigned> extractUIntArray(ArrayAttr attr) {
   return result;
 }
 
-namespace {
-/// A simple pattern rewriter that implements no special logic.
-class SimpleRewriter : public PatternRewriter {
-public:
-  SimpleRewriter(MLIRContext *context) : PatternRewriter(context) {}
-};
-} // namespace
-
 /// Attempts to apply the pattern specified as template argument to the given
 /// operation. The pattern is expected to have a `returningMatchAndRewrite`
 /// function that returns the "main" result or failure. Returns failure if the
@@ -65,7 +58,7 @@ static FailureOr<LinalgOp> tryApply(Operation *operation, Args &&...args) {
 
   // Apply the pattern directly to the op.
   PatternTy pattern(operation->getContext(), std::forward<Args>(args)...);
-  SimpleRewriter rewriter(operation->getContext());
+  TrivialPatternRewriter rewriter(operation->getContext());
   rewriter.setInsertionPoint(operation);
   auto result = pattern.returningMatchAndRewrite(op, rewriter);
   if (failed(result))
@@ -125,7 +118,7 @@ static LogicalResult applyTilingToAll(
     if (!tilingInterfaceOp)
       return transformOp->emitError("only TilingInterface ops are supported");
 
-    SimpleRewriter rewriter(target->getContext());
+    TrivialPatternRewriter rewriter(target->getContext());
     rewriter.setInsertionPoint(target);
     FailureOr<scf::SCFTileAndFuseResult> tiledResults =
         applyFn(tilingInterfaceOp);
@@ -209,7 +202,7 @@ transform::FuseOp::apply(mlir::transform::TransformResults &transformResults,
       tileSizes.size() - llvm::count(tileSizes, 0), transformResults,
       [&](TilingInterface tilingInterfaceOp)
           -> FailureOr<scf::SCFTileAndFuseResult> {
-        SimpleRewriter rewriter(getContext());
+        TrivialPatternRewriter rewriter(getContext());
         return tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
             rewriter, tilingInterfaceOp, tileAndFuseOptions);
       });
@@ -601,7 +594,7 @@ transform::InterchangeOp::applyToOne(linalg::GenericOp target,
     results.push_back(target);
     return DiagnosedSilenceableFailure(success());
   }
-  SimpleRewriter rewriter(target->getContext());
+  TrivialPatternRewriter rewriter(target->getContext());
   FailureOr<GenericOp> res =
       interchangeGenericOp(rewriter, target, interchangeVector);
   if (failed(res))
@@ -875,7 +868,7 @@ transform::PromoteOp::applyToOne(linalg::LinalgOp target,
   if (failed(promoteSubviewsPrecondition(target, promotionOptions)))
     return DiagnosedSilenceableFailure(reportUnknownTransformError(target));
 
-  SimpleRewriter rewriter(target->getContext());
+  TrivialPatternRewriter rewriter(target->getContext());
   rewriter.setInsertionPoint(target);
   FailureOr<LinalgOp> res = promoteSubViews(rewriter, target, promotionOptions);
   if (failed(res))
@@ -974,7 +967,7 @@ transform::ScalarizeOp::applyToOne(linalg::LinalgOp target,
     return tileSizes;
   });
   SmallVector<int64_t> emptyTileSizes;
-  SimpleRewriter rewriter(getContext());
+  TrivialPatternRewriter rewriter(getContext());
   rewriter.setInsertionPoint(target);
   FailureOr<scf::SCFTilingResult> maybeTilingResult = tileUsingSCFForOp(
       rewriter, cast<TilingInterface>(target.getOperation()), tilingOptions);
@@ -993,7 +986,7 @@ DiagnosedSilenceableFailure SplitOp::apply(TransformResults &results,
                                            TransformState &state) {
   // Collect the dynamic split points if provided.
   ArrayRef<Operation *> payload = state.getPayloadOps(getTarget());
-  SimpleRewriter rewriter(getContext());
+  TrivialPatternRewriter rewriter(getContext());
   SmallVector<OpFoldResult> splitPoints;
   splitPoints.reserve(payload.size());
   if (getDynamicSplitPoint()) {
@@ -1122,8 +1115,7 @@ void SplitOp::print(OpAsmPrinter &printer) {
 }
 
 LogicalResult SplitOp::verify() {
-  if ((static_cast<int64_t>(getStaticSplitPoint()) !=
-       ShapedType::kDynamic) ^
+  if ((static_cast<int64_t>(getStaticSplitPoint()) != ShapedType::kDynamic) ^
       (getDynamicSplitPoint() == nullptr)) {
     return emitOpError() << "expects either a dynamic or a static split "
                             "point to be provided";
@@ -1172,7 +1164,7 @@ transform::SplitReductionOp::applyToOne(linalg::LinalgOp target,
                                          unsigned(getInsertSplitDimension()),
                                          bool(getInnerParallel())};
   };
-  SimpleRewriter rewriter(getContext());
+  TrivialPatternRewriter rewriter(getContext());
   rewriter.setInsertionPoint(target);
   FailureOr<SplitReductionResult> splitResult =
       (getUseScalingAlgorithm())
@@ -1195,7 +1187,7 @@ transform::SplitReductionOp::applyToOne(linalg::LinalgOp target,
 DiagnosedSilenceableFailure transform::TileReductionUsingScfOp::applyToOne(
     linalg::LinalgOp target, SmallVectorImpl<Operation *> &results,
     transform::TransformState &state) {
-  SimpleRewriter rewriter(getContext());
+  TrivialPatternRewriter rewriter(getContext());
   rewriter.setInsertionPoint(target);
   SmallVector<int64_t> tileSizes = extractFromI64ArrayAttr(getTileSizes());
   SmallVector<OpFoldResult> sizes;
@@ -1223,7 +1215,7 @@ DiagnosedSilenceableFailure
 transform::TileReductionUsingForeachThreadOp::applyToOne(
     linalg::LinalgOp target, SmallVectorImpl<Operation *> &results,
     transform::TransformState &state) {
-  SimpleRewriter rewriter(getContext());
+  TrivialPatternRewriter rewriter(getContext());
   rewriter.setInsertionPoint(target);
   SmallVector<int64_t> numThreads = extractFromI64ArrayAttr(getNumThreads());
   SmallVector<OpFoldResult> numThreadResults;
@@ -1321,7 +1313,7 @@ transform::TileOp::apply(TransformResults &transformResults,
     }
 
     tilingOptions.setInterchange(getInterchange());
-    SimpleRewriter rewriter(linalgOp.getContext());
+    TrivialPatternRewriter rewriter(linalgOp.getContext());
     FailureOr<scf::SCFTilingResult> maybeTilingResult = tileUsingSCFForOp(
         rewriter, cast<TilingInterface>(linalgOp.getOperation()),
         tilingOptions);
@@ -1714,7 +1706,7 @@ transform::TileToScfForOp::apply(TransformResults &transformResults,
     }
 
     tilingOptions.setInterchange(getInterchange());
-    SimpleRewriter rewriter(tilingInterfaceOp.getContext());
+    TrivialPatternRewriter rewriter(tilingInterfaceOp.getContext());
     FailureOr<scf::SCFTilingResult> tilingResult =
         tileUsingSCFForOp(rewriter, tilingInterfaceOp, tilingOptions);
     if (failed(tilingResult))
