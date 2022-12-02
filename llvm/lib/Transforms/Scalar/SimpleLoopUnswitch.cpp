@@ -579,8 +579,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     // If fully unswitching, we can use the existing branch instruction.
     // Splice it into the old PH to gate reaching the new preheader and re-point
     // its successors.
-    OldPH->getInstList().splice(OldPH->end(), BI.getParent()->getInstList(),
-                                BI);
+    OldPH->splice(OldPH->end(), BI.getParent(), BI.getIterator());
     BI.setCondition(Cond);
     if (MSSAU) {
       // Temporarily clone the terminator, to make MSSA update cheaper by
@@ -2251,7 +2250,7 @@ static void unswitchNontrivialInvariants(
   if (FullUnswitch) {
     // Splice the terminator from the original loop and rewrite its
     // successors.
-    SplitBB->getInstList().splice(SplitBB->end(), ParentBB->getInstList(), TI);
+    SplitBB->splice(SplitBB->end(), ParentBB, TI.getIterator());
 
     // Keep a clone of the terminator for MSSA updates.
     Instruction *NewTI = TI.clone();
