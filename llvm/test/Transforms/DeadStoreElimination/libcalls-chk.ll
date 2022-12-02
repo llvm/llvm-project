@@ -12,8 +12,7 @@ declare void @use(ptr)
 ; strncpy -> __memset_chk, full overwrite
 define void @dse_strncpy_memset_chk_test1(ptr noalias %out, ptr noalias %in, i64 %n) {
 ; CHECK-LABEL: @dse_strncpy_memset_chk_test1(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @strncpy(ptr [[OUT:%.*]], ptr [[IN:%.*]], i64 100)
-; CHECK-NEXT:    [[CALL_2:%.*]] = tail call ptr @__memset_chk(ptr [[OUT]], i32 42, i64 100, i64 [[N:%.*]])
+; CHECK-NEXT:    [[CALL_2:%.*]] = tail call ptr @__memset_chk(ptr [[OUT:%.*]], i32 42, i64 100, i64 [[N:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %call = tail call ptr @strncpy(ptr %out, ptr %in, i64 100)
@@ -23,8 +22,7 @@ define void @dse_strncpy_memset_chk_test1(ptr noalias %out, ptr noalias %in, i64
 
 define void @dse_memset_chk_eliminate_store1(ptr %out, i64 %n) {
 ; CHECK-LABEL: @dse_memset_chk_eliminate_store1(
-; CHECK-NEXT:    store i8 10, ptr [[OUT:%.*]], align 1
-; CHECK-NEXT:    [[CALL_2:%.*]] = tail call ptr @__memset_chk(ptr [[OUT]], i32 42, i64 100, i64 [[N:%.*]])
+; CHECK-NEXT:    [[CALL_2:%.*]] = tail call ptr @__memset_chk(ptr [[OUT:%.*]], i32 42, i64 100, i64 [[N:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   store i8 10, ptr %out
@@ -48,7 +46,6 @@ define void @dse_memset_chk_eliminate_store2(ptr %out, i64 %n) {
 define void @dse_memset_chk_eliminates_store_local_object_escapes_after(i64 %n) {
 ; CHECK-LABEL: @dse_memset_chk_eliminates_store_local_object_escapes_after(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [200 x i8], align 1
-; CHECK-NEXT:    store i8 10, ptr [[A]], align 1
 ; CHECK-NEXT:    [[OUT_100:%.*]] = getelementptr i8, ptr [[A]], i64 100
 ; CHECK-NEXT:    store i8 10, ptr [[OUT_100]], align 1
 ; CHECK-NEXT:    [[CALL_2:%.*]] = tail call ptr @__memset_chk(ptr [[A]], i32 42, i64 100, i64 [[N:%.*]])
@@ -68,7 +65,6 @@ define void @dse_memset_chk_eliminates_store_local_object_escapes_before(i64 %n)
 ; CHECK-LABEL: @dse_memset_chk_eliminates_store_local_object_escapes_before(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [200 x i8], align 1
 ; CHECK-NEXT:    call void @use(ptr [[A]])
-; CHECK-NEXT:    store i8 10, ptr [[A]], align 1
 ; CHECK-NEXT:    [[OUT_100:%.*]] = getelementptr i8, ptr [[A]], i64 100
 ; CHECK-NEXT:    store i8 0, ptr [[OUT_100]], align 1
 ; CHECK-NEXT:    [[CALL_2:%.*]] = tail call ptr @__memset_chk(ptr [[A]], i32 42, i64 100, i64 [[N:%.*]])
