@@ -21,6 +21,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -60,7 +61,7 @@ PPCTTIImpl::getPopcntSupport(unsigned TyWidth) {
   return TTI::PSK_Software;
 }
 
-Optional<Instruction *>
+std::optional<Instruction *>
 PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
   switch (IID) {
@@ -160,7 +161,7 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     break;
   }
-  return None;
+  return std::nullopt;
 }
 
 InstructionCost PPCTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
