@@ -22,19 +22,6 @@
 
 using namespace fir;
 
-namespace fir::details {
-llvm::StringRef Attributes::getIntExtensionAttrName() const {
-  // The attribute names are available via LLVM dialect interfaces
-  // like getZExtAttrName(), getByValAttrName(), etc., so we'd better
-  // use them than literals.
-  if (isZeroExt())
-    return "llvm.zeroext";
-  else if (isSignExt())
-    return "llvm.signext";
-  return {};
-}
-} // namespace fir::details
-
 // Reduce a REAL/float type to the floating point semantics.
 static const llvm::fltSemantics &floatToSemantics(const KindMapping &kindMap,
                                                   mlir::Type type) {
@@ -80,46 +67,6 @@ struct GenericTarget : public CodeGenSpecifics {
                                    /*sret=*/sret, /*append=*/!sret});
     return marshal;
   }
-
-  CodeGenSpecifics::Marshalling
-  integerArgumentType(mlir::Location loc,
-                      mlir::IntegerType argTy) const override {
-    CodeGenSpecifics::Marshalling marshal;
-    AT::IntegerExtension intExt = AT::IntegerExtension::None;
-    if (argTy.getWidth() < getCIntTypeWidth()) {
-      // isSigned() and isUnsigned() branches below are dead code currently.
-      // If needed, we can generate calls with signed/unsigned argument types
-      // to more precisely match C side (e.g. for Fortran runtime functions
-      // with 'unsigned short' arguments).
-      if (argTy.isSigned())
-        intExt = AT::IntegerExtension::Sign;
-      else if (argTy.isUnsigned())
-        intExt = AT::IntegerExtension::Zero;
-      else if (argTy.isSignless()) {
-        // Zero extend for 'i1' and sign extend for other types.
-        if (argTy.getWidth() == 1)
-          intExt = AT::IntegerExtension::Zero;
-        else
-          intExt = AT::IntegerExtension::Sign;
-      }
-    }
-
-    marshal.emplace_back(argTy, AT{/*alignment=*/0, /*byval=*/false,
-                                   /*sret=*/false, /*append=*/false,
-                                   /*intExt=*/intExt});
-    return marshal;
-  }
-
-  CodeGenSpecifics::Marshalling
-  integerReturnType(mlir::Location loc,
-                    mlir::IntegerType argTy) const override {
-    return integerArgumentType(loc, argTy);
-  }
-
-  // Width of 'int' type is 32-bits for almost all targets, except
-  // for AVR and MSP430 (see TargetInfo initializations
-  // in clang/lib/Basic/Targets).
-  unsigned char getCIntTypeWidth() const override { return 32; }
 };
 } // namespace
 
