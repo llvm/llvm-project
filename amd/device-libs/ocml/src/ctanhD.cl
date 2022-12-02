@@ -45,7 +45,7 @@ MATH_MANGLE(ctanh)(double2 z)
         bool ni = BUILTIN_CLASS_F64(x, CLASS_PZER|CLASS_PSUB|CLASS_PNOR) & yin;
         rr = (ni | xn) ? AS_DOUBLE(QNANBITPATT_DP64) : rr;
         ri = ni ? AS_DOUBLE(QNANBITPATT_DP64) : ri;
-        ri = (BUILTIN_CLASS_F64(x, CLASS_PINF|CLASS_NINF) & yin) ? 0.0 : ri;
+        ri = (BUILTIN_ISINF_F64(x) & yin) ? 0.0 : ri;
         ri = (xn & (z.y == 0.0)) ? z.y : ri;
     }
 
