@@ -56,11 +56,21 @@ TEST_F(HostInfoTest, GetHostname) {
 
 #if defined(__APPLE__)
 TEST_F(HostInfoTest, GetXcodeSDK) {
-  EXPECT_FALSE(HostInfo::GetXcodeSDKPath(XcodeSDK("MacOSX.sdk")).empty());
+  auto get_sdk = [](std::string sdk, bool error = false) -> llvm::StringRef {
+    auto sdk_path_or_err = HostInfo::GetXcodeSDKPath(XcodeSDK(std::move(sdk)));
+    if (!error) {
+      EXPECT_TRUE((bool)sdk_path_or_err);
+      return *sdk_path_or_err;
+    }
+    EXPECT_FALSE((bool)sdk_path_or_err);
+    llvm::consumeError(sdk_path_or_err.takeError());
+    return {};
+  };
+  EXPECT_FALSE(get_sdk("MacOSX.sdk").empty());
   // These are expected to fall back to an available version.
-  EXPECT_FALSE(HostInfo::GetXcodeSDKPath(XcodeSDK("MacOSX9999.sdk")).empty());
+  EXPECT_FALSE(get_sdk("MacOSX9999.sdk").empty());
   // This is expected to fail.
-  EXPECT_TRUE(HostInfo::GetXcodeSDKPath(XcodeSDK("CeciNestPasUnOS.sdk")).empty());
+  EXPECT_TRUE(get_sdk("CeciNestPasUnOS.sdk", true).empty());
 }
 #endif
 

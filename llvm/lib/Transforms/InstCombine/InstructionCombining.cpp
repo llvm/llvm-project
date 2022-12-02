@@ -105,6 +105,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -2709,7 +2710,7 @@ static bool isRemovableWrite(CallBase &CB, Value *UsedV,
   // If the only possible side effect of the call is writing to the alloca,
   // and the result isn't used, we can safely remove any reads implied by the
   // call including those which might read the alloca itself.
-  Optional<MemoryLocation> Dest = MemoryLocation::getForDest(&CB, TLI);
+  std::optional<MemoryLocation> Dest = MemoryLocation::getForDest(&CB, TLI);
   return Dest && Dest->Ptr == UsedV;
 }
 
@@ -4003,7 +4004,7 @@ static bool SoleWriteToDeadLocal(Instruction *I, TargetLibraryInfo &TLI) {
     // to allow reload along used path as described below.  Otherwise, this
     // is simply a store to a dead allocation which will be removed.
     return false;
-  Optional<MemoryLocation> Dest = MemoryLocation::getForDest(CB, TLI);
+  std::optional<MemoryLocation> Dest = MemoryLocation::getForDest(CB, TLI);
   if (!Dest)
     return false;
   auto *AI = dyn_cast<AllocaInst>(getUnderlyingObject(Dest->Ptr));

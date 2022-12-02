@@ -2292,7 +2292,7 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
     return DerefAA.getKnownDereferenceableBytes();
   }
 
-  Optional<MemoryLocation> Loc = MemoryLocation::getOrNone(I);
+  std::optional<MemoryLocation> Loc = MemoryLocation::getOrNone(I);
   if (!Loc || Loc->Ptr != UseV || !Loc->Size.isPrecise() || I->isVolatile())
     return 0;
 
@@ -4238,7 +4238,7 @@ struct AADereferenceableImpl : AADereferenceable {
     if (!UseV->getType()->isPointerTy())
       return;
 
-    Optional<MemoryLocation> Loc = MemoryLocation::getOrNone(I);
+    std::optional<MemoryLocation> Loc = MemoryLocation::getOrNone(I);
     if (!Loc || Loc->Ptr != UseV || !Loc->Size.isPrecise() || I->isVolatile())
       return;
 

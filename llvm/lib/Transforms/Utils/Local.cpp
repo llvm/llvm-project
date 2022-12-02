@@ -799,7 +799,7 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB,
 
   // Splice all the instructions from PredBB to DestBB.
   PredBB->getTerminator()->eraseFromParent();
-  DestBB->getInstList().splice(DestBB->begin(), PredBB->getInstList());
+  DestBB->splice(DestBB->begin(), PredBB);
   new UnreachableInst(PredBB->getContext(), PredBB);
 
   // If the PredBB is the entry block of the function, move DestBB up to
@@ -1204,8 +1204,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 
     // Copy over any phi, debug or lifetime instruction.
     BB->getTerminator()->eraseFromParent();
-    Succ->getInstList().splice(Succ->getFirstNonPHI()->getIterator(),
-                               BB->getInstList());
+    Succ->splice(Succ->getFirstNonPHI()->getIterator(), BB);
   } else {
     while (PHINode *PN = dyn_cast<PHINode>(&BB->front())) {
       // We explicitly check for such uses in CanPropagatePredecessorsForPHIs.
@@ -2962,9 +2961,8 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
     I->setDebugLoc(InsertPt->getDebugLoc());
     ++II;
   }
-  DomBlock->getInstList().splice(InsertPt->getIterator(), BB->getInstList(),
-                                 BB->begin(),
-                                 BB->getTerminator()->getIterator());
+  DomBlock->splice(InsertPt->getIterator(), BB, BB->begin(),
+                   BB->getTerminator()->getIterator());
 }
 
 namespace {
