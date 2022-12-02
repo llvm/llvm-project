@@ -2150,6 +2150,7 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
 
   MachineBasicBlock &MBB = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
+  unsigned Opcode = MI->getOpcode();
 
   bool LOADCnt = false;
   bool DSCnt = false;
@@ -2240,7 +2241,7 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
 
   if (LOADCnt) {
     unsigned WaitFor = AMDGPU::S_WAIT_LOADCNT; // Default wait instruction.
-    const AMDGPU::MIMGBaseOpcodeInfo *Info = AMDGPU::getMIMGBaseOpcode(MI->getOpcode());
+    const AMDGPU::MIMGBaseOpcodeInfo *Info = AMDGPU::getMIMGBaseOpcode(Opcode);
 
     if (Info) {
       if (Info->BVH)
