@@ -19,7 +19,7 @@ MATH_MANGLE(tanpi)(half x)
     t ^= AS_SHORT(x) & (short)0x8000;
 
     if (!FINITE_ONLY_OPT()) {
-        t =  BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? (short)QNANBITPATT_HP16 : t;
+        t =  BUILTIN_ISFINITE_F16(x) ? t : (short)QNANBITPATT_HP16;
     }
 
     return AS_HALF(t);

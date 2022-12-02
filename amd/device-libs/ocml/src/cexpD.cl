@@ -23,14 +23,14 @@ MATH_MANGLE(cexp)(double2 z)
     double ri = ex * sy;
 
     if (!FINITE_ONLY_OPT()) {
-        bool b = BUILTIN_CLASS_F64(y, CLASS_NINF|CLASS_PINF|CLASS_QNAN|CLASS_SNAN);
+        bool isfinite = BUILTIN_ISFINITE_F64(y);
         if (BUILTIN_CLASS_F64(x, CLASS_NINF)) {
             rr = 0.0;
-            ri = b ? 0.0 : ri;
+            ri = isfinite ? ri : 0.0;
         }
         if (BUILTIN_CLASS_F64(x, CLASS_PINF)) {
-            rr = b ? AS_DOUBLE(PINFBITPATT_DP64) : rr;
-            ri = b ? AS_DOUBLE(QNANBITPATT_DP64) : ri;
+            rr = isfinite ? rr : AS_DOUBLE(PINFBITPATT_DP64);
+            ri = isfinite ? ri : AS_DOUBLE(QNANBITPATT_DP64);
             ri = y == 0.0 ? y : ri;
         }
         ri = (BUILTIN_ISNAN_F64(x) & (y == 0.0)) ? y : ri;

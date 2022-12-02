@@ -17,7 +17,7 @@ MATH_MANGLE(tanpi)(double x)
     t.hi ^= AS_INT2(x).hi & (int)0x80000000;
 
     if (!FINITE_ONLY_OPT()) {
-        t =  BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? AS_INT2(QNANBITPATT_DP64) : t;
+        t =  BUILTIN_ISFINITE_F64(x) ? t : AS_INT2(QNANBITPATT_DP64);
     }
 
     return AS_DOUBLE(t);

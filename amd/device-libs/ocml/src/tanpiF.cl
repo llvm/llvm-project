@@ -17,7 +17,7 @@ MATH_MANGLE(tanpi)(float x)
     t ^= AS_INT(x) & (int)0x80000000;
 
     if (!FINITE_ONLY_OPT()) {
-        t =  BUILTIN_CLASS_F32(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? QNANBITPATT_SP32 : t;
+        t =  BUILTIN_ISFINITE_F32(x) ? t : QNANBITPATT_SP32;
     }
 
     return AS_FLOAT(t);

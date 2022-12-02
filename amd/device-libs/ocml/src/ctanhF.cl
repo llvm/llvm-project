@@ -41,7 +41,7 @@ MATH_MANGLE(ctanh)(float2 z)
 
     if (!FINITE_ONLY_OPT()) {
         bool xn = BUILTIN_ISNAN_F32(x);
-        bool yin = BUILTIN_CLASS_F32(z.y, CLASS_NINF|CLASS_PINF|CLASS_QNAN|CLASS_SNAN);
+        bool yin = !BUILTIN_ISFINITE_F32(z.y);
         bool ni = BUILTIN_CLASS_F32(x, CLASS_PZER|CLASS_PSUB|CLASS_PNOR) & yin;
         rr = (ni | xn) ? AS_FLOAT(QNANBITPATT_SP32) : rr;
         ri = ni ? AS_FLOAT(QNANBITPATT_SP32) : ri;

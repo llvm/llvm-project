@@ -35,9 +35,9 @@ MATH_MANGLE(sincospi)(half x, __private half *cp)
     c ^= flip;
 
     if (!FINITE_ONLY_OPT()) {
-        bool nori = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF);
-        c = nori ? (short)QNANBITPATT_HP16 : c;
-        s = nori ? (short)QNANBITPATT_HP16 : s;
+        bool finite = BUILTIN_ISFINITE_F16(x);
+        c = finite ? c : (short)QNANBITPATT_HP16;
+        s = finite ? s : (short)QNANBITPATT_HP16;
     }
 
     *cp = AS_HALF(c);

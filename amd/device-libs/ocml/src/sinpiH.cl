@@ -20,7 +20,7 @@ MATH_MANGLE(sinpi)(half x)
     s ^= (r.i > (short)1 ? (short)0x8000 : (short)0) ^ (AS_SHORT(x) & (short)0x8000);
 
     if (!FINITE_ONLY_OPT()) {
-        s = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? (short)QNANBITPATT_HP16 : s;
+        s = BUILTIN_ISFINITE_F16(x) ? s : (short)QNANBITPATT_HP16;
     }
 
     return AS_HALF(s);

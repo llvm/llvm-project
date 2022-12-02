@@ -55,7 +55,7 @@ MATH_MANGLE(log)(float x)
 	            r = MATH_MAD(yh, ch, MATH_MAD(yt, ch, MATH_MAD(yh, ct, yt*ct)));
             }
 
-            r = BUILTIN_CLASS_F32(y, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) != 0 ? y : r;
+            r = BUILTIN_ISFINITE_F32(y) ? r : y;
             return r;
 #endif
         }
@@ -103,7 +103,7 @@ MATH_MANGLE(log)(float x)
 	            r = MATH_MAD(yh, ch, MATH_MAD(yt, ch, MATH_MAD(yh, ct, yt*ct)));
             }
 
-            r = BUILTIN_CLASS_F32(y, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) != 0 ? y : r;
+            r = BUILTIN_ISFINITE_F32(y) ? r : y;
 
 #if defined COMPILING_LOG10
             r = r - (s ? 0x1.344136p+3f : 0.0f);

@@ -24,9 +24,9 @@ MATH_MANGLE(sincospi)(double x, __private double * cp)
     c.hi ^= flip;
 
     if (!FINITE_ONLY_OPT()) {
-        bool nori = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF);
-        s = nori ? AS_INT2(QNANBITPATT_DP64) : s;
-        c = nori ? AS_INT2(QNANBITPATT_DP64) : c;
+        bool finite = BUILTIN_ISFINITE_F64(x);
+        s = finite ? s : AS_INT2(QNANBITPATT_DP64);
+        c = finite ? c : AS_INT2(QNANBITPATT_DP64);
     }
 
     *cp = AS_DOUBLE(c);

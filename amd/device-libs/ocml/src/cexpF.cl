@@ -23,14 +23,14 @@ MATH_MANGLE(cexp)(float2 z)
     float ri = ex * sy;
 
     if (!FINITE_ONLY_OPT()) {
-        bool b = BUILTIN_CLASS_F32(y, CLASS_NINF|CLASS_PINF|CLASS_QNAN|CLASS_SNAN);
+        bool finite = BUILTIN_ISFINITE_F32(y);
         if (BUILTIN_CLASS_F32(x, CLASS_NINF)) {
             rr = 0.0f;
-            ri = b ? 0.0f : ri;
+            ri = finite ? ri : 0.0f;
         }
         if (BUILTIN_CLASS_F32(x, CLASS_PINF)) {
-            rr = b ? AS_FLOAT(PINFBITPATT_SP32) : rr;
-            ri = b ? AS_FLOAT(QNANBITPATT_SP32) : ri;
+            rr = finite ? rr : AS_FLOAT(PINFBITPATT_SP32);
+            ri = finite ? ri : AS_FLOAT(QNANBITPATT_SP32);
             ri = y == 0.0f ? y : ri;
         }
         ri = (BUILTIN_ISNAN_F32(x) & (y == 0.0f)) ? y : ri;

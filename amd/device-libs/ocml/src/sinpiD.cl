@@ -18,7 +18,7 @@ MATH_MANGLE(sinpi)(double x)
     s.hi ^= (r.i > 1 ? 0x80000000 : 0) ^ (AS_INT2(x).hi & 0x80000000);
 
     if (!FINITE_ONLY_OPT()) {
-        s = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? AS_INT2(QNANBITPATT_DP64) : s;
+        s = BUILTIN_ISFINITE_F64(x) ? s : AS_INT2(QNANBITPATT_DP64);
     }
 
     return AS_DOUBLE(s);
