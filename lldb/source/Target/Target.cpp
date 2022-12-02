@@ -1682,30 +1682,6 @@ void Target::ModulesDidUnload(ModuleList &module_list, bool delete_locations) {
     m_breakpoint_list.UpdateBreakpoints(module_list, false, delete_locations);
     m_internal_breakpoint_list.UpdateBreakpoints(module_list, false,
                                                  delete_locations);
-
-    // If a module was torn down it will have torn down the 'TypeSystemClang's
-    // that we used as source 'ASTContext's for the persistent variables in
-    // the current target. Those would now be unsafe to access because the
-    // 'DeclOrigin' are now possibly stale. Thus clear all persistent
-    // variables. We only want to flush 'TypeSystem's if the module being
-    // unloaded was capable of describing a source type. JITted module unloads
-    // happen frequently for Objective-C utility functions or the REPL and rely
-    // on the persistent variables to stick around.
-    const bool should_flush_type_systems =
-        module_list.AnyOf([](lldb_private::Module &module) {
-          auto *object_file = module.GetObjectFile();
-
-          if (!object_file)
-            return true;
-
-          auto type = object_file->GetType();
-
-          return type == ObjectFile::eTypeObjectFile ||
-                 type == ObjectFile::eTypeExecutable;
-        });
-
-    if (should_flush_type_systems)
-      m_scratch_type_system_map.Clear();
   }
 }
 
