@@ -196,28 +196,105 @@ do {
     const char *optional_extension =
         weak_self ? "Swift.Optional where Wrapped == " : "";
 
-    // The expression text is inserted into the body of $__lldb_wrapped_expr_%u.
-    wrapped_stream.Printf(R"(
+    // The expression text is inserted into the body of $__lldb_user_expr_%u.
+    if (!options.GetBindGenericTypes()) {
+      // A Swift program can't have types with non-bound generic type parameters
+      // inside a non generic function. For example, the following program would
+      // not compile as T is not part of foo's signature.
+      //
+      // func foo() {
+      //   let bar: Baz<T> = ... // Where does T come from?
+      //  }
+      //
+      // LLDB has to circumvent this problem, as the entry-point function for
+      // expression evaluation can't be generic. LLDB achieves this by bypassing
+      // the Swift typesystem, by:
+      // - Setting the type of self in the expression to an opaque pointer type.
+      // - Setting up $__lldb_trampoline, which calls the method
+      // with the user's code. The purpose of this function is to have a common
+      // number of function parameters regardless of the type of self. This
+      // function is initially not called anywhere.
+      // - Setting up $__lldb_sink, whose signature should match that of
+      // $__lldb_trampoline, in number and position of parameters,
+      // but which takes in type erased pointers instead (currently only the
+      // pointer to self, and the pointer to the metadata). This function is
+      // what is initially called by $__lldb_expr.
+      // - After generating LLVM IR SwiftExpressionParser uses the sink call to
+      // fish out the parameters, and redirect the call to
+      // $__lldb_trampoline instead.
+      // - SwiftASTManipulator also needs to make sure $__lldb_trampoline and
+      // $__lldb_user_expr are generic, it does that by referring to the
+      // generic parameters in the tuple argument of $__lldb_arg. This is safe
+      // to do because the only purpose of $__lldb_arg is to be used by the
+      // materializer to materialize the user's current environment in the lldb
+      // expression.
+      // FIXME: the current approach always passes in the first metadata
+      // pointer, change it to allow as many metadata pointers as necessary be
+      // passed in.
+      // FIXME: the current approach only evaluates self as generic, make it so
+      // every variable in scope can be passed in as generic, adding the
+      // variables and generic parameters to the signature as demanded.
+      // FIXME: the current approach names the generic parameter "T", use the
+      // user's name for the generic parameter, so they can refer to it in
+      // their expression.
+      wrapped_stream.Printf(
+          R"(
 extension %s$__lldb_context {
   @LLDBDebuggerFunction %s
-  %s func $__lldb_wrapped_expr_%u(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
+  %s func $__lldb_user_expr_%u<T>(_ $__lldb_arg: UnsafeMutablePointer<(T)>) {
+    %s
+  }
+}
+
+@LLDBDebuggerFunction %s
+func $__lldb_trampoline<T>(_ $__lldb_arg: UnsafeMutablePointer<(T)>,
+                             _ $__lldb_injected_self: inout $__lldb_context) {
+  do {
+    $__lldb_injected_self.$__lldb_user_expr_%u(
+      $__lldb_arg
+    )
+  }
+}
+
+
+@LLDBDebuggerFunction %s
+func $__lldb_sink(_ $__lldb_arg : UnsafeMutablePointer<Any>,
+                       _: $__lldb_builtin_ptr_t,
+                       _: $__lldb_builtin_ptr_t) {
+}
+
+
+@LLDBDebuggerFunction %s
+func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
+  $__lldb_sink($__lldb_arg, $__lldb_injected_self, $τ_0_0)
+}
+)",
+          optional_extension, availability.c_str(), func_decorator,
+          current_counter, wrapped_expr_text.GetData(), availability.c_str(),
+          current_counter, availability.c_str(), availability.c_str());
+
+    } else {
+      wrapped_stream.Printf(R"(
+extension %s$__lldb_context {
+  @LLDBDebuggerFunction %s
+  %s func $__lldb_user_expr_%u(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
     %s
   }
 }
 @LLDBDebuggerFunction %s
 func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
   do {
-    $__lldb_injected_self.$__lldb_wrapped_expr_%u(
+    $__lldb_injected_self.$__lldb_user_expr_%u(
       $__lldb_arg
     )
   }
 }
 )",
-                          optional_extension, availability.c_str(),
-                          func_decorator, current_counter,
-                          wrapped_expr_text.GetData(), availability.c_str(),
-                          current_counter);
-
+                            optional_extension, availability.c_str(),
+                            func_decorator, current_counter,
+                            wrapped_expr_text.GetData(), availability.c_str(),
+                            current_counter);
+    }
     first_body_line = 5;
   } else {
     wrapped_stream.Printf(
@@ -261,10 +338,17 @@ void SwiftASTManipulatorBase::DoInitialization() {
   struct FuncAndExtensionFinder : public swift::ASTWalker {
     /// This is the toplevel entry function for the expression. It may
     /// call into \c ext_method_decl or hold the entire expression.
-    swift::FuncDecl *toplevel_decl = nullptr;
+    swift::FuncDecl *entrypoint_decl = nullptr;
     /// This is optional.
     swift::FuncDecl *ext_method_decl = nullptr;
-    /// This is an optional extension holding the above function.
+    /// When evaluating self as generic, this is the generic function that calls
+    /// the ext_method_decl.
+    swift::FuncDecl *trampoline_decl = nullptr;
+    /// When evaluating self as generic, this is the sink function
+    /// that the top level entry function calls in the AST level.
+    swift::FuncDecl *sink_decl = nullptr;
+
+    /// This is an optional extension holding method decl if not null.
     swift::ExtensionDecl *extension_decl = nullptr;
 
     PreWalkAction walkToDeclPre(swift::Decl *D) override {
@@ -284,8 +368,13 @@ void SwiftASTManipulatorBase::DoInitialization() {
           return Action::SkipChildren();
         }
       }
-      // Not in an extenstion,
-      toplevel_decl = FD;
+      // Not in an extension.
+      if (FD->getNameStr().equals("$__lldb_trampoline"))
+        trampoline_decl = FD;
+      else if (FD->getNameStr().equals("$__lldb_expr"))
+        entrypoint_decl = FD;
+      else if (FD->getNameStr().equals("$__lldb_sink"))
+        sink_decl = FD;
       return Action::SkipChildren();
     }
   };
@@ -296,10 +385,12 @@ void SwiftASTManipulatorBase::DoInitialization() {
   m_extension_decl = func_finder.extension_decl;
   if (m_extension_decl) {
     m_function_decl = func_finder.ext_method_decl;
-    m_wrapper_decl = func_finder.toplevel_decl;
+    m_entrypoint_decl = func_finder.entrypoint_decl;
+    m_trampoline_decl = func_finder.trampoline_decl;
+    m_sink_decl = func_finder.sink_decl;
   } else {
-    m_function_decl = func_finder.toplevel_decl;
-    m_wrapper_decl = nullptr;
+    m_function_decl = func_finder.entrypoint_decl;
+    m_entrypoint_decl = nullptr;
   }
 
   assert(m_function_decl);
@@ -340,8 +431,9 @@ swift::BraceStmt *SwiftASTManipulatorBase::GetUserBody() {
 }
 
 SwiftASTManipulator::SwiftASTManipulator(swift::SourceFile &source_file,
-                                         bool repl)
-    : SwiftASTManipulatorBase(source_file, repl) {}
+                                         bool repl,
+                                         bool bind_generic_types)
+    : SwiftASTManipulatorBase(source_file, repl, bind_generic_types) {}
 
 void SwiftASTManipulator::FindSpecialNames(
     llvm::SmallVectorImpl<swift::Identifier> &names, llvm::StringRef prefix) {
@@ -1010,14 +1102,23 @@ GetPatternBindingForVarDecl(swift::VarDecl *var_decl,
 }
 
 swift::FuncDecl *SwiftASTManipulator::GetFunctionToInjectVariableInto(
-    const SwiftASTManipulator::VariableInfo &variable, bool is_self) const {
-  // The only variable that we inject in the wrapper is self, so we can
+    const SwiftASTManipulator::VariableInfo &variable) const {
+  // We always inject self in the wrapper, so we can
   // call the function declared in the type extension.
-  return is_self ? m_wrapper_decl : m_function_decl;
+  if (variable.IsSelf())
+    return m_entrypoint_decl;
+
+  // When evaluating self in a generic context, we want to inject the metadata
+  // pointers in the wrapper, so we can pass them as in the generic function
+  // later on.
+  if (!m_bind_generic_types && variable.IsMetadataPointer())
+    return m_entrypoint_decl;
+
+  return m_function_decl;
 }
 
 llvm::Optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
-    const SwiftASTManipulator::VariableInfo &variable, bool is_self) const {
+    const SwiftASTManipulator::VariableInfo &variable) const {
   auto type_system_swift =
       variable.m_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
 
@@ -1042,7 +1143,7 @@ llvm::Optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
   // anything more to get this to work.
   swift_type = swift_type->getWithoutSpecifierType();
 
-  if (is_self) {
+  if (variable.IsSelf()) {
     // Another tricky bit is that the Metatype types we get have the
     // "Representation" already attached (i.e.
     // "@thick", "@thin".)  But the representation is a SIL level thing,
@@ -1063,9 +1164,9 @@ llvm::Optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
 }
 
 swift::VarDecl *SwiftASTManipulator::GetVarDeclForVariableInFunction(
-    const SwiftASTManipulator::VariableInfo &variable, bool is_self,
+    const SwiftASTManipulator::VariableInfo &variable,
     swift::FuncDecl *containing_function) {
-  const auto maybe_swift_type = GetSwiftTypeForVariable(variable, is_self);
+  const auto maybe_swift_type = GetSwiftTypeForVariable(variable);
 
   if (!maybe_swift_type)
     return {};
@@ -1076,8 +1177,8 @@ swift::VarDecl *SwiftASTManipulator::GetVarDeclForVariableInFunction(
   const swift::Identifier name = variable.GetName();
   // We may need to mutate the self variable later, so hardcode it to a var
   // in that case.
-  const auto introducer =
-      is_self ? swift::VarDecl::Introducer::Var : variable.GetVarIntroducer();
+  const auto introducer = variable.IsSelf() ? swift::VarDecl::Introducer::Var
+                                            : variable.GetVarIntroducer();
 
   const swift::ASTContext &ast_context = m_source_file.getASTContext();
   swift::VarDecl *redirected_var_decl = new (ast_context) swift::VarDecl(
@@ -1201,15 +1302,14 @@ bool SwiftASTManipulator::AddExternalVariables(
         injected_nodes;
 
     for (SwiftASTManipulator::VariableInfo &variable : variables) {
-      bool is_self = !variable.m_name.str().compare("$__lldb_injected_self");
       swift::FuncDecl *containing_function =
-          GetFunctionToInjectVariableInto(variable, is_self);
+          GetFunctionToInjectVariableInto(variable);
       assert(containing_function && "No function to inject variable into!");
       if (!containing_function)
         continue;
 
-      swift::VarDecl *redirected_var_decl = GetVarDeclForVariableInFunction(
-          variable, is_self, containing_function);
+      swift::VarDecl *redirected_var_decl =
+          GetVarDeclForVariableInFunction(variable, containing_function);
       swift::PatternBindingDecl *pattern_binding =
           GetPatternBindingForVarDecl(redirected_var_decl, containing_function);
 
@@ -1289,13 +1389,13 @@ bool SwiftASTManipulator::FixCaptures() {
       FindArgInFunction(ast_context, m_function_decl);
   swift::VarDecl *wrapper_arg_decl = nullptr;
 
-  if (m_wrapper_decl)
-    wrapper_arg_decl = FindArgInFunction(ast_context, m_wrapper_decl);
+  if (m_entrypoint_decl)
+    wrapper_arg_decl = FindArgInFunction(ast_context, m_entrypoint_decl);
 
   if (!function_arg_decl)
     return false;
 
-  if (m_wrapper_decl && (!wrapper_arg_decl))
+  if (m_entrypoint_decl && (!wrapper_arg_decl))
     return false;
 
   for (VariableInfo &variable : m_variables) {
@@ -1319,7 +1419,7 @@ bool SwiftASTManipulator::FixCaptures() {
     if (decl_context == (swift::DeclContext *)m_function_decl) {
       AppendToCaptures(ast_context, getter_decl, function_arg_decl);
       AppendToCaptures(ast_context, setter_decl, function_arg_decl);
-    } else if (decl_context == (swift::DeclContext *)m_wrapper_decl) {
+    } else if (decl_context == (swift::DeclContext *)m_entrypoint_decl) {
       AppendToCaptures(ast_context, getter_decl, wrapper_arg_decl);
       AppendToCaptures(ast_context, setter_decl, wrapper_arg_decl);
     } else {

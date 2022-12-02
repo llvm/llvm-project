@@ -67,6 +67,10 @@ public:
     swift::VarDecl *GetDecl() const { return m_decl; }
     swift::VarDecl::Introducer GetVarIntroducer() const;
     bool GetIsCaptureList() const;
+    bool IsMetadataPointer() const { return m_name.str().startswith("$τ"); }
+    bool IsSelf() const {
+      return !m_name.str().compare("$__lldb_injected_self");
+    }
 
     VariableInfo() : m_type(), m_name(), m_metadata() {}
 
@@ -99,8 +103,10 @@ public:
     VariableMetadataSP m_metadata;
   };
 
-  SwiftASTManipulatorBase(swift::SourceFile &source_file, bool repl)
-      : m_source_file(source_file), m_variables(), m_repl(repl) {
+  SwiftASTManipulatorBase(swift::SourceFile &source_file, bool repl,
+                          bool bind_generic_types)
+      : m_source_file(source_file), m_variables(), m_repl(repl),
+        m_bind_generic_types(bind_generic_types) {
     DoInitialization();
   }
 
@@ -108,7 +114,7 @@ public:
 
   bool IsValid() {
     return m_repl || (m_function_decl &&
-                      (m_wrapper_decl || (!m_extension_decl)) && m_do_stmt);
+                      (m_entrypoint_decl || (!m_extension_decl)) && m_do_stmt);
   }
 
   swift::BraceStmt *GetUserBody();
@@ -122,10 +128,19 @@ protected:
 
   bool m_repl = false;
 
+  bool m_bind_generic_types = true;
+
   /// The function containing the expression's code.
   swift::FuncDecl *m_function_decl = nullptr;
-  /// The wrapper that invokes the right generic function.
-  swift::FuncDecl *m_wrapper_decl = nullptr;
+  /// The entrypoint function. Null if evaluating an expression outside a method,
+  /// $__lldb_expr otherswise.
+  swift::FuncDecl *m_entrypoint_decl = nullptr;
+  /// If evaluating in a generic context, the trampoline function that calls the
+  /// method with the user's expression, null otherwise.
+  swift::FuncDecl *m_trampoline_decl = nullptr;
+  /// If evaluating in a generic context, the sink function the entrypoint calls
+  /// in the AST, null otherwise.
+  swift::FuncDecl *m_sink_decl = nullptr;
   /// The extension m_function_decl lives in, if it's a method.
   swift::ExtensionDecl *m_extension_decl = nullptr;
   /// The do{}catch(){} statement whose body is the main body.
@@ -137,7 +152,8 @@ protected:
 
 class SwiftASTManipulator : public SwiftASTManipulatorBase {
 public:
-  SwiftASTManipulator(swift::SourceFile &source_file, bool repl);
+  SwiftASTManipulator(swift::SourceFile &source_file, bool repl,
+                      bool bind_generic_types);
 
   static void WrapExpression(Stream &wrapped_stream, const char *text,
                              bool needs_object_ptr,
@@ -156,13 +172,12 @@ public:
                                       VariableMetadataSP &metadata_sp);
 
   swift::FuncDecl *GetFunctionToInjectVariableInto(
-      const SwiftASTManipulator::VariableInfo &variable, bool is_self) const;
+      const SwiftASTManipulator::VariableInfo &variable) const;
   swift::VarDecl *GetVarDeclForVariableInFunction(
-      const SwiftASTManipulator::VariableInfo &variable, bool is_self,
+      const SwiftASTManipulator::VariableInfo &variable,
       swift::FuncDecl *containing_function);
-  llvm::Optional<swift::Type>
-  GetSwiftTypeForVariable(
-      const SwiftASTManipulator::VariableInfo &variable, bool is_self) const;
+  llvm::Optional<swift::Type> GetSwiftTypeForVariable(
+      const SwiftASTManipulator::VariableInfo &variable) const;
 
   bool AddExternalVariables(llvm::MutableArrayRef<VariableInfo> variables);
 
@@ -200,6 +215,20 @@ public:
                                const EvaluateExpressionOptions &options,
                                std::string &expr_source_path);
 
+  swift::FuncDecl *GetEntrypointDecl() const {
+    return m_entrypoint_decl;
+  }
+
+  swift::FuncDecl *GetFuncDecl() const {
+    return m_function_decl;
+  }
+  swift::FuncDecl *GetTrampolineDecl() const {
+    return m_trampoline_decl;
+  }
+
+  swift::FuncDecl *GetSinkDecl() const {
+    return m_sink_decl;
+  }
 private:
   uint32_t m_tmpname_idx = 0;
 
