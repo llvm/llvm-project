@@ -473,7 +473,7 @@ bool SIFoldOperands::tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
   // Inlineable constant might have been folded into Imm operand of fmaak or
   // fmamk and we are trying to fold a non-inlinable constant.
   if ((Opc == AMDGPU::S_FMAAK_F32 || Opc == AMDGPU::S_FMAMK_F32) &&
-      !TII->isInlineConstant(*OpToFold)) {
+      !OpToFold->isReg() && !TII->isInlineConstant(*OpToFold)) {
     unsigned ImmIdx = Opc == AMDGPU::S_FMAAK_F32 ? 3 : 2;
     MachineOperand &OpImm = MI->getOperand(ImmIdx);
     if (!OpImm.isReg() &&
