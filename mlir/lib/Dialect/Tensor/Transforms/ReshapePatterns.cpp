@@ -49,41 +49,9 @@ struct FoldExpandOfRankReducingExtract
     return success();
   }
 };
-
-/// Fold insert_slice(collapse_shape) ops that cancel itself out.
-struct FoldInsertOfRankReducingInsert : public OpRewritePattern<InsertSliceOp> {
-  using OpRewritePattern<InsertSliceOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(InsertSliceOp insertSliceOp,
-                                PatternRewriter &rewriter) const override {
-    auto collapseShapeOp =
-        insertSliceOp.getSource().getDefiningOp<CollapseShapeOp>();
-    if (!collapseShapeOp)
-      return failure();
-    RankedTensorType srcType = collapseShapeOp.getSrcType();
-
-    // Only cases where the CollapseShapeOp can be folded away entirely are
-    // supported. Moreover, only simple cases where the resulting InsertSliceOp
-    // has no rank-reduction anymore are supported at the moment.
-    RankedTensorType nonReducingInsertType =
-        RankedTensorType::get(insertSliceOp.getStaticSizes(),
-                              insertSliceOp.getType().getElementType());
-    if (nonReducingInsertType != srcType)
-      return failure();
-
-    SmallVector<OpFoldResult> mixedOffsets = insertSliceOp.getMixedOffsets();
-    SmallVector<OpFoldResult> mixedSizes = insertSliceOp.getMixedSizes();
-    SmallVector<OpFoldResult> mixedStrides = insertSliceOp.getMixedStrides();
-    rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
-        insertSliceOp, collapseShapeOp.getSrc(), insertSliceOp.getDest(),
-        mixedOffsets, mixedSizes, mixedStrides);
-    return success();
-  }
-};
 } // namespace
 
 void mlir::tensor::populateReassociativeReshapeFoldingPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<FoldExpandOfRankReducingExtract, FoldInsertOfRankReducingInsert>(
-      patterns.getContext());
+  patterns.add<FoldExpandOfRankReducingExtract>(patterns.getContext());
 }
