@@ -1,4 +1,4 @@
-; RUN: opt -S -licm %s | FileCheck %s
+; RUN: opt -S -passes=licm %s | FileCheck %s
 @v_1 = global i8 0, align 1
 @v_2 =  global i8 0, align 1
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-rotate -o - -verify-loop-info -verify-dom-info -verify-memoryssa | FileCheck %s
+; RUN: opt < %s -S -passes=loop-rotate -o - -verify-loop-info -verify-dom-info -verify-memoryssa | FileCheck %s
 
 ; PR5502
 define void @z80_do_opcodes() nounwind {
