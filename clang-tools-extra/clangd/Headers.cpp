@@ -211,7 +211,7 @@ llvm::Expected<HeaderFile> toHeaderFile(llvm::StringRef Header,
   return HeaderFile{std::move(*Resolved), /*Verbatim=*/false};
 }
 
-llvm::SmallVector<llvm::StringRef, 1> getRankedIncludes(const Symbol &Sym) {
+llvm::SmallVector<SymbolInclude, 1> getRankedIncludes(const Symbol &Sym) {
   auto Includes = Sym.IncludeHeaders;
   // Sort in descending order by reference count and header length.
   llvm::sort(Includes, [](const Symbol::IncludeHeaderWithReferences &LHS,
@@ -220,9 +220,9 @@ llvm::SmallVector<llvm::StringRef, 1> getRankedIncludes(const Symbol &Sym) {
       return LHS.IncludeHeader.size() < RHS.IncludeHeader.size();
     return LHS.References > RHS.References;
   });
-  llvm::SmallVector<llvm::StringRef, 1> Headers;
+  llvm::SmallVector<SymbolInclude, 1> Headers;
   for (const auto &Include : Includes)
-    Headers.push_back(Include.IncludeHeader);
+    Headers.push_back({Include.IncludeHeader, Include.supportedDirectives()});
   return Headers;
 }
 
