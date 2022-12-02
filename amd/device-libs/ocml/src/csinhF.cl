@@ -24,14 +24,13 @@ MATH_MANGLE(csinh)(float2 z)
     float cy;
     float sy = MATH_MANGLE(sincos)(z.y, &cy);
 
-    float cxhi, sxhi;
-    if (FINITE_ONLY_OPT()) {
-        cxhi = cx.hi;
-        sxhi = sx.hi;
-    } else {
+    float cxhi = cx.hi;
+    float sxhi = sx.hi;
+
+    if (!FINITE_ONLY_OPT()) {
         bool b = x >= 0x1.686fc0p+6f;
-        cxhi = b ? AS_FLOAT(PINFBITPATT_SP32) : cx.hi;
-        sxhi = b ? AS_FLOAT(PINFBITPATT_SP32) : sx.hi;
+        cxhi = b ? AS_FLOAT(PINFBITPATT_SP32) : cxhi;
+        sxhi = b ? AS_FLOAT(PINFBITPATT_SP32) : sxhi;
     }
 
     bool s = x >= 0x1.0p-12f;

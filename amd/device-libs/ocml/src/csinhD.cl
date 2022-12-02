@@ -24,14 +24,13 @@ MATH_MANGLE(csinh)(double2 z)
     double cy;
     double sy = MATH_MANGLE(sincos)(z.y, &cy);
 
-    double cxhi, sxhi;
-    if (FINITE_ONLY_OPT()) {
-        cxhi = cx.hi;
-        sxhi = sx.hi;
-    } else {
+    double cxhi = cx.hi;
+    double sxhi = sx.hi;
+
+    if (!FINITE_ONLY_OPT()) {
         bool b = x >= 0x1.6395a2079b70cp+9;
-        cxhi = b ? AS_DOUBLE(PINFBITPATT_DP64) : cx.hi;
-        sxhi = b ? AS_DOUBLE(PINFBITPATT_DP64) : sx.hi;
+        cxhi = b ? AS_DOUBLE(PINFBITPATT_DP64) : cxhi;
+        sxhi = b ? AS_DOUBLE(PINFBITPATT_DP64) : sxhi;
     }
 
     bool s = x >= 0x1.0p-27;
