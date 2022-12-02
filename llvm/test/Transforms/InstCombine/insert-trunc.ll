@@ -143,11 +143,16 @@ define <4 x i8> @low_index_shorter_length_poison_basevec_extra_use(i64 %x) {
 }
 
 define <4 x i16> @lshr_same_length_poison_basevec_le(i64 %x) {
-; ALL-LABEL: @lshr_same_length_poison_basevec_le(
-; ALL-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 32
-; ALL-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
-; ALL-NEXT:    [[R:%.*]] = insertelement <4 x i16> poison, i16 [[T]], i64 2
-; ALL-NEXT:    ret <4 x i16> [[R]]
+; BE-LABEL: @lshr_same_length_poison_basevec_le(
+; BE-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 32
+; BE-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
+; BE-NEXT:    [[R:%.*]] = insertelement <4 x i16> poison, i16 [[T]], i64 2
+; BE-NEXT:    ret <4 x i16> [[R]]
+;
+; LE-LABEL: @lshr_same_length_poison_basevec_le(
+; LE-NEXT:    [[VEC_X:%.*]] = bitcast i64 [[X:%.*]] to <4 x i16>
+; LE-NEXT:    [[R:%.*]] = shufflevector <4 x i16> [[VEC_X]], <4 x i16> poison, <4 x i32> <i32 undef, i32 undef, i32 2, i32 undef>
+; LE-NEXT:    ret <4 x i16> [[R]]
 ;
   %s = lshr i64 %x, 32
   %t = trunc i64 %s to i16
@@ -156,11 +161,16 @@ define <4 x i16> @lshr_same_length_poison_basevec_le(i64 %x) {
 }
 
 define <4 x i16> @lshr_same_length_poison_basevec_be(i64 %x) {
-; ALL-LABEL: @lshr_same_length_poison_basevec_be(
-; ALL-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 32
-; ALL-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
-; ALL-NEXT:    [[R:%.*]] = insertelement <4 x i16> poison, i16 [[T]], i64 1
-; ALL-NEXT:    ret <4 x i16> [[R]]
+; BE-LABEL: @lshr_same_length_poison_basevec_be(
+; BE-NEXT:    [[VEC_X:%.*]] = bitcast i64 [[X:%.*]] to <4 x i16>
+; BE-NEXT:    [[R:%.*]] = shufflevector <4 x i16> [[VEC_X]], <4 x i16> poison, <4 x i32> <i32 undef, i32 1, i32 undef, i32 undef>
+; BE-NEXT:    ret <4 x i16> [[R]]
+;
+; LE-LABEL: @lshr_same_length_poison_basevec_be(
+; LE-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 32
+; LE-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
+; LE-NEXT:    [[R:%.*]] = insertelement <4 x i16> poison, i16 [[T]], i64 1
+; LE-NEXT:    ret <4 x i16> [[R]]
 ;
   %s = lshr i64 %x, 32
   %t = trunc i64 %s to i16
@@ -170,9 +180,8 @@ define <4 x i16> @lshr_same_length_poison_basevec_be(i64 %x) {
 
 define <4 x i16> @lshr_same_length_poison_basevec_both_endian(i64 %x) {
 ; BE-LABEL: @lshr_same_length_poison_basevec_both_endian(
-; BE-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 48
-; BE-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
-; BE-NEXT:    [[R:%.*]] = insertelement <4 x i16> poison, i16 [[T]], i64 0
+; BE-NEXT:    [[VEC_X:%.*]] = bitcast i64 [[X:%.*]] to <4 x i16>
+; BE-NEXT:    [[R:%.*]] = shufflevector <4 x i16> [[VEC_X]], <4 x i16> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
 ; BE-NEXT:    ret <4 x i16> [[R]]
 ;
 ; LE-LABEL: @lshr_same_length_poison_basevec_both_endian(
@@ -208,9 +217,8 @@ define <8 x i16> @lshr_longer_length_poison_basevec_le(i64 %x) {
 ; BE-NEXT:    ret <8 x i16> [[R]]
 ;
 ; LE-LABEL: @lshr_longer_length_poison_basevec_le(
-; LE-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 48
-; LE-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
-; LE-NEXT:    [[R:%.*]] = insertelement <8 x i16> poison, i16 [[T]], i64 3
+; LE-NEXT:    [[VEC_X:%.*]] = bitcast i64 [[X:%.*]] to <4 x i16>
+; LE-NEXT:    [[R:%.*]] = shufflevector <4 x i16> [[VEC_X]], <4 x i16> poison, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
 ; LE-NEXT:    ret <8 x i16> [[R]]
 ;
   %s = lshr i64 %x, 48
@@ -220,11 +228,16 @@ define <8 x i16> @lshr_longer_length_poison_basevec_le(i64 %x) {
 }
 
 define <8 x i16> @lshr_longer_length_poison_basevec_be(i64 %x) {
-; ALL-LABEL: @lshr_longer_length_poison_basevec_be(
-; ALL-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 32
-; ALL-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
-; ALL-NEXT:    [[R:%.*]] = insertelement <8 x i16> poison, i16 [[T]], i64 1
-; ALL-NEXT:    ret <8 x i16> [[R]]
+; BE-LABEL: @lshr_longer_length_poison_basevec_be(
+; BE-NEXT:    [[VEC_X:%.*]] = bitcast i64 [[X:%.*]] to <4 x i16>
+; BE-NEXT:    [[R:%.*]] = shufflevector <4 x i16> [[VEC_X]], <4 x i16> poison, <8 x i32> <i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; BE-NEXT:    ret <8 x i16> [[R]]
+;
+; LE-LABEL: @lshr_longer_length_poison_basevec_be(
+; LE-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 32
+; LE-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
+; LE-NEXT:    [[R:%.*]] = insertelement <8 x i16> poison, i16 [[T]], i64 1
+; LE-NEXT:    ret <8 x i16> [[R]]
 ;
   %s = lshr i64 %x, 32
   %t = trunc i64 %s to i16
@@ -246,11 +259,16 @@ define <8 x i16> @lshr_wrong_index_longer_length_poison_basevec(i64 %x) {
 }
 
 define <2 x i16> @lshr_shorter_length_poison_basevec_le(i64 %x) {
-; ALL-LABEL: @lshr_shorter_length_poison_basevec_le(
-; ALL-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 16
-; ALL-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
-; ALL-NEXT:    [[R:%.*]] = insertelement <2 x i16> poison, i16 [[T]], i64 1
-; ALL-NEXT:    ret <2 x i16> [[R]]
+; BE-LABEL: @lshr_shorter_length_poison_basevec_le(
+; BE-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 16
+; BE-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
+; BE-NEXT:    [[R:%.*]] = insertelement <2 x i16> poison, i16 [[T]], i64 1
+; BE-NEXT:    ret <2 x i16> [[R]]
+;
+; LE-LABEL: @lshr_shorter_length_poison_basevec_le(
+; LE-NEXT:    [[VEC_X:%.*]] = bitcast i64 [[X:%.*]] to <4 x i16>
+; LE-NEXT:    [[R:%.*]] = shufflevector <4 x i16> [[VEC_X]], <4 x i16> poison, <2 x i32> <i32 undef, i32 1>
+; LE-NEXT:    ret <2 x i16> [[R]]
 ;
   %s = lshr i64 %x, 16
   %t = trunc i64 %s to i16
@@ -259,11 +277,16 @@ define <2 x i16> @lshr_shorter_length_poison_basevec_le(i64 %x) {
 }
 
 define <4 x i8> @lshr_shorter_length_poison_basevec_be(i64 %x) {
-; ALL-LABEL: @lshr_shorter_length_poison_basevec_be(
-; ALL-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 40
-; ALL-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i8
-; ALL-NEXT:    [[R:%.*]] = insertelement <4 x i8> poison, i8 [[T]], i64 2
-; ALL-NEXT:    ret <4 x i8> [[R]]
+; BE-LABEL: @lshr_shorter_length_poison_basevec_be(
+; BE-NEXT:    [[VEC_X:%.*]] = bitcast i64 [[X:%.*]] to <8 x i8>
+; BE-NEXT:    [[R:%.*]] = shufflevector <8 x i8> [[VEC_X]], <8 x i8> poison, <4 x i32> <i32 undef, i32 undef, i32 2, i32 undef>
+; BE-NEXT:    ret <4 x i8> [[R]]
+;
+; LE-LABEL: @lshr_shorter_length_poison_basevec_be(
+; LE-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 40
+; LE-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i8
+; LE-NEXT:    [[R:%.*]] = insertelement <4 x i8> poison, i8 [[T]], i64 2
+; LE-NEXT:    ret <4 x i8> [[R]]
 ;
   %s = lshr i64 %x, 40
   %t = trunc i64 %s to i8

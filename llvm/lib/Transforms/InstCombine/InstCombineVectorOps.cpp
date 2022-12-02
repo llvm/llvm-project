@@ -1544,8 +1544,17 @@ static Instruction *foldTruncInsElt(InsertElementInst &InsElt, bool IsBigEndian,
     // The insert is to the LSB end of the vector (depends on endian).
     // That's all we need.
   } else {
-    // TODO: Look through a shift-right and translate the insert index.
-    return nullptr;
+    // If not, we must match a right-shift to translate the insert index.
+    uint64_t ShiftC;
+    if (!match(T, m_OneUse(m_LShr(m_Value(X), m_ConstantInt(ShiftC)))))
+      return nullptr;
+
+    // Check the shift amount to see if this can be folded to an identity
+    // shuffle (assuming we are shuffling with an undef base vector).
+    // Big endian has MSB at vector index 0, so the insert index is flipped.
+    if (ShiftC != (IsBigEndian ? (NumEltsInScalar - 1 - IndexC) * VecEltWidth
+                               : IndexC * VecEltWidth))
+      return nullptr;
   }
 
   // Bitcast the scalar to a vector type with the destination element type.
