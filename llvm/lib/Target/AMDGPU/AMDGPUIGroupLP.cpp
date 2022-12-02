@@ -771,43 +771,13 @@ void MFMASmallGemmOpt::applyIGLPStrategy(
 
   const unsigned PipelineSyncID = 0;
   SchedGroup *SG = nullptr;
-  for (unsigned I = 0; I < MFMACount; ++I) {
+  for (unsigned I = 0; I < MFMACount * 3; ++I) {
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
-        SchedGroupMask::DS_READ, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
-
-    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
-        SchedGroupMask::VMEM_READ, 1, PipelineSyncID, DAG, TII);
+        SchedGroupMask::DS, 2, PipelineSyncID, DAG, TII);
     SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
 
     SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
         SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
-
-    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
-        SchedGroupMask::VMEM_WRITE, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
-
-    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
-        SchedGroupMask::DS_WRITE, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
-  }
-
-  for (unsigned I = 0; I < MFMACount; ++I) {
-    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
-        SchedGroupMask::DS_READ, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
-
-    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
-        SchedGroupMask::VMEM_READ, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
-
-    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
-        SchedGroupMask::VMEM_WRITE, 1, PipelineSyncID, DAG, TII);
-    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
-
-    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
-        SchedGroupMask::DS_WRITE, 1, PipelineSyncID, DAG, TII);
     SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
   }
 }
