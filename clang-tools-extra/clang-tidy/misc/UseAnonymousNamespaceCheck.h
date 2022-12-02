@@ -16,8 +16,7 @@ namespace tidy {
 namespace misc {
 
 /// Warns when using 'static' functions or variables at global scope, and
-/// suggests moving them to an anonymous namespace. It also suggests removing
-/// 'static' if they are already inside an anonymous namespace.
+/// suggests moving them to an anonymous namespace.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-anonymous-namespace.html
