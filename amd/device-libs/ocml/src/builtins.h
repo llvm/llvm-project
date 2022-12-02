@@ -68,6 +68,10 @@
 #define BUILTIN_ISFINITE_F64(x) __builtin_amdgcn_class(x, CLASS_NNOR|CLASS_NSUB|CLASS_NZER|CLASS_PZER|CLASS_PSUB|CLASS_PNOR)
 #define BUILTIN_ISFINITE_F16(x) __builtin_amdgcn_classh(x, CLASS_NNOR|CLASS_NSUB|CLASS_NZER|CLASS_PZER|CLASS_PSUB|CLASS_PNOR)
 
+#define BUILTIN_ISSUBNORMAL_F32(x) __builtin_amdgcn_classf(x, CLASS_NSUB|CLASS_PSUB)
+#define BUILTIN_ISSUBNORMAL_F64(x) __builtin_amdgcn_class(x, CLASS_NSUB|CLASS_PSUB)
+#define BUILTIN_ISSUBNORMAL_F16(x) __builtin_amdgcn_classh(x, CLASS_NSUB|CLASS_PSUB)
+
 #define BUILTIN_COPYSIGN_F32 __builtin_copysignf
 #define BUILTIN_COPYSIGN_F64 __builtin_copysign
 #define BUILTIN_COPYSIGN_F16 __builtin_copysignf16

@@ -62,7 +62,7 @@ MATH_MANGLE(log)(float x)
     } else {
         // not DAZ
         if (UNSAFE_MATH_OPT()) {
-            bool s = BUILTIN_CLASS_F32(x, CLASS_NSUB|CLASS_PSUB);
+            bool s = BUILTIN_ISSUBNORMAL_F32(x);
             x *= s ? 0x1.0p+32f : 1.0f;
 #if defined COMPILING_LOG2
             return BUILTIN_LOG2_F32(x) - (s ? 32.0f : 0.0f);
@@ -72,7 +72,7 @@ MATH_MANGLE(log)(float x)
             return MATH_MAD(BUILTIN_LOG2_F32(x), 0x1.62e430p-1f, s ? -0x1.62e430p+4f : 0.0f);
 #endif
         } else {
-            bool s = BUILTIN_CLASS_F32(x, CLASS_NSUB|CLASS_PSUB);
+            bool s = BUILTIN_ISSUBNORMAL_F32(x);
             x *= s ? 0x1.0p+32f : 1.0f;
 #if defined COMPILING_LOG2
             return BUILTIN_LOG2_F32(x) - (s ? 32.0f : 0.0f);
