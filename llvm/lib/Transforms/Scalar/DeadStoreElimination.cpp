@@ -86,6 +86,7 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -1045,9 +1046,9 @@ struct DSEState {
     return !I.first->second;
   }
 
-  Optional<MemoryLocation> getLocForWrite(Instruction *I) const {
+  std::optional<MemoryLocation> getLocForWrite(Instruction *I) const {
     if (!I->mayWriteToMemory())
-      return None;
+      return std::nullopt;
 
     if (auto *CB = dyn_cast<CallBase>(I))
       return MemoryLocation::getForDest(CB, TLI);
@@ -1157,7 +1158,7 @@ struct DSEState {
   /// If \p I is a memory  terminator like llvm.lifetime.end or free, return a
   /// pair with the MemoryLocation terminated by \p I and a boolean flag
   /// indicating whether \p I is a free-like call.
-  Optional<std::pair<MemoryLocation, bool>>
+  std::optional<std::pair<MemoryLocation, bool>>
   getLocForTerminator(Instruction *I) const {
     uint64_t Len;
     Value *Ptr;
@@ -1170,7 +1171,7 @@ struct DSEState {
         return {std::make_pair(MemoryLocation::getAfter(FreedOp), true)};
     }
 
-    return None;
+    return std::nullopt;
   }
 
   /// Returns true if \p I is a memory terminator instruction like
@@ -1185,7 +1186,7 @@ struct DSEState {
   /// instruction \p AccessI.
   bool isMemTerminator(const MemoryLocation &Loc, Instruction *AccessI,
                        Instruction *MaybeTerm) {
-    Optional<std::pair<MemoryLocation, bool>> MaybeTermLoc =
+    std::optional<std::pair<MemoryLocation, bool>> MaybeTermLoc =
         getLocForTerminator(MaybeTerm);
 
     if (!MaybeTermLoc)
@@ -1296,7 +1297,7 @@ struct DSEState {
                        !KillingI->mayReadFromMemory();
 
     // Find the next clobbering Mod access for DefLoc, starting at StartAccess.
-    Optional<MemoryLocation> CurrentLoc;
+    std::optional<MemoryLocation> CurrentLoc;
     for (;; Current = cast<MemoryDef>(Current)->getDefiningAccess()) {
       LLVM_DEBUG({
         dbgs() << "   visiting " << *Current;
@@ -2024,12 +2025,13 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
       continue;
     Instruction *KillingI = KillingDef->getMemoryInst();
 
-    Optional<MemoryLocation> MaybeKillingLoc;
-    if (State.isMemTerminatorInst(KillingI))
-      MaybeKillingLoc = State.getLocForTerminator(KillingI).transform(
-          [](const std::pair<MemoryLocation, bool> &P) { return P.first; });
-    else
+    std::optional<MemoryLocation> MaybeKillingLoc;
+    if (State.isMemTerminatorInst(KillingI)) {
+      if (auto KillingLoc = State.getLocForTerminator(KillingI))
+        MaybeKillingLoc = KillingLoc->first;
+    } else {
       MaybeKillingLoc = State.getLocForWrite(KillingI);
+    }
 
     if (!MaybeKillingLoc) {
       LLVM_DEBUG(dbgs() << "Failed to find analyzable write location for "
