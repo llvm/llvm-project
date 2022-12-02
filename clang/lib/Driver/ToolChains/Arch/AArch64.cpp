@@ -135,8 +135,9 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
     Features.push_back("+neon");
   } else {
     ArchKind = llvm::AArch64::parseCPUArch(CPU);
-    if (!llvm::AArch64::getArchFeatures(ArchKind, Features))
+    if (ArchKind == llvm::AArch64::ArchKind::INVALID)
       return false;
+    Features.push_back(llvm::AArch64::getArchFeature(ArchKind));
 
     uint64_t Extension = llvm::AArch64::getDefaultExtensions(CPU, ArchKind);
     if (!llvm::AArch64::getExtensionFeatures(Extension, Features))
@@ -160,9 +161,9 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseArch(Split.first);
   if (Split.first == "native")
     ArchKind = llvm::AArch64::getCPUArchKind(llvm::sys::getHostCPUName().str());
-  if (ArchKind == llvm::AArch64::ArchKind::INVALID ||
-      !llvm::AArch64::getArchFeatures(ArchKind, Features))
+  if (ArchKind == llvm::AArch64::ArchKind::INVALID)
     return false;
+  Features.push_back(llvm::AArch64::getArchFeature(ArchKind));
 
   // Enable SVE2 by default on Armv9-A.
   // It can still be disabled if +nosve2 is present.
