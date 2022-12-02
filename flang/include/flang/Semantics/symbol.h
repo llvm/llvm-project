@@ -105,6 +105,10 @@ public:
   Symbol *moduleInterface() { return moduleInterface_; }
   const Symbol *moduleInterface() const { return moduleInterface_; }
   void set_moduleInterface(Symbol &);
+  void ReplaceResult(Symbol &result) {
+    CHECK(result_ != nullptr);
+    result_ = &result;
+  }
 
 private:
   bool isInterface_{false}; // true if this represents an interface-body
