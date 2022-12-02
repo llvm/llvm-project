@@ -187,9 +187,20 @@ func.func @extract_element(%arg0 : vector<4xf32>, %id : i32) -> f32 {
 
 // -----
 
+// CHECK-LABEL: @extract_element_cst
+//  CHECK-SAME: %[[V:.*]]: vector<4xf32>
+//       CHECK:   spirv.CompositeExtract %[[V]][1 : i32] : vector<4xf32>
+func.func @extract_element_cst(%arg0 : vector<4xf32>) -> f32 {
+  %idx = arith.constant 1 : i32
+  %0 = vector.extractelement %arg0[%idx : i32] : vector<4xf32>
+  return %0: f32
+}
+
+// -----
+
 // CHECK-LABEL: @extract_element_index
 func.func @extract_element_index(%arg0 : vector<4xf32>, %id : index) -> f32 {
-  // CHECK: vector.extractelement
+  // CHECK: spirv.VectorExtractDynamic
   %0 = vector.extractelement %arg0[%id : index] : vector<4xf32>
   return %0: f32
 }
@@ -249,9 +260,20 @@ func.func @insert_element(%val: f32, %arg0 : vector<4xf32>, %id : i32) -> vector
 
 // -----
 
+// CHECK-LABEL: @insert_element_cst
+//  CHECK-SAME: %[[VAL:.*]]: f32, %[[V:.*]]: vector<4xf32>
+//       CHECK:   spirv.CompositeInsert %[[VAL]], %[[V]][2 : i32] : f32 into vector<4xf32>
+func.func @insert_element_cst(%val: f32, %arg0 : vector<4xf32>) -> vector<4xf32> {
+  %idx = arith.constant 2 : i32
+  %0 = vector.insertelement %val, %arg0[%idx : i32] : vector<4xf32>
+  return %0: vector<4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @insert_element_index
 func.func @insert_element_index(%val: f32, %arg0 : vector<4xf32>, %id : index) -> vector<4xf32> {
-  // CHECK: vector.insertelement
+  // CHECK: spirv.VectorInsertDynamic
   %0 = vector.insertelement %val, %arg0[%id : index] : vector<4xf32>
   return %0: vector<4xf32>
 }

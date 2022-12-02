@@ -9859,7 +9859,7 @@ void TypeSystemClang::RequireCompleteType(CompilerType type) {
   const clang::TagDecl *td = ClangUtil::GetAsTagDecl(type);
   auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
   if (ts)
-    ts->GetMetadata(td)->SetIsForcefullyCompleted();
+    ts->SetDeclIsForcefullyCompleted(td);
 }
 
 namespace {
@@ -10061,4 +10061,15 @@ bool TypeSystemClang::IsForcefullyCompleted(lldb::opaque_compiler_type_t type) {
     }
   }
   return false;
+}
+
+bool TypeSystemClang::SetDeclIsForcefullyCompleted(const clang::TagDecl *td) {
+  if (td == nullptr)
+    return false;
+  ClangASTMetadata *metadata = GetMetadata(td);
+  if (metadata == nullptr)
+    return false;
+  m_has_forcefully_completed_types = true;
+  metadata->SetIsForcefullyCompleted();
+  return true;
 }

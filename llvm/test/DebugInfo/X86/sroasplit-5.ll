@@ -1,11 +1,11 @@
-; RUN: opt %s -sroa -verify -S -o - | FileCheck %s
+; RUN: opt %s -passes='sroa,verify' -S -o - | FileCheck %s
 ; From:
 ; struct prog_src_register {
-;   unsigned : 4;       
-;   int Index : 12 + 1; 
-;   unsigned : 12;      
-;   unsigned : 4;       
-;   int : 12 + 1        
+;   unsigned : 4;
+;   int Index : 12 + 1;
+;   unsigned : 12;
+;   unsigned : 4;
+;   int : 12 + 1
 ; } src_reg_for_float() {
 ;   struct prog_src_register a;
 ;   memset(&a, 0, sizeof(a));

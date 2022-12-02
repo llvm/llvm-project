@@ -275,16 +275,24 @@ function(runtime_register_target name target)
     endif()
   endforeach()
 
-  foreach(target_name IN LISTS SUB_COMPONENTS SUB_INSTALL_TARGETS)
+  foreach(target_name IN LISTS SUB_COMPONENTS)
     set(${target_name}-${name} ${target_name})
     list(APPEND ${name}_extra_targets ${target_name}-${name})
   endforeach()
 
+  foreach(target_name IN LISTS SUB_INSTALL_TARGETS)
+    set(${target_name}-${name} ${target_name})
+    set(${target_name}-${name}-stripped ${target_name}-stripped)
+    list(APPEND ${name}_extra_targets ${target_name}-${name} ${target_name}-${name}-stripped)
+  endforeach()
+
   foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
-    set(${component}-${name} ${component})
-    set(install-${component}-${name} install-${component})
-    set(install-${component}-${name}-stripped install-${component}-stripped)
-    list(APPEND ${name}_extra_targets ${component}-${name} install-${component}-${name} install-${component}-${name}-stripped)
+    if(NOT component IN_LIST SUB_COMPONENTS)
+      set(${component}-${name} ${component})
+      set(install-${component}-${name} install-${component})
+      set(install-${component}-${name}-stripped install-${component}-stripped)
+      list(APPEND ${name}_extra_targets ${component}-${name} install-${component}-${name} install-${component}-${name}-stripped)
+    endif()
   endforeach()
 
   if(LLVM_INCLUDE_TESTS)
@@ -293,7 +301,15 @@ function(runtime_register_target name target)
     set(check-runtimes-${name} check-runtimes)
     list(APPEND ${name}_test_targets runtimes-test-depends-${name} check-runtimes-${name})
     list(APPEND test_targets ${${name}_test_targets})
-    foreach(target_name IN LISTS SUB_CHECK_TARGETS)
+
+    set(component_check_targets)
+    foreach(component IN LISTS LLVM_RUNTIME_DISTRIBUTION_COMPONENTS)
+      if(NOT "check-${component}" IN_LIST SUB_CHECK_TARGETS)
+        list(APPEND component_check_targets "check-${component}")
+      endif()
+    endforeach()
+
+    foreach(target_name IN LISTS SUB_CHECK_TARGETS component_check_targets)
       set(${target_name}-${name} ${target_name})
       list(APPEND ${name}_test_targets ${target_name}-${name})
       list(APPEND test_targets ${target_name}-${name})
@@ -468,8 +484,10 @@ if(runtimes)
     set(RUNTIMES_TEST_DEPENDS
         FileCheck
         count
+        llvm-cov
         llvm-nm
         llvm-objdump
+        llvm-profdata
         llvm-xray
         not
         obj2yaml

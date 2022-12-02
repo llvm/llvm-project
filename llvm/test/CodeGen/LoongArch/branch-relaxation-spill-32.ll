@@ -131,7 +131,7 @@ define void @relax_b28_spill() {
 ; CHECK-NEXT:    .space 536870912
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    b .LBB0_3
-; CHECK-NEXT:  .LBB0_5: # %iftrue
+; CHECK-NEXT:  .LBB0_5: # %iffalse
 ; CHECK-NEXT:    ld.w $t8, $sp, 0
 ; CHECK-NEXT:  # %bb.2: # %iffalse
 ; CHECK-NEXT:    #APP

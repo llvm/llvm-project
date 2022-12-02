@@ -1125,10 +1125,10 @@ SymbolFileDWARFDebugMap::ParseCallEdgesInFunction(UserID func_id) {
 }
 
 TypeSP SymbolFileDWARFDebugMap::FindDefinitionTypeForDWARFDeclContext(
-    const DWARFDeclContext &die_decl_ctx) {
+    const DWARFDIE &die) {
   TypeSP type_sp;
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
-    type_sp = oso_dwarf->FindDefinitionTypeForDWARFDeclContext(die_decl_ctx);
+    type_sp = oso_dwarf->FindDefinitionTypeForDWARFDeclContext(die);
     return ((bool)type_sp);
   });
   return type_sp;

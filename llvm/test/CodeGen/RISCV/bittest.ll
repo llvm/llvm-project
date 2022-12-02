@@ -1524,8 +1524,8 @@ define void @bit_31_nz_branch_i64(i64 %0) {
 define void @bit_32_z_branch_i64(i64 %0) {
 ; RV32-LABEL: bit_32_z_branch_i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    andi a0, a1, 1
-; RV32-NEXT:    bnez a0, .LBB53_2
+; RV32-NEXT:    andi a1, a1, 1
+; RV32-NEXT:    bnez a1, .LBB53_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    tail bar@plt
 ; RV32-NEXT:  .LBB53_2:
@@ -1554,8 +1554,8 @@ define void @bit_32_z_branch_i64(i64 %0) {
 define void @bit_32_nz_branch_i64(i64 %0) {
 ; RV32-LABEL: bit_32_nz_branch_i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    andi a0, a1, 1
-; RV32-NEXT:    beqz a0, .LBB54_2
+; RV32-NEXT:    andi a1, a1, 1
+; RV32-NEXT:    beqz a1, .LBB54_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    tail bar@plt
 ; RV32-NEXT:  .LBB54_2:

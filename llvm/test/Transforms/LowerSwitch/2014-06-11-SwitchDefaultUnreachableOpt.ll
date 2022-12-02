@@ -1,4 +1,4 @@
-; RUN: opt < %s -lowerswitch -S | FileCheck %s
+; RUN: opt < %s -passes=lowerswitch -S | FileCheck %s
 ;
 ; The switch is lowered with a single icmp.
 ; CHECK: icmp

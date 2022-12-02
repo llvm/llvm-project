@@ -164,7 +164,7 @@ private:
 // respectively.
 class BssSection final : public SyntheticSection {
 public:
-  BssSection(StringRef name, uint64_t size, uint32_t alignment);
+  BssSection(StringRef name, uint64_t size, uint32_t addralign);
   void writeTo(uint8_t *) override {}
   bool isNeeded() const override { return size != 0; }
   size_t getSize() const override { return size; }
@@ -935,14 +935,14 @@ public:
 
 protected:
   MergeSyntheticSection(StringRef name, uint32_t type, uint64_t flags,
-                        uint32_t alignment)
-      : SyntheticSection(flags, type, alignment, name) {}
+                        uint32_t addralign)
+      : SyntheticSection(flags, type, addralign, name) {}
 };
 
 class MergeTailSection final : public MergeSyntheticSection {
 public:
   MergeTailSection(StringRef name, uint32_t type, uint64_t flags,
-                   uint32_t alignment);
+                   uint32_t addralign);
 
   size_t getSize() const override;
   void writeTo(uint8_t *buf) override;
@@ -955,8 +955,8 @@ private:
 class MergeNoTailSection final : public MergeSyntheticSection {
 public:
   MergeNoTailSection(StringRef name, uint32_t type, uint64_t flags,
-                     uint32_t alignment)
-      : MergeSyntheticSection(name, type, flags, alignment) {}
+                     uint32_t addralign)
+      : MergeSyntheticSection(name, type, flags, addralign) {}
 
   size_t getSize() const override { return size; }
   void writeTo(uint8_t *buf) override;

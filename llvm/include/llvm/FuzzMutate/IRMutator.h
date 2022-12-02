@@ -118,6 +118,17 @@ public:
   void mutate(Instruction &Inst, RandomIRBuilder &IB) override;
 };
 
+/// Strategy to insert PHI Nodes at the head of each basic block.
+class InsertPHIStrategy : public IRMutationStrategy {
+public:
+  uint64_t getWeight(size_t CurrentSize, size_t MaxSize,
+                     uint64_t CurrentWeight) override {
+    return 2;
+  }
+
+  void mutate(BasicBlock &BB, RandomIRBuilder &IB) override;
+};
+
 /// Strategy to select a random instruction and add a new sink (user) to it to
 /// increate data dependency.
 class SinkInstructionStrategy : public IRMutationStrategy {

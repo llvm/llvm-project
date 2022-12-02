@@ -24,6 +24,10 @@
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include <memory>
 #include <vector>
 
@@ -133,8 +137,37 @@ struct Include {
                                        // nullptr if the header was not found
   SourceLocation HashLocation;         // of hash in #include <vector>
   unsigned Line = 0;                   // 1-based line number for #include
+  bool Angled = false;                 // True if spelled with <angle> quotes.
+  std::string quote() const;           // e.g. <vector>
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Include &);
+
+/// A container for all includes present in a file.
+/// Supports efficiently hit-testing Headers against Includes.
+class Includes {
+public:
+  void add(const Include &);
+
+  /// All #includes seen, in the order they appear.
+  llvm::ArrayRef<Include> all() const { return All; }
+
+  /// Determine #includes that match a header (that provides a used symbol).
+  ///
+  /// Matching is based on the type of Header specified:
+  ///  - for a physical file like /path/to/foo.h, we check Resolved
+  ///  - for a logical file like <vector>, we check Spelled
+  llvm::SmallVector<const Include *> match(Header H) const;
+
+  /// Finds the include written on the specified line.
+  const Include *atLine(unsigned OneBasedIndex) const;
+
+private:
+  std::vector<Include> All;
+  // Lookup structures for match(), values are index into All.
+  llvm::StringMap<llvm::SmallVector<unsigned>> BySpelling;
+  llvm::DenseMap<const FileEntry *, llvm::SmallVector<unsigned>> ByFile;
+  llvm::DenseMap<unsigned, unsigned> ByLine;
+};
 
 } // namespace include_cleaner
 } // namespace clang

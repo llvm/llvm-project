@@ -1,4 +1,4 @@
-; RUN: opt %s -lowerswitch -S | FileCheck %s
+; RUN: opt %s -passes=lowerswitch -S | FileCheck %s
 
 define void @foo(i32 %x, i32* %p) {
 ; Cases 2 and 4 are removed and become the new default case.

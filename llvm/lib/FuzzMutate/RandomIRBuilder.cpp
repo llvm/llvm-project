@@ -169,3 +169,8 @@ Value *RandomIRBuilder::findPointer(BasicBlock &BB,
     return RS.getSelection();
   return nullptr;
 }
+
+Type *RandomIRBuilder::randomType() {
+  uint64_t TyIdx = uniform<uint64_t>(Rand, 0, KnownTypes.size() - 1);
+  return KnownTypes[TyIdx];
+}

@@ -13,7 +13,7 @@ define void @iv_no_binary_op_in_descriptor(i1 %c, ptr %dst) {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     WIDEN-INDUCTION %iv = phi 0, %iv.next.p, ir<1>
-; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr ir<%dst>, vp<[[STEPS:%.+]]>
 ; CHECK-NEXT:     WIDEN store ir<%gep>, ir<%iv>
 ; CHECK-NEXT:   Successor(s): loop.latch

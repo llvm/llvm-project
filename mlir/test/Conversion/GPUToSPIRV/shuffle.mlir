@@ -8,7 +8,7 @@ module attributes {
 gpu.module @kernels {
   // CHECK-LABEL:  spirv.func @shuffle_xor()
   gpu.func @shuffle_xor() kernel
-    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[16, 1, 1]>: vector<3xi32>>} {
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     %mask = arith.constant 8 : i32
     %width = arith.constant 16 : i32
     %val = arith.constant 42.0 : f32
@@ -33,7 +33,7 @@ module attributes {
 
 gpu.module @kernels {
   gpu.func @shuffle_xor() kernel
-    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[16, 1, 1]>: vector<3xi32>>} {
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     %mask = arith.constant 8 : i32
     %width = arith.constant 16 : i32
     %val = arith.constant 42.0 : f32
@@ -57,7 +57,7 @@ module attributes {
 gpu.module @kernels {
   // CHECK-LABEL:  spirv.func @shuffle_idx()
   gpu.func @shuffle_idx() kernel
-    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[16, 1, 1]>: vector<3xi32>>} {
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     %mask = arith.constant 8 : i32
     %width = arith.constant 16 : i32
     %val = arith.constant 42.0 : f32

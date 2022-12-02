@@ -1,4 +1,4 @@
-; RUN: opt < %s -strip -S | llvm-as | llvm-dis
+; RUN: opt < %s -passes=strip -S | llvm-as | llvm-dis
 ; RUN: verify-uselistorder %s
 
 ; Stripping the name from A should not break references to it.

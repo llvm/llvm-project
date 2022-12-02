@@ -1,4 +1,4 @@
-; RUN: opt -S -indvars < %s | FileCheck %s
+; RUN: opt -S -passes=indvars < %s | FileCheck %s
 
 ; CHECK: @main
 ; CHECK: %mul.lcssa5 = phi i32 [ %a.promoted4, %entry ], [ %mul.30, %for.body3 ]

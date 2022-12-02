@@ -21,7 +21,7 @@ define void @sink_replicate_region_1(i32 %x, i8* %ptr, i32* noalias %dst) optsiz
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%0> = phi ir<0>, ir<%conv>
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
-; CHECK-NEXT:   vp<[[STEPS:%.]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; CHECK-NEXT:   vp<[[STEPS:%.]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT: Successor(s): loop.0
 ; CHECK-EMPTY:
@@ -117,7 +117,7 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, i32* %ptr) optsize {
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT: Successor(s): loop.0
 ; CHECK-EMPTY:
@@ -269,7 +269,7 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, i8* 
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%0> = phi ir<0>, ir<%conv>
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT:   REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT: Successor(s): loop.0
@@ -376,7 +376,7 @@ define void @sink_replicate_region_after_replicate_region(i32* %ptr, i32 %x, i8 
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT: Successor(s): loop.0
 ; CHECK-EMPTY:
@@ -467,7 +467,8 @@ define void @need_new_block_after_sinking_pr56146(i32 %x, i32* %src, i32* noalia
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%.pn> = phi ir<0>, ir<[[L:%.+]]>
-; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<2>, ir<1>
+; CHECK-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<2> + vp<[[CAN_IV]]> * ir<1>
+; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>
 ; CHECK-NEXT:     EMIT vp<[[WIDE_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
 ; CHECK-NEXT:     EMIT vp<[[CMP:%.+]]> = icmp ule vp<[[WIDE_IV]]> vp<[[BTC]]>
 ; CHECK-NEXT:   Successor(s): loop.0
@@ -487,7 +488,7 @@ define void @need_new_block_after_sinking_pr56146(i32 %x, i32* %src, i32* noalia
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.if:
 ; CHECK-NEXT:       REPLICATE ir<%val> = sdiv vp<[[SPLICE]]>, ir<%x>
-; CHECK-NEXT:       REPLICATE ir<%gep.dst> = getelementptr ir<%dst>, vp<%5>
+; CHECK-NEXT:       REPLICATE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[SCALAR_STEPS]]>
 ; CHECK-NEXT:       REPLICATE store ir<%val>, ir<%gep.dst>
 ; CHECK-NEXT:     Successor(s): pred.store.continue
 ; CHECK-EMPTY:
