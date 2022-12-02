@@ -252,7 +252,7 @@ private:
 template <typename T>
 struct BinaryOp {
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
+                                         fir::FirOpBuilder &builder, const T &,
                                          hlfir::Entity lhs, hlfir::Entity rhs) {
     TODO(loc, "binary op implementation in HLFIR");
   }
@@ -263,9 +263,11 @@ struct BinaryOp {
   template <int KIND>                                                          \
   struct BinaryOp<Fortran::evaluate::GenBinEvOp<Fortran::evaluate::Type<       \
       Fortran::common::TypeCategory::GenBinTyCat, KIND>>> {                    \
+    using Op = Fortran::evaluate::GenBinEvOp<Fortran::evaluate::Type<          \
+        Fortran::common::TypeCategory::GenBinTyCat, KIND>>;                    \
     static hlfir::EntityWithAttributes gen(mlir::Location loc,                 \
                                            fir::FirOpBuilder &builder,         \
-                                           hlfir::Entity lhs,                  \
+                                           const Op &, hlfir::Entity lhs,      \
                                            hlfir::Entity rhs) {                \
       return hlfir::EntityWithAttributes{                                      \
           builder.create<GenBinFirOp>(loc, lhs, rhs)};                         \
@@ -287,9 +289,11 @@ GENBIN(Divide, Complex, fir::DivcOp)
 
 template <Fortran::common::TypeCategory TC, int KIND>
 struct BinaryOp<Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>>> {
+  using Op = Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder,
-                                         hlfir::Entity lhs, hlfir::Entity rhs) {
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
     mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
                                                /*params=*/llvm::None);
     return hlfir::EntityWithAttributes{
@@ -300,13 +304,40 @@ struct BinaryOp<Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>>> {
 template <Fortran::common::TypeCategory TC, int KIND>
 struct BinaryOp<
     Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC, KIND>>> {
+  using Op =
+      Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC, KIND>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder,
-                                         hlfir::Entity lhs, hlfir::Entity rhs) {
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
     mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
                                                /*params=*/llvm::None);
     return hlfir::EntityWithAttributes{
         Fortran::lower::genPow(builder, loc, ty, lhs, rhs)};
+  }
+};
+
+template <Fortran::common::TypeCategory TC, int KIND>
+struct BinaryOp<
+    Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC, KIND>>> {
+  using Op = Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    // evaluate::Extremum is only created by the front-end when building
+    // compiler generated expressions (like when folding LEN() or shape/bounds
+    // inquiries). MIN and MAX are represented as evaluate::ProcedureRef and are
+    // not going through here. So far the frontend does not generate character
+    // Extremum so there is no way to test it.
+    if constexpr (TC == Fortran::common::TypeCategory::Character) {
+      fir::emitFatalError(loc, "Fortran::evaluate::Extremum are unexpected");
+    }
+    llvm::SmallVector<mlir::Value, 2> args{lhs, rhs};
+    fir::ExtendedValue res = op.ordering == Fortran::evaluate::Ordering::Greater
+                                 ? Fortran::lower::genMax(builder, loc, args)
+                                 : Fortran::lower::genMin(builder, loc, args);
+    return hlfir::EntityWithAttributes{fir::getBase(res)};
   }
 };
 
@@ -411,7 +442,7 @@ private:
       TODO(loc, "elemental operations in HLFIR");
     auto left = hlfir::loadTrivialScalar(loc, builder, gen(op.left()));
     auto right = hlfir::loadTrivialScalar(loc, builder, gen(op.right()));
-    return BinaryOp<D>::gen(loc, builder, left, right);
+    return BinaryOp<D>::gen(loc, builder, op.derived(), left, right);
   }
 
   template <int KIND>
