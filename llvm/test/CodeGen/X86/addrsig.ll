@@ -1,7 +1,17 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux | FileCheck --check-prefix=NO-ADDRSIG %s
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux -addrsig | FileCheck %s
+; RUN: llc %s -filetype=obj -mtriple=x86_64-unknown-linux -addrsig -o %t
+; RUN: llvm-readobj --addrsig %t | FileCheck %s --check-prefix=SYM
 
 ; NO-ADDRSIG-NOT: .addrsig
+
+; SYM:      Addrsig [
+; SYM-NEXT:   Sym: f1
+; SYM-NEXT:   Sym: metadata_f2
+; SYM-NEXT:   Sym: g1
+; SYM-NEXT:   Sym: a1
+; SYM-NEXT:   Sym: i1
+; SYM-NEXT: ]
 
 ; CHECK: .addrsig
 
@@ -27,7 +37,8 @@ define void()* @f1() {
 
 declare void @f4(i8*) unnamed_addr
 
-; CHECK-NOT: .addrsig_sym metadata_f1
+;; f1 is unreferenced, so this directive does not emit an entry.
+; CHECK: .addrsig_sym metadata_f1
 declare void @metadata_f1()
 
 ; CHECK: .addrsig_sym metadata_f2
