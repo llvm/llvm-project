@@ -95,7 +95,7 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
   return errc::no_such_file_or_directory;
 }
 
-static bool RedirectIO(Optional<StringRef> Path, int FD, std::string *ErrMsg) {
+static bool RedirectIO(std::optional<StringRef> Path, int FD, std::string *ErrMsg) {
   if (!Path) // Noop
     return false;
   std::string File;
@@ -172,8 +172,8 @@ toNullTerminatedCStringArray(ArrayRef<StringRef> Strings, StringSaver &Saver) {
 }
 
 static bool Execute(ProcessInfo &PI, StringRef Program,
-                    ArrayRef<StringRef> Args, Optional<ArrayRef<StringRef>> Env,
-                    ArrayRef<Optional<StringRef>> Redirects,
+                    ArrayRef<StringRef> Args, std::optional<ArrayRef<StringRef>> Env,
+                    ArrayRef<std::optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg,
                     BitVector *AffinityMask) {
   if (!llvm::sys::fs::exists(Program)) {
@@ -386,7 +386,7 @@ pid_t(llvm::sys::wait4)(pid_t pid, int *status, int options,
 
 ProcessInfo llvm::sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
                             bool WaitUntilTerminates, std::string *ErrMsg,
-                            Optional<ProcessStatistics> *ProcStat) {
+                            std::optional<ProcessStatistics> *ProcStat) {
   struct sigaction Act, Old;
   assert(PI.Pid && "invalid pid to wait on, process not started?");
 

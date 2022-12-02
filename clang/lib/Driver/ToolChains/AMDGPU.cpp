@@ -778,7 +778,7 @@ AMDGPUToolChain::detectSystemGPUs(const ArgList &Args,
   llvm::sys::fs::createTemporaryFile("print-system-gpus", "" /* No Suffix */,
                                      OutputFile);
   llvm::FileRemover OutputRemover(OutputFile.c_str());
-  llvm::Optional<llvm::StringRef> Redirects[] = {
+  std::optional<llvm::StringRef> Redirects[] = {
       {""},
       OutputFile.str(),
       {""},
