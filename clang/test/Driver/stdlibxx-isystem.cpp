@@ -51,3 +51,13 @@
 // RUN:   -stdlib++-isystem /tmp/foo -stdlib++-isystem /tmp/bar -nostdinc++ \
 // RUN:   -fsyntax-only %s -### 2>&1 | FileCheck -check-prefix=NOSTDINCXX %s
 // NOSTDINCXX-NOT: "-internal-isystem" "/tmp/foo" "-internal-isystem" "/tmp/bar"
+
+// It should take effect even if -nostdinc or -nostdlibinc are specified; only
+// -nostdinc++ should suppress it.
+// RUN: %clang -target aarch64-linux-gnu -ccc-install-dir %t/bin \
+// RUN:   -stdlib++-isystem /tmp/foo -stdlib++-isystem /tmp/bar -nostdinc \
+// RUN:   -fsyntax-only %s -### 2>&1 | FileCheck -check-prefix=NOSTDINC %s
+// RUN: %clang -target x86_64-apple-darwin -ccc-install-dir %t/bin \
+// RUN:   -stdlib++-isystem /tmp/foo -stdlib++-isystem /tmp/bar -nostdlibinc \
+// RUN:   -fsyntax-only %s -### 2>&1 | FileCheck -check-prefix=NOSTDINC %s
+// NOSTDINC: "-internal-isystem" "/tmp/foo" "-internal-isystem" "/tmp/bar"
