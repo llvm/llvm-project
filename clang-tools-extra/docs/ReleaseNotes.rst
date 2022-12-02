@@ -115,6 +115,12 @@ New checks
 
   Warns when using ``do-while`` loops.
 
+- New :doc:`misc-use-anonymous-namespace
+  <clang-tidy/checks/misc/use-anonymous-namespace>` check.
+
+  Warns when using ``static`` function or variables at global scope, and suggests
+  moving them into an anonymous namespace.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
