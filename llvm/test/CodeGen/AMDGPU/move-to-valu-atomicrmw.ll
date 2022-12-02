@@ -11,18 +11,18 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 ; GCN-LABEL: {{^}}atomic_max_i32:
 ; GCN: buffer_atomic_smax v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:400 glc{{$}}
-define amdgpu_kernel void @atomic_max_i32(i32 addrspace(1)* %out, i32 addrspace(1)* addrspace(1)* %in, i32 addrspace(1)* %x, i32 %y) #0 {
+define amdgpu_kernel void @atomic_max_i32(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %x, i32 %y) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %tid.gep = getelementptr i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %in, i32 %tid
-  %ptr = load volatile i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %tid.gep
+  %tid.gep = getelementptr ptr addrspace(1), ptr addrspace(1) %in, i32 %tid
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(1) %tid.gep
   %xor = xor i32 %tid, 1
   %cmp = icmp ne i32 %xor, 0
   br i1 %cmp, label %atomic, label %exit
 
 atomic:
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i32 100
-  %ret = atomicrmw max i32 addrspace(1)* %gep, i32 %y seq_cst
-  store i32 %ret, i32 addrspace(1)* %out
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 100
+  %ret = atomicrmw max ptr addrspace(1) %gep, i32 %y seq_cst
+  store i32 %ret, ptr addrspace(1) %out
   br label %exit
 
 exit:
@@ -31,17 +31,17 @@ exit:
 
 ; GCN-LABEL: {{^}}atomic_max_i32_noret:
 ; GCN: buffer_atomic_smax v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:400{{$}}
-define amdgpu_kernel void @atomic_max_i32_noret(i32 addrspace(1)* %out, i32 addrspace(1)* addrspace(1)* %in, i32 addrspace(1)* %x, i32 %y) #0 {
+define amdgpu_kernel void @atomic_max_i32_noret(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %x, i32 %y) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %tid.gep = getelementptr i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %in, i32 %tid
-  %ptr = load volatile i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %tid.gep
+  %tid.gep = getelementptr ptr addrspace(1), ptr addrspace(1) %in, i32 %tid
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(1) %tid.gep
   %xor = xor i32 %tid, 1
   %cmp = icmp ne i32 %xor, 0
   br i1 %cmp, label %atomic, label %exit
 
 atomic:
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i32 100
-  %ret = atomicrmw max i32 addrspace(1)* %gep, i32 %y seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 100
+  %ret = atomicrmw max ptr addrspace(1) %gep, i32 %y seq_cst
   br label %exit
 
 exit:
