@@ -1354,6 +1354,22 @@ static llvm::Optional<StringRef> GetDSYMBundle(Module &module) {
   return dsym;
 }
 
+static std::string GetSDKPath(std::string m_description, XcodeSDK sdk) {
+  auto sdk_path_or_err = HostInfo::GetXcodeSDKPath(sdk);
+  if (!sdk_path_or_err) {
+    Debugger::ReportError("Error while searching for Xcode SDK: " +
+                          toString(sdk_path_or_err.takeError()));
+    HEALTH_LOG_PRINTF("Error while searching for Xcode SDK %s.",
+                      sdk.GetString().str().c_str());
+    return {};
+  }
+
+  std::string sdk_path = sdk_path_or_err->str();
+  LOG_PRINTF(GetLog(LLDBLog::Types), "Host SDK path for sdk %s is %s.",
+             sdk.GetString().str().c_str(), sdk_path.c_str());
+  return sdk_path;
+}
+
 /// Force parsing of the CUs to extract the SDK info.
 static std::string GetSDKPathFromDebugInfo(std::string m_description,
                                            Module &module) {
@@ -1376,11 +1392,7 @@ static std::string GetSDKPathFromDebugInfo(std::string m_description,
                       "'%s'. Mixed use of SDKs indicates use of different "
                       "toolchains, which is not supported.",
                       module.GetFileSpec().GetFilename().GetCString());
-
-  std::string sdk_path = HostInfo::GetXcodeSDKPath(sdk).str();
-  LOG_PRINTF(GetLog(LLDBLog::Types), "Host SDK path for sdk %s is %s.",
-             sdk.GetString().str().c_str(), sdk_path.c_str());
-  return sdk_path;
+  return GetSDKPath(m_description, sdk);
 }
 
 /// Detect whether a Swift module was "imported" by DWARFImporter.
@@ -2464,7 +2476,7 @@ void SwiftASTContext::InitializeSearchPathOptions(
       XcodeSDK::Info info;
       info.type = XcodeSDK::GetSDKTypeForTriple(triple);
       XcodeSDK sdk(info);
-      sdk_path = HostInfo::GetXcodeSDKPath(sdk).str();
+      sdk_path = GetSDKPath(m_description, sdk);
     }
     if (sdk_path.empty()) {
       // This fallback is questionable. Perhaps it should be removed.
@@ -2472,7 +2484,7 @@ void SwiftASTContext::InitializeSearchPathOptions(
       info.type = XcodeSDK::GetSDKTypeForTriple(
           HostInfo::GetArchitecture().GetTriple());
       XcodeSDK sdk(info);
-      sdk_path = std::string(HostInfo::GetXcodeSDKPath(sdk));
+      sdk_path = GetSDKPath(m_description, sdk);
     }
     if (!sdk_path.empty()) {
       // Note that calling setSDKPath() also recomputes all paths that
