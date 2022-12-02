@@ -6,7 +6,7 @@
 
 define amdgpu_ps void @main() {
 main_body:
-  %0 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 1)
+  %0 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 1)
   %1 = extractelement <4 x float> %0, i32 0
   %2 = bitcast float %1 to i32
   %3 = icmp eq i32 %2, 0
@@ -17,7 +17,7 @@ main_body:
   br i1 %7, label %ENDIF, label %ELSE
 
 ELSE:                                             ; preds = %main_body
-  %8 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 1)
+  %8 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 1)
   %9 = extractelement <4 x float> %8, i32 0
   %10 = bitcast float %9 to i32
   %11 = icmp eq i32 %10, 1
@@ -40,7 +40,7 @@ ENDIF:                                            ; preds = %IF13, %ELSE, %main_
   ret void
 
 IF13:                                             ; preds = %ELSE
-  %20 = load <4 x float>, <4 x float> addrspace(8)* null
+  %20 = load <4 x float>, ptr addrspace(8) null
   %21 = extractelement <4 x float> %20, i32 0
   %22 = fsub float -0.000000e+00, %21
   %23 = fadd float 0x3FF8000000000000, %22

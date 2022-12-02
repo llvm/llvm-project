@@ -8,12 +8,12 @@
 ; GCN-NOT: v_cmp
 ; GCN:   s_andn2_b64 vcc, exec, [[CC]]
 ; GCN:   s_cbranch_vccnz .LBB0_2
-define amdgpu_kernel void @negated_cond(i32 addrspace(1)* %arg1) {
+define amdgpu_kernel void @negated_cond(ptr addrspace(1) %arg1) {
 bb:
   br label %bb1
 
 bb1:
-  %tmp1 = load i32, i32 addrspace(1)* %arg1
+  %tmp1 = load i32, ptr addrspace(1) %arg1
   %tmp2 = icmp eq i32 %tmp1, 0
   br label %bb2
 
@@ -28,8 +28,8 @@ bb3:
 
 bb4:
   %tmp6 = phi i32 [ %tmp5, %bb3 ], [ %tmp4, %bb2 ]
-  %gep = getelementptr inbounds i32, i32 addrspace(1)* %arg1, i32 %tmp6
-  store i32 0, i32 addrspace(1)* %gep
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %arg1, i32 %tmp6
+  store i32 0, ptr addrspace(1) %gep
   %tmp7 = icmp eq i32 %tmp6, 32
   br i1 %tmp7, label %bb1, label %bb2
 }
@@ -47,12 +47,12 @@ bb4:
 ; GCN:   s_mov_b64 vcc, exec
 ; GCN:   s_cbranch_execnz [[BB0]]
 ; GCN: [[BB2]]:
-define amdgpu_kernel void @negated_cond_dominated_blocks(i32 addrspace(1)* %arg1) {
+define amdgpu_kernel void @negated_cond_dominated_blocks(ptr addrspace(1) %arg1) {
 bb:
   br label %bb2
 
 bb2:
-  %tmp1 = load i32, i32 addrspace(1)* %arg1
+  %tmp1 = load i32, ptr addrspace(1) %arg1
   %tmp2 = icmp eq i32 %tmp1, 0
   br label %bb4
 
@@ -74,8 +74,8 @@ bb6:
 
 bb7:
   %tmp7 = phi i32 [ %tmp5, %bb5 ], [ %tmp6, %bb6 ]
-  %gep = getelementptr inbounds i32, i32 addrspace(1)* %arg1, i32 %tmp7
-  store i32 0, i32 addrspace(1)* %gep
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %arg1, i32 %tmp7
+  store i32 0, ptr addrspace(1) %gep
   %tmp8 = icmp eq i32 %tmp7, 32
   br i1 %tmp8, label %bb3, label %bb4
 }

@@ -334,8 +334,7 @@ define amdgpu_kernel void @used_101_sgprs() {
 ; GFX1100:    ; Occupancy: 16
 @lds6552 = internal addrspace(3) global [6552 x i8] undef, align 4
 define amdgpu_kernel void @used_lds_6552() {
-  %p = bitcast [6552 x i8] addrspace(3)* @lds6552 to i8 addrspace(3)*
-  store volatile i8 1, i8 addrspace(3)* %p
+  store volatile i8 1, ptr addrspace(3) @lds6552
   ret void
 }
 
@@ -346,8 +345,7 @@ define amdgpu_kernel void @used_lds_6552() {
 ; GFX1100:    ; Occupancy: 16
 @lds6556 = internal addrspace(3) global [6556 x i8] undef, align 4
 define amdgpu_kernel void @used_lds_6556() {
-  %p = bitcast [6556 x i8] addrspace(3)* @lds6556 to i8 addrspace(3)*
-  store volatile i8 1, i8 addrspace(3)* %p
+  store volatile i8 1, ptr addrspace(3) @lds6556
   ret void
 }
 
@@ -358,8 +356,7 @@ define amdgpu_kernel void @used_lds_6556() {
 ; GFX1100:    ; Occupancy: 16
 @lds13112 = internal addrspace(3) global [13112 x i8] undef, align 4
 define amdgpu_kernel void @used_lds_13112() {
-  %p = bitcast [13112 x i8] addrspace(3)* @lds13112 to i8 addrspace(3)*
-  store volatile i8 1, i8 addrspace(3)* %p
+  store volatile i8 1, ptr addrspace(3) @lds13112
   ret void
 }
 
@@ -371,8 +368,7 @@ define amdgpu_kernel void @used_lds_13112() {
 ; GFX1100W32: ; Occupancy: 14{{$}}
 @lds8252 = internal addrspace(3) global [8252 x i8] undef, align 4
 define amdgpu_kernel void @used_lds_8252_max_group_size_64() #3 {
-  %p = bitcast [8252 x i8] addrspace(3)* @lds8252 to i8 addrspace(3)*
-  store volatile i8 1, i8 addrspace(3)* %p
+  store volatile i8 1, ptr addrspace(3) @lds8252
   ret void
 }
 
@@ -384,8 +380,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_64() #3 {
 ; GFX1100W64: ; Occupancy: 14{{$}}
 ; GFX1100W32: ; Occupancy: 16{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_96() #4 {
-  %p = bitcast [8252 x i8] addrspace(3)* @lds8252 to i8 addrspace(3)*
-  store volatile i8 1, i8 addrspace(3)* %p
+  store volatile i8 1, ptr addrspace(3) @lds8252
   ret void
 }
 
@@ -397,8 +392,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_96() #4 {
 ; GFX1100W64: ; Occupancy: 14{{$}}
 ; GFX1100W32: ; Occupancy: 16{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_128() #5 {
-  %p = bitcast [8252 x i8] addrspace(3)* @lds8252 to i8 addrspace(3)*
-  store volatile i8 1, i8 addrspace(3)* %p
+  store volatile i8 1, ptr addrspace(3) @lds8252
   ret void
 }
 
@@ -408,8 +402,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_128() #5 {
 ; GFX1030:    ; Occupancy: 16{{$}}
 ; GFX1100:    ; Occupancy: 16{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_192() #6 {
-  %p = bitcast [8252 x i8] addrspace(3)* @lds8252 to i8 addrspace(3)*
-  store volatile i8 1, i8 addrspace(3)* %p
+  store volatile i8 1, ptr addrspace(3) @lds8252
   ret void
 }
 
@@ -419,8 +412,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_192() #6 {
 ; GFX1030:    ; Occupancy: 16{{$}}
 ; GFX1100:    ; Occupancy: 16{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_256() #7 {
-  %p = bitcast [8252 x i8] addrspace(3)* @lds8252 to i8 addrspace(3)*
-  store volatile i8 1, i8 addrspace(3)* %p
+  store volatile i8 1, ptr addrspace(3) @lds8252
   ret void
 }
 
@@ -430,8 +422,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_256() #7 {
 ; GFX1030:    ; Occupancy: 16{{$}}
 ; GFX1100:    ; Occupancy: 16{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_512() #8 {
-  %p = bitcast [8252 x i8] addrspace(3)* @lds8252 to i8 addrspace(3)*
-  store volatile i8 1, i8 addrspace(3)* %p
+  store volatile i8 1, ptr addrspace(3) @lds8252
   ret void
 }
 
@@ -441,8 +432,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_512() #8 {
 ; GFX1030:    ; Occupancy: 16{{$}}
 ; GFX1100:    ; Occupancy: 16{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_1024() #9 {
-  %p = bitcast [8252 x i8] addrspace(3)* @lds8252 to i8 addrspace(3)*
-  store volatile i8 1, i8 addrspace(3)* %p
+  store volatile i8 1, ptr addrspace(3) @lds8252
   ret void
 }
 
@@ -451,8 +441,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_1024() #9 {
 ; GFX10:      ; Occupancy: 7{{$}}
 ; GFX1100:    ; Occupancy: 7{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_32() #10 {
-  %p = bitcast [8252 x i8] addrspace(3)* @lds8252 to i8 addrspace(3)*
-  store volatile i8 1, i8 addrspace(3)* %p
+  store volatile i8 1, ptr addrspace(3) @lds8252
   ret void
 }
 
