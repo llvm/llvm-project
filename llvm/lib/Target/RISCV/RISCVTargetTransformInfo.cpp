@@ -784,7 +784,7 @@ RISCVTTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
 
 InstructionCost
 RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                         Optional<FastMathFlags> FMF,
+                                         std::optional<FastMathFlags> FMF,
                                          TTI::TargetCostKind CostKind) {
   if (isa<FixedVectorType>(Ty) && !ST->useRVVForFixedLengthVectors())
     return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
@@ -815,7 +815,7 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
 
 InstructionCost RISCVTTIImpl::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *ValTy,
-    Optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) {
+    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) {
   if (isa<FixedVectorType>(ValTy) && !ST->useRVVForFixedLengthVectors())
     return BaseT::getExtendedReductionCost(Opcode, IsUnsigned, ResTy, ValTy,
                                            FMF, CostKind);

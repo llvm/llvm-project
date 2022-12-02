@@ -852,22 +852,11 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SCUDO-LINUX %s
 // CHECK-SCUDO-LINUX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-SCUDO-LINUX: "-pie"
-// CHECK-SCUDO-LINUX: "--whole-archive" "{{.*}}libclang_rt.scudo-i386.a" "--no-whole-archive"
+// CHECK-SCUDO-LINUX: "--whole-archive" "{{.*}}libclang_rt.scudo_standalone-i386.a" "--no-whole-archive"
 // CHECK-SCUDO-LINUX-NOT: "-lstdc++"
 // CHECK-SCUDO-LINUX: "-lpthread"
 // CHECK-SCUDO-LINUX: "-ldl"
 // CHECK-SCUDO-LINUX: "-lresolv"
-
-// RUN: %clang -fsanitize=scudo -fsanitize-minimal-runtime -### %s 2>&1 \
-// RUN:     --target=i386-unknown-linux -fuse-ld=ld \
-// RUN:     -resource-dir=%S/Inputs/resource_dir \
-// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-SCUDO-MINIMAL-LINUX %s
-// CHECK-SCUDO-MINIMAL-LINUX: "{{.*}}ld{{(.exe)?}}"
-// CHECK-SCUDO-MINIMAL-LINUX: "-pie"
-// CHECK-SCUDO-MINIMAL-LINUX: "--whole-archive" "{{.*}}libclang_rt.scudo_minimal-i386.a" "--no-whole-archive"
-// CHECK-SCUDO-MINIMAL-LINUX: "-lpthread"
-// CHECK-SCUDO-MINIMAL-LINUX: "-lresolv"
 
 // RUN: %clang -### %s -o %t.so -shared 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld -fsanitize=scudo -shared-libsan \
@@ -877,8 +866,8 @@
 //
 // CHECK-SCUDO-SHARED-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-SCUDO-SHARED-LINUX-NOT: "-lc"
-// CHECK-SCUDO-SHARED-LINUX-NOT: libclang_rt.scudo-i386.a"
-// CHECK-SCUDO-SHARED-LINUX: libclang_rt.scudo-i386.so"
+// CHECK-SCUDO-SHARED-LINUX-NOT: libclang_rt.scudo_standalone-i386.a"
+// CHECK-SCUDO-SHARED-LINUX: libclang_rt.scudo_standalone-i386.so"
 // CHECK-SCUDO-SHARED-LINUX-NOT: "-lpthread"
 // CHECK-SCUDO-SHARED-LINUX-NOT: "-lrt"
 // CHECK-SCUDO-SHARED-LINUX-NOT: "-ldl"
@@ -896,7 +885,7 @@
 // CHECK-SCUDO-ANDROID: "-pie"
 // CHECK-SCUDO-ANDROID-NOT: "-lpthread"
 // CHECK-SCUDO-ANDROID-NOT: "-lresolv"
-// CHECK-SCUDO-ANDROID: libclang_rt.scudo-arm-android.so"
+// CHECK-SCUDO-ANDROID: libclang_rt.scudo_standalone-arm-android.so"
 // CHECK-SCUDO-ANDROID-NOT: "-lpthread"
 // CHECK-SCUDO-ANDROID-NOT: "-lresolv"
 
@@ -907,7 +896,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SCUDO-ANDROID-STATIC %s
 // CHECK-SCUDO-ANDROID-STATIC: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-SCUDO-ANDROID-STATIC: "-pie"
-// CHECK-SCUDO-ANDROID-STATIC: "--whole-archive" "{{.*}}libclang_rt.scudo-arm-android.a" "--no-whole-archive"
+// CHECK-SCUDO-ANDROID-STATIC: "--whole-archive" "{{.*}}libclang_rt.scudo_standalone-arm-android.a" "--no-whole-archive"
 // CHECK-SCUDO-ANDROID-STATIC-NOT: "-lstdc++"
 // CHECK-SCUDO-ANDROID-STATIC-NOT: "-lpthread"
 // CHECK-SCUDO-ANDROID-STATIC-NOT: "-lrt"

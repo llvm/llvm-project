@@ -26,7 +26,7 @@ module {
   func.func private @getSparseTensorReaderRank(!TensorReader) -> (index)
   func.func private @getSparseTensorReaderNNZ(!TensorReader) -> (index)
   func.func private @getSparseTensorReaderIsSymmetric(!TensorReader) -> (i1)
-  func.func private @getSparseTensorReaderDimSizes(!TensorReader,
+  func.func private @copySparseTensorReaderDimSizes(!TensorReader,
     memref<?xindex>) -> () attributes { llvm.emit_c_interface }
   func.func private @getSparseTensorReaderNextF32(!TensorReader,
     memref<?xindex>, memref<f32>) -> () attributes { llvm.emit_c_interface }
@@ -98,7 +98,7 @@ module {
       : (!TensorReader) -> i1
     vector.print %symmetric : i1
     %dimSizes = memref.alloc(%rank) : memref<?xindex>
-    func.call @getSparseTensorReaderDimSizes(%tensor, %dimSizes)
+    func.call @copySparseTensorReaderDimSizes(%tensor, %dimSizes)
       : (!TensorReader, memref<?xindex>) -> ()
     call @dumpi(%dimSizes) : (memref<?xindex>) -> ()
     %x0s, %x1s, %vs = call @readTensorFile(%tensor)
@@ -132,7 +132,7 @@ module {
     %rank = call @getSparseTensorReaderRank(%tensor0) : (!TensorReader) -> index
     %nnz = call @getSparseTensorReaderNNZ(%tensor0) : (!TensorReader) -> index
     %dimSizes = memref.alloc(%rank) : memref<?xindex>
-    func.call @getSparseTensorReaderDimSizes(%tensor0,%dimSizes)
+    func.call @copySparseTensorReaderDimSizes(%tensor0, %dimSizes)
       : (!TensorReader, memref<?xindex>) -> ()
     call @outSparseTensorWriterMetaData(%tensor1, %rank, %nnz, %dimSizes)
       : (!TensorWriter, index, index, memref<?xindex>) -> ()

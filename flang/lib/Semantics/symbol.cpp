@@ -253,9 +253,7 @@ std::string DetailsToString(const Details &details) {
       details);
 }
 
-const std::string Symbol::GetDetailsName() const {
-  return DetailsToString(details_);
-}
+std::string Symbol::GetDetailsName() const { return DetailsToString(details_); }
 
 void Symbol::set_details(Details &&details) {
   CHECK(CanReplaceDetails(details));

@@ -1,6 +1,6 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Resolve generic based on number of arguments
-subroutine s1
+subroutine subr1
   interface f
     real function f1(x)
       optional :: x
@@ -15,7 +15,7 @@ subroutine s1
 end
 
 ! Elemental and non-element function both match: non-elemental one should be used
-subroutine s2
+subroutine subr2
   interface f
     logical elemental function f1(x)
       intent(in) :: x
@@ -53,10 +53,10 @@ module m4
   real, protected :: x
   real :: y
   interface s
-    pure subroutine s1(x)
+    pure subroutine s101(x)
       real, intent(out) :: x
     end
-    subroutine s2(x, y)
+    subroutine s102(x, y)
       real :: x, y
     end
   end interface
