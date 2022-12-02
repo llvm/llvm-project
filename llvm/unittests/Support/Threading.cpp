@@ -20,6 +20,7 @@ using namespace llvm;
 namespace {
 
 static bool isThreadingSupportedArchAndOS() {
+#if LLVM_ENABLE_THREADS
   Triple Host(Triple::normalize(sys::getProcessTriple()));
 
   // Initially this is only testing detection of the number of
@@ -29,6 +30,9 @@ static bool isThreadingSupportedArchAndOS() {
          (Host.isX86() && Host.isOSLinux()) ||
          (Host.isOSLinux() && !Host.isAndroid()) ||
          (Host.isSystemZ() && Host.isOSzOS());
+#else
+  return false;
+#endif
 }
 
 TEST(Threading, PhysicalConcurrency) {

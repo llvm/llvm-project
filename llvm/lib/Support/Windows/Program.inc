@@ -127,7 +127,7 @@ bool MakeErrMsg(std::string *ErrMsg, const std::string &prefix) {
   return R != 0;
 }
 
-static HANDLE RedirectIO(Optional<StringRef> Path, int fd,
+static HANDLE RedirectIO(std::optional<StringRef> Path, int fd,
                          std::string *ErrMsg) {
   HANDLE h;
   if (!Path) {
@@ -172,8 +172,8 @@ static HANDLE RedirectIO(Optional<StringRef> Path, int fd,
 } // namespace llvm
 
 static bool Execute(ProcessInfo &PI, StringRef Program,
-                    ArrayRef<StringRef> Args, Optional<ArrayRef<StringRef>> Env,
-                    ArrayRef<Optional<StringRef>> Redirects,
+                    ArrayRef<StringRef> Args, std::optional<ArrayRef<StringRef>> Env,
+                    ArrayRef<std::optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg,
                     BitVector *AffinityMask) {
   if (!sys::fs::can_execute(Program)) {
@@ -410,7 +410,7 @@ ErrorOr<std::wstring> sys::flattenWindowsCommandLine(ArrayRef<StringRef> Args) {
 
 ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
                       bool WaitUntilChildTerminates, std::string *ErrMsg,
-                      Optional<ProcessStatistics> *ProcStat) {
+                      std::optional<ProcessStatistics> *ProcStat) {
   assert(PI.Pid && "invalid pid to wait on, process not started?");
   assert((PI.Process && PI.Process != INVALID_HANDLE_VALUE) &&
          "invalid process handle to wait on, process not started?");

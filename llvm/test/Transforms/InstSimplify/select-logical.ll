@@ -455,13 +455,101 @@ define <2 x i1> @select_or_same_op_vector2_poison(<2 x i1> %x, <2 x i1> %y) {
 
 ; negative test - must have common operands
 
-define i1 @select_or_same_op_negatvie(i1 %x, i1 %y, i1 %z) {
-; CHECK-LABEL: @select_or_same_op_negatvie(
+define i1 @select_or_same_op_negative(i1 %x, i1 %y, i1 %z) {
+; CHECK-LABEL: @select_or_same_op_negative(
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[OR]], i1 [[X]], i1 [[Z:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %or = or i1 %x, %y
   %r = select i1 %or, i1 %x, i1 %z
+  ret i1 %r
+}
+
+; (X && Y) ? X : Y --> Y
+
+define i1 @select_and_same_op(i1 %x, i1 %y) {
+; CHECK-LABEL: @select_and_same_op(
+; CHECK-NEXT:    ret i1 [[Y:%.*]]
+;
+  %a = and i1 %x, %y
+  %r = select i1 %a, i1 %x, i1 %y
+  ret i1 %r
+}
+
+
+define i1 @select_and_same_op_commute(i1 %x, i1 %y) {
+; CHECK-LABEL: @select_and_same_op_commute(
+; CHECK-NEXT:    ret i1 [[X:%.*]]
+;
+  %a = and i1 %x, %y
+  %r = select i1 %a, i1 %y, i1 %x
+  ret i1 %r
+}
+
+
+define <2 x i1> @select_and_same_op_vector1(<2 x i1> %x, <2 x i1> %y) {
+; CHECK-LABEL: @select_and_same_op_vector1(
+; CHECK-NEXT:    ret <2 x i1> [[Y:%.*]]
+;
+  %a = and <2 x i1> %x, %y
+  %r = select <2 x i1> %a, <2 x i1> %x, <2 x i1> %y
+  ret <2 x i1> %r
+}
+
+
+define i1 @select_logic_and1_same_op(i1 %x, i1 %y) {
+; CHECK-LABEL: @select_logic_and1_same_op(
+; CHECK-NEXT:    ret i1 [[Y:%.*]]
+;
+  %a = select i1 %x, i1 %y, i1 false
+  %r = select i1 %a, i1 %x, i1 %y
+  ret i1 %r
+}
+
+
+define i1 @select_logic_and2_same_op(i1 %x, i1 %y) {
+; CHECK-LABEL: @select_logic_and2_same_op(
+; CHECK-NEXT:    ret i1 [[Y:%.*]]
+;
+  %a = select i1 %y, i1 %x, i1 false
+  %r = select i1 %a, i1 %x, i1 %y
+  ret i1 %r
+}
+
+
+define <2 x i1> @select_and_same_op_vector2(<2 x i1> %x, <2 x i1> %y) {
+; CHECK-LABEL: @select_and_same_op_vector2(
+; CHECK-NEXT:    ret <2 x i1> [[Y:%.*]]
+;
+  %a = select <2 x i1> %x, <2 x i1> %y, <2 x i1> zeroinitializer
+  %r = select <2 x i1> %a, <2 x i1> %x, <2 x i1> %y
+  ret <2 x i1> %r
+}
+
+; TODO: this could transform to Y
+; (X && Y) ? X : Y --> Y
+
+define <2 x i1> @select_and_same_op_vector2_poison(<2 x i1> %x, <2 x i1> %y) {
+; CHECK-LABEL: @select_and_same_op_vector2_poison(
+; CHECK-NEXT:    [[A:%.*]] = select <2 x i1> [[X:%.*]], <2 x i1> [[Y:%.*]], <2 x i1> <i1 false, i1 poison>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[A]], <2 x i1> [[X]], <2 x i1> [[Y]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %a = select <2 x i1> %x, <2 x i1> %y, <2 x i1> <i1 false, i1 poison>
+  %r = select <2 x i1> %a, <2 x i1> %x, <2 x i1> %y
+  ret <2 x i1> %r
+}
+
+; negative test - must have common operands
+
+define i1 @select_and_same_op_negative(i1 %x, i1 %y, i1 %z) {
+; CHECK-LABEL: @select_and_same_op_negative(
+; CHECK-NEXT:    [[A:%.*]] = and i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[A]], i1 [[X]], i1 [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = and i1 %x, %y
+  %r = select i1 %a, i1 %x, i1 %z
   ret i1 %r
 }

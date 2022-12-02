@@ -1,4 +1,4 @@
-; RUN: opt < %s -inferattrs -S | FileCheck %s
+; RUN: opt < %s -passes=inferattrs -S | FileCheck %s
 
 
 

@@ -36,8 +36,8 @@ define void @foo(i32 %a, i32 *%b, i1 %c) nounwind {
 ; RV32I-NEXT:    bgeu a0, a3, .LBB0_14
 ; RV32I-NEXT:  # %bb.10: # %test11
 ; RV32I-NEXT:    lw a0, 0(a1)
-; RV32I-NEXT:    andi a0, a2, 1
-; RV32I-NEXT:    bnez a0, .LBB0_14
+; RV32I-NEXT:    andi a2, a2, 1
+; RV32I-NEXT:    bnez a2, .LBB0_14
 ; RV32I-NEXT:  # %bb.11: # %test12
 ; RV32I-NEXT:    lw a0, 0(a1)
 ; RV32I-NEXT:    bgez a0, .LBB0_14

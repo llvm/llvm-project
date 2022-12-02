@@ -141,7 +141,7 @@ static bool occupiesMoreThan(CodeGenTypes &cgt,
     if (type->isPointerTy()) {
       intCount++;
     } else if (auto intTy = dyn_cast<llvm::IntegerType>(type)) {
-      auto ptrWidth = cgt.getTarget().getPointerWidth(0);
+      auto ptrWidth = cgt.getTarget().getPointerWidth(LangAS::Default);
       intCount += (intTy->getBitWidth() + ptrWidth - 1) / ptrWidth;
     } else {
       assert(type->isVectorTy() || type->isFloatingPointTy());
@@ -5831,8 +5831,9 @@ AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
       Alignment = getContext().getTypeUnadjustedAlign(Ty);
       Alignment = Alignment < 128 ? 64 : 128;
     } else {
-      Alignment = std::max(getContext().getTypeAlign(Ty),
-                           (unsigned)getTarget().getPointerWidth(0));
+      Alignment =
+          std::max(getContext().getTypeAlign(Ty),
+                   (unsigned)getTarget().getPointerWidth(LangAS::Default));
     }
     Size = llvm::alignTo(Size, Alignment);
 
@@ -6247,7 +6248,7 @@ Address AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
   if (!isAggregateTypeForABI(Ty) && !isIllegalVectorType(Ty))
     return EmitVAArgInstr(CGF, VAListAddr, Ty, ABIArgInfo::getDirect());
 
-  uint64_t PointerSize = getTarget().getPointerWidth(0) / 8;
+  uint64_t PointerSize = getTarget().getPointerWidth(LangAS::Default) / 8;
   CharUnits SlotSize = CharUnits::fromQuantity(PointerSize);
 
   // Empty records are ignored for parameter passing purposes.
@@ -8199,7 +8200,7 @@ Address MipsABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // Integer arguments are promoted to 32-bit on O32 and 64-bit on N32/N64.
   // Pointers are also promoted in the same way but this only matters for N32.
   unsigned SlotSizeInBits = IsO32 ? 32 : 64;
-  unsigned PtrWidth = getTarget().getPointerWidth(0);
+  unsigned PtrWidth = getTarget().getPointerWidth(LangAS::Default);
   bool DidPromote = false;
   if ((Ty->isIntegerType() &&
           getContext().getIntWidth(Ty) < SlotSizeInBits) ||
@@ -12201,7 +12202,7 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64: {
     StringRef ABIStr = getTarget().getABI();
-    unsigned XLen = getTarget().getPointerWidth(0);
+    unsigned XLen = getTarget().getPointerWidth(LangAS::Default);
     unsigned ABIFLen = 0;
     if (ABIStr.endswith("f"))
       ABIFLen = 32;
@@ -12296,7 +12297,7 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     else if (ABIStr.endswith("d"))
       ABIFRLen = 64;
     return SetCGInfo(new LoongArchTargetCodeGenInfo(
-        Types, getTarget().getPointerWidth(0), ABIFRLen));
+        Types, getTarget().getPointerWidth(LangAS::Default), ABIFRLen));
   }
   }
 }

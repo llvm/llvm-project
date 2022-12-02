@@ -243,39 +243,35 @@ decomposeGEP(GetElementPtrInst &GEP,
   if (!GEP.isInBounds())
     return &GEP;
 
-  // Handle the (gep (gep ....), C) case by incrementing the constant
-  // coefficient of the inner GEP, if C is a constant.
-  auto *InnerGEP = dyn_cast<GetElementPtrInst>(GEP.getPointerOperand());
-  if (InnerGEP && GEP.getNumOperands() == 2 &&
-      isa<ConstantInt>(GEP.getOperand(1))) {
-    APInt Offset = cast<ConstantInt>(GEP.getOperand(1))->getValue();
-    auto Result = decompose(InnerGEP, Preconditions, IsSigned, DL);
-
-    auto GTI = gep_type_begin(GEP);
-    // Bail out for scalable vectors for now.
-    if (isa<ScalableVectorType>(GTI.getIndexedType()))
-      return &GEP;
-    int64_t Scale = static_cast<int64_t>(
-        DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize());
-
-    Result.add(multiplyWithOverflow(Scale, Offset.getSExtValue()));
-    if (Offset.isNegative()) {
-      // Add pre-condition ensuring the GEP is increasing monotonically and
-      // can be de-composed.
-      Preconditions.emplace_back(
-          CmpInst::ICMP_SGE, InnerGEP->getOperand(1),
-          ConstantInt::get(InnerGEP->getOperand(1)->getType(),
-                           -1 * Offset.getSExtValue()));
-    }
-    return Result;
-  }
-
   Type *PtrTy = GEP.getType()->getScalarType();
   unsigned BitWidth = DL.getIndexTypeSizeInBits(PtrTy);
   MapVector<Value *, APInt> VariableOffsets;
   APInt ConstantOffset(BitWidth, 0);
   if (!GEP.collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset))
     return &GEP;
+
+  // Handle the (gep (gep ....), C) case by incrementing the constant
+  // coefficient of the inner GEP, if C is a constant.
+  auto *InnerGEP = dyn_cast<GetElementPtrInst>(GEP.getPointerOperand());
+  if (VariableOffsets.empty() && InnerGEP && InnerGEP->getNumOperands() == 2) {
+    auto Result = decompose(InnerGEP, Preconditions, IsSigned, DL);
+    Result.add(ConstantOffset.getSExtValue());
+
+    if (ConstantOffset.isNegative()) {
+      unsigned Scale = DL.getTypeAllocSize(InnerGEP->getResultElementType());
+      int64_t ConstantOffsetI = ConstantOffset.getSExtValue();
+      if (ConstantOffsetI % Scale != 0)
+        return &GEP;
+      // Add pre-condition ensuring the GEP is increasing monotonically and
+      // can be de-composed.
+      // Both sides are normalized by being divided by Scale.
+      Preconditions.emplace_back(
+          CmpInst::ICMP_SGE, InnerGEP->getOperand(1),
+          ConstantInt::get(InnerGEP->getOperand(1)->getType(),
+                           -1 * (ConstantOffsetI / Scale)));
+    }
+    return Result;
+  }
 
   Decomposition Result(ConstantOffset.getSExtValue(),
                        DecompEntry(1, GEP.getPointerOperand()));

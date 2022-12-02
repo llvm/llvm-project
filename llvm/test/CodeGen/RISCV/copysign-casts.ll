@@ -485,8 +485,8 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ;
 ; RV32IFZFH-LABEL: fold_demote_h_d:
 ; RV32IFZFH:       # %bb.0:
-; RV32IFZFH-NEXT:    srli a0, a1, 16
-; RV32IFZFH-NEXT:    fmv.h.x ft0, a0
+; RV32IFZFH-NEXT:    srli a1, a1, 16
+; RV32IFZFH-NEXT:    fmv.h.x ft0, a1
 ; RV32IFZFH-NEXT:    fsgnj.h fa0, fa0, ft0
 ; RV32IFZFH-NEXT:    ret
 ;

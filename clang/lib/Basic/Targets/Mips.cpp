@@ -182,7 +182,7 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (DisableMadd4)
     Builder.defineMacro("__mips_no_madd4", Twine(1));
 
-  Builder.defineMacro("_MIPS_SZPTR", Twine(getPointerWidth(0)));
+  Builder.defineMacro("_MIPS_SZPTR", Twine(getPointerWidth(LangAS::Default)));
   Builder.defineMacro("_MIPS_SZINT", Twine(getIntWidth()));
   Builder.defineMacro("_MIPS_SZLONG", Twine(getLongWidth()));
 
@@ -229,7 +229,7 @@ unsigned MipsTargetInfo::getUnwindWordWidth() const {
       .Case("o32", 32)
       .Case("n32", 64)
       .Case("n64", 64)
-      .Default(getPointerWidth(0));
+      .Default(getPointerWidth(LangAS::Default));
 }
 
 bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {

@@ -42,11 +42,9 @@ extern const char *TestMainArgv0;
   } while (false)
 
 TEST(TrainingLoggerTest, Logger) {
-  std::vector<LoggedFeatureSpec> Features;
-  Features.push_back(
-      {TensorSpec::createSpec<float>("the_float", {2, 3}), None});
-  Features.push_back({TensorSpec::createSpec<int64_t>("the_int", {2}),
-                      std::string("alternate_name")});
+  std::vector<TensorSpec> Features{
+      TensorSpec::createSpec<float>("the_float", {2, 3}),
+      TensorSpec::createSpec<int64_t>("alternate_name", {2})};
 
   auto Rewards = TensorSpec::createSpec<float>("reward", {1});
   Logger L(Features, Rewards, true);
@@ -78,11 +76,9 @@ TEST(TrainingLoggerTest, Logger) {
 }
 
 TEST(TrainingLoggerTest, LoggerInt32FeaturesAndReward) {
-  std::vector<LoggedFeatureSpec> Features;
-  Features.push_back(
-      {TensorSpec::createSpec<float>("the_float", {2, 3}), None});
-  Features.push_back({TensorSpec::createSpec<int32_t>("the_int", {2}),
-                      std::string("alternate_name")});
+  std::vector<TensorSpec> Features{
+      TensorSpec::createSpec<float>("the_float", {2, 3}),
+      TensorSpec::createSpec<int32_t>("alternate_name", {2})};
 
   auto Rewards = TensorSpec::createSpec<int32_t>("reward", {1});
   Logger L(Features, Rewards, true);
@@ -114,11 +110,9 @@ TEST(TrainingLoggerTest, LoggerInt32FeaturesAndReward) {
 }
 
 TEST(TrainingLoggerTest, LoggerNoReward) {
-  std::vector<LoggedFeatureSpec> Features;
-  Features.push_back(
-      {TensorSpec::createSpec<float>("the_float", {2, 3}), None});
-  Features.push_back({TensorSpec::createSpec<int64_t>("the_int", {2}),
-                      std::string("alternate_name")});
+  std::vector<TensorSpec> Features{
+      TensorSpec::createSpec<float>("the_float", {2, 3}),
+      TensorSpec::createSpec<int64_t>("alternate_name", {2})};
 
   auto Rewards = TensorSpec::createSpec<float>("reward", {1});
   Logger L(Features, Rewards, false);
@@ -144,9 +138,9 @@ TEST(TrainingLoggerTest, LoggerNoReward) {
 }
 
 TEST(TrainingLoggerTest, LoggerFinalReward) {
-  std::vector<LoggedFeatureSpec> Features;
-  Features.push_back({TensorSpec::createSpec<float>("the_float", {1}), None});
-  Features.push_back({TensorSpec::createSpec<int64_t>("the_int", {1}), None});
+  std::vector<TensorSpec> Features{
+      TensorSpec::createSpec<float>("the_float", {1}),
+      TensorSpec::createSpec<int64_t>("the_int", {1})};
 
   auto Rewards = TensorSpec::createSpec<float>("reward", {1});
   Logger L(Features, Rewards, true);
@@ -169,9 +163,9 @@ TEST(TrainingLoggerTest, LoggerFinalReward) {
 }
 
 TEST(TrainingLoggerTest, LoggerGroup) {
-  std::vector<LoggedFeatureSpec> Features;
-  Features.push_back({TensorSpec::createSpec<float>("the_float", {1}), None});
-  Features.push_back({TensorSpec::createSpec<int64_t>("the_int", {1}), None});
+  std::vector<TensorSpec> Features{
+      TensorSpec::createSpec<float>("the_float", {1}),
+      TensorSpec::createSpec<int64_t>("the_int", {1})};
 
   auto Rewards = TensorSpec::createSpec<float>("reward", {1});
   StringMap<std::unique_ptr<Logger>> Loggers;

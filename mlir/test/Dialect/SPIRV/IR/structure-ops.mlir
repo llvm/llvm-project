@@ -370,6 +370,13 @@ spirv.module Logical GLSL450 {
 // -----
 
 spirv.module Logical GLSL450 {
+  // expected-error @+1 {{result must be of a !spv.ptr type}}
+  "spirv.GlobalVariable"() {sym_name = "var0", type = none} : () -> ()
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
   // expected-error @+1 {{op initializer must be result of a spirv.SpecConstant or spirv.GlobalVariable op}}
   spirv.GlobalVariable @var0 initializer(@var1) : !spirv.ptr<f32, Private>
 }

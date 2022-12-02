@@ -23,17 +23,18 @@ using namespace sys;
 //===----------------------------------------------------------------------===//
 
 static bool Execute(ProcessInfo &PI, StringRef Program,
-                    ArrayRef<StringRef> Args, Optional<ArrayRef<StringRef>> Env,
-                    ArrayRef<Optional<StringRef>> Redirects,
+                    ArrayRef<StringRef> Args,
+                    std::optional<ArrayRef<StringRef>> Env,
+                    ArrayRef<std::optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg,
                     BitVector *AffinityMask);
 
 int sys::ExecuteAndWait(StringRef Program, ArrayRef<StringRef> Args,
-                        Optional<ArrayRef<StringRef>> Env,
-                        ArrayRef<Optional<StringRef>> Redirects,
+                        std::optional<ArrayRef<StringRef>> Env,
+                        ArrayRef<std::optional<StringRef>> Redirects,
                         unsigned SecondsToWait, unsigned MemoryLimit,
                         std::string *ErrMsg, bool *ExecutionFailed,
-                        Optional<ProcessStatistics> *ProcStat,
+                        std::optional<ProcessStatistics> *ProcStat,
                         BitVector *AffinityMask) {
   assert(Redirects.empty() || Redirects.size() == 3);
   ProcessInfo PI;
@@ -54,8 +55,8 @@ int sys::ExecuteAndWait(StringRef Program, ArrayRef<StringRef> Args,
 }
 
 ProcessInfo sys::ExecuteNoWait(StringRef Program, ArrayRef<StringRef> Args,
-                               Optional<ArrayRef<StringRef>> Env,
-                               ArrayRef<Optional<StringRef>> Redirects,
+                               std::optional<ArrayRef<StringRef>> Env,
+                               ArrayRef<std::optional<StringRef>> Redirects,
                                unsigned MemoryLimit, std::string *ErrMsg,
                                bool *ExecutionFailed, BitVector *AffinityMask) {
   assert(Redirects.empty() || Redirects.size() == 3);

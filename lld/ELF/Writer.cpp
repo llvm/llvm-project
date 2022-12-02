@@ -282,7 +282,7 @@ template <class ELFT> void elf::createSyntheticSections() {
   in.shStrTab = std::make_unique<StringTableSection>(".shstrtab", false);
 
   Out::programHeaders = make<OutputSection>("", 0, SHF_ALLOC);
-  Out::programHeaders->alignment = config->wordsize;
+  Out::programHeaders->addralign = config->wordsize;
 
   if (config->strip != StripPolicy::All) {
     in.strTab = std::make_unique<StringTableSection>(".strtab", false);
@@ -992,7 +992,7 @@ void PhdrEntry::add(OutputSection *sec) {
   lastSec = sec;
   if (!firstSec)
     firstSec = sec;
-  p_align = std::max(p_align, sec->alignment);
+  p_align = std::max(p_align, sec->addralign);
   if (p_type == PT_LOAD)
     sec->ptLoad = this;
 }
@@ -1684,10 +1684,10 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   for (SectionCommand *cmd : script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd)) {
       OutputSection *osec = &osd->osec;
-      if (osec->addr % osec->alignment != 0)
+      if (osec->addr % osec->addralign != 0)
         warn("address (0x" + Twine::utohexstr(osec->addr) + ") of section " +
              osec->name + " is not a multiple of alignment (" +
-             Twine(osec->alignment) + ")");
+             Twine(osec->addralign) + ")");
     }
 }
 
@@ -2402,7 +2402,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     if (sec->partition != partNo)
       continue;
     if (sec->type == SHT_NOTE && (sec->flags & SHF_ALLOC)) {
-      if (!note || sec->lmaExpr || note->lastSec->alignment != sec->alignment)
+      if (!note || sec->lmaExpr || note->lastSec->addralign != sec->addralign)
         note = addHdr(PT_NOTE, PF_R);
       note->add(sec);
     } else {
@@ -2436,7 +2436,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
     OutputSection *cmd = p->firstSec;
     if (!cmd)
       return;
-    cmd->alignExpr = [align = cmd->alignment]() { return align; };
+    cmd->alignExpr = [align = cmd->addralign]() { return align; };
     if (!cmd->addrExpr) {
       // Prefer advancing to align(dot, maxPageSize) + dot%maxPageSize to avoid
       // padding in the file contents.
@@ -2513,7 +2513,7 @@ static uint64_t computeFileOffset(OutputSection *os, uint64_t off) {
 
   // If the section is not in a PT_LOAD, we just have to align it.
   if (!os->ptLoad)
-     return alignToPowerOf2(off, os->alignment);
+     return alignToPowerOf2(off, os->addralign);
 
   // If two sections share the same PT_LOAD the file offset is calculated
   // using this formula: Off2 = Off1 + (VA2 - VA1).
@@ -2576,7 +2576,7 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
   }
   for (OutputSection *osec : outputSections)
     if (!(osec->flags & SHF_ALLOC)) {
-      osec->offset = alignToPowerOf2(off, osec->alignment);
+      osec->offset = alignToPowerOf2(off, osec->addralign);
       off = osec->offset + osec->size;
     }
 

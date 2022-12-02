@@ -282,8 +282,7 @@ protected:
 
   CompileUnitInfo *GetCompileUnitInfo(SymbolFileDWARF *oso_dwarf);
 
-  lldb::TypeSP
-  FindDefinitionTypeForDWARFDeclContext(const DWARFDeclContext &die_decl_ctx);
+  lldb::TypeSP FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die);
 
   bool Supports_DW_AT_APPLE_objc_complete_type(SymbolFileDWARF *skip_dwarf_oso);
 
