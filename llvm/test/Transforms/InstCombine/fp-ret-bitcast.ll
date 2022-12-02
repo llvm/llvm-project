@@ -4,39 +4,37 @@
 ; float result
 
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
-%struct.NSObject = type { %struct.objc_class* }
+%struct.NSObject = type { ptr }
 %struct.NSArray = type { %struct.NSObject }
 %struct.objc_class = type opaque
 %struct.objc_selector = type opaque
 
 @"\01L_OBJC_METH_VAR_NAME_112" = internal global [15 x i8] c"whiteComponent\00", section "__TEXT,__cstring,cstring_literals"
-@"\01L_OBJC_SELECTOR_REFERENCES_81" = internal global %struct.objc_selector* bitcast ([15 x i8]* @"\01L_OBJC_METH_VAR_NAME_112" to %struct.objc_selector*), section "__OBJC,__message_refs,literal_pointers,no_dead_strip"
+@"\01L_OBJC_SELECTOR_REFERENCES_81" = internal global ptr @"\01L_OBJC_METH_VAR_NAME_112", section "__OBJC,__message_refs,literal_pointers,no_dead_strip"
 
 define void @bork() nounwind  {
 ; CHECK-LABEL: @bork(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COLOR:%.*]] = alloca %struct.NSArray*, align 8
-; CHECK-NEXT:    [[TMP103:%.*]] = load %struct.NSArray*, %struct.NSArray** [[COLOR]], align 8
-; CHECK-NEXT:    [[TMP103104:%.*]] = getelementptr [[STRUCT_NSARRAY:%.*]], %struct.NSArray* [[TMP103]], i64 0, i32 0
-; CHECK-NEXT:    [[TMP105:%.*]] = load %struct.objc_selector*, %struct.objc_selector** @"\01L_OBJC_SELECTOR_REFERENCES_81", align 8
-; CHECK-NEXT:    [[TMP107:%.*]] = call float bitcast (void (%struct.NSObject*, ...)* @objc_msgSend_fpret to float (%struct.NSObject*, %struct.objc_selector*)*)(%struct.NSObject* [[TMP103104]], %struct.objc_selector* [[TMP105]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[COLOR:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    [[TMP103:%.*]] = load ptr, ptr [[COLOR]], align 8
+; CHECK-NEXT:    [[TMP105:%.*]] = load ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_81", align 8
+; CHECK-NEXT:    [[TMP107:%.*]] = call float @objc_msgSend_fpret(ptr [[TMP103]], ptr [[TMP105]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %color = alloca %struct.NSArray*
-  %color.466 = alloca %struct.NSObject*
-  %tmp103 = load %struct.NSArray*, %struct.NSArray** %color, align 4
-  %tmp103104 = getelementptr %struct.NSArray, %struct.NSArray* %tmp103, i32 0, i32 0
-  store %struct.NSObject* %tmp103104, %struct.NSObject** %color.466, align 4
-  %tmp105 = load %struct.objc_selector*, %struct.objc_selector** @"\01L_OBJC_SELECTOR_REFERENCES_81", align 4
-  %tmp106 = load %struct.NSObject*, %struct.NSObject** %color.466, align 4
-  %tmp107 = call float bitcast (void (%struct.NSObject*, ...)* @objc_msgSend_fpret to float (%struct.NSObject*, %struct.objc_selector*)*)( %struct.NSObject* %tmp106, %struct.objc_selector* %tmp105 ) nounwind
+  %color = alloca ptr
+  %color.466 = alloca ptr
+  %tmp103 = load ptr, ptr %color, align 4
+  store ptr %tmp103, ptr %color.466, align 4
+  %tmp105 = load ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_81", align 4
+  %tmp106 = load ptr, ptr %color.466, align 4
+  %tmp107 = call float @objc_msgSend_fpret( ptr %tmp106, ptr %tmp105 ) nounwind
   br label %exit
 
 exit:
   ret void
 }
 
-declare void @objc_msgSend_fpret(%struct.NSObject*, ...)
+declare void @objc_msgSend_fpret(ptr, ...)
