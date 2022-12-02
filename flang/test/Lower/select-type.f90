@@ -253,6 +253,8 @@ contains
       print*, 'type is real'
     type is (logical)
       print*, 'type is logical'
+    type is (character(*))
+      print*, 'type is character'
     class default
       print*,'default'
     end select
@@ -261,14 +263,57 @@ contains
 ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type5(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<none> {fir.bindc_name = "a"})
 ! CHECK: fir.select_type %[[ARG0]] : !fir.class<none>
-! CHECK-SAME: [#fir.type_is<i8>, ^[[I8_BLK:.*]], #fir.type_is<i32>, ^[[I32_BLK:.*]], #fir.type_is<f32>, ^[[F32_BLK:.*]], #fir.type_is<!fir.logical<4>>, ^[[LOG_BLK:.*]], unit, ^[[DEFAULT:.*]]] 
+! CHECK-SAME: [#fir.type_is<i8>, ^[[I8_BLK:.*]], #fir.type_is<i32>, ^[[I32_BLK:.*]], #fir.type_is<f32>, ^[[F32_BLK:.*]], #fir.type_is<!fir.logical<4>>, ^[[LOG_BLK:.*]], #fir.type_is<!fir.char<1,?>>, ^[[CHAR_BLK:.*]], unit, ^[[DEFAULT:.*]]] 
 ! CHECK: ^[[I8_BLK]]
 ! CHECK: ^[[I32_BLK]]
 ! CHECK: ^[[F32_BLK]]
 ! CHECK: ^[[LOG_BLK]]
+! CHECK: ^[[CHAR_BLK]]
 ! CHECK: ^[[DEFAULT_BLOCK]]
 
 ! CFG-LABEL: func.func @_QMselect_type_lower_testPselect_type5(
+! CFG-SAME: %[[SELECTOR:.*]]: !fir.class<none> {fir.bindc_name = "a"}) {
+
+! CFG:  %[[INT8_TC:.*]] = arith.constant 7 : i8
+! CFG:  %[[TYPE_CODE:.*]] = fir.box_typecode %[[SELECTOR]] : (!fir.class<none>) -> i8
+! CFG:  %[[IS_INT8:.*]] = arith.cmpi eq, %[[TYPE_CODE]], %[[INT8_TC]] : i8
+! CFG:  cf.cond_br %[[IS_INT8]], ^[[INT8_BLK:.*]], ^[[NOT_INT8:.*]]
+! CFG: ^[[NOT_INT8]]:
+! CFG:  %[[INT32_TC:.*]] = arith.constant 9 : i8
+! CFG:  %[[TYPE_CODE:.*]] = fir.box_typecode %[[SELECTOR]] : (!fir.class<none>) -> i8
+! CFG:  %[[IS_INT32:.*]] = arith.cmpi eq, %[[TYPE_CODE]], %[[INT32_TC]] : i8
+! CFG:  cf.cond_br %[[IS_INT32]], ^[[INT32_BLK:.*]], ^[[NOT_INT32_BLK:.*]]
+! CFG: ^[[INT8_BLK]]:
+! CFG:  cf.br ^[[EXIT_BLK:.*]]
+! CFG: ^[[NOT_INT32_BLK]]:
+! CFG:  %[[FLOAT_TC:.*]] = arith.constant 27 : i8
+! CFG:  %[[TYPE_CODE:.*]] = fir.box_typecode %[[SELECTOR]] : (!fir.class<none>) -> i8
+! CFG:  %[[IS_FLOAT:.*]] = arith.cmpi eq, %[[TYPE_CODE]], %[[FLOAT_TC]] : i8
+! CFG:  cf.cond_br %[[IS_FLOAT]], ^[[FLOAT_BLK:.*]], ^[[NOT_FLOAT_BLK:.*]]
+! CFG: ^[[INT32_BLK]]:
+! CFG:  cf.br ^[[EXIT_BLK]]
+! CFG: ^[[NOT_FLOAT_BLK]]:
+! CFG:  %[[LOGICAL_TC:.*]] = arith.constant 14 : i8
+! CFG:  %[[TYPE_CODE:.*]] = fir.box_typecode %[[SELECTOR]] : (!fir.class<none>) -> i8
+! CFG:  %[[IS_LOGICAL:.*]] = arith.cmpi eq, %[[TYPE_CODE]], %[[LOGICAL_TC]] : i8
+! CFG:  cf.cond_br %[[IS_LOGICAL]], ^[[LOGICAL_BLK:.*]], ^[[NOT_LOGICAL_BLK:.*]]
+! CFG: ^[[FLOAT_BLK]]:
+! CFG:  cf.br ^[[EXIT_BLK]]
+! CFG: ^[[NOT_LOGICAL_BLK]]:
+! CFG:  %[[CHAR_TC:.*]] = arith.constant 40 : i8
+! CFG:  %[[TYPE_CODE:.*]] = fir.box_typecode %[[SELECTOR]] : (!fir.class<none>) -> i8
+! CFG:  %[[IS_CHAR:.*]] = arith.cmpi eq, %[[TYPE_CODE]], %[[CHAR_TC]] : i8
+! CFG:  cf.cond_br %[[IS_CHAR]], ^[[CHAR_BLK:.*]], ^[[NOT_CHAR_BLK:.*]]
+! CFG: ^[[LOGICAL_BLK]]:
+! CFG:  cf.br ^[[EXIT_BLK]]
+! CFG: ^[[NOT_CHAR_BLK]]:
+! CFG:  cf.br ^[[DEFAULT_BLK:.*]]
+! CFG: ^[[CHAR_BLK]]:
+! CFG:  cf.br ^[[EXIT_BLK]]
+! CFG: ^[[DEFAULT_BLK]]:
+! CFG:  cf.br ^[[EXIT_BLK]]
+! CFG: ^bb12:
+! CFG:  return
 
   subroutine select_type6(a)
     class(*) :: a
