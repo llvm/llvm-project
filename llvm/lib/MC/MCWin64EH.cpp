@@ -999,6 +999,23 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
       // These are never canonical; they don't show up with the usual Arm64
       // calling convention.
       return false;
+    case Win64EH::UOP_AllocLarge:
+      // Allocations this large can't be represented in packed unwind (and
+      // usually don't fit the canonical form anyway because we need to use
+      // __chkstk to allocate the stack space).
+      return false;
+    case Win64EH::UOP_AddFP:
+      // "add x29, sp, #N" doesn't show up in the canonical pattern (except for
+      // N=0, which is UOP_SetFP).
+      return false;
+    case Win64EH::UOP_TrapFrame:
+    case Win64EH::UOP_Context:
+    case Win64EH::UOP_ClearUnwoundToCall:
+    case Win64EH::UOP_PushMachFrame:
+      // These are special opcodes that aren't normally generated.
+      return false;
+    default:
+      report_fatal_error("Unknown Arm64 unwind opcode");
     }
   }
   if (RegI > 10 || RegF > 8)
