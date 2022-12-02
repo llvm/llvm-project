@@ -22,10 +22,12 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include <limits>
 
 namespace mlir {
 #define GEN_PASS_DEF_GPULAUNCHSINKINDEXCOMPUTATIONS
@@ -147,8 +149,27 @@ LogicalResult mlir::sinkOperationsIntoLaunchOp(
   return success();
 }
 
+/// Return the provided KernelDim3 as an array of i32 constants if possible.
+static DenseI32ArrayAttr maybeConstantDimsAttr(gpu::KernelDim3 dims) {
+  SmallVector<int32_t, 3> constants;
+  MLIRContext *ctx = dims.x.getContext();
+  for (Value v : {dims.x, dims.y, dims.z}) {
+    APInt constValue;
+    if (!matchPattern(v, m_ConstantInt(&constValue)))
+      return nullptr;
+    // In the event someone called for a too-large block or grid dimension,
+    // don't set bounds as it is likely to cause more confusing behavior.
+    if (constValue.ugt(std::numeric_limits<uint32_t>::max()))
+      return nullptr;
+    constants.push_back(
+        constValue.getLimitedValue(std::numeric_limits<uint32_t>::max()));
+  }
+  return DenseI32ArrayAttr::get(ctx, constants);
+}
+
 /// Outline the `gpu.launch` operation body into a kernel function. Replace
 /// `gpu.terminator` operations by `gpu.return` in the generated function.
+/// Set block and grid size bounds if known.
 static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
                                             StringRef kernelFnName,
                                             SetVector<Value> &operands) {
@@ -173,6 +194,19 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   auto outlinedFunc = builder.create<gpu::GPUFuncOp>(loc, kernelFnName, type);
   outlinedFunc->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
                         builder.getUnitAttr());
+
+  // If we can infer bounds on the grid and/or block sizes from the arguments
+  // to the launch op, propagate them to the generated kernel. This is safe
+  // because multiple launches with the same body are not deduplicated.
+  if (auto blockBounds =
+          maybeConstantDimsAttr(launchOp.getBlockSizeOperandValues()))
+    outlinedFunc->setAttr(gpu::GPUFuncOp::getKnownBlockSizeAttrName(),
+                          blockBounds);
+  if (auto gridBounds =
+          maybeConstantDimsAttr(launchOp.getGridSizeOperandValues()))
+    outlinedFunc->setAttr(gpu::GPUFuncOp::getKnownGridSizeAttrName(),
+                          gridBounds);
+
   BlockAndValueMapping map;
 
   // Map the arguments corresponding to the launch parameters like blockIdx,
