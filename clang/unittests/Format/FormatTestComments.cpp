@@ -3062,6 +3062,61 @@ TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
                    "int d;// comment\n",
                    Style));
 
+  EXPECT_EQ("// do not touch\n"
+            "int a;  // any comments\n"
+            "\n"
+            "   // comment\n"
+            "// comment\n"
+            "\n"
+            "// comment",
+            format("// do not touch\n"
+                   "int a;  // any comments\n"
+                   "\n"
+                   "   // comment\n"
+                   "// comment\n"
+                   "\n"
+                   "// comment",
+                   Style));
+
+  EXPECT_EQ("// do not touch\n"
+            "int a;  // any comments\n"
+            "\n"
+            "   // comment\n"
+            "// comment\n"
+            "\n"
+            "// comment",
+            format("// do not touch\n"
+                   "int a;  // any comments\n"
+                   "\n"
+                   "\n"
+                   "   // comment\n"
+                   "// comment\n"
+                   "\n"
+                   "\n"
+                   "// comment",
+                   Style));
+
+  // Allow to keep 2 empty lines
+  Style.MaxEmptyLinesToKeep = 2;
+  EXPECT_EQ("// do not touch\n"
+            "int a;  // any comments\n"
+            "\n"
+            "\n"
+            "   // comment\n"
+            "// comment\n"
+            "\n"
+            "// comment",
+            format("// do not touch\n"
+                   "int a;  // any comments\n"
+                   "\n"
+                   "\n"
+                   "   // comment\n"
+                   "// comment\n"
+                   "\n"
+                   "// comment",
+                   Style));
+  Style.MaxEmptyLinesToKeep = 1;
+
   // Just format comments normally when leaving exceeds the column limit
   Style.ColumnLimit = 35;
   EXPECT_EQ("int foo = 12345; // comment\n"

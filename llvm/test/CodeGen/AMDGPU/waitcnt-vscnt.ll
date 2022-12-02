@@ -9,20 +9,20 @@
 ; GFX8:         s_waitcnt vmcnt(0){{$}}
 ; GFX9PLUS:     s_waitcnt vmcnt(0){{$}}
 ; GCN-NEXT:     s_barrier
-define amdgpu_kernel void @barrier_vmcnt_global(i32 addrspace(1)* %arg) {
+define amdgpu_kernel void @barrier_vmcnt_global(ptr addrspace(1) %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = zext i32 %tmp to i64
   %tmp2 = shl nuw nsw i64 %tmp1, 32
-  %tmp3 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tmp1
-  %tmp4 = load i32, i32 addrspace(1)* %tmp3, align 4
+  %tmp3 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp1
+  %tmp4 = load i32, ptr addrspace(1) %tmp3, align 4
   fence syncscope("singlethread") release
   tail call void @llvm.amdgcn.s.barrier()
   fence syncscope("singlethread") acquire
   %tmp5 = add nuw nsw i64 %tmp2, 4294967296
   %tmp6 = lshr exact i64 %tmp5, 32
-  %tmp7 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tmp6
-  store i32 %tmp4, i32 addrspace(1)* %tmp7, align 4
+  %tmp7 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp6
+  store i32 %tmp4, ptr addrspace(1) %tmp7, align 4
   ret void
 }
 
@@ -33,22 +33,22 @@ bb:
 ; GFX9:       s_waitcnt vmcnt(0){{$}}
 ; GFX10PLUS:  s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:   s_barrier
-define amdgpu_kernel void @barrier_vscnt_global(i32 addrspace(1)* %arg) {
+define amdgpu_kernel void @barrier_vscnt_global(ptr addrspace(1) %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = zext i32 %tmp to i64
   %tmp2 = shl nuw nsw i64 %tmp1, 32
   %tmp3 = add nuw nsw i64 %tmp2, 8589934592
   %tmp4 = lshr exact i64 %tmp3, 32
-  %tmp5 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tmp4
-  store i32 0, i32 addrspace(1)* %tmp5, align 4
+  %tmp5 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp4
+  store i32 0, ptr addrspace(1) %tmp5, align 4
   fence syncscope("singlethread") release
   tail call void @llvm.amdgcn.s.barrier()
   fence syncscope("singlethread") acquire
   %tmp6 = add nuw nsw i64 %tmp2, 4294967296
   %tmp7 = lshr exact i64 %tmp6, 32
-  %tmp8 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tmp7
-  store i32 1, i32 addrspace(1)* %tmp8, align 4
+  %tmp8 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp7
+  store i32 1, ptr addrspace(1) %tmp8, align 4
   ret void
 }
 
@@ -59,24 +59,24 @@ bb:
 ; GFX9PLUS:     s_waitcnt vmcnt(0){{$}}
 ; GFX10PLUS:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:     s_barrier
-define amdgpu_kernel void @barrier_vmcnt_vscnt_global(i32 addrspace(1)* %arg) {
+define amdgpu_kernel void @barrier_vmcnt_vscnt_global(ptr addrspace(1) %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = zext i32 %tmp to i64
   %tmp2 = shl nuw nsw i64 %tmp1, 32
   %tmp3 = add nuw nsw i64 %tmp2, 8589934592
   %tmp4 = lshr exact i64 %tmp3, 32
-  %tmp5 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tmp4
-  store i32 0, i32 addrspace(1)* %tmp5, align 4
-  %tmp6 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tmp1
-  %tmp7 = load i32, i32 addrspace(1)* %tmp6, align 4
+  %tmp5 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp4
+  store i32 0, ptr addrspace(1) %tmp5, align 4
+  %tmp6 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp1
+  %tmp7 = load i32, ptr addrspace(1) %tmp6, align 4
   fence syncscope("singlethread") release
   tail call void @llvm.amdgcn.s.barrier()
   fence syncscope("singlethread") acquire
   %tmp8 = add nuw nsw i64 %tmp2, 4294967296
   %tmp9 = lshr exact i64 %tmp8, 32
-  %tmp10 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tmp9
-  store i32 %tmp7, i32 addrspace(1)* %tmp10, align 4
+  %tmp10 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp9
+  store i32 %tmp7, ptr addrspace(1) %tmp10, align 4
   ret void
 }
 
@@ -84,20 +84,20 @@ bb:
 ; GCN:      flat_load_{{dword|b32}}
 ; GCN:      s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
 ; GCN-NEXT: s_barrier
-define amdgpu_kernel void @barrier_vmcnt_flat(i32* %arg) {
+define amdgpu_kernel void @barrier_vmcnt_flat(ptr %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = zext i32 %tmp to i64
   %tmp2 = shl nuw nsw i64 %tmp1, 32
-  %tmp3 = getelementptr inbounds i32, i32* %arg, i64 %tmp1
-  %tmp4 = load i32, i32* %tmp3, align 4
+  %tmp3 = getelementptr inbounds i32, ptr %arg, i64 %tmp1
+  %tmp4 = load i32, ptr %tmp3, align 4
   fence syncscope("singlethread") release
   tail call void @llvm.amdgcn.s.barrier()
   fence syncscope("singlethread") acquire
   %tmp5 = add nuw nsw i64 %tmp2, 4294967296
   %tmp6 = lshr exact i64 %tmp5, 32
-  %tmp7 = getelementptr inbounds i32, i32* %arg, i64 %tmp6
-  store i32 %tmp4, i32* %tmp7, align 4
+  %tmp7 = getelementptr inbounds i32, ptr %arg, i64 %tmp6
+  store i32 %tmp4, ptr %tmp7, align 4
   ret void
 }
 
@@ -107,22 +107,22 @@ bb:
 ; GFX10PLUS:   s_waitcnt lgkmcnt(0){{$}}
 ; GFX10PLUS:   s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_barrier
-define amdgpu_kernel void @barrier_vscnt_flat(i32* %arg) {
+define amdgpu_kernel void @barrier_vscnt_flat(ptr %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = zext i32 %tmp to i64
   %tmp2 = shl nuw nsw i64 %tmp1, 32
   %tmp3 = add nuw nsw i64 %tmp2, 8589934592
   %tmp4 = lshr exact i64 %tmp3, 32
-  %tmp5 = getelementptr inbounds i32, i32* %arg, i64 %tmp4
-  store i32 0, i32* %tmp5, align 4
+  %tmp5 = getelementptr inbounds i32, ptr %arg, i64 %tmp4
+  store i32 0, ptr %tmp5, align 4
   fence syncscope("singlethread") release
   tail call void @llvm.amdgcn.s.barrier()
   fence syncscope("singlethread") acquire
   %tmp6 = add nuw nsw i64 %tmp2, 4294967296
   %tmp7 = lshr exact i64 %tmp6, 32
-  %tmp8 = getelementptr inbounds i32, i32* %arg, i64 %tmp7
-  store i32 1, i32* %tmp8, align 4
+  %tmp8 = getelementptr inbounds i32, ptr %arg, i64 %tmp7
+  store i32 1, ptr %tmp8, align 4
   ret void
 }
 
@@ -131,24 +131,24 @@ bb:
 ; GCN:        s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
 ; GFX10PLUS:  s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:   s_barrier
-define amdgpu_kernel void @barrier_vmcnt_vscnt_flat(i32* %arg) {
+define amdgpu_kernel void @barrier_vmcnt_vscnt_flat(ptr %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = zext i32 %tmp to i64
   %tmp2 = shl nuw nsw i64 %tmp1, 32
   %tmp3 = add nuw nsw i64 %tmp2, 8589934592
   %tmp4 = lshr exact i64 %tmp3, 32
-  %tmp5 = getelementptr inbounds i32, i32* %arg, i64 %tmp4
-  store i32 0, i32* %tmp5, align 4
-  %tmp6 = getelementptr inbounds i32, i32* %arg, i64 %tmp1
-  %tmp7 = load i32, i32* %tmp6, align 4
+  %tmp5 = getelementptr inbounds i32, ptr %arg, i64 %tmp4
+  store i32 0, ptr %tmp5, align 4
+  %tmp6 = getelementptr inbounds i32, ptr %arg, i64 %tmp1
+  %tmp7 = load i32, ptr %tmp6, align 4
   fence syncscope("singlethread") release
   tail call void @llvm.amdgcn.s.barrier()
   fence syncscope("singlethread") acquire
   %tmp8 = add nuw nsw i64 %tmp2, 4294967296
   %tmp9 = lshr exact i64 %tmp8, 32
-  %tmp10 = getelementptr inbounds i32, i32* %arg, i64 %tmp9
-  store i32 %tmp7, i32* %tmp10, align 4
+  %tmp10 = getelementptr inbounds i32, ptr %arg, i64 %tmp9
+  store i32 %tmp7, ptr %tmp10, align 4
   ret void
 }
 
@@ -159,24 +159,24 @@ bb:
 ; GFX10PLUS:  s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
 ; GFX10PLUS:  s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:   s_barrier
-define amdgpu_kernel void @barrier_vmcnt_vscnt_flat_workgroup(i32* %arg) {
+define amdgpu_kernel void @barrier_vmcnt_vscnt_flat_workgroup(ptr %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = zext i32 %tmp to i64
   %tmp2 = shl nuw nsw i64 %tmp1, 32
   %tmp3 = add nuw nsw i64 %tmp2, 8589934592
   %tmp4 = lshr exact i64 %tmp3, 32
-  %tmp5 = getelementptr inbounds i32, i32* %arg, i64 %tmp4
-  store i32 0, i32* %tmp5, align 4
-  %tmp6 = getelementptr inbounds i32, i32* %arg, i64 %tmp1
-  %tmp7 = load i32, i32* %tmp6, align 4
+  %tmp5 = getelementptr inbounds i32, ptr %arg, i64 %tmp4
+  store i32 0, ptr %tmp5, align 4
+  %tmp6 = getelementptr inbounds i32, ptr %arg, i64 %tmp1
+  %tmp7 = load i32, ptr %tmp6, align 4
   fence syncscope("workgroup") release
   tail call void @llvm.amdgcn.s.barrier()
   fence syncscope("workgroup") acquire
   %tmp8 = add nuw nsw i64 %tmp2, 4294967296
   %tmp9 = lshr exact i64 %tmp8, 32
-  %tmp10 = getelementptr inbounds i32, i32* %arg, i64 %tmp9
-  store i32 %tmp7, i32* %tmp10, align 4
+  %tmp10 = getelementptr inbounds i32, ptr %arg, i64 %tmp9
+  store i32 %tmp7, ptr %tmp10, align 4
   ret void
 }
 
@@ -186,17 +186,17 @@ bb:
 ; GFX8:     s_waitcnt vmcnt(0){{$}}
 ; GFX9PLUS: s_waitcnt vmcnt(0){{$}}
 ; GCN-NEXT: {{global|flat}}_store_{{dword|b32}}
-define amdgpu_kernel void @load_vmcnt_global(i32 addrspace(1)* %arg) {
+define amdgpu_kernel void @load_vmcnt_global(ptr addrspace(1) %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = zext i32 %tmp to i64
   %tmp2 = shl nuw nsw i64 %tmp1, 32
-  %tmp3 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tmp1
-  %tmp4 = load i32, i32 addrspace(1)* %tmp3, align 4
+  %tmp3 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp1
+  %tmp4 = load i32, ptr addrspace(1) %tmp3, align 4
   %tmp5 = add nuw nsw i64 %tmp2, 4294967296
   %tmp6 = lshr exact i64 %tmp5, 32
-  %tmp7 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tmp6
-  store i32 %tmp4, i32 addrspace(1)* %tmp7, align 4
+  %tmp7 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp6
+  store i32 %tmp4, ptr addrspace(1) %tmp7, align 4
   ret void
 }
 
@@ -205,17 +205,17 @@ bb:
 ; GCN-NOT:  vscnt
 ; GCN:      s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
 ; GCN-NEXT: {{global|flat}}_store_{{dword|b32}}
-define amdgpu_kernel void @load_vmcnt_flat(i32* %arg) {
+define amdgpu_kernel void @load_vmcnt_flat(ptr %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = zext i32 %tmp to i64
   %tmp2 = shl nuw nsw i64 %tmp1, 32
-  %tmp3 = getelementptr inbounds i32, i32* %arg, i64 %tmp1
-  %tmp4 = load i32, i32* %tmp3, align 4
+  %tmp3 = getelementptr inbounds i32, ptr %arg, i64 %tmp1
+  %tmp4 = load i32, ptr %tmp3, align 4
   %tmp5 = add nuw nsw i64 %tmp2, 4294967296
   %tmp6 = lshr exact i64 %tmp5, 32
-  %tmp7 = getelementptr inbounds i32, i32* %arg, i64 %tmp6
-  store i32 %tmp4, i32* %tmp7, align 4
+  %tmp7 = getelementptr inbounds i32, ptr %arg, i64 %tmp6
+  store i32 %tmp4, ptr %tmp7, align 4
   ret void
 }
 
@@ -224,8 +224,8 @@ bb:
 ; GFX8_9:      s_waitcnt vmcnt(0)
 ; GFX10PLUS:   s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64
-define void @store_vscnt_private(i32 addrspace(5)* %p) {
-  store i32 0, i32 addrspace(5)* %p
+define void @store_vscnt_private(ptr addrspace(5) %p) {
+  store i32 0, ptr addrspace(5) %p
   ret void
 }
 
@@ -235,8 +235,8 @@ define void @store_vscnt_private(i32 addrspace(5)* %p) {
 ; GFX8_9:      s_waitcnt vmcnt(0)
 ; GFX10PLUS:   s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64
-define void @store_vscnt_global(i32 addrspace(1)* %p) {
-  store i32 0, i32 addrspace(1)* %p
+define void @store_vscnt_global(ptr addrspace(1) %p) {
+  store i32 0, ptr addrspace(1) %p
   ret void
 }
 
@@ -246,8 +246,8 @@ define void @store_vscnt_global(i32 addrspace(1)* %p) {
 ; GFX10PLUS:   s_waitcnt lgkmcnt(0){{$}}
 ; GFX10PLUS:   s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64
-define void @store_vscnt_flat(i32* %p) {
-  store i32 0, i32* %p
+define void @store_vscnt_flat(ptr %p) {
+  store i32 0, ptr %p
   ret void
 }
 

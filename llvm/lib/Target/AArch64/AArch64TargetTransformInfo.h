@@ -25,6 +25,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 
@@ -126,7 +127,7 @@ public:
     return ST->getMinVectorRegisterBitWidth();
   }
 
-  Optional<unsigned> getVScaleForTuning() const {
+  std::optional<unsigned> getVScaleForTuning() const {
     return ST->getVScaleForTuning();
   }
 

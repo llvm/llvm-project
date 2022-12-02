@@ -1686,7 +1686,8 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
   for (RegInfo &RI : Scope->RegInfos) {
     const Region *R = RI.R;
     unsigned Duplication = getRegionDuplicationCount(R);
-    dbgs() << "Dup count for R=" << R << "  is " << Duplication << "\n";
+    CHR_DEBUG(dbgs() << "Dup count for R=" << R << "  is " << Duplication
+                     << "\n");
     if (Duplication >= CHRDupThreshsold) {
       CHR_DEBUG(dbgs() << "Reached the dup threshold of " << Duplication
                        << " for this region");

@@ -5,20 +5,20 @@
 
 ; Make sure we match the addressing mode offset of csub intrinsics across blocks.
 
-define amdgpu_kernel void @test_sink_small_offset_global_atomic_csub_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @test_sink_small_offset_global_atomic_csub_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; OPT-LABEL: @test_sink_small_offset_global_atomic_csub_i32(
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #[[ATTR3:[0-9]+]]
 ; OPT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TID]], 0
 ; OPT-NEXT:    br i1 [[CMP]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT:       if:
-; OPT-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, i32 addrspace(1)* [[IN:%.*]], i32 7
-; OPT-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* [[IN_GEP]], i32 2)
+; OPT-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN:%.*]], i32 7
+; OPT-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) [[IN_GEP]], i32 2)
 ; OPT-NEXT:    br label [[ENDIF]]
 ; OPT:       endif:
 ; OPT-NEXT:    [[X:%.*]] = phi i32 [ [[VAL]], [[IF]] ], [ 0, [[ENTRY:%.*]] ]
-; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, i32 addrspace(1)* [[OUT:%.*]], i32 999999
-; OPT-NEXT:    store i32 [[X]], i32 addrspace(1)* [[OUT_GEP]], align 4
+; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i32 999999
+; OPT-NEXT:    store i32 [[X]], ptr addrspace(1) [[OUT_GEP]], align 4
 ; OPT-NEXT:    br label [[DONE:%.*]]
 ; OPT:       done:
 ; OPT-NEXT:    ret void
@@ -48,21 +48,21 @@ entry:
   br i1 %cmp, label %endif, label %if
 
 if:
-  %in.gep = getelementptr i32, i32 addrspace(1)* %in, i32 7
-  %val = call i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* %in.gep, i32 2)
+  %in.gep = getelementptr i32, ptr addrspace(1) %in, i32 7
+  %val = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %in.gep, i32 2)
   br label %endif
 
 endif:
   %x = phi i32 [ %val, %if ], [ 0, %entry ]
-  %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 999999
-  store i32 %x, i32 addrspace(1)* %out.gep
+  %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 999999
+  store i32 %x, ptr addrspace(1) %out.gep
   br label %done
 
 done:
   ret void
 }
 
-declare i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* nocapture, i32) #0
+declare i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) nocapture, i32) #0
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 
 attributes #0 = { argmemonly nounwind }
