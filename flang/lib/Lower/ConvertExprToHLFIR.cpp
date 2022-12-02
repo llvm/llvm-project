@@ -20,6 +20,7 @@
 #include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
+#include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 
@@ -338,6 +339,121 @@ struct BinaryOp<
                                  ? Fortran::lower::genMax(builder, loc, args)
                                  : Fortran::lower::genMin(builder, loc, args);
     return hlfir::EntityWithAttributes{fir::getBase(res)};
+  }
+};
+
+/// Convert parser's INTEGER relational operators to MLIR.
+static mlir::arith::CmpIPredicate
+translateRelational(Fortran::common::RelationalOperator rop) {
+  switch (rop) {
+  case Fortran::common::RelationalOperator::LT:
+    return mlir::arith::CmpIPredicate::slt;
+  case Fortran::common::RelationalOperator::LE:
+    return mlir::arith::CmpIPredicate::sle;
+  case Fortran::common::RelationalOperator::EQ:
+    return mlir::arith::CmpIPredicate::eq;
+  case Fortran::common::RelationalOperator::NE:
+    return mlir::arith::CmpIPredicate::ne;
+  case Fortran::common::RelationalOperator::GT:
+    return mlir::arith::CmpIPredicate::sgt;
+  case Fortran::common::RelationalOperator::GE:
+    return mlir::arith::CmpIPredicate::sge;
+  }
+  llvm_unreachable("unhandled INTEGER relational operator");
+}
+
+/// Convert parser's REAL relational operators to MLIR.
+/// The choice of order (O prefix) vs unorder (U prefix) follows Fortran 2018
+/// requirements in the IEEE context (table 17.1 of F2018). This choice is
+/// also applied in other contexts because it is easier and in line with
+/// other Fortran compilers.
+/// FIXME: The signaling/quiet aspect of the table 17.1 requirement is not
+/// fully enforced. FIR and LLVM `fcmp` instructions do not give any guarantee
+/// whether the comparison will signal or not in case of quiet NaN argument.
+static mlir::arith::CmpFPredicate
+translateFloatRelational(Fortran::common::RelationalOperator rop) {
+  switch (rop) {
+  case Fortran::common::RelationalOperator::LT:
+    return mlir::arith::CmpFPredicate::OLT;
+  case Fortran::common::RelationalOperator::LE:
+    return mlir::arith::CmpFPredicate::OLE;
+  case Fortran::common::RelationalOperator::EQ:
+    return mlir::arith::CmpFPredicate::OEQ;
+  case Fortran::common::RelationalOperator::NE:
+    return mlir::arith::CmpFPredicate::UNE;
+  case Fortran::common::RelationalOperator::GT:
+    return mlir::arith::CmpFPredicate::OGT;
+  case Fortran::common::RelationalOperator::GE:
+    return mlir::arith::CmpFPredicate::OGE;
+  }
+  llvm_unreachable("unhandled REAL relational operator");
+}
+
+template <int KIND>
+struct BinaryOp<Fortran::evaluate::Relational<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, KIND>>> {
+  using Op = Fortran::evaluate::Relational<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    auto cmp = builder.create<mlir::arith::CmpIOp>(
+        loc, translateRelational(op.opr), lhs, rhs);
+    return hlfir::EntityWithAttributes{cmp};
+  }
+};
+
+template <int KIND>
+struct BinaryOp<Fortran::evaluate::Relational<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Real, KIND>>> {
+  using Op = Fortran::evaluate::Relational<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Real, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    auto cmp = builder.create<mlir::arith::CmpFOp>(
+        loc, translateFloatRelational(op.opr), lhs, rhs);
+    return hlfir::EntityWithAttributes{cmp};
+  }
+};
+
+template <int KIND>
+struct BinaryOp<Fortran::evaluate::Relational<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex, KIND>>> {
+  using Op = Fortran::evaluate::Relational<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    auto cmp = builder.create<fir::CmpcOp>(
+        loc, translateFloatRelational(op.opr), lhs, rhs);
+    return hlfir::EntityWithAttributes{cmp};
+  }
+};
+
+template <int KIND>
+struct BinaryOp<Fortran::evaluate::Relational<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, KIND>>> {
+  using Op = Fortran::evaluate::Relational<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    auto [lhsExv, lhsCleanUp] =
+        hlfir::translateToExtendedValue(loc, builder, lhs);
+    auto [rhsExv, rhsCleanUp] =
+        hlfir::translateToExtendedValue(loc, builder, rhs);
+    auto cmp = fir::runtime::genCharCompare(
+        builder, loc, translateRelational(op.opr), lhsExv, rhsExv);
+    if (lhsCleanUp)
+      lhsCleanUp.value()();
+    if (rhsCleanUp)
+      rhsCleanUp.value()();
+    return hlfir::EntityWithAttributes{cmp};
   }
 };
 

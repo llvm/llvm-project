@@ -207,3 +207,85 @@ end subroutine
 ! CHECK:  %[[VAL_12:.*]] = fir.load %{{.*}} : !fir.ref<i64>
 ! CHECK:  %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_11]], %[[VAL_12]] : i64
 ! CHECK:  arith.select %[[VAL_13]], %[[VAL_11]], %[[VAL_12]] : i64
+
+subroutine cmp_int(l, x, y)
+  logical :: l
+  integer :: x, y
+  l = x .eq. y
+end subroutine
+! CHECK-LABEL: func.func @_QPcmp_int(
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare {{.*}}x"
+! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare {{.*}}y"
+! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
+! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
+! CHECK:  %[[VAL_8:.*]] = arith.cmpi eq, %[[VAL_6]], %[[VAL_7]] : i32
+
+subroutine cmp_int_2(l, x, y)
+  logical :: l
+  integer :: x, y
+  l = x .ne. y
+! CHECK:  arith.cmpi ne
+  l = x .gt. y
+! CHECK:  arith.cmpi sgt
+  l = x .ge. y
+! CHECK:  arith.cmpi sge
+  l = x .lt. y
+! CHECK:  arith.cmpi slt
+  l = x .le. y
+! CHECK:  arith.cmpi sle
+end subroutine
+
+subroutine cmp_real(l, x, y)
+  logical :: l
+  real :: x, y
+  l = x .eq. y
+end subroutine
+! CHECK-LABEL: func.func @_QPcmp_real(
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare {{.*}}x"
+! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare {{.*}}y"
+! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<f32>
+! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<f32>
+! CHECK:  %[[VAL_8:.*]] = arith.cmpf oeq, %[[VAL_6]], %[[VAL_7]] : f32
+
+subroutine cmp_real_2(l, x, y)
+  logical :: l
+  real :: x, y
+  l = x .ne. y
+! CHECK:  arith.cmpf une
+  l = x .gt. y
+! CHECK:  arith.cmpf ogt
+  l = x .ge. y
+! CHECK:  arith.cmpf oge
+  l = x .lt. y
+! CHECK:  arith.cmpf olt
+  l = x .le. y
+! CHECK:  arith.cmpf ole
+end subroutine
+
+subroutine cmp_cmplx(l, x, y)
+  logical :: l
+  complex :: x, y
+  l = x .eq. y
+end subroutine
+! CHECK-LABEL: func.func @_QPcmp_cmplx(
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare {{.*}}x"
+! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare {{.*}}y"
+! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.complex<4>>
+! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.complex<4>>
+! CHECK:  %[[VAL_8:.*]] = fir.cmpc "oeq", %[[VAL_6]], %[[VAL_7]] : !fir.complex<4>
+
+subroutine cmp_char(l, x, y)
+  logical :: l
+  character(*) :: x, y
+  l = x .eq. y
+end subroutine
+! CHECK-LABEL: func.func @_QPcmp_char(
+! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_4:.*]]#1 {uniq_name = "_QFcmp_charEx"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_6:.*]]#1 {uniq_name = "_QFcmp_charEy"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+! CHECK:  %[[VAL_9:.*]] = fir.convert %[[VAL_7]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+! CHECK:  %[[VAL_10:.*]] = fir.convert %[[VAL_4]]#1 : (index) -> i64
+! CHECK:  %[[VAL_11:.*]] = fir.convert %[[VAL_6]]#1 : (index) -> i64
+! CHECK:  %[[VAL_12:.*]] = fir.call @_FortranACharacterCompareScalar1(%[[VAL_8]], %[[VAL_9]], %[[VAL_10]], %[[VAL_11]]) fastmath<contract> : (!fir.ref<i8>, !fir.ref<i8>, i64, i64) -> i32
+! CHECK:  %[[VAL_13:.*]] = arith.constant 0 : i32
+! CHECK:  %[[VAL_14:.*]] = arith.cmpi eq, %[[VAL_12]], %[[VAL_13]] : i32
