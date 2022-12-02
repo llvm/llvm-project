@@ -80,6 +80,11 @@ public:
   CompilerType GetGenericArgumentType(lldb::opaque_compiler_type_t type,
                                       size_t idx) override;
 
+  /// Returns the list of DependentGenericParamTypes (depth, index pairs) that a
+  /// type has, if any.
+  static llvm::SmallVector<std::pair<int, int>, 1>
+  GetDependentGenericParamListForType(llvm::StringRef type);
+
   // PluginInterface functions
   llvm::StringRef GetPluginName() override { return "TypeSystemSwiftTypeRef"; }
 
@@ -305,6 +310,8 @@ public:
   std::string GetSwiftName(const clang::Decl *clang_decl,
                            TypeSystemClang &clang_typesystem) override;
 
+  CompilerType GetBuiltinRawPointerType() override;
+
   /// Wrap \p node as \p Global(TypeMangling(node)), remangle the type
   /// and create a CompilerType from it.
   CompilerType RemangleAsType(swift::Demangle::Demangler &dem,
@@ -318,7 +325,7 @@ protected:
   /// Helper that creates an AST type from \p type.
   void *ReconstructType(lldb::opaque_compiler_type_t type);
   /// Cast \p opaque_type as a mangled name.
-  const char *AsMangledName(lldb::opaque_compiler_type_t type);
+  static const char *AsMangledName(lldb::opaque_compiler_type_t type);
 
   /// Lookup a type in the debug info.
   lldb::TypeSP FindTypeInModule(lldb::opaque_compiler_type_t type);

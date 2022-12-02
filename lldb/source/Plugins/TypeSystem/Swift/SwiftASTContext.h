@@ -361,6 +361,11 @@ public:
   /// clang_decl.
   std::string GetSwiftName(const clang::Decl *clang_decl,
                            TypeSystemClang &clang_typesystem) override;
+
+  CompilerType GetBuiltinRawPointerType() override;
+
+  bool TypeHasArchetype(CompilerType type);
+
   /// Use \p ClangImporter to swiftify the decl's name.
   std::string ImportName(const clang::NamedDecl *clang_decl);
 
