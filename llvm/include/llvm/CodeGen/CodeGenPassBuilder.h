@@ -1130,6 +1130,9 @@ void CodeGenPassBuilder<Derived>::addMachineLateOptimization(
   if (!TM.requiresStructuredCFG())
     addPass(TailDuplicatePass());
 
+  // Cleanup of redundant (identical) address/immediate loads.
+  addPass(MachineLateInstrsCleanupPass());
+
   // Copy propagation.
   addPass(MachineCopyPropagationPass());
 }
