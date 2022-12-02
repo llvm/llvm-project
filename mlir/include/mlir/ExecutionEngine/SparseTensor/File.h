@@ -103,6 +103,23 @@ public:
   SparseTensorReader(const SparseTensorReader &) = delete;
   SparseTensorReader &operator=(const SparseTensorReader &) = delete;
 
+  /// Factory method to allocate a new reader, open the file, read the
+  /// header, and validate that the actual contents of the file match
+  /// the expected `dimShape` and `valTp`.
+  static SparseTensorReader *create(const char *filename, uint64_t dimRank,
+                                    const uint64_t *dimShape,
+                                    PrimaryType valTp) {
+    SparseTensorReader *reader = new SparseTensorReader(filename);
+    reader->openFile();
+    reader->readHeader();
+    if (!reader->canReadAs(valTp))
+      MLIR_SPARSETENSOR_FATAL(
+          "Tensor element type %d not compatible with values in file %s\n",
+          static_cast<int>(valTp), filename);
+    reader->assertMatchesShape(dimRank, dimShape);
+    return reader;
+  }
+
   // This dtor tries to avoid leaking the `file`.  (Though it's better
   // to call `closeFile` explicitly when possible, since there are
   // circumstances where dtors are not called reliably.)
@@ -173,8 +190,49 @@ public:
   /// to the `indices` array.
   template <typename V>
   V readCOOElement(uint64_t rank, uint64_t *indices) {
-    char *linePtr = readCOOIndices(rank, indices);
+    assert(rank == getRank() && "rank mismatch");
+    char *linePtr = readCOOIndices(indices);
     return detail::readCOOValue<V>(&linePtr, isPattern());
+  }
+
+  /// Allocates a new COO object for `lvlSizes`, initializes it by reading
+  /// all the elements from the file and applying `dim2lvl` to their indices,
+  /// and then closes the file.
+  ///
+  /// Preconditions:
+  /// * `lvlSizes` must be valid for `lvlRank`.
+  /// * `dim2lvl` must be valid for `getRank()`.
+  /// * `dim2lvl` maps indices valid for `getDimSizes()` to indices
+  ///   valid for `lvlSizes`.
+  /// * the file's actual value type can be read as `V`.
+  ///
+  /// Asserts:
+  /// * `isValid()`
+  /// * `dim2lvl` is a permutation, and therefore also `lvlRank == getRank()`.
+  ///   (This requirement will be lifted once we functionalize `dim2lvl`.)
+  //
+  // NOTE: This method is factored out of `readSparseTensor` primarily to
+  // reduce code bloat (since the bulk of the code doesn't care about the
+  // `<P,I>` type template parameters).  But we leave it public since it's
+  // perfectly reasonable for clients to use.
+  template <typename V>
+  SparseTensorCOO<V> *readCOO(uint64_t lvlRank, const uint64_t *lvlSizes,
+                              const uint64_t *dim2lvl);
+
+  /// Allocates a new sparse-tensor storage object with the given encoding,
+  /// initializes it by reading all the elements from the file, and then
+  /// closes the file.  Preconditions/assertions are as per `readCOO`
+  /// and `SparseTensorStorage::newFromCOO`.
+  template <typename P, typename I, typename V>
+  SparseTensorStorage<P, I, V> *
+  readSparseTensor(uint64_t lvlRank, const uint64_t *lvlSizes,
+                   const DimLevelType *lvlTypes, const uint64_t *lvl2dim,
+                   const uint64_t *dim2lvl) {
+    auto *lvlCOO = readCOO<V>(lvlRank, lvlSizes, dim2lvl);
+    auto *tensor = SparseTensorStorage<P, I, V>::newFromCOO(
+        getRank(), getDimSizes(), lvlRank, lvlTypes, lvl2dim, *lvlCOO);
+    delete lvlCOO;
+    return tensor;
   }
 
 private:
@@ -187,7 +245,9 @@ private:
   /// buffer where the element's value should be parsed from.  This method
   /// has been factored out from `readCOOElement` to minimize code bloat
   /// for the generated library.
-  char *readCOOIndices(uint64_t rank, uint64_t *indices);
+  ///
+  /// Precondition: `indices` is valid for `getRank()`.
+  char *readCOOIndices(uint64_t *indices);
 
   /// Reads the MME header of a general sparse matrix of type real.
   void readMMEHeader();
@@ -209,72 +269,49 @@ private:
 
 //===----------------------------------------------------------------------===//
 
-/// Reads a sparse tensor with the given filename into a memory-resident
-/// sparse tensor.
-///
-/// Preconditions:
-/// * `dimShape` and `dim2lvl` must be valid for `dimRank`.
-/// * `lvlTypes` and `lvl2dim` must be valid for `lvlRank`.
-/// * `dim2lvl` is the inverse of `lvl2dim`.
-///
-/// Asserts:
-/// * the file's actual value type can be read as `valTp`.
-/// * the file's actual dimension-sizes match the expected `dimShape`.
-/// * `dim2lvl` is a permutation, and therefore also `dimRank == lvlRank`.
-//
-// TODO: As currently written, this function uses `dim2lvl` in two
-// places: first, to construct the level-sizes from the file's actual
-// dimension-sizes; and second, to map the file's dimension-indices into
-// level-indices.  The latter can easily generalize to arbitrary mappings,
-// however the former cannot.  Thus, once we functionalize the mappings,
-// this function will need both the sizes-to-sizes and indices-to-indices
-// variants of the `dim2lvl` mapping.  For the `lvl2dim` direction we only
-// need the indices-to-indices variant, for handing off to `newFromCOO`.
-template <typename P, typename I, typename V>
-inline SparseTensorStorage<P, I, V> *
-openSparseTensor(uint64_t dimRank, const uint64_t *dimShape, uint64_t lvlRank,
-                 const DimLevelType *lvlTypes, const uint64_t *lvl2dim,
-                 const uint64_t *dim2lvl, const char *filename,
-                 PrimaryType valTp) {
-  // Read the file's header and check the file's actual element type and
-  // dimension-sizes against the expected element type and dimension-shape.
-  SparseTensorReader stfile(filename);
-  stfile.openFile();
-  stfile.readHeader();
-  if (!stfile.canReadAs(valTp))
-    MLIR_SPARSETENSOR_FATAL(
-        "Tensor element type %d not compatible with values in file %s\n",
-        static_cast<int>(valTp), filename);
-  stfile.assertMatchesShape(dimRank, dimShape);
-  const uint64_t *dimSizes = stfile.getDimSizes();
-  // Construct the level-sizes from the file's dimension-sizes
-  // TODO: This doesn't generalize to arbitrary mappings. (See above.)
-  assert(dimRank == lvlRank && "Rank mismatch");
+template <typename V>
+SparseTensorCOO<V> *SparseTensorReader::readCOO(uint64_t lvlRank,
+                                                const uint64_t *lvlSizes,
+                                                const uint64_t *dim2lvl) {
+  assert(isValid() && "Attempt to readCOO() before readHeader()");
+  // Construct a `PermutationRef` for the `pushforward` below.
+  // TODO: This specific implementation does not generalize to arbitrary
+  // mappings, but once we functionalize the `dim2lvl` argument we can
+  // simply use that function instead.
+  const uint64_t dimRank = getRank();
+  assert(lvlRank == dimRank && "Rank mismatch");
   detail::PermutationRef d2l(dimRank, dim2lvl);
-  std::vector<uint64_t> lvlSizes = d2l.pushforward(dimRank, dimSizes);
   // Prepare a COO object with the number of nonzeros as initial capacity.
-  uint64_t nnz = stfile.getNNZ();
-  auto *lvlCOO = new SparseTensorCOO<V>(lvlSizes, nnz);
+  const uint64_t nnz = getNNZ();
+  auto *lvlCOO = new SparseTensorCOO<V>(lvlRank, lvlSizes, nnz);
   // Read all nonzero elements.
   std::vector<uint64_t> dimInd(dimRank);
   std::vector<uint64_t> lvlInd(lvlRank);
+  // Do some manual LICM, to avoid assertions in the for-loop.
+  const bool addSymmetric = (isSymmetric() && dimRank == 2);
+  const bool isPattern_ = isPattern();
   for (uint64_t k = 0; k < nnz; ++k) {
-    const V value = stfile.readCOOElement<V>(dimRank, dimInd.data());
+    // We inline `readCOOElement` here in order to avoid redundant
+    // assertions, since they're guaranteed by the call to `isValid()`
+    // and the construction of `dimInd` above.
+    char *linePtr = readCOOIndices(dimInd.data());
+    const V value = detail::readCOOValue<V>(&linePtr, isPattern_);
     d2l.pushforward(dimRank, dimInd.data(), lvlInd.data());
     // TODO: <https://github.com/llvm/llvm-project/issues/54179>
     lvlCOO->add(lvlInd, value);
     // We currently chose to deal with symmetric matrices by fully
     // constructing them.  In the future, we may want to make symmetry
     // implicit for storage reasons.
-    if (stfile.isSymmetric() && lvlInd[0] != lvlInd[1])
-      lvlCOO->add({lvlInd[1], lvlInd[0]}, value);
+    if (addSymmetric && dimInd[0] != dimInd[1]) {
+      // Must recompute `lvlInd`, since arbitrary mappings don't preserve swap.
+      std::swap(dimInd[0], dimInd[1]);
+      d2l.pushforward(dimRank, dimInd.data(), lvlInd.data());
+      lvlCOO->add(lvlInd, value);
+    }
   }
-  // Close the file, convert the COO to SparseTensorStorage, and return.
-  stfile.closeFile();
-  auto *tensor = SparseTensorStorage<P, I, V>::newFromCOO(
-      dimRank, dimSizes, lvlRank, lvlTypes, lvl2dim, *lvlCOO);
-  delete lvlCOO;
-  return tensor;
+  // Close the file and return the COO.
+  closeFile();
+  return lvlCOO;
 }
 
 /// Writes the sparse tensor to `filename` in extended FROSTT format.
