@@ -161,11 +161,13 @@ static TypeCode getTypeCodeForTypeClass(Type::TypeClass id) {
 
 namespace {
 
-std::set<const FileEntry *> GetAffectingModuleMaps(const HeaderSearch &HS,
+std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
                                                    Module *RootModule) {
   std::set<const FileEntry *> ModuleMaps{};
   std::set<const Module *> ProcessedModules;
   SmallVector<const Module *> ModulesToProcess{RootModule};
+
+  const HeaderSearch &HS = PP.getHeaderSearchInfo();
 
   SmallVector<const FileEntry *, 16> FilesByUID;
   HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
@@ -191,11 +193,27 @@ std::set<const FileEntry *> GetAffectingModuleMaps(const HeaderSearch &HS,
   }
 
   const ModuleMap &MM = HS.getModuleMap();
+  SourceManager &SourceMgr = PP.getSourceManager();
 
-  auto ProcessModuleOnce = [&](const Module *Mod) {
-    if (ProcessedModules.insert(Mod).second)
-      if (auto ModuleMapFile = MM.getModuleMapFileForUniquing(Mod))
-        ModuleMaps.insert(*ModuleMapFile);
+  auto ForIncludeChain = [&](FileEntryRef F,
+                             llvm::function_ref<void(FileEntryRef)> CB) {
+    CB(F);
+    FileID FID = SourceMgr.translateFile(F);
+    SourceLocation Loc = SourceMgr.getIncludeLoc(FID);
+    while (Loc.isValid()) {
+      FID = SourceMgr.getFileID(Loc);
+      CB(*SourceMgr.getFileEntryRefForID(FID));
+      Loc = SourceMgr.getIncludeLoc(FID);
+    }
+  };
+
+  auto ProcessModuleOnce = [&](const Module *M) {
+    for (const Module *Mod = M; Mod; Mod = Mod->Parent)
+      if (ProcessedModules.insert(Mod).second)
+        if (auto ModuleMapFile = MM.getModuleMapFileForUniquing(Mod))
+          ForIncludeChain(*ModuleMapFile, [&](FileEntryRef F) {
+            ModuleMaps.insert(F);
+          });
   };
 
   for (const Module *CurrentModule : ModulesToProcess) {
@@ -4544,8 +4562,7 @@ void ASTWriter::collectNonAffectingInputFiles() {
   if (!WritingModule)
     return;
 
-  auto AffectingModuleMaps =
-      GetAffectingModuleMaps(PP->getHeaderSearchInfo(), WritingModule);
+  auto AffectingModuleMaps = GetAffectingModuleMaps(*PP, WritingModule);
 
   unsigned FileIDAdjustment = 0;
   unsigned OffsetAdjustment = 0;

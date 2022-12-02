@@ -1000,7 +1000,7 @@ bool Procedure::IsCompatibleWith(const Procedure &actual, std::string *whyNot,
       auto sep{": "s};
       *whyNot = "incompatible procedure attributes";
       differences.IterateOverMembers([&](Attr x) {
-        *whyNot += sep + EnumToString(x);
+        *whyNot += sep + std::string{EnumToString(x)};
         sep = ", ";
       });
     }

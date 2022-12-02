@@ -43,7 +43,7 @@ using common::LanguageFeature;
 using common::NumericOperator;
 using common::TypeCategory;
 
-static inline std::string ToUpperCase(const std::string &str) {
+static inline std::string ToUpperCase(std::string_view str) {
   return parser::ToUpperCaseLetters(str);
 }
 
@@ -1343,15 +1343,15 @@ public:
               MakeSpecific<T>(std::move(values_))});
         }
       } else if (type_->kind() == T::kind) {
+        ArrayConstructor<T> result{MakeSpecific<T>(std::move(values_))};
         if constexpr (T::category == TypeCategory::Character) {
           if (auto len{type_->LEN()}) {
-            return AsMaybeExpr(ArrayConstructor<T>{
-                *std::move(len), MakeSpecific<T>(std::move(values_))});
+            if (IsConstantExpr(*len)) {
+              result.set_LEN(std::move(*len));
+            }
           }
-        } else {
-          return AsMaybeExpr(
-              ArrayConstructor<T>{MakeSpecific<T>(std::move(values_))});
         }
+        return AsMaybeExpr(std::move(result));
       }
     }
     return std::nullopt;
