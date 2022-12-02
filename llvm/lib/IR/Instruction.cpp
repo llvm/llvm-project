@@ -115,7 +115,7 @@ void Instruction::moveAfter(Instruction *MovePos) {
 void Instruction::moveBefore(BasicBlock &BB,
                              SymbolTableList<Instruction>::iterator I) {
   assert(I == BB.end() || I->getParent() == &BB);
-  BB.getInstList().splice(I, getParent()->getInstList(), getIterator());
+  BB.splice(I, getParent(), getIterator());
 }
 
 bool Instruction::comesBefore(const Instruction *Other) const {

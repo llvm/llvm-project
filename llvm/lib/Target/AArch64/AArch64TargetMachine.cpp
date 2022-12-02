@@ -50,6 +50,7 @@
 #include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/Scalar.h"
 #include <memory>
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -397,7 +398,7 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   unsigned MaxSVEVectorSize = 0;
   Attribute VScaleRangeAttr = F.getFnAttribute(Attribute::VScaleRange);
   if (VScaleRangeAttr.isValid()) {
-    Optional<unsigned> VScaleMax = VScaleRangeAttr.getVScaleRangeMax();
+    std::optional<unsigned> VScaleMax = VScaleRangeAttr.getVScaleRangeMax();
     MinSVEVectorSize = VScaleRangeAttr.getVScaleRangeMin() * 128;
     MaxSVEVectorSize = VScaleMax ? *VScaleMax * 128 : 0;
   } else {

@@ -4,7 +4,7 @@
 ; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx900 -mattr=+unaligned-access-mode < %s | FileCheck %s -check-prefixes=GCN,UNALIGNED,UNALIGNED-SDAG
 ; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx900 -mattr=+unaligned-access-mode < %s | FileCheck %s -check-prefixes=GCN,UNALIGNED,UNALIGNED-GISEL
 
-define amdgpu_kernel void @ds1align1(i8 addrspace(3)* %in, i8 addrspace(3)* %out) {
+define amdgpu_kernel void @ds1align1(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; GCN-LABEL: ds1align1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -15,12 +15,12 @@ define amdgpu_kernel void @ds1align1(i8 addrspace(3)* %in, i8 addrspace(3)* %out
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_write_b8 v1, v0
 ; GCN-NEXT:    s_endpgm
-  %val = load i8, i8 addrspace(3)* %in, align 1
-  store i8 %val, i8 addrspace(3)* %out, align 1
+  %val = load i8, ptr addrspace(3) %in, align 1
+  store i8 %val, ptr addrspace(3) %out, align 1
   ret void
 }
 
-define amdgpu_kernel void @ds2align1(i16 addrspace(3)* %in, i16 addrspace(3)* %out) {
+define amdgpu_kernel void @ds2align1(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; ALIGNED-SDAG-LABEL: ds2align1:
 ; ALIGNED-SDAG:       ; %bb.0:
 ; ALIGNED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -60,12 +60,12 @@ define amdgpu_kernel void @ds2align1(i16 addrspace(3)* %in, i16 addrspace(3)* %o
 ; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED-NEXT:    ds_write_b16 v1, v0
 ; UNALIGNED-NEXT:    s_endpgm
-  %val = load i16, i16 addrspace(3)* %in, align 1
-  store i16 %val, i16 addrspace(3)* %out, align 1
+  %val = load i16, ptr addrspace(3) %in, align 1
+  store i16 %val, ptr addrspace(3) %out, align 1
   ret void
 }
 
-define amdgpu_kernel void @ds2align2(i16 addrspace(3)* %in, i16 addrspace(3)* %out) {
+define amdgpu_kernel void @ds2align2(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; GCN-LABEL: ds2align2:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -76,12 +76,12 @@ define amdgpu_kernel void @ds2align2(i16 addrspace(3)* %in, i16 addrspace(3)* %o
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_write_b16 v1, v0
 ; GCN-NEXT:    s_endpgm
-  %val = load i16, i16 addrspace(3)* %in, align 2
-  store i16 %val, i16 addrspace(3)* %out, align 2
+  %val = load i16, ptr addrspace(3) %in, align 2
+  store i16 %val, ptr addrspace(3) %out, align 2
   ret void
 }
 
-define amdgpu_kernel void @ds4align1(i32 addrspace(3)* %in, i32 addrspace(3)* %out) {
+define amdgpu_kernel void @ds4align1(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; ALIGNED-SDAG-LABEL: ds4align1:
 ; ALIGNED-SDAG:       ; %bb.0:
 ; ALIGNED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -138,12 +138,12 @@ define amdgpu_kernel void @ds4align1(i32 addrspace(3)* %in, i32 addrspace(3)* %o
 ; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED-NEXT:    ds_write_b32 v1, v0
 ; UNALIGNED-NEXT:    s_endpgm
-  %val = load i32, i32 addrspace(3)* %in, align 1
-  store i32 %val, i32 addrspace(3)* %out, align 1
+  %val = load i32, ptr addrspace(3) %in, align 1
+  store i32 %val, ptr addrspace(3) %out, align 1
   ret void
 }
 
-define amdgpu_kernel void @ds4align2(i32 addrspace(3)* %in, i32 addrspace(3)* %out) {
+define amdgpu_kernel void @ds4align2(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; ALIGNED-SDAG-LABEL: ds4align2:
 ; ALIGNED-SDAG:       ; %bb.0:
 ; ALIGNED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -182,12 +182,12 @@ define amdgpu_kernel void @ds4align2(i32 addrspace(3)* %in, i32 addrspace(3)* %o
 ; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED-NEXT:    ds_write_b32 v1, v0
 ; UNALIGNED-NEXT:    s_endpgm
-  %val = load i32, i32 addrspace(3)* %in, align 2
-  store i32 %val, i32 addrspace(3)* %out, align 2
+  %val = load i32, ptr addrspace(3) %in, align 2
+  store i32 %val, ptr addrspace(3) %out, align 2
   ret void
 }
 
-define amdgpu_kernel void @ds4align4(i32 addrspace(3)* %in, i32 addrspace(3)* %out) {
+define amdgpu_kernel void @ds4align4(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; GCN-LABEL: ds4align4:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -198,12 +198,12 @@ define amdgpu_kernel void @ds4align4(i32 addrspace(3)* %in, i32 addrspace(3)* %o
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_write_b32 v1, v0
 ; GCN-NEXT:    s_endpgm
-  %val = load i32, i32 addrspace(3)* %in, align 4
-  store i32 %val, i32 addrspace(3)* %out, align 4
+  %val = load i32, ptr addrspace(3) %in, align 4
+  store i32 %val, ptr addrspace(3) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @ds8align1(<2 x i32> addrspace(3)* %in, <2 x i32> addrspace(3)* %out) {
+define amdgpu_kernel void @ds8align1(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; ALIGNED-SDAG-LABEL: ds8align1:
 ; ALIGNED-SDAG:       ; %bb.0:
 ; ALIGNED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -283,12 +283,12 @@ define amdgpu_kernel void @ds8align1(<2 x i32> addrspace(3)* %in, <2 x i32> addr
 ; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED-NEXT:    ds_write_b64 v2, v[0:1]
 ; UNALIGNED-NEXT:    s_endpgm
-  %val = load <2 x i32>, <2 x i32> addrspace(3)* %in, align 1
-  store <2 x i32> %val, <2 x i32> addrspace(3)* %out, align 1
+  %val = load <2 x i32>, ptr addrspace(3) %in, align 1
+  store <2 x i32> %val, ptr addrspace(3) %out, align 1
   ret void
 }
 
-define amdgpu_kernel void @ds8align2(<2 x i32> addrspace(3)* %in, <2 x i32> addrspace(3)* %out) {
+define amdgpu_kernel void @ds8align2(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; ALIGNED-SDAG-LABEL: ds8align2:
 ; ALIGNED-SDAG:       ; %bb.0:
 ; ALIGNED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -339,12 +339,12 @@ define amdgpu_kernel void @ds8align2(<2 x i32> addrspace(3)* %in, <2 x i32> addr
 ; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED-NEXT:    ds_write_b64 v2, v[0:1]
 ; UNALIGNED-NEXT:    s_endpgm
-  %val = load <2 x i32>, <2 x i32> addrspace(3)* %in, align 2
-  store <2 x i32> %val, <2 x i32> addrspace(3)* %out, align 2
+  %val = load <2 x i32>, ptr addrspace(3) %in, align 2
+  store <2 x i32> %val, ptr addrspace(3) %out, align 2
   ret void
 }
 
-define amdgpu_kernel void @ds8align4(<2 x i32> addrspace(3)* %in, <2 x i32> addrspace(3)* %out) {
+define amdgpu_kernel void @ds8align4(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; GCN-LABEL: ds8align4:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -355,12 +355,12 @@ define amdgpu_kernel void @ds8align4(<2 x i32> addrspace(3)* %in, <2 x i32> addr
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_write2_b32 v2, v0, v1 offset1:1
 ; GCN-NEXT:    s_endpgm
-  %val = load <2 x i32>, <2 x i32> addrspace(3)* %in, align 4
-  store <2 x i32> %val, <2 x i32> addrspace(3)* %out, align 4
+  %val = load <2 x i32>, ptr addrspace(3) %in, align 4
+  store <2 x i32> %val, ptr addrspace(3) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @ds8align8(<2 x i32> addrspace(3)* %in, <2 x i32> addrspace(3)* %out) {
+define amdgpu_kernel void @ds8align8(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; GCN-LABEL: ds8align8:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -371,12 +371,12 @@ define amdgpu_kernel void @ds8align8(<2 x i32> addrspace(3)* %in, <2 x i32> addr
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_write_b64 v2, v[0:1]
 ; GCN-NEXT:    s_endpgm
-  %val = load <2 x i32>, <2 x i32> addrspace(3)* %in, align 8
-  store <2 x i32> %val, <2 x i32> addrspace(3)* %out, align 8
+  %val = load <2 x i32>, ptr addrspace(3) %in, align 8
+  store <2 x i32> %val, ptr addrspace(3) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @ds12align1(<3 x i32> addrspace(3)* %in, <3 x i32> addrspace(3)* %out) {
+define amdgpu_kernel void @ds12align1(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; ALIGNED-SDAG-LABEL: ds12align1:
 ; ALIGNED-SDAG:       ; %bb.0:
 ; ALIGNED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -483,12 +483,12 @@ define amdgpu_kernel void @ds12align1(<3 x i32> addrspace(3)* %in, <3 x i32> add
 ; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED-NEXT:    ds_write_b96 v3, v[0:2]
 ; UNALIGNED-NEXT:    s_endpgm
-  %val = load <3 x i32>, <3 x i32> addrspace(3)* %in, align 1
-  store <3 x i32> %val, <3 x i32> addrspace(3)* %out, align 1
+  %val = load <3 x i32>, ptr addrspace(3) %in, align 1
+  store <3 x i32> %val, ptr addrspace(3) %out, align 1
   ret void
 }
 
-define amdgpu_kernel void @ds12align2(<3 x i32> addrspace(3)* %in, <3 x i32> addrspace(3)* %out) {
+define amdgpu_kernel void @ds12align2(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; ALIGNED-SDAG-LABEL: ds12align2:
 ; ALIGNED-SDAG:       ; %bb.0:
 ; ALIGNED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -549,12 +549,12 @@ define amdgpu_kernel void @ds12align2(<3 x i32> addrspace(3)* %in, <3 x i32> add
 ; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED-NEXT:    ds_write_b96 v3, v[0:2]
 ; UNALIGNED-NEXT:    s_endpgm
-  %val = load <3 x i32>, <3 x i32> addrspace(3)* %in, align 2
-  store <3 x i32> %val, <3 x i32> addrspace(3)* %out, align 2
+  %val = load <3 x i32>, ptr addrspace(3) %in, align 2
+  store <3 x i32> %val, ptr addrspace(3) %out, align 2
   ret void
 }
 
-define amdgpu_kernel void @ds12align4(<3 x i32> addrspace(3)* %in, <3 x i32> addrspace(3)* %out) {
+define amdgpu_kernel void @ds12align4(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; ALIGNED-LABEL: ds12align4:
 ; ALIGNED:       ; %bb.0:
 ; ALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -593,12 +593,12 @@ define amdgpu_kernel void @ds12align4(<3 x i32> addrspace(3)* %in, <3 x i32> add
 ; UNALIGNED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED-GISEL-NEXT:    ds_write_b96 v3, v[0:2]
 ; UNALIGNED-GISEL-NEXT:    s_endpgm
-  %val = load <3 x i32>, <3 x i32> addrspace(3)* %in, align 4
-  store <3 x i32> %val, <3 x i32> addrspace(3)* %out, align 4
+  %val = load <3 x i32>, ptr addrspace(3) %in, align 4
+  store <3 x i32> %val, ptr addrspace(3) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @ds12align8(<3 x i32> addrspace(3)* %in, <3 x i32> addrspace(3)* %out) {
+define amdgpu_kernel void @ds12align8(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; ALIGNED-SDAG-LABEL: ds12align8:
 ; ALIGNED-SDAG:       ; %bb.0:
 ; ALIGNED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -651,12 +651,12 @@ define amdgpu_kernel void @ds12align8(<3 x i32> addrspace(3)* %in, <3 x i32> add
 ; UNALIGNED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED-GISEL-NEXT:    ds_write_b96 v3, v[0:2]
 ; UNALIGNED-GISEL-NEXT:    s_endpgm
-  %val = load <3 x i32>, <3 x i32> addrspace(3)* %in, align 8
-  store <3 x i32> %val, <3 x i32> addrspace(3)* %out, align 8
+  %val = load <3 x i32>, ptr addrspace(3) %in, align 8
+  store <3 x i32> %val, ptr addrspace(3) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @ds12align16(<3 x i32> addrspace(3)* %in, <3 x i32> addrspace(3)* %out) {
+define amdgpu_kernel void @ds12align16(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; GCN-LABEL: ds12align16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -667,12 +667,12 @@ define amdgpu_kernel void @ds12align16(<3 x i32> addrspace(3)* %in, <3 x i32> ad
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_write_b96 v3, v[0:2]
 ; GCN-NEXT:    s_endpgm
-  %val = load <3 x i32>, <3 x i32> addrspace(3)* %in, align 16
-  store <3 x i32> %val, <3 x i32> addrspace(3)* %out, align 16
+  %val = load <3 x i32>, ptr addrspace(3) %in, align 16
+  store <3 x i32> %val, ptr addrspace(3) %out, align 16
   ret void
 }
 
-define amdgpu_kernel void @ds16align1(<4 x i32> addrspace(3)* %in, <4 x i32> addrspace(3)* %out) {
+define amdgpu_kernel void @ds16align1(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; ALIGNED-SDAG-LABEL: ds16align1:
 ; ALIGNED-SDAG:       ; %bb.0:
 ; ALIGNED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -805,12 +805,12 @@ define amdgpu_kernel void @ds16align1(<4 x i32> addrspace(3)* %in, <4 x i32> add
 ; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED-NEXT:    ds_write_b128 v4, v[0:3]
 ; UNALIGNED-NEXT:    s_endpgm
-  %val = load <4 x i32>, <4 x i32> addrspace(3)* %in, align 1
-  store <4 x i32> %val, <4 x i32> addrspace(3)* %out, align 1
+  %val = load <4 x i32>, ptr addrspace(3) %in, align 1
+  store <4 x i32> %val, ptr addrspace(3) %out, align 1
   ret void
 }
 
-define amdgpu_kernel void @ds16align2(<4 x i32> addrspace(3)* %in, <4 x i32> addrspace(3)* %out) {
+define amdgpu_kernel void @ds16align2(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; ALIGNED-SDAG-LABEL: ds16align2:
 ; ALIGNED-SDAG:       ; %bb.0:
 ; ALIGNED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -881,12 +881,12 @@ define amdgpu_kernel void @ds16align2(<4 x i32> addrspace(3)* %in, <4 x i32> add
 ; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED-NEXT:    ds_write_b128 v4, v[0:3]
 ; UNALIGNED-NEXT:    s_endpgm
-  %val = load <4 x i32>, <4 x i32> addrspace(3)* %in, align 2
-  store <4 x i32> %val, <4 x i32> addrspace(3)* %out, align 2
+  %val = load <4 x i32>, ptr addrspace(3) %in, align 2
+  store <4 x i32> %val, ptr addrspace(3) %out, align 2
   ret void
 }
 
-define amdgpu_kernel void @ds16align4(<4 x i32> addrspace(3)* %in, <4 x i32> addrspace(3)* %out) {
+define amdgpu_kernel void @ds16align4(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; ALIGNED-LABEL: ds16align4:
 ; ALIGNED:       ; %bb.0:
 ; ALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -925,12 +925,12 @@ define amdgpu_kernel void @ds16align4(<4 x i32> addrspace(3)* %in, <4 x i32> add
 ; UNALIGNED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED-GISEL-NEXT:    ds_write2_b64 v4, v[0:1], v[2:3] offset1:1
 ; UNALIGNED-GISEL-NEXT:    s_endpgm
-  %val = load <4 x i32>, <4 x i32> addrspace(3)* %in, align 4
-  store <4 x i32> %val, <4 x i32> addrspace(3)* %out, align 4
+  %val = load <4 x i32>, ptr addrspace(3) %in, align 4
+  store <4 x i32> %val, ptr addrspace(3) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @ds16align8(<4 x i32> addrspace(3)* %in, <4 x i32> addrspace(3)* %out) {
+define amdgpu_kernel void @ds16align8(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; GCN-LABEL: ds16align8:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -941,12 +941,12 @@ define amdgpu_kernel void @ds16align8(<4 x i32> addrspace(3)* %in, <4 x i32> add
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_write2_b64 v4, v[0:1], v[2:3] offset1:1
 ; GCN-NEXT:    s_endpgm
-  %val = load <4 x i32>, <4 x i32> addrspace(3)* %in, align 8
-  store <4 x i32> %val, <4 x i32> addrspace(3)* %out, align 8
+  %val = load <4 x i32>, ptr addrspace(3) %in, align 8
+  store <4 x i32> %val, ptr addrspace(3) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @ds16align16(<4 x i32> addrspace(3)* %in, <4 x i32> addrspace(3)* %out) {
+define amdgpu_kernel void @ds16align16(ptr addrspace(3) %in, ptr addrspace(3) %out) {
 ; GCN-LABEL: ds16align16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -957,7 +957,7 @@ define amdgpu_kernel void @ds16align16(<4 x i32> addrspace(3)* %in, <4 x i32> ad
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_write_b128 v4, v[0:3]
 ; GCN-NEXT:    s_endpgm
-  %val = load <4 x i32>, <4 x i32> addrspace(3)* %in, align 16
-  store <4 x i32> %val, <4 x i32> addrspace(3)* %out, align 16
+  %val = load <4 x i32>, ptr addrspace(3) %in, align 16
+  store <4 x i32> %val, ptr addrspace(3) %out, align 16
   ret void
 }

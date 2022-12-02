@@ -8529,7 +8529,7 @@ defm RCWSWP  : ReadCheckWriteOperation<0b010, "swp">;
 // General Data-Processing Instructions (FEAT_V94_DP)
 //===----------------------------------------------------------------------===//
 defm ABS : OneOperandData<0b001000, "abs">, Requires<[HasCSSC]>;
-defm CNT : OneOperandData<0b000111, "cnt">, Requires<[HasCSSC]>;
+defm CNT : OneOperandData<0b000111, "cnt", ctpop>, Requires<[HasCSSC]>;
 defm CTZ : OneOperandData<0b000110, "ctz">, Requires<[HasCSSC]>;
 
 defm SMAX : ComparisonOp<0, 0, "smax">, Requires<[HasCSSC]>;

@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include <cmath>
+#include <optional>
 using namespace llvm;
 
 #define DEBUG_TYPE "riscvtti"
@@ -196,13 +197,13 @@ bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   }
 }
 
-Optional<unsigned> RISCVTTIImpl::getMaxVScale() const {
+std::optional<unsigned> RISCVTTIImpl::getMaxVScale() const {
   if (ST->hasVInstructions())
     return ST->getRealMaxVLen() / RISCV::RVVBitsPerBlock;
   return BaseT::getMaxVScale();
 }
 
-Optional<unsigned> RISCVTTIImpl::getVScaleForTuning() const {
+std::optional<unsigned> RISCVTTIImpl::getVScaleForTuning() const {
   if (ST->hasVInstructions())
     if (unsigned MinVLen = ST->getRealMinVLen();
         MinVLen >= RISCV::RVVBitsPerBlock)
