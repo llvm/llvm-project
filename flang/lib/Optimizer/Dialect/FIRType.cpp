@@ -508,7 +508,8 @@ fir::ClassType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                        mlir::Type eleTy) {
   if (eleTy.isa<fir::RecordType, fir::SequenceType, fir::HeapType,
                 fir::PointerType, mlir::NoneType, mlir::IntegerType,
-                mlir::FloatType>())
+                mlir::FloatType, fir::CharacterType, fir::LogicalType,
+                fir::ComplexType, mlir::ComplexType>())
     return mlir::success();
   return emitError() << "invalid element type\n";
 }
