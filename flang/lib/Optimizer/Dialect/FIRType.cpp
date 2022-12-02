@@ -198,6 +198,16 @@ bool isa_fir_or_std_type(mlir::Type t) {
   return isa_fir_type(t) || isa_std_type(t);
 }
 
+mlir::Type getDerivedType(mlir::Type ty) {
+  return llvm::TypeSwitch<mlir::Type, mlir::Type>(ty)
+      .Case<fir::PointerType, fir::HeapType, fir::SequenceType>([](auto p) {
+        if (auto seq = p.getEleTy().template dyn_cast<fir::SequenceType>())
+          return seq.getEleTy();
+        return p.getEleTy();
+      })
+      .Default([](mlir::Type t) { return t; });
+}
+
 mlir::Type dyn_cast_ptrEleTy(mlir::Type t) {
   return llvm::TypeSwitch<mlir::Type, mlir::Type>(t)
       .Case<fir::ReferenceType, fir::PointerType, fir::HeapType,
