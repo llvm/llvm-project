@@ -1388,7 +1388,7 @@ dialect.
 [StructType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#Structure
 [SpirvTools]: https://github.com/KhronosGroup/SPIRV-Tools
 [Rationale]: ../Rationale/Rationale.md/#block-arguments-vs-phi-nodes
-[ODS]: ../OpDefinitions.md
+[ODS]: ../DefiningDialects/Operations.md
 [GreedyPatternRewriter]: https://github.com/llvm/llvm-project/blob/main/mlir/lib/Transforms/Utils/GreedyPatternRewriteDriver.cpp
 [MlirDialectConversionTypeConversion]: ../DialectConversion.md/#type-converter
 [MlirDialectConversionRewritePattern]: ../DialectConversion.md/#conversion-patterns
@@ -1420,7 +1420,7 @@ dialect.
 [GitHubDialectTracking]: https://github.com/tensorflow/mlir/issues/302
 [GitHubLoweringTracking]: https://github.com/tensorflow/mlir/issues/303
 [GenSpirvUtilsPy]: https://github.com/llvm/llvm-project/blob/main/mlir/utils/spirv/gen_spirv_dialect.py
-[CustomTypeAttrTutorial]: ../Tutorials/DefiningAttributesAndTypes.md
+[CustomTypeAttrTutorial]: ../DefiningDialects/AttributesAndTypes.md
 [VulkanExtensionPhysicalStorageBuffer]: https://github.com/KhronosGroup/SPIRV-Registry/blob/main/extensions/KHR/SPV_KHR_physical_storage_buffer.html
 [VulkanExtensionVariablePointers]: https://github.com/KhronosGroup/SPIRV-Registry/blob/main/extensions/KHR/SPV_KHR_variable_pointers.html
 [VulkanSpirv]: https://renderdoc.org/vkspec_chunked/chap40.html#spirvenv

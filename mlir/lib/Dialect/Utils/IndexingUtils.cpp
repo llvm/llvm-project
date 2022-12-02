@@ -86,6 +86,25 @@ int64_t mlir::computeMaxLinearIndex(ArrayRef<int64_t> basis) {
                          std::multiplies<int64_t>());
 }
 
+llvm::SmallVector<int64_t>
+mlir::invertPermutationVector(ArrayRef<int64_t> permutation) {
+  SmallVector<int64_t> inversion(permutation.size());
+  for (const auto &pos : llvm::enumerate(permutation)) {
+    inversion[pos.value()] = pos.index();
+  }
+  return inversion;
+}
+
+bool mlir::isPermutationVector(ArrayRef<int64_t> interchange) {
+  llvm::SmallDenseSet<int64_t, 4> seenVals;
+  for (auto val : interchange) {
+    if (seenVals.count(val))
+      return false;
+    seenVals.insert(val);
+  }
+  return seenVals.size() == interchange.size();
+}
+
 llvm::SmallVector<int64_t> mlir::getI64SubArray(ArrayAttr arrayAttr,
                                                 unsigned dropFront,
                                                 unsigned dropBack) {

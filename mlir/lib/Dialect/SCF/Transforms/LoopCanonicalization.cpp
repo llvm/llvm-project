@@ -192,8 +192,8 @@ struct AffineOpSCFCanonicalizationPattern : public OpRewritePattern<OpTy> {
       return failure();
     };
 
-    return scf::canonicalizeMinMaxOpInLoop(rewriter, op, op.getAffineMap(),
-                                           op.operands(), IsMin, loopMatcher);
+    return scf::canonicalizeMinMaxOpInLoop(
+        rewriter, op, op.getAffineMap(), op.getOperands(), IsMin, loopMatcher);
   }
 };
 
