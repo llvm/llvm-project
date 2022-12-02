@@ -1,5 +1,4 @@
 set(LLVM_LINK_COMPONENTS
-  FrontendOpenMP
   Support
   TestingSupport
   )
@@ -21,7 +20,6 @@ target_include_directories(ClangIncludeCleanerTests
 clang_target_link_libraries(ClangIncludeCleanerTests
   PRIVATE
   clangAST
-  clangASTMatchers
   clangBasic
   clangFrontend
   clangLex
