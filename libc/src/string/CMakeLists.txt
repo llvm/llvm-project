@@ -21,20 +21,13 @@ add_header_library(
 )
 
 add_entrypoint_object(
-  bcopy
-  SRCS
-    bcopy.cpp
-  HDRS
-    bcopy.h
-)
-
-add_entrypoint_object(
   memccpy
   SRCS
     memccpy.cpp
   HDRS
     memccpy.h
 )
+
 
 add_entrypoint_object(
   mempcpy
