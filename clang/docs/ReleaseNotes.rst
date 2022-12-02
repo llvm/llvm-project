@@ -159,6 +159,10 @@ code bases.
     }
 
 
+- Clang now diagnoses if structs/unions with the same name are different in
+  different used modules. Behavior in C and Objective-C language modes now is
+  the same as in C++.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
