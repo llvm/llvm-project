@@ -291,8 +291,8 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     flexibility allows to progressively drop unit dimensions while lowering
     between different flavors of ops on that operate on tensors.
 
-    Verification vs Inference in the rank-reduced case:
-    ===================================================
+    #### Verification vs Inference in the rank-reduced case
+    
     Note that there may be multiple ways to infer a resulting rank-reduced type.
       e.g. 1x6x1 could potentially rank-reduce to either 1x6 or 6x1 2-D shapes.
 
@@ -785,8 +785,8 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     The rank-altering behavior of tensor.insert_slice matches the rank-reducing
     behavior of tensor.extract_slice.
 
-    Verification in the rank-reduced case:
-    ======================================
+    #### Verification in the rank-reduced case
+    
     The same verification discussion and mechanisms apply as for ExtractSliceOp.
     Unlike ExtractSliceOp however, there is no need for a specific inference.
 
@@ -1389,8 +1389,8 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
     The rank-altering behavior of tensor.parallel_insert_slice matches the
     rank-reducing behavior of tensor.insert_slice and tensor.extract_slice.
 
-    Verification in the rank-reduced case:
-    ======================================
+    #### Verification in the rank-reduced case
+    
     The same verification discussion and mechanisms apply as for ExtractSliceOp.
     Unlike ExtractSliceOp however, there is no need for a specific inference.
   }];
