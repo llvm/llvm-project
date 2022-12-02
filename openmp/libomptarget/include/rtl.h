@@ -38,10 +38,10 @@ struct RTLInfoTy {
   typedef int32_t(is_valid_binary_ty)(void *);
   typedef int32_t(is_valid_binary_info_ty)(void *, void *);
   typedef int32_t(is_data_exchangable_ty)(int32_t, int32_t);
-  typedef int32_t(number_of_team_procs_ty)(int32_t);
   typedef int32_t(number_of_devices_ty)();
   typedef int32_t(init_device_ty)(int32_t);
   typedef int32_t(deinit_device_ty)(int32_t);
+  typedef int32_t(number_of_team_procs_ty)(int32_t);
   typedef __tgt_target_table *(load_binary_ty)(int32_t, void *);
   typedef void *(data_alloc_ty)(int32_t, int64_t, void *, int32_t);
   typedef void *(data_lock_ty)(int32_t, void *, int64_t);
@@ -104,14 +104,12 @@ struct RTLInfoTy {
   is_valid_binary_ty *is_valid_binary = nullptr;
   is_valid_binary_info_ty *is_valid_binary_info = nullptr;
   is_data_exchangable_ty *is_data_exchangable = nullptr;
-  number_of_team_procs_ty *number_of_team_procs = nullptr;
   number_of_devices_ty *number_of_devices = nullptr;
   init_device_ty *init_device = nullptr;
   deinit_device_ty *deinit_device = nullptr;
+  number_of_team_procs_ty *number_of_team_procs = nullptr;
   load_binary_ty *load_binary = nullptr;
   data_alloc_ty *data_alloc = nullptr;
-  data_lock_ty *data_lock = nullptr;
-  data_unlock_ty *data_unlock = nullptr;
   data_submit_ty *data_submit = nullptr;
   data_submit_async_ty *data_submit_async = nullptr;
   data_retrieve_ty *data_retrieve = nullptr;
@@ -136,12 +134,14 @@ struct RTLInfoTy {
   wait_event_ty *wait_event = nullptr;
   sync_event_ty *sync_event = nullptr;
   destroy_event_ty *destroy_event = nullptr;
-  set_coarse_grain_mem_region_ty *set_coarse_grain_mem_region = nullptr;
-  query_coarse_grain_mem_region_ty *query_coarse_grain_mem_region = nullptr;
-  enable_access_to_all_agents_ty *enable_access_to_all_agents = nullptr;
   init_async_info_ty *init_async_info = nullptr;
   init_device_into_ty *init_device_info = nullptr;
   release_async_info_ty *release_async_info = nullptr;
+  data_lock_ty *data_lock = nullptr;
+  data_unlock_ty *data_unlock = nullptr;
+  set_coarse_grain_mem_region_ty *set_coarse_grain_mem_region = nullptr;
+  query_coarse_grain_mem_region_ty *query_coarse_grain_mem_region = nullptr;
+  enable_access_to_all_agents_ty *enable_access_to_all_agents = nullptr;
 
   // Are there images associated with this RTL.
   bool IsUsed = false;
@@ -161,7 +161,7 @@ struct RTLsTy {
 
   // Array of pointers to the detected runtime libraries that have compatible
   // binaries.
-  std::vector<RTLInfoTy *> UsedRTLs;
+  llvm::SmallVector<RTLInfoTy *> UsedRTLs;
 
   int64_t RequiresFlags = OMP_REQ_UNDEFINED;
 
@@ -217,10 +217,12 @@ struct TranslationTable {
   __tgt_target_table HostTable;
 
   // Image assigned to a given device.
-  std::vector<__tgt_device_image *> TargetsImages; // One image per device ID.
+  llvm::SmallVector<__tgt_device_image *>
+      TargetsImages; // One image per device ID.
 
   // Table of entry points or NULL if it was not already computed.
-  std::vector<__tgt_target_table *> TargetsTable; // One table per device ID.
+  llvm::SmallVector<__tgt_target_table *>
+      TargetsTable; // One table per device ID.
 };
 typedef std::map<__tgt_offload_entry *, TranslationTable>
     HostEntriesBeginToTransTableTy;

@@ -691,6 +691,11 @@ int32_t __tgt_rtl_deinit_device(int32_t DeviceId) {
 
 int32_t __tgt_rtl_number_of_devices() { return Plugin::get().getNumDevices(); }
 
+int __tgt_rtl_number_of_team_procs(int DeviceId) {
+  // TODO have this find and return the correct number of CUs
+  return Plugin::get().getDevice(DeviceId).getDefaultNumThreads();
+}
+
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
   Plugin::get().setRequiresFlag(RequiresFlags);
   return RequiresFlags;

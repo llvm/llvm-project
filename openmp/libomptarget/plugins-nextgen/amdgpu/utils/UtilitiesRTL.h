@@ -128,7 +128,6 @@ bool isImageCompatibleWithEnv(const __tgt_image_info *Info,
 #endif
   return true;
 }
-
 } // namespace utils
 } // namespace plugin
 } // namespace target

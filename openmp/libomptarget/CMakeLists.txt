@@ -158,6 +158,7 @@ set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins)
+add_subdirectory(plugins-nextgen)
 # Currently device libm functions are created by clang headers.  These do not
 # work for FORTRAN. The libm here  builds a libm device library by turning on
 # __BUILD_MATH_BUILTINS_LIB__ This converts the math functions in the clang

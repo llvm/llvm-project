@@ -1138,7 +1138,7 @@ public:
       return ptr;
     }
 
-    int dev_free(void *ptr) override {
+    int free(void *ptr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) override {
       TargetAllocTy kind = (HostAllocations.find(ptr) == HostAllocations.end())
                                ? TARGET_ALLOC_DEFAULT
                                : TARGET_ALLOC_HOST;

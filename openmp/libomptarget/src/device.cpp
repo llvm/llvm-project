@@ -615,8 +615,10 @@ void DeviceTy::init() {
   if (RTL->init_requires)
     RTL->init_requires(PM->RTLs.RequiresFlags);
   int32_t Ret = RTL->init_device(RTLDeviceID);
+  DP("Initialization returned %d\n", Ret);
   if (Ret != OFFLOAD_SUCCESS)
     return;
+  assert(RTL->number_of_team_procs && "Need function pointer to entry point");
   setTeamProcs(RTL->number_of_team_procs(RTLDeviceID));
 
   IsInit = true;
