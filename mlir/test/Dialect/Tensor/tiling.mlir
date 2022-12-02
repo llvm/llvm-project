@@ -385,3 +385,177 @@ transform.sequence failures(propagate) {
     %0 = transform.structured.match ops{["tensor.pack"]} in %arg1
     %1, %loops:2 = transform.structured.tile_to_scf_for %0 [2, 4]
 }
+
+// -----
+
+// CHECK-DAG:   #[[MAP0:.+]] = affine_map<(d0) -> (d0 floordiv 32)>
+// CHECK-DAG:   #[[MAP1:.+]] = affine_map<(d0) -> (d0 mod 32)>
+// CHECK-DAG:   #[[MAP2:.+]] = affine_map<(d0) -> ((d0 + 1) floordiv 32 - d0 floordiv 32 + 1)>
+// CHECK-DAG:   #[[MAP3:.+]] = affine_map<(d0) -> (((d0 + 1) floordiv 32) * 32 - (d0 floordiv 32) * 32 + 32)>
+// CHECK-DAG:   #[[MAP4:.+]] = affine_map<(d0) -> (d0 floordiv 16)>
+// CHECK-DAG:   #[[MAP5:.+]] = affine_map<(d0) -> (d0 mod 16)>
+// CHECK-DAG:   #[[MAP6:.+]] = affine_map<(d0) -> ((d0 + 3) floordiv 16 - d0 floordiv 16 + 1)>
+// CHECK-DAG:   #[[MAP7:.+]] = affine_map<(d0) -> (((d0 + 3) floordiv 16) * 16 - (d0 floordiv 16) * 16 + 16)>
+// CHECK:       func.func @NCnc_to_NC
+// CHECK-SAME:    %[[IN:[A-Za-z0-9]+]]:
+// CHECK-SAME:    %[[OUT:[A-Za-z0-9]+]]:
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : index
+// CHECK-DAG:     %[[C128:.*]] = arith.constant 128 : index
+// CHECK-DAG:     %[[C256:.*]] = arith.constant 256 : index
+// CHECK:         %{{.+}} = scf.for %[[I:.+]] = %[[C0]] to %[[C256]] step %[[C2]]
+// CHECK:           %{{.+}} = scf.for %[[J:.+]] = %[[C0]] to %[[C128]] step %[[C4]]
+// CHECK-DAG:         %[[IN_I:.+]] = affine.apply #[[MAP0]](%[[I]])
+// CHECK-DAG:         %[[OFFSET_I:.+]] = affine.apply #[[MAP1]](%[[I]])
+// CHECK-DAG:         %[[IN_I_SZ:.+]] = affine.apply #[[MAP2]](%[[I]])
+// CHECK-DAG:         %[[IN_J:.+]] = affine.apply #[[MAP4]](%[[J]])
+// CHECK-DAG:         %[[OFFSET_J:.+]] = affine.apply #[[MAP5]](%[[J]])
+// CHECK-DAG:         %[[IN_J_SZ:.+]] = affine.apply #[[MAP6]](%[[J]])
+// CHECK:             %[[SLICE:.+]] = tensor.extract_slice %[[IN]]
+// CHECK-SAME:          [%[[IN_I]], %[[IN_J]], 0, 0] [%[[IN_I_SZ]], %[[IN_J_SZ]], 32, 16]
+// CHECK-SAME:        : tensor<8x8x32x16xf32> to tensor<?x?x32x16xf32>
+// CHECK:             %[[EMPTY:.+]] = tensor.empty
+// CHECK:             %[[UNPACK:.+]] = tensor.unpack
+// CHECK-SAME:          %[[SLICE]] inner_dims_pos = [0, 1] inner_tiles = [32, 16]
+// CHECK-SAME:          into %[[EMPTY]]
+// CHECK:             %[[UNPACK_SLICE:.+]] = tensor.extract_slice %[[UNPACK]]
+// CHECK-SAME:          [%[[OFFSET_I]], %[[OFFSET_J]]] [2, 4]
+// CHECK:             %[[RES:.+]] = tensor.insert_slice %[[UNPACK_SLICE]]
+// CHECK-SAME:          into %{{.+}}[%[[I]], %[[J]]] [2, 4]
+// CHECK:             scf.yield %[[RES]]
+func.func @NCnc_to_NC(%source: tensor<8x8x32x16xf32>, %dest: tensor<256x128xf32>) -> tensor<256x128xf32> {
+  %0 = tensor.unpack %source inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %dest : tensor<8x8x32x16xf32> -> tensor<256x128xf32>
+  return %0 : tensor<256x128xf32>
+}
+
+transform.sequence failures(propagate) {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["tensor.unpack"]} in %arg1
+    %1, %loops:2 = transform.structured.tile_to_scf_for %0 [2, 4]
+}
+
+// -----
+
+// CHECK-DAG:   #[[MAP0:.+]] = affine_map<(d0) -> (d0 floordiv 32)>
+// CHECK-DAG:   #[[MAP1:.+]] = affine_map<(d0) -> (d0 mod 32)>
+// CHECK-DAG:   #[[MAP2:.+]] = affine_map<(d0) -> ((d0 + 1) floordiv 32 - d0 floordiv 32 + 1)>
+// CHECK-DAG:   #[[MAP3:.+]] = affine_map<(d0) -> (((d0 + 1) floordiv 32) * 32 - (d0 floordiv 32) * 32 + 32)>
+// CHECK-DAG:   #[[MAP4:.+]] = affine_map<(d0) -> (d0 floordiv 8)>
+// CHECK-DAG:   #[[MAP5:.+]] = affine_map<(d0) -> (d0 mod 8)>
+// CHECK-DAG:   #[[MAP6:.+]] = affine_map<(d0) -> ((d0 + 3) floordiv 8 - d0 floordiv 8 + 1)>
+// CHECK-DAG:   #[[MAP7:.+]] = affine_map<(d0) -> (((d0 + 3) floordiv 8) * 8 - (d0 floordiv 8) * 8 + 8)>
+// CHECK:       func.func @CKkc_to_KC
+// CHECK-SAME:    %[[IN:[A-Za-z0-9]+]]:
+// CHECK-SAME:    %[[OUT:[A-Za-z0-9]+]]:
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : index
+// CHECK-DAG:     %[[C128:.*]] = arith.constant 128 : index
+// CHECK-DAG:     %[[C256:.*]] = arith.constant 256 : index
+// CHECK:         %{{.+}} = scf.for %[[K:.+]] = %[[C0]] to %[[C128]] step %[[C2]]
+// CHECK:           %{{.+}} = scf.for %[[C:.+]] = %[[C0]] to %[[C256]] step %[[C4]]
+// CHECK-DAG:         %[[IN_K:.+]] = affine.apply #[[MAP0]](%[[K]])
+// CHECK-DAG:         %[[OFFSET_K:.+]] = affine.apply #[[MAP1]](%[[K]])
+// CHECK-DAG:         %[[IN_K_SZ:.+]] = affine.apply #[[MAP2]](%[[K]])
+// CHECK-DAG:         %[[IN_C:.+]] = affine.apply #[[MAP4]](%[[C]])
+// CHECK-DAG:         %[[OFFSET_C:.+]] = affine.apply #[[MAP5]](%[[C]])
+// CHECK-DAG:         %[[IN_C_SZ:.+]] = affine.apply #[[MAP6]](%[[C]])
+// CHECK:             %[[IN_SLICE:.+]] = tensor.extract_slice %[[IN]]
+// CHECK:               [%[[IN_C]], %[[IN_K]], 0, 0] [%[[IN_C_SZ]], %[[IN_K_SZ]], 32, 8]
+// CHECK:             %[[EMPTY:.+]] = tensor.empty
+// CHECK:             %[[UNPACK:.+]] = tensor.unpack
+// CHECK-SAME:          %[[IN_SLICE]] outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [32, 8]
+// CHECK-SAME:          into %[[EMPTY]]
+// CHECK:             %[[UNPACK_SLICE:.+]] = tensor.extract_slice %[[UNPACK]]
+// CHECK-SAME:          [%[[OFFSET_K]], %[[OFFSET_C]]] [2, 4]
+// CHECK:             %[[RES:.+]] = tensor.insert_slice %[[UNPACK_SLICE]]
+// CHECK-SAME:          into %{{.+}}[%[[K]], %[[C]]] [2, 4]
+// CHECK:             scf.yield %[[RES]]
+func.func @CKkc_to_KC(%source: tensor<32x4x32x8xf32>, %dest: tensor<128x256xf32>) -> tensor<128x256xf32> {
+  %0 = tensor.unpack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [32, 8] into %dest : tensor<32x4x32x8xf32> -> tensor<128x256xf32>
+  return %0 : tensor<128x256xf32>
+}
+
+transform.sequence failures(propagate) {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["tensor.unpack"]} in %arg1
+    %1, %loops:2 = transform.structured.tile_to_scf_for %0 [2, 4]
+}
+
+// -----
+
+// CHECK-DAG:   #[[MAP0:.+]] = affine_map<(d0) -> (d0 floordiv 2)>
+// CHECK-DAG:   #[[MAP1:.+]] = affine_map<(d0) -> (d0 floordiv 4)>
+// CHECK:       func.func @perfect_CKkc_to_KC
+// CHECK-SAME:    %[[IN:[A-Za-z0-9]+]]:
+// CHECK-SAME:    %[[OUT:[A-Za-z0-9]+]]:
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : index
+// CHECK-DAG:     %[[C8:.*]] = arith.constant 8 : index
+// CHECK-DAG:     %[[C128:.*]] = arith.constant 128 : index
+// CHECK:         %{{.+}} = scf.for %[[K:.+]] = %[[C0]] to %[[C8]] step %[[C2]]
+// CHECK:           %{{.+}} = scf.for %[[C:.+]] = %[[C0]] to %[[C128]] step %[[C4]]
+// CHECK-DAG:         %[[IN_K:.+]] = affine.apply #[[MAP0]](%[[K]])
+// CHECK-DAG:         %[[IN_C:.+]] = affine.apply #[[MAP1]](%[[C]])
+// CHECK:             %[[IN_SLICE:.+]] = tensor.extract_slice %[[IN]]
+// CHECK:               [%[[IN_C]], %[[IN_K]], 0, 0] [1, 1, 2, 4]
+// CHECK:             %[[ITER_SLICE:.+]] = tensor.extract_slice %{{.+}}[%[[K]], %[[C]]] [2, 4]
+// CHECK:             %[[UNPACK:.+]] = tensor.unpack
+// CHECK-SAME:          %[[IN_SLICE]] outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [2, 4]
+// CHECK-SAME:          into %[[ITER_SLICE]]
+// CHECK:             %[[RES:.+]] = tensor.insert_slice %[[UNPACK]]
+// CHECK-SAME:          into %{{.+}}[%[[K]], %[[C]]] [2, 4]
+// CHECK:             scf.yield %[[RES]]
+func.func @perfect_CKkc_to_KC(%source: tensor<32x4x2x4xf32>, %dest: tensor<8x128xf32>) -> tensor<8x128xf32> {
+  %0 = tensor.unpack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [2, 4] into %dest : tensor<32x4x2x4xf32> -> tensor<8x128xf32>
+  return %0 : tensor<8x128xf32>
+}
+
+transform.sequence failures(propagate) {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["tensor.unpack"]} in %arg1
+    %1, %loops:2 = transform.structured.tile_to_scf_for %0 [2, 4]
+}
+
+// -----
+
+// CHECK-DAG:   #[[MAP0:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 2)>
+// CHECK-DAG:   #[[MAP1:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 4)>
+// CHECK-DAG:   #[[MAP2:.+]] = affine_map<(d0) -> (d0 floordiv 2)>
+// CHECK-DAG:   #[[MAP3:.+]] = affine_map<(d0) -> (d0 ceildiv 2)>
+// CHECK:       func.func @dynamic_perfect_CKkc_to_KC
+// CHECK-SAME:    %[[IN:[A-Za-z0-9]+]]:
+// CHECK-SAME:    %[[OUT:[A-Za-z0-9]+]]:
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : index
+// CHECK-DAG:     %[[DIM_0:.+]] = tensor.dim %[[OUT]], %[[C0]]
+// CHECK-DAG:     %[[DIM_1:.+]] = tensor.dim %[[OUT]], %[[C1]]
+// CHECK:         %{{.+}} = scf.for %[[K:.+]] = %[[C0]] to %[[DIM_0]] step %[[C2]]
+// CHECK-DAG:       %[[OUT_K_SZ:.+]] = affine.min #[[MAP0]](%[[K]])[%[[DIM_0]]]
+// CHECK:           %{{.+}} = scf.for %[[C:.+]] = %[[C0]] to %[[DIM_1]] step %[[C4]]
+// CHECK-DAG:         %[[OUT_C_SZ:.+]] = affine.min #[[MAP1]](%[[C]])[%[[DIM_1]]]
+// CHECK-DAG:         %[[IN_K:.+]] = affine.apply #[[MAP2]](%[[K]])
+// CHECK-DAG:         %[[IN_C:.+]] = affine.apply #[[MAP2]](%[[C]])
+// CHECK-DAG:         %[[IN_C_SZ:.+]] = affine.apply #[[MAP3]](%[[OUT_C_SZ]])
+// CHECK:             %[[IN_SLICE:.+]] = tensor.extract_slice %[[IN]]
+// CHECK:               [%[[IN_C]], %[[IN_K]], 0, 0] [%[[IN_C_SZ]], 1, 2, 2]
+// CHECK:             %[[ITER_SLICE:.+]] = tensor.extract_slice %{{.+}}[%[[K]], %[[C]]] [%[[OUT_K_SZ]], %[[OUT_C_SZ]]]
+// CHECK:             %[[UNPACK:.+]] = tensor.unpack
+// CHECK-SAME:          %[[IN_SLICE]] outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [2, 2]
+// CHECK-SAME:          into %[[ITER_SLICE]]
+// CHECK:             %[[RES:.+]] = tensor.insert_slice %[[UNPACK]]
+// CHECK-SAME:          into %{{.+}}[%[[K]], %[[C]]] [%[[OUT_K_SZ]], %[[OUT_C_SZ]]]
+// CHECK:             scf.yield %[[RES]]
+func.func @dynamic_perfect_CKkc_to_KC(%source: tensor<?x?x2x2xf32>, %dest: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = tensor.unpack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [2, 2] into %dest : tensor<?x?x2x2xf32> -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+transform.sequence failures(propagate) {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["tensor.unpack"]} in %arg1
+    %1, %loops:2 = transform.structured.tile_to_scf_for %0 [2, 4]
+}
