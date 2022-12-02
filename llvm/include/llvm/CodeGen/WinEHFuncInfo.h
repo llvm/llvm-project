@@ -92,6 +92,7 @@ struct WinEHFuncInfo {
   DenseMap<const FuncletPadInst *, int> FuncletBaseStateMap;
   DenseMap<const InvokeInst *, int> InvokeStateMap;
   DenseMap<MCSymbol *, std::pair<int, MCSymbol *>> LabelToStateMap;
+  DenseMap<const BasicBlock *, int> BlockToStateMap; // for AsynchEH
   SmallVector<CxxUnwindMapEntry, 4> CxxUnwindMap;
   SmallVector<WinEHTryBlockMapEntry, 4> TryBlockMap;
   SmallVector<SEHUnwindMapEntry, 4> SEHUnwindMap;
@@ -103,6 +104,8 @@ struct WinEHFuncInfo {
 
   void addIPToStateRange(const InvokeInst *II, MCSymbol *InvokeBegin,
                          MCSymbol *InvokeEnd);
+
+  void addIPToStateRange(int State, MCSymbol *InvokeBegin, MCSymbol *InvokeEnd);
 
   int EHRegNodeFrameIndex = std::numeric_limits<int>::max();
   int EHRegNodeEndOffset = std::numeric_limits<int>::max();
@@ -122,6 +125,12 @@ void calculateSEHStateNumbers(const Function *ParentFn,
                               WinEHFuncInfo &FuncInfo);
 
 void calculateClrEHStateNumbers(const Function *Fn, WinEHFuncInfo &FuncInfo);
+
+// For AsynchEH (VC++ option -EHa)
+void calculateCXXStateForAsynchEH(const BasicBlock *BB, int State,
+                                  WinEHFuncInfo &FuncInfo);
+void calculateSEHStateForAsynchEH(const BasicBlock *BB, int State,
+                                  WinEHFuncInfo &FuncInfo);
 
 } // end namespace llvm
 
