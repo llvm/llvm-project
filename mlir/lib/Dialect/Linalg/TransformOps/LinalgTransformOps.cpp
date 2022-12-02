@@ -897,7 +897,8 @@ transform::ReplaceOp::apply(TransformResults &transformResults,
   for (Operation *target : payload) {
     if (target->getNumOperands() > 0)
       return emitDefiniteFailure() << "expected target without operands";
-    if (!target->hasTrait<IsIsolatedFromAbove>() && target->getNumRegions() > 0)
+    if (!target->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
+        target->getNumRegions() > 0)
       return emitDefiniteFailure()
              << "expected target that is isloated from above";
   }
@@ -935,7 +936,7 @@ LogicalResult transform::ReplaceOp::verify() {
   if (replacement->getNumOperands() > 0)
     return replacement->emitOpError()
            << "expected replacement without operands";
-  if (!replacement->hasTrait<IsIsolatedFromAbove>() &&
+  if (!replacement->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
       replacement->getNumRegions() > 0)
     return replacement->emitOpError()
            << "expect op that is isolated from above";
