@@ -1,12 +1,12 @@
 // RUN: not llvm-mc -triple i686-elf -filetype asm -o /dev/null %s 2>&1 | FileCheck %s
 
 	.type TYPE FUNC
-// CHECK: error: unsupported attribute in '.type' directive
+// CHECK: error: unsupported attribute
 // CHECK: .type TYPE FUNC
 // CHECK:            ^
 
 	.type type stt_func
-// CHECK: error: unsupported attribute in '.type' directive
+// CHECK: error: unsupported attribute
 // CHECK: .type type stt_func
 // CHECK:            ^
 

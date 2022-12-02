@@ -6,35 +6,9 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @store_trunc_v8i16i8(<8 x i16>* %ap, <8 x i8>* %dest) #0 {
 ; CHECK-LABEL: store_trunc_v8i16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    mov z1.h, z0.h[7]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z2.h, z0.h[6]
-; CHECK-NEXT:    mov z3.h, z0.h[5]
-; CHECK-NEXT:    mov z4.h, z0.h[4]
-; CHECK-NEXT:    fmov w10, s2
-; CHECK-NEXT:    strb w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    strb w9, [sp, #15]
-; CHECK-NEXT:    fmov w9, s4
-; CHECK-NEXT:    mov z5.h, z0.h[3]
-; CHECK-NEXT:    mov z6.h, z0.h[2]
-; CHECK-NEXT:    mov z0.h, z0.h[1]
-; CHECK-NEXT:    strb w10, [sp, #14]
-; CHECK-NEXT:    fmov w10, s5
-; CHECK-NEXT:    strb w8, [sp, #13]
-; CHECK-NEXT:    fmov w8, s6
-; CHECK-NEXT:    strb w9, [sp, #12]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    strb w10, [sp, #11]
-; CHECK-NEXT:    strb w8, [sp, #10]
-; CHECK-NEXT:    strb w9, [sp, #9]
-; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    str d0, [x1]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, <8 x i16>* %ap
   %val = trunc <8 x i16> %a to <8 x i8>
@@ -45,24 +19,10 @@ define void @store_trunc_v8i16i8(<8 x i16>* %ap, <8 x i8>* %dest) #0 {
 define void @store_trunc_v4i32i8(<4 x i32>* %ap, <4 x i8>* %dest) #0 {
 ; CHECK-LABEL: store_trunc_v4i32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov z1.s, z0.s[3]
-; CHECK-NEXT:    mov z2.s, z0.s[2]
-; CHECK-NEXT:    mov z0.s, z0.s[1]
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    fmov w10, s2
-; CHECK-NEXT:    strh w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    strh w9, [sp, #14]
-; CHECK-NEXT:    strh w10, [sp, #12]
-; CHECK-NEXT:    strh w8, [sp, #10]
-; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x1]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %ap
   %val = trunc <4 x i32> %a to <4 x i8>
@@ -73,23 +33,9 @@ define void @store_trunc_v4i32i8(<4 x i32>* %ap, <4 x i8>* %dest) #0 {
 define void @store_trunc_v4i32i16(<4 x i32>* %ap, <4 x i16>* %dest) #0 {
 ; CHECK-LABEL: store_trunc_v4i32i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov z1.s, z0.s[3]
-; CHECK-NEXT:    mov z2.s, z0.s[2]
-; CHECK-NEXT:    mov z0.s, z0.s[1]
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    fmov w10, s2
-; CHECK-NEXT:    strh w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    strh w9, [sp, #14]
-; CHECK-NEXT:    strh w10, [sp, #12]
-; CHECK-NEXT:    strh w8, [sp, #10]
-; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    str d0, [x1]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %ap
   %val = trunc <4 x i32> %a to <4 x i16>
@@ -97,7 +43,7 @@ define void @store_trunc_v4i32i16(<4 x i32>* %ap, <4 x i16>* %dest) #0 {
   ret void
 }
 
-define void @store_trunc_v2i64i8(<2 x i64>* %ap, <2 x i32>* %dest) vscale_range(2,0) #0 {
+define void @store_trunc_v2i64i8(<2 x i64>* %ap, <2 x i32>* %dest) #0 {
 ; CHECK-LABEL: store_trunc_v2i64i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -110,7 +56,7 @@ define void @store_trunc_v2i64i8(<2 x i64>* %ap, <2 x i32>* %dest) vscale_range(
   ret void
 }
 
-define void @store_trunc_v2i256i64(<2 x i256>* %ap, <2 x i64>* %dest) vscale_range(2,0) #0 {
+define void @store_trunc_v2i256i64(<2 x i256>* %ap, <2 x i64>* %dest) #0 {
 ; CHECK-LABEL: store_trunc_v2i256i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0, #32]

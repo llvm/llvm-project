@@ -13,10 +13,14 @@
 
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SetVector.h"
 
@@ -131,9 +135,10 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
     return failure();
   }
 
-  spirv::TargetEnvAttr targetEnv = spirv::lookupTargetEnv(funcOp);
+  spirv::TargetEnvAttr targetEnvAttr = spirv::lookupTargetEnv(funcOp);
+  spirv::TargetEnv targetEnv(targetEnvAttr);
   FailureOr<spirv::ExecutionModel> executionModel =
-      spirv::getExecutionModel(targetEnv);
+      spirv::getExecutionModel(targetEnvAttr);
   if (failed(executionModel))
     return funcOp.emitRemark("lower entry point failure: could not select "
                              "execution model based on 'spirv.target_env'");
@@ -142,14 +147,36 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
                                       funcOp, interfaceVars);
 
   // Specifies the spirv.ExecutionModeOp.
-  auto localSizeAttr = entryPointAttr.getLocalSize();
-  if (localSizeAttr) {
-    auto values = localSizeAttr.getValues<int32_t>();
-    SmallVector<int32_t, 3> localSize(values);
-    builder.create<spirv::ExecutionModeOp>(
-        funcOp.getLoc(), funcOp, spirv::ExecutionMode::LocalSize, localSize);
-    funcOp->removeAttr(entryPointAttrName);
+  if (DenseI32ArrayAttr workgroupSizeAttr = entryPointAttr.getWorkgroupSize()) {
+    Optional<ArrayRef<spirv::Capability>> caps =
+        spirv::getCapabilities(spirv::ExecutionMode::LocalSize);
+    if (!caps || targetEnv.allows(*caps)) {
+      builder.create<spirv::ExecutionModeOp>(funcOp.getLoc(), funcOp,
+                                             spirv::ExecutionMode::LocalSize,
+                                             workgroupSizeAttr.asArrayRef());
+      // Erase workgroup size.
+      entryPointAttr = spirv::EntryPointABIAttr::get(
+          entryPointAttr.getContext(), DenseI32ArrayAttr(),
+          entryPointAttr.getSubgroupSize());
+    }
   }
+  if (Optional<int> subgroupSize = entryPointAttr.getSubgroupSize()) {
+    Optional<ArrayRef<spirv::Capability>> caps =
+        spirv::getCapabilities(spirv::ExecutionMode::SubgroupSize);
+    if (!caps || targetEnv.allows(*caps)) {
+      builder.create<spirv::ExecutionModeOp>(funcOp.getLoc(), funcOp,
+                                             spirv::ExecutionMode::SubgroupSize,
+                                             *subgroupSize);
+      // Erase subgroup size.
+      entryPointAttr = spirv::EntryPointABIAttr::get(
+          entryPointAttr.getContext(), entryPointAttr.getWorkgroupSize(),
+          llvm::None);
+    }
+  }
+  if (entryPointAttr.getWorkgroupSize() || entryPointAttr.getSubgroupSize())
+    funcOp->setAttr(entryPointAttrName, entryPointAttr);
+  else
+    funcOp->removeAttr(entryPointAttrName);
   return success();
 }
 

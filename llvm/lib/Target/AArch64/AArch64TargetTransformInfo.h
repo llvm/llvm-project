@@ -259,7 +259,7 @@ public:
   }
 
   bool isLegalMaskedGatherScatter(Type *DataType) const {
-    if (!ST->hasSVE())
+    if (!ST->hasSVE() || ST->forceStreamingCompatibleSVE())
       return false;
 
     // For fixed vectors, scalarize if not using SVE for them.

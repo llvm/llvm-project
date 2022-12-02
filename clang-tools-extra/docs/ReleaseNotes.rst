@@ -115,6 +115,12 @@ New checks
 
   Warns when using ``do-while`` loops.
 
+- New :doc:`misc-use-anonymous-namespace
+  <clang-tidy/checks/misc/use-anonymous-namespace>` check.
+
+  Warns when using ``static`` function or variables at global scope, and suggests
+  moving them into an anonymous namespace.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -140,6 +146,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` when warnings
   would be emitted for uninitialized members of an anonymous union despite
   there being an initializer for one of the other members.
+
+- Fixed false positives in :doc:`google-objc-avoid-throwing-exception
+  <clang-tidy/checks/google/objc-avoid-throwing-exception>` check for exceptions
+  thrown by code emitted from macros in system headers.
 
 - Improved :doc:`modernize-use-emplace <clang-tidy/checks/modernize/use-emplace>`
   check.

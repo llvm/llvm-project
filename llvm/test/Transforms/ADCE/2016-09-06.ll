@@ -1,4 +1,4 @@
-; RUN: opt < %s -sroa -adce -adce-remove-loops -S | FileCheck %s
+; RUN: opt < %s -passes='sroa,adce' -adce-remove-loops -S | FileCheck %s
 ; ModuleID = 'test1.bc'
 source_filename = "test1.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -19,7 +19,7 @@ define i32 @foo(i32, i32, i32) #0 {
   %I10 = icmp ne i32 %9, 0
   br i1 %I10, label %B11, label %B21
 
-B11: 
+B11:
   store i32 0, ptr %8, align 4
   br label %B12
 
@@ -30,10 +30,10 @@ B12:
 ; CHECK: br label %B20
   br i1 %I15, label %B16, label %B20
 
-B16: 
+B16:
   br label %B17
 
-B17: 
+B17:
   %I18 = load i32, ptr %8, align 4
   %I19 = add nsw i32 %I18, 1
   store i32 %I19, ptr %8, align 4
@@ -43,7 +43,7 @@ B20:
   store i32 1, ptr %7, align 4
   br label %B21
 
-B21: 
+B21:
   %I22 = load i32, ptr %7, align 4
   ret i32 %I22
 }

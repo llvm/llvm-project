@@ -3,6 +3,33 @@
 
 #include <larchintrin.h>
 
+// CHECK-LABEL: @crc_w_b_w(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crc.w.b.w(i32 [[A:%.*]], i32 [[B:%.*]])
+// CHECK-NEXT:    ret i32 [[TMP0]]
+//
+int crc_w_b_w(int a, int b) {
+  return __builtin_loongarch_crc_w_b_w(a, b);
+}
+
+// CHECK-LABEL: @crc_w_h_w(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crc.w.h.w(i32 [[A:%.*]], i32 [[B:%.*]])
+// CHECK-NEXT:    ret i32 [[TMP0]]
+//
+int crc_w_h_w(int a, int b) {
+  return __builtin_loongarch_crc_w_h_w(a, b);
+}
+
+// CHECK-LABEL: @crc_w_w_w(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crc.w.w.w(i32 [[A:%.*]], i32 [[B:%.*]])
+// CHECK-NEXT:    ret i32 [[TMP0]]
+//
+int crc_w_w_w(int a, int b) {
+  return __builtin_loongarch_crc_w_w_w(a, b);
+}
+
 // CHECK-LABEL: @crc_w_d_w(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crc.w.d.w(i64 [[A:%.*]], i32 [[B:%.*]])
@@ -10,4 +37,40 @@
 //
 int crc_w_d_w(long int a, int b) {
   return __builtin_loongarch_crc_w_d_w(a, b);
+}
+
+// CHECK-LABEL: @crcc_w_b_w(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crcc.w.b.w(i32 [[A:%.*]], i32 [[B:%.*]])
+// CHECK-NEXT:    ret i32 [[TMP0]]
+//
+int crcc_w_b_w(int a, int b) {
+  return __builtin_loongarch_crcc_w_b_w(a, b);
+}
+
+// CHECK-LABEL: @crcc_w_h_w(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crcc.w.h.w(i32 [[A:%.*]], i32 [[B:%.*]])
+// CHECK-NEXT:    ret i32 [[TMP0]]
+//
+int crcc_w_h_w(int a, int b) {
+  return __builtin_loongarch_crcc_w_h_w(a, b);
+}
+
+// CHECK-LABEL: @crcc_w_w_w(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crcc.w.w.w(i32 [[A:%.*]], i32 [[B:%.*]])
+// CHECK-NEXT:    ret i32 [[TMP0]]
+//
+int crcc_w_w_w(int a, int b) {
+  return __builtin_loongarch_crcc_w_w_w(a, b);
+}
+
+// CHECK-LABEL: @crcc_w_d_w(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crcc.w.d.w(i64 [[A:%.*]], i32 [[B:%.*]])
+// CHECK-NEXT:    ret i32 [[TMP0]]
+//
+int crcc_w_d_w(long int a, int b) {
+  return __builtin_loongarch_crcc_w_d_w(a, b);
 }

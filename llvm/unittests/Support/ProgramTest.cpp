@@ -151,7 +151,8 @@ TEST_F(ProgramEnvTest, CreateProcessLongPath) {
 
   std::string Error;
   bool ExecutionFailed;
-  Optional<StringRef> Redirects[] = {None, LongPath.str(), None};
+  std::optional<StringRef> Redirects[] = {std::nullopt, LongPath.str(),
+                                          std::nullopt};
   int RC = ExecuteAndWait(MyExe, ArgV, getEnviron(), Redirects,
     /*secondsToWait=*/ 10, /*memoryLimit=*/ 0, &Error,
     &ExecutionFailed);
@@ -194,7 +195,7 @@ TEST_F(ProgramEnvTest, CreateProcessTrailingSlash) {
 #else
   StringRef nul("/dev/null");
 #endif
-  Optional<StringRef> redirects[] = { nul, nul, None };
+  std::optional<StringRef> redirects[] = {nul, nul, None};
   int rc = ExecuteAndWait(my_exe, argv, getEnviron(), redirects,
                           /*secondsToWait=*/ 10, /*memoryLimit=*/ 0, &error,
                           &ExecutionFailed);
@@ -367,7 +368,7 @@ TEST_F(ProgramEnvTest, TestExecuteAndWaitStatistics) {
 
   std::string Error;
   bool ExecutionFailed;
-  Optional<ProcessStatistics> ProcStat;
+  std::optional<ProcessStatistics> ProcStat;
   int RetCode = ExecuteAndWait(Executable, argv, getEnviron(), {}, 0, 0, &Error,
                                &ExecutionFailed, &ProcStat);
   ASSERT_EQ(0, RetCode);

@@ -271,6 +271,9 @@ class FunctionSpecializer {
   /// The IPSCCP Solver.
   SCCPSolver &Solver;
 
+  /// Analysis manager, needed to invalidate analyses.
+  FunctionAnalysisManager *FAM;
+
   /// Analyses used to help determine if a function should be specialized.
   std::function<AssumptionCache &(Function &)> GetAC;
   std::function<TargetTransformInfo &(Function &)> GetTTI;
@@ -282,11 +285,12 @@ class FunctionSpecializer {
   DenseMap<Function *, CodeMetrics> FunctionMetrics;
 
 public:
-  FunctionSpecializer(SCCPSolver &Solver,
+  FunctionSpecializer(SCCPSolver &Solver, FunctionAnalysisManager *FAM,
                       std::function<AssumptionCache &(Function &)> GetAC,
                       std::function<TargetTransformInfo &(Function &)> GetTTI,
                       std::function<TargetLibraryInfo &(Function &)> GetTLI)
-      : Solver(Solver), GetAC(GetAC), GetTTI(GetTTI), GetTLI(GetTLI) {}
+      : Solver(Solver), FAM(FAM), GetAC(GetAC), GetTTI(GetTTI), GetTLI(GetTLI) {
+  }
 
   ~FunctionSpecializer() {
     // Eliminate dead code.
@@ -344,6 +348,8 @@ public:
     for (auto *F : FullySpecialized) {
       LLVM_DEBUG(dbgs() << "FnSpecialization: Removing dead function "
                         << F->getName() << "\n");
+      if (FAM)
+        FAM->clear(*F, F->getName());
       F->eraseFromParent();
     }
     FullySpecialized.clear();
@@ -819,13 +825,13 @@ private:
 } // namespace
 
 bool llvm::runFunctionSpecialization(
-    Module &M, const DataLayout &DL,
+    Module &M, FunctionAnalysisManager *FAM, const DataLayout &DL,
     std::function<TargetLibraryInfo &(Function &)> GetTLI,
     std::function<TargetTransformInfo &(Function &)> GetTTI,
     std::function<AssumptionCache &(Function &)> GetAC,
     function_ref<AnalysisResultsForFn(Function &)> GetAnalysis) {
   SCCPSolver Solver(DL, GetTLI, M.getContext());
-  FunctionSpecializer FS(Solver, GetAC, GetTTI, GetTLI);
+  FunctionSpecializer FS(Solver, FAM, GetAC, GetTTI, GetTLI);
   bool Changed = false;
 
   // Loop over all functions, marking arguments to those with their addresses

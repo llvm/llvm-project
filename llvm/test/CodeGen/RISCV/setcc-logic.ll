@@ -8,16 +8,16 @@ define i1 @and_icmp_eq(i32 signext %a, i32 signext %b, i32 signext %c, i32 signe
 ; RV32I-LABEL: and_icmp_eq:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    xor a0, a0, a1
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    or a0, a0, a2
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and_icmp_eq:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
   %cmp1 = icmp eq i32 %a, %b
@@ -30,16 +30,16 @@ define i1 @or_icmp_ne(i32 signext %a, i32 signext %b, i32 signext %c, i32 signex
 ; RV32I-LABEL: or_icmp_ne:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    xor a0, a0, a1
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    or a0, a0, a2
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: or_icmp_ne:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    ret
   %cmp1 = icmp ne i32 %a, %b
@@ -55,8 +55,8 @@ define i1 @or_icmps_const_1bit_diff(i64 %x) nounwind {
 ; RV32I-NEXT:    sltu a0, a2, a0
 ; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    addi a0, a0, -1
-; RV32I-NEXT:    andi a1, a2, -5
-; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    andi a2, a2, -5
+; RV32I-NEXT:    or a0, a2, a0
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    ret
 ;
@@ -299,8 +299,8 @@ define void @and_sge_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 ; RV32I-LABEL: and_sge_eq:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slt a0, a0, a1
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    snez a1, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    snez a1, a2
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    bnez a0, .LBB13_2
 ; RV32I-NEXT:  # %bb.1:
@@ -311,8 +311,8 @@ define void @and_sge_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 ; RV64I-LABEL: and_sge_eq:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slt a0, a0, a1
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    snez a1, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    snez a1, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    bnez a0, .LBB13_2
 ; RV64I-NEXT:  # %bb.1:
@@ -336,8 +336,8 @@ define void @and_sle_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 ; RV32I-LABEL: and_sle_eq:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slt a0, a1, a0
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    snez a1, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    snez a1, a2
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    bnez a0, .LBB14_2
 ; RV32I-NEXT:  # %bb.1:
@@ -348,8 +348,8 @@ define void @and_sle_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 ; RV64I-LABEL: and_sle_eq:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slt a0, a1, a0
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    snez a1, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    snez a1, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    bnez a0, .LBB14_2
 ; RV64I-NEXT:  # %bb.1:
@@ -373,8 +373,8 @@ define void @and_uge_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 ; RV32I-LABEL: and_uge_eq:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a0, a0, a1
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    snez a1, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    snez a1, a2
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    bnez a0, .LBB15_2
 ; RV32I-NEXT:  # %bb.1:
@@ -385,8 +385,8 @@ define void @and_uge_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 ; RV64I-LABEL: and_uge_eq:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sltu a0, a0, a1
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    snez a1, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    snez a1, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    bnez a0, .LBB15_2
 ; RV64I-NEXT:  # %bb.1:
@@ -410,8 +410,8 @@ define void @and_ule_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 ; RV32I-LABEL: and_ule_eq:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a0, a1, a0
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    snez a1, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    snez a1, a2
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    bnez a0, .LBB16_2
 ; RV32I-NEXT:  # %bb.1:
@@ -422,8 +422,8 @@ define void @and_ule_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 ; RV64I-LABEL: and_ule_eq:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sltu a0, a1, a0
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    snez a1, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    snez a1, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    bnez a0, .LBB16_2
 ; RV64I-NEXT:  # %bb.1:
@@ -447,8 +447,8 @@ define void @and_sge_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 ; RV32I-LABEL: and_sge_ne:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slt a0, a0, a1
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    seqz a1, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    seqz a1, a2
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    bnez a0, .LBB17_2
 ; RV32I-NEXT:  # %bb.1:
@@ -459,8 +459,8 @@ define void @and_sge_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 ; RV64I-LABEL: and_sge_ne:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slt a0, a0, a1
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    seqz a1, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    seqz a1, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    bnez a0, .LBB17_2
 ; RV64I-NEXT:  # %bb.1:
@@ -484,8 +484,8 @@ define void @and_sle_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 ; RV32I-LABEL: and_sle_ne:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slt a0, a1, a0
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    seqz a1, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    seqz a1, a2
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    bnez a0, .LBB18_2
 ; RV32I-NEXT:  # %bb.1:
@@ -496,8 +496,8 @@ define void @and_sle_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 ; RV64I-LABEL: and_sle_ne:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slt a0, a1, a0
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    seqz a1, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    seqz a1, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    bnez a0, .LBB18_2
 ; RV64I-NEXT:  # %bb.1:
@@ -521,8 +521,8 @@ define void @and_uge_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 ; RV32I-LABEL: and_uge_ne:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a0, a0, a1
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    seqz a1, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    seqz a1, a2
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    bnez a0, .LBB19_2
 ; RV32I-NEXT:  # %bb.1:
@@ -533,8 +533,8 @@ define void @and_uge_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 ; RV64I-LABEL: and_uge_ne:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sltu a0, a0, a1
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    seqz a1, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    seqz a1, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    bnez a0, .LBB19_2
 ; RV64I-NEXT:  # %bb.1:
@@ -558,8 +558,8 @@ define void @and_ule_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 ; RV32I-LABEL: and_ule_ne:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a0, a1, a0
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    seqz a1, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    seqz a1, a2
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    bnez a0, .LBB20_2
 ; RV32I-NEXT:  # %bb.1:
@@ -570,8 +570,8 @@ define void @and_ule_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 ; RV64I-LABEL: and_ule_ne:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sltu a0, a1, a0
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    seqz a1, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    seqz a1, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    bnez a0, .LBB20_2
 ; RV64I-NEXT:  # %bb.1:
@@ -595,8 +595,8 @@ define void @or_sge_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 ; RV32I-LABEL: or_sge_eq:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slt a0, a0, a1
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    snez a1, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    snez a1, a2
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    bnez a0, .LBB21_2
 ; RV32I-NEXT:  # %bb.1:
@@ -607,8 +607,8 @@ define void @or_sge_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 ; RV64I-LABEL: or_sge_eq:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slt a0, a0, a1
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    snez a1, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    snez a1, a2
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    bnez a0, .LBB21_2
 ; RV64I-NEXT:  # %bb.1:
@@ -632,8 +632,8 @@ define void @or_sle_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 ; RV32I-LABEL: or_sle_eq:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slt a0, a1, a0
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    snez a1, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    snez a1, a2
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    bnez a0, .LBB22_2
 ; RV32I-NEXT:  # %bb.1:
@@ -644,8 +644,8 @@ define void @or_sle_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 ; RV64I-LABEL: or_sle_eq:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slt a0, a1, a0
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    snez a1, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    snez a1, a2
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    bnez a0, .LBB22_2
 ; RV64I-NEXT:  # %bb.1:
@@ -669,8 +669,8 @@ define void @or_uge_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 ; RV32I-LABEL: or_uge_eq:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a0, a0, a1
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    snez a1, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    snez a1, a2
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    bnez a0, .LBB23_2
 ; RV32I-NEXT:  # %bb.1:
@@ -681,8 +681,8 @@ define void @or_uge_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 ; RV64I-LABEL: or_uge_eq:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sltu a0, a0, a1
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    snez a1, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    snez a1, a2
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    bnez a0, .LBB23_2
 ; RV64I-NEXT:  # %bb.1:
@@ -706,8 +706,8 @@ define void @or_ule_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 ; RV32I-LABEL: or_ule_eq:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a0, a1, a0
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    snez a1, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    snez a1, a2
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    bnez a0, .LBB24_2
 ; RV32I-NEXT:  # %bb.1:
@@ -718,8 +718,8 @@ define void @or_ule_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 ; RV64I-LABEL: or_ule_eq:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sltu a0, a1, a0
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    snez a1, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    snez a1, a2
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    bnez a0, .LBB24_2
 ; RV64I-NEXT:  # %bb.1:
@@ -743,8 +743,8 @@ define void @or_sge_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 ; RV32I-LABEL: or_sge_ne:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slt a0, a0, a1
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    seqz a1, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    seqz a1, a2
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    bnez a0, .LBB25_2
 ; RV32I-NEXT:  # %bb.1:
@@ -755,8 +755,8 @@ define void @or_sge_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 ; RV64I-LABEL: or_sge_ne:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slt a0, a0, a1
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    seqz a1, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    seqz a1, a2
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    bnez a0, .LBB25_2
 ; RV64I-NEXT:  # %bb.1:
@@ -780,8 +780,8 @@ define void @or_sle_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 ; RV32I-LABEL: or_sle_ne:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slt a0, a1, a0
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    seqz a1, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    seqz a1, a2
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    bnez a0, .LBB26_2
 ; RV32I-NEXT:  # %bb.1:
@@ -792,8 +792,8 @@ define void @or_sle_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 ; RV64I-LABEL: or_sle_ne:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slt a0, a1, a0
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    seqz a1, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    seqz a1, a2
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    bnez a0, .LBB26_2
 ; RV64I-NEXT:  # %bb.1:
@@ -817,8 +817,8 @@ define void @or_uge_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 ; RV32I-LABEL: or_uge_ne:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a0, a0, a1
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    seqz a1, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    seqz a1, a2
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    bnez a0, .LBB27_2
 ; RV32I-NEXT:  # %bb.1:
@@ -829,8 +829,8 @@ define void @or_uge_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 ; RV64I-LABEL: or_uge_ne:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sltu a0, a0, a1
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    seqz a1, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    seqz a1, a2
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    bnez a0, .LBB27_2
 ; RV64I-NEXT:  # %bb.1:
@@ -854,8 +854,8 @@ define void @or_ule_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 ; RV32I-LABEL: or_ule_ne:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a0, a1, a0
-; RV32I-NEXT:    xor a1, a2, a3
-; RV32I-NEXT:    seqz a1, a1
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    seqz a1, a2
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    bnez a0, .LBB28_2
 ; RV32I-NEXT:  # %bb.1:
@@ -866,8 +866,8 @@ define void @or_ule_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 ; RV64I-LABEL: or_ule_ne:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sltu a0, a1, a0
-; RV64I-NEXT:    xor a1, a2, a3
-; RV64I-NEXT:    seqz a1, a1
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    seqz a1, a2
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    bnez a0, .LBB28_2
 ; RV64I-NEXT:  # %bb.1:

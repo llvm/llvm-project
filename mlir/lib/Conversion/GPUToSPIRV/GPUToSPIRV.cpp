@@ -171,12 +171,12 @@ SingleDimLaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
 LogicalResult WorkGroupSizeConversion::matchAndRewrite(
     gpu::BlockDimOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  auto workGroupSizeAttr = spirv::lookupLocalWorkGroupSize(op);
+  DenseI32ArrayAttr workGroupSizeAttr = spirv::lookupLocalWorkGroupSize(op);
   if (!workGroupSizeAttr)
     return failure();
 
-  auto val = workGroupSizeAttr
-                 .getValues<int32_t>()[static_cast<int32_t>(op.getDimension())];
+  int val =
+      workGroupSizeAttr.asArrayRef()[static_cast<int32_t>(op.getDimension())];
   auto convertedType =
       getTypeConverter()->convertType(op.getResult().getType());
   if (!convertedType)

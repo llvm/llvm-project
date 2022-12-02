@@ -232,7 +232,8 @@ bool BugDriver::runPasses(Module &Program,
              << " " << Args[i];
              errs() << "\n";);
 
-  Optional<StringRef> Redirects[3] = {None, None, None};
+  std::optional<StringRef> Redirects[3] = {std::nullopt, std::nullopt,
+                                           std::nullopt};
   // Redirect stdout and stderr to nowhere if SilencePasses is given.
   if (SilencePasses) {
     Redirects[1] = "";
@@ -240,7 +241,7 @@ bool BugDriver::runPasses(Module &Program,
   }
 
   std::string ErrMsg;
-  int result = sys::ExecuteAndWait(Prog, Args, None, Redirects, Timeout,
+  int result = sys::ExecuteAndWait(Prog, Args, std::nullopt, Redirects, Timeout,
                                    MemoryLimit, &ErrMsg);
 
   // If we are supposed to delete the bitcode file or if the passes crashed,

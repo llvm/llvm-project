@@ -161,22 +161,15 @@ define void @test_copysign_v4f64_v4f64(ptr %ap, ptr %bp) #0 {
 define void @test_copysign_v2f32_v2f64(ptr %ap, ptr %bp) #0 {
 ; CHECK-LABEL: test_copysign_v2f32_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ldr d1, [x0]
 ; CHECK-NEXT:    fcvt z0.s, p0/m, z0.d
-; CHECK-NEXT:    mov z1.d, z0.d[1]
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    stp w8, w9, [sp, #8]
-; CHECK-NEXT:    and z0.s, z0.s, #0x7fffffff
-; CHECK-NEXT:    ldr d1, [sp, #8]
-; CHECK-NEXT:    and z1.s, z1.s, #0x80000000
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    and z1.s, z1.s, #0x7fffffff
+; CHECK-NEXT:    and z0.s, z0.s, #0x80000000
+; CHECK-NEXT:    orr z0.d, z1.d, z0.d
 ; CHECK-NEXT:    str d0, [x0]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %a = load <2 x float>, ptr %ap
   %b = load <2 x double>, ptr %bp
@@ -192,27 +185,19 @@ define void @test_copysign_v2f32_v2f64(ptr %ap, ptr %bp) #0 {
 define void @test_copysign_v4f32_v4f64(ptr %ap, ptr %bp) #0 {
 ; CHECK-LABEL: test_copysign_v4f32_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldp q1, q0, [x1]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fcvt z1.s, p0/m, z1.d
-; CHECK-NEXT:    fmov x10, d1
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    ldr q2, [x0]
 ; CHECK-NEXT:    fcvt z0.s, p0/m, z0.d
-; CHECK-NEXT:    mov z2.d, z0.d[1]
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    fmov x9, d2
-; CHECK-NEXT:    mov z2.d, z1.d[1]
-; CHECK-NEXT:    fmov x11, d2
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    stp w8, w9, [sp, #8]
-; CHECK-NEXT:    stp w10, w11, [sp]
-; CHECK-NEXT:    and z0.s, z0.s, #0x7fffffff
-; CHECK-NEXT:    ldr q1, [sp]
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    splice z1.s, p0, z1.s, z0.s
 ; CHECK-NEXT:    and z1.s, z1.s, #0x80000000
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z2.s, z2.s, #0x7fffffff
+; CHECK-NEXT:    orr z0.d, z2.d, z1.d
 ; CHECK-NEXT:    str q0, [x0]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, ptr %ap
   %b = load <4 x double>, ptr %bp
@@ -295,29 +280,15 @@ define void @test_copysign_v4f64_v4f32(ptr %ap, ptr %bp) #0 {
 define void @test_copysign_v4f16_v4f32(ptr %ap, ptr %bp) #0 {
 ; CHECK-LABEL: test_copysign_v4f16_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov z1.s, z0.s[3]
-; CHECK-NEXT:    mov z2.s, z0.s[2]
-; CHECK-NEXT:    mov z0.s, z0.s[1]
-; CHECK-NEXT:    fmov w9, s1
 ; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    fmov w10, s2
-; CHECK-NEXT:    strh w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    strh w9, [sp, #14]
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    and z1.h, z1.h, #0x7fff
-; CHECK-NEXT:    strh w10, [sp, #12]
-; CHECK-NEXT:    strh w8, [sp, #10]
-; CHECK-NEXT:    ldr d0, [sp, #8]
 ; CHECK-NEXT:    and z0.h, z0.h, #0x8000
 ; CHECK-NEXT:    orr z0.d, z1.d, z0.d
 ; CHECK-NEXT:    str d0, [x0]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %a = load <4 x half>, ptr %ap
   %b = load <4 x float>, ptr %bp
@@ -364,41 +335,19 @@ define void @test_copysign_v4f16_v4f64(ptr %ap, ptr %bp) #0 {
 define void @test_copysign_v8f16_v8f32(ptr %ap, ptr %bp) #0 {
 ; CHECK-LABEL: test_copysign_v8f16_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldp q0, q1, [x1]
+; CHECK-NEXT:    ldp q1, q0, [x1]
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z5.s, z0.s[2]
 ; CHECK-NEXT:    fcvt z1.h, p0/m, z1.s
-; CHECK-NEXT:    mov z6.s, z0.s[1]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov z2.s, z1.s[3]
-; CHECK-NEXT:    mov z3.s, z1.s[2]
-; CHECK-NEXT:    mov z4.s, z1.s[1]
-; CHECK-NEXT:    mov z1.s, z0.s[3]
-; CHECK-NEXT:    fmov w10, s2
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    strh w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    strh w9, [sp]
-; CHECK-NEXT:    fmov w9, s4
-; CHECK-NEXT:    strh w10, [sp, #14]
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    and z0.h, z0.h, #0x7fff
-; CHECK-NEXT:    strh w8, [sp, #12]
-; CHECK-NEXT:    fmov w8, s5
-; CHECK-NEXT:    strh w9, [sp, #10]
-; CHECK-NEXT:    fmov w9, s6
-; CHECK-NEXT:    strh w10, [sp, #6]
-; CHECK-NEXT:    strh w8, [sp, #4]
-; CHECK-NEXT:    strh w9, [sp, #2]
-; CHECK-NEXT:    ldr q1, [sp]
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    splice z1.h, p0, z1.h, z0.h
 ; CHECK-NEXT:    and z1.h, z1.h, #0x8000
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z2.h, z2.h, #0x7fff
+; CHECK-NEXT:    orr z0.d, z2.d, z1.d
 ; CHECK-NEXT:    str q0, [x0]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, ptr %ap
   %b = load <8 x float>, ptr %bp

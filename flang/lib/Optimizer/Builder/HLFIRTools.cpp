@@ -159,16 +159,78 @@ hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
   return mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
 }
 
-/// If the entity is a variable, load its value (dereference pointers and
-/// allocatables if needed). Do nothing if the entity os already a variable or
-/// if it is not a scalar entity of numerical or logical type.
+hlfir::AssociateOp hlfir::genAssociateExpr(mlir::Location loc,
+                                           fir::FirOpBuilder &builder,
+                                           hlfir::Entity value,
+                                           mlir::Type variableType,
+                                           llvm::StringRef name) {
+  assert(value.isValue() && "must not be a variable");
+  mlir::Value shape{};
+  if (value.isArray())
+    TODO(loc, "associating array expressions");
+
+  mlir::Value source = value;
+  // Lowered scalar expression values for numerical and logical may have a
+  // different type than what is required for the type in memory (logical
+  // expressions are typically manipulated as i1, but needs to be stored
+  // according to the fir.logical<kind> so that the storage size is correct).
+  // Character length mismatches are ignored (it is ok for one to be dynamic
+  // and the other static).
+  mlir::Type varEleTy = getFortranElementType(variableType);
+  mlir::Type valueEleTy = getFortranElementType(value.getType());
+  if (varEleTy != valueEleTy && !(valueEleTy.isa<fir::CharacterType>() &&
+                                  varEleTy.isa<fir::CharacterType>())) {
+    assert(value.isScalar() && fir::isa_trivial(value.getType()));
+    source = builder.createConvert(loc, fir::unwrapPassByRefType(variableType),
+                                   value);
+  }
+  llvm::SmallVector<mlir::Value> lenParams;
+  genLengthParameters(loc, builder, value, lenParams);
+  return builder.create<hlfir::AssociateOp>(loc, source, name, shape, lenParams,
+                                            fir::FortranVariableFlagsAttr{});
+}
+
+mlir::Value hlfir::genVariableRawAddress(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         hlfir::Entity var) {
+  assert(var.isVariable() && "only address of variables can be taken");
+  mlir::Value baseAddr = var.getFirBase();
+  if (var.isMutableBox())
+    baseAddr = builder.create<fir::LoadOp>(loc, baseAddr);
+  // Get raw address.
+  if (baseAddr.getType().isa<fir::BaseBoxType>()) {
+    auto addrType =
+        fir::ReferenceType::get(fir::unwrapPassByRefType(baseAddr.getType()));
+    baseAddr = builder.create<fir::BoxAddrOp>(loc, addrType, baseAddr);
+  }
+  return baseAddr;
+}
+
+mlir::Value hlfir::genVariableBoxChar(mlir::Location loc,
+                                      fir::FirOpBuilder &builder,
+                                      hlfir::Entity var) {
+  assert(var.isVariable() && "only address of variables can be taken");
+  if (var.getType().isa<fir::BoxCharType>())
+    return var;
+  mlir::Value addr = genVariableRawAddress(loc, builder, var);
+  llvm::SmallVector<mlir::Value> lengths;
+  genLengthParameters(loc, builder, var, lengths);
+  assert(lengths.size() == 1);
+  auto charType = var.getFortranElementType().cast<fir::CharacterType>();
+  auto boxCharType =
+      fir::BoxCharType::get(builder.getContext(), charType.getFKind());
+  auto scalarAddr =
+      builder.createConvert(loc, fir::ReferenceType::get(charType), addr);
+  return builder.create<fir::EmboxCharOp>(loc, boxCharType, scalarAddr,
+                                          lengths[0]);
+}
+
 hlfir::Entity hlfir::loadTrivialScalar(mlir::Location loc,
                                        fir::FirOpBuilder &builder,
                                        Entity entity) {
   if (entity.isVariable() && entity.isScalar() &&
       fir::isa_trivial(entity.getFortranElementType())) {
-    if (entity.isMutableBox())
-      TODO(loc, "load pointer/allocatable scalar");
+    entity = derefPointersAndAllocatables(loc, builder, entity);
     return Entity{builder.create<fir::LoadOp>(loc, entity)};
   }
   return entity;
@@ -246,4 +308,12 @@ std::pair<mlir::Value, mlir::Value> hlfir::genVariableFirBaseShapeAndParams(
   if (auto variableInterface = entity.getIfVariableInterface())
     return {fir::getBase(exv), variableInterface.getShape()};
   return {fir::getBase(exv), builder.createShape(loc, exv)};
+}
+
+hlfir::Entity hlfir::derefPointersAndAllocatables(mlir::Location loc,
+                                                  fir::FirOpBuilder &builder,
+                                                  Entity entity) {
+  if (entity.isMutableBox())
+    return hlfir::Entity{builder.create<fir::LoadOp>(loc, entity).getResult()};
+  return entity;
 }

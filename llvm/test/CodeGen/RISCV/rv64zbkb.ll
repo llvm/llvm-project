@@ -253,8 +253,8 @@ define i64 @pack_i64_allWUsers(i32 signext %0, i32 signext %1, i32 signext %2) {
 ; RV64I-NEXT:    addw a0, a1, a0
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    slli a2, a2, 32
-; RV64I-NEXT:    srli a1, a2, 32
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    srli a2, a2, 32
+; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: pack_i64_allWUsers:
