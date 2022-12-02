@@ -22,6 +22,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -430,8 +431,8 @@ public:
 
   unsigned getMinVectorRegisterBitWidth() const { return 128; }
 
-  Optional<unsigned> getMaxVScale() const { return None; }
-  Optional<unsigned> getVScaleForTuning() const { return None; }
+  std::optional<unsigned> getMaxVScale() const { return std::nullopt; }
+  std::optional<unsigned> getVScaleForTuning() const { return std::nullopt; }
 
   bool
   shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const {

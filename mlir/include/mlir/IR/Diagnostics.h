@@ -347,6 +347,10 @@ public:
     return impl->attachNote(noteLoc);
   }
 
+  /// Returns the underlying diagnostic or nullptr if this diagnostic isn't
+  /// active.
+  Diagnostic *getUnderlyingDiagnostic() { return impl ? &*impl : nullptr; }
+
   /// Reports the diagnostic to the engine.
   void report();
 

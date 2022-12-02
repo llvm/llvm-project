@@ -3210,7 +3210,7 @@ void MergeSyntheticSection::addSection(MergeInputSection *ms) {
 MergeTailSection::MergeTailSection(StringRef name, uint32_t type,
                                    uint64_t flags, uint32_t alignment)
     : MergeSyntheticSection(name, type, flags, alignment),
-      builder(StringTableBuilder::RAW, alignment) {}
+      builder(StringTableBuilder::RAW, llvm::Align(alignment)) {}
 
 size_t MergeTailSection::getSize() const { return builder.getSize(); }
 
@@ -3252,7 +3252,7 @@ void MergeNoTailSection::writeTo(uint8_t *buf) {
 void MergeNoTailSection::finalizeContents() {
   // Initializes string table builders.
   for (size_t i = 0; i < numShards; ++i)
-    shards.emplace_back(StringTableBuilder::RAW, addralign);
+    shards.emplace_back(StringTableBuilder::RAW, llvm::Align(addralign));
 
   // Concurrency level. Must be a power of 2 to avoid expensive modulo
   // operations in the following tight loop.

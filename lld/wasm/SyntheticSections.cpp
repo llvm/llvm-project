@@ -668,7 +668,7 @@ void LinkingSection::writeBody() {
     writeUleb128(sub.os, dataSegments.size(), "num data segments");
     for (const OutputSegment *s : dataSegments) {
       writeStr(sub.os, s->name, "segment name");
-      writeUleb128(sub.os, s->alignment, "alignment");
+      writeUleb128(sub.os, Log2(s->alignment), "alignment");
       writeUleb128(sub.os, s->linkingFlags, "flags");
     }
     sub.writeTo(os);

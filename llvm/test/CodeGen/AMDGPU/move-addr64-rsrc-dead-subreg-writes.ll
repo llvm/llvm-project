@@ -18,15 +18,15 @@
 ; GCN: v_addc_u32_e32 v[[PTRHI:[0-9]+]], vcc, v[[LDPTRHI]], v[[VARG1HI]]
 ; GCN: buffer_load_ubyte v{{[0-9]+}}, v[[[PTRLO]]:[[PTRHI]]],
 
-define amdgpu_kernel void @clobber_vgpr_pair_pointer_add(i64 %arg1, [8 x i32], i8 addrspace(1)* addrspace(1)* %ptrarg, i32 %arg3) #0 {
+define amdgpu_kernel void @clobber_vgpr_pair_pointer_add(i64 %arg1, [8 x i32], ptr addrspace(1) %ptrarg, i32 %arg3) #0 {
 bb:
   %tmp = icmp sgt i32 %arg3, 0
   br i1 %tmp, label %bb4, label %bb17
 
 bb4:
-  %tmp14 = load volatile i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %ptrarg
-  %tmp15 = getelementptr inbounds i8, i8 addrspace(1)* %tmp14, i64 %arg1
-  %tmp16 = load volatile i8, i8 addrspace(1)* %tmp15
+  %tmp14 = load volatile ptr addrspace(1), ptr addrspace(1) %ptrarg
+  %tmp15 = getelementptr inbounds i8, ptr addrspace(1) %tmp14, i64 %arg1
+  %tmp16 = load volatile i8, ptr addrspace(1) %tmp15
   br label %bb17
 
 bb17:

@@ -1247,18 +1247,8 @@ private:
   /// Reads a statement from the specified cursor.
   Stmt *ReadStmtFromStream(ModuleFile &F);
 
-  struct InputFileInfo {
-    std::string Filename;
-    uint64_t ContentHash;
-    off_t StoredSize;
-    time_t StoredTime;
-    bool Overridden;
-    bool Transient;
-    bool TopLevelModuleMap;
-  };
-
-  /// Reads the stored information about an input file.
-  InputFileInfo readInputFileInfo(ModuleFile &F, unsigned ID);
+  /// Retrieve the stored information about an input file.
+  serialization::InputFileInfo getInputFileInfo(ModuleFile &F, unsigned ID);
 
   /// Retrieve the file entry and 'overridden' bit for an input
   /// file in the given module file.

@@ -4,7 +4,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX12 %s
 
 ; IEEE bit enabled for compute kernel, so shouldn't use.
-define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_signed_zeros(float addrspace(1)* %out, float addrspace(1)* %aptr) #4 {
+define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_signed_zeros(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #4 {
 ; SI-LABEL: v_omod_div2_f32_enable_ieee_signed_zeros:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -54,17 +54,17 @@ define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_signed_zeros(float addrsp
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %add = fadd float %a, 1.0
   %div2 = fmul float %add, 0.5
-  store float %div2, float addrspace(1)* %out.gep
+  store float %div2, ptr addrspace(1) %out.gep
   ret void
 }
 
 ; IEEE bit enabled for compute kernel, so shouldn't use.
-define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_signed_zeros(double addrspace(1)* %out, double addrspace(1)* %aptr) #4 {
+define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_signed_zeros(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #4 {
 ; SI-LABEL: v_omod_div2_f64_enable_ieee_signed_zeros:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -114,17 +114,17 @@ define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_signed_zeros(double addrs
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr double, double addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr double, double addrspace(1)* %out, i32 %tid
-  %a = load double, double addrspace(1)* %gep0
+  %gep0 = getelementptr double, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr double, ptr addrspace(1) %out, i32 %tid
+  %a = load double, ptr addrspace(1) %gep0
   %add = fadd double %a, 1.0
   %div2 = fmul double %add, 0.5
-  store double %div2, double addrspace(1)* %out.gep
+  store double %div2, ptr addrspace(1) %out.gep
   ret void
 }
 
 ; IEEE bit enabled for compute kernel, so shouldn't use even though nsz is allowed
-define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_nsz(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
+define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_nsz(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #0 {
 ; SI-LABEL: v_omod_div2_f32_enable_ieee_nsz:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -174,17 +174,17 @@ define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_nsz(float addrspace(1)* %
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load float, float addrspace(1)* %gep0
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load float, ptr addrspace(1) %gep0
   %add = fadd float %a, 1.0
   %div2 = fmul float %add, 0.5
-  store float %div2, float addrspace(1)* %out.gep
+  store float %div2, ptr addrspace(1) %out.gep
   ret void
 }
 
 ; IEEE bit enabled for compute kernel, so shouldn't use even though nsz is allowed.
-define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_nsz(double addrspace(1)* %out, double addrspace(1)* %aptr) #5 {
+define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_nsz(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #5 {
 ; SI-LABEL: v_omod_div2_f64_enable_ieee_nsz:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -234,12 +234,12 @@ define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_nsz(double addrspace(1)* 
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr double, double addrspace(1)* %aptr, i32 %tid
-  %out.gep = getelementptr double, double addrspace(1)* %out, i32 %tid
-  %a = load double, double addrspace(1)* %gep0
+  %gep0 = getelementptr double, ptr addrspace(1) %aptr, i32 %tid
+  %out.gep = getelementptr double, ptr addrspace(1) %out, i32 %tid
+  %a = load double, ptr addrspace(1) %gep0
   %add = fadd double %a, 1.0
   %div2 = fmul double %add, 0.5
-  store double %div2, double addrspace(1)* %out.gep
+  store double %div2, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -271,7 +271,7 @@ define amdgpu_ps void @v_omod_div2_f32_signed_zeros(float %a) #4 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd float %a, 1.0
   %div2 = fmul float %add, 0.5
-  store float %div2, float addrspace(1)* undef
+  store float %div2, ptr addrspace(1) undef
   ret void
 }
 
@@ -303,7 +303,7 @@ define amdgpu_ps void @v_omod_div2_f64_signed_zeros(double %a) #4 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd double %a, 1.0
   %div2 = fmul double %add, 0.5
-  store double %div2, double addrspace(1)* undef
+  store double %div2, ptr addrspace(1) undef
   ret void
 }
 
@@ -330,7 +330,7 @@ define amdgpu_ps void @v_omod_div2_f32(float %a) #0 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd float %a, 1.0
   %div2 = fmul float %add, 0.5
-  store float %div2, float addrspace(1)* undef
+  store float %div2, ptr addrspace(1) undef
   ret void
 }
 
@@ -357,7 +357,7 @@ define amdgpu_ps void @v_omod_div2_f64(double %a) #5 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd nsz double %a, 1.0
   %div2 = fmul nsz double %add, 0.5
-  store double %div2, double addrspace(1)* undef
+  store double %div2, ptr addrspace(1) undef
   ret void
 }
 
@@ -384,7 +384,7 @@ define amdgpu_ps void @v_omod_mul2_f32(float %a) #0 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd float %a, 1.0
   %div2 = fmul float %add, 2.0
-  store float %div2, float addrspace(1)* undef
+  store float %div2, ptr addrspace(1) undef
   ret void
 }
 
@@ -411,7 +411,7 @@ define amdgpu_ps void @v_omod_mul2_f64(double %a) #5 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd nsz double %a, 1.0
   %div2 = fmul nsz double %add, 2.0
-  store double %div2, double addrspace(1)* undef
+  store double %div2, ptr addrspace(1) undef
   ret void
 }
 
@@ -438,7 +438,7 @@ define amdgpu_ps void @v_omod_mul4_f32(float %a) #0 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd float %a, 1.0
   %div2 = fmul float %add, 4.0
-  store float %div2, float addrspace(1)* undef
+  store float %div2, ptr addrspace(1) undef
   ret void
 }
 
@@ -465,7 +465,7 @@ define amdgpu_ps void @v_omod_mul4_f64(double %a) #5 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd nsz double %a, 1.0
   %div2 = fmul nsz double %add, 4.0
-  store double %div2, double addrspace(1)* undef
+  store double %div2, ptr addrspace(1) undef
   ret void
 }
 
@@ -503,8 +503,8 @@ define amdgpu_ps void @v_omod_mul4_multi_use_f32(float %a) #0 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd float %a, 1.0
   %div2 = fmul float %add, 4.0
-  store float %div2, float addrspace(1)* undef
-  store volatile float %add, float addrspace(1)* undef
+  store float %div2, ptr addrspace(1) undef
+  store volatile float %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -532,7 +532,7 @@ define amdgpu_ps void @v_omod_mul4_dbg_use_f32(float %a) #0 {
   %add = fadd float %a, 1.0
   call void @llvm.dbg.value(metadata float %add, i64 0, metadata !4, metadata !9), !dbg !10
   %div2 = fmul float %add, 4.0
-  store float %div2, float addrspace(1)* undef
+  store float %div2, ptr addrspace(1) undef
   ret void
 }
 
@@ -563,7 +563,7 @@ define amdgpu_ps void @v_clamp_omod_div2_f32(float %a) #0 {
 
   %max = call float @llvm.maxnum.f32(float %div2, float 0.0)
   %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
-  store float %clamp, float addrspace(1)* undef
+  store float %clamp, ptr addrspace(1) undef
   ret void
 }
 
@@ -597,7 +597,7 @@ define amdgpu_ps void @v_omod_div2_clamp_f32(float %a) #0 {
   %max = call float @llvm.maxnum.f32(float %add, float 0.0)
   %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
   %div2 = fmul float %clamp, 0.5
-  store float %div2, float addrspace(1)* undef
+  store float %div2, ptr addrspace(1) undef
   ret void
 }
 
@@ -629,7 +629,7 @@ define amdgpu_ps void @v_omod_div2_abs_src_f32(float %a) #0 {
   %add = fadd float %a, 1.0
   %abs.add = call float @llvm.fabs.f32(float %add)
   %div2 = fmul float %abs.add, 0.5
-  store float %div2, float addrspace(1)* undef
+  store float %div2, ptr addrspace(1) undef
   ret void
 }
 
@@ -657,7 +657,7 @@ define amdgpu_ps void @v_omod_add_self_clamp_f32(float %a) #0 {
   %add = fadd float %a, %a
   %max = call float @llvm.maxnum.f32(float %add, float 0.0)
   %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
-  store float %clamp, float addrspace(1)* undef
+  store float %clamp, ptr addrspace(1) undef
   ret void
 }
 
@@ -689,7 +689,7 @@ define amdgpu_ps void @v_omod_add_clamp_self_f32(float %a) #0 {
   %max = call float @llvm.maxnum.f32(float %a, float 0.0)
   %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
   %add = fadd float %clamp, %clamp
-  store float %add, float addrspace(1)* undef
+  store float %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -721,7 +721,7 @@ define amdgpu_ps void @v_omod_add_abs_self_f32(float %a) #0 {
   %x = fadd float %a, 1.0
   %abs.x = call float @llvm.fabs.f32(float %x)
   %add = fadd float %abs.x, %abs.x
-  store float %add, float addrspace(1)* undef
+  store float %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -753,7 +753,7 @@ define amdgpu_ps void @v_omod_add_abs_x_x_f32(float %a) #0 {
   %x = fadd float %a, 1.0
   %abs.x = call float @llvm.fabs.f32(float %x)
   %add = fadd float %abs.x, %x
-  store float %add, float addrspace(1)* undef
+  store float %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -785,7 +785,7 @@ define amdgpu_ps void @v_omod_add_x_abs_x_f32(float %a) #0 {
   %x = fadd float %a, 1.0
   %abs.x = call float @llvm.fabs.f32(float %x)
   %add = fadd float %x, %abs.x
-  store float %add, float addrspace(1)* undef
+  store float %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -818,7 +818,7 @@ define amdgpu_ps void @v_omod_div2_omod_div2_f32(float %a) #0 {
   %add = fadd float %a, 1.0
   %div2.0 = fmul float %add, 0.5
   %div2.1 = fmul float %div2.0, 0.5
-  store float %div2.1, float addrspace(1)* undef
+  store float %div2.1, ptr addrspace(1) undef
   ret void
 }
 
@@ -850,7 +850,7 @@ define amdgpu_ps void @v_omod_div2_f32_denormals(float %a) #2 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd float %a, 1.0
   %div2 = fmul float %add, 0.5
-  store float %div2, float addrspace(1)* undef
+  store float %div2, ptr addrspace(1) undef
   ret void
 }
 
@@ -882,7 +882,7 @@ define amdgpu_ps void @v_omod_div2_f64_denormals(double %a) #6 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd double %a, 1.0
   %div2 = fmul double %add, 0.5
-  store double %div2, double addrspace(1)* undef
+  store double %div2, ptr addrspace(1) undef
   ret void
 }
 
@@ -914,7 +914,7 @@ define amdgpu_ps void @v_omod_mul2_f32_denormals(float %a) #2 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd float %a, 1.0
   %mul2 = fadd float %add, %add
-  store float %mul2, float addrspace(1)* undef
+  store float %mul2, ptr addrspace(1) undef
   ret void
 }
 
@@ -946,7 +946,7 @@ define amdgpu_ps void @v_omod_mul2_f64_denormals(double %a) #2 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd double %a, 1.0
   %mul2 = fadd double %add, %add
-  store double %mul2, double addrspace(1)* undef
+  store double %mul2, ptr addrspace(1) undef
   ret void
 }
 
@@ -980,7 +980,7 @@ define amdgpu_ps void @v_omod_div2_f16_denormals(half %a) #0 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd half %a, 1.0
   %div2 = fmul half %add, 0.5
-  store half %div2, half addrspace(1)* undef
+  store half %div2, ptr addrspace(1) undef
   ret void
 }
 
@@ -1014,7 +1014,7 @@ define amdgpu_ps void @v_omod_mul2_f16_denormals(half %a) #0 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd half %a, 1.0
   %mul2 = fadd half %add, %add
-  store half %mul2, half addrspace(1)* undef
+  store half %mul2, ptr addrspace(1) undef
   ret void
 }
 
@@ -1044,7 +1044,7 @@ define amdgpu_ps void @v_omod_div2_f16_no_denormals(half %a) #3 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd half %a, 1.0
   %div2 = fmul half %add, 0.5
-  store half %div2, half addrspace(1)* undef
+  store half %div2, ptr addrspace(1) undef
   ret void
 }
 
@@ -1078,7 +1078,7 @@ define amdgpu_ps void @v_omod_mac_to_mad(float %b, float %a) #0 {
   %add = fadd float %mul, %b
   %mad = fmul float %add, 2.0
   %res = fmul float %mad, %b
-  store float %res, float addrspace(1)* undef
+  store float %res, ptr addrspace(1) undef
   ret void
 }
 

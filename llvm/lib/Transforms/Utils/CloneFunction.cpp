@@ -889,7 +889,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     Dest->replaceAllUsesWith(&*I);
 
     // Move all the instructions in the succ to the pred.
-    I->getInstList().splice(I->end(), Dest->getInstList());
+    I->splice(I->end(), Dest);
 
     // Remove the dest block.
     Dest->eraseFromParent();

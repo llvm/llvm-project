@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
+#include "llvm/ADT/SmallString.h"
 
 using namespace mlir;
 using namespace mlir::index;
@@ -424,6 +425,14 @@ OpFoldResult CmpOp::fold(ArrayRef<Attribute> operands) {
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
+void ConstantOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  SmallString<32> specialNameBuffer;
+  llvm::raw_svector_ostream specialName(specialNameBuffer);
+  specialName << "idx" << getValueAttr().getValue();
+  setNameFn(getResult(), specialName.str());
+}
+
 OpFoldResult ConstantOp::fold(ArrayRef<Attribute> operands) {
   return getValueAttr();
 }
@@ -438,6 +447,11 @@ void ConstantOp::build(OpBuilder &b, OperationState &state, int64_t value) {
 
 OpFoldResult BoolConstantOp::fold(ArrayRef<Attribute> operands) {
   return getValueAttr();
+}
+
+void BoolConstantOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), getValue() ? "true" : "false");
 }
 
 //===----------------------------------------------------------------------===//

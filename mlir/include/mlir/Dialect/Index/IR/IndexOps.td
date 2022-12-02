@@ -14,6 +14,7 @@ include "mlir/Dialect/Index/IR/IndexEnums.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/OpBase.td"
 
 //===----------------------------------------------------------------------===//
@@ -528,7 +529,10 @@ def Index_SizeOfOp : IndexOp<"sizeof"> {
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
-def Index_ConstantOp : IndexOp<"constant", [ConstantLike]> {
+def Index_ConstantOp : IndexOp<"constant", [
+    ConstantLike,
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
+  ]> {
   let summary = "index constant";
   let description = [{
     The `index.constant` operation produces an index-typed SSA value equal to
@@ -553,7 +557,10 @@ def Index_ConstantOp : IndexOp<"constant", [ConstantLike]> {
 // BoolConstantOp
 //===----------------------------------------------------------------------===//
 
-def Index_BoolConstantOp : IndexOp<"bool.constant", [ConstantLike]> {
+def Index_BoolConstantOp : IndexOp<"bool.constant", [
+    ConstantLike,
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
+  ]> {
   let summary = "boolean constant";
   let description = [{
     The `index.bool.constant` operation produces an bool-typed SSA value equal

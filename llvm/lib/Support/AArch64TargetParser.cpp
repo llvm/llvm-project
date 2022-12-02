@@ -73,10 +73,9 @@ bool AArch64::getExtensionFeatures(uint64_t Extensions,
 
 StringRef AArch64::resolveCPUAlias(StringRef CPU) {
   return StringSwitch<StringRef>(CPU)
-#define AARCH64_CPU_ALIAS(ALIAS,NAME)                                          \
-  .Case(ALIAS, NAME)
+#define AARCH64_CPU_ALIAS(ALIAS, NAME) .Case(ALIAS, NAME)
 #include "../../include/llvm/Support/AArch64TargetParser.def"
-  .Default(CPU);
+      .Default(CPU);
 }
 
 StringRef AArch64::getArchExtFeature(StringRef ArchExt) {

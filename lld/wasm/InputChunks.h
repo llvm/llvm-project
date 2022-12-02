@@ -85,7 +85,7 @@ public:
   OutputSection *outputSec = nullptr;
   uint32_t comdat = UINT32_MAX;
   uint32_t inputSectionOffset = 0;
-  uint32_t alignment;
+  llvm::Align alignment;
   uint32_t flags;
 
   // Only applies to data segments.
@@ -109,8 +109,8 @@ public:
 protected:
   InputChunk(ObjFile *f, Kind k, StringRef name, uint32_t alignment = 0,
              uint32_t flags = 0)
-      : name(name), file(f), alignment(alignment), flags(flags), sectionKind(k),
-        live(!config->gcSections), discarded(false) {}
+      : name(name), file(f), alignment(1ULL << alignment), flags(flags),
+        sectionKind(k), live(!config->gcSections), discarded(false) {}
   ArrayRef<uint8_t> data() const { return rawData; }
   uint64_t getTombstone() const;
 
@@ -223,7 +223,8 @@ class SyntheticMergedChunk : public InputChunk {
 public:
   SyntheticMergedChunk(StringRef name, uint32_t alignment, uint32_t flags)
       : InputChunk(nullptr, InputChunk::MergedChunk, name, alignment, flags),
-        builder(llvm::StringTableBuilder::RAW, 1ULL << alignment) {}
+        builder(llvm::StringTableBuilder::RAW, llvm::Align(1ULL << alignment)) {
+  }
 
   static bool classof(const InputChunk *c) {
     return c->kind() == InputChunk::MergedChunk;

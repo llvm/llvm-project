@@ -2236,11 +2236,6 @@ private:
               int kind =
                   Fortran::evaluate::ToInt64(intrinsic->kind()).value_or(kind);
               llvm::SmallVector<Fortran::lower::LenParameterTy> params;
-              if (intrinsic->category() ==
-                      Fortran::common::TypeCategory::Character ||
-                  intrinsic->category() ==
-                      Fortran::common::TypeCategory::Derived)
-                TODO(loc, "typeSpec with length parameters");
               ty = genType(intrinsic->category(), kind, params);
             } else {
               const Fortran::semantics::DerivedTypeSpec *derived =
@@ -2304,12 +2299,24 @@ private:
             exactValue = builder->create<fir::BoxAddrOp>(
                 loc, fir::ReferenceType::get(attr.getType()),
                 fir::getBase(selector));
+            const Fortran::semantics::IntrinsicTypeSpec *intrinsic =
+                typeSpec->declTypeSpec->AsIntrinsic();
+            if (intrinsic->category() ==
+                Fortran::common::TypeCategory::Character) {
+              auto charTy = attr.getType().dyn_cast<fir::CharacterType>();
+              mlir::Value charLen =
+                  fir::factory::CharacterExprHelper(*builder, loc)
+                      .readLengthFromBox(fir::getBase(selector), charTy);
+              addAssocEntitySymbol(fir::CharBoxValue(exactValue, charLen));
+            } else {
+              addAssocEntitySymbol(exactValue);
+            }
           } else if (std::holds_alternative<Fortran::parser::DerivedTypeSpec>(
                          typeSpec->u)) {
             exactValue = builder->create<fir::ConvertOp>(
                 loc, fir::BoxType::get(attr.getType()), fir::getBase(selector));
+            addAssocEntitySymbol(exactValue);
           }
-          addAssocEntitySymbol(exactValue);
         } else if (std::holds_alternative<Fortran::parser::DerivedTypeSpec>(
                        guard.u)) {
           // CLASS IS
