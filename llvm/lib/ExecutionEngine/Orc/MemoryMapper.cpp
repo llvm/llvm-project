@@ -423,6 +423,10 @@ SharedMemoryMapper::~SharedMemoryMapper() {
 
     UnmapViewOfFile(R.second.LocalAddr);
 
+#else
+
+    (void)R;
+
 #endif
   }
 }
