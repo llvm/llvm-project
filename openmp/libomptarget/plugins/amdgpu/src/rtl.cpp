@@ -1961,24 +1961,27 @@ void getLaunchVals(uint16_t &ThreadsPerGroup, int &NumGroups, int WarpSize,
     return;
   }
 
-  // For optimized reduction, we use as many teams as the number of CUs. This
-  // must be kept in sync with CodeGen and DeviceRTL.
   if (ExecutionMode ==
       llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_XTEAM_RED) {
-    // Constrain NumGroups to be lower than ThreadsPerGroup. The following only
-    // works for current GPU configs.
-    // TODO remove it in the future
-    if (ThreadsPerGroup > 0)
-      NumGroups = DeviceNumCUs * std::min(2, 1024 / ThreadsPerGroup);
-    else
-      NumGroups = DeviceNumCUs;
-    // Ensure we don't have a large number of teams running if the tripcount is
-    // low.
-    int NumGroupsFromTripCount = 1;
-    if (LoopTripcount > 0)
-      NumGroupsFromTripCount = ((LoopTripcount - 1) / ThreadsPerGroup) + 1;
-    NumGroups = std::min(NumGroups, NumGroupsFromTripCount);
-
+    // Honor num_teams clause.
+    if (NumTeams > 0 &&
+        NumTeams <= static_cast<int>(RTLDeviceInfoTy::HardTeamLimit))
+      NumGroups = NumTeams;
+    else {
+      // If num_teams clause is not specified, we allow a max of 2*CU teams.
+      if (ThreadsPerGroup > 0)
+        NumGroups = DeviceNumCUs * std::min(2, 1024 / ThreadsPerGroup);
+      else
+        NumGroups = DeviceNumCUs;
+      // Ensure we don't have a large number of teams running if the tripcount
+      // is low.
+      int NumGroupsFromTripCount = 1;
+      if (LoopTripcount > 0)
+        NumGroupsFromTripCount = ((LoopTripcount - 1) / ThreadsPerGroup) + 1;
+      NumGroups = std::min(NumGroups, NumGroupsFromTripCount);
+    }
+    // For now, we don't allow number of teams beyond 512.
+    NumGroups = std::min(512, NumGroups);
     DP("Final %d NumGroups and %d ThreadsPerGroup\n", NumGroups,
       ThreadsPerGroup);
     return;
