@@ -1,7 +1,7 @@
 ; RUN: llc < %s
 
 ; NVPTX can not select llvm.stacksave (dynamic_stackalloc) and llvm.stackrestore
-; UNSUPPORTED: nvptx
+; UNSUPPORTED: target=nvptx{{.*}}
 
 declare i8* @llvm.stacksave()
 

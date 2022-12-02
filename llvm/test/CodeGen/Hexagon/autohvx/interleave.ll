@@ -1,4 +1,4 @@
-; RUN: opt -march=hexagon -hexagon-autohvx -loop-vectorize -S < %s | FileCheck %s
+; RUN: opt -march=hexagon -hexagon-autohvx -passes=loop-vectorize -S < %s | FileCheck %s
 ; Check that the loop has been interleaved.
 ; CHECK: store <64 x i32> %interleaved.vec
 

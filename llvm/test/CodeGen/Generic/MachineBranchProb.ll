@@ -2,7 +2,7 @@
 
 ; Hexagon runs passes that renumber the basic blocks, causing this test
 ; to fail.
-; XFAIL: hexagon
+; XFAIL: target=hexagon-{{.*}}
 
 declare void @foo()
 

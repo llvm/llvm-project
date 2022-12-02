@@ -1180,7 +1180,8 @@ public:
                                        const MachineBasicBlock *MBB) const;
 
   /// Return true when \P Inst has reassociable sibling.
-  bool hasReassociableSibling(const MachineInstr &Inst, bool &Commuted) const;
+  virtual bool hasReassociableSibling(const MachineInstr &Inst,
+                                      bool &Commuted) const;
 
   /// When getMachineCombinerPatterns() finds patterns, this function generates
   /// the instructions that could replace the original code sequence. The client

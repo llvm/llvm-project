@@ -3,10 +3,10 @@
 # RUN: llvm-mc %s --triple=loongarch64 --mattr=+d --show-encoding --defsym=LA64=1 \
 # RUN:     | FileCheck --check-prefixes=ASM-AND-OBJ,ASM,ASM-AND-OBJ64,ASM64 %s
 # RUN: llvm-mc %s --triple=loongarch32 --mattr=+d --filetype=obj \
-# RUN:     | llvm-objdump -d --mattr=+d - \
+# RUN:     | llvm-objdump -d - \
 # RUN:     | FileCheck --check-prefix=ASM-AND-OBJ %s
 # RUN: llvm-mc %s --triple=loongarch64 --mattr=+d --filetype=obj --defsym=LA64=1 \
-# RUN:     | llvm-objdump -d --mattr=+d - \
+# RUN:     | llvm-objdump -d - \
 # RUN:     | FileCheck --check-prefixes=ASM-AND-OBJ,ASM-AND-OBJ64 %s
 
 ## Support for the 'D' extension implies support for 'F'

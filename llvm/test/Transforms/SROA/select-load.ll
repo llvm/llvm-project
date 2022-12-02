@@ -116,35 +116,175 @@ define i32 @clamp_load_to_constant_range(ptr %data, i64 %indvars.iv) {
   ret i32 %i3
 }
 
-define i32 @non_speculatable_load_of_select(i1 %cond, ptr %data) {
+define i32 @non_speculatable_load_of_select(i1 %cond, ptr %else.addr) {
 ; CHECK-LABEL: @non_speculatable_load_of_select(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MIN:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 0, ptr [[MIN]], align 4
-; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND:%.*]], ptr [[MIN]], ptr [[DATA:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND:%.*]], ptr [[MIN]], ptr [[ELSE_ADDR:%.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
   %min = alloca i32, align 4
   store i32 0, ptr %min, align 4
-  %addr = select i1 %cond, ptr %min, ptr %data, !prof !0
+  %addr = select i1 %cond, ptr %min, ptr %else.addr, !prof !0
   %r = load i32, ptr %addr, align 4
   ret i32 %r
 }
-define i32 @non_speculatable_load_of_select_inverted(i1 %cond, ptr %data) {
+define i32 @non_speculatable_load_of_select_inverted(i1 %cond, ptr %then.addr) {
 ; CHECK-LABEL: @non_speculatable_load_of_select_inverted(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MAX:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 4095, ptr [[MAX]], align 4
-; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND:%.*]], ptr [[DATA:%.*]], ptr [[MAX]], !prof [[PROF0]]
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND:%.*]], ptr [[THEN_ADDR:%.*]], ptr [[MAX]], !prof [[PROF0]]
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
   %max = alloca i32, align 4
   store i32 4095, ptr %max, align 4
-  %addr = select i1 %cond, ptr %data, ptr %max, !prof !0
+  %addr = select i1 %cond, ptr %then.addr, ptr %max, !prof !0
+  %r = load i32, ptr %addr, align 4
+  ret i32 %r
+}
+
+define i32 @non_speculatable_volatile_load_of_select(i1 %cond, ptr %else.addr) {
+; CHECK-LABEL: @non_speculatable_volatile_load_of_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[MIN]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND:%.*]], ptr [[MIN]], ptr [[ELSE_ADDR:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[R:%.*]] = load volatile i32, ptr [[ADDR]], align 4
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %min = alloca i32, align 4
+  store i32 0, ptr %min, align 4
+  %addr = select i1 %cond, ptr %min, ptr %else.addr, !prof !0
+  %r = load volatile i32, ptr %addr, align 4
+  ret i32 %r
+}
+define i32 @non_speculatable_volatile_load_of_select_inverted(i1 %cond, ptr %then.addr) {
+; CHECK-LABEL: @non_speculatable_volatile_load_of_select_inverted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MAX:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 4095, ptr [[MAX]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND:%.*]], ptr [[THEN_ADDR:%.*]], ptr [[MAX]], !prof [[PROF0]]
+; CHECK-NEXT:    [[R:%.*]] = load volatile i32, ptr [[ADDR]], align 4
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %max = alloca i32, align 4
+  store i32 4095, ptr %max, align 4
+  %addr = select i1 %cond, ptr %then.addr, ptr %max, !prof !0
+  %r = load volatile i32, ptr %addr, align 4
+  ret i32 %r
+}
+
+define i32 @non_speculatable_atomic_unord_load_of_select(i1 %cond, ptr %else.addr) {
+; CHECK-LABEL: @non_speculatable_atomic_unord_load_of_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[MIN]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND:%.*]], ptr [[MIN]], ptr [[ELSE_ADDR:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[ADDR]] unordered, align 4
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %min = alloca i32, align 4
+  store i32 0, ptr %min, align 4
+  %addr = select i1 %cond, ptr %min, ptr %else.addr, !prof !0
+  %r = load atomic i32, ptr %addr unordered, align 4
+  ret i32 %r
+}
+define i32 @non_speculatable_atomic_unord_load_of_select_inverted(i1 %cond, ptr %then.addr) {
+; CHECK-LABEL: @non_speculatable_atomic_unord_load_of_select_inverted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MAX:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 4095, ptr [[MAX]], align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND:%.*]], ptr [[THEN_ADDR:%.*]], ptr [[MAX]], !prof [[PROF0]]
+; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[ADDR]] unordered, align 4
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %max = alloca i32, align 4
+  store i32 4095, ptr %max, align 4
+  %addr = select i1 %cond, ptr %then.addr, ptr %max, !prof !0
+  %r = load atomic i32, ptr %addr unordered, align 4
+  ret i32 %r
+}
+
+define i32 @non_speculatable_load_of_select_outer(i1 %cond_inner, i1 %cond_outer, ptr %data_then, ptr %data_else) {
+; CHECK-LABEL: @non_speculatable_load_of_select_outer(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[MIN]], align 4
+; CHECK-NEXT:    [[ADDR_DATA:%.*]] = select i1 [[COND_INNER:%.*]], ptr [[DATA_THEN:%.*]], ptr [[DATA_ELSE:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND_OUTER:%.*]], ptr [[MIN]], ptr [[ADDR_DATA]], !prof [[PROF0]]
+; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[ADDR]], align 4
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %min = alloca i32, align 4
+  store i32 0, ptr %min, align 4
+  %addr.data = select i1 %cond_inner, ptr %data_then, ptr %data_else, !prof !0
+  %addr = select i1 %cond_outer, ptr %min, ptr %addr.data, !prof !0
+  %r = load i32, ptr %addr, align 4
+  ret i32 %r
+}
+define i32 @non_speculatable_load_of_select_outer_inverted(i1 %cond_inner, i1 %cond_outer, ptr %data_then, ptr %data_else) {
+; CHECK-LABEL: @non_speculatable_load_of_select_outer_inverted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[MIN]], align 4
+; CHECK-NEXT:    [[ADDR_DATA:%.*]] = select i1 [[COND_INNER:%.*]], ptr [[DATA_THEN:%.*]], ptr [[DATA_ELSE:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND_OUTER:%.*]], ptr [[ADDR_DATA]], ptr [[MIN]], !prof [[PROF0]]
+; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[ADDR]], align 4
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %min = alloca i32, align 4
+  store i32 0, ptr %min, align 4
+  %addr.data = select i1 %cond_inner, ptr %data_then, ptr %data_else, !prof !0
+  %addr = select i1 %cond_outer, ptr %addr.data, ptr %min, !prof !0
+  %r = load i32, ptr %addr, align 4
+  ret i32 %r
+}
+
+define i32 @non_speculatable_load_of_select_inner(i1 %cond_inner, i1 %cond_outer, ptr %data_else, ptr %min_else) {
+; CHECK-LABEL: @non_speculatable_load_of_select_inner(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[MIN]], align 4
+; CHECK-NEXT:    [[MIN_ADDR_DATA:%.*]] = select i1 [[COND_INNER:%.*]], ptr [[MIN]], ptr [[MIN_ELSE:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND_OUTER:%.*]], ptr [[MIN_ADDR_DATA]], ptr [[DATA_ELSE:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[ADDR]], align 4
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %min = alloca i32, align 4
+  store i32 0, ptr %min, align 4
+  %min.addr.data = select i1 %cond_inner, ptr %min, ptr %min_else, !prof !0
+  %addr = select i1 %cond_outer, ptr %min.addr.data, ptr %data_else, !prof !0
+  %r = load i32, ptr %addr, align 4
+  ret i32 %r
+}
+define i32 @non_speculatable_load_of_select_inner_inverted(i1 %cond_inner, i1 %cond_outer, ptr %data_else, ptr %min_then) {
+; CHECK-LABEL: @non_speculatable_load_of_select_inner_inverted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[MIN]], align 4
+; CHECK-NEXT:    [[MIN_ADDR_DATA:%.*]] = select i1 [[COND_INNER:%.*]], ptr [[MIN_THEN:%.*]], ptr [[MIN]], !prof [[PROF0]]
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND_OUTER:%.*]], ptr [[MIN_ADDR_DATA]], ptr [[DATA_ELSE:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[ADDR]], align 4
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %min = alloca i32, align 4
+  store i32 0, ptr %min, align 4
+  %min.addr.data = select i1 %cond_inner, ptr %min_then, ptr %min, !prof !0
+  %addr = select i1 %cond_outer, ptr %min.addr.data, ptr %data_else, !prof !0
   %r = load i32, ptr %addr, align 4
   ret i32 %r
 }
@@ -152,7 +292,6 @@ entry:
 !0  = !{!"branch_weights", i32 1,  i32 99}
 
 ; Ensure that the branch metadata is reversed to match the reversals above.
-; CHECK: !0 = {{.*}} i32 1, i32 99}
 
 declare void @llvm.lifetime.start.p0(i64, ptr )
 declare void @llvm.lifetime.end.p0(i64, ptr)

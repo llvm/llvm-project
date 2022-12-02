@@ -248,7 +248,7 @@ static int computeHostNumHardwareThreads() {
 
 // Finds the proper CPU socket where a thread number should go. Returns 'None'
 // if the thread shall remain on the actual CPU socket.
-Optional<unsigned>
+std::optional<unsigned>
 llvm::ThreadPoolStrategy::compute_cpu_socket(unsigned ThreadPoolNum) const {
   ArrayRef<ProcessorGroup> Groups = getProcessorGroups();
   // Only one CPU socket in the system or process affinity was set, no need to
@@ -273,7 +273,7 @@ llvm::ThreadPoolStrategy::compute_cpu_socket(unsigned ThreadPoolNum) const {
 // Assign the current thread to a more appropriate CPU socket or CPU group
 void llvm::ThreadPoolStrategy::apply_thread_strategy(
     unsigned ThreadPoolNum) const {
-  Optional<unsigned> Socket = compute_cpu_socket(ThreadPoolNum);
+  std::optional<unsigned> Socket = compute_cpu_socket(ThreadPoolNum);
   if (!Socket)
     return;
   ArrayRef<ProcessorGroup> Groups = getProcessorGroups();

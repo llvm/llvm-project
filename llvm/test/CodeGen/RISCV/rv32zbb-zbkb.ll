@@ -138,8 +138,8 @@ declare i64 @llvm.fshl.i64(i64, i64, i64)
 define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: rol_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a3, a2, 26
-; CHECK-NEXT:    srli a5, a3, 31
+; CHECK-NEXT:    slli a5, a2, 26
+; CHECK-NEXT:    srli a5, a5, 31
 ; CHECK-NEXT:    mv a4, a1
 ; CHECK-NEXT:    bnez a5, .LBB7_2
 ; CHECK-NEXT:  # %bb.1:
@@ -155,8 +155,8 @@ define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    srl a1, a1, a5
 ; CHECK-NEXT:    or a3, a3, a1
 ; CHECK-NEXT:    sll a0, a0, a2
-; CHECK-NEXT:    srli a1, a4, 1
-; CHECK-NEXT:    srl a1, a1, a5
+; CHECK-NEXT:    srli a4, a4, 1
+; CHECK-NEXT:    srl a1, a4, a5
 ; CHECK-NEXT:    or a1, a0, a1
 ; CHECK-NEXT:    mv a0, a3
 ; CHECK-NEXT:    ret
@@ -306,9 +306,9 @@ define i64 @not_shl_one_i64(i64 %x) {
 ; CHECK-NEXT:    and a2, a4, a2
 ; CHECK-NEXT:    sll a0, a1, a0
 ; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a1, a3, a0
+; CHECK-NEXT:    and a3, a3, a0
 ; CHECK-NEXT:    not a0, a2
-; CHECK-NEXT:    not a1, a1
+; CHECK-NEXT:    not a1, a3
 ; CHECK-NEXT:    ret
   %1 = shl i64 1, %x
   %2 = xor i64 %1, -1

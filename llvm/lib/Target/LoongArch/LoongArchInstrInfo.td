@@ -59,8 +59,22 @@ def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_rotr_w : SDNode<"LoongArchISD::ROTR_W", SDT_LoongArchIntBinOpW>;
 def loongarch_rotl_w : SDNode<"LoongArchISD::ROTL_W", SDT_LoongArchIntBinOpW>;
+def loongarch_crc_w_b_w
+    : SDNode<"LoongArchISD::CRC_W_B_W", SDT_LoongArchIntBinOpW>;
+def loongarch_crc_w_h_w
+    : SDNode<"LoongArchISD::CRC_W_H_W", SDT_LoongArchIntBinOpW>;
+def loongarch_crc_w_w_w
+    : SDNode<"LoongArchISD::CRC_W_W_W", SDT_LoongArchIntBinOpW>;
 def loongarch_crc_w_d_w
     : SDNode<"LoongArchISD::CRC_W_D_W", SDT_LoongArchIntBinOpW>;
+def loongarch_crcc_w_b_w
+    : SDNode<"LoongArchISD::CRCC_W_B_W", SDT_LoongArchIntBinOpW>;
+def loongarch_crcc_w_h_w
+    : SDNode<"LoongArchISD::CRCC_W_H_W", SDT_LoongArchIntBinOpW>;
+def loongarch_crcc_w_w_w
+    : SDNode<"LoongArchISD::CRCC_W_W_W", SDT_LoongArchIntBinOpW>;
+def loongarch_crcc_w_d_w
+    : SDNode<"LoongArchISD::CRCC_W_D_W", SDT_LoongArchIntBinOpW>;
 def loongarch_bstrins
     : SDNode<"LoongArchISD::BSTRINS", SDT_LoongArchBStrIns>;
 def loongarch_bstrpick
@@ -1487,7 +1501,14 @@ def : Pat<(loongarch_syscall uimm15:$imm15), (SYSCALL uimm15:$imm15)>;
 
 let Predicates = [IsLA64] in {
 // CRC Check Instructions
+def : PatGprGpr<loongarch_crc_w_b_w, CRC_W_B_W>;
+def : PatGprGpr<loongarch_crc_w_h_w, CRC_W_H_W>;
+def : PatGprGpr<loongarch_crc_w_w_w, CRC_W_W_W>;
 def : PatGprGpr<loongarch_crc_w_d_w, CRC_W_D_W>;
+def : PatGprGpr<loongarch_crcc_w_b_w, CRCC_W_B_W>;
+def : PatGprGpr<loongarch_crcc_w_h_w, CRCC_W_H_W>;
+def : PatGprGpr<loongarch_crcc_w_w_w, CRCC_W_W_W>;
+def : PatGprGpr<loongarch_crcc_w_d_w, CRCC_W_D_W>;
 } // Predicates = [IsLA64]
 
 /// Other pseudo-instructions

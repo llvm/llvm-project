@@ -409,10 +409,6 @@ namespace llvm {
   /// the intrinsic for later emission to the StackMap.
   extern char &StackMapLivenessID;
 
-  // MachineSanitizerBinaryMetadata - appends/finalizes sanitizer binary
-  // metadata after llvm SanitizerBinaryMetadata pass.
-  extern char &MachineSanitizerBinaryMetadataID;
-
   /// RemoveRedundantDebugValues pass.
   extern char &RemoveRedundantDebugValuesID;
 
@@ -497,6 +493,9 @@ namespace llvm {
 
   // Expands large div/rem instructions.
   FunctionPass *createExpandLargeDivRemPass();
+
+  // Expands large div/rem instructions.
+  FunctionPass *createExpandLargeFpConvertPass();
 
   // This pass expands memcmp() to load/stores.
   FunctionPass *createExpandMemCmpPass();

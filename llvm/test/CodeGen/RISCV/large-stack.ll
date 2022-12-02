@@ -94,9 +94,9 @@ define void @test_emergency_spill_slot(i32 %a) {
 ; RV32I-WITHFP-NEXT:    addi a1, a1, 688
 ; RV32I-WITHFP-NEXT:    sub sp, sp, a1
 ; RV32I-WITHFP-NEXT:    lui a1, 78
-; RV32I-WITHFP-NEXT:    lui a2, 1048478
-; RV32I-WITHFP-NEXT:    addi a2, a2, 1388
-; RV32I-WITHFP-NEXT:    add a2, s0, a2
+; RV32I-WITHFP-NEXT:    lui a2, 98
+; RV32I-WITHFP-NEXT:    addi a2, a2, -1388
+; RV32I-WITHFP-NEXT:    sub a2, s0, a2
 ; RV32I-WITHFP-NEXT:    add a1, a2, a1
 ; RV32I-WITHFP-NEXT:    #APP
 ; RV32I-WITHFP-NEXT:    nop

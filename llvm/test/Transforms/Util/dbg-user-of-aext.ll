@@ -1,7 +1,7 @@
 ; Checks that llvm.dbg.declare -> llvm.dbg.value conversion utility
 ; (here exposed through the SROA) pass refers to [s|z]exts of values (as
 ; opposed to the operand of a [s|z]ext).
-; RUN: opt -S -passes=sroa %s | FileCheck %s
+; RUN: opt -S -passes='sroa' %s | FileCheck %s
 
 ; Built from:
 ; struct foo { bool b; long i; };

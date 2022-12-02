@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -memcpyopt | FileCheck --match-full-lines %s
+; RUN: opt < %s -S -passes=memcpyopt | FileCheck --match-full-lines %s
 
 ; Make sure callslot optimization merges alias.scope metadata correctly when it merges instructions.
 ; Merging here naively generates:
