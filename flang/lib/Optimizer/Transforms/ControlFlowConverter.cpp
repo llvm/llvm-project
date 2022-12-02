@@ -464,7 +464,10 @@ public:
       return fir::complexBitsToTypeCode(
           kindMap.getRealBitsize(cmplxTy.getFKind()));
     }
-    return 0; // TODO more types.
+    if (auto charTy = ty.dyn_cast<fir::CharacterType>())
+      return fir::characterBitsToTypeCode(
+          kindMap.getCharacterBitsize(charTy.getFKind()));
+    return 0;
   }
 
   mlir::LogicalResult
@@ -476,13 +479,14 @@ public:
     mlir::Value cmp;
     // TYPE IS type guard comparison are all done inlined.
     if (auto a = attr.dyn_cast<fir::ExactTypeAttr>()) {
-      if (fir::isa_trivial(a.getType())) {
+      if (fir::isa_trivial(a.getType()) ||
+          a.getType().isa<fir::CharacterType>()) {
         // For type guard statement with Intrinsic type spec the type code of
         // the descriptor is compared.
         int code = getTypeCode(a.getType(), kindMap);
         if (code == 0)
           return mlir::emitError(loc)
-                 << "type code not done for " << a.getType();
+                 << "type code unavailable for " << a.getType();
         mlir::Value typeCode = rewriter.create<mlir::arith::ConstantOp>(
             loc, rewriter.getI8IntegerAttr(code));
         mlir::Value selectorTypeCode = rewriter.create<fir::BoxTypeCodeOp>(
