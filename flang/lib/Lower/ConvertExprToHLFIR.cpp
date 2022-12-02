@@ -592,6 +592,27 @@ struct UnaryOp<Fortran::evaluate::Parentheses<T>> {
   }
 };
 
+template <Fortran::common::TypeCategory TC1, int KIND,
+          Fortran::common::TypeCategory TC2>
+struct UnaryOp<
+    Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1, KIND>, TC2>> {
+  using Op =
+      Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1, KIND>, TC2>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs) {
+    if constexpr (TC1 == Fortran::common::TypeCategory::Character &&
+                  TC2 == TC1) {
+      TODO(loc, "character conversion in HLFIR");
+    } else {
+      mlir::Type type = Fortran::lower::getFIRType(builder.getContext(), TC1,
+                                                   KIND, /*params=*/llvm::None);
+      mlir::Value res = builder.convertWithSemantics(loc, type, lhs);
+      return hlfir::EntityWithAttributes{res};
+    }
+  }
+};
+
 /// Lower Expr to HLFIR.
 class HlfirBuilder {
 public:
@@ -668,14 +689,6 @@ private:
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::ArrayConstructor<T> &expr) {
     TODO(getLoc(), "lowering ArrayCtor to HLFIR");
-  }
-
-  template <Fortran::common::TypeCategory TC1, int KIND,
-            Fortran::common::TypeCategory TC2>
-  hlfir::EntityWithAttributes
-  gen(const Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1, KIND>, TC2>
-          &convert) {
-    TODO(getLoc(), "lowering convert to HLFIR");
   }
 
   template <typename D, typename R, typename O>
