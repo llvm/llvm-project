@@ -3464,6 +3464,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
       getNamedOperand(MI, AMDGPU::OpName::src2_modifiers);
   const MachineOperand *Clamp = getNamedOperand(MI, AMDGPU::OpName::clamp);
   const MachineOperand *Omod = getNamedOperand(MI, AMDGPU::OpName::omod);
+  const MachineOperand *OpSel = getNamedOperand(MI, AMDGPU::OpName::op_sel);
 
   if (!Src0Mods && !Src1Mods && !Src2Mods && !Clamp && !Omod && !IsF64 &&
       !IsLegacy &&
@@ -3574,6 +3575,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
             .add(*Src2)
             .addImm(Clamp ? Clamp->getImm() : 0)
             .addImm(Omod ? Omod->getImm() : 0);
+  if (AMDGPU::hasNamedOperand(NewOpc, AMDGPU::OpName::op_sel))
+    MIB.addImm(OpSel ? OpSel->getImm() : 0);
   updateLiveVariables(LV, MI, *MIB);
   if (LIS)
     LIS->ReplaceMachineInstrInMaps(MI, *MIB);
