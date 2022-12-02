@@ -50,6 +50,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -1427,7 +1428,7 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
   }
   case Attribute::AllocSize: {
     unsigned ElemSizeArg;
-    Optional<unsigned> NumElemsArg;
+    std::optional<unsigned> NumElemsArg;
     if (parseAllocSizeArguments(ElemSizeArg, NumElemsArg))
       return true;
     B.addAllocSizeAttr(ElemSizeArg, NumElemsArg);
@@ -1438,7 +1439,7 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     if (parseVScaleRangeArguments(MinValue, MaxValue))
       return true;
     B.addVScaleRangeAttr(MinValue,
-                         MaxValue > 0 ? MaxValue : Optional<unsigned>());
+                         MaxValue > 0 ? MaxValue : std::optional<unsigned>());
     return false;
   }
   case Attribute::Dereferenceable: {
@@ -2371,7 +2372,7 @@ bool LLParser::parseOptionalCommaAddrSpace(unsigned &AddrSpace, LocTy &Loc,
 }
 
 bool LLParser::parseAllocSizeArguments(unsigned &BaseSizeArg,
-                                       Optional<unsigned> &HowManyArg) {
+                                       std::optional<unsigned> &HowManyArg) {
   Lex.Lex();
 
   auto StartParen = Lex.getLoc();
