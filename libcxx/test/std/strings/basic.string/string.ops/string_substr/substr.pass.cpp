@@ -126,14 +126,14 @@ TEST_CONSTEXPR_CXX20 bool test_alloc() {
     using string = std::basic_string<char, std::char_traits<char>, alloc>;
     test_allocator_statistics stats;
     {
-      string str((alloc(&stats)));
+      string str = string(alloc(&stats));
       stats = test_allocator_statistics();
       (void)str.substr();
       assert(stats.moved == 0);
       assert(stats.copied == 0);
     }
     {
-      string str((alloc(&stats)));
+      string str = string(alloc(&stats));
       stats = test_allocator_statistics();
       (void)std::move(str).substr();
       assert(stats.moved == 0);
