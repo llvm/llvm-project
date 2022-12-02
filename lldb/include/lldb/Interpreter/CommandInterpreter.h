@@ -559,6 +559,9 @@ public:
   bool GetSaveSessionOnQuit() const;
   void SetSaveSessionOnQuit(bool enable);
 
+  bool GetOpenTranscriptInEditor() const;
+  void SetOpenTranscriptInEditor(bool enable);
+
   FileSpec GetSaveSessionDirectory() const;
   void SetSaveSessionDirectory(llvm::StringRef path);
 

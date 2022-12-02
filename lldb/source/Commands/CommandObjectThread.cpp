@@ -189,6 +189,7 @@ protected:
         if (ext_thread_sp && ext_thread_sp->IsValid()) {
           const uint32_t num_frames_with_source = 0;
           const bool stop_format = false;
+          strm.PutChar('\n');
           if (ext_thread_sp->GetStatus(strm, m_options.m_start,
                                        m_options.m_count,
                                        num_frames_with_source, stop_format)) {

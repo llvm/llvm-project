@@ -177,4 +177,15 @@ ScriptedProcessPythonInterface::CreateScriptedThreadInterface() {
   return std::make_shared<ScriptedThreadPythonInterface>(m_interpreter);
 }
 
+StructuredData::DictionarySP ScriptedProcessPythonInterface::GetMetadata() {
+  Status error;
+  StructuredData::DictionarySP dict =
+      Dispatch<StructuredData::DictionarySP>("get_process_metadata", error);
+
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict, error))
+    return {};
+
+  return dict;
+}
+
 #endif

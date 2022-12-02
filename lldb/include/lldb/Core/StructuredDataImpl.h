@@ -80,7 +80,7 @@ public:
         error.SetErrorString("No data to describe.");
         return error;
       }
-      m_data_sp->Dump(stream, true);
+      m_data_sp->GetDescription(stream);
       return error;
     }
     // Get the data's description.

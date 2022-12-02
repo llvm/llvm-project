@@ -462,6 +462,12 @@ class JSONCrashLogParser(CrashLogParser):
             self.parse_images(self.data['usedImages'])
             self.parse_main_image(self.data)
             self.parse_threads(self.data['threads'])
+            if 'asi' in self.data:
+                self.crashlog.asi = self.data['asi']
+            if 'asiBacktraces' in self.data:
+                self.parse_app_specific_backtraces(self.data['asiBacktraces'])
+            if 'lastExceptionBacktrace' in self.data:
+                self.crashlog.asb = self.data['lastExceptionBacktrace']
             self.parse_errors(self.data)
             thread = self.crashlog.threads[self.crashlog.crashed_thread_idx]
             reason = self.parse_crash_reason(self.data['exception'])
@@ -573,6 +579,31 @@ class JSONCrashLogParser(CrashLogParser):
             self.crashlog.threads.append(thread)
             idx += 1
 
+    def parse_asi_backtrace(self, thread, bt):
+        for line in bt.split('\n'):
+            frame_match = TextCrashLogParser.frame_regex.search(line)
+            if not frame_match:
+                print("error: can't parse application specific backtrace.")
+                return False
+
+            (frame_id, frame_img_name, frame_addr,
+                frame_ofs) = frame_match.groups()
+
+            thread.add_ident(frame_img_name)
+            if frame_img_name not in self.crashlog.idents:
+                self.crashlog.idents.append(frame_img_name)
+            thread.frames.append(self.crashlog.Frame(int(frame_id), int(
+                frame_addr, 0), frame_ofs))
+
+        return True
+
+    def parse_app_specific_backtraces(self, json_app_specific_bts):
+        for idx, backtrace in enumerate(json_app_specific_bts):
+            thread = self.crashlog.Thread(idx, True)
+            thread.queue = "Application Specific Backtrace"
+            if self.parse_asi_backtrace(thread, backtrace):
+                self.crashlog.threads.append(thread)
+
     def parse_thread_registers(self, json_thread_state, prefix=None):
         registers = dict()
         for key, state in json_thread_state.items():
@@ -613,17 +644,17 @@ class TextCrashLogParser(CrashLogParser):
     frame_regex = re.compile(r'^(\d+)\s+'              # id
                              r'(.+?)\s+'               # img_name
                              r'(?:' +version+ r'\s+)?' # img_version
-                             r'(0x[0-9a-fA-F]{7,})'    # addr (7 chars or more)
-                             r' +(.*)'                 # offs
+                             r'(0x[0-9a-fA-F]{4,})'    # addr (4 chars or more)
+                             r'(?: +(.*))?'            # offs
                             )
-    null_frame_regex = re.compile(r'^\d+\s+\?\?\?\s+0{7,} +')
+    null_frame_regex = re.compile(r'^\d+\s+\?\?\?\s+0{4,} +')
     image_regex_uuid = re.compile(r'(0x[0-9a-fA-F]+)'          # img_lo
                                   r'\s+-\s+'                   #   -
                                   r'(0x[0-9a-fA-F]+)\s+'       # img_hi
                                   r'[+]?(.+?)\s+'              # img_name
                                   r'(?:(' +version+ r')\s+)?'  # img_version
                                   r'(?:<([-0-9a-fA-F]+)>\s+)?' # img_uuid
-                                  r'(/.*)'                     # img_path
+                                  r'(\?+|/.*)'                 # img_path
                                  )
     exception_type_regex = re.compile(r'^Exception Type:\s+(EXC_[A-Z_]+)(?:\s+\((.*)\))?')
     exception_codes_regex = re.compile(r'^Exception Codes:\s+(0x[0-9a-fA-F]+),\s*(0x[0-9a-fA-F]+)')
@@ -1073,7 +1104,7 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result)
         raise InteractiveCrashLogException("couldn't import crashlog scripted process module")
 
     structured_data = lldb.SBStructuredData()
-    structured_data.SetFromJSON(json.dumps({ "crashlog_path" : crashlog_path,
+    structured_data.SetFromJSON(json.dumps({ "file_path" : crashlog_path,
                                              "load_all_images": options.load_all_images }))
     launch_info = lldb.SBLaunchInfo(None)
     launch_info.SetProcessPluginName("ScriptedProcess")
@@ -1102,8 +1133,8 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result)
             run_options.SetEchoCommands(True)
 
             commands_stream = lldb.SBStream()
-            commands_stream.Print("process status\n")
-            commands_stream.Print("thread backtrace\n")
+            commands_stream.Print("process status --verbose\n")
+            commands_stream.Print("thread backtrace --extended true\n")
             error = debugger.SetInputString(commands_stream.GetData())
             if error.Success():
                 debugger.RunCommandInterpreter(True, False, run_options, 0, False, True)
