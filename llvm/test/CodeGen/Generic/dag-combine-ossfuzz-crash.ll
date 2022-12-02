@@ -1,5 +1,5 @@
 ; RUN: llc < %s
-; XFAIL: avr
+; XFAIL: target=avr{{.*}}
 
 ; llc built with address sanitizer crashes because of a dangling node pointer
 ; oss-fuzz -  DAGCombiner::useDivRem (5011)
