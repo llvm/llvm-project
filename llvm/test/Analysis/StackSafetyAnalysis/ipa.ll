@@ -565,7 +565,7 @@ entry:
 ; CHECK-NEXT: p[]: [0,4){{$}}
 ; CHECK-NEXT: allocas uses:
 ; GLOBAL-NEXT: safe accesses:
-; GLOBAL-NEXT: store i32 0, i32* %0, align 1
+; GLOBAL-NEXT: store i32 0, i32* %cast, align 1
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Write4_2{{$}}
@@ -574,8 +574,8 @@ entry:
 ; CHECK-NEXT: q[]: [0,4){{$}}
 ; CHECK-NEXT: allocas uses:
 ; GLOBAL-NEXT: safe accesses:
-; GLOBAL-NEXT: store i32 0, i32* %0, align 1
-; GLOBAL-NEXT: store i32 0, i32* %1, align 1
+; GLOBAL-NEXT: store i32 0, i32* %cast0, align 1
+; GLOBAL-NEXT: store i32 0, i32* %cast1, align 1
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Write8{{$}}
@@ -583,7 +583,7 @@ entry:
 ; CHECK-NEXT: p[]: [0,8){{$}}
 ; CHECK-NEXT: allocas uses:
 ; GLOBAL-NEXT: safe accesses:
-; GLOBAL-NEXT: store i64 0, i64* %0, align 1
+; GLOBAL-NEXT: store i64 0, i64* %cast0, align 1
 ; CHECK-EMPTY:
 
 ; CHECK-LABEL: @WriteAndReturn8{{$}}
@@ -648,8 +648,8 @@ entry:
 ; CHECK-NEXT: acc[]: [0,4), @RecursiveNoOffset(arg2, [0,1)){{$}}
 ; CHECK-NEXT: allocas uses:
 ; GLOBAL-NEXT: safe accesses:
-; GLOBAL-NEXT: %0 = load i32, i32* %p, align 4
-; GLOBAL-NEXT: %1 = load i32, i32* %acc, align 4
+; GLOBAL-NEXT: %load0 = load i32, i32* %p, align 4
+; GLOBAL-NEXT: %load1 = load i32, i32* %acc, align 4
 ; GLOBAL-NEXT: store i32 %add, i32* %acc, align 4
 ; CHECK-EMPTY:
 

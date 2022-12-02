@@ -11,24 +11,24 @@ entry:
 
 define dso_local void @Write4(i8* %p) #0 {
 entry:
-  %0 = bitcast i8* %p to i32*
-  store i32 0, i32* %0, align 1
+  %cast = bitcast i8* %p to i32*
+  store i32 0, i32* %cast, align 1
   ret void
 }
 
 define dso_local void @Write4_2(i8* %p, i8* %q) #0 {
 entry:
-  %0 = bitcast i8* %p to i32*
-  store i32 0, i32* %0, align 1
-  %1 = bitcast i8* %q to i32*
-  store i32 0, i32* %1, align 1
+  %cast0 = bitcast i8* %p to i32*
+  store i32 0, i32* %cast0, align 1
+  %cast1 = bitcast i8* %q to i32*
+  store i32 0, i32* %cast1, align 1
   ret void
 }
 
 define dso_local void @Write8(i8* %p) #0 {
 entry:
-  %0 = bitcast i8* %p to i64*
-  store i64 0, i64* %0, align 1
+  %cast0 = bitcast i8* %p to i64*
+  store i64 0, i64* %cast0, align 1
   ret void
 }
 
@@ -89,9 +89,9 @@ entry:
   br i1 %cmp, label %return, label %if.end
 
 if.end:
-  %0 = load i32, i32* %p, align 4
-  %1 = load i32, i32* %acc, align 4
-  %add = add nsw i32 %1, %0
+  %load0 = load i32, i32* %p, align 4
+  %load1 = load i32, i32* %acc, align 4
+  %add = add nsw i32 %load1, %load0
   store i32 %add, i32* %acc, align 4
   %add.ptr = getelementptr inbounds i32, i32* %p, i64 1
   %sub = add nsw i32 %size, -1
