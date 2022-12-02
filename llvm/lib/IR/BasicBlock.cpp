@@ -480,6 +480,11 @@ void BasicBlock::splice(BasicBlock::iterator ToIt, BasicBlock *FromBB,
   getInstList().splice(ToIt, FromBB->getInstList(), FromBeginIt, FromEndIt);
 }
 
+BasicBlock::iterator BasicBlock::erase(BasicBlock::iterator FromIt,
+                                       BasicBlock::iterator ToIt) {
+  return getInstList().erase(FromIt, ToIt);
+}
+
 void BasicBlock::replacePhiUsesWith(BasicBlock *Old, BasicBlock *New) {
   // N.B. This might not be a complete BasicBlock, so don't assume
   // that it ends with a non-phi instruction.

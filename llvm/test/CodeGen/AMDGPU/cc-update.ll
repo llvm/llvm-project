@@ -61,7 +61,7 @@ define amdgpu_kernel void @test_kern_stack() local_unnamed_addr #0 {
 ; GFX1100-NEXT:    s_endpgm
 entry:
   %x = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %x, align 4
+  store volatile i32 0, ptr addrspace(5) %x, align 4
   ret void
 }
 
@@ -243,7 +243,7 @@ define amdgpu_kernel void @test_kern_stack_and_call() local_unnamed_addr #0 {
 
 entry:
   %x = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %x, align 4
+  store volatile i32 0, ptr addrspace(5) %x, align 4
   tail call void @ex() #0
   ret void
 }
@@ -314,7 +314,7 @@ define amdgpu_kernel void @test_force_fp_kern_stack() local_unnamed_addr #2 {
 ; GFX1100-NEXT:    s_endpgm
 entry:
   %x = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %x, align 4
+  store volatile i32 0, ptr addrspace(5) %x, align 4
   ret void
 }
 
@@ -521,7 +521,7 @@ define amdgpu_kernel void @test_force_fp_kern_stack_and_call() local_unnamed_add
 ; GFX1100-NEXT:    s_endpgm
 entry:
   %x = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %x, align 4
+  store volatile i32 0, ptr addrspace(5) %x, align 4
   tail call void @ex() #2
   ret void
 }
@@ -598,19 +598,18 @@ entry:
   ; Occupy 4096 bytes of scratch, so the offset of the spill of %a does not
   ; fit in the instruction, and has to live in the SGPR offset.
   %alloca = alloca i8, i32 4092, align 4, addrspace(5)
-  %buf = bitcast i8 addrspace(5)* %alloca to i32 addrspace(5)*
 
-  %aptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
+  %aptr = getelementptr i32, ptr addrspace(5) %alloca, i32 1
   ; 0x40000 / 64 = 4096 (for wave64)
   ; CHECK: s_add_u32 s6, s7, 0x40000
   ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 ; 4-byte Folded Spill
-  %a = load volatile i32, i32 addrspace(5)* %aptr
+  %a = load volatile i32, ptr addrspace(5) %aptr
 
   ; Force %a to spill
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}" ()
 
-  %outptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
-  store volatile i32 %a, i32 addrspace(5)* %outptr
+  %outptr = getelementptr i32, ptr addrspace(5) %alloca, i32 1
+  store volatile i32 %a, ptr addrspace(5) %outptr
 
   ret void
 }

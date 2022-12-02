@@ -4,21 +4,21 @@
 
 ; Make sure we match the addressing mode offset of globla.atomic.fadd intrinsics across blocks.
 
-define amdgpu_kernel void @test_sink_small_offset_global_atomic_fadd_f32(float addrspace(1)* %out, float addrspace(1)* %in) {
+define amdgpu_kernel void @test_sink_small_offset_global_atomic_fadd_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; OPT-LABEL: @test_sink_small_offset_global_atomic_fadd_f32(
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #[[ATTR3:[0-9]+]]
 ; OPT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TID]], 0
 ; OPT-NEXT:    br i1 [[CMP]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT:       if:
-; OPT-NEXT:    [[IN_GEP:%.*]] = getelementptr float, float addrspace(1)* [[IN:%.*]], i32 7
-; OPT-NEXT:    [[FADD2:%.*]] = call float @llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32(float addrspace(1)* [[IN_GEP]], float 2.000000e+00)
-; OPT-NEXT:    [[VAL:%.*]] = load volatile float, float addrspace(1)* undef, align 4
+; OPT-NEXT:    [[IN_GEP:%.*]] = getelementptr float, ptr addrspace(1) [[IN:%.*]], i32 7
+; OPT-NEXT:    [[FADD2:%.*]] = call float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) [[IN_GEP]], float 2.000000e+00)
+; OPT-NEXT:    [[VAL:%.*]] = load volatile float, ptr addrspace(1) undef, align 4
 ; OPT-NEXT:    br label [[ENDIF]]
 ; OPT:       endif:
 ; OPT-NEXT:    [[X:%.*]] = phi float [ [[VAL]], [[IF]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr float, float addrspace(1)* [[OUT:%.*]], i32 999999
-; OPT-NEXT:    store float [[X]], float addrspace(1)* [[OUT_GEP]], align 4
+; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr float, ptr addrspace(1) [[OUT:%.*]], i32 999999
+; OPT-NEXT:    store float [[X]], ptr addrspace(1) [[OUT_GEP]], align 4
 ; OPT-NEXT:    br label [[DONE:%.*]]
 ; OPT:       done:
 ; OPT-NEXT:    ret void
@@ -50,15 +50,15 @@ entry:
   br i1 %cmp, label %endif, label %if
 
 if:
-  %in.gep = getelementptr float, float addrspace(1)* %in, i32 7
-  %fadd2 = call float @llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32(float addrspace(1)* %in.gep, float 2.0)
-  %val = load volatile float, float addrspace(1)* undef
+  %in.gep = getelementptr float, ptr addrspace(1) %in, i32 7
+  %fadd2 = call float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) %in.gep, float 2.0)
+  %val = load volatile float, ptr addrspace(1) undef
   br label %endif
 
 endif:
   %x = phi float [ %val, %if ], [ 0.0, %entry ]
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 999999
-  store float %x, float addrspace(1)* %out.gep
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 999999
+  store float %x, ptr addrspace(1) %out.gep
   br label %done
 
 done:
@@ -66,7 +66,7 @@ done:
 }
 
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
-declare float @llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32(float addrspace(1)* nocapture, float) #2
+declare float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) nocapture, float) #2
 
 attributes #0 = { argmemonly nounwind }
 attributes #1 = { nounwind readnone willreturn }

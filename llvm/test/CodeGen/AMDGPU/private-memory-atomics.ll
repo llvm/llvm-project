@@ -2,9 +2,9 @@
 ; RUN: opt -S -mtriple=amdgcn-- -mcpu=tahiti -atomic-expand < %s | FileCheck -check-prefix=IR %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti < %s | FileCheck -check-prefix=GCN %s
 
-define i32 @load_atomic_private_seq_cst_i32(i32 addrspace(5)* %ptr) {
+define i32 @load_atomic_private_seq_cst_i32(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @load_atomic_private_seq_cst_i32(
-; IR-NEXT:    [[LOAD:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    ret i32 [[LOAD]]
 ;
 ; GCN-LABEL: load_atomic_private_seq_cst_i32:
@@ -13,13 +13,13 @@ define i32 @load_atomic_private_seq_cst_i32(i32 addrspace(5)* %ptr) {
 ; GCN-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %load = load atomic i32, i32 addrspace(5)* %ptr seq_cst, align 4
+  %load = load atomic i32, ptr addrspace(5) %ptr seq_cst, align 4
   ret i32 %load
 }
 
-define i64 @load_atomic_private_seq_cst_i64(i64 addrspace(5)* %ptr) {
+define i64 @load_atomic_private_seq_cst_i64(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @load_atomic_private_seq_cst_i64(
-; IR-NEXT:    [[LOAD:%.*]] = load i64, i64 addrspace(5)* [[PTR:%.*]], align 8
+; IR-NEXT:    [[LOAD:%.*]] = load i64, ptr addrspace(5) [[PTR:%.*]], align 8
 ; IR-NEXT:    ret i64 [[LOAD]]
 ;
 ; GCN-LABEL: load_atomic_private_seq_cst_i64:
@@ -30,13 +30,13 @@ define i64 @load_atomic_private_seq_cst_i64(i64 addrspace(5)* %ptr) {
 ; GCN-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %load = load atomic i64, i64 addrspace(5)* %ptr seq_cst, align 8
+  %load = load atomic i64, ptr addrspace(5) %ptr seq_cst, align 8
   ret i64 %load
 }
 
-define void @atomic_store_seq_cst_i32(i32 addrspace(5)* %ptr, i32 %val) {
+define void @atomic_store_seq_cst_i32(ptr addrspace(5) %ptr, i32 %val) {
 ; IR-LABEL: @atomic_store_seq_cst_i32(
-; IR-NEXT:    store i32 [[VAL:%.*]], i32 addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    store i32 [[VAL:%.*]], ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    ret void
 ;
 ; GCN-LABEL: atomic_store_seq_cst_i32:
@@ -45,13 +45,13 @@ define void @atomic_store_seq_cst_i32(i32 addrspace(5)* %ptr, i32 %val) {
 ; GCN-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  store atomic i32 %val, i32 addrspace(5)* %ptr seq_cst, align 4
+  store atomic i32 %val, ptr addrspace(5) %ptr seq_cst, align 4
   ret void
 }
 
-define void @atomic_store_seq_cst_i64(i64 addrspace(5)* %ptr, i64 %val) {
+define void @atomic_store_seq_cst_i64(ptr addrspace(5) %ptr, i64 %val) {
 ; IR-LABEL: @atomic_store_seq_cst_i64(
-; IR-NEXT:    store i64 [[VAL:%.*]], i64 addrspace(5)* [[PTR:%.*]], align 8
+; IR-NEXT:    store i64 [[VAL:%.*]], ptr addrspace(5) [[PTR:%.*]], align 8
 ; IR-NEXT:    ret void
 ;
 ; GCN-LABEL: atomic_store_seq_cst_i64:
@@ -62,13 +62,13 @@ define void @atomic_store_seq_cst_i64(i64 addrspace(5)* %ptr, i64 %val) {
 ; GCN-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  store atomic i64 %val, i64 addrspace(5)* %ptr seq_cst, align 8
+  store atomic i64 %val, ptr addrspace(5) %ptr seq_cst, align 8
   ret void
 }
 
-define i32 @load_atomic_private_seq_cst_syncscope_i32(i32 addrspace(5)* %ptr) {
+define i32 @load_atomic_private_seq_cst_syncscope_i32(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @load_atomic_private_seq_cst_syncscope_i32(
-; IR-NEXT:    [[LOAD:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    ret i32 [[LOAD]]
 ;
 ; GCN-LABEL: load_atomic_private_seq_cst_syncscope_i32:
@@ -77,13 +77,13 @@ define i32 @load_atomic_private_seq_cst_syncscope_i32(i32 addrspace(5)* %ptr) {
 ; GCN-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %load = load atomic i32, i32 addrspace(5)* %ptr syncscope("agent") seq_cst, align 4
+  %load = load atomic i32, ptr addrspace(5) %ptr syncscope("agent") seq_cst, align 4
   ret i32 %load
 }
 
-define void @atomic_store_seq_cst_syncscope_i32(i32 addrspace(5)* %ptr, i32 %val) {
+define void @atomic_store_seq_cst_syncscope_i32(ptr addrspace(5) %ptr, i32 %val) {
 ; IR-LABEL: @atomic_store_seq_cst_syncscope_i32(
-; IR-NEXT:    store i32 [[VAL:%.*]], i32 addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    store i32 [[VAL:%.*]], ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    ret void
 ;
 ; GCN-LABEL: atomic_store_seq_cst_syncscope_i32:
@@ -92,21 +92,21 @@ define void @atomic_store_seq_cst_syncscope_i32(i32 addrspace(5)* %ptr, i32 %val
 ; GCN-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  store atomic i32 %val, i32 addrspace(5)* %ptr syncscope("agent") seq_cst, align 4
+  store atomic i32 %val, ptr addrspace(5) %ptr syncscope("agent") seq_cst, align 4
   ret void
 }
 
-define i32 @cmpxchg_private_i32(i32 addrspace(5)* %ptr) {
+define i32 @cmpxchg_private_i32(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @cmpxchg_private_i32(
-; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; IR-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 1, i32 [[TMP1]]
-; IR-NEXT:    store i32 [[TMP3]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    store i32 [[TMP3]], ptr addrspace(5) [[PTR]], align 4
 ; IR-NEXT:    [[TMP4:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP1]], 0
 ; IR-NEXT:    [[TMP5:%.*]] = insertvalue { i32, i1 } [[TMP4]], i1 [[TMP2]], 1
 ; IR-NEXT:    [[RESULT_0:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; IR-NEXT:    [[RESULT_1:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; IR-NEXT:    store i1 [[RESULT_1]], i1 addrspace(1)* poison, align 1
+; IR-NEXT:    store i1 [[RESULT_1]], ptr addrspace(1) poison, align 1
 ; IR-NEXT:    ret i32 [[RESULT_0]]
 ;
 ; GCN-LABEL: cmpxchg_private_i32:
@@ -125,24 +125,24 @@ define i32 @cmpxchg_private_i32(i32 addrspace(5)* %ptr) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = cmpxchg i32 addrspace(5)* %ptr, i32 0, i32 1 acq_rel monotonic
+  %result = cmpxchg ptr addrspace(5) %ptr, i32 0, i32 1 acq_rel monotonic
   %result.0 = extractvalue { i32, i1 } %result, 0
   %result.1 = extractvalue { i32, i1 } %result, 1
-  store i1 %result.1, i1 addrspace(1)* poison
+  store i1 %result.1, ptr addrspace(1) poison
   ret i32 %result.0
 }
 
-define i64 @cmpxchg_private_i64(i64 addrspace(5)* %ptr) {
+define i64 @cmpxchg_private_i64(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @cmpxchg_private_i64(
-; IR-NEXT:    [[TMP1:%.*]] = load i64, i64 addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 0
 ; IR-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 1, i64 [[TMP1]]
-; IR-NEXT:    store i64 [[TMP3]], i64 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    store i64 [[TMP3]], ptr addrspace(5) [[PTR]], align 4
 ; IR-NEXT:    [[TMP4:%.*]] = insertvalue { i64, i1 } poison, i64 [[TMP1]], 0
 ; IR-NEXT:    [[TMP5:%.*]] = insertvalue { i64, i1 } [[TMP4]], i1 [[TMP2]], 1
 ; IR-NEXT:    [[RESULT_0:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; IR-NEXT:    [[RESULT_1:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
-; IR-NEXT:    store i1 [[RESULT_1]], i1 addrspace(1)* poison, align 1
+; IR-NEXT:    store i1 [[RESULT_1]], ptr addrspace(1) poison, align 1
 ; IR-NEXT:    ret i64 [[RESULT_0]]
 ;
 ; GCN-LABEL: cmpxchg_private_i64:
@@ -165,18 +165,18 @@ define i64 @cmpxchg_private_i64(i64 addrspace(5)* %ptr) {
 ; GCN-NEXT:    buffer_store_byte v4, off, s[4:7], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = cmpxchg i64 addrspace(5)* %ptr, i64 0, i64 1 acq_rel monotonic
+  %result = cmpxchg ptr addrspace(5) %ptr, i64 0, i64 1 acq_rel monotonic
   %result.0 = extractvalue { i64, i1 } %result, 0
   %result.1 = extractvalue { i64, i1 } %result, 1
-  store i1 %result.1, i1 addrspace(1)* poison
+  store i1 %result.1, ptr addrspace(1) poison
   ret i64 %result.0
 }
 
 
-define i32 @atomicrmw_xchg_private_i32(i32 addrspace(5)* %ptr) {
+define i32 @atomicrmw_xchg_private_i32(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @atomicrmw_xchg_private_i32(
-; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
-; IR-NEXT:    store i32 4, i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[PTR:%.*]], align 4
+; IR-NEXT:    store i32 4, ptr addrspace(5) [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_xchg_private_i32:
@@ -189,15 +189,15 @@ define i32 @atomicrmw_xchg_private_i32(i32 addrspace(5)* %ptr) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = atomicrmw xchg i32 addrspace(5)* %ptr, i32 4 seq_cst
+  %result = atomicrmw xchg ptr addrspace(5) %ptr, i32 4 seq_cst
   ret i32 %result
 }
 
-define i32 @atomicrmw_add_private_i32(i32 addrspace(5)* %ptr) {
+define i32 @atomicrmw_add_private_i32(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @atomicrmw_add_private_i32(
-; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    [[NEW:%.*]] = add i32 [[TMP1]], 4
-; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    store i32 [[NEW]], ptr addrspace(5) [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_add_private_i32:
@@ -210,15 +210,15 @@ define i32 @atomicrmw_add_private_i32(i32 addrspace(5)* %ptr) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = atomicrmw add i32 addrspace(5)* %ptr, i32 4 seq_cst
+  %result = atomicrmw add ptr addrspace(5) %ptr, i32 4 seq_cst
   ret i32 %result
 }
 
-define i32 @atomicrmw_sub_private_i32(i32 addrspace(5)* %ptr) {
+define i32 @atomicrmw_sub_private_i32(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @atomicrmw_sub_private_i32(
-; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    [[NEW:%.*]] = sub i32 [[TMP1]], 4
-; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    store i32 [[NEW]], ptr addrspace(5) [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_sub_private_i32:
@@ -231,15 +231,15 @@ define i32 @atomicrmw_sub_private_i32(i32 addrspace(5)* %ptr) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = atomicrmw sub i32 addrspace(5)* %ptr, i32 4 seq_cst
+  %result = atomicrmw sub ptr addrspace(5) %ptr, i32 4 seq_cst
   ret i32 %result
 }
 
-define i32 @atomicrmw_and_private_i32(i32 addrspace(5)* %ptr) {
+define i32 @atomicrmw_and_private_i32(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @atomicrmw_and_private_i32(
-; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    [[NEW:%.*]] = and i32 [[TMP1]], 4
-; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    store i32 [[NEW]], ptr addrspace(5) [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_and_private_i32:
@@ -252,16 +252,16 @@ define i32 @atomicrmw_and_private_i32(i32 addrspace(5)* %ptr) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = atomicrmw and i32 addrspace(5)* %ptr, i32 4 seq_cst
+  %result = atomicrmw and ptr addrspace(5) %ptr, i32 4 seq_cst
   ret i32 %result
 }
 
-define i32 @atomicrmw_nand_private_i32(i32 addrspace(5)* %ptr) {
+define i32 @atomicrmw_nand_private_i32(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @atomicrmw_nand_private_i32(
-; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 4
 ; IR-NEXT:    [[NEW:%.*]] = xor i32 [[TMP2]], -1
-; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    store i32 [[NEW]], ptr addrspace(5) [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_nand_private_i32:
@@ -275,15 +275,15 @@ define i32 @atomicrmw_nand_private_i32(i32 addrspace(5)* %ptr) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = atomicrmw nand i32 addrspace(5)* %ptr, i32 4 seq_cst
+  %result = atomicrmw nand ptr addrspace(5) %ptr, i32 4 seq_cst
   ret i32 %result
 }
 
-define i32 @atomicrmw_or_private_i32(i32 addrspace(5)* %ptr) {
+define i32 @atomicrmw_or_private_i32(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @atomicrmw_or_private_i32(
-; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    [[NEW:%.*]] = or i32 [[TMP1]], 4
-; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    store i32 [[NEW]], ptr addrspace(5) [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_or_private_i32:
@@ -296,15 +296,15 @@ define i32 @atomicrmw_or_private_i32(i32 addrspace(5)* %ptr) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = atomicrmw or i32 addrspace(5)* %ptr, i32 4 seq_cst
+  %result = atomicrmw or ptr addrspace(5) %ptr, i32 4 seq_cst
   ret i32 %result
 }
 
-define i32 @atomicrmw_xor_private_i32(i32 addrspace(5)* %ptr) {
+define i32 @atomicrmw_xor_private_i32(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @atomicrmw_xor_private_i32(
-; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    [[NEW:%.*]] = xor i32 [[TMP1]], 4
-; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    store i32 [[NEW]], ptr addrspace(5) [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_xor_private_i32:
@@ -317,16 +317,16 @@ define i32 @atomicrmw_xor_private_i32(i32 addrspace(5)* %ptr) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = atomicrmw xor i32 addrspace(5)* %ptr, i32 4 seq_cst
+  %result = atomicrmw xor ptr addrspace(5) %ptr, i32 4 seq_cst
   ret i32 %result
 }
 
-define i32 @atomicrmw_max_private_i32(i32 addrspace(5)* %ptr) {
+define i32 @atomicrmw_max_private_i32(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @atomicrmw_max_private_i32(
-; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], 4
 ; IR-NEXT:    [[NEW:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 4
-; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    store i32 [[NEW]], ptr addrspace(5) [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_max_private_i32:
@@ -339,16 +339,16 @@ define i32 @atomicrmw_max_private_i32(i32 addrspace(5)* %ptr) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = atomicrmw max i32 addrspace(5)* %ptr, i32 4 seq_cst
+  %result = atomicrmw max ptr addrspace(5) %ptr, i32 4 seq_cst
   ret i32 %result
 }
 
-define i32 @atomicrmw_min_private_i32(i32 addrspace(5)* %ptr) {
+define i32 @atomicrmw_min_private_i32(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @atomicrmw_min_private_i32(
-; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    [[TMP2:%.*]] = icmp sle i32 [[TMP1]], 4
 ; IR-NEXT:    [[NEW:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 4
-; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    store i32 [[NEW]], ptr addrspace(5) [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_min_private_i32:
@@ -361,16 +361,16 @@ define i32 @atomicrmw_min_private_i32(i32 addrspace(5)* %ptr) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = atomicrmw min i32 addrspace(5)* %ptr, i32 4 seq_cst
+  %result = atomicrmw min ptr addrspace(5) %ptr, i32 4 seq_cst
   ret i32 %result
 }
 
-define i32 @atomicrmw_umax_private_i32(i32 addrspace(5)* %ptr) {
+define i32 @atomicrmw_umax_private_i32(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @atomicrmw_umax_private_i32(
-; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    [[TMP2:%.*]] = icmp ugt i32 [[TMP1]], 4
 ; IR-NEXT:    [[NEW:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 4
-; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    store i32 [[NEW]], ptr addrspace(5) [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_umax_private_i32:
@@ -383,16 +383,16 @@ define i32 @atomicrmw_umax_private_i32(i32 addrspace(5)* %ptr) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = atomicrmw umax i32 addrspace(5)* %ptr, i32 4 seq_cst
+  %result = atomicrmw umax ptr addrspace(5) %ptr, i32 4 seq_cst
   ret i32 %result
 }
 
-define i32 @atomicrmw_umin_private_i32(i32 addrspace(5)* %ptr) {
+define i32 @atomicrmw_umin_private_i32(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @atomicrmw_umin_private_i32(
-; IR-NEXT:    [[TMP1:%.*]] = load i32, i32 addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[TMP1]], 4
 ; IR-NEXT:    [[NEW:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 4
-; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    store i32 [[NEW]], ptr addrspace(5) [[PTR]], align 4
 ; IR-NEXT:    ret i32 [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_umin_private_i32:
@@ -405,15 +405,15 @@ define i32 @atomicrmw_umin_private_i32(i32 addrspace(5)* %ptr) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = atomicrmw umin i32 addrspace(5)* %ptr, i32 4 seq_cst
+  %result = atomicrmw umin ptr addrspace(5) %ptr, i32 4 seq_cst
   ret i32 %result
 }
 
-define float @atomicrmw_fadd_private_i32(float addrspace(5)* %ptr) {
+define float @atomicrmw_fadd_private_i32(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @atomicrmw_fadd_private_i32(
-; IR-NEXT:    [[TMP1:%.*]] = load float, float addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    [[NEW:%.*]] = fadd float [[TMP1]], 2.000000e+00
-; IR-NEXT:    store float [[NEW]], float addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    store float [[NEW]], ptr addrspace(5) [[PTR]], align 4
 ; IR-NEXT:    ret float [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_fadd_private_i32:
@@ -426,15 +426,15 @@ define float @atomicrmw_fadd_private_i32(float addrspace(5)* %ptr) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = atomicrmw fadd float addrspace(5)* %ptr, float 2.0 seq_cst
+  %result = atomicrmw fadd ptr addrspace(5) %ptr, float 2.0 seq_cst
   ret float %result
 }
 
-define float @atomicrmw_fsub_private_i32(float addrspace(5)* %ptr, float %val) {
+define float @atomicrmw_fsub_private_i32(ptr addrspace(5) %ptr, float %val) {
 ; IR-LABEL: @atomicrmw_fsub_private_i32(
-; IR-NEXT:    [[TMP1:%.*]] = load float, float addrspace(5)* [[PTR:%.*]], align 4
+; IR-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[PTR:%.*]], align 4
 ; IR-NEXT:    [[NEW:%.*]] = fsub float [[TMP1]], [[VAL:%.*]]
-; IR-NEXT:    store float [[NEW]], float addrspace(5)* [[PTR]], align 4
+; IR-NEXT:    store float [[NEW]], ptr addrspace(5) [[PTR]], align 4
 ; IR-NEXT:    ret float [[TMP1]]
 ;
 ; GCN-LABEL: atomicrmw_fsub_private_i32:
@@ -447,23 +447,22 @@ define float @atomicrmw_fsub_private_i32(float addrspace(5)* %ptr, float %val) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, v2
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = atomicrmw fsub float addrspace(5)* %ptr, float %val seq_cst
+  %result = atomicrmw fsub ptr addrspace(5) %ptr, float %val seq_cst
   ret float %result
 }
 
-define amdgpu_kernel void @alloca_promote_atomicrmw_private_lds_promote(i32 addrspace(1)* %out, i32 %in) nounwind {
+define amdgpu_kernel void @alloca_promote_atomicrmw_private_lds_promote(ptr addrspace(1) %out, i32 %in) nounwind {
 ; IR-LABEL: @alloca_promote_atomicrmw_private_lds_promote(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[TMP:%.*]] = alloca [2 x i32], align 4, addrspace(5)
-; IR-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x i32], [2 x i32] addrspace(5)* [[TMP]], i32 0, i32 0
-; IR-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x i32], [2 x i32] addrspace(5)* [[TMP]], i32 0, i32 1
-; IR-NEXT:    store i32 0, i32 addrspace(5)* [[GEP1]], align 4
-; IR-NEXT:    store i32 1, i32 addrspace(5)* [[GEP2]], align 4
-; IR-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [2 x i32], [2 x i32] addrspace(5)* [[TMP]], i32 0, i32 [[IN:%.*]]
-; IR-NEXT:    [[TMP0:%.*]] = load i32, i32 addrspace(5)* [[GEP3]], align 4
+; IR-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x i32], ptr addrspace(5) [[TMP]], i32 0, i32 1
+; IR-NEXT:    store i32 0, ptr addrspace(5) [[TMP]], align 4
+; IR-NEXT:    store i32 1, ptr addrspace(5) [[GEP2]], align 4
+; IR-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [2 x i32], ptr addrspace(5) [[TMP]], i32 0, i32 [[IN:%.*]]
+; IR-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[GEP3]], align 4
 ; IR-NEXT:    [[NEW:%.*]] = add i32 [[TMP0]], 7
-; IR-NEXT:    store i32 [[NEW]], i32 addrspace(5)* [[GEP3]], align 4
-; IR-NEXT:    store i32 [[TMP0]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; IR-NEXT:    store i32 [[NEW]], ptr addrspace(5) [[GEP3]], align 4
+; IR-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; IR-NEXT:    ret void
 ;
 ; GCN-LABEL: alloca_promote_atomicrmw_private_lds_promote:
@@ -480,33 +479,31 @@ define amdgpu_kernel void @alloca_promote_atomicrmw_private_lds_promote(i32 addr
 ; GCN-NEXT:    s_endpgm
 entry:
   %tmp = alloca [2 x i32], addrspace(5)
-  %gep1 = getelementptr inbounds [2 x i32], [2 x i32] addrspace(5)* %tmp, i32 0, i32 0
-  %gep2 = getelementptr inbounds [2 x i32], [2 x i32] addrspace(5)* %tmp, i32 0, i32 1
-  store i32 0, i32 addrspace(5)* %gep1
-  store i32 1, i32 addrspace(5)* %gep2
-  %gep3 = getelementptr inbounds [2 x i32], [2 x i32] addrspace(5)* %tmp, i32 0, i32 %in
-  %rmw = atomicrmw add i32 addrspace(5)* %gep3, i32 7 acq_rel
-  store i32 %rmw, i32 addrspace(1)* %out
+  %gep2 = getelementptr inbounds [2 x i32], ptr addrspace(5) %tmp, i32 0, i32 1
+  store i32 0, ptr addrspace(5) %tmp
+  store i32 1, ptr addrspace(5) %gep2
+  %gep3 = getelementptr inbounds [2 x i32], ptr addrspace(5) %tmp, i32 0, i32 %in
+  %rmw = atomicrmw add ptr addrspace(5) %gep3, i32 7 acq_rel
+  store i32 %rmw, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @alloca_promote_cmpxchg_private(i32 addrspace(1)* %out, i32 %in) nounwind {
+define amdgpu_kernel void @alloca_promote_cmpxchg_private(ptr addrspace(1) %out, i32 %in) nounwind {
 ; IR-LABEL: @alloca_promote_cmpxchg_private(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[TMP:%.*]] = alloca [2 x i32], align 4, addrspace(5)
-; IR-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x i32], [2 x i32] addrspace(5)* [[TMP]], i32 0, i32 0
-; IR-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x i32], [2 x i32] addrspace(5)* [[TMP]], i32 0, i32 1
-; IR-NEXT:    store i32 0, i32 addrspace(5)* [[GEP1]], align 4
-; IR-NEXT:    store i32 1, i32 addrspace(5)* [[GEP2]], align 4
-; IR-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [2 x i32], [2 x i32] addrspace(5)* [[TMP]], i32 0, i32 [[IN:%.*]]
-; IR-NEXT:    [[TMP0:%.*]] = load i32, i32 addrspace(5)* [[GEP3]], align 4
+; IR-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x i32], ptr addrspace(5) [[TMP]], i32 0, i32 1
+; IR-NEXT:    store i32 0, ptr addrspace(5) [[TMP]], align 4
+; IR-NEXT:    store i32 1, ptr addrspace(5) [[GEP2]], align 4
+; IR-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [2 x i32], ptr addrspace(5) [[TMP]], i32 0, i32 [[IN:%.*]]
+; IR-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[GEP3]], align 4
 ; IR-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 0
 ; IR-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 1, i32 [[TMP0]]
-; IR-NEXT:    store i32 [[TMP2]], i32 addrspace(5)* [[GEP3]], align 4
+; IR-NEXT:    store i32 [[TMP2]], ptr addrspace(5) [[GEP3]], align 4
 ; IR-NEXT:    [[TMP3:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP0]], 0
 ; IR-NEXT:    [[TMP4:%.*]] = insertvalue { i32, i1 } [[TMP3]], i1 [[TMP1]], 1
 ; IR-NEXT:    [[VAL:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; IR-NEXT:    store i32 [[VAL]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; IR-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; IR-NEXT:    ret void
 ;
 ; GCN-LABEL: alloca_promote_cmpxchg_private:
@@ -523,13 +520,12 @@ define amdgpu_kernel void @alloca_promote_cmpxchg_private(i32 addrspace(1)* %out
 ; GCN-NEXT:    s_endpgm
 entry:
   %tmp = alloca [2 x i32], addrspace(5)
-  %gep1 = getelementptr inbounds [2 x i32], [2 x i32] addrspace(5)* %tmp, i32 0, i32 0
-  %gep2 = getelementptr inbounds [2 x i32], [2 x i32] addrspace(5)* %tmp, i32 0, i32 1
-  store i32 0, i32 addrspace(5)* %gep1
-  store i32 1, i32 addrspace(5)* %gep2
-  %gep3 = getelementptr inbounds [2 x i32], [2 x i32] addrspace(5)* %tmp, i32 0, i32 %in
-  %xchg = cmpxchg i32 addrspace(5)* %gep3, i32 0, i32 1 acq_rel monotonic
+  %gep2 = getelementptr inbounds [2 x i32], ptr addrspace(5) %tmp, i32 0, i32 1
+  store i32 0, ptr addrspace(5) %tmp
+  store i32 1, ptr addrspace(5) %gep2
+  %gep3 = getelementptr inbounds [2 x i32], ptr addrspace(5) %tmp, i32 0, i32 %in
+  %xchg = cmpxchg ptr addrspace(5) %gep3, i32 0, i32 1 acq_rel monotonic
   %val = extractvalue { i32, i1 } %xchg, 0
-  store i32 %val, i32 addrspace(1)* %out
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }

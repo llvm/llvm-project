@@ -1303,9 +1303,16 @@ ModuleMap::canonicalizeModuleMapPath(SmallVectorImpl<char> &Path) {
   // Canonicalize the directory.
   StringRef CanonicalDir = FM.getCanonicalName(*DirEntry);
   if (CanonicalDir != Dir) {
-    bool Done = llvm::sys::path::replace_path_prefix(Path, Dir, CanonicalDir);
-    (void)Done;
-    assert(Done && "Path should always start with Dir");
+    auto CanonicalDirEntry = FM.getDirectory(CanonicalDir);
+    // Only use the canonicalized path if it resolves to the same entry as the
+    // original. This is not true if there's a VFS overlay on top of a FS where
+    // the directory is a symlink. The overlay would not remap the target path
+    // of the symlink to the same directory entry in that case.
+    if (CanonicalDirEntry && *CanonicalDirEntry == *DirEntry) {
+      bool Done = llvm::sys::path::replace_path_prefix(Path, Dir, CanonicalDir);
+      (void)Done;
+      assert(Done && "Path should always start with Dir");
+    }
   }
 
   // In theory, the filename component should also be canonicalized if it

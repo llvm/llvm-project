@@ -580,23 +580,24 @@ bool ModuleDepCollector::isPrebuiltModule(const Module *M) {
   return true;
 }
 
-static StringRef makeAbsolute(CompilerInstance &CI, StringRef Path,
-                              SmallVectorImpl<char> &Storage) {
+static StringRef makeAbsoluteAndPreferred(CompilerInstance &CI, StringRef Path,
+                                          SmallVectorImpl<char> &Storage) {
   if (llvm::sys::path::is_absolute(Path))
     return Path;
   Storage.assign(Path.begin(), Path.end());
   CI.getFileManager().makeAbsolutePath(Storage);
+  llvm::sys::path::make_preferred(Storage);
   return StringRef(Storage.data(), Storage.size());
 }
 
 void ModuleDepCollector::addFileDep(StringRef Path) {
   llvm::SmallString<256> Storage;
-  Path = makeAbsolute(ScanInstance, Path, Storage);
+  Path = makeAbsoluteAndPreferred(ScanInstance, Path, Storage);
   FileDeps.push_back(std::string(Path));
 }
 
 void ModuleDepCollector::addFileDep(ModuleDeps &MD, StringRef Path) {
   llvm::SmallString<256> Storage;
-  Path = makeAbsolute(ScanInstance, Path, Storage);
+  Path = makeAbsoluteAndPreferred(ScanInstance, Path, Storage);
   MD.FileDeps.insert(Path);
 }

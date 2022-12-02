@@ -1,22 +1,21 @@
 ; RUN: opt -S --passes=instcombine %s | FileCheck %s
 
 ; https://github.com/llvm/llvm-project/issues/56807
-declare void @foo(i8* %pixels)
+declare void @foo(ptr %pixels)
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; CHECK-LABEL: @toplevel(
 ; CHECK:  entry:
 ; CHECK-NEXT:    %pixels1 = alloca [3 x i8], align 1
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata [3 x i8]* %pixels1, metadata ![[MD:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG:[0-9]+]]
-; CHECK-NEXT:    %pixels1.sub = getelementptr inbounds [3 x i8], [3 x i8]* %pixels1, i64 0, i64 0
-; CHECK-NEXT:    call void @foo(i8* nonnull %pixels1.sub)
+; CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr %pixels1, metadata ![[MD:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG:[0-9]+]]
+; CHECK-NEXT:    call void @foo(ptr nonnull %pixels1)
 ; CHECK-NEXT:    ret void
 define dso_local void @toplevel() {
 entry:
   %pixels = alloca i8, i32 3
-  call void @llvm.dbg.declare(metadata i8* %pixels, metadata !11, metadata !DIExpression()), !dbg !12
-  call void @foo(i8* %pixels)
+  call void @llvm.dbg.declare(metadata ptr %pixels, metadata !11, metadata !DIExpression()), !dbg !12
+  call void @foo(ptr %pixels)
   ret void
 }
 

@@ -15,7 +15,7 @@
 declare void @llvm.trap() #0
 declare void @llvm.debugtrap() #1
 
-define amdgpu_kernel void @trap(i32 addrspace(1)* nocapture readonly %arg0) {
+define amdgpu_kernel void @trap(ptr addrspace(1) nocapture readonly %arg0) {
 ; NOHSA-TRAP-GFX900-V2-LABEL: trap:
 ; NOHSA-TRAP-GFX900-V2:       ; %bb.0:
 ; NOHSA-TRAP-GFX900-V2-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
@@ -347,14 +347,14 @@ define amdgpu_kernel void @trap(i32 addrspace(1)* nocapture readonly %arg0) {
 ; HSA-NOTRAP-GFX900-V4-NEXT:    global_store_dword v0, v1, s[0:1]
 ; HSA-NOTRAP-GFX900-V4-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-NOTRAP-GFX900-V4-NEXT:    s_endpgm
-  store volatile i32 1, i32 addrspace(1)* %arg0
+  store volatile i32 1, ptr addrspace(1) %arg0
   call void @llvm.trap()
   unreachable
-  store volatile i32 2, i32 addrspace(1)* %arg0
+  store volatile i32 2, ptr addrspace(1) %arg0
   ret void
 }
 
-define amdgpu_kernel void @non_entry_trap(i32 addrspace(1)* nocapture readonly %arg0) local_unnamed_addr {
+define amdgpu_kernel void @non_entry_trap(ptr addrspace(1) nocapture readonly %arg0) local_unnamed_addr {
 ; NOHSA-TRAP-GFX900-V2-LABEL: non_entry_trap:
 ; NOHSA-TRAP-GFX900-V2:       ; %bb.0: ; %entry
 ; NOHSA-TRAP-GFX900-V2-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
@@ -777,7 +777,7 @@ define amdgpu_kernel void @non_entry_trap(i32 addrspace(1)* nocapture readonly %
 ; HSA-NOTRAP-GFX900-V4-NEXT:  .LBB1_2: ; %trap
 ; HSA-NOTRAP-GFX900-V4-NEXT:    s_endpgm
 entry:
-  %tmp29 = load volatile i32, i32 addrspace(1)* %arg0
+  %tmp29 = load volatile i32, ptr addrspace(1) %arg0
   %cmp = icmp eq i32 %tmp29, -1
   br i1 %cmp, label %ret, label %trap
 
@@ -786,11 +786,11 @@ trap:
   unreachable
 
 ret:
-  store volatile i32 3, i32 addrspace(1)* %arg0
+  store volatile i32 3, ptr addrspace(1) %arg0
   ret void
 }
 
-define amdgpu_kernel void @debugtrap(i32 addrspace(1)* nocapture readonly %arg0) {
+define amdgpu_kernel void @debugtrap(ptr addrspace(1) nocapture readonly %arg0) {
 ; NOHSA-TRAP-GFX900-V2-LABEL: debugtrap:
 ; NOHSA-TRAP-GFX900-V2:       ; %bb.0:
 ; NOHSA-TRAP-GFX900-V2-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1159,9 +1159,9 @@ define amdgpu_kernel void @debugtrap(i32 addrspace(1)* nocapture readonly %arg0)
 ; HSA-NOTRAP-GFX900-V4-NEXT:    global_store_dword v0, v2, s[0:1]
 ; HSA-NOTRAP-GFX900-V4-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-NOTRAP-GFX900-V4-NEXT:    s_endpgm
-  store volatile i32 1, i32 addrspace(1)* %arg0
+  store volatile i32 1, ptr addrspace(1) %arg0
   call void @llvm.debugtrap()
-  store volatile i32 2, i32 addrspace(1)* %arg0
+  store volatile i32 2, ptr addrspace(1) %arg0
   ret void
 }
 
