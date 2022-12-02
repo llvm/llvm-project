@@ -345,10 +345,12 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
 }
 
 llvm::Optional<TextEdit>
-IncludeInserter::insert(llvm::StringRef VerbatimHeader) const {
+IncludeInserter::insert(llvm::StringRef VerbatimHeader,
+                        tooling::IncludeDirective Directive) const {
   llvm::Optional<TextEdit> Edit;
-  if (auto Insertion = Inserter.insert(VerbatimHeader.trim("\"<>"),
-                                       VerbatimHeader.startswith("<")))
+  if (auto Insertion =
+          Inserter.insert(VerbatimHeader.trim("\"<>"),
+                          VerbatimHeader.startswith("<"), Directive))
     Edit = replacementToEdit(Code, *Insertion);
   return Edit;
 }

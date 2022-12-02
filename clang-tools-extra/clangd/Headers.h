@@ -50,7 +50,7 @@ struct SymbolInclude {
   /// The header to include. This is either a URI or a verbatim include which is
   /// quoted with <> or "".
   llvm::StringRef Header;
-  /// The include directive to use, e.g. #import or #include.
+  /// The include directive(s) that can be used, e.g. #import and/or #include.
   Symbol::IncludeDirective Directive;
 };
 
@@ -248,7 +248,8 @@ public:
 
   /// Calculates an edit that inserts \p VerbatimHeader into code. If the header
   /// is already included, this returns std::nullopt.
-  llvm::Optional<TextEdit> insert(llvm::StringRef VerbatimHeader) const;
+  llvm::Optional<TextEdit> insert(llvm::StringRef VerbatimHeader,
+                                  tooling::IncludeDirective Directive) const;
 
 private:
   StringRef FileName;
