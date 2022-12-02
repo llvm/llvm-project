@@ -14,6 +14,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineOperand.h"
 
 #define DEBUG_TYPE "si-fold-operands"
 using namespace llvm;
@@ -340,6 +341,9 @@ bool SIFoldOperands::tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
       // Check if changing this to a v_mad_{f16, f32} instruction will allow us
       // to fold the operand.
       MI->setDesc(TII->get(NewOpc));
+      if (!AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::op_sel) &&
+          AMDGPU::hasNamedOperand(NewOpc, AMDGPU::OpName::op_sel))
+        MI->addOperand(MachineOperand::CreateImm(0));
       bool FoldAsMAD = tryAddToFoldList(FoldList, MI, OpNo, OpToFold);
       if (FoldAsMAD) {
         MI->untieRegOperand(OpNo);
