@@ -45,6 +45,12 @@ public:
                    const CXXRecordDecl *SecondRecord,
                    const struct CXXRecordDecl::DefinitionData *SecondDD) const;
 
+  /// Diagnose ODR mismatch between 2 RecordDecl that are not CXXRecordDecl.
+  ///
+  /// Returns true if found a mismatch and diagnosed it.
+  bool diagnoseMismatch(const RecordDecl *FirstRecord,
+                        const RecordDecl *SecondRecord) const;
+
   /// Diagnose ODR mismatch between 2 ObjCProtocolDecl.
   ///
   /// Returns true if found a mismatch and diagnosed it.
