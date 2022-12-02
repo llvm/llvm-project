@@ -120,10 +120,10 @@ module second { header "second.h" }
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.m"
 // CHECK-NEXT:         }
-// CHECK-NEXT:       ]
-// CHECK-NEXT:     }
-// CHECK-NEXT:   ]
-// CHECK-NEXT: }
+// CHECK:            ]
+// CHECK:          }
+// CHECK:        ]
+// CHECK:      }
 
 // RUN: %deps-to-rsp --module-name=first %t/result.json > %t/first.cc1.rsp
 // RUN: %deps-to-rsp --module-name=first_other %t/result.json > %t/first_other.cc1.rsp
