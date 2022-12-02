@@ -1949,26 +1949,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     handled_sdk_path = true;
   }
 
-  auto warmup_astcontexts = [&]() {
-    if (target.GetSwiftCreateModuleContextsInParallel()) {
-      // The first call to GetTypeSystemForLanguage() on a module will
-      // trigger the import (and thus most likely the rebuild) of all
-      // the Clang modules that were imported in this module. This can
-      // be a lot of work (potentially ten seconds per module), but it
-      // can be performed in parallel.
-      llvm::ThreadPool pool(llvm::hardware_concurrency());
-      for (size_t mi = 0; mi != num_images; ++mi) {
-        auto module_sp = target.GetImages().GetModuleAtIndex(mi);
-        pool.async([=] {
-          GetModuleSwiftASTContext(*module_sp);
-        });
-      }
-      pool.wait();
-    }
-  };
-
   if (!handled_sdk_path) {
-    warmup_astcontexts();
     for (size_t mi = 0; mi != num_images; ++mi) {
       ModuleSP module_sp = target.GetImages().GetModuleAtIndex(mi);
       if (!HasSwiftModules(*module_sp))
@@ -2085,8 +2066,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
                         FileSpec(resource_dir), triple);
   const bool discover_implicit_search_paths =
       target.GetSwiftDiscoverImplicitSearchPaths();
-  if (discover_implicit_search_paths)
-    warmup_astcontexts();
 
   const bool use_all_compiler_flags =
       !got_serialized_options || target.GetUseAllCompilerFlags();

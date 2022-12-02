@@ -4,9 +4,6 @@ let Definition = "target_experimental" in {
   def InjectLocalVars : Property<"inject-local-vars", "Boolean">,
     Global, DefaultTrue,
     Desc<"If true, inject local variables explicitly into the expression text. This will fix symbol resolution when there are name collisions between ivars and local variables. But it can make expressions run much more slowly.">;
-  def SwiftCreateModuleContextsInParallel : Property<"swift-create-module-contexts-in-parallel", "Boolean">,
-    DefaultTrue,
-    Desc<"Create the per-module Swift AST contexts in parallel.">;
   def SwiftReadMetadataFromFileCache: Property<"swift-read-metadata-from-file-cache", "Boolean">,
     DefaultTrue,
     Desc<"Read Swift reflection metadata from the file cache instead of the process when possible">;
