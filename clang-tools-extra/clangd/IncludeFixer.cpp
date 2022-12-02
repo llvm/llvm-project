@@ -317,7 +317,10 @@ std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
   llvm::StringSet<> InsertedHeaders;
   for (const auto &Sym : Syms) {
     for (const auto &Inc : getRankedIncludes(Sym)) {
-      if (auto ToInclude = Inserted(Sym, Inc)) {
+      // FIXME: We should support #import directives here.
+      if ((Inc.Directive & clang::clangd::Symbol::Include) == 0)
+        continue;
+      if (auto ToInclude = Inserted(Sym, Inc.Header)) {
         if (ToInclude->second) {
           if (!InsertedHeaders.try_emplace(ToInclude->first).second)
             continue;
@@ -326,8 +329,8 @@ std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
             Fixes.push_back(std::move(*Fix));
         }
       } else {
-        vlog("Failed to calculate include insertion for {0} into {1}: {2}", Inc,
-             File, ToInclude.takeError());
+        vlog("Failed to calculate include insertion for {0} into {1}: {2}",
+             Inc.Header, File, ToInclude.takeError());
       }
     }
   }
