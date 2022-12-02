@@ -643,6 +643,7 @@ static std::shared_ptr<grpc::Channel> createGRPCChannel(StringRef SocketPath) {
   // connection fails due to the timeout. Note that the connection still fails
   // if the socket path does not exist or there is no process listening on it.
   Args.SetInt(GRPC_ARG_MIN_RECONNECT_BACKOFF_MS, INT_MAX);
+  Args.SetInt(GRPC_ARG_MAX_RECEIVE_MESSAGE_LENGTH, -1);
   return grpc::CreateCustomChannel(std::move(Address),
                                    grpc::InsecureChannelCredentials(), Args);
 }
