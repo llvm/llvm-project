@@ -18,12 +18,15 @@ define void @test() {
 ; CHECK-NEXT:    br label [[FOR_INC:%.*]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[C_0:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C_0]], label [[WHILE_COND25:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[C_0]], label [[WHILE_COND25_PREHEADER:%.*]], label [[FOR_BODY]]
+; CHECK:       while.cond25.preheader:
+; CHECK-NEXT:    call void @llvm.set.loop.iterations.i64(i64 51)
+; CHECK-NEXT:    br label [[WHILE_COND25:%.*]]
 ; CHECK:       while.cond25:
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[LAND_RHS:%.*]] ], [ 0, [[FOR_INC]] ]
-; CHECK-NEXT:    [[INDVARS_IV349:%.*]] = phi i64 [ [[INDVARS_IV_NEXT350:%.*]], [[LAND_RHS]] ], [ 50, [[FOR_INC]] ]
-; CHECK-NEXT:    [[CMP26_NOT:%.*]] = icmp eq i64 [[INDVARS_IV349]], 0
-; CHECK-NEXT:    br i1 [[CMP26_NOT]], label [[WHILE_END187:%.*]], label [[LAND_RHS]]
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[WHILE_COND25_PREHEADER]] ], [ [[INDVAR_NEXT:%.*]], [[LAND_RHS:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV349:%.*]] = phi i64 [ [[INDVARS_IV_NEXT350:%.*]], [[LAND_RHS]] ], [ 50, [[WHILE_COND25_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.loop.decrement.i64(i64 1)
+; CHECK-NEXT:    br i1 [[TMP0]], label [[LAND_RHS]], label [[WHILE_END187:%.*]]
 ; CHECK:       land.rhs:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT350]] = add nsw i64 [[INDVARS_IV349]], -1
 ; CHECK-NEXT:    [[C_1:%.*]] = call i1 @cond()
@@ -34,13 +37,13 @@ define void @test() {
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[WHILE_END187]], label [[WHILE_COND35_PREHEADER:%.*]]
 ; CHECK:       while.cond35.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw i64 [[INDVAR_LCSSA1]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 51
-; CHECK-NEXT:    call void @llvm.set.loop.iterations.i64(i64 [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 [[INDVAR_LCSSA1]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 51
+; CHECK-NEXT:    call void @llvm.set.loop.iterations.i64(i64 [[TMP2]])
 ; CHECK-NEXT:    br label [[WHILE_COND35:%.*]]
 ; CHECK:       while.cond35:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.loop.decrement.i64(i64 1)
-; CHECK-NEXT:    br i1 [[TMP2]], label [[LAND_RHS37:%.*]], label [[IF_END51:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.loop.decrement.i64(i64 1)
+; CHECK-NEXT:    br i1 [[TMP3]], label [[LAND_RHS37:%.*]], label [[IF_END51:%.*]]
 ; CHECK:       land.rhs37:
 ; CHECK-NEXT:    br label [[WHILE_COND35]]
 ; CHECK:       if.end51:

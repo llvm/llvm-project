@@ -11,8 +11,8 @@ define void @julia__typed_vcat_20() #0 {
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    li r3, 1
 ; CHECK-NEXT:    li r30, 0
+; CHECK-NEXT:    li r3, 1
 ; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb3
@@ -28,7 +28,7 @@ define void @julia__typed_vcat_20() #0 {
 ; CHECK-NEXT:    addi r30, r30, -1
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    cmpldi r30, 0
-; CHECK-NEXT:    bne+ cr0, .LBB0_1
+; CHECK-NEXT:    bc 12, gt, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %bb11
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
 ; CHECK-NEXT:    nop
@@ -91,7 +91,7 @@ define void @julia__hypot_17() #0 {
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    addi r30, r30, -1
 ; CHECK-NEXT:    cmpldi r30, 0
-; CHECK-NEXT:    beq cr0, .LBB1_3
+; CHECK-NEXT:    bc 4, gt, .LBB1_3
 ; CHECK-NEXT:  # %bb.2: # %bb3
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lhz r3, 0(0)
@@ -156,26 +156,28 @@ define void @func_48786() #0 {
 ; CHECK-NEXT:    ld r3, 0(r3)
 ; CHECK-NEXT:    cmpdi r3, 0
 ; CHECK-NEXT:    crnot 4*cr2+lt, eq
-; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB2_3
+; CHECK-NEXT:    b .LBB2_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB2_1: # %bb4
+; CHECK-NEXT:  .LBB2_1: # %bb10
+; CHECK-NEXT:    #
+; CHECK-NEXT:    addi r30, r30, -1
+; CHECK-NEXT:    cmpldi r30, 0
+; CHECK-NEXT:    bc 4, gt, .LBB2_5
+; CHECK-NEXT:  .LBB2_2: # %bb2
+; CHECK-NEXT:    #
+; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB2_1
+; CHECK-NEXT:  # %bb.3: # %bb4
+; CHECK-NEXT:    #
 ; CHECK-NEXT:    lhz r3, 0(r3)
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    bc 4, 4*cr2+lt, .LBB2_6
-; CHECK-NEXT:  # %bb.2: # %bb8
+; CHECK-NEXT:  # %bb.4: # %bb8
+; CHECK-NEXT:    #
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    sth r3, 0(0)
-; CHECK-NEXT:  .LBB2_3: # %bb10
-; CHECK-NEXT:    #
-; CHECK-NEXT:    cmpldi r30, 0
-; CHECK-NEXT:    beq cr0, .LBB2_5
-; CHECK-NEXT:  # %bb.4: # %bb12
-; CHECK-NEXT:    #
-; CHECK-NEXT:    addi r30, r30, 1
-; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB2_1
-; CHECK-NEXT:    b .LBB2_3
+; CHECK-NEXT:    b .LBB2_1
 ; CHECK-NEXT:  .LBB2_5: # %bb14
 ; CHECK-NEXT:    ld r30, 32(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi r1, r1, 48
@@ -263,20 +265,21 @@ define void @func_48785(half %arg) #0 {
 ; CHECK-NEXT:    stfd f31, -8(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -64(r1)
 ; CHECK-NEXT:    fmr f31, f1
-; CHECK-NEXT:    li r30, 0
+; CHECK-NEXT:    li r3, 1
 ; CHECK-NEXT:    li r29, 0
 ; CHECK-NEXT:    std r0, 80(r1)
+; CHECK-NEXT:    rldic r30, r3, 62, 1
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB3_1: # %bb1
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    fmr f1, f31
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi r29, r29, -12
-; CHECK-NEXT:    sth r3, 0(r30)
-; CHECK-NEXT:    addi r30, r30, 24
-; CHECK-NEXT:    cmpldi r29, 0
-; CHECK-NEXT:    bne+ cr0, .LBB3_1
+; CHECK-NEXT:    addi r30, r30, -1
+; CHECK-NEXT:    sth r3, 0(r29)
+; CHECK-NEXT:    addi r29, r29, 24
+; CHECK-NEXT:    cmpldi r30, 0
+; CHECK-NEXT:    bc 12, gt, .LBB3_1
 ; CHECK-NEXT:  # %bb.2: # %bb5
 ;
 ; CHECK-P9-LABEL: func_48785:
