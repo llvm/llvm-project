@@ -378,6 +378,20 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
         }
       }
     }
+
+    // icmp eq/ne with a common operand also can have the common operand
+    // pulled after the select.
+    ICmpInst::Predicate TPred, FPred;
+    if (match(TI, m_ICmp(TPred, m_Value(), m_Value())) &&
+        match(FI, m_ICmp(FPred, m_Value(), m_Value()))) {
+      if (TPred == FPred && ICmpInst::isEquality(TPred)) {
+        if (Value *MatchOp = getCommonOp(TI, FI, true)) {
+          Value *NewSel = Builder.CreateSelect(Cond, OtherOpT, OtherOpF,
+                                               SI.getName() + ".v", &SI);
+          return new ICmpInst(TPred, NewSel, MatchOp);
+        }
+      }
+    }
   }
 
   // Only handle binary operators (including two-operand getelementptr) with
