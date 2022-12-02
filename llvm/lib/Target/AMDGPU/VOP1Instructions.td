@@ -1350,3 +1350,15 @@ def : GCNPat <
                         (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))
 >;
 } // End OtherPredicates = [isGFX11Only]
+
+//===----------------------------------------------------------------------===//
+// GFX12
+//===----------------------------------------------------------------------===//
+
+let OtherPredicates = [isGFX12Only] in {
+def : GCNPat <
+  (i32 (int_amdgcn_mov_dpp8 i32:$src, timm:$dpp8)),
+  (V_MOV_B32_dpp8_gfx12 VGPR_32:$src, VGPR_32:$src,
+                        (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))
+>;
+} // End OtherPredicates = [isGFX12Only]
