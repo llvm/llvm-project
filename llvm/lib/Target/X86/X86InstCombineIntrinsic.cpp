@@ -18,7 +18,6 @@
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
-#include <optional>
 
 using namespace llvm;
 
@@ -925,7 +924,7 @@ static Value *simplifyX86vpermv(const IntrinsicInst &II,
   return Builder.CreateShuffleVector(V1, makeArrayRef(Indexes, Size));
 }
 
-std::optional<Instruction *>
+Optional<Instruction *>
 X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   auto SimplifyDemandedVectorEltsLow = [&IC](Value *Op, unsigned Width,
                                              unsigned DemandedWidth) {
@@ -1731,10 +1730,10 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   default:
     break;
   }
-  return std::nullopt;
+  return None;
 }
 
-std::optional<Value *> X86TTIImpl::simplifyDemandedUseBitsIntrinsic(
+Optional<Value *> X86TTIImpl::simplifyDemandedUseBitsIntrinsic(
     InstCombiner &IC, IntrinsicInst &II, APInt DemandedMask, KnownBits &Known,
     bool &KnownBitsComputed) const {
   switch (II.getIntrinsicID()) {
@@ -1771,10 +1770,10 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedUseBitsIntrinsic(
     break;
   }
   }
-  return std::nullopt;
+  return None;
 }
 
-std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
+Optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
     APInt &UndefElts2, APInt &UndefElts3,
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
@@ -2026,5 +2025,5 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     UndefElts.setHighBits(VWidth / 2);
     break;
   }
-  return std::nullopt;
+  return None;
 }

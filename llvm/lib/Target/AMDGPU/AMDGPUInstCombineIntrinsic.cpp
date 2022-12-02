@@ -20,7 +20,6 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
-#include <optional>
 
 using namespace llvm;
 
@@ -115,14 +114,14 @@ static Value *convertTo16Bit(Value &V, InstCombiner::BuilderTy &Builder) {
 /// Applies Func(OldIntr.Args, OldIntr.ArgTys), creates intrinsic call with
 /// modified arguments (based on OldIntr) and replaces InstToReplace with
 /// this newly created intrinsic call.
-static std::optional<Instruction *> modifyIntrinsicCall(
+static Optional<Instruction *> modifyIntrinsicCall(
     IntrinsicInst &OldIntr, Instruction &InstToReplace, unsigned NewIntr,
     InstCombiner &IC,
     std::function<void(SmallVectorImpl<Value *> &, SmallVectorImpl<Type *> &)>
         Func) {
   SmallVector<Type *, 4> ArgTys;
   if (!Intrinsic::getIntrinsicSignature(OldIntr.getCalledFunction(), ArgTys))
-    return std::nullopt;
+    return None;
 
   SmallVector<Value *, 8> Args(OldIntr.args());
 
@@ -150,7 +149,7 @@ static std::optional<Instruction *> modifyIntrinsicCall(
   return RetValue;
 }
 
-static std::optional<Instruction *>
+static Optional<Instruction *>
 simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
                              const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr,
                              IntrinsicInst &II, InstCombiner &IC) {
@@ -253,7 +252,7 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
 
   // Try to use A16 or G16
   if (!ST->hasA16() && !ST->hasG16())
-    return std::nullopt;
+    return None;
 
   // Address is interpreted as float if the instruction has a sampler or as
   // unsigned int if there is no sampler.
@@ -296,7 +295,7 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
 
   if (OnlyDerivatives && (!ST->hasG16() || ImageDimIntr->GradientStart ==
                                                ImageDimIntr->CoordStart))
-    return std::nullopt;
+    return None;
 
   Type *CoordType = FloatCoord ? Type::getHalfTy(II.getContext())
                                : Type::getInt16Ty(II.getContext());
@@ -349,7 +348,7 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Value *Op0, const Value *Op1,
   return false;
 }
 
-std::optional<Instruction *>
+Optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
   switch (IID) {
@@ -1060,7 +1059,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
   }
   }
-  return std::nullopt;
+  return None;
 }
 
 /// Implement SimplifyDemandedVectorElts for amdgcn buffer and image intrinsics.
@@ -1205,7 +1204,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
   return Shuffle;
 }
 
-std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
+Optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
     InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
     APInt &UndefElts2, APInt &UndefElts3,
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
@@ -1229,5 +1228,5 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
     break;
   }
   }
-  return std::nullopt;
+  return None;
 }
