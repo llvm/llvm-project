@@ -883,7 +883,8 @@ struct DSEState {
                                       LocationSize Size) const {
     if (auto *CB = dyn_cast<CallBase>(I)) {
       LibFunc F;
-      if (TLI.getLibFunc(*CB, F) && TLI.has(F) && F == LibFunc_memset_chk) {
+      if (TLI.getLibFunc(*CB, F) && TLI.has(F) &&
+          (F == LibFunc_memset_chk || F == LibFunc_memcpy_chk)) {
         // Use the precise location size specified by the 3rd argument
         // for determining KillingI overwrites DeadLoc if it is a memset_chk
         // instruction. memset_chk will write either the amount specified as 3rd
