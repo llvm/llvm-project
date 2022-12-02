@@ -25,6 +25,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include <cctype>
+#include <optional>
 
 using namespace llvm;
 
@@ -1450,7 +1451,7 @@ static SDValue lowerGR128ToI128(SelectionDAG &DAG, SDValue In) {
 
 bool SystemZTargetLowering::splitValueIntoRegisterParts(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
-    unsigned NumParts, MVT PartVT, Optional<CallingConv::ID> CC) const {
+    unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC) const {
   EVT ValueVT = Val.getValueType();
   assert((ValueVT != MVT::i128 ||
           ((NumParts == 1 && PartVT == MVT::Untyped) ||
@@ -1466,7 +1467,7 @@ bool SystemZTargetLowering::splitValueIntoRegisterParts(
 
 SDValue SystemZTargetLowering::joinRegisterPartsIntoValue(
     SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts, unsigned NumParts,
-    MVT PartVT, EVT ValueVT, Optional<CallingConv::ID> CC) const {
+    MVT PartVT, EVT ValueVT, std::optional<CallingConv::ID> CC) const {
   assert((ValueVT != MVT::i128 ||
           ((NumParts == 1 && PartVT == MVT::Untyped) ||
            (NumParts == 2 && PartVT == MVT::i64))) &&
