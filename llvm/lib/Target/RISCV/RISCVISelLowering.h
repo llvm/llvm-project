@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Support/TargetParser.h"
+#include <optional>
 
 namespace llvm {
 class RISCVSubtarget;
@@ -551,16 +552,15 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *Fast = nullptr) const override;
 
-  bool splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL,
-                                   SDValue Val, SDValue *Parts,
-                                   unsigned NumParts, MVT PartVT,
-                                   Optional<CallingConv::ID> CC) const override;
+  bool splitValueIntoRegisterParts(
+      SelectionDAG & DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
+      unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC)
+      const override;
 
-  SDValue
-  joinRegisterPartsIntoValue(SelectionDAG &DAG, const SDLoc &DL,
-                             const SDValue *Parts, unsigned NumParts,
-                             MVT PartVT, EVT ValueVT,
-                             Optional<CallingConv::ID> CC) const override;
+  SDValue joinRegisterPartsIntoValue(
+      SelectionDAG & DAG, const SDLoc &DL, const SDValue *Parts,
+      unsigned NumParts, MVT PartVT, EVT ValueVT,
+      std::optional<CallingConv::ID> CC) const override;
 
   static RISCVII::VLMUL getLMUL(MVT VT);
   inline static unsigned computeVLMAX(unsigned VectorBits, unsigned EltSize,

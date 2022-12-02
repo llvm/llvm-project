@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include <optional>
 
 namespace llvm {
 namespace SystemZISD {
@@ -417,7 +418,7 @@ public:
   }
   unsigned
   getNumRegisters(LLVMContext &Context, EVT VT,
-                  Optional<MVT> RegisterVT) const override {
+                  std::optional<MVT> RegisterVT) const override {
     // i128 inline assembly operand.
     if (VT == MVT::i128 && RegisterVT && *RegisterVT == MVT::Untyped)
       return 1;
@@ -556,15 +557,14 @@ public:
   const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
   bool allowTruncateForTailCall(Type *, Type *) const override;
   bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
-  bool splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL,
-                                   SDValue Val, SDValue *Parts,
-                                   unsigned NumParts, MVT PartVT,
-                                   Optional<CallingConv::ID> CC) const override;
-  SDValue
-  joinRegisterPartsIntoValue(SelectionDAG &DAG, const SDLoc &DL,
-                             const SDValue *Parts, unsigned NumParts,
-                             MVT PartVT, EVT ValueVT,
-                             Optional<CallingConv::ID> CC) const override;
+  bool splitValueIntoRegisterParts(
+      SelectionDAG & DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
+      unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC)
+      const override;
+  SDValue joinRegisterPartsIntoValue(
+      SelectionDAG & DAG, const SDLoc &DL, const SDValue *Parts,
+      unsigned NumParts, MVT PartVT, EVT ValueVT,
+      std::optional<CallingConv::ID> CC) const override;
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,
                                const SmallVectorImpl<ISD::InputArg> &Ins,
