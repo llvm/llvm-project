@@ -822,6 +822,7 @@ static SDValue customLegalizeToWOp(SDNode *N, SelectionDAG &DAG, int NumOp,
 void LoongArchTargetLowering::ReplaceNodeResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   SDLoc DL(N);
+  EVT VT = N->getValueType(0);
   switch (N->getOpcode()) {
   default:
     llvm_unreachable("Don't know how to legalize this operation");
@@ -829,7 +830,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   case ISD::SRA:
   case ISD::SRL:
   case ISD::ROTR:
-    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+    assert(VT == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     if (N->getOperand(1).getOpcode() != ISD::Constant) {
       Results.push_back(customLegalizeToWOp(N, DAG, 2));
@@ -844,32 +845,31 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     }
     break;
   case ISD::FP_TO_SINT: {
-    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+    assert(VT == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     SDValue Src = N->getOperand(0);
-    EVT VT = EVT::getFloatingPointVT(N->getValueSizeInBits(0));
+    EVT FVT = EVT::getFloatingPointVT(N->getValueSizeInBits(0));
     if (getTypeAction(*DAG.getContext(), Src.getValueType()) !=
         TargetLowering::TypeSoftenFloat) {
-      SDValue Dst = DAG.getNode(LoongArchISD::FTINT, DL, VT, Src);
-      Results.push_back(DAG.getNode(ISD::BITCAST, DL, N->getValueType(0), Dst));
+      SDValue Dst = DAG.getNode(LoongArchISD::FTINT, DL, FVT, Src);
+      Results.push_back(DAG.getNode(ISD::BITCAST, DL, VT, Dst));
       return;
     }
     // If the FP type needs to be softened, emit a library call using the 'si'
     // version. If we left it to default legalization we'd end up with 'di'.
     RTLIB::Libcall LC;
-    LC = RTLIB::getFPTOSINT(Src.getValueType(), N->getValueType(0));
+    LC = RTLIB::getFPTOSINT(Src.getValueType(), VT);
     MakeLibCallOptions CallOptions;
     EVT OpVT = Src.getValueType();
-    CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0), true);
+    CallOptions.setTypeListBeforeSoften(OpVT, VT, true);
     SDValue Chain = SDValue();
     SDValue Result;
     std::tie(Result, Chain) =
-        makeLibCall(DAG, LC, N->getValueType(0), Src, CallOptions, DL, Chain);
+        makeLibCall(DAG, LC, VT, Src, CallOptions, DL, Chain);
     Results.push_back(Result);
     break;
   }
   case ISD::BITCAST: {
-    EVT VT = N->getValueType(0);
     SDValue Src = N->getOperand(0);
     EVT SrcVT = Src.getValueType();
     if (VT == MVT::i32 && SrcVT == MVT::f32 && Subtarget.is64Bit() &&
@@ -881,7 +881,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     break;
   }
   case ISD::FP_TO_UINT: {
-    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+    assert(VT == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     auto &TLI = DAG.getTargetLoweringInfo();
     SDValue Tmp1, Tmp2;
@@ -891,7 +891,6 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   }
   case ISD::BSWAP: {
     SDValue Src = N->getOperand(0);
-    EVT VT = N->getValueType(0);
     assert((VT == MVT::i16 || VT == MVT::i32) &&
            "Unexpected custom legalization");
     MVT GRLenVT = Subtarget.getGRLenVT();
@@ -914,7 +913,6 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   }
   case ISD::BITREVERSE: {
     SDValue Src = N->getOperand(0);
-    EVT VT = N->getValueType(0);
     assert((VT == MVT::i8 || (VT == MVT::i32 && Subtarget.is64Bit())) &&
            "Unexpected custom legalization");
     MVT GRLenVT = Subtarget.getGRLenVT();
@@ -935,15 +933,14 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   }
   case ISD::CTLZ:
   case ISD::CTTZ: {
-    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+    assert(VT == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     Results.push_back(customLegalizeToWOp(N, DAG, 1));
     break;
   }
   case ISD::INTRINSIC_W_CHAIN: {
-    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+    assert(VT == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
-    EVT VT = N->getValueType(0);
     SDValue Op2 = N->getOperand(2);
     SDValue Op3 = N->getOperand(3);
 
@@ -988,7 +985,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     else
       DAG.getContext()->emitError(
           "On LA32, only 32-bit registers can be read.");
-    Results.push_back(DAG.getUNDEF(N->getValueType(0)));
+    Results.push_back(DAG.getUNDEF(VT));
     Results.push_back(N->getOperand(0));
     break;
   }

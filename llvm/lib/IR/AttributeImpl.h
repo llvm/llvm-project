@@ -24,6 +24,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -229,7 +230,7 @@ class AttributeSetNode final
 
   static AttributeSetNode *getSorted(LLVMContext &C,
                                      ArrayRef<Attribute> SortedAttrs);
-  Optional<Attribute> findEnumAttribute(Attribute::AttrKind Kind) const;
+  std::optional<Attribute> findEnumAttribute(Attribute::AttrKind Kind) const;
 
 public:
   // AttributesSetNode is uniqued, these should not be available.
@@ -258,9 +259,10 @@ public:
   MaybeAlign getStackAlignment() const;
   uint64_t getDereferenceableBytes() const;
   uint64_t getDereferenceableOrNullBytes() const;
-  Optional<std::pair<unsigned, Optional<unsigned>>> getAllocSizeArgs() const;
+  std::optional<std::pair<unsigned, std::optional<unsigned>>> getAllocSizeArgs()
+      const;
   unsigned getVScaleRangeMin() const;
-  Optional<unsigned> getVScaleRangeMax() const;
+  std::optional<unsigned> getVScaleRangeMax() const;
   UWTableKind getUWTableKind() const;
   AllocFnKind getAllocKind() const;
   MemoryEffects getMemoryEffects() const;

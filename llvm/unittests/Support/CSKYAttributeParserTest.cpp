@@ -83,7 +83,7 @@ static bool testAttributeInt(unsigned Tag, unsigned Value, unsigned ExpectedTag,
   CSKYAttributeParser Parser;
   cantFail(Parser.parse(Bytes, support::little));
 
-  Optional<unsigned> Attr = Parser.getAttributeValue(ExpectedTag);
+  std::optional<unsigned> Attr = Parser.getAttributeValue(ExpectedTag);
   return Attr && *Attr == ExpectedValue;
 }
 
@@ -100,7 +100,7 @@ static bool testAttributeString(unsigned Tag, const char *Value,
   CSKYAttributeParser Parser;
   cantFail(Parser.parse(Bytes, support::little));
 
-  Optional<StringRef> Attr = Parser.getAttributeString(ExpectedTag);
+  std::optional<StringRef> Attr = Parser.getAttributeString(ExpectedTag);
   return Attr && *Attr == ExpectedValue;
 }
 
