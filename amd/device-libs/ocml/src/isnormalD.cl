@@ -10,6 +10,6 @@
 CONSTATTR int
 MATH_MANGLE(isnormal)(double x)
 {
-    return BUILTIN_CLASS_F64(x, CLASS_PNOR|CLASS_NNOR);
+    return BUILTIN_ISNORMAL_F64(x);
 }
 

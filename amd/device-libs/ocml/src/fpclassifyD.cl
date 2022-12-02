@@ -13,7 +13,7 @@ MATH_MANGLE(fpclassify)(double x)
     int ret = BUILTIN_ISINF_F64(x) ? FP_INFINITE : FP_NAN;
     ret = BUILTIN_ISZERO_F64(x) ? FP_ZERO : ret;
     ret = BUILTIN_ISSUBNORMAL_F64(x) ? FP_SUBNORMAL : ret;
-    ret = BUILTIN_CLASS_F64(x, CLASS_PNOR|CLASS_NNOR) ? FP_NORMAL : ret;
+    ret = BUILTIN_ISNORMAL_F64(x) ? FP_NORMAL : ret;
     return ret;
 }
 

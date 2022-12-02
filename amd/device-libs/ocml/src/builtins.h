@@ -76,6 +76,10 @@
 #define BUILTIN_ISZERO_F64(x) __builtin_amdgcn_class(x, CLASS_NZER|CLASS_PZER)
 #define BUILTIN_ISZERO_F16(x) __builtin_amdgcn_classh(x, CLASS_NZER|CLASS_PZER)
 
+#define BUILTIN_ISNORMAL_F32(x) __builtin_amdgcn_classf(x, CLASS_NNOR|CLASS_PNOR)
+#define BUILTIN_ISNORMAL_F64(x) __builtin_amdgcn_class(x, CLASS_NNOR|CLASS_PNOR)
+#define BUILTIN_ISNORMAL_F16(x) __builtin_amdgcn_classh(x, CLASS_NNOR|CLASS_PNOR)
+
 #define BUILTIN_COPYSIGN_F32 __builtin_copysignf
 #define BUILTIN_COPYSIGN_F64 __builtin_copysign
 #define BUILTIN_COPYSIGN_F16 __builtin_copysignf16
