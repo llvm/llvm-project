@@ -424,6 +424,8 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
       Reserved.set(*SubReg);
   }
 
+  markSuperRegs(Reserved, AArch64::FPCR);
+
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
