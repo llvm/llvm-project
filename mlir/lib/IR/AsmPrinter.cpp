@@ -1266,9 +1266,9 @@ private:
 
 SSANameState::SSANameState(Operation *op, const OpPrintingFlags &printerFlags)
     : printerFlags(printerFlags) {
-  llvm::SaveAndRestore<unsigned> valueIDSaver(nextValueID);
-  llvm::SaveAndRestore<unsigned> argumentIDSaver(nextArgumentID);
-  llvm::SaveAndRestore<unsigned> conflictIDSaver(nextConflictID);
+  llvm::SaveAndRestore valueIDSaver(nextValueID);
+  llvm::SaveAndRestore argumentIDSaver(nextArgumentID);
+  llvm::SaveAndRestore conflictIDSaver(nextConflictID);
 
   // The naming context includes `nextValueID`, `nextArgumentID`,
   // `nextConflictID` and `usedNames` scoped HashTable. This information is

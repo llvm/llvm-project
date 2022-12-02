@@ -412,7 +412,7 @@ static void SignalHandler(int Sig) {
 }
 
 static void InfoSignalHandler(int Sig) {
-  SaveAndRestore<int> SaveErrnoDuringASignalHandler(errno);
+  SaveAndRestore SaveErrnoDuringASignalHandler(errno);
   if (SignalHandlerFunctionType CurrentInfoFunction = InfoSignalFunction)
     CurrentInfoFunction();
 }

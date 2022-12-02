@@ -1059,13 +1059,13 @@ bool TargetPassConfig::addCoreISelPasses() {
   //        pass manager into two. GlobalISel with the fallback path disabled
   //        and -run-pass seem to be unaffected. The majority of GlobalISel
   //        testing uses -run-pass so this probably isn't too bad.
-  SaveAndRestore<bool> SavedDebugifyIsSafe(DebugifyIsSafe);
+  SaveAndRestore SavedDebugifyIsSafe(DebugifyIsSafe);
   if (Selector != SelectorType::GlobalISel || !isGlobalISelAbortEnabled())
     DebugifyIsSafe = false;
 
   // Add instruction selector passes.
   if (Selector == SelectorType::GlobalISel) {
-    SaveAndRestore<bool> SavedAddingMachinePasses(AddingMachinePasses, true);
+    SaveAndRestore SavedAddingMachinePasses(AddingMachinePasses, true);
     if (addIRTranslator())
       return true;
 
