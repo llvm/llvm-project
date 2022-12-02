@@ -940,7 +940,6 @@ mlir::LogicalResult fir::ConvertOp::verify() {
       (fir::isBoxedRecordType(inType) && fir::isPolymorphicType(outType)) ||
       (fir::isPolymorphicType(inType) && fir::isPolymorphicType(outType)))
     return mlir::success();
-  llvm::errs() << inType << " / " << outType << "\n";
   return emitOpError("invalid type conversion");
 }
 
