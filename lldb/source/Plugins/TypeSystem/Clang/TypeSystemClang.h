@@ -1077,6 +1077,8 @@ public:
   /// complete (base class, member, etc.).
   static void RequireCompleteType(CompilerType type);
 
+  bool SetDeclIsForcefullyCompleted(const clang::TagDecl *td);
+
 private:
   /// Returns the PrintingPolicy used when generating the internal type names.
   /// These type names are mostly used for the formatter selection.

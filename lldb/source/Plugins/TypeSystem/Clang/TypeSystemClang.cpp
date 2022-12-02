@@ -9863,8 +9863,9 @@ void TypeSystemClang::RequireCompleteType(CompilerType type) {
   lldbassert(started && "Unable to start a class type definition.");
   TypeSystemClang::CompleteTagDeclarationDefinition(type);
   const clang::TagDecl *td = ClangUtil::GetAsTagDecl(type);
-  if (auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>())
-    ts->GetMetadata(td)->SetIsForcefullyCompleted();
+  auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  if (ts)
+    ts->SetDeclIsForcefullyCompleted(td);
 }
 
 namespace {
@@ -10066,4 +10067,15 @@ bool TypeSystemClang::IsForcefullyCompleted(lldb::opaque_compiler_type_t type) {
     }
   }
   return false;
+}
+
+bool TypeSystemClang::SetDeclIsForcefullyCompleted(const clang::TagDecl *td) {
+  if (td == nullptr)
+    return false;
+  ClangASTMetadata *metadata = GetMetadata(td);
+  if (metadata == nullptr)
+    return false;
+  m_has_forcefully_completed_types = true;
+  metadata->SetIsForcefullyCompleted();
+  return true;
 }

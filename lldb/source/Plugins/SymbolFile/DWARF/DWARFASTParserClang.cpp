@@ -226,7 +226,7 @@ static void ForcefullyCompleteType(CompilerType type) {
   auto ts_sp = type.GetTypeSystem();
   auto ts = ts_sp.dyn_cast_or_null<TypeSystemClang>();
   if (ts)
-    ts->GetMetadata(td)->SetIsForcefullyCompleted();
+    ts->SetDeclIsForcefullyCompleted(td);
 }
 
 /// This function serves a similar purpose as RequireCompleteType above, but it
