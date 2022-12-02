@@ -475,6 +475,10 @@ public:
               BasicBlock::iterator FromBeginIt,
               BasicBlock::iterator FromEndIt);
 
+  /// Erases a range of instructions from \p FromIt to (not including) \p ToIt.
+  /// \Returns \p ToIt.
+  BasicBlock::iterator erase(BasicBlock::iterator FromIt, BasicBlock::iterator ToIt);
+
   /// Returns true if there are any uses of this basic block other than
   /// direct branches, switches, etc. to it.
   bool hasAddressTaken() const {

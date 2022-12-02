@@ -7,7 +7,7 @@
 
 ; These two objects should be allocated at the same constant offsets
 ; from the base.
-define amdgpu_kernel void @alloc_lds_gds(i32 addrspace(1)* %out) #1 {
+define amdgpu_kernel void @alloc_lds_gds(ptr addrspace(1) %out) #1 {
 ; GCN-LABEL: alloc_lds_gds:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_mov_b32_e32 v0, 5
@@ -21,15 +21,15 @@ define amdgpu_kernel void @alloc_lds_gds(i32 addrspace(1)* %out) #1 {
 ; GCN-NEXT:    ds_add_u32 v1, v0 offset:12
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_endpgm
-  %gep.gds = getelementptr [4 x i32], [4 x i32] addrspace(2)* @gds0, i32 0, i32 3
-  %val0 = atomicrmw add i32 addrspace(2)* %gep.gds, i32 5 acq_rel
-  %gep.lds = getelementptr [4 x i32], [4 x i32] addrspace(3)* @lds0, i32 0, i32 3
-  %val1 = atomicrmw add i32 addrspace(3)* %gep.lds, i32 5 acq_rel
+  %gep.gds = getelementptr [4 x i32], ptr addrspace(2) @gds0, i32 0, i32 3
+  %val0 = atomicrmw add ptr addrspace(2) %gep.gds, i32 5 acq_rel
+  %gep.lds = getelementptr [4 x i32], ptr addrspace(3) @lds0, i32 0, i32 3
+  %val1 = atomicrmw add ptr addrspace(3) %gep.lds, i32 5 acq_rel
   ret void
 }
 
 ; The LDS alignment shouldn't change offset of GDS.
-define amdgpu_kernel void @alloc_lds_gds_align(i32 addrspace(1)* %out) #1 {
+define amdgpu_kernel void @alloc_lds_gds_align(ptr addrspace(1) %out) #1 {
 ; GCN-LABEL: alloc_lds_gds_align:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_mov_b32_e32 v0, 5
@@ -45,21 +45,21 @@ define amdgpu_kernel void @alloc_lds_gds_align(i32 addrspace(1)* %out) #1 {
 ; GCN-NEXT:    ds_add_u32 v1, v0 offset:12
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_endpgm
-  %gep.gds = getelementptr [4 x i32], [4 x i32] addrspace(2)* @gds0, i32 0, i32 3
-  %val0 = atomicrmw add i32 addrspace(2)* %gep.gds, i32 5 acq_rel
+  %gep.gds = getelementptr [4 x i32], ptr addrspace(2) @gds0, i32 0, i32 3
+  %val0 = atomicrmw add ptr addrspace(2) %gep.gds, i32 5 acq_rel
 
-  %gep.lds0 = getelementptr [4 x i32], [4 x i32] addrspace(3)* @lds0, i32 0, i32 3
-  %val1 = atomicrmw add i32 addrspace(3)* %gep.lds0, i32 5 acq_rel
+  %gep.lds0 = getelementptr [4 x i32], ptr addrspace(3) @lds0, i32 0, i32 3
+  %val1 = atomicrmw add ptr addrspace(3) %gep.lds0, i32 5 acq_rel
 
-  %gep.lds1 = getelementptr [4 x i32], [4 x i32] addrspace(3)* @lds1, i32 0, i32 3
-  %val2 = atomicrmw add i32 addrspace(3)* %gep.lds1, i32 5 acq_rel
+  %gep.lds1 = getelementptr [4 x i32], ptr addrspace(3) @lds1, i32 0, i32 3
+  %val2 = atomicrmw add ptr addrspace(3) %gep.lds1, i32 5 acq_rel
   ret void
 }
 
 @gds_align8 = internal addrspace(2) global [4 x i32] undef, align 8
 @gds_align32 = internal addrspace(2) global [4 x i32] undef, align 32
 
-define amdgpu_kernel void @gds_global_align(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @gds_global_align(ptr addrspace(1) %out) {
 ; GCN-LABEL: gds_global_align:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_mov_b32_e32 v0, 5
@@ -74,14 +74,14 @@ define amdgpu_kernel void @gds_global_align(i32 addrspace(1)* %out) {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1
 ; GCN-NEXT:    s_endpgm
-  %gep.gds0 = getelementptr [4 x i32], [4 x i32] addrspace(2)* @gds_align8, i32 0, i32 3
-  %val0 = atomicrmw add i32 addrspace(2)* %gep.gds0, i32 5 acq_rel
-  %gep.gds1 = getelementptr [4 x i32], [4 x i32] addrspace(2)* @gds_align32, i32 0, i32 3
-  %val1 = atomicrmw add i32 addrspace(2)* %gep.gds1, i32 5 acq_rel
+  %gep.gds0 = getelementptr [4 x i32], ptr addrspace(2) @gds_align8, i32 0, i32 3
+  %val0 = atomicrmw add ptr addrspace(2) %gep.gds0, i32 5 acq_rel
+  %gep.gds1 = getelementptr [4 x i32], ptr addrspace(2) @gds_align32, i32 0, i32 3
+  %val1 = atomicrmw add ptr addrspace(2) %gep.gds1, i32 5 acq_rel
   ret void
 }
 
-define amdgpu_kernel void @gds_global_align_plus_attr(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @gds_global_align_plus_attr(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: gds_global_align_plus_attr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_mov_b32_e32 v0, 5
@@ -96,17 +96,17 @@ define amdgpu_kernel void @gds_global_align_plus_attr(i32 addrspace(1)* %out) #0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1
 ; GCN-NEXT:    s_endpgm
-  %gep.gds0 = getelementptr [4 x i32], [4 x i32] addrspace(2)* @gds_align8, i32 0, i32 3
-  %val0 = atomicrmw add i32 addrspace(2)* %gep.gds0, i32 5 acq_rel
-  %gep.gds1 = getelementptr [4 x i32], [4 x i32] addrspace(2)* @gds_align32, i32 0, i32 3
-  %val1 = atomicrmw add i32 addrspace(2)* %gep.gds1, i32 5 acq_rel
+  %gep.gds0 = getelementptr [4 x i32], ptr addrspace(2) @gds_align8, i32 0, i32 3
+  %val0 = atomicrmw add ptr addrspace(2) %gep.gds0, i32 5 acq_rel
+  %gep.gds1 = getelementptr [4 x i32], ptr addrspace(2) @gds_align32, i32 0, i32 3
+  %val1 = atomicrmw add ptr addrspace(2) %gep.gds1, i32 5 acq_rel
   ret void
 }
 
 @small.gds = internal addrspace(2) global i8 undef, align 1
 @gds.external = external unnamed_addr addrspace(3) global [0 x i32], align 4
 
-define amdgpu_kernel void @gds_extern_align(i32 addrspace(1)* %out, [4 x i32] addrspace(2)* %gds.arg) #0 {
+define amdgpu_kernel void @gds_extern_align(ptr addrspace(1) %out, ptr addrspace(2) %gds.arg) #0 {
 ; GCN-LABEL: gds_extern_align:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x8
@@ -123,9 +123,9 @@ define amdgpu_kernel void @gds_extern_align(i32 addrspace(1)* %out, [4 x i32] ad
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1
 ; GCN-NEXT:    s_endpgm
-  call void asm sideeffect "; use $0","s"(i8 addrspace(2)* @small.gds)
-  %gep.gds0 = getelementptr [4 x i32], [4 x i32] addrspace(2)* %gds.arg, i32 0, i32 3
-  %val0 = atomicrmw add i32 addrspace(2)* %gep.gds0, i32 5 acq_rel
+  call void asm sideeffect "; use $0","s"(ptr addrspace(2) @small.gds)
+  %gep.gds0 = getelementptr [4 x i32], ptr addrspace(2) %gds.arg, i32 0, i32 3
+  %val0 = atomicrmw add ptr addrspace(2) %gep.gds0, i32 5 acq_rel
   ret void
 }
 

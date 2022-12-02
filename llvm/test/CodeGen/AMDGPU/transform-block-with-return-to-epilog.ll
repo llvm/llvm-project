@@ -25,7 +25,7 @@ define amdgpu_ps float @test_return_to_epilog_into_end_block(i32 inreg %a, float
   ; GCN: bb.2.else:
   ; GCN:   successors:
   ; GCN:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; GCN:   GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+  ; GCN:   GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
   ; GCN:   S_WAITCNT 3952
   ; GCN: bb.3:
 entry:
@@ -34,7 +34,7 @@ entry:
 if:                                               ; preds = %entry
   ret float %b
 else:                                             ; preds = %entry
-  store volatile i32 0, i32 addrspace(1)* undef
+  store volatile i32 0, ptr addrspace(1) undef
   unreachable
 }
 
@@ -62,7 +62,7 @@ define amdgpu_ps float @test_unify_return_to_epilog_into_end_block(i32 inreg %a,
   ; GCN: bb.4.else:
   ; GCN:   successors:
   ; GCN:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; GCN:   GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+  ; GCN:   GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
   ; GCN:   S_WAITCNT 3952
   ; GCN: bb.5:
 entry:
@@ -76,7 +76,7 @@ else.if.cond:                                     ; preds = %entry
 else.if:                                          ; preds = %else.if.cond
   ret float %d
 else:                                             ; preds = %else.if.cond
-  store volatile i32 0, i32 addrspace(1)* undef
+  store volatile i32 0, ptr addrspace(1) undef
   unreachable
 }
 

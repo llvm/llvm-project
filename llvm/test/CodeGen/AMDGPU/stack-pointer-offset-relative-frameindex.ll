@@ -7,7 +7,7 @@
 ; During instruction selection, we use immediate const zero for soffset in
 ; MUBUF stack accesses and let eliminateFrameIndex to fix up this field to use
 ; the correct frame register whenever required.
-define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <4 x i32> addrspace(1)* %input, <4 x float> addrspace(1)* %output, i32 %i) {
+define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr addrspace(1) %input, ptr addrspace(1) %output, i32 %i) {
 ; MUBUF-LABEL: kernel_background_evaluate:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_load_dword s0, s[0:1], 0x24
@@ -136,26 +136,26 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 entry:
   %sd = alloca < 1339 x i32>, align 8192, addrspace(5)
   %state = alloca <4 x i32>, align 16, addrspace(5)
-  %rslt = call i32 @svm_eval_nodes(float addrspace(5)* %kg, <1339 x i32> addrspace(5)* %sd, <4 x i32> addrspace(5)* %state, i32 0, i32 4194304)
+  %rslt = call i32 @svm_eval_nodes(ptr addrspace(5) %kg, ptr addrspace(5) %sd, ptr addrspace(5) %state, i32 0, i32 4194304)
   %cmp = icmp eq i32 %rslt, 0
   br i1 %cmp, label %shader_eval_surface.exit, label %if.then4.i
 
 if.then4.i:                                       ; preds = %entry
-  %rng_hash.i.i = getelementptr inbounds < 4 x i32>, <4 x i32> addrspace(5)* %state, i32 0, i32 1
-  %tmp0 = load i32, i32 addrspace(5)* %rng_hash.i.i, align 4
-  %rng_offset.i.i = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(5)* %state, i32 0, i32 2
-  %tmp1 = load i32, i32 addrspace(5)* %rng_offset.i.i, align 4
+  %rng_hash.i.i = getelementptr inbounds < 4 x i32>, ptr addrspace(5) %state, i32 0, i32 1
+  %tmp0 = load i32, ptr addrspace(5) %rng_hash.i.i, align 4
+  %rng_offset.i.i = getelementptr inbounds <4 x i32>, ptr addrspace(5) %state, i32 0, i32 2
+  %tmp1 = load i32, ptr addrspace(5) %rng_offset.i.i, align 4
   %add.i.i = add i32 %tmp1, %tmp0
   %add1.i.i = add i32 %add.i.i, 0
   %mul.i.i.i.i = mul i32 %add1.i.i, 1103515245
   %add.i.i.i.i = add i32 %mul.i.i.i.i, 12345
-  store i32 %add.i.i.i.i, i32 addrspace(5)* undef, align 16
+  store i32 %add.i.i.i.i, ptr addrspace(5) undef, align 16
   br label %shader_eval_surface.exit
 
 shader_eval_surface.exit:                         ; preds = %entry
   ret void
 }
 
-declare hidden i32 @svm_eval_nodes(float addrspace(5)*, <1339 x i32> addrspace(5)*, <4 x i32> addrspace(5)*, i32, i32) local_unnamed_addr #0
+declare hidden i32 @svm_eval_nodes(ptr addrspace(5), ptr addrspace(5), ptr addrspace(5), i32, i32) local_unnamed_addr #0
 
 attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
