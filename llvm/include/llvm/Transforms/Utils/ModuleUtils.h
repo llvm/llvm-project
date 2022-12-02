@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/GlobalIFunc.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <utility> // for std::pair
@@ -124,6 +125,21 @@ std::string getUniqueModuleId(Module *M);
 /// module using the same section name.
 void embedBufferInModule(Module &M, MemoryBufferRef Buf, StringRef SectionName,
                          Align Alignment = Align(1));
+
+/// Lower all calls to ifuncs by replacing uses with indirect calls loaded out
+/// of a global table initialized in a global constructor. This will introduce
+/// one constructor function and adds it to llvm.global_ctors. The constructor
+/// will call the resolver function once for each ifunc.
+///
+/// Leaves any unhandled constant initializer uses as-is.
+///
+/// If \p IFuncsToLower is empty, all ifuncs in the module will be lowered.
+/// If \p IFuncsToLower is non-empty, only the selected ifuncs will be lowered.
+///
+/// The processed ifuncs without remaining users will be removed from the
+/// module.
+bool lowerGlobalIFuncUsersAsGlobalCtor(
+    Module &M, ArrayRef<GlobalIFunc *> IFuncsToLower = {});
 
 class CallInst;
 namespace VFABI {
