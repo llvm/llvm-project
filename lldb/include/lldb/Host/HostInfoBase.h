@@ -116,7 +116,9 @@ public:
 #endif
   
   /// Return the directory containing a specific Xcode SDK.
-  static llvm::StringRef GetXcodeSDKPath(XcodeSDK sdk) { return {}; }
+  static llvm::Expected<llvm::StringRef> GetXcodeSDKPath(XcodeSDK sdk) {
+    return "";
+  }
 
   /// Return information about module \p image_name if it is loaded in
   /// the current process's address space.
