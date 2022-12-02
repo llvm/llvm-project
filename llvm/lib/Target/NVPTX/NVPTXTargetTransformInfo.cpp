@@ -414,12 +414,12 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
   llvm_unreachable("All SpecialCase enumerators should be handled in switch.");
 }
 
-std::optional<Instruction *>
+Optional<Instruction *>
 NVPTXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   if (Instruction *I = simplifyNvvmIntrinsic(&II, IC)) {
     return I;
   }
-  return std::nullopt;
+  return None;
 }
 
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(

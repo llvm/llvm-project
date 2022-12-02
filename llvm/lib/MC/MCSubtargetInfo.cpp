@@ -17,7 +17,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
-#include <optional>
 
 using namespace llvm;
 
@@ -336,11 +335,11 @@ void MCSubtargetInfo::initInstrItins(InstrItineraryData &InstrItins) const {
                                   ForwardingPaths);
 }
 
-std::optional<unsigned> MCSubtargetInfo::getCacheSize(unsigned Level) const {
-  return std::nullopt;
+Optional<unsigned> MCSubtargetInfo::getCacheSize(unsigned Level) const {
+  return None;
 }
 
-std::optional<unsigned>
+Optional<unsigned>
 MCSubtargetInfo::getCacheAssociativity(unsigned Level) const {
   return None;
 }

@@ -971,7 +971,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       }
       default: {
         // Handle target specific intrinsics
-        std::optional<Value *> V = targetSimplifyDemandedUseBitsIntrinsic(
+        Optional<Value *> V = targetSimplifyDemandedUseBitsIntrinsic(
             *II, DemandedMask, Known, KnownBitsComputed);
         if (V)
           return V.value();
@@ -1696,7 +1696,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     }
     default: {
       // Handle target specific intrinsics
-      std::optional<Value *> V = targetSimplifyDemandedVectorEltsIntrinsic(
+      Optional<Value *> V = targetSimplifyDemandedVectorEltsIntrinsic(
           *II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
           simplifyAndSetOp);
       if (V)
