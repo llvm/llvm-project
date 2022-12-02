@@ -415,7 +415,7 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName,
   DebugLoc Loc = I->getDebugLoc();
   // Move all of the specified instructions from the original basic block into
   // the new basic block.
-  New->getInstList().splice(New->end(), this->getInstList(), I, end());
+  New->splice(New->end(), this, I, end());
 
   // Add a branch instruction to the newly formed basic block.
   BranchInst *BI = BranchInst::Create(New, this);
@@ -444,7 +444,7 @@ BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
   DebugLoc Loc = I->getDebugLoc();
   // Move all of the specified instructions from the original basic block into
   // the new basic block.
-  New->getInstList().splice(New->end(), this->getInstList(), begin(), I);
+  New->splice(New->end(), this, begin(), I);
 
   // Loop through all of the predecessors of the 'this' block (which will be the
   // predecessors of the New block), replace the specified successor 'this'
