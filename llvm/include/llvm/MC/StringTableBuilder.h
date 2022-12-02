@@ -12,6 +12,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Alignment.h"
 #include <cstddef>
 #include <cstdint>
 
@@ -38,7 +39,7 @@ private:
   DenseMap<CachedHashStringRef, size_t> StringIndexMap;
   size_t Size = 0;
   Kind K;
-  unsigned Alignment;
+  Align Alignment;
   bool Finalized = false;
 
   void finalizeStringTable(bool Optimize);
