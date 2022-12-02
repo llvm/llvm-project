@@ -77,20 +77,20 @@ func.func @sizeof_op() {
 
 // CHECK-LABEL: @constant_op
 func.func @constant_op() {
-  // CHECK-NEXT: index.constant 0
+  // CHECK-NEXT: %idx0 = index.constant 0
   %0 = index.constant 0
-  // CHECK-NEXT: index.constant 1
+  // CHECK-NEXT: %idx1 = index.constant 1
   %1 = index.constant 1
-  // CHECK-NEXT: index.constant 42
+  // CHECK-NEXT: %idx42 = index.constant 42
   %2 = index.constant 42
   return
 }
 
 // CHECK-LABEL: @bool_constant_op
 func.func @bool_constant_op() {
-  // CHECK-NEXT: index.bool.constant true
+  // CHECK-NEXT: %true = index.bool.constant true
   %0 = index.bool.constant true
-  // CHECK-NEXT: index.bool.constant false
+  // CHECK-NEXT: %false = index.bool.constant false
   %1 = index.bool.constant false
   return
 }
