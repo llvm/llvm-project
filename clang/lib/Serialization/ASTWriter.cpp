@@ -1195,6 +1195,12 @@ ASTFileSignature ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
     AddString(HSOpts.SystemHeaderPrefixes[I].Prefix, Record);
     Record.push_back(HSOpts.SystemHeaderPrefixes[I].IsSystemHeader);
   }
+
+  // VFS overlay files.
+  Record.push_back(HSOpts.VFSOverlayFiles.size());
+  for (StringRef VFSOverlayFile : HSOpts.VFSOverlayFiles)
+    AddString(VFSOverlayFile, Record);
+
   Stream.EmitRecord(HEADER_SEARCH_PATHS, Record);
 
   // File system options.
@@ -1444,8 +1450,8 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
   // Header search options.
   Record.clear();
-  const HeaderSearchOptions &HSOpts
-    = PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   AddString(HSOpts.Sysroot, Record);
   AddString(HSOpts.ResourceDir, Record);
