@@ -79,7 +79,7 @@ Optional<unsigned> getVVPOpcode(unsigned Opcode) {
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
     return VEISD::VVP_STORE;
   }
-  return None;
+  return std::nullopt;
 }
 
 bool maySafelyIgnoreMask(SDValue Op) {
@@ -185,7 +185,7 @@ Optional<int> getAVLPos(unsigned Opc) {
     return 5;
   }
 
-  return None;
+  return std::nullopt;
 }
 
 Optional<int> getMaskPos(unsigned Opc) {
@@ -208,7 +208,7 @@ Optional<int> getMaskPos(unsigned Opc) {
     return 2;
   }
 
-  return None;
+  return std::nullopt;
 }
 
 bool isLegalAVL(SDValue AVL) { return AVL->getOpcode() == VEISD::LEGALAVL; }
