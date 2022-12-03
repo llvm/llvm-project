@@ -140,7 +140,7 @@ std::string getCanonicalTargetID(llvm::StringRef Processor,
 // For a specific processor, a feature either shows up in all target IDs, or
 // does not show up in any target IDs. Otherwise the target ID combination
 // is invalid.
-llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
+std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
 getConflictTargetIDCombination(const std::set<llvm::StringRef> &TargetIDs) {
   struct Info {
     llvm::StringRef TargetID;

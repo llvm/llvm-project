@@ -202,7 +202,7 @@ public:
   /// Read the marker of the next bundled to be read in the file. The bundle
   /// name is returned if there is one in the file, or `None` if there are no
   /// more bundles to be read.
-  virtual Expected<Optional<StringRef>>
+  virtual Expected<std::optional<StringRef>>
   ReadBundleStart(MemoryBuffer &Input) = 0;
 
   /// Read the marker that closes the current bundle.
@@ -245,7 +245,8 @@ public:
   Error forEachBundle(MemoryBuffer &Input,
                       std::function<Error(const BundleInfo &)> Func) {
     while (true) {
-      Expected<Optional<StringRef>> CurTripleOrErr = ReadBundleStart(Input);
+      Expected<std::optional<StringRef>> CurTripleOrErr =
+          ReadBundleStart(Input);
       if (!CurTripleOrErr)
         return CurTripleOrErr.takeError();
 
@@ -415,7 +416,8 @@ public:
     return Error::success();
   }
 
-  Expected<Optional<StringRef>> ReadBundleStart(MemoryBuffer &Input) final {
+  Expected<std::optional<StringRef>>
+  ReadBundleStart(MemoryBuffer &Input) final {
     if (NextBundleInfo == BundlesInfo.end())
       return std::nullopt;
     CurBundleInfo = NextBundleInfo++;
@@ -501,7 +503,7 @@ public:
   }
 
   // Creates temporary file with given contents.
-  Expected<StringRef> Create(Optional<ArrayRef<char>> Contents) {
+  Expected<StringRef> Create(std::optional<ArrayRef<char>> Contents) {
     SmallString<128u> File;
     if (std::error_code EC =
             sys::fs::createTemporaryFile("clang-offload-bundler", "tmp", File))
@@ -538,7 +540,8 @@ class ObjectFileHandler final : public FileHandler {
 
   /// Return bundle name (<kind>-<triple>) if the provided section is an offload
   /// section.
-  static Expected<Optional<StringRef>> IsOffloadSection(SectionRef CurSection) {
+  static Expected<std::optional<StringRef>>
+  IsOffloadSection(SectionRef CurSection) {
     Expected<StringRef> NameOrErr = CurSection.getName();
     if (!NameOrErr)
       return NameOrErr.takeError();
@@ -576,14 +579,15 @@ public:
 
   Error ReadHeader(MemoryBuffer &Input) final { return Error::success(); }
 
-  Expected<Optional<StringRef>> ReadBundleStart(MemoryBuffer &Input) final {
+  Expected<std::optional<StringRef>>
+  ReadBundleStart(MemoryBuffer &Input) final {
     while (NextSection != Obj->section_end()) {
       CurrentSection = NextSection;
       ++NextSection;
 
       // Check if the current section name starts with the reserved prefix. If
       // so, return the triple.
-      Expected<Optional<StringRef>> TripleOrErr =
+      Expected<std::optional<StringRef>> TripleOrErr =
           IsOffloadSection(*CurrentSection);
       if (!TripleOrErr)
         return TripleOrErr.takeError();
@@ -733,7 +737,8 @@ class TextFileHandler final : public FileHandler {
 protected:
   Error ReadHeader(MemoryBuffer &Input) final { return Error::success(); }
 
-  Expected<Optional<StringRef>> ReadBundleStart(MemoryBuffer &Input) final {
+  Expected<std::optional<StringRef>>
+  ReadBundleStart(MemoryBuffer &Input) final {
     StringRef FC = Input.getBuffer();
 
     // Find start of the bundle.
@@ -989,7 +994,8 @@ Error OffloadBundler::UnbundleFiles() {
   // assume the file is meant for the host target.
   bool FoundHostBundle = false;
   while (!Worklist.empty()) {
-    Expected<Optional<StringRef>> CurTripleOrErr = FH->ReadBundleStart(Input);
+    Expected<std::optional<StringRef>> CurTripleOrErr =
+        FH->ReadBundleStart(Input);
     if (!CurTripleOrErr)
       return CurTripleOrErr.takeError();
 
@@ -1180,12 +1186,12 @@ Error OffloadBundler::UnbundleArchive() {
     if (Error ReadErr = FileHandler.get()->ReadHeader(*CodeObjectBuffer))
       return ReadErr;
 
-    Expected<Optional<StringRef>> CurBundleIDOrErr =
+    Expected<std::optional<StringRef>> CurBundleIDOrErr =
         FileHandler->ReadBundleStart(*CodeObjectBuffer);
     if (!CurBundleIDOrErr)
       return CurBundleIDOrErr.takeError();
 
-    Optional<StringRef> OptionalCurBundleID = *CurBundleIDOrErr;
+    std::optional<StringRef> OptionalCurBundleID = *CurBundleIDOrErr;
     // No device code in this child, skip.
     if (!OptionalCurBundleID)
       continue;
@@ -1245,7 +1251,7 @@ Error OffloadBundler::UnbundleArchive() {
       if (Error Err = FileHandler.get()->ReadBundleEnd(*CodeObjectBuffer))
         return Err;
 
-      Expected<Optional<StringRef>> NextTripleOrErr =
+      Expected<std::optional<StringRef>> NextTripleOrErr =
           FileHandler->ReadBundleStart(*CodeObjectBuffer);
       if (!NextTripleOrErr)
         return NextTripleOrErr.takeError();

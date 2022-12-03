@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -65,25 +66,24 @@ bool useUniversalCRT(ToolsetLayout VSLayout, const std::string &VCToolChainPath,
 
 /// Get Windows SDK installation directory.
 bool getWindowsSDKDir(vfs::FileSystem &VFS,
-                      llvm::Optional<llvm::StringRef> WinSdkDir,
-                      llvm::Optional<llvm::StringRef> WinSdkVersion,
-                      llvm::Optional<llvm::StringRef> WinSysRoot,
+                      std::optional<llvm::StringRef> WinSdkDir,
+                      std::optional<llvm::StringRef> WinSdkVersion,
+                      std::optional<llvm::StringRef> WinSysRoot,
                       std::string &Path, int &Major,
                       std::string &WindowsSDKIncludeVersion,
                       std::string &WindowsSDKLibVersion);
 
 bool getUniversalCRTSdkDir(vfs::FileSystem &VFS,
-                           llvm::Optional<llvm::StringRef> WinSdkDir,
-                           llvm::Optional<llvm::StringRef> WinSdkVersion,
-                           llvm::Optional<llvm::StringRef> WinSysRoot,
-                           std::string &Path,
-                           std::string &UCRTVersion);
+                           std::optional<llvm::StringRef> WinSdkDir,
+                           std::optional<llvm::StringRef> WinSdkVersion,
+                           std::optional<llvm::StringRef> WinSysRoot,
+                           std::string &Path, std::string &UCRTVersion);
 
 // Check command line arguments to try and find a toolchain.
 bool findVCToolChainViaCommandLine(
-    vfs::FileSystem &VFS, llvm::Optional<llvm::StringRef> VCToolsDir,
-    llvm::Optional<llvm::StringRef> VCToolsVersion,
-    llvm::Optional<llvm::StringRef> WinSysRoot, std::string &Path,
+    vfs::FileSystem &VFS, std::optional<llvm::StringRef> VCToolsDir,
+    std::optional<llvm::StringRef> VCToolsVersion,
+    std::optional<llvm::StringRef> WinSysRoot, std::string &Path,
     ToolsetLayout &VSLayout);
 
 // Check various environment variables to try and find a toolchain.
