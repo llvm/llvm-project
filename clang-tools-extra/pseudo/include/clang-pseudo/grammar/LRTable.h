@@ -222,7 +222,7 @@ private:
       Word KeyMask = Word(1) << (Key % WordBits);
       unsigned KeyWord = Key / WordBits;
       if ((HasValue[KeyWord] & KeyMask) == 0)
-        return llvm::None;
+        return std::nullopt;
       // Count the number of values since the checkpoint.
       Word BelowKeyMask = KeyMask - 1;
       unsigned CountSinceCheckpoint =
