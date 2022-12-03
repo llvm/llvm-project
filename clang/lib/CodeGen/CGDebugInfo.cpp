@@ -351,12 +351,12 @@ CGDebugInfo::computeChecksum(FileID FID, SmallString<64> &Checksum) const {
 
   if (!CGM.getCodeGenOpts().EmitCodeView &&
       CGM.getCodeGenOpts().DwarfVersion < 5)
-    return None;
+    return std::nullopt;
 
   SourceManager &SM = CGM.getContext().getSourceManager();
   Optional<llvm::MemoryBufferRef> MemBuffer = SM.getBufferOrNone(FID);
   if (!MemBuffer)
-    return None;
+    return std::nullopt;
 
   auto Data = llvm::arrayRefFromStringRef(MemBuffer->getBuffer());
   switch (CGM.getCodeGenOpts().getDebugSrcHash()) {
@@ -376,13 +376,13 @@ CGDebugInfo::computeChecksum(FileID FID, SmallString<64> &Checksum) const {
 Optional<StringRef> CGDebugInfo::getSource(const SourceManager &SM,
                                            FileID FID) {
   if (!CGM.getCodeGenOpts().EmbedSource)
-    return None;
+    return std::nullopt;
 
   bool SourceInvalid = false;
   StringRef Source = SM.getBufferData(FID, &SourceInvalid);
 
   if (SourceInvalid)
-    return None;
+    return std::nullopt;
 
   return Source;
 }
@@ -2130,7 +2130,7 @@ CGDebugInfo::GetTemplateArgs(const FunctionDecl *FD) const {
                                              ->getTemplateParameters();
     return {{TList, FD->getTemplateSpecializationArgs()->asArray()}};
   }
-  return None;
+  return std::nullopt;
 }
 Optional<CGDebugInfo::TemplateArgs>
 CGDebugInfo::GetTemplateArgs(const VarDecl *VD) const {
@@ -2139,7 +2139,7 @@ CGDebugInfo::GetTemplateArgs(const VarDecl *VD) const {
   // there are arguments.
   auto *TS = dyn_cast<VarTemplateSpecializationDecl>(VD);
   if (!TS)
-    return None;
+    return std::nullopt;
   VarTemplateDecl *T = TS->getSpecializedTemplate();
   const TemplateParameterList *TList = T->getTemplateParameters();
   auto TA = TS->getTemplateArgs().asArray();
@@ -2156,7 +2156,7 @@ CGDebugInfo::GetTemplateArgs(const RecordDecl *RD) const {
     const TemplateArgumentList &TAList = TSpecial->getTemplateArgs();
     return {{TPList, TAList.asArray()}};
   }
-  return None;
+  return std::nullopt;
 }
 
 llvm::DINodeArray
@@ -2355,7 +2355,7 @@ void CGDebugInfo::addHeapAllocSiteMetadata(llvm::CallBase *CI,
     return;
   llvm::MDNode *node;
   if (AllocatedTy->isVoidType())
-    node = llvm::MDNode::get(CGM.getLLVMContext(), None);
+    node = llvm::MDNode::get(CGM.getLLVMContext(), std::nullopt);
   else
     node = getOrCreateType(AllocatedTy, getOrCreateFile(Loc));
 
@@ -3971,7 +3971,8 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
              !CGM.getCodeGenOpts().EmitCodeView))
     // Create fake but valid subroutine type. Otherwise -verify would fail, and
     // subprogram DIE will miss DW_AT_decl_file and DW_AT_decl_line fields.
-    return DBuilder.createSubroutineType(DBuilder.getOrCreateTypeArray(None));
+    return DBuilder.createSubroutineType(
+        DBuilder.getOrCreateTypeArray(std::nullopt));
 
   if (const auto *Method = dyn_cast<CXXMethodDecl>(D))
     return getOrCreateMethodType(Method, F);
@@ -4685,11 +4686,11 @@ CGDebugInfo::EmitDeclareOfAutoVariable(const VarDecl *VD, llvm::Value *Storage,
 
   if (auto *DD = dyn_cast<DecompositionDecl>(VD))
     for (auto *B : DD->bindings()) {
-      EmitDeclare(B, Storage, llvm::None, Builder,
+      EmitDeclare(B, Storage, std::nullopt, Builder,
                   VD->getType()->isReferenceType());
     }
 
-  return EmitDeclare(VD, Storage, llvm::None, Builder, UsePointerValue);
+  return EmitDeclare(VD, Storage, std::nullopt, Builder, UsePointerValue);
 }
 
 void CGDebugInfo::EmitLabel(const LabelDecl *D, CGBuilderTy &Builder) {

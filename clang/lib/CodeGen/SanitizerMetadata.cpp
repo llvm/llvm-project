@@ -104,5 +104,5 @@ void SanitizerMetadata::disableSanitizerForGlobal(llvm::GlobalVariable *GV) {
 
 void SanitizerMetadata::disableSanitizerForInstruction(llvm::Instruction *I) {
   I->setMetadata(llvm::LLVMContext::MD_nosanitize,
-                 llvm::MDNode::get(CGM.getLLVMContext(), None));
+                 llvm::MDNode::get(CGM.getLLVMContext(), std::nullopt));
 }
