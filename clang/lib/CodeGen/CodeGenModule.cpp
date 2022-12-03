@@ -524,7 +524,7 @@ void CodeGenModule::Release() {
       GlobalTopLevelStmtBlockInFlight.first) {
     const TopLevelStmtDecl *TLSD = GlobalTopLevelStmtBlockInFlight.second;
     GlobalTopLevelStmtBlockInFlight.first->FinishFunction(TLSD->getEndLoc());
-    GlobalTopLevelStmtBlockInFlight = {};
+    GlobalTopLevelStmtBlockInFlight = {nullptr, nullptr};
   }
 
   if (CXX20ModuleInits && Primary && Primary->isInterfaceOrPartition())
