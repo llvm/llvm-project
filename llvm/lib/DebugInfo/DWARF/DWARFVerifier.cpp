@@ -62,7 +62,7 @@ DWARFVerifier::DieRangeInfo::insert(const DWARFAddressRange &R) {
   }
 
   Ranges.insert(Pos, R);
-  return None;
+  return std::nullopt;
 }
 
 DWARFVerifier::DieRangeInfo::die_range_info_iterator

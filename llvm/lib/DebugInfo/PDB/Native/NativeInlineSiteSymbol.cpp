@@ -57,7 +57,7 @@ findInlineeByTypeIndex(TypeIndex Id, ModuleDebugStreamRef &ModS) {
       if (Line.Header->Inlinee == Id)
         return Line;
   }
-  return None;
+  return std::nullopt;
 }
 
 std::string NativeInlineSiteSymbol::getName() const {
@@ -140,10 +140,10 @@ void NativeInlineSiteSymbol::getLineOffset(uint32_t OffsetInFunc,
         FileOffset = *NextFileOffset;
       if (NextLineOffset) {
         CurLineOffset = NextLineOffset;
-        NextLineOffset = None;
+        NextLineOffset = std::nullopt;
       }
       CodeOffsetBase = CodeOffsetEnd;
-      CodeOffsetEnd = NextFileOffset = None;
+      CodeOffsetEnd = NextFileOffset = std::nullopt;
     }
     return false;
   };

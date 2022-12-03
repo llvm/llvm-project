@@ -172,7 +172,7 @@ public:
   /// table isn't empty, or llvm::None if the line table is emtpy.
   Optional<LineEntry> first() const {
     if (Lines.empty())
-      return llvm::None;
+      return std::nullopt;
     return Lines.front();
   }
   /// Return the last line entry if the line table isn't empty.
@@ -181,7 +181,7 @@ public:
   /// table isn't empty, or llvm::None if the line table is emtpy.
   Optional<LineEntry> last() const {
     if (Lines.empty())
-      return llvm::None;
+      return std::nullopt;
     return Lines.back();
   }
   void push(const LineEntry &LE) {
