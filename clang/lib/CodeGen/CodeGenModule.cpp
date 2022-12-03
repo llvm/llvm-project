@@ -1649,7 +1649,7 @@ void CodeGenModule::EmitCtorList(CtorList &Fns, const char *GlobalName) {
 
   // The LTO linker doesn't seem to like it when we set an alignment
   // on appending variables.  Take it off as a workaround.
-  list->setAlignment(llvm::None);
+  list->setAlignment(std::nullopt);
 
   Fns.clear();
 }

@@ -1250,7 +1250,7 @@ void ItaniumCXXABI::emitRethrow(CodeGenFunction &CGF, bool isNoReturn) {
   llvm::FunctionCallee Fn = CGM.CreateRuntimeFunction(FTy, "__cxa_rethrow");
 
   if (isNoReturn)
-    CGF.EmitNoreturnRuntimeCallOrInvoke(Fn, None);
+    CGF.EmitNoreturnRuntimeCallOrInvoke(Fn, std::nullopt);
   else
     CGF.EmitRuntimeCallOrInvoke(Fn);
 }
