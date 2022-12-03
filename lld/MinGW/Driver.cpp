@@ -116,7 +116,7 @@ static Optional<std::string> findFile(StringRef path1, const Twine &path2) {
   sys::path::append(s, path1, path2);
   if (sys::fs::exists(s))
     return std::string(s);
-  return None;
+  return std::nullopt;
 }
 
 // This is for -lfoo. We'll look for libfoo.dll.a or libfoo.a from search paths.

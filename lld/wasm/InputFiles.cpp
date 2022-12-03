@@ -61,7 +61,7 @@ Optional<MemoryBufferRef> readFile(StringRef path) {
   auto mbOrErr = MemoryBuffer::getFile(path);
   if (auto ec = mbOrErr.getError()) {
     error("cannot open " + path + ": " + ec.message());
-    return None;
+    return std::nullopt;
   }
   std::unique_ptr<MemoryBuffer> &mb = *mbOrErr;
   MemoryBufferRef mbref = mb->getMemBufferRef();
@@ -739,8 +739,8 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &keptComdats,
   if (objSym.isUndefined() || excludedByComdat) {
     flags |= WASM_SYMBOL_UNDEFINED;
     if (objSym.isExecutable())
-      return symtab->addUndefinedFunction(name, None, None, flags, &f, nullptr,
-                                          true);
+      return symtab->addUndefinedFunction(name, std::nullopt, std::nullopt,
+                                          flags, &f, nullptr, true);
     return symtab->addUndefinedData(name, flags, &f);
   }
 
