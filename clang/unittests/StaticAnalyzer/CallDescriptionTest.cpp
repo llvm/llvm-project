@@ -153,7 +153,7 @@ TEST(CallDescription, RequiredArguments) {
 TEST(CallDescription, LackOfRequiredArguments) {
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-          {{"foo", None}, true},
+          {{"foo", std::nullopt}, true},
           {{"foo", 2}, false},
       })),
       "void foo(int); void foo(int, int); void bar() { foo(1); }"));
