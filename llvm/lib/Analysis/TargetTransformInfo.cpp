@@ -547,6 +547,10 @@ TargetTransformInfo::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   return TTIImpl->enableMemCmpExpansion(OptSize, IsZeroCmp);
 }
 
+bool TargetTransformInfo::enableSelectOptimize() const {
+  return TTIImpl->enableSelectOptimize();
+}
+
 bool TargetTransformInfo::enableInterleavedAccessVectorization() const {
   return TTIImpl->enableInterleavedAccessVectorization();
 }
