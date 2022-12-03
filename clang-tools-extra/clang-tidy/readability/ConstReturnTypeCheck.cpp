@@ -28,7 +28,7 @@ static llvm::Optional<Token>
 findConstToRemove(const FunctionDecl *Def,
                   const MatchFinder::MatchResult &Result) {
   if (!Def->getReturnType().isLocalConstQualified())
-    return None;
+    return std::nullopt;
 
   // Get the begin location for the function name, including any qualifiers
   // written in the source (for out-of-line declarations). A FunctionDecl's
@@ -45,7 +45,7 @@ findConstToRemove(const FunctionDecl *Def,
       *Result.SourceManager, Result.Context->getLangOpts());
 
   if (FileRange.isInvalid())
-    return None;
+    return std::nullopt;
 
   return utils::lexer::getQualifyingToken(
       tok::kw_const, FileRange, *Result.Context, *Result.SourceManager);
