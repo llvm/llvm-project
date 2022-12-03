@@ -96,7 +96,7 @@ Optional<bool> areDenseMapKeysEqualSpecialValues(T LHS, T RHS) {
   if (LHSTombstone || RHSTombstone)
     return LHSTombstone && RHSTombstone;
 
-  return None;
+  return std::nullopt;
 }
 
 template<>
