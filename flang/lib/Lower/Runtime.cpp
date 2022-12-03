@@ -114,7 +114,7 @@ void Fortran::lower::genFailImageStatement(
   mlir::Location loc = converter.getCurrentLocation();
   mlir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(FailImageStatement)>(loc, builder);
-  builder.create<fir::CallOp>(loc, callee, llvm::None);
+  builder.create<fir::CallOp>(loc, callee, std::nullopt);
   genUnreachable(builder, loc);
 }
 
@@ -173,7 +173,7 @@ void Fortran::lower::genPauseStatement(
   mlir::Location loc = converter.getCurrentLocation();
   mlir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(PauseStatement)>(loc, builder);
-  builder.create<fir::CallOp>(loc, callee, llvm::None);
+  builder.create<fir::CallOp>(loc, callee, std::nullopt);
 }
 
 mlir::Value Fortran::lower::genAssociated(fir::FirOpBuilder &builder,
@@ -203,7 +203,7 @@ mlir::Value Fortran::lower::genCpuTime(fir::FirOpBuilder &builder,
                                        mlir::Location loc) {
   mlir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(CpuTime)>(loc, builder);
-  return builder.create<fir::CallOp>(loc, func, llvm::None).getResult(0);
+  return builder.create<fir::CallOp>(loc, func, std::nullopt).getResult(0);
 }
 
 void Fortran::lower::genDateAndTime(fir::FirOpBuilder &builder,

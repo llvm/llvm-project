@@ -106,8 +106,8 @@ public:
       shapeOpers.push_back(extVal);
     }
     auto xbox = rewriter.create<fir::cg::XEmboxOp>(
-        loc, embox.getType(), embox.getMemref(), shapeOpers, llvm::None,
-        llvm::None, llvm::None, llvm::None, embox.getTypeparams(),
+        loc, embox.getType(), embox.getMemref(), shapeOpers, std::nullopt,
+        std::nullopt, std::nullopt, std::nullopt, embox.getTypeparams(),
         embox.getTdesc());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());

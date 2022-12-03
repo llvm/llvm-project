@@ -352,7 +352,7 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
         descAddr = builder.createTemporary(loc, boxType);
         fir::MutableBoxValue box = fir::MutableBoxValue(descAddr, {}, {});
         fir::factory::associateMutableBox(builder, loc, box, exv,
-                                          /*lbounds=*/llvm::None);
+                                          /*lbounds=*/std::nullopt);
       }
       descAddr = builder.createConvert(loc, descRefTy, descAddr);
       list = builder.create<fir::InsertValueOp>(loc, listTy, list, descAddr,
@@ -1348,7 +1348,7 @@ static llvm::Optional<fir::ExtendedValue> getVariableBufferRequiredDescriptor(
     return varBox;
   if (fir::factory::CharacterExprHelper::isArray(varAddr.getType()))
     return varBox;
-  return llvm::None;
+  return std::nullopt;
 }
 
 template <typename A>
@@ -1362,14 +1362,14 @@ maybeGetInternalIODescriptor(Fortran::lower::AbstractConverter &converter,
   if (auto *unit = getIOControl<Fortran::parser::IoUnit>(stmt))
     if (auto *var = std::get_if<Fortran::parser::Variable>(&unit->u))
       return getVariableBufferRequiredDescriptor(converter, loc, *var, stmtCtx);
-  return llvm::None;
+  return std::nullopt;
 }
 template <>
 inline llvm::Optional<fir::ExtendedValue>
 maybeGetInternalIODescriptor<Fortran::parser::PrintStmt>(
     Fortran::lower::AbstractConverter &, mlir::Location loc,
     const Fortran::parser::PrintStmt &, Fortran::lower::StatementContext &) {
-  return llvm::None;
+  return std::nullopt;
 }
 
 template <typename A>
@@ -1955,7 +1955,7 @@ genDataTransferStmt(Fortran::lower::AbstractConverter &converter,
   const bool isInternal = isDataTransferInternal(stmt);
   llvm::Optional<fir::ExtendedValue> descRef =
       isInternal ? maybeGetInternalIODescriptor(converter, loc, stmt, stmtCtx)
-                 : llvm::None;
+                 : std::nullopt;
   const bool isInternalWithDesc = descRef.has_value();
   const bool isAsync = isDataTransferAsynchronous(loc, stmt);
   const bool isNml = isDataTransferNamelist(stmt);
