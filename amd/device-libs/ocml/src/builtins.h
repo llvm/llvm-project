@@ -73,9 +73,6 @@
 #define BUILTIN_COPYSIGN_F16 __builtin_copysignf16
 #define BUILTIN_COPYSIGN_2F16 __llvm_copysign_2f16
 
-#define BUILTIN_CLZ_U32 __llvm_ctlz_i32
-#define BUILTIN_CLZ_U64 __llvm_ctlz_i64
-
 #define BUILTIN_FLOOR_F32 __builtin_floorf
 #define BUILTIN_FLOOR_F64 __builtin_floor
 #define BUILTIN_FLOOR_F16 __builtin_floorf16

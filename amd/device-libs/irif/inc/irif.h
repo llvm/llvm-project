@@ -28,12 +28,12 @@ extern __attribute__((const)) half2 __llvm_round_2f16(half2) __asm("llvm.round.v
 extern __attribute__((const)) half2 __llvm_rint_2f16(half2) __asm("llvm.rint.v2f16");
 extern __attribute__((const)) half2 __llvm_canonicalize_2f16(half2) __asm("llvm.canonicalize.v2f16");
 
-// Intrinsics requiring wrapping
-extern __attribute__((const)) uchar __llvm_ctlz_i8(uchar);
-extern __attribute__((const)) ushort __llvm_ctlz_i16(ushort);
-extern __attribute__((const)) uint __llvm_ctlz_i32(uint);
-extern __attribute__((const)) ulong __llvm_ctlz_i64(ulong);
+#define BUILTIN_CLZ_U8(x) (uchar)(x == 0u ? 8 : __builtin_clz(x) - 24)
+#define BUILTIN_CLZ_U16(x) (ushort)(x == 0u ? 16 : __builtin_clzs(x))
+#define BUILTIN_CLZ_U32(x) (uint)(x == 0u ? 32 : __builtin_clz(x))
+#define BUILTIN_CLZ_U64(x) (ulong)(x == 0u ? 64 : __builtin_clzl(x))
 
+// Intrinsics requiring wrapping
 extern __attribute__((const)) uchar __llvm_cttz_i8(uchar);
 extern __attribute__((const)) ushort __llvm_cttz_i16(ushort);
 extern __attribute__((const)) uint __llvm_cttz_i32(uint);
