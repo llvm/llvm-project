@@ -152,7 +152,7 @@ static bool opensProtoMessageField(const FormatToken &LessTok,
 static llvm::Optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
   if (TokenText.size() < 5 // The smallest raw string possible is 'R"()"'.
       || !TokenText.startswith("R\"") || !TokenText.endswith("\"")) {
-    return None;
+    return std::nullopt;
   }
 
   // A raw string starts with 'R"<delimiter>(' and delimiter is ascii and has
@@ -160,15 +160,15 @@ static llvm::Optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
   // 19 bytes.
   size_t LParenPos = TokenText.substr(0, 19).find_first_of('(');
   if (LParenPos == StringRef::npos)
-    return None;
+    return std::nullopt;
   StringRef Delimiter = TokenText.substr(2, LParenPos - 2);
 
   // Check that the string ends in ')Delimiter"'.
   size_t RParenPos = TokenText.size() - Delimiter.size() - 2;
   if (TokenText[RParenPos] != ')')
-    return None;
+    return std::nullopt;
   if (!TokenText.substr(RParenPos + 1).startswith(Delimiter))
-    return None;
+    return std::nullopt;
   return Delimiter;
 }
 
@@ -209,7 +209,7 @@ llvm::Optional<FormatStyle>
 RawStringFormatStyleManager::getDelimiterStyle(StringRef Delimiter) const {
   auto It = DelimiterStyle.find(Delimiter);
   if (It == DelimiterStyle.end())
-    return None;
+    return std::nullopt;
   return It->second;
 }
 
@@ -218,7 +218,7 @@ RawStringFormatStyleManager::getEnclosingFunctionStyle(
     StringRef EnclosingFunction) const {
   auto It = EnclosingFunctionStyle.find(EnclosingFunction);
   if (It == EnclosingFunctionStyle.end())
-    return None;
+    return std::nullopt;
   return It->second;
 }
 
@@ -2071,17 +2071,17 @@ llvm::Optional<FormatStyle>
 ContinuationIndenter::getRawStringStyle(const FormatToken &Current,
                                         const LineState &State) {
   if (!Current.isStringLiteral())
-    return None;
+    return std::nullopt;
   auto Delimiter = getRawStringDelimiter(Current.TokenText);
   if (!Delimiter)
-    return None;
+    return std::nullopt;
   auto RawStringStyle = RawStringFormats.getDelimiterStyle(*Delimiter);
   if (!RawStringStyle && Delimiter->empty()) {
     RawStringStyle = RawStringFormats.getEnclosingFunctionStyle(
         getEnclosingFunctionName(Current));
   }
   if (!RawStringStyle)
-    return None;
+    return std::nullopt;
   RawStringStyle->ColumnLimit = getColumnLimit(State);
   return RawStringStyle;
 }

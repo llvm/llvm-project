@@ -3066,7 +3066,8 @@ private:
   void ParseTypeQualifierListOpt(
       DeclSpec &DS, unsigned AttrReqs = AR_AllAttributesParsed,
       bool AtomicAllowed = true, bool IdentifierRequired = false,
-      Optional<llvm::function_ref<void()>> CodeCompletionHandler = None);
+      Optional<llvm::function_ref<void()>> CodeCompletionHandler =
+          std::nullopt);
   void ParseDirectDeclarator(Declarator &D);
   void ParseDecompositionDeclarator(Declarator &D);
   void ParseParenDeclarator(Declarator &D);

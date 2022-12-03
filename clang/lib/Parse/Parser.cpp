@@ -917,7 +917,7 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     if (CurParsedObjCImpl) {
       // Code-complete Objective-C methods even without leading '-'/'+' prefix.
       Actions.CodeCompleteObjCMethodDecl(getCurScope(),
-                                         /*IsInstanceMethod=*/None,
+                                         /*IsInstanceMethod=*/std::nullopt,
                                          /*ReturnType=*/nullptr);
     }
     Actions.CodeCompleteOrdinaryName(

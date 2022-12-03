@@ -307,7 +307,7 @@ static Optional<StringRef> findSimilarStr(
   if (SimilarStr) {
     return SimilarStr->first;
   } else {
-    return None;
+    return std::nullopt;
   }
 }
 
@@ -1077,7 +1077,7 @@ Optional<FileEntryRef> Preprocessor::LookupFile(
   }
 
   // Otherwise, we really couldn't find the file.
-  return None;
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2020,7 +2020,7 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
     return File;
 
   if (SuppressIncludeNotFoundError)
-    return None;
+    return std::nullopt;
 
   // If the file could not be located and it was included via angle
   // brackets, we can attempt a lookup as though it were a quoted path to
@@ -2095,7 +2095,7 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
         << CacheEntry.Directory->getName();
   }
 
-  return None;
+  return std::nullopt;
 }
 
 /// Handle either a #include-like directive or an import declaration that names
