@@ -35,6 +35,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -716,10 +717,10 @@ public:
   void setMainFileName(StringRef S) { MainFileName = std::string(S); }
 
   /// Creates an entry in the dwarf file and directory tables.
-  Expected<unsigned> getDwarfFile(StringRef Directory, StringRef FileName,
-                                  unsigned FileNumber,
-                                  Optional<MD5::MD5Result> Checksum,
-                                  Optional<StringRef> Source, unsigned CUID);
+  Expected<unsigned> getDwarfFile(
+      StringRef Directory, StringRef FileName, unsigned FileNumber,
+      Optional<MD5::MD5Result> Checksum, std::optional<StringRef> Source,
+      unsigned CUID);
 
   bool isValidDwarfFileNumber(unsigned FileNumber, unsigned CUID = 0);
 
@@ -754,7 +755,7 @@ public:
   void setMCLineTableRootFile(unsigned CUID, StringRef CompilationDir,
                               StringRef Filename,
                               Optional<MD5::MD5Result> Checksum,
-                              Optional<StringRef> Source) {
+                              std::optional<StringRef> Source) {
     getMCDwarfLineTable(CUID).setRootFile(CompilationDir, Filename, Checksum,
                                           Source);
   }

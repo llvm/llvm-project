@@ -17,6 +17,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace clang {
 namespace targets {
@@ -127,7 +128,7 @@ public:
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
-  Optional<unsigned>
+  std::optional<unsigned>
   getDWARFAddressSpace(unsigned AddressSpace) const override {
     return AddressSpace;
   }

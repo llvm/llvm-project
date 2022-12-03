@@ -185,7 +185,7 @@ void DbgVariableIntrinsic::addVariableLocationOps(ArrayRef<Value *> NewValues,
       0, MetadataAsValue::get(getContext(), DIArgList::get(getContext(), MDs)));
 }
 
-Optional<uint64_t> DbgVariableIntrinsic::getFragmentSizeInBits() const {
+std::optional<uint64_t> DbgVariableIntrinsic::getFragmentSizeInBits() const {
   if (auto Fragment = getExpression()->getFragmentInfo())
     return Fragment->SizeInBits;
   return getVariable()->getSizeInBits();
