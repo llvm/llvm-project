@@ -199,7 +199,8 @@ void X86PreAMXConfig::addTileConfig(Instruction *ModelStart,
 
   preWriteTileCfg(I8Ptr, Builder, Shapes);
 
-  Builder.CreateIntrinsic(Intrinsic::x86_ldtilecfg_internal, None, {I8Ptr});
+  Builder.CreateIntrinsic(Intrinsic::x86_ldtilecfg_internal, std::nullopt,
+                          {I8Ptr});
 }
 
 // Todo: We may need to handle "more than one store" case in the future.
