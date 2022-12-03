@@ -584,10 +584,10 @@ struct FCVTInst {
 
 TEST_F(RISCVEmulatorTester, TestFCVTInst) {
   std::vector<FCVTInst> tests = {
-      {0xC001F253, "FCVT_W_S"},
-      {0xC011F253, "FCVT_WU_S"},
-      {0xD001F253, "FCVT_S_W"},
-      {0xD011F253, "FCVT_S_WU"},
+      {0xC001F253, "FCVT_W_S"}, {0xC011F253, "FCVT_WU_S"},
+      {0xD001F253, "FCVT_S_W"}, {0xD011F253, "FCVT_S_WU"},
+      {0xC021F253, "FCVT_L_S"}, {0xC031F253, "FCVT_LU_S"},
+      {0xD021F253, "FCVT_S_L"}, {0xD031F253, "FCVT_S_LU"},
   };
   for (auto i : tests) {
     auto decode = this->Decode(i.inst);
