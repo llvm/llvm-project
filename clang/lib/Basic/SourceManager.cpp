@@ -1309,7 +1309,7 @@ LineOffsetMapping LineOffsetMapping::get(llvm::MemoryBufferRef Buffer,
       Buf += N / 8 + 1;
       unsigned char Byte = Word;
       switch (Byte) {
-      case 'r':
+      case '\r':
         // If this is \r\n, skip both characters.
         if (*Buf == '\n') {
           ++Buf;
