@@ -187,42 +187,50 @@ void OpenMPCounterVisitor::PostConstructsCommon() {
 }
 
 void OpenMPCounterVisitor::Post(const OmpProcBindClause::Type &c) {
-  clauseDetails += "type="s + OmpProcBindClause::EnumToString(c) + ";"s;
+  clauseDetails +=
+      "type=" + std::string{OmpProcBindClause::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpDefaultClause::Type &c) {
-  clauseDetails += "type="s + OmpDefaultClause::EnumToString(c) + ";"s;
+  clauseDetails +=
+      "type=" + std::string{OmpDefaultClause::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(
     const OmpDefaultmapClause::ImplicitBehavior &c) {
   clauseDetails +=
-      "implicit_behavior="s + OmpDefaultmapClause::EnumToString(c) + ";"s;
+      "implicit_behavior=" + std::string{OmpDefaultmapClause::EnumToString(c)} +
+      ";";
 }
 void OpenMPCounterVisitor::Post(
     const OmpDefaultmapClause::VariableCategory &c) {
   clauseDetails +=
-      "variable_category="s + OmpDefaultmapClause::EnumToString(c) + ";"s;
+      "variable_category=" + std::string{OmpDefaultmapClause::EnumToString(c)} +
+      ";";
 }
 void OpenMPCounterVisitor::Post(const OmpScheduleModifierType::ModType &c) {
   clauseDetails +=
-      "modifier="s + OmpScheduleModifierType::EnumToString(c) + ";"s;
+      "modifier=" + std::string{OmpScheduleModifierType::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpLinearModifier::Type &c) {
-  clauseDetails += "modifier="s + OmpLinearModifier::EnumToString(c) + ";"s;
+  clauseDetails +=
+      "modifier=" + std::string{OmpLinearModifier::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpDependenceType::Type &c) {
-  clauseDetails += "type="s + OmpDependenceType::EnumToString(c) + ";"s;
+  clauseDetails +=
+      "type=" + std::string{OmpDependenceType::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpMapType::Type &c) {
-  clauseDetails += "type="s + OmpMapType::EnumToString(c) + ";"s;
+  clauseDetails += "type=" + std::string{OmpMapType::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpScheduleClause::ScheduleType &c) {
-  clauseDetails += "type="s + OmpScheduleClause::EnumToString(c) + ";"s;
+  clauseDetails +=
+      "type=" + std::string{OmpScheduleClause::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpIfClause::DirectiveNameModifier &c) {
-  clauseDetails += "name_modifier="s + OmpIfClause::EnumToString(c) + ";"s;
+  clauseDetails +=
+      "name_modifier=" + std::string{OmpIfClause::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpCancelType::Type &c) {
-  clauseDetails += "type="s + OmpCancelType::EnumToString(c) + ";"s;
+  clauseDetails += "type=" + std::string{OmpCancelType::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpClause &c) {
   PostClauseCommon(normalize_clause_name(c.source.ToString()));
