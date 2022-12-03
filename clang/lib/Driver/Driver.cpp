@@ -115,10 +115,10 @@ getOffloadTargetTriple(const Driver &D, const ArgList &Args) {
   switch (OffloadTargets.size()) {
   default:
     D.Diag(diag::err_drv_only_one_offload_target_supported);
-    return llvm::None;
+    return std::nullopt;
   case 0:
     D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << "";
-    return llvm::None;
+    return std::nullopt;
   case 1:
     break;
   }
@@ -138,10 +138,10 @@ getNVIDIAOffloadTargetTriple(const Driver &D, const ArgList &Args,
     if (Args.hasArg(options::OPT_emit_llvm))
       return TT;
     D.Diag(diag::err_drv_cuda_offload_only_emit_bc);
-    return llvm::None;
+    return std::nullopt;
   }
   D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << TT->str();
-  return llvm::None;
+  return std::nullopt;
 }
 static llvm::Optional<llvm::Triple>
 getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
@@ -150,7 +150,7 @@ getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
   }
   auto TT = getOffloadTargetTriple(D, Args);
   if (!TT)
-    return llvm::None;
+    return std::nullopt;
   if (TT->getArch() == llvm::Triple::amdgcn &&
       TT->getVendor() == llvm::Triple::AMD &&
       TT->getOS() == llvm::Triple::AMDHSA)
@@ -158,7 +158,7 @@ getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
   if (TT->getArch() == llvm::Triple::spirv64)
     return TT;
   D.Diag(diag::err_drv_invalid_or_unsupported_offload_target) << TT->str();
-  return llvm::None;
+  return std::nullopt;
 }
 
 // static
@@ -1596,7 +1596,7 @@ void Driver::generateCompilationDiagnostics(
     NewLLDInvocation.replaceArguments(std::move(ArgList));
 
     // Redirect stdout/stderr to /dev/null.
-    NewLLDInvocation.Execute({None, {""}, {""}}, nullptr, nullptr);
+    NewLLDInvocation.Execute({std::nullopt, {""}, {""}}, nullptr, nullptr);
     Diag(clang::diag::note_drv_command_failed_diag_msg) << BugReporMsg;
     Diag(clang::diag::note_drv_command_failed_diag_msg) << TmpName;
     Diag(clang::diag::note_drv_command_failed_diag_msg)
@@ -3128,7 +3128,7 @@ class OffloadingActionBuilder final {
     llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
     getConflictOffloadArchCombination(
         const std::set<StringRef> &GpuArchs) override {
-      return llvm::None;
+      return std::nullopt;
     }
 
     ActionBuilderReturnCode
@@ -4211,7 +4211,7 @@ static llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
 getConflictOffloadArchCombination(const llvm::DenseSet<StringRef> &Archs,
                                   Action::OffloadKind Kind) {
   if (Kind != Action::OFK_HIP)
-    return None;
+    return std::nullopt;
 
   std::set<StringRef> ArchSet;
   llvm::copy(Archs, std::inserter(ArchSet, ArchSet.begin()));
@@ -5721,7 +5721,7 @@ std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
       if (llvm::sys::fs::exists(Twine(P)))
         return std::string(P);
     }
-    return None;
+    return std::nullopt;
   };
 
   if (auto P = SearchPaths(PrefixDirs))

@@ -550,8 +550,9 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     const char *Exec =
         Args.MakeArgString(getToolChain().GetProgramPath("touch"));
     CmdArgs.push_back(Output.getFilename());
-    C.addCommand(std::make_unique<Command>(
-        JA, *this, ResponseFileSupport::None(), Exec, CmdArgs, None, Output));
+    C.addCommand(std::make_unique<Command>(JA, *this,
+                                           ResponseFileSupport::None(), Exec,
+                                           CmdArgs, std::nullopt, Output));
     return;
   }
 
@@ -1790,7 +1791,7 @@ getDeploymentTargetFromOSVersionArg(DerivedArgList &Args,
         Darwin::WatchOS, WatchOSVersion,
         WatchOSVersion->getOption().getID() ==
             options::OPT_mwatchos_simulator_version_min_EQ);
-  return None;
+  return std::nullopt;
 }
 
 /// Returns the deployment target that's specified using the
@@ -1845,7 +1846,7 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
           (Darwin::DarwinPlatformKind)Target.index(), EnvVars[Target.index()],
           Target.value());
   }
-  return None;
+  return std::nullopt;
 }
 
 /// Returns the SDK name without the optional prefix that ends with a '.' or an
@@ -1865,11 +1866,11 @@ inferDeploymentTargetFromSDK(DerivedArgList &Args,
                              const Optional<DarwinSDKInfo> &SDKInfo) {
   const Arg *A = Args.getLastArg(options::OPT_isysroot);
   if (!A)
-    return None;
+    return std::nullopt;
   StringRef isysroot = A->getValue();
   StringRef SDK = Darwin::getSDKName(isysroot);
   if (!SDK.size())
-    return None;
+    return std::nullopt;
 
   std::string Version;
   if (SDKInfo) {
@@ -1884,7 +1885,7 @@ inferDeploymentTargetFromSDK(DerivedArgList &Args,
       Version = std::string(SDK.slice(StartVer, EndVer + 1));
   }
   if (Version.empty())
-    return None;
+    return std::nullopt;
 
   auto CreatePlatformFromSDKName =
       [&](StringRef SDK) -> Optional<DarwinPlatform> {
@@ -1905,7 +1906,7 @@ inferDeploymentTargetFromSDK(DerivedArgList &Args,
           /*IsSimulator=*/SDK.startswith("AppleTVSimulator"));
     else if (SDK.startswith("DriverKit"))
       return DarwinPlatform::createFromSDK(Darwin::DriverKit, Version);
-    return None;
+    return std::nullopt;
   };
   if (auto Result = CreatePlatformFromSDKName(SDK))
     return Result;
@@ -1974,7 +1975,7 @@ inferDeploymentTargetFromArch(DerivedArgList &Args, const Darwin &Toolchain,
            MachOArchName != "armv7em")
     OSTy = llvm::Triple::MacOSX;
   if (OSTy == llvm::Triple::UnknownOS)
-    return None;
+    return std::nullopt;
   return DarwinPlatform::createFromArch(OSTy,
                                         getOSVersion(OSTy, Triple, TheDriver));
 }
@@ -1984,10 +1985,10 @@ Optional<DarwinPlatform> getDeploymentTargetFromTargetArg(
     DerivedArgList &Args, const llvm::Triple &Triple, const Driver &TheDriver,
     const Optional<DarwinSDKInfo> &SDKInfo) {
   if (!Args.hasArg(options::OPT_target))
-    return None;
+    return std::nullopt;
   if (Triple.getOS() == llvm::Triple::Darwin ||
       Triple.getOS() == llvm::Triple::UnknownOS)
-    return None;
+    return std::nullopt;
   std::string OSVersion = getOSVersion(Triple.getOS(), Triple, TheDriver);
   Optional<llvm::Triple> TargetVariantTriple;
   for (const Arg *A : Args.filtered(options::OPT_darwin_target_variant)) {
@@ -2026,7 +2027,7 @@ getDeploymentTargetFromMTargetOSArg(DerivedArgList &Args,
                                     const Optional<DarwinSDKInfo> &SDKInfo) {
   auto *A = Args.getLastArg(options::OPT_mtargetos_EQ);
   if (!A)
-    return None;
+    return std::nullopt;
   llvm::Triple TT(llvm::Twine("unknown-apple-") + A->getValue());
   switch (TT.getOS()) {
   case llvm::Triple::MacOSX:
@@ -2037,14 +2038,14 @@ getDeploymentTargetFromMTargetOSArg(DerivedArgList &Args,
   default:
     TheDriver.Diag(diag::err_drv_invalid_os_in_arg)
         << TT.getOSName() << A->getAsString(Args);
-    return None;
+    return std::nullopt;
   }
 
   VersionTuple Version = TT.getOSVersion();
   if (!Version.getMajor()) {
     TheDriver.Diag(diag::err_drv_invalid_version_number)
         << A->getAsString(Args);
-    return None;
+    return std::nullopt;
   }
   return DarwinPlatform::createFromMTargetOS(TT.getOS(), Version,
                                              TT.getEnvironment(), A, SDKInfo);
@@ -2055,13 +2056,13 @@ Optional<DarwinSDKInfo> parseSDKSettings(llvm::vfs::FileSystem &VFS,
                                          const Driver &TheDriver) {
   const Arg *A = Args.getLastArg(options::OPT_isysroot);
   if (!A)
-    return None;
+    return std::nullopt;
   StringRef isysroot = A->getValue();
   auto SDKInfoOrErr = parseDarwinSDKInfo(VFS, isysroot);
   if (!SDKInfoOrErr) {
     llvm::consumeError(SDKInfoOrErr.takeError());
     TheDriver.Diag(diag::warn_drv_darwin_sdk_invalid_settings);
-    return None;
+    return std::nullopt;
   }
   return *SDKInfoOrErr;
 }

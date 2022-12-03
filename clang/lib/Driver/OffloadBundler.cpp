@@ -417,7 +417,7 @@ public:
 
   Expected<Optional<StringRef>> ReadBundleStart(MemoryBuffer &Input) final {
     if (NextBundleInfo == BundlesInfo.end())
-      return None;
+      return std::nullopt;
     CurBundleInfo = NextBundleInfo++;
     return CurBundleInfo->first();
   }
@@ -545,7 +545,7 @@ class ObjectFileHandler final : public FileHandler {
 
     // If it does not start with the reserved suffix, just skip this section.
     if (!NameOrErr->startswith(OFFLOAD_BUNDLER_MAGIC_STR))
-      return None;
+      return std::nullopt;
 
     // Return the triple that is right after the reserved prefix.
     return NameOrErr->substr(sizeof(OFFLOAD_BUNDLER_MAGIC_STR) - 1);
@@ -590,7 +590,7 @@ public:
       if (*TripleOrErr)
         return **TripleOrErr;
     }
-    return None;
+    return std::nullopt;
   }
 
   Error ReadBundleEnd(MemoryBuffer &Input) final { return Error::success(); }
@@ -739,7 +739,7 @@ protected:
     // Find start of the bundle.
     ReadChars = FC.find(BundleStartString, ReadChars);
     if (ReadChars == FC.npos)
-      return None;
+      return std::nullopt;
 
     // Get position of the triple.
     size_t TripleStart = ReadChars = ReadChars + BundleStartString.size();
@@ -747,7 +747,7 @@ protected:
     // Get position that closes the triple.
     size_t TripleEnd = ReadChars = FC.find("\n", ReadChars);
     if (TripleEnd == FC.npos)
-      return None;
+      return std::nullopt;
 
     // Next time we read after the new line.
     ++ReadChars;
