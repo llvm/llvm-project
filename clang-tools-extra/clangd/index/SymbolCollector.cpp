@@ -148,7 +148,7 @@ llvm::Optional<RelationKind> indexableRelation(const index::SymbolRelation &R) {
     return RelationKind::BaseOf;
   if (R.Roles & static_cast<unsigned>(index::SymbolRole::RelationOverrideOf))
     return RelationKind::OverriddenBy;
-  return None;
+  return std::nullopt;
 }
 
 // Given a ref contained in enclosing decl `Enclosing`, return
@@ -310,7 +310,7 @@ private:
       ++I;
     }
     // Unexpected, must not be a framework header.
-    return llvm::None;
+    return std::nullopt;
   }
 
   // Frameworks typically have an umbrella header of the same name, e.g.
@@ -374,7 +374,7 @@ private:
       // Unexpected: must not be a proper framework header, don't cache the
       // failure.
       CachePathToFrameworkSpelling.erase(Res.first);
-      return llvm::None;
+      return std::nullopt;
     }
     auto DirKind = HS.getFileDirFlavor(FE);
     if (auto UmbrellaSpelling =
@@ -441,7 +441,7 @@ SymbolCollector::getTokenLocation(SourceLocation TokLoc) {
   const auto &SM = ASTCtx->getSourceManager();
   auto *FE = SM.getFileEntryForID(SM.getFileID(TokLoc));
   if (!FE)
-    return None;
+    return std::nullopt;
 
   SymbolLocation Result;
   Result.FileURI = HeaderFileURIs->toURI(FE).c_str();

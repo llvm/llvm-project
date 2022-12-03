@@ -273,12 +273,12 @@ llvm::Optional<SourceRange> findZoneRange(const Node *Parent,
           SM, LangOpts, Parent->Children.front()->ASTNode.getSourceRange()))
     SR.setBegin(BeginFileRange->getBegin());
   else
-    return llvm::None;
+    return std::nullopt;
   if (auto EndFileRange = toHalfOpenFileRange(
           SM, LangOpts, Parent->Children.back()->ASTNode.getSourceRange()))
     SR.setEnd(EndFileRange->getEnd());
   else
-    return llvm::None;
+    return std::nullopt;
   return SR;
 }
 
@@ -317,22 +317,22 @@ llvm::Optional<ExtractionZone> findExtractionZone(const Node *CommonAnc,
   ExtractionZone ExtZone;
   ExtZone.Parent = getParentOfRootStmts(CommonAnc);
   if (!ExtZone.Parent || ExtZone.Parent->Children.empty())
-    return llvm::None;
+    return std::nullopt;
   ExtZone.EnclosingFunction = findEnclosingFunction(ExtZone.Parent);
   if (!ExtZone.EnclosingFunction)
-    return llvm::None;
+    return std::nullopt;
   // When there is a single RootStmt, we must check if it's valid for
   // extraction.
   if (ExtZone.Parent->Children.size() == 1 &&
       !validSingleChild(ExtZone.getLastRootStmt(), ExtZone.EnclosingFunction))
-    return llvm::None;
+    return std::nullopt;
   if (auto FuncRange =
           computeEnclosingFuncRange(ExtZone.EnclosingFunction, SM, LangOpts))
     ExtZone.EnclosingFuncRange = *FuncRange;
   if (auto ZoneRange = findZoneRange(ExtZone.Parent, SM, LangOpts))
     ExtZone.ZoneRange = *ZoneRange;
   if (ExtZone.EnclosingFuncRange.isInvalid() || ExtZone.ZoneRange.isInvalid())
-    return llvm::None;
+    return std::nullopt;
 
   for (const Node *Child : ExtZone.Parent->Children)
     ExtZone.RootStmts.insert(Child->ASTNode.get<Stmt>());

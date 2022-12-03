@@ -126,11 +126,11 @@ llvm::Optional<DriverInfo> parseDriverOutput(llvm::StringRef Output) {
   }
   if (!SeenIncludes) {
     elog("System include extraction: start marker not found: {0}", Output);
-    return llvm::None;
+    return std::nullopt;
   }
   if (State == IncludesExtracting) {
     elog("System include extraction: end marker missing: {0}", Output);
-    return llvm::None;
+    return std::nullopt;
   }
   return std::move(Info);
 }
@@ -152,7 +152,7 @@ extractSystemIncludesAndTarget(llvm::SmallString<128> Driver,
       Driver = *DriverProgram;
     } else {
       elog("System include extraction: driver {0} not found in PATH", Driver);
-      return llvm::None;
+      return std::nullopt;
     }
   }
 
@@ -161,7 +161,7 @@ extractSystemIncludesAndTarget(llvm::SmallString<128> Driver,
 
   if (!QueryDriverRegex.match(Driver)) {
     vlog("System include extraction: not allowed driver {0}", Driver);
-    return llvm::None;
+    return std::nullopt;
   }
 
   llvm::SmallString<128> StdErrPath;
@@ -170,7 +170,7 @@ extractSystemIncludesAndTarget(llvm::SmallString<128> Driver,
     elog("System include extraction: failed to create temporary file with "
          "error {0}",
          EC.message());
-    return llvm::None;
+    return std::nullopt;
   }
   auto CleanUp = llvm::make_scope_exit(
       [&StdErrPath]() { llvm::sys::fs::remove(StdErrPath); });
@@ -209,26 +209,26 @@ extractSystemIncludesAndTarget(llvm::SmallString<128> Driver,
   }
 
   std::string ErrMsg;
-  if (int RC = llvm::sys::ExecuteAndWait(Driver, Args, /*Env=*/llvm::None,
+  if (int RC = llvm::sys::ExecuteAndWait(Driver, Args, /*Env=*/std::nullopt,
                                          Redirects, /*SecondsToWait=*/0,
                                          /*MemoryLimit=*/0, &ErrMsg)) {
     elog("System include extraction: driver execution failed with return code: "
          "{0} - '{1}'. Args: [{2}]",
          llvm::to_string(RC), ErrMsg, printArgv(Args));
-    return llvm::None;
+    return std::nullopt;
   }
 
   auto BufOrError = llvm::MemoryBuffer::getFile(StdErrPath);
   if (!BufOrError) {
     elog("System include extraction: failed to read {0} with error {1}",
          StdErrPath, BufOrError.getError().message());
-    return llvm::None;
+    return std::nullopt;
   }
 
   llvm::Optional<DriverInfo> Info =
       parseDriverOutput(BufOrError->get()->getBuffer());
   if (!Info)
-    return llvm::None;
+    return std::nullopt;
   log("System includes extractor: successfully executed {0}\n\tgot includes: "
       "\"{1}\"\n\tgot target: \"{2}\"",
       Driver, llvm::join(Info->SystemIncludes, ", "), Info->Target);

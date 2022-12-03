@@ -119,16 +119,16 @@ void logIfOverflow(const SymbolLocation &Loc) {
 llvm::Optional<Location> toLSPLocation(const SymbolLocation &Loc,
                                        llvm::StringRef TUPath) {
   if (!Loc)
-    return None;
+    return std::nullopt;
   auto Uri = URI::parse(Loc.FileURI);
   if (!Uri) {
     elog("Could not parse URI {0}: {1}", Loc.FileURI, Uri.takeError());
-    return None;
+    return std::nullopt;
   }
   auto U = URIForFile::fromURI(*Uri, TUPath);
   if (!U) {
     elog("Could not resolve URI {0}: {1}", Loc.FileURI, U.takeError());
-    return None;
+    return std::nullopt;
   }
 
   Location LSPLoc;
@@ -210,11 +210,11 @@ llvm::Optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
   const auto &SM = AST.getSourceManager();
   const FileEntry *F = SM.getFileEntryForID(SM.getFileID(Loc));
   if (!F)
-    return None;
+    return std::nullopt;
   auto FilePath = getCanonicalPath(F, SM);
   if (!FilePath) {
     log("failed to get path!");
-    return None;
+    return std::nullopt;
   }
   Location L;
   L.uri = URIForFile::canonicalize(*FilePath, TUPath);
@@ -241,7 +241,7 @@ llvm::Optional<LocatedSymbol> locateFileReferent(const Position &Pos,
       return File;
     }
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 // Macros are simple: there's no declaration/definition distinction.
@@ -260,7 +260,7 @@ locateMacroReferent(const syntax::Token &TouchedIdentifier, ParsedAST &AST,
       return Macro;
     }
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 // A wrapper around `Decl::getCanonicalDecl` to support cases where Clang's
@@ -1209,7 +1209,7 @@ llvm::Optional<DocumentHighlight> toHighlight(SourceLocation Loc,
         CharSourceRange::getCharRange(Tok->location(), Tok->endLocation()));
     return Result;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 } // namespace
@@ -1569,11 +1569,11 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
   const auto DeclRange =
       toHalfOpenFileRange(SM, Ctx.getLangOpts(), {BeginLoc, EndLoc});
   if (!DeclRange)
-    return llvm::None;
+    return std::nullopt;
   auto FilePath =
       getCanonicalPath(SM.getFileEntryForID(SM.getFileID(NameLoc)), SM);
   if (!FilePath)
-    return llvm::None; // Not useful without a uri.
+    return std::nullopt; // Not useful without a uri.
 
   Position NameBegin = sourceLocToPosition(SM, NameLoc);
   Position NameEnd = sourceLocToPosition(
@@ -1633,7 +1633,7 @@ static llvm::Optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
   auto Loc = symbolToLocation(S, TUPath);
   if (!Loc) {
     elog("Failed to convert symbol to hierarchy item: {0}", Loc.takeError());
-    return llvm::None;
+    return std::nullopt;
   }
   HierarchyItem HI;
   HI.name = std::string(S.Name);
@@ -2065,7 +2065,7 @@ llvm::Optional<std::vector<TypeHierarchyItem>>
 superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index) {
   std::vector<TypeHierarchyItem> Results;
   if (!Item.data.parents)
-    return llvm::None;
+    return std::nullopt;
   if (Item.data.parents->empty())
     return Results;
   LookupRequest Req;

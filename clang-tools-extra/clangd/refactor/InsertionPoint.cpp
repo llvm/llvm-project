@@ -59,7 +59,7 @@ llvm::Optional<const Decl *> insertionDecl(const DeclContext &DC,
   }
   if (ReturnNext || (LastMatched && A.Direction == Anchor::Below))
     return nullptr;
-  return llvm::None;
+  return std::nullopt;
 }
 
 SourceLocation beginLoc(const Decl &D) {
