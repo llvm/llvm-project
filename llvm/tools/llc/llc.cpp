@@ -520,7 +520,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     }
   };
 
-  Optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
+  std::optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
   std::optional<CodeModel::Model> CM = codegen::getExplicitCodeModel();
 
   const Target *TheTarget = nullptr;

@@ -53,7 +53,7 @@ static std::string computeDataLayout(const Triple &TT) {
          "v96:128-v192:256-v256:256-v512:512-v1024:1024";
 }
 
-static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   if (!RM)
     return Reloc::PIC_;
   return *RM;
@@ -65,7 +65,7 @@ SPIRVTargetObjectFile::~SPIRVTargetObjectFile() {}
 SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
-                                       Optional<Reloc::Model> RM,
+                                       std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
