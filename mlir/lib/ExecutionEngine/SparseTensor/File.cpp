@@ -53,12 +53,11 @@ void SparseTensorReader::readLine() {
     MLIR_SPARSETENSOR_FATAL("Cannot read next line of %s\n", filename);
 }
 
-char *SparseTensorReader::readCOOIndices(uint64_t rank, uint64_t *indices) {
-  assert(rank == getRank() && "Rank mismatch");
+char *SparseTensorReader::readCOOIndices(uint64_t *indices) {
   readLine();
   // Local variable for tracking the parser's position in the `line` buffer.
   char *linePtr = line;
-  for (uint64_t r = 0; r < rank; ++r) {
+  for (uint64_t rank = getRank(), r = 0; r < rank; ++r) {
     // Parse the 1-based index.
     uint64_t idx = strtoul(linePtr, &linePtr, 10);
     // Store the 0-based index.

@@ -1,4 +1,4 @@
-// UNSUPPORTED: -zos, -aix
+// UNSUPPORTED: -zos, target={{.*}}-aix{{.*}}
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -debug-info-kind=limited -fmodules \
 // RUN:     -DGREETING="Hello World" -UNDEBUG \

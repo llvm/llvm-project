@@ -342,7 +342,7 @@ void *TestDialect::getRegisteredInterfaceForOp(TypeID typeID,
 
 Note: Before reading this section, the reader should have some familiarity with
 the concepts described in the
-[`Operation Definition Specification`](OpDefinitions.md) documentation.
+[`Operation Definition Specification`](DefiningDialects/Operations.md) documentation.
 
 As detailed above, [Interfaces](#attributeoperationtype-interfaces) allow for
 attributes, operations, and types to expose method calls without requiring that

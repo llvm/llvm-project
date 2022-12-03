@@ -1,4 +1,4 @@
-// XFAIL: -aix
+// XFAIL: target={{.*}}-aix{{.*}}
 // UNSUPPORTED: -zos
 // REQUIRES: object-emission
 // RUN: llvm-mc %s -o -| FileCheck %s

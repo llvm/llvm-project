@@ -184,6 +184,9 @@ code bases.
 - To match GCC, ``__ppc64__`` is no longer defined on PowerPC64 targets. Use
   ``__powerpc64__`` instead.
 
+- ``-p`` is rejected for all targets which are not AIX or OpenBSD. ``-p`` led
+  to an ``-Wunused-command-line-argument`` warning in previous releases.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed

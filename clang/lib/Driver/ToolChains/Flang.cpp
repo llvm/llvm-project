@@ -80,6 +80,32 @@ void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   }
 }
 
+void Flang::addTargetOptions(const ArgList &Args,
+                             ArgStringList &CmdArgs) const {
+  const ToolChain &TC = getToolChain();
+  const llvm::Triple &Triple = TC.getEffectiveTriple();
+  const Driver &D = TC.getDriver();
+
+  std::string CPU = getCPUName(D, Args, Triple);
+  if (!CPU.empty()) {
+    CmdArgs.push_back("-target-cpu");
+    CmdArgs.push_back(Args.MakeArgString(CPU));
+  }
+
+  // Add the target features.
+  switch (TC.getArch()) {
+  default:
+    break;
+  case llvm::Triple::aarch64:
+    [[fallthrough]];
+  case llvm::Triple::x86_64:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    break;
+  }
+
+  // TODO: Add target specific flags, ABI, mtune option etc.
+}
+
 static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   StringRef FPContract;
@@ -242,6 +268,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Floating point related options
   addFloatingPointOptions(D, Args, CmdArgs);
+
+  // Add target args, features, etc.
+  addTargetOptions(Args, CmdArgs);
 
   // Add other compile options
   addOtherOptions(Args, CmdArgs);

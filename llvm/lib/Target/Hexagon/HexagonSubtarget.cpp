@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <cassert>
 #include <map>
+#include <optional>
 
 using namespace llvm;
 
@@ -92,7 +93,7 @@ HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
 
 HexagonSubtarget &
 HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
-  Optional<Hexagon::ArchEnum> ArchVer = Hexagon::getCpu(CPUString);
+  std::optional<Hexagon::ArchEnum> ArchVer = Hexagon::getCpu(CPUString);
   if (ArchVer)
     HexagonArchVersion = *ArchVer;
   else

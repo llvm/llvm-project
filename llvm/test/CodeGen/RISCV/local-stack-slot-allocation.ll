@@ -14,13 +14,11 @@ define void @use_frame_base_reg() {
 ; RV32I-NEXT:    sub sp, sp, a0
 ; RV32I-NEXT:    .cfi_def_cfa_offset 100016
 ; RV32I-NEXT:    lui a0, 24
-; RV32I-NEXT:    addi a0, a0, 1708
 ; RV32I-NEXT:    add a0, sp, a0
-; RV32I-NEXT:    lb a0, 0(a0)
+; RV32I-NEXT:    lb a0, 1708(a0)
 ; RV32I-NEXT:    lui a0, 24
-; RV32I-NEXT:    addi a0, a0, 1704
 ; RV32I-NEXT:    add a0, sp, a0
-; RV32I-NEXT:    lb a0, 0(a0)
+; RV32I-NEXT:    lb a0, 1704(a0)
 ; RV32I-NEXT:    lui a0, 24
 ; RV32I-NEXT:    addi a0, a0, 1712
 ; RV32I-NEXT:    add sp, sp, a0
@@ -33,13 +31,11 @@ define void @use_frame_base_reg() {
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 100016
 ; RV64I-NEXT:    lui a0, 24
-; RV64I-NEXT:    addiw a0, a0, 1708
 ; RV64I-NEXT:    add a0, sp, a0
-; RV64I-NEXT:    lb a0, 0(a0)
+; RV64I-NEXT:    lb a0, 1708(a0)
 ; RV64I-NEXT:    lui a0, 24
-; RV64I-NEXT:    addiw a0, a0, 1704
 ; RV64I-NEXT:    add a0, sp, a0
-; RV64I-NEXT:    lb a0, 0(a0)
+; RV64I-NEXT:    lb a0, 1704(a0)
 ; RV64I-NEXT:    lui a0, 24
 ; RV64I-NEXT:    addiw a0, a0, 1712
 ; RV64I-NEXT:    add sp, sp, a0
