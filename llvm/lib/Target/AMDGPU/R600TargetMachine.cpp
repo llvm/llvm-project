@@ -18,6 +18,7 @@
 #include "R600MachineScheduler.h"
 #include "R600TargetTransformInfo.h"
 #include "llvm/Transforms/Scalar.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -51,7 +52,7 @@ R600TargetMachine::R600TargetMachine(const Target &T, const Triple &TT,
                                      StringRef CPU, StringRef FS,
                                      TargetOptions Options,
                                      Optional<Reloc::Model> RM,
-                                     Optional<CodeModel::Model> CM,
+                                     std::optional<CodeModel::Model> CM,
                                      CodeGenOpt::Level OL, bool JIT)
     : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {
   setRequiresStructuredCFG(true);

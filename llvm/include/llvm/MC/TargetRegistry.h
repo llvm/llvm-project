@@ -31,6 +31,7 @@
 #include <cstddef>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -167,7 +168,7 @@ public:
   using TargetMachineCtorTy = TargetMachine
       *(*)(const Target &T, const Triple &TT, StringRef CPU, StringRef Features,
            const TargetOptions &Options, Optional<Reloc::Model> RM,
-           Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT);
+           std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT);
   // If it weren't for layering issues (this header is in llvm/Support, but
   // depends on MC?) this should take the Streamer by value rather than rvalue
   // reference.
@@ -481,7 +482,7 @@ public:
   TargetMachine *
   createTargetMachine(StringRef TT, StringRef CPU, StringRef Features,
                       const TargetOptions &Options, Optional<Reloc::Model> RM,
-                      Optional<CodeModel::Model> CM = std::nullopt,
+                      std::optional<CodeModel::Model> CM = std::nullopt,
                       CodeGenOpt::Level OL = CodeGenOpt::Default,
                       bool JIT = false) const {
     if (!TargetMachineCtorFn)
@@ -1358,10 +1359,12 @@ template <class TargetMachineImpl> struct RegisterTargetMachine {
   }
 
 private:
-  static TargetMachine *
-  Allocator(const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
-            const TargetOptions &Options, Optional<Reloc::Model> RM,
-            Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT) {
+  static TargetMachine *Allocator(const Target &T, const Triple &TT,
+                                  StringRef CPU, StringRef FS,
+                                  const TargetOptions &Options,
+                                  Optional<Reloc::Model> RM,
+                                  std::optional<CodeModel::Model> CM,
+                                  CodeGenOpt::Level OL, bool JIT) {
     return new TargetMachineImpl(T, TT, CPU, FS, Options, RM, CM, OL, JIT);
   }
 };
