@@ -35,6 +35,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstddef>
@@ -1831,8 +1832,10 @@ SampleProfileReaderItaniumRemapper::lookUpNameInProfile(StringRef Fname) {
 ///
 /// \returns an error code indicating the status of the buffer.
 static ErrorOr<std::unique_ptr<MemoryBuffer>>
-setupMemoryBuffer(const Twine &Filename) {
-  auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
+setupMemoryBuffer(const Twine &Filename, vfs::FileSystem &FS) {
+  auto BufferOrErr = Filename.str() == "-" ? MemoryBuffer::getSTDIN()
+                                           : FS.getBufferForFile(Filename);
+  // auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
   if (std::error_code EC = BufferOrErr.getError())
     return EC;
   auto Buffer = std::move(BufferOrErr.get());
@@ -1857,12 +1860,12 @@ setupMemoryBuffer(const Twine &Filename) {
 /// \returns an error code indicating the status of the created reader.
 ErrorOr<std::unique_ptr<SampleProfileReader>>
 SampleProfileReader::create(const std::string Filename, LLVMContext &C,
-                            FSDiscriminatorPass P,
+                            vfs::FileSystem &FS, FSDiscriminatorPass P,
                             const std::string RemapFilename) {
-  auto BufferOrError = setupMemoryBuffer(Filename);
+  auto BufferOrError = setupMemoryBuffer(Filename, FS);
   if (std::error_code EC = BufferOrError.getError())
     return EC;
-  return create(BufferOrError.get(), C, P, RemapFilename);
+  return create(BufferOrError.get(), C, FS, P, RemapFilename);
 }
 
 /// Create a sample profile remapper from the given input, to remap the
@@ -1877,9 +1880,10 @@ SampleProfileReader::create(const std::string Filename, LLVMContext &C,
 /// \returns an error code indicating the status of the created reader.
 ErrorOr<std::unique_ptr<SampleProfileReaderItaniumRemapper>>
 SampleProfileReaderItaniumRemapper::create(const std::string Filename,
+                                           vfs::FileSystem &FS,
                                            SampleProfileReader &Reader,
                                            LLVMContext &C) {
-  auto BufferOrError = setupMemoryBuffer(Filename);
+  auto BufferOrError = setupMemoryBuffer(Filename, FS);
   if (std::error_code EC = BufferOrError.getError())
     return EC;
   return create(BufferOrError.get(), Reader, C);
@@ -1927,7 +1931,7 @@ SampleProfileReaderItaniumRemapper::create(std::unique_ptr<MemoryBuffer> &B,
 /// \returns an error code indicating the status of the created reader.
 ErrorOr<std::unique_ptr<SampleProfileReader>>
 SampleProfileReader::create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C,
-                            FSDiscriminatorPass P,
+                            vfs::FileSystem &FS, FSDiscriminatorPass P,
                             const std::string RemapFilename) {
   std::unique_ptr<SampleProfileReader> Reader;
   if (SampleProfileReaderRawBinary::hasFormat(*B))
@@ -1945,7 +1949,7 @@ SampleProfileReader::create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C,
 
   if (!RemapFilename.empty()) {
     auto ReaderOrErr =
-        SampleProfileReaderItaniumRemapper::create(RemapFilename, *Reader, C);
+        SampleProfileReaderItaniumRemapper::create(RemapFilename, FS, *Reader, C);
     if (std::error_code EC = ReaderOrErr.getError()) {
       std::string Msg = "Could not create remapper: " + EC.message();
       C.diagnose(DiagnosticInfoSampleProfile(RemapFilename, Msg));
