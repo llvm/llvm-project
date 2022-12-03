@@ -288,8 +288,8 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
 }
 
 static CodeModel::Model
-getEffectiveAArch64CodeModel(const Triple &TT, Optional<CodeModel::Model> CM,
-                             bool JIT) {
+getEffectiveAArch64CodeModel(const Triple &TT,
+                             std::optional<CodeModel::Model> CM, bool JIT) {
   if (CM) {
     if (*CM != CodeModel::Small && *CM != CodeModel::Tiny &&
         *CM != CodeModel::Large) {
@@ -316,7 +316,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
                                            Optional<Reloc::Model> RM,
-                                           Optional<CodeModel::Model> CM,
+                                           std::optional<CodeModel::Model> CM,
                                            CodeGenOpt::Level OL, bool JIT,
                                            bool LittleEndian)
     : LLVMTargetMachine(T,
@@ -455,7 +455,7 @@ void AArch64leTargetMachine::anchor() { }
 AArch64leTargetMachine::AArch64leTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, Optional<Reloc::Model> RM,
-    Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
+    std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
     : AArch64TargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
 
 void AArch64beTargetMachine::anchor() { }
@@ -463,7 +463,7 @@ void AArch64beTargetMachine::anchor() { }
 AArch64beTargetMachine::AArch64beTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, Optional<Reloc::Model> RM,
-    Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
+    std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
     : AArch64TargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, false) {}
 
 namespace {

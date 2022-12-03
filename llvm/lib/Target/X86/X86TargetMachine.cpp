@@ -51,6 +51,7 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/CFGuard.h"
 #include <memory>
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -204,8 +205,9 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
   return *RM;
 }
 
-static CodeModel::Model getEffectiveX86CodeModel(Optional<CodeModel::Model> CM,
-                                                 bool JIT, bool Is64Bit) {
+static CodeModel::Model
+getEffectiveX86CodeModel(std::optional<CodeModel::Model> CM, bool JIT,
+                         bool Is64Bit) {
   if (CM) {
     if (*CM == CodeModel::Tiny)
       report_fatal_error("Target does not support the tiny CodeModel", false);
@@ -222,7 +224,7 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    const TargetOptions &Options,
                                    Optional<Reloc::Model> RM,
-                                   Optional<CodeModel::Model> CM,
+                                   std::optional<CodeModel::Model> CM,
                                    CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(
           T, computeDataLayout(TT), TT, CPU, FS, Options,
