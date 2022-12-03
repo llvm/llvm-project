@@ -215,12 +215,12 @@ DWARFUnit::getAddrOffsetSectionItem(uint32_t Index) const {
     if (IsDWO && hasSingleElement(R))
       return (*R.begin())->getAddrOffsetSectionItem(Index);
 
-    return None;
+    return std::nullopt;
   }
 
   uint64_t Offset = *AddrOffsetSectionBase + Index * getAddressByteSize();
   if (AddrOffsetSection->Data.size() < Offset + getAddressByteSize())
-    return None;
+    return std::nullopt;
   DWARFDataExtractor DA(Context.getDWARFObj(), *AddrOffsetSection,
                         IsLittleEndian, getAddressByteSize());
   uint64_t Section;
@@ -377,7 +377,7 @@ void DWARFUnit::clear() {
   BaseAddr.reset();
   RangeSectionBase = 0;
   LocSectionBase = 0;
-  AddrOffsetSectionBase = None;
+  AddrOffsetSectionBase = std::nullopt;
   SU = nullptr;
   clearDIEs(false);
   AddrDieMap.clear();
@@ -502,7 +502,7 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
   if (Optional<uint64_t> DWOId = toUnsigned(UnitDie.find(DW_AT_GNU_dwo_id)))
     Header.setDWOId(*DWOId);
   if (!IsDWO) {
-    assert(AddrOffsetSectionBase == None);
+    assert(AddrOffsetSectionBase == std::nullopt);
     assert(RangeSectionBase == 0);
     assert(LocSectionBase == 0);
     AddrOffsetSectionBase = toSectionOffset(UnitDie.find(DW_AT_addr_base));
@@ -1138,7 +1138,7 @@ DWARFUnit::determineStringOffsetsTableContribution(DWARFDataExtractor &DA) {
   assert(!IsDWO);
   auto OptOffset = toSectionOffset(getUnitDIE().find(DW_AT_str_offsets_base));
   if (!OptOffset)
-    return None;
+    return std::nullopt;
   auto DescOrError =
       parseDWARFStringOffsetsTableHeader(DA, Header.getFormat(), *OptOffset);
   if (!DescOrError)
@@ -1157,7 +1157,7 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor & DA) {
     Offset = C->Offset;
   if (getVersion() >= 5) {
     if (DA.getData().data() == nullptr)
-      return None;
+      return std::nullopt;
     Offset += Header.getFormat() == dwarf::DwarfFormat::DWARF32 ? 8 : 16;
     // Look for a valid contribution at the given offset.
     auto DescOrError = parseDWARFStringOffsetsTableHeader(DA, Header.getFormat(), Offset);
@@ -1176,7 +1176,7 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor & DA) {
     Desc = StrOffsetsContributionDescriptor(0, StringOffsetSection.Data.size(),
                                             4, Header.getFormat());
   else
-    return None;
+    return std::nullopt;
   auto DescOrError = Desc.validateContributionSize(DA);
   if (!DescOrError)
     return DescOrError.takeError();
@@ -1191,12 +1191,12 @@ Optional<uint64_t> DWARFUnit::getRnglistOffset(uint32_t Index) {
   if (Optional<uint64_t> Off = llvm::DWARFListTableHeader::getOffsetEntry(
           RangesData, RangeSectionBase, getFormat(), Index))
     return *Off + RangeSectionBase;
-  return None;
+  return std::nullopt;
 }
 
 Optional<uint64_t> DWARFUnit::getLoclistOffset(uint32_t Index) {
   if (Optional<uint64_t> Off = llvm::DWARFListTableHeader::getOffsetEntry(
           LocTable->getData(), LocSectionBase, getFormat(), Index))
     return *Off + LocSectionBase;
-  return None;
+  return std::nullopt;
 }

@@ -251,17 +251,17 @@ bool DWARFDie::isSubroutineDIE() const {
 
 Optional<DWARFFormValue> DWARFDie::find(dwarf::Attribute Attr) const {
   if (!isValid())
-    return None;
+    return std::nullopt;
   auto AbbrevDecl = getAbbreviationDeclarationPtr();
   if (AbbrevDecl)
     return AbbrevDecl->getAttributeValue(getOffset(), Attr, *U);
-  return None;
+  return std::nullopt;
 }
 
 Optional<DWARFFormValue>
 DWARFDie::find(ArrayRef<dwarf::Attribute> Attrs) const {
   if (!isValid())
-    return None;
+    return std::nullopt;
   auto AbbrevDecl = getAbbreviationDeclarationPtr();
   if (AbbrevDecl) {
     for (auto Attr : Attrs) {
@@ -269,7 +269,7 @@ DWARFDie::find(ArrayRef<dwarf::Attribute> Attrs) const {
         return Value;
     }
   }
-  return None;
+  return std::nullopt;
 }
 
 Optional<DWARFFormValue>
@@ -302,7 +302,7 @@ DWARFDie::findRecursively(ArrayRef<dwarf::Attribute> Attrs) const {
         Worklist.push_back(D);
   }
 
-  return None;
+  return std::nullopt;
 }
 
 DWARFDie
@@ -348,7 +348,7 @@ Optional<uint64_t> DWARFDie::getLocBaseAttribute() const {
 Optional<uint64_t> DWARFDie::getHighPC(uint64_t LowPC) const {
   uint64_t Tombstone = dwarf::computeTombstoneAddress(U->getAddressByteSize());
   if (LowPC == Tombstone)
-    return None;
+    return std::nullopt;
   if (auto FormValue = find(DW_AT_high_pc)) {
     if (auto Address = FormValue->getAsAddress()) {
       // High PC is an address.
@@ -359,7 +359,7 @@ Optional<uint64_t> DWARFDie::getHighPC(uint64_t LowPC) const {
       return LowPC + *Offset;
     }
   }
-  return None;
+  return std::nullopt;
 }
 
 bool DWARFDie::getLowAndHighPC(uint64_t &LowPC, uint64_t &HighPC,
@@ -429,7 +429,7 @@ DWARFDie::getLocations(dwarf::Attribute Attr) const {
 
   if (Optional<ArrayRef<uint8_t>> Expr = Location->getAsBlock()) {
     return DWARFLocationExpressionsVector{
-        DWARFLocationExpression{None, to_vector<4>(*Expr)}};
+        DWARFLocationExpression{std::nullopt, to_vector<4>(*Expr)}};
   }
 
   return createStringError(
@@ -520,10 +520,10 @@ Optional<uint64_t> DWARFDie::getTypeSize(uint64_t PointerSize) {
   case DW_TAG_array_type: {
     DWARFDie BaseType = getAttributeValueAsReferencedDie(DW_AT_type);
     if (!BaseType)
-      return None;
+      return std::nullopt;
     Optional<uint64_t> BaseSize = BaseType.getTypeSize(PointerSize);
     if (!BaseSize)
-      return None;
+      return std::nullopt;
     uint64_t Size = *BaseSize;
     for (DWARFDie Child : *this) {
       if (Child.getTag() != DW_TAG_subrange_type)
@@ -549,7 +549,7 @@ Optional<uint64_t> DWARFDie::getTypeSize(uint64_t PointerSize) {
       return BaseType.getTypeSize(PointerSize);
     break;
   }
-  return None;
+  return std::nullopt;
 }
 
 /// Helper to dump a DIE with all of its parents, but no siblings.
