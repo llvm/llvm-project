@@ -87,11 +87,11 @@ Optional<uint64_t> ProfileSummaryInfo::getProfileCount(
     uint64_t TotalCount;
     if (Call.extractProfTotalWeight(TotalCount))
       return TotalCount;
-    return None;
+    return std::nullopt;
   }
   if (BFI)
     return BFI->getBlockProfileCount(Call.getParent(), AllowSynthetic);
-  return None;
+  return std::nullopt;
 }
 
 /// Returns true if the function's entry is hot. If it returns false, it
@@ -267,7 +267,7 @@ void ProfileSummaryInfo::computeThresholds() {
 Optional<uint64_t>
 ProfileSummaryInfo::computeThreshold(int PercentileCutoff) const {
   if (!hasProfileSummary())
-    return None;
+    return std::nullopt;
   auto iter = ThresholdCache.find(PercentileCutoff);
   if (iter != ThresholdCache.end()) {
     return iter->second;

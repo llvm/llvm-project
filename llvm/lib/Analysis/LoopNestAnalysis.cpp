@@ -128,7 +128,7 @@ LoopNest::LoopNestEnum LoopNest::analyzeLoopNestForPerfectNest(
 
   // Bail out if we cannot retrieve the outer loop bounds.
   auto OuterLoopLB = OuterLoop.getBounds(SE);
-  if (OuterLoopLB == None) {
+  if (OuterLoopLB == std::nullopt) {
     LLVM_DEBUG(dbgs() << "Cannot compute loop bounds of OuterLoop: "
                       << OuterLoop << "\n";);
     return OuterLoopLowerBoundUnknown;

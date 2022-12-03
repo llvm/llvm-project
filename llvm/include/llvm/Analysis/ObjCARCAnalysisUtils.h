@@ -241,9 +241,9 @@ class ARCMDKindCache {
 public:
   void init(Module *Mod) {
     M = Mod;
-    ImpreciseReleaseMDKind = llvm::None;
-    CopyOnEscapeMDKind = llvm::None;
-    NoObjCARCExceptionsMDKind = llvm::None;
+    ImpreciseReleaseMDKind = std::nullopt;
+    CopyOnEscapeMDKind = std::nullopt;
+    NoObjCARCExceptionsMDKind = std::nullopt;
   }
 
   unsigned get(ARCMDKindID ID) {
