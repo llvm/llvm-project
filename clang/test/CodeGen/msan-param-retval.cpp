@@ -29,3 +29,11 @@ int foo() {
 // NOUNDEF_ONLY: @__msan_retval_tls
 // EAGER-NOT:    @__msan_retval_tls
 // CHECK: }
+
+int noret() {
+}
+
+// CLEAN: define dso_local i32 @_Z5noretv() #0 {
+// NOUNDEF: define dso_local noundef i32 @_Z5noretv() #0 {
+// CHECK:  unreachable
+// CHECK: }

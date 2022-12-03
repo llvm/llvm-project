@@ -23,6 +23,13 @@ int foo() {
   return 1;
 }
 
-// CHECK:   define dso_local i32 @foo() #0 {
-// CHECK:        @__msan_retval_tls
+// CHECK: define dso_local i32 @foo() #0 {
+// CHECK:   @__msan_retval_tls
+// CHECK: }
+
+int noret() {
+}
+
+// CHECK: define dso_local i32 @noret() #0 {
+// CHECK:   %retval = alloca
 // CHECK: }
