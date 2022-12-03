@@ -89,7 +89,7 @@ struct LTOCodeGenerator {
   void setAsmUndefinedRefs(struct LTOModule *);
   void setTargetOptions(const TargetOptions &Options);
   void setDebugInfo(lto_debug_model);
-  void setCodePICModel(Optional<Reloc::Model> Model) {
+  void setCodePICModel(std::optional<Reloc::Model> Model) {
     Config.RelocModel = Model;
   }
 

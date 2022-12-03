@@ -26,7 +26,7 @@
 
 using namespace llvm;
 
-static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
@@ -45,7 +45,7 @@ getEffectiveXCoreCodeModel(std::optional<CodeModel::Model> CM) {
 XCoreTargetMachine::XCoreTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
-                                       Optional<Reloc::Model> RM,
+                                       std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(

@@ -16,7 +16,7 @@ llvm::TargetOptions lld::initTargetOptionsFromCodeGenFlags() {
   return llvm::codegen::InitTargetOptionsFromCodeGenFlags(llvm::Triple());
 }
 
-llvm::Optional<llvm::Reloc::Model> lld::getRelocModelFromCMModel() {
+std::optional<llvm::Reloc::Model> lld::getRelocModelFromCMModel() {
   return llvm::codegen::getExplicitRelocModel();
 }
 

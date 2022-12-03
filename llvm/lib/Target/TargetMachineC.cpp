@@ -100,7 +100,7 @@ LLVMTargetMachineRef LLVMCreateTargetMachine(LLVMTargetRef T,
         const char *Triple, const char *CPU, const char *Features,
         LLVMCodeGenOptLevel Level, LLVMRelocMode Reloc,
         LLVMCodeModel CodeModel) {
-  Optional<Reloc::Model> RM;
+  std::optional<Reloc::Model> RM;
   switch (Reloc){
     case LLVMRelocStatic:
       RM = Reloc::Static;
