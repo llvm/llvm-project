@@ -96,6 +96,7 @@ class ChunkHeader {
   // align < 8 -> 0
   // else      -> log2(min(align, 512)) - 2
   u8 user_requested_alignment_log : 3;
+  u8 device_mem : 1;
 
  private:
   u16 user_requested_size_hi;
@@ -562,6 +563,7 @@ struct Allocator {
     uptr chunk_beg = user_beg - kChunkHeaderSize;
     AsanChunk *m = reinterpret_cast<AsanChunk *>(chunk_beg);
     m->alloc_type = alloc_type;
+    m->device_mem = da_info ? 1 : 0;
     CHECK(size);
     m->SetUsedSize(size);
     m->user_requested_alignment_log = user_requested_alignment_log;
@@ -617,9 +619,26 @@ struct Allocator {
     if (!atomic_compare_exchange_strong(&m->chunk_state, &old_chunk_state,
                                         CHUNK_QUARANTINE,
                                         memory_order_acquire)) {
-      ReportInvalidFree(ptr, old_chunk_state, stack);
-      // It's not safe to push a chunk in quarantine on invalid free.
-      return false;
+      if (!m->device_mem) {
+        ReportInvalidFree(ptr, old_chunk_state, stack);
+        // It's not safe to push a chunk in quarantine on invalid free.
+        return false;
+      } else {
+        // Temporary patch: atomic_compare_exchange_strong will give wrong
+        // results sometimes for device memory, so just use a mutex to protect
+        // us from the possible race conditions
+        //
+        // We need a mutex, borrow fallback_mutex
+        SpinMutexLock l(&fallback_mutex);
+        old_chunk_state = atomic_load(&m->chunk_state, memory_order_relaxed);
+        if (old_chunk_state == CHUNK_ALLOCATED) {
+          atomic_store(&m->chunk_state, CHUNK_QUARANTINE, memory_order_relaxed);
+        } else {
+          ReportInvalidFree(ptr, old_chunk_state, stack);
+          // It's not safe to push a chunk in quarantine on invalid free.
+          return false;
+        }
+      }
     }
     CHECK_EQ(CHUNK_ALLOCATED, old_chunk_state);
     // It was a user data.
