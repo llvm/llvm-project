@@ -473,7 +473,7 @@ protected:
 
     // Function DI
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
-    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray(None);
+    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray(std::nullopt);
     DISubroutineType *FuncType =
         DBuilder.createSubroutineType(ParamTypes);
     auto *CU = DBuilder.createCompileUnit(dwarf::DW_LANG_C99,
@@ -962,7 +962,7 @@ protected:
 
     // Create debug info
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
-    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray(None);
+    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray(std::nullopt);
     DISubroutineType *DFuncType = DBuilder.createSubroutineType(ParamTypes);
     auto *CU = DBuilder.createCompileUnit(dwarf::DW_LANG_C99,
                                           DBuilder.createFile("filename.c",

@@ -680,12 +680,12 @@ void CheckRelation(const Optional<T> &Lhs, const Optional<T> &Rhs,
   if (Lhs)
     EXPECT_EQ(Expected, OperatorT::apply(*Lhs, Rhs));
   else
-    EXPECT_EQ(Expected, OperatorT::apply(None, Rhs));
+    EXPECT_EQ(Expected, OperatorT::apply(std::nullopt, Rhs));
 
   if (Rhs)
     EXPECT_EQ(Expected, OperatorT::apply(Lhs, *Rhs));
   else
-    EXPECT_EQ(Expected, OperatorT::apply(Lhs, None));
+    EXPECT_EQ(Expected, OperatorT::apply(Lhs, std::nullopt));
 }
 
 struct EqualityMock {};
@@ -800,7 +800,7 @@ TEST(OptionalTest, StreamOperator) {
   };
   EXPECT_EQ("ComparableAndStreamable",
             to_string(ComparableAndStreamable::get()));
-  EXPECT_EQ("None", to_string(None));
+  EXPECT_EQ("None", to_string(std::nullopt));
 }
 
 struct Comparable {

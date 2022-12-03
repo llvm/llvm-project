@@ -32,8 +32,8 @@ dwarf::CIE createCIE(bool IsDWARF64, uint64_t Offset, uint64_t Length) {
                     /*AugmentationData=*/StringRef(),
                     /*FDEPointerEncoding=*/dwarf::DW_EH_PE_absptr,
                     /*LSDAPointerEncoding=*/dwarf::DW_EH_PE_omit,
-                    /*Personality=*/None,
-                    /*PersonalityEnc=*/None,
+                    /*Personality=*/std::nullopt,
+                    /*PersonalityEnc=*/std::nullopt,
                     /*Arch=*/Triple::x86_64);
 }
 
@@ -98,7 +98,7 @@ TEST(DWARFDebugFrame, DumpDWARF64FDE) {
                      /*InitialLocation=*/0x5555abcdabcd,
                      /*AddressRange=*/0x111111111111,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
   expectDumpResult(TestFDE, /*IsEH=*/false,
                    "3333abcdabcd 00004444abcdabcd 00001111abcdabcd FDE "
@@ -116,7 +116,7 @@ TEST(DWARFDebugFrame, DumpEH64FDE) {
                      /*InitialLocation=*/0x4444abcdabcd,
                      /*AddressRange=*/0x111111111111,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
   expectDumpResult(TestFDE, /*IsEH=*/true,
                    "1111abcdabcd 00002222abcdabcd 0033abcd FDE "
@@ -124,7 +124,7 @@ TEST(DWARFDebugFrame, DumpEH64FDE) {
 }
 
 static Error parseCFI(dwarf::CIE &C, ArrayRef<uint8_t> Instructions,
-                      Optional<uint64_t> Size = None) {
+                      Optional<uint64_t> Size = std::nullopt) {
   DWARFDataExtractor Data(Instructions, /*IsLittleEndian=*/true,
                           /*AddressSize=*/8);
   uint64_t Offset = 0;
@@ -478,7 +478,7 @@ TEST(DWARFDebugFrame, UnwindTableEmptyRows) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Having an empty instructions list is fine.
@@ -517,7 +517,7 @@ TEST(DWARFDebugFrame, UnwindTableEmptyRows_NOPs) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make an FDE that has only DW_CFA_nop instructions.
@@ -543,7 +543,7 @@ TEST(DWARFDebugFrame, UnwindTableErrorNonAscendingFDERows) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition.
@@ -585,7 +585,7 @@ TEST(DWARFDebugFrame, UnwindTableError_DW_CFA_restore_state) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition.
@@ -620,7 +620,7 @@ TEST(DWARFDebugFrame, UnwindTableError_DW_CFA_GNU_window_save) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition.
@@ -656,7 +656,7 @@ TEST(DWARFDebugFrame, UnwindTableError_DW_CFA_def_cfa_offset) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has an invalid CFA definition. We do this so we can try
@@ -691,7 +691,7 @@ TEST(DWARFDebugFrame, UnwindTableDefCFAOffsetSFCFAError) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has an invalid CFA definition. We do this so we can try
@@ -726,7 +726,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_def_cfa_register) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has only defines the CFA register with no offset. Some
@@ -766,7 +766,7 @@ TEST(DWARFDebugFrame, UnwindTableRowPushingOpcodes) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -854,7 +854,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_restore) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -917,7 +917,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_restore_extended) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -981,7 +981,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_offset) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1037,7 +1037,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_val_offset) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1088,7 +1088,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_nop) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1134,7 +1134,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_remember_state) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1231,7 +1231,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_undefined) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1276,7 +1276,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_same_value) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1320,7 +1320,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_register) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1366,7 +1366,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_expression) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1418,7 +1418,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_val_expression) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1471,7 +1471,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_def_cfa) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind
@@ -1567,7 +1567,7 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_LLVM_def_aspace_cfa) {
                      /*InitialLocation=*/0x1000,
                      /*AddressRange=*/0x1000,
                      /*Cie=*/&TestCIE,
-                     /*LSDAAddress=*/None,
+                     /*LSDAAddress=*/std::nullopt,
                      /*Arch=*/Triple::x86_64);
 
   // Make a CIE that has a valid CFA definition and a single register unwind

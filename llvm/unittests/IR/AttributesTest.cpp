@@ -97,7 +97,7 @@ TEST(Attributes, RemoveAlign) {
   EXPECT_TRUE(AS.hasAttribute(Attribute::ReadOnly));
   AS = AttributeSet::get(C, B_align_readonly);
   AS = AS.removeAttributes(C, B_align);
-  EXPECT_TRUE(AS.getAlignment() == None);
+  EXPECT_TRUE(AS.getAlignment() == std::nullopt);
   EXPECT_TRUE(AS.hasAttribute(Attribute::ReadOnly));
 
   AttributeList AL;

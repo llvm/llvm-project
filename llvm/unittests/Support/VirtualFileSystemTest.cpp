@@ -1129,7 +1129,8 @@ TEST_F(InMemoryFileSystemTest, AddFileWithUser) {
 }
 
 TEST_F(InMemoryFileSystemTest, AddFileWithGroup) {
-  FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), None, 0xDABBAD00);
+  FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), std::nullopt,
+             0xDABBAD00);
   auto Stat = FS.status("/a");
   ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
   ASSERT_TRUE(Stat->isDirectory());
@@ -1146,8 +1147,8 @@ TEST_F(InMemoryFileSystemTest, AddFileWithGroup) {
 }
 
 TEST_F(InMemoryFileSystemTest, AddFileWithFileType) {
-  FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), None, None,
-             sys::fs::file_type::socket_file);
+  FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), std::nullopt,
+             std::nullopt, sys::fs::file_type::socket_file);
   auto Stat = FS.status("/a");
   ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
   ASSERT_TRUE(Stat->isDirectory());
@@ -1161,7 +1162,8 @@ TEST_F(InMemoryFileSystemTest, AddFileWithFileType) {
 }
 
 TEST_F(InMemoryFileSystemTest, AddFileWithPerms) {
-  FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), None, None, None,
+  FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), std::nullopt,
+             std::nullopt, std::nullopt,
              sys::fs::perms::owner_read | sys::fs::perms::owner_write);
   auto Stat = FS.status("/a");
   ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
@@ -1183,10 +1185,11 @@ TEST_F(InMemoryFileSystemTest, AddFileWithPerms) {
 }
 
 TEST_F(InMemoryFileSystemTest, AddDirectoryThenAddChild) {
-  FS.addFile("/a", 0, MemoryBuffer::getMemBuffer(""), /*User=*/None,
-             /*Group=*/None, sys::fs::file_type::directory_file);
-  FS.addFile("/a/b", 0, MemoryBuffer::getMemBuffer("abc"), /*User=*/None,
-             /*Group=*/None, sys::fs::file_type::regular_file);
+  FS.addFile("/a", 0, MemoryBuffer::getMemBuffer(""), /*User=*/std::nullopt,
+             /*Group=*/std::nullopt, sys::fs::file_type::directory_file);
+  FS.addFile("/a/b", 0, MemoryBuffer::getMemBuffer("abc"),
+             /*User=*/std::nullopt,
+             /*Group=*/std::nullopt, sys::fs::file_type::regular_file);
   auto Stat = FS.status("/a");
   ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
   ASSERT_TRUE(Stat->isDirectory());
@@ -1199,8 +1202,9 @@ TEST_F(InMemoryFileSystemTest, AddDirectoryThenAddChild) {
 // was requested (to match the behavior of RealFileSystem).
 TEST_F(InMemoryFileSystemTest, StatusName) {
   NormalizedFS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"),
-                       /*User=*/None,
-                       /*Group=*/None, sys::fs::file_type::regular_file);
+                       /*User=*/std::nullopt,
+                       /*Group=*/std::nullopt,
+                       sys::fs::file_type::regular_file);
   NormalizedFS.setCurrentWorkingDirectory("/a/b");
 
   // Access using InMemoryFileSystem::status.
