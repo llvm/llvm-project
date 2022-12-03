@@ -1494,8 +1494,8 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
     FileName = *FName;
   assert(FileName != "");
   DWARFCompileUnit *DstUnit = DwCtx->getCompileUnitForOffset(DestCUID);
-  return cantFail(getDwarfFile(Dir, FileName, 0, None, None, DestCUID,
-                               DstUnit->getVersion()));
+  return cantFail(getDwarfFile(Dir, FileName, 0, std::nullopt, std::nullopt,
+                               DestCUID, DstUnit->getVersion()));
 }
 
 std::vector<BinaryFunction *> BinaryContext::getSortedFunctions() {
@@ -1530,7 +1530,7 @@ std::vector<BinaryFunction *> BinaryContext::getAllBinaryFunctions() {
 Optional<DWARFUnit *> BinaryContext::getDWOCU(uint64_t DWOId) {
   auto Iter = DWOCUs.find(DWOId);
   if (Iter == DWOCUs.end())
-    return None;
+    return std::nullopt;
 
   return Iter->second;
 }
@@ -1657,7 +1657,7 @@ void BinaryContext::preprocessDebugInfo() {
             Iter->second->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       }
       BinaryLineTable.setRootFile(CU->getCompilationDir(), *Name, Checksum,
-                                  None);
+                                  std::nullopt);
     }
 
     BinaryLineTable.setDwarfVersion(DwarfVersion);
@@ -1665,8 +1665,8 @@ void BinaryContext::preprocessDebugInfo() {
     // Assign a unique label to every line table, one per CU.
     // Make sure empty debug line tables are registered too.
     if (FileNames.empty()) {
-      cantFail(
-          getDwarfFile("", "<unknown>", 0, None, None, CUID, DwarfVersion));
+      cantFail(getDwarfFile("", "<unknown>", 0, std::nullopt, std::nullopt,
+                            CUID, DwarfVersion));
       continue;
     }
     const uint32_t Offset = DwarfVersion < 5 ? 1 : 0;
@@ -1686,8 +1686,8 @@ void BinaryContext::preprocessDebugInfo() {
       Optional<MD5::MD5Result> Checksum;
       if (DwarfVersion >= 5 && LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[I].Checksum;
-      cantFail(
-          getDwarfFile(Dir, FileName, 0, Checksum, None, CUID, DwarfVersion));
+      cantFail(getDwarfFile(Dir, FileName, 0, Checksum, std::nullopt, CUID,
+                            DwarfVersion));
     }
   }
 }
@@ -1897,7 +1897,7 @@ BinaryContext::getBaseAddressForMapping(uint64_t MMapAddress,
     }
   }
 
-  return None;
+  return std::nullopt;
 }
 
 ErrorOr<BinarySection &> BinaryContext::getSectionForAddress(uint64_t Address) {
