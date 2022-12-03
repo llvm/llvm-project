@@ -1522,15 +1522,14 @@ namespace {
 /// This unrolls outer-products along the reduction dimension.
 struct UnrolledOuterProductGenerator
     : public StructuredGenerator<vector::ContractionOp, vector::IteratorType> {
-  UnrolledOuterProductGenerator(OpBuilder &builder, vector::ContractionOp op)
-      : StructuredGenerator<vector::ContractionOp, vector::IteratorType>(
-            builder, op),
+  UnrolledOuterProductGenerator(RewriterBase &b, vector::ContractionOp op)
+      : StructuredGenerator<vector::ContractionOp, vector::IteratorType>(b, op),
         kind(op.getKind()), lhs(op.getLhs()), rhs(op.getRhs()),
         res(op.getAcc()), lhsType(op.getLhsType()) {}
 
   Value t(Value v) {
     static constexpr std::array<int64_t, 2> perm = {1, 0};
-    return builder.create<vector::TransposeOp>(loc, v, perm);
+    return rewriter.create<vector::TransposeOp>(loc, v, perm);
   }
 
   Value promote(Value v, Type dstElementType) {
@@ -1544,20 +1543,20 @@ struct UnrolledOuterProductGenerator
     if (vecType)
       promotedType = VectorType::get(vecType.getShape(), promotedType);
     if (dstElementType.isa<FloatType>())
-      return builder.create<arith::ExtFOp>(loc, promotedType, v);
-    return builder.create<arith::ExtSIOp>(loc, promotedType, v);
+      return rewriter.create<arith::ExtFOp>(loc, promotedType, v);
+    return rewriter.create<arith::ExtSIOp>(loc, promotedType, v);
   }
 
   Value outerProd(Value lhs, Value rhs, Value res, int reductionSize) {
     assert(reductionSize > 0);
     Type resElementType = res.getType().cast<VectorType>().getElementType();
     for (int64_t k = 0; k < reductionSize; ++k) {
-      Value a = builder.create<vector::ExtractOp>(loc, lhs, k);
-      Value b = builder.create<vector::ExtractOp>(loc, rhs, k);
-      a = promote(a, resElementType);
-      b = promote(b, resElementType);
-      res = builder.create<vector::OuterProductOp>(loc, res.getType(), a, b,
-                                                   res, kind);
+      Value extractA = rewriter.create<vector::ExtractOp>(loc, lhs, k);
+      Value extractB = rewriter.create<vector::ExtractOp>(loc, rhs, k);
+      extractA = promote(extractA, resElementType);
+      extractB = promote(extractB, resElementType);
+      res = rewriter.create<vector::OuterProductOp>(loc, res.getType(), extractA,
+                                             extractB, res, kind);
     }
     return res;
   }
@@ -1568,7 +1567,7 @@ struct UnrolledOuterProductGenerator
       return failure();
     // Set up the parallel/reduction structure in the right form.
     AffineExpr m, n, k;
-    bindDims(builder.getContext(), m, n, k);
+    bindDims(rewriter.getContext(), m, n, k);
     // Classical row-major matmul:  Just permute the lhs.
     if (layout({{m, k}, {k, n}, {m, n}}))
       return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1));
@@ -1604,7 +1603,7 @@ struct UnrolledOuterProductGenerator
     if (!iters({Par(), Red()}))
       return failure();
     AffineExpr m, k;
-    bindDims(builder.getContext(), m, k);
+    bindDims(rewriter.getContext(), m, k);
 
     // Case mat-vec: transpose.
     if (layout({{m, k}, {k}, {m}}))
@@ -1628,7 +1627,7 @@ struct UnrolledOuterProductGenerator
     if (!iters({Red(), Par()}))
       return failure();
     AffineExpr k, m;
-    bindDims(builder.getContext(), k, m);
+    bindDims(rewriter.getContext(), k, m);
 
     // Case mat-vec: transpose.
     if (layout({{m, k}, {k}, {m}}))

@@ -5076,15 +5076,9 @@ def emit_fir : Flag<["-"], "emit-fir">, Alias<emit_mlir>;
 
 let Flags = [CC1Option, CC1AsOption, NoDriverOption] in {
 
-def target_cpu : Separate<["-"], "target-cpu">,
-  HelpText<"Target a specific cpu type">,
-  MarshallingInfoString<TargetOpts<"CPU">>;
 def tune_cpu : Separate<["-"], "tune-cpu">,
   HelpText<"Tune for a specific cpu type">,
   MarshallingInfoString<TargetOpts<"TuneCPU">>;
-def target_feature : Separate<["-"], "target-feature">,
-  HelpText<"Target specific attributes">,
-  MarshallingInfoStringVector<TargetOpts<"FeaturesAsWritten">>;
 def target_abi : Separate<["-"], "target-abi">,
   HelpText<"Target a particular ABI type">,
   MarshallingInfoString<TargetOpts<"ABI">>;
@@ -5111,6 +5105,12 @@ def darwin_target_variant_triple : Separate<["-"], "darwin-target-variant-triple
 
 let Flags = [CC1Option, CC1AsOption, FC1Option, NoDriverOption] in {
 
+def target_cpu : Separate<["-"], "target-cpu">,
+  HelpText<"Target a specific cpu type">,
+  MarshallingInfoString<TargetOpts<"CPU">>;
+def target_feature : Separate<["-"], "target-feature">,
+  HelpText<"Target specific attributes">,
+  MarshallingInfoStringVector<TargetOpts<"FeaturesAsWritten">>;
 def triple : Separate<["-"], "triple">,
   HelpText<"Specify target triple (e.g. i686-apple-darwin9)">,
   MarshallingInfoString<TargetOpts<"Triple">, "llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple())">,

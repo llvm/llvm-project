@@ -22,7 +22,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "inline-order"
 
-enum class InlinePriorityMode : int { Size, Cost, CostBenefit };
+enum class InlinePriorityMode : int { Size, Cost, CostBenefit, ML };
 
 static cl::opt<InlinePriorityMode> UseInlinePriority(
     "inline-priority-mode", cl::init(InlinePriorityMode::Size), cl::Hidden,
@@ -32,7 +32,9 @@ static cl::opt<InlinePriorityMode> UseInlinePriority(
                clEnumValN(InlinePriorityMode::Cost, "cost",
                           "Use inline cost priority."),
                clEnumValN(InlinePriorityMode::CostBenefit, "cost-benefit",
-                          "Use cost-benefit ratio.")));
+                          "Use cost-benefit ratio."),
+               clEnumValN(InlinePriorityMode::ML, "ml",
+                          "Use ML.")));
 
 static cl::opt<int> ModuleInlinerTopPriorityThreshold(
     "moudle-inliner-top-priority-threshold", cl::Hidden, cl::init(0),
@@ -84,7 +86,7 @@ public:
   }
 
 private:
-  unsigned Size;
+  unsigned Size = UINT_MAX;
 };
 
 class CostPriority {
@@ -104,7 +106,7 @@ public:
   }
 
 private:
-  int Cost;
+  int Cost = INT_MAX;
 };
 
 class CostBenefitPriority {
@@ -170,9 +172,29 @@ public:
   }
 
 private:
-  int Cost;
-  int StaticBonusApplied;
+  int Cost = INT_MAX;
+  int StaticBonusApplied = 0;
   Optional<CostBenefitPair> CostBenefit;
+};
+
+class MLPriority {
+public:
+  MLPriority() = default;
+  MLPriority(const CallBase *CB, FunctionAnalysisManager &FAM,
+             const InlineParams &Params) {
+    auto IC = getInlineCostWrapper(const_cast<CallBase &>(*CB), FAM, Params);
+    if (IC.isVariable())
+      Cost = IC.getCost();
+    else
+      Cost = IC.isNever() ? INT_MAX : INT_MIN;
+  }
+
+  static bool isMoreDesirable(const MLPriority &P1, const MLPriority &P2) {
+    return P1.Cost < P2.Cost;
+  }
+
+private:
+  int Cost = INT_MAX;
 };
 
 template <typename PriorityT>
@@ -274,6 +296,10 @@ llvm::getInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params) {
     LLVM_DEBUG(
         dbgs() << "    Current used priority: cost-benefit priority ---- \n");
     return std::make_unique<PriorityInlineOrder<CostBenefitPriority>>(FAM, Params);
+  case InlinePriorityMode::ML:
+    LLVM_DEBUG(
+        dbgs() << "    Current used priority: ML priority ---- \n");
+    return std::make_unique<PriorityInlineOrder<MLPriority>>(FAM, Params);
   }
   return nullptr;
 }

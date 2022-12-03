@@ -20,11 +20,11 @@ define i32 @caller() {
 }
 
 %struct.S = type { i8 }
-@_ZN1SC1Ev = alias void (%struct.S*), void (%struct.S*)* @_ZN1SC2Ev
-define void @_ZN1SC2Ev(%struct.S* %this) unnamed_addr align 2 {
+@_ZN1SC1Ev = alias void (ptr), ptr @_ZN1SC2Ev
+define void @_ZN1SC2Ev(ptr %this) unnamed_addr align 2 {
 entry:
-  %this.addr = alloca %struct.S*, align 4
-  store %struct.S* %this, %struct.S** %this.addr, align 4
+  %this.addr = alloca ptr, align 4
+  store ptr %this, ptr %this.addr, align 4
   ret void
 }
 

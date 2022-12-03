@@ -2,22 +2,22 @@
 ; RUN: llc < %s -mtriple arm64-apple-darwin -global-isel -stop-after=irtranslator -verify-machineinstrs | FileCheck %s
 
 ; Check that we don't try to tail-call with a non-forwarded sret parameter.
-declare void @test_explicit_sret(i64* sret(i64))
+declare void @test_explicit_sret(ptr sret(i64))
 
 ; Forwarded explicit sret pointer => we can tail call.
-define void @can_tail_call_forwarded_explicit_sret_ptr(i64* sret(i64) %arg) {
+define void @can_tail_call_forwarded_explicit_sret_ptr(ptr sret(i64) %arg) {
   ; CHECK-LABEL: name: can_tail_call_forwarded_explicit_sret_ptr
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $x8
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x8
   ; CHECK:   $x8 = COPY [[COPY]](p0)
   ; CHECK:   TCRETURNdi @test_explicit_sret, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit $x8
-  tail call void @test_explicit_sret(i64* %arg)
+  tail call void @test_explicit_sret(ptr %arg)
   ret void
 }
 
 ; Not marked as tail, so don't tail call.
-define void @test_call_explicit_sret(i64* sret(i64) %arg) {
+define void @test_call_explicit_sret(ptr sret(i64) %arg) {
   ; CHECK-LABEL: name: test_call_explicit_sret
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $x8
@@ -27,7 +27,7 @@ define void @test_call_explicit_sret(i64* sret(i64) %arg) {
   ; CHECK:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK:   RET_ReallyLR
-  call void @test_explicit_sret(i64* %arg)
+  call void @test_explicit_sret(ptr %arg)
   ret void
 }
 
@@ -41,11 +41,11 @@ define void @dont_tail_call_explicit_sret_alloca_unused() {
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK:   RET_ReallyLR
   %l = alloca i64, align 8
-  tail call void @test_explicit_sret(i64* %l)
+  tail call void @test_explicit_sret(ptr %l)
   ret void
 }
 
-define void @dont_tail_call_explicit_sret_alloca_dummyusers(i64* %ptr) {
+define void @dont_tail_call_explicit_sret_alloca_dummyusers(ptr %ptr) {
   ; CHECK-LABEL: name: dont_tail_call_explicit_sret_alloca_dummyusers
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $x0
@@ -59,13 +59,13 @@ define void @dont_tail_call_explicit_sret_alloca_dummyusers(i64* %ptr) {
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK:   RET_ReallyLR
   %l = alloca i64, align 8
-  %r = load i64, i64* %ptr, align 8
-  store i64 %r, i64* %l, align 8
-  tail call void @test_explicit_sret(i64* %l)
+  %r = load i64, ptr %ptr, align 8
+  store i64 %r, ptr %l, align 8
+  tail call void @test_explicit_sret(ptr %l)
   ret void
 }
 
-define void @dont_tail_call_tailcall_explicit_sret_gep(i64* %ptr) {
+define void @dont_tail_call_tailcall_explicit_sret_gep(ptr %ptr) {
   ; CHECK-LABEL: name: dont_tail_call_tailcall_explicit_sret_gep
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $x0
@@ -77,8 +77,8 @@ define void @dont_tail_call_tailcall_explicit_sret_gep(i64* %ptr) {
   ; CHECK:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK:   RET_ReallyLR
-  %ptr2 = getelementptr i64, i64* %ptr, i32 1
-  tail call void @test_explicit_sret(i64* %ptr2)
+  %ptr2 = getelementptr i64, ptr %ptr, i32 1
+  tail call void @test_explicit_sret(ptr %ptr2)
   ret void
 }
 
@@ -94,7 +94,7 @@ define i64 @dont_tail_call_sret_alloca_returned() {
   ; CHECK:   $x0 = COPY [[LOAD]](s64)
   ; CHECK:   RET_ReallyLR implicit $x0
   %l = alloca i64, align 8
-  tail call void @test_explicit_sret(i64* %l)
-  %r = load i64, i64* %l, align 8
+  tail call void @test_explicit_sret(ptr %l)
+  %r = load i64, ptr %l, align 8
   ret i64 %r
 }

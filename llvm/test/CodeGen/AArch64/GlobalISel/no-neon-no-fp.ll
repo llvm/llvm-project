@@ -4,9 +4,9 @@ target triple = "aarch64-unknown-unknown"
 
 ; We should fall back in the translator if we don't have no-neon/no-fp support.
 ; CHECK: Instruction selection used fallback path for foo
-define void @foo(i128 *%ptr) #0 align 2 {
+define void @foo(ptr %ptr) #0 align 2 {
 entry:
-  store i128 0, i128* %ptr, align 16
+  store i128 0, ptr %ptr, align 16
   ret void
 }
 

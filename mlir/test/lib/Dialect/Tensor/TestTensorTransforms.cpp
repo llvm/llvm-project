@@ -65,11 +65,6 @@ struct TestTensorTransforms
                      "with loop nest"),
       llvm::cl::init(false)};
 
-  Option<bool> testReassociativeReshapeFolding{
-      *this, "test-reassociative-reshape-folding",
-      llvm::cl::desc("Test folding of expand_shape/collapse_shape"),
-      llvm::cl::init(false)};
-
   Option<bool> useForeach{
       *this, "use-foreach",
       llvm::cl::desc(
@@ -78,12 +73,6 @@ struct TestTensorTransforms
       llvm::cl::init(false)};
 };
 } // namespace
-
-static void applyReassociativeReshapeFoldingPatterns(Operation *rootOp) {
-  RewritePatternSet patterns(rootOp->getContext());
-  tensor::populateReassociativeReshapeFoldingPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
-}
 
 static void applySplitPaddingPatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
@@ -262,8 +251,6 @@ void TestTensorTransforms::runOnOperation() {
     applyFoldConstantExtractSlicePatterns(rootOp);
   if (testFoldConsecutiveInsertExtractSlice)
     applyFoldConsecutiveInsertExtractSlicePatterns(rootOp);
-  if (testReassociativeReshapeFolding)
-    applyReassociativeReshapeFoldingPatterns(rootOp);
   if (testRewriteExtractSliceWithTiledCollapseShape) {
     if (failed(
             applyRewriteExtractFromCollapseShapePatterns(rootOp, useForeach)))

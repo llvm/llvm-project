@@ -9,9 +9,10 @@ target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 @f = dso_local local_unnamed_addr global ptr @e, align 8
 @d = dso_local local_unnamed_addr global i32 0, align 4
 
-; FIXME: This shows a miscompile caused by merging truncated 
-; stores if the store of 0 (sthrl) to 'e' happens before 
-; a 64-bit store (stg) of r0.
+; This shows a miscompile caused by merging truncated
+; stores if the store of 0 (sthrl) to 'e' happens before
+; a 64-bit store (stg) of r0. The store of r0 can follow
+; the store to 'e' only if it is a 32-bit store (st).
 
 define signext i32 @main() {
 ; CHECK-LABEL: main:
@@ -22,7 +23,7 @@ define signext i32 @main() {
 ; CHECK-NEXT:    st %r2, 0(%r1)
 ; CHECK-NEXT:    lhi %r2, 0
 ; CHECK-NEXT:    sthrl %r2, e
-; CHECK-NEXT:    stg %r0, 0(%r1)
+; CHECK-NEXT:    st %r0, 4(%r1)
 ; CHECK-NEXT:    lghi %r2, 0
 ; CHECK-NEXT:    strl %r0, d
 ; CHECK-NEXT:    br %r14

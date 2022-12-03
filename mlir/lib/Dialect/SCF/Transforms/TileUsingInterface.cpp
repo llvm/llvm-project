@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
@@ -57,34 +58,6 @@ fillInterchangeVector(ArrayRef<int64_t> interchangeVector,
   if (filledVector.size() > iterationDomainSize)
     filledVector.resize(iterationDomainSize);
   return filledVector;
-}
-
-/// Helper method to apply permutation to a vector
-template <typename T>
-static SmallVector<T> applyPermutationToVector(const SmallVector<T> &vector,
-                                               ArrayRef<int64_t> interchange) {
-  assert(interchange.size() == vector.size());
-  return llvm::to_vector(
-      llvm::map_range(interchange, [&](int64_t val) { return vector[val]; }));
-}
-/// Helper method to apply to invert a permutation.
-static SmallVector<int64_t>
-invertPermutationVector(ArrayRef<int64_t> interchange) {
-  SmallVector<int64_t> inversion(interchange.size());
-  for (const auto &pos : llvm::enumerate(interchange)) {
-    inversion[pos.value()] = pos.index();
-  }
-  return inversion;
-}
-/// Method to check if an interchange vector is a permutation.
-static bool isPermutation(ArrayRef<int64_t> interchange) {
-  llvm::SmallDenseSet<int64_t, 4> seenVals;
-  for (auto val : interchange) {
-    if (seenVals.count(val))
-      return false;
-    seenVals.insert(val);
-  }
-  return seenVals.size() == interchange.size();
 }
 
 //===----------------------------------------------------------------------===//
@@ -321,16 +294,14 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
                                                 iterationDomain.size());
     }
     if (!interchangeVector.empty()) {
-      if (!isPermutation(interchangeVector)) {
+      if (!isPermutationVector(interchangeVector)) {
         return rewriter.notifyMatchFailure(
             op, "invalid intechange vector, not a permutation of the entire "
                 "iteration space");
       }
 
-      iterationDomain =
-          applyPermutationToVector(iterationDomain, interchangeVector);
-      tileSizeVector =
-          applyPermutationToVector(tileSizeVector, interchangeVector);
+      applyPermutationToVector(iterationDomain, interchangeVector);
+      applyPermutationToVector(tileSizeVector, interchangeVector);
     }
 
     // 3. Materialize an empty loop nest that iterates over the tiles. These
@@ -341,8 +312,8 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
 
     if (!interchangeVector.empty()) {
       auto inversePermutation = invertPermutationVector(interchangeVector);
-      offsets = applyPermutationToVector(offsets, inversePermutation);
-      sizes = applyPermutationToVector(sizes, inversePermutation);
+      applyPermutationToVector(offsets, inversePermutation);
+      applyPermutationToVector(sizes, inversePermutation);
     }
   }
 

@@ -4146,10 +4146,10 @@ body:             |
   ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
-  ; GFX908-NEXT:   [[V_CMP_GT_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_GT_U32_e64 [[S_LOAD_DWORDX2_IMM]].sub0, [[COPY1]](s32), implicit $exec
   ; GFX908-NEXT:   undef %4.sub1:sreg_64 = S_MOV_B32 0
-  ; GFX908-NEXT:   undef %4.sub0:sreg_64 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
   ; GFX908-NEXT:   %5:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CMP_GT_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_GT_U32_e64 [[S_LOAD_DWORDX2_IMM]].sub0, [[COPY1]](s32), implicit $exec
+  ; GFX908-NEXT:   undef %4.sub0:sreg_64 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
   ; GFX908-NEXT:   %6:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   %7:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   %8:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode, implicit-def $m0
@@ -4488,10 +4488,10 @@ body:             |
   ; GFX908-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
-  ; GFX908-NEXT:   [[V_CMP_GT_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_GT_U32_e64 [[S_LOAD_DWORDX2_IMM]].sub0, [[COPY1]](s32), implicit $exec
   ; GFX908-NEXT:   undef %4.sub1:sreg_64 = S_MOV_B32 0
-  ; GFX908-NEXT:   undef %4.sub0:sreg_64 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
   ; GFX908-NEXT:   %5:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CMP_GT_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_GT_U32_e64 [[S_LOAD_DWORDX2_IMM]].sub0, [[COPY1]](s32), implicit $exec
+  ; GFX908-NEXT:   undef %4.sub0:sreg_64 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
   ; GFX908-NEXT:   %6:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   %7:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   %8:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode, implicit-def $m0

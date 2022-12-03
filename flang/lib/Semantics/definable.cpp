@@ -149,7 +149,8 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
         "'%s' is an entity with either an EVENT_TYPE or LOCK_TYPE"_en_US,
         original);
   }
-  if (FindPureProcedureContaining(scope)) {
+  if (!flags.test(DefinabilityFlag::PolymorphicOkInPure) &&
+      FindPureProcedureContaining(scope)) {
     if (auto dyType{evaluate::DynamicType::From(ultimate)}) {
       if (dyType->IsPolymorphic()) { // C1596
         return BlameSymbol(at,
