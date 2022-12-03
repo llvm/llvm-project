@@ -297,7 +297,7 @@ public:
   auto transform(const Function &F) const & -> Optional<decltype(F(value()))> {
     if (*this)
       return F(value());
-    return None;
+    return std::nullopt;
   }
 
   T &&value() && { return std::move(Storage.value()); }
@@ -313,7 +313,7 @@ public:
       const Function &F) && -> Optional<decltype(F(std::move(*this).value()))> {
     if (*this)
       return F(std::move(*this).value());
-    return None;
+    return std::nullopt;
   }
 };
 
@@ -365,17 +365,17 @@ constexpr bool operator==(const Optional<T> &X, std::nullopt_t) {
 
 template <typename T>
 constexpr bool operator==(std::nullopt_t, const Optional<T> &X) {
-  return X == None;
+  return X == std::nullopt;
 }
 
 template <typename T>
 constexpr bool operator!=(const Optional<T> &X, std::nullopt_t) {
-  return !(X == None);
+  return !(X == std::nullopt);
 }
 
 template <typename T>
 constexpr bool operator!=(std::nullopt_t, const Optional<T> &X) {
-  return X != None;
+  return X != std::nullopt;
 }
 
 template <typename T>
@@ -390,32 +390,32 @@ constexpr bool operator<(std::nullopt_t, const Optional<T> &X) {
 
 template <typename T>
 constexpr bool operator<=(const Optional<T> &X, std::nullopt_t) {
-  return !(None < X);
+  return !(std::nullopt < X);
 }
 
 template <typename T>
 constexpr bool operator<=(std::nullopt_t, const Optional<T> &X) {
-  return !(X < None);
+  return !(X < std::nullopt);
 }
 
 template <typename T>
 constexpr bool operator>(const Optional<T> &X, std::nullopt_t) {
-  return None < X;
+  return std::nullopt < X;
 }
 
 template <typename T>
 constexpr bool operator>(std::nullopt_t, const Optional<T> &X) {
-  return X < None;
+  return X < std::nullopt;
 }
 
 template <typename T>
 constexpr bool operator>=(const Optional<T> &X, std::nullopt_t) {
-  return None <= X;
+  return std::nullopt <= X;
 }
 
 template <typename T>
 constexpr bool operator>=(std::nullopt_t, const Optional<T> &X) {
-  return X <= None;
+  return X <= std::nullopt;
 }
 
 template <typename T>
@@ -486,7 +486,7 @@ raw_ostream &operator<<(raw_ostream &OS, const Optional<T> &O) {
   if (O)
     OS << *O;
   else
-    OS << None;
+    OS << std::nullopt;
   return OS;
 }
 
