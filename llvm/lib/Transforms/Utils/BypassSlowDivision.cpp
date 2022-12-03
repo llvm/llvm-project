@@ -357,12 +357,12 @@ Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
   VisitedSetTy SetL;
   ValueRange DividendRange = getValueRange(Dividend, SetL);
   if (DividendRange == VALRNG_LIKELY_LONG)
-    return None;
+    return std::nullopt;
 
   VisitedSetTy SetR;
   ValueRange DivisorRange = getValueRange(Divisor, SetR);
   if (DivisorRange == VALRNG_LIKELY_LONG)
-    return None;
+    return std::nullopt;
 
   bool DividendShort = (DividendRange == VALRNG_KNOWN_SHORT);
   bool DivisorShort = (DivisorRange == VALRNG_KNOWN_SHORT);
@@ -387,7 +387,7 @@ Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     // If the divisor is not a constant, DAGCombiner will convert it to a
     // multiplication by a magic constant.  It isn't clear if it is worth
     // introducing control flow to get a narrower multiply.
-    return None;
+    return std::nullopt;
   }
 
   // After Constant Hoisting pass, long constants may be represented as
@@ -397,7 +397,7 @@ Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
   if (auto *BCI = dyn_cast<BitCastInst>(Divisor))
     if (BCI->getParent() == SlowDivOrRem->getParent() &&
         isa<ConstantInt>(BCI->getOperand(0)))
-      return None;
+      return std::nullopt;
 
   IRBuilder<> Builder(MainBB, MainBB->end());
   Builder.SetCurrentDebugLocation(SlowDivOrRem->getDebugLoc());

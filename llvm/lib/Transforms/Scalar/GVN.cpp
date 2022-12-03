@@ -763,14 +763,14 @@ void GVNPass::printPipeline(
       OS, MapClassName2PassName);
 
   OS << "<";
-  if (Options.AllowPRE != None)
+  if (Options.AllowPRE != std::nullopt)
     OS << (Options.AllowPRE.value() ? "" : "no-") << "pre;";
-  if (Options.AllowLoadPRE != None)
+  if (Options.AllowLoadPRE != std::nullopt)
     OS << (Options.AllowLoadPRE.value() ? "" : "no-") << "load-pre;";
-  if (Options.AllowLoadPRESplitBackedge != None)
+  if (Options.AllowLoadPRESplitBackedge != std::nullopt)
     OS << (Options.AllowLoadPRESplitBackedge.value() ? "" : "no-")
        << "split-backedge-load-pre;";
-  if (Options.AllowMemDep != None)
+  if (Options.AllowMemDep != std::nullopt)
     OS << (Options.AllowMemDep.value() ? "" : "no-") << "memdep";
   OS << ">";
 }
@@ -1129,12 +1129,12 @@ tryToConvertLoadOfPtrSelect(BasicBlock *DepBB, BasicBlock::iterator End,
 
   auto *Sel = dyn_cast_or_null<SelectInst>(Address);
   if (!Sel || DepBB != Sel->getParent())
-    return None;
+    return std::nullopt;
 
   LoadInst *L1 = findDominatingLoad(Sel->getOperand(1), LoadTy, Sel, DT);
   LoadInst *L2 = findDominatingLoad(Sel->getOperand(2), LoadTy, Sel, DT);
   if (!L1 || !L2)
-    return None;
+    return std::nullopt;
 
   // Ensure there are no accesses that may modify the locations referenced by
   // either L1 or L2 between L1, L2 and the specified End iterator.
@@ -1145,7 +1145,7 @@ tryToConvertLoadOfPtrSelect(BasicBlock *DepBB, BasicBlock::iterator End,
         return isModSet(AA->getModRefInfo(&I, L1Loc)) ||
                isModSet(AA->getModRefInfo(&I, L2Loc));
       }))
-    return None;
+    return std::nullopt;
 
   return AvailableValue::getSelect(Sel);
 }
@@ -1204,7 +1204,9 @@ bool GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
             canCoerceMustAliasedValueToLoad(DepLoad, LoadType, DL)) {
           const auto ClobberOff = MD->getClobberOffset(DepLoad);
           // GVN has no deal with a negative offset.
-          Offset = (ClobberOff == None || *ClobberOff < 0) ? -1 : *ClobberOff;
+          Offset = (ClobberOff == std::nullopt || *ClobberOff < 0)
+                       ? -1
+                       : *ClobberOff;
         }
         if (Offset == -1)
           Offset =
