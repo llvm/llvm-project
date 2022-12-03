@@ -253,7 +253,7 @@ tryParseObjCMethodName(StringRef Name, SmallVectorImpl<StringRef> &SlotNames,
   if (!Name.empty() && (Name.front() == '-' || Name.front() == '+'))
     Name = Name.drop_front(1);
   if (Name.empty())
-    return None;
+    return std::nullopt;
   Name.split(SlotNames, ':');
   unsigned NumParams;
   if (Name.back() == ':') {
@@ -263,7 +263,7 @@ tryParseObjCMethodName(StringRef Name, SmallVectorImpl<StringRef> &SlotNames,
   } else {
     if (SlotNames.size() != 1)
       // Not a valid method name, just a colon-separated string.
-      return None;
+      return std::nullopt;
     NumParams = 0;
   }
   // Verify all slot names are valid.
@@ -272,7 +272,7 @@ tryParseObjCMethodName(StringRef Name, SmallVectorImpl<StringRef> &SlotNames,
     if (S.empty())
       continue;
     if (!isValidAsciiIdentifier(S, AllowDollar))
-      return None;
+      return std::nullopt;
   }
   return NumParams;
 }
@@ -286,14 +286,14 @@ createAttributeInsertion(const NamedDecl *D, const SourceManager &SM,
     return AttributeInsertion::createInsertionAfter(D);
   if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
     if (MD->hasBody())
-      return None;
+      return std::nullopt;
     return AttributeInsertion::createInsertionAfter(D);
   }
   if (const auto *TD = dyn_cast<TagDecl>(D)) {
     SourceLocation Loc =
         Lexer::getLocForEndOfToken(TD->getInnerLocStart(), 0, SM, LangOpts);
     if (Loc.isInvalid())
-      return None;
+      return std::nullopt;
     // Insert after the 'struct'/whatever keyword.
     return AttributeInsertion::createInsertionAfter(Loc);
   }
