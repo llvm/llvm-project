@@ -103,12 +103,12 @@ class InlineCost {
   const char *Reason = nullptr;
 
   /// The cost-benefit pair computed by cost-benefit analysis.
-  Optional<CostBenefitPair> CostBenefit = None;
+  Optional<CostBenefitPair> CostBenefit = std::nullopt;
 
   // Trivial constructor, interesting logic in the factory functions below.
   InlineCost(int Cost, int Threshold, int StaticBonusApplied,
              const char *Reason = nullptr,
-             Optional<CostBenefitPair> CostBenefit = None)
+             Optional<CostBenefitPair> CostBenefit = std::nullopt)
       : Cost(Cost), Threshold(Threshold),
         StaticBonusApplied(StaticBonusApplied), Reason(Reason),
         CostBenefit(CostBenefit) {
@@ -122,12 +122,14 @@ public:
     assert(Cost < NeverInlineCost && "Cost crosses sentinel value");
     return InlineCost(Cost, Threshold, StaticBonus);
   }
-  static InlineCost getAlways(const char *Reason,
-                              Optional<CostBenefitPair> CostBenefit = None) {
+  static InlineCost
+  getAlways(const char *Reason,
+            Optional<CostBenefitPair> CostBenefit = std::nullopt) {
     return InlineCost(AlwaysInlineCost, 0, 0, Reason, CostBenefit);
   }
-  static InlineCost getNever(const char *Reason,
-                             Optional<CostBenefitPair> CostBenefit = None) {
+  static InlineCost
+  getNever(const char *Reason,
+           Optional<CostBenefitPair> CostBenefit = std::nullopt) {
     return InlineCost(NeverInlineCost, 0, 0, Reason, CostBenefit);
   }
 

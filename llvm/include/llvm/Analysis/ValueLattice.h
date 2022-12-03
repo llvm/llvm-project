@@ -281,7 +281,7 @@ public:
     } else if (isConstantRange() && getConstantRange().isSingleElement()) {
       return *getConstantRange().getSingleElement();
     }
-    return None;
+    return std::nullopt;
   }
 
   bool markOverdefined() {

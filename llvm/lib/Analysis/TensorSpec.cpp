@@ -47,7 +47,7 @@ Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
     llvm::raw_string_ostream OS(S);
     OS << Value;
     Ctx.emitError("Unable to parse JSON Value as spec (" + Message + "): " + S);
-    return None;
+    return std::nullopt;
   };
   // FIXME: accept a Path as a parameter, and use it for error reporting.
   json::Path::Root Root("tensor_spec");
@@ -74,7 +74,7 @@ Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
     return TensorSpec::createSpec<T>(TensorName, TensorShape, TensorPort);
   SUPPORTED_TENSOR_TYPES(PARSE_TYPE)
 #undef PARSE_TYPE
-  return None;
+  return std::nullopt;
 }
 
 } // namespace llvm
