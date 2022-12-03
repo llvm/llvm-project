@@ -506,7 +506,7 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
   if (hasFeature("sve"))
     return std::pair<unsigned, unsigned>(1, 16);
 
-  return None;
+  return std::nullopt;
 }
 
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {

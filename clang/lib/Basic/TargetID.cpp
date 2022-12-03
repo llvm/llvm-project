@@ -73,7 +73,7 @@ parseTargetIDWithFormatCheckingOnly(llvm::StringRef TargetID,
   auto Split = TargetID.split(':');
   Processor = Split.first;
   if (Processor.empty())
-    return llvm::None;
+    return std::nullopt;
 
   auto Features = Split.second;
   if (Features.empty())
@@ -88,12 +88,12 @@ parseTargetIDWithFormatCheckingOnly(llvm::StringRef TargetID,
     auto Sign = Splits.first.back();
     auto Feature = Splits.first.drop_back();
     if (Sign != '+' && Sign != '-')
-      return llvm::None;
+      return std::nullopt;
     bool IsOn = Sign == '+';
     auto Loc = FeatureMap->find(Feature);
     // Each feature can only show up at most once in target ID.
     if (Loc != FeatureMap->end())
-      return llvm::None;
+      return std::nullopt;
     (*FeatureMap)[Feature] = IsOn;
     Features = Splits.second;
   }
@@ -107,11 +107,11 @@ parseTargetID(const llvm::Triple &T, llvm::StringRef TargetID,
       parseTargetIDWithFormatCheckingOnly(TargetID, FeatureMap);
 
   if (!OptionalProcessor)
-    return llvm::None;
+    return std::nullopt;
 
   llvm::StringRef Processor = getCanonicalProcessorName(T, *OptionalProcessor);
   if (Processor.empty())
-    return llvm::None;
+    return std::nullopt;
 
   llvm::SmallSet<llvm::StringRef, 4> AllFeatures;
   for (auto &&F : getAllPossibleTargetIDFeatures(T, Processor))
@@ -119,7 +119,7 @@ parseTargetID(const llvm::Triple &T, llvm::StringRef TargetID,
 
   for (auto &&F : *FeatureMap)
     if (!AllFeatures.count(F.first()))
-      return llvm::None;
+      return std::nullopt;
 
   return Processor;
 }
@@ -161,7 +161,7 @@ getConflictTargetIDCombination(const std::set<llvm::StringRef> &TargetIDs) {
         return std::make_pair(Loc->second.TargetID, ID);
     }
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 bool isCompatibleTargetID(llvm::StringRef Provided, llvm::StringRef Requested) {
