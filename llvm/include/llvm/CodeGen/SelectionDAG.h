@@ -725,19 +725,19 @@ public:
   SDValue getTargetJumpTable(int JTI, EVT VT, unsigned TargetFlags = 0) {
     return getJumpTable(JTI, VT, true, TargetFlags);
   }
-  SDValue getConstantPool(const Constant *C, EVT VT, MaybeAlign Align = None,
-                          int Offs = 0, bool isT = false,
-                          unsigned TargetFlags = 0);
+  SDValue getConstantPool(const Constant *C, EVT VT,
+                          MaybeAlign Align = std::nullopt, int Offs = 0,
+                          bool isT = false, unsigned TargetFlags = 0);
   SDValue getTargetConstantPool(const Constant *C, EVT VT,
-                                MaybeAlign Align = None, int Offset = 0,
+                                MaybeAlign Align = std::nullopt, int Offset = 0,
                                 unsigned TargetFlags = 0) {
     return getConstantPool(C, VT, Align, Offset, true, TargetFlags);
   }
   SDValue getConstantPool(MachineConstantPoolValue *C, EVT VT,
-                          MaybeAlign Align = None, int Offs = 0,
+                          MaybeAlign Align = std::nullopt, int Offs = 0,
                           bool isT = false, unsigned TargetFlags = 0);
   SDValue getTargetConstantPool(MachineConstantPoolValue *C, EVT VT,
-                                MaybeAlign Align = None, int Offset = 0,
+                                MaybeAlign Align = std::nullopt, int Offset = 0,
                                 unsigned TargetFlags = 0) {
     return getConstantPool(C, VT, Align, Offset, true, TargetFlags);
   }
@@ -1228,7 +1228,8 @@ public:
 
   inline SDValue getMemIntrinsicNode(
       unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
-      EVT MemVT, MachinePointerInfo PtrInfo, MaybeAlign Alignment = None,
+      EVT MemVT, MachinePointerInfo PtrInfo,
+      MaybeAlign Alignment = std::nullopt,
       MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
                                        MachineMemOperand::MOStore,
       uint64_t Size = 0, const AAMDNodes &AAInfo = AAMDNodes()) {

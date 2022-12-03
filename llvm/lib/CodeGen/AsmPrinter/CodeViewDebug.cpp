@@ -2034,7 +2034,7 @@ TypeIndex CodeViewDebug::lowerTypeFunction(const DISubroutineType *Ty) {
     ReturnAndArgTypeIndices.back() = TypeIndex::None();
   }
   TypeIndex ReturnTypeIndex = TypeIndex::Void();
-  ArrayRef<TypeIndex> ArgTypeIndices = None;
+  ArrayRef<TypeIndex> ArgTypeIndices = std::nullopt;
   if (!ReturnAndArgTypeIndices.empty()) {
     auto ReturnAndArgTypesRef = makeArrayRef(ReturnAndArgTypeIndices);
     ReturnTypeIndex = ReturnAndArgTypesRef.front();
