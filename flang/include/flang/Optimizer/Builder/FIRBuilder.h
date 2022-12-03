@@ -385,14 +385,14 @@ public:
   /// Create an IfOp with no "else" region, and no result values.
   /// Usage: genIfThen(loc, cdt).genThen(lambda).end();
   IfBuilder genIfThen(mlir::Location loc, mlir::Value cdt) {
-    auto op = create<fir::IfOp>(loc, llvm::None, cdt, false);
+    auto op = create<fir::IfOp>(loc, std::nullopt, cdt, false);
     return IfBuilder(op, *this);
   }
 
   /// Create an IfOp with an "else" region, and no result values.
   /// Usage: genIfThenElse(loc, cdt).genThen(lambda).genElse(lambda).end();
   IfBuilder genIfThenElse(mlir::Location loc, mlir::Value cdt) {
-    auto op = create<fir::IfOp>(loc, llvm::None, cdt, true);
+    auto op = create<fir::IfOp>(loc, std::nullopt, cdt, true);
     return IfBuilder(op, *this);
   }
 

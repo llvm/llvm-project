@@ -372,7 +372,7 @@ fir::factory::CharacterExprHelper::createCharacterTemp(mlir::Type type,
   if (typeLen == fir::CharacterType::unknownLen())
     lenParams.push_back(len);
   auto ref = builder.allocateLocal(loc, charTy, "", ".chrtmp",
-                                   /*shape=*/llvm::None, lenParams);
+                                   /*shape=*/std::nullopt, lenParams);
   return {ref, len};
 }
 
