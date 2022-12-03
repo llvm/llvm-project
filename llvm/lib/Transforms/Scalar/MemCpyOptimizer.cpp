@@ -58,6 +58,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 
 using namespace llvm;
 
@@ -1348,7 +1349,7 @@ static bool hasUndefContents(MemorySSA *MSSA, AliasAnalysis *AA, Value *V,
       if (auto *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(V))) {
         if (getUnderlyingObject(II->getArgOperand(1)) == Alloca) {
           const DataLayout &DL = Alloca->getModule()->getDataLayout();
-          if (Optional<TypeSize> AllocaSize =
+          if (std::optional<TypeSize> AllocaSize =
                   Alloca->getAllocationSizeInBits(DL))
             if (*AllocaSize == LTSize->getValue() * 8)
               return true;
