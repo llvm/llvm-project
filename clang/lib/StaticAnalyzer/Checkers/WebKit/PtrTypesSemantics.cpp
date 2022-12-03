@@ -51,13 +51,13 @@ isRefCountable(const CXXBaseSpecifier *Base) {
 
   const Type *T = Base->getType().getTypePtrOrNull();
   if (!T)
-    return llvm::None;
+    return std::nullopt;
 
   const CXXRecordDecl *R = T->getAsCXXRecordDecl();
   if (!R)
-    return llvm::None;
+    return std::nullopt;
   if (!R->hasDefinition())
-    return llvm::None;
+    return std::nullopt;
 
   return hasPublicRefAndDeref(R) ? R : nullptr;
 }
@@ -67,7 +67,7 @@ llvm::Optional<bool> isRefCountable(const CXXRecordDecl *R) {
 
   R = R->getDefinition();
   if (!R)
-    return llvm::None;
+    return std::nullopt;
 
   if (hasPublicRefAndDeref(R))
     return true;
@@ -90,7 +90,7 @@ llvm::Optional<bool> isRefCountable(const CXXRecordDecl *R) {
   bool BasesResult = R->lookupInBases(isRefCountableBase, Paths,
                                       /*LookupInDependent =*/true);
   if (AnyInconclusiveBase)
-    return llvm::None;
+    return std::nullopt;
 
   return BasesResult;
 }
@@ -119,7 +119,7 @@ llvm::Optional<bool> isUncounted(const CXXRecordDecl *Class) {
 
   llvm::Optional<bool> IsRefCountable = isRefCountable(Class);
   if (!IsRefCountable)
-    return llvm::None;
+    return std::nullopt;
 
   return (*IsRefCountable);
 }
