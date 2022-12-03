@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -tensor-copy-insertion="must-infer-memory-space" -split-input-file -verify-diagnostics
+// RUN: mlir-opt %s -test-tensor-copy-insertion="must-infer-memory-space" -split-input-file -verify-diagnostics
 
 // An alloc is inserted but the copy is emitted. Therefore, the memory space
 // should be specified on the alloc_tensor op.

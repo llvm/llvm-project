@@ -763,7 +763,7 @@ Pass::getArgument()` to specify the argument used when registering a pass.
 ## Declarative Pass Specification
 
 Some aspects of a Pass may be specified declaratively, in a form similar to
-[operations](OpDefinitions.md). This specification simplifies several mechanisms
+[operations](DefiningDialects/Operations.md). This specification simplifies several mechanisms
 used when defining passes. It can be used for generating pass registration
 calls, defining boilerplate pass utilities, and generating pass documentation.
 

@@ -9,6 +9,8 @@
 #include "CommonArgs.h"
 #include "Arch/AArch64.h"
 #include "Arch/ARM.h"
+#include "Arch/CSKY.h"
+#include "Arch/LoongArch.h"
 #include "Arch/M68k.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
@@ -19,6 +21,7 @@
 #include "Arch/X86.h"
 #include "HIPAMD.h"
 #include "Hexagon.h"
+#include "MSP430.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/ObjCRuntime.h"
@@ -467,6 +470,96 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
     return std::string(getWebAssemblyTargetCPU(Args));
+  }
+}
+
+static void getWebAssemblyTargetFeatures(const ArgList &Args,
+                                         std::vector<StringRef> &Features) {
+  handleTargetFeaturesGroup(Args, Features, options::OPT_m_wasm_Features_Group);
+}
+
+void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
+                              const ArgList &Args, ArgStringList &CmdArgs,
+                              bool ForAS, bool IsAux) {
+  std::vector<StringRef> Features;
+  switch (Triple.getArch()) {
+  default:
+    break;
+  case llvm::Triple::mips:
+  case llvm::Triple::mipsel:
+  case llvm::Triple::mips64:
+  case llvm::Triple::mips64el:
+    mips::getMIPSTargetFeatures(D, Triple, Args, Features);
+    break;
+  case llvm::Triple::arm:
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumb:
+  case llvm::Triple::thumbeb:
+    arm::getARMTargetFeatures(D, Triple, Args, Features, ForAS);
+    break;
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppcle:
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+    ppc::getPPCTargetFeatures(D, Triple, Args, Features);
+    break;
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    riscv::getRISCVTargetFeatures(D, Triple, Args, Features);
+    break;
+  case llvm::Triple::systemz:
+    systemz::getSystemZTargetFeatures(D, Args, Features);
+    break;
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
+  case llvm::Triple::aarch64_be:
+    aarch64::getAArch64TargetFeatures(D, Triple, Args, Features, ForAS);
+    break;
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+    x86::getX86TargetFeatures(D, Triple, Args, Features);
+    break;
+  case llvm::Triple::hexagon:
+    hexagon::getHexagonTargetFeatures(D, Args, Features);
+    break;
+  case llvm::Triple::wasm32:
+  case llvm::Triple::wasm64:
+    getWebAssemblyTargetFeatures(Args, Features);
+    break;
+  case llvm::Triple::sparc:
+  case llvm::Triple::sparcel:
+  case llvm::Triple::sparcv9:
+    sparc::getSparcTargetFeatures(D, Args, Features);
+    break;
+  case llvm::Triple::r600:
+  case llvm::Triple::amdgcn:
+    amdgpu::getAMDGPUTargetFeatures(D, Triple, Args, Features);
+    break;
+  case llvm::Triple::nvptx:
+  case llvm::Triple::nvptx64:
+    NVPTX::getNVPTXTargetFeatures(D, Triple, Args, Features);
+    break;
+  case llvm::Triple::m68k:
+    m68k::getM68kTargetFeatures(D, Triple, Args, Features);
+    break;
+  case llvm::Triple::msp430:
+    msp430::getMSP430TargetFeatures(D, Args, Features);
+    break;
+  case llvm::Triple::ve:
+    ve::getVETargetFeatures(D, Args, Features);
+    break;
+  case llvm::Triple::csky:
+    csky::getCSKYTargetFeatures(D, Triple, Args, CmdArgs, Features);
+    break;
+  case llvm::Triple::loongarch32:
+  case llvm::Triple::loongarch64:
+    loongarch::getLoongArchTargetFeatures(D, Triple, Args, Features);
+    break;
+  }
+
+  for (auto Feature : unifyTargetFeatures(Features)) {
+    CmdArgs.push_back(IsAux ? "-aux-target-feature" : "-target-feature");
+    CmdArgs.push_back(Feature.data());
   }
 }
 
@@ -941,10 +1034,7 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
         SharedRuntimes.push_back("ubsan_standalone");
     }
     if (SanArgs.needsScudoRt() && SanArgs.linkRuntimes()) {
-      if (SanArgs.requiresMinimalRuntime())
-        SharedRuntimes.push_back("scudo_minimal");
-      else
-        SharedRuntimes.push_back("scudo");
+      SharedRuntimes.push_back("scudo_standalone");
     }
     if (SanArgs.needsTsanRt() && SanArgs.linkRuntimes())
       SharedRuntimes.push_back("tsan");
@@ -1041,15 +1131,9 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     RequiredSymbols.push_back("__sanitizer_stats_register");
   }
   if (!SanArgs.needsSharedRt() && SanArgs.needsScudoRt() && SanArgs.linkRuntimes()) {
-    if (SanArgs.requiresMinimalRuntime()) {
-      StaticRuntimes.push_back("scudo_minimal");
-      if (SanArgs.linkCXXRuntimes())
-        StaticRuntimes.push_back("scudo_cxx_minimal");
-    } else {
-      StaticRuntimes.push_back("scudo");
-      if (SanArgs.linkCXXRuntimes())
-        StaticRuntimes.push_back("scudo_cxx");
-    }
+    StaticRuntimes.push_back("scudo_standalone");
+    if (SanArgs.linkCXXRuntimes())
+      StaticRuntimes.push_back("scudo_standalone_cxx");
   }
 }
 

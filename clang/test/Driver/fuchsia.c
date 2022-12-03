@@ -183,7 +183,7 @@
 // CHECK-SCUDO-X86: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-SCUDO-X86: "-fsanitize=safe-stack,scudo"
 // CHECK-SCUDO-X86: "-pie"
-// CHECK-SCUDO-X86: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}libclang_rt.scudo.so"
+// CHECK-SCUDO-X86: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}fuchsia{{/|\\\\}}libclang_rt.scudo_standalone-x86_64.so"
 
 // RUN: %clang -### %s --target=aarch64-unknown-fuchsia \
 // RUN:     -fsanitize=scudo 2>&1 \
@@ -193,7 +193,7 @@
 // CHECK-SCUDO-AARCH64: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-SCUDO-AARCH64: "-fsanitize=shadow-call-stack,scudo"
 // CHECK-SCUDO-AARCH64: "-pie"
-// CHECK-SCUDO-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aarch64-unknown-fuchsia{{/|\\\\}}libclang_rt.scudo.so"
+// CHECK-SCUDO-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}fuchsia{{/|\\\\}}libclang_rt.scudo_standalone-aarch64.so"
 
 // RUN: %clang -### %s --target=x86_64-unknown-fuchsia \
 // RUN:     -fsanitize=scudo -fPIC -shared 2>&1 \
@@ -202,7 +202,7 @@
 // RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-SHARED
 // CHECK-SCUDO-SHARED: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-SCUDO-SHARED: "-fsanitize=safe-stack,scudo"
-// CHECK-SCUDO-SHARED: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}libclang_rt.scudo.so"
+// CHECK-SCUDO-SHARED: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}fuchsia{{/|\\\\}}libclang_rt.scudo_standalone-x86_64.so"
 
 // RUN: %clang -### %s --target=aarch64-unknown-fuchsia \
 // RUN:     -fsanitize=leak 2>&1 \

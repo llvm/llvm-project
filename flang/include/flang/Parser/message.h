@@ -96,9 +96,9 @@ constexpr MessageFixedText operator""_en_US(const char str[], std::size_t n) {
 
 // The construction of a MessageFormattedText uses a MessageFixedText
 // as a vsnprintf() formatting string that is applied to the
-// following arguments.  CharBlock and std::string argument
-// values are also supported; they are automatically converted into
-// char pointers that are suitable for '%s' formatting.
+// following arguments.  CharBlock, std::string, and std::string_view
+// argument values are also supported; they are automatically converted
+// into char pointers that are suitable for '%s' formatting.
 class MessageFormattedText {
 public:
   template <typename... A>
@@ -128,10 +128,6 @@ private:
     static_assert(!std::is_class_v<std::decay_t<A>>);
     return x;
   }
-  template <typename A> A Convert(A &x) {
-    static_assert(!std::is_class_v<std::decay_t<A>>);
-    return x;
-  }
   template <typename A> common::IfNoLvalue<A, A> Convert(A &&x) {
     static_assert(!std::is_class_v<std::decay_t<A>>);
     return std::move(x);
@@ -139,8 +135,9 @@ private:
   const char *Convert(const char *s) { return s; }
   const char *Convert(char *s) { return s; }
   const char *Convert(const std::string &);
-  const char *Convert(std::string &);
   const char *Convert(std::string &&);
+  const char *Convert(const std::string_view &);
+  const char *Convert(std::string_view &&);
   const char *Convert(CharBlock);
   std::intmax_t Convert(std::int64_t x) { return x; }
   std::uintmax_t Convert(std::uint64_t x) { return x; }

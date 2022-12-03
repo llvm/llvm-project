@@ -3,7 +3,7 @@
 
 %dag = type { { { i8, { i8 } }, { { i8, { i8 } }, { i8 } } }, { { i8, { i8 } }, { i8 } } }
 
-define void @test_const(%dag* %dst) {
+define void @test_const(ptr %dst) {
   ; CHECK-LABEL: name: test_const
   ; CHECK: bb.1.entry:
   ; CHECK:   liveins: $x0
@@ -63,7 +63,7 @@ entry:
    },
    0,
    1
- store %dag %updated, %dag* %dst
+ store %dag %updated, ptr %dst
  ; 10, 20, 10, 20, 50, 10, 20, 20 sequence is expected
 
  store
@@ -91,7 +91,7 @@ entry:
        { i8 } { i8 20 }
      }
    },
-   %dag* %dst
+   ptr %dst
  ; 10, 20, 10, 20, 20, 10, 20, 20 sequence is expected
  ret void
 }

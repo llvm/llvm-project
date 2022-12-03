@@ -23,6 +23,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -401,7 +402,7 @@ bool GCNTTIImpl::isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
 Type *GCNTTIImpl::getMemcpyLoopLoweringType(
     LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
     unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
-    Optional<uint32_t> AtomicElementSize) const {
+    std::optional<uint32_t> AtomicElementSize) const {
 
   if (AtomicElementSize)
     return Type::getIntNTy(Context, *AtomicElementSize * 8);
@@ -433,7 +434,7 @@ void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
     SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
     unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
     unsigned SrcAlign, unsigned DestAlign,
-    Optional<uint32_t> AtomicCpySize) const {
+    std::optional<uint32_t> AtomicCpySize) const {
   assert(RemainingBytes < 16);
 
   if (AtomicCpySize)
@@ -756,7 +757,7 @@ InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
 
 InstructionCost
 GCNTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                       Optional<FastMathFlags> FMF,
+                                       std::optional<FastMathFlags> FMF,
                                        TTI::TargetCostKind CostKind) {
   if (TTI::requiresOrderedReduction(FMF))
     return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);

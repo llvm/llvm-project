@@ -351,7 +351,7 @@ void processConstantOp(mlir::Operation *operation) {
 
 In addition to specializing the `mlir::Op` C++ template, MLIR also supports
 defining operations in a declarative manner. This is achieved via the
-[Operation Definition Specification](../../OpDefinitions.md) framework. Facts
+[Operation Definition Specification](../../DefiningDialects/Operations.md) framework. Facts
 regarding an operation are specified concisely into a TableGen record, which
 will be expanded into an equivalent `mlir::Op` C++ template specialization at
 compile time. Using the ODS framework is the desired way for defining operations
@@ -379,7 +379,7 @@ operation.
 
 We define a toy operation by inheriting from our base 'Toy_Op' class above. Here
 we provide the mnemonic and a list of traits for the operation. The
-[mnemonic](../../OpDefinitions.md/#operation-name) here matches the one given in
+[mnemonic](../../DefiningDialects/Operations.md/#operation-name) here matches the one given in
 `ConstantOp::getOperationName` without the dialect prefix; `toy.`. Missing here
 from our C++ definition are the `ZeroOperands` and `OneResult` traits; these
 will be automatically inferred based upon the `arguments` and `results` fields
@@ -405,8 +405,8 @@ implementation is incredibly useful when getting started with TableGen.
 #### Defining Arguments and Results
 
 With the shell of the operation defined, we can now provide the
-[inputs](../../OpDefinitions.md/#operation-arguments) and
-[outputs](../../OpDefinitions.md/#operation-results) to our operation. The
+[inputs](../../DefiningDialects/Operations.md/#operation-arguments) and
+[outputs](../../DefiningDialects/Operations.md/#operation-results) to our operation. The
 inputs, or arguments, to an operation may be attributes or types for SSA operand
 values. The results correspond to a set of types for the values produced by the
 operation:
@@ -431,7 +431,7 @@ ConstantOp::value()`.
 
 The next step after defining the operation is to document it. Operations may
 provide
-[`summary` and `description`](../../OpDefinitions.md/#operation-documentation)
+[`summary` and `description`](../../DefiningDialects/Operations.md/#operation-documentation)
 fields to describe the semantics of the operation. This information is useful
 for users of the dialect and can even be used to auto-generate Markdown
 documents.
@@ -469,7 +469,7 @@ necessary verification logic based upon the constraints we have given. This
 means that we don't need to verify the structure of the return type, or even the
 input attribute `value`. In many cases, additional verification is not even
 necessary for ODS operations. To add additional verification logic, an operation
-can override the [`verifier`](../../OpDefinitions.md/#custom-verifier-code)
+can override the [`verifier`](../../DefiningDialects/Operations.md/#custom-verifier-code)
 field. The `verifier` field allows for defining a C++ code blob that will be run
 as part of `ConstantOp::verify`. This blob can assume that all of the other
 invariants of the operation have already been verified:
@@ -510,7 +510,7 @@ def ConstantOp : Toy_Op<"constant"> {
 The final missing component here from our original C++ example are the `build`
 methods. ODS can generate some simple build methods automatically, and in this
 case it will generate our first build method for us. For the rest, we define the
-[`builders`](../../OpDefinitions.md/#custom-builder-methods) field. This field
+[`builders`](../../DefiningDialects/Operations.md/#custom-builder-methods) field. This field
 takes a list of `OpBuilder` objects that take a string corresponding to a list
 of C++ parameters, as well as an optional code block that can be used to specify
 the implementation inline.
@@ -583,7 +583,7 @@ One thing to notice here is that all of our Toy operations are printed using the
 generic assembly format. This format is the one shown when breaking down
 `toy.transpose` at the beginning of this chapter. MLIR allows for operations to
 define their own custom assembly format, either
-[declaratively](../../OpDefinitions.md/#declarative-assembly-format) or
+[declaratively](../../DefiningDialects/Operations.md/#declarative-assembly-format) or
 imperatively via C++. Defining a custom assembly format allows for tailoring the
 generated IR into something a bit more readable by removing a lot of the fluff
 that is required by the generic format. Let's walk through an example of an
@@ -655,7 +655,7 @@ mlir::ParseResult PrintOp::parse(mlir::OpAsmParser &parser,
 ```
 
 With the C++ implementation defined, let's see how this can be mapped to the
-[declarative format](../../OpDefinitions.md/#declarative-assembly-format). The
+[declarative format](../../DefiningDialects/Operations.md/#declarative-assembly-format). The
 declarative format is largely composed of three different components:
 
 *   Directives
@@ -681,7 +681,7 @@ def PrintOp : Toy_Op<"print"> {
 }
 ```
 
-The [declarative format](../../OpDefinitions.md/#declarative-assembly-format) has
+The [declarative format](../../DefiningDialects/Operations.md/#declarative-assembly-format) has
 many more interesting features, so be sure to check it out before implementing a
 custom format in C++. After beautifying the format of a few of our operations we
 now get a much more readable:
@@ -710,7 +710,7 @@ module {
 Above we introduce several of the concepts for defining operations in the ODS
 framework, but there are many more that we haven't had a chance to: regions,
 variadic operands, etc. Check out the
-[full specification](../../OpDefinitions.md) for more details.
+[full specification](../../DefiningDialects/Operations.md) for more details.
 
 ## Complete Toy Example
 
