@@ -1044,14 +1044,14 @@ private:
           return llvm::APInt(Context->getTypeSize(Context->IntTy), !Value);
         default:
           assert(false && "Unexpected unary operator!");
-          return llvm::None;
+          return std::nullopt;
         }
       }
     } else if (const auto *IntLiteral =
                    dyn_cast<IntegerLiteral>(E->IgnoreParens()))
       return IntLiteral->getValue();
 
-    return llvm::None;
+    return std::nullopt;
   }
 
   TryResult analyzeLogicOperatorCondition(BinaryOperatorKind Relation,
