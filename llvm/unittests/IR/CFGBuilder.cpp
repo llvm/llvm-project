@@ -128,13 +128,13 @@ void CFGBuilder::buildCFG(const std::vector<Arc> &NewArcs) {
 
 Optional<CFGBuilder::Update> CFGBuilder::getNextUpdate() const {
   if (UpdateIdx == Updates.size())
-    return None;
+    return std::nullopt;
   return Updates[UpdateIdx];
 }
 
 Optional<CFGBuilder::Update> CFGBuilder::applyUpdate() {
   if (UpdateIdx == Updates.size())
-    return None;
+    return std::nullopt;
   Update NextUpdate = Updates[UpdateIdx++];
   if (NextUpdate.Action == ActionKind::Insert)
     connect(NextUpdate.Edge);
