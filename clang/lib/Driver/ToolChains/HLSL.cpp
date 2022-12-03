@@ -64,7 +64,7 @@ bool isLegalShaderModel(Triple &T) {
   return false;
 }
 
-llvm::Optional<std::string> tryParseProfile(StringRef Profile) {
+std::optional<std::string> tryParseProfile(StringRef Profile) {
   // [ps|vs|gs|hs|ds|cs|ms|as]_[major]_[minor]
   SmallVector<StringRef, 3> Parts;
   Profile.split(Parts, "_");
@@ -138,7 +138,7 @@ HLSLToolChain::HLSLToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
     : ToolChain(D, Triple, Args) {}
 
-llvm::Optional<std::string>
+std::optional<std::string>
 clang::driver::toolchains::HLSLToolChain::parseTargetProfile(
     StringRef TargetProfile) {
   return tryParseProfile(TargetProfile);
