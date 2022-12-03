@@ -132,6 +132,11 @@ static cl::opt<bool>
                  cl::init(false));
 
 static cl::opt<bool>
+    EnableSelectOpt("aarch64-select-opt", cl::Hidden,
+                    cl::desc("Enable select to branch optimizations"),
+                    cl::init(true));
+
+static cl::opt<bool>
     BranchRelaxation("aarch64-enable-branch-relax", cl::Hidden, cl::init(true),
                      cl::desc("Relax out of range conditional branches"));
 
@@ -586,6 +591,9 @@ void AArch64PassConfig::addIRPasses() {
   }
 
   TargetPassConfig::addIRPasses();
+
+  if (getOptLevel() == CodeGenOpt::Aggressive && EnableSelectOpt)
+    addPass(createSelectOptimizePass());
 
   addPass(createAArch64StackTaggingPass(
       /*IsOptNone=*/TM->getOptLevel() == CodeGenOpt::None));
