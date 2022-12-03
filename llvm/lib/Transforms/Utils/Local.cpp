@@ -489,7 +489,8 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
     }
 
     if (auto *FPI = dyn_cast<ConstrainedFPIntrinsic>(I)) {
-      Optional<fp::ExceptionBehavior> ExBehavior = FPI->getExceptionBehavior();
+      std::optional<fp::ExceptionBehavior> ExBehavior =
+          FPI->getExceptionBehavior();
       return *ExBehavior != fp::ebStrict;
     }
   }
