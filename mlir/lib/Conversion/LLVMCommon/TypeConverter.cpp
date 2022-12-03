@@ -199,6 +199,8 @@ Type LLVMTypeConverter::convertFunctionType(FunctionType type) {
   SignatureConversion conversion(type.getNumInputs());
   Type converted =
       convertFunctionSignature(type, /*isVariadic=*/false, conversion);
+  if (!converted)
+    return {};
   return LLVM::LLVMPointerType::get(converted);
 }
 
@@ -298,8 +300,13 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) {
 SmallVector<Type, 5>
 LLVMTypeConverter::getMemRefDescriptorFields(MemRefType type,
                                              bool unpackAggregates) {
-  assert(isStrided(type) &&
-         "Non-strided layout maps must have been normalized away");
+  if (!isStrided(type)) {
+    emitError(
+        UnknownLoc::get(type.getContext()),
+        "conversion to strided form failed either due to non-strided layout "
+        "maps (which should have been normalized away) or other reasons");
+    return {};
+  }
 
   Type elementType = convertType(type.getElementType());
   if (!elementType)
