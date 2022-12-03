@@ -549,7 +549,7 @@ void LinkerDriver::detectWinSysRoot(const opt::InputArgList &Args) {
   // use. Check the environment next, in case we're being invoked from a VS
   // command prompt. Failing that, just try to find the newest Visual Studio
   // version we can and use its default VC toolchain.
-  Optional<StringRef> VCToolsDir, VCToolsVersion, WinSysRoot;
+  std::optional<StringRef> VCToolsDir, VCToolsVersion, WinSysRoot;
   if (auto *A = Args.getLastArg(OPT_vctoolsdir))
     VCToolsDir = A->getValue();
   if (auto *A = Args.getLastArg(OPT_vctoolsversion))
@@ -579,7 +579,7 @@ void LinkerDriver::detectWinSysRoot(const opt::InputArgList &Args) {
                          Args.getLastArg(OPT_vctoolsdir, OPT_winsysroot);
   if (Args.hasArg(OPT_lldignoreenv) || !Process::GetEnv("LIB") ||
       Args.getLastArg(OPT_winsdkdir, OPT_winsysroot)) {
-    Optional<StringRef> WinSdkDir, WinSdkVersion;
+    std::optional<StringRef> WinSdkDir, WinSdkVersion;
     if (auto *A = Args.getLastArg(OPT_winsdkdir))
       WinSdkDir = A->getValue();
     if (auto *A = Args.getLastArg(OPT_winsdkversion))
