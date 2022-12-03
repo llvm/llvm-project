@@ -1905,10 +1905,6 @@ std::optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
   return NewDecl;
 }
 
-static bool isPointerCastOperator(const User *U) {
-  return isa<AddrSpaceCastOperator>(U) || isa<BitCastOperator>(U);
-}
-
 /// hasAddressTaken - returns true if there are any uses of this function
 /// other than direct calls or invokes to it. Optionally ignores callback
 /// uses, assume like pointer annotation calls, and references in llvm.used
@@ -1930,7 +1926,8 @@ bool Function::hasAddressTaken(const User **PutOffender,
 
     const auto *Call = dyn_cast<CallBase>(FU);
     if (!Call) {
-      if (IgnoreAssumeLikeCalls && isPointerCastOperator(FU) &&
+      if (IgnoreAssumeLikeCalls &&
+          isa<BitCastOperator, AddrSpaceCastOperator>(FU) &&
           all_of(FU->users(), [](const User *U) {
             if (const auto *I = dyn_cast<IntrinsicInst>(U))
               return I->isAssumeLikeIntrinsic();
@@ -1941,8 +1938,8 @@ bool Function::hasAddressTaken(const User **PutOffender,
 
       if (IgnoreLLVMUsed && !FU->user_empty()) {
         const User *FUU = FU;
-        if (isa<BitCastOperator>(FU) && FU->hasOneUse() &&
-            !FU->user_begin()->user_empty())
+        if (isa<BitCastOperator, AddrSpaceCastOperator>(FU) &&
+            FU->hasOneUse() && !FU->user_begin()->user_empty())
           FUU = *FU->user_begin();
         if (llvm::all_of(FUU->users(), [](const User *U) {
               if (const auto *GV = dyn_cast<GlobalVariable>(U))
