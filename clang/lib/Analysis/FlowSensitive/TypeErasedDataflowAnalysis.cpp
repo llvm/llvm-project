@@ -414,7 +414,7 @@ runTypeErasedDataflowAnalysis(
   ForwardDataflowWorklist Worklist(CFCtx.getCFG(), &POV);
 
   std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates(
-      CFCtx.getCFG().size(), llvm::None);
+      CFCtx.getCFG().size(), std::nullopt);
 
   // The entry basic block doesn't contain statements so it can be skipped.
   const CFGBlock &Entry = CFCtx.getCFG().getEntry();
