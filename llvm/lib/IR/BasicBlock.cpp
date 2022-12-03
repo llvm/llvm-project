@@ -529,7 +529,7 @@ Optional<uint64_t> BasicBlock::getIrrLoopHeaderWeight() const {
       return Optional<uint64_t>(CI->getValue().getZExtValue());
     }
   }
-  return None;
+  return std::nullopt;
 }
 
 BasicBlock::iterator llvm::skipDebugIntrinsics(BasicBlock::iterator It) {
