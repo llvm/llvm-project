@@ -284,11 +284,11 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
                       ScalarEvolution &SE, const TargetTransformInfo &TTI,
                       AssumptionCache &AC, DependenceInfo &DI,
                       OptimizationRemarkEmitter &ORE, int OptLevel) {
-  TargetTransformInfo::UnrollingPreferences UP =
-      gatherUnrollingPreferences(L, SE, TTI, nullptr, nullptr, ORE, OptLevel,
-                                 None, None, None, None, None, None);
+  TargetTransformInfo::UnrollingPreferences UP = gatherUnrollingPreferences(
+      L, SE, TTI, nullptr, nullptr, ORE, OptLevel, std::nullopt, std::nullopt,
+      std::nullopt, std::nullopt, std::nullopt, std::nullopt);
   TargetTransformInfo::PeelingPreferences PP =
-      gatherPeelingPreferences(L, SE, TTI, None, None);
+      gatherPeelingPreferences(L, SE, TTI, std::nullopt, std::nullopt);
 
   TransformationMode EnableMode = hasUnrollAndJamTransformation(L);
   if (EnableMode & TM_Disable)

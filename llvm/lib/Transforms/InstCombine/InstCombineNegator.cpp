@@ -522,7 +522,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     // endless combine looping.
     for (Instruction *I : llvm::reverse(NewInstructions))
       I->eraseFromParent();
-    return llvm::None;
+    return std::nullopt;
   }
   return std::make_pair(ArrayRef<Instruction *>(NewInstructions), Negated);
 }
