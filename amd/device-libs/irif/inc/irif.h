@@ -33,11 +33,10 @@ extern __attribute__((const)) half2 __llvm_canonicalize_2f16(half2) __asm("llvm.
 #define BUILTIN_CLZ_U32(x) (uint)(x == 0u ? 32 : __builtin_clz(x))
 #define BUILTIN_CLZ_U64(x) (ulong)(x == 0u ? 64 : __builtin_clzl(x))
 
-// Intrinsics requiring wrapping
-extern __attribute__((const)) uchar __llvm_cttz_i8(uchar);
-extern __attribute__((const)) ushort __llvm_cttz_i16(ushort);
-extern __attribute__((const)) uint __llvm_cttz_i32(uint);
-extern __attribute__((const)) ulong __llvm_cttz_i64(ulong);
+#define BUILTIN_CTZ_U8(x) (uchar)(x == 0u ? (uchar)8 : __builtin_ctz((uint)x))
+#define BUILTIN_CTZ_U16(x) (ushort)(x == 0u ? 16 : __builtin_ctzs(x))
+#define BUILTIN_CTZ_U32(x) (uint)(x == 0u ? 32 : __builtin_ctz(x))
+#define BUILTIN_CTZ_U64(x) (ulong)(x == 0u ? 64 : __builtin_ctzl(x))
 
 // Atomics
 extern uint __llvm_ld_atomic_a1_x_dev_i32(__global uint *);
