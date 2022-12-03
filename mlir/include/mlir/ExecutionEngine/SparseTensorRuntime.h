@@ -220,7 +220,27 @@ MLIR_SPARSETENSOR_FOREVERY_V(DECL_CONVERTFROMMLIRSPARSETENSOR)
 /// Creates a SparseTensorReader for reading a sparse tensor from a file with
 /// the given file name. This opens the file and read the header meta data based
 /// of the sparse tensor format derived from the suffix of the file name.
+//
+// FIXME: update `SparseTensorCodegenPass` to use
+// `_mlir_ciface_createCheckedSparseTensorReader` instead.
 MLIR_CRUNNERUTILS_EXPORT void *createSparseTensorReader(char *filename);
+
+/// Constructs a new SparseTensorReader object, opens the file, reads the
+/// header, and validates that the actual contents of the file match
+/// the expected `dimShapeRef` and `valTp`.
+MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_createCheckedSparseTensorReader(
+    char *filename, StridedMemRefType<index_type, 1> *dimShapeRef,
+    PrimaryType valTp);
+
+/// Constructs a new sparse-tensor storage object with the given encoding,
+/// initializes it by reading all the elements from the file, and then
+/// closes the file.
+MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_newSparseTensorFromReader(
+    void *p, StridedMemRefType<index_type, 1> *lvlSizesRef,
+    StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
+    StridedMemRefType<index_type, 1> *lvl2dimRef,
+    StridedMemRefType<index_type, 1> *dim2lvlRef, OverheadType ptrTp,
+    OverheadType indTp, PrimaryType valTp);
 
 /// Returns the rank of the sparse tensor being read.
 MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderRank(void *p);
@@ -235,9 +255,18 @@ MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderNNZ(void *p);
 MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderDimSize(void *p,
                                                                  index_type d);
 
-/// Returns all dimension sizes for the sparse tensor being read.
-MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_getSparseTensorReaderDimSizes(
+/// SparseTensorReader method to copy the dimension-sizes into the
+/// provided memref.
+//
+// FIXME: update `SparseTensorCodegenPass` to use
+// `_mlir_ciface_getSparseTensorReaderDimSizes` instead.
+MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_copySparseTensorReaderDimSizes(
     void *p, StridedMemRefType<index_type, 1> *dref);
+
+/// SparseTensorReader method to obtain direct access to the
+/// dimension-sizes array.
+MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_getSparseTensorReaderDimSizes(
+    StridedMemRefType<index_type, 1> *out, void *p);
 
 /// Releases the SparseTensorReader. This also closes the file associated with
 /// the reader.

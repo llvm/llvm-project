@@ -1,4 +1,4 @@
-// UNSUPPORTED: -zos, -aix
+// UNSUPPORTED: -zos, target={{.*}}-aix{{.*}}
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: %clang_cc1 -x objective-c-header -emit-pch %S/Inputs/pch-used.h -o %t/pch-used.h.pch -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -O0 -isystem %S/Inputs/System/usr/include

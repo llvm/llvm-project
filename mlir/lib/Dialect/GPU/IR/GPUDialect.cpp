@@ -1066,14 +1066,14 @@ LogicalResult gpu::ReturnOp::verify() {
 
   FunctionType funType = function.getFunctionType();
 
-  if (funType.getNumResults() != operands().size())
+  if (funType.getNumResults() != getOperands().size())
     return emitOpError()
         .append("expected ", funType.getNumResults(), " result operands")
         .attachNote(function.getLoc())
         .append("return type declared here");
 
   for (const auto &pair : llvm::enumerate(
-           llvm::zip(function.getFunctionType().getResults(), operands()))) {
+           llvm::zip(function.getFunctionType().getResults(), getOperands()))) {
     auto [type, operand] = pair.value();
     if (type != operand.getType())
       return emitOpError() << "unexpected type `" << operand.getType()

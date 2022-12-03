@@ -26,6 +26,16 @@ subroutine s1()
   character(:) :: colonString2
   !OK because of the allocatable attribute
   character(:), allocatable :: colonString3
+!ERROR: 'foo1' has a type CHARACTER(KIND=1,LEN=:) with a deferred type parameter but is neither an allocatable or a pointer
+  character(:), external :: foo1
+!ERROR: 'foo2' has a type CHARACTER(KIND=1,LEN=:) with a deferred type parameter but is neither an allocatable or a pointer
+  procedure(character(:)) :: foo2
+  interface
+    function foo3()
+!ERROR: 'foo3' has a type CHARACTER(KIND=1,LEN=:) with a deferred type parameter but is neither an allocatable or a pointer
+      character(:) foo3
+    end function
+  end interface
 
 !ERROR: Must have INTEGER type, but is REAL(4)
   character(3.5) :: badParamValue
@@ -75,6 +85,8 @@ function f4
   implicit character(:)(f)
 end function
 
+!Not errors.
+
 Program d5
   Type string(maxlen)
     Integer,Kind :: maxlen
@@ -85,7 +97,6 @@ Program d5
   Print *,Trim(line%value)
 End Program
 
-!Not errors.
 subroutine outer
   integer n
  contains

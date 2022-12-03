@@ -36,10 +36,6 @@ FailureOr<Value> replaceExtractSliceWithTiledProducer(
 void populateMergeConsecutiveInsertExtractSlicePatterns(
     RewritePatternSet &patterns);
 
-/// Populates `patterns` with patterns that fold `tensor.expand_shape` and
-/// `tensor.collapse_shape` into other ops.
-void populateReassociativeReshapeFoldingPatterns(RewritePatternSet &patterns);
-
 } // namespace tensor
 } // namespace mlir
 

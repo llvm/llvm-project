@@ -32,6 +32,7 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
@@ -2633,8 +2634,13 @@ private:
               // Assignment to polymorphic allocatables may require changing the
               // variable dynamic type (See Fortran 2018 10.2.1.3 p3).
               if (lhsType->IsPolymorphic() &&
-                  Fortran::lower::isWholeAllocatable(assign.lhs))
-                TODO(loc, "assignment to polymorphic allocatable");
+                  Fortran::lower::isWholeAllocatable(assign.lhs)) {
+                mlir::Value lhs = genExprMutableBox(loc, assign.lhs).getAddr();
+                mlir::Value rhs =
+                    fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));
+                fir::runtime::genAssign(*builder, loc, lhs, rhs);
+                return;
+              }
 
               // Note: No ad-hoc handling for pointers is required here. The
               // target will be assigned as per 2018 10.2.1.3 p2. genExprAddr

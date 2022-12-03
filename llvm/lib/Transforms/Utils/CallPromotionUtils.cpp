@@ -439,6 +439,18 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
         *FailureReason = "Argument type mismatch";
       return false;
     }
+
+    // MustTail call needs stricter type match. See
+    // Verifier::verifyMustTailCall().
+    if (CB.isMustTailCall()) {
+      PointerType *PF = dyn_cast<PointerType>(FormalTy);
+      PointerType *PA = dyn_cast<PointerType>(ActualTy);
+      if (!PF || !PA || PF->getAddressSpace() != PA->getAddressSpace()) {
+        if (FailureReason)
+          *FailureReason = "Musttail call Argument type mismatch";
+        return false;
+      }
+    }
   }
   for (; I < NumArgs; I++) {
     // Vararg functions can have more arguments than parameters.

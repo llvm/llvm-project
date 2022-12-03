@@ -1,4 +1,4 @@
-// UNSUPPORTED: -zos, -aix
+// UNSUPPORTED: -zos, target={{.*}}-aix{{.*}}
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-pch -x objective-c++ -std=c++0x -o %t %s
 // RUN: %clang_cc1 -triple %itanium_abi_triple -include-pch %t -x objective-c++ -std=c++0x -verify %s
 // RUN: %clang_cc1 -triple %itanium_abi_triple -include-pch %t -x objective-c++ -std=c++0x -ast-print %s | FileCheck -check-prefix=CHECK-PRINT %s

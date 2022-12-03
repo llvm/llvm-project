@@ -1022,22 +1022,6 @@ bool Value::isSwiftError() const {
   return Alloca->isSwiftError();
 }
 
-bool Value::isTransitiveUsedByMetadataOnly() const {
-  SmallVector<const User *, 32> WorkList(user_begin(), user_end());
-  SmallPtrSet<const User *, 32> Visited(user_begin(), user_end());
-  while (!WorkList.empty()) {
-    const User *U = WorkList.pop_back_val();
-    // If it is transitively used by a global value or a non-constant value,
-    // it's obviously not only used by metadata.
-    if (!isa<Constant>(U) || isa<GlobalValue>(U))
-      return false;
-    for (const User *UU : U->users())
-      if (Visited.insert(UU).second)
-        WorkList.push_back(UU);
-  }
-  return true;
-}
-
 //===----------------------------------------------------------------------===//
 //                             ValueHandleBase Class
 //===----------------------------------------------------------------------===//

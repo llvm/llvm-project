@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -tensor-copy-insertion="allow-return-allocs" -allow-unregistered-dialect -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -tensor-copy-insertion="bufferize-function-boundaries allow-return-allocs" -split-input-file | FileCheck %s --check-prefix=CHECK-FUNC
+// RUN: mlir-opt %s -test-tensor-copy-insertion="allow-return-allocs" -allow-unregistered-dialect -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-tensor-copy-insertion="bufferize-function-boundaries allow-return-allocs" -split-input-file | FileCheck %s --check-prefix=CHECK-FUNC
 
 // CHECK-LABEL: func @scf_for(
 //  CHECK-SAME:     %[[A:.*]]: tensor<?xf32>, %[[B:.*]]: tensor<?xf32>
