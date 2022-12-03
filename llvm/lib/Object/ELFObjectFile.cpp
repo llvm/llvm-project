@@ -383,7 +383,7 @@ Optional<StringRef> ELFObjectFileBase::tryGetCPUName() const {
   case ELF::EM_PPC64:
     return StringRef("future");
   default:
-    return None;
+    return std::nullopt;
   }
 }
 
@@ -686,7 +686,7 @@ ELFObjectFileBase::getPltAddresses() const {
     if (PltEntryIter != GotToPlt.end()) {
       symbol_iterator Sym = Relocation.getSymbol();
       if (Sym == symbol_end())
-        Result.emplace_back(None, PltEntryIter->second);
+        Result.emplace_back(std::nullopt, PltEntryIter->second);
       else
         Result.emplace_back(Sym->getRawDataRefImpl(), PltEntryIter->second);
     }

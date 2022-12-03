@@ -195,7 +195,7 @@ Block &LinkGraph::splitBlock(Block &B, size_t SplitIndex,
     SplitBlockCache LocalBlockSymbolsCache;
     if (!Cache)
       Cache = &LocalBlockSymbolsCache;
-    if (*Cache == None) {
+    if (*Cache == std::nullopt) {
       *Cache = SplitBlockCache::value_type();
       for (auto *Sym : B.getSection().symbols())
         if (&Sym->getBlock() == &B)
