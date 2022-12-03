@@ -22,6 +22,7 @@
 #include "llvm/IR/Value.h"
 
 #include <numeric>
+#include <optional>
 
 using namespace llvm;
 
@@ -172,8 +173,8 @@ const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
   return DILocation::get(C, Line, Col, S, L);
 }
 
-Optional<unsigned> DILocation::encodeDiscriminator(unsigned BD, unsigned DF,
-                                                   unsigned CI) {
+std::optional<unsigned>
+DILocation::encodeDiscriminator(unsigned BD, unsigned DF, unsigned CI) {
   std::array<unsigned, 3> Components = {BD, DF, CI};
   uint64_t RemainingWork = 0U;
   // We use RemainingWork to figure out if we have no remaining components to
@@ -601,7 +602,7 @@ DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
                        (Tag, SizeInBits, AlignInBits, Encoding, Flags), Ops);
 }
 
-Optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
+std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
   switch (getEncoding()) {
   case dwarf::DW_ATE_signed:
   case dwarf::DW_ATE_signed_char:
@@ -661,12 +662,14 @@ Constant *DIDerivedType::getDiscriminantValue() const {
   return nullptr;
 }
 
-DIDerivedType *DIDerivedType::getImpl(
-    LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
-    unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
-    uint32_t AlignInBits, uint64_t OffsetInBits,
-    Optional<unsigned> DWARFAddressSpace, DIFlags Flags, Metadata *ExtraData,
-    Metadata *Annotations, StorageType Storage, bool ShouldCreate) {
+DIDerivedType *
+DIDerivedType::getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
+                       Metadata *File, unsigned Line, Metadata *Scope,
+                       Metadata *BaseType, uint64_t SizeInBits,
+                       uint32_t AlignInBits, uint64_t OffsetInBits,
+                       std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
+                       Metadata *ExtraData, Metadata *Annotations,
+                       StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIDerivedType,
                         (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
@@ -798,8 +801,8 @@ DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context, DIFlags Flags,
 }
 
 DIFile::DIFile(LLVMContext &C, StorageType Storage,
-               Optional<ChecksumInfo<MDString *>> CS, Optional<MDString *> Src,
-               ArrayRef<Metadata *> Ops)
+               std::optional<ChecksumInfo<MDString *>> CS,
+               std::optional<MDString *> Src, ArrayRef<Metadata *> Ops)
     : DIScope(C, DIFileKind, Storage, dwarf::DW_TAG_file_type, Ops),
       Checksum(CS), Source(Src) {}
 
@@ -819,8 +822,9 @@ StringRef DIFile::getChecksumKindAsString(ChecksumKind CSKind) {
   return ChecksumKindName[CSKind - 1];
 }
 
-Optional<DIFile::ChecksumKind> DIFile::getChecksumKind(StringRef CSKindStr) {
-  return StringSwitch<Optional<DIFile::ChecksumKind>>(CSKindStr)
+std::optional<DIFile::ChecksumKind>
+DIFile::getChecksumKind(StringRef CSKindStr) {
+  return StringSwitch<std::optional<DIFile::ChecksumKind>>(CSKindStr)
       .Case("CSK_MD5", DIFile::CSK_MD5)
       .Case("CSK_SHA1", DIFile::CSK_SHA1)
       .Case("CSK_SHA256", DIFile::CSK_SHA256)
@@ -829,8 +833,8 @@ Optional<DIFile::ChecksumKind> DIFile::getChecksumKind(StringRef CSKindStr) {
 
 DIFile *DIFile::getImpl(LLVMContext &Context, MDString *Filename,
                         MDString *Directory,
-                        Optional<DIFile::ChecksumInfo<MDString *>> CS,
-                        Optional<MDString *> Source, StorageType Storage,
+                        std::optional<DIFile::ChecksumInfo<MDString *>> CS,
+                        std::optional<MDString *> Source, StorageType Storage,
                         bool ShouldCreate) {
   assert(isCanonical(Filename) && "Expected canonical MDString");
   assert(isCanonical(Directory) && "Expected canonical MDString");
@@ -889,9 +893,9 @@ DICompileUnit *DICompileUnit::getImpl(
                    Storage);
 }
 
-Optional<DICompileUnit::DebugEmissionKind>
+std::optional<DICompileUnit::DebugEmissionKind>
 DICompileUnit::getEmissionKind(StringRef Str) {
-  return StringSwitch<Optional<DebugEmissionKind>>(Str)
+  return StringSwitch<std::optional<DebugEmissionKind>>(Str)
       .Case("NoDebug", NoDebug)
       .Case("FullDebug", FullDebug)
       .Case("LineTablesOnly", LineTablesOnly)
@@ -899,9 +903,9 @@ DICompileUnit::getEmissionKind(StringRef Str) {
       .Default(std::nullopt);
 }
 
-Optional<DICompileUnit::DebugNameTableKind>
+std::optional<DICompileUnit::DebugNameTableKind>
 DICompileUnit::getNameTableKind(StringRef Str) {
-  return StringSwitch<Optional<DebugNameTableKind>>(Str)
+  return StringSwitch<std::optional<DebugNameTableKind>>(Str)
       .Case("Default", DebugNameTableKind::Default)
       .Case("GNU", DebugNameTableKind::GNU)
       .Case("None", DebugNameTableKind::None)
@@ -1204,7 +1208,7 @@ DIVariable::DIVariable(LLVMContext &C, unsigned ID, StorageType Storage,
                        uint32_t AlignInBits)
     : DINode(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line),
       AlignInBits(AlignInBits) {}
-Optional<uint64_t> DIVariable::getSizeInBits() const {
+std::optional<uint64_t> DIVariable::getSizeInBits() const {
   // This is used by the Verifier so be mindful of broken types.
   const Metadata *RawType = getRawType();
   while (RawType) {
@@ -1408,7 +1412,7 @@ bool DIExpression::isComplex() const {
   return false;
 }
 
-Optional<DIExpression::FragmentInfo>
+std::optional<DIExpression::FragmentInfo>
 DIExpression::getFragmentInfo(expr_op_iterator Start, expr_op_iterator End) {
   for (auto I = Start; I != End; ++I)
     if (I->getOp() == dwarf::DW_OP_LLVM_fragment) {
@@ -1622,7 +1626,7 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
   // has no DW_OP_stack_value.
   //
   // Match .* DW_OP_stack_value (DW_OP_LLVM_fragment A B)?.
-  Optional<FragmentInfo> FI = Expr->getFragmentInfo();
+  std::optional<FragmentInfo> FI = Expr->getFragmentInfo();
   unsigned DropUntilStackValue = FI ? 3 : 0;
   ArrayRef<uint64_t> ExprOpsBeforeFragment =
       Expr->getElements().drop_back(DropUntilStackValue);
@@ -1641,7 +1645,7 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
   return DIExpression::append(Expr, NewOps);
 }
 
-Optional<DIExpression *> DIExpression::createFragmentExpression(
+std::optional<DIExpression *> DIExpression::createFragmentExpression(
     const DIExpression *Expr, unsigned OffsetInBits, unsigned SizeInBits) {
   SmallVector<uint64_t, 8> Ops;
   // Track whether it's safe to split the value at the top of the DWARF stack,
@@ -1752,7 +1756,7 @@ uint64_t DIExpression::getNumLocationOperands() const {
   return Result;
 }
 
-llvm::Optional<DIExpression::SignedOrUnsignedConstant>
+std::optional<DIExpression::SignedOrUnsignedConstant>
 DIExpression::isConstant() const {
 
   // Recognize signed and unsigned constants.

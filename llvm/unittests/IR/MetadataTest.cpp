@@ -22,6 +22,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
+#include <optional>
 using namespace llvm;
 
 namespace {
@@ -3016,7 +3017,7 @@ TEST_F(DIExpressionTest, createFragmentExpression) {
   } while (false)
 
   // createFragmentExpression adds correct ops.
-  Optional<DIExpression*> R = DIExpression::createFragmentExpression(
+  std::optional<DIExpression*> R = DIExpression::createFragmentExpression(
     DIExpression::get(Context, {}), 0, 32);
   EXPECT_EQ(R.has_value(), true);
   EXPECT_EQ(3u, (*R)->getNumElements());

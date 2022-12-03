@@ -38,6 +38,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -562,7 +563,7 @@ void MCDwarfLineTable::emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 Expected<unsigned> MCDwarfLineTable::tryGetFile(StringRef &Directory,
                                                 StringRef &FileName,
                                                 Optional<MD5::MD5Result> Checksum,
-                                                Optional<StringRef> Source,
+                                                std::optional<StringRef> Source,
                                                 uint16_t DwarfVersion,
                                                 unsigned FileNumber) {
   return Header.tryGetFile(Directory, FileName, Checksum, Source, DwarfVersion,
@@ -580,7 +581,7 @@ Expected<unsigned>
 MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
                                    StringRef &FileName,
                                    Optional<MD5::MD5Result> Checksum,
-                                   Optional<StringRef> Source,
+                                   std::optional<StringRef> Source,
                                    uint16_t DwarfVersion,
                                    unsigned FileNumber) {
   if (Directory == CompilationDir)

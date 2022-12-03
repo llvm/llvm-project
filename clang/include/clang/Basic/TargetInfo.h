@@ -37,6 +37,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cassert>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -1654,7 +1655,8 @@ public:
   ///
   /// \returns Otherwise return None and no conversion will be emitted in the
   /// DWARF.
-  virtual Optional<unsigned> getDWARFAddressSpace(unsigned AddressSpace) const {
+  virtual std::optional<unsigned> getDWARFAddressSpace(unsigned AddressSpace)
+      const {
     return std::nullopt;
   }
 
