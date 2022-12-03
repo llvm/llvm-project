@@ -341,7 +341,7 @@ void MemoryOpRemark::visitVariable(const Value *V,
     return;
 
   // If not, get it from the alloca.
-  Optional<TypeSize> TySize = AI->getAllocationSizeInBits(DL);
+  std::optional<TypeSize> TySize = AI->getAllocationSizeInBits(DL);
   std::optional<uint64_t> Size =
       TySize ? getSizeInBytes(TySize->getFixedSize()) : std::nullopt;
   VariableInfo Var{nameOrNone(AI), Size};
