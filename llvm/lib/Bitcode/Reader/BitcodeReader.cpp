@@ -554,7 +554,7 @@ public:
   Optional<unsigned> getInRangeIndex() const {
     assert(Opcode == Instruction::GetElementPtr);
     if (Extra == (unsigned)-1)
-      return None;
+      return std::nullopt;
     return Extra;
   }
 
@@ -822,7 +822,9 @@ private:
   Error parseAttrKind(uint64_t Code, Attribute::AttrKind *Kind);
   Error parseModule(
       uint64_t ResumeBit, bool ShouldLazyLoadMetadata = false,
-      DataLayoutCallbackTy DataLayoutCallback = [](StringRef) { return None; });
+      DataLayoutCallbackTy DataLayoutCallback = [](StringRef) {
+        return std::nullopt;
+      });
 
   Error parseComdatRecord(ArrayRef<uint64_t> Record);
   Error parseGlobalVarRecord(ArrayRef<uint64_t> Record);
@@ -7915,7 +7917,7 @@ Expected<std::unique_ptr<Module>>
 BitcodeModule::getLazyModule(LLVMContext &Context, bool ShouldLazyLoadMetadata,
                              bool IsImporting) {
   return getModuleImpl(Context, false, ShouldLazyLoadMetadata, IsImporting,
-                       [](StringRef) { return None; });
+                       [](StringRef) { return std::nullopt; });
 }
 
 // Parse the specified bitcode buffer and merge the index into CombinedIndex.
