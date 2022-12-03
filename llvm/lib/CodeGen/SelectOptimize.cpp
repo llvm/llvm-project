@@ -978,7 +978,7 @@ Optional<uint64_t> SelectOptimize::computeInstCost(const Instruction *I) {
       TTI->getInstructionCost(I, TargetTransformInfo::TCK_Latency);
   if (auto OC = ICost.getValue())
     return Optional<uint64_t>(*OC);
-  return None;
+  return std::nullopt;
 }
 
 ScaledNumber<uint64_t>

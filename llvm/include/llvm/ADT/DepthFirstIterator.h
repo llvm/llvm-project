@@ -105,7 +105,7 @@ private:
 
   inline df_iterator(NodeRef Node) {
     this->Visited.insert(Node);
-    VisitStack.push_back(StackElement(Node, None));
+    VisitStack.push_back(StackElement(Node, std::nullopt));
   }
 
   inline df_iterator() = default; // End is when stack is empty
@@ -113,7 +113,7 @@ private:
   inline df_iterator(NodeRef Node, SetType &S)
       : df_iterator_storage<SetType, ExtStorage>(S) {
     if (this->Visited.insert(Node).second)
-      VisitStack.push_back(StackElement(Node, None));
+      VisitStack.push_back(StackElement(Node, std::nullopt));
   }
 
   inline df_iterator(SetType &S)
@@ -137,7 +137,7 @@ private:
         // Has our next sibling been visited?
         if (this->Visited.insert(Next).second) {
           // No, do it now.
-          VisitStack.push_back(StackElement(Next, None));
+          VisitStack.push_back(StackElement(Next, std::nullopt));
           return;
         }
       }

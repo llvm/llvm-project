@@ -261,12 +261,12 @@ ImplicitNullChecks::computeDependence(const MachineInstr *MI,
     if (canReorder(*I, MI))
       continue;
 
-    if (Dep == None) {
+    if (Dep == std::nullopt) {
       // Found one possible dependency, keep track of it.
       Dep = I;
     } else {
       // We found two dependencies, so bail out.
-      return {false, None};
+      return {false, std::nullopt};
     }
   }
 
@@ -805,7 +805,7 @@ void ImplicitNullChecks::rewriteNullChecks(
     // Insert an *unconditional* branch to not-null successor - we expect
     // block placement to remove fallthroughs later.
     TII->insertBranch(*NC.getCheckBlock(), NC.getNotNullSucc(), nullptr,
-                      /*Cond=*/None, DL);
+                      /*Cond=*/std::nullopt, DL);
 
     NumImplicitNullChecks++;
   }
