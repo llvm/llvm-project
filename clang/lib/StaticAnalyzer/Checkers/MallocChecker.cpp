@@ -220,10 +220,10 @@ static bool isReleased(SymbolRef Sym, CheckerContext &C);
 /// Update the RefState to reflect the new memory allocation.
 /// The optional \p RetVal parameter specifies the newly allocated pointer
 /// value; if unspecified, the value of expression \p E is used.
-static ProgramStateRef MallocUpdateRefState(CheckerContext &C, const Expr *E,
-                                            ProgramStateRef State,
-                                            AllocationFamily Family,
-                                            Optional<SVal> RetVal = None);
+static ProgramStateRef
+MallocUpdateRefState(CheckerContext &C, const Expr *E, ProgramStateRef State,
+                     AllocationFamily Family,
+                     Optional<SVal> RetVal = std::nullopt);
 
 //===----------------------------------------------------------------------===//
 // The modeling of memory reallocation.
@@ -468,7 +468,8 @@ private:
   ///   if unspecified, the value of expression \p E is used.
   [[nodiscard]] static ProgramStateRef
   ProcessZeroAllocCheck(const CallEvent &Call, const unsigned IndexOfSizeArg,
-                        ProgramStateRef State, Optional<SVal> RetVal = None);
+                        ProgramStateRef State,
+                        Optional<SVal> RetVal = std::nullopt);
 
   /// Model functions with the ownership_returns attribute.
   ///
@@ -1154,21 +1155,21 @@ MallocChecker::performKernelMalloc(const CallEvent &Call, CheckerContext &C,
 
       // Fall back to normal malloc behavior on platforms where we don't
       // know M_ZERO.
-      return None;
+      return std::nullopt;
   }
 
   // We treat the last argument as the flags argument, and callers fall-back to
   // normal malloc on a None return. This works for the FreeBSD kernel malloc
   // as well as Linux kmalloc.
   if (Call.getNumArgs() < 2)
-    return None;
+    return std::nullopt;
 
   const Expr *FlagsEx = Call.getArgExpr(Call.getNumArgs() - 1);
   const SVal V = C.getSVal(FlagsEx);
   if (!isa<NonLoc>(V)) {
     // The case where 'V' can be a location can only be due to a bad header,
     // so in this case bail out.
-    return None;
+    return std::nullopt;
   }
 
   NonLoc Flags = V.castAs<NonLoc>();
@@ -1180,7 +1181,7 @@ MallocChecker::performKernelMalloc(const CallEvent &Call, CheckerContext &C,
                                                       Flags, ZeroFlag,
                                                       FlagsEx->getType());
   if (MaskedFlagsUC.isUnknownOrUndef())
-    return None;
+    return std::nullopt;
   DefinedSVal MaskedFlags = MaskedFlagsUC.castAs<DefinedSVal>();
 
   // Check if maskedFlags is non-zero.
@@ -1194,7 +1195,7 @@ MallocChecker::performKernelMalloc(const CallEvent &Call, CheckerContext &C,
                         AF_Malloc);
   }
 
-  return None;
+  return std::nullopt;
 }
 
 SVal MallocChecker::evalMulForBufferSize(CheckerContext &C, const Expr *Blocks,
@@ -1650,7 +1651,7 @@ static Optional<bool> getFreeWhenDoneArg(const ObjCMethodCall &Call) {
     if (S.getNameForSlot(i).equals("freeWhenDone"))
       return !Call.getArgSVal(i).isZeroConstant();
 
-  return None;
+  return std::nullopt;
 }
 
 void MallocChecker::checkPostObjCMessage(const ObjCMethodCall &Call,
@@ -2071,7 +2072,7 @@ MallocChecker::getCheckIfTracked(AllocationFamily Family,
   case AF_IfNameIndex: {
     if (ChecksEnabled[CK_MallocChecker])
       return CK_MallocChecker;
-    return None;
+    return std::nullopt;
   }
   case AF_CXXNew:
   case AF_CXXNewArray: {
@@ -2083,12 +2084,12 @@ MallocChecker::getCheckIfTracked(AllocationFamily Family,
       if (ChecksEnabled[CK_NewDeleteChecker])
         return CK_NewDeleteChecker;
     }
-    return None;
+    return std::nullopt;
   }
   case AF_InnerBuffer: {
     if (ChecksEnabled[CK_InnerPointerChecker])
       return CK_InnerPointerChecker;
-    return None;
+    return std::nullopt;
   }
   case AF_None: {
     llvm_unreachable("no family");

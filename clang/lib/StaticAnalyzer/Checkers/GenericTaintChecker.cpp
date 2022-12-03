@@ -127,7 +127,7 @@ SVal getPointeeOf(const CheckerContext &C, Loc LValue) {
 Optional<SVal> getPointeeOf(const CheckerContext &C, SVal Arg) {
   if (auto LValue = Arg.getAs<Loc>())
     return getPointeeOf(C, *LValue);
-  return None;
+  return std::nullopt;
 }
 
 /// Given a pointer, return the SVal of its pointee or if it is tainted,
@@ -147,7 +147,7 @@ Optional<SVal> getTaintedPointeeOrPointer(const CheckerContext &C, SVal Arg) {
   if (isStdin(Arg, C.getASTContext()))
     return Arg;
 
-  return None;
+  return std::nullopt;
 }
 
 bool isTaintedOrPointsToTainted(const Expr *E, const ProgramStateRef &State,
@@ -161,7 +161,8 @@ bool isTaintedOrPointsToTainted(const Expr *E, const ProgramStateRef &State,
 class ArgSet {
 public:
   ArgSet() = default;
-  ArgSet(ArgVecTy &&DiscreteArgs, Optional<ArgIdxTy> VariadicIndex = None)
+  ArgSet(ArgVecTy &&DiscreteArgs,
+         Optional<ArgIdxTy> VariadicIndex = std::nullopt)
       : DiscreteArgs(std::move(DiscreteArgs)),
         VariadicIndex(std::move(VariadicIndex)) {}
 
@@ -202,7 +203,7 @@ class GenericTaintRule {
   GenericTaintRule() = default;
 
   GenericTaintRule(ArgSet &&Sink, ArgSet &&Filter, ArgSet &&Src, ArgSet &&Dst,
-                   Optional<StringRef> SinkMsg = None)
+                   Optional<StringRef> SinkMsg = std::nullopt)
       : SinkArgs(std::move(Sink)), FilterArgs(std::move(Filter)),
         PropSrcArgs(std::move(Src)), PropDstArgs(std::move(Dst)),
         SinkMsg(SinkMsg) {}
@@ -211,7 +212,7 @@ public:
   /// Make a rule that reports a warning if taint reaches any of \p FilterArgs
   /// arguments.
   static GenericTaintRule Sink(ArgSet &&SinkArgs,
-                               Optional<StringRef> Msg = None) {
+                               Optional<StringRef> Msg = std::nullopt) {
     return {std::move(SinkArgs), {}, {}, {}, Msg};
   }
 
@@ -234,7 +235,7 @@ public:
   /// Make a rule that taints all PropDstArgs if any of PropSrcArgs is tainted.
   static GenericTaintRule SinkProp(ArgSet &&SinkArgs, ArgSet &&SrcArgs,
                                    ArgSet &&DstArgs,
-                                   Optional<StringRef> Msg = None) {
+                                   Optional<StringRef> Msg = std::nullopt) {
     return {
         std::move(SinkArgs), {}, std::move(SrcArgs), std::move(DstArgs), Msg};
   }
@@ -487,8 +488,10 @@ void GenericTaintRuleParser::parseConfig(const std::string &Option,
   bool IsDstVariadic = P.VarType == TaintConfiguration::VariadicType::Dst;
   Optional<ArgIdxTy> JustVarIndex = P.VarIndex;
 
-  ArgSet SrcDesc(std::move(P.SrcArgs), IsSrcVariadic ? JustVarIndex : None);
-  ArgSet DstDesc(std::move(P.DstArgs), IsDstVariadic ? JustVarIndex : None);
+  ArgSet SrcDesc(std::move(P.SrcArgs),
+                 IsSrcVariadic ? JustVarIndex : std::nullopt);
+  ArgSet DstDesc(std::move(P.DstArgs),
+                 IsDstVariadic ? JustVarIndex : std::nullopt);
 
   consumeRulesFromConfig(
       P, GenericTaintRule::Prop(std::move(SrcDesc), std::move(DstDesc)), Rules);
