@@ -124,7 +124,7 @@ llvm::Optional<Element> findOptional(const llvm::StringMap<Element> &Map,
                                      llvm::StringRef Key) {
   auto it = Map.find(Key);
   if (it == Map.end())
-    return llvm::None;
+    return std::nullopt;
   return it->second;
 }
 
@@ -157,7 +157,7 @@ static ExpectedProgress<std::nullopt_t> parseChar(char c, ParseState State) {
   if (State.Input.empty() || State.Input.front() != c)
     return makeParseError(State,
                           ("expected char not found: " + llvm::Twine(c)).str());
-  return makeParseProgress(advance(State, 1), llvm::None);
+  return makeParseProgress(advance(State, 1), std::nullopt);
 }
 
 // Parses an identitifer "token" -- handles preceding whitespace.

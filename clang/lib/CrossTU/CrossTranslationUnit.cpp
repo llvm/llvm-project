@@ -797,7 +797,7 @@ llvm::Optional<clang::MacroExpansionContext>
 CrossTranslationUnitContext::getMacroExpansionContextForSourceLocation(
     const clang::SourceLocation &ToLoc) const {
   // FIXME: Implement: Record such a context for every imported ASTUnit; lookup.
-  return llvm::None;
+  return std::nullopt;
 }
 
 bool CrossTranslationUnitContext::isImportedAsNew(const Decl *ToDecl) const {

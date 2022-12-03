@@ -2246,7 +2246,7 @@ void ASTUnit::CodeComplete(
       [&FileMgr](StringRef Filename) -> Optional<llvm::sys::fs::UniqueID> {
     if (auto Status = FileMgr.getVirtualFileSystem().status(Filename))
       return Status->getUniqueID();
-    return None;
+    return std::nullopt;
   };
 
   auto hasSameUniqueID = [getUniqueID](StringRef LHS, StringRef RHS) {
