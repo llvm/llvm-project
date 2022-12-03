@@ -26,7 +26,7 @@ static llvm::Optional<const char *> getReplacementType(StringRef Type) {
       .Case("io_state", "iostate")
       .Case("open_mode", "openmode")
       .Case("seek_dir", "seekdir")
-      .Default(llvm::None);
+      .Default(std::nullopt);
 }
 
 void DeprecatedIosBaseAliasesCheck::registerMatchers(MatchFinder *Finder) {

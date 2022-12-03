@@ -73,7 +73,7 @@ getNamespaceNameAsWritten(SourceLocation &Loc, const SourceManager &Sources,
       } else if (T->is(tok::coloncolon)) {
         Result.append("::");
       } else { // Any other kind of token is unexpected here.
-        return llvm::None;
+        return std::nullopt;
       }
     }
   }

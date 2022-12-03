@@ -44,7 +44,7 @@ static bool locDangerous(SourceLocation S) {
 static Optional<SourceLocation>
 skipLParensBackwards(SourceLocation Start, const ASTContext &Context) {
   if (locDangerous(Start))
-    return None;
+    return std::nullopt;
 
   auto PreviousTokenLParen = [&Start, &Context]() {
     Token T;
@@ -58,14 +58,14 @@ skipLParensBackwards(SourceLocation Start, const ASTContext &Context) {
                                           Context.getLangOpts());
 
   if (locDangerous(Start))
-    return None;
+    return std::nullopt;
   return Start;
 }
 
 static Optional<FixItHint> fixIfNotDangerous(SourceLocation Loc,
                                              StringRef Text) {
   if (locDangerous(Loc))
-    return None;
+    return std::nullopt;
   return FixItHint::CreateInsertion(Loc, Text);
 }
 
@@ -93,7 +93,7 @@ static Optional<FixItHint> changeValue(const VarDecl &Var,
 
     if (IgnoredParens)
       return fixIfNotDangerous(*IgnoredParens, buildQualifier(Qualifier));
-    return None;
+    return std::nullopt;
   }
   llvm_unreachable("Unknown QualifierPolicy enum");
 }
@@ -102,13 +102,13 @@ static Optional<FixItHint> changePointerItself(const VarDecl &Var,
                                                DeclSpec::TQ Qualifier,
                                                const ASTContext &Context) {
   if (locDangerous(Var.getLocation()))
-    return None;
+    return std::nullopt;
 
   Optional<SourceLocation> IgnoredParens =
       skipLParensBackwards(Var.getLocation(), Context);
   if (IgnoredParens)
     return fixIfNotDangerous(*IgnoredParens, buildQualifier(Qualifier));
-  return None;
+  return std::nullopt;
 }
 
 static Optional<FixItHint>
@@ -136,7 +136,7 @@ changePointer(const VarDecl &Var, DeclSpec::TQ Qualifier, const Type *Pointee,
           Var.getLocation(), Context.getSourceManager(), Context.getLangOpts(),
           tok::star);
       if (locDangerous(BeforeStar))
-        return None;
+        return std::nullopt;
 
       Optional<SourceLocation> IgnoredParens =
           skipLParensBackwards(BeforeStar, Context);
@@ -144,7 +144,7 @@ changePointer(const VarDecl &Var, DeclSpec::TQ Qualifier, const Type *Pointee,
       if (IgnoredParens)
         return fixIfNotDangerous(*IgnoredParens,
                                  buildQualifier(Qualifier, true));
-      return None;
+      return std::nullopt;
     }
   }
 
@@ -159,7 +159,7 @@ changePointer(const VarDecl &Var, DeclSpec::TQ Qualifier, const Type *Pointee,
     return fixIfNotDangerous(BeforeStar, buildQualifier(Qualifier, true));
   }
 
-  return None;
+  return std::nullopt;
 }
 
 static Optional<FixItHint>
@@ -178,7 +178,7 @@ changeReferencee(const VarDecl &Var, DeclSpec::TQ Qualifier, QualType Pointee,
   if (IgnoredParens)
     return fixIfNotDangerous(*IgnoredParens, buildQualifier(Qualifier, true));
 
-  return None;
+  return std::nullopt;
 }
 
 Optional<FixItHint> addQualifierToVarDecl(const VarDecl &Var,
@@ -221,7 +221,7 @@ Optional<FixItHint> addQualifierToVarDecl(const VarDecl &Var,
                            QualTarget, QualPolicy, Context);
   }
 
-  return None;
+  return std::nullopt;
 }
 } // namespace fixit
 } // namespace utils
