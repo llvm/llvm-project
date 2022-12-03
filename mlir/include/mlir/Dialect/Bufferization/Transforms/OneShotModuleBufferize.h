@@ -30,6 +30,9 @@ LogicalResult analyzeModuleOp(ModuleOp moduleOp, OneShotAnalysisState &state);
 LogicalResult bufferizeModuleOp(ModuleOp moduleOp,
                                 const OneShotBufferizationOptions &options);
 
+/// Remove bufferization attributes on every FuncOp arguments in the ModuleOp.
+void removeBufferizationAttributesInModule(ModuleOp moduleOp);
+
 /// Run One-Shot Module Bufferization on the given module. Performs a simple
 /// function call analysis to determine which function arguments are
 /// inplaceable. Then analyzes and bufferizes FuncOps one-by-one with One-Shot

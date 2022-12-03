@@ -451,9 +451,9 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
 
   MDC.ScanInstance.getASTReader()->visitTopLevelModuleMaps(
       *MF, [&](FileEntryRef FE) {
-        if (FE.getName().endswith("__inferred_module.map"))
+        if (FE.getNameAsRequested().endswith("__inferred_module.map"))
           return;
-        MD.ModuleMapFileDeps.emplace_back(FE.getName());
+        MD.ModuleMapFileDeps.emplace_back(FE.getNameAsRequested());
       });
 
   CompilerInvocation CI = MDC.makeInvocationForModuleBuildWithoutOutputs(
