@@ -284,9 +284,9 @@ void MCDwarfDwoLineTable::Emit(MCStreamer &MCOS, MCDwarfLineTableParams Params,
                                MCSection *Section) const {
   if (!HasSplitLineTable)
     return;
-  Optional<MCDwarfLineStr> NoLineStr(None);
+  Optional<MCDwarfLineStr> NoLineStr(std::nullopt);
   MCOS.switchSection(Section);
-  MCOS.emitLabel(Header.Emit(&MCOS, Params, None, NoLineStr).second);
+  MCOS.emitLabel(Header.Emit(&MCOS, Params, std::nullopt, NoLineStr).second);
 }
 
 std::pair<MCSymbol *, MCSymbol *>
@@ -594,7 +594,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
   // If any files have embedded source, they all must.
   if (MCDwarfFiles.empty()) {
     trackMD5Usage(Checksum.has_value());
-    HasSource = (Source != None);
+    HasSource = (Source != std::nullopt);
   }
   if (DwarfVersion >= 5 && isRootFile(RootFile, Directory, FileName, Checksum))
     return 0;
@@ -622,7 +622,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
                                    inconvertibleErrorCode());
 
   // If any files have embedded source, they all must.
-  if (HasSource != (Source != None))
+  if (HasSource != (Source != std::nullopt))
     return make_error<StringError>("inconsistent use of embedded source",
                                    inconvertibleErrorCode());
 
