@@ -1016,7 +1016,8 @@ public:
   ///       Most of the time, using type units with DWO is not a good idea.
   ///       If type units are used, the caller is responsible for verifying
   ///       that abbreviations are shared by CU and TUs.
-  DebugAbbrevWriter(DWARFContext &Context, Optional<uint64_t> DWOId = None)
+  DebugAbbrevWriter(DWARFContext &Context,
+                    Optional<uint64_t> DWOId = std::nullopt)
       : Context(Context), DWOId(DWOId) {}
 
   DebugAbbrevWriter(const DebugAbbrevWriter &) = delete;
