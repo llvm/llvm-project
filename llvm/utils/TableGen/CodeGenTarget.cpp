@@ -400,7 +400,7 @@ CodeGenTarget::getSuperRegForSubReg(const ValueTypeByHwMode &ValueTy,
 
   // If we didn't find anything, we're done.
   if (Candidates.empty())
-    return None;
+    return std::nullopt;
 
   // Find and return the largest of our candidate classes.
   llvm::stable_sort(Candidates, [&](const CodeGenRegisterClass *A,
