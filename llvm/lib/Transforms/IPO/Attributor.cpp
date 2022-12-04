@@ -2026,9 +2026,9 @@ ChangeStatus Attributor::cleanupIR() {
     // If we plan to replace NewV we need to update it at this point.
     do {
       const auto &Entry = ToBeChangedValues.lookup(NewV);
-      if (!Entry.first)
+      if (!get<0>(Entry))
         break;
-      NewV = Entry.first;
+      NewV = get<0>(Entry);
     } while (true);
 
     Instruction *I = dyn_cast<Instruction>(U->getUser());
@@ -2092,11 +2092,10 @@ ChangeStatus Attributor::cleanupIR() {
   SmallVector<Use *, 4> Uses;
   for (auto &It : ToBeChangedValues) {
     Value *OldV = It.first;
-    auto &Entry = It.second;
-    Value *NewV = Entry.first;
+    auto [NewV, Done] = It.second;
     Uses.clear();
     for (auto &U : OldV->uses())
-      if (Entry.second || !U.getUser()->isDroppable())
+      if (Done || !U.getUser()->isDroppable())
         Uses.push_back(&U);
     for (Use *U : Uses) {
       if (auto *I = dyn_cast<Instruction>(U->getUser()))
