@@ -3893,6 +3893,7 @@ bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
     case Intrinsic::nearbyint:
     case Intrinsic::round:
     case Intrinsic::roundeven:
+    case Intrinsic::arithmetic_fence:
       return isKnownNeverNaN(II->getArgOperand(0), TLI, Depth + 1);
     case Intrinsic::sqrt:
       return isKnownNeverNaN(II->getArgOperand(0), TLI, Depth + 1) &&
