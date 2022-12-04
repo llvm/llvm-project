@@ -23,6 +23,7 @@
 #include "llvm/MC/SubtargetFeature.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -236,13 +237,13 @@ public:
   /// Level is zero-based, so a value of zero means the first level of
   /// cache.
   ///
-  virtual Optional<unsigned> getCacheSize(unsigned Level) const;
+  virtual std::optional<unsigned> getCacheSize(unsigned Level) const;
 
   /// Return the cache associatvity for the given level of cache.
   /// Level is zero-based, so a value of zero means the first level of
   /// cache.
   ///
-  virtual Optional<unsigned> getCacheAssociativity(unsigned Level) const;
+  virtual std::optional<unsigned> getCacheAssociativity(unsigned Level) const;
 
   /// Return the target cache line size in bytes at a given level.
   ///
