@@ -3530,7 +3530,8 @@ void DwarfDebug::insertSectionLabel(const MCSymbol *S) {
       AddrPool.getIndex(S);
 }
 
-Optional<MD5::MD5Result> DwarfDebug::getMD5AsBytes(const DIFile *File) const {
+std::optional<MD5::MD5Result>
+DwarfDebug::getMD5AsBytes(const DIFile *File) const {
   assert(File);
   if (getDwarfVersion() < 5)
     return std::nullopt;

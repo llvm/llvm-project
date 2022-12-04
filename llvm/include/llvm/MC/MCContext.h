@@ -616,9 +616,9 @@ public:
 
   /// Return the unique ID of the section with the given name, flags and entry
   /// size, if it exists.
-  Optional<unsigned> getELFUniqueIDForEntsize(StringRef SectionName,
-                                              unsigned Flags,
-                                              unsigned EntrySize);
+  std::optional<unsigned> getELFUniqueIDForEntsize(StringRef SectionName,
+                                                   unsigned Flags,
+                                                   unsigned EntrySize);
 
   MCSectionGOFF *getGOFFSection(StringRef Section, SectionKind Kind,
                                 MCSection *Parent, const MCExpr *SubsectionId);
@@ -673,13 +673,12 @@ public:
   bool hasXCOFFSection(StringRef Section,
                        XCOFF::CsectProperties CsectProp) const;
 
-  MCSectionXCOFF *
-  getXCOFFSection(StringRef Section, SectionKind K,
-                  Optional<XCOFF::CsectProperties> CsectProp = std::nullopt,
-                  bool MultiSymbolsAllowed = false,
-                  const char *BeginSymName = nullptr,
-                  Optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSubtypeFlags =
-                      std::nullopt);
+  MCSectionXCOFF *getXCOFFSection(
+      StringRef Section, SectionKind K,
+      std::optional<XCOFF::CsectProperties> CsectProp = std::nullopt,
+      bool MultiSymbolsAllowed = false, const char *BeginSymName = nullptr,
+      std::optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSubtypeFlags =
+          std::nullopt);
 
   // Create and save a copy of STI and return a reference to the copy.
   MCSubtargetInfo &getSubtargetCopy(const MCSubtargetInfo &STI);
@@ -717,10 +716,11 @@ public:
   void setMainFileName(StringRef S) { MainFileName = std::string(S); }
 
   /// Creates an entry in the dwarf file and directory tables.
-  Expected<unsigned> getDwarfFile(
-      StringRef Directory, StringRef FileName, unsigned FileNumber,
-      Optional<MD5::MD5Result> Checksum, std::optional<StringRef> Source,
-      unsigned CUID);
+  Expected<unsigned> getDwarfFile(StringRef Directory, StringRef FileName,
+                                  unsigned FileNumber,
+                                  std::optional<MD5::MD5Result> Checksum,
+                                  std::optional<StringRef> Source,
+                                  unsigned CUID);
 
   bool isValidDwarfFileNumber(unsigned FileNumber, unsigned CUID = 0);
 
@@ -754,7 +754,7 @@ public:
   /// These are "file 0" and "directory 0" in DWARF v5.
   void setMCLineTableRootFile(unsigned CUID, StringRef CompilationDir,
                               StringRef Filename,
-                              Optional<MD5::MD5Result> Checksum,
+                              std::optional<MD5::MD5Result> Checksum,
                               std::optional<StringRef> Source) {
     getMCDwarfLineTable(CUID).setRootFile(CompilationDir, Filename, Checksum,
                                           Source);

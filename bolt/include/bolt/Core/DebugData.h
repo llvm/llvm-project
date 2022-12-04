@@ -1130,10 +1130,10 @@ public:
 
   /// Emit the Dwarf file and the line tables for a given CU.
   void emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
-              Optional<MCDwarfLineStr> &LineStr, BinaryContext &BC) const;
+              std::optional<MCDwarfLineStr> &LineStr, BinaryContext &BC) const;
 
   Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
-                                Optional<MD5::MD5Result> Checksum,
+                                std::optional<MD5::MD5Result> Checksum,
                                 std::optional<StringRef> Source,
                                 uint16_t DwarfVersion,
                                 unsigned FileNumber = 0) {
@@ -1150,7 +1150,7 @@ public:
   /// Sets the root file \p Directory, \p FileName, optional \p CheckSum, and
   /// optional \p Source.
   void setRootFile(StringRef Directory, StringRef FileName,
-                   Optional<MD5::MD5Result> Checksum,
+                   std::optional<MD5::MD5Result> Checksum,
                    std::optional<StringRef> Source) {
     Header.setRootFile(Directory, FileName, Checksum, Source);
   }

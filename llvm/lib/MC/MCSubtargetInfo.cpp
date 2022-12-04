@@ -345,7 +345,8 @@ MCSubtargetInfo::getCacheAssociativity(unsigned Level) const {
   return std::nullopt;
 }
 
-Optional<unsigned> MCSubtargetInfo::getCacheLineSize(unsigned Level) const {
+std::optional<unsigned>
+MCSubtargetInfo::getCacheLineSize(unsigned Level) const {
   return std::nullopt;
 }
 

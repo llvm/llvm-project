@@ -20,11 +20,11 @@
 namespace llvm {
 
 struct XCOFFSymbolInfo {
-  Optional<XCOFF::StorageMappingClass> StorageMappingClass;
-  Optional<uint32_t> Index;
+  std::optional<XCOFF::StorageMappingClass> StorageMappingClass;
+  std::optional<uint32_t> Index;
   bool IsLabel;
-  XCOFFSymbolInfo(Optional<XCOFF::StorageMappingClass> Smc,
-                  Optional<uint32_t> Idx, bool Label)
+  XCOFFSymbolInfo(std::optional<XCOFF::StorageMappingClass> Smc,
+                  std::optional<uint32_t> Idx, bool Label)
       : StorageMappingClass(Smc), Index(Idx), IsLabel(Label) {}
 
   bool operator<(const XCOFFSymbolInfo &SymInfo) const;
@@ -44,8 +44,8 @@ private:
 
 public:
   SymbolInfoTy(uint64_t Addr, StringRef Name,
-               Optional<XCOFF::StorageMappingClass> Smc, Optional<uint32_t> Idx,
-               bool Label)
+               std::optional<XCOFF::StorageMappingClass> Smc,
+               std::optional<uint32_t> Idx, bool Label)
       : Addr(Addr), Name(Name), XCOFFSymInfo(Smc, Idx, Label), IsXCOFF(true),
         HasType(false) {}
   SymbolInfoTy(uint64_t Addr, StringRef Name, uint8_t Type,
@@ -159,7 +159,7 @@ public:
   ///                   done by buffering the output if needed.
   ///                 - None if the target doesn't want to handle the symbol
   ///                   separately. Value of Size is ignored in this case.
-  virtual Optional<DecodeStatus>
+  virtual std::optional<DecodeStatus>
   onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
                 uint64_t Address, raw_ostream &CStream) const;
   // TODO:

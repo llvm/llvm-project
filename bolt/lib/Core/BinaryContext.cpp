@@ -1461,7 +1461,7 @@ void BinaryContext::printGlobalSymbols(raw_ostream &OS) const {
 
 Expected<unsigned> BinaryContext::getDwarfFile(
     StringRef Directory, StringRef FileName, unsigned FileNumber,
-    Optional<MD5::MD5Result> Checksum, std::optional<StringRef> Source,
+    std::optional<MD5::MD5Result> Checksum, std::optional<StringRef> Source,
     unsigned CUID, unsigned DWARFVersion) {
   DwarfLineTable &Table = DwarfLineTablesCUMap[CUID];
   return Table.tryGetFile(Directory, FileName, Checksum, Source, DWARFVersion,
@@ -1645,7 +1645,7 @@ void BinaryContext::preprocessDebugInfo() {
 
     uint16_t DwarfVersion = LineTable->Prologue.getVersion();
     if (DwarfVersion >= 5) {
-      Optional<MD5::MD5Result> Checksum;
+      std::optional<MD5::MD5Result> Checksum;
       if (LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[0].Checksum;
       Optional<const char *> Name =
@@ -1683,7 +1683,7 @@ void BinaryContext::preprocessDebugInfo() {
       if (Optional<const char *> FName = dwarf::toString(FileNames[I].Name))
         FileName = *FName;
       assert(FileName != "");
-      Optional<MD5::MD5Result> Checksum;
+      std::optional<MD5::MD5Result> Checksum;
       if (DwarfVersion >= 5 && LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[I].Checksum;
       cantFail(getDwarfFile(Dir, FileName, 0, Checksum, std::nullopt, CUID,
