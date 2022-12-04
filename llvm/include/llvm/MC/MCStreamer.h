@@ -908,7 +908,7 @@ public:
   /// implements the DWARF2 '.file 4 "foo.c"' assembler directive.
   unsigned emitDwarfFileDirective(
       unsigned FileNo, StringRef Directory, StringRef Filename,
-      Optional<MD5::MD5Result> Checksum = std::nullopt,
+      std::optional<MD5::MD5Result> Checksum = std::nullopt,
       std::optional<StringRef> Source = std::nullopt, unsigned CUID = 0) {
     return cantFail(
         tryEmitDwarfFileDirective(FileNo, Directory, Filename, Checksum,
@@ -922,12 +922,12 @@ public:
   /// '.file 4 "dir/foo.c" md5 "..." source "..."' assembler directive.
   virtual Expected<unsigned> tryEmitDwarfFileDirective(
       unsigned FileNo, StringRef Directory, StringRef Filename,
-      Optional<MD5::MD5Result> Checksum = std::nullopt,
+      std::optional<MD5::MD5Result> Checksum = std::nullopt,
       std::optional<StringRef> Source = std::nullopt, unsigned CUID = 0);
 
   /// Specify the "root" file of the compilation, using the ".file 0" extension.
   virtual void emitDwarfFile0Directive(StringRef Directory, StringRef Filename,
-                                       Optional<MD5::MD5Result> Checksum,
+                                       std::optional<MD5::MD5Result> Checksum,
                                        std::optional<StringRef> Source,
                                        unsigned CUID = 0);
 
@@ -1086,7 +1086,7 @@ public:
 
   /// Record a relocation described by the .reloc directive. Return None if
   /// succeeded. Otherwise, return a pair (Name is invalid, error message).
-  virtual Optional<std::pair<bool, std::string>>
+  virtual std::optional<std::pair<bool, std::string>>
   emitRelocDirective(const MCExpr &Offset, StringRef Name, const MCExpr *Expr,
                      SMLoc Loc, const MCSubtargetInfo &STI) {
     return std::nullopt;

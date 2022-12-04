@@ -90,7 +90,7 @@ struct MCDwarfFile {
 
   /// The MD5 checksum, if there is one. Non-owning pointer to data allocated
   /// in MCContext.
-  Optional<MD5::MD5Result> Checksum;
+  std::optional<MD5::MD5Result> Checksum;
 
   /// The source code of the file. Non-owning reference to data allocated in
   /// MCContext.
@@ -271,17 +271,16 @@ public:
   MCDwarfLineTableHeader() = default;
 
   Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
-                                Optional<MD5::MD5Result> Checksum,
+                                std::optional<MD5::MD5Result> Checksum,
                                 std::optional<StringRef> Source,
-                                uint16_t DwarfVersion,
-                                unsigned FileNumber = 0);
+                                uint16_t DwarfVersion, unsigned FileNumber = 0);
   std::pair<MCSymbol *, MCSymbol *>
   Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
-       Optional<MCDwarfLineStr> &LineStr) const;
+       std::optional<MCDwarfLineStr> &LineStr) const;
   std::pair<MCSymbol *, MCSymbol *>
   Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
        ArrayRef<char> SpecialOpcodeLengths,
-       Optional<MCDwarfLineStr> &LineStr) const;
+       std::optional<MCDwarfLineStr> &LineStr) const;
   void resetMD5Usage() {
     HasAllMD5 = true;
     HasAnyMD5 = false;
@@ -295,7 +294,7 @@ public:
   }
 
   void setRootFile(StringRef Directory, StringRef FileName,
-                   Optional<MD5::MD5Result> Checksum,
+                   std::optional<MD5::MD5Result> Checksum,
                    std::optional<StringRef> Source) {
     CompilationDir = std::string(Directory);
     RootFile.Name = std::string(FileName);
@@ -316,7 +315,8 @@ public:
 
 private:
   void emitV2FileDirTables(MCStreamer *MCOS) const;
-  void emitV5FileDirTables(MCStreamer *MCOS, Optional<MCDwarfLineStr> &LineStr) const;
+  void emitV5FileDirTables(MCStreamer *MCOS,
+                           std::optional<MCDwarfLineStr> &LineStr) const;
 };
 
 class MCDwarfDwoLineTable {
@@ -325,7 +325,7 @@ class MCDwarfDwoLineTable {
 
 public:
   void maybeSetRootFile(StringRef Directory, StringRef FileName,
-                        Optional<MD5::MD5Result> Checksum,
+                        std::optional<MD5::MD5Result> Checksum,
                         std::optional<StringRef> Source) {
     if (!Header.RootFile.Name.empty())
       return;
@@ -333,8 +333,8 @@ public:
   }
 
   unsigned getFile(StringRef Directory, StringRef FileName,
-                   Optional<MD5::MD5Result> Checksum, uint16_t DwarfVersion,
-                   std::optional<StringRef> Source) {
+                   std::optional<MD5::MD5Result> Checksum,
+                   uint16_t DwarfVersion, std::optional<StringRef> Source) {
     HasSplitLineTable = true;
     return cantFail(Header.tryGetFile(Directory, FileName, Checksum, Source,
                                       DwarfVersion));
@@ -354,7 +354,7 @@ public:
 
   // This emits the Dwarf file and the line tables for a given Compile Unit.
   void emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
-              Optional<MCDwarfLineStr> &LineStr) const;
+              std::optional<MCDwarfLineStr> &LineStr) const;
 
   // This emits a single line table associated with a given Section.
   static void
@@ -362,12 +362,11 @@ public:
           const MCLineSection::MCDwarfLineEntryCollection &LineEntries);
 
   Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
-                                Optional<MD5::MD5Result> Checksum,
+                                std::optional<MD5::MD5Result> Checksum,
                                 std::optional<StringRef> Source,
-                                uint16_t DwarfVersion,
-                                unsigned FileNumber = 0);
+                                uint16_t DwarfVersion, unsigned FileNumber = 0);
   unsigned getFile(StringRef &Directory, StringRef &FileName,
-                   Optional<MD5::MD5Result> Checksum,
+                   std::optional<MD5::MD5Result> Checksum,
                    std::optional<StringRef> Source, uint16_t DwarfVersion,
                    unsigned FileNumber = 0) {
     return cantFail(tryGetFile(Directory, FileName, Checksum, Source,
@@ -375,7 +374,7 @@ public:
   }
 
   void setRootFile(StringRef Directory, StringRef FileName,
-                   Optional<MD5::MD5Result> Checksum,
+                   std::optional<MD5::MD5Result> Checksum,
                    std::optional<StringRef> Source) {
     Header.CompilationDir = std::string(Directory);
     Header.RootFile.Name = std::string(FileName);

@@ -635,12 +635,12 @@ bool MCContext::isELFGenericMergeableSection(StringRef SectionName) {
          ELFSeenGenericMergeableSections.count(SectionName);
 }
 
-Optional<unsigned> MCContext::getELFUniqueIDForEntsize(StringRef SectionName,
-                                                       unsigned Flags,
-                                                       unsigned EntrySize) {
+std::optional<unsigned>
+MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
+                                    unsigned EntrySize) {
   auto I = ELFEntrySizeMap.find(
       MCContext::ELFEntrySizeKey{SectionName, Flags, EntrySize});
-  return (I != ELFEntrySizeMap.end()) ? Optional<unsigned>(I->second)
+  return (I != ELFEntrySizeMap.end()) ? std::optional<unsigned>(I->second)
                                       : std::nullopt;
 }
 
@@ -771,9 +771,9 @@ bool MCContext::hasXCOFFSection(StringRef Section,
 
 MCSectionXCOFF *MCContext::getXCOFFSection(
     StringRef Section, SectionKind Kind,
-    Optional<XCOFF::CsectProperties> CsectProp, bool MultiSymbolsAllowed,
+    std::optional<XCOFF::CsectProperties> CsectProp, bool MultiSymbolsAllowed,
     const char *BeginSymName,
-    Optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSectionSubtypeFlags) {
+    std::optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSectionSubtypeFlags) {
   bool IsDwarfSec = DwarfSectionSubtypeFlags.has_value();
   assert((IsDwarfSec != CsectProp.has_value()) && "Invalid XCOFF section!");
 
@@ -932,7 +932,7 @@ EmitDwarfUnwindType MCContext::emitDwarfUnwindInfo() const {
 void MCContext::setGenDwarfRootFile(StringRef InputFileName, StringRef Buffer) {
   // MCDwarf needs the root file as well as the compilation directory.
   // If we find a '.file 0' directive that will supersede these values.
-  Optional<MD5::MD5Result> Cksum;
+  std::optional<MD5::MD5Result> Cksum;
   if (getDwarfVersion() >= 5) {
     MD5 Hash;
     MD5::MD5Result Sum;
@@ -969,12 +969,11 @@ void MCContext::setGenDwarfRootFile(StringRef InputFileName, StringRef Buffer) {
 /// directory tables.  If the file number has already been allocated it is an
 /// error and zero is returned and the client reports the error, else the
 /// allocated file number is returned.  The file numbers may be in any order.
-Expected<unsigned> MCContext::getDwarfFile(StringRef Directory,
-                                           StringRef FileName,
-                                           unsigned FileNumber,
-                                           Optional<MD5::MD5Result> Checksum,
-                                           std::optional<StringRef> Source,
-                                           unsigned CUID) {
+Expected<unsigned>
+MCContext::getDwarfFile(StringRef Directory, StringRef FileName,
+                        unsigned FileNumber,
+                        std::optional<MD5::MD5Result> Checksum,
+                        std::optional<StringRef> Source, unsigned CUID) {
   MCDwarfLineTable &Table = MCDwarfLineTablesCUMap[CUID];
   return Table.tryGetFile(Directory, FileName, Checksum, Source, DwarfVersion,
                           FileNumber);

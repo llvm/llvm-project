@@ -265,7 +265,7 @@ void MCDwarfLineTable::emit(MCStreamer *MCOS, MCDwarfLineTableParams Params) {
     return;
 
   // In a v5 non-split line table, put the strings in a separate section.
-  Optional<MCDwarfLineStr> LineStr;
+  std::optional<MCDwarfLineStr> LineStr;
   if (context.getDwarfVersion() >= 5)
     LineStr.emplace(context);
 
@@ -285,14 +285,14 @@ void MCDwarfDwoLineTable::Emit(MCStreamer &MCOS, MCDwarfLineTableParams Params,
                                MCSection *Section) const {
   if (!HasSplitLineTable)
     return;
-  Optional<MCDwarfLineStr> NoLineStr(std::nullopt);
+  std::optional<MCDwarfLineStr> NoLineStr(std::nullopt);
   MCOS.switchSection(Section);
   MCOS.emitLabel(Header.Emit(&MCOS, Params, std::nullopt, NoLineStr).second);
 }
 
 std::pair<MCSymbol *, MCSymbol *>
 MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
-                             Optional<MCDwarfLineStr> &LineStr) const {
+                             std::optional<MCDwarfLineStr> &LineStr) const {
   static const char StandardOpcodeLengths[] = {
       0, // length of DW_LNS_copy
       1, // length of DW_LNS_advance_pc
@@ -382,7 +382,7 @@ void MCDwarfLineTableHeader::emitV2FileDirTables(MCStreamer *MCOS) const {
 
 static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
                                bool EmitMD5, bool HasSource,
-                               Optional<MCDwarfLineStr> &LineStr) {
+                               std::optional<MCDwarfLineStr> &LineStr) {
   assert(!DwarfFile.Name.empty());
   if (LineStr)
     LineStr->emitRef(MCOS, DwarfFile.Name);
@@ -407,7 +407,7 @@ static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
 }
 
 void MCDwarfLineTableHeader::emitV5FileDirTables(
-    MCStreamer *MCOS, Optional<MCDwarfLineStr> &LineStr) const {
+    MCStreamer *MCOS, std::optional<MCDwarfLineStr> &LineStr) const {
   // The directory format, which is just a list of the directory paths.  In a
   // non-split object, these are references to .debug_line_str; in a split
   // object, they are inline strings.
@@ -482,7 +482,7 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
 std::pair<MCSymbol *, MCSymbol *>
 MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
                              ArrayRef<char> StandardOpcodeLengths,
-                             Optional<MCDwarfLineStr> &LineStr) const {
+                             std::optional<MCDwarfLineStr> &LineStr) const {
   MCContext &context = MCOS->getContext();
 
   // Create a symbol at the beginning of the line table.
@@ -548,7 +548,7 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 }
 
 void MCDwarfLineTable::emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
-                              Optional<MCDwarfLineStr> &LineStr) const {
+                              std::optional<MCDwarfLineStr> &LineStr) const {
   MCSymbol *LineEndSym = Header.Emit(MCOS, Params, LineStr).second;
 
   // Put out the line tables.
@@ -560,30 +560,28 @@ void MCDwarfLineTable::emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   MCOS->emitLabel(LineEndSym);
 }
 
-Expected<unsigned> MCDwarfLineTable::tryGetFile(StringRef &Directory,
-                                                StringRef &FileName,
-                                                Optional<MD5::MD5Result> Checksum,
-                                                std::optional<StringRef> Source,
-                                                uint16_t DwarfVersion,
-                                                unsigned FileNumber) {
+Expected<unsigned>
+MCDwarfLineTable::tryGetFile(StringRef &Directory, StringRef &FileName,
+                             std::optional<MD5::MD5Result> Checksum,
+                             std::optional<StringRef> Source,
+                             uint16_t DwarfVersion, unsigned FileNumber) {
   return Header.tryGetFile(Directory, FileName, Checksum, Source, DwarfVersion,
                            FileNumber);
 }
 
 static bool isRootFile(const MCDwarfFile &RootFile, StringRef &Directory,
-                       StringRef &FileName, Optional<MD5::MD5Result> Checksum) {
+                       StringRef &FileName,
+                       std::optional<MD5::MD5Result> Checksum) {
   if (RootFile.Name.empty() || StringRef(RootFile.Name) != FileName)
     return false;
   return RootFile.Checksum == Checksum;
 }
 
 Expected<unsigned>
-MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
-                                   StringRef &FileName,
-                                   Optional<MD5::MD5Result> Checksum,
+MCDwarfLineTableHeader::tryGetFile(StringRef &Directory, StringRef &FileName,
+                                   std::optional<MD5::MD5Result> Checksum,
                                    std::optional<StringRef> Source,
-                                   uint16_t DwarfVersion,
-                                   unsigned FileNumber) {
+                                   uint16_t DwarfVersion, unsigned FileNumber) {
   if (Directory == CompilationDir)
     Directory = "";
   if (FileName.empty()) {

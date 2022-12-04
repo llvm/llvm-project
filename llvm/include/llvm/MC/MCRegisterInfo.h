@@ -514,7 +514,7 @@ public:
 
   /// Map a dwarf register back to a target register. Returns None is there is
   /// no mapping.
-  Optional<unsigned> getLLVMRegNum(unsigned RegNum, bool isEH) const;
+  std::optional<unsigned> getLLVMRegNum(unsigned RegNum, bool isEH) const;
 
   /// Map a target EH register number to an equivalent DWARF register
   /// number.

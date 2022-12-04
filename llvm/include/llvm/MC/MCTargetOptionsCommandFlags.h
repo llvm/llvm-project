@@ -25,7 +25,7 @@ enum class EmitDwarfUnwindType;
 namespace mc {
 
 bool getRelaxAll();
-Optional<bool> getExplicitRelaxAll();
+std::optional<bool> getExplicitRelaxAll();
 
 bool getIncrementalLinkerCompatible();
 

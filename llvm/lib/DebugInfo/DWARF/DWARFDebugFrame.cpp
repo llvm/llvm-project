@@ -33,7 +33,7 @@ using namespace dwarf;
 static void printRegister(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
                           unsigned RegNum) {
   if (MRI) {
-    if (Optional<unsigned> LLVMRegNum = MRI->getLLVMRegNum(RegNum, IsEH)) {
+    if (std::optional<unsigned> LLVMRegNum = MRI->getLLVMRegNum(RegNum, IsEH)) {
       if (const char *RegName = MRI->getName(*LLVMRegNum)) {
         OS << RegName;
         return;

@@ -863,7 +863,7 @@ addDynamicElfSymbols(const ELFObjectFileBase &Obj,
     llvm_unreachable("Unsupported binary format");
 }
 
-static Optional<SectionRef> getWasmCodeSection(const WasmObjectFile &Obj) {
+static std::optional<SectionRef> getWasmCodeSection(const WasmObjectFile &Obj) {
   for (auto SecI : Obj.sections()) {
     const WasmSection &Section = Obj.getWasmSection(SecI);
     if (Section.Type == wasm::WASM_SEC_CODE)
@@ -875,7 +875,7 @@ static Optional<SectionRef> getWasmCodeSection(const WasmObjectFile &Obj) {
 static void
 addMissingWasmCodeSymbols(const WasmObjectFile &Obj,
                           std::map<SectionRef, SectionSymbolsTy> &AllSymbols) {
-  Optional<SectionRef> Section = getWasmCodeSection(Obj);
+  std::optional<SectionRef> Section = getWasmCodeSection(Obj);
   if (!Section)
     return;
   SectionSymbolsTy &Symbols = AllSymbols[*Section];
@@ -1084,7 +1084,7 @@ SymbolInfoTy objdump::createSymbolInfo(const ObjectFile &Obj,
     DataRefImpl SymbolDRI = Symbol.getRawDataRefImpl();
 
     const uint32_t SymbolIndex = XCOFFObj.getSymbolIndex(SymbolDRI.p);
-    Optional<XCOFF::StorageMappingClass> Smc =
+    std::optional<XCOFF::StorageMappingClass> Smc =
         getXCOFFSymbolCsectSMC(XCOFFObj, Symbol);
     return SymbolInfoTy(Addr, Name, Smc, SymbolIndex,
                         isLabel(XCOFFObj, Symbol));
@@ -1823,7 +1823,7 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
             bool PrintTarget =
                 MIA->evaluateBranch(Inst, SectionAddr + Index, Size, Target);
             if (!PrintTarget)
-              if (Optional<uint64_t> MaybeTarget =
+              if (std::optional<uint64_t> MaybeTarget =
                       MIA->evaluateMemoryOperandAddress(
                           Inst, STI, SectionAddr + Index, Size)) {
                 Target = *MaybeTarget;
@@ -2480,7 +2480,7 @@ void objdump::printSymbol(const ObjectFile &O, const SymbolRef &Symbol,
     StringRef SectionName = unwrapOrError(Section->getName(), FileName);
     outs() << SectionName;
     if (O.isXCOFF()) {
-      Optional<SymbolRef> SymRef =
+      std::optional<SymbolRef> SymRef =
           getXCOFFSymbolContainingSymbolRef(cast<XCOFFObjectFile>(O), Symbol);
       if (SymRef) {
 
