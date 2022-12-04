@@ -52,25 +52,12 @@ getBufferizationOptions(bool analysisOnly) {
 void mlir::sparse_tensor::buildSparseCompiler(
     OpPassManager &pm, const SparseCompilerOptions &options) {
   pm.addNestedPass<func::FuncOp>(createLinalgGeneralizationPass());
-  pm.addPass(
-      bufferization::createTensorCopyInsertionPass(getBufferizationOptions(
-          /*analysisOnly=*/options.testBufferizationAnalysisOnly)));
+  pm.addPass(createSparsificationAndBufferizationPass(
+      getBufferizationOptions(options.testBufferizationAnalysisOnly),
+      options.sparsificationOptions(), options.sparseTensorConversionOptions(),
+      options.enableRuntimeLibrary, options.enableBufferInitialization));
   if (options.testBufferizationAnalysisOnly)
     return;
-  pm.addPass(createPreSparsificationRewritePass());
-  pm.addPass(createSparsificationPass(options.sparsificationOptions()));
-  pm.addPass(createPostSparsificationRewritePass(options.enableRuntimeLibrary));
-  if (options.enableRuntimeLibrary) {
-    pm.addPass(createSparseTensorConversionPass(
-        options.sparseTensorConversionOptions()));
-  } else {
-    pm.addPass(
-        createSparseTensorCodegenPass(options.enableBufferInitialization));
-    pm.addPass(
-        createSparseBufferRewritePass(options.enableBufferInitialization));
-  }
-  pm.addPass(createDenseBufferizationPass(
-      getBufferizationOptions(/*analysisOnly=*/false)));
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
   pm.addNestedPass<func::FuncOp>(
       mlir::bufferization::createFinalizingBufferizePass());
