@@ -621,20 +621,21 @@ public:
     return BaseT::emitGetActiveLaneMask();
   }
 
-  std::optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
+  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
                                                IntrinsicInst &II) {
     return BaseT::instCombineIntrinsic(IC, II);
   }
 
-  std::optional<Value *>
-  simplifyDemandedUseBitsIntrinsic(InstCombiner &IC, IntrinsicInst &II,
-                                   APInt DemandedMask, KnownBits &Known,
-                                   bool &KnownBitsComputed) {
+  Optional<Value *> simplifyDemandedUseBitsIntrinsic(InstCombiner &IC,
+                                                     IntrinsicInst &II,
+                                                     APInt DemandedMask,
+                                                     KnownBits &Known,
+                                                     bool &KnownBitsComputed) {
     return BaseT::simplifyDemandedUseBitsIntrinsic(IC, II, DemandedMask, Known,
                                                    KnownBitsComputed);
   }
 
-  std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
+  Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
       InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
       APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
@@ -644,15 +645,15 @@ public:
         SimplifyAndSetOp);
   }
 
-  virtual std::optional<unsigned>
+  virtual Optional<unsigned>
   getCacheSize(TargetTransformInfo::CacheLevel Level) const {
-    return std::optional<unsigned>(
-        getST()->getCacheSize(static_cast<unsigned>(Level)));
+    return Optional<unsigned>(
+      getST()->getCacheSize(static_cast<unsigned>(Level)));
   }
 
-  virtual std::optional<unsigned>
+  virtual Optional<unsigned>
   getCacheAssociativity(TargetTransformInfo::CacheLevel Level) const {
-    std::optional<unsigned> TargetResult =
+    Optional<unsigned> TargetResult =
         getST()->getCacheAssociativity(static_cast<unsigned>(Level));
 
     if (TargetResult)
@@ -2282,7 +2283,7 @@ public:
   }
 
   InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                             std::optional<FastMathFlags> FMF,
+                                             Optional<FastMathFlags> FMF,
                                              TTI::TargetCostKind CostKind) {
     if (TTI::requiresOrderedReduction(FMF))
       return getOrderedReductionCost(Opcode, Ty, CostKind);
@@ -2356,7 +2357,7 @@ public:
 
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *Ty,
-                                           std::optional<FastMathFlags> FMF,
+                                           Optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind) {
     // Without any native support, this is equivalent to the cost of
     // vecreduce.opcode(ext(Ty A)).

@@ -20,7 +20,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include <optional>
 
 namespace llvm {
 
@@ -42,8 +41,8 @@ public:
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  std::optional<Instruction *> instCombineIntrinsic(InstCombiner & IC,
-                                                    IntrinsicInst & II) const;
+  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
+                                               IntrinsicInst &II) const;
 
   /// \name Scalar TTI Implementations
   /// @{

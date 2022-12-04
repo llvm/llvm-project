@@ -26,7 +26,6 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/SubtargetFeature.h"
-#include <optional>
 
 namespace llvm {
 
@@ -119,9 +118,9 @@ public:
     return !ST->isTargetDarwin() && !ST->hasMVEFloatOps();
   }
 
-  std::optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
-                                                    IntrinsicInst &II) const;
-  std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
+  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
+                                               IntrinsicInst &II) const;
+  Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
       InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
       APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
@@ -275,11 +274,11 @@ public:
                                          const Instruction *I = nullptr);
 
   InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
-                                             std::optional<FastMathFlags> FMF,
+                                             Optional<FastMathFlags> FMF,
                                              TTI::TargetCostKind CostKind);
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *ValTy,
-                                           std::optional<FastMathFlags> FMF,
+                                           Optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind);
   InstructionCost getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
                                          VectorType *ValTy,

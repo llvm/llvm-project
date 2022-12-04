@@ -20,7 +20,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
-#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -309,20 +308,20 @@ PredicationStyle TargetTransformInfo::emitGetActiveLaneMask() const {
   return TTIImpl->emitGetActiveLaneMask();
 }
 
-std::optional<Instruction *>
+Optional<Instruction *>
 TargetTransformInfo::instCombineIntrinsic(InstCombiner &IC,
                                           IntrinsicInst &II) const {
   return TTIImpl->instCombineIntrinsic(IC, II);
 }
 
-std::optional<Value *> TargetTransformInfo::simplifyDemandedUseBitsIntrinsic(
+Optional<Value *> TargetTransformInfo::simplifyDemandedUseBitsIntrinsic(
     InstCombiner &IC, IntrinsicInst &II, APInt DemandedMask, KnownBits &Known,
     bool &KnownBitsComputed) const {
   return TTIImpl->simplifyDemandedUseBitsIntrinsic(IC, II, DemandedMask, Known,
                                                    KnownBitsComputed);
 }
 
-std::optional<Value *> TargetTransformInfo::simplifyDemandedVectorEltsIntrinsic(
+Optional<Value *> TargetTransformInfo::simplifyDemandedVectorEltsIntrinsic(
     InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
     APInt &UndefElts2, APInt &UndefElts3,
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
@@ -690,12 +689,12 @@ unsigned TargetTransformInfo::getCacheLineSize() const {
                                                : TTIImpl->getCacheLineSize();
 }
 
-std::optional<unsigned>
+llvm::Optional<unsigned>
 TargetTransformInfo::getCacheSize(CacheLevel Level) const {
   return TTIImpl->getCacheSize(Level);
 }
 
-std::optional<unsigned>
+llvm::Optional<unsigned>
 TargetTransformInfo::getCacheAssociativity(CacheLevel Level) const {
   return TTIImpl->getCacheAssociativity(Level);
 }
@@ -1001,7 +1000,7 @@ InstructionCost TargetTransformInfo::getMemcpyCost(const Instruction *I) const {
 }
 
 InstructionCost TargetTransformInfo::getArithmeticReductionCost(
-    unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
+    unsigned Opcode, VectorType *Ty, Optional<FastMathFlags> FMF,
     TTI::TargetCostKind CostKind) const {
   InstructionCost Cost =
       TTIImpl->getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
@@ -1020,7 +1019,7 @@ InstructionCost TargetTransformInfo::getMinMaxReductionCost(
 
 InstructionCost TargetTransformInfo::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
-    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) const {
+    Optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) const {
   return TTIImpl->getExtendedReductionCost(Opcode, IsUnsigned, ResTy, Ty, FMF,
                                            CostKind);
 }
@@ -1053,7 +1052,7 @@ Value *TargetTransformInfo::getOrCreateResultFromMemIntrinsic(
 Type *TargetTransformInfo::getMemcpyLoopLoweringType(
     LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
     unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
-    std::optional<uint32_t> AtomicElementSize) const {
+    Optional<uint32_t> AtomicElementSize) const {
   return TTIImpl->getMemcpyLoopLoweringType(Context, Length, SrcAddrSpace,
                                             DestAddrSpace, SrcAlign, DestAlign,
                                             AtomicElementSize);
@@ -1063,7 +1062,7 @@ void TargetTransformInfo::getMemcpyLoopResidualLoweringType(
     SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
     unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
     unsigned SrcAlign, unsigned DestAlign,
-    std::optional<uint32_t> AtomicCpySize) const {
+    Optional<uint32_t> AtomicCpySize) const {
   TTIImpl->getMemcpyLoopResidualLoweringType(
       OpsOut, Context, RemainingBytes, SrcAddrSpace, DestAddrSpace, SrcAlign,
       DestAlign, AtomicCpySize);

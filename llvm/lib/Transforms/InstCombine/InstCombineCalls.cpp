@@ -72,7 +72,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <optional>
 #include <utility>
 #include <vector>
 
@@ -2828,7 +2827,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   default: {
     // Handle target specific intrinsics
-    std::optional<Instruction *> V = targetInstCombineIntrinsic(*II);
+    Optional<Instruction *> V = targetInstCombineIntrinsic(*II);
     if (V)
       return V.value();
     break;

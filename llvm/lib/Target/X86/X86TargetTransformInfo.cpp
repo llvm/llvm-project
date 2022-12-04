@@ -56,7 +56,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/Debug.h"
-#include <optional>
 
 using namespace llvm;
 
@@ -76,7 +75,7 @@ struct CostKindCosts {
   unsigned CodeSizeCost = ~0U;
   unsigned SizeAndLatencyCost = ~0U;
 
-  std::optional<unsigned>
+  llvm::Optional<unsigned>
   operator[](TargetTransformInfo::TargetCostKind Kind) const {
     unsigned Cost = ~0U;
     switch (Kind) {
@@ -94,7 +93,7 @@ struct CostKindCosts {
       break;
     }
     if (Cost == ~0U)
-      return std::nullopt;
+      return None;
     return Cost;
   }
 };
@@ -109,7 +108,7 @@ X86TTIImpl::getPopcntSupport(unsigned TyWidth) {
   return ST->hasPOPCNT() ? TTI::PSK_FastHardware : TTI::PSK_Software;
 }
 
-std::optional<unsigned> X86TTIImpl::getCacheSize(
+llvm::Optional<unsigned> X86TTIImpl::getCacheSize(
   TargetTransformInfo::CacheLevel Level) const {
   switch (Level) {
   case TargetTransformInfo::CacheLevel::L1D:
@@ -139,7 +138,7 @@ std::optional<unsigned> X86TTIImpl::getCacheSize(
   llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
 }
 
-std::optional<unsigned> X86TTIImpl::getCacheAssociativity(
+llvm::Optional<unsigned> X86TTIImpl::getCacheAssociativity(
   TargetTransformInfo::CacheLevel Level) const {
   //   - Penryn
   //   - Nehalem
@@ -4910,7 +4909,7 @@ InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
 
 InstructionCost
 X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
-                                       std::optional<FastMathFlags> FMF,
+                                       Optional<FastMathFlags> FMF,
                                        TTI::TargetCostKind CostKind) {
   if (TTI::requiresOrderedReduction(FMF))
     return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
