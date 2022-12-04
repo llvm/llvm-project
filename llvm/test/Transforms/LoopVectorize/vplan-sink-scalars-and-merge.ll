@@ -574,7 +574,7 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT: next.0:
 ; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.0>
 ; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = select vp<[[MASK1]]> vp<[[NOT]]> ir<false>
-; CHECK-NEXT:   BLEND %p = ir<0>/vp<%14> vp<%12>/vp<%9>
+; CHECK-NEXT:   BLEND %p = ir<0>/vp<[[MASK3]]> vp<[[PRED]]>/vp<[[MASK2]]>
 ; CHECK-NEXT: Successor(s): then.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.1:
