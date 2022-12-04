@@ -4957,7 +4957,7 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoExportsTrie() const {
   return makeArrayRef(Ptr, DyldInfo.export_size);
 }
 
-Expected<Optional<MachO::linkedit_data_command>>
+Expected<std::optional<MachO::linkedit_data_command>>
 MachOObjectFile::getChainedFixupsLoadCommand() const {
   // Load the dyld chained fixups load command.
   if (!DyldChainedFixupsLoadCmd)
@@ -4976,7 +4976,7 @@ MachOObjectFile::getChainedFixupsLoadCommand() const {
   return DyldChainedFixups;
 }
 
-Expected<Optional<MachO::dyld_chained_fixups_header>>
+Expected<std::optional<MachO::dyld_chained_fixups_header>>
 MachOObjectFile::getChainedFixupsHeader() const {
   auto CFOrErr = getChainedFixupsLoadCommand();
   if (!CFOrErr)
