@@ -1080,9 +1080,9 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     InductionDescriptor IndDesc;
     VPScalarIVStepsRecipe Recipe(IndDesc, &Op1, &Op2);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
-    EXPECT_TRUE(Recipe.mayReadFromMemory());
-    EXPECT_TRUE(Recipe.mayWriteToMemory());
-    EXPECT_TRUE(Recipe.mayReadOrWriteMemory());
+    EXPECT_FALSE(Recipe.mayReadFromMemory());
+    EXPECT_FALSE(Recipe.mayWriteToMemory());
+    EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
   }
 
   // The initial implementation is conservative with respect to VPInstructions.
