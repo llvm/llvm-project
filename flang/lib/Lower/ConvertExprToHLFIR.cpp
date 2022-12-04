@@ -479,6 +479,7 @@ struct BinaryOp<Fortran::evaluate::LogicalOperation<KIND>> {
       // lib/evaluate expression for .NOT. is Fortran::evaluate::Not<KIND>.
       llvm_unreachable(".NOT. is not a binary operator");
     }
+    llvm_unreachable("unhandled logical operation");
   }
 };
 
