@@ -3797,8 +3797,10 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
   }
 
   // Configure the diagnostics.
+  std::unique_ptr<DiagnosticOptions> DiagOpts = CreateAndPopulateDiagOpts(
+      llvm::makeArrayRef(command_line_args, num_command_line_args));
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      CompilerInstance::createDiagnostics(new DiagnosticOptions));
+      CompilerInstance::createDiagnostics(DiagOpts.release()));
 
   if (options & CXTranslationUnit_KeepGoing)
     Diags->setFatalsAsError(true);
