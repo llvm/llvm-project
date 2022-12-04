@@ -38,17 +38,17 @@ public:
   llvm::DenseSet<const VarDecl *> &S;
 
   bool TraverseObjCAtFinallyStmt(ObjCAtFinallyStmt *S) {
-    SaveAndRestore<bool> inFinally(inEH, true);
+    SaveAndRestore inFinally(inEH, true);
     return ::RecursiveASTVisitor<EHCodeVisitor>::TraverseObjCAtFinallyStmt(S);
   }
 
   bool TraverseObjCAtCatchStmt(ObjCAtCatchStmt *S) {
-    SaveAndRestore<bool> inCatch(inEH, true);
+    SaveAndRestore inCatch(inEH, true);
     return ::RecursiveASTVisitor<EHCodeVisitor>::TraverseObjCAtCatchStmt(S);
   }
 
   bool TraverseCXXCatchStmt(CXXCatchStmt *S) {
-    SaveAndRestore<bool> inCatch(inEH, true);
+    SaveAndRestore inCatch(inEH, true);
     return TraverseStmt(S->getHandlerBlock());
   }
 
