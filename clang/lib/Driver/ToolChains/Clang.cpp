@@ -6314,6 +6314,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
             << A->getAsString(Args) << TripleStr;
     }
   }
+  if (Arg *A = Args.getLastArgNoClaim(options::OPT_p)) {
+    if (!TC.getTriple().isOSAIX() && !TC.getTriple().isOSOpenBSD()) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << TripleStr;
+    }
+  }
 
   if (Args.getLastArg(options::OPT_fapple_kext) ||
       (Args.hasArg(options::OPT_mkernel) && types::isCXX(InputType)))
