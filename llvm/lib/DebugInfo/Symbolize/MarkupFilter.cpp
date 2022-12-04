@@ -496,7 +496,7 @@ void MarkupFilter::printValue(Twine Value) {
 #define ASSIGN_OR_RETURN_NONE(TYPE, NAME, EXPR)                                \
   auto NAME##Opt = (EXPR);                                                     \
   if (!NAME##Opt)                                                              \
-    return None;                                                               \
+    return std::nullopt;                                                       \
   TYPE NAME = std::move(*NAME##Opt)
 
 Optional<MarkupFilter::Module>
