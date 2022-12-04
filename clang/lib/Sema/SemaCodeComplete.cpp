@@ -6193,7 +6193,7 @@ QualType Sema::ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
 //     Only aggregate initialization is possible, but we can't assist with it.
 //     Returns an out-of-range index.
 //   - we saw no designators, just positional arguments.
-//     Returns None.
+//     Returns std::nullopt.
 static llvm::Optional<unsigned>
 getNextAggregateIndexAfterDesignatedInit(const ResultCandidate &Aggregate,
                                          ArrayRef<Expr *> Args) {

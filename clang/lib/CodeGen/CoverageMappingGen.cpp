@@ -325,7 +325,7 @@ public:
 
   /// Get the coverage mapping file ID for \c Loc.
   ///
-  /// If such file id doesn't exist, return None.
+  /// If such file id doesn't exist, return std::nullopt.
   Optional<unsigned> getCoverageFileID(SourceLocation Loc) {
     auto Mapping = FileIDMapping.find(SM.getFileID(Loc));
     if (Mapping != FileIDMapping.end())
@@ -335,7 +335,7 @@ public:
 
   /// This shrinks the skipped range if it spans a line that contains a
   /// non-comment token. If shrinking the skipped range would make it empty,
-  /// this returns None.
+  /// this returns std::nullopt.
   /// Note this function can potentially be expensive because
   /// getSpellingLineNumber uses getLineNumber, which is expensive.
   Optional<SpellingRegion> adjustSkippedRange(SourceManager &SM,
