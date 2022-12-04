@@ -147,10 +147,6 @@ private:
   // Get start/end section marker pointer.
   GlobalVariable *getSectionMarker(const Twine &MarkerName, Type *Ty);
 
-  // Create a 0-sized object in a section, so that the section is not discarded
-  // if all inputs have been discarded.
-  void createZeroSizedObjectInSection(Type *Ty, StringRef SectionSuffix);
-
   // Returns the target-dependent section name.
   StringRef getSectionName(StringRef SectionSuffix);
 
@@ -213,7 +209,6 @@ bool SanitizerBinaryMetadata::run() {
     }
     appendToGlobalCtors(Mod, Ctor, kCtorDtorPriority, CtorData);
     appendToGlobalDtors(Mod, Dtor, kCtorDtorPriority, DtorData);
-    createZeroSizedObjectInSection(Int8PtrTy, MI->SectionSuffix);
   }
 
   return true;
@@ -285,25 +280,13 @@ bool SanitizerBinaryMetadata::runOn(Instruction &I, MetadataInfoSet &MIS,
 
 GlobalVariable *
 SanitizerBinaryMetadata::getSectionMarker(const Twine &MarkerName, Type *Ty) {
+  // Use ExternalWeak so that if all sections are discarded due to section
+  // garbage collection, the linker will not report undefined symbol errors.
   auto *Marker = new GlobalVariable(Mod, Ty, /*isConstant=*/false,
-                                    GlobalVariable::ExternalLinkage,
+                                    GlobalVariable::ExternalWeakLinkage,
                                     /*Initializer=*/nullptr, MarkerName);
   Marker->setVisibility(GlobalValue::HiddenVisibility);
   return Marker;
-}
-
-void SanitizerBinaryMetadata::createZeroSizedObjectInSection(
-    Type *Ty, StringRef SectionSuffix) {
-  auto *DummyInit = ConstantAggregateZero::get(ArrayType::get(Ty, 0));
-  auto *DummyEntry = new GlobalVariable(Mod, DummyInit->getType(), true,
-                                        GlobalVariable::ExternalLinkage,
-                                        DummyInit, "__dummy_" + SectionSuffix);
-  DummyEntry->setSection(getSectionName(SectionSuffix));
-  DummyEntry->setVisibility(GlobalValue::HiddenVisibility);
-  if (TargetTriple.supportsCOMDAT())
-    DummyEntry->setComdat(Mod.getOrInsertComdat(DummyEntry->getName()));
-  // Make sure the section isn't discarded by gc-sections.
-  appendToUsed(Mod, DummyEntry);
 }
 
 StringRef SanitizerBinaryMetadata::getSectionName(StringRef SectionSuffix) {
