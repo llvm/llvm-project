@@ -1059,8 +1059,8 @@ int SlotTracker::processIndex() {
   // assigned consecutively. Since the StringMap iteration order isn't
   // guaranteed, use a std::map to order by module ID before assigning slots.
   std::map<uint64_t, StringRef> ModuleIdToPathMap;
-  for (auto &ModPath : TheIndex->modulePaths())
-    ModuleIdToPathMap[ModPath.second.first] = ModPath.first();
+  for (auto &[ModPath, ModId] : TheIndex->modulePaths())
+    ModuleIdToPathMap[ModId.first] = ModPath;
   for (auto &ModPair : ModuleIdToPathMap)
     CreateModulePathSlot(ModPair.second);
 
@@ -2875,13 +2875,12 @@ void AssemblyWriter::printModuleSummaryIndex() {
   std::string RegularLTOModuleName =
       ModuleSummaryIndex::getRegularLTOModuleName();
   moduleVec.resize(TheIndex->modulePaths().size());
-  for (auto &ModPath : TheIndex->modulePaths())
-    moduleVec[Machine.getModulePathSlot(ModPath.first())] = std::make_pair(
+  for (auto &[ModPath, ModId] : TheIndex->modulePaths())
+    moduleVec[Machine.getModulePathSlot(ModPath)] = std::make_pair(
         // A module id of -1 is a special entry for a regular LTO module created
         // during the thin link.
-        ModPath.second.first == -1u ? RegularLTOModuleName
-                                    : (std::string)std::string(ModPath.first()),
-        ModPath.second.second);
+        ModId.first == -1u ? RegularLTOModuleName : std::string(ModPath),
+        ModId.second);
 
   unsigned i = 0;
   for (auto &ModPair : moduleVec) {

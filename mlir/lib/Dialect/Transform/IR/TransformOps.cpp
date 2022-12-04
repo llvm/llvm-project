@@ -88,8 +88,8 @@ LogicalResult PatternApplicatorExtension::findAllMatches(
     // also used by the following operations.
     auto *dialect =
         root->getContext()->getLoadedDialect<transform::TransformDialect>();
-    for (const auto &pair : dialect->getPDLConstraintHooks())
-      patternModule.registerConstraintFunction(pair.first(), pair.second);
+    for (const auto &[name, constraintFn] : dialect->getPDLConstraintHooks())
+      patternModule.registerConstraintFunction(name, constraintFn);
 
     // Register a noop rewriter because PDL requires patterns to end with some
     // rewrite call.
