@@ -933,7 +933,7 @@ MipsInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   return makeArrayRef(Flags);
 }
 
-Optional<ParamLoadedValue>
+std::optional<ParamLoadedValue>
 MipsInstrInfo::describeLoadedValue(const MachineInstr &MI, Register Reg) const {
   DIExpression *Expr =
       DIExpression::get(MI.getMF()->getFunction().getContext(), {});
@@ -962,8 +962,8 @@ MipsInstrInfo::describeLoadedValue(const MachineInstr &MI, Register Reg) const {
   return TargetInstrInfo::describeLoadedValue(MI, Reg);
 }
 
-Optional<RegImmPair> MipsInstrInfo::isAddImmediate(const MachineInstr &MI,
-                                                   Register Reg) const {
+std::optional<RegImmPair> MipsInstrInfo::isAddImmediate(const MachineInstr &MI,
+                                                        Register Reg) const {
   // TODO: Handle cases where Reg is a super- or sub-register of the
   // destination register.
   const MachineOperand &Op0 = MI.getOperand(0);

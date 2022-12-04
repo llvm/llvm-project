@@ -89,7 +89,7 @@ inline bool isRefType(wasm::ValType Type) {
 
 // Convert StringRef to ValType / HealType / BlockType
 
-Optional<wasm::ValType> parseType(StringRef Type);
+std::optional<wasm::ValType> parseType(StringRef Type);
 BlockType parseBlockType(StringRef Type);
 MVT parseMVT(StringRef Type);
 

@@ -2581,8 +2581,8 @@ static unsigned MatchNeonVectorRegName(StringRef Name) {
 /// is a valid vector kind. Where the number of elements in a vector
 /// or the vector width is implicit or explicitly unknown (but still a
 /// valid suffix kind), 0 is used.
-static Optional<std::pair<int, int>> parseVectorKind(StringRef Suffix,
-                                                     RegKind VectorKind) {
+static std::optional<std::pair<int, int>> parseVectorKind(StringRef Suffix,
+                                                          RegKind VectorKind) {
   std::pair<int, int> Res = {-1, -1};
 
   switch (VectorKind) {
@@ -2633,7 +2633,7 @@ static Optional<std::pair<int, int>> parseVectorKind(StringRef Suffix,
   if (Res == std::make_pair(-1, -1))
     return std::nullopt;
 
-  return Optional<std::pair<int, int>>(Res);
+  return std::optional<std::pair<int, int>>(Res);
 }
 
 static bool isValidVectorKind(StringRef Suffix, RegKind VectorKind) {
@@ -3026,19 +3026,19 @@ AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
   auto LookupByName = [](StringRef N) {
     if (IsSVEPrefetch) {
       if (auto Res = AArch64SVEPRFM::lookupSVEPRFMByName(N))
-        return Optional<unsigned>(Res->Encoding);
+        return std::optional<unsigned>(Res->Encoding);
     } else if (auto Res = AArch64PRFM::lookupPRFMByName(N))
-      return Optional<unsigned>(Res->Encoding);
-    return Optional<unsigned>();
+      return std::optional<unsigned>(Res->Encoding);
+    return std::optional<unsigned>();
   };
 
   auto LookupByEncoding = [](unsigned E) {
     if (IsSVEPrefetch) {
       if (auto Res = AArch64SVEPRFM::lookupSVEPRFMByEncoding(E))
-        return Optional<StringRef>(Res->Name);
+        return std::optional<StringRef>(Res->Name);
     } else if (auto Res = AArch64PRFM::lookupPRFMByEncoding(E))
-      return Optional<StringRef>(Res->Name);
-    return Optional<StringRef>();
+      return std::optional<StringRef>(Res->Name);
+    return std::optional<StringRef>();
   };
   unsigned MaxVal = IsSVEPrefetch ? 15 : 31;
 
@@ -4326,7 +4326,7 @@ AArch64AsmParser::tryParseMatrixTileList(OperandVector &Operands) {
       return MatchOperand_NoMatch;
 
     StringRef Tail = Name.drop_front(DotPosition);
-    const Optional<std::pair<int, int>> &KindRes =
+    const std::optional<std::pair<int, int>> &KindRes =
         parseVectorKind(Tail, RegKind::Matrix);
     if (!KindRes) {
       TokError("Expected the register to be followed by element width suffix");
