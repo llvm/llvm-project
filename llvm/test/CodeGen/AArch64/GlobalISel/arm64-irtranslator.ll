@@ -284,7 +284,7 @@ define i64* @trivial_bitcast(i8* %a) {
 }
 
 ; CHECK-LABEL: name: trivial_bitcast_with_copy
-; CHECK:     [[A:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK:     [[A:%[0-9]+]]:_(s64) = COPY $d0
 ; CHECK:     G_BR %[[CAST:bb\.[0-9]+]]
 
 ; CHECK: [[END:bb\.[0-9]+]].{{[a-zA-Z0-9.]+}}:
@@ -292,14 +292,14 @@ define i64* @trivial_bitcast(i8* %a) {
 
 ; CHECK: [[CAST]].{{[a-zA-Z0-9.]+}}:
 ; CHECK:     G_BR %[[END]]
-define i64* @trivial_bitcast_with_copy(i8* %a) {
+define i64 @trivial_bitcast_with_copy(double %a) {
   br label %cast
 
 end:
-  ret i64* %val
+  ret i64 %val
 
 cast:
-  %val = bitcast i8* %a to i64*
+  %val = bitcast double %a to i64
   br label %end
 }
 
