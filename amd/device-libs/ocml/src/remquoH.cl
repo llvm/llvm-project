@@ -18,6 +18,16 @@ MATH_MANGLE2(remquo)(half2 x, half2 y, __private int2 *q7p)
     return r;
 }
 
+__ocml_remquo_2f16_result
+MATH_MANGLE2(remquo2)(half2 x, half2 y)
+{
+    __ocml_remquo_f16_result lo = MATH_MANGLE(remquo2)(x.lo, y.lo);
+    __ocml_remquo_f16_result hi = MATH_MANGLE(remquo2)(x.hi, y.hi);
+    __ocml_remquo_2f16_result result = { (half2)(lo.rem, hi.rem),
+                                         (int2)(lo.quo, hi.quo) };
+    return result;
+}
+
 #define COMPILING_REMQUO
 #include "remainderH_base.h"
 

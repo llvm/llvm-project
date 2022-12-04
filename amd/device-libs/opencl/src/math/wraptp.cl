@@ -118,7 +118,11 @@ F(T##2 x, T##2 y, A P##2 * v) \
     PWRAPTAP(F,T,__global,P) \
     PWRAPTAP(F,T,,P)
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated"
+
 SWRAPTP(remquo,float,int)
 SWRAPTP(remquo,double,int)
 PWRAPTP(remquo,half,int)
 
+#pragma clang diagnostic pop

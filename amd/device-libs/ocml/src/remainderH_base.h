@@ -15,8 +15,8 @@ samesign(half x, half y)
 REQUIRES_16BIT_INSTS CONSTATTR half
 MATH_MANGLE(fmod)(half x, half y)
 #elif defined(COMPILING_REMQUO)
-REQUIRES_16BIT_INSTS half
-MATH_MANGLE(remquo)(half x, half y, __private int *q7p)
+REQUIRES_16BIT_INSTS __ocml_remquo_f16_result
+MATH_MANGLE(remquo2)(half x, half y)
 #else
 REQUIRES_16BIT_INSTS CONSTATTR half
 MATH_MANGLE(remainder)(half x, half y)
@@ -136,8 +136,17 @@ MATH_MANGLE(remainder)(half x, half y)
     }
 
 #if defined(COMPILING_REMQUO)
-    *q7p = q7;
-#endif
+    __ocml_remquo_f16_result result = { ret, q7 };
+    return result;
+#else
     return ret;
+#endif
 }
 
+#if defined(COMPILING_REMQUO)
+half MATH_MANGLE(remquo)(half x, half y, __private int *q7p) {
+    __ocml_remquo_f16_result result = MATH_MANGLE(remquo2)(x, y);
+    *q7p = result.quo;
+    return result.rem;
+}
+#endif

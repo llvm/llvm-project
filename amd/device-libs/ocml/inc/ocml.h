@@ -20,6 +20,8 @@
 #define FP_SUBNORMAL 3
 #define FP_NORMAL 4
 
+#define OCML_DEPRECATED(X, Replacement) __attribute__((deprecated("use "#Replacement " instead", Replacement)))
+
 #define _MANGLE3(P,N,S) P##_##N##_##S
 #define MANGLE3(P,N,S) _MANGLE3(P,N,S)
 #define OCML_MANGLE_F32(N) MANGLE3(__ocml, N, f32)
@@ -186,6 +188,15 @@ extern __attribute__((pure)) float OCML_MANGLE_F32(pown)(float, int);
 extern __attribute__((pure)) float OCML_MANGLE_F32(rootn)(float, int);
 DECL_CONST_OCML_UNARY_F32(pred)
 DECL_CONST_OCML_BINARY_F32(remainder)
+
+typedef struct __ocml_remquo_f32_result {
+    float rem;
+    int quo;
+} __ocml_remquo_f32_result;
+
+extern __ocml_remquo_f32_result OCML_MANGLE_F32(remquo2)(float, float);
+
+OCML_DEPRECATED(OCML_MANGLE_F32(remquo), "__ocml_remquo2_f32")
 extern float OCML_MANGLE_F32(remquo)(float, float, __private int *);
 DECL_CONST_OCML_BINARY_F32(rhypot)
 DECL_CONST_OCML_UNARY_F32(rint)
@@ -317,6 +328,16 @@ extern __attribute__((pure)) double OCML_MANGLE_F64(pown)(double, int);
 extern __attribute__((pure)) double OCML_MANGLE_F64(rootn)(double, int);
 DECL_CONST_OCML_UNARY_F64(pred)
 DECL_CONST_OCML_BINARY_F64(remainder)
+
+
+typedef struct __ocml_remquo_f64_result {
+    double rem;
+    int quo;
+} __ocml_remquo_f64_result;
+
+extern __ocml_remquo_f64_result OCML_MANGLE_F64(remquo2)(double, double);
+
+OCML_DEPRECATED(OCML_MANGLE_F64(remquo), "__ocml_remquo2_f64")
 extern double OCML_MANGLE_F64(remquo)(double, double, __private int *);
 DECL_CONST_OCML_BINARY_F64(rhypot)
 DECL_CONST_OCML_UNARY_F64(rint)
@@ -487,7 +508,17 @@ extern __attribute__((pure)) half OCML_MANGLE_F16(rootn)(half, int);
 DECL_CONST_OCML_UNARY_F16(pred)
 DECL_CONST_OCML_UNARY_F16(rcbrt)
 DECL_CONST_OCML_BINARY_F16(remainder)
+
+typedef struct __ocml_remquo_f16_result {
+    half rem;
+    int quo;
+} __ocml_remquo_f16_result;
+
+extern __ocml_remquo_f16_result OCML_MANGLE_F16(remquo2)(half, half);
+
+OCML_DEPRECATED(OCML_MANGLE_F16(remquo), "__ocml_remquo2_f16")
 extern half OCML_MANGLE_F16(remquo)(half, half, __private int *);
+
 DECL_CONST_OCML_BINARY_F16(rhypot)
 DECL_CONST_OCML_UNARY_F16(rint)
 DECL_CONST_OCML_TERNARY_F16(rlen3)
@@ -623,6 +654,15 @@ extern __attribute__((pure)) half2 OCML_MANGLE_2F16(pown)(half2, int2);
 extern __attribute__((pure)) half2 OCML_MANGLE_2F16(rootn)(half2, int2);
 DECL_CONST_OCML_UNARY_2F16(rcbrt)
 DECL_CONST_OCML_BINARY_2F16(remainder)
+
+typedef struct __ocml_remquo_2f16_result {
+    half2 rem;
+    int2 quo;
+} __ocml_remquo_2f16_result;
+
+extern __ocml_remquo_2f16_result OCML_MANGLE_2F16(remquo2)(half2, half2);
+
+OCML_DEPRECATED(OCML_MANGLE_F16(remquo), "__ocml_remquo2_2f16")
 extern half2 OCML_MANGLE_2F16(remquo)(half2, half2, __private int2 *);
 DECL_CONST_OCML_UNARY_2F16(rint)
 DECL_CONST_OCML_UNARY_2F16(round)

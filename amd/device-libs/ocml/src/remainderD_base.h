@@ -17,8 +17,8 @@ fnma(double a, double b, double c)
 CONSTATTR double
 MATH_MANGLE(fmod)(double x, double y)
 #elif defined(COMPILING_REMQUO)
-double
-MATH_MANGLE(remquo)(double x, double y, __private int *q7p)
+__ocml_remquo_f64_result
+MATH_MANGLE(remquo2)(double x, double y)
 #else
 CONSTATTR double
 MATH_MANGLE(remainder)(double x, double y)
@@ -134,8 +134,18 @@ MATH_MANGLE(remainder)(double x, double y)
     }
 
 #if defined(COMPILING_REMQUO)
-    *q7p = q7;
-#endif
+    __ocml_remquo_f64_result result = { ret, q7 };
+    return result;
+#else
     return ret;
+#endif
 }
 
+#if defined(COMPILING_REMQUO)
+double
+MATH_MANGLE(remquo)(double x, double y, __private int *q7p) {
+    __ocml_remquo_f64_result result = MATH_MANGLE(remquo2)(x, y);
+    *q7p = result.quo;
+    return result.rem;
+}
+#endif
