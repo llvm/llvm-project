@@ -1461,7 +1461,7 @@ void BinaryContext::printGlobalSymbols(raw_ostream &OS) const {
 
 Expected<unsigned> BinaryContext::getDwarfFile(
     StringRef Directory, StringRef FileName, unsigned FileNumber,
-    Optional<MD5::MD5Result> Checksum, Optional<StringRef> Source,
+    Optional<MD5::MD5Result> Checksum, std::optional<StringRef> Source,
     unsigned CUID, unsigned DWARFVersion) {
   DwarfLineTable &Table = DwarfLineTablesCUMap[CUID];
   return Table.tryGetFile(Directory, FileName, Checksum, Source, DWARFVersion,

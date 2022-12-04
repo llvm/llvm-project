@@ -284,8 +284,8 @@ public:
   Expected<unsigned> getDwarfFile(StringRef Directory, StringRef FileName,
                                   unsigned FileNumber,
                                   Optional<MD5::MD5Result> Checksum,
-                                  Optional<StringRef> Source, unsigned CUID,
-                                  unsigned DWARFVersion);
+                                  std::optional<StringRef> Source,
+                                  unsigned CUID, unsigned DWARFVersion);
 
   /// [start memory address] -> [segment info] mapping.
   std::map<uint64_t, SegmentInfo> SegmentMapInfo;
