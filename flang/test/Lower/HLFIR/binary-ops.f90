@@ -289,3 +289,37 @@ end subroutine
 ! CHECK:  %[[VAL_12:.*]] = fir.call @_FortranACharacterCompareScalar1(%[[VAL_8]], %[[VAL_9]], %[[VAL_10]], %[[VAL_11]]) fastmath<contract> : (!fir.ref<i8>, !fir.ref<i8>, i64, i64) -> i32
 ! CHECK:  %[[VAL_13:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_14:.*]] = arith.cmpi eq, %[[VAL_12]], %[[VAL_13]] : i32
+
+subroutine logical_and(x, y, z)
+  logical :: x, y, z
+  x = y.and.z
+end subroutine
+! CHECK-LABEL: func.func @_QPlogical_and(
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}y"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}z"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.logical<4>>
+! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.logical<4>>
+! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_6]] : (!fir.logical<4>) -> i1
+! CHECK:  %[[VAL_9:.*]] = fir.convert %[[VAL_7]] : (!fir.logical<4>) -> i1
+! CHECK:  %[[VAL_10:.*]] = arith.andi %[[VAL_8]], %[[VAL_9]] : i1
+
+subroutine logical_or(x, y, z)
+  logical :: x, y, z
+  x = y.or.z
+end subroutine
+! CHECK-LABEL: func.func @_QPlogical_or(
+! CHECK:  %[[VAL_10:.*]] = arith.ori
+
+subroutine logical_eqv(x, y, z)
+  logical :: x, y, z
+  x = y.eqv.z
+end subroutine
+! CHECK-LABEL: func.func @_QPlogical_eqv(
+! CHECK:  %[[VAL_10:.*]] = arith.cmpi eq
+
+subroutine logical_neqv(x, y, z)
+  logical :: x, y, z
+  x = y.neqv.z
+end subroutine
+! CHECK-LABEL: func.func @_QPlogical_neqv(
+! CHECK:  %[[VAL_10:.*]] = arith.cmpi ne
