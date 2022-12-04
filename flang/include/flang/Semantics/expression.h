@@ -369,6 +369,7 @@ private:
     return evaluate::Fold(foldingContext_, std::move(expr));
   }
   bool CheckIsValidForwardReference(const semantics::DerivedTypeSpec &);
+  MaybeExpr AnalyzeComplex(MaybeExpr &&re, MaybeExpr &&im, const char *what);
 
   semantics::SemanticsContext &context_;
   FoldingContext &foldingContext_{context_.foldingContext()};
