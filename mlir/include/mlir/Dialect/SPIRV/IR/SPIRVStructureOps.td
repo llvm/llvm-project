@@ -490,11 +490,11 @@ def SPIRV_ModuleOp : SPIRV_Op<"module",
   let regions = (region AnyRegion);
 
   let builders = [
-    OpBuilder<(ins CArg<"Optional<StringRef>", "llvm::None">:$name)>,
+    OpBuilder<(ins CArg<"Optional<StringRef>", "std::nullopt">:$name)>,
     OpBuilder<(ins "spirv::AddressingModel":$addressing_model,
                    "spirv::MemoryModel":$memory_model,
-                   CArg<"Optional<spirv::VerCapExtAttr>", "llvm::None">:$vce_triple,
-                   CArg<"Optional<StringRef>", "llvm::None">:$name)>
+                   CArg<"Optional<spirv::VerCapExtAttr>", "std::nullopt">:$vce_triple,
+                   CArg<"Optional<StringRef>", "std::nullopt">:$name)>
   ];
 
   // We need to ensure the block inside the region is properly terminated;
