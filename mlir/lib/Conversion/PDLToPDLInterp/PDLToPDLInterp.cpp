@@ -614,7 +614,7 @@ SymbolRefAttr PatternLowering::generateRewriter(
   builder.setInsertionPointToEnd(rewriterModule.getBody());
   auto rewriterFunc = builder.create<pdl_interp::FuncOp>(
       pattern.getLoc(), "pdl_generated_rewriter",
-      builder.getFunctionType(llvm::None, llvm::None));
+      builder.getFunctionType(std::nullopt, std::nullopt));
   rewriterSymbolTable.insert(rewriterFunc);
 
   // Generate the rewriter function body.
@@ -681,7 +681,7 @@ SymbolRefAttr PatternLowering::generateRewriter(
   // Update the signature of the rewrite function.
   rewriterFunc.setType(builder.getFunctionType(
       llvm::to_vector<8>(rewriterFunc.front().getArgumentTypes()),
-      /*results=*/llvm::None));
+      /*results=*/std::nullopt));
 
   builder.create<pdl_interp::FinalizeOp>(rewriter.getLoc());
   return SymbolRefAttr::get(
@@ -968,8 +968,8 @@ void PDLToPDLInterpPass::runOnOperation() {
   auto matcherFunc = builder.create<pdl_interp::FuncOp>(
       module.getLoc(), pdl_interp::PDLInterpDialect::getMatcherFunctionName(),
       builder.getFunctionType(builder.getType<pdl::OperationType>(),
-                              /*results=*/llvm::None),
-      /*attrs=*/llvm::None);
+                              /*results=*/std::nullopt),
+      /*attrs=*/std::nullopt);
 
   // Create a nested module to hold the functions invoked for rewriting the IR
   // after a successful match.

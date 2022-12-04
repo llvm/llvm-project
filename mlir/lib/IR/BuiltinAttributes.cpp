@@ -95,7 +95,7 @@ static bool dictionaryAttrSort(ArrayRef<NamedAttribute> value,
 /// attributes. Returns llvm::None if all elements have unique names.
 static Optional<NamedAttribute>
 findDuplicateElement(ArrayRef<NamedAttribute> value) {
-  const Optional<NamedAttribute> none{llvm::None};
+  const Optional<NamedAttribute> none{std::nullopt};
   if (value.size() < 2)
     return none;
 
@@ -1604,7 +1604,7 @@ Optional<ArrayRef<T>>
 DenseResourceElementsAttrBase<T>::tryGetAsArrayRef() const {
   if (AsmResourceBlob *blob = this->getRawHandle().getBlob())
     return blob->template getDataAs<T>();
-  return llvm::None;
+  return std::nullopt;
 }
 
 template <typename T>

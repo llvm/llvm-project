@@ -1571,7 +1571,7 @@ void ConversionPatternRewriter::replaceUsesOfBlockArgument(BlockArgument from,
 
 Value ConversionPatternRewriter::getRemappedValue(Value key) {
   SmallVector<Value> remappedValues;
-  if (failed(impl->remapValues("value", /*inputLoc=*/llvm::None, *this, key,
+  if (failed(impl->remapValues("value", /*inputLoc=*/std::nullopt, *this, key,
                                remappedValues)))
     return nullptr;
   return remappedValues.front();
@@ -1582,7 +1582,7 @@ ConversionPatternRewriter::getRemappedValues(ValueRange keys,
                                              SmallVectorImpl<Value> &results) {
   if (keys.empty())
     return success();
-  return impl->remapValues("value", /*inputLoc=*/llvm::None, *this, keys,
+  return impl->remapValues("value", /*inputLoc=*/std::nullopt, *this, keys,
                            results);
 }
 
@@ -3048,7 +3048,7 @@ auto TypeConverter::convertBlockSignature(Block *block)
     -> Optional<SignatureConversion> {
   SignatureConversion conversion(block->getNumArguments());
   if (failed(convertSignatureArgs(block->getArgumentTypes(), conversion)))
-    return llvm::None;
+    return std::nullopt;
   return conversion;
 }
 
@@ -3147,7 +3147,7 @@ auto ConversionTarget::isLegal(Operation *op) const
     -> Optional<LegalOpDetails> {
   Optional<LegalizationInfo> info = getOpInfo(op->getName());
   if (!info)
-    return llvm::None;
+    return std::nullopt;
 
   // Returns true if this operation instance is known to be legal.
   auto isOpLegal = [&] {
@@ -3162,7 +3162,7 @@ auto ConversionTarget::isLegal(Operation *op) const
     return info->action == LegalizationAction::Legal;
   };
   if (!isOpLegal())
-    return llvm::None;
+    return std::nullopt;
 
   // This operation is legal, compute any additional legality information.
   LegalOpDetails legalityDetails;
@@ -3269,7 +3269,7 @@ auto ConversionTarget::getOpInfo(OperationName op) const
   if (unknownLegalityFn)
     return LegalizationInfo{LegalizationAction::Dynamic,
                             /*isRecursivelyLegal=*/false, unknownLegalityFn};
-  return llvm::None;
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//

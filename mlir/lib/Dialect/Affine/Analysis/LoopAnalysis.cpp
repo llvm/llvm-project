@@ -87,7 +87,7 @@ Optional<uint64_t> mlir::getConstantTripCount(AffineForOp forOp) {
   getTripCountMapAndOperands(forOp, &map, &operands);
 
   if (!map)
-    return None;
+    return std::nullopt;
 
   // Take the min if all trip counts are constant.
   Optional<uint64_t> tripCount;
@@ -99,7 +99,7 @@ Optional<uint64_t> mlir::getConstantTripCount(AffineForOp forOp) {
       else
         tripCount = constExpr.getValue();
     } else
-      return None;
+      return std::nullopt;
   }
   return tripCount;
 }

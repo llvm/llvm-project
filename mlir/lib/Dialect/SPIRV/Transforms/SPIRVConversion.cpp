@@ -140,14 +140,14 @@ static Optional<int64_t> getTypeNumBytes(const SPIRVConversionOptions &options,
     // non-externally visible shader Storage Classes: Workgroup, CrossWorkgroup,
     // Private, Function, Input, and Output."
     if (bitWidth == 1)
-      return llvm::None;
+      return std::nullopt;
     return bitWidth / 8;
   }
 
   if (auto vecType = type.dyn_cast<VectorType>()) {
     auto elementSize = getTypeNumBytes(options, vecType.getElementType());
     if (!elementSize)
-      return llvm::None;
+      return std::nullopt;
     return vecType.getNumElements() * *elementSize;
   }
 
@@ -158,14 +158,14 @@ static Optional<int64_t> getTypeNumBytes(const SPIRVConversionOptions &options,
     SmallVector<int64_t, 4> strides;
     if (!memRefType.hasStaticShape() ||
         failed(getStridesAndOffset(memRefType, strides, offset)))
-      return llvm::None;
+      return std::nullopt;
 
     // To get the size of the memref object in memory, the total size is the
     // max(stride * dimension-size) computed for all dimensions times the size
     // of the element.
     auto elementSize = getTypeNumBytes(options, memRefType.getElementType());
     if (!elementSize)
-      return llvm::None;
+      return std::nullopt;
 
     if (memRefType.getRank() == 0)
       return elementSize;
@@ -174,7 +174,7 @@ static Optional<int64_t> getTypeNumBytes(const SPIRVConversionOptions &options,
     if (llvm::is_contained(dims, ShapedType::kDynamic) ||
         ShapedType::isDynamic(offset) ||
         llvm::is_contained(strides, ShapedType::kDynamic))
-      return llvm::None;
+      return std::nullopt;
 
     int64_t memrefSize = -1;
     for (const auto &shape : enumerate(dims))
@@ -185,11 +185,11 @@ static Optional<int64_t> getTypeNumBytes(const SPIRVConversionOptions &options,
 
   if (auto tensorType = type.dyn_cast<TensorType>()) {
     if (!tensorType.hasStaticShape())
-      return llvm::None;
+      return std::nullopt;
 
     auto elementSize = getTypeNumBytes(options, tensorType.getElementType());
     if (!elementSize)
-      return llvm::None;
+      return std::nullopt;
 
     int64_t size = *elementSize;
     for (auto shape : tensorType.getShape())
@@ -199,7 +199,7 @@ static Optional<int64_t> getTypeNumBytes(const SPIRVConversionOptions &options,
   }
 
   // TODO: Add size computation for other types.
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Converts a scalar `type` to a suitable type under the given `targetEnv`.

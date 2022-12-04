@@ -77,7 +77,7 @@ Type Dialect::parseType(DialectAsmParser &parser) const {
 
 Optional<Dialect::ParseOpHook>
 Dialect::getParseOperationHook(StringRef opName) const {
-  return None;
+  return std::nullopt;
 }
 
 llvm::unique_function<void(Operation *, OpAsmPrinter &printer)>

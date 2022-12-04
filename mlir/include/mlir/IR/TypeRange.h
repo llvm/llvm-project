@@ -36,7 +36,7 @@ class TypeRange : public llvm::detail::indexed_accessor_range_base<
                       Type, Type, Type> {
 public:
   using RangeBaseT::RangeBaseT;
-  TypeRange(ArrayRef<Type> types = llvm::None);
+  TypeRange(ArrayRef<Type> types = std::nullopt);
   explicit TypeRange(OperandRange values);
   explicit TypeRange(ResultRange values);
   explicit TypeRange(ValueRange values);

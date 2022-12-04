@@ -360,14 +360,14 @@ private:
         if (srcSubShape == resultSubShape)
           composedReassociation.push_back(srcIndices);
         else
-          return llvm::None;
+          return std::nullopt;
       }
 
       // Find reassociation to collapse `srcSubShape` into `resultSubShape`.
       auto subShapeReassociation =
           getReassociationIndicesForCollapse(srcSubShape, resultSubShape);
       if (!subShapeReassociation)
-        return llvm::None;
+        return std::nullopt;
 
       // Remap the subshape indices back to the original srcShape.
       for (auto &subshape_indices : *subShapeReassociation) {

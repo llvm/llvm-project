@@ -2007,7 +2007,7 @@ namespace {
 static Optional<uint64_t> getTrivialConstantTripCount(AffineForOp forOp) {
   int64_t step = forOp.getStep();
   if (!forOp.hasConstantBounds() || step <= 0)
-    return None;
+    return std::nullopt;
   int64_t lb = forOp.getConstantLowerBound();
   int64_t ub = forOp.getConstantUpperBound();
   return ub - lb <= 0 ? 0 : (ub - lb + step - 1) / step;
@@ -2263,7 +2263,7 @@ Optional<Value> AffineForOp::getSingleInductionVar() {
 
 Optional<OpFoldResult> AffineForOp::getSingleLowerBound() {
   if (!hasConstantLowerBound())
-    return llvm::None;
+    return std::nullopt;
   OpBuilder b(getContext());
   return OpFoldResult(b.getI64IntegerAttr(getConstantLowerBound()));
 }
@@ -2275,7 +2275,7 @@ Optional<OpFoldResult> AffineForOp::getSingleStep() {
 
 Optional<OpFoldResult> AffineForOp::getSingleUpperBound() {
   if (!hasConstantUpperBound())
-    return llvm::None;
+    return std::nullopt;
   OpBuilder b(getContext());
   return OpFoldResult(b.getI64IntegerAttr(getConstantUpperBound()));
 }
@@ -2365,8 +2365,8 @@ static AffineForOp
 buildAffineLoopFromConstants(OpBuilder &builder, Location loc, int64_t lb,
                              int64_t ub, int64_t step,
                              AffineForOp::BodyBuilderFn bodyBuilderFn) {
-  return builder.create<AffineForOp>(loc, lb, ub, step, /*iterArgs=*/llvm::None,
-                                     bodyBuilderFn);
+  return builder.create<AffineForOp>(loc, lb, ub, step,
+                                     /*iterArgs=*/std::nullopt, bodyBuilderFn);
 }
 
 /// Creates an affine loop from the bounds that may or may not be constants.
@@ -2381,7 +2381,7 @@ buildAffineLoopFromValues(OpBuilder &builder, Location loc, Value lb, Value ub,
                                         ubConst.value(), step, bodyBuilderFn);
   return builder.create<AffineForOp>(loc, lb, builder.getDimIdentityMap(), ub,
                                      builder.getDimIdentityMap(), step,
-                                     /*iterArgs=*/llvm::None, bodyBuilderFn);
+                                     /*iterArgs=*/std::nullopt, bodyBuilderFn);
 }
 
 void mlir::buildAffineLoopNest(
@@ -3551,7 +3551,7 @@ AffineValueMap AffineParallelOp::getUpperBoundsValueMap() {
 
 Optional<SmallVector<int64_t, 8>> AffineParallelOp::getConstantRanges() {
   if (hasMinMaxBounds())
-    return llvm::None;
+    return std::nullopt;
 
   // Try to convert all the ranges to constant expressions.
   SmallVector<int64_t, 8> out;
@@ -3563,7 +3563,7 @@ Optional<SmallVector<int64_t, 8>> AffineParallelOp::getConstantRanges() {
     auto expr = rangesValueMap.getResult(i);
     auto cst = expr.dyn_cast<AffineConstantExpr>();
     if (!cst)
-      return llvm::None;
+      return std::nullopt;
     out.push_back(cst.getValue());
   }
   return out;

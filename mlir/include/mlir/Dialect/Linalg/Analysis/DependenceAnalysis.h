@@ -80,7 +80,7 @@ public:
     static Optional<AffineMap> getIndexingMap(OpView opView) {
       auto owner = dyn_cast<LinalgOp>(getOwner(opView));
       if (!owner)
-        return llvm::None;
+        return std::nullopt;
       if (OpOperand *operand = opView.dyn_cast<OpOperand *>())
         return owner.getMatchingIndexingMap(operand);
       return owner.getMatchingIndexingMap(owner.getDpsInitOperand(
@@ -91,14 +91,14 @@ public:
     static Optional<unsigned> getOperandNumber(OpView opView) {
       if (OpOperand *operand = opView.dyn_cast<OpOperand *>())
         return operand->getOperandNumber();
-      return llvm::None;
+      return std::nullopt;
     }
     // Return the result number if the `opView` is an OpResult. Otherwise return
     // llvm::None.
     static Optional<unsigned> getResultNumber(OpView opView) {
       if (OpResult result = opView.dyn_cast<Value>().cast<OpResult>())
         return result.getResultNumber();
-      return llvm::None;
+      return std::nullopt;
     }
 
     // Return the owner of the dependent OpView.

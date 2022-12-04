@@ -695,7 +695,7 @@ private:
     Block *insertionBlock = rewriter.getInsertionBlock();
     bool noEscape = bufferization::allocationDoesNotEscape(op->getOpResult(0));
 
-    rewriter.create<ForeachOp>(loc, src, llvm::None,
+    rewriter.create<ForeachOp>(loc, src, std::nullopt,
                                [&](OpBuilder &builder, Location loc,
                                    ValueRange args, Value v, ValueRange reduc) {
                                  builder.create<memref::StoreOp>(loc, v, dst,
@@ -1065,7 +1065,7 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
     ModuleOp module = op->getParentOfType<ModuleOp>();
     // For each element in the source tensor, output the element.
     rewriter.create<ForeachOp>(
-        loc, src, llvm::None,
+        loc, src, std::nullopt,
         [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
             ValueRange reduc) {
           for (uint64_t i = 0; i < rank; i++) {

@@ -291,8 +291,8 @@ struct FoldConstantTranspose : public FoldConstantBase<FoldConstantTranspose> {
     // No computation; just return the orginal value.
     return [](const APIntOrFloatArray &inputs) {
       if (inputs.apFloats.empty())
-        return APIntOrFloat{inputs.apInts.front(), llvm::None};
-      return APIntOrFloat{llvm::None, inputs.apFloats.front()};
+        return APIntOrFloat{inputs.apInts.front(), std::nullopt};
+      return APIntOrFloat{std::nullopt, inputs.apFloats.front()};
     };
   }
 

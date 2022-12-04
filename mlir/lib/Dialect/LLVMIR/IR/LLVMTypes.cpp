@@ -271,7 +271,7 @@ Optional<unsigned> mlir::LLVM::extractPointerSpecValue(Attribute attr,
   auto spec = attr.cast<DenseIntElementsAttr>();
   auto idx = static_cast<unsigned>(pos);
   if (idx >= spec.size())
-    return None;
+    return std::nullopt;
   return spec.getValues<unsigned>()[idx];
 }
 
@@ -305,7 +305,7 @@ getPointerDataLayoutEntry(DataLayoutEntryListRef params, LLVMPointerType type,
                                       : kDefaultPointerAlignment;
   }
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 unsigned
@@ -538,7 +538,7 @@ getStructDataLayoutEntry(DataLayoutEntryListRef params, LLVMStructType type,
         return entry.isTypeEntry();
       });
   if (currentEntry == params.end())
-    return llvm::None;
+    return std::nullopt;
 
   auto attr = currentEntry->getValue().cast<DenseIntElementsAttr>();
   if (pos == StructDLEntryPos::Preferred &&

@@ -147,7 +147,7 @@ OpFoldResult DivSOp::fold(ArrayRef<Attribute> operands) {
       operands, [](const APInt &lhs, const APInt &rhs) -> Optional<APInt> {
         // Don't fold division by zero.
         if (rhs.isZero())
-          return None;
+          return std::nullopt;
         return lhs.sdiv(rhs);
       });
 }
@@ -161,7 +161,7 @@ OpFoldResult DivUOp::fold(ArrayRef<Attribute> operands) {
       operands, [](const APInt &lhs, const APInt &rhs) -> Optional<APInt> {
         // Don't fold division by zero.
         if (rhs.isZero())
-          return None;
+          return std::nullopt;
         return lhs.udiv(rhs);
       });
 }
@@ -175,7 +175,7 @@ OpFoldResult DivUOp::fold(ArrayRef<Attribute> operands) {
 static Optional<APInt> calculateCeilDivS(const APInt &n, const APInt &m) {
   // Don't fold division by zero.
   if (m.isZero())
-    return None;
+    return std::nullopt;
   // Short-circuit the zero case.
   if (n.isZero())
     return n;
@@ -207,7 +207,7 @@ OpFoldResult CeilDivUOp::fold(ArrayRef<Attribute> operands) {
       operands, [](const APInt &n, const APInt &m) -> Optional<APInt> {
         // Don't fold division by zero.
         if (m.isZero())
-          return None;
+          return std::nullopt;
         // Short-circuit the zero case.
         if (n.isZero())
           return n;
@@ -225,7 +225,7 @@ OpFoldResult CeilDivUOp::fold(ArrayRef<Attribute> operands) {
 static Optional<APInt> calculateFloorDivS(const APInt &n, const APInt &m) {
   // Don't fold division by zero.
   if (m.isZero())
-    return None;
+    return std::nullopt;
   // Short-circuit the zero case.
   if (n.isZero())
     return n;

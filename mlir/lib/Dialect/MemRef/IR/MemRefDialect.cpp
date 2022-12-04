@@ -50,7 +50,7 @@ llvm::Optional<Operation *> mlir::memref::findDealloc(Value allocValue) {
       continue;
     // If we found > 1 dealloc, return None.
     if (dealloc)
-      return llvm::None;
+      return std::nullopt;
     dealloc = user;
   }
   return dealloc;

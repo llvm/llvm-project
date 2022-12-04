@@ -311,8 +311,8 @@ template <typename MemoryOpTy>
 static void printMemoryAccessAttribute(
     MemoryOpTy memoryOp, OpAsmPrinter &printer,
     SmallVectorImpl<StringRef> &elidedAttrs,
-    Optional<spirv::MemoryAccess> memoryAccessAtrrValue = None,
-    Optional<uint32_t> alignmentAttrValue = None) {
+    Optional<spirv::MemoryAccess> memoryAccessAtrrValue = std::nullopt,
+    Optional<uint32_t> alignmentAttrValue = std::nullopt) {
   // Print optional memory access attribute.
   if (auto memAccess = (memoryAccessAtrrValue ? memoryAccessAtrrValue
                                               : memoryOp.getMemoryAccess())) {
@@ -341,8 +341,8 @@ template <typename MemoryOpTy>
 static void printSourceMemoryAccessAttribute(
     MemoryOpTy memoryOp, OpAsmPrinter &printer,
     SmallVectorImpl<StringRef> &elidedAttrs,
-    Optional<spirv::MemoryAccess> memoryAccessAtrrValue = None,
-    Optional<uint32_t> alignmentAttrValue = None) {
+    Optional<spirv::MemoryAccess> memoryAccessAtrrValue = std::nullopt,
+    Optional<uint32_t> alignmentAttrValue = std::nullopt) {
 
   printer << ", ";
 

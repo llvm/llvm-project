@@ -143,7 +143,7 @@ public:
   /// Finalize the most recently started operation definition.
   void finalizeOperationDefinition(
       Operation *op, SMRange nameLoc, SMLoc endLoc,
-      ArrayRef<std::pair<unsigned, SMLoc>> resultGroups = llvm::None);
+      ArrayRef<std::pair<unsigned, SMLoc>> resultGroups = std::nullopt);
 
   /// Start a definition for a region nested under the current operation.
   void startRegionDefinition();
