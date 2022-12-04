@@ -815,8 +815,10 @@ bool GlobalModuleIndexBuilder::writeIndex(llvm::BitstreamWriter &Stream) {
     IdentifierIndexWriterTrait Trait;
 
     // Populate the hash table.
-    for (auto &[Identifier, IDs] : InterestingIdentifiers) {
-      Generator.insert(Identifier, IDs, Trait);
+    for (InterestingIdentifierMap::iterator I = InterestingIdentifiers.begin(),
+                                            IEnd = InterestingIdentifiers.end();
+         I != IEnd; ++I) {
+      Generator.insert(I->first(), I->second, Trait);
     }
 
     // Create the on-disk hash table in a buffer.
