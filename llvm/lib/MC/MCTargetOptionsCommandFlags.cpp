@@ -31,7 +31,7 @@ using namespace llvm;
       TY res = *NAME##View;                                                    \
       return res;                                                              \
     }                                                                          \
-    return None;                                                               \
+    return std::nullopt;                                                       \
   }
 
 MCOPT_EXP(bool, RelaxAll)
