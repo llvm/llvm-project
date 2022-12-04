@@ -1819,10 +1819,7 @@ declare double @llvm.maximum.f64(double, double)
 
 define i1 @isKnownNeverInfinity_sqrt(double %x) {
 ; CHECK-LABEL: @isKnownNeverInfinity_sqrt(
-; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = call double @llvm.sqrt.f64(double [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = fadd ninf double %x, 1.0
   %e = call double @llvm.sqrt.f64(double %a)
