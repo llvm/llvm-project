@@ -39,7 +39,7 @@ def AllocationOpInterface : OpInterface<"AllocationOpInterface"> {
       }],
       "::mlir::Optional<::mlir::Operation*>", "buildDealloc",
       (ins "::mlir::OpBuilder&":$builder, "::mlir::Value":$alloc), [{}],
-      /*defaultImplementation=*/[{ return llvm::None; }]
+      /*defaultImplementation=*/[{ return std::nullopt; }]
     >,
     StaticInterfaceMethod<[{
         Builds a clone operation using the provided builder and the current
@@ -50,7 +50,7 @@ def AllocationOpInterface : OpInterface<"AllocationOpInterface"> {
       }],
       "::mlir::Optional<::mlir::Value>", "buildClone",
       (ins "::mlir::OpBuilder&":$builder, "::mlir::Value":$alloc), [{}],
-      /*defaultImplementation=*/[{ return llvm::None; }]
+      /*defaultImplementation=*/[{ return std::nullopt; }]
     >
   ];
 }

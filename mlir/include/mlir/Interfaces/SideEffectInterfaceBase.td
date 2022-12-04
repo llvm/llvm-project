@@ -115,7 +115,7 @@ class EffectOpInterfaceBase<string name, string baseEffect>
         return isa<Effect>(it.getEffect()) && it.getValue() == value;
       });
       if (it == effects.end())
-        return llvm::None;
+        return std::nullopt;
       return *it;
     }
 
