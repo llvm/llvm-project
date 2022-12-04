@@ -776,7 +776,7 @@ static Optional<Type> getLoadStoreElementType(OpAsmParser &parser, Type type,
   auto llvmTy = type.dyn_cast<LLVM::LLVMPointerType>();
   if (!llvmTy) {
     parser.emitError(trailingTypeLoc, "expected LLVM pointer type");
-    return llvm::None;
+    return std::nullopt;
   }
   return llvmTy.getElementType();
 }
@@ -2007,7 +2007,7 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
   assert(type.cast<LLVMFunctionType>().getNumParams() == argAttrs.size() &&
          "expected as many argument attribute lists as arguments");
   function_interface_impl::addArgAndResultAttrs(builder, result, argAttrs,
-                                                /*resultAttrs=*/llvm::None);
+                                                /*resultAttrs=*/std::nullopt);
 }
 
 // Builds an LLVM function type from the given lists of input and output types.

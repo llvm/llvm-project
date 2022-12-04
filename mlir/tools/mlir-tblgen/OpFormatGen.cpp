@@ -61,7 +61,7 @@ struct AttributeVariable
   /// if it doesn't have one.
   llvm::Optional<StringRef> getTypeBuilder() const {
     llvm::Optional<Type> attrType = var->attr.getValueType();
-    return attrType ? attrType->getBuilderCall() : llvm::None;
+    return attrType ? attrType->getBuilderCall() : std::nullopt;
   }
 
   /// Return if this attribute refers to a UnitAttr.
@@ -2472,7 +2472,7 @@ static Optional<LogicalResult> checkRangeForElement(
     return success();
   }
   // Return None to indicate that we reached the end.
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// For the given elements, check whether any attributes are followed by a colon
@@ -2751,9 +2751,9 @@ void OpFormatParser::handleAllTypesMatchConstraint(
 
     // Mark this value as the type resolver for the other variables.
     for (unsigned j = 0; j != i; ++j)
-      variableTyResolver[values[j]] = {arg, llvm::None};
+      variableTyResolver[values[j]] = {arg, std::nullopt};
     for (unsigned j = i + 1; j != e; ++j)
-      variableTyResolver[values[j]] = {arg, llvm::None};
+      variableTyResolver[values[j]] = {arg, std::nullopt};
   }
 }
 
@@ -2774,11 +2774,11 @@ void OpFormatParser::handleSameTypesConstraint(
   // Set the resolvers for each operand and result.
   for (unsigned i = 0, e = op.getNumOperands(); i != e; ++i)
     if (!seenOperandTypes.test(i))
-      variableTyResolver[op.getOperand(i).name] = {resolver, llvm::None};
+      variableTyResolver[op.getOperand(i).name] = {resolver, std::nullopt};
   if (includeResults) {
     for (unsigned i = 0, e = op.getNumResults(); i != e; ++i)
       if (!seenResultTypes.test(i))
-        variableTyResolver[op.getResultName(i)] = {resolver, llvm::None};
+        variableTyResolver[op.getResultName(i)] = {resolver, std::nullopt};
   }
 }
 

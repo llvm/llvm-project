@@ -234,7 +234,7 @@ getAllBitsUnsetCase(llvm::ArrayRef<EnumAttrCase> cases) {
     if (attrCase.getValue() == 0)
       return attrCase;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 // Emits the following inline function for bit enums:

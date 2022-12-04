@@ -583,7 +583,7 @@ LoopNest mlir::scf::buildLoopNest(
     ValueRange steps,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
   // Delegate to the main function by wrapping the body builder.
-  return buildLoopNest(builder, loc, lbs, ubs, steps, llvm::None,
+  return buildLoopNest(builder, loc, lbs, ubs, steps, std::nullopt,
                        [&bodyBuilder](OpBuilder &nestedBuilder,
                                       Location nestedLoc, ValueRange ivs,
                                       ValueRange) -> ValueVector {
@@ -736,7 +736,7 @@ static Optional<int64_t> computeConstDiff(Value l, Value u) {
       matchPattern(
           u, m_Op<arith::AddIOp>(m_ConstantInt(&diff), matchers::m_Val(l))))
     return diff.getSExtValue();
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Rewriting pattern that erases loops that are known not to iterate, replaces
@@ -1451,7 +1451,7 @@ bool mlir::scf::insideMutuallyExclusiveBranches(Operation *a, Operation *b) {
 
 void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
                  bool withElseRegion) {
-  build(builder, result, /*resultTypes=*/llvm::None, cond, withElseRegion);
+  build(builder, result, /*resultTypes=*/std::nullopt, cond, withElseRegion);
 }
 
 void IfOp::build(OpBuilder &builder, OperationState &result,
@@ -2595,7 +2595,8 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
     auto newSteps = concatValues(op.getStep(), innerOp.getStep());
 
     rewriter.replaceOpWithNewOp<ParallelOp>(op, newLowerBounds, newUpperBounds,
-                                            newSteps, llvm::None, bodyBuilder);
+                                            newSteps, std::nullopt,
+                                            bodyBuilder);
     return success();
   }
 };

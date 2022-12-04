@@ -43,7 +43,7 @@ static Optional<int64_t> extractConstantIndex(Value v) {
   if (auto affineApplyOp = v.getDefiningOp<AffineApplyOp>())
     if (affineApplyOp.getAffineMap().isSingleConstant())
       return affineApplyOp.getAffineMap().getSingleConstantResult();
-  return None;
+  return std::nullopt;
 }
 
 // Missing foldings of scf.if make it necessary to perform poor man's folding

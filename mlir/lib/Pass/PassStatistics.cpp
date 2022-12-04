@@ -27,7 +27,7 @@ struct Statistic {
 
 /// Utility to print a pass entry in the statistics output.
 static void printPassEntry(raw_ostream &os, unsigned indent, StringRef pass,
-                           MutableArrayRef<Statistic> stats = llvm::None) {
+                           MutableArrayRef<Statistic> stats = std::nullopt) {
   os.indent(indent) << pass << "\n";
   if (stats.empty())
     return;

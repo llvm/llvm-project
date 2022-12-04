@@ -119,10 +119,10 @@ getMemrefConstantHorizontalStride(ShapedType type) {
   SmallVector<int64_t, 2> strides;
   if (failed(getStridesAndOffset(memrefType, strides, offset)) ||
       strides.back() != 1)
-    return llvm::None;
+    return std::nullopt;
   int64_t stride = strides[strides.size() - 2];
   if (stride == ShapedType::kDynamic)
-    return llvm::None;
+    return std::nullopt;
   return stride;
 }
 
@@ -197,7 +197,7 @@ convertElementwiseOpToMMA(Operation *op) {
     return gpu::MMAElementwiseOp::MINF;
   if (isa<arith::DivFOp>(op))
     return gpu::MMAElementwiseOp::DIVF;
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Return true if the op is supported as elementwise op on MMAMatrix type.

@@ -67,7 +67,7 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
           .Default([](Operation *) -> Optional<arith::AtomicRMWKind> {
             // TODO: AtomicRMW supports other kinds of reductions this is
             // currently not detecting, add those when the need arises.
-            return llvm::None;
+            return std::nullopt;
           });
   if (!maybeKind)
     return nullptr;

@@ -62,7 +62,7 @@ static void registerTranslation(StringRef name, StringRef description,
 
 TranslateRegistration::TranslateRegistration(
     StringRef name, StringRef description, const TranslateFunction &function) {
-  registerTranslation(name, description, /*inputAlignment=*/llvm::None,
+  registerTranslation(name, description, /*inputAlignment=*/std::nullopt,
                       function);
 }
 
@@ -116,7 +116,7 @@ TranslateFromMLIRRegistration::TranslateFromMLIRRegistration(
     const TranslateFromMLIRFunction &function,
     const std::function<void(DialectRegistry &)> &dialectRegistration) {
   registerTranslation(
-      name, description, /*inputAlignment=*/llvm::None,
+      name, description, /*inputAlignment=*/std::nullopt,
       [function, dialectRegistration](llvm::SourceMgr &sourceMgr,
                                       raw_ostream &output,
                                       MLIRContext *context) {

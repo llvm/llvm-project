@@ -405,11 +405,11 @@ mlir::computeRankReductionMask(ArrayRef<int64_t> originalShape,
     // If no match on `originalIdx`, the `originalShape` at this dimension
     // must be 1, otherwise we bail.
     if (originalShape[originalIdx] != 1)
-      return llvm::None;
+      return std::nullopt;
   }
   // The whole reducedShape must be scanned, otherwise we bail.
   if (reducedIdx != reducedRank)
-    return llvm::None;
+    return std::nullopt;
   return unusedDims;
 }
 
