@@ -2318,6 +2318,19 @@ void mlir::extractForInductionVars(ArrayRef<AffineForOp> forInsts,
     ivs->push_back(forInst.getInductionVar());
 }
 
+void mlir::extractInductionVars(ArrayRef<mlir::Operation *> affineOps,
+                                SmallVectorImpl<mlir::Value> &ivs) {
+  ivs.reserve(affineOps.size());
+  for (Operation *op : affineOps) {
+    // Add constraints from forOp's bounds.
+    if (auto forOp = dyn_cast<AffineForOp>(op))
+      ivs.push_back(forOp.getInductionVar());
+    else if (auto parallelOp = dyn_cast<AffineParallelOp>(op))
+      for (size_t i = 0; i < parallelOp.getBody()->getNumArguments(); i++)
+        ivs.push_back(parallelOp.getBody()->getArgument(i));
+  }
+}
+
 /// Builds an affine loop nest, using "loopCreatorFn" to create individual loop
 /// operations.
 template <typename BoundListTy, typename LoopCreatorTy>
