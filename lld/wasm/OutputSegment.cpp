@@ -22,10 +22,10 @@ namespace wasm {
 void OutputSegment::addInputSegment(InputChunk *inSeg) {
   alignment = std::max(alignment, inSeg->alignment);
   inputSegments.push_back(inSeg);
-  size = llvm::alignTo(size, 1ULL << inSeg->alignment);
+  size = llvm::alignTo(size, inSeg->alignment);
   LLVM_DEBUG(dbgs() << "addInputSegment: " << inSeg->name << " oname=" << name
-                    << " size=" << inSeg->getSize()
-                    << " align=" << inSeg->alignment << " at:" << size << "\n");
+                    << " size=" << inSeg->getSize() << " align="
+                    << Log2(inSeg->alignment) << " at:" << size << "\n");
   inSeg->outputSeg = this;
   inSeg->outputSegmentOffset = size;
   size += inSeg->getSize();
@@ -56,8 +56,9 @@ void OutputSegment::finalizeInputSegments() {
     });
     if (i == mergedSegments.end()) {
       LLVM_DEBUG(llvm::dbgs() << "new merge segment: " << name
-                              << " alignment=" << ms->alignment << "\n");
-      auto *syn = make<SyntheticMergedChunk>(name, ms->alignment, ms->flags);
+                              << " alignment=" << Log2(ms->alignment) << "\n");
+      auto *syn =
+          make<SyntheticMergedChunk>(name, Log2(ms->alignment), ms->flags);
       syn->outputSeg = this;
       mergedSegments.push_back(syn);
       i = std::prev(mergedSegments.end());
@@ -74,7 +75,7 @@ void OutputSegment::finalizeInputSegments() {
   inputSegments = newSegments;
   size = 0;
   for (InputChunk *seg : inputSegments) {
-    size = llvm::alignTo(size, 1ULL << seg->alignment);
+    size = llvm::alignTo(size, seg->alignment);
     LLVM_DEBUG(llvm::dbgs() << "outputSegmentOffset set: " << seg->name
                             << " -> " << size << "\n");
     seg->outputSegmentOffset = size;
