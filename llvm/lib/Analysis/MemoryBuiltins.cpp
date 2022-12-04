@@ -44,6 +44,7 @@
 #include <cstdint>
 #include <iterator>
 #include <numeric>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -251,7 +252,7 @@ static Optional<AllocFnsTy> getAllocationSize(const Value *V,
   if (Attr == Attribute())
     return None;
 
-  std::pair<unsigned, Optional<unsigned>> Args = Attr.getAllocSizeArgs();
+  std::pair<unsigned, std::optional<unsigned>> Args = Attr.getAllocSizeArgs();
 
   AllocFnsTy Result;
   // Because allocsize only tells us how many bytes are allocated, we're not
