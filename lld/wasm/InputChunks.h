@@ -223,7 +223,8 @@ class SyntheticMergedChunk : public InputChunk {
 public:
   SyntheticMergedChunk(StringRef name, uint32_t alignment, uint32_t flags)
       : InputChunk(nullptr, InputChunk::MergedChunk, name, alignment, flags),
-        builder(llvm::StringTableBuilder::RAW, 1ULL << alignment) {}
+        builder(llvm::StringTableBuilder::RAW, llvm::Align(1ULL << alignment)) {
+  }
 
   static bool classof(const InputChunk *c) {
     return c->kind() == InputChunk::MergedChunk;

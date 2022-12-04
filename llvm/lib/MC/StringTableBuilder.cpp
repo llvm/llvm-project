@@ -52,7 +52,7 @@ void StringTableBuilder::initSize() {
   }
 }
 
-StringTableBuilder::StringTableBuilder(Kind K, unsigned Alignment)
+StringTableBuilder::StringTableBuilder(Kind K, Align Alignment)
     : K(K), Alignment(Alignment) {
   initSize();
 }
