@@ -44,7 +44,7 @@ public:
     /// A null terminated array of prefix strings to apply to name while
     /// matching.
     const char *const *Prefixes;
-    const char *Name;
+    StringRef Name;
     const char *HelpText;
     const char *MetaVar;
     unsigned ID;
@@ -102,9 +102,7 @@ public:
   const Option getOption(OptSpecifier Opt) const;
 
   /// Lookup the name of the given option.
-  const char *getOptionName(OptSpecifier id) const {
-    return getInfo(id).Name;
-  }
+  StringRef getOptionName(OptSpecifier id) const { return getInfo(id).Name; }
 
   /// Get the kind of the given option.
   unsigned getOptionKind(OptSpecifier id) const {
@@ -184,7 +182,7 @@ public:
   ///  takes
   ///
   /// \return true in success, and false in fail.
-  bool addValues(const char *Option, const char *Values);
+  bool addValues(StringRef Option, const char *Values);
 
   /// Parse a single argument; returning the new argument and
   /// updating Index.
