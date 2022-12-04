@@ -12,13 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RemoteCacheProvider.h"
-#include "compilation_caching_kv.grpc.pb.h"
+#include "llvm/RemoteCachingService/LLVMCASCacheProvider.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
-#include "llvm/RemoteCachingService/RemoteCacheServer.h"
+#include "llvm/RemoteCachingService/RemoteCacheProvider.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -29,8 +28,6 @@
 using namespace llvm;
 using namespace llvm::cas;
 using namespace llvm::cas::remote;
-using namespace compilation_cache_service::cas::v1;
-using namespace compilation_cache_service::keyvalue::v1;
 
 static cas::CacheKey cacheKeyFromString(StringRef Data) {
   // FIXME: Enhance \p cas::ActionCache to be able to pass data for key, without
@@ -52,75 +49,38 @@ public:
   void initialize(StringRef TempPath, std::unique_ptr<cas::ObjectStore> CAS,
                   std::unique_ptr<cas::ActionCache> Cache);
 
-  void GetValueAsync(
-      const GetValueRequest &Request,
-      std::function<void(const GetValueResponse &)> Receiver) override;
-  void PutValueAsync(
-      const PutValueRequest &Request,
-      std::function<void(const PutValueResponse &)> Receiver) override;
+  void GetValueAsync(std::string Key,
+                     std::function<void(Expected<std::optional<std::string>>)>
+                         Receiver) override;
+  void PutValueAsync(std::string Key, std::string Value,
+                     std::function<void(Error)> Receiver) override;
 
   void
-  CASLoadAsync(const CASLoadRequest &Request,
-               std::function<void(const CASLoadResponse &)> Receiver) override;
+  CASLoadAsync(std::string CASID, bool WriteToDisk,
+               std::function<void(Expected<LoadResponse>)> Receiver) override;
   void
-  CASSaveAsync(const CASSaveRequest &Request,
-               std::function<void(const CASSaveResponse &)> Receiver) override;
-  void
-  CASGetAsync(const CASGetRequest &Request,
-              std::function<void(const CASGetResponse &)> Receiver) override;
-  void
-  CASPutAsync(const CASPutRequest &Request,
-              std::function<void(const CASPutResponse &)> Receiver) override;
+  CASSaveAsync(BlobContents Blob,
+               std::function<void(Expected<std::string>)> Receiver) override;
 
-  GetValueResponse GetValue(const GetValueRequest &Request);
-  PutValueResponse PutValue(const PutValueRequest &Request);
+  void
+  CASGetAsync(std::string CASID, bool WriteToDisk,
+              std::function<void(Expected<GetResponse>)> Receiver) override;
+  void
+  CASPutAsync(BlobContents Blob, SmallVector<std::string> Refs,
+              std::function<void(Expected<std::string>)> Receiver) override;
 
-  CASLoadResponse CASLoad(const CASLoadRequest &Request);
-  CASSaveResponse CASSave(const CASSaveRequest &Request);
-  CASGetResponse CASGet(const CASGetRequest &Request);
-  CASPutResponse CASPut(const CASPutRequest &Request);
+  Expected<std::optional<std::string>> GetValue(StringRef Key);
+  Error PutValue(StringRef Key, StringRef Value);
+
+  Expected<LoadResponse> CASLoad(StringRef CASID, bool WriteToDisk);
+  Expected<std::string> CASSave(const BlobContents &Blob);
+
+  Expected<GetResponse> CASGet(StringRef CASID, bool WriteToDisk);
+  Expected<std::string> CASPut(const BlobContents &Blob,
+                               ArrayRef<std::string> Refs);
 };
 
 } // namespace
-
-static GetValueResponse GetValueWithError(Error &&E) {
-  GetValueResponse Response;
-  Response.set_outcome(GetValueResponse_Outcome_ERROR);
-  Response.mutable_error()->set_description(toString(std::move(E)));
-  return Response;
-}
-
-static PutValueResponse PutValueWithError(Error &&E) {
-  PutValueResponse Response;
-  Response.mutable_error()->set_description(toString(std::move(E)));
-  return Response;
-}
-
-static CASLoadResponse CASLoadWithError(Error &&E) {
-  CASLoadResponse Response;
-  Response.set_outcome(CASLoadResponse_Outcome_ERROR);
-  Response.mutable_error()->set_description(toString(std::move(E)));
-  return Response;
-}
-
-static CASSaveResponse CASSaveWithError(Error &&E) {
-  CASSaveResponse Response;
-  Response.mutable_error()->set_description(toString(std::move(E)));
-  return Response;
-}
-
-static CASGetResponse CASGetWithError(Error &&E) {
-  CASGetResponse Response;
-  Response.set_outcome(CASGetResponse_Outcome_ERROR);
-  Response.mutable_error()->set_description(toString(std::move(E)));
-  return Response;
-}
-
-static CASPutResponse CASPutWithError(Error &&E) {
-  CASPutResponse Response;
-  Response.mutable_error()->set_description(toString(std::move(E)));
-  return Response;
-}
 
 void LLVMCASCacheProvider::initialize(StringRef TempPath,
                                       std::unique_ptr<cas::ObjectStore> CAS,
@@ -131,208 +91,203 @@ void LLVMCASCacheProvider::initialize(StringRef TempPath,
 }
 
 void LLVMCASCacheProvider::GetValueAsync(
-    const GetValueRequest &Request,
-    std::function<void(const GetValueResponse &)> Receiver) {
-  Pool.async([this, Request, Receiver]() { Receiver(GetValue(Request)); });
+    std::string Key,
+    std::function<void(Expected<std::optional<std::string>>)> Receiver) {
+  Pool.async([this, Key = std::move(Key), Receiver = std::move(Receiver)]() {
+    Receiver(GetValue(Key));
+  });
 }
 
-void LLVMCASCacheProvider::PutValueAsync(
-    const PutValueRequest &Request,
-    std::function<void(const PutValueResponse &)> Receiver) {
-  Pool.async([this, Request, Receiver]() { Receiver(PutValue(Request)); });
+void LLVMCASCacheProvider::PutValueAsync(std::string Key, std::string Value,
+                                         std::function<void(Error)> Receiver) {
+  Pool.async(
+      [this, Key = std::move(Key), Value = std::move(Value),
+       Receiver = std::move(Receiver)]() { Receiver(PutValue(Key, Value)); });
 }
 
 void LLVMCASCacheProvider::CASLoadAsync(
-    const CASLoadRequest &Request,
-    std::function<void(const CASLoadResponse &)> Receiver) {
-  Pool.async([this, Request, Receiver]() { Receiver(CASLoad(Request)); });
+    std::string CASID, bool WriteToDisk,
+    std::function<void(Expected<LoadResponse>)> Receiver) {
+  Pool.async([this, CASID = std::move(CASID), WriteToDisk,
+              Receiver = std::move(Receiver)]() {
+    Receiver(CASLoad(CASID, WriteToDisk));
+  });
 }
 
 void LLVMCASCacheProvider::CASSaveAsync(
-    const CASSaveRequest &Request,
-    std::function<void(const CASSaveResponse &)> Receiver) {
-  Pool.async([this, Request, Receiver]() { Receiver(CASSave(Request)); });
+    BlobContents Blob, std::function<void(Expected<std::string>)> Receiver) {
+  Pool.async([this, Blob = std::move(Blob), Receiver = std::move(Receiver)]() {
+    Receiver(CASSave(Blob));
+  });
 }
 
 void LLVMCASCacheProvider::CASGetAsync(
-    const CASGetRequest &Request,
-    std::function<void(const CASGetResponse &)> Receiver) {
-  Pool.async([this, Request, Receiver]() { Receiver(CASGet(Request)); });
+    std::string CASID, bool WriteToDisk,
+    std::function<void(Expected<GetResponse>)> Receiver) {
+  Pool.async([this, CASID = std::move(CASID), WriteToDisk,
+              Receiver = std::move(Receiver)]() {
+    Receiver(CASGet(CASID, WriteToDisk));
+  });
 }
 
 void LLVMCASCacheProvider::CASPutAsync(
-    const CASPutRequest &Request,
-    std::function<void(const CASPutResponse &)> Receiver) {
-  Pool.async([this, Request, Receiver]() { Receiver(CASPut(Request)); });
+    BlobContents Blob, SmallVector<std::string> Refs,
+    std::function<void(Expected<std::string>)> Receiver) {
+  Pool.async(
+      [this, Blob = std::move(Blob), Refs = std::move(Refs),
+       Receiver = std::move(Receiver)]() { Receiver(CASPut(Blob, Refs)); });
 }
 
-GetValueResponse
-LLVMCASCacheProvider::GetValue(const GetValueRequest &Request) {
-  cas::CacheKey Key = cacheKeyFromString(Request.key());
-  Expected<Optional<cas::CASID>> ID = ActCache->get(Key);
+Expected<std::optional<std::string>>
+LLVMCASCacheProvider::GetValue(StringRef RawKey) {
+  cas::CacheKey Key = cacheKeyFromString(RawKey);
+  Expected<std::optional<cas::CASID>> ID = ActCache->get(Key);
   if (!ID)
-    return GetValueWithError(ID.takeError());
+    return ID.takeError();
 
-  GetValueResponse Response;
   if (*ID) {
-    Response.set_outcome(GetValueResponse_Outcome_SUCCESS);
     Expected<cas::ObjectProxy> Obj = CAS->getProxy(**ID);
     if (!Obj)
-      return GetValueWithError(Obj.takeError());
-    StringRef ValData = Obj->getData();
-    Response.mutable_value()->ParseFromArray(ValData.data(), ValData.size());
+      return Obj.takeError();
+    return Obj->getData().str();
   } else {
-    Response.set_outcome(GetValueResponse_Outcome_KEY_NOT_FOUND);
+    return std::nullopt;
   }
-  return Response;
 }
 
-PutValueResponse
-LLVMCASCacheProvider::PutValue(const PutValueRequest &Request) {
-  Expected<cas::ObjectRef> Obj =
-      CAS->storeFromString({}, Request.value().SerializeAsString());
+Error LLVMCASCacheProvider::PutValue(StringRef RawKey, StringRef Value) {
+  Expected<cas::ObjectRef> Obj = CAS->storeFromString({}, Value);
   if (!Obj)
-    return PutValueWithError(Obj.takeError());
-  cas::CacheKey Key = cacheKeyFromString(Request.key());
-  if (Error E = ActCache->put(Key, CAS->getID(*Obj)))
-    return PutValueWithError(std::move(E));
-  return PutValueResponse();
+    return Obj.takeError();
+  cas::CacheKey Key = cacheKeyFromString(RawKey);
+  return ActCache->put(Key, CAS->getID(*Obj));
 }
 
-CASLoadResponse LLVMCASCacheProvider::CASLoad(const CASLoadRequest &Request) {
-  Expected<cas::CASID> ID = CAS->parseID(Request.cas_id().id());
+Expected<RemoteCacheProvider::LoadResponse>
+LLVMCASCacheProvider::CASLoad(StringRef CASID, bool WriteToDisk) {
+  Expected<cas::CASID> ID = CAS->parseID(CASID);
   if (!ID)
-    return CASLoadWithError(ID.takeError());
+    return ID.takeError();
   Expected<cas::ObjectProxy> Obj = CAS->getProxy(*ID);
   if (!Obj)
-    return CASLoadWithError(Obj.takeError());
+    return Obj.takeError();
   StringRef BlobData = Obj->getData();
 
-  CASLoadResponse Response;
-  Response.set_outcome(CASLoadResponse_Outcome_SUCCESS);
-
-  if (Request.write_to_disk()) {
+  if (WriteToDisk) {
     SmallString<128> ModelPath{TempDir};
     sys::path::append(ModelPath, "%%%%%%%.blob");
     int FD;
     SmallString<256> TempPath;
     std::error_code EC = sys::fs::createUniqueFile(ModelPath, FD, TempPath);
     if (EC)
-      return CASLoadWithError(createStringError(
-          EC, "failed creating '" + ModelPath + "': " + EC.message()));
+      return createStringError(EC, "failed creating '" + ModelPath +
+                                       "': " + EC.message());
     raw_fd_ostream OS(FD, /*shouldClose=*/true);
     OS << BlobData;
     OS.close();
-    Response.mutable_data()->mutable_blob()->set_file_path(
-        TempPath.str().str());
+    return LoadResponse{
+        /*KeyNotFound*/ false,
+        BlobContents{/*IsFilePath*/ true, TempPath.str().str()}};
   } else {
-    Response.mutable_data()->mutable_blob()->set_data(BlobData.str());
+    return LoadResponse{/*KeyNotFound*/ false,
+                        BlobContents{/*IsFilePath*/ false, BlobData.str()}};
   }
-
-  return Response;
 }
 
-CASSaveResponse LLVMCASCacheProvider::CASSave(const CASSaveRequest &Request) {
-  const CASBytes &Blob = Request.data().blob();
-
-  Optional<cas::ObjectRef> Ref;
-  if (Blob.has_file_path()) {
+Expected<std::string> LLVMCASCacheProvider::CASSave(const BlobContents &Blob) {
+  std::optional<cas::ObjectRef> Ref;
+  if (Blob.IsFilePath) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> FileBuf =
-        MemoryBuffer::getFile(Blob.file_path());
+        MemoryBuffer::getFile(Blob.DataOrPath);
     if (!FileBuf)
-      return CASSaveWithError(createStringError(
-          FileBuf.getError(), "failed reading '" + Blob.file_path() +
-                                  "': " + FileBuf.getError().message()));
+      return createStringError(FileBuf.getError(),
+                               "failed reading '" + Blob.DataOrPath +
+                                   "': " + FileBuf.getError().message());
     if (Error E =
             CAS->storeFromString({}, (*FileBuf)->getBuffer()).moveInto(Ref))
-      return CASSaveWithError(std::move(E));
+      return std::move(E);
   } else {
-    if (Error E = CAS->storeFromString({}, Blob.data()).moveInto(Ref))
-      return CASSaveWithError(std::move(E));
+    if (Error E = CAS->storeFromString({}, Blob.DataOrPath).moveInto(Ref))
+      return std::move(E);
   }
 
-  CASSaveResponse Response;
-  Response.mutable_cas_id()->set_id(CAS->getID(*Ref).toString());
-  return Response;
+  return CAS->getID(*Ref).toString();
 }
 
-CASGetResponse LLVMCASCacheProvider::CASGet(const CASGetRequest &Request) {
-  Expected<cas::CASID> ID = CAS->parseID(Request.cas_id().id());
+Expected<RemoteCacheProvider::GetResponse>
+LLVMCASCacheProvider::CASGet(StringRef CASID, bool WriteToDisk) {
+  Expected<cas::CASID> ID = CAS->parseID(CASID);
   if (!ID)
-    return CASGetWithError(ID.takeError());
+    return ID.takeError();
   Expected<cas::ObjectProxy> Obj = CAS->getProxy(*ID);
   if (!Obj)
-    return CASGetWithError(Obj.takeError());
+    return Obj.takeError();
   StringRef BlobData = Obj->getData();
 
-  CASGetResponse Response;
-  Response.set_outcome(CASGetResponse_Outcome_SUCCESS);
+  SmallVector<std::string> Refs;
+  Refs.reserve(Obj->getNumReferences());
+  auto Err = Obj->forEachReference([&](ObjectRef Ref) {
+    Refs.push_back(toStringRef(CAS->getID(Ref).getHash()).str());
+    return Error::success();
+  });
+  if (Err)
+    return std::move(Err);
 
-  if (Request.write_to_disk()) {
+  if (WriteToDisk) {
     SmallString<128> ModelPath{TempDir};
     sys::path::append(ModelPath, "%%%%%%%.blob");
     int FD;
     SmallString<256> TempPath;
     std::error_code EC = sys::fs::createUniqueFile(ModelPath, FD, TempPath);
     if (EC)
-      return CASGetWithError(createStringError(
-          EC, "failed creating '" + ModelPath + "': " + EC.message()));
+      return createStringError(EC, "failed creating '" + ModelPath +
+                                       "': " + EC.message());
     raw_fd_ostream OS(FD, /*shouldClose=*/true);
     OS << BlobData;
     OS.close();
-    Response.mutable_data()->mutable_blob()->set_file_path(
-        TempPath.str().str());
+    return GetResponse{/*KeyNotFound*/ false,
+                       BlobContents{/*IsFilePath*/ true, TempPath.str().str()},
+                       std::move(Refs)};
   } else {
-    Response.mutable_data()->mutable_blob()->set_data(BlobData.str());
+    return GetResponse{/*KeyNotFound*/ false,
+                       BlobContents{/*IsFilePath*/ false, BlobData.str()},
+                       std::move(Refs)};
   }
-
-  auto Err = Obj->forEachReference([&](ObjectRef Ref) {
-    std::string Hash = toStringRef(CAS->getID(Ref).getHash()).str();
-    Response.mutable_data()->add_references()->set_id(Hash);
-    return Error::success();
-  });
-
-  if (Err)
-    return CASGetWithError(std::move(Err));
-
-  return Response;
 }
 
-CASPutResponse LLVMCASCacheProvider::CASPut(const CASPutRequest &Request) {
-  const CASBytes &Blob = Request.data().blob();
-
+Expected<std::string>
+LLVMCASCacheProvider::CASPut(const BlobContents &Blob,
+                             ArrayRef<std::string> RawRefs) {
   SmallVector<ObjectRef> Refs;
-  for (auto &Ref : Request.data().references()) {
-    auto ID = CAS->parseID(Ref.id());
+  for (const auto &Ref : RawRefs) {
+    auto ID = CAS->parseID(Ref);
     if (!ID)
-      return CASPutWithError(ID.takeError());
+      return ID.takeError();
     auto CASRef = CAS->getReference(*ID);
     if (!CASRef)
-      return CASPutWithError(createStringError(
-          inconvertibleErrorCode(), "cannot get ObjectRef from CASID "));
+      return createStringError(inconvertibleErrorCode(),
+                               "cannot get ObjectRef from CASID ");
 
     Refs.push_back(*CASRef);
   }
 
-  Optional<cas::ObjectRef> Ref;
-  if (Blob.has_file_path()) {
+  std::optional<cas::ObjectRef> Ref;
+  if (Blob.IsFilePath) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> FileBuf =
-        MemoryBuffer::getFile(Blob.file_path());
+        MemoryBuffer::getFile(Blob.DataOrPath);
     if (!FileBuf)
-      return CASPutWithError(createStringError(
-          FileBuf.getError(), "failed reading '" + Blob.file_path() +
-                                  "': " + FileBuf.getError().message()));
+      return createStringError(FileBuf.getError(),
+                               "failed reading '" + Blob.DataOrPath +
+                                   "': " + FileBuf.getError().message());
     if (Error E =
             CAS->storeFromString(Refs, (*FileBuf)->getBuffer()).moveInto(Ref))
-      return CASPutWithError(std::move(E));
+      return std::move(E);
   } else {
-    if (Error E = CAS->storeFromString(Refs, Blob.data()).moveInto(Ref))
-      return CASPutWithError(std::move(E));
+    if (Error E = CAS->storeFromString(Refs, Blob.DataOrPath).moveInto(Ref))
+      return std::move(E);
   }
 
-  CASPutResponse Response;
-  Response.mutable_cas_id()->set_id(CAS->getID(*Ref).toString());
-  return Response;
+  return CAS->getID(*Ref).toString();
 }
 
 std::unique_ptr<RemoteCacheProvider>
