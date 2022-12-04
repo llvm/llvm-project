@@ -222,7 +222,7 @@ def ForOp : SCF_Op<"for",
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "Value":$lowerBound, "Value":$upperBound, "Value":$step,
-      CArg<"ValueRange", "llvm::None">:$iterArgs,
+      CArg<"ValueRange", "std::nullopt">:$iterArgs,
       CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
            "nullptr">)>
   ];
@@ -276,10 +276,10 @@ def ForOp : SCF_Op<"for",
     /// operand return llvm::None.
     Optional<unsigned> getIterArgNumberForOpOperand(OpOperand &opOperand) {
       if (opOperand.getOwner() != getOperation())
-        return llvm::None;
+        return std::nullopt;
       unsigned operandNumber = opOperand.getOperandNumber();
       if (operandNumber < getNumControlOperands())
-        return llvm::None;
+        return std::nullopt;
       return operandNumber - getNumControlOperands();
     }
 

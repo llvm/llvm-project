@@ -57,7 +57,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return llvm::None;
+        return std::nullopt;
       }]
     >,
     InterfaceMethod<[{
@@ -69,7 +69,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return llvm::None;
+        return std::nullopt;
       }]
     >,
     InterfaceMethod<[{
@@ -81,7 +81,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return llvm::None;
+        return std::nullopt;
       }]
     >,
     InterfaceMethod<[{
@@ -93,7 +93,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return llvm::None;
+        return std::nullopt;
       }]
     >,
   ];
