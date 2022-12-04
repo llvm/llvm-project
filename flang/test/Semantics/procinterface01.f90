@@ -130,9 +130,9 @@ contains
  end function nested5
 end module module1
 
-!DEF: /explicit1 ELEMENTAL (Function) Subprogram REAL(4)
+!DEF: /explicit1 (Function) Subprogram REAL(4)
 !DEF: /explicit1/x INTENT(IN) ObjectEntity REAL(4)
-real elemental function explicit1(x)
+real function explicit1(x)
  !REF: /explicit1/x
  real, intent(in) :: x
  !DEF: /explicit1/explicit1 ObjectEntity REAL(4)
@@ -150,14 +150,13 @@ integer function logical(x)
  logical = x+3.
 end function logical
 
-!DEF: /tan (Function) Subprogram REAL(4)
+!DEF: /tan (Function) Subprogram CHARACTER(1_8,1)
 !DEF: /tan/x INTENT(IN) ObjectEntity REAL(4)
-real function tan(x)
+character*1 function tan(x)
  !REF: /tan/x
  real, intent(in) :: x
- !DEF: /tan/tan ObjectEntity REAL(4)
- !REF: /tan/x
- tan = x+5.
+ !DEF: /tan/tan ObjectEntity CHARACTER(1_8,1)
+ tan = "?"
 end function tan
 
 !DEF: /main MainProgram
