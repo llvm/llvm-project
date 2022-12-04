@@ -65,6 +65,9 @@ struct AsyncInfoWrapperTy {
     return reinterpret_cast<Ty &>(AsyncInfoPtr->Queue);
   }
 
+  /// Indicate whether there is queue.
+  bool hasQueue() const { return (AsyncInfoPtr->Queue != nullptr); }
+
 private:
   Error &Err;
   ErrorAsOutParameter ErrOutParam;
