@@ -21,17 +21,6 @@
 #include <vector>
 
 namespace llvm {
-
-template <typename T, typename = decltype(std::declval<raw_ostream &>()
-                                          << std::declval<const T &>())>
-raw_ostream &operator<<(raw_ostream &OS, const std::optional<T> &O) {
-  if (O)
-    OS << *O;
-  else
-    OS << std::nullopt;
-  return OS;
-}
-
 namespace bolt {
 
 // NOTE: using SmallVector for instruction list results in a memory regression.

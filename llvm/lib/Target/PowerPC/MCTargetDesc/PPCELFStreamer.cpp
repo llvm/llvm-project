@@ -92,7 +92,8 @@ void PPCELFStreamer::emitInstruction(const MCInst &Inst,
   // instruction pair, return a value, otherwise return None. A true returned
   // value means the instruction is the PLDpc and a false value means it is
   // the user instruction.
-  Optional<bool> IsPartOfGOTToPCRelPair = isPartOfGOTToPCRelPair(Inst, STI);
+  std::optional<bool> IsPartOfGOTToPCRelPair =
+      isPartOfGOTToPCRelPair(Inst, STI);
 
   // User of the GOT-indirect address.
   // For example, the load that will get the relocation as follows:
@@ -196,8 +197,8 @@ void PPCELFStreamer::emitGOTToPCRelLabel(const MCInst &Inst) {
 // at the opcode and in the case of PLDpc we will return true. For the load
 // (or store) this function will return false indicating it has found the second
 // instruciton in the pair.
-Optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
-                                            const MCSubtargetInfo &STI) {
+std::optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
+                                                 const MCSubtargetInfo &STI) {
   // Need at least two operands.
   if (Inst.getNumOperands() < 2)
     return std::nullopt;

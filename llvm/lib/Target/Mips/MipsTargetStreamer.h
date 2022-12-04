@@ -183,7 +183,7 @@ public:
   }
 
 protected:
-  llvm::Optional<MipsABIInfo> ABI;
+  std::optional<MipsABIInfo> ABI;
   MipsABIFlagsSection ABIFlagsSection;
 
   bool GPRInfoSet;

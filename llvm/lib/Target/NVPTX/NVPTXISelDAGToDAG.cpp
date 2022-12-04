@@ -808,10 +808,12 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
 
 // Helper function template to reduce amount of boilerplate code for
 // opcode selection.
-static Optional<unsigned> pickOpcodeForVT(
-    MVT::SimpleValueType VT, unsigned Opcode_i8, unsigned Opcode_i16,
-    unsigned Opcode_i32, Optional<unsigned> Opcode_i64, unsigned Opcode_f16,
-    unsigned Opcode_f16x2, unsigned Opcode_f32, Optional<unsigned> Opcode_f64) {
+static std::optional<unsigned>
+pickOpcodeForVT(MVT::SimpleValueType VT, unsigned Opcode_i8,
+                unsigned Opcode_i16, unsigned Opcode_i32,
+                std::optional<unsigned> Opcode_i64, unsigned Opcode_f16,
+                unsigned Opcode_f16x2, unsigned Opcode_f32,
+                std::optional<unsigned> Opcode_f64) {
   switch (VT) {
   case MVT::i1:
   case MVT::i8:
@@ -924,7 +926,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   SDValue N1 = N->getOperand(1);
   SDValue Addr;
   SDValue Offset, Base;
-  Optional<unsigned> Opcode;
+  std::optional<unsigned> Opcode;
   MVT::SimpleValueType TargetVT = LD->getSimpleValueType(0).SimpleTy;
 
   if (SelectDirectAddr(N1, Addr)) {
@@ -1003,7 +1005,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   SDValue Chain = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDValue Addr, Offset, Base;
-  Optional<unsigned> Opcode;
+  std::optional<unsigned> Opcode;
   SDLoc DL(N);
   SDNode *LD;
   MemSDNode *MemSD = cast<MemSDNode>(N);
@@ -1266,7 +1268,7 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
     Mem = cast<MemSDNode>(N);
   }
 
-  Optional<unsigned> Opcode;
+  std::optional<unsigned> Opcode;
   SDLoc DL(N);
   SDNode *LD;
   SDValue Base, Offset, Addr;
@@ -1770,7 +1772,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   SDValue BasePtr = ST->getBasePtr();
   SDValue Addr;
   SDValue Offset, Base;
-  Optional<unsigned> Opcode;
+  std::optional<unsigned> Opcode;
   MVT::SimpleValueType SourceVT =
       Value.getNode()->getSimpleValueType(0).SimpleTy;
 
@@ -1873,7 +1875,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   SDValue Chain = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDValue Addr, Offset, Base;
-  Optional<unsigned> Opcode;
+  std::optional<unsigned> Opcode;
   SDLoc DL(N);
   SDNode *ST;
   EVT EltVT = Op1.getValueType();
@@ -2113,7 +2115,7 @@ bool NVPTXDAGToDAGISel::tryLoadParam(SDNode *Node) {
   EVT EltVT = Node->getValueType(0);
   EVT MemVT = Mem->getMemoryVT();
 
-  Optional<unsigned> Opcode;
+  std::optional<unsigned> Opcode;
 
   switch (VecSize) {
   default:
@@ -2198,7 +2200,7 @@ bool NVPTXDAGToDAGISel::tryStoreRetval(SDNode *N) {
   // Determine target opcode
   // If we have an i1, use an 8-bit store. The lowering code in
   // NVPTXISelLowering will have already emitted an upcast.
-  Optional<unsigned> Opcode = 0;
+  std::optional<unsigned> Opcode = 0;
   switch (NumElts) {
   default:
     return false;
@@ -2275,7 +2277,7 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
   // Determine target opcode
   // If we have an i1, use an 8-bit store. The lowering code in
   // NVPTXISelLowering will have already emitted an upcast.
-  Optional<unsigned> Opcode = 0;
+  std::optional<unsigned> Opcode = 0;
   switch (N->getOpcode()) {
   default:
     switch (NumElts) {
