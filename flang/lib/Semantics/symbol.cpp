@@ -671,20 +671,20 @@ bool GenericKind::IsOperator() const {
 std::string GenericKind::ToString() const {
   return common::visit(
       common::visitors {
-        [](const OtherKind &x) { return EnumToString(x); },
+        [](const OtherKind &x) { return std::string{EnumToString(x)}; },
             [](const DefinedIo &x) { return AsFortran(x).ToString(); },
 #if !__clang__ && __GNUC__ == 7 && __GNUC_MINOR__ == 2
             [](const common::NumericOperator &x) {
-              return common::EnumToString(x);
+              return std::string{common::EnumToString(x)};
             },
             [](const common::LogicalOperator &x) {
-              return common::EnumToString(x);
+              return std::string{common::EnumToString(x)};
             },
             [](const common::RelationalOperator &x) {
-              return common::EnumToString(x);
+              return std::string{common::EnumToString(x)};
             },
 #else
-            [](const auto &x) { return common::EnumToString(x); },
+            [](const auto &x) { return std::string{common::EnumToString(x)}; },
 #endif
       },
       u);

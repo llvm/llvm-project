@@ -43,7 +43,7 @@ using common::LanguageFeature;
 using common::NumericOperator;
 using common::TypeCategory;
 
-static inline std::string ToUpperCase(const std::string &str) {
+static inline std::string ToUpperCase(std::string_view str) {
   return parser::ToUpperCaseLetters(str);
 }
 

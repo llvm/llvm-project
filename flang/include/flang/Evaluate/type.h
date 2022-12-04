@@ -373,7 +373,7 @@ template <TypeCategory CATEGORY> struct SomeKind {
   static constexpr TypeCategory category{CATEGORY};
   constexpr bool operator==(const SomeKind &) const { return true; }
   static std::string AsFortran() {
-    return "Some"s + common::EnumToString(category);
+    return "Some"s + std::string{common::EnumToString(category)};
   }
 };
 
