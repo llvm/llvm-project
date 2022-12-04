@@ -114,18 +114,18 @@ isBigEndian(const SmallDenseMap<int64_t, int64_t, 8> &MemOffset2Idx,
   // Need at least two byte positions to decide on endianness.
   unsigned Width = MemOffset2Idx.size();
   if (Width < 2)
-    return None;
+    return std::nullopt;
   bool BigEndian = true, LittleEndian = true;
   for (unsigned MemOffset = 0; MemOffset < Width; ++ MemOffset) {
     auto MemOffsetAndIdx = MemOffset2Idx.find(MemOffset);
     if (MemOffsetAndIdx == MemOffset2Idx.end())
-      return None;
+      return std::nullopt;
     const int64_t Idx = MemOffsetAndIdx->second - LowestIdx;
     assert(Idx >= 0 && "Expected non-negative byte offset?");
     LittleEndian &= Idx == littleEndianByteAt(Width, MemOffset);
     BigEndian &= Idx == bigEndianByteAt(Width, MemOffset);
     if (!BigEndian && !LittleEndian)
-      return None;
+      return std::nullopt;
   }
 
   assert((BigEndian != LittleEndian) &&
@@ -1290,7 +1290,7 @@ static Optional<APFloat> constantFoldFpUnary(unsigned Opcode, LLT DstTy,
                                              const MachineRegisterInfo &MRI) {
   const ConstantFP *MaybeCst = getConstantFPVRegVal(Op, MRI);
   if (!MaybeCst)
-    return None;
+    return std::nullopt;
 
   APFloat V = MaybeCst->getValueAPF();
   switch (Opcode) {
@@ -3246,7 +3246,7 @@ CombinerHelper::findCandidatesForLoadOrCombine(const MachineInstr *Root) const {
 
     // In the combine, we want to elimate the entire tree.
     if (!MRI.hasOneNonDBGUse(OrLHS) || !MRI.hasOneNonDBGUse(OrRHS))
-      return None;
+      return std::nullopt;
 
     // If it's a G_OR, save it and continue to walk. If it's not, then it's
     // something that may be a load + arithmetic.
@@ -3263,7 +3263,7 @@ CombinerHelper::findCandidatesForLoadOrCombine(const MachineInstr *Root) const {
   // We're going to try and merge each register into a wider power-of-2 type,
   // so we ought to have an even number of registers.
   if (RegsToVisit.empty() || RegsToVisit.size() % 2 != 0)
-    return None;
+    return std::nullopt;
   return RegsToVisit;
 }
 
@@ -3289,15 +3289,15 @@ matchLoadAndBytePosition(Register Reg, unsigned MemSizeInBits,
   }
 
   if (Shift % MemSizeInBits != 0)
-    return None;
+    return std::nullopt;
 
   // TODO: Handle other types of loads.
   auto *Load = getOpcodeDef<GZExtLoad>(MaybeLoad, MRI);
   if (!Load)
-    return None;
+    return std::nullopt;
 
   if (!Load->isUnordered() || Load->getMemSizeInBits() != MemSizeInBits)
-    return None;
+    return std::nullopt;
 
   return std::make_pair(Load, Shift / MemSizeInBits);
 }
@@ -3342,7 +3342,7 @@ CombinerHelper::findLoadOffsetsForLoadOrCombine(
     // shifted) value.
     auto LoadAndPos = matchLoadAndBytePosition(Reg, MemSizeInBits, MRI);
     if (!LoadAndPos)
-      return None;
+      return std::nullopt;
     GZExtLoad *Load;
     int64_t DstPos;
     std::tie(Load, DstPos) = *LoadAndPos;
@@ -3353,14 +3353,14 @@ CombinerHelper::findLoadOffsetsForLoadOrCombine(
     if (!MBB)
       MBB = LoadMBB;
     if (LoadMBB != MBB)
-      return None;
+      return std::nullopt;
 
     // Make sure that the MachineMemOperands of every seen load are compatible.
     auto &LoadMMO = Load->getMMO();
     if (!MMO)
       MMO = &LoadMMO;
     if (MMO->getAddrSpace() != LoadMMO.getAddrSpace())
-      return None;
+      return std::nullopt;
 
     // Find out what the base pointer and index for the load is.
     Register LoadPtr;
@@ -3373,7 +3373,7 @@ CombinerHelper::findLoadOffsetsForLoadOrCombine(
 
     // Don't combine things like a[i], a[i] -> a bigger load.
     if (!SeenIdx.insert(Idx).second)
-      return None;
+      return std::nullopt;
 
     // Every load must share the same base pointer; don't combine things like:
     //
@@ -3381,7 +3381,7 @@ CombinerHelper::findLoadOffsetsForLoadOrCombine(
     if (!BasePtr.isValid())
       BasePtr = LoadPtr;
     if (BasePtr != LoadPtr)
-      return None;
+      return std::nullopt;
 
     if (Idx < LowestIdx) {
       LowestIdx = Idx;
@@ -3393,7 +3393,7 @@ CombinerHelper::findLoadOffsetsForLoadOrCombine(
     //
     // a[i] << 16, a[i + k] << 16 -> a bigger load.
     if (!MemOffset2Idx.try_emplace(DstPos, Idx).second)
-      return None;
+      return std::nullopt;
     Loads.insert(Load);
 
     // Keep track of the position of the earliest/latest loads in the pattern.
@@ -3428,9 +3428,9 @@ CombinerHelper::findLoadOffsetsForLoadOrCombine(
     if (Loads.count(&MI))
       continue;
     if (MI.isLoadFoldBarrier())
-      return None;
+      return std::nullopt;
     if (Iter++ == MaxIter)
-      return None;
+      return std::nullopt;
   }
 
   return std::make_tuple(LowestIdxLoad, LowestIdx, LatestLoad);
@@ -3560,7 +3560,7 @@ getTruncStoreByteOffset(GStore &Store, Register &SrcVal,
                         MachineRegisterInfo &MRI) {
   Register TruncVal;
   if (!mi_match(Store.getValueReg(), MRI, m_GTrunc(m_Reg(TruncVal))))
-    return None;
+    return std::nullopt;
 
   // The shift amount must be a constant multiple of the narrow type.
   // It is translated to the offset address in the wide source value "y".
@@ -3578,21 +3578,21 @@ getTruncStoreByteOffset(GStore &Store, Register &SrcVal,
         SrcVal = TruncVal;
       return 0; // If it's the lowest index store.
     }
-    return None;
+    return std::nullopt;
   }
 
   unsigned NarrowBits = Store.getMMO().getMemoryType().getScalarSizeInBits();
   if (ShiftAmt % NarrowBits!= 0)
-    return None;
+    return std::nullopt;
   const unsigned Offset = ShiftAmt / NarrowBits;
 
   if (SrcVal.isValid() && FoundSrcVal != SrcVal)
-    return None;
+    return std::nullopt;
 
   if (!SrcVal.isValid())
     SrcVal = FoundSrcVal;
   else if (MRI.getType(SrcVal) != MRI.getType(FoundSrcVal))
-    return None;
+    return std::nullopt;
   return Offset;
 }
 

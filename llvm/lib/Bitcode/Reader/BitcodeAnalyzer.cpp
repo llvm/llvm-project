@@ -28,7 +28,7 @@ static Optional<const char *> GetBlockName(unsigned BlockID,
   if (BlockID < bitc::FIRST_APPLICATION_BLOCKID) {
     if (BlockID == bitc::BLOCKINFO_BLOCK_ID)
       return "BLOCKINFO_BLOCK";
-    return None;
+    return std::nullopt;
   }
 
   // Check to see if we have a blockinfo record for this block, with a name.
@@ -39,11 +39,11 @@ static Optional<const char *> GetBlockName(unsigned BlockID,
   }
 
   if (CurStreamType != LLVMIRBitstream)
-    return None;
+    return std::nullopt;
 
   switch (BlockID) {
   default:
-    return None;
+    return std::nullopt;
   case bitc::OPERAND_BUNDLE_TAGS_BLOCK_ID:
     return "OPERAND_BUNDLE_TAGS_BLOCK";
   case bitc::MODULE_BLOCK_ID:
@@ -92,7 +92,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
     if (BlockID == bitc::BLOCKINFO_BLOCK_ID) {
       switch (CodeID) {
       default:
-        return None;
+        return std::nullopt;
       case bitc::BLOCKINFO_CODE_SETBID:
         return "SETBID";
       case bitc::BLOCKINFO_CODE_BLOCKNAME:
@@ -101,7 +101,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
         return "SETRECORDNAME";
       }
     }
-    return None;
+    return std::nullopt;
   }
 
   // Check to see if we have a blockinfo record for this record, with a name.
@@ -113,18 +113,18 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
   }
 
   if (CurStreamType != LLVMIRBitstream)
-    return None;
+    return std::nullopt;
 
 #define STRINGIFY_CODE(PREFIX, CODE)                                           \
   case bitc::PREFIX##_##CODE:                                                  \
     return #CODE;
   switch (BlockID) {
   default:
-    return None;
+    return std::nullopt;
   case bitc::MODULE_BLOCK_ID:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
       STRINGIFY_CODE(MODULE_CODE, VERSION)
       STRINGIFY_CODE(MODULE_CODE, TRIPLE)
       STRINGIFY_CODE(MODULE_CODE, DATALAYOUT)
@@ -144,14 +144,14 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
   case bitc::IDENTIFICATION_BLOCK_ID:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
       STRINGIFY_CODE(IDENTIFICATION_CODE, STRING)
       STRINGIFY_CODE(IDENTIFICATION_CODE, EPOCH)
     }
   case bitc::PARAMATTR_BLOCK_ID:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
     // FIXME: Should these be different?
     case bitc::PARAMATTR_CODE_ENTRY_OLD:
       return "ENTRY";
@@ -161,14 +161,14 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
   case bitc::PARAMATTR_GROUP_BLOCK_ID:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
     case bitc::PARAMATTR_GRP_CODE_ENTRY:
       return "ENTRY";
     }
   case bitc::TYPE_BLOCK_ID_NEW:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
       STRINGIFY_CODE(TYPE_CODE, NUMENTRY)
       STRINGIFY_CODE(TYPE_CODE, VOID)
       STRINGIFY_CODE(TYPE_CODE, FLOAT)
@@ -196,7 +196,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
   case bitc::CONSTANTS_BLOCK_ID:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
       STRINGIFY_CODE(CST_CODE, SETTYPE)
       STRINGIFY_CODE(CST_CODE, NULL)
       STRINGIFY_CODE(CST_CODE, UNDEF)
@@ -227,7 +227,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
   case bitc::FUNCTION_BLOCK_ID:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
       STRINGIFY_CODE(FUNC_CODE, DECLAREBLOCKS)
       STRINGIFY_CODE(FUNC_CODE, INST_BINOP)
       STRINGIFY_CODE(FUNC_CODE, INST_CAST)
@@ -272,7 +272,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
   case bitc::VALUE_SYMTAB_BLOCK_ID:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
       STRINGIFY_CODE(VST_CODE, ENTRY)
       STRINGIFY_CODE(VST_CODE, BBENTRY)
       STRINGIFY_CODE(VST_CODE, FNENTRY)
@@ -281,7 +281,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
   case bitc::MODULE_STRTAB_BLOCK_ID:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
       STRINGIFY_CODE(MST_CODE, ENTRY)
       STRINGIFY_CODE(MST_CODE, HASH)
     }
@@ -289,7 +289,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
   case bitc::FULL_LTO_GLOBALVAL_SUMMARY_BLOCK_ID:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
       STRINGIFY_CODE(FS, PERMODULE)
       STRINGIFY_CODE(FS, PERMODULE_PROFILE)
       STRINGIFY_CODE(FS, PERMODULE_RELBF)
@@ -324,13 +324,13 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
   case bitc::METADATA_ATTACHMENT_ID:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
       STRINGIFY_CODE(METADATA, ATTACHMENT)
     }
   case bitc::METADATA_BLOCK_ID:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
       STRINGIFY_CODE(METADATA, STRING_OLD)
       STRINGIFY_CODE(METADATA, VALUE)
       STRINGIFY_CODE(METADATA, NODE)
@@ -374,13 +374,13 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
   case bitc::METADATA_KIND_BLOCK_ID:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
       STRINGIFY_CODE(METADATA, KIND)
     }
   case bitc::USELIST_BLOCK_ID:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
     case bitc::USELIST_CODE_DEFAULT:
       return "USELIST_CODE_DEFAULT";
     case bitc::USELIST_CODE_BB:
@@ -390,21 +390,21 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
   case bitc::OPERAND_BUNDLE_TAGS_BLOCK_ID:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
     case bitc::OPERAND_BUNDLE_TAG:
       return "OPERAND_BUNDLE_TAG";
     }
   case bitc::STRTAB_BLOCK_ID:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
     case bitc::STRTAB_BLOB:
       return "BLOB";
     }
   case bitc::SYMTAB_BLOCK_ID:
     switch (CodeID) {
     default:
-      return None;
+      return std::nullopt;
     case bitc::SYMTAB_BLOB:
       return "BLOB";
     }

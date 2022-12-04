@@ -6072,7 +6072,7 @@ bool LLParser::parseFunctionBody(Function &Fn) {
   // within this function.
   if (PFS.resolveForwardRefBlockAddresses())
     return true;
-  SaveAndRestore<PerFunctionState *> ScopeExit(BlockAddressPFS, &PFS);
+  SaveAndRestore ScopeExit(BlockAddressPFS, &PFS);
 
   // We need at least one basic block.
   if (Lex.getKind() == lltok::rbrace || Lex.getKind() == lltok::kw_uselistorder)

@@ -230,7 +230,7 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     CGF.EmitBlock(Handler.Block);
 
     CodeGenFunction::LexicalScope Cleanups(CGF, Handler.Body->getSourceRange());
-    SaveAndRestore<llvm::Instruction *> RevertAfterScope(CGF.CurrentFuncletPad);
+    SaveAndRestore RevertAfterScope(CGF.CurrentFuncletPad);
     if (useFunclets) {
       llvm::Instruction *CPICandidate = Handler.Block->getFirstNonPHI();
       if (auto *CPI = dyn_cast_or_null<llvm::CatchPadInst>(CPICandidate)) {

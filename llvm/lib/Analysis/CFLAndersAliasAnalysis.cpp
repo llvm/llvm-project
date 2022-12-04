@@ -365,7 +365,7 @@ getInterfaceValue(InstantiatedValue IValue,
 
   if (Index)
     return InterfaceValue{*Index, IValue.DerefLevel};
-  return None;
+  return std::nullopt;
 }
 
 static void populateAttrMap(DenseMap<const Value *, AliasAttrs> &AttrMap,
@@ -515,7 +515,7 @@ CFLAndersAAResult::FunctionInfo::getAttrs(const Value *V) const {
   auto Itr = AttrMap.find(V);
   if (Itr != AttrMap.end())
     return Itr->second;
-  return None;
+  return std::nullopt;
 }
 
 bool CFLAndersAAResult::FunctionInfo::mayAlias(
@@ -631,7 +631,7 @@ static std::optional<InstantiatedValue> getNodeBelow(const CFLGraph &Graph,
   auto NodeBelow = InstantiatedValue{V.Val, V.DerefLevel + 1};
   if (Graph.getNode(NodeBelow))
     return NodeBelow;
-  return None;
+  return std::nullopt;
 }
 
 static void processWorkListItem(const WorkListItem &Item, const CFLGraph &Graph,
