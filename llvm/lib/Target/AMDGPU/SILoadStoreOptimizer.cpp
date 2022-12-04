@@ -1989,12 +1989,12 @@ SILoadStoreOptimizer::extractConstOffset(const MachineOperand &Op) const {
     return Op.getImm();
 
   if (!Op.isReg())
-    return None;
+    return std::nullopt;
 
   MachineInstr *Def = MRI->getUniqueVRegDef(Op.getReg());
   if (!Def || Def->getOpcode() != AMDGPU::S_MOV_B32 ||
       !Def->getOperand(1).isImm())
-    return None;
+    return std::nullopt;
 
   return Def->getOperand(1).getImm();
 }

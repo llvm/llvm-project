@@ -62,7 +62,7 @@ public:
           return false;
       }
       // Wait until the values are propagated from the predecessors
-      return None;
+      return std::nullopt;
     }
 
   public:

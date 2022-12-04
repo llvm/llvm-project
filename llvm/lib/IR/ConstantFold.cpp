@@ -1073,7 +1073,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
           } else if (isa<Function>(GV)) {
             // Without a datalayout we have to assume the worst case: that the
             // function pointer isn't aligned at all.
-            GVAlign = llvm::None;
+            GVAlign = std::nullopt;
           } else if (isa<GlobalVariable>(GV)) {
             GVAlign = cast<GlobalVariable>(GV)->getAlign();
           }
@@ -2024,7 +2024,7 @@ static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
   // outer GEP, any inbounds attribute on that index is invalidated.
   Optional<unsigned> IRIndex = GEP->getInRangeIndex();
   if (IRIndex && *IRIndex == GEP->getNumIndices() - 1)
-    IRIndex = None;
+    IRIndex = std::nullopt;
 
   return ConstantExpr::getGetElementPtr(
       GEP->getSourceElementType(), cast<Constant>(GEP->getPointerOperand()),

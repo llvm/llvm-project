@@ -85,18 +85,19 @@ class BitcodeAnalyzer {
   std::map<unsigned, PerBlockIDStats> BlockIDStats;
 
 public:
-  BitcodeAnalyzer(StringRef Buffer, Optional<StringRef> BlockInfoBuffer = None);
+  BitcodeAnalyzer(StringRef Buffer,
+                  Optional<StringRef> BlockInfoBuffer = std::nullopt);
   /// Analyze the bitcode file.
-  Error analyze(Optional<BCDumpOptions> O = None,
-                Optional<StringRef> CheckHash = None);
+  Error analyze(Optional<BCDumpOptions> O = std::nullopt,
+                Optional<StringRef> CheckHash = std::nullopt);
   /// Print stats about the bitcode file.
-  void printStats(BCDumpOptions O, Optional<StringRef> Filename = None);
+  void printStats(BCDumpOptions O, Optional<StringRef> Filename = std::nullopt);
 
 private:
   /// Read a block, updating statistics, etc.
   Error parseBlock(unsigned BlockID, unsigned IndentLevel,
-                   Optional<BCDumpOptions> O = None,
-                   Optional<StringRef> CheckHash = None);
+                   Optional<BCDumpOptions> O = std::nullopt,
+                   Optional<StringRef> CheckHash = std::nullopt);
 
   Error decodeMetadataStringsBlob(StringRef Indent, ArrayRef<uint64_t> Record,
                                   StringRef Blob, raw_ostream &OS);

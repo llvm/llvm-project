@@ -4737,12 +4737,19 @@ IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 clang::createVFSFromCompilerInvocation(
     const CompilerInvocation &CI, DiagnosticsEngine &Diags,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
-  if (CI.getHeaderSearchOpts().VFSOverlayFiles.empty())
+  return createVFSFromOverlayFiles(CI.getHeaderSearchOpts().VFSOverlayFiles,
+                                   Diags, std::move(BaseFS));
+}
+
+IntrusiveRefCntPtr<llvm::vfs::FileSystem> clang::createVFSFromOverlayFiles(
+    ArrayRef<std::string> VFSOverlayFiles, DiagnosticsEngine &Diags,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
+  if (VFSOverlayFiles.empty())
     return BaseFS;
 
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> Result = BaseFS;
   // earlier vfs files are on the bottom
-  for (const auto &File : CI.getHeaderSearchOpts().VFSOverlayFiles) {
+  for (const auto &File : VFSOverlayFiles) {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
         Result->getBufferForFile(File);
     if (!Buffer) {

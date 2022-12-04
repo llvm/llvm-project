@@ -165,7 +165,7 @@ public:
   ListBuilder(DebugLocStream &Locs, DwarfCompileUnit &CU, AsmPrinter &Asm,
               DbgVariable &V, const MachineInstr &MI)
       : Locs(Locs), Asm(Asm), V(V), MI(MI), ListIndex(Locs.startList(&CU)),
-        TagOffset(None) {}
+        TagOffset(std::nullopt) {}
 
   void setTagOffset(uint8_t TO) {
     TagOffset = TO;

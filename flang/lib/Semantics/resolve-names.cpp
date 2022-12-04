@@ -1194,6 +1194,7 @@ public:
   // Creates Block scopes with neither symbol name nor symbol details.
   bool Pre(const parser::SelectRankConstruct::RankCase &);
   void Post(const parser::SelectRankConstruct::RankCase &);
+  bool Pre(const parser::TypeGuardStmt::Guard &);
   void Post(const parser::TypeGuardStmt::Guard &);
   void Post(const parser::SelectRankCaseStmt::Rank &);
   bool Pre(const parser::ChangeTeamStmt &);
@@ -6405,6 +6406,14 @@ bool ConstructVisitor::Pre(const parser::SelectRankConstruct::RankCase &) {
 }
 void ConstructVisitor::Post(const parser::SelectRankConstruct::RankCase &) {
   PopScope();
+}
+
+bool ConstructVisitor::Pre(const parser::TypeGuardStmt::Guard &x) {
+  if (std::holds_alternative<parser::DerivedTypeSpec>(x.u)) {
+    // CLASS IS (t)
+    SetDeclTypeSpecCategory(DeclTypeSpec::Category::ClassDerived);
+  }
+  return true;
 }
 
 void ConstructVisitor::Post(const parser::TypeGuardStmt::Guard &x) {

@@ -613,7 +613,7 @@ Optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
                  .Default(-1u);
     }
     if (Type == -1u)
-      return None;
+      return std::nullopt;
     return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
   }
   return MCAsmBackend::getFixupKind(Name);

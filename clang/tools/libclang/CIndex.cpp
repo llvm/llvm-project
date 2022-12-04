@@ -628,8 +628,8 @@ bool CursorVisitor::VisitDeclContext(DeclContext *DC) {
 
   // FIXME: Eventually remove.  This part of a hack to support proper
   // iteration over all Decls contained lexically within an ObjC container.
-  SaveAndRestore<DeclContext::decl_iterator *> DI_saved(DI_current, &I);
-  SaveAndRestore<DeclContext::decl_iterator> DE_saved(DE_current, E);
+  SaveAndRestore DI_saved(DI_current, &I);
+  SaveAndRestore DE_saved(DE_current, E);
 
   for (; I != E; ++I) {
     Decl *D = *I;

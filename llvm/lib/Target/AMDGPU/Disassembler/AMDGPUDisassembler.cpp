@@ -2232,7 +2232,7 @@ AMDGPUDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
     Size = 64; // Size = 64 regardless of success or failure.
     return decodeKernelDescriptor(Name.drop_back(3), Bytes, Address);
   }
-  return None;
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//

@@ -103,11 +103,11 @@ exit:
   ret i32 %b
 }
 
-@_ZTIi = external global i8*
+@_ZTIi = external global ptr
 
 ; CHECK-LABEL: throwSmallException
 ; CHECK-NOT: invoke i32 @smallFunction
-define i32 @throwSmallException(i32 %idx, i32 %limit) #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @throwSmallException(i32 %idx, i32 %limit) #0 personality ptr @__gxx_personality_v0 {
 entry:
   %cmp = icmp sge i32 %idx, %limit
   br i1 %cmp, label %if.then, label %if.end
@@ -115,18 +115,18 @@ entry:
 ; CHECK: edge entry -> if.end probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
 
 if.then:                                          ; preds = %entry
-  %exception = call i8* @__cxa_allocate_exception(i64 1) #0
+  %exception = call ptr @__cxa_allocate_exception(i64 1) #0
   invoke i32 @smallFunction(i32 %idx)
           to label %invoke.cont unwind label %lpad
 ; CHECK: edge if.then -> invoke.cont probability is 0x40000000 / 0x80000000 = 50.00%
 ; CHECK: edge if.then -> lpad probability is 0x40000000 / 0x80000000 = 50.00%
 
 invoke.cont:                                      ; preds = %if.then
-  call void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi  to i8*), i8* null) #1
+  call void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #1
   unreachable
 
 lpad:                                             ; preds = %if.then
-  %ll = landingpad { i8*, i32 }
+  %ll = landingpad { ptr, i32 }
           cleanup
   ret i32 %idx
 
@@ -137,13 +137,13 @@ if.end:                                           ; preds = %entry
 @a = global i32 4
 define i32 @smallFunction(i32 %a) {
 entry:
-  %r = load volatile i32, i32* @a
+  %r = load volatile i32, ptr @a
   ret i32 %r
 }
 
 attributes #0 = { nounwind }
 attributes #1 = { noreturn }
 
-declare i8* @__cxa_allocate_exception(i64)
+declare ptr @__cxa_allocate_exception(i64)
 declare i32 @__gxx_personality_v0(...)
-declare void @__cxa_throw(i8*, i8*, i8*)
+declare void @__cxa_throw(ptr, ptr, ptr)
