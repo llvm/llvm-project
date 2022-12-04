@@ -1385,7 +1385,7 @@ public:
   /// constant.
   ///
   /// If threshold option is not specified, it is disabled (0) by default.
-  Optional<uint64_t> DiagnosticsHotnessThreshold = 0;
+  std::optional<uint64_t> DiagnosticsHotnessThreshold = 0;
 
   /// The percentage of difference between profiling branch weights and
   /// llvm.expect branch weights to tolerate when emiting MisExpect diagnostics

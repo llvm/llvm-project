@@ -426,7 +426,7 @@ public:
   ///                    compilation.
   ///
   /// If threshold option is not specified, it is disabled by default.
-  Optional<uint64_t> DiagnosticsHotnessThreshold = 0;
+  std::optional<uint64_t> DiagnosticsHotnessThreshold = 0;
 
   /// The maximum percentage profiling weights can deviate from the expected
   /// values in order to be included in misexpect diagnostics.
