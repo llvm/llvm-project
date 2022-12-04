@@ -252,13 +252,7 @@ private:
 //===--------------------------------------------------------------------===//
 
 template <typename T>
-struct BinaryOp {
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder, const T &,
-                                         hlfir::Entity lhs, hlfir::Entity rhs) {
-    TODO(loc, "binary op implementation in HLFIR");
-  }
-};
+struct BinaryOp {};
 
 #undef GENBIN
 #define GENBIN(GenBinEvOp, GenBinTyCat, GenBinFirOp)                           \
@@ -498,6 +492,17 @@ struct BinaryOp<Fortran::evaluate::ComplexConstructor<KIND>> {
     mlir::Value res =
         fir::factory::Complex{builder, loc}.createComplex(KIND, lhs, rhs);
     return hlfir::EntityWithAttributes{res};
+  }
+};
+
+template <int KIND>
+struct BinaryOp<Fortran::evaluate::SetLength<KIND>> {
+  using Op = Fortran::evaluate::SetLength<KIND>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    TODO(loc, "SetLength lowering to HLFIR");
   }
 };
 
