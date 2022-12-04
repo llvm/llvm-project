@@ -1133,7 +1133,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
 
   // Remangle our intrinsic since we upgrade the mangling
   auto Result = llvm::Intrinsic::remangleIntrinsicFunction(F);
-  if (Result != None) {
+  if (Result != std::nullopt) {
     NewFn = *Result;
     return true;
   }

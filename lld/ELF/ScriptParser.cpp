@@ -1041,19 +1041,19 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
   const StringRef op = peek();
   if (op.startswith("=")) {
     // Support = followed by an expression without whitespace.
-    SaveAndRestore<bool> saved(inExpr, true);
+    SaveAndRestore saved(inExpr, true);
     cmd = readSymbolAssignment(tok);
   } else if ((op.size() == 2 && op[1] == '=' && strchr("*/+-&|", op[0])) ||
              op == "<<=" || op == ">>=") {
     cmd = readSymbolAssignment(tok);
   } else if (tok == "PROVIDE") {
-    SaveAndRestore<bool> saved(inExpr, true);
+    SaveAndRestore saved(inExpr, true);
     cmd = readProvideHidden(true, false);
   } else if (tok == "HIDDEN") {
-    SaveAndRestore<bool> saved(inExpr, true);
+    SaveAndRestore saved(inExpr, true);
     cmd = readProvideHidden(false, true);
   } else if (tok == "PROVIDE_HIDDEN") {
-    SaveAndRestore<bool> saved(inExpr, true);
+    SaveAndRestore saved(inExpr, true);
     cmd = readProvideHidden(true, true);
   }
 

@@ -205,7 +205,7 @@ MachineIRBuilder::materializePtrAdd(Register &Res, Register Op0,
 
   if (Value == 0) {
     Res = Op0;
-    return None;
+    return std::nullopt;
   }
 
   Res = getMRI()->createGenericVirtualRegister(getMRI()->getType(Op0));

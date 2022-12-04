@@ -66,7 +66,7 @@ public:
   Optional<AddressRange> getRangeThatContains(uint64_t Addr) const {
     Collection::const_iterator It = find(Addr);
     if (It == Ranges.end())
-      return None;
+      return std::nullopt;
 
     return *It;
   }
@@ -129,7 +129,7 @@ public:
   getRangeValueThatContains(uint64_t Addr) const {
     Collection::const_iterator It = find(Addr);
     if (It == Ranges.end())
-      return None;
+      return std::nullopt;
 
     return std::make_pair(*It, Values[It - Ranges.begin()]);
   }

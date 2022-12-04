@@ -124,7 +124,7 @@ Optional<MCFixupKind> SystemZMCAsmBackend::getFixupKind(StringRef Name) const {
 			.Default(-1u);
   if (Type != -1u)
     return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
-  return None;
+  return std::nullopt;
 }
 
 const MCFixupKindInfo &

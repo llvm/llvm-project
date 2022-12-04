@@ -100,7 +100,7 @@ namespace AMDGPU {
 
 Optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
   if (STI && STI->getTargetTriple().getOS() != Triple::AMDHSA)
-    return None;
+    return std::nullopt;
 
   switch (AmdhsaCodeObjectVersion) {
   case 2:
@@ -2441,25 +2441,26 @@ Optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
   // The signed version is always a byte offset.
   if (!IsBuffer && hasSMRDSignedImmOffset(ST)) {
     assert(hasSMEMByteOffset(ST));
-    return isInt<20>(ByteOffset) ? Optional<int64_t>(ByteOffset) : None;
+    return isInt<20>(ByteOffset) ? Optional<int64_t>(ByteOffset) : std::nullopt;
   }
 
   if (!isDwordAligned(ByteOffset) && !hasSMEMByteOffset(ST))
-    return None;
+    return std::nullopt;
 
   int64_t EncodedOffset = convertSMRDOffsetUnits(ST, ByteOffset);
   return isLegalSMRDEncodedUnsignedOffset(ST, EncodedOffset)
              ? Optional<int64_t>(EncodedOffset)
-             : None;
+             : std::nullopt;
 }
 
 Optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
                                                 int64_t ByteOffset) {
   if (!isCI(ST) || !isDwordAligned(ByteOffset))
-    return None;
+    return std::nullopt;
 
   int64_t EncodedOffset = convertSMRDOffsetUnits(ST, ByteOffset);
-  return isUInt<32>(EncodedOffset) ? Optional<int64_t>(EncodedOffset) : None;
+  return isUInt<32>(EncodedOffset) ? Optional<int64_t>(EncodedOffset)
+                                   : std::nullopt;
 }
 
 unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST, bool Signed) {

@@ -12,6 +12,6 @@ entry:
 
 define void @caller() {
 entry:
-	call void (...) @callee( void (...)* @callee )
+	call void (...) @callee( ptr @callee )
 	unreachable
 }
