@@ -404,12 +404,12 @@ public:
   llvm::Optional<std::nullptr_t> getAsNull() const {
     if (LLVM_LIKELY(Type == T_Null))
       return nullptr;
-    return llvm::None;
+    return std::nullopt;
   }
   llvm::Optional<bool> getAsBoolean() const {
     if (LLVM_LIKELY(Type == T_Boolean))
       return as<bool>();
-    return llvm::None;
+    return std::nullopt;
   }
   llvm::Optional<double> getAsNumber() const {
     if (LLVM_LIKELY(Type == T_Double))
@@ -418,7 +418,7 @@ public:
       return as<int64_t>();
     if (LLVM_LIKELY(Type == T_UINT64))
       return as<uint64_t>();
-    return llvm::None;
+    return std::nullopt;
   }
   // Succeeds if the Value is a Number, and exactly representable as int64_t.
   llvm::Optional<int64_t> getAsInteger() const {
@@ -431,7 +431,7 @@ public:
                       D <= double(std::numeric_limits<int64_t>::max())))
         return D;
     }
-    return llvm::None;
+    return std::nullopt;
   }
   llvm::Optional<uint64_t> getAsUINT64() const {
     if (Type == T_UINT64)
@@ -441,14 +441,14 @@ public:
       if (N >= 0)
         return as<uint64_t>();
     }
-    return llvm::None;
+    return std::nullopt;
   }
   llvm::Optional<llvm::StringRef> getAsString() const {
     if (Type == T_String)
       return llvm::StringRef(as<std::string>());
     if (LLVM_LIKELY(Type == T_StringRef))
       return as<llvm::StringRef>();
-    return llvm::None;
+    return std::nullopt;
   }
   const json::Object *getAsObject() const {
     return LLVM_LIKELY(Type == T_Object) ? &as<json::Object>() : nullptr;
@@ -764,7 +764,7 @@ inline bool fromJSON(const Value &E, std::nullptr_t &Out, Path P) {
 template <typename T>
 bool fromJSON(const Value &E, llvm::Optional<T> &Out, Path P) {
   if (E.getAsNull()) {
-    Out = llvm::None;
+    Out = std::nullopt;
     return true;
   }
   T Result;
@@ -845,7 +845,7 @@ public:
     assert(*this && "Must check this is an object before calling map()");
     if (const Value *E = O->get(Prop))
       return fromJSON(*E, Out, P.field(Prop));
-    Out = llvm::None;
+    Out = std::nullopt;
     return true;
   }
 

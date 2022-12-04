@@ -455,7 +455,7 @@ public:
   // None if pointer-difference checks cannot be used.
   std::optional<ArrayRef<PointerDiffInfo>> getDiffChecks() const {
     if (!CanUseDiffCheck)
-      return None;
+      return std::nullopt;
     return {DiffChecks};
   }
 

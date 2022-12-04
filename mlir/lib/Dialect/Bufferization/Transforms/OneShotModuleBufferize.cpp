@@ -377,6 +377,14 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
   return success();
 }
 
+void mlir::bufferization::removeBufferizationAttributesInModule(
+    ModuleOp moduleOp) {
+  moduleOp.walk([&](func::FuncOp op) {
+    for (BlockArgument bbArg : op.getArguments())
+      removeBufferizationAttributes(bbArg);
+  });
+}
+
 LogicalResult mlir::bufferization::bufferizeModuleOp(
     ModuleOp moduleOp, const OneShotBufferizationOptions &options) {
   assert(options.bufferizeFunctionBoundaries &&
@@ -405,10 +413,7 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   }
 
   // Post-pass cleanup of function argument attributes.
-  moduleOp.walk([&](func::FuncOp op) {
-    for (BlockArgument bbArg : op.getArguments())
-      removeBufferizationAttributes(bbArg);
-  });
+  removeBufferizationAttributesInModule(moduleOp);
 
   return success();
 }

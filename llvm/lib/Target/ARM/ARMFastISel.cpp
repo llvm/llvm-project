@@ -188,10 +188,10 @@ class ARMFastISel final : public FastISel {
     bool ARMEmitCmp(const Value *Src1Value, const Value *Src2Value,
                     bool isZExt);
     bool ARMEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
-                     MaybeAlign Alignment = None, bool isZExt = true,
+                     MaybeAlign Alignment = std::nullopt, bool isZExt = true,
                      bool allocReg = true);
     bool ARMEmitStore(MVT VT, unsigned SrcReg, Address &Addr,
-                      MaybeAlign Alignment = None);
+                      MaybeAlign Alignment = std::nullopt);
     bool ARMComputeAddress(const Value *Obj, Address &Addr);
     void ARMSimplifyAddress(Address &Addr, MVT VT, bool useAM3);
     bool ARMIsMemCpySmall(uint64_t Len);

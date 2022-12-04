@@ -1246,7 +1246,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     if (!determineAndHandleAssignments(
             UsingReturnedArg ? ReturnedArgHandler : Handler, Assigner, InArgs,
             MIRBuilder, Info.CallConv, Info.IsVarArg,
-            UsingReturnedArg ? makeArrayRef(OutArgs[0].Regs) : None))
+            UsingReturnedArg ? makeArrayRef(OutArgs[0].Regs) : std::nullopt))
       return false;
   }
 

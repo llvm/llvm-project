@@ -610,11 +610,6 @@ std::optional<ArraySpec> ToArraySpec(
 // procedure.
 bool HasDefinedIo(
     GenericKind::DefinedIo, const DerivedTypeSpec &, const Scope * = nullptr);
-// Seeks out an allocatable or pointer ultimate component that is not
-// nested in a nonallocatable/nonpointer component with a specific
-// defined I/O procedure.
-const Symbol *FindUnsafeIoDirectComponent(
-    GenericKind::DefinedIo, const DerivedTypeSpec &, const Scope * = nullptr);
 
 // Some intrinsic operators have more than one name (e.g. `operator(.eq.)` and
 // `operator(==)`). GetAllNames() returns them all, including symbolName.

@@ -196,7 +196,7 @@ Optional<bool> IndexedReference::hasSpacialReuse(const IndexedReference &Other,
                << "No spacial reuse, difference between subscript:\n\t"
                << *LastSubscript << "\n\t" << OtherLastSubscript
                << "\nis not constant.\n");
-    return None;
+    return std::nullopt;
   }
 
   bool InSameCacheLine = (Diff->getValue()->getSExtValue() < CLS);
@@ -248,7 +248,7 @@ Optional<bool> IndexedReference::hasTemporalReuse(const IndexedReference &Other,
 
     if (SCEVConst == nullptr) {
       LLVM_DEBUG(dbgs().indent(2) << "No temporal reuse: distance unknown\n");
-      return None;
+      return std::nullopt;
     }
 
     const ConstantInt &CI = *SCEVConst->getValue();

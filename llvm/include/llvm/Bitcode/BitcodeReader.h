@@ -107,7 +107,7 @@ typedef llvm::function_ref<Optional<std::string>(StringRef)>
     /// Read the entire bitcode module and return it.
     Expected<std::unique_ptr<Module>> parseModule(
         LLVMContext &Context, DataLayoutCallbackTy DataLayoutCallback =
-                                  [](StringRef) { return None; });
+                                  [](StringRef) { return std::nullopt; });
 
     /// Returns information about the module to be used for LTO: whether to
     /// compile with ThinLTO, and whether it has a summary.
@@ -175,7 +175,7 @@ typedef llvm::function_ref<Optional<std::string>(StringRef)>
   Expected<std::unique_ptr<Module>> parseBitcodeFile(
       MemoryBufferRef Buffer, LLVMContext &Context,
       DataLayoutCallbackTy DataLayoutCallback = [](StringRef) {
-        return None;
+        return std::nullopt;
       });
 
   /// Returns LTO information for the specified bitcode file.

@@ -200,7 +200,7 @@ Optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
                                             const MCSubtargetInfo &STI) {
   // Need at least two operands.
   if (Inst.getNumOperands() < 2)
-    return None;
+    return std::nullopt;
 
   unsigned LastOp = Inst.getNumOperands() - 1;
   // The last operand needs to be an MCExpr and it needs to have a variant kind
@@ -208,13 +208,13 @@ Optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
   // link time GOT PC Rel opt instruction and we can ignore it and return None.
   const MCOperand &Operand = Inst.getOperand(LastOp);
   if (!Operand.isExpr())
-    return None;
+    return std::nullopt;
 
   // Check for the variant kind VK_PPC_PCREL_OPT in this expression.
   const MCExpr *Expr = Operand.getExpr();
   const MCSymbolRefExpr *SymExpr = static_cast<const MCSymbolRefExpr *>(Expr);
   if (!SymExpr || SymExpr->getKind() != MCSymbolRefExpr::VK_PPC_PCREL_OPT)
-    return None;
+    return std::nullopt;
 
   return (Inst.getOpcode() == PPC::PLDpc);
 }
