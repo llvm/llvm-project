@@ -495,7 +495,7 @@ define signext i8 @SimpleLoop() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[10]: [0,10){{$}}
 ; GLOBAL-NEXT: safe accesses:
-; GLOBAL-NEXT: %1 = load volatile i8, i8* %p.09, align 1
+; GLOBAL-NEXT: %load = load volatile i8, i8* %p.09, align 1
 ; CHECK-EMPTY:
 entry:
   %x = alloca [10 x i8], align 1
@@ -507,8 +507,8 @@ for.body:
   %sum.010 = phi i8 [ 0, %entry ], [ %add, %for.body ]
   %p.09 = phi i8* [ %0, %entry ], [ %incdec.ptr, %for.body ]
   %incdec.ptr = getelementptr inbounds i8, i8* %p.09, i64 1
-  %1 = load volatile i8, i8* %p.09, align 1
-  %add = add i8 %1, %sum.010
+  %load = load volatile i8, i8* %p.09, align 1
+  %add = add i8 %load, %sum.010
   %exitcond = icmp eq i8* %incdec.ptr, %lftr.limit
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
@@ -535,8 +535,8 @@ for.body:
   %sum.010 = phi i8 [ 0, %entry ], [ %add, %for.body ]
   %p.09 = phi i8* [ %0, %entry ], [ %incdec.ptr, %for.body ]
   %incdec.ptr = getelementptr inbounds i8, i8* %p.09, i64 1
-  %1 = load volatile i8, i8* %p.09, align 1
-  %add = add i8 %1, %sum.010
+  %load = load volatile i8, i8* %p.09, align 1
+  %add = add i8 %load, %sum.010
   %exitcond = icmp eq i8* %incdec.ptr, %lftr.limit
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
@@ -596,7 +596,7 @@ define void @ZeroSize(%zerosize_type *%p)  {
 ; GLOBAL-NEXT: safe accesses:
 ; GLOBAL-NEXT: store %zerosize_type undef, %zerosize_type* %x, align 4
 ; GLOBAL-NEXT: store %zerosize_type undef, %zerosize_type* undef, align 4
-; GLOBAL-NEXT: load %zerosize_type, %zerosize_type* %p, align 
+; GLOBAL-NEXT: load %zerosize_type, %zerosize_type* %p, align
 ; CHECK-EMPTY:
 entry:
   %x = alloca %zerosize_type, align 4
