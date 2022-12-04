@@ -18,6 +18,7 @@ define fastcc ptr @pushdecl(ptr %x) nounwind  {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB0_1: # %bb160
+; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
