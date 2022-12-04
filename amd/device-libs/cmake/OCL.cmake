@@ -67,7 +67,7 @@ endmacro()
 macro(opencl_bc_lib)
   set(parse_options)
   set(one_value_args NAME)
-  set(multi_value_args SOURCES INTERNAL_LINK_LIBS)
+  set(multi_value_args SOURCES INTERNAL_LINK_LIBS HEADERS)
 
   cmake_parse_arguments(OPENCL_BC_LIB "${parse_options}" "${one_value_args}"
                                       "${multi_value_args}" ${ARGN})
@@ -75,6 +75,7 @@ macro(opencl_bc_lib)
   set(name ${OPENCL_BC_LIB_NAME})
   set(sources ${OPENCL_BC_LIB_SOURCES})
   set(internal_link_libs ${OPENCL_BC_LIB_INTERNAL_LINK_LIBS})
+  set(headers ${OPENCL_BC_LIB_HEADERS})
 
   get_target_property(irif_lib_output irif OUTPUT_NAME)
 
@@ -103,18 +104,33 @@ macro(opencl_bc_lib)
 
       get_property(file_specific_flags SOURCE "${file}" PROPERTY COMPILE_FLAGS)
 
+      # irif is not included normally so is invisible to
+      # IMPLICIT_DEPENDS scanning, so we have to forcibly add it as a
+      # dependency.
+      set(depends_args DEPENDS
+        "$<TARGET_FILE:clang>"
+        "${irif_lib_output}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../irif/inc/irif.h")
+
+      # FIXME: Currently IMPLICIT_DEPENDS is only supported for GNU
+      # Makefile, so as an overly-conservatively workaround to cover
+      # all generators we just assume all .cl sources require all
+      # headers. If all the generators we care about begin to support
+      # IMPLICIT_DEPENDS we won't need this.
+      if(CMAKE_GENERATOR MATCHES "Makefiles")
+        list(APPEND depends_args IMPLICIT_DEPENDS C "${file}")
+      else()
+        list(APPEND depends_args  ${headers})
+        # FIXME: Use DEPFILE instead for Ninja
+      endif()
+
       add_custom_command(OUTPUT "${output}"
         COMMAND $<TARGET_FILE:clang> ${inc_options} ${CLANG_OCL_FLAGS}
           ${file_specific_flags}
           -emit-llvm -Xclang -mlink-builtin-bitcode -Xclang "${irif_lib_output}"
           -c "${file}" -o "${output}"
-        DEPENDS "${file}" "${irif_lib_output}" "$<TARGET_FILE:clang>"
-        # FIXME: Currently IMPLICIT_DEPENDS is only supported for GNU Makefile,
-        # so as an overly-conservatively workaround to cover all generators
-        # we just assume all .cl sources require irif.h. If all the generators
-        # we care about begin to support IMPLICIT_DEPENDS we won't need this.
-        "${CMAKE_CURRENT_SOURCE_DIR}/../irif/inc/irif.h"
-        IMPLICIT_DEPENDS C "${file}")
+          MAIN_DEPENDENCY "${file}"
+          ${depends_args})
       list(APPEND deps "${output}")
       list(APPEND clean_files "${output}")
     endif()

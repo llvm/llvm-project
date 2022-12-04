@@ -10,8 +10,13 @@ file(GLOB sources
   ${CMAKE_CURRENT_SOURCE_DIR}/src/*.ll
 )
 
+file(GLOB headers
+  ${CMAKE_CURRENT_SOURCE_DIR}/inc/*.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h
+)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../irif/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../oclc/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/inc)
 
-opencl_bc_lib(NAME ockl SOURCES ${sources})
+opencl_bc_lib(NAME ockl SOURCES ${sources} HEADERS ${headers})
