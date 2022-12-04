@@ -15,9 +15,9 @@ define void @local_escape() {
   ; CHECK-NEXT:   RET_ReallyLR
   %a = alloca i32
   %b = alloca i32, i32 2
-  call void (...) @llvm.localescape(i32* %a, i32* %b)
-  store i32 42, i32* %a
-  store i32 13, i32* %b
+  call void (...) @llvm.localescape(ptr %a, ptr %b)
+  store i32 42, ptr %a
+  store i32 13, ptr %b
   ret void
 }
 
@@ -36,13 +36,13 @@ define void @local_escape_insert_point() {
   ; CHECK-NEXT:   RET_ReallyLR
   %a = alloca i32
   %b = alloca i32, i32 2
-  store i32 42, i32* %a
-  store i32 13, i32* %b
-  call void (...) @llvm.localescape(i32* %a, i32* null, i32* %b)
+  store i32 42, ptr %a
+  store i32 13, ptr %b
+  call void (...) @llvm.localescape(ptr %a, ptr null, ptr %b)
   ret void
 }
 
-declare void @foo([128 x i32]*)
+declare void @foo(ptr)
 
 ; Check a cast of an alloca
 define void @local_escape_strip_ptr_cast() {
@@ -51,17 +51,16 @@ define void @local_escape_strip_ptr_cast() {
   ; CHECK-NEXT:   LOCAL_ESCAPE <mcsymbol .Llocal_escape_strip_ptr_cast$frame_escape_0>, %stack.0.a
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.a
-  ; CHECK-NEXT:   G_STORE [[C]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %ir.cast)
+  ; CHECK-NEXT:   G_STORE [[C]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %ir.a)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[FRAME_INDEX]](p0)
   ; CHECK-NEXT:   BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   RET_ReallyLR
   %a = alloca [128 x i32]
-  %cast = bitcast [128 x i32]* %a to i32*
-  store i32 42, i32* %cast
-  call void (...) @llvm.localescape(i32* %cast, i32* null)
-  call void @foo([128 x i32]* %a)
+  store i32 42, ptr %a
+  call void (...) @llvm.localescape(ptr %a, ptr null)
+  call void @foo(ptr %a)
   ret void
 }
 

@@ -119,7 +119,7 @@ entry:
   ret i32 %0
 }
 
-define zeroext i8 @test_register_output_trunc(i8* %src) nounwind {
+define zeroext i8 @test_register_output_trunc(ptr %src) nounwind {
   ;
   ; CHECK-LABEL: name: test_register_output_trunc
   ; CHECK: bb.1.entry:
@@ -184,7 +184,7 @@ define void @test_input_imm() {
   ret void
 }
 
-define zeroext i8 @test_input_register(i8* %src) nounwind {
+define zeroext i8 @test_input_register(ptr %src) nounwind {
   ; CHECK-LABEL: name: test_input_register
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $x0
@@ -198,11 +198,11 @@ define zeroext i8 @test_input_register(i8* %src) nounwind {
   ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
-  %0 = tail call i8 asm "ldtrb ${0:w}, [$1]", "=r,r"(i8* %src) nounwind
+  %0 = tail call i8 asm "ldtrb ${0:w}, [$1]", "=r,r"(ptr %src) nounwind
   ret i8 %0
 }
 
-define i32 @test_memory_constraint(i32* %a) nounwind {
+define i32 @test_memory_constraint(ptr %a) nounwind {
   ; CHECK-LABEL: name: test_memory_constraint
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $x0
@@ -212,7 +212,7 @@ define i32 @test_memory_constraint(i32* %a) nounwind {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %1
   ; CHECK-NEXT:   $w0 = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
-  %1 = tail call i32 asm "ldr $0, $1", "=r,*m"(i32* elementtype(i32) %a)
+  %1 = tail call i32 asm "ldr $0, $1", "=r,*m"(ptr elementtype(i32) %a)
   ret i32 %1
 }
 
