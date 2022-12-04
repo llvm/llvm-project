@@ -149,7 +149,7 @@ public:
   void registerParametricStorageType(TypeID id) {
     // If the storage is trivially destructible, we don't need a destructor
     // function.
-    if (std::is_trivially_destructible<Storage>::value)
+    if constexpr (std::is_trivially_destructible_v<Storage>)
       return registerParametricStorageTypeImpl(id, nullptr);
     registerParametricStorageTypeImpl(id, [](BaseStorage *storage) {
       static_cast<Storage *>(storage)->~Storage();
