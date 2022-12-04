@@ -2034,3 +2034,101 @@ define i1 @isKnownNeverNegInfinity_log2_maybe_0(double %x) {
 }
 
 declare double @llvm.log2.f64(double)
+
+define i1 @isNotKnownNeverInfinity_pow(double %x, double %y) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_pow(
+; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[NINF_Y:%.*]] = fadd ninf double [[Y:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.pow.f64(double [[NINF_X]], double [[NINF_Y]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.x = fadd ninf double %x, 1.0
+  %ninf.y = fadd ninf double %y, 1.0
+  %op = call double @llvm.pow.f64(double %ninf.x, double %ninf.y)
+  %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+declare double @llvm.pow.f64(double, double)
+
+define i1 @isNotKnownNeverInfinity_powi(double %x) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_powi(
+; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.powi.f64.i32(double [[NINF_X]], i32 2)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.x = fadd ninf double %x, 1.0
+  %op = call double @llvm.powi.f64.i32(double %ninf.x, i32 2)
+  %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+declare double @llvm.powi.f64(double, i32)
+
+define i1 @isNotKnownNeverInfinity_exp(double %x) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_exp(
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.exp.f64(double [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf double %x, 1.0
+  %e = call double @llvm.exp.f64(double %a)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+declare double @llvm.exp.f64(double)
+
+define i1 @isNotKnownNeverInfinity_exp2(double %x) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_exp2(
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[E:%.*]] = call double @llvm.exp2.f64(double [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf double %x, 1.0
+  %e = call double @llvm.exp2.f64(double %a)
+  %r = fcmp une double %e, 0x7ff0000000000000
+  ret i1 %r
+}
+
+define i1 @isNotKnownNeverInfinity_fma(double %x, double %y, double %z) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_fma(
+; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[NINF_Y:%.*]] = fadd ninf double [[Y:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[NINF_Z:%.*]] = fadd ninf double [[Z:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.fma.f64(double [[NINF_X]], double [[NINF_Y]], double [[NINF_Z]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.x = fadd ninf double %x, 1.0
+  %ninf.y = fadd ninf double %y, 1.0
+  %ninf.z = fadd ninf double %z, 1.0
+  %op = call double @llvm.fma.f64(double %ninf.x, double %ninf.y, double %ninf.z)
+  %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+declare double @llvm.fma.f64(double, double, double)
+
+define i1 @isNotKnownNeverInfinity_fmuladd(double %x, double %y, double %z) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_fmuladd(
+; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[NINF_Y:%.*]] = fadd ninf double [[Y:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[NINF_Z:%.*]] = fadd ninf double [[Z:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.fmuladd.f64(double [[NINF_X]], double [[NINF_Y]], double [[NINF_Z]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.x = fadd ninf double %x, 1.0
+  %ninf.y = fadd ninf double %y, 1.0
+  %ninf.z = fadd ninf double %z, 1.0
+  %op = call double @llvm.fmuladd.f64(double %ninf.x, double %ninf.y, double %ninf.z)
+  %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+declare double @llvm.fmuladd.f64(double, double, double)
