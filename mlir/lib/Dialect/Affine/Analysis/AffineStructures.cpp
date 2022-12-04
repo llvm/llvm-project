@@ -639,6 +639,33 @@ FlatAffineValueConstraints::addAffineForOpDomain(AffineForOp forOp) {
                   forOp.getUpperBoundOperands());
 }
 
+LogicalResult FlatAffineValueConstraints::addAffineParallelOpDomain(
+    AffineParallelOp parallelOp) {
+  size_t ivPos = 0;
+  for (auto iv : parallelOp.getIVs()) {
+    unsigned pos;
+    if (!findVar(iv, &pos)) {
+      assert(false && "variable expected for the IV value");
+      return failure();
+    }
+
+    AffineMap lowerBound = parallelOp.getLowerBoundMap(ivPos);
+    if (lowerBound.isConstant())
+      addBound(BoundType::LB, pos, lowerBound.getSingleConstantResult());
+    else if (failed(addBound(BoundType::LB, pos, lowerBound,
+                             parallelOp.getLowerBoundsOperands())))
+      return failure();
+
+    auto upperBound = parallelOp.getUpperBoundMap(ivPos);
+    if (upperBound.isConstant())
+      addBound(BoundType::UB, pos, upperBound.getSingleConstantResult());
+    else if (failed(addBound(BoundType::UB, pos, upperBound,
+                             parallelOp.getUpperBoundsOperands())))
+      return failure();
+  }
+  return success();
+}
+
 LogicalResult
 FlatAffineValueConstraints::addDomainFromSliceMaps(ArrayRef<AffineMap> lbMaps,
                                                    ArrayRef<AffineMap> ubMaps,
