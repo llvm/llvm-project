@@ -140,7 +140,7 @@ bool LLVMContext::getDiagnosticsHotnessRequested() const {
   return pImpl->DiagnosticsHotnessRequested;
 }
 
-void LLVMContext::setDiagnosticsHotnessThreshold(Optional<uint64_t> Threshold) {
+void LLVMContext::setDiagnosticsHotnessThreshold(std::optional<uint64_t> Threshold) {
   pImpl->DiagnosticsHotnessThreshold = Threshold;
 }
 void LLVMContext::setMisExpectWarningRequested(bool Requested) {
