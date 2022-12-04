@@ -1,20 +1,20 @@
 # Defining Dialects
 
-This document describes how to define [Dialects](LangRef.md/#dialects).
+This document describes how to define [Dialects](../LangRef.md/#dialects).
 
 [TOC]
 
 ## LangRef Refresher
 
 Before diving into how to define these constructs, below is a quick refresher
-from the [MLIR LangRef](LangRef.md).
+from the [MLIR LangRef](../LangRef.md).
 
 Dialects are the mechanism by which to engage with and extend the MLIR
-ecosystem. They allow for defining new [attributes](LangRef.md#attributes),
-[operations](LangRef.md#operations), and [types](LangRef.md#type-system).
+ecosystem. They allow for defining new [attributes](../LangRef.md#attributes),
+[operations](../LangRef.md#operations), and [types](../LangRef.md#type-system).
 Dialects are used to model a variety of different abstractions; from traditional
-[arithmetic](Dialects/ArithOps.md) to
-[pattern rewrites](Dialects/PDLOps.md); and is one of the most fundamental
+[arithmetic](../Dialects/ArithOps.md) to
+[pattern rewrites](../Dialects/PDLOps.md); and is one of the most fundamental
 aspects of MLIR.
 
 ## Defining a Dialect
@@ -39,7 +39,7 @@ the Dialect class in a different `.td` file from the attributes, operations, typ
 and other sub-components of the dialect to establish a proper layering between
 the various different dialect components. It also prevents situations where you may
 inadvertantly generate multiple definitions for some constructs. This recommendation
-extends to all of the MLIR constructs, including [Interfaces](Interfaces.md) for example.
+extends to all of the MLIR constructs, including [Interfaces](../Interfaces.md) for example.
 
 ```tablegen
 // Include the definition of the necessary tablegen constructs for defining
@@ -170,7 +170,7 @@ and a constant operation should be generated. `hasConstantMaterializer` is used 
 materialization, and the `materializeConstant` hook is declared on the dialect. This
 hook takes in an `Attribute` value, generally returned by `fold`, and produces a
 "constant-like" operation that materializes that value. See the
-[documentation for canonicalization](Canonicalization.md) for a more in-depth
+[documentation for canonicalization](../Canonicalization.md) for a more in-depth
 introduction to `folding` in MLIR.
 
 Constant materialization logic can then be defined in the source file:
@@ -196,7 +196,7 @@ only the declaration of the destructor is generated for the Dialect class.
 
 ### Discardable Attribute Verification
 
-As described by the [MLIR Language Reference](LangRef.md#attributes),
+As described by the [MLIR Language Reference](../LangRef.md#attributes),
 *discardable attribute* are a type of attribute that has its semantics defined
 by the dialect whose name prefixes that of the attribute. For example, if an
 operation has an attribute named `gpu.contained_module`, the `gpu` dialect
@@ -270,7 +270,7 @@ void *MyDialect::getRegisteredInterfaceForOp(TypeID typeID, StringAttr opName);
 ```
 
 For a more detail description of the expected usages of this hook, view the detailed 
-[interface documentation](Interfaces.md#dialect-fallback-for-opinterface).
+[interface documentation](../Interfaces.md#dialect-fallback-for-opinterface).
 
 ### Default Attribute/Type Parsers and Printers 
 
@@ -286,7 +286,7 @@ parser and printer of its Attributes and Types it should set these to `0` as nec
 
 ### Dialect-wide Canonicalization Patterns
 
-Generally, [canonicalization](Canonicalization.md) patterns are specific to individual 
+Generally, [canonicalization](../Canonicalization.md) patterns are specific to individual 
 operations within a dialect. There are some cases, however, that prompt canonicalization
 patterns to be added to the dialect-level. For example, if a dialect defines a canonicalization
 pattern that operates on an interface or trait, it can be beneficial to only add this pattern
@@ -299,7 +299,7 @@ the `getCanonicalizationPatterns` method on the dialect, which has the form:
 void MyDialect::getCanonicalizationPatterns(RewritePatternSet &results) const;
 ```
 
-See the documentation for [Canonicalization in MLIR](Canonicalization.md) for a much more 
+See the documentation for [Canonicalization in MLIR](../Canonicalization.md) for a much more 
 detailed description about canonicalization patterns.
 
 ## Defining an Extensible dialect
