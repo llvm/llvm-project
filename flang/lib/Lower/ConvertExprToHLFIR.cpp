@@ -20,6 +20,7 @@
 #include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
+#include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -484,6 +485,19 @@ struct BinaryOp<Fortran::evaluate::LogicalOperation<KIND>> {
       // lib/evaluate expression for .NOT. is Fortran::evaluate::Not<KIND>.
       llvm_unreachable(".NOT. is not a binary operator");
     }
+  }
+};
+
+template <int KIND>
+struct BinaryOp<Fortran::evaluate::ComplexConstructor<KIND>> {
+  using Op = Fortran::evaluate::ComplexConstructor<KIND>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    mlir::Value res =
+        fir::factory::Complex{builder, loc}.createComplex(KIND, lhs, rhs);
+    return hlfir::EntityWithAttributes{res};
   }
 };
 
