@@ -484,7 +484,7 @@ struct FuncOpInterface
     }
 
     // 3. Rewrite the terminator without the in-place bufferizable values.
-    returnOp.operandsMutable().assign(returnValues);
+    returnOp.getOperandsMutable().assign(returnValues);
 
     // 4. Rewrite the FuncOp type to buffer form.
     funcOp.setType(FunctionType::get(op->getContext(), argTypes,
