@@ -3793,6 +3793,7 @@ bool llvm::isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
       case Intrinsic::fabs:
       case Intrinsic::canonicalize:
       case Intrinsic::copysign:
+      case Intrinsic::arithmetic_fence:
         return isKnownNeverInfinity(Inst->getOperand(0), TLI, Depth + 1);
       default:
         break;
