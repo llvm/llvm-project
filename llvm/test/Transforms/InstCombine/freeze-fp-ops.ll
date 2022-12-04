@@ -508,9 +508,9 @@ define i1 @freeze_isfpclass(float %arg0) {
 
 define float @freeze_fptrunc_round(double %arg0) {
 ; CHECK-LABEL: @freeze_fptrunc_round(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.fptrunc.round.f32.f64(double [[ARG0:%.*]], metadata !"round.downward")
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze double [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.fptrunc.round.f32.f64(double [[ARG0_FR]], metadata !"round.downward")
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
   %freeze = freeze float %op
