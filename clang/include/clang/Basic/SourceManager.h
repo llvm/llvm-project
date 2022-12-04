@@ -939,7 +939,7 @@ public:
 
   /// Retrieve the memory buffer associated with the given file.
   ///
-  /// Returns None if the buffer is not valid.
+  /// Returns std::nullopt if the buffer is not valid.
   llvm::Optional<llvm::MemoryBufferRef>
   getMemoryBufferForFileOrNone(const FileEntry *File);
 
@@ -999,8 +999,8 @@ public:
   }
 
   /// Bypass the overridden contents of a file.  This creates a new FileEntry
-  /// and initializes the content cache for it.  Returns None if there is no
-  /// such file in the filesystem.
+  /// and initializes the content cache for it.  Returns std::nullopt if there
+  /// is no such file in the filesystem.
   ///
   /// This should be called before parsing has begun.
   Optional<FileEntryRef> bypassFileContentsOverride(FileEntryRef File);
@@ -1020,7 +1020,8 @@ public:
 
   /// Return the buffer for the specified FileID.
   ///
-  /// If there is an error opening this buffer the first time, return None.
+  /// If there is an error opening this buffer the first time, return
+  /// std::nullopt.
   llvm::Optional<llvm::MemoryBufferRef>
   getBufferOrNone(FileID FID, SourceLocation Loc = SourceLocation()) const {
     if (auto *Entry = getSLocEntryForFile(FID))
@@ -1057,7 +1058,7 @@ public:
   /// Returns the filename for the provided FileID, unless it's a built-in
   /// buffer that's not represented by a filename.
   ///
-  /// Returns None for non-files and built-in files.
+  /// Returns std::nullopt for non-files and built-in files.
   Optional<StringRef> getNonBuiltinFilenameForID(FileID FID) const;
 
   /// Returns the FileEntry record for the provided SLocEntry.

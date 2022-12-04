@@ -1361,7 +1361,7 @@ private:
 
   /// Try to convert given range into the given type.
   ///
-  /// It will return llvm::None only when the trivial conversion is possible.
+  /// It will return std::nullopt only when the trivial conversion is possible.
   llvm::Optional<Range> convert(const Range &Origin, APSIntType To) {
     if (To.testInRange(Origin.From(), false) != APSIntType::RTR_Within ||
         To.testInRange(Origin.To(), false) != APSIntType::RTR_Within) {

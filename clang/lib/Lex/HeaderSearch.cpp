@@ -329,7 +329,8 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
       continue;
 
     bool IsSystem = Dir.isSystemHeaderDirectory();
-    // Only returns None if not a normal directory, which we just checked
+    // Only returns std::nullopt if not a normal directory, which we just
+    // checked
     DirectoryEntryRef NormalDir = *Dir.getDirRef();
     // Search for a module map file in this directory.
     if (loadModuleMapFile(NormalDir, IsSystem,

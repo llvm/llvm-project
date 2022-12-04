@@ -29,7 +29,7 @@ std::optional<VersionTuple> DarwinSDKInfo::RelatedTargetVersionMapping::map(
   // the major-only check.
   if (Key.getMinor())
     return map(VersionTuple(Key.getMajor()), MinimumValue, MaximumValue);
-  // If this a major only key, return None for a missing entry.
+  // If this a major only key, return std::nullopt for a missing entry.
   return std::nullopt;
 }
 
