@@ -358,7 +358,7 @@ public:
   static bool classof(Binary const *v) { return v->isArchive(); }
 
   // check if a symbol is in the archive
-  Expected<Optional<Child>> findSym(StringRef name) const;
+  Expected<std::optional<Child>> findSym(StringRef name) const;
 
   virtual bool isEmpty() const;
   bool hasSymbolTable() const;

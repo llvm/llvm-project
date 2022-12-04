@@ -1272,12 +1272,12 @@ static void createFakeELFSections(ObjectFile &Obj) {
 
 // Tries to fetch a more complete version of the given object file using its
 // Build ID. Returns None if nothing was found.
-static Optional<OwningBinary<Binary>>
+static std::optional<OwningBinary<Binary>>
 fetchBinaryByBuildID(const ObjectFile &Obj) {
-  Optional<object::BuildIDRef> BuildID = getBuildID(&Obj);
+  std::optional<object::BuildIDRef> BuildID = getBuildID(&Obj);
   if (!BuildID)
     return std::nullopt;
-  Optional<std::string> Path = BIDFetcher->fetch(*BuildID);
+  std::optional<std::string> Path = BIDFetcher->fetch(*BuildID);
   if (!Path)
     return std::nullopt;
   Expected<OwningBinary<Binary>> DebugBinary = createBinary(*Path);
@@ -1423,7 +1423,8 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
   LLVM_DEBUG(LVP.dump());
 
   std::unordered_map<uint64_t, BBAddrMap> AddrToBBAddrMap;
-  auto ReadBBAddrMap = [&](Optional<unsigned> SectionIndex = std::nullopt) {
+  auto ReadBBAddrMap = [&](std::optional<unsigned> SectionIndex =
+                               std::nullopt) {
     AddrToBBAddrMap.clear();
     if (const auto *Elf = dyn_cast<ELFObjectFileBase>(&Obj)) {
       auto BBAddrMapsOrErr = Elf->readBBAddrMap(SectionIndex);
@@ -1975,7 +1976,7 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
   // more complete binary and disassemble that instead.
   OwningBinary<Binary> FetchedBinary;
   if (Obj->symbols().empty()) {
-    if (Optional<OwningBinary<Binary>> FetchedBinaryOpt =
+    if (std::optional<OwningBinary<Binary>> FetchedBinaryOpt =
             fetchBinaryByBuildID(*Obj)) {
       if (auto *O = dyn_cast<ObjectFile>(FetchedBinaryOpt->getBinary())) {
         if (!O->symbols().empty() ||
@@ -2092,7 +2093,7 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
 
   const ObjectFile *DbgObj = Obj;
   if (!FetchedBinary.getBinary() && !Obj->hasDebugInfo()) {
-    if (Optional<OwningBinary<Binary>> DebugBinaryOpt =
+    if (std::optional<OwningBinary<Binary>> DebugBinaryOpt =
             fetchBinaryByBuildID(*Obj)) {
       if (auto *FetchedObj =
               dyn_cast<const ObjectFile>(DebugBinaryOpt->getBinary())) {
@@ -3099,7 +3100,7 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   // Look up any provided build IDs, then append them to the input filenames.
   for (const opt::Arg *A : InputArgs.filtered(OBJDUMP_build_id)) {
     object::BuildID BuildID = parseBuildIDArg(A);
-    Optional<std::string> Path = BIDFetcher->fetch(BuildID);
+    std::optional<std::string> Path = BIDFetcher->fetch(BuildID);
     if (!Path) {
       reportCmdLineError(A->getSpelling() + ": could not find build ID '" +
                          A->getValue() + "'");
