@@ -127,7 +127,7 @@ public:
   // in the Graph (BBGuard). That is if any of the block is deleted or RAUWed
   // then the CFG is treated poisoned and no block pointer of the Graph is used.
   struct CFG {
-    Optional<DenseMap<intptr_t, BBGuard>> BBGuards;
+    std::optional<DenseMap<intptr_t, BBGuard>> BBGuards;
     DenseMap<const BasicBlock *, DenseMap<const BasicBlock *, unsigned>> Graph;
 
     CFG(const Function *F, bool TrackBBLifetime);
