@@ -921,9 +921,9 @@ private:
     // We also filter some internal lldb identifiers here. The user
     // shouldn't see these.
     if (llvm::StringRef(ToInsert).startswith("$__lldb_"))
-      return llvm::None;
+      return std::nullopt;
     if (ToInsert.empty())
-      return llvm::None;
+      return std::nullopt;
     // Merge the suggested Token into the existing command line to comply
     // with the kind of result the lldb API expects.
     std::string CompletionSuggestion =

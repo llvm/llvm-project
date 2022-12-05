@@ -57,18 +57,18 @@ GetWasmString(llvm::DataExtractor &data, llvm::DataExtractor::Cursor &c) {
   uint64_t len = data.getULEB128(c);
   if (!c) {
     consumeError(c.takeError());
-    return llvm::None;
+    return std::nullopt;
   }
 
   if (len >= (uint64_t(1) << 32)) {
-    return llvm::None;
+    return std::nullopt;
   }
 
   llvm::SmallVector<uint8_t, 32> str_storage;
   data.getU8(c, str_storage, len);
   if (!c) {
     consumeError(c.takeError());
-    return llvm::None;
+    return std::nullopt;
   }
 
   llvm::StringRef str = toStringRef(makeArrayRef(str_storage));
@@ -427,7 +427,7 @@ llvm::Optional<FileSpec> ObjectFileWasm::GetExternalDebugInfoFileSpec() {
         return FileSpec(symbols_url->GetStringRef());
     }
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 void ObjectFileWasm::Dump(Stream *s) {

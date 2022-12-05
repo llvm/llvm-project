@@ -37,7 +37,7 @@ public:
   llvm::Optional<uint32_t> dwo_num() const {
     if (m_dwo_num_valid)
       return m_dwo_num;
-    return llvm::None;
+    return std::nullopt;
   }
 
   Section section() const { return static_cast<Section>(m_section); }

@@ -39,7 +39,7 @@ static llvm::Optional<std::tuple<Ts...>> zipOpt(llvm::Optional<Ts> &&...ts) {
     return llvm::Optional<std::tuple<Ts...>>(
         std::make_tuple(std::move(*ts)...));
   else
-    return llvm::None;
+    return std::nullopt;
 }
 
 // The funct3 is the type of compare in B<CMP> instructions.
@@ -134,7 +134,7 @@ llvm::Optional<uint64_t> Rs::Read(EmulateInstructionRISCV &emulator) {
   RegisterValue value;
   return emulator.ReadRegister(eRegisterKindLLDB, lldbReg, value)
              ? llvm::Optional<uint64_t>(value.GetAsUInt64())
-             : llvm::None;
+             : std::nullopt;
 }
 
 llvm::Optional<int32_t> Rs::ReadI32(EmulateInstructionRISCV &emulator) {
@@ -157,7 +157,7 @@ llvm::Optional<llvm::APFloat> Rs::ReadAPFloat(EmulateInstructionRISCV &emulator,
   uint32_t lldbReg = FPREncodingToLLDB(rs);
   RegisterValue value;
   if (!emulator.ReadRegister(eRegisterKindLLDB, lldbReg, value))
-    return llvm::None;
+    return std::nullopt;
   uint64_t bits = value.GetAsUInt64();
   llvm::APInt api(64, bits, false);
   return llvm::APFloat(isDouble ? llvm::APFloat(api.bitsToDouble())
@@ -251,9 +251,9 @@ static std::enable_if_t<is_amo_add<I> || is_amo_bit_op<I> || is_amo_swap<I> ||
 AtomicAddr(EmulateInstructionRISCV &emulator, I inst, unsigned int align) {
   return inst.rs1.Read(emulator)
       .transform([&](uint64_t rs1) {
-        return rs1 % align == 0 ? llvm::Optional<uint64_t>(rs1) : llvm::None;
+        return rs1 % align == 0 ? llvm::Optional<uint64_t>(rs1) : std::nullopt;
       })
-      .value_or(llvm::None);
+      .value_or(std::nullopt);
 }
 
 template <typename I, typename T>
@@ -575,7 +575,7 @@ llvm::Optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
   }
   LLDB_LOGF(log, "EmulateInstructionRISCV::%s: inst(0x%x) was unsupported",
             __FUNCTION__, inst);
-  return llvm::None;
+  return std::nullopt;
 }
 
 class Executor {
@@ -1467,7 +1467,7 @@ llvm::Optional<DecodeResult>
 EmulateInstructionRISCV::ReadInstructionAt(lldb::addr_t addr) {
   return ReadMem<uint32_t>(addr)
       .transform([&](uint32_t inst) { return Decode(inst); })
-      .value_or(llvm::None);
+      .value_or(std::nullopt);
 }
 
 bool EmulateInstructionRISCV::ReadInstruction() {
@@ -1490,7 +1490,7 @@ llvm::Optional<lldb::addr_t> EmulateInstructionRISCV::ReadPC() {
   bool success = false;
   auto addr = ReadRegisterUnsigned(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC,
                                    LLDB_INVALID_ADDRESS, &success);
-  return success ? llvm::Optional<lldb::addr_t>(addr) : llvm::None;
+  return success ? llvm::Optional<lldb::addr_t>(addr) : std::nullopt;
 }
 
 bool EmulateInstructionRISCV::WritePC(lldb::addr_t pc) {

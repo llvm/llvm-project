@@ -47,7 +47,7 @@ public:
   ///     Whether to look for an exact match.
   ///
   explicit SourceLocationSpec(FileSpec file_spec, uint32_t line,
-                              llvm::Optional<uint16_t> column = llvm::None,
+                              llvm::Optional<uint16_t> column = std::nullopt,
                               bool check_inlines = false,
                               bool exact_match = false);
 

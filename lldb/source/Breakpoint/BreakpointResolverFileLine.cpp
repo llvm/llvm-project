@@ -210,7 +210,7 @@ void BreakpointResolverFileLine::DeduceSourceMapping(
         return a;
       }
     }
-    return llvm::None;
+    return std::nullopt;
   };
 
   FileSpec request_file = m_location_spec.GetFileSpec();

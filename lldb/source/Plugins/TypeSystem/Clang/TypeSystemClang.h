@@ -744,7 +744,7 @@ public:
                        ExecutionContextScope *exe_scope) {
     if (llvm::Optional<uint64_t> bit_size = GetBitSize(type, exe_scope))
       return (*bit_size + 7) / 8;
-    return llvm::None;
+    return std::nullopt;
   }
 
   llvm::Optional<uint64_t>
