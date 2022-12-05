@@ -55,7 +55,7 @@ public:
                        const DebugLoc &DL) const;
 
   // Returns the index of the WebAssembly local to which the stack object
-  // FrameIndex in MF should be allocated, or None.
+  // FrameIndex in MF should be allocated, or std::nullopt.
   static std::optional<unsigned> getLocalForStackObject(MachineFunction &MF,
                                                         int FrameIndex);
 

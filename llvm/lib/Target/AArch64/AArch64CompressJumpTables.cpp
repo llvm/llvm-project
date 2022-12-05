@@ -37,8 +37,8 @@ class AArch64CompressJumpTables : public MachineFunctionPass {
   MachineFunction *MF;
   SmallVector<int, 8> BlockInfo;
 
-  /// Returns the size in instructions of the block \p MBB, or None if we
-  /// couldn't get a safe upper bound.
+  /// Returns the size in instructions of the block \p MBB, or std::nullopt if
+  /// we couldn't get a safe upper bound.
   std::optional<int> computeBlockSize(MachineBasicBlock &MBB);
 
   /// Gather information about the function, returns false if we can't perform

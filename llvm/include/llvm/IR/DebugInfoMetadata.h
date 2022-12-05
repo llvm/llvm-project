@@ -860,8 +860,8 @@ public:
 
   enum class Signedness { Signed, Unsigned };
 
-  /// Return the signedness of this type, or None if this type is neither
-  /// signed nor unsigned.
+  /// Return the signedness of this type, or std::nullopt if this type is
+  /// neither signed nor unsigned.
   std::optional<Signedness> getSignedness() const;
 
   static bool classof(const Metadata *MD) {
@@ -2552,8 +2552,8 @@ public:
   /// Determines the size of the variable's type.
   std::optional<uint64_t> getSizeInBits() const;
 
-  /// Return the signedness of this variable's type, or None if this type is
-  /// neither signed nor unsigned.
+  /// Return the signedness of this variable's type, or std::nullopt if this
+  /// type is neither signed nor unsigned.
   std::optional<DIBasicType::Signedness> getSignedness() const {
     if (auto *BT = dyn_cast<DIBasicType>(getType()))
       return BT->getSignedness();

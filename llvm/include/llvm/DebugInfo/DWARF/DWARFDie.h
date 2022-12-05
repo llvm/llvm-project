@@ -149,8 +149,8 @@ public:
   ///
   /// \param Attrs an array of DWARF attribute to look for.
   /// \returns an optional that has a valid DWARFFormValue for the first
-  /// matching attribute in Attrs, or None if none of the attributes in Attrs
-  /// exist in this DIE.
+  /// matching attribute in Attrs, or std::nullopt if none of the attributes in
+  /// Attrs exist in this DIE.
   std::optional<DWARFFormValue> find(ArrayRef<dwarf::Attribute> Attrs) const;
 
   /// Extract the first value of any attribute in Attrs from this DIE and
@@ -159,9 +159,9 @@ public:
   ///
   /// \param Attrs an array of DWARF attribute to look for.
   /// \returns an optional that has a valid DWARFFormValue for the first
-  /// matching attribute in Attrs, or None if none of the attributes in Attrs
-  /// exist in this DIE or in any DW_AT_specification or DW_AT_abstract_origin
-  /// DIEs.
+  /// matching attribute in Attrs, or std::nullopt if none of the attributes in
+  /// Attrs exist in this DIE or in any DW_AT_specification or
+  /// DW_AT_abstract_origin DIEs.
   std::optional<DWARFFormValue>
   findRecursively(ArrayRef<dwarf::Attribute> Attrs) const;
 

@@ -9617,7 +9617,7 @@ private:
       Unreachable.erase(&Fn);
     }
 
-    /// If there is no information about the function None is returned.
+    /// If there is no information about the function std::nullopt is returned.
     Optional<bool> isCachedReachable(const Function &Fn) {
       // Assume that we can reach the function.
       // TODO: Be more specific with the unknown callee.

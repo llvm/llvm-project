@@ -110,7 +110,7 @@ void MarkupParser::flush() {
 }
 
 // Finds and returns the next valid markup element in the given line. Returns
-// None if the line contains no valid elements.
+// std::nullopt if the line contains no valid elements.
 std::optional<MarkupNode> MarkupParser::parseElement(StringRef Line) {
   while (true) {
     // Find next element using begin and end markers.

@@ -187,7 +187,7 @@ public:
   ///
   /// \param RegNum the register number to find a location for.
   ///
-  /// \returns A location if one is available for \a RegNum, or llvm::None
+  /// \returns A location if one is available for \a RegNum, or std::nullopt
   /// otherwise.
   std::optional<UnwindLocation> getRegisterLocation(uint32_t RegNum) const {
     auto Pos = Locations.find(RegNum);

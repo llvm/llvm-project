@@ -393,8 +393,8 @@ public:
     return SubclassOptionalData & IsInBounds;
   }
 
-  /// Returns the offset of the index with an inrange attachment, or None if
-  /// none.
+  /// Returns the offset of the index with an inrange attachment, or
+  /// std::nullopt if none.
   Optional<unsigned> getInRangeIndex() const {
     if (SubclassOptionalData >> 1 == 0)
       return std::nullopt;

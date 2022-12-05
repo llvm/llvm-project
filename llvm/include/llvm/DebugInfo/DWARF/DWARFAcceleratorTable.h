@@ -51,12 +51,12 @@ public:
 
   public:
     /// Returns the Offset of the Compilation Unit associated with this
-    /// Accelerator Entry or None if the Compilation Unit offset is not recorded
-    /// in this Accelerator Entry.
+    /// Accelerator Entry or std::nullopt if the Compilation Unit offset is not
+    /// recorded in this Accelerator Entry.
     virtual std::optional<uint64_t> getCUOffset() const = 0;
 
     /// Returns the Tag of the Debug Info Entry associated with this
-    /// Accelerator Entry or None if the Tag is not recorded in this
+    /// Accelerator Entry or std::nullopt if the Tag is not recorded in this
     /// Accelerator Entry.
     virtual std::optional<dwarf::Tag> getTag() const = 0;
 
@@ -126,9 +126,9 @@ public:
     std::optional<uint64_t> getCUOffset() const override;
 
     /// Returns the Section Offset of the Debug Info Entry associated with this
-    /// Accelerator Entry or None if the DIE offset is not recorded in this
-    /// Accelerator Entry. The returned offset is relative to the start of the
-    /// Section containing the DIE.
+    /// Accelerator Entry or std::nullopt if the DIE offset is not recorded in
+    /// this Accelerator Entry. The returned offset is relative to the start of
+    /// the Section containing the DIE.
     std::optional<uint64_t> getDIESectionOffset() const;
 
     std::optional<dwarf::Tag> getTag() const override;
@@ -292,12 +292,12 @@ public:
     std::optional<dwarf::Tag> getTag() const override { return tag(); }
 
     /// Returns the Index into the Compilation Unit list of the owning Name
-    /// Index or None if this Accelerator Entry does not have an associated
-    /// Compilation Unit. It is up to the user to verify that the returned Index
-    /// is valid in the owning NameIndex (or use getCUOffset(), which will
-    /// handle that check itself). Note that entries in NameIndexes which index
-    /// just a single Compilation Unit are implicitly associated with that unit,
-    /// so this function will return 0 even without an explicit
+    /// Index or std::nullopt if this Accelerator Entry does not have an
+    /// associated Compilation Unit. It is up to the user to verify that the
+    /// returned Index is valid in the owning NameIndex (or use getCUOffset(),
+    /// which will handle that check itself). Note that entries in NameIndexes
+    /// which index just a single Compilation Unit are implicitly associated
+    /// with that unit, so this function will return 0 even without an explicit
     /// DW_IDX_compile_unit attribute.
     std::optional<uint64_t> getCUIndex() const;
 

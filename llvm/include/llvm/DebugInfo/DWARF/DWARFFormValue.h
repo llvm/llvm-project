@@ -129,8 +129,8 @@ public:
   ///
   /// \param Kind The kind of path to extract.
   ///
-  /// \returns A valid string value on success, or llvm::None if the form class
-  /// is not FC_Constant, or if the file index is not valid.
+  /// \returns A valid string value on success, or std::nullopt if the form
+  /// class is not FC_Constant, or if the file index is not valid.
   std::optional<std::string>
   getAsFile(DILineInfoSpecifier::FileLineInfoKind Kind) const;
 

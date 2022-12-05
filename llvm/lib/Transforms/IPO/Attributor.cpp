@@ -1074,8 +1074,8 @@ Attributor::getAssumedConstant(const IRPosition &IRP,
                                const AbstractAttribute &AA,
                                bool &UsedAssumedInformation) {
   // First check all callbacks provided by outside AAs. If any of them returns
-  // a non-null value that is different from the associated value, or None, we
-  // assume it's simplified.
+  // a non-null value that is different from the associated value, or
+  // std::nullopt, we assume it's simplified.
   for (auto &CB : SimplificationCallbacks.lookup(IRP)) {
     Optional<Value *> SimplifiedV = CB(IRP, &AA, UsedAssumedInformation);
     if (!SimplifiedV)
@@ -1104,8 +1104,8 @@ Optional<Value *> Attributor::getAssumedSimplified(const IRPosition &IRP,
                                                    bool &UsedAssumedInformation,
                                                    AA::ValueScope S) {
   // First check all callbacks provided by outside AAs. If any of them returns
-  // a non-null value that is different from the associated value, or None, we
-  // assume it's simplified.
+  // a non-null value that is different from the associated value, or
+  // std::nullopt, we assume it's simplified.
   for (auto &CB : SimplificationCallbacks.lookup(IRP))
     return CB(IRP, AA, UsedAssumedInformation);
 
@@ -1128,8 +1128,8 @@ bool Attributor::getAssumedSimplifiedValues(
     SmallVectorImpl<AA::ValueAndContext> &Values, AA::ValueScope S,
     bool &UsedAssumedInformation) {
   // First check all callbacks provided by outside AAs. If any of them returns
-  // a non-null value that is different from the associated value, or None, we
-  // assume it's simplified.
+  // a non-null value that is different from the associated value, or
+  // std::nullopt, we assume it's simplified.
   const auto &SimplificationCBs = SimplificationCallbacks.lookup(IRP);
   for (const auto &CB : SimplificationCBs) {
     Optional<Value *> CBResult = CB(IRP, AA, UsedAssumedInformation);

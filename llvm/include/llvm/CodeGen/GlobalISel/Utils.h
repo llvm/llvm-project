@@ -473,7 +473,7 @@ bool isConstantOrConstantVector(MachineInstr &MI,
 
 /// Determines if \p MI defines a constant integer or a splat vector of
 /// constant integers.
-/// \returns the scalar constant or None.
+/// \returns the scalar constant or std::nullopt.
 Optional<APInt> isConstantOrConstantSplatVector(MachineInstr &MI,
                                                 const MachineRegisterInfo &MRI);
 

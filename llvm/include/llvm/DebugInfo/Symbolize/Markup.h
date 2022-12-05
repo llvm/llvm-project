@@ -78,7 +78,7 @@ public:
   /// Calling nextNode() may invalidate the contents of the node returned by the
   /// previous call.
   ///
-  /// \returns the next markup node or None if none remain.
+  /// \returns the next markup node or std::nullopt if none remain.
   std::optional<MarkupNode> nextNode();
 
   bool isSGR(const MarkupNode &Node) const {

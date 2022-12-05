@@ -137,7 +137,7 @@ public:
   ///
   /// \param Index An index into the file table.
   /// \returns An optional FileInfo that will be valid if the file index is
-  /// valid, or llvm::None if the file index is out of bounds,
+  /// valid, or std::nullopt if the file index is out of bounds,
   std::optional<FileEntry> getFile(uint32_t Index) const {
     if (Index < Files.size())
       return Files[Index];
@@ -204,7 +204,7 @@ public:
   ///
   /// \param Index A index into the address table.
   /// \returns A resolved virtual address for adddress in the address table
-  /// or llvm::None if Index is out of bounds.
+  /// or std::nullopt if Index is out of bounds.
   std::optional<uint64_t> getAddress(size_t Index) const;
 
 protected:
@@ -236,7 +236,7 @@ protected:
   ///
   /// \param Index An index into the AddrOffsets array.
   /// \returns An virtual address that matches the original object file for the
-  /// address as the specified index, or llvm::None if Index is out of bounds.
+  /// address as the specified index, or std::nullopt if Index is out of bounds.
   template <class T>
   std::optional<uint64_t> addressForIndex(size_t Index) const {
     ArrayRef<T> AIO = getAddrOffsets<T>();
