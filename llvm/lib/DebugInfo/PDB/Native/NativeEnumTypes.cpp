@@ -8,7 +8,6 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
