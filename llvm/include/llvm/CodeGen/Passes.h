@@ -334,6 +334,10 @@ namespace llvm {
 
   MachineFunctionPass *createMachineCopyPropagationPass(bool UseCopyInstr);
 
+  /// MachineLateInstrsCleanup - This pass removes redundant identical
+  /// instructions after register allocation and rematerialization.
+  extern char &MachineLateInstrsCleanupID;
+
   /// PeepholeOptimizer - This pass performs peephole optimizations -
   /// like extension and comparison eliminations.
   extern char &PeepholeOptimizerID;
