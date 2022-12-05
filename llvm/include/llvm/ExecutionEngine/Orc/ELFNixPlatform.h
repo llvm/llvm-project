@@ -95,7 +95,7 @@ public:
   static Expected<std::unique_ptr<ELFNixPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          JITDylib &PlatformJD, const char *OrcRuntimePath,
-         Optional<SymbolAliasMap> RuntimeAliases = None);
+         Optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   ExecutionSession &getExecutionSession() const { return ES; }
   ObjectLinkingLayer &getObjectLinkingLayer() const { return ObjLinkingLayer; }

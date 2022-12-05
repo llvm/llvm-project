@@ -481,7 +481,7 @@ TEST(ZipIteratorTest, ZipLongestBasic) {
     const vector<tuple<Optional<unsigned>, Optional<StringRef>>> expected{
         make_tuple(3, StringRef("2")), make_tuple(1, StringRef("7")),
         make_tuple(4, StringRef("1")), make_tuple(1, StringRef("8")),
-        make_tuple(5, None),           make_tuple(9, None)};
+        make_tuple(5, std::nullopt),   make_tuple(9, std::nullopt)};
     size_t iters = 0;
     for (auto tup : zip_longest(pi, e)) {
       EXPECT_EQ(tup, expected[iters]);
@@ -495,7 +495,7 @@ TEST(ZipIteratorTest, ZipLongestBasic) {
     const vector<tuple<Optional<StringRef>, Optional<unsigned>>> expected{
         make_tuple(StringRef("2"), 3), make_tuple(StringRef("7"), 1),
         make_tuple(StringRef("1"), 4), make_tuple(StringRef("8"), 1),
-        make_tuple(None, 5),           make_tuple(None, 9)};
+        make_tuple(std::nullopt, 5),   make_tuple(std::nullopt, 9)};
     size_t iters = 0;
     for (auto tup : zip_longest(e, pi)) {
       EXPECT_EQ(tup, expected[iters]);

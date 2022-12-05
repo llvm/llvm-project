@@ -126,11 +126,9 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
     Sec.SectionType = llvm::wasm::WASM_SEC_CUSTOM;
     Sec.Name = NewSection.SectionName;
 
-    llvm::StringRef InputData =
-        llvm::StringRef(NewSection.SectionData->getBufferStart(),
-                        NewSection.SectionData->getBufferSize());
     std::unique_ptr<MemoryBuffer> BufferCopy = MemoryBuffer::getMemBufferCopy(
-        InputData, NewSection.SectionData->getBufferIdentifier());
+        NewSection.SectionData->getBufferStart(),
+        NewSection.SectionData->getBufferIdentifier());
     Sec.Contents = makeArrayRef<uint8_t>(
         reinterpret_cast<const uint8_t *>(BufferCopy->getBufferStart()),
         BufferCopy->getBufferSize());

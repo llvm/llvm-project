@@ -50,7 +50,7 @@ llvm::Error TestAsmPrinter::init(const Target *TheTarget, StringRef TripleName,
                                  uint16_t DwarfVersion,
                                  dwarf::DwarfFormat DwarfFormat) {
   TM.reset(TheTarget->createTargetMachine(TripleName, "", "", TargetOptions(),
-                                          None));
+                                          std::nullopt));
   if (!TM)
     return make_error<StringError>("no target machine for target " + TripleName,
                                    inconvertibleErrorCode());

@@ -409,7 +409,8 @@ Error LVBinaryReader::createInstructions(LVScope *Scope,
         std::string BufferCodes;
         raw_string_ostream StreamCodes(BufferCodes);
         StreamCodes << format_bytes(
-            ArrayRef<uint8_t>(Begin, Begin + BytesConsumed), None, 16, 16);
+            ArrayRef<uint8_t>(Begin, Begin + BytesConsumed), std::nullopt, 16,
+            16);
         dbgs() << "[" << hexValue((uint64_t)Begin) << "] "
                << "Size: " << format_decimal(BytesConsumed, 2) << " ("
                << formatv("{0}",

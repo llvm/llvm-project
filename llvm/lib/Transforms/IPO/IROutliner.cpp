@@ -469,7 +469,7 @@ constantMatches(Value *V, unsigned GVN,
   // See if we have a constants
   Constant *CST = dyn_cast<Constant>(V);
   if (!CST)
-    return None;
+    return std::nullopt;
 
   // Holds a mapping from a global value number to a Constant.
   DenseMap<unsigned, Constant *>::iterator GVNToConstantIt;
@@ -684,7 +684,8 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
         Unit /* Context */, F->getName(), MangledNameStream.str(),
         Unit /* File */,
         0 /* Line 0 is reserved for compiler-generated code. */,
-        DB.createSubroutineType(DB.getOrCreateTypeArray(None)), /* void type */
+        DB.createSubroutineType(
+            DB.getOrCreateTypeArray(std::nullopt)), /* void type */
         0, /* Line 0 is reserved for compiler-generated code. */
         DINode::DIFlags::FlagArtificial /* Compiler-generated code. */,
         /* Outlined code is optimized code by definition. */
@@ -1193,7 +1194,7 @@ static Optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
     Optional<unsigned> OGVN = Cand.getGVN(Incoming);
     if (!OGVN && Blocks.contains(IncomingBlock)) {
       Region.IgnoreRegion = true;
-      return None;
+      return std::nullopt;
     }
 
     // If the incoming block isn't in the region, we don't have to worry about
@@ -2013,7 +2014,7 @@ Optional<unsigned> findDuplicateOutputBlock(
     MatchingNum++;
   }
 
-  return None;
+  return std::nullopt;
 }
 
 /// Remove empty output blocks from the outlined region.

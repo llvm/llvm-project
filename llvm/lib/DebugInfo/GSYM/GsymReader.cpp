@@ -213,14 +213,14 @@ Optional<uint64_t> GsymReader::getAddress(size_t Index) const {
   case 4: return addressForIndex<uint32_t>(Index);
   case 8: return addressForIndex<uint64_t>(Index);
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 Optional<uint64_t> GsymReader::getAddressInfoOffset(size_t Index) const {
   const auto NumAddrInfoOffsets = AddrInfoOffsets.size();
   if (Index < NumAddrInfoOffsets)
     return AddrInfoOffsets[Index];
-  return llvm::None;
+  return std::nullopt;
 }
 
 Expected<uint64_t>

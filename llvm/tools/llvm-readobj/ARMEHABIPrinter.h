@@ -502,7 +502,7 @@ void PrinterContext<ET>::PrintExceptionTable(const Elf_Shdr &EHT,
                            : PREL31(Word, EHT.sh_addr + TableEntryOffset);
     SW.printHex("PersonalityRoutineAddress", Address);
     Optional<unsigned> SecIndex =
-        IsRelocatable ? Optional<unsigned>(EHT.sh_link) : None;
+        IsRelocatable ? Optional<unsigned>(EHT.sh_link) : std::nullopt;
     if (ErrorOr<StringRef> Name = FunctionAtAddress(Address, SecIndex))
       SW.printString("PersonalityRoutineName", *Name);
   }
@@ -575,7 +575,7 @@ void PrinterContext<ET>::PrintIndexTable(unsigned SectionIndex,
     // the sh_link field is not reliable, because we have one .ARM.exidx section
     // normally, but might have many code sections.
     Optional<unsigned> SecIndex =
-        IsRelocatable ? Optional<unsigned>(IT->sh_link) : None;
+        IsRelocatable ? Optional<unsigned>(IT->sh_link) : std::nullopt;
     if (ErrorOr<StringRef> Name = FunctionAtAddress(Address, SecIndex))
       SW.printString("FunctionName", *Name);
 

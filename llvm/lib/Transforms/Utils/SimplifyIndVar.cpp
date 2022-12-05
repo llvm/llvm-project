@@ -1042,9 +1042,8 @@ class WidenIV {
                                               Instruction *UseI) {
     DefUserPair Key(Def, UseI);
     auto It = PostIncRangeInfos.find(Key);
-    return It == PostIncRangeInfos.end()
-               ? Optional<ConstantRange>(None)
-               : Optional<ConstantRange>(It->second);
+    return It == PostIncRangeInfos.end() ? Optional<ConstantRange>(std::nullopt)
+                                         : Optional<ConstantRange>(It->second);
   }
 
   void calculatePostIncRanges(PHINode *OrigPhi);

@@ -282,7 +282,7 @@ public:
   /// defined at line \p DefLineNumber or defined before input is parsed if
   /// \p DefLineNumber is None.
   explicit NumericVariable(StringRef Name, ExpressionFormat ImplicitFormat,
-                           Optional<size_t> DefLineNumber = None)
+                           Optional<size_t> DefLineNumber = std::nullopt)
       : Name(Name), ImplicitFormat(ImplicitFormat),
         DefLineNumber(DefLineNumber) {}
 
@@ -306,7 +306,7 @@ public:
   /// buffer string from which it was parsed to \p NewStrValue.  See comments on
   /// getStringValue for a discussion of when the latter can be None.
   void setValue(ExpressionValue NewValue,
-                Optional<StringRef> NewStrValue = None) {
+                Optional<StringRef> NewStrValue = std::nullopt) {
     Value = NewValue;
     StrValue = NewStrValue;
   }
@@ -314,8 +314,8 @@ public:
   /// Clears value of this numeric variable, regardless of whether it is
   /// currently defined or not.
   void clearValue() {
-    Value = None;
-    StrValue = None;
+    Value = std::nullopt;
+    StrValue = std::nullopt;
   }
 
   /// \returns the line number where this variable is defined, if any, or None
@@ -555,7 +555,7 @@ public:
   SMRange getRange() const { return Range; }
 
   static Error get(const SourceMgr &SM, SMLoc Loc, const Twine &ErrMsg,
-                   SMRange Range = None) {
+                   SMRange Range = std::nullopt) {
     return make_error<ErrorDiagnostic>(
         SM.GetMessage(Loc, SourceMgr::DK_Error, ErrMsg), Range);
   }
@@ -682,7 +682,7 @@ class Pattern {
 
 public:
   Pattern(Check::FileCheckType Ty, FileCheckPatternContext *Context,
-          Optional<size_t> Line = None)
+          Optional<size_t> Line = std::nullopt)
       : Context(Context), CheckTy(Ty), LineNumber(Line) {}
 
   /// \returns the location in source code.

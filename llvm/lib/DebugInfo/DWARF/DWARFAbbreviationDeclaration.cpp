@@ -144,7 +144,7 @@ DWARFAbbreviationDeclaration::findAttributeIndex(dwarf::Attribute Attr) const {
     if (AttributeSpecs[i].Attr == Attr)
       return i;
   }
-  return None;
+  return std::nullopt;
 }
 
 uint64_t DWARFAbbreviationDeclaration::getAttributeOffsetFromIndex(
@@ -180,7 +180,7 @@ DWARFAbbreviationDeclaration::getAttributeValueFromOffset(
   DWARFDataExtractor DebugInfoData = U.getDebugInfoExtractor();
   if (FormValue.extractValue(DebugInfoData, &Offset, U.getFormParams(), &U))
     return FormValue;
-  return None;
+  return std::nullopt;
 }
 
 Optional<DWARFFormValue>
@@ -191,7 +191,7 @@ DWARFAbbreviationDeclaration::getAttributeValue(const uint64_t DIEOffset,
   // any data so we can return quickly if it doesn't.
   Optional<uint32_t> MatchAttrIndex = findAttributeIndex(Attr);
   if (!MatchAttrIndex)
-    return None;
+    return std::nullopt;
 
   uint64_t Offset = getAttributeOffsetFromIndex(*MatchAttrIndex, DIEOffset, U);
 
@@ -227,5 +227,5 @@ Optional<size_t> DWARFAbbreviationDeclaration::getFixedAttributesByteSize(
     const DWARFUnit &U) const {
   if (FixedAttributeSize)
     return FixedAttributeSize->getByteSize(U);
-  return None;
+  return std::nullopt;
 }

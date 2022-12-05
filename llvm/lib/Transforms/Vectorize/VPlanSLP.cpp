@@ -193,7 +193,7 @@ static std::optional<unsigned> getOpcode(ArrayRef<VPValue *> Values) {
   if (any_of(Values, [Opcode](VPValue *V) {
         return cast<VPInstruction>(V)->getOpcode() != Opcode;
       }))
-    return None;
+    return std::nullopt;
   return {Opcode};
 }
 
