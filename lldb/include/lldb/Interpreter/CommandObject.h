@@ -273,7 +273,7 @@ public:
   ///    The command arguments.
   ///
   /// \return
-  ///     llvm::None if there is no special repeat command - it will use the
+  ///     std::nullopt if there is no special repeat command - it will use the
   ///     current command line.
   ///     Otherwise a std::string containing the command to be repeated.
   ///     If the string is empty, the command won't be allow repeating.

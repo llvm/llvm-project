@@ -56,7 +56,7 @@ public:
   bool IsRemovable() const override { return true; }
 
   /// More documentation is available in lldb::CommandObject::GetRepeatCommand,
-  /// but in short, if llvm::None is returned, the previous command will be
+  /// but in short, if std::nullopt is returned, the previous command will be
   /// repeated, and if an empty string is returned, no commands will be
   /// executed.
   llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,

@@ -188,7 +188,7 @@ public:
   ///   The trace item index to compare with.
   ///
   /// \return
-  ///   The requested TSC range, or \a llvm::None if not available.
+  ///   The requested TSC range, or \a std::nullopt if not available.
   llvm::Optional<DecodedThread::TSCRange>
   GetTSCRangeByIndex(uint64_t item_index) const;
 
@@ -199,7 +199,7 @@ public:
   ///   The trace item index to compare with.
   ///
   /// \return
-  ///   The requested nanoseconds range, or \a llvm::None if not available.
+  ///   The requested nanoseconds range, or \a std::nullopt if not available.
   llvm::Optional<DecodedThread::NanosecondsRange>
   GetNanosecondsRangeByIndex(uint64_t item_index);
 

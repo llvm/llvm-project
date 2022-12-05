@@ -81,8 +81,8 @@ public:
   /// \param[in] only_if_exists
   ///     If \b true, besides matching \p path with the remapping rules, this
   ///     tries to check with the filesystem that the remapped file exists. If
-  ///     no valid file is found, \b None is returned. This might be expensive,
-  ///     specially on a network.
+  ///     no valid file is found, \b std::nullopt is returned. This might be
+  ///     expensive, specially on a network.
   ///
   ///     If \b false, then the existence of the returned remapping is not
   ///     checked.
@@ -104,8 +104,8 @@ public:
   ///     The reversed mapped new path.
   ///
   /// \return
-  ///     llvm::None if no remapping happens, otherwise, the matching source map
-  ///     entry's ""to_new_pathto"" part (which is the prefix of \a file) is
+  ///     std::nullopt if no remapping happens, otherwise, the matching source
+  ///     map entry's ""to_new_pathto"" part (which is the prefix of \a file) is
   ///     returned.
   llvm::Optional<llvm::StringRef> ReverseRemapPath(const FileSpec &file,
                                                    FileSpec &fixed) const;

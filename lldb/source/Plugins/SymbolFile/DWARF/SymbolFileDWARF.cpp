@@ -3866,7 +3866,7 @@ CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
     const size_t num_attributes = child.GetAttributes(attributes);
 
     // Parse the location at index \p attr_index within this call site parameter
-    // DIE, or return None on failure.
+    // DIE, or return std::nullopt on failure.
     auto parse_simple_location =
         [&](int attr_index) -> llvm::Optional<DWARFExpressionList> {
       DWARFFormValue form_value;

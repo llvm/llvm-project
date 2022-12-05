@@ -34,7 +34,7 @@ public:
   ///
   ///  \param[in] cgroup_fd
   ///  A file descriptor in /sys/fs associated with the cgroup of the process to
-  ///  trace. If not \a llvm::None, then the trace sesion will use cgroup
+  ///  trace. If not \a std::nullopt, then the trace sesion will use cgroup
   ///  filtering.
   ///
   /// \return

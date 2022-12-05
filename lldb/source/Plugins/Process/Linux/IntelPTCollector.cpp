@@ -64,7 +64,7 @@ Error IntelPTCollector::TraceStop(const TraceStopRequest &request) {
 
 /// \return
 ///   some file descriptor in /sys/fs/ associated with the cgroup of the given
-///   pid, or \a llvm::None if the pid is not part of a cgroup.
+///   pid, or \a std::nullopt if the pid is not part of a cgroup.
 static Optional<int> GetCGroupFileDescriptor(lldb::pid_t pid) {
   static Optional<int> fd;
   if (fd)

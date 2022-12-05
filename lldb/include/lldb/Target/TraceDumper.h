@@ -411,8 +411,8 @@ public:
   ///     The number of instructions to print.
   ///
   /// \return
-  ///     The instruction id of the last traversed instruction, or \b llvm::None
-  ///     if no instructions were visited.
+  ///     The instruction id of the last traversed instruction, or \b
+  ///     std::nullopt if no instructions were visited.
   llvm::Optional<lldb::user_id_t> DumpInstructions(size_t count);
 
   /// Dump all function calls forwards chronologically and hierarchically
