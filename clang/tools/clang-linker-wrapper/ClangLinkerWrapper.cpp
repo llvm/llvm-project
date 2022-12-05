@@ -876,7 +876,7 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
     if (BitcodeOutput.size() != 1 || !SingleOutput)
       return createStringError(inconvertibleErrorCode(),
                                "Cannot embed bitcode with multiple files.");
-    OutputFiles.push_back(static_cast<std::string>(BitcodeOutput.front()));
+    OutputFiles.push_back(Args.MakeArgString(BitcodeOutput.front()));
     return Error::success();
   }
 
@@ -1187,7 +1187,8 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
         return createFileError(*OutputOrErr, EC);
 
       OffloadingImage TheImage{};
-      TheImage.TheImageKind = IMG_Object;
+      TheImage.TheImageKind =
+          Args.hasArg(OPT_embed_bitcode) ? IMG_Bitcode : IMG_Object;
       TheImage.TheOffloadKind = Kind;
       TheImage.StringData = {
           {"triple",
