@@ -46,7 +46,7 @@ class MCSectionXCOFF final : public MCSection {
                  bool MultiSymbolsAllowed)
       : MCSection(SV_XCOFF, Name, K, Begin),
         CsectProp(XCOFF::CsectProperties(SMC, ST)), QualName(QualName),
-        SymbolTableName(SymbolTableName), DwarfSubtypeFlags(None),
+        SymbolTableName(SymbolTableName), DwarfSubtypeFlags(std::nullopt),
         MultiSymbolsAllowed(MultiSymbolsAllowed) {
     assert(
         (ST == XCOFF::XTY_SD || ST == XCOFF::XTY_CM || ST == XCOFF::XTY_ER) &&

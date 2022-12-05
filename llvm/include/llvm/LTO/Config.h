@@ -52,7 +52,7 @@ struct Config {
   /// For adding passes that run right before codegen.
   std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
   Optional<Reloc::Model> RelocModel = Reloc::PIC_;
-  Optional<CodeModel::Model> CodeModel = None;
+  Optional<CodeModel::Model> CodeModel = std::nullopt;
   CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
   CodeGenFileType CGFileType = CGFT_ObjectFile;
   unsigned OptLevel = 2;

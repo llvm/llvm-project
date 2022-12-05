@@ -35,12 +35,12 @@ struct YAMLRemarkSerializer : public RemarkSerializer {
   yaml::Output YAMLOutput;
 
   YAMLRemarkSerializer(raw_ostream &OS, SerializerMode Mode,
-                       Optional<StringTable> StrTab = None);
+                       Optional<StringTable> StrTab = std::nullopt);
 
   void emit(const Remark &Remark) override;
   std::unique_ptr<MetaSerializer>
   metaSerializer(raw_ostream &OS,
-                 Optional<StringRef> ExternalFilename = None) override;
+                 Optional<StringRef> ExternalFilename = std::nullopt) override;
 
   static bool classof(const RemarkSerializer *S) {
     return S->SerializerFormat == Format::YAML;
@@ -49,7 +49,7 @@ struct YAMLRemarkSerializer : public RemarkSerializer {
 protected:
   YAMLRemarkSerializer(Format SerializerFormat, raw_ostream &OS,
                        SerializerMode Mode,
-                       Optional<StringTable> StrTab = None);
+                       Optional<StringTable> StrTab = std::nullopt);
 };
 
 struct YAMLMetaSerializer : public MetaSerializer {
@@ -83,7 +83,7 @@ struct YAMLStrTabRemarkSerializer : public YAMLRemarkSerializer {
 
   std::unique_ptr<MetaSerializer>
   metaSerializer(raw_ostream &OS,
-                 Optional<StringRef> ExternalFilename = None) override;
+                 Optional<StringRef> ExternalFilename = std::nullopt) override;
 
   static bool classof(const RemarkSerializer *S) {
     return S->SerializerFormat == Format::YAMLStrTab;

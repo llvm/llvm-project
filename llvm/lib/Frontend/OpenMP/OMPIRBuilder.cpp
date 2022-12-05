@@ -3194,8 +3194,8 @@ createTargetMachine(Function *F, CodeGenOpt::Level OptLevel) {
 
   llvm::TargetOptions Options;
   return std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-      Triple, CPU, Features, Options, /*RelocModel=*/None, /*CodeModel=*/None,
-      OptLevel));
+      Triple, CPU, Features, Options, /*RelocModel=*/std::nullopt,
+      /*CodeModel=*/std::nullopt, OptLevel));
 }
 
 /// Heuristically determine the best-performant unroll factor for \p CLI. This
@@ -3240,12 +3240,12 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
       gatherUnrollingPreferences(L, SE, TTI,
                                  /*BlockFrequencyInfo=*/nullptr,
                                  /*ProfileSummaryInfo=*/nullptr, ORE, OptLevel,
-                                 /*UserThreshold=*/None,
-                                 /*UserCount=*/None,
+                                 /*UserThreshold=*/std::nullopt,
+                                 /*UserCount=*/std::nullopt,
                                  /*UserAllowPartial=*/true,
                                  /*UserAllowRuntime=*/true,
-                                 /*UserUpperBound=*/None,
-                                 /*UserFullUnrollMaxCount=*/None);
+                                 /*UserUpperBound=*/std::nullopt,
+                                 /*UserFullUnrollMaxCount=*/std::nullopt);
 
   UP.Force = true;
 

@@ -2342,7 +2342,7 @@ struct AAICVTracker : public StateWrapper<BooleanState, AbstractAttribute> {
   virtual Optional<Value *> getReplacementValue(InternalControlVar ICV,
                                                 const Instruction *I,
                                                 Attributor &A) const {
-    return None;
+    return std::nullopt;
   }
 
   /// Return an assumed unique ICV value if a single candidate is found. If
@@ -2447,7 +2447,7 @@ struct AAICVTrackerFunction : public AAICVTracker {
     const auto *CB = dyn_cast<CallBase>(&I);
     if (!CB || CB->hasFnAttr("no_openmp") ||
         CB->hasFnAttr("no_openmp_routines"))
-      return None;
+      return std::nullopt;
 
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
     auto &GetterRFI = OMPInfoCache.RFIs[OMPInfoCache.ICVs[ICV].Getter];
@@ -2458,7 +2458,7 @@ struct AAICVTrackerFunction : public AAICVTracker {
     if (CalledFunction == nullptr)
       return nullptr;
     if (CalledFunction == GetterRFI.Declaration)
-      return None;
+      return std::nullopt;
     if (CalledFunction == SetterRFI.Declaration) {
       if (ICVReplacementValuesMap[ICV].count(&I))
         return ICVReplacementValuesMap[ICV].lookup(&I);
@@ -2487,7 +2487,7 @@ struct AAICVTrackerFunction : public AAICVTracker {
   // We don't check unique value for a function, so return None.
   Optional<Value *>
   getUniqueReplacementValue(InternalControlVar ICV) const override {
-    return None;
+    return std::nullopt;
   }
 
   /// Return the value with which \p I can be replaced for specific \p ICV.

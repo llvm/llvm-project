@@ -510,9 +510,11 @@ public:
     AssemblerDialect = i;
   }
 
-  void Note(SMLoc L, const Twine &Msg, SMRange Range = None) override;
-  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = None) override;
-  bool printError(SMLoc L, const Twine &Msg, SMRange Range = None) override;
+  void Note(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) override;
+  bool Warning(SMLoc L, const Twine &Msg,
+               SMRange Range = std::nullopt) override;
+  bool printError(SMLoc L, const Twine &Msg,
+                  SMRange Range = std::nullopt) override;
 
   enum ExpandKind { ExpandMacros, DoNotExpandMacros };
   const AsmToken &Lex(ExpandKind ExpandNextToken);
@@ -619,7 +621,7 @@ private:
   bool expandStatement(SMLoc Loc);
 
   void printMessage(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Msg,
-                    SMRange Range = None) const {
+                    SMRange Range = std::nullopt) const {
     ArrayRef<SMRange> Ranges(Range);
     SrcMgr.PrintMessage(Loc, Kind, Msg, Ranges);
   }
@@ -1323,10 +1325,9 @@ bool MasmParser::enabledGenDwarfForAssembly() {
     // Use the first #line directive for this, if any. It's preprocessed, so
     // there is no checksum, and of course no source directive.
     if (!FirstCppHashFilename.empty())
-      getContext().setMCLineTableRootFile(/*CUID=*/0,
-                                          getContext().getCompilationDir(),
-                                          FirstCppHashFilename,
-                                          /*Cksum=*/None, /*Source=*/None);
+      getContext().setMCLineTableRootFile(
+          /*CUID=*/0, getContext().getCompilationDir(), FirstCppHashFilename,
+          /*Cksum=*/std::nullopt, /*Source=*/std::nullopt);
     const MCDwarfFile &RootFile =
         getContext().getMCDwarfLineTable(/*CUID=*/0).getRootFile();
     getContext().setGenDwarfFileNumber(getStreamer().emitDwarfFileDirective(
@@ -6991,7 +6992,8 @@ bool MasmParser::parseDirectiveRepeat(SMLoc DirectiveLoc, StringRef Dir) {
   SmallString<256> Buf;
   raw_svector_ostream OS(Buf);
   while (Count--) {
-    if (expandMacro(OS, M->Body, None, None, M->Locals, getTok().getLoc()))
+    if (expandMacro(OS, M->Body, std::nullopt, std::nullopt, M->Locals,
+                    getTok().getLoc()))
       return true;
   }
   instantiateMacroLikeBody(M, DirectiveLoc, OS);
@@ -7024,7 +7026,8 @@ bool MasmParser::parseDirectiveWhile(SMLoc DirectiveLoc) {
   if (Condition) {
     // Instantiate the macro, then resume at this directive to recheck the
     // condition.
-    if (expandMacro(OS, M->Body, None, None, M->Locals, getTok().getLoc()))
+    if (expandMacro(OS, M->Body, std::nullopt, std::nullopt, M->Locals,
+                    getTok().getLoc()))
       return true;
     instantiateMacroLikeBody(M, DirectiveLoc, /*ExitLoc=*/DirectiveLoc, OS);
   }

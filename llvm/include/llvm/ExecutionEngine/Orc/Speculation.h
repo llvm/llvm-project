@@ -50,7 +50,7 @@ private:
     if (Position != Maps.end())
       return Position->getSecond();
     else
-      return None;
+      return std::nullopt;
   }
 
   std::mutex ConcurrentAccess;

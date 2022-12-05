@@ -192,17 +192,17 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
 
   // Check basic results
   EXPECT_EQ(AA.getModRefInfo(Store1, MemoryLocation()), ModRefInfo::Mod);
-  EXPECT_EQ(AA.getModRefInfo(Store1, None), ModRefInfo::Mod);
+  EXPECT_EQ(AA.getModRefInfo(Store1, std::nullopt), ModRefInfo::Mod);
   EXPECT_EQ(AA.getModRefInfo(Load1, MemoryLocation()), ModRefInfo::Ref);
-  EXPECT_EQ(AA.getModRefInfo(Load1, None), ModRefInfo::Ref);
+  EXPECT_EQ(AA.getModRefInfo(Load1, std::nullopt), ModRefInfo::Ref);
   EXPECT_EQ(AA.getModRefInfo(Add1, MemoryLocation()), ModRefInfo::NoModRef);
-  EXPECT_EQ(AA.getModRefInfo(Add1, None), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(Add1, std::nullopt), ModRefInfo::NoModRef);
   EXPECT_EQ(AA.getModRefInfo(VAArg1, MemoryLocation()), ModRefInfo::ModRef);
-  EXPECT_EQ(AA.getModRefInfo(VAArg1, None), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(VAArg1, std::nullopt), ModRefInfo::ModRef);
   EXPECT_EQ(AA.getModRefInfo(CmpXChg1, MemoryLocation()), ModRefInfo::ModRef);
-  EXPECT_EQ(AA.getModRefInfo(CmpXChg1, None), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(CmpXChg1, std::nullopt), ModRefInfo::ModRef);
   EXPECT_EQ(AA.getModRefInfo(AtomicRMW, MemoryLocation()), ModRefInfo::ModRef);
-  EXPECT_EQ(AA.getModRefInfo(AtomicRMW, None), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(AtomicRMW, std::nullopt), ModRefInfo::ModRef);
 }
 
 static Instruction *getInstructionByName(Function &F, StringRef Name) {

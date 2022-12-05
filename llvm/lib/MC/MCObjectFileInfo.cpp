@@ -972,47 +972,53 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
   // sections, and the individual DWARF sections are distinguished by their
   // section subtype.
   DwarfAbbrevSection = Ctx->getXCOFFSection(
-      ".dwabrev", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwabrev", SectionKind::getMetadata(),
+      /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwabrev", XCOFF::SSUBTYP_DWABREV);
 
   DwarfInfoSection = Ctx->getXCOFFSection(
-      ".dwinfo", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwinfo", SectionKind::getMetadata(), /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwinfo", XCOFF::SSUBTYP_DWINFO);
 
   DwarfLineSection = Ctx->getXCOFFSection(
-      ".dwline", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwline", SectionKind::getMetadata(), /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwline", XCOFF::SSUBTYP_DWLINE);
 
   DwarfFrameSection = Ctx->getXCOFFSection(
-      ".dwframe", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwframe", SectionKind::getMetadata(),
+      /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwframe", XCOFF::SSUBTYP_DWFRAME);
 
   DwarfPubNamesSection = Ctx->getXCOFFSection(
-      ".dwpbnms", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwpbnms", SectionKind::getMetadata(),
+      /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwpbnms", XCOFF::SSUBTYP_DWPBNMS);
 
   DwarfPubTypesSection = Ctx->getXCOFFSection(
-      ".dwpbtyp", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwpbtyp", SectionKind::getMetadata(),
+      /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwpbtyp", XCOFF::SSUBTYP_DWPBTYP);
 
   DwarfStrSection = Ctx->getXCOFFSection(
-      ".dwstr", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwstr", SectionKind::getMetadata(), /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwstr", XCOFF::SSUBTYP_DWSTR);
 
   DwarfLocSection = Ctx->getXCOFFSection(
-      ".dwloc", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwloc", SectionKind::getMetadata(), /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwloc", XCOFF::SSUBTYP_DWLOC);
 
   DwarfARangesSection = Ctx->getXCOFFSection(
-      ".dwarnge", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwarnge", SectionKind::getMetadata(),
+      /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwarnge", XCOFF::SSUBTYP_DWARNGE);
 
   DwarfRangesSection = Ctx->getXCOFFSection(
-      ".dwrnges", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwrnges", SectionKind::getMetadata(),
+      /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwrnges", XCOFF::SSUBTYP_DWRNGES);
 
   DwarfMacinfoSection = Ctx->getXCOFFSection(
-      ".dwmac", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwmac", SectionKind::getMetadata(), /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwmac", XCOFF::SSUBTYP_DWMAC);
 }
 

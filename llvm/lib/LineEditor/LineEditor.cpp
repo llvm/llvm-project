@@ -255,7 +255,7 @@ Optional<std::string> LineEditor::readLine() const {
 
   // Either of these may mean end-of-file.
   if (!Line || LineLen == 0)
-    return None;
+    return std::nullopt;
 
   // Strip any newlines off the end of the string.
   while (LineLen > 0 &&

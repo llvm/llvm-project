@@ -237,9 +237,11 @@ public:
     AssemblerDialect = i;
   }
 
-  void Note(SMLoc L, const Twine &Msg, SMRange Range = None) override;
-  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = None) override;
-  bool printError(SMLoc L, const Twine &Msg, SMRange Range = None) override;
+  void Note(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) override;
+  bool Warning(SMLoc L, const Twine &Msg,
+               SMRange Range = std::nullopt) override;
+  bool printError(SMLoc L, const Twine &Msg,
+                  SMRange Range = std::nullopt) override;
 
   const AsmToken &Lex() override;
 
@@ -322,7 +324,7 @@ private:
 
   void printMacroInstantiations();
   void printMessage(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Msg,
-                    SMRange Range = None) const {
+                    SMRange Range = std::nullopt) const {
     ArrayRef<SMRange> Ranges(Range);
     SrcMgr.PrintMessage(Loc, Kind, Msg, Ranges);
   }
@@ -949,10 +951,9 @@ bool AsmParser::enabledGenDwarfForAssembly() {
     // Use the first #line directive for this, if any. It's preprocessed, so
     // there is no checksum, and of course no source directive.
     if (!FirstCppHashFilename.empty())
-      getContext().setMCLineTableRootFile(/*CUID=*/0,
-                                          getContext().getCompilationDir(),
-                                          FirstCppHashFilename,
-                                          /*Cksum=*/None, /*Source=*/None);
+      getContext().setMCLineTableRootFile(
+          /*CUID=*/0, getContext().getCompilationDir(), FirstCppHashFilename,
+          /*Cksum=*/std::nullopt, /*Source=*/std::nullopt);
     const MCDwarfFile &RootFile =
         getContext().getMCDwarfLineTable(/*CUID=*/0).getRootFile();
     getContext().setGenDwarfFileNumber(getStreamer().emitDwarfFileDirective(
@@ -5698,7 +5699,8 @@ bool AsmParser::parseDirectiveRept(SMLoc DirectiveLoc, StringRef Dir) {
   raw_svector_ostream OS(Buf);
   while (Count--) {
     // Note that the AtPseudoVariable is disabled for instantiations of .rep(t).
-    if (expandMacro(OS, M->Body, None, None, false, getTok().getLoc()))
+    if (expandMacro(OS, M->Body, std::nullopt, std::nullopt, false,
+                    getTok().getLoc()))
       return true;
   }
   instantiateMacroLikeBody(M, DirectiveLoc, OS);

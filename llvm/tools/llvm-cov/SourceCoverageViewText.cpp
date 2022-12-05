@@ -128,7 +128,7 @@ void SourceCoverageViewText::renderLine(raw_ostream &OS, LineRef L,
     else if (Col == ExpansionCol)
       Highlight = raw_ostream::CYAN;
     else
-      Highlight = None;
+      Highlight = std::nullopt;
   }
 
   // Show the rest of the line.

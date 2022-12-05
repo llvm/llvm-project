@@ -271,8 +271,8 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
-  MDNode *HAM = MDNode::getDistinct(Ctx, None);
-  MDNode *PCS = MDNode::getDistinct(Ctx, None);
+  MDNode *HAM = MDNode::getDistinct(Ctx, std::nullopt);
+  MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
 
   ASSERT_TRUE(MI->memoperands_empty());
   ASSERT_FALSE(MI->getPreInstrSymbol());
@@ -331,8 +331,8 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
-  MDNode *HAM = MDNode::getDistinct(Ctx, None);
-  MDNode *PCS = MDNode::getDistinct(Ctx, None);
+  MDNode *HAM = MDNode::getDistinct(Ctx, std::nullopt);
+  MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
 
   MI->setMemRefs(*MF, MMOs);
   MI->setPreInstrSymbol(*MF, Sym1);
@@ -373,8 +373,8 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
-  MDNode *HAM = MDNode::getDistinct(Ctx, None);
-  MDNode *PCS = MDNode::getDistinct(Ctx, None);
+  MDNode *HAM = MDNode::getDistinct(Ctx, std::nullopt);
+  MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
 
   MI->setMemRefs(*MF, MMOs);
   MI->setPreInstrSymbol(*MF, Sym1);
@@ -451,8 +451,8 @@ MATCHER_P(HasMIMetadata, MIMD, "") {
 
 TEST(MachineInstrBuilder, BuildMI) {
   LLVMContext Ctx;
-  MDNode *PCS = MDNode::getDistinct(Ctx, None);
-  MDNode *DI = MDNode::getDistinct(Ctx, None);
+  MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
+  MDNode *DI = MDNode::getDistinct(Ctx, std::nullopt);
   DebugLoc DL(DI);
   MIMetadata MIMD(DL, PCS);
   EXPECT_EQ(MIMD.getDL(), DL);

@@ -31,9 +31,9 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
   auto TT(Triple::normalize("x86_64--"));
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
-  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine*>(
-      TheTarget->createTargetMachine(TT, "", "", TargetOptions(), None, None,
-                                     CodeGenOpt::Default)));
+  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      TheTarget->createTargetMachine(TT, "", "", TargetOptions(), std::nullopt,
+                                     std::nullopt, CodeGenOpt::Default)));
 }
 
 class MachineSizeOptsTest : public testing::Test {
