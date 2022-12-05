@@ -519,14 +519,14 @@ const LandingPadInst *BasicBlock::getLandingPadInst() const {
   return dyn_cast<LandingPadInst>(getFirstNonPHI());
 }
 
-Optional<uint64_t> BasicBlock::getIrrLoopHeaderWeight() const {
+std::optional<uint64_t> BasicBlock::getIrrLoopHeaderWeight() const {
   const Instruction *TI = getTerminator();
   if (MDNode *MDIrrLoopHeader =
       TI->getMetadata(LLVMContext::MD_irr_loop)) {
     MDString *MDName = cast<MDString>(MDIrrLoopHeader->getOperand(0));
     if (MDName->getString().equals("loop_header_weight")) {
       auto *CI = mdconst::extract<ConstantInt>(MDIrrLoopHeader->getOperand(1));
-      return Optional<uint64_t>(CI->getValue().getZExtValue());
+      return std::optional<uint64_t>(CI->getValue().getZExtValue());
     }
   }
   return std::nullopt;

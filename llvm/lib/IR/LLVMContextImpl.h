@@ -24,7 +24,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1389,7 +1388,7 @@ public:
 
   /// The percentage of difference between profiling branch weights and
   /// llvm.expect branch weights to tolerate when emiting MisExpect diagnostics
-  Optional<uint32_t> DiagnosticsMisExpectTolerance = 0;
+  std::optional<uint32_t> DiagnosticsMisExpectTolerance = 0;
   bool MisExpectWarningRequested = false;
 
   /// The specialized remark streamer used by LLVM's OptimizationRemarkEmitter.
@@ -1421,7 +1420,7 @@ public:
 #include "llvm/IR/Metadata.def"
 
   // Optional map for looking up composite types by identifier.
-  Optional<DenseMap<const MDString *, DICompositeType *>> DITypeMap;
+  std::optional<DenseMap<const MDString *, DICompositeType *>> DITypeMap;
 
   // MDNodes may be uniqued or not uniqued.  When they're not uniqued, they
   // aren't in the MDNodeSet, but they're still shared between objects, so no
@@ -1580,7 +1579,7 @@ public:
   void setOpaquePointers(bool OP);
 
 private:
-  Optional<bool> OpaquePointers;
+  std::optional<bool> OpaquePointers;
 };
 
 } // end namespace llvm
