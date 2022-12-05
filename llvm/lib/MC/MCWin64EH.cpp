@@ -287,7 +287,7 @@ static Optional<int64_t> GetOptionalAbsDifference(MCStreamer &Streamer,
   // unusual constructs, like an inline asm with an alignment directive.
   int64_t value;
   if (!Diff->evaluateAsAbsolute(value, OS->getAssembler()))
-    return None;
+    return std::nullopt;
   return value;
 }
 

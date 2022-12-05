@@ -417,7 +417,7 @@ static Optional<unsigned> getSmallBestKnownTC(ScalarEvolution &SE, Loop *L) {
   if (unsigned ExpectedTC = SE.getSmallConstantMaxTripCount(L))
     return ExpectedTC;
 
-  return None;
+  return std::nullopt;
 }
 
 // Forward declare GeneratedRTChecks.
@@ -6452,8 +6452,8 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
 
   bool Reverse = ConsecutiveStride < 0;
   if (Reverse)
-    Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, None,
-                               CostKind, 0);
+    Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
+                               std::nullopt, CostKind, 0);
   return Cost;
 }
 
@@ -6537,8 +6537,8 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
     assert(!Legal->isMaskRequired(I) &&
            "Reverse masked interleaved access not supported.");
     Cost += Group->getNumMembers() *
-            TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, None,
-                               CostKind, 0);
+            TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
+                               std::nullopt, CostKind, 0);
   }
   return Cost;
 }
@@ -6548,7 +6548,7 @@ Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
   using namespace llvm::PatternMatch;
   // Early exit for no inloop reductions
   if (InLoopReductionChains.empty() || VF.isScalar() || !isa<VectorType>(Ty))
-    return None;
+    return std::nullopt;
   auto *VectorTy = cast<VectorType>(Ty);
 
   // We are looking for a pattern of, and finding the minimal acceptable cost:
@@ -6566,7 +6566,7 @@ Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
   Instruction *RetI = I;
   if (match(RetI, m_ZExtOrSExt(m_Value()))) {
     if (!RetI->hasOneUser())
-      return None;
+      return std::nullopt;
     RetI = RetI->user_back();
   }
 
@@ -6578,7 +6578,7 @@ Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
   // Test if the found instruction is a reduction, and if not return an invalid
   // cost specifying the parent to use the original cost modelling.
   if (!InLoopReductionImmediateChains.count(RetI))
-    return None;
+    return std::nullopt;
 
   // Find the reduction this chain is a part of and calculate the basic cost of
   // the reduction on its own.
@@ -6712,7 +6712,7 @@ Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
     }
   }
 
-  return I == RetI ? Optional<InstructionCost>(BaseCost) : None;
+  return I == RetI ? Optional<InstructionCost>(BaseCost) : std::nullopt;
 }
 
 InstructionCost
@@ -7498,7 +7498,7 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   assert(OrigLoop->isInnermost() && "Inner loop expected.");
   FixedScalableVFPair MaxFactors = CM.computeMaxVF(UserVF, UserIC);
   if (!MaxFactors) // Cases that should not to be vectorized nor interleaved.
-    return None;
+    return std::nullopt;
 
   // Invalidate interleave groups if all blocks of loop will be predicated.
   if (CM.blockNeedsPredicationForAnyReason(OrigLoop->getHeader()) &&

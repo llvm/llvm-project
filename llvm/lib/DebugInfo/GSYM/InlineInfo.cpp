@@ -57,7 +57,7 @@ llvm::Optional<InlineInfo::InlineArray> InlineInfo::getInlineStack(uint64_t Addr
   InlineArray Result;
   if (getInlineStackHelper(*this, Addr, Result))
     return Result;
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Skip an InlineInfo object in the specified data at the specified offset.

@@ -72,7 +72,7 @@ Optional<uint64_t>
 DWARFDataExtractor::getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
                                       uint64_t PCRelOffset) const {
   if (Encoding == dwarf::DW_EH_PE_omit)
-    return None;
+    return std::nullopt;
 
   uint64_t Result = 0;
   uint64_t OldOffset = *Offset;
@@ -86,7 +86,7 @@ DWARFDataExtractor::getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
       Result = getUnsigned(Offset, getAddressSize());
       break;
     default:
-      return None;
+      return std::nullopt;
     }
     break;
   case dwarf::DW_EH_PE_uleb128:
@@ -114,7 +114,7 @@ DWARFDataExtractor::getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
     Result = getRelocatedValue(8, Offset);
     break;
   default:
-    return None;
+    return std::nullopt;
   }
   // Then add relative offset, if required
   switch (Encoding & 0x70) {
@@ -130,7 +130,7 @@ DWARFDataExtractor::getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
   case dwarf::DW_EH_PE_aligned:
   default:
     *Offset = OldOffset;
-    return None;
+    return std::nullopt;
   }
 
   return Result;

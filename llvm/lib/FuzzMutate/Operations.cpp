@@ -163,7 +163,7 @@ OpDescriptor llvm::fuzzerop::splitBlockDescriptor(unsigned Weight) {
   SourcePred isInt1Ty{[](ArrayRef<Value *>, const Value *V) {
                         return V->getType()->isIntegerTy(1);
                       },
-                      None};
+                      std::nullopt};
   return {Weight, {isInt1Ty}, buildSplitBlock};
 }
 
@@ -182,7 +182,7 @@ OpDescriptor llvm::fuzzerop::gepDescriptor(unsigned Weight) {
   // TODO: Try to avoid meaningless accesses.
   SourcePred sizedType(
       [](ArrayRef<Value *>, const Value *V) { return V->getType()->isSized(); },
-      None);
+      std::nullopt);
   return {Weight, {sizedPtrType(), sizedType, anyIntType()}, buildGEP};
 }
 

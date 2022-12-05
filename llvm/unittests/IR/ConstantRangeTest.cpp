@@ -777,7 +777,7 @@ TEST_F(ConstantRangeTest, AddWithNoWrap) {
         bool IsOverflow;
         APInt Res = N1.sadd_ov(N2, IsOverflow);
         if (IsOverflow)
-          return None;
+          return std::nullopt;
         return Res;
       },
       PreferSmallest,
@@ -831,7 +831,7 @@ TEST_F(ConstantRangeTest, AddWithNoWrap) {
         bool IsOverflow;
         APInt Res = N1.uadd_ov(N2, IsOverflow);
         if (IsOverflow)
-          return None;
+          return std::nullopt;
         return Res;
       },
       PreferSmallest,
@@ -872,7 +872,7 @@ TEST_F(ConstantRangeTest, AddWithNoWrap) {
         APInt Res1 = N1.uadd_ov(N2, IsOverflow1);
         APInt Res2 = N1.sadd_ov(N2, IsOverflow2);
         if (IsOverflow1 || IsOverflow2)
-          return None;
+          return std::nullopt;
         assert(Res1 == Res2 && "Addition results differ?");
         return Res1;
       },
@@ -920,7 +920,7 @@ TEST_F(ConstantRangeTest, SubWithNoWrap) {
         bool IsOverflow;
         APInt Res = N1.ssub_ov(N2, IsOverflow);
         if (IsOverflow)
-          return None;
+          return std::nullopt;
         return Res;
       },
       PreferSmallest,
@@ -933,7 +933,7 @@ TEST_F(ConstantRangeTest, SubWithNoWrap) {
         bool IsOverflow;
         APInt Res = N1.usub_ov(N2, IsOverflow);
         if (IsOverflow)
-          return None;
+          return std::nullopt;
         return Res;
       },
       PreferSmallest,
@@ -947,7 +947,7 @@ TEST_F(ConstantRangeTest, SubWithNoWrap) {
         APInt Res1 = N1.usub_ov(N2, IsOverflow1);
         APInt Res2 = N1.ssub_ov(N2, IsOverflow2);
         if (IsOverflow1 || IsOverflow2)
-          return None;
+          return std::nullopt;
         assert(Res1 == Res2 && "Subtraction results differ?");
         return Res1;
       },
@@ -1248,7 +1248,7 @@ TEST_F(ConstantRangeTest, URem) {
       },
       [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
         if (N2.isZero())
-          return None;
+          return std::nullopt;
         return N1.urem(N2);
       },
       PreferSmallest,
@@ -1324,7 +1324,7 @@ TEST_F(ConstantRangeTest, SRem) {
       },
       [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
         if (N2.isZero())
-          return None;
+          return std::nullopt;
         return N1.srem(N2);
       },
       PreferSmallest,
@@ -1362,7 +1362,7 @@ TEST_F(ConstantRangeTest, Shl) {
       },
       [](const APInt &N1, const APInt &N2) -> Optional<APInt> {
         if (N2.uge(N2.getBitWidth()))
-          return None;
+          return std::nullopt;
         return N1.shl(N2);
       },
       PreferSmallestUnsigned,
@@ -2398,7 +2398,7 @@ TEST_F(ConstantRangeTest, Abs) {
       [](const ConstantRange &CR) { return CR.abs(/*IntMinIsPoison=*/true); },
       [](const APInt &N) -> Optional<APInt> {
         if (N.isMinSignedValue())
-          return None;
+          return std::nullopt;
         return N.abs();
       });
 }

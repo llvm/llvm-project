@@ -181,7 +181,7 @@ namespace llvm {
           BlockAddressPFS(nullptr) {}
     bool Run(
         bool UpgradeDebugInfo, DataLayoutCallbackTy DataLayoutCallback =
-                                   [](StringRef) { return None; });
+                                   [](StringRef) { return std::nullopt; });
 
     bool parseStandaloneConstantValue(Constant *&C, const SlotMapping *Slots);
 

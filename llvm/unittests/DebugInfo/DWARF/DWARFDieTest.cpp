@@ -80,9 +80,9 @@ TEST(DWARFDie, getLocations) {
                        HasValue(testing::ElementsAre(DWARFLocationExpression{
                            DWARFAddressRange{1, 3}, {}})));
 
-  EXPECT_THAT_EXPECTED(
-      Die.getLocations(DW_AT_data_member_location),
-      HasValue(testing::ElementsAre(DWARFLocationExpression{None, {0x47}})));
+  EXPECT_THAT_EXPECTED(Die.getLocations(DW_AT_data_member_location),
+                       HasValue(testing::ElementsAre(
+                           DWARFLocationExpression{std::nullopt, {0x47}})));
 
   EXPECT_THAT_EXPECTED(
       Die.getLocations(DW_AT_vtable_elem_location),
