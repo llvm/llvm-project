@@ -893,7 +893,7 @@ public:
     assert(V != nullptr && "Value is a nullptr?");
     DenseMap<Value *, unsigned>::iterator VNIt = ValueToNumber.find(V);
     if (VNIt == ValueToNumber.end())
-      return None;
+      return std::nullopt;
     return VNIt->second;
   }
 
@@ -904,7 +904,7 @@ public:
   Optional<Value *> fromGVN(unsigned Num) {
     DenseMap<unsigned, Value *>::iterator VNIt = NumberToValue.find(Num);
     if (VNIt == NumberToValue.end())
-      return None;
+      return std::nullopt;
     assert(VNIt->second != nullptr && "Found value is a nullptr!");
     return VNIt->second;
   }
@@ -918,7 +918,7 @@ public:
   Optional<unsigned> getCanonicalNum(unsigned N) {
     DenseMap<unsigned, unsigned>::iterator NCIt = NumberToCanonNum.find(N);
     if (NCIt == NumberToCanonNum.end())
-      return None;
+      return std::nullopt;
     return NCIt->second;
   }
 
@@ -931,7 +931,7 @@ public:
   Optional<unsigned> fromCanonicalNum(unsigned N) {
     DenseMap<unsigned, unsigned>::iterator CNIt = CanonNumToNumber.find(N);
     if (CNIt == CanonNumToNumber.end())
-      return None;
+      return std::nullopt;
     return CNIt->second;
   }
 
