@@ -574,7 +574,7 @@ define <vscale x 2 x i64> @dupq_i64_range(<vscale x 2 x i64> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z1.d, #0, #1
 ; CHECK-NEXT:    and z1.d, z1.d, #0x1
-; CHECK-NEXT:    add z1.d, z1.d, #8 // =0x8
+; CHECK-NEXT:    orr z1.d, z1.d, #0x8
 ; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %a, i64 4)
