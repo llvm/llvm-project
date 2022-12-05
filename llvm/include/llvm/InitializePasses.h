@@ -58,7 +58,6 @@ void initializeAlwaysInlinerLegacyPassPass(PassRegistry&);
 void initializeAssumeSimplifyPassLegacyPassPass(PassRegistry &);
 void initializeAssumeBuilderPassLegacyPassPass(PassRegistry &);
 void initializeAnnotation2MetadataLegacyPass(PassRegistry &);
-void initializeAnnotationRemarksLegacyPass(PassRegistry &);
 void initializeAssumptionCacheTrackerPass(PassRegistry&);
 void initializeAtomicExpandPass(PassRegistry&);
 void initializeAttributorLegacyPassPass(PassRegistry&);
