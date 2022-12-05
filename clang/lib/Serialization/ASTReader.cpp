@@ -5995,8 +5995,13 @@ bool ASTReader::ParseHeaderSearchPaths(const RecordData &Record,
     HSOpts.SystemHeaderPrefixes.emplace_back(std::move(Prefix), IsSystemHeader);
   }
 
-  // TODO: implement checking and warnings for path mismatches.
-  return false;
+  // VFS overlay files.
+  for (unsigned N = Record[Idx++]; N; --N) {
+    std::string VFSOverlayFile = ReadString(Record, Idx);
+    HSOpts.VFSOverlayFiles.emplace_back(std::move(VFSOverlayFile));
+  }
+
+  return Listener.ReadHeaderSearchPaths(HSOpts, Complain);
 }
 
 bool ASTReader::ParsePreprocessorOptions(const RecordData &Record,
