@@ -10551,7 +10551,6 @@ define amdgpu_kernel void @test_limited_sgpr(<64 x i32> addrspace(1)* %out, <64 
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
 ; GFX6-NEXT:    ;;#ASMSTART
 ; GFX6-NEXT:    ;;#ASMEND
-; GFX6-NEXT:    s_mov_b32 s2, 0x84800
 ; GFX6-NEXT:    buffer_load_dword v17, off, s[40:43], s2 ; 4-byte Folded Reload
 ; GFX6-NEXT:    buffer_load_dword v18, off, s[40:43], s2 offset:4 ; 4-byte Folded Reload
 ; GFX6-NEXT:    buffer_load_dword v19, off, s[40:43], s2 offset:8 ; 4-byte Folded Reload
@@ -10796,7 +10795,7 @@ define amdgpu_kernel void @test_limited_sgpr(<64 x i32> addrspace(1)* %out, <64 
 ; GFX9-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[20:23], s0 ; 16-byte Folded Spill
 ; GFX9-FLATSCR-NEXT:    s_movk_i32 s0, 0x2100
 ; GFX9-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[8:11], s0 ; 16-byte Folded Spill
-; GFX9-FLATSCR-NEXT:    s_movk_i32 s0, 0x2100
+; GFX9-FLATSCR-NEXT:    s_nop 0
 ; GFX9-FLATSCR-NEXT:    ;;#ASMSTART
 ; GFX9-FLATSCR-NEXT:    ;;#ASMEND
 ; GFX9-FLATSCR-NEXT:    scratch_load_dwordx4 v[8:11], off, s0 ; 16-byte Folded Reload
@@ -11032,7 +11031,6 @@ define amdgpu_kernel void @test_limited_sgpr(<64 x i32> addrspace(1)* %out, <64 
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v35, v60
 ; GFX10-FLATSCR-NEXT:    ;;#ASMSTART
 ; GFX10-FLATSCR-NEXT:    ;;#ASMEND
-; GFX10-FLATSCR-NEXT:    s_movk_i32 s0, 0x2010
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v36, v65
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v37, v66
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v38, v67

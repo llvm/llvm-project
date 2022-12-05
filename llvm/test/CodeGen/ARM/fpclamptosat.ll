@@ -3764,7 +3764,6 @@ define i64 @stest_f32i64_mm(float %x) {
 ; SOFT-NEXT:  @ %bb.18: @ %entry
 ; SOFT-NEXT:    mov r3, r6
 ; SOFT-NEXT:  .LBB48_19: @ %entry
-; SOFT-NEXT:    ldr r0, .LCPI48_0
 ; SOFT-NEXT:    cmp r4, r0
 ; SOFT-NEXT:    ldr r4, [sp, #16] @ 4-byte Reload
 ; SOFT-NEXT:    beq .LBB48_21
@@ -4347,7 +4346,6 @@ define i64 @stest_f16i64_mm(half %x) {
 ; SOFT-NEXT:  @ %bb.18: @ %entry
 ; SOFT-NEXT:    mov r3, r6
 ; SOFT-NEXT:  .LBB51_19: @ %entry
-; SOFT-NEXT:    ldr r0, .LCPI51_0
 ; SOFT-NEXT:    cmp r4, r0
 ; SOFT-NEXT:    ldr r4, [sp, #16] @ 4-byte Reload
 ; SOFT-NEXT:    beq .LBB51_21
