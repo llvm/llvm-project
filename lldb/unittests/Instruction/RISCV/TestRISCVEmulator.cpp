@@ -27,8 +27,8 @@ struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
   RegisterInfoPOSIX_riscv64::FPR fpr;
   uint8_t memory[1024] = {0};
 
-  RISCVEmulatorTester()
-      : EmulateInstructionRISCV(ArchSpec("riscv64-unknown-linux-gnu")) {
+  RISCVEmulatorTester(std::string triple = "riscv64-unknown-linux-gnu")
+      : EmulateInstructionRISCV(ArchSpec(triple)) {
     EmulateInstruction::SetReadRegCallback(ReadRegisterCallback);
     EmulateInstruction::SetWriteRegCallback(WriteRegisterCallback);
     EmulateInstruction::SetReadMemCallback(ReadMemoryCallback);
@@ -347,6 +347,26 @@ TEST_F(RISCVEmulatorTester, TestCDecode) {
       {0xC006, SW{Rs{2}, Rs{1}, 0}},
       // C.SDSP here, decoded as SD
       {0xE006, SD{Rs{2}, Rs{1}, 0}},
+  };
+
+  for (auto i : tests) {
+    auto decode = this->Decode(i.inst);
+    ASSERT_TRUE(decode.has_value());
+    ASSERT_TRUE(compareInst(decode->decoded, i.inst_type));
+  }
+}
+
+class RISCVEmulatorTester32 : public RISCVEmulatorTester {
+public:
+  RISCVEmulatorTester32() : RISCVEmulatorTester("riscv32-unknown-linux-gnu") {}
+};
+
+TEST_F(RISCVEmulatorTester32, TestCDecodeRV32) {
+  std::vector<TestDecode> tests = {
+      {0x6002, FLW{Rd{0}, Rs{2}, 0}},
+      {0xE006, FSW{Rs{2}, Rs{1}, 0}},
+      {0x6000, FLW{Rd{8}, Rs{8}, 0}},
+      {0xE000, FSW{Rs{8}, Rs{8}, 0}},
   };
 
   for (auto i : tests) {
