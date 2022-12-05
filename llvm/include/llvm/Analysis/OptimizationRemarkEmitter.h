@@ -14,11 +14,11 @@
 #ifndef LLVM_ANALYSIS_OPTIMIZATIONREMARKEMITTER_H
 #define LLVM_ANALYSIS_OPTIMIZATIONREMARKEMITTER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include <optional>
 
 namespace llvm {
 class Function;
@@ -116,7 +116,7 @@ private:
 
   /// Compute hotness from IR value (currently assumed to be a block) if PGO is
   /// available.
-  Optional<uint64_t> computeHotness(const Value *V);
+  std::optional<uint64_t> computeHotness(const Value *V);
 
   /// Similar but use value from \p OptDiag and update hotness there.
   void computeHotness(DiagnosticInfoIROptimization &OptDiag);
