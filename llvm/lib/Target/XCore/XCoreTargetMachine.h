@@ -14,7 +14,6 @@
 #define LLVM_LIB_TARGET_XCORE_XCORETARGETMACHINE_H
 
 #include "XCoreSubtarget.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"

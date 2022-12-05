@@ -13,7 +13,6 @@
 #ifndef LLVM_TARGET_DIRECTX_DXILRESOURCE_H
 #define LLVM_TARGET_DIRECTX_DXILRESOURCE_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
