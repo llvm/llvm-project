@@ -1557,8 +1557,8 @@ public:
       y = rewriter.create<arith::AddIOp>(loc, y, yOffset);
       x = rewriter.create<arith::AddIOp>(loc, x, xOffset);
 
-      iy = rewriter.create<arith::DivUIOp>(loc, y, yScaleN);
-      ix = rewriter.create<arith::DivUIOp>(loc, x, xScaleN);
+      iy = rewriter.create<arith::DivSIOp>(loc, y, yScaleN);
+      ix = rewriter.create<arith::DivSIOp>(loc, x, xScaleN);
 
       Value tempY = rewriter.create<arith::MulIOp>(loc, iy, yScaleN);
       Value tempX = rewriter.create<arith::MulIOp>(loc, ix, xScaleN);
@@ -1583,14 +1583,12 @@ public:
         xPred = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OGE,
                                                dx, halfVal);
       } else {
-        Value yScaleNHalfVal =
-            rewriter.create<arith::ShRSIOp>(loc, yScaleN, oneVal);
-        Value xScaleNHalfVal =
-            rewriter.create<arith::ShRSIOp>(loc, xScaleN, oneVal);
+        Value dyDoubled = rewriter.create<arith::ShLIOp>(loc, dy, oneVal);
+        Value dxDoubled = rewriter.create<arith::ShLIOp>(loc, dx, oneVal);
         yPred = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sge,
-                                               dy, yScaleNHalfVal);
+                                               dyDoubled, yScaleN);
         xPred = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sge,
-                                               dx, xScaleNHalfVal);
+                                               dxDoubled, xScaleN);
       }
 
       auto yOffset =
