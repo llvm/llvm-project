@@ -435,7 +435,7 @@ public:
 
   fir::ExtendedValue
   getSymbolExtendedValue(const Fortran::semantics::Symbol &sym) override final {
-    Fortran::lower::SymbolBox sb = localSymbols.lookupSymbol(sym);
+    Fortran::lower::SymbolBox sb = lookupSymbol(sym);
     assert(sb && "symbol box not found");
     return sb.toExtendedValue();
   }
@@ -838,6 +838,19 @@ private:
   /// Find the symbol in the local map or return null.
   Fortran::lower::SymbolBox
   lookupSymbol(const Fortran::semantics::Symbol &sym) {
+    if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
+      if (llvm::Optional<fir::FortranVariableOpInterface> var =
+              localSymbols.lookupVariableDefinition(sym)) {
+        auto exv =
+            hlfir::translateToExtendedValue(toLocation(), *builder, *var);
+        return exv.match(
+            [](mlir::Value x) -> Fortran::lower::SymbolBox {
+              return Fortran::lower::SymbolBox::Intrinsic{x};
+            },
+            [](auto x) -> Fortran::lower::SymbolBox { return x; });
+      }
+      return {};
+    }
     if (Fortran::lower::SymbolBox v = localSymbols.lookupSymbol(sym))
       return v;
     return {};
@@ -3202,8 +3215,7 @@ private:
         // the reference to the host variable, which must be in the map.
         const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
         if (funit.parentHostAssoc().isAssociated(ultimate)) {
-          Fortran::lower::SymbolBox hostBox =
-              localSymbols.lookupSymbol(ultimate);
+          Fortran::lower::SymbolBox hostBox = lookupSymbol(ultimate);
           assert(hostBox && "host association is not in map");
           localSymbols.addSymbol(sym, hostBox.toExtendedValue());
           continue;
