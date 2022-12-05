@@ -98,9 +98,9 @@ public:
   }
 
   /// Returns the profile count for \p CallInst.
-  Optional<uint64_t> getProfileCount(const CallBase &CallInst,
-                                     BlockFrequencyInfo *BFI,
-                                     bool AllowSynthetic = false) const;
+  std::optional<uint64_t> getProfileCount(const CallBase &CallInst,
+                                          BlockFrequencyInfo *BFI,
+                                          bool AllowSynthetic = false) const;
   /// Returns true if module \c M has partial-profile sample profile.
   bool hasPartialSampleProfile() const;
   /// Returns true if the working set size of the code is considered huge.

@@ -479,8 +479,8 @@ public:
   StringRef getPassName() const { return PassName; }
   StringRef getRemarkName() const { return RemarkName; }
   std::string getMsg() const;
-  Optional<uint64_t> getHotness() const { return Hotness; }
-  void setHotness(Optional<uint64_t> H) { Hotness = H; }
+  std::optional<uint64_t> getHotness() const { return Hotness; }
+  void setHotness(std::optional<uint64_t> H) { Hotness = H; }
 
   bool isVerbose() const { return IsVerbose; }
 
@@ -521,7 +521,7 @@ protected:
 
   /// If profile information is available, this is the number of times the
   /// corresponding code was executed in a profile instrumentation run.
-  Optional<uint64_t> Hotness;
+  std::optional<uint64_t> Hotness;
 
   /// Arguments collected via the streaming interface.
   SmallVector<Argument, 4> Args;
