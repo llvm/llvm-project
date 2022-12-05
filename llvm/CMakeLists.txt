@@ -157,7 +157,7 @@ if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
 endif()
 foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
   if (NOT "${proj}" IN_LIST LLVM_SUPPORTED_RUNTIMES)
-    message(FATAL_ERROR "Runtime ${proj} is not a supported runtime. Supported runtimes are: ${LLVM_SUPPORTED_RUNTIMES}")
+    message(FATAL_ERROR "Runtime \"${proj}\" is not a supported runtime. Supported runtimes are: ${LLVM_SUPPORTED_RUNTIMES}")
   endif()
 endforeach()
 
