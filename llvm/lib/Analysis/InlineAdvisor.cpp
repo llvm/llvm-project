@@ -402,7 +402,7 @@ llvm::shouldInline(CallBase &CB,
       });
     }
     setInlineRemark(CB, inlineCostStr(IC));
-    return None;
+    return std::nullopt;
   }
 
   int TotalSecondaryCost = 0;
@@ -419,7 +419,7 @@ llvm::shouldInline(CallBase &CB,
              << "' in other contexts";
     });
     setInlineRemark(CB, "deferred");
-    return None;
+    return std::nullopt;
   }
 
   LLVM_DEBUG(dbgs() << "    Inlining " << inlineCostStr(IC) << ", Call: " << CB

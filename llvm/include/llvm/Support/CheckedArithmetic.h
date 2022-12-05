@@ -33,7 +33,7 @@ checkedOp(T LHS, T RHS, F Op, bool Signed = true) {
   bool Overflow;
   llvm::APInt Out = (ALHS.*Op)(ARHS, Overflow);
   if (Overflow)
-    return llvm::None;
+    return std::nullopt;
   return Signed ? Out.getSExtValue() : Out.getZExtValue();
 }
 }
@@ -75,7 +75,7 @@ std::enable_if_t<std::is_signed<T>::value, llvm::Optional<T>>
 checkedMulAdd(T A, T B, T C) {
   if (auto Product = checkedMul(A, B))
     return checkedAdd(*Product, C);
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Add two unsigned integers \p LHS and \p RHS.
@@ -104,7 +104,7 @@ std::enable_if_t<std::is_unsigned<T>::value, llvm::Optional<T>>
 checkedMulAddUnsigned(T A, T B, T C) {
   if (auto Product = checkedMulUnsigned(A, B))
     return checkedAddUnsigned(*Product, C);
-  return llvm::None;
+  return std::nullopt;
 }
 
 } // End llvm namespace
