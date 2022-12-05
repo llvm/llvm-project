@@ -508,6 +508,16 @@ def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
                                                  "Don't place a BTI instruction "
                                                  "after a return-twice">;
 
+def FeatureCLRBHB : SubtargetFeature<"clrbhb", "HasCLRBHB",
+    "true", "Enable Clear BHB instruction (FEAT_CLRBHB)">;
+
+def FeaturePRFM_SLC : SubtargetFeature<"prfm-slc-target", "HasPRFM_SLC",
+    "true", "Enable SLC target for PRFM instruction">;
+
+def FeatureSPECRES2 : SubtargetFeature<"specres2", "HasSPECRES2",
+    "true", "Enable Speculation Restriction Instruction (FEAT_SPECRES2)",
+    [FeaturePredRes]>;
+
 def FeatureMEC : SubtargetFeature<"mec", "HasMEC",
     "true", "Enable Memory Encryption Contexts Extension", [FeatureRME]>;
 
@@ -578,7 +588,8 @@ def HasV8_8aOps : SubtargetFeature<
 
 def HasV8_9aOps : SubtargetFeature<
   "v8.9a", "HasV8_9aOps", "true", "Support ARM v8.9a instructions",
-  [HasV8_8aOps, FeatureCSSC]>;
+  [HasV8_8aOps, FeatureCLRBHB, FeaturePRFM_SLC, FeatureSPECRES2,
+   FeatureCSSC]>;
 
 def HasV9_0aOps : SubtargetFeature<
   "v9a", "HasV9_0aOps", "true", "Support ARM v9a instructions",

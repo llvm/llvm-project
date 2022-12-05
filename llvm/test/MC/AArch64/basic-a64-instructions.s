@@ -3963,6 +3963,7 @@ _func:
         msr SCTLR2_EL1, x12
         msr SCTLR2_EL12, x12
         msr SCTLR2_EL2, x12
+        msr SCTLR2_EL3, x12
         msr TCR2_EL1, x12
         msr TCR2_EL12, x12
         msr TCR2_EL2, x12
@@ -4243,6 +4244,7 @@ _func:
 // CHECK: msr      {{sctlr2_el1|SCTLR2_EL1}}, x12       // encoding: [0x6c,0x10,0x18,0xd5]
 // CHECK: msr      {{sctlr2_el12|SCTLR2_EL12}}, x12       // encoding: [0x6c,0x10,0x1d,0xd5]
 // CHECK: msr      {{sctlr2_el2|SCTLR2_EL2}}, x12       // encoding: [0x6c,0x10,0x1c,0xd5]
+// CHECK: msr      {{sctlr2_el3|SCTLR2_EL3}}, x12       // encoding: [0x6c,0x10,0x1e,0xd5]
 // CHECK: msr      {{tcr2_el1|TCR2_EL1}}, x12       // encoding: [0x6c,0x20,0x18,0xd5]
 // CHECK: msr      {{tcr2_el12|TCR2_EL12}}, x12       // encoding: [0x6c,0x20,0x1d,0xd5]
 // CHECK: msr      {{tcr2_el2|TCR2_EL2}}, x12       // encoding: [0x6c,0x20,0x1c,0xd5]
@@ -4362,6 +4364,7 @@ _func:
 	mrs x9, MVFR2_EL1
 	mrs x9, ID_AA64PFR0_EL1
 	mrs x9, ID_AA64PFR1_EL1
+	mrs x9, ID_AA64PFR2_EL1
 	mrs x9, ID_AA64DFR0_EL1
 	mrs x9, ID_AA64DFR1_EL1
 	mrs x9, ID_AA64AFR0_EL1
@@ -4370,6 +4373,8 @@ _func:
 	mrs x9, ID_AA64ISAR1_EL1
 	mrs x9, ID_AA64MMFR0_EL1
 	mrs x9, ID_AA64MMFR1_EL1
+	mrs x9, ID_AA64MMFR2_EL1
+	mrs x9, ID_AA64MMFR3_EL1
 	mrs x9, SCTLR_EL1
 	mrs x9, SCTLR_EL2
 	mrs x9, SCTLR_EL3
@@ -4575,6 +4580,7 @@ _func:
         mrs x9, SCTLR2_EL1
         mrs x9, SCTLR2_EL12
         mrs x9, SCTLR2_EL2
+        mrs x9, SCTLR2_EL3
         mrs x9, TCR2_EL1
         mrs x9, TCR2_EL12
         mrs x9, TCR2_EL2
@@ -4693,6 +4699,7 @@ _func:
 // CHECK: mrs      x9, {{mvfr2_el1|MVFR2_EL1}}              // encoding: [0x49,0x03,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64pfr0_el1|ID_AA64PFR0_EL1}}        // encoding: [0x09,0x04,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64pfr1_el1|ID_AA64PFR1_EL1}}        // encoding: [0x29,0x04,0x38,0xd5]
+// CHECK: mrs      x9, {{id_aa64pfr2_el1|ID_AA64PFR2_EL1}}        // encoding: [0x49,0x04,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64dfr0_el1|ID_AA64DFR0_EL1}}        // encoding: [0x09,0x05,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64dfr1_el1|ID_AA64DFR1_EL1}}        // encoding: [0x29,0x05,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64afr0_el1|ID_AA64AFR0_EL1}}        // encoding: [0x89,0x05,0x38,0xd5]
@@ -4701,6 +4708,8 @@ _func:
 // CHECK: mrs      x9, {{id_aa64isar1_el1|ID_AA64ISAR1_EL1}}       // encoding: [0x29,0x06,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64mmfr0_el1|ID_AA64MMFR0_EL1}}       // encoding: [0x09,0x07,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64mmfr1_el1|ID_AA64MMFR1_EL1}}       // encoding: [0x29,0x07,0x38,0xd5]
+// CHECK: mrs      x9, {{id_aa64mmfr2_el1|ID_AA64MMFR2_EL1}}       // encoding: [0x49,0x07,0x38,0xd5]
+// CHECK: mrs      x9, {{id_aa64mmfr3_el1|ID_AA64MMFR3_EL1}}       // encoding: [0x69,0x07,0x38,0xd5]
 // CHECK: mrs      x9, {{sctlr_el1|SCTLR_EL1}}              // encoding: [0x09,0x10,0x38,0xd5]
 // CHECK: mrs      x9, {{sctlr_el2|SCTLR_EL2}}              // encoding: [0x09,0x10,0x3c,0xd5]
 // CHECK: mrs      x9, {{sctlr_el3|SCTLR_EL3}}              // encoding: [0x09,0x10,0x3e,0xd5]
@@ -4906,6 +4915,7 @@ _func:
 // CHECK: mrs      x9, {{sctlr2_el1|SCTLR2_EL1}}        // encoding: [0x69,0x10,0x38,0xd5]
 // CHECK: mrs      x9, {{sctlr2_el12|SCTLR2_EL12}}        // encoding: [0x69,0x10,0x3d,0xd5]
 // CHECK: mrs      x9, {{sctlr2_el2|SCTLR2_EL2}}        // encoding: [0x69,0x10,0x3c,0xd5]
+// CHECK: mrs      x9, {{sctlr2_el3|SCTLR2_EL3}}        // encoding: [0x69,0x10,0x3e,0xd5]
 // CHECK: mrs      x9, {{tcr2_el1|TCR2_EL1}}        // encoding: [0x69,0x20,0x38,0xd5]
 // CHECK: mrs      x9, {{tcr2_el12|TCR2_EL12}}        // encoding: [0x69,0x20,0x3d,0xd5]
 // CHECK: mrs      x9, {{tcr2_el2|TCR2_EL2}}        // encoding: [0x69,0x20,0x3c,0xd5]
