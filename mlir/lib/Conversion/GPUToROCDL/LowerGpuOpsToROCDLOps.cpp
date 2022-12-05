@@ -26,9 +26,11 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -139,6 +141,27 @@ struct LowerGpuOpsToROCDLOpsPass
     configureGpuToROCDLConversionLegality(target);
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
+
+    // Manually rewrite known block size attributes so the LLVMIR translation
+    // infrastructure can pick them up.
+    m.walk([ctx](LLVM::LLVMFuncOp op) {
+      if (auto blockSizes =
+              op->removeAttr(gpu::GPUFuncOp::getKnownBlockSizeAttrName())
+                  .dyn_cast_or_null<DenseI32ArrayAttr>()) {
+        op->setAttr(ROCDL::ROCDLDialect::getReqdWorkGroupSizeAttrName(),
+                    blockSizes);
+        // Also set up the rocdl.flat_work_group_size attribute to prevent
+        // conflicting metadata.
+        uint32_t flatSize = 1;
+        for (uint32_t size : blockSizes.asArrayRef()) {
+          flatSize *= size;
+        }
+        StringAttr flatSizeAttr =
+            StringAttr::get(ctx, Twine(flatSize) + "," + Twine(flatSize));
+        op->setAttr(ROCDL::ROCDLDialect::getFlatWorkGroupSizeAttrName(),
+                    flatSizeAttr);
+      }
+    });
   }
 };
 
@@ -173,11 +196,14 @@ void mlir::populateGpuToROCDLConversionPatterns(
   populateWithGenerated(patterns);
   patterns
       .add<GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, ROCDL::ThreadIdXOp,
-                                       ROCDL::ThreadIdYOp, ROCDL::ThreadIdZOp>,
-           GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, ROCDL::BlockDimXOp,
+                                       ROCDL::ThreadIdYOp, ROCDL::ThreadIdZOp>>(
+          converter, gpu::GPUFuncOp::getKnownBlockSizeAttrName());
+  patterns.add<GPUIndexIntrinsicOpLowering<
+      gpu::BlockIdOp, ROCDL::BlockIdXOp, ROCDL::BlockIdYOp, ROCDL::BlockIdZOp>>(
+      converter, gpu::GPUFuncOp::getKnownGridSizeAttrName());
+  patterns
+      .add<GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, ROCDL::BlockDimXOp,
                                        ROCDL::BlockDimYOp, ROCDL::BlockDimZOp>,
-           GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, ROCDL::BlockIdXOp,
-                                       ROCDL::BlockIdYOp, ROCDL::BlockIdZOp>,
            GPUIndexIntrinsicOpLowering<gpu::GridDimOp, ROCDL::GridDimXOp,
                                        ROCDL::GridDimYOp, ROCDL::GridDimZOp>,
            GPUReturnOpLowering>(converter);
