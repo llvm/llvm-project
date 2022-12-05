@@ -648,7 +648,7 @@ Optional<bool> compareFnAttributes(const CodeGenIntrinsic *L,
   uint32_t RK = R->ME.toIntValue();
   if (LK != RK) return (LK > RK);
 
-  return None;
+  return std::nullopt;
 }
 
 struct FnAttributeComparator {

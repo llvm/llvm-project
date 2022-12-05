@@ -2888,7 +2888,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
       Module *M = II->getModule();
       Function *F = Intrinsic::getDeclaration(M, Intrinsic::donothing);
       InvokeInst::Create(F, II->getNormalDest(), II->getUnwindDest(),
-                         None, "", II->getParent());
+                         std::nullopt, "", II->getParent());
     }
 
     // Remove debug intrinsics which describe the value contained within the
@@ -4214,7 +4214,7 @@ bool InstCombinerImpl::run() {
     auto getOptionalSinkBlockForInst =
         [this](Instruction *I) -> std::optional<BasicBlock *> {
       if (!EnableCodeSinking)
-        return None;
+        return std::nullopt;
 
       BasicBlock *BB = I->getParent();
       BasicBlock *UserParent = nullptr;
@@ -4224,7 +4224,7 @@ bool InstCombinerImpl::run() {
         if (U->isDroppable())
           continue;
         if (NumUsers > MaxSinkNumUsers)
-          return None;
+          return std::nullopt;
 
         Instruction *UserInst = cast<Instruction>(U);
         // Special handling for Phi nodes - get the block the use occurs in.
@@ -4235,14 +4235,14 @@ bool InstCombinerImpl::run() {
               // sophisticated analysis (i.e finding NearestCommonDominator of
               // these use blocks).
               if (UserParent && UserParent != PN->getIncomingBlock(i))
-                return None;
+                return std::nullopt;
               UserParent = PN->getIncomingBlock(i);
             }
           }
           assert(UserParent && "expected to find user block!");
         } else {
           if (UserParent && UserParent != UserInst->getParent())
-            return None;
+            return std::nullopt;
           UserParent = UserInst->getParent();
         }
 
@@ -4252,7 +4252,7 @@ bool InstCombinerImpl::run() {
           // Try sinking to another block. If that block is unreachable, then do
           // not bother. SimplifyCFG should handle it.
           if (UserParent == BB || !DT.isReachableFromEntry(UserParent))
-            return None;
+            return std::nullopt;
 
           auto *Term = UserParent->getTerminator();
           // See if the user is one of our successors that has only one
@@ -4264,7 +4264,7 @@ bool InstCombinerImpl::run() {
           //   - the User will be executed at most once.
           // So sinking I down to User is always profitable or neutral.
           if (UserParent->getUniquePredecessor() != BB && !succ_empty(Term))
-            return None;
+            return std::nullopt;
 
           assert(DT.dominates(BB, UserParent) && "Dominance relation broken?");
         }
@@ -4274,7 +4274,7 @@ bool InstCombinerImpl::run() {
 
       // No user or only has droppable users.
       if (!UserParent)
-        return None;
+        return std::nullopt;
 
       return UserParent;
     };

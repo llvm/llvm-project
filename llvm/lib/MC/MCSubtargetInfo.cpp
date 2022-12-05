@@ -342,11 +342,11 @@ std::optional<unsigned> MCSubtargetInfo::getCacheSize(unsigned Level) const {
 
 std::optional<unsigned>
 MCSubtargetInfo::getCacheAssociativity(unsigned Level) const {
-  return None;
+  return std::nullopt;
 }
 
 Optional<unsigned> MCSubtargetInfo::getCacheLineSize(unsigned Level) const {
-  return None;
+  return std::nullopt;
 }
 
 unsigned MCSubtargetInfo::getPrefetchDistance() const {

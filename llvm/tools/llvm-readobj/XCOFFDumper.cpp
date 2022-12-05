@@ -601,7 +601,7 @@ static void printUnexpectedRawAuxEnt(ScopedPrinter &W, uintptr_t AuxAddress) {
                        ArrayRef<uint8_t>(
                            reinterpret_cast<const uint8_t *>(AuxAddress),
                            XCOFF::SymbolTableEntrySize),
-                       None, XCOFF::SymbolTableEntrySize)
+                       std::nullopt, XCOFF::SymbolTableEntrySize)
                 << "\n";
 }
 

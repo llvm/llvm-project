@@ -266,12 +266,10 @@ public:
   void emitFileDirective(StringRef Filename) override;
   void emitFileDirective(StringRef Filename, StringRef CompilerVerion,
                          StringRef TimeStamp, StringRef Description) override;
-  Expected<unsigned> tryEmitDwarfFileDirective(unsigned FileNo,
-                                               StringRef Directory,
-                                               StringRef Filename,
-                                               Optional<MD5::MD5Result> Checksum = None,
-                                               Optional<StringRef> Source = None,
-                                               unsigned CUID = 0) override;
+  Expected<unsigned> tryEmitDwarfFileDirective(
+      unsigned FileNo, StringRef Directory, StringRef Filename,
+      Optional<MD5::MD5Result> Checksum = std::nullopt,
+      Optional<StringRef> Source = std::nullopt, unsigned CUID = 0) override;
   void emitDwarfFile0Directive(StringRef Directory, StringRef Filename,
                                Optional<MD5::MD5Result> Checksum,
                                Optional<StringRef> Source,
@@ -1499,7 +1497,7 @@ void MCAsmStreamer::emitCodeAlignment(Align Alignment,
     emitAlignmentDirective(Alignment.value(), MAI->getTextAlignFillValue(), 1,
                            MaxBytesToEmit);
   else
-    emitAlignmentDirective(Alignment.value(), None, 1, MaxBytesToEmit);
+    emitAlignmentDirective(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
 }
 
 void MCAsmStreamer::emitValueToOffset(const MCExpr *Offset,
@@ -2383,7 +2381,7 @@ MCAsmStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
     Expr->print(OS, MAI);
   }
   EmitEOL();
-  return None;
+  return std::nullopt;
 }
 
 void MCAsmStreamer::emitAddrsig() {

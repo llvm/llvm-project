@@ -550,7 +550,7 @@ Optional<DWARFYAML::Data> ELFDumper<ELFT>::dumpDWARFSections(
   }
 
   if (DWARF.getNonEmptySectionNames().empty())
-    return None;
+    return std::nullopt;
   return DWARF;
 }
 

@@ -197,8 +197,8 @@ public:
       return;
 
     TargetOptions Options;
-    TM.reset(TheTarget->createTargetMachine(TripleName, "", "",
-                                            Options, None));
+    TM.reset(TheTarget->createTargetMachine(TripleName, "", "", Options,
+                                            std::nullopt));
   }
 };
 

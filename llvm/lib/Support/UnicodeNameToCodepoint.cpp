@@ -294,7 +294,7 @@ nameToHangulCodePoint(StringRef Name, bool Strict, BufferType &Buffer) {
   bool DoesStartWith = startsWith(Name, "HANGUL SYLLABLE ", Strict, Consummed,
                                   NameStart, NeedleStart);
   if (!DoesStartWith)
-    return None;
+    return std::nullopt;
   Name = Name.substr(Consummed);
   int L = -1, V = -1, T = -1;
   Name = Name.substr(findSyllable(Name, Strict, NameStart, L, 0));
@@ -314,7 +314,7 @@ nameToHangulCodePoint(StringRef Name, bool Strict, BufferType &Buffer) {
            std::uint32_t(T);
   }
   // Otherwise, it's an illegal syllable name.
-  return None;
+  return std::nullopt;
 }
 
 struct GeneratedNamesData {
@@ -367,13 +367,13 @@ nameToGeneratedCodePoint(StringRef Name, bool Strict, BufferType &Buffer) {
     }
     return V;
   }
-  return None;
+  return std::nullopt;
 }
 
 static llvm::Optional<char32_t> nameToCodepoint(StringRef Name, bool Strict,
                                                 BufferType &Buffer) {
   if (Name.empty())
-    return None;
+    return std::nullopt;
 
   llvm::Optional<char32_t> Res = nameToHangulCodePoint(Name, Strict, Buffer);
   if (!Res)
@@ -397,7 +397,7 @@ static llvm::Optional<char32_t> nameToCodepoint(StringRef Name, bool Strict,
     }
     return Value;
   }
-  return None;
+  return std::nullopt;
 }
 
 llvm::Optional<char32_t> nameToCodepointStrict(StringRef Name) {
@@ -412,7 +412,7 @@ nameToCodepointLooseMatching(StringRef Name) {
   BufferType Buffer;
   auto Opt = nameToCodepoint(Name, false, Buffer);
   if (!Opt)
-    return None;
+    return std::nullopt;
   return LooseMatchingResult{*Opt, Buffer};
 }
 

@@ -118,7 +118,7 @@ public:
   Optional<StringRef> getName() const {
     if (!R && !G)
       return Name;
-    return None;
+    return std::nullopt;
   }
   bool operator==(StringRef S) const {
     return R ? R->match(S) : G ? G->match(S) : Name == S;
