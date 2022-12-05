@@ -1344,9 +1344,10 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
             IV, &CB,
             ValueLatticeElement::getRange(NewCR, /*MayIncludeUndef*/ false));
         return;
-      } else if (Pred == CmpInst::ICMP_EQ && CondVal.isConstant()) {
+      } else if (Pred == CmpInst::ICMP_EQ &&
+                 (CondVal.isConstant() || CondVal.isNotConstant())) {
         // For non-integer values or integer constant expressions, only
-        // propagate equal constants.
+        // propagate equal constants or not-constants.
         addAdditionalUser(OtherOp, &CB);
         mergeInValue(IV, &CB, CondVal);
         return;
