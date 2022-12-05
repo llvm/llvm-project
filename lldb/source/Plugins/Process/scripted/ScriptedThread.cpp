@@ -58,8 +58,8 @@ ScriptedThread::Create(ScriptedProcess &process,
   ExecutionContext exe_ctx(process);
   StructuredData::GenericSP owned_script_object_sp =
       scripted_thread_interface->CreatePluginObject(
-          thread_class_name, exe_ctx,
-          process.m_scripted_process_info.GetArgsSP(), script_object);
+          thread_class_name, exe_ctx, process.m_scripted_metadata.GetArgsSP(),
+          script_object);
 
   if (!owned_script_object_sp)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
