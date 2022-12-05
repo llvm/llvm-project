@@ -68,21 +68,21 @@ BreakpointID::ParseCanonicalReference(llvm::StringRef input) {
   break_id_t loc_id = LLDB_INVALID_BREAK_ID;
 
   if (input.empty())
-    return llvm::None;
+    return std::nullopt;
 
   // If it doesn't start with an integer, it's not valid.
   if (input.consumeInteger(0, bp_id))
-    return llvm::None;
+    return std::nullopt;
 
   // period is optional, but if it exists, it must be followed by a number.
   if (input.consume_front(".")) {
     if (input.consumeInteger(0, loc_id))
-      return llvm::None;
+      return std::nullopt;
   }
 
   // And at the end, the entire string must have been consumed.
   if (!input.empty())
-    return llvm::None;
+    return std::nullopt;
 
   return BreakpointID(bp_id, loc_id);
 }

@@ -266,7 +266,7 @@ InstructionLengthDecode(const uint8_t *inst_bytes, int bytes_len,
   // in `src/pt_ild.c`
   while (!prefix_done) {
     if (op_idx >= bytes_len)
-      return llvm::None;
+      return std::nullopt;
 
     ret.primary_opcode = inst_bytes[op_idx];
     switch (ret.primary_opcode) {

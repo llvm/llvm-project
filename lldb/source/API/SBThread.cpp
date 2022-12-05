@@ -837,7 +837,7 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     const bool stop_other_threads = false;
     // TODO: Handle SourceLocationSpec column information
     SourceLocationSpec location_spec(
-        step_file_spec, line, /*column=*/llvm::None, /*check_inlines=*/true,
+        step_file_spec, line, /*column=*/std::nullopt, /*check_inlines=*/true,
         /*exact_match=*/false);
 
     SymbolContextList sc_list;

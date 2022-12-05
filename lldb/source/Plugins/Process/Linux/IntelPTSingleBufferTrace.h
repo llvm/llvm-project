@@ -52,8 +52,8 @@ public:
   static llvm::Expected<IntelPTSingleBufferTrace>
   Start(const TraceIntelPTStartRequest &request,
         llvm::Optional<lldb::tid_t> tid,
-        llvm::Optional<lldb::cpu_id_t> cpu_id = llvm::None,
-        bool disabled = false, llvm::Optional<int> cgroup_fd = llvm::None);
+        llvm::Optional<lldb::cpu_id_t> cpu_id = std::nullopt,
+        bool disabled = false, llvm::Optional<int> cgroup_fd = std::nullopt);
 
   /// \return
   ///    The bytes requested by a jLLDBTraceGetBinaryData packet that was routed

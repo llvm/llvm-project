@@ -41,7 +41,7 @@ public:
   template <typename Ratio2,
             typename = typename EnableIf<int64_t, Ratio2>::type>
   Timeout(const Timeout<Ratio2> &other)
-      : Base(other ? Base(Dur<Ratio>(*other)) : llvm::None) {}
+      : Base(other ? Base(Dur<Ratio>(*other)) : std::nullopt) {}
 
   template <typename Rep2, typename Ratio2,
             typename = typename EnableIf<Rep2, Ratio2>::type>

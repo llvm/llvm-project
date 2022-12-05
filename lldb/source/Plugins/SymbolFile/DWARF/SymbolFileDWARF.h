@@ -278,7 +278,7 @@ public:
   GetDwoSymbolFileForCompileUnit(DWARFUnit &dwarf_cu,
                                  const DWARFDebugInfoEntry &cu_die);
 
-  virtual llvm::Optional<uint32_t> GetDwoNum() { return llvm::None; }
+  virtual llvm::Optional<uint32_t> GetDwoNum() { return std::nullopt; }
 
   /// If this is a DWARF object with a single CU, return its DW_AT_dwo_id.
   llvm::Optional<uint64_t> GetDWOId();
