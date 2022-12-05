@@ -618,11 +618,9 @@ private:
   /// Print the given operation in the generic form.
   void printGenericOp(Operation *op, bool printOpName = true) override {
     // Consider nested operations for aliases.
-    if (op->getNumRegions() != 0) {
-      for (Region &region : op->getRegions())
-        printRegion(region, /*printEntryBlockArgs=*/true,
-                    /*printBlockTerminators=*/true);
-    }
+    for (Region &region : op->getRegions())
+      printRegion(region, /*printEntryBlockArgs=*/true,
+                  /*printBlockTerminators=*/true);
 
     // Visit all the types used in the operation.
     for (Type type : op->getOperandTypes())
