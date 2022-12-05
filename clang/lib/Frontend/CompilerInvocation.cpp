@@ -115,7 +115,7 @@ using namespace llvm::opt;
 
 // Parse misexpect tolerance argument value.
 // Valid option values are integers in the range [0, 100)
-inline Expected<Optional<uint32_t>> parseToleranceOption(StringRef Arg) {
+static Expected<std::optional<uint32_t>> parseToleranceOption(StringRef Arg) {
   uint32_t Val;
   if (Arg.getAsInteger(10, Val))
     return llvm::createStringError(llvm::inconvertibleErrorCode(),

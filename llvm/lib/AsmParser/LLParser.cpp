@@ -3855,7 +3855,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
         return true;
     }
 
-    Optional<unsigned> InRangeOp;
+    std::optional<unsigned> InRangeOp;
     if (parseGlobalValueVector(
             Elts, Opc == Instruction::GetElementPtr ? &InRangeOp : nullptr) ||
         parseToken(lltok::rparen, "expected ')' in constantexpr"))
@@ -3998,7 +3998,7 @@ bool LLParser::parseOptionalComdat(StringRef GlobalName, Comdat *&C) {
 ///   ::= /*empty*/
 ///   ::= [inrange] TypeAndValue (',' [inrange] TypeAndValue)*
 bool LLParser::parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts,
-                                      Optional<unsigned> *InRangeOp) {
+                                      std::optional<unsigned> *InRangeOp) {
   // Empty list.
   if (Lex.getKind() == lltok::rbrace ||
       Lex.getKind() == lltok::rsquare ||

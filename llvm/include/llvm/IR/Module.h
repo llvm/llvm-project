@@ -15,7 +15,6 @@
 #define LLVM_IR_MODULE_H
 
 #include "llvm-c/Types.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"

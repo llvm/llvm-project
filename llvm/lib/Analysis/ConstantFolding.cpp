@@ -825,7 +825,7 @@ Constant *SymbolicallyEvaluateBinop(unsigned Opc, Constant *Op0, Constant *Op1,
 /// If array indices are not pointer-sized integers, explicitly cast them so
 /// that they aren't implicitly casted by the getelementptr.
 Constant *CastGEPIndices(Type *SrcElemTy, ArrayRef<Constant *> Ops,
-                         Type *ResultTy, Optional<unsigned> InRangeIndex,
+                         Type *ResultTy, std::optional<unsigned> InRangeIndex,
                          const DataLayout &DL, const TargetLibraryInfo *TLI) {
   Type *IntIdxTy = DL.getIndexType(ResultTy);
   Type *IntIdxScalarTy = IntIdxTy->getScalarType();
@@ -992,8 +992,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
   // Preserve the inrange index from the innermost GEP if possible. We must
   // have calculated the same indices up to and including the inrange index.
-  Optional<unsigned> InRangeIndex;
-  if (Optional<unsigned> LastIRIndex = InnermostGEP->getInRangeIndex())
+  std::optional<unsigned> InRangeIndex;
+  if (std::optional<unsigned> LastIRIndex = InnermostGEP->getInRangeIndex())
     if (SrcElemTy == InnermostGEP->getSourceElementType() &&
         NewIdxs.size() > *LastIRIndex) {
       InRangeIndex = LastIRIndex;
