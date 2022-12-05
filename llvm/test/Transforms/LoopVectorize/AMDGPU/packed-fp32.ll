@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s -loop-vectorize -S | FileCheck -check-prefix=GFX90A %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s -passes=loop-vectorize -S | FileCheck -check-prefix=GFX90A %s
 
 ; GFX90A-LABEL: @vectorize_v2f32_loop(
 ; GFX90A-COUNT-2: load <2 x float>

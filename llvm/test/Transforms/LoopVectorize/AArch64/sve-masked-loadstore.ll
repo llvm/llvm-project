@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -mattr=+sve \
+; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple aarch64-linux-gnu -mattr=+sve \
 ; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -S %s -o - | FileCheck %s
 
 define void @mloadstore_f32(float* noalias nocapture %a, float* noalias nocapture readonly %b, i64 %n) {
