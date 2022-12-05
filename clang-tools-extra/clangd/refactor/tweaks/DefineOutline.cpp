@@ -69,7 +69,7 @@ llvm::Optional<Path> getSourceFile(llvm::StringRef FileName,
 
 // Synthesize a DeclContext for TargetNS from CurContext. TargetNS must be empty
 // for global namespace, and endwith "::" otherwise.
-// Returns None if TargetNS is not a prefix of CurContext.
+// Returns std::nullopt if TargetNS is not a prefix of CurContext.
 llvm::Optional<const DeclContext *>
 findContextForNS(llvm::StringRef TargetNS, const DeclContext *CurContext) {
   assert(TargetNS.empty() || TargetNS.endswith("::"));
