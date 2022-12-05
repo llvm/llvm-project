@@ -82,7 +82,7 @@ static uint8_t getSMCPriority(XCOFF::StorageMappingClass SMC) {
 /// The symbols in the same section are sorted in ascending order.
 /// llvm-objdump -D will choose the highest priority symbol to display when
 /// there are symbols with the same address.
-bool XCOFFSymbolInfo::operator<(const XCOFFSymbolInfo &SymInfo) const {
+bool XCOFFSymbolInfoTy::operator<(const XCOFFSymbolInfoTy &SymInfo) const {
   // Label symbols have higher priority than non-label symbols.
   if (IsLabel != SymInfo.IsLabel)
     return SymInfo.IsLabel;
