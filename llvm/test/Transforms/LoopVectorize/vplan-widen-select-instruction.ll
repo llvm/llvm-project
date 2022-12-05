@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=4 -enable-vplan-native-path -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -enable-vplan-native-path -S %s | FileCheck %s
 
 ; Test that VPlan native path is able to widen select instruction in the
 ; innermost loop under different conditions when outer loop is marked to be

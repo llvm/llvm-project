@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=2 -S -mtriple=xcore | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=2 -S -mtriple=xcore | FileCheck %s
 
 target datalayout = "e-p:32:32:32-a0:0:32-n32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f16:16:32-f32:32:32-f64:32:32"
 target triple = "xcore"

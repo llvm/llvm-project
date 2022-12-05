@@ -6,7 +6,7 @@
 ;    a[i] = b[i] + 1.0;
 
 ; REQUIRES: asserts
-; RUN: opt -loop-vectorize -dce -instcombine -mtriple riscv64-linux-gnu \
+; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v -debug-only=loop-vectorize -scalable-vectorization=on \
 ; RUN:   -riscv-v-vector-bits-min=128 -disable-output < %s 2>&1 | FileCheck %s
 

@@ -1,6 +1,6 @@
-; RUN: opt -S -hints-allow-reordering=false -loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN: opt -S -hints-allow-reordering=false -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
 ; RUN:   < %s | FileCheck %s --check-prefix=CHECK
-; RUN: opt -S -hints-allow-reordering=false -loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN: opt -S -hints-allow-reordering=false -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
 ; RUN:   -prefer-inloop-reductions < %s | FileCheck %s --check-prefix=CHECK-IN-LOOP
 
 target triple = "aarch64-unknown-linux-gnu"
