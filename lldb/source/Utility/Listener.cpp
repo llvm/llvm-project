@@ -11,7 +11,6 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
-#include "llvm/ADT/Optional.h"
 
 #include <algorithm>
 #include <memory>

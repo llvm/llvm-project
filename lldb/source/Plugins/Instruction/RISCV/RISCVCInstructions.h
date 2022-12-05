@@ -14,7 +14,6 @@
 
 #include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
 #include "RISCVInstructions.h"
-#include "llvm/ADT/Optional.h"
 
 namespace lldb_private {
 
