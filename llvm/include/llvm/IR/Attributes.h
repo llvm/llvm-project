@@ -44,6 +44,7 @@ class Function;
 class LLVMContext;
 class MemoryEffects;
 class Type;
+class raw_ostream;
 
 enum class AllocFnKind : uint64_t {
   Unknown = 0,

@@ -12,6 +12,10 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
+
 namespace lldb_private {
 
 struct URI {
