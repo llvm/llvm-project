@@ -25,6 +25,11 @@
 ; RUN: sed -i 's/\\n/ /g' %t2
 ; RUN: FileCheck --input-file %t2 %s --check-prefixes=CHECK,ML
 
+; RUN: llc -o /dev/null -mtriple=x86_64-linux-unknown -regalloc=greedy \
+; RUN:   -regalloc-enable-advisor=development -regalloc-training-log=%t3.log \
+; RUN:   -tfutils-use-simplelogger < %S/Inputs/two-large-fcts.ll
+; RUN: %python %S/../../../lib/Analysis/models/log_reader.py %t3.log | FileCheck %s --check-prefixes=CHECK-LOG
+
 ; CHECK-NOT: nan
 ; CHECK-LABEL: key: \"index_to_evict\"
 ; ML-NEXT:    value: 9
@@ -34,3 +39,16 @@
 ; NOML: value: 36.64
 ; CHECK-NEXT: feature_list
 ; CHECK-NEXT: key: \"start_bb_freq_by_max\"
+
+; CHECK-LOG: context: SyFgetsCopy
+; CHECK-LOG-NEXT: observation: 0
+; CHECK-LOG-NEXT: mask: 0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+; CHECK-LOG: index_to_evict: 12
+; CHECK-LOG: observation: 16
+; CHECK-LOG: reward: 36.64
+; CHECK-LOG: context: SyFgets
+; CHECK-LOG-NEXT: observation: 0
+; CHECK-LOG-NEXT: mask: 0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+; CHECK-LOG: index_to_evict: 12
+; CHECK-LOG: observation: 16
+; CHECK-LOG: reward: 36.64
