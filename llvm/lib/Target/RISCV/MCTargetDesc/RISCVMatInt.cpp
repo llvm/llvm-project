@@ -296,9 +296,9 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     // Search for each bit and build corresponding BCLRI/BSETI.
     if (Opc > 0) {
       while (Hi != 0) {
-        unsigned Bit = countTrailingZeros(Hi);
+        unsigned Bit = findFirstSet(Hi, ZB_Undefined);
         TmpSeq.emplace_back(Opc, Bit + 32);
-        Hi &= ~(1 << Bit);
+        Hi &= (Hi - 1); // Clear lowest set bit.
       }
       if (TmpSeq.size() < Res.size())
         Res = TmpSeq;
