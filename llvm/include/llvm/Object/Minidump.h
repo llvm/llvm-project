@@ -40,8 +40,8 @@ public:
     return getData().slice(Stream.Location.RVA, Stream.Location.DataSize);
   }
 
-  /// Returns the raw contents of the stream of the given type, or None if the
-  /// file does not contain a stream of this type.
+  /// Returns the raw contents of the stream of the given type, or std::nullopt
+  /// if the file does not contain a stream of this type.
   std::optional<ArrayRef<uint8_t>>
   getRawStream(minidump::StreamType Type) const;
 
