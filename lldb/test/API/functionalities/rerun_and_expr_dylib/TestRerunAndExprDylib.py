@@ -45,7 +45,8 @@ class TestRerunExprDylib(TestBase):
 
         exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe) 
-        breakpoint = target.BreakpointCreateBySourceRegex('return', lldb.SBFileSpec('main.cpp'))
+        target.BreakpointCreateBySourceRegex('dlclose', lldb.SBFileSpec('main.cpp'))
+        target.BreakpointCreateBySourceRegex('return', lldb.SBFileSpec('main.cpp'))
         process = target.LaunchSimple(None, None, self.get_process_working_directory())  
 
         self.expect_expr('*foo', result_type='Foo', result_children=[
@@ -60,6 +61,7 @@ class TestRerunExprDylib(TestBase):
                                'LD_EXTRAS':'-L.'})
 
         # Rerun program within the same target
+        process.Continue()
         process.Destroy()
         process = target.LaunchSimple(None, None, self.get_process_working_directory())  
 
