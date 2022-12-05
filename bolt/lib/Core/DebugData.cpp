@@ -49,7 +49,7 @@ findAttributeInfo(const DWARFDie DIE,
   const DWARFUnit &U = *DIE.getDwarfUnit();
   uint64_t Offset =
       AbbrevDecl->getAttributeOffsetFromIndex(Index, DIE.getOffset(), U);
-  Optional<DWARFFormValue> Value =
+  std::optional<DWARFFormValue> Value =
       AbbrevDecl->getAttributeValueFromOffset(Index, Offset, U);
   if (!Value)
     return std::nullopt;
@@ -57,7 +57,7 @@ findAttributeInfo(const DWARFDie DIE,
   const DWARFAbbreviationDeclaration::AttributeSpec *AttrVal =
       AbbrevDecl->attributes().begin() + Index;
   uint32_t ValSize = 0;
-  Optional<int64_t> ValSizeOpt = AttrVal->getByteSize(U);
+  std::optional<int64_t> ValSizeOpt = AttrVal->getByteSize(U);
   if (ValSizeOpt) {
     ValSize = static_cast<uint32_t>(*ValSizeOpt);
   } else {
@@ -81,7 +81,7 @@ Optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
       DIE.getAbbreviationDeclarationPtr();
   if (!AbbrevDecl)
     return std::nullopt;
-  Optional<uint32_t> Index = AbbrevDecl->findAttributeIndex(Attr);
+  std::optional<uint32_t> Index = AbbrevDecl->findAttributeIndex(Attr);
   if (!Index)
     return std::nullopt;
   return findAttributeInfo(DIE, AbbrevDecl, *Index);
@@ -421,7 +421,7 @@ AddressSectionBuffer DebugAddrWriterDwarf5::finalize() {
     // for it.
     if (AMIter == AddressMaps.end()) {
       AMIter = AddressMaps.insert({CUID, AddressForDWOCU()}).first;
-      Optional<uint64_t> BaseOffset = CU->getAddrOffsetSectionBase();
+      std::optional<uint64_t> BaseOffset = CU->getAddrOffsetSectionBase();
       if (!BaseOffset)
         continue;
       // Address base offset is to the first entry.
@@ -1067,7 +1067,7 @@ std::string DebugInfoBinaryPatcher::patchBinary(StringRef BinaryContents) {
 
 void DebugStrOffsetsWriter::initialize(
     const DWARFSection &StrOffsetsSection,
-    const Optional<StrOffsetsContributionDescriptor> Contr) {
+    const std::optional<StrOffsetsContributionDescriptor> Contr) {
   if (!Contr)
     return;
 

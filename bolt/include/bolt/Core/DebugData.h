@@ -424,7 +424,7 @@ public:
 
   /// Initializes Buffer and Stream.
   void initialize(const DWARFSection &StrOffsetsSection,
-                  const Optional<StrOffsetsContributionDescriptor> Contr);
+                  const std::optional<StrOffsetsContributionDescriptor> Contr);
 
   /// Update Str offset in .debug_str in .debug_str_offsets.
   void updateAddressMap(uint32_t Index, uint32_t Address);

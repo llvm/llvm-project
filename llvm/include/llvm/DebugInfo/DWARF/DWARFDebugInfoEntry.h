@@ -45,7 +45,7 @@ public:
   uint64_t getOffset() const { return Offset; }
 
   /// Returns index of the parent die.
-  Optional<uint32_t> getParentIdx() const {
+  std::optional<uint32_t> getParentIdx() const {
     if (ParentIdx == UINT32_MAX)
       return std::nullopt;
 
@@ -53,7 +53,7 @@ public:
   }
 
   /// Returns index of the sibling die.
-  Optional<uint32_t> getSiblingIdx() const {
+  std::optional<uint32_t> getSiblingIdx() const {
     if (SiblingIdx == 0)
       return std::nullopt;
 

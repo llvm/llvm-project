@@ -21,8 +21,8 @@ class TypeTableCollection : public TypeCollection {
 public:
   explicit TypeTableCollection(ArrayRef<ArrayRef<uint8_t>> Records);
 
-  Optional<TypeIndex> getFirst() override;
-  Optional<TypeIndex> getNext(TypeIndex Prev) override;
+  std::optional<TypeIndex> getFirst() override;
+  std::optional<TypeIndex> getNext(TypeIndex Prev) override;
 
   CVType getType(TypeIndex Index) override;
   StringRef getTypeName(TypeIndex Index) override;
