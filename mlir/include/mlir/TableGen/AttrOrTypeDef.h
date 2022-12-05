@@ -252,8 +252,8 @@ class AttrDef : public AttrOrTypeDef {
 public:
   using AttrOrTypeDef::AttrOrTypeDef;
 
-  /// Returns the attributes value type builder code block, or None if it
-  /// doesn't have one.
+  /// Returns the attributes value type builder code block, or std::nullopt if
+  /// it doesn't have one.
   Optional<StringRef> getTypeBuilder() const;
 
   static bool classof(const AttrOrTypeDef *def);

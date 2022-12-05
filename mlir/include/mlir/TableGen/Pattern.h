@@ -282,7 +282,7 @@ public:
     enum class Kind : uint8_t { Attr, Operand, Result, Value, MultipleValues };
 
     // Creates a SymbolInfo instance. `dagAndConstant` is only used for `Attr`
-    // and `Operand` so should be llvm::None for `Result` and `Value` kind.
+    // and `Operand` so should be std::nullopt for `Result` and `Value` kind.
     SymbolInfo(const Operator *op, Kind kind,
                Optional<DagAndConstant> dagAndConstant);
 

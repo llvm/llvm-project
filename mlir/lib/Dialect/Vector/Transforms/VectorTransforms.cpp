@@ -190,7 +190,7 @@ static SmallVector<int64_t> getReductionIndex(AffineMap map,
 }
 
 /// Look for a given dimension in an affine map and return its position. Return
-/// llvm::None if the dimension is not in the map results.
+/// std::nullopt if the dimension is not in the map results.
 static llvm::Optional<unsigned> getDimPosition(AffineMap map, unsigned dim) {
   for (unsigned i = 0, e = map.getNumResults(); i < e; i++) {
     if (map.getDimPosition(i) == dim)

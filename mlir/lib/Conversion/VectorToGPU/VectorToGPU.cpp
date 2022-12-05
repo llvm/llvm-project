@@ -184,7 +184,7 @@ static bool broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
 }
 
 /// Return the MMA elementwise enum associated with `op` if it is supported.
-/// Return `llvm::None` otherwise.
+/// Return `std::nullopt` otherwise.
 static std::optional<gpu::MMAElementwiseOp>
 convertElementwiseOpToMMA(Operation *op) {
   if (isa<arith::AddFOp>(op))

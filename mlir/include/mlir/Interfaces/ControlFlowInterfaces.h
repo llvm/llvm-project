@@ -126,8 +126,8 @@ private:
 
 namespace detail {
 /// Return the `BlockArgument` corresponding to operand `operandIndex` in some
-/// successor if `operandIndex` is within the range of `operands`, or None if
-/// `operandIndex` isn't a successor operand index.
+/// successor if `operandIndex` is within the range of `operands`, or
+/// std::nullopt if `operandIndex` isn't a successor operand index.
 Optional<BlockArgument>
 getBranchSuccessorArgument(const SuccessorOperands &operands,
                            unsigned operandIndex, Block *successor);
@@ -237,9 +237,9 @@ bool isRegionReturnLike(Operation *operation);
 /// Returns the mutable operands that are passed to the region with the given
 /// `regionIndex`. If the operation does not implement the
 /// `RegionBranchTerminatorOpInterface` and is not marked as `ReturnLike`, the
-/// result will be `llvm::None`. In all other cases, the resulting
+/// result will be `std::nullopt`. In all other cases, the resulting
 /// `OperandRange` represents all operands that are passed to the specified
-/// successor region. If `regionIndex` is `llvm::None`, all operands that are
+/// successor region. If `regionIndex` is `std::nullopt`, all operands that are
 /// passed to the parent operation will be returned.
 Optional<MutableOperandRange>
 getMutableRegionBranchSuccessorOperands(Operation *operation,

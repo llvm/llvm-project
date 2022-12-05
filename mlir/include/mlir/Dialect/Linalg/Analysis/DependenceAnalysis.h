@@ -94,7 +94,7 @@ public:
       return std::nullopt;
     }
     // Return the result number if the `opView` is an OpResult. Otherwise return
-    // llvm::None.
+    // std::nullopt.
     static Optional<unsigned> getResultNumber(OpView opView) {
       if (OpResult result = opView.dyn_cast<Value>().cast<OpResult>())
         return result.getResultNumber();
@@ -114,13 +114,13 @@ public:
     Value getIndexingValue() const { return getValue(indexingOpView); }
 
     // If the dependent OpView is an operand, return operand number. Return
-    // llvm::None otherwise.
+    // std::nullopt otherwise.
     Optional<unsigned> getDependentOpViewOperandNum() const {
       return getOperandNumber(dependentOpView);
     }
 
     // If the indexing OpView is an operand, return operand number. Return
-    // llvm::None otherwise.
+    // std::nullopt otherwise.
     Optional<unsigned> getIndexingOpViewOperandNum() const {
       return getOperandNumber(indexingOpView);
     }

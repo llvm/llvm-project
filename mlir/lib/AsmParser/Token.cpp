@@ -124,8 +124,8 @@ std::string Token::getStringValue() const {
   return result;
 }
 
-/// Given a token containing a hex string literal, return its value or None if
-/// the token does not contain a valid hex string.
+/// Given a token containing a hex string literal, return its value or
+/// std::nullopt if the token does not contain a valid hex string.
 Optional<std::string> Token::getHexStringValue() const {
   assert(getKind() == string);
 
