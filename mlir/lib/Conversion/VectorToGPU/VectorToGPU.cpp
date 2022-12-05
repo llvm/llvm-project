@@ -191,12 +191,26 @@ convertElementwiseOpToMMA(Operation *op) {
     return gpu::MMAElementwiseOp::ADDF;
   if (isa<arith::MulFOp>(op))
     return gpu::MMAElementwiseOp::MULF;
+  if (isa<arith::SubFOp>(op))
+    return gpu::MMAElementwiseOp::SUBF;
   if (isa<arith::MaxFOp>(op))
     return gpu::MMAElementwiseOp::MAXF;
   if (isa<arith::MinFOp>(op))
     return gpu::MMAElementwiseOp::MINF;
   if (isa<arith::DivFOp>(op))
     return gpu::MMAElementwiseOp::DIVF;
+  if (isa<arith::AddIOp>(op))
+    return gpu::MMAElementwiseOp::ADDI;
+  if (isa<arith::MulIOp>(op))
+    return gpu::MMAElementwiseOp::MULI;
+  if (isa<arith::SubIOp>(op))
+    return gpu::MMAElementwiseOp::SUBI;
+  if (isa<arith::DivSIOp>(op))
+    return gpu::MMAElementwiseOp::DIVS;
+  if (isa<arith::DivUIOp>(op))
+    return gpu::MMAElementwiseOp::DIVU;
+  if (isa<arith::NegFOp>(op))
+    return gpu::MMAElementwiseOp::NEGATEF;
   return std::nullopt;
 }
 
