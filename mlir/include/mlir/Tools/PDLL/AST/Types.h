@@ -164,7 +164,8 @@ public:
                            Optional<StringRef> name = std::nullopt,
                            const ods::Operation *odsOp = nullptr);
 
-  /// Return the name of this operation type, or None if it doesn't have on.
+  /// Return the name of this operation type, or std::nullopt if it doesn't have
+  /// on.
   Optional<StringRef> getName() const;
 
   /// Return the ODS operation that this type refers to, or nullptr if the ODS

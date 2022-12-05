@@ -39,10 +39,10 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
                                            unsigned maxDepth,
                                            DenseSet<Value> &visited,
                                            SmallVectorImpl<Value> &output) {
-  // Given the index of a region of the branch (`predIndex`), or None to
+  // Given the index of a region of the branch (`predIndex`), or std::nullopt to
   // represent the parent operation, try to return the index into the outputs of
   // this region predecessor that correspond to the input values of `region`. If
-  // an index could not be found, None is returned instead.
+  // an index could not be found, std::nullopt is returned instead.
   auto getOperandIndexIfPred =
       [&](Optional<unsigned> predIndex) -> Optional<unsigned> {
     SmallVector<RegionSuccessor, 2> successors;

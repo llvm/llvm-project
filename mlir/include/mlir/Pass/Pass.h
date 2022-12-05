@@ -80,8 +80,8 @@ public:
   /// Return an empty string if one does not exist.
   virtual StringRef getDescription() const { return ""; }
 
-  /// Returns the name of the operation that this pass operates on, or None if
-  /// this is a generic OperationPass.
+  /// Returns the name of the operation that this pass operates on, or
+  /// std::nullopt if this is a generic OperationPass.
   Optional<StringRef> getOpName() const { return opName; }
 
   //===--------------------------------------------------------------------===//
@@ -300,8 +300,8 @@ private:
   /// Represents a unique identifier for the pass.
   TypeID passID;
 
-  /// The name of the operation that this pass operates on, or None if this is a
-  /// generic OperationPass.
+  /// The name of the operation that this pass operates on, or std::nullopt if
+  /// this is a generic OperationPass.
   Optional<StringRef> opName;
 
   /// The current execution state for the pass.

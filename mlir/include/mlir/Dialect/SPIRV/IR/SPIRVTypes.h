@@ -71,7 +71,7 @@ public:
                        Optional<StorageClass> storage = std::nullopt);
 
   /// Returns the size in bytes for each type. If no size can be calculated,
-  /// returns `llvm::None`. Note that if the type has explicit layout, it is
+  /// returns `std::nullopt`. Note that if the type has explicit layout, it is
   /// also taken into account in calculation.
   Optional<int64_t> getSizeInBytes();
 };

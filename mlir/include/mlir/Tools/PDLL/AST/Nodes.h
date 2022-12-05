@@ -508,7 +508,7 @@ public:
                                ArrayRef<Expr *> resultTypes,
                                ArrayRef<NamedAttributeDecl *> attributes);
 
-  /// Return the name of the operation, or None if there isn't one.
+  /// Return the name of the operation, or std::nullopt if there isn't one.
   Optional<StringRef> getName() const;
 
   /// Return the declaration of the operation name.
@@ -764,7 +764,7 @@ public:
   static OpConstraintDecl *create(Context &ctx, SMRange loc,
                                   const OpNameDecl *nameDecl = nullptr);
 
-  /// Return the name of the operation, or None if there isn't one.
+  /// Return the name of the operation, or std::nullopt if there isn't one.
   Optional<StringRef> getName() const;
 
   /// Return the declaration of the operation name.
@@ -1028,7 +1028,7 @@ public:
                              bool hasBoundedRecursion,
                              const CompoundStmt *body);
 
-  /// Return the benefit of this pattern if specified, or None.
+  /// Return the benefit of this pattern if specified, or std::nullopt.
   Optional<uint16_t> getBenefit() const { return benefit; }
 
   /// Return if this pattern has bounded rewrite recursion.
