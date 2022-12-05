@@ -3,7 +3,7 @@
 ; RUN: %llc_dwarf -split-dwarf-file=foo.dwo < %s -filetype=obj | llvm-dwarfdump -v - | FileCheck --check-prefix=FISSION %s
 
 ; darwin has a workaround for a linker bug so it always emits one line table entry
-; XFAIL: darwin
+; XFAIL: target={{.*}}-darwin{{.*}}
 
 ; Expect no line table entry since there are no functions and file references in this compile unit
 ; CHECK: .debug_line contents:
