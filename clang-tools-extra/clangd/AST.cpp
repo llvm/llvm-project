@@ -63,8 +63,8 @@ getTemplateSpecializationArgLocs(const NamedDecl &ND) {
     if (auto *Args = Var->getTemplateArgsInfo())
       return Args->arguments();
   }
-  // We return None for ClassTemplateSpecializationDecls because it does not
-  // contain TemplateArgumentLoc information.
+  // We return std::nullopt for ClassTemplateSpecializationDecls because it does
+  // not contain TemplateArgumentLoc information.
   return std::nullopt;
 }
 
