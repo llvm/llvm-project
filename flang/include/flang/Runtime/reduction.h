@@ -347,23 +347,23 @@ void RTNAME(MinvalDim)(Descriptor &, const Descriptor &, int dim,
     const char *source, int line, const Descriptor *mask = nullptr);
 
 // NORM2
-float RTNAME(Norm2_2)(const Descriptor &, const char *source, int line,
-    int dim = 0, const Descriptor *mask = nullptr);
-float RTNAME(Norm2_3)(const Descriptor &, const char *source, int line,
-    int dim = 0, const Descriptor *mask = nullptr);
-float RTNAME(Norm2_4)(const Descriptor &, const char *source, int line,
-    int dim = 0, const Descriptor *mask = nullptr);
-double RTNAME(Norm2_8)(const Descriptor &, const char *source, int line,
-    int dim = 0, const Descriptor *mask = nullptr);
+float RTNAME(Norm2_2)(
+    const Descriptor &, const char *source, int line, int dim = 0);
+float RTNAME(Norm2_3)(
+    const Descriptor &, const char *source, int line, int dim = 0);
+float RTNAME(Norm2_4)(
+    const Descriptor &, const char *source, int line, int dim = 0);
+double RTNAME(Norm2_8)(
+    const Descriptor &, const char *source, int line, int dim = 0);
 #if LDBL_MANT_DIG == 64
-long double RTNAME(Norm2_10)(const Descriptor &, const char *source, int line,
-    int dim = 0, const Descriptor *mask = nullptr);
+long double RTNAME(Norm2_10)(
+    const Descriptor &, const char *source, int line, int dim = 0);
 #elif LDBL_MANT_DIG == 113
-long double RTNAME(Norm2_16)(const Descriptor &, const char *source, int line,
-    int dim = 0, const Descriptor *mask = nullptr);
+long double RTNAME(Norm2_16)(
+    const Descriptor &, const char *source, int line, int dim = 0);
 #endif
-void RTNAME(Norm2Dim)(Descriptor &, const Descriptor &, int dim,
-    const char *source, int line, const Descriptor *mask = nullptr);
+void RTNAME(Norm2Dim)(
+    Descriptor &, const Descriptor &, int dim, const char *source, int line);
 
 // ALL, ANY, COUNT, & PARITY logical reductions
 bool RTNAME(All)(const Descriptor &, const char *source, int line, int dim = 0);

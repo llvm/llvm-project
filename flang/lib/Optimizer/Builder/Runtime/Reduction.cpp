@@ -119,6 +119,36 @@ struct ForcedMinvalInteger16 {
   }
 };
 
+/// Placeholder for real*10 version of Norm2 Intrinsic
+struct ForcedNorm2Real10 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(Norm2_10));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF80(ctx);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy}, {ty});
+    };
+  }
+};
+
+/// Placeholder for real*16 version of Norm2 Intrinsic
+struct ForcedNorm2Real16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(Norm2_16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF128(ctx);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy}, {ty});
+    };
+  }
+};
+
 /// Placeholder for real*10 version of Product Intrinsic
 struct ForcedProductReal10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ProductReal10));
@@ -845,6 +875,55 @@ mlir::Value fir::runtime::genMinval(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, arrayBox, sourceFile, sourceLine, dim, maskBox);
+
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
+/// Generate call to `Norm2Dim` intrinsic runtime routine. This is the version
+/// that takes a dim argument.
+void fir::runtime::genNorm2Dim(fir::FirOpBuilder &builder, mlir::Location loc,
+                               mlir::Value resultBox, mlir::Value arrayBox,
+                               mlir::Value dim) {
+  auto func = fir::runtime::getRuntimeFunc<mkRTKey(Norm2Dim)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  auto args = fir::runtime::createArguments(
+      builder, loc, fTy, resultBox, arrayBox, dim, sourceFile, sourceLine);
+
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+/// Generate call to `Norm2` intrinsic runtime routine. This is the version
+/// that does not take a dim argument.
+mlir::Value fir::runtime::genNorm2(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value arrayBox) {
+  mlir::func::FuncOp func;
+  auto ty = arrayBox.getType();
+  auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
+  auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+  auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
+
+  if (eleTy.isF16() || eleTy.isBF16())
+    TODO(loc, "half-precision NORM2");
+  else if (eleTy.isF32())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(Norm2_4)>(loc, builder);
+  else if (eleTy.isF64())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(Norm2_8)>(loc, builder);
+  else if (eleTy.isF80())
+    func = fir::runtime::getRuntimeFunc<ForcedNorm2Real10>(loc, builder);
+  else if (eleTy.isF128())
+    func = fir::runtime::getRuntimeFunc<ForcedNorm2Real16>(loc, builder);
+  else
+    fir::emitFatalError(loc, "invalid type in NORM2");
+
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
+  auto args = fir::runtime::createArguments(builder, loc, fTy, arrayBox,
+                                            sourceFile, sourceLine, dim);
 
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
