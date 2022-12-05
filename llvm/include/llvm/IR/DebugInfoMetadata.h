@@ -1745,7 +1745,7 @@ public:
   /// Returns a new DILocation with duplication factor \p DF * current
   /// duplication factor encoded in the discriminator. The current duplication
   /// factor is as defined by getDuplicationFactor().
-  /// Returns None if encoding failed.
+  /// Returns std::nullopt if encoding failed.
   inline std::optional<const DILocation *>
   cloneByMultiplyingDuplicationFactor(unsigned DF) const;
 

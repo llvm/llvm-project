@@ -1271,7 +1271,7 @@ static void createFakeELFSections(ObjectFile &Obj) {
 }
 
 // Tries to fetch a more complete version of the given object file using its
-// Build ID. Returns None if nothing was found.
+// Build ID. Returns std::nullopt if nothing was found.
 static std::optional<OwningBinary<Binary>>
 fetchBinaryByBuildID(const ObjectFile &Obj) {
   std::optional<object::BuildIDRef> BuildID = getBuildID(&Obj);

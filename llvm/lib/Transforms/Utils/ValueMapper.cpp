@@ -271,7 +271,8 @@ private:
   /// return the result of \a mapDistinctNode().
   ///
   /// \return std::nullopt if \c Op is an unmapped uniqued \a MDNode.
-  /// \post getMappedOp(Op) only returns std::nullopt if this returns None.
+  /// \post getMappedOp(Op) only returns std::nullopt if this returns
+  /// std::nullopt.
   Optional<Metadata *> tryToMapOperand(const Metadata *Op);
 
   /// Map a distinct node.

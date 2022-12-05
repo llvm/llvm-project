@@ -402,7 +402,7 @@ static Constant *getSignedIntOrFpConstant(Type *Ty, int64_t C) {
 ///   1) Returns exact trip count if it is known.
 ///   2) Returns expected trip count according to profile data if any.
 ///   3) Returns upper bound estimate if it is known.
-///   4) Returns None if all of the above failed.
+///   4) Returns std::nullopt if all of the above failed.
 static Optional<unsigned> getSmallBestKnownTC(ScalarEvolution &SE, Loop *L) {
   // Check if exact trip count is known.
   if (unsigned ExpectedTC = SE.getSmallConstantTripCount(L))

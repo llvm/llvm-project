@@ -1746,7 +1746,7 @@ void at::deleteAll(Function *F) {
 }
 
 /// Collect constant properies (base, size, offset) of \p StoreDest.
-/// Return None if any properties are not constants.
+/// Return std::nullopt if any properties are not constants.
 static std::optional<AssignmentInfo>
 getAssignmentInfoImpl(const DataLayout &DL, const Value *StoreDest,
                       uint64_t SizeInBits) {

@@ -26,8 +26,8 @@ namespace remarks {
 // 1. integer: manually specified threshold; or
 // 2. string 'auto': automatically get threshold from profile summary.
 //
-// Return None Optional if 'auto' is specified, indicating the value will
-// be filled later during PSI.
+// Return std::nullopt Optional if 'auto' is specified, indicating the value
+// will be filled later during PSI.
 inline Expected<std::optional<uint64_t>> parseHotnessThresholdOption(StringRef Arg) {
   if (Arg == "auto")
     return std::nullopt;
