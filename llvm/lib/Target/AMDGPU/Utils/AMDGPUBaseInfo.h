@@ -10,7 +10,6 @@
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H
 
 #include "SIDefines.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/Alignment.h"
 #include <array>

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/IR/Function.h"
 
 #ifndef LLVM_LIB_TARGET_AARCH64_UTILS_AARCH64SMEATTRIBUTES_H

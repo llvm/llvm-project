@@ -14,7 +14,6 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"

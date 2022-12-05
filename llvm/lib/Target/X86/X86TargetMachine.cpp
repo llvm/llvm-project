@@ -20,7 +20,6 @@
 #include "X86Subtarget.h"
 #include "X86TargetObjectFile.h"
 #include "X86TargetTransformInfo.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
