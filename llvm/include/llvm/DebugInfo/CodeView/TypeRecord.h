@@ -11,7 +11,6 @@
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
@@ -22,6 +21,7 @@
 #include "llvm/Support/Endian.h"
 #include <algorithm>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 namespace llvm {

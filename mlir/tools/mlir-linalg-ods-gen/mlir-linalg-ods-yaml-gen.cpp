@@ -398,7 +398,7 @@ findTensorDefArgIndex(StringRef name, SmallVectorImpl<LinalgOperandDef> &args) {
     if (it.value().name == name)
       return it.index();
   }
-  return None;
+  return std::nullopt;
 }
 
 // Try to map the TypeVar to a predefined or an argument type.
@@ -425,7 +425,7 @@ findTypeValue(StringRef typeVar, SmallVectorImpl<LinalgOperandDef> &args) {
           .str();
   }
 
-  return None;
+  return std::nullopt;
 }
 
 static ScalarAssign *findAssignment(StringRef name,
@@ -525,7 +525,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
       (ins "ValueRange":$inputs, "ValueRange":$outputs,
             CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
       [{{
-        buildStructuredOp($_builder, $_state, llvm::None, inputs, outputs,
+        buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
           attributes, {0}::getRegionBuilder());
       }]>,
       OpBuilder<
@@ -1064,7 +1064,7 @@ if ({1}Iter != attrs.end()) {{
           if (!argIndex) {
             emitError(genContext.getLoc())
                 << "scalar argument not defined on the op: " << *expression.arg;
-            return None;
+            return std::nullopt;
           }
           return std::string(
               llvm::formatv("block.getArgument({0})", *argIndex));
@@ -1118,7 +1118,7 @@ if ({1}Iter != attrs.end()) {{
                   << "type variable " << expression.scalarFn->typeVar.value()
                   << ", used in a type conversion, must map to a predefined or "
                   << "an argument type but it does not";
-              return None;
+              return std::nullopt;
             }
             operandCppValues.push_back(typeCppValue.value());
           }
@@ -1127,7 +1127,7 @@ if ({1}Iter != attrs.end()) {{
           for (ScalarExpression &operand : expression.scalarFn->operands) {
             auto operandCppValue = generateExpression(operand);
             if (!operandCppValue)
-              return None;
+              return std::nullopt;
             operandCppValues.push_back(*operandCppValue);
           }
 
@@ -1139,7 +1139,7 @@ if ({1}Iter != attrs.end()) {{
           return cppIdent;
         }
         emitError(genContext.getLoc()) << "unknown ScalarExpression type";
-        return None;
+        return std::nullopt;
       };
       Optional<std::string> cppValue = generateExpression(assignment->value);
       if (!cppValue)

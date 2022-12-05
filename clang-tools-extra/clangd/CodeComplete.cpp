@@ -258,14 +258,14 @@ struct CompletionCandidate {
   headerToInsertIfAllowed(const CodeCompleteOptions &Opts) const {
     if (Opts.InsertIncludes == CodeCompleteOptions::NeverInsert ||
         RankedIncludeHeaders.empty())
-      return None;
+      return std::nullopt;
     if (SemaResult && SemaResult->Declaration) {
       // Avoid inserting new #include if the declaration is found in the current
       // file e.g. the symbol is forward declared.
       auto &SM = SemaResult->Declaration->getASTContext().getSourceManager();
       for (const Decl *RD : SemaResult->Declaration->redecls())
         if (SM.isInMainFile(SM.getExpansionLoc(RD->getBeginLoc())))
-          return None;
+          return std::nullopt;
     }
     return RankedIncludeHeaders[0];
   }
@@ -1821,7 +1821,7 @@ private:
          (C.IndexResult &&
           C.IndexResult->SymInfo.Kind == index::SymbolKind::Macro)) &&
         !C.Name.startswith_insensitive(Filter->pattern()))
-      return None;
+      return std::nullopt;
     return Filter->match(C.Name);
   }
 
@@ -2049,7 +2049,7 @@ maybeFunctionArgumentCommentStart(llvm::StringRef Content) {
   Content = Content.rtrim();
   if (Content.endswith("/*"))
     return Content.size() - 2;
-  return None;
+  return std::nullopt;
 }
 
 CodeCompleteResult codeComplete(PathRef FileName, Position Pos,

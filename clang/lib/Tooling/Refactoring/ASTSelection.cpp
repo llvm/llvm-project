@@ -55,7 +55,7 @@ public:
     SelectedASTNode Result = std::move(SelectionStack.back());
     SelectionStack.pop_back();
     if (Result.Children.empty())
-      return None;
+      return std::nullopt;
     return std::move(Result);
   }
 
@@ -380,17 +380,17 @@ CodeRangeASTSelection::create(SourceRange SelectionRange,
                               const SelectedASTNode &ASTSelection) {
   // Code range is selected when the selection range is not empty.
   if (SelectionRange.getBegin() == SelectionRange.getEnd())
-    return None;
+    return std::nullopt;
   llvm::SmallVector<SelectedNodeWithParents, 4> ContainSelection;
   findDeepestWithKind(ASTSelection, ContainSelection,
                       SourceSelectionKind::ContainsSelection);
   // We are looking for a selection in one body of code, so let's focus on
   // one matching result.
   if (ContainSelection.size() != 1)
-    return None;
+    return std::nullopt;
   SelectedNodeWithParents &Selected = ContainSelection[0];
   if (!Selected.Node.get().Node.get<Stmt>())
-    return None;
+    return std::nullopt;
   const Stmt *CodeRangeStmt = Selected.Node.get().Node.get<Stmt>();
   if (!isa<CompoundStmt>(CodeRangeStmt)) {
     Selected.canonicalize();

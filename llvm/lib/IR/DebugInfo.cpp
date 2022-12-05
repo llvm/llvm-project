@@ -36,6 +36,7 @@
 #include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cassert>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -1745,10 +1746,10 @@ void at::deleteAll(Function *F) {
 }
 
 /// Collect constant properies (base, size, offset) of \p StoreDest.
-/// Return None if any properties are not constants.
-static Optional<AssignmentInfo> getAssignmentInfoImpl(const DataLayout &DL,
-                                                      const Value *StoreDest,
-                                                      uint64_t SizeInBits) {
+/// Return std::nullopt if any properties are not constants.
+static std::optional<AssignmentInfo>
+getAssignmentInfoImpl(const DataLayout &DL, const Value *StoreDest,
+                      uint64_t SizeInBits) {
   APInt GEPOffset(DL.getIndexTypeSizeInBits(StoreDest->getType()), 0);
   const Value *Base = StoreDest->stripAndAccumulateConstantOffsets(
       DL, GEPOffset, /*AllowNonInbounds*/ true);
@@ -1761,8 +1762,8 @@ static Optional<AssignmentInfo> getAssignmentInfoImpl(const DataLayout &DL,
   return std::nullopt;
 }
 
-Optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
-                                               const MemIntrinsic *I) {
+std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
+                                                    const MemIntrinsic *I) {
   const Value *StoreDest = I->getRawDest();
   // Assume 8 bit bytes.
   auto *ConstLengthInBytes = dyn_cast<ConstantInt>(I->getLength());
@@ -1773,15 +1774,15 @@ Optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
   return getAssignmentInfoImpl(DL, StoreDest, SizeInBits);
 }
 
-Optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
-                                               const StoreInst *SI) {
+std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
+                                                    const StoreInst *SI) {
   const Value *StoreDest = SI->getPointerOperand();
   uint64_t SizeInBits = DL.getTypeSizeInBits(SI->getValueOperand()->getType());
   return getAssignmentInfoImpl(DL, StoreDest, SizeInBits);
 }
 
-Optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
-                                               const AllocaInst *AI) {
+std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
+                                                    const AllocaInst *AI) {
   uint64_t SizeInBits = DL.getTypeSizeInBits(AI->getAllocatedType());
   return getAssignmentInfoImpl(DL, AI, SizeInBits);
 }
@@ -1829,7 +1830,7 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
   for (auto BBI = Start; BBI != End; ++BBI) {
     for (Instruction &I : *BBI) {
 
-      Optional<AssignmentInfo> Info = std::nullopt;
+      std::optional<AssignmentInfo> Info = std::nullopt;
       Value *ValueComponent = nullptr;
       Value *DestComponent = nullptr;
       if (auto *AI = dyn_cast<AllocaInst>(&I)) {

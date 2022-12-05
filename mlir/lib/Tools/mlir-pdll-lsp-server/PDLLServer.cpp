@@ -79,7 +79,7 @@ getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr, const ast::Diagnostic &diag,
 
   // Skip diagnostics that weren't emitted within the main file.
   if (loc.uri != uri)
-    return llvm::None;
+    return std::nullopt;
 
   // Convert the severity for the diagnostic.
   switch (diag.getSeverity()) {
@@ -460,7 +460,7 @@ Optional<lsp::Hover> PDLDocument::findHover(const lsp::URIForFile &uri,
   SMRange hoverRange;
   const PDLIndexSymbol *symbol = index.lookup(posLoc, &hoverRange);
   if (!symbol)
-    return llvm::None;
+    return std::nullopt;
 
   // Add hover for operation names.
   if (const auto *op = symbol->definition.dyn_cast<const ods::Operation *>())
@@ -491,7 +491,7 @@ Optional<lsp::Hover> PDLDocument::findHover(const ast::Decl *decl,
   if (const auto *rewrite = dyn_cast<ast::UserRewriteDecl>(decl))
     return buildHoverForUserConstraintOrRewrite("Rewrite", rewrite, hoverRange);
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 lsp::Hover PDLDocument::buildHoverForOpName(const ods::Operation *op,
@@ -1037,7 +1037,7 @@ public:
     const ods::Operation *odsOp =
         opName ? odsContext.lookupOperation(*opName) : nullptr;
     codeCompleteOperationOperandOrResultSignature(
-        opName, odsOp, odsOp ? odsOp->getOperands() : llvm::None,
+        opName, odsOp, odsOp ? odsOp->getOperands() : std::nullopt,
         currentNumOperands, "operand", "Value");
   }
 
@@ -1046,7 +1046,7 @@ public:
     const ods::Operation *odsOp =
         opName ? odsContext.lookupOperation(*opName) : nullptr;
     codeCompleteOperationOperandOrResultSignature(
-        opName, odsOp, odsOp ? odsOp->getResults() : llvm::None,
+        opName, odsOp, odsOp ? odsOp->getResults() : std::nullopt,
         currentNumResults, "result", "Type");
   }
 
@@ -1732,7 +1732,7 @@ void lsp::PDLLServer::updateDocument(
 Optional<int64_t> lsp::PDLLServer::removeDocument(const URIForFile &uri) {
   auto it = impl->files.find(uri.file());
   if (it == impl->files.end())
-    return llvm::None;
+    return std::nullopt;
 
   int64_t version = it->second->getVersion();
   impl->files.erase(it);
@@ -1767,7 +1767,7 @@ Optional<lsp::Hover> lsp::PDLLServer::findHover(const URIForFile &uri,
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     return fileIt->second->findHover(uri, hoverPos);
-  return llvm::None;
+  return std::nullopt;
 }
 
 void lsp::PDLLServer::findDocumentSymbols(
@@ -1813,5 +1813,5 @@ lsp::PDLLServer::getPDLLViewOutput(const URIForFile &uri,
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     return fileIt->second->getPDLLViewOutput(kind);
-  return llvm::None;
+  return std::nullopt;
 }

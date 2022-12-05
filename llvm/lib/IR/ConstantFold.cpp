@@ -2022,7 +2022,7 @@ static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
   // The combined GEP normally inherits its index inrange attribute from
   // the inner GEP, but if the inner GEP's last index was adjusted by the
   // outer GEP, any inbounds attribute on that index is invalidated.
-  Optional<unsigned> IRIndex = GEP->getInRangeIndex();
+  std::optional<unsigned> IRIndex = GEP->getInRangeIndex();
   if (IRIndex && *IRIndex == GEP->getNumIndices() - 1)
     IRIndex = std::nullopt;
 
@@ -2033,7 +2033,7 @@ static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
 
 Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
                                           bool InBounds,
-                                          Optional<unsigned> InRangeIndex,
+                                          std::optional<unsigned> InRangeIndex,
                                           ArrayRef<Value *> Idxs) {
   if (Idxs.empty()) return C;
 

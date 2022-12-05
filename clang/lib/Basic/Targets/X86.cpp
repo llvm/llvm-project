@@ -1453,7 +1453,7 @@ Optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     // The following currently have unknown cache line sizes (but they are probably all 64):
     // Core
     case CK_None:
-      return None;
+      return std::nullopt;
   }
   llvm_unreachable("Unknown CPU kind");
 }

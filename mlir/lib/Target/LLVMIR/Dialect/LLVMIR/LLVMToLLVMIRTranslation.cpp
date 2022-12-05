@@ -213,7 +213,7 @@ static void setLoopMetadata(Operation &opInst, llvm::Instruction &llvmInst,
 
       SmallVector<llvm::Metadata *> loopOptions;
       // Reserve operand 0 for loop id self reference.
-      auto dummy = llvm::MDNode::getTemporary(ctx, llvm::None);
+      auto dummy = llvm::MDNode::getTemporary(ctx, std::nullopt);
       loopOptions.push_back(dummy.get());
 
       auto loopAttr = attr.cast<DictionaryAttr>();

@@ -1873,7 +1873,7 @@ static Optional<SmallVector<uint64_t, 16>>
 getLikelihoodWeights(ArrayRef<Stmt::Likelihood> Likelihoods) {
   // Are there enough branches to weight them?
   if (Likelihoods.size() <= 1)
-    return None;
+    return std::nullopt;
 
   uint64_t NumUnlikely = 0;
   uint64_t NumNone = 0;
@@ -1894,7 +1894,7 @@ getLikelihoodWeights(ArrayRef<Stmt::Likelihood> Likelihoods) {
 
   // Is there a likelihood attribute used?
   if (NumUnlikely == 0 && NumLikely == 0)
-    return None;
+    return std::nullopt;
 
   // When multiple cases share the same code they can be combined during
   // optimization. In that case the weights of the branch will be the sum of

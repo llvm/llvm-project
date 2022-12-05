@@ -89,7 +89,6 @@ exit:
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT: Successor(s): pred.load
 
@@ -99,6 +98,7 @@ exit:
 ; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
 
 ; CHECK:      pred.load.if:
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE ir<%lv.b> = load ir<%gep.b>
 ; CHECK-NEXT:   Successor(s): pred.load.continue
@@ -168,7 +168,6 @@ exit:
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT: Successor(s): pred.load
 
@@ -178,6 +177,7 @@ exit:
 ; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
 
 ; CHECK:       pred.load.if:
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE ir<%lv.b> = load ir<%gep.b> (S->V)
 ; CHECK-NEXT:   Successor(s): pred.load.continue
@@ -250,7 +250,6 @@ define void @uniform_gep(i64 %k, i16* noalias %A, i16* noalias %B) {
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 21, %iv.next, ir<1>
 ; CHECK-NEXT:   vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<21> + vp<[[CAN_IV]]> * ir<1>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[WIDE_CAN_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule vp<[[WIDE_CAN_IV]]> vp<[[BTC]]>
 ; CHECK-NEXT:   CLONE ir<%gep.A.uniform> = getelementptr ir<%A>, ir<0>
@@ -269,6 +268,7 @@ define void @uniform_gep(i64 %k, i16* noalias %A, i16* noalias %B) {
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>
 ; CHECK-NEXT:     REPLICATE ir<%gep.B> = getelementptr ir<%B>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE store ir<%lv>, ir<%gep.B>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
@@ -325,7 +325,6 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%c.1> = icmp ult ir<%iv>, ir<%j>
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
@@ -341,6 +340,7 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.load.if:
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE ir<%lv.b> = load ir<%gep.b> (S->V)
 ; CHECK-NEXT:   Successor(s): pred.load.continue
@@ -426,7 +426,6 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
 ; CHECK-NEXT:   WIDEN ir<%c.0> = icmp ult ir<%iv>, ir<%j>
@@ -443,6 +442,7 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.load.if:
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE ir<%lv.b> = load ir<%gep.b> (S->V)
 ; CHECK-NEXT:   Successor(s): pred.load.continue
@@ -542,7 +542,6 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
 ; CHECK-NEXT:   WIDEN ir<%c.0> = icmp ult ir<%iv>, ir<%j>
@@ -558,6 +557,7 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.load.if:
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE ir<%lv.b> = load ir<%gep.b>
 ; CHECK-NEXT:   Successor(s): pred.load.continue
@@ -574,7 +574,7 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT: next.0:
 ; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.0>
 ; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = select vp<[[MASK1]]> vp<[[NOT]]> ir<false>
-; CHECK-NEXT:   BLEND %p = ir<0>/vp<%14> vp<%12>/vp<%9>
+; CHECK-NEXT:   BLEND %p = ir<0>/vp<[[MASK3]]> vp<[[PRED]]>/vp<[[MASK2]]>
 ; CHECK-NEXT: Successor(s): then.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.1:

@@ -227,7 +227,7 @@ llvm::Optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   const auto SymbolRange =
       toHalfOpenFileRange(SM, Ctx.getLangOpts(), {BeginLoc, EndLoc});
   if (!SymbolRange)
-    return llvm::None;
+    return std::nullopt;
 
   index::SymbolInfo SymInfo = index::getSymbolInfo(&ND);
   // FIXME: This is not classifying constructors, destructors and operators

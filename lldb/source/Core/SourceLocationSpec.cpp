@@ -69,13 +69,13 @@ std::string SourceLocationSpec::GetString() const {
 llvm::Optional<uint32_t> SourceLocationSpec::GetLine() const {
   uint32_t line = m_declaration.GetLine();
   if (line == 0 || line == LLDB_INVALID_LINE_NUMBER)
-    return llvm::None;
+    return std::nullopt;
   return line;
 }
 
 llvm::Optional<uint16_t> SourceLocationSpec::GetColumn() const {
   uint16_t column = m_declaration.GetColumn();
   if (column == LLDB_INVALID_COLUMN_NUMBER)
-    return llvm::None;
+    return std::nullopt;
   return column;
 }

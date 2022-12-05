@@ -12,7 +12,6 @@
 
 #include "llvm/IR/Module.h"
 #include "SymbolTableListTraitsImpl.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -616,7 +615,7 @@ void Module::setPIELevel(PIELevel::Level PL) {
   addModuleFlag(ModFlagBehavior::Max, "PIE Level", PL);
 }
 
-Optional<CodeModel::Model> Module::getCodeModel() const {
+std::optional<CodeModel::Model> Module::getCodeModel() const {
   auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("Code Model"));
 
   if (!Val)

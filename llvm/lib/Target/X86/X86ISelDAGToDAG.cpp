@@ -2690,7 +2690,7 @@ bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
   if (N->getOpcode() != ISD::TargetGlobalAddress)
     return TM.getCodeModel() == CodeModel::Small;
 
-  Optional<ConstantRange> CR =
+  std::optional<ConstantRange> CR =
       cast<GlobalAddressSDNode>(N)->getGlobal()->getAbsoluteSymbolRange();
   if (!CR)
     return TM.getCodeModel() == CodeModel::Small;
@@ -2872,7 +2872,7 @@ bool X86DAGToDAGISel::selectRelocImm(SDValue N, SDValue &Op) {
 
   // Check that the global's range fits into VT.
   auto *GA = cast<GlobalAddressSDNode>(N.getOperand(0));
-  Optional<ConstantRange> CR = GA->getGlobal()->getAbsoluteSymbolRange();
+  std::optional<ConstantRange> CR = GA->getGlobal()->getAbsoluteSymbolRange();
   if (!CR || CR->getUnsignedMax().uge(1ull << VT.getSizeInBits()))
     return false;
 
@@ -2929,7 +2929,7 @@ bool X86DAGToDAGISel::isSExtAbsoluteSymbolRef(unsigned Width, SDNode *N) const {
   if (!GA)
     return false;
 
-  Optional<ConstantRange> CR = GA->getGlobal()->getAbsoluteSymbolRange();
+  std::optional<ConstantRange> CR = GA->getGlobal()->getAbsoluteSymbolRange();
   if (!CR)
     return Width == 32 && TM.getCodeModel() == CodeModel::Small;
 
@@ -3499,17 +3499,20 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
   // If we have BMI2's BZHI, we are ok with muti-use patterns.
   // Else, if we only have BMI1's BEXTR, we require one-use.
   const bool AllowExtraUsesByDefault = Subtarget->hasBMI2();
-  auto checkUses = [AllowExtraUsesByDefault](SDValue Op, unsigned NUses,
-                                             Optional<bool> AllowExtraUses) {
+  auto checkUses = [AllowExtraUsesByDefault](
+                       SDValue Op, unsigned NUses,
+                       std::optional<bool> AllowExtraUses) {
     return AllowExtraUses.value_or(AllowExtraUsesByDefault) ||
            Op.getNode()->hasNUsesOfValue(NUses, Op.getResNo());
   };
   auto checkOneUse = [checkUses](SDValue Op,
-                                 Optional<bool> AllowExtraUses = std::nullopt) {
+                                 std::optional<bool> AllowExtraUses =
+                                     std::nullopt) {
     return checkUses(Op, 1, AllowExtraUses);
   };
   auto checkTwoUse = [checkUses](SDValue Op,
-                                 Optional<bool> AllowExtraUses = std::nullopt) {
+                                 std::optional<bool> AllowExtraUses =
+                                     std::nullopt) {
     return checkUses(Op, 2, AllowExtraUses);
   };
 

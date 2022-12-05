@@ -238,7 +238,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
         SrcMBB.isInlineAsmBrIndirectTarget());
 
     // FIXME: This is not serialized
-    if (Optional<uint64_t> Weight = SrcMBB.getIrrLoopHeaderWeight())
+    if (std::optional<uint64_t> Weight = SrcMBB.getIrrLoopHeaderWeight())
       DstMBB->setIrrLoopHeaderWeight(*Weight);
   }
 
@@ -426,7 +426,7 @@ parseReducerWorkItem(const char *ToolName, StringRef Filename,
 
       // Hopefully the MIR parsing doesn't depend on any options.
       TargetOptions Options;
-      Optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
+      std::optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
       std::string CPUStr = codegen::getCPUStr();
       std::string FeaturesStr = codegen::getFeaturesStr();
       TM = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(

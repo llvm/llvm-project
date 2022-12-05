@@ -72,7 +72,7 @@ private:
                SmallVectorImpl<Value> &newValues) -> Optional<LogicalResult> {
       if (T derivedType = type.dyn_cast<T>())
         return callback(builder, loc, derivedType, value, newValues);
-      return llvm::None;
+      return std::nullopt;
     };
   }
 

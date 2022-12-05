@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include <optional>
 
 namespace llvm {
 
@@ -81,8 +82,8 @@ private:
   void visitSizeOperand(Value *V, DiagnosticInfoIROptimization &R);
 
   struct VariableInfo {
-    Optional<StringRef> Name;
-    Optional<uint64_t> Size;
+    std::optional<StringRef> Name;
+    std::optional<uint64_t> Size;
     bool isEmpty() const { return !Name && !Size; }
   };
   /// Gather more information about \p V as a variable. This can be debug info,

@@ -200,7 +200,7 @@ std::optional<MemoryBufferRef> macho::readFile(StringRef path) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> mbOrErr = MemoryBuffer::getFile(path);
   if (std::error_code ec = mbOrErr.getError()) {
     error("cannot open " + path + ": " + ec.message());
-    return None;
+    return std::nullopt;
   }
 
   std::unique_ptr<MemoryBuffer> &mb = *mbOrErr;
@@ -228,7 +228,7 @@ std::optional<MemoryBufferRef> macho::readFile(StringRef path) {
     if (reinterpret_cast<const char *>(arch + i + 1) >
         buf + mbref.getBufferSize()) {
       error(path + ": fat_arch struct extends beyond end of file");
-      return None;
+      return std::nullopt;
     }
 
     if (read32be(&arch[i].cputype) != static_cast<uint32_t>(target->cpuType) ||
@@ -246,7 +246,7 @@ std::optional<MemoryBufferRef> macho::readFile(StringRef path) {
   }
 
   error("unable to find matching architecture in " + path);
-  return None;
+  return std::nullopt;
 }
 
 InputFile::InputFile(Kind kind, const InterfaceFile &interface)

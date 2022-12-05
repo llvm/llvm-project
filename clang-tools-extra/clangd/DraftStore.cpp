@@ -20,7 +20,7 @@ llvm::Optional<DraftStore::Draft> DraftStore::getDraft(PathRef File) const {
 
   auto It = Drafts.find(File);
   if (It == Drafts.end())
-    return None;
+    return std::nullopt;
 
   return It->second.D;
 }

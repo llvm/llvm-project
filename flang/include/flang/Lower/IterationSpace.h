@@ -469,7 +469,7 @@ public:
     assert(i < lhsBases.size());
     if (lhsBases[counter])
       return findBinding(*lhsBases[counter]);
-    return llvm::None;
+    return std::nullopt;
   }
 
   /// Return the outermost loop in this FORALL nest.

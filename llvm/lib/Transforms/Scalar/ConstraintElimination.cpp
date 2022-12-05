@@ -289,10 +289,9 @@ decomposeGEP(GetElementPtrInst &GEP,
   return Result;
 }
 
-// Decomposes \p V into a vector of entries of the form { Coefficient, Variable
-// } where Coefficient * Variable. The sum of the pairs equals \p V.  The first
-// pair is the constant-factor and X must be nullptr. If the expression cannot
-// be decomposed, returns an empty vector.
+// Decomposes \p V into a constant offset + list of pairs { Coefficient,
+// Variable } where Coefficient * Variable. The sum of the constant offset and
+// pairs equals \p V.
 static Decomposition decompose(Value *V,
                                SmallVectorImpl<PreconditionTy> &Preconditions,
                                bool IsSigned, const DataLayout &DL) {

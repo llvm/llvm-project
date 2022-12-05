@@ -312,12 +312,12 @@ static ParseResult parseScheduleClause(
       if (parser.parseOperand(*chunkSize) || parser.parseColonType(chunkType))
         return failure();
     } else {
-      chunkSize = llvm::None;
+      chunkSize = std::nullopt;
     }
     break;
   case ClauseScheduleKind::Auto:
   case ClauseScheduleKind::Runtime:
-    chunkSize = llvm::None;
+    chunkSize = std::nullopt;
   }
 
   // If there is a comma, we have one or more modifiers..

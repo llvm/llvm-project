@@ -56,7 +56,7 @@ getBestGuess(llvm::StringRef Search, llvm::ArrayRef<llvm::StringRef> Allowed,
     if (!Res.empty())
       return Res.str();
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::Optional<std::string>
@@ -69,7 +69,7 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
   if (Value.isString())
     return ::getBestGuess(Value.getString(), llvm::makeArrayRef(Allowed),
                           "attr::");
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::Optional<std::string>
@@ -82,7 +82,7 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
   if (Value.isString())
     return ::getBestGuess(Value.getString(), llvm::makeArrayRef(Allowed),
                           "CK_");
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::Optional<std::string>
@@ -96,7 +96,7 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
   if (Value.isString())
     return ::getBestGuess(Value.getString(), llvm::makeArrayRef(Allowed),
                           "OMPC_");
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::Optional<std::string>
@@ -110,7 +110,7 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
   if (Value.isString())
     return ::getBestGuess(Value.getString(), llvm::makeArrayRef(Allowed),
                           "UETT_");
-  return llvm::None;
+  return std::nullopt;
 }
 
 static constexpr std::pair<llvm::StringRef, llvm::Regex::RegexFlags>
@@ -127,7 +127,7 @@ getRegexFlag(llvm::StringRef Flag) {
     if (Flag == StringFlag.first)
       return StringFlag.second;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 static llvm::Optional<llvm::StringRef>
@@ -136,7 +136,7 @@ getCloseRegexMatch(llvm::StringRef Flag) {
     if (Flag.edit_distance(StringFlag.first) < 3)
       return StringFlag.first;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::Optional<llvm::Regex::RegexFlags>
@@ -150,7 +150,7 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
             getRegexFlag(OrFlag.trim()))
       Flag = Flag.value_or(llvm::Regex::NoFlags) | *NextFlag;
     else
-      return None;
+      return std::nullopt;
   }
   return Flag;
 }
@@ -159,7 +159,7 @@ llvm::Optional<std::string>
 clang::ast_matchers::dynamic::internal::ArgTypeTraits<
     llvm::Regex::RegexFlags>::getBestGuess(const VariantValue &Value) {
   if (!Value.isString())
-    return llvm::None;
+    return std::nullopt;
   SmallVector<StringRef, 4> Split;
   llvm::StringRef(Value.getString()).split(Split, '|', -1, false);
   for (llvm::StringRef &Flag : Split) {
@@ -167,9 +167,9 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
             getCloseRegexMatch(Flag.trim()))
       Flag = *BestGuess;
     else
-      return None;
+      return std::nullopt;
   }
   if (Split.empty())
-    return None;
+    return std::nullopt;
   return llvm::join(Split, " | ");
 }

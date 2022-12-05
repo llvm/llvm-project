@@ -223,7 +223,7 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   machinery.returnValues = retValues;
   machinery.coroHandle = coroHdlOp.getHandle();
   machinery.entry = entryBlock;
-  machinery.setError = None; // created lazily only if needed
+  machinery.setError = std::nullopt; // created lazily only if needed
   machinery.cleanup = cleanupBlock;
   machinery.suspend = suspendBlock;
   return machinery;

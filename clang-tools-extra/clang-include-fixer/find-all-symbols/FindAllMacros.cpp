@@ -26,7 +26,7 @@ FindAllMacros::CreateMacroSymbol(const Token &MacroNameTok,
   std::string FilePath =
       getIncludePath(*SM, info->getDefinitionLoc(), Collector);
   if (FilePath.empty())
-    return llvm::None;
+    return std::nullopt;
   return SymbolInfo(MacroNameTok.getIdentifierInfo()->getName(),
                     SymbolInfo::SymbolKind::Macro, FilePath, {});
 }

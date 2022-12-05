@@ -56,7 +56,7 @@ TEST(EnumsGenTest, GeneratedSymbolToStringFn) {
 TEST(EnumsGenTest, GeneratedStringToSymbolFn) {
   EXPECT_EQ(llvm::Optional<FooEnum>(FooEnum::CaseA), ConvertToEnum("CaseA"));
   EXPECT_EQ(llvm::Optional<FooEnum>(FooEnum::CaseB), ConvertToEnum("CaseB"));
-  EXPECT_EQ(llvm::None, ConvertToEnum("X"));
+  EXPECT_EQ(std::nullopt, ConvertToEnum("X"));
 }
 
 TEST(EnumsGenTest, GeneratedUnderlyingType) {
@@ -94,10 +94,10 @@ TEST(EnumsGenTest, GeneratedStringToSymbolForBitEnum) {
   EXPECT_EQ(symbolizeBitEnumWithNone("Bit3|Bit0"),
             BitEnumWithNone::Bit3 | BitEnumWithNone::Bit0);
 
-  EXPECT_EQ(symbolizeBitEnumWithNone("Bit2"), llvm::None);
-  EXPECT_EQ(symbolizeBitEnumWithNone("Bit3 | Bit4"), llvm::None);
+  EXPECT_EQ(symbolizeBitEnumWithNone("Bit2"), std::nullopt);
+  EXPECT_EQ(symbolizeBitEnumWithNone("Bit3 | Bit4"), std::nullopt);
 
-  EXPECT_EQ(symbolizeBitEnumWithoutNone("None"), llvm::None);
+  EXPECT_EQ(symbolizeBitEnumWithoutNone("None"), std::nullopt);
 }
 
 TEST(EnumsGenTest, GeneratedSymbolToStringFnForGroupedBitEnum) {
@@ -115,7 +115,7 @@ TEST(EnumsGenTest, GeneratedSymbolToStringFnForGroupedBitEnum) {
 TEST(EnumsGenTest, GeneratedStringToSymbolForGroupedBitEnum) {
   EXPECT_EQ(symbolizeBitEnumWithGroup("Bit0"), BitEnumWithGroup::Bit0);
   EXPECT_EQ(symbolizeBitEnumWithGroup("Bit3"), BitEnumWithGroup::Bit3);
-  EXPECT_EQ(symbolizeBitEnumWithGroup("Bit5"), llvm::None);
+  EXPECT_EQ(symbolizeBitEnumWithGroup("Bit5"), std::nullopt);
   EXPECT_EQ(symbolizeBitEnumWithGroup("Bit3|Bit0"),
             BitEnumWithGroup::Bit3 | BitEnumWithGroup::Bit0);
 }

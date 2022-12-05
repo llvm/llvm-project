@@ -351,7 +351,7 @@ getCharacterLengthIfStatic(mlir::Type t) {
           hlfir::getFortranElementType(t).dyn_cast<fir::CharacterType>())
     if (charType.hasConstantLen())
       return charType.getLen();
-  return llvm::None;
+  return std::nullopt;
 }
 
 mlir::LogicalResult hlfir::ConcatOp::verify() {

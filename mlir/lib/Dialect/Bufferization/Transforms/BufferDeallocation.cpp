@@ -371,7 +371,8 @@ private:
     // parent operation. In this case, we have to introduce an additional clone
     // for buffer that is passed to the argument.
     SmallVector<RegionSuccessor, 2> successorRegions;
-    regionInterface.getSuccessorRegions(/*index=*/llvm::None, successorRegions);
+    regionInterface.getSuccessorRegions(/*index=*/std::nullopt,
+                                        successorRegions);
     auto *it =
         llvm::find_if(successorRegions, [&](RegionSuccessor &successorRegion) {
           return successorRegion.getSuccessor() == argRegion;

@@ -8161,7 +8161,7 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::None(),
       TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
-      CmdArgs, None, Output));
+      CmdArgs, std::nullopt, Output));
 }
 
 void OffloadBundler::ConstructJobMultipleOutputs(
@@ -8245,7 +8245,7 @@ void OffloadBundler::ConstructJobMultipleOutputs(
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::None(),
       TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
-      CmdArgs, None, Outputs));
+      CmdArgs, std::nullopt, Outputs));
 }
 
 void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,

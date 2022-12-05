@@ -159,9 +159,9 @@ private:
     addProfiledFunction(Samples.getFuncName());
 
     for (const auto &Sample : Samples.getBodySamples()) {
-      for (const auto &Target : Sample.second.getCallTargets()) {
-        addProfiledFunction(Target.first());
-        addProfiledCall(Samples.getFuncName(), Target.first(), Target.second);
+      for (const auto &[Target, Frequency] : Sample.second.getCallTargets()) {
+        addProfiledFunction(Target);
+        addProfiledCall(Samples.getFuncName(), Target, Frequency);
       }
     }
 

@@ -238,7 +238,7 @@ public:
                        llvm::StringRef IncludingFile) const;
 
   /// Calculates an edit that inserts \p VerbatimHeader into code. If the header
-  /// is already included, this returns None.
+  /// is already included, this returns std::nullopt.
   llvm::Optional<TextEdit> insert(llvm::StringRef VerbatimHeader) const;
 
 private:

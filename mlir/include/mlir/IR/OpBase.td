@@ -1035,7 +1035,7 @@ class OptionalAttr<Attr attr> : Attr<attr.predicate, attr.summary> {
   let storageType = attr.storageType;
   let returnType = "::llvm::Optional<" # attr.returnType #">";
   let convertFromStorage = "$_self ? " # returnType # "(" #
-                           attr.convertFromStorage # ") : (::llvm::None)";
+                           attr.convertFromStorage # ") : (::std::nullopt)";
   let valueType = attr.valueType;
   let isOptional = 1;
 

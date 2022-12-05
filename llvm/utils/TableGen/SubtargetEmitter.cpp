@@ -1862,7 +1862,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   if (NumFeatures)
     OS << Target << "FeatureKV, ";
   else
-    OS << "None, ";
+    OS << "std::nullopt, ";
   if (NumProcs)
     OS << Target << "SubTypeKV, ";
   else
@@ -1955,7 +1955,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   if (NumFeatures)
     OS << "makeArrayRef(" << Target << "FeatureKV, " << NumFeatures << "), ";
   else
-    OS << "None, ";
+    OS << "std::nullopt, ";
   if (NumProcs)
     OS << "makeArrayRef(" << Target << "SubTypeKV, " << NumProcs << "), ";
   else

@@ -609,7 +609,7 @@ void CodeGenAction::setUpTargetMachine() {
       theTriple, /*CPU=*/targetOpts.cpu,
       /*Features=*/featuresStr, llvm::TargetOptions(),
       /*Reloc::Model=*/CGOpts.getRelocationModel(),
-      /*CodeModel::Model=*/llvm::None, OptLevel));
+      /*CodeModel::Model=*/std::nullopt, OptLevel));
   assert(tm && "Failed to create TargetMachine");
 }
 
@@ -696,7 +696,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   // Create the pass manager builder.
   llvm::PassInstrumentationCallbacks pic;
   llvm::PipelineTuningOptions pto;
-  llvm::Optional<llvm::PGOOptions> pgoOpt;
+  std::optional<llvm::PGOOptions> pgoOpt;
   llvm::StandardInstrumentations si(
       llvmModule->getContext(), opts.DebugPassManager);
   si.registerCallbacks(pic, &fam);

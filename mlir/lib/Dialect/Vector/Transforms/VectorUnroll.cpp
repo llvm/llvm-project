@@ -132,28 +132,28 @@ static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
                         resultTypes, op->getAttrs());
 }
 
-/// Return the target shape for unrolling for the given `op`. Return llvm::None
-/// if the op shouldn't be or cannot be unrolled.
+/// Return the target shape for unrolling for the given `op`. Return
+/// std::nullopt if the op shouldn't be or cannot be unrolled.
 static Optional<SmallVector<int64_t>>
 getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
   if (options.filterConstraint && failed(options.filterConstraint(op)))
-    return llvm::None;
+    return std::nullopt;
   assert(options.nativeShape &&
          "vector unrolling expects the native shape or native"
          "shape call back function to be set");
   auto unrollableVectorOp = dyn_cast<VectorUnrollOpInterface>(op);
   if (!unrollableVectorOp)
-    return llvm::None;
+    return std::nullopt;
   auto maybeUnrollShape = unrollableVectorOp.getShapeForUnroll();
   if (!maybeUnrollShape)
-    return llvm::None;
+    return std::nullopt;
   Optional<SmallVector<int64_t>> targetShape = options.nativeShape(op);
   if (!targetShape)
-    return llvm::None;
+    return std::nullopt;
   auto maybeShapeRatio = computeShapeRatio(*maybeUnrollShape, *targetShape);
   if (!maybeShapeRatio ||
       llvm::all_of(*maybeShapeRatio, [](int64_t v) { return v == 1; }))
-    return llvm::None;
+    return std::nullopt;
   return targetShape;
 }
 

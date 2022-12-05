@@ -362,7 +362,7 @@ static void emitAvailabilityQueryForIntEnum(const Record &enumDef,
     if (classCasePair.getValue().size() < enumAttr.getAllCases().size())
       os << "  default: break;\n";
     os << "  }\n"
-       << "  return llvm::None;\n"
+       << "  return std::nullopt;\n"
        << "}\n";
   }
 }
@@ -407,7 +407,7 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
     }
     os << "  default: break;\n";
     os << "  }\n"
-       << "  return llvm::None;\n"
+       << "  return std::nullopt;\n"
        << "}\n";
   }
 }

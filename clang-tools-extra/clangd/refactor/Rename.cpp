@@ -42,11 +42,11 @@ namespace {
 llvm::Optional<std::string> filePath(const SymbolLocation &Loc,
                                      llvm::StringRef HintFilePath) {
   if (!Loc)
-    return None;
+    return std::nullopt;
   auto Path = URI::resolve(Loc.FileURI, HintFilePath);
   if (!Path) {
     elog("Could not resolve URI {0}: {1}", Loc.FileURI, Path.takeError());
-    return None;
+    return std::nullopt;
   }
 
   return *Path;
@@ -217,7 +217,7 @@ llvm::Optional<ReasonToReject> renameable(const NamedDecl &RenameDecl,
   }
   // function-local symbols is safe to rename.
   if (RenameDecl.getParentFunctionOrMethod())
-    return None;
+    return std::nullopt;
 
   if (isExcluded(RenameDecl))
     return ReasonToReject::UnsupportedSymbol;
@@ -239,7 +239,7 @@ llvm::Optional<ReasonToReject> renameable(const NamedDecl &RenameDecl,
           IsMainFileOnly))
     return ReasonToReject::NonIndexable;
 
-  return None;
+  return std::nullopt;
 }
 
 llvm::Error makeError(ReasonToReject Reason) {
@@ -935,7 +935,7 @@ llvm::Optional<std::vector<Range>> getMappedRanges(ArrayRef<Range> Indexed,
     SPAN_ATTACH(
         Tracer, "error",
         "The number of lexed occurrences is less than indexed occurrences");
-    return llvm::None;
+    return std::nullopt;
   }
   // Fast check for the special subset case.
   if (std::includes(Indexed.begin(), Indexed.end(), Lexed.begin(), Lexed.end()))
@@ -962,12 +962,12 @@ llvm::Optional<std::vector<Range>> getMappedRanges(ArrayRef<Range> Indexed,
   if (HasMultiple) {
     vlog("The best near miss is not unique.");
     SPAN_ATTACH(Tracer, "error", "The best near miss is not unique");
-    return llvm::None;
+    return std::nullopt;
   }
   if (Best.empty()) {
     vlog("Didn't find a near miss.");
     SPAN_ATTACH(Tracer, "error", "Didn't find a near miss");
-    return llvm::None;
+    return std::nullopt;
   }
   std::vector<Range> Mapped;
   for (auto I : Best)

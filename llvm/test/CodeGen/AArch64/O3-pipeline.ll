@@ -66,6 +66,10 @@
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       TLS Variable Hoist
+; CHECK-NEXT:       Lazy Branch Probability Analysis
+; CHECK-NEXT:       Lazy Block Frequency Analysis
+; CHECK-NEXT:       Optimization Remark Emitter
+; CHECK-NEXT:       Optimize selects
 ; CHECK-NEXT:     Stack Safety Analysis
 ; CHECK-NEXT:       FunctionPass Manager
 ; CHECK-NEXT:         Dominator Tree Construction
@@ -215,6 +219,7 @@
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
+; CHECK-NEXT:       Machine Sanitizer Binary Metadata
 ; CHECK-NEXT:     Machine Outliner
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Insert CFI remember/restore state instructions
