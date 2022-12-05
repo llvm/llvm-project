@@ -23,13 +23,20 @@ int foo() {
   return 1;
 }
 
-// CHECK: define dso_local i32 @foo() #0 {
-// CHECK:   @__msan_retval_tls
+// CLEAN:   define dso_local i32 @foo() #0 {
+// NOUNDEF: define dso_local noundef i32 @foo() #0 {
+// CLEAN:        @__msan_retval_tls
+// NOUNDEF_ONLY: @__msan_retval_tls
+// EAGER-NOT:    @__msan_retval_tls
 // CHECK: }
 
 int noret() {
 }
 
-// CHECK: define dso_local i32 @noret() #0 {
+// CLEAN:   define dso_local i32 @noret() #0 {   
+// NOUNDEF: define dso_local noundef i32 @noret() #0 {
 // CHECK:   %retval = alloca
+// CLEAN:        @__msan_retval_tls
+// NOUNDEF_ONLY: @__msan_retval_tls
+// EAGER-NOT:    @__msan_retval_tls
 // CHECK: }
