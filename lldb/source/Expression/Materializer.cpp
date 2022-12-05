@@ -773,7 +773,7 @@ private:
   /// Returns size in bytes of the type associated with this variable
   ///
   /// \returns On success, returns byte size of the type associated
-  ///          with this variable. Returns NoneType otherwise.
+  ///          with this variable. Returns std::nullopt otherwise.
   virtual llvm::Optional<uint64_t>
   GetByteSize(ExecutionContextScope *scope) const = 0;
 
@@ -784,7 +784,7 @@ private:
   /// Returns alignment of the type associated with this variable in bits.
   ///
   /// \returns On success, returns alignment in bits for the type associated
-  ///          with this variable. Returns NoneType otherwise.
+  ///          with this variable. Returns std::nullopt otherwise.
   virtual llvm::Optional<size_t>
   GetTypeBitAlign(ExecutionContextScope *scope) const = 0;
 

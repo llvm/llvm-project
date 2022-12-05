@@ -2273,7 +2273,7 @@ SymbolFileNativePDB::FindSymbolScope(PdbCompilandSymId id) {
     // If this exact symbol opens a scope, we can just directly access its
     // parent.
     id.offset = getScopeParentOffset(sym);
-    // Global symbols have parent offset of 0.  Return llvm::None to indicate
+    // Global symbols have parent offset of 0.  Return std::nullopt to indicate
     // this.
     if (id.offset == 0)
       return std::nullopt;

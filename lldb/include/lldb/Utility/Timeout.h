@@ -21,7 +21,7 @@ namespace lldb_private {
 // from Timeout<std::milli> to Timeout<std::micro>.
 //
 // The intended meaning of the values is:
-// - llvm::None - no timeout, the call should wait forever - 0 - poll, only
+// - std::nullopt - no timeout, the call should wait forever - 0 - poll, only
 // complete the call if it will not block - >0 - wait for a given number of
 // units for the result
 template <typename Ratio>

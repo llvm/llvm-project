@@ -47,7 +47,7 @@ MemoryTagMap::GetTags(lldb::addr_t addr, size_t len) const {
       got_valid_tags = true;
   }
 
-  // To save the caller checking if every item is llvm::None,
+  // To save the caller checking if every item is std::nullopt,
   // we return an empty vector if we got no tags at all.
   if (got_valid_tags)
     return tags;

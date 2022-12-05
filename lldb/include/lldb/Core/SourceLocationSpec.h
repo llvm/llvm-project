@@ -29,7 +29,7 @@ public:
   /// Constructor.
   ///
   /// Takes a \a file_spec with a \a line number and a \a column number. If
-  /// \a column is null or not provided, it is set to llvm::None.
+  /// \a column is null or not provided, it is set to std::nullopt.
   ///
   /// \param[in] file_spec
   ///     The full or partial path to a file.
