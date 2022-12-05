@@ -88,10 +88,10 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32* %in, i32* %out) {
+    ptr %in, ptr %out) {
 entry:
-  %val = load volatile i32, i32* %in, align 4
-  store i32 %val, i32* %out
+  %val = load volatile i32, ptr %in, align 4
+  store i32 %val, ptr %out
   ret void
 }
 
@@ -189,12 +189,12 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32* %in, i32* %out) {
+    ptr %in, ptr %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %val.gep = getelementptr inbounds i32, i32* %in, i32 %tid
-  %val = load volatile i32, i32* %val.gep, align 4
-  store i32 %val, i32* %out
+  %val.gep = getelementptr inbounds i32, ptr %in, i32 %tid
+  %val = load volatile i32, ptr %val.gep, align 4
+  store i32 %val, ptr %out
   ret void
 }
 
@@ -280,10 +280,10 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32* %in, i32* %out) {
+    ptr %in, ptr %out) {
 entry:
-  %val = load i32, i32* %in, align 4
-  store volatile i32 %val, i32* %out
+  %val = load i32, ptr %in, align 4
+  store volatile i32 %val, ptr %out
   ret void
 }
 
@@ -381,12 +381,12 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32* %in, i32* %out) {
+    ptr %in, ptr %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %val = load i32, i32* %in, align 4
-  %out.gep = getelementptr inbounds i32, i32* %out, i32 %tid
-  store volatile i32 %val, i32* %out.gep
+  %val = load i32, ptr %in, align 4
+  %out.gep = getelementptr inbounds i32, ptr %out, i32 %tid
+  store volatile i32 %val, ptr %out.gep
   ret void
 }
 
@@ -472,10 +472,10 @@ define amdgpu_kernel void @flat_volatile_workgroup_acquire_load(
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32* %in, i32* %out) {
+    ptr %in, ptr %out) {
 entry:
-  %val = load atomic volatile i32, i32* %in syncscope("workgroup") acquire, align 4
-  store i32 %val, i32* %out
+  %val = load atomic volatile i32, ptr %in syncscope("workgroup") acquire, align 4
+  store i32 %val, ptr %out
   ret void
 }
 
@@ -557,9 +557,9 @@ define amdgpu_kernel void @flat_volatile_workgroup_release_store(
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-   i32 %in, i32* %out) {
+   i32 %in, ptr %out) {
 entry:
-  store atomic volatile i32 %in, i32* %out syncscope("workgroup") release, align 4
+  store atomic volatile i32 %in, ptr %out syncscope("workgroup") release, align 4
   ret void
 }
 
