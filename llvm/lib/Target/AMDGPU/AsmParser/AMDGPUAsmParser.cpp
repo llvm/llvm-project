@@ -3378,7 +3378,8 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
                                        unsigned OpIdx) const {
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
 
-  if (!AMDGPU::isSISrcOperand(Desc, OpIdx)) {
+  if (!AMDGPU::isSISrcOperand(Desc, OpIdx) ||
+      AMDGPU::isKImmOperand(Desc, OpIdx)) {
     return false;
   }
 
