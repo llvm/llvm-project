@@ -369,7 +369,7 @@ public:
 };
 
 /// \returns The splat index of a G_SHUFFLE_VECTOR \p MI when \p MI is a splat.
-/// If \p MI is not a splat, returns None.
+/// If \p MI is not a splat, returns std::nullopt.
 Optional<int> getSplatIndex(MachineInstr &MI);
 
 /// \returns the scalar integral splat value of \p Reg if possible.

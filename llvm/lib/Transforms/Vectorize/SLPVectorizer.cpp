@@ -1641,7 +1641,7 @@ public:
 
     // Search all operands in Ops[*][Lane] for the one that matches best
     // Ops[OpIdx][LastLane] and return its opreand index.
-    // If no good match can be found, return None.
+    // If no good match can be found, return std::nullopt.
     Optional<unsigned> getBestOperand(unsigned OpIdx, int Lane, int LastLane,
                                       ArrayRef<ReorderingMode> ReorderingModes,
                                       ArrayRef<Value *> MainAltOps) {
@@ -1721,7 +1721,7 @@ public:
         getData(*BestOp.Idx, Lane).IsUsed = IsUsed;
         return BestOp.Idx;
       }
-      // If we could not find a good match return None.
+      // If we could not find a good match return std::nullopt.
       return std::nullopt;
     }
 
