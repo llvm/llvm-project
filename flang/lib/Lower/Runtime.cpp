@@ -199,6 +199,24 @@ void Fortran::lower::genPointerAssociate(fir::FirOpBuilder &builder,
   builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
 
+void Fortran::lower::genPointerAssociateRemapping(fir::FirOpBuilder &builder,
+                                                  mlir::Location loc,
+                                                  mlir::Value pointer,
+                                                  mlir::Value target,
+                                                  mlir::Value bounds) {
+  mlir::func::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(PointerAssociateRemapping)>(loc,
+                                                                       builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, func.getFunctionType(), pointer, target, bounds, sourceFile,
+      sourceLine);
+  builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
 mlir::Value Fortran::lower::genCpuTime(fir::FirOpBuilder &builder,
                                        mlir::Location loc) {
   mlir::func::FuncOp func =

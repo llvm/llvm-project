@@ -2782,15 +2782,6 @@ private:
             // bounds-remapping is a pair, lower bound and upper bound.
             [&](const Fortran::evaluate::Assignment::BoundsRemapping
                     &boundExprs) {
-              std::optional<Fortran::evaluate::DynamicType> lhsType =
-                  assign.lhs.GetType();
-              std::optional<Fortran::evaluate::DynamicType> rhsType =
-                  assign.rhs.GetType();
-              // Polymorphic lhs/rhs may need more care. See F2018 10.2.2.3.
-              if ((lhsType && lhsType->IsPolymorphic()) ||
-                  (rhsType && rhsType->IsPolymorphic()))
-                TODO(loc, "pointer assignment involving polymorphic entity");
-
               llvm::SmallVector<mlir::Value> lbounds;
               llvm::SmallVector<mlir::Value> ubounds;
               for (const std::pair<Fortran::evaluate::ExtentExpr,
@@ -2802,6 +2793,61 @@ private:
                     fir::getBase(genExprValue(toEvExpr(lbExpr), stmtCtx)));
                 ubounds.push_back(
                     fir::getBase(genExprValue(toEvExpr(ubExpr), stmtCtx)));
+              }
+
+              std::optional<Fortran::evaluate::DynamicType> lhsType =
+                  assign.lhs.GetType();
+              std::optional<Fortran::evaluate::DynamicType> rhsType =
+                  assign.rhs.GetType();
+              // Polymorphic lhs/rhs need more care. See F2018 10.2.2.3.
+              if ((lhsType && lhsType->IsPolymorphic()) ||
+                  (rhsType && rhsType->IsPolymorphic())) {
+                if (explicitIterationSpace())
+                  TODO(loc, "polymorphic pointer assignment in FORALL");
+                
+                mlir::Value lhs = genExprMutableBox(loc, assign.lhs).getAddr();
+                mlir::Value rhs =
+                    fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));
+
+                // Create the 2xnewRank array with the bounds to be passed to
+                // the runtime as a descriptor.
+                assert(lbounds.size() && ubounds.size());
+                fir::SequenceType::Shape shape(2, lbounds.size());
+                mlir::Type indexTy = builder->getIndexType();
+                mlir::Type boundArrayTy =
+                    fir::SequenceType::get(shape, builder->getI64Type());
+                mlir::Value boundArray =
+                    builder->create<fir::AllocaOp>(loc, boundArrayTy);
+                mlir::Value array =
+                    builder->create<fir::UndefOp>(loc, boundArrayTy);
+                llvm::SmallVector<mlir::Value> exts;
+                mlir::Value c2 =
+                    builder->createIntegerConstant(loc, indexTy, 2);
+                for (unsigned i = 0; i < lbounds.size(); ++i) {
+                  array = builder->create<fir::InsertValueOp>(
+                      loc, boundArrayTy, array, lbounds[i],
+                      builder->getArrayAttr(
+                          {builder->getIntegerAttr(builder->getIndexType(),
+                                                   static_cast<int>(i)),
+                           builder->getIntegerAttr(builder->getIndexType(),
+                                                   static_cast<int>(0))}));
+                  array = builder->create<fir::InsertValueOp>(
+                      loc, boundArrayTy, array, ubounds[i],
+                      builder->getArrayAttr(
+                          {builder->getIntegerAttr(builder->getIndexType(),
+                                                   static_cast<int>(i)),
+                           builder->getIntegerAttr(builder->getIndexType(),
+                                                   static_cast<int>(1))}));
+                  exts.push_back(c2);
+                }
+                builder->create<fir::StoreOp>(loc, array, boundArray);
+                mlir::Type boxTy = fir::BoxType::get(boundArrayTy);
+                mlir::Value shapeOp = builder->genShape(loc, exts);
+                mlir::Value boundsDesc = builder->create<fir::EmboxOp>(
+                    loc, boxTy, boundArray, shapeOp);
+                Fortran::lower::genPointerAssociateRemapping(*builder, loc, lhs,
+                                                             rhs, boundsDesc);
+                return;
               }
               if (explicitIterationSpace()) {
                 // Pointer assignment in FORALL context. Copy the rhs box value
