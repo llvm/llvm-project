@@ -44,8 +44,8 @@ public:
 
   //
   // Derived classes should provide the following method which performs the
-  // actual conversion. It should return llvm::None upon conversion failure and
-  // return the converted operation upon success.
+  // actual conversion. It should return std::nullopt upon conversion failure
+  // and return the converted operation upon success.
   //
   // Optional<SourceOp> convertSourceOp(SourceOp op, OpAdaptor adaptor,
   //                                    ConversionPatternRewriter &rewriter,

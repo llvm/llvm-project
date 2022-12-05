@@ -40,7 +40,7 @@ StringRef TypeConstraint::getVariadicOfVariadicSegmentSizeAttr() const {
 }
 
 // Returns the builder call for this constraint if this is a buildable type,
-// returns None otherwise.
+// returns std::nullopt otherwise.
 Optional<StringRef> TypeConstraint::getBuilderCall() const {
   const llvm::Record *baseType = def;
   if (isVariableLength())

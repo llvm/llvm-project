@@ -179,15 +179,15 @@ public:
 
   /// Get an iterator range for all of the uses, for any symbol, that are nested
   /// within the given operation 'from'. This does not traverse into any nested
-  /// symbol tables. This function returns None if there are any unknown
+  /// symbol tables. This function returns std::nullopt if there are any unknown
   /// operations that may potentially be symbol tables.
   static Optional<UseRange> getSymbolUses(Operation *from);
   static Optional<UseRange> getSymbolUses(Region *from);
 
   /// Get all of the uses of the given symbol that are nested within the given
   /// operation 'from'. This does not traverse into any nested symbol tables.
-  /// This function returns None if there are any unknown operations that may
-  /// potentially be symbol tables.
+  /// This function returns std::nullopt if there are any unknown operations
+  /// that may potentially be symbol tables.
   static Optional<UseRange> getSymbolUses(StringAttr symbol, Operation *from);
   static Optional<UseRange> getSymbolUses(Operation *symbol, Operation *from);
   static Optional<UseRange> getSymbolUses(StringAttr symbol, Region *from);

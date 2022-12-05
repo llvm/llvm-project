@@ -226,7 +226,7 @@ static void emitMaxValueFn(const Record &enumDef, raw_ostream &os) {
   os << "}\n\n";
 }
 
-// Returns the EnumAttrCase whose value is zero if exists; returns llvm::None
+// Returns the EnumAttrCase whose value is zero if exists; returns std::nullopt
 // otherwise.
 static llvm::Optional<EnumAttrCase>
 getAllBitsUnsetCase(llvm::ArrayRef<EnumAttrCase> cases) {

@@ -2471,7 +2471,7 @@ static Optional<LogicalResult> checkRangeForElement(
     // We found a closing element that is valid.
     return success();
   }
-  // Return None to indicate that we reached the end.
+  // Return std::nullopt to indicate that we reached the end.
   return std::nullopt;
 }
 

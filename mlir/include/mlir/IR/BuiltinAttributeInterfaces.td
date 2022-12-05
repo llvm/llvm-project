@@ -393,7 +393,7 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
     // Failable Value Iteration
 
     /// If this attribute supports iterating over element values of type `T`,
-    /// return the iterable range. Otherwise, return llvm::None.
+    /// return the iterable range. Otherwise, return std::nullopt.
     template <typename T>
     DefaultValueCheckT<T, Optional<iterator_range<T>>> tryGetValues() const {
       if (Optional<iterator<T>> beginIt = try_value_begin<T>())
@@ -404,7 +404,7 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
     DefaultValueCheckT<T, Optional<iterator<T>>> try_value_begin() const;
 
     /// If this attribute supports iterating over element values of type `T`,
-    /// return the iterable range. Otherwise, return llvm::None.
+    /// return the iterable range. Otherwise, return std::nullopt.
     template <typename T, typename = DerivedAttrValueCheckT<T>>
     Optional<DerivedAttrValueIteratorRange<T>> tryGetValues() const {
       auto values = tryGetValues<Attribute>();

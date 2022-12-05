@@ -576,7 +576,7 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary", [
     static bool sortInPlace(SmallVectorImpl<NamedAttribute> &array);
 
     /// Returns an entry with a duplicate name in `array`, if it exists, else
-    /// returns llvm::None. If `isSorted` is true, the array is assumed to be
+    /// returns std::nullopt. If `isSorted` is true, the array is assumed to be
     /// sorted else it will be sorted in place before finding the duplicate entry.
     static Optional<NamedAttribute>
     findDuplicate(SmallVectorImpl<NamedAttribute> &array, bool isSorted);
