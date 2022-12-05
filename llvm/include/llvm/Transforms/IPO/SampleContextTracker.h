@@ -51,7 +51,7 @@ public:
   StringRef getFuncName() const;
   FunctionSamples *getFunctionSamples() const;
   void setFunctionSamples(FunctionSamples *FSamples);
-  Optional<uint32_t> getFunctionSize() const;
+  std::optional<uint32_t> getFunctionSize() const;
   void addFunctionSize(uint32_t FSize);
   LineLocation getCallSiteLoc() const;
   ContextTrieNode *getParentContext() const;
@@ -74,7 +74,7 @@ private:
   FunctionSamples *FuncSamples;
 
   // Function size for current context
-  Optional<uint32_t> FuncSize;
+  std::optional<uint32_t> FuncSize;
 
   // Callsite location in parent context
   LineLocation CallSiteLoc;

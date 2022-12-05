@@ -494,7 +494,7 @@ protected:
 
   bool inlineHotFunctions(Function &F,
                           DenseSet<GlobalValue::GUID> &InlinedGUIDs);
-  Optional<InlineCost> getExternalInlineAdvisorCost(CallBase &CB);
+  std::optional<InlineCost> getExternalInlineAdvisorCost(CallBase &CB);
   bool getExternalInlineAdvisorShouldInline(CallBase &CB);
   InlineCost shouldInlineCandidate(InlineCandidate &Candidate);
   bool getInlineCandidate(InlineCandidate *NewCandidate, CallBase *CB);
@@ -1320,7 +1320,7 @@ bool SampleProfileLoader::getInlineCandidate(InlineCandidate *NewCandidate,
   return true;
 }
 
-Optional<InlineCost>
+std::optional<InlineCost>
 SampleProfileLoader::getExternalInlineAdvisorCost(CallBase &CB) {
   std::unique_ptr<InlineAdvice> Advice = nullptr;
   if (ExternalInlineAdvisor) {
@@ -1339,13 +1339,13 @@ SampleProfileLoader::getExternalInlineAdvisorCost(CallBase &CB) {
 }
 
 bool SampleProfileLoader::getExternalInlineAdvisorShouldInline(CallBase &CB) {
-  Optional<InlineCost> Cost = getExternalInlineAdvisorCost(CB);
+  std::optional<InlineCost> Cost = getExternalInlineAdvisorCost(CB);
   return Cost ? !!Cost.value() : false;
 }
 
 InlineCost
 SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
-  if (Optional<InlineCost> ReplayCost =
+  if (std::optional<InlineCost> ReplayCost =
           getExternalInlineAdvisorCost(*Candidate.CallInstr))
     return ReplayCost.value();
   // Adjust threshold based on call site hotness, only do this for callsite
