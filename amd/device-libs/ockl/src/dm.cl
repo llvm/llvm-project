@@ -337,7 +337,7 @@ static uint
 size_to_kind(uint sz)
 {
     sz = sz < 16 ? 16 : sz;
-    uint b = 31 - __ockl_clz_u32(sz);
+    uint b = 31 - BUILTIN_CLZ_U32(sz);
     uint v = 1 << b;
     return ((b - 4) << 1) + (sz > v) + (sz > (v | (v >> 1)));
 }

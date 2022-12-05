@@ -6,6 +6,7 @@
  *===------------------------------------------------------------------------*/
 
 #include "int.h"
+#include "irif.h"
 
 #define UEXPATTR __attribute__((overloadable, const))
 UEXP(char,ctz)
@@ -20,48 +21,48 @@ UEXP(ulong,ctz)
 UEXPATTR char
 ctz(char x)
 {
-    return (char)__ockl_ctz_u8((uchar)x);
+    return (char)BUILTIN_CTZ_U8((uchar)x);
 }
 
 UEXPATTR uchar
 ctz(uchar x)
 {
-    return __ockl_ctz_u8(x);
+    return BUILTIN_CTZ_U8(x);
 }
 
 UEXPATTR short
 ctz(short x)
 {
-    return (short)__ockl_ctz_u16((ushort)x);
+    return (short)BUILTIN_CTZ_U16((ushort)x);
 }
 
 UEXPATTR ushort
 ctz(ushort x)
 {
-    return __ockl_ctz_u16(x);
+    return BUILTIN_CTZ_U16(x);
 }
 
 UEXPATTR int
 ctz(int x)
 {
-    return (int)__ockl_ctz_u32((uint)x);
+    return (int)BUILTIN_CTZ_U32((uint)x);
 }
 
 UEXPATTR uint
 ctz(uint x)
 {
-    return __ockl_ctz_u32(x);
+    return BUILTIN_CTZ_U32(x);
 }
 
 UEXPATTR long
 ctz(long x)
 {
-    return (long)__ockl_ctz_u64((ulong)x);
+    return (long)BUILTIN_CTZ_U64((ulong)x);
 }
 
 UEXPATTR ulong
 ctz(ulong x)
 {
-    return __ockl_ctz_u64(x);
+    return BUILTIN_CTZ_U64(x);
 }
 
