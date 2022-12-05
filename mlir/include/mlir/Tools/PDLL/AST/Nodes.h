@@ -668,7 +668,7 @@ public:
   void setDocComment(Context &ctx, StringRef comment);
 
   /// Return the documentation comment attached to this decl if it has been set.
-  /// Otherwise, returns None.
+  /// Otherwise, returns std::nullopt.
   Optional<StringRef> getDocComment() const { return docComment; }
 
 protected:
@@ -901,8 +901,8 @@ public:
     return const_cast<UserConstraintDecl *>(this)->getInputs();
   }
 
-  /// Return the explicit native type to use for the given input. Returns None
-  /// if no explicit type was set.
+  /// Return the explicit native type to use for the given input. Returns
+  /// std::nullopt if no explicit type was set.
   Optional<StringRef> getNativeInputType(unsigned index) const;
 
   /// Return the explicit results of the constraint declaration. May be empty,

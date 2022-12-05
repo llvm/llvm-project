@@ -76,7 +76,7 @@ public:
       return opView.get<Value>();
     }
     // Return the indexing map of the operand/result in `opView` specified in
-    // the owning LinalgOp. If the owner is not a LinalgOp returns llvm::None.
+    // the owning LinalgOp. If the owner is not a LinalgOp returns std::nullopt.
     static Optional<AffineMap> getIndexingMap(OpView opView) {
       auto owner = dyn_cast<LinalgOp>(getOwner(opView));
       if (!owner)
@@ -87,7 +87,7 @@ public:
           opView.get<Value>().cast<OpResult>().getResultNumber()));
     }
     // Return the operand number if the `opView` is an OpOperand *. Otherwise
-    // return llvm::None.
+    // return std::nullopt.
     static Optional<unsigned> getOperandNumber(OpView opView) {
       if (OpOperand *operand = opView.dyn_cast<OpOperand *>())
         return operand->getOperandNumber();
@@ -126,13 +126,13 @@ public:
     }
 
     // If the dependent OpView is a result value, return the result
-    // number. Return llvm::None otherwise.
+    // number. Return std::nullopt otherwise.
     Optional<unsigned> getDependentOpViewResultNum() const {
       return getResultNumber(dependentOpView);
     }
 
     // If the dependent OpView is a result value, return the result
-    // number. Return llvm::None otherwise.
+    // number. Return std::nullopt otherwise.
     Optional<unsigned> getIndexingOpViewResultNum() const {
       return getResultNumber(indexingOpView);
     }

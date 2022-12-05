@@ -64,7 +64,7 @@ SmallVector<ReassociationIndices, 2> convertReassociationMapsToIndices(
     OpBuilder &b, ArrayRef<ReassociationExprs> reassociationExprs);
 
 /// Return the reassociations maps to use to reshape given the source type and
-/// the target type when possible. Return llvm::None when this computation
+/// the target type when possible. Return std::nullopt when this computation
 /// failed.
 Optional<SmallVector<ReassociationIndices>>
 getReassociationIndicesForReshape(ShapedType sourceType, ShapedType targetType);

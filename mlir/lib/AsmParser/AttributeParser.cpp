@@ -1166,8 +1166,8 @@ Attribute Parser::parseStridedLayoutAttr() {
     return nullptr;
 
   // Parses either an integer token or a question mark token. Reports an error
-  // and returns None if the current token is neither. The integer token must
-  // fit into int64_t limits.
+  // and returns std::nullopt if the current token is neither. The integer token
+  // must fit into int64_t limits.
   auto parseStrideOrOffset = [&]() -> Optional<int64_t> {
     if (consumeIf(Token::question))
       return ShapedType::kDynamic;

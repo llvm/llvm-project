@@ -153,7 +153,7 @@ static Optional<unsigned> getResultNumberFromLoc(SMLoc loc) {
 }
 
 /// Given a source location range, return the text covered by the given range.
-/// If the range is invalid, returns None.
+/// If the range is invalid, returns std::nullopt.
 static Optional<StringRef> getTextFromRange(SMRange range) {
   if (!range.isValid())
     return std::nullopt;
