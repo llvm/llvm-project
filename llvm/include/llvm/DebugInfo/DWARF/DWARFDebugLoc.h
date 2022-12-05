@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGLOC_H
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGLOC_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/Support/Errc.h"
@@ -66,14 +65,15 @@ public:
   /// can attempt to parse another list after the current one (\p Offset will be
   /// updated to point past the end of the current list).
   bool dumpLocationList(uint64_t *Offset, raw_ostream &OS,
-                        Optional<object::SectionedAddress> BaseAddr,
+                        std::optional<object::SectionedAddress> BaseAddr,
                         const MCRegisterInfo *MRI, const DWARFObject &Obj,
                         DWARFUnit *U, DIDumpOptions DumpOpts,
                         unsigned Indent) const;
 
   Error visitAbsoluteLocationList(
-      uint64_t Offset, Optional<object::SectionedAddress> BaseAddr,
-      std::function<Optional<object::SectionedAddress>(uint32_t)> LookupAddr,
+      uint64_t Offset, std::optional<object::SectionedAddress> BaseAddr,
+      std::function<std::optional<object::SectionedAddress>(uint32_t)>
+          LookupAddr,
       function_ref<bool(Expected<DWARFLocationExpression>)> Callback) const;
 
   const DWARFDataExtractor &getData() { return Data; }
@@ -111,7 +111,7 @@ public:
   /// Print the location lists found within the debug_loc section.
   void dump(raw_ostream &OS, const MCRegisterInfo *RegInfo,
             const DWARFObject &Obj, DIDumpOptions DumpOpts,
-            Optional<uint64_t> Offset) const;
+            std::optional<uint64_t> Offset) const;
 
   Error visitLocationList(
       uint64_t *Offset,

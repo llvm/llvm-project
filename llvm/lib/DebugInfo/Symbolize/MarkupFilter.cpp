@@ -37,7 +37,7 @@ using namespace llvm;
 using namespace llvm::symbolize;
 
 MarkupFilter::MarkupFilter(raw_ostream &OS, LLVMSymbolizer &Symbolizer,
-                           Optional<bool> ColorsEnabled)
+                           std::optional<bool> ColorsEnabled)
     : OS(OS), Symbolizer(Symbolizer),
       ColorsEnabled(
           ColorsEnabled.value_or(WithColor::defaultAutoDetectFunction()(OS))) {}
@@ -51,7 +51,7 @@ void MarkupFilter::filter(StringRef Line) {
   // See if the line is a contextual (i.e. contains a contextual element).
   // In this case, anything after the contextual element is elided, or the whole
   // line may be elided.
-  while (Optional<MarkupNode> Node = Parser.nextNode()) {
+  while (std::optional<MarkupNode> Node = Parser.nextNode()) {
     // If this was a contextual line, then summarily stop processing.
     if (tryContextualElement(*Node, DeferredNodes))
       return;
@@ -67,7 +67,7 @@ void MarkupFilter::filter(StringRef Line) {
 
 void MarkupFilter::finish() {
   Parser.flush();
-  while (Optional<MarkupNode> Node = Parser.nextNode())
+  while (std::optional<MarkupNode> Node = Parser.nextNode())
     filterNode(*Node);
   endAnyModuleInfoLine();
   resetColor();
@@ -96,7 +96,7 @@ bool MarkupFilter::tryMMap(const MarkupNode &Node,
                            const SmallVector<MarkupNode> &DeferredNodes) {
   if (Node.Tag != "mmap")
     return false;
-  Optional<MMap> ParsedMMap = parseMMap(Node);
+  std::optional<MMap> ParsedMMap = parseMMap(Node);
   if (!ParsedMMap)
     return true;
 
@@ -148,7 +148,7 @@ bool MarkupFilter::tryModule(const MarkupNode &Node,
                              const SmallVector<MarkupNode> &DeferredNodes) {
   if (Node.Tag != "module")
     return false;
-  Optional<Module> ParsedModule = parseModule(Node);
+  std::optional<Module> ParsedModule = parseModule(Node);
   if (!ParsedModule)
     return true;
 
@@ -243,7 +243,7 @@ bool MarkupFilter::tryPC(const MarkupNode &Node) {
   if (!checkNumFieldsAtMost(Node, 2))
     return true;
 
-  Optional<uint64_t> Addr = parseAddr(Node.Fields[0]);
+  std::optional<uint64_t> Addr = parseAddr(Node.Fields[0]);
   if (!Addr)
     return true;
 
@@ -251,7 +251,7 @@ bool MarkupFilter::tryPC(const MarkupNode &Node) {
   // locations.
   PCType Type = PCType::PreciseCode;
   if (Node.Fields.size() == 2) {
-    Optional<PCType> ParsedType = parsePCType(Node.Fields[1]);
+    std::optional<PCType> ParsedType = parsePCType(Node.Fields[1]);
     if (!ParsedType)
       return true;
     Type = *ParsedType;
@@ -297,18 +297,18 @@ bool MarkupFilter::tryBackTrace(const MarkupNode &Node) {
   if (!checkNumFieldsAtMost(Node, 3))
     return true;
 
-  Optional<uint64_t> FrameNumber = parseFrameNumber(Node.Fields[0]);
+  std::optional<uint64_t> FrameNumber = parseFrameNumber(Node.Fields[0]);
   if (!FrameNumber)
     return true;
 
-  Optional<uint64_t> Addr = parseAddr(Node.Fields[1]);
+  std::optional<uint64_t> Addr = parseAddr(Node.Fields[1]);
   if (!Addr)
     return true;
 
   // Backtrace addresses are assumed to be return addresses by default.
   PCType Type = PCType::ReturnAddress;
   if (Node.Fields.size() == 3) {
-    Optional<PCType> ParsedType = parsePCType(Node.Fields[2]);
+    std::optional<PCType> ParsedType = parsePCType(Node.Fields[2]);
     if (!ParsedType)
       return true;
     Type = *ParsedType;
@@ -375,7 +375,7 @@ bool MarkupFilter::tryData(const MarkupNode &Node) {
     return false;
   if (!checkNumFields(Node, 1))
     return true;
-  Optional<uint64_t> Addr = parseAddr(Node.Fields[0]);
+  std::optional<uint64_t> Addr = parseAddr(Node.Fields[0]);
   if (!Addr)
     return true;
 
@@ -499,7 +499,7 @@ void MarkupFilter::printValue(Twine Value) {
     return std::nullopt;                                                       \
   TYPE NAME = std::move(*NAME##Opt)
 
-Optional<MarkupFilter::Module>
+std::optional<MarkupFilter::Module>
 MarkupFilter::parseModule(const MarkupNode &Element) const {
   if (!checkNumFieldsAtLeast(Element, 3))
     return std::nullopt;
@@ -518,7 +518,7 @@ MarkupFilter::parseModule(const MarkupNode &Element) const {
   return Module{ID, Name.str(), std::move(BuildID)};
 }
 
-Optional<MarkupFilter::MMap>
+std::optional<MarkupFilter::MMap>
 MarkupFilter::parseMMap(const MarkupNode &Element) const {
   if (!checkNumFieldsAtLeast(Element, 3))
     return std::nullopt;
@@ -547,7 +547,7 @@ MarkupFilter::parseMMap(const MarkupNode &Element) const {
 }
 
 // Parse an address (%p in the spec).
-Optional<uint64_t> MarkupFilter::parseAddr(StringRef Str) const {
+std::optional<uint64_t> MarkupFilter::parseAddr(StringRef Str) const {
   if (Str.empty()) {
     reportTypeError(Str, "address");
     return std::nullopt;
@@ -567,7 +567,7 @@ Optional<uint64_t> MarkupFilter::parseAddr(StringRef Str) const {
 }
 
 // Parse a module ID (%i in the spec).
-Optional<uint64_t> MarkupFilter::parseModuleID(StringRef Str) const {
+std::optional<uint64_t> MarkupFilter::parseModuleID(StringRef Str) const {
   uint64_t ID;
   if (Str.getAsInteger(0, ID)) {
     reportTypeError(Str, "module ID");
@@ -577,7 +577,7 @@ Optional<uint64_t> MarkupFilter::parseModuleID(StringRef Str) const {
 }
 
 // Parse a size (%i in the spec).
-Optional<uint64_t> MarkupFilter::parseSize(StringRef Str) const {
+std::optional<uint64_t> MarkupFilter::parseSize(StringRef Str) const {
   uint64_t ID;
   if (Str.getAsInteger(0, ID)) {
     reportTypeError(Str, "size");
@@ -587,7 +587,7 @@ Optional<uint64_t> MarkupFilter::parseSize(StringRef Str) const {
 }
 
 // Parse a frame number (%i in the spec).
-Optional<uint64_t> MarkupFilter::parseFrameNumber(StringRef Str) const {
+std::optional<uint64_t> MarkupFilter::parseFrameNumber(StringRef Str) const {
   uint64_t ID;
   if (Str.getAsInteger(10, ID)) {
     reportTypeError(Str, "frame number");
@@ -597,7 +597,8 @@ Optional<uint64_t> MarkupFilter::parseFrameNumber(StringRef Str) const {
 }
 
 // Parse a build ID (%x in the spec).
-Optional<SmallVector<uint8_t>> MarkupFilter::parseBuildID(StringRef Str) const {
+std::optional<SmallVector<uint8_t>>
+MarkupFilter::parseBuildID(StringRef Str) const {
   std::string Bytes;
   if (Str.empty() || Str.size() % 2 || !tryGetFromHex(Str, Bytes)) {
     reportTypeError(Str, "build ID");
@@ -609,7 +610,7 @@ Optional<SmallVector<uint8_t>> MarkupFilter::parseBuildID(StringRef Str) const {
 }
 
 // Parses the mode string for an mmap element.
-Optional<std::string> MarkupFilter::parseMode(StringRef Str) const {
+std::optional<std::string> MarkupFilter::parseMode(StringRef Str) const {
   if (Str.empty()) {
     reportTypeError(Str, "mode");
     return std::nullopt;
@@ -634,9 +635,10 @@ Optional<std::string> MarkupFilter::parseMode(StringRef Str) const {
   return Str.lower();
 }
 
-Optional<MarkupFilter::PCType> MarkupFilter::parsePCType(StringRef Str) const {
-  Optional<MarkupFilter::PCType> Type =
-      StringSwitch<Optional<MarkupFilter::PCType>>(Str)
+std::optional<MarkupFilter::PCType>
+MarkupFilter::parsePCType(StringRef Str) const {
+  std::optional<MarkupFilter::PCType> Type =
+      StringSwitch<std::optional<MarkupFilter::PCType>>(Str)
           .Case("ra", MarkupFilter::PCType::ReturnAddress)
           .Case("pc", MarkupFilter::PCType::PreciseCode)
           .Default(std::nullopt);

@@ -225,7 +225,8 @@ static void analyzeImportedModule(
     SysRoot = CU.getSysRoot();
   if (!SysRoot.empty() && Path.startswith(SysRoot))
     return;
-  Optional<const char*> Name = dwarf::toString(DIE.find(dwarf::DW_AT_name));
+  std::optional<const char *> Name =
+      dwarf::toString(DIE.find(dwarf::DW_AT_name));
   if (!Name)
     return;
   auto &Entry = (*ParseableSwiftInterfaces)[*Name];
@@ -498,7 +499,7 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
 
   Flags |= TF_Keep;
 
-  Optional<uint64_t> HighPc = DIE.getHighPC(*LowPc);
+  std::optional<uint64_t> HighPc = DIE.getHighPC(*LowPc);
   if (!HighPc) {
     reportWarning("Function without high_pc. Range will be discarded.\n", File,
                   &DIE);
@@ -882,7 +883,7 @@ void DWARFLinker::assignAbbrev(DIEAbbrev &Abbrev) {
 unsigned DWARFLinker::DIECloner::cloneStringAttribute(
     DIE &Die, AttributeSpec AttrSpec, const DWARFFormValue &Val,
     const DWARFUnit &, OffsetsStringPool &StringPool, AttributesInfo &Info) {
-  Optional<const char *> String = dwarf::toString(Val);
+  std::optional<const char *> String = dwarf::toString(Val);
   if (!String)
     return 0;
 
@@ -1107,7 +1108,7 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
   dwarf::Form Form = AttrSpec.Form;
   uint64_t Addr = 0;
   if (Form == dwarf::DW_FORM_addrx) {
-    if (Optional<uint64_t> AddrOffsetSectionBase =
+    if (std::optional<uint64_t> AddrOffsetSectionBase =
             Unit.getOrigUnit().getAddrOffsetSectionBase()) {
       uint64_t StartOffset =
           *AddrOffsetSectionBase +
@@ -1943,7 +1944,7 @@ uint32_t DWARFLinker::DIECloner::hashFullyQualifiedName(DWARFDie DIE,
   const char *Name = nullptr;
   DWARFUnit *OrigUnit = &U.getOrigUnit();
   CompileUnit *CU = &U;
-  Optional<DWARFFormValue> Ref;
+  std::optional<DWARFFormValue> Ref;
 
   while (true) {
     if (const char *CurrentName = DIE.getName(DINameKind::ShortName))

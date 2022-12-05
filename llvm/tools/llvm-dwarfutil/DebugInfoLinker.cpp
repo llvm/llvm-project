@@ -76,7 +76,7 @@ public:
             DIE.getTag() == dwarf::DW_TAG_label) &&
            "Wrong type of input die");
 
-    if (Optional<uint64_t> LowPC =
+    if (std::optional<uint64_t> LowPC =
             dwarf::toAddress(DIE.find(dwarf::DW_AT_low_pc))) {
       if (!isDeadAddress(*LowPC, DIE.getDwarfUnit()->getVersion(),
                          Opts.Tombstone,

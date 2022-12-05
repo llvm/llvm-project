@@ -634,7 +634,7 @@ unsigned AttributeEncodingVendor(TypeKind E);
 unsigned LanguageVendor(SourceLanguage L);
 /// @}
 
-Optional<unsigned> LanguageLowerBound(SourceLanguage L);
+std::optional<unsigned> LanguageLowerBound(SourceLanguage L);
 
 /// The size of a reference determined by the DWARF 32/64-bit format.
 inline uint8_t getDwarfOffsetByteSize(DwarfFormat Format) {
@@ -694,9 +694,10 @@ inline uint8_t getUnitLengthFieldByteSize(DwarfFormat Format) {
 ///
 /// \param Form DWARF form to get the fixed byte size for.
 /// \param Params DWARF parameters to help interpret forms.
-/// \returns Optional<uint8_t> value with the fixed byte size or None if
+/// \returns std::optional<uint8_t> value with the fixed byte size or None if
 /// \p Form doesn't have a fixed byte size.
-Optional<uint8_t> getFixedFormByteSize(dwarf::Form Form, FormParams Params);
+std::optional<uint8_t> getFixedFormByteSize(dwarf::Form Form,
+                                            FormParams Params);
 
 /// Tells whether the specified form is defined in the specified version,
 /// or is an extension if extensions are allowed.

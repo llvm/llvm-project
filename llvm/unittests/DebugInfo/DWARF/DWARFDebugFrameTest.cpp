@@ -422,7 +422,7 @@ TEST(DWARFDebugFrame, RegisterLocations) {
   expectDumpResult(Locs, "reg12=[CFA+4], reg13=[CFA+8], reg14=same");
 
   // Verify RegisterLocations::getRegisterLocation() works as expected.
-  Optional<dwarf::UnwindLocation> OptionalLoc;
+  std::optional<dwarf::UnwindLocation> OptionalLoc;
   OptionalLoc = Locs.getRegisterLocation(0);
   EXPECT_FALSE(OptionalLoc.has_value());
 
