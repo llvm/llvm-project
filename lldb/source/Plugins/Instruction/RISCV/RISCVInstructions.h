@@ -236,6 +236,10 @@ using RISCVInst = std::variant<
     FCVT_S_WU, FMV_W_X, FCVT_L_S, FCVT_LU_S, FCVT_S_L, FCVT_S_LU, INVALID,
     EBREAK, RESERVED, HINT, NOP>;
 
+constexpr uint8_t RV32 = 1;
+constexpr uint8_t RV64 = 2;
+constexpr uint8_t RV128 = 4;
+
 struct InstrPattern {
   const char *name;
   /// Bit mask to check the type of a instruction (B-Type, I-Type, J-Type, etc.)
@@ -243,6 +247,8 @@ struct InstrPattern {
   /// Characteristic value after bitwise-and with type_mask.
   uint32_t eigen;
   RISCVInst (*decode)(uint32_t inst);
+  /// If not specified, the inst will be supported by all RV versions.
+  uint8_t inst_type = RV32 | RV64 | RV128;
 };
 
 struct DecodeResult {
