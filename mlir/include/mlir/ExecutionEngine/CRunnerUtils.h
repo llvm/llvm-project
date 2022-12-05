@@ -476,4 +476,14 @@ extern "C" MLIR_CRUNNERUTILS_EXPORT void printNewline();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printFlops(double flops);
 extern "C" MLIR_CRUNNERUTILS_EXPORT double rtclock();
 
+//===----------------------------------------------------------------------===//
+// Runtime support library for random number generation.
+//===----------------------------------------------------------------------===//
+// Uses a seed to initialize a random generator and returns the generator.
+extern "C" MLIR_CRUNNERUTILS_EXPORT void *rtsrand(uint64_t s);
+// Returns a random number in the range of [0, m).
+extern "C" MLIR_CRUNNERUTILS_EXPORT uint64_t rtrand(void *, uint64_t m);
+// Deletes the random number generator.
+extern "C" MLIR_CRUNNERUTILS_EXPORT void rtdrand(void *);
+
 #endif // MLIR_EXECUTIONENGINE_CRUNNERUTILS_H
