@@ -107,7 +107,7 @@ getFrameLayout(Function *Resume) {
   // Pull information from the function attributes.
   auto Size = Resume->getParamDereferenceableBytes(0);
   if (!Size)
-    return None;
+    return std::nullopt;
   return std::make_pair(Size, Resume->getParamAlign(0).valueOrOne());
 }
 

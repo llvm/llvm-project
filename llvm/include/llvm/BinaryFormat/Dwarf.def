@@ -916,7 +916,7 @@ HANDLE_DW_LANG(0x0023, Fortran08, 1, 5, DWARF)
 HANDLE_DW_LANG(0x0024, RenderScript, 0, 5, DWARF)
 HANDLE_DW_LANG(0x0025, BLISS, 0, 5, DWARF)
 // Vendor extensions:
-HANDLE_DW_LANG(0x8001, Mips_Assembler, None, 0, MIPS)
+HANDLE_DW_LANG(0x8001, Mips_Assembler, std::nullopt, 0, MIPS)
 HANDLE_DW_LANG(0x8e57, GOOGLE_RenderScript, 0, 0, GOOGLE)
 HANDLE_DW_LANG(0xb000, BORLAND_Delphi, 0, 0, BORLAND)
 

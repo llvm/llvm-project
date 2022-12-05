@@ -2648,9 +2648,9 @@ llvm::Optional<StringRef>
 Record::getValueAsOptionalString(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
   if (!R || !R->getValue())
-    return llvm::None;
+    return std::nullopt;
   if (isa<UnsetInit>(R->getValue()))
-    return llvm::None;
+    return std::nullopt;
 
   if (StringInit *SI = dyn_cast<StringInit>(R->getValue()))
     return SI->getValue();

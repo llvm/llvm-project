@@ -58,7 +58,7 @@ private:
 /// loaded to find the registration functions.
 Expected<std::unique_ptr<EPCDebugObjectRegistrar>> createJITLoaderGDBRegistrar(
     ExecutionSession &ES,
-    Optional<ExecutorAddr> RegistrationFunctionDylib = None);
+    Optional<ExecutorAddr> RegistrationFunctionDylib = std::nullopt);
 
 } // end namespace orc
 } // end namespace llvm

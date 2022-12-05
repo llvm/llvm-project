@@ -136,14 +136,14 @@ static bool ExecGraphViewer(StringRef ExecPath, std::vector<StringRef> &args,
                             StringRef Filename, bool wait,
                             std::string &ErrMsg) {
   if (wait) {
-    if (sys::ExecuteAndWait(ExecPath, args, None, {}, 0, 0, &ErrMsg)) {
+    if (sys::ExecuteAndWait(ExecPath, args, std::nullopt, {}, 0, 0, &ErrMsg)) {
       errs() << "Error: " << ErrMsg << "\n";
       return true;
     }
     sys::fs::remove(Filename);
     errs() << " done. \n";
   } else {
-    sys::ExecuteNoWait(ExecPath, args, None, {}, 0, &ErrMsg);
+    sys::ExecuteNoWait(ExecPath, args, std::nullopt, {}, 0, &ErrMsg);
     errs() << "Remember to erase graph file: " << Filename << "\n";
   }
   return false;

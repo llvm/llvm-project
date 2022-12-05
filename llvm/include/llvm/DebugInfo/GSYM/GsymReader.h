@@ -141,7 +141,7 @@ public:
   Optional<FileEntry> getFile(uint32_t Index) const {
     if (Index < Files.size())
       return Files[Index];
-    return llvm::None;
+    return std::nullopt;
   }
 
   /// Dump the entire Gsym data contained in this object.
@@ -242,7 +242,7 @@ protected:
     ArrayRef<T> AIO = getAddrOffsets<T>();
     if (Index < AIO.size())
       return AIO[Index] + Hdr->BaseAddress;
-    return llvm::None;
+    return std::nullopt;
   }
   /// Lookup an address offset in the AddrOffsets table.
   ///
@@ -262,7 +262,7 @@ protected:
     // Watch for addresses that fall between the gsym::Header::BaseAddress and
     // the first address offset.
     if (Iter == Begin && AddrOffset < *Begin)
-      return llvm::None;
+      return std::nullopt;
     if (Iter == End || AddrOffset < *Iter)
       --Iter;
     return std::distance(Begin, Iter);

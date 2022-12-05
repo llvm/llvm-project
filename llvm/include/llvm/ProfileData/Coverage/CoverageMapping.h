@@ -323,7 +323,7 @@ class CounterMappingContext {
 
 public:
   CounterMappingContext(ArrayRef<CounterExpression> Expressions,
-                        ArrayRef<uint64_t> CounterValues = None)
+                        ArrayRef<uint64_t> CounterValues = std::nullopt)
       : Expressions(Expressions), CounterValues(CounterValues) {}
 
   void setCounts(ArrayRef<uint64_t> Counts) { CounterValues = Counts; }
@@ -605,7 +605,8 @@ public:
   /// Ignores non-instrumented object files unless all are not instrumented.
   static Expected<std::unique_ptr<CoverageMapping>>
   load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
-       ArrayRef<StringRef> Arches = None, StringRef CompilationDir = "");
+       ArrayRef<StringRef> Arches = std::nullopt,
+       StringRef CompilationDir = "");
 
   /// The number of functions that couldn't have their profiles mapped.
   ///

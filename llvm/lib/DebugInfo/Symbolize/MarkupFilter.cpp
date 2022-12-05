@@ -421,7 +421,7 @@ bool MarkupFilter::trySGR(const MarkupNode &Node) {
                       .Case("\033[35m", raw_ostream::Colors::MAGENTA)
                       .Case("\033[36m", raw_ostream::Colors::CYAN)
                       .Case("\033[37m", raw_ostream::Colors::WHITE)
-                      .Default(llvm::None);
+                      .Default(std::nullopt);
   if (SGRColor) {
     Color = *SGRColor;
     if (ColorsEnabled)
@@ -502,17 +502,17 @@ void MarkupFilter::printValue(Twine Value) {
 Optional<MarkupFilter::Module>
 MarkupFilter::parseModule(const MarkupNode &Element) const {
   if (!checkNumFieldsAtLeast(Element, 3))
-    return None;
+    return std::nullopt;
   ASSIGN_OR_RETURN_NONE(uint64_t, ID, parseModuleID(Element.Fields[0]));
   StringRef Name = Element.Fields[1];
   StringRef Type = Element.Fields[2];
   if (Type != "elf") {
     WithColor::error() << "unknown module type\n";
     reportLocation(Type.begin());
-    return None;
+    return std::nullopt;
   }
   if (!checkNumFields(Element, 4))
-    return None;
+    return std::nullopt;
   ASSIGN_OR_RETURN_NONE(SmallVector<uint8_t>, BuildID,
                         parseBuildID(Element.Fields[3]));
   return Module{ID, Name.str(), std::move(BuildID)};
@@ -521,24 +521,24 @@ MarkupFilter::parseModule(const MarkupNode &Element) const {
 Optional<MarkupFilter::MMap>
 MarkupFilter::parseMMap(const MarkupNode &Element) const {
   if (!checkNumFieldsAtLeast(Element, 3))
-    return None;
+    return std::nullopt;
   ASSIGN_OR_RETURN_NONE(uint64_t, Addr, parseAddr(Element.Fields[0]));
   ASSIGN_OR_RETURN_NONE(uint64_t, Size, parseSize(Element.Fields[1]));
   StringRef Type = Element.Fields[2];
   if (Type != "load") {
     WithColor::error() << "unknown mmap type\n";
     reportLocation(Type.begin());
-    return None;
+    return std::nullopt;
   }
   if (!checkNumFields(Element, 6))
-    return None;
+    return std::nullopt;
   ASSIGN_OR_RETURN_NONE(uint64_t, ID, parseModuleID(Element.Fields[3]));
   ASSIGN_OR_RETURN_NONE(std::string, Mode, parseMode(Element.Fields[4]));
   auto It = Modules.find(ID);
   if (It == Modules.end()) {
     WithColor::error() << "unknown module ID\n";
     reportLocation(Element.Fields[3].begin());
-    return None;
+    return std::nullopt;
   }
   ASSIGN_OR_RETURN_NONE(uint64_t, ModuleRelativeAddr,
                         parseAddr(Element.Fields[5]));
@@ -550,18 +550,18 @@ MarkupFilter::parseMMap(const MarkupNode &Element) const {
 Optional<uint64_t> MarkupFilter::parseAddr(StringRef Str) const {
   if (Str.empty()) {
     reportTypeError(Str, "address");
-    return None;
+    return std::nullopt;
   }
   if (all_of(Str, [](char C) { return C == '0'; }))
     return 0;
   if (!Str.startswith("0x")) {
     reportTypeError(Str, "address");
-    return None;
+    return std::nullopt;
   }
   uint64_t Addr;
   if (Str.drop_front(2).getAsInteger(16, Addr)) {
     reportTypeError(Str, "address");
-    return None;
+    return std::nullopt;
   }
   return Addr;
 }
@@ -571,7 +571,7 @@ Optional<uint64_t> MarkupFilter::parseModuleID(StringRef Str) const {
   uint64_t ID;
   if (Str.getAsInteger(0, ID)) {
     reportTypeError(Str, "module ID");
-    return None;
+    return std::nullopt;
   }
   return ID;
 }
@@ -581,7 +581,7 @@ Optional<uint64_t> MarkupFilter::parseSize(StringRef Str) const {
   uint64_t ID;
   if (Str.getAsInteger(0, ID)) {
     reportTypeError(Str, "size");
-    return None;
+    return std::nullopt;
   }
   return ID;
 }
@@ -591,7 +591,7 @@ Optional<uint64_t> MarkupFilter::parseFrameNumber(StringRef Str) const {
   uint64_t ID;
   if (Str.getAsInteger(10, ID)) {
     reportTypeError(Str, "frame number");
-    return None;
+    return std::nullopt;
   }
   return ID;
 }
@@ -601,7 +601,7 @@ Optional<SmallVector<uint8_t>> MarkupFilter::parseBuildID(StringRef Str) const {
   std::string Bytes;
   if (Str.empty() || Str.size() % 2 || !tryGetFromHex(Str, Bytes)) {
     reportTypeError(Str, "build ID");
-    return None;
+    return std::nullopt;
   }
   ArrayRef<uint8_t> BuildID(reinterpret_cast<const uint8_t *>(Bytes.data()),
                             Bytes.size());
@@ -612,7 +612,7 @@ Optional<SmallVector<uint8_t>> MarkupFilter::parseBuildID(StringRef Str) const {
 Optional<std::string> MarkupFilter::parseMode(StringRef Str) const {
   if (Str.empty()) {
     reportTypeError(Str, "mode");
-    return None;
+    return std::nullopt;
   }
 
   // Pop off each of r/R, w/W, and x/X from the front, in that order.
@@ -627,7 +627,7 @@ Optional<std::string> MarkupFilter::parseMode(StringRef Str) const {
   // If anything remains, then the string wasn't a mode.
   if (!Remainder.empty()) {
     reportTypeError(Str, "mode");
-    return None;
+    return std::nullopt;
   }
 
   // Normalize the mode.
@@ -639,7 +639,7 @@ Optional<MarkupFilter::PCType> MarkupFilter::parsePCType(StringRef Str) const {
       StringSwitch<Optional<MarkupFilter::PCType>>(Str)
           .Case("ra", MarkupFilter::PCType::ReturnAddress)
           .Case("pc", MarkupFilter::PCType::PreciseCode)
-          .Default(None);
+          .Default(std::nullopt);
   if (!Type)
     reportTypeError(Str, "PC type");
   return Type;

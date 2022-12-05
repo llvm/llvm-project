@@ -60,7 +60,7 @@ struct RemarkSerializer {
   /// Return the corresponding metadata serializer.
   virtual std::unique_ptr<MetaSerializer>
   metaSerializer(raw_ostream &OS,
-                 Optional<StringRef> ExternalFilename = None) = 0;
+                 Optional<StringRef> ExternalFilename = std::nullopt) = 0;
 };
 
 /// This is the base class for a remark metadata serializer.
