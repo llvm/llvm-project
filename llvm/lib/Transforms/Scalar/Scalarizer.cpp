@@ -76,10 +76,13 @@ BasicBlock::iterator skipPastPhiNodesAndDbg(BasicBlock::iterator Itr) {
 // Used to store the scattered form of a vector.
 using ValueVector = SmallVector<Value *, 8>;
 
-// Used to map a vector Value to its scattered form.  We use std::map
-// because we want iterators to persist across insertion and because the
-// values are relatively large.
-using ScatterMap = std::map<Value *, ValueVector>;
+// Used to map a vector Value and associated type to its scattered form.
+// The associated type is only non-null for pointer values that are "scattered"
+// when used as pointer operands to load or store.
+//
+// We use std::map because we want iterators to persist across insertion and
+// because the values are relatively large.
+using ScatterMap = std::map<std::pair<Value *, Type *>, ValueVector>;
 
 // Lists Instructions that have been replaced with scalar implementations,
 // along with a pointer to their scattered forms.
@@ -389,7 +392,7 @@ Scatterer ScalarizerVisitor::scatter(Instruction *Point, Value *V,
     // so that it can be used everywhere.
     Function *F = VArg->getParent();
     BasicBlock *BB = &F->getEntryBlock();
-    return Scatterer(BB, BB->begin(), V, PtrElemTy, &Scattered[V]);
+    return Scatterer(BB, BB->begin(), V, PtrElemTy, &Scattered[{V, PtrElemTy}]);
   }
   if (Instruction *VOp = dyn_cast<Instruction>(V)) {
     // When scalarizing PHI nodes we might try to examine/rewrite InsertElement
@@ -406,7 +409,7 @@ Scatterer ScalarizerVisitor::scatter(Instruction *Point, Value *V,
     BasicBlock *BB = VOp->getParent();
     return Scatterer(
         BB, skipPastPhiNodesAndDbg(std::next(BasicBlock::iterator(VOp))), V,
-        PtrElemTy, &Scattered[V]);
+        PtrElemTy, &Scattered[{V, PtrElemTy}]);
   }
   // In the fallback case, just put the scattered before Point and
   // keep the result local to Point.
@@ -422,7 +425,7 @@ void ScalarizerVisitor::gather(Instruction *Op, const ValueVector &CV) {
 
   // If we already have a scattered form of Op (created from ExtractElements
   // of Op itself), replace them with the new form.
-  ValueVector &SV = Scattered[Op];
+  ValueVector &SV = Scattered[{Op, nullptr}];
   if (!SV.empty()) {
     for (unsigned I = 0, E = SV.size(); I != E; ++I) {
       Value *V = SV[I];
