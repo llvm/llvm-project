@@ -2312,9 +2312,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   if (llvm::any_of(Comps, [](uint32_t P) { return P == 0; }))
     return OpRef::fail();
 
-dbgs() << "Comps:["; for (unsigned I : Comps) dbgs() << ' ' << I; dbgs() << " ]\n";
   auto Pick = completeToPerfect(Comps, LogLen);
-dbgs() << "Pick:["; for (unsigned I : Pick) dbgs() << ' ' << I; dbgs() << " ]\n";
   for (unsigned I = 0; I != LogLen; ++I)
     Perm[I] = Log2_32(Pick[I]);
 
