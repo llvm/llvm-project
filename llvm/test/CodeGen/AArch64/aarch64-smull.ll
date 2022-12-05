@@ -137,8 +137,8 @@ define <2 x i64> @smull_zext_v2i32_v2i64(<2 x i16>* %A, <2 x i32>* %B) nounwind 
 ; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    fmov x9, d0
 ; CHECK-NEXT:    mov x10, v0.d[1]
-; CHECK-NEXT:    mul x8, x8, x9
-; CHECK-NEXT:    mul x9, x11, x10
+; CHECK-NEXT:    smull x8, w8, w9
+; CHECK-NEXT:    smull x9, w11, w10
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov v0.d[1], x9
 ; CHECK-NEXT:    ret
@@ -162,8 +162,8 @@ define <2 x i64> @smull_zext_and_v2i32_v2i64(<2 x i32>* %A, <2 x i32>* %B) nounw
 ; CHECK-NEXT:    fmov x10, d0
 ; CHECK-NEXT:    mov x8, v1.d[1]
 ; CHECK-NEXT:    mov x11, v0.d[1]
-; CHECK-NEXT:    mul x9, x10, x9
-; CHECK-NEXT:    mul x8, x11, x8
+; CHECK-NEXT:    smull x9, w10, w9
+; CHECK-NEXT:    smull x8, w11, w8
 ; CHECK-NEXT:    fmov d0, x9
 ; CHECK-NEXT:    mov v0.d[1], x8
 ; CHECK-NEXT:    ret
