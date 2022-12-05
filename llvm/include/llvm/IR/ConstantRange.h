@@ -333,11 +333,11 @@ public:
                           PreferredRangeType Type = Smallest) const;
 
   /// Intersect the two ranges and return the result if it can be represented
-  /// exactly, otherwise return None.
+  /// exactly, otherwise return std::nullopt.
   Optional<ConstantRange> exactIntersectWith(const ConstantRange &CR) const;
 
   /// Union the two ranges and return the result if it can be represented
-  /// exactly, otherwise return None.
+  /// exactly, otherwise return std::nullopt.
   Optional<ConstantRange> exactUnionWith(const ConstantRange &CR) const;
 
   /// Return a new range representing the possible values resulting

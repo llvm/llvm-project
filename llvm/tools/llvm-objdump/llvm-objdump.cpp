@@ -1681,8 +1681,8 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
                                   SectionAddr + Start, CommentStream);
 
         if (!Status) {
-          // If onSymbolStart returns None, that means it didn't trigger any
-          // interesting handling for this symbol. Try the other symbols
+          // If onSymbolStart returns std::nullopt, that means it didn't trigger
+          // any interesting handling for this symbol. Try the other symbols
           // defined at this address.
           continue;
         }

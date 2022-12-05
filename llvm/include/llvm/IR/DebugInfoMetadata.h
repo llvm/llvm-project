@@ -1728,7 +1728,7 @@ public:
   /// Returns a new DILocation with updated base discriminator \p BD. Only the
   /// base discriminator is set in the new DILocation, the other encoded values
   /// are elided.
-  /// If the discriminator cannot be encoded, the function returns None.
+  /// If the discriminator cannot be encoded, the function returns std::nullopt.
   inline std::optional<const DILocation *>
   cloneWithBaseDiscriminator(unsigned BD) const;
 

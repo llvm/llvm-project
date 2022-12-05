@@ -89,9 +89,9 @@ void PPCELFStreamer::emitInstruction(const MCInst &Inst,
       static_cast<PPCMCCodeEmitter*>(getAssembler().getEmitterPtr());
 
   // If the instruction is a part of the GOT to PC-Rel link time optimization
-  // instruction pair, return a value, otherwise return None. A true returned
-  // value means the instruction is the PLDpc and a false value means it is
-  // the user instruction.
+  // instruction pair, return a value, otherwise return std::nullopt. A true
+  // returned value means the instruction is the PLDpc and a false value means
+  // it is the user instruction.
   std::optional<bool> IsPartOfGOTToPCRelPair =
       isPartOfGOTToPCRelPair(Inst, STI);
 
@@ -206,7 +206,8 @@ std::optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
   unsigned LastOp = Inst.getNumOperands() - 1;
   // The last operand needs to be an MCExpr and it needs to have a variant kind
   // of VK_PPC_PCREL_OPT. If it does not satisfy these conditions it is not a
-  // link time GOT PC Rel opt instruction and we can ignore it and return None.
+  // link time GOT PC Rel opt instruction and we can ignore it and return
+  // std::nullopt.
   const MCOperand &Operand = Inst.getOperand(LastOp);
   if (!Operand.isExpr())
     return std::nullopt;
