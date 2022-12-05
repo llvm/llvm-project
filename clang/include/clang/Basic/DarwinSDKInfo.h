@@ -99,7 +99,7 @@ public:
 
     /// Returns the mapped key, or the appropriate Minimum / MaximumValue if
     /// they key is outside of the mapping bounds. If they key isn't mapped, but
-    /// within the minimum and maximum bounds, None is returned.
+    /// within the minimum and maximum bounds, std::nullopt is returned.
     std::optional<VersionTuple>
     map(const VersionTuple &Key, const VersionTuple &MinimumValue,
         std::optional<VersionTuple> MaximumValue) const;

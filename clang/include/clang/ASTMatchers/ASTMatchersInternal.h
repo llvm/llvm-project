@@ -536,7 +536,7 @@ public:
   /// Returns the \c TraversalKind respected by calls to `match()`, if any.
   ///
   /// Most matchers will not have a traversal kind set, instead relying on the
-  /// surrounding context. For those, \c llvm::None is returned.
+  /// surrounding context. For those, \c std::nullopt is returned.
   llvm::Optional<clang::TraversalKind> getTraversalKind() const {
     return Implementation->TraversalKind();
   }
