@@ -235,7 +235,7 @@ void Float2IntPass::walkBackwards() {
 }
 
 // Calculate result range from operand ranges.
-// Return None if the range cannot be calculated yet.
+// Return std::nullopt if the range cannot be calculated yet.
 Optional<ConstantRange> Float2IntPass::calcRange(Instruction *I) {
   SmallVector<ConstantRange, 4> OpRanges;
   for (Value *O : I->operands()) {
