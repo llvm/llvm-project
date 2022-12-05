@@ -232,7 +232,7 @@ bool lldb_private::LLDBSWIGPythonRunScriptKeywordProcess(
 llvm::Optional<std::string> lldb_private::LLDBSWIGPythonRunScriptKeywordThread(
     const char *python_function_name, const char *session_dictionary_name,
     lldb::ThreadSP thread) {
-  return llvm::None;
+  return std::nullopt;
 }
 
 bool lldb_private::LLDBSWIGPythonRunScriptKeywordTarget(
@@ -244,7 +244,7 @@ bool lldb_private::LLDBSWIGPythonRunScriptKeywordTarget(
 llvm::Optional<std::string> lldb_private::LLDBSWIGPythonRunScriptKeywordFrame(
     const char *python_function_name, const char *session_dictionary_name,
     lldb::StackFrameSP frame) {
-  return llvm::None;
+  return std::nullopt;
 }
 
 bool lldb_private::LLDBSWIGPythonRunScriptKeywordValue(
