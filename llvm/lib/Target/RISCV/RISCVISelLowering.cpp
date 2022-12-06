@@ -8063,14 +8063,16 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
 // (sub x, (select cond, 0, c))
 //   -> (select cond, x, (sub x, c))  [AllOnes=0]
 static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
-                                   SelectionDAG &DAG, bool AllOnes) {
+                                   SelectionDAG &DAG, bool AllOnes,
+                                   const RISCVSubtarget &Subtarget) {
   EVT VT = N->getValueType(0);
 
   // Skip vectors.
   if (VT.isVector())
     return SDValue();
 
-  if ((Slct.getOpcode() != ISD::SELECT &&
+  if (!Subtarget.hasShortForwardBranchOpt() ||
+      (Slct.getOpcode() != ISD::SELECT &&
        Slct.getOpcode() != RISCVISD::SELECT_CC) ||
       !Slct.hasOneUse())
     return SDValue();
@@ -8111,12 +8113,13 @@ static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
 
 // Attempt combineSelectAndUse on each operand of a commutative operator N.
 static SDValue combineSelectAndUseCommutative(SDNode *N, SelectionDAG &DAG,
-                                              bool AllOnes) {
+                                              bool AllOnes,
+                                              const RISCVSubtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-  if (SDValue Result = combineSelectAndUse(N, N0, N1, DAG, AllOnes))
+  if (SDValue Result = combineSelectAndUse(N, N0, N1, DAG, AllOnes, Subtarget))
     return Result;
-  if (SDValue Result = combineSelectAndUse(N, N1, N0, DAG, AllOnes))
+  if (SDValue Result = combineSelectAndUse(N, N1, N0, DAG, AllOnes, Subtarget))
     return Result;
   return SDValue();
 }
@@ -8198,7 +8201,7 @@ static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
     return V;
   // fold (add (select lhs, rhs, cc, 0, y), x) ->
   //      (select lhs, rhs, cc, x, (add x, y))
-  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
+  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
 }
 
 // Try to turn a sub boolean RHS and constant LHS into an addi.
@@ -8242,7 +8245,8 @@ static SDValue combineSubOfBoolean(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::ADD, DL, VT, NewLHS, NewRHS);
 }
 
-static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
   if (SDValue V = combineSubOfBoolean(N, DAG))
     return V;
 
@@ -8250,7 +8254,7 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG) {
   //      (select lhs, rhs, cc, x, (sub x, y))
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-  return combineSelectAndUse(N, N1, N0, DAG, /*AllOnes*/ false);
+  return combineSelectAndUse(N, N1, N0, DAG, /*AllOnes*/ false, Subtarget);
 }
 
 // Apply DeMorgan's law to (and/or (xor X, 1), (xor Y, 1)) if X and Y are 0/1.
@@ -8356,7 +8360,7 @@ static SDValue performANDCombine(SDNode *N,
 
   // fold (and (select lhs, rhs, cc, -1, y), x) ->
   //      (select lhs, rhs, cc, x, (and x, y))
-  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ true);
+  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ true, Subtarget);
 }
 
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
@@ -8372,10 +8376,11 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   // fold (or (select cond, 0, y), x) ->
   //      (select cond, x, (or x, y))
-  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
+  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
 }
 
-static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
@@ -8394,7 +8399,7 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG) {
     return V;
   // fold (xor (select cond, 0, y), x) ->
   //      (select cond, x, (xor x, y))
-  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
+  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
 }
 
 // Replace (seteq (i64 (and X, 0xffffffff)), C1) with
@@ -9596,13 +9601,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ADD:
     return performADDCombine(N, DAG, Subtarget);
   case ISD::SUB:
-    return performSUBCombine(N, DAG);
+    return performSUBCombine(N, DAG, Subtarget);
   case ISD::AND:
     return performANDCombine(N, DCI, Subtarget);
   case ISD::OR:
     return performORCombine(N, DCI, Subtarget);
   case ISD::XOR:
-    return performXORCombine(N, DAG);
+    return performXORCombine(N, DAG, Subtarget);
   case ISD::FADD:
   case ISD::UMAX:
   case ISD::UMIN:
