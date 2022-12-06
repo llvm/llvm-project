@@ -115,8 +115,9 @@ def HasDotProd       : Predicate<"Subtarget->hasDotProd()">,
                                  AssemblerPredicateWithAll<(all_of FeatureDotProd), "dotprod">;
 def HasCRC           : Predicate<"Subtarget->hasCRC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCRC), "crc">;
-def HasCSSC           : Predicate<"Subtarget->hasCSSC()">,
+def HasCSSC          : Predicate<"Subtarget->hasCSSC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCSSC), "cssc">;
+def HasNoCSSC        : Predicate<"!Subtarget->hasCSSC()">;
 def HasLSE           : Predicate<"Subtarget->hasLSE()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSE), "lse">;
 def HasNoLSE         : Predicate<"!Subtarget->hasLSE()">;
@@ -5092,7 +5093,7 @@ def : Pat<(i64 (int_aarch64_neon_sqsub (i64 FPR64:$Rd),
 // Advanced SIMD two scalar instructions.
 //===----------------------------------------------------------------------===//
 
-defm ABS    : SIMDTwoScalarD<    0, 0b01011, "abs", abs>;
+defm ABS    : SIMDTwoScalarD<    0, 0b01011, "abs", abs, [HasNoCSSC]>;
 defm CMEQ   : SIMDCmpTwoScalarD< 0, 0b01001, "cmeq", AArch64cmeqz>;
 defm CMGE   : SIMDCmpTwoScalarD< 1, 0b01000, "cmge", AArch64cmgez>;
 defm CMGT   : SIMDCmpTwoScalarD< 0, 0b01000, "cmgt", AArch64cmgtz>;
@@ -8554,7 +8555,7 @@ defm RCWSWP  : ReadCheckWriteOperation<0b010, "swp">;
 //===----------------------------------------------------------------------===//
 // General Data-Processing Instructions (FEAT_V94_DP)
 //===----------------------------------------------------------------------===//
-defm ABS : OneOperandData<0b001000, "abs">, Requires<[HasCSSC]>;
+defm ABS : OneOperandData<0b001000, "abs", abs>, Requires<[HasCSSC]>;
 defm CNT : OneOperandData<0b000111, "cnt", ctpop>, Requires<[HasCSSC]>;
 defm CTZ : OneOperandData<0b000110, "ctz", cttz>, Requires<[HasCSSC]>;
 
