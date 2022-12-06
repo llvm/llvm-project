@@ -49,7 +49,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using llvm::None;
 using llvm::Optional;
 using llvm::StringRef;
 
