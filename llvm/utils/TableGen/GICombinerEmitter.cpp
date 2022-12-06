@@ -636,7 +636,7 @@ void GICombinerEmitter::emitNameMatcher(raw_ostream &OS) const {
         std::make_pair(std::string(EnumeratedRule.getName()), Code));
   }
 
-  OS << "static Optional<uint64_t> getRuleIdxForIdentifier(StringRef "
+  OS << "static std::optional<uint64_t> getRuleIdxForIdentifier(StringRef "
         "RuleIdentifier) {\n"
      << "  uint64_t I;\n"
      << "  // getAtInteger(...) returns false on success\n"
@@ -950,7 +950,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
 
   emitNameMatcher(OS);
 
-  OS << "static Optional<std::pair<uint64_t, uint64_t>> "
+  OS << "static std::optional<std::pair<uint64_t, uint64_t>> "
         "getRuleRangeForIdentifier(StringRef RuleIdentifier) {\n"
      << "  std::pair<StringRef, StringRef> RangePair = "
         "RuleIdentifier.split('-');\n"

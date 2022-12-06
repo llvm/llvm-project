@@ -40,18 +40,18 @@ public:
 
     /// Return an optional string containing the name of this parameter. If
     /// None, no name was specified for this parameter by the user.
-    Optional<StringRef> getName() const { return name; }
+    std::optional<StringRef> getName() const { return name; }
 
     /// Return an optional string containing the default value to use for this
     /// parameter.
-    Optional<StringRef> getDefaultValue() const;
+    std::optional<StringRef> getDefaultValue() const;
 
   private:
-    Parameter(Optional<StringRef> name, const llvm::Init *def)
+    Parameter(std::optional<StringRef> name, const llvm::Init *def)
         : name(name), def(def) {}
 
     /// The optional name of the parameter.
-    Optional<StringRef> name;
+    std::optional<StringRef> name;
 
     /// The tablegen definition of the parameter. This is either a StringInit,
     /// or a CArg DefInit.
@@ -68,7 +68,7 @@ public:
   ArrayRef<Parameter> getParameters() const { return parameters; }
 
   /// Return an optional string containing the body of the builder.
-  Optional<StringRef> getBody() const;
+  std::optional<StringRef> getBody() const;
 
 protected:
   /// The TableGen definition of this builder.
