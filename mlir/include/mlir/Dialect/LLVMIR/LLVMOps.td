@@ -790,7 +790,7 @@ def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-def LLVM_ReturnOp : LLVM_TerminatorOp<"return", [Pure]> {
+def LLVM_ReturnOp : LLVM_TerminatorOp<"return", [Pure, ReturnLike]> {
   let arguments = (ins Optional<LLVM_Type>:$arg);
   let assemblyFormat = "attr-dict ($arg^ `:` type($arg))?";
 
