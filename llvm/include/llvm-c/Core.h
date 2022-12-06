@@ -567,13 +567,6 @@ LLVMBool LLVMContextShouldDiscardValueNames(LLVMContextRef C);
 void LLVMContextSetDiscardValueNames(LLVMContextRef C, LLVMBool Discard);
 
 /**
- * Set whether the given context is in opaque pointer mode.
- *
- * @see LLVMContext::setOpaquePointers()
- */
-void LLVMContextSetOpaquePointers(LLVMContextRef C, LLVMBool OpaquePointers);
-
-/**
  * Destroy a context instance.
  *
  * This should be called for every call to LLVMContextCreate() or memory
