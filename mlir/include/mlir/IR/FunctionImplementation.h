@@ -39,10 +39,12 @@ private:
 /// with special names given by getResultAttrName, getArgumentAttrName.
 void addArgAndResultAttrs(Builder &builder, OperationState &result,
                           ArrayRef<DictionaryAttr> argAttrs,
-                          ArrayRef<DictionaryAttr> resultAttrs);
+                          ArrayRef<DictionaryAttr> resultAttrs,
+                          StringAttr argAttrsName, StringAttr resAttrsName);
 void addArgAndResultAttrs(Builder &builder, OperationState &result,
-                          ArrayRef<OpAsmParser::Argument> argAttrs,
-                          ArrayRef<DictionaryAttr> resultAttrs);
+                          ArrayRef<OpAsmParser::Argument> args,
+                          ArrayRef<DictionaryAttr> resultAttrs,
+                          StringAttr argAttrsName, StringAttr resAttrsName);
 
 /// Callback type for `parseFunctionOp`, the callback should produce the
 /// type that will be associated with a function-like operation from lists of
@@ -77,15 +79,17 @@ Type getFunctionType(Builder &builder, ArrayRef<OpAsmParser::Argument> argAttrs,
 /// type, report the error or delegate the reporting to the op's verifier.
 ParseResult parseFunctionOp(OpAsmParser &parser, OperationState &result,
                             bool allowVariadic, StringAttr typeAttrName,
-                            FuncTypeBuilder funcTypeBuilder);
+                            FuncTypeBuilder funcTypeBuilder,
+                            StringAttr argAttrsName, StringAttr resAttrsName);
 
 /// Printer implementation for function-like operations.
 void printFunctionOp(OpAsmPrinter &p, FunctionOpInterface op, bool isVariadic,
-                     StringRef typeAttrName);
+                     StringRef typeAttrName, StringAttr argAttrsName,
+                     StringAttr resAttrsName);
 
 /// Prints the signature of the function-like operation `op`. Assumes `op` has
 /// is a FunctionOpInterface and has passed verification.
-void printFunctionSignature(OpAsmPrinter &p, Operation *op,
+void printFunctionSignature(OpAsmPrinter &p, FunctionOpInterface op,
                             ArrayRef<Type> argTypes, bool isVariadic,
                             ArrayRef<Type> resultTypes);
 

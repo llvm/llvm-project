@@ -153,12 +153,14 @@ ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
   return function_interface_impl::parseFunctionOp(
       parser, result, /*allowVariadic=*/false,
-      getFunctionTypeAttrName(result.name), buildFuncType);
+      getFunctionTypeAttrName(result.name), buildFuncType,
+      getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 }
 
 void FuncOp::print(OpAsmPrinter &p) {
-  function_interface_impl::printFunctionOp(p, *this, /*isVariadic=*/false,
-                                           getFunctionTypeAttrName());
+  function_interface_impl::printFunctionOp(
+      p, *this, /*isVariadic=*/false, getFunctionTypeAttrName(),
+      getArgAttrsAttrName(), getResAttrsAttrName());
 }
 
 //===----------------------------------------------------------------------===//
@@ -316,12 +318,14 @@ ParseResult SubgraphOp::parse(OpAsmParser &parser, OperationState &result) {
 
   return function_interface_impl::parseFunctionOp(
       parser, result, /*allowVariadic=*/false,
-      getFunctionTypeAttrName(result.name), buildFuncType);
+      getFunctionTypeAttrName(result.name), buildFuncType,
+      getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 }
 
 void SubgraphOp::print(OpAsmPrinter &p) {
-  function_interface_impl::printFunctionOp(p, *this, /*isVariadic=*/false,
-                                           getFunctionTypeAttrName());
+  function_interface_impl::printFunctionOp(
+      p, *this, /*isVariadic=*/false, getFunctionTypeAttrName(),
+      getArgAttrsAttrName(), getResAttrsAttrName());
 }
 
 //===----------------------------------------------------------------------===//
