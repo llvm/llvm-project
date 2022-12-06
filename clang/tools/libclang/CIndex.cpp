@@ -6696,6 +6696,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::Export:
   case Decl::ObjCPropertyImpl:
   case Decl::FileScopeAsm:
+  case Decl::TopLevelStmt:
   case Decl::StaticAssert:
   case Decl::Block:
   case Decl::Captured:
