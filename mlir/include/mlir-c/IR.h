@@ -52,6 +52,7 @@ DEFINE_C_API_STRUCT(MlirContext, void);
 DEFINE_C_API_STRUCT(MlirDialect, void);
 DEFINE_C_API_STRUCT(MlirDialectRegistry, void);
 DEFINE_C_API_STRUCT(MlirOperation, void);
+DEFINE_C_API_STRUCT(MlirOpOperand, void);
 DEFINE_C_API_STRUCT(MlirOpPrintingFlags, void);
 DEFINE_C_API_STRUCT(MlirBlock, void);
 DEFINE_C_API_STRUCT(MlirRegion, void);
@@ -727,6 +728,29 @@ MLIR_CAPI_EXPORTED void mlirValueDump(MlirValue value);
 /// several times with consecutive chunks of the string.
 MLIR_CAPI_EXPORTED void
 mlirValuePrint(MlirValue value, MlirStringCallback callback, void *userData);
+
+/// Returns an op operand representing the first use of the value, or a null op
+/// operand if there are no uses.
+MLIR_CAPI_EXPORTED MlirOpOperand mlirValueGetFirstUse(MlirValue value);
+
+//===----------------------------------------------------------------------===//
+// OpOperand API.
+//===----------------------------------------------------------------------===//
+
+/// Returns whether the op operand is null.
+MLIR_CAPI_EXPORTED bool mlirOpOperandIsNull(MlirOpOperand opOperand);
+
+/// Returns the owner operation of an op operand.
+MLIR_CAPI_EXPORTED MlirOperation mlirOpOperandGetOwner(MlirOpOperand opOperand);
+
+/// Returns the operand number of an op operand.
+MLIR_CAPI_EXPORTED unsigned
+mlirOpOperandGetOperandNumber(MlirOpOperand opOperand);
+
+/// Returns an op operand representing the next use of the value, or a null op
+/// operand if there is no next use.
+MLIR_CAPI_EXPORTED MlirOpOperand
+mlirOpOperandGetNextUse(MlirOpOperand opOperand);
 
 //===----------------------------------------------------------------------===//
 // Type API.
