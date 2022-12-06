@@ -84,6 +84,10 @@ public:
     report(E->getMemberLoc(), getMemberProvider(Type));
     return true;
   }
+  bool VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) {
+    report(E->getMemberLoc(), getMemberProvider(E->getBaseType()));
+    return true;
+  }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
     report(E->getLocation(), E->getConstructor(),
