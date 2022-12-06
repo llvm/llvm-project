@@ -21763,8 +21763,7 @@ void AArch64TargetLowering::ReplaceNodeResults(
   }
   case ISD::READ_REGISTER: {
     SDLoc DL(N);
-    EVT VT = N->getValueType(0);
-    assert(VT == MVT::i128 &&
+    assert(N->getValueType(0) == MVT::i128 &&
            "READ_REGISTER custom lowering is only for 128-bit sysregs");
     SDValue Chain = N->getOperand(0);
     SDValue SysRegName = N->getOperand(1);
