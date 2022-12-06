@@ -1541,11 +1541,11 @@ getExistingLazyBinding(SValBuilder &SVB, RegionBindingsConstRef B,
                        const SubRegion *R, bool AllowSubregionBindings) {
   Optional<SVal> V = B.getDefaultBinding(R);
   if (!V)
-    return None;
+    return std::nullopt;
 
   Optional<nonloc::LazyCompoundVal> LCV = V->getAs<nonloc::LazyCompoundVal>();
   if (!LCV)
-    return None;
+    return std::nullopt;
 
   // If the LCV is for a subregion, the types might not match, and we shouldn't
   // reuse the binding.
@@ -1554,7 +1554,7 @@ getExistingLazyBinding(SValBuilder &SVB, RegionBindingsConstRef B,
       !RegionTy->isVoidPointerType()) {
     QualType SourceRegionTy = LCV->getRegion()->getValueType();
     if (!SVB.getContext().hasSameUnqualifiedType(RegionTy, SourceRegionTy))
-      return None;
+      return std::nullopt;
   }
 
   if (!AllowSubregionBindings) {
@@ -1564,7 +1564,7 @@ getExistingLazyBinding(SValBuilder &SVB, RegionBindingsConstRef B,
     collectSubRegionBindings(Bindings, SVB, *B.lookup(R->getBaseRegion()), R,
                              /*IncludeAllDefaultBindings=*/true);
     if (Bindings.size() > 1)
-      return None;
+      return std::nullopt;
   }
 
   return *LCV;
@@ -1717,7 +1717,7 @@ convertOffsetsFromSvalToUnsigneds(const SmallVector<SVal, 2> &SrcOffsets,
     // account.
     return UnknownVal();
   }
-  return None;
+  return std::nullopt;
 }
 
 Optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
@@ -1730,7 +1730,7 @@ Optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
   std::tie(SValOffsets, Base) = getElementRegionOffsetsWithBase(R);
   const VarRegion *VR = dyn_cast<VarRegion>(Base);
   if (!VR)
-    return None;
+    return std::nullopt;
 
   assert(!SValOffsets.empty() && "getElementRegionOffsets guarantees the "
                                  "offsets vector is not empty.");
@@ -1741,7 +1741,7 @@ Optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
   if (!VD->getType().isConstQualified() &&
       !R->getElementType().isConstQualified() &&
       (!B.isMainAnalysis() || !VD->hasGlobalStorage()))
-    return None;
+    return std::nullopt;
 
   // Array's declaration should have `ConstantArrayType` type, because only this
   // type contains an array extent. It may happen that array type can be of
@@ -1756,13 +1756,13 @@ Optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
   // NOTE: If `Init` is non-null, then a new `VD` is non-null for sure. So check
   // `Init` for null only and don't worry about the replaced `VD`.
   if (!Init)
-    return None;
+    return std::nullopt;
 
   // Array's declaration should have ConstantArrayType type, because only this
   // type contains an array extent.
   const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(VD->getType());
   if (!CAT)
-    return None;
+    return std::nullopt;
 
   // Get array extents.
   SmallVector<uint64_t, 2> Extents = getConstantArrayExtents(CAT);
@@ -1774,7 +1774,7 @@ Optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
   //  auto x = ptr[4][2]; // UB
   // FIXME: Should return UndefinedVal.
   if (SValOffsets.size() != Extents.size())
-    return None;
+    return std::nullopt;
 
   SmallVector<uint64_t, 2> ConcreteOffsets;
   if (Optional<SVal> V = convertOffsetsFromSvalToUnsigneds(SValOffsets, Extents,
@@ -1796,7 +1796,7 @@ Optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
 
   // FIXME: Handle CompoundLiteralExpr.
 
-  return None;
+  return std::nullopt;
 }
 
 /// Returns an SVal, if possible, for the specified position of an
@@ -1908,7 +1908,7 @@ static Optional<SVal> getDerivedSymbolForBinding(
       }
     }
   }
-  return None;
+  return std::nullopt;
 }
 
 SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
@@ -2042,7 +2042,7 @@ RegionStoreManager::getBindingForDerivedDefaultValue(RegionBindingsConstRef B,
     llvm_unreachable("Unknown default value");
   }
 
-  return None;
+  return std::nullopt;
 }
 
 SVal RegionStoreManager::getLazyBinding(const SubRegion *LazyBindingRegion,
@@ -2439,16 +2439,16 @@ Optional<RegionBindingsRef> RegionStoreManager::tryBindSmallArray(
 
   // If we don't know the size, create a lazyCompoundVal instead.
   if (!CAT)
-    return None;
+    return std::nullopt;
 
   QualType Ty = CAT->getElementType();
   if (!(Ty->isScalarType() || Ty->isReferenceType()))
-    return None;
+    return std::nullopt;
 
   // If the array is too big, create a LCV instead.
   uint64_t ArrSize = CAT->getSize().getLimitedValue();
   if (ArrSize > SmallArrayLimit)
-    return None;
+    return std::nullopt;
 
   RegionBindingsRef NewB = B;
 
@@ -2578,7 +2578,7 @@ RegionStoreManager::tryBindSmallStruct(RegionBindingsConstRef B,
 
   if (const CXXRecordDecl *Class = dyn_cast<CXXRecordDecl>(RD))
     if (Class->getNumBases() != 0 || Class->getNumVBases() != 0)
-      return None;
+      return std::nullopt;
 
   for (const auto *FD : RD->fields()) {
     if (FD->isUnnamedBitfield())
@@ -2587,7 +2587,7 @@ RegionStoreManager::tryBindSmallStruct(RegionBindingsConstRef B,
     // If there are too many fields, or if any of the fields are aggregates,
     // just use the LCV as a default binding.
     if (Fields.size() == SmallStructLimit)
-      return None;
+      return std::nullopt;
 
     QualType Ty = FD->getType();
 
@@ -2597,7 +2597,7 @@ RegionStoreManager::tryBindSmallStruct(RegionBindingsConstRef B,
       continue;
 
     if (!(Ty->isScalarType() || Ty->isReferenceType()))
-      return None;
+      return std::nullopt;
 
     Fields.push_back(FD);
   }
