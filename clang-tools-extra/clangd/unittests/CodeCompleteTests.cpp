@@ -3555,7 +3555,7 @@ TEST(CompletionTest, CompletionRange) {
   // heuristics as normal and reports a range. It'd be nice to be consistent.
   const char *NoCompletion = "/* foo [[]]^ */";
   Completions = completions(NoCompletion);
-  EXPECT_EQ(Completions.CompletionRange, llvm::None);
+  EXPECT_EQ(Completions.CompletionRange, std::nullopt);
   Completions = completionsNoCompile(NoCompletion);
   EXPECT_EQ(Completions.CompletionRange, Annotations(NoCompletion).range());
 }
