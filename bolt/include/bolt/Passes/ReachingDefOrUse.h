@@ -34,7 +34,7 @@ class ReachingDefOrUse
 
 public:
   ReachingDefOrUse(const RegAnalysis &RA, BinaryFunction &BF,
-                   Optional<MCPhysReg> TrackingReg = None,
+                   Optional<MCPhysReg> TrackingReg = std::nullopt,
                    MCPlusBuilder::AllocatorIdTy AllocId = 0)
       : InstrsDataflowAnalysis<ReachingDefOrUse<Def>, !Def>(BF, AllocId),
         RA(RA), TrackingReg(TrackingReg) {}
@@ -125,7 +125,7 @@ protected:
     }
     // Gen
     if (!this->BC.MIB->isCFI(Point)) {
-      if (TrackingReg == None) {
+      if (TrackingReg == std::nullopt) {
         // Track all instructions
         Next.set(this->ExprToIdx[&Point]);
       } else {
