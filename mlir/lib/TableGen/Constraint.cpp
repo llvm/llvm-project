@@ -52,7 +52,8 @@ std::string Constraint::getConditionTemplate() const {
 }
 
 StringRef Constraint::getSummary() const {
-  if (Optional<StringRef> summary = def->getValueAsOptionalString("summary"))
+  if (std::optional<StringRef> summary =
+          def->getValueAsOptionalString("summary"))
     return *summary;
   return def->getName();
 }
@@ -62,7 +63,7 @@ StringRef Constraint::getDescription() const {
 }
 
 StringRef Constraint::getDefName() const {
-  if (Optional<StringRef> baseDefName = getBaseDefName())
+  if (std::optional<StringRef> baseDefName = getBaseDefName())
     return *baseDefName;
   return def->getName();
 }
@@ -77,15 +78,15 @@ std::string Constraint::getUniqueDefName() const {
   // Otherwise, this is an anonymous class. In these cases we still use the def
   // name, but we also try attach the name of the base def when present to make
   // the name more obvious.
-  if (Optional<StringRef> baseDefName = getBaseDefName())
+  if (std::optional<StringRef> baseDefName = getBaseDefName())
     return (*baseDefName + "(" + defName + ")").str();
   return defName;
 }
 
-Optional<StringRef> Constraint::getBaseDefName() const {
+std::optional<StringRef> Constraint::getBaseDefName() const {
   // Functor used to check a base def in the case where the current def is
   // anonymous.
-  auto checkBaseDefFn = [&](StringRef baseName) -> Optional<StringRef> {
+  auto checkBaseDefFn = [&](StringRef baseName) -> std::optional<StringRef> {
     if (const auto *defValue = def->getValue(baseName)) {
       if (const auto *defInit = dyn_cast<llvm::DefInit>(defValue->getValue()))
         return Constraint(defInit->getDef(), kind).getDefName();

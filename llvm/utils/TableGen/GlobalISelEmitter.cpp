@@ -200,7 +200,7 @@ std::set<LLTCodeGen> KnownTypes;
 class InstructionMatcher;
 /// Convert an MVT to an equivalent LLT if possible, or the invalid LLT() for
 /// MVTs that don't map cleanly to an LLT (e.g., iPTR, *any, ...).
-static Optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
+static std::optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
   MVT VT(SVT);
 
   if (VT.isVector() && !VT.getVectorElementCount().isScalar())
@@ -466,7 +466,7 @@ public:
   /// The actual run-time value, if known
   int64_t RawValue;
 
-  MatchTableRecord(Optional<unsigned> LabelID_, StringRef EmitStr,
+  MatchTableRecord(std::optional<unsigned> LabelID_, StringRef EmitStr,
                    unsigned NumElements, unsigned Flags,
                    int64_t RawValue = std::numeric_limits<int64_t>::min())
       : LabelID(LabelID_.value_or(~0u)), EmitStr(EmitStr),
@@ -966,7 +966,7 @@ public:
     return Error::success();
   }
 
-  Optional<DefinedComplexPatternSubOperand>
+  std::optional<DefinedComplexPatternSubOperand>
   getComplexSubOperand(StringRef SymbolicName) const {
     const auto &I = ComplexSubOperands.find(SymbolicName);
     if (I == ComplexSubOperands.end())
@@ -1643,7 +1643,7 @@ public:
 
   /// Construct a new operand predicate and add it to the matcher.
   template <class Kind, class... Args>
-  Optional<Kind *> addPredicate(Args &&... args) {
+  std::optional<Kind *> addPredicate(Args &&...args) {
     if (isSameAsAnotherOperand())
       return std::nullopt;
     Predicates.emplace_back(std::make_unique<Kind>(
@@ -2302,7 +2302,7 @@ public:
 
   /// Construct a new instruction predicate and add it to the matcher.
   template <class Kind, class... Args>
-  Optional<Kind *> addPredicate(Args &&... args) {
+  std::optional<Kind *> addPredicate(Args &&...args) {
     Predicates.emplace_back(
         std::make_unique<Kind>(getInsnVarID(), std::forward<Args>(args)...));
     return static_cast<Kind *>(Predicates.back().get());
@@ -2951,7 +2951,7 @@ private:
   unsigned RendererID;
   /// When provided, this is the suboperand of the ComplexPattern operand to
   /// render. Otherwise all the suboperands will be rendered.
-  Optional<unsigned> SubOperand;
+  std::optional<unsigned> SubOperand;
 
   unsigned getNumOperands() const {
     return TheDef.getValueAsDag("Operands")->getNumArgs();
@@ -2960,7 +2960,7 @@ private:
 public:
   RenderComplexPatternOperand(unsigned InsnID, const Record &TheDef,
                               StringRef SymbolicName, unsigned RendererID,
-                              Optional<unsigned> SubOperand = std::nullopt)
+                              std::optional<unsigned> SubOperand = std::nullopt)
       : OperandRenderer(OR_ComplexPattern), InsnID(InsnID), TheDef(TheDef),
         SymbolicName(SymbolicName), RendererID(RendererID),
         SubOperand(SubOperand) {}
@@ -3552,7 +3552,7 @@ static Expected<LLTCodeGen> getInstResultType(const TreePatternNode *Dst) {
   if (ChildTypes.size() != 1)
     return failedImport("Dst pattern child has multiple results");
 
-  Optional<LLTCodeGen> MaybeOpTy;
+  std::optional<LLTCodeGen> MaybeOpTy;
   if (ChildTypes.front().isMachineValueType()) {
     MaybeOpTy =
       MVTToLLT(ChildTypes.front().getMachineValueType().SimpleTy);
@@ -3598,7 +3598,7 @@ private:
   SubtargetFeatureInfoMap SubtargetFeatures;
 
   // Rule coverage information.
-  Optional<CodeGenCoverage> RuleCoverage;
+  std::optional<CodeGenCoverage> RuleCoverage;
 
   /// Variables used to help with collecting of named operands for predicates
   /// with 'let PredicateCodeUsesOperands = 1'. WaitingForNamedOperands is set
@@ -3683,30 +3683,30 @@ private:
   /// CodeGenRegisterClass will support the CodeGenRegisterClass of
   /// \p SubRegNode, and the subregister index defined by \p SubRegIdxNode.
   /// If no register class is found, return std::nullopt.
-  Optional<const CodeGenRegisterClass *>
+  std::optional<const CodeGenRegisterClass *>
   inferSuperRegisterClassForNode(const TypeSetByHwMode &Ty,
                                  TreePatternNode *SuperRegNode,
                                  TreePatternNode *SubRegIdxNode);
-  Optional<CodeGenSubRegIndex *>
+  std::optional<CodeGenSubRegIndex *>
   inferSubRegIndexForNode(TreePatternNode *SubRegIdxNode);
 
   /// Infer a CodeGenRegisterClass which suppoorts \p Ty and \p SubRegIdxNode.
   /// Return std::nullopt if no such class exists.
-  Optional<const CodeGenRegisterClass *>
+  std::optional<const CodeGenRegisterClass *>
   inferSuperRegisterClass(const TypeSetByHwMode &Ty,
                           TreePatternNode *SubRegIdxNode);
 
   /// Return the CodeGenRegisterClass associated with \p Leaf if it has one.
-  Optional<const CodeGenRegisterClass *>
+  std::optional<const CodeGenRegisterClass *>
   getRegClassFromLeaf(TreePatternNode *Leaf);
 
   /// Return a CodeGenRegisterClass for \p N if one can be found. Return
   /// std::nullopt otherwise.
-  Optional<const CodeGenRegisterClass *>
+  std::optional<const CodeGenRegisterClass *>
   inferRegClassFromPattern(TreePatternNode *N);
 
   /// Return the size of the MemoryVT in this predicate, if possible.
-  Optional<unsigned>
+  std::optional<unsigned>
   getMemSizeBitsFromPredicate(const TreePredicateFn &Predicate);
 
   // Add builtin predicates.
@@ -3823,8 +3823,9 @@ Error GlobalISelEmitter::importRulePredicates(RuleMatcher &M,
   return Error::success();
 }
 
-Optional<unsigned> GlobalISelEmitter::getMemSizeBitsFromPredicate(const TreePredicateFn &Predicate) {
-  Optional<LLTCodeGen> MemTyOrNone =
+std::optional<unsigned> GlobalISelEmitter::getMemSizeBitsFromPredicate(
+    const TreePredicateFn &Predicate) {
+  std::optional<LLTCodeGen> MemTyOrNone =
       MVTToLLT(getValueType(Predicate.getMemoryVT()));
 
   if (!MemTyOrNone)
@@ -4545,7 +4546,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     if (ChildTypes.size() != 1)
       return failedImport("Dst pattern child has multiple results");
 
-    Optional<LLTCodeGen> OpTyOrNone;
+    std::optional<LLTCodeGen> OpTyOrNone;
     if (ChildTypes.front().isMachineValueType())
       OpTyOrNone = MVTToLLT(ChildTypes.front().getMachineValueType().SimpleTy);
     if (!OpTyOrNone)
@@ -4659,7 +4660,7 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
     if (!SubClass)
       return failedImport(
           "Cannot infer register class from INSERT_SUBREG operand #1");
-    Optional<const CodeGenRegisterClass *> SuperClass =
+    std::optional<const CodeGenRegisterClass *> SuperClass =
         inferSuperRegisterClassForNode(Dst->getExtType(0), Dst->getChild(0),
                                        Dst->getChild(2));
     if (!SuperClass)
@@ -4977,7 +4978,7 @@ Error GlobalISelEmitter::importDefaultOperandRenderers(
     action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
     DagInit *DefaultOps) const {
   for (const auto *DefaultOp : DefaultOps->getArgs()) {
-    Optional<LLTCodeGen> OpTyOrNone;
+    std::optional<LLTCodeGen> OpTyOrNone;
 
     // Look through ValueType operators.
     if (const DagInit *DefaultDagOp = dyn_cast<DagInit>(DefaultOp)) {
@@ -5029,7 +5030,7 @@ Error GlobalISelEmitter::importImplicitDefRenderers(
   return Error::success();
 }
 
-Optional<const CodeGenRegisterClass *>
+std::optional<const CodeGenRegisterClass *>
 GlobalISelEmitter::getRegClassFromLeaf(TreePatternNode *Leaf) {
   assert(Leaf && "Expected node?");
   assert(Leaf->isLeaf() && "Expected leaf?");
@@ -5042,7 +5043,7 @@ GlobalISelEmitter::getRegClassFromLeaf(TreePatternNode *Leaf) {
   return RC;
 }
 
-Optional<const CodeGenRegisterClass *>
+std::optional<const CodeGenRegisterClass *>
 GlobalISelEmitter::inferRegClassFromPattern(TreePatternNode *N) {
   if (!N)
     return std::nullopt;
@@ -5110,7 +5111,7 @@ GlobalISelEmitter::inferRegClassFromPattern(TreePatternNode *N) {
   return std::nullopt;
 }
 
-Optional<const CodeGenRegisterClass *>
+std::optional<const CodeGenRegisterClass *>
 GlobalISelEmitter::inferSuperRegisterClass(const TypeSetByHwMode &Ty,
                                            TreePatternNode *SubRegIdxNode) {
   assert(SubRegIdxNode && "Expected subregister index node!");
@@ -5134,7 +5135,7 @@ GlobalISelEmitter::inferSuperRegisterClass(const TypeSetByHwMode &Ty,
   return *RC;
 }
 
-Optional<const CodeGenRegisterClass *>
+std::optional<const CodeGenRegisterClass *>
 GlobalISelEmitter::inferSuperRegisterClassForNode(
     const TypeSetByHwMode &Ty, TreePatternNode *SuperRegNode,
     TreePatternNode *SubRegIdxNode) {
@@ -5144,13 +5145,13 @@ GlobalISelEmitter::inferSuperRegisterClassForNode(
   // from the subregister index node. We can assume that whoever wrote the
   // pattern in the first place made sure that the super register and
   // subregister are compatible.
-  if (Optional<const CodeGenRegisterClass *> SuperRegisterClass =
+  if (std::optional<const CodeGenRegisterClass *> SuperRegisterClass =
           inferRegClassFromPattern(SuperRegNode))
     return *SuperRegisterClass;
   return inferSuperRegisterClass(Ty, SubRegIdxNode);
 }
 
-Optional<CodeGenSubRegIndex *>
+std::optional<CodeGenSubRegIndex *>
 GlobalISelEmitter::inferSubRegIndexForNode(TreePatternNode *SubRegIdxNode) {
   if (!SubRegIdxNode->isLeaf())
     return std::nullopt;
