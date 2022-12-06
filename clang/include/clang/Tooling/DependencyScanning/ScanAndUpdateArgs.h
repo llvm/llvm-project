@@ -12,12 +12,16 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm {
+class StringSaver;
+class TreePathPrefixMapper;
+
 namespace cas {
 class ObjectStore;
 class CASID;
-}
+} // namespace cas
 } // namespace llvm
 
 namespace clang {
@@ -37,6 +41,16 @@ struct DepscanPrefixMapping {
   Optional<StringRef> NewSDKPath;
   Optional<StringRef> NewToolchainPath;
   SmallVector<StringRef> PrefixMap;
+
+  /// Add path mappings from the current path in \p Invocation to the new path
+  /// from \c DepscanPrefixMapping to the \p Mapper.
+  llvm::Error configurePrefixMapper(const CompilerInvocation &Invocation,
+                                    llvm::StringSaver &Saver,
+                                    llvm::TreePathPrefixMapper &Mapper) const;
+
+  /// Apply the mappings from \p Mapper to \p Invocation.
+  static void remapInvocationPaths(CompilerInvocation &Invocation,
+                                   llvm::TreePathPrefixMapper &Mapper);
 };
 } // namespace cc1depscand
 
