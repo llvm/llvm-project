@@ -108,7 +108,7 @@ public:
   // `TextSectionIndex` is specified, only returns the BB address maps
   // corresponding to the section with that index.
   Expected<std::vector<BBAddrMap>>
-  readBBAddrMap(Optional<unsigned> TextSectionIndex = None) const;
+  readBBAddrMap(Optional<unsigned> TextSectionIndex = std::nullopt) const;
 };
 
 class ELFSectionRef : public SectionRef {

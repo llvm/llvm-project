@@ -113,7 +113,7 @@ struct CParser {
   std::optional<std::string> Err;
 
   CParser(Format ParserFormat, StringRef Buf,
-          std::optional<ParsedStringTable> StrTab = None)
+          std::optional<ParsedStringTable> StrTab = std::nullopt)
       : TheParser(cantFail(
             StrTab ? createRemarkParser(ParserFormat, Buf, std::move(*StrTab))
                    : createRemarkParser(ParserFormat, Buf))) {}

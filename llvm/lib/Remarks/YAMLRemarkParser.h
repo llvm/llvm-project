@@ -107,10 +107,9 @@ protected:
   Expected<StringRef> parseStr(yaml::KeyValueNode &Node) override;
 };
 
-Expected<std::unique_ptr<YAMLRemarkParser>>
-createYAMLParserFromMeta(StringRef Buf,
-                         Optional<ParsedStringTable> StrTab = None,
-                         Optional<StringRef> ExternalFilePrependPath = None);
+Expected<std::unique_ptr<YAMLRemarkParser>> createYAMLParserFromMeta(
+    StringRef Buf, Optional<ParsedStringTable> StrTab = std::nullopt,
+    Optional<StringRef> ExternalFilePrependPath = std::nullopt);
 
 } // end namespace remarks
 } // end namespace llvm

@@ -179,7 +179,7 @@ getCOFFObjectFileSymbolInfo(ExecutionSession &ES,
       if (Def->Selection != COFF::IMAGE_COMDAT_SELECT_NODUPLICATES) {
         IsWeak = true;
       }
-      ComdatDefs[COFFSym.getSectionNumber()] = None;
+      ComdatDefs[COFFSym.getSectionNumber()] = std::nullopt;
     } else {
       // Skip symbols not defined in this object file.
       if (*SymFlagsOrErr & object::BasicSymbolRef::SF_Undefined)
