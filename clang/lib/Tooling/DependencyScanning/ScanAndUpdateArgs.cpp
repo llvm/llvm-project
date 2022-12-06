@@ -18,83 +18,6 @@
 using namespace clang;
 using llvm::Error;
 
-static bool isPathApplicableAsPrefix(StringRef Path) {
-  if (Path.empty())
-    return false;
-  if (llvm::sys::path::is_relative(Path))
-    return false;
-  if (Path == llvm::sys::path::root_path(Path))
-    return false;
-  return true;
-}
-
-static Error computeSDKMapping(llvm::StringSaver &Saver,
-                               const CompilerInvocation &Invocation,
-                               StringRef New,
-                               llvm::TreePathPrefixMapper &Mapper) {
-  StringRef SDK = Invocation.getHeaderSearchOpts().Sysroot;
-  if (isPathApplicableAsPrefix(SDK))
-    // Need a new copy of the string since the invocation will be modified.
-    return Mapper.add(llvm::MappedPrefix{Saver.save(SDK), New});
-  return Error::success();
-}
-
-static Error computeToolchainMapping(llvm::StringSaver &Saver,
-                                     const CompilerInvocation &Invocation,
-                                     StringRef New,
-                                     llvm::TreePathPrefixMapper &Mapper) {
-  // Look up for the toolchain, assuming resources are at
-  // <toolchain>/usr/lib/clang/<VERSION>. Return a shallower guess if the
-  // directories do not match.
-  //
-  // FIXME: Should this append ".." instead of calling parent_path?
-  StringRef ResourceDir = Invocation.getHeaderSearchOpts().ResourceDir;
-  StringRef Guess = llvm::sys::path::parent_path(ResourceDir);
-  for (StringRef Dir : {"clang", "lib", "usr"}) {
-    if (llvm::sys::path::filename(Guess) != Dir)
-      break;
-    Guess = llvm::sys::path::parent_path(Guess);
-  }
-  if (isPathApplicableAsPrefix(Guess))
-    // Need a new copy of the string since the invocation will be modified.
-    return Mapper.add(llvm::MappedPrefix{Saver.save(Guess), New});
-  return Error::success();
-}
-
-static Error
-computeFullMapping(llvm::StringSaver &Saver,
-                   const CompilerInvocation &Invocation,
-                   const cc1depscand::DepscanPrefixMapping &DepscanMapping,
-                   llvm::TreePathPrefixMapper &Mapper) {
-  if (DepscanMapping.NewSDKPath)
-    if (Error E = computeSDKMapping(Saver, Invocation,
-                                    *DepscanMapping.NewSDKPath, Mapper))
-      return E;
-
-  if (DepscanMapping.NewToolchainPath)
-    if (Error E = computeToolchainMapping(
-            Saver, Invocation, *DepscanMapping.NewToolchainPath, Mapper))
-      return E;
-
-  if (!DepscanMapping.PrefixMap.empty()) {
-    llvm::SmallVector<llvm::MappedPrefix> Split;
-    llvm::MappedPrefix::transformJoinedIfValid(DepscanMapping.PrefixMap, Split);
-    for (auto &MappedPrefix : Split) {
-      if (isPathApplicableAsPrefix(MappedPrefix.Old)) {
-        if (auto E = Mapper.add(MappedPrefix))
-          return E;
-      } else {
-        return createStringError(llvm::errc::invalid_argument,
-                                 "invalid prefix map: '" + MappedPrefix.Old +
-                                     "=" + MappedPrefix.New + "'");
-      }
-    }
-  }
-
-  Mapper.sort();
-  return Error::success();
-}
-
 static void updateCompilerInvocation(CompilerInvocation &Invocation,
                                      llvm::StringSaver &Saver,
                                      bool ProduceIncludeTree,
@@ -136,6 +59,12 @@ static void updateCompilerInvocation(CompilerInvocation &Invocation,
   // Turn off dependency outputs. Should have already been emitted.
   Invocation.getDependencyOutputOpts().OutputFile.clear();
 
+  // Apply path remappings.
+  cc1depscand::DepscanPrefixMapping::remapInvocationPaths(Invocation, Mapper);
+}
+
+void cc1depscand::DepscanPrefixMapping::remapInvocationPaths(
+    CompilerInvocation &Invocation, llvm::TreePathPrefixMapper &Mapper) {
   // If there are no mappings, we're done. Otherwise, continue and remap
   // everything.
   if (Mapper.getMappings().empty())
@@ -155,6 +84,7 @@ static void updateCompilerInvocation(CompilerInvocation &Invocation,
   };
 
   // If we can't remap the working directory, skip everything else.
+  auto &FileSystemOpts = Invocation.getFileSystemOpts();
   if (remapInPlace(FileSystemOpts.CASFileSystemWorkingDirectory))
     return;
 
@@ -192,6 +122,7 @@ static void updateCompilerInvocation(CompilerInvocation &Invocation,
   Mapper.mapInPlaceOrClear(PPOpts.ImplicitPCHInclude);
 
   // Frontend options.
+  auto &FrontendOpts = Invocation.getFrontendOpts();
   remapInPlaceOrFilterOutWith(
       FrontendOpts.Inputs, [&](FrontendInputFile &Input) {
         if (Input.isBuffer())
@@ -238,6 +169,65 @@ static void updateCompilerInvocation(CompilerInvocation &Invocation,
   Mapper.mapInPlaceOrClear(CodeGenOpts.ProfileRemappingFile);
 }
 
+Error cc1depscand::DepscanPrefixMapping::configurePrefixMapper(
+    const CompilerInvocation &Invocation, llvm::StringSaver &Saver,
+    llvm::TreePathPrefixMapper &Mapper) const {
+  auto isPathApplicableAsPrefix = [](StringRef Path) -> bool {
+    if (Path.empty())
+      return false;
+    if (llvm::sys::path::is_relative(Path))
+      return false;
+    if (Path == llvm::sys::path::root_path(Path))
+      return false;
+    return true;
+  };
+
+  const HeaderSearchOptions &HSOpts = Invocation.getHeaderSearchOpts();
+
+  if (NewSDKPath) {
+    StringRef SDK = HSOpts.Sysroot;
+    if (isPathApplicableAsPrefix(SDK))
+      // Need a new copy of the string since the invocation will be modified.
+      if (auto E = Mapper.add({Saver.save(SDK), *NewSDKPath}))
+        return E;
+  }
+  if (NewToolchainPath) {
+    // Look up for the toolchain, assuming resources are at
+    // <toolchain>/usr/lib/clang/<VERSION>. Return a shallower guess if the
+    // directories do not match.
+    //
+    // FIXME: Should this append ".." instead of calling parent_path?
+    StringRef ResourceDir = HSOpts.ResourceDir;
+    StringRef Guess = llvm::sys::path::parent_path(ResourceDir);
+    for (StringRef Dir : {"clang", "lib", "usr"}) {
+      if (llvm::sys::path::filename(Guess) != Dir)
+        break;
+      Guess = llvm::sys::path::parent_path(Guess);
+    }
+    if (isPathApplicableAsPrefix(Guess))
+      // Need a new copy of the string since the invocation will be modified.
+      if (auto E = Mapper.add({Saver.save(Guess), *NewToolchainPath}))
+        return E;
+  }
+  if (!PrefixMap.empty()) {
+    llvm::SmallVector<llvm::MappedPrefix> Split;
+    llvm::MappedPrefix::transformJoinedIfValid(PrefixMap, Split);
+    for (auto &MappedPrefix : Split) {
+      if (isPathApplicableAsPrefix(MappedPrefix.Old)) {
+        if (auto E = Mapper.add(MappedPrefix))
+          return E;
+      } else {
+        return createStringError(llvm::errc::invalid_argument,
+                                 "invalid prefix map: '" + MappedPrefix.Old +
+                                     "=" + MappedPrefix.New + "'");
+      }
+    }
+  }
+
+  Mapper.sort();
+  return Error::success();
+}
+
 Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
     tooling::dependencies::DependencyScanningTool &Tool,
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
@@ -253,7 +243,7 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver(Alloc);
   llvm::TreePathPrefixMapper Mapper(&FS, Alloc);
-  if (Error E = computeFullMapping(Saver, Invocation, PrefixMapping, Mapper))
+  if (Error E = PrefixMapping.configurePrefixMapper(Invocation, Saver, Mapper))
     return std::move(E);
 
   auto ScanInvocation = std::make_shared<CompilerInvocation>(Invocation);
