@@ -354,7 +354,8 @@ private:
   std::pair<const Symbol *, bool /* failure due to NULL() actuals */>
   ResolveGeneric(const Symbol &, const ActualArguments &, const AdjustActuals &,
       bool isSubroutine, bool mightBeStructureConstructor = false);
-  void EmitGenericResolutionError(const Symbol &, bool dueToNullActuals);
+  void EmitGenericResolutionError(
+      const Symbol &, bool dueToNullActuals, bool isSubroutine);
   const Symbol &AccessSpecific(
       const Symbol &originalGeneric, const Symbol &specific);
   std::optional<CalleeAndArguments> GetCalleeAndArguments(const parser::Name &,
