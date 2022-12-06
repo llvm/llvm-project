@@ -48,7 +48,6 @@ enum class TensorType {
 #define _TENSOR_TYPE_ENUM_MEMBERS(_, Name) Name,
   SUPPORTED_TENSOR_TYPES(_TENSOR_TYPE_ENUM_MEMBERS)
 #undef _TENSOR_TYPE_ENUM_MEMBERS
-      Total
 };
 
 class TensorSpec final {
@@ -86,8 +85,6 @@ public:
   TensorSpec(const std::string &NewName, const TensorSpec &Other)
       : TensorSpec(NewName, Other.Port, Other.Type, Other.ElementSize,
                    Other.Shape) {}
-
-  void toJSON(json::OStream &OS) const;
 
 private:
   TensorSpec(const std::string &Name, int Port, TensorType Type,
