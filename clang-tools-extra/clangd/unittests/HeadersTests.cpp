@@ -353,7 +353,7 @@ TEST(Headers, NoHeaderSearchInfo) {
   EXPECT_EQ(Inserter.shouldInsertInclude(HeaderPath, Verbatim), true);
 
   EXPECT_EQ(Inserter.calculateIncludePath(Inserting, "sub2/main2.cpp"),
-            llvm::None);
+            std::nullopt);
 }
 
 TEST_F(HeadersTest, PresumedLocations) {

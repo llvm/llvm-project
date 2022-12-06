@@ -504,7 +504,7 @@ TEST(MergeIndexTest, Refs) {
   AST = Test.build();
   Dyn.updateMain(testPath(Test.Filename), AST);
 
-  Request.Limit = llvm::None;
+  Request.Limit = std::nullopt;
   RefSlab::Builder Results3;
   EXPECT_FALSE(
       Merge.refs(Request, [&](const Ref &O) { Results3.insert(Foo.ID, O); }));

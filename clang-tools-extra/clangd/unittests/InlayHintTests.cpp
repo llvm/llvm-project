@@ -33,7 +33,7 @@ using ::testing::IsEmpty;
 
 std::vector<InlayHint> hintsOfKind(ParsedAST &AST, InlayHintKind Kind) {
   std::vector<InlayHint> Result;
-  for (auto &Hint : inlayHints(AST, /*RestrictRange=*/llvm::None)) {
+  for (auto &Hint : inlayHints(AST, /*RestrictRange=*/std::nullopt)) {
     if (Hint.kind == Kind)
       Result.push_back(Hint);
   }
@@ -93,7 +93,7 @@ void assertHints(InlayHintKind Kind, llvm::StringRef AnnotatedSource,
   // Sneak in a cross-cutting check that hints are disabled by config.
   // We'll hit an assertion failure if addInlayHint still gets called.
   WithContextValue WithCfg(Config::Key, noHintsConfig());
-  EXPECT_THAT(inlayHints(AST, llvm::None), IsEmpty());
+  EXPECT_THAT(inlayHints(AST, std::nullopt), IsEmpty());
 }
 
 // Hack to allow expression-statements operating on parameter packs in C++14.

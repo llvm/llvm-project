@@ -164,10 +164,10 @@ int* int_ptr_;
 
   auto IntPtrTy = *OpaqueType::fromType(astCtx(), typeOf("int_ptr_"));
   EXPECT_EQ(fromCompletionResult(decl("returns_not_dependent")), IntPtrTy);
-  EXPECT_EQ(fromCompletionResult(decl("returns_dependent")), llvm::None);
+  EXPECT_EQ(fromCompletionResult(decl("returns_dependent")), std::nullopt);
 
   EXPECT_EQ(fromCompletionResult(decl("var_not_dependent")), IntPtrTy);
-  EXPECT_EQ(fromCompletionResult(decl("var_dependent")), llvm::None);
+  EXPECT_EQ(fromCompletionResult(decl("var_dependent")), std::nullopt);
 }
 
 } // namespace
