@@ -3084,6 +3084,10 @@ def fclangir_lifetime_check : Flag<["-"], "fclangir-lifetime-check">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
   Alias<fclangir_lifetime_check_EQ>, AliasArgs<["history=invalid,null"]>,
   HelpText<"Run lifetime checker">;
+def fclangir_direct_lowering : Flag<["-"], "fclangir-direct-lowering">,
+  Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
+  HelpText<"Lower directly from ClangIR to LLVM">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIRDirectLowering">>;
 
 def flto : Flag<["-"], "flto">,
   Visibility<[ClangOption, CLOption, CC1Option, FC1Option, FlangOption]>,

@@ -421,6 +421,9 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned UseClangIRPipeline : 1;
 
+  /// Lower directly from ClangIR to LLVM
+  unsigned ClangIRDirectLowering : 1;
+
   /// Disable Clang IR specific (CIR) passes
   unsigned ClangIRDisablePasses : 1;
 
@@ -625,9 +628,10 @@ public:
         EmitSymbolGraph(false), EmitExtensionSymbolGraphs(false),
         EmitSymbolGraphSymbolLabelsForTesting(false),
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
-        UseClangIRPipeline(false), ClangIRDisablePasses(false),
-        ClangIRDisableCIRVerifier(false), ClangIRDisableEmitCXXDefault(false),
-        ClangIRLifetimeCheck(false), TimeTraceGranularity(500),
+        UseClangIRPipeline(false), ClangIRDirectLowering(false),
+        ClangIRDisablePasses(false), ClangIRDisableCIRVerifier(false),
+        ClangIRDisableEmitCXXDefault(false), ClangIRLifetimeCheck(false),
+        TimeTraceGranularity(500),
         TimeTraceVerbose(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file

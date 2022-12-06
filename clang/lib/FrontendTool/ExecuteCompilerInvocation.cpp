@@ -62,6 +62,10 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     llvm::report_fatal_error(
         "-emit-cir and -emit-cir-only only valid when using -fclangir");
 
+  if (CI.getFrontendOpts().ClangIRDirectLowering && Act == EmitMLIR)
+    llvm::report_fatal_error(
+        "ClangIR direct lowering is incompatible with -emit-mlir");
+
   switch (CI.getFrontendOpts().ProgramAction) {
   case ASTDeclList:            return std::make_unique<ASTDeclListAction>();
   case ASTDump:                return std::make_unique<ASTDumpAction>();
