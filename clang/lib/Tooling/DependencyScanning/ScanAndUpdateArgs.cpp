@@ -16,6 +16,7 @@
 #include "llvm/Support/PrefixMapper.h"
 
 using namespace clang;
+using namespace clang::tooling::dependencies;
 using llvm::Error;
 
 static void updateCompilerInvocation(CompilerInvocation &Invocation,
@@ -60,10 +61,10 @@ static void updateCompilerInvocation(CompilerInvocation &Invocation,
   Invocation.getDependencyOutputOpts().OutputFile.clear();
 
   // Apply path remappings.
-  cc1depscand::DepscanPrefixMapping::remapInvocationPaths(Invocation, Mapper);
+  DepscanPrefixMapping::remapInvocationPaths(Invocation, Mapper);
 }
 
-void cc1depscand::DepscanPrefixMapping::remapInvocationPaths(
+void DepscanPrefixMapping::remapInvocationPaths(
     CompilerInvocation &Invocation, llvm::TreePathPrefixMapper &Mapper) {
   // If there are no mappings, we're done. Otherwise, continue and remap
   // everything.
@@ -169,7 +170,7 @@ void cc1depscand::DepscanPrefixMapping::remapInvocationPaths(
   Mapper.mapInPlaceOrClear(CodeGenOpts.ProfileRemappingFile);
 }
 
-Error cc1depscand::DepscanPrefixMapping::configurePrefixMapper(
+Error DepscanPrefixMapping::configurePrefixMapper(
     const CompilerInvocation &Invocation, llvm::StringSaver &Saver,
     llvm::TreePathPrefixMapper &Mapper) const {
   auto isPathApplicableAsPrefix = [](StringRef Path) -> bool {
@@ -229,10 +230,9 @@ Error cc1depscand::DepscanPrefixMapping::configurePrefixMapper(
 }
 
 Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
-    tooling::dependencies::DependencyScanningTool &Tool,
-    DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
-    CompilerInvocation &Invocation, StringRef WorkingDirectory,
-    const cc1depscand::DepscanPrefixMapping &PrefixMapping,
+    DependencyScanningTool &Tool, DiagnosticConsumer &DiagsConsumer,
+    raw_ostream *VerboseOS, CompilerInvocation &Invocation,
+    StringRef WorkingDirectory, const DepscanPrefixMapping &PrefixMapping,
     llvm::cas::ObjectStore &DB) {
   llvm::cas::CachingOnDiskFileSystem &FS = Tool.getCachingFileSystem();
 

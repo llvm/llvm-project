@@ -33,10 +33,7 @@ class DiagnosticConsumer;
 namespace tooling {
 namespace dependencies {
 class DependencyScanningTool;
-}
-} // namespace tooling
 
-namespace cc1depscand {
 struct DepscanPrefixMapping {
   Optional<StringRef> NewSDKPath;
   Optional<StringRef> NewToolchainPath;
@@ -52,13 +49,14 @@ struct DepscanPrefixMapping {
   static void remapInvocationPaths(CompilerInvocation &Invocation,
                                    llvm::TreePathPrefixMapper &Mapper);
 };
-} // namespace cc1depscand
+} // namespace dependencies
+} // namespace tooling
 
 Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     tooling::dependencies::DependencyScanningTool &Tool,
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
     CompilerInvocation &Invocation, StringRef WorkingDirectory,
-    const cc1depscand::DepscanPrefixMapping &PrefixMapping,
+    const tooling::dependencies::DepscanPrefixMapping &PrefixMapping,
     llvm::cas::ObjectStore &DB);
 
 } // end namespace clang
