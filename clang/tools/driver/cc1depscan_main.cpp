@@ -64,6 +64,7 @@
 using namespace clang;
 using namespace llvm::opt;
 using cc1depscand::DepscanSharing;
+using clang::tooling::dependencies::DepscanPrefixMapping;
 using llvm::Error;
 
 #define DEBUG_TYPE "cc1depscand"
@@ -367,7 +368,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1Inline(
     const char *Exec, ArrayRef<const char *> InputArgs,
     StringRef WorkingDirectory, SmallVectorImpl<const char *> &OutputArgs,
     bool ProduceIncludeTree, bool &DiagnosticErrorOccurred,
-    const cc1depscand::DepscanPrefixMapping &PrefixMapping,
+    const DepscanPrefixMapping &PrefixMapping,
     llvm::function_ref<const char *(const Twine &)> SaveArg,
     const CASOptions &CASOpts, std::shared_ptr<llvm::cas::ObjectStore> DB,
     std::shared_ptr<llvm::cas::ActionCache> Cache);
@@ -377,8 +378,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS, const char *Exec,
     ArrayRef<const char *> InputArgs, StringRef WorkingDirectory,
     SmallVectorImpl<const char *> &OutputArgs,
-    const cc1depscand::DepscanPrefixMapping &PrefixMapping,
-    llvm::cas::ObjectStore &DB,
+    const DepscanPrefixMapping &PrefixMapping, llvm::cas::ObjectStore &DB,
     llvm::function_ref<const char *(const Twine &)> SaveArg);
 
 static void shutdownCC1ScanDepsDaemon(StringRef Path) {
@@ -413,9 +413,8 @@ static void shutdownCC1ScanDepsDaemon(StringRef Path) {
 static llvm::Expected<llvm::cas::CASID> scanAndUpdateCC1UsingDaemon(
     const char *Exec, ArrayRef<const char *> OldArgs,
     StringRef WorkingDirectory, SmallVectorImpl<const char *> &NewArgs,
-    bool &DiagnosticErrorOccurred,
-    const cc1depscand::DepscanPrefixMapping &Mapping, StringRef Path,
-    const DepscanSharing &Sharing,
+    bool &DiagnosticErrorOccurred, const DepscanPrefixMapping &Mapping,
+    StringRef Path, const DepscanSharing &Sharing,
     llvm::function_ref<const char *(const Twine &)> SaveArg,
     llvm::cas::ObjectStore &CAS) {
   using namespace clang::cc1depscand;
@@ -482,10 +481,10 @@ static void writeResponseFile(raw_ostream &OS,
   OS << "\n";
 }
 
-static cc1depscand::DepscanPrefixMapping
+static DepscanPrefixMapping
 parseCASFSAutoPrefixMappings(DiagnosticsEngine &Diag, const ArgList &Args) {
   using namespace clang::driver;
-  cc1depscand::DepscanPrefixMapping Mapping;
+  DepscanPrefixMapping Mapping;
   for (const Arg *A : Args.filtered(options::OPT_fdepscan_prefix_map_EQ)) {
     StringRef Map = A->getValue();
     size_t Equals = Map.find('=');
@@ -572,8 +571,7 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
 
   bool ProduceIncludeTree = Args.hasArg(options::OPT_fdepscan_include_tree);
 
-  cc1depscand::DepscanPrefixMapping PrefixMapping =
-      parseCASFSAutoPrefixMappings(Diag, Args);
+  DepscanPrefixMapping PrefixMapping = parseCASFSAutoPrefixMappings(Diag, Args);
 
   auto SaveArg = [&Args](const Twine &T) { return Args.MakeArgString(T); };
   CompilerInvocation::GenerateCASArgs(CASOpts, Sharing.CASArgs, SaveArg);
@@ -1000,7 +998,7 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
       llvm::StringSaver Saver(Alloc);
       StringRef WorkingDirectory;
       SmallVector<const char *> Args;
-      cc1depscand::DepscanPrefixMapping PrefixMapping;
+      DepscanPrefixMapping PrefixMapping;
       if (llvm::Error E =
               Comms.getCommand(Saver, WorkingDirectory, Args, PrefixMapping)) {
         SharedOS.applyLocked([&](raw_ostream &OS) {
@@ -1151,8 +1149,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS, const char *Exec,
     ArrayRef<const char *> InputArgs, StringRef WorkingDirectory,
     SmallVectorImpl<const char *> &OutputArgs,
-    const cc1depscand::DepscanPrefixMapping &PrefixMapping,
-    llvm::cas::ObjectStore &DB,
+    const DepscanPrefixMapping &PrefixMapping, llvm::cas::ObjectStore &DB,
     llvm::function_ref<const char *(const Twine &)> SaveArg) {
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions());
   Diags.setClient(&DiagsConsumer, /*ShouldOwnClient=*/false);
@@ -1177,7 +1174,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1Inline(
     const char *Exec, ArrayRef<const char *> InputArgs,
     StringRef WorkingDirectory, SmallVectorImpl<const char *> &OutputArgs,
     bool ProduceIncludeTree, bool &DiagnosticErrorOccurred,
-    const cc1depscand::DepscanPrefixMapping &PrefixMapping,
+    const DepscanPrefixMapping &PrefixMapping,
     llvm::function_ref<const char *(const Twine &)> SaveArg,
     const CASOptions &CASOpts, std::shared_ptr<llvm::cas::ObjectStore> DB,
     std::shared_ptr<llvm::cas::ActionCache> Cache) {
