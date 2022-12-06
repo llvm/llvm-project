@@ -944,6 +944,14 @@ public:
     return CreateBinaryIntrinsic(Intrinsic::maximum, LHS, RHS, nullptr, Name);
   }
 
+  /// Create call to the copysign intrinsic.
+  CallInst *CreateCopySign(Value *LHS, Value *RHS,
+                           Instruction *FMFSource = nullptr,
+                           const Twine &Name = "") {
+    return CreateBinaryIntrinsic(Intrinsic::copysign, LHS, RHS, FMFSource,
+                                 Name);
+  }
+
   /// Create a call to the arithmetic_fence intrinsic.
   CallInst *CreateArithmeticFence(Value *Val, Type *DstType,
                                   const Twine &Name = "") {
