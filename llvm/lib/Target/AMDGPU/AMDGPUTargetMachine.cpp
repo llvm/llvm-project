@@ -1591,10 +1591,21 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
 
   MFI->Mode.IEEE = YamlMFI.Mode.IEEE;
   MFI->Mode.DX10Clamp = YamlMFI.Mode.DX10Clamp;
-  MFI->Mode.FP32InputDenormals = YamlMFI.Mode.FP32InputDenormals;
-  MFI->Mode.FP32OutputDenormals = YamlMFI.Mode.FP32OutputDenormals;
-  MFI->Mode.FP64FP16InputDenormals = YamlMFI.Mode.FP64FP16InputDenormals;
-  MFI->Mode.FP64FP16OutputDenormals = YamlMFI.Mode.FP64FP16OutputDenormals;
+
+  // FIXME: Move proper support for denormal-fp-math into base MachineFunction
+  MFI->Mode.FP32Denormals.Input = YamlMFI.Mode.FP32InputDenormals
+                                      ? DenormalMode::IEEE
+                                      : DenormalMode::PreserveSign;
+  MFI->Mode.FP32Denormals.Output = YamlMFI.Mode.FP32OutputDenormals
+                                       ? DenormalMode::IEEE
+                                       : DenormalMode::PreserveSign;
+
+  MFI->Mode.FP64FP16Denormals.Input = YamlMFI.Mode.FP64FP16InputDenormals
+                                          ? DenormalMode::IEEE
+                                          : DenormalMode::PreserveSign;
+  MFI->Mode.FP64FP16Denormals.Output = YamlMFI.Mode.FP64FP16OutputDenormals
+                                           ? DenormalMode::IEEE
+                                           : DenormalMode::PreserveSign;
 
   return false;
 }
