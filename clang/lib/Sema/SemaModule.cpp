@@ -836,7 +836,7 @@ static llvm::Optional<UnnamedDeclKind> getUnnamedDeclKind(Decl *D) {
   if (isa<UsingDirectiveDecl>(D))
     return UnnamedDeclKind::UsingDirective;
   // Everything else either introduces one or more names or is ill-formed.
-  return llvm::None;
+  return std::nullopt;
 }
 
 unsigned getUnnamedDeclDiag(UnnamedDeclKind UDK, bool InBlock) {
