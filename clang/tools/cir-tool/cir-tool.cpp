@@ -31,13 +31,7 @@ int main(int argc, char **argv) {
                   mlir::LLVM::LLVMDialect>();
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
-    return cir::createConvertCIRToFuncPass();
-  });
-  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return cir::createConvertMLIRToLLVMPass();
-  });
-  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
-    return cir::createConvertCIRToMemRefPass();
   });
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return mlir::createMergeCleanupsPass();

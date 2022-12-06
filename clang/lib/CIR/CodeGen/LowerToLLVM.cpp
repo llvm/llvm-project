@@ -53,30 +53,6 @@ struct ConvertMLIRToLLVMPass
   virtual StringRef getArgument() const override { return "cir-mlir-to-llvm"; }
 };
 
-struct ConvertCIRToMemRefPass
-    : public mlir::PassWrapper<ConvertCIRToMemRefPass,
-                               mlir::OperationPass<mlir::ModuleOp>> {
-  void getDependentDialects(mlir::DialectRegistry &registry) const override {
-    registry.insert<mlir::memref::MemRefDialect, mlir::func::FuncDialect,
-                    mlir::scf::SCFDialect, mlir::cf::ControlFlowDialect>();
-  }
-  void runOnOperation() final;
-
-  virtual StringRef getArgument() const override { return "cir-to-memref"; }
-};
-
-struct ConvertCIRToFuncPass
-    : public mlir::PassWrapper<ConvertCIRToFuncPass,
-                               mlir::OperationPass<mlir::ModuleOp>> {
-  void getDependentDialects(mlir::DialectRegistry &registry) const override {
-    registry.insert<mlir::BuiltinDialect, mlir::func::FuncDialect,
-                    mlir::cir::CIRDialect>();
-  }
-  void runOnOperation() final;
-
-  virtual StringRef getArgument() const override { return "cir-to-func"; }
-};
-
 class CIRReturnLowering
     : public mlir::OpConversionPattern<mlir::cir::ReturnOp> {
 public:
@@ -609,53 +585,6 @@ void ConvertMLIRToLLVMPass::runOnOperation() {
     signalPassFailure();
 }
 
-void ConvertCIRToMemRefPass::runOnOperation() {
-  mlir::ConversionTarget target(getContext());
-
-  // TODO: Should this be a wholesale conversion? It's a bit ambiguous on
-  // whether we should have micro-conversions that do the minimal amount of work
-  // or macro conversions that entiirely remove a dialect.
-  target.addLegalOp<mlir::ModuleOp>();
-  target.addLegalDialect<mlir::affine::AffineDialect, mlir::arith::ArithDialect,
-                         mlir::memref::MemRefDialect, mlir::func::FuncDialect,
-                         mlir::scf::SCFDialect, mlir::cf::ControlFlowDialect>();
-  target
-      .addIllegalOp<mlir::cir::BinOp, mlir::cir::ReturnOp, mlir::cir::AllocaOp,
-                    mlir::cir::LoadOp, mlir::cir::StoreOp,
-                    mlir::cir::ConstantOp, mlir::cir::CmpOp, mlir::cir::BrOp>();
-
-  mlir::RewritePatternSet patterns(&getContext());
-  populateCIRToMemRefConversionPatterns(patterns);
-  // populateAffineToStdConversionPatterns(patterns);
-  // populateLoopToStdConversionPatterns(patterns);
-
-  auto module = getOperation();
-  if (failed(applyPartialConversion(module, target, std::move(patterns))))
-    signalPassFailure();
-}
-
-void ConvertCIRToFuncPass::runOnOperation() {
-  // End goal here is to legalize to builtin.func, func.return, func.call.
-  // Given that children node are ignored, handle both return and call in
-  // a subsequent conversion.
-
-  // Convert cir.func to builtin.func
-  mlir::ConversionTarget target(getContext());
-  target.addLegalOp<mlir::ModuleOp>();
-  target.addLegalDialect<mlir::func::FuncDialect>();
-  target.addIllegalOp<mlir::cir::FuncOp, mlir::cir::ReturnOp,
-                      mlir::cir::CallOp>();
-
-  mlir::RewritePatternSet patterns(&getContext());
-  auto converter = prepareTypeConverter();
-  patterns.add<CIRReturnLowering, CIRCallLowering>(patterns.getContext());
-  patterns.add<CIRFuncLowering>(converter, patterns.getContext());
-
-  auto module = getOperation();
-  if (failed(applyPartialConversion(module, target, std::move(patterns))))
-    signalPassFailure();
-}
-
 std::unique_ptr<llvm::Module>
 lowerFromCIRToLLVMIR(mlir::ModuleOp theModule,
                      std::unique_ptr<mlir::MLIRContext> mlirCtx,
@@ -687,14 +616,6 @@ lowerFromCIRToLLVMIR(mlir::ModuleOp theModule,
 
 std::unique_ptr<mlir::Pass> createConvertMLIRToLLVMPass() {
   return std::make_unique<ConvertMLIRToLLVMPass>();
-}
-
-std::unique_ptr<mlir::Pass> createConvertCIRToMemRefPass() {
-  return std::make_unique<ConvertCIRToMemRefPass>();
-}
-
-std::unique_ptr<mlir::Pass> createConvertCIRToFuncPass() {
-  return std::make_unique<ConvertCIRToFuncPass>();
 }
 
 std::unique_ptr<mlir::Pass> createConvertCIRToMLIRPass() {
