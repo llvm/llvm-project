@@ -756,6 +756,28 @@ func.func @sexti2(%arg0 : i32) -> i64 {
   return %0 : i64
 }
 
+// CHECK-LABEL: @sext_bool_scalar
+// CHECK-SAME:  ([[ARG:%.+]]: i1) -> i32
+func.func @sext_bool_scalar(%arg0 : i1) -> i32 {
+  // CHECK-DAG:  [[ONES:%.+]] = spirv.Constant -1 : i32
+  // CHECK-DAG:  [[ZERO:%.+]] = spirv.Constant 0 : i32
+  // CHECK:      [[SEL:%.+]]  = spirv.Select [[ARG]], [[ONES]], [[ZERO]] : i1, i32
+  // CHECK-NEXT: return [[SEL]] : i32
+  %0 = arith.extsi %arg0 : i1 to i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @sext_bool_vector
+// CHECK-SAME:  ([[ARG:%.+]]: vector<3xi1>) -> vector<3xi32>
+func.func @sext_bool_vector(%arg0 : vector<3xi1>) -> vector<3xi32> {
+  // CHECK-DAG:  [[ONES:%.+]] = spirv.Constant dense<-1> : vector<3xi32>
+  // CHECK-DAG:  [[ZERO:%.+]] = spirv.Constant dense<0> : vector<3xi32>
+  // CHECK:      [[SEL:%.+]]  = spirv.Select [[ARG]], [[ONES]], [[ZERO]] : vector<3xi1>, vector<3xi32>
+  // CHECK-NEXT: return [[SEL]] : vector<3xi32>
+  %0 = arith.extsi %arg0 : vector<3xi1> to vector<3xi32>
+  return %0 : vector<3xi32>
+}
+
 // CHECK-LABEL: @zexti1
 func.func @zexti1(%arg0: i16) -> i64 {
   // CHECK: spirv.UConvert %{{.*}} : i16 to i64

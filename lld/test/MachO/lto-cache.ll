@@ -69,6 +69,51 @@
 ; CHECK: llvmcache-newer
 ; CHECK-NOT: llvmcache-old
 
+;; Check that mllvm options participate in the cache key
+; RUN: rm -rf %t/cache && mkdir %t/cache
+; RUN: %lld -cache_path_lto %t/cache -o %t/test %t/foo.o %t/bar.o
+; RUN: ls %t/cache | count 3
+; RUN: %lld -cache_path_lto %t/cache -o %t/test %t/foo.o %t/bar.o -mllvm -enable-ml-inliner=default
+; RUN: ls %t/cache | count 5
+
+;; Adding another option resuls in 2 more cache entries
+; RUN: rm -rf %t/cache && mkdir %t/cache
+; RUN: %lld -cache_path_lto %t/cache -o %t/test %t/foo.o %t/bar.o
+; RUN: ls %t/cache | count 3
+; RUN: %lld -cache_path_lto %t/cache -o %t/test %t/foo.o %t/bar.o -mllvm -enable-ml-inliner=default
+; RUN: ls %t/cache | count 5
+; RUN: %lld -cache_path_lto %t/cache -o %t/test %t/foo.o %t/bar.o -mllvm -enable-ml-inliner=default -mllvm -max-devirt-iterations=1
+; RUN: ls %t/cache | count 7
+
+;; Changing order may matter - e.g. if overriding -mllvm options - so we get 2 more entries
+; RUN: %lld -cache_path_lto %t/cache -o %t/test %t/foo.o %t/bar.o -mllvm -max-devirt-iterations=1 -mllvm -enable-ml-inliner=default
+; RUN: ls %t/cache | count 9
+
+;; Going back to a pre-cached order doesn't create more entries.
+; RUN: %lld -cache_path_lto %t/cache -o %t/test %t/foo.o %t/bar.o -mllvm -enable-ml-inliner=default -mllvm -max-devirt-iterations=1
+; RUN: ls %t/cache | count 9
+
+;; Different flag values matter
+; RUN: rm -rf %t/cache && mkdir %t/cache
+; RUN: %lld -cache_path_lto %t/cache -o %t/test %t/foo.o %t/bar.o -mllvm -enable-ml-inliner=default -mllvm -max-devirt-iterations=2
+; RUN: ls %t/cache | count 3
+; RUN: %lld -cache_path_lto %t/cache -o %t/test %t/foo.o %t/bar.o -mllvm -enable-ml-inliner=default -mllvm -max-devirt-iterations=1
+; RUN: ls %t/cache | count 5
+
+;; Same flag value passed to different flags matters, and switching the order
+;; of the two flags matters.
+; RUN: rm -rf %t/cache && mkdir %t/cache
+; RUN: %lld -cache_path_lto %t/cache -o %t/test %t/foo.o %t/bar.o -mllvm -enable-ml-inliner=default
+; RUN: ls %t/cache | count 3
+; RUN: %lld -cache_path_lto %t/cache -o %t/test %t/foo.o %t/bar.o -mllvm -emit-dwarf-unwind=default
+; RUN: ls %t/cache | count 5
+; RUN: %lld -cache_path_lto %t/cache -o %t/test %t/foo.o %t/bar.o -mllvm -enable-ml-inliner=default
+; RUN: ls %t/cache | count 5
+; RUN: %lld -cache_path_lto %t/cache -o %t/test %t/foo.o %t/bar.o -mllvm -enable-ml-inliner=default -mllvm -emit-dwarf-unwind=default
+; RUN: ls %t/cache | count 7
+; RUN: %lld -cache_path_lto %t/cache -o %t/test %t/foo.o %t/bar.o -mllvm -emit-dwarf-unwind=default -mllvm -enable-ml-inliner=default
+; RUN: ls %t/cache | count 9
+
 ;--- foo.ll
 
 target triple = "x86_64-apple-macosx10.15.0"

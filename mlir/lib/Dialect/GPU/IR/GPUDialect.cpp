@@ -311,10 +311,10 @@ static void printAsyncDependencies(OpAsmPrinter &printer, Operation *op,
 
 static bool verifyReduceOpAndType(gpu::AllReduceOperation opName,
                                   Type resType) {
-  return !((opName == gpu::AllReduceOperation::AND ||
-            opName == gpu::AllReduceOperation::OR ||
-            opName == gpu::AllReduceOperation::XOR) &&
-           !resType.isa<IntegerType>());
+  return (opName != gpu::AllReduceOperation::AND &&
+          opName != gpu::AllReduceOperation::OR &&
+          opName != gpu::AllReduceOperation::XOR) ||
+         resType.isa<IntegerType>();
 }
 
 LogicalResult gpu::AllReduceOp::verifyRegions() {

@@ -49,6 +49,7 @@
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Object/IRSymtab.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/SHA1.h"
 
 namespace llvm {
@@ -275,6 +276,13 @@ private:
   void writeDIArgList(const DIArgList *N, SmallVectorImpl<uint64_t> &Record,
                       unsigned Abbrev) {
     llvm_unreachable("DXIL cannot contain DIArgList Nodes");
+  }
+  void writeDIAssignID(const DIAssignID *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev) {
+    // DIAssignID is experimental feature to track variable location in IR..
+    // FIXME: translate DIAssignID to debug info DXIL supports.
+    //   See https://github.com/llvm/llvm-project/issues/58989
+    llvm_unreachable("DXIL cannot contain DIAssignID Nodes");
   }
   void writeDIModule(const DIModule *N, SmallVectorImpl<uint64_t> &Record,
                      unsigned Abbrev);
@@ -661,8 +669,6 @@ uint64_t DXILBitcodeWriter::getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_ALIGNMENT;
   case Attribute::AlwaysInline:
     return bitc::ATTR_KIND_ALWAYS_INLINE;
-  case Attribute::ArgMemOnly:
-    return bitc::ATTR_KIND_ARGMEMONLY;
   case Attribute::Builtin:
     return bitc::ATTR_KIND_BUILTIN;
   case Attribute::ByVal:
@@ -929,12 +935,29 @@ void DXILBitcodeWriter::writeAttributeGroupTable() {
         Record.push_back(0);
         Record.push_back(Val);
       } else if (Attr.isIntAttribute()) {
-        uint64_t Val = getAttrKindEncoding(Attr.getKindAsEnum());
-        assert(Val <= bitc::ATTR_KIND_ARGMEMONLY &&
-               "DXIL does not support attributes above ATTR_KIND_ARGMEMONLY");
-        Record.push_back(1);
-        Record.push_back(Val);
-        Record.push_back(Attr.getValueAsInt());
+        if (Attr.getKindAsEnum() == Attribute::AttrKind::Memory) {
+          MemoryEffects ME = Attr.getMemoryEffects();
+          if (ME.doesNotAccessMemory()) {
+            Record.push_back(0);
+            Record.push_back(bitc::ATTR_KIND_READ_NONE);
+          } else {
+            if (ME.onlyReadsMemory()) {
+              Record.push_back(0);
+              Record.push_back(bitc::ATTR_KIND_READ_ONLY);
+            }
+            if (ME.onlyAccessesArgPointees()) {
+              Record.push_back(0);
+              Record.push_back(bitc::ATTR_KIND_ARGMEMONLY);
+            }
+          }
+        } else {
+          uint64_t Val = getAttrKindEncoding(Attr.getKindAsEnum());
+          assert(Val <= bitc::ATTR_KIND_ARGMEMONLY &&
+                 "DXIL does not support attributes above ATTR_KIND_ARGMEMONLY");
+          Record.push_back(1);
+          Record.push_back(Val);
+          Record.push_back(Attr.getValueAsInt());
+        }
       } else {
         StringRef Kind = Attr.getKindAsString();
         StringRef Val = Attr.getValueAsString();

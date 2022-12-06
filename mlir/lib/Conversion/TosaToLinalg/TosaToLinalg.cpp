@@ -1781,19 +1781,13 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
     Value emptyTensor = rewriter.create<tensor::EmptyOp>(
         loc, resultType.getShape(), resultType.getElementType(), dynDims);
 
-    Value zeroVal = rewriter.createOrFold<arith::ConstantOp>(
-        loc, rewriter.getZeroAttr(resultType.getElementType()));
-    Value result = rewriter
-                       .create<linalg::FillOp>(loc, ValueRange{zeroVal},
-                                               ValueRange{emptyTensor})
-                       .result();
-
     auto toOpFoldResult = [](Value v) -> OpFoldResult {
       auto op = v.getDefiningOp<arith::ConstantIndexOp>();
       if (!op)
         return v;
       return op.getValue();
     };
+    Value result = emptyTensor;
     for (auto arg : adaptor.getOperands()) {
       sizes[axis] = rewriter.createOrFold<tensor::DimOp>(loc, arg, axisValue);
       result = rewriter.createOrFold<tensor::InsertSliceOp>(

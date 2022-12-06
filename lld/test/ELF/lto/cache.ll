@@ -81,6 +81,20 @@
 ; RUN: ld.lld --thinlto-cache-dir=%t.cache -o %t3 %t2.o %t.o -mllvm -enable-ml-inliner=default -mllvm -max-devirt-iterations=1
 ; RUN: ls %t.cache | count 5
 
+;; Same flag value passed to different flags matters, and switching the order
+;; of the two flags matters.
+; RUN: rm -rf %t.cache && mkdir %t.cache
+; RUN: ld.lld --thinlto-cache-dir=%t.cache -o %t3 %t2.o %t.o -mllvm -enable-ml-inliner=default
+; RUN: ls %t.cache | count 3
+; RUN: ld.lld --thinlto-cache-dir=%t.cache -o %t3 %t2.o %t.o -mllvm -emit-dwarf-unwind=default
+; RUN: ls %t.cache | count 5
+; RUN: ld.lld --thinlto-cache-dir=%t.cache -o %t3 %t2.o %t.o -mllvm -enable-ml-inliner=default
+; RUN: ls %t.cache | count 5
+; RUN: ld.lld --thinlto-cache-dir=%t.cache -o %t3 %t2.o %t.o -mllvm -enable-ml-inliner=default -mllvm -emit-dwarf-unwind=default
+; RUN: ls %t.cache | count 7
+; RUN: ld.lld --thinlto-cache-dir=%t.cache -o %t3 %t2.o %t.o -mllvm -emit-dwarf-unwind=default -mllvm -enable-ml-inliner=default
+; RUN: ls %t.cache | count 9
+
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

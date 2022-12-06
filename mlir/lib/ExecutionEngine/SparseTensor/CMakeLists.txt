@@ -8,6 +8,7 @@
 add_mlir_library(MLIRSparseTensorRuntime
   File.cpp
   NNZ.cpp
+  PermutationRef.cpp
   Storage.cpp
 
   EXCLUDE_FROM_LIBMLIR

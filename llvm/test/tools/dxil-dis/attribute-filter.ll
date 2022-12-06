@@ -11,5 +11,16 @@ define float @fma(float %0, float %1, float %2) #0 {
   ret float %5
 }
 
+; CHECK: Function Attrs: readnone
+; Function Attrs: norecurse readnone willreturn
+define float @fma2(float %0, float %1, float %2) #1 {
+  %4 = fmul float %0, %1
+  %5 = fadd float %4, %2
+  ret float %5
+}
+
 ; CHECK: attributes #0 = { nounwind readnone "disable-tail-calls"="false" }
 attributes #0 = { norecurse nounwind readnone willreturn "disable-tail-calls"="false" }
+
+; CHECK: attributes #1 = { readnone "disable-tail-calls"="false" }
+attributes #1 = { norecurse memory(none) willreturn "disable-tail-calls"="false" }

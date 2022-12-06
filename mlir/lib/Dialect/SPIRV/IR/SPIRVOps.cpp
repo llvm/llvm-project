@@ -2032,7 +2032,7 @@ spirv::ConstantOp spirv::ConstantOp::getZero(Type type, Location loc,
       return builder.create<spirv::ConstantOp>(
           loc, type,
           DenseElementsAttr::get(vectorType,
-                                 IntegerAttr::get(elemType, 0.0).getValue()));
+                                 IntegerAttr::get(elemType, 0).getValue()));
     }
     if (elemType.isa<FloatType>()) {
       return builder.create<spirv::ConstantOp>(
@@ -2065,7 +2065,7 @@ spirv::ConstantOp spirv::ConstantOp::getOne(Type type, Location loc,
       return builder.create<spirv::ConstantOp>(
           loc, type,
           DenseElementsAttr::get(vectorType,
-                                 IntegerAttr::get(elemType, 1.0).getValue()));
+                                 IntegerAttr::get(elemType, 1).getValue()));
     }
     if (elemType.isa<FloatType>()) {
       return builder.create<spirv::ConstantOp>(
