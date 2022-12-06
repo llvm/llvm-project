@@ -34,9 +34,11 @@ struct SIModeRegisterDefaults {
   /// and f16/v2f16 instructions.
   DenormalMode FP64FP16Denormals;
 
-  SIModeRegisterDefaults()
-      : IEEE(true), DX10Clamp(true), FP32Denormals(DenormalMode::getIEEE()),
-        FP64FP16Denormals(DenormalMode::getIEEE()) {}
+  SIModeRegisterDefaults() :
+    IEEE(true),
+    DX10Clamp(true),
+    FP32Denormals(DenormalMode::getIEEE()),
+    FP64FP16Denormals(DenormalMode::getIEEE()) {}
 
   SIModeRegisterDefaults(const Function &F);
 
@@ -84,35 +86,10 @@ struct SIModeRegisterDefaults {
     return FP_DENORM_FLUSH_NONE;
   }
 
-  /// Returns true if a flag is compatible if it's enabled in the callee, but
-  /// disabled in the caller.
-  static bool oneWayCompatible(bool CallerMode, bool CalleeMode) {
-    return CallerMode == CalleeMode || (!CallerMode && CalleeMode);
-  }
-
   // FIXME: Inlining should be OK for dx10-clamp, since the caller's mode should
   // be able to override.
   bool isInlineCompatible(SIModeRegisterDefaults CalleeMode) const {
-    if (DX10Clamp != CalleeMode.DX10Clamp)
-      return false;
-    if (IEEE != CalleeMode.IEEE)
-      return false;
-
-    // Allow inlining denormals enabled into denormals flushed functions.
-    return oneWayCompatible(FP64FP16Denormals.Input !=
-                                DenormalMode::PreserveSign,
-                            CalleeMode.FP64FP16Denormals.Input !=
-                                DenormalMode::PreserveSign) &&
-           oneWayCompatible(FP64FP16Denormals.Output !=
-                                DenormalMode::PreserveSign,
-                            CalleeMode.FP64FP16Denormals.Output !=
-                                DenormalMode::PreserveSign) &&
-           oneWayCompatible(FP32Denormals.Input != DenormalMode::PreserveSign,
-                            CalleeMode.FP32Denormals.Input !=
-                                DenormalMode::PreserveSign) &&
-           oneWayCompatible(FP32Denormals.Output != DenormalMode::PreserveSign,
-                            CalleeMode.FP32Denormals.Output !=
-                                DenormalMode::PreserveSign);
+    return DX10Clamp == CalleeMode.DX10Clamp && IEEE == CalleeMode.IEEE;
   }
 };
 
