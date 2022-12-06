@@ -16905,7 +16905,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       Args.push_back(EmitScalarExpr(E->getArg(I)));
     assert(Args.size() == 5 || Args.size() == 6);
     if (Args.size() == 5)
-      Args.insert(Args.begin(), llvm::UndefValue::get(Args[0]->getType()));
+      Args.insert(Args.begin(), llvm::PoisonValue::get(Args[0]->getType()));
     Function *F =
         CGM.getIntrinsic(Intrinsic::amdgcn_update_dpp, Args[0]->getType());
     return Builder.CreateCall(F, Args);
