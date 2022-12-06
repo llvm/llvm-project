@@ -290,7 +290,7 @@ public:
   }
 
   llvm::Optional<TraversalKind> getCheckTraversalKind() const override {
-    return llvm::None;
+    return std::nullopt;
   }
 
   SmallVector<BoundNodes, 1> Nodes;

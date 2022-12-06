@@ -58,7 +58,7 @@ unsigned getOffsetAfterTokenSequence(
 // (second) raw_identifier name is checked.
 bool checkAndConsumeDirectiveWithName(
     Lexer &Lex, StringRef Name, Token &Tok,
-    llvm::Optional<StringRef> RawIDName = llvm::None) {
+    llvm::Optional<StringRef> RawIDName = std::nullopt) {
   bool Matched = Tok.is(tok::hash) && !Lex.LexFromRawLexer(Tok) &&
                  Tok.is(tok::raw_identifier) &&
                  Tok.getRawIdentifier() == Name && !Lex.LexFromRawLexer(Tok) &&
@@ -352,7 +352,7 @@ HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled) const {
     for (const auto &Inc : It->second)
       if ((IsAngled && StringRef(Inc.Name).startswith("<")) ||
           (!IsAngled && StringRef(Inc.Name).startswith("\"")))
-        return llvm::None;
+        return std::nullopt;
   std::string Quoted =
       std::string(llvm::formatv(IsAngled ? "<{0}>" : "\"{0}\"", IncludeName));
   StringRef QuotedName = Quoted;
