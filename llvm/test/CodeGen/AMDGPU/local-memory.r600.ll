@@ -4,7 +4,7 @@
 
 ; Check that the LDS size emitted correctly
 ; EG: .long 166120
-; EG-NEXT: .long 0
+; EG-NEXT: .long 128
 
 ; FUNC-LABEL: {{^}}local_memory:
 
@@ -36,7 +36,7 @@ entry:
 
 ; Check that the LDS size emitted correctly
 ; EG: .long 166120
-; EG-NEXT: .long 0
+; EG-NEXT: .long 8
 ; GCN: .long 47180
 ; GCN-NEXT: .long 32900
 
