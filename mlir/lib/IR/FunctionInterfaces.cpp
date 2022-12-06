@@ -112,7 +112,7 @@ void mlir::function_interface_impl::setAllResultAttrDicts(
 }
 
 void mlir::function_interface_impl::insertFunctionArguments(
-    Operation *op, ArrayRef<unsigned> argIndices, TypeRange argTypes,
+    FunctionOpInterface op, ArrayRef<unsigned> argIndices, TypeRange argTypes,
     ArrayRef<DictionaryAttr> argAttrs, ArrayRef<Location> argLocs,
     unsigned originalNumArgs, Type newType) {
   assert(argIndices.size() == argTypes.size());
@@ -152,15 +152,15 @@ void mlir::function_interface_impl::insertFunctionArguments(
   }
 
   // Update the function type and any entry block arguments.
-  op->setAttr(getTypeAttrName(), TypeAttr::get(newType));
+  op.setFunctionTypeAttr(TypeAttr::get(newType));
   for (unsigned i = 0, e = argIndices.size(); i < e; ++i)
     entry.insertArgument(argIndices[i] + i, argTypes[i], argLocs[i]);
 }
 
 void mlir::function_interface_impl::insertFunctionResults(
-    Operation *op, ArrayRef<unsigned> resultIndices, TypeRange resultTypes,
-    ArrayRef<DictionaryAttr> resultAttrs, unsigned originalNumResults,
-    Type newType) {
+    FunctionOpInterface op, ArrayRef<unsigned> resultIndices,
+    TypeRange resultTypes, ArrayRef<DictionaryAttr> resultAttrs,
+    unsigned originalNumResults, Type newType) {
   assert(resultIndices.size() == resultTypes.size());
   assert(resultIndices.size() == resultAttrs.size() || resultAttrs.empty());
   if (resultIndices.empty())
@@ -196,11 +196,11 @@ void mlir::function_interface_impl::insertFunctionResults(
   }
 
   // Update the function type.
-  op->setAttr(getTypeAttrName(), TypeAttr::get(newType));
+  op.setFunctionTypeAttr(TypeAttr::get(newType));
 }
 
 void mlir::function_interface_impl::eraseFunctionArguments(
-    Operation *op, const BitVector &argIndices, Type newType) {
+    FunctionOpInterface op, const BitVector &argIndices, Type newType) {
   // There are 3 things that need to be updated:
   // - Function type.
   // - Arg attrs.
@@ -218,12 +218,12 @@ void mlir::function_interface_impl::eraseFunctionArguments(
   }
 
   // Update the function type and any entry block arguments.
-  op->setAttr(getTypeAttrName(), TypeAttr::get(newType));
+  op.setFunctionTypeAttr(TypeAttr::get(newType));
   entry.eraseArguments(argIndices);
 }
 
 void mlir::function_interface_impl::eraseFunctionResults(
-    Operation *op, const BitVector &resultIndices, Type newType) {
+    FunctionOpInterface op, const BitVector &resultIndices, Type newType) {
   // There are 2 things that need to be updated:
   // - Function type.
   // - Result attrs.
@@ -239,7 +239,7 @@ void mlir::function_interface_impl::eraseFunctionResults(
   }
 
   // Update the function type.
-  op->setAttr(getTypeAttrName(), TypeAttr::get(newType));
+  op.setFunctionTypeAttr(TypeAttr::get(newType));
 }
 
 TypeRange mlir::function_interface_impl::insertTypesInto(
@@ -276,14 +276,13 @@ TypeRange mlir::function_interface_impl::filterTypesOut(
 // Function type signature.
 //===----------------------------------------------------------------------===//
 
-void mlir::function_interface_impl::setFunctionType(Operation *op,
+void mlir::function_interface_impl::setFunctionType(FunctionOpInterface op,
                                                     Type newType) {
-  FunctionOpInterface funcOp = cast<FunctionOpInterface>(op);
-  unsigned oldNumArgs = funcOp.getNumArguments();
-  unsigned oldNumResults = funcOp.getNumResults();
-  op->setAttr(getTypeAttrName(), TypeAttr::get(newType));
-  unsigned newNumArgs = funcOp.getNumArguments();
-  unsigned newNumResults = funcOp.getNumResults();
+  unsigned oldNumArgs = op.getNumArguments();
+  unsigned oldNumResults = op.getNumResults();
+  op.setFunctionTypeAttr(TypeAttr::get(newType));
+  unsigned newNumArgs = op.getNumArguments();
+  unsigned newNumResults = op.getNumResults();
 
   // Functor used to update the argument and result attributes of the function.
   auto updateAttrFn = [&](StringRef attrName, unsigned oldCount,
