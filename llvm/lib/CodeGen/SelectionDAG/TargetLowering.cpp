@@ -3739,6 +3739,26 @@ SDValue TargetLowering::foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
       return DAG.getBoolExtOrTrunc(N0, DL, VT, OpVT);
   }
 
+  // Try to eliminate a power-of-2 mask constant by converting to a signbit
+  // test in a narrow type that we can truncate to with no cost. Examples:
+  // (i32 X & 32768) == 0 --> (trunc X to i16) >= 0
+  // (i32 X & 32768) != 0 --> (trunc X to i16) < 0
+  // TODO: This conservatively checks for type legality on the source and
+  //       destination types. That may inhibit optimizations, but it also
+  //       allows setcc->shift transforms that may be more beneficial.
+  auto *AndC = dyn_cast<ConstantSDNode>(N0.getOperand(1));
+  if (AndC && isNullConstant(N1) && AndC->getAPIntValue().isPowerOf2() &&
+      isTypeLegal(OpVT) && N0.hasOneUse()) {
+    EVT NarrowVT = EVT::getIntegerVT(*DAG.getContext(),
+                                     AndC->getAPIntValue().getActiveBits());
+    if (isTruncateFree(OpVT, NarrowVT) && isTypeLegal(NarrowVT)) {
+      SDValue Trunc = DAG.getZExtOrTrunc(N0.getOperand(0), DL, NarrowVT);
+      SDValue Zero = DAG.getConstant(0, DL, NarrowVT);
+      return DAG.getSetCC(DL, VT, Trunc, Zero,
+                          Cond == ISD::SETEQ ? ISD::SETGE : ISD::SETLT);
+    }
+  }
+
   // Match these patterns in any of their permutations:
   // (X & Y) == Y
   // (X & Y) != Y

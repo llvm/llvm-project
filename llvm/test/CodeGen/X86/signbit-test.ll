@@ -5,8 +5,8 @@ define i64 @test_clear_mask_i64_i32(i64 %x) nounwind {
 ; CHECK-LABEL: test_clear_mask_i64_i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
-; CHECK-NEXT:    jne .LBB0_2
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    js .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %t
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:  .LBB0_2: # %f
@@ -26,8 +26,8 @@ define i64 @test_set_mask_i64_i32(i64 %x) nounwind {
 ; CHECK-LABEL: test_set_mask_i64_i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
-; CHECK-NEXT:    je .LBB1_2
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    jns .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %t
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:  .LBB1_2: # %f
@@ -47,8 +47,8 @@ define i64 @test_clear_mask_i64_i16(i64 %x) nounwind {
 ; CHECK-LABEL: test_clear_mask_i64_i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    testl $32768, %eax # imm = 0x8000
-; CHECK-NEXT:    jne .LBB2_2
+; CHECK-NEXT:    testw %ax, %ax
+; CHECK-NEXT:    js .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %t
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:  .LBB2_2: # %f
@@ -68,8 +68,8 @@ define i64 @test_set_mask_i64_i16(i64 %x) nounwind {
 ; CHECK-LABEL: test_set_mask_i64_i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    testl $32768, %eax # imm = 0x8000
-; CHECK-NEXT:    je .LBB3_2
+; CHECK-NEXT:    testw %ax, %ax
+; CHECK-NEXT:    jns .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %t
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:  .LBB3_2: # %f
@@ -89,8 +89,8 @@ define i64 @test_clear_mask_i64_i8(i64 %x) nounwind {
 ; CHECK-LABEL: test_clear_mask_i64_i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    testb $-128, %al
-; CHECK-NEXT:    jne .LBB4_2
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    js .LBB4_2
 ; CHECK-NEXT:  # %bb.1: # %t
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:  .LBB4_2: # %f
@@ -110,8 +110,8 @@ define i64 @test_set_mask_i64_i8(i64 %x) nounwind {
 ; CHECK-LABEL: test_set_mask_i64_i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    testb $-128, %al
-; CHECK-NEXT:    je .LBB5_2
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jns .LBB5_2
 ; CHECK-NEXT:  # %bb.1: # %t
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:  .LBB5_2: # %f
@@ -131,8 +131,8 @@ define i32 @test_clear_mask_i32_i16(i32 %x) nounwind {
 ; CHECK-LABEL: test_clear_mask_i32_i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    testl $32768, %edi # imm = 0x8000
-; CHECK-NEXT:    jne .LBB6_2
+; CHECK-NEXT:    testw %ax, %ax
+; CHECK-NEXT:    js .LBB6_2
 ; CHECK-NEXT:  # %bb.1: # %t
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:  .LBB6_2: # %f
@@ -152,8 +152,8 @@ define i32 @test_set_mask_i32_i16(i32 %x) nounwind {
 ; CHECK-LABEL: test_set_mask_i32_i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    testl $32768, %edi # imm = 0x8000
-; CHECK-NEXT:    je .LBB7_2
+; CHECK-NEXT:    testw %ax, %ax
+; CHECK-NEXT:    jns .LBB7_2
 ; CHECK-NEXT:  # %bb.1: # %t
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:  .LBB7_2: # %f
@@ -173,8 +173,8 @@ define i32 @test_clear_mask_i32_i8(i32 %x) nounwind {
 ; CHECK-LABEL: test_clear_mask_i32_i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    testb $-128, %al
-; CHECK-NEXT:    jne .LBB8_2
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    js .LBB8_2
 ; CHECK-NEXT:  # %bb.1: # %t
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:  .LBB8_2: # %f
@@ -194,8 +194,8 @@ define i32 @test_set_mask_i32_i8(i32 %x) nounwind {
 ; CHECK-LABEL: test_set_mask_i32_i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    testb $-128, %al
-; CHECK-NEXT:    je .LBB9_2
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jns .LBB9_2
 ; CHECK-NEXT:  # %bb.1: # %t
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:  .LBB9_2: # %f
@@ -215,8 +215,8 @@ define i16 @test_clear_mask_i16_i8(i16 %x) nounwind {
 ; CHECK-LABEL: test_clear_mask_i16_i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    testb $-128, %al
-; CHECK-NEXT:    jne .LBB10_2
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    js .LBB10_2
 ; CHECK-NEXT:  # %bb.1: # %t
 ; CHECK-NEXT:    movw $42, %ax
 ; CHECK-NEXT:  .LBB10_2: # %f
@@ -237,8 +237,8 @@ define i16 @test_set_mask_i16_i8(i16 %x) nounwind {
 ; CHECK-LABEL: test_set_mask_i16_i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    testb $-128, %al
-; CHECK-NEXT:    je .LBB11_2
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jns .LBB11_2
 ; CHECK-NEXT:  # %bb.1: # %t
 ; CHECK-NEXT:    movw $42, %ax
 ; CHECK-NEXT:  .LBB11_2: # %f
