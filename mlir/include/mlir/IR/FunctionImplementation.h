@@ -39,10 +39,12 @@ private:
 /// with special names given by getResultAttrName, getArgumentAttrName.
 void addArgAndResultAttrs(Builder &builder, OperationState &result,
                           ArrayRef<DictionaryAttr> argAttrs,
-                          ArrayRef<DictionaryAttr> resultAttrs);
+                          ArrayRef<DictionaryAttr> resultAttrs,
+                          StringAttr argAttrsName, StringAttr resAttrsName);
 void addArgAndResultAttrs(Builder &builder, OperationState &result,
-                          ArrayRef<OpAsmParser::Argument> argAttrs,
-                          ArrayRef<DictionaryAttr> resultAttrs);
+                          ArrayRef<OpAsmParser::Argument> args,
+                          ArrayRef<DictionaryAttr> resultAttrs,
+                          StringAttr argAttrsName, StringAttr resAttrsName);
 
 /// Callback type for `parseFunctionOp`, the callback should produce the
 /// type that will be associated with a function-like operation from lists of
@@ -69,21 +71,25 @@ Type getFunctionType(Builder &builder, ArrayRef<OpAsmParser::Argument> argAttrs,
 
 /// Parser implementation for function-like operations.  Uses
 /// `funcTypeBuilder` to construct the custom function type given lists of
-/// input and output types.  If `allowVariadic` is set, the parser will accept
+/// input and output types. The parser sets the `typeAttrName` attribute to the
+/// resulting function type. If `allowVariadic` is set, the parser will accept
 /// trailing ellipsis in the function signature and indicate to the builder
 /// whether the function is variadic.  If the builder returns a null type,
 /// `result` will not contain the `type` attribute.  The caller can then add a
 /// type, report the error or delegate the reporting to the op's verifier.
 ParseResult parseFunctionOp(OpAsmParser &parser, OperationState &result,
-                            bool allowVariadic,
-                            FuncTypeBuilder funcTypeBuilder);
+                            bool allowVariadic, StringAttr typeAttrName,
+                            FuncTypeBuilder funcTypeBuilder,
+                            StringAttr argAttrsName, StringAttr resAttrsName);
 
 /// Printer implementation for function-like operations.
-void printFunctionOp(OpAsmPrinter &p, FunctionOpInterface op, bool isVariadic);
+void printFunctionOp(OpAsmPrinter &p, FunctionOpInterface op, bool isVariadic,
+                     StringRef typeAttrName, StringAttr argAttrsName,
+                     StringAttr resAttrsName);
 
 /// Prints the signature of the function-like operation `op`. Assumes `op` has
 /// is a FunctionOpInterface and has passed verification.
-void printFunctionSignature(OpAsmPrinter &p, Operation *op,
+void printFunctionSignature(OpAsmPrinter &p, FunctionOpInterface op,
                             ArrayRef<Type> argTypes, bool isVariadic,
                             ArrayRef<Type> resultTypes);
 
@@ -92,8 +98,7 @@ void printFunctionSignature(OpAsmPrinter &p, Operation *op,
 /// function-like operation internally are not printed. Nothing is printed
 /// if all attributes are elided. Assumes `op` is a FunctionOpInterface and
 /// has passed verification.
-void printFunctionAttributes(OpAsmPrinter &p, Operation *op, unsigned numInputs,
-                             unsigned numResults,
+void printFunctionAttributes(OpAsmPrinter &p, Operation *op,
                              ArrayRef<StringRef> elided = {});
 
 } // namespace function_interface_impl
