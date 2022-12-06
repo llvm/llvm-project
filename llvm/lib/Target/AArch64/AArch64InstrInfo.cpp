@@ -1652,10 +1652,10 @@ llvm::examineCFlagsUse(MachineInstr &MI, MachineInstr &CmpInstr,
                        SmallVectorImpl<MachineInstr *> *CCUseInstrs) {
   MachineBasicBlock *CmpParent = CmpInstr.getParent();
   if (MI.getParent() != CmpParent)
-    return None;
+    return std::nullopt;
 
   if (areCFlagsAliveInSuccessors(CmpParent))
-    return None;
+    return std::nullopt;
 
   UsedNZCV NZCVUsedAfterCmp;
   for (MachineInstr &Instr : instructionsWithoutDebug(
@@ -1663,7 +1663,7 @@ llvm::examineCFlagsUse(MachineInstr &MI, MachineInstr &CmpInstr,
     if (Instr.readsRegister(AArch64::NZCV, &TRI)) {
       AArch64CC::CondCode CC = findCondCodeUsedByInstr(Instr);
       if (CC == AArch64CC::Invalid) // Unsupported conditional instruction
-        return None;
+        return std::nullopt;
       NZCVUsedAfterCmp |= getUsedNZCV(CC);
       if (CCUseInstrs)
         CCUseInstrs->push_back(&Instr);
@@ -2601,10 +2601,10 @@ AArch64InstrInfo::getAddrModeFromMemoryOp(const MachineInstr &MemI,
   int64_t Offset;             // Filled with the offset of MI.
   bool OffsetIsScalable;
   if (!getMemOperandWithOffset(MemI, Base, Offset, OffsetIsScalable, TRI))
-    return None;
+    return std::nullopt;
 
   if (!Base->isReg())
-    return None;
+    return std::nullopt;
   ExtAddrMode AM;
   AM.BaseReg = Base->getReg();
   AM.Displacement = Offset;
@@ -8097,7 +8097,7 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
   }
 
-  return None;
+  return std::nullopt;
 }
 
 Optional<RegImmPair> AArch64InstrInfo::isAddImmediate(const MachineInstr &MI,
@@ -8109,11 +8109,11 @@ Optional<RegImmPair> AArch64InstrInfo::isAddImmediate(const MachineInstr &MI,
   // destination register.
   const MachineOperand &Op0 = MI.getOperand(0);
   if (!Op0.isReg() || Reg != Op0.getReg())
-    return None;
+    return std::nullopt;
 
   switch (MI.getOpcode()) {
   default:
-    return None;
+    return std::nullopt;
   case AArch64::SUBWri:
   case AArch64::SUBXri:
   case AArch64::SUBSWri:
@@ -8127,7 +8127,7 @@ Optional<RegImmPair> AArch64InstrInfo::isAddImmediate(const MachineInstr &MI,
     // TODO: Third operand can be global address (usually some string).
     if (!MI.getOperand(0).isReg() || !MI.getOperand(1).isReg() ||
         !MI.getOperand(2).isImm())
-      return None;
+      return std::nullopt;
     int Shift = MI.getOperand(3).getImm();
     assert((Shift == 0 || Shift == 12) && "Shift can be either 0 or 12");
     Offset = Sign * (MI.getOperand(2).getImm() << Shift);
@@ -8145,7 +8145,7 @@ describeORRLoadedValue(const MachineInstr &MI, Register DescribedReg,
                        const TargetRegisterInfo *TRI) {
   auto DestSrc = TII->isCopyInstr(MI);
   if (!DestSrc)
-    return None;
+    return std::nullopt;
 
   Register DestReg = DestSrc->Destination->getReg();
   Register SrcReg = DestSrc->Source->getReg();
@@ -8171,7 +8171,7 @@ describeORRLoadedValue(const MachineInstr &MI, Register DescribedReg,
   assert(!TRI->isSuperOrSubRegisterEq(DestReg, DescribedReg) &&
          "Unhandled ORR[XW]rs copy case");
 
-  return None;
+  return std::nullopt;
 }
 
 Optional<ParamLoadedValue>
@@ -8185,10 +8185,10 @@ AArch64InstrInfo::describeLoadedValue(const MachineInstr &MI,
     // MOVZWi may be used for producing zero-extended 32-bit immediates in
     // 64-bit parameters, so we need to consider super-registers.
     if (!TRI->isSuperRegisterEq(MI.getOperand(0).getReg(), Reg))
-      return None;
+      return std::nullopt;
 
     if (!MI.getOperand(1).isImm())
-      return None;
+      return std::nullopt;
     int64_t Immediate = MI.getOperand(1).getImm();
     int Shift = MI.getOperand(2).getImm();
     return ParamLoadedValue(MachineOperand::CreateImm(Immediate << Shift),

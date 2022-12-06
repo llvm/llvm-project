@@ -154,7 +154,7 @@ public:
 
   /// getNode {
   SDValue getNode(unsigned OC, SDVTList VTL, ArrayRef<SDValue> OpV,
-                  Optional<SDNodeFlags> Flags = None) const {
+                  Optional<SDNodeFlags> Flags = std::nullopt) const {
     auto N = DAG.getNode(OC, DL, VTL, OpV);
     if (Flags)
       N->setFlags(*Flags);
@@ -162,7 +162,7 @@ public:
   }
 
   SDValue getNode(unsigned OC, ArrayRef<EVT> ResVT, ArrayRef<SDValue> OpV,
-                  Optional<SDNodeFlags> Flags = None) const {
+                  Optional<SDNodeFlags> Flags = std::nullopt) const {
     auto N = DAG.getNode(OC, DL, ResVT, OpV);
     if (Flags)
       N->setFlags(*Flags);
@@ -170,7 +170,7 @@ public:
   }
 
   SDValue getNode(unsigned OC, EVT ResVT, ArrayRef<SDValue> OpV,
-                  Optional<SDNodeFlags> Flags = None) const {
+                  Optional<SDNodeFlags> Flags = std::nullopt) const {
     auto N = DAG.getNode(OC, DL, ResVT, OpV);
     if (Flags)
       N->setFlags(*Flags);

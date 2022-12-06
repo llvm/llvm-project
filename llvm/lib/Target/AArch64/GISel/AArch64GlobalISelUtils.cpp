@@ -23,7 +23,7 @@ AArch64GISelUtils::getAArch64VectorSplat(const MachineInstr &MI,
   if (auto Splat = getVectorSplat(MI, MRI))
     return Splat;
   if (MI.getOpcode() != AArch64::G_DUP)
-    return None;
+    return std::nullopt;
   Register Src = MI.getOperand(1).getReg();
   if (auto ValAndVReg =
           getAnyConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI))
@@ -36,7 +36,7 @@ AArch64GISelUtils::getAArch64VectorSplatScalar(const MachineInstr &MI,
                                                const MachineRegisterInfo &MRI) {
   auto Splat = getAArch64VectorSplat(MI, MRI);
   if (!Splat || Splat->isReg())
-    return None;
+    return std::nullopt;
   return Splat->getCst();
 }
 
