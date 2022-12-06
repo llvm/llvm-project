@@ -23,6 +23,7 @@
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetOptions.h"
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -497,8 +498,9 @@ public:
 /// CM does not have a value. The tiny and kernel models will produce
 /// an error, so targets that support them or require more complex codemodel
 /// selection logic should implement and call their own getEffectiveCodeModel.
-inline CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM,
-                                              CodeModel::Model Default) {
+inline CodeModel::Model
+getEffectiveCodeModel(std::optional<CodeModel::Model> CM,
+                      CodeModel::Model Default) {
   if (CM) {
     // By default, targets do not support the tiny and kernel models.
     if (*CM == CodeModel::Tiny)

@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CodeGen.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -30,7 +31,7 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
 }
 
 static CodeModel::Model
-getEffectiveXCoreCodeModel(Optional<CodeModel::Model> CM) {
+getEffectiveXCoreCodeModel(std::optional<CodeModel::Model> CM) {
   if (CM) {
     if (*CM != CodeModel::Small && *CM != CodeModel::Large)
       report_fatal_error("Target only supports CodeModel Small or Large");
@@ -45,7 +46,7 @@ XCoreTargetMachine::XCoreTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
                                        Optional<Reloc::Model> RM,
-                                       Optional<CodeModel::Model> CM,
+                                       std::optional<CodeModel::Model> CM,
                                        CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(
           T, "e-m:e-p:32:32-i1:8:32-i8:8:32-i16:16:32-i64:32-f64:32-a:0:32-n32",
