@@ -171,7 +171,7 @@ struct FragmentCompiler {
   };
 
   // Attempt to parse a specified string into an enum.
-  // Yields llvm::None and produces a diagnostic on failure.
+  // Yields std::nullopt and produces a diagnostic on failure.
   //
   // Optional<T> Value = compileEnum<En>("Foo", Frag.Foo)
   //    .map("Foo", Enum::Foo)

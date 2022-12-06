@@ -180,7 +180,7 @@ public:
     ForCleanup.reset();
   }
 
-  /// Returns the cached value for \p K, or llvm::None if the value is not in
+  /// Returns the cached value for \p K, or std::nullopt if the value is not in
   /// the cache anymore. If nullptr was cached for \p K, this function will
   /// return a null unique_ptr wrapped into an optional.
   /// If \p AccessMetric is set records whether there was a hit or miss.
