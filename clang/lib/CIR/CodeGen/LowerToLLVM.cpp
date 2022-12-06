@@ -42,15 +42,15 @@ using namespace llvm;
 
 namespace cir {
 
-struct ConvertCIRToLLVMPass
-    : public mlir::PassWrapper<ConvertCIRToLLVMPass,
+struct ConvertMLIRToLLVMPass
+    : public mlir::PassWrapper<ConvertMLIRToLLVMPass,
                                mlir::OperationPass<mlir::ModuleOp>> {
   void getDependentDialects(mlir::DialectRegistry &registry) const override {
     registry.insert<mlir::LLVM::LLVMDialect>();
   }
   void runOnOperation() final;
 
-  virtual StringRef getArgument() const override { return "cir-to-llvm"; }
+  virtual StringRef getArgument() const override { return "cir-mlir-to-llvm"; }
 };
 
 struct ConvertCIRToMemRefPass
@@ -589,7 +589,7 @@ void ConvertCIRToMLIRPass::runOnOperation() {
     signalPassFailure();
 }
 
-void ConvertCIRToLLVMPass::runOnOperation() {
+void ConvertMLIRToLLVMPass::runOnOperation() {
   mlir::LLVMConversionTarget target(getContext());
   target.addLegalOp<mlir::ModuleOp>();
 
@@ -663,7 +663,7 @@ lowerFromCIRToLLVMIR(mlir::ModuleOp theModule,
   mlir::PassManager pm(mlirCtx.get());
 
   pm.addPass(createConvertCIRToMLIRPass());
-  pm.addPass(createConvertCIRToLLVMPass());
+  pm.addPass(createConvertMLIRToLLVMPass());
 
   auto result = !mlir::failed(pm.run(theModule));
   if (!result)
@@ -685,8 +685,8 @@ lowerFromCIRToLLVMIR(mlir::ModuleOp theModule,
   return llvmModule;
 }
 
-std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {
-  return std::make_unique<ConvertCIRToLLVMPass>();
+std::unique_ptr<mlir::Pass> createConvertMLIRToLLVMPass() {
+  return std::make_unique<ConvertMLIRToLLVMPass>();
 }
 
 std::unique_ptr<mlir::Pass> createConvertCIRToMemRefPass() {
