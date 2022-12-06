@@ -18,16 +18,25 @@
 using namespace clang;
 using llvm::Error;
 
+static bool isPathApplicableAsPrefix(StringRef Path) {
+  if (Path.empty())
+    return false;
+  if (llvm::sys::path::is_relative(Path))
+    return false;
+  if (Path == llvm::sys::path::root_path(Path))
+    return false;
+  return true;
+}
+
 static Error computeSDKMapping(llvm::StringSaver &Saver,
                                const CompilerInvocation &Invocation,
                                StringRef New,
                                llvm::TreePathPrefixMapper &Mapper) {
   StringRef SDK = Invocation.getHeaderSearchOpts().Sysroot;
-  if (SDK.empty())
-    return Error::success();
-
-  // Need a new copy of the string since the invocation will be modified.
-  return Mapper.add(llvm::MappedPrefix{Saver.save(SDK), New});
+  if (isPathApplicableAsPrefix(SDK))
+    // Need a new copy of the string since the invocation will be modified.
+    return Mapper.add(llvm::MappedPrefix{Saver.save(SDK), New});
+  return Error::success();
 }
 
 static Error computeToolchainMapping(llvm::StringSaver &Saver,
@@ -46,7 +55,10 @@ static Error computeToolchainMapping(llvm::StringSaver &Saver,
       break;
     Guess = llvm::sys::path::parent_path(Guess);
   }
-  return Mapper.add(llvm::MappedPrefix{Guess, New});
+  if (isPathApplicableAsPrefix(Guess))
+    // Need a new copy of the string since the invocation will be modified.
+    return Mapper.add(llvm::MappedPrefix{Saver.save(Guess), New});
+  return Error::success();
 }
 
 static Error
@@ -67,8 +79,16 @@ computeFullMapping(llvm::StringSaver &Saver,
   if (!DepscanMapping.PrefixMap.empty()) {
     llvm::SmallVector<llvm::MappedPrefix> Split;
     llvm::MappedPrefix::transformJoinedIfValid(DepscanMapping.PrefixMap, Split);
-    if (Error E = Mapper.addRange(Split))
-      return E;
+    for (auto &MappedPrefix : Split) {
+      if (isPathApplicableAsPrefix(MappedPrefix.Old)) {
+        if (auto E = Mapper.add(MappedPrefix))
+          return E;
+      } else {
+        return createStringError(llvm::errc::invalid_argument,
+                                 "invalid prefix map: '" + MappedPrefix.Old +
+                                     "=" + MappedPrefix.New + "'");
+      }
+    }
   }
 
   Mapper.sort();
