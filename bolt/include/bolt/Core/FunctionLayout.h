@@ -303,16 +303,16 @@ public:
     return {block_begin(), block_end()};
   }
   block_reverse_iterator block_rbegin() {
-    return block_reverse_iterator(Blocks.rbegin());
+    return block_reverse_iterator(block_end());
   }
   block_const_reverse_iterator block_rbegin() const {
-    return block_const_reverse_iterator(Blocks.rbegin());
+    return block_const_reverse_iterator(block_end());
   }
   block_reverse_iterator block_rend() {
-    return block_reverse_iterator(Blocks.rend());
+    return block_reverse_iterator(block_begin());
   }
   block_const_reverse_iterator block_rend() const {
-    return block_const_reverse_iterator(Blocks.rend());
+    return block_const_reverse_iterator(block_begin());
   }
   iterator_range<block_const_reverse_iterator> rblocks() const {
     return {block_rbegin(), block_rend()};
