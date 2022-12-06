@@ -484,7 +484,8 @@ TEST(BracesAroundStatementsCheckTest, Macros) {
 }
 
 #define EXPECT_NO_CHANGES_WITH_OPTS(Check, Opts, Code)                         \
-  EXPECT_EQ(Code, runCheckOnCode<Check>(Code, nullptr, "input.cc", None, Opts))
+  EXPECT_EQ(Code, runCheckOnCode<Check>(Code, nullptr, "input.cc",             \
+                                        std::nullopt, Opts))
 TEST(BracesAroundStatementsCheckTest, ImplicitCastInReturn) {
   ClangTidyOptions Opts;
   Opts.CheckOptions["test-check-0.ShortStatementLines"] = "1";
