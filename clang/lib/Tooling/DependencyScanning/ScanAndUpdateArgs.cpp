@@ -31,15 +31,17 @@ static Error computeSDKMapping(llvm::StringSaver &Saver,
 }
 
 static Error computeToolchainMapping(llvm::StringSaver &Saver,
-                                     StringRef ClangPath, StringRef New,
+                                     const CompilerInvocation &Invocation,
+                                     StringRef New,
                                      llvm::TreePathPrefixMapper &Mapper) {
-  // Look up from clang for the toolchain, assuming clang is at
-  // <toolchain>/usr/bin/clang. Return a shallower guess if the directories
-  // don't match.
+  // Look up for the toolchain, assuming resources are at
+  // <toolchain>/usr/lib/clang/<VERSION>. Return a shallower guess if the
+  // directories do not match.
   //
   // FIXME: Should this append ".." instead of calling parent_path?
-  StringRef Guess = llvm::sys::path::parent_path(ClangPath);
-  for (StringRef Dir : {"bin", "usr"}) {
+  StringRef ResourceDir = Invocation.getHeaderSearchOpts().ResourceDir;
+  StringRef Guess = llvm::sys::path::parent_path(ResourceDir);
+  for (StringRef Dir : {"clang", "lib", "usr"}) {
     if (llvm::sys::path::filename(Guess) != Dir)
       break;
     Guess = llvm::sys::path::parent_path(Guess);
@@ -48,7 +50,7 @@ static Error computeToolchainMapping(llvm::StringSaver &Saver,
 }
 
 static Error
-computeFullMapping(llvm::StringSaver &Saver, StringRef ClangPath,
+computeFullMapping(llvm::StringSaver &Saver,
                    const CompilerInvocation &Invocation,
                    const cc1depscand::DepscanPrefixMapping &DepscanMapping,
                    llvm::TreePathPrefixMapper &Mapper) {
@@ -59,7 +61,7 @@ computeFullMapping(llvm::StringSaver &Saver, StringRef ClangPath,
 
   if (DepscanMapping.NewToolchainPath)
     if (Error E = computeToolchainMapping(
-            Saver, ClangPath, *DepscanMapping.NewToolchainPath, Mapper))
+            Saver, Invocation, *DepscanMapping.NewToolchainPath, Mapper))
       return E;
 
   if (!DepscanMapping.PrefixMap.empty()) {
@@ -218,7 +220,7 @@ static void updateCompilerInvocation(CompilerInvocation &Invocation,
 
 Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
     tooling::dependencies::DependencyScanningTool &Tool,
-    DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS, const char *Exec,
+    DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
     CompilerInvocation &Invocation, StringRef WorkingDirectory,
     const cc1depscand::DepscanPrefixMapping &PrefixMapping,
     llvm::cas::ObjectStore &DB) {
@@ -231,8 +233,7 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver(Alloc);
   llvm::TreePathPrefixMapper Mapper(&FS, Alloc);
-  if (Error E =
-          computeFullMapping(Saver, Exec, Invocation, PrefixMapping, Mapper))
+  if (Error E = computeFullMapping(Saver, Invocation, PrefixMapping, Mapper))
     return std::move(E);
 
   auto ScanInvocation = std::make_shared<CompilerInvocation>(Invocation);

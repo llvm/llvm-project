@@ -248,7 +248,7 @@ llvm::cl::opt<bool> Verbose("v", llvm::cl::Optional,
 static bool emitCompilationDBWithCASTreeArguments(
     std::shared_ptr<llvm::cas::ObjectStore> DB,
     std::vector<tooling::CompileCommand> Inputs,
-    DiagnosticConsumer &DiagsConsumer, const char *Exec,
+    DiagnosticConsumer &DiagsConsumer,
     const cc1depscand::DepscanPrefixMapping &PrefixMapping,
     DependencyScanningService &Service, llvm::ThreadPool &Pool,
     llvm::raw_ostream &OS) {
@@ -311,7 +311,6 @@ static bool emitCompilationDBWithCASTreeArguments(
           llvm::cas::ObjectStore &DB;
           tooling::dependencies::DependencyScanningTool &WorkerTool;
           DiagnosticConsumer &DiagsConsumer;
-          const char *Exec;
           StringRef CWD;
           const cc1depscand::DepscanPrefixMapping &PrefixMapping;
           SmallVectorImpl<const char *> &OutputArgs;
@@ -321,14 +320,13 @@ static bool emitCompilationDBWithCASTreeArguments(
           ScanForCC1Action(
               llvm::cas::ObjectStore &DB,
               tooling::dependencies::DependencyScanningTool &WorkerTool,
-              DiagnosticConsumer &DiagsConsumer, const char *Exec,
-              StringRef CWD,
+              DiagnosticConsumer &DiagsConsumer, StringRef CWD,
               const cc1depscand::DepscanPrefixMapping &PrefixMapping,
               SmallVectorImpl<const char *> &OutputArgs,
               llvm::StringSaver &Saver)
               : DB(DB), WorkerTool(WorkerTool), DiagsConsumer(DiagsConsumer),
-                Exec(Exec), CWD(CWD), PrefixMapping(PrefixMapping),
-                OutputArgs(OutputArgs), Saver(Saver) {}
+                CWD(CWD), PrefixMapping(PrefixMapping), OutputArgs(OutputArgs),
+                Saver(Saver) {}
 
           bool
           runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
@@ -336,8 +334,8 @@ static bool emitCompilationDBWithCASTreeArguments(
                         std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                         DiagnosticConsumer *DiagConsumer) override {
             Expected<llvm::cas::CASID> Root = scanAndUpdateCC1InlineWithTool(
-                WorkerTool, DiagsConsumer, /*VerboseOS*/ nullptr, Exec,
-                *Invocation, CWD, PrefixMapping, DB);
+                WorkerTool, DiagsConsumer, /*VerboseOS*/ nullptr, *Invocation,
+                CWD, PrefixMapping, DB);
             if (!Root) {
               llvm::consumeError(Root.takeError());
               return false;
@@ -353,8 +351,8 @@ static bool emitCompilationDBWithCASTreeArguments(
         SmallVector<const char *> OutputArgs;
         llvm::StringSaver &Saver = PerThreadStates[I]->Saver;
         OutputArgs.push_back(Saver.save(Input->CommandLine.front()).data());
-        ScanForCC1Action Action(*DB, WorkerTool, *IgnoringDiagsConsumer, Exec,
-                                CWD, PrefixMapping, OutputArgs, Saver);
+        ScanForCC1Action Action(*DB, WorkerTool, *IgnoringDiagsConsumer, CWD,
+                                PrefixMapping, OutputArgs, Saver);
 
         llvm::IntrusiveRefCntPtr<FileManager> FileMgr =
             WorkerTool.getOrCreateFileManager();
@@ -839,7 +837,7 @@ int main(int argc, const char **argv) {
     cc1depscand::DepscanPrefixMapping PrefixMapping;
     return emitCompilationDBWithCASTreeArguments(
         CAS, AdjustingCompilations->getAllCompileCommands(), *DiagsConsumer,
-        argv[0], PrefixMapping, Service, Pool, llvm::outs());
+        PrefixMapping, Service, Pool, llvm::outs());
   }
 
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
