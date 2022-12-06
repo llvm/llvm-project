@@ -88,6 +88,9 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
   setOperationAction(ISD::SRA, MVT::i16, Custom);
   setOperationAction(ISD::SHL, MVT::i16, Custom);
   setOperationAction(ISD::SRL, MVT::i16, Custom);
+  setOperationAction(ISD::SRA, MVT::i32, Custom);
+  setOperationAction(ISD::SHL, MVT::i32, Custom);
+  setOperationAction(ISD::SRL, MVT::i32, Custom);
   setOperationAction(ISD::SHL_PARTS, MVT::i16, Expand);
   setOperationAction(ISD::SRA_PARTS, MVT::i16, Expand);
   setOperationAction(ISD::SRL_PARTS, MVT::i16, Expand);
@@ -247,10 +250,13 @@ const char *AVRTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE(CALL);
     NODE(WRAPPER);
     NODE(LSL);
+    NODE(LSLW);
     NODE(LSR);
+    NODE(LSRW);
     NODE(ROL);
     NODE(ROR);
     NODE(ASR);
+    NODE(ASRW);
     NODE(LSLLOOP);
     NODE(LSRLOOP);
     NODE(ROLLOOP);
@@ -278,6 +284,57 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(N);
   assert(isPowerOf2_32(VT.getSizeInBits()) &&
          "Expected power-of-2 shift amount");
+
+  if (VT.getSizeInBits() == 32) {
+    if (!isa<ConstantSDNode>(N->getOperand(1))) {
+      // 32-bit shifts are converted to a loop in IR.
+      // This should be unreachable.
+      report_fatal_error("Expected a constant shift amount!");
+    }
+    SDVTList ResTys = DAG.getVTList(MVT::i16, MVT::i16);
+    SDValue SrcLo =
+        DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i16, Op.getOperand(0),
+                    DAG.getConstant(0, dl, MVT::i16));
+    SDValue SrcHi =
+        DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i16, Op.getOperand(0),
+                    DAG.getConstant(1, dl, MVT::i16));
+    uint64_t ShiftAmount =
+        cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+    if (ShiftAmount == 16) {
+      // Special case these two operations because they appear to be used by the
+      // generic codegen parts to lower 32-bit numbers.
+      // TODO: perhaps we can lower shift amounts bigger than 16 to a 16-bit
+      // shift of a part of the 32-bit value?
+      switch (Op.getOpcode()) {
+      case ISD::SHL: {
+        SDValue Zero = DAG.getConstant(0, dl, MVT::i16);
+        return DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i32, Zero, SrcLo);
+      }
+      case ISD::SRL: {
+        SDValue Zero = DAG.getConstant(0, dl, MVT::i16);
+        return DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i32, SrcHi, Zero);
+      }
+      }
+    }
+    SDValue Cnt = DAG.getTargetConstant(ShiftAmount, dl, MVT::i8);
+    unsigned Opc;
+    switch (Op.getOpcode()) {
+    default:
+      llvm_unreachable("Invalid 32-bit shift opcode!");
+    case ISD::SHL:
+      Opc = AVRISD::LSLW;
+      break;
+    case ISD::SRL:
+      Opc = AVRISD::LSRW;
+      break;
+    case ISD::SRA:
+      Opc = AVRISD::ASRW;
+      break;
+    }
+    SDValue Result = DAG.getNode(Opc, dl, ResTys, SrcLo, SrcHi, Cnt);
+    return DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i32, Result.getValue(0),
+                       Result.getValue(1));
+  }
 
   // Expand non-constant shifts to loops.
   if (!isa<ConstantSDNode>(N->getOperand(1))) {
@@ -1789,6 +1846,114 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
   return RemBB;
 }
 
+// Do a multibyte AVR shift. Insert shift instructions and put the output
+// registers in the Regs array.
+// Because AVR does not have a normal shift instruction (only a single bit shift
+// instruction), we have to emulate this behavior with other instructions.
+static void insertMultibyteShift(MachineInstr &MI, MachineBasicBlock *BB,
+                                 MutableArrayRef<std::pair<Register, int>> Regs,
+                                 ISD::NodeType Opc, int64_t ShiftAmt) {
+  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+  const DebugLoc &dl = MI.getDebugLoc();
+
+  const bool ShiftLeft = Opc == ISD::SHL;
+  const bool ArithmeticShift = Opc == ISD::SRA;
+
+  // Shift by one. This is the fallback that always works, and the shift
+  // operation that is used for 1, 2, and 3 bit shifts.
+  while (ShiftLeft && ShiftAmt) {
+    // Shift one to the left.
+    for (ssize_t I = Regs.size() - 1; I >= 0; I--) {
+      Register Out = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+      Register In = Regs[I].first;
+      Register InSubreg = Regs[I].second;
+      if (I == (ssize_t)Regs.size() - 1) { // first iteration
+        BuildMI(*BB, MI, dl, TII.get(AVR::ADDRdRr), Out)
+            .addReg(In, 0, InSubreg)
+            .addReg(In, 0, InSubreg);
+      } else {
+        BuildMI(*BB, MI, dl, TII.get(AVR::ADCRdRr), Out)
+            .addReg(In, 0, InSubreg)
+            .addReg(In, 0, InSubreg);
+      }
+      Regs[I] = std::pair(Out, 0);
+    }
+    ShiftAmt--;
+  }
+  while (!ShiftLeft && ShiftAmt) {
+    // Shift one to the right.
+    for (size_t I = 0; I < Regs.size(); I++) {
+      Register Out = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+      Register In = Regs[I].first;
+      Register InSubreg = Regs[I].second;
+      if (I == 0) {
+        unsigned Opc = ArithmeticShift ? AVR::ASRRd : AVR::LSRRd;
+        BuildMI(*BB, MI, dl, TII.get(Opc), Out).addReg(In, 0, InSubreg);
+      } else {
+        BuildMI(*BB, MI, dl, TII.get(AVR::RORRd), Out).addReg(In, 0, InSubreg);
+      }
+      Regs[I] = std::pair(Out, 0);
+    }
+    ShiftAmt--;
+  }
+
+  if (ShiftAmt != 0) {
+    llvm_unreachable("don't know how to shift!"); // sanity check
+  }
+}
+
+// Do a wide (32-bit) shift.
+MachineBasicBlock *
+AVRTargetLowering::insertWideShift(MachineInstr &MI,
+                                   MachineBasicBlock *BB) const {
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  const DebugLoc &dl = MI.getDebugLoc();
+
+  // How much to shift to the right (meaning: a negative number indicates a left
+  // shift).
+  int64_t ShiftAmt = MI.getOperand(4).getImm();
+  ISD::NodeType Opc;
+  switch (MI.getOpcode()) {
+  case AVR::Lsl32:
+    Opc = ISD::SHL;
+    break;
+  case AVR::Lsr32:
+    Opc = ISD::SRL;
+    break;
+  case AVR::Asr32:
+    Opc = ISD::SRA;
+    break;
+  }
+
+  // Read the input registers, with the most significant register at index 0.
+  std::array<std::pair<Register, int>, 4> Registers = {
+      std::pair(MI.getOperand(3).getReg(), AVR::sub_hi),
+      std::pair(MI.getOperand(3).getReg(), AVR::sub_lo),
+      std::pair(MI.getOperand(2).getReg(), AVR::sub_hi),
+      std::pair(MI.getOperand(2).getReg(), AVR::sub_lo),
+  };
+
+  // Do the shift. The registers are modified in-place.
+  insertMultibyteShift(MI, BB, Registers, Opc, ShiftAmt);
+
+  // Combine the 8-bit registers into 16-bit register pairs.
+  BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(1).getReg())
+      .addReg(Registers[0].first, 0, Registers[0].second)
+      .addImm(AVR::sub_hi)
+      .addReg(Registers[1].first, 0, Registers[1].second)
+      .addImm(AVR::sub_lo);
+  BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(0).getReg())
+      .addReg(Registers[2].first, 0, Registers[2].second)
+      .addImm(AVR::sub_hi)
+      .addReg(Registers[3].first, 0, Registers[3].second)
+      .addImm(AVR::sub_lo);
+
+  // Remove the pseudo instruction.
+  MI.eraseFromParent();
+  return BB;
+}
+
 static bool isCopyMulResult(MachineBasicBlock::iterator const &I) {
   if (I->getOpcode() == AVR::COPY) {
     Register SrcReg = I->getOperand(1).getReg();
@@ -1901,6 +2066,10 @@ AVRTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AVR::Asr8:
   case AVR::Asr16:
     return insertShift(MI, MBB);
+  case AVR::Lsl32:
+  case AVR::Lsr32:
+  case AVR::Asr32:
+    return insertWideShift(MI, MBB);
   case AVR::MULRdRr:
   case AVR::MULSRdRr:
     return insertMul(MI, MBB);
