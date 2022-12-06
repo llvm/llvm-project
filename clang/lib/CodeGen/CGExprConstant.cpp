@@ -305,7 +305,7 @@ Optional<size_t> ConstantAggregateBuilder::splitAt(CharUnits Pos) {
 
     // Try to decompose it into smaller constants.
     if (!split(LastAtOrBeforePosIndex, Pos))
-      return None;
+      return std::nullopt;
   }
 }
 
