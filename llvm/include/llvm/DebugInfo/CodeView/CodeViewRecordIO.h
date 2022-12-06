@@ -249,7 +249,7 @@ private:
 
     Optional<uint32_t> bytesRemaining(uint32_t CurrentOffset) const {
       if (!MaxLength)
-        return None;
+        return std::nullopt;
       assert(CurrentOffset >= BeginOffset);
 
       uint32_t BytesUsed = CurrentOffset - BeginOffset;

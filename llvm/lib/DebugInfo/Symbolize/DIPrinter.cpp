@@ -34,7 +34,7 @@ class SourceCode {
   Optional<StringRef> load(StringRef FileName,
                            const Optional<StringRef> &EmbeddedSource) {
     if (Lines <= 0)
-      return None;
+      return std::nullopt;
 
     if (EmbeddedSource)
       return EmbeddedSource;
@@ -42,7 +42,7 @@ class SourceCode {
       ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
           MemoryBuffer::getFile(FileName);
       if (!BufOrErr)
-        return None;
+        return std::nullopt;
       MemBuf = std::move(*BufOrErr);
       return MemBuf->getBuffer();
     }
@@ -50,7 +50,7 @@ class SourceCode {
 
   Optional<StringRef> pruneSource(const Optional<StringRef> &Source) {
     if (!Source)
-      return None;
+      return std::nullopt;
     size_t FirstLinePos = StringRef::npos, Pos = 0;
     for (int64_t L = 1; L <= LastLine; ++L, ++Pos) {
       if (L == FirstLine)
@@ -60,7 +60,7 @@ class SourceCode {
         break;
     }
     if (FirstLinePos == StringRef::npos)
-      return None;
+      return std::nullopt;
     return Source->substr(FirstLinePos, (Pos == StringRef::npos)
                                             ? StringRef::npos
                                             : Pos - FirstLinePos);
