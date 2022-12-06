@@ -2128,7 +2128,7 @@ StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(RecordDecl *Anon) {
 
   const auto *Owner = dyn_cast<RecordDecl>(Anon->getDeclContext());
   if (!Owner)
-    return None;
+    return std::nullopt;
 
   unsigned Index = 0;
   for (const auto *D : Owner->noload_decls()) {
