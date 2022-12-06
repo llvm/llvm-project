@@ -32,7 +32,7 @@ public:
   };
 
   /// \return Contents of the stored document.
-  /// For untracked files, a llvm::None is returned.
+  /// For untracked files, a std::nullopt is returned.
   llvm::Optional<Draft> getDraft(PathRef File) const;
 
   /// \return List of names of the drafts in this store.
