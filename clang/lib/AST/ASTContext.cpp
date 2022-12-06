@@ -7102,6 +7102,21 @@ unsigned ASTContext::getIntegerRank(const Type *T) const {
   case BuiltinType::Int128:
   case BuiltinType::UInt128:
     return 7 + (getIntWidth(Int128Ty) << 3);
+
+  // "The ranks of char8_t, char16_t, char32_t, and wchar_t equal the ranks of
+  // their underlying types" [c++20 conv.rank]
+  case BuiltinType::Char8:
+    return getIntegerRank(UnsignedCharTy.getTypePtr());
+  case BuiltinType::Char16:
+    return getIntegerRank(
+        getFromTargetType(Target->getChar16Type()).getTypePtr());
+  case BuiltinType::Char32:
+    return getIntegerRank(
+        getFromTargetType(Target->getChar32Type()).getTypePtr());
+  case BuiltinType::WChar_S:
+  case BuiltinType::WChar_U:
+    return getIntegerRank(
+        getFromTargetType(Target->getWCharType()).getTypePtr());
   }
 }
 
