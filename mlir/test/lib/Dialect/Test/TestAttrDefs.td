@@ -312,7 +312,7 @@ def TestArrayOfEnums : ArrayOfAttr<Test_Dialect, "ArrayOfEnums",
 def TestCustomAnchor : Test_Attr<"TestCustomAnchor"> {
   let parameters = (ins "int":$a, OptionalParameter<"mlir::Optional<int>">:$b);
   let mnemonic = "custom_anchor";
-  let assemblyFormat = "`<` $a (`>`) : (`,` ` ` custom<TrueFalse>($b)^ `>`)?";
+  let assemblyFormat = "`<` $a (`>`) : (`,` custom<TrueFalse>($b)^ `>`)?";
 }
 
 def Test_IteratorTypeEnum
