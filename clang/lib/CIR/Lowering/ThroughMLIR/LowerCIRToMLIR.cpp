@@ -515,6 +515,7 @@ void populateCIRToMLIRConversionPatterns(mlir::RewritePatternSet &patterns,
   patterns.add<CIRFuncLowering>(converter, patterns.getContext());
 }
 
+namespace {
 mlir::TypeConverter prepareTypeConverter() {
   mlir::TypeConverter converter;
   converter.addConversion([&](mlir::cir::PointerType type) -> mlir::Type {
@@ -527,6 +528,7 @@ mlir::TypeConverter prepareTypeConverter() {
 
   return converter;
 }
+} // namespace
 
 void ConvertCIRToMLIRPass::runOnOperation() {
   auto module = getOperation();
@@ -549,9 +551,9 @@ void ConvertCIRToMLIRPass::runOnOperation() {
 }
 
 std::unique_ptr<llvm::Module>
-lowerFromCIRToLLVMIR(mlir::ModuleOp theModule,
-                     std::unique_ptr<mlir::MLIRContext> mlirCtx,
-                     LLVMContext &llvmCtx) {
+lowerFromCIRToMLIRToLLVMIR(mlir::ModuleOp theModule,
+                           std::unique_ptr<mlir::MLIRContext> mlirCtx,
+                           LLVMContext &llvmCtx) {
   mlir::PassManager pm(mlirCtx.get());
 
   pm.addPass(createConvertCIRToMLIRPass());

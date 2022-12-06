@@ -27,7 +27,6 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -537,13 +536,17 @@ void ConvertCIRToLLVMPass::runOnOperation() {
     signalPassFailure();
 }
 
+std::unique_ptr<mlir::Pass> createConvertDirectCIRToLLVMPass() {
+  return std::make_unique<ConvertCIRToLLVMPass>();
+}
+
 std::unique_ptr<llvm::Module>
-lowerFromCIRToMLIRToLLVMIR(mlir::ModuleOp theModule,
-                           std::unique_ptr<mlir::MLIRContext> mlirCtx,
-                           LLVMContext &llvmCtx) {
+lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule,
+                             std::unique_ptr<mlir::MLIRContext> mlirCtx,
+                             LLVMContext &llvmCtx) {
   mlir::PassManager pm(mlirCtx.get());
 
-  pm.addPass(createConvertCIRToLLVMPass());
+  pm.addPass(createConvertDirectCIRToLLVMPass());
 
   auto result = !mlir::failed(pm.run(theModule));
   if (!result)
@@ -564,27 +567,4 @@ lowerFromCIRToMLIRToLLVMIR(mlir::ModuleOp theModule,
 
   return llvmModule;
 }
-
-std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {
-  return std::make_unique<ConvertCIRToLLVMPass>();
-}
-
-mlir::ModuleOp lowerFromCIRToMLIR(mlir::ModuleOp theModule,
-                                  mlir::MLIRContext *mlirCtx) {
-  mlir::PassManager pm(mlirCtx);
-
-  pm.addPass(createConvertCIRToLLVMPass());
-
-  auto result = !mlir::failed(pm.run(theModule));
-  if (!result)
-    report_fatal_error(
-        "The pass manager failed to lower CIR to LLVMIR dialect!");
-
-  // Now that we ran all the lowering passes, verify the final output.
-  if (theModule.verify().failed())
-    report_fatal_error("Verification of the final LLVMIR dialect failed!");
-
-  return theModule;
-}
-
 } // namespace cir

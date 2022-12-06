@@ -72,6 +72,16 @@ static std::string sanitizePassOptions(llvm::StringRef o) {
 }
 
 namespace cir {
+
+static std::unique_ptr<llvm::Module> lowerFromCIRToLLVMIR(
+    const clang::FrontendOptions &feOptions, mlir::ModuleOp mlirMod,
+    std::unique_ptr<mlir::MLIRContext> mlirCtx, llvm::LLVMContext &llvmCtx) {
+  if (feOptions.ClangIRDirectLowering)
+    return lowerDirectlyFromCIRToLLVMIR(mlirMod, std::move(mlirCtx), llvmCtx);
+  else
+    return lowerFromCIRToMLIRToLLVMIR(mlirMod, std::move(mlirCtx), llvmCtx);
+}
+
 class CIRGenConsumer : public clang::ASTConsumer {
 
   virtual void anchor();
@@ -236,7 +246,7 @@ public:
     case CIRGenAction::OutputType::EmitLLVM: {
       llvm::LLVMContext llvmCtx;
       auto llvmModule =
-          lowerFromCIRToLLVMIR(mlirMod, std::move(mlirCtx), llvmCtx);
+          lowerFromCIRToLLVMIR(feOptions, mlirMod, std::move(mlirCtx), llvmCtx);
 
       llvmModule->setTargetTriple(targetOptions.Triple);
 
@@ -250,7 +260,7 @@ public:
     case CIRGenAction::OutputType::EmitObj: {
       llvm::LLVMContext llvmCtx;
       auto llvmModule =
-          lowerFromCIRToLLVMIR(mlirMod, std::move(mlirCtx), llvmCtx);
+          lowerFromCIRToLLVMIR(feOptions, mlirMod, std::move(mlirCtx), llvmCtx);
 
       llvmModule->setTargetTriple(targetOptions.Triple);
       EmitBackendOutput(diagnosticsEngine, headerSearchOptions, codeGenOptions,
@@ -263,7 +273,7 @@ public:
     case CIRGenAction::OutputType::EmitAssembly: {
       llvm::LLVMContext llvmCtx;
       auto llvmModule =
-          lowerFromCIRToLLVMIR(mlirMod, std::move(mlirCtx), llvmCtx);
+          lowerFromCIRToLLVMIR(feOptions, mlirMod, std::move(mlirCtx), llvmCtx);
 
       llvmModule->setTargetTriple(targetOptions.Triple);
       EmitBackendOutput(diagnosticsEngine, headerSearchOptions, codeGenOptions,
@@ -408,7 +418,8 @@ void CIRGenAction::ExecuteAction() {
 
   llvm::LLVMContext llvmCtx;
   auto llvmModule = lowerFromCIRToLLVMIR(
-      *mlirModule, std::unique_ptr<mlir::MLIRContext>(mlirContext), llvmCtx);
+      ci.getFrontendOpts(), *mlirModule,
+      std::unique_ptr<mlir::MLIRContext>(mlirContext), llvmCtx);
 
   if (outstream)
     llvmModule->print(*outstream, nullptr);
