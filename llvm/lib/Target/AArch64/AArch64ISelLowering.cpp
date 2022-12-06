@@ -546,6 +546,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTPOP, MVT::i64, Legal);
     setOperationAction(ISD::CTPOP, MVT::i128, Expand);
     setOperationAction(ISD::PARITY, MVT::i128, Expand);
+    setOperationAction(ISD::CTTZ, MVT::i32, Legal);
+    setOperationAction(ISD::CTTZ, MVT::i64, Legal);
+    setOperationAction(ISD::CTTZ, MVT::i128, Expand);
   } else {
     setOperationAction(ISD::CTPOP, MVT::i32, Custom);
     setOperationAction(ISD::CTPOP, MVT::i64, Custom);
@@ -931,6 +934,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::FP_EXTEND);
 
   setTargetDAGCombine(ISD::GlobalAddress);
+
+  setTargetDAGCombine(ISD::CTLZ);
 
   // In case of strict alignment, avoid an excessive number of byte wide stores.
   MaxStoresPerMemsetOptSize = 8;
@@ -20280,6 +20285,17 @@ static SDValue performGlobalAddressCombine(SDNode *N, SelectionDAG &DAG,
                      DAG.getConstant(MinOffset, DL, MVT::i64));
 }
 
+static SDValue performCTLZCombine(SDNode *N, SelectionDAG &DAG,
+                                  const AArch64Subtarget *Subtarget) {
+  SDValue BR = N->getOperand(0);
+  if (!Subtarget->hasCSSC() || BR.getOpcode() != ISD::BITREVERSE ||
+      !BR.getValueType().isScalarInteger())
+    return SDValue();
+
+  SDLoc DL(N);
+  return DAG.getNode(ISD::CTTZ, DL, BR.getValueType(), BR.getOperand(0));
+}
+
 // Turns the vector of indices into a vector of byte offstes by scaling Offset
 // by (BitWidth / 8).
 static SDValue getScaledOffsetForBitWidth(SelectionDAG &DAG, SDValue Offset,
@@ -21185,6 +21201,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case ISD::GlobalAddress:
     return performGlobalAddressCombine(N, DAG, Subtarget, getTargetMachine());
+  case ISD::CTLZ:
+    return performCTLZCombine(N, DAG, Subtarget);
   }
   return SDValue();
 }
