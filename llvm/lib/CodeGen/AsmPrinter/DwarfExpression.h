@@ -55,7 +55,7 @@ public:
   /// Consume one operation.
   Optional<DIExpression::ExprOperand> take() {
     if (Start == End)
-      return None;
+      return std::nullopt;
     return *(Start++);
   }
 
@@ -65,18 +65,18 @@ public:
   /// Return the current operation.
   Optional<DIExpression::ExprOperand> peek() const {
     if (Start == End)
-      return None;
+      return std::nullopt;
     return *(Start);
   }
 
   /// Return the next operation.
   Optional<DIExpression::ExprOperand> peekNext() const {
     if (Start == End)
-      return None;
+      return std::nullopt;
 
     auto Next = Start.getNext();
     if (Next == End)
-      return None;
+      return std::nullopt;
 
     return *Next;
   }
