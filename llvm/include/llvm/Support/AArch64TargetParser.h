@@ -114,12 +114,6 @@ struct ArchInfo {
   StringRef ArchFeature; // Command line feature flag, e.g. +v8a
   uint64_t DefaultExts;  // bitfield of default extensions ArchExtKind
 
-  // These are not intended to be copied or created outside of this file.
-  ArchInfo(const ArchInfo &) = delete;
-  ArchInfo(const ArchInfo &&) = delete;
-  ArchInfo &operator=(const ArchInfo &rhs) = delete;
-  ArchInfo &&operator=(const ArchInfo &&rhs) = delete;
-
   // Comparison is done by address. Copies should not exist.
   bool operator==(const ArchInfo &Other) const { return this == &Other; }
   bool operator!=(const ArchInfo &Other) const { return this != &Other; }

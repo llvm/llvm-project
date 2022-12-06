@@ -10,7 +10,7 @@ module m
   end interface
   !ERROR: Automatic data object 'a' may not appear in the specification part of a module
   real :: a(if1(1))
-  !ERROR: No specific procedure of generic 'ifn2' matches the actual arguments
+  !ERROR: No specific function of generic 'ifn2' matches the actual arguments
   real :: b(ifn2(1))
  contains
   subroutine t1(n)

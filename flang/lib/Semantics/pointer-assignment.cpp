@@ -307,6 +307,10 @@ bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
             symbol->name());
         return false;
       }
+    } else if (symbol->has<ProcBindingDetails>()) {
+      evaluate::SayWithDeclaration(context_.messages(), *symbol,
+          "Procedure binding '%s' used as target of a pointer assignment"_port_en_US,
+          symbol->name());
     }
   }
   if (auto chars{Procedure::Characterize(d, context_)}) {

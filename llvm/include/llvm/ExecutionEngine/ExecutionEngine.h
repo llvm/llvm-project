@@ -35,6 +35,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -540,8 +541,8 @@ private:
   std::shared_ptr<MCJITMemoryManager> MemMgr;
   std::shared_ptr<LegacyJITSymbolResolver> Resolver;
   TargetOptions Options;
-  Optional<Reloc::Model> RelocModel;
-  Optional<CodeModel::Model> CMModel;
+  std::optional<Reloc::Model> RelocModel;
+  std::optional<CodeModel::Model> CMModel;
   std::string MArch;
   std::string MCPU;
   SmallVector<std::string, 4> MAttrs;

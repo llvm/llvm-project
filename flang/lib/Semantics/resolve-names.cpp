@@ -3246,9 +3246,8 @@ void InterfaceVisitor::ResolveSpecificsInGeneric(Symbol &generic) {
   specificProcs_.erase(range.first, range.second);
 }
 
-// Check that the specific procedures are all functions or all subroutines.
-// If there is a derived type with the same name they must be functions.
-// Set the corresponding flag on generic.
+// Mixed interfaces are allowed by the standard.
+// If there is a derived type with the same name, they must all be functions.
 void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
   ResolveSpecificsInGeneric(generic);
   auto &details{generic.get<GenericDetails>()};
@@ -3271,10 +3270,11 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
   }
   const Symbol &firstSpecific{specifics.front()};
   bool isFunction{firstSpecific.test(Symbol::Flag::Function)};
+  bool isBoth{false};
   for (const Symbol &specific : specifics) {
     if (isFunction != specific.test(Symbol::Flag::Function)) { // C1514
       auto &msg{Say(generic.name(),
-          "Generic interface '%s' has both a function and a subroutine"_err_en_US)};
+          "Generic interface '%s' has both a function and a subroutine"_warn_en_US)};
       if (isFunction) {
         msg.Attach(firstSpecific.name(), "Function declaration"_en_US);
         msg.Attach(specific.name(), "Subroutine declaration"_en_US);
@@ -3282,6 +3282,9 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
         msg.Attach(firstSpecific.name(), "Subroutine declaration"_en_US);
         msg.Attach(specific.name(), "Function declaration"_en_US);
       }
+      isFunction = false;
+      isBoth = true;
+      break;
     }
   }
   if (!isFunction && details.derivedType()) {
@@ -3290,7 +3293,9 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
         " with same name"_err_en_US,
         *details.derivedType()->GetUltimate().scope());
   }
-  generic.set(isFunction ? Symbol::Flag::Function : Symbol::Flag::Subroutine);
+  if (!isBoth) {
+    generic.set(isFunction ? Symbol::Flag::Function : Symbol::Flag::Subroutine);
+  }
 }
 
 // SubprogramVisitor implementation
@@ -5984,7 +5989,7 @@ bool DeclarationVisitor::OkToAddComponent(
       } else if (extends) {
         msg = "Type cannot be extended as it has a component named"
               " '%s'"_err_en_US;
-      } else if (CheckAccessibleComponent(currScope(), *prev)) {
+      } else if (CheckAccessibleSymbol(currScope(), *prev)) {
         // inaccessible component -- redeclaration is ok
         msg = "Component '%s' is inaccessibly declared in or as a "
               "parent of this derived type"_warn_en_US;
@@ -6859,8 +6864,7 @@ const parser::Name *DeclarationVisitor::FindComponent(
     derived->Instantiate(currScope()); // in case of forward referenced type
     if (const Scope * scope{derived->scope()}) {
       if (Resolve(component, scope->FindComponent(component.source))) {
-        if (auto msg{
-                CheckAccessibleComponent(currScope(), *component.symbol)}) {
+        if (auto msg{CheckAccessibleSymbol(currScope(), *component.symbol)}) {
           context().Say(component.source, *msg);
         }
         return &component;

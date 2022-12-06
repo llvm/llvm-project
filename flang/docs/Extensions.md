@@ -242,6 +242,14 @@ end
   compilers, so it is not supported.
 * f18 doesn't impose a limit on the number of continuation lines
   allowed for a single statement.
+* When a type-bound procedure declaration statement has neither interface
+  nor attributes, the "::" before the bindings is optional, even
+  if a binding has renaming with "=> proc".
+  The colons are not necessary for an unambiguous parse, C768
+  notwithstanding.
+* A type-bound procedure binding can be passed as an actual
+  argument corresponding to a dummy procedure and can be used as
+  the target of a procedure pointer assignment statement.
 
 ### Extensions supported when enabled by options
 
@@ -356,6 +364,15 @@ end
   appears as part of a complex-literal-constant be a scalar, but
   most compilers emit an error when an array appears.
   f18 supports them with a portability warning.
+* f18 does not enforce a blanket prohibition against generic
+  interfaces containing a mixture of functions and subroutines.
+  Apart from some contexts in which the standard requires all of
+  a particular generic interface to have only all functions or
+  all subroutines as its specific procedures, we allow both to
+  appear, unlike several other Fortran compilers.
+  This is especially desirable when two generics of the same
+  name are combined due to USE association and the mixture may
+  be inadvertent.
 
 ## Behavior in cases where the standard is ambiguous or indefinite
 

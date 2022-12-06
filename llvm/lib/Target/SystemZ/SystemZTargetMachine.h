@@ -21,6 +21,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 #include <memory>
+#include <optional>
 
 namespace llvm {
 
@@ -32,8 +33,9 @@ class SystemZTargetMachine : public LLVMTargetMachine {
 public:
   SystemZTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
-                       Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
-                       CodeGenOpt::Level OL, bool JIT);
+                       std::optional<Reloc::Model> RM,
+                       std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                       bool JIT);
   ~SystemZTargetMachine() override;
 
   const SystemZSubtarget *getSubtargetImpl(const Function &) const override;

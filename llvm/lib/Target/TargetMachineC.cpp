@@ -24,6 +24,7 @@
 #include "llvm/Target/CodeGenCWrappers.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cstring>
+#include <optional>
 
 using namespace llvm;
 
@@ -99,7 +100,7 @@ LLVMTargetMachineRef LLVMCreateTargetMachine(LLVMTargetRef T,
         const char *Triple, const char *CPU, const char *Features,
         LLVMCodeGenOptLevel Level, LLVMRelocMode Reloc,
         LLVMCodeModel CodeModel) {
-  Optional<Reloc::Model> RM;
+  std::optional<Reloc::Model> RM;
   switch (Reloc){
     case LLVMRelocStatic:
       RM = Reloc::Static;
@@ -124,7 +125,7 @@ LLVMTargetMachineRef LLVMCreateTargetMachine(LLVMTargetRef T,
   }
 
   bool JIT;
-  Optional<CodeModel::Model> CM = unwrap(CodeModel, JIT);
+  std::optional<CodeModel::Model> CM = unwrap(CodeModel, JIT);
 
   CodeGenOpt::Level OL;
   switch (Level) {

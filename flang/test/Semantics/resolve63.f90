@@ -58,15 +58,15 @@ contains
     l = z'fe' == r !OK
     l = cVar == z'fe' !OK
     l = z'fe' == cVar !OK
-    !ERROR: No intrinsic or user-defined OPERATOR(==) matches operand types CHARACTER(KIND=1) and INTEGER(4)
+    !ERROR: Operands of .EQ. must have comparable types; have CHARACTER(KIND=1) and INTEGER(4)
     l = charVar == z'fe'
-    !ERROR: No intrinsic or user-defined OPERATOR(==) matches operand types INTEGER(4) and CHARACTER(KIND=1)
+    !ERROR: Operands of .EQ. must have comparable types; have INTEGER(4) and CHARACTER(KIND=1)
     l = z'fe' == charVar
-    !ERROR: No intrinsic or user-defined OPERATOR(==) matches operand types LOGICAL(4) and INTEGER(4)
-    l = l == z'fe' !OK
-    !ERROR: No intrinsic or user-defined OPERATOR(==) matches operand types INTEGER(4) and LOGICAL(4)
-    l = z'fe' == l !OK
-    !ERROR: No intrinsic or user-defined OPERATOR(==) matches operand types TYPE(t) and REAL(4)
+    !ERROR: Operands of .EQ. must have comparable types; have LOGICAL(4) and INTEGER(4)
+    l = l == z'fe'
+    !ERROR: Operands of .EQ. must have comparable types; have INTEGER(4) and LOGICAL(4)
+    l = z'fe' == l
+    !ERROR: Operands of .EQ. must have comparable types; have TYPE(t) and REAL(4)
     l = x == r
 
     lVar = z'a' == b'1010' !OK
@@ -265,9 +265,9 @@ contains
     i = x + y
     i = x + i
     i = y + i
-    !ERROR: No intrinsic or user-defined OPERATOR(+) matches operand types CLASS(t2) and CLASS(t1)
+    !ERROR: Operands of + must be numeric; have CLASS(t2) and CLASS(t1)
     i = y + x
-    !ERROR: No intrinsic or user-defined OPERATOR(+) matches operand types INTEGER(4) and CLASS(t1)
+    !ERROR: Operands of + must be numeric; have INTEGER(4) and CLASS(t1)
     i = i + x
   end
 end
@@ -307,9 +307,9 @@ module m7
     j = null() - null(mold=x1)
     j = null(mold=x1) - null()
     j = null() - null()
-    !ERROR: No intrinsic or user-defined OPERATOR(/) matches operand types untyped and TYPE(t1)
+    !ERROR: A NULL() pointer is not allowed as an operand here
     j = null() / null(mold=x1)
-    !ERROR: No intrinsic or user-defined OPERATOR(/) matches operand types TYPE(t1) and untyped
+    !ERROR: A NULL() pointer is not allowed as an operand here
     j = null(mold=x1) / null()
     !ERROR: A NULL() pointer is not allowed as an operand here
     j = null() / null()

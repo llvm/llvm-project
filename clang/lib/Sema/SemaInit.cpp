@@ -503,7 +503,7 @@ ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
                                                             true);
   MultiExprArg SubInit;
   Expr *InitExpr;
-  InitListExpr DummyInitList(SemaRef.Context, Loc, None, Loc);
+  InitListExpr DummyInitList(SemaRef.Context, Loc, std::nullopt, Loc);
 
   // C++ [dcl.init.aggr]p7:
   //   If there are fewer initializer-clauses in the list than there are
@@ -522,8 +522,10 @@ ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
     //
     // Only do this if we're initializing a class type, to avoid filling in
     // the initializer list where possible.
-    InitExpr = VerifyOnly ? &DummyInitList : new (SemaRef.Context)
-                   InitListExpr(SemaRef.Context, Loc, None, Loc);
+    InitExpr = VerifyOnly
+                   ? &DummyInitList
+                   : new (SemaRef.Context)
+                         InitListExpr(SemaRef.Context, Loc, std::nullopt, Loc);
     InitExpr->setType(SemaRef.Context.VoidTy);
     SubInit = InitExpr;
     Kind = InitializationKind::CreateCopy(Loc, Loc);
@@ -3120,10 +3122,8 @@ InitListExpr *
 InitListChecker::createInitListExpr(QualType CurrentObjectType,
                                     SourceRange InitRange,
                                     unsigned ExpectedNumInits) {
-  InitListExpr *Result
-    = new (SemaRef.Context) InitListExpr(SemaRef.Context,
-                                         InitRange.getBegin(), None,
-                                         InitRange.getEnd());
+  InitListExpr *Result = new (SemaRef.Context) InitListExpr(
+      SemaRef.Context, InitRange.getBegin(), std::nullopt, InitRange.getEnd());
 
   QualType ResultType = CurrentObjectType;
   if (!ResultType->isArrayType())
@@ -5237,7 +5237,7 @@ static void TryDefaultInitialization(Sema &S,
   //       constructor for T is called (and the initialization is ill-formed if
   //       T has no accessible default constructor);
   if (DestType->isRecordType() && S.getLangOpts().CPlusPlus) {
-    TryConstructorInitialization(S, Entity, Kind, None, DestType,
+    TryConstructorInitialization(S, Entity, Kind, std::nullopt, DestType,
                                  Entity.getType(), Sequence);
     return;
   }

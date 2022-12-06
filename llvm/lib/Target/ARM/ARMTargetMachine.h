@@ -21,6 +21,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 #include <memory>
+#include <optional>
 
 namespace llvm {
 
@@ -41,8 +42,9 @@ protected:
 public:
   ARMBaseTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
-                       Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
-                       CodeGenOpt::Level OL, bool isLittle);
+                       std::optional<Reloc::Model> RM,
+                       std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                       bool isLittle);
   ~ARMBaseTargetMachine() override;
 
   const ARMSubtarget *getSubtargetImpl(const Function &F) const override;
@@ -86,8 +88,9 @@ class ARMLETargetMachine : public ARMBaseTargetMachine {
 public:
   ARMLETargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
-                     Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
-                     CodeGenOpt::Level OL, bool JIT);
+                     std::optional<Reloc::Model> RM,
+                     std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                     bool JIT);
 };
 
 /// ARM/Thumb big endian target machine.
@@ -96,8 +99,9 @@ class ARMBETargetMachine : public ARMBaseTargetMachine {
 public:
   ARMBETargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
-                     Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
-                     CodeGenOpt::Level OL, bool JIT);
+                     std::optional<Reloc::Model> RM,
+                     std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                     bool JIT);
 };
 
 } // end namespace llvm
