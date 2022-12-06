@@ -30,7 +30,7 @@ public:
   LanaiTargetMachine(const Target &TheTarget, const Triple &TargetTriple,
                      StringRef Cpu, StringRef FeatureString,
                      const TargetOptions &Options,
-                     Optional<Reloc::Model> RelocationModel,
+                     std::optional<Reloc::Model> RM,
                      std::optional<CodeModel::Model> CodeModel,
                      CodeGenOpt::Level OptLevel, bool JIT);
 

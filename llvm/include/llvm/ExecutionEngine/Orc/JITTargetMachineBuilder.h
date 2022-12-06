@@ -84,13 +84,13 @@ public:
   const std::string &getCPU() const { return CPU; }
 
   /// Set the relocation model.
-  JITTargetMachineBuilder &setRelocationModel(Optional<Reloc::Model> RM) {
+  JITTargetMachineBuilder &setRelocationModel(std::optional<Reloc::Model> RM) {
     this->RM = std::move(RM);
     return *this;
   }
 
   /// Get the relocation model.
-  const Optional<Reloc::Model> &getRelocationModel() const { return RM; }
+  const std::optional<Reloc::Model> &getRelocationModel() const { return RM; }
 
   /// Set the code model.
   JITTargetMachineBuilder &setCodeModel(std::optional<CodeModel::Model> CM) {
@@ -151,7 +151,7 @@ private:
   std::string CPU;
   SubtargetFeatures Features;
   TargetOptions Options;
-  Optional<Reloc::Model> RM;
+  std::optional<Reloc::Model> RM;
   std::optional<CodeModel::Model> CM;
   CodeGenOpt::Level OptLevel = CodeGenOpt::Default;
 };

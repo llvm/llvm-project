@@ -209,7 +209,7 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   for (const std::string &A : Conf.MAttrs)
     Features.AddFeature(A);
 
-  Optional<Reloc::Model> RelocModel;
+  std::optional<Reloc::Model> RelocModel;
   if (Conf.RelocModel)
     RelocModel = *Conf.RelocModel;
   else if (M.getModuleFlag("PIC Level"))

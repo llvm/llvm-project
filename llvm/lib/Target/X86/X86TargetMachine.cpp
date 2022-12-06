@@ -163,9 +163,8 @@ static std::string computeDataLayout(const Triple &TT) {
   return Ret;
 }
 
-static Reloc::Model getEffectiveRelocModel(const Triple &TT,
-                                           bool JIT,
-                                           Optional<Reloc::Model> RM) {
+static Reloc::Model getEffectiveRelocModel(const Triple &TT, bool JIT,
+                                           std::optional<Reloc::Model> RM) {
   bool is64Bit = TT.getArch() == Triple::x86_64;
   if (!RM) {
     // JIT codegen should use static relocations by default, since it's
@@ -223,7 +222,7 @@ getEffectiveX86CodeModel(std::optional<CodeModel::Model> CM, bool JIT,
 X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    const TargetOptions &Options,
-                                   Optional<Reloc::Model> RM,
+                                   std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(
