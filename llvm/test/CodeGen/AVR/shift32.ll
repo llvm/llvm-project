@@ -29,6 +29,33 @@ define i32 @shl_i32_2(i32 %a) {
   ret i32 %res
 }
 
+define i32 @shl_i32_8(i32 %a) {
+; CHECK-LABEL: shl_i32_8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov r25, r24
+; CHECK-NEXT:    mov r24, r23
+; CHECK-NEXT:    mov r23, r22
+; CHECK-NEXT:    mov r22, r1
+; CHECK-NEXT:    ret
+  %res = shl i32 %a, 8
+  ret i32 %res
+}
+
+define i32 @shl_i32_9(i32 %a) {
+; CHECK-LABEL: shl_i32_9:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    lsl r22
+; CHECK-NEXT:    rol r23
+; CHECK-NEXT:    rol r24
+; CHECK-NEXT:    mov r25, r24
+; CHECK-NEXT:    mov r24, r23
+; CHECK-NEXT:    mov r23, r22
+; CHECK-NEXT:    mov r22, r1
+; CHECK-NEXT:    ret
+  %res = shl i32 %a, 9
+  ret i32 %res
+}
+
 ; This is a special case: this shift is performed directly inside SelectionDAG
 ; instead of as a custom lowering like the other shift operations.
 define i32 @shl_i32_16(i32 %a) {
@@ -89,6 +116,37 @@ define i32 @lshr_i32_2(i32 %a) {
   ret i32 %res
 }
 
+define i32 @lshr_i32_8(i32 %a) {
+; CHECK-LABEL: lshr_i32_8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov r19, r1
+; CHECK-NEXT:    mov r18, r25
+; CHECK-NEXT:    mov r25, r24
+; CHECK-NEXT:    mov r24, r23
+; CHECK-NEXT:    movw r22, r24
+; CHECK-NEXT:    movw r24, r18
+; CHECK-NEXT:    ret
+  %res = lshr i32 %a, 8
+  ret i32 %res
+}
+
+define i32 @lshr_i32_9(i32 %a) {
+; CHECK-LABEL: lshr_i32_9:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    lsr r25
+; CHECK-NEXT:    ror r24
+; CHECK-NEXT:    ror r23
+; CHECK-NEXT:    mov r19, r1
+; CHECK-NEXT:    mov r18, r25
+; CHECK-NEXT:    mov r25, r24
+; CHECK-NEXT:    mov r24, r23
+; CHECK-NEXT:    movw r22, r24
+; CHECK-NEXT:    movw r24, r18
+; CHECK-NEXT:    ret
+  %res = lshr i32 %a, 9
+  ret i32 %res
+}
+
 define i32 @lshr_i32_16(i32 %a) {
 ; CHECK-LABEL: lshr_i32_16:
 ; CHECK:       ; %bb.0:
@@ -97,6 +155,19 @@ define i32 @lshr_i32_16(i32 %a) {
 ; CHECK-NEXT:    ldi r25, 0
 ; CHECK-NEXT:    ret
   %res = lshr i32 %a, 16
+  ret i32 %res
+}
+
+define i32 @lshr_i32_24(i32 %a) {
+; CHECK-LABEL: lshr_i32_24:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov r19, r1
+; CHECK-NEXT:    mov r18, r1
+; CHECK-NEXT:    mov r23, r1
+; CHECK-NEXT:    mov r22, r25
+; CHECK-NEXT:    movw r24, r18
+; CHECK-NEXT:    ret
+  %res = lshr i32 %a, 24
   ret i32 %res
 }
 
@@ -125,5 +196,48 @@ define i32 @ashr_i32_2(i32 %a) {
 ; CHECK-NEXT:    ror r22
 ; CHECK-NEXT:    ret
   %res = ashr i32 %a, 2
+  ret i32 %res
+}
+
+; TODO: this could be optimized to 4 movs, instead of 6.
+define i32 @ashr_i32_8(i32 %a) {
+; CHECK-LABEL: ashr_i32_8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov r19, r25
+; CHECK-NEXT:    lsl r19
+; CHECK-NEXT:    sbc r19, r19
+; CHECK-NEXT:    mov r18, r25
+; CHECK-NEXT:    mov r25, r24
+; CHECK-NEXT:    mov r24, r23
+; CHECK-NEXT:    movw r22, r24
+; CHECK-NEXT:    movw r24, r18
+; CHECK-NEXT:    ret
+  %res = ashr i32 %a, 8
+  ret i32 %res
+}
+
+define i32 @ashr_i32_16(i32 %a) {
+; CHECK-LABEL: ashr_i32_16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    movw r22, r24
+; CHECK-NEXT:    lsl r25
+; CHECK-NEXT:    sbc r25, r25
+; CHECK-NEXT:    mov r24, r25
+; CHECK-NEXT:    ret
+  %res = ashr i32 %a, 16
+  ret i32 %res
+}
+
+define i32 @ashr_i32_17(i32 %a) {
+; CHECK-LABEL: ashr_i32_17:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    movw r22, r24
+; CHECK-NEXT:    lsl r25
+; CHECK-NEXT:    sbc r25, r25
+; CHECK-NEXT:    asr r23
+; CHECK-NEXT:    ror r22
+; CHECK-NEXT:    mov r24, r25
+; CHECK-NEXT:    ret
+  %res = ashr i32 %a, 17
   ret i32 %res
 }
