@@ -353,7 +353,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                      PGOOptions::NoCSAction, DebugInfoForProfiling,
                      PseudoProbeForProfiling);
     else
-      P = None;
+      P = std::nullopt;
   }
   if (CSPGOKindFlag != NoCSPGO) {
     if (P && (P->Action == PGOOptions::IRInstr ||

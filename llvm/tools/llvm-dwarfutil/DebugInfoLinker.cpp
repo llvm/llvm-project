@@ -222,7 +222,8 @@ protected:
 
   bool isDeadAddress(uint64_t LowPC, uint16_t Version, TombstoneKind Tombstone,
                      uint8_t AddressByteSize) {
-    return isDeadAddressRange(LowPC, None, Version, Tombstone, AddressByteSize);
+    return isDeadAddressRange(LowPC, std::nullopt, Version, Tombstone,
+                              AddressByteSize);
   }
 
 private:
