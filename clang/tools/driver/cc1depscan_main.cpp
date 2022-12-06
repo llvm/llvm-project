@@ -1162,7 +1162,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
                                    "failed to create compiler invocation");
 
   Expected<llvm::cas::CASID> Root = scanAndUpdateCC1InlineWithTool(
-      Tool, DiagsConsumer, VerboseOS, Exec, *Invocation, WorkingDirectory,
+      Tool, DiagsConsumer, VerboseOS, *Invocation, WorkingDirectory,
       PrefixMapping, DB);
   if (!Root)
     return Root;
