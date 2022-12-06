@@ -1,4 +1,4 @@
-//====- LowerToLLVM.cpp - Lowering from CIR to LLVM -----------------------===//
+//====- LowerCIRToMLIR.cpp - Lowering from CIR to MLIR --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements full lowering of CIR operations to LLVMIR.
+// This file implements lowering of CIR operations to MLIR.
 //
 //===----------------------------------------------------------------------===//
 
@@ -41,17 +41,6 @@ using namespace cir;
 using namespace llvm;
 
 namespace cir {
-
-struct ConvertMLIRToLLVMPass
-    : public mlir::PassWrapper<ConvertMLIRToLLVMPass,
-                               mlir::OperationPass<mlir::ModuleOp>> {
-  void getDependentDialects(mlir::DialectRegistry &registry) const override {
-    registry.insert<mlir::LLVM::LLVMDialect>();
-  }
-  void runOnOperation() final;
-
-  virtual StringRef getArgument() const override { return "cir-mlir-to-llvm"; }
-};
 
 class CIRReturnLowering
     : public mlir::OpConversionPattern<mlir::cir::ReturnOp> {
@@ -517,12 +506,6 @@ public:
   }
 };
 
-void populateCIRToMemRefConversionPatterns(mlir::RewritePatternSet &patterns) {
-  patterns.add<CIRAllocaLowering, CIRLoadLowering, CIRStoreLowering,
-               CIRConstantLowering, CIRUnaryOpLowering, CIRBinOpLowering,
-               CIRCmpOpLowering, CIRBrOpLowering>(patterns.getContext());
-}
-
 void populateCIRToMLIRConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRAllocaLowering, CIRLoadLowering, CIRStoreLowering,
@@ -565,26 +548,6 @@ void ConvertCIRToMLIRPass::runOnOperation() {
     signalPassFailure();
 }
 
-void ConvertMLIRToLLVMPass::runOnOperation() {
-  mlir::LLVMConversionTarget target(getContext());
-  target.addLegalOp<mlir::ModuleOp>();
-
-  mlir::LLVMTypeConverter typeConverter(&getContext());
-
-  mlir::RewritePatternSet patterns(&getContext());
-  populateAffineToStdConversionPatterns(patterns);
-  mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
-  populateSCFToControlFlowConversionPatterns(patterns);
-  mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter,
-                                                        patterns);
-  populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns);
-  populateFuncToLLVMConversionPatterns(typeConverter, patterns);
-
-  auto module = getOperation();
-  if (failed(applyFullConversion(module, target, std::move(patterns))))
-    signalPassFailure();
-}
-
 std::unique_ptr<llvm::Module>
 lowerFromCIRToLLVMIR(mlir::ModuleOp theModule,
                      std::unique_ptr<mlir::MLIRContext> mlirCtx,
@@ -612,10 +575,6 @@ lowerFromCIRToLLVMIR(mlir::ModuleOp theModule,
     report_fatal_error("Lowering from LLVMIR dialect to llvm IR failed!");
 
   return llvmModule;
-}
-
-std::unique_ptr<mlir::Pass> createConvertMLIRToLLVMPass() {
-  return std::make_unique<ConvertMLIRToLLVMPass>();
 }
 
 std::unique_ptr<mlir::Pass> createConvertCIRToMLIRPass() {
