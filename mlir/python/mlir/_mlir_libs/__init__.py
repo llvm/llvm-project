@@ -54,6 +54,7 @@ def _site_initialize():
   import itertools
   import logging
   from ._mlir import ir
+  logger = logging.getLogger(__name__)
   registry = ir.DialectRegistry()
   post_init_hooks = []
 
@@ -66,14 +67,14 @@ def _site_initialize():
       message = (f"Error importing mlir initializer {module_name}. This may "
       "happen in unclean incremental builds but is likely a real bug if "
       "encountered otherwise and the MLIR Python API may not function.")
-      logging.warning(message, exc_info=True)
+      logger.warning(message, exc_info=True)
 
-    logging.debug("Initializing MLIR with module: %s", module_name)
+    logger.debug("Initializing MLIR with module: %s", module_name)
     if hasattr(m, "register_dialects"):
-      logging.debug("Registering dialects from initializer %r", m)
+      logger.debug("Registering dialects from initializer %r", m)
       m.register_dialects(registry)
     if hasattr(m, "context_init_hook"):
-      logging.debug("Adding context init hook from %r", m)
+      logger.debug("Adding context init hook from %r", m)
       post_init_hooks.append(m.context_init_hook)
     return True
 
