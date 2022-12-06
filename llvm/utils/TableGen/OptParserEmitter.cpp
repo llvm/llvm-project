@@ -54,9 +54,9 @@ static std::string getOptionSpelling(const Record &R) {
 
 static void emitNameUsingSpelling(raw_ostream &OS, const Record &R) {
   size_t PrefixLength;
-  OS << "llvm::StringRef(";
+  OS << "llvm::StringRef(&";
   write_cstring(OS, StringRef(getOptionSpelling(R, PrefixLength)));
-  OS << ").substr(" << PrefixLength << ")";
+  OS << '[' << PrefixLength << "])";
 }
 
 class MarshallingInfo {
