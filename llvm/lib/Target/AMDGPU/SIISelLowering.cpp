@@ -6042,10 +6042,23 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
 bool
 SITargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
   // We can fold offsets for anything that doesn't require a GOT relocation.
-  return (GA->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
-          GA->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
-          GA->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
-         !shouldEmitGOTReloc(GA->getGlobal());
+  auto const AS = GA->getAddressSpace();
+  if (AS == AMDGPUAS::GLOBAL_ADDRESS) return true;
+  if (AS == AMDGPUAS::CONSTANT_ADDRESS) return true;
+  if ((AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
+      !shouldEmitGOTReloc(GA->getGlobal())) return true;
+    
+  // Some LDS variables have compile time known addresses
+  if (AS == AMDGPUAS::LOCAL_ADDRESS) {
+    if (const GlobalVariable *GV =
+        dyn_cast<const GlobalVariable>(GA->getGlobal())) {
+      if (AMDGPUMachineFunction::isKnownAddressLDSGlobal(*GV)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 static SDValue

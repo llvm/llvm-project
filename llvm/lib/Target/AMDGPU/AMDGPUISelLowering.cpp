@@ -1299,6 +1299,24 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
 
   if (G->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
       G->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) {
+
+    if (G->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+      // special case handling for kernel block variable
+      // it's allocated in the kernel at a predictable address
+      // so that uses of it from functions and globals can be
+      // resolved here
+      // This only works if the current function is called from the kernel
+      // with the corresponding global
+      if (const GlobalVariable *GV2 = dyn_cast<const GlobalVariable>(GV)) {
+        if (MFI->isKnownAddressLDSGlobal(*GV2)) {
+          unsigned offset = MFI->calculateKnownAddressOfLDSGlobal(*GV2);
+
+          return DAG.getConstant(offset + G->getOffset(), SDLoc(Op),
+                                 Op.getValueType());
+        }
+      }
+    }
+
     if (!MFI->isModuleEntryFunction() &&
         !GV->getName().equals("llvm.amdgcn.module.lds")) {
       SDLoc DL(Op);

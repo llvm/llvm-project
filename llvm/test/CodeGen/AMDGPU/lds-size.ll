@@ -9,7 +9,7 @@
 ; GCN-NEXT: .long 32900
 
 ; EG: .long 166120
-; EG-NEXT: .long 1
+; EG-NEXT: .long 0
 ; ALL: {{^}}test:
 
 ; HSA: granulated_lds_size = 0
