@@ -545,10 +545,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTPOP, MVT::i32, Legal);
     setOperationAction(ISD::CTPOP, MVT::i64, Legal);
     setOperationAction(ISD::CTPOP, MVT::i128, Expand);
+
     setOperationAction(ISD::PARITY, MVT::i128, Expand);
+
     setOperationAction(ISD::CTTZ, MVT::i32, Legal);
     setOperationAction(ISD::CTTZ, MVT::i64, Legal);
     setOperationAction(ISD::CTTZ, MVT::i128, Expand);
+
+    setOperationAction(ISD::ABS, MVT::i32, Legal);
+    setOperationAction(ISD::ABS, MVT::i64, Legal);
   } else {
     setOperationAction(ISD::CTPOP, MVT::i32, Custom);
     setOperationAction(ISD::CTPOP, MVT::i64, Custom);
@@ -556,10 +561,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::PARITY, MVT::i64, Custom);
     setOperationAction(ISD::PARITY, MVT::i128, Custom);
-  }
 
-  setOperationAction(ISD::ABS, MVT::i32, Custom);
-  setOperationAction(ISD::ABS, MVT::i64, Custom);
+    setOperationAction(ISD::ABS, MVT::i32, Custom);
+    setOperationAction(ISD::ABS, MVT::i64, Custom);
+  }
 
   setOperationAction(ISD::SDIVREM, MVT::i32, Expand);
   setOperationAction(ISD::SDIVREM, MVT::i64, Expand);
