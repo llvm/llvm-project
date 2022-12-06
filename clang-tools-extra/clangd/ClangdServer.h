@@ -171,6 +171,10 @@ public:
     // If true, parse emplace-like functions in the preamble.
     bool PreambleParseForwardingFunctions = false;
 
+    /// Whether include fixer insertions for Objective-C code should use #import
+    /// instead of #include.
+    bool ImportInsertions = false;
+
     explicit operator TUScheduler::Options() const;
   };
   // Sensible default options for use in tests.
@@ -433,6 +437,8 @@ private:
   bool LineFoldingOnly = false;
 
   bool PreambleParseForwardingFunctions = false;
+
+  bool ImportInsertions = false;
 
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
   llvm::StringMap<std::optional<FuzzyFindRequest>>
