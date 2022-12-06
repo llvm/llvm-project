@@ -570,7 +570,7 @@ Error lldb_private::trace_intel_pt::DecodeSingleTraceForThread(
         trace_intel_pt, block, buffer.slice(block.psb_offset, block.size),
         *decoded_thread.GetThread()->GetProcess(),
         i + 1 < blocks->size() ? blocks->at(i + 1).starting_ip : None,
-        decoded_thread, llvm::None);
+        decoded_thread, std::nullopt);
     if (!decoder)
       return decoder.takeError();
 
