@@ -53,6 +53,9 @@ Changes to the LLVM IR
 * Typed pointers are no longer supported. See the `opaque pointers
   <OpaquePointers.html>`__ documentation for migration instructions.
 
+* The ``nofpclass`` attribute was introduced. This allows more
+  optimizations around special floating point value comparisons.
+
 Changes to building LLVM
 ------------------------
 

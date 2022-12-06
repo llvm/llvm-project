@@ -45,6 +45,7 @@ class LLVMContext;
 class MemoryEffects;
 class Type;
 class raw_ostream;
+enum FPClassTest : unsigned;
 
 enum class AllocFnKind : uint64_t {
   Unknown = 0,
@@ -148,6 +149,7 @@ public:
   static Attribute getWithInAllocaType(LLVMContext &Context, Type *Ty);
   static Attribute getWithUWTableKind(LLVMContext &Context, UWTableKind Kind);
   static Attribute getWithMemoryEffects(LLVMContext &Context, MemoryEffects ME);
+  static Attribute getWithNoFPClass(LLVMContext &Context, FPClassTest Mask);
 
   /// For a typed attribute, return the equivalent attribute with the type
   /// changed to \p ReplacementTy.
@@ -248,6 +250,9 @@ public:
 
   /// Returns memory effects.
   MemoryEffects getMemoryEffects() const;
+
+  /// Return the FPClassTest for nofpclass
+  FPClassTest getNoFPClass() const;
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
@@ -383,6 +388,7 @@ public:
   UWTableKind getUWTableKind() const;
   AllocFnKind getAllocKind() const;
   MemoryEffects getMemoryEffects() const;
+  FPClassTest getNoFPClass() const;
   std::string getAsString(bool InAttrGrp = false) const;
 
   /// Return true if this attribute set belongs to the LLVMContext.
@@ -877,6 +883,12 @@ public:
   /// arg.
   uint64_t getParamDereferenceableOrNullBytes(unsigned ArgNo) const;
 
+  /// Get the disallowed floating-point classes of the return value.
+  FPClassTest getRetNoFPClass() const;
+
+  /// Get the disallowed floating-point classes of the argument value.
+  FPClassTest getParamNoFPClass(unsigned ArgNo) const;
+
   /// Get the unwind table kind requested for the function.
   UWTableKind getUWTableKind() const;
 
@@ -1235,6 +1247,9 @@ public:
 
   /// Add memory effect attribute.
   AttrBuilder &addMemoryAttr(MemoryEffects ME);
+
+  // Add nofpclass attribute
+  AttrBuilder &addNoFPClassAttr(FPClassTest NoFPClassMask);
 
   ArrayRef<Attribute> attrs() const { return Attrs; }
 
