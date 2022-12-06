@@ -325,7 +325,7 @@ ParallelSnippetGenerator::generateCodeTemplates(
   SmallVector<RegRandomizationStrategy, 3> Strategies;
   if (HasTiedOperands || NumUntiedUseRegs >= 3)
     Strategies.push_back(RegRandomizationStrategy::PickRandomRegs);
-  if (HasTiedOperands || NumUntiedUseRegs >= 2)
+  if (NumUntiedUseRegs >= 2)
     Strategies.push_back(RegRandomizationStrategy::SingleStaticRegPerOperand);
   Strategies.push_back(RegRandomizationStrategy::SingleStaticReg);
   for (RegRandomizationStrategy S : Strategies) {
