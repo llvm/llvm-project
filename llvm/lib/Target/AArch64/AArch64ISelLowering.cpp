@@ -10647,13 +10647,11 @@ static bool isEXTMask(ArrayRef<int> M, EVT VT, bool &ReverseEXT,
 /// instruction with the specified blocksize.  (The order of the elements
 /// within each block of the vector is reversed.)
 static bool isREVMask(ArrayRef<int> M, EVT VT, unsigned BlockSize) {
-  assert((BlockSize == 16 || BlockSize == 32 || BlockSize == 64) &&
-         "Only possible block sizes for REV are: 16, 32, 64");
+  assert((BlockSize == 16 || BlockSize == 32 || BlockSize == 64 ||
+          BlockSize == 128) &&
+         "Only possible block sizes for REV are: 16, 32, 64, 128");
 
   unsigned EltSz = VT.getScalarSizeInBits();
-  if (EltSz == 64)
-    return false;
-
   unsigned NumElts = VT.getVectorNumElements();
   unsigned BlockElts = M[0] + 1;
   // If the first shuffle index is UNDEF, be optimistic.
@@ -23253,6 +23251,18 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
       Op = DAG.getNode(ISD::BITCAST, DL, ContainerVT, Op);
       return convertFromScalableVector(DAG, VT, Op);
     }
+  }
+
+  if (Subtarget->hasSVE2p1() && VT.getScalarSizeInBits() == 64 &&
+      isREVMask(ShuffleMask, VT, 128)) {
+    if (!VT.isFloatingPoint())
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::REVD_MERGE_PASSTHRU);
+
+    EVT NewVT = getPackedSVEVectorVT(EVT::getIntegerVT(*DAG.getContext(), 64));
+    Op = DAG.getNode(ISD::BITCAST, DL, NewVT, Op1);
+    Op = LowerToPredicatedOp(Op, DAG, AArch64ISD::REVD_MERGE_PASSTHRU);
+    Op = DAG.getNode(ISD::BITCAST, DL, ContainerVT, Op);
+    return convertFromScalableVector(DAG, VT, Op);
   }
 
   unsigned WhichResult;
