@@ -27,7 +27,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPcall_int_arg_expr() {
 ! CHECK:  %[[VAL_0:.*]] = arith.constant 42 : i32
 ! CHECK:  %[[VAL_1:.*]]:3 = hlfir.associate %[[VAL_0]] {uniq_name = "adapt.valuebyref"} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
-! CHECK:  fir.call @_QPtake_i4(%[[VAL_1]]#0) fastmath<contract> : (!fir.ref<i32>) -> ()
+! CHECK:  fir.call @_QPtake_i4(%[[VAL_1]]#1) fastmath<contract> : (!fir.ref<i32>) -> ()
 ! CHECK:  hlfir.end_associate %[[VAL_1]]#1, %[[VAL_1]]#2 : !fir.ref<i32>, i1
 
 subroutine call_real_arg_expr()
@@ -36,7 +36,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPcall_real_arg_expr() {
 ! CHECK:  %[[VAL_0:.*]] = arith.constant 4.200000e-01 : f32
 ! CHECK:  %[[VAL_1:.*]]:3 = hlfir.associate %[[VAL_0]] {uniq_name = "adapt.valuebyref"} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
-! CHECK:  fir.call @_QPtake_r4(%[[VAL_1]]#0) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:  fir.call @_QPtake_r4(%[[VAL_1]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:  hlfir.end_associate %[[VAL_1]]#1, %[[VAL_1]]#2 : !fir.ref<f32>, i1
 
 subroutine call_real_arg_var(x)
@@ -64,7 +64,7 @@ end subroutine
 ! CHECK:  %[[VAL_0:.*]] = arith.constant true
 ! CHECK:  %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (i1) -> !fir.logical<4>
 ! CHECK:  %[[VAL_2:.*]]:3 = hlfir.associate %[[VAL_1]] {uniq_name = "adapt.valuebyref"} : (!fir.logical<4>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>, i1)
-! CHECK:  fir.call @_QPtake_l4(%[[VAL_2]]#0) fastmath<contract> : (!fir.ref<!fir.logical<4>>) -> ()
+! CHECK:  fir.call @_QPtake_l4(%[[VAL_2]]#1) fastmath<contract> : (!fir.ref<!fir.logical<4>>) -> ()
 ! CHECK:  hlfir.end_associate %[[VAL_2]]#1, %[[VAL_2]]#2 : !fir.ref<!fir.logical<4>>, i1
 
 subroutine call_logical_arg_expr_2()
@@ -74,7 +74,7 @@ end subroutine
 ! CHECK:  %[[VAL_0:.*]] = arith.constant true
 ! CHECK:  %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (i1) -> !fir.logical<8>
 ! CHECK:  %[[VAL_2:.*]]:3 = hlfir.associate %[[VAL_1]] {uniq_name = "adapt.valuebyref"} : (!fir.logical<8>) -> (!fir.ref<!fir.logical<8>>, !fir.ref<!fir.logical<8>>, i1)
-! CHECK:  fir.call @_QPtake_l8(%[[VAL_2]]#0) fastmath<contract> : (!fir.ref<!fir.logical<8>>) -> ()
+! CHECK:  fir.call @_QPtake_l8(%[[VAL_2]]#1) fastmath<contract> : (!fir.ref<!fir.logical<8>>) -> ()
 ! CHECK:  hlfir.end_associate %[[VAL_2]]#1, %[[VAL_2]]#2 : !fir.ref<!fir.logical<8>>, i1
 
 subroutine call_char_arg_var(x)

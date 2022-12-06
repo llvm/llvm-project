@@ -76,16 +76,28 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
   if (entity.isVariable())
     TODO(loc, "HLFIR variable to fir::ExtendedValue without a "
               "FortranVariableOpInterface");
-  if (entity.getType().isa<hlfir::ExprType>())
-    TODO(loc, "hlfir.expr to fir::ExtendedValue"); // use hlfir.associate
+  if (entity.getType().isa<hlfir::ExprType>()) {
+    hlfir::AssociateOp associate = hlfir::genAssociateExpr(
+        loc, builder, entity, entity.getType(), "adapt.valuebyref");
+    auto *bldr = &builder;
+    hlfir::CleanupFunction cleanup = [bldr, loc, associate]() -> void {
+      bldr->create<hlfir::EndAssociateOp>(loc, associate);
+    };
+    hlfir::Entity temp{associate.getBase()};
+    return {translateToExtendedValue(loc, builder, temp).first, cleanup};
+  }
   return {{static_cast<mlir::Value>(entity)}, {}};
 }
 
 mlir::Value hlfir::Entity::getFirBase() const {
-  if (fir::FortranVariableOpInterface variable = getIfVariableInterface())
+  if (fir::FortranVariableOpInterface variable = getIfVariableInterface()) {
     if (auto declareOp =
             mlir::dyn_cast<hlfir::DeclareOp>(variable.getOperation()))
       return declareOp.getOriginalBase();
+    if (auto associateOp =
+            mlir::dyn_cast<hlfir::AssociateOp>(variable.getOperation()))
+      return associateOp.getFirBase();
+  }
   return getBase();
 }
 

@@ -508,12 +508,16 @@ public:
       hlfir::EntityWithAttributes loweredExpr =
           Fortran::lower::convertExprToHLFIR(loc, *this, expr, localSymbols,
                                              context);
-      if (fir::FortranVariableOpInterface variable =
-              loweredExpr.getIfVariable())
-        if (!variable.isBox())
-          return translateToExtendedValue(loc, loweredExpr, context);
-      TODO(loc, "lower expr that is not a scalar or explicit shape array "
-                "variable to HLFIR address");
+      if (expr.Rank() > 0 &&
+          !Fortran::evaluate::IsSimplyContiguous(expr, getFoldingContext()))
+        TODO(loc, "genExprAddr of non contiguous variables in HLFIR");
+      fir::ExtendedValue exv =
+          translateToExtendedValue(loc, loweredExpr, context);
+      if (fir::isa_trivial(fir::getBase(exv).getType()))
+        TODO(loc, "place trivial in memory");
+      if (const auto *mutableBox = exv.getBoxOf<fir::MutableBoxValue>())
+        exv = fir::factory::genMutableBoxRead(*builder, loc, *mutableBox);
+      return exv;
     }
     return Fortran::lower::createSomeExtendedAddress(loc, *this, expr,
                                                      localSymbols, context);
@@ -564,14 +568,10 @@ public:
       hlfir::EntityWithAttributes loweredExpr =
           Fortran::lower::convertExprToHLFIR(loc, *this, expr, localSymbols,
                                              stmtCtx);
-      if (fir::FortranVariableOpInterface variable =
-              loweredExpr.getIfVariable())
-        if (variable.isBoxValue() || !variable.isBoxAddress()) {
-          auto exv = translateToExtendedValue(loc, loweredExpr, stmtCtx);
-          return fir::factory::createBoxValue(getFirOpBuilder(), loc, exv);
-        }
-      TODO(loc,
-           "lower expression value or pointer and allocatable to HLFIR box");
+      auto exv = translateToExtendedValue(loc, loweredExpr, stmtCtx);
+      if (fir::isa_trivial(fir::getBase(exv).getType()))
+        TODO(loc, "place trivial in memory");
+      return fir::factory::createBoxValue(getFirOpBuilder(), loc, exv);
     }
     return Fortran::lower::createBoxValue(loc, *this, expr, localSymbols,
                                           stmtCtx);
