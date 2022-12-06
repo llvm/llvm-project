@@ -3380,11 +3380,13 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
         continue;
       Register TrueReg = TRI->lookThruCopyLike(Reg, MRI);
       if (Register::isVirtualRegister(TrueReg)) {
-        DefMI = MRI->getVRegDef(TrueReg);
-        if (DefMI->getOpcode() == PPC::LI || DefMI->getOpcode() == PPC::LI8 ||
-            DefMI->getOpcode() == PPC::ADDI ||
-            DefMI->getOpcode() == PPC::ADDI8) {
+        MachineInstr *DefMIForTrueReg = MRI->getVRegDef(TrueReg);
+        if (DefMIForTrueReg->getOpcode() == PPC::LI ||
+            DefMIForTrueReg->getOpcode() == PPC::LI8 ||
+            DefMIForTrueReg->getOpcode() == PPC::ADDI ||
+            DefMIForTrueReg->getOpcode() == PPC::ADDI8) {
           OpNoForForwarding = i;
+          DefMI = DefMIForTrueReg;
           // The ADDI and LI operand maybe exist in one instruction at same
           // time. we prefer to fold LI operand as LI only has one Imm operand
           // and is more possible to be converted. So if current DefMI is
@@ -3424,7 +3426,7 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
       if (MO.isReg() && MO.isUse() && !MO.isImplicit()) {
         Register Reg = MI.getOperand(i).getReg();
         // If we see another use of this reg between the def and the MI,
-        // we want to flat it so the def isn't deleted.
+        // we want to flag it so the def isn't deleted.
         MachineInstr *DefMI = getDefMIPostRA(Reg, MI, SeenIntermediateUse);
         if (DefMI) {
           // Is this register defined by some form of add-immediate (including
