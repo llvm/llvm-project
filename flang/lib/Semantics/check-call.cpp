@@ -599,6 +599,10 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
               argProcSymbol->name());
           return;
         }
+      } else if (argProcSymbol->has<ProcBindingDetails>()) {
+        evaluate::SayWithDeclaration(messages, *argProcSymbol,
+            "Procedure binding '%s' passed as an actual argument"_port_en_US,
+            argProcSymbol->name());
       }
     }
     if (auto argChars{characteristics::DummyArgument::FromActual(
