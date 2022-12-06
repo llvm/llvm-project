@@ -1,11 +1,9 @@
 // RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++1z %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-
-#if __cplusplus < 201103L
-// expected-no-diagnostics
-#endif
+// RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2b %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace std {
   __extension__ typedef __SIZE_TYPE__ size_t;
@@ -73,6 +71,34 @@ namespace dr948 { // dr948: 3.7
   }
 #endif
 }
+
+namespace dr952 { // dr952: yes
+struct A {
+  typedef int I; // #dr952-typedef-decl
+};
+struct B : private A { // #dr952-inheritance
+};
+struct C : B {
+  void f() {
+    I i1; // expected-error {{private member}}
+    // expected-note@#dr952-inheritance {{constrained by private inheritance}}
+    // expected-note@#dr952-typedef-decl {{declared here}}
+  }
+  I i2; // expected-error {{private member}}
+  // expected-note@#dr952-inheritance {{constrained by private inheritance}}
+  // expected-note@#dr952-typedef-decl {{declared here}}
+  struct D {
+    I i3; // expected-error {{private member}}
+    // expected-note@#dr952-inheritance {{constrained by private inheritance}}
+    // expected-note@#dr952-typedef-decl {{declared here}}
+    void g() {
+      I i4; // expected-error {{private member}}
+      // expected-note@#dr952-inheritance {{constrained by private inheritance}}
+      // expected-note@#dr952-typedef-decl {{declared here}}
+    }
+  };
+};
+} // namespace dr952
 
 namespace dr974 { // dr974: yes
 #if __cplusplus >= 201103L
