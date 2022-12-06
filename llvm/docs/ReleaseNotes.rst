@@ -118,6 +118,9 @@ Changes to the OCaml bindings
 Changes to the C API
 --------------------
 
+* ``LLVMContextSetOpaquePointers``, a temporary API to pin to legacy typed
+  pointer, has been removed.
+
 Changes to the FastISel infrastructure
 --------------------------------------
 
