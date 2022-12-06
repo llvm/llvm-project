@@ -1873,6 +1873,112 @@ static void insertMultibyteShift(MachineInstr &MI, MachineBasicBlock *BB,
   BuildMI(*BB, MI, dl, TII.get(AVR::COPY), ZeroReg)
       .addReg(STI.getZeroRegister());
 
+  // Do a shift modulo 6 or 7. This is a bit more complicated than most shifts
+  // and is hard to compose with the rest, so these are special cased.
+  // The basic idea is to shift one or two bits in the opposite direction and
+  // then move registers around to get the correct end result.
+  if (ShiftLeft && (ShiftAmt % 8) >= 6) {
+    // Left shift modulo 6 or 7.
+
+    // Create a slice of the registers we're going to modify, to ease working
+    // with them.
+    size_t ShiftRegsOffset = ShiftAmt / 8;
+    size_t ShiftRegsSize = Regs.size() - ShiftRegsOffset;
+    MutableArrayRef<std::pair<Register, int>> ShiftRegs =
+        Regs.slice(ShiftRegsOffset, ShiftRegsSize);
+
+    // Shift one to the right, keeping the least significant bit as the carry
+    // bit.
+    insertMultibyteShift(MI, BB, ShiftRegs, ISD::SRL, 1);
+
+    // Rotate the least significant bit from the carry bit into a new register
+    // (that starts out zero).
+    Register LowByte = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+    BuildMI(*BB, MI, dl, TII.get(AVR::RORRd), LowByte).addReg(ZeroReg);
+
+    // Shift one more to the right if this is a modulo-6 shift.
+    if (ShiftAmt % 8 == 6) {
+      insertMultibyteShift(MI, BB, ShiftRegs, ISD::SRL, 1);
+      Register NewLowByte = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+      BuildMI(*BB, MI, dl, TII.get(AVR::RORRd), NewLowByte).addReg(LowByte);
+      LowByte = NewLowByte;
+    }
+
+    // Move all registers to the left, zeroing the bottom registers as needed.
+    for (size_t I = 0; I < Regs.size(); I++) {
+      int ShiftRegsIdx = I + 1;
+      if (ShiftRegsIdx < (int)ShiftRegs.size()) {
+        Regs[I] = ShiftRegs[ShiftRegsIdx];
+      } else if (ShiftRegsIdx == (int)ShiftRegs.size()) {
+        Regs[I] = std::pair(LowByte, 0);
+      } else {
+        Regs[I] = std::pair(ZeroReg, 0);
+      }
+    }
+
+    return;
+  }
+
+  // Right shift modulo 6 or 7.
+  if (!ShiftLeft && (ShiftAmt % 8) >= 6) {
+    // Create a view on the registers we're going to modify, to ease working
+    // with them.
+    size_t ShiftRegsSize = Regs.size() - (ShiftAmt / 8);
+    MutableArrayRef<std::pair<Register, int>> ShiftRegs =
+        Regs.slice(0, ShiftRegsSize);
+
+    // Shift one to the left.
+    insertMultibyteShift(MI, BB, ShiftRegs, ISD::SHL, 1);
+
+    // Sign or zero extend the most significant register into a new register.
+    // The HighByte is the byte that still has one (or two) bits from the
+    // original value. The ExtByte is purely a zero/sign extend byte (all bits
+    // are either 0 or 1).
+    Register HighByte = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+    Register ExtByte = 0;
+    if (ArithmeticShift) {
+      // Sign-extend bit that was shifted out last.
+      BuildMI(*BB, MI, dl, TII.get(AVR::SBCRdRr), HighByte)
+          .addReg(HighByte, RegState::Undef)
+          .addReg(HighByte, RegState::Undef);
+      ExtByte = HighByte;
+      // The highest bit of the original value is the same as the zero-extend
+      // byte, so HighByte and ExtByte are the same.
+    } else {
+      // Use the zero register for zero extending.
+      ExtByte = ZeroReg;
+      // Rotate most significant bit into a new register (that starts out zero).
+      BuildMI(*BB, MI, dl, TII.get(AVR::ADCRdRr), HighByte)
+          .addReg(ExtByte)
+          .addReg(ExtByte);
+    }
+
+    // Shift one more to the left for modulo 6 shifts.
+    if (ShiftAmt % 8 == 6) {
+      insertMultibyteShift(MI, BB, ShiftRegs, ISD::SHL, 1);
+      // Shift the topmost bit into the HighByte.
+      Register NewExt = MRI.createVirtualRegister(&AVR::GPR8RegClass);
+      BuildMI(*BB, MI, dl, TII.get(AVR::ADCRdRr), NewExt)
+          .addReg(HighByte)
+          .addReg(HighByte);
+      HighByte = NewExt;
+    }
+
+    // Move all to the right, while sign or zero extending.
+    for (int I = Regs.size() - 1; I >= 0; I--) {
+      int ShiftRegsIdx = I - (Regs.size() - ShiftRegs.size()) - 1;
+      if (ShiftRegsIdx >= 0) {
+        Regs[I] = ShiftRegs[ShiftRegsIdx];
+      } else if (ShiftRegsIdx == -1) {
+        Regs[I] = std::pair(HighByte, 0);
+      } else {
+        Regs[I] = std::pair(ExtByte, 0);
+      }
+    }
+
+    return;
+  }
+
   // For shift amounts of at least one register, simply rename the registers and
   // zero the bottom registers.
   while (ShiftLeft && ShiftAmt >= 8) {
