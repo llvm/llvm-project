@@ -565,6 +565,8 @@ mlir::TypeConverter prepareTypeConverter() {
   });
   converter.addConversion(
       [&](mlir::IntegerType type) -> mlir::Type { return type; });
+  converter.addConversion(
+      [&](mlir::FloatType type) -> mlir::Type { return type; });
 
   return converter;
 }
