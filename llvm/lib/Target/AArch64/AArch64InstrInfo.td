@@ -8556,7 +8556,7 @@ defm RCWSWP  : ReadCheckWriteOperation<0b010, "swp">;
 //===----------------------------------------------------------------------===//
 defm ABS : OneOperandData<0b001000, "abs">, Requires<[HasCSSC]>;
 defm CNT : OneOperandData<0b000111, "cnt", ctpop>, Requires<[HasCSSC]>;
-defm CTZ : OneOperandData<0b000110, "ctz">, Requires<[HasCSSC]>;
+defm CTZ : OneOperandData<0b000110, "ctz", cttz>, Requires<[HasCSSC]>;
 
 defm SMAX : ComparisonOp<0, 0, "smax">, Requires<[HasCSSC]>;
 defm SMIN : ComparisonOp<0, 1, "smin">, Requires<[HasCSSC]>;
