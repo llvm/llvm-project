@@ -6,8 +6,8 @@
 ; CHECK-NOT: llvm.amdgcn.module.lds
 ; CHECK-NOT: llvm.amdgcn.module.lds.t
 
-; var1, var2 would be transformed were they used from a non-kernel function
-; CHECK-NOT: @var1 =
+; var1 is removed, var2 stays because it's in compiler.used
+; CHECK-NOT: @var1
 ; CHECK: @var2 = addrspace(3) global float undef
 @var1 = addrspace(3) global i32 undef
 @var2 = addrspace(3) global float undef
