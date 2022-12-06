@@ -8,6 +8,7 @@ set(LIBS
   ${dialect_libs}
   ${conversion_libs}
   clangCIR
+  clangCIRLoweringThroughMLIR
   MLIRAnalysis
   MLIRCIR
   MLIRCIRTransforms
