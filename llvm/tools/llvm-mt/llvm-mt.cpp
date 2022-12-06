@@ -150,9 +150,9 @@ int llvm_mt_main(int Argc, char **Argv) {
     bool Same = false;
     if (OutBuffOrErr) {
       const std::unique_ptr<MemoryBuffer> &FileBuffer = *OutBuffOrErr;
-      Same = std::equal(OutputBuffer->getBufferStart(),
-                        OutputBuffer->getBufferEnd(),
-                        FileBuffer->getBufferStart());
+      Same = std::equal(
+          OutputBuffer->getBufferStart(), OutputBuffer->getBufferEnd(),
+          FileBuffer->getBufferStart(), FileBuffer->getBufferEnd());
     }
     if (!Same) {
 #if LLVM_ON_UNIX
