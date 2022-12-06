@@ -1058,7 +1058,7 @@ ExprResult Sema::DefaultVariadicArgumentPromotion(Expr *E, VariadicCallType CT,
       return ExprError();
 
     ExprResult Call = BuildCallExpr(TUScope, TrapFn.get(), E->getBeginLoc(),
-                                    None, E->getEndLoc());
+                                    std::nullopt, E->getEndLoc());
     if (Call.isInvalid())
       return ExprError();
 
@@ -1963,8 +1963,8 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
     TemplateArgument Arg(Lit);
     TemplateArgumentLocInfo ArgInfo(Lit);
     ExplicitArgs.addArgument(TemplateArgumentLoc(Arg, ArgInfo));
-    return BuildLiteralOperatorCall(R, OpNameInfo, None, StringTokLocs.back(),
-                                    &ExplicitArgs);
+    return BuildLiteralOperatorCall(R, OpNameInfo, std::nullopt,
+                                    StringTokLocs.back(), &ExplicitArgs);
   }
 
   case LOLR_StringTemplatePack: {
@@ -1984,8 +1984,8 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
       TemplateArgumentLocInfo ArgInfo;
       ExplicitArgs.addArgument(TemplateArgumentLoc(Arg, ArgInfo));
     }
-    return BuildLiteralOperatorCall(R, OpNameInfo, None, StringTokLocs.back(),
-                                    &ExplicitArgs);
+    return BuildLiteralOperatorCall(R, OpNameInfo, std::nullopt,
+                                    StringTokLocs.back(), &ExplicitArgs);
   }
   case LOLR_Raw:
   case LOLR_ErrorNoDiagnostic:
@@ -2624,7 +2624,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // a template name, but we happen to have always already looked up the name
     // before we get here if it must be a template name.
     if (DiagnoseEmptyLookup(S, SS, R, CCC ? *CCC : DefaultValidator, nullptr,
-                            None, &TE)) {
+                            std::nullopt, &TE)) {
       if (TE && KeywordReplacement) {
         auto &State = getTypoExprState(TE);
         auto BestTC = State.Consumer->getNextCorrection();
@@ -3855,7 +3855,7 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
         TemplateArgumentLocInfo ArgInfo;
         ExplicitArgs.addArgument(TemplateArgumentLoc(Arg, ArgInfo));
       }
-      return BuildLiteralOperatorCall(R, OpNameInfo, None, TokLoc,
+      return BuildLiteralOperatorCall(R, OpNameInfo, std::nullopt, TokLoc,
                                       &ExplicitArgs);
     }
     case LOLR_StringTemplatePack:
@@ -16314,7 +16314,7 @@ void Sema::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
     FunctionProtoType::ExtProtoInfo EPI;
     EPI.HasTrailingReturn = false;
     EPI.TypeQuals.addConst();
-    T = Context.getFunctionType(Context.DependentTy, None, EPI);
+    T = Context.getFunctionType(Context.DependentTy, std::nullopt, EPI);
     Sig = Context.getTrivialTypeSourceInfo(T);
   }
 
@@ -16464,10 +16464,10 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
     if (isa<FunctionNoProtoType>(FTy)) {
       FunctionProtoType::ExtProtoInfo EPI;
       EPI.ExtInfo = Ext;
-      BlockTy = Context.getFunctionType(RetTy, None, EPI);
+      BlockTy = Context.getFunctionType(RetTy, std::nullopt, EPI);
 
-    // Otherwise, if we don't need to change anything about the function type,
-    // preserve its sugar structure.
+      // Otherwise, if we don't need to change anything about the function type,
+      // preserve its sugar structure.
     } else if (FTy->getReturnType() == RetTy &&
                (!NoReturn || FTy->getNoReturnAttr())) {
       BlockTy = BSI->FunctionType;
@@ -16485,7 +16485,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   } else {
     FunctionProtoType::ExtProtoInfo EPI;
     EPI.ExtInfo = FunctionType::ExtInfo().withNoReturn(NoReturn);
-    BlockTy = Context.getFunctionType(RetTy, None, EPI);
+    BlockTy = Context.getFunctionType(RetTy, std::nullopt, EPI);
   }
 
   DiagnoseUnusedParameters(BD->parameters());
@@ -20039,7 +20039,7 @@ bool Sema::DiagRuntimeBehavior(SourceLocation Loc, ArrayRef<const Stmt*> Stmts,
 bool Sema::DiagRuntimeBehavior(SourceLocation Loc, const Stmt *Statement,
                                const PartialDiagnostic &PD) {
   return DiagRuntimeBehavior(
-      Loc, Statement ? llvm::makeArrayRef(Statement) : llvm::None, PD);
+      Loc, Statement ? llvm::makeArrayRef(Statement) : std::nullopt, PD);
 }
 
 bool Sema::CheckCallReturnType(QualType ReturnType, SourceLocation Loc,
@@ -20965,7 +20965,7 @@ ExprResult Sema::ActOnObjCAvailabilityCheckExpr(
       });
     }
     if (Spec == AvailSpecs.end())
-      return None;
+      return std::nullopt;
     if (Platform == "macos") {
       return ObjCAvailabilityCheckExpr::VersionAsWritten{
           llvm::Triple::getCanonicalVersionForOS(llvm::Triple::MacOSX,

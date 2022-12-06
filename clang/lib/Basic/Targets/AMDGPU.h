@@ -119,7 +119,7 @@ public:
   ArrayRef<const char *> getGCCRegNames() const override;
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return None;
+    return std::nullopt;
   }
 
   /// Accepted register names: (n, m is unsigned integer, n < m)
@@ -402,7 +402,7 @@ public:
     } else if (AddressSpace == Local) {
       return DWARF_Local;
     } else {
-      return None;
+      return std::nullopt;
     }
   }
 
@@ -452,7 +452,7 @@ public:
 
   Optional<std::string> getTargetID() const override {
     if (!isAMDGCN(getTriple()))
-      return llvm::None;
+      return std::nullopt;
     // When -target-cpu is not set, we assume generic code that it is valid
     // for all GPU and use an empty string as target ID to represent that.
     if (GPUKind == llvm::AMDGPU::GK_NONE)

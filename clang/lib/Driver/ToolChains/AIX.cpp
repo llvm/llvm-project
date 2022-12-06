@@ -226,7 +226,8 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     auto ExpCommand = std::make_unique<Command>(
         JA, *this, ResponseFileSupport::None(), CreateExportListExec,
         CreateExportCmdArgs, Inputs, Output);
-    ExpCommand->setRedirectFiles({None, std::string(ExportList), None});
+    ExpCommand->setRedirectFiles(
+        {std::nullopt, std::string(ExportList), std::nullopt});
     C.addCommand(std::move(ExpCommand));
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-bE:") + ExportList));
   }

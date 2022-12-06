@@ -192,7 +192,7 @@ public:
   ArrayRef<const char *> getGCCRegNames() const override;
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return None;
+    return std::nullopt;
   }
 
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;

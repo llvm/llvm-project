@@ -140,7 +140,7 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
     llvm::Value *Ptr = EmitLoadOfScalar(LV, E->getBeginLoc());
     cast<llvm::LoadInst>(Ptr)->setMetadata(
         CGM.getModule().getMDKindID("invariant.load"),
-        llvm::MDNode::get(getLLVMContext(), None));
+        llvm::MDNode::get(getLLVMContext(), std::nullopt));
     return Builder.CreateBitCast(Ptr, ConvertType(E->getType()));
   }
 
@@ -381,7 +381,7 @@ tryGenerateSpecializedMessageSend(CodeGenFunction &CGF, QualType ResultType,
                                   bool isClassMessage) {
   auto &CGM = CGF.CGM;
   if (!CGM.getCodeGenOpts().ObjCConvertMessagesToRuntimeCalls)
-    return None;
+    return std::nullopt;
 
   auto &Runtime = CGM.getLangOpts().ObjCRuntime;
   switch (Sel.getMethodFamily()) {
@@ -402,7 +402,7 @@ tryGenerateSpecializedMessageSend(CodeGenFunction &CGF, QualType ResultType,
           if (isa<llvm::ConstantPointerNull>(arg))
             return CGF.EmitObjCAllocWithZone(Receiver,
                                              CGF.ConvertType(ResultType));
-          return None;
+          return std::nullopt;
         }
     }
     break;
@@ -433,7 +433,7 @@ tryGenerateSpecializedMessageSend(CodeGenFunction &CGF, QualType ResultType,
   default:
     break;
   }
-  return None;
+  return std::nullopt;
 }
 
 CodeGen::RValue CGObjCRuntime::GeneratePossiblySpecializedMessageSend(
@@ -526,32 +526,32 @@ static Optional<llvm::Value *>
 tryEmitSpecializedAllocInit(CodeGenFunction &CGF, const ObjCMessageExpr *OME) {
   auto &Runtime = CGF.getLangOpts().ObjCRuntime;
   if (!Runtime.shouldUseRuntimeFunctionForCombinedAllocInit())
-    return None;
+    return std::nullopt;
 
   // Match the exact pattern '[[MyClass alloc] init]'.
   Selector Sel = OME->getSelector();
   if (OME->getReceiverKind() != ObjCMessageExpr::Instance ||
       !OME->getType()->isObjCObjectPointerType() || !Sel.isUnarySelector() ||
       Sel.getNameForSlot(0) != "init")
-    return None;
+    return std::nullopt;
 
   // Okay, this is '[receiver init]', check if 'receiver' is '[cls alloc]'
   // with 'cls' a Class.
   auto *SubOME =
       dyn_cast<ObjCMessageExpr>(OME->getInstanceReceiver()->IgnoreParenCasts());
   if (!SubOME)
-    return None;
+    return std::nullopt;
   Selector SubSel = SubOME->getSelector();
 
   if (!SubOME->getType()->isObjCObjectPointerType() ||
       !SubSel.isUnarySelector() || SubSel.getNameForSlot(0) != "alloc")
-    return None;
+    return std::nullopt;
 
   llvm::Value *Receiver = nullptr;
   switch (SubOME->getReceiverKind()) {
   case ObjCMessageExpr::Instance:
     if (!SubOME->getInstanceReceiver()->getType()->isObjCClassType())
-      return None;
+      return std::nullopt;
     Receiver = CGF.EmitScalarExpr(SubOME->getInstanceReceiver());
     break;
 
@@ -565,7 +565,7 @@ tryEmitSpecializedAllocInit(CodeGenFunction &CGF, const ObjCMessageExpr *OME) {
   }
   case ObjCMessageExpr::SuperInstance:
   case ObjCMessageExpr::SuperClass:
-    return None;
+    return std::nullopt;
   }
 
   return CGF.EmitObjCAllocInit(Receiver, CGF.ConvertType(OME->getType()));
@@ -2343,7 +2343,7 @@ llvm::Value *CodeGenFunction::EmitARCRetainBlock(llvm::Value *value,
            CGM.getObjCEntrypoints().objc_retainBlock);
 
     call->setMetadata("clang.arc.copy_on_escape",
-                      llvm::MDNode::get(Builder.getContext(), None));
+                      llvm::MDNode::get(Builder.getContext(), std::nullopt));
   }
 
   return result;
@@ -2385,7 +2385,8 @@ static void emitAutoreleasedReturnValueMarker(CodeGenFunction &CGF) {
 
   // Call the marker asm if we made one, which we do only at -O0.
   if (marker)
-    CGF.Builder.CreateCall(marker, None, CGF.getBundlesForFunclet(marker));
+    CGF.Builder.CreateCall(marker, std::nullopt,
+                           CGF.getBundlesForFunclet(marker));
 }
 
 static llvm::Value *emitOptimizedARCReturnCall(llvm::Value *value,
@@ -2471,7 +2472,7 @@ void CodeGenFunction::EmitARCRelease(llvm::Value *value,
 
   if (precise == ARCImpreciseLifetime) {
     call->setMetadata("clang.imprecise_release",
-                      llvm::MDNode::get(Builder.getContext(), None));
+                      llvm::MDNode::get(Builder.getContext(), std::nullopt));
   }
 }
 
@@ -2869,7 +2870,7 @@ void CodeGenFunction::EmitObjCRelease(llvm::Value *value,
 
   if (precise == ARCImpreciseLifetime) {
     call->setMetadata("clang.imprecise_release",
-                      llvm::MDNode::get(Builder.getContext(), None));
+                      llvm::MDNode::get(Builder.getContext(), std::nullopt));
   }
 }
 

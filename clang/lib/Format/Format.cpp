@@ -1874,10 +1874,10 @@ std::string configurationAsText(const FormatStyle &Style) {
 llvm::Optional<FormatStyle>
 FormatStyle::FormatStyleSet::Get(FormatStyle::LanguageKind Language) const {
   if (!Styles)
-    return None;
+    return std::nullopt;
   auto It = Styles->find(Language);
   if (It == Styles->end())
-    return None;
+    return std::nullopt;
   FormatStyle Style = It->second;
   Style.StyleSet = *this;
   return Style;

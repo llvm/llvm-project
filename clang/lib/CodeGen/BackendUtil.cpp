@@ -516,7 +516,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
 static Optional<GCOVOptions> getGCOVOptions(const CodeGenOptions &CodeGenOpts,
                                             const LangOptions &LangOpts) {
   if (!CodeGenOpts.EmitGcovArcs && !CodeGenOpts.EmitGcovNotes)
-    return None;
+    return std::nullopt;
   // Not using 'GCOVOptions::getDefault' allows us to avoid exiting if
   // LLVM's -default-gcov-version flag is set to something invalid.
   GCOVOptions Options;
@@ -534,7 +534,7 @@ static Optional<InstrProfOptions>
 getInstrProfOptions(const CodeGenOptions &CodeGenOpts,
                     const LangOptions &LangOpts) {
   if (!CodeGenOpts.hasProfileClangInstr())
-    return None;
+    return std::nullopt;
   InstrProfOptions Options;
   Options.NoRedZone = CodeGenOpts.DisableRedZone;
   Options.InstrProfileOutput = CodeGenOpts.InstrProfileOutput;

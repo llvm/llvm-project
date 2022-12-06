@@ -1119,14 +1119,14 @@ public:
     const SharingMapTy &StackElem = getTopOfStack();
     auto I = StackElem.UsesAllocatorsDecls.find(D);
     if (I == StackElem.UsesAllocatorsDecls.end())
-      return None;
+      return std::nullopt;
     return I->getSecond();
   }
   Optional<UsesAllocatorsDeclKind> isUsesAllocatorsDecl(const Decl *D) const {
     const SharingMapTy &StackElem = getTopOfStack();
     auto I = StackElem.UsesAllocatorsDecls.find(D);
     if (I == StackElem.UsesAllocatorsDecls.end())
-      return None;
+      return std::nullopt;
     return I->getSecond();
   }
 
@@ -7293,14 +7293,14 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
                                         unsigned NumAppendArgs,
                                         SourceRange SR) {
   if (!DG || DG.get().isNull())
-    return None;
+    return std::nullopt;
 
   const int VariantId = 1;
   // Must be applied only to single decl.
   if (!DG.get().isSingleDecl()) {
     Diag(SR.getBegin(), diag::err_omp_single_decl_in_declare_simd_variant)
         << VariantId << SR;
-    return None;
+    return std::nullopt;
   }
   Decl *ADecl = DG.get().getSingleDecl();
   if (auto *FTD = dyn_cast<FunctionTemplateDecl>(ADecl))
@@ -7311,7 +7311,7 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
   if (!FD) {
     Diag(ADecl->getLocation(), diag::err_omp_function_expected)
         << VariantId << SR;
-    return None;
+    return std::nullopt;
   }
 
   auto &&HasMultiVersionAttributes = [](const FunctionDecl *FD) {
@@ -7323,7 +7323,7 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
   if (HasMultiVersionAttributes(FD)) {
     Diag(FD->getLocation(), diag::err_omp_declare_variant_incompat_attributes)
         << SR;
-    return None;
+    return std::nullopt;
   }
 
   // Allow #pragma omp declare variant only if the function is not used.
@@ -7341,7 +7341,7 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
   // The VariantRef must point to function.
   if (!VariantRef) {
     Diag(SR.getBegin(), diag::err_omp_function_expected) << VariantId;
-    return None;
+    return std::nullopt;
   }
 
   auto ShouldDelayChecks = [](Expr *&E, bool) {
@@ -7376,7 +7376,7 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
     return true;
   };
   if (TI.anyScoreOrCondition(HandleNonConstantScoresAndConditions))
-    return None;
+    return std::nullopt;
 
   QualType AdjustedFnType = FD->getType();
   if (NumAppendArgs) {
@@ -7384,7 +7384,7 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
     if (!PTy) {
       Diag(FD->getLocation(), diag::err_omp_declare_variant_prototype_required)
           << SR;
-      return None;
+      return std::nullopt;
     }
     // Adjust the function type to account for an extra omp_interop_t for each
     // specified in the append_args clause.
@@ -7397,12 +7397,12 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
     }
     if (!TD) {
       Diag(SR.getBegin(), diag::err_omp_interop_type_not_found) << SR;
-      return None;
+      return std::nullopt;
     }
     QualType InteropType = Context.getTypeDeclType(TD);
     if (PTy->isVariadic()) {
       Diag(FD->getLocation(), diag::err_omp_append_args_with_varargs) << SR;
-      return None;
+      return std::nullopt;
     }
     llvm::SmallVector<QualType, 8> Params;
     Params.append(PTy->param_type_begin(), PTy->param_type_end());
@@ -7432,7 +7432,7 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
       if (!ER.isUsable()) {
         Diag(VariantRef->getExprLoc(), diag::err_omp_function_expected)
             << VariantId << VariantRef->getSourceRange();
-        return None;
+        return std::nullopt;
       }
       VariantRef = ER.get();
     } else {
@@ -7452,12 +7452,12 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
             << VariantRef->getType()
             << ((Method && !Method->isStatic()) ? FnPtrType : FD->getType())
             << (NumAppendArgs ? 1 : 0) << VariantRef->getSourceRange();
-        return None;
+        return std::nullopt;
       }
       VariantRefCast = PerformImplicitConversion(
           VariantRef, FnPtrType.getUnqualifiedType(), AA_Converting);
       if (!VariantRefCast.isUsable())
-        return None;
+        return std::nullopt;
     }
     // Drop previously built artificial addr_of unary op for member functions.
     if (Method && !Method->isStatic()) {
@@ -7473,7 +7473,7 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
       !ER.get()->IgnoreParenImpCasts()->getType()->isFunctionType()) {
     Diag(VariantRef->getExprLoc(), diag::err_omp_function_expected)
         << VariantId << VariantRef->getSourceRange();
-    return None;
+    return std::nullopt;
   }
 
   // The VariantRef must point to function.
@@ -7481,20 +7481,20 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
   if (!DRE) {
     Diag(VariantRef->getExprLoc(), diag::err_omp_function_expected)
         << VariantId << VariantRef->getSourceRange();
-    return None;
+    return std::nullopt;
   }
   auto *NewFD = dyn_cast_or_null<FunctionDecl>(DRE->getDecl());
   if (!NewFD) {
     Diag(VariantRef->getExprLoc(), diag::err_omp_function_expected)
         << VariantId << VariantRef->getSourceRange();
-    return None;
+    return std::nullopt;
   }
 
   if (FD->getCanonicalDecl() == NewFD->getCanonicalDecl()) {
     Diag(VariantRef->getExprLoc(),
          diag::err_omp_declare_variant_same_base_function)
         << VariantRef->getSourceRange();
-    return None;
+    return std::nullopt;
   }
 
   // Check if function types are compatible in C.
@@ -7506,7 +7506,7 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
            diag::err_omp_declare_variant_incompat_types)
           << NewFD->getType() << FD->getType() << (NumAppendArgs ? 1 : 0)
           << VariantRef->getSourceRange();
-      return None;
+      return std::nullopt;
     }
     if (NewType->isFunctionProtoType()) {
       if (FD->getType()->isFunctionNoProtoType())
@@ -7524,7 +7524,7 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
     SourceRange SR =
         NewFD->specific_attr_begin<OMPDeclareVariantAttr>()->getRange();
     Diag(SR.getBegin(), diag::note_omp_marked_declare_variant_here) << SR;
-    return None;
+    return std::nullopt;
   }
 
   enum DoesntSupport {
@@ -7540,38 +7540,38 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
     if (CXXFD->isVirtual()) {
       Diag(FD->getLocation(), diag::err_omp_declare_variant_doesnt_support)
           << VirtFuncs;
-      return None;
+      return std::nullopt;
     }
 
     if (isa<CXXConstructorDecl>(FD)) {
       Diag(FD->getLocation(), diag::err_omp_declare_variant_doesnt_support)
           << Constructors;
-      return None;
+      return std::nullopt;
     }
 
     if (isa<CXXDestructorDecl>(FD)) {
       Diag(FD->getLocation(), diag::err_omp_declare_variant_doesnt_support)
           << Destructors;
-      return None;
+      return std::nullopt;
     }
   }
 
   if (FD->isDeleted()) {
     Diag(FD->getLocation(), diag::err_omp_declare_variant_doesnt_support)
         << DeletedFuncs;
-    return None;
+    return std::nullopt;
   }
 
   if (FD->isDefaulted()) {
     Diag(FD->getLocation(), diag::err_omp_declare_variant_doesnt_support)
         << DefaultedFuncs;
-    return None;
+    return std::nullopt;
   }
 
   if (FD->isConstexpr()) {
     Diag(FD->getLocation(), diag::err_omp_declare_variant_doesnt_support)
         << (NewFD->isConsteval() ? ConstevalFuncs : ConstexprFuncs);
-    return None;
+    return std::nullopt;
   }
 
   // Check general compatibility.
@@ -7587,7 +7587,7 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
                                   << FD->getLocation()),
           /*TemplatesSupported=*/true, /*ConstexprSupported=*/false,
           /*CLinkageMayDiffer=*/true))
-    return None;
+    return std::nullopt;
   return std::make_pair(FD, cast<Expr>(DRE));
 }
 
@@ -8091,7 +8091,7 @@ OpenMPIterationSpaceChecker::doesDependOnLoopCounter(const Stmt *S,
     DepDecl = LoopStmtChecker.getDepDecl();
     return LoopStmtChecker.getBaseLoopId();
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
@@ -8232,10 +8232,10 @@ bool OpenMPIterationSpaceChecker::checkAndSetCond(Expr *S) {
                      (Opcode == BO_LT || Opcode == BO_GT), SR, OpLoc);
     } else if (IneqCondIsCanonical && Opcode == BO_NE) {
       return setUB(const_cast<Expr *>(getInitLCDecl(LHS) == LCDecl ? RHS : LHS),
-                   /*LessOp=*/llvm::None,
+                   /*LessOp=*/std::nullopt,
                    /*StrictOp=*/true, SR, OpLoc);
     }
-    return llvm::None;
+    return std::nullopt;
   };
   llvm::Optional<bool> Res;
   if (auto *RBO = dyn_cast<CXXRewrittenBinaryOperator>(S)) {
@@ -16623,7 +16623,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
 
 static std::string
 getListOfPossibleValues(OpenMPClauseKind K, unsigned First, unsigned Last,
-                        ArrayRef<unsigned> Exclude = llvm::None) {
+                        ArrayRef<unsigned> Exclude = std::nullopt) {
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
   unsigned Skipped = Exclude.size();
@@ -21551,7 +21551,7 @@ static void checkMappableExpressionList(
     CXXScopeSpec &MapperIdScopeSpec, DeclarationNameInfo MapperId,
     ArrayRef<Expr *> UnresolvedMappers,
     OpenMPMapClauseKind MapType = OMPC_MAP_unknown,
-    ArrayRef<OpenMPMapModifierKind> Modifiers = None,
+    ArrayRef<OpenMPMapModifierKind> Modifiers = std::nullopt,
     bool IsMapTypeImplicit = false, bool NoDiagnose = false) {
   // We only expect mappable expressions in 'to', 'from', and 'map' clauses.
   assert((CKind == OMPC_map || CKind == OMPC_to || CKind == OMPC_from) &&
