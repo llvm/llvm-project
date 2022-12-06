@@ -308,6 +308,9 @@ public:
   /// Returns the setter name for the accessor of `name`.
   std::string getSetterName(StringRef name) const;
 
+  /// Returns the remove name for the accessor of `name`.
+  std::string getRemoverName(StringRef name) const;
+
 private:
   /// Populates the vectors containing operands, attributes, results and traits.
   void populateOpStructure();
