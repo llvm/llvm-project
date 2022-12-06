@@ -3,6 +3,7 @@
 //
 // Test the emission of the "s390x-visible-vector-ABI" module flag.
 
+// REQUIRES: systemz-registered-target
 // RUN: %clang_cc1 -triple s390x-ibm-linux -target-cpu arch10 -S \
 // RUN:   -fzvector -o - %s 2>&1 | FileCheck  %s --check-prefix=ARCH10-ASM
 // RUN: %clang_cc1 -triple s390x-ibm-linux -target-cpu arch13 -S \
