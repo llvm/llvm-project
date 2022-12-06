@@ -2157,16 +2157,42 @@ AVRTargetLowering::insertWideShift(MachineInstr &MI,
   insertMultibyteShift(MI, BB, Registers, Opc, ShiftAmt);
 
   // Combine the 8-bit registers into 16-bit register pairs.
-  BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(1).getReg())
-      .addReg(Registers[0].first, 0, Registers[0].second)
-      .addImm(AVR::sub_hi)
-      .addReg(Registers[1].first, 0, Registers[1].second)
-      .addImm(AVR::sub_lo);
-  BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(0).getReg())
-      .addReg(Registers[2].first, 0, Registers[2].second)
-      .addImm(AVR::sub_hi)
-      .addReg(Registers[3].first, 0, Registers[3].second)
-      .addImm(AVR::sub_lo);
+  // This done either from LSB to MSB or from MSB to LSB, depending on the
+  // shift. It's an optimization so that the register allocator will use the
+  // fewest movs possible (which order we use isn't a correctness issue, just an
+  // optimization issue).
+  //   - lsl prefers starting from the most significant byte (2nd case).
+  //   - lshr prefers starting from the least significant byte (1st case).
+  //   - for ashr it depends on the number of shifted bytes.
+  // Some shift operations still don't get the most optimal mov sequences even
+  // with this distinction. TODO: figure out why and try to fix it (but we're
+  // already equal to or faster than avr-gcc in all cases except ashr 8).
+  if (Opc != ISD::SHL &&
+      (Opc != ISD::SRA || (ShiftAmt < 16 || ShiftAmt >= 22))) {
+    // Use the resulting registers starting with the least significant byte.
+    BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(0).getReg())
+        .addReg(Registers[3].first, 0, Registers[3].second)
+        .addImm(AVR::sub_lo)
+        .addReg(Registers[2].first, 0, Registers[2].second)
+        .addImm(AVR::sub_hi);
+    BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(1).getReg())
+        .addReg(Registers[1].first, 0, Registers[1].second)
+        .addImm(AVR::sub_lo)
+        .addReg(Registers[0].first, 0, Registers[0].second)
+        .addImm(AVR::sub_hi);
+  } else {
+    // Use the resulting registers starting with the most significant byte.
+    BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(1).getReg())
+        .addReg(Registers[0].first, 0, Registers[0].second)
+        .addImm(AVR::sub_hi)
+        .addReg(Registers[1].first, 0, Registers[1].second)
+        .addImm(AVR::sub_lo);
+    BuildMI(*BB, MI, dl, TII.get(AVR::REG_SEQUENCE), MI.getOperand(0).getReg())
+        .addReg(Registers[2].first, 0, Registers[2].second)
+        .addImm(AVR::sub_hi)
+        .addReg(Registers[3].first, 0, Registers[3].second)
+        .addImm(AVR::sub_lo);
+  }
 
   // Remove the pseudo instruction.
   MI.eraseFromParent();

@@ -314,10 +314,9 @@ define i32 @lshr_i32_6(i32 %a) {
 ; CHECK-NEXT:    rol r24
 ; CHECK-NEXT:    rol r25
 ; CHECK-NEXT:    rol r19
+; CHECK-NEXT:    mov r22, r23
+; CHECK-NEXT:    mov r23, r24
 ; CHECK-NEXT:    mov r18, r25
-; CHECK-NEXT:    mov r25, r24
-; CHECK-NEXT:    mov r24, r23
-; CHECK-NEXT:    movw r22, r24
 ; CHECK-NEXT:    movw r24, r18
 ; CHECK-NEXT:    ret
   %res = lshr i32 %a, 6
@@ -333,10 +332,9 @@ define i32 @lshr_i32_7(i32 %a) {
 ; CHECK-NEXT:    rol r25
 ; CHECK-NEXT:    mov r19, r1
 ; CHECK-NEXT:    rol r19
+; CHECK-NEXT:    mov r22, r23
+; CHECK-NEXT:    mov r23, r24
 ; CHECK-NEXT:    mov r18, r25
-; CHECK-NEXT:    mov r25, r24
-; CHECK-NEXT:    mov r24, r23
-; CHECK-NEXT:    movw r22, r24
 ; CHECK-NEXT:    movw r24, r18
 ; CHECK-NEXT:    ret
   %res = lshr i32 %a, 7
@@ -346,12 +344,10 @@ define i32 @lshr_i32_7(i32 %a) {
 define i32 @lshr_i32_8(i32 %a) {
 ; CHECK-LABEL: lshr_i32_8:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov r19, r1
-; CHECK-NEXT:    mov r18, r25
-; CHECK-NEXT:    mov r25, r24
-; CHECK-NEXT:    mov r24, r23
-; CHECK-NEXT:    movw r22, r24
-; CHECK-NEXT:    movw r24, r18
+; CHECK-NEXT:    mov r22, r23
+; CHECK-NEXT:    mov r23, r24
+; CHECK-NEXT:    mov r24, r25
+; CHECK-NEXT:    mov r25, r1
 ; CHECK-NEXT:    ret
   %res = lshr i32 %a, 8
   ret i32 %res
@@ -363,12 +359,10 @@ define i32 @lshr_i32_9(i32 %a) {
 ; CHECK-NEXT:    lsr r25
 ; CHECK-NEXT:    ror r24
 ; CHECK-NEXT:    ror r23
-; CHECK-NEXT:    mov r19, r1
-; CHECK-NEXT:    mov r18, r25
-; CHECK-NEXT:    mov r25, r24
-; CHECK-NEXT:    mov r24, r23
-; CHECK-NEXT:    movw r22, r24
-; CHECK-NEXT:    movw r24, r18
+; CHECK-NEXT:    mov r22, r23
+; CHECK-NEXT:    mov r23, r24
+; CHECK-NEXT:    mov r24, r25
+; CHECK-NEXT:    mov r25, r1
 ; CHECK-NEXT:    ret
   %res = lshr i32 %a, 9
   ret i32 %res
@@ -388,11 +382,10 @@ define i32 @lshr_i32_16(i32 %a) {
 define i32 @lshr_i32_24(i32 %a) {
 ; CHECK-LABEL: lshr_i32_24:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov r19, r1
-; CHECK-NEXT:    mov r18, r1
-; CHECK-NEXT:    mov r23, r1
 ; CHECK-NEXT:    mov r22, r25
-; CHECK-NEXT:    movw r24, r18
+; CHECK-NEXT:    mov r23, r1
+; CHECK-NEXT:    mov r24, r1
+; CHECK-NEXT:    mov r25, r1
 ; CHECK-NEXT:    ret
   %res = lshr i32 %a, 24
   ret i32 %res
@@ -404,9 +397,9 @@ define i32 @lshr_i32_31(i32 %a) {
 ; CHECK-NEXT:    lsl r25
 ; CHECK-NEXT:    mov r22, r1
 ; CHECK-NEXT:    rol r22
-; CHECK-NEXT:    mov r25, r1
-; CHECK-NEXT:    mov r24, r1
 ; CHECK-NEXT:    mov r23, r1
+; CHECK-NEXT:    mov r24, r1
+; CHECK-NEXT:    mov r25, r1
 ; CHECK-NEXT:    ret
   %res = lshr i32 %a, 31
   ret i32 %res
@@ -473,27 +466,25 @@ define i32 @ashr_i32_7(i32 %a) {
 ; CHECK-NEXT:    rol r24
 ; CHECK-NEXT:    rol r25
 ; CHECK-NEXT:    sbc r19, r19
+; CHECK-NEXT:    mov r22, r23
+; CHECK-NEXT:    mov r23, r24
 ; CHECK-NEXT:    mov r18, r25
-; CHECK-NEXT:    mov r25, r24
-; CHECK-NEXT:    mov r24, r23
-; CHECK-NEXT:    movw r22, r24
 ; CHECK-NEXT:    movw r24, r18
 ; CHECK-NEXT:    ret
   %res = ashr i32 %a, 7
   ret i32 %res
 }
 
-; TODO: this could be optimized to 4 movs, instead of 6.
+; TODO: this could be optimized to 4 movs, instead of 5.
 define i32 @ashr_i32_8(i32 %a) {
 ; CHECK-LABEL: ashr_i32_8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    mov r19, r25
 ; CHECK-NEXT:    lsl r19
 ; CHECK-NEXT:    sbc r19, r19
+; CHECK-NEXT:    mov r22, r23
+; CHECK-NEXT:    mov r23, r24
 ; CHECK-NEXT:    mov r18, r25
-; CHECK-NEXT:    mov r25, r24
-; CHECK-NEXT:    mov r24, r23
-; CHECK-NEXT:    movw r22, r24
 ; CHECK-NEXT:    movw r24, r18
 ; CHECK-NEXT:    ret
   %res = ashr i32 %a, 8
@@ -531,13 +522,13 @@ define i32 @ashr_i32_22(i32 %a) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    lsl r24
 ; CHECK-NEXT:    rol r25
-; CHECK-NEXT:    sbc r19, r19
+; CHECK-NEXT:    sbc r18, r18
 ; CHECK-NEXT:    lsl r24
 ; CHECK-NEXT:    rol r25
-; CHECK-NEXT:    mov r23, r19
+; CHECK-NEXT:    mov r23, r18
 ; CHECK-NEXT:    rol r23
-; CHECK-NEXT:    mov r18, r19
 ; CHECK-NEXT:    mov r22, r25
+; CHECK-NEXT:    mov r19, r18
 ; CHECK-NEXT:    movw r24, r18
 ; CHECK-NEXT:    ret
   %res = ashr i32 %a, 22
@@ -549,11 +540,10 @@ define i32 @ashr_i32_23(i32 %a) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    lsl r24
 ; CHECK-NEXT:    rol r25
-; CHECK-NEXT:    sbc r19, r19
-; CHECK-NEXT:    mov r18, r19
-; CHECK-NEXT:    mov r23, r19
+; CHECK-NEXT:    sbc r23, r23
 ; CHECK-NEXT:    mov r22, r25
-; CHECK-NEXT:    movw r24, r18
+; CHECK-NEXT:    mov r24, r23
+; CHECK-NEXT:    mov r25, r23
 ; CHECK-NEXT:    ret
   %res = ashr i32 %a, 23
   ret i32 %res
@@ -563,13 +553,12 @@ define i32 @ashr_i32_30(i32 %a) {
 ; CHECK-LABEL: ashr_i32_30:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    lsl r25
-; CHECK-NEXT:    sbc r19, r19
+; CHECK-NEXT:    sbc r23, r23
 ; CHECK-NEXT:    lsl r25
-; CHECK-NEXT:    mov r22, r19
+; CHECK-NEXT:    mov r22, r23
 ; CHECK-NEXT:    rol r22
-; CHECK-NEXT:    mov r18, r19
-; CHECK-NEXT:    mov r23, r19
-; CHECK-NEXT:    movw r24, r18
+; CHECK-NEXT:    mov r24, r23
+; CHECK-NEXT:    mov r25, r23
 ; CHECK-NEXT:    ret
   %res = ashr i32 %a, 30
   ret i32 %res
@@ -579,8 +568,8 @@ define i32 @ashr_i32_31(i32 %a) {
 ; CHECK-LABEL: ashr_i32_31:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    lsl r25
-; CHECK-NEXT:    sbc r23, r23
-; CHECK-NEXT:    mov r22, r23
+; CHECK-NEXT:    sbc r22, r22
+; CHECK-NEXT:    mov r23, r22
 ; CHECK-NEXT:    movw r24, r22
 ; CHECK-NEXT:    ret
   %res = ashr i32 %a, 31
