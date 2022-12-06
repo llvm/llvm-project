@@ -62,6 +62,7 @@
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <optional>
 #include <system_error>
 using namespace llvm;
 
@@ -274,7 +275,7 @@ bool LTOCodeGenerator::runAIXSystemAssembler(SmallString<128> &AssemblyFile) {
 
   // Setup the LDR_CNTRL variable
   std::string LDR_CNTRL_var = "LDR_CNTRL=MAXDATA32=0xA0000000@DSA";
-  if (Optional<std::string> V = sys::Process::GetEnv("LDR_CNTRL"))
+  if (std::optional<std::string> V = sys::Process::GetEnv("LDR_CNTRL"))
     LDR_CNTRL_var += ("@" + *V);
 
   // Prepare inputs for the assember.
