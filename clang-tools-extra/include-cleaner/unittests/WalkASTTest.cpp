@@ -229,6 +229,13 @@ TEST(WalkAST, MemberExprs) {
       namespace ns { template<typename> struct Foo { int a; }; }
       using ns::$explicit^Foo;)cpp",
            "void k(Foo<int> b) { b.^a; }");
+  // Test the dependent-type case (CXXDependentScopeMemberExpr)
+  testWalk("template<typename T> struct $explicit^Base { void method(); };",
+           "template<typename T> void k(Base<T> t) { t.^method(); }");
+  testWalk("template<typename T> struct $explicit^Base { void method(); };",
+           "template<typename T> void k(Base<T>& t) { t.^method(); }");
+  testWalk("template<typename T> struct $explicit^Base { void method(); };",
+           "template<typename T> void k(Base<T>* t) { t->^method(); }");
 }
 
 TEST(WalkAST, ConstructExprs) {
