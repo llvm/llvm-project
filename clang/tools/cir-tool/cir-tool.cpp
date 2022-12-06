@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
     return cir::createConvertCIRToFuncPass();
   });
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
-    return cir::createConvertCIRToLLVMPass();
+    return cir::createConvertMLIRToLLVMPass();
   });
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return cir::createConvertCIRToMemRefPass();
