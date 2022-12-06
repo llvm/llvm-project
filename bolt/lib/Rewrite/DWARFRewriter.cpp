@@ -62,10 +62,10 @@ namespace bolt {
 /// \param DIE die to look up in.
 /// \param Attrs finds the first attribute that matches and extracts it.
 /// \return an optional AttrInfo with DWARFFormValue and Offset.
-Optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
-                                     std::vector<dwarf::Attribute> Attrs) {
+std::optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
+                                          std::vector<dwarf::Attribute> Attrs) {
   for (dwarf::Attribute &Attr : Attrs)
-    if (Optional<AttrInfo> Info = findAttributeInfo(DIE, Attr))
+    if (std::optional<AttrInfo> Info = findAttributeInfo(DIE, Attr))
       return Info;
   return std::nullopt;
 }
@@ -230,7 +230,7 @@ void DWARFRewriter::updateDebugInfo() {
 
   auto updateDWONameCompDir = [&](DWARFUnit &Unit) -> void {
     const DWARFDie &DIE = Unit.getUnitDIE();
-    Optional<AttrInfo> AttrInfoVal = findAttributeInfo(
+    std::optional<AttrInfo> AttrInfoVal = findAttributeInfo(
         DIE, {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name});
     (void)AttrInfoVal;
     assert(AttrInfoVal && "Skeleton CU doesn't have dwo_name.");
@@ -514,11 +514,11 @@ void DWARFRewriter::updateUnitDebugInfo(
         }
       };
 
-      if (Optional<AttrInfo> AttrVal =
+      if (std::optional<AttrInfo> AttrVal =
               findAttributeInfo(DIE, dwarf::DW_AT_call_pc))
         patchPC(*AttrVal, "DW_AT_call_pc");
 
-      if (Optional<AttrInfo> AttrVal =
+      if (std::optional<AttrInfo> AttrVal =
               findAttributeInfo(DIE, dwarf::DW_AT_call_return_pc))
         patchPC(*AttrVal, "DW_AT_call_return_pc");
 
@@ -528,7 +528,7 @@ void DWARFRewriter::updateUnitDebugInfo(
       // Handle any tag that can have DW_AT_location attribute.
       DWARFFormValue Value;
       uint64_t AttrOffset;
-      if (Optional<AttrInfo> AttrVal =
+      if (std::optional<AttrInfo> AttrVal =
               findAttributeInfo(DIE, dwarf::DW_AT_location)) {
         AttrOffset = AttrVal->Offset;
         Value = AttrVal->V;
@@ -690,7 +690,7 @@ void DWARFRewriter::updateUnitDebugInfo(
                                              SizeDiff + CurrEndOffset, 1);
           }
         }
-      } else if (Optional<AttrInfo> AttrVal =
+      } else if (std::optional<AttrInfo> AttrVal =
                      findAttributeInfo(DIE, dwarf::DW_AT_low_pc)) {
         AttrOffset = AttrVal->Offset;
         Value = AttrVal->V;
@@ -736,7 +736,7 @@ void DWARFRewriter::updateUnitDebugInfo(
         }
       } else if (IsDWP && Unit.isDWOUnit()) {
         // Not a common path so don't want to search all DIEs all the time.
-        Optional<AttrInfo> SignatureAttrVal =
+        std::optional<AttrInfo> SignatureAttrVal =
             findAttributeInfo(DIE, dwarf::DW_AT_signature);
         if (!SignatureAttrVal)
           continue;
@@ -771,7 +771,8 @@ void DWARFRewriter::updateUnitDebugInfo(
       case dwarf::DW_FORM_ref8:
       case dwarf::DW_FORM_ref_udata:
       case dwarf::DW_FORM_ref_addr: {
-        Optional<AttrInfo> AttrVal = findAttributeInfo(DIE, AbbrevDecl, Index);
+        std::optional<AttrInfo> AttrVal =
+            findAttributeInfo(DIE, AbbrevDecl, Index);
         uint32_t DestinationAddress =
             AttrVal->V.getRawUValue() +
             (Decl.Form == dwarf::DW_FORM_ref_addr ? 0 : Unit.getOffset());
@@ -813,7 +814,7 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
   if (RangesBase) {
     // If DW_AT_GNU_ranges_base is present, update it. No further modifications
     // are needed for ranges base.
-    Optional<AttrInfo> RangesBaseAttrInfo =
+    std::optional<AttrInfo> RangesBaseAttrInfo =
         findAttributeInfo(DIE, dwarf::DW_AT_GNU_ranges_base);
     if (!RangesBaseAttrInfo)
       RangesBaseAttrInfo = findAttributeInfo(DIE, dwarf::DW_AT_rnglists_base);
@@ -826,9 +827,9 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
     }
   }
 
-  Optional<AttrInfo> LowPCAttrInfo =
+  std::optional<AttrInfo> LowPCAttrInfo =
       findAttributeInfo(DIE, dwarf::DW_AT_low_pc);
-  if (Optional<AttrInfo> AttrVal =
+  if (std::optional<AttrInfo> AttrVal =
           findAttributeInfo(DIE, dwarf::DW_AT_ranges)) {
     // Case 1: The object was already non-contiguous and had DW_AT_ranges.
     // In this case we simply need to update the value of DW_AT_ranges
@@ -881,7 +882,7 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
 
   // Case 2: The object has both DW_AT_low_pc and DW_AT_high_pc emitted back
   // to back. Replace with new attributes and patch the DIE.
-  Optional<AttrInfo> HighPCAttrInfo =
+  std::optional<AttrInfo> HighPCAttrInfo =
       findAttributeInfo(DIE, dwarf::DW_AT_high_pc);
   if (LowPCAttrInfo && HighPCAttrInfo) {
     convertToRangesPatchAbbrev(*DIE.getDwarfUnit(), AbbreviationDecl,
@@ -937,7 +938,7 @@ void DWARFRewriter::updateLineTableOffsets(const MCAsmLayout &Layout) {
     if (!Label)
       continue;
 
-    Optional<AttrInfo> AttrVal =
+    std::optional<AttrInfo> AttrVal =
         findAttributeInfo(CU.get()->getUnitDIE(), dwarf::DW_AT_stmt_list);
     if (!AttrVal)
       continue;
@@ -951,7 +952,7 @@ void DWARFRewriter::updateLineTableOffsets(const MCAsmLayout &Layout) {
 
   for (const std::unique_ptr<DWARFUnit> &TU : BC.DwCtx->types_section_units()) {
     DWARFUnit *Unit = TU.get();
-    Optional<AttrInfo> AttrVal =
+    std::optional<AttrInfo> AttrVal =
         findAttributeInfo(TU.get()->getUnitDIE(), dwarf::DW_AT_stmt_list);
     if (!AttrVal)
       continue;
@@ -1039,9 +1040,9 @@ DWARFRewriter::finalizeDebugSections(DebugInfoBinaryPatcher &DebugInfoPatcher) {
       uint64_t Offset = 0;
       uint64_t AttrOffset = 0;
       uint32_t Size = 0;
-      Optional<AttrInfo> AttrValGnu =
+      std::optional<AttrInfo> AttrValGnu =
           findAttributeInfo(DIE, dwarf::DW_AT_GNU_addr_base);
-      Optional<AttrInfo> AttrVal =
+      std::optional<AttrInfo> AttrVal =
           findAttributeInfo(DIE, dwarf::DW_AT_addr_base);
 
       // For cases where Skeleton CU does not have DW_AT_GNU_addr_base
@@ -1827,8 +1828,8 @@ std::unique_ptr<DebugBufferVector> DWARFRewriter::makeFinalLocListsSection(
 
 namespace {
 
-void getRangeAttrData(DWARFDie DIE, Optional<AttrInfo> &LowPCVal,
-                      Optional<AttrInfo> &HighPCVal) {
+void getRangeAttrData(DWARFDie DIE, std::optional<AttrInfo> &LowPCVal,
+                      std::optional<AttrInfo> &HighPCVal) {
   LowPCVal = findAttributeInfo(DIE, dwarf::DW_AT_low_pc);
   HighPCVal = findAttributeInfo(DIE, dwarf::DW_AT_high_pc);
   uint64_t LowPCOffset = LowPCVal->Offset;
@@ -1894,8 +1895,8 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
     DWARFDie DIE, uint64_t RangesSectionOffset,
     SimpleBinaryPatcher &DebugInfoPatcher, uint64_t LowPCToUse,
     Optional<uint64_t> RangesBase) {
-  Optional<AttrInfo> LowPCVal;
-  Optional<AttrInfo> HighPCVal;
+  std::optional<AttrInfo> LowPCVal;
+  std::optional<AttrInfo> HighPCVal;
   getRangeAttrData(DIE, LowPCVal, HighPCVal);
   uint64_t LowPCOffset = LowPCVal->Offset;
   uint64_t HighPCOffset = HighPCVal->Offset;
