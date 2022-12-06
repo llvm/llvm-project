@@ -197,7 +197,7 @@ void macho::writeMapFile() {
                    sym->getName().str().data());
     }
     for (CStringInfo &cstrInfo : info.deadCStrings) {
-      os << format("<<dead>>\t0x%08llX\t[%3u] literal string: ",
+      os << format("<<dead>>\t0x%08zX\t[%3u] literal string: ",
                    cstrInfo.str.size() + 1, cstrInfo.fileIndex);
       os.write_escaped(cstrInfo.str) << "\n";
     }
