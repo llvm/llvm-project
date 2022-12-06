@@ -151,16 +151,14 @@ public:
   }
 };
 
-class CIRLoadLowering : public mlir::ConversionPattern {
+class CIRLoadLowering : public mlir::OpConversionPattern<mlir::cir::LoadOp> {
 public:
-  CIRLoadLowering(mlir::MLIRContext *ctx)
-      : mlir::ConversionPattern(mlir::cir::LoadOp::getOperationName(), 1, ctx) {
-  }
+  using OpConversionPattern<mlir::cir::LoadOp>::OpConversionPattern;
 
   mlir::LogicalResult
-  matchAndRewrite(mlir::Operation *op, ArrayRef<mlir::Value> operands,
+  matchAndRewrite(mlir::cir::LoadOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<mlir::memref::LoadOp>(op, operands[0]);
+    rewriter.replaceOpWithNewOp<mlir::memref::LoadOp>(op, adaptor.getAddr());
     return mlir::LogicalResult::success();
   }
 };
