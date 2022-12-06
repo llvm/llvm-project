@@ -250,7 +250,8 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
   const bool CSIsInvoke = BC.MIB->isInvoke(*CallInst);
   const bool CSIsTailCall = BC.MIB->isTailCall(*CallInst);
   const int64_t CSGNUArgsSize = BC.MIB->getGnuArgsSize(*CallInst);
-  const Optional<MCPlus::MCLandingPad> CSEHInfo = BC.MIB->getEHInfo(*CallInst);
+  const std::optional<MCPlus::MCLandingPad> CSEHInfo =
+      BC.MIB->getEHInfo(*CallInst);
 
   // Split basic block at the call site if there will be more incoming edges
   // coming from the callee.
