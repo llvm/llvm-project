@@ -48,7 +48,7 @@ public:
 } // end anonymous namespace
 
 Optional<MCFixupKind> ARMAsmBackend::getFixupKind(StringRef Name) const {
-  return None;
+  return std::nullopt;
 }
 
 Optional<MCFixupKind> ARMAsmBackendELF::getFixupKind(StringRef Name) const {
@@ -62,7 +62,7 @@ Optional<MCFixupKind> ARMAsmBackendELF::getFixupKind(StringRef Name) const {
                       .Case("BFD_RELOC_32", ELF::R_ARM_ABS32)
                       .Default(-1u);
   if (Type == -1u)
-    return None;
+    return std::nullopt;
   return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
 }
 

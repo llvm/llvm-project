@@ -116,7 +116,7 @@ static MaybeAlign getNewAlignmentDiff(const SCEV *DiffSCEV,
       return Align(DiffUnitsAbs);
   }
 
-  return None;
+  return std::nullopt;
 }
 
 // There is an address given by an offset OffSCEV from AASCEV which has an

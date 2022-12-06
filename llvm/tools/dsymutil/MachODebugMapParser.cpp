@@ -151,7 +151,8 @@ void MachODebugMapParser::addCommonSymbols() {
       // The main binary doesn't have an address for the given symbol.
       continue;
     }
-    if (!CurrentDebugMapObject->addSymbol(CommonSymbol, None /*ObjectAddress*/,
+    if (!CurrentDebugMapObject->addSymbol(CommonSymbol,
+                                          std::nullopt /*ObjectAddress*/,
                                           CommonAddr, 0 /*size*/)) {
       // The symbol is already present.
       continue;
@@ -533,9 +534,9 @@ void MachODebugMapParser::loadCurrentObjectFileSymbols(
     // in the DebugMap, leave it unassigned for these symbols.
     uint32_t Flags = cantFail(Sym.getFlags());
     if (Flags & SymbolRef::SF_Absolute) {
-      CurrentObjectAddresses[*Name] = None;
+      CurrentObjectAddresses[*Name] = std::nullopt;
     } else if (Flags & SymbolRef::SF_Common) {
-      CurrentObjectAddresses[*Name] = None;
+      CurrentObjectAddresses[*Name] = std::nullopt;
       CommonSymbols.push_back(std::string(*Name));
     } else {
       CurrentObjectAddresses[*Name] = Addr;

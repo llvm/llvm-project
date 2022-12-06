@@ -515,7 +515,7 @@ int main(int argc, char **argv) {
   // Load the input module...
   auto SetDataLayout = [](StringRef) -> Optional<std::string> {
     if (ClDataLayout.empty())
-      return None;
+      return std::nullopt;
     return ClDataLayout;
   };
   std::unique_ptr<Module> M;

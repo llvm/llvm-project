@@ -342,7 +342,7 @@ static std::string getFSProfileFile(const TargetMachine *TM) {
   if (!FSProfileFile.empty())
     return FSProfileFile.getValue();
   const Optional<PGOOptions> &PGOOpt = TM->getPGOOption();
-  if (PGOOpt == None || PGOOpt->Action != PGOOptions::SampleUse)
+  if (PGOOpt == std::nullopt || PGOOpt->Action != PGOOptions::SampleUse)
     return std::string();
   return PGOOpt->ProfileFile;
 }
@@ -353,7 +353,7 @@ static std::string getFSRemappingFile(const TargetMachine *TM) {
   if (!FSRemappingFile.empty())
     return FSRemappingFile.getValue();
   const Optional<PGOOptions> &PGOOpt = TM->getPGOOption();
-  if (PGOOpt == None || PGOOpt->Action != PGOOptions::SampleUse)
+  if (PGOOpt == std::nullopt || PGOOpt->Action != PGOOptions::SampleUse)
     return std::string();
   return PGOOpt->ProfileRemappingFile;
 }

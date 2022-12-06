@@ -2183,7 +2183,7 @@ static std::optional<uint64_t> getExactInteger(const APFloat &APF,
   if ((APF.convertToInteger(ValInt, ArbitraryRM, &IsExact) ==
        APFloatBase::opInvalidOp) ||
       !IsExact)
-    return None;
+    return std::nullopt;
   return ValInt.extractBitsAsZExtValue(BitWidth, 0);
 }
 
@@ -2216,19 +2216,19 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
     if (IsInteger) {
       // The BUILD_VECTOR must be all constants.
       if (!isa<ConstantSDNode>(Op.getOperand(Idx)))
-        return None;
+        return std::nullopt;
       Val = Op.getConstantOperandVal(Idx) &
             maskTrailingOnes<uint64_t>(EltSizeInBits);
     } else {
       // The BUILD_VECTOR must be all constants.
       if (!isa<ConstantFPSDNode>(Op.getOperand(Idx)))
-        return None;
+        return std::nullopt;
       if (auto ExactInteger = getExactInteger(
               cast<ConstantFPSDNode>(Op.getOperand(Idx))->getValueAPF(),
               EltSizeInBits))
         Val = *ExactInteger;
       else
-        return None;
+        return std::nullopt;
     }
 
     if (PrevElt) {
@@ -2248,7 +2248,7 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
       if (Remainder != ValDiff) {
         // The difference must cleanly divide the element span.
         if (Remainder != 0)
-          return None;
+          return std::nullopt;
         ValDiff /= IdxDiff;
         IdxDiff = 1;
       }
@@ -2256,12 +2256,12 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
       if (!SeqStepNum)
         SeqStepNum = ValDiff;
       else if (ValDiff != SeqStepNum)
-        return None;
+        return std::nullopt;
 
       if (!SeqStepDenom)
         SeqStepDenom = IdxDiff;
       else if (IdxDiff != *SeqStepDenom)
-        return None;
+        return std::nullopt;
     }
 
     // Record this non-undef element for later.
@@ -2271,7 +2271,7 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
 
   // We need to have logged a step for this to count as a legal index sequence.
   if (!SeqStepNum || !SeqStepDenom)
-    return None;
+    return std::nullopt;
 
   // Loop back through the sequence and validate elements we might have skipped
   // while waiting for a valid step. While doing this, log any sequence addend.
@@ -2293,7 +2293,7 @@ static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
     if (!SeqAddend)
       SeqAddend = Addend;
     else if (Addend != SeqAddend)
-      return None;
+      return std::nullopt;
   }
 
   assert(SeqAddend && "Must have an addend if we have a step");
@@ -8843,7 +8843,7 @@ canFoldToVWWithSameExtensionImpl(SDNode *Root, const NodeExtensionHelper &LHS,
                                  bool AllowZExt) {
   assert((AllowSExt || AllowZExt) && "Forgot to set what you want?");
   if (!LHS.areVLAndMaskCompatible(Root) || !RHS.areVLAndMaskCompatible(Root))
-    return None;
+    return std::nullopt;
   if (AllowZExt && LHS.SupportsZExt && RHS.SupportsZExt)
     return CombineResult(NodeExtensionHelper::getSameExtensionOpcode(
                              Root->getOpcode(), /*IsSExt=*/false),
@@ -8854,7 +8854,7 @@ canFoldToVWWithSameExtensionImpl(SDNode *Root, const NodeExtensionHelper &LHS,
                              Root->getOpcode(), /*IsSExt=*/true),
                          Root, LHS, /*SExtLHS=*/true, RHS,
                          /*SExtRHS=*/true);
-  return None;
+  return std::nullopt;
 }
 
 /// Check if \p Root follows a pattern Root(ext(LHS), ext(RHS))
@@ -8878,7 +8878,7 @@ static Optional<CombineResult> canFoldToVW_W(SDNode *Root,
                                              const NodeExtensionHelper &LHS,
                                              const NodeExtensionHelper &RHS) {
   if (!RHS.areVLAndMaskCompatible(Root))
-    return None;
+    return std::nullopt;
 
   // FIXME: Is it useful to form a vwadd.wx or vwsub.wx if it removes a scalar
   // sext/zext?
@@ -8887,12 +8887,12 @@ static Optional<CombineResult> canFoldToVW_W(SDNode *Root,
   if (RHS.SupportsZExt && (!RHS.isSplat() || AllowSplatInVW_W))
     return CombineResult(
         NodeExtensionHelper::getWOpcode(Root->getOpcode(), /*IsSExt=*/false),
-        Root, LHS, /*SExtLHS=*/None, RHS, /*SExtRHS=*/false);
+        Root, LHS, /*SExtLHS=*/std::nullopt, RHS, /*SExtRHS=*/false);
   if (RHS.SupportsSExt && (!RHS.isSplat() || AllowSplatInVW_W))
     return CombineResult(
         NodeExtensionHelper::getWOpcode(Root->getOpcode(), /*IsSExt=*/true),
-        Root, LHS, /*SExtLHS=*/None, RHS, /*SExtRHS=*/true);
-  return None;
+        Root, LHS, /*SExtLHS=*/std::nullopt, RHS, /*SExtRHS=*/true);
+  return std::nullopt;
 }
 
 /// Check if \p Root follows a pattern Root(sext(LHS), sext(RHS))
@@ -8925,9 +8925,9 @@ static Optional<CombineResult> canFoldToVW_SU(SDNode *Root,
                                               const NodeExtensionHelper &LHS,
                                               const NodeExtensionHelper &RHS) {
   if (!LHS.SupportsSExt || !RHS.SupportsZExt)
-    return None;
+    return std::nullopt;
   if (!LHS.areVLAndMaskCompatible(Root) || !RHS.areVLAndMaskCompatible(Root))
-    return None;
+    return std::nullopt;
   return CombineResult(NodeExtensionHelper::getSUOpcode(Root->getOpcode()),
                        Root, LHS, /*SExtLHS=*/true, RHS, /*SExtRHS=*/false);
 }
@@ -11477,7 +11477,7 @@ static Optional<unsigned> preAssignMask(const ArgTy &Args) {
     if (ArgVT.isVector() && ArgVT.getVectorElementType() == MVT::i1)
       return ArgIdx.index();
   }
-  return None;
+  return std::nullopt;
 }
 
 void RISCVTargetLowering::analyzeInputArgs(

@@ -672,11 +672,13 @@ public:
   bool hasXCOFFSection(StringRef Section,
                        XCOFF::CsectProperties CsectProp) const;
 
-  MCSectionXCOFF *getXCOFFSection(
-      StringRef Section, SectionKind K,
-      Optional<XCOFF::CsectProperties> CsectProp = None,
-      bool MultiSymbolsAllowed = false, const char *BeginSymName = nullptr,
-      Optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSubtypeFlags = None);
+  MCSectionXCOFF *
+  getXCOFFSection(StringRef Section, SectionKind K,
+                  Optional<XCOFF::CsectProperties> CsectProp = std::nullopt,
+                  bool MultiSymbolsAllowed = false,
+                  const char *BeginSymName = nullptr,
+                  Optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSubtypeFlags =
+                      std::nullopt);
 
   // Create and save a copy of STI and return a reference to the copy.
   MCSubtargetInfo &getSubtargetCopy(const MCSubtargetInfo &STI);

@@ -122,8 +122,8 @@ unsigned DwarfCompileUnit::getOrCreateSourceID(const DIFile *File) {
   // extend .file to support this.
   unsigned CUID = Asm->OutStreamer->hasRawTextSupport() ? 0 : getUniqueID();
   if (!File)
-    return Asm->OutStreamer->emitDwarfFileDirective(0, "", "", None, None,
-                                                    CUID);
+    return Asm->OutStreamer->emitDwarfFileDirective(0, "", "", std::nullopt,
+                                                    std::nullopt, CUID);
 
   if (LastFile != File) {
     LastFile = File;
@@ -671,13 +671,13 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope,
 
   // Add the call site information to the DIE.
   const DILocation *IA = Scope->getInlinedAt();
-  addUInt(*ScopeDIE, dwarf::DW_AT_call_file, None,
+  addUInt(*ScopeDIE, dwarf::DW_AT_call_file, std::nullopt,
           getOrCreateSourceID(IA->getFile()));
-  addUInt(*ScopeDIE, dwarf::DW_AT_call_line, None, IA->getLine());
+  addUInt(*ScopeDIE, dwarf::DW_AT_call_line, std::nullopt, IA->getLine());
   if (IA->getColumn())
-    addUInt(*ScopeDIE, dwarf::DW_AT_call_column, None, IA->getColumn());
+    addUInt(*ScopeDIE, dwarf::DW_AT_call_column, std::nullopt, IA->getColumn());
   if (IA->getDiscriminator() && DD->getDwarfVersion() >= 4)
-    addUInt(*ScopeDIE, dwarf::DW_AT_GNU_discriminator, None,
+    addUInt(*ScopeDIE, dwarf::DW_AT_GNU_discriminator, std::nullopt,
             IA->getDiscriminator());
 
   // Add name to the name table, we do this here because we're guaranteed
@@ -1594,7 +1594,8 @@ void DwarfCompileUnit::createBaseTypeDIEs() {
                     "_" + Twine(Btr.BitSize)).toStringRef(Str));
     addUInt(Die, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1, Btr.Encoding);
     // Round up to smallest number of bytes that contains this number of bits.
-    addUInt(Die, dwarf::DW_AT_byte_size, None, divideCeil(Btr.BitSize, 8));
+    addUInt(Die, dwarf::DW_AT_byte_size, std::nullopt,
+            divideCeil(Btr.BitSize, 8));
 
     Btr.Die = &Die;
   }

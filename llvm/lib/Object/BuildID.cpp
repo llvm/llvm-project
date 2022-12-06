@@ -54,7 +54,7 @@ Optional<BuildIDRef> getBuildID(const ObjectFile *Obj) {
     return getBuildID(O->getELFFile());
   if (auto *O = dyn_cast<ELFObjectFile<ELF64BE>>(Obj))
     return getBuildID(O->getELFFile());
-  return None;
+  return std::nullopt;
 }
 
 Optional<std::string> BuildIDFetcher::fetch(BuildIDRef BuildID) const {
@@ -86,7 +86,7 @@ Optional<std::string> BuildIDFetcher::fetch(BuildIDRef BuildID) const {
         return std::string(Path);
     }
   }
-  return None;
+  return std::nullopt;
 }
 
 } // namespace object

@@ -81,7 +81,7 @@ bool DWARFDebugLine::Prologue::hasFileAtIndex(uint64_t FileIndex) const {
 
 Optional<uint64_t> DWARFDebugLine::Prologue::getLastValidFileIndex() const {
   if (FileNames.empty())
-    return None;
+    return std::nullopt;
   uint16_t DwarfVersion = getVersion();
   assert(DwarfVersion != 0 &&
          "line table prologue has no dwarf version information");
@@ -722,7 +722,7 @@ static Optional<T> parseULEB128(DWARFDataExtractor &Data,
   T Value = Data.getULEB128(Cursor);
   if (Cursor)
     return Value;
-  return None;
+  return std::nullopt;
 }
 
 Error DWARFDebugLine::LineTable::parse(
@@ -1333,11 +1333,11 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
 Optional<StringRef> DWARFDebugLine::LineTable::getSourceByIndex(uint64_t FileIndex,
                                                                 FileLineInfoKind Kind) const {
   if (Kind == FileLineInfoKind::None || !Prologue.hasFileAtIndex(FileIndex))
-    return None;
+    return std::nullopt;
   const FileNameEntry &Entry = Prologue.getFileNameEntry(FileIndex);
   if (auto E = dwarf::toString(Entry.Source))
     return StringRef(*E);
-  return None;
+  return std::nullopt;
 }
 
 static bool isPathAbsoluteOnWindowsOrPosix(const Twine &Path) {
