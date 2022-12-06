@@ -7285,8 +7285,7 @@ void ASTReader::CompleteRedeclChain(const Decl *D) {
   //
   // FIXME: Merging a function definition should merge
   // all mergeable entities within it.
-  if (isa<TranslationUnitDecl>(DC) || isa<NamespaceDecl>(DC) ||
-      isa<CXXRecordDecl>(DC) || isa<EnumDecl>(DC)) {
+  if (isa<TranslationUnitDecl, NamespaceDecl, RecordDecl, EnumDecl>(DC)) {
     if (DeclarationName Name = cast<NamedDecl>(D)->getDeclName()) {
       if (!getContext().getLangOpts().CPlusPlus &&
           isa<TranslationUnitDecl>(DC)) {

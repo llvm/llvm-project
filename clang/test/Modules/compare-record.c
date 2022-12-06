@@ -31,6 +31,15 @@
 // REDEFINE: %{macro_flag} = -DCASE3=1
 // RUN: %{command}
 
+// Run tests for anonymous nested structs and unions
+// REDEFINE: %{filename} = test-anonymous.c
+// REDEFINE: %{macro_flag} = -DCASE1=1
+// RUN: %{command}
+// REDEFINE: %{macro_flag} = -DCASE2=1
+// RUN: %{command}
+// REDEFINE: %{macro_flag} = -DCASE3=1
+// RUN: %{command}
+
 // Test that we don't accept different structs and unions with the same name
 // from multiple modules but detect mismatches and provide actionable
 // diagnostic.
@@ -44,12 +53,14 @@ module First {
   module Hidden {
     header "first.h"
     header "first-nested-struct.h"
+    header "first-anonymous.h"
     export *
   }
 }
 module Second {
   header "second.h"
   header "second-nested-struct.h"
+  header "second-anonymous.h"
   export *
 }
 
@@ -415,4 +426,72 @@ struct CompareDifferentFieldInIndirectStruct compareIndirectStruct;
 struct CompareIndirectStructPointer compareIndirectStructPointer;
 // expected-error@second-nested-struct.h:* {{'IndirectStruct::mismatchingField' from module 'Second' is not present in definition of 'struct IndirectStruct' in module 'First.Hidden'}}
 // expected-note@first-nested-struct.h:* {{declaration of 'mismatchingField' does not match}}
+#endif
+
+//--- include/first-anonymous.h
+struct CompareAnonymousNestedUnion {
+  union {
+    int anonymousNestedUnionField;
+  };
+};
+
+struct CompareAnonymousNestedStruct {
+  struct {
+    int anonymousNestedStructField;
+  };
+};
+
+struct CompareDeeplyNestedAnonymousUnionsAndStructs {
+  union {
+    int x;
+    union {
+      int y;
+      struct {
+        int z;
+      };
+    };
+  };
+};
+
+//--- include/second-anonymous.h
+struct CompareAnonymousNestedUnion {
+  union {
+    float anonymousNestedUnionField;
+  };
+};
+
+struct CompareAnonymousNestedStruct {
+  struct {
+    float anonymousNestedStructField;
+  };
+};
+
+struct CompareDeeplyNestedAnonymousUnionsAndStructs {
+  union {
+    int x;
+    union {
+      int y;
+      struct {
+        float z;
+      };
+    };
+  };
+};
+
+//--- test-anonymous.c
+#include "first-empty.h"
+#include "second-anonymous.h"
+
+#if defined(CASE1)
+struct CompareAnonymousNestedUnion compareAnonymousNestedUnion;
+// expected-error-re@second-anonymous.h:* {{'CompareAnonymousNestedUnion::(anonymous union)::anonymousNestedUnionField' from module 'Second' is not present in definition of 'union CompareAnonymousNestedUnion::(anonymous at {{.*}})' in module 'First.Hidden'}}
+// expected-note@first-anonymous.h:* {{declaration of 'anonymousNestedUnionField' does not match}}
+#elif defined(CASE2)
+struct CompareAnonymousNestedStruct compareAnonymousNestedStruct;
+// expected-error-re@second-anonymous.h:* {{'CompareAnonymousNestedStruct::(anonymous struct)::anonymousNestedStructField' from module 'Second' is not present in definition of 'struct CompareAnonymousNestedStruct::(anonymous at {{.*}})' in module 'First.Hidden'}}
+// expected-note@first-anonymous.h:* {{declaration of 'anonymousNestedStructField' does not match}}
+#elif defined(CASE3)
+struct CompareDeeplyNestedAnonymousUnionsAndStructs compareDeeplyNested;
+// expected-error-re@second-anonymous.h:* {{'CompareDeeplyNestedAnonymousUnionsAndStructs::(anonymous union)::(anonymous union)::(anonymous struct)::z' from module 'Second' is not present in definition of 'struct CompareDeeplyNestedAnonymousUnionsAndStructs::(anonymous at {{.*}})' in module 'First.Hidden'}}
+// expected-note@first-anonymous.h:* {{declaration of 'z' does not match}}
 #endif
