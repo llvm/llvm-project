@@ -218,10 +218,13 @@ struct SIMode {
   SIMode(const AMDGPU::SIModeRegisterDefaults &Mode) {
     IEEE = Mode.IEEE;
     DX10Clamp = Mode.DX10Clamp;
-    FP32InputDenormals = Mode.FP32InputDenormals;
-    FP32OutputDenormals = Mode.FP32OutputDenormals;
-    FP64FP16InputDenormals = Mode.FP64FP16InputDenormals;
-    FP64FP16OutputDenormals = Mode.FP64FP16OutputDenormals;
+    FP32InputDenormals = Mode.FP32Denormals.Input != DenormalMode::PreserveSign;
+    FP32OutputDenormals =
+        Mode.FP32Denormals.Output != DenormalMode::PreserveSign;
+    FP64FP16InputDenormals =
+        Mode.FP64FP16Denormals.Input != DenormalMode::PreserveSign;
+    FP64FP16OutputDenormals =
+        Mode.FP64FP16Denormals.Output != DenormalMode::PreserveSign;
   }
 
   bool operator ==(const SIMode Other) const {
