@@ -3873,6 +3873,18 @@ bool llvm::isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
     if (FPMathOp->hasNoInfs())
       return true;
 
+  if (const auto *Arg = dyn_cast<Argument>(V)) {
+    if ((Arg->getNoFPClass() & fcInf) == fcInf)
+      return true;
+  }
+
+  // TODO: Use fpclass like API for isKnown queries and distinguish +inf from
+  // -inf.
+  if (const auto *CB = dyn_cast<CallBase>(V)) {
+    if ((CB->getRetNoFPClass() & fcInf) == fcInf)
+      return true;
+  }
+
   // Handle scalar constants.
   if (auto *CFP = dyn_cast<ConstantFP>(V))
     return !CFP->isInfinity();
@@ -4000,6 +4012,19 @@ bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
   if (auto *FPMathOp = dyn_cast<FPMathOperator>(V))
     if (FPMathOp->hasNoNaNs())
       return true;
+
+  if (const auto *Arg = dyn_cast<Argument>(V)) {
+    if ((Arg->getNoFPClass() & fcNan) == fcNan)
+      return true;
+  }
+
+  // TODO: Use fpclass like API for isKnown queries and distinguish snan from
+  // qnan.
+  if (const auto *CB = dyn_cast<CallBase>(V)) {
+    FPClassTest Mask = CB->getRetNoFPClass();
+    if ((Mask & fcNan) == fcNan)
+      return true;
+  }
 
   // Handle scalar constants.
   if (auto *CFP = dyn_cast<ConstantFP>(V))

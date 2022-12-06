@@ -294,6 +294,7 @@ namespace llvm {
     bool parseOptionalUWTableKind(UWTableKind &Kind);
     bool parseAllocKind(AllocFnKind &Kind);
     std::optional<MemoryEffects> parseMemoryAttr();
+    unsigned parseNoFPClassAttr();
     bool parseScopeAndOrdering(bool IsAtomic, SyncScope::ID &SSID,
                                AtomicOrdering &Ordering);
     bool parseScope(SyncScope::ID &SSID);
