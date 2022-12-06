@@ -5,8 +5,10 @@ set(amd_comgr_NAME "${PROJECT_NAME}")
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
-
-option(FILE_REORG_BACKWARD_COMPATIBILITY "Enable File Reorg with backward compatibility" ON)
+# Disable file reorg backward compatibility for ASAN build
+if(NOT ENABLE_ASAN_PACKAGING)
+  option(FILE_REORG_BACKWARD_COMPATIBILITY "Enable File Reorg with backward compatibility" ON)
+endif()
 # Optionally, build Compiler Support with ccache.
 set(ROCM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 if (ROCM_CCACHE_BUILD)
@@ -244,6 +246,9 @@ install(TARGETS amd_comgr
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS amd_comgr
+  COMPONENT asan
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h"
@@ -276,6 +281,10 @@ install(FILES
   "NOTICES.txt"
   COMPONENT amd-comgr
   DESTINATION ${CMAKE_INSTALL_DOCDIR})
+install(FILES
+  "LICENSE.txt"
+  COMPONENT asan
+  DESTINATION ${CMAKE_INSTALL_DOCDIR}-asan)
 
 # Generate the install-tree package.
 set(AMD_COMGR_PREFIX_CODE "
@@ -299,13 +308,16 @@ configure_file("cmake/${AMD_COMGR_CONFIG_NAME}.in"
   @ONLY)
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/${AMD_COMGR_CONFIG_NAME}.install"
+  COMPONENT amd-comgr
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/${AMD_COMGR_PACKAGE_PREFIX}"
   RENAME "${AMD_COMGR_CONFIG_NAME}")
 install(EXPORT amd_comgr_export
+  COMPONENT amd-comgr
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/${AMD_COMGR_PACKAGE_PREFIX}"
   FILE "${AMD_COMGR_TARGETS_NAME}")
 install(FILES
   "${AMD_COMGR_VERSION_PATH}"
+  COMPONENT amd-comgr
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/${AMD_COMGR_PACKAGE_PREFIX}")
 
 if(TARGET clangFrontendTool)
@@ -357,16 +369,29 @@ endif()
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   # Add packaging directives for amd_comgr
+  if(ENABLE_ASAN_PACKAGING)
+  # Only libraries required for ASAN Package
+    set(CPACK_COMPONENTS_ALL asan)
+    set(PKG_DESC_SUMMARY "AddressSanitizer Instrumented Libraries to provide support functions for ROCm code objects.")
+  else()
+    set(CPACK_COMPONENTS_ALL amd-comgr)
+    set(PKG_DESC_SUMMARY "Library to provide support functions for ROCm code objects.")
+  endif()
   set(CPACK_PACKAGE_NAME comgr)
   set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc.")
-  set(CPACK_PACKAGE_DESCRIPTION "Library to provide support functions\nfor ROCm code objects.")
+  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${PKG_DESC_SUMMARY})
+  set(CPACK_PACKAGE_DESCRIPTION "This package contains the AMD ${CPACK_PACKAGE_DESCRIPTION_SUMMARY}.")
   set(CPACK_PACKAGE_VERSION_MAJOR "${amd_comgr_VERSION_MAJOR}")
   set(CPACK_PACKAGE_VERSION_MINOR "${amd_comgr_VERSION_MINOR}")
   set(CPACK_PACKAGE_VERSION_PATCH "${amd_comgr_VERSION_PATCH}")
   set(CPACK_PACKAGE_CONTACT "ROCm Compiler Support <rocm.compiler.support@amd.com>")
   set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 
-  # Make proper version for appending
+  # ASAN Specific variables
+  set(CPACK_DEBIAN_ASAN_PACKAGE_NAME comgr-asan)
+  set(CPACK_RPM_ASAN_PACKAGE_NAME comgr-asan)
+
+ # Make proper version for appending
   set(ROCM_VERSION_FOR_PACKAGE "")
   if(DEFINED ENV{ROCM_LIBPATCH_VERSION})
     set(ROCM_VERSION_FOR_PACKAGE $ENV{ROCM_LIBPATCH_VERSION})
@@ -378,11 +403,15 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 
   # Debian package specific variables
+  set(CPACK_DEB_COMPONENT_INSTALL ON)
+  set(CPACK_DEBIAN_AMD-COMGR_PACKAGE_NAME comgr)
   set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/RadeonOpenCompute/ROCm-CompilerSupport")
   if (LLVM_LINK_LLVM_DYLIB)
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "libtinfo-dev, rocm-core, rocm-llvm-core")
+    set(CPACK_DEBIAN_ASAN_PACKAGE_DEPENDS "libtinfo-dev, rocm-core-asan, rocm-llvm-core")
   else()
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "libtinfo-dev, rocm-core")
+    set(CPACK_DEBIAN_ASAN_PACKAGE_DEPENDS "libtinfo-dev, rocm-core-asan")
   endif()
   if (DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
     set(CPACK_DEBIAN_PACKAGE_RELEASE $ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
@@ -391,10 +420,14 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 
   # RPM package specific variables
+  set(CPACK_RPM_COMPONENT_INSTALL ON)
+  set(CPACK_RPM_AMD-COMGR_PACKAGE_NAME comgr)
   if (LLVM_LINK_LLVM_DYLIB)
     set(CPACK_RPM_PACKAGE_REQUIRES "ncurses, rocm-core, rocm-llvm-core")
+    set(CPACK_RPM_ASAN_PACKAGE_REQUIRES "ncurses, rocm-core-asan, rocm-llvm-core")
   else()
     set(CPACK_RPM_PACKAGE_REQUIRES "ncurses, rocm-core")
+    set(CPACK_RPM_ASAN_PACKAGE_REQUIRES "ncurses, rocm-core-asan")
   endif()
   if(DEFINED ENV{CPACK_RPM_PACKAGE_RELEASE})
     set(CPACK_RPM_PACKAGE_RELEASE $ENV{CPACK_RPM_PACKAGE_RELEASE})
@@ -417,7 +450,9 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   # Remove dependency on rocm-core if -DROCM_DEP_ROCMCORE=ON not given to cmake
   if(NOT ROCM_DEP_ROCMCORE)
       string(REGEX REPLACE ",? ?rocm-core" "" CPACK_RPM_PACKAGE_REQUIRES ${CPACK_RPM_PACKAGE_REQUIRES})
+      string(REGEX REPLACE ",? ?rocm-core-asan" "" CPACK_RPM_ASAN_PACKAGE_REQUIRES ${CPACK_RPM_ASAN_PACKAGE_REQUIRES})
       string(REGEX REPLACE ",? ?rocm-core" "" CPACK_DEBIAN_PACKAGE_DEPENDS ${CPACK_DEBIAN_PACKAGE_DEPENDS})
+      string(REGEX REPLACE ",? ?rocm-core-asan" "" CPACK_DEBIAN_ASAN_PACKAGE_DEPENDS ${CPACK_DEBIAN_ASAN_PACKAGE_DEPENDS})
   endif()
 
   include(CPack)
