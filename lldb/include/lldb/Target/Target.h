@@ -431,6 +431,10 @@ public:
       m_language = lldb::eLanguageTypeSwift;
   }
 
+  bool GetBindGenericTypes() const { return m_bind_generic_types; }
+
+  void SetBindGenericTypes(bool b) { m_bind_generic_types = b; }
+
   bool GetPlaygroundTransformHighPerformance() const {
     return m_playground_transforms_hp;
   }
@@ -515,6 +519,8 @@ private:
   /// True if the executed code should be treated as utility code that is only
   /// used by LLDB internally.
   bool m_running_utility_expression = false;
+
+  bool m_bind_generic_types = true;
 
   lldb::DynamicValueType m_use_dynamic = lldb::eNoDynamicValues;
   Timeout<std::micro> m_timeout = default_timeout;
