@@ -391,25 +391,28 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   }
 
   // Definability
-  if (scope) {
-    const char *reason{nullptr};
+  const char *reason{nullptr};
+  if (dummy.intent == common::Intent::Out) {
+    reason = "INTENT(OUT)";
+  } else if (dummy.intent == common::Intent::InOut) {
+    reason = "INTENT(IN OUT)";
+  }
+  bool dummyIsPointer{
+      dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)};
+  if (reason && scope) {
     // Problems with polymorphism are caught in the callee's definition.
     DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
-    if (dummy.intent == common::Intent::Out) {
-      reason = "INTENT(OUT)";
-    } else if (dummy.intent == common::Intent::InOut) {
-      reason = "INTENT(IN OUT)";
+    if (isElemental || dummyIsValue) { // 15.5.2.4(21)
+      flags.set(DefinabilityFlag::VectorSubscriptIsOk);
     }
-    if (reason) {
-      if (isElemental || dummyIsValue) { // 15.5.2.4(21)
-        flags.set(DefinabilityFlag::VectorSubscriptIsOk);
-      }
-      if (auto whyNot{WhyNotDefinable(messages.at(), *scope, flags, actual)}) {
-        if (auto *msg{messages.Say(
-                "Actual argument associated with %s %s is not definable"_err_en_US,
-                reason, dummyName)}) {
-          msg->Attach(std::move(*whyNot));
-        }
+    if (actualIsPointer && dummyIsPointer) { // 19.6.8
+      flags.set(DefinabilityFlag::PointerDefinition);
+    }
+    if (auto whyNot{WhyNotDefinable(messages.at(), *scope, flags, actual)}) {
+      if (auto *msg{messages.Say(
+              "Actual argument associated with %s %s is not definable"_err_en_US,
+              reason, dummyName)}) {
+        msg->Attach(std::move(*whyNot));
       }
     }
   }
@@ -418,8 +421,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   bool actualIsContiguous{IsSimplyContiguous(actual, context)};
   bool dummyIsAssumedShape{dummy.type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedShape)};
-  bool dummyIsPointer{
-      dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)};
   bool dummyIsContiguous{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Contiguous)};
   if ((actualIsAsynchronous || actualIsVolatile) &&
@@ -691,9 +692,15 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
     }
     if (dummyIsPointer && dummy.intent != common::Intent::In) {
       const Symbol *last{GetLastSymbol(*expr)};
-      if (!(last && IsProcedurePointer(*last)) &&
-          !(dummy.intent == common::Intent::Default &&
-              IsNullProcedurePointer(*expr))) {
+      if (last && IsProcedurePointer(*last)) {
+        if (dummy.intent != common::Intent::Default &&
+            IsIntentIn(last->GetUltimate())) { // 19.6.8
+          messages.Say(
+              "Actual argument associated with procedure pointer %s may not be INTENT(IN)"_err_en_US,
+              dummyName);
+        }
+      } else if (!(dummy.intent == common::Intent::Default &&
+                     IsNullProcedurePointer(*expr))) {
         // 15.5.2.9(5) -- dummy procedure POINTER
         // Interface compatibility has already been checked above
         messages.Say(
