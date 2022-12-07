@@ -5266,6 +5266,19 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   MVT XLenVT = Subtarget.getXLenVT();
 
   if (VecVT.getVectorElementType() == MVT::i1) {
+    // Use vfirst.m to extract the first bit.
+    if (isNullConstant(Idx)) {
+      MVT ContainerVT = VecVT;
+      if (VecVT.isFixedLengthVector()) {
+        ContainerVT = getContainerForFixedLengthVector(VecVT);
+        Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
+      }
+      auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
+      SDValue Vfirst =
+          DAG.getNode(RISCVISD::VFIRST_VL, DL, XLenVT, Vec, Mask, VL);
+      return DAG.getSetCC(DL, XLenVT, Vfirst, DAG.getConstant(0, DL, XLenVT),
+                          ISD::SETEQ);
+    }
     if (VecVT.isFixedLengthVector()) {
       unsigned NumElts = VecVT.getVectorNumElements();
       if (NumElts >= 8) {
