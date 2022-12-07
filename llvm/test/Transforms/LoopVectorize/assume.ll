@@ -1,4 +1,4 @@
-; RUN: opt < %s  -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=2  -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=2  -S | FileCheck %s
 
 define void @test1(float* noalias nocapture %a, float* noalias nocapture readonly %b) {
 ; CHECK-LABEL: @test1(
