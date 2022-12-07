@@ -93,7 +93,7 @@ TEST(FileEntryTest, OptionalFileEntryRefDegradesToFileEntryPtr) {
   OptionalFileEntryRefDegradesToFileEntryPtr M0;
   OptionalFileEntryRefDegradesToFileEntryPtr M1 = Refs.addFile("1");
   OptionalFileEntryRefDegradesToFileEntryPtr M2 = Refs.addFile("2");
-  OptionalFileEntryRefDegradesToFileEntryPtr M0Also = None;
+  OptionalFileEntryRefDegradesToFileEntryPtr M0Also = std::nullopt;
   OptionalFileEntryRefDegradesToFileEntryPtr M1Also =
       Refs.addFileAlias("1-also", *M1);
 
