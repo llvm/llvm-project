@@ -70,7 +70,7 @@ public:
 
   /// Return the full length of this table, including the length field.
   /// Return None if the length cannot be identified reliably.
-  Optional<uint64_t> getFullLength() const;
+  std::optional<uint64_t> getFullLength() const;
 
   /// Return the DWARF format of this table.
   dwarf::DwarfFormat getFormat() const { return Format; }

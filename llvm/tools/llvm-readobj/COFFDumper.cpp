@@ -1371,7 +1371,7 @@ void COFFDumper::mergeCodeViewTypes(MergingTypeTableBuilder &CVIDs,
                     Obj->getFileName());
       }
       SmallVector<TypeIndex, 128> SourceToDest;
-      Optional<PCHMergerInfo> PCHInfo;
+      std::optional<PCHMergerInfo> PCHInfo;
       if (GHash) {
         std::vector<GloballyHashedType> Hashes =
             GloballyHashedType::hashTypes(Types);

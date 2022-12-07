@@ -173,7 +173,7 @@ bool DWARFFormValue::skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
     case DW_FORM_GNU_ref_alt:
     case DW_FORM_GNU_strp_alt:
     case DW_FORM_implicit_const:
-      if (Optional<uint8_t> FixedSize =
+      if (std::optional<uint8_t> FixedSize =
               dwarf::getFixedFormByteSize(Form, Params)) {
         *OffsetPtr += *FixedSize;
         return true;
@@ -427,7 +427,8 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
       OS << "<invalid dwarf unit>";
       break;
     }
-    Optional<object::SectionedAddress> A = U->getAddrOffsetSectionItem(UValue);
+    std::optional<object::SectionedAddress> A =
+        U->getAddrOffsetSectionItem(UValue);
     if (!A || DumpOpts.Verbose)
       AddrOS << format("indexed (%8.8x) address = ", (uint32_t)UValue);
     if (A)
@@ -443,7 +444,8 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     }
     uint32_t Index = UValue >> 32;
     uint32_t Offset = UValue & 0xffffffff;
-    Optional<object::SectionedAddress> A = U->getAddrOffsetSectionItem(Index);
+    std::optional<object::SectionedAddress> A =
+        U->getAddrOffsetSectionItem(Index);
     if (!A || DumpOpts.Verbose)
       AddrOS << format("indexed (%8.8x) + 0x%x address = ", Index, Offset);
     if (A) {
@@ -666,13 +668,13 @@ Expected<const char *> DWARFFormValue::getAsCString() const {
       inconvertibleErrorCode());
 }
 
-Optional<uint64_t> DWARFFormValue::getAsAddress() const {
+std::optional<uint64_t> DWARFFormValue::getAsAddress() const {
   if (auto SA = getAsSectionedAddress())
     return SA->Address;
   return std::nullopt;
 }
 
-Optional<object::SectionedAddress>
+std::optional<object::SectionedAddress>
 DWARFFormValue::getAsSectionedAddress() const {
   if (!isFormClass(FC_Address))
     return std::nullopt;
@@ -682,7 +684,8 @@ DWARFFormValue::getAsSectionedAddress() const {
     uint32_t Index = AddrOffset ? (Value.uval >> 32) : Value.uval;
     if (!U)
       return std::nullopt;
-    Optional<object::SectionedAddress> SA = U->getAddrOffsetSectionItem(Index);
+    std::optional<object::SectionedAddress> SA =
+        U->getAddrOffsetSectionItem(Index);
     if (!SA)
       return std::nullopt;
     if (AddrOffset)
@@ -692,13 +695,14 @@ DWARFFormValue::getAsSectionedAddress() const {
   return {{Value.uval, Value.SectionIndex}};
 }
 
-Optional<uint64_t> DWARFFormValue::getAsReference() const {
+std::optional<uint64_t> DWARFFormValue::getAsReference() const {
   if (auto R = getAsRelativeReference())
     return R->Unit ? R->Unit->getOffset() + R->Offset : R->Offset;
   return std::nullopt;
 }
 
-Optional<DWARFFormValue::UnitOffset> DWARFFormValue::getAsRelativeReference() const {
+std::optional<DWARFFormValue::UnitOffset>
+DWARFFormValue::getAsRelativeReference() const {
   if (!isFormClass(FC_Reference))
     return std::nullopt;
   switch (Form) {
@@ -719,20 +723,20 @@ Optional<DWARFFormValue::UnitOffset> DWARFFormValue::getAsRelativeReference() co
   }
 }
 
-Optional<uint64_t> DWARFFormValue::getAsSectionOffset() const {
+std::optional<uint64_t> DWARFFormValue::getAsSectionOffset() const {
   if (!isFormClass(FC_SectionOffset))
     return std::nullopt;
   return Value.uval;
 }
 
-Optional<uint64_t> DWARFFormValue::getAsUnsignedConstant() const {
+std::optional<uint64_t> DWARFFormValue::getAsUnsignedConstant() const {
   if ((!isFormClass(FC_Constant) && !isFormClass(FC_Flag)) ||
       Form == DW_FORM_sdata)
     return std::nullopt;
   return Value.uval;
 }
 
-Optional<int64_t> DWARFFormValue::getAsSignedConstant() const {
+std::optional<int64_t> DWARFFormValue::getAsSignedConstant() const {
   if ((!isFormClass(FC_Constant) && !isFormClass(FC_Flag)) ||
       (Form == DW_FORM_udata &&
        uint64_t(std::numeric_limits<int64_t>::max()) < Value.uval))
@@ -751,26 +755,26 @@ Optional<int64_t> DWARFFormValue::getAsSignedConstant() const {
   }
 }
 
-Optional<ArrayRef<uint8_t>> DWARFFormValue::getAsBlock() const {
+std::optional<ArrayRef<uint8_t>> DWARFFormValue::getAsBlock() const {
   if (!isFormClass(FC_Block) && !isFormClass(FC_Exprloc) &&
       Form != DW_FORM_data16)
     return std::nullopt;
   return makeArrayRef(Value.data, Value.uval);
 }
 
-Optional<uint64_t> DWARFFormValue::getAsCStringOffset() const {
+std::optional<uint64_t> DWARFFormValue::getAsCStringOffset() const {
   if (!isFormClass(FC_String) && Form == DW_FORM_string)
     return std::nullopt;
   return Value.uval;
 }
 
-Optional<uint64_t> DWARFFormValue::getAsReferenceUVal() const {
+std::optional<uint64_t> DWARFFormValue::getAsReferenceUVal() const {
   if (!isFormClass(FC_Reference))
     return std::nullopt;
   return Value.uval;
 }
 
-Optional<std::string>
+std::optional<std::string>
 DWARFFormValue::getAsFile(DILineInfoSpecifier::FileLineInfoKind Kind) const {
   if (U == nullptr || !isFormClass(FC_Constant))
     return std::nullopt;

@@ -86,15 +86,15 @@ Error RangeListEntry::extract(DWARFDataExtractor Data, uint64_t *OffsetPtr) {
 }
 
 DWARFAddressRangesVector DWARFDebugRnglist::getAbsoluteRanges(
-    llvm::Optional<object::SectionedAddress> BaseAddr, DWARFUnit &U) const {
+    std::optional<object::SectionedAddress> BaseAddr, DWARFUnit &U) const {
   return getAbsoluteRanges(
       BaseAddr, U.getAddressByteSize(),
       [&](uint32_t Index) { return U.getAddrOffsetSectionItem(Index); });
 }
 
 DWARFAddressRangesVector DWARFDebugRnglist::getAbsoluteRanges(
-    Optional<object::SectionedAddress> BaseAddr, uint8_t AddressByteSize,
-    function_ref<Optional<object::SectionedAddress>(uint32_t)>
+    std::optional<object::SectionedAddress> BaseAddr, uint8_t AddressByteSize,
+    function_ref<std::optional<object::SectionedAddress>(uint32_t)>
         LookupPooledAddress) const {
   DWARFAddressRangesVector Res;
   uint64_t Tombstone = dwarf::computeTombstoneAddress(AddressByteSize);
@@ -175,7 +175,7 @@ DWARFAddressRangesVector DWARFDebugRnglist::getAbsoluteRanges(
 void RangeListEntry::dump(
     raw_ostream &OS, uint8_t AddrSize, uint8_t MaxEncodingStringLength,
     uint64_t &CurrentBase, DIDumpOptions DumpOpts,
-    llvm::function_ref<Optional<object::SectionedAddress>(uint32_t)>
+    llvm::function_ref<std::optional<object::SectionedAddress>(uint32_t)>
         LookupPooledAddress) const {
   auto PrintRawEntry = [](raw_ostream &OS, const RangeListEntry &Entry,
                           uint8_t AddrSize, DIDumpOptions DumpOpts) {

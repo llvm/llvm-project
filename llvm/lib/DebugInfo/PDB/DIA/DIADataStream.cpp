@@ -24,7 +24,7 @@ std::string DIADataStream::getName() const {
   return invokeBstrMethod(*StreamData, &IDiaEnumDebugStreamData::get_name);
 }
 
-llvm::Optional<DIADataStream::RecordType>
+std::optional<DIADataStream::RecordType>
 DIADataStream::getItemAtIndex(uint32_t Index) const {
   RecordType Record;
   DWORD RecordSize = 0;

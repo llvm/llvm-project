@@ -119,7 +119,7 @@ static DWARFExpression::Operation::Description getOpDesc(unsigned OpCode) {
 
 bool DWARFExpression::Operation::extract(DataExtractor Data,
                                          uint8_t AddressSize, uint64_t Offset,
-                                         Optional<DwarfFormat> Format) {
+                                         std::optional<DwarfFormat> Format) {
   EndOffset = Offset;
   Opcode = Data.getU8(&Offset);
 

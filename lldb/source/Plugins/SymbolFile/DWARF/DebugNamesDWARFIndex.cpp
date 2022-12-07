@@ -43,7 +43,7 @@ DebugNamesDWARFIndex::GetUnits(const DebugNames &debug_names) {
 
 llvm::Optional<DIERef>
 DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
-  llvm::Optional<uint64_t> cu_offset = entry.getCUOffset();
+  std::optional<uint64_t> cu_offset = entry.getCUOffset();
   if (!cu_offset)
     return llvm::None;
 
@@ -52,7 +52,7 @@ DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
     return llvm::None;
 
   cu = &cu->GetNonSkeletonUnit();
-  if (llvm::Optional<uint64_t> die_offset = entry.getDIEUnitOffset())
+  if (std::optional<uint64_t> die_offset = entry.getDIEUnitOffset())
     return DIERef(cu->GetSymbolFileDWARF().GetDwoNum(),
                   DIERef::Section::DebugInfo, cu->GetOffset() + *die_offset);
 

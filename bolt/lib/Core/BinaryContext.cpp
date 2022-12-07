@@ -1482,14 +1482,14 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
          "FileIndex out of range for the compilation unit.");
   StringRef Dir = "";
   if (FileNames[FileIndex - 1].DirIdx != 0) {
-    if (Optional<const char *> DirName = dwarf::toString(
+    if (std::optional<const char *> DirName = dwarf::toString(
             LineTable->Prologue
                 .IncludeDirectories[FileNames[FileIndex - 1].DirIdx - 1])) {
       Dir = *DirName;
     }
   }
   StringRef FileName = "";
-  if (Optional<const char *> FName =
+  if (std::optional<const char *> FName =
           dwarf::toString(FileNames[FileIndex - 1].Name))
     FileName = *FName;
   assert(FileName != "");
@@ -1545,7 +1545,7 @@ DWARFContext *BinaryContext::getDWOContext() const {
 void BinaryContext::preprocessDWODebugInfo() {
   for (const std::unique_ptr<DWARFUnit> &CU : DwCtx->compile_units()) {
     DWARFUnit *const DwarfUnit = CU.get();
-    if (llvm::Optional<uint64_t> DWOId = DwarfUnit->getDWOId()) {
+    if (std::optional<uint64_t> DWOId = DwarfUnit->getDWOId()) {
       DWARFUnit *DWOCU = DwarfUnit->getNonSkeletonUnitDIE(false).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
         std::string DWOName = dwarf::toString(
@@ -1648,9 +1648,9 @@ void BinaryContext::preprocessDebugInfo() {
       std::optional<MD5::MD5Result> Checksum;
       if (LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[0].Checksum;
-      Optional<const char *> Name =
+      std::optional<const char *> Name =
           dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
-      if (Optional<uint64_t> DWOID = CU->getDWOId()) {
+      if (std::optional<uint64_t> DWOID = CU->getDWOId()) {
         auto Iter = DWOCUs.find(*DWOID);
         assert(Iter != DWOCUs.end() && "DWO CU was not found.");
         Name = dwarf::toString(
@@ -1675,12 +1675,13 @@ void BinaryContext::preprocessDebugInfo() {
       // means empty dir.
       StringRef Dir = "";
       if (FileNames[I].DirIdx != 0 || DwarfVersion >= 5)
-        if (Optional<const char *> DirName = dwarf::toString(
+        if (std::optional<const char *> DirName = dwarf::toString(
                 LineTable->Prologue
                     .IncludeDirectories[FileNames[I].DirIdx - Offset]))
           Dir = *DirName;
       StringRef FileName = "";
-      if (Optional<const char *> FName = dwarf::toString(FileNames[I].Name))
+      if (std::optional<const char *> FName =
+              dwarf::toString(FileNames[I].Name))
         FileName = *FName;
       assert(FileName != "");
       std::optional<MD5::MD5Result> Checksum;
@@ -1811,7 +1812,7 @@ static void printDebugInfo(raw_ostream &OS, const MCInst &Instruction,
 
   const DWARFDebugLine::Row &Row = LineTable->Rows[RowRef.RowIndex - 1];
   StringRef FileName = "";
-  if (Optional<const char *> FName =
+  if (std::optional<const char *> FName =
           dwarf::toString(LineTable->Prologue.FileNames[Row.File - 1].Name))
     FileName = *FName;
   OS << " # debug line " << FileName << ":" << Row.Line;

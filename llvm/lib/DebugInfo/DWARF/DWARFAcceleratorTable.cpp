@@ -143,8 +143,8 @@ void AppleAcceleratorTable::Header::dump(ScopedPrinter &W) const {
   W.printNumber("HeaderData length", HeaderDataLength);
 }
 
-Optional<uint64_t> AppleAcceleratorTable::HeaderData::extractOffset(
-    Optional<DWARFFormValue> Value) const {
+std::optional<uint64_t> AppleAcceleratorTable::HeaderData::extractOffset(
+    std::optional<DWARFFormValue> Value) const {
   if (!Value)
     return std::nullopt;
 
@@ -185,7 +185,7 @@ bool AppleAcceleratorTable::dumpName(ScopedPrinter &W,
       W.startLine() << format("Atom[%d]: ", i);
       if (Atom.extractValue(AccelSection, DataOffset, FormParams)) {
         Atom.dump(W.getOStream());
-        if (Optional<uint64_t> Val = Atom.getAsUnsignedConstant()) {
+        if (std::optional<uint64_t> Val = Atom.getAsUnsignedConstant()) {
           StringRef Str = dwarf::AtomValueString(HdrData.Atoms[i].first, *Val);
           if (!Str.empty())
             W.getOStream() << " (" << Str << ")";
@@ -272,7 +272,7 @@ void AppleAcceleratorTable::Entry::extract(
     Atom.extractValue(AccelTable.AccelSection, Offset, FormParams);
 }
 
-Optional<DWARFFormValue>
+std::optional<DWARFFormValue>
 AppleAcceleratorTable::Entry::lookup(HeaderData::AtomType Atom) const {
   assert(HdrData && "Dereferencing end iterator?");
   assert(HdrData->Atoms.size() == Values.size());
@@ -283,19 +283,20 @@ AppleAcceleratorTable::Entry::lookup(HeaderData::AtomType Atom) const {
   return std::nullopt;
 }
 
-Optional<uint64_t> AppleAcceleratorTable::Entry::getDIESectionOffset() const {
+std::optional<uint64_t>
+AppleAcceleratorTable::Entry::getDIESectionOffset() const {
   return HdrData->extractOffset(lookup(dwarf::DW_ATOM_die_offset));
 }
 
-Optional<uint64_t> AppleAcceleratorTable::Entry::getCUOffset() const {
+std::optional<uint64_t> AppleAcceleratorTable::Entry::getCUOffset() const {
   return HdrData->extractOffset(lookup(dwarf::DW_ATOM_cu_offset));
 }
 
-Optional<dwarf::Tag> AppleAcceleratorTable::Entry::getTag() const {
-  Optional<DWARFFormValue> Tag = lookup(dwarf::DW_ATOM_die_tag);
+std::optional<dwarf::Tag> AppleAcceleratorTable::Entry::getTag() const {
+  std::optional<DWARFFormValue> Tag = lookup(dwarf::DW_ATOM_die_tag);
   if (!Tag)
     return std::nullopt;
-  if (Optional<uint64_t> Value = Tag->getAsUnsignedConstant())
+  if (std::optional<uint64_t> Value = Tag->getAsUnsignedConstant())
     return dwarf::Tag(*Value);
   return std::nullopt;
 }
@@ -534,7 +535,7 @@ DWARFDebugNames::Entry::Entry(const NameIndex &NameIdx, const Abbrev &Abbr)
     Values.emplace_back(Attr.Form);
 }
 
-Optional<DWARFFormValue>
+std::optional<DWARFFormValue>
 DWARFDebugNames::Entry::lookup(dwarf::Index Index) const {
   assert(Abbr->Attributes.size() == Values.size());
   for (auto Tuple : zip_first(Abbr->Attributes, Values)) {
@@ -544,14 +545,14 @@ DWARFDebugNames::Entry::lookup(dwarf::Index Index) const {
   return std::nullopt;
 }
 
-Optional<uint64_t> DWARFDebugNames::Entry::getDIEUnitOffset() const {
-  if (Optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_die_offset))
+std::optional<uint64_t> DWARFDebugNames::Entry::getDIEUnitOffset() const {
+  if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_die_offset))
     return Off->getAsReferenceUVal();
   return std::nullopt;
 }
 
-Optional<uint64_t> DWARFDebugNames::Entry::getCUIndex() const {
-  if (Optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_compile_unit))
+std::optional<uint64_t> DWARFDebugNames::Entry::getCUIndex() const {
+  if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_compile_unit))
     return Off->getAsUnsignedConstant();
   // In a per-CU index, the entries without a DW_IDX_compile_unit attribute
   // implicitly refer to the single CU.
@@ -560,8 +561,8 @@ Optional<uint64_t> DWARFDebugNames::Entry::getCUIndex() const {
   return std::nullopt;
 }
 
-Optional<uint64_t> DWARFDebugNames::Entry::getCUOffset() const {
-  Optional<uint64_t> Index = getCUIndex();
+std::optional<uint64_t> DWARFDebugNames::Entry::getCUOffset() const {
+  std::optional<uint64_t> Index = getCUIndex();
   if (!Index || *Index >= NameIdx->getCUCount())
     return std::nullopt;
   return NameIdx->getCUOffset(*Index);
@@ -683,7 +684,7 @@ bool DWARFDebugNames::NameIndex::dumpEntry(ScopedPrinter &W,
 
 void DWARFDebugNames::NameIndex::dumpName(ScopedPrinter &W,
                                           const NameTableEntry &NTE,
-                                          Optional<uint32_t> Hash) const {
+                                          std::optional<uint32_t> Hash) const {
   DictScope NameScope(W, ("Name " + Twine(NTE.getIndex())).str());
   if (Hash)
     W.printHex("Hash", *Hash);
@@ -793,7 +794,7 @@ LLVM_DUMP_METHOD void DWARFDebugNames::dump(raw_ostream &OS) const {
     NI.dump(W);
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 DWARFDebugNames::ValueIterator::findEntryOffsetInCurrentIndex() {
   const Header &Hdr = CurrentIndex->Hdr;
   if (Hdr.BucketCount == 0) {
@@ -837,7 +838,7 @@ bool DWARFDebugNames::ValueIterator::getEntryAtCurrentOffset() {
 }
 
 bool DWARFDebugNames::ValueIterator::findInCurrentIndex() {
-  Optional<uint64_t> Offset = findEntryOffsetInCurrentIndex();
+  std::optional<uint64_t> Offset = findEntryOffsetInCurrentIndex();
   if (!Offset)
     return false;
   DataOffset = *Offset;
