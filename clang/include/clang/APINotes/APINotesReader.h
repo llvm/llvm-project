@@ -81,7 +81,7 @@ public:
 
   public:
     /// Form an empty set of versioned information.
-    VersionedInfo(llvm::NoneType) : Selected(0) { }
+    VersionedInfo(std::nullopt_t) : Selected(0) { }
     
     /// Form a versioned info set given the desired version and a set of
     /// results.

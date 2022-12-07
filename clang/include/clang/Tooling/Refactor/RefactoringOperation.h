@@ -137,7 +137,7 @@ struct RefactoringOperationResult {
   StringRef FailureReason;
 
   RefactoringOperationResult() : Initiated(false) {}
-  RefactoringOperationResult(llvm::NoneType) : Initiated(false) {}
+  RefactoringOperationResult(std::nullopt_t) : Initiated(false) {}
   explicit RefactoringOperationResult(StringRef FailureReason)
       : Initiated(false), FailureReason(FailureReason) {}
 };

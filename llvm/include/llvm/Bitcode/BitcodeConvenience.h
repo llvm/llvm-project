@@ -205,7 +205,7 @@ public:
   }
 
   template <typename T, typename... DataTy>
-  static void read(ArrayRef<T> buffer, NoneType, DataTy &&...data) {
+  static void read(ArrayRef<T> buffer, std::nullopt_t, DataTy &&...data) {
     assert(!buffer.empty() && "too few elements in buffer");
     BCRecordCoding<Fields...>::read(buffer.slice(1),
                                     std::forward<DataTy>(data)...);
@@ -237,7 +237,7 @@ public:
     data = ElementTy::convert(buffer.front());
   }
 
-  template <typename T> static void read(ArrayRef<T> buffer, NoneType) {
+  template <typename T> static void read(ArrayRef<T> buffer, std::nullopt_t) {
     assert(buffer.size() == 1 && "record data does not match layout");
     (void)buffer;
   }
@@ -278,7 +278,7 @@ public:
 
   template <typename BufferTy>
   static void emit(llvm::BitstreamWriter &Stream, BufferTy &Buffer,
-                   unsigned code, NoneType) {
+                   unsigned code, std::nullopt_t) {
     Stream.EmitRecordWithAbbrev(code, Buffer);
   }
 
@@ -293,7 +293,7 @@ public:
                  llvm::map_iterator(buffer.end(), T::convert));
   }
 
-  template <typename T> static void read(ArrayRef<T> buffer, NoneType) {
+  template <typename T> static void read(ArrayRef<T> buffer, std::nullopt_t) {
     (void)buffer;
   }
 
