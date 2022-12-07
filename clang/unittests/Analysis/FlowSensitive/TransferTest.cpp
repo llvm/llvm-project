@@ -3613,6 +3613,172 @@ TEST(TransferTest, StructuredBindingAssignFromStructIntMembersToInts) {
       });
 }
 
+TEST(TransferTest, StructuredBindingAssignFromTupleLikeType) {
+  std::string Code = R"(
+    namespace std {
+    using size_t = int;
+    template <class> struct tuple_size;
+    template <std::size_t, class> struct tuple_element;
+    template <class...> class tuple;
+
+    namespace {
+    template <class T, T v>
+    struct size_helper { static const T value = v; };
+    } // namespace
+
+    template <class... T>
+    struct tuple_size<tuple<T...>> : size_helper<std::size_t, sizeof...(T)> {};
+
+    template <std::size_t I, class... T>
+    struct tuple_element<I, tuple<T...>> {
+      using type =  __type_pack_element<I, T...>;
+    };
+
+    template <class...> class tuple {};
+
+    template <std::size_t I, class... T>
+    typename tuple_element<I, tuple<T...>>::type get(tuple<T...>);
+    } // namespace std
+
+    std::tuple<bool, int> makeTuple();
+
+    void target(bool B) {
+      auto [BoundFoo, BoundBar] = makeTuple();
+      bool Baz;
+      // Include if-then-else to test interaction of `BindingDecl` with join.
+      if (B) {
+        Baz = BoundFoo;
+        (void)BoundBar;
+        // [[p1]]
+      } else {
+        Baz = BoundFoo;
+      }
+      (void)0;
+      // [[p2]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2"));
+        const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
+
+        const ValueDecl *BoundFooDecl = findValueDecl(ASTCtx, "BoundFoo");
+        ASSERT_THAT(BoundFooDecl, NotNull());
+
+        const ValueDecl *BoundBarDecl = findValueDecl(ASTCtx, "BoundBar");
+        ASSERT_THAT(BoundBarDecl, NotNull());
+
+        const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
+        ASSERT_THAT(BazDecl, NotNull());
+
+        const Value *BoundFooValue =
+            Env1.getValue(*BoundFooDecl, SkipPast::Reference);
+        ASSERT_THAT(BoundFooValue, NotNull());
+        EXPECT_TRUE(isa<BoolValue>(BoundFooValue));
+
+        const Value *BoundBarValue =
+            Env1.getValue(*BoundBarDecl, SkipPast::Reference);
+        ASSERT_THAT(BoundBarValue, NotNull());
+        EXPECT_TRUE(isa<IntegerValue>(BoundBarValue));
+
+        // Test that a `DeclRefExpr` to a `BindingDecl` works as expected.
+        EXPECT_EQ(Env1.getValue(*BazDecl, SkipPast::Reference), BoundFooValue);
+
+        const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
+
+        // Test that `BoundFooDecl` retains the value we expect, after the join.
+        BoundFooValue = Env2.getValue(*BoundFooDecl, SkipPast::Reference);
+        EXPECT_EQ(Env2.getValue(*BazDecl, SkipPast::Reference), BoundFooValue);
+      });
+}
+
+TEST(TransferTest, StructuredBindingAssignRefFromTupleLikeType) {
+  std::string Code = R"(
+    namespace std {
+    using size_t = int;
+    template <class> struct tuple_size;
+    template <std::size_t, class> struct tuple_element;
+    template <class...> class tuple;
+
+    namespace {
+    template <class T, T v>
+    struct size_helper { static const T value = v; };
+    } // namespace
+
+    template <class... T>
+    struct tuple_size<tuple<T...>> : size_helper<std::size_t, sizeof...(T)> {};
+
+    template <std::size_t I, class... T>
+    struct tuple_element<I, tuple<T...>> {
+      using type =  __type_pack_element<I, T...>;
+    };
+
+    template <class...> class tuple {};
+
+    template <std::size_t I, class... T>
+    typename tuple_element<I, tuple<T...>>::type get(tuple<T...>);
+    } // namespace std
+
+    std::tuple<bool, int> &getTuple();
+
+    void target(bool B) {
+      auto &[BoundFoo, BoundBar] = getTuple();
+      bool Baz;
+      // Include if-then-else to test interaction of `BindingDecl` with join.
+      if (B) {
+        Baz = BoundFoo;
+        (void)BoundBar;
+        // [[p1]]
+      } else {
+        Baz = BoundFoo;
+      }
+      (void)0;
+      // [[p2]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2"));
+        const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
+
+        const ValueDecl *BoundFooDecl = findValueDecl(ASTCtx, "BoundFoo");
+        ASSERT_THAT(BoundFooDecl, NotNull());
+
+        const ValueDecl *BoundBarDecl = findValueDecl(ASTCtx, "BoundBar");
+        ASSERT_THAT(BoundBarDecl, NotNull());
+
+        const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
+        ASSERT_THAT(BazDecl, NotNull());
+
+        const Value *BoundFooValue =
+            Env1.getValue(*BoundFooDecl, SkipPast::Reference);
+        ASSERT_THAT(BoundFooValue, NotNull());
+        EXPECT_TRUE(isa<BoolValue>(BoundFooValue));
+
+        const Value *BoundBarValue =
+            Env1.getValue(*BoundBarDecl, SkipPast::Reference);
+        ASSERT_THAT(BoundBarValue, NotNull());
+        EXPECT_TRUE(isa<IntegerValue>(BoundBarValue));
+
+        // Test that a `DeclRefExpr` to a `BindingDecl` (with reference type)
+        // works as expected. We don't test aliasing properties of the
+        // reference, because we don't model `std::get` and so have no way to
+        // equate separate references into the tuple.
+        EXPECT_EQ(Env1.getValue(*BazDecl, SkipPast::Reference), BoundFooValue);
+
+        const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
+
+        // Test that `BoundFooDecl` retains the value we expect, after the join.
+        BoundFooValue = Env2.getValue(*BoundFooDecl, SkipPast::Reference);
+        EXPECT_EQ(Env2.getValue(*BazDecl, SkipPast::Reference), BoundFooValue);
+      });
+}
+// TODO: ref binding
+
 TEST(TransferTest, BinaryOperatorComma) {
   std::string Code = R"(
     void target(int Foo, int Bar) {
