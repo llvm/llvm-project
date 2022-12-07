@@ -205,7 +205,7 @@ static void generateFusedElementwiseOpRegion(
     mapper.map(bbArg, fusedBlock->addArgument(bbArg.getType(), bbArg.getLoc()));
 
   // 6. All of the producer's output operands
-  for (auto bbArg : llvm::enumerate(
+  for (const auto &bbArg : llvm::enumerate(
            producerBlock.getArguments().take_back(producer.getNumDpsInits()))) {
     if (!preservedProducerResults.count(bbArg.index()))
       continue;
@@ -254,7 +254,8 @@ static void generateFusedElementwiseOpRegion(
   SmallVector<Value> fusedYieldValues;
   fusedYieldValues.reserve(producerYieldOp.getNumOperands() +
                            consumerYieldOp.getNumOperands());
-  for (auto producerYieldVal : llvm::enumerate(producerYieldOp.getOperands())) {
+  for (const auto &producerYieldVal :
+       llvm::enumerate(producerYieldOp.getOperands())) {
     if (preservedProducerResults.count(producerYieldVal.index()))
       fusedYieldValues.push_back(
           mapper.lookupOrDefault(producerYieldVal.value()));
@@ -281,7 +282,7 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
          "expected producer of input operand");
   /// Find the results of the producer that have uses outside of the consumer.
   llvm::SmallDenseSet<int> preservedProducerResults;
-  for (auto producerResult : llvm::enumerate(producer->getResults())) {
+  for (const auto &producerResult : llvm::enumerate(producer->getResults())) {
     auto outputOperand = producer.getDpsInitOperand(producerResult.index());
     if (producer.payloadUsesValueFromOperand(outputOperand) ||
         !producer.canOpOperandsBeDropped(outputOperand) ||
@@ -335,7 +336,7 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   }
 
   // 6. Collect all of the producer outputs.
-  for (auto opOperand : llvm::enumerate(producer.getDpsInitOperands())) {
+  for (const auto &opOperand : llvm::enumerate(producer.getDpsInitOperands())) {
     if (!preservedProducerResults.count(opOperand.index()))
       continue;
 
