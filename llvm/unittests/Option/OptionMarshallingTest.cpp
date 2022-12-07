@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringRef.h"
 #include "gtest/gtest.h"
 
 struct OptionWithMarshallingInfo {
-  llvm::StringRef Name;
+  const char *Name;
   const char *KeyPath;
   const char *ImpliedCheck;
   const char *ImpliedValue;
@@ -28,10 +27,10 @@ static const OptionWithMarshallingInfo MarshallingTable[] = {
 };
 
 TEST(OptionMarshalling, EmittedOrderSameAsDefinitionOrder) {
-  ASSERT_STREQ(MarshallingTable[0].Name.data(), "marshalled-flag-d");
-  ASSERT_STREQ(MarshallingTable[1].Name.data(), "marshalled-flag-c");
-  ASSERT_STREQ(MarshallingTable[2].Name.data(), "marshalled-flag-b");
-  ASSERT_STREQ(MarshallingTable[3].Name.data(), "marshalled-flag-a");
+  ASSERT_STREQ(MarshallingTable[0].Name, "marshalled-flag-d");
+  ASSERT_STREQ(MarshallingTable[1].Name, "marshalled-flag-c");
+  ASSERT_STREQ(MarshallingTable[2].Name, "marshalled-flag-b");
+  ASSERT_STREQ(MarshallingTable[3].Name, "marshalled-flag-a");
 }
 
 TEST(OptionMarshalling, EmittedSpecifiedKeyPath) {
