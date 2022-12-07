@@ -23,7 +23,7 @@ public:
   cookie_io_functions_t ops;
 };
 
-size_t write_func(File *f, const void *data, size_t size) {
+FileIOResult write_func(File *f, const void *data, size_t size) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.write == nullptr)
     return 0;
@@ -31,7 +31,7 @@ size_t write_func(File *f, const void *data, size_t size) {
                                 reinterpret_cast<const char *>(data), size);
 }
 
-size_t read_func(File *f, void *data, size_t size) {
+FileIOResult read_func(File *f, void *data, size_t size) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.read == nullptr)
     return 0;
@@ -39,11 +39,10 @@ size_t read_func(File *f, void *data, size_t size) {
                                reinterpret_cast<char *>(data), size);
 }
 
-long seek_func(File *f, long offset, int whence) {
+ErrorOr<long> seek_func(File *f, long offset, int whence) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.seek == nullptr) {
-    errno = EINVAL;
-    return -1;
+    return Error(EINVAL);
   }
   off64_t offset64 = offset;
   int result = cookie_file->ops.seek(cookie_file->cookie, &offset64, whence);
