@@ -1,4 +1,4 @@
-; RUN: opt -annotation-remarks -o /dev/null -S -pass-remarks-output=%t.opt.yaml %s -pass-remarks-missed=annotation-remarks 2>&1 | FileCheck %s
+; RUN: opt -passes=annotation-remarks -o /dev/null -S -pass-remarks-output=%t.opt.yaml %s -pass-remarks-missed=annotation-remarks 2>&1 | FileCheck %s
 ; RUN: cat %t.opt.yaml | FileCheck -check-prefix=YAML %s
 
 ; No remarks for this function, no instructions with metadata.
