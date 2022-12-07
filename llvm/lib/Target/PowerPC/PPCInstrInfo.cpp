@@ -5450,7 +5450,7 @@ PPCInstrInfo::isSignOrZeroExtended(const unsigned Reg,
   case PPC::XORI:
   case PPC::ORI8:
   case PPC::XORI8: {
-    unsigned SrcReg = MI->getOperand(1).getReg();
+    Register SrcReg = MI->getOperand(1).getReg();
     auto SrcExt = isSignOrZeroExtended(SrcReg, BinOpDepth, MRI);
     return std::pair<bool, bool>(SrcExt.first || IsSExt,
                                  SrcExt.second || IsZExt);
@@ -5464,7 +5464,7 @@ PPCInstrInfo::isSignOrZeroExtended(const unsigned Reg,
   case PPC::XORIS:
   case PPC::ORIS8:
   case PPC::XORIS8: {
-    unsigned SrcReg = MI->getOperand(1).getReg();
+    Register SrcReg = MI->getOperand(1).getReg();
     auto SrcExt = isSignOrZeroExtended(SrcReg, BinOpDepth, MRI);
     uint16_t Imm = MI->getOperand(2).getImm();
     if (Imm & 0x8000)
@@ -5497,7 +5497,7 @@ PPCInstrInfo::isSignOrZeroExtended(const unsigned Reg,
       if (!MI->getOperand(I).isReg())
         return std::pair<bool, bool>(false, false);
 
-      unsigned SrcReg = MI->getOperand(I).getReg();
+      Register SrcReg = MI->getOperand(I).getReg();
       auto SrcExt = isSignOrZeroExtended(SrcReg, BinOpDepth + 1, MRI);
       IsSExt &= SrcExt.first;
       IsZExt &= SrcExt.second;
@@ -5513,8 +5513,8 @@ PPCInstrInfo::isSignOrZeroExtended(const unsigned Reg,
     if (BinOpDepth >= MAX_BINOP_DEPTH)
       return std::pair<bool, bool>(false, false);
 
-    unsigned SrcReg1 = MI->getOperand(1).getReg();
-    unsigned SrcReg2 = MI->getOperand(2).getReg();
+    Register SrcReg1 = MI->getOperand(1).getReg();
+    Register SrcReg2 = MI->getOperand(2).getReg();
     auto Src1Ext = isSignOrZeroExtended(SrcReg1, BinOpDepth + 1, MRI);
     auto Src2Ext = isSignOrZeroExtended(SrcReg2, BinOpDepth + 1, MRI);
     return std::pair<bool, bool>(Src1Ext.first && Src2Ext.first,
