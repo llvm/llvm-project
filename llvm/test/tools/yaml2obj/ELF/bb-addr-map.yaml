@@ -12,13 +12,13 @@
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   Address: 0x0
 # CHECK-NEXT:   Offset: 0x40
-# CHECK-NEXT:   Size: 12
+# CHECK-NEXT:   Size: 13
 # CHECK-NEXT:   Link: 0
 # CHECK-NEXT:   Info: 0
 # CHECK-NEXT:   AddressAlignment: 0
 # CHECK-NEXT:   EntrySize: 0
 # CHECK-NEXT:   SectionData (
-# CHECK-NEXT:     0000: 00000000 00000000 01010203
+# CHECK-NEXT:     0000: 00000000 00000000 01010203 04
 # CHECK-NEXT:   )
 # CHECK-NEXT: }
 
@@ -36,7 +36,7 @@
 # Case 4: Specify Entries.
 # CHECK:        Name: .llvm_bb_addr_map (1)
 # CHECK:        SectionData (
-# CHECK-NEXT:     0000: 01002000 00000000 00000101 0203
+# CHECK-NEXT:     0000: 02002000 00000000 0000010B 010203
 # CHECK-NEXT:   )
 
 # Case 5: Specify Entries and omit the Address field.
@@ -44,13 +44,13 @@
 # CHECK:        Address:
 # CHECK-SAME:   {{^ 0x0$}}
 # CHECK:        SectionData (
-# CHECK-NEXT:     0000: 00000000 00000000 00000101 0203
+# CHECK-NEXT:     0000: 02000000 00000000 0000010C 010203
 # CHECK-NEXT:   )
 
 # Case 6: Override the NumBlocks field.
 # CHECK:        Name: .llvm_bb_addr_map (1)
 # CHECK:        SectionData (
-# CHECK-NEXT:     0000: 01002000 00000000 00000201 0203
+# CHECK-NEXT:     0000: 02002000 00000000 0000020D 010203
 # CHECK-NEXT:   )
 
 --- !ELF
@@ -67,7 +67,7 @@ Sections:
 ##  Specify Content.
   - Name:    '.llvm_bb_addr_map (1)'
     Type:    SHT_LLVM_BB_ADDR_MAP
-    Content: "000000000000000001010203"
+    Content: "00000000000000000101020304"
 
 ## 2) We can produce an empty .llvm_bb_addr_map section from a description
 ##    with empty section content.
@@ -85,10 +85,11 @@ Sections:
   - Name: '.llvm_bb_addr_map (4)'
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
-      - Version: 1
+      - Version: 2
         Address: 0x0000000000000020
         BBEntries:
-          - AddressOffset: 0x00000001
+          - ID:            11
+            AddressOffset: 0x00000001
             Size:          0x00000002
             Metadata:      0x00000003
 
@@ -97,9 +98,10 @@ Sections:
   - Name: '.llvm_bb_addr_map (5)'
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
-      - Version: 0
+      - Version: 2
         BBEntries:
-          - AddressOffset: 0x00000001
+          - ID:            12
+            AddressOffset: 0x00000001
             Size:          0x00000002
             Metadata:      0x00000003
 
@@ -108,11 +110,12 @@ Sections:
   - Name: '.llvm_bb_addr_map (6)'
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
-      - Version:   1
+      - Version:   2
         Address:   0x0000000000000020
         NumBlocks: 2
         BBEntries:
-          - AddressOffset: 0x00000001
+          - ID:            13
+            AddressOffset: 0x00000001
             Size:          0x00000002
             Metadata:      0x00000003
 
@@ -137,7 +140,7 @@ Sections:
 
 ## Check that yaml2obj generates a warning when we use unsupported versions.
 # RUN: yaml2obj --docnum=3  %s 2>&1 | FileCheck %s --check-prefix=INVALID-VERSION
-# INVALID-VERSION: warning: unsupported SHT_LLVM_BB_ADDR_MAP version: 2; encoding using the most recent version
+# INVALID-VERSION: warning: unsupported SHT_LLVM_BB_ADDR_MAP version: 3; encoding using the most recent version
 
 --- !ELF
 FileHeader:
@@ -149,4 +152,4 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
 ##  Specify unsupported version
-      - Version: 2
+      - Version: 3
