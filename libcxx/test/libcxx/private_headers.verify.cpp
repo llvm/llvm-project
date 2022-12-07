@@ -651,6 +651,7 @@ END-SCRIPT
 #include <__type_traits/is_destructible.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_destructible.h'}}
 #include <__type_traits/is_empty.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_empty.h'}}
 #include <__type_traits/is_enum.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_enum.h'}}
+#include <__type_traits/is_equality_comparable.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_equality_comparable.h'}}
 #include <__type_traits/is_final.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_final.h'}}
 #include <__type_traits/is_floating_point.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_floating_point.h'}}
 #include <__type_traits/is_function.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_function.h'}}
@@ -715,6 +716,7 @@ END-SCRIPT
 #include <__type_traits/nat.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/nat.h'}}
 #include <__type_traits/negation.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/negation.h'}}
 #include <__type_traits/noexcept_move_assign_container.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/noexcept_move_assign_container.h'}}
+#include <__type_traits/predicate_traits.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/predicate_traits.h'}}
 #include <__type_traits/promote.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/promote.h'}}
 #include <__type_traits/rank.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/rank.h'}}
 #include <__type_traits/remove_all_extents.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/remove_all_extents.h'}}

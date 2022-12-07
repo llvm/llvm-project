@@ -604,7 +604,10 @@ module std [system] {
       module unique                          { private header "__algorithm/unique.h" }
       module unique_copy                     { private header "__algorithm/unique_copy.h" }
       module unwrap_iter                     { private header "__algorithm/unwrap_iter.h" }
-      module unwrap_range                    { private header "__algorithm/unwrap_range.h" }
+      module unwrap_range {
+        private header "__algorithm/unwrap_range.h"
+        export utility.__utility.pair
+      }
       module upper_bound                     { private header "__algorithm/upper_bound.h" }
     }
   }
@@ -1491,6 +1494,10 @@ module std [system] {
     module is_destructible                     { private header "__type_traits/is_destructible.h" }
     module is_empty                            { private header "__type_traits/is_empty.h" }
     module is_enum                             { private header "__type_traits/is_enum.h" }
+    module is_equality_comparable                       {
+      private header "__type_traits/is_equality_comparable.h"
+      export integral_constant
+    }
     module is_final                            { private header "__type_traits/is_final.h" }
     module is_floating_point                   { private header "__type_traits/is_floating_point.h" }
     module is_function                         { private header "__type_traits/is_function.h" }
@@ -1561,6 +1568,7 @@ module std [system] {
     module nat                                 { private header "__type_traits/nat.h" }
     module negation                            { private header "__type_traits/negation.h" }
     module noexcept_move_assign_container      { private header "__type_traits/noexcept_move_assign_container.h" }
+    module predicate_traits                    { private header "__type_traits/predicate_traits.h" }
     module promote                             { private header "__type_traits/promote.h" }
     module rank                                { private header "__type_traits/rank.h" }
     module remove_all_extents                  { private header "__type_traits/remove_all_extents.h" }
