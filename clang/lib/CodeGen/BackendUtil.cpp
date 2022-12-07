@@ -239,6 +239,7 @@ getSanitizerBinaryMetadataOptions(const CodeGenOptions &CGOpts) {
   SanitizerBinaryMetadataOptions Opts;
   Opts.Covered = CGOpts.SanitizeBinaryMetadataCovered;
   Opts.Atomics = CGOpts.SanitizeBinaryMetadataAtomics;
+  Opts.UAR = CGOpts.SanitizeBinaryMetadataUAR;
   return Opts;
 }
 
