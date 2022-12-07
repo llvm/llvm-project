@@ -904,3 +904,492 @@ entry:
   %tmp3 = mul i64 %tmp1, %c
   ret i64 %tmp3
 }
+
+define i64 @umull_ldrb_h(i8* %x0, i16 %x1) {
+; CHECK-LABEL: umull_ldrb_h:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x9, x1, #0xffff
+; CHECK-NEXT:    smull x0, w8, w9
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i8, i8* %x0
+  %zext = zext i8 %ext64 to i64
+  %zext4 = zext i16 %x1 to i64
+  %mul = mul i64 %zext, %zext4
+  ret i64 %mul
+}
+
+define i64 @umull_ldrb_h_commuted(i8* %x0, i16 %x1) {
+; CHECK-LABEL: umull_ldrb_h_commuted:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x9, x1, #0xffff
+; CHECK-NEXT:    smull x0, w9, w8
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i8, i8* %x0
+  %zext = zext i8 %ext64 to i64
+  %zext4 = zext i16 %x1 to i64
+  %mul = mul i64 %zext4, %zext
+  ret i64 %mul
+}
+
+define i64 @umull_ldrh_w(i16* %x0, i32 %x1) {
+; CHECK-LABEL: umull_ldrh_w:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    mov w9, w1
+; CHECK-NEXT:    mul x0, x8, x9
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i16, i16* %x0
+  %zext = zext i16 %ext64 to i64
+  %zext4 = zext i32 %x1 to i64
+  %mul = mul i64 %zext, %zext4
+  ret i64 %mul
+}
+
+define i64 @umull_ldr_b(i32* %x0, i8 %x1) {
+; CHECK-LABEL: umull_ldr_b:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x9, x1, #0xff
+; CHECK-NEXT:    mul x0, x8, x9
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i32, i32* %x0
+  %zext = zext i32 %ext64 to i64
+  %zext4 = zext i8 %x1 to i64
+  %mul = mul i64 %zext, %zext4
+  ret i64 %mul
+}
+
+define i64 @umull_ldr2_w(i64* %x0, i32 %x1) {
+; CHECK-LABEL: umull_ldr2_w:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    mov w9, w1
+; CHECK-NEXT:    mul x0, x8, x9
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i64, i64* %x0
+  %and = and i64 %ext64, 4294967295
+  %zext4 = zext i32 %x1 to i64
+  %mul = mul i64 %and, %zext4
+  ret i64 %mul
+}
+
+define i64 @umull_ldr2_ldr2(i64* %x0, i64* %x1) {
+; CHECK-LABEL: umull_ldr2_ldr2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    ldr w9, [x1]
+; CHECK-NEXT:    mul x0, x8, x9
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i64, i64* %x0
+  %and = and i64 %ext64, 4294967295
+  %ext64_2 = load i64, i64* %x1
+  %and2 = and i64 %ext64_2, 4294967295
+  %mul = mul i64 %and, %and2
+  ret i64 %mul
+}
+
+define i64 @umull_ldr2_d(i64* %x0, i64 %x1) {
+; CHECK-LABEL: umull_ldr2_d:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    and x9, x1, #0xffffffff
+; CHECK-NEXT:    mul x0, x8, x9
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i64, i64* %x0
+  %and = and i64 %ext64, 4294967295
+  %and2 = and i64 %x1, 4294967295
+  %mul = mul i64 %and, %and2
+  ret i64 %mul
+}
+
+define i64 @umaddl_ldrb_h(i8* %x0, i16 %x1, i64 %x2) {
+; CHECK-LABEL: umaddl_ldrb_h:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x9, x1, #0xffff
+; CHECK-NEXT:    smaddl x0, w8, w9, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i8, i8* %x0
+  %zext = zext i8 %ext64 to i64
+  %zext4 = zext i16 %x1 to i64
+  %mul = mul i64 %zext, %zext4
+  %add = add i64 %mul, %x2
+  ret i64 %add
+}
+
+define i64 @umaddl_ldrb_h_commuted(i8* %x0, i16 %x1, i64 %x2) {
+; CHECK-LABEL: umaddl_ldrb_h_commuted:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x9, x1, #0xffff
+; CHECK-NEXT:    smaddl x0, w9, w8, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i8, i8* %x0
+  %zext = zext i8 %ext64 to i64
+  %zext4 = zext i16 %x1 to i64
+  %mul = mul i64 %zext4, %zext
+  %add = add i64 %mul, %x2
+  ret i64 %add
+}
+
+define i64 @umaddl_ldrh_w(i16* %x0, i32 %x1, i64 %x2) {
+; CHECK-LABEL: umaddl_ldrh_w:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    mov w9, w1
+; CHECK-NEXT:    madd x0, x8, x9, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i16, i16* %x0
+  %zext = zext i16 %ext64 to i64
+  %zext4 = zext i32 %x1 to i64
+  %mul = mul i64 %zext, %zext4
+  %add = add i64 %mul, %x2
+  ret i64 %add
+}
+
+define i64 @umaddl_ldr_b(i32* %x0, i8 %x1, i64 %x2) {
+; CHECK-LABEL: umaddl_ldr_b:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x9, x1, #0xff
+; CHECK-NEXT:    madd x0, x8, x9, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i32, i32* %x0
+  %zext = zext i32 %ext64 to i64
+  %zext4 = zext i8 %x1 to i64
+  %mul = mul i64 %zext, %zext4
+  %add = add i64 %mul, %x2
+  ret i64 %add
+}
+
+define i64 @umaddl_ldr2_w(i64* %x0, i32 %x1, i64 %x2) {
+; CHECK-LABEL: umaddl_ldr2_w:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    mov w9, w1
+; CHECK-NEXT:    madd x0, x8, x9, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i64, i64* %x0
+  %and = and i64 %ext64, 4294967295
+  %zext4 = zext i32 %x1 to i64
+  %mul = mul i64 %and, %zext4
+  %add = add i64 %mul, %x2
+  ret i64 %add
+}
+
+define i64 @umaddl_ldr2_ldr2(i64* %x0, i64* %x1, i64 %x2) {
+; CHECK-LABEL: umaddl_ldr2_ldr2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    ldr w9, [x1]
+; CHECK-NEXT:    madd x0, x8, x9, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i64, i64* %x0
+  %and = and i64 %ext64, 4294967295
+  %ext64_2 = load i64, i64* %x1
+  %and2 = and i64 %ext64_2, 4294967295
+  %mul = mul i64 %and, %and2
+  %add = add i64 %mul, %x2
+  ret i64 %add
+}
+
+define i64 @umaddl_ldr2_d(i64* %x0, i64 %x1, i64 %x2) {
+; CHECK-LABEL: umaddl_ldr2_d:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    and x9, x1, #0xffffffff
+; CHECK-NEXT:    madd x0, x8, x9, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i64, i64* %x0
+  %and = and i64 %ext64, 4294967295
+  %and2 = and i64 %x1, 4294967295
+  %mul = mul i64 %and, %and2
+  %add = add i64 %mul, %x2
+  ret i64 %add
+}
+
+define i64 @umnegl_ldrb_h(i8* %x0, i16 %x1) {
+; CHECK-LABEL: umnegl_ldrb_h:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x9, x1, #0xffff
+; CHECK-NEXT:    smnegl x0, w8, w9
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i8, i8* %x0
+  %zext = zext i8 %ext64 to i64
+  %zext4 = zext i16 %x1 to i64
+  %mul = mul i64 %zext, %zext4
+  %sub = sub i64 0, %mul
+  ret i64 %sub
+}
+
+define i64 @umnegl_ldrb_h_commuted(i8* %x0, i16 %x1) {
+; CHECK-LABEL: umnegl_ldrb_h_commuted:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x9, x1, #0xffff
+; CHECK-NEXT:    smnegl x0, w9, w8
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i8, i8* %x0
+  %zext = zext i8 %ext64 to i64
+  %zext4 = zext i16 %x1 to i64
+  %mul = mul i64 %zext4, %zext
+  %sub = sub i64 0, %mul
+  ret i64 %sub
+}
+
+define i64 @umnegl_ldrh_w(i16* %x0, i32 %x1) {
+; CHECK-LABEL: umnegl_ldrh_w:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    mov w9, w1
+; CHECK-NEXT:    mneg x0, x8, x9
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i16, i16* %x0
+  %zext = zext i16 %ext64 to i64
+  %zext4 = zext i32 %x1 to i64
+  %mul = mul i64 %zext, %zext4
+  %sub = sub i64 0, %mul
+  ret i64 %sub
+}
+
+define i64 @umnegl_ldr_b(i32* %x0, i8 %x1) {
+; CHECK-LABEL: umnegl_ldr_b:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x9, x1, #0xff
+; CHECK-NEXT:    mneg x0, x8, x9
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i32, i32* %x0
+  %zext = zext i32 %ext64 to i64
+  %zext4 = zext i8 %x1 to i64
+  %mul = mul i64 %zext, %zext4
+  %sub = sub i64 0, %mul
+  ret i64 %sub
+}
+
+define i64 @umnegl_ldr2_w(i64* %x0, i32 %x1) {
+; CHECK-LABEL: umnegl_ldr2_w:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    mov w9, w1
+; CHECK-NEXT:    mneg x0, x8, x9
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i64, i64* %x0
+  %and = and i64 %ext64, 4294967295
+  %zext4 = zext i32 %x1 to i64
+  %mul = mul i64 %and, %zext4
+  %sub = sub i64 0, %mul
+  ret i64 %sub
+}
+
+define i64 @umnegl_ldr2_ldr2(i64* %x0, i64* %x1) {
+; CHECK-LABEL: umnegl_ldr2_ldr2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    ldr w9, [x1]
+; CHECK-NEXT:    mneg x0, x8, x9
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i64, i64* %x0
+  %and = and i64 %ext64, 4294967295
+  %ext64_2 = load i64, i64* %x1
+  %and2 = and i64 %ext64_2, 4294967295
+  %mul = mul i64 %and, %and2
+  %sub = sub i64 0, %mul
+  ret i64 %sub
+}
+
+define i64 @umnegl_ldr2_d(i64* %x0, i64 %x1) {
+; CHECK-LABEL: umnegl_ldr2_d:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    and x9, x1, #0xffffffff
+; CHECK-NEXT:    mneg x0, x8, x9
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i64, i64* %x0
+  %and = and i64 %ext64, 4294967295
+  %and2 = and i64 %x1, 4294967295
+  %mul = mul i64 %and, %and2
+  %sub = sub i64 0, %mul
+  ret i64 %sub
+}
+
+define i64 @umsubl_ldrb_h(i8* %x0, i16 %x1, i64 %x2) {
+; CHECK-LABEL: umsubl_ldrb_h:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x9, x1, #0xffff
+; CHECK-NEXT:    smsubl x0, w8, w9, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i8, i8* %x0
+  %zext = zext i8 %ext64 to i64
+  %zext4 = zext i16 %x1 to i64
+  %mul = mul i64 %zext, %zext4
+  %sub = sub i64 %x2, %mul
+  ret i64 %sub
+}
+
+define i64 @umsubl_ldrb_h_commuted(i8* %x0, i16 %x1, i64 %x2) {
+; CHECK-LABEL: umsubl_ldrb_h_commuted:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x9, x1, #0xffff
+; CHECK-NEXT:    smsubl x0, w9, w8, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i8, i8* %x0
+  %zext = zext i8 %ext64 to i64
+  %zext4 = zext i16 %x1 to i64
+  %mul = mul i64 %zext4, %zext
+  %sub = sub i64 %x2, %mul
+  ret i64 %sub
+}
+
+define i64 @umsubl_ldrh_w(i16* %x0, i32 %x1, i64 %x2) {
+; CHECK-LABEL: umsubl_ldrh_w:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    mov w9, w1
+; CHECK-NEXT:    msub x0, x8, x9, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i16, i16* %x0
+  %zext = zext i16 %ext64 to i64
+  %zext4 = zext i32 %x1 to i64
+  %mul = mul i64 %zext, %zext4
+  %sub = sub i64 %x2, %mul
+  ret i64 %sub
+}
+
+define i64 @umsubl_ldr_b(i32* %x0, i8 %x1, i64 %x2) {
+; CHECK-LABEL: umsubl_ldr_b:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x9, x1, #0xff
+; CHECK-NEXT:    msub x0, x8, x9, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i32, i32* %x0
+  %zext = zext i32 %ext64 to i64
+  %zext4 = zext i8 %x1 to i64
+  %mul = mul i64 %zext, %zext4
+  %sub = sub i64 %x2, %mul
+  ret i64 %sub
+}
+
+define i64 @umsubl_ldr2_w(i64* %x0, i32 %x1, i64 %x2) {
+; CHECK-LABEL: umsubl_ldr2_w:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    mov w9, w1
+; CHECK-NEXT:    msub x0, x8, x9, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i64, i64* %x0
+  %and = and i64 %ext64, 4294967295
+  %zext4 = zext i32 %x1 to i64
+  %mul = mul i64 %and, %zext4
+  %sub = sub i64 %x2, %mul
+  ret i64 %sub
+}
+
+define i64 @umsubl_ldr2_ldr2(i64* %x0, i64* %x1, i64 %x2) {
+; CHECK-LABEL: umsubl_ldr2_ldr2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    ldr w9, [x1]
+; CHECK-NEXT:    msub x0, x8, x9, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i64, i64* %x0
+  %and = and i64 %ext64, 4294967295
+  %ext64_2 = load i64, i64* %x1
+  %and2 = and i64 %ext64_2, 4294967295
+  %mul = mul i64 %and, %and2
+  %sub = sub i64 %x2, %mul
+  ret i64 %sub
+}
+
+define i64 @umsubl_ldr2_d(i64* %x0, i64 %x1, i64 %x2) {
+; CHECK-LABEL: umsubl_ldr2_d:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    and x9, x1, #0xffffffff
+; CHECK-NEXT:    msub x0, x8, x9, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i64, i64* %x0
+  %and = and i64 %ext64, 4294967295
+  %and2 = and i64 %x1, 4294967295
+  %mul = mul i64 %and, %and2
+  %sub = sub i64 %x2, %mul
+  ret i64 %sub
+}
+
+define i64 @umull_ldr2_w_cc1(i64* %x0, i32 %x1) {
+; CHECK-LABEL: umull_ldr2_w_cc1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr x9, [x0]
+; CHECK-NEXT:    mov w8, w1
+; CHECK-NEXT:    and x9, x9, #0x7fffffff
+; CHECK-NEXT:    mul x0, x9, x8
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i64, i64* %x0
+  %and = and i64 %ext64, 2147483647
+  %zext4 = zext i32 %x1 to i64
+  %mul = mul i64 %and, %zext4
+  ret i64 %mul
+}
+
+define i64 @umull_ldr2_w_cc2(i64* %x0, i32 %x1) {
+; CHECK-LABEL: umull_ldr2_w_cc2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr x9, [x0]
+; CHECK-NEXT:    mov w8, w1
+; CHECK-NEXT:    and x9, x9, #0x1ffffffff
+; CHECK-NEXT:    mul x0, x9, x8
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i64, i64* %x0
+  %and = and i64 %ext64, 8589934591
+  %zext4 = zext i32 %x1 to i64
+  %mul = mul i64 %and, %zext4
+  ret i64 %mul
+}
