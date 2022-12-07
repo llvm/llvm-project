@@ -17,6 +17,7 @@
 
 #include "Representation.h"
 #include "clang/AST/AST.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -63,9 +64,6 @@ enum BlockId {
   BI_FUNCTION_BLOCK_ID,
   BI_COMMENT_BLOCK_ID,
   BI_REFERENCE_BLOCK_ID,
-  BI_TEMPLATE_BLOCK_ID,
-  BI_TEMPLATE_SPECIALIZATION_BLOCK_ID,
-  BI_TEMPLATE_PARAM_BLOCK_ID,
   BI_TYPEDEF_BLOCK_ID,
   BI_LAST,
   BI_FIRST = BI_VERSION_BLOCK_ID
@@ -123,12 +121,9 @@ enum RecordId {
   BASE_RECORD_IS_PARENT,
   REFERENCE_USR,
   REFERENCE_NAME,
-  REFERENCE_QUAL_NAME,
   REFERENCE_TYPE,
   REFERENCE_PATH,
   REFERENCE_FIELD,
-  TEMPLATE_PARAM_CONTENTS,
-  TEMPLATE_SPECIALIZATION_OF,
   TYPEDEF_USR,
   TYPEDEF_NAME,
   TYPEDEF_DEFLOCATION,
@@ -174,9 +169,6 @@ public:
   void emitBlock(const FieldTypeInfo &B);
   void emitBlock(const MemberTypeInfo &T);
   void emitBlock(const CommentInfo &B);
-  void emitBlock(const TemplateInfo &T);
-  void emitBlock(const TemplateSpecializationInfo &T);
-  void emitBlock(const TemplateParamInfo &T);
   void emitBlock(const Reference &B, FieldId F);
 
 private:
@@ -223,7 +215,7 @@ private:
   void emitRecord(bool Value, RecordId ID);
   void emitRecord(int Value, RecordId ID);
   void emitRecord(unsigned Value, RecordId ID);
-  void emitRecord(const TemplateInfo &Templ);
+  void emitRecord(llvm::APSInt Value, RecordId ID);
   bool prepRecordData(RecordId ID, bool ShouldEmit = true);
 
   // Emission of appropriate abbreviation type.
