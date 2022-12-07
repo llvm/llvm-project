@@ -27,9 +27,11 @@ enum OpndKind {
 
 struct Inst {
   unsigned Opc;
-  int64_t Imm;
+  int32_t Imm; // The largest value we need to store is 20 bits.
 
-  Inst(unsigned Opc, int64_t Imm) : Opc(Opc), Imm(Imm) {}
+  Inst(unsigned Opc, int64_t I) : Opc(Opc), Imm(I) {
+    assert(I == Imm && "truncated");
+  }
 
   OpndKind getOpndKind() const;
 };
