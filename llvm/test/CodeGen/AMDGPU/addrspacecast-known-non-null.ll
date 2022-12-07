@@ -25,7 +25,6 @@ define void @cast_alloca() {
 
 ; CHECK-LABEL: {{^}}cast_lds_gv:
 ; CHECK: s_mov_b64 s[{{[0-9]+}}:[[HIREG:[0-9]+]]], src_shared_base
-; CHECK: v_mov_b32_e32 v0, 0
 ; CHECK: v_mov_b32_e32 v1, s[[HIREG]]
 ; CHECK-NOT: v0
 ; CHECK-NOT: v1
