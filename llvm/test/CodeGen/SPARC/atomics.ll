@@ -87,25 +87,24 @@ entry:
 ; SPARC:       sll %o4, %o1, %o4
 ; SPARC:       and %o0, 255, %o0
 ; SPARC:       sll %o0, %o1, %o0
-; SPARC:       andn %g2, %o5, %g2
-; SPARC:       mov %g0, %o5
+; SPARC:       andn %g2, %o5, %o5
 ; SPARC:      [[LABEL1:\.L.*]]:
-; SPARC:       or %g2, %o4, %g3
-; SPARC:       or %g2, %o0, %g4
-; SPARC:       cas [%o2], %g4, %g3
-; SPARC:       cmp %g3, %g4
-; SPARC:       mov  %o5, %g4
+; SPARC:       or %o5, %o4, %g2
+; SPARC:       or %o5, %o0, %g3
+; SPARC:       cas [%o2], %g3, %g2
+; SPARC:       mov %g0, %g4
+; SPARC:       cmp %g2, %g3
 ; SPARC:       move %icc, 1, %g4
 ; SPARC:       cmp %g4, 0
 ; SPARC:       bne %icc, [[LABEL2:\.L.*]]
 ; SPARC:       nop
-; SPARC:       and %g3, %o3, %g4
-; SPARC:       cmp %g2, %g4
+; SPARC:       and %g2, %o3, %g3
+; SPARC:       cmp %o5, %g3
 ; SPARC:       bne %icc, [[LABEL1]]
-; SPARC:       mov  %g4, %g2
+; SPARC:       mov  %g3, %o5
 ; SPARC:      [[LABEL2]]:
 ; SPARC:       retl
-; SPARC:       srl %g3, %o1, %o0
+; SPARC:       srl %g2, %o1, %o0
 ; SPARC64-LABEL: test_cmpxchg_i8
 ; SPARC64:       and %o1, -4, %o2
 ; SPARC64:       mov  3, %o3
@@ -119,25 +118,24 @@ entry:
 ; SPARC64:       sll %o4, %o1, %o4
 ; SPARC64:       and %o0, 255, %o0
 ; SPARC64:       sll %o0, %o1, %o0
-; SPARC64:       andn %g2, %o5, %g2
-; SPARC64:       mov %g0, %o5
+; SPARC64:       andn %g2, %o5, %o5
 ; SPARC64:      [[LABEL1:\.L.*]]:
-; SPARC64:       or %g2, %o4, %g3
-; SPARC64:       or %g2, %o0, %g4
-; SPARC64:       cas [%o2], %g4, %g3
-; SPARC64:       cmp %g3, %g4
-; SPARC64:       mov  %o5, %g4
+; SPARC64:       or %o5, %o4, %g2
+; SPARC64:       or %o5, %o0, %g3
+; SPARC64:       cas [%o2], %g3, %g2
+; SPARC64:       mov %g0, %g4
+; SPARC64:       cmp %g2, %g3
 ; SPARC64:       move %icc, 1, %g4
 ; SPARC64:       cmp %g4, 0
 ; SPARC64:       bne %icc, [[LABEL2:\.L.*]]
 ; SPARC64:       nop
-; SPARC64:       and %g3, %o3, %g4
-; SPARC64:       cmp %g2, %g4
+; SPARC64:       and %g2, %o3, %g3
+; SPARC64:       cmp %o5, %g3
 ; SPARC64:       bne %icc, [[LABEL1]]
-; SPARC64:       mov  %g4, %g2
+; SPARC64:       mov  %g3, %o5
 ; SPARC64:      [[LABEL2]]:
 ; SPARC64:       retl
-; SPARC64:       srl %g3, %o1, %o0
+; SPARC64:       srl %g2, %o1, %o0
 define i8 @test_cmpxchg_i8(i8 %a, i8* %ptr) {
 entry:
   %pair = cmpxchg i8* %ptr, i8 %a, i8 123 monotonic monotonic
@@ -160,25 +158,24 @@ entry:
 ; SPARC:       mov  123, %o0
 ; SPARC:       sll %o0, %o1, %o0
 ; SPARC:       sll %o4, %o1, %o4
-; SPARC:       andn %g2, %o5, %g2
-; SPARC:       mov %g0, %o5
+; SPARC:       andn %g2, %o5, %o5
 ; SPARC:      [[LABEL1:\.L.*]]:
-; SPARC:       or %g2, %o0, %g3
-; SPARC:       or %g2, %o4, %g4
-; SPARC:       cas [%o2], %g4, %g3
-; SPARC:       cmp %g3, %g4
-; SPARC:       mov  %o5, %g4
+; SPARC:       or %o5, %o0, %g2
+; SPARC:       or %o5, %o4, %g3
+; SPARC:       cas [%o2], %g3, %g2
+; SPARC:       mov %g0, %g4
+; SPARC:       cmp %g2, %g3
 ; SPARC:       move %icc, 1, %g4
 ; SPARC:       cmp %g4, 0
 ; SPARC:       bne %icc, [[LABEL2:\.L.*]]
 ; SPARC:       nop
-; SPARC:       and %g3, %o3, %g4
-; SPARC:       cmp %g2, %g4
+; SPARC:       and %g2, %o3, %g3
+; SPARC:       cmp %o5, %g3
 ; SPARC:       bne %icc, [[LABEL1]]
-; SPARC:       mov  %g4, %g2
+; SPARC:       mov  %g3, %o5
 ; SPARC:      [[LABEL2]]:
 ; SPARC:       retl
-; SPARC:       srl %g3, %o1, %o0
+; SPARC:       srl %g2, %o1, %o0
 ; SPARC64:       and %o1, -4, %o2
 ; SPARC64:       and %o1, 3, %o1
 ; SPARC64:       xor %o1, 2, %o1
@@ -192,25 +189,24 @@ entry:
 ; SPARC64:       mov  123, %o0
 ; SPARC64:       sll %o0, %o1, %o0
 ; SPARC64:       sll %o4, %o1, %o4
-; SPARC64:       andn %g2, %o5, %g2
-; SPARC64:       mov %g0, %o5
+; SPARC64:       andn %g2, %o5, %o5
 ; SPARC64:      [[LABEL1:\.L.*]]:
-; SPARC64:       or %g2, %o0, %g3
-; SPARC64:       or %g2, %o4, %g4
-; SPARC64:       cas [%o2], %g4, %g3
-; SPARC64:       cmp %g3, %g4
-; SPARC64:       mov  %o5, %g4
+; SPARC64:       or %o5, %o0, %g2
+; SPARC64:       or %o5, %o4, %g3
+; SPARC64:       cas [%o2], %g3, %g2
+; SPARC64:       mov %g0, %g4
+; SPARC64:       cmp %g2, %g3
 ; SPARC64:       move %icc, 1, %g4
 ; SPARC64:       cmp %g4, 0
 ; SPARC64:       bne %icc, [[LABEL2:\.L.*]]
 ; SPARC64:       nop
-; SPARC64:       and %g3, %o3, %g4
-; SPARC64:       cmp %g2, %g4
+; SPARC64:       and %g2, %o3, %g3
+; SPARC64:       cmp %o5, %g3
 ; SPARC64:       bne %icc, [[LABEL1]]
-; SPARC64:       mov  %g4, %g2
+; SPARC64:       mov  %g3, %o5
 ; SPARC64:      [[LABEL2]]:
 ; SPARC64:       retl
-; SPARC64:       srl %g3, %o1, %o0
+; SPARC64:       srl %g2, %o1, %o0
 define i16 @test_cmpxchg_i16(i16 %a, i16* %ptr) {
 entry:
   %pair = cmpxchg i16* %ptr, i16 %a, i16 123 monotonic monotonic
@@ -305,14 +301,12 @@ entry:
 
 ; SPARC-LABEL: test_load_add_i32
 ; SPARC: membar
-; SPARC: mov %g0
 ; SPARC: mov [[U:%[gilo][0-7]]], [[V:%[gilo][0-7]]]
 ; SPARC: add [[U:%[gilo][0-7]]], %o1, [[V2:%[gilo][0-7]]]
 ; SPARC: cas [%o0], [[V]], [[V2]]
 ; SPARC: membar
 ; SPARC64-LABEL: test_load_add_i32
 ; SPARC64: membar
-; SPARC64: mov %g0
 ; SPARC64: mov [[U:%[gilo][0-7]]], [[V:%[gilo][0-7]]]
 ; SPARC64: add [[U:%[gilo][0-7]]], %o1, [[V2:%[gilo][0-7]]]
 ; SPARC64: cas [%o0], [[V]], [[V2]]
