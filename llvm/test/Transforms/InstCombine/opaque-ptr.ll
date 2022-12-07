@@ -96,8 +96,8 @@ define ptr addrspace(1) @gep_constexpr_3(ptr %a) {
 
 define ptr @load_bitcast_1(ptr %a) {
 ; CHECK-LABEL: @load_bitcast_1(
-; CHECK-NEXT:    [[B1:%.*]] = load ptr, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    ret ptr [[B1]]
+; CHECK-NEXT:    [[B:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    ret ptr [[B]]
 ;
   %b = load ptr, ptr %a
   ret ptr %b
@@ -105,8 +105,8 @@ define ptr @load_bitcast_1(ptr %a) {
 
 define ptr @load_bitcast_2(ptr %a) {
 ; CHECK-LABEL: @load_bitcast_2(
-; CHECK-NEXT:    [[C1:%.*]] = load ptr, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    ret ptr [[C1]]
+; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    ret ptr [[C]]
 ;
   %c = load ptr, ptr %a
   ret ptr %c
