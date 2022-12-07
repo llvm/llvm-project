@@ -1,4 +1,4 @@
-; RUN: opt -S -mergefunc < %s | FileCheck %s
+; RUN: opt -S -passes=mergefunc < %s | FileCheck %s
 
 @llvm.compiler.used = appending global [1 x i8*] [i8* bitcast (i32 (i32)* @a to i8*)], section "llvm.metadata"
 
