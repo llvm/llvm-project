@@ -31,7 +31,7 @@ using namespace mlir::dataflow;
 /// non-negative.
 static LogicalResult staticallyNonNegative(DataFlowSolver &solver, Value v) {
   auto *result = solver.lookupState<IntegerValueRangeLattice>(v);
-  if (!result)
+  if (!result || result->getValue().isUninitialized())
     return failure();
   const ConstantIntRanges &range = result->getValue().getValue();
   return success(range.smin().isNonNegative());
