@@ -15,6 +15,10 @@
 #include <climits>
 #include <vector>
 
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
+
 namespace clang {
 namespace api_notes {
 enum class RetainCountConventionKind {

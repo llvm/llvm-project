@@ -31,6 +31,7 @@ class MCRegisterInfo;
 class MCSubtargetInfo;
 class StringRef;
 class Triple;
+class raw_ostream;
 
 namespace amdhsa {
 struct kernel_descriptor_t;
