@@ -139,7 +139,7 @@ private:
   /// if each slice dimension maps to an existing dst dimension and both the src
   /// and the dst loops for those dimensions have the same bounds. Returns false
   /// if both the src and the dst loops don't have the same bounds. Returns
-  /// llvm::None if none of the above can be proven.
+  /// std::nullopt if none of the above can be proven.
   Optional<bool> isSliceMaximalFastCheck() const;
 };
 

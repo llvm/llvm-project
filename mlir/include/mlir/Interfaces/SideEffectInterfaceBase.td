@@ -104,7 +104,7 @@ class EffectOpInterfaceBase<string name, string baseEffect>
     }
 
     /// Return the effect of the given type `Effect` that is applied to the
-    /// given value, or None if no effect exists.
+    /// given value, or std::nullopt if no effect exists.
     template <typename Effect>
     ::llvm::Optional<::mlir::SideEffects::EffectInstance<}] # baseEffect # [{>>
     getEffectOnValue(::mlir::Value value) {

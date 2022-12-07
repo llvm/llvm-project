@@ -1338,7 +1338,7 @@ MaybeOptimum<Fraction> Simplex::computeRowOptimum(Direction direction,
 }
 
 /// Compute the optimum of the specified expression in the specified direction,
-/// or None if it is unbounded.
+/// or std::nullopt if it is unbounded.
 MaybeOptimum<Fraction> Simplex::computeOptimum(Direction direction,
                                                ArrayRef<MPInt> coeffs) {
   if (empty)

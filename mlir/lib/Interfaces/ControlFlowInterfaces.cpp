@@ -34,8 +34,8 @@ SuccessorOperands::SuccessorOperands(unsigned int producedOperandCount,
 //===----------------------------------------------------------------------===//
 
 /// Returns the `BlockArgument` corresponding to operand `operandIndex` in some
-/// successor if 'operandIndex' is within the range of 'operands', or None if
-/// `operandIndex` isn't a successor operand index.
+/// successor if 'operandIndex' is within the range of 'operands', or
+/// std::nullopt if `operandIndex` isn't a successor operand index.
 Optional<BlockArgument>
 detail::getBranchSuccessorArgument(const SuccessorOperands &operands,
                                    unsigned operandIndex, Block *successor) {
@@ -85,9 +85,9 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
 //===----------------------------------------------------------------------===//
 
 /// Verify that types match along all region control flow edges originating from
-/// `sourceNo` (region # if source is a region, llvm::None if source is parent
+/// `sourceNo` (region # if source is a region, std::nullopt if source is parent
 /// op). `getInputsTypesForRegion` is a function that returns the types of the
-/// inputs that flow from `sourceIndex' to the given region, or llvm::None if
+/// inputs that flow from `sourceIndex' to the given region, or std::nullopt if
 /// the exact type match verification is not necessary (e.g., if the Op verifies
 /// the match itself).
 static LogicalResult
@@ -363,9 +363,9 @@ bool mlir::isRegionReturnLike(Operation *operation) {
 /// Returns the mutable operands that are passed to the region with the given
 /// `regionIndex`. If the operation does not implement the
 /// `RegionBranchTerminatorOpInterface` and is not marked as `ReturnLike`, the
-/// result will be `llvm::None`. In all other cases, the resulting
+/// result will be `std::nullopt`. In all other cases, the resulting
 /// `OperandRange` represents all operands that are passed to the specified
-/// successor region. If `regionIndex` is `llvm::None`, all operands that are
+/// successor region. If `regionIndex` is `std::nullopt`, all operands that are
 /// passed to the parent operation will be returned.
 Optional<MutableOperandRange>
 mlir::getMutableRegionBranchSuccessorOperands(Operation *operation,
