@@ -1,5 +1,5 @@
-; RUN: opt %s -gvn -S -enable-gvn-memdep=false | FileCheck %s
-; RUN: opt %s -gvn -S -enable-gvn-memdep=true | FileCheck %s
+; RUN: opt %s -passes=gvn -S -enable-gvn-memdep=false | FileCheck %s
+; RUN: opt %s -passes=gvn -S -enable-gvn-memdep=true | FileCheck %s
 
 ; Check that llvm.x86.avx2.gather.d.ps.256 intrinsic is not eliminated by GVN
 ; with and without memory dependence info.
