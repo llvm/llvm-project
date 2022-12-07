@@ -51,6 +51,7 @@ subroutine bozchecks
   res = CMPLX (realpart, img, 4)
   res = CMPLX (B"0101", B"1111", 4)
 
+  !WARNING: underflow on REAL(8) to REAL(4) conversion
   dbl = DBLE(B"1111")
   dbl = DBLE(realpart)
 

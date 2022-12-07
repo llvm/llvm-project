@@ -2235,9 +2235,11 @@ void BitcodeFile::parseLazy() {
 }
 
 void macho::extract(InputFile &file, StringRef reason) {
-  printArchiveMemberLoad(reason, &file);
-  assert(file.lazy);
+  if (!file.lazy)
+    return;
   file.lazy = false;
+
+  printArchiveMemberLoad(reason, &file);
   if (auto *bitcode = dyn_cast<BitcodeFile>(&file)) {
     bitcode->parse();
   } else {

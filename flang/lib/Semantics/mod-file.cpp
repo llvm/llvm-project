@@ -1256,11 +1256,14 @@ bool SubprogramSymbolCollector::NeedImport(
     const SourceName &name, const Symbol &symbol) {
   if (!isInterface_) {
     return false;
+  } else if (IsSeparateModuleProcedureInterface(&symbol_)) {
+    return false; // IMPORT needed only for external and dummy procedure
+                  // interfaces
   } else if (&symbol == scope_.symbol()) {
     return false;
   } else if (symbol.owner().Contains(scope_)) {
     return true;
-  } else if (const Symbol * found{scope_.FindSymbol(name)}) {
+  } else if (const Symbol *found{scope_.FindSymbol(name)}) {
     // detect import from ancestor of use-associated symbol
     return found->has<UseDetails>() && found->owner() != scope_;
   } else {

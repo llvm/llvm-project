@@ -538,22 +538,28 @@ static const InstrPattern PATTERNS[] = {
     {"FSUB_S", 0xFE00007F, 0x8000053, DecodeRType<FSUB_S>},
     {"FMUL_S", 0xFE00007F, 0x10000053, DecodeRType<FMUL_S>},
     {"FDIV_S", 0xFE00007F, 0x18000053, DecodeRType<FDIV_S>},
-    {"FSQRT_S", 0xFFF0007F, 0x58000053, DecodeRType<FSQRT_S>},
+    {"FSQRT_S", 0xFFF0007F, 0x58000053, DecodeIType<FSQRT_S>},
     {"FSGNJ_S", 0xFE00707F, 0x20000053, DecodeRType<FSGNJ_S>},
     {"FSGNJN_S", 0xFE00707F, 0x20001053, DecodeRType<FSGNJN_S>},
     {"FSGNJX_S", 0xFE00707F, 0x20002053, DecodeRType<FSGNJX_S>},
     {"FMIN_S", 0xFE00707F, 0x28000053, DecodeRType<FMIN_S>},
     {"FMAX_S", 0xFE00707F, 0x28001053, DecodeRType<FMAX_S>},
-    {"FCVT_W_S", 0xFFF0007F, 0xC0000053, DecodeRType<FCVT_W_S>},
-    {"FCVT_WU_S", 0xFFF0007F, 0xC0100053, DecodeRType<FCVT_WU_S>},
-    {"FMV_X_W", 0xFFF0707F, 0xE0000053, DecodeRType<FMV_X_W>},
+    {"FCVT_W_S", 0xFFF0007F, 0xC0000053, DecodeIType<FCVT_W_S>},
+    {"FCVT_WU_S", 0xFFF0007F, 0xC0100053, DecodeIType<FCVT_WU_S>},
+    {"FMV_X_W", 0xFFF0707F, 0xE0000053, DecodeIType<FMV_X_W>},
     {"FEQ_S", 0xFE00707F, 0xA2002053, DecodeRType<FEQ_S>},
     {"FLT_S", 0xFE00707F, 0xA2001053, DecodeRType<FLT_S>},
     {"FLE_S", 0xFE00707F, 0xA2000053, DecodeRType<FLE_S>},
-    {"FCLASS_S", 0xFFF0707F, 0xE0001053, DecodeRType<FCLASS_S>},
-    {"FCVT_S_W", 0xFFF0007F, 0xD0000053, DecodeRType<FCVT_S_W>},
-    {"FCVT_S_WU", 0xFFF0007F, 0xD0100053, DecodeRType<FCVT_S_WU>},
-    {"FMV_W_X", 0xFFF0707F, 0xF0000053, DecodeRType<FMV_W_X>},
+    {"FCLASS_S", 0xFFF0707F, 0xE0001053, DecodeIType<FCLASS_S>},
+    {"FCVT_S_W", 0xFFF0007F, 0xD0000053, DecodeIType<FCVT_S_W>},
+    {"FCVT_S_WU", 0xFFF0007F, 0xD0100053, DecodeIType<FCVT_S_WU>},
+    {"FMV_W_X", 0xFFF0707F, 0xF0000053, DecodeIType<FMV_W_X>},
+
+    // RV64F (Extension for Single-Precision Floating-Point) //
+    {"FCVT_L_S", 0xFFF0007F, 0xC0200053, DecodeIType<FCVT_L_S>},
+    {"FCVT_LU_S", 0xFFF0007F, 0xC0300053, DecodeIType<FCVT_LU_S>},
+    {"FCVT_S_L", 0xFFF0007F, 0xD0200053, DecodeIType<FCVT_S_L>},
+    {"FCVT_S_LU", 0xFFF0007F, 0xD0300053, DecodeIType<FCVT_S_LU>},
 };
 
 llvm::Optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
@@ -1424,6 +1430,38 @@ public:
         .transform([&](auto &&rs1) {
           llvm::APInt apInt(32, NanUnBoxing(rs1));
           llvm::APFloat apf(apInt.bitsToFloat());
+          return inst.rd.WriteAPFloat(m_emu, apf);
+        })
+        .value_or(false);
+  }
+  bool operator()(FCVT_L_S inst) {
+    return inst.rs1.ReadAPFloat(m_emu, false)
+        .transform([&](auto &&rs1) {
+          int64_t res = rs1.convertToFloat();
+          return inst.rd.Write(m_emu, uint64_t(res));
+        })
+        .value_or(false);
+  }
+  bool operator()(FCVT_LU_S inst) {
+    return inst.rs1.ReadAPFloat(m_emu, false)
+        .transform([&](auto &&rs1) {
+          uint64_t res = rs1.convertToFloat();
+          return inst.rd.Write(m_emu, res);
+        })
+        .value_or(false);
+  }
+  bool operator()(FCVT_S_L inst) {
+    return inst.rs1.ReadI64(m_emu)
+        .transform([&](auto &&rs1) {
+          llvm::APFloat apf(llvm::APFloat::IEEEsingle(), rs1);
+          return inst.rd.WriteAPFloat(m_emu, apf);
+        })
+        .value_or(false);
+  }
+  bool operator()(FCVT_S_LU inst) {
+    return inst.rs1.Read(m_emu)
+        .transform([&](auto &&rs1) {
+          llvm::APFloat apf(llvm::APFloat::IEEEsingle(), rs1);
           return inst.rd.WriteAPFloat(m_emu, apf);
         })
         .value_or(false);
