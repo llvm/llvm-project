@@ -122,7 +122,7 @@ template <typename T> struct TypeListContainsSuperOf<EmptyTypeList, T> {
 template <typename ResultT, typename ArgT,
           ResultT (*Func)(ArrayRef<const ArgT *>)>
 struct VariadicFunction {
-  ResultT operator()() const { return Func(None); }
+  ResultT operator()() const { return Func(std::nullopt); }
 
   template <typename... ArgsT>
   ResultT operator()(const ArgT &Arg1, const ArgsT &... Args) const {
@@ -352,7 +352,7 @@ public:
                           BoundNodesTreeBuilder *Builder) const = 0;
 
   virtual llvm::Optional<clang::TraversalKind> TraversalKind() const {
-    return llvm::None;
+    return std::nullopt;
   }
 };
 
@@ -1983,10 +1983,10 @@ template <>
 inline Optional<BinaryOperatorKind>
 equivalentBinaryOperator<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
   if (Node.getNumArgs() != 2)
-    return None;
+    return std::nullopt;
   switch (Node.getOperator()) {
   default:
-    return None;
+    return std::nullopt;
   case OO_ArrowStar:
     return BO_PtrMemI;
   case OO_Star:
@@ -2065,10 +2065,10 @@ inline Optional<UnaryOperatorKind>
 equivalentUnaryOperator<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
   if (Node.getNumArgs() != 1 && Node.getOperator() != OO_PlusPlus &&
       Node.getOperator() != OO_MinusMinus)
-    return None;
+    return std::nullopt;
   switch (Node.getOperator()) {
   default:
-    return None;
+    return std::nullopt;
   case OO_Plus:
     return UO_Plus;
   case OO_Minus:
@@ -2084,13 +2084,13 @@ equivalentUnaryOperator<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
   case OO_PlusPlus: {
     const auto *FD = Node.getDirectCallee();
     if (!FD)
-      return None;
+      return std::nullopt;
     return FD->getNumParams() > 0 ? UO_PostInc : UO_PreInc;
   }
   case OO_MinusMinus: {
     const auto *FD = Node.getDirectCallee();
     if (!FD)
-      return None;
+      return std::nullopt;
     return FD->getNumParams() > 0 ? UO_PostDec : UO_PreDec;
   }
   case OO_Coawait:
@@ -2191,7 +2191,7 @@ inline Optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
   if (!optBinaryOpcode) {
     auto optUnaryOpcode = equivalentUnaryOperator(Node);
     if (!optUnaryOpcode)
-      return None;
+      return std::nullopt;
     return UnaryOperator::getOpcodeStr(*optUnaryOpcode);
   }
   return BinaryOperator::getOpcodeStr(*optBinaryOpcode);
@@ -2236,7 +2236,7 @@ private:
     if (!optBinaryOpcode) {
       auto optUnaryOpcode = equivalentUnaryOperator(Node);
       if (!optUnaryOpcode)
-        return None;
+        return std::nullopt;
       return UnaryOperator::getOpcodeStr(*optUnaryOpcode);
     }
     return BinaryOperator::getOpcodeStr(*optBinaryOpcode);

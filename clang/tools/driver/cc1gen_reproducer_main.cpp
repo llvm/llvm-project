@@ -136,7 +136,7 @@ generateReproducerForInvocationArguments(ArrayRef<const char *> Argv,
     }
   }
 
-  return None;
+  return std::nullopt;
 }
 
 std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes);

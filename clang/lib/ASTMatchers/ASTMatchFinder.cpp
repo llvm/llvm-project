@@ -1687,7 +1687,7 @@ StringRef MatchFinder::MatchCallback::getID() const { return "<unknown>"; }
 
 llvm::Optional<TraversalKind>
 MatchFinder::MatchCallback::getCheckTraversalKind() const {
-  return llvm::None;
+  return std::nullopt;
 }
 
 } // end namespace ast_matchers

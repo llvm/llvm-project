@@ -93,7 +93,7 @@ struct ParsedSourceRange {
     }
     auto Begin = ParsedSourceLocation::FromString(RangeSplit.first);
     if (Begin.FileName.empty())
-      return None;
+      return std::nullopt;
     if (!HasEndLoc) {
       EndLine = Begin.Line;
       EndColumn = Begin.Column;
