@@ -46,6 +46,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -4470,6 +4471,34 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     }
     assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
     return Tmp;
+  }
+  case ISD::LOAD: {
+    LoadSDNode *LD = cast<LoadSDNode>(Op);
+    if (const MDNode *Ranges = LD->getRanges()) {
+      if (DemandedElts != 1)
+        break;
+
+      ConstantRange CR = getConstantRangeFromMetadata(*Ranges);
+      if (VTBits > CR.getBitWidth()) {
+        switch (LD->getExtensionType()) {
+        case ISD::SEXTLOAD:
+          CR = CR.signExtend(VTBits);
+          break;
+        case ISD::ZEXTLOAD:
+          CR = CR.zeroExtend(VTBits);
+          break;
+        default:
+          break;
+        }
+      }
+
+      if (VTBits != CR.getBitWidth())
+        break;
+      return std::min(CR.getSignedMin().getNumSignBits(),
+                      CR.getSignedMax().getNumSignBits());
+    }
+
+    break;
   }
   case ISD::ATOMIC_CMP_SWAP:
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
