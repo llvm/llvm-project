@@ -595,7 +595,7 @@ public:
   /// if index cannot be computed, e.g. because the type is not an aggregate.
   /// ElemTy is updated to be the result element type and Offset to be the
   /// residual offset.
-  Optional<APInt> getGEPIndexForOffset(Type *&ElemTy, APInt &Offset) const;
+  std::optional<APInt> getGEPIndexForOffset(Type *&ElemTy, APInt &Offset) const;
 
   /// Returns a StructLayout object, indicating the alignment of the
   /// struct, its size, and the offsets of its fields.

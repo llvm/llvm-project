@@ -28,7 +28,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
@@ -38,6 +37,7 @@
 #include <cstddef>
 #include <iterator>
 #include <mutex>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -91,7 +91,7 @@ class ValueMap {
   using ExtraData = typename Config::ExtraData;
 
   MapT Map;
-  Optional<MDMapT> MDMap;
+  std::optional<MDMapT> MDMap;
   ExtraData Data;
 
 public:
@@ -117,10 +117,10 @@ public:
       MDMap.emplace();
     return *MDMap;
   }
-  Optional<MDMapT> &getMDMap() { return MDMap; }
+  std::optional<MDMapT> &getMDMap() { return MDMap; }
 
   /// Get the mapped metadata, if it's in the map.
-  Optional<Metadata *> getMappedMD(const Metadata *MD) const {
+  std::optional<Metadata *> getMappedMD(const Metadata *MD) const {
     if (!MDMap)
       return std::nullopt;
     auto Where = MDMap->find(MD);

@@ -611,7 +611,7 @@ Optional<Metadata *> MDNodeMapper::getMappedOp(const Metadata *Op) const {
   if (!Op)
     return nullptr;
 
-  if (Optional<Metadata *> MappedOp = M.getVM().getMappedMD(Op))
+  if (std::optional<Metadata *> MappedOp = M.getVM().getMappedMD(Op))
     return *MappedOp;
 
   if (isa<MDString>(Op))
@@ -828,7 +828,7 @@ Metadata *MDNodeMapper::mapTopLevelUniquedNode(const MDNode &FirstN) {
 
 Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
   // If the value already exists in the map, use it.
-  if (Optional<Metadata *> NewMD = getVM().getMappedMD(MD))
+  if (std::optional<Metadata *> NewMD = getVM().getMappedMD(MD))
     return *NewMD;
 
   if (isa<MDString>(MD))

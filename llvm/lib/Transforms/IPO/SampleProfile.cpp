@@ -622,7 +622,7 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
 ErrorOr<uint64_t> SampleProfileLoader::getProbeWeight(const Instruction &Inst) {
   assert(FunctionSamples::ProfileIsProbeBased &&
          "Profile is not pseudo probe based");
-  Optional<PseudoProbe> Probe = extractProbe(Inst);
+  std::optional<PseudoProbe> Probe = extractProbe(Inst);
   // Ignore the non-probe instruction. If none of the instruction in the BB is
   // probe, we choose to infer the BB's weight.
   if (!Probe)
@@ -775,7 +775,7 @@ SampleProfileLoader::findIndirectCallFunctionSamples(
 const FunctionSamples *
 SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
   if (FunctionSamples::ProfileIsProbeBased) {
-    Optional<PseudoProbe> Probe = extractProbe(Inst);
+    std::optional<PseudoProbe> Probe = extractProbe(Inst);
     if (!Probe)
       return nullptr;
   }
@@ -1288,7 +1288,7 @@ bool SampleProfileLoader::tryInlineCandidate(
   // aggregation of duplication.
   if (Candidate.CallsiteDistribution < 1) {
     for (auto &I : IFI.InlinedCallSites) {
-      if (Optional<PseudoProbe> Probe = extractProbe(*I))
+      if (std::optional<PseudoProbe> Probe = extractProbe(*I))
         setProbeDistributionFactor(*I, Probe->Factor *
                                    Candidate.CallsiteDistribution);
     }
@@ -1313,7 +1313,7 @@ bool SampleProfileLoader::getInlineCandidate(InlineCandidate *NewCandidate,
     return false;
 
   float Factor = 1.0;
-  if (Optional<PseudoProbe> Probe = extractProbe(*CB))
+  if (std::optional<PseudoProbe> Probe = extractProbe(*CB))
     Factor = Probe->Factor;
 
   uint64_t CallsiteCount =
@@ -1638,7 +1638,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
             // Prorate the callsite counts based on the pre-ICP distribution
             // factor to reflect what is already done to the callsite before
             // ICP, such as calliste cloning.
-            if (Optional<PseudoProbe> Probe = extractProbe(I)) {
+            if (std::optional<PseudoProbe> Probe = extractProbe(I)) {
               if (Probe->Factor < 1)
                 T = SampleRecord::adjustCallTargets(T.get(), Probe->Factor);
             }
