@@ -16669,16 +16669,9 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   case PPC::BI__builtin_ppc_test_data_class: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
-    llvm::Type *ArgType = Op0->getType();
-    unsigned IntrinsicID;
-    if (ArgType->isDoubleTy())
-      IntrinsicID = Intrinsic::ppc_test_data_class_d;
-    else if (ArgType->isFloatTy())
-      IntrinsicID = Intrinsic::ppc_test_data_class_f;
-    else
-      llvm_unreachable("Invalid Argument Type");
-    return Builder.CreateCall(CGM.getIntrinsic(IntrinsicID), {Op0, Op1},
-                              "test_data_class");
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::ppc_test_data_class, Op0->getType()),
+        {Op0, Op1}, "test_data_class");
   }
   case PPC::BI__builtin_ppc_maxfe: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
