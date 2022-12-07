@@ -1,4 +1,4 @@
-; RUN: opt -S -consthoist < %s | FileCheck %s
+; RUN: opt -S -passes=consthoist < %s | FileCheck %s
 ; ModuleID = 'test-hoist-debug.cpp'
 source_filename = "test-hoist-debug.cpp"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @_Z3foov() !dbg !7 {
 ; CHECK: bitcast
 ; CHECK-NOT: !dbg !11
-; CHECK: inttoptr 
+; CHECK: inttoptr
 entry:
   %a0 = inttoptr i64 4646526064 to i32*
   %v0 = load i32, i32* %a0, align 16, !dbg !11
