@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -1473,6 +1474,27 @@ TargetLowering::AtomicExpansionKind SparcTargetLowering::shouldExpandAtomicRMWIn
   return AtomicExpansionKind::CmpXChg;
 }
 
+/// intCondCCodeToRcond - Convert a DAG integer condition code to a SPARC
+/// rcond condition.
+static SPCC::CondCodes intCondCCodeToRcond(ISD::CondCode CC) {
+  switch (CC) {
+  default:
+    llvm_unreachable("Unknown/unsigned integer condition code!");
+  case ISD::SETEQ:
+    return SPCC::REG_Z;
+  case ISD::SETNE:
+    return SPCC::REG_NZ;
+  case ISD::SETLT:
+    return SPCC::REG_LZ;
+  case ISD::SETGT:
+    return SPCC::REG_GZ;
+  case ISD::SETLE:
+    return SPCC::REG_LEZ;
+  case ISD::SETGE:
+    return SPCC::REG_GEZ;
+  }
+}
+
 /// IntCondCCodeToICC - Convert a DAG integer condition code to a SPARC ICC
 /// condition.
 static SPCC::CondCodes IntCondCCodeToICC(ISD::CondCode CC) {
@@ -1961,6 +1983,8 @@ const char *SparcTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case SPISD::SELECT_ICC:      return "SPISD::SELECT_ICC";
   case SPISD::SELECT_XCC:      return "SPISD::SELECT_XCC";
   case SPISD::SELECT_FCC:      return "SPISD::SELECT_FCC";
+  case SPISD::SELECT_REG:
+    return "SPISD::SELECT_REG";
   case SPISD::Hi:              return "SPISD::Hi";
   case SPISD::Lo:              return "SPISD::Lo";
   case SPISD::FTOI:            return "SPISD::FTOI";
@@ -2573,6 +2597,7 @@ static SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG,
   // If this is a br_cc of a "setcc", and if the setcc got lowered into
   // an CMP[IF]CC/SELECT_[IF]CC pair, find the original compared values.
   LookThroughSetCC(LHS, RHS, CC, SPCC);
+  assert(LHS.getValueType() == RHS.getValueType());
 
   // Get the condition flag.
   SDValue CompareFlag;
@@ -2603,7 +2628,7 @@ static SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG,
 
 static SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG,
                               const SparcTargetLowering &TLI, bool hasHardQuad,
-                              bool isV9) {
+                              bool isV9, bool is64Bit) {
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
@@ -2615,9 +2640,18 @@ static SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG,
   // If this is a select_cc of a "setcc", and if the setcc got lowered into
   // an CMP[IF]CC/SELECT_[IF]CC pair, find the original compared values.
   LookThroughSetCC(LHS, RHS, CC, SPCC);
+  assert(LHS.getValueType() == RHS.getValueType());
 
   SDValue CompareFlag;
   if (LHS.getValueType().isInteger()) {
+    // On V9 processors running in 64-bit mode, if CC compares two `i64`s
+    // and the RHS is zero we might be able to use a specialized select.
+    if (is64Bit && isV9 && LHS.getValueType() == MVT::i64 &&
+        isNullConstant(RHS) && !ISD::isUnsignedIntSetCC(CC))
+      return DAG.getNode(
+          SPISD::SELECT_REG, dl, TrueVal.getValueType(), TrueVal, FalseVal,
+          DAG.getConstant(intCondCCodeToRcond(CC), dl, MVT::i32), LHS);
+
     CompareFlag = DAG.getNode(SPISD::CMPICC, dl, MVT::Glue, LHS, RHS);
     Opc = LHS.getValueType() == MVT::i32 ?
           SPISD::SELECT_ICC : SPISD::SELECT_XCC;
@@ -3154,6 +3188,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 
   bool hasHardQuad = Subtarget->hasHardQuad();
   bool isV9        = Subtarget->isV9();
+  bool is64Bit = Subtarget->is64Bit();
 
   switch (Op.getOpcode()) {
   default: llvm_unreachable("Should not custom lower this!");
@@ -3177,7 +3212,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::BR_CC:
     return LowerBR_CC(Op, DAG, *this, hasHardQuad, isV9);
   case ISD::SELECT_CC:
-    return LowerSELECT_CC(Op, DAG, *this, hasHardQuad, isV9);
+    return LowerSELECT_CC(Op, DAG, *this, hasHardQuad, isV9, is64Bit);
   case ISD::VASTART:            return LowerVASTART(Op, DAG, *this);
   case ISD::VAARG:              return LowerVAARG(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC: return LowerDYNAMIC_STACKALLOC(Op, DAG,
