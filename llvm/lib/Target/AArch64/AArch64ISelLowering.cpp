@@ -1189,9 +1189,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
   }
 
-  if (Subtarget->hasSME())
-    setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
-
   if (Subtarget->hasSVE()) {
     for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64}) {
       setOperationAction(ISD::BITREVERSE, VT, Custom);
@@ -1519,6 +1516,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // Only required for llvm.aarch64.mops.memset.tag
     setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i8, Custom);
   }
+
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
 
   PredictableSelectIsExpensive = Subtarget->predictableSelectIsExpensive();
 
@@ -4724,6 +4723,44 @@ static std::optional<SMEAttrs> getCalleeAttrsFromExternalFunction(SDValue V) {
   return std::nullopt;
 }
 
+SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  unsigned IntNo = Op.getConstantOperandVal(1);
+  SDLoc DL(Op);
+  switch (IntNo) {
+  default:
+    return SDValue(); // Don't custom lower most intrinsics.
+  case Intrinsic::aarch64_prefetch: {
+    SDValue Chain = Op.getOperand(0);
+    SDValue Addr = Op.getOperand(2);
+
+    unsigned IsWrite = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
+    unsigned Locality = cast<ConstantSDNode>(Op.getOperand(4))->getZExtValue();
+    unsigned IsStream = cast<ConstantSDNode>(Op.getOperand(5))->getZExtValue();
+    unsigned IsData = cast<ConstantSDNode>(Op.getOperand(6))->getZExtValue();
+    unsigned PrfOp = (IsWrite << 4) |    // Load/Store bit
+                     (!IsData << 3) |    // IsDataCache bit
+                     (Locality << 1) |   // Cache level bits
+                     (unsigned)IsStream; // Stream bit
+
+    return DAG.getNode(AArch64ISD::PREFETCH, DL, MVT::Other, Chain,
+                       DAG.getTargetConstant(PrfOp, DL, MVT::i32), Addr);
+  }
+  case Intrinsic::aarch64_sme_za_enable:
+    return DAG.getNode(
+        AArch64ISD::SMSTART, DL, MVT::Other,
+        Op->getOperand(0), // Chain
+        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
+        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
+  case Intrinsic::aarch64_sme_za_disable:
+    return DAG.getNode(
+        AArch64ISD::SMSTOP, DL, MVT::Other,
+        Op->getOperand(0), // Chain
+        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
+        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
+  }
+}
+
 SDValue AArch64TargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                                       SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(1);
@@ -4754,18 +4791,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     // changed.
     return DAG.getMergeValues({MS.getValue(0), MS.getValue(2)}, DL);
   }
-  case Intrinsic::aarch64_sme_za_enable:
-    return DAG.getNode(
-        AArch64ISD::SMSTART, DL, MVT::Other,
-        Op->getOperand(0), // Chain
-        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
-  case Intrinsic::aarch64_sme_za_disable:
-    return DAG.getNode(
-        AArch64ISD::SMSTOP, DL, MVT::Other,
-        Op->getOperand(0), // Chain
-        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
   }
 }
 
@@ -5872,11 +5897,12 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::MULHS_PRED);
   case ISD::MULHU:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::MULHU_PRED);
-  case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN:
     return LowerINTRINSIC_W_CHAIN(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
     return LowerINTRINSIC_WO_CHAIN(Op, DAG);
+  case ISD::INTRINSIC_VOID:
+    return LowerINTRINSIC_VOID(Op, DAG);
   case ISD::ATOMIC_STORE:
     if (cast<MemSDNode>(Op)->getMemoryVT() == MVT::i128) {
       assert(Subtarget->hasLSE2());
