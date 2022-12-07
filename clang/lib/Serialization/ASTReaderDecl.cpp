@@ -1926,9 +1926,12 @@ void ASTDeclReader::ReadCXXDefinitionData(
     Lambda.ManglingNumber = Record.readInt();
     D->setDeviceLambdaManglingNumber(Record.readInt());
     Lambda.ContextDecl = readDeclID();
-    Lambda.Captures = (Capture *)Reader.getContext().Allocate(
-        sizeof(Capture) * Lambda.NumCaptures);
-    Capture *ToCapture = Lambda.Captures;
+    Capture *ToCapture = nullptr;
+    if (Lambda.NumCaptures) {
+      ToCapture = (Capture *)Reader.getContext().Allocate(sizeof(Capture) *
+                                                          Lambda.NumCaptures);
+      Lambda.AddCaptureList(Reader.getContext(), ToCapture);
+    }
     Lambda.MethodTyInfo = readTypeSourceInfo();
     for (unsigned I = 0, N = Lambda.NumCaptures; I != N; ++I) {
       SourceLocation Loc = readSourceLocation();
@@ -2012,8 +2015,26 @@ void ASTDeclReader::MergeDefinitionData(
   // lazily load it.
 
   if (DD.IsLambda) {
-    // FIXME: ODR-checking for merging lambdas (this happens, for instance,
-    // when they occur within the body of a function template specialization).
+    auto &Lambda1 = static_cast<CXXRecordDecl::LambdaDefinitionData &>(DD);
+    auto &Lambda2 = static_cast<CXXRecordDecl::LambdaDefinitionData &>(MergeDD);
+    DetectedOdrViolation |= Lambda1.DependencyKind != Lambda2.DependencyKind;
+    DetectedOdrViolation |= Lambda1.IsGenericLambda != Lambda2.IsGenericLambda;
+    DetectedOdrViolation |= Lambda1.CaptureDefault != Lambda2.CaptureDefault;
+    DetectedOdrViolation |= Lambda1.NumCaptures != Lambda2.NumCaptures;
+    DetectedOdrViolation |=
+        Lambda1.NumExplicitCaptures != Lambda2.NumExplicitCaptures;
+    DetectedOdrViolation |=
+        Lambda1.HasKnownInternalLinkage != Lambda2.HasKnownInternalLinkage;
+    DetectedOdrViolation |= Lambda1.ManglingNumber != Lambda2.ManglingNumber;
+
+    if (Lambda1.NumCaptures && Lambda1.NumCaptures == Lambda2.NumCaptures) {
+      for (unsigned I = 0, N = Lambda1.NumCaptures; I != N; ++I) {
+        LambdaCapture &Cap1 = Lambda1.Captures.front()[I];
+        LambdaCapture &Cap2 = Lambda2.Captures.front()[I];
+        DetectedOdrViolation |= Cap1.getCaptureKind() != Cap2.getCaptureKind();
+      }
+      Lambda1.AddCaptureList(Reader.getContext(), Lambda2.Captures.front());
+    }
   }
 
   if (D->getODRHash() != MergeDD.ODRHash) {
