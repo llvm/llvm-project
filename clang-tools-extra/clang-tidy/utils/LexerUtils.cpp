@@ -138,7 +138,7 @@ llvm::Optional<Token> getQualifyingToken(tok::TokenKind TK,
     if (Tok.is(tok::less))
       SawTemplate = true;
     else if (Tok.isOneOf(tok::greater, tok::greatergreater))
-      LastMatchAfterTemplate = None;
+      LastMatchAfterTemplate = std::nullopt;
     else if (Tok.is(TK)) {
       if (SawTemplate)
         LastMatchAfterTemplate = Tok;
@@ -146,8 +146,8 @@ llvm::Optional<Token> getQualifyingToken(tok::TokenKind TK,
         LastMatchBeforeTemplate = Tok;
     }
   }
-  return LastMatchAfterTemplate != None ? LastMatchAfterTemplate
-                                        : LastMatchBeforeTemplate;
+  return LastMatchAfterTemplate != std::nullopt ? LastMatchAfterTemplate
+                                                : LastMatchBeforeTemplate;
 }
 
 static bool breakAndReturnEnd(const Stmt &S) {
