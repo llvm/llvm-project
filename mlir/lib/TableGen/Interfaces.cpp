@@ -43,21 +43,21 @@ bool InterfaceMethod::isStatic() const {
 }
 
 // Return the body for this method if it has one.
-llvm::Optional<StringRef> InterfaceMethod::getBody() const {
+std::optional<StringRef> InterfaceMethod::getBody() const {
   auto value = def->getValueAsString("body");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
 }
 
 // Return the default implementation for this method if it has one.
-llvm::Optional<StringRef> InterfaceMethod::getDefaultImplementation() const {
+std::optional<StringRef> InterfaceMethod::getDefaultImplementation() const {
   auto value = def->getValueAsString("defaultBody");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
 }
 
 // Return the description of this method if it has one.
-llvm::Optional<StringRef> InterfaceMethod::getDescription() const {
+std::optional<StringRef> InterfaceMethod::getDescription() const {
   auto value = def->getValueAsString("description");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
 }
 
 ArrayRef<InterfaceMethod::Argument> InterfaceMethod::getArguments() const {
@@ -93,36 +93,36 @@ StringRef Interface::getCppNamespace() const {
 ArrayRef<InterfaceMethod> Interface::getMethods() const { return methods; }
 
 // Return the description of this method if it has one.
-llvm::Optional<StringRef> Interface::getDescription() const {
+std::optional<StringRef> Interface::getDescription() const {
   auto value = def->getValueAsString("description");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
 }
 
 // Return the interfaces extra class declaration code.
-llvm::Optional<StringRef> Interface::getExtraClassDeclaration() const {
+std::optional<StringRef> Interface::getExtraClassDeclaration() const {
   auto value = def->getValueAsString("extraClassDeclaration");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
 }
 
 // Return the traits extra class declaration code.
-llvm::Optional<StringRef> Interface::getExtraTraitClassDeclaration() const {
+std::optional<StringRef> Interface::getExtraTraitClassDeclaration() const {
   auto value = def->getValueAsString("extraTraitClassDeclaration");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
 }
 
 // Return the shared extra class declaration code.
-llvm::Optional<StringRef> Interface::getExtraSharedClassDeclaration() const {
+std::optional<StringRef> Interface::getExtraSharedClassDeclaration() const {
   auto value = def->getValueAsString("extraSharedClassDeclaration");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
 }
 
 // Return the body for this method if it has one.
-llvm::Optional<StringRef> Interface::getVerify() const {
+std::optional<StringRef> Interface::getVerify() const {
   // Only OpInterface supports the verify method.
   if (!isa<OpInterface>(this))
     return std::nullopt;
   auto value = def->getValueAsString("verify");
-  return value.empty() ? llvm::Optional<StringRef>() : value;
+  return value.empty() ? std::optional<StringRef>() : value;
 }
 
 bool Interface::verifyWithRegions() const {

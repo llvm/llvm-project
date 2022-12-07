@@ -50,7 +50,7 @@ public:
   ArrayRef<StringRef> getDependentDialects() const;
 
   // Returns the dialects extra class declaration code.
-  llvm::Optional<StringRef> getExtraClassDeclaration() const;
+  std::optional<StringRef> getExtraClassDeclaration() const;
 
   /// Returns true if this dialect has a canonicalizer.
   bool hasCanonicalizer() const;
