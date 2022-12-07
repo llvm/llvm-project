@@ -405,8 +405,8 @@ public:
   /// Sort call targets in descending order of call frequency.
   static const SortedCallTargetSet SortCallTargets(const CallTargetMap &Targets) {
     SortedCallTargetSet SortedTargets;
-    for (const auto &I : Targets) {
-      SortedTargets.emplace(I.first(), I.second);
+    for (const auto &[Target, Frequency] : Targets) {
+      SortedTargets.emplace(Target, Frequency);
     }
     return SortedTargets;
   }
@@ -415,8 +415,8 @@ public:
   static const CallTargetMap adjustCallTargets(const CallTargetMap &Targets,
                                                float DistributionFactor) {
     CallTargetMap AdjustedTargets;
-    for (const auto &I : Targets) {
-      AdjustedTargets[I.first()] = I.second * DistributionFactor;
+    for (const auto &[Target, Frequency] : Targets) {
+      AdjustedTargets[Target] = Frequency * DistributionFactor;
     }
     return AdjustedTargets;
   }
