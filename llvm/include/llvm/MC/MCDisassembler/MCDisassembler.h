@@ -19,24 +19,19 @@
 
 namespace llvm {
 
-struct XCOFFSymbolInfo {
+struct XCOFFSymbolInfoTy {
   std::optional<XCOFF::StorageMappingClass> StorageMappingClass;
   std::optional<uint32_t> Index;
-  bool IsLabel;
-  XCOFFSymbolInfo(std::optional<XCOFF::StorageMappingClass> Smc,
-                  std::optional<uint32_t> Idx, bool Label)
-      : StorageMappingClass(Smc), Index(Idx), IsLabel(Label) {}
-
-  bool operator<(const XCOFFSymbolInfo &SymInfo) const;
+  bool IsLabel = false;
+  bool operator<(const XCOFFSymbolInfoTy &SymInfo) const;
 };
 
 struct SymbolInfoTy {
   uint64_t Addr;
   StringRef Name;
-  union {
-    uint8_t Type;
-    XCOFFSymbolInfo XCOFFSymInfo;
-  };
+  // XCOFF uses XCOFFSymInfo. Other targets use Type.
+  XCOFFSymbolInfoTy XCOFFSymInfo;
+  uint8_t Type;
 
 private:
   bool IsXCOFF;
@@ -46,8 +41,8 @@ public:
   SymbolInfoTy(uint64_t Addr, StringRef Name,
                std::optional<XCOFF::StorageMappingClass> Smc,
                std::optional<uint32_t> Idx, bool Label)
-      : Addr(Addr), Name(Name), XCOFFSymInfo(Smc, Idx, Label), IsXCOFF(true),
-        HasType(false) {}
+      : Addr(Addr), Name(Name), XCOFFSymInfo{Smc, Idx, Label}, Type(0),
+        IsXCOFF(true), HasType(false) {}
   SymbolInfoTy(uint64_t Addr, StringRef Name, uint8_t Type,
                bool IsXCOFF = false)
       : Addr(Addr), Name(Name), Type(Type), IsXCOFF(IsXCOFF), HasType(true) {}
