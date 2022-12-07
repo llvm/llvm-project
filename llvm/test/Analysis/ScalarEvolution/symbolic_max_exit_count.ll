@@ -395,3 +395,45 @@ failed_1:
 failed_2:
   ret i32 -2
 }
+
+define i32 @test_two_phis_simple(i32 %start_1, i32 %start_2, i32 %len) {
+; CHECK-LABEL: 'test_two_phis_simple'
+; CHECK-NEXT:  Classifying expressions for: @test_two_phis_simple
+; CHECK-NEXT:    %iv_1 = phi i32 [ %start_1, %entry ], [ %iv_1.next, %backedge ]
+; CHECK-NEXT:    --> {%start_1,+,-1}<%loop> U: full-set S: full-set Exits: ((-1 * (%start_1 umin_seq %start_2)) + %start_1) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv_2 = phi i32 [ %start_2, %entry ], [ %iv_2.next, %backedge ]
+; CHECK-NEXT:    --> {%start_2,+,-1}<%loop> U: full-set S: full-set Exits: ((-1 * (%start_1 umin_seq %start_2)) + %start_2) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv_1.next = add i32 %iv_1, -1
+; CHECK-NEXT:    --> {(-1 + %start_1),+,-1}<%loop> U: full-set S: full-set Exits: (-1 + (-1 * (%start_1 umin_seq %start_2)) + %start_1) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv_2.next = add i32 %iv_2, -1
+; CHECK-NEXT:    --> {(-1 + %start_2),+,-1}<%loop> U: full-set S: full-set Exits: (-1 + (-1 * (%start_1 umin_seq %start_2)) + %start_2) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_two_phis_simple
+; CHECK-NEXT:  Loop %loop: <multiple exits> backedge-taken count is (%start_1 umin_seq %start_2)
+; CHECK-NEXT:    exit count for loop: %start_1
+; CHECK-NEXT:    exit count for backedge: %start_2
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%start_1 umin %start_2)
+; CHECK-NEXT:    symbolic max exit count for loop: %start_1
+; CHECK-NEXT:    symbolic max exit count for backedge: %start_2
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%start_1 umin_seq %start_2)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  br label %loop
+
+loop:
+  %iv_1 = phi i32 [%start_1, %entry], [%iv_1.next, %backedge]
+  %iv_2 = phi i32 [%start_2, %entry], [%iv_2.next, %backedge]
+  %zero_check_1 = icmp ne i32 %iv_1, 0
+  br i1 %zero_check_1, label %backedge, label %exit
+
+backedge:
+  %zero_check_2 = icmp ne i32 %iv_2, 0
+  %iv_1.next = add i32 %iv_1, -1
+  %iv_2.next = add i32 %iv_2, -1
+  br i1 %zero_check_2, label %loop, label %exit
+
+exit:
+  ret i32 0
+}
