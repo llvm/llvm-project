@@ -93,7 +93,7 @@ findContextForNS(llvm::StringRef TargetNS, const DeclContext *CurContext) {
   // If TargetNS is not a prefix of CurrentContext, there's no way to reach
   // it.
   if (!CurrentContextNS.startswith(TargetNS))
-    return llvm::None;
+    return std::nullopt;
 
   while (CurrentContextNS != TargetNS) {
     CurContext = CurContext->getParent();

@@ -228,7 +228,7 @@ SymbolSlab indexStandardLibrary(llvm::StringRef HeaderSources,
   auto Clang = prepareCompilerInstance(
       std::move(CI), /*Preamble=*/nullptr,
       llvm::MemoryBuffer::getMemBuffer(HeaderSources, Input.getFile()),
-      TFS.view(/*CWD=*/llvm::None), IgnoreDiags);
+      TFS.view(/*CWD=*/std::nullopt), IgnoreDiags);
   if (!Clang) {
     elog("Standard Library Index: Couldn't build compiler instance");
     return Symbols;
@@ -296,7 +296,7 @@ llvm::Optional<StdLibLocation> StdLibSet::add(const LangOptions &LO,
 
   if (!Config::current().Index.StandardLibrary) {
     dlog("No: disabled in config");
-    return llvm::None;
+    return std::nullopt;
   }
 
   if (NewVersion <= OldVersion) {
@@ -305,7 +305,7 @@ llvm::Optional<StdLibLocation> StdLibSet::add(const LangOptions &LO,
              static_cast<LangStandard::Kind>(NewVersion))
              .getName(),
          OldVersion, NewVersion);
-    return llvm::None;
+    return std::nullopt;
   }
 
   // We'd like to index a standard library here if there is one.
@@ -344,7 +344,7 @@ llvm::Optional<StdLibLocation> StdLibSet::add(const LangOptions &LO,
     }
   }
   if (SearchPaths.empty())
-    return llvm::None;
+    return std::nullopt;
 
   dlog("Found standard library in {0}", llvm::join(SearchPaths, ", "));
 
@@ -352,7 +352,8 @@ llvm::Optional<StdLibLocation> StdLibSet::add(const LangOptions &LO,
                                         std::memory_order_acq_rel))
     if (OldVersion >= NewVersion) {
       dlog("No: lost the race");
-      return llvm::None; // Another thread won the race while we were checking.
+      return std::nullopt; // Another thread won the race while we were
+                           // checking.
     }
 
   dlog("Yes, index stdlib!");

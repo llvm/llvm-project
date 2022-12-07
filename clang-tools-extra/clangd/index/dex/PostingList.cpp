@@ -184,7 +184,7 @@ std::vector<Chunk> encodeStream(llvm::ArrayRef<DocID> Documents) {
 /// the stream is terminated, return None.
 llvm::Optional<DocID> readVByte(llvm::ArrayRef<uint8_t> &Bytes) {
   if (Bytes.front() == 0 || Bytes.empty())
-    return llvm::None;
+    return std::nullopt;
   DocID Result = 0;
   bool HasNextByte = true;
   for (size_t Length = 0; HasNextByte && !Bytes.empty(); ++Length) {

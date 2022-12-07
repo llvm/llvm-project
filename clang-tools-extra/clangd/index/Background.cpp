@@ -396,7 +396,7 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
   Rebuilder.loadedShard(LoadedShards);
   Rebuilder.doneLoading();
 
-  auto FS = TFS.view(/*CWD=*/llvm::None);
+  auto FS = TFS.view(/*CWD=*/std::nullopt);
   llvm::DenseSet<PathRef> TUsToIndex;
   // We'll accept data from stale shards, but ensure the files get reindexed
   // soon.

@@ -242,7 +242,7 @@ IncludeStructure::getID(const FileEntry *Entry) const {
   }
   auto It = UIDToIndex.find(Entry->getUniqueID());
   if (It == UIDToIndex.end())
-    return llvm::None;
+    return std::nullopt;
   return It->second;
 }
 
@@ -336,7 +336,7 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
   }
   // FIXME: should we allow (some limited number of) "../header.h"?
   if (llvm::sys::path::is_absolute(Suggested))
-    return None;
+    return std::nullopt;
   if (IsSystem)
     Suggested = "<" + Suggested + ">";
   else
