@@ -213,6 +213,15 @@ OPTIONS
   could occur if the sampling is too frequent. A prime number should be used to
   avoid consistently skipping certain blocks.
 
+.. option:: -x86-disable-upper-sse-registers
+
+  Using the upper xmm registers (xmm8-xmm15) forces a longer instruction encoding
+  which may put greater pressure on the frontend fetch and decode stages,
+  potentially reducing the rate that instructions are dispatched to the backend,
+  particularly on older hardware. Comparing baseline results with this mode
+  enabled can help determine the effects of the frontend and can be used to
+  improve latency and throughput estimates.
+
 .. option:: -repetition-mode=[duplicate|loop|min]
 
  Specify the repetition mode. `duplicate` will create a large, straight line
