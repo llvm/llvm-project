@@ -2804,45 +2804,38 @@ private:
                   (rhsType && rhsType->IsPolymorphic())) {
                 if (explicitIterationSpace())
                   TODO(loc, "polymorphic pointer assignment in FORALL");
-                
+
                 mlir::Value lhs = genExprMutableBox(loc, assign.lhs).getAddr();
                 mlir::Value rhs =
                     fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));
 
-                // Create the 2xnewRank array with the bounds to be passed to
+                // Create the newRank x 2 array with the bounds to be passed to
                 // the runtime as a descriptor.
                 assert(lbounds.size() && ubounds.size());
-                fir::SequenceType::Shape shape(2, lbounds.size());
                 mlir::Type indexTy = builder->getIndexType();
-                mlir::Type boundArrayTy =
-                    fir::SequenceType::get(shape, builder->getI64Type());
+                mlir::Type boundArrayTy = fir::SequenceType::get(
+                    {static_cast<int64_t>(lbounds.size()) * 2},
+                    builder->getI64Type());
                 mlir::Value boundArray =
                     builder->create<fir::AllocaOp>(loc, boundArrayTy);
                 mlir::Value array =
                     builder->create<fir::UndefOp>(loc, boundArrayTy);
-                llvm::SmallVector<mlir::Value> exts;
-                mlir::Value c2 =
-                    builder->createIntegerConstant(loc, indexTy, 2);
                 for (unsigned i = 0; i < lbounds.size(); ++i) {
                   array = builder->create<fir::InsertValueOp>(
                       loc, boundArrayTy, array, lbounds[i],
-                      builder->getArrayAttr(
-                          {builder->getIntegerAttr(builder->getIndexType(),
-                                                   static_cast<int>(i)),
-                           builder->getIntegerAttr(builder->getIndexType(),
-                                                   static_cast<int>(0))}));
+                      builder->getArrayAttr({builder->getIntegerAttr(
+                          builder->getIndexType(), static_cast<int>(i * 2))}));
                   array = builder->create<fir::InsertValueOp>(
                       loc, boundArrayTy, array, ubounds[i],
-                      builder->getArrayAttr(
-                          {builder->getIntegerAttr(builder->getIndexType(),
-                                                   static_cast<int>(i)),
-                           builder->getIntegerAttr(builder->getIndexType(),
-                                                   static_cast<int>(1))}));
-                  exts.push_back(c2);
+                      builder->getArrayAttr({builder->getIntegerAttr(
+                          builder->getIndexType(),
+                          static_cast<int>(i * 2 + 1))}));
                 }
                 builder->create<fir::StoreOp>(loc, array, boundArray);
                 mlir::Type boxTy = fir::BoxType::get(boundArrayTy);
-                mlir::Value shapeOp = builder->genShape(loc, exts);
+                mlir::Value ext = builder->createIntegerConstant(
+                    loc, indexTy, lbounds.size() * 2);
+                mlir::Value shapeOp = builder->genShape(loc, {ext});
                 mlir::Value boundsDesc = builder->create<fir::EmboxOp>(
                     loc, boxTy, boundArray, shapeOp);
                 Fortran::lower::genPointerAssociateRemapping(*builder, loc, lhs,
