@@ -64,8 +64,8 @@ public:
   ///
   ///    If the range had no tags at all, the vector will be empty.
   ///    If some of the range was tagged it will have items and some
-  ///    of them may be llvm::None.
-  ///    (this saves the caller checking whether all items are llvm::None)
+  ///    of them may be std::nullopt.
+  ///    (this saves the caller checking whether all items are std::nullopt)
   std::vector<llvm::Optional<lldb::addr_t>> GetTags(lldb::addr_t addr,
                                                     size_t len) const;
 
@@ -77,7 +77,7 @@ private:
   ///     to a granule boundary.
   ///
   /// \return
-  ///     The tag for the granule that address refers to, or llvm::None
+  ///     The tag for the granule that address refers to, or std::nullopt
   ///     if it has no memory tag.
   llvm::Optional<lldb::addr_t> GetTag(lldb::addr_t addr) const;
 

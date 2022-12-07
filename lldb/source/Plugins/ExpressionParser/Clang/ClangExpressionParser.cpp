@@ -874,7 +874,7 @@ private:
   /// non-deterministic order, so this function should have no side effects.
   /// To make this easier to enforce, this function and all its parameters
   /// should always be const-qualified.
-  /// \return Returns llvm::None if no completion should be provided for the
+  /// \return Returns std::nullopt if no completion should be provided for the
   ///         given CodeCompletionResult.
   llvm::Optional<CompletionWithPriority>
   getCompletionForResult(const CodeCompletionResult &R) const {

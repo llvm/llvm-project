@@ -121,7 +121,7 @@ namespace ParsingUtils {
 ///     MB and MiB for 2^20 bytes; and B for bytes. A single integral number is
 ///     considered bytes.
 /// \return
-///   The converted number of bytes or \a llvm::None if the expression is
+///   The converted number of bytes or \a std::nullopt if the expression is
 ///   invalid.
 llvm::Optional<uint64_t>
 ParseUserFriendlySizeExpression(llvm::StringRef size_expression);
