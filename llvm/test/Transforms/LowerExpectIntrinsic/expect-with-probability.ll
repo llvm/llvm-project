@@ -1,4 +1,3 @@
-; RUN: opt -lower-expect -strip-dead-prototypes -S -o - < %s | FileCheck %s
 ; RUN: opt -S -passes='function(lower-expect),strip-dead-prototypes' < %s | FileCheck %s
 
 ; CHECK-LABEL: @test1(
