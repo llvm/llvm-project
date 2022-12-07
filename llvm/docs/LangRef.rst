@@ -15408,6 +15408,8 @@ then the result is the size in bits of the type of ``src`` if
 
 .. _int_overflow:
 
+.. _int_fshl:
+
 '``llvm.fshl.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -15453,6 +15455,8 @@ Example:
       %r = call i8 @llvm.fshl.i8(i8 255, i8 0, i8 15)  ; %r = i8: 128 (0b10000000)
       %r = call i8 @llvm.fshl.i8(i8 15, i8 15, i8 11)  ; %r = i8: 120 (0b01111000)
       %r = call i8 @llvm.fshl.i8(i8 0, i8 255, i8 8)   ; %r = i8: 0   (0b00000000)
+
+.. _int_fshr:
 
 '``llvm.fshr.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -22101,6 +22105,100 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %a)
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
+
+
+.. _int_vp_fshl:
+
+'``llvm.vp.fshl.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i32>  @llvm.vp.fshl.v16i32 (<16 x i32> <left_op>, <16 x i32> <middle_op>, <16 x i32> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32>  @llvm.vp.fshl.nxv4i32  (<vscale x 4 x i32> <left_op>, <vscale x 4 x i32> <middle_op>, <vscale x 4 x i32> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64>  @llvm.vp.fshl.v256i64 (<256 x i64> <left_op>, <256 x i64> <middle_op>, <256 x i64> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated fshl of three vectors of integers.
+
+
+Arguments:
+""""""""""
+
+The first three operand and the result have the same vector of integer type. The
+fourth operand is the vector mask and has the same number of elements as the
+result vector type. The fifth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.fshl``' intrinsic performs fshl (:ref:`fshl <int_fshl>`) of the first, second, and third
+vector operand on each enabled lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
+
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i32> @llvm.vp.fshl.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c)
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
+
+
+'``llvm.vp.fshr.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i32>  @llvm.vp.fshr.v16i32 (<16 x i32> <left_op>, <16 x i32> <middle_op>, <16 x i32> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32>  @llvm.vp.fshr.nxv4i32  (<vscale x 4 x i32> <left_op>, <vscale x 4 x i32> <middle_op>, <vscale x 4 x i32> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64>  @llvm.vp.fshr.v256i64 (<256 x i64> <left_op>, <256 x i64> <middle_op>, <256 x i64> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated fshr of three vectors of integers.
+
+
+Arguments:
+""""""""""
+
+The first three operand and the result have the same vector of integer type. The
+fourth operand is the vector mask and has the same number of elements as the
+result vector type. The fifth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.fshr``' intrinsic performs fshr (:ref:`fshr <int_fshr>`) of the first, second, and third
+vector operand on each enabled lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
+
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i32> @llvm.vp.fshr.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c)
       %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
