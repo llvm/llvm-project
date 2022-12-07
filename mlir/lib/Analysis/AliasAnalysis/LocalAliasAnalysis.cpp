@@ -70,7 +70,7 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
       }
       return inputIndex - firstInputIndex;
     }
-    return llvm::None;
+    return std::nullopt;
   };
 
   // Check branches from the parent operation.
@@ -80,7 +80,7 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
     regionIndex = region->getRegionNumber();
   }
   if (Optional<unsigned> operandIndex =
-          getOperandIndexIfPred(/*predIndex=*/llvm::None)) {
+          getOperandIndexIfPred(/*predIndex=*/std::nullopt)) {
     collectUnderlyingAddressValues(
         branch.getSuccessorEntryOperands(regionIndex)[*operandIndex], maxDepth,
         visited, output);

@@ -202,7 +202,7 @@ public:
 
   /// Returns the unknown invocation bounds, i.e., there is no information on
   /// how many times a region may be invoked.
-  static InvocationBounds getUnknown() { return {0, llvm::None}; }
+  static InvocationBounds getUnknown() { return {0, std::nullopt}; }
 
 private:
   /// The minimum number of times the successor region will be invoked.

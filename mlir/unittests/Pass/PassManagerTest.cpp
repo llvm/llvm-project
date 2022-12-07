@@ -60,9 +60,9 @@ TEST(PassManagerTest, OpSpecificAnalysis) {
   // Create a module with 2 functions.
   OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
   for (StringRef name : {"secret", "not_secret"}) {
-    auto func =
-        func::FuncOp::create(builder.getUnknownLoc(), name,
-                             builder.getFunctionType(llvm::None, llvm::None));
+    auto func = func::FuncOp::create(
+        builder.getUnknownLoc(), name,
+        builder.getFunctionType(std::nullopt, std::nullopt));
     func.setPrivate();
     module->push_back(func);
   }

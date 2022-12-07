@@ -84,10 +84,10 @@ private:
       for (Operation *users : readOp->getUsers()) {
         auto extract = dyn_cast<ExtractStridedSliceOp>(users);
         if (!extract)
-          return llvm::None;
+          return std::nullopt;
         auto vecType = extract.getResult().getType().cast<VectorType>();
         if (dstVec && dstVec != vecType)
-          return llvm::None;
+          return std::nullopt;
         dstVec = vecType;
       }
       return SmallVector<int64_t>(dstVec.getShape().begin(),
@@ -96,11 +96,11 @@ private:
     if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op)) {
       auto insert = writeOp.getVector().getDefiningOp<InsertStridedSliceOp>();
       if (!insert)
-        return llvm::None;
+        return std::nullopt;
       ArrayRef<int64_t> shape = insert.getSourceVectorType().getShape();
       return SmallVector<int64_t>(shape.begin(), shape.end());
     }
-    return llvm::None;
+    return std::nullopt;
   }
 
   static LogicalResult filter(Operation *op) {
@@ -334,7 +334,7 @@ struct TestVectorUnrollingPatterns
           vector::ContractionOp contractOp = cast<vector::ContractionOp>(op);
           if (contractOp.getIteratorTypes().size() == unrollOrder.size())
             return SmallVector<int64_t>(unrollOrder.begin(), unrollOrder.end());
-          return None;
+          return std::nullopt;
         });
       }
       populateVectorUnrollPatterns(patterns, opts);
@@ -342,7 +342,7 @@ struct TestVectorUnrollingPatterns
       auto nativeShapeFn = [](Operation *op) -> Optional<SmallVector<int64_t>> {
         auto contractOp = dyn_cast<ContractionOp>(op);
         if (!contractOp)
-          return None;
+          return std::nullopt;
         return SmallVector<int64_t>(contractOp.getIteratorTypes().size(), 2);
       };
       populateVectorUnrollPatterns(patterns,
@@ -404,7 +404,7 @@ struct TestVectorTransferUnrollingPatterns
             else if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op))
               numLoops = writeOp.getVectorType().getRank();
             else
-              return None;
+              return std::nullopt;
             auto order = llvm::reverse(llvm::seq<int64_t>(0, numLoops));
             return llvm::to_vector(order);
           });

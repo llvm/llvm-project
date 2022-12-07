@@ -88,7 +88,7 @@ protected:
   /// may not be populated.
   struct Impl {
     Impl(StringAttr name)
-        : name(name), dialect(nullptr), interfaceMap(llvm::None) {}
+        : name(name), dialect(nullptr), interfaceMap(std::nullopt) {}
 
     /// The name of the operation.
     StringAttr name;

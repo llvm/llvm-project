@@ -2330,7 +2330,7 @@ struct InsertSliceOpCastFolder final : public OpRewritePattern<InsertOpTy> {
     auto getSourceOfCastOp = [](Value v) -> Optional<Value> {
       auto castOp = v.getDefiningOp<tensor::CastOp>();
       if (!castOp || !canFoldIntoConsumerOp(castOp))
-        return llvm::None;
+        return std::nullopt;
       return castOp.getSource();
     };
     Optional<Value> sourceCastSource =

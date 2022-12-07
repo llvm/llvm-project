@@ -1405,7 +1405,7 @@ Optional<MPInt> IntegerRelation::getConstantBoundOnDimSize(
     // representation of the local vars.
     if (!std::all_of(eq.begin() + getNumDimAndSymbolVars(), eq.end() - 1,
                      [](const MPInt &coeff) { return coeff == 0; }))
-      return None;
+      return std::nullopt;
 
     // This variable can only take a single value.
     if (lb) {
@@ -1442,7 +1442,7 @@ Optional<MPInt> IntegerRelation::getConstantBoundOnDimSize(
   }
   if (r == e)
     // If it doesn't, there isn't a bound on it.
-    return None;
+    return std::nullopt;
 
   // Positions of constraints that are lower/upper bounds on the variable.
   SmallVector<unsigned, 4> lbIndices, ubIndices;
@@ -1477,7 +1477,7 @@ Optional<MPInt> IntegerRelation::getConstantBoundOnDimSize(
                            atIneq(lbPos, pos));
       // This bound is non-negative by definition.
       diff = std::max<MPInt>(diff, MPInt(0));
-      if (minDiff == None || diff < minDiff) {
+      if (minDiff == std::nullopt || diff < minDiff) {
         minDiff = diff;
         minLbPosition = lbPos;
         minUbPosition = ubPos;
@@ -1536,7 +1536,7 @@ IntegerRelation::computeConstantLowerOrUpperBound(unsigned pos) {
   }
   if (r == e)
     // If it doesn't, there isn't a bound on it.
-    return None;
+    return std::nullopt;
 
   Optional<MPInt> minOrMaxConst;
 
@@ -1563,10 +1563,10 @@ IntegerRelation::computeConstantLowerOrUpperBound(unsigned pos) {
         isLower ? ceilDiv(-atIneq(r, getNumCols() - 1), atIneq(r, 0))
                 : floorDiv(atIneq(r, getNumCols() - 1), -atIneq(r, 0));
     if (isLower) {
-      if (minOrMaxConst == None || boundConst > minOrMaxConst)
+      if (minOrMaxConst == std::nullopt || boundConst > minOrMaxConst)
         minOrMaxConst = boundConst;
     } else {
-      if (minOrMaxConst == None || boundConst < minOrMaxConst)
+      if (minOrMaxConst == std::nullopt || boundConst < minOrMaxConst)
         minOrMaxConst = boundConst;
     }
   }
@@ -1589,7 +1589,7 @@ Optional<MPInt> IntegerRelation::getConstantBound(BoundType type,
   Optional<MPInt> ub =
       IntegerRelation(*this)
           .computeConstantLowerOrUpperBound</*isLower=*/false>(pos);
-  return (lb && ub && *lb == *ub) ? Optional<MPInt>(*ub) : None;
+  return (lb && ub && *lb == *ub) ? Optional<MPInt>(*ub) : std::nullopt;
 }
 
 // A simple (naive and conservative) check for hyper-rectangularity.

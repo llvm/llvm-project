@@ -32,7 +32,7 @@ static Optional<lsp::Location> getLocationFromLoc(StringRef uriScheme,
     lsp::Logger::error("Failed to create URI for file `{0}`: {1}",
                        loc.getFilename(),
                        llvm::toString(sourceURI.takeError()));
-    return llvm::None;
+    return std::nullopt;
   }
 
   lsp::Position position;
@@ -140,7 +140,7 @@ static Optional<unsigned> getResultNumberFromLoc(SMLoc loc) {
   // Check to see if this location indexes into the result group, via `#`. If it
   // doesn't, we can't extract a sub result number.
   if (*curPtr != '#')
-    return llvm::None;
+    return std::nullopt;
 
   // Compute the sub result number from the remaining portion of the string.
   const char *numberStart = ++curPtr;
@@ -156,7 +156,7 @@ static Optional<unsigned> getResultNumberFromLoc(SMLoc loc) {
 /// If the range is invalid, returns None.
 static Optional<StringRef> getTextFromRange(SMRange range) {
   if (!range.isValid())
-    return None;
+    return std::nullopt;
   const char *startPtr = range.Start.getPointer();
   return StringRef(startPtr, range.End.getPointer() - startPtr);
 }
@@ -490,7 +490,7 @@ Optional<lsp::Hover> MLIRDocument::findHover(const lsp::URIForFile &uri,
           hoverRange, block.block->getArgument(arg.index()), block);
     }
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 Optional<lsp::Hover> MLIRDocument::buildHoverForOperation(
@@ -1227,7 +1227,7 @@ void lsp::MLIRServer::addOrUpdateDocument(
 Optional<int64_t> lsp::MLIRServer::removeDocument(const URIForFile &uri) {
   auto it = impl->files.find(uri.file());
   if (it == impl->files.end())
-    return llvm::None;
+    return std::nullopt;
 
   int64_t version = it->second->getVersion();
   impl->files.erase(it);
@@ -1255,7 +1255,7 @@ Optional<lsp::Hover> lsp::MLIRServer::findHover(const URIForFile &uri,
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     return fileIt->second->findHover(uri, hoverPos);
-  return llvm::None;
+  return std::nullopt;
 }
 
 void lsp::MLIRServer::findDocumentSymbols(

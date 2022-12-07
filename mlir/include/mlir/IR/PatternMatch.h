@@ -92,7 +92,7 @@ public:
   Optional<OperationName> getRootKind() const {
     if (rootKind == RootKind::OperationName)
       return OperationName::getFromOpaquePointer(rootValue);
-    return llvm::None;
+    return std::nullopt;
   }
 
   /// Return the interface ID used to match the root operation of this pattern.
@@ -101,7 +101,7 @@ public:
   Optional<TypeID> getRootInterfaceID() const {
     if (rootKind == RootKind::InterfaceID)
       return TypeID::getFromOpaquePointer(rootValue);
-    return llvm::None;
+    return std::nullopt;
   }
 
   /// Return the trait ID used to match the root operation of this pattern.
@@ -110,7 +110,7 @@ public:
   Optional<TypeID> getRootTraitID() const {
     if (rootKind == RootKind::TraitID)
       return TypeID::getFromOpaquePointer(rootValue);
-    return llvm::None;
+    return std::nullopt;
   }
 
   /// Return the benefit (the inverse of "cost") of matching this pattern.  The
@@ -465,12 +465,12 @@ public:
   /// 'argValues' is used to replace the block arguments of 'source' after
   /// merging.
   virtual void mergeBlocks(Block *source, Block *dest,
-                           ValueRange argValues = llvm::None);
+                           ValueRange argValues = std::nullopt);
 
   // Merge the operations of block 'source' before the operation 'op'. Source
   // block should not have existing predecessors or successors.
   void mergeBlockBefore(Block *source, Operation *op,
-                        ValueRange argValues = llvm::None);
+                        ValueRange argValues = std::nullopt);
 
   /// Split the operations starting at "before" (inclusive) out of the given
   /// block into a new block, and return it.
@@ -1587,7 +1587,8 @@ public:
   RewritePatternSet &add(ConstructorArg &&arg, ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(/*debugLabels=*/llvm::None, std::forward<ConstructorArg>(arg),
+    (addImpl<Ts>(/*debugLabels=*/std::nullopt,
+                 std::forward<ConstructorArg>(arg),
                  std::forward<ConstructorArgs>(args)...),
      ...);
     return *this;
@@ -1666,7 +1667,7 @@ public:
   RewritePatternSet &insert(ConstructorArg &&arg, ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(/*debugLabels=*/llvm::None, arg, args...), ...);
+    (addImpl<Ts>(/*debugLabels=*/std::nullopt, arg, args...), ...);
     return *this;
   }
 

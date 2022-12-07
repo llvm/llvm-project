@@ -599,7 +599,7 @@ makePattern(const DenseSet<Operation *> &parallelLoops, int vectorRank,
                For(isVectorizableLoopPtrFactory(parallelLoops, d1),
                    For(isVectorizableLoopPtrFactory(parallelLoops, d2))));
   default: {
-    return llvm::None;
+    return std::nullopt;
   }
   }
 }

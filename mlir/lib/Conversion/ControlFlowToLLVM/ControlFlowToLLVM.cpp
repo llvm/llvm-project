@@ -66,7 +66,7 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
 
     // Generate IR to call `abort`.
     Block *failureBlock = rewriter.createBlock(opBlock->getParent());
-    rewriter.create<LLVM::CallOp>(loc, abortFunc, llvm::None);
+    rewriter.create<LLVM::CallOp>(loc, abortFunc, std::nullopt);
     rewriter.create<LLVM::UnreachableOp>(loc);
 
     // Generate assertion test.

@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include <optional>
 
 #include "LiveDebugValues.h"
 
@@ -1005,7 +1006,7 @@ public:
       // The "empty" fragment is stored as DebugVariable::DefaultFragment, so
       // that it overlaps with everything, however its cannonical representation
       // in a DebugVariable is as "None".
-      Optional<DIExpression::FragmentInfo> OptFragmentInfo = FragmentInfo;
+      std::optional<DIExpression::FragmentInfo> OptFragmentInfo = FragmentInfo;
       if (DebugVariable::isDefaultFragment(FragmentInfo))
         OptFragmentInfo = std::nullopt;
 
@@ -1033,7 +1034,7 @@ public:
   friend class ::InstrRefLDVTest;
 
   using FragmentInfo = DIExpression::FragmentInfo;
-  using OptFragmentInfo = Optional<DIExpression::FragmentInfo>;
+  using OptFragmentInfo = std::optional<DIExpression::FragmentInfo>;
 
   // Helper while building OverlapMap, a map of all fragments seen for a given
   // DILocalVariable.

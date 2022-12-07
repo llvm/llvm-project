@@ -734,10 +734,10 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
           isExpanding ? expandingReshapeOp.getReassociationMaps()
                       : collapsingReshapeOp.getReassociationMaps(),
           expandedType.getShape(), collapsedType.getShape(), rewriter)))
-    return llvm::None;
+    return std::nullopt;
 
   if (failed(isGenericOpExpandable(genericOp, expansionInfo, rewriter)))
-    return llvm::None;
+    return std::nullopt;
 
   SmallVector<AffineMap, 4> expandedOpIndexingMaps = llvm::to_vector<4>(
       llvm::map_range(genericOp.getIndexingMapsArray(), [&](AffineMap m) {
@@ -772,7 +772,7 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
                 opOperandType.getShape(), expandedOperandType.getShape(),
                 reassociation,
                 /*isExpandingReshape=*/true)))
-          return llvm::None;
+          return std::nullopt;
         expandedOpOperands.push_back(rewriter.create<tensor::ExpandShapeOp>(
             genericOp.getLoc(), expandedOperandType, opOperand->get(),
             reassociation));
@@ -799,7 +799,7 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
               opOperandType.getShape(), expandedOutputType.getShape(),
               reassociation,
               /*isExpandingReshape=*/true)))
-        return llvm::None;
+        return std::nullopt;
       outputs.push_back(rewriter.create<tensor::ExpandShapeOp>(
           genericOp.getLoc(), expandedOutputType, opOperand->get(),
           reassociation));

@@ -357,7 +357,7 @@ static Optional<APInt> buildAttributeAPInt(Type type, bool isNegative,
   APInt result;
   bool isHex = spelling.size() > 1 && spelling[1] == 'x';
   if (spelling.getAsInteger(isHex ? 0 : 10, result))
-    return llvm::None;
+    return std::nullopt;
 
   // Extend or truncate the bitwidth to the right size.
   unsigned width = type.isIndex() ? IndexType::kInternalStorageBitWidth
@@ -369,7 +369,7 @@ static Optional<APInt> buildAttributeAPInt(Type type, bool isNegative,
     // The parser can return an unnecessarily wide result with leading zeros.
     // This isn't a problem, but truncating off bits is bad.
     if (result.countLeadingZeros() < result.getBitWidth() - width)
-      return llvm::None;
+      return std::nullopt;
 
     result = result.trunc(width);
   }
@@ -378,18 +378,18 @@ static Optional<APInt> buildAttributeAPInt(Type type, bool isNegative,
     // 0 bit integers cannot be negative and manipulation of their sign bit will
     // assert, so short-cut validation here.
     if (isNegative)
-      return llvm::None;
+      return std::nullopt;
   } else if (isNegative) {
     // The value is negative, we have an overflow if the sign bit is not set
     // in the negated apInt.
     result.negate();
     if (!result.isSignBitSet())
-      return llvm::None;
+      return std::nullopt;
   } else if ((type.isSignedInteger() || type.isIndex()) &&
              result.isSignBitSet()) {
     // The value is a positive signed integer or index,
     // we have an overflow if the sign bit is set.
-    return llvm::None;
+    return std::nullopt;
   }
 
   return result;
@@ -1175,7 +1175,7 @@ Attribute Parser::parseStridedLayoutAttr() {
     SMLoc loc = getToken().getLoc();
     auto emitWrongTokenError = [&] {
       emitError(loc, "expected a 64-bit signed integer or '?'");
-      return llvm::None;
+      return std::nullopt;
     };
 
     bool negative = consumeIf(Token::minus);
