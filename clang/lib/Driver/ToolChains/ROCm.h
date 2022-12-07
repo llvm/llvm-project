@@ -266,7 +266,7 @@ public:
   void detectHIPRuntime();
 
   /// Get the values for --rocm-device-lib-path arguments
-  const ArrayRef<std::string> getRocmDeviceLibPathArg() const {
+  ArrayRef<std::string> getRocmDeviceLibPathArg() const {
     return RocmDeviceLibPathArg;
   }
 
