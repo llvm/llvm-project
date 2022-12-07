@@ -873,7 +873,7 @@ private:
   Symbol &PushSubprogramScope(const parser::Name &, Symbol::Flag,
       const parser::LanguageBindingSpec * = nullptr);
   Symbol *GetSpecificFromGeneric(const parser::Name &);
-  SubprogramDetails &PostSubprogramStmt(const parser::Name &);
+  SubprogramDetails &PostSubprogramStmt();
   void CreateEntry(const parser::EntryStmt &stmt, Symbol &subprogram);
   void PostEntryStmt(const parser::EntryStmt &stmt);
   void HandleLanguageBinding(Symbol *,
@@ -3422,8 +3422,7 @@ bool SubprogramVisitor::Pre(const parser::SubroutineStmt &stmt) {
   Walk(std::get<parser::Name>(stmt.t));
   Walk(std::get<std::list<parser::DummyArg>>(stmt.t));
   // Don't traverse the LanguageBindingSpec now; it's deferred to EndSubprogram.
-  const auto &name{std::get<parser::Name>(stmt.t)};
-  auto &details{PostSubprogramStmt(name)};
+  auto &details{PostSubprogramStmt()};
   for (const auto &dummyArg : std::get<std::list<parser::DummyArg>>(stmt.t)) {
     if (const auto *dummyName{std::get_if<parser::Name>(&dummyArg.u)}) {
       Symbol &dummy{MakeSymbol(*dummyName, EntityDetails{true})};
@@ -3444,7 +3443,7 @@ bool SubprogramVisitor::Pre(const parser::EntryStmt &) { return BeginAttrs(); }
 
 void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
   const auto &name{std::get<parser::Name>(stmt.t)};
-  auto &details{PostSubprogramStmt(name)};
+  auto &details{PostSubprogramStmt()};
   for (const auto &dummyName : std::get<std::list<parser::Name>>(stmt.t)) {
     Symbol &dummy{MakeSymbol(dummyName, EntityDetails{true})};
     details.add_dummyArg(dummy);
@@ -3509,8 +3508,7 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
   info.resultName = nullptr;
 }
 
-SubprogramDetails &SubprogramVisitor::PostSubprogramStmt(
-    const parser::Name &name) {
+SubprogramDetails &SubprogramVisitor::PostSubprogramStmt() {
   Symbol &symbol{*currScope().symbol()};
   SetExplicitAttrs(symbol, EndAttrs());
   if (symbol.attrs().test(Attr::MODULE)) {
@@ -3775,7 +3773,7 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
     if (moduleInterface && &moduleInterface->owner() == &currScope()) {
       // Subprogram is MODULE FUNCTION or MODULE SUBROUTINE with an interface
       // previously defined in the same scope.
-      currScope().erase(moduleInterface->name());
+      EraseSymbol(name);
     }
   }
   Symbol &newSymbol{PushSubprogramScope(name, subpFlag, bindingSpec)};
