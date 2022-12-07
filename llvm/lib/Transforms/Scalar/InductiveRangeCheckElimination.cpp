@@ -554,7 +554,7 @@ class LoopConstrainer {
 
   // Compute a safe set of limits for the main loop to run in -- effectively the
   // intersection of `Range' and the iteration space of the original loop.
-  // Return None if unable to compute the set of subranges.
+  // Return std::nullopt if unable to compute the set of subranges.
   Optional<SubRanges> calculateSubRanges(bool IsSignedPredicate) const;
 
   // Clone `OriginalLoop' and return the result in CLResult.  The IR after

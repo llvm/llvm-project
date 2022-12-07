@@ -1084,8 +1084,8 @@ public:
 
   virtual void emitSyntaxDirective();
 
-  /// Record a relocation described by the .reloc directive. Return None if
-  /// succeeded. Otherwise, return a pair (Name is invalid, error message).
+  /// Record a relocation described by the .reloc directive. Return std::nullopt
+  /// if succeeded. Otherwise, return a pair (Name is invalid, error message).
   virtual std::optional<std::pair<bool, std::string>>
   emitRelocDirective(const MCExpr &Offset, StringRef Name, const MCExpr *Expr,
                      SMLoc Loc, const MCSubtargetInfo &STI) {

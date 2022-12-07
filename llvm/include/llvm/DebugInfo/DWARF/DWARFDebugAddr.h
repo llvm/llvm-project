@@ -69,7 +69,7 @@ public:
   Expected<uint64_t> getAddrEntry(uint32_t Index) const;
 
   /// Return the full length of this table, including the length field.
-  /// Return None if the length cannot be identified reliably.
+  /// Return std::nullopt if the length cannot be identified reliably.
   std::optional<uint64_t> getFullLength() const;
 
   /// Return the DWARF format of this table.

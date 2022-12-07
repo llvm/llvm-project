@@ -306,8 +306,8 @@ protected:
 
   // Returns the function symbol index for the given address. Matches the
   // symbol's section with FunctionSec when specified.
-  // Returns None if no function symbol can be found for the address or in case
-  // it is not defined in the specified section.
+  // Returns std::nullopt if no function symbol can be found for the address or
+  // in case it is not defined in the specified section.
   SmallVector<uint32_t>
   getSymbolIndexesForFunctionAddress(uint64_t SymValue,
                                      Optional<const Elf_Shdr *> FunctionSec);

@@ -493,7 +493,7 @@ void MarkupFilter::printValue(Twine Value) {
 
 // This macro helps reduce the amount of indirection done through Optional
 // below, since the usual case upon returning a std::nullopt Optional is to
-// return None.
+// return std::nullopt.
 #define ASSIGN_OR_RETURN_NONE(TYPE, NAME, EXPR)                                \
   auto NAME##Opt = (EXPR);                                                     \
   if (!NAME##Opt)                                                              \

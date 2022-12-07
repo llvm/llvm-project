@@ -890,8 +890,8 @@ public:
   void writeRegMask(const MachineOperand *MO, unsigned CurBB, unsigned InstID);
 
   /// Find LocIdx for SpillLoc \p L, creating a new one if it's not tracked.
-  /// Returns None when in scenarios where a spill slot could be tracked, but
-  /// we would likely run into resource limitations.
+  /// Returns std::nullopt when in scenarios where a spill slot could be
+  /// tracked, but we would likely run into resource limitations.
   Optional<SpillLocationNo> getOrTrackSpillLoc(SpillLoc L);
 
   // Get LocIdx of a spill ID.
