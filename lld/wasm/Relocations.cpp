@@ -33,9 +33,9 @@ static bool requiresGOTAccess(const Symbol *sym) {
 }
 
 static bool allowUndefined(const Symbol* sym) {
-  // Symbols with explicit import names are always allowed to be undefined at
+  // Symbols that are explicitly imported are always allowed to be undefined at
   // link time.
-  if (sym->importName)
+  if (sym->isImported())
     return true;
   if (isa<UndefinedFunction>(sym) && config->importUndefined)
     return true;

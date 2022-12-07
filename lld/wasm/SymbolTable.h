@@ -103,6 +103,7 @@ public:
   DefinedFunction *createUndefinedStub(const WasmSignature &sig);
 
   std::vector<ObjFile *> objectFiles;
+  std::vector<StubFile *> stubFiles;
   std::vector<SharedFile *> sharedFiles;
   std::vector<BitcodeFile *> bitcodeFiles;
   std::vector<InputFunction *> syntheticFunctions;

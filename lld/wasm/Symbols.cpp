@@ -220,6 +220,10 @@ void Symbol::setHidden(bool isHidden) {
     flags |= WASM_SYMBOL_VISIBILITY_DEFAULT;
 }
 
+bool Symbol::isImported() const {
+  return isUndefined() && (importName.has_value() || forceImport);
+}
+
 bool Symbol::isExported() const {
   if (!isDefined() || isLocal())
     return false;

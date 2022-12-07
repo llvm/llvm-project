@@ -39,6 +39,13 @@ void SymbolTable::addFile(InputFile *file) {
     return;
   }
 
+  // stub file
+  if (auto *f = dyn_cast<StubFile>(file)) {
+    f->parse();
+    stubFiles.push_back(f);
+    return;
+  }
+
   if (config->trace)
     message(toString(file));
 
