@@ -22,10 +22,12 @@
 #include <unistd.h>     // FIXME: Unix-only. Not portable.
 
 namespace clang {
+namespace tooling::dependencies {
+struct DepscanPrefixMapping;
+}
 
 namespace cc1depscand {
-
-struct DepscanPrefixMapping;
+using tooling::dependencies::DepscanPrefixMapping;
 
 struct DepscanSharing {
   bool OnlyShareParent = false;
