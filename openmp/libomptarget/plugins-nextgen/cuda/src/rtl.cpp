@@ -97,7 +97,7 @@ public:
 
   /// Create a new stream and save the reference. The reference must be empty
   /// before calling to this function.
-  Error create() override {
+  Error create(GenericDeviceTy &Device) override {
     if (Stream)
       return Plugin::error("Creating an existing stream");
 
@@ -110,7 +110,7 @@ public:
 
   /// Destroy the referenced stream and invalidate the reference. The reference
   /// must be to a valid stream before calling to this function.
-  Error destroy() override {
+  Error destroy(GenericDeviceTy &Device) override {
     if (!Stream)
       return Plugin::error("Destroying an invalid stream");
 
@@ -140,7 +140,7 @@ public:
 
   /// Create a new event and save the reference. The reference must be empty
   /// before calling to this function.
-  Error create() override {
+  Error create(GenericDeviceTy &Device) override {
     if (Event)
       return Plugin::error("Creating an existing event");
 
@@ -153,7 +153,7 @@ public:
 
   /// Destroy the referenced event and invalidate the reference. The reference
   /// must be to a valid event before calling to this function.
-  Error destroy() override {
+  Error destroy(GenericDeviceTy &Device) override {
     if (!Event)
       return Plugin::error("Destroying an invalid event");
 

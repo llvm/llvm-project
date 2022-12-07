@@ -626,10 +626,10 @@ public:
 /// create a new resource on the ctor, but on the create() function instead.
 struct GenericDeviceResourceRef {
   /// Create a new resource and stores a reference.
-  virtual Error create() = 0;
+  virtual Error create(GenericDeviceTy &Device) = 0;
 
   /// Destroy and release the resources pointed by the reference.
-  virtual Error destroy() = 0;
+  virtual Error destroy(GenericDeviceTy &Device) = 0;
 
 protected:
   ~GenericDeviceResourceRef() = default;
@@ -679,6 +679,10 @@ protected:
   /// Get resource from the pool or create new resources.
   ResourceRef getResource() {
     const std::lock_guard<std::mutex> Lock(Mutex);
+
+    assert(NextAvailable <= ResourcePool.size() &&
+           "Resource pool is corrupted");
+
     if (NextAvailable == ResourcePool.size()) {
       // By default we double the resource pool every time.
       if (auto Err = ResourcePoolTy::resizeResourcePool(NextAvailable * 2)) {
@@ -694,6 +698,8 @@ protected:
   /// Return resource to the pool.
   void returnResource(ResourceRef Resource) {
     const std::lock_guard<std::mutex> Lock(Mutex);
+
+    assert(NextAvailable > 0 && "Resource pool is corrupted");
     ResourcePool[--NextAvailable] = Resource;
   }
 
@@ -709,13 +715,13 @@ private:
     if (OldSize < NewSize) {
       // Create new resources.
       for (uint32_t I = OldSize; I < NewSize; ++I) {
-        if (auto Err = ResourcePool[I].create())
+        if (auto Err = ResourcePool[I].create(Device))
           return Err;
       }
     } else {
       // Destroy the obsolete resources.
       for (uint32_t I = NewSize; I < OldSize; ++I) {
-        if (auto Err = ResourcePool[I].destroy())
+        if (auto Err = ResourcePool[I].destroy(Device))
           return Err;
       }
     }
