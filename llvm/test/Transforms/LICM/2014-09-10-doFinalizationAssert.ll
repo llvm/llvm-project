@@ -1,4 +1,4 @@
-; RUN: opt < %s -licm -loop-unroll -disable-output
+; RUN: opt < %s -passes='loop-mssa(licm),loop-unroll' -disable-output
 ; Test triggered an assertion in doFinalization() because loop unroll was deleting
 ; the inner loop which caused the loop to not get removed from the
 ; LoopToAliasSetMap.
