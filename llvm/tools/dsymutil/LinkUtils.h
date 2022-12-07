@@ -23,6 +23,14 @@
 namespace llvm {
 namespace dsymutil {
 
+enum class DsymutilAccelTableKind : uint8_t {
+  None,
+  Apple,   ///< .apple_names, .apple_namespaces, .apple_types, .apple_objc.
+  Dwarf,   ///< DWARF v5 .debug_names.
+  Default, ///< Dwarf for DWARF5 or later, Apple otherwise.
+  Pub,     ///< .debug_pubnames, .debug_pubtypes
+};
+
 struct LinkOptions {
   /// Verbosity
   bool Verbose = false;
@@ -56,7 +64,7 @@ struct LinkOptions {
   OutputFileType FileType = OutputFileType::Object;
 
   /// The accelerator table kind
-  DwarfLinkerAccelTableKind TheAccelTableKind;
+  DsymutilAccelTableKind TheAccelTableKind;
 
   /// -oso-prepend-path
   std::string PrependPath;

@@ -297,7 +297,6 @@ Error linkDebugInfo(object::ObjectFile &File, const Options &Options,
   DWARFLinker DebugInfoLinker(&OutStreamer, DwarfLinkerClient::LLD);
 
   DebugInfoLinker.setEstimatedObjfilesAmount(1);
-  DebugInfoLinker.setAccelTableKind(DwarfLinkerAccelTableKind::None);
   DebugInfoLinker.setErrorHandler(ReportErr);
   DebugInfoLinker.setWarningHandler(ReportWarn);
   DebugInfoLinker.setNumThreads(Options.NumThreads);
