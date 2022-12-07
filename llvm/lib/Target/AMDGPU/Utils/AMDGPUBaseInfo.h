@@ -1126,8 +1126,12 @@ unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI);
 LLVM_READNONE
 unsigned mc2PseudoReg(unsigned Reg);
 
-/// Can this operand also contain immediate values?
+/// Is this an AMDGPU specific source operand? These include registers,
+/// inline constants, literals and mandatory literals (KImm).
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo);
+
+/// Is this a KImm operand?
+bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
 /// Is this floating-point operand?
 bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo);
