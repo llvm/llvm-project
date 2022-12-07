@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -Wimplicit-int-conversion -Wno-unused -Wunevaluated-expression -triple x86_64-gnu-linux
+// RUN: %clang_cc1 -fsyntax-only -verify %s -Wimplicit-int-conversion -Wno-unused -Wunevaluated-expression -triple aarch64-unknown-unknown
 
 template<int Bounds>
 struct HasExtInt {

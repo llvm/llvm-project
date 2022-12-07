@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c2x -fsyntax-only -verify -Wno-unused %s
+// RUN: %clang_cc1 -triple aarch64-unknown-unknown -std=c2x -fsyntax-only -verify -Wno-unused %s
 
 // Test that the preprocessor behavior makes sense.
 #if 1wb != 1
