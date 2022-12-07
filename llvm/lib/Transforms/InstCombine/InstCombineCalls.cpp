@@ -3313,7 +3313,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
       LiveGcValues.insert(BasePtr);
       LiveGcValues.insert(DerivedPtr);
     }
-    Optional<OperandBundleUse> Bundle =
+    std::optional<OperandBundleUse> Bundle =
         GCSP.getOperandBundle(LLVMContext::OB_gc_live);
     unsigned NumOfGCLives = LiveGcValues.size();
     if (!Bundle || NumOfGCLives == Bundle->Inputs.size())

@@ -5555,9 +5555,9 @@ public:
     return MI == EndLoop;
   }
 
-  Optional<bool>
-  createTripCountGreaterCondition(int TC, MachineBasicBlock &MBB,
-                                  SmallVectorImpl<MachineOperand> &Cond) override {
+  std::optional<bool> createTripCountGreaterCondition(
+      int TC, MachineBasicBlock &MBB,
+      SmallVectorImpl<MachineOperand> &Cond) override {
     if (TripCount == -1) {
       // Since BDZ/BDZ8 that we will insert will also decrease the ctr by 1,
       // so we don't need to generate any thing here.

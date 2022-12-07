@@ -63,7 +63,7 @@ public:
   virtual bool IsAlive() { return true; }
 
   virtual llvm::Optional<std::string> GetScriptedThreadPluginName() {
-    return llvm::None;
+    return std::nullopt;
   }
 
   virtual StructuredData::DictionarySP GetMetadata() { return {}; }
@@ -86,11 +86,11 @@ public:
 
   virtual lldb::tid_t GetThreadID() { return LLDB_INVALID_THREAD_ID; }
 
-  virtual llvm::Optional<std::string> GetName() { return llvm::None; }
+  virtual llvm::Optional<std::string> GetName() { return std::nullopt; }
 
   virtual lldb::StateType GetState() { return lldb::eStateInvalid; }
 
-  virtual llvm::Optional<std::string> GetQueue() { return llvm::None; }
+  virtual llvm::Optional<std::string> GetQueue() { return std::nullopt; }
 
   virtual StructuredData::DictionarySP GetStopReason() { return {}; }
 
@@ -99,7 +99,7 @@ public:
   virtual StructuredData::DictionarySP GetRegisterInfo() { return {}; }
 
   virtual llvm::Optional<std::string> GetRegisterContext() {
-    return llvm::None;
+    return std::nullopt;
   }
 
   virtual StructuredData::ArraySP GetExtendedInfo() { return {}; }

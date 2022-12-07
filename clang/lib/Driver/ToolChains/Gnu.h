@@ -27,7 +27,7 @@ struct DetectedMultilibs {
 
   /// On Biarch systems, this corresponds to the default multilib when
   /// targeting the non-default multilib. Otherwise, it is empty.
-  llvm::Optional<Multilib> BiarchSibling;
+  std::optional<Multilib> BiarchSibling;
 };
 
 bool findMIPSMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
@@ -201,7 +201,7 @@ public:
     Multilib SelectedMultilib;
     /// On Biarch systems, this corresponds to the default multilib when
     /// targeting the non-default multilib. Otherwise, it is empty.
-    llvm::Optional<Multilib> BiarchSibling;
+    std::optional<Multilib> BiarchSibling;
 
     GCCVersion Version;
 
@@ -218,7 +218,7 @@ public:
   public:
     explicit GCCInstallationDetector(const Driver &D) : IsValid(false), D(D) {}
     void init(const llvm::Triple &TargetTriple, const llvm::opt::ArgList &Args,
-              ArrayRef<std::string> ExtraTripleAliases = None);
+              ArrayRef<std::string> ExtraTripleAliases = std::nullopt);
 
     /// Check whether we detected a valid GCC install.
     bool isValid() const { return IsValid; }

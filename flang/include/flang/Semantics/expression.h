@@ -237,6 +237,7 @@ public:
   MaybeExpr Analyze(const parser::StructureConstructor &);
   MaybeExpr Analyze(const parser::InitialDataTarget &);
   MaybeExpr Analyze(const parser::NullInit &);
+  MaybeExpr Analyze(const parser::StmtFunctionStmt &);
 
   void Analyze(const parser::CallStmt &);
   const Assignment *Analyze(const parser::AssignmentStmt &);
@@ -354,7 +355,8 @@ private:
   std::pair<const Symbol *, bool /* failure due to NULL() actuals */>
   ResolveGeneric(const Symbol &, const ActualArguments &, const AdjustActuals &,
       bool isSubroutine, bool mightBeStructureConstructor = false);
-  void EmitGenericResolutionError(const Symbol &, bool dueToNullActuals);
+  void EmitGenericResolutionError(
+      const Symbol &, bool dueToNullActuals, bool isSubroutine);
   const Symbol &AccessSpecific(
       const Symbol &originalGeneric, const Symbol &specific);
   std::optional<CalleeAndArguments> GetCalleeAndArguments(const parser::Name &,
@@ -384,6 +386,7 @@ private:
   bool useSavedTypedExprs_{true};
   bool inWhereBody_{false};
   bool inDataStmtConstant_{false};
+  bool inStmtFunctionDefinition_{false};
   friend class ArgumentAnalyzer;
 };
 

@@ -51,7 +51,7 @@ IntelPTMultiCoreTrace::StartOnAllCores(const TraceIntelPTStartRequest &request,
 
   for (cpu_id_t cpu_id : *cpu_ids) {
     Expected<IntelPTSingleBufferTrace> core_trace =
-        IntelPTSingleBufferTrace::Start(request, /*tid=*/None, cpu_id,
+        IntelPTSingleBufferTrace::Start(request, /*tid=*/std::nullopt, cpu_id,
                                         /*disabled=*/true, cgroup_fd);
     if (!core_trace)
       return IncludePerfEventParanoidMessageInError(core_trace.takeError());
@@ -149,7 +149,7 @@ Expected<Optional<std::vector<uint8_t>>>
 IntelPTMultiCoreTrace::TryGetBinaryData(
     const TraceGetBinaryDataRequest &request) {
   if (!request.cpu_id)
-    return None;
+    return std::nullopt;
   auto it = m_traces_per_core.find(*request.cpu_id);
   if (it == m_traces_per_core.end())
     return createStringError(
@@ -160,5 +160,5 @@ IntelPTMultiCoreTrace::TryGetBinaryData(
     return it->second.first.GetIptTrace();
   if (request.kind == IntelPTDataKinds::kPerfContextSwitchTrace)
     return it->second.second.GetReadOnlyDataBuffer();
-  return None;
+  return std::nullopt;
 }

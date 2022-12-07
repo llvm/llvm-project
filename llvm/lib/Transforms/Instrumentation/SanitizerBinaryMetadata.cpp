@@ -67,14 +67,16 @@ public:
 private:
   // Forbid construction elsewhere.
   explicit constexpr MetadataInfo(StringRef FunctionPrefix,
-                                  StringRef SectionSuffix, int Feature)
+                                  StringRef SectionSuffix, uint32_t Feature)
       : FunctionPrefix(FunctionPrefix), SectionSuffix(SectionSuffix),
-        FeatureMask(Feature != -1 ? (1u << Feature) : 0) {}
+        FeatureMask(Feature) {}
 };
 const MetadataInfo MetadataInfo::Covered{"__sanitizer_metadata_covered",
-                                         "sanmd_covered", -1};
+                                         kSanitizerBinaryMetadataCoveredSection,
+                                         kSanitizerBinaryMetadataNone};
 const MetadataInfo MetadataInfo::Atomics{"__sanitizer_metadata_atomics",
-                                         "sanmd_atomics", 0};
+                                         kSanitizerBinaryMetadataAtomicsSection,
+                                         kSanitizerBinaryMetadataAtomics};
 
 // The only instances of MetadataInfo are the constants above, so a set of
 // them may simply store pointers to them. To deterministically generate code,
@@ -89,11 +91,16 @@ cl::opt<bool> ClEmitCovered("sanitizer-metadata-covered",
 cl::opt<bool> ClEmitAtomics("sanitizer-metadata-atomics",
                             cl::desc("Emit PCs for atomic operations."),
                             cl::Hidden, cl::init(false));
+cl::opt<bool> ClEmitUAR("sanitizer-metadata-uar",
+                        cl::desc("Emit PCs for start of functions that are "
+                                 "subject for use-after-return checking"),
+                        cl::Hidden, cl::init(false));
 
 //===--- Statistics -------------------------------------------------------===//
 
 STATISTIC(NumMetadataCovered, "Metadata attached to covered functions");
 STATISTIC(NumMetadataAtomics, "Metadata attached to atomics");
+STATISTIC(NumMetadataUAR, "Metadata attached to UAR functions");
 
 //===----------------------------------------------------------------------===//
 
@@ -102,6 +109,7 @@ SanitizerBinaryMetadataOptions &&
 transformOptionsFromCl(SanitizerBinaryMetadataOptions &&Opts) {
   Opts.Covered |= ClEmitCovered;
   Opts.Atomics |= ClEmitAtomics;
+  Opts.UAR |= ClEmitUAR;
   return std::move(Opts);
 }
 
@@ -142,14 +150,11 @@ private:
   // function with memory operations (atomic or not) requires covered metadata
   // to determine if a memory operation is atomic or not in modules compiled
   // with SanitizerBinaryMetadata.
-  bool runOn(Instruction &I, MetadataInfoSet &MIS, MDBuilder &MDB);
+  bool runOn(Instruction &I, MetadataInfoSet &MIS, MDBuilder &MDB,
+             uint32_t &FeatureMask);
 
   // Get start/end section marker pointer.
   GlobalVariable *getSectionMarker(const Twine &MarkerName, Type *Ty);
-
-  // Create a 0-sized object in a section, so that the section is not discarded
-  // if all inputs have been discarded.
-  void createZeroSizedObjectInSection(Type *Ty, StringRef SectionSuffix);
 
   // Returns the target-dependent section name.
   StringRef getSectionName(StringRef SectionSuffix);
@@ -213,7 +218,6 @@ bool SanitizerBinaryMetadata::run() {
     }
     appendToGlobalCtors(Mod, Ctor, kCtorDtorPriority, CtorData);
     appendToGlobalDtors(Mod, Dtor, kCtorDtorPriority, DtorData);
-    createZeroSizedObjectInSection(Int8PtrTy, MI->SectionSuffix);
   }
 
   return true;
@@ -232,35 +236,57 @@ void SanitizerBinaryMetadata::runOn(Function &F, MetadataInfoSet &MIS) {
 
   // The metadata features enabled for this function, stored along covered
   // metadata (if enabled).
-  uint32_t PerInstrFeatureMask = getEnabledPerInstructionFeature();
+  uint32_t FeatureMask = getEnabledPerInstructionFeature();
   // Don't emit unnecessary covered metadata for all functions to save space.
   bool RequiresCovered = false;
-  if (PerInstrFeatureMask) {
+  // We can only understand if we need to set UAR feature after looking
+  // at the instructions. So we need to check instructions even if FeatureMask
+  // is empty.
+  if (FeatureMask || Options.UAR) {
     for (BasicBlock &BB : F)
       for (Instruction &I : BB)
-        RequiresCovered |= runOn(I, MIS, MDB);
+        RequiresCovered |= runOn(I, MIS, MDB, FeatureMask);
   }
+
+  if (F.isVarArg())
+    FeatureMask &= ~kSanitizerBinaryMetadataUAR;
+  if (FeatureMask & kSanitizerBinaryMetadataUAR)
+    NumMetadataUAR++;
 
   // Covered metadata is always emitted if explicitly requested, otherwise only
   // if some other metadata requires it to unambiguously interpret it for
   // modules compiled with SanitizerBinaryMetadata.
-  if (Options.Covered || RequiresCovered) {
+  if (Options.Covered || (FeatureMask && RequiresCovered)) {
     NumMetadataCovered++;
     const auto *MI = &MetadataInfo::Covered;
     MIS.insert(MI);
     const StringRef Section = getSectionName(MI->SectionSuffix);
     // The feature mask will be placed after the size (32 bit) of the function,
     // so in total one covered entry will use `sizeof(void*) + 4 + 4`.
-    Constant *CFM = IRB.getInt32(PerInstrFeatureMask);
+    Constant *CFM = IRB.getInt32(FeatureMask);
     F.setMetadata(LLVMContext::MD_pcsections,
                   MDB.createPCSections({{Section, {CFM}}}));
   }
 }
 
 bool SanitizerBinaryMetadata::runOn(Instruction &I, MetadataInfoSet &MIS,
-                                    MDBuilder &MDB) {
+                                    MDBuilder &MDB, uint32_t &FeatureMask) {
   SmallVector<const MetadataInfo *, 1> InstMetadata;
   bool RequiresCovered = false;
+
+  if (Options.UAR) {
+    for (unsigned i = 0; i < I.getNumOperands(); ++i) {
+      const Value *V = I.getOperand(i);
+      // TODO(dvyukov): check if V is an address of alloca/function arg.
+      // See isSafeAndProfitableToSinkLoad for addr-taken allocas
+      // and DeadArgumentEliminationPass::removeDeadStuffFromFunction
+      // for iteration over function args.
+      if (V) {
+        RequiresCovered = true;
+        FeatureMask |= kSanitizerBinaryMetadataUAR;
+      }
+    }
+  }
 
   if (Options.Atomics && I.mayReadOrWriteMemory()) {
     auto SSID = getAtomicSyncScopeID(&I);
@@ -285,25 +311,13 @@ bool SanitizerBinaryMetadata::runOn(Instruction &I, MetadataInfoSet &MIS,
 
 GlobalVariable *
 SanitizerBinaryMetadata::getSectionMarker(const Twine &MarkerName, Type *Ty) {
+  // Use ExternalWeak so that if all sections are discarded due to section
+  // garbage collection, the linker will not report undefined symbol errors.
   auto *Marker = new GlobalVariable(Mod, Ty, /*isConstant=*/false,
-                                    GlobalVariable::ExternalLinkage,
+                                    GlobalVariable::ExternalWeakLinkage,
                                     /*Initializer=*/nullptr, MarkerName);
   Marker->setVisibility(GlobalValue::HiddenVisibility);
   return Marker;
-}
-
-void SanitizerBinaryMetadata::createZeroSizedObjectInSection(
-    Type *Ty, StringRef SectionSuffix) {
-  auto *DummyInit = ConstantAggregateZero::get(ArrayType::get(Ty, 0));
-  auto *DummyEntry = new GlobalVariable(Mod, DummyInit->getType(), true,
-                                        GlobalVariable::ExternalLinkage,
-                                        DummyInit, "__dummy_" + SectionSuffix);
-  DummyEntry->setSection(getSectionName(SectionSuffix));
-  DummyEntry->setVisibility(GlobalValue::HiddenVisibility);
-  if (TargetTriple.supportsCOMDAT())
-    DummyEntry->setComdat(Mod.getOrInsertComdat(DummyEntry->getName()));
-  // Make sure the section isn't discarded by gc-sections.
-  appendToUsed(Mod, DummyEntry);
 }
 
 StringRef SanitizerBinaryMetadata::getSectionName(StringRef SectionSuffix) {

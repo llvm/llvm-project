@@ -16,7 +16,6 @@
 
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -35,6 +34,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -540,8 +540,8 @@ private:
   std::shared_ptr<MCJITMemoryManager> MemMgr;
   std::shared_ptr<LegacyJITSymbolResolver> Resolver;
   TargetOptions Options;
-  Optional<Reloc::Model> RelocModel;
-  Optional<CodeModel::Model> CMModel;
+  std::optional<Reloc::Model> RelocModel;
+  std::optional<CodeModel::Model> CMModel;
   std::string MArch;
   std::string MCPU;
   SmallVector<std::string, 4> MAttrs;

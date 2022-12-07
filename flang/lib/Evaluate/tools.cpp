@@ -60,12 +60,8 @@ Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
 }
 
 std::optional<DataRef> ExtractDataRef(
-    const ActualArgument &arg, bool intoSubstring) {
-  if (const Expr<SomeType> *expr{arg.UnwrapExpr()}) {
-    return ExtractDataRef(*expr, intoSubstring);
-  } else {
-    return std::nullopt;
-  }
+    const ActualArgument &arg, bool intoSubstring, bool intoComplexPart) {
+  return ExtractDataRef(arg.UnwrapExpr(), intoSubstring, intoComplexPart);
 }
 
 std::optional<DataRef> ExtractSubstringBase(const Substring &substring) {
@@ -1272,6 +1268,9 @@ bool IsPureProcedure(const Symbol &original) {
     // reference an IMPURE procedure or a VOLATILE variable
     if (const auto &expr{symbol.get<SubprogramDetails>().stmtFunction()}) {
       for (const SymbolRef &ref : evaluate::CollectSymbols(*expr)) {
+        if (&*ref == &symbol) {
+          return false; // error recovery, recursion is caught elsewhere
+        }
         if (IsFunction(*ref) && !IsPureProcedure(*ref)) {
           return false;
         }

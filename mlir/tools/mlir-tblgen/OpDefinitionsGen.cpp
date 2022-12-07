@@ -354,13 +354,13 @@ void OpOrAdaptorHelper::computeAttrMetadata() {
     attrMetadata.insert(
         {operandSegmentAttrName,
          AttributeMetadata{operandSegmentAttrName, /*isRequired=*/true,
-                           /*attr=*/llvm::None}});
+                           /*attr=*/std::nullopt}});
   }
   if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
     attrMetadata.insert(
         {resultSegmentAttrName,
          AttributeMetadata{resultSegmentAttrName, /*isRequired=*/true,
-                           /*attr=*/llvm::None}});
+                           /*attr=*/std::nullopt}});
   }
 
   // Store the metadata in sorted order.

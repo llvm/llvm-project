@@ -539,7 +539,7 @@ namespace llvm {
     bool parseGlobalValue(Type *Ty, Constant *&C);
     bool parseGlobalTypeAndValue(Constant *&V);
     bool parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts,
-                                Optional<unsigned> *InRangeOp = nullptr);
+                                std::optional<unsigned> *InRangeOp = nullptr);
     bool parseOptionalComdat(StringRef GlobalName, Comdat *&C);
     bool parseSanitizer(GlobalVariable *GV);
     bool parseMetadataAsValue(Value *&V, PerFunctionState &PFS);

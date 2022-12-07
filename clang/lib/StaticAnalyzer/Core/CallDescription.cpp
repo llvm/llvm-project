@@ -32,7 +32,7 @@ static MaybeCount readRequiredParams(MaybeCount RequiredArgs,
     return RequiredParams;
   if (RequiredArgs)
     return RequiredArgs;
-  return None;
+  return std::nullopt;
 }
 
 ento::CallDescription::CallDescription(CallDescriptionFlags Flags,

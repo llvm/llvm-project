@@ -1053,7 +1053,7 @@ void ARMBaseInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Mov->addRegisterKilled(SrcReg, TRI);
 }
 
-Optional<DestSourcePair>
+std::optional<DestSourcePair>
 ARMBaseInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   // VMOVRRD is also a copy instruction but it requires
   // special way of handling. It is more complex copy version
@@ -1069,7 +1069,7 @@ ARMBaseInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
 }
 
-Optional<ParamLoadedValue>
+std::optional<ParamLoadedValue>
 ARMBaseInstrInfo::describeLoadedValue(const MachineInstr &MI,
                                       Register Reg) const {
   if (auto DstSrcPair = isCopyInstrImpl(MI)) {
@@ -5555,8 +5555,8 @@ ARMBaseInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   return makeArrayRef(TargetFlags);
 }
 
-Optional<RegImmPair> ARMBaseInstrInfo::isAddImmediate(const MachineInstr &MI,
-                                                      Register Reg) const {
+std::optional<RegImmPair>
+ARMBaseInstrInfo::isAddImmediate(const MachineInstr &MI, Register Reg) const {
   int Sign = 1;
   unsigned Opcode = MI.getOpcode();
   int64_t Offset = 0;
@@ -6815,7 +6815,7 @@ public:
     return true;
   }
 
-  Optional<bool> createTripCountGreaterCondition(
+  std::optional<bool> createTripCountGreaterCondition(
       int TC, MachineBasicBlock &MBB,
       SmallVectorImpl<MachineOperand> &Cond) override {
 

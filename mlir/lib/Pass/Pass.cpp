@@ -716,7 +716,7 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
   for (auto &region : getOperation()->getRegions()) {
     for (Operation &op : region.getOps()) {
       // Get the pass manager index for this operation type.
-      auto pmIdxIt = knownOpPMIdx.try_emplace(op.getName(), llvm::None);
+      auto pmIdxIt = knownOpPMIdx.try_emplace(op.getName(), std::nullopt);
       if (pmIdxIt.second) {
         if (auto *mgr = findPassManagerFor(mgrs, op.getName(), *context))
           pmIdxIt.first->second = std::distance(mgrs.begin(), mgr);

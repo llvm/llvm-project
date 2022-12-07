@@ -822,7 +822,7 @@ void Fortran::lower::ExplicitIterSpace::exprBase(Fortran::lower::FrontEndExpr x,
     endAssign();
   if (lhs) {
     if (bases.empty()) {
-      lhsBases.push_back(llvm::None);
+      lhsBases.push_back(std::nullopt);
       return;
     }
     assert(bases.size() >= 1 && "must detect an array reference on lhs");
@@ -854,7 +854,7 @@ void Fortran::lower::ExplicitIterSpace::conditionalCleanup() {
     loadBindings.clear();
     ccLoopNest.clear();
     innerArgs.clear();
-    outerLoop = llvm::None;
+    outerLoop = std::nullopt;
     clearLoops();
     counter = 0;
   }
@@ -870,7 +870,7 @@ Fortran::lower::ExplicitIterSpace::findArgPosition(fir::ArrayLoadOp load) {
     assert(optPos.has_value() && "load does not correspond to lhs");
     return optPos;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::SmallVector<Fortran::lower::FrontEndSymbol>

@@ -735,7 +735,7 @@ public:
   llvm::Optional<Module *> getCachedModuleLoad(const IdentifierInfo &II) {
     auto I = CachedModuleLoads.find(&II);
     if (I == CachedModuleLoads.end())
-      return None;
+      return std::nullopt;
     return I->second;
   }
 };

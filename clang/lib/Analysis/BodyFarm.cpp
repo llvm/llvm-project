@@ -541,7 +541,7 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
   CallExpr *CE = CallExpr::Create(
       /*ASTContext=*/C,
       /*StmtClass=*/M.makeLvalueToRvalue(/*Expr=*/Block),
-      /*Args=*/None,
+      /*Args=*/std::nullopt,
       /*QualType=*/C.VoidTy,
       /*ExprValueType=*/VK_PRValue,
       /*SourceLocation=*/SourceLocation(), FPOptionsOverride());
@@ -609,7 +609,7 @@ static Stmt *create_dispatch_sync(ASTContext &C, const FunctionDecl *D) {
   ASTMaker M(C);
   DeclRefExpr *DR = M.makeDeclRefExpr(PV);
   ImplicitCastExpr *ICE = M.makeLvalueToRvalue(DR, Ty);
-  CallExpr *CE = CallExpr::Create(C, ICE, None, C.VoidTy, VK_PRValue,
+  CallExpr *CE = CallExpr::Create(C, ICE, std::nullopt, C.VoidTy, VK_PRValue,
                                   SourceLocation(), FPOptionsOverride());
   return CE;
 }

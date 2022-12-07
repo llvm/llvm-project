@@ -1721,12 +1721,12 @@ static bool generateVectorLoadStoreInst(const SPIRV::IncomingCall *Call,
 /// Lowers a builtin funtion call using the provided \p DemangledCall skeleton
 /// and external instruction \p Set.
 namespace SPIRV {
-Optional<bool> lowerBuiltin(const StringRef DemangledCall,
-                            SPIRV::InstructionSet::InstructionSet Set,
-                            MachineIRBuilder &MIRBuilder,
-                            const Register OrigRet, const Type *OrigRetTy,
-                            const SmallVectorImpl<Register> &Args,
-                            SPIRVGlobalRegistry *GR) {
+std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
+                                 SPIRV::InstructionSet::InstructionSet Set,
+                                 MachineIRBuilder &MIRBuilder,
+                                 const Register OrigRet, const Type *OrigRetTy,
+                                 const SmallVectorImpl<Register> &Args,
+                                 SPIRVGlobalRegistry *GR) {
   LLVM_DEBUG(dbgs() << "Lowering builtin call: " << DemangledCall << "\n");
 
   // SPIR-V type and return register.

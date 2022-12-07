@@ -20,7 +20,6 @@
 
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"

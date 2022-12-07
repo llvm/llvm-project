@@ -512,6 +512,8 @@ void CheckHelper::CheckObjectEntity(
   }
   CheckAssumedTypeEntity(symbol, details);
   WarnMissingFinal(symbol);
+  const DeclTypeSpec *type{details.type()};
+  const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
   if (!details.coshape().empty()) {
     bool isDeferredCoshape{details.coshape().CanBeDeferredShape()};
     if (IsAllocatable(symbol)) {
@@ -533,16 +535,14 @@ void CheckHelper::CheckObjectEntity(
             symbol.name());
       }
     }
-    if (const DeclTypeSpec *type{details.type()}) {
-      if (IsBadCoarrayType(type->AsDerived())) { // C747 & C824
-        messages_.Say(
-            "Coarray '%s' may not have type TEAM_TYPE, C_PTR, or C_FUNPTR"_err_en_US,
-            symbol.name());
-      }
+    if (IsBadCoarrayType(derived)) { // C747 & C824
+      messages_.Say(
+          "Coarray '%s' may not have type TEAM_TYPE, C_PTR, or C_FUNPTR"_err_en_US,
+          symbol.name());
     }
   }
   if (details.isDummy()) {
-    if (symbol.attrs().test(Attr::INTENT_OUT)) {
+    if (IsIntentOut(symbol)) {
       if (FindUltimateComponent(symbol, [](const Symbol &x) {
             return evaluate::IsCoarray(x) && IsAllocatable(x);
           })) { // C846
@@ -553,6 +553,22 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "An INTENT(OUT) dummy argument may not be, or contain, EVENT_TYPE or LOCK_TYPE"_err_en_US);
       }
+      if (details.IsAssumedSize()) { // C834
+        if (type && type->IsPolymorphic()) {
+          messages_.Say(
+              "An INTENT(OUT) assumed-size dummy argument array may not be polymorphic"_err_en_US);
+        }
+        if (derived) {
+          if (derived->HasDefaultInitialization()) {
+            messages_.Say(
+                "An INTENT(OUT) assumed-size dummy argument array may not have a derived type with any default component initialization"_err_en_US);
+          }
+          if (IsFinalizable(*derived)) {
+            messages_.Say(
+                "An INTENT(OUT) assumed-size dummy argument array may not be finalizable"_err_en_US);
+          }
+        }
+      }
     }
     if (InPure() && !IsStmtFunction(DEREF(innermostSymbol_)) &&
         !IsPointer(symbol) && !IsIntentIn(symbol) &&
@@ -561,22 +577,20 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "non-POINTER dummy argument of pure function must be INTENT(IN) or VALUE"_err_en_US);
       } else if (IsIntentOut(symbol)) {
-        if (const DeclTypeSpec *type{details.type()}) {
-          if (type && type->IsPolymorphic()) { // C1588
+        if (type && type->IsPolymorphic()) { // C1588
+          messages_.Say(
+              "An INTENT(OUT) dummy argument of a pure subroutine may not be polymorphic"_err_en_US);
+        } else if (derived) {
+          if (FindUltimateComponent(*derived, [](const Symbol &x) {
+                const DeclTypeSpec *type{x.GetType()};
+                return type && type->IsPolymorphic();
+              })) { // C1588
             messages_.Say(
-                "An INTENT(OUT) dummy argument of a pure subroutine may not be polymorphic"_err_en_US);
-          } else if (const DerivedTypeSpec *derived{type->AsDerived()}) {
-            if (FindUltimateComponent(*derived, [](const Symbol &x) {
-                  const DeclTypeSpec *type{x.GetType()};
-                  return type && type->IsPolymorphic();
-                })) { // C1588
-              messages_.Say(
-                  "An INTENT(OUT) dummy argument of a pure subroutine may not have a polymorphic ultimate component"_err_en_US);
-            }
-            if (HasImpureFinal(*derived)) { // C1587
-              messages_.Say(
-                  "An INTENT(OUT) dummy argument of a pure subroutine may not have an impure FINAL subroutine"_err_en_US);
-            }
+                "An INTENT(OUT) dummy argument of a pure subroutine may not have a polymorphic ultimate component"_err_en_US);
+          }
+          if (HasImpureFinal(*derived)) { // C1587
+            messages_.Say(
+                "An INTENT(OUT) dummy argument of a pure subroutine may not have an impure FINAL subroutine"_err_en_US);
           }
         }
       } else if (!IsIntentInOut(symbol)) { // C1586
@@ -655,14 +669,12 @@ void CheckHelper::CheckObjectEntity(
           "An initialized variable in BLOCK DATA must be in a COMMON block"_err_en_US);
     }
   }
-  if (const DeclTypeSpec *type{details.type()}) { // C708
-    if (type->IsPolymorphic() &&
-        !(type->IsAssumedType() || IsAllocatableOrPointer(symbol) ||
-            IsDummy(symbol))) {
-      messages_.Say("CLASS entity '%s' must be a dummy argument or have "
-                    "ALLOCATABLE or POINTER attribute"_err_en_US,
-          symbol.name());
-    }
+  if (type && type->IsPolymorphic() &&
+      !(type->IsAssumedType() || IsAllocatableOrPointer(symbol) ||
+          IsDummy(symbol))) { // C708
+    messages_.Say("CLASS entity '%s' must be a dummy argument or have "
+                  "ALLOCATABLE or POINTER attribute"_err_en_US,
+        symbol.name());
   }
 }
 
@@ -963,6 +975,12 @@ void CheckHelper::CheckSubprogram(
           msg->Attach(subprogram->name(), "Containing subprogram"_en_US);
         }
       }
+    }
+  }
+  if (const MaybeExpr & stmtFunction{details.stmtFunction()}) {
+    if (auto msg{evaluate::CheckStatementFunction(
+            symbol, *stmtFunction, context_.foldingContext())}) {
+      SayWithDeclaration(symbol, std::move(*msg));
     }
   }
   if (IsElementalProcedure(symbol)) {
@@ -1850,6 +1868,31 @@ void CheckHelper::Check(const Scope &scope) {
     }
     if (scope.kind() == Scope::Kind::BlockData) {
       CheckBlockData(scope);
+    }
+    if (auto name{scope.GetName()}) {
+      auto iter{scope.find(*name)};
+      if (iter != scope.end()) {
+        const char *kind{nullptr};
+        switch (scope.kind()) {
+        case Scope::Kind::Module:
+          kind = scope.symbol()->get<ModuleDetails>().isSubmodule()
+              ? "submodule"
+              : "module";
+          break;
+        case Scope::Kind::MainProgram:
+          kind = "main program";
+          break;
+        case Scope::Kind::BlockData:
+          kind = "BLOCK DATA subprogram";
+          break;
+        default:;
+        }
+        if (kind) {
+          messages_.Say(iter->second->name(),
+              "Name '%s' declared in a %s should not have the same name as the %s"_port_en_US,
+              *name, kind, kind);
+        }
+      }
     }
     CheckGenericOps(scope);
   }

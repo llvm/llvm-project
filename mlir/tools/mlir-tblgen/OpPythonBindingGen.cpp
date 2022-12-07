@@ -71,7 +71,7 @@ class {0}(_ods_ir.OpView):
 /// Each segment spec is either None (default) or an array of integers
 /// where:
 ///   1 = single element (expect non sequence operand/result)
-///   0 = optional element (expect a value or None)
+///   0 = optional element (expect a value or std::nullopt)
 ///   -1 = operand/result is a sequence corresponding to a variadic
 constexpr const char *opClassSizedSegmentsTemplate = R"Py(
   _ODS_{0}_SEGMENTS = {1}

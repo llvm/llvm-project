@@ -408,10 +408,6 @@ public:
   bool isGlobalSReg32Imm() const { return isImmTy(ImmTyGlobalSReg32); }
   bool isGlobalSReg64Imm() const { return isImmTy(ImmTyGlobalSReg64); }
 
-  bool isMod() const {
-    return isClampSI() || isOModSI();
-  }
-
   bool isRegOrImm() const {
     return isReg() || isImm();
   }
@@ -3481,7 +3477,8 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
                                        unsigned OpIdx) const {
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
 
-  if (!AMDGPU::isSISrcOperand(Desc, OpIdx)) {
+  if (!AMDGPU::isSISrcOperand(Desc, OpIdx) ||
+      AMDGPU::isKImmOperand(Desc, OpIdx)) {
     return false;
   }
 
@@ -8560,29 +8557,16 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
 
-  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src0_modifiers)) {
-    // This instruction has src modifiers
-    for (unsigned E = Operands.size(); I != E; ++I) {
-      AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
-      if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
-        Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
-      } else if (Op.isImmModifier()) {
-        OptionalIdx[Op.getImmTy()] = I;
-      } else if (Op.isRegOrImm()) {
-        Op.addRegOrImmOperands(Inst, 1);
-      } else {
-        llvm_unreachable("unhandled operand type");
-      }
-    }
-  } else {
-    // No src modifiers
-    for (unsigned E = Operands.size(); I != E; ++I) {
-      AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
-      if (Op.isMod()) {
-        OptionalIdx[Op.getImmTy()] = I;
-      } else {
-        Op.addRegOrImmOperands(Inst, 1);
-      }
+  for (unsigned E = Operands.size(); I != E; ++I) {
+    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
+    if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
+      Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
+    } else if (Op.isImmModifier()) {
+      OptionalIdx[Op.getImmTy()] = I;
+    } else if (Op.isRegOrImm()) {
+      Op.addRegOrImmOperands(Inst, 1);
+    } else {
+      llvm_unreachable("unhandled operand type");
     }
   }
 
@@ -9084,8 +9068,6 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
   OptionalImmIndexMap OptionalIdx;
   unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
-  bool HasModifiers =
-      AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src0_modifiers);
 
   // MAC instructions are special because they have 'old'
   // operand which is not tied to dst (but assumed to be).
@@ -9127,14 +9109,12 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
     // Add the register arguments
     if (IsDPP8 && Op.isFI()) {
       Fi = Op.getImm();
-    } else if (HasModifiers &&
-               isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
+    } else if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
       Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
     } else if (Op.isReg()) {
       Op.addRegOperands(Inst, 1);
     } else if (Op.isImm() &&
                Desc.OpInfo[Inst.getNumOperands()].RegClass != -1) {
-      assert(!HasModifiers && "Case should be unreachable with modifiers");
       assert(!Op.IsImmKindLiteral() && "Cannot use literal with DPP");
       Op.addImmOperands(Inst, 1);
     } else if (Op.isImm()) {
@@ -9176,9 +9156,6 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
 void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool IsDPP8) {
   OptionalImmIndexMap OptionalIdx;
 
-  unsigned Opc = Inst.getOpcode();
-  bool HasModifiers =
-      AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src0_modifiers);
   unsigned I = 1;
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
   for (unsigned J = 0; J < Desc.getNumDefs(); ++J) {
@@ -9205,8 +9182,7 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
     if (IsDPP8) {
       if (Op.isDPP8()) {
         Op.addImmOperands(Inst, 1);
-      } else if (HasModifiers &&
-                 isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
+      } else if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
         Op.addRegWithFPInputModsOperands(Inst, 2);
       } else if (Op.isFI()) {
         Fi = Op.getImm();
@@ -9216,8 +9192,7 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
         llvm_unreachable("Invalid operand type");
       }
     } else {
-      if (HasModifiers &&
-          isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
+      if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
         Op.addRegWithFPInputModsOperands(Inst, 2);
       } else if (Op.isReg()) {
         Op.addRegOperands(Inst, 1);

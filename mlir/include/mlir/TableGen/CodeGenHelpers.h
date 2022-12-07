@@ -135,8 +135,8 @@ public:
   ///
   ///   LogicalResult(Operation *op, Attribute attr, StringRef attrName);
   ///
-  /// If a uniqued constraint was not found, this function returns None. The
-  /// uniqued constraints cannot be used in the context of an OpAdaptor.
+  /// If a uniqued constraint was not found, this function returns std::nullopt.
+  /// The uniqued constraints cannot be used in the context of an OpAdaptor.
   ///
   /// Pattern constraints have the form:
   ///

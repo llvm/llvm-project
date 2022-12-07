@@ -24,6 +24,7 @@ namespace mlir {
 class AffineCondition;
 class AffineForOp;
 class AffineIfOp;
+class AffineParallelOp;
 class AffineMap;
 class AffineValueMap;
 class IntegerSet;
@@ -55,7 +56,7 @@ public:
     assert(valArgs.empty() || valArgs.size() == getNumDimAndSymbolVars());
     values.reserve(numReservedCols);
     if (valArgs.empty())
-      values.resize(getNumDimAndSymbolVars(), None);
+      values.resize(getNumDimAndSymbolVars(), std::nullopt);
     else
       values.append(valArgs.begin(), valArgs.end());
   }
@@ -76,7 +77,7 @@ public:
       : IntegerPolyhedron(fac) {
     assert(valArgs.empty() || valArgs.size() == getNumDimAndSymbolVars());
     if (valArgs.empty())
-      values.resize(getNumDimAndSymbolVars(), None);
+      values.resize(getNumDimAndSymbolVars(), std::nullopt);
     else
       values.append(valArgs.begin(), valArgs.end());
   }
@@ -140,6 +141,13 @@ public:
   /// symbol).
   //  TODO: add support for non-unit strides.
   LogicalResult addAffineForOpDomain(AffineForOp forOp);
+
+  /// Add constraints (lower and upper bounds) for the specified
+  /// 'affine.parallel' operation's Value using IR information stored in its
+  /// bound maps. Returns failure for the yet unimplemented/unsupported cases.
+  /// Asserts if the Value corresponding to the 'affine.parallel' operation
+  /// isn't found in the constraint system.
+  LogicalResult addAffineParallelOpDomain(AffineParallelOp parallelOp);
 
   /// Adds constraints (lower and upper bounds) for each loop in the loop nest
   /// described by the bound maps `lbMaps` and `ubMaps` of a computation slice.

@@ -17,7 +17,7 @@ NativeProcessELF::GetAuxValue(enum AuxVector::EntryType type) {
   if (m_aux_vector == nullptr) {
     auto buffer_or_error = GetAuxvData();
     if (!buffer_or_error)
-      return llvm::None;
+      return std::nullopt;
     DataExtractor auxv_data(buffer_or_error.get()->getBufferStart(),
                             buffer_or_error.get()->getBufferSize(),
                             GetByteOrder(), GetAddressByteSize());

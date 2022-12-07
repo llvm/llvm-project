@@ -50,7 +50,7 @@ static Optional<int64_t> getResultIndex(AffineMap map, int64_t index) {
     if (idx == index)
       return i;
   }
-  return None;
+  return std::nullopt;
 }
 
 // Helper to construct iterator types with one index removed.
@@ -157,7 +157,7 @@ static Optional<Value> createContractArithOp(Location loc, Value x, Value y,
   if (isInt) {
     if (kind == CombiningKind::MINF || kind == CombiningKind::MAXF)
       // Only valid for floating point types.
-      return None;
+      return std::nullopt;
     mul = rewriter.create<arith::MulIOp>(loc, x, y);
   } else {
     // Float case.
@@ -166,7 +166,7 @@ static Optional<Value> createContractArithOp(Location loc, Value x, Value y,
         kind == CombiningKind::MAXSI || kind == CombiningKind::OR ||
         kind == CombiningKind::XOR)
       // Only valid for integer types.
-      return None;
+      return std::nullopt;
     // Special case for fused multiply-add.
     if (acc && acc.getType().isa<VectorType>() && kind == CombiningKind::ADD) {
       return Optional<Value>(rewriter.create<vector::FMAOp>(loc, x, y, acc));
@@ -190,13 +190,13 @@ static SmallVector<int64_t> getReductionIndex(AffineMap map,
 }
 
 /// Look for a given dimension in an affine map and return its position. Return
-/// llvm::None if the dimension is not in the map results.
+/// std::nullopt if the dimension is not in the map results.
 static llvm::Optional<unsigned> getDimPosition(AffineMap map, unsigned dim) {
   for (unsigned i = 0, e = map.getNumResults(); i < e; i++) {
     if (map.getDimPosition(i) == dim)
       return i;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 namespace {

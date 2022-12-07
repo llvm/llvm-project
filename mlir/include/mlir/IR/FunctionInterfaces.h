@@ -62,13 +62,13 @@ void setAllResultAttrDicts(Operation *op, ArrayRef<Attribute> attrs);
 /// Return all of the attributes for the argument at 'index'.
 inline ArrayRef<NamedAttribute> getArgAttrs(Operation *op, unsigned index) {
   auto argDict = getArgAttrDict(op, index);
-  return argDict ? argDict.getValue() : llvm::None;
+  return argDict ? argDict.getValue() : std::nullopt;
 }
 
 /// Return all of the attributes for the result at 'index'.
 inline ArrayRef<NamedAttribute> getResultAttrs(Operation *op, unsigned index) {
   auto resultDict = getResultAttrDict(op, index);
-  return resultDict ? resultDict.getValue() : llvm::None;
+  return resultDict ? resultDict.getValue() : std::nullopt;
 }
 
 /// Insert the specified arguments and update the function type attribute.

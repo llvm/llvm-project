@@ -28,6 +28,6 @@ TEST(Predicate, WaitForValueEqualTo) {
 TEST(Predicate, WaitForValueNotEqualTo) {
   Predicate<int> P(0);
   EXPECT_EQ(0, P.WaitForValueNotEqualTo(1));
-  EXPECT_EQ(llvm::None,
+  EXPECT_EQ(std::nullopt,
             P.WaitForValueNotEqualTo(0, std::chrono::milliseconds(10)));
 }

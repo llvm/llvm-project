@@ -120,7 +120,7 @@ llvm::Optional<StringRef> Interface::getExtraSharedClassDeclaration() const {
 llvm::Optional<StringRef> Interface::getVerify() const {
   // Only OpInterface supports the verify method.
   if (!isa<OpInterface>(this))
-    return llvm::None;
+    return std::nullopt;
   auto value = def->getValueAsString("verify");
   return value.empty() ? llvm::Optional<StringRef>() : value;
 }

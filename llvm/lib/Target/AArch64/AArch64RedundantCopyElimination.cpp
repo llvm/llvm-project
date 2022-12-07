@@ -50,7 +50,6 @@
 //        to use WZR/XZR directly in some cases.
 //===----------------------------------------------------------------------===//
 #include "AArch64.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"

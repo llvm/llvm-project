@@ -2103,6 +2103,13 @@ bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
          OpType <= AMDGPU::OPERAND_SRC_LAST;
 }
 
+bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo) {
+  assert(OpNo < Desc.NumOperands);
+  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  return OpType >= AMDGPU::OPERAND_KIMM_FIRST &&
+         OpType <= AMDGPU::OPERAND_KIMM_LAST;
+}
+
 bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
   unsigned OpType = Desc.OpInfo[OpNo].OperandType;

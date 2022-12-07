@@ -190,6 +190,22 @@ Changes to the C API
 
   * ``LLVMConstFNeg``
 
+
+* The following deprecated functions have been removed, because they are
+  incompatible with opaque pointers. Use the new functions accepting a separate
+  function/element type instead.
+
+  * ``LLVMBuildLoad`` -> ``LLVMBuildLoad2``
+  * ``LLVMBuildCall`` -> ``LLVMBuildCall2``
+  * ``LLVMBuildInvoke`` -> ``LLVMBuildInvoke2``
+  * ``LLVMBuildGEP`` -> ``LLVMBuildGEP2``
+  * ``LLVMBuildInBoundsGEP`` -> ``LLVMBuildInBoundsGEP2``
+  * ``LLVMBuildStructGEP`` -> ``LLVMBuildStructGEP2``
+  * ``LLVMBuildPtrDiff`` -> ``LLVMBuildPtrDiff2``
+  * ``LLVMConstGEP`` -> ``LLVMConstGEP2``
+  * ``LLVMConstInBoundsGEP`` -> ``LLVMConstInBoundsGEP2``
+  * ``LLVMAddAlias`` -> ``LLVMAddAlias2``
+
 Changes to the Go bindings
 --------------------------
 

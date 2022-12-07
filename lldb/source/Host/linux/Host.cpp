@@ -324,6 +324,6 @@ llvm::Optional<lldb::pid_t> lldb_private::getPIDForTID(lldb::pid_t tid) {
 
   if (!GetStatusInfo(tid, process_info, state, tracerpid, tgid) ||
       tgid == LLDB_INVALID_PROCESS_ID)
-    return llvm::None;
+    return std::nullopt;
   return tgid;
 }

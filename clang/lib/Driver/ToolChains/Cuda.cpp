@@ -78,10 +78,10 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
 
 CudaVersion parseCudaHFile(llvm::StringRef Input) {
   // Helper lambda which skips the words if the line starts with them or returns
-  // None otherwise.
+  // std::nullopt otherwise.
   auto StartsWithWords =
       [](llvm::StringRef Line,
-         const SmallVector<StringRef, 3> words) -> llvm::Optional<StringRef> {
+         const SmallVector<StringRef, 3> words) -> std::optional<StringRef> {
     for (StringRef word : words) {
       if (!Line.consume_front(word))
         return {};

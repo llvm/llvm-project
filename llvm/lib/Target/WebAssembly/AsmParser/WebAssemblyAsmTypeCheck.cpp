@@ -83,7 +83,7 @@ bool WebAssemblyAsmTypeCheck::typeError(SMLoc ErrorLoc, const Twine &Msg) {
 }
 
 bool WebAssemblyAsmTypeCheck::popType(SMLoc ErrorLoc,
-                                      Optional<wasm::ValType> EVT) {
+                                      std::optional<wasm::ValType> EVT) {
   if (Stack.empty()) {
     return typeError(ErrorLoc,
                      EVT ? StringRef("empty stack while popping ") +

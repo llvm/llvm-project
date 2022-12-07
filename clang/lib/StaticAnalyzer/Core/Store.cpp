@@ -89,7 +89,7 @@ Optional<const MemRegion *> StoreManager::castRegion(const MemRegion *R,
 
     // We don't know what to make of it.  Return a NULL region, which
     // will be interpreted as UnknownVal.
-    return None;
+    return std::nullopt;
   }
 
   // Now assume we are casting from pointer to pointer. Other cases should
@@ -175,7 +175,7 @@ Optional<const MemRegion *> StoreManager::castRegion(const MemRegion *R,
       // If we cannot compute a raw offset, throw up our hands and return
       // a NULL MemRegion*.
       if (!baseR)
-        return None;
+        return std::nullopt;
 
       CharUnits off = rawOff.getOffset();
 
@@ -390,7 +390,7 @@ Optional<SVal> StoreManager::evalBaseToDerived(SVal Base, QualType TargetType) {
 
   // We failed if the region we ended up with has perfect type info.
   if (isa<TypedValueRegion>(MR))
-    return None;
+    return std::nullopt;
 
   return UnknownVal();
 }

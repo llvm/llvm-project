@@ -784,7 +784,7 @@ public:
   get(ShapedType type, StringRef blobName, AsmResourceBlob blob);
 
   /// Return the data of this attribute as an ArrayRef<T> if it is present,
-  /// returns None otherwise.
+  /// returns std::nullopt otherwise.
   Optional<ArrayRef<T>> tryGetAsArrayRef() const;
 
   /// Support for isa<>/cast<>.

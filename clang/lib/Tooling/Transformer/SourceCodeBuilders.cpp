@@ -76,7 +76,7 @@ llvm::Optional<std::string> tooling::buildParens(const Expr &E,
                                                  const ASTContext &Context) {
   StringRef Text = getText(E, Context);
   if (Text.empty())
-    return llvm::None;
+    return std::nullopt;
   if (mayEverNeedParens(E))
     return ("(" + Text + ")").str();
   return Text.str();
@@ -90,13 +90,13 @@ tooling::buildDereference(const Expr &E, const ASTContext &Context) {
       StringRef Text =
           getText(*Op->getSubExpr()->IgnoreParenImpCasts(), Context);
       if (Text.empty())
-        return llvm::None;
+        return std::nullopt;
       return Text.str();
     }
 
   StringRef Text = getText(E, Context);
   if (Text.empty())
-    return llvm::None;
+    return std::nullopt;
   // Add leading '*'.
   if (needParensAfterUnaryOperator(E))
     return ("*(" + Text + ")").str();
@@ -113,13 +113,13 @@ llvm::Optional<std::string> tooling::buildAddressOf(const Expr &E,
       StringRef Text =
           getText(*Op->getSubExpr()->IgnoreParenImpCasts(), Context);
       if (Text.empty())
-        return llvm::None;
+        return std::nullopt;
       return Text.str();
     }
   // Add leading '&'.
   StringRef Text = getText(E, Context);
   if (Text.empty())
-    return llvm::None;
+    return std::nullopt;
   if (needParensAfterUnaryOperator(E)) {
     return ("&(" + Text + ")").str();
   }
@@ -136,7 +136,7 @@ buildAccessForValue(const Expr &E, const ASTContext &Context) {
       const Expr *SubExpr = Op->getSubExpr()->IgnoreParenImpCasts();
       StringRef DerefText = getText(*SubExpr, Context);
       if (DerefText.empty())
-        return llvm::None;
+        return std::nullopt;
       if (needParensBeforeDotOrArrow(*SubExpr))
         return ("(" + DerefText + ")->").str();
       return (DerefText + "->").str();
@@ -145,7 +145,7 @@ buildAccessForValue(const Expr &E, const ASTContext &Context) {
   // Add following '.'.
   StringRef Text = getText(E, Context);
   if (Text.empty())
-    return llvm::None;
+    return std::nullopt;
   if (needParensBeforeDotOrArrow(E)) {
     return ("(" + Text + ").").str();
   }
@@ -162,7 +162,7 @@ buildAccessForPointer(const Expr &E, const ASTContext &Context) {
       const Expr *SubExpr = Op->getSubExpr()->IgnoreParenImpCasts();
       StringRef DerefText = getText(*SubExpr, Context);
       if (DerefText.empty())
-        return llvm::None;
+        return std::nullopt;
       if (needParensBeforeDotOrArrow(*SubExpr))
         return ("(" + DerefText + ").").str();
       return (DerefText + ".").str();
@@ -171,7 +171,7 @@ buildAccessForPointer(const Expr &E, const ASTContext &Context) {
   // Add following '->'.
   StringRef Text = getText(E, Context);
   if (Text.empty())
-    return llvm::None;
+    return std::nullopt;
   if (needParensBeforeDotOrArrow(E))
     return ("(" + Text + ")->").str();
   return (Text + "->").str();

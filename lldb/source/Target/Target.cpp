@@ -3176,7 +3176,7 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   assert(launch_info.GetHijackListener());
 
   EventSP first_stop_event_sp;
-  state = m_process_sp->WaitForProcessToStop(llvm::None, &first_stop_event_sp,
+  state = m_process_sp->WaitForProcessToStop(std::nullopt, &first_stop_event_sp,
                                              rebroadcast_first_stop,
                                              launch_info.GetHijackListener());
   m_process_sp->RestoreProcessEvents();
@@ -3332,8 +3332,9 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
     if (async) {
       process_sp->RestoreProcessEvents();
     } else {
-      state = process_sp->WaitForProcessToStop(
-          llvm::None, nullptr, false, attach_info.GetHijackListener(), stream);
+      state = process_sp->WaitForProcessToStop(std::nullopt, nullptr, false,
+                                               attach_info.GetHijackListener(),
+                                               stream);
       process_sp->RestoreProcessEvents();
 
       if (state != eStateStopped) {

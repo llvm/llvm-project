@@ -37,7 +37,7 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
         auto vt = $_op.getResult().getType().
           template dyn_cast<::mlir::VectorType>();
         if (!vt)
-          return ::mlir::None;
+          return ::std::nullopt;
         ::llvm::SmallVector<int64_t, 4> res(vt.getShape().begin(), vt.getShape().end());
         return res;
       }]

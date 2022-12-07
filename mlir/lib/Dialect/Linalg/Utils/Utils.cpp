@@ -106,17 +106,17 @@ Optional<RegionMatcher::BinaryOpKind>
 RegionMatcher::matchAsScalarBinaryOp(GenericOp op) {
   auto &region = op.getRegion();
   if (!llvm::hasSingleElement(region))
-    return llvm::None;
+    return std::nullopt;
 
   Block &block = region.front();
   if (block.getNumArguments() != 2 ||
       !block.getArgument(0).getType().isSignlessIntOrFloat() ||
       !block.getArgument(1).getType().isSignlessIntOrFloat())
-    return llvm::None;
+    return std::nullopt;
 
   auto &ops = block.getOperations();
   if (!llvm::hasSingleElement(block.without_terminator()))
-    return llvm::None;
+    return std::nullopt;
 
   using mlir::matchers::m_Val;
   auto a = m_Val(block.getArgument(0));
@@ -126,7 +126,7 @@ RegionMatcher::matchAsScalarBinaryOp(GenericOp op) {
   if (addPattern.match(&ops.back()))
     return BinaryOpKind::IAdd;
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Explicit instantiation of loop nest generator for different loop types.
@@ -966,7 +966,7 @@ computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
     Type operandType = opOperand.get().getType();
     if (!isTiled(map, tileSizes) && !(operandType.isa<RankedTensorType>() &&
                                       linalgOp.isDpsInit(&opOperand))) {
-      allSliceParams.push_back(llvm::None);
+      allSliceParams.push_back(std::nullopt);
       LLVM_DEBUG(llvm::dbgs()
                  << ": not tiled: use shape: " << operandType << "\n");
       continue;
@@ -1088,7 +1088,7 @@ Optional<Attribute> getNeutralElement(Operation *op) {
     return b.getIntegerAttr(resultType, std::numeric_limits<int64_t>::max());
   if (isa<arith::MulIOp>(op))
     return b.getIntegerAttr(resultType, 1);
-  return llvm::None;
+  return std::nullopt;
 }
 
 } // namespace linalg
