@@ -318,5 +318,18 @@ def hlfir_AsExprOp : hlfir_Op<"as_expr", []> {
   let builders = [OpBuilder<(ins "mlir::Value":$var)>];
 }
 
+def hlfir_NoReassocOp : hlfir_Op<"no_reassoc", [NoMemoryEffect, SameOperandsAndResultType]> {
+  let summary = "synthetic op to prevent reassociation";
+
+  let description = [{
+    Same as fir.reassoc, except it accepts hlfir.expr arguments.
+  }];
+
+  let arguments = (ins AnyFortranEntity:$val);
+  let results = (outs AnyFortranEntity);
+
+  let assemblyFormat = "$val attr-dict `:` type($val)";
+}
+
 
 #endif // FORTRAN_DIALECT_HLFIR_OPS
