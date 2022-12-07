@@ -3499,17 +3499,20 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
   // If we have BMI2's BZHI, we are ok with muti-use patterns.
   // Else, if we only have BMI1's BEXTR, we require one-use.
   const bool AllowExtraUsesByDefault = Subtarget->hasBMI2();
-  auto checkUses = [AllowExtraUsesByDefault](SDValue Op, unsigned NUses,
-                                             Optional<bool> AllowExtraUses) {
+  auto checkUses = [AllowExtraUsesByDefault](
+                       SDValue Op, unsigned NUses,
+                       std::optional<bool> AllowExtraUses) {
     return AllowExtraUses.value_or(AllowExtraUsesByDefault) ||
            Op.getNode()->hasNUsesOfValue(NUses, Op.getResNo());
   };
   auto checkOneUse = [checkUses](SDValue Op,
-                                 Optional<bool> AllowExtraUses = std::nullopt) {
+                                 std::optional<bool> AllowExtraUses =
+                                     std::nullopt) {
     return checkUses(Op, 1, AllowExtraUses);
   };
   auto checkTwoUse = [checkUses](SDValue Op,
-                                 Optional<bool> AllowExtraUses = std::nullopt) {
+                                 std::optional<bool> AllowExtraUses =
+                                     std::nullopt) {
     return checkUses(Op, 2, AllowExtraUses);
   };
 

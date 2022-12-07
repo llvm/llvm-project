@@ -56,8 +56,8 @@ public:
 
   // Returns the index of the WebAssembly local to which the stack object
   // FrameIndex in MF should be allocated, or None.
-  static Optional<unsigned> getLocalForStackObject(MachineFunction &MF,
-                                                   int FrameIndex);
+  static std::optional<unsigned> getLocalForStackObject(MachineFunction &MF,
+                                                        int FrameIndex);
 
   static unsigned getSPReg(const MachineFunction &MF);
   static unsigned getFPReg(const MachineFunction &MF);
