@@ -5,7 +5,7 @@
 ;   sub %y, (xor %x, -1)
 ; Transform it to:
 ;   add (add %x, 1), %y
-; We prefer this form because that is what -reassociate would produce.
+; We prefer this form because that is what -passes=reassociate would produce.
 
 ;------------------------------------------------------------------------------;
 ; Scalar tests
