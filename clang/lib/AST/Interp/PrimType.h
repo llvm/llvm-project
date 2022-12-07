@@ -69,24 +69,6 @@ static inline bool aligned(const void *P) {
   return aligned(reinterpret_cast<uintptr_t>(P));
 }
 
-inline bool isPrimitiveIntegral(PrimType Type) {
-  switch (Type) {
-  case PT_Bool:
-  case PT_Sint8:
-  case PT_Uint8:
-  case PT_Sint16:
-  case PT_Uint16:
-  case PT_Sint32:
-  case PT_Uint32:
-  case PT_Sint64:
-  case PT_Uint64:
-  case PT_Float:
-    return true;
-  default:
-    return false;
-  }
-}
-
 } // namespace interp
 } // namespace clang
 
