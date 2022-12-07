@@ -1,5 +1,5 @@
-; RUN: opt -S -load-store-vectorizer --mcpu=hawaii -mattr=-unaligned-access-mode,+max-private-element-size-16 < %s | FileCheck -check-prefix=ALIGNED -check-prefix=ALL %s
-; RUN: opt -S -load-store-vectorizer --mcpu=hawaii -mattr=+unaligned-access-mode,+unaligned-scratch-access,+max-private-element-size-16 < %s | FileCheck -check-prefix=UNALIGNED -check-prefix=ALL %s
+; RUN: opt -S -passes=load-store-vectorizer --mcpu=hawaii -mattr=-unaligned-access-mode,+max-private-element-size-16 < %s | FileCheck -check-prefix=ALIGNED -check-prefix=ALL %s
+; RUN: opt -S -passes=load-store-vectorizer --mcpu=hawaii -mattr=+unaligned-access-mode,+unaligned-scratch-access,+max-private-element-size-16 < %s | FileCheck -check-prefix=UNALIGNED -check-prefix=ALL %s
 ; RUN: opt -S -passes='function(load-store-vectorizer)' --mcpu=hawaii -mattr=-unaligned-access-mode,+max-private-element-size-16 < %s | FileCheck -check-prefix=ALIGNED -check-prefix=ALL %s
 ; RUN: opt -S -passes='function(load-store-vectorizer)' --mcpu=hawaii -mattr=+unaligned-access-mode,+unaligned-scratch-access,+max-private-element-size-16 < %s | FileCheck -check-prefix=UNALIGNED -check-prefix=ALL %s
 
