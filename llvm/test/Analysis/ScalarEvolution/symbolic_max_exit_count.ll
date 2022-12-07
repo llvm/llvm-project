@@ -319,3 +319,79 @@ done:
 failed_1:
   ret i32 -1
 }
+
+; TODO: Symbolic max can be start1 umin_seq start2
+define i32 @test_two_phis(i32 %start_1, i32 %start_2, i32 %len) {
+; CHECK-LABEL: 'test_two_phis'
+; CHECK-NEXT:  Classifying expressions for: @test_two_phis
+; CHECK-NEXT:    %iv_1 = phi i32 [ %start_1, %entry ], [ %iv_1.next, %backedge ]
+; CHECK-NEXT:    --> {%start_1,+,-1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv_2 = phi i32 [ %start_2, %entry ], [ %iv_2.next, %backedge ]
+; CHECK-NEXT:    --> {%start_2,+,-1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %scam_1 = call i1 @cond()
+; CHECK-NEXT:    --> %scam_1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %c1 = and i1 %zero_check_1, %scam_1
+; CHECK-NEXT:    --> (%zero_check_1 umin %scam_1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %scam_2 = call i1 @cond()
+; CHECK-NEXT:    --> %scam_2 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %c2 = and i1 %zero_check_2, %scam_2
+; CHECK-NEXT:    --> (%zero_check_2 umin %scam_2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %iv.minus.1 = add i32 %iv_1, -1
+; CHECK-NEXT:    --> {(-1 + %start_1),+,-1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv_1.next = add i32 %iv_1, -1
+; CHECK-NEXT:    --> {(-1 + %start_1),+,-1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv_2.next = add i32 %iv_2, -1
+; CHECK-NEXT:    --> {(-1 + %start_2),+,-1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %loop_cond = call i1 @cond()
+; CHECK-NEXT:    --> %loop_cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @test_two_phis
+; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for zero_check_block: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for range_check_block: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for backedge: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is -1
+; CHECK-NEXT:    symbolic max exit count for loop: -1
+; CHECK-NEXT:    symbolic max exit count for zero_check_block: -1
+; CHECK-NEXT:    symbolic max exit count for range_check_block: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br label %loop
+
+loop:
+  %iv_1 = phi i32 [%start_1, %entry], [%iv_1.next, %backedge]
+  %iv_2 = phi i32 [%start_2, %entry], [%iv_2.next, %backedge]
+  %scam_1 = call i1 @cond()
+  %zero_check_1 = icmp ne i32 %iv_1, 0
+  %c1 = and i1 %zero_check_1, %scam_1
+  br i1 %c1, label %zero_check_block, label %failed_1
+
+zero_check_block:
+  %scam_2 = call i1 @cond()
+  %zero_check_2 = icmp ne i32 %iv_2, 0
+  %c2 = and i1 %zero_check_2, %scam_2
+  br i1 %c2, label %range_check_block, label %failed_1
+
+range_check_block:
+  %iv.minus.1 = add i32 %iv_1, -1
+  %range_check = icmp ult i32 %iv.minus.1, %len
+  br i1 %range_check, label %backedge, label %failed_2
+
+backedge:
+  %iv_1.next = add i32 %iv_1, -1
+  %iv_2.next = add i32 %iv_2, -1
+  %loop_cond = call i1 @cond()
+  br i1 %loop_cond, label %done, label %loop
+
+done:
+  ret i32 %iv_2
+
+failed_1:
+  ret i32 -1
+
+failed_2:
+  ret i32 -2
+}
