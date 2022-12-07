@@ -1,4 +1,4 @@
-; RUN: opt -S  -passes=loop-reroll   %s | FileCheck %s
+; RUN: opt -S -passes=loop-reroll   %s | FileCheck %s
 target triple = "aarch64--linux-gnu"
 
 define void @test(i32 %n, float* %arrayidx200, float* %arrayidx164, float* %arrayidx172) {
