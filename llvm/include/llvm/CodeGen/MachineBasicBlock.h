@@ -169,6 +169,10 @@ private:
   /// Indicate that this basic block is the entry block of a cleanup funclet.
   bool IsCleanupFuncletEntry = false;
 
+  /// Fixed unique ID assigned to this basic block upon creation. Used with
+  /// basic block sections and basic block labels.
+  std::optional<unsigned> BBID;
+
   /// With basic block sections, this stores the Section ID of the basic block.
   MBBSectionID SectionID{0};
 
@@ -620,6 +624,14 @@ public:
 
   void setIsEndSection(bool V = true) { IsEndSection = V; }
 
+  std::optional<unsigned> getBBID() const { return BBID; }
+
+  /// Returns the BBID of the block when BBAddrMapVersion >= 2, otherwise
+  /// returns `MachineBasicBlock::Number`.
+  /// TODO: Remove this function when version 1 is deprecated and replace its
+  /// uses with `getBBID()`.
+  unsigned getBBIDOrNumber() const;
+
   /// Returns the section ID of this basic block.
   MBBSectionID getSectionID() const { return SectionID; }
 
@@ -627,6 +639,12 @@ public:
   unsigned getSectionIDNum() const {
     return ((unsigned)MBBSectionID::SectionType::Cold) -
            ((unsigned)SectionID.Type) + SectionID.Number;
+  }
+
+  /// Sets the fixed BBID of this basic block.
+  void setBBID(unsigned V) {
+    assert(!BBID.has_value() && "Cannot change BBID.");
+    BBID = V;
   }
 
   /// Sets the section ID for this basic block.

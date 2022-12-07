@@ -7143,6 +7143,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
       ListScope L(W, "BB entries");
       for (const BBAddrMap::BBEntry &BBE : AM.BBEntries) {
         DictScope L(W);
+        W.printNumber("ID", BBE.ID);
         W.printHex("Offset", BBE.Offset);
         W.printHex("Size", BBE.Size);
         W.printBoolean("HasReturn", BBE.HasReturn);
