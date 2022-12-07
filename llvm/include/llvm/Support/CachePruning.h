@@ -14,7 +14,6 @@
 #ifndef LLVM_SUPPORT_CACHEPRUNING_H
 #define LLVM_SUPPORT_CACHEPRUNING_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <chrono>
 #include <optional>
