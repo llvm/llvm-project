@@ -80,8 +80,8 @@ define i32 @test_litter_conditions(i32 %start, i32 %len) {
 ; CHECK-NEXT:    exit count for range_check_block: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for backedge: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is -1
+; CHECK-NEXT:    symbolic max exit count for loop: -1
 ; CHECK-NEXT:    symbolic max exit count for range_check_block: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
@@ -144,8 +144,8 @@ define i32 @test_litter_conditions_bad_context(i32 %start, i32 %len) {
 ; CHECK-NEXT:    exit count for range_check_block: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for backedge: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is -1
+; CHECK-NEXT:    symbolic max exit count for loop: -1
 ; CHECK-NEXT:    symbolic max exit count for range_check_block: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
@@ -201,8 +201,8 @@ define i32 @test_and_conditions(i32 %start, i32 %len) {
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for backedge: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is -1
+; CHECK-NEXT:    symbolic max exit count for loop: -1
 ; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
