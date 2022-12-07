@@ -20,9 +20,9 @@
 
 #include "test_macros.h"
 
-static_assert(std::__libcpp_isnan_or_builtin(0.) == false, "");
-static_assert(std::__libcpp_isinf_or_builtin(0.0) == false, "");
-static_assert(std::__libcpp_isfinite_or_builtin(0.0) == true, "");
+static_assert(std::__constexpr_isnan(0.) == false, "");
+static_assert(std::__constexpr_isinf(0.0) == false, "");
+static_assert(std::__constexpr_isfinite(0.0) == true, "");
 
 int main(int, char**)
 {
