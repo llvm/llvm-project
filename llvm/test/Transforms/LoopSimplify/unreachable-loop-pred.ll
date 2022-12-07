@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-simplify -disable-output -verify-loop-info -verify-dom-info < %s
+; RUN: opt -S -passes=loop-simplify -disable-output -verify-loop-info -verify-dom-info < %s
 ; PR5235
 
 ; When loopsimplify inserts a preheader for this loop, it should add the new
@@ -27,7 +27,7 @@ entry:
   br label %outerHeader
 
 outerHeader:
-  invoke void @foo() 
+  invoke void @foo()
           to label %innerPreheader unwind label %innerLoopExit
 
 innerPreheader:
@@ -50,7 +50,7 @@ unreachableB:                                             ; No predecessors!
 innerLoopExit:
   %tmp65 = landingpad { i8*, i32 }
           cleanup
-  invoke void @foo() 
+  invoke void @foo()
           to label %outerHeader unwind label %unwindblock
 
 unwindblock:
