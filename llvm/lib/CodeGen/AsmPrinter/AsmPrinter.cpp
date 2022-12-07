@@ -2059,7 +2059,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   remarks::RemarkSerializer &RemarkSerializer = RS.getSerializer();
 
   std::optional<SmallString<128>> Filename;
-  if (Optional<StringRef> FilenameRef = RS.getFilename()) {
+  if (std::optional<StringRef> FilenameRef = RS.getFilename()) {
     Filename = *FilenameRef;
     sys::fs::make_absolute(*Filename);
     assert(!Filename->empty() && "The filename can't be empty.");

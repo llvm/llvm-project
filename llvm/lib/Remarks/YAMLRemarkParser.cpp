@@ -108,10 +108,9 @@ static Expected<ParsedStringTable> parseStrTab(StringRef &Buf,
   return Expected<ParsedStringTable>(std::move(Result));
 }
 
-Expected<std::unique_ptr<YAMLRemarkParser>>
-remarks::createYAMLParserFromMeta(StringRef Buf,
-                                  Optional<ParsedStringTable> StrTab,
-                                  Optional<StringRef> ExternalFilePrependPath) {
+Expected<std::unique_ptr<YAMLRemarkParser>> remarks::createYAMLParserFromMeta(
+    StringRef Buf, std::optional<ParsedStringTable> StrTab,
+    std::optional<StringRef> ExternalFilePrependPath) {
   // We now have a magic number. The metadata has to be correct.
   Expected<bool> isMeta = parseMagic(Buf);
   if (!isMeta)
@@ -171,7 +170,7 @@ YAMLRemarkParser::YAMLRemarkParser(StringRef Buf)
     : YAMLRemarkParser(Buf, std::nullopt) {}
 
 YAMLRemarkParser::YAMLRemarkParser(StringRef Buf,
-                                   Optional<ParsedStringTable> StrTab)
+                                   std::optional<ParsedStringTable> StrTab)
     : RemarkParser{Format::YAML}, StrTab(std::move(StrTab)),
       SM(setupSM(LastErrorMessage)), Stream(Buf, SM), YAMLIt(Stream.begin()) {}
 

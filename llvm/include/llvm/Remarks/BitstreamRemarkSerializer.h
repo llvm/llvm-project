@@ -106,8 +106,8 @@ struct BitstreamRemarkSerializerHelper {
 
   /// Emit the metadata for the remarks.
   void emitMetaBlock(uint64_t ContainerVersion,
-                     Optional<uint64_t> RemarkVersion,
-                     Optional<const StringTable *> StrTab = std::nullopt,
+                     std::optional<uint64_t> RemarkVersion,
+                     std::optional<const StringTable *> StrTab = std::nullopt,
                      std::optional<StringRef> Filename = std::nullopt);
 
   /// Emit a remark block. The string table is required.
@@ -162,19 +162,19 @@ struct BitstreamMetaSerializer : public MetaSerializer {
   /// BitstreamRemarkSerializerHelper, or with [2] one that is owned by the meta
   /// serializer. In case of [1], we need to be able to store a reference to the
   /// object, while in case of [2] we need to store the whole object.
-  Optional<BitstreamRemarkSerializerHelper> TmpHelper;
+  std::optional<BitstreamRemarkSerializerHelper> TmpHelper;
   /// The actual helper, that can point to \p TmpHelper or to an external helper
   /// object.
   BitstreamRemarkSerializerHelper *Helper = nullptr;
 
-  Optional<const StringTable *> StrTab;
+  std::optional<const StringTable *> StrTab;
   std::optional<StringRef> ExternalFilename;
 
   /// Create a new meta serializer based on \p ContainerType.
-  BitstreamMetaSerializer(raw_ostream &OS,
-                          BitstreamRemarkContainerType ContainerType,
-                          Optional<const StringTable *> StrTab = std::nullopt,
-                          std::optional<StringRef> ExternalFilename = std::nullopt)
+  BitstreamMetaSerializer(
+      raw_ostream &OS, BitstreamRemarkContainerType ContainerType,
+      std::optional<const StringTable *> StrTab = std::nullopt,
+      std::optional<StringRef> ExternalFilename = std::nullopt)
       : MetaSerializer(OS), TmpHelper(std::nullopt), Helper(nullptr),
         StrTab(StrTab), ExternalFilename(ExternalFilename) {
     TmpHelper.emplace(ContainerType);
@@ -182,10 +182,10 @@ struct BitstreamMetaSerializer : public MetaSerializer {
   }
 
   /// Create a new meta serializer based on a previously built \p Helper.
-  BitstreamMetaSerializer(raw_ostream &OS,
-                          BitstreamRemarkSerializerHelper &Helper,
-                          Optional<const StringTable *> StrTab = std::nullopt,
-                          std::optional<StringRef> ExternalFilename = std::nullopt)
+  BitstreamMetaSerializer(
+      raw_ostream &OS, BitstreamRemarkSerializerHelper &Helper,
+      std::optional<const StringTable *> StrTab = std::nullopt,
+      std::optional<StringRef> ExternalFilename = std::nullopt)
       : MetaSerializer(OS), TmpHelper(std::nullopt), Helper(&Helper),
         StrTab(StrTab), ExternalFilename(ExternalFilename) {}
 
