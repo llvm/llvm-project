@@ -221,7 +221,7 @@ class PathDiagnosticBuilder : public BugReporterContext {
 public:
   /// Find a non-invalidated report for a given equivalence class,  and returns
   /// a PathDiagnosticBuilder able to construct bug reports for different
-  /// consumers. Returns None if no valid report is found.
+  /// consumers. Returns std::nullopt if no valid report is found.
   static Optional<PathDiagnosticBuilder>
   findValidReport(ArrayRef<PathSensitiveBugReport *> &bugReports,
                   PathSensitiveBugReporter &Reporter);
@@ -1566,7 +1566,8 @@ static void simplifySimpleBranches(PathPieces &pieces) {
 
 /// Returns the number of bytes in the given (character-based) SourceRange.
 ///
-/// If the locations in the range are not on the same line, returns None.
+/// If the locations in the range are not on the same line, returns
+/// std::nullopt.
 ///
 /// Note that this does not do a precise user-visible character or column count.
 static Optional<size_t> getLengthOnSingleLine(const SourceManager &SM,

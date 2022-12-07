@@ -273,7 +273,7 @@ static bool warnByDefaultOnWrongCase(StringRef Include) {
 /// \param Candidates the candidates to find a similar string.
 ///
 /// \returns a similar string if exists. If no similar string exists,
-/// returns None.
+/// returns std::nullopt.
 static Optional<StringRef> findSimilarStr(
     StringRef LHS, const std::vector<StringRef> &Candidates) {
   // We need to check if `Candidates` has the exact case-insensitive string
