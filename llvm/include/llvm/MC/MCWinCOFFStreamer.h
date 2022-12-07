@@ -57,10 +57,10 @@ public:
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         unsigned ByteAlignment) override;
   void emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                             Align ByteAlignment) override;
+                             unsigned ByteAlignment) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
   void emitZerofill(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
-                    Align ByteAlignment, SMLoc Loc = SMLoc()) override;
+                    unsigned ByteAlignment, SMLoc Loc = SMLoc()) override;
   void emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                       unsigned ByteAlignment) override;
   void emitIdent(StringRef IdentString) override;
