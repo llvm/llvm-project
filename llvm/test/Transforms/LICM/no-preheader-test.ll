@@ -1,5 +1,5 @@
 ; Test that LICM works when there is not a loop-preheader
-; RUN: opt < %s -licm | llvm-dis
+; RUN: opt < %s -passes=licm | llvm-dis
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' < %s | llvm-dis
 
 define void @testfunc(i32 %i.s, i1 %ifcond) {

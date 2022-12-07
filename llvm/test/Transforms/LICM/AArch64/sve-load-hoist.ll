@@ -1,4 +1,4 @@
-; RUN: opt -licm -mtriple aarch64-linux-gnu -mattr=+sve -S < %s | FileCheck %s
+; RUN: opt -passes=licm -mtriple aarch64-linux-gnu -mattr=+sve -S < %s | FileCheck %s
 
 define void @no_hoist_load1_nxv2i64(ptr %out, ptr %in8, i32 %n) {
 ; CHECK-LABEL: @no_hoist_load1_nxv2i64(

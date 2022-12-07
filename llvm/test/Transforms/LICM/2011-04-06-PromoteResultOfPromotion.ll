@@ -1,4 +1,4 @@
-; RUN: opt < %s -licm -S | FileCheck %s
+; RUN: opt < %s -passes=licm -S | FileCheck %s
 ; PR9634
 
 @g_58 = common global i32 0, align 4
