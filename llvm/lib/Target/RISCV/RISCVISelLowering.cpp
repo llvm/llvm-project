@@ -1228,6 +1228,18 @@ bool RISCVTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
   return C && C->getAPIntValue().ule(10);
 }
 
+bool RISCVTargetLowering::shouldFoldSelectWithIdentityConstant(unsigned Opcode,
+                                                               EVT VT) const {
+  // Only enable for rvv.
+  if (!VT.isVector() || !Subtarget.hasVInstructions())
+    return false;
+
+  if (VT.isFixedLengthVector() && !isTypeLegal(VT))
+    return false;
+
+  return true;
+}
+
 bool RISCVTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                                             Type *Ty) const {
   assert(Ty->isIntegerTy());
