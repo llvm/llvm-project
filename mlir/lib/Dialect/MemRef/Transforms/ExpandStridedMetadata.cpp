@@ -60,14 +60,7 @@ public:
     auto newExtractStridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
 
-    SmallVector<int64_t> sourceStrides;
-    int64_t sourceOffset;
-
-    bool hasKnownStridesAndOffset =
-        succeeded(getStridesAndOffset(sourceType, sourceStrides, sourceOffset));
-    (void)hasKnownStridesAndOffset;
-    assert(hasKnownStridesAndOffset &&
-           "getStridesAndOffset must work on valid subviews");
+    auto [sourceStrides, sourceOffset] = getStridesAndOffset(sourceType);
 
     // Compute the new strides and offset from the base strides and offset:
     // newStride#i = baseStride#i * subStride#i
@@ -265,13 +258,7 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
   // Collect the statically known information about the original stride.
   Value source = expandShape.getSrc();
   auto sourceType = source.getType().cast<MemRefType>();
-  SmallVector<int64_t> strides;
-  int64_t offset;
-  bool hasKnownStridesAndOffset =
-      succeeded(getStridesAndOffset(sourceType, strides, offset));
-  (void)hasKnownStridesAndOffset;
-  assert(hasKnownStridesAndOffset &&
-         "getStridesAndOffset must work on valid expand_shape");
+  auto [strides, offset] = getStridesAndOffset(sourceType);
 
   OpFoldResult origStride =
       ShapedType::isDynamic(strides[groupId])
@@ -414,13 +401,7 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
   Value source = collapseShape.getSrc();
   auto sourceType = source.getType().cast<MemRefType>();
 
-  SmallVector<int64_t> strides;
-  int64_t offset;
-  bool hasKnownStridesAndOffset =
-      succeeded(getStridesAndOffset(sourceType, strides, offset));
-  (void)hasKnownStridesAndOffset;
-  assert(hasKnownStridesAndOffset &&
-         "getStridesAndOffset must work on valid collapse_shape");
+  auto [strides, offset] = getStridesAndOffset(sourceType);
 
   SmallVector<OpFoldResult> collapsedStride;
   int64_t innerMostDimForGroup = reassocGroup.back();
@@ -473,13 +454,7 @@ public:
         rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
 
     // Collect statically known information.
-    SmallVector<int64_t> strides;
-    int64_t offset;
-    bool hasKnownStridesAndOffset =
-        succeeded(getStridesAndOffset(sourceType, strides, offset));
-    (void)hasKnownStridesAndOffset;
-    assert(hasKnownStridesAndOffset &&
-           "getStridesAndOffset must work on valid reassociative_reshape_like");
+    auto [strides, offset] = getStridesAndOffset(sourceType);
     MemRefType reshapeType = reshape.getResultType();
     unsigned reshapeRank = reshapeType.getRank();
 
