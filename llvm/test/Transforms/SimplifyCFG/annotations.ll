@@ -1,4 +1,4 @@
-; RUN: opt -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S %s | FileCheck --match-full-lines %s
+; RUN: opt -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S %s | FileCheck --match-full-lines %s
 
 ; The branch in %cont has !annotation metadata. Make sure generated AND
 ; has !annotation metadata.

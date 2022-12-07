@@ -1,6 +1,6 @@
 ; Basic block #2 should not be merged into BB #3!
 ;
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 declare void @foo()
 
