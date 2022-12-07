@@ -3653,6 +3653,9 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
     switch (IID) {
     default:
       break;
+    case Intrinsic::canonicalize:
+    case Intrinsic::arithmetic_fence:
+      return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly, Depth + 1);
     case Intrinsic::maxnum: {
       Value *V0 = I->getOperand(0), *V1 = I->getOperand(1);
       auto isPositiveNum = [&](Value *V) {
