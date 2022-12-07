@@ -165,9 +165,8 @@ public:
       if (*rawConstantIter == GEPOp::kDynamicIndex)
         return *valuesIter;
 
-      return IntegerAttr::get(
-          ElementsAttr::getElementType(base->rawConstantIndices),
-          *rawConstantIter);
+      return IntegerAttr::get(base->rawConstantIndices.getElementType(),
+                              *rawConstantIter);
     }
 
     iterator &operator++() {
