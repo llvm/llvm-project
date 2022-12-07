@@ -231,7 +231,22 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(const Value &V) {
            "unexpected value saved");
     return (IterationsToInvariance[Phi] = addOne(Iterations));
   }
-  // TODO: handle expressions
+  if (const Instruction *I = dyn_cast<Instruction>(&V)) {
+    if (isa<CmpInst>(I) || I->isBinaryOp()) {
+      // Binary instructions get the max of the operands.
+      PeelCounter LHS = calculate(*I->getOperand(0));
+      if (LHS == Unknown)
+        return Unknown;
+      PeelCounter RHS = calculate(*I->getOperand(1));
+      if (RHS == Unknown)
+        return Unknown;
+      return (IterationsToInvariance[I] = {std::max(*LHS, *RHS)});
+    }
+    if (I->isCast())
+      // Cast instructions get the value of the operand.
+      return (IterationsToInvariance[I] = calculate(*I->getOperand(0)));
+  }
+  // TODO: handle more expressions
 
   // Everything else is Unknown.
   assert(IterationsToInvariance[&V] == Unknown && "unexpected value saved");
