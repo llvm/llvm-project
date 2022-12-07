@@ -15,7 +15,6 @@
 #define LLVM_IR_MODULE_H
 
 #include "llvm-c/Types.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -36,6 +35,7 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -863,7 +863,7 @@ public:
   /// @{
 
   /// Returns the code model (tiny, small, kernel, medium or large model)
-  Optional<CodeModel::Model> getCodeModel() const;
+  std::optional<CodeModel::Model> getCodeModel() const;
 
   /// Set the code model (tiny, small, kernel, medium or large)
   void setCodeModel(CodeModel::Model CL);

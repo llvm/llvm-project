@@ -1270,7 +1270,7 @@ bool BlockFrequencyInfoImpl<BT>::computeMassInLoop(LoopData &Loop) {
       auto &HeaderNode = Loop.Nodes[H];
       const BlockT *Block = getBlock(HeaderNode);
       IsIrrLoopHeader.set(Loop.Nodes[H].Index);
-      Optional<uint64_t> HeaderWeight = Block->getIrrLoopHeaderWeight();
+      std::optional<uint64_t> HeaderWeight = Block->getIrrLoopHeaderWeight();
       if (!HeaderWeight) {
         LLVM_DEBUG(dbgs() << "Missing irr loop header metadata on "
                           << getBlockName(HeaderNode) << "\n");
@@ -1734,8 +1734,8 @@ raw_ostream &BlockFrequencyInfoImpl<BT>::print(raw_ostream &OS) const {
         BlockFrequencyInfoImplBase::getBlockProfileCount(
             F->getFunction(), getNode(&BB)))
       OS << ", count = " << ProfileCount.value();
-    if (Optional<uint64_t> IrrLoopHeaderWeight =
-        BB.getIrrLoopHeaderWeight())
+    if (std::optional<uint64_t> IrrLoopHeaderWeight =
+            BB.getIrrLoopHeaderWeight())
       OS << ", irr_loop_header_weight = " << IrrLoopHeaderWeight.value();
     OS << "\n";
   }

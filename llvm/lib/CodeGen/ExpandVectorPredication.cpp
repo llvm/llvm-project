@@ -29,6 +29,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -122,7 +123,7 @@ static bool maySpeculateLanes(VPIntrinsic &VPI) {
   if (isa<VPReductionIntrinsic>(VPI))
     return false;
   // Fallback to whether the intrinsic is speculatable.
-  Optional<unsigned> OpcOpt = VPI.getFunctionalOpcode();
+  std::optional<unsigned> OpcOpt = VPI.getFunctionalOpcode();
   unsigned FunctionalOpc = OpcOpt.value_or((unsigned)Instruction::Call);
   return isSafeToSpeculativelyExecuteWithOpcode(FunctionalOpc, &VPI);
 }

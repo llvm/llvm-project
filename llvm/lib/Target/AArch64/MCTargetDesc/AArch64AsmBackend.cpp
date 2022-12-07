@@ -46,7 +46,7 @@ public:
     return AArch64::NumTargetFixupKinds;
   }
 
-  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[AArch64::NumTargetFixupKinds] = {
@@ -330,7 +330,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
   }
 }
 
-Optional<MCFixupKind> AArch64AsmBackend::getFixupKind(StringRef Name) const {
+std::optional<MCFixupKind>
+AArch64AsmBackend::getFixupKind(StringRef Name) const {
   if (!TheTriple.isOSBinFormatELF())
     return std::nullopt;
 

@@ -115,14 +115,14 @@ static scf::ForOp createFor(OpBuilder &builder, Location loc, Value upper,
 }
 
 /// Gets the dimension size for the given sparse tensor at the given
-/// original dimension 'dim'. Returns None if no sparse encoding is
+/// original dimension 'dim'. Returns std::nullopt if no sparse encoding is
 /// attached to the given tensor type.
 static Optional<Value> sizeFromTensorAtDim(OpBuilder &builder, Location loc,
                                            RankedTensorType tensorTp,
                                            Value adaptedValue, unsigned dim) {
   auto enc = getSparseTensorEncoding(tensorTp);
   if (!enc)
-    return llvm::None;
+    return std::nullopt;
 
   // Access into static dimension can query original type directly.
   // Note that this is typically already done by DimOp's folding.
@@ -200,7 +200,7 @@ static Optional<LogicalResult>
 convertSparseTensorType(Type type, SmallVectorImpl<Type> &fields) {
   auto enc = getSparseTensorEncoding(type);
   if (!enc)
-    return llvm::None;
+    return std::nullopt;
   // Construct the basic types.
   auto *context = type.getContext();
   RankedTensorType rType = type.cast<RankedTensorType>();
@@ -1105,7 +1105,7 @@ mlir::SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
                               Location loc) -> Optional<Value> {
     if (!getSparseTensorEncoding(tp))
       // Not a sparse tensor.
-      return llvm::None;
+      return std::nullopt;
     // Sparse compiler knows how to cancel out these casts.
     return genTuple(builder, loc, tp, inputs);
   });

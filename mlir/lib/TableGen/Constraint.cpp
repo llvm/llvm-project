@@ -90,20 +90,20 @@ Optional<StringRef> Constraint::getBaseDefName() const {
       if (const auto *defInit = dyn_cast<llvm::DefInit>(defValue->getValue()))
         return Constraint(defInit->getDef(), kind).getDefName();
     }
-    return llvm::None;
+    return std::nullopt;
   };
 
   switch (kind) {
   case CK_Attr:
     if (def->isAnonymous())
       return checkBaseDefFn("baseAttr");
-    return llvm::None;
+    return std::nullopt;
   case CK_Type:
     if (def->isAnonymous())
       return checkBaseDefFn("baseType");
-    return llvm::None;
+    return std::nullopt;
   default:
-    return llvm::None;
+    return std::nullopt;
   }
 }
 

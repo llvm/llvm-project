@@ -334,7 +334,7 @@ BlockCommandComment *Parser::parseBlockCommand() {
   if (isTokBlockCommand()) {
     // Block command ahead.  We can't nest block commands, so pretend that this
     // command has an empty argument.
-    ParagraphComment *Paragraph = S.actOnParagraphComment(None);
+    ParagraphComment *Paragraph = S.actOnParagraphComment(std::nullopt);
     if (PC) {
       S.actOnParamCommandFinish(PC, Paragraph);
       return PC;
@@ -376,7 +376,7 @@ BlockCommandComment *Parser::parseBlockCommand() {
 
   ParagraphComment *Paragraph;
   if (EmptyParagraph)
-    Paragraph = S.actOnParagraphComment(None);
+    Paragraph = S.actOnParagraphComment(std::nullopt);
   else {
     BlockContentComment *Block = parseParagraphOrBlockCommand();
     // Since we have checked for a block command, we should have parsed a

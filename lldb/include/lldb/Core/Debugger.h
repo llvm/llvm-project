@@ -402,7 +402,7 @@ public:
   ///   ensure the given warning is only broadcast once.
   static void
   ReportWarning(std::string message,
-                llvm::Optional<lldb::user_id_t> debugger_id = llvm::None,
+                llvm::Optional<lldb::user_id_t> debugger_id = std::nullopt,
                 std::once_flag *once = nullptr);
 
   /// Report error events.
@@ -424,7 +424,7 @@ public:
   ///   ensure the given error is only broadcast once.
   static void
   ReportError(std::string message,
-              llvm::Optional<lldb::user_id_t> debugger_id = llvm::None,
+              llvm::Optional<lldb::user_id_t> debugger_id = std::nullopt,
               std::once_flag *once = nullptr);
 
   /// Report info events.
@@ -444,7 +444,7 @@ public:
   ///   ensure the given info is only logged once.
   static void
   ReportInfo(std::string message,
-             llvm::Optional<lldb::user_id_t> debugger_id = llvm::None,
+             llvm::Optional<lldb::user_id_t> debugger_id = std::nullopt,
              std::once_flag *once = nullptr);
 
   static void ReportSymbolChange(const ModuleSpec &module_spec);

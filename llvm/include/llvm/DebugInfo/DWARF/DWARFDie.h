@@ -10,7 +10,6 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFDIE_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -139,7 +138,7 @@ public:
   /// \param Attr the attribute to extract.
   /// \returns an optional DWARFFormValue that will have the form value if the
   /// attribute was successfully extracted.
-  Optional<DWARFFormValue> find(dwarf::Attribute Attr) const;
+  std::optional<DWARFFormValue> find(dwarf::Attribute Attr) const;
 
   /// Extract the first value of any attribute in Attrs from this DIE.
   ///
@@ -150,9 +149,9 @@ public:
   ///
   /// \param Attrs an array of DWARF attribute to look for.
   /// \returns an optional that has a valid DWARFFormValue for the first
-  /// matching attribute in Attrs, or None if none of the attributes in Attrs
-  /// exist in this DIE.
-  Optional<DWARFFormValue> find(ArrayRef<dwarf::Attribute> Attrs) const;
+  /// matching attribute in Attrs, or std::nullopt if none of the attributes in
+  /// Attrs exist in this DIE.
+  std::optional<DWARFFormValue> find(ArrayRef<dwarf::Attribute> Attrs) const;
 
   /// Extract the first value of any attribute in Attrs from this DIE and
   /// recurse into any DW_AT_specification or DW_AT_abstract_origin referenced
@@ -160,10 +159,10 @@ public:
   ///
   /// \param Attrs an array of DWARF attribute to look for.
   /// \returns an optional that has a valid DWARFFormValue for the first
-  /// matching attribute in Attrs, or None if none of the attributes in Attrs
-  /// exist in this DIE or in any DW_AT_specification or DW_AT_abstract_origin
-  /// DIEs.
-  Optional<DWARFFormValue>
+  /// matching attribute in Attrs, or std::nullopt if none of the attributes in
+  /// Attrs exist in this DIE or in any DW_AT_specification or
+  /// DW_AT_abstract_origin DIEs.
+  std::optional<DWARFFormValue>
   findRecursively(ArrayRef<dwarf::Attribute> Attrs) const;
 
   /// Extract the specified attribute from this DIE as the referenced DIE.
@@ -190,8 +189,8 @@ public:
   /// or DW_AT_GNU_ranges_base attribute.
   ///
   /// \returns anm optional absolute section offset value for the attribute.
-  Optional<uint64_t> getRangesBaseAttribute() const;
-  Optional<uint64_t> getLocBaseAttribute() const;
+  std::optional<uint64_t> getRangesBaseAttribute() const;
+  std::optional<uint64_t> getLocBaseAttribute() const;
 
   /// Get the DW_AT_high_pc attribute value as an address.
   ///
@@ -203,7 +202,7 @@ public:
   ///
   /// \param LowPC the low PC that might be needed to calculate the high PC.
   /// \returns an optional address value for the attribute.
-  Optional<uint64_t> getHighPC(uint64_t LowPC) const;
+  std::optional<uint64_t> getHighPC(uint64_t LowPC) const;
 
   /// Retrieves DW_AT_low_pc and DW_AT_high_pc from CU.
   /// Returns true if both attributes are present.
@@ -285,7 +284,7 @@ public:
   /// \param PointerSize the pointer size of the containing CU.
   /// \returns if this is a type DIE, or this DIE contains a DW_AT_type, returns
   /// the size of the type.
-  Optional<uint64_t> getTypeSize(uint64_t PointerSize);
+  std::optional<uint64_t> getTypeSize(uint64_t PointerSize);
 
   class iterator;
 

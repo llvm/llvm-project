@@ -29,7 +29,7 @@ llvm::Optional<lldb::pid_t> MinidumpMiscInfo::GetPid() const {
   if (flags1 & pid_flag)
     return llvm::Optional<lldb::pid_t>(process_id);
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 // Linux Proc Status
@@ -52,7 +52,7 @@ LinuxProcStatus::Parse(llvm::ArrayRef<uint8_t> &data) {
     }
   }
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 lldb::pid_t LinuxProcStatus::GetPid() const { return pid; }

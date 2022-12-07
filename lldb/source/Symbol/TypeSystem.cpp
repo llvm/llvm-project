@@ -135,7 +135,7 @@ CompilerType TypeSystem::GetTypeTemplateArgument(opaque_compiler_type_t type,
 llvm::Optional<CompilerType::IntegralTemplateArgument>
 TypeSystem::GetIntegralTemplateArgument(opaque_compiler_type_t type, size_t idx,
                                         bool expand_pack) {
-  return llvm::None;
+  return std::nullopt;
 }
 
 LazyBool TypeSystem::ShouldPrintAsOneLiner(void *type, ValueObject *valobj) {
@@ -177,7 +177,7 @@ TypeSystem::CreateUtilityFunction(std::string text, std::string name) {
 }
 
 llvm::Optional<llvm::json::Value> TypeSystem::ReportStatistics() {
-  return llvm::None;
+  return std::nullopt;
 }
 
 #pragma mark TypeSystemMap

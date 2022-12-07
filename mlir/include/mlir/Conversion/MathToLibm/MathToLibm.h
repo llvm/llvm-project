@@ -21,7 +21,7 @@ class OperationPass;
 /// If log1pBenefit is present, use it instead of benefit for the Log1p op.
 void populateMathToLibmConversionPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit,
-    llvm::Optional<PatternBenefit> log1pBenefit = llvm::None);
+    llvm::Optional<PatternBenefit> log1pBenefit = std::nullopt);
 
 /// Create a pass to convert Math operations to libm calls.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertMathToLibmPass();

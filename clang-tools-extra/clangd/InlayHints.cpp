@@ -646,11 +646,11 @@ private:
     // TokenBuffer will return null if e.g. R corresponds to only part of a
     // macro expansion.
     if (!Spelled || Spelled->empty())
-      return llvm::None;
+      return std::nullopt;
     // Hint must be within the main file, not e.g. a non-preamble include.
     if (SM.getFileID(Spelled->front().location()) != SM.getMainFileID() ||
         SM.getFileID(Spelled->back().location()) != SM.getMainFileID())
-      return llvm::None;
+      return std::nullopt;
     return Range{sourceLocToPosition(SM, Spelled->front().location()),
                  sourceLocToPosition(SM, Spelled->back().endLocation())};
   }

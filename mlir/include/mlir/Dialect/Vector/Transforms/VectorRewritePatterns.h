@@ -113,7 +113,8 @@ struct UnrollVectorOptions {
   using NativeShapeFnType =
       std::function<Optional<SmallVector<int64_t>>(Operation *op)>;
   /// Function that returns the shape of the vector to unroll to for a given
-  /// operation. The unrolling is aborted if the function returns `llvm::None`.
+  /// operation. The unrolling is aborted if the function returns
+  /// `std::nullopt`.
   NativeShapeFnType nativeShape = nullptr;
   UnrollVectorOptions &setNativeShapeFn(NativeShapeFnType fn) {
     nativeShape = std::move(fn);

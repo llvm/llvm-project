@@ -45,17 +45,16 @@ define <2 x i64> @load_zext_v2i32i64(<2 x i32>* %ap) #0 {
 define <2 x i256> @load_zext_v2i64i256(<2 x i64>* %ap) #0 {
 ; CHECK-LABEL: load_zext_v2i64i256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI3_0
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    mov x1, xzr
-; CHECK-NEXT:    mov x5, xzr
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
+; CHECK-NEXT:    mov z0.d, #0 // =0x0
+; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    mov z2.d, z0.d[1]
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    fmov x4, d2
+; CHECK-NEXT:    fmov x2, d0
+; CHECK-NEXT:    fmov x3, d2
+; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    mov z0.d, z1.d[1]
-; CHECK-NEXT:    fmov x2, d1
-; CHECK-NEXT:    fmov x3, d0
+; CHECK-NEXT:    fmov x0, d1
+; CHECK-NEXT:    fmov x4, d0
+; CHECK-NEXT:    mov x5, xzr
 ; CHECK-NEXT:    mov x6, x2
 ; CHECK-NEXT:    mov x7, x3
 ; CHECK-NEXT:    ret
@@ -136,33 +135,30 @@ define <4 x i256> @load_sext_v4i32i256(<4 x i32>* %ap) #0 {
 define <2 x i256> @load_sext_v2i64i256(<2 x i64>* %ap) #0 {
 ; CHECK-LABEL: load_sext_v2i64i256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    mov z0.d, z0.d[1]
+; CHECK-NEXT:    fmov x10, d0
 ; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    stp x8, x9, [sp, #16]
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    stp x9, x9, [sp]
-; CHECK-NEXT:    ldp q1, q0, [sp]
-; CHECK-NEXT:    asr x10, x8, #63
-; CHECK-NEXT:    stp x8, x10, [sp, #48]
-; CHECK-NEXT:    fmov x2, d1
-; CHECK-NEXT:    stp x10, x10, [sp, #32]
-; CHECK-NEXT:    ldp q3, q2, [sp, #32]
-; CHECK-NEXT:    mov z4.d, z0.d[1]
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    asr x11, x10, #63
+; CHECK-NEXT:    stp x8, x9, [sp, #-32]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    mov z0.d, x9
+; CHECK-NEXT:    stp x10, x11, [sp, #16]
+; CHECK-NEXT:    mov z1.d, z0.d[1]
+; CHECK-NEXT:    fmov x2, d0
+; CHECK-NEXT:    mov z0.d, x11
+; CHECK-NEXT:    fmov x3, d1
+; CHECK-NEXT:    ldp q1, q3, [sp], #32
+; CHECK-NEXT:    mov z2.d, z0.d[1]
+; CHECK-NEXT:    fmov x6, d0
 ; CHECK-NEXT:    mov z0.d, z1.d[1]
-; CHECK-NEXT:    fmov x1, d4
-; CHECK-NEXT:    fmov x3, d0
-; CHECK-NEXT:    fmov x6, d3
-; CHECK-NEXT:    mov z1.d, z2.d[1]
-; CHECK-NEXT:    fmov x4, d2
-; CHECK-NEXT:    mov z2.d, z3.d[1]
-; CHECK-NEXT:    fmov x5, d1
+; CHECK-NEXT:    fmov x0, d1
+; CHECK-NEXT:    mov z1.d, z3.d[1]
 ; CHECK-NEXT:    fmov x7, d2
-; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:    fmov x4, d3
+; CHECK-NEXT:    fmov x1, d0
+; CHECK-NEXT:    fmov x5, d1
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, <2 x i64>* %ap
   %val = sext <2 x i64> %a to <2 x i256>

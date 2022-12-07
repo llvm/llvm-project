@@ -7889,11 +7889,12 @@ private:
 } // end anonymous namespace
 
 /// Recursively traverses the expression calculating the origin of the requested
-/// byte of the given value. Returns None if the provider can't be calculated.
+/// byte of the given value. Returns std::nullopt if the provider can't be
+/// calculated.
 ///
 /// For all the values except the root of the expression, we verify that the
-/// value has exactly one use and if not then return None. This way if the
-/// origin of the byte is returned it's guaranteed that the values which
+/// value has exactly one use and if not then return std::nullopt. This way if
+/// the origin of the byte is returned it's guaranteed that the values which
 /// contribute to the byte are not used outside of this expression.
 
 /// However, there is a special case when dealing with vector loads -- we allow

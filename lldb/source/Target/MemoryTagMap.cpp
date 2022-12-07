@@ -47,7 +47,7 @@ MemoryTagMap::GetTags(lldb::addr_t addr, size_t len) const {
       got_valid_tags = true;
   }
 
-  // To save the caller checking if every item is llvm::None,
+  // To save the caller checking if every item is std::nullopt,
   // we return an empty vector if we got no tags at all.
   if (got_valid_tags)
     return tags;
@@ -59,6 +59,6 @@ llvm::Optional<lldb::addr_t> MemoryTagMap::GetTag(lldb::addr_t addr) const {
   // were inserted.
   auto found = m_addr_to_tag.find(addr);
   if (found == m_addr_to_tag.end())
-    return llvm::None;
+    return std::nullopt;
   return found->second;
 }

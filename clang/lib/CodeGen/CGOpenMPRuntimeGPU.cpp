@@ -1028,7 +1028,7 @@ llvm::Function *CGOpenMPRuntimeGPU::emitTeamsOutlinedFunction(
     getDistributeLastprivateVars(CGM.getContext(), D, LastPrivatesReductions);
     if (!LastPrivatesReductions.empty()) {
       GlobalizedRD = ::buildRecordForGlobalizedVars(
-          CGM.getContext(), llvm::None, LastPrivatesReductions,
+          CGM.getContext(), std::nullopt, LastPrivatesReductions,
           MappedDeclsFields, WarpSize);
     }
   } else if (!LastPrivatesReductions.empty()) {
@@ -3005,7 +3005,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
       ++Cnt;
     }
     const RecordDecl *TeamReductionRec = ::buildRecordForGlobalizedVars(
-        CGM.getContext(), PrivatesReductions, llvm::None, VarFieldMap,
+        CGM.getContext(), PrivatesReductions, std::nullopt, VarFieldMap,
         C.getLangOpts().OpenMPCUDAReductionBufNum);
     TeamsReductions.push_back(TeamReductionRec);
     if (!KernelTeamsReductionPtr) {
@@ -3077,7 +3077,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
   llvm::Value *EndArgs[] = {ThreadId};
   RegionCodeGenTy RCG(CodeGen);
   NVPTXActionTy Action(
-      nullptr, llvm::None,
+      nullptr, std::nullopt,
       OMPBuilder.getOrCreateRuntimeFunction(
           CGM.getModule(), OMPRTL___kmpc_nvptx_end_reduce_nowait),
       EndArgs);
@@ -3358,7 +3358,7 @@ void CGOpenMPRuntimeGPU::emitFunctionProlog(CodeGenFunction &CGF,
     Data.insert(std::make_pair(VD, MappedVarData()));
   }
   if (!IsInTTDRegion && !NeedToDelayGlobalization && !IsInParallelRegion) {
-    CheckVarsEscapingDeclContext VarChecker(CGF, llvm::None);
+    CheckVarsEscapingDeclContext VarChecker(CGF, std::nullopt);
     VarChecker.Visit(Body);
     I->getSecond().SecondaryLocalVarData.emplace();
     DeclToAddrMapTy &Data = *I->getSecond().SecondaryLocalVarData;
@@ -3709,10 +3709,10 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUNumThreads(CodeGenFunction &CGF) {
   llvm::Function *F = M->getFunction(LocSize);
   if (!F) {
     F = llvm::Function::Create(
-        llvm::FunctionType::get(CGF.Int32Ty, llvm::None, false),
+        llvm::FunctionType::get(CGF.Int32Ty, std::nullopt, false),
         llvm::GlobalVariable::ExternalLinkage, LocSize, &CGF.CGM.getModule());
   }
-  return Bld.CreateCall(F, llvm::None, "nvptx_num_threads");
+  return Bld.CreateCall(F, std::nullopt, "nvptx_num_threads");
 }
 
 llvm::Value *CGOpenMPRuntimeGPU::getGPUThreadID(CodeGenFunction &CGF) {

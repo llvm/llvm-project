@@ -288,7 +288,7 @@ static std::optional<ArrayRef<uint8_t>> getDebugH(ObjFile *file) {
   SectionChunk *sec =
       SectionChunk::findByName(file->getDebugChunks(), ".debug$H");
   if (!sec)
-    return llvm::None;
+    return std::nullopt;
   ArrayRef<uint8_t> contents = sec->getContents();
   if (!canUseDebugH(contents))
     return std::nullopt;
@@ -315,7 +315,7 @@ Error TpiSource::mergeDebugT(TypeMerger *m) {
   // When dealing with PCH.OBJ, some indices were already merged.
   unsigned nbHeadIndices = indexMapStorage.size();
 
-  Optional<PCHMergerInfo> pchInfo;
+  std::optional<PCHMergerInfo> pchInfo;
   if (auto err = mergeTypeAndIdRecords(m->idTable, m->typeTable,
                                        indexMapStorage, types, pchInfo))
     fatal("codeview::mergeTypeAndIdRecords failed: " +

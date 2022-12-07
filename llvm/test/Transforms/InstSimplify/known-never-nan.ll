@@ -412,6 +412,16 @@ define i1 @nnan_frem(double %arg0, double %arg1) {
   ret i1 %tmp
 }
 
+define i1 @nnan_arithemtic_fence_src(double %arg) {
+; CHECK-LABEL: @nnan_arithemtic_fence_src(
+; CHECK-NEXT:    ret i1 true
+;
+  %nnan = fadd nnan double %arg, 1.0
+  %op = call double @llvm.arithmetic.fence.f64(double %nnan)
+  %tmp = fcmp ord double %op, %op
+  ret i1 %tmp
+}
+
 declare double @llvm.sqrt.f64(double)
 declare double @llvm.fabs.f64(double)
 declare double @llvm.canonicalize.f64(double)
@@ -425,3 +435,4 @@ declare double @llvm.rint.f64(double)
 declare double @llvm.nearbyint.f64(double)
 declare double @llvm.round.f64(double)
 declare double @llvm.roundeven.f64(double)
+declare double @llvm.arithmetic.fence.f64(double)

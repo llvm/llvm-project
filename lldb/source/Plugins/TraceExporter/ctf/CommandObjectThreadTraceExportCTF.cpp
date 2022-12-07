@@ -54,7 +54,7 @@ Status CommandObjectThreadTraceExportCTF::CommandOptions::SetOptionValue(
 void CommandObjectThreadTraceExportCTF::CommandOptions::OptionParsingStarting(
     ExecutionContext *execution_context) {
   m_file.clear();
-  m_thread_index = None;
+  m_thread_index = std::nullopt;
 }
 
 llvm::ArrayRef<OptionDefinition>

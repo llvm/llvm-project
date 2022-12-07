@@ -547,7 +547,7 @@ public:
     rewriter.setInsertionPointToEnd(thisBlock);
     if (destOps.has_value())
       rewriter.create<mlir::cf::CondBranchOp>(loc, cmp, dest, destOps.value(),
-                                              newBlock, llvm::None);
+                                              newBlock, std::nullopt);
     else
       rewriter.create<mlir::cf::CondBranchOp>(loc, cmp, dest, newBlock);
     rewriter.setInsertionPointToEnd(newBlock);

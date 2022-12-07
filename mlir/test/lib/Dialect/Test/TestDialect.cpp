@@ -94,7 +94,7 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
             .Case("alias_test:sanitize_conflict_b",
                   StringRef("test_alias_conflict0_"))
             .Case("alias_test:tensor_encoding", StringRef("test_encoding"))
-            .Default(llvm::None);
+            .Default(std::nullopt);
     if (!aliasName)
       return AliasResult::NoAlias;
 
@@ -441,7 +441,7 @@ TestDialect::getParseOperationHook(StringRef opName) const {
       return ParseResult::success();
     }};
   }
-  return None;
+  return std::nullopt;
 }
 
 llvm::unique_function<void(Operation *, OpAsmPrinter &)>

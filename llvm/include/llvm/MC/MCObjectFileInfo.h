@@ -13,13 +13,13 @@
 #ifndef LLVM_MC_MCOBJECTFILEINFO_H
 #define LLVM_MC_MCOBJECTFILEINFO_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Swift.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/Support/VersionTuple.h"
 
 #include <array>
+#include <optional>
 
 namespace llvm {
 class MCContext;
@@ -451,7 +451,7 @@ private:
   bool PositionIndependent = false;
   MCContext *Ctx = nullptr;
   VersionTuple SDKVersion;
-  Optional<Triple> DarwinTargetVariantTriple;
+  std::optional<Triple> DarwinTargetVariantTriple;
   VersionTuple DarwinTargetVariantSDKVersion;
 
   void initMachOMCObjectFileInfo(const Triple &T);

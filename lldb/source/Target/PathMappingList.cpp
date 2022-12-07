@@ -235,7 +235,7 @@ PathMappingList::ReverseRemapPath(const FileSpec &file, FileSpec &fixed) const {
     AppendPathComponents(fixed, path_ref, orig_style);
     return removed_prefix;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::Optional<FileSpec> PathMappingList::FindFile(const FileSpec &orig_spec) const {

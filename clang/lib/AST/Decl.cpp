@@ -235,7 +235,7 @@ static Optional<Visibility> getVisibilityOf(const NamedDecl *D,
     return getVisibilityFromAttr(A);
   }
 
-  return None;
+  return std::nullopt;
 }
 
 LinkageInfo LinkageComputer::getLVForType(const Type &T,
@@ -1194,11 +1194,11 @@ getExplicitVisibilityAux(const NamedDecl *ND,
     const auto *TD = spec->getSpecializedTemplate()->getTemplatedDecl();
     while (TD != nullptr) {
       auto Vis = getVisibilityOf(TD, kind);
-      if (Vis != None)
+      if (Vis != std::nullopt)
         return Vis;
       TD = TD->getPreviousDecl();
     }
-    return None;
+    return std::nullopt;
   }
 
   // Use the most recent declaration.
@@ -1219,7 +1219,7 @@ getExplicitVisibilityAux(const NamedDecl *ND,
       return getVisibilityOf(VTSD->getSpecializedTemplate()->getTemplatedDecl(),
                              kind);
 
-    return None;
+    return std::nullopt;
   }
   // Also handle function template specializations.
   if (const auto *fn = dyn_cast<FunctionDecl>(ND)) {
@@ -1236,14 +1236,14 @@ getExplicitVisibilityAux(const NamedDecl *ND,
     if (InstantiatedFrom)
       return getVisibilityOf(InstantiatedFrom, kind);
 
-    return None;
+    return std::nullopt;
   }
 
   // The visibility of a template is stored in the templated decl.
   if (const auto *TD = dyn_cast<TemplateDecl>(ND))
     return getVisibilityOf(TD->getTemplatedDecl(), kind);
 
-  return None;
+  return std::nullopt;
 }
 
 Optional<Visibility>
@@ -5130,8 +5130,9 @@ IndirectFieldDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
 
 IndirectFieldDecl *IndirectFieldDecl::CreateDeserialized(ASTContext &C,
                                                          unsigned ID) {
-  return new (C, ID) IndirectFieldDecl(C, nullptr, SourceLocation(),
-                                       DeclarationName(), QualType(), None);
+  return new (C, ID)
+      IndirectFieldDecl(C, nullptr, SourceLocation(), DeclarationName(),
+                        QualType(), std::nullopt);
 }
 
 SourceRange EnumConstantDecl::getSourceRange() const {
@@ -5234,6 +5235,29 @@ FileScopeAsmDecl *FileScopeAsmDecl::CreateDeserialized(ASTContext &C,
                                                        unsigned ID) {
   return new (C, ID) FileScopeAsmDecl(nullptr, nullptr, SourceLocation(),
                                       SourceLocation());
+}
+
+void TopLevelStmtDecl::anchor() {}
+
+TopLevelStmtDecl *TopLevelStmtDecl::Create(ASTContext &C, Stmt *Statement) {
+  assert(Statement);
+  assert(C.getLangOpts().IncrementalExtensions &&
+         "Must be used only in incremental mode");
+
+  SourceLocation BeginLoc = Statement->getBeginLoc();
+  DeclContext *DC = C.getTranslationUnitDecl();
+
+  return new (C, DC) TopLevelStmtDecl(DC, BeginLoc, Statement);
+}
+
+TopLevelStmtDecl *TopLevelStmtDecl::CreateDeserialized(ASTContext &C,
+                                                       unsigned ID) {
+  return new (C, ID)
+      TopLevelStmtDecl(/*DC=*/nullptr, SourceLocation(), /*S=*/nullptr);
+}
+
+SourceRange TopLevelStmtDecl::getSourceRange() const {
+  return SourceRange(getLocation(), Statement->getEndLoc());
 }
 
 void EmptyDecl::anchor() {}
@@ -5339,7 +5363,7 @@ ImportDecl *ImportDecl::CreateDeserialized(ASTContext &C, unsigned ID,
 
 ArrayRef<SourceLocation> ImportDecl::getIdentifierLocs() const {
   if (!isImportComplete())
-    return None;
+    return std::nullopt;
 
   const auto *StoredLocs = getTrailingObjects<SourceLocation>();
   return llvm::makeArrayRef(StoredLocs,

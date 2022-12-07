@@ -185,7 +185,7 @@ public:
     if (CachePopulatedAt > FreshTime)
       return CDB;
 
-    if (/*MayCache=*/load(*TFS.view(/*CWD=*/llvm::None))) {
+    if (/*MayCache=*/load(*TFS.view(/*CWD=*/std::nullopt))) {
       // Use new timestamp, as loading may be slow.
       CachePopulatedAt = stopwatch::now();
       NoCDBAt.store((CDB ? stopwatch::time_point::min() : CachePopulatedAt)
@@ -366,14 +366,14 @@ DirectoryBasedGlobalCompilationDatabase::getCompileCommand(PathRef File) const {
   auto Res = lookupCDB(Req);
   if (!Res) {
     log("Failed to find compilation database for {0}", File);
-    return llvm::None;
+    return std::nullopt;
   }
 
   auto Candidates = Res->CDB->getCompileCommands(File);
   if (!Candidates.empty())
     return std::move(Candidates.front());
 
-  return None;
+  return std::nullopt;
 }
 
 std::vector<DirectoryBasedGlobalCompilationDatabase::DirectoryCache *>
@@ -413,7 +413,7 @@ DirectoryBasedGlobalCompilationDatabase::lookupCDB(
     const auto &Spec = Config::current().CompileFlags.CDBSearch;
     switch (Spec.Policy) {
     case Config::CDBSearchSpec::NoCDBSearch:
-      return llvm::None;
+      return std::nullopt;
     case Config::CDBSearchSpec::FixedDir:
       Storage = *Spec.FixedCDBPath;
       SearchDirs = {Storage};
@@ -444,7 +444,7 @@ DirectoryBasedGlobalCompilationDatabase::lookupCDB(
   }
 
   if (!CDB)
-    return llvm::None;
+    return std::nullopt;
 
   CDBLookupResult Result;
   Result.CDB = std::move(CDB);
@@ -734,7 +734,7 @@ DirectoryBasedGlobalCompilationDatabase::getProjectInfo(PathRef File) const {
       std::chrono::steady_clock::time_point::min();
   auto Res = lookupCDB(Req);
   if (!Res)
-    return llvm::None;
+    return std::nullopt;
   return Res->PI;
 }
 
@@ -756,7 +756,7 @@ OverlayCDB::getCompileCommand(PathRef File) const {
   if (!Cmd)
     Cmd = DelegatingCDB::getCompileCommand(File);
   if (!Cmd)
-    return llvm::None;
+    return std::nullopt;
   if (Mangler)
     Mangler(*Cmd, File);
   return Cmd;
@@ -804,13 +804,13 @@ DelegatingCDB::DelegatingCDB(std::unique_ptr<GlobalCompilationDatabase> Base)
 llvm::Optional<tooling::CompileCommand>
 DelegatingCDB::getCompileCommand(PathRef File) const {
   if (!Base)
-    return llvm::None;
+    return std::nullopt;
   return Base->getCompileCommand(File);
 }
 
 llvm::Optional<ProjectInfo> DelegatingCDB::getProjectInfo(PathRef File) const {
   if (!Base)
-    return llvm::None;
+    return std::nullopt;
   return Base->getProjectInfo(File);
 }
 

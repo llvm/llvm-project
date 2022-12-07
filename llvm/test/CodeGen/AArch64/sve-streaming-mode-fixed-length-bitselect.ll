@@ -12,23 +12,20 @@ target triple = "aarch64"
 define <8 x i32> @fixed_bitselect_v8i32(ptr %pre_cond_ptr, ptr %left_ptr, ptr %right_ptr) #0 {
 ; CHECK-LABEL: fixed_bitselect_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI0_0]
-; CHECK-NEXT:    adrp x8, .LCPI0_1
-; CHECK-NEXT:    ldp q3, q4, [x1]
-; CHECK-NEXT:    sub z6.s, z2.s, z1.s
-; CHECK-NEXT:    sub z2.s, z2.s, z0.s
-; CHECK-NEXT:    and z3.d, z6.d, z3.d
-; CHECK-NEXT:    ldp q7, q16, [x2]
+; CHECK-NEXT:    ldp q3, q2, [x0]
+; CHECK-NEXT:    mov z0.s, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    add z7.s, z3.s, z0.s
+; CHECK-NEXT:    subr z3.s, z3.s, #0 // =0x0
+; CHECK-NEXT:    ldp q1, q4, [x1]
+; CHECK-NEXT:    add z0.s, z2.s, z0.s
+; CHECK-NEXT:    subr z2.s, z2.s, #0 // =0x0
+; CHECK-NEXT:    and z1.d, z3.d, z1.d
+; CHECK-NEXT:    ldp q5, q6, [x2]
 ; CHECK-NEXT:    and z2.d, z2.d, z4.d
-; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI0_1]
-; CHECK-NEXT:    add z1.s, z1.s, z5.s
-; CHECK-NEXT:    add z0.s, z0.s, z5.s
-; CHECK-NEXT:    and z4.d, z0.d, z16.d
-; CHECK-NEXT:    and z0.d, z1.d, z7.d
-; CHECK-NEXT:    orr z0.d, z0.d, z3.d
-; CHECK-NEXT:    orr z1.d, z4.d, z2.d
+; CHECK-NEXT:    and z3.d, z0.d, z6.d
+; CHECK-NEXT:    and z0.d, z7.d, z5.d
+; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    orr z1.d, z3.d, z2.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret

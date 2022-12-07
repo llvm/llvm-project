@@ -876,7 +876,7 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
     if (BitcodeOutput.size() != 1 || !SingleOutput)
       return createStringError(inconvertibleErrorCode(),
                                "Cannot embed bitcode with multiple files.");
-    OutputFiles.push_back(static_cast<std::string>(BitcodeOutput.front()));
+    OutputFiles.push_back(Args.MakeArgString(BitcodeOutput.front()));
     return Error::success();
   }
 
@@ -1187,7 +1187,8 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
         return createFileError(*OutputOrErr, EC);
 
       OffloadingImage TheImage{};
-      TheImage.TheImageKind = IMG_Object;
+      TheImage.TheImageKind =
+          Args.hasArg(OPT_embed_bitcode) ? IMG_Bitcode : IMG_Object;
       TheImage.TheOffloadKind = Kind;
       TheImage.StringData = {
           {"triple",
@@ -1237,7 +1238,7 @@ Optional<std::string> findFile(StringRef Dir, StringRef Root,
 
   if (sys::fs::exists(Path))
     return static_cast<std::string>(Path);
-  return None;
+  return std::nullopt;
 }
 
 Optional<std::string> findFromSearchPaths(StringRef Name, StringRef Root,
@@ -1245,7 +1246,7 @@ Optional<std::string> findFromSearchPaths(StringRef Name, StringRef Root,
   for (StringRef Dir : SearchPaths)
     if (Optional<std::string> File = findFile(Dir, Root, Name))
       return File;
-  return None;
+  return std::nullopt;
 }
 
 Optional<std::string> searchLibraryBaseName(StringRef Name, StringRef Root,
@@ -1256,7 +1257,7 @@ Optional<std::string> searchLibraryBaseName(StringRef Name, StringRef Root,
     if (Optional<std::string> File = findFile(Dir, Root, "lib" + Name + ".a"))
       return File;
   }
-  return None;
+  return std::nullopt;
 }
 
 /// Search for static libraries in the linker's library path given input like

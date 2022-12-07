@@ -208,9 +208,10 @@ void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
 ///     It is useful to ensure the same line
 ///     provided by the setBreakpoints request are returned to the IDE as a
 ///     fallback.
-void AppendBreakpoint(lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints,
-                      llvm::Optional<llvm::StringRef> request_path = llvm::None,
-                      llvm::Optional<uint32_t> request_line = llvm::None);
+void AppendBreakpoint(
+    lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints,
+    llvm::Optional<llvm::StringRef> request_path = std::nullopt,
+    llvm::Optional<uint32_t> request_line = std::nullopt);
 
 /// Converts breakpoint location to a Visual Studio Code "Breakpoint"
 ///
@@ -235,8 +236,8 @@ void AppendBreakpoint(lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints,
 ///     definition outlined by Microsoft.
 llvm::json::Value
 CreateBreakpoint(lldb::SBBreakpoint &bp,
-                 llvm::Optional<llvm::StringRef> request_path = llvm::None,
-                 llvm::Optional<uint32_t> request_line = llvm::None);
+                 llvm::Optional<llvm::StringRef> request_path = std::nullopt,
+                 llvm::Optional<uint32_t> request_line = std::nullopt);
 
 /// Converts a LLDB module to a VS Code DAP module for use in "modules" events.
 ///

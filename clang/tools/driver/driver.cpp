@@ -497,7 +497,7 @@ int clang_main(int Argc, char **Argv) {
                      .Case("crash", Driver::ReproLevel::OnCrash)
                      .Case("error", Driver::ReproLevel::OnError)
                      .Case("always", Driver::ReproLevel::Always)
-                     .Default(None);
+                     .Default(std::nullopt);
     if (!Level) {
       llvm::errs() << "Unknown value for " << A->getSpelling() << ": '"
                    << A->getValue() << "'\n";

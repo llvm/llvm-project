@@ -554,7 +554,7 @@ void testBinarySetOperationExhaustive(Fn1 OpFn, Fn2 ExactOpFn, Fn3 InResultFn) {
         ConstantRange SignedCR = OpFn(CR1, CR2, ConstantRange::Signed);
         TestRange(SignedCR, Elems, PreferSmallestNonFullSigned, {CR1, CR2});
 
-        Optional<ConstantRange> ExactCR = ExactOpFn(CR1, CR2);
+        std::optional<ConstantRange> ExactCR = ExactOpFn(CR1, CR2);
         if (SmallestCR.isSizeLargerThan(Elems.count())) {
           EXPECT_TRUE(!ExactCR);
         } else {
