@@ -4806,7 +4806,9 @@ static LogicalResult verifyIntegerDotProduct(Operation *op) {
   if (op->getOperand(1).getType() != factorTy)
     return op->emitOpError("requires the same type for both vector operands");
 
+  unsigned expectedNumAttrs = 0;
   if (auto intTy = factorTy.dyn_cast<IntegerType>()) {
+    ++expectedNumAttrs;
     auto packedVectorFormat =
         op->getAttr(kPackedVectorFormatAttrName)
             .dyn_cast_or_null<spirv::PackedVectorFormatAttr>();
@@ -4816,15 +4818,20 @@ static LogicalResult verifyIntegerDotProduct(Operation *op) {
 
     assert(packedVectorFormat.getValue() ==
                spirv::PackedVectorFormat::PackedVectorFormat4x8Bit &&
-           "unknown Packed Vector format");
+           "Unknown Packed Vector Format");
     if (intTy.getWidth() != 32)
       return op->emitOpError(
           llvm::formatv("with specified Packed Vector Format ({0}) requires "
                         "integer vector operands to be 32-bits wide",
                         packedVectorFormat.getValue()));
+  } else {
+    if (op->hasAttr(kPackedVectorFormatAttrName))
+      return op->emitOpError(llvm::formatv(
+          "with invalid format attribute for vector operands of type '{0}'",
+          factorTy));
   }
 
-  if (op->getAttrs().size() > 1)
+  if (op->getAttrs().size() > expectedNumAttrs)
     return op->emitError(
         "op only supports the 'format' #spirv.packed_vector_format attribute");
 
