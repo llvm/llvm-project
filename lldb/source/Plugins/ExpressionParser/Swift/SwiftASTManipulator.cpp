@@ -197,7 +197,7 @@ do {
         weak_self ? "Swift.Optional where Wrapped == " : "";
 
     // The expression text is inserted into the body of $__lldb_user_expr_%u.
-    if (!options.GetBindGenericTypes()) {
+    if (options.GetBindGenericTypes() == lldb::eDontBind) {
       // A Swift program can't have types with non-bound generic type parameters
       // inside a non generic function. For example, the following program would
       // not compile as T is not part of foo's signature.
@@ -341,8 +341,8 @@ void SwiftASTManipulatorBase::DoInitialization() {
     swift::FuncDecl *entrypoint_decl = nullptr;
     /// This is optional.
     swift::FuncDecl *ext_method_decl = nullptr;
-    /// When evaluating self as generic, this is the generic function that calls
-    /// the ext_method_decl.
+    /// When evaluating self as generic, this is the trampoline function that
+    /// calls the ext_method_decl.
     swift::FuncDecl *trampoline_decl = nullptr;
     /// When evaluating self as generic, this is the sink function
     /// that the top level entry function calls in the AST level.
@@ -430,9 +430,9 @@ swift::BraceStmt *SwiftASTManipulatorBase::GetUserBody() {
   return do_body;
 }
 
-SwiftASTManipulator::SwiftASTManipulator(swift::SourceFile &source_file,
-                                         bool repl,
-                                         bool bind_generic_types)
+SwiftASTManipulator::SwiftASTManipulator(
+    swift::SourceFile &source_file, bool repl,
+    lldb::BindGenericTypes bind_generic_types)
     : SwiftASTManipulatorBase(source_file, repl, bind_generic_types) {}
 
 void SwiftASTManipulator::FindSpecialNames(
@@ -1108,10 +1108,10 @@ swift::FuncDecl *SwiftASTManipulator::GetFunctionToInjectVariableInto(
   if (variable.IsSelf())
     return m_entrypoint_decl;
 
-  // When evaluating self in a generic context, we want to inject the metadata
-  // pointers in the wrapper, so we can pass them as in the generic function
-  // later on.
-  if (!m_bind_generic_types && variable.IsMetadataPointer())
+  // When not binding generic type parameters, we want to inject the metadata
+  // pointers in the wrapper, so we can pass them as opaque pointers in the
+  // trampoline function later on.
+  if (m_bind_generic_types == lldb::eDontBind && variable.IsMetadataPointer())
     return m_entrypoint_decl;
 
   return m_function_decl;

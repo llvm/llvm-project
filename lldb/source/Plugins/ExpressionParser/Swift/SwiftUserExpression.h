@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 
+#include "SwiftExpressionParser.h"
 #include "lldb/Expression/LLVMUserExpression.h"
 #include "lldb/Expression/Materializer.h"
 
@@ -26,7 +27,7 @@
 // Project includes
 
 namespace lldb_private {
-class SwiftExpressionParser;
+class SwiftExpressionSourceCode;
   
 //----------------------------------------------------------------------
 /// @class SwiftUserExpression SwiftUserExpression.h
@@ -149,6 +150,11 @@ private:
   bool AddArguments(ExecutionContext &exe_ctx, std::vector<lldb::addr_t> &args,
                     lldb::addr_t struct_address,
                     DiagnosticManager &diagnostic_manager) override;
+
+  SwiftExpressionParser::ParseResult
+  GetTextAndSetExpressionParser(DiagnosticManager &diagnostic_manager,
+                  std::unique_ptr<SwiftExpressionSourceCode> &source_code,
+                  ExecutionContext &exe_ctx, ExecutionContextScope *exe_scope);
 
   SwiftUserExpressionHelper m_type_system_helper;
 
