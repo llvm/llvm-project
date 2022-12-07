@@ -4835,7 +4835,7 @@ static void packImage16bitOpsToDwords(MachineIRBuilder &B, MachineInstr &MI,
 static void convertImageAddrToPacked(MachineIRBuilder &B, MachineInstr &MI,
                                      int DimIdx, int NumVAddrs) {
   const LLT S32 = LLT::scalar(32);
-
+  (void)S32;
   SmallVector<Register, 8> AddrRegs;
   for (int I = 0; I != NumVAddrs; ++I) {
     MachineOperand &SrcOp = MI.getOperand(DimIdx + I);
