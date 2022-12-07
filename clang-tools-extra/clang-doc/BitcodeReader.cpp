@@ -8,7 +8,6 @@
 
 #include "BitcodeReader.h"
 #include "llvm/ADT/IndexedMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -795,7 +794,7 @@ llvm::Error ClangDocBitcodeReader::validateStream() {
 }
 
 llvm::Error ClangDocBitcodeReader::readBlockInfoBlock() {
-  Expected<Optional<llvm::BitstreamBlockInfo>> MaybeBlockInfo =
+  Expected<std::optional<llvm::BitstreamBlockInfo>> MaybeBlockInfo =
       Stream.ReadBlockInfoBlock();
   if (!MaybeBlockInfo)
     return MaybeBlockInfo.takeError();
