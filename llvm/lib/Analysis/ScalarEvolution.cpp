@@ -14789,7 +14789,7 @@ ScalarEvolution::computeSymbolicMaxBackedgeTakenCount(const Loop *L) {
   }
   if (ExitCounts.empty())
     return getCouldNotCompute();
-  return getUMinFromMismatchedTypes(ExitCounts);
+  return getUMinFromMismatchedTypes(ExitCounts, /*Sequential*/ true);
 }
 
 /// A rewriter to replace SCEV expressions in Map with the corresponding entry
