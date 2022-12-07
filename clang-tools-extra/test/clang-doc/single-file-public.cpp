@@ -28,9 +28,8 @@ void Record::function_public() {}
 // CHECK-NEXT: Namespace:
 // CHECK-NEXT:   - Type:             Namespace
 // CHECK-NEXT:     Name:             'GlobalNamespace'
-// CHECK-NEXT:     QualName:         'GlobalNamespace'
 // CHECK-NEXT: DefLocation:
-// CHECK-NEXT:   LineNumber:      12
+// CHECK-NEXT:   LineNumber:      [[@LINE-20]]
 // CHECK-NEXT:   Filename:        '{{.*}}'
 // CHECK-NEXT: TagType:         Class
 // CHECK-NEXT: ChildFunctions:
@@ -39,26 +38,22 @@ void Record::function_public() {}
 // CHECK-NEXT:     Namespace:
 // CHECK-NEXT:       - Type:            Record
 // CHECK-NEXT:         Name:            'Record'
-// CHECK-NEXT:         QualName:        'Record'
 // CHECK-NEXT:         USR:             '{{([0-9A-F]{40})}}'
 // CHECK-NEXT:       - Type:            Namespace
 // CHECK-NEXT:         Name:            'GlobalNamespace'
-// CHECK-NEXT:         QualName:        'GlobalNamespace'
 // CHECK-NEXT:     DefLocation:
-// CHECK-NEXT:         LineNumber:      22
+// CHECK-NEXT:         LineNumber:      [[@LINE-23]]
 // CHECK-NEXT:         Filename:        '{{.*}}'
 // CHECK-NEXT:     Location:
-// CHECK-NEXT:       - LineNumber:      17
+// CHECK-NEXT:       - LineNumber:      [[@LINE-31]]
 // CHECK-NEXT:         Filename:        '{{.*}}'
 // CHECK-NEXT:     IsMethod:        true
 // CHECK-NEXT:     Parent:
 // CHECK-NEXT:         Type:            Record
 // CHECK-NEXT:         Name:            'Record'
-// CHECK-NEXT:         QualName:        'Record'
 // CHECK-NEXT:         USR:             '{{([0-9A-F]{40})}}'
 // CHECK-NEXT:     ReturnType:
 // CHECK-NEXT:       Type:
 // CHECK-NEXT:         Name:            'void'
-// CHECK-NEXT:         QualName:        'void'
 // CHECK-NEXT:     Access:			Public
 // CHECK-NEXT: ...
