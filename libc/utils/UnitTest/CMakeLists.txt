@@ -33,7 +33,7 @@ add_library(
     FPMatcher.h
 )
 target_include_directories(LibcFPTestHelpers PUBLIC ${LIBC_SOURCE_DIR})
-target_link_libraries(LibcFPTestHelpers LibcUnitTest)
+target_link_libraries(LibcFPTestHelpers LibcUnitTest libc_test_utils)
 add_dependencies(
   LibcFPTestHelpers
   LibcUnitTest
