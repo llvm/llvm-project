@@ -233,7 +233,9 @@ public:
 
   TemplateArgument(TemplateName, bool) = delete;
 
-  static TemplateArgument getEmptyPack() { return TemplateArgument(None); }
+  static TemplateArgument getEmptyPack() {
+    return TemplateArgument(std::nullopt);
+  }
 
   /// Create a new template argument pack by copying the given set of
   /// template arguments.

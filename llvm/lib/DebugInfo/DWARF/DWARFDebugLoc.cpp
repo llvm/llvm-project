@@ -30,16 +30,17 @@ class DWARFObject;
 
 namespace {
 class DWARFLocationInterpreter {
-  Optional<object::SectionedAddress> Base;
-  std::function<Optional<object::SectionedAddress>(uint32_t)> LookupAddr;
+  std::optional<object::SectionedAddress> Base;
+  std::function<std::optional<object::SectionedAddress>(uint32_t)> LookupAddr;
 
 public:
   DWARFLocationInterpreter(
-      Optional<object::SectionedAddress> Base,
-      std::function<Optional<object::SectionedAddress>(uint32_t)> LookupAddr)
+      std::optional<object::SectionedAddress> Base,
+      std::function<std::optional<object::SectionedAddress>(uint32_t)>
+          LookupAddr)
       : Base(Base), LookupAddr(std::move(LookupAddr)) {}
 
-  Expected<Optional<DWARFLocationExpression>>
+  Expected<std::optional<DWARFLocationExpression>>
   Interpret(const DWARFLocationEntry &E);
 };
 } // namespace
@@ -48,7 +49,7 @@ static Error createResolverError(uint32_t Index, unsigned Kind) {
   return make_error<ResolverError>(Index, (dwarf::LoclistEntries)Kind);
 }
 
-Expected<Optional<DWARFLocationExpression>>
+Expected<std::optional<DWARFLocationExpression>>
 DWARFLocationInterpreter::Interpret(const DWARFLocationEntry &E) {
   switch (E.Kind) {
   case dwarf::DW_LLE_end_of_list:
@@ -60,10 +61,10 @@ DWARFLocationInterpreter::Interpret(const DWARFLocationEntry &E) {
     return std::nullopt;
   }
   case dwarf::DW_LLE_startx_endx: {
-    Optional<SectionedAddress> LowPC = LookupAddr(E.Value0);
+    std::optional<SectionedAddress> LowPC = LookupAddr(E.Value0);
     if (!LowPC)
       return createResolverError(E.Value0, E.Kind);
-    Optional<SectionedAddress> HighPC = LookupAddr(E.Value1);
+    std::optional<SectionedAddress> HighPC = LookupAddr(E.Value1);
     if (!HighPC)
       return createResolverError(E.Value1, E.Kind);
     return DWARFLocationExpression{
@@ -71,7 +72,7 @@ DWARFLocationInterpreter::Interpret(const DWARFLocationEntry &E) {
         E.Loc};
   }
   case dwarf::DW_LLE_startx_length: {
-    Optional<SectionedAddress> LowPC = LookupAddr(E.Value0);
+    std::optional<SectionedAddress> LowPC = LookupAddr(E.Value0);
     if (!LowPC)
       return createResolverError(E.Value0, E.Kind);
     return DWARFLocationExpression{DWARFAddressRange{LowPC->Address,
@@ -120,21 +121,19 @@ static void dumpExpression(raw_ostream &OS, DIDumpOptions DumpOpts,
   DWARFExpression(Extractor, AddressSize).print(OS, DumpOpts, MRI, U);
 }
 
-bool DWARFLocationTable::dumpLocationList(uint64_t *Offset, raw_ostream &OS,
-                                          Optional<SectionedAddress> BaseAddr,
-                                          const MCRegisterInfo *MRI,
-                                          const DWARFObject &Obj, DWARFUnit *U,
-                                          DIDumpOptions DumpOpts,
-                                          unsigned Indent) const {
+bool DWARFLocationTable::dumpLocationList(
+    uint64_t *Offset, raw_ostream &OS, std::optional<SectionedAddress> BaseAddr,
+    const MCRegisterInfo *MRI, const DWARFObject &Obj, DWARFUnit *U,
+    DIDumpOptions DumpOpts, unsigned Indent) const {
   DWARFLocationInterpreter Interp(
-      BaseAddr, [U](uint32_t Index) -> Optional<SectionedAddress> {
+      BaseAddr, [U](uint32_t Index) -> std::optional<SectionedAddress> {
         if (U)
           return U->getAddrOffsetSectionItem(Index);
         return std::nullopt;
       });
   OS << format("0x%8.8" PRIx64 ": ", *Offset);
   Error E = visitLocationList(Offset, [&](const DWARFLocationEntry &E) {
-    Expected<Optional<DWARFLocationExpression>> Loc = Interp.Interpret(E);
+    Expected<std::optional<DWARFLocationExpression>> Loc = Interp.Interpret(E);
     if (!Loc || DumpOpts.DisplayRawContents)
       dumpRawEntry(E, OS, Indent, DumpOpts, Obj);
     if (Loc && *Loc) {
@@ -170,12 +169,12 @@ bool DWARFLocationTable::dumpLocationList(uint64_t *Offset, raw_ostream &OS,
 }
 
 Error DWARFLocationTable::visitAbsoluteLocationList(
-    uint64_t Offset, Optional<SectionedAddress> BaseAddr,
-    std::function<Optional<SectionedAddress>(uint32_t)> LookupAddr,
+    uint64_t Offset, std::optional<SectionedAddress> BaseAddr,
+    std::function<std::optional<SectionedAddress>(uint32_t)> LookupAddr,
     function_ref<bool(Expected<DWARFLocationExpression>)> Callback) const {
   DWARFLocationInterpreter Interp(BaseAddr, std::move(LookupAddr));
   return visitLocationList(&Offset, [&](const DWARFLocationEntry &E) {
-    Expected<Optional<DWARFLocationExpression>> Loc = Interp.Interpret(E);
+    Expected<std::optional<DWARFLocationExpression>> Loc = Interp.Interpret(E);
     if (!Loc)
       return Callback(Loc.takeError());
     if (*Loc)
@@ -186,7 +185,7 @@ Error DWARFLocationTable::visitAbsoluteLocationList(
 
 void DWARFDebugLoc::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
                          const DWARFObject &Obj, DIDumpOptions DumpOpts,
-                         Optional<uint64_t> DumpOffset) const {
+                         std::optional<uint64_t> DumpOffset) const {
   auto BaseAddr = std::nullopt;
   unsigned Indent = 12;
   if (DumpOffset) {

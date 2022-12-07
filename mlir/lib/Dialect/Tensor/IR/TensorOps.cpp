@@ -2330,7 +2330,7 @@ struct InsertSliceOpCastFolder final : public OpRewritePattern<InsertOpTy> {
     auto getSourceOfCastOp = [](Value v) -> Optional<Value> {
       auto castOp = v.getDefiningOp<tensor::CastOp>();
       if (!castOp || !canFoldIntoConsumerOp(castOp))
-        return llvm::None;
+        return std::nullopt;
       return castOp.getSource();
     };
     Optional<Value> sourceCastSource =
@@ -3330,7 +3330,7 @@ ShapedType PackOp::inferPackedType(ShapedType sourceType,
                                    ArrayRef<int64_t> innerDimsPos,
                                    ArrayRef<int64_t> outerDimsPerm) {
   SmallVector<int64_t> resultShape = llvm::to_vector(sourceType.getShape());
-  for (auto tiledDim : llvm::enumerate(innerDimsPos)) {
+  for (const auto &tiledDim : llvm::enumerate(innerDimsPos)) {
     if (ShapedType::isDynamic(resultShape[tiledDim.value()]))
       continue;
     if (ShapedType::isDynamic(innerTileSizes[tiledDim.index()])) {

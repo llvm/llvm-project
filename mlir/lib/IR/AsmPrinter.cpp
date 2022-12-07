@@ -529,7 +529,8 @@ private:
       return alias < rhs.alias;
     }
 
-    /// The alias for the attribute or type, or None if the value has no alias.
+    /// The alias for the attribute or type, or std::nullopt if the value has no
+    /// alias.
     Optional<StringRef> alias;
     /// The alias depth of this attribute or type, i.e. an indication of the
     /// relative ordering of when to print this alias.

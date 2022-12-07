@@ -41,25 +41,24 @@ class VersionTuple {
   unsigned HasBuild : 1;
 
 public:
-  constexpr VersionTuple()
+  VersionTuple()
       : Major(0), Minor(0), HasMinor(false), Subminor(0), HasSubminor(false),
         Build(0), HasBuild(false) {}
 
-  explicit constexpr VersionTuple(unsigned Major)
+  explicit VersionTuple(unsigned Major)
       : Major(Major), Minor(0), HasMinor(false), Subminor(0),
         HasSubminor(false), Build(0), HasBuild(false) {}
 
-  explicit constexpr VersionTuple(unsigned Major, unsigned Minor)
+  explicit VersionTuple(unsigned Major, unsigned Minor)
       : Major(Major), Minor(Minor), HasMinor(true), Subminor(0),
         HasSubminor(false), Build(0), HasBuild(false) {}
 
-  explicit constexpr VersionTuple(unsigned Major, unsigned Minor,
-                                  unsigned Subminor)
+  explicit VersionTuple(unsigned Major, unsigned Minor, unsigned Subminor)
       : Major(Major), Minor(Minor), HasMinor(true), Subminor(Subminor),
         HasSubminor(true), Build(0), HasBuild(false) {}
 
-  explicit constexpr VersionTuple(unsigned Major, unsigned Minor,
-                                  unsigned Subminor, unsigned Build)
+  explicit VersionTuple(unsigned Major, unsigned Minor, unsigned Subminor,
+                        unsigned Build)
       : Major(Major), Minor(Minor), HasMinor(true), Subminor(Subminor),
         HasSubminor(true), Build(Build), HasBuild(true) {}
 

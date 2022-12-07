@@ -13,6 +13,7 @@
 
 #include "DirectXSubtarget.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
 
 namespace llvm {
 class Function;
@@ -23,8 +24,9 @@ class DirectXTargetMachine : public LLVMTargetMachine {
 public:
   DirectXTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
-                       Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
-                       CodeGenOpt::Level OL, bool JIT);
+                       std::optional<Reloc::Model> RM,
+                       std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                       bool JIT);
 
   ~DirectXTargetMachine() override;
 

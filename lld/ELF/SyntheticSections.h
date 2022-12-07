@@ -95,7 +95,7 @@ private:
   llvm::DenseMap<std::pair<ArrayRef<uint8_t>, Symbol *>, CieRecord *> cieMap;
 };
 
-class GotSection : public SyntheticSection {
+class GotSection final : public SyntheticSection {
 public:
   GotSection();
   size_t getSize() const override { return size; }
@@ -135,7 +135,7 @@ public:
   size_t getSize() const override { return 0; }
 };
 
-class GnuPropertySection : public SyntheticSection {
+class GnuPropertySection final : public SyntheticSection {
 public:
   GnuPropertySection();
   void writeTo(uint8_t *buf) override;
@@ -1036,7 +1036,7 @@ private:
 // of executable file which is pointed to by the DT_MIPS_RLD_MAP entry.
 // See "Dynamic section" in Chapter 5 in the following document:
 // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-class MipsRldMapSection : public SyntheticSection {
+class MipsRldMapSection final : public SyntheticSection {
 public:
   MipsRldMapSection();
   size_t getSize() const override { return config->wordsize; }
@@ -1119,7 +1119,7 @@ private:
 
 // A container for one or more linker generated thunks. Instances of these
 // thunks including ARM interworking and Mips LA25 PI to non-PI thunks.
-class ThunkSection : public SyntheticSection {
+class ThunkSection final : public SyntheticSection {
 public:
   // ThunkSection in OS, with desired outSecOff of Off
   ThunkSection(OutputSection *os, uint64_t off);
@@ -1176,7 +1176,7 @@ private:
 };
 
 template <typename ELFT>
-class PartitionElfHeaderSection : public SyntheticSection {
+class PartitionElfHeaderSection final : public SyntheticSection {
 public:
   PartitionElfHeaderSection();
   size_t getSize() const override;
@@ -1184,14 +1184,14 @@ public:
 };
 
 template <typename ELFT>
-class PartitionProgramHeadersSection : public SyntheticSection {
+class PartitionProgramHeadersSection final : public SyntheticSection {
 public:
   PartitionProgramHeadersSection();
   size_t getSize() const override;
   void writeTo(uint8_t *buf) override;
 };
 
-class PartitionIndexSection : public SyntheticSection {
+class PartitionIndexSection final : public SyntheticSection {
 public:
   PartitionIndexSection();
   size_t getSize() const override;
@@ -1202,7 +1202,7 @@ public:
 // See the following link for the Android-specific loader code that operates on
 // this section:
 // https://cs.android.com/android/platform/superproject/+/master:bionic/libc/bionic/libc_init_static.cpp;drc=9425b16978f9c5aa8f2c50c873db470819480d1d;l=192
-class MemtagAndroidNote : public SyntheticSection {
+class MemtagAndroidNote final : public SyntheticSection {
 public:
   MemtagAndroidNote()
       : SyntheticSection(llvm::ELF::SHF_ALLOC, llvm::ELF::SHT_NOTE,
@@ -1211,7 +1211,7 @@ public:
   size_t getSize() const override;
 };
 
-class PackageMetadataNote : public SyntheticSection {
+class PackageMetadataNote final : public SyntheticSection {
 public:
   PackageMetadataNote()
       : SyntheticSection(llvm::ELF::SHF_ALLOC, llvm::ELF::SHT_NOTE,

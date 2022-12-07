@@ -91,7 +91,7 @@ llvm::Optional<MemoryRegionInfo>
 ScriptInterpreter::GetOpaqueTypeFromSBMemoryRegionInfo(
     const lldb::SBMemoryRegionInfo &mem_region) const {
   if (!mem_region.m_opaque_up)
-    return llvm::None;
+    return std::nullopt;
   return *mem_region.m_opaque_up.get();
 }
 

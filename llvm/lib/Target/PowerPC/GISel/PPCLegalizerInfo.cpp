@@ -35,5 +35,11 @@ PPCLegalizerInfo::PPCLegalizerInfo(const PPCSubtarget &ST) {
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
       .legalFor({S32, S64});
 
+  getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
+      .legalForCartesianProduct({S64}, {S32, S64});
+
+  getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
+      .legalForCartesianProduct({S32, S64}, {S64});
+
   getLegacyLegalizerInfo().computeTables();
 }

@@ -354,7 +354,7 @@ Error PDBFileBuilder::commit(StringRef Filename, codeview::GUID *Guid) {
   } else {
     H->Age = Info->getAge();
     H->Guid = Info->getGuid();
-    Optional<uint32_t> Sig = Info->getSignature();
+    std::optional<uint32_t> Sig = Info->getSignature();
     H->Signature = Sig ? *Sig : time(nullptr);
   }
 

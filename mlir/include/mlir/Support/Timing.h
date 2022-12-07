@@ -136,7 +136,7 @@ protected:
   //
   // See the corresponding functions in `Timer` for additional details.
 
-  /// Return the root timer. Implementations should return `llvm::None` if the
+  /// Return the root timer. Implementations should return `std::nullopt` if the
   /// collection of timing samples is disabled. This will cause the timers
   /// constructed from the manager to be tombstones which can be skipped
   /// quickly.

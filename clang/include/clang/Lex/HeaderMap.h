@@ -75,7 +75,7 @@ private:
   HMapBucket getBucket(unsigned BucketNo) const;
 
   /// Look up the specified string in the string table.  If the string index is
-  /// not valid, return None.
+  /// not valid, return std::nullopt.
   Optional<StringRef> getString(unsigned StrTabIdx) const;
 };
 

@@ -89,7 +89,7 @@ public:
   unsigned getNumFixupKinds() const override {
     return SystemZ::NumTargetFixupKinds;
   }
-  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target) override;
@@ -111,7 +111,8 @@ public:
 };
 } // end anonymous namespace
 
-Optional<MCFixupKind> SystemZMCAsmBackend::getFixupKind(StringRef Name) const {
+std::optional<MCFixupKind>
+SystemZMCAsmBackend::getFixupKind(StringRef Name) const {
   unsigned Type = llvm::StringSwitch<unsigned>(Name)
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/SystemZ.def"

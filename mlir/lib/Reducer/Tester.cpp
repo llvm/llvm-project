@@ -68,7 +68,7 @@ Tester::Interestingness Tester::isInteresting(StringRef testCase) const {
 
   std::string errMsg;
   int result = llvm::sys::ExecuteAndWait(
-      testScript, testerArgs, /*Env=*/None, /*Redirects=*/None,
+      testScript, testerArgs, /*Env=*/std::nullopt, /*Redirects=*/std::nullopt,
       /*SecondsToWait=*/0, /*MemoryLimit=*/0, &errMsg);
 
   if (result < 0)

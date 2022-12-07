@@ -63,7 +63,9 @@ struct ConstantPropagationLattice {
   // `None` is "bottom".
   llvm::Optional<VarValue> Data;
 
-  static constexpr ConstantPropagationLattice bottom() { return {llvm::None}; }
+  static constexpr ConstantPropagationLattice bottom() {
+    return {std::nullopt};
+  }
   static constexpr ConstantPropagationLattice top() {
     return {VarValue{nullptr, 0}};
   }

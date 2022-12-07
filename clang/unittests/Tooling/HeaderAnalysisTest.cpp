@@ -66,11 +66,11 @@ TEST(HeaderAnalysisTest, ParseIWYUPragma) {
   EXPECT_THAT(parseIWYUPragma("// IWYU pragma:   keep  me\netc"),
               ValueIs(Eq("keep  me")));
   EXPECT_THAT(parseIWYUPragma("/* IWYU pragma: keep */"), ValueIs(Eq("keep")));
-  EXPECT_EQ(parseIWYUPragma("//  IWYU pragma: keep"), llvm::None)
+  EXPECT_EQ(parseIWYUPragma("//  IWYU pragma: keep"), std::nullopt)
       << "Prefix is sensitive to whitespace";
-  EXPECT_EQ(parseIWYUPragma("// IWYU pragma:keep"), llvm::None)
+  EXPECT_EQ(parseIWYUPragma("// IWYU pragma:keep"), std::nullopt)
       << "Prefix is sensitive to whitespace";
-  EXPECT_EQ(parseIWYUPragma("/\n* IWYU pragma: keep */"), llvm::None)
+  EXPECT_EQ(parseIWYUPragma("/\n* IWYU pragma: keep */"), std::nullopt)
       << "Must start with /* or //";
 }
 

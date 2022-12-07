@@ -74,7 +74,7 @@ public:
   bool mayUseUncheckedLoadStore();
   void uncheckUsesOf(unsigned TaggedReg, int FI);
   void uncheckLoadsAndStores();
-  Optional<int> findFirstSlotCandidate();
+  std::optional<int> findFirstSlotCandidate();
 
   bool runOnMachineFunction(MachineFunction &Func) override;
   StringRef getPassName() const override {
@@ -238,7 +238,7 @@ static bool isSlotPreAllocated(MachineFrameInfo *MFI, int FI) {
 // eliminates a vreg (by replacing it with direct uses of IRG, which is usually
 // live almost everywhere anyway), and therefore needs to happen before
 // regalloc.
-Optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
+std::optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
   // Find the best (FI, Tag) pair to pin to offset 0.
   // Looking at the possible uses of a tagged address, the advantage of pinning
   // is:
@@ -378,7 +378,7 @@ bool AArch64StackTaggingPreRA::runOnMachineFunction(MachineFunction &Func) {
   // Find a slot that is used with zero tag offset, like ADDG #fi, 0.
   // If the base tagged pointer is set up to the address of this slot,
   // the ADDG instruction can be eliminated.
-  Optional<int> BaseSlot = findFirstSlotCandidate();
+  std::optional<int> BaseSlot = findFirstSlotCandidate();
   if (BaseSlot)
     AFI->setTaggedBasePointerIndex(*BaseSlot);
 

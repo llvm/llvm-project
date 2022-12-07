@@ -349,7 +349,7 @@ HTRBlockLayerUP lldb_private::BasicSuperBlockMerge(IHTRLayer &layer) {
         // Tail logic
         construct_next_layer(i - superblock_size + 1, superblock_size);
         // Reset the block_head since the prev super block has come to and end
-        superblock_head = llvm::None;
+        superblock_head = std::nullopt;
         superblock_size = 0;
       } else if (isHead) {
         if (superblock_size) { // this handles (tail, head) adjacency -
@@ -369,7 +369,7 @@ HTRBlockLayerUP lldb_private::BasicSuperBlockMerge(IHTRLayer &layer) {
         // End previous super block
         construct_next_layer(i - superblock_size + 1, superblock_size);
         // Reset the block_head since the prev super block has come to and end
-        superblock_head = llvm::None;
+        superblock_head = std::nullopt;
         superblock_size = 0;
       } else {
         if (!superblock_head)

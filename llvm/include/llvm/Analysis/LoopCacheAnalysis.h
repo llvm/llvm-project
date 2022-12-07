@@ -72,7 +72,7 @@ public:
   /// Return true/false if the current object and the indexed reference \p Other
   /// are/aren't in the same cache line of size \p CLS. Two references are in
   /// the same chace line iff the distance between them in the innermost
-  /// dimension is less than the cache line size. Return None if unsure.
+  /// dimension is less than the cache line size. Return std::nullopt if unsure.
   Optional<bool> hasSpacialReuse(const IndexedReference &Other, unsigned CLS,
                                  AAResults &AA) const;
 

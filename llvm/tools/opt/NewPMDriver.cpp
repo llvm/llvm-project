@@ -333,7 +333,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                            bool EnableDebugify, bool VerifyDIPreserve) {
   bool VerifyEachPass = VK == VK_VerifyEachPass;
 
-  Optional<PGOOptions> P;
+  std::optional<PGOOptions> P;
   switch (PGOKindFlag) {
   case InstrGen:
     P = PGOOptions(ProfileFile, "", "", PGOOptions::IRInstr);

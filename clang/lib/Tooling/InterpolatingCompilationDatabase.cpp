@@ -207,7 +207,7 @@ struct TransferableCommand {
     Type = foldType(*Type);
     // The contract is to store None instead of TY_INVALID.
     if (Type == types::TY_INVALID)
-      Type = llvm::None;
+      Type = std::nullopt;
   }
 
   // Produce a CompileCommand for \p filename, based on this one.
@@ -291,7 +291,7 @@ private:
       if (Opt.matches(driver::options::OPT_x))
         return types::lookupTypeForTypeSpecifier(Arg.getValue());
     }
-    return None;
+    return std::nullopt;
   }
 
   // Try to interpret the argument as '-std='.
@@ -299,7 +299,7 @@ private:
     using namespace driver::options;
     if (Arg.getOption().matches(ClangCLMode ? OPT__SLASH_std : OPT_std_EQ))
       return LangStandard::getLangKind(Arg.getValue());
-    return None;
+    return std::nullopt;
   }
 };
 

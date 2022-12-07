@@ -26,7 +26,7 @@ mlir::func::FuncOp fir::factory::getLlvmMemcpy(fir::FirOpBuilder &builder) {
   llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type(),
                                         builder.getI1Type()};
   auto memcpyTy =
-      mlir::FunctionType::get(builder.getContext(), args, llvm::None);
+      mlir::FunctionType::get(builder.getContext(), args, std::nullopt);
   return builder.addNamedFunction(builder.getUnknownLoc(),
                                   "llvm.memcpy.p0.p0.i64", memcpyTy);
 }
@@ -36,7 +36,7 @@ mlir::func::FuncOp fir::factory::getLlvmMemmove(fir::FirOpBuilder &builder) {
   llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type(),
                                         builder.getI1Type()};
   auto memmoveTy =
-      mlir::FunctionType::get(builder.getContext(), args, llvm::None);
+      mlir::FunctionType::get(builder.getContext(), args, std::nullopt);
   return builder.addNamedFunction(builder.getUnknownLoc(),
                                   "llvm.memmove.p0.p0.i64", memmoveTy);
 }
@@ -46,7 +46,7 @@ mlir::func::FuncOp fir::factory::getLlvmMemset(fir::FirOpBuilder &builder) {
   llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type(),
                                         builder.getI1Type()};
   auto memsetTy =
-      mlir::FunctionType::get(builder.getContext(), args, llvm::None);
+      mlir::FunctionType::get(builder.getContext(), args, std::nullopt);
   return builder.addNamedFunction(builder.getUnknownLoc(),
                                   "llvm.memset.p0.p0.i64", memsetTy);
 }
@@ -62,7 +62,7 @@ mlir::func::FuncOp fir::factory::getRealloc(fir::FirOpBuilder &builder) {
 mlir::func::FuncOp fir::factory::getLlvmStackSave(fir::FirOpBuilder &builder) {
   auto ptrTy = builder.getRefType(builder.getIntegerType(8));
   auto funcTy =
-      mlir::FunctionType::get(builder.getContext(), llvm::None, {ptrTy});
+      mlir::FunctionType::get(builder.getContext(), std::nullopt, {ptrTy});
   return builder.addNamedFunction(builder.getUnknownLoc(), "llvm.stacksave",
                                   funcTy);
 }
@@ -71,7 +71,7 @@ mlir::func::FuncOp
 fir::factory::getLlvmStackRestore(fir::FirOpBuilder &builder) {
   auto ptrTy = builder.getRefType(builder.getIntegerType(8));
   auto funcTy =
-      mlir::FunctionType::get(builder.getContext(), {ptrTy}, llvm::None);
+      mlir::FunctionType::get(builder.getContext(), {ptrTy}, std::nullopt);
   return builder.addNamedFunction(builder.getUnknownLoc(), "llvm.stackrestore",
                                   funcTy);
 }
@@ -80,7 +80,7 @@ mlir::func::FuncOp
 fir::factory::getLlvmInitTrampoline(fir::FirOpBuilder &builder) {
   auto ptrTy = builder.getRefType(builder.getIntegerType(8));
   auto funcTy = mlir::FunctionType::get(builder.getContext(),
-                                        {ptrTy, ptrTy, ptrTy}, llvm::None);
+                                        {ptrTy, ptrTy, ptrTy}, std::nullopt);
   return builder.addNamedFunction(builder.getUnknownLoc(),
                                   "llvm.init.trampoline", funcTy);
 }

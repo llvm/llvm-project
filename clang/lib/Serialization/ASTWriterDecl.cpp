@@ -124,6 +124,7 @@ namespace clang {
     void VisitLinkageSpecDecl(LinkageSpecDecl *D);
     void VisitExportDecl(ExportDecl *D);
     void VisitFileScopeAsmDecl(FileScopeAsmDecl *D);
+    void VisitTopLevelStmtDecl(TopLevelStmtDecl *D);
     void VisitImportDecl(ImportDecl *D);
     void VisitAccessSpecDecl(AccessSpecDecl *D);
     void VisitFriendDecl(FriendDecl *D);
@@ -204,7 +205,7 @@ namespace clang {
       return Common->PartialSpecializations;
     }
     ArrayRef<Decl> getPartialSpecializations(FunctionTemplateDecl::Common *) {
-      return None;
+      return std::nullopt;
     }
 
     template<typename DeclTy>
@@ -1169,6 +1170,12 @@ void ASTDeclWriter::VisitFileScopeAsmDecl(FileScopeAsmDecl *D) {
   Record.AddStmt(D->getAsmString());
   Record.AddSourceLocation(D->getRParenLoc());
   Code = serialization::DECL_FILE_SCOPE_ASM;
+}
+
+void ASTDeclWriter::VisitTopLevelStmtDecl(TopLevelStmtDecl *D) {
+  VisitDecl(D);
+  Record.AddStmt(D->getStmt());
+  Code = serialization::DECL_TOP_LEVEL_STMT_DECL;
 }
 
 void ASTDeclWriter::VisitEmptyDecl(EmptyDecl *D) {
@@ -2418,7 +2425,7 @@ static bool isRequiredDecl(const Decl *D, ASTContext &Context,
 
   // File scoped assembly or obj-c or OMP declare target implementation must be
   // seen.
-  if (isa<FileScopeAsmDecl, ObjCImplDecl>(D))
+  if (isa<FileScopeAsmDecl, TopLevelStmtDecl, ObjCImplDecl>(D))
     return true;
 
   if (WritingModule && isPartOfPerModuleInitializer(D)) {

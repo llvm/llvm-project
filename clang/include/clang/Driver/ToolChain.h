@@ -181,9 +181,9 @@ private:
     EffectiveTriple = std::move(ET);
   }
 
-  mutable llvm::Optional<CXXStdlibType> cxxStdlibType;
-  mutable llvm::Optional<RuntimeLibType> runtimeLibType;
-  mutable llvm::Optional<UnwindLibType> unwindLibType;
+  mutable std::optional<CXXStdlibType> cxxStdlibType;
+  mutable std::optional<RuntimeLibType> runtimeLibType;
+  mutable std::optional<UnwindLibType> unwindLibType;
 
 protected:
   MultilibSet Multilibs;

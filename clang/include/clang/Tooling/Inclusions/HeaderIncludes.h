@@ -69,7 +69,7 @@ public:
   /// this will simply insert the #include in front of the first #include of the
   /// same category in the code that should be sorted after \p IncludeName. If
   /// \p IncludeName already exists (with exactly the same spelling), this
-  /// returns None.
+  /// returns std::nullopt.
   llvm::Optional<tooling::Replacement> insert(llvm::StringRef Header,
                                               bool IsAngled) const;
 

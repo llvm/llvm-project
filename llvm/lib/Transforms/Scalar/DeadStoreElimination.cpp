@@ -1293,7 +1293,7 @@ struct DSEState {
   // Find a MemoryDef writing to \p KillingLoc and dominating \p StartAccess,
   // with no read access between them or on any other path to a function exit
   // block if \p KillingLoc is not accessible after the function returns. If
-  // there is no such MemoryDef, return None. The returned value may not
+  // there is no such MemoryDef, return std::nullopt. The returned value may not
   // (completely) overwrite \p KillingLoc. Currently we bail out when we
   // encounter an aliasing MemoryUse (read).
   Optional<MemoryAccess *>

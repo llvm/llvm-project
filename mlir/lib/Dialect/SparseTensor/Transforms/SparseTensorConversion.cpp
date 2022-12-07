@@ -42,7 +42,7 @@ namespace {
 static Optional<Type> convertSparseTensorTypes(Type type) {
   if (getSparseTensorEncoding(type) != nullptr)
     return LLVM::LLVMPointerType::get(IntegerType::get(type.getContext(), 8));
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Replaces the `op` with  a `CallOp` to the function reference returned

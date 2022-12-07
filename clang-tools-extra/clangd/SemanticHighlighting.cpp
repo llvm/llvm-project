@@ -109,7 +109,7 @@ kindForDecl(const NamedDecl *D, const HeuristicResolver *Resolver) {
   if (auto *RD = llvm::dyn_cast<RecordDecl>(D)) {
     // We don't want to highlight lambdas like classes.
     if (RD->isLambda())
-      return llvm::None;
+      return std::nullopt;
     return HighlightingKind::Class;
   }
   if (isa<ClassTemplateDecl, RecordDecl, CXXConstructorDecl, ObjCInterfaceDecl,
@@ -135,7 +135,7 @@ kindForDecl(const NamedDecl *D, const HeuristicResolver *Resolver) {
     return HighlightingKind::Parameter;
   if (auto *VD = dyn_cast<VarDecl>(D)) {
     if (isa<ImplicitParamDecl>(VD)) // e.g. ObjC Self
-      return llvm::None;
+      return std::nullopt;
     return VD->isStaticDataMember()
                ? HighlightingKind::StaticField
                : VD->isLocalVarDecl() ? HighlightingKind::LocalVariable
@@ -162,12 +162,12 @@ kindForDecl(const NamedDecl *D, const HeuristicResolver *Resolver) {
     }
     return HighlightingKind::Unknown;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 llvm::Optional<HighlightingKind>
 kindForType(const Type *TP, const HeuristicResolver *Resolver) {
   if (!TP)
-    return llvm::None;
+    return std::nullopt;
   if (TP->isBuiltinType()) // Builtins are special, they do not have decls.
     return HighlightingKind::Primitive;
   if (auto *TD = dyn_cast<TemplateTypeParmType>(TP))
@@ -176,7 +176,7 @@ kindForType(const Type *TP, const HeuristicResolver *Resolver) {
     return HighlightingKind::Class;
   if (auto *TD = TP->getAsTagDecl())
     return kindForDecl(TD, Resolver);
-  return llvm::None;
+  return std::nullopt;
 }
 
 // Whether T is const in a loose sense - is a variable with this type readonly?
@@ -337,7 +337,7 @@ llvm::Optional<HighlightingToken> resolveConflict(const HighlightingToken &A,
   unsigned Priority1 = evaluateHighlightPriority(A);
   unsigned Priority2 = evaluateHighlightPriority(B);
   if (Priority1 == Priority2 && A.Kind != B.Kind)
-    return llvm::None;
+    return std::nullopt;
   auto Result = Priority1 > Priority2 ? A : B;
   Result.Modifiers = A.Modifiers | B.Modifiers;
   return Result;
@@ -477,7 +477,7 @@ private:
   llvm::Optional<Range> getRangeForSourceLocation(SourceLocation Loc) {
     Loc = getHighlightableSpellingToken(Loc, SourceMgr);
     if (Loc.isInvalid())
-      return llvm::None;
+      return std::nullopt;
 
     const auto *Tok = TB.spelledTokenAt(Loc);
     assert(Tok);
@@ -517,7 +517,7 @@ llvm::Optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
   // Some template parameters (e.g. those for variable templates) don't have
   // meaningful DeclContexts. That doesn't mean they're global!
   if (DC->isTranslationUnit() && D->isTemplateParameter())
-    return llvm::None;
+    return std::nullopt;
   // ExternalLinkage threshold could be tweaked, e.g. module-visible as global.
   if (D->getLinkageInternal() < ExternalLinkage)
     return HighlightingModifier::FileScope;
@@ -526,14 +526,14 @@ llvm::Optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
 
 llvm::Optional<HighlightingModifier> scopeModifier(const Type *T) {
   if (!T)
-    return llvm::None;
+    return std::nullopt;
   if (T->isBuiltinType())
     return HighlightingModifier::GlobalScope;
   if (auto *TD = dyn_cast<TemplateTypeParmType>(T))
     return scopeModifier(TD->getDecl());
   if (auto *TD = T->getAsTagDecl())
     return scopeModifier(TD);
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Produces highlightings, which are not captured by findExplicitReferences,

@@ -3682,7 +3682,7 @@ private:
   /// Infer a CodeGenRegisterClass for the type of \p SuperRegNode. The returned
   /// CodeGenRegisterClass will support the CodeGenRegisterClass of
   /// \p SubRegNode, and the subregister index defined by \p SubRegIdxNode.
-  /// If no register class is found, return None.
+  /// If no register class is found, return std::nullopt.
   Optional<const CodeGenRegisterClass *>
   inferSuperRegisterClassForNode(const TypeSetByHwMode &Ty,
                                  TreePatternNode *SuperRegNode,
@@ -3691,7 +3691,7 @@ private:
   inferSubRegIndexForNode(TreePatternNode *SubRegIdxNode);
 
   /// Infer a CodeGenRegisterClass which suppoorts \p Ty and \p SubRegIdxNode.
-  /// Return None if no such class exists.
+  /// Return std::nullopt if no such class exists.
   Optional<const CodeGenRegisterClass *>
   inferSuperRegisterClass(const TypeSetByHwMode &Ty,
                           TreePatternNode *SubRegIdxNode);
@@ -3700,8 +3700,8 @@ private:
   Optional<const CodeGenRegisterClass *>
   getRegClassFromLeaf(TreePatternNode *Leaf);
 
-  /// Return a CodeGenRegisterClass for \p N if one can be found. Return None
-  /// otherwise.
+  /// Return a CodeGenRegisterClass for \p N if one can be found. Return
+  /// std::nullopt otherwise.
   Optional<const CodeGenRegisterClass *>
   inferRegClassFromPattern(TreePatternNode *N);
 

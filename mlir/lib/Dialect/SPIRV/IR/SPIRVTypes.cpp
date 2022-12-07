@@ -80,7 +80,7 @@ Optional<int64_t> ArrayType::getSizeInBytes() {
   auto elementType = getElementType().cast<SPIRVType>();
   Optional<int64_t> size = elementType.getSizeInBytes();
   if (!size)
-    return llvm::None;
+    return std::nullopt;
   return (*size + getArrayStride()) * getNumElements();
 }
 
@@ -194,10 +194,10 @@ Optional<int64_t> CompositeType::getSizeInBytes() {
     Optional<int64_t> elementSize =
         vectorType.getElementType().cast<ScalarType>().getSizeInBytes();
     if (!elementSize)
-      return llvm::None;
+      return std::nullopt;
     return *elementSize * vectorType.getNumElements();
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -716,7 +716,7 @@ Optional<int64_t> ScalarType::getSizeInBytes() {
   // non-externally visible shader Storage Classes: Workgroup, CrossWorkgroup,
   // Private, Function, Input, and Output."
   if (bitWidth == 1)
-    return llvm::None;
+    return std::nullopt;
   return bitWidth / 8;
 }
 
@@ -783,7 +783,7 @@ Optional<int64_t> SPIRVType::getSizeInBytes() {
     return scalarType.getSizeInBytes();
   if (auto compositeType = dyn_cast<CompositeType>())
     return compositeType.getSizeInBytes();
-  return llvm::None;
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//

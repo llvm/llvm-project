@@ -1,5 +1,5 @@
 ! RUN: not %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s
-! Test WhyNotModifiable() explanations
+! Test WhyNotDefinable() explanations
 
 module prot
   real, protected :: prot
@@ -66,5 +66,20 @@ module m
     !CHECK: error: Input variable 'ptr' is not definable
     !CHECK: because: 'ptr' is externally visible via 'ptr' and not definable in a pure subprogram
     read(internal,*) ptr
+  end subroutine
+  subroutine test3(objp, procp)
+    real, intent(in), pointer :: objp
+    procedure(sin), pointer, intent(in) :: procp
+    !CHECK: error: Actual argument associated with INTENT(IN OUT) dummy argument 'op=' is not definable
+    !CHECK: because: 'objp' is an INTENT(IN) dummy argument
+    call test3a(objp)
+    !CHECK: error: Actual argument associated with procedure pointer dummy argument 'pp=' may not be INTENT(IN)
+    call test3b(procp)
+  end subroutine
+  subroutine test3a(op)
+    real, intent(in out), pointer :: op
+  end subroutine
+  subroutine test3b(pp)
+    procedure(sin), pointer, intent(in out) :: pp
   end subroutine
 end module

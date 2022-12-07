@@ -147,21 +147,21 @@ public:
       if (arg_string.equals("-c") || count_opt.startswith(arg_string)) {
         idx++;
         if (idx == num_entries)
-          return llvm::None;
+          return std::nullopt;
         count_idx = idx;
         if (copy_args[idx].ref().getAsInteger(0, count_val))
-          return llvm::None;
+          return std::nullopt;
       } else if (arg_string.equals("-s") || start_opt.startswith(arg_string)) {
         idx++;
         if (idx == num_entries)
-          return llvm::None;
+          return std::nullopt;
         start_idx = idx;
         if (copy_args[idx].ref().getAsInteger(0, start_val))
-          return llvm::None;
+          return std::nullopt;
       }
     }
     if (count_idx == 0)
-      return llvm::None;
+      return std::nullopt;
 
     std::string new_start_val = llvm::formatv("{0}", start_val + count_val);
     if (start_idx == 0) {
@@ -172,7 +172,7 @@ public:
     }
     std::string repeat_command;
     if (!copy_args.GetQuotedCommandString(repeat_command))
-      return llvm::None;
+      return std::nullopt;
     return repeat_command;
   }
 
@@ -2149,7 +2149,7 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_dumper_options = {};
-      m_output_file = llvm::None;
+      m_output_file = std::nullopt;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -2321,7 +2321,7 @@ public:
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_count = kDefaultCount;
       m_continue = false;
-      m_output_file = llvm::None;
+      m_output_file = std::nullopt;
       m_dumper_options = {};
     }
 

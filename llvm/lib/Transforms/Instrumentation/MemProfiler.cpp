@@ -171,7 +171,7 @@ public:
 
   /// If it is an interesting memory access, populate information
   /// about the access and return a InterestingMemoryAccess struct.
-  /// Otherwise return None.
+  /// Otherwise return std::nullopt.
   Optional<InterestingMemoryAccess>
   isInterestingMemoryAccess(Instruction *I) const;
 

@@ -51,7 +51,7 @@ TEST(SourceLocationSpecTest, FileLineColumnComponents) {
   EXPECT_TRUE(without_column);
   EXPECT_EQ(fs, without_column.GetFileSpec());
   EXPECT_EQ(line, without_column.GetLine().value_or(0));
-  EXPECT_EQ(llvm::None, without_column.GetColumn());
+  EXPECT_EQ(std::nullopt, without_column.GetColumn());
   EXPECT_FALSE(without_column.GetCheckInlines());
   EXPECT_TRUE(without_column.GetExactMatch());
   EXPECT_STREQ("check inlines = false, exact match = true, decl = /foo/bar:19",

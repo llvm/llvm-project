@@ -22,6 +22,8 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include <optional>
+
 namespace llvm {
 class formatted_raw_ostream;
 class M68kRegisterInfo;
@@ -35,8 +37,9 @@ class M68kTargetMachine : public LLVMTargetMachine {
 public:
   M68kTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                     StringRef FS, const TargetOptions &Options,
-                    Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
-                    CodeGenOpt::Level OL, bool JIT);
+                    std::optional<Reloc::Model> RM,
+                    std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                    bool JIT);
 
   ~M68kTargetMachine() override;
 

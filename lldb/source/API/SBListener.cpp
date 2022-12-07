@@ -132,7 +132,7 @@ bool SBListener::WaitForEvent(uint32_t timeout_secs, SBEvent &event) {
   bool success = false;
 
   if (m_opaque_sp) {
-    Timeout<std::micro> timeout(llvm::None);
+    Timeout<std::micro> timeout(std::nullopt);
     if (timeout_secs != UINT32_MAX) {
       assert(timeout_secs != 0); // Take this out after all calls with timeout
                                  // set to zero have been removed....
@@ -156,7 +156,7 @@ bool SBListener::WaitForEventForBroadcaster(uint32_t num_seconds,
   LLDB_INSTRUMENT_VA(this, num_seconds, broadcaster, event);
 
   if (m_opaque_sp && broadcaster.IsValid()) {
-    Timeout<std::micro> timeout(llvm::None);
+    Timeout<std::micro> timeout(std::nullopt);
     if (num_seconds != UINT32_MAX)
       timeout = std::chrono::seconds(num_seconds);
     EventSP event_sp;
@@ -176,7 +176,7 @@ bool SBListener::WaitForEventForBroadcasterWithType(
   LLDB_INSTRUMENT_VA(this, num_seconds, broadcaster, event_type_mask, event);
 
   if (m_opaque_sp && broadcaster.IsValid()) {
-    Timeout<std::micro> timeout(llvm::None);
+    Timeout<std::micro> timeout(std::nullopt);
     if (num_seconds != UINT32_MAX)
       timeout = std::chrono::seconds(num_seconds);
     EventSP event_sp;

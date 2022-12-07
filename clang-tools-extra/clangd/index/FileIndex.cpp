@@ -192,7 +192,7 @@ llvm::Optional<IndexFileIn>
 FileShardedIndex::getShard(llvm::StringRef Uri) const {
   auto It = Shards.find(Uri);
   if (It == Shards.end())
-    return llvm::None;
+    return std::nullopt;
 
   IndexFileIn IF;
   IF.Sources = It->getValue().IG;

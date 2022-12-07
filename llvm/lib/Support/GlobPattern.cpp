@@ -12,7 +12,6 @@
 
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 

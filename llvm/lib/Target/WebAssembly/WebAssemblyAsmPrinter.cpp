@@ -272,7 +272,7 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
 }
 
 void WebAssemblyAsmPrinter::emitSymbolType(const MCSymbolWasm *Sym) {
-  Optional<wasm::WasmSymbolType> WasmTy = Sym->getType();
+  std::optional<wasm::WasmSymbolType> WasmTy = Sym->getType();
   if (!WasmTy)
     return;
 

@@ -813,8 +813,8 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   }
 
   // Determine whether we should inline the given call site, taking into account
-  // both the size cost and the cycle savings.  Return None if we don't have
-  // suficient profiling information to determine.
+  // both the size cost and the cycle savings.  Return std::nullopt if we don't
+  // have suficient profiling information to determine.
   std::optional<bool> costBenefitAnalysis() {
     if (!CostBenefitAnalysisEnabled)
       return std::nullopt;

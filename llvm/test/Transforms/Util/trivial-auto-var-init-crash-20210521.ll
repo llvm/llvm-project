@@ -1,4 +1,4 @@
-; RUN: opt -annotation-remarks -pass-remarks-missed=annotation-remarks -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=annotation-remarks -pass-remarks-missed=annotation-remarks -disable-output < %s 2>&1 | FileCheck %s
 
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 source_filename = "test.ll"

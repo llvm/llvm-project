@@ -813,10 +813,10 @@ bool matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P, Value *&Start,
                            Value *&Step);
 
 /// Return true if RHS is known to be implied true by LHS.  Return false if
-/// RHS is known to be implied false by LHS.  Otherwise, return None if no
-/// implication can be made.
-/// A & B must be i1 (boolean) values or a vector of such values. Note that
-/// the truth table for implication is the same as <=u on i1 values (but not
+/// RHS is known to be implied false by LHS.  Otherwise, return std::nullopt if
+/// no implication can be made. A & B must be i1 (boolean) values or a vector of
+/// such values. Note that the truth table for implication is the same as <=u on
+/// i1 values (but not
 /// <=s!).  The truth table for both is:
 ///    | T | F (B)
 ///  T | T | F

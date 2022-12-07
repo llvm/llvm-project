@@ -276,7 +276,7 @@ Optional<unsigned> TemplateArgument::getNumTemplateExpansions() const {
   if (TemplateArg.NumExpansions)
     return TemplateArg.NumExpansions - 1;
 
-  return None;
+  return std::nullopt;
 }
 
 QualType TemplateArgument::getNonTypeTemplateArgumentType() const {

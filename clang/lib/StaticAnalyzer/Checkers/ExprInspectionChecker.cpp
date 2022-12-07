@@ -58,9 +58,9 @@ class ExprInspectionChecker
 
   // Optional parameter `ExprVal` for expression value to be marked interesting.
   ExplodedNode *reportBug(llvm::StringRef Msg, CheckerContext &C,
-                          Optional<SVal> ExprVal = None) const;
+                          Optional<SVal> ExprVal = std::nullopt) const;
   ExplodedNode *reportBug(llvm::StringRef Msg, BugReporter &BR, ExplodedNode *N,
-                          Optional<SVal> ExprVal = None) const;
+                          Optional<SVal> ExprVal = std::nullopt) const;
   template <typename T> void printAndReport(CheckerContext &C, T What) const;
 
   const Expr *getArgExpr(const CallExpr *CE, CheckerContext &C) const;
@@ -477,7 +477,7 @@ public:
       const StringLiteral *SL = *SLPtr;
       return std::string(SL->getBytes());
     }
-    return None;
+    return std::nullopt;
   }
 
   Optional<std::string> VisitSymExpr(const SymExpr *S) { return lookup(S); }
@@ -490,7 +490,7 @@ public:
               std::to_string(S->getRHS().getLimitedValue()) +
               (S->getRHS().isUnsigned() ? "U" : ""))
           .str();
-    return None;
+    return std::nullopt;
   }
 
   Optional<std::string> VisitSymSymExpr(const SymSymExpr *S) {
@@ -501,7 +501,7 @@ public:
         return (*Str1 + " " + BinaryOperator::getOpcodeStr(S->getOpcode()) +
                 " " + *Str2)
             .str();
-    return None;
+    return std::nullopt;
   }
 
   Optional<std::string> VisitUnarySymExpr(const UnarySymExpr *S) {
@@ -509,7 +509,7 @@ public:
       return Str;
     if (Optional<std::string> Str = Visit(S->getOperand()))
       return (UnaryOperator::getOpcodeStr(S->getOpcode()) + *Str).str();
-    return None;
+    return std::nullopt;
   }
 
   Optional<std::string> VisitSymbolCast(const SymbolCast *S) {
@@ -517,7 +517,7 @@ public:
       return Str;
     if (Optional<std::string> Str = Visit(S->getOperand()))
       return (Twine("(") + S->getType().getAsString() + ")" + *Str).str();
-    return None;
+    return std::nullopt;
   }
 };
 } // namespace

@@ -10,6 +10,7 @@
 /// PowerPC.
 //===----------------------------------------------------------------------===//
 
+#include "PPC.h"
 #include "PPCInstrInfo.h"
 #include "PPCRegisterBankInfo.h"
 #include "PPCSubtarget.h"
@@ -43,6 +44,12 @@ private:
   /// selector for the patterns that do not require complex C++.
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
 
+  bool selectFPToInt(MachineInstr &I, MachineBasicBlock &MBB,
+                  MachineRegisterInfo &MRI) const;
+  bool selectIntToFP(MachineInstr &I, MachineBasicBlock &MBB,
+                  MachineRegisterInfo &MRI) const;
+
+  const PPCSubtarget &STI;
   const PPCInstrInfo &TII;
   const PPCRegisterInfo &TRI;
   const PPCRegisterBankInfo &RBI;
@@ -65,7 +72,7 @@ private:
 PPCInstructionSelector::PPCInstructionSelector(const PPCTargetMachine &TM,
                                                const PPCSubtarget &STI,
                                                const PPCRegisterBankInfo &RBI)
-    : TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI),
+    : STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI),
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "PPCGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_INIT
@@ -114,6 +121,63 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   return true;
 }
 
+bool PPCInstructionSelector::selectIntToFP(MachineInstr &I,
+                                           MachineBasicBlock &MBB,
+                                           MachineRegisterInfo &MRI) const {
+  if (!STI.hasDirectMove() || !STI.isPPC64() || !STI.hasFPCVT())
+    return false;
+
+  const DebugLoc &DbgLoc = I.getDebugLoc();
+  const Register DstReg = I.getOperand(0).getReg();
+  const Register SrcReg = I.getOperand(1).getReg();
+
+  Register MoveReg = MRI.createVirtualRegister(&PPC::VSFRCRegClass);
+
+  // For now, only handle the case for 64 bit integer.
+  BuildMI(MBB, I, DbgLoc, TII.get(PPC::MTVSRD), MoveReg).addReg(SrcReg);
+
+  bool IsSingle = MRI.getType(DstReg).getSizeInBits() == 32;
+  bool IsSigned = I.getOpcode() == TargetOpcode::G_SITOFP;
+  unsigned ConvOp = IsSingle ? (IsSigned ? PPC::XSCVSXDSP : PPC::XSCVUXDSP)
+                             : (IsSigned ? PPC::XSCVSXDDP : PPC::XSCVUXDDP);
+
+  MachineInstr *MI =
+      BuildMI(MBB, I, DbgLoc, TII.get(ConvOp), DstReg).addReg(MoveReg);
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
+bool PPCInstructionSelector::selectFPToInt(MachineInstr &I,
+                                           MachineBasicBlock &MBB,
+                                           MachineRegisterInfo &MRI) const {
+  if (!STI.hasDirectMove() || !STI.isPPC64() || !STI.hasFPCVT())
+    return false;
+
+  const DebugLoc &DbgLoc = I.getDebugLoc();
+  const Register DstReg = I.getOperand(0).getReg();
+  const Register SrcReg = I.getOperand(1).getReg();
+
+  Register CopyReg = MRI.createVirtualRegister(&PPC::VSFRCRegClass);
+  BuildMI(MBB, I, DbgLoc, TII.get(TargetOpcode::COPY), CopyReg).addReg(SrcReg);
+
+  Register ConvReg = MRI.createVirtualRegister(&PPC::VSFRCRegClass);
+
+  bool IsSigned = I.getOpcode() == TargetOpcode::G_FPTOSI;
+
+  // single-precision is stored as double-precision on PPC in registers, so
+  // always use double-precision convertions.
+  unsigned ConvOp = IsSigned ? PPC::XSCVDPSXDS : PPC::XSCVDPUXDS;
+
+  BuildMI(MBB, I, DbgLoc, TII.get(ConvOp), ConvReg).addReg(CopyReg);
+
+  MachineInstr *MI =
+      BuildMI(MBB, I, DbgLoc, TII.get(PPC::MFVSRD), DstReg).addReg(ConvReg);
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
 bool PPCInstructionSelector::select(MachineInstr &I) {
   auto &MBB = *I.getParent();
   auto &MF = *MBB.getParent();
@@ -128,6 +192,19 @@ bool PPCInstructionSelector::select(MachineInstr &I) {
 
   if (selectImpl(I, *CoverageInfo))
     return true;
+
+  unsigned Opcode = I.getOpcode();
+
+  switch (Opcode) {
+  default:
+    return false;
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP:
+    return selectIntToFP(I, MBB, MRI);
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI:
+    return selectFPToInt(I, MBB, MRI);
+  }
   return false;
 }
 

@@ -161,10 +161,11 @@ public:
   /// Return an instance of the Operation type with an optional operation name.
   /// If no name is provided, this type may refer to any operation.
   static OperationType get(Context &context,
-                           Optional<StringRef> name = llvm::None,
+                           Optional<StringRef> name = std::nullopt,
                            const ods::Operation *odsOp = nullptr);
 
-  /// Return the name of this operation type, or None if it doesn't have on.
+  /// Return the name of this operation type, or std::nullopt if it doesn't have
+  /// on.
   Optional<StringRef> getName() const;
 
   /// Return the ODS operation that this type refers to, or nullptr if the ODS
@@ -247,7 +248,7 @@ public:
   static TupleType get(Context &context, ArrayRef<Type> elementTypes,
                        ArrayRef<StringRef> elementNames);
   static TupleType get(Context &context,
-                       ArrayRef<Type> elementTypes = llvm::None);
+                       ArrayRef<Type> elementTypes = std::nullopt);
 
   /// Return the element types of this tuple.
   ArrayRef<Type> getElementTypes() const;

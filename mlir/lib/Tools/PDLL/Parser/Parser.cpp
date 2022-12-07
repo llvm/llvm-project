@@ -981,7 +981,8 @@ ast::Decl *Parser::createODSNativePDLLConstraintDecl(
   // Build the native constraint.
   auto *constraintDecl = ast::UserConstraintDecl::createNative(
       ctx, ast::Name::create(ctx, name, loc), paramVar,
-      /*results=*/llvm::None, codeBlock, ast::TupleType::get(ctx), nativeType);
+      /*results=*/std::nullopt, codeBlock, ast::TupleType::get(ctx),
+      nativeType);
   constraintDecl->setDocComment(ctx, docString);
   curDeclScope->add(constraintDecl);
   return constraintDecl;
@@ -1782,7 +1783,7 @@ Parser::parseConstraint(Optional<SMRange> &typeConstraint,
 
 FailureOr<ast::ConstraintRef> Parser::parseArgOrResultConstraint() {
   Optional<SMRange> typeConstraint;
-  return parseConstraint(typeConstraint, /*existingConstraints=*/llvm::None,
+  return parseConstraint(typeConstraint, /*existingConstraints=*/std::nullopt,
                          /*allowInlineTypeConstraints=*/false);
 }
 
@@ -2856,7 +2857,7 @@ Parser::validateOperationOperands(SMRange loc, Optional<StringRef> name,
                                   SmallVectorImpl<ast::Expr *> &operands) {
   return validateOperationOperandsOrResults(
       "operand", loc, odsOp ? odsOp->getLoc() : Optional<SMRange>(), name,
-      operands, odsOp ? odsOp->getOperands() : llvm::None, valueTy,
+      operands, odsOp ? odsOp->getOperands() : std::nullopt, valueTy,
       valueRangeTy);
 }
 
@@ -2866,7 +2867,7 @@ Parser::validateOperationResults(SMRange loc, Optional<StringRef> name,
                                  SmallVectorImpl<ast::Expr *> &results) {
   return validateOperationOperandsOrResults(
       "result", loc, odsOp ? odsOp->getLoc() : Optional<SMRange>(), name,
-      results, odsOp ? odsOp->getResults() : llvm::None, typeTy, typeRangeTy);
+      results, odsOp ? odsOp->getResults() : std::nullopt, typeTy, typeRangeTy);
 }
 
 void Parser::checkOperationResultTypeInferrence(SMRange loc, StringRef opName,
@@ -2965,8 +2966,8 @@ LogicalResult Parser::validateOperationOperandsOrResults(
       // Otherwise, create dummy values for each of the entries so that we
       // adhere to the ODS signature.
       for (unsigned i = 0, e = odsValues.size(); i < e; ++i) {
-        values.push_back(
-            ast::RangeExpr::create(ctx, loc, /*elements=*/llvm::None, rangeTy));
+        values.push_back(ast::RangeExpr::create(
+            ctx, loc, /*elements=*/std::nullopt, rangeTy));
       }
       return success();
     }

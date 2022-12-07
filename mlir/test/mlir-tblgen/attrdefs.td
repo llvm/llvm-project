@@ -33,7 +33,7 @@ include "mlir/IR/OpBase.td"
 // DEF-NEXT:   return ::mlir::success(!!value);
 // DEF: .Default([&](llvm::StringRef keyword,
 // DEF-NEXT:   *mnemonic = keyword;
-// DEF-NEXT:   return llvm::None;
+// DEF-NEXT:   return std::nullopt;
 
 def Test_Dialect: Dialect {
 // DECL-NOT: TestDialect

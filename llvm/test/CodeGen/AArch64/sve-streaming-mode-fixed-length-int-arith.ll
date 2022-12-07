@@ -587,12 +587,10 @@ define void @sub_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 define <4 x i8> @abs_v4i8(<4 x i8> %op1) #0 {
 ; CHECK-LABEL: abs_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI42_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI42_0]
-; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, #8
+; CHECK-NEXT:    asr z0.h, p0/m, z0.h, #8
 ; CHECK-NEXT:    abs z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -642,12 +640,10 @@ define void @abs_v32i8(<32 x i8>* %a) #0 {
 define <2 x i16> @abs_v2i16(<2 x i16> %op1) #0 {
 ; CHECK-LABEL: abs_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI46_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI46_0]
-; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, #16
+; CHECK-NEXT:    asr z0.s, p0/m, z0.s, #16
 ; CHECK-NEXT:    abs z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret

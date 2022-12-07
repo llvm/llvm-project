@@ -103,7 +103,7 @@ static void dumpUUID(raw_ostream &OS, const ObjectFile &Obj) {
 }
 
 using ContributionCollection =
-    std::vector<Optional<StrOffsetsContributionDescriptor>>;
+    std::vector<std::optional<StrOffsetsContributionDescriptor>>;
 
 // Collect all the contributions to the string offsets table from all units,
 // sort them by their starting offsets and remove duplicates.
@@ -117,8 +117,8 @@ collectContributionData(DWARFContext::unit_iterator_range Units) {
   // the start of the contributions vector. This way they are reported
   // first.
   llvm::sort(Contributions,
-             [](const Optional<StrOffsetsContributionDescriptor> &L,
-                const Optional<StrOffsetsContributionDescriptor> &R) {
+             [](const std::optional<StrOffsetsContributionDescriptor> &L,
+                const std::optional<StrOffsetsContributionDescriptor> &R) {
                if (L && R)
                  return L->Base < R->Base;
                return R.has_value();
@@ -129,8 +129,8 @@ collectContributionData(DWARFContext::unit_iterator_range Units) {
   // to report them more than once.
   Contributions.erase(
       std::unique(Contributions.begin(), Contributions.end(),
-                  [](const Optional<StrOffsetsContributionDescriptor> &L,
-                     const Optional<StrOffsetsContributionDescriptor> &R) {
+                  [](const std::optional<StrOffsetsContributionDescriptor> &L,
+                     const std::optional<StrOffsetsContributionDescriptor> &R) {
                     if (L && R)
                       return L->Base == R->Base && L->Size == R->Size;
                     return false;
@@ -245,7 +245,7 @@ static void dumpAddrSection(raw_ostream &OS, DWARFDataExtractor &AddrData,
 // Dump the .debug_rnglists or .debug_rnglists.dwo section (DWARF v5).
 static void dumpRnglistsSection(
     raw_ostream &OS, DWARFDataExtractor &rnglistData,
-    llvm::function_ref<Optional<object::SectionedAddress>(uint32_t)>
+    llvm::function_ref<std::optional<object::SectionedAddress>(uint32_t)>
         LookupPooledAddress,
     DIDumpOptions DumpOpts) {
   uint64_t Offset = 0;
@@ -312,7 +312,7 @@ static void dumpLoclistsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
                                 DWARFDataExtractor Data,
                                 const MCRegisterInfo *MRI,
                                 const DWARFObject &Obj,
-                                Optional<uint64_t> DumpOffset) {
+                                std::optional<uint64_t> DumpOffset) {
   uint64_t Offset = 0;
 
   while (Data.isValidOffset(Offset)) {
@@ -351,7 +351,7 @@ static void dumpPubTableSection(raw_ostream &OS, DIDumpOptions DumpOpts,
 
 void DWARFContext::dump(
     raw_ostream &OS, DIDumpOptions DumpOpts,
-    std::array<Optional<uint64_t>, DIDT_ID_Count> DumpOffsets) {
+    std::array<std::optional<uint64_t>, DIDT_ID_Count> DumpOffsets) {
   uint64_t DumpType = DumpOpts.DumpType;
 
   StringRef Extension = sys::path::extension(DObj->getFileName());
@@ -368,7 +368,7 @@ void DWARFContext::dump(
   bool Explicit = DumpType != DIDT_All && !IsDWO;
   bool ExplicitDWO = Explicit && IsDWO;
   auto shouldDump = [&](bool Explicit, const char *Name, unsigned ID,
-                        StringRef Section) -> Optional<uint64_t> * {
+                        StringRef Section) -> std::optional<uint64_t> * {
     unsigned Mask = 1U << ID;
     bool Should = (DumpType & Mask) && (Explicit || !Section.empty());
     if (!Should)
@@ -459,7 +459,7 @@ void DWARFContext::dump(
     }
   }
 
-  if (const Optional<uint64_t> *Off =
+  if (const std::optional<uint64_t> *Off =
           shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
                      DObj->getFrameSection().Data)) {
     if (Expected<const DWARFDebugFrame *> DF = getDebugFrame())
@@ -468,7 +468,7 @@ void DWARFContext::dump(
       RecoverableErrorHandler(DF.takeError());
   }
 
-  if (const Optional<uint64_t> *Off =
+  if (const std::optional<uint64_t> *Off =
           shouldDump(Explicit, ".eh_frame", DIDT_ID_DebugFrame,
                      DObj->getEHFrameSection().Data)) {
     if (Expected<const DWARFDebugFrame *> DF = getEHFrame())
@@ -519,7 +519,7 @@ void DWARFContext::dump(
 
   auto DumpLineSection = [&](DWARFDebugLine::SectionParser Parser,
                              DIDumpOptions DumpOpts,
-                             Optional<uint64_t> DumpOffset) {
+                             std::optional<uint64_t> DumpOffset) {
     while (!Parser.done()) {
       if (DumpOffset && Parser.getOffset() != *DumpOffset) {
         Parser.skip(DumpOpts.WarningHandler, DumpOpts.WarningHandler);
@@ -612,7 +612,8 @@ void DWARFContext::dump(
     }
   }
 
-  auto LookupPooledAddress = [&](uint32_t Index) -> Optional<SectionedAddress> {
+  auto LookupPooledAddress =
+      [&](uint32_t Index) -> std::optional<SectionedAddress> {
     const auto &CUs = compile_units();
     auto I = CUs.begin();
     if (I == CUs.end())
@@ -712,7 +713,7 @@ DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
 
   struct UnitContainers {
     const DWARFUnitVector &Units;
-    Optional<DenseMap<uint64_t, DWARFTypeUnit *>> &Map;
+    std::optional<DenseMap<uint64_t, DWARFTypeUnit *>> &Map;
   };
   UnitContainers Units = IsDWO ? UnitContainers{DWOUnits, DWOTypeUnits}
                                : UnitContainers{NormalUnits, NormalTypeUnits};
@@ -744,8 +745,8 @@ DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
   for (const auto &DWOCU : dwo_compile_units()) {
     // Might not have parsed DWO ID yet.
     if (!DWOCU->getDWOId()) {
-      if (Optional<uint64_t> DWOId =
-          toUnsigned(DWOCU->getUnitDIE().find(DW_AT_GNU_dwo_id)))
+      if (std::optional<uint64_t> DWOId =
+              toUnsigned(DWOCU->getUnitDIE().find(DW_AT_GNU_dwo_id)))
         DWOCU->setDWOId(*DWOId);
       else
         // No DWO ID?
@@ -1111,7 +1112,7 @@ static bool getFunctionNameAndStartLineForAddress(
     DWARFCompileUnit *CU, uint64_t Address, FunctionNameKind Kind,
     DILineInfoSpecifier::FileLineInfoKind FileNameKind,
     std::string &FunctionName, std::string &StartFile, uint32_t &StartLine,
-    Optional<uint64_t> &StartAddress) {
+    std::optional<uint64_t> &StartAddress) {
   // The address may correspond to instruction in some inlined function,
   // so we have to build the chain of inlined functions and take the
   // name of the topmost function in it.
@@ -1141,9 +1142,9 @@ static bool getFunctionNameAndStartLineForAddress(
   return FoundResult;
 }
 
-static Optional<int64_t>
+static std::optional<int64_t>
 getExpressionFrameOffset(ArrayRef<uint8_t> Expr,
-                         Optional<unsigned> FrameBaseReg) {
+                         std::optional<unsigned> FrameBaseReg) {
   if (!Expr.empty() &&
       (Expr[0] == DW_OP_fbreg ||
        (FrameBaseReg && Expr[0] == DW_OP_breg0 + *FrameBaseReg))) {
@@ -1168,9 +1169,9 @@ void DWARFContext::addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram,
     if (const char *Name = Subprogram.getSubroutineName(DINameKind::ShortName))
       Local.FunctionName = Name;
 
-    Optional<unsigned> FrameBaseReg;
+    std::optional<unsigned> FrameBaseReg;
     if (auto FrameBase = Subprogram.find(DW_AT_frame_base))
-      if (Optional<ArrayRef<uint8_t>> Expr = FrameBase->getAsBlock())
+      if (std::optional<ArrayRef<uint8_t>> Expr = FrameBase->getAsBlock())
         if (!Expr->empty() && (*Expr)[0] >= DW_OP_reg0 &&
             (*Expr)[0] <= DW_OP_reg31) {
           FrameBaseReg = (*Expr)[0] - DW_OP_reg0;
@@ -1179,7 +1180,7 @@ void DWARFContext::addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram,
     if (Expected<std::vector<DWARFLocationExpression>> Loc =
             Die.getLocations(DW_AT_location)) {
       for (const auto &Entry : *Loc) {
-        if (Optional<int64_t> FrameOffset =
+        if (std::optional<int64_t> FrameOffset =
                 getExpressionFrameOffset(Entry.Expr, FrameBaseReg)) {
           Local.FrameOffset = *FrameOffset;
           break;
@@ -1198,7 +1199,7 @@ void DWARFContext::addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram,
             Die.getAttributeValueAsReferencedDie(DW_AT_abstract_origin))
       Die = Origin;
     if (auto NameAttr = Die.find(DW_AT_name))
-      if (Optional<const char *> Name = dwarf::toString(*NameAttr))
+      if (std::optional<const char *> Name = dwarf::toString(*NameAttr))
         Local.Name = *Name;
     if (auto Type = Die.getAttributeValueAsReferencedDie(DW_AT_type))
       Local.Size = Type.getTypeSize(getCUAddrSize());
@@ -1285,7 +1286,7 @@ DILineInfoTable DWARFContext::getLineInfoForAddressRange(
   uint32_t StartLine = 0;
   std::string StartFileName;
   std::string FunctionName(DILineInfo::BadString);
-  Optional<uint64_t> StartAddress;
+  std::optional<uint64_t> StartAddress;
   getFunctionNameAndStartLineForAddress(CU, Address.Address, Spec.FNKind,
                                         Spec.FLIKind, FunctionName,
                                         StartFileName, StartLine, StartAddress);
@@ -1846,9 +1847,9 @@ public:
         if (Supports && Supports(Reloc.getType())) {
           auto I = Map->try_emplace(
               Reloc.getOffset(),
-              RelocAddrEntry{SymInfoOrErr->SectionIndex, Reloc,
-                             SymInfoOrErr->Address,
-                             Optional<object::RelocationRef>(), 0, Resolver});
+              RelocAddrEntry{
+                  SymInfoOrErr->SectionIndex, Reloc, SymInfoOrErr->Address,
+                  std::optional<object::RelocationRef>(), 0, Resolver});
           // If we didn't successfully insert that's because we already had a
           // relocation for that offset. Store it as a second relocation in the
           // same RelocAddrEntry instead.

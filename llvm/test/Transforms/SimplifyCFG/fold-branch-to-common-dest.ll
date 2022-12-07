@@ -1117,4 +1117,49 @@ cleanup:
   ret i32 %retval.0
 }
 
+define i32 @test_builtin_fpclassify(float %x) {
+; CHECK-LABEL: @test_builtin_fpclassify(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ISZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[ISZERO]], label [[FPCLASSIFY_END:%.*]], label [[FPCLASSIFY_NOT_ZERO:%.*]]
+; CHECK:       fpclassify_end:
+; CHECK-NEXT:    [[FPCLASSIFY_RESULT:%.*]] = phi i32 [ 2, [[ENTRY:%.*]] ], [ 0, [[FPCLASSIFY_NOT_ZERO]] ], [ 1, [[FPCLASSIFY_NOT_NAN:%.*]] ], [ [[NORMAL_OR_SUBNORMAL:%.*]], [[FPCLASSIFY_NOT_INF:%.*]] ]
+; CHECK-NEXT:    ret i32 [[FPCLASSIFY_RESULT]]
+; CHECK:       fpclassify_not_zero:
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[X]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label [[FPCLASSIFY_END]], label [[FPCLASSIFY_NOT_NAN]]
+; CHECK:       fpclassify_not_nan:
+; CHECK-NEXT:    [[X_ABS:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq float [[X_ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    br i1 [[ISINF]], label [[FPCLASSIFY_END]], label [[FPCLASSIFY_NOT_INF]]
+; CHECK:       fpclassify_not_inf:
+; CHECK-NEXT:    [[ISNORMAL:%.*]] = fcmp uge float [[X_ABS]], 0x3810000000000000
+; CHECK-NEXT:    [[NORMAL_OR_SUBNORMAL]] = select i1 [[ISNORMAL]], i32 4, i32 3
+; CHECK-NEXT:    br label [[FPCLASSIFY_END]]
+;
+entry:
+  %iszero = fcmp oeq float %x, 0.000000e+00
+  br i1 %iszero, label %fpclassify_end, label %fpclassify_not_zero
+
+fpclassify_end:
+  %fpclassify_result = phi i32 [ 2, %entry ], [ 0, %fpclassify_not_zero ], [ 1, %fpclassify_not_nan ], [ %normal_or_subnormal, %fpclassify_not_inf ]
+  ret i32 %fpclassify_result
+
+fpclassify_not_zero:
+  %cmp = fcmp uno float %x, 0.000000e+00
+  br i1 %cmp, label %fpclassify_end, label %fpclassify_not_nan
+
+fpclassify_not_nan:
+  %x.abs = tail call float @llvm.fabs.f32(float %x)
+  %isinf = fcmp oeq float %x.abs, 0x7FF0000000000000
+  br i1 %isinf, label %fpclassify_end, label %fpclassify_not_inf
+
+fpclassify_not_inf:
+  %isnormal = fcmp uge float %x.abs, 0x3810000000000000
+  %normal_or_subnormal = select i1 %isnormal, i32 4, i32 3
+  br label %fpclassify_end
+}
+
+declare float @llvm.fabs.f32(float)
+
 attributes #0 = { nounwind argmemonly speculatable }

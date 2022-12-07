@@ -468,7 +468,7 @@ OptionalParseResult ExtensibleDialect::parseOptionalDynamicType(
     StringRef typeName, AsmParser &parser, Type &resultType) const {
   DynamicTypeDefinition *typeDef = lookupTypeDefinition(typeName);
   if (!typeDef)
-    return llvm::None;
+    return std::nullopt;
 
   DynamicType dynType;
   if (DynamicType::parse(parser, typeDef, dynType))
@@ -490,7 +490,7 @@ OptionalParseResult ExtensibleDialect::parseOptionalDynamicAttr(
     StringRef attrName, AsmParser &parser, Attribute &resultAttr) const {
   DynamicAttrDefinition *attrDef = lookupAttrDefinition(attrName);
   if (!attrDef)
-    return llvm::None;
+    return std::nullopt;
 
   DynamicAttr dynAttr;
   if (DynamicAttr::parse(parser, attrDef, dynAttr))
