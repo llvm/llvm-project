@@ -222,7 +222,7 @@ public:
 
   /// Set the minimum hotness value a diagnostic needs in order to be
   /// included in optimization diagnostics.
-  void setDiagnosticsHotnessThreshold(Optional<uint64_t> Threshold);
+  void setDiagnosticsHotnessThreshold(std::optional<uint64_t> Threshold);
 
   /// Return if hotness threshold is requested from PSI.
   bool isDiagnosticsHotnessThresholdSetFromPSI() const;
