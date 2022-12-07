@@ -4,7 +4,7 @@
 declare void @sideeffect0(i8)
 declare void @sideeffect1(i8)
 declare void @sideeffect2(i8)
-declare i8 @gen8() speculatable
+declare void @use1(i1)
 
 define void @incompatible_ivs_of_single_phi(i8 %v0, i8 %v1, i8 %iv.of.final_left.from.dispatch, i8 %iv.of.final_right.from.pred, i8 %iv.of.final_right.from.dispatch) {
 ; ALL-LABEL: @incompatible_ivs_of_single_phi(
@@ -76,14 +76,51 @@ final_right:
   ret void
 }
 
-define void @incompatible_ivs_of_single_phi.insertpos(i8 %v0, i8 %v1, i8 %iv.of.final_left.from.dispatch) {
+define void @incompatible_ivs_of_single_phi.invert_pred_cond.with_extra_use(i8 %v0, i8 %v1, i8 %iv.of.final_left.from.dispatch, i8 %iv.of.final_right.from.pred, i8 %iv.of.final_right.from.dispatch) {
+; ALL-LABEL: @incompatible_ivs_of_single_phi.invert_pred_cond.with_extra_use(
+; ALL-NEXT:  pred:
+; ALL-NEXT:    [[C0:%.*]] = icmp ne i8 [[V0:%.*]], 0
+; ALL-NEXT:    call void @use1(i1 [[C0]])
+; ALL-NEXT:    br i1 [[C0]], label [[FINAL_RIGHT:%.*]], label [[DISPATCH:%.*]]
+; ALL:       dispatch:
+; ALL-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
+; ALL-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT]]
+; ALL:       common.ret:
+; ALL-NEXT:    ret void
+; ALL:       final_left:
+; ALL-NEXT:    [[FINAL_LEFT_PHI:%.*]] = phi i8 [ [[IV_OF_FINAL_LEFT_FROM_DISPATCH:%.*]], [[DISPATCH]] ]
+; ALL-NEXT:    call void @sideeffect0(i8 [[FINAL_LEFT_PHI]])
+; ALL-NEXT:    br label [[COMMON_RET:%.*]]
+; ALL:       final_right:
+; ALL-NEXT:    [[FINAL_RIGHT_PHI:%.*]] = phi i8 [ [[IV_OF_FINAL_RIGHT_FROM_PRED:%.*]], [[PRED:%.*]] ], [ [[IV_OF_FINAL_RIGHT_FROM_DISPATCH:%.*]], [[DISPATCH]] ]
+; ALL-NEXT:    call void @sideeffect1(i8 [[FINAL_RIGHT_PHI]])
+; ALL-NEXT:    br label [[COMMON_RET]]
+;
+pred:
+  %c0 = icmp ne i8 %v0, 0
+  call void @use1(i1 %c0)
+  br i1 %c0, label %final_right, label %dispatch
+dispatch:
+  %c1 = icmp eq i8 %v1, 0
+  br i1 %c1, label %final_left, label %final_right
+final_left:
+  %final_left.phi = phi i8 [ %iv.of.final_left.from.dispatch, %dispatch ]
+  call void @sideeffect0(i8 %final_left.phi)
+  ret void
+final_right:
+  %final_right.phi = phi i8 [ %iv.of.final_right.from.pred, %pred ], [ %iv.of.final_right.from.dispatch, %dispatch ]
+  call void @sideeffect1(i8 %final_right.phi)
+  ret void
+}
+
+define void @incompatible_ivs_of_single_phi.insertpos(i8 %v0, i8 %v1, i8 %iv.of.final_left.from.dispatch, ptr dereferenceable(1) %src0, ptr dereferenceable(1) %src1) {
 ; ALL-LABEL: @incompatible_ivs_of_single_phi.insertpos(
 ; ALL-NEXT:  pred:
-; ALL-NEXT:    [[IV_OF_FINAL_RIGHT_FROM_PRED:%.*]] = call i8 @gen8()
+; ALL-NEXT:    [[IV_OF_FINAL_RIGHT_FROM_PRED:%.*]] = load i8, ptr [[SRC0:%.*]], align 1
 ; ALL-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
 ; ALL-NEXT:    br i1 [[C0]], label [[DISPATCH:%.*]], label [[FINAL_RIGHT:%.*]]
 ; ALL:       dispatch:
-; ALL-NEXT:    [[IV_OF_FINAL_RIGHT_FROM_DISPATCH:%.*]] = call i8 @gen8()
+; ALL-NEXT:    [[IV_OF_FINAL_RIGHT_FROM_DISPATCH:%.*]] = load i8, ptr [[SRC1:%.*]], align 1
 ; ALL-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
 ; ALL-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT]]
 ; ALL:       common.ret:
@@ -98,11 +135,11 @@ define void @incompatible_ivs_of_single_phi.insertpos(i8 %v0, i8 %v1, i8 %iv.of.
 ; ALL-NEXT:    br label [[COMMON_RET]]
 ;
 pred:
-  %iv.of.final_right.from.pred = call i8 @gen8()
+  %iv.of.final_right.from.pred = load i8, ptr %src0
   %c0 = icmp eq i8 %v0, 0
   br i1 %c0, label %dispatch, label %final_right
 dispatch:
-  %iv.of.final_right.from.dispatch = call i8 @gen8()
+  %iv.of.final_right.from.dispatch = load i8, ptr %src1
   %c1 = icmp eq i8 %v1, 0
   br i1 %c1, label %final_left, label %final_right
 final_left:
