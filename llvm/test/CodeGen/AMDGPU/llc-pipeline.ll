@@ -374,6 +374,7 @@
 ; GCN-O1-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-NEXT:        Shrink Wrapping analysis
 ; GCN-O1-NEXT:        Prologue/Epilogue Insertion & Frame Finalization
+; GCN-O1-NEXT:        Machine Late Instructions Cleanup Pass
 ; GCN-O1-NEXT:        Control Flow Optimizer
 ; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Tail Duplication
@@ -670,6 +671,7 @@
 ; GCN-O1-OPTS-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-OPTS-NEXT:        Shrink Wrapping analysis
 ; GCN-O1-OPTS-NEXT:        Prologue/Epilogue Insertion & Frame Finalization
+; GCN-O1-OPTS-NEXT:        Machine Late Instructions Cleanup Pass
 ; GCN-O1-OPTS-NEXT:        Control Flow Optimizer
 ; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Tail Duplication
@@ -968,6 +970,7 @@
 ; GCN-O2-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O2-NEXT:        Shrink Wrapping analysis
 ; GCN-O2-NEXT:        Prologue/Epilogue Insertion & Frame Finalization
+; GCN-O2-NEXT:        Machine Late Instructions Cleanup Pass
 ; GCN-O2-NEXT:        Control Flow Optimizer
 ; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Tail Duplication
@@ -1279,6 +1282,7 @@
 ; GCN-O3-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O3-NEXT:        Shrink Wrapping analysis
 ; GCN-O3-NEXT:        Prologue/Epilogue Insertion & Frame Finalization
+; GCN-O3-NEXT:        Machine Late Instructions Cleanup Pass
 ; GCN-O3-NEXT:        Control Flow Optimizer
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Tail Duplication
