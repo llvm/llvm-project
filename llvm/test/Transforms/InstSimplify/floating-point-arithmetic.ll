@@ -279,6 +279,7 @@ define float @PR22688(float %x) {
 declare float @llvm.fabs.f32(float)
 declare float @llvm.canonicalize.f32(float)
 declare float @llvm.arithmetic.fence.f32(float)
+declare float @llvm.copysign.f32(float, float)
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
 declare float @llvm.sqrt.f32(float)
 declare float @llvm.maxnum.f32(float, float)
@@ -953,5 +954,39 @@ define i1 @arithmetic_fence_unknown_positive(float %unknown) {
 ;
   %known.positive = call float @llvm.arithmetic.fence.f32(float %unknown)
   %cmp = fcmp nnan oge float %known.positive, 0.0
+  ret i1 %cmp
+}
+
+define i1 @copysign_known_positive_maybe_neg0(float %unknown, float %sign) {
+; CHECK-LABEL: @copysign_known_positive_maybe_neg0(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan ninf float @llvm.sqrt.f32(float [[SIGN:%.*]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float [[UNKNOWN:%.*]], float [[SQRT]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oge float [[COPYSIGN]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call ninf nnan float @llvm.sqrt.f32(float %sign)
+  %copysign = call float @llvm.copysign.f32(float %unknown, float %sqrt)
+  %cmp = fcmp nnan oge float %copysign, 0.0
+  ret i1 %cmp
+}
+
+define i1 @copysign_known_positive(float %unknown, float %sign) {
+; CHECK-LABEL: @copysign_known_positive(
+; CHECK-NEXT:    ret i1 true
+;
+  %sqrt = call ninf nnan nsz float @llvm.sqrt.f32(float %sign)
+  %copysign = call float @llvm.copysign.f32(float %unknown, float %sqrt)
+  %cmp = fcmp nnan oge float %copysign, 0.0
+  ret i1 %cmp
+}
+
+define i1 @copysign_unknown_positive(float %unknown, float %unknown.sign) {
+; CHECK-LABEL: @copysign_unknown_positive(
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float [[UNKNOWN:%.*]], float [[UNKNOWN_SIGN:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oge float [[COPYSIGN]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %copysign = call float @llvm.copysign.f32(float %unknown, float %unknown.sign)
+  %cmp = fcmp nnan oge float %copysign, 0.0
   ret i1 %cmp
 }
