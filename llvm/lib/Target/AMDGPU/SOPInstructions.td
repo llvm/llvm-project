@@ -51,7 +51,7 @@ class SOP1_Pseudo <string opName, dag outs, dag ins,
   let UseNamedOperandTable = 1;
 
   bits<1> has_src0 = 1;
-  bits<1> has_sdst = 1;
+  let has_sdst = 1;
 }
 
 class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
@@ -722,10 +722,7 @@ let SubtargetPredicate = isGFX11Plus in {
 
 class SOPK_Pseudo <string opName, dag outs, dag ins,
                    string asmOps, list<dag> pattern=[]> :
-  InstSI <outs, ins, "", pattern>,
-  SIMCInstr<opName, SIEncodingFamily.NONE> {
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
+  SOP_Pseudo<opName, outs, ins, " " # asmOps, pattern> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -734,10 +731,8 @@ class SOPK_Pseudo <string opName, dag outs, dag ins,
   let FixedSize = 1;
   let SchedRW = [WriteSALU];
   let UseNamedOperandTable = 1;
-  string Mnemonic = opName;
-  string AsmOperands = " " # asmOps;
 
-  bits<1> has_sdst = 1;
+  let has_sdst = 1;
 }
 
 class SOPK_Real<SOPK_Pseudo ps> :
@@ -1113,8 +1108,6 @@ class SOPP_Pseudo<string opName, dag ins,
                   string sep = !if(!empty(asmOps), "", " "),
                   string keyName = opName> :
   SOP_Pseudo<opName, (outs), ins, sep # asmOps, pattern> {
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
