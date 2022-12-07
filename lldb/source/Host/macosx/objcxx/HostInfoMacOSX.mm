@@ -68,7 +68,7 @@ llvm::Optional<std::string> HostInfoMacOSX::GetOSBuildString() {
   if (::sysctl(mib, 2, cstr, &cstr_len, NULL, 0) == 0)
     return std::string(cstr, cstr_len - 1);
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 static void ParseOSVersion(llvm::VersionTuple &version, NSString *Key) {
