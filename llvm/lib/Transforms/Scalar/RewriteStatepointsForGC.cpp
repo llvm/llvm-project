@@ -296,7 +296,7 @@ using RematCandTy = MapVector<Value *, RematerizlizationCandidateRecord>;
 } // end anonymous namespace
 
 static ArrayRef<Use> GetDeoptBundleOperands(const CallBase *Call) {
-  Optional<OperandBundleUse> DeoptBundle =
+  std::optional<OperandBundleUse> DeoptBundle =
       Call->getOperandBundle(LLVMContext::OB_deopt);
 
   if (!DeoptBundle) {
