@@ -36,10 +36,10 @@ StringRef Builder::Parameter::getCppType() const {
 /// parameter.
 Optional<StringRef> Builder::Parameter::getDefaultValue() const {
   if (isa<llvm::StringInit>(def))
-    return llvm::None;
+    return std::nullopt;
   const llvm::Record *record = cast<llvm::DefInit>(def)->getDef();
   Optional<StringRef> value = record->getValueAsOptionalString("defaultValue");
-  return value && !value->empty() ? value : llvm::None;
+  return value && !value->empty() ? value : std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -77,5 +77,5 @@ Builder::Builder(const llvm::Record *record, ArrayRef<SMLoc> loc)
 /// Return an optional string containing the body of the builder.
 Optional<StringRef> Builder::getBody() const {
   Optional<StringRef> body = def->getValueAsOptionalString("body");
-  return body && !body->empty() ? body : llvm::None;
+  return body && !body->empty() ? body : std::nullopt;
 }

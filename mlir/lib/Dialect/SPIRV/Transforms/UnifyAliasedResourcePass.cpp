@@ -98,11 +98,12 @@ static Optional<int> deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
     assert(type.isScalarOrVector());
     if (auto vectorType = type.dyn_cast<VectorType>()) {
       if (vectorType.getNumElements() % 2 != 0)
-        return llvm::None; // Odd-sized vector has special layout requirements.
+        return std::nullopt; // Odd-sized vector has special layout
+                             // requirements.
 
       Optional<int64_t> numBytes = type.getSizeInBytes();
       if (!numBytes)
-        return llvm::None;
+        return std::nullopt;
 
       scalarNumBits.push_back(
           vectorType.getElementType().getIntOrFloatBitWidth());
@@ -122,7 +123,7 @@ static Optional<int> deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
     // With out this, we cannot properly adjust the index later.
     if (llvm::any_of(vectorNumBits,
                      [&](int bits) { return bits % *minVal != 0; }))
-      return llvm::None;
+      return std::nullopt;
 
     // Require all scalar type bit counts to be a multiple of the chosen
     // vector's primitive type to avoid reading/writing subcomponents.
@@ -130,7 +131,7 @@ static Optional<int> deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
     int baseNumBits = scalarNumBits[index];
     if (llvm::any_of(scalarNumBits,
                      [&](int bits) { return bits % baseNumBits != 0; }))
-      return llvm::None;
+      return std::nullopt;
 
     return index;
   }
@@ -140,7 +141,7 @@ static Optional<int> deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
   auto *minVal = std::min_element(scalarNumBits.begin(), scalarNumBits.end());
   if (llvm::any_of(scalarNumBits,
                    [minVal](int64_t bit) { return bit % *minVal != 0; }))
-    return llvm::None;
+    return std::nullopt;
   return std::distance(scalarNumBits.begin(), minVal);
 }
 

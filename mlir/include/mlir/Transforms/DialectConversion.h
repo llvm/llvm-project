@@ -284,7 +284,7 @@ private:
                ArrayRef<Type> callStack) -> Optional<LogicalResult> {
       T derivedType = type.dyn_cast<T>();
       if (!derivedType)
-        return llvm::None;
+        return std::nullopt;
       return callback(derivedType, results, callStack);
     };
   }
@@ -306,7 +306,7 @@ private:
                Location loc) -> Optional<Value> {
       if (T derivedType = resultType.dyn_cast<T>())
         return callback(builder, derivedType, inputs, loc);
-      return llvm::None;
+      return std::nullopt;
     };
   }
 

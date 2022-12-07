@@ -188,7 +188,7 @@ static Optional<Type>
 convertStructTypeWithOffset(spirv::StructType type,
                             LLVMTypeConverter &converter) {
   if (type != VulkanLayoutUtils::decorateType(type))
-    return llvm::None;
+    return std::nullopt;
 
   auto elementsVector = llvm::to_vector<8>(
       llvm::map_range(type.getElementTypes(), [&](Type elementType) {
@@ -253,7 +253,7 @@ static Optional<Type> convertArrayType(spirv::ArrayType type,
   Type elementType = type.getElementType();
   auto sizeInBytes = elementType.cast<spirv::SPIRVType>().getSizeInBytes();
   if (stride != 0 && (!sizeInBytes || *sizeInBytes != stride))
-    return llvm::None;
+    return std::nullopt;
 
   auto llvmElementType = converter.convertType(elementType);
   unsigned numElements = type.getNumElements();
@@ -274,7 +274,7 @@ static Type convertPointerType(spirv::PointerType type,
 static Optional<Type> convertRuntimeArrayType(spirv::RuntimeArrayType type,
                                               TypeConverter &converter) {
   if (type.getArrayStride() != 0)
-    return llvm::None;
+    return std::nullopt;
   auto elementType = converter.convertType(type.getElementType());
   return LLVM::LLVMArrayType::get(elementType, 0);
 }
@@ -286,7 +286,7 @@ static Optional<Type> convertStructType(spirv::StructType type,
   SmallVector<spirv::StructType::MemberDecorationInfo, 4> memberDecorations;
   type.getMemberDecorations(memberDecorations);
   if (!memberDecorations.empty())
-    return llvm::None;
+    return std::nullopt;
   if (type.hasOffset())
     return convertStructTypeWithOffset(type, converter);
   return convertStructTypePacked(type, converter);
@@ -812,7 +812,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     if (callOp.getNumResults() == 0) {
       rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-          callOp, llvm::None, adaptor.getOperands(), callOp->getAttrs());
+          callOp, std::nullopt, adaptor.getOperands(), callOp->getAttrs());
       return success();
     }
 

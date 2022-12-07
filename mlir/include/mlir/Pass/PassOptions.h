@@ -122,7 +122,7 @@ private:
       for (auto &it : this->Values)
         if (it.V.compare(value))
           return it.Name;
-      return llvm::None;
+      return std::nullopt;
     }
   };
 

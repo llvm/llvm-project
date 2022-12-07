@@ -97,7 +97,7 @@ public:
     template <typename T>
     ArrayRef<T> copyInto(ArrayRef<T> elements) {
       if (elements.empty())
-        return llvm::None;
+        return std::nullopt;
       auto result = allocator.Allocate<T>(elements.size());
       std::uninitialized_copy(elements.begin(), elements.end(), result);
       return ArrayRef<T>(result, elements.size());
@@ -178,7 +178,7 @@ public:
   }
   template <typename Storage>
   void registerSingletonStorageType(TypeID id) {
-    registerSingletonStorageType<Storage>(id, llvm::None);
+    registerSingletonStorageType<Storage>(id, std::nullopt);
   }
   /// Utility override when the storage type represents the type id.
   template <typename Storage>

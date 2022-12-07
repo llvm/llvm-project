@@ -134,7 +134,7 @@ static OptionalParseResult parseOptionalOperandAndType(OpAsmParser &parser,
     return failure(parser.parseLParen() ||
                    parseOperandAndType(parser, result) || parser.parseRParen());
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Parse optional operand and its type wrapped in parenthesis.
@@ -145,7 +145,7 @@ static OptionalParseResult parseOptionalOperandAndType(OpAsmParser &parser,
   if (succeeded(parser.parseOptionalLParen())) {
     return failure(parseOperandAndType(parser, result) || parser.parseRParen());
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Parse optional operand with its type prefixed with prefixKeyword `=`.
@@ -158,7 +158,7 @@ static OptionalParseResult parserOptionalOperandAndTypeWithPrefix(
       return failure();
     return success();
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 static bool isComputeOperation(Operation *op) {

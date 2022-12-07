@@ -159,7 +159,7 @@ public:
   }
 
 protected:
-  explicit Pass(TypeID passID, Optional<StringRef> opName = llvm::None)
+  explicit Pass(TypeID passID, Optional<StringRef> opName = std::nullopt)
       : passID(passID), opName(opName) {}
   Pass(const Pass &other) : Pass(other.passID, other.opName) {}
 

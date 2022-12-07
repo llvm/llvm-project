@@ -886,8 +886,8 @@ public:
                                         ArrayRef<VariableDecl *> results,
                                         const CompoundStmt *body,
                                         Type resultType) {
-    return createImpl(ctx, name, inputs, /*nativeInputTypes=*/llvm::None,
-                      results, /*codeBlock=*/llvm::None, body, resultType);
+    return createImpl(ctx, name, inputs, /*nativeInputTypes=*/std::nullopt,
+                      results, /*codeBlock=*/std::nullopt, body, resultType);
   }
 
   /// Return the name of the constraint.
@@ -1008,7 +1008,7 @@ public:
   /// Return the name of this operation, or none if the name is unknown.
   Optional<StringRef> getName() const {
     const Name *name = Decl::getName();
-    return name ? Optional<StringRef>(name->getName()) : llvm::None;
+    return name ? Optional<StringRef>(name->getName()) : std::nullopt;
   }
 
 private:
@@ -1093,7 +1093,7 @@ public:
                                      ArrayRef<VariableDecl *> results,
                                      const CompoundStmt *body,
                                      Type resultType) {
-    return createImpl(ctx, name, inputs, results, /*codeBlock=*/llvm::None,
+    return createImpl(ctx, name, inputs, results, /*codeBlock=*/std::nullopt,
                       body, resultType);
   }
 

@@ -73,7 +73,7 @@ StringRef Attribute::getReturnType() const {
 llvm::Optional<Type> Attribute::getValueType() const {
   if (auto *defInit = dyn_cast<llvm::DefInit>(def->getValueInit("valueType")))
     return Type(defInit->getDef());
-  return llvm::None;
+  return std::nullopt;
 }
 
 StringRef Attribute::getConvertFromStorageCall() const {

@@ -30,7 +30,7 @@ Optional<unsigned> Token::getUnsignedIntegerValue() const {
 
   unsigned result = 0;
   if (spelling.getAsInteger(isHex ? 0 : 10, result))
-    return None;
+    return std::nullopt;
   return result;
 }
 
@@ -41,7 +41,7 @@ Optional<uint64_t> Token::getUInt64IntegerValue(StringRef spelling) {
 
   uint64_t result = 0;
   if (spelling.getAsInteger(isHex ? 0 : 10, result))
-    return None;
+    return std::nullopt;
   return result;
 }
 
@@ -50,7 +50,7 @@ Optional<uint64_t> Token::getUInt64IntegerValue(StringRef spelling) {
 Optional<double> Token::getFloatingPointValue() const {
   double result = 0;
   if (spelling.getAsDouble(result))
-    return None;
+    return std::nullopt;
   return result;
 }
 
@@ -60,14 +60,14 @@ Optional<unsigned> Token::getIntTypeBitwidth() const {
   unsigned bitwidthStart = (spelling[0] == 'i' ? 1 : 2);
   unsigned result = 0;
   if (spelling.drop_front(bitwidthStart).getAsInteger(10, result))
-    return None;
+    return std::nullopt;
   return result;
 }
 
 Optional<bool> Token::getIntTypeSignedness() const {
   assert(getKind() == inttype);
   if (spelling[0] == 'i')
-    return llvm::None;
+    return std::nullopt;
   if (spelling[0] == 's')
     return true;
   assert(spelling[0] == 'u');
@@ -138,7 +138,7 @@ Optional<std::string> Token::getHexStringValue() const {
   std::string hex;
   if (!bytes.consume_front("0x") || (bytes.size() & 1) ||
       !llvm::tryGetFromHex(bytes, hex))
-    return llvm::None;
+    return std::nullopt;
   return hex;
 }
 
@@ -161,7 +161,7 @@ Optional<unsigned> Token::getHashIdentifierNumber() const {
   assert(getKind() == hash_identifier);
   unsigned result = 0;
   if (spelling.drop_front().getAsInteger(10, result))
-    return None;
+    return std::nullopt;
   return result;
 }
 

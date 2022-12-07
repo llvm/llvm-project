@@ -44,7 +44,7 @@ OptionalParseResult Parser::parseOptionalType(Type &type) {
     return failure(!(type = parseType()));
 
   default:
-    return llvm::None;
+    return std::nullopt;
   }
 }
 

@@ -55,7 +55,7 @@ public:
     assert(valArgs.empty() || valArgs.size() == getNumDimAndSymbolVars());
     values.reserve(numReservedCols);
     if (valArgs.empty())
-      values.resize(getNumDimAndSymbolVars(), None);
+      values.resize(getNumDimAndSymbolVars(), std::nullopt);
     else
       values.append(valArgs.begin(), valArgs.end());
   }
@@ -76,7 +76,7 @@ public:
       : IntegerPolyhedron(fac) {
     assert(valArgs.empty() || valArgs.size() == getNumDimAndSymbolVars());
     if (valArgs.empty())
-      values.resize(getNumDimAndSymbolVars(), None);
+      values.resize(getNumDimAndSymbolVars(), std::nullopt);
     else
       values.append(valArgs.begin(), valArgs.end());
   }
