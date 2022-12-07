@@ -1,4 +1,4 @@
-; RUN: opt -S -mergefunc -mergefunc-use-aliases < %s | FileCheck %s
+; RUN: opt -S -passes=mergefunc -mergefunc-use-aliases < %s | FileCheck %s
 
 ; Aliases should always be created for the weak functions, and
 ; for external functions if there is no local function
