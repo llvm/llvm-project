@@ -45,7 +45,8 @@ private:
 
   // Parses tokens starting at Tok into Tree.
   // If we reach an End or Else directive that ends Tree, returns it.
-  // If TopLevel is true, then we do not expect End and always return None.
+  // If TopLevel is true, then we do not expect End and always return
+  // std::nullopt.
   llvm::Optional<DirectiveTree::Directive> parse(DirectiveTree *Tree,
                                                 bool TopLevel) {
     auto StartsDirective =
