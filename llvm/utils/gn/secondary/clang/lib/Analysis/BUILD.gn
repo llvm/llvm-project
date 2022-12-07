@@ -38,6 +38,5 @@ static_library("Analysis") {
     "ThreadSafetyLogical.cpp",
     "ThreadSafetyTIL.cpp",
     "UninitializedValues.cpp",
-    "UnsafeBufferUsage.cpp",
   ]
 }
