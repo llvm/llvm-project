@@ -5073,7 +5073,7 @@ struct AAPointerInfo : public AbstractAttribute {
     bool isWrite() const { return Kind & AK_W; }
 
     /// Return true if this is a write access.
-    bool isWriteOrAssumption() const { return isWrite() | isAssumption(); }
+    bool isWriteOrAssumption() const { return isWrite() || isAssumption(); }
 
     /// Return true if this is an assumption access.
     bool isAssumption() const { return Kind == AK_ASSUMPTION; }
