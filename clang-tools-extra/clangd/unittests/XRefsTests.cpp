@@ -395,8 +395,8 @@ TEST(LocateSymbol, FindOverrides) {
   TestTU TU = TestTU::withCode(Code.code());
   auto AST = TU.build();
   EXPECT_THAT(locateSymbolAt(AST, Code.point(), TU.index().get()),
-              UnorderedElementsAre(sym("foo", Code.range("1"), llvm::None),
-                                   sym("foo", Code.range("2"), llvm::None)));
+              UnorderedElementsAre(sym("foo", Code.range("1"), std::nullopt),
+                                   sym("foo", Code.range("2"), std::nullopt)));
 }
 
 TEST(LocateSymbol, WithIndexPreferredLocation) {
@@ -1317,20 +1317,20 @@ TEST(LocateSymbol, Ambiguous) {
   // FIXME: Target the constructor as well.
   EXPECT_THAT(locateSymbolAt(AST, T.point("9")), ElementsAre(sym("Foo")));
   EXPECT_THAT(locateSymbolAt(AST, T.point("10")),
-              ElementsAre(sym("Foo", T.range("ConstructorLoc"), llvm::None)));
+              ElementsAre(sym("Foo", T.range("ConstructorLoc"), std::nullopt)));
   EXPECT_THAT(locateSymbolAt(AST, T.point("11")),
-              ElementsAre(sym("Foo", T.range("ConstructorLoc"), llvm::None)));
+              ElementsAre(sym("Foo", T.range("ConstructorLoc"), std::nullopt)));
   // These assertions are unordered because the order comes from
   // CXXRecordDecl::lookupDependentName() which doesn't appear to provide
   // an order guarantee.
   EXPECT_THAT(locateSymbolAt(AST, T.point("12")),
               UnorderedElementsAre(
-                  sym("bar", T.range("NonstaticOverload1"), llvm::None),
-                  sym("bar", T.range("NonstaticOverload2"), llvm::None)));
-  EXPECT_THAT(
-      locateSymbolAt(AST, T.point("13")),
-      UnorderedElementsAre(sym("baz", T.range("StaticOverload1"), llvm::None),
-                           sym("baz", T.range("StaticOverload2"), llvm::None)));
+                  sym("bar", T.range("NonstaticOverload1"), std::nullopt),
+                  sym("bar", T.range("NonstaticOverload2"), std::nullopt)));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("13")),
+              UnorderedElementsAre(
+                  sym("baz", T.range("StaticOverload1"), std::nullopt),
+                  sym("baz", T.range("StaticOverload2"), std::nullopt)));
 }
 
 TEST(LocateSymbol, TextualDependent) {
@@ -1360,10 +1360,11 @@ TEST(LocateSymbol, TextualDependent) {
   // interaction between locateASTReferent() and
   // locateSymbolNamedTextuallyAt().
   auto Results = locateSymbolAt(AST, Source.point(), Index.get());
-  EXPECT_THAT(Results,
-              UnorderedElementsAre(
-                  sym("uniqueMethodName", Header.range("FooLoc"), llvm::None),
-                  sym("uniqueMethodName", Header.range("BarLoc"), llvm::None)));
+  EXPECT_THAT(
+      Results,
+      UnorderedElementsAre(
+          sym("uniqueMethodName", Header.range("FooLoc"), std::nullopt),
+          sym("uniqueMethodName", Header.range("BarLoc"), std::nullopt)));
 }
 
 TEST(LocateSymbol, Alias) {
@@ -1625,7 +1626,7 @@ TEST(LocateSymbol, WithPreamble) {
   // stale one.
   EXPECT_THAT(
       cantFail(runLocateSymbolAt(Server, FooCpp, FooWithoutHeader.point())),
-      ElementsAre(sym("foo", FooWithoutHeader.range(), llvm::None)));
+      ElementsAre(sym("foo", FooWithoutHeader.range(), std::nullopt)));
 
   // Reset test environment.
   runAddDocument(Server, FooCpp, FooWithHeader.code());
@@ -1635,7 +1636,7 @@ TEST(LocateSymbol, WithPreamble) {
   // Use the AST being built in above request.
   EXPECT_THAT(
       cantFail(runLocateSymbolAt(Server, FooCpp, FooWithoutHeader.point())),
-      ElementsAre(sym("foo", FooWithoutHeader.range(), llvm::None)));
+      ElementsAre(sym("foo", FooWithoutHeader.range(), std::nullopt)));
 }
 
 TEST(LocateSymbol, NearbyTokenSmoke) {
@@ -1739,7 +1740,7 @@ TEST(LocateSymbol, NearbyIdentifier) {
       Nearby = halfOpenToRange(SM, CharSourceRange::getCharRange(
                                        Tok->location(), Tok->endLocation()));
     if (T.ranges().empty())
-      EXPECT_THAT(Nearby, Eq(llvm::None)) << Test;
+      EXPECT_THAT(Nearby, Eq(std::nullopt)) << Test;
     else
       EXPECT_EQ(Nearby, T.range()) << Test;
   }
@@ -1820,7 +1821,7 @@ TEST(FindImplementations, CaptureDefinition) {
   EXPECT_THAT(
       findImplementations(AST, Code.point(), TU.index().get()),
       UnorderedElementsAre(sym("Foo", Code.range("Decl"), Code.range("Def")),
-                           sym("Foo", Code.range("Child2"), llvm::None)))
+                           sym("Foo", Code.range("Child2"), std::nullopt)))
       << Test;
 }
 
@@ -2390,9 +2391,9 @@ TEST(FindReferences, NoQueryForLocalSymbols) {
     auto AST = TestTU::withCode(File.code()).build();
     findReferences(AST, File.point(), 0, &Rec);
     if (T.WantQuery)
-      EXPECT_NE(Rec.RefIDs, None) << T.AnnotatedCode;
+      EXPECT_NE(Rec.RefIDs, std::nullopt) << T.AnnotatedCode;
     else
-      EXPECT_EQ(Rec.RefIDs, None) << T.AnnotatedCode;
+      EXPECT_EQ(Rec.RefIDs, std::nullopt) << T.AnnotatedCode;
   }
 }
 

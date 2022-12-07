@@ -1206,7 +1206,7 @@ TEST_F(TUSchedulerTests, IncluderCache) {
     llvm::Optional<tooling::CompileCommand>
     getCompileCommand(PathRef File) const override {
       if (File == NoCmd || File == NotIncluded || FailAll)
-        return llvm::None;
+        return std::nullopt;
       auto Basic = getFallbackCommand(File);
       Basic.Heuristic.clear();
       if (File == Unreliable) {

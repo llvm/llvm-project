@@ -246,3 +246,21 @@ join:
   load i32, i32* %gep3
   ret void
 }
+
+; Don't crash with an unreachable predecessor.
+; CHECK-LABEL: pr59360
+; CHECK: MayAlias: i32* %loaded.ptr, i32* %phi
+define void @pr59360() {
+entry:
+  br label %outer
+
+loopexit:                                         ; No predecessors!
+  br label %outer
+
+outer:                                            ; preds = %loopexit, %entry
+  %phi = phi i32* [ %loaded.ptr, %loopexit ], [ null, %entry ]
+  store i32 0, i32* %phi, align 4
+  %loaded.ptr = load i32*, i32** null, align 8
+  %0 = load i32, i32* %loaded.ptr, align 4
+  ret void
+}

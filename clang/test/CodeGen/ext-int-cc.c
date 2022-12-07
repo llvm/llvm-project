@@ -131,10 +131,10 @@ void ParamPassing3(_BitInt(15) a, _BitInt(31) b) {}
 // are negated. This will give an error when a target does support larger
 // _BitInt widths to alert us to enable the test.
 void ParamPassing4(_BitInt(129) a) {}
-// LIN64-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
-// WIN64-NOT: define dso_local void @ParamPassing4(ptr %{{.+}})
-// LIN32-NOT: define{{.*}} void @ParamPassing4(ptr %{{.+}})
-// WIN32-NOT: define dso_local void @ParamPassing4(ptr %{{.+}})
+// LIN64: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
+// WIN64: define dso_local void @ParamPassing4(ptr %{{.+}})
+// LIN32: define{{.*}} void @ParamPassing4(ptr %{{.+}})
+// WIN32: define dso_local void @ParamPassing4(ptr %{{.+}})
 // NACL-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // NVPTX64-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // NVPTX-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
@@ -290,10 +290,10 @@ _BitInt(128) ReturnPassing4(void){}
 
 #if __BITINT_MAXWIDTH__ > 128
 _BitInt(129) ReturnPassing5(void){}
-// LIN64-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// WIN64-NOT: define dso_local void @ReturnPassing5(ptr noalias sret
-// LIN32-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
-// WIN32-NOT: define dso_local void @ReturnPassing5(ptr noalias sret
+// LIN64: define{{.*}} void @ReturnPassing5(ptr noalias sret
+// WIN64: define dso_local void @ReturnPassing5(ptr noalias sret
+// LIN32: define{{.*}} void @ReturnPassing5(ptr noalias sret
+// WIN32: define dso_local void @ReturnPassing5(ptr noalias sret
 // NACL-NOT: define{{.*}} void @ReturnPassing5(ptr noalias sret
 // NVPTX64-NOT: define{{.*}} i129 @ReturnPassing5(
 // NVPTX-NOT: define{{.*}} i129 @ReturnPassing5(

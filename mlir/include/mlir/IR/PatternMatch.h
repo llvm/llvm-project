@@ -502,10 +502,15 @@ public:
     finalizeRootUpdate(root);
   }
 
-  /// Find uses of `from` and replace it with `to`. It also marks every modified
-  /// uses and notifies the rewriter that an in-place operation modification is
-  /// about to happen.
+  /// Find uses of `from` and replace them with `to`. It also marks every
+  /// modified uses and notifies the rewriter that an in-place operation
+  /// modification is about to happen.
   void replaceAllUsesWith(Value from, Value to);
+
+  /// Find uses of `from` and replace them with `to` except if the user is
+  /// `exceptedUser`. It also marks every modified uses and notifies the
+  /// rewriter that an in-place operation modification is about to happen.
+  void replaceAllUsesExcept(Value from, Value to, Operation *exceptedUser);
 
   /// Used to notify the rewriter that the IR failed to be rewritten because of
   /// a match failure, and provide a callback to populate a diagnostic with the

@@ -105,7 +105,7 @@ lldb::addr_t TraceCursorIntelPT::GetLoadAddress() const {
 Optional<uint64_t> TraceCursorIntelPT::GetHWClock() const {
   if (const Optional<DecodedThread::TSCRange> &range = GetTSCRange())
     return range->tsc;
-  return None;
+  return std::nullopt;
 }
 
 Optional<double> TraceCursorIntelPT::GetWallClockTime() const {
@@ -113,7 +113,7 @@ Optional<double> TraceCursorIntelPT::GetWallClockTime() const {
           GetNanosecondsRange())
     return range->GetInterpolatedTime(m_pos, *m_beginning_of_time_nanos,
                                       *m_tsc_conversion);
-  return None;
+  return std::nullopt;
 }
 
 lldb::cpu_id_t TraceCursorIntelPT::GetCPU() const {

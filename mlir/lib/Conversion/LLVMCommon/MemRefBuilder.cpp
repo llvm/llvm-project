@@ -52,11 +52,7 @@ MemRefDescriptor MemRefDescriptor::fromStaticShape(
   assert(type.hasStaticShape() && "unexpected dynamic shape");
 
   // Extract all strides and offsets and verify they are static.
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  auto result = getStridesAndOffset(type, strides, offset);
-  (void)result;
-  assert(succeeded(result) && "unexpected failure in stride computation");
+  auto [strides, offset] = getStridesAndOffset(type);
   assert(!ShapedType::isDynamic(offset) &&
          "expected static offset");
   assert(!llvm::any_of(strides, ShapedType::isDynamic) &&

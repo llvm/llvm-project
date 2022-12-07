@@ -127,7 +127,7 @@ public:
   /// attribute.
   ///
   /// \param attr DWARF attribute to search for.
-  /// \returns Optional index of the attribute if found, None otherwise.
+  /// \returns Optional index of the attribute if found, std::nullopt otherwise.
   std::optional<uint32_t> findAttributeIndex(dwarf::Attribute attr) const;
 
   /// Extract a DWARF form value from a DIE specified by DIE offset.

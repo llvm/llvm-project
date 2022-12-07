@@ -37,8 +37,7 @@ bool isErrorAboutInclude(llvm::StringRef Line) {
 }
 
 // Heuristically headers that only want to be included via an umbrella.
-bool isDontIncludeMeHeader(llvm::MemoryBufferRef Buffer) {
-  StringRef Content = Buffer.getBuffer();
+bool isDontIncludeMeHeader(StringRef Content) {
   llvm::StringRef Line;
   // Only sniff up to 100 lines or 10KB.
   Content = Content.take_front(100 * 100);
@@ -50,19 +49,48 @@ bool isDontIncludeMeHeader(llvm::MemoryBufferRef Buffer) {
   return false;
 }
 
+bool isImportLine(llvm::StringRef Line) {
+  Line = Line.ltrim();
+  if (!Line.consume_front("#"))
+    return false;
+  Line = Line.ltrim();
+  return Line.startswith("import");
+}
+
+llvm::StringRef getFileContents(const FileEntry *FE, const SourceManager &SM) {
+  return const_cast<SourceManager &>(SM)
+      .getMemoryBufferForFileOrNone(FE)
+      .value_or(llvm::MemoryBufferRef())
+      .getBuffer();
+}
+
 } // namespace
 
 bool isSelfContainedHeader(const FileEntry *FE, const SourceManager &SM,
                            HeaderSearch &HeaderInfo) {
   assert(FE);
   if (!HeaderInfo.isFileMultipleIncludeGuarded(FE) &&
-      !HeaderInfo.hasFileBeenImported(FE))
+      !HeaderInfo.hasFileBeenImported(FE) &&
+      // Any header that contains #imports is supposed to be #import'd so no
+      // need to check for anything but the main-file.
+      (SM.getFileEntryForID(SM.getMainFileID()) != FE ||
+       !codeContainsImports(getFileContents(FE, SM))))
     return false;
   // This pattern indicates that a header can't be used without
   // particular preprocessor state, usually set up by another header.
-  return !isDontIncludeMeHeader(
-      const_cast<SourceManager &>(SM).getMemoryBufferForFileOrNone(FE).value_or(
-          llvm::MemoryBufferRef()));
+  return !isDontIncludeMeHeader(getFileContents(FE, SM));
+}
+
+bool codeContainsImports(llvm::StringRef Code) {
+  // Only sniff up to 100 lines or 10KB.
+  Code = Code.take_front(100 * 100);
+  llvm::StringRef Line;
+  for (unsigned I = 0; I < 100 && !Code.empty(); ++I) {
+    std::tie(Line, Code) = Code.split('\n');
+    if (isImportLine(Line))
+      return true;
+  }
+  return false;
 }
 
 llvm::Optional<StringRef> parseIWYUPragma(const char *Text) {

@@ -639,7 +639,8 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
       });
 
   if (didEncounterError)
-    return failure();
+    return rewriter.notifyMatchFailure(
+        operation, "unable to create linalg.generic body for elementwise op");
 
   rewriter.replaceOp(operation, linalgOp->getResults());
   return success();
@@ -816,7 +817,8 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
       });
 
   if (!didEncounterError)
-    return failure();
+    return rewriter.notifyMatchFailure(
+        op, "unable to create linalg.generic body for reduce op");
 
   SmallVector<ReassociationExprs, 4> reassociationMap;
   uint64_t expandInputRank =
@@ -1086,7 +1088,7 @@ public:
                                 PatternRewriter &rewriter) const final {
     DenseIntElementsAttr perms;
     if (!matchPattern(op.getPerms(), m_Constant(&perms))) {
-      return failure();
+      return rewriter.notifyMatchFailure(op, "unmatched permutation tensor");
     }
 
     auto loc = op.getLoc();
@@ -1348,7 +1350,8 @@ public:
 
     // TODO(suderman): These string values should be declared the TOSA dialect.
     if (op.getMode() != "NEAREST_NEIGHBOR" && op.getMode() != "BILINEAR")
-      return failure();
+      return rewriter.notifyMatchFailure(
+          op, "tosa.resize mode should be NEAREST_NEIGHBOR or BILINEAR");
 
     const bool isBilinear = op.getMode() == "BILINEAR";
 
@@ -1439,11 +1442,13 @@ public:
     auto dynamicDimsOr =
         checkHasDynamicBatchDims(rewriter, op, {input, op.getOutput()});
     if (!dynamicDimsOr.has_value())
-      return failure();
+      return rewriter.notifyMatchFailure(
+          op, "unable to get dynamic dimensions of tosa.resize");
     SmallVector<Value> dynamicDims = dynamicDimsOr.value();
 
     if (op.getMode() != "NEAREST_NEIGHBOR" && op.getMode() != "BILINEAR")
-      return failure();
+      return rewriter.notifyMatchFailure(
+          op, "tosa.resize mode should be NEAREST_NEIGHBOR or BILINEAR");
 
     auto emptyTensor = rewriter.create<tensor::EmptyOp>(
         loc, resultTy.getShape(), resultElementTy, dynamicDims);
@@ -1552,8 +1557,8 @@ public:
       y = rewriter.create<arith::AddIOp>(loc, y, yOffset);
       x = rewriter.create<arith::AddIOp>(loc, x, xOffset);
 
-      iy = rewriter.create<arith::DivUIOp>(loc, y, yScaleN);
-      ix = rewriter.create<arith::DivUIOp>(loc, x, xScaleN);
+      iy = rewriter.create<arith::DivSIOp>(loc, y, yScaleN);
+      ix = rewriter.create<arith::DivSIOp>(loc, x, xScaleN);
 
       Value tempY = rewriter.create<arith::MulIOp>(loc, iy, yScaleN);
       Value tempX = rewriter.create<arith::MulIOp>(loc, ix, xScaleN);
@@ -1578,14 +1583,12 @@ public:
         xPred = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OGE,
                                                dx, halfVal);
       } else {
-        Value yScaleNHalfVal =
-            rewriter.create<arith::ShRSIOp>(loc, yScaleN, oneVal);
-        Value xScaleNHalfVal =
-            rewriter.create<arith::ShRSIOp>(loc, xScaleN, oneVal);
+        Value dyDoubled = rewriter.create<arith::ShLIOp>(loc, dy, oneVal);
+        Value dxDoubled = rewriter.create<arith::ShLIOp>(loc, dx, oneVal);
         yPred = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sge,
-                                               dy, yScaleNHalfVal);
+                                               dyDoubled, yScaleN);
         xPred = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sge,
-                                               dx, xScaleNHalfVal);
+                                               dxDoubled, xScaleN);
       }
 
       auto yOffset =
@@ -1929,81 +1932,6 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
   }
 };
 
-class PadConverter : public OpRewritePattern<tosa::PadOp> {
-public:
-  using OpRewritePattern<tosa::PadOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::PadOp padOp,
-                                PatternRewriter &rewriter) const final {
-    auto loc = padOp.getLoc();
-    auto input = padOp.getInput1();
-    auto padding = padOp.getPadding();
-
-    ShapedType inputTy = input.getType().cast<ShapedType>();
-    Type elementTy = inputTy.getElementType();
-    int64_t rank = inputTy.getRank();
-
-    // Setup the default constantAttr.
-
-    Value padConstant;
-
-    if (padOp.getPadConst()) {
-      padConstant = rewriter.createOrFold<tensor::ExtractOp>(
-          loc, padOp.getPadConst(), ValueRange({}));
-    } else {
-      Attribute constantAttr;
-      if (elementTy.isa<FloatType>()) {
-        constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-      } else if (elementTy.isa<IntegerType>() && !padOp.getQuantizationInfo()) {
-        constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-      } else if (elementTy.isa<IntegerType>() && padOp.getQuantizationInfo()) {
-        int64_t value = padOp.getQuantizationInfo()->getInputZp();
-        constantAttr = rewriter.getIntegerAttr(elementTy, value);
-      }
-      if (constantAttr)
-        padConstant = rewriter.create<arith::ConstantOp>(loc, constantAttr);
-    }
-
-    if (!padConstant) {
-      return rewriter.notifyMatchFailure(
-          padOp, "tosa.pad was unable to determine the pad constant value.");
-    }
-
-    Value lowIndex =
-        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(0));
-    Value highIndex =
-        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(1));
-
-    SmallVector<OpFoldResult, 3> lowValues;
-    SmallVector<OpFoldResult, 3> highValues;
-
-    lowValues.reserve(rank);
-    highValues.reserve(rank);
-
-    for (int i = 0; i < rank; i++) {
-      Value inputIndex = rewriter.createOrFold<arith::ConstantIndexOp>(loc, i);
-      Value lowVal = rewriter.createOrFold<tensor::ExtractOp>(
-          loc, padding, ValueRange({inputIndex, lowIndex}));
-      Value highVal = rewriter.createOrFold<tensor::ExtractOp>(
-          loc, padding, ValueRange({inputIndex, highIndex}));
-
-      lowVal = rewriter.createOrFold<arith::IndexCastOp>(
-          loc, rewriter.getIndexType(), lowVal);
-      highVal = rewriter.createOrFold<arith::IndexCastOp>(
-          loc, rewriter.getIndexType(), highVal);
-
-      lowValues.push_back(lowVal);
-      highValues.push_back(highVal);
-    }
-
-    auto newPadOp = rewriter.create<tensor::PadOp>(
-        loc, padOp.getType(), input, lowValues, highValues, padConstant);
-
-    rewriter.replaceOp(padOp, newPadOp.getResult());
-    return success();
-  }
-};
-
 // Tosa argmax lowering represents the ArgMax op as an linalg.indexed_generic
 // op, producing two output buffers.
 //
@@ -2149,7 +2077,8 @@ public:
     auto dynamicDimsOr = checkHasDynamicBatchDims(
         rewriter, op, {input, indices, op.getOutput()});
     if (!dynamicDimsOr.has_value())
-      return failure();
+      return rewriter.notifyMatchFailure(
+          op, "tosa.gather currently only supports dynamic batch dimensions");
     SmallVector<Value> dynamicDims = dynamicDimsOr.value();
 
     auto resultElementTy = resultTy.getElementType();
@@ -2371,7 +2300,6 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       ArgMaxConverter,
       ConcatConverter,
       GatherConverter,
-      PadConverter,
       ReshapeConverterCollapse,
       ReshapeConverterExpand,
       ReshapeConverterCollapseExpand,

@@ -5,7 +5,7 @@
 ;  for (int i = N-1; i >= 0; --i)
 ;    a[i] = b[i] + 1.0;
 
-; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -S \
+; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple aarch64-linux-gnu -S \
 ; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue < %s | FileCheck %s
 
 define void @vector_reverse_f64(i64 %N, double* noalias %a, double* noalias %b) #0{

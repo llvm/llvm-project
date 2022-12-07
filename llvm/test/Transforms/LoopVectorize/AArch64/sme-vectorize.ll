@@ -1,14 +1,14 @@
-; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_enabled/ %s | opt -loop-vectorize -slp-vectorizer -S - | FileCheck %s --check-prefix=CHECK
-; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_enabled/ %s | opt -loop-vectorize -slp-vectorizer -S -enable-scalable-autovec-in-streaming-mode - | FileCheck %s --check-prefix=CHECK-FORCE-SCALABLE
-; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_enabled/ %s | opt -loop-vectorize -slp-vectorizer -S -enable-fixedwidth-autovec-in-streaming-mode - | FileCheck %s --check-prefix=CHECK-FORCE-FIXEDWIDTH
+; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_enabled/ %s | opt -passes=loop-vectorize,slp-vectorizer -S - | FileCheck %s --check-prefix=CHECK
+; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_enabled/ %s | opt -passes=loop-vectorize,slp-vectorizer -S -enable-scalable-autovec-in-streaming-mode - | FileCheck %s --check-prefix=CHECK-FORCE-SCALABLE
+; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_enabled/ %s | opt -passes=loop-vectorize,slp-vectorizer -S -enable-fixedwidth-autovec-in-streaming-mode - | FileCheck %s --check-prefix=CHECK-FORCE-FIXEDWIDTH
 
-; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_compatible/ %s | opt -loop-vectorize -slp-vectorizer -S - | FileCheck %s --check-prefix=CHECK
-; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_compatible/ %s | opt -loop-vectorize -slp-vectorizer -S -enable-scalable-autovec-in-streaming-mode - | FileCheck %s --check-prefix=CHECK-FORCE-SCALABLE
-; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_compatible/ %s | opt -loop-vectorize -slp-vectorizer -S -enable-fixedwidth-autovec-in-streaming-mode - | FileCheck %s --check-prefix=CHECK-FORCE-FIXEDWIDTH
+; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_compatible/ %s | opt -passes=loop-vectorize,slp-vectorizer -S - | FileCheck %s --check-prefix=CHECK
+; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_compatible/ %s | opt -passes=loop-vectorize,slp-vectorizer -S -enable-scalable-autovec-in-streaming-mode - | FileCheck %s --check-prefix=CHECK-FORCE-SCALABLE
+; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_compatible/ %s | opt -passes=loop-vectorize,slp-vectorizer -S -enable-fixedwidth-autovec-in-streaming-mode - | FileCheck %s --check-prefix=CHECK-FORCE-FIXEDWIDTH
 
-; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_body/ %s | opt -loop-vectorize -slp-vectorizer -S - | FileCheck %s --check-prefix=CHECK
-; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_body/ %s | opt -loop-vectorize -slp-vectorizer -S -enable-scalable-autovec-in-streaming-mode - | FileCheck %s --check-prefix=CHECK-FORCE-SCALABLE
-; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_body/ %s | opt -loop-vectorize -slp-vectorizer -S -enable-fixedwidth-autovec-in-streaming-mode - | FileCheck %s --check-prefix=CHECK-FORCE-FIXEDWIDTH
+; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_body/ %s | opt -passes=loop-vectorize,slp-vectorizer -S - | FileCheck %s --check-prefix=CHECK
+; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_body/ %s | opt -passes=loop-vectorize,slp-vectorizer -S -enable-scalable-autovec-in-streaming-mode - | FileCheck %s --check-prefix=CHECK-FORCE-SCALABLE
+; RUN: sed -e s/REPLACE_PSTATE_MACRO/aarch64_pstate_sm_body/ %s | opt -passes=loop-vectorize,slp-vectorizer -S -enable-fixedwidth-autovec-in-streaming-mode - | FileCheck %s --check-prefix=CHECK-FORCE-FIXEDWIDTH
 
 target triple = "aarch64-unknown-linux-gnu"
 

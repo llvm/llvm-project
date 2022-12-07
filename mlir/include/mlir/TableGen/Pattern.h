@@ -284,7 +284,7 @@ public:
     // Creates a SymbolInfo instance. `dagAndConstant` is only used for `Attr`
     // and `Operand` so should be std::nullopt for `Result` and `Value` kind.
     SymbolInfo(const Operator *op, Kind kind,
-               Optional<DagAndConstant> dagAndConstant);
+               std::optional<DagAndConstant> dagAndConstant);
 
     // Static methods for creating SymbolInfo.
     static SymbolInfo getAttr(const Operator *op, int index) {
@@ -345,11 +345,11 @@ public:
     // the size of MultipleValue symbol). Note that operands may be bound to the
     // same symbol, use the DagNode and index to distinguish them. For `Attr`
     // and MultipleValue, the Dag part will be nullptr.
-    Optional<DagAndConstant> dagAndConstant;
+    std::optional<DagAndConstant> dagAndConstant;
 
     // Alternative name for the symbol. It is used in case the name
     // is not unique. Applicable for `Operand` only.
-    Optional<std::string> alternativeName;
+    std::optional<std::string> alternativeName;
   };
 
   using BaseT = std::unordered_multimap<std::string, SymbolInfo>;

@@ -554,7 +554,7 @@ def Vector_ExtractElementOp :
 
     Note that this instruction resembles vector.extract, but is restricted to
     0-D and 1-D vectors and relaxed to dynamic indices.
-    If the vector is 0-D, the position must be llvm::None.
+    If the vector is 0-D, the position must be std::nullopt.
 
 
     It is meant to be closer to LLVM's version:

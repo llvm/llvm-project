@@ -1170,10 +1170,21 @@ public:
   /// will be set to true.
   bool isReassociationCandidate(const MachineInstr &Inst, bool &Commuted) const;
 
-  /// Return true when \P Inst is both associative and commutative.
-  virtual bool isAssociativeAndCommutative(const MachineInstr &Inst) const {
+  /// Return true when \P Inst is both associative and commutative. If \P Invert
+  /// is true, then the inverse of \P Inst operation must be tested.
+  virtual bool isAssociativeAndCommutative(const MachineInstr &Inst,
+                                           bool Invert = false) const {
     return false;
   }
+
+  /// Return the inverse operation opcode if it exists for \P Opcode (e.g. add
+  /// for sub and vice versa).
+  virtual std::optional<unsigned> getInverseOpcode(unsigned Opcode) const {
+    return std::nullopt;
+  }
+
+  /// Return true when \P Opcode1 or its inversion is equal to \P Opcode2.
+  bool areOpcodesEqualOrInverse(unsigned Opcode1, unsigned Opcode2) const;
 
   /// Return true when \P Inst has reassociable operands in the same \P MBB.
   virtual bool hasReassociableOperands(const MachineInstr &Inst,
@@ -1206,6 +1217,15 @@ public:
                       SmallVectorImpl<MachineInstr *> &InsInstrs,
                       SmallVectorImpl<MachineInstr *> &DelInstrs,
                       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const;
+
+  /// Reassociation of some instructions requires inverse operations (e.g.
+  /// (X + A) - Y => (X - Y) + A). This method returns a pair of new opcodes
+  /// (new root opcode, new prev opcode) that must be used to reassociate \P
+  /// Root and \P Prev accoring to \P Pattern.
+  std::pair<unsigned, unsigned>
+  getReassociationOpcodes(MachineCombinerPattern Pattern,
+                          const MachineInstr &Root,
+                          const MachineInstr &Prev) const;
 
   /// The limit on resource length extension we accept in MachineCombiner Pass.
   virtual int getExtendResourceLenLimit() const { return 0; }

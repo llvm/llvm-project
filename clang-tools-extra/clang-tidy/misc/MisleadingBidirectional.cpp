@@ -11,6 +11,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/Support/ConvertUTF.h"
+#include <optional>
 
 using namespace clang;
 using namespace clang::tidy::misc;
@@ -90,7 +91,7 @@ class MisleadingBidirectionalCheck::MisleadingBidirectionalHandler
     : public CommentHandler {
 public:
   MisleadingBidirectionalHandler(MisleadingBidirectionalCheck &Check,
-                                 llvm::Optional<std::string> User)
+                                 std::optional<std::string> User)
       : Check(Check) {}
 
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {

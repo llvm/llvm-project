@@ -1395,7 +1395,8 @@ static bool emitAvailabilityImpl(const RecordKeeper &recordKeeper,
   auto defs = recordKeeper.getAllDerivedDefinitions("SPIRV_Op");
   for (const auto *def : defs) {
     Operator op(def);
-    emitAvailabilityImpl(op, os);
+    if (def->getValueAsBit("autogenAvailability"))
+      emitAvailabilityImpl(op, os);
   }
   return false;
 }

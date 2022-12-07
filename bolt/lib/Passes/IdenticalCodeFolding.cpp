@@ -110,8 +110,8 @@ bool isInstrEquivalentWith(const MCInst &InstA, const BinaryBasicBlock &BBA,
   // NB: there's no need to compare jump table indirect jump instructions
   //     separately as jump tables are handled by comparing corresponding
   //     symbols.
-  const Optional<MCPlus::MCLandingPad> EHInfoA = BC.MIB->getEHInfo(InstA);
-  const Optional<MCPlus::MCLandingPad> EHInfoB = BC.MIB->getEHInfo(InstB);
+  const std::optional<MCPlus::MCLandingPad> EHInfoA = BC.MIB->getEHInfo(InstA);
+  const std::optional<MCPlus::MCLandingPad> EHInfoB = BC.MIB->getEHInfo(InstB);
 
   if (EHInfoA || EHInfoB) {
     if (!EHInfoA && (EHInfoB->first || EHInfoB->second))

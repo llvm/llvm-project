@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -loop-vectorize -mtriple=arm64-apple-iphoneos -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64-apple-iphoneos -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s
 
 ; Specify a large unsafe vectorization factor of 32 that gets clamped to 16,
 ; then test an even smaller VF of 2 is selected based on the cost-model.

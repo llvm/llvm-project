@@ -78,10 +78,10 @@ StringRef StaticVerifierFunctionEmitter::getTypeConstraintFn(
 
 // Find a uniqued attribute constraint. Since not all attribute constraints can
 // be uniqued, return std::nullopt if one was not found.
-Optional<StringRef> StaticVerifierFunctionEmitter::getAttrConstraintFn(
+std::optional<StringRef> StaticVerifierFunctionEmitter::getAttrConstraintFn(
     const Constraint &constraint) const {
   auto it = attrConstraints.find(constraint);
-  return it == attrConstraints.end() ? Optional<StringRef>()
+  return it == attrConstraints.end() ? std::optional<StringRef>()
                                      : StringRef(it->second);
 }
 

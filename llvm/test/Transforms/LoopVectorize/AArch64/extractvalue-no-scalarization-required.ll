@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
 
-; RUN: opt -loop-vectorize -mtriple=arm64-apple-ios %s -S -debug -disable-output 2>&1 | FileCheck --check-prefix=CM %s
-; RUN: opt -loop-vectorize -force-vector-width=2 -force-vector-interleave=1 %s -S | FileCheck --check-prefix=FORCED %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64-apple-ios %s -S -debug -disable-output 2>&1 | FileCheck --check-prefix=CM %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=1 %s -S | FileCheck --check-prefix=FORCED %s
 
 ; Test case from PR41294.
 

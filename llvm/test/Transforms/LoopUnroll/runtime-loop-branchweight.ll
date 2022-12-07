@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-runtime=true -unroll-count=4 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-unroll -unroll-runtime=true -unroll-count=4 | FileCheck %s
 ; RUN: opt < %s -S -passes=loop-unroll -unroll-runtime=true -unroll-count=4 | FileCheck %s
 
 ;; Check that the remainder loop is properly assigned a branch weight for its latch branch.

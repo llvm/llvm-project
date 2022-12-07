@@ -53,8 +53,8 @@ define <32 x half> @test_sqrt_ph_512_fast_estimate_attribute_2(<32 x half> %a0, 
 ; CHECK-NEXT:    vmulph %zmm2, %zmm0, %zmm0
 ; CHECK-NEXT:    vfmadd213ph {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to32}, %zmm2, %zmm0
 ; CHECK-NEXT:    vmulph {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to32}, %zmm2, %zmm2
-; CHECK-NEXT:    vmulph %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    vmulph %zmm0, %zmm2, %zmm0
+; CHECK-NEXT:    vmulph %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    vmulph %zmm2, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %1 = call fast <32 x half> @llvm.sqrt.v32f16(<32 x half> %a0)
   %2 = fdiv fast <32 x half> %a1, %1

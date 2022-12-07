@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-count=2 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-unroll -unroll-count=2 | FileCheck %s
 ; Checks that "llvm.loop.unroll.disable" is set when
 ; unroll with count set by user has been applied.
 ;

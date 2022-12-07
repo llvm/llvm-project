@@ -15,6 +15,9 @@
 #include <__config>
 #include <__format/format_fwd.h>
 #include <__format/format_parse_context.h>
+#include <__type_traits/is_specialization.h>
+#include <__utility/pair.h>
+#include <tuple>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -56,6 +59,17 @@ concept __formattable =
 #  if _LIBCPP_STD_VER > 20
 template <class _Tp, class _CharT>
 concept formattable = __formattable<_Tp, _CharT>;
+
+// [tuple.like] defines a tuple-like exposition only concept. This concept is
+// not related to that. Therefore it uses a different name for the concept.
+//
+// TODO FMT Add a test to validate we fail when using that concept after P2165
+// has been implemented.
+template <class _Tp>
+concept __fmt_pair_like = __is_specialization_v<_Tp, pair> ||
+                          // Use a requires since tuple_size_v may fail to instantiate,
+                          (__is_specialization_v<_Tp, tuple> && requires { tuple_size_v<_Tp> == 2; });
+
 #  endif //_LIBCPP_STD_VER > 20
 #endif //_LIBCPP_STD_VER > 17
 

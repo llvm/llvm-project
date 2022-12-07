@@ -595,3 +595,30 @@ define i1 @all_uses_after_assume(i8 %a, i8 %b, i1 %c) {
   %res.2 = xor i1 %res.1, %c.2
   ret i1 %res.2
 }
+
+define i1 @test_order_assume_and_conds_in_different_bb(i16 %a, ptr %dst) {
+; CHECK-LABEL: @test_order_assume_and_conds_in_different_bb(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i16 [[A:%.*]], 10
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    store volatile float 0.000000e+00, ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i16 [[A]], 20
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[C_2]])
+; CHECK-NEXT:    ret i1 [[C_2]]
+;
+entry:
+  %c.1 = icmp ult i16 %a, 10
+  br i1 %c.1, label %then, label %else
+
+then:
+  ret i1 0
+
+else:
+  store volatile float 0.000000e+00, ptr %dst
+  %c.2 = icmp eq i16 %a, 20
+  tail call void @llvm.assume(i1 %c.2)
+  ret i1 %c.2
+}

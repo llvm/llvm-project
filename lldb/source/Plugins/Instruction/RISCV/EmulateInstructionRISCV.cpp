@@ -497,13 +497,13 @@ static const InstrPattern PATTERNS[] = {
 
     // RVC (Compressed Instructions) //
     {"C_LWSP", 0xE003, 0x4002, DecodeC_LWSP},
-    {"C_LDSP", 0xE003, 0x6002, DecodeC_LDSP},
+    {"C_LDSP", 0xE003, 0x6002, DecodeC_LDSP, RV64 | RV128},
     {"C_SWSP", 0xE003, 0xC002, DecodeC_SWSP},
-    {"C_SDSP", 0xE003, 0xE002, DecodeC_SDSP},
+    {"C_SDSP", 0xE003, 0xE002, DecodeC_SDSP, RV64 | RV128},
     {"C_LW", 0xE003, 0x4000, DecodeC_LW},
-    {"C_LD", 0xE003, 0x6000, DecodeC_LD},
+    {"C_LD", 0xE003, 0x6000, DecodeC_LD, RV64 | RV128},
     {"C_SW", 0xE003, 0xC000, DecodeC_SW},
-    {"C_SD", 0xE003, 0xE000, DecodeC_SD},
+    {"C_SD", 0xE003, 0xE000, DecodeC_SD, RV64 | RV128},
     {"C_J", 0xE003, 0xA001, DecodeC_J},
     {"C_JR", 0xF07F, 0x8002, DecodeC_JR},
     {"C_JALR", 0xF07F, 0x9002, DecodeC_JALR},
@@ -512,11 +512,11 @@ static const InstrPattern PATTERNS[] = {
     {"C_LI", 0xE003, 0x4001, DecodeC_LI},
     {"C_LUI_ADDI16SP", 0xE003, 0x6001, DecodeC_LUI_ADDI16SP},
     {"C_ADDI", 0xE003, 0x1, DecodeC_ADDI},
-    {"C_ADDIW", 0xE003, 0x2001, DecodeC_ADDIW},
+    {"C_ADDIW", 0xE003, 0x2001, DecodeC_ADDIW, RV64 | RV128},
     {"C_ADDI4SPN", 0xE003, 0x0, DecodeC_ADDI4SPN},
-    {"C_SLLI", 0xE003, 0x2, DecodeC_SLLI},
-    {"C_SRLI", 0xEC03, 0x8001, DecodeC_SRLI},
-    {"C_SRAI", 0xEC03, 0x8401, DecodeC_SRAI},
+    {"C_SLLI", 0xE003, 0x2, DecodeC_SLLI, RV64 | RV128},
+    {"C_SRLI", 0xEC03, 0x8001, DecodeC_SRLI, RV64 | RV128},
+    {"C_SRAI", 0xEC03, 0x8401, DecodeC_SRAI, RV64 | RV128},
     {"C_ANDI", 0xEC03, 0x8801, DecodeC_ANDI},
     {"C_MV", 0xF003, 0x8002, DecodeC_MV},
     {"C_ADD", 0xF003, 0x9002, DecodeC_ADD},
@@ -524,8 +524,13 @@ static const InstrPattern PATTERNS[] = {
     {"C_OR", 0xFC63, 0x8C41, DecodeC_OR},
     {"C_XOR", 0xFC63, 0x8C21, DecodeC_XOR},
     {"C_SUB", 0xFC63, 0x8C01, DecodeC_SUB},
-    {"C_SUBW", 0xFC63, 0x9C01, DecodeC_SUBW},
-    {"C_ADDW", 0xFC63, 0x9C21, DecodeC_ADDW},
+    {"C_SUBW", 0xFC63, 0x9C01, DecodeC_SUBW, RV64 | RV128},
+    {"C_ADDW", 0xFC63, 0x9C21, DecodeC_ADDW, RV64 | RV128},
+    // RV32FC //
+    {"FLW", 0xE003, 0x6000, DecodeC_FLW, RV32},
+    {"FSW", 0xE003, 0xE000, DecodeC_FSW, RV32},
+    {"FLWSP", 0xE003, 0x6002, DecodeC_FLWSP, RV32},
+    {"FSWSP", 0xE003, 0xE002, DecodeC_FSWSP, RV32},
 
     // RV32F (Extension for Single-Precision Floating-Point) //
     {"FLW", 0x707F, 0x2007, DecodeIType<FLW>},
@@ -569,9 +574,16 @@ llvm::Optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
   // check whether the compressed encode could be valid
   uint16_t mask = try_rvc & 0b11;
   bool is_rvc = try_rvc != 0 && mask != 3;
+  uint8_t inst_type = RV64;
+
+  // if we have ArchSpec::eCore_riscv128 in the future,
+  // we also need to check it here
+  if (m_arch.GetCore() == ArchSpec::eCore_riscv32)
+    inst_type = RV32;
 
   for (const InstrPattern &pat : PATTERNS) {
-    if ((inst & pat.type_mask) == pat.eigen) {
+    if ((inst & pat.type_mask) == pat.eigen &&
+        (inst_type & pat.inst_type) != 0) {
       LLDB_LOGF(
           log, "EmulateInstructionRISCV::%s: inst(%x at %lx) was decoded to %s",
           __FUNCTION__, inst, m_addr, pat.name);

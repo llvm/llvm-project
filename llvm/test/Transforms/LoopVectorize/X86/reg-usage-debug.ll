@@ -1,4 +1,4 @@
-; RUN: opt < %s -debug-only=loop-vectorize -loop-vectorize -mtriple=x86_64-unknown-linux -S 2>&1 | FileCheck %s
+; RUN: opt < %s -debug-only=loop-vectorize -passes=loop-vectorize -mtriple=x86_64-unknown-linux -S 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Test that the register usage estimation is not affected by the presence of

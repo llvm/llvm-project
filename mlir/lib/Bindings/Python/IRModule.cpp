@@ -91,14 +91,14 @@ PyGlobals::lookupDialectClass(const std::string &dialectNamespace) {
   const auto foundIt = dialectClassMap.find(dialectNamespace);
   if (foundIt != dialectClassMap.end()) {
     if (foundIt->second.is_none())
-      return llvm::None;
+      return std::nullopt;
     assert(foundIt->second && "py::object is defined");
     return foundIt->second;
   }
 
   // Not found and loading did not yield a registration. Negative cache.
   dialectClassMap[dialectNamespace] = py::none();
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::Optional<pybind11::object>
@@ -107,7 +107,7 @@ PyGlobals::lookupRawOpViewClass(llvm::StringRef operationName) {
     auto foundIt = rawOpViewClassMapCache.find(operationName);
     if (foundIt != rawOpViewClassMapCache.end()) {
       if (foundIt->second.is_none())
-        return llvm::None;
+        return std::nullopt;
       assert(foundIt->second && "py::object is defined");
       return foundIt->second;
     }
@@ -123,7 +123,7 @@ PyGlobals::lookupRawOpViewClass(llvm::StringRef operationName) {
     auto foundIt = rawOpViewClassMap.find(operationName);
     if (foundIt != rawOpViewClassMap.end()) {
       if (foundIt->second.is_none())
-        return llvm::None;
+        return std::nullopt;
       assert(foundIt->second && "py::object is defined");
       // Positive cache.
       rawOpViewClassMapCache[operationName] = foundIt->second;
@@ -131,7 +131,7 @@ PyGlobals::lookupRawOpViewClass(llvm::StringRef operationName) {
     }
     // Negative cache.
     rawOpViewClassMap[operationName] = py::none();
-    return llvm::None;
+    return std::nullopt;
   }
 }
 

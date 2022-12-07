@@ -33,7 +33,6 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -249,18 +248,22 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
 }
 
 llvm::Optional<Fix> IncludeFixer::insertHeader(llvm::StringRef Spelled,
-                                               llvm::StringRef Symbol) const {
+                                               llvm::StringRef Symbol,
+                                               tooling::IncludeDirective Directive) const {
   Fix F;
 
-  if (auto Edit = Inserter->insert(Spelled))
+  if (auto Edit = Inserter->insert(Spelled, Directive))
     F.Edits.push_back(std::move(*Edit));
   else
     return std::nullopt;
 
+  llvm::StringRef DirectiveSpelling =
+      Directive == tooling::IncludeDirective::Include ? "Include" : "Import";
   if (Symbol.empty())
-    F.Message = llvm::formatv("Include {0}", Spelled);
+    F.Message = llvm::formatv("{0} {1}", DirectiveSpelling, Spelled);
   else
-    F.Message = llvm::formatv("Include {0} for symbol {1}", Spelled, Symbol);
+    F.Message = llvm::formatv("{0} {1} for symbol {2}",
+        DirectiveSpelling, Spelled, Symbol);
 
   return F;
 }
@@ -317,17 +320,21 @@ std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
   llvm::StringSet<> InsertedHeaders;
   for (const auto &Sym : Syms) {
     for (const auto &Inc : getRankedIncludes(Sym)) {
-      if (auto ToInclude = Inserted(Sym, Inc)) {
+      // FIXME: We should support #import directives here.
+      if ((Inc.Directive & clang::clangd::Symbol::Include) == 0)
+        continue;
+      if (auto ToInclude = Inserted(Sym, Inc.Header)) {
         if (ToInclude->second) {
           if (!InsertedHeaders.try_emplace(ToInclude->first).second)
             continue;
           if (auto Fix =
-                  insertHeader(ToInclude->first, (Sym.Scope + Sym.Name).str()))
+                  insertHeader(ToInclude->first, (Sym.Scope + Sym.Name).str(),
+                               tooling::IncludeDirective::Include))
             Fixes.push_back(std::move(*Fix));
         }
       } else {
-        vlog("Failed to calculate include insertion for {0} into {1}: {2}", Inc,
-             File, ToInclude.takeError());
+        vlog("Failed to calculate include insertion for {0} into {1}: {2}",
+             Inc.Header, File, ToInclude.takeError());
       }
     }
   }

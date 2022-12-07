@@ -51,6 +51,9 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
 
+  void lowerVSPILL(MachineBasicBlock::iterator II) const;
+  void lowerVRELOAD(MachineBasicBlock::iterator II) const;
+
   Register getFrameRegister(const MachineFunction &MF) const override;
 
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {

@@ -11,9 +11,18 @@
 namespace llvm {
 namespace exegesis {
 
+CodeTemplate::CodeTemplate(const CodeTemplate &) = default;
+
 CodeTemplate::CodeTemplate(CodeTemplate &&) = default;
 
 CodeTemplate &CodeTemplate::operator=(CodeTemplate &&) = default;
+
+CodeTemplate &CodeTemplate::operator=(const CodeTemplate &) = default;
+
+CodeTemplate CodeTemplate::clone() const {
+  CodeTemplate CT = *this;
+  return CT;
+}
 
 InstructionTemplate::InstructionTemplate(const Instruction *Instr)
     : Instr(Instr), VariableValues(Instr->Variables.size()) {}

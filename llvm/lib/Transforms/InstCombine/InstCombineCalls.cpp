@@ -2008,6 +2008,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return replaceOperand(*II, 0, TVal);
     }
 
+    Value *Magnitude, *Sign;
+    if (match(II->getArgOperand(0),
+              m_CopySign(m_Value(Magnitude), m_Value(Sign)))) {
+      // fabs (copysign x, y) -> (fabs x)
+      CallInst *AbsSign =
+          Builder.CreateCall(II->getCalledFunction(), {Magnitude});
+      AbsSign->copyFastMathFlags(II);
+      return replaceInstUsesWith(*II, AbsSign);
+    }
+
     [[fallthrough]];
   }
   case Intrinsic::ceil:

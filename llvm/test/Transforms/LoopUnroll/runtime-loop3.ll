@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -disable-output -stats -loop-unroll -unroll-runtime -unroll-partial-threshold=200 -unroll-threshold=400 -info-output-file - | FileCheck %s --check-prefix=STATS
+; RUN: opt < %s -disable-output -stats -passes=loop-unroll -unroll-runtime -unroll-partial-threshold=200 -unroll-threshold=400 -info-output-file - | FileCheck %s --check-prefix=STATS
 ; RUN: opt < %s -disable-output -stats -passes='require<opt-remark-emit>,loop-unroll' -unroll-runtime -unroll-partial-threshold=200 -unroll-threshold=400 -info-output-file - | FileCheck %s --check-prefix=STATS
 
 ; Test that nested loops can be unrolled.  We need to increase threshold to do it

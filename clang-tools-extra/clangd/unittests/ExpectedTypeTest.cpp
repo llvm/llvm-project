@@ -11,7 +11,6 @@
 #include "TestTU.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -164,10 +163,10 @@ int* int_ptr_;
 
   auto IntPtrTy = *OpaqueType::fromType(astCtx(), typeOf("int_ptr_"));
   EXPECT_EQ(fromCompletionResult(decl("returns_not_dependent")), IntPtrTy);
-  EXPECT_EQ(fromCompletionResult(decl("returns_dependent")), llvm::None);
+  EXPECT_EQ(fromCompletionResult(decl("returns_dependent")), std::nullopt);
 
   EXPECT_EQ(fromCompletionResult(decl("var_not_dependent")), IntPtrTy);
-  EXPECT_EQ(fromCompletionResult(decl("var_dependent")), llvm::None);
+  EXPECT_EQ(fromCompletionResult(decl("var_dependent")), std::nullopt);
 }
 
 } // namespace

@@ -246,22 +246,22 @@ static int computeHostNumHardwareThreads() {
   return Threads;
 }
 
-// Finds the proper CPU socket where a thread number should go. Returns 'None'
-// if the thread shall remain on the actual CPU socket.
+// Finds the proper CPU socket where a thread number should go. Returns
+// 'std::nullopt' if the thread shall remain on the actual CPU socket.
 std::optional<unsigned>
 llvm::ThreadPoolStrategy::compute_cpu_socket(unsigned ThreadPoolNum) const {
   ArrayRef<ProcessorGroup> Groups = getProcessorGroups();
   // Only one CPU socket in the system or process affinity was set, no need to
   // move the thread(s) to another CPU socket.
   if (Groups.size() <= 1)
-    return None;
+    return std::nullopt;
 
   // We ask for less threads than there are hardware threads per CPU socket, no
   // need to dispatch threads to other CPU sockets.
   unsigned MaxThreadsPerSocket =
       UseHyperThreads ? Groups[0].UsableThreads : Groups[0].useableCores();
   if (compute_thread_count() <= MaxThreadsPerSocket)
-    return None;
+    return std::nullopt;
 
   assert(ThreadPoolNum < compute_thread_count() &&
          "The thread index is not within thread strategy's range!");

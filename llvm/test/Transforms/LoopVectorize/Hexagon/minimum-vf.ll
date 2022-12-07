@@ -1,4 +1,4 @@
-; RUN: opt -march=hexagon -loop-vectorize -hexagon-autohvx -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -march=hexagon -passes=loop-vectorize -hexagon-autohvx -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Check that TTI::getMinimumVF works. The calculated MaxVF was based on the

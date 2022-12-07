@@ -76,7 +76,7 @@ bool isPrivateProtoDecl(const NamedDecl &ND) {
 // We only collect #include paths for symbols that are suitable for global code
 // completion, except for namespaces since #include path for a namespace is hard
 // to define.
-bool shouldCollectIncludePath(index::SymbolKind Kind) {
+Symbol::IncludeDirective shouldCollectIncludePath(index::SymbolKind Kind) {
   using SK = index::SymbolKind;
   switch (Kind) {
   case SK::Macro:
@@ -90,9 +90,11 @@ bool shouldCollectIncludePath(index::SymbolKind Kind) {
   case SK::Variable:
   case SK::EnumConstant:
   case SK::Concept:
-    return true;
+    return Symbol::Include | Symbol::Import;
+  case SK::Protocol:
+    return Symbol::Import;
   default:
-    return false;
+    return Symbol::Invalid;
   }
 }
 
@@ -805,12 +807,12 @@ void SymbolCollector::processRelations(
 }
 
 void SymbolCollector::setIncludeLocation(const Symbol &S, SourceLocation Loc) {
-  if (Opts.CollectIncludePath)
-    if (shouldCollectIncludePath(S.SymInfo.Kind))
-      // Use the expansion location to get the #include header since this is
-      // where the symbol is exposed.
-      IncludeFiles[S.ID] =
-          PP->getSourceManager().getDecomposedExpansionLoc(Loc).first;
+  if (Opts.CollectIncludePath &&
+      shouldCollectIncludePath(S.SymInfo.Kind) != Symbol::Invalid)
+    // Use the expansion location to get the #include header since this is
+    // where the symbol is exposed.
+    IncludeFiles[S.ID] =
+        PP->getSourceManager().getDecomposedExpansionLoc(Loc).first;
 }
 
 void SymbolCollector::finish() {
@@ -835,11 +837,12 @@ void SymbolCollector::finish() {
             Symbols.erase(ID);
     }
   }
+  llvm::DenseMap<FileID, bool> FileToContainsImportsOrObjC;
   // Fill in IncludeHeaders.
   // We delay this until end of TU so header guards are all resolved.
   llvm::SmallString<128> QName;
-  for (const auto &Entry : IncludeFiles) {
-    if (const Symbol *S = Symbols.find(Entry.first)) {
+  for (const auto &[SID, FID] : IncludeFiles) {
+    if (const Symbol *S = Symbols.find(SID)) {
       llvm::StringRef IncludeHeader;
       // Look for an overridden include header for this symbol specifically.
       if (Opts.Includes) {
@@ -856,19 +859,36 @@ void SymbolCollector::finish() {
       }
       // Otherwise find the approprate include header for the defining file.
       if (IncludeHeader.empty())
-        IncludeHeader = HeaderFileURIs->getIncludeHeader(Entry.second);
+        IncludeHeader = HeaderFileURIs->getIncludeHeader(FID);
 
       // Symbols in slabs aren't mutable, insert() has to walk all the strings
       if (!IncludeHeader.empty()) {
-        Symbol NewSym = *S;
-        NewSym.IncludeHeaders.push_back({IncludeHeader, 1});
-        Symbols.insert(NewSym);
+        Symbol::IncludeDirective Directives = Symbol::Invalid;
+        auto CollectDirectives = shouldCollectIncludePath(S->SymInfo.Kind);
+        if ((CollectDirectives & Symbol::Include) != 0)
+          Directives |= Symbol::Include;
+        // Only allow #import for symbols from ObjC-like files.
+        if ((CollectDirectives & Symbol::Import) != 0) {
+          auto [It, Inserted] = FileToContainsImportsOrObjC.try_emplace(FID);
+          if (Inserted)
+            It->second = FilesWithObjCConstructs.contains(FID) ||
+                         tooling::codeContainsImports(
+                             ASTCtx->getSourceManager().getBufferData(FID));
+          if (It->second)
+            Directives |= Symbol::Import;
+        }
+        if (Directives != Symbol::Invalid) {
+          Symbol NewSym = *S;
+          NewSym.IncludeHeaders.push_back({IncludeHeader, 1, Directives});
+          Symbols.insert(NewSym);
+        }
       }
     }
   }
 
   ReferencedSymbols.clear();
   IncludeFiles.clear();
+  FilesWithObjCConstructs.clear();
 }
 
 const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
@@ -896,7 +916,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   auto Loc = nameLocation(ND, SM);
   assert(Loc.isValid() && "Invalid source location for NamedDecl");
   // FIXME: use the result to filter out symbols.
-  shouldIndexFile(SM.getFileID(Loc));
+  auto FID = SM.getFileID(Loc);
+  shouldIndexFile(FID);
   if (auto DeclLoc = getTokenLocation(Loc))
     S.CanonicalDeclaration = *DeclLoc;
 
@@ -940,6 +961,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
 
   Symbols.insert(S);
   setIncludeLocation(S, ND.getLocation());
+  if (S.SymInfo.Lang == index::SymbolLanguage::ObjC)
+    FilesWithObjCConstructs.insert(FID);
   return Symbols.find(S.ID);
 }
 
