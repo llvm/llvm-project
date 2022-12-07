@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-unroll -unroll-runtime -unroll-allow-partial -S | FileCheck %s
+; RUN: opt < %s -passes=loop-unroll -unroll-runtime -unroll-allow-partial -S | FileCheck %s
 
 declare void @f() convergent
 
