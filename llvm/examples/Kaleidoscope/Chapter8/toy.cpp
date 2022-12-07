@@ -1243,7 +1243,7 @@ int main() {
   auto Features = "";
 
   TargetOptions opt;
-  auto RM = Optional<Reloc::Model>();
+  auto RM = std::optional<Reloc::Model>();
   auto TheTargetMachine =
       Target->createTargetMachine(TargetTriple, CPU, Features, opt, RM);
 
