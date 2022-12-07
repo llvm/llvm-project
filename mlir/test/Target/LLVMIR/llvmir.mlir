@@ -1501,6 +1501,16 @@ llvm.func @callFreezeOp(%x : i32) {
   llvm.return
 }
 
+// CHECK-LABEL: @freezeUsed
+llvm.func @freezeUsed(%x : i32) -> i64 {
+  // CHECK: %[[frozen:.*]] = freeze i32
+  %frozen = llvm.freeze %x : i32
+  // CHECK: %[[ext:.*]] = sext i32 %[[frozen]] to i64
+  %ext = llvm.sext %frozen : i32 to i64
+  // CHECK: ret i64 %[[ext]]
+  llvm.return %ext : i64
+}
+
 // CHECK-LABEL: @boolConstArg
 llvm.func @boolConstArg() -> i1 {
   // CHECK: ret i1 false
