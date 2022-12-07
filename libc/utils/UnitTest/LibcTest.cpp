@@ -35,47 +35,43 @@ private:
 
 namespace internal {
 
-// When the value is of integral type, just display it as normal.
-template <typename ValType>
-cpp::enable_if_t<cpp::is_integral_v<ValType>, std::string>
-describeValue(ValType Value) {
-  return std::to_string(Value);
-}
-
-std::string describeValue(std::string Value) { return std::string(Value); }
-std::string describeValue(cpp::string_view Value) {
-  return std::string(Value.data(), Value.size());
-}
-
 // When the value is UInt128 or __uint128_t, show its hexadecimal digits.
 // We cannot just use a UInt128 specialization as that resolves to only
 // one type, UInt<128> or __uint128_t. We want both overloads as we want to
 // be able to unittest UInt<128> on platforms where UInt128 resolves to
 // UInt128.
-// TODO(lntue): Investigate why UInt<128> was printed backward, with the lower
-// 64-bits first.
-template <typename UInt128Type>
-std::string describeValue128(UInt128Type Value) {
-  std::string S(sizeof(UInt128) * 2, '0');
+template <typename T>
+cpp::enable_if_t<cpp::is_integral_v<T> && cpp::is_unsigned_v<T>, std::string>
+describeValueUInt(T Value) {
+  static_assert(sizeof(T) % 8 == 0, "Unsupported size of UInt");
+  std::string S(sizeof(T) * 2, '0');
 
-  for (auto I = S.rbegin(), End = S.rend(); I != End; ++I, Value >>= 4) {
-    unsigned char Mod = static_cast<unsigned char>(Value) & 15;
-    *I = Mod < 10 ? '0' + Mod : 'a' + Mod - 10;
+  constexpr char HEXADECIMALS[16] = {'0', '1', '2', '3', '4', '5', '6', '7',
+                                     '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+
+  for (auto I = S.rbegin(), End = S.rend(); I != End; ++I, Value >>= 8) {
+    unsigned char Mod = static_cast<unsigned char>(Value) & 0xFF;
+    *(I++) = HEXADECIMALS[Mod & 0x0F];
+    *I = HEXADECIMALS[Mod >> 4];
   }
 
   return "0x" + S;
 }
 
-#ifdef __SIZEOF_INT128__
-template <> std::string describeValue<__uint128_t>(__uint128_t Value) {
-  return describeValue128(Value);
+// When the value is of integral type, just display it as normal.
+template <typename ValType>
+cpp::enable_if_t<cpp::is_integral_v<ValType>, std::string>
+describeValue(ValType Value) {
+  if constexpr (sizeof(ValType) <= sizeof(uint64_t)) {
+    return std::to_string(Value);
+  } else {
+    return describeValueUInt(Value);
+  }
 }
-#endif
 
-template <>
-std::string
-describeValue<__llvm_libc::cpp::UInt<128>>(__llvm_libc::cpp::UInt<128> Value) {
-  return describeValue128(Value);
+std::string describeValue(std::string Value) { return std::string(Value); }
+std::string describeValue(cpp::string_view Value) {
+  return std::string(Value.data(), Value.size());
 }
 
 template <typename ValType>
@@ -280,6 +276,16 @@ template bool test<__uint128_t>(RunContext *Ctx, TestCondition Cond,
 template bool test<__llvm_libc::cpp::UInt<128>>(
     RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::UInt<128> LHS,
     __llvm_libc::cpp::UInt<128> RHS, const char *LHSStr, const char *RHSStr,
+    const char *File, unsigned long Line);
+
+template bool test<__llvm_libc::cpp::UInt<192>>(
+    RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::UInt<192> LHS,
+    __llvm_libc::cpp::UInt<192> RHS, const char *LHSStr, const char *RHSStr,
+    const char *File, unsigned long Line);
+
+template bool test<__llvm_libc::cpp::UInt<256>>(
+    RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::UInt<256> LHS,
+    __llvm_libc::cpp::UInt<256> RHS, const char *LHSStr, const char *RHSStr,
     const char *File, unsigned long Line);
 
 template bool test<__llvm_libc::cpp::string_view>(

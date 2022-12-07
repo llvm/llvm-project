@@ -15,6 +15,8 @@
 // we use a sugar which does not conflict with the UInt128 type which can
 // resolve to __uint128_t if the platform has it.
 using LL_UInt128 = __llvm_libc::cpp::UInt<128>;
+using LL_UInt192 = __llvm_libc::cpp::UInt<192>;
+using LL_UInt256 = __llvm_libc::cpp::UInt<256>;
 
 TEST(LlvmLibcUInt128ClassTest, BasicInit) {
   LL_UInt128 empty;
@@ -43,6 +45,24 @@ TEST(LlvmLibcUInt128ClassTest, AdditionTests) {
   LL_UInt128 result3({0x12346789bcdf1233, 0xa987765443210fed});
   EXPECT_EQ(val5 + val6, result3);
   EXPECT_EQ(val5 + val6, val6 + val5);
+
+  // Test 192-bit addition
+  LL_UInt192 val7({0x0123456789abcdef, 0xfedcba9876543210, 0xfedcba9889abcdef});
+  LL_UInt192 val8({0x1111222233334444, 0xaaaabbbbccccdddd, 0xeeeeffffeeeeffff});
+  LL_UInt192 result4(
+      {0x12346789bcdf1233, 0xa987765443210fed, 0xedcbba98789acdef});
+  EXPECT_EQ(val7 + val8, result4);
+  EXPECT_EQ(val7 + val8, val8 + val7);
+
+  // Test 256-bit addition
+  LL_UInt256 val9({0x1f1e1d1c1b1a1918, 0xf1f2f3f4f5f6f7f8, 0x0123456789abcdef,
+                   0xfedcba9876543210});
+  LL_UInt256 val10({0x1111222233334444, 0xaaaabbbbccccdddd, 0x1111222233334444,
+                    0xaaaabbbbccccdddd});
+  LL_UInt256 result5({0x302f3f3e4e4d5d5c, 0x9c9dafb0c2c3d5d5,
+                      0x12346789bcdf1234, 0xa987765443210fed});
+  EXPECT_EQ(val9 + val10, result5);
+  EXPECT_EQ(val9 + val10, val10 + val9);
 }
 
 TEST(LlvmLibcUInt128ClassTest, SubtractionTests) {
@@ -112,6 +132,26 @@ TEST(LlvmLibcUInt128ClassTest, MultiplicationTests) {
   LL_UInt128 result5({0x917cf11d1e039c50, 0x3a4f32d17f40d08f});
   EXPECT_EQ((val9 * val10), result5);
   EXPECT_EQ((val9 * val10), (val10 * val9));
+
+  // Test 192-bit multiplication
+  LL_UInt192 val11(
+      {0xffffffffffffffff, 0x01D762422C946590, 0x9F4F2726179A2245});
+  LL_UInt192 val12(
+      {0xffffffffffffffff, 0x3792F412CB06794D, 0xCDB02555653131B6});
+
+  LL_UInt192 result6(
+      {0x0000000000000001, 0xc695a9ab08652121, 0x5de7faf698d32732});
+  EXPECT_EQ((val11 * val12), result6);
+  EXPECT_EQ((val11 * val12), (val12 * val11));
+
+  LL_UInt256 val13({0xffffffffffffffff, 0x01D762422C946590, 0x9F4F2726179A2245,
+                    0xffffffffffffffff});
+  LL_UInt256 val14({0xffffffffffffffff, 0xffffffffffffffff, 0x3792F412CB06794D,
+                    0xCDB02555653131B6});
+  LL_UInt256 result7({0x0000000000000001, 0xfe289dbdd36b9a6f,
+                      0x291de4c71d5f646c, 0xfd37221cb06d4978});
+  EXPECT_EQ((val13 * val14), result7);
+  EXPECT_EQ((val13 * val14), (val14 * val13));
 }
 
 TEST(LlvmLibcUInt128ClassTest, DivisionTests) {

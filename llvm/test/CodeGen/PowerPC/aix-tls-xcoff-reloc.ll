@@ -32,7 +32,7 @@ entry:
 ; RELOC-NEXT: Relocations [
 ; RELOC-NEXT:   Section (index: 1) .text {
 ; RELOC-NEXT:   Relocation {
-; RELOC-NEXT:     Virtual Address: 0x12
+; RELOC-NEXT:     Virtual Address: 0xE
 ; RELOC-NEXT:     Symbol: .TIUninit (23)
 ; RELOC-NEXT:     IsSigned: No
 ; RELOC-NEXT:     FixupBitValue: 0
@@ -40,7 +40,7 @@ entry:
 ; RELOC-NEXT:     Type: R_TOC (0x3)
 ; RELOC-NEXT:   }
 ; RELOC-NEXT:   Relocation {
-; RELOC-NEXT:     Virtual Address: 0x16
+; RELOC-NEXT:     Virtual Address: 0x12
 ; RELOC-NEXT:     Symbol: TIUninit (25)
 ; RELOC-NEXT:     IsSigned: No
 ; RELOC-NEXT:     FixupBitValue: 0
@@ -56,7 +56,7 @@ entry:
 ; RELOC-NEXT:     Type: R_RBA (0x18)
 ; RELOC-NEXT:   }
 ; RELOC-NEXT:   Relocation {
-; RELOC-NEXT:     Virtual Address: 0x3E
+; RELOC-NEXT:     Virtual Address: 0x3A
 ; RELOC-NEXT:     Symbol: .TGInit (27)
 ; RELOC-NEXT:     IsSigned: No
 ; RELOC-NEXT:     FixupBitValue: 0
@@ -64,7 +64,7 @@ entry:
 ; RELOC-NEXT:     Type: R_TOC (0x3)
 ; RELOC-NEXT:   }
 ; RELOC-NEXT:   Relocation {
-; RELOC-NEXT:     Virtual Address: 0x42
+; RELOC-NEXT:     Virtual Address: 0x3E
 ; RELOC-NEXT:     Symbol: TGInit (29)
 ; RELOC-NEXT:     IsSigned: No
 ; RELOC-NEXT:     FixupBitValue: 0
@@ -565,13 +565,13 @@ entry:
 ; DIS:      Disassembly of section .text:
 ; DIS:      00000000 (idx: 5) .storesTIUninit:
 ; DIS-NEXT:                                      mflr 0
-; DIS-NEXT:                                      stw 0, 8(1)
 ; DIS-NEXT:                                      stwu 1, -32(1)
 ; DIS-NEXT:                                      mr 6, 3
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 3, 0(2)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC (idx: 23) .TIUninit[TC]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 4, 4(2)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC (idx: 25) TIUninit[TC]
+; DIS-NEXT:                                      stw 0, 40(1)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               bla 0
 ; DIS-NEXT: {{0*}}[[#ADDR]]: R_RBA (idx: 1)      .__tls_get_addr[PR]
 ; DIS-NEXT:                                      stw 6, 0(3)
@@ -581,12 +581,12 @@ entry:
 ; DIS-NEXT:                                      blr
 ; DIS:      00000030 (idx: 7) .loadsTGInit:
 ; DIS-NEXT:                                      mflr 0
-; DIS-NEXT:                                      stw 0, 8(1)
 ; DIS-NEXT:                                      stwu 1, -32(1)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 3, 8(2)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC (idx: 27) .TGInit[TC]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 4, 12(2)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC (idx: 29) TGInit[TC]
+; DIS-NEXT:                                      stw 0, 40(1)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               bla 0
 ; DIS-NEXT: {{0*}}[[#ADDR]]: R_RBA (idx: 1)      .__tls_get_addr[PR]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 4, 16(2)

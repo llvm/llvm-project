@@ -371,6 +371,9 @@ void LoongArchInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  LoongArchMachineFunctionInfo *LAFI =
+      MF->getInfo<LoongArchMachineFunctionInfo>();
 
   if (!isInt<32>(BrOffset))
     report_fatal_error(
@@ -379,26 +382,45 @@ void LoongArchInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   Register ScratchReg = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
   auto II = MBB.end();
 
-  MachineInstr &MI =
+  MachineInstr &PCALAU12I =
       *BuildMI(MBB, II, DL, get(LoongArch::PCALAU12I), ScratchReg)
            .addMBB(&DestBB, LoongArchII::MO_PCREL_HI);
-  BuildMI(MBB, II, DL,
-          get(STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W),
-          ScratchReg)
-      .addReg(ScratchReg)
-      .addMBB(&DestBB, LoongArchII::MO_PCREL_LO);
+  MachineInstr &ADDI =
+      *BuildMI(MBB, II, DL,
+               get(STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W),
+               ScratchReg)
+           .addReg(ScratchReg)
+           .addMBB(&DestBB, LoongArchII::MO_PCREL_LO);
   BuildMI(MBB, II, DL, get(LoongArch::PseudoBRIND))
       .addReg(ScratchReg, RegState::Kill)
       .addImm(0);
 
   RS->enterBasicBlockEnd(MBB);
-  Register Scav = RS->scavengeRegisterBackwards(LoongArch::GPRRegClass,
-                                                MI.getIterator(), false, 0);
-  // TODO: When there is no scavenged register, it needs to specify a register.
-  assert(Scav != LoongArch::NoRegister && "No register is scavenged!");
+  Register Scav = RS->scavengeRegisterBackwards(
+      LoongArch::GPRRegClass, PCALAU12I.getIterator(), /*RestoreAfter=*/false,
+      /*SPAdj=*/0, /*AllowSpill=*/false);
+  if (Scav != LoongArch::NoRegister)
+    RS->setRegUsed(Scav);
+  else {
+    // When there is no scavenged register, it needs to specify a register.
+    // Specify t8 register because it won't be used too often.
+    Scav = LoongArch::R20;
+    int FrameIndex = LAFI->getBranchRelaxationSpillFrameIndex();
+    if (FrameIndex == -1)
+      report_fatal_error("The function size is incorrectly estimated.");
+    storeRegToStackSlot(MBB, PCALAU12I, Scav, /*IsKill=*/true, FrameIndex,
+                        &LoongArch::GPRRegClass, TRI);
+    TRI->eliminateFrameIndex(std::prev(PCALAU12I.getIterator()),
+                             /*SpAdj=*/0, /*FIOperandNum=*/1);
+    PCALAU12I.getOperand(1).setMBB(&RestoreBB);
+    ADDI.getOperand(2).setMBB(&RestoreBB);
+    loadRegFromStackSlot(RestoreBB, RestoreBB.end(), Scav, FrameIndex,
+                         &LoongArch::GPRRegClass, TRI);
+    TRI->eliminateFrameIndex(RestoreBB.back(),
+                             /*SpAdj=*/0, /*FIOperandNum=*/1);
+  }
   MRI.replaceRegWith(ScratchReg, Scav);
   MRI.clearVirtRegs();
-  RS->setRegUsed(Scav);
 }
 
 static unsigned getOppositeBranchOpc(unsigned Opc) {

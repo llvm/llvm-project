@@ -1222,6 +1222,86 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   lghi %r2, 0
   br %r14
 
+#elif defined(__loongarch__) && __loongarch_grlen == 64
+
+#
+# extern int __unw_getcontext(unw_context_t* thread_state)
+#
+# On entry:
+#  thread_state pointer is in $a0($r4)
+#
+DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+  st.d    $r1, $a0, (8 * 1)
+  st.d    $r2, $a0, (8 * 2)
+  st.d    $r3, $a0, (8 * 3)
+  st.d    $r4, $a0, (8 * 4)
+  st.d    $r5, $a0, (8 * 5)
+  st.d    $r6, $a0, (8 * 6)
+  st.d    $r7, $a0, (8 * 7)
+  st.d    $r8, $a0, (8 * 8)
+  st.d    $r9, $a0, (8 * 9)
+  st.d    $r10, $a0, (8 * 10)
+  st.d    $r11, $a0, (8 * 11)
+  st.d    $r12, $a0, (8 * 12)
+  st.d    $r13, $a0, (8 * 13)
+  st.d    $r14, $a0, (8 * 14)
+  st.d    $r15, $a0, (8 * 15)
+  st.d    $r16, $a0, (8 * 16)
+  st.d    $r17, $a0, (8 * 17)
+  st.d    $r18, $a0, (8 * 18)
+  st.d    $r19, $a0, (8 * 19)
+  st.d    $r20, $a0, (8 * 20)
+  st.d    $r21, $a0, (8 * 21)
+  st.d    $r22, $a0, (8 * 22)
+  st.d    $r23, $a0, (8 * 23)
+  st.d    $r24, $a0, (8 * 24)
+  st.d    $r25, $a0, (8 * 25)
+  st.d    $r26, $a0, (8 * 26)
+  st.d    $r27, $a0, (8 * 27)
+  st.d    $r28, $a0, (8 * 28)
+  st.d    $r29, $a0, (8 * 29)
+  st.d    $r30, $a0, (8 * 30)
+  st.d    $r31, $a0, (8 * 31)
+  st.d    $r1,  $a0, (8 * 32) // store $ra to pc
+
+# if __loongarch_frlen == 64
+  fst.d    $f0, $a0, (8 * 33 + 8 * 0)
+  fst.d    $f1, $a0, (8 * 33 + 8 * 1)
+  fst.d    $f2, $a0, (8 * 33 + 8 * 2)
+  fst.d    $f3, $a0, (8 * 33 + 8 * 3)
+  fst.d    $f4, $a0, (8 * 33 + 8 * 4)
+  fst.d    $f5, $a0, (8 * 33 + 8 * 5)
+  fst.d    $f6, $a0, (8 * 33 + 8 * 6)
+  fst.d    $f7, $a0, (8 * 33 + 8 * 7)
+  fst.d    $f8, $a0, (8 * 33 + 8 * 8)
+  fst.d    $f9, $a0, (8 * 33 + 8 * 9)
+  fst.d    $f10, $a0, (8 * 33 + 8 * 10)
+  fst.d    $f11, $a0, (8 * 33 + 8 * 11)
+  fst.d    $f12, $a0, (8 * 33 + 8 * 12)
+  fst.d    $f13, $a0, (8 * 33 + 8 * 13)
+  fst.d    $f14, $a0, (8 * 33 + 8 * 14)
+  fst.d    $f15, $a0, (8 * 33 + 8 * 15)
+  fst.d    $f16, $a0, (8 * 33 + 8 * 16)
+  fst.d    $f17, $a0, (8 * 33 + 8 * 17)
+  fst.d    $f18, $a0, (8 * 33 + 8 * 18)
+  fst.d    $f19, $a0, (8 * 33 + 8 * 19)
+  fst.d    $f20, $a0, (8 * 33 + 8 * 20)
+  fst.d    $f21, $a0, (8 * 33 + 8 * 21)
+  fst.d    $f22, $a0, (8 * 33 + 8 * 22)
+  fst.d    $f23, $a0, (8 * 33 + 8 * 23)
+  fst.d    $f24, $a0, (8 * 33 + 8 * 24)
+  fst.d    $f25, $a0, (8 * 33 + 8 * 25)
+  fst.d    $f26, $a0, (8 * 33 + 8 * 26)
+  fst.d    $f27, $a0, (8 * 33 + 8 * 27)
+  fst.d    $f28, $a0, (8 * 33 + 8 * 28)
+  fst.d    $f29, $a0, (8 * 33 + 8 * 29)
+  fst.d    $f30, $a0, (8 * 33 + 8 * 30)
+  fst.d    $f31, $a0, (8 * 33 + 8 * 31)
+# endif
+
+  move     $a0, $zero  // UNW_ESUCCESS
+  jr       $ra
+
 #endif
 
   WEAK_ALIAS(__unw_getcontext, unw_getcontext)

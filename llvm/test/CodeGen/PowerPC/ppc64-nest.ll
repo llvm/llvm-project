@@ -17,6 +17,7 @@ define ptr @nest_receiver(ptr nest %arg) nounwind {
 define ptr @nest_caller(ptr %arg) nounwind {
 ; CHECK-LABEL: nest_caller:
 ; CHECK: mr 11, 3
+; CHECK: std 0, 128(1)
 ; CHECK-NEXT: bl nest_receiver
 ; CHECK: blr
 

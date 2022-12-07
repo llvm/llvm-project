@@ -9,8 +9,8 @@ define void @bar() {
 ; 32BIT-LABEL: bar:
 ; 32BIT:       # %bb.0: # %entry
 ; 32BIT-NEXT:    mflr 0
-; 32BIT-NEXT:    stw 0, 8(1)
 ; 32BIT-NEXT:    stwu 1, -64(1)
+; 32BIT-NEXT:    stw 0, 72(1)
 ; 32BIT-NEXT:    bl .foo[PR]
 ; 32BIT-NEXT:    nop
 ; 32BIT-NEXT:    addi 1, 1, 64
@@ -21,8 +21,8 @@ define void @bar() {
 ; 64BIT-LABEL: bar:
 ; 64BIT:       # %bb.0: # %entry
 ; 64BIT-NEXT:    mflr 0
-; 64BIT-NEXT:    std 0, 16(1)
 ; 64BIT-NEXT:    stdu 1, -112(1)
+; 64BIT-NEXT:    std 0, 128(1)
 ; 64BIT-NEXT:    bl .foo[PR]
 ; 64BIT-NEXT:    nop
 ; 64BIT-NEXT:    addi 1, 1, 112

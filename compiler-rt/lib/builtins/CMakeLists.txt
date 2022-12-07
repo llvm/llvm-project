@@ -25,7 +25,9 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(base-config-ix)
   include(CompilerRTUtils)
 
-  load_llvm_config()
+  if (NOT LLVM_RUNTIMES_BUILD)
+    load_llvm_config()
+  endif()
   construct_compiler_rt_default_triple()
 
   include(SetPlatformToolchainTools)

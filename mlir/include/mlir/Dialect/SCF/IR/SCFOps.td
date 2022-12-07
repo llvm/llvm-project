@@ -935,7 +935,7 @@ def WhileOp : SCF_Op<"while",
 
     Note that the types of region arguments need not to match with each other.
     The op expects the operand types to match with argument types of the
-    "before" region"; the result types to match with the trailing operand types
+    "before" region; the result types to match with the trailing operand types
     of the terminator of the "before" region, and with the argument types of the
     "after" region. The following scheme can be used to share the results of
     some operations executed in the "before" region with the "after" region,
@@ -983,7 +983,16 @@ def WhileOp : SCF_Op<"while",
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$before, SizedRegion<1>:$after);
 
+  let builders = [
+    OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$operands,
+      "function_ref<void(OpBuilder &, Location, ValueRange)>":$beforeBuilder,
+      "function_ref<void(OpBuilder &, Location, ValueRange)>":$afterBuilder)>
+  ];
+
   let extraClassDeclaration = [{
+    using BodyBuilderFn =
+        function_ref<void(OpBuilder &, Location, ValueRange)>;
+
     OperandRange getSuccessorEntryOperands(Optional<unsigned> index);
     ConditionOp getConditionOp();
     YieldOp getYieldOp();

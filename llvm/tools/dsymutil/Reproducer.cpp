@@ -20,6 +20,7 @@ static std::string createReproducerDir(std::error_code &EC) {
   } else {
     EC = sys::fs::createUniqueDirectory("dsymutil", Root);
   }
+  sys::fs::make_absolute(Root);
   return EC ? "" : std::string(Root);
 }
 

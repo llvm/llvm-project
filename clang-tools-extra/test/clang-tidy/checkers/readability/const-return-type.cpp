@@ -196,13 +196,22 @@ const /* comment */ /* another comment*/ int p16() { return 0; }
 // Test cases where the `const` token lexically is hidden behind some form of
 // indirection.
 
+// Regression tests involving macros, which are ignored by default because
+// IgnoreMacros defaults to true.
+#define CONCAT(a, b) a##b
+CONCAT(cons, t) int n22(){}
+
 #define CONSTINT const int
-CONSTINT p18() {}
-// CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const int' is 'const'-qu
+CONSTINT n23() {}
 
 #define CONST const
-CONST int p19() {}
-// CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const int' is 'const'-qu
+CONST int n24() {}
+
+#define CREATE_FUNCTION()                    \
+const int n_inside_macro() { \
+  return 1; \
+}
+CREATE_FUNCTION();
 
 using ty = const int;
 ty p21() {}
@@ -279,12 +288,21 @@ public:
   // CHECK-NOT-FIXES: virtual int getC() = 0;
 };
 
-class PVDerive : public PVBase {
+class NVDerive : public PVBase {
 public:
-  const int getC() { return 1; }
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: return type 'const int' is 'const'-qualified at the top level, which may reduce code readability without improving const correctness
-  // CHECK-NOT-FIXES: int getC() { return 1; }
+  // Don't warn about overridden methods, because it may be impossible to make
+  // them non-const as the user may not be able to change the base class.
+  const int getC() override { return 1; }
 };
+
+class NVDeriveOutOfLine : public PVBase {
+public:
+  // Don't warn about overridden methods, because it may be impossible to make
+  // them non-const as one may not be able to change the base class
+  const int getC();
+};
+
+const int NVDeriveOutOfLine::getC() { return 1; }
 
 // Don't warn about const auto types, because it may be impossible to make them non-const
 // without a significant semantics change. Since `auto` drops cv-qualifiers,

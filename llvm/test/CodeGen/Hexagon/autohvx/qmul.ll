@@ -87,7 +87,7 @@ define void @f2(ptr %a0, ptr %a1, ptr %a2) #0 {
 ; CHECK-NEXT:     v1:0.w = vmpy(v0.h,v1.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1:0 = vshuff(v1,v0,r7)
+; CHECK-NEXT:     v1:0 = vdeal(v1,v0,r7)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v0.uw = vlsr(v0.uw,r3)

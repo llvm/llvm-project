@@ -1813,7 +1813,7 @@ OpRef HvxSelector::contracting(ShuffleMask SM, OpRef Va, OpRef Vb,
       OpRef C = OpRef::res(Results.top());
       MVT JoinTy = MVT::getVectorVT(ResTy.getVectorElementType(),
                                     2 * ResTy.getVectorNumElements());
-      Results.push(Hexagon::V6_vshuffvdd, JoinTy, {Vb, Va, C});
+      Results.push(Hexagon::V6_vdealvdd, JoinTy, {Vb, Va, C});
       return Strip.first == 0 ? OpRef::lo(OpRef::res(Results.top()))
                               : OpRef::hi(OpRef::res(Results.top()));
     }

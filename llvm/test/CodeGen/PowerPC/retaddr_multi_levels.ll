@@ -14,8 +14,8 @@ define ptr @test0() nounwind readnone {
 ; CHECK-64B-LE-LABEL: test0:
 ; CHECK-64B-LE:       # %bb.0: # %entry
 ; CHECK-64B-LE-NEXT:    mflr 0
-; CHECK-64B-LE-NEXT:    std 0, 16(1)
 ; CHECK-64B-LE-NEXT:    stdu 1, -32(1)
+; CHECK-64B-LE-NEXT:    std 0, 48(1)
 ; CHECK-64B-LE-NEXT:    ld 3, 48(1)
 ; CHECK-64B-LE-NEXT:    addi 1, 1, 32
 ; CHECK-64B-LE-NEXT:    ld 0, 16(1)
@@ -25,8 +25,8 @@ define ptr @test0() nounwind readnone {
 ; CHECK-64B-BE-LABEL: test0:
 ; CHECK-64B-BE:       # %bb.0: # %entry
 ; CHECK-64B-BE-NEXT:    mflr 0
-; CHECK-64B-BE-NEXT:    std 0, 16(1)
 ; CHECK-64B-BE-NEXT:    stdu 1, -48(1)
+; CHECK-64B-BE-NEXT:    std 0, 64(1)
 ; CHECK-64B-BE-NEXT:    ld 3, 64(1)
 ; CHECK-64B-BE-NEXT:    addi 1, 1, 48
 ; CHECK-64B-BE-NEXT:    ld 0, 16(1)
@@ -36,8 +36,8 @@ define ptr @test0() nounwind readnone {
 ; CHECK-32B-BE-LABEL: test0:
 ; CHECK-32B-BE:       # %bb.0: # %entry
 ; CHECK-32B-BE-NEXT:    mflr 0
-; CHECK-32B-BE-NEXT:    stw 0, 8(1)
 ; CHECK-32B-BE-NEXT:    stwu 1, -32(1)
+; CHECK-32B-BE-NEXT:    stw 0, 40(1)
 ; CHECK-32B-BE-NEXT:    lwz 3, 40(1)
 ; CHECK-32B-BE-NEXT:    addi 1, 1, 32
 ; CHECK-32B-BE-NEXT:    lwz 0, 8(1)
@@ -52,8 +52,8 @@ define ptr @test1() nounwind readnone {
 ; CHECK-64B-LE-LABEL: test1:
 ; CHECK-64B-LE:       # %bb.0: # %entry
 ; CHECK-64B-LE-NEXT:    mflr 0
-; CHECK-64B-LE-NEXT:    std 0, 16(1)
 ; CHECK-64B-LE-NEXT:    stdu 1, -32(1)
+; CHECK-64B-LE-NEXT:    std 0, 48(1)
 ; CHECK-64B-LE-NEXT:    ld 3, 0(1)
 ; CHECK-64B-LE-NEXT:    ld 3, 0(3)
 ; CHECK-64B-LE-NEXT:    ld 3, 16(3)
@@ -65,8 +65,8 @@ define ptr @test1() nounwind readnone {
 ; CHECK-64B-BE-LABEL: test1:
 ; CHECK-64B-BE:       # %bb.0: # %entry
 ; CHECK-64B-BE-NEXT:    mflr 0
-; CHECK-64B-BE-NEXT:    std 0, 16(1)
 ; CHECK-64B-BE-NEXT:    stdu 1, -48(1)
+; CHECK-64B-BE-NEXT:    std 0, 64(1)
 ; CHECK-64B-BE-NEXT:    ld 3, 0(1)
 ; CHECK-64B-BE-NEXT:    ld 3, 0(3)
 ; CHECK-64B-BE-NEXT:    ld 3, 16(3)
@@ -78,8 +78,8 @@ define ptr @test1() nounwind readnone {
 ; CHECK-32B-BE-LABEL: test1:
 ; CHECK-32B-BE:       # %bb.0: # %entry
 ; CHECK-32B-BE-NEXT:    mflr 0
-; CHECK-32B-BE-NEXT:    stw 0, 8(1)
 ; CHECK-32B-BE-NEXT:    stwu 1, -32(1)
+; CHECK-32B-BE-NEXT:    stw 0, 40(1)
 ; CHECK-32B-BE-NEXT:    lwz 3, 0(1)
 ; CHECK-32B-BE-NEXT:    lwz 3, 0(3)
 ; CHECK-32B-BE-NEXT:    lwz 3, 8(3)
@@ -96,8 +96,8 @@ define ptr @test2() nounwind readnone {
 ; CHECK-64B-LE-LABEL: test2:
 ; CHECK-64B-LE:       # %bb.0: # %entry
 ; CHECK-64B-LE-NEXT:    mflr 0
-; CHECK-64B-LE-NEXT:    std 0, 16(1)
 ; CHECK-64B-LE-NEXT:    stdu 1, -32(1)
+; CHECK-64B-LE-NEXT:    std 0, 48(1)
 ; CHECK-64B-LE-NEXT:    ld 3, 0(1)
 ; CHECK-64B-LE-NEXT:    ld 3, 0(3)
 ; CHECK-64B-LE-NEXT:    ld 3, 0(3)
@@ -110,8 +110,8 @@ define ptr @test2() nounwind readnone {
 ; CHECK-64B-BE-LABEL: test2:
 ; CHECK-64B-BE:       # %bb.0: # %entry
 ; CHECK-64B-BE-NEXT:    mflr 0
-; CHECK-64B-BE-NEXT:    std 0, 16(1)
 ; CHECK-64B-BE-NEXT:    stdu 1, -48(1)
+; CHECK-64B-BE-NEXT:    std 0, 64(1)
 ; CHECK-64B-BE-NEXT:    ld 3, 0(1)
 ; CHECK-64B-BE-NEXT:    ld 3, 0(3)
 ; CHECK-64B-BE-NEXT:    ld 3, 0(3)
@@ -124,8 +124,8 @@ define ptr @test2() nounwind readnone {
 ; CHECK-32B-BE-LABEL: test2:
 ; CHECK-32B-BE:       # %bb.0: # %entry
 ; CHECK-32B-BE-NEXT:    mflr 0
-; CHECK-32B-BE-NEXT:    stw 0, 8(1)
 ; CHECK-32B-BE-NEXT:    stwu 1, -32(1)
+; CHECK-32B-BE-NEXT:    stw 0, 40(1)
 ; CHECK-32B-BE-NEXT:    lwz 3, 0(1)
 ; CHECK-32B-BE-NEXT:    lwz 3, 0(3)
 ; CHECK-32B-BE-NEXT:    lwz 3, 0(3)

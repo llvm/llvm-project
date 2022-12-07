@@ -280,7 +280,6 @@ uint64_t getDefaultExtensions(StringRef CPU, ArchKind AK);
 StringRef getDefaultCPU(StringRef Arch);
 StringRef getCanonicalArchName(StringRef Arch);
 StringRef getFPUSynonym(StringRef FPU);
-StringRef getArchSynonym(StringRef Arch);
 
 // Parser
 uint64_t parseHWDiv(StringRef HWDiv);

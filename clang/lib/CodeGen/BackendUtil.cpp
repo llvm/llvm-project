@@ -409,7 +409,12 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.NoInfsFPMath = LangOpts.NoHonorInfs;
   Options.NoNaNsFPMath = LangOpts.NoHonorNaNs;
   Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
-  Options.UnsafeFPMath = LangOpts.UnsafeFPMath;
+  Options.UnsafeFPMath = LangOpts.AllowFPReassoc && LangOpts.AllowRecip &&
+                         LangOpts.NoSignedZero && LangOpts.ApproxFunc &&
+                         (LangOpts.getDefaultFPContractMode() ==
+                              LangOptions::FPModeKind::FPM_Fast ||
+                          LangOpts.getDefaultFPContractMode() ==
+                              LangOptions::FPModeKind::FPM_FastHonorPragmas);
   Options.ApproxFuncFPMath = LangOpts.ApproxFunc;
 
   Options.BBSections =

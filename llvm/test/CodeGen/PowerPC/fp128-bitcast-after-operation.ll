@@ -92,8 +92,8 @@ define i128 @test_copysign(ppc_fp128 %x, ppc_fp128 %y) nounwind  {
 ; PPC64-P8-LE-LABEL: test_copysign:
 ; PPC64-P8-LE:       # %bb.0: # %entry
 ; PPC64-P8-LE-NEXT:    mflr 0
-; PPC64-P8-LE-NEXT:    std 0, 16(1)
 ; PPC64-P8-LE-NEXT:    stdu 1, -32(1)
+; PPC64-P8-LE-NEXT:    std 0, 48(1)
 ; PPC64-P8-LE-NEXT:    bl copysignl
 ; PPC64-P8-LE-NEXT:    nop
 ; PPC64-P8-LE-NEXT:    mffprd 3, 1
@@ -106,8 +106,8 @@ define i128 @test_copysign(ppc_fp128 %x, ppc_fp128 %y) nounwind  {
 ; PPC64-LE-LABEL: test_copysign:
 ; PPC64-LE:       # %bb.0: # %entry
 ; PPC64-LE-NEXT:    mflr 0
-; PPC64-LE-NEXT:    std 0, 16(1)
 ; PPC64-LE-NEXT:    stdu 1, -48(1)
+; PPC64-LE-NEXT:    std 0, 64(1)
 ; PPC64-LE-NEXT:    bl copysignl
 ; PPC64-LE-NEXT:    nop
 ; PPC64-LE-NEXT:    stfd 1, 32(1)
@@ -122,8 +122,8 @@ define i128 @test_copysign(ppc_fp128 %x, ppc_fp128 %y) nounwind  {
 ; PPC64-P8-BE-LABEL: test_copysign:
 ; PPC64-P8-BE:       # %bb.0: # %entry
 ; PPC64-P8-BE-NEXT:    mflr 0
-; PPC64-P8-BE-NEXT:    std 0, 16(1)
 ; PPC64-P8-BE-NEXT:    stdu 1, -112(1)
+; PPC64-P8-BE-NEXT:    std 0, 128(1)
 ; PPC64-P8-BE-NEXT:    bl copysignl
 ; PPC64-P8-BE-NEXT:    nop
 ; PPC64-P8-BE-NEXT:    mffprd 3, 1
@@ -136,8 +136,8 @@ define i128 @test_copysign(ppc_fp128 %x, ppc_fp128 %y) nounwind  {
 ; PPC64-BE-LABEL: test_copysign:
 ; PPC64-BE:       # %bb.0: # %entry
 ; PPC64-BE-NEXT:    mflr 0
-; PPC64-BE-NEXT:    std 0, 16(1)
 ; PPC64-BE-NEXT:    stdu 1, -128(1)
+; PPC64-BE-NEXT:    std 0, 144(1)
 ; PPC64-BE-NEXT:    bl copysignl
 ; PPC64-BE-NEXT:    nop
 ; PPC64-BE-NEXT:    stfd 1, 112(1)
@@ -152,8 +152,8 @@ define i128 @test_copysign(ppc_fp128 %x, ppc_fp128 %y) nounwind  {
 ; PPC32-LABEL: test_copysign:
 ; PPC32:       # %bb.0: # %entry
 ; PPC32-NEXT:    mflr 0
-; PPC32-NEXT:    stw 0, 4(1)
 ; PPC32-NEXT:    stwu 1, -96(1)
+; PPC32-NEXT:    stw 0, 100(1)
 ; PPC32-NEXT:    stfd 1, 40(1)
 ; PPC32-NEXT:    lwz 3, 44(1)
 ; PPC32-NEXT:    stfd 2, 32(1)

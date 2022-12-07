@@ -1,10 +1,9 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
 
-; Test that we generate an unaligned vector store for a spill when a function
-; has an alloca. Also, make sure the addressing mode for unaligned store does
-; is not a base+offset with a non-zero offset that is not a multiple of 128.
+; Test that we no longer generate an unaligned vector store for a spill when
+; a function has an alloca.
 
-; CHECK: vmemu({{.*}}) =
+; CHECK: vmem({{.*}}) =
 
 %s.0 = type { [5 x [4 x i8]], i32, i32, i32, i32 }
 

@@ -140,6 +140,9 @@ public:
     return ISD::SIGN_EXTEND;
   }
 
+  Register getRegisterByName(const char *RegName, LLT VT,
+                             const MachineFunction &MF) const override;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,

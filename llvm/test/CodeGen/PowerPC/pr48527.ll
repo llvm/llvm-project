@@ -13,8 +13,8 @@ define void @_ZNK1q1rEv() local_unnamed_addr #0 align 2 {
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -64(1)
+; CHECK-NEXT:    std 0, 80(1)
 ; CHECK-NEXT:    lwz 30, 0(3)
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
 ; CHECK-NEXT:    ld 29, .LC0@toc@l(3)

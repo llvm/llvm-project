@@ -250,15 +250,15 @@ define <4 x i64> @var_bitreverse_v4i64(<4 x i64> %a) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %bitreverse
 ;
 ; AVX1-LABEL: 'var_bitreverse_v4i64'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 51 for instruction: %bitreverse = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %a)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %bitreverse = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %a)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %bitreverse
 ;
 ; AVX2-LABEL: 'var_bitreverse_v4i64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 51 for instruction: %bitreverse = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %a)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %bitreverse = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %a)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %bitreverse
 ;
 ; AVX512-LABEL: 'var_bitreverse_v4i64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 51 for instruction: %bitreverse = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %a)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %bitreverse = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %a)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %bitreverse
 ;
 ; XOP-LABEL: 'var_bitreverse_v4i64'
@@ -299,15 +299,15 @@ define <8 x i64> @var_bitreverse_v8i64(<8 x i64> %a) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %bitreverse
 ;
 ; AVX1-LABEL: 'var_bitreverse_v8i64'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 102 for instruction: %bitreverse = call <8 x i64> @llvm.bitreverse.v8i64(<8 x i64> %a)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 100 for instruction: %bitreverse = call <8 x i64> @llvm.bitreverse.v8i64(<8 x i64> %a)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %bitreverse
 ;
 ; AVX2-LABEL: 'var_bitreverse_v8i64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 102 for instruction: %bitreverse = call <8 x i64> @llvm.bitreverse.v8i64(<8 x i64> %a)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 100 for instruction: %bitreverse = call <8 x i64> @llvm.bitreverse.v8i64(<8 x i64> %a)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %bitreverse
 ;
 ; AVX512-LABEL: 'var_bitreverse_v8i64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 103 for instruction: %bitreverse = call <8 x i64> @llvm.bitreverse.v8i64(<8 x i64> %a)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 102 for instruction: %bitreverse = call <8 x i64> @llvm.bitreverse.v8i64(<8 x i64> %a)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %bitreverse
 ;
 ; XOP-LABEL: 'var_bitreverse_v8i64'
@@ -397,15 +397,15 @@ define <8 x i32> @var_bitreverse_v8i32(<8 x i32> %a) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %bitreverse
 ;
 ; AVX1-LABEL: 'var_bitreverse_v8i32'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 99 for instruction: %bitreverse = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %a)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 98 for instruction: %bitreverse = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %a)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %bitreverse
 ;
 ; AVX2-LABEL: 'var_bitreverse_v8i32'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 99 for instruction: %bitreverse = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %a)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 98 for instruction: %bitreverse = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %a)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %bitreverse
 ;
 ; AVX512-LABEL: 'var_bitreverse_v8i32'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 99 for instruction: %bitreverse = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %a)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 98 for instruction: %bitreverse = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %a)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %bitreverse
 ;
 ; XOP-LABEL: 'var_bitreverse_v8i32'
@@ -446,15 +446,15 @@ define <16 x i32> @var_bitreverse_v16i32(<16 x i32> %a) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %bitreverse
 ;
 ; AVX1-LABEL: 'var_bitreverse_v16i32'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 198 for instruction: %bitreverse = call <16 x i32> @llvm.bitreverse.v16i32(<16 x i32> %a)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 196 for instruction: %bitreverse = call <16 x i32> @llvm.bitreverse.v16i32(<16 x i32> %a)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %bitreverse
 ;
 ; AVX2-LABEL: 'var_bitreverse_v16i32'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 198 for instruction: %bitreverse = call <16 x i32> @llvm.bitreverse.v16i32(<16 x i32> %a)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 196 for instruction: %bitreverse = call <16 x i32> @llvm.bitreverse.v16i32(<16 x i32> %a)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %bitreverse
 ;
 ; AVX512-LABEL: 'var_bitreverse_v16i32'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 199 for instruction: %bitreverse = call <16 x i32> @llvm.bitreverse.v16i32(<16 x i32> %a)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 198 for instruction: %bitreverse = call <16 x i32> @llvm.bitreverse.v16i32(<16 x i32> %a)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %bitreverse
 ;
 ; XOP-LABEL: 'var_bitreverse_v16i32'
@@ -532,15 +532,15 @@ define <16 x i16> @var_bitreverse_v16i16(<16 x i16> %a) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %bitreverse
 ;
 ; AVX1-LABEL: 'var_bitreverse_v16i16'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 195 for instruction: %bitreverse = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 194 for instruction: %bitreverse = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %bitreverse
 ;
 ; AVX2-LABEL: 'var_bitreverse_v16i16'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 195 for instruction: %bitreverse = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 194 for instruction: %bitreverse = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %bitreverse
 ;
 ; AVX512-LABEL: 'var_bitreverse_v16i16'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 195 for instruction: %bitreverse = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 194 for instruction: %bitreverse = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %bitreverse
 ;
 ; XOP-LABEL: 'var_bitreverse_v16i16'
@@ -581,15 +581,15 @@ define <32 x i16> @var_bitreverse_v32i16(<32 x i16> %a) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %bitreverse
 ;
 ; AVX1-LABEL: 'var_bitreverse_v32i16'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 390 for instruction: %bitreverse = call <32 x i16> @llvm.bitreverse.v32i16(<32 x i16> %a)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 388 for instruction: %bitreverse = call <32 x i16> @llvm.bitreverse.v32i16(<32 x i16> %a)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %bitreverse
 ;
 ; AVX2-LABEL: 'var_bitreverse_v32i16'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 390 for instruction: %bitreverse = call <32 x i16> @llvm.bitreverse.v32i16(<32 x i16> %a)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 388 for instruction: %bitreverse = call <32 x i16> @llvm.bitreverse.v32i16(<32 x i16> %a)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %bitreverse
 ;
 ; AVX512-LABEL: 'var_bitreverse_v32i16'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 391 for instruction: %bitreverse = call <32 x i16> @llvm.bitreverse.v32i16(<32 x i16> %a)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 390 for instruction: %bitreverse = call <32 x i16> @llvm.bitreverse.v32i16(<32 x i16> %a)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %bitreverse
 ;
 ; XOP-LABEL: 'var_bitreverse_v32i16'

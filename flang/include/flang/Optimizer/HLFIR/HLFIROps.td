@@ -83,7 +83,7 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
     OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs
   );
 
-  let results = (outs AnyFortranVariableLike, AnyRefOrBoxLike);
+  let results = (outs AnyFortranVariable, AnyRefOrBoxLike);
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
@@ -114,6 +114,23 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
   }];
 
   let hasVerifier = 1;
+}
+
+def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
+  let summary = "Assign an expression or variable value to a Fortran variable";
+
+  let description = [{
+    Assign rhs to lhs following Fortran intrinsic assignments rules.
+    The operation deals with inserting a temporary if the lhs and rhs
+    may overlap.
+  }];
+
+  let arguments = (ins AnyFortranEntity:$rhs,
+                   Arg<AnyFortranVariable, "", [MemWrite]>:$lhs);
+
+  let assemblyFormat = [{
+    $rhs `to` $lhs attr-dict `:` type(operands)
+  }];
 }
 
 #endif // FORTRAN_DIALECT_HLFIR_OPS

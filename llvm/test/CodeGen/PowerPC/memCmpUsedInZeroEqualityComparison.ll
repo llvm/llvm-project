@@ -150,9 +150,9 @@ define i1 @length2_eq_nobuiltin_attr(ptr %X, ptr %Y) nounwind {
 ; CHECK-LABEL: length2_eq_nobuiltin_attr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
 ; CHECK-NEXT:    li 5, 2
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    bl memcmp
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    cntlzw 3, 3

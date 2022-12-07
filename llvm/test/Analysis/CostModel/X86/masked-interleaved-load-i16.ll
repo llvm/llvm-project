@@ -28,8 +28,8 @@ define void @test1(i16* noalias nocapture %points, i16* noalias nocapture readon
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 13 for VF 4 For instruction: %i4 = load i16, i16* %arrayidx7, align 2
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 27 for VF 8 For instruction: %i2 = load i16, i16* %arrayidx2, align 2
 ; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 27 for VF 8 For instruction: %i4 = load i16, i16* %arrayidx7, align 2
-; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 56 for VF 16 For instruction: %i2 = load i16, i16* %arrayidx2, align 2
-; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 56 for VF 16 For instruction: %i4 = load i16, i16* %arrayidx7, align 2
+; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 55 for VF 16 For instruction: %i2 = load i16, i16* %arrayidx2, align 2
+; DISABLED_MASKED_STRIDED:  LV: Found an estimated cost of 55 for VF 16 For instruction: %i4 = load i16, i16* %arrayidx7, align 2
 ;
 ; ENABLED_MASKED_STRIDED-LABEL: 'test1'
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: %i2 = load i16, i16* %arrayidx2, align 2

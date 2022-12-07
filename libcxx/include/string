@@ -682,6 +682,7 @@ public:
                   "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
                   "original allocator");
 
+    // TODO: Implement iterator bounds checking without requiring the global database.
     typedef __wrap_iter<pointer>                         iterator;
     typedef __wrap_iter<const_pointer>                   const_iterator;
     typedef std::reverse_iterator<iterator>              reverse_iterator;

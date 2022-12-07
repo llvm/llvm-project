@@ -7,8 +7,8 @@ define void @main() nounwind #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -48(1)
+; CHECK-NEXT:    std 0, 64(1)
 ; CHECK-NEXT:    bl strtol
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mr 30, 3

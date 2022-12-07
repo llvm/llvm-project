@@ -748,7 +748,7 @@ def G_FCANONICALIZE : GenericInstruction {
 // Generic opcode equivalent to the llvm.is_fpclass intrinsic.
 def G_IS_FPCLASS: GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type1:$src, unknown:$test, unknown:$fpsem);
+  let InOperandList = (ins type1:$src, unknown:$test);
   let hasSideEffects = false;
 }
 

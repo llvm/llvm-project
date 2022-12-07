@@ -17,17 +17,11 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include <map>
 
 namespace llvm {
 namespace memprof {
-
-// Allocation type assigned to an allocation reached by a given context.
-// More can be added but initially this is just noncold and cold.
-// Values should be powers of two so that they can be ORed, in particular to
-// track allocations that have different behavior with different calling
-// contexts.
-enum class AllocationType : uint8_t { None = 0, NotCold = 1, Cold = 2 };
 
 /// Return the allocation type for a given set of memory profile values.
 AllocationType getAllocType(uint64_t MaxAccessCount, uint64_t MinSize,
@@ -105,6 +99,62 @@ public:
   /// Returns true if memprof metadata attached, false if not (attribute added).
   bool buildAndAttachMIBMetadata(CallBase *CI);
 };
+
+/// Helper class to iterate through stack ids in both metadata (memprof MIB and
+/// callsite) and the corresponding ThinLTO summary data structures
+/// (CallsiteInfo and MIBInfo). This simplifies implementation of client code
+/// which doesn't need to worry about whether we are operating with IR (Regular
+/// LTO), or summary (ThinLTO).
+template <class NodeT, class IteratorT> class CallStack {
+public:
+  CallStack(const NodeT *N = nullptr) : N(N) {}
+
+  // Implement minimum required methods for range-based for loop.
+  // The default implementation assumes we are operating on ThinLTO data
+  // structures, which have a vector of StackIdIndices. There are specialized
+  // versions provided to iterate through metadata.
+  struct CallStackIterator {
+    const NodeT *N = nullptr;
+    IteratorT Iter;
+    CallStackIterator(const NodeT *N, bool End) : N(N) {
+      if (!N)
+        return;
+      Iter = End ? N->StackIdIndices.end() : N->StackIdIndices.begin();
+    }
+    uint64_t operator*() {
+      assert(Iter != N->StackIdIndices.end());
+      return *Iter;
+    }
+    bool operator==(const CallStackIterator &rhs) { return Iter == rhs.Iter; }
+    bool operator!=(const CallStackIterator &rhs) { return !(*this == rhs); }
+    void operator++() { ++Iter; }
+  };
+
+  bool empty() const { return N == nullptr; }
+
+  CallStackIterator begin() const {
+    return CallStackIterator(N, /*End*/ false);
+  }
+  CallStackIterator end() const { return CallStackIterator(N, /*End*/ true); }
+
+  CallStackIterator beginAfterSharedPrefix(CallStack &Other) {
+    CallStackIterator Cur = begin();
+    for (CallStackIterator OtherCur = Other.begin();
+         Cur != end() && OtherCur != Other.end(); ++Cur, ++OtherCur)
+      assert(*Cur == *OtherCur);
+    return Cur;
+  }
+
+private:
+  const NodeT *N = nullptr;
+};
+
+/// Specializations for iterating through IR metadata stack contexts.
+template <>
+CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::CallStackIterator(
+    const MDNode *N, bool End);
+template <>
+uint64_t CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::operator*();
 
 } // end namespace memprof
 } // end namespace llvm

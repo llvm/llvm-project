@@ -524,8 +524,8 @@ entry:
 ; DIS:      Disassembly of section .text:
 ; DIS:      00000000 (idx: 5) .storesTIInit:
 ; DIS-NEXT:                                       mflr 0
-; DIS-NEXT:                                       stw 0, 8(1)
 ; DIS-NEXT:                                       stwu 1, -32(1)
+; DIS-NEXT:                                       stw 0, 40(1)
 ; DIS-NEXT:                                       mr 6, 4
 ; DIS-NEXT:                                       mr 7, 3
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 3, 2, 0
@@ -546,8 +546,8 @@ entry:
 ; DIS-NEXT:                                       blr
 ; DIS:      00000040 (idx: 7) .loadsTWInit:
 ; DIS-NEXT:                                       mflr 0
-; DIS-NEXT:                                       stw 0, 8(1)
 ; DIS-NEXT:                                       stwu 1, -32(1)
+; DIS-NEXT:                                       stw 0, 40(1)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 3, 2, 0
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU (idx: 21) .TWInit[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 4, 2, 0

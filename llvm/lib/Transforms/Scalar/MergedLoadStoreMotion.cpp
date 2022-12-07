@@ -250,6 +250,7 @@ void MergedLoadStoreMotion::sinkStoresAndGEPs(BasicBlock *BB, StoreInst *S0,
   S0->andIRFlags(S1);
   S0->dropUnknownNonDebugMetadata();
   S0->applyMergedLocation(S0->getDebugLoc(), S1->getDebugLoc());
+  S0->mergeDIAssignID(S1);
 
   // Create the new store to be inserted at the join point.
   StoreInst *SNew = cast<StoreInst>(S0->clone());

@@ -44,11 +44,11 @@ define dso_local signext i32 @caller(i32 signext %a, i32 signext %b, i32 signext
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r31, -8(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -192(r1)
+; CHECK-NEXT:    std r0, 208(r1)
 ; CHECK-NEXT:    std r5, 32(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r3, 40(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    mr r0, r4
+; CHECK-NEXT:    std r3, 40(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    ld r3, 40(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    add r3, r3, r0

@@ -484,8 +484,7 @@ G_IS_FPCLASS
 ^^^^^^^^^^^^
 
 Tests if the first operand, which must be floating-point scalar or vector, has
-floating-point class specified by the second operand. The third operand
-specifies floating-point semantics of the tested value. Returns non-zero (true)
+floating-point class specified by the second operand. Returns non-zero (true)
 or zero (false). It's target specific whether a true value is 1, ~0U, or some
 other non-zero value. If the first operand is a vector, the returned value is a
 vector of the same length.

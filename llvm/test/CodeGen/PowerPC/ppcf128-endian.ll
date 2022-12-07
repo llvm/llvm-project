@@ -28,8 +28,8 @@ define void @caller() {
 ; CHECK-LABEL: caller:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
@@ -54,8 +54,8 @@ define void @caller_const() {
 ; CHECK-LABEL: caller_const:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LCPI2_0@toc@ha
@@ -90,8 +90,8 @@ define void @use_result() {
 ; CHECK-LABEL: use_result:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl test_result
@@ -116,8 +116,8 @@ define void @caller_result() {
 ; CHECK-LABEL: caller_result:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl test_result

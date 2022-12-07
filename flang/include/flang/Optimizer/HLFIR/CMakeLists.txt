@@ -1,6 +1,6 @@
 set(LLVM_TARGET_DEFINITIONS HLFIROpBase.td)
-mlir_tablegen(HLFIRTypes.h.inc -gen-typedef-decls)
-mlir_tablegen(HLFIRTypes.cpp.inc -gen-typedef-defs)
+mlir_tablegen(HLFIRTypes.h.inc -gen-typedef-decls -typedefs-dialect=hlfir)
+mlir_tablegen(HLFIRTypes.cpp.inc -gen-typedef-defs -typedefs-dialect=hlfir)
 mlir_tablegen(HLFIRDialect.h.inc -gen-dialect-decls -dialect=hlfir)
 mlir_tablegen(HLFIRDialect.cpp.inc -gen-dialect-defs -dialect=hlfir)
 mlir_tablegen(HLFIRAttributes.h.inc -gen-attrdef-decls -attrdefs-dialect=hlfir)

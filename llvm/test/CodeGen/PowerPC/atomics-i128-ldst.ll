@@ -29,8 +29,8 @@ define dso_local i128 @lq_unordered(ptr %src) {
 ; PWR7-LABEL: lq_unordered:
 ; PWR7:       # %bb.0: # %entry
 ; PWR7-NEXT:    mflr r0
-; PWR7-NEXT:    std r0, 16(r1)
 ; PWR7-NEXT:    stdu r1, -112(r1)
+; PWR7-NEXT:    std r0, 128(r1)
 ; PWR7-NEXT:    .cfi_def_cfa_offset 112
 ; PWR7-NEXT:    .cfi_offset lr, 16
 ; PWR7-NEXT:    li r4, 0
@@ -50,9 +50,9 @@ define dso_local i128 @lq_unordered(ptr %src) {
 ; AIX64-PWR8-LABEL: lq_unordered:
 ; AIX64-PWR8:       # %bb.0: # %entry
 ; AIX64-PWR8-NEXT:    mflr r0
-; AIX64-PWR8-NEXT:    std r0, 16(r1)
 ; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
 ; AIX64-PWR8-NEXT:    li r4, 0
+; AIX64-PWR8-NEXT:    std r0, 128(r1)
 ; AIX64-PWR8-NEXT:    bl .__atomic_load_16[PR]
 ; AIX64-PWR8-NEXT:    nop
 ; AIX64-PWR8-NEXT:    addi r1, r1, 112
@@ -63,8 +63,8 @@ define dso_local i128 @lq_unordered(ptr %src) {
 ; PPC-PWR8-LABEL: lq_unordered:
 ; PPC-PWR8:       # %bb.0: # %entry
 ; PPC-PWR8-NEXT:    mflr r0
-; PPC-PWR8-NEXT:    stw r0, 4(r1)
 ; PPC-PWR8-NEXT:    stwu r1, -32(r1)
+; PPC-PWR8-NEXT:    stw r0, 36(r1)
 ; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 32
 ; PPC-PWR8-NEXT:    .cfi_offset lr, 4
 ; PPC-PWR8-NEXT:    mr r4, r3
@@ -98,8 +98,8 @@ define dso_local i128 @lqx_unordered(ptr %src, i64 %idx) {
 ; PWR7-LABEL: lqx_unordered:
 ; PWR7:       # %bb.0: # %entry
 ; PWR7-NEXT:    mflr r0
-; PWR7-NEXT:    std r0, 16(r1)
 ; PWR7-NEXT:    stdu r1, -112(r1)
+; PWR7-NEXT:    std r0, 128(r1)
 ; PWR7-NEXT:    .cfi_def_cfa_offset 112
 ; PWR7-NEXT:    .cfi_offset lr, 16
 ; PWR7-NEXT:    sldi r4, r4, 4
@@ -125,9 +125,9 @@ define dso_local i128 @lqx_unordered(ptr %src, i64 %idx) {
 ; AIX64-PWR8-LABEL: lqx_unordered:
 ; AIX64-PWR8:       # %bb.0: # %entry
 ; AIX64-PWR8-NEXT:    mflr r0
-; AIX64-PWR8-NEXT:    std r0, 16(r1)
 ; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
 ; AIX64-PWR8-NEXT:    sldi r4, r4, 4
+; AIX64-PWR8-NEXT:    std r0, 128(r1)
 ; AIX64-PWR8-NEXT:    add r3, r3, r4
 ; AIX64-PWR8-NEXT:    li r4, 0
 ; AIX64-PWR8-NEXT:    bl .__atomic_load_16[PR]
@@ -140,8 +140,8 @@ define dso_local i128 @lqx_unordered(ptr %src, i64 %idx) {
 ; PPC-PWR8-LABEL: lqx_unordered:
 ; PPC-PWR8:       # %bb.0: # %entry
 ; PPC-PWR8-NEXT:    mflr r0
-; PPC-PWR8-NEXT:    stw r0, 4(r1)
 ; PPC-PWR8-NEXT:    stwu r1, -32(r1)
+; PPC-PWR8-NEXT:    stw r0, 36(r1)
 ; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 32
 ; PPC-PWR8-NEXT:    .cfi_offset lr, 4
 ; PPC-PWR8-NEXT:    slwi r4, r6, 4
@@ -177,8 +177,8 @@ define dso_local i128 @lq_big_offset_unordered(ptr %src) {
 ; PWR7-LABEL: lq_big_offset_unordered:
 ; PWR7:       # %bb.0: # %entry
 ; PWR7-NEXT:    mflr r0
-; PWR7-NEXT:    std r0, 16(r1)
 ; PWR7-NEXT:    stdu r1, -112(r1)
+; PWR7-NEXT:    std r0, 128(r1)
 ; PWR7-NEXT:    .cfi_def_cfa_offset 112
 ; PWR7-NEXT:    .cfi_offset lr, 16
 ; PWR7-NEXT:    addis r3, r3, 32
@@ -203,10 +203,10 @@ define dso_local i128 @lq_big_offset_unordered(ptr %src) {
 ; AIX64-PWR8-LABEL: lq_big_offset_unordered:
 ; AIX64-PWR8:       # %bb.0: # %entry
 ; AIX64-PWR8-NEXT:    mflr r0
-; AIX64-PWR8-NEXT:    std r0, 16(r1)
 ; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
 ; AIX64-PWR8-NEXT:    addis r3, r3, 32
 ; AIX64-PWR8-NEXT:    li r4, 0
+; AIX64-PWR8-NEXT:    std r0, 128(r1)
 ; AIX64-PWR8-NEXT:    bl .__atomic_load_16[PR]
 ; AIX64-PWR8-NEXT:    nop
 ; AIX64-PWR8-NEXT:    addi r1, r1, 112
@@ -217,8 +217,8 @@ define dso_local i128 @lq_big_offset_unordered(ptr %src) {
 ; PPC-PWR8-LABEL: lq_big_offset_unordered:
 ; PPC-PWR8:       # %bb.0: # %entry
 ; PPC-PWR8-NEXT:    mflr r0
-; PPC-PWR8-NEXT:    stw r0, 4(r1)
 ; PPC-PWR8-NEXT:    stwu r1, -32(r1)
+; PPC-PWR8-NEXT:    stw r0, 36(r1)
 ; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 32
 ; PPC-PWR8-NEXT:    .cfi_offset lr, 4
 ; PPC-PWR8-NEXT:    addis r4, r3, 32
@@ -251,8 +251,8 @@ define dso_local i128 @lq_monotonic(ptr %src) {
 ; PWR7-LABEL: lq_monotonic:
 ; PWR7:       # %bb.0: # %entry
 ; PWR7-NEXT:    mflr r0
-; PWR7-NEXT:    std r0, 16(r1)
 ; PWR7-NEXT:    stdu r1, -112(r1)
+; PWR7-NEXT:    std r0, 128(r1)
 ; PWR7-NEXT:    .cfi_def_cfa_offset 112
 ; PWR7-NEXT:    .cfi_offset lr, 16
 ; PWR7-NEXT:    li r4, 0
@@ -272,9 +272,9 @@ define dso_local i128 @lq_monotonic(ptr %src) {
 ; AIX64-PWR8-LABEL: lq_monotonic:
 ; AIX64-PWR8:       # %bb.0: # %entry
 ; AIX64-PWR8-NEXT:    mflr r0
-; AIX64-PWR8-NEXT:    std r0, 16(r1)
 ; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
 ; AIX64-PWR8-NEXT:    li r4, 0
+; AIX64-PWR8-NEXT:    std r0, 128(r1)
 ; AIX64-PWR8-NEXT:    bl .__atomic_load_16[PR]
 ; AIX64-PWR8-NEXT:    nop
 ; AIX64-PWR8-NEXT:    addi r1, r1, 112
@@ -285,8 +285,8 @@ define dso_local i128 @lq_monotonic(ptr %src) {
 ; PPC-PWR8-LABEL: lq_monotonic:
 ; PPC-PWR8:       # %bb.0: # %entry
 ; PPC-PWR8-NEXT:    mflr r0
-; PPC-PWR8-NEXT:    stw r0, 4(r1)
 ; PPC-PWR8-NEXT:    stwu r1, -32(r1)
+; PPC-PWR8-NEXT:    stw r0, 36(r1)
 ; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 32
 ; PPC-PWR8-NEXT:    .cfi_offset lr, 4
 ; PPC-PWR8-NEXT:    mr r4, r3
@@ -321,8 +321,8 @@ define dso_local i128 @lq_acquire(ptr %src) {
 ; PWR7-LABEL: lq_acquire:
 ; PWR7:       # %bb.0: # %entry
 ; PWR7-NEXT:    mflr r0
-; PWR7-NEXT:    std r0, 16(r1)
 ; PWR7-NEXT:    stdu r1, -112(r1)
+; PWR7-NEXT:    std r0, 128(r1)
 ; PWR7-NEXT:    .cfi_def_cfa_offset 112
 ; PWR7-NEXT:    .cfi_offset lr, 16
 ; PWR7-NEXT:    li r4, 2
@@ -345,9 +345,9 @@ define dso_local i128 @lq_acquire(ptr %src) {
 ; AIX64-PWR8-LABEL: lq_acquire:
 ; AIX64-PWR8:       # %bb.0: # %entry
 ; AIX64-PWR8-NEXT:    mflr r0
-; AIX64-PWR8-NEXT:    std r0, 16(r1)
 ; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
 ; AIX64-PWR8-NEXT:    li r4, 2
+; AIX64-PWR8-NEXT:    std r0, 128(r1)
 ; AIX64-PWR8-NEXT:    bl .__atomic_load_16[PR]
 ; AIX64-PWR8-NEXT:    nop
 ; AIX64-PWR8-NEXT:    addi r1, r1, 112
@@ -358,8 +358,8 @@ define dso_local i128 @lq_acquire(ptr %src) {
 ; PPC-PWR8-LABEL: lq_acquire:
 ; PPC-PWR8:       # %bb.0: # %entry
 ; PPC-PWR8-NEXT:    mflr r0
-; PPC-PWR8-NEXT:    stw r0, 4(r1)
 ; PPC-PWR8-NEXT:    stwu r1, -32(r1)
+; PPC-PWR8-NEXT:    stw r0, 36(r1)
 ; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 32
 ; PPC-PWR8-NEXT:    .cfi_offset lr, 4
 ; PPC-PWR8-NEXT:    mr r4, r3
@@ -395,8 +395,8 @@ define dso_local i128 @lq_seqcst(ptr %src) {
 ; PWR7-LABEL: lq_seqcst:
 ; PWR7:       # %bb.0: # %entry
 ; PWR7-NEXT:    mflr r0
-; PWR7-NEXT:    std r0, 16(r1)
 ; PWR7-NEXT:    stdu r1, -112(r1)
+; PWR7-NEXT:    std r0, 128(r1)
 ; PWR7-NEXT:    .cfi_def_cfa_offset 112
 ; PWR7-NEXT:    .cfi_offset lr, 16
 ; PWR7-NEXT:    li r4, 5
@@ -420,9 +420,9 @@ define dso_local i128 @lq_seqcst(ptr %src) {
 ; AIX64-PWR8-LABEL: lq_seqcst:
 ; AIX64-PWR8:       # %bb.0: # %entry
 ; AIX64-PWR8-NEXT:    mflr r0
-; AIX64-PWR8-NEXT:    std r0, 16(r1)
 ; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
 ; AIX64-PWR8-NEXT:    li r4, 5
+; AIX64-PWR8-NEXT:    std r0, 128(r1)
 ; AIX64-PWR8-NEXT:    bl .__atomic_load_16[PR]
 ; AIX64-PWR8-NEXT:    nop
 ; AIX64-PWR8-NEXT:    addi r1, r1, 112
@@ -433,8 +433,8 @@ define dso_local i128 @lq_seqcst(ptr %src) {
 ; PPC-PWR8-LABEL: lq_seqcst:
 ; PPC-PWR8:       # %bb.0: # %entry
 ; PPC-PWR8-NEXT:    mflr r0
-; PPC-PWR8-NEXT:    stw r0, 4(r1)
 ; PPC-PWR8-NEXT:    stwu r1, -32(r1)
+; PPC-PWR8-NEXT:    stw r0, 36(r1)
 ; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 32
 ; PPC-PWR8-NEXT:    .cfi_offset lr, 4
 ; PPC-PWR8-NEXT:    mr r4, r3
@@ -466,8 +466,8 @@ define dso_local void @stq_unordered(i128 %val, ptr %dst) {
 ; PWR7-LABEL: stq_unordered:
 ; PWR7:       # %bb.0: # %entry
 ; PWR7-NEXT:    mflr r0
-; PWR7-NEXT:    std r0, 16(r1)
 ; PWR7-NEXT:    stdu r1, -112(r1)
+; PWR7-NEXT:    std r0, 128(r1)
 ; PWR7-NEXT:    .cfi_def_cfa_offset 112
 ; PWR7-NEXT:    .cfi_offset lr, 16
 ; PWR7-NEXT:    mr r6, r4
@@ -492,11 +492,11 @@ define dso_local void @stq_unordered(i128 %val, ptr %dst) {
 ; AIX64-PWR8-LABEL: stq_unordered:
 ; AIX64-PWR8:       # %bb.0: # %entry
 ; AIX64-PWR8-NEXT:    mflr r0
-; AIX64-PWR8-NEXT:    std r0, 16(r1)
 ; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
 ; AIX64-PWR8-NEXT:    mr r6, r4
 ; AIX64-PWR8-NEXT:    mr r4, r3
 ; AIX64-PWR8-NEXT:    mr r3, r5
+; AIX64-PWR8-NEXT:    std r0, 128(r1)
 ; AIX64-PWR8-NEXT:    mr r5, r6
 ; AIX64-PWR8-NEXT:    li r6, 0
 ; AIX64-PWR8-NEXT:    bl .__atomic_store_16[PR]
@@ -509,8 +509,8 @@ define dso_local void @stq_unordered(i128 %val, ptr %dst) {
 ; PPC-PWR8-LABEL: stq_unordered:
 ; PPC-PWR8:       # %bb.0: # %entry
 ; PPC-PWR8-NEXT:    mflr r0
-; PPC-PWR8-NEXT:    stw r0, 4(r1)
 ; PPC-PWR8-NEXT:    stwu r1, -32(r1)
+; PPC-PWR8-NEXT:    stw r0, 36(r1)
 ; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 32
 ; PPC-PWR8-NEXT:    .cfi_offset lr, 4
 ; PPC-PWR8-NEXT:    stw r6, 28(r1)
@@ -544,8 +544,8 @@ define dso_local void @stqx_unordered(i128 %val, ptr %dst, i64 %idx) {
 ; PWR7-LABEL: stqx_unordered:
 ; PWR7:       # %bb.0: # %entry
 ; PWR7-NEXT:    mflr r0
-; PWR7-NEXT:    std r0, 16(r1)
 ; PWR7-NEXT:    stdu r1, -112(r1)
+; PWR7-NEXT:    std r0, 128(r1)
 ; PWR7-NEXT:    .cfi_def_cfa_offset 112
 ; PWR7-NEXT:    .cfi_offset lr, 16
 ; PWR7-NEXT:    mr r7, r4
@@ -573,10 +573,10 @@ define dso_local void @stqx_unordered(i128 %val, ptr %dst, i64 %idx) {
 ; AIX64-PWR8-LABEL: stqx_unordered:
 ; AIX64-PWR8:       # %bb.0: # %entry
 ; AIX64-PWR8-NEXT:    mflr r0
-; AIX64-PWR8-NEXT:    std r0, 16(r1)
 ; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
 ; AIX64-PWR8-NEXT:    mr r7, r4
 ; AIX64-PWR8-NEXT:    mr r4, r3
+; AIX64-PWR8-NEXT:    std r0, 128(r1)
 ; AIX64-PWR8-NEXT:    sldi r3, r6, 4
 ; AIX64-PWR8-NEXT:    li r6, 0
 ; AIX64-PWR8-NEXT:    add r3, r5, r3
@@ -591,8 +591,8 @@ define dso_local void @stqx_unordered(i128 %val, ptr %dst, i64 %idx) {
 ; PPC-PWR8-LABEL: stqx_unordered:
 ; PPC-PWR8:       # %bb.0: # %entry
 ; PPC-PWR8-NEXT:    mflr r0
-; PPC-PWR8-NEXT:    stw r0, 4(r1)
 ; PPC-PWR8-NEXT:    stwu r1, -32(r1)
+; PPC-PWR8-NEXT:    stw r0, 36(r1)
 ; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 32
 ; PPC-PWR8-NEXT:    .cfi_offset lr, 4
 ; PPC-PWR8-NEXT:    slwi r8, r10, 4
@@ -629,8 +629,8 @@ define dso_local void @stq_big_offset_unordered(i128 %val, ptr %dst) {
 ; PWR7-LABEL: stq_big_offset_unordered:
 ; PWR7:       # %bb.0: # %entry
 ; PWR7-NEXT:    mflr r0
-; PWR7-NEXT:    std r0, 16(r1)
 ; PWR7-NEXT:    stdu r1, -112(r1)
+; PWR7-NEXT:    std r0, 128(r1)
 ; PWR7-NEXT:    .cfi_def_cfa_offset 112
 ; PWR7-NEXT:    .cfi_offset lr, 16
 ; PWR7-NEXT:    mr r6, r4
@@ -657,11 +657,11 @@ define dso_local void @stq_big_offset_unordered(i128 %val, ptr %dst) {
 ; AIX64-PWR8-LABEL: stq_big_offset_unordered:
 ; AIX64-PWR8:       # %bb.0: # %entry
 ; AIX64-PWR8-NEXT:    mflr r0
-; AIX64-PWR8-NEXT:    std r0, 16(r1)
 ; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
 ; AIX64-PWR8-NEXT:    mr r6, r4
 ; AIX64-PWR8-NEXT:    mr r4, r3
 ; AIX64-PWR8-NEXT:    addis r3, r5, 32
+; AIX64-PWR8-NEXT:    std r0, 128(r1)
 ; AIX64-PWR8-NEXT:    mr r5, r6
 ; AIX64-PWR8-NEXT:    li r6, 0
 ; AIX64-PWR8-NEXT:    bl .__atomic_store_16[PR]
@@ -674,8 +674,8 @@ define dso_local void @stq_big_offset_unordered(i128 %val, ptr %dst) {
 ; PPC-PWR8-LABEL: stq_big_offset_unordered:
 ; PPC-PWR8:       # %bb.0: # %entry
 ; PPC-PWR8-NEXT:    mflr r0
-; PPC-PWR8-NEXT:    stw r0, 4(r1)
 ; PPC-PWR8-NEXT:    stwu r1, -32(r1)
+; PPC-PWR8-NEXT:    stw r0, 36(r1)
 ; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 32
 ; PPC-PWR8-NEXT:    .cfi_offset lr, 4
 ; PPC-PWR8-NEXT:    stw r6, 28(r1)
@@ -709,8 +709,8 @@ define dso_local void @stq_monotonic(i128 %val, ptr %dst) {
 ; PWR7-LABEL: stq_monotonic:
 ; PWR7:       # %bb.0: # %entry
 ; PWR7-NEXT:    mflr r0
-; PWR7-NEXT:    std r0, 16(r1)
 ; PWR7-NEXT:    stdu r1, -112(r1)
+; PWR7-NEXT:    std r0, 128(r1)
 ; PWR7-NEXT:    .cfi_def_cfa_offset 112
 ; PWR7-NEXT:    .cfi_offset lr, 16
 ; PWR7-NEXT:    mr r6, r4
@@ -735,11 +735,11 @@ define dso_local void @stq_monotonic(i128 %val, ptr %dst) {
 ; AIX64-PWR8-LABEL: stq_monotonic:
 ; AIX64-PWR8:       # %bb.0: # %entry
 ; AIX64-PWR8-NEXT:    mflr r0
-; AIX64-PWR8-NEXT:    std r0, 16(r1)
 ; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
 ; AIX64-PWR8-NEXT:    mr r6, r4
 ; AIX64-PWR8-NEXT:    mr r4, r3
 ; AIX64-PWR8-NEXT:    mr r3, r5
+; AIX64-PWR8-NEXT:    std r0, 128(r1)
 ; AIX64-PWR8-NEXT:    mr r5, r6
 ; AIX64-PWR8-NEXT:    li r6, 0
 ; AIX64-PWR8-NEXT:    bl .__atomic_store_16[PR]
@@ -752,8 +752,8 @@ define dso_local void @stq_monotonic(i128 %val, ptr %dst) {
 ; PPC-PWR8-LABEL: stq_monotonic:
 ; PPC-PWR8:       # %bb.0: # %entry
 ; PPC-PWR8-NEXT:    mflr r0
-; PPC-PWR8-NEXT:    stw r0, 4(r1)
 ; PPC-PWR8-NEXT:    stwu r1, -32(r1)
+; PPC-PWR8-NEXT:    stw r0, 36(r1)
 ; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 32
 ; PPC-PWR8-NEXT:    .cfi_offset lr, 4
 ; PPC-PWR8-NEXT:    stw r6, 28(r1)
@@ -786,8 +786,8 @@ define dso_local void @stq_release(i128 %val, ptr %dst) {
 ; PWR7-LABEL: stq_release:
 ; PWR7:       # %bb.0: # %entry
 ; PWR7-NEXT:    mflr r0
-; PWR7-NEXT:    std r0, 16(r1)
 ; PWR7-NEXT:    stdu r1, -112(r1)
+; PWR7-NEXT:    std r0, 128(r1)
 ; PWR7-NEXT:    .cfi_def_cfa_offset 112
 ; PWR7-NEXT:    .cfi_offset lr, 16
 ; PWR7-NEXT:    mr r6, r4
@@ -813,11 +813,11 @@ define dso_local void @stq_release(i128 %val, ptr %dst) {
 ; AIX64-PWR8-LABEL: stq_release:
 ; AIX64-PWR8:       # %bb.0: # %entry
 ; AIX64-PWR8-NEXT:    mflr r0
-; AIX64-PWR8-NEXT:    std r0, 16(r1)
 ; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
 ; AIX64-PWR8-NEXT:    mr r6, r4
 ; AIX64-PWR8-NEXT:    mr r4, r3
 ; AIX64-PWR8-NEXT:    mr r3, r5
+; AIX64-PWR8-NEXT:    std r0, 128(r1)
 ; AIX64-PWR8-NEXT:    mr r5, r6
 ; AIX64-PWR8-NEXT:    li r6, 3
 ; AIX64-PWR8-NEXT:    bl .__atomic_store_16[PR]
@@ -830,8 +830,8 @@ define dso_local void @stq_release(i128 %val, ptr %dst) {
 ; PPC-PWR8-LABEL: stq_release:
 ; PPC-PWR8:       # %bb.0: # %entry
 ; PPC-PWR8-NEXT:    mflr r0
-; PPC-PWR8-NEXT:    stw r0, 4(r1)
 ; PPC-PWR8-NEXT:    stwu r1, -32(r1)
+; PPC-PWR8-NEXT:    stw r0, 36(r1)
 ; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 32
 ; PPC-PWR8-NEXT:    .cfi_offset lr, 4
 ; PPC-PWR8-NEXT:    stw r6, 28(r1)
@@ -864,8 +864,8 @@ define dso_local void @stq_seqcst(i128 %val, ptr %dst) {
 ; PWR7-LABEL: stq_seqcst:
 ; PWR7:       # %bb.0: # %entry
 ; PWR7-NEXT:    mflr r0
-; PWR7-NEXT:    std r0, 16(r1)
 ; PWR7-NEXT:    stdu r1, -112(r1)
+; PWR7-NEXT:    std r0, 128(r1)
 ; PWR7-NEXT:    .cfi_def_cfa_offset 112
 ; PWR7-NEXT:    .cfi_offset lr, 16
 ; PWR7-NEXT:    mr r6, r4
@@ -891,11 +891,11 @@ define dso_local void @stq_seqcst(i128 %val, ptr %dst) {
 ; AIX64-PWR8-LABEL: stq_seqcst:
 ; AIX64-PWR8:       # %bb.0: # %entry
 ; AIX64-PWR8-NEXT:    mflr r0
-; AIX64-PWR8-NEXT:    std r0, 16(r1)
 ; AIX64-PWR8-NEXT:    stdu r1, -112(r1)
 ; AIX64-PWR8-NEXT:    mr r6, r4
 ; AIX64-PWR8-NEXT:    mr r4, r3
 ; AIX64-PWR8-NEXT:    mr r3, r5
+; AIX64-PWR8-NEXT:    std r0, 128(r1)
 ; AIX64-PWR8-NEXT:    mr r5, r6
 ; AIX64-PWR8-NEXT:    li r6, 5
 ; AIX64-PWR8-NEXT:    bl .__atomic_store_16[PR]
@@ -908,8 +908,8 @@ define dso_local void @stq_seqcst(i128 %val, ptr %dst) {
 ; PPC-PWR8-LABEL: stq_seqcst:
 ; PPC-PWR8:       # %bb.0: # %entry
 ; PPC-PWR8-NEXT:    mflr r0
-; PPC-PWR8-NEXT:    stw r0, 4(r1)
 ; PPC-PWR8-NEXT:    stwu r1, -32(r1)
+; PPC-PWR8-NEXT:    stw r0, 36(r1)
 ; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 32
 ; PPC-PWR8-NEXT:    .cfi_offset lr, 4
 ; PPC-PWR8-NEXT:    stw r6, 28(r1)

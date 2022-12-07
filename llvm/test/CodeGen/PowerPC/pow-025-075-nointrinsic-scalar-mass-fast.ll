@@ -13,8 +13,8 @@ define float @powf_f32_fast025(float %a) #1 {
 ; CHECK-LNX-LABEL: powf_f32_fast025:
 ; CHECK-LNX:       # %bb.0: # %entry
 ; CHECK-LNX-NEXT:    mflr 0
-; CHECK-LNX-NEXT:    std 0, 16(1)
 ; CHECK-LNX-NEXT:    stdu 1, -32(1)
+; CHECK-LNX-NEXT:    std 0, 48(1)
 ; CHECK-LNX-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LNX-NEXT:    .cfi_offset lr, 16
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
@@ -29,9 +29,9 @@ define float @powf_f32_fast025(float %a) #1 {
 ; CHECK-AIX-LABEL: powf_f32_fast025:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    stw 0, 8(1)
 ; CHECK-AIX-NEXT:    stwu 1, -64(1)
 ; CHECK-AIX-NEXT:    lwz 3, L..C0(2) # %const.0
+; CHECK-AIX-NEXT:    stw 0, 72(1)
 ; CHECK-AIX-NEXT:    lfs 2, 0(3)
 ; CHECK-AIX-NEXT:    bl .__xl_powf_finite[PR]
 ; CHECK-AIX-NEXT:    nop
@@ -50,8 +50,8 @@ define double @pow_f64_fast025(double %a) #1 {
 ; CHECK-LNX-LABEL: pow_f64_fast025:
 ; CHECK-LNX:       # %bb.0: # %entry
 ; CHECK-LNX-NEXT:    mflr 0
-; CHECK-LNX-NEXT:    std 0, 16(1)
 ; CHECK-LNX-NEXT:    stdu 1, -32(1)
+; CHECK-LNX-NEXT:    std 0, 48(1)
 ; CHECK-LNX-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LNX-NEXT:    .cfi_offset lr, 16
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
@@ -66,9 +66,9 @@ define double @pow_f64_fast025(double %a) #1 {
 ; CHECK-AIX-LABEL: pow_f64_fast025:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    stw 0, 8(1)
 ; CHECK-AIX-NEXT:    stwu 1, -64(1)
 ; CHECK-AIX-NEXT:    lwz 3, L..C1(2) # %const.0
+; CHECK-AIX-NEXT:    stw 0, 72(1)
 ; CHECK-AIX-NEXT:    lfs 2, 0(3)
 ; CHECK-AIX-NEXT:    bl .__xl_pow_finite[PR]
 ; CHECK-AIX-NEXT:    nop
@@ -87,8 +87,8 @@ define float @powf_f32_fast075(float %a) #1 {
 ; CHECK-LNX-LABEL: powf_f32_fast075:
 ; CHECK-LNX:       # %bb.0: # %entry
 ; CHECK-LNX-NEXT:    mflr 0
-; CHECK-LNX-NEXT:    std 0, 16(1)
 ; CHECK-LNX-NEXT:    stdu 1, -32(1)
+; CHECK-LNX-NEXT:    std 0, 48(1)
 ; CHECK-LNX-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LNX-NEXT:    .cfi_offset lr, 16
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI2_0@toc@ha
@@ -103,9 +103,9 @@ define float @powf_f32_fast075(float %a) #1 {
 ; CHECK-AIX-LABEL: powf_f32_fast075:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    stw 0, 8(1)
 ; CHECK-AIX-NEXT:    stwu 1, -64(1)
 ; CHECK-AIX-NEXT:    lwz 3, L..C2(2) # %const.0
+; CHECK-AIX-NEXT:    stw 0, 72(1)
 ; CHECK-AIX-NEXT:    lfs 2, 0(3)
 ; CHECK-AIX-NEXT:    bl .__xl_powf_finite[PR]
 ; CHECK-AIX-NEXT:    nop
@@ -124,8 +124,8 @@ define double @pow_f64_fast075(double %a) #1 {
 ; CHECK-LNX-LABEL: pow_f64_fast075:
 ; CHECK-LNX:       # %bb.0: # %entry
 ; CHECK-LNX-NEXT:    mflr 0
-; CHECK-LNX-NEXT:    std 0, 16(1)
 ; CHECK-LNX-NEXT:    stdu 1, -32(1)
+; CHECK-LNX-NEXT:    std 0, 48(1)
 ; CHECK-LNX-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LNX-NEXT:    .cfi_offset lr, 16
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
@@ -140,9 +140,9 @@ define double @pow_f64_fast075(double %a) #1 {
 ; CHECK-AIX-LABEL: pow_f64_fast075:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    stw 0, 8(1)
 ; CHECK-AIX-NEXT:    stwu 1, -64(1)
 ; CHECK-AIX-NEXT:    lwz 3, L..C3(2) # %const.0
+; CHECK-AIX-NEXT:    stw 0, 72(1)
 ; CHECK-AIX-NEXT:    lfs 2, 0(3)
 ; CHECK-AIX-NEXT:    bl .__xl_pow_finite[PR]
 ; CHECK-AIX-NEXT:    nop
@@ -161,8 +161,8 @@ define float @powf_f32_fast050(float %a) #1 {
 ; CHECK-LNX-LABEL: powf_f32_fast050:
 ; CHECK-LNX:       # %bb.0: # %entry
 ; CHECK-LNX-NEXT:    mflr 0
-; CHECK-LNX-NEXT:    std 0, 16(1)
 ; CHECK-LNX-NEXT:    stdu 1, -32(1)
+; CHECK-LNX-NEXT:    std 0, 48(1)
 ; CHECK-LNX-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LNX-NEXT:    .cfi_offset lr, 16
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
@@ -177,9 +177,9 @@ define float @powf_f32_fast050(float %a) #1 {
 ; CHECK-AIX-LABEL: powf_f32_fast050:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    stw 0, 8(1)
 ; CHECK-AIX-NEXT:    stwu 1, -64(1)
 ; CHECK-AIX-NEXT:    lwz 3, L..C4(2) # %const.0
+; CHECK-AIX-NEXT:    stw 0, 72(1)
 ; CHECK-AIX-NEXT:    lfs 2, 0(3)
 ; CHECK-AIX-NEXT:    bl .__xl_powf_finite[PR]
 ; CHECK-AIX-NEXT:    nop
@@ -198,8 +198,8 @@ define double @pow_f64_fast050(double %a) #1 {
 ; CHECK-LNX-LABEL: pow_f64_fast050:
 ; CHECK-LNX:       # %bb.0: # %entry
 ; CHECK-LNX-NEXT:    mflr 0
-; CHECK-LNX-NEXT:    std 0, 16(1)
 ; CHECK-LNX-NEXT:    stdu 1, -32(1)
+; CHECK-LNX-NEXT:    std 0, 48(1)
 ; CHECK-LNX-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LNX-NEXT:    .cfi_offset lr, 16
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
@@ -214,9 +214,9 @@ define double @pow_f64_fast050(double %a) #1 {
 ; CHECK-AIX-LABEL: pow_f64_fast050:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    stw 0, 8(1)
 ; CHECK-AIX-NEXT:    stwu 1, -64(1)
 ; CHECK-AIX-NEXT:    lwz 3, L..C5(2) # %const.0
+; CHECK-AIX-NEXT:    stw 0, 72(1)
 ; CHECK-AIX-NEXT:    lfs 2, 0(3)
 ; CHECK-AIX-NEXT:    bl .__xl_pow_finite[PR]
 ; CHECK-AIX-NEXT:    nop
@@ -237,8 +237,8 @@ define float @__powf_finite_f32_fast025(float %a) #1 {
 ; CHECK-LNX-LABEL: __powf_finite_f32_fast025:
 ; CHECK-LNX:       # %bb.0: # %entry
 ; CHECK-LNX-NEXT:    mflr 0
-; CHECK-LNX-NEXT:    std 0, 16(1)
 ; CHECK-LNX-NEXT:    stdu 1, -32(1)
+; CHECK-LNX-NEXT:    std 0, 48(1)
 ; CHECK-LNX-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LNX-NEXT:    .cfi_offset lr, 16
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI6_0@toc@ha
@@ -253,9 +253,9 @@ define float @__powf_finite_f32_fast025(float %a) #1 {
 ; CHECK-AIX-LABEL: __powf_finite_f32_fast025:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    stw 0, 8(1)
 ; CHECK-AIX-NEXT:    stwu 1, -64(1)
 ; CHECK-AIX-NEXT:    lwz 3, L..C6(2) # %const.0
+; CHECK-AIX-NEXT:    stw 0, 72(1)
 ; CHECK-AIX-NEXT:    lfs 2, 0(3)
 ; CHECK-AIX-NEXT:    bl .__xl_powf_finite[PR]
 ; CHECK-AIX-NEXT:    nop
@@ -274,8 +274,8 @@ define double @__pow_finite_f64_fast025(double %a) #1 {
 ; CHECK-LNX-LABEL: __pow_finite_f64_fast025:
 ; CHECK-LNX:       # %bb.0: # %entry
 ; CHECK-LNX-NEXT:    mflr 0
-; CHECK-LNX-NEXT:    std 0, 16(1)
 ; CHECK-LNX-NEXT:    stdu 1, -32(1)
+; CHECK-LNX-NEXT:    std 0, 48(1)
 ; CHECK-LNX-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LNX-NEXT:    .cfi_offset lr, 16
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI7_0@toc@ha
@@ -290,9 +290,9 @@ define double @__pow_finite_f64_fast025(double %a) #1 {
 ; CHECK-AIX-LABEL: __pow_finite_f64_fast025:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    stw 0, 8(1)
 ; CHECK-AIX-NEXT:    stwu 1, -64(1)
 ; CHECK-AIX-NEXT:    lwz 3, L..C7(2) # %const.0
+; CHECK-AIX-NEXT:    stw 0, 72(1)
 ; CHECK-AIX-NEXT:    lfs 2, 0(3)
 ; CHECK-AIX-NEXT:    bl .__xl_pow_finite[PR]
 ; CHECK-AIX-NEXT:    nop
@@ -311,8 +311,8 @@ define float @__powf_finite_f32_fast075(float %a) #1 {
 ; CHECK-LNX-LABEL: __powf_finite_f32_fast075:
 ; CHECK-LNX:       # %bb.0: # %entry
 ; CHECK-LNX-NEXT:    mflr 0
-; CHECK-LNX-NEXT:    std 0, 16(1)
 ; CHECK-LNX-NEXT:    stdu 1, -32(1)
+; CHECK-LNX-NEXT:    std 0, 48(1)
 ; CHECK-LNX-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LNX-NEXT:    .cfi_offset lr, 16
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI8_0@toc@ha
@@ -327,9 +327,9 @@ define float @__powf_finite_f32_fast075(float %a) #1 {
 ; CHECK-AIX-LABEL: __powf_finite_f32_fast075:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    stw 0, 8(1)
 ; CHECK-AIX-NEXT:    stwu 1, -64(1)
 ; CHECK-AIX-NEXT:    lwz 3, L..C8(2) # %const.0
+; CHECK-AIX-NEXT:    stw 0, 72(1)
 ; CHECK-AIX-NEXT:    lfs 2, 0(3)
 ; CHECK-AIX-NEXT:    bl .__xl_powf_finite[PR]
 ; CHECK-AIX-NEXT:    nop
@@ -348,8 +348,8 @@ define double @__pow_finite_f64_fast075(double %a) #1 {
 ; CHECK-LNX-LABEL: __pow_finite_f64_fast075:
 ; CHECK-LNX:       # %bb.0: # %entry
 ; CHECK-LNX-NEXT:    mflr 0
-; CHECK-LNX-NEXT:    std 0, 16(1)
 ; CHECK-LNX-NEXT:    stdu 1, -32(1)
+; CHECK-LNX-NEXT:    std 0, 48(1)
 ; CHECK-LNX-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LNX-NEXT:    .cfi_offset lr, 16
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI9_0@toc@ha
@@ -364,9 +364,9 @@ define double @__pow_finite_f64_fast075(double %a) #1 {
 ; CHECK-AIX-LABEL: __pow_finite_f64_fast075:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    stw 0, 8(1)
 ; CHECK-AIX-NEXT:    stwu 1, -64(1)
 ; CHECK-AIX-NEXT:    lwz 3, L..C9(2) # %const.0
+; CHECK-AIX-NEXT:    stw 0, 72(1)
 ; CHECK-AIX-NEXT:    lfs 2, 0(3)
 ; CHECK-AIX-NEXT:    bl .__xl_pow_finite[PR]
 ; CHECK-AIX-NEXT:    nop
@@ -385,8 +385,8 @@ define float @__powf_finite_f32_fast050(float %a) #1 {
 ; CHECK-LNX-LABEL: __powf_finite_f32_fast050:
 ; CHECK-LNX:       # %bb.0: # %entry
 ; CHECK-LNX-NEXT:    mflr 0
-; CHECK-LNX-NEXT:    std 0, 16(1)
 ; CHECK-LNX-NEXT:    stdu 1, -32(1)
+; CHECK-LNX-NEXT:    std 0, 48(1)
 ; CHECK-LNX-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LNX-NEXT:    .cfi_offset lr, 16
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI10_0@toc@ha
@@ -401,9 +401,9 @@ define float @__powf_finite_f32_fast050(float %a) #1 {
 ; CHECK-AIX-LABEL: __powf_finite_f32_fast050:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    stw 0, 8(1)
 ; CHECK-AIX-NEXT:    stwu 1, -64(1)
 ; CHECK-AIX-NEXT:    lwz 3, L..C10(2) # %const.0
+; CHECK-AIX-NEXT:    stw 0, 72(1)
 ; CHECK-AIX-NEXT:    lfs 2, 0(3)
 ; CHECK-AIX-NEXT:    bl .__xl_powf_finite[PR]
 ; CHECK-AIX-NEXT:    nop
@@ -422,8 +422,8 @@ define double @__pow_finite_f64_fast050(double %a) #1 {
 ; CHECK-LNX-LABEL: __pow_finite_f64_fast050:
 ; CHECK-LNX:       # %bb.0: # %entry
 ; CHECK-LNX-NEXT:    mflr 0
-; CHECK-LNX-NEXT:    std 0, 16(1)
 ; CHECK-LNX-NEXT:    stdu 1, -32(1)
+; CHECK-LNX-NEXT:    std 0, 48(1)
 ; CHECK-LNX-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LNX-NEXT:    .cfi_offset lr, 16
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI11_0@toc@ha
@@ -438,9 +438,9 @@ define double @__pow_finite_f64_fast050(double %a) #1 {
 ; CHECK-AIX-LABEL: __pow_finite_f64_fast050:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    stw 0, 8(1)
 ; CHECK-AIX-NEXT:    stwu 1, -64(1)
 ; CHECK-AIX-NEXT:    lwz 3, L..C11(2) # %const.0
+; CHECK-AIX-NEXT:    stw 0, 72(1)
 ; CHECK-AIX-NEXT:    lfs 2, 0(3)
 ; CHECK-AIX-NEXT:    bl .__xl_pow_finite[PR]
 ; CHECK-AIX-NEXT:    nop

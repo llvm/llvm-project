@@ -171,8 +171,8 @@ define double @nearbyint_f64(double %f1, double %f2) {
 ; P8-LABEL: nearbyint_f64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    .cfi_def_cfa_offset 112
 ; P8-NEXT:    .cfi_offset lr, 16
 ; P8-NEXT:    bl nearbyint
@@ -185,8 +185,8 @@ define double @nearbyint_f64(double %f1, double %f2) {
 ; P9-LABEL: nearbyint_f64:
 ; P9:       # %bb.0:
 ; P9-NEXT:    mflr r0
-; P9-NEXT:    std r0, 16(r1)
 ; P9-NEXT:    stdu r1, -32(r1)
+; P9-NEXT:    std r0, 48(r1)
 ; P9-NEXT:    .cfi_def_cfa_offset 32
 ; P9-NEXT:    .cfi_offset lr, 16
 ; P9-NEXT:    bl nearbyint
@@ -206,8 +206,8 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %vf1, <4 x float> %vf2) {
 ; P8-LABEL: nearbyint_v4f32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -176(r1)
+; P8-NEXT:    std r0, 192(r1)
 ; P8-NEXT:    .cfi_def_cfa_offset 176
 ; P8-NEXT:    .cfi_offset lr, 16
 ; P8-NEXT:    .cfi_offset v29, -48
@@ -258,8 +258,8 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %vf1, <4 x float> %vf2) {
 ; P9-LABEL: nearbyint_v4f32:
 ; P9:       # %bb.0:
 ; P9-NEXT:    mflr r0
-; P9-NEXT:    std r0, 16(r1)
 ; P9-NEXT:    stdu r1, -80(r1)
+; P9-NEXT:    std r0, 96(r1)
 ; P9-NEXT:    .cfi_def_cfa_offset 80
 ; P9-NEXT:    .cfi_offset lr, 16
 ; P9-NEXT:    .cfi_offset v29, -48
@@ -311,8 +311,8 @@ define <2 x double> @nearbyint_v2f64(<2 x double> %vf1, <2 x double> %vf2) {
 ; P8-LABEL: nearbyint_v2f64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -160(r1)
+; P8-NEXT:    std r0, 176(r1)
 ; P8-NEXT:    .cfi_def_cfa_offset 160
 ; P8-NEXT:    .cfi_offset lr, 16
 ; P8-NEXT:    .cfi_offset v30, -32
@@ -344,8 +344,8 @@ define <2 x double> @nearbyint_v2f64(<2 x double> %vf1, <2 x double> %vf2) {
 ; P9-LABEL: nearbyint_v2f64:
 ; P9:       # %bb.0:
 ; P9-NEXT:    mflr r0
-; P9-NEXT:    std r0, 16(r1)
 ; P9-NEXT:    stdu r1, -64(r1)
+; P9-NEXT:    std r0, 80(r1)
 ; P9-NEXT:    .cfi_def_cfa_offset 64
 ; P9-NEXT:    .cfi_offset lr, 16
 ; P9-NEXT:    .cfi_offset v30, -32

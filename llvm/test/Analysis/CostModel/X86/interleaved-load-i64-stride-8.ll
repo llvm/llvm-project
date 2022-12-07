@@ -20,14 +20,14 @@ define void @test() {
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i64, ptr %in0, align 8
 ; AVX1:  LV: Found an estimated cost of 40 for VF 2 For instruction: %v0 = load i64, ptr %in0, align 8
-; AVX1:  LV: Found an estimated cost of 96 for VF 4 For instruction: %v0 = load i64, ptr %in0, align 8
-; AVX1:  LV: Found an estimated cost of 192 for VF 8 For instruction: %v0 = load i64, ptr %in0, align 8
+; AVX1:  LV: Found an estimated cost of 88 for VF 4 For instruction: %v0 = load i64, ptr %in0, align 8
+; AVX1:  LV: Found an estimated cost of 176 for VF 8 For instruction: %v0 = load i64, ptr %in0, align 8
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i64, ptr %in0, align 8
 ; AVX2:  LV: Found an estimated cost of 32 for VF 2 For instruction: %v0 = load i64, ptr %in0, align 8
-; AVX2:  LV: Found an estimated cost of 80 for VF 4 For instruction: %v0 = load i64, ptr %in0, align 8
-; AVX2:  LV: Found an estimated cost of 160 for VF 8 For instruction: %v0 = load i64, ptr %in0, align 8
+; AVX2:  LV: Found an estimated cost of 72 for VF 4 For instruction: %v0 = load i64, ptr %in0, align 8
+; AVX2:  LV: Found an estimated cost of 144 for VF 8 For instruction: %v0 = load i64, ptr %in0, align 8
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i64, ptr %in0, align 8

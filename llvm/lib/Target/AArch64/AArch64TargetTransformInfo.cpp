@@ -975,16 +975,34 @@ instCombineSVECntElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts) {
 
 static Optional<Instruction *> instCombineSVEPTest(InstCombiner &IC,
                                                    IntrinsicInst &II) {
-  IntrinsicInst *Pg = dyn_cast<IntrinsicInst>(II.getArgOperand(0));
-  IntrinsicInst *Op = dyn_cast<IntrinsicInst>(II.getArgOperand(1));
+  Value *PgVal = II.getArgOperand(0);
+  Value *OpVal = II.getArgOperand(1);
+
+  IRBuilder<> Builder(II.getContext());
+  Builder.SetInsertPoint(&II);
+
+  // PTEST_<FIRST|LAST>(X, X) is equivalent to PTEST_ANY(X, X).
+  // Later optimizations prefer this form.
+  if (PgVal == OpVal &&
+      (II.getIntrinsicID() == Intrinsic::aarch64_sve_ptest_first ||
+       II.getIntrinsicID() == Intrinsic::aarch64_sve_ptest_last)) {
+    Value *Ops[] = {PgVal, OpVal};
+    Type *Tys[] = {PgVal->getType()};
+
+    auto *PTest =
+        Builder.CreateIntrinsic(Intrinsic::aarch64_sve_ptest_any, Tys, Ops);
+    PTest->takeName(&II);
+
+    return IC.replaceInstUsesWith(II, PTest);
+  }
+
+  IntrinsicInst *Pg = dyn_cast<IntrinsicInst>(PgVal);
+  IntrinsicInst *Op = dyn_cast<IntrinsicInst>(OpVal);
 
   if (!Pg || !Op)
     return None;
 
   Intrinsic::ID OpIID = Op->getIntrinsicID();
-
-  IRBuilder<> Builder(II.getContext());
-  Builder.SetInsertPoint(&II);
 
   if (Pg->getIntrinsicID() == Intrinsic::aarch64_sve_convert_to_svbool &&
       OpIID == Intrinsic::aarch64_sve_convert_to_svbool &&

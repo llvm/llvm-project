@@ -350,6 +350,7 @@ public:
     typedef typename __alloc_traits::difference_type        difference_type;
     typedef typename __alloc_traits::pointer                pointer;
     typedef typename __alloc_traits::const_pointer          const_pointer;
+    // TODO: Implement iterator bounds checking without requiring the global database.
     typedef __wrap_iter<pointer>                            iterator;
     typedef __wrap_iter<const_pointer>                      const_iterator;
     typedef std::reverse_iterator<iterator>               reverse_iterator;

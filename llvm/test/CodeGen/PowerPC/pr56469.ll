@@ -7,7 +7,6 @@ define void @callee(float  %a, float  %b, float  %c, float  %d, float  %e, float
 ; CHECK-LABEL: callee:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stw 0, 4(1)
 ; CHECK-NEXT:    stwu 1, -16(1)
 ; CHECK-NEXT:    lfs 1, 24(1)
 ; CHECK-NEXT:    lis 3, .L.str@ha
@@ -16,6 +15,7 @@ define void @callee(float  %a, float  %b, float  %c, float  %d, float  %e, float
 ; CHECK-NEXT:    lfs 3, 32(1)
 ; CHECK-NEXT:    creqv 6, 6, 6
 ; CHECK-NEXT:    lfs 4, 36(1)
+; CHECK-NEXT:    stw 0, 20(1)
 ; CHECK-NEXT:    bl printf
 ; CHECK-NEXT:    lwz 0, 20(1)
 ; CHECK-NEXT:    addi 1, 1, 16

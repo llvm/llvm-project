@@ -24,10 +24,10 @@ define void @qpConv2sdw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-PWR8-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR8-NEXT:    .cfi_offset r30, -16
 ; CHECK-PWR8-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-PWR8-NEXT:    std 0, 16(1)
 ; CHECK-PWR8-NEXT:    stdu 1, -48(1)
-; CHECK-PWR8-NEXT:    lxvd2x 0, 0, 3
+; CHECK-PWR8-NEXT:    std 0, 64(1)
 ; CHECK-PWR8-NEXT:    mr 30, 4
+; CHECK-PWR8-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-PWR8-NEXT:    xxswapd 2, 0
 ; CHECK-PWR8-NEXT:    bl __fixkfdi
 ; CHECK-PWR8-NEXT:    nop
@@ -62,10 +62,10 @@ define void @qpConv2sw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-PWR8-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR8-NEXT:    .cfi_offset r30, -16
 ; CHECK-PWR8-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-PWR8-NEXT:    std 0, 16(1)
 ; CHECK-PWR8-NEXT:    stdu 1, -48(1)
-; CHECK-PWR8-NEXT:    lxvd2x 0, 0, 3
+; CHECK-PWR8-NEXT:    std 0, 64(1)
 ; CHECK-PWR8-NEXT:    mr 30, 4
+; CHECK-PWR8-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-PWR8-NEXT:    xxswapd 2, 0
 ; CHECK-PWR8-NEXT:    bl __fixkfsi
 ; CHECK-PWR8-NEXT:    nop
@@ -100,10 +100,10 @@ define void @qpConv2udw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-PWR8-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR8-NEXT:    .cfi_offset r30, -16
 ; CHECK-PWR8-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-PWR8-NEXT:    std 0, 16(1)
 ; CHECK-PWR8-NEXT:    stdu 1, -48(1)
-; CHECK-PWR8-NEXT:    lxvd2x 0, 0, 3
+; CHECK-PWR8-NEXT:    std 0, 64(1)
 ; CHECK-PWR8-NEXT:    mr 30, 4
+; CHECK-PWR8-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-PWR8-NEXT:    xxswapd 2, 0
 ; CHECK-PWR8-NEXT:    bl __fixunskfdi
 ; CHECK-PWR8-NEXT:    nop
@@ -138,10 +138,10 @@ define void @qpConv2uw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-PWR8-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR8-NEXT:    .cfi_offset r30, -16
 ; CHECK-PWR8-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-PWR8-NEXT:    std 0, 16(1)
 ; CHECK-PWR8-NEXT:    stdu 1, -48(1)
-; CHECK-PWR8-NEXT:    lxvd2x 0, 0, 3
+; CHECK-PWR8-NEXT:    std 0, 64(1)
 ; CHECK-PWR8-NEXT:    mr 30, 4
+; CHECK-PWR8-NEXT:    lxvd2x 0, 0, 3
 ; CHECK-PWR8-NEXT:    xxswapd 2, 0
 ; CHECK-PWR8-NEXT:    bl __fixunskfsi
 ; CHECK-PWR8-NEXT:    nop

@@ -97,6 +97,9 @@ Deprecations and Removals
   Please migrate to ``<memory_resource>`` instead. Per libc++'s TS deprecation policy,
   ``<experimental/memory_resource>`` will be removed in LLVM 18.
 
+- The ``_LIBCPP_DEBUG`` macro is not honored anymore, and it is an error to try to use it. Please migrate to
+  ``_LIBCPP_ENABLE_DEBUG_MODE`` instead.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 

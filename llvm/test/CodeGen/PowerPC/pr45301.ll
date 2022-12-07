@@ -7,8 +7,8 @@ define dso_local void @g(ptr %agg.result) local_unnamed_addr #0 {
 ; CHECK-LABEL: g:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -112(r1)
+; CHECK-NEXT:    std r0, 128(r1)
 ; CHECK-NEXT:    bl i
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addis r4, r2, g@toc@ha

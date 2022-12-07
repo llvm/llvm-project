@@ -550,7 +550,7 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
         tileUsingSCFForOp(rewriter, consumer, options.tilingOptions);
     if (failed(tilingResult))
       return rewriter.notifyMatchFailure(consumer, "failed to tile consumer");
-    for (auto tiledOp : tilingResult->tiledOps)
+    for (auto *tiledOp : tilingResult->tiledOps)
       tileAndFuseResult.tiledAndFusedOps.insert(tiledOp);
     tileAndFuseResult.loops = std::move(tilingResult->loops);
     for (const auto &result : llvm::enumerate(

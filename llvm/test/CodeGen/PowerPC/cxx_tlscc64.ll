@@ -16,8 +16,8 @@ define cxx_fast_tlscc nonnull ptr @_ZTW2sg() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -48(1)
+; CHECK-NEXT:    std 0, 64(1)
 ; CHECK-NEXT:    addis 3, 13, __tls_guard@tprel@ha
 ; CHECK-NEXT:    lbz 4, __tls_guard@tprel@l(3)
 ; CHECK-NEXT:    andi. 4, 4, 1

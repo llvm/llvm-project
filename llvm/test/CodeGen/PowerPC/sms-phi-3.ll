@@ -11,8 +11,8 @@ define void @phi3(i32*) nounwind {
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -64(1)
+; CHECK-NEXT:    std 0, 80(1)
 ; CHECK-NEXT:    mr 30, 3
 ; CHECK-NEXT:    bl malloc
 ; CHECK-NEXT:    nop
@@ -38,7 +38,7 @@ define void @phi3(i32*) nounwind {
 ; CHECK-NEXT:    lwzu 8, 4(7)
 ; CHECK-NEXT:    bdz .LBB0_4
 ; CHECK-NEXT:    .p2align 5
-; CHECK-NEXT:  .LBB0_3: #
+; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    add 9, 3, 6
 ; CHECK-NEXT:    extswsli 6, 5, 5
 ; CHECK-NEXT:    add 5, 8, 5

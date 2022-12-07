@@ -18,8 +18,8 @@ define void @qpFmadd(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-P8-LABEL: qpFmadd:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    std r0, 96(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
@@ -73,8 +73,8 @@ define void @qpFmadd_02(ptr nocapture readonly %a,
 ; CHECK-P8-LABEL: qpFmadd_02:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    std r0, 96(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
@@ -136,12 +136,12 @@ define void @qpFmadd_03(ptr nocapture readonly %a,
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -64(r1)
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
+; CHECK-P8-NEXT:    std r0, 80(r1)
 ; CHECK-P8-NEXT:    mr r30, r6
 ; CHECK-P8-NEXT:    mr r29, r5
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    xxswapd v3, vs1
 ; CHECK-P8-NEXT:    bl __mulkf3
@@ -184,8 +184,8 @@ define void @qpFnmadd(ptr nocapture readonly %a,
 ; CHECK-P8-LABEL: qpFnmadd:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -96(r1)
+; CHECK-P8-NEXT:    std r0, 112(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
@@ -254,12 +254,12 @@ define void @qpFnmadd_02(ptr nocapture readonly %a,
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
+; CHECK-P8-NEXT:    std r0, 96(r1)
 ; CHECK-P8-NEXT:    mr r30, r6
 ; CHECK-P8-NEXT:    mr r29, r5
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    xxswapd v3, vs1
 ; CHECK-P8-NEXT:    bl __mulkf3
@@ -309,8 +309,8 @@ define void @qpFmsub(ptr nocapture readonly %a,
 ; CHECK-P8-LABEL: qpFmsub:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    std r0, 96(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
@@ -372,12 +372,12 @@ define void @qpFmsub_02(ptr nocapture readonly %a,
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -64(r1)
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
+; CHECK-P8-NEXT:    std r0, 80(r1)
 ; CHECK-P8-NEXT:    mr r30, r6
 ; CHECK-P8-NEXT:    mr r29, r5
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    xxswapd v3, vs1
 ; CHECK-P8-NEXT:    bl __mulkf3
@@ -421,8 +421,8 @@ define void @qpFnmsub(ptr nocapture readonly %a,
 ; CHECK-P8-LABEL: qpFnmsub:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -96(r1)
+; CHECK-P8-NEXT:    std r0, 112(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
@@ -491,12 +491,12 @@ define void @qpFnmsub_02(ptr nocapture readonly %a,
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
+; CHECK-P8-NEXT:    std r0, 96(r1)
 ; CHECK-P8-NEXT:    mr r30, r6
 ; CHECK-P8-NEXT:    mr r29, r5
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    xxswapd v3, vs1
 ; CHECK-P8-NEXT:    bl __mulkf3

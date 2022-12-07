@@ -20,8 +20,8 @@ define ptr @g() nounwind readnone {
 ; CHECK-LABEL: g:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stw 0, 4(1)
 ; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    stw 0, 20(1)
 ; CHECK-NEXT:    lwz 3, 0(1)
 ; CHECK-NEXT:    lwz 3, 0(3)
 ; CHECK-NEXT:    lwz 3, 4(3)

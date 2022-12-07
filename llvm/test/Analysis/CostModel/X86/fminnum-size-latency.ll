@@ -15,8 +15,8 @@ define i32 @f32(i32 %arg) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %F32 = call float @llvm.minnum.f32(float undef, float undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %V2F32 = call <2 x float> @llvm.minnum.v2f32(<2 x float> undef, <2 x float> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %V4F32 = call <4 x float> @llvm.minnum.v4f32(<4 x float> undef, <4 x float> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V8F32 = call <8 x float> @llvm.minnum.v8f32(<8 x float> undef, <8 x float> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 176 for instruction: %V16F32 = call <16 x float> @llvm.minnum.v16f32(<16 x float> undef, <16 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 87 for instruction: %V8F32 = call <8 x float> @llvm.minnum.v8f32(<8 x float> undef, <8 x float> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 174 for instruction: %V16F32 = call <16 x float> @llvm.minnum.v16f32(<16 x float> undef, <16 x float> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %F32 = call float @llvm.minnum.f32(float undef, float undef)

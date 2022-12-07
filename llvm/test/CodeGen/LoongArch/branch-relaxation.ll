@@ -88,6 +88,8 @@ iffalse:
 define i32 @relax_b28(i1 %a) {
 ; LA32-LABEL: relax_b28:
 ; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $sp, $sp, -16
+; LA32-NEXT:    .cfi_def_cfa_offset 16
 ; LA32-NEXT:    andi $a0, $a0, 1
 ; LA32-NEXT:    bnez $a0, .LBB2_1
 ; LA32-NEXT:  # %bb.3:
@@ -99,13 +101,17 @@ define i32 @relax_b28(i1 %a) {
 ; LA32-NEXT:    .space 536870912
 ; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    ori $a0, $zero, 1
+; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ; LA32-NEXT:  .LBB2_2: # %iffalse
 ; LA32-NEXT:    move $a0, $zero
+; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: relax_b28:
 ; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $sp, $sp, -16
+; LA64-NEXT:    .cfi_def_cfa_offset 16
 ; LA64-NEXT:    andi $a0, $a0, 1
 ; LA64-NEXT:    bnez $a0, .LBB2_1
 ; LA64-NEXT:  # %bb.3:
@@ -117,9 +123,11 @@ define i32 @relax_b28(i1 %a) {
 ; LA64-NEXT:    .space 536870912
 ; LA64-NEXT:    #NO_APP
 ; LA64-NEXT:    ori $a0, $zero, 1
+; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
 ; LA64-NEXT:  .LBB2_2: # %iffalse
 ; LA64-NEXT:    move $a0, $zero
+; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
   br i1 %a, label %iftrue, label %iffalse
 

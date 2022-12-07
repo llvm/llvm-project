@@ -23,9 +23,9 @@ define void @test() {
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load float, ptr %in0, align 4
 ; AVX1:  LV: Found an estimated cost of 11 for VF 2 For instruction: %v0 = load float, ptr %in0, align 4
 ; AVX1:  LV: Found an estimated cost of 21 for VF 4 For instruction: %v0 = load float, ptr %in0, align 4
-; AVX1:  LV: Found an estimated cost of 48 for VF 8 For instruction: %v0 = load float, ptr %in0, align 4
-; AVX1:  LV: Found an estimated cost of 96 for VF 16 For instruction: %v0 = load float, ptr %in0, align 4
-; AVX1:  LV: Found an estimated cost of 192 for VF 32 For instruction: %v0 = load float, ptr %in0, align 4
+; AVX1:  LV: Found an estimated cost of 45 for VF 8 For instruction: %v0 = load float, ptr %in0, align 4
+; AVX1:  LV: Found an estimated cost of 90 for VF 16 For instruction: %v0 = load float, ptr %in0, align 4
+; AVX1:  LV: Found an estimated cost of 180 for VF 32 For instruction: %v0 = load float, ptr %in0, align 4
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load float, ptr %in0, align 4

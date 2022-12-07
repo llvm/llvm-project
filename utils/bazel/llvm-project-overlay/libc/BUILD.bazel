@@ -128,6 +128,26 @@ cc_library(
 )
 
 cc_library(
+    name = "__support_number_pair",
+    hdrs = ["src/__support/number_pair.h"],
+    deps = [
+        "__support_cpp_type_traits",
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "__support_integer_utils",
+    hdrs = ["src/__support/integer_utils.h"],
+    deps = [
+        "__support_builtin_wrappers",
+        "__support_cpp_type_traits",
+        "__support_number_pair",
+        ":libc_root",
+    ],
+)
+
+cc_library(
     name = "__support_uint",
     hdrs = ["src/__support/UInt.h"],
     deps = [
@@ -136,6 +156,8 @@ cc_library(
         "__support_cpp_type_traits",
         "__support_cpp_optional",
         "__support_builtin_wrappers",
+        "__support_number_pair",
+        "__support_integer_utils",
         ":libc_root",
     ],
 )

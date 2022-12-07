@@ -16,6 +16,7 @@
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
+include "flang/Optimizer/Dialect/FIRTypes.td"
 
 def hlfir_Dialect : Dialect {
   let name = "hlfir";
@@ -72,7 +73,17 @@ def hlfir_ExprType : TypeDef<hlfir_Dialect, "Expr"> {
 
 def IsFortranVariablePred
         : CPred<"::hlfir::isFortranVariableType($_self)">;
+def AnyFortranVariable : Type<IsFortranVariablePred, "any HLFIR variable type">;
 
-def AnyFortranVariableLike : Type<IsFortranVariablePred, "any HLFIR variable type">;
+
+def AnyFortranValue : TypeConstraint<Or<[AnyLogicalLike.predicate,
+    AnyIntegerLike.predicate, AnyRealLike.predicate,
+    fir_ComplexType.predicate, AnyComplex.predicate,
+    hlfir_ExprType.predicate]>, "any Fortran value type">;
+
+
+def AnyFortranEntity : TypeConstraint<Or<[AnyFortranVariable.predicate,
+    AnyFortranValue.predicate]>, "any Fortran value or variable type">;
+
 
 #endif // FORTRAN_DIALECT_HLFIR_OP_BASE

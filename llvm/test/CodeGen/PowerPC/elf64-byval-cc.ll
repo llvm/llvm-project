@@ -11,8 +11,8 @@ define void @call_test_byval_mem1() #0 {
 ; CHECK-LABEL: call_test_byval_mem1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
@@ -45,8 +45,8 @@ define void @call_test_byval_mem1_2() #0 {
 ; CHECK-LABEL: call_test_byval_mem1_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -112(1)
+; CHECK-NEXT:    std 0, 128(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
@@ -86,8 +86,8 @@ define void @call_test_byval_mem1_3() #0 {
 ; CHECK-LABEL: call_test_byval_mem1_3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
@@ -126,8 +126,8 @@ define void @call_test_byval_mem1_4() #0 {
 ; CHECK-LABEL: call_test_byval_mem1_4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -112(1)
+; CHECK-NEXT:    std 0, 128(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
@@ -168,8 +168,8 @@ define void @call_test_byval_mem1_5() #0 {
 ; CHECK-LABEL: call_test_byval_mem1_5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
@@ -211,8 +211,8 @@ define void @call_test_byval_mem2() #0 {
 ; CHECK-LABEL: call_test_byval_mem2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC1@toc@ha
@@ -247,8 +247,8 @@ define void @call_test_byval_mem3() #0 {
 ; CHECK-LABEL: call_test_byval_mem3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC2@toc@ha
@@ -290,8 +290,8 @@ define void @call_test_byval_mem4() #0 {
 ; CHECK-LABEL: call_test_byval_mem4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC3@toc@ha
@@ -326,8 +326,8 @@ define void @call_test_byval_mem8() #0 {
 ; CHECK-LABEL: call_test_byval_mem8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC4@toc@ha
@@ -363,8 +363,8 @@ define void @call_test_byval_mem32() #0 {
 ; CHECK-LABEL: call_test_byval_mem32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC5@toc@ha
@@ -403,8 +403,8 @@ define void @call_test_byval_mem32_2() #0 {
 ; CHECK-LABEL: call_test_byval_mem32_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC5@toc@ha
@@ -444,8 +444,8 @@ define void @call_test_byval_mem32_3() #0 {
 ; CHECK-LABEL: call_test_byval_mem32_3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -112(1)
+; CHECK-NEXT:    std 0, 128(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC5@toc@ha
@@ -498,8 +498,8 @@ define void @call_test_byval_mem64() #0 {
 ; CHECK-LABEL: call_test_byval_mem64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC6@toc@ha
@@ -548,8 +548,8 @@ define void @call_test_byval_mem65() #0 {
 ; CHECK-LABEL: call_test_byval_mem65:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -112(1)
+; CHECK-NEXT:    std 0, 128(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC7@toc@ha

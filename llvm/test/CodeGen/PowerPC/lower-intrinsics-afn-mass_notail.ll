@@ -10,9 +10,9 @@ define void @cos_f64(ptr %arg) {
 ; CHECK-LNX-NEXT:    .cfi_offset lr, 16
 ; CHECK-LNX-NEXT:    .cfi_offset f31, -8
 ; CHECK-LNX-NEXT:    stfd 31, -8(1) # 8-byte Folded Spill
-; CHECK-LNX-NEXT:    std 0, 16(1)
 ; CHECK-LNX-NEXT:    stdu 1, -48(1)
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
+; CHECK-LNX-NEXT:    std 0, 64(1)
 ; CHECK-LNX-NEXT:    xssqrtdp 31, 0
 ; CHECK-LNX-NEXT:    lfs 1, .LCPI0_0@toc@l(3)
 ; CHECK-LNX-NEXT:    bl __xl_cos
@@ -27,8 +27,8 @@ define void @cos_f64(ptr %arg) {
 ; CHECK-AIX-LABEL: cos_f64:
 ; CHECK-AIX:       # %bb.0: # %bb
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    stw 0, 8(1)
 ; CHECK-AIX-NEXT:    stwu 1, -64(1)
+; CHECK-AIX-NEXT:    stw 0, 72(1)
 ; CHECK-AIX-NEXT:    stfd 31, 56(1) # 8-byte Folded Spill
 ; CHECK-AIX-NEXT:    bl .sqrt[PR]
 ; CHECK-AIX-NEXT:    nop
@@ -66,9 +66,9 @@ define void @log_f64(ptr %arg) {
 ; CHECK-LNX-NEXT:    .cfi_offset lr, 16
 ; CHECK-LNX-NEXT:    .cfi_offset f31, -8
 ; CHECK-LNX-NEXT:    stfd 31, -8(1) # 8-byte Folded Spill
-; CHECK-LNX-NEXT:    std 0, 16(1)
 ; CHECK-LNX-NEXT:    stdu 1, -48(1)
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
+; CHECK-LNX-NEXT:    std 0, 64(1)
 ; CHECK-LNX-NEXT:    xssqrtdp 31, 0
 ; CHECK-LNX-NEXT:    lfs 1, .LCPI1_0@toc@l(3)
 ; CHECK-LNX-NEXT:    bl __xl_log
@@ -83,8 +83,8 @@ define void @log_f64(ptr %arg) {
 ; CHECK-AIX-LABEL: log_f64:
 ; CHECK-AIX:       # %bb.0: # %bb
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    stw 0, 8(1)
 ; CHECK-AIX-NEXT:    stwu 1, -64(1)
+; CHECK-AIX-NEXT:    stw 0, 72(1)
 ; CHECK-AIX-NEXT:    stfd 31, 56(1) # 8-byte Folded Spill
 ; CHECK-AIX-NEXT:    bl .sqrt[PR]
 ; CHECK-AIX-NEXT:    nop

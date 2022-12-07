@@ -4340,8 +4340,13 @@ Align NVPTXTargetLowering::getFunctionParamOptimizedAlign(
   const uint64_t ABITypeAlign = DL.getABITypeAlign(ArgTy).value();
 
   // If a function has linkage different from internal or private, we
-  // must use default ABI alignment as external users rely on it.
-  if (!(F && F->hasLocalLinkage()))
+  // must use default ABI alignment as external users rely on it. Same
+  // for a function that may be called from a function pointer.
+  if (!F || !F->hasLocalLinkage() ||
+      F->hasAddressTaken(/*Users=*/nullptr,
+                         /*IgnoreCallbackUses=*/false,
+                         /*IgnoreAssumeLikeCalls=*/true,
+                         /*IgnoreLLVMUsed=*/true))
     return Align(ABITypeAlign);
 
   assert(!isKernelFunction(*F) && "Expect kernels to have non-local linkage");

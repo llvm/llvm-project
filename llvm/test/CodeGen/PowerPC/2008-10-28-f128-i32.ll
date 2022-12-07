@@ -5,11 +5,11 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-LABEL: __fixunstfdi:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stw 0, 4(1)
 ; CHECK-NEXT:    stwu 1, -464(1)
 ; CHECK-NEXT:    mfcr 12
-; CHECK-NEXT:    stw 29, 412(1) # 4-byte Folded Spill
+; CHECK-NEXT:    stw 0, 468(1)
 ; CHECK-NEXT:    lis 3, .LCPI0_0@ha
+; CHECK-NEXT:    stw 29, 412(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 30, 416(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 12, 408(1)
 ; CHECK-NEXT:    stfd 2, 376(1)

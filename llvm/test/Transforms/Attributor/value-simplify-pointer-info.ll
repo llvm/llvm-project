@@ -2223,6 +2223,7 @@ define i8 @phi_no_store_2() {
 ; TUNIT:       loop:
 ; TUNIT-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a2 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; TUNIT-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
+; TUNIT-NEXT:    store i8 1, i8* [[P]], align 2
 ; TUNIT-NEXT:    [[G]] = getelementptr i8, i8* bitcast (i32* @a2 to i8*), i64 2
 ; TUNIT-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; TUNIT-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
@@ -2241,6 +2242,7 @@ define i8 @phi_no_store_2() {
 ; CGSCC:       loop:
 ; CGSCC-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a2 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; CGSCC-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
+; CGSCC-NEXT:    store i8 1, i8* [[P]], align 2
 ; CGSCC-NEXT:    [[G]] = getelementptr i8, i8* bitcast (i32* @a2 to i8*), i64 2
 ; CGSCC-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; CGSCC-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
@@ -2281,6 +2283,7 @@ define i8 @phi_no_store_3() {
 ; TUNIT:       loop:
 ; TUNIT-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a3 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; TUNIT-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
+; TUNIT-NEXT:    store i8 1, i8* [[P]], align 2
 ; TUNIT-NEXT:    [[G]] = getelementptr i8, i8* bitcast (i32* @a3 to i8*), i64 2
 ; TUNIT-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; TUNIT-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
@@ -2302,6 +2305,7 @@ define i8 @phi_no_store_3() {
 ; CGSCC:       loop:
 ; CGSCC-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a3 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; CGSCC-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
+; CGSCC-NEXT:    store i8 1, i8* [[P]], align 2
 ; CGSCC-NEXT:    [[G]] = getelementptr i8, i8* bitcast (i32* @a3 to i8*), i64 2
 ; CGSCC-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; CGSCC-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
@@ -3102,6 +3106,43 @@ define void @scope_value_traversal_helper(i32* %a, i1 %c) {
   store i32 %sel, i32* %a
   ret void
 }
+
+define i8 @multiple_offsets_not_simplifiable_1(i1 %cnd1, i1 %cnd2) {
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn
+; TUNIT-LABEL: define {{[^@]+}}@multiple_offsets_not_simplifiable_1
+; TUNIT-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
+; TUNIT-NEXT:    [[GEP7:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 7
+; TUNIT-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 23
+; TUNIT-NEXT:    [[SEL_PTR:%.*]] = select i1 [[CND1]], i8* [[GEP7]], i8* [[GEP23]]
+; TUNIT-NEXT:    store i8 42, i8* [[SEL_PTR]], align 4
+; TUNIT-NEXT:    [[I:%.*]] = load i8, i8* [[GEP7]], align 4
+; TUNIT-NEXT:    ret i8 [[I]]
+;
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
+; CGSCC-LABEL: define {{[^@]+}}@multiple_offsets_not_simplifiable_1
+; CGSCC-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR5]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
+; CGSCC-NEXT:    [[GEP7:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 7
+; CGSCC-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 23
+; CGSCC-NEXT:    [[SEL_PTR:%.*]] = select i1 [[CND1]], i8* [[GEP7]], i8* [[GEP23]]
+; CGSCC-NEXT:    store i8 42, i8* [[SEL_PTR]], align 4
+; CGSCC-NEXT:    [[I:%.*]] = load i8, i8* [[GEP7]], align 4
+; CGSCC-NEXT:    ret i8 [[I]]
+;
+entry:
+  %Bytes = alloca [1024 x i8], align 16
+  %gep7 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 7
+  %gep23 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 23
+  ; %phi.ptr = phi i8* [ %gep7, %then ], [ %gep23, %else ]
+  %sel.ptr = select i1 %cnd1, i8* %gep7, i8* %gep23
+  store i8 42, i8* %sel.ptr, align 4
+  %i = load i8, i8* %gep7, align 4
+  ret i8 %i
+}
+
 
 !llvm.module.flags = !{!0, !1}
 !llvm.ident = !{!2}

@@ -160,7 +160,7 @@ func.func @map_nested_foreach_to_threads_not_buffer(%x: tensor<32x32xf32>, %y: t
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !pdl.operation):
   %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg0
-  %foreach, %tiled = transform.structured.tile_to_foreach_thread_op %matmul num_threads [10, 20, 30]
+  %foreach, %tiled = transform.structured.tile_to_foreach_thread_op %matmul num_threads [10, 20, 30] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
   // expected-error @below {{only bufferized scf.foreach_thread lowers to gpu.thread_id}}    
   transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [128, 4, 1] }

@@ -5,8 +5,8 @@ define float @frem32(float %a, float %b) {
 ; CHECK-LABEL: frem32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl fmodf
@@ -24,8 +24,8 @@ define double @frem64(double %a, double %b) {
 ; CHECK-LABEL: frem64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl fmod
@@ -43,8 +43,8 @@ define <4 x float> @frem4x32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: frem4x32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -96(1)
+; CHECK-NEXT:    std 0, 112(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset v28, -64
@@ -105,8 +105,8 @@ define <2 x double> @frem2x64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: frem2x64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -80(1)
+; CHECK-NEXT:    std 0, 96(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    .cfi_offset v29, -48

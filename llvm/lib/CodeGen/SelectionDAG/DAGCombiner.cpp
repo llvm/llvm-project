@@ -4477,10 +4477,11 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
 
   // fold (udiv X, -1) -> select(X == -1, 1, 0)
   ConstantSDNode *N1C = isConstOrConstSplat(N1);
-  if (N1C && N1C->isAllOnes())
+  if (N1C && N1C->isAllOnes() && CCVT.isVector() == VT.isVector()) {
     return DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, N0, N1, ISD::SETEQ),
                          DAG.getConstant(1, DL, VT),
                          DAG.getConstant(0, DL, VT));
+  }
 
   if (SDValue V = simplifyDivRem(N, DAG))
     return V;
@@ -4583,7 +4584,8 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
 
   // fold (urem X, -1) -> select(FX == -1, 0, FX)
   // Freeze the numerator to avoid a miscompile with an undefined value.
-  if (!isSigned && llvm::isAllOnesOrAllOnesSplat(N1, /*AllowUndefs*/ false)) {
+  if (!isSigned && llvm::isAllOnesOrAllOnesSplat(N1, /*AllowUndefs*/ false) &&
+      CCVT.isVector() == VT.isVector()) {
     SDValue F0 = DAG.getFreeze(N0);
     SDValue EqualsNeg1 = DAG.getSetCC(DL, CCVT, F0, N1, ISD::SETEQ);
     return DAG.getSelect(DL, VT, EqualsNeg1, DAG.getConstant(0, DL, VT), F0);

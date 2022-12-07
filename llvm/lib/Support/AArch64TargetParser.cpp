@@ -14,6 +14,7 @@
 #include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Support/ARMTargetParserCommon.h"
 #include <cctype>
 
 using namespace llvm;
@@ -22,17 +23,6 @@ static unsigned checkArchVersion(llvm::StringRef Arch) {
   if (Arch.size() >= 2 && Arch[0] == 'v' && std::isdigit(Arch[1]))
     return (Arch[1] - 48);
   return 0;
-}
-
-unsigned AArch64::getDefaultFPU(StringRef CPU, AArch64::ArchKind AK) {
-  if (CPU == "generic")
-    return AArch64ARCHNames[static_cast<unsigned>(AK)].DefaultFPU;
-
-  return StringSwitch<unsigned>(CPU)
-#define AARCH64_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)       \
-  .Case(NAME, ARM::DEFAULT_FPU)
-#include "../../include/llvm/Support/AArch64TargetParser.def"
-  .Default(ARM::FK_INVALID);
 }
 
 uint64_t AArch64::getDefaultExtensions(StringRef CPU, AArch64::ArchKind AK) {
@@ -61,8 +51,7 @@ AArch64::ArchKind AArch64::getCPUArchKind(StringRef CPU) {
 
 AArch64::ArchKind AArch64::getSubArchArchKind(StringRef SubArch) {
   return StringSwitch<AArch64::ArchKind>(SubArch)
-#define AARCH64_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU,        \
-                     ARCH_BASE_EXT)                                            \
+#define AARCH64_ARCH(NAME, ID, SUB_ARCH, ARCH_BASE_EXT)                        \
   .Case(SUB_ARCH, ArchKind::ID)
 #include "../../include/llvm/Support/AArch64TargetParser.def"
   .Default(ArchKind::INVALID);
@@ -106,23 +95,8 @@ StringRef AArch64::getArchName(AArch64::ArchKind AK) {
   return AArch64ARCHNames[static_cast<unsigned>(AK)].getName();
 }
 
-StringRef AArch64::getCPUAttr(AArch64::ArchKind AK) {
-  return AArch64ARCHNames[static_cast<unsigned>(AK)].getCPUAttr();
-}
-
 StringRef AArch64::getSubArch(AArch64::ArchKind AK) {
   return AArch64ARCHNames[static_cast<unsigned>(AK)].getSubArch();
-}
-
-unsigned AArch64::getArchAttr(AArch64::ArchKind AK) {
-  return AArch64ARCHNames[static_cast<unsigned>(AK)].ArchAttr;
-}
-
-StringRef AArch64::getArchExtName(unsigned ArchExtKind) {
-  for (const auto &AE : AArch64ARCHExtNames)
-    if (ArchExtKind == AE.ID)
-      return AE.getName();
-  return StringRef();
 }
 
 StringRef AArch64::getArchExtFeature(StringRef ArchExt) {
@@ -153,20 +127,6 @@ AArch64::ArchKind AArch64::convertV9toV8(AArch64::ArchKind AK) {
   return static_cast<AArch64::ArchKind>(AK_v8);
 }
 
-StringRef AArch64::getDefaultCPU(StringRef Arch) {
-  ArchKind AK = parseArch(Arch);
-  if (AK == ArchKind::INVALID)
-    return StringRef();
-
-  // Look for multiple AKs to find the default for pair AK+Name.
-  for (const auto &CPU : AArch64CPUNames)
-    if (CPU.ArchID == AK && CPU.Default)
-      return CPU.getName();
-
-  // If we can't find a default then target the architecture instead
-  return "generic";
-}
-
 void AArch64::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
   for (const auto &Arch : AArch64CPUNames) {
     if (Arch.ArchID != ArchKind::INVALID)
@@ -184,11 +144,11 @@ bool AArch64::isX18ReservedByDefault(const Triple &TT) {
 
 // Allows partial match, ex. "v8a" matches "armv8a".
 AArch64::ArchKind AArch64::parseArch(StringRef Arch) {
-  Arch = ARM::getCanonicalArchName(Arch);
+  Arch = llvm::ARM::getCanonicalArchName(Arch);
   if (checkArchVersion(Arch) < 8)
     return ArchKind::INVALID;
 
-  StringRef Syn = ARM::getArchSynonym(Arch);
+  StringRef Syn = llvm::ARM::getArchSynonym(Arch);
   for (const auto &A : AArch64ARCHNames) {
     if (A.getName().endswith(Syn))
       return A.ID;

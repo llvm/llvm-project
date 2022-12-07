@@ -27,7 +27,8 @@ def ThreadsEnum : I64EnumAttr<"Threads", "threads for loop mapping", [
 }
 
 def GPUThreadMappingAttr 
-    : GPU_Attr<"GPUThreadMapping", "thread", [ DeviceMappingAttrInterface ]> {
+    : GPU_Attr<"GPUThreadMapping", "thread", [ 
+      DeclareAttrInterfaceMethods<DeviceMappingAttrInterface> ]> {
   let parameters = (ins
     EnumParameter<ThreadsEnum>:$thread
   );
@@ -47,7 +48,8 @@ def BlocksEnum : I64EnumAttr<"Blocks", "threads for loop mapping", [
   let cppNamespace = "::mlir::gpu";
 }
 
-def GPUBlockMappingAttr : GPU_Attr<"GPUBlockMapping", "block", [ DeviceMappingAttrInterface ] >  {
+def GPUBlockMappingAttr : GPU_Attr<"GPUBlockMapping", "block", [ 
+  DeclareAttrInterfaceMethods<DeviceMappingAttrInterface> ] >  {
   let parameters = (ins
     EnumParameter<BlocksEnum>:$block
   );

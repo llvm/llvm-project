@@ -62,11 +62,11 @@ define dso_local signext i32 @foo(i32 signext %x, i32 signext %y) nounwind {
 ; CHECK-P9-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; CHECK-P9-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-P9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P9-NEXT:    std r0, 16(r1)
 ; CHECK-P9-NEXT:    stdu r1, -80(r1)
 ; CHECK-P9-NEXT:    mr r30, r4
 ; CHECK-P9-NEXT:    mr r29, r3
 ; CHECK-P9-NEXT:    lis r3, 21845
+; CHECK-P9-NEXT:    std r0, 96(r1)
 ; CHECK-P9-NEXT:    add r28, r30, r29
 ; CHECK-P9-NEXT:    ori r27, r3, 21846
 ; CHECK-P9-NEXT:    b .LBB1_4

@@ -22,15 +22,15 @@ define void @test() {
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4
 ; AVX1:  LV: Found an estimated cost of 34 for VF 2 For instruction: %v0 = load i32, ptr %in0, align 4
 ; AVX1:  LV: Found an estimated cost of 63 for VF 4 For instruction: %v0 = load i32, ptr %in0, align 4
-; AVX1:  LV: Found an estimated cost of 140 for VF 8 For instruction: %v0 = load i32, ptr %in0, align 4
-; AVX1:  LV: Found an estimated cost of 280 for VF 16 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX1:  LV: Found an estimated cost of 133 for VF 8 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX1:  LV: Found an estimated cost of 266 for VF 16 For instruction: %v0 = load i32, ptr %in0, align 4
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4
 ; AVX2:  LV: Found an estimated cost of 28 for VF 2 For instruction: %v0 = load i32, ptr %in0, align 4
 ; AVX2:  LV: Found an estimated cost of 56 for VF 4 For instruction: %v0 = load i32, ptr %in0, align 4
-; AVX2:  LV: Found an estimated cost of 126 for VF 8 For instruction: %v0 = load i32, ptr %in0, align 4
-; AVX2:  LV: Found an estimated cost of 252 for VF 16 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX2:  LV: Found an estimated cost of 119 for VF 8 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX2:  LV: Found an estimated cost of 238 for VF 16 For instruction: %v0 = load i32, ptr %in0, align 4
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4

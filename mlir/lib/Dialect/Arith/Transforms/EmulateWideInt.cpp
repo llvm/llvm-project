@@ -782,6 +782,69 @@ struct ConvertShRUI final : OpConversionPattern<arith::ShRUIOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertShRSI
+//===----------------------------------------------------------------------===//
+
+struct ConvertShRSI final : OpConversionPattern<arith::ShRSIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::ShRSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+
+    Type oldTy = op.getType();
+    auto newTy =
+        getTypeConverter()->convertType(oldTy).dyn_cast_or_null<VectorType>();
+    if (!newTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {0}", op.getType()));
+
+    Value lhsElem1 = extractLastDimSlice(rewriter, loc, adaptor.getLhs(), 1);
+    Value rhsElem0 = extractLastDimSlice(rewriter, loc, adaptor.getRhs(), 0);
+
+    Type narrowTy = rhsElem0.getType();
+    int64_t origBitwidth = newTy.getElementTypeBitWidth() * 2;
+
+    // Rewrite this as an bitwise or of `arith.shrui` and sign extension bits.
+    // Perform as many ops over the narrow integer type as possible and let the
+    // other emulation patterns convert the rest.
+    Value elemZero =
+        createScalarOrSplatConstant(rewriter, loc, narrowTy, 0);
+    Value signBit = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::slt, lhsElem1, elemZero);
+    signBit = dropTrailingX1Dim(rewriter, loc, signBit);
+
+    // Create a bit pattern of either all ones or all zeros. Then shift it left
+    // to calculate the sign extension bits created by shifting the original
+    // sign bit right.
+    Value allSign = rewriter.create<arith::ExtSIOp>(loc, oldTy, signBit);
+    Value maxShift =
+        createScalarOrSplatConstant(rewriter, loc, narrowTy, origBitwidth);
+    Value numNonSignExtBits =
+        rewriter.create<arith::SubIOp>(loc, maxShift, rhsElem0);
+    numNonSignExtBits = dropTrailingX1Dim(rewriter, loc, numNonSignExtBits);
+    numNonSignExtBits =
+        rewriter.create<arith::ExtUIOp>(loc, oldTy, numNonSignExtBits);
+    Value signBits =
+        rewriter.create<arith::ShLIOp>(loc, allSign, numNonSignExtBits);
+
+    // Use original arguments to create the right shift.
+    Value shrui = rewriter.create<arith::ShRUIOp>(loc, op.getLhs(), op.getRhs());
+    Value shrsi = rewriter.create<arith::OrIOp>(loc, shrui, signBits);
+
+    // Handle shifting by zero. This is necessary when the `signBits` shift is
+    // invalid.
+    Value isNoop = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
+                                                  rhsElem0, elemZero);
+    isNoop = dropTrailingX1Dim(rewriter, loc, isNoop);
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNoop, op.getLhs(), shrsi);
+
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertTruncI
 //===----------------------------------------------------------------------===//
 
@@ -799,7 +862,8 @@ struct ConvertTruncI final : OpConversionPattern<arith::TruncIOp> {
           loc, llvm::formatv("unsupported truncation result type: {0}",
                              op.getType()));
 
-    // Discard the high half of the input. Truncate the low half, if necessary.
+    // Discard the high half of the input. Truncate the low half, if
+    // necessary.
     Value extracted = extractLastDimSlice(rewriter, loc, adaptor.getIn(), 0);
     extracted = dropTrailingX1Dim(rewriter, loc, extracted);
     Value truncated =
@@ -940,7 +1004,7 @@ void arith::populateArithWideIntEmulationPatterns(
       // Misc ops.
       ConvertConstant, ConvertCmpI, ConvertSelect, ConvertVectorPrint,
       // Binary ops.
-      ConvertAddI, ConvertMulI, ConvertShLI, ConvertShRUI,
+      ConvertAddI, ConvertMulI, ConvertShLI, ConvertShRSI, ConvertShRUI,
       // Bitwise binary ops.
       ConvertBitwiseBinary<arith::AndIOp>, ConvertBitwiseBinary<arith::OrIOp>,
       ConvertBitwiseBinary<arith::XOrIOp>,

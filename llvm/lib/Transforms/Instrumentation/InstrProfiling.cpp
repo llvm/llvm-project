@@ -1014,9 +1014,17 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
   };
   auto *DataTy = StructType::get(Ctx, makeArrayRef(DataTypes));
 
-  Constant *FunctionAddr = shouldRecordFunctionAddr(Fn)
-                               ? ConstantExpr::getBitCast(Fn, Int8PtrTy)
-                               : ConstantPointerNull::get(Int8PtrTy);
+  Constant *FunctionAddr;
+  if (shouldRecordFunctionAddr(Fn)) {
+    // When possible use a private alias to avoid relocations
+    Constant *Addr = !Fn->isDeclarationForLinker()
+                         ? static_cast<Constant *>(GlobalAlias::create(
+                               GlobalValue::PrivateLinkage, Fn->getName(), Fn))
+                         : Fn;
+    FunctionAddr = ConstantExpr::getBitCast(Addr, Int8PtrTy);
+  } else {
+    FunctionAddr = ConstantPointerNull::get(Int8PtrTy);
+  }
 
   Constant *Int16ArrayVals[IPVK_Last + 1];
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)

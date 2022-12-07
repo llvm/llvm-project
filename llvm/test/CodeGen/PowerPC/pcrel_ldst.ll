@@ -2490,8 +2490,8 @@ define dso_local void @store_f128_to_uint(fp128 %str) local_unnamed_addr #0 {
 ; CHECK-P8-LE-LABEL: store_f128_to_uint:
 ; CHECK-P8-LE:       # %bb.0: # %entry
 ; CHECK-P8-LE-NEXT:    mflr r0
-; CHECK-P8-LE-NEXT:    std r0, 16(r1)
 ; CHECK-P8-LE-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-LE-NEXT:    std r0, 48(r1)
 ; CHECK-P8-LE-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-LE-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-LE-NEXT:    bl __fixunskfdi
@@ -2506,8 +2506,8 @@ define dso_local void @store_f128_to_uint(fp128 %str) local_unnamed_addr #0 {
 ; CHECK-P8-BE-LABEL: store_f128_to_uint:
 ; CHECK-P8-BE:       # %bb.0: # %entry
 ; CHECK-P8-BE-NEXT:    mflr r0
-; CHECK-P8-BE-NEXT:    std r0, 16(r1)
 ; CHECK-P8-BE-NEXT:    stdu r1, -112(r1)
+; CHECK-P8-BE-NEXT:    std r0, 128(r1)
 ; CHECK-P8-BE-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-P8-BE-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-BE-NEXT:    bl __fixunskfdi
@@ -2551,8 +2551,8 @@ define dso_local void @store_f128_to_sint(fp128 %str) local_unnamed_addr #0 {
 ; CHECK-P8-LE-LABEL: store_f128_to_sint:
 ; CHECK-P8-LE:       # %bb.0: # %entry
 ; CHECK-P8-LE-NEXT:    mflr r0
-; CHECK-P8-LE-NEXT:    std r0, 16(r1)
 ; CHECK-P8-LE-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-LE-NEXT:    std r0, 48(r1)
 ; CHECK-P8-LE-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-LE-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-LE-NEXT:    bl __fixkfdi
@@ -2567,8 +2567,8 @@ define dso_local void @store_f128_to_sint(fp128 %str) local_unnamed_addr #0 {
 ; CHECK-P8-BE-LABEL: store_f128_to_sint:
 ; CHECK-P8-BE:       # %bb.0: # %entry
 ; CHECK-P8-BE-NEXT:    mflr r0
-; CHECK-P8-BE-NEXT:    std r0, 16(r1)
 ; CHECK-P8-BE-NEXT:    stdu r1, -112(r1)
+; CHECK-P8-BE-NEXT:    std r0, 128(r1)
 ; CHECK-P8-BE-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-P8-BE-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-BE-NEXT:    bl __fixkfdi

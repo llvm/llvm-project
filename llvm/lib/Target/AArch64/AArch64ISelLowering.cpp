@@ -2335,6 +2335,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::UUNPKLO)
     MAKE_CASE(AArch64ISD::INSR)
     MAKE_CASE(AArch64ISD::PTEST)
+    MAKE_CASE(AArch64ISD::PTEST_ANY)
     MAKE_CASE(AArch64ISD::PTRUE)
     MAKE_CASE(AArch64ISD::LD1_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::LD1S_MERGE_ZERO)
@@ -17405,7 +17406,9 @@ static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
   }
 
   // Set condition code (CC) flags.
-  SDValue Test = DAG.getNode(AArch64ISD::PTEST, DL, MVT::Other, Pg, Op);
+  SDValue Test = DAG.getNode(
+      Cond == AArch64CC::ANY_ACTIVE ? AArch64ISD::PTEST_ANY : AArch64ISD::PTEST,
+      DL, MVT::Other, Pg, Op);
 
   // Convert CC to integer based on requested condition.
   // NOTE: Cond is inverted to promote CSEL's removal when it feeds a compare.

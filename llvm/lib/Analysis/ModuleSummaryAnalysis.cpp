@@ -24,6 +24,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
@@ -56,6 +57,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::memprof;
 
 #define DEBUG_TYPE "module-summary-analysis"
 
@@ -275,6 +277,9 @@ static void computeFunctionSummary(
   std::vector<const Instruction *> NonVolatileLoads;
   std::vector<const Instruction *> NonVolatileStores;
 
+  std::vector<CallsiteInfo> Callsites;
+  std::vector<AllocInfo> Allocs;
+
   bool HasInlineAsmMaybeReferencingInternal = false;
   bool HasIndirBranchToBlockAddress = false;
   bool HasUnknownCall = false;
@@ -417,6 +422,57 @@ static void computeFunctionSummary(
           CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)]
               .updateHotness(getHotness(Candidate.Count, PSI));
       }
+
+      // TODO: Skip indirect calls for now. Need to handle these better, likely
+      // by creating multiple Callsites, one per target, then speculatively
+      // devirtualize while applying clone info in the ThinLTO backends. This
+      // will also be important because we will have a different set of clone
+      // versions per target. This handling needs to match that in the ThinLTO
+      // backend so we handle things consistently for matching of callsite
+      // summaries to instructions.
+      if (!CalledFunction)
+        continue;
+
+      // Compute the list of stack ids first (so we can trim them from the stack
+      // ids on any MIBs).
+      CallStack<MDNode, MDNode::op_iterator> InstCallsite(
+          I.getMetadata(LLVMContext::MD_callsite));
+      auto *MemProfMD = I.getMetadata(LLVMContext::MD_memprof);
+      if (MemProfMD) {
+        std::vector<MIBInfo> MIBs;
+        for (auto &MDOp : MemProfMD->operands()) {
+          auto *MIBMD = cast<const MDNode>(MDOp);
+          MDNode *StackNode = getMIBStackNode(MIBMD);
+          assert(StackNode);
+          SmallVector<unsigned> StackIdIndices;
+          CallStack<MDNode, MDNode::op_iterator> StackContext(StackNode);
+          // Collapse out any on the allocation call (inlining).
+          for (auto ContextIter =
+                   StackContext.beginAfterSharedPrefix(InstCallsite);
+               ContextIter != StackContext.end(); ++ContextIter) {
+            unsigned StackIdIdx = Index.addOrGetStackIdIndex(*ContextIter);
+            // If this is a direct recursion, simply skip the duplicate
+            // entries. If this is mutual recursion, handling is left to
+            // the LTO link analysis client.
+            if (StackIdIndices.empty() || StackIdIndices.back() != StackIdIdx)
+              StackIdIndices.push_back(StackIdIdx);
+          }
+          MIBs.push_back(
+              MIBInfo(getMIBAllocType(MIBMD), std::move(StackIdIndices)));
+        }
+        Allocs.push_back(AllocInfo(std::move(MIBs)));
+      } else if (!InstCallsite.empty()) {
+        SmallVector<unsigned> StackIdIndices;
+        for (auto StackId : InstCallsite)
+          StackIdIndices.push_back(Index.addOrGetStackIdIndex(StackId));
+        // Use the original CalledValue, in case it was an alias. We want
+        // to record the call edge to the alias in that case. Eventually
+        // an alias summary will be created to associate the alias and
+        // aliasee.
+        auto CalleeValueInfo =
+            Index.getOrInsertValueInfo(cast<GlobalValue>(CalledValue));
+        Callsites.push_back({CalleeValueInfo, StackIdIndices});
+      }
     }
   }
   Index.addBlockCount(F.size());
@@ -508,7 +564,8 @@ static void computeFunctionSummary(
       CallGraphEdges.takeVector(), TypeTests.takeVector(),
       TypeTestAssumeVCalls.takeVector(), TypeCheckedLoadVCalls.takeVector(),
       TypeTestAssumeConstVCalls.takeVector(),
-      TypeCheckedLoadConstVCalls.takeVector(), std::move(ParamAccesses));
+      TypeCheckedLoadConstVCalls.takeVector(), std::move(ParamAccesses),
+      std::move(Callsites), std::move(Allocs));
   if (NonRenamableLocal)
     CantBePromoted.insert(F.getGUID());
   Index.addGlobalValueSummary(F, std::move(FuncSummary));
@@ -757,7 +814,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                     ArrayRef<FunctionSummary::VFuncId>{},
                     ArrayRef<FunctionSummary::ConstVCall>{},
                     ArrayRef<FunctionSummary::ConstVCall>{},
-                    ArrayRef<FunctionSummary::ParamAccess>{});
+                    ArrayRef<FunctionSummary::ParamAccess>{},
+                    ArrayRef<CallsiteInfo>{}, ArrayRef<AllocInfo>{});
             Index.addGlobalValueSummary(*GV, std::move(Summary));
           } else {
             std::unique_ptr<GlobalVarSummary> Summary =

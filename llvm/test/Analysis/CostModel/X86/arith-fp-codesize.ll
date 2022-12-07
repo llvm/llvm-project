@@ -584,8 +584,8 @@ define i32 @fma(i32 %arg) {
 ; AVX-LABEL: 'fma'
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.fma.f32(float undef, float undef, float undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4F32 = call <4 x float> @llvm.fma.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F32 = call <8 x float> @llvm.fma.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16F32 = call <16 x float> @llvm.fma.v16f32(<16 x float> undef, <16 x float> undef, <16 x float> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V8F32 = call <8 x float> @llvm.fma.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V16F32 = call <16 x float> @llvm.fma.v16f32(<16 x float> undef, <16 x float> undef, <16 x float> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call double @llvm.fma.f64(double undef, double undef, double undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2F64 = call <2 x double> @llvm.fma.v2f64(<2 x double> undef, <2 x double> undef, <2 x double> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4F64 = call <4 x double> @llvm.fma.v4f64(<4 x double> undef, <4 x double> undef, <4 x double> undef)

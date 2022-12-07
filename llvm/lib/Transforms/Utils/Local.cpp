@@ -1499,7 +1499,7 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
 /// that has an associated llvm.dbg.declare or llvm.dbg.addr intrinsic.
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                            StoreInst *SI, DIBuilder &Builder) {
-  assert(DII->isAddressOfVariable());
+  assert(DII->isAddressOfVariable() || isa<DbgAssignIntrinsic>(DII));
   auto *DIVar = DII->getVariable();
   assert(DIVar && "Missing variable");
   auto *DIExpr = DII->getExpression();
