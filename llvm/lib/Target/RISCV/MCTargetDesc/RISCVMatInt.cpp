@@ -366,7 +366,8 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
 int getIntMatCost(const APInt &Val, unsigned Size,
                   const FeatureBitset &ActiveFeatures, bool CompressionCost) {
   bool IsRV64 = ActiveFeatures[RISCV::Feature64Bit];
-  bool HasRVC = CompressionCost && ActiveFeatures[RISCV::FeatureStdExtC];
+  bool HasRVC = CompressionCost && (ActiveFeatures[RISCV::FeatureStdExtC] ||
+                                    ActiveFeatures[RISCV::FeatureExtZca]);
   int PlatRegSize = IsRV64 ? 64 : 32;
 
   // Split the constant into platform register sized chunks, and calculate cost
