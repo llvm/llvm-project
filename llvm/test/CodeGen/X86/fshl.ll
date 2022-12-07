@@ -338,26 +338,24 @@ define i128 @var_shift_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ; X86-SLOW-NEXT:    movl %edx, %ebx
 ; X86-SLOW-NEXT:    movl %esi, %edx
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SLOW-NEXT:    jmp .LBB6_3
-; X86-SLOW-NEXT:  .LBB6_1:
-; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SLOW-NEXT:  .LBB6_3:
-; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SLOW-NEXT:    testb $32, %al
-; X86-SLOW-NEXT:    jne .LBB6_4
-; X86-SLOW-NEXT:  # %bb.5:
-; X86-SLOW-NEXT:    movl %ecx, %ebx
-; X86-SLOW-NEXT:    movl %edi, (%esp) # 4-byte Spill
-; X86-SLOW-NEXT:    jmp .LBB6_6
+; X86-SLOW-NEXT:    je .LBB6_5
 ; X86-SLOW-NEXT:  .LBB6_4:
 ; X86-SLOW-NEXT:    movl %esi, (%esp) # 4-byte Spill
 ; X86-SLOW-NEXT:    movl %ebp, %esi
 ; X86-SLOW-NEXT:    movl %edx, %ebp
 ; X86-SLOW-NEXT:    movl %ecx, %edx
+; X86-SLOW-NEXT:    jmp .LBB6_6
+; X86-SLOW-NEXT:  .LBB6_1:
+; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SLOW-NEXT:    testb $32, %al
+; X86-SLOW-NEXT:    jne .LBB6_4
+; X86-SLOW-NEXT:  .LBB6_5:
+; X86-SLOW-NEXT:    movl %ecx, %ebx
+; X86-SLOW-NEXT:    movl %edi, (%esp) # 4-byte Spill
 ; X86-SLOW-NEXT:  .LBB6_6:
 ; X86-SLOW-NEXT:    movl %edx, %edi
-; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SLOW-NEXT:    movl %eax, %ecx
 ; X86-SLOW-NEXT:    shll %cl, %edi
 ; X86-SLOW-NEXT:    shrl %ebx

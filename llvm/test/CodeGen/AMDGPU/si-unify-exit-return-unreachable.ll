@@ -140,7 +140,6 @@ define void @my_func(i32 %0) {
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_10
 ; GCN-NEXT:  ; %bb.9:
 ; GCN-NEXT:    s_mov_b64 s[6:7], -1
-; GCN-NEXT:    s_mov_b64 s[4:5], 0
 ; GCN-NEXT:    s_and_saveexec_b64 s[8:9], s[6:7]
 ; GCN-NEXT:    s_cbranch_execnz .LBB0_3
 ; GCN-NEXT:    s_branch .LBB0_4
@@ -173,7 +172,6 @@ define void @my_func(i32 %0) {
 ; GCN-NEXT:  ; %bb.15: ; %LeafBlock9
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 1, v0
 ; GCN-NEXT:    s_mov_b64 s[8:9], -1
-; GCN-NEXT:    s_mov_b64 s[4:5], 0
 ; GCN-NEXT:    s_and_saveexec_b64 s[12:13], vcc
 ; GCN-NEXT:  ; %bb.16: ; %do.body.i.i.i.i
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
