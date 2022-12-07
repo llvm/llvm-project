@@ -3,7 +3,8 @@
 // REQUIRES: swift
 
 // RUN: %lldb --repl < %s 2>&1 | FileCheck %s
-// CHECK: target.detach-on-error
+// CHECK: UInt
 
 import Dispatch
+DISPATCH_WALLTIME_NOW
 // CHECK-NOT: error
