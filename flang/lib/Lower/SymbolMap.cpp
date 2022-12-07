@@ -101,10 +101,10 @@ Fortran::lower::SymMap::lookupVariableDefinition(semantics::SymbolRef sym) {
               std::get_if<fir::FortranVariableOpInterface>(&iter->second))
         return *varDef;
       else
-        return llvm::None;
+        return std::nullopt;
     }
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::raw_ostream &

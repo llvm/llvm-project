@@ -290,7 +290,8 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
     auto *context = builder.getContext();
     if (snd.isa<fir::BoxProcType>() &&
         fst.getType().isa<mlir::FunctionType>()) {
-      auto funcTy = mlir::FunctionType::get(context, llvm::None, llvm::None);
+      auto funcTy =
+          mlir::FunctionType::get(context, std::nullopt, std::nullopt);
       auto boxProcTy = builder.getBoxProcType(funcTy);
       if (mlir::Value host = argumentHostAssocs(converter, fst)) {
         cast = builder.create<fir::EmboxProcOp>(
@@ -462,7 +463,7 @@ public:
             loc, getConverter(), *expr, getSymMap(), getStmtCtx()));
       } else {
         // Optional dummy argument for which there is no actual argument.
-        loweredActuals.emplace_back(llvm::None);
+        loweredActuals.emplace_back(std::nullopt);
       }
 
     llvm::SmallVector<hlfir::AssociateOp> exprAssociations;
@@ -553,7 +554,7 @@ public:
     for (auto associate : exprAssociations)
       builder.create<hlfir::EndAssociateOp>(loc, associate);
     if (!resultFirBase)
-      return llvm::None; // subroutine call.
+      return std::nullopt; // subroutine call.
     if (fir::isa_trivial(resultFirBase.getType()))
       return hlfir::EntityWithAttributes{resultFirBase};
     return hlfir::genDeclare(loc, builder, result, "tmp.funcresult",
