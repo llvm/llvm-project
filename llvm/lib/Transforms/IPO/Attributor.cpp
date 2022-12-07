@@ -305,9 +305,10 @@ Value *AA::getWithType(Value &V, Type &Ty) {
   return nullptr;
 }
 
-Optional<Value *>
-AA::combineOptionalValuesInAAValueLatice(const Optional<Value *> &A,
-                                         const Optional<Value *> &B, Type *Ty) {
+std::optional<Value *>
+AA::combineOptionalValuesInAAValueLatice(const std::optional<Value *> &A,
+                                         const std::optional<Value *> &B,
+                                         Type *Ty) {
   if (A == B)
     return A;
   if (!B)
@@ -391,7 +392,8 @@ static bool getPotentialCopiesOfMemoryValue(
 
     bool NullOnly = true;
     bool NullRequired = false;
-    auto CheckForNullOnlyAndUndef = [&](Optional<Value *> V, bool IsExact) {
+    auto CheckForNullOnlyAndUndef = [&](std::optional<Value *> V,
+                                        bool IsExact) {
       if (!V || *V == nullptr)
         NullOnly = false;
       else if (isa<UndefValue>(*V))
@@ -1069,7 +1071,7 @@ void IRPosition::verify() {
 #endif
 }
 
-Optional<Constant *>
+std::optional<Constant *>
 Attributor::getAssumedConstant(const IRPosition &IRP,
                                const AbstractAttribute &AA,
                                bool &UsedAssumedInformation) {
@@ -1077,7 +1079,7 @@ Attributor::getAssumedConstant(const IRPosition &IRP,
   // a non-null value that is different from the associated value, or
   // std::nullopt, we assume it's simplified.
   for (auto &CB : SimplificationCallbacks.lookup(IRP)) {
-    Optional<Value *> SimplifiedV = CB(IRP, &AA, UsedAssumedInformation);
+    std::optional<Value *> SimplifiedV = CB(IRP, &AA, UsedAssumedInformation);
     if (!SimplifiedV)
       return std::nullopt;
     if (isa_and_nonnull<Constant>(*SimplifiedV))
@@ -1099,10 +1101,9 @@ Attributor::getAssumedConstant(const IRPosition &IRP,
   return nullptr;
 }
 
-Optional<Value *> Attributor::getAssumedSimplified(const IRPosition &IRP,
-                                                   const AbstractAttribute *AA,
-                                                   bool &UsedAssumedInformation,
-                                                   AA::ValueScope S) {
+std::optional<Value *> Attributor::getAssumedSimplified(
+    const IRPosition &IRP, const AbstractAttribute *AA,
+    bool &UsedAssumedInformation, AA::ValueScope S) {
   // First check all callbacks provided by outside AAs. If any of them returns
   // a non-null value that is different from the associated value, or
   // std::nullopt, we assume it's simplified.
@@ -1132,7 +1133,7 @@ bool Attributor::getAssumedSimplifiedValues(
   // std::nullopt, we assume it's simplified.
   const auto &SimplificationCBs = SimplificationCallbacks.lookup(IRP);
   for (const auto &CB : SimplificationCBs) {
-    Optional<Value *> CBResult = CB(IRP, AA, UsedAssumedInformation);
+    std::optional<Value *> CBResult = CB(IRP, AA, UsedAssumedInformation);
     if (!CBResult.has_value())
       continue;
     Value *V = CBResult.value();
@@ -1156,8 +1157,8 @@ bool Attributor::getAssumedSimplifiedValues(
   return true;
 }
 
-Optional<Value *> Attributor::translateArgumentToCallSiteContent(
-    Optional<Value *> V, CallBase &CB, const AbstractAttribute &AA,
+std::optional<Value *> Attributor::translateArgumentToCallSiteContent(
+    std::optional<Value *> V, CallBase &CB, const AbstractAttribute &AA,
     bool &UsedAssumedInformation) {
   if (!V)
     return V;
@@ -2779,7 +2780,7 @@ void InformationCache::initializeInformationCache(const Function &CF,
   // queried by abstract attributes during their initialization or update.
   // This has to happen before we create attributes.
 
-  DenseMap<const Value *, Optional<short>> AssumeUsesMap;
+  DenseMap<const Value *, std::optional<short>> AssumeUsesMap;
 
   // Add \p V to the assume uses map which track the number of uses outside of
   // "visited" assumes. If no outside uses are left the value is added to the
@@ -2790,7 +2791,7 @@ void InformationCache::initializeInformationCache(const Function &CF,
       Worklist.push_back(I);
     while (!Worklist.empty()) {
       const Instruction *I = Worklist.pop_back_val();
-      Optional<short> &NumUses = AssumeUsesMap[I];
+      std::optional<short> &NumUses = AssumeUsesMap[I];
       if (!NumUses)
         NumUses = I->getNumUses();
       NumUses = NumUses.value() - /* this assume */ 1;
