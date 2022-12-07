@@ -8786,8 +8786,8 @@ struct NodeExtensionHelper {
   /// anything. Instead they produce an optional CombineResult that if not None,
   /// need to be materialized for the combine to be applied.
   /// \see CombineResult::materialize.
-  /// If the related CombineToTry function returns None, that means the combine
-  /// didn't match.
+  /// If the related CombineToTry function returns std::nullopt, that means the
+  /// combine didn't match.
   static SmallVector<CombineToTry> getSupportedFoldings(const SDNode *Root);
 };
 
@@ -8835,8 +8835,8 @@ struct CombineResult {
 /// \note If the pattern can match with both zext and sext, the returned
 /// CombineResult will feature the zext result.
 ///
-/// \returns None if the pattern doesn't match or a CombineResult that can be
-/// used to apply the pattern.
+/// \returns std::nullopt if the pattern doesn't match or a CombineResult that
+/// can be used to apply the pattern.
 static std::optional<CombineResult>
 canFoldToVWWithSameExtensionImpl(SDNode *Root, const NodeExtensionHelper &LHS,
                                  const NodeExtensionHelper &RHS, bool AllowSExt,
@@ -8861,8 +8861,8 @@ canFoldToVWWithSameExtensionImpl(SDNode *Root, const NodeExtensionHelper &LHS,
 /// where `ext` is the same for both LHS and RHS (i.e., both are sext or both
 /// are zext) and LHS and RHS can be folded into Root.
 ///
-/// \returns None if the pattern doesn't match or a CombineResult that can be
-/// used to apply the pattern.
+/// \returns std::nullopt if the pattern doesn't match or a CombineResult that
+/// can be used to apply the pattern.
 static std::optional<CombineResult>
 canFoldToVWWithSameExtension(SDNode *Root, const NodeExtensionHelper &LHS,
                              const NodeExtensionHelper &RHS) {
@@ -8872,8 +8872,8 @@ canFoldToVWWithSameExtension(SDNode *Root, const NodeExtensionHelper &LHS,
 
 /// Check if \p Root follows a pattern Root(LHS, ext(RHS))
 ///
-/// \returns None if the pattern doesn't match or a CombineResult that can be
-/// used to apply the pattern.
+/// \returns std::nullopt if the pattern doesn't match or a CombineResult that
+/// can be used to apply the pattern.
 static std::optional<CombineResult>
 canFoldToVW_W(SDNode *Root, const NodeExtensionHelper &LHS,
               const NodeExtensionHelper &RHS) {
@@ -8897,8 +8897,8 @@ canFoldToVW_W(SDNode *Root, const NodeExtensionHelper &LHS,
 
 /// Check if \p Root follows a pattern Root(sext(LHS), sext(RHS))
 ///
-/// \returns None if the pattern doesn't match or a CombineResult that can be
-/// used to apply the pattern.
+/// \returns std::nullopt if the pattern doesn't match or a CombineResult that
+/// can be used to apply the pattern.
 static std::optional<CombineResult>
 canFoldToVWWithSEXT(SDNode *Root, const NodeExtensionHelper &LHS,
                     const NodeExtensionHelper &RHS) {
@@ -8908,8 +8908,8 @@ canFoldToVWWithSEXT(SDNode *Root, const NodeExtensionHelper &LHS,
 
 /// Check if \p Root follows a pattern Root(zext(LHS), zext(RHS))
 ///
-/// \returns None if the pattern doesn't match or a CombineResult that can be
-/// used to apply the pattern.
+/// \returns std::nullopt if the pattern doesn't match or a CombineResult that
+/// can be used to apply the pattern.
 static std::optional<CombineResult>
 canFoldToVWWithZEXT(SDNode *Root, const NodeExtensionHelper &LHS,
                     const NodeExtensionHelper &RHS) {
@@ -8919,8 +8919,8 @@ canFoldToVWWithZEXT(SDNode *Root, const NodeExtensionHelper &LHS,
 
 /// Check if \p Root follows a pattern Root(sext(LHS), zext(RHS))
 ///
-/// \returns None if the pattern doesn't match or a CombineResult that can be
-/// used to apply the pattern.
+/// \returns std::nullopt if the pattern doesn't match or a CombineResult that
+/// can be used to apply the pattern.
 static std::optional<CombineResult>
 canFoldToVW_SU(SDNode *Root, const NodeExtensionHelper &LHS,
                const NodeExtensionHelper &RHS) {

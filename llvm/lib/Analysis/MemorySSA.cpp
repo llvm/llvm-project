@@ -621,8 +621,9 @@ template <class AliasAnalysisType> class ClobberWalker {
   /// value is the indices of searches that stopped at the last phi optimization
   /// target. It's left in an unspecified state.
   ///
-  /// If this returns None, NewPaused is a vector of searches that terminated
-  /// at StopWhere. Otherwise, NewPaused is left in an unspecified state.
+  /// If this returns std::nullopt, NewPaused is a vector of searches that
+  /// terminated at StopWhere. Otherwise, NewPaused is left in an unspecified
+  /// state.
   Optional<TerminatedPath>
   getBlockingAccess(const MemoryAccess *StopWhere,
                     SmallVectorImpl<ListIndex> &PausedSearches,

@@ -1046,7 +1046,7 @@ public:
 
   /// Check whether the condition described by Pred, LHS, and RHS is true or
   /// false. If we know it, return the evaluation of this condition. If neither
-  /// is proved, return None.
+  /// is proved, return std::nullopt.
   Optional<bool> evaluatePredicate(ICmpInst::Predicate Pred, const SCEV *LHS,
                                    const SCEV *RHS);
 
@@ -1057,7 +1057,7 @@ public:
 
   /// Check whether the condition described by Pred, LHS, and RHS is true or
   /// false in the given \p Context. If we know it, return the evaluation of
-  /// this condition. If neither is proved, return None.
+  /// this condition. If neither is proved, return std::nullopt.
   Optional<bool> evaluatePredicateAt(ICmpInst::Predicate Pred, const SCEV *LHS,
                                      const SCEV *RHS, const Instruction *CtxI);
 
@@ -1079,7 +1079,8 @@ public:
   /// If, for all loop invariant X, the predicate "LHS `Pred` X" is
   /// monotonically increasing or decreasing, returns
   /// Some(MonotonicallyIncreasing) and Some(MonotonicallyDecreasing)
-  /// respectively. If we could not prove either of these facts, returns None.
+  /// respectively. If we could not prove either of these facts, returns
+  /// std::nullopt.
   Optional<MonotonicPredicateType>
   getMonotonicPredicateType(const SCEVAddRecExpr *LHS,
                             ICmpInst::Predicate Pred);
@@ -1095,7 +1096,7 @@ public:
   };
   /// If the result of the predicate LHS `Pred` RHS is loop invariant with
   /// respect to L, return a LoopInvariantPredicate with LHS and RHS being
-  /// invariants, available at L's entry. Otherwise, return None.
+  /// invariants, available at L's entry. Otherwise, return std::nullopt.
   Optional<LoopInvariantPredicate>
   getLoopInvariantPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,
                             const SCEV *RHS, const Loop *L,
@@ -1104,8 +1105,8 @@ public:
   /// If the result of the predicate LHS `Pred` RHS is loop invariant with
   /// respect to L at given Context during at least first MaxIter iterations,
   /// return a LoopInvariantPredicate with LHS and RHS being invariants,
-  /// available at L's entry. Otherwise, return None. The predicate should be
-  /// the loop's exit condition.
+  /// available at L's entry. Otherwise, return std::nullopt. The predicate
+  /// should be the loop's exit condition.
   Optional<LoopInvariantPredicate>
   getLoopInvariantExitCondDuringFirstIterations(ICmpInst::Predicate Pred,
                                                 const SCEV *LHS,

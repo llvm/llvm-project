@@ -141,8 +141,8 @@ public:
   /// start of a symbol, or the entire symbol.
   /// This is used for example by WebAssembly to decode preludes.
   ///
-  /// Base implementation returns None. So all targets by default ignore to
-  /// treat symbols separately.
+  /// Base implementation returns std::nullopt. So all targets by default ignore
+  /// to treat symbols separately.
   ///
   /// \param Symbol   - The symbol.
   /// \param Size     - The number of bytes consumed.

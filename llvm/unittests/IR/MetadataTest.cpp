@@ -1214,7 +1214,7 @@ TEST_F(DILocationTest, discriminatorSpecialCases) {
                         .value()
                         ->getDuplicationFactor());
 
-  // Check we return None for unencodable cases.
+  // Check we return std::nullopt for unencodable cases.
   EXPECT_EQ(std::nullopt, L4->cloneWithBaseDiscriminator(0x1000));
   EXPECT_EQ(std::nullopt, L4->cloneByMultiplyingDuplicationFactor(0x1000));
 }

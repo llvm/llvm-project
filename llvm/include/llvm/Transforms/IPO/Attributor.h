@@ -1744,7 +1744,7 @@ struct Attributor {
   }
 
   /// If \p IRP is assumed to be a constant, return it, if it is unclear yet,
-  /// return None, otherwise return `nullptr`.
+  /// return std::nullopt, otherwise return `nullptr`.
   Optional<Constant *> getAssumedConstant(const IRPosition &IRP,
                                           const AbstractAttribute &AA,
                                           bool &UsedAssumedInformation);
@@ -1755,7 +1755,7 @@ struct Attributor {
   }
 
   /// If \p V is assumed simplified, return it, if it is unclear yet,
-  /// return None, otherwise return `nullptr`.
+  /// return std::nullopt, otherwise return `nullptr`.
   Optional<Value *> getAssumedSimplified(const IRPosition &IRP,
                                          const AbstractAttribute &AA,
                                          bool &UsedAssumedInformation,
@@ -1771,8 +1771,9 @@ struct Attributor {
   }
 
   /// If \p V is assumed simplified, return it, if it is unclear yet,
-  /// return None, otherwise return `nullptr`. Same as the public version
-  /// except that it can be used without recording dependences on any \p AA.
+  /// return std::nullopt, otherwise return `nullptr`. Same as the public
+  /// version except that it can be used without recording dependences on any \p
+  /// AA.
   Optional<Value *> getAssumedSimplified(const IRPosition &V,
                                          const AbstractAttribute *AA,
                                          bool &UsedAssumedInformation,
