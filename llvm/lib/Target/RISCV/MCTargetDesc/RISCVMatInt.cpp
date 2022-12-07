@@ -185,12 +185,8 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     TmpSeq.emplace_back(RISCV::SLLI, TrailingZeros);
 
     // Keep the new sequence if it is an improvement.
-    if (TmpSeq.size() < Res.size()) {
+    if (TmpSeq.size() < Res.size())
       Res = TmpSeq;
-      // A 2 instruction sequence is the best we can do.
-      if (Res.size() <= 2)
-        return Res;
-    }
   }
 
   // If the constant is positive we might be able to generate a shifted constant
@@ -210,12 +206,8 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     TmpSeq.emplace_back(RISCV::SRLI, LeadingZeros);
 
     // Keep the new sequence if it is an improvement.
-    if (TmpSeq.size() < Res.size()) {
+    if (TmpSeq.size() < Res.size())
       Res = TmpSeq;
-      // A 2 instruction sequence is the best we can do.
-      if (Res.size() <= 2)
-        return Res;
-    }
 
     // Some cases can benefit from filling the lower bits with zeros instead.
     ShiftedVal &= maskTrailingZeros<uint64_t>(LeadingZeros);
@@ -224,12 +216,8 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     TmpSeq.emplace_back(RISCV::SRLI, LeadingZeros);
 
     // Keep the new sequence if it is an improvement.
-    if (TmpSeq.size() < Res.size()) {
+    if (TmpSeq.size() < Res.size())
       Res = TmpSeq;
-      // A 2 instruction sequence is the best we can do.
-      if (Res.size() <= 2)
-        return Res;
-    }
 
     // If we have exactly 32 leading zeros and Zba, we can try using zext.w at
     // the end of the sequence.
@@ -241,12 +229,8 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
       TmpSeq.emplace_back(RISCV::ADD_UW, 0);
 
       // Keep the new sequence if it is an improvement.
-      if (TmpSeq.size() < Res.size()) {
+      if (TmpSeq.size() < Res.size())
         Res = TmpSeq;
-        // A 2 instruction sequence is the best we can do.
-        if (Res.size() <= 2)
-          return Res;
-      }
     }
   }
 
