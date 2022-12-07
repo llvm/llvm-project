@@ -1,5 +1,5 @@
-; RUN: opt -S -callsite-splitting < %s | FileCheck --check-prefix=CHECK %s
-; RUN: opt -S -callsite-splitting -callsite-splitting-duplication-threshold=0 < %s | FileCheck --check-prefix=NODUP %s
+; RUN: opt -S -passes=callsite-splitting < %s | FileCheck --check-prefix=CHECK %s
+; RUN: opt -S -passes=callsite-splitting -callsite-splitting-duplication-threshold=0 < %s | FileCheck --check-prefix=NODUP %s
 
 ; Instructions before a call that will be pushed to its predecessors
 ; with uses after the callsite, must be patched up as PHI nodes in
