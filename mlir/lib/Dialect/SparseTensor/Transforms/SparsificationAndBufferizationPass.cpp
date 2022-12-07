@@ -9,6 +9,7 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
@@ -84,6 +85,10 @@ public:
 
     bufferization::removeBufferizationAttributesInModule(getOperation());
     return success();
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<bufferization::BufferizationDialect>();
   }
 
   void runOnOperation() override {
