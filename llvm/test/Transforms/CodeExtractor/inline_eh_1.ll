@@ -1,4 +1,4 @@
-; RUN: opt < %s -skip-partial-inlining-cost-analysis -partial-inliner -S  | FileCheck %s
+; RUN: opt < %s -skip-partial-inlining-cost-analysis -passes=partial-inliner -S  | FileCheck %s
 ; RUN: opt < %s -skip-partial-inlining-cost-analysis -passes=partial-inliner -S  | FileCheck %s
 
 declare dso_local void @bar()
