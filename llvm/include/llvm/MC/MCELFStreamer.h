@@ -70,7 +70,7 @@ public:
                     uint64_t Size = 0, Align ByteAlignment = Align(1),
                     SMLoc L = SMLoc()) override;
   void emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
-                      unsigned ByteAlignment = 0) override;
+                      Align ByteAlignment = Align(1)) override;
   void emitValueImpl(const MCExpr *Value, unsigned Size,
                      SMLoc Loc = SMLoc()) override;
 
