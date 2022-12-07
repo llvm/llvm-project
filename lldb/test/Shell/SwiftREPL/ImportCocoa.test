@@ -3,7 +3,8 @@
 // REQUIRES: swift
 
 // RUN: %lldb --repl < %s 2>&1 | FileCheck %s
-// CHECK: target.detach-on-error
+// CHECK: NSNumber = Int{{32|64}}(23)
 
 import Cocoa
+NSNumber(23)
 // CHECK-NOT: error
