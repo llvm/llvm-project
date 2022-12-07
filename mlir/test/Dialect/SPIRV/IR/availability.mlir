@@ -49,3 +49,97 @@ func.func @module_physical_storage_buffer64_vulkan() {
   spirv.module PhysicalStorageBuffer64 Vulkan { }
   return
 }
+
+//===----------------------------------------------------------------------===//
+// Integer Dot Product ops
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: sdot_scalar_i32_i32
+func.func @sdot_scalar_i32_i32(%a: i32) -> i32 {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_KHR_integer_dot_product] ]
+  // CHECK: capabilities: [ [DotProduct] [DotProductInput4x8BitPacked] ]
+  %r = spirv.SDot %a, %a {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32) -> i32
+  return %r: i32
+}
+
+// CHECK-LABEL: sdot_vector_4xi8_i64
+func.func @sdot_vector_4xi8_i64(%a: vector<4xi8>) -> i64 {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_KHR_integer_dot_product] ]
+  // CHECK: capabilities: [ [DotProduct] [DotProductInput4x8Bit] ]
+  %r = spirv.SDot %a, %a: (vector<4xi8>, vector<4xi8>) -> i64
+  return %r: i64
+}
+
+// CHECK-LABEL: sdot_vector_4xi16_i64
+func.func @sdot_vector_4xi16_i64(%a: vector<4xi16>) -> i64 {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_KHR_integer_dot_product] ]
+  // CHECK: capabilities: [ [DotProduct] [DotProductInputAll] ]
+  %r = spirv.SDot %a, %a: (vector<4xi16>, vector<4xi16>) -> i64
+  return %r: i64
+}
+
+// CHECK-LABEL: sudot_scalar_i32_i32
+func.func @sudot_scalar_i32_i32(%a: i32) -> i32 {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_KHR_integer_dot_product] ]
+  // CHECK: capabilities: [ [DotProduct] [DotProductInput4x8BitPacked] ]
+  %r = spirv.SUDot %a, %a {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32) -> i32
+  return %r: i32
+}
+
+// CHECK-LABEL: sudot_vector_4xi8_i64
+func.func @sudot_vector_4xi8_i64(%a: vector<4xi8>) -> i64 {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_KHR_integer_dot_product] ]
+  // CHECK: capabilities: [ [DotProduct] [DotProductInput4x8Bit] ]
+  %r = spirv.SUDot %a, %a: (vector<4xi8>, vector<4xi8>) -> i64
+  return %r: i64
+}
+
+// CHECK-LABEL: sudot_vector_4xi16_i64
+func.func @sudot_vector_4xi16_i64(%a: vector<4xi16>) -> i64 {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_KHR_integer_dot_product] ]
+  // CHECK: capabilities: [ [DotProduct] [DotProductInputAll] ]
+  %r = spirv.SUDot %a, %a: (vector<4xi16>, vector<4xi16>) -> i64
+  return %r: i64
+}
+
+// CHECK-LABEL: udot_scalar_i32_i32
+func.func @udot_scalar_i32_i32(%a: i32) -> i32 {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_KHR_integer_dot_product] ]
+  // CHECK: capabilities: [ [DotProduct] [DotProductInput4x8BitPacked] ]
+  %r = spirv.UDot %a, %a {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32) -> i32
+  return %r: i32
+}
+
+// CHECK-LABEL: udot_vector_4xi8_i64
+func.func @udot_vector_4xi8_i64(%a: vector<4xi8>) -> i64 {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_KHR_integer_dot_product] ]
+  // CHECK: capabilities: [ [DotProduct] [DotProductInput4x8Bit] ]
+  %r = spirv.UDot %a, %a: (vector<4xi8>, vector<4xi8>) -> i64
+  return %r: i64
+}
+
+// CHECK-LABEL: udot_vector_4xi16_i64
+func.func @udot_vector_4xi16_i64(%a: vector<4xi16>) -> i64 {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_KHR_integer_dot_product] ]
+  // CHECK: capabilities: [ [DotProduct] [DotProductInputAll] ]
+  %r = spirv.UDot %a, %a: (vector<4xi16>, vector<4xi16>) -> i64
+  return %r: i64
+}
