@@ -92,8 +92,8 @@ public:
 
   /// If the type specified can be reliably distinguished, returns true for
   /// pointers to GC managed locations and false for pointers to non-GC
-  /// managed locations.  Note a GCStrategy can always return 'None' (i.e. an
-  /// empty optional indicating it can't reliably distinguish.
+  /// managed locations.  Note a GCStrategy can always return 'std::nullopt'
+  /// (i.e. an empty optional indicating it can't reliably distinguish.
   virtual std::optional<bool> isGCManagedPointer(const Type *Ty) const {
     return std::nullopt;
   }
