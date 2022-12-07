@@ -283,7 +283,7 @@ public:
 
   Expected<unsigned> getDwarfFile(StringRef Directory, StringRef FileName,
                                   unsigned FileNumber,
-                                  Optional<MD5::MD5Result> Checksum,
+                                  std::optional<MD5::MD5Result> Checksum,
                                   std::optional<StringRef> Source,
                                   unsigned CUID, unsigned DWARFVersion);
 

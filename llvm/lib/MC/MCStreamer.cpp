@@ -227,19 +227,17 @@ void llvm::MCStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLen,
 /// The implementation in this class just redirects to emitFill.
 void MCStreamer::emitZeros(uint64_t NumBytes) { emitFill(NumBytes, 0); }
 
-Expected<unsigned>
-MCStreamer::tryEmitDwarfFileDirective(unsigned FileNo, StringRef Directory,
-                                      StringRef Filename,
-                                      Optional<MD5::MD5Result> Checksum,
-                                      std::optional<StringRef> Source,
-                                      unsigned CUID) {
+Expected<unsigned> MCStreamer::tryEmitDwarfFileDirective(
+    unsigned FileNo, StringRef Directory, StringRef Filename,
+    std::optional<MD5::MD5Result> Checksum, std::optional<StringRef> Source,
+    unsigned CUID) {
   return getContext().getDwarfFile(Directory, Filename, FileNo, Checksum,
                                    Source, CUID);
 }
 
 void MCStreamer::emitDwarfFile0Directive(StringRef Directory,
                                          StringRef Filename,
-                                         Optional<MD5::MD5Result> Checksum,
+                                         std::optional<MD5::MD5Result> Checksum,
                                          std::optional<StringRef> Source,
                                          unsigned CUID) {
   getContext().setMCLineTableRootFile(CUID, Directory, Filename, Checksum,

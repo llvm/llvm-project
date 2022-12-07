@@ -26,7 +26,7 @@ using namespace llvm;
 
 #define MCOPT_EXP(TY, NAME)                                                    \
   MCOPT(TY, NAME)                                                              \
-  Optional<TY> llvm::mc::getExplicit##NAME() {                                 \
+  std::optional<TY> llvm::mc::getExplicit##NAME() {                            \
     if (NAME##View->getNumOccurrences()) {                                     \
       TY res = *NAME##View;                                                    \
       return res;                                                              \

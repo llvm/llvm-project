@@ -64,7 +64,7 @@ public:
   }
 
 private:
-  Optional<XCOFF::StorageClass> StorageClass;
+  std::optional<XCOFF::StorageClass> StorageClass;
   MCSectionXCOFF *RepresentedCsect = nullptr;
   XCOFF::VisibilityType VisibilityType = XCOFF::SYM_V_UNSPECIFIED;
   StringRef SymbolTableName;
