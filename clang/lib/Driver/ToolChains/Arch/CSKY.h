@@ -35,9 +35,9 @@ void getCSKYTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                            llvm::opt::ArgStringList &CmdArgs,
                            std::vector<llvm::StringRef> &Features);
 
-llvm::Optional<llvm::StringRef> getCSKYArchName(const Driver &D,
-                                                const llvm::opt::ArgList &Args,
-                                                const llvm::Triple &Triple);
+std::optional<llvm::StringRef> getCSKYArchName(const Driver &D,
+                                               const llvm::opt::ArgList &Args,
+                                               const llvm::Triple &Triple);
 
 } // end namespace csky
 } // namespace tools

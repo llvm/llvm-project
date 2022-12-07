@@ -148,7 +148,7 @@ private:
   mutable std::unique_ptr<tools::darwin::VerifyDebug> VerifyDebug;
 
   /// The version of the linker known to be available in the tool chain.
-  mutable Optional<VersionTuple> LinkerVersion;
+  mutable std::optional<VersionTuple> LinkerVersion;
 
 public:
   MachO(const Driver &D, const llvm::Triple &Triple,
@@ -318,10 +318,10 @@ public:
   mutable VersionTuple OSTargetVersion;
 
   /// The information about the darwin SDK that was used.
-  mutable Optional<DarwinSDKInfo> SDKInfo;
+  mutable std::optional<DarwinSDKInfo> SDKInfo;
 
   /// The target variant triple that was specified (if any).
-  mutable Optional<llvm::Triple> TargetVariantTriple;
+  mutable std::optional<llvm::Triple> TargetVariantTriple;
 
   CudaInstallationDetector CudaInstallation;
   RocmInstallationDetector RocmInstallation;

@@ -27,7 +27,7 @@ struct DetectedMultilibs {
 
   /// On Biarch systems, this corresponds to the default multilib when
   /// targeting the non-default multilib. Otherwise, it is empty.
-  llvm::Optional<Multilib> BiarchSibling;
+  std::optional<Multilib> BiarchSibling;
 };
 
 bool findMIPSMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
@@ -201,7 +201,7 @@ public:
     Multilib SelectedMultilib;
     /// On Biarch systems, this corresponds to the default multilib when
     /// targeting the non-default multilib. Otherwise, it is empty.
-    llvm::Optional<Multilib> BiarchSibling;
+    std::optional<Multilib> BiarchSibling;
 
     GCCVersion Version;
 

@@ -29,8 +29,7 @@ public:
   llvm::opt::DerivedArgList *
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
-  static llvm::Optional<std::string>
-  parseTargetProfile(StringRef TargetProfile);
+  static std::optional<std::string> parseTargetProfile(StringRef TargetProfile);
 };
 
 } // end namespace toolchains

@@ -14,9 +14,9 @@
 
 using namespace clang;
 
-Optional<VersionTuple> DarwinSDKInfo::RelatedTargetVersionMapping::map(
+std::optional<VersionTuple> DarwinSDKInfo::RelatedTargetVersionMapping::map(
     const VersionTuple &Key, const VersionTuple &MinimumValue,
-    Optional<VersionTuple> MaximumValue) const {
+    std::optional<VersionTuple> MaximumValue) const {
   if (Key < MinimumKeyVersion)
     return MinimumValue;
   if (Key > MaximumKeyVersion)
@@ -72,7 +72,7 @@ static Optional<VersionTuple> getVersionKey(const llvm::json::Object &Obj,
   return Version;
 }
 
-Optional<DarwinSDKInfo>
+std::optional<DarwinSDKInfo>
 DarwinSDKInfo::parseDarwinSDKSettingsJSON(const llvm::json::Object *Obj) {
   auto Version = getVersionKey(*Obj, "Version");
   if (!Version)
@@ -126,7 +126,7 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(const llvm::json::Object *Obj) {
                        std::move(VersionMappings));
 }
 
-Expected<Optional<DarwinSDKInfo>>
+Expected<std::optional<DarwinSDKInfo>>
 clang::parseDarwinSDKInfo(llvm::vfs::FileSystem &VFS, StringRef SDKRootPath) {
   llvm::SmallString<256> Filepath = SDKRootPath;
   llvm::sys::path::append(Filepath, "SDKSettings.json");

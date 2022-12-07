@@ -81,7 +81,7 @@ CudaVersion parseCudaHFile(llvm::StringRef Input) {
   // None otherwise.
   auto StartsWithWords =
       [](llvm::StringRef Line,
-         const SmallVector<StringRef, 3> words) -> llvm::Optional<StringRef> {
+         const SmallVector<StringRef, 3> words) -> std::optional<StringRef> {
     for (StringRef word : words) {
       if (!Line.consume_front(word))
         return {};
