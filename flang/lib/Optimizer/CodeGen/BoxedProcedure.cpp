@@ -253,6 +253,14 @@ public:
             rewriter.replaceOpWithNewOp<ConvertOp>(embox, toTy,
                                                    embox.getFunc());
           }
+        } else if (auto global = mlir::dyn_cast<GlobalOp>(op)) {
+          auto ty = global.getType();
+          if (typeConverter.needsConversion(ty)) {
+            rewriter.startRootUpdate(global);
+            auto toTy = typeConverter.convertType(ty);
+            global.setType(toTy);
+            rewriter.finalizeRootUpdate(global);
+          }
         } else if (auto mem = mlir::dyn_cast<AllocaOp>(op)) {
           auto ty = mem.getType();
           if (typeConverter.needsConversion(ty)) {
