@@ -60,7 +60,7 @@ MockCompilationDatabase::getProjectInfo(PathRef File) const {
 llvm::Optional<tooling::CompileCommand>
 MockCompilationDatabase::getCompileCommand(PathRef File) const {
   if (ExtraClangFlags.empty())
-    return None;
+    return std::nullopt;
 
   auto FileName = llvm::sys::path::filename(File);
 
