@@ -1,7 +1,7 @@
-; RUN: opt -loop-vectorize -force-vector-width=2 \
+; RUN: opt -passes=loop-vectorize -force-vector-width=2 \
 ; RUN:     -force-vector-interleave=1 -S < %s \
 ; RUN:     | FileCheck %s -check-prefix=BOTH -check-prefix=LV
-; RUN: opt -loop-vectorize -dse -force-vector-width=2 \
+; RUN: opt -passes=loop-vectorize,dse -force-vector-width=2 \
 ; RUN:     -force-vector-interleave=1 -S < %s \
 ; RUN:     | FileCheck %s -check-prefix=BOTH -check-prefix=DSE
 

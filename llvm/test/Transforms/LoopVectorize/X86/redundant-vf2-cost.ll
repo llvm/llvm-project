@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -mtriple x86_64 -debug -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -mtriple x86_64 -debug -disable-output 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Check that cost model is not executed twice for VF=2 when vectorization is

@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -force-vector-width=4 %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=4 %s | FileCheck %s
 
 ; CHECK-LABEL: @test_fshl
 ; CHECK-LABEL: vector.body:
