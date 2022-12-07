@@ -146,9 +146,9 @@ static bool opensProtoMessageField(const FormatToken &LessTok,
            (LessTok.Previous && LessTok.Previous->is(tok::equal))));
 }
 
-// Returns the delimiter of a raw string literal, or None if TokenText is not
-// the text of a raw string literal. The delimiter could be the empty string.
-// For example, the delimiter of R"deli(cont)deli" is deli.
+// Returns the delimiter of a raw string literal, or std::nullopt if TokenText
+// is not the text of a raw string literal. The delimiter could be the empty
+// string.  For example, the delimiter of R"deli(cont)deli" is deli.
 static llvm::Optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
   if (TokenText.size() < 5 // The smallest raw string possible is 'R"()"'.
       || !TokenText.startswith("R\"") || !TokenText.endswith("\"")) {

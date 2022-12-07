@@ -2671,8 +2671,8 @@ bool ExprEngine::hasMoreIteration(ProgramStateRef State,
 }
 
 /// Split the state on whether there are any more iterations left for this loop.
-/// Returns a (HasMoreIteration, HasNoMoreIteration) pair, or None when the
-/// acquisition of the loop condition value failed.
+/// Returns a (HasMoreIteration, HasNoMoreIteration) pair, or std::nullopt when
+/// the acquisition of the loop condition value failed.
 static Optional<std::pair<ProgramStateRef, ProgramStateRef>>
 assumeCondition(const Stmt *Condition, ExplodedNode *N) {
   ProgramStateRef State = N->getState();

@@ -31,9 +31,9 @@ llvm::StringRef getProcessorFromTargetID(const llvm::Triple &T,
                                          llvm::StringRef OffloadArch);
 
 /// Parse a target ID to get processor and feature map.
-/// Returns canonicalized processor name or None if the target ID is invalid.
-/// Returns target ID features in \p FeatureMap if it is not null pointer.
-/// This function assumes \p OffloadArch is a valid target ID.
+/// Returns canonicalized processor name or std::nullopt if the target ID is
+/// invalid.  Returns target ID features in \p FeatureMap if it is not null
+/// pointer. This function assumes \p OffloadArch is a valid target ID.
 /// If the target ID contains feature+, map it to true.
 /// If the target ID contains feature-, map it to false.
 /// If the target ID does not contain a feature (default), do not map it.
