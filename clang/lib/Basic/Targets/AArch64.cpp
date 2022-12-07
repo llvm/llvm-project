@@ -199,7 +199,6 @@ void AArch64TargetInfo::getTargetDefinesARMV83A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   Builder.defineMacro("__ARM_FEATURE_COMPLEX", "1");
   Builder.defineMacro("__ARM_FEATURE_JCVT", "1");
-  Builder.defineMacro("__ARM_FEATURE_PAUTH", "1");
   // Also include the Armv8.2 defines
   getTargetDefinesARMV82A(Opts, Builder);
 }
@@ -213,7 +212,6 @@ void AArch64TargetInfo::getTargetDefinesARMV84A(const LangOptions &Opts,
 void AArch64TargetInfo::getTargetDefinesARMV85A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   Builder.defineMacro("__ARM_FEATURE_FRINT", "1");
-  Builder.defineMacro("__ARM_FEATURE_BTI", "1");
   // Also include the Armv8.4 defines
   getTargetDefinesARMV84A(Opts, Builder);
 }
@@ -386,9 +384,6 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_FEATURE_SM3", "1");
     Builder.defineMacro("__ARM_FEATURE_SM4", "1");
   }
-
-  if (HasPAuth)
-    Builder.defineMacro("__ARM_FEATURE_PAUTH", "1");
 
   if (HasUnaligned)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
