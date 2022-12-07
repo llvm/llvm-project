@@ -34,10 +34,6 @@ class TestTwoValidInputs(repl.PlaygroundREPLTest):
             self.did_crash(result)
             self.assertTrue(False)
 
-        with recording(self, self.TraceOn()) as sbuf:
-            print("playground output:", file=sbuf)
-            print(playground_output, file=sbuf)
-
         self.assertTrue(playground_output is not None)
         self.assertTrue("a=\\'3\\'" in playground_output)
         self.assertTrue("b=\\'5\\'" in playground_output)
