@@ -99,10 +99,13 @@ declare i32 @doSomething(i32, ptr)
 ; CHECK: {{.*}}[[LOOP:BB[0-9_]+]]: # %for.body
 ; CHECK: bl {{.*}}something
 ;
-; CHECK-DAG: addi [[IV]], [[IV]], -1
-; CHECK-DAG: add [[SUM]], 3, [[SUM]]
-; CHECK-DAG: cmplwi [[IV]], 0
-; CHECK-NEXT: bne 0, {{.*}}[[LOOP]]
+; CHECK-64-DAG: addi [[IV]], [[IV]], -1
+; CHECK-64-DAG: add [[SUM]], 3, [[SUM]]
+; CHECK-64-DAG: cmpldi [[IV]], 0
+; CHECK-32-DAG: addi [[IV]], [[IV]], -1
+; CHECK-32-DAG: add [[SUM]], 3, [[SUM]]
+; CHECK-32-DAG: cmplwi [[IV]], 0
+; CHECK-NEXT: bc 12, 1, {{.*}}[[LOOP]]
 ;
 ; Next BB.
 ; CHECK: slwi 3, [[SUM]], 3
@@ -171,11 +174,14 @@ declare i32 @something(...)
 ; CHECK: {{.*}}[[LOOP:BB[0-9_]+]]: # %for.body
 ; CHECK: bl {{.*}}something
 ;
-; CHECK-DAG: addi [[IV]], [[IV]], -1
-; CHECK-DAG: add [[SUM]], 3, [[SUM]]
-; CHECK-DAG: cmplwi [[IV]], 0
+; CHECK-64-DAG: addi [[IV]], [[IV]], -1
+; CHECK-64-DAG: add [[SUM]], 3, [[SUM]]
+; CHECK-64-DAG: cmpldi [[IV]], 0
+; CHECK-32-DAG: addi [[IV]], [[IV]], -1
+; CHECK-32-DAG: add [[SUM]], 3, [[SUM]]
+; CHECK-32-DAG: cmplwi [[IV]], 0
 ;
-; CHECK-NEXT: bne 0, {{.*}}[[LOOP]]
+; CHECK-NEXT: bc 12, 1, {{.*}}[[LOOP]]
 ;
 ; Next BB
 ; CHECK: %for.exit
@@ -240,11 +246,14 @@ for.end:                                          ; preds = %for.body
 ; CHECK: {{.*}}[[LOOP:BB[0-9_]+]]: # %for.body
 ; CHECK: bl {{.*}}something
 ;
-; CHECK-DAG: addi [[IV]], [[IV]], -1
-; CHECK-DAG: add [[SUM]], 3, [[SUM]]
-; CHECK-DAG: cmplwi [[IV]], 0
+; CHECK-64-DAG: addi [[IV]], [[IV]], -1
+; CHECK-64-DAG: add [[SUM]], 3, [[SUM]]
+; CHECK-64-DAG: cmpldi [[IV]], 0
+; CHECK-32-DAG: addi [[IV]], [[IV]], -1
+; CHECK-32-DAG: add [[SUM]], 3, [[SUM]]
+; CHECK-32-DAG: cmplwi [[IV]], 0
 ;
-; CHECK-NEXT: bne 0, {{.*}}[[LOOP]]
+; CHECK-NEXT: bc 12, 1, {{.*}}[[LOOP]]
 ;
 ; Next BB
 ; CHECK: bl {{.*}}somethingElse
@@ -336,11 +345,14 @@ declare void @somethingElse(...)
 ; CHECK: {{.*}}[[LOOP:BB[0-9_]+]]: # %for.body
 ; CHECK: bl {{.*}}something
 ;
-; CHECK-DAG: addi [[IV]], [[IV]], -1
-; CHECK-DAG: add [[SUM]], 3, [[SUM]]
-; CHECK-DAG: cmplwi [[IV]], 0
+; CHECK-64-DAG: addi [[IV]], [[IV]], -1
+; CHECK-64-DAG: add [[SUM]], 3, [[SUM]]
+; CHECK-64-DAG: cmpldi [[IV]], 0
+; CHECK-32-DAG: addi [[IV]], [[IV]], -1
+; CHECK-32-DAG: add [[SUM]], 3, [[SUM]]
+; CHECK-32-DAG: cmplwi [[IV]], 0
 ;
-; CHECK-NEXT: bne 0, {{.*}}[[LOOP]]
+; CHECK-NEXT: bc 12, 1, {{.*}}[[LOOP]]
 ;
 ; Next BB.
 ; CHECK: slwi 3, [[SUM]], 3
