@@ -129,7 +129,6 @@ static_library("CodeGen") {
     "MachineInstr.cpp",
     "MachineInstrBundle.cpp",
     "MachineLICM.cpp",
-    "MachineLateInstrsCleanup.cpp",
     "MachineLoopInfo.cpp",
     "MachineLoopUtils.cpp",
     "MachineModuleInfo.cpp",
