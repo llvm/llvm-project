@@ -13,7 +13,6 @@
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
