@@ -10,6 +10,7 @@ module polymorphic_test
     procedure :: print
     procedure :: assign_p1_int
     generic :: assignment(=) => assign_p1_int
+    procedure :: host_assoc
   end type
 
   type, extends(p1) :: p2
@@ -38,6 +39,14 @@ module polymorphic_test
     lhs%a = rhs
     lhs%b = rhs
   End Subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPhost_assoc(
+! CHECK-SAME: %[[THIS:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {
+! CHECK: %[[TUPLE:.*]] = fir.alloca tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
+! CHECK: %[[POS_IN_TUPLE:.*]] = arith.constant 0 : i32
+! CHECK: %[[COORD_OF_CLASS:.*]] = fir.coordinate_of %[[TUPLE]], %[[POS_IN_TUPLE]] : (!fir.ref<tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>, i32) -> !fir.ref<!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
+! CHECK: fir.store %[[THIS]] to %[[COORD_OF_CLASS]] : !fir.ref<!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
+! CHECK: fir.call @_QMpolymorphic_testFhost_assocPinternal(%[[TUPLE]]) {{.*}} : (!fir.ref<tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>) -> ()
 
   ! Test correct access to polymorphic entity component.
   subroutine component_access(p)
@@ -412,5 +421,29 @@ module polymorphic_test
 ! CHECK: }
 ! CHECK: fir.array_merge_store %[[LOAD_PA]], %[[DO_RES]] to %[[PA]] : !fir.array<3x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.array<3x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.ref<!fir.array<3x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
 ! CHECK: return
+
+  subroutine host_assoc(this)
+    class(p1) :: this
+    
+    call internal
+  contains
+    subroutine internal
+      print*, this%a, this%b
+    end subroutine
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testFhost_assocPinternal(
+! CHECK-SAME: %[[TUPLE:.*]]: !fir.ref<tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>> {fir.host_assoc}) {
+! CHECK: %[[POS_IN_TUPLE:.*]] = arith.constant 0 : i32
+! CHECK: %[[COORD_OF_CLASS:.*]] = fir.coordinate_of %[[TUPLE]], %[[POS_IN_TUPLE]] : (!fir.ref<tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>, i32) -> !fir.ref<!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
+! CHECK: %[[CLASS:.*]] = fir.load %[[COORD_OF_CLASS]] : !fir.ref<!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
+! CHECK: %[[FIELD_A:.*]] = fir.field_index a, !fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>
+! CHECK: %[[COORD_A:.*]] = fir.coordinate_of %[[CLASS]], %[[FIELD_A]] : (!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
+! CHECK: %[[A:.*]] = fir.load %[[COORD_A]] : !fir.ref<i32>
+! CHECK: %{{.*}} = fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[A]]) {{.*}} : (!fir.ref<i8>, i32) -> i1
+! CHECK: %[[FIELD_B:.*]] = fir.field_index b, !fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>
+! CHECK: %[[COORD_B:.*]] = fir.coordinate_of %[[CLASS]], %[[FIELD_B]] : (!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
+! CHECK: %[[B:.*]] = fir.load %[[COORD_B]] : !fir.ref<i32>
+! CHECK: %{{.*}} = fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[B]]) {{.*}} : (!fir.ref<i8>, i32) -> i1
 
 end module
