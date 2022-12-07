@@ -34,8 +34,6 @@ namespace plugin {
 struct CUDAKernelTy;
 struct CUDADeviceTy;
 struct CUDAPluginTy;
-struct CUDAStreamManagerTy;
-struct CUDAEventManagerTy;
 
 /// Class implementing the CUDA kernel functionalities which derives from the
 /// generic kernel class.
@@ -260,11 +258,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
       return Err;
 
     // Initialize stream pool.
-    if (auto Err = CUDAStreamManager.init())
+    if (auto Err = CUDAStreamManager.init(OMPX_InitialNumStreams))
       return Err;
 
     // Initialize event pool.
-    if (auto Err = CUDAEventManager.init())
+    if (auto Err = CUDAEventManager.init(OMPX_InitialNumEvents))
       return Err;
 
     // Query attributes to determine number of threads/block and blocks/grid.
@@ -383,7 +381,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
   CUstream getStream(AsyncInfoWrapperTy &AsyncInfoWrapper) {
     CUstream &Stream = AsyncInfoWrapper.getQueueAs<CUstream>();
     if (!Stream)
-      Stream = CUDAStreamManager.getStream();
+      Stream = CUDAStreamManager.getResource();
     return Stream;
   }
 
@@ -482,7 +480,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
     // Once the stream is synchronized, return it to stream pool and reset
     // AsyncInfo. This is to make sure the synchronization only works for its
     // own tasks.
-    CUDAStreamManager.returnStream(Stream);
+    CUDAStreamManager.returnResource(Stream);
     AsyncInfo.Queue = nullptr;
 
     return Plugin::check(Res, "Error in cuStreamSynchronize: %s");
@@ -553,14 +551,14 @@ struct CUDADeviceTy : public GenericDeviceTy {
   /// Create an event.
   Error createEventImpl(void **EventPtrStorage) override {
     CUevent *Event = reinterpret_cast<CUevent *>(EventPtrStorage);
-    *Event = CUDAEventManager.getEvent();
+    *Event = CUDAEventManager.getResource();
     return Plugin::success();
   }
 
   /// Destroy a previously created event.
   Error destroyEventImpl(void *EventPtr) override {
     CUevent Event = reinterpret_cast<CUevent>(EventPtr);
-    CUDAEventManager.returnEvent(Event);
+    CUDAEventManager.returnResource(Event);
     return Plugin::success();
   }
 
@@ -779,8 +777,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
 private:
-  using CUDAStreamManagerTy = GenericStreamManagerTy<CUDAStreamRef>;
-  using CUDAEventManagerTy = GenericEventManagerTy<CUDAEventRef>;
+  using CUDAStreamManagerTy = GenericDeviceResourceManagerTy<CUDAStreamRef>;
+  using CUDAEventManagerTy = GenericDeviceResourceManagerTy<CUDAEventRef>;
 
   /// Stream manager for CUDA streams.
   CUDAStreamManagerTy CUDAStreamManager;
