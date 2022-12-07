@@ -6,9 +6,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @store_v4i8(<4 x i8>* %a) #0 {
 ; CHECK-LABEL: store_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    mov z0.h, #0 // =0x0
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   store <4 x i8> zeroinitializer, <4 x i8>* %a
@@ -18,8 +17,7 @@ define void @store_v4i8(<4 x i8>* %a) #0 {
 define void @store_v8i8(<8 x i8>* %a) #0 {
 ; CHECK-LABEL: store_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI1_0]
+; CHECK-NEXT:    mov z0.b, #0 // =0x0
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   store <8 x i8> zeroinitializer, <8 x i8>* %a
@@ -29,8 +27,7 @@ define void @store_v8i8(<8 x i8>* %a) #0 {
 define void @store_v16i8(<16 x i8>* %a) #0 {
 ; CHECK-LABEL: store_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    mov z0.b, #0 // =0x0
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   store <16 x i8> zeroinitializer, <16 x i8>* %a
@@ -40,8 +37,7 @@ define void @store_v16i8(<16 x i8>* %a) #0 {
 define void @store_v32i8(<32 x i8>* %a) #0 {
 ; CHECK-LABEL: store_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI3_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI3_0]
+; CHECK-NEXT:    mov z0.b, #0 // =0x0
 ; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    ret
   store <32 x i8> zeroinitializer, <32 x i8>* %a
@@ -51,9 +47,8 @@ define void @store_v32i8(<32 x i8>* %a) #0 {
 define void @store_v2i16(<2 x i16>* %a) #0 {
 ; CHECK-LABEL: store_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI4_0
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI4_0]
+; CHECK-NEXT:    mov z0.s, #0 // =0x0
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   store <2 x i16> zeroinitializer, <2 x i16>* %a
@@ -63,8 +58,7 @@ define void @store_v2i16(<2 x i16>* %a) #0 {
 define void @store_v2f16(<2 x half>* %a) #0 {
 ; CHECK-LABEL: store_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI5_0
-; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI5_0]
+; CHECK-NEXT:    mov z0.h, #0 // =0x0
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
@@ -75,8 +69,7 @@ define void @store_v2f16(<2 x half>* %a) #0 {
 define void @store_v4i16(<4 x i16>* %a) #0 {
 ; CHECK-LABEL: store_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI6_0
-; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI6_0]
+; CHECK-NEXT:    mov z0.h, #0 // =0x0
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   store <4 x i16> zeroinitializer, <4 x i16>* %a
@@ -86,8 +79,7 @@ define void @store_v4i16(<4 x i16>* %a) #0 {
 define void @store_v4f16(<4 x half>* %a) #0 {
 ; CHECK-LABEL: store_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI7_0
-; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI7_0]
+; CHECK-NEXT:    mov z0.h, #0 // =0x0
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   store <4 x half> zeroinitializer, <4 x half>* %a
@@ -97,8 +89,7 @@ define void @store_v4f16(<4 x half>* %a) #0 {
 define void @store_v8i16(<8 x i16>* %a) #0 {
 ; CHECK-LABEL: store_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI8_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI8_0]
+; CHECK-NEXT:    mov z0.h, #0 // =0x0
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   store <8 x i16> zeroinitializer, <8 x i16>* %a
@@ -108,8 +99,7 @@ define void @store_v8i16(<8 x i16>* %a) #0 {
 define void @store_v8f16(<8 x half>* %a) #0 {
 ; CHECK-LABEL: store_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI9_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI9_0]
+; CHECK-NEXT:    mov z0.h, #0 // =0x0
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   store <8 x half> zeroinitializer, <8 x half>* %a
@@ -119,8 +109,7 @@ define void @store_v8f16(<8 x half>* %a) #0 {
 define void @store_v16i16(<16 x i16>* %a) #0 {
 ; CHECK-LABEL: store_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI10_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI10_0]
+; CHECK-NEXT:    mov z0.h, #0 // =0x0
 ; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    ret
   store <16 x i16> zeroinitializer, <16 x i16>* %a
@@ -130,8 +119,7 @@ define void @store_v16i16(<16 x i16>* %a) #0 {
 define void @store_v16f16(<16 x half>* %a) #0 {
 ; CHECK-LABEL: store_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI11_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI11_0]
+; CHECK-NEXT:    mov z0.h, #0 // =0x0
 ; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    ret
   store <16 x half> zeroinitializer, <16 x half>* %a
@@ -177,8 +165,7 @@ define void @store_v4f32(<4 x float>* %a) #0 {
 define void @store_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-LABEL: store_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI16_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI16_0]
+; CHECK-NEXT:    mov z0.s, #0 // =0x0
 ; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    ret
   store <8 x i32> zeroinitializer, <8 x i32>* %a
@@ -188,8 +175,7 @@ define void @store_v8i32(<8 x i32>* %a) #0 {
 define void @store_v8f32(<8 x float>* %a) #0 {
 ; CHECK-LABEL: store_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI17_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI17_0]
+; CHECK-NEXT:    mov z0.s, #0 // =0x0
 ; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    ret
   store <8 x float> zeroinitializer, <8 x float>* %a
@@ -199,7 +185,7 @@ define void @store_v8f32(<8 x float>* %a) #0 {
 define void @store_v1i64(<1 x i64>* %a) #0 {
 ; CHECK-LABEL: store_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, xzr
+; CHECK-NEXT:    mov z0.d, #0 // =0x0
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   store <1 x i64> zeroinitializer, <1 x i64>* %a
@@ -237,8 +223,7 @@ define void @store_v2f64(<2 x double>* %a) #0 {
 define void @store_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-LABEL: store_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI22_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI22_0]
+; CHECK-NEXT:    mov z0.d, #0 // =0x0
 ; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    ret
   store <4 x i64> zeroinitializer, <4 x i64>* %a
@@ -248,8 +233,7 @@ define void @store_v4i64(<4 x i64>* %a) #0 {
 define void @store_v4f64(<4 x double>* %a) #0 {
 ; CHECK-LABEL: store_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI23_0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI23_0]
+; CHECK-NEXT:    mov z0.d, #0 // =0x0
 ; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    ret
   store <4 x double> zeroinitializer, <4 x double>* %a

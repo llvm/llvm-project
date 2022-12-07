@@ -207,8 +207,8 @@ void test_mm512_mask_store_ps(void *p, __m512 a, __mmask16 m)
 void test_mm512_store_si512 (void *__P, __m512i __A)
 {
   // CHECK-LABEL: @test_mm512_store_si512 
-  // CHECK: load <8 x i64>, <8 x i64>* %__A.addr.i, align 64
-  // CHECK: [[SI512_3:%.+]] = load i8*, i8** %__P.addr.i, align 8
+  // CHECK: load <8 x i64>, <8 x i64>* %__A.addr.i, align 64{{$}}
+  // CHECK: [[SI512_3:%.+]] = load i8*, i8** %__P.addr.i, align 8{{$}}
   // CHECK: bitcast i8* [[SI512_3]] to <8 x i64>*
   // CHECK: store <8 x i64>  
   _mm512_store_si512 ( __P,__A);
@@ -217,8 +217,8 @@ void test_mm512_store_si512 (void *__P, __m512i __A)
 void test_mm512_store_epi32 (void *__P, __m512i __A)
 {
   // CHECK-LABEL: @test_mm512_store_epi32 
-  // CHECK: load <8 x i64>, <8 x i64>* %__A.addr.i, align 64
-  // CHECK: [[Si32_3:%.+]] = load i8*, i8** %__P.addr.i, align 8
+  // CHECK: load <8 x i64>, <8 x i64>* %__A.addr.i, align 64{{$}}
+  // CHECK: [[Si32_3:%.+]] = load i8*, i8** %__P.addr.i, align 8{{$}}
   // CHECK: bitcast i8* [[Si32_3]] to <8 x i64>*
   // CHECK: store <8 x i64>  
   _mm512_store_epi32 ( __P,__A);
@@ -227,8 +227,8 @@ void test_mm512_store_epi32 (void *__P, __m512i __A)
 void test_mm512_store_epi64 (void *__P, __m512i __A)
 {
   // CHECK-LABEL: @test_mm512_store_epi64 
-  // CHECK: load <8 x i64>, <8 x i64>* %__A.addr.i, align 64
-  // CHECK: [[SI64_3:%.+]] = load i8*, i8** %__P.addr.i, align 8
+  // CHECK: load <8 x i64>, <8 x i64>* %__A.addr.i, align 64{{$}}
+  // CHECK: [[SI64_3:%.+]] = load i8*, i8** %__P.addr.i, align 8{{$}}
   // CHECK: bitcast i8* [[SI64_3]] to <8 x i64>*
   // CHECK: store <8 x i64>  
   _mm512_store_epi64 ( __P,__A);
@@ -359,34 +359,34 @@ __m512d test_mm512_mask_loadu_pd (__m512d __W, __mmask8 __U, void *__P)
 __m512i test_mm512_load_si512 (void *__P)
 {
   // CHECK-LABEL: @test_mm512_load_si512 
-  // CHECK: [[LI512_1:%.+]] = load i8*, i8** %__P.addr.i, align 8
+  // CHECK: [[LI512_1:%.+]] = load i8*, i8** %__P.addr.i, align 8{{$}}
   // CHECK: [[LI512_2:%.+]] = bitcast i8* [[LI512_1]] to <8 x i64>*
-  // CHECK: load <8 x i64>, <8 x i64>* [[LI512_2]], align 64
+  // CHECK: load <8 x i64>, <8 x i64>* [[LI512_2]], align 64{{$}}
   return _mm512_load_si512 ( __P);
 }
 
 __m512i test_mm512_load_epi32 (void *__P)
 {
   // CHECK-LABEL: @test_mm512_load_epi32 
-  // CHECK: [[LI32_1:%.+]] = load i8*, i8** %__P.addr.i, align 8
+  // CHECK: [[LI32_1:%.+]] = load i8*, i8** %__P.addr.i, align 8{{$}}
   // CHECK: [[LI32_2:%.+]] = bitcast i8* [[LI32_1]] to <8 x i64>*
-  // CHECK: load <8 x i64>, <8 x i64>* [[LI32_2]], align 64
+  // CHECK: load <8 x i64>, <8 x i64>* [[LI32_2]], align 64{{$}}
   return _mm512_load_epi32 ( __P);
 }
 
 __m512i test_mm512_load_epi64 (void *__P)
 {
   // CHECK-LABEL: @test_mm512_load_epi64 
-  // CHECK: [[LI64_1:%.+]] = load i8*, i8** %__P.addr.i, align 8
+  // CHECK: [[LI64_1:%.+]] = load i8*, i8** %__P.addr.i, align 8{{$}}
   // CHECK: [[LI64_2:%.+]] = bitcast i8* [[LI64_1]] to <8 x i64>*
-  // CHECK: load <8 x i64>, <8 x i64>* [[LI64_2]], align 64
+  // CHECK: load <8 x i64>, <8 x i64>* [[LI64_2]], align 64{{$}}
   return _mm512_load_epi64 ( __P);
 }
 
 __m512 test_mm512_load_ps(void *p)
 {
   // CHECK-LABEL: @test_mm512_load_ps
-  // CHECK: load <16 x float>, <16 x float>* %{{.*}}, align 64
+  // CHECK: load <16 x float>, <16 x float>* %{{.*}}, align 64{{$}}
   return _mm512_load_ps(p);
 }
 
@@ -407,7 +407,7 @@ __m512 test_mm512_maskz_load_ps(__mmask16 __U, void *__P)
 __m512d test_mm512_load_pd(void *p)
 {
   // CHECK-LABEL: @test_mm512_load_pd
-  // CHECK: load <8 x double>, <8 x double>* %{{.*}}, align 64
+  // CHECK: load <8 x double>, <8 x double>* %{{.*}}, align 64{{$}}
   return _mm512_load_pd(p);
 }
 
@@ -4610,7 +4610,7 @@ __m128 test_mm_getmant_ss(__m128 __A, __m128 __B) {
 
 __mmask16 test_mm512_kmov(__mmask16 __A) {
   // CHECK-LABEL: @test_mm512_kmov
-  // CHECK: load i16, i16* %__A.addr.i, align 2
+  // CHECK: load i16, i16* %__A.addr.i, align 2{{$}}
   return _mm512_kmov(__A); 
 }
 
@@ -8525,7 +8525,7 @@ __mmask16 test_cvtu32_mask16(__m512i A, __m512i B, unsigned int C) {
 
 __mmask16 test_load_mask16(__mmask16 *A, __m512i B, __m512i C) {
   // CHECK-LABEL: @test_load_mask16
-  // CHECK: [[LOAD:%.*]] = load i16, i16* %{{.*}}
+  // CHECK: [[LOAD:%.*]] = load i16, i16* %{{.*}}{{$}}
   // CHECK: bitcast i16 [[LOAD]] to <16 x i1>
   return _mm512_mask_cmpneq_epu32_mask(_load_mask16(A), B, C);
 }
@@ -8539,49 +8539,49 @@ void test_store_mask16(__mmask16 *A, __m512i B, __m512i C) {
 
 void test_mm512_stream_si512(__m512i * __P, __m512i __A) {
   // CHECK-LABEL: @test_mm512_stream_si512
-  // CHECK: store <8 x i64> %{{.*}}, <8 x i64>* %{{.*}}, align 64, !nontemporal
+  // CHECK: store <8 x i64> %{{.*}}, <8 x i64>* %{{.*}}, align 64, !nontemporal [[NONTEMPORAL:![0-9]+]]
   _mm512_stream_si512(__P, __A); 
 }
 
 void test_mm512_stream_si512_2(void * __P, __m512i __A) {
   // CHECK-LABEL: @test_mm512_stream_si512
-  // CHECK: store <8 x i64> %{{.*}}, <8 x i64>* %{{.*}}, align 64, !nontemporal
+  // CHECK: store <8 x i64> %{{.*}}, <8 x i64>* %{{.*}}, align 64, !nontemporal [[NONTEMPORAL]]
   _mm512_stream_si512(__P, __A); 
 }
 
 __m512i test_mm512_stream_load_si512(void *__P) {
   // CHECK-LABEL: @test_mm512_stream_load_si512
-  // CHECK: load <8 x i64>, <8 x i64>* %{{.*}}, align 64, !nontemporal
+  // CHECK: load <8 x i64>, <8 x i64>* %{{.*}}, align 64, !nontemporal [[NONTEMPORAL]]{{$}}
   return _mm512_stream_load_si512(__P); 
 }
 
 __m512i test_mm512_stream_load_si512_const(void const *__P) {
   // CHECK-LABEL: @test_mm512_stream_load_si512_const
-  // CHECK: load <8 x i64>, <8 x i64>* %{{.*}}, align 64, !nontemporal
+  // CHECK: load <8 x i64>, <8 x i64>* %{{.*}}, align 64, !nontemporal [[NONTEMPORAL]]{{$}}
   return _mm512_stream_load_si512(__P); 
 }
 
 void test_mm512_stream_pd(double *__P, __m512d __A) {
   // CHECK-LABEL: @test_mm512_stream_pd
-  // CHECK: store <8 x double> %{{.*}}, <8 x double>* %{{.*}}, align 64, !nontemporal
+  // CHECK: store <8 x double> %{{.*}}, <8 x double>* %{{.*}}, align 64, !nontemporal [[NONTEMPORAL]]
   return _mm512_stream_pd(__P, __A); 
 }
 
 void test_mm512_stream_pd_2(void *__P, __m512d __A) {
   // CHECK-LABEL: @test_mm512_stream_pd
-  // CHECK: store <8 x double> %{{.*}}, <8 x double>* %{{.*}}, align 64, !nontemporal
+  // CHECK: store <8 x double> %{{.*}}, <8 x double>* %{{.*}}, align 64, !nontemporal [[NONTEMPORAL]]
   return _mm512_stream_pd(__P, __A); 
 }
 
 void test_mm512_stream_ps(float *__P, __m512 __A) {
   // CHECK-LABEL: @test_mm512_stream_ps
-  // CHECK: store <16 x float> %{{.*}}, <16 x float>* %{{.*}}, align 64, !nontemporal
+  // CHECK: store <16 x float> %{{.*}}, <16 x float>* %{{.*}}, align 64, !nontemporal [[NONTEMPORAL]]
   _mm512_stream_ps(__P, __A); 
 }
 
 void test_mm512_stream_ps_2(void *__P, __m512 __A) {
   // CHECK-LABEL: @test_mm512_stream_ps
-  // CHECK: store <16 x float> %{{.*}}, <16 x float>* %{{.*}}, align 64, !nontemporal
+  // CHECK: store <16 x float> %{{.*}}, <16 x float>* %{{.*}}, align 64, !nontemporal [[NONTEMPORAL]]
   _mm512_stream_ps(__P, __A); 
 }
 __m512d test_mm512_mask_compress_pd(__m512d __W, __mmask8 __U, __m512d __A) {

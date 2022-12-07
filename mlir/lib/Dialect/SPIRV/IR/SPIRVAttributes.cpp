@@ -156,7 +156,7 @@ Optional<spirv::StorageClass> spirv::InterfaceVarABIAttr::getStorageClass() {
   if (getImpl()->storageClass)
     return static_cast<spirv::StorageClass>(
         getImpl()->storageClass.cast<IntegerAttr>().getValue().getZExtValue());
-  return llvm::None;
+  return std::nullopt;
 }
 
 LogicalResult spirv::InterfaceVarABIAttr::verify(

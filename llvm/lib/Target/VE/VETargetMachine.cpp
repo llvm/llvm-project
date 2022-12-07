@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/TargetRegistry.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -60,7 +61,7 @@ static std::string computeDataLayout(const Triple &T) {
   return Ret;
 }
 
-static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
@@ -79,8 +80,8 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF() {
 VETargetMachine::VETargetMachine(const Target &T, const Triple &TT,
                                  StringRef CPU, StringRef FS,
                                  const TargetOptions &Options,
-                                 Optional<Reloc::Model> RM,
-                                 Optional<CodeModel::Model> CM,
+                                 std::optional<Reloc::Model> RM,
+                                 std::optional<CodeModel::Model> CM,
                                  CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         getEffectiveRelocModel(RM),

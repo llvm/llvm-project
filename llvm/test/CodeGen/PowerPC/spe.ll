@@ -1793,10 +1793,11 @@ define dso_local float @test_fma(i32 %d) local_unnamed_addr #0 {
 ; CHECK-NEXT:    efscfsi 3, 29
 ; CHECK-NEXT:    mr 4, 3
 ; CHECK-NEXT:    bl fmaf
-; CHECK-NEXT:    addi 29, 29, 1
-; CHECK-NEXT:    cmplw 30, 29
+; CHECK-NEXT:    addi 30, 30, -1
 ; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    bne 0, .LBB56_2
+; CHECK-NEXT:    cmplwi 30, 0
+; CHECK-NEXT:    addi 29, 29, 1
+; CHECK-NEXT:    bc 12, 1, .LBB56_2
 ; CHECK-NEXT:    b .LBB56_4
 ; CHECK-NEXT:  .LBB56_3:
 ; CHECK-NEXT:    # implicit-def: $r5

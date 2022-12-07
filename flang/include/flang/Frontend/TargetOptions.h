@@ -19,6 +19,7 @@
 #define FORTRAN_FRONTEND_TARGETOPTIONS_H
 
 #include <string>
+#include <vector>
 
 namespace Fortran::frontend {
 

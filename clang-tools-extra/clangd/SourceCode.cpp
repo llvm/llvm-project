@@ -427,11 +427,11 @@ llvm::Optional<SourceRange> toHalfOpenFileRange(const SourceManager &SM,
                                                 SourceRange R) {
   SourceRange R1 = getTokenFileRange(R.getBegin(), SM, LangOpts);
   if (!isValidFileRange(SM, R1))
-    return llvm::None;
+    return std::nullopt;
 
   SourceRange R2 = getTokenFileRange(R.getEnd(), SM, LangOpts);
   if (!isValidFileRange(SM, R2))
-    return llvm::None;
+    return std::nullopt;
 
   SourceRange Result =
       rangeInCommonFile(unionTokenRange(R1, R2, SM, LangOpts), SM, LangOpts);
@@ -439,7 +439,7 @@ llvm::Optional<SourceRange> toHalfOpenFileRange(const SourceManager &SM,
   // Convert from closed token range to half-open (char) range
   Result.setEnd(Result.getEnd().getLocWithOffset(TokLen));
   if (!isValidFileRange(SM, Result))
-    return llvm::None;
+    return std::nullopt;
 
   return Result;
 }
@@ -515,7 +515,7 @@ std::vector<TextEdit> replacementsToEdits(llvm::StringRef Code,
 llvm::Optional<std::string> getCanonicalPath(const FileEntry *F,
                                              const SourceManager &SourceMgr) {
   if (!F)
-    return None;
+    return std::nullopt;
 
   llvm::SmallString<128> FilePath = F->getName();
   if (!llvm::sys::path::is_absolute(FilePath)) {
@@ -524,7 +524,7 @@ llvm::Optional<std::string> getCanonicalPath(const FileEntry *F,
                 FilePath)) {
       elog("Could not turn relative path '{0}' to absolute: {1}", FilePath,
            EC.message());
-      return None;
+      return std::nullopt;
     }
   }
 
@@ -574,7 +574,7 @@ llvm::Optional<FileDigest> digestFile(const SourceManager &SM, FileID FID) {
   bool Invalid = false;
   llvm::StringRef Content = SM.getBufferData(FID, &Invalid);
   if (Invalid)
-    return None;
+    return std::nullopt;
   return digest(Content);
 }
 
@@ -583,7 +583,7 @@ format::FormatStyle getFormatStyleForFile(llvm::StringRef File,
                                           const ThreadsafeFS &TFS) {
   auto Style = format::getStyle(format::DefaultFormatStyle, File,
                                 format::DefaultFallbackStyle, Content,
-                                TFS.view(/*CWD=*/llvm::None).get());
+                                TFS.view(/*CWD=*/std::nullopt).get());
   if (!Style) {
     log("getStyle() failed for file {0}: {1}. Fallback is LLVM style.", File,
         Style.takeError());
@@ -951,14 +951,14 @@ llvm::Optional<SpelledWord> SpelledWord::touching(SourceLocation SpelledLoc,
   bool Invalid = false;
   llvm::StringRef Code = SM.getBufferData(File, &Invalid);
   if (Invalid)
-    return llvm::None;
+    return std::nullopt;
   unsigned B = Offset, E = Offset;
   while (B > 0 && isAsciiIdentifierContinue(Code[B - 1]))
     --B;
   while (E < Code.size() && isAsciiIdentifierContinue(Code[E]))
     ++E;
   if (B == E)
-    return llvm::None;
+    return std::nullopt;
 
   SpelledWord Result;
   Result.Location = SM.getComposedLoc(File, B);
@@ -977,13 +977,13 @@ llvm::Optional<SpelledWord> SpelledWord::touching(SourceLocation SpelledLoc,
 llvm::Optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
                                            Preprocessor &PP) {
   if (SpelledTok.kind() != tok::identifier)
-    return None;
+    return std::nullopt;
   SourceLocation Loc = SpelledTok.location();
   assert(Loc.isFileID());
   const auto &SM = PP.getSourceManager();
   IdentifierInfo *IdentifierInfo = PP.getIdentifierInfo(SpelledTok.text(SM));
   if (!IdentifierInfo || !IdentifierInfo->hadMacroDefinition())
-    return None;
+    return std::nullopt;
 
   // We need to take special case to handle #define and #undef.
   // Preprocessor::getMacroDefinitionAtLoc() only considers a macro
@@ -1004,7 +1004,7 @@ llvm::Optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
                     .getMacroInfo();
   }
   if (!MacroInfo) {
-    return None;
+    return std::nullopt;
   }
   return DefinedMacro{
       IdentifierInfo->getName(), MacroInfo,

@@ -88,7 +88,7 @@ adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
                    std::vector<Range> Indexed, const LangOptions &LangOpts);
 
 /// Calculates the lexed occurrences that the given indexed occurrences map to.
-/// Returns None if we don't find a mapping.
+/// Returns std::nullopt if we don't find a mapping.
 ///
 /// Exposed for testing only.
 ///

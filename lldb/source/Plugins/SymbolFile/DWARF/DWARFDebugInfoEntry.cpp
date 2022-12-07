@@ -555,7 +555,7 @@ DWARFDebugInfoEntry::GetAttributeValueAsOptionalUnsigned(
   if (GetAttributeValue(cu, attr, form_value, nullptr,
                         check_specification_or_abstract_origin))
     return form_value.Unsigned();
-  return llvm::None;
+  return std::nullopt;
 }
 
 // GetAttributeValueAsReference

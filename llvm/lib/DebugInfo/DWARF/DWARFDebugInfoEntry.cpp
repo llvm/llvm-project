@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
@@ -67,7 +66,8 @@ bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U, uint64_t *OffsetPtr,
   }
   // See if all attributes in this DIE have fixed byte sizes. If so, we can
   // just add this size to the offset to skip to the next DIE.
-  if (Optional<size_t> FixedSize = AbbrevDecl->getFixedAttributesByteSize(U)) {
+  if (std::optional<size_t> FixedSize =
+          AbbrevDecl->getFixedAttributesByteSize(U)) {
     *OffsetPtr += *FixedSize;
     return true;
   }

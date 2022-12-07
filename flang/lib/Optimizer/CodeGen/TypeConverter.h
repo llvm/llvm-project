@@ -62,7 +62,7 @@ public:
     addConversion([&](BoxProcType boxproc) {
       // TODO: Support for this type will be added later when the Fortran 2003
       // procedure pointer feature is implemented.
-      return llvm::None;
+      return std::nullopt;
     });
     addConversion(
         [&](fir::ClassType classTy) { return convertBoxType(classTy); });
@@ -128,7 +128,7 @@ public:
     });
     addConversion([&](mlir::NoneType none) {
       return mlir::LLVM::LLVMStructType::getLiteral(
-          none.getContext(), llvm::None, /*isPacked=*/false);
+          none.getContext(), std::nullopt, /*isPacked=*/false);
     });
     // FIXME: https://reviews.llvm.org/D82831 introduced an automatic
     // materialization of conversion around function calls that is not working
@@ -140,7 +140,7 @@ public:
             mlir::ValueRange inputs,
             mlir::Location loc) -> llvm::Optional<mlir::Value> {
           if (inputs.size() != 1)
-            return llvm::None;
+            return std::nullopt;
           return inputs[0];
         });
     // Similar FIXME workaround here (needed for compare.fir/select-type.fir
@@ -150,7 +150,7 @@ public:
             mlir::ValueRange inputs,
             mlir::Location loc) -> llvm::Optional<mlir::Value> {
           if (inputs.size() != 1)
-            return llvm::None;
+            return std::nullopt;
           return inputs[0];
         });
   }

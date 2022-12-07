@@ -23,6 +23,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -40,14 +41,15 @@ using namespace llvm;
     return *NAME##View;                                                        \
   }
 
+// Temporary macro for incremental transition to std::optional.
 #define CGOPT_EXP(TY, NAME)                                                    \
   CGOPT(TY, NAME)                                                              \
-  Optional<TY> codegen::getExplicit##NAME() {                                  \
+  std::optional<TY> codegen::getExplicit##NAME() {                             \
     if (NAME##View->getNumOccurrences()) {                                     \
       TY res = *NAME##View;                                                    \
       return res;                                                              \
     }                                                                          \
-    return None;                                                               \
+    return std::nullopt;                                                       \
   }
 
 CGOPT(std::string, MArch)
@@ -590,8 +592,8 @@ std::string codegen::getFeaturesStr() {
   if (getMCPU() == "native") {
     StringMap<bool> HostFeatures;
     if (sys::getHostCPUFeatures(HostFeatures))
-      for (auto &F : HostFeatures)
-        Features.AddFeature(F.first(), F.second);
+      for (const auto &[Feature, IsEnabled] : HostFeatures)
+        Features.AddFeature(Feature, IsEnabled);
   }
 
   for (auto const &MAttr : getMAttrs())
@@ -610,8 +612,8 @@ std::vector<std::string> codegen::getFeatureList() {
   if (getMCPU() == "native") {
     StringMap<bool> HostFeatures;
     if (sys::getHostCPUFeatures(HostFeatures))
-      for (auto &F : HostFeatures)
-        Features.AddFeature(F.first(), F.second);
+      for (const auto &[Feature, IsEnabled] : HostFeatures)
+        Features.AddFeature(Feature, IsEnabled);
   }
 
   for (auto const &MAttr : getMAttrs())

@@ -111,7 +111,7 @@ struct FragmentCompiler {
     std::string RegexError;
     if (!Result.isValid(RegexError)) {
       diag(Error, "Invalid regex " + Anchored + ": " + RegexError, Text.Range);
-      return llvm::None;
+      return std::nullopt;
     }
     return Result;
   }
@@ -129,7 +129,7 @@ struct FragmentCompiler {
                Description)
                .str(),
            Path.Range);
-      return llvm::None;
+      return std::nullopt;
     }
     llvm::SmallString<256> AbsPath = llvm::StringRef(*Path);
     llvm::sys::fs::make_absolute(FragmentDirectory, AbsPath);

@@ -117,7 +117,7 @@ class VariantMatcher {
 
     /// Constructs a variadic typed matcher from \p InnerMatchers.
     /// Will try to convert each inner matcher to the destination type and
-    /// return llvm::None if it fails to do so.
+    /// return std::nullopt if it fails to do so.
     llvm::Optional<DynTypedMatcher>
     constructVariadicOperator(DynTypedMatcher::VariadicOperator Op,
                               ArrayRef<VariantMatcher> InnerMatchers) const;

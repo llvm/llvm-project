@@ -68,14 +68,14 @@ bool isSelfContainedHeader(const FileEntry *FE, const SourceManager &SM,
 llvm::Optional<StringRef> parseIWYUPragma(const char *Text) {
   // Skip the comment start, // or /*.
   if (Text[0] != '/' || (Text[1] != '/' && Text[1] != '*'))
-    return llvm::None;
+    return std::nullopt;
   bool BlockComment = Text[1] == '*';
   Text += 2;
 
   // Per spec, direcitves are whitespace- and case-sensitive.
   constexpr llvm::StringLiteral IWYUPragma = " IWYU pragma: ";
   if (strncmp(Text, IWYUPragma.data(), IWYUPragma.size()))
-    return llvm::None;
+    return std::nullopt;
   Text += IWYUPragma.size();
   const char *End = Text;
   while (*End != 0 && *End != '\n')

@@ -99,11 +99,11 @@ void MacroExpansionContext::registerForPreprocessor(Preprocessor &NewPP) {
 Optional<StringRef>
 MacroExpansionContext::getExpandedText(SourceLocation MacroExpansionLoc) const {
   if (MacroExpansionLoc.isMacroID())
-    return llvm::None;
+    return std::nullopt;
 
-  // If there was no macro expansion at that location, return None.
+  // If there was no macro expansion at that location, return std::nullopt.
   if (ExpansionRanges.find_as(MacroExpansionLoc) == ExpansionRanges.end())
-    return llvm::None;
+    return std::nullopt;
 
   // There was macro expansion, but resulted in no tokens, return empty string.
   const auto It = ExpandedTokens.find_as(MacroExpansionLoc);
@@ -117,11 +117,11 @@ MacroExpansionContext::getExpandedText(SourceLocation MacroExpansionLoc) const {
 Optional<StringRef>
 MacroExpansionContext::getOriginalText(SourceLocation MacroExpansionLoc) const {
   if (MacroExpansionLoc.isMacroID())
-    return llvm::None;
+    return std::nullopt;
 
   const auto It = ExpansionRanges.find_as(MacroExpansionLoc);
   if (It == ExpansionRanges.end())
-    return llvm::None;
+    return std::nullopt;
 
   assert(It->getFirst() != It->getSecond() &&
          "Every macro expansion must cover a non-empty range.");

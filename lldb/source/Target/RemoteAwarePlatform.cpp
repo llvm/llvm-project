@@ -308,13 +308,13 @@ bool RemoteAwarePlatform::GetRemoteOSVersion() {
 llvm::Optional<std::string> RemoteAwarePlatform::GetRemoteOSBuildString() {
   if (m_remote_platform_sp)
     return m_remote_platform_sp->GetRemoteOSBuildString();
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::Optional<std::string> RemoteAwarePlatform::GetRemoteOSKernelDescription() {
   if (m_remote_platform_sp)
     return m_remote_platform_sp->GetRemoteOSKernelDescription();
-  return llvm::None;
+  return std::nullopt;
 }
 
 ArchSpec RemoteAwarePlatform::GetRemoteSystemArchitecture() {

@@ -15,7 +15,6 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_CLUSTERING_H
 
 #include "BenchmarkResult.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
 #include <limits>
 #include <vector>

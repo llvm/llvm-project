@@ -48,10 +48,10 @@ typeOfCompletion(const CodeCompletionResult &R) {
     D = Template->getTemplatedDecl();
   auto *VD = dyn_cast_or_null<ValueDecl>(D);
   if (!VD)
-    return llvm::None; // We handle only variables and functions below.
+    return std::nullopt; // We handle only variables and functions below.
   auto T = VD->getType();
   if (T.isNull())
-    return llvm::None;
+    return std::nullopt;
   if (auto *FuncT = T->getAs<FunctionType>()) {
     // Functions are a special case. They are completed as 'foo()' and we want
     // to match their return type rather than the function type itself.
@@ -65,13 +65,13 @@ typeOfCompletion(const CodeCompletionResult &R) {
 
 llvm::Optional<OpaqueType> OpaqueType::encode(ASTContext &Ctx, QualType T) {
   if (T.isNull())
-    return None;
+    return std::nullopt;
   const Type *C = toEquivClass(Ctx, T);
   if (!C)
-    return None;
+    return std::nullopt;
   llvm::SmallString<128> Encoded;
   if (index::generateUSRForType(QualType(C, 0), Ctx, Encoded))
-    return None;
+    return std::nullopt;
   return OpaqueType(std::string(Encoded.str()));
 }
 
@@ -87,7 +87,7 @@ OpaqueType::fromCompletionResult(ASTContext &Ctx,
                                  const CodeCompletionResult &R) {
   auto T = typeOfCompletion(R);
   if (!T)
-    return None;
+    return std::nullopt;
   return encode(Ctx, *T);
 }
 

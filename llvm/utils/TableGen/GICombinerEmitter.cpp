@@ -647,7 +647,7 @@ void GICombinerEmitter::emitNameMatcher(raw_ostream &OS) const {
   StringMatcher Matcher("RuleIdentifier", Cases, OS);
   Matcher.Emit();
   OS << "#endif // ifndef NDEBUG\n\n"
-     << "  return None;\n"
+     << "  return std::nullopt;\n"
      << "}\n";
 }
 
@@ -960,7 +960,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
      << "    const auto Last = "
         "getRuleIdxForIdentifier(RangePair.second);\n"
      << "    if (!First || !Last)\n"
-     << "      return None;\n"
+     << "      return std::nullopt;\n"
      << "    if (First >= Last)\n"
      << "      report_fatal_error(\"Beginning of range should be before "
         "end of range\");\n"
@@ -971,7 +971,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
      << "  }\n"
      << "  const auto I = getRuleIdxForIdentifier(RangePair.first);\n"
      << "  if (!I)\n"
-     << "    return None;\n"
+     << "    return std::nullopt;\n"
      << "  return {{*I, *I + 1}};\n"
      << "}\n\n";
 

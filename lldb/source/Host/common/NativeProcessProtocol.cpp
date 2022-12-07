@@ -70,7 +70,7 @@ llvm::Optional<WaitStatus> NativeProcessProtocol::GetExitStatus() {
   if (m_state == lldb::eStateExited)
     return m_exit_status;
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 bool NativeProcessProtocol::SetExitStatus(WaitStatus status,
@@ -136,7 +136,7 @@ NativeProcessProtocol::GetHardwareDebugSupportInfo() const {
       const_cast<NativeProcessProtocol *>(this)->GetThreadAtIndex(0));
   if (!thread) {
     LLDB_LOG(log, "failed to find a thread to grab a NativeRegisterContext!");
-    return llvm::None;
+    return std::nullopt;
   }
 
   NativeRegisterContext &reg_ctx = thread->GetRegisterContext();
@@ -245,7 +245,7 @@ Status NativeProcessProtocol::SetHardwareBreakpoint(lldb::addr_t addr,
   // Exit here if target does not have required hardware breakpoint capability.
   auto hw_debug_cap = GetHardwareDebugSupportInfo();
 
-  if (hw_debug_cap == llvm::None || hw_debug_cap->first == 0 ||
+  if (hw_debug_cap == std::nullopt || hw_debug_cap->first == 0 ||
       hw_debug_cap->first <= m_hw_breakpoints_map.size())
     return Status("Target does not have required no of hardware breakpoints");
 

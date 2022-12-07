@@ -13,19 +13,17 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @sext_v8i1_v8i32(<8 x i1> %a, <8 x i32>* %out) #0 {
 ; CHECK-LABEL: sext_v8i1_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpklo z2.s, z0.h
+; CHECK-NEXT:    uunpklo z1.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    lsl z2.s, p0/m, z2.s, z1.s
-; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    asr z2.s, p0/m, z2.s, z1.s
-; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    stp q2, q0, [x0]
+; CHECK-NEXT:    lsl z1.s, p0/m, z1.s, #31
+; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, #31
+; CHECK-NEXT:    asr z1.s, p0/m, z1.s, #31
+; CHECK-NEXT:    asr z0.s, p0/m, z0.s, #31
+; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
   %b = sext <8 x i1> %a to <8 x i32>
   store <8 x i32> %b, <8 x i32>* %out
@@ -42,19 +40,17 @@ define void @sext_v8i1_v8i32(<8 x i1> %a, <8 x i32>* %out) #0 {
 define void @sext_v4i3_v4i64(<4 x i3> %a, <4 x i64>* %out) #0 {
 ; CHECK-LABEL: sext_v4i3_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI1_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z2.d, z0.s
+; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    lsl z2.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    asr z2.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    asr z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    stp q2, q0, [x0]
+; CHECK-NEXT:    lsl z1.d, p0/m, z1.d, #61
+; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, #61
+; CHECK-NEXT:    asr z1.d, p0/m, z1.d, #61
+; CHECK-NEXT:    asr z0.d, p0/m, z0.d, #61
+; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
   %b = sext <4 x i3> %a to <4 x i64>
   store <4 x i64> %b, <4 x i64>* %out
@@ -188,19 +184,17 @@ define void @sext_v32i8_v32i32(<32 x i8>* %in, <32 x i32>* %out) #0 {
 define void @sext_v4i8_v4i64(<4 x i8> %a, <4 x i64>* %out) #0 {
 ; CHECK-LABEL: sext_v4i8_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI7_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z2.d, z0.s
+; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI7_0]
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    lsl z2.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    asr z2.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    asr z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    stp q2, q0, [x0]
+; CHECK-NEXT:    lsl z1.d, p0/m, z1.d, #56
+; CHECK-NEXT:    lsl z0.d, p0/m, z0.d, #56
+; CHECK-NEXT:    asr z1.d, p0/m, z1.d, #56
+; CHECK-NEXT:    asr z0.d, p0/m, z0.d, #56
+; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
   %b = sext <4 x i8> %a to <4 x i64>
   store <4 x i64>%b, <4 x i64>* %out
@@ -611,10 +605,8 @@ define void @zext_v32i8_v32i32(<32 x i8>* %in, <32 x i32>* %out) #0 {
 define void @zext_v4i8_v4i64(<4 x i8> %a, <4 x i64>* %out) #0 {
 ; CHECK-LABEL: zext_v4i8_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI23_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI23_0]
-; CHECK-NEXT:    and z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z0.h, z0.h, #0xff
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8

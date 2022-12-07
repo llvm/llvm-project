@@ -193,7 +193,7 @@ public:
   /// Generate the type from a category and kind and length parameters.
   virtual mlir::Type
   genType(Fortran::common::TypeCategory tc, int kind,
-          llvm::ArrayRef<std::int64_t> lenParameters = llvm::None) = 0;
+          llvm::ArrayRef<std::int64_t> lenParameters = std::nullopt) = 0;
   /// Generate the type from a DerivedTypeSpec.
   virtual mlir::Type genType(const Fortran::semantics::DerivedTypeSpec &) = 0;
   /// Generate the type from a Variable

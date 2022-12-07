@@ -30,7 +30,7 @@ typedef ArrayRef<uint8_t> BuildIDRef;
 class ObjectFile;
 
 /// Returns the build ID, if any, contained in the given object file.
-Optional<BuildIDRef> getBuildID(const ObjectFile *Obj);
+std::optional<BuildIDRef> getBuildID(const ObjectFile *Obj);
 
 /// BuildIDFetcher searches local cache directories for debug info.
 class BuildIDFetcher {
@@ -40,7 +40,7 @@ public:
   virtual ~BuildIDFetcher() = default;
 
   /// Returns the path to the debug file with the given build ID.
-  virtual Optional<std::string> fetch(BuildIDRef BuildID) const;
+  virtual std::optional<std::string> fetch(BuildIDRef BuildID) const;
 
 private:
   const std::vector<std::string> DebugFileDirectories;

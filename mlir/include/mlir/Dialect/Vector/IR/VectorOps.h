@@ -118,7 +118,7 @@ void populateBubbleVectorBitCastOpPatterns(RewritePatternSet &patterns,
 /// VectorToSCF, which reduces the rank of vector transfer ops.
 void populateVectorTransferLoweringPatterns(
     RewritePatternSet &patterns,
-    llvm::Optional<unsigned> maxTransferRank = llvm::None,
+    llvm::Optional<unsigned> maxTransferRank = std::nullopt,
     PatternBenefit benefit = 1);
 
 /// These patterns materialize masks for various vector ops such as transfers.

@@ -44,8 +44,9 @@ public:
   void addInclude(StringRef FileName, bool IsAngled,
                   SourceLocation HashLocation, SourceLocation EndLocation);
 
-  /// Creates a quoted inclusion directive in the right sort order. Returns None
-  /// on error or if header inclusion directive for header already exists.
+  /// Creates a quoted inclusion directive in the right sort order. Returns
+  /// std::nullopt on error or if header inclusion directive for header already
+  /// exists.
   Optional<FixItHint> createIncludeInsertion(StringRef FileName, bool IsAngled);
 
 private:

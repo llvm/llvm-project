@@ -179,6 +179,7 @@ namespace {
     }
 
     bool HandleTopLevelDecl(DeclGroupRef DG) override {
+      // FIXME: Why not return false and abort parsing?
       if (Diags.hasErrorOccurred())
         return true;
 

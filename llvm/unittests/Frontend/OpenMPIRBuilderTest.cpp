@@ -20,6 +20,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 using namespace omp;
@@ -170,7 +171,7 @@ protected:
 
     DIBuilder DIB(*M);
     auto File = DIB.createFile("test.dbg", "/src", std::nullopt,
-                               Optional<StringRef>("/src/test.dbg"));
+                               std::optional<StringRef>("/src/test.dbg"));
     auto CU =
         DIB.createCompileUnit(dwarf::DW_LANG_C, File, "llvm-C", true, "", 0);
     auto Type =

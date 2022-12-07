@@ -46,12 +46,11 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
   // ahead and replace the value with the memory location, this lets the caller
   // quickly eliminate the markers.
 
-  SmallVector<std::pair<Value *, bool>, 35> ValuesToInspect;
+  SmallVector<PointerIntPair<Value *, 1, bool>, 35> ValuesToInspect;
   ValuesToInspect.emplace_back(V, false);
   while (!ValuesToInspect.empty()) {
-    auto ValuePair = ValuesToInspect.pop_back_val();
-    const bool IsOffset = ValuePair.second;
-    for (auto &U : ValuePair.first->uses()) {
+    const auto [Value, IsOffset] = ValuesToInspect.pop_back_val();
+    for (auto &U : Value->uses()) {
       auto *I = cast<Instruction>(U.getUser());
 
       if (auto *LI = dyn_cast<LoadInst>(I)) {

@@ -231,7 +231,7 @@ public:
   StringRef getSectionContent(unsigned SectionID) const;
 
   /// If the section was loaded, return the section's load address,
-  /// otherwise return None.
+  /// otherwise return std::nullopt.
   uint64_t getSectionLoadAddress(unsigned SectionID) const;
 
   /// Set the NotifyStubEmitted callback. This is used for debugging

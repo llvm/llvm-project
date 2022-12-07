@@ -44,7 +44,7 @@ public:
 
   /// Attach a note to this diagnostic.
   Diagnostic &attachNote(const Twine &msg,
-                         Optional<SMRange> noteLoc = llvm::None) {
+                         Optional<SMRange> noteLoc = std::nullopt) {
     assert(getSeverity() != Severity::DK_Note &&
            "cannot attach a Note to a Note");
     notes.emplace_back(

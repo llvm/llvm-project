@@ -202,8 +202,8 @@ define <8 x i32> @insertelement_v8i32(<8 x i32>* %a) #0 {
 define <1 x i64> @insertelement_v1i64(<1 x i64> %op1) #0 {
 ; CHECK-LABEL: insertelement_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    mov z0.d, #5 // =0x5
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
     %r = insertelement <1 x i64> %op1, i64 5, i64 0
     ret <1 x i64> %r

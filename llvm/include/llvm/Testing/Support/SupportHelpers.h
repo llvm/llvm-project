@@ -99,7 +99,7 @@ private:
 } // namespace detail
 
 /// Matches an llvm::Optional<T> with a value that conforms to an inner matcher.
-/// To match llvm::None you could use Eq(llvm::None).
+/// To match std::nullopt you could use Eq(std::nullopt).
 template <class InnerMatcher>
 detail::ValueIsMatcher<InnerMatcher> ValueIs(const InnerMatcher &ValueMatcher) {
   return detail::ValueIsMatcher<InnerMatcher>(ValueMatcher);

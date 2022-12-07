@@ -596,7 +596,7 @@ uint32_t Module::ResolveSymbolContextsForFileSpec(
 
   if (SymbolFile *symbols = GetSymbolFile()) {
     // TODO: Handle SourceLocationSpec column information
-    SourceLocationSpec location_spec(file_spec, line, /*column=*/llvm::None,
+    SourceLocationSpec location_spec(file_spec, line, /*column=*/std::nullopt,
                                      check_inlines, /*exact_match=*/false);
 
     symbols->ResolveSymbolContext(location_spec, resolve_scope, sc_list);
@@ -937,7 +937,7 @@ void Module::FindAddressesForLine(const lldb::TargetSP target_sp,
   SearchFilterByModule filter(target_sp, m_file);
 
   // TODO: Handle SourceLocationSpec column information
-  SourceLocationSpec location_spec(file, line, /*column=*/llvm::None,
+  SourceLocationSpec location_spec(file, line, /*column=*/std::nullopt,
                                    /*check_inlines=*/true,
                                    /*exact_match=*/false);
   AddressResolverFileLine resolver(location_spec);

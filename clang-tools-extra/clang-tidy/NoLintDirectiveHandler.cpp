@@ -52,7 +52,7 @@ static Optional<NoLintType> strToNoLintType(StringRef Str) {
                   .Case("NOLINTNEXTLINE", NoLintType::NoLintNextLine)
                   .Case("NOLINTBEGIN", NoLintType::NoLintBegin)
                   .Case("NOLINTEND", NoLintType::NoLintEnd)
-                  .Default(None);
+                  .Default(std::nullopt);
   return Type;
 }
 

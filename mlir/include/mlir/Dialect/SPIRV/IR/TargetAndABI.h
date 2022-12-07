@@ -34,13 +34,13 @@ public:
   /// Returns true if the given capability is allowed.
   bool allows(Capability) const;
   /// Returns the first allowed one if any of the given capabilities is allowed.
-  /// Returns llvm::None otherwise.
+  /// Returns std::nullopt otherwise.
   Optional<Capability> allows(ArrayRef<Capability>) const;
 
   /// Returns true if the given extension is allowed.
   bool allows(Extension) const;
   /// Returns the first allowed one if any of the given extensions is allowed.
-  /// Returns llvm::None otherwise.
+  /// Returns std::nullopt otherwise.
   Optional<Extension> allows(ArrayRef<Extension>) const;
 
   /// Returns the vendor ID.
