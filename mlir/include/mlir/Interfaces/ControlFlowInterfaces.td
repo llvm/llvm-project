@@ -79,7 +79,7 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
                 opaqueOp->getSuccessor(i)))
             return arg;
         }
-        return ::llvm::None;
+        return ::std::nullopt;
       }]
     >,
     InterfaceMethod<[{

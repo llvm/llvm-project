@@ -525,7 +525,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
       (ins "ValueRange":$inputs, "ValueRange":$outputs,
             CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
       [{{
-        buildStructuredOp($_builder, $_state, llvm::None, inputs, outputs,
+        buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
           attributes, {0}::getRegionBuilder());
       }]>,
       OpBuilder<

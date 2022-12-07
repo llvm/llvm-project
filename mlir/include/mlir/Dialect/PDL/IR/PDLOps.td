@@ -420,7 +420,7 @@ def PDL_PatternOp : PDL_Op<"pattern", [
 
   let builders = [
     OpBuilder<(ins CArg<"Optional<uint16_t>", "1">:$benefit,
-                   CArg<"Optional<StringRef>", "llvm::None">:$name)>,
+                   CArg<"Optional<StringRef>", "std::nullopt">:$name)>,
   ];
   let extraClassDeclaration = [{
     //===------------------------------------------------------------------===//
