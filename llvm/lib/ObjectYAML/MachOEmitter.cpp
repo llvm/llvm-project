@@ -300,8 +300,7 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
     case MachO::LC_SEGMENT_64:
       uint64_t segOff = is64Bit ? LC.Data.segment_command_64_data.fileoff
                                 : LC.Data.segment_command_data.fileoff;
-      if (0 ==
-          strncmp(&LC.Data.segment_command_data.segname[0], "__LINKEDIT", 16)) {
+      if (0 == strcmp(LC.Data.segment_command_data.segname, "__LINKEDIT")) {
         FoundLinkEditSeg = true;
         LinkEditOff = segOff;
         if (Obj.RawLinkEditSegment)
