@@ -3228,26 +3228,25 @@ multiclass IntMed3Pat<Instruction med3Inst,
 defm : IntMed3Pat<V_MED3_I32_e64, smin, smax>;
 defm : IntMed3Pat<V_MED3_U32_e64, umin, umax>;
 
-// This matches 16 permutations of
-// max(min(x, y), min(max(x, y), z))
+// This matches 16 permutations of max(min(x, y), min(max(x, y), z))
 class FPMed3Pat<ValueType vt,
-                //SDPatternOperator max, SDPatternOperator min,
                 Instruction med3Inst> : GCNPat<
-  (fmaxnum_like (fminnum_like (VOP3Mods_nnan vt:$src0, i32:$src0_mods),
-                              (VOP3Mods_nnan vt:$src1, i32:$src1_mods)),
-           (fminnum_like (fmaxnum_like (VOP3Mods_nnan vt:$src0, i32:$src0_mods),
-                                       (VOP3Mods_nnan vt:$src1, i32:$src1_mods)),
-                         (vt (VOP3Mods_nnan vt:$src2, i32:$src2_mods)))),
-  (med3Inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2, DSTCLAMP.NONE, DSTOMOD.NONE)
->;
+    (fmaxnum_like_nnan
+      (fminnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
+                    (VOP3Mods vt:$src1, i32:$src1_mods)),
+      (fminnum_like (fmaxnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
+                                  (VOP3Mods vt:$src1, i32:$src1_mods)),
+                    (vt (VOP3Mods vt:$src2, i32:$src2_mods)))),
+    (med3Inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
+              DSTCLAMP.NONE, DSTOMOD.NONE)>;
 
 class FP16Med3Pat<ValueType vt,
                 Instruction med3Inst> : GCNPat<
-  (fmaxnum_like (fminnum_like (VOP3Mods_nnan vt:$src0, i32:$src0_mods),
-                                     (VOP3Mods_nnan vt:$src1, i32:$src1_mods)),
-                (fminnum_like (fmaxnum_like (VOP3Mods_nnan vt:$src0, i32:$src0_mods),
-                                            (VOP3Mods_nnan vt:$src1, i32:$src1_mods)),
-                              (vt (VOP3Mods_nnan vt:$src2, i32:$src2_mods)))),
+  (fmaxnum_like_nnan (fminnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
+                                   (VOP3Mods vt:$src1, i32:$src1_mods)),
+           (fminnum_like (fmaxnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
+                                       (VOP3Mods vt:$src1, i32:$src1_mods)),
+                         (vt (VOP3Mods vt:$src2, i32:$src2_mods)))),
   (med3Inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2, DSTCLAMP.NONE)
 >;
 
