@@ -16,7 +16,6 @@
 using namespace lldb;
 using namespace lldb_private;
 using llvm::Optional;
-using llvm::None;
 using ParsedFunction = lldb_private::CPlusPlusNameParser::ParsedFunction;
 using ParsedName = lldb_private::CPlusPlusNameParser::ParsedName;
 namespace tok = clang::tok;
