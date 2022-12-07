@@ -64,6 +64,11 @@ inline bool isBoxAddressType(mlir::Type type) {
   return type && type.isa<fir::BaseBoxType>();
 }
 
+/// Is this a fir.box or fir.class address or value type?
+inline bool isBoxAddressOrValueType(mlir::Type type) {
+  return fir::unwrapRefType(type).isa<fir::BaseBoxType>();
+}
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_HLFIR_HLFIRDIALECT_H
