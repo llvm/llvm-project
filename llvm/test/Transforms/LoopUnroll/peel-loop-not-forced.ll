@@ -1,5 +1,5 @@
-; RUN: opt < %s -S -loop-unroll -unroll-threshold=30 | FileCheck %s
-; RUN: opt < %s -S -loop-unroll -unroll-threshold=30 -unroll-allow-peeling=false | FileCheck %s --check-prefix=DISABLE
+; RUN: opt < %s -S -passes=loop-unroll -unroll-threshold=30 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-unroll -unroll-threshold=30 -unroll-allow-peeling=false | FileCheck %s --check-prefix=DISABLE
 
 define i32 @invariant_backedge_1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @invariant_backedge_1
