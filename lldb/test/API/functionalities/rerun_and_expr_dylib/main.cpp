@@ -13,5 +13,9 @@ int main() {
   struct Foo *foo = (struct Foo *)dlsym(handle, "global_foo");
   assert(foo != nullptr);
 
+  // Unload dylib (important on Linux so a program re-run loads
+  // an updated version of the dylib and destroys the old lldb module).
+  dlclose(handle);
+
   return 0;
 }
