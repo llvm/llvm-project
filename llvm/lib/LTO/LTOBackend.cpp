@@ -234,7 +234,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
                            ModuleSummaryIndex *ExportSummary,
                            const ModuleSummaryIndex *ImportSummary) {
   auto FS = vfs::getRealFileSystem();
-  Optional<PGOOptions> PGOOpt;
+  std::optional<PGOOptions> PGOOpt;
   if (!Conf.SampleProfile.empty())
     PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping, FS,
                         PGOOptions::SampleUse, PGOOptions::NoCSAction, true);

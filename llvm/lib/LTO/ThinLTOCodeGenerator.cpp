@@ -237,7 +237,7 @@ crossImportIntoModule(Module &TheModule, const ModuleSummaryIndex &Index,
 static void optimizeModule(Module &TheModule, TargetMachine &TM,
                            unsigned OptLevel, bool Freestanding,
                            bool DebugPassManager, ModuleSummaryIndex *Index) {
-  Optional<PGOOptions> PGOOpt;
+  std::optional<PGOOptions> PGOOpt;
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;

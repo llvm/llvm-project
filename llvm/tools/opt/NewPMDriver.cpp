@@ -335,7 +335,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   bool VerifyEachPass = VK == VK_VerifyEachPass;
 
   auto FS = vfs::getRealFileSystem();
-  Optional<PGOOptions> P;
+  std::optional<PGOOptions> P;
   switch (PGOKindFlag) {
   case InstrGen:
     P = PGOOptions(ProfileFile, "", "", FS, PGOOptions::IRInstr);
