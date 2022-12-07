@@ -13,7 +13,7 @@
 // The attributes hide_from_abi_of_visible.query relies on aren't applied on windows.
 // XFAIL: windows
 
-// RUN: clang-query -f %S/clang_query/hide_from_abi_or_visible.query %s --use-color -- -Wno-unknown-warning-option %{compile_flags} -fno-modules > %t.output
+// RUN: %{clang-query} -f %S/clang_query/hide_from_abi_or_visible.query %s --use-color -- -Wno-unknown-warning-option %{compile_flags} -fno-modules > %t.output
 // RUN: cat %t.output
 // RUN: cat %t.output | wc -l | grep -Fxq 1
 
