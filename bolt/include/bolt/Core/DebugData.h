@@ -1134,7 +1134,7 @@ public:
 
   Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
                                 Optional<MD5::MD5Result> Checksum,
-                                Optional<StringRef> Source,
+                                std::optional<StringRef> Source,
                                 uint16_t DwarfVersion,
                                 unsigned FileNumber = 0) {
     assert(RawData.empty() && "cannot use with raw data");
@@ -1151,7 +1151,7 @@ public:
   /// optional \p Source.
   void setRootFile(StringRef Directory, StringRef FileName,
                    Optional<MD5::MD5Result> Checksum,
-                   Optional<StringRef> Source) {
+                   std::optional<StringRef> Source) {
     Header.setRootFile(Directory, FileName, Checksum, Source);
   }
 
