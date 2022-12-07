@@ -100,13 +100,13 @@ Pointer Program::getPtrGlobal(unsigned Idx) {
   return Pointer(Globals[Idx]->block());
 }
 
-llvm::Optional<unsigned> Program::getGlobal(const ValueDecl *VD) {
+std::optional<unsigned> Program::getGlobal(const ValueDecl *VD) {
   auto It = GlobalIndices.find(VD);
   if (It != GlobalIndices.end())
     return It->second;
 
   // Find any previous declarations which were already evaluated.
-  llvm::Optional<unsigned> Index;
+  std::optional<unsigned> Index;
   for (const Decl *P = VD; P; P = P->getPreviousDecl()) {
     auto It = GlobalIndices.find(P);
     if (It != GlobalIndices.end()) {
@@ -124,7 +124,7 @@ llvm::Optional<unsigned> Program::getGlobal(const ValueDecl *VD) {
   return Index;
 }
 
-llvm::Optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD) {
+std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD) {
   if (auto Idx = getGlobal(VD))
     return Idx;
 
@@ -135,7 +135,7 @@ llvm::Optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD) {
   return {};
 }
 
-llvm::Optional<unsigned> Program::getOrCreateDummy(const ParmVarDecl *PD) {
+std::optional<unsigned> Program::getOrCreateDummy(const ParmVarDecl *PD) {
   auto &ASTCtx = Ctx.getASTContext();
 
   // Create a pointer to an incomplete array of the specified elements.
@@ -154,8 +154,8 @@ llvm::Optional<unsigned> Program::getOrCreateDummy(const ParmVarDecl *PD) {
   return {};
 }
 
-llvm::Optional<unsigned> Program::createGlobal(const ValueDecl *VD,
-                                               const Expr *Init) {
+std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
+                                              const Expr *Init) {
   bool IsStatic, IsExtern;
   if (auto *Var = dyn_cast<VarDecl>(VD)) {
     IsStatic = !Var->hasLocalStorage();
@@ -172,13 +172,13 @@ llvm::Optional<unsigned> Program::createGlobal(const ValueDecl *VD,
   return {};
 }
 
-llvm::Optional<unsigned> Program::createGlobal(const Expr *E) {
+std::optional<unsigned> Program::createGlobal(const Expr *E) {
   return createGlobal(E, E->getType(), /*isStatic=*/true, /*isExtern=*/false);
 }
 
-llvm::Optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
-                                               bool IsStatic, bool IsExtern,
-                                               const Expr *Init) {
+std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
+                                              bool IsStatic, bool IsExtern,
+                                              const Expr *Init) {
   // Create a descriptor for the global.
   Descriptor *Desc;
   const bool IsConst = Ty.isConstQualified();
@@ -285,7 +285,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     const bool IsConst = FT.isConstQualified();
     const bool IsMutable = FD->isMutable();
     Descriptor *Desc;
-    if (llvm::Optional<PrimType> T = Ctx.classify(FT)) {
+    if (std::optional<PrimType> T = Ctx.classify(FT)) {
       Desc = createDescriptor(FD, *T, IsConst, /*isTemporary=*/false,
                               IsMutable);
     } else {
@@ -319,7 +319,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     // Array of well-known bounds.
     if (auto CAT = dyn_cast<ConstantArrayType>(ArrayType)) {
       size_t NumElems = CAT->getSize().getZExtValue();
-      if (llvm::Optional<PrimType> T = Ctx.classify(ElemTy)) {
+      if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
         // Arrays of primitives.
         unsigned ElemSize = primSize(*T);
         if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems) {
@@ -346,7 +346,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     // Array of unknown bounds - cannot be accessed and pointer arithmetic
     // is forbidden on pointers to such objects.
     if (isa<IncompleteArrayType>(ArrayType)) {
-      if (llvm::Optional<PrimType> T = Ctx.classify(ElemTy)) {
+      if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
         return allocateDescriptor(D, *T, IsTemporary,
                                   Descriptor::UnknownSize{});
       } else {

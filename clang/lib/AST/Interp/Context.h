@@ -59,7 +59,7 @@ public:
   unsigned getCharBit() const;
 
   /// Classifies an expression.
-  llvm::Optional<PrimType> classify(QualType T) const;
+  std::optional<PrimType> classify(QualType T) const;
 
 private:
   /// Runs a function.
