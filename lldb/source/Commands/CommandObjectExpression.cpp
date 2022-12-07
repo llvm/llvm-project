@@ -355,6 +355,7 @@ CommandObjectExpression::GetEvalOptions(const Target &target) {
   options.SetDebug(m_command_options.debug);
 
   // BEGIN SWIFT
+  options.SetBindGenericTypes(m_varobj_options.bind_generic_types);
   // If the language was not specified in the expression command,
   // set it to the language in the target's properties if
   // specified, else default to the language for the frame.

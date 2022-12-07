@@ -232,6 +232,10 @@ swift::Type SwiftASTContext::GetSwiftType(CompilerType compiler_type) {
   if (compiler_type.GetTypeSystem().isa_and_nonnull<SwiftASTContext>())
     return reinterpret_cast<swift::TypeBase *>(
         compiler_type.GetOpaqueQualType());
+  if (auto ts = compiler_type.GetTypeSystem()
+                    .dyn_cast_or_null<TypeSystemSwiftTypeRef>())
+    return ts->GetSwiftType(compiler_type);
+
   return {};
 }
 
@@ -4070,7 +4074,7 @@ swift::TypeBase *SwiftASTContext::ReconstructType(ConstString mangled_typename,
     // the mapping isn't bijective.
     if (ast_type == found_type)
       CacheDemangledType(mangled_typename, ast_type);
-    CompilerType result_type = {weak_from_this(), ast_type};//ToCompilerType(ast_type);
+    CompilerType result_type = {weak_from_this(), ast_type};
     LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\") -- found %s", mangled_cstr,
                result_type.GetTypeName().GetCString());
     return ast_type;
@@ -7620,6 +7624,17 @@ std::string SwiftASTContext::GetSwiftName(const clang::Decl *clang_decl,
   if (auto name_decl = llvm::dyn_cast<clang::NamedDecl>(clang_decl))
     return ImportName(name_decl);
   return {};
+}
+
+CompilerType SwiftASTContext::GetBuiltinRawPointerType() {
+  return GetTypeFromMangledTypename(ConstString("$sBpD"));
+}
+
+bool SwiftASTContext::TypeHasArchetype(CompilerType type) {
+  auto swift_type = GetSwiftType(type);
+  if (swift_type)
+    return swift_type->hasArchetype();
+  return false;
 }
 
 std::string SwiftASTContext::ImportName(const clang::NamedDecl *clang_decl) {

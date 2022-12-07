@@ -853,6 +853,10 @@ TypeSystemSwiftTypeRef::GetSwiftName(const clang::Decl *clang_decl,
   return {};
 }
 
+CompilerType TypeSystemSwiftTypeRef::GetBuiltinRawPointerType() {
+  return GetTypeFromMangledTypename(ConstString("$sBpD"));
+}
+
 /// Determine whether \p node is an Objective-C type and return its name.
 static StringRef GetObjCTypeName(swift::Demangle::NodePointer node) {
   if (node && node->getNumChildren() == 2 && node->getChild(0)->hasText() &&
@@ -3829,6 +3833,39 @@ TypeSystemSwiftTypeRef::GetGenericArgumentType(opaque_compiler_type_t type,
                       (ReconstructType(type), idx),
                       (ReconstructType(type), idx));
 }
+
+llvm::SmallVector<std::pair<int, int>, 1>
+TypeSystemSwiftTypeRef::GetDependentGenericParamListForType(
+    llvm::StringRef type) {
+  llvm::SmallVector<std::pair<int, int>, 1> dependent_params;
+  Demangler dem;
+  NodePointer type_node = GetDemangledType(dem, type);
+  if (type_node->getNumChildren() != 2)
+    return dependent_params;
+
+  NodePointer type_list = type_node->getLastChild();
+  for (auto *child_type : *type_list) {
+    if (child_type->getKind() != Node::Kind::Type)
+      continue;
+    if (child_type->getNumChildren() != 1)
+      continue;
+
+    NodePointer dep_gen_param_type =  child_type->getFirstChild();
+    if (dep_gen_param_type->getKind() != Node::Kind::DependentGenericParamType)
+      continue;
+    if (dep_gen_param_type->getNumChildren() != 2)
+      continue;
+    
+    NodePointer depth = dep_gen_param_type->getFirstChild();
+    NodePointer index = dep_gen_param_type->getLastChild();
+
+    if (!depth->hasIndex() || !index->hasIndex())
+      continue;
+    dependent_params.emplace_back(depth->getIndex(), index->getIndex());
+  }
+  return dependent_params;
+}
+
 #ifndef NDEBUG
 bool TypeSystemSwiftTypeRef::ShouldSkipValidation(opaque_compiler_type_t type) {
   auto mangled_name = GetMangledTypeName(type);
