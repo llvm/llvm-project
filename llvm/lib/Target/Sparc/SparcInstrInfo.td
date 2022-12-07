@@ -1767,7 +1767,8 @@ let Predicates = [HasV9] in {
 //===----------------------------------------------------------------------===//
 
 // Zero immediate.
-def : Pat<(i32 0), (COPY (i32 G0))>;
+def : Pat<(i32 0),
+          (ORrr (i32 G0), (i32 G0))>;
 // Small immediates.
 def : Pat<(i32 simm13:$val),
           (ORri (i32 G0), imm:$val)>;
@@ -1847,15 +1848,6 @@ def : Pat<(atomic_store_16 ADDRrr:$dst, i32:$val), (STHrr ADDRrr:$dst, $val)>;
 def : Pat<(atomic_store_16 ADDRri:$dst, i32:$val), (STHri ADDRri:$dst, $val)>;
 def : Pat<(atomic_store_32 ADDRrr:$dst, i32:$val), (STrr ADDRrr:$dst, $val)>;
 def : Pat<(atomic_store_32 ADDRri:$dst, i32:$val), (STri ADDRri:$dst, $val)>;
-
-// Zero register pair.
-// This forces zeroing of the upper half to be done with ORrr instead of COPY,
-// since there `COPY G0` will be converted into `COPY G0_G1` later on, which
-// is not what we want in this case.
-def : Pat<(build_vector (i32 0), (i32 0)),
-          (INSERT_SUBREG (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)),
-            (ORrr (i32 G0), (i32 G0)), sub_even),
-            (i32 G0), sub_odd)>;
 
 // extract_vector
 def : Pat<(extractelt (v2i32 IntPair:$Rn), 0),
