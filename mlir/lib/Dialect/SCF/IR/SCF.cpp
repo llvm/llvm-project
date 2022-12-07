@@ -719,7 +719,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
 };
 
 /// Util function that tries to compute a constant diff between u and l.
-/// Returns llvm::None when the difference between two AffineValueMap is
+/// Returns std::nullopt when the difference between two AffineValueMap is
 /// dynamic.
 static Optional<int64_t> computeConstDiff(Value l, Value u) {
   IntegerAttr clb, cub;

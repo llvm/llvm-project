@@ -48,7 +48,7 @@ llvm::Optional<Operation *> mlir::memref::findDealloc(Value allocValue) {
   for (Operation *user : allocValue.getUsers()) {
     if (!hasEffect<MemoryEffects::Free>(user, allocValue))
       continue;
-    // If we found > 1 dealloc, return None.
+    // If we found > 1 dealloc, return std::nullopt.
     if (dealloc)
       return std::nullopt;
     dealloc = user;

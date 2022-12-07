@@ -24,7 +24,7 @@ SMLoc Token::getEndLoc() const {
 SMRange Token::getLocRange() const { return SMRange(getLoc(), getEndLoc()); }
 
 /// For an integer token, return its value as an unsigned.  If it doesn't fit,
-/// return None.
+/// return std::nullopt.
 Optional<unsigned> Token::getUnsignedIntegerValue() const {
   bool isHex = spelling.size() > 1 && spelling[1] == 'x';
 
@@ -35,7 +35,7 @@ Optional<unsigned> Token::getUnsignedIntegerValue() const {
 }
 
 /// For an integer token, return its value as a uint64_t.  If it doesn't fit,
-/// return None.
+/// return std::nullopt.
 Optional<uint64_t> Token::getUInt64IntegerValue(StringRef spelling) {
   bool isHex = spelling.size() > 1 && spelling[1] == 'x';
 
@@ -45,8 +45,8 @@ Optional<uint64_t> Token::getUInt64IntegerValue(StringRef spelling) {
   return result;
 }
 
-/// For a floatliteral, return its value as a double. Return None if the value
-/// underflows or overflows.
+/// For a floatliteral, return its value as a double. Return std::nullopt if the
+/// value underflows or overflows.
 Optional<double> Token::getFloatingPointValue() const {
   double result = 0;
   if (spelling.getAsDouble(result))

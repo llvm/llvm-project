@@ -92,7 +92,7 @@ static bool dictionaryAttrSort(ArrayRef<NamedAttribute> value,
 }
 
 /// Returns an entry with a duplicate name from the given sorted array of named
-/// attributes. Returns llvm::None if all elements have unique names.
+/// attributes. Returns std::nullopt if all elements have unique names.
 static Optional<NamedAttribute>
 findDuplicateElement(ArrayRef<NamedAttribute> value) {
   const Optional<NamedAttribute> none{std::nullopt};

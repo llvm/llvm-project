@@ -834,8 +834,8 @@ public:
 
   /// If the given operation instance is legal on this target, a structure
   /// containing legality information is returned. If the operation is not
-  /// legal, None is returned. Also returns None is operation legality wasn't
-  /// registered by user or dynamic legality callbacks returned None.
+  /// legal, std::nullopt is returned. Also returns None is operation legality
+  /// wasn't registered by user or dynamic legality callbacks returned None.
   ///
   /// Note: Legality is actually a 4-state: Legal(recursive=true),
   /// Legal(recursive=false), Illegal or Unknown, where Unknown is treated

@@ -88,7 +88,7 @@ public:
   ArrayRef<OperationName> getGeneratedOps() const { return generatedOps; }
 
   /// Return the root node that this pattern matches. Patterns that can match
-  /// multiple root types return None.
+  /// multiple root types return std::nullopt.
   Optional<OperationName> getRootKind() const {
     if (rootKind == RootKind::OperationName)
       return OperationName::getFromOpaquePointer(rootValue);
@@ -97,7 +97,7 @@ public:
 
   /// Return the interface ID used to match the root operation of this pattern.
   /// If the pattern does not use an interface ID for deciding the root match,
-  /// this returns None.
+  /// this returns std::nullopt.
   Optional<TypeID> getRootInterfaceID() const {
     if (rootKind == RootKind::InterfaceID)
       return TypeID::getFromOpaquePointer(rootValue);
@@ -106,7 +106,7 @@ public:
 
   /// Return the trait ID used to match the root operation of this pattern.
   /// If the pattern does not use a trait ID for deciding the root match, this
-  /// returns None.
+  /// returns std::nullopt.
   Optional<TypeID> getRootTraitID() const {
     if (rootKind == RootKind::TraitID)
       return TypeID::getFromOpaquePointer(rootValue);

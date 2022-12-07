@@ -132,8 +132,8 @@ static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
                         resultTypes, op->getAttrs());
 }
 
-/// Return the target shape for unrolling for the given `op`. Return llvm::None
-/// if the op shouldn't be or cannot be unrolled.
+/// Return the target shape for unrolling for the given `op`. Return
+/// std::nullopt if the op shouldn't be or cannot be unrolled.
 static Optional<SmallVector<int64_t>>
 getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
   if (options.filterConstraint && failed(options.filterConstraint(op)))

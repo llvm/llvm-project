@@ -50,7 +50,7 @@ public:
   OperationName getName() { return name; }
 
   /// If this operation has a registered operation description, return it.
-  /// Otherwise return None.
+  /// Otherwise return std::nullopt.
   Optional<RegisteredOperationName> getRegisteredInfo() {
     return getName().getRegisteredInfo();
   }

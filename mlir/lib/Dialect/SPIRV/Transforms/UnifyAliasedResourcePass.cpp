@@ -82,7 +82,7 @@ static Type getRuntimeArrayElementType(Type type) {
 }
 
 /// Given a list of resource element `types`, returns the index of the canonical
-/// resource that all resources should be unified into. Returns llvm::None if
+/// resource that all resources should be unified into. Returns std::nullopt if
 /// unable to unify.
 static Optional<int> deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
   // scalarNumBits: contains all resources' scalar types' bit counts.

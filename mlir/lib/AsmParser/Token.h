@@ -74,18 +74,18 @@ public:
   // Helpers to decode specific sorts of tokens.
 
   /// For an integer token, return its value as an unsigned.  If it doesn't fit,
-  /// return None.
+  /// return std::nullopt.
   Optional<unsigned> getUnsignedIntegerValue() const;
 
   /// For an integer token, return its value as an uint64_t.  If it doesn't fit,
-  /// return None.
+  /// return std::nullopt.
   static Optional<uint64_t> getUInt64IntegerValue(StringRef spelling);
   Optional<uint64_t> getUInt64IntegerValue() const {
     return getUInt64IntegerValue(getSpelling());
   }
 
-  /// For a floatliteral token, return its value as a double. Returns None in
-  /// the case of underflow or overflow.
+  /// For a floatliteral token, return its value as a double. Returns
+  /// std::nullopt in the case of underflow or overflow.
   Optional<double> getFloatingPointValue() const;
 
   /// For an inttype token, return its bitwidth.

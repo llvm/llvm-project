@@ -273,7 +273,7 @@ def ForOp : SCF_Op<"for",
       return getOperation()->getNumOperands() - getNumControlOperands();
     }
     /// Get the iter arg number for an operand. If it isnt an iter arg
-    /// operand return llvm::None.
+    /// operand return std::nullopt.
     Optional<unsigned> getIterArgNumberForOpOperand(OpOperand &opOperand) {
       if (opOperand.getOwner() != getOperation())
         return std::nullopt;
