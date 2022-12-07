@@ -765,9 +765,9 @@ getUndefinedSymbolTreatment(const ArgList &args) {
              (treatment == UndefinedSymbolTreatment::warning ||
               treatment == UndefinedSymbolTreatment::suppress)) {
     if (treatment == UndefinedSymbolTreatment::warning)
-      error("'-undefined warning' only valid with '-flat_namespace'");
+      fatal("'-undefined warning' only valid with '-flat_namespace'");
     else
-      error("'-undefined suppress' only valid with '-flat_namespace'");
+      fatal("'-undefined suppress' only valid with '-flat_namespace'");
     treatment = UndefinedSymbolTreatment::error;
   }
   return treatment;
