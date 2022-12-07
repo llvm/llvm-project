@@ -3228,9 +3228,10 @@ multiclass IntMed3Pat<Instruction med3Inst,
 defm : IntMed3Pat<V_MED3_I32_e64, smin, smax>;
 defm : IntMed3Pat<V_MED3_U32_e64, umin, umax>;
 
-// This matches 16 permutations of max(min(x, y), min(max(x, y), z))
-class FPMed3Pat<ValueType vt,
-                Instruction med3Inst> : GCNPat<
+multiclass FPMed3Pat<ValueType vt,
+                Instruction med3Inst> {
+  // This matches 16 permutations of max(min(x, y), min(max(x, y), z))
+  def : GCNPat<
     (fmaxnum_like_nnan
       (fminnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
                     (VOP3Mods vt:$src1, i32:$src1_mods)),
@@ -3239,6 +3240,19 @@ class FPMed3Pat<ValueType vt,
                     (vt (VOP3Mods vt:$src2, i32:$src2_mods)))),
     (med3Inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
               DSTCLAMP.NONE, DSTOMOD.NONE)>;
+
+
+  // This matches 16 permutations of min(max(x, y), max(min(x, y), z))
+  def : GCNPat<
+    (fminnum_like_nnan
+      (fmaxnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
+                    (VOP3Mods vt:$src1, i32:$src1_mods)),
+      (fmaxnum_like (fminnum_like (VOP3Mods vt:$src0, i32:$src0_mods),
+                                  (VOP3Mods vt:$src1, i32:$src1_mods)),
+                    (vt (VOP3Mods vt:$src2, i32:$src2_mods)))),
+    (med3Inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
+              DSTCLAMP.NONE, DSTOMOD.NONE)>;
+}
 
 class FP16Med3Pat<ValueType vt,
                 Instruction med3Inst> : GCNPat<
@@ -3270,7 +3284,7 @@ multiclass Int16Med3Pat<Instruction med3Inst,
 >;
 }
 
-def : FPMed3Pat<f32, V_MED3_F32_e64>;
+defm : FPMed3Pat<f32, V_MED3_F32_e64>;
 
 class
 IntMinMaxPat<Instruction minmaxInst, SDPatternOperator min_or_max,
