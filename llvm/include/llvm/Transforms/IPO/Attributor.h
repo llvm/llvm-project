@@ -1700,14 +1700,13 @@ struct Attributor {
     }
     Value &V = IRP.getAssociatedValue();
     auto &Entry = ToBeChangedValues[&V];
-    Value *&CurNV = Entry.first;
+    Value *CurNV = get<0>(Entry);
     if (CurNV && (CurNV->stripPointerCasts() == NV.stripPointerCasts() ||
                   isa<UndefValue>(CurNV)))
       return false;
     assert((!CurNV || CurNV == &NV || isa<UndefValue>(NV)) &&
            "Value replacement was registered twice with different values!");
-    CurNV = &NV;
-    Entry.second = ChangeDroppable;
+    Entry = {&NV, ChangeDroppable};
     return true;
   }
 
@@ -2265,7 +2264,8 @@ private:
 
   /// Values we replace with a new value after manifest is done. We will remove
   /// then trivially dead instructions as well.
-  SmallMapVector<Value *, std::pair<Value *, bool>, 32> ToBeChangedValues;
+  SmallMapVector<Value *, PointerIntPair<Value *, 1, bool>, 32>
+      ToBeChangedValues;
 
   /// Instructions we replace with `unreachable` insts after manifest is done.
   SmallSetVector<WeakVH, 16> ToBeChangedToUnreachableInsts;
