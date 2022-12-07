@@ -56,7 +56,6 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -271,7 +270,7 @@ struct CompletionCandidate {
       // FIXME: We should support #import directives here.
       if ((Inc.Directive & clang::clangd::Symbol::Include) != 0)
         return Inc.Header;
-    return None;
+    return std::nullopt;
   }
 
   using Bundle = llvm::SmallVector<CompletionCandidate, 4>;
