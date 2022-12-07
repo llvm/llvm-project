@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: opt -S -instsimplify -hotcoldsplit -hotcoldsplit-threshold=-1 -debug < %s 2>&1 | FileCheck %s
-; RUN: opt -instcombine -hotcoldsplit -instsimplify %s -o /dev/null
+; RUN: opt -S -passes='function(instsimplify),hotcoldsplit' -hotcoldsplit-threshold=-1 -debug < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='function(instcombine),hotcoldsplit,function(instsimplify)' %s -o /dev/null
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64"
