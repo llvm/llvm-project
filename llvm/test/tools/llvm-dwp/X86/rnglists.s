@@ -6,12 +6,12 @@
 # RUN: llvm-dwarfdump -debug-rnglists -debug-cu-index -debug-tu-index %t.dwp | FileCheck %s
 
 # CHECK-DAG: .debug_cu_index contents:
-# CHECK: Index Signature          INFO                         ABBREV                   RNGLISTS
-# CHECK:     1 {{.*}} [0x0000000000000018, 0x000000000000002d) [0x00000000, 0x00000004) [0x00000000, 0x00000017)
+# CHECK: Index Signature          INFO                     ABBREV                   RNGLISTS
+# CHECK:     1 {{.*}} [0x00000018, 0x0000002d) [0x00000000, 0x00000004) [0x00000000, 0x00000017)
 
 # CHECK-DAG: .debug_tu_index contents:
-# CHECK: Index Signature          INFO                         ABBREV                   RNGLISTS
-# CHECK:     2 {{.*}} [0x0000000000000000, 0x0000000000000018) [0x00000000, 0x00000004) [0x00000000, 0x00000017)
+# CHECK: Index Signature          INFO                     ABBREV                   RNGLISTS
+# CHECK:     2 {{.*}} [0x00000000, 0x00000018) [0x00000000, 0x00000004) [0x00000000, 0x00000017)
 
 # CHECK-DAG: .debug_rnglists.dwo contents:
 # range list header: length = 0x00000013, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000001
