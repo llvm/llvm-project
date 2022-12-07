@@ -1766,8 +1766,8 @@ public:
   }
 
   /// Return an assumed unique return value if a single candidate is found. If
-  /// there cannot be one, return a nullptr. If it is not clear yet, return the
-  /// Optional::NoneType.
+  /// there cannot be one, return a nullptr. If it is not clear yet, return
+  /// std::nullopt.
   std::optional<Value *> getAssumedUniqueReturnValue(Attributor &A) const;
 
   /// See AbstractState::checkForAllReturnedValues(...).
