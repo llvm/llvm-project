@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll-and-jam -allow-unroll-and-jam -unroll-and-jam-count=2 -S < %s | FileCheck %s
+; RUN: opt -passes=loop-unroll-and-jam -allow-unroll-and-jam -unroll-and-jam-count=2 -S < %s | FileCheck %s
 ;
 ; Check that the disable_nonforced loop property is honored by
 ; loop unroll-and-jam.
