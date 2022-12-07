@@ -9,13 +9,13 @@
 # RUN:   | FileCheck %s --check-prefixes=DISASM
 
 # DISASM-LABEL: <clmul>
-# DISASM: <unknown>
+# DISASM: clmul	a0, a0, a1
 
 # DISASM-LABEL: <clmulh>
-# DISASM: <unknown>
+# DISASM: clmulh	a0, a0, a1
 
 # DISASM-LABEL: <clmulr>
-# DISASM: <unknown>
+# DISASM: clmulr	a0, a0, a1
 
 --- !ELF
 FileHeader:
