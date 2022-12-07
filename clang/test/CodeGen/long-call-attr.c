@@ -17,5 +17,5 @@ void __attribute__((near)) foo3 (void) { foo1(); foo4(); }
 
 // CHECK: attributes [[FAR]] = { {{.*}} "long-call" {{.*}} }
 // CHECK: attributes [[NEAR]] = { {{.*}} "short-call" {{.*}} }
-// CHECK: attributes [[LONGDECL]] = { {{.*}} "long-call" {{.*}} }
+// CHECK: attributes [[LONGDECL]] = { "long-call" {{.*}} }
 // CHECK: attributes [[SHORTDECL]] = { {{.*}} "short-call" {{.*}} }
