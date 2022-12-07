@@ -346,14 +346,12 @@ void builtinTransfer(const CFGElement &Elt,
                      TypeErasedDataflowAnalysisState &State,
                      AnalysisContext &AC) {
   switch (Elt.getKind()) {
-  case CFGElement::Statement: {
+  case CFGElement::Statement:
     builtinTransferStatement(Elt.castAs<CFGStmt>(), State, AC);
     break;
-  }
-  case CFGElement::Initializer: {
+  case CFGElement::Initializer:
     builtinTransferInitializer(Elt.castAs<CFGInitializer>(), State);
     break;
-  }
   default:
     // FIXME: Evaluate other kinds of `CFGElement`.
     break;
