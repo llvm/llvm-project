@@ -1189,8 +1189,6 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
     }
     case MachineOperand::MO_TargetIndex: {
       OS << "!target-index(" << Op.getIndex() << "," << Op.getOffset() << ")";
-      // NOTE: Want this comment at start of line, don't emit with AddComment.
-      AP.OutStreamer->emitRawComment(OS.str());
       break;
     }
     case MachineOperand::MO_Register:
