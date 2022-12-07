@@ -371,7 +371,7 @@ private:
 
   /// Iterates over all edges leading from \p SrcBB to \p Successors and
   /// returns maximum of all estimated weights. If at least one edge has unknown
-  /// estimated weight None is returned.
+  /// estimated weight std::nullopt is returned.
   template <class IterT>
   Optional<uint32_t>
   getMaxEstimatedEdgeWeight(const LoopBlock &SrcBB,

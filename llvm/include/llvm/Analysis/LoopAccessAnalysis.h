@@ -452,7 +452,7 @@ public:
   // pairs that can be used to prove that there are no vectorization-preventing
   // dependencies at runtime. There are is a vectorization-preventing dependency
   // if any pointer-difference is <u VF * InterleaveCount * access size. Returns
-  // None if pointer-difference checks cannot be used.
+  // std::nullopt if pointer-difference checks cannot be used.
   std::optional<ArrayRef<PointerDiffInfo>> getDiffChecks() const {
     if (!CanUseDiffCheck)
       return std::nullopt;

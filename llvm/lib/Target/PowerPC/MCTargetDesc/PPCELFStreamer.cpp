@@ -191,10 +191,10 @@ void PPCELFStreamer::emitGOTToPCRelLabel(const MCInst &Inst) {
 // <MCInst SOME_LOAD <MCOperand Reg:22> <MCOperand Imm:0> <MCOperand Reg:282>
 //   <MCOperand Expr:(.Lpcrel@<<invalid>>)>>
 // The above is a pair of such instructions and this function will not return
-// None for either one of them. In both cases we are looking for the last
-// operand <MCOperand Expr:(.Lpcrel@<<invalid>>)> which needs to be an MCExpr
-// and has the flag MCSymbolRefExpr::VK_PPC_PCREL_OPT. After that we just look
-// at the opcode and in the case of PLDpc we will return true. For the load
+// std::nullopt for either one of them. In both cases we are looking for the
+// last operand <MCOperand Expr:(.Lpcrel@<<invalid>>)> which needs to be an
+// MCExpr and has the flag MCSymbolRefExpr::VK_PPC_PCREL_OPT. After that we just
+// look at the opcode and in the case of PLDpc we will return true. For the load
 // (or store) this function will return false indicating it has found the second
 // instruciton in the pair.
 std::optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,

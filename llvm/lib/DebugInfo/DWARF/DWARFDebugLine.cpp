@@ -716,7 +716,7 @@ DWARFDebugLine::ParsingState::handleSpecialOpcode(uint8_t Opcode,
 }
 
 /// Parse a ULEB128 using the specified \p Cursor. \returns the parsed value on
-/// success, or None if \p Cursor is in a failing state.
+/// success, or std::nullopt if \p Cursor is in a failing state.
 template <typename T>
 static std::optional<T> parseULEB128(DWARFDataExtractor &Data,
                                      DataExtractor::Cursor &Cursor) {

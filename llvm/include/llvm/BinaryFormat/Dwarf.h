@@ -694,8 +694,8 @@ inline uint8_t getUnitLengthFieldByteSize(DwarfFormat Format) {
 ///
 /// \param Form DWARF form to get the fixed byte size for.
 /// \param Params DWARF parameters to help interpret forms.
-/// \returns std::optional<uint8_t> value with the fixed byte size or None if
-/// \p Form doesn't have a fixed byte size.
+/// \returns std::optional<uint8_t> value with the fixed byte size or
+/// std::nullopt if \p Form doesn't have a fixed byte size.
 std::optional<uint8_t> getFixedFormByteSize(dwarf::Form Form,
                                             FormParams Params);
 

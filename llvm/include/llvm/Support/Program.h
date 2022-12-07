@@ -117,7 +117,7 @@ namespace sys {
       ///< If the array is empty, no redirections are performed.
       ///< Otherwise, the inferior process's stdin(0), stdout(1), and stderr(2)
       ///< will be redirected to the corresponding paths, if the optional path
-      ///< is present (not \c llvm::None).
+      ///< is present (not \c std::nullopt).
       ///< When an empty path is passed in, the corresponding file descriptor
       ///< will be disconnected (ie, /dev/null'd) in a portable way.
       unsigned SecondsToWait = 0, ///< If non-zero, this specifies the amount

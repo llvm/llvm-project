@@ -1237,7 +1237,7 @@ bool isLegalSMRDEncodedSignedOffset(const MCSubtargetInfo &ST,
 uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST, uint64_t ByteOffset);
 
 /// \returns The encoding that will be used for \p ByteOffset in the
-/// SMRD offset field, or None if it won't fit. On GFX9 and GFX10
+/// SMRD offset field, or std::nullopt if it won't fit. On GFX9 and GFX10
 /// S_LOAD instructions have a signed offset, on other subtargets it is
 /// unsigned. S_BUFFER has an unsigned offset for all subtargets.
 Optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
