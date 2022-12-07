@@ -852,6 +852,12 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::NullInit &n) {
   return std::nullopt;
 }
 
+MaybeExpr ExpressionAnalyzer::Analyze(
+    const parser::StmtFunctionStmt &stmtFunc) {
+  inStmtFunctionDefinition_ = true;
+  return Analyze(std::get<parser::Scalar<parser::Expr>>(stmtFunc.t));
+}
+
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::InitialDataTarget &x) {
   return Analyze(x.value());
 }
@@ -2187,6 +2193,9 @@ bool ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
         context_.SetError(symbol);
         return false;
       }
+    } else if (inStmtFunctionDefinition_) {
+      semantics::ResolveSpecificationParts(context_, symbol);
+      CHECK(symbol.has<semantics::SubprogramDetails>());
     } else { // 10.1.11 para 4
       Say("The internal function '%s' may not be referenced in a specification expression"_err_en_US,
           symbol.name());
@@ -3076,7 +3085,9 @@ static bool CheckFuncRefToArrayElement(semantics::SemanticsContext &context,
     if (const Symbol *function{
             semantics::IsFunctionResultWithSameNameAsFunction(*name->symbol)}) {
       auto &msg{context.Say(funcRef.v.source,
-          "Recursive call to '%s' requires a distinct RESULT in its declaration"_err_en_US,
+          function->flags().test(Symbol::Flag::StmtFunction)
+              ? "Recursive call to statement function '%s' is not allowed"_err_en_US
+              : "Recursive call to '%s' requires a distinct RESULT in its declaration"_err_en_US,
           name->source)};
       AttachDeclaration(&msg, *function);
       name->symbol = const_cast<Symbol *>(function);
