@@ -45,7 +45,7 @@ public:
         m_backend(backend) {
     m_auto_repeat_command =
         auto_repeat_command == nullptr
-            ? llvm::None
+            ? std::nullopt
             : llvm::Optional<std::string>(auto_repeat_command);
     // We don't know whether any given command coming from this interface takes
     // arguments or not so here we're just disabling the basic args check.
@@ -62,7 +62,7 @@ public:
   llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
                                                uint32_t index) override {
     if (!m_auto_repeat_command)
-      return llvm::None;
+      return std::nullopt;
     else
       return m_auto_repeat_command;
   }

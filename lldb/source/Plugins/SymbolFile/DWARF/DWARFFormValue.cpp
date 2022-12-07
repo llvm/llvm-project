@@ -193,7 +193,7 @@ DWARFFormValue::GetFixedSize(dw_form_t form, const DWARFUnit *u) {
     return g_form_sizes[form].size;
   if (form == DW_FORM_addr && u)
     return u->GetAddressByteSize();
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::Optional<uint8_t> DWARFFormValue::GetFixedSize() const {

@@ -71,7 +71,7 @@ llvm::Optional<std::string> HostInfoLinux::GetOSBuildString() {
   ::memset(&un, 0, sizeof(utsname));
 
   if (uname(&un) < 0)
-    return llvm::None;
+    return std::nullopt;
 
   return std::string(un.release);
 }

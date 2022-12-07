@@ -783,7 +783,7 @@ SerialPort::OptionsFromURL(llvm::StringRef urlqs) {
               .Case("odd", Terminal::Parity::Odd)
               .Case("mark", Terminal::Parity::Mark)
               .Case("space", Terminal::Parity::Space)
-              .Default(llvm::None);
+              .Default(std::nullopt);
       if (!serial_options.Parity)
         return llvm::createStringError(
             llvm::inconvertibleErrorCode(),
@@ -798,7 +798,7 @@ SerialPort::OptionsFromURL(llvm::StringRef urlqs) {
               // "mark" mode is not currently supported as it requires special
               // input processing
               // .Case("mark", Terminal::ParityCheck::Mark)
-              .Default(llvm::None);
+              .Default(std::nullopt);
       if (!serial_options.ParityCheck)
         return llvm::createStringError(
             llvm::inconvertibleErrorCode(),

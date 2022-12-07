@@ -45,18 +45,18 @@ llvm::Optional<DIERef>
 DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
   std::optional<uint64_t> cu_offset = entry.getCUOffset();
   if (!cu_offset)
-    return llvm::None;
+    return std::nullopt;
 
   DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *cu_offset);
   if (!cu)
-    return llvm::None;
+    return std::nullopt;
 
   cu = &cu->GetNonSkeletonUnit();
   if (std::optional<uint64_t> die_offset = entry.getDIEUnitOffset())
     return DIERef(cu->GetSymbolFileDWARF().GetDwoNum(),
                   DIERef::Section::DebugInfo, cu->GetOffset() + *die_offset);
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 bool DebugNamesDWARFIndex::ProcessEntry(

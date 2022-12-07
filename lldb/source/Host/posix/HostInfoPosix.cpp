@@ -41,7 +41,7 @@ bool HostInfoPosix::GetHostname(std::string &s) {
 llvm::Optional<std::string> HostInfoPosix::GetOSKernelDescription() {
   struct utsname un;
   if (uname(&un) < 0)
-    return llvm::None;
+    return std::nullopt;
 
   return std::string(un.version);
 }
@@ -85,13 +85,13 @@ static llvm::Optional<PasswdEntry> GetPassword(id_t uid) {
     return PasswdEntry{user_info_ptr->pw_name, user_info_ptr->pw_shell};
   }
 #endif
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::Optional<std::string> PosixUserIDResolver::DoGetUserName(id_t uid) {
   if (llvm::Optional<PasswdEntry> password = GetPassword(uid))
     return password->username;
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::Optional<std::string> PosixUserIDResolver::DoGetGroupName(id_t gid) {
@@ -113,7 +113,7 @@ llvm::Optional<std::string> PosixUserIDResolver::DoGetGroupName(id_t gid) {
       return std::string(group_info_ptr->gr_name);
   }
 #endif
-  return llvm::None;
+  return std::nullopt;
 }
 
 static llvm::ManagedStatic<PosixUserIDResolver> g_user_id_resolver;

@@ -279,7 +279,7 @@ public:
   ///     If the string is empty, the command won't be allow repeating.
   virtual llvm::Optional<std::string>
   GetRepeatCommand(Args &current_command_args, uint32_t index) {
-    return llvm::None;
+    return std::nullopt;
   }
 
   bool HasOverrideCallback() const {

@@ -169,7 +169,7 @@ public:
   virtual bool IsAllowedRuntimeValue(ConstString name) { return false; }
 
   virtual llvm::Optional<CompilerType> GetRuntimeType(CompilerType base_type) {
-    return llvm::None;
+    return std::nullopt;
   }
 
   void ModulesDidLoad(const ModuleList &module_list) override {}

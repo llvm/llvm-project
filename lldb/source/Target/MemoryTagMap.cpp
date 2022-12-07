@@ -59,6 +59,6 @@ llvm::Optional<lldb::addr_t> MemoryTagMap::GetTag(lldb::addr_t addr) const {
   // were inserted.
   auto found = m_addr_to_tag.find(addr);
   if (found == m_addr_to_tag.end())
-    return llvm::None;
+    return std::nullopt;
   return found->second;
 }

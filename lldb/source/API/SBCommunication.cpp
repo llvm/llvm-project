@@ -107,7 +107,7 @@ size_t SBCommunication::Read(void *dst, size_t dst_len, uint32_t timeout_usec,
 
   size_t bytes_read = 0;
   Timeout<std::micro> timeout = timeout_usec == UINT32_MAX
-                                    ? Timeout<std::micro>(llvm::None)
+                                    ? Timeout<std::micro>(std::nullopt)
                                     : std::chrono::microseconds(timeout_usec);
   if (m_opaque)
     bytes_read = m_opaque->Read(dst, dst_len, timeout, status, nullptr);

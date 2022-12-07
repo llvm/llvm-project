@@ -71,10 +71,10 @@ void UnwindPlan::Row::RegisterLocation::SetIsDWARFExpression(
 static llvm::Optional<std::pair<lldb::ByteOrder, uint32_t>>
 GetByteOrderAndAddrSize(Thread *thread) {
   if (!thread)
-    return llvm::None;
+    return std::nullopt;
   ProcessSP process_sp = thread->GetProcess();
   if (!process_sp)
-    return llvm::None;
+    return std::nullopt;
   ArchSpec arch = process_sp->GetTarget().GetArchitecture();
   return std::make_pair(arch.GetByteOrder(), arch.GetAddressByteSize());
 }

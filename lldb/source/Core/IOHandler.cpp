@@ -330,7 +330,7 @@ void IOHandlerEditline::TerminalSizeChanged() {
 static Optional<std::string> SplitLine(std::string &line_buffer) {
   size_t pos = line_buffer.find('\n');
   if (pos == std::string::npos)
-    return None;
+    return std::nullopt;
   std::string line =
       std::string(StringRef(line_buffer.c_str(), pos).rtrim("\n\r"));
   line_buffer = line_buffer.substr(pos + 1);
@@ -341,7 +341,7 @@ static Optional<std::string> SplitLine(std::string &line_buffer) {
 // it as a line anyway.
 static Optional<std::string> SplitLineEOF(std::string &line_buffer) {
   if (llvm::all_of(line_buffer, llvm::isSpace))
-    return None;
+    return std::nullopt;
   std::string line = std::move(line_buffer);
   line_buffer.clear();
   return line;

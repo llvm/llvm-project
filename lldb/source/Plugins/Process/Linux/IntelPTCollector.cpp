@@ -73,7 +73,7 @@ static Optional<int> GetCGroupFileDescriptor(lldb::pid_t pid) {
   std::ifstream ifile;
   ifile.open(formatv("/proc/{0}/cgroup", pid));
   if (!ifile)
-    return None;
+    return std::nullopt;
 
   std::string line;
   while (std::getline(ifile, line)) {
@@ -82,7 +82,7 @@ static Optional<int> GetCGroupFileDescriptor(lldb::pid_t pid) {
 
     std::string slice = line.substr(line.find_first_of("/"));
     if (slice.empty())
-      return None;
+      return std::nullopt;
     std::string cgroup_file = formatv("/sys/fs/cgroup/{0}", slice);
     // This cgroup should for the duration of the target, so we don't need to
     // invoke close ourselves.
@@ -92,7 +92,7 @@ static Optional<int> GetCGroupFileDescriptor(lldb::pid_t pid) {
       return fd;
     }
   }
-  return None;
+  return std::nullopt;
 }
 
 Error IntelPTCollector::TraceStart(const TraceIntelPTStartRequest &request) {
