@@ -929,9 +929,9 @@ static parser::Messages CheckExplicitInterface(
   parser::Messages buffer;
   parser::ContextualMessages messages{context.messages().at(), &buffer};
   RearrangeArguments(proc, actuals, messages);
+  evaluate::FoldingContext localContext{context, messages};
   if (buffer.empty()) {
     int index{0};
-    evaluate::FoldingContext localContext{context, messages};
     for (auto &actual : actuals) {
       const auto &dummy{proc.dummyArguments.at(index++)};
       if (actual) {
