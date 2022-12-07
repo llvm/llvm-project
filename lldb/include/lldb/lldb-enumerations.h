@@ -498,6 +498,12 @@ enum DynamicValueType {
   eDynamicDontRunTarget = 2
 };
 
+enum BindGenericTypes {
+  eBindAuto = 0,
+  eBind = 1,
+  eDontBind = 2
+};
+
 enum StopShowColumn {
   eStopShowColumnAnsiOrCaret = 0,
   eStopShowColumnAnsi = 1,
