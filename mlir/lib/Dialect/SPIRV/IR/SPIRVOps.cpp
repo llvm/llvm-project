@@ -4829,6 +4829,11 @@ static LogicalResult verifyIntegerDotProduct(Operation *op) {
         "op only supports the 'format' #spirv.packed_vector_format attribute");
 
   Type resultTy = op->getResultTypes().front();
+  bool hasAccumulator = op->getNumOperands() == 3;
+  if (hasAccumulator && op->getOperand(2).getType() != resultTy)
+    return op->emitOpError(
+        "requires the same accumulator operand and result types");
+
   unsigned factorBitWidth = getBitWidth(factorTy);
   unsigned resultBitWidth = getBitWidth(resultTy);
   if (factorBitWidth > resultBitWidth)
@@ -4909,6 +4914,9 @@ getIntegerDotProductCapabilities(Operation *op) {
 SPIRV_IMPL_INTEGER_DOT_PRODUCT_OP(spirv::SDotOp)
 SPIRV_IMPL_INTEGER_DOT_PRODUCT_OP(spirv::SUDotOp)
 SPIRV_IMPL_INTEGER_DOT_PRODUCT_OP(spirv::UDotOp)
+SPIRV_IMPL_INTEGER_DOT_PRODUCT_OP(spirv::SDotAccSatOp)
+SPIRV_IMPL_INTEGER_DOT_PRODUCT_OP(spirv::SUDotAccSatOp)
+SPIRV_IMPL_INTEGER_DOT_PRODUCT_OP(spirv::UDotAccSatOp)
 
 #undef SPIRV_IMPL_INTEGER_DOT_PRODUCT_OP
 
