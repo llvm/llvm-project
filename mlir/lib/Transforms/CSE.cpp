@@ -307,27 +307,25 @@ LogicalResult CSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op,
 void CSE::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
                         bool hasSSADominance) {
   for (auto &op : *bb) {
+    // Most operations don't have regions, so fast path that case.
+    if (op.getNumRegions() != 0) {
+      // If this operation is isolated above, we can't process nested regions
+      // with the given 'knownValues' map. This would cause the insertion of
+      // implicit captures in explicit capture only regions.
+      if (op.mightHaveTrait<OpTrait::IsIsolatedFromAbove>()) {
+        ScopedMapTy nestedKnownValues;
+        for (auto &region : op.getRegions())
+          simplifyRegion(nestedKnownValues, region);
+      } else {
+        // Otherwise, process nested regions normally.
+        for (auto &region : op.getRegions())
+          simplifyRegion(knownValues, region);
+      }
+    }
+
     // If the operation is simplified, we don't process any held regions.
     if (succeeded(simplifyOperation(knownValues, &op, hasSSADominance)))
       continue;
-
-    // Most operations don't have regions, so fast path that case.
-    if (op.getNumRegions() == 0)
-      continue;
-
-    // If this operation is isolated above, we can't process nested regions with
-    // the given 'knownValues' map. This would cause the insertion of implicit
-    // captures in explicit capture only regions.
-    if (op.mightHaveTrait<OpTrait::IsIsolatedFromAbove>()) {
-      ScopedMapTy nestedKnownValues;
-      for (auto &region : op.getRegions())
-        simplifyRegion(nestedKnownValues, region);
-      continue;
-    }
-
-    // Otherwise, process nested regions normally.
-    for (auto &region : op.getRegions())
-      simplifyRegion(knownValues, region);
   }
   // Clear the MemoryEffects cache since its usage is by block only.
   memEffectsCache.clear();
