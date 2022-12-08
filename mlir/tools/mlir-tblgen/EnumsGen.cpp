@@ -128,8 +128,7 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
         continue;
       StringRef symbol = it.value().getSymbol();
       os << llvm::formatv("  case {0}::{1}:\n", qualName,
-                          llvm::isDigit(symbol.front()) ? ("_" + symbol)
-                                                        : symbol);
+                          makeIdentifier(symbol));
     }
     os << "    break;\n"
           "  default:\n"
@@ -326,7 +325,7 @@ static void emitSymToStrFnForBitEnum(const Record &enumDef, raw_ostream &os) {
   if (allBitsUnsetCase) {
     os << "  // Special case for all bits unset.\n";
     os << formatv("  if (val == 0) return \"{0}\";\n\n",
-                  allBitsUnsetCase->getSymbol());
+                  allBitsUnsetCase->getStr());
   }
   os << "  ::llvm::SmallVector<::llvm::StringRef, 2> strs;\n";
 
@@ -413,7 +412,7 @@ static void emitStrToSymFnForBitEnum(const Record &enumDef, raw_ostream &os) {
     os << "  // Special case for all bits unset.\n";
     StringRef caseSymbol = allBitsUnsetCase->getSymbol();
     os << formatv("  if (str == \"{1}\") return {0}::{2};\n\n", enumName,
-                  caseSymbol, makeIdentifier(caseSymbol));
+                  allBitsUnsetCase->getStr(), makeIdentifier(caseSymbol));
   }
 
   // Split the string to get symbols for all the bits.
