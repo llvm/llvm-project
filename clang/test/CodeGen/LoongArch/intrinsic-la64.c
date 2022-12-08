@@ -3,6 +3,78 @@
 
 #include <larchintrin.h>
 
+// CHECK-LABEL: @dbar(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.loongarch.dbar(i32 0)
+// CHECK-NEXT:    ret void
+//
+void dbar() {
+  return __builtin_loongarch_dbar(0);
+}
+
+// CHECK-LABEL: @ibar(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.loongarch.ibar(i32 0)
+// CHECK-NEXT:    ret void
+//
+void ibar() {
+  return __builtin_loongarch_ibar(0);
+}
+
+// CHECK-LABEL: @loongarch_break(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.loongarch.break(i32 1)
+// CHECK-NEXT:    ret void
+//
+void loongarch_break() {
+  __builtin_loongarch_break(1);
+}
+
+// CHECK-LABEL: @syscall(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.loongarch.syscall(i32 1)
+// CHECK-NEXT:    ret void
+//
+void syscall() {
+  __builtin_loongarch_syscall(1);
+}
+
+// CHECK-LABEL: @csrrd_w(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.csrrd.w(i32 1)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.csrrd.w(i32 1)
+// CHECK-NEXT:    ret i32 0
+//
+unsigned int csrrd_w() {
+  unsigned int a = __csrrd_w(1);
+  unsigned int b = __builtin_loongarch_csrrd_w(1);
+  return 0;
+}
+
+// CHECK-LABEL: @csrwr_w(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.csrwr.w(i32 [[A:%.*]], i32 1)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.csrwr.w(i32 [[A]], i32 1)
+// CHECK-NEXT:    ret i32 0
+//
+unsigned int csrwr_w(unsigned int a) {
+  unsigned int b = __csrwr_w(a, 1);
+  unsigned int c = __builtin_loongarch_csrwr_w(a, 1);
+  return 0;
+}
+
+// CHECK-LABEL: @csrxchg_w(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.csrxchg.w(i32 [[A:%.*]], i32 [[B:%.*]], i32 1)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.csrxchg.w(i32 [[A]], i32 [[B]], i32 1)
+// CHECK-NEXT:    ret i32 0
+//
+unsigned int csrxchg_w(unsigned int a, unsigned int b) {
+  unsigned int c = __csrxchg_w(a, b, 1);
+  unsigned int d = __builtin_loongarch_csrxchg_w(a, b, 1);
+  return 0;
+}
+
 // CHECK-LABEL: @crc_w_b_w(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crc.w.b.w(i32 [[A:%.*]], i32 [[B:%.*]])
