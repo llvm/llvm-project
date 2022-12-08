@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -mergefunc -stats -disable-output < %s 2>&1 | grep "functions merged"
+; RUN: opt -passes=mergefunc -stats -disable-output < %s 2>&1 | grep "functions merged"
 
 ; This test is checks whether we can merge
 ;   vector<intptr_t>::push_back(0)

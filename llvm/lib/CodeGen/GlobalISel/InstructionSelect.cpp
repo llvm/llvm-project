@@ -184,6 +184,11 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
+      if (MI.getOpcode() == TargetOpcode::G_INVOKE_REGION_START) {
+        MI.eraseFromParent();
+        continue;
+      }
+
       if (!ISel->select(MI)) {
         // FIXME: It would be nice to dump all inserted instructions.  It's
         // not obvious how, esp. considering select() can insert after MI.

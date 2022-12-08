@@ -2599,6 +2599,7 @@ bool IRTranslator::translateInvoke(const User &U,
   // the region covered by the try.
   MCSymbol *BeginSymbol = nullptr;
   if (NeedEHLabel) {
+    MIRBuilder.buildInstr(TargetOpcode::G_INVOKE_REGION_START);
     BeginSymbol = Context.createTempSymbol();
     MIRBuilder.buildInstr(TargetOpcode::EH_LABEL).addSym(BeginSymbol);
   }

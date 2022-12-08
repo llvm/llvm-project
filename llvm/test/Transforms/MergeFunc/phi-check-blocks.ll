@@ -1,4 +1,4 @@
-; RUN: opt -S -mergefunc < %s | FileCheck %s
+; RUN: opt -S -passes=mergefunc < %s | FileCheck %s
 
 ; Ensure that we do not merge functions that are identical with the
 ; exception of the order of the incoming blocks to a phi.

@@ -639,7 +639,7 @@ define <32 x double> @vp_rint_v32f64(<32 x double> %va, <32 x i1> %m, i32 zeroex
 ; CHECK-NEXT:    vs8r.v v24, (a1) # Unknown-size Folded Spill
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vl8re8.v v24, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v24, (a1) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfsgnj.vv v8, v24, v8, v0.t
 ; CHECK-NEXT:    addi a1, a0, -16
 ; CHECK-NEXT:    sltu a0, a0, a1
@@ -698,7 +698,7 @@ define <32 x double> @vp_rint_v32f64_unmasked(<32 x double> %va, i32 zeroext %ev
 ; CHECK-NEXT:    vs8r.v v24, (a1) # Unknown-size Folded Spill
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vl8re8.v v24, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v24, (a1) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfsgnj.vv v8, v24, v8, v0.t
 ; CHECK-NEXT:    addi a1, a0, -16
 ; CHECK-NEXT:    sltu a0, a0, a1

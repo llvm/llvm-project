@@ -4,7 +4,7 @@
 ; $ clang -m64 -fno-discard-value-names -O0 -S -emit-llvm -Xclang -disable-O0-optnone Code.c
 ; $ bin/opt -S -mem2reg -loop-simplify -lcssa -loop-rotate \
 ;   -licm -simple-loop-unswitch -enable-nontrivial-unswitch -loop-simplify \
-;   -loop-deletion -simplifycfg -indvars Code.ll > CodeOpt.ll
+;   -loop-deletion -simplifycfg -passes=indvars Code.ll > CodeOpt.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 ; void PositiveFor64(int *ar, long long n, long long m)
 ; {

@@ -1,7 +1,7 @@
-; This testcase fails because preheader insertion is not updating exit node 
+; This testcase fails because preheader insertion is not updating exit node
 ; information for loops.
 
-; RUN: opt < %s -licm
+; RUN: opt < %s -passes=licm
 
 define i32 @main(i32 %argc, ptr %argv) {
 bb0:

@@ -12,7 +12,6 @@ tablegen("LoongArchGenMCPseudoLowering") {
   td_file = "LoongArch.td"
 }
 
-
 static_library("LLVMLoongArchCodeGen") {
   deps = [
     ":LoongArchGenDAGISel",
@@ -38,9 +37,9 @@ static_library("LLVMLoongArchCodeGen") {
     "LoongArchExpandAtomicPseudoInsts.cpp",
     "LoongArchExpandPseudoInsts.cpp",
     "LoongArchFrameLowering.cpp",
-    "LoongArchInstrInfo.cpp",
     "LoongArchISelDAGToDAG.cpp",
     "LoongArchISelLowering.cpp",
+    "LoongArchInstrInfo.cpp",
     "LoongArchMCInstLower.cpp",
     "LoongArchRegisterInfo.cpp",
     "LoongArchSubtarget.cpp",

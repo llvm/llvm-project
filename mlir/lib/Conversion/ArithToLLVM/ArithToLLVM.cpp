@@ -133,12 +133,12 @@ using IndexCastOpSILowering =
 using IndexCastOpUILowering =
     IndexCastOpLowering<arith::IndexCastUIOp, LLVM::ZExtOp>;
 
-struct AddUICarryOpLowering
-    : public ConvertOpToLLVMPattern<arith::AddUICarryOp> {
+struct AddUIExtendedOpLowering
+    : public ConvertOpToLLVMPattern<arith::AddUIExtendedOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(arith::AddUICarryOp op, OpAdaptor adaptor,
+  matchAndRewrite(arith::AddUIExtendedOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -223,15 +223,15 @@ LogicalResult IndexCastOpLowering<OpTy, ExtCastTy>::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
-// AddUICarryOpLowering
+// AddUIExtendedOpLowering
 //===----------------------------------------------------------------------===//
 
-LogicalResult AddUICarryOpLowering::matchAndRewrite(
-    arith::AddUICarryOp op, OpAdaptor adaptor,
+LogicalResult AddUIExtendedOpLowering::matchAndRewrite(
+    arith::AddUIExtendedOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Type operandType = adaptor.getLhs().getType();
   Type sumResultType = op.getSum().getType();
-  Type carryResultType = op.getCarry().getType();
+  Type overflowResultType = op.getOverflow().getType();
 
   if (!LLVM::isCompatibleType(operandType))
     return failure();
@@ -241,16 +241,16 @@ LogicalResult AddUICarryOpLowering::matchAndRewrite(
 
   // Handle the scalar and 1D vector cases.
   if (!operandType.isa<LLVM::LLVMArrayType>()) {
-    Type newCarryType = typeConverter->convertType(carryResultType);
+    Type newOverflowType = typeConverter->convertType(overflowResultType);
     Type structType =
-        LLVM::LLVMStructType::getLiteral(ctx, {sumResultType, newCarryType});
+        LLVM::LLVMStructType::getLiteral(ctx, {sumResultType, newOverflowType});
     Value addOverflow = rewriter.create<LLVM::UAddWithOverflowOp>(
         loc, structType, adaptor.getLhs(), adaptor.getRhs());
     Value sumExtracted =
         rewriter.create<LLVM::ExtractValueOp>(loc, addOverflow, 0);
-    Value carryExtracted =
+    Value overflowExtracted =
         rewriter.create<LLVM::ExtractValueOp>(loc, addOverflow, 1);
-    rewriter.replaceOp(op, {sumExtracted, carryExtracted});
+    rewriter.replaceOp(op, {sumExtracted, overflowExtracted});
     return success();
   }
 
@@ -374,7 +374,7 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     AddFOpLowering,
     AddIOpLowering,
     AndIOpLowering,
-    AddUICarryOpLowering,
+    AddUIExtendedOpLowering,
     BitcastOpLowering,
     ConstantOpLowering,
     CmpFOpLowering,

@@ -970,9 +970,20 @@ static bool lowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
 
   // Compares against 0 have special target-specific pseudos.
   bool IsZero = Splat && Splat->isCst() && Splat->getCst() == 0;
-  bool Invert;
-  AArch64CC::CondCode CC, CC2;
-  changeVectorFCMPPredToAArch64CC(Pred, CC, CC2, Invert);
+
+
+  bool Invert = false;
+  AArch64CC::CondCode CC, CC2 = AArch64CC::AL;
+  if (Pred == CmpInst::Predicate::FCMP_ORD && IsZero) {
+    // The special case "fcmp ord %a, 0" is the canonical check that LHS isn't
+    // NaN, so equivalent to a == a and doesn't need the two comparisons an
+    // "ord" normally would.
+    RHS = LHS;
+    IsZero = false;
+    CC = AArch64CC::EQ;
+  } else
+    changeVectorFCMPPredToAArch64CC(Pred, CC, CC2, Invert);
+
   bool NoNans = ST.getTargetLowering()->getTargetMachine().Options.NoNaNsFPMath;
 
   // Instead of having an apply function, just build here to simplify things.
