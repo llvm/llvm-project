@@ -455,8 +455,8 @@ public:
       if (!err.Success()) {
         dump_stream.Printf("  <could not be read>\n");
       } else {
-        DumpHexBytes(&dump_stream, data.GetBytes(),
-                               data.GetByteSize(), 16, load_addr);
+        DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
+                     load_addr);
 
         dump_stream.PutChar('\n');
       }
@@ -465,7 +465,7 @@ public:
     {
       dump_stream.Printf("Target:\n");
 
-      lldb::addr_t target_address;
+      lldb::addr_t target_address = LLDB_INVALID_ADDRESS;
 
       map.ReadPointerFromMemory(&target_address, load_addr, err);
 
@@ -482,8 +482,8 @@ public:
         if (!err.Success()) {
           dump_stream.Printf("  <could not be read>\n");
         } else {
-          DumpHexBytes(&dump_stream, data.GetBytes(),
-                                 data.GetByteSize(), 16, target_address);
+          DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
+                       target_address);
 
           dump_stream.PutChar('\n');
         }
