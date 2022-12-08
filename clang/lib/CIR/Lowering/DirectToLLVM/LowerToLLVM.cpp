@@ -42,25 +42,26 @@ using namespace llvm;
 
 namespace cir {
 
-// class CIRReturnLowering
-//     : public mlir::OpConversionPattern<mlir::cir::ReturnOp> {
-// public:
-//   using OpConversionPattern<mlir::cir::ReturnOp>::OpConversionPattern;
+class CIRReturnLowering
+    : public mlir::OpConversionPattern<mlir::cir::ReturnOp> {
+public:
+  using OpConversionPattern<mlir::cir::ReturnOp>::OpConversionPattern;
 
-//   mlir::LogicalResult
-//   matchAndRewrite(mlir::cir::ReturnOp op, OpAdaptor adaptor,
-//                   mlir::ConversionPatternRewriter &rewriter) const override {
-//     rewriter.replaceOpWithNewOp<mlir::func::ReturnOp>(op,
-//                                                       adaptor.getOperands());
-//     return mlir::LogicalResult::success();
-//   }
-// };
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::ReturnOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::func::ReturnOp>(op,
+                                                      adaptor.getOperands());
+    return mlir::LogicalResult::success();
+  }
+};
 
 struct ConvertCIRToLLVMPass
     : public mlir::PassWrapper<ConvertCIRToLLVMPass,
                                mlir::OperationPass<mlir::ModuleOp>> {
   void getDependentDialects(mlir::DialectRegistry &registry) const override {
-    registry.insert<mlir::BuiltinDialect, mlir::LLVM::LLVMDialect>();
+    registry.insert<mlir::BuiltinDialect, mlir::LLVM::LLVMDialect,
+                    mlir::func::FuncDialect>();
   }
   void runOnOperation() final;
 
@@ -169,48 +170,48 @@ struct ConvertCIRToLLVMPass
 //   }
 // };
 
-// class CIRFuncLowering : public mlir::OpConversionPattern<mlir::cir::FuncOp> {
-// public:
-//   using OpConversionPattern<mlir::cir::FuncOp>::OpConversionPattern;
+class CIRFuncLowering : public mlir::OpConversionPattern<mlir::cir::FuncOp> {
+public:
+  using OpConversionPattern<mlir::cir::FuncOp>::OpConversionPattern;
 
-//   mlir::LogicalResult
-//   matchAndRewrite(mlir::cir::FuncOp op, OpAdaptor adaptor,
-//                   mlir::ConversionPatternRewriter &rewriter) const override {
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::FuncOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
 
-//     auto fnType = op.getFunctionType();
-//     mlir::TypeConverter::SignatureConversion signatureConversion(
-//         fnType.getNumInputs());
+    auto fnType = op.getFunctionType();
+    mlir::TypeConverter::SignatureConversion signatureConversion(
+        fnType.getNumInputs());
 
-//     for (const auto &argType : enumerate(fnType.getInputs())) {
-//       auto convertedType = typeConverter->convertType(argType.value());
-//       if (!convertedType)
-//         return mlir::failure();
-//       signatureConversion.addInputs(argType.index(), convertedType);
-//     }
+    for (const auto &argType : enumerate(fnType.getInputs())) {
+      auto convertedType = typeConverter->convertType(argType.value());
+      if (!convertedType)
+        return mlir::failure();
+      signatureConversion.addInputs(argType.index(), convertedType);
+    }
 
-//     mlir::Type resultType;
-//     if (fnType.getNumResults() == 1) {
-//       resultType = getTypeConverter()->convertType(fnType.getResult(0));
-//       if (!resultType)
-//         return mlir::failure();
-//     }
+    mlir::Type resultType;
+    if (fnType.getNumResults() == 1) {
+      resultType = getTypeConverter()->convertType(fnType.getResult(0));
+      if (!resultType)
+        return mlir::failure();
+    }
 
-//     auto fn = rewriter.create<mlir::func::FuncOp>(
-//         op.getLoc(), op.getName(),
-//         rewriter.getFunctionType(signatureConversion.getConvertedTypes(),
-//                                  resultType ? mlir::TypeRange(resultType)
-//                                             : mlir::TypeRange()));
+    auto fn = rewriter.create<mlir::func::FuncOp>(
+        op.getLoc(), op.getName(),
+        rewriter.getFunctionType(signatureConversion.getConvertedTypes(),
+                                 resultType ? mlir::TypeRange(resultType)
+                                            : mlir::TypeRange()));
 
-//     rewriter.inlineRegionBefore(op.getBody(), fn.getBody(), fn.end());
-//     if (failed(rewriter.convertRegionTypes(&fn.getBody(), *typeConverter,
-//                                            &signatureConversion)))
-//       return mlir::failure();
+    rewriter.inlineRegionBefore(op.getBody(), fn.getBody(), fn.end());
+    if (failed(rewriter.convertRegionTypes(&fn.getBody(), *typeConverter,
+                                           &signatureConversion)))
+      return mlir::failure();
 
-//     rewriter.eraseOp(op);
+    rewriter.eraseOp(op);
 
-//     return mlir::LogicalResult::success();
-//   }
-// };
+    return mlir::LogicalResult::success();
+  }
+};
 
 // class CIRUnaryOpLowering : public mlir::OpRewritePattern<mlir::cir::UnaryOp>
 // { public:
@@ -498,11 +499,12 @@ struct ConvertCIRToLLVMPass
 
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
-  // patterns.add<CIRAllocaLowering, CIRLoadLowering, CIRStoreLowering,
-  //              CIRConstantLowering, CIRUnaryOpLowering, CIRBinOpLowering,
-  //              CIRCmpOpLowering, CIRBrOpLowering, CIRCallLowering,
-  //              CIRReturnLowering>(patterns.getContext());
-  // patterns.add<CIRFuncLowering>(converter, patterns.getContext());
+  patterns.add</*CIRAllocaLowering, CIRLoadLowering, CIRStoreLowering,
+               CIRConstantLowering, CIRUnaryOpLowering, CIRBinOpLowering,
+               CIRCmpOpLowering, CIRBrOpLowering,
+               CIRCallLowering, */
+               CIRReturnLowering>(patterns.getContext());
+  patterns.add<CIRFuncLowering>(converter, patterns.getContext());
 }
 
 static mlir::TypeConverter prepareTypeConverter() {
@@ -525,12 +527,15 @@ void ConvertCIRToLLVMPass::runOnOperation() {
 
   mlir::RewritePatternSet patterns(&getContext());
 
+  mlir::LLVMTypeConverter llvmConverter(&getContext());
+
   populateCIRToLLVMConversionPatterns(patterns, converter);
+  mlir::populateFuncToLLVMConversionPatterns(llvmConverter, patterns);
 
   mlir::ConversionTarget target(getContext());
   target.addLegalOp<mlir::ModuleOp>();
   target.addLegalDialect<mlir::LLVM::LLVMDialect>();
-  target.addIllegalDialect<mlir::cir::CIRDialect>();
+  target.addIllegalDialect<mlir::cir::CIRDialect, mlir::func::FuncDialect>();
 
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
