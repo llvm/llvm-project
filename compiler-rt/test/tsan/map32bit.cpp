@@ -12,6 +12,7 @@
 // XFAIL: aarch64
 // XFAIL: powerpc64
 // XFAIL: s390x
+// XFAIL: loongarch64
 
 // MAP_32BIT doesn't exist on OS X and NetBSD.
 // UNSUPPORTED: darwin,netbsd
