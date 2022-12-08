@@ -14,13 +14,13 @@ mrs x0, DIT
 //CHECK-NEXT: msr DIT, x0                 // encoding: [0xa0,0x42,0x1b,0xd5]
 //CHECK-NEXT: mrs x0, DIT                 // encoding: [0xa0,0x42,0x3b,0xd5]
 
-msr DIT, #2
+msr DIT, #16
 msr DIT, #-1
 
-//CHECK-ERROR:      error: immediate must be an integer in range [0, 1].
-//CHECK-ERROR-NEXT: msr DIT, #2
+//CHECK-ERROR:      error: immediate must be an integer in range [0, 15].
+//CHECK-ERROR-NEXT: msr DIT, #16
 //CHECK-ERROR-NEXT:          ^
-//CHECK-ERROR-NEXT: error: immediate must be an integer in range [0, 1].
+//CHECK-ERROR-NEXT: error: immediate must be an integer in range [0, 15].
 //CHECK-ERROR-NEXT: msr DIT, #-1
 //CHECK-ERROR-NEXT:          ^
 
@@ -34,7 +34,7 @@ msr DIT, #-1
 //CHECK-NO-V84-NEXT: mrs x0, DIT
 //CHECK-NO-V84-NEXT:         ^
 //CHECK-NO-V84-NEXT: error: expected writable system register or pstate
-//CHECK-NO-V84-NEXT: msr DIT, #2
+//CHECK-NO-V84-NEXT: msr DIT, #16
 //CHECK-NO-V84-NEXT:     ^
 //CHECK-NO-V84-NEXT: error: expected writable system register or pstate
 //CHECK-NO-V84-NEXT: msr DIT, #-1
