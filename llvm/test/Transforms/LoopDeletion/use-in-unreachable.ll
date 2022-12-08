@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-deletion -S | FileCheck %s
+; RUN: opt < %s -passes=loop-deletion -S | FileCheck %s
 
 ; Checking that possible users of instruction from the loop in
 ; unreachable blocks are handled.

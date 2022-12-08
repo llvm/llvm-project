@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=inline,instcombine -S | FileCheck %s
 
 ; PR22857: http://llvm.org/bugs/show_bug.cgi?id=22857
 ; The inliner should not add an edge to an intrinsic and

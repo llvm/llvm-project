@@ -353,8 +353,8 @@ struct MemRefRegion {
   FlatAffineValueConstraints cst;
 };
 
-/// Returns the size of memref data in bytes if it's statically shaped, None
-/// otherwise.
+/// Returns the size of memref data in bytes if it's statically shaped,
+/// std::nullopt otherwise.
 Optional<uint64_t> getMemRefSizeInBytes(MemRefType memRefType);
 
 /// Checks a load or store op for an out of bound access; returns failure if the

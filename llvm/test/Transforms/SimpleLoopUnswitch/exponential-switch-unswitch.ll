@@ -11,19 +11,19 @@
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=0 -unswitch-siblings-toplevel-div=1 \
-; RUN:     -passes='loop(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN: -passes='loop(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=0 -unswitch-siblings-toplevel-div=16 \
-; RUN:     -passes='loop(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN: -passes='loop(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=0 -unswitch-siblings-toplevel-div=1 \
-; RUN:     -passes='loop-mssa(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN: -passes='loop-mssa(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=0 -unswitch-siblings-toplevel-div=16 \
-; RUN:     -passes='loop-mssa(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN: -passes='loop-mssa(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
 ; With relaxed candidates multiplier (unscaled candidates == 8) we should allow
 ; some unswitches to happen until siblings multiplier starts kicking in:
@@ -34,7 +34,7 @@
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=8 -unswitch-siblings-toplevel-div=1 \
-; RUN:     -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
+; RUN: -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
 ; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-RELAX
 ;
 ; With relaxed candidates multiplier (unscaled candidates == 8) and with relaxed
@@ -43,13 +43,13 @@
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=8 -unswitch-siblings-toplevel-div=8 \
-; RUN:     -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
+; RUN: -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
 ; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-RELAX2
 ;
 ; We get hundreds of copies of the loop when cost multiplier is disabled:
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=false \
-; RUN:     -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
+; RUN: -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
 ; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-MAX
 
 ; Single loop nest, not unswitched

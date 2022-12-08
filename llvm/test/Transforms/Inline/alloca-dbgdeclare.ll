@@ -1,17 +1,17 @@
-; RUN: opt -inline -S < %s | FileCheck %s
+; RUN: opt -passes=inline -S < %s | FileCheck %s
 ; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
 ; struct A {
 ;   int arg0;
 ;   double arg1[2];
 ; } a, b;
-;  
+;
 ; void fn3(A p1) {
 ;   if (p1.arg0)
 ;     a = p1;
 ; }
-;  
+;
 ; void fn4() { fn3(b); }
-;  
+;
 ; void fn5() {
 ;   while (1)
 ;     fn4();

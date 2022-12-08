@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -loop-rotate -licm -verify-dom-info -verify-loop-info | FileCheck %s
+; RUN: opt -S < %s -passes='loop-mssa(loop-rotate,licm)'  -verify-dom-info -verify-loop-info | FileCheck %s
 ; PR2624 unroll multiple exits
 
 @mode_table = global [4 x i32] zeroinitializer		; <[4 x i32]*> [#uses=1]

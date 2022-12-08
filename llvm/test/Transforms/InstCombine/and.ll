@@ -603,7 +603,7 @@ define i32 @test34(i32 %A, i32 %B) {
   ret i32 %t4
 }
 
-; FIXME: This test should only need -instsimplify (ValueTracking / computeKnownBits), not -passes=instcombine.
+; FIXME: This test should only need -passes=instsimplify (ValueTracking / computeKnownBits), not -passes=instcombine.
 
 define <2 x i32> @PR24942(<2 x i32> %x) {
 ; CHECK-LABEL: @PR24942(

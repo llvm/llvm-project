@@ -20,7 +20,7 @@ declare void @readnone() readnone nounwind
 
 ; This function should no longer exist.
 ; CHECK-NOT: @test1_f()
-define internal void @test1_f(void()* %p) {
+define internal void @test1_f(ptr %p) {
 entry:
   call void %p()
   ret void
@@ -31,7 +31,7 @@ entry:
 ; CHECK-NEXT: define void @test1_g()
 define void @test1_g() noinline {
 entry:
-  call void @test1_f(void()* @test1_h)
+  call void @test1_f(ptr @test1_h)
   ret void
 }
 
@@ -53,9 +53,9 @@ entry:
 
 ; This function should no longer exist.
 ; CHECK-NOT: @test2_f()
-define internal void()* @test2_f() {
+define internal ptr @test2_f() {
 entry:
-  ret void()* @test2_h
+  ret ptr @test2_h
 }
 
 ; This function should have had 'memory(none)' deduced for its SCC.
@@ -63,7 +63,7 @@ entry:
 ; CHECK-NEXT: define void @test2_g()
 define void @test2_g() noinline {
 entry:
-  %p = call void()* @test2_f()
+  %p = call ptr @test2_f()
   call void %p()
   ret void
 }
@@ -168,7 +168,7 @@ entry:
 }
 
 ; CHECK-NOT: @test4_g
-define internal void @test4_g(void()* %p) {
+define internal void @test4_g(ptr %p) {
 entry:
   call void %p()
   ret void
@@ -179,6 +179,6 @@ entry:
 ; CHECK-NEXT: define void @test4_h()
 define void @test4_h() noinline {
 entry:
-  call void @test4_g(void()* @test4_f2)
+  call void @test4_g(ptr @test4_f2)
   ret void
 }

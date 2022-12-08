@@ -7,11 +7,11 @@ define void @foo() alwaysinline {
     ret void
 }
 
-define void @bar() alwaysinline personality void ()* @personalityFn1 {
+define void @bar() alwaysinline personality ptr @personalityFn1 {
     ret void
 }
 
-define void @goo() personality void ()* @personalityFn2 {
+define void @goo() personality ptr @personalityFn2 {
     ; CHECK-DAG: remark: {{.*}}: 'bar' is not inlined into 'goo': incompatible personality
     call void @bar()
     ; CHECK-DAG: remark: {{.*}}: 'foo' is not inlined into 'goo': unsupported operand bundle

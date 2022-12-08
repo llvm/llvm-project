@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-simplify -lcssa -verify-loop-info -verify-dom-info -S | FileCheck %s
+; RUN: opt < %s -passes=loop-simplify,lcssa -verify-loop-info -verify-dom-info -S | FileCheck %s
 
 ; LCSSA should work correctly in the case of an indirectbr that exits
 ; the loop, and the loop has exits with predecessors not within the loop

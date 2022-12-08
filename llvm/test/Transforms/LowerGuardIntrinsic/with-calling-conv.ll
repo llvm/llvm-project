@@ -1,4 +1,4 @@
-; RUN: opt -S -lower-guard-intrinsic < %s | FileCheck %s
+; RUN: opt -S -passes=lower-guard-intrinsic < %s | FileCheck %s
 
 declare cc99 void @llvm.experimental.guard(i1, ...)
 

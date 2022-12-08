@@ -1,4 +1,4 @@
-; RUN: opt -inline -S < %s | FileCheck %s
+; RUN: opt -passes=inline -S < %s | FileCheck %s
 ; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
 
 declare void @use(i8* %a)

@@ -13278,14 +13278,15 @@ bool RISCVTargetLowering::isVScaleKnownToBeAPowerOfTwo() const {
 
 bool RISCVTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                                      EVT VT) const {
-  VT = VT.getScalarType();
+  EVT SVT = VT.getScalarType();
 
-  if (!VT.isSimple())
+  if (!SVT.isSimple())
     return false;
 
-  switch (VT.getSimpleVT().SimpleTy) {
+  switch (SVT.getSimpleVT().SimpleTy) {
   case MVT::f16:
-    return Subtarget.hasStdExtZfh();
+    return VT.isVector() ? Subtarget.hasVInstructionsF16()
+                         : Subtarget.hasStdExtZfh();
   case MVT::f32:
     return Subtarget.hasStdExtF();
   case MVT::f64:

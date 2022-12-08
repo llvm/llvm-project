@@ -84,8 +84,8 @@ static OpFoldResult foldBinaryOpUnchecked(
 /// bits of the results.
 ///
 /// The function accepts a lambda that computes the integer result in both
-/// 64-bit and 32-bit. If either call returns `None`, the operation is not
-/// folded.
+/// 64-bit and 32-bit. If either call returns `std::nullopt`, the operation is
+/// not folded.
 static OpFoldResult foldBinaryOpChecked(
     ArrayRef<Attribute> operands,
     function_ref<Optional<APInt>(const APInt &, const APInt &lhs)> calculate) {

@@ -1,4 +1,4 @@
-; RUN: opt -verify-loop-info -irce -irce-print-range-checks -irce-print-changed-loops %s -S 2>&1 | FileCheck %s
+; RUN: opt -verify-loop-info -passes=irce -irce-print-range-checks -irce-print-changed-loops %s -S 2>&1 | FileCheck %s
 ; RUN: opt -verify-loop-info -passes='require<branch-prob>,irce' -irce-print-range-checks -irce-print-changed-loops %s -S 2>&1 | FileCheck %s
 
 ; CHECK: irce: loop has 1 inductive range checks:

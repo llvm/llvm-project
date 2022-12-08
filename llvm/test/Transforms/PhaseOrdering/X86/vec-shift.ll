@@ -3,7 +3,7 @@
 ; RUN: opt -passes="default<O3>" -S -mattr=avx < %s | FileCheck %s --check-prefix=AVX
 
 ; This test is based on https://github.com/llvm/llvm-project/issues/50778
-; It's the unoptimized IR passed through -mem2reg to remove obvious noise.
+; It's the unoptimized IR passed through -passes=mem2reg to remove obvious noise.
 ; This should show cooperation between instcombine, unrolling, inlining,
 ; and SLP to create the target-optimal vector math+logic ops.
 

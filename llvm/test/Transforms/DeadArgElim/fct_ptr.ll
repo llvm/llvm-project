@@ -1,4 +1,4 @@
-; RUN: opt -S %s -deadargelim -o - | FileCheck %s
+; RUN: opt -S %s -passes=deadargelim -o - | FileCheck %s
 ; In that test @internal_fct is used by an instruction
 ; we don't know how to rewrite (the comparison that produces
 ; %cmp1).
