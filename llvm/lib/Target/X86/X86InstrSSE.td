@@ -3215,7 +3215,7 @@ let SchedRW = [WriteLoad] in {
 // Flush cache
 def CLFLUSH : I<0xAE, MRM7m, (outs), (ins i8mem:$src),
                "clflush\t$src", [(int_x86_sse2_clflush addr:$src)]>,
-               PS, Requires<[HasSSE2]>;
+               PS, Requires<[HasCLFLUSH]>;
 }
 
 let SchedRW = [WriteNop] in {
