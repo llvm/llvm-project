@@ -8,6 +8,7 @@
 
 #include "llvm/Support/PrefixMapper.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 using namespace llvm;
@@ -93,8 +94,8 @@ static bool startsWith(StringRef Path, StringRef Prefix,
   return true;
 }
 
-Optional<StringRef> PrefixMapper::mapImpl(StringRef Path,
-                                          SmallVectorImpl<char> &Storage) {
+Expected<Optional<StringRef>>
+PrefixMapper::mapImpl(StringRef Path, SmallVectorImpl<char> &Storage) {
   for (const MappedPrefix &Map : Mappings) {
     StringRef Old = Map.Old;
     StringRef New = Map.New;
@@ -116,54 +117,55 @@ Optional<StringRef> PrefixMapper::mapImpl(StringRef Path,
   return None;
 }
 
-void PrefixMapper::map(StringRef Path, SmallVectorImpl<char> &NewPath) {
+Error PrefixMapper::map(StringRef Path, SmallVectorImpl<char> &NewPath) {
   NewPath.clear();
-  Optional<StringRef> Mapped = mapImpl(Path, NewPath);
+  Optional<StringRef> Mapped;
+  if (Error E = mapImpl(Path, NewPath).moveInto(Mapped))
+    return E;
   if (!NewPath.empty())
-    return;
+    return Error::success();
   if (!Mapped)
     Mapped = Path;
   NewPath.assign(Mapped->begin(), Mapped->end());
+  return Error::success();
 }
 
-void PrefixMapper::map(StringRef Path, std::string &NewPath) {
-  NewPath = mapToString(Path);
+Error PrefixMapper::map(StringRef Path, std::string &NewPath) {
+  return mapToString(Path).moveInto(NewPath);
 }
 
-StringRef PrefixMapper::map(StringRef Path) {
+Expected<std::string> PrefixMapper::mapToString(StringRef Path) {
   SmallString<256> Storage;
-  Optional<StringRef> Mapped = mapImpl(Path, Storage);
-  if (!Mapped)
-    return Path;
-  if (Storage.empty())
-    return *Mapped; // Exact match.
-  return Saver.save(StringRef(Storage));
-}
-
-std::string PrefixMapper::mapToString(StringRef Path) {
-  SmallString<256> Storage;
-  Optional<StringRef> Mapped = mapImpl(Path, Storage);
+  Optional<StringRef> Mapped;
+  if (Error E = mapImpl(Path, Storage).moveInto(Mapped))
+    return std::move(E);
   return Mapped ? Mapped->str() : Path.str();
 }
 
-void PrefixMapper::mapInPlace(SmallVectorImpl<char> &Path) {
+Error PrefixMapper::mapInPlace(SmallVectorImpl<char> &Path) {
   SmallString<256> Storage;
-  Optional<StringRef> Mapped =
-      mapImpl(StringRef(Path.begin(), Path.size()), Storage);
+  Optional<StringRef> Mapped;
+  if (Error E = mapImpl(StringRef(Path.begin(), Path.size()), Storage)
+                    .moveInto(Mapped))
+    return E;
   if (!Mapped)
-    return;
+    return Error::success();
   if (Storage.empty())
     Path.assign(Mapped->begin(), Mapped->end());
   else
     Storage.swap(Path);
+  return Error::success();
 }
 
-void PrefixMapper::mapInPlace(std::string &Path) {
+Error PrefixMapper::mapInPlace(std::string &Path) {
   SmallString<256> Storage;
-  Optional<StringRef> Mapped = mapImpl(Path, Storage);
+  Optional<StringRef> Mapped;
+  if (Error E = mapImpl(Path, Storage).moveInto(Mapped))
+    return E;
   if (!Mapped)
-    return;
+    return Error::success();
   Path.assign(Mapped->begin(), Mapped->size());
+  return Error::success();
 }
 
 void PrefixMapper::sort() {
@@ -176,33 +178,23 @@ void PrefixMapper::sort() {
 }
 
 TreePathPrefixMapper::TreePathPrefixMapper(
-    IntrusiveRefCntPtr<vfs::FileSystem> FS, BumpPtrAllocator &Alloc,
-    sys::path::Style PathStyle)
-    : PM(Alloc, PathStyle), FS(std::move(FS)) {}
-
-TreePathPrefixMapper::TreePathPrefixMapper(
     IntrusiveRefCntPtr<vfs::FileSystem> FS, sys::path::Style PathStyle)
-    : PM(PathStyle), FS(std::move(FS)) {}
+    : PrefixMapper(PathStyle), FS(std::move(FS)) {}
 
 TreePathPrefixMapper::~TreePathPrefixMapper() = default;
 
-void TreePathPrefixMapper::map(const vfs::CachedDirectoryEntry &Entry,
-                               SmallVectorImpl<char> &NewPath) {
-  PM.map(Entry.getTreePath(), NewPath);
-}
-
-void TreePathPrefixMapper::map(const vfs::CachedDirectoryEntry &Entry,
-                               std::string &NewPath) {
-  PM.map(Entry.getTreePath(), NewPath);
-}
-
-StringRef TreePathPrefixMapper::map(const vfs::CachedDirectoryEntry &Entry) {
-  return PM.map(Entry.getTreePath());
-}
-
-std::string
-TreePathPrefixMapper::mapToString(const vfs::CachedDirectoryEntry &Entry) {
-  return PM.mapToString(Entry.getTreePath());
+Expected<Optional<StringRef>>
+TreePathPrefixMapper::mapImpl(StringRef Path, SmallVectorImpl<char> &Storage) {
+  StringRef TreePath;
+  if (Error E = getTreePath(Path).moveInto(TreePath))
+    return std::move(E);
+  Optional<StringRef> Mapped =
+      cantFail(PrefixMapper::mapImpl(TreePath, Storage));
+  if (Mapped)
+    return *Mapped;
+  if (TreePath != Path)
+    return TreePath;
+  return None;
 }
 
 Expected<StringRef> TreePathPrefixMapper::getTreePath(StringRef Path) {
@@ -215,61 +207,12 @@ Expected<StringRef> TreePathPrefixMapper::getTreePath(StringRef Path) {
   return Entry->getTreePath();
 }
 
-Error TreePathPrefixMapper::getTreePath(StringRef Path,
-                                        SmallVectorImpl<char> &TreePath) {
-  assert(TreePath.empty() && "Expected to be fed an empty TreePath");
-  StringRef TreePathRef;
-  if (Error E = getTreePath(Path).moveInto(TreePathRef))
-    return E;
-  TreePath.assign(TreePathRef.begin(), TreePathRef.end());
-  return Error::success();
-}
-
-Error TreePathPrefixMapper::map(StringRef Path,
-                                SmallVectorImpl<char> &NewPath) {
-  NewPath.clear();
-  if (Error E = getTreePath(Path, NewPath))
-    return E;
-  PM.mapInPlace(NewPath);
-  return Error::success();
-}
-
-Expected<StringRef> TreePathPrefixMapper::map(StringRef Path) {
-  StringRef TreePath;
-  if (Error E = getTreePath(Path).moveInto(TreePath))
-    return std::move(E);
-  return PM.map(TreePath);
-}
-
-Expected<std::string> TreePathPrefixMapper::mapToString(StringRef Path) {
-  StringRef TreePath;
-  if (Error E = getTreePath(Path).moveInto(TreePath))
-    return std::move(E);
-  return PM.mapToString(TreePath);
-}
-
-Error TreePathPrefixMapper::mapInPlace(SmallVectorImpl<char> &Path) {
-  SmallString<256> TreePath;
-  if (Error E = getTreePath(StringRef(Path.begin(), Path.size()), TreePath))
-    return E;
-  PM.map(TreePath, Path);
-  return Error::success();
-}
-
-Error TreePathPrefixMapper::mapInPlace(std::string &Path) {
-  SmallString<256> TreePath;
-  if (Error E = getTreePath(Path, TreePath))
-    return E;
-  Path = PM.mapToString(TreePath);
-  return Error::success();
-}
-
 Error TreePathPrefixMapper::canonicalizePrefix(StringRef &Prefix) {
-  SmallString<256> TreePath;
-  if (Error E = getTreePath(Prefix, TreePath))
+  StringRef TreePath;
+  if (Error E = getTreePath(Prefix).moveInto(TreePath))
     return E;
   if (TreePath != Prefix)
-    Prefix = PM.getStringSaver().save(StringRef(TreePath));
+    Prefix = TreePath;
   return Error::success();
 }
 
@@ -278,6 +221,15 @@ Error TreePathPrefixMapper::add(const MappedPrefix &Mapping) {
   StringRef New = Mapping.New;
   if (Error E = canonicalizePrefix(Old))
     return E;
-  PM.add(MappedPrefix{Old, New});
-  return Error::success();
+  return PrefixMapper::add(MappedPrefix{Old, New});
+}
+
+StringRef
+TreePathPrefixMapper::mapDirEntry(const vfs::CachedDirectoryEntry &Entry,
+                                  StringSaver &Saver) {
+  StringRef TreePath = Entry.getTreePath();
+  SmallString<256> PathBuf;
+  Optional<StringRef> Mapped =
+      cantFail(PrefixMapper::mapImpl(TreePath, PathBuf));
+  return Mapped ? Saver.save(*Mapped) : TreePath;
 }
