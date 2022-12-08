@@ -9,8 +9,10 @@
 #define OCKL_H
 
 // This C header declares the functions provided by the OCKL library
-// Aspects of this library's behavior can be controlled via the 
+// Aspects of this library's behavior can be controlled via the
 // oclc library.  See the oclc header for further information
+
+#define OCKL_DEPRECATED __attribute__((deprecated))
 
 #define _MANGLE3x(P,N,S) P##_##N##S
 #define MANGLE3x(P,N,S) _MANGLE3x(P,N,S)
@@ -141,7 +143,10 @@ DECL_CONST_OCKL_BINARY_U32(mul24)
 DECL_OCKL_NULLARY_U32(lane)
 DECL_OCKL_NULLARY_U32(activelane)
 
+OCKL_DEPRECATED
 DECL_OCKL_NULLARY_U64(memtime)
+
+OCKL_DEPRECATED
 DECL_OCKL_NULLARY_U64(memrealtime)
 DECL_OCKL_NULLARY_U64(cyclectr)
 DECL_OCKL_NULLARY_U64(steadyctr)
