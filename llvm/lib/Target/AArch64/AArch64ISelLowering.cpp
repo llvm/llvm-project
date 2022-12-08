@@ -4539,7 +4539,9 @@ static unsigned selectUmullSmull(SDNode *&N0, SDNode *&N1, SelectionDAG &DAG,
     return AArch64ISD::UMULL;
 
   // Select SMULL if we can replace zext with sext.
-  if ((IsN0SExt && IsN1ZExt) || (IsN0ZExt && IsN1SExt)) {
+  if (((IsN0SExt && IsN1ZExt) || (IsN0ZExt && IsN1SExt)) &&
+      !isExtendedBUILD_VECTOR(N0, DAG, false) &&
+      !isExtendedBUILD_VECTOR(N1, DAG, false)) {
     SDValue ZextOperand;
     if (IsN0ZExt)
       ZextOperand = N0->getOperand(0);
