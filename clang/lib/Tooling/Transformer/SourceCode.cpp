@@ -78,27 +78,43 @@ llvm::Error clang::tooling::validateEditRange(const CharSourceRange &Range,
   return llvm::Error::success();
 }
 
-llvm::Optional<CharSourceRange>
-clang::tooling::getRangeForEdit(const CharSourceRange &EditRange,
-                                const SourceManager &SM,
-                                const LangOptions &LangOpts) {
-  // FIXME: makeFileCharRange() has the disadvantage of stripping off "identity"
-  // macros. For example, if we're looking to rewrite the int literal 3 to 6,
-  // and we have the following definition:
-  //    #define DO_NOTHING(x) x
-  // then
-  //    foo(DO_NOTHING(3))
-  // will be rewritten to
-  //    foo(6)
-  // rather than the arguably better
-  //    foo(DO_NOTHING(6))
-  // Decide whether the current behavior is desirable and modify if not.
-  CharSourceRange Range = Lexer::makeFileCharRange(EditRange, SM, LangOpts);
+static bool SpelledInMacroDefinition(SourceLocation Loc,
+                                     const SourceManager &SM) {
+  while (Loc.isMacroID()) {
+    const auto &Expansion = SM.getSLocEntry(SM.getFileID(Loc)).getExpansion();
+    if (Expansion.isMacroArgExpansion()) {
+      // Check the spelling location of the macro arg, in case the arg itself is
+      // in a macro expansion.
+      Loc = Expansion.getSpellingLoc();
+    } else {
+      return true;
+    }
+  }
+  return false;
+}
+
+llvm::Optional<CharSourceRange> clang::tooling::getRangeForEdit(
+    const CharSourceRange &EditRange, const SourceManager &SM,
+    const LangOptions &LangOpts, bool IncludeMacroExpansion) {
+  CharSourceRange Range;
+  if (IncludeMacroExpansion) {
+    Range = Lexer::makeFileCharRange(EditRange, SM, LangOpts);
+  } else {
+    if (SpelledInMacroDefinition(EditRange.getBegin(), SM) ||
+        SpelledInMacroDefinition(EditRange.getEnd(), SM))
+      return std::nullopt;
+
+    auto B = SM.getSpellingLoc(EditRange.getBegin());
+    auto E = SM.getSpellingLoc(EditRange.getEnd());
+    if (EditRange.isTokenRange())
+      E = Lexer::getLocForEndOfToken(E, 0, SM, LangOpts);
+    Range = CharSourceRange::getCharRange(B, E);
+  }
+
   bool IsInvalid = llvm::errorToBool(validateEditRange(Range, SM));
   if (IsInvalid)
     return std::nullopt;
   return Range;
-
 }
 
 static bool startsWithNewline(const SourceManager &SM, const Token &Tok) {
