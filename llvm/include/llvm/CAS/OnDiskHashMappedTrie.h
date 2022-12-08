@@ -24,6 +24,7 @@
 namespace llvm {
 
 class MemoryBuffer;
+class raw_ostream;
 
 namespace cas {
 
