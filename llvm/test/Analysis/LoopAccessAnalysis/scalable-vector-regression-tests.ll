@@ -1,9 +1,9 @@
-; RUN: opt -temporarily-allow-old-pass-syntax -loop-load-elim -mtriple=aarch64 -mattr=+sve -S -debug < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-load-elim -mtriple=aarch64 -mattr=+sve -S -debug < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Regression tests verifying "assumption that TypeSize is not scalable" and
 ; "Invalid size request on a scalable vector." are not produced by
-; -load-loop-elim (this would cause the test to fail because opt -temporarily-allow-old-pass-syntax would exit with
+; -load-loop-elim (this would cause the test to fail because opt would exit with
 ; a non-zero exit status).
 
 ; No output checked for this one, but causes a fatal error if the regression is present.
