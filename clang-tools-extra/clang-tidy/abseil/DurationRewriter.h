@@ -50,7 +50,7 @@ stripFloatCast(const ast_matchers::MatchFinder::MatchResult &Result,
 /// Possibly remove the fractional part of a floating point literal.
 ///
 /// If `Node` represents a floating point literal with a zero fractional part,
-/// return the textual context of the integral part, otherwise `None`.
+/// return the textual context of the integral part, otherwise `std::nullopt`.
 llvm::Optional<std::string>
 stripFloatLiteralFraction(const ast_matchers::MatchFinder::MatchResult &Result,
                           const Expr &Node);
@@ -63,11 +63,11 @@ simplifyDurationFactoryArg(const ast_matchers::MatchFinder::MatchResult &Result,
                            const Expr &Node);
 
 /// Given the name of an inverse Duration function (e.g., `ToDoubleSeconds`),
-/// return its `DurationScale`, or `None` if a match is not found.
+/// return its `DurationScale`, or `std::nullopt` if a match is not found.
 llvm::Optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name);
 
 /// Given the name of an inverse Time function (e.g., `ToUnixSeconds`),
-/// return its `DurationScale`, or `None` if a match is not found.
+/// return its `DurationScale`, or `std::nullopt` if a match is not found.
 llvm::Optional<DurationScale> getScaleForTimeInverse(llvm::StringRef Name);
 
 /// Given a `Scale` return the fully qualified inverse functions for it.
