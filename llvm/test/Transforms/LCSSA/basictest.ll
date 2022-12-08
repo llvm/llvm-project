@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=lcssa -S | FileCheck %s
-; RUN: opt < %s -passes=lcssa -S | FileCheck %s
 ; RUN: opt < %s -passes=debugify,lcssa -S | FileCheck -check-prefix=DEBUGIFY %s
 
 define void @lcssa(i1 %S2) {
