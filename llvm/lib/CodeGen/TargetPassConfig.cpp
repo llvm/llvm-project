@@ -551,7 +551,7 @@ static void registerPartialPipelineCallback(PassInstrumentationCallbacks &PIC,
       [=, EnableCurrent = StartBefore.empty() && StartAfter.empty(),
        EnableNext = std::optional<bool>(), StartBeforeCount = 0u,
        StartAfterCount = 0u, StopBeforeCount = 0u,
-       StopAfterCount = 0u](StringRef P, std::any) mutable {
+       StopAfterCount = 0u](StringRef P, Any) mutable {
         bool StartBeforePass = !StartBefore.empty() && P.contains(StartBefore);
         bool StartAfterPass = !StartAfter.empty() && P.contains(StartAfter);
         bool StopBeforePass = !StopBefore.empty() && P.contains(StopBefore);
@@ -586,7 +586,7 @@ void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
                                    LLVMTargetMachine &LLVMTM) {
 
   // Register a callback for disabling passes.
-  PIC.registerShouldRunOptionalPassCallback([](StringRef P, std::any) {
+  PIC.registerShouldRunOptionalPassCallback([](StringRef P, Any) {
 
 #define DISABLE_PASS(Option, Name)                                             \
   if (Option && P.contains(#Name))                                             \

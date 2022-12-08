@@ -15,8 +15,6 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/PassManagerImpl.h"
 
-#include <any>
-
 using namespace llvm;
 
 namespace llvm {
@@ -42,12 +40,12 @@ Error MachineFunctionPassManager::run(Module &M,
     // No need to pop this callback later since MIR pipeline is flat which means
     // current pipeline is the top-level pipeline. Callbacks are not used after
     // current pipeline.
-    PI.pushBeforeNonSkippedPassCallback([&MFAM](StringRef PassID, std::any IR) {
-      assert(std::any_cast<const MachineFunction *>(&IR));
-      const MachineFunction **MF = std::any_cast<const MachineFunction *>(&IR);
+    PI.pushBeforeNonSkippedPassCallback([&MFAM](StringRef PassID, Any IR) {
+      assert(any_isa<const MachineFunction *>(IR));
+      const MachineFunction *MF = any_cast<const MachineFunction *>(IR);
       assert(MF && "Machine function should be valid for printing");
       std::string Banner = std::string("After ") + std::string(PassID);
-      verifyMachineFunction(&MFAM, Banner, **MF);
+      verifyMachineFunction(&MFAM, Banner, *MF);
     });
   }
 

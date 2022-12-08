@@ -61,7 +61,7 @@ public:
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
   // Implementation of pass instrumentation callbacks for new pass manager.
-  void runAfterPass(StringRef PassID, std::any IR);
+  void runAfterPass(StringRef PassID, Any IR);
 
 private:
   // Allow a little bias due the rounding to integral factors.
