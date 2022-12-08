@@ -1,4 +1,4 @@
-; RUN: not opt -S -verify < %s 2>&1 | FileCheck %s
+; RUN: not opt -S -passes=verify < %s 2>&1 | FileCheck %s
 
 ; Reject stepvector intrinsics that return a scalar
 
