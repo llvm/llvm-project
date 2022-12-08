@@ -1545,8 +1545,14 @@ Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
 void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
                                          Instruction **ThenTerm,
                                          Instruction **ElseTerm,
-                                         MDNode *BranchWeights) {
+                                         MDNode *BranchWeights,
+                                         DomTreeUpdater *DTU) {
   BasicBlock *Head = SplitBefore->getParent();
+
+  SmallPtrSet<BasicBlock *, 8> UniqueOrigSuccessors;
+  if (DTU)
+    UniqueOrigSuccessors.insert(succ_begin(Head), succ_end(Head));
+
   BasicBlock *Tail = Head->splitBasicBlock(SplitBefore->getIterator());
   Instruction *HeadOldTerm = Head->getTerminator();
   LLVMContext &C = Head->getContext();
@@ -1560,6 +1566,19 @@ void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
     BranchInst::Create(/*ifTrue*/ThenBlock, /*ifFalse*/ElseBlock, Cond);
   HeadNewTerm->setMetadata(LLVMContext::MD_prof, BranchWeights);
   ReplaceInstWithInst(HeadOldTerm, HeadNewTerm);
+  if (DTU) {
+    SmallVector<DominatorTree::UpdateType, 8> Updates;
+    Updates.reserve(4 + 2 * UniqueOrigSuccessors.size());
+    for (BasicBlock *Succ : successors(Head)) {
+      Updates.push_back({DominatorTree::Insert, Head, Succ});
+      Updates.push_back({DominatorTree::Insert, Succ, Tail});
+    }
+    for (BasicBlock *UniqueOrigSuccessor : UniqueOrigSuccessors)
+      Updates.push_back({DominatorTree::Insert, Tail, UniqueOrigSuccessor});
+    for (BasicBlock *UniqueOrigSuccessor : UniqueOrigSuccessors)
+      Updates.push_back({DominatorTree::Delete, Head, UniqueOrigSuccessor});
+    DTU->applyUpdates(Updates);
+  }
 }
 
 BranchInst *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
