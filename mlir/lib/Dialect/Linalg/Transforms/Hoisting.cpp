@@ -14,9 +14,7 @@
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -31,7 +29,6 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 
 using llvm::dbgs;
@@ -428,10 +425,10 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
 
       LLVM_DEBUG(DBGS() << "Candidate for hoisting: "
                         << *transferRead.getOperation() << "\n");
-      auto loop = dyn_cast<LoopLikeOpInterface>(transferRead->getParentOp());
+      auto loop = dyn_cast<scf::ForOp>(transferRead->getParentOp());
       LLVM_DEBUG(DBGS() << "Parent op: " << *transferRead->getParentOp()
                         << "\n");
-      if (!isa_and_nonnull<scf::ForOp, AffineForOp>(loop))
+      if (!loop)
         return WalkResult::advance();
 
       LLVM_DEBUG(DBGS() << "Candidate read: " << *transferRead.getOperation()
@@ -516,47 +513,18 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
                                     ArrayRef<BlockArgument> newBBArgs) {
         return SmallVector<Value>{transferWrite.getVector()};
       };
+      auto newForOp =
+          replaceLoopWithNewYields(b, loop, transferRead.getVector(), yieldFn);
 
       // Transfer write has been hoisted, need to update the written vector by
       // the value yielded by the newForOp.
-      return TypeSwitch<Operation *, WalkResult>(loop)
-          .Case<scf::ForOp>([&](scf::ForOp scfForOp) {
-            auto newForOp = replaceLoopWithNewYields(
-                b, scfForOp, transferRead.getVector(), yieldFn);
-            transferWrite.getVectorMutable().assign(
-                newForOp.getResults().back());
-            changed = true;
-            loop.erase();
-            // Need to interrupt and restart because erasing the loop messes up
-            // the walk.
-            return WalkResult::interrupt();
-          })
-          .Case<AffineForOp>([&](AffineForOp affineForOp) {
-            auto newForOp = replaceForOpWithNewYields(
-                b, affineForOp, transferRead.getVector(),
-                SmallVector<Value>{transferWrite.getVector()},
-                transferWrite.getVector());
-            ArrayRef<BlockArgument> newBBArgs =
-                newForOp.getLoopBody().getArguments().take_back(1);
-            // Replace all uses of the `transferRead` with the corresponding
-            // basic block argument.
-            for (auto it :
-                 llvm::zip(ValueRange{transferRead.getVector()}, newBBArgs)) {
-              std::get<0>(it).replaceUsesWithIf(
-                  std::get<1>(it), [&](OpOperand &use) {
-                    Operation *user = use.getOwner();
-                    return newForOp->isProperAncestor(user);
-                  });
-            }
-            transferWrite.getVectorMutable().assign(
-                newForOp.getResults().back());
-            changed = true;
-            loop.erase();
-            // Need to interrupt and restart because erasing the loop messes up
-            // the walk.
-            return WalkResult::interrupt();
-          })
-          .Default([](Operation *) { return WalkResult::interrupt(); });
+      transferWrite.getVectorMutable().assign(newForOp.getResults().back());
+
+      changed = true;
+      loop.erase();
+      // Need to interrupt and restart because erasing the loop messes up the
+      // walk.
+      return WalkResult::interrupt();
     });
   }
 }
