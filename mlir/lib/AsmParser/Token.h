@@ -97,8 +97,8 @@ public:
   Optional<bool> getIntTypeSignedness() const;
 
   /// Given a hash_identifier token like #123, try to parse the number out of
-  /// the identifier, returning None if it is a named identifier like #x or
-  /// if the integer doesn't fit.
+  /// the identifier, returning std::nullopt if it is a named identifier like #x
+  /// or if the integer doesn't fit.
   Optional<unsigned> getHashIdentifierNumber() const;
 
   /// Given a token containing a string literal, return its value, including
