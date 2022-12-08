@@ -823,8 +823,7 @@ public:
           rewriter.create<memref::ReallocOp>(loc, bufferType, buffer, capacity);
       if (enableBufferInitialization) {
         Value fillSize = rewriter.create<arith::SubIOp>(loc, capacity, newSize);
-        Value fillValue = rewriter.create<arith::ConstantOp>(
-            loc, value.getType(), rewriter.getZeroAttr(value.getType()));
+        Value fillValue = constantZero(rewriter, loc, value.getType());
         Value subBuffer = rewriter.create<memref::SubViewOp>(
             loc, newBuffer, /*offset=*/ValueRange{newSize},
             /*size=*/ValueRange{fillSize},
