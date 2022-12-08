@@ -813,16 +813,17 @@ struct Comparable {
 TEST(OptionalTest, UseInUnitTests) {
   // Test that we invoke the streaming operators when pretty-printing values in
   // EXPECT macros.
-  EXPECT_NONFATAL_FAILURE(EXPECT_EQ(llvm::None, ComparableAndStreamable::get()),
-                          "Expected equality of these values:\n"
-                          "  llvm::None\n"
-                          "    Which is: None\n"
-                          "  ComparableAndStreamable::get()\n"
-                          "    Which is: ComparableAndStreamable");
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_EQ(std::nullopt, ComparableAndStreamable::get()),
+      "Expected equality of these values:\n"
+      "  std::nullopt\n"
+      "    Which is: None\n"
+      "  ComparableAndStreamable::get()\n"
+      "    Which is: ComparableAndStreamable");
 
   // Test that it is still possible to compare objects which do not have a
   // custom streaming operator.
-  EXPECT_NONFATAL_FAILURE(EXPECT_EQ(llvm::None, Comparable::get()), "object");
+  EXPECT_NONFATAL_FAILURE(EXPECT_EQ(std::nullopt, Comparable::get()), "object");
 }
 
 TEST(OptionalTest, HashValue) {

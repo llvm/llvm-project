@@ -232,6 +232,11 @@ static DemandedFields getDemanded(const MachineInstr &MI) {
     Res.LMUL = false;
   }
 
+  // For vmv.s.x and vfmv.s.f, there is only two behaviors, VL = 0 and VL > 0.
+  // As such, the result does not depend on LMUL.
+  if (isScalarMoveInstr(MI))
+    Res.LMUL = false;
+
   return Res;
 }
 
