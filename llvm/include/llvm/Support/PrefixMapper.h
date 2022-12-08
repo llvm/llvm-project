@@ -13,9 +13,9 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/StringSaver.h"
 
 namespace llvm {
+class StringSaver;
 
 namespace vfs {
 class FileSystem;
@@ -51,32 +51,49 @@ struct MappedPrefix {
 /// need it, and those could assert/crash if one is not configured.
 class PrefixMapper {
 public:
+  virtual ~PrefixMapper() = default;
+
   /// Map \p Path, and saving the new (or existing) path in \p NewPath.
   ///
   /// \pre \p Path is not a reference into \p NewPath.
-  void map(StringRef Path, SmallVectorImpl<char> &NewPath);
-  void map(StringRef Path, std::string &NewPath);
-
-  /// Map \p Path, returning \a StringSaver::save() for new paths that aren't
-  /// exact matches.
-  StringRef map(StringRef Path);
+  Error map(StringRef Path, SmallVectorImpl<char> &NewPath);
+  Error map(StringRef Path, std::string &NewPath);
 
   /// Map \p Path, returning \a std::string.
-  std::string mapToString(StringRef Path);
+  Expected<std::string> mapToString(StringRef Path);
 
   /// Map \p Path in place.
-  void mapInPlace(SmallVectorImpl<char> &Path);
-  void mapInPlace(std::string &Path);
+  Error mapInPlace(SmallVectorImpl<char> &Path);
+  Error mapInPlace(std::string &Path);
 
-private:
+  void mapInPlaceOrClear(std::string &Path) {
+    if (errorToBool(mapInPlace(Path)))
+      Path.clear();
+  }
+
+  /// Like \p map() except it returns \p None in case of an error.
+  Optional<StringRef> mapOrNoneIfError(StringRef Path,
+                                       SmallVectorImpl<char> &Storage) {
+    if (Error E = map(Path, Storage)) {
+      consumeError(std::move(E));
+      return std::nullopt;
+    }
+    return StringRef(Storage.begin(), Storage.size());
+  }
+
+protected:
   /// Map (or unmap) \p Path. On a match, fills \p Storage with the mapped path
   /// unless it's an exact match.
   ///
   /// \pre \p Path is not a reference into \p Storage.
-  Optional<StringRef> mapImpl(StringRef Path, SmallVectorImpl<char> &Storage);
+  virtual Expected<Optional<StringRef>> mapImpl(StringRef Path,
+                                                SmallVectorImpl<char> &Storage);
 
 public:
-  void add(const MappedPrefix &MP) { Mappings.push_back(MP); }
+  virtual Error add(const MappedPrefix &MP) {
+    Mappings.push_back(MP);
+    return Error::success();
+  }
 
   /// A path-based reverse lexicographic sort, putting deeper paths first so
   /// that deeper paths are prioritized over their parent paths. For example,
@@ -92,31 +109,39 @@ public:
   /// TODO: Test.
   void sort();
 
-  template <class RangeT> void addRange(const RangeT &Mappings) {
-    this->Mappings.append(Mappings.begin(), Mappings.end());
+  template <class RangeT> Error addRange(const RangeT &Mappings) {
+    for (const MappedPrefix &M : Mappings)
+      if (Error E = add(M))
+        return E;
+    return Error::success();
   }
 
-  template <class RangeT> void addInverseRange(const RangeT &Mappings) {
+  template <class RangeT> Error addInverseRange(const RangeT &Mappings) {
     for (const MappedPrefix &M : Mappings)
-      add(M.getInverse());
+      if (Error E = add(M.getInverse()))
+        return E;
+    return Error::success();
+  }
+
+  template <class RangeT> void addRangeIfValid(const RangeT &Mappings) {
+    for (const MappedPrefix &M : Mappings)
+      consumeError(add(M));
+  }
+
+  template <class RangeT> void addInverseRangeIfValid(const RangeT &Mappings) {
+    for (const MappedPrefix &M : Mappings)
+      consumeError(add(M.getInverse()));
   }
 
   ArrayRef<MappedPrefix> getMappings() const { return Mappings; }
 
-  StringSaver &getStringSaver() { return Saver; }
   sys::path::Style getPathStyle() const { return PathStyle; }
 
   PrefixMapper(sys::path::Style PathStyle = sys::path::Style::native)
-      : PathStyle(PathStyle), Alloc(std::in_place), Saver(*Alloc) {}
-
-  PrefixMapper(BumpPtrAllocator &Alloc,
-               sys::path::Style PathStyle = sys::path::Style::native)
-      : PathStyle(PathStyle), Saver(Alloc) {}
+      : PathStyle(PathStyle) {}
 
 private:
   sys::path::Style PathStyle;
-  Optional<BumpPtrAllocator> Alloc;
-  StringSaver Saver;
   SmallVector<MappedPrefix> Mappings;
 };
 
@@ -149,98 +174,27 @@ private:
 ///
 /// Returns an error if an input cannot be found, except that an empty string
 /// always maps to itself.
-class TreePathPrefixMapper {
-public:
-  void map(const vfs::CachedDirectoryEntry &Entry,
-           SmallVectorImpl<char> &NewPath);
-  void map(const vfs::CachedDirectoryEntry &Entry, std::string &NewPath);
-  StringRef map(const vfs::CachedDirectoryEntry &Entry);
-  std::string mapToString(const vfs::CachedDirectoryEntry &Entry);
-
-  Error map(StringRef Path, SmallVectorImpl<char> &NewPath);
-  Error map(StringRef Path, std::string &NewPath) {
-    return mapToString(Path).moveInto(NewPath);
-  }
-  Expected<StringRef> map(StringRef Path);
-  Expected<std::string> mapToString(StringRef Path);
-  Error mapInPlace(SmallVectorImpl<char> &Path);
-  Error mapInPlace(std::string &Path);
-
-  void mapOrOriginal(StringRef Path, SmallVectorImpl<char> &NewPath) {
-    if (errorToBool(map(Path, NewPath)))
-      NewPath.assign(Path.begin(), Path.end());
-  }
-  void mapOrOriginal(StringRef Path, std::string &NewPath) {
-    if (errorToBool(map(Path, NewPath)))
-      NewPath.assign(Path.begin(), Path.end());
-  }
-  Optional<StringRef> mapOrNone(StringRef Path) {
-    return expectedToOptional(map(Path));
-  }
-  StringRef mapOrOriginal(StringRef Path) {
-    Optional<StringRef> Mapped = mapOrNone(Path);
-    return Mapped ? *Mapped : Path;
-  }
-  Optional<std::string> mapToStringOrNone(StringRef Path) {
-    return expectedToOptional(mapToString(Path));
-  }
-  void mapInPlaceOrClear(SmallVectorImpl<char> &Path) {
-    if (errorToBool(mapInPlace(Path)))
-      Path.clear();
-  }
-  void mapInPlaceOrClear(std::string &Path) {
-    if (errorToBool(mapInPlace(Path)))
-      Path.clear();
-  }
-
+class TreePathPrefixMapper : public PrefixMapper {
 private:
+  Expected<Optional<StringRef>>
+  mapImpl(StringRef Path, SmallVectorImpl<char> &Storage) override;
+
   /// Find the tree path for \p Path, getting the real path for its parent
   /// directory but not following symlinks in \a sys::path::filename().
   Expected<StringRef> getTreePath(StringRef Path);
-  Error getTreePath(StringRef Path, SmallVectorImpl<char> &TreePath);
   Error canonicalizePrefix(StringRef &Prefix);
 
 public:
-  ArrayRef<MappedPrefix> getMappings() const { return PM.getMappings(); }
-  sys::path::Style getPathStyle() const { return PM.getPathStyle(); }
+  Error add(const MappedPrefix &Mapping) override;
 
-  Error add(const MappedPrefix &Mapping);
-
-  template <class RangeT> Error addRange(const RangeT &Mappings) {
-    for (const MappedPrefix &M : Mappings)
-      if (Error E = add(M))
-        return E;
-    return Error::success();
-  }
-
-  template <class RangeT> Error addInverseRange(const RangeT &Mappings) {
-    for (const MappedPrefix &M : Mappings)
-      if (Error E = add(M.getInverse()))
-        return E;
-    return Error::success();
-  }
-
-  template <class RangeT> void addRangeIfValid(const RangeT &Mappings) {
-    for (const MappedPrefix &M : Mappings)
-      consumeError(add(M));
-  }
-
-  template <class RangeT> void addInverseRangeIfValid(const RangeT &Mappings) {
-    for (const MappedPrefix &M : Mappings)
-      consumeError(add(M.getInverse()));
-  }
-
-  void sort() { PM.sort(); }
+  StringRef mapDirEntry(const vfs::CachedDirectoryEntry &Entry,
+                        StringSaver &Saver);
 
   TreePathPrefixMapper(IntrusiveRefCntPtr<vfs::FileSystem> FS,
-                       sys::path::Style PathStyle = sys::path::Style::native);
-  TreePathPrefixMapper(IntrusiveRefCntPtr<vfs::FileSystem> FS,
-                       BumpPtrAllocator &Alloc,
                        sys::path::Style PathStyle = sys::path::Style::native);
   ~TreePathPrefixMapper();
 
 private:
-  PrefixMapper PM;
   IntrusiveRefCntPtr<vfs::FileSystem> FS;
 };
 

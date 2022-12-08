@@ -16,7 +16,7 @@
 
 namespace llvm {
 class StringSaver;
-class TreePathPrefixMapper;
+class PrefixMapper;
 
 namespace cas {
 class ObjectStore;
@@ -43,11 +43,11 @@ struct DepscanPrefixMapping {
   /// from \c DepscanPrefixMapping to the \p Mapper.
   llvm::Error configurePrefixMapper(const CompilerInvocation &Invocation,
                                     llvm::StringSaver &Saver,
-                                    llvm::TreePathPrefixMapper &Mapper) const;
+                                    llvm::PrefixMapper &Mapper) const;
 
   /// Apply the mappings from \p Mapper to \p Invocation.
   static void remapInvocationPaths(CompilerInvocation &Invocation,
-                                   llvm::TreePathPrefixMapper &Mapper);
+                                   llvm::PrefixMapper &Mapper);
 };
 } // namespace dependencies
 } // namespace tooling

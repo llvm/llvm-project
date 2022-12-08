@@ -15,6 +15,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrefixMapper.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
@@ -343,13 +344,28 @@ TEST(CachingOnDiskFileSystemTest, Exists) {
   EXPECT_FALSE(FS->exists(BrokenLink.path()));
 }
 
+struct PrefixMapperWrapper {
+  TreePathPrefixMapper PM;
+  BumpPtrAllocator Alloc;
+  StringSaver Saver;
+
+  PrefixMapperWrapper(IntrusiveRefCntPtr<cas::CachingOnDiskFileSystem> FS)
+      : PM(std::move(FS)), Saver(Alloc) {}
+
+  Error add(const MappedPrefix &Mapping) { return PM.add(Mapping); }
+
+  StringRef map(const vfs::CachedDirectoryEntry &Entry) {
+    return PM.mapDirEntry(Entry, Saver);
+  }
+};
+
 TEST(CachingOnDiskFileSystemTest, TrackNewAccesses) {
   TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
   IntrusiveRefCntPtr<cas::CachingOnDiskFileSystem> FS =
       cantFail(cas::createCachingOnDiskFileSystem(cas::createInMemoryCAS()));
   ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
 
-  TreePathPrefixMapper Remapper(FS);
+  PrefixMapperWrapper Remapper(FS);
   ASSERT_THAT_ERROR(Remapper.add(MappedPrefix{TestDirectory.path(), "/"}),
                     Succeeded());
 
@@ -396,7 +412,7 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesStack) {
       cantFail(cas::createCachingOnDiskFileSystem(cas::createInMemoryCAS()));
   ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
 
-  TreePathPrefixMapper Remapper(FS);
+  PrefixMapperWrapper Remapper(FS);
   ASSERT_THAT_ERROR(Remapper.add(MappedPrefix{TestDirectory.path(), "/"}),
                     Succeeded());
 
@@ -465,7 +481,7 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesExists) {
       cantFail(cas::createCachingOnDiskFileSystem(cas::createInMemoryCAS()));
   ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
 
-  TreePathPrefixMapper Remapper(FS);
+  PrefixMapperWrapper Remapper(FS);
   ASSERT_THAT_ERROR(Remapper.add(MappedPrefix{TestDirectory.path(), "/"}),
                     Succeeded());
 
@@ -600,7 +616,7 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
       cantFail(cas::createCachingOnDiskFileSystem(cas::createInMemoryCAS()));
   ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
 
-  TreePathPrefixMapper Remapper(FS);
+  PrefixMapperWrapper Remapper(FS);
   ASSERT_THAT_ERROR(Remapper.add(MappedPrefix{TestDirectory.path(), "/"}),
                     Succeeded());
 

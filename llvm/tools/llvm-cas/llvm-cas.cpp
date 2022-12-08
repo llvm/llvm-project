@@ -403,7 +403,8 @@ static Expected<ObjectProxy> ingestFileSystemImpl(ObjectStore &CAS,
     return FS.takeError();
 
   BumpPtrAllocator Alloc;
-  TreePathPrefixMapper Mapper(*FS, Alloc);
+  StringSaver Saver(Alloc);
+  TreePathPrefixMapper Mapper(*FS);
   SmallVector<llvm::MappedPrefix> Split;
   if (!PrefixMapPaths.empty()) {
     MappedPrefix::transformJoinedIfValid(PrefixMapPaths, Split);
@@ -419,7 +420,7 @@ static Expected<ObjectProxy> ingestFileSystemImpl(ObjectStore &CAS,
 
   return (*FS)->createTreeFromNewAccesses(
       [&](const llvm::vfs::CachedDirectoryEntry &Entry) {
-        return Mapper.map(Entry);
+        return Mapper.mapDirEntry(Entry, Saver);
       });
 }
 
