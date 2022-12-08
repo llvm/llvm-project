@@ -415,7 +415,8 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
   // If this is a function specialization then use the pattern body as the
   // location for the function.
   if (const auto *SpecDecl = FD->getTemplateInstantiationPattern())
-    llvm_unreachable("NYI");
+    if (SpecDecl->hasBody(SpecDecl))
+      Loc = SpecDecl->getLocation();
 
   Stmt *Body = FD->getBody();
 
