@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax < %s -inline -S | grep example
+; RUN: opt < %s -passes='cgscc(inline)' -S | grep example
 
 	%IntArray = type { i32, [0 x ptr] }
 

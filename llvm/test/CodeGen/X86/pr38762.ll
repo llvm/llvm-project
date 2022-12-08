@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax < %s -S -simplifycfg | FileCheck %s
+; RUN: opt < %s -S -passes=simplifycfg | FileCheck %s
 
 ; Note: This patch is a complement to pr38763.
 ;
