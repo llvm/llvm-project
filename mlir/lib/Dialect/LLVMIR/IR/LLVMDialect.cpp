@@ -2821,6 +2821,15 @@ LogicalResult LLVMDialect::verifyRegionResultAttribute(Operation *op,
                << "llvm.noalias attribute attached to non-pointer result";
       return success();
     }
+    if (name == LLVMDialect::getReadonlyAttrName()) {
+      if (!attrValue.isa<UnitAttr>())
+        return op->emitError() << "expected llvm.readonly result attribute to "
+                                  "be a unit attribute";
+      if (verifyValueType && !resTy.isa<LLVMPointerType>())
+        return op->emitError()
+               << "llvm.readonly attribute attached to non-pointer result";
+      return success();
+    }
     if (name == LLVMDialect::getNoUndefAttrName()) {
       if (!attrValue.isa<UnitAttr>())
         return op->emitError() << "expected llvm.noundef result attribute to "
