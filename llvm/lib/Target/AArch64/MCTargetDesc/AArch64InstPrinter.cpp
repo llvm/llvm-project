@@ -1288,7 +1288,7 @@ static void printMemExtendImpl(bool SignExtend, bool DoShift, unsigned Width,
     O << " ";
     if (UseMarkup)
       O << "<imm:";
-    O << " #" << Log2_32(Width / 8);
+    O << "#" << Log2_32(Width / 8);
     if (UseMarkup)
       O << ">";
   }
