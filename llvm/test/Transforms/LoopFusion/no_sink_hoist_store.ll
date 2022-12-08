@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-simplify -loop-fusion -debug-only=loop-fusion < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=loop-simplify,loop-fusion -debug-only=loop-fusion < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 ; CHECK: Could not hoist/sink all instructions
 
@@ -11,7 +11,7 @@ pre1:
   %ptr = alloca i32, align 4
   br label %body1
 
-; CHECK:body1: 
+; CHECK:body1:
 ; CHECK-NOT:  store i32 3, i32* %ptr
 body1:  ; preds = %pre1, %body1
   %i = phi i32 [%i_next, %body1], [0, %pre1]

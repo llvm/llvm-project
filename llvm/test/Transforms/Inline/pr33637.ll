@@ -1,4 +1,4 @@
-; RUN: opt -inline < %s
+; RUN: opt -passes=inline < %s
 
 define void @patatino() {
 for.cond:

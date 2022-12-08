@@ -1,8 +1,8 @@
-; RUN: opt < %s -inline -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=inline,instcombine -S | FileCheck %s
 
 ; PR21403: http://llvm.org/bugs/show_bug.cgi?id=21403
 ; When the call to sqrtf is replaced by an intrinsic call to fabs,
-; it should not cause a problem in CGSCC. 
+; it should not cause a problem in CGSCC.
 
 define float @bar(float %f) #0 {
   %mul = fmul fast float %f, %f

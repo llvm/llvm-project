@@ -15,7 +15,6 @@
 #define LLVM_BITSTREAM_BITSTREAMWRITER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodes.h"
@@ -23,6 +22,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -370,7 +370,7 @@ private:
   /// the code.
   template <typename uintty>
   void EmitRecordWithAbbrevImpl(unsigned Abbrev, ArrayRef<uintty> Vals,
-                                StringRef Blob, Optional<unsigned> Code) {
+                                StringRef Blob, std::optional<unsigned> Code) {
     const char *BlobData = Blob.data();
     unsigned BlobLen = (unsigned) Blob.size();
     unsigned AbbrevNo = Abbrev-bitc::FIRST_APPLICATION_ABBREV;

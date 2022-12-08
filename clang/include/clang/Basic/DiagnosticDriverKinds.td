@@ -342,6 +342,13 @@ def err_drv_small_columns : Error<
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
 
+def err_drv_print_header_env_var : Error<
+  "environment variable CC_PRINT_HEADERS_%select{FORMAT|FILTERING}0 has invalid value %1">;
+def err_drv_print_header_env_var_combination : Error<
+  "unsupported combination: CC_PRINT_HEADERS_FORMAT=%0 and CC_PRINT_HEADERS_FILTERING=%1">;
+def err_drv_print_header_env_var_combination_cc1 : Error<
+  "unsupported combination: -header-include-format=%0 and -header-include-filtering=%1">;
+
 def warn_O4_is_O3 : Warning<"-O4 is equivalent to -O3">, InGroup<Deprecated>;
 def warn_drv_optimization_value : Warning<"optimization level '%0' is not supported; using '%1%2' instead">,
   InGroup<InvalidCommandLineArgument>;

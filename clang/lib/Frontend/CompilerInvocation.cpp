@@ -2151,6 +2151,16 @@ static bool ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
       Opts.ExtraDeps.emplace_back(std::string(Val), EDK_ModuleFile);
   }
 
+  // Check for invalid combinations of header-include-format
+  // and header-include-filtering.
+  if ((Opts.HeaderIncludeFormat == HIFMT_Textual &&
+       Opts.HeaderIncludeFiltering != HIFIL_None) ||
+      (Opts.HeaderIncludeFormat == HIFMT_JSON &&
+       Opts.HeaderIncludeFiltering != HIFIL_Only_Direct_System))
+    Diags.Report(diag::err_drv_print_header_env_var_combination_cc1)
+        << Args.getLastArg(OPT_header_include_format_EQ)->getValue()
+        << Args.getLastArg(OPT_header_include_filtering_EQ)->getValue();
+
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 

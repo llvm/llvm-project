@@ -322,7 +322,7 @@ void MCWinCOFFStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
 }
 
 void MCWinCOFFStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
-                                       uint64_t Size, unsigned ByteAlignment) {
+                                       uint64_t Size, Align ByteAlignment) {
   llvm_unreachable("not implemented");
 }
 

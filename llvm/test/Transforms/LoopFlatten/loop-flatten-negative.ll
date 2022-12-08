@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-flatten -debug-only=loop-flatten 2>&1 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-flatten -debug-only=loop-flatten 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
@@ -434,7 +434,7 @@ while.body3:
 while.end.loopexit:
   %inc.lcssa = phi i32 [ %inc, %while.body3 ]
   br label %while.end
-  
+
 while.end:
   %j.1 = phi i32 [ %j.017, %while.cond1.preheader], [ %inc.lcssa, %while.end.loopexit ]
   %inc4 = add i32 %i.016, 1
@@ -760,7 +760,7 @@ for.body7:
 define void @invalid_tripCount(i8* %a, i32 %b, i32 %c, i32 %initial-mutations, i32 %statemutations) {
 entry:
   %iszero = icmp eq i32 %b, 0
-  br i1 %iszero, label %for.empty, label %for.loopinit 
+  br i1 %iszero, label %for.empty, label %for.loopinit
 for.loopinit:
   br label %for.loopbody.outer
 for.loopbody.outer:
@@ -784,7 +784,7 @@ for.empty.loopexit:
   br label %for.empty
 for.empty:
   ret void
-} 
+}
 
 ; GEP doesn't dominate the loop latch so can't guarantee N*M won't overflow.
 @first = global i32 1, align 4

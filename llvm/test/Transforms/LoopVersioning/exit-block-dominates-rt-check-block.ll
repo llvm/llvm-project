@@ -2,12 +2,12 @@
 ; if the exit block of the loop (bb0) dominates the runtime check block
 ; (bb1 will become the runtime check block).
 
-; RUN: opt -loop-distribute -enable-loop-distribute -verify-dom-info -S -o - %s > %t
-; RUN: opt -loop-simplify -loop-distribute -enable-loop-distribute -verify-dom-info -S -o - %s > %t
+; RUN: opt -passes=loop-distribute -enable-loop-distribute -verify-dom-info -S -o - %s > %t
+; RUN: opt -passes=loop-simplify,loop-distribute -enable-loop-distribute -verify-dom-info -S -o - %s > %t
 ; RUN: FileCheck --check-prefix CHECK-VERSIONING -input-file %t %s
 
-; RUN: opt -loop-versioning -verify-dom-info -S -o - %s > %t
-; RUN: opt -loop-simplify -loop-versioning -verify-dom-info -S -o - %s > %t
+; RUN: opt -passes=loop-versioning -verify-dom-info -S -o - %s > %t
+; RUN: opt -passes=loop-simplify,loop-versioning -verify-dom-info -S -o - %s > %t
 ; RUN: FileCheck --check-prefix CHECK-VERSIONING -input-file %t %s
 
 @c1 = external global i16

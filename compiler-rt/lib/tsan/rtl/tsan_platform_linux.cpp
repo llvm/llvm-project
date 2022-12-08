@@ -230,6 +230,14 @@ void InitializePlatformEarly() {
     Die();
   }
 #endif
+#elif SANITIZER_LOONGARCH64
+# if !SANITIZER_GO
+  if (vmaSize != 47) {
+    Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
+    Printf("FATAL: Found %zd - Supported 47\n", vmaSize);
+    Die();
+  }
+# endif
 #elif defined(__powerpc64__)
 # if !SANITIZER_GO
   if (vmaSize != 44 && vmaSize != 46 && vmaSize != 47) {
@@ -375,6 +383,8 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 # else
   return mangled_sp;
 # endif
+#elif defined(__loongarch__)
+  return mangled_sp;
 #elif defined(__powerpc64__)
   // Reverse of:
   //   ld   r4, -28696(r13)
@@ -410,6 +420,8 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #elif SANITIZER_LINUX
 # ifdef __aarch64__
 #  define LONG_JMP_SP_ENV_SLOT 13
+# elif defined(__loongarch__)
+#  define LONG_JMP_SP_ENV_SLOT 1
 # elif defined(__mips64)
 #  define LONG_JMP_SP_ENV_SLOT 1
 # elif defined(__s390x__)

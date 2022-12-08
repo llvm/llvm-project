@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s  -passes='loop-vectorize' -force-vector-width=2 -enable-epilogue-vectorization -epilogue-vectorization-force-VF=2 --debug-only=loop-vectorize -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='loop-vectorize' -force-vector-width=2 -enable-epilogue-vectorization -epilogue-vectorization-force-VF=2 --debug-only=loop-vectorize -S 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-n32:64-v256:256:256-v512:512:512"
 
