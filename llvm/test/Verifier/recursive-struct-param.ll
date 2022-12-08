@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax -verify < %s
+; RUN: opt -passes=verify < %s
 
 %struct.__sFILE = type { %struct.__sFILE }
 
