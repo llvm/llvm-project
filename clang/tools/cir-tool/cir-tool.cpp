@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
   });
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
-    return cir::createConvertCIRToLLVMPass();
+    return cir::direct::createConvertCIRToLLVMPass();
   });
 
   mlir::registerTransformsPasses();
