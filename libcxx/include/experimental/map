@@ -49,11 +49,11 @@ _LIBCPP_BEGIN_NAMESPACE_LFTS_PMR
 
 template <class _Key, class _Value, class  _Compare = less<_Key>>
 using map = _VSTD::map<_Key, _Value, _Compare,
-                        polymorphic_allocator<pair<const _Key, _Value>>>;
+                        std::pmr::polymorphic_allocator<pair<const _Key, _Value>>>;
 
 template <class _Key, class _Value, class  _Compare = less<_Key>>
 using multimap = _VSTD::multimap<_Key, _Value, _Compare,
-                        polymorphic_allocator<pair<const _Key, _Value>>>;
+                        std::pmr::polymorphic_allocator<pair<const _Key, _Value>>>;
 
 #endif // _LIBCPP_CXX03_LANG
 

@@ -6845,10 +6845,9 @@ regex_replace(const _CharT* __s,
 _LIBCPP_END_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 14
-_LIBCPP_BEGIN_NAMESPACE_STD
-namespace pmr {
+_LIBCPP_BEGIN_NAMESPACE_STD_PMR
 template <class _BidirT>
-using match_results = std::match_results<_BidirT, polymorphic_allocator<std::sub_match<_BidirT>>>;
+using match_results = std::match_results<_BidirT, std::pmr::polymorphic_allocator<std::sub_match<_BidirT>>>;
 
 using cmatch  = match_results<const char*>;
 using smatch  = match_results<std::pmr::string::const_iterator>;
@@ -6857,8 +6856,7 @@ using smatch  = match_results<std::pmr::string::const_iterator>;
 using wcmatch = match_results<const wchar_t*>;
 using wsmatch = match_results<std::pmr::wstring::const_iterator>;
 #endif
-} // namespace pmr
-_LIBCPP_END_NAMESPACE_STD
+_LIBCPP_END_NAMESPACE_STD_PMR
 #endif
 
 _LIBCPP_POP_MACROS

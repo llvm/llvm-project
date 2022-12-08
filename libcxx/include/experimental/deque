@@ -43,7 +43,7 @@ _LIBCPP_BEGIN_NAMESPACE_LFTS_PMR
 #ifndef _LIBCPP_CXX03_LANG
 
 template <class _ValueT>
-using deque = _VSTD::deque<_ValueT, polymorphic_allocator<_ValueT>>;
+using deque = _VSTD::deque<_ValueT, std::pmr::polymorphic_allocator<_ValueT>>;
 
 #endif // _LIBCPP_CXX03_LANG
 

@@ -15,13 +15,13 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
+namespace std  { // purposefully not using versioning namespace
 
 namespace pmr {
 template <class _ValueType>
 class _LIBCPP_TEMPLATE_VIS polymorphic_allocator;
 } // namespace pmr
 
-_LIBCPP_END_NAMESPACE_STD
+}
 
 #endif // _LIBCPP___FWD_MEMORY_RESOURCE_H
