@@ -104,7 +104,7 @@ public:
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                        unsigned ByteAlignment) override;
+                        Align ByteAlignment) override;
 
   void emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                              Align ByteAlignment) override;
@@ -431,13 +431,13 @@ void MCMachOStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
 }
 
 void MCMachOStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                                       unsigned ByteAlignment) {
+                                       Align ByteAlignment) {
   // FIXME: Darwin 'as' does appear to allow redef of a .comm by itself.
   assert(Symbol->isUndefined() && "Cannot define a symbol twice!");
 
   getAssembler().registerSymbol(*Symbol);
   Symbol->setExternal(true);
-  Symbol->setCommon(Size, ByteAlignment);
+  Symbol->setCommon(Size, ByteAlignment.value());
 }
 
 void MCMachOStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,

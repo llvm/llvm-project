@@ -754,7 +754,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (GVKind.isCommon()) {
     if (Size == 0) Size = 1;   // .comm Foo, 0 is undefined, avoid it.
     // .comm _foo, 42, 4
-    OutStreamer->emitCommonSymbol(GVSym, Size, Alignment.value());
+    OutStreamer->emitCommonSymbol(GVSym, Size, Alignment);
     return;
   }
 
@@ -795,7 +795,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     // .local _foo
     OutStreamer->emitSymbolAttribute(GVSym, MCSA_Local);
     // .comm _foo, 42, 4
-    OutStreamer->emitCommonSymbol(GVSym, Size, Alignment.value());
+    OutStreamer->emitCommonSymbol(GVSym, Size, Alignment);
     return;
   }
 
