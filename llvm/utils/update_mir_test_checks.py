@@ -9,7 +9,8 @@ The checks added by this script will cover the entire body of each
 function it handles. Virtual registers used are given names via
 FileCheck patterns, so if you do want to check a subset of the body it
 should be straightforward to trim out the irrelevant parts. None of
-the YAML metadata will be checked, other than function names.
+the YAML metadata will be checked, other than function names, and fixedStack
+if the --print-fixed-stack option is used.
 
 If there are multiple llc commands in a test, the full set of checks
 will be repeated for each different check pattern. Checks for patterns
@@ -51,6 +52,10 @@ MIR_FUNC_RE = re.compile(
     r'^---$'
     r'\n'
     r'^ *name: *(?P<func>[A-Za-z0-9_.-]+)$'
+    r'.*?'
+    r'^ *fixedStack: *(\[\])? *\n'
+    r'(?P<fixedStack>.*?)\n?'
+    r'^ *stack:'
     r'.*?'
     r'^ *body: *\|\n'
     r'(?P<body>.*?)\n'
@@ -168,10 +173,22 @@ def find_functions_with_one_bb(lines, verbose=False):
     return result
 
 
-def build_function_body_dictionary(test, raw_tool_output, triple, prefixes,
+class FunctionInfo:
+    def __init__(self, body, fixedStack):
+        self.body = body
+        self.fixedStack = fixedStack
+
+    def __eq__(self, other):
+        if not isinstance(other, FunctionInfo):
+            return False
+        return self.body == other.body and self.fixedStack == other.fixedStack
+
+
+def build_function_info_dictionary(test, raw_tool_output, triple, prefixes,
                                    func_dict, verbose):
     for m in MIR_FUNC_RE.finditer(raw_tool_output):
         func = m.group('func')
+        fixedStack = m.group('fixedStack')
         body = m.group('body')
         if verbose:
             log('Processing function: {}'.format(func))
@@ -196,15 +213,16 @@ def build_function_body_dictionary(test, raw_tool_output, triple, prefixes,
         body = ''.join(mangled)
 
         for prefix in prefixes:
+            info = FunctionInfo(body, fixedStack)
             if func in func_dict[prefix]:
-                if func_dict[prefix][func] != body:
+                if func_dict[prefix][func] != info:
                     func_dict[prefix][func] = None
             else:
-                func_dict[prefix][func] = body
+                func_dict[prefix][func] = info
 
 
 def add_checks_for_function(test, output_lines, run_list, func_dict, func_name,
-                            single_bb, verbose=False):
+                            single_bb, args):
     printed_prefixes = set()
     for run in run_list:
         for prefix in run.prefixes:
@@ -216,9 +234,9 @@ def add_checks_for_function(test, output_lines, run_list, func_dict, func_name,
             #     # Add some space between different check prefixes.
             #     output_lines.append('')
             printed_prefixes.add(prefix)
-            log('Adding {} lines for {}'.format(prefix, func_name), verbose)
+            log('Adding {} lines for {}'.format(prefix, func_name), args.verbose)
             add_check_lines(test, output_lines, prefix, func_name, single_bb,
-                            func_dict[prefix][func_name].splitlines())
+                            func_dict[prefix][func_name], args)
             break
         else:
             common.warn(
@@ -228,7 +246,8 @@ def add_checks_for_function(test, output_lines, run_list, func_dict, func_name,
 
 
 def add_check_lines(test, output_lines, prefix, func_name, single_bb,
-                    func_body):
+                    func_info: FunctionInfo, args):
+    func_body = func_info.body.splitlines()
     if single_bb:
         # Don't bother checking the basic block label for a single BB
         func_body.pop(0)
@@ -244,8 +263,14 @@ def add_check_lines(test, output_lines, prefix, func_name, single_bb,
     check = '{:>{}}; {}'.format('', indent, prefix)
 
     output_lines.append('{}-LABEL: name: {}'.format(check, func_name))
-    first_check = True
 
+    if args.print_fixed_stack:
+        output_lines.append('{}: fixedStack:'.format(check))
+        for stack_line in func_info.fixedStack.splitlines():
+            filecheck_directive = check + '-NEXT'
+            output_lines.append('{}: {}'.format(filecheck_directive, stack_line))
+
+    first_check = True
     for func_line in func_body:
         if not func_line.strip():
             # The mir printer prints leading whitespace so we can't use CHECK-EMPTY:
@@ -332,7 +357,7 @@ def update_test_file(args, test):
             common.warn('No triple found: skipping file', test_file=test)
             return
 
-        build_function_body_dictionary(test, raw_tool_output,
+        build_function_info_dictionary(test, raw_tool_output,
                                        triple_in_cmd or triple_in_ir,
                                        prefixes, func_dict, args.verbose)
 
@@ -381,14 +406,14 @@ def update_test_file(args, test):
                 state = 'mir function body'
                 add_checks_for_function(test, output_lines, run_list,
                                         func_dict, func_name, single_bb=False,
-                                        verbose=args.verbose)
+                                        args=args)
         elif state == 'mir function prefix':
             m = MIR_PREFIX_DATA_RE.match(input_line)
             if not m:
                 state = 'mir function body'
                 add_checks_for_function(test, output_lines, run_list,
                                         func_dict, func_name, single_bb=True,
-                                        verbose=args.verbose)
+                                        args=args)
 
             if should_add_line_to_output(input_line, prefix_set):
                 output_lines.append(input_line)
@@ -404,7 +429,7 @@ def update_test_file(args, test):
                 state = 'ir function body'
                 add_checks_for_function(test, output_lines, run_list,
                                         func_dict, func_name, single_bb=False,
-                                        verbose=args.verbose)
+                                        args=args)
 
             if should_add_line_to_output(input_line, prefix_set):
                 output_lines.append(input_line)
@@ -427,6 +452,8 @@ def main():
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--llc-binary', dest='llc', default='llc', type=LLC,
                         help='The "llc" binary to generate the test case with')
+    parser.add_argument('--print-fixed-stack', action='store_true',
+                        help='Add check lines for fixedStack')
     parser.add_argument('tests', nargs='+')
     args = common.parse_commandline_args(parser)
 
