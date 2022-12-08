@@ -32,6 +32,7 @@ def SIEncodingFamily {
   int GFX90A = 8;
   int GFX940 = 9;
   int GFX11 = 10;
+  int GFX12 = 11;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1038,6 +1039,18 @@ def VReg32OrOffClass : AsmOperandClass {
   let ParserMethod = "parseVReg32OrOff";
 }
 
+def GlobalSReg32ImmClass : AsmOperandClass {
+  let Name = "GlobalSReg32Imm";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseGlobalSReg32Imm";
+}
+
+def GlobalSReg64ImmClass : AsmOperandClass {
+  let Name = "GlobalSReg64Imm";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseGlobalSReg64Imm";
+}
+
 let OperandType = "OPERAND_IMMEDIATE" in {
 def SendMsgImm : Operand<i32> {
   let PrintMethod = "printSendMsg";
@@ -1067,6 +1080,18 @@ def DepCtrImm : Operand <i32> {
 def DELAY_FLAG : Operand <i32> {
   let ParserMatchClass = SDelayMatchClass;
   let PrintMethod = "printDelayFlag";
+}
+
+// Global register references are represented as immediate operands but printed
+// and parsed like registers.
+def globalSReg32imm : Operand<i16> {
+  let ParserMatchClass = GlobalSReg32ImmClass;
+  let PrintMethod = "printGlobalSReg32ImmOperand";
+}
+
+def globalSReg64imm : Operand<i16> {
+  let ParserMatchClass = GlobalSReg64ImmClass;
+  let PrintMethod = "printGlobalSReg64ImmOperand";
 }
 } // End OperandType = "OPERAND_IMMEDIATE"
 
@@ -1229,6 +1254,8 @@ def highmod : NamedOperandBit<"High", NamedMatchClass<"High">>;
 def CPol : NamedOperandU32<"CPol", NamedMatchClass<"CPol">>;
 def CPol_0 : NamedOperandU32Default0<"CPol", NamedMatchClass<"CPol">>;
 def CPol_GLC1 : NamedOperandU32Default1<"CPol", NamedMatchClass<"CPol">>;
+def Scope : NamedOperandU32<"Scope", NamedMatchClass<"Scope">>;
+def TH : NamedOperandU32<"TH", NamedMatchClass<"TH">>;
 
 def TFE : NamedOperandBit<"TFE", NamedMatchClass<"TFE">>;
 def SWZ : NamedOperandBit<"SWZ", NamedMatchClass<"SWZ">>;
@@ -1239,6 +1266,7 @@ def R128A16 : NamedOperandBit<"R128A16", NamedMatchClass<"R128A16">>;
 def GFX10A16 : NamedOperandBit<"GFX10A16", NamedMatchClass<"GFX10A16">>;
 def D16 : NamedOperandBit<"D16", NamedMatchClass<"D16">>;
 def LWE : NamedOperandBit<"LWE", NamedMatchClass<"LWE">>;
+def NV : NamedOperandBit<"NV", NamedMatchClass<"NV">>;
 def exp_compr : NamedOperandBit<"ExpCompr", NamedMatchClass<"ExpCompr">>;
 def exp_vm : NamedOperandBit<"ExpVM", NamedMatchClass<"ExpVM">>;
 
@@ -1277,6 +1305,8 @@ def exp_tgt : NamedOperandU32<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
 
 def wait_vdst : NamedOperandU8<"WaitVDST", NamedMatchClass<"WaitVDST">>;
 def wait_exp : NamedOperandU8<"WaitEXP", NamedMatchClass<"WaitEXP">>;
+def wait_va_vdst : NamedOperandU8<"WaitVAVDST", NamedMatchClass<"WaitVAVDST">>;
+def wait_vm_vsrc : NamedOperandU8<"WaitVMVSRC", NamedMatchClass<"WaitVMVSRC">>;
 
 } // End OperandType = "OPERAND_IMMEDIATE"
 
@@ -2896,7 +2926,8 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.SDWA10)],
                    [!cast<string>(SIEncodingFamily.GFX90A)],
                    [!cast<string>(SIEncodingFamily.GFX940)],
-                   [!cast<string>(SIEncodingFamily.GFX11)]];
+                   [!cast<string>(SIEncodingFamily.GFX11)],
+                   [!cast<string>(SIEncodingFamily.GFX12)]];
 }
 
 // Get equivalent SOPK instruction.
@@ -3035,14 +3066,14 @@ def getVOPDBaseFromComponent : SearchIndex {
 def VOPDPairs : GenericTable {
   let FilterClass = "VOPD_Base";
   let CppTypeName = "VOPDInfo";
-  let Fields = ["Opcode", "OpX", "OpY"];
+  let Fields = ["Opcode", "OpX", "OpY", "SubTgt"];
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getVOPDOpcodeHelper";
 }
 
 def getVOPDInfoFromComponentOpcodes : SearchIndex {
   let Table = VOPDPairs;
-  let Key = ["OpX", "OpY"];
+  let Key = ["OpX", "OpY", "SubTgt"];
 }
 
 include "SIInstructions.td"

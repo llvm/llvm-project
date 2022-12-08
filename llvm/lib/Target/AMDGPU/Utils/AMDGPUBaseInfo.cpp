@@ -283,6 +283,7 @@ struct VOPDInfo {
   uint16_t Opcode;
   uint16_t OpX;
   uint16_t OpY;
+  uint16_t Subtarget;
 };
 
 struct VOPTrue16Info {
@@ -444,11 +445,13 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_FMAC_F64_e64_gfx90a ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_F32_e64_gfx11 ||
+         Opc == AMDGPU::V_FMAC_F32_e64_gfx12 ||
          Opc == AMDGPU::V_FMAC_F32_e64_vi ||
          Opc == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F16_e64_gfx10 ||
          Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx11 ||
+         Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx12 ||
          Opc == AMDGPU::V_DOT2C_F32_F16_e64_vi ||
          Opc == AMDGPU::V_DOT2C_I32_I16_e64_vi ||
          Opc == AMDGPU::V_DOT4C_I32_I8_e64_vi ||
@@ -484,8 +487,8 @@ int getMCOpcode(uint16_t Opcode, unsigned Gen) {
   return getMCOpcodeGen(Opcode, static_cast<Subtarget>(Gen));
 }
 
-int getVOPDFull(unsigned OpX, unsigned OpY) {
-  const VOPDInfo *Info = getVOPDInfoFromComponentOpcodes(OpX, OpY);
+int getVOPDFull(unsigned OpX, unsigned OpY, int Subtarget) {
+  const VOPDInfo *Info = getVOPDInfoFromComponentOpcodes(OpX, OpY, Subtarget);
   return Info ? Info->Opcode : -1;
 }
 
@@ -537,13 +540,15 @@ unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
 }
 
 Optional<unsigned> InstInfo::getInvalidCompOperandIndex(
-    std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
+    std::function<unsigned(unsigned, unsigned)> GetRegIdx, bool SkipSrc) const {
 
   auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx);
   auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx);
 
+  const unsigned CompOprNum =
+      SkipSrc ? Component::DST_NUM : Component::MAX_OPR_NUM;
   unsigned CompOprIdx;
-  for (CompOprIdx = 0; CompOprIdx < Component::MAX_OPR_NUM; ++CompOprIdx) {
+  for (CompOprIdx = 0; CompOprIdx < CompOprNum; ++CompOprIdx) {
     unsigned BanksNum = BANKS_NUM[CompOprIdx];
     if (OpXRegs[CompOprIdx] && OpYRegs[CompOprIdx] &&
         (OpXRegs[CompOprIdx] % BanksNum == OpYRegs[CompOprIdx] % BanksNum))
@@ -1117,10 +1122,17 @@ amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
   AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
                   amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64,
                   amdhsa::FLOAT_DENORM_MODE_FLUSH_NONE);
-  AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                  amdhsa::COMPUTE_PGM_RSRC1_ENABLE_DX10_CLAMP, 1);
-  AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                  amdhsa::COMPUTE_PGM_RSRC1_ENABLE_IEEE_MODE, 1);
+  if (Version.Major >= 12) {
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                    amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN, 0);
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                    amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_DISABLE_PERF, 0);
+  } else {
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                    amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP, 1);
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                    amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE, 1);
+  }
   AMDHSA_BITS_SET(KD.compute_pgm_rsrc2,
                   amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X, 1);
   if (Version.Major >= 10) {
@@ -1951,7 +1963,15 @@ bool isGFX11(const MCSubtargetInfo &STI) {
 }
 
 bool isGFX11Plus(const MCSubtargetInfo &STI) {
-  return isGFX11(STI);
+  return isGFX11(STI) || isGFX12Plus(STI);
+}
+
+bool isGFX12(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX12];
+}
+
+bool isGFX12Plus(const MCSubtargetInfo &STI) {
+  return isGFX12(STI);
 }
 
 bool isNotGFX11Plus(const MCSubtargetInfo &STI) {
@@ -2441,6 +2461,9 @@ static bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
 
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
                                       int64_t EncodedOffset) {
+  if (isGFX12Plus(ST))
+    return isUInt<23>(EncodedOffset);
+
   return hasSMEMByteOffset(ST) ? isUInt<20>(EncodedOffset)
                                : isUInt<8>(EncodedOffset);
 }
@@ -2448,6 +2471,9 @@ bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
 bool isLegalSMRDEncodedSignedOffset(const MCSubtargetInfo &ST,
                                     int64_t EncodedOffset,
                                     bool IsBuffer) {
+  if (isGFX12Plus(ST))
+    return isInt<24>(EncodedOffset);
+
   return !IsBuffer &&
          hasSMRDSignedImmOffset(ST) &&
          isInt<21>(EncodedOffset);
@@ -2468,6 +2494,9 @@ uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST,
 
 Optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
                                        int64_t ByteOffset, bool IsBuffer) {
+  if (isGFX12Plus(ST)) // 24 bit signed offsets
+    return isInt<24>(ByteOffset) ? Optional<int64_t>(ByteOffset) : None;
+
   // The signed version is always a byte offset.
   if (!IsBuffer && hasSMRDSignedImmOffset(ST)) {
     assert(hasSMEMByteOffset(ST));
@@ -2547,17 +2576,22 @@ bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
   return true;
 }
 
-SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F) {
+SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F,
+                                               const GCNSubtarget &ST) {
   *this = getDefaultForCallingConv(F.getCallingConv());
 
-  StringRef IEEEAttr = F.getFnAttribute("amdgpu-ieee").getValueAsString();
-  if (!IEEEAttr.empty())
-    IEEE = IEEEAttr == "true";
+  if (ST.hasIEEEMode()) {
+    StringRef IEEEAttr = F.getFnAttribute("amdgpu-ieee").getValueAsString();
+    if (!IEEEAttr.empty())
+      IEEE = IEEEAttr == "true";
+  }
 
-  StringRef DX10ClampAttr
-    = F.getFnAttribute("amdgpu-dx10-clamp").getValueAsString();
-  if (!DX10ClampAttr.empty())
-    DX10Clamp = DX10ClampAttr == "true";
+  if (ST.hasDX10ClampMode()) {
+    StringRef DX10ClampAttr
+      = F.getFnAttribute("amdgpu-dx10-clamp").getValueAsString();
+    if (!DX10ClampAttr.empty())
+      DX10Clamp = DX10ClampAttr == "true";
+  }
 
   StringRef DenormF32Attr = F.getFnAttribute("denormal-fp-math-f32").getValueAsString();
   if (!DenormF32Attr.empty()) {

@@ -5,7 +5,7 @@
 ; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | grep -v 'Verify generated machine code' | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O1 %s
 ; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -amdgpu-scalar-ir-passes -amdgpu-sdwa-peephole \
-; RUN:   -amdgpu-load-store-vectorizer -amdgpu-enable-pre-ra-optimizations -debug-pass=Structure < %s 2>&1 \
+; RUN:   -amdgpu-load-store-vectorizer -amdgpu-enable-pre-ra-optimizations -amdgpu-loop-prefetch -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | grep -v 'Verify generated machine code' | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O1-OPTS %s
 ; RUN: llc -O2 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | grep -v 'Verify generated machine code' | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O2 %s
@@ -480,6 +480,8 @@
 ; GCN-O1-OPTS-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:      Loop Pass Manager
 ; GCN-O1-OPTS-NEXT:        Loop Invariant Code Motion
+; GCN-O1-OPTS-NEXT:      Optimization Remark Emitter
+; GCN-O1-OPTS-NEXT:      Loop Data Prefetch
 ; GCN-O1-OPTS-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
 ; GCN-O1-OPTS-NEXT:      Scalar Evolution Analysis
 ; GCN-O1-OPTS-NEXT:      Straight line strength reduction
@@ -490,6 +492,7 @@
 ; GCN-O1-OPTS-NEXT:      Post-Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      Legacy Divergence Analysis
 ; GCN-O1-OPTS-NEXT:      AMDGPU IR optimizations
+; GCN-O1-OPTS-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:      Canonicalize natural loops
 ; GCN-O1-OPTS-NEXT:      Scalar Evolution Analysis
 ; GCN-O1-OPTS-NEXT:      Loop Pass Manager

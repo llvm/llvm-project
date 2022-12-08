@@ -188,6 +188,7 @@ public:
   MCOperand decodeOperand_VReg_512(unsigned Val) const;
   MCOperand decodeOperand_VReg_1024(unsigned Val) const;
 
+  MCOperand decodeOperand_SReg_16(unsigned Val) const;
   MCOperand decodeOperand_SReg_32(unsigned Val) const;
   MCOperand decodeOperand_SReg_32_XM0_XEXEC(unsigned Val) const;
   MCOperand decodeOperand_SReg_32_XEXEC_HI(unsigned Val) const;
@@ -274,6 +275,7 @@ public:
   bool isGFX10Plus() const;
   bool isGFX11() const;
   bool isGFX11Plus() const;
+  bool isGFX12Plus() const;
 
   bool hasArchitectedFlatScratch() const;
 

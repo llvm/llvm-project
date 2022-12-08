@@ -1,6 +1,7 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX6,GFX678 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8,GFX678 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX678,GFX6789 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX678,GFX6789 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GFX6789 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
 
 declare float @llvm.fabs.f32(float) #0
 declare float @llvm.canonicalize.f32(float) #0
@@ -20,7 +21,9 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 ; GCN-LABEL: {{^}}v_test_canonicalize_var_f32:
 ; GFX678: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_max_num_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_var_f32(ptr addrspace(1) %out) #1 {
   %val = load float, ptr addrspace(1) %out
   %canonicalized = call float @llvm.canonicalize.f32(float %val)
@@ -31,7 +34,9 @@ define amdgpu_kernel void @v_test_canonicalize_var_f32(ptr addrspace(1) %out) #1
 ; GCN-LABEL: {{^}}s_test_canonicalize_var_f32:
 ; GFX678: v_mul_f32_e64 [[REG:v[0-9]+]], 1.0, {{s[0-9]+}}
 ; GFX9: v_max_f32_e64 [[REG:v[0-9]+]], {{s[0-9]+}}, {{s[0-9]+}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_max_num_f32_e64 [[REG:v[0-9]+]], {{s[0-9]+}}, {{s[0-9]+}}
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @s_test_canonicalize_var_f32(ptr addrspace(1) %out, float %val) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float %val)
   store float %canonicalized, ptr addrspace(1) %out
@@ -41,7 +46,9 @@ define amdgpu_kernel void @s_test_canonicalize_var_f32(ptr addrspace(1) %out, fl
 ; GCN-LABEL: {{^}}v_test_canonicalize_fabs_var_f32:
 ; GFX678: v_mul_f32_e64 [[REG:v[0-9]+]], 1.0, |{{v[0-9]+}}|
 ; GFX9: v_max_f32_e64 [[REG:v[0-9]+]], |{{v[0-9]+}}|, |{{v[0-9]+}}|
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_max_num_f32_e64 [[REG:v[0-9]+]], |{{v[0-9]+}}|, |{{v[0-9]+}}|
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_fabs_var_f32(ptr addrspace(1) %out) #1 {
   %val = load float, ptr addrspace(1) %out
   %val.fabs = call float @llvm.fabs.f32(float %val)
@@ -53,7 +60,9 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f32(ptr addrspace(1) %ou
 ; GCN-LABEL: {{^}}v_test_canonicalize_fneg_fabs_var_f32:
 ; GFX678: v_mul_f32_e64 [[REG:v[0-9]+]], -1.0, |{{v[0-9]+}}|
 ; GFX9: v_max_f32_e64 [[REG:v[0-9]+]], -|{{v[0-9]+}}|, -|{{v[0-9]+}}|
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_max_num_f32_e64 [[REG:v[0-9]+]], -|{{v[0-9]+}}|, -|{{v[0-9]+}}|
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f32(ptr addrspace(1) %out) #1 {
   %val = load float, ptr addrspace(1) %out
   %val.fabs = call float @llvm.fabs.f32(float %val)
@@ -66,7 +75,9 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f32(ptr addrspace(1
 ; GCN-LABEL: {{^}}v_test_canonicalize_fneg_var_f32:
 ; GFX678: v_mul_f32_e32 [[REG:v[0-9]+]], -1.0, {{v[0-9]+}}
 ; GFX9: v_max_f32_e64 [[REG:v[0-9]+]], -{{v[0-9]+}}, -{{v[0-9]+}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_max_num_f32_e64 [[REG:v[0-9]+]], -{{v[0-9]+}}, -{{v[0-9]+}}
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_fneg_var_f32(ptr addrspace(1) %out) #1 {
   %val = load float, ptr addrspace(1) %out
   %val.fneg = fneg float %val
@@ -77,7 +88,8 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_f32(ptr addrspace(1) %ou
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_undef_f32:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_fold_canonicalize_undef_f32(ptr addrspace(1) %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float undef)
   store float %canonicalized, ptr addrspace(1) %out
@@ -86,7 +98,8 @@ define amdgpu_kernel void @test_fold_canonicalize_undef_f32(ptr addrspace(1) %ou
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_p0_f32:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_fold_canonicalize_p0_f32(ptr addrspace(1) %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float 0.0)
   store float %canonicalized, ptr addrspace(1) %out
@@ -95,7 +108,8 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_f32(ptr addrspace(1) %out) 
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_n0_f32:
 ; GCN: v_bfrev_b32_e32 [[REG:v[0-9]+]], 1{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_fold_canonicalize_n0_f32(ptr addrspace(1) %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float -0.0)
   store float %canonicalized, ptr addrspace(1) %out
@@ -103,8 +117,10 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_f32(ptr addrspace(1) %out) 
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_p1_f32:
-; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 1.0{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: v_mov_b32_e32 [[REG:v[0-9]+]], 1.0{{$}}
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_dual_mov_b32 [[REG:v[0-9]+]], 1.0{{$}}
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_fold_canonicalize_p1_f32(ptr addrspace(1) %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float 1.0)
   store float %canonicalized, ptr addrspace(1) %out
@@ -112,8 +128,10 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_f32(ptr addrspace(1) %out) 
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_n1_f32:
-; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], -1.0{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: v_mov_b32_e32 [[REG:v[0-9]+]], -1.0{{$}}
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_dual_mov_b32 [[REG:v[0-9]+]], -1.0{{$}}
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_fold_canonicalize_n1_f32(ptr addrspace(1) %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float -1.0)
   store float %canonicalized, ptr addrspace(1) %out
@@ -121,8 +139,10 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_f32(ptr addrspace(1) %out) 
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_literal_f32:
-; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x41800000{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: v_mov_b32_e32 [[REG:v[0-9]+]], 0x41800000{{$}}
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_dual_mov_b32 [[REG:v[0-9]+]], 0x41800000{{$}}
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_fold_canonicalize_literal_f32(ptr addrspace(1) %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float 16.0)
   store float %canonicalized, ptr addrspace(1) %out
@@ -131,7 +151,8 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_f32(ptr addrspace(1) %
 
 ; GCN-LABEL: {{^}}test_no_denormals_fold_canonicalize_denormal0_f32:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32(ptr addrspace(1) %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 8388607 to float))
   store float %canonicalized, ptr addrspace(1) %out
@@ -139,8 +160,10 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32(ptr
 }
 
 ; GCN-LABEL: {{^}}test_denormals_fold_canonicalize_denormal0_f32:
-; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fffff{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fffff{{$}}
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_dual_mov_b32 [[REG:v[0-9]+]], 0x7fffff{{$}}
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f32(ptr addrspace(1) %out) #3 {
   %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 8388607 to float))
   store float %canonicalized, ptr addrspace(1) %out
@@ -149,7 +172,8 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f32(ptr ad
 
 ; GCN-LABEL: {{^}}test_no_denormals_fold_canonicalize_denormal1_f32:
 ; GCN: v_bfrev_b32_e32 [[REG:v[0-9]+]], 1{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_f32(ptr addrspace(1) %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 2155872255 to float))
   store float %canonicalized, ptr addrspace(1) %out
@@ -157,8 +181,10 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_f32(ptr
 }
 
 ; GCN-LABEL: {{^}}test_denormals_fold_canonicalize_denormal1_f32:
-; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x807fffff{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: v_mov_b32_e32 [[REG:v[0-9]+]], 0x807fffff{{$}}
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_dual_mov_b32 [[REG:v[0-9]+]], 0x807fffff{{$}}
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f32(ptr addrspace(1) %out) #3 {
   %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 2155872255 to float))
   store float %canonicalized, ptr addrspace(1) %out
@@ -166,8 +192,10 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f32(ptr ad
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_qnan_f32:
-; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_dual_mov_b32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_fold_canonicalize_qnan_f32(ptr addrspace(1) %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float 0x7FF8000000000000)
   store float %canonicalized, ptr addrspace(1) %out
@@ -175,8 +203,10 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_f32(ptr addrspace(1) %out
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_qnan_value_neg1_f32:
-; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_dual_mov_b32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f32(ptr addrspace(1) %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 -1 to float))
   store float %canonicalized, ptr addrspace(1) %out
@@ -184,8 +214,10 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f32(ptr addrsp
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_qnan_value_neg2_f32:
-; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_dual_mov_b32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f32(ptr addrspace(1) %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 -2 to float))
   store float %canonicalized, ptr addrspace(1) %out
@@ -193,8 +225,10 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f32(ptr addrsp
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_snan0_value_f32:
-; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_dual_mov_b32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f32(ptr addrspace(1) %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 2139095041 to float))
   store float %canonicalized, ptr addrspace(1) %out
@@ -202,8 +236,10 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f32(ptr addrspace(
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_snan1_value_f32:
-; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_dual_mov_b32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f32(ptr addrspace(1) %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 2143289343 to float))
   store float %canonicalized, ptr addrspace(1) %out
@@ -211,8 +247,10 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f32(ptr addrspace(
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_snan2_value_f32:
-; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_dual_mov_b32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f32(ptr addrspace(1) %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 4286578689 to float))
   store float %canonicalized, ptr addrspace(1) %out
@@ -220,8 +258,10 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f32(ptr addrspace(
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_snan3_value_f32:
-; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
-; GCN: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX6789: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
+; GFX6789: {{flat|global}}_store_dword v{{.+}}, [[REG]]
+; GFX12: v_dual_mov_b32 [[REG:v[0-9]+]], 0x7fc00000{{$}}
+; GFX12: {{flat|global}}_store_b32 v{{.+}}, [[REG]]
 define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f32(ptr addrspace(1) %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 4290772991 to float))
   store float %canonicalized, ptr addrspace(1) %out
@@ -229,8 +269,10 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f32(ptr addrspace(
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_var_f64:
-; GCN: v_max_f64 [[REG:v\[[0-9]+:[0-9]+\]]], {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, [[REG]]
+; GFX6789: v_max_f64 [[REG:v\[[0-9]+:[0-9]+\]]], {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, [[REG]]
+; GFX12: v_max_num_f64_e32 [[REG:v\[[0-9]+:[0-9]+\]]], {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_var_f64(ptr addrspace(1) %out) #1 {
   %val = load double, ptr addrspace(1) %out
   %canonicalized = call double @llvm.canonicalize.f64(double %val)
@@ -239,8 +281,10 @@ define amdgpu_kernel void @v_test_canonicalize_var_f64(ptr addrspace(1) %out) #1
 }
 
 ; GCN-LABEL: {{^}}s_test_canonicalize_var_f64:
-; GCN: v_max_f64 [[REG:v\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, [[REG]]
+; GFX6789: v_max_f64 [[REG:v\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, [[REG]]
+; GFX12: v_max_num_f64_e64 [[REG:v\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, [[REG]]
 define amdgpu_kernel void @s_test_canonicalize_var_f64(ptr addrspace(1) %out, double %val) #1 {
   %canonicalized = call double @llvm.canonicalize.f64(double %val)
   store double %canonicalized, ptr addrspace(1) %out
@@ -248,8 +292,10 @@ define amdgpu_kernel void @s_test_canonicalize_var_f64(ptr addrspace(1) %out, do
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_fabs_var_f64:
-; GCN: v_max_f64 [[REG:v\[[0-9]+:[0-9]+\]]], |{{v\[[0-9]+:[0-9]+\]}}|, |{{v\[[0-9]+:[0-9]+\]}}|
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, [[REG]]
+; GFX6789: v_max_f64 [[REG:v\[[0-9]+:[0-9]+\]]], |{{v\[[0-9]+:[0-9]+\]}}|, |{{v\[[0-9]+:[0-9]+\]}}|
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, [[REG]]
+; GFX12: v_max_num_f64_e64 [[REG:v\[[0-9]+:[0-9]+\]]], |{{v\[[0-9]+:[0-9]+\]}}|, |{{v\[[0-9]+:[0-9]+\]}}|
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_fabs_var_f64(ptr addrspace(1) %out) #1 {
   %val = load double, ptr addrspace(1) %out
   %val.fabs = call double @llvm.fabs.f64(double %val)
@@ -259,8 +305,10 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f64(ptr addrspace(1) %ou
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_fneg_fabs_var_f64:
-; GCN: v_max_f64 [[REG:v\[[0-9]+:[0-9]\]]], -|{{v\[[0-9]+:[0-9]+\]}}|, -|{{v\[[0-9]+:[0-9]+\]}}|
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, [[REG]]
+; GFX6789: v_max_f64 [[REG:v\[[0-9]+:[0-9]\]]], -|{{v\[[0-9]+:[0-9]+\]}}|, -|{{v\[[0-9]+:[0-9]+\]}}|
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, [[REG]]
+; GFX12: v_max_num_f64_e64 [[REG:v\[[0-9]+:[0-9]\]]], -|{{v\[[0-9]+:[0-9]+\]}}|, -|{{v\[[0-9]+:[0-9]+\]}}|
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f64(ptr addrspace(1) %out) #1 {
   %val = load double, ptr addrspace(1) %out
   %val.fabs = call double @llvm.fabs.f64(double %val)
@@ -271,8 +319,10 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f64(ptr addrspace(1
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_fneg_var_f64:
-; GCN: v_max_f64 [[REG:v\[[0-9]+:[0-9]+\]]], -{{v\[[0-9]+:[0-9]+\]}}, -{{v\[[0-9]+:[0-9]+\]}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, [[REG]]
+; GFX6789: v_max_f64 [[REG:v\[[0-9]+:[0-9]+\]]], -{{v\[[0-9]+:[0-9]+\]}}, -{{v\[[0-9]+:[0-9]+\]}}
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, [[REG]]
+; GFX12: v_max_num_f64_e64 [[REG:v\[[0-9]+:[0-9]+\]]], -{{v\[[0-9]+:[0-9]+\]}}, -{{v\[[0-9]+:[0-9]+\]}}
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_fneg_var_f64(ptr addrspace(1) %out) #1 {
   %val = load double, ptr addrspace(1) %out
   %val.fneg = fneg double %val
@@ -284,7 +334,8 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_f64(ptr addrspace(1) %ou
 ; GCN-LABEL: {{^}}test_fold_canonicalize_p0_f64:
 ; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
 ; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], v[[LO]]{{$}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_fold_canonicalize_p0_f64(ptr addrspace(1) %out) #1 {
   %canonicalized = call double @llvm.canonicalize.f64(double 0.0)
   store double %canonicalized, ptr addrspace(1) %out
@@ -294,7 +345,8 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_f64(ptr addrspace(1) %out) 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_n0_f64:
 ; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
 ; GCN-DAG: v_bfrev_b32_e32 v[[HI:[0-9]+]], 1{{$}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_fold_canonicalize_n0_f64(ptr addrspace(1) %out) #1 {
   %canonicalized = call double @llvm.canonicalize.f64(double -0.0)
   store double %canonicalized, ptr addrspace(1) %out
@@ -302,9 +354,11 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_f64(ptr addrspace(1) %out) 
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_p1_f64:
-; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x3ff00000{{$}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX6789-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; GFX6789-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x3ff00000{{$}}
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX12: v_dual_mov_b32 v[[LO:[0-9]+]], 0 :: v_dual_mov_b32 v[[HI:[0-9]+]], 0x3ff00000{{$}}
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_fold_canonicalize_p1_f64(ptr addrspace(1) %out) #1 {
   %canonicalized = call double @llvm.canonicalize.f64(double 1.0)
   store double %canonicalized, ptr addrspace(1) %out
@@ -312,9 +366,11 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_f64(ptr addrspace(1) %out) 
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_n1_f64:
-; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0xbff00000{{$}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX6789-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; GFX6789-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0xbff00000{{$}}
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX12: v_dual_mov_b32 v[[LO:[0-9]+]], 0 :: v_dual_mov_b32 v[[HI:[0-9]+]], 0xbff00000{{$}}
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_fold_canonicalize_n1_f64(ptr addrspace(1) %out) #1 {
   %canonicalized = call double @llvm.canonicalize.f64(double -1.0)
   store double %canonicalized, ptr addrspace(1) %out
@@ -322,9 +378,11 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_f64(ptr addrspace(1) %out) 
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_literal_f64:
-; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x40300000{{$}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX6789-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; GFX6789-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x40300000{{$}}
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX12: v_dual_mov_b32 v[[LO:[0-9]+]], 0 :: v_dual_mov_b32 v[[HI:[0-9]+]], 0x40300000{{$}}
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_fold_canonicalize_literal_f64(ptr addrspace(1) %out) #1 {
   %canonicalized = call double @llvm.canonicalize.f64(double 16.0)
   store double %canonicalized, ptr addrspace(1) %out
@@ -334,7 +392,8 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_f64(ptr addrspace(1) %
 ; GCN-LABEL: {{^}}test_no_denormals_fold_canonicalize_denormal0_f64:
 ; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
 ; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], v[[LO]]{{$}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f64(ptr addrspace(1) %out) #2 {
   %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 4503599627370495 to double))
   store double %canonicalized, ptr addrspace(1) %out
@@ -342,9 +401,12 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f64(ptr
 }
 
 ; GCN-LABEL: {{^}}test_denormals_fold_canonicalize_denormal0_f64:
-; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], -1{{$}}
-; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0xfffff{{$}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX6789-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], -1{{$}}
+; GFX6789-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0xfffff{{$}}
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX12: v_dual_mov_b32 v[[HI:[0-9]+]], 0xfffff{{$}}
+; GFX12: v_mov_b32_e32 v[[LO:[0-9]+]], -1{{$}}
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f64(ptr addrspace(1) %out) #3 {
   %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 4503599627370495 to double))
   store double %canonicalized, ptr addrspace(1) %out
@@ -354,7 +416,8 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f64(ptr ad
 ; GCN-LABEL: {{^}}test_no_denormals_fold_canonicalize_denormal1_f64:
 ; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
 ; GCN: v_bfrev_b32_e32 v[[HI:[0-9]+]], 1{{$}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_f64(ptr addrspace(1) %out) #2 {
   %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 9227875636482146303 to double))
   store double %canonicalized, ptr addrspace(1) %out
@@ -362,9 +425,12 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_f64(ptr
 }
 
 ; GCN-LABEL: {{^}}test_denormals_fold_canonicalize_denormal1_f64:
-; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], -1{{$}}
-; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x800fffff{{$}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX6789-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], -1{{$}}
+; GFX6789-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x800fffff{{$}}
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX12: v_dual_mov_b32 v[[HI:[0-9]+]], 0x800fffff{{$}}
+; GFX12: v_mov_b32_e32 v[[LO:[0-9]+]], -1{{$}}
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f64(ptr addrspace(1) %out) #3 {
   %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 9227875636482146303 to double))
   store double %canonicalized, ptr addrspace(1) %out
@@ -372,9 +438,11 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f64(ptr ad
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_qnan_f64:
-; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
-; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX6789-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
+; GFX6789-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX12: v_dual_mov_b32 v[[LO:[0-9]+]], 0 :: v_dual_mov_b32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_fold_canonicalize_qnan_f64(ptr addrspace(1) %out) #1 {
   %canonicalized = call double @llvm.canonicalize.f64(double 0x7FF8000000000000)
   store double %canonicalized, ptr addrspace(1) %out
@@ -382,9 +450,11 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_f64(ptr addrspace(1) %out
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_qnan_value_neg1_f64:
-; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
-; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX6789-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
+; GFX6789-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX12: v_dual_mov_b32 v[[LO:[0-9]+]], 0 :: v_dual_mov_b32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f64(ptr addrspace(1) %out) #1 {
   %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 -1 to double))
   store double %canonicalized, ptr addrspace(1) %out
@@ -392,9 +462,11 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f64(ptr addrsp
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_qnan_value_neg2_f64:
-; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
-; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX6789-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
+; GFX6789-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX12: v_dual_mov_b32 v[[LO:[0-9]+]], 0 :: v_dual_mov_b32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f64(ptr addrspace(1) %out) #1 {
   %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 -2 to double))
   store double %canonicalized, ptr addrspace(1) %out
@@ -402,9 +474,11 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f64(ptr addrsp
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_snan0_value_f64:
-; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
-; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX6789-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
+; GFX6789-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX12: v_dual_mov_b32 v[[LO:[0-9]+]], 0 :: v_dual_mov_b32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f64(ptr addrspace(1) %out) #1 {
   %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 9218868437227405313 to double))
   store double %canonicalized, ptr addrspace(1) %out
@@ -412,9 +486,11 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f64(ptr addrspace(
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_snan1_value_f64:
-; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
-; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX6789-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
+; GFX6789-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX12: v_dual_mov_b32 v[[LO:[0-9]+]], 0 :: v_dual_mov_b32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f64(ptr addrspace(1) %out) #1 {
   %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 9223372036854775807 to double))
   store double %canonicalized, ptr addrspace(1) %out
@@ -422,9 +498,11 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f64(ptr addrspace(
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_snan2_value_f64:
-; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
-; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX6789-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
+; GFX6789-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX12: v_dual_mov_b32 v[[LO:[0-9]+]], 0 :: v_dual_mov_b32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f64(ptr addrspace(1) %out) #1 {
   %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 18442240474082181121 to double))
   store double %canonicalized, ptr addrspace(1) %out
@@ -432,9 +510,11 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f64(ptr addrspace(
 }
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_snan3_value_f64:
-; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
-; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; GCN: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX6789-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
+; GFX6789-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; GFX6789: {{flat|global}}_store_dwordx2 v{{.+}}, v[[[LO]]:[[HI]]]
+; GFX12: v_dual_mov_b32 v[[LO:[0-9]+]], 0 :: v_dual_mov_b32 v[[HI:[0-9]+]], 0x7ff80000{{$}}
+; GFX12: {{flat|global}}_store_b64 v{{.+}}, v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f64(ptr addrspace(1) %out) #1 {
   %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 18446744073709551615 to double))
   store double %canonicalized, ptr addrspace(1) %out
@@ -443,7 +523,8 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f64(ptr addrspace(
 
 ; GCN-LABEL:  {{^}}test_canonicalize_value_f64_flush:
 ; GFX678: v_mul_f64 v[{{[0-9:]+}}], 1.0, v[{{[0-9:]+}}]
-; GCN9: v_max_f64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
+; GFX9: v_max_f64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
+; GFX12: v_max_num_f64_e32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
 define amdgpu_kernel void @test_canonicalize_value_f64_flush(ptr addrspace(1) %arg, ptr addrspace(1) %out) #4 {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds double, ptr addrspace(1) %arg, i32 %id
@@ -457,6 +538,7 @@ define amdgpu_kernel void @test_canonicalize_value_f64_flush(ptr addrspace(1) %a
 ; GCN-LABEL:  {{^}}test_canonicalize_value_f32_flush:
 ; GFX6: v_mul_f32_e32 {{v[0-9]+}}, 1.0, {{v[0-9]+}}
 ; GFX9: v_max_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_max_num_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 define amdgpu_kernel void @test_canonicalize_value_f32_flush(ptr addrspace(1) %arg, ptr addrspace(1) %out) #4 {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id
@@ -470,6 +552,7 @@ define amdgpu_kernel void @test_canonicalize_value_f32_flush(ptr addrspace(1) %a
 ; GCN-LABEL:  {{^}}test_canonicalize_value_f16_flush:
 ; GFX8: v_mul_f16_e32 {{v[0-9]+}}, 1.0, {{v[0-9]+}}
 ; GFX9: v_max_f16_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_max_num_f16_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 define amdgpu_kernel void @test_canonicalize_value_f16_flush(ptr addrspace(1) %arg, ptr addrspace(1) %out) #4 {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds half, ptr addrspace(1) %arg, i32 %id
@@ -486,6 +569,8 @@ define amdgpu_kernel void @test_canonicalize_value_f16_flush(ptr addrspace(1) %a
 ; GFX8-DAG: v_mul_f16_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
 
 ; GFX9: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
+
+; GFX12: v_pk_max_num_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 define amdgpu_kernel void @test_canonicalize_value_v2f16_flush(ptr addrspace(1) %arg, ptr addrspace(1) %out) #4 {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %arg, i32 %id
@@ -497,7 +582,8 @@ define amdgpu_kernel void @test_canonicalize_value_v2f16_flush(ptr addrspace(1) 
 }
 
 ; GCN-LABEL:  {{^}}test_canonicalize_value_f64_denorm:
-; GCN: v_max_f64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
+; GFX6789: v_max_f64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
+; GFX12: v_max_num_f64_e32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
 define amdgpu_kernel void @test_canonicalize_value_f64_denorm(ptr addrspace(1) %arg, ptr addrspace(1) %out) #3 {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds double, ptr addrspace(1) %arg, i32 %id
@@ -511,6 +597,7 @@ define amdgpu_kernel void @test_canonicalize_value_f64_denorm(ptr addrspace(1) %
 ; GCN-LABEL:  {{^}}test_canonicalize_value_f32_denorm:
 ; GFX678: v_mul_f32_e32 {{v[0-9]+}}, 1.0, {{v[0-9]+}}
 ; GFX9: v_max_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_max_num_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 define amdgpu_kernel void @test_canonicalize_value_f32_denorm(ptr addrspace(1) %arg, ptr addrspace(1) %out) #3 {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id
@@ -526,6 +613,7 @@ define amdgpu_kernel void @test_canonicalize_value_f32_denorm(ptr addrspace(1) %
 ; GFX6: v_mul_f32_e32 {{v[0-9]+}}, 1.0, {{v[0-9]+}}
 ; GFX8: v_max_f16_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 ; GFX9: v_max_f16_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_max_num_f16_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 define amdgpu_kernel void @test_canonicalize_value_f16_denorm(ptr addrspace(1) %arg, ptr addrspace(1) %out) #3 {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds half, ptr addrspace(1) %arg, i32 %id
@@ -544,6 +632,7 @@ define amdgpu_kernel void @test_canonicalize_value_f16_denorm(ptr addrspace(1) %
 ; GFX8: v_max_f16_e32
 
 ; GFX9: v_pk_max_f16 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_pk_max_num_f16 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 define amdgpu_kernel void @test_canonicalize_value_v2f16_denorm(ptr addrspace(1) %arg, ptr addrspace(1) %out) #3 {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x half>, ptr addrspace(1) %arg, i32 %id
@@ -555,8 +644,10 @@ define amdgpu_kernel void @test_canonicalize_value_v2f16_denorm(ptr addrspace(1)
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_var_v2f64:
-; GCN: v_max_f64
-; GCN: v_max_f64
+; GFX6789: v_max_f64
+; GFX6789: v_max_f64
+; GFX12: v_max_num_f64_e32
+; GFX12: v_max_num_f64_e32
 define amdgpu_kernel void @v_test_canonicalize_var_v2f64(ptr addrspace(1) %out) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <2 x double>, ptr addrspace(1) %out, i32 %tid
@@ -572,6 +663,8 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f64(ptr addrspace(1) %out) 
 
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+
+; GFX12: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 define <2 x float> @v_test_canonicalize_v2f32_flush(<2 x float> %arg) #1 {
   %canon = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %arg)
   ret <2 x float> %canon
@@ -585,6 +678,9 @@ define <2 x float> @v_test_canonicalize_v2f32_flush(<2 x float> %arg) #1 {
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+
+; GFX12: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_max_num_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 define <3 x float> @v_test_canonicalize_v3f32_flush(<3 x float> %arg) #1 {
   %canon = call <3 x float> @llvm.canonicalize.v3f32(<3 x float> %arg)
   ret <3 x float> %canon
@@ -600,6 +696,9 @@ define <3 x float> @v_test_canonicalize_v3f32_flush(<3 x float> %arg) #1 {
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+
+; GFX12: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 define <4 x float> @v_test_canonicalize_v4f32_flush(<4 x float> %arg) #1 {
   %canon = call <4 x float> @llvm.canonicalize.v4f32(<4 x float> %arg)
   ret <4 x float> %canon
@@ -623,33 +722,50 @@ define <4 x float> @v_test_canonicalize_v4f32_flush(<4 x float> %arg) #1 {
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+
+; GFX12: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 define <8 x float> @v_test_canonicalize_v8f32_flush(<8 x float> %arg) #1 {
   %canon = call <8 x float> @llvm.canonicalize.v8f32(<8 x float> %arg)
   ret <8 x float> %canon
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_v2f64:
-; GCN: v_max_f64
-; GCN: v_max_f64
+; GFX6789: v_max_f64
+; GFX6789: v_max_f64
+
+; GFX12: v_max_num_f64_e32
+; GFX12: v_max_num_f64_e32
 define <2 x double> @v_test_canonicalize_v2f64(<2 x double> %arg) #1 {
   %canon = call <2 x double> @llvm.canonicalize.v2f64(<2 x double> %arg)
   ret <2 x double> %canon
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_v3f64:
-; GCN: v_max_f64
-; GCN: v_max_f64
-; GCN: v_max_f64
+; GFX6789: v_max_f64
+; GFX6789: v_max_f64
+; GFX6789: v_max_f64
+
+; GFX12: v_max_num_f64_e32
+; GFX12: v_max_num_f64_e32
+; GFX12: v_max_num_f64_e32
 define <3 x double> @v_test_canonicalize_v3f64(<3 x double> %arg) #1 {
   %canon = call <3 x double> @llvm.canonicalize.v3f64(<3 x double> %arg)
   ret <3 x double> %canon
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_v4f64:
-; GCN: v_max_f64
-; GCN: v_max_f64
-; GCN: v_max_f64
-; GCN: v_max_f64
+; GFX6789: v_max_f64
+; GFX6789: v_max_f64
+; GFX6789: v_max_f64
+; GFX6789: v_max_f64
+
+; GFX12: v_max_num_f64_e32
+; GFX12: v_max_num_f64_e32
+; GFX12: v_max_num_f64_e32
+; GFX12: v_max_num_f64_e32
 define <4 x double> @v_test_canonicalize_v4f64(<4 x double> %arg) #1 {
   %canon = call <4 x double> @llvm.canonicalize.v4f64(<4 x double> %arg)
   ret <4 x double> %canon

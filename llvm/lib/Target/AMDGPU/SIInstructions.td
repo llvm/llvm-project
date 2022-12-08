@@ -1692,7 +1692,10 @@ class ClampPat<Instruction inst, ValueType vt> : GCNPat <
 >;
 
 def : ClampPat<V_MAX_F32_e64, f32>;
+let SubtargetPredicate = isNotGFX12Plus in
 def : ClampPat<V_MAX_F64_e64, f64>;
+let SubtargetPredicate = isGFX12Plus in
+def : ClampPat<V_MAX_NUM_F64_e64, f64>;
 let SubtargetPredicate = NotHasTrue16BitInsts in
 def : ClampPat<V_MAX_F16_e64, f16>;
 let SubtargetPredicate = HasTrue16BitInsts in
@@ -2819,10 +2822,12 @@ def : GCNPat<
 >;
 
 // TODO: Handle fneg like other types.
+let SubtargetPredicate = isNotGFX12Plus in {
 def : GCNPat<
   (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
   (V_MUL_F64_e64  0, CONST.FP64_ONE, $src_mods, $src)
 >;
+}
 } // End AddedComplexity = -5
 
 multiclass SelectCanonicalizeAsMax<
@@ -2838,7 +2843,13 @@ multiclass SelectCanonicalizeAsMax<
   def : GCNPat<
     (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
     (V_MAX_F64_e64  $src_mods, $src, $src_mods, $src)> {
-    let OtherPredicates = f64_preds;
+    let OtherPredicates = !listconcat(f64_preds, [isNotGFX12Plus]);
+  }
+
+  def : GCNPat<
+    (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
+    (V_MAX_NUM_F64_e64  $src_mods, $src, $src_mods, $src)> {
+    let OtherPredicates = !listconcat(f64_preds, [isGFX12Plus]);
   }
 
   def : GCNPat<
@@ -3147,6 +3158,18 @@ def : GCNPat <
                         (as_i1timm $bound_ctrl))
 >;
 
+class SMPrefetchGetPcPat<string type, int cache_type> : GCNPat <
+    (prefetch (i64 imm:$offset), imm, imm, (i32 cache_type)),
+    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) (S_ADD_U64_PSEUDO (S_GETPC_B64), $offset),
+                                                   (i32 20), (i32 SGPR_NULL), (i8 0))
+    // Offset 20 should roughly adjust getpc sequence length.
+  > {
+  let AddedComplexity = 9;
+}
+
+def : SMPrefetchGetPcPat<"INST", 0>;
+def : SMPrefetchGetPcPat<"DATA", 1>;
+
 //===----------------------------------------------------------------------===//
 // Fract Patterns
 //===----------------------------------------------------------------------===//
@@ -3421,6 +3444,13 @@ defm : Int16Med3Pat<V_MED3_I16_e64, smin, smax>;
 defm : Int16Med3Pat<V_MED3_U16_e64, umin, umax>;
 } // End Predicates = [isGFX9Plus]
 
+let OtherPredicates = [isGFX12Plus] in {
+def : FPMinMaxPat<V_MINIMUMMAXIMUM_F32_e64, f32, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinMaxPat<V_MAXIMUMMINIMUM_F32_e64, f32, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+def : FPMinMaxPat<V_MINIMUMMAXIMUM_F16_e64, f16, DivergentBinFrag<fmaximum>, fminimum_oneuse>;
+def : FPMinMaxPat<V_MAXIMUMMINIMUM_F16_e64, f16, DivergentBinFrag<fminimum>, fmaximum_oneuse>;
+}
+
 class AMDGPUGenericInstruction : GenericInstruction {
   let Namespace = "AMDGPU";
 }
@@ -3677,6 +3707,14 @@ def G_AMDGPU_INTRIN_IMAGE_STORE_D16 : AMDGPUGenericInstruction {
 }
 
 def G_AMDGPU_INTRIN_BVH_INTERSECT_RAY : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$intrin, variable_ops);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+}
+
+def G_AMDGPU_INTRIN_BVH_DUAL_INTERSECT_RAY : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$intrin, variable_ops);
   let hasSideEffects = 0;

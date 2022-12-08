@@ -724,6 +724,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMad64_32())
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i32, Custom);
 
+  if (Subtarget->hasIEEEMinMax())
+    setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
+                       {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
+
+  if (Subtarget->hasPrefetch())
+    setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
+
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::Other, MVT::f32, MVT::v4f32, MVT::i16, MVT::f16,
                       MVT::v2i16, MVT::v2f16},
@@ -751,6 +758,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::FMAXNUM,
                        ISD::FMINNUM_IEEE,
                        ISD::FMAXNUM_IEEE,
+                       ISD::FMINIMUM,
+                       ISD::FMAXIMUM,
                        ISD::FMA,
                        ISD::SMIN,
                        ISD::SMAX,
@@ -1108,6 +1117,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                   MachineMemOperand::MOVolatile;
     return true;
   }
+  case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
   case Intrinsic::amdgcn_image_bvh_intersect_ray: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType()); // XXX: what is correct VT?
@@ -1169,7 +1179,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                   MachineMemOperand::MOVolatile;
     return true;
   }
-  case Intrinsic::amdgcn_ds_bvh_stack_rtn: {
+  case Intrinsic::amdgcn_ds_bvh_stack_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
 
     const GCNTargetMachine &TM =
@@ -1184,6 +1197,34 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(4);
 
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    return true;
+  }
+  case Intrinsic::amdgcn_s_mov_from_global:
+  case Intrinsic::amdgcn_s_mov_to_global:
+  case Intrinsic::amdgcn_s_swap_to_global: {
+    Type *T;
+    if (IntrID == Intrinsic::amdgcn_s_mov_to_global) {
+      Info.opc = ISD::INTRINSIC_VOID;
+      T = CI.getArgOperand(1)->getType();
+    } else {
+      Info.opc = ISD::INTRINSIC_W_CHAIN;
+      T = CI.getType();
+    }
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), T->getIntegerBitWidth());
+
+    Info.flags |= MachineMemOperand::MODereferenceable;
+    if (IntrID == Intrinsic::amdgcn_s_mov_from_global ||
+        IntrID == Intrinsic::amdgcn_s_swap_to_global)
+      Info.flags |= MachineMemOperand::MOLoad;
+    if (IntrID == Intrinsic::amdgcn_s_mov_to_global ||
+        IntrID == Intrinsic::amdgcn_s_swap_to_global)
+      Info.flags |= MachineMemOperand::MOStore;
+
+    const GCNTargetMachine &TM =
+        static_cast<const GCNTargetMachine &>(getTargetMachine());
+    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    Info.ptrVal = MFI->getGlobalRegisterPSV(TM);
+
     return true;
   }
   default:
@@ -3468,6 +3509,23 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   return AMDGPUTargetLowering::LowerDYNAMIC_STACKALLOC(Op, DAG);
 }
 
+SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
+  if (!Subtarget->hasVectorPrefetch() && Op->isDivergent())
+    return SDValue();
+
+  switch (cast<MemSDNode>(Op)->getAddressSpace()) {
+  case AMDGPUAS::FLAT_ADDRESS:
+  case AMDGPUAS::GLOBAL_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
+    break;
+  default:
+    return SDValue();
+  }
+
+  return Op;
+}
+
 Register SITargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                              const MachineFunction &MF) const {
   Register Reg = StringSwitch<Register>(RegName)
@@ -4047,40 +4105,51 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
   case AMDGPU::S_ADD_U64_PSEUDO:
   case AMDGPU::S_SUB_U64_PSEUDO: {
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    // For targets older than GFX12, we emit a sequence of 32-bit operations.
+    // For GFX12, we emit s_add_u64 and s_sub_u64.
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-    const SIRegisterInfo *TRI = ST.getRegisterInfo();
-    const TargetRegisterClass *BoolRC = TRI->getBoolRC();
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
     const DebugLoc &DL = MI.getDebugLoc();
-
     MachineOperand &Dest = MI.getOperand(0);
     MachineOperand &Src0 = MI.getOperand(1);
     MachineOperand &Src1 = MI.getOperand(2);
-
-    Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-    Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-
-    MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src0, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
-    MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src0, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
-
-    MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src1, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
-    MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src1, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
-
     bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_U64_PSEUDO);
+    if (Subtarget->hasScalarAddSub64()) {
+      unsigned Opc = IsAdd ? AMDGPU::S_ADD_U64 : AMDGPU::S_SUB_U64;
+      BuildMI(*BB, MI, DL, TII->get(Opc), Dest.getReg())
+          .addReg(Src0.getReg())
+          .addReg(Src1.getReg());
+    } else {
+      const SIRegisterInfo *TRI = ST.getRegisterInfo();
+      const TargetRegisterClass *BoolRC = TRI->getBoolRC();
 
-    unsigned LoOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
-    unsigned HiOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
-    BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0).add(Src0Sub0).add(Src1Sub0);
-    BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1).add(Src0Sub1).add(Src1Sub1);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
-        .addReg(DestSub0)
-        .addImm(AMDGPU::sub0)
-        .addReg(DestSub1)
-        .addImm(AMDGPU::sub1);
+      Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+      MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
+          MI, MRI, Src0, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
+      MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
+          MI, MRI, Src0, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
+
+      MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
+          MI, MRI, Src1, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
+      MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
+          MI, MRI, Src1, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
+
+      unsigned LoOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
+      unsigned HiOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
+      BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0)
+          .add(Src0Sub0)
+          .add(Src1Sub0);
+      BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1)
+          .add(Src0Sub1)
+          .add(Src1Sub1);
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
+          .addReg(DestSub0)
+          .addImm(AMDGPU::sub0)
+          .addReg(DestSub1)
+          .addImm(AMDGPU::sub1);
+    }
     MI.eraseFromParent();
     return BB;
   }
@@ -4806,6 +4875,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerXMUL_LOHI(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::PREFETCH:
+    return lowerPREFETCH(Op, DAG);
   }
   return SDValue();
 }
@@ -7742,6 +7813,48 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return DAG.getMemIntrinsicNode(AMDGPUISD::BUFFER_ATOMIC_CMPSWAP, DL,
                                    Op->getVTList(), Ops, VT, M->getMemOperand());
   }
+  case Intrinsic::amdgcn_image_bvh_dual_intersect_ray: {
+    MemSDNode *M = cast<MemSDNode>(Op);
+    SDValue NodePtr = M->getOperand(2);
+    SDValue RayExtent = M->getOperand(3);
+    SDValue InstanceMask = M->getOperand(4);
+    SDValue RayOrigin = M->getOperand(5);
+    SDValue RayDir = M->getOperand(6);
+    SDValue Offsets = M->getOperand(7);
+    SDValue TDescr = M->getOperand(8);
+
+    assert(NodePtr.getValueType() == MVT::i64);
+    assert(RayDir.getValueType() == MVT::v3f32);
+
+    if (!AMDGPU::isGFX12Plus(*Subtarget)) {
+      emitRemovedIntrinsicError(DAG, DL, Op.getValueType());
+      return SDValue();
+    }
+
+    const unsigned NumVDataDwords = 10;
+    const unsigned NumVAddrDwords = 12;
+    int Opcode = AMDGPU::getMIMGOpcode(AMDGPU::IMAGE_BVH_DUAL_INTERSECT_RAY,
+                                       AMDGPU::MIMGEncGfx12,
+                                       NumVDataDwords, NumVAddrDwords);
+    assert(Opcode != -1);
+
+    SmallVector<SDValue, 16> Ops;
+    Ops.push_back(NodePtr);
+    Ops.push_back(DAG.getBuildVector(MVT::v2i32, DL,
+                  {DAG.getBitcast(MVT::i32, RayExtent),
+                   DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, InstanceMask)}));
+    Ops.push_back(RayOrigin);
+    Ops.push_back(RayDir);
+    Ops.push_back(Offsets);
+    Ops.push_back(TDescr);
+    Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i1));
+    Ops.push_back(M->getChain());
+
+    auto *NewNode = DAG.getMachineNode(Opcode, DL, M->getVTList(), Ops);
+    MachineMemOperand *MemRef = M->getMemOperand();
+    DAG.setNodeMemRefs(NewNode, {MemRef});
+    return SDValue(NewNode, 0);
+  }
   case Intrinsic::amdgcn_image_bvh_intersect_ray: {
     MemSDNode *M = cast<MemSDNode>(Op);
     SDValue NodePtr = M->getOperand(2);
@@ -10184,10 +10297,14 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case ISD::FMAXNUM:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case AMDGPUISD::CLAMP:
   case AMDGPUISD::FMED3:
   case AMDGPUISD::FMAX3:
-  case AMDGPUISD::FMIN3: {
+  case AMDGPUISD::FMIN3:
+  case AMDGPUISD::FMAXIMUM3:
+  case AMDGPUISD::FMINIMUM3: {
     // FIXME: Shouldn't treat the generic operations different based these.
     // However, we aren't really required to flush the result from
     // minnum/maxnum..
@@ -10334,7 +10451,9 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
   case AMDGPU::G_FMINNUM:
   case AMDGPU::G_FMAXNUM:
   case AMDGPU::G_FMINNUM_IEEE:
-  case AMDGPU::G_FMAXNUM_IEEE: {
+  case AMDGPU::G_FMAXNUM_IEEE:
+  case AMDGPU::G_FMINIMUM:
+  case AMDGPU::G_FMAXIMUM: {
     if (Subtarget->supportsMinMaxDenormModes() ||
         denormalsEnabledForType(MRI.getType(Reg), MF))
       return true;
@@ -10512,6 +10631,8 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
   case ISD::FMAXNUM:
   case ISD::FMAXNUM_IEEE:
     return AMDGPUISD::FMAX3;
+  case ISD::FMAXIMUM:
+    return AMDGPUISD::FMAXIMUM3;
   case ISD::SMAX:
     return AMDGPUISD::SMAX3;
   case ISD::UMAX:
@@ -10519,6 +10640,8 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
   case ISD::FMINNUM:
   case ISD::FMINNUM_IEEE:
     return AMDGPUISD::FMIN3;
+  case ISD::FMINIMUM:
+    return AMDGPUISD::FMINIMUM3;
   case ISD::SMIN:
     return AMDGPUISD::SMIN3;
   case ISD::UMIN:
@@ -10867,7 +10990,9 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
     case ISD::FMAXNUM:
     case ISD::FMINNUM:
     case ISD::FMAXNUM_IEEE:
-    case ISD::FMINNUM_IEEE: {
+    case ISD::FMINNUM_IEEE:
+    case ISD::FMAXIMUM:
+    case ISD::FMINIMUM: {
       SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
                                  Vec.getOperand(0), Idx);
       SDValue Elt1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
@@ -11648,6 +11773,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FMINNUM:
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINNUM_IEEE:
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUM:
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::UMAX:

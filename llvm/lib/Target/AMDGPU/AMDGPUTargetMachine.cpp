@@ -327,6 +327,16 @@ static cl::opt<bool> EnablePromoteKernelArguments(
     cl::desc("Enable promotion of flat kernel pointer arguments to global"),
     cl::Hidden, cl::init(true));
 
+static cl::opt<bool> EnableImageIntrinsicOptimizer(
+    "amdgpu-enable-image-intrinsic-optimizer",
+    cl::desc("Enable image intrinsic optimizer pass"), cl::init(false),
+    cl::Hidden);
+
+static cl::opt<bool> EnableLoopPrefetch(
+    "amdgpu-loop-prefetch",
+    cl::desc("Enable loop data prefetch on AMDGPU"),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<bool> EnableMaxIlpSchedStrategy(
     "amdgpu-enable-max-ilp-scheduling-strategy",
     cl::desc("Enable scheduling strategy to maximize ILP for a single wave."),
@@ -405,6 +415,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUExternalAAWrapperPass(*PR);
   initializeAMDGPUUseNativeCallsPass(*PR);
   initializeAMDGPUSimplifyLibCallsPass(*PR);
+  initializeAMDGPUImageIntrinsicOptimizerPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
   initializeAMDGPUResourceUsageAnalysisPass(*PR);
   initializeGCNNSAReassignPass(*PR);
@@ -617,6 +628,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
              ArrayRef<PassBuilder::PipelineElement>) {
         if (PassName == "amdgpu-simplifylib") {
           PM.addPass(AMDGPUSimplifyLibCallsPass(*this));
+          return true;
+        }
+        if (PassName == "amdgpu-image-intrinsic-opt") {
+          PM.addPass(AMDGPUImageIntrinsicOptimizerPass(*this));
           return true;
         }
         if (PassName == "amdgpu-usenative") {
@@ -929,6 +944,8 @@ void AMDGPUPassConfig::addEarlyCSEOrGVNPass() {
 
 void AMDGPUPassConfig::addStraightLineScalarOptimizationPasses() {
   addPass(createLICMPass());
+  if (isPassEnabled(EnableLoopPrefetch, CodeGenOpt::Aggressive))
+    addPass(createLoopDataPrefetchPass());
   addPass(createSeparateConstOffsetFromGEPPass());
   // ReassociateGEPs exposes more opportunities for SLSR. See
   // the example in reassociate-geps-and-slsr.ll.
@@ -956,6 +973,9 @@ void AMDGPUPassConfig::addIRPasses() {
 
   // A call to propagate attributes pass in the backend in case opt was not run.
   addPass(createAMDGPUPropagateAttributesEarlyPass(&TM));
+
+  if (isPassEnabled(EnableImageIntrinsicOptimizer))
+    addPass(createAMDGPUImageIntrinsicOptimizerPass(&TM));
 
   addPass(createAMDGPULowerIntrinsicsPass());
 
@@ -1421,13 +1441,13 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
       static_cast<const yaml::SIMachineFunctionInfo &>(MFI_);
   MachineFunction &MF = PFS.MF;
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   if (MFI->initializeBaseYamlFields(YamlMFI, MF, PFS, Error, SourceRange))
     return true;
 
   if (MFI->Occupancy == 0) {
     // Fixup the subtarget dependent default value.
-    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
     MFI->Occupancy = ST.computeOccupancy(MF.getFunction(), MFI->getLDSSize());
   }
 
@@ -1574,8 +1594,10 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
                              MFI->ArgInfo.WorkItemIDZ, 0, 0)))
     return true;
 
-  MFI->Mode.IEEE = YamlMFI.Mode.IEEE;
-  MFI->Mode.DX10Clamp = YamlMFI.Mode.DX10Clamp;
+  if (ST.hasIEEEMode())
+    MFI->Mode.IEEE = YamlMFI.Mode.IEEE;
+  if (ST.hasDX10ClampMode())
+    MFI->Mode.DX10Clamp = YamlMFI.Mode.DX10Clamp;
   MFI->Mode.FP32InputDenormals = YamlMFI.Mode.FP32InputDenormals;
   MFI->Mode.FP32OutputDenormals = YamlMFI.Mode.FP32OutputDenormals;
   MFI->Mode.FP64FP16InputDenormals = YamlMFI.Mode.FP64FP16InputDenormals;

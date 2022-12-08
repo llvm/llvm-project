@@ -220,6 +220,23 @@ class SM_WaveId_Pseudo<string opName, SDPatternOperator node> : SM_Pseudo<
   let has_sbase = 0;
 }
 
+class SM_Prefetch_Pseudo <string opName, RegisterClass baseClass, bit hasSBase>
+  : SM_Pseudo<opName, (outs), !con(!if(hasSBase, (ins baseClass:$sbase), (ins)),
+                                   (ins smem_offset:$offset, SReg_32:$soffset, i8imm:$sdata)),
+              !if(hasSBase, " $sbase,", "") # " $offset, $soffset, $sdata"> {
+  // Mark prefetches as both load and store to prevent reordering with loads
+  // and stores. This is also needed for pattern to match prefetch intrinsic.
+  let mayLoad = 1;
+  let mayStore = 1;
+  let has_glc = 0;
+  let LGKM_CNT = 0;
+  let has_sbase = hasSBase;
+  let ScalarStore = 0;
+  let has_offset = 1;
+  let has_soffset = 1;
+  let PseudoInstr = opName;
+}
+
 //===----------------------------------------------------------------------===//
 // Scalar Atomic Memory Classes
 //===----------------------------------------------------------------------===//
@@ -296,6 +313,10 @@ defm S_LOAD_DWORDX2  : SM_Pseudo_Loads <"s_load_dwordx2", SReg_64, SReg_64_XEXEC
 defm S_LOAD_DWORDX4  : SM_Pseudo_Loads <"s_load_dwordx4", SReg_64, SReg_128>;
 defm S_LOAD_DWORDX8  : SM_Pseudo_Loads <"s_load_dwordx8", SReg_64, SReg_256>;
 defm S_LOAD_DWORDX16 : SM_Pseudo_Loads <"s_load_dwordx16", SReg_64, SReg_512>;
+defm S_LOAD_I8       : SM_Pseudo_Loads <"s_load_i8", SReg_64, SReg_32_XM0_XEXEC>;
+defm S_LOAD_U8       : SM_Pseudo_Loads <"s_load_u8", SReg_64, SReg_32_XM0_XEXEC>;
+defm S_LOAD_I16      : SM_Pseudo_Loads <"s_load_i16", SReg_64, SReg_32_XM0_XEXEC>;
+defm S_LOAD_U16      : SM_Pseudo_Loads <"s_load_u16", SReg_64, SReg_32_XM0_XEXEC>;
 
 let is_buffer = 1 in {
 defm S_BUFFER_LOAD_DWORD : SM_Pseudo_Loads <
@@ -318,6 +339,22 @@ defm S_BUFFER_LOAD_DWORDX8 : SM_Pseudo_Loads <
 
 defm S_BUFFER_LOAD_DWORDX16 : SM_Pseudo_Loads <
   "s_buffer_load_dwordx16", SReg_128, SReg_512
+>;
+
+defm S_BUFFER_LOAD_I8 : SM_Pseudo_Loads <
+  "s_buffer_load_i8", SReg_128, SReg_32_XM0_XEXEC
+>;
+
+defm S_BUFFER_LOAD_U8 : SM_Pseudo_Loads <
+  "s_buffer_load_u8", SReg_128, SReg_32_XM0_XEXEC
+>;
+
+defm S_BUFFER_LOAD_I16 : SM_Pseudo_Loads <
+  "s_buffer_load_i16", SReg_128, SReg_32_XM0_XEXEC
+>;
+
+defm S_BUFFER_LOAD_U16 : SM_Pseudo_Loads <
+  "s_buffer_load_u16", SReg_128, SReg_32_XM0_XEXEC
 >;
 }
 
@@ -446,6 +483,16 @@ let SubtargetPredicate = HasScalarAtomics in {
 defm S_DCACHE_DISCARD    : SM_Pseudo_Discards <"s_dcache_discard">;
 defm S_DCACHE_DISCARD_X2 : SM_Pseudo_Discards <"s_dcache_discard_x2">;
 }
+
+let SubtargetPredicate = isGFX12Plus in {
+def S_PREFETCH_INST        : SM_Prefetch_Pseudo <"s_prefetch_inst", SReg_64, 1>;
+def S_PREFETCH_INST_PC_REL : SM_Prefetch_Pseudo <"s_prefetch_inst_pc_rel", SReg_64, 0>;
+def S_PREFETCH_DATA        : SM_Prefetch_Pseudo <"s_prefetch_data", SReg_64, 1>;
+def S_PREFETCH_DATA_PC_REL : SM_Prefetch_Pseudo <"s_prefetch_data_pc_rel", SReg_64, 0>;
+def S_BUFFER_PREFETCH_DATA : SM_Prefetch_Pseudo <"s_buffer_prefetch_data", SReg_128, 1> {
+  let is_buffer = 1;
+}
+} // end let SubtargetPredicate = isGFX12Plus
 
 //===----------------------------------------------------------------------===//
 // Targets
@@ -828,6 +875,14 @@ def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{ return isUniformL
   }];
 }
 
+def smrd_prefetch : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
+                             (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
+                             [{ return !N->getOperand(1)->isDivergent();}]> {
+  let GISelPredicateCode = [{
+    return isInstrUniform(MI);
+  }];
+}
+
 def SMRDImm         : ComplexPattern<iPTR, 2, "SelectSMRDImm">;
 def SMRDImm32       : ComplexPattern<iPTR, 2, "SelectSMRDImm32">;
 def SMRDSgpr        : ComplexPattern<iPTR, 2, "SelectSMRDSgpr">;
@@ -959,6 +1014,32 @@ def : GCNPat <
   let AddedComplexity = 1;
 }
 } // let OtherPredicates = [HasShaderCyclesRegister]
+
+def SIMM24bitPtr : ImmLeaf <iPTR,
+  [{return isInt<24>(Imm);}]
+>;
+
+multiclass SMPrefetchPat<string type, int cache_type> {
+  def : GCNPat <
+    (smrd_prefetch (SMRDImm i64:$sbase, i32:$offset), imm, imm, (i32 cache_type)),
+    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, $offset, (i32 SGPR_NULL), (i8 0))
+  >;
+
+  def : GCNPat <
+    (smrd_prefetch (i64 SReg_64:$sbase), imm, imm, (i32 cache_type)),
+    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, 0, (i32 SGPR_NULL), (i8 0))
+  >;
+
+  def : GCNPat <
+    (prefetch SIMM24bitPtr:$offset, imm, imm, (i32 cache_type)),
+    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type#"_PC_REL") (as_i32timm $offset), (i32 SGPR_NULL), (i8 0))
+  > {
+    let AddedComplexity = 10;
+  }
+}
+
+defm : SMPrefetchPat<"INST", 0>;
+defm : SMPrefetchPat<"DATA", 1>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
@@ -1236,3 +1317,53 @@ multiclass SM_Real_Probe_gfx11<bits<8> op, string ps> {
 
 defm S_ATC_PROBE        : SM_Real_Probe_gfx11 <0x22, "S_ATC_PROBE">;
 defm S_ATC_PROBE_BUFFER : SM_Real_Probe_gfx11 <0x23, "S_ATC_PROBE_BUFFER">;
+
+//===----------------------------------------------------------------------===//
+// GFX12.
+//===----------------------------------------------------------------------===//
+
+class SMEM_Real_gfx12<bits<8> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
+    SMEM_Real_10Plus_common<op, ps, opName, SIEncodingFamily.GFX12,
+                            SGPR_NULL_gfx11plus> {
+  let AssemblerPredicate = isGFX12Plus;
+  let DecoderNamespace = "GFX12";
+  let Inst{18-13} = op{5-0};
+  let Inst{19}    = !if(ps.has_dlc, cpol{CPolBit.DLC}, 0);
+  let Inst{24-20} = ?; // TODO-GFX12: Add new bits {24-20}: TH, Scope, NV
+  let Inst{25}    = !if(ps.has_glc, cpol{CPolBit.GLC}, 0);
+  let Inst{55-32} = offset{23-0};
+}
+
+class SMEM_Real_Prefetch_gfx12 <bits<8> op, SM_Pseudo ps> : SMEM_Real_gfx12<op, ps> {
+  bits<7> sdata; // Only 5 bits of sdata are supported.
+
+  let sdst = ?;
+  let Inst{12-11} = 0; // Unused sdata bits.
+  let Inst{10-6}  = !if(ps.has_sdst, sdata{4-0}, ?);
+}
+
+def S_PREFETCH_INST_gfx12        : SMEM_Real_Prefetch_gfx12<0x24, S_PREFETCH_INST>;
+def S_PREFETCH_INST_PC_REL_gfx12 : SMEM_Real_Prefetch_gfx12<0x25, S_PREFETCH_INST_PC_REL>;
+def S_PREFETCH_DATA_gfx12        : SMEM_Real_Prefetch_gfx12<0x26, S_PREFETCH_DATA>;
+def S_BUFFER_PREFETCH_DATA_gfx12 : SMEM_Real_Prefetch_gfx12<0x27, S_BUFFER_PREFETCH_DATA>;
+def S_PREFETCH_DATA_PC_REL_gfx12 : SMEM_Real_Prefetch_gfx12<0x28, S_PREFETCH_DATA_PC_REL>;
+
+class SMEM_Real_Load_gfx12<bits<8> op, string ps, string opName, OffsetMode offsets> :
+    SMEM_Real_gfx12<op, !cast<SM_Pseudo>(ps # offsets.Variant), opName> {
+  RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps # offsets.Variant).BaseClass;
+  let InOperandList = !con((ins BaseClass:$sbase), offsets.Ins, (ins CPol:$cpol));
+}
+
+multiclass SM_Real_Loads_gfx12<bits<8> op, string ps, string opName> {
+  def _IMM_gfx12 : SMEM_Real_Load_gfx12<op, ps, opName, IMM_Offset>;
+  def _SGPR_IMM_gfx12 : SMEM_Real_Load_gfx12<op, ps, opName, SGPR_IMM_Offset>;
+}
+
+defm S_LOAD_I8         : SM_Real_Loads_gfx12<0x8, "S_LOAD_I8", "s_load_i8">;
+defm S_LOAD_U8         : SM_Real_Loads_gfx12<0x9, "S_LOAD_U8", "s_load_u8">;
+defm S_BUFFER_LOAD_I8  : SM_Real_Loads_gfx12<0x18, "S_BUFFER_LOAD_I8", "s_buffer_load_i8">;
+defm S_BUFFER_LOAD_U8  : SM_Real_Loads_gfx12<0x19, "S_BUFFER_LOAD_U8", "s_buffer_load_u8">;
+defm S_LOAD_I16        : SM_Real_Loads_gfx12<0xa, "S_LOAD_I16", "s_load_i16">;
+defm S_LOAD_U16        : SM_Real_Loads_gfx12<0xb, "S_LOAD_U16", "s_load_u16">;
+defm S_BUFFER_LOAD_I16 : SM_Real_Loads_gfx12<0x1a, "S_BUFFER_LOAD_I16", "s_buffer_load_i16">;
+defm S_BUFFER_LOAD_U16 : SM_Real_Loads_gfx12<0x1b, "S_BUFFER_LOAD_U16", "s_buffer_load_u16">;

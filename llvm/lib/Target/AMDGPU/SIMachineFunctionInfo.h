@@ -36,7 +36,8 @@ class AMDGPUPseudoSourceValue : public PseudoSourceValue {
 public:
   enum AMDGPUPSVKind : unsigned {
     PSVImage = PseudoSourceValue::TargetCustom,
-    GWSResource
+    GWSResource,
+    GlobalRegister,
   };
 
 protected:
@@ -80,6 +81,31 @@ public:
 
   void printCustom(raw_ostream &OS) const override {
     OS << "GWSResource";
+  }
+};
+
+class AMDGPUGlobalRegisterPseudoSourceValue final
+    : public AMDGPUPseudoSourceValue {
+public:
+  explicit AMDGPUGlobalRegisterPseudoSourceValue(const AMDGPUTargetMachine &TM)
+      : AMDGPUPseudoSourceValue(GlobalRegister, TM) {}
+
+  static bool classof(const PseudoSourceValue *V) {
+    return V->kind() == GlobalRegister;
+  }
+
+  // These are inaccessible memory from IR.
+  bool isAliased(const MachineFrameInfo *) const override {
+    return false;
+  }
+
+  // These are inaccessible memory from IR.
+  bool mayAlias(const MachineFrameInfo *) const override {
+    return false;
+  }
+
+  void printCustom(raw_ostream &OS) const override {
+    OS << "GlobalRegister";
   }
 };
 
@@ -375,6 +401,7 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   std::pair<unsigned, unsigned> WavesPerEU = {0, 0};
 
   const AMDGPUGWSResourcePseudoSourceValue GWSResourcePSV;
+  const AMDGPUGlobalRegisterPseudoSourceValue GlobalRegisterPSV;
 
 private:
   unsigned NumUserSGPRs = 0;
@@ -951,6 +978,11 @@ public:
   const AMDGPUGWSResourcePseudoSourceValue *
   getGWSPSV(const AMDGPUTargetMachine &TM) {
     return &GWSResourcePSV;
+  }
+
+  const AMDGPUGlobalRegisterPseudoSourceValue *
+  getGlobalRegisterPSV(const AMDGPUTargetMachine &TM) {
+    return &GlobalRegisterPSV;
   }
 
   unsigned getOccupancy() const {
