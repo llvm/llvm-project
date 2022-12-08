@@ -4813,8 +4813,10 @@ static Value *simplifyInsertValueInst(Value *Agg, Value *Val,
     if (Constant *CVal = dyn_cast<Constant>(Val))
       return ConstantFoldInsertValueInstruction(CAgg, CVal, Idxs);
 
-  // insertvalue x, undef, n -> x
-  if (Q.isUndefValue(Val))
+  // insertvalue x, poison, n -> x
+  // insertvalue x, undef, n -> x if x cannot be poison
+  if (isa<PoisonValue>(Val) ||
+      (Q.isUndefValue(Val) && isGuaranteedNotToBePoison(Agg)))
     return Agg;
 
   // insertvalue x, (extractvalue y, n), n
