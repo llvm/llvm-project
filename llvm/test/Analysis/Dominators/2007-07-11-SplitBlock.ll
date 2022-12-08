@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax < %s -loop-rotate -simple-loop-unswitch -disable-output
+; RUN: opt < %s -passes=loop-rotate,simple-loop-unswitch -disable-output
 
 define i32 @stringSearch_Clib(i32 %count) {
 entry:
