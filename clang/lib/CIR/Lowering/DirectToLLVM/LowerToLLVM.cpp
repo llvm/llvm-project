@@ -536,7 +536,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
     signalPassFailure();
 }
 
-std::unique_ptr<mlir::Pass> createConvertDirectCIRToLLVMPass() {
+std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {
   return std::make_unique<ConvertCIRToLLVMPass>();
 }
 
@@ -546,7 +546,7 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule,
                              LLVMContext &llvmCtx) {
   mlir::PassManager pm(mlirCtx.get());
 
-  pm.addPass(createConvertDirectCIRToLLVMPass());
+  pm.addPass(createConvertCIRToLLVMPass());
 
   auto result = !mlir::failed(pm.run(theModule));
   if (!result)
