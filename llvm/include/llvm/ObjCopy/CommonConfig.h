@@ -22,6 +22,7 @@
 #include "llvm/Support/Regex.h"
 // Necessary for llvm::DebugCompressionType::None
 #include "llvm/Target/TargetOptions.h"
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -75,7 +76,7 @@ enum SectionFlag {
 struct SectionRename {
   StringRef OriginalName;
   StringRef NewName;
-  Optional<SectionFlag> NewFlags;
+  std::optional<SectionFlag> NewFlags;
 };
 
 struct SectionFlagsUpdate {
@@ -206,7 +207,7 @@ struct CommonConfig {
   FileFormat OutputFormat = FileFormat::Unspecified;
 
   // Only applicable when --output-format!=binary (e.g. elf64-x86-64).
-  Optional<MachineInfo> OutputArch;
+  std::optional<MachineInfo> OutputArch;
 
   // Advanced options
   StringRef AddGnuDebugLink;
