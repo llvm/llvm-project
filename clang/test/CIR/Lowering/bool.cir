@@ -1,0 +1,14 @@
+// RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+
+module {
+  cir.func @foo() {
+    cir.return
+  }
+}
+
+//     MLIR: llvm.func @foo() {
+// MLIR-NEXT: llvm.return
+
+//      LLVM: define void @foo()
+// LLVM-NEXT:   ret void
