@@ -251,7 +251,7 @@ TEST_F(X86ParallelSnippetGeneratorTest, ReadAfterWrite_CMOV32rr) {
   // - hasAliasingRegisters
   const unsigned Opcode = X86::CMOV32rr;
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
-  ASSERT_THAT(CodeTemplates, SizeIs(3));
+  ASSERT_THAT(CodeTemplates, SizeIs(2));
   for (const auto &CT : CodeTemplates) {
     EXPECT_THAT(CT.Info, HasSubstr("avoiding Read-After-Write issue"));
     EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
