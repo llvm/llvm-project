@@ -2434,7 +2434,7 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
           OutContext.getOrCreateSymbol(GVSym->getSymbolTableName()), Size,
           GVSym, Alignment);
     else
-      OutStreamer->emitCommonSymbol(GVSym, Size, Alignment.value());
+      OutStreamer->emitCommonSymbol(GVSym, Size, Alignment);
     return;
   }
 
