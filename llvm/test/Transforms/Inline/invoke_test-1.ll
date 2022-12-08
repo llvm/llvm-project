@@ -14,8 +14,8 @@ entry:
 }
 
 ; caller returns true if might_throw throws an exception...
-define i32 @caller() personality i32 (...)* @__gxx_personality_v0 {
-; CHECK-LABEL: define i32 @caller() personality i32 (...)* @__gxx_personality_v0
+define i32 @caller() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define i32 @caller() personality ptr @__gxx_personality_v0
 entry:
   invoke void @callee()
       to label %cont unwind label %exc
@@ -26,7 +26,7 @@ cont:
   ret i32 0
 
 exc:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
   ret i32 1
 }

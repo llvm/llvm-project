@@ -7,13 +7,13 @@ define void @foo() {
   ret void
 }
 
-define void @bar(void ()*) {
+define void @bar(ptr) {
   call void @llvm.assume(i1 true)
   call void %0();
   ret void
 }
 
 define void @baz() {
-  call void @bar(void ()* @foo)
+  call void @bar(ptr @foo)
   ret void
 }

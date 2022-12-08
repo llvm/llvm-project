@@ -15,6 +15,6 @@ define linkonce_odr void @bar() comdat($c) {
 }
 ; CHECK: define linkonce_odr void @bar() comdat($c)
 
-define void()* @zed()  {
-  ret void()* @foo
+define ptr @zed()  {
+  ret ptr @foo
 }

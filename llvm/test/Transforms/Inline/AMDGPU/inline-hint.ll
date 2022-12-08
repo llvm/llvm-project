@@ -29,12 +29,12 @@ entry:
 ; CHECK-NOT: call
 ; CHECK: udiv
 ; CHECK: ret void
-define amdgpu_kernel void @caller_hint(<16 x i32> addrspace(1)* nocapture %x, <16 x i32> addrspace(1)* nocapture readonly %y) {
+define amdgpu_kernel void @caller_hint(ptr addrspace(1) nocapture %x, ptr addrspace(1) nocapture readonly %y) {
 entry:
-  %tmp = load <16 x i32>, <16 x i32> addrspace(1)* %x, align 4
-  %tmp1 = load <16 x i32>, <16 x i32> addrspace(1)* %y, align 4
+  %tmp = load <16 x i32>, ptr addrspace(1) %x, align 4
+  %tmp1 = load <16 x i32>, ptr addrspace(1) %y, align 4
   %div.i = tail call <16 x i32> @div_hint(<16 x i32> %tmp, <16 x i32> %tmp1) #0
-  store <16 x i32> %div.i, <16 x i32> addrspace(1)* %x, align 4
+  store <16 x i32> %div.i, ptr addrspace(1) %x, align 4
   ret void
 }
 
@@ -66,12 +66,12 @@ entry:
 ; CHECK-NOT: udiv
 ; CHECK: tail call <16 x i32> @div_nohint
 ; CHECK: ret void
-define amdgpu_kernel void @caller_nohint(<16 x i32> addrspace(1)* nocapture %x, <16 x i32> addrspace(1)* nocapture readonly %y) {
+define amdgpu_kernel void @caller_nohint(ptr addrspace(1) nocapture %x, ptr addrspace(1) nocapture readonly %y) {
 entry:
-  %tmp = load <16 x i32>, <16 x i32> addrspace(1)* %x
-  %tmp1 = load <16 x i32>, <16 x i32> addrspace(1)* %y
+  %tmp = load <16 x i32>, ptr addrspace(1) %x
+  %tmp1 = load <16 x i32>, ptr addrspace(1) %y
   %div.i = tail call <16 x i32> @div_nohint(<16 x i32> %tmp, <16 x i32> %tmp1)
-  store <16 x i32> %div.i, <16 x i32> addrspace(1)* %x
+  store <16 x i32> %div.i, ptr addrspace(1) %x
   ret void
 }
 
