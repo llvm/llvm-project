@@ -178,14 +178,12 @@ define <4 x i32> @test17(<4 x i32> %a0, ptr %dummy) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorps %xmm0, %xmm0
 ; X86-NEXT:    movaps %xmm0, (%eax)
-; X86-NEXT:    xorps %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test17:
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, (%rdi)
-; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %a = call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> undef, i32 6)
   store <4 x i32> %a, ptr %dummy
@@ -199,14 +197,12 @@ define <4 x i32> @test18(<4 x i32> %a0, ptr %dummy) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorps %xmm0, %xmm0
 ; X86-NEXT:    movaps %xmm0, (%eax)
-; X86-NEXT:    xorps %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test18:
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, (%rdi)
-; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %a = call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> undef, i32 3)
   store <4 x i32> %a, ptr %dummy

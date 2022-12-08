@@ -86,6 +86,13 @@ namespace llvm {
     /// Gets the inlined-at scope for a DebugLoc.
     MDNode *getInlinedAtScope() const;
 
+    /// Rebuild the entire inline-at chain by replacing the subprogram at the
+    /// end of the chain with NewSP.
+    static DebugLoc
+    replaceInlinedAtSubprogram(const DebugLoc &DL, DISubprogram &NewSP,
+                               LLVMContext &Ctx,
+                               DenseMap<const MDNode *, MDNode *> &Cache);
+
     /// Find the debug info location for the start of the function.
     ///
     /// Walk up the scope chain of given debug loc and find line number info

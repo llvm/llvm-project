@@ -53,7 +53,7 @@ public:
   Result operator()(const common::Indirection<A, C> &x) const {
     return visitor_(x.value());
   }
-  template <typename A> Result operator()(const SymbolRef x) const {
+  template <typename _> Result operator()(const SymbolRef x) const {
     return visitor_(*x);
   }
   template <typename A> Result operator()(const std::unique_ptr<A> &x) const {
@@ -122,13 +122,13 @@ public:
   // Variables
   Result operator()(const BaseObject &x) const { return visitor_(x.u); }
   Result operator()(const Component &x) const {
-    return Combine(x.base(), x.GetLastSymbol());
+    return Combine(x.base(), x.symbol());
   }
   Result operator()(const NamedEntity &x) const {
     if (const Component * component{x.UnwrapComponent()}) {
       return visitor_(*component);
     } else {
-      return visitor_(x.GetFirstSymbol());
+      return visitor_(DEREF(x.UnwrapSymbolRef()));
     }
   }
   Result operator()(const TypeParamInquiry &x) const {

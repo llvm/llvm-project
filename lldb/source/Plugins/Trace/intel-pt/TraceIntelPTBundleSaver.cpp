@@ -170,7 +170,7 @@ WriteContextSwitchTrace(TraceIntelPT &trace_ipt, lldb::cpu_id_t cpu_id,
     return std::move(err);
 
   if (should_skip)
-    return None;
+    return std::nullopt;
   return output_context_switch_trace;
 }
 
@@ -193,7 +193,7 @@ static Expected<FileSpec> WriteIntelPTTrace(TraceIntelPT &trace_ipt,
 static llvm::Expected<llvm::Optional<std::vector<JSONCpu>>>
 BuildCpusSection(TraceIntelPT &trace_ipt, FileSpec directory, bool compact) {
   if (trace_ipt.GetTracedCpus().empty())
-    return None;
+    return std::nullopt;
 
   std::vector<JSONCpu> json_cpus;
   FileSpec cpus_dir = directory;

@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -mattr=+sve -mtriple aarch64-linux-gnu \
+; RUN: opt -S -passes=loop-vectorize -mattr=+sve -mtriple aarch64-linux-gnu \
 ; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue < %s | FileCheck %s
 
 define void @invariant_load(i64 %n, i32* noalias nocapture %a, i32* nocapture readonly %b) {

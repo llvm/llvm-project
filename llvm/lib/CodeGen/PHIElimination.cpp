@@ -161,7 +161,7 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
       for (unsigned Index = 0, e = MRI->getNumVirtRegs(); Index != e; ++Index) {
         // Set the bit for this register for each MBB where it is
         // live-through or live-in (killed).
-        unsigned VirtReg = Register::index2VirtReg(Index);
+        Register VirtReg = Register::index2VirtReg(Index);
         MachineInstr *DefMI = MRI->getVRegDef(VirtReg);
         if (!DefMI)
           continue;

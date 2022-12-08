@@ -2162,8 +2162,8 @@ let Predicates = [HasSVEorSME] in {
 } // End HasSVEorSME
 
 let Predicates = [HasBF16, HasSVEorSME] in {
-  defm BFDOT_ZZZ    : sve_bfloat_dot<"bfdot", int_aarch64_sve_bfdot>;
-  defm BFDOT_ZZI    : sve_bfloat_dot_indexed<"bfdot", int_aarch64_sve_bfdot_lane>;
+  defm BFDOT_ZZZ    : sve_float_dot<0b1, "bfdot", nxv8bf16, int_aarch64_sve_bfdot>;
+  defm BFDOT_ZZI    : sve_float_dot_indexed<0b1, "bfdot", nxv8bf16, int_aarch64_sve_bfdot_lane_v2>;
 } // End HasBF16, HasSVEorSME
 
 let Predicates = [HasBF16, HasSVE] in {
@@ -2171,10 +2171,10 @@ let Predicates = [HasBF16, HasSVE] in {
 } // End HasBF16, HasSVE
 
 let Predicates = [HasBF16, HasSVEorSME] in {
-  defm BFMLALB_ZZZ : sve_bfloat_matmul_longvecl<0b0, 0b0, "bfmlalb", int_aarch64_sve_bfmlalb>;
-  defm BFMLALT_ZZZ : sve_bfloat_matmul_longvecl<0b1, 0b0, "bfmlalt", int_aarch64_sve_bfmlalt>;
-  defm BFMLALB_ZZZI : sve_bfloat_matmul_longvecl_idx<0b0, 0b0, "bfmlalb", int_aarch64_sve_bfmlalb_lane>;
-  defm BFMLALT_ZZZI : sve_bfloat_matmul_longvecl_idx<0b1, 0b0, "bfmlalt", int_aarch64_sve_bfmlalt_lane>;
+  defm BFMLALB_ZZZ : sve2_fp_mla_long<0b100, "bfmlalb", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlalb>;
+  defm BFMLALT_ZZZ : sve2_fp_mla_long<0b101, "bfmlalt", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlalt>;
+  defm BFMLALB_ZZZI : sve2_fp_mla_long_by_indexed_elem<0b100, "bfmlalb", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlalb_lane_v2>;
+  defm BFMLALT_ZZZI : sve2_fp_mla_long_by_indexed_elem<0b101, "bfmlalt", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlalt_lane_v2>;
   defm BFCVT_ZPmZ   : sve_bfloat_convert<0b1, "bfcvt",   int_aarch64_sve_fcvt_bf16f32>;
   defm BFCVTNT_ZPmZ : sve_bfloat_convert<0b0, "bfcvtnt", int_aarch64_sve_fcvtnt_bf16f32>;
 } // End HasBF16, HasSVEorSME
@@ -3518,16 +3518,16 @@ let Predicates = [HasSVE2orSME] in {
   defm FMINP_ZPmZZ   : sve2_fp_pairwise_pred<0b111, "fminp",   int_aarch64_sve_fminp>;
 
   // SVE2 floating-point multiply-add long (indexed)
-  defm FMLALB_ZZZI_SHH : sve2_fp_mla_long_by_indexed_elem<0b00, "fmlalb", int_aarch64_sve_fmlalb_lane>;
-  defm FMLALT_ZZZI_SHH : sve2_fp_mla_long_by_indexed_elem<0b01, "fmlalt", int_aarch64_sve_fmlalt_lane>;
-  defm FMLSLB_ZZZI_SHH : sve2_fp_mla_long_by_indexed_elem<0b10, "fmlslb", int_aarch64_sve_fmlslb_lane>;
-  defm FMLSLT_ZZZI_SHH : sve2_fp_mla_long_by_indexed_elem<0b11, "fmlslt", int_aarch64_sve_fmlslt_lane>;
+  defm FMLALB_ZZZI_SHH : sve2_fp_mla_long_by_indexed_elem<0b000, "fmlalb", nxv4f32, nxv8f16, int_aarch64_sve_fmlalb_lane>;
+  defm FMLALT_ZZZI_SHH : sve2_fp_mla_long_by_indexed_elem<0b001, "fmlalt", nxv4f32, nxv8f16, int_aarch64_sve_fmlalt_lane>;
+  defm FMLSLB_ZZZI_SHH : sve2_fp_mla_long_by_indexed_elem<0b010, "fmlslb", nxv4f32, nxv8f16, int_aarch64_sve_fmlslb_lane>;
+  defm FMLSLT_ZZZI_SHH : sve2_fp_mla_long_by_indexed_elem<0b011, "fmlslt", nxv4f32, nxv8f16, int_aarch64_sve_fmlslt_lane>;
 
   // SVE2 floating-point multiply-add long
-  defm FMLALB_ZZZ_SHH : sve2_fp_mla_long<0b00, "fmlalb", int_aarch64_sve_fmlalb>;
-  defm FMLALT_ZZZ_SHH : sve2_fp_mla_long<0b01, "fmlalt", int_aarch64_sve_fmlalt>;
-  defm FMLSLB_ZZZ_SHH : sve2_fp_mla_long<0b10, "fmlslb", int_aarch64_sve_fmlslb>;
-  defm FMLSLT_ZZZ_SHH : sve2_fp_mla_long<0b11, "fmlslt", int_aarch64_sve_fmlslt>;
+  defm FMLALB_ZZZ_SHH : sve2_fp_mla_long<0b000, "fmlalb", nxv4f32, nxv8f16, int_aarch64_sve_fmlalb>;
+  defm FMLALT_ZZZ_SHH : sve2_fp_mla_long<0b001, "fmlalt", nxv4f32, nxv8f16, int_aarch64_sve_fmlalt>;
+  defm FMLSLB_ZZZ_SHH : sve2_fp_mla_long<0b010, "fmlslb", nxv4f32, nxv8f16, int_aarch64_sve_fmlslb>;
+  defm FMLSLT_ZZZ_SHH : sve2_fp_mla_long<0b011, "fmlslt", nxv4f32, nxv8f16, int_aarch64_sve_fmlslt>;
 
   // SVE2 bitwise ternary operations
   defm EOR3_ZZZZ  : sve2_int_bitwise_ternary_op<0b000, "eor3",  AArch64eor3>;
@@ -3655,10 +3655,10 @@ let Predicates = [HasSVE2p1_or_HasSME2] in {
 defm FCLAMP_ZZZ : sve2p1_fclamp<"fclamp">;
 def FDOT_ZZZ_S  : sve_float_dot<0b0, "fdot">;
 def FDOT_ZZZI_S : sve_float_dot_indexed<0b0, "fdot">;
-def BFMLSLB_ZZZ_S : sve_bfloat_matmul_longvecl<0b0, 0b1, "bfmlslb">;
-def BFMLSLT_ZZZ_S : sve_bfloat_matmul_longvecl<0b1, 0b1, "bfmlslt">;
-def BFMLSLB_ZZZI_S : sve_bfloat_matmul_longvecl_idx<0b0, 0b1, "bfmlslb">;
-def BFMLSLT_ZZZI_S : sve_bfloat_matmul_longvecl_idx<0b1, 0b1, "bfmlslt">;
+def BFMLSLB_ZZZ_S : sve2_fp_mla_long<0b110, "bfmlslb">;
+def BFMLSLT_ZZZ_S : sve2_fp_mla_long<0b111, "bfmlslt">;
+def BFMLSLB_ZZZI_S : sve2_fp_mla_long_by_indexed_elem<0b110, "bfmlslb">;
+def BFMLSLT_ZZZI_S : sve2_fp_mla_long_by_indexed_elem<0b111, "bfmlslt">;
 
 def SDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"sdot", 0b0>;
 def UDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"udot", 0b1>;

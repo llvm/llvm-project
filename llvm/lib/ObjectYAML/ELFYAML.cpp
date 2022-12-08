@@ -23,6 +23,7 @@
 #include "llvm/Support/WithColor.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 
@@ -1160,7 +1161,7 @@ namespace {
 
 struct NormalizedOther {
   NormalizedOther(IO &IO) : YamlIO(IO) {}
-  NormalizedOther(IO &IO, Optional<uint8_t> Original) : YamlIO(IO) {
+  NormalizedOther(IO &IO, std::optional<uint8_t> Original) : YamlIO(IO) {
     assert(Original && "This constructor is only used for outputting YAML and "
                        "assumes a non-empty Original");
     std::vector<StOtherPiece> Ret;
@@ -1200,7 +1201,7 @@ struct NormalizedOther {
     return 0;
   }
 
-  Optional<uint8_t> denormalize(IO &) {
+  std::optional<uint8_t> denormalize(IO &) {
     if (!Other)
       return std::nullopt;
     uint8_t Ret = 0;
@@ -1248,7 +1249,7 @@ struct NormalizedOther {
   }
 
   IO &YamlIO;
-  Optional<std::vector<StOtherPiece>> Other;
+  std::optional<std::vector<StOtherPiece>> Other;
   std::string UnknownFlagsHolder;
 };
 
@@ -1298,11 +1299,11 @@ void MappingTraits<ELFYAML::Symbol>::mapping(IO &IO, ELFYAML::Symbol &Symbol) {
 
   // Symbol's Other field is a bit special. It is usually a field that
   // represents st_other and holds the symbol visibility. However, on some
-  // platforms, it can contain bit fields and regular values, or even sometimes a
-  // crazy mix of them (see comments for NormalizedOther). Because of this, we
+  // platforms, it can contain bit fields and regular values, or even sometimes
+  // a crazy mix of them (see comments for NormalizedOther). Because of this, we
   // need special handling.
-  MappingNormalization<NormalizedOther, Optional<uint8_t>> Keys(IO,
-                                                                Symbol.Other);
+  MappingNormalization<NormalizedOther, std::optional<uint8_t>> Keys(
+      IO, Symbol.Other);
   IO.mapOptional("Other", Keys->Other);
 }
 
@@ -1794,6 +1795,7 @@ void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(
 void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(
     IO &IO, ELFYAML::BBAddrMapEntry::BBEntry &E) {
   assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapOptional("ID", E.ID);
   IO.mapRequired("AddressOffset", E.AddressOffset);
   IO.mapRequired("Size", E.Size);
   IO.mapRequired("Metadata", E.Metadata);

@@ -27,6 +27,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -52,7 +53,7 @@ struct LinalgYAMLContext {
 struct LinalgOpMetadata {
   std::string name;
   std::string cppClassName;
-  Optional<std::string> doc;
+  std::optional<std::string> doc;
   SmallVector<std::string> implements;
   SmallVector<std::string> defines;
 };
@@ -76,11 +77,11 @@ enum class LinalgOperandDefKind {
 struct LinalgOperandDef {
   std::string name;
   LinalgOperandDefKind kind;
-  Optional<std::string> typeVar;
-  Optional<SerializedAffineMap> shapeMap;
-  Optional<SerializedAffineMap> indexAttrMap;
-  Optional<SmallVector<int64_t>> defaultIndices;
-  Optional<std::string> defaultFn;
+  std::optional<std::string> typeVar;
+  std::optional<SerializedAffineMap> shapeMap;
+  std::optional<SerializedAffineMap> indexAttrMap;
+  std::optional<SmallVector<int64_t>> defaultIndices;
+  std::optional<std::string> defaultFn;
 };
 
 enum class LinalgIteratorTypeDef {
@@ -89,7 +90,7 @@ enum class LinalgIteratorTypeDef {
 };
 
 struct LinalgIndexingMapsConfig {
-  Optional<SmallVector<SerializedAffineMap>> staticIndexingMaps;
+  std::optional<SmallVector<SerializedAffineMap>> staticIndexingMaps;
 };
 
 struct ScalarExpression;
@@ -98,19 +99,19 @@ enum class ScalarFnKind { Unary, Binary, Type };
 
 struct ScalarFn {
   ScalarFnKind kind;
-  Optional<std::string> fnName;
-  Optional<std::string> attrName;
-  Optional<std::string> typeVar;
+  std::optional<std::string> fnName;
+  std::optional<std::string> attrName;
+  std::optional<std::string> typeVar;
   // NOTE: This must be of arity 1, but to break the self-referential cycle,
   // we use a heap allocated vector.
   std::vector<ScalarExpression> operands;
 };
 
 struct ScalarExpression {
-  Optional<std::string> arg;
-  Optional<std::string> constant;
-  Optional<int64_t> index;
-  Optional<ScalarFn> scalarFn;
+  std::optional<std::string> arg;
+  std::optional<std::string> constant;
+  std::optional<int64_t> index;
+  std::optional<ScalarFn> scalarFn;
 };
 
 struct ScalarAssign {
@@ -126,8 +127,8 @@ struct LinalgStructuredOpConfig {
 };
 
 struct LinalgOpConfig {
-  Optional<LinalgOpMetadata> metadata;
-  Optional<LinalgStructuredOpConfig> structuredOp;
+  std::optional<LinalgOpMetadata> metadata;
+  std::optional<LinalgStructuredOpConfig> structuredOp;
 };
 
 } // namespace

@@ -18,6 +18,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Transforms/Instrumentation.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -73,7 +74,7 @@ static bool runCGProfilePass(
       continue;
     TargetTransformInfo &TTI = GetTTI(F);
     for (auto &BB : F) {
-      Optional<uint64_t> BBCount = BFI.getBlockProfileCount(&BB);
+      std::optional<uint64_t> BBCount = BFI.getBlockProfileCount(&BB);
       if (!BBCount)
         continue;
       for (auto &I : BB) {

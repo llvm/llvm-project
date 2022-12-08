@@ -1785,12 +1785,6 @@ struct AdditionalKeywords {
                                     kw_input, kw_output, kw_sequence)));
   }
 
-  /// Whether the token begins a block.
-  bool isBlockBegin(const FormatToken &Tok, const FormatStyle &Style) const {
-    return Tok.is(TT_MacroBlockBegin) ||
-           (Style.isVerilog() ? isVerilogBegin(Tok) : Tok.is(tok::l_brace));
-  }
-
 private:
   /// The JavaScript keywords beyond the C++ keyword set.
   std::unordered_set<IdentifierInfo *> JsExtraKeywords;

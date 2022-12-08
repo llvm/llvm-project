@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=armv7-apple-ios8.0 -o - %s | FileCheck %s
 
-%BigInt = type i5500
+%BigInt = type i8500
 
 define %BigInt @test_moved_jumptable(i1 %tst, i32 %sw, %BigInt %l) {
 ; CHECK-LABEL: test_moved_jumptable:

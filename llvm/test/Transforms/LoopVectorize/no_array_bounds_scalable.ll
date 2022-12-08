@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -transform-warning -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize,transform-warning -S 2>&1 | FileCheck %s
 
 ; Like no_array_bounds.ll we verify warnings are generated when vectorization/interleaving is
 ; explicitly specified and fails to occur for both fixed and scalable vectorize.width loop hints.

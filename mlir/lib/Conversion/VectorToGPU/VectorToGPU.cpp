@@ -191,12 +191,26 @@ convertElementwiseOpToMMA(Operation *op) {
     return gpu::MMAElementwiseOp::ADDF;
   if (isa<arith::MulFOp>(op))
     return gpu::MMAElementwiseOp::MULF;
+  if (isa<arith::SubFOp>(op))
+    return gpu::MMAElementwiseOp::SUBF;
   if (isa<arith::MaxFOp>(op))
     return gpu::MMAElementwiseOp::MAXF;
   if (isa<arith::MinFOp>(op))
     return gpu::MMAElementwiseOp::MINF;
   if (isa<arith::DivFOp>(op))
     return gpu::MMAElementwiseOp::DIVF;
+  if (isa<arith::AddIOp>(op))
+    return gpu::MMAElementwiseOp::ADDI;
+  if (isa<arith::MulIOp>(op))
+    return gpu::MMAElementwiseOp::MULI;
+  if (isa<arith::SubIOp>(op))
+    return gpu::MMAElementwiseOp::SUBI;
+  if (isa<arith::DivSIOp>(op))
+    return gpu::MMAElementwiseOp::DIVS;
+  if (isa<arith::DivUIOp>(op))
+    return gpu::MMAElementwiseOp::DIVU;
+  if (isa<arith::NegFOp>(op))
+    return gpu::MMAElementwiseOp::NEGATEF;
   return std::nullopt;
 }
 
@@ -473,9 +487,9 @@ static void convertTransferWriteOp(vector::TransferWriteOp op,
   assert(stride);
   OpBuilder b(op);
   Value matrix = valueMapping.find(op.getVector())->second;
-  b.create<gpu::SubgroupMmaStoreMatrixOp>(op.getLoc(), matrix, op.getSource(),
-                                          op.getIndices(),
-                                          b.getIndexAttr(*stride));
+  b.create<gpu::SubgroupMmaStoreMatrixOp>(
+      op.getLoc(), matrix, op.getSource(), op.getIndices(),
+      b.getIndexAttr(*stride), /*transpose=*/UnitAttr());
   op.erase();
 }
 
@@ -800,8 +814,9 @@ static void convertContractOp(vector::ContractionOp op,
   Value opA = valueMapping.find(op.getLhs())->second;
   Value opB = valueMapping.find(op.getRhs())->second;
   Value opC = valueMapping.find(op.getAcc())->second;
-  Value matmul = b.create<gpu::SubgroupMmaComputeOp>(op.getLoc(), opC.getType(),
-                                                     opA, opB, opC);
+  Value matmul = b.create<gpu::SubgroupMmaComputeOp>(
+      op.getLoc(), opC.getType(), opA, opB, opC, /*a_transpose=*/UnitAttr(),
+      /*b_transpose=*/UnitAttr());
   valueMapping[op.getResult()] = matmul;
 }
 

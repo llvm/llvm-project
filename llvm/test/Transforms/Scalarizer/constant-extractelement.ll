@@ -8,8 +8,8 @@ define i32 @f1(ptr %src, i32 %index) {
 ; ALL-LABEL: @f1(
 ; ALL-NEXT:    [[SRC_I3:%.*]] = getelementptr i32, ptr [[SRC:%.*]], i32 3
 ; ALL-NEXT:    [[VAL0_I3:%.*]] = load i32, ptr [[SRC_I3]], align 4
-; ALL-NEXT:    [[VAL2:%.*]] = shl i32 4, [[VAL0_I3]]
-; ALL-NEXT:    ret i32 [[VAL2]]
+; ALL-NEXT:    [[VAL1_I3:%.*]] = shl i32 4, [[VAL0_I3]]
+; ALL-NEXT:    ret i32 [[VAL1_I3]]
 ;
   %val0 = load <4 x i32> , ptr %src
   %val1 = shl <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %val0

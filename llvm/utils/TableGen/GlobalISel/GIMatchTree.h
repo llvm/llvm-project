@@ -24,12 +24,12 @@ class GIMatchTreeVariableBinding {
   StringRef Name;
   // The matched instruction it is bound to. 
   unsigned InstrID;
-  // The matched operand (if appropriate) it is bound to. 
-  Optional<unsigned> OpIdx;
+  // The matched operand (if appropriate) it is bound to.
+  std::optional<unsigned> OpIdx;
 
 public:
   GIMatchTreeVariableBinding(StringRef Name, unsigned InstrID,
-                             Optional<unsigned> OpIdx = std::nullopt)
+                             std::optional<unsigned> OpIdx = std::nullopt)
       : Name(Name), InstrID(InstrID), OpIdx(OpIdx) {}
 
   bool isInstr() const { return !OpIdx; }

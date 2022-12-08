@@ -38,8 +38,8 @@ func.func @test_overlap_with_alloc_components(%arg0: !fir.ref<!fir.array<10x!t_w
 // CHECK:   %[[VAL_9:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 // CHECK:   %[[VAL_10:.*]] = fir.slice %[[VAL_4]], %[[VAL_6]], %[[VAL_7]] : (index, index, index) -> !fir.slice<1>
 // CHECK:   %[[VAL_11:.*]] = fir.allocmem !fir.array<10x!fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
-// CHECK:   %[[VAL_12:.*]] = fir.embox %[[VAL_11]](%[[VAL_9]]) : (!fir.heap<!fir.array<10x!fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>, !fir.shape<1>) -> !fir.box<!fir.ref<!fir.array<10x!fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>
-// CHECK:   %[[VAL_16:.*]] = fir.convert %[[VAL_12]] : (!fir.box<!fir.ref<!fir.array<10x!fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>) -> !fir.box<none>
+// CHECK:   %[[VAL_12:.*]] = fir.embox %[[VAL_11]](%[[VAL_9]]) : (!fir.heap<!fir.array<10x!fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<10x!fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>
+// CHECK:   %[[VAL_16:.*]] = fir.convert %[[VAL_12]] : (!fir.box<!fir.heap<!fir.array<10x!fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>) -> !fir.box<none>
 // CHECK:   fir.call @_FortranAInitialize(%[[VAL_16]], %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
 // CHECK:   fir.do_loop {{.*}} {
 // CHECK:     fir.call @_FortranAAssign
@@ -50,6 +50,6 @@ func.func @test_overlap_with_alloc_components(%arg0: !fir.ref<!fir.array<10x!t_w
 // CHECK:   fir.do_loop %{{.*}} {
 // CHECK:     fir.call @_FortranAAssign
 // CHECK:   }
-// CHECK:   %[[VAL_72:.*]] = fir.convert %[[VAL_12]] : (!fir.box<!fir.ref<!fir.array<10x!fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>) -> !fir.box<none>
+// CHECK:   %[[VAL_72:.*]] = fir.convert %[[VAL_12]] : (!fir.box<!fir.heap<!fir.array<10x!fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>) -> !fir.box<none>
 // CHECK:   %[[VAL_73:.*]] = fir.call @_FortranADestroy(%[[VAL_72]]) : (!fir.box<none>) -> none
 // CHECK:   fir.freemem %[[VAL_11]]

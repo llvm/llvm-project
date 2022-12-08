@@ -18,6 +18,8 @@ if (NOT DEFINED CLANGD_BUILD_XPC)
   unset(CLANGD_BUILD_XPC_DEFAULT)
 endif ()
 
+# This involves generating and compiling large source files, which can run into toolchain limitations.
+option(CLANGD_DECISION_FOREST "Enable decision forest model for ranking code completion items" ON)
 option(CLANGD_MALLOC_TRIM "Call malloc_trim(3) periodically in Clangd. (only takes effect when using glibc)" ON)
 # -DCLANG_TIDY_CHECKS=Off avoids a dependency on clang-tidy, reducing rebuilds.
 option(CLANGD_TIDY_CHECKS "Link all clang-tidy checks into clangd" ON)
@@ -29,6 +31,7 @@ llvm_canonicalize_cmake_booleans(
   CLANGD_MALLOC_TRIM
   CLANGD_TIDY_CHECKS
   LLVM_ENABLE_ZLIB
+  CLANGD_DECISION_FOREST
 )
 
 configure_file(
@@ -43,8 +46,12 @@ set(LLVM_LINK_COMPONENTS
   Option
   )
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/quality/CompletionModel.cmake)
-gen_decision_forest(${CMAKE_CURRENT_SOURCE_DIR}/quality/model CompletionModel clang::clangd::Example)
+set(COMPLETIONMODEL_SOURCES)
+if(CLANGD_DECISION_FOREST)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/quality/CompletionModel.cmake)
+  gen_decision_forest(${CMAKE_CURRENT_SOURCE_DIR}/quality/model CompletionModel clang::clangd::Example)
+  list(APPEND COMPLETIONMODEL_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/CompletionModel.cpp)
+endif()
 
 if(MSVC AND NOT CLANG_CL)
  set_source_files_properties(CompileCommands.cpp PROPERTIES COMPILE_FLAGS -wd4130) # disables C4130: logical operation on address of string constant
@@ -66,6 +73,7 @@ add_clang_library(clangDaemon
   ConfigCompile.cpp
   ConfigProvider.cpp
   ConfigYAML.cpp
+  DecisionForest.cpp
   Diagnostics.cpp
   DraftStore.cpp
   DumpAST.cpp
@@ -102,7 +110,7 @@ add_clang_library(clangDaemon
   TUScheduler.cpp
   URI.cpp
   XRefs.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/CompletionModel.cpp
+  ${COMPLETIONMODEL_SOURCES}
 
   index/Background.cpp
   index/BackgroundIndexLoader.cpp

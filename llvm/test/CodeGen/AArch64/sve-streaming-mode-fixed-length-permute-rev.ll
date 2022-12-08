@@ -203,6 +203,38 @@ define void @test_rev_elts_fail(ptr %a) #0 {
   ret void
 }
 
+; This is the same test as above, but with sve2p1 it can use the REVD instruction to reverse
+; the double-words within quard-words.
+define void @test_revdv4i64_sve2p1(ptr %a) #1 {
+; CHECK-LABEL: test_revdv4i64_sve2p1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    revd z0.q, p0/m, z0.q
+; CHECK-NEXT:    revd z1.q, p0/m, z1.q
+; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    ret
+  %tmp1 = load <4 x i64>, ptr %a
+  %tmp2 = shufflevector <4 x i64> %tmp1, <4 x i64> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  store <4 x i64> %tmp2, ptr %a
+  ret void
+}
+
+define void @test_revdv4f64_sve2p1(ptr %a) #1 {
+; CHECK-LABEL: test_revdv4f64_sve2p1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    revd z0.q, p0/m, z0.q
+; CHECK-NEXT:    revd z1.q, p0/m, z1.q
+; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    ret
+  %tmp1 = load <4 x double>, ptr %a
+  %tmp2 = shufflevector <4 x double> %tmp1, <4 x double> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  store <4 x double> %tmp2, ptr %a
+  ret void
+}
+
 define void @test_revv8i32(ptr %a) #0 {
 ; CHECK-LABEL: test_revv8i32:
 ; CHECK:       // %bb.0:
@@ -238,3 +270,4 @@ define void @test_revv8i32(ptr %a) #0 {
 }
 
 attributes #0 = { "target-features"="+sve" }
+attributes #1 = { "target-features"="+sve2p1" }

@@ -5,7 +5,7 @@ entry:
   ret i32 0
 }
 
-@alias = alias i32 (), i32 ()* @func
+@alias = alias i32 (), ptr @func
 
 define i32 @main() {
 entry:

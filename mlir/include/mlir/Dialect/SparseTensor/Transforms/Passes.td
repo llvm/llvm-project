@@ -54,8 +54,8 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
 
     // Multiply a sparse matrix A with a dense vector b into a dense vector x.
     func.func @kernel_matvec(%arga: tensor<?x?xf64, #SparseMatrix>,
-                        %argb: tensor<?xf64>,
-                        %argx: tensor<?xf64>) -> tensor<?xf64> {
+                             %argb: tensor<?xf64>,
+                             %argx: tensor<?xf64>) -> tensor<?xf64> {
       %0 = linalg.generic #matvec
         ins(%arga, %argb: tensor<?x?xf64, #SparseMatrix>, tensor<?xf64>)
         outs(%argx: tensor<?xf64>) {
@@ -142,17 +142,19 @@ def SparseTensorConversionPass : Pass<"sparse-tensor-conversion", "ModuleOp"> {
 
     ```mlir
       Before:
-        %c1 = arith.constant 1 : index
-        %0 = sparse_tensor.pointers %arg0, %c1
-          : tensor<8x8xf32, #sparse_tensor.encoding<{
-              dimLevelType = [ "dense", "compressed" ],
-              pointerBitWidth = 0,
-              indexBitWidth = 0
-            }>> to memref<?xindex>
+        func.func @foo(%arg0: tensor<8x8xf32, #CSR>) -> memref<?xindex> {
+          %0 = sparse_tensor.pointers %arg0 {dimension = 1 : index}
+             : tensor<8x8xf32, #CSR> to memref<?xindex>
+          return %0 : memref<?xindex>
+        }
 
       After:
-        %c1 = arith.constant 1 : index
-        %0 = call @sparsePointers(%arg0, %c1) : (!llvm.ptr<i8>, index) -> memref<?xindex>
+        func.func @foo(%arg0: !llvm.ptr<i8>) -> memref<?xindex> {
+          %c1 = arith.constant 1 : index
+          %0 = call @sparsePointers0(%arg0, %c1)
+             : (!llvm.ptr<i8>, index) -> memref<?xindex>
+          return %0 : memref<?xindex>
+        }
     ```
   }];
   let constructor = "mlir::createSparseTensorConversionPass()";
@@ -186,7 +188,21 @@ def SparseTensorCodegen : Pass<"sparse-tensor-codegen", "ModuleOp"> {
     Example of the conversion:
 
     ```mlir
-    TBD
+      Before:
+        func.func @foo(%arg0: tensor<8x8xf32, #CSR>) -> memref<?xindex> {
+          %0 = sparse_tensor.pointers %arg0 {dimension = 1 : index}
+             : tensor<8x8xf32, #CSR> to memref<?xindex>
+          return %0 : memref<?xindex>
+        }
+
+      After:
+        func.func @foo(%arg0: memref<2xindex>,
+                       %arg1: memref<3xindex>,
+                       %arg2: memref<?xindex>,
+                       %arg3: memref<?xindex>,
+                       %arg4: memref<?xf32>) -> memref<?xindex> {
+          return %arg2 : memref<?xindex>
+        }
     ```
   }];
   let constructor = "mlir::createSparseTensorCodegenPass()";

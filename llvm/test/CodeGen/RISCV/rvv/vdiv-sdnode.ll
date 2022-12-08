@@ -1184,3 +1184,52 @@ define <vscale x 8 x i64> @vdiv_vi_nxv8i64_0(<vscale x 8 x i64> %va) {
   %vc = sdiv <vscale x 8 x i64> %va, %splat
   ret <vscale x 8 x i64> %vc
 }
+
+define <vscale x 8 x i32> @vdiv_vv_mask_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> %vb, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: vdiv_vv_mask_nxv8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vmv.v.i v16, 1
+; CHECK-NEXT:    vmerge.vvm v12, v16, v12, v0
+; CHECK-NEXT:    vdiv.vv v8, v8, v12
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 8 x i32> poison, i32 1, i32 0
+  %one = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+  %vs = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> %vb, <vscale x 8 x i32> %one
+  %vc = sdiv <vscale x 8 x i32> %va, %vs
+  ret <vscale x 8 x i32> %vc
+}
+
+define <vscale x 8 x i32> @vdiv_vx_mask_nxv8i32(<vscale x 8 x i32> %va, i32 signext %b, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: vdiv_vx_mask_nxv8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vmv.v.i v12, 1
+; CHECK-NEXT:    vmerge.vxm v12, v12, a0, v0
+; CHECK-NEXT:    vdiv.vv v8, v8, v12
+; CHECK-NEXT:    ret
+  %head1 = insertelement <vscale x 8 x i32> poison, i32 1, i32 0
+  %one = shufflevector <vscale x 8 x i32> %head1, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+  %head2 = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
+  %splat = shufflevector <vscale x 8 x i32> %head2, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+  %vs = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> %splat, <vscale x 8 x i32> %one
+  %vc = sdiv <vscale x 8 x i32> %va, %vs
+  ret <vscale x 8 x i32> %vc
+}
+
+define <vscale x 8 x i32> @vdiv_vi_mask_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: vdiv_vi_mask_nxv8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vmv.v.i v12, 1
+; CHECK-NEXT:    vmerge.vim v12, v12, 7, v0
+; CHECK-NEXT:    vdiv.vv v8, v8, v12
+; CHECK-NEXT:    ret
+  %head1 = insertelement <vscale x 8 x i32> poison, i32 1, i32 0
+  %one = shufflevector <vscale x 8 x i32> %head1, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+  %head2 = insertelement <vscale x 8 x i32> poison, i32 7, i32 0
+  %splat = shufflevector <vscale x 8 x i32> %head2, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+  %vs = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> %splat, <vscale x 8 x i32> %one
+  %vc = sdiv <vscale x 8 x i32> %va, %vs
+  ret <vscale x 8 x i32> %vc
+}

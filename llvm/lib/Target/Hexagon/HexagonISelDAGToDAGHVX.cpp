@@ -1957,6 +1957,27 @@ SmallVector<uint32_t, 8> HvxSelector::getPerfectCompletions(ShuffleMask SM,
   // are exactly the same as in s1, which means that they are exactly the
   // same as in P. This implies that P == Q.
 
+  // There can be a situation where there are more entries with the same
+  // bits set than there are set bits (e.g. value 9 occuring more than 2
+  // times). In such cases it will be impossible to complete this to a
+  // perfect shuffle.
+  SmallVector<uint32_t, 8> Sorted(Worklist);
+  llvm::sort(Sorted.begin(), Sorted.end());
+
+  for (unsigned I = 0, E = Sorted.size(); I != E;) {
+    unsigned P = Sorted[I], Count = 1;
+    while (++I != E && P == Sorted[I])
+      ++Count;
+    if (countPopulation(P) < Count) {
+      // Reset all occurences of P, if there are more occurrences of P
+      // than there are bits in P.
+      for_each(Worklist, [P](unsigned &Q) {
+        if (Q == P)
+          Q = 0;
+      });
+    }
+  }
+
   return Worklist;
 }
 
@@ -1980,6 +2001,17 @@ HvxSelector::completeToPerfect(ArrayRef<uint32_t> Completions, unsigned Width) {
     }
     Comps[I] = T;
   }
+
+#ifndef NDEBUG
+  // Check that we have generated a valid completion.
+  uint32_t OrAll = 0;
+  for (unsigned I = 0, E = Comps.size(); I != E; ++I) {
+    uint32_t C = Comps[I];
+    assert(isPowerOf2_32(C));
+    OrAll |= C;
+  }
+  assert(OrAll == (1u << Width) -1);
+#endif
 
   return Comps;
 }

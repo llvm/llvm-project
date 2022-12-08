@@ -44,7 +44,7 @@ func.func @not_inplace(
   %f0 = arith.constant 0.0 : f32
 
   //     CHECK: %[[D0:.*]] = memref.dim %[[A]], {{.*}} : memref<?xf32, strided<[?], offset: ?>>
-  //     CHECK: %[[ALLOC:.*]] = memref.alloc(%[[D0]]) {alignment = 128 : i64} : memref<?xf32>
+  //     CHECK: %[[ALLOC:.*]] = memref.alloc(%[[D0]]) {alignment = 64 : i64} : memref<?xf32>
   //     CHECK: linalg.fill ins(%[[F0]] : f32) outs(%[[ALLOC]] : memref<?xf32>)
   %r = linalg.fill ins(%f0 : f32) outs(%A : tensor<?xf32>) -> tensor<?xf32>
 
@@ -161,7 +161,7 @@ func.func @matmul(
   %c16 = arith.constant 16 : index
 
   // Hoisted alloc.
-  // CHECK: %[[ALLOC:.*]] = memref.alloc() {alignment = 128 : i64} : memref<128x192xf32>
+  // CHECK: %[[ALLOC:.*]] = memref.alloc() {alignment = 64 : i64} : memref<128x192xf32>
   // CHECK: memref.copy %[[C]], %[[ALLOC]]
 
   // CHECK: scf.for %[[I:.*]] =

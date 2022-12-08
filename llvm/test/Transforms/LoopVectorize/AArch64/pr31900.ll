@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=aarch64-apple-ios -loop-vectorize -enable-interleaved-mem-accesses -force-vector-width=2 < %s | FileCheck %s
+; RUN: opt -S -mtriple=aarch64-apple-ios -passes=loop-vectorize -enable-interleaved-mem-accesses -force-vector-width=2 < %s | FileCheck %s
 
 ; Reproducer for address space fault in the LoopVectorizer (pr31900). Added
 ; different sized address space pointers (p:16:16-p4:32:16) to the aarch64

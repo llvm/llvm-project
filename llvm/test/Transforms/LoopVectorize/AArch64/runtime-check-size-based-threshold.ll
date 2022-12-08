@@ -1,5 +1,5 @@
-; RUN: opt -loop-vectorize -mtriple=arm64-apple-iphoneos -vectorizer-min-trip-count=8 -S %s | FileCheck --check-prefixes=CHECK,DEFAULT %s
-; RUN: opt -loop-vectorize -mtriple=arm64-apple-iphoneos -vectorizer-min-trip-count=8 -vectorize-memory-check-threshold=1 -S %s | FileCheck --check-prefixes=CHECK,THRESHOLD %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64-apple-iphoneos -vectorizer-min-trip-count=8 -S %s | FileCheck --check-prefixes=CHECK,DEFAULT %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64-apple-iphoneos -vectorizer-min-trip-count=8 -vectorize-memory-check-threshold=1 -S %s | FileCheck --check-prefixes=CHECK,THRESHOLD %s
 
 ; Tests for loops with large numbers of runtime checks. Check that loops are
 ; vectorized, if the loop trip counts are large and the impact of the runtime

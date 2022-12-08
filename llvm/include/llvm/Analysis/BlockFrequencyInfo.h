@@ -13,12 +13,12 @@
 #ifndef LLVM_ANALYSIS_BLOCKFREQUENCYINFO_H
 #define LLVM_ANALYSIS_BLOCKFREQUENCYINFO_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include <cstdint>
 #include <memory>
+#include <optional>
 
 namespace llvm {
 
@@ -67,13 +67,13 @@ public:
   /// Returns the estimated profile count of \p BB.
   /// This computes the relative block frequency of \p BB and multiplies it by
   /// the enclosing function's count (if available) and returns the value.
-  Optional<uint64_t> getBlockProfileCount(const BasicBlock *BB,
-                                          bool AllowSynthetic = false) const;
+  std::optional<uint64_t>
+  getBlockProfileCount(const BasicBlock *BB, bool AllowSynthetic = false) const;
 
   /// Returns the estimated profile count of \p Freq.
   /// This uses the frequency \p Freq and multiplies it by
   /// the enclosing function's count (if available) and returns the value.
-  Optional<uint64_t> getProfileCountFromFreq(uint64_t Freq) const;
+  std::optional<uint64_t> getProfileCountFromFreq(uint64_t Freq) const;
 
   /// Returns true if \p BB is an irreducible loop header
   /// block. Otherwise false.

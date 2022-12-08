@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -force-vector-width=2 -loop-vectorize -debug-only=loop-vectorize -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -force-vector-width=2 -passes=loop-vectorize -debug-only=loop-vectorize -disable-output 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"

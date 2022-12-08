@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++20 %s
 // RUN: %clang_cc1 -flax-vector-conversions=integer -triple x86_64-apple-darwin10 -fsyntax-only -verify %s -DNO_LAX_FLOAT
 // RUN: %clang_cc1 -flax-vector-conversions=none -triple x86_64-apple-darwin10 -fsyntax-only -verify %s -DNO_LAX_FLOAT -DNO_LAX_INT
 
@@ -530,3 +531,17 @@ void use() {
   S<int, 16> s;
 }
 } // namespace PR48540
+
+#if __cplusplus >= 202002L // C++20 or later
+// Don't crash due to missing integer ranks.
+char8_t v1 __attribute__((vector_size(16)));
+char16_t v2 __attribute__((vector_size(16)));
+char32_t v3 __attribute__((vector_size(16)));
+wchar_t v4 __attribute__((vector_size(16)));
+void triggerIntegerRankCheck() {
+  auto b1 = (v1 >= 0x12);
+  auto b2 = (v2 >= 0x12);
+  auto b3 = (v3 >= 0x12);
+  auto b4 = (v4 >= 0x12);
+}
+#endif

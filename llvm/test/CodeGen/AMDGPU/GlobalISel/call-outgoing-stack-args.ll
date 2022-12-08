@@ -157,8 +157,6 @@ define amdgpu_kernel void @kernel_caller_byval() {
 ; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0
 ; FLATSCR-NEXT:    s_mov_b32 vcc_lo, 0
 ; FLATSCR-NEXT:    s_mov_b32 vcc_hi, 0
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], vcc_lo offset:8
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], vcc_hi offset:16
 ; FLATSCR-NEXT:    s_mov_b32 s11, 0
 ; FLATSCR-NEXT:    s_mov_b32 s10, 0
 ; FLATSCR-NEXT:    s_mov_b32 s9, 0
@@ -171,9 +169,8 @@ define amdgpu_kernel void @kernel_caller_byval() {
 ; FLATSCR-NEXT:    s_mov_b32 s4, 0
 ; FLATSCR-NEXT:    s_mov_b32 s3, 0
 ; FLATSCR-NEXT:    s_mov_b32 s2, 0
-; FLATSCR-NEXT:    s_mov_b32 vcc_lo, 0
-; FLATSCR-NEXT:    s_mov_b32 vcc_hi, 0
-; FLATSCR-NEXT:    s_mov_b32 s40, 0
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], vcc_lo offset:8
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], vcc_hi offset:16
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s11 offset:24
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s10 offset:32
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s9 offset:40
@@ -188,6 +185,7 @@ define amdgpu_kernel void @kernel_caller_byval() {
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s2 offset:112
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], vcc_lo offset:120
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], vcc_hi offset:128
+; FLATSCR-NEXT:    s_mov_b32 s40, 0
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s40 offset:8
 ; FLATSCR-NEXT:    s_mov_b32 s39, 0
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[2:3], off, s39 offset:16

@@ -590,7 +590,7 @@ StopInfoMachException::MachException::ExceptionCode(const char *name) {
 #ifdef EXC_CORPSE_NOTIFY
       .Case("EXC_CORPSE_NOTIFY", EXC_CORPSE_NOTIFY)
 #endif
-      .Default(llvm::None);
+      .Default(std::nullopt);
 }
 #endif
 

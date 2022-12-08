@@ -340,6 +340,8 @@ def SPV_KHR_fragment_shader_barycentric      : I32EnumAttrCase<"SPV_KHR_fragment
 def SPV_KHR_ray_cull_mask                    : I32EnumAttrCase<"SPV_KHR_ray_cull_mask", 26>;
 def SPV_KHR_uniform_group_instructions       : I32EnumAttrCase<"SPV_KHR_uniform_group_instructions", 27>;
 def SPV_KHR_subgroup_rotate                  : I32EnumAttrCase<"SPV_KHR_subgroup_rotate", 28>;
+def SPV_KHR_non_semantic_info                : I32EnumAttrCase<"SPV_KHR_non_semantic_info", 29>;
+def SPV_KHR_terminate_invocation             : I32EnumAttrCase<"SPV_KHR_terminate_invocation", 30>;
 
 def SPV_EXT_demote_to_helper_invocation  : I32EnumAttrCase<"SPV_EXT_demote_to_helper_invocation", 1000>;
 def SPV_EXT_descriptor_indexing          : I32EnumAttrCase<"SPV_EXT_descriptor_indexing", 1001>;
@@ -430,6 +432,7 @@ def SPIRV_ExtensionAttr :
       SPV_KHR_ray_tracing, SPV_KHR_subgroup_uniform_control_flow, SPV_KHR_linkonce_odr,
       SPV_KHR_fragment_shader_barycentric, SPV_KHR_ray_cull_mask,
       SPV_KHR_uniform_group_instructions, SPV_KHR_subgroup_rotate,
+      SPV_KHR_non_semantic_info, SPV_KHR_terminate_invocation,
       SPV_EXT_demote_to_helper_invocation, SPV_EXT_descriptor_indexing,
       SPV_EXT_fragment_fully_covered, SPV_EXT_fragment_invocation_density,
       SPV_EXT_fragment_shader_interlock, SPV_EXT_physical_storage_buffer,
@@ -3966,6 +3969,18 @@ def SPIRV_StorageClassAttr :
       SPIRV_SC_CodeSectionINTEL, SPIRV_SC_DeviceOnlyINTEL, SPIRV_SC_HostOnlyINTEL
     ]>;
 
+def SPIRV_PVF_PackedVectorFormat4x8Bit : I32EnumAttrCase<"PackedVectorFormat4x8Bit", 0> {
+  list<Availability> availability = [
+    MinVersion<SPIRV_V_1_6>,
+    Extension<[SPV_KHR_integer_dot_product]>
+  ];
+}
+
+def SPIRV_PackedVectorFormatAttr :
+    SPIRV_I32EnumAttr<"PackedVectorFormat", "valid SPIR-V PackedVectorFormat", "packed_vector_format", [
+      SPIRV_PVF_PackedVectorFormat4x8Bit
+    ]>;
+
 // End enum section. Generated from SPIR-V spec; DO NOT MODIFY!
 
 // Enums added manually that are not part of SPIR-V spec
@@ -4118,6 +4133,9 @@ class SPIRV_ScalarOrVectorOf<Type type> :
 class SPIRV_ScalarOrVectorOrCoopMatrixOf<Type type> :
     AnyTypeOf<[type, VectorOfLengthAndType<[2, 3, 4, 8, 16], [type]>,
                SPIRV_CoopMatrixOfType<[type]>]>;
+
+class SPIRV_MatrixOrCoopMatrixOf<Type type> :
+    AnyTypeOf<[SPIRV_AnyMatrix, SPIRV_CoopMatrixOfType<[type]>]>;
 
 def SPIRV_ScalarOrVector : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector]>;
 def SPIRV_ScalarOrVectorOrPtr : AnyTypeOf<[SPIRV_ScalarOrVector, SPIRV_AnyPtr]>;
@@ -4359,6 +4377,12 @@ def SPIRV_OC_OpGroupNonUniformSMax        : I32EnumAttrCase<"OpGroupNonUniformSM
 def SPIRV_OC_OpGroupNonUniformUMax        : I32EnumAttrCase<"OpGroupNonUniformUMax", 357>;
 def SPIRV_OC_OpGroupNonUniformFMax        : I32EnumAttrCase<"OpGroupNonUniformFMax", 358>;
 def SPIRV_OC_OpSubgroupBallotKHR          : I32EnumAttrCase<"OpSubgroupBallotKHR", 4421>;
+def SPIRV_OC_OpSDot                       : I32EnumAttrCase<"OpSDot", 4450>;
+def SPIRV_OC_OpUDot                       : I32EnumAttrCase<"OpUDot", 4451>;
+def SPIRV_OC_OpSUDot                      : I32EnumAttrCase<"OpSUDot", 4452>;
+def SPIRV_OC_OpSDotAccSat                 : I32EnumAttrCase<"OpSDotAccSat", 4453>;
+def SPIRV_OC_OpUDotAccSat                 : I32EnumAttrCase<"OpUDotAccSat", 4454>;
+def SPIRV_OC_OpSUDotAccSat                : I32EnumAttrCase<"OpSUDotAccSat", 4455>;
 def SPIRV_OC_OpTypeCooperativeMatrixNV    : I32EnumAttrCase<"OpTypeCooperativeMatrixNV", 5358>;
 def SPIRV_OC_OpCooperativeMatrixLoadNV    : I32EnumAttrCase<"OpCooperativeMatrixLoadNV", 5359>;
 def SPIRV_OC_OpCooperativeMatrixStoreNV   : I32EnumAttrCase<"OpCooperativeMatrixStoreNV", 5360>;
@@ -4451,7 +4475,9 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpGroupNonUniformSMin, SPIRV_OC_OpGroupNonUniformUMin,
       SPIRV_OC_OpGroupNonUniformFMin, SPIRV_OC_OpGroupNonUniformSMax,
       SPIRV_OC_OpGroupNonUniformUMax, SPIRV_OC_OpGroupNonUniformFMax,
-      SPIRV_OC_OpSubgroupBallotKHR, SPIRV_OC_OpTypeCooperativeMatrixNV,
+      SPIRV_OC_OpSubgroupBallotKHR, SPIRV_OC_OpSDot, SPIRV_OC_OpUDot,
+      SPIRV_OC_OpSUDot, SPIRV_OC_OpSDotAccSat, SPIRV_OC_OpUDotAccSat,
+      SPIRV_OC_OpSUDotAccSat, SPIRV_OC_OpTypeCooperativeMatrixNV,
       SPIRV_OC_OpCooperativeMatrixLoadNV, SPIRV_OC_OpCooperativeMatrixStoreNV,
       SPIRV_OC_OpCooperativeMatrixMulAddNV, SPIRV_OC_OpCooperativeMatrixLengthNV,
       SPIRV_OC_OpSubgroupBlockReadINTEL, SPIRV_OC_OpSubgroupBlockWriteINTEL,
@@ -4487,6 +4513,19 @@ class SPIRV_Op<string mnemonic, list<Trait> traits = []> :
     Extension<[]>,
     Capability<[]>
   ];
+
+  // Controls whether to auto-generate this op's availability specification.
+  // If set, generates the following methods:
+  //
+  // ```c++
+  // SmallVector<ArrayRef<Capability>, 1> OpTy::getCapabilities();
+  // SmallVector<ArrayRef<Extension>, 1>  OpTy::getExtensions();
+  // Optional<Version>                    OpTy::getMinVersion();
+  // Optional<Version>                    OpTy::getMaxVersion();
+  // ```
+  //
+  // When not set, manual implementation of these methods is required.
+  bit autogenAvailability = 1;
 
   // For each SPIR-V op, the following static functions need to be defined
   // in SPIRVOps.cpp:

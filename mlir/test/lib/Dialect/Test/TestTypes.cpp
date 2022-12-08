@@ -134,7 +134,7 @@ static LogicalResult parseBarString(AsmParser &parser, StringRef foo) {
 }
 
 static void printBarString(AsmPrinter &printer, StringRef foo) {
-  printer << ' ' << foo;
+  printer << foo;
 }
 //===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions

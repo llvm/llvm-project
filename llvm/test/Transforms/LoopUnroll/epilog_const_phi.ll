@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-unroll -unroll-runtime < %s | FileCheck %s
+; RUN: opt -S -passes=loop-unroll -unroll-runtime < %s | FileCheck %s
 
 ; Epilog unroll allows to keep PHI constant value.
 ; For the test this means that after unroll XOR could be deleted.

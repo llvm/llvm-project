@@ -226,6 +226,11 @@ OPTIONS
   When disassembling, display source interleaved with the disassembly. Implies
   :option:`--disassemble`.
 
+.. option:: --show-all-symbols
+
+  Show all symbols during disassembly, even if multiple symbols are defined at
+  the same location.
+
 .. option:: --show-lma
 
   Display the LMA column when dumping ELF section headers. Defaults to off

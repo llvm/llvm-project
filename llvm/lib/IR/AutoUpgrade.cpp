@@ -605,6 +605,21 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                         F->arg_begin()->getType());
       return true;
     }
+    if (Name == "aarch64.sve.bfdot.lane") {
+      NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                        Intrinsic::aarch64_sve_bfdot_lane_v2);
+      return true;
+    }
+    if (Name == "aarch64.sve.bfmlalb.lane") {
+      NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                        Intrinsic::aarch64_sve_bfmlalb_lane_v2);
+      return true;
+    }
+    if (Name == "aarch64.sve.bfmlalt.lane") {
+      NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                        Intrinsic::aarch64_sve_bfmlalt_lane_v2);
+      return true;
+    }
     static const Regex LdRegex("^aarch64\\.sve\\.ld[234](.nxv[a-z0-9]+|$)");
     if (LdRegex.match(Name)) {
       Type *ScalarTy =
@@ -3952,6 +3967,16 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   case Intrinsic::arm_neon_vst3lane:
   case Intrinsic::arm_neon_vst4lane: {
     SmallVector<Value *, 4> Args(CI->args());
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
+  case Intrinsic::aarch64_sve_bfmlalb_lane_v2:
+  case Intrinsic::aarch64_sve_bfmlalt_lane_v2:
+  case Intrinsic::aarch64_sve_bfdot_lane_v2: {
+    LLVMContext &Ctx = F->getParent()->getContext();
+    SmallVector<Value *, 4> Args(CI->args());
+    Args[3] = ConstantInt::get(Type::getInt32Ty(Ctx),
+                               cast<ConstantInt>(Args[3])->getZExtValue());
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }

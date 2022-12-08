@@ -39,7 +39,7 @@ class SOP_Pseudo<string opName, dag outs, dag ins, string asmOps,
 
 class SOP1_Pseudo <string opName, dag outs, dag ins,
                    string asmOps, list<dag> pattern=[]> :
-  SOP_Pseudo<opName, outs, ins, asmOps, pattern> {
+  SOP_Pseudo<opName, outs, ins, " " # asmOps, pattern> {
 
   let mayLoad = 0;
   let mayStore = 0;
@@ -51,12 +51,12 @@ class SOP1_Pseudo <string opName, dag outs, dag ins,
   let UseNamedOperandTable = 1;
 
   bits<1> has_src0 = 1;
-  bits<1> has_sdst = 1;
+  let has_sdst = 1;
 }
 
 class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   InstSI <ps.OutOperandList, ps.InOperandList,
-          real_name # " " # ps.AsmOperands, []>,
+          real_name # ps.AsmOperands>,
   Enc32 {
 
   let SALU = 1;
@@ -418,7 +418,7 @@ let SubtargetPredicate = isGFX11Plus in {
 
 class SOP2_Pseudo<string opName, dag outs, dag ins,
                   string asmOps, list<dag> pattern=[]> :
-  SOP_Pseudo<opName, outs, ins, asmOps, pattern> {
+  SOP_Pseudo<opName, outs, ins, " " # asmOps, pattern> {
 
   let mayLoad = 0;
   let mayStore = 0;
@@ -440,7 +440,7 @@ class SOP2_Pseudo<string opName, dag outs, dag ins,
 
 class SOP2_Real<bits<7> op, SOP_Pseudo ps, string real_name = ps.Mnemonic> :
   InstSI <ps.OutOperandList, ps.InOperandList,
-          real_name # " " # ps.AsmOperands, []>,
+          real_name # ps.AsmOperands>,
   Enc32 {
   let SALU = 1;
   let SOP2 = 1;
@@ -722,10 +722,7 @@ let SubtargetPredicate = isGFX11Plus in {
 
 class SOPK_Pseudo <string opName, dag outs, dag ins,
                    string asmOps, list<dag> pattern=[]> :
-  InstSI <outs, ins, "", pattern>,
-  SIMCInstr<opName, SIEncodingFamily.NONE> {
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
+  SOP_Pseudo<opName, outs, ins, " " # asmOps, pattern> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -734,15 +731,13 @@ class SOPK_Pseudo <string opName, dag outs, dag ins,
   let FixedSize = 1;
   let SchedRW = [WriteSALU];
   let UseNamedOperandTable = 1;
-  string Mnemonic = opName;
-  string AsmOperands = asmOps;
 
-  bits<1> has_sdst = 1;
+  let has_sdst = 1;
 }
 
 class SOPK_Real<SOPK_Pseudo ps> :
   InstSI <ps.OutOperandList, ps.InOperandList,
-          ps.Mnemonic # " " # ps.AsmOperands, []> {
+          ps.Mnemonic # ps.AsmOperands> {
   let SALU = 1;
   let SOPK = 1;
   let isPseudo = 0;
@@ -816,7 +811,7 @@ class SOPK_SCC <string opName, string base_op, bit isSignExt> : SOPK_Pseudo <
   !if(isSignExt,
       (ins SReg_32:$sdst, s16imm:$simm16),
       (ins SReg_32:$sdst, u16imm:$simm16)),
-  "$sdst, $simm16", []>,
+  "$sdst, $simm16">,
   SOPKInstTable<1, base_op>{
   let Defs = [SCC];
 }
@@ -987,7 +982,7 @@ let SubtargetPredicate = isGFX10Plus in {
 
 class SOPC_Pseudo<string opName, dag outs, dag ins,
                   string asmOps, list<dag> pattern=[]> :
-  SOP_Pseudo<opName, outs, ins, asmOps, pattern> {
+  SOP_Pseudo<opName, outs, ins, " " # asmOps, pattern> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -998,9 +993,9 @@ class SOPC_Pseudo<string opName, dag outs, dag ins,
   let UseNamedOperandTable = 1;
 }
 
-class SOPC_Real<bits<7> op, SOPC_Pseudo ps, string real_name = ps.Mnemonic> :
+class SOPC_Real<bits<7> op, SOPC_Pseudo ps> :
   InstSI <ps.OutOperandList, ps.InOperandList,
-          real_name # " " # ps.AsmOperands, []>,
+          ps.Mnemonic # ps.AsmOperands>,
   Enc32 {
   let SALU = 1;
   let SOPC = 1;
@@ -1109,10 +1104,10 @@ def S_SET_GPR_IDX_ON : SOPC_Pseudo <
 //===----------------------------------------------------------------------===//
 
 class SOPP_Pseudo<string opName, dag ins,
-                  string asmOps = "", list<dag> pattern=[], string keyName = opName> :
-  SOP_Pseudo<opName, (outs), ins, asmOps, pattern> {
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
+                  string asmOps = "", list<dag> pattern=[],
+                  string sep = !if(!empty(asmOps), "", " "),
+                  string keyName = opName> :
+  SOP_Pseudo<opName, (outs), ins, sep # asmOps, pattern> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1131,10 +1126,9 @@ class SOPPRelaxTable <bit isRelaxed, string keyName, string gfxip> {
   string KeyName = keyName # gfxip;
 }
 
-//spaces inserted in realname on instantiation of this record to allow s_endpgm to omit whitespace
 class SOPP_Real<SOPP_Pseudo ps, string real_name = ps.Mnemonic> :
   InstSI <ps.OutOperandList, ps.InOperandList,
-          real_name # ps.AsmOperands, []> {
+          real_name # ps.AsmOperands> {
   let SALU = 1;
   let SOPP = 1;
   let isPseudo = 0;
@@ -1174,13 +1168,13 @@ Enc64 {
 multiclass SOPP_With_Relaxation <string opName, dag ins,
                   string asmOps, list<dag> pattern=[]> {
   def "" : SOPP_Pseudo <opName, ins, asmOps, pattern>;
-  def _pad_s_nop : SOPP_Pseudo <opName # "_pad_s_nop", ins, asmOps, pattern, opName>;
+  def _pad_s_nop : SOPP_Pseudo <opName # "_pad_s_nop", ins, asmOps, pattern, " ", opName>;
 }
 
 def S_NOP : SOPP_Pseudo<"s_nop" , (ins i16imm:$simm16), "$simm16">;
 
 let isTerminator = 1 in {
-def S_ENDPGM : SOPP_Pseudo<"s_endpgm", (ins EndpgmImm:$simm16), "$simm16"> {
+def S_ENDPGM : SOPP_Pseudo<"s_endpgm", (ins EndpgmImm:$simm16), "$simm16", [], ""> {
   let isBarrier = 1;
   let isReturn = 1;
   let hasSideEffects = 1;
@@ -1367,7 +1361,7 @@ let SubtargetPredicate = isGFX10Plus in {
   def S_CLAUSE :
     SOPP_Pseudo<"s_clause", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_IDLE :
-    SOPP_Pseudo <"s_wait_idle", (ins), ""> {
+    SOPP_Pseudo <"s_wait_idle", (ins)> {
       let simm16 = 0;
       let fixed_imm = 1;
     }
@@ -1939,20 +1933,20 @@ defm S_SETREG_IMM32_B32 : SOPK_Real64_gfx6_gfx7_gfx10<0x015>;
 // SOPP - GFX11
 //===----------------------------------------------------------------------===//
 
-multiclass SOPP_Real_32_gfx11<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> {
-  def _gfx11 : SOPP_Real_32<op, !cast<SOPP_Pseudo>(NAME), real_name>,
+multiclass SOPP_Real_32_gfx11<bits<7> op> {
+  def _gfx11 : SOPP_Real_32<op, !cast<SOPP_Pseudo>(NAME), !cast<SOPP_Pseudo>(NAME).Mnemonic>,
                Select_gfx11<!cast<SOPP_Pseudo>(NAME).Mnemonic>,
                SOPPRelaxTable<0, !cast<SOPP_Pseudo>(NAME).KeyName, "_gfx11">;
 }
 
-multiclass SOPP_Real_64_gfx11<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> {
-  def _gfx11 : SOPP_Real_64<op, !cast<SOPP_Pseudo>(NAME), real_name>,
+multiclass SOPP_Real_64_gfx11<bits<7> op> {
+  def _gfx11 : SOPP_Real_64<op, !cast<SOPP_Pseudo>(NAME), !cast<SOPP_Pseudo>(NAME).Mnemonic>,
                Select_gfx11<!cast<SOPP_Pseudo>(NAME).Mnemonic>,
                SOPPRelaxTable<1, !cast<SOPP_Pseudo>(NAME).KeyName, "_gfx11">;
 }
 
 multiclass SOPP_Real_32_Renamed_gfx11<bits<7> op, SOPP_Pseudo backing_pseudo, string real_name> {
-  def _gfx11 : SOPP_Real_32<op, backing_pseudo, real_name # " ">,
+  def _gfx11 : SOPP_Real_32<op, backing_pseudo, real_name>,
                Select_gfx11<backing_pseudo.Mnemonic>,
                MnemonicAlias<backing_pseudo.Mnemonic, real_name>, Requires<[isGFX11Plus]>;
 }
@@ -1986,7 +1980,7 @@ defm S_CBRANCH_CDBGSYS            : SOPP_Real_With_Relaxation_gfx11<0x027>;
 defm S_CBRANCH_CDBGUSER           : SOPP_Real_With_Relaxation_gfx11<0x028>;
 defm S_CBRANCH_CDBGSYS_OR_USER    : SOPP_Real_With_Relaxation_gfx11<0x029>;
 defm S_CBRANCH_CDBGSYS_AND_USER   : SOPP_Real_With_Relaxation_gfx11<0x02a>;
-defm S_ENDPGM                     : SOPP_Real_32_gfx11<0x030, "s_endpgm">;
+defm S_ENDPGM                     : SOPP_Real_32_gfx11<0x030>;
 defm S_ENDPGM_SAVED               : SOPP_Real_32_gfx11<0x031>;
 defm S_WAKEUP                     : SOPP_Real_32_gfx11<0x034>;
 defm S_SETPRIO                    : SOPP_Real_32_gfx11<0x035>;
@@ -2003,75 +1997,75 @@ defm S_BARRIER                    : SOPP_Real_32_gfx11<0x03d>;
 // SOPP - GFX6, GFX7, GFX8, GFX9, GFX10
 //===----------------------------------------------------------------------===//
 
-multiclass SOPP_Real_32_gfx6_gfx7<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic> {
+multiclass SOPP_Real_32_gfx6_gfx7<bits<7> op> {
   defvar ps = !cast<SOPP_Pseudo>(NAME);
-  def _gfx6_gfx7 : SOPP_Real_32<op, ps, real_name>,
+  def _gfx6_gfx7 : SOPP_Real_32<op, ps, !cast<SOPP_Pseudo>(NAME).Mnemonic>,
                    Select_gfx6_gfx7<ps.Mnemonic>,
                    SOPPRelaxTable<0, ps.KeyName, "_gfx6_gfx7">;
 }
 
-multiclass SOPP_Real_32_gfx8_gfx9<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> {
+multiclass SOPP_Real_32_gfx8_gfx9<bits<7> op> {
   defvar ps = !cast<SOPP_Pseudo>(NAME);
-  def _vi : SOPP_Real_32<op, ps, real_name>,
+  def _vi : SOPP_Real_32<op, ps>,
             Select_vi<ps.Mnemonic>,
             SOPPRelaxTable<0, ps.KeyName, "_vi">;
 }
 
-multiclass SOPP_Real_32_gfx10<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> {
+multiclass SOPP_Real_32_gfx10<bits<7> op> {
   defvar ps = !cast<SOPP_Pseudo>(NAME);
-  def _gfx10 : SOPP_Real_32<op, ps, real_name>,
+  def _gfx10 : SOPP_Real_32<op, ps>,
                Select_gfx10<ps.Mnemonic>,
                SOPPRelaxTable<0, ps.KeyName, "_gfx10">;
 }
 
-multiclass SOPP_Real_32_gfx8_gfx9_gfx10<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> :
-  SOPP_Real_32_gfx8_gfx9<op, real_name>, SOPP_Real_32_gfx10<op, real_name>;
+multiclass SOPP_Real_32_gfx8_gfx9_gfx10<bits<7> op> :
+  SOPP_Real_32_gfx8_gfx9<op>, SOPP_Real_32_gfx10<op>;
 
-multiclass SOPP_Real_32_gfx6_gfx7_gfx8_gfx9<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> :
-  SOPP_Real_32_gfx6_gfx7<op, real_name>, SOPP_Real_32_gfx8_gfx9<op, real_name>;
+multiclass SOPP_Real_32_gfx6_gfx7_gfx8_gfx9<bits<7> op> :
+  SOPP_Real_32_gfx6_gfx7<op>, SOPP_Real_32_gfx8_gfx9<op>;
 
-multiclass SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> :
-  SOPP_Real_32_gfx6_gfx7_gfx8_gfx9<op, real_name>, SOPP_Real_32_gfx10<op, real_name>;
+multiclass SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<bits<7> op> :
+  SOPP_Real_32_gfx6_gfx7_gfx8_gfx9<op>, SOPP_Real_32_gfx10<op>;
 
-multiclass SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> :
-  SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<op, real_name>, SOPP_Real_32_gfx11<op, real_name>;
+multiclass SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11<bits<7> op> :
+  SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<op>, SOPP_Real_32_gfx11<op>;
 
-multiclass SOPP_Real_32_gfx10_gfx11<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> :
-  SOPP_Real_32_gfx10<op, real_name>, SOPP_Real_32_gfx11<op, real_name>;
+multiclass SOPP_Real_32_gfx10_gfx11<bits<7> op> :
+  SOPP_Real_32_gfx10<op>, SOPP_Real_32_gfx11<op>;
 
 //64 bit encodings, for Relaxation
-multiclass SOPP_Real_64_gfx6_gfx7<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> {
+multiclass SOPP_Real_64_gfx6_gfx7<bits<7> op> {
   defvar ps = !cast<SOPP_Pseudo>(NAME);
-  def _gfx6_gfx7 : SOPP_Real_64<op, ps, real_name>,
+  def _gfx6_gfx7 : SOPP_Real_64<op, ps>,
                    Select_gfx6_gfx7<ps.Mnemonic>,
                    SOPPRelaxTable<1, ps.KeyName, "_gfx6_gfx7">;
 }
 
-multiclass SOPP_Real_64_gfx8_gfx9<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> {
+multiclass SOPP_Real_64_gfx8_gfx9<bits<7> op> {
   defvar ps = !cast<SOPP_Pseudo>(NAME);
-  def _vi : SOPP_Real_64<op, ps, real_name>,
+  def _vi : SOPP_Real_64<op, ps>,
             Select_vi<ps.Mnemonic>,
             SOPPRelaxTable<1, ps.KeyName, "_vi">;
 }
 
-multiclass SOPP_Real_64_gfx10<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> {
+multiclass SOPP_Real_64_gfx10<bits<7> op> {
   defvar ps = !cast<SOPP_Pseudo>(NAME);
-  def _gfx10 : SOPP_Real_64<op, ps, real_name>,
+  def _gfx10 : SOPP_Real_64<op, ps>,
                Select_gfx10<ps.Mnemonic>,
                SOPPRelaxTable<1, ps.KeyName, "_gfx10">;
 }
 
-multiclass SOPP_Real_64_gfx8_gfx9_gfx10<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> :
-  SOPP_Real_64_gfx8_gfx9<op, real_name>, SOPP_Real_64_gfx10<op, real_name>;
+multiclass SOPP_Real_64_gfx8_gfx9_gfx10<bits<7> op> :
+  SOPP_Real_64_gfx8_gfx9<op>, SOPP_Real_64_gfx10<op>;
 
-multiclass SOPP_Real_64_gfx6_gfx7_gfx8_gfx9<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> :
-  SOPP_Real_64_gfx6_gfx7<op, real_name>, SOPP_Real_64_gfx8_gfx9<op, real_name>;
+multiclass SOPP_Real_64_gfx6_gfx7_gfx8_gfx9<bits<7> op> :
+  SOPP_Real_64_gfx6_gfx7<op>, SOPP_Real_64_gfx8_gfx9<op>;
 
-multiclass SOPP_Real_64_gfx6_gfx7_gfx8_gfx9_gfx10<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> :
-  SOPP_Real_64_gfx6_gfx7_gfx8_gfx9<op, real_name>, SOPP_Real_64_gfx10<op, real_name>;
+multiclass SOPP_Real_64_gfx6_gfx7_gfx8_gfx9_gfx10<bits<7> op> :
+  SOPP_Real_64_gfx6_gfx7_gfx8_gfx9<op>, SOPP_Real_64_gfx10<op>;
 
-multiclass SOPP_Real_64_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> :
-  SOPP_Real_64_gfx6_gfx7_gfx8_gfx9_gfx10<op, real_name>, SOPP_Real_64_gfx11<op, real_name>;
+multiclass SOPP_Real_64_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11<bits<7> op> :
+  SOPP_Real_64_gfx6_gfx7_gfx8_gfx9_gfx10<op>, SOPP_Real_64_gfx11<op>;
 
 //relaxation for insts with no operands not implemented
 multiclass SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<bits<7> op> {
@@ -2080,7 +2074,7 @@ multiclass SOPP_Real_With_Relaxation_gfx6_gfx7_gfx8_gfx9_gfx10<bits<7> op> {
 }
 
 defm S_NOP                      : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10_gfx11<0x000>;
-defm S_ENDPGM                   : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<0x001, "s_endpgm">;
+defm S_ENDPGM                   : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<0x001>;
 defm S_WAKEUP                   : SOPP_Real_32_gfx8_gfx9_gfx10<0x003>;
 defm S_BARRIER                  : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<0x00a>;
 defm S_WAITCNT                  : SOPP_Real_32_gfx6_gfx7_gfx8_gfx9_gfx10<0x00c>;
