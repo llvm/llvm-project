@@ -1,12 +1,12 @@
-; RUN: opt -loop-simplify -loop-distribute -enable-loop-distribute -S < %s 2>&1 \
+; RUN: opt -passes=loop-simplify,loop-distribute -enable-loop-distribute -S < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=ALWAYS --check-prefix=NO_REMARKS
-; RUN: opt -loop-simplify -loop-distribute -enable-loop-distribute -S \
+; RUN: opt -passes=loop-simplify,loop-distribute -enable-loop-distribute -S \
 ; RUN:     -pass-remarks-missed=loop-distribute < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=ALWAYS --check-prefix=MISSED_REMARKS
-; RUN: opt -loop-simplify -loop-distribute -enable-loop-distribute -S \
+; RUN: opt -passes=loop-simplify,loop-distribute -enable-loop-distribute -S \
 ; RUN:     -pass-remarks-analysis=loop-distribute < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=ALWAYS --check-prefix=ANALYSIS_REMARKS
-; RUN: opt -loop-simplify -loop-distribute -enable-loop-distribute -S \
+; RUN: opt -passes=loop-simplify,loop-distribute -enable-loop-distribute -S \
 ; RUN:     -pass-remarks=loop-distribute < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=ALWAYS --check-prefix=REMARKS
 

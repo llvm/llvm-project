@@ -443,7 +443,7 @@ defm unresolved_symbols:
   Eq<"unresolved-symbols", "Determine how to handle unresolved symbols">;
 
 defm undefined_version: B<"undefined-version",
-  "Allow unused version in version script (default)",
+  "Allow unused version in version script (disabled by default)",
   "Report version scripts that refer undefined symbols">;
 
 defm rsp_quoting: EEq<"rsp-quoting", "Quoting style for response files">,

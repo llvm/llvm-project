@@ -1,4 +1,4 @@
-; RUN: opt -S -irce -irce-print-changed-loops=true < %s | FileCheck %s
+; RUN: opt -S -passes=irce -irce-print-changed-loops=true < %s | FileCheck %s
 ; RUN: opt -S -passes='require<branch-prob>,irce' -irce-print-changed-loops=true < %s | FileCheck %s
 
 ; CHECK-NOT: irce

@@ -16,6 +16,7 @@
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::remarks;
@@ -230,7 +231,7 @@ Error BitstreamParserHelper::parseBlockInfoBlock() {
         "Error while parsing BLOCKINFO_BLOCK: expecting [ENTER_SUBBLOCK, "
         "BLOCKINFO_BLOCK, ...].");
 
-  Expected<Optional<BitstreamBlockInfo>> MaybeBlockInfo =
+  Expected<std::optional<BitstreamBlockInfo>> MaybeBlockInfo =
       Stream.ReadBlockInfoBlock();
   if (!MaybeBlockInfo)
     return MaybeBlockInfo.takeError();

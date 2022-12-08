@@ -76,7 +76,7 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
   if (entity.isVariable()) {
     if (entity.isScalar() && !entity.hasLengthParameters() &&
         !hlfir::isBoxAddressOrValueType(entity.getType()))
-      return {fir::ExtendedValue{entity.getBase()}, llvm::None};
+      return {fir::ExtendedValue{entity.getBase()}, std::nullopt};
     TODO(loc, "HLFIR variable to fir::ExtendedValue without a "
               "FortranVariableOpInterface");
   }

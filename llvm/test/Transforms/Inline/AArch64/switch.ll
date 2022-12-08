@@ -1,7 +1,7 @@
-; RUN: opt < %s -inline -inline-threshold=20 -S -mtriple=aarch64-none-linux  | FileCheck %s
+; RUN: opt < %s -passes=inline -inline-threshold=20 -S -mtriple=aarch64-none-linux  | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -inline-threshold=20 -S -mtriple=aarch64-none-linux | FileCheck %s
 
-define i32 @callee_range(i32 %a, i32* %P) {
+define i32 @callee_range(i32 %a, ptr %P) {
   switch i32 %a, label %sw.default [
     i32 0, label %sw.bb0
     i32 1000, label %sw.bb1
@@ -16,26 +16,26 @@ define i32 @callee_range(i32 %a, i32* %P) {
   ]
 
 sw.default:
-  store volatile i32 %a, i32* %P
+  store volatile i32 %a, ptr %P
   br label %return
 sw.bb0:
-  store volatile i32 %a, i32* %P
+  store volatile i32 %a, ptr %P
   br label %return
 sw.bb1:
-  store volatile i32 %a, i32* %P
+  store volatile i32 %a, ptr %P
   br label %return
 return:
   ret i32 42
 }
 
-define i32 @caller_range(i32 %a, i32* %P) {
+define i32 @caller_range(i32 %a, ptr %P) {
 ; CHECK-LABEL: @caller_range(
 ; CHECK: call i32 @callee_range
-  %r = call i32 @callee_range(i32 %a, i32* %P)
+  %r = call i32 @callee_range(i32 %a, ptr %P)
   ret i32 %r
 }
 
-define i32 @callee_bittest(i32 %a, i32* %P) {
+define i32 @callee_bittest(i32 %a, ptr %P) {
   switch i32 %a, label %sw.default [
     i32 0, label %sw.bb0
     i32 1, label %sw.bb1
@@ -49,15 +49,15 @@ define i32 @callee_bittest(i32 %a, i32* %P) {
   ]
 
 sw.default:
-  store volatile i32 %a, i32* %P
+  store volatile i32 %a, ptr %P
   br label %return
 
 sw.bb0:
-  store volatile i32 %a, i32* %P
+  store volatile i32 %a, ptr %P
   br label %return
 
 sw.bb1:
-  store volatile i32 %a, i32* %P
+  store volatile i32 %a, ptr %P
   br label %return
 
 sw.bb2:
@@ -68,14 +68,14 @@ return:
 }
 
 
-define i32 @caller_bittest(i32 %a, i32* %P) {
+define i32 @caller_bittest(i32 %a, ptr %P) {
 ; CHECK-LABEL: @caller_bittest(
 ; CHECK-NOT: call i32 @callee_bittest
-  %r= call i32 @callee_bittest(i32 %a, i32* %P)
+  %r= call i32 @callee_bittest(i32 %a, ptr %P)
   ret i32 %r
 }
 
-define i32 @callee_jumptable(i32 %a, i32* %P) {
+define i32 @callee_jumptable(i32 %a, ptr %P) {
   switch i32 %a, label %sw.default [
     i32 1001, label %sw.bb101
     i32 1002, label %sw.bb102
@@ -95,29 +95,29 @@ sw.default:
   br label %return
 
 sw.bb101:
-  store volatile i32 %a, i32* %P
+  store volatile i32 %a, ptr %P
   br label %return
 
 sw.bb102:
-  store volatile i32 %a, i32* %P
+  store volatile i32 %a, ptr %P
   br label %return
 
 sw.bb103:
-  store volatile i32 %a, i32* %P
+  store volatile i32 %a, ptr %P
   br label %return
 
 sw.bb104:
-  store volatile i32 %a, i32* %P
+  store volatile i32 %a, ptr %P
   br label %return
 
 return:
   ret i32 42
 }
 
-define i32 @caller_jumptable(i32 %a, i32 %b, i32* %P) {
+define i32 @caller_jumptable(i32 %a, i32 %b, ptr %P) {
 ; CHECK-LABEL: @caller_jumptable(
 ; CHECK: call i32 @callee_jumptable
-  %r = call i32 @callee_jumptable(i32 %b, i32* %P)
+  %r = call i32 @callee_jumptable(i32 %b, ptr %P)
   ret i32 %r
 }
 

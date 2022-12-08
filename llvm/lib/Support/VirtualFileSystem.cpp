@@ -1506,6 +1506,7 @@ void RedirectingFileSystem::setRedirection(
 
 std::vector<StringRef> RedirectingFileSystem::getRoots() const {
   std::vector<StringRef> R;
+  R.reserve(Roots.size());
   for (const auto &Root : Roots)
     R.push_back(Root->getName());
   return R;

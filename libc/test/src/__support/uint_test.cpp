@@ -352,6 +352,17 @@ TEST(LlvmLibcUIntClassTest, ShiftRightTests) {
   LL_UInt128 result6({0, 0});
   EXPECT_EQ((val2 >> 128), result6);
   EXPECT_EQ((val2 >> 256), result6);
+
+  LL_UInt128 v1({0x1111222233334444, 0xaaaabbbbccccdddd});
+  LL_UInt128 r1({0xaaaabbbbccccdddd, 0});
+  EXPECT_EQ((v1 >> 64), r1);
+
+  LL_UInt192 v2({0x1111222233334444, 0x5555666677778888, 0xaaaabbbbccccdddd});
+  LL_UInt192 r2({0x5555666677778888, 0xaaaabbbbccccdddd, 0});
+  LL_UInt192 r3({0xaaaabbbbccccdddd, 0, 0});
+  EXPECT_EQ((v2 >> 64), r2);
+  EXPECT_EQ((v2 >> 128), r3);
+  EXPECT_EQ((r2 >> 64), r3);
 }
 
 TEST(LlvmLibcUIntClassTest, AndTests) {
@@ -502,11 +513,8 @@ TEST(LlvmLibcUIntClassTest, FullMulTests) {
   } while (0)
 
 TEST(LlvmLibcUIntClassTest, QuickMulHiTests) {
-  // TODO(lntue): Investigate / Analyze the error bounds for other rounding
-  // modes.  It the error bounds seems to be able to reach to WordCount instead
-  // of WordCount - 1 in the CI environment.
-  TEST_QUICK_MUL_HI(128, 2);
-  TEST_QUICK_MUL_HI(192, 3);
-  TEST_QUICK_MUL_HI(256, 4);
-  TEST_QUICK_MUL_HI(512, 8);
+  TEST_QUICK_MUL_HI(128, 1);
+  TEST_QUICK_MUL_HI(192, 2);
+  TEST_QUICK_MUL_HI(256, 3);
+  TEST_QUICK_MUL_HI(512, 7);
 }

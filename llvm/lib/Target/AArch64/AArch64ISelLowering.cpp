@@ -4528,7 +4528,7 @@ SDValue AArch64TargetLowering::LowerSET_ROUNDING(SDValue Op,
 }
 
 static unsigned selectUmullSmull(SDNode *&N0, SDNode *&N1, SelectionDAG &DAG,
-                                 bool &IsMLA) {
+                                 SDLoc DL, bool &IsMLA) {
   bool IsN0SExt = isSignExtended(N0, DAG);
   bool IsN1SExt = isSignExtended(N1, DAG);
   if (IsN0SExt && IsN1SExt)
@@ -4540,6 +4540,23 @@ static unsigned selectUmullSmull(SDNode *&N0, SDNode *&N1, SelectionDAG &DAG,
   if (IsN0ZExt && IsN1ZExt)
     return AArch64ISD::UMULL;
 
+  // Select SMULL if we can replace zext with sext.
+  if ((IsN0SExt && IsN1ZExt) || (IsN0ZExt && IsN1SExt)) {
+    SDValue ZextOperand;
+    if (IsN0ZExt)
+      ZextOperand = N0->getOperand(0);
+    else
+      ZextOperand = N1->getOperand(0);
+    if (DAG.SignBitIsZero(ZextOperand)) {
+      SDNode *NewSext =
+          DAG.getSExtOrTrunc(ZextOperand, DL, N0->getValueType(0)).getNode();
+      if (IsN0ZExt)
+        N0 = NewSext;
+      else
+        N1 = NewSext;
+      return AArch64ISD::SMULL;
+    }
+  }
   if (!IsN1SExt && !IsN1ZExt)
     return 0;
   // Look for (s/zext A + s/zext B) * (s/zext C). We want to turn these
@@ -4577,7 +4594,8 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   SDNode *N0 = Op.getOperand(0).getNode();
   SDNode *N1 = Op.getOperand(1).getNode();
   bool isMLA = false;
-  unsigned NewOpc = selectUmullSmull(N0, N1, DAG, isMLA);
+  SDLoc DL(Op);
+  unsigned NewOpc = selectUmullSmull(N0, N1, DAG, DL, isMLA);
 
   if (!NewOpc) {
     if (VT == MVT::v2i64)
@@ -4589,7 +4607,6 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // Legalize to a S/UMULL instruction
-  SDLoc DL(Op);
   SDValue Op0;
   SDValue Op1 = skipExtensionForVectorMULL(N1, DAG);
   if (!isMLA) {

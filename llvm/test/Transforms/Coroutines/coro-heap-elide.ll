@@ -1,8 +1,8 @@
 ; Tests that the dynamic allocation and deallocation of the coroutine frame is
-; elided and any tail calls referencing the coroutine frame has the tail 
+; elided and any tail calls referencing the coroutine frame has the tail
 ; call attribute removed.
 ; RUN: opt < %s -S \
-; RUN:   -passes='cgscc(inline,function(coro-elide,instsimplify,simplifycfg))' \
+; RUN: -passes='cgscc(inline,function(coro-elide,instsimplify,simplifycfg))' \
 ; RUN:   -aa-pipeline='basic-aa' | FileCheck %s
 
 declare void @print(i32) nounwind
@@ -19,7 +19,7 @@ declare void @may_throw()
 declare i8* @CustomAlloc(i32)
 declare void @CustomFree(i8*)
 
-@f.resumers = internal constant [3 x void (%f.frame*)*] 
+@f.resumers = internal constant [3 x void (%f.frame*)*]
   [void (%f.frame*)* @f.resume, void (%f.frame*)* @f.destroy, void (%f.frame*)* @f.cleanup]
 
 ; a coroutine start function
@@ -36,9 +36,9 @@ dyn.alloc:
 coro.begin:
   %phi = phi i8* [ null, %entry ], [ %alloc, %dyn.alloc ]
   %hdl = call i8* @llvm.coro.begin(token %id, i8* %phi)
-  invoke void @may_throw() 
+  invoke void @may_throw()
     to label %ret unwind label %ehcleanup
-ret:          
+ret:
   ret i8* %hdl
 
 ehcleanup:
@@ -338,7 +338,7 @@ entry:
 ; Tail call should remain tail calls
 ; CHECK: tail call void @bar(
   tail call void @bar(i8* %hdl)
-; CHECK: tail call void @bar(  
+; CHECK: tail call void @bar(
   tail call void @bar(i8* null)
 
 ; CHECK-NEXT: call fastcc void bitcast (void (%f.frame*)* @f.resume to void (i8*)*)(i8*

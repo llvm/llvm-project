@@ -1,4 +1,4 @@
-; RUN: opt < %s  -passes=loop-vectorize,instcombine -force-vector-width=4 -force-vector-interleave=1 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize,instcombine -force-vector-width=4 -force-vector-interleave=1 -S | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 

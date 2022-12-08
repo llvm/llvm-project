@@ -12,6 +12,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 
@@ -41,6 +42,43 @@ public:
     if (OwnsOutputFile)
       delete OutputFile;
   }
+
+  void FileChanged(SourceLocation Loc, FileChangeReason Reason,
+                   SrcMgr::CharacteristicKind FileType,
+                   FileID PrevFID) override;
+
+  void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
+                   SrcMgr::CharacteristicKind FileType) override;
+};
+
+/// A callback for emitting header usage information to a file in JSON. Each
+/// line in the file is a JSON object that includes the source file name and
+/// the list of headers directly or indirectly included from it. For example:
+///
+/// {"source":"/tmp/foo.c",
+///  "includes":["/usr/include/stdio.h", "/usr/include/stdlib.h"]}
+///
+/// To reduce the amount of data written to the file, we only record system
+/// headers that are directly included from a file that isn't in the system
+/// directory.
+class HeaderIncludesJSONCallback : public PPCallbacks {
+  SourceManager &SM;
+  raw_ostream *OutputFile;
+  bool OwnsOutputFile;
+  SmallVector<std::string, 16> IncludedHeaders;
+
+public:
+  HeaderIncludesJSONCallback(const Preprocessor *PP, raw_ostream *OutputFile_,
+                             bool OwnsOutputFile_)
+      : SM(PP->getSourceManager()), OutputFile(OutputFile_),
+        OwnsOutputFile(OwnsOutputFile_) {}
+
+  ~HeaderIncludesJSONCallback() override {
+    if (OwnsOutputFile)
+      delete OutputFile;
+  }
+
+  void EndOfMainFile() override;
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
@@ -116,16 +154,33 @@ void clang::AttachHeaderIncludeGen(Preprocessor &PP,
     }
   }
 
-  // Print header info for extra headers, pretending they were discovered by
-  // the regular preprocessor. The primary use case is to support proper
-  // generation of Make / Ninja file dependencies for implicit includes, such
-  // as sanitizer ignorelists. It's only important for cl.exe compatibility,
-  // the GNU way to generate rules is -M / -MM / -MD / -MMD.
-  for (const auto &Header : DepOpts.ExtraDeps)
-    PrintHeaderInfo(OutputFile, Header.first, ShowDepth, 2, MSStyle);
-  PP.addPPCallbacks(std::make_unique<HeaderIncludesCallback>(
-      &PP, ShowAllHeaders, OutputFile, DepOpts, OwnsOutputFile, ShowDepth,
-      MSStyle));
+  switch (DepOpts.HeaderIncludeFormat) {
+  case HIFMT_None:
+    llvm_unreachable("unexpected header format kind");
+  case HIFMT_Textual: {
+    assert(DepOpts.HeaderIncludeFiltering == HIFIL_None &&
+           "header filtering is currently always disabled when output format is"
+           "textual");
+    // Print header info for extra headers, pretending they were discovered by
+    // the regular preprocessor. The primary use case is to support proper
+    // generation of Make / Ninja file dependencies for implicit includes, such
+    // as sanitizer ignorelists. It's only important for cl.exe compatibility,
+    // the GNU way to generate rules is -M / -MM / -MD / -MMD.
+    for (const auto &Header : DepOpts.ExtraDeps)
+      PrintHeaderInfo(OutputFile, Header.first, ShowDepth, 2, MSStyle);
+    PP.addPPCallbacks(std::make_unique<HeaderIncludesCallback>(
+        &PP, ShowAllHeaders, OutputFile, DepOpts, OwnsOutputFile, ShowDepth,
+        MSStyle));
+    break;
+  }
+  case HIFMT_JSON: {
+    assert(DepOpts.HeaderIncludeFiltering == HIFIL_Only_Direct_System &&
+           "only-direct-system is the only option for filtering");
+    PP.addPPCallbacks(std::make_unique<HeaderIncludesJSONCallback>(
+        &PP, OutputFile, OwnsOutputFile));
+    break;
+  }
+  }
 }
 
 void HeaderIncludesCallback::FileChanged(SourceLocation Loc,
@@ -196,4 +251,65 @@ void HeaderIncludesCallback::FileSkipped(const FileEntryRef &SkippedFile, const
 
   PrintHeaderInfo(OutputFile, SkippedFile.getName(), ShowDepth,
                   CurrentIncludeDepth + 1, MSStyle);
+}
+
+void HeaderIncludesJSONCallback::EndOfMainFile() {
+  const FileEntry *FE = SM.getFileEntryForID(SM.getMainFileID());
+  SmallString<256> MainFile(FE->getName());
+  SM.getFileManager().makeAbsolutePath(MainFile);
+
+  std::string Str;
+  llvm::raw_string_ostream OS(Str);
+  llvm::json::OStream JOS(OS);
+  JOS.object([&] {
+    JOS.attribute("source", MainFile.c_str());
+    JOS.attributeArray("includes", [&] {
+      llvm::StringSet<> SeenHeaders;
+      for (const std::string &H : IncludedHeaders)
+        if (SeenHeaders.insert(H).second)
+          JOS.value(H);
+    });
+  });
+  OS << "\n";
+
+  if (OutputFile->get_kind() == raw_ostream::OStreamKind::OK_FDStream) {
+    llvm::raw_fd_ostream *FDS = static_cast<llvm::raw_fd_ostream *>(OutputFile);
+    if (auto L = FDS->lock())
+      *OutputFile << Str;
+  } else
+    *OutputFile << Str;
+}
+
+/// Determine whether the header file should be recorded. The header file should
+/// be recorded only if the header file is a system header and the current file
+/// isn't a system header.
+static bool shouldRecordNewFile(SrcMgr::CharacteristicKind NewFileType,
+                                SourceLocation PrevLoc, SourceManager &SM) {
+  return SrcMgr::isSystem(NewFileType) && !SM.isInSystemHeader(PrevLoc);
+}
+
+void HeaderIncludesJSONCallback::FileChanged(
+    SourceLocation Loc, FileChangeReason Reason,
+    SrcMgr::CharacteristicKind NewFileType, FileID PrevFID) {
+  if (!shouldRecordNewFile(NewFileType, SM.getLocForStartOfFile(PrevFID), SM))
+    return;
+
+  // Unless we are exiting a #include, make sure to skip ahead to the line the
+  // #include directive was at.
+  PresumedLoc UserLoc = SM.getPresumedLoc(Loc);
+  if (UserLoc.isInvalid())
+    return;
+
+  if (Reason == PPCallbacks::EnterFile &&
+      UserLoc.getFilename() != StringRef("<command line>"))
+    IncludedHeaders.push_back(UserLoc.getFilename());
+}
+
+void HeaderIncludesJSONCallback::FileSkipped(
+    const FileEntryRef &SkippedFile, const Token &FilenameTok,
+    SrcMgr::CharacteristicKind FileType) {
+  if (!shouldRecordNewFile(FileType, FilenameTok.getLocation(), SM))
+    return;
+
+  IncludedHeaders.push_back(SkippedFile.getName().str());
 }

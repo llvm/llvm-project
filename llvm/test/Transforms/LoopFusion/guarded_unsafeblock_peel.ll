@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-fusion -loop-fusion-peel-max-count=3 < %s | FileCheck %s
+; RUN: opt -S -passes=loop-fusion -loop-fusion-peel-max-count=3 < %s | FileCheck %s
 
 ; Tests that we do not fuse two guarded loops together.
 ; These loops do not have the same trip count, and the first loop meets the

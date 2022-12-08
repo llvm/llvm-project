@@ -3,7 +3,7 @@
 ; IPSCCP can simplify, so we can test the case where IPSCCP makes changes.
 
 ; RUN: opt -disable-verify -debug-pass-manager \
-; RUN:     -passes='function(require<domtree>,require<postdomtree>),ipsccp,function(require<domtree>,require<postdomtree>)' -S  %s 2>&1 \
+; RUN: -passes='function(require<domtree>,require<postdomtree>),ipsccp,function(require<domtree>,require<postdomtree>)' -S  %s 2>&1 \
 ; RUN:     | FileCheck -check-prefixes='IR,NEW-PM' %s
 
 ; RUN: opt -passes='function(require<postdomtree>),ipsccp,function(verify<domtree>)' -S  %s | FileCheck -check-prefixes='IR' %s

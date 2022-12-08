@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=riscv32-unknown-elf -S -consthoist < %s | FileCheck %s
-; RUN: opt -mtriple=riscv64-unknown-elf -S -consthoist < %s | FileCheck %s
+; RUN: opt -mtriple=riscv32-unknown-elf -S -passes=consthoist < %s | FileCheck %s
+; RUN: opt -mtriple=riscv64-unknown-elf -S -passes=consthoist < %s | FileCheck %s
 
 ; Check that we don't hoist immediates with small values.
 define i64 @test1(i64 %a) nounwind {

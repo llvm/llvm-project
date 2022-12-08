@@ -1,4 +1,4 @@
-; RUN: opt -irce-skip-profitability-checks -S -verify-loop-info -irce < %s | FileCheck %s
+; RUN: opt -irce-skip-profitability-checks -S -verify-loop-info -passes=irce < %s | FileCheck %s
 ; RUN: opt -irce-skip-profitability-checks -S -verify-loop-info -passes='require<branch-prob>,irce' < %s | FileCheck %s
 
 define void @single_access_no_preloop_no_offset(ptr %arr, ptr %a_len_ptr, i32 %n) {

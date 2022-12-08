@@ -13,7 +13,6 @@
 #ifndef LLVM_ASMPARSER_PARSER_H
 #define LLVM_ASMPARSER_PARSER_H
 
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>

@@ -1,4 +1,4 @@
-; RUN: opt -load-store-vectorizer -S < %s | FileCheck %s
+; RUN: opt -passes=load-store-vectorizer -S < %s | FileCheck %s
 
 target datalayout = "e-p:64:64-p1:64:64-p5:32:32"
 

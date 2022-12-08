@@ -22,24 +22,22 @@ define i32 @test1(i32 %W) {
 %T = type { i32, i32 }
 
 ; CHECK-NOT: @test2f(
-define internal %T* @test2f(i1 %cond, %T* %P) {
+define internal ptr @test2f(i1 %cond, ptr %P) {
   br i1 %cond, label %T, label %F
 
 T:
-  %A = getelementptr %T, %T* %P, i32 0, i32 0
-  store i32 42, i32* %A
-  ret %T* %P
+  store i32 42, ptr %P
+  ret ptr %P
 
 F:
-  ret %T* %P
+  ret ptr %P
 }
 
 define i32 @test2(i1 %cond) {
   %A = alloca %T
 
-  %B = call %T* @test2f(i1 %cond, %T* %A)
-  %C = getelementptr %T, %T* %B, i32 0, i32 0
-  %D = load i32, i32* %C
+  %B = call ptr @test2f(i1 %cond, ptr %A)
+  %D = load i32, ptr %B
   ret i32 %D
 
 ; CHECK-LABEL: @test2(
@@ -94,7 +92,7 @@ define i32 @test() {
 
 ; Inliner shouldn't delete calls it can't inline, even if they're trivially dead
 ; CHECK-LABEL: @outer4(
-define void @outer4(void ()* %inner4) {
+define void @outer4(ptr %inner4) {
 entry:
 ; CHECK: call void %inner4()
   call void %inner4() nounwind readnone
@@ -103,7 +101,7 @@ entry:
 
 declare void @inner5_inner()
 
-define void @inner5(void ()* %x) {
+define void @inner5(ptr %x) {
   call void %x() nounwind readnone
   ret void
 }
@@ -112,6 +110,6 @@ define void @inner5(void ()* %x) {
 ; CHECK-LABEL: @outer5(
 define void @outer5() {
 ; CHECK: call void @inner5_inner(
-  call void @inner5(void ()* @inner5_inner)
+  call void @inner5(ptr @inner5_inner)
   ret void
 }

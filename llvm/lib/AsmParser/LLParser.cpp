@@ -4996,11 +4996,11 @@ bool LLParser::parseDIFile(MDNode *&Result, bool IsDistinct) {
   else if (checksumkind.Seen || checksum.Seen)
     return Lex.Error("'checksumkind' and 'checksum' must be provided together");
 
-  std::optional<MDString *> OptSource;
+  MDString *Source = nullptr;
   if (source.Seen)
-    OptSource = source.Val;
-  Result = GET_OR_DISTINCT(DIFile, (Context, filename.Val, directory.Val,
-                                    OptChecksum, OptSource));
+    Source = source.Val;
+  Result = GET_OR_DISTINCT(
+      DIFile, (Context, filename.Val, directory.Val, OptChecksum, Source));
   return false;
 }
 
