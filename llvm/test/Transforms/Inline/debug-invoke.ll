@@ -1,4 +1,4 @@
-; RUN: opt < %s -always-inline -S | FileCheck %s
+; RUN: opt < %s -passes=always-inline -S | FileCheck %s
 
 ; Test that the debug location is preserved when rewriting an inlined call as an invoke
 

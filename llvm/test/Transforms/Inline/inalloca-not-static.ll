@@ -1,4 +1,4 @@
-; RUN: opt -always-inline -S < %s | FileCheck %s
+; RUN: opt -passes=always-inline -S < %s | FileCheck %s
 ; RUN: opt -passes=always-inline -S < %s | FileCheck %s
 
 ; We used to misclassify inalloca as a static alloca in the inliner. This only

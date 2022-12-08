@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -inline-remark-attribute --inline-threshold=0 -S | FileCheck %s
+; RUN: opt < %s -passes=inline -inline-remark-attribute --inline-threshold=0 -S | FileCheck %s
 
 ; Test that the inliner adds inline remark attributes to non-inlined callsites.
 

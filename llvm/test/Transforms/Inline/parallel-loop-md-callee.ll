@@ -1,4 +1,4 @@
-; RUN: opt -S -inline < %s | FileCheck %s
+; RUN: opt -S -passes=inline < %s | FileCheck %s
 ;
 ; Check that the !llvm.access.group is still present after inlining.
 ;

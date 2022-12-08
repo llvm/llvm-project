@@ -1,4 +1,4 @@
-; RUN: opt -always-inline -globalopt -S < %s | FileCheck %s
+; RUN: opt  -passes=always-inline,globalopt -S < %s | FileCheck %s
 ;
 ; static void __attribute__((always_inline)) callee(long n, double A[static const restrict n], long i) {
 ;   for (long j = 0; j < n; j += 1)

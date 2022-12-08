@@ -1,4 +1,4 @@
-; RUN: opt -inline %s -S | FileCheck %s
+; RUN: opt -passes=inline %s -S | FileCheck %s
 ; RUN: opt -passes='cgscc(inline)' %s -S | FileCheck %s
 ; Ensure SSP attributes are propagated correctly when inlining.
 

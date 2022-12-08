@@ -1,7 +1,7 @@
 ; Inlining should not clone label annotations.
 ; Currently we block all duplication for simplicity.
 
-; RUN: opt < %s -S -inline | FileCheck %s
+; RUN: opt < %s -S -passes=inline | FileCheck %s
 
 @the_global = global i32 0
 

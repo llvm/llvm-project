@@ -1,7 +1,7 @@
 ; Test that the inliner doesn't leave around dead allocas, and that it folds
 ; uncond branches away after it is done specializing.
 
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 
 @A = weak global i32 0		; <i32*> [#uses=1]

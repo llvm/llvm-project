@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline,function(instcombine))' -S | FileCheck %s
 
 declare void @ext_method(i8*, i32)

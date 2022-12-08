@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -disable-output
+; RUN: opt < %s -passes=inline -disable-output
 ; PR4123
 	%struct.S0 = type <{ i32 }>
 	%struct.S1 = type <{ i8, i8, i8, i8, %struct.S0 }>

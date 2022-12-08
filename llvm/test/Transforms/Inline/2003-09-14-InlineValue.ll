@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -disable-output
+; RUN: opt < %s -passes=inline -disable-output
 
 declare i32 @External()
 

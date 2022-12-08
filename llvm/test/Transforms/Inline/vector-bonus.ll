@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -inline-threshold=35  -S | FileCheck %s
+; RUN: opt < %s -passes=inline -inline-threshold=35  -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -inline-threshold=35  -S | FileCheck %s
 
 define i32 @bar(<4 x i32> %v, i32 %i) #0 {

@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -disable-output 2>/dev/null
+; RUN: opt < %s -passes=inline -disable-output 2>/dev/null
 ; This test used to trigger an assertion in the assumption cache when
 ; inlining the indirect call
 declare void @llvm.assume(i1)
