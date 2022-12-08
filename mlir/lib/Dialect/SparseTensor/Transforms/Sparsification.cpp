@@ -583,6 +583,19 @@ static bool isAdmissibleTensorExp(Merger &merger, linalg::GenericOp op,
                                   std::vector<unsigned> &topSort, unsigned exp,
                                   OpOperand **sparseOut,
                                   unsigned &outerParNest) {
+  // We reject any expression that makes a reduction from `-outTensor`, as those
+  // expression create dependency between the current iteration (i) and the
+  // previous iteration (i-1). It would then require iterating over the whole
+  // coordinate space, which prevent us from exploiting sparsity for faster
+  // code.
+  for (utils::IteratorType it : op.getIteratorTypesArray()) {
+    if (it == utils::IteratorType::reduction) {
+      if (merger.hasNegateOnOut(exp))
+        return false;
+      break;
+    }
+  }
+
   OpOperand *lhs = op.getDpsInitOperand(0);
   unsigned tensor = lhs->getOperandNumber();
   auto enc = getSparseTensorEncoding(lhs->get().getType());
