@@ -38,71 +38,7 @@ extern __attribute__((const)) half2 __llvm_canonicalize_2f16(half2) __asm("llvm.
 #define BUILTIN_CTZ_U32(x) (uint)(x == 0u ? 32 : __builtin_ctz(x))
 #define BUILTIN_CTZ_U64(x) (ulong)(x == 0u ? 64 : __builtin_ctzl(x))
 
-// Atomics
-extern uint __llvm_ld_atomic_a1_x_dev_i32(__global uint *);
-extern ulong __llvm_ld_atomic_a1_x_dev_i64(__global ulong *);
-extern uint __llvm_ld_atomic_a3_x_wg_i32(__local uint *);
-extern ulong __llvm_ld_atomic_a3_x_wg_i64(__local ulong *);
-
-extern void __llvm_st_atomic_a1_x_dev_i32(__global uint *, uint);
-extern void __llvm_st_atomic_a1_x_dev_i64(__global ulong *, ulong);
-extern void __llvm_st_atomic_a3_x_wg_i32(__local uint *, uint);
-extern void __llvm_st_atomic_a3_x_wg_i64(__local ulong *, ulong);
-
-extern uint __llvm_atomic_add_a1_x_dev_i32(__global uint *, uint);
-extern ulong __llvm_atomic_add_a1_x_dev_i64(__global ulong *, ulong);
-extern uint __llvm_atomic_add_a3_x_wg_i32(__local uint *, uint);
-extern ulong __llvm_atomic_add_a3_x_wg_i64(__local ulong *, ulong);
-
-extern uint __llvm_atomic_and_a1_x_dev_i32(__global uint *, uint);
-extern ulong __llvm_atomic_and_a1_x_dev_i64(__global ulong *, ulong);
-extern uint __llvm_atomic_and_a3_x_wg_i32(__local uint *, uint);
-extern ulong __llvm_atomic_and_a3_x_wg_i64(__local ulong *, ulong);
-
-extern uint __llvm_atomic_or_a1_x_dev_i32(__global uint *, uint);
-extern ulong __llvm_atomic_or_a1_x_dev_i64(__global ulong *, ulong);
-extern uint __llvm_atomic_or_a3_x_wg_i32(__local uint *, uint);
-extern ulong __llvm_atomic_or_a3_x_wg_i64(__local ulong *, ulong);
-
-extern uint __llvm_atomic_max_a1_x_dev_i32(__global int *, int);
-extern uint __llvm_atomic_umax_a1_x_dev_i32(__global uint *, uint);
-extern ulong __llvm_atomic_max_a1_x_dev_i64(__global long *, long);
-extern ulong __llvm_atomic_umax_a1_x_dev_i64(__global ulong *, ulong);
-extern uint __llvm_atomic_max_a3_x_wg_i32(__local int *, int);
-extern uint __llvm_atomic_umax_a3_x_wg_i32(__local uint *, uint);
-extern ulong __llvm_atomic_max_a3_x_wg_i64(__local long *, long);
-extern ulong __llvm_atomic_umax_a3_x_wg_i64(__local ulong *, ulong);
-
-extern uint __llvm_atomic_min_a1_x_dev_i32(__global int *, int);
-extern uint __llvm_atomic_umin_a1_x_dev_i32(__global uint *, uint);
-extern ulong __llvm_atomic_min_a1_x_dev_i64(__global long *, long);
-extern ulong __llvm_atomic_umin_a1_x_dev_i64(__global ulong *, ulong);
-extern uint __llvm_atomic_min_a3_x_wg_i32(__local int *, int);
-extern uint __llvm_atomic_umin_a3_x_wg_i32(__local uint *, uint);
-extern ulong __llvm_atomic_min_a3_x_wg_i64(__local long *, long);
-extern ulong __llvm_atomic_umin_a3_x_wg_i64(__local ulong *, ulong);
-
-extern uint __llvm_cmpxchg_a1_x_x_dev_i32(__global uint *, uint, uint);
-extern ulong __llvm_cmpxchg_a1_x_x_dev_i64(__global ulong *, ulong, ulong);
-extern uint __llvm_cmpxchg_a3_x_x_wg_i32(__local uint *, uint, uint);
-extern ulong __llvm_cmpxchg_a3_x_x_wg_i64(__local ulong *, ulong, ulong);
-
 // AMDGPU intrinsics
-
-// llvm.amdgcn.mov.dpp.i32 <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
-
-// llvm.amdgcn.update.dpp.i32 <old> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
-extern uint __llvm_amdgcn_update_dpp_i32(uint, uint, uint, uint, uint, bool) __asm("llvm.amdgcn.update.dpp.i32");
-
-// llvm.amdgcn.mov.dpp8.i32 <src> <sel>
-extern uint __llvm_amdgcn_dpp8_i32(uint, uint) __asm("llvm.amdgcn.dpp8.i32");
-
-// llvm.amdgcn.permlane16 <old> <src0> <src1> <src2> <fi> <bound_control>
-extern uint __llvm_amdgcn_permlane16(uint, uint, uint, uint, bool, bool) __asm("llvm.amdgcn.permlane16");
-
-// llvm.amdgcn.permlanex16 <old> <src0> <src1> <src2> <fi> <bound_control>
-extern uint __llvm_amdgcn_permlanex16(uint, uint, uint, uint, bool, bool) __asm("llvm.amdgcn.permlanex16");
-
 extern __attribute__((const, convergent)) ulong __llvm_amdgcn_icmp_i64_i32(uint, uint, uint) __asm("llvm.amdgcn.icmp.i64.i32");
 extern __attribute__((const, convergent)) ulong __llvm_amdgcn_icmp_i64_i64(ulong, ulong, uint) __asm("llvm.amdgcn.icmp.i64.i64");
 extern __attribute__((const, convergent)) ulong __llvm_amdgcn_fcmp_i64_f32(float, float, uint) __asm("llvm.amdgcn.fcmp.i64.f32");
