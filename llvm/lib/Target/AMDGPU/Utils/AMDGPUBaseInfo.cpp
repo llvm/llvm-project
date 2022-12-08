@@ -1159,21 +1159,6 @@ bool shouldEmitConstantsToTextSection(const Triple &TT) {
   return TT.getArch() == Triple::r600;
 }
 
-int getIntegerAttribute(const Function &F, StringRef Name, int Default) {
-  Attribute A = F.getFnAttribute(Name);
-  int Result = Default;
-
-  if (A.isStringAttribute()) {
-    StringRef Str = A.getValueAsString();
-    if (Str.getAsInteger(0, Result)) {
-      LLVMContext &Ctx = F.getContext();
-      Ctx.emitError("can't parse integer attribute " + Name);
-    }
-  }
-
-  return Result;
-}
-
 std::pair<int, int> getIntegerPairAttribute(const Function &F,
                                             StringRef Name,
                                             std::pair<int, int> Default,
@@ -1814,18 +1799,18 @@ uint64_t encodeMsg(uint64_t MsgId,
 //===----------------------------------------------------------------------===//
 
 unsigned getInitialPSInputAddr(const Function &F) {
-  return getIntegerAttribute(F, "InitialPSInputAddr", 0);
+  return F.getFnAttributeAsParsedInteger("InitialPSInputAddr", 0);
 }
 
 bool getHasColorExport(const Function &F) {
   // As a safe default always respond as if PS has color exports.
-  return getIntegerAttribute(
-             F, "amdgpu-color-export",
+  return F.getFnAttributeAsParsedInteger(
+             "amdgpu-color-export",
              F.getCallingConv() == CallingConv::AMDGPU_PS ? 1 : 0) != 0;
 }
 
 bool getHasDepthExport(const Function &F) {
-  return getIntegerAttribute(F, "amdgpu-depth-export", 0) != 0;
+  return F.getFnAttributeAsParsedInteger("amdgpu-depth-export", 0) != 0;
 }
 
 bool isShader(CallingConv::ID cc) {

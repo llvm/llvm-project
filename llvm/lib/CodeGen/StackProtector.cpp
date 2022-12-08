@@ -63,7 +63,7 @@ static cl::opt<bool> EnableSelectionDAGSP("enable-selectiondag-sp",
 
 char StackProtector::ID = 0;
 
-StackProtector::StackProtector() : FunctionPass(ID), SSPBufferSize(8) {
+StackProtector::StackProtector() : FunctionPass(ID) {
   initializeStackProtectorPass(*PassRegistry::getPassRegistry());
 }
 
@@ -92,11 +92,8 @@ bool StackProtector::runOnFunction(Function &Fn) {
   HasPrologue = false;
   HasIRCheck = false;
 
-  Attribute Attr = Fn.getFnAttribute("stack-protector-buffer-size");
-  if (Attr.isStringAttribute() &&
-      Attr.getValueAsString().getAsInteger(10, SSPBufferSize))
-    return false; // Invalid integer string
-
+  SSPBufferSize = Fn.getFnAttributeAsParsedInteger(
+      "stack-protector-buffer-size", DefaultSSPBufferSize);
   if (!RequiresStackProtector())
     return false;
 
