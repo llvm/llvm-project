@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax < %s -loop-vectorize -force-vector-width=4 -verify-scev-maps -S |FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -verify-scev-maps -S |FileCheck %s
 
 ; SCEV expansion uses existing value when the SCEV has no AddRec expr.
 ; CHECK-LABEL: @foo(
