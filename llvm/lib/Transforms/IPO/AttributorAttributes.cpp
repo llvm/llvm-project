@@ -3722,8 +3722,9 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
       // still needed.
       if (auto *SI = dyn_cast<StoreInst>(I)) {
         SmallSetVector<Instruction *, 8> AssumeOnlyInst;
-        assert(isDeadStore(A, *SI, &AssumeOnlyInst) &&
-               "Store was assumed to be dead!");
+        bool IsDead = isDeadStore(A, *SI, &AssumeOnlyInst);
+        (void)IsDead;
+        assert(IsDead && "Store was assumed to be dead!");
         A.deleteAfterManifest(*I);
         for (size_t i = 0; i < AssumeOnlyInst.size(); ++i) {
           Instruction *AOI = AssumeOnlyInst[i];
