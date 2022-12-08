@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax -lint -disable-output < %s
+; RUN: opt -passes=lint -disable-output < %s
 
 ; This test is meant to prove that the verifier does not report errors for correct
 ; use of the llvm.eh.exceptionpointer intrinsic.
