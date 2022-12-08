@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax -S -globalopt -temporarily-allow-old-pass-syntax < %s | FileCheck %s
+; RUN: opt -S -passes=globalopt < %s | FileCheck %s
 
 ;; Generated at -g from:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax -inline -S < %s | FileCheck %s
+; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
 
 ; Created from source
 ;
