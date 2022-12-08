@@ -395,16 +395,17 @@ std::unique_ptr<Arg> OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
                                            unsigned FlagsToInclude,
                                            unsigned FlagsToExclude) const {
   unsigned Prev = Index;
-  const char *Str = Args.getArgString(Index);
+  StringRef Str = Args.getArgString(Index);
 
   // Anything that doesn't start with PrefixesUnion is an input, as is '-'
   // itself.
   if (isInput(PrefixesUnion, Str))
-    return std::make_unique<Arg>(getOption(InputOptionID), Str, Index++, Str);
+    return std::make_unique<Arg>(getOption(InputOptionID), Str, Index++,
+                                 Str.data());
 
   const Info *Start = OptionInfos.data() + FirstSearchableIndex;
   const Info *End = OptionInfos.data() + OptionInfos.size();
-  StringRef Name = StringRef(Str).ltrim(PrefixChars);
+  StringRef Name = Str.ltrim(PrefixChars);
 
   // Search for the first next option which could be a prefix.
   Start = std::lower_bound(Start, End, Name);
@@ -447,9 +448,11 @@ std::unique_ptr<Arg> OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
   // If we failed to find an option and this arg started with /, then it's
   // probably an input path.
   if (Str[0] == '/')
-    return std::make_unique<Arg>(getOption(InputOptionID), Str, Index++, Str);
+    return std::make_unique<Arg>(getOption(InputOptionID), Str, Index++,
+                                 Str.data());
 
-  return std::make_unique<Arg>(getOption(UnknownOptionID), Str, Index++, Str);
+  return std::make_unique<Arg>(getOption(UnknownOptionID), Str, Index++,
+                               Str.data());
 }
 
 InputArgList OptTable::ParseArgs(ArrayRef<const char *> ArgArr,
@@ -517,10 +520,10 @@ InputArgList OptTable::parseArgs(int Argc, char *const *Argv,
   for (const opt::Arg *A : Args.filtered(Unknown)) {
     std::string Spelling = A->getAsString(Args);
     if (findNearest(Spelling, Nearest) > 1)
-      ErrorFn("unknown argument '" + A->getAsString(Args) + "'");
+      ErrorFn("unknown argument '" + Spelling + "'");
     else
-      ErrorFn("unknown argument '" + A->getAsString(Args) +
-              "', did you mean '" + Nearest + "'?");
+      ErrorFn("unknown argument '" + Spelling + "', did you mean '" + Nearest +
+              "'?");
   }
   return Args;
 }
