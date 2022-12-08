@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax -disable-output -print-mustexecute < %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -passes=print-mustexecute < %s 2>&1 | FileCheck %s
 
 @c = global i16 0, align 2
 
