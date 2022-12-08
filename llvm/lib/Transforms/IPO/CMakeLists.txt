@@ -66,8 +66,10 @@ add_llvm_component_library(LLVMipo
   Linker
   Object
   ProfileData
+  Scalar
   Support
   TransformUtils
   Vectorize
   Instrumentation
+  Scalar
   )
