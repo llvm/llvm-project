@@ -1,22 +1,22 @@
 ; "PLAIN" - No optimizations. This tests the default target layout
 ; constant folder.
-; RUN: opt -temporarily-allow-old-pass-syntax -S -o - < %s | FileCheck --check-prefix=PLAIN %s
+; RUN: opt -S -o - < %s | FileCheck --check-prefix=PLAIN %s
 
 ; "OPT" - Optimizations but no targetdata. This tests default target layout
 ; folding in the optimizers.
-; RUN: opt -temporarily-allow-old-pass-syntax -S -o - -instcombine -globalopt -temporarily-allow-old-pass-syntax < %s | FileCheck --check-prefix=OPT %s
+; RUN: opt -S -o - -passes='function(instcombine),globalopt' < %s | FileCheck --check-prefix=OPT %s
 
 ; "TO" - Optimizations and targetdata. This tests target-dependent
 ; folding in the optimizers.
-; RUN: opt -temporarily-allow-old-pass-syntax -S -o - -instcombine -globalopt -temporarily-allow-old-pass-syntax -data-layout="e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64" < %s | FileCheck --check-prefix=TO %s
+; RUN: opt -S -o - -passes='function(instcombine),globalopt' -data-layout="e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64" < %s | FileCheck --check-prefix=TO %s
 
 ; "SCEV" - ScalarEvolution with default target layout
-; RUN: opt -temporarily-allow-old-pass-syntax -passes='print<scalar-evolution>' < %s -disable-output 2>&1 | FileCheck --check-prefix=SCEV %s
+; RUN: opt -passes='print<scalar-evolution>' < %s -disable-output 2>&1 | FileCheck --check-prefix=SCEV %s
 
 
-; The automatic constant folder in opt -temporarily-allow-old-pass-syntax does not have targetdata access, so
+; The automatic constant folder in opt does not have targetdata access, so
 ; it can't fold gep arithmetic, in general. However, the constant folder run
-; from instcombine and global opt -temporarily-allow-old-pass-syntax can use targetdata.
+; from instcombine and global opt can use targetdata.
 
 ; PLAIN: @G8 = global i8* getelementptr (i8, i8* inttoptr (i32 1 to i8*), i32 -1)
 ; PLAIN: @G1 = global i1* getelementptr (i1, i1* inttoptr (i32 1 to i1*), i32 -1)
