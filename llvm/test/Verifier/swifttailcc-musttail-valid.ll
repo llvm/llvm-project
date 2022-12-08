@@ -1,4 +1,4 @@
-; RUN: opt -verify %s
+; RUN: opt -temporarily-allow-old-pass-syntax -verify %s
 
 define swifttailcc void @valid_attrs(i64* sret(i64) %ret, i8* byval(i8) %byval, i8* swiftself %self, i8* swiftasync %ctx) {
   musttail call swifttailcc void @valid_attrs(i64* sret(i64) %ret, i8* byval(i8) %byval, i8* swiftself %self, i8* swiftasync %ctx)

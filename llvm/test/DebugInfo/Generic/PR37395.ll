@@ -1,4 +1,4 @@
-; RUN: opt -lcssa -S %s | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax -lcssa -S %s | FileCheck %s
 source_filename = "small.c"
 
 @a = common dso_local global i32 0, align 4, !dbg !0

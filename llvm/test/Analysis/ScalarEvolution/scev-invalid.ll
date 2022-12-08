@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -indvars -loop-unroll | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax < %s -S -indvars -loop-unroll | FileCheck %s
 ;
 ; PR15570: SEGV: SCEV back-edge info invalid after dead code removal.
 ;

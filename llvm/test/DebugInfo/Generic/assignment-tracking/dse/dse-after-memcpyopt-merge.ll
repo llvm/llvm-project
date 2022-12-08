@@ -1,6 +1,6 @@
-; RUN: opt %s -S -dse -o - -experimental-assignment-tracking | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax %s -S -dse -o - -experimental-assignment-tracking | FileCheck %s
 
-;; Observed in the wild, but test is created by running memcpyopt on
+;; Observed in the wild, but test is created by running memcpyopt -temporarily-allow-old-pass-syntax on
 ;; assignment-tracking/memcpyopt/merge-stores.ll then manually inserting
 ;; two stores that overwrite each end of the memset.
 ;;

@@ -1,4 +1,4 @@
-; RUN: opt -S -inline < %s | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax -S -inline < %s | FileCheck %s
 
 ; Check that the inliner does not inline through arbitrary unknown
 ; operand bundles.

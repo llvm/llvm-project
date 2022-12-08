@@ -1,5 +1,5 @@
-; RUN: opt -instcombine -S < %s | llvm-as
-; RUN: opt -instcombine -globalopt -S < %s | llvm-as
+; RUN: opt -temporarily-allow-old-pass-syntax -instcombine -S < %s | llvm-as
+; RUN: opt -temporarily-allow-old-pass-syntax -instcombine -globalopt -temporarily-allow-old-pass-syntax -S < %s | llvm-as
 @G1 = global i32 zeroinitializer
 @G2 = global i32 zeroinitializer
 @g = global <2 x i32*> zeroinitializer

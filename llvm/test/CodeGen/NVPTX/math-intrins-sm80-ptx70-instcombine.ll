@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S -mtriple=nvptx-nvidia-cuda -march=nvptx64 \
+; RUN: opt -temporarily-allow-old-pass-syntax < %s -instcombine -S -mtriple=nvptx-nvidia-cuda -march=nvptx64 \
 ; RUN:    -mcpu=sm_80 -mattr=+ptx70 | \
 ; RUN: FileCheck %s
 

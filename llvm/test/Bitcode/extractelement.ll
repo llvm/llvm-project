@@ -1,4 +1,4 @@
-; RUN: opt < %s -instsimplify | llvm-dis -disable-output
+; RUN: opt -temporarily-allow-old-pass-syntax < %s -instsimplify | llvm-dis -disable-output
 ; RUN: verify-uselistorder < %s
 ; PR3465
 

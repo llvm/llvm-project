@@ -1,4 +1,4 @@
-; RUN: opt -run-twice -verify -S -o - %s | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax -run-twice -verify -S -o - %s | FileCheck %s
 
 ; The ValueMap shared between CloneFunctionInto calls within CloneModule needs
 ; to contain identity mappings for all of the DISubprogram's to prevent them

@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax < %s -inline -S | FileCheck %s
 
 ; This was generated from the following source:
 ; int a, b;

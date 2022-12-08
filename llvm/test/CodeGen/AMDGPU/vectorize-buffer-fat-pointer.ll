@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-- -load-store-vectorizer < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -temporarily-allow-old-pass-syntax -S -mtriple=amdgcn-- -load-store-vectorizer < %s | FileCheck -check-prefix=OPT %s
 
 ; OPT-LABEL: @func(
 define void @func(i32 addrspace(7)* %out) {

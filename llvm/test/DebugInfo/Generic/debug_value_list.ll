@@ -1,4 +1,4 @@
-; RUN: opt -verify < %s | opt -verify -S | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax -verify < %s | opt -temporarily-allow-old-pass-syntax -verify -S | FileCheck %s
 
 ; Simple IR-BC-IR round-trip test for a @llvm.dbg.value that uses !DIArgList
 ; and DW_OP_LLVM_arg.
