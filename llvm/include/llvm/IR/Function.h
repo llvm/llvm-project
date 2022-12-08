@@ -406,6 +406,15 @@ public:
   /// Return the attribute for the given attribute kind.
   Attribute getFnAttribute(StringRef Kind) const;
 
+  /// For a string attribute \p Kind, parse attribute as an integer.
+  ///
+  /// \returns \p Default if attribute is not present.
+  ///
+  /// \returns \p Default if there is an error parsing the attribute integer,
+  /// and error is emitted to the LLVMContext
+  uint64_t getFnAttributeAsParsedInteger(StringRef Kind,
+                                         uint64_t Default = 0) const;
+
   /// gets the specified attribute from the list of attributes.
   Attribute getParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
 

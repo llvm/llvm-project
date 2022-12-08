@@ -557,10 +557,9 @@ static bool WindowsRequiresStackProbe(const MachineFunction &MF,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const Function &F = MF.getFunction();
   unsigned StackProbeSize = (MFI.getStackProtectorIndex() > 0) ? 4080 : 4096;
-  if (F.hasFnAttribute("stack-probe-size"))
-    F.getFnAttribute("stack-probe-size")
-        .getValueAsString()
-        .getAsInteger(0, StackProbeSize);
+
+  StackProbeSize =
+      F.getFnAttributeAsParsedInteger("stack-probe-size", StackProbeSize);
   return (StackSizeInBytes >= StackProbeSize) &&
          !F.hasFnAttribute("no-stack-arg-probe");
 }
