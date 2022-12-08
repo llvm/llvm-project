@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax < %s -deadargelim
+; RUN: opt < %s -passes=deadargelim
 
 declare void @llvm.gcroot(ptr, ptr)
 
