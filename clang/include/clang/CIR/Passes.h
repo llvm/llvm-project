@@ -24,6 +24,9 @@ std::unique_ptr<mlir::Pass> createConvertMLIRToLLVMPass();
 
 /// Create a pass that fully lowers CIR to the MLIR in-tree dialects.
 std::unique_ptr<mlir::Pass> createConvertCIRToMLIRPass();
+
+/// Create a pass that fully lowers CIR to the LLVMIR dialect.
+std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass();
 } // end namespace cir
 
 #endif // CLANG_CIR_PASSES_H

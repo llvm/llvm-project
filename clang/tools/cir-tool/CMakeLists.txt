@@ -9,6 +9,7 @@ set(LIBS
   ${conversion_libs}
   clangCIR
   clangCIRLoweringThroughMLIR
+  clangCIRLoweringDirectToLLVM
   MLIRAnalysis
   MLIRCIR
   MLIRCIRTransforms
