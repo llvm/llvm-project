@@ -1,4 +1,4 @@
-; RUN: opt < %s -break-crit-edges -loop-simplify -loop-extract -S | FileCheck %s
+; RUN: opt < %s -passes='function(break-crit-edges,loop-simplify),loop-extract' -S | FileCheck %s
 
 ; This function is just a minimal wrapper around a loop and should not be extracted.
 define void @test() {

@@ -164,6 +164,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC64-LABEL: muloti_test:
 ; SPARC64:         .cfi_startproc
 ; SPARC64-NEXT:    .register %g2, #scratch
+; SPARC64-NEXT:    .register %g3, #scratch
 ; SPARC64-NEXT:  ! %bb.0: ! %start
 ; SPARC64-NEXT:    save %sp, -176, %sp
 ; SPARC64-NEXT:    .cfi_def_cfa_register %fp
@@ -194,19 +195,15 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC64-NEXT:    cmp %i1, %o0
 ; SPARC64-NEXT:    mov %i3, %i4
 ; SPARC64-NEXT:    movcs %xcc, 1, %i4
-; SPARC64-NEXT:    cmp %l1, 0
 ; SPARC64-NEXT:    mov %i3, %g2
-; SPARC64-NEXT:    movne %xcc, 1, %g2
-; SPARC64-NEXT:    cmp %i2, 0
+; SPARC64-NEXT:    movrnz %l1, 1, %g2
+; SPARC64-NEXT:    mov %i3, %g3
+; SPARC64-NEXT:    movrnz %i2, 1, %g3
 ; SPARC64-NEXT:    mov %i3, %i2
-; SPARC64-NEXT:    movne %xcc, 1, %i2
-; SPARC64-NEXT:    cmp %i0, 0
-; SPARC64-NEXT:    mov %i3, %i0
-; SPARC64-NEXT:    movne %xcc, 1, %i0
-; SPARC64-NEXT:    and %i0, %i2, %i0
+; SPARC64-NEXT:    movrnz %i0, 1, %i2
+; SPARC64-NEXT:    and %i2, %g3, %i0
 ; SPARC64-NEXT:    or %i0, %g2, %i0
-; SPARC64-NEXT:    cmp %i5, 0
-; SPARC64-NEXT:    movne %xcc, 1, %i3
+; SPARC64-NEXT:    movrnz %i5, 1, %i3
 ; SPARC64-NEXT:    or %i0, %i3, %i0
 ; SPARC64-NEXT:    or %i0, %i4, %i0
 ; SPARC64-NEXT:    srl %i0, 0, %i2

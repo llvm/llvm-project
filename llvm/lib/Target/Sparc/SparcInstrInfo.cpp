@@ -136,6 +136,21 @@ static SPCC::CondCodes GetOppositeBranchCondition(SPCC::CondCodes CC)
       // only be used in inline assembler, so this code should
       // not be reached in a normal compilation pass.
       llvm_unreachable("Meaningless inversion of co-processor cond code");
+
+  case SPCC::REG_BEGIN:
+      llvm_unreachable("Use of reserved cond code");
+  case SPCC::REG_Z:
+      return SPCC::REG_NZ;
+  case SPCC::REG_LEZ:
+      return SPCC::REG_GZ;
+  case SPCC::REG_LZ:
+      return SPCC::REG_GEZ;
+  case SPCC::REG_NZ:
+      return SPCC::REG_Z;
+  case SPCC::REG_GZ:
+      return SPCC::REG_LEZ;
+  case SPCC::REG_GEZ:
+      return SPCC::REG_LZ;
   }
   llvm_unreachable("Invalid cond code");
 }

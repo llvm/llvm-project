@@ -59,6 +59,34 @@ multiclass fpcond_mov_alias<string cond, int condVal,
                   (fmovd DFPRegs:$rd, FCCRegs:$cc, DFPRegs:$rs2, condVal)>;
 }
 
+// movr<cond> rs1, rs2, rd
+multiclass regcond_mov_alias<string rcond, int condVal,
+                          Instruction movrrr, Instruction movrri,
+                          Instruction fmovrs, Instruction fmovrd,
+                          Instruction fmovrq> {
+
+  // movr<cond> $rs1, $rs2, $rd
+  def : InstAlias<!strconcat(!strconcat("movr", rcond), " $rs1, $rs2, $rd"),
+                  (movrrr IntRegs:$rd, I64Regs:$rs1, IntRegs:$rs2, condVal)>;
+
+  // movr<cond> $rs1, $simm10, $rd
+  def : InstAlias<!strconcat(!strconcat("movr", rcond), " $rs1, $simm10, $rd"),
+                  (movrri IntRegs:$rd, I64Regs:$rs1, i32imm:$simm10, condVal)>;
+
+  // fmovrs<cond> $rs1, $rs2, $rd
+  def : InstAlias<!strconcat(!strconcat("fmovrs", rcond), " $rs1, $rs2, $rd"),
+                  (fmovrs FPRegs:$rd, I64Regs:$rs1, FPRegs:$rs2, condVal)>;
+
+  // fmovrd<cond> $rs1, $rs2, $rd
+  def : InstAlias<!strconcat(!strconcat("fmovrd", rcond), " $rs1, $rs2, $rd"),
+                  (fmovrd DFPRegs:$rd, I64Regs:$rs1, DFPRegs:$rs2, condVal)>;
+
+  // fmovrq<cond> $rs1, $rs2, $rd
+  let Predicates = [HasHardQuad] in
+  def : InstAlias<!strconcat(!strconcat("fmovrq", rcond), " $rs1, $rs2, $rd"),
+                  (fmovrq QFPRegs:$rd, I64Regs:$rs1, QFPRegs:$rs2, condVal)>;
+}
+
 // Instruction aliases for integer conditional branches and moves.
 multiclass int_cond_alias<string cond, int condVal> {
 
@@ -265,6 +293,14 @@ multiclass cp_cond_alias<string cond, int condVal> {
                   (CBCONDA brtarget:$imm, condVal), 0>;
 }
 
+// Instruction aliases for register conditional branches and moves.
+multiclass reg_cond_alias<string rcond, int condVal> {
+  defm : regcond_mov_alias<rcond, condVal,
+                            MOVRrr, MOVRri,
+                            FMOVRS, FMOVRD, FMOVRQ>,
+                            Requires<[Is64Bit]>;
+}
+
 defm : int_cond_alias<"a",    0b1000>;
 defm : int_cond_alias<"n",    0b0000>;
 defm : int_cond_alias<"ne",   0b1001>;
@@ -330,6 +366,13 @@ defm : cp_cond_alias<"01",    0b1101>;
 defm : cp_cond_alias<"013",   0b1110>;
 defm : cp_cond_alias<"012",   0b1111>;
 let EmitPriority = 0 in defm : cp_cond_alias<"",      0b1000>; // same as a; gnu asm, not in manual
+
+defm : reg_cond_alias<"z",    0b001>;
+defm : reg_cond_alias<"lez",  0b010>;
+defm : reg_cond_alias<"lz",   0b011>;
+defm : reg_cond_alias<"nz",   0b101>;
+defm : reg_cond_alias<"gz",   0b110>;
+defm : reg_cond_alias<"gez",  0b111>;
 
 // Section A.3 Synthetic Instructions
 

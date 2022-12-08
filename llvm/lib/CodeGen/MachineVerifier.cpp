@@ -830,8 +830,12 @@ void MachineVerifier::visitMachineBundleBefore(const MachineInstr *MI) {
     if (!FirstTerminator)
       FirstTerminator = MI;
   } else if (FirstTerminator) {
-    report("Non-terminator instruction after the first terminator", MI);
-    errs() << "First terminator was:\t" << *FirstTerminator;
+    // For GlobalISel, G_INVOKE_REGION_START is a terminator that we allow to
+    // precede non-terminators.
+    if (FirstTerminator->getOpcode() != TargetOpcode::G_INVOKE_REGION_START) {
+      report("Non-terminator instruction after the first terminator", MI);
+      errs() << "First terminator was:\t" << *FirstTerminator;
+    }
   }
 }
 

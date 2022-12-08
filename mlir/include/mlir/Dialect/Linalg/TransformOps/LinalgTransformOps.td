@@ -751,6 +751,8 @@ def TileReductionUsingForeachThreadOp :
     All the partial reduction value is are parallel inserted to create a new
     tensor. After the loop a merge operation is created to do a final reduction
     with the partial reductions tensor.
+    If an extra `tile_sizes` parameter is passed the tiles are cyclically
+    distributed on the threads of the `scf.foreach_threads` loop.
 
     #### Return modes
 
@@ -804,7 +806,8 @@ def TileReductionUsingForeachThreadOp :
   }];
 
   let arguments = (ins PDL_Operation:$target,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$num_threads);
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$num_threads,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes);
   let results = (outs PDL_Operation:$fill_op,
                       PDL_Operation:$split_linalg_op,
                       PDL_Operation:$combining_linalg_op);
