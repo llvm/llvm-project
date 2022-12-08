@@ -245,7 +245,7 @@ define void @pos_multiple() {
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { "llvm.assume"="ompx_aligned_barrier" }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { convergent nocallback nounwind }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent nounwind willreturn }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}

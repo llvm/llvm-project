@@ -1270,6 +1270,15 @@ def G_BRJT : GenericInstruction {
   let isIndirectBranch = true;
 }
 
+// A marker to signal the following code is an invoke region, that may throw
+// an exception and therefore not return.
+def G_INVOKE_REGION_START : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let isTerminator = true; // This must be a terminator.
+  let hasSideEffects = false;
+}
+
 def G_READ_REGISTER : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$register);

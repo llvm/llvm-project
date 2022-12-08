@@ -1,5 +1,5 @@
 ; Test for rdar://7452967
-; RUN: opt < %s -licm -disable-output
+; RUN: opt < %s -passes=licm -disable-output
 define void @foo (ptr %v)
 {
   entry:

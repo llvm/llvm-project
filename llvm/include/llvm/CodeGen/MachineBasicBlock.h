@@ -833,6 +833,11 @@ public:
   /// instr_iterator instead.
   instr_iterator getFirstInstrTerminator();
 
+  /// Finds the first terminator in a block by scanning forward. This can handle
+  /// cases in GlobalISel where there may be non-terminator instructions between
+  /// terminators, for which getFirstTerminator() will not work correctly.
+  iterator getFirstTerminatorForward();
+
   /// Returns an iterator to the first non-debug instruction in the basic block,
   /// or end(). Skip any pseudo probe operation if \c SkipPseudoOp is true.
   /// Pseudo probes are like debug instructions which do not turn into real

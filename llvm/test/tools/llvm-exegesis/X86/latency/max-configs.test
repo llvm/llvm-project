@@ -1,5 +1,5 @@
-# RUN: llvm-exegesis -mode=latency -opcode-name=SBB8rr -max-configs-per-opcode=1 | FileCheck -check-prefixes=CHECK,CHECK1 %s
-# RUN: llvm-exegesis -mode=latency -opcode-name=SBB8rr -max-configs-per-opcode=2 | FileCheck -check-prefixes=CHECK,CHECK2 %s
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --skip-measurements -opcode-name=SBB8rr -max-configs-per-opcode=1 | FileCheck -check-prefixes=CHECK,CHECK1 %s
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --skip-measurements -opcode-name=SBB8rr -max-configs-per-opcode=2 | FileCheck -check-prefixes=CHECK,CHECK2 %s
 
 CHECK:      ---
 CHECK-NEXT: mode: latency

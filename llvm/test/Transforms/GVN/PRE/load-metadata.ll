@@ -1,4 +1,4 @@
-; RUN: opt -S -gvn < %s | FileCheck %s
+; RUN: opt -S -passes=gvn < %s | FileCheck %s
 
 define i32 @test1(i32* %p, i1 %C) {
 ; CHECK-LABEL: @test1(

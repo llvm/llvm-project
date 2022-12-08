@@ -449,7 +449,8 @@ std::string VarLenCodeEmitterGen::getInstructionCaseForEncoding(
 
       auto OpIdx = CGI.Operands.ParseOperandName(OperandName);
       unsigned FlatOpIdx = CGI.Operands.getFlattenedOperandNumber(OpIdx);
-      StringRef CustomEncoder = CGI.Operands[OpIdx.first].EncoderMethodName;
+      StringRef CustomEncoder =
+          CGI.Operands[OpIdx.first].EncoderMethodNames[OpIdx.second];
       if (ES.CustomEncoder.size())
         CustomEncoder = ES.CustomEncoder;
 

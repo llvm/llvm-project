@@ -537,6 +537,7 @@ def AddiuRxRxImmX16: FEXT_2RI16_ins<0b01001, "addiu", IIM16Alu>,
   let isCodeGenOnly = 1;
 }
 
+let DecoderMethod = "DecodeFIXMEInstruction" in
 def AddiuRxRyOffMemX16:
   FEXT_RRI_A16_mem_ins<0, "addiu", mem16_ea, IIM16Alu>;
 
@@ -850,6 +851,7 @@ def LwRxRyOffMemX16: FEXT_RRI16_mem_ins<0b10011, "lw", mem16, II_LW>, MayLoad{
 // Purpose: Load Word (SP-Relative, Extended)
 // To load an SP-relative word from memory as a signed value.
 //
+let DecoderMethod = "DecodeFIXMEInstruction" in
 def LwRxSpImmX16: FEXT_RRI16_mem_ins<0b10010, "lw", mem16sp, II_LW>, MayLoad;
 
 def LwRxPcTcp16: FRI16_TCP_ins<0b10110, "lw", II_LW>, MayLoad;
@@ -1006,6 +1008,7 @@ def SaveX16:
 // Purpose: Store Byte (Extended)
 // To store a byte to memory.
 //
+let DecoderMethod = "DecodeFIXMEInstruction" in
 def SbRxRyOffMemX16:
   FEXT_RRI16_mem2_ins<0b11000, "sb", mem16, II_SB>, MayStore;
 
@@ -1144,6 +1147,7 @@ def SelTBtneZSltiu: SeliT<"btnez", "sltiu">;
 // Purpose: Store Halfword (Extended)
 // To store a halfword to memory.
 //
+let DecoderMethod = "DecodeFIXMEInstruction" in
 def ShRxRyOffMemX16:
   FEXT_RRI16_mem2_ins<0b11001, "sh", mem16, II_SH>, MayStore;
 
@@ -1280,6 +1284,7 @@ def SubuRxRyRz16: FRRR16_ins<0b11, "subu", IIM16Alu>, ArithLogic16Defs<0>;
 // Purpose: Store Word (Extended)
 // To store a word to memory.
 //
+let DecoderMethod = "DecodeFIXMEInstruction" in
 def SwRxRyOffMemX16: FEXT_RRI16_mem2_ins<0b11011, "sw", mem16, II_SW>, MayStore;
 
 //
@@ -1287,6 +1292,7 @@ def SwRxRyOffMemX16: FEXT_RRI16_mem2_ins<0b11011, "sw", mem16, II_SW>, MayStore;
 // Purpose: Store Word rx (SP-Relative)
 // To store an SP-relative word to memory.
 //
+let DecoderMethod = "DecodeFIXMEInstruction" in
 def SwRxSpImmX16: FEXT_RRI16_mem2_ins<0b11010, "sw", mem16sp, II_SW>, MayStore;
 
 //

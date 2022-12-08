@@ -1,4 +1,4 @@
-; RUN: opt -loop-idiom -S <%s | FileCheck %s
+; RUN: opt -passes=loop-idiom -S <%s | FileCheck %s
 
 define void @memcpy_fixed_vec(i64* noalias %a, i64* noalias %b) local_unnamed_addr #1 {
 ; CHECK-LABEL: @memcpy_fixed_vec(

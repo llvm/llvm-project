@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -enable-load-pre -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -enable-load-pre -S | FileCheck %s
 ; RUN: opt < %s -passes="gvn<load-pre>" -enable-load-pre=false -S | FileCheck %s
 ; This testcase assumed we'll PRE the load into %for.cond, but we don't actually
 ; verify that doing so is safe.  If there didn't _happen_ to be a load in

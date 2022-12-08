@@ -1,4 +1,4 @@
-; RUN: opt -S -licm < %s | FileCheck %s
+; RUN: opt -S -passes=licm < %s | FileCheck %s
 
 ; LICM is trying to merge the two `store` in block %14 and %17, but given their
 ; locations disagree, it sets a line zero location instead instead of picking a
@@ -8,16 +8,16 @@
 ; volatile int a;
 ; extern int g;
 ; int g;
-; void f1() { 
-;  while (a) { 
+; void f1() {
+;  while (a) {
 ;    g = 0;
 ;    if (a)
 ;      g = 0;
-;  } 
+;  }
 ; }
 
 ; CHECK: bb22:
-; CHECK-NEXT: store i32 0, ptr getelementptr inbounds ([2 x i32], ptr @g_390, i64 0, i64 1), align 4, !dbg [[storeLocation:![0-9]+]] 
+; CHECK-NEXT: store i32 0, ptr getelementptr inbounds ([2 x i32], ptr @g_390, i64 0, i64 1), align 4, !dbg [[storeLocation:![0-9]+]]
 ; CHECK: [[storeLocation]] = !DILocation(line: 0
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

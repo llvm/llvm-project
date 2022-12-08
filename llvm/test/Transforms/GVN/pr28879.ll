@@ -1,4 +1,4 @@
-; RUN: opt -gvn <%s -S -o - | FileCheck %s
+; RUN: opt -passes=gvn <%s -S -o - | FileCheck %s
 
 define void @f() {
 entry:
@@ -7,7 +7,7 @@ entry:
 ; CHECK: store <7 x i1> undef, <7 x i1>*
   %0 = getelementptr inbounds <7 x i1>, <7 x i1>* %a, i64 0, i64 0
   %val = load i1, i1* %0, align 2
-; CHECK: load i1, i1* 
+; CHECK: load i1, i1*
   br i1 %val, label %cond.true, label %cond.false
 
 cond.true:

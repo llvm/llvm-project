@@ -4835,7 +4835,7 @@ static void packImage16bitOpsToDwords(MachineIRBuilder &B, MachineInstr &MI,
 static void convertImageAddrToPacked(MachineIRBuilder &B, MachineInstr &MI,
                                      int DimIdx, int NumVAddrs) {
   const LLT S32 = LLT::scalar(32);
-
+  (void)S32;
   SmallVector<Register, 8> AddrRegs;
   for (int I = 0; I != NumVAddrs; ++I) {
     MachineOperand &SrcOp = MI.getOperand(DimIdx + I);
@@ -4847,14 +4847,6 @@ static void convertImageAddrToPacked(MachineIRBuilder &B, MachineInstr &MI,
 
   int NumAddrRegs = AddrRegs.size();
   if (NumAddrRegs != 1) {
-    // Above 8 elements round up to next power of 2 (i.e. 16).
-    if (NumAddrRegs > 8 && !isPowerOf2_32(NumAddrRegs)) {
-      const int RoundedNumRegs = NextPowerOf2(NumAddrRegs);
-      auto Undef = B.buildUndef(S32);
-      AddrRegs.append(RoundedNumRegs - NumAddrRegs, Undef.getReg(0));
-      NumAddrRegs = RoundedNumRegs;
-    }
-
     auto VAddr =
         B.buildBuildVector(LLT::fixed_vector(NumAddrRegs, 32), AddrRegs);
     MI.getOperand(DimIdx).setReg(VAddr.getReg(0));
