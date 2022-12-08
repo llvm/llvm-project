@@ -142,13 +142,14 @@ mlir::LogicalResult CIRGenFunction::buildStmt(const Stmt *S,
 
   case Stmt::CoroutineBodyStmtClass:
     return buildCoroutineBody(cast<CoroutineBodyStmt>(*S));
+  case Stmt::CoreturnStmtClass:
+    return buildCoreturnStmt(cast<CoreturnStmt>(*S));
 
   case Stmt::IndirectGotoStmtClass:
   case Stmt::ReturnStmtClass:
   // When implemented, GCCAsmStmtClass should fall-through to MSAsmStmtClass.
   case Stmt::GCCAsmStmtClass:
   case Stmt::MSAsmStmtClass:
-  case Stmt::CoreturnStmtClass:
   case Stmt::CapturedStmtClass:
   case Stmt::ObjCAtTryStmtClass:
   case Stmt::ObjCAtThrowStmtClass:
