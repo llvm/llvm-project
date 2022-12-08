@@ -1,4 +1,4 @@
-; RUN: opt -callsite-splitting -S < %s | FileCheck %s
+; RUN: opt -passes=callsite-splitting -S < %s | FileCheck %s
 
 ; CHECK-LABEL: @test1
 ; CHECK:         [[R1:%.+]] = call i32 @callee(i32 0, i32 %dd), !dbg [[DBG1:!.*]]

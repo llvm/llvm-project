@@ -198,7 +198,7 @@ define void @test4() {
 ; Much like @test3, this is specifically testing big-endian management of data.
 ; Also similarly, it uses constants with particular bits set to help track
 ; whether values are corrupted, and can be easily evaluated by running through
-; -instcombine to see that the i64 round-trips.
+; -passes=instcombine to see that the i64 round-trips.
 ;
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:

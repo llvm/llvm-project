@@ -1,5 +1,5 @@
-; RUN: opt < %s -callsite-splitting -S | FileCheck %s
-; RUN: opt < %s  -passes='function(callsite-splitting)' -S | FileCheck %s
+; RUN: opt < %s -passes=callsite-splitting -S | FileCheck %s
+; RUN: opt < %s -passes='function(callsite-splitting)' -S | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-linaro-linux-gnueabi"
@@ -381,7 +381,7 @@ Header:
   br i1 %tobool1, label %Tail, label %TBB
 
 TBB:
-  %cmp = icmp eq i32 %v, %v2 
+  %cmp = icmp eq i32 %v, %v2
   br i1 %cmp, label %Tail, label %End
 
 Tail:
@@ -428,7 +428,7 @@ Header:
   br i1 %tobool1, label %Tail, label %TBB
 
 TBB:
-  %cmp = icmp eq i32 %v, %v2 
+  %cmp = icmp eq i32 %v, %v2
   br i1 %cmp, label %Tail, label %End
 
 Tail:
@@ -568,7 +568,7 @@ entry:
   br label %Top0
 
 Top0:
-  %tobool1 = icmp eq i32* %a_elt, inttoptr (i64 4643 to  i32*) 
+  %tobool1 = icmp eq i32* %a_elt, inttoptr (i64 4643 to  i32*)
   br i1 %tobool1, label %Top1, label %NextCond
 
 Top1:

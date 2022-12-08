@@ -497,7 +497,7 @@ FailureOr<ForeachThreadReductionTilingResult>
 tileReductionUsingForeachThread(RewriterBase &b, PartialReductionOpInterface op,
                                 ArrayRef<OpFoldResult> numThreads,
                                 ArrayRef<OpFoldResult> tileSizes = {},
-                                Optional<ArrayAttr> mapping = llvm::None);
+                                Optional<ArrayAttr> mapping = std::nullopt);
 
 /// All indices returned by IndexOp should be invariant with respect to
 /// tiling. Therefore, if an operation is tiled, we have to transform the

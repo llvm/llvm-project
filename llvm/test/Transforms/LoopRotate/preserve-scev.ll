@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-rotate -loop-reduce -verify-memoryssa -verify-dom-info -verify-loop-info -disable-output
+; RUN: opt < %s -passes=loop-rotate,loop-reduce -verify-memoryssa -verify-dom-info -verify-loop-info -disable-output
 
 define fastcc void @foo(i32* %A, i64 %i) nounwind {
 BB:

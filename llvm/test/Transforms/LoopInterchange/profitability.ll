@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-interchange -cache-line-size=64 -pass-remarks-output=%t -verify-dom-info -verify-loop-info \
+; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -pass-remarks-output=%t -verify-dom-info -verify-loop-info \
 ; RUN:     -pass-remarks=loop-interchange -pass-remarks-missed=loop-interchange
 ; RUN: FileCheck -input-file %t %s
 
@@ -51,7 +51,7 @@ for.end16:
 
 ;; ---------------------------------------Test case 02---------------------------------
 ;; Check loop interchange profitability model.
-;; This tests profitability model when operands of getelementpointer and not exactly the induction variable but some 
+;; This tests profitability model when operands of getelementpointer and not exactly the induction variable but some
 ;; arithmetic operation on them.
 ;;   for(int i=1;i<N;i++)
 ;;    for(int j=1;j<N;j++)

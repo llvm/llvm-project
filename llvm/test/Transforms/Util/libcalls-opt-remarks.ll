@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -o /dev/null  -pass-remarks-output=%t -S \
+; RUN: opt < %s -passes=instcombine -o /dev/null  -pass-remarks-output=%t -S \
 ; RUN:     -pass-remarks=instcombine 2>&1 | FileCheck %s
 ; RUN: cat %t | FileCheck -check-prefix=YAML %s
 ; RUN: opt < %s -passes='require<opt-remark-emit>,instcombine' -o /dev/null \

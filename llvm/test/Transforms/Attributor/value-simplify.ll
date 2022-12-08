@@ -188,12 +188,11 @@ define void @test-select-phi(i1 %c) {
 ; CHECK-NEXT:    [[PHI_NOT_SAME:%.*]] = phi i32 [ 0, [[IF_TRUE]] ], [ 1, [[IF_FALSE]] ]
 ; CHECK-NEXT:    [[PHI_SAME_PROP:%.*]] = phi i32 [ 1, [[IF_TRUE]] ], [ 1, [[IF_FALSE]] ]
 ; CHECK-NEXT:    [[PHI_SAME_UNDEF:%.*]] = phi i32 [ 1, [[IF_TRUE]] ], [ undef, [[IF_FALSE]] ]
-; CHECK-NEXT:    [[SELECT_NOT_SAME_UNDEF:%.*]] = select i1 [[C]], i32 [[PHI_NOT_SAME]], i32 undef
 ; CHECK-NEXT:    tail call void @use(i32 noundef 1)
 ; CHECK-NEXT:    tail call void @use(i32 noundef [[PHI_NOT_SAME]])
 ; CHECK-NEXT:    tail call void @use(i32 noundef 1)
 ; CHECK-NEXT:    tail call void @use(i32 1)
-; CHECK-NEXT:    tail call void @use(i32 [[SELECT_NOT_SAME_UNDEF]])
+; CHECK-NEXT:    tail call void @use(i32 [[PHI_NOT_SAME]])
 ; CHECK-NEXT:    ret void
 ;
   %select-same = select i1 %c, i32 1, i32 1

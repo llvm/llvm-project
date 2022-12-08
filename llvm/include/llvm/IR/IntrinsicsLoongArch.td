@@ -73,4 +73,23 @@ def int_loongarch_crcc_w_w_w : Intrinsic<[llvm_i32_ty],
                                          [llvm_i32_ty, llvm_i32_ty]>;
 def int_loongarch_crcc_w_d_w : Intrinsic<[llvm_i32_ty],
                                          [llvm_i64_ty, llvm_i32_ty]>;
+
+def int_loongarch_csrrd_w : Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
+                                      [ImmArg<ArgIndex<0>>]>;
+def int_loongarch_csrrd_d : Intrinsic<[llvm_i64_ty], [llvm_i32_ty],
+                                      [ImmArg<ArgIndex<0>>]>;
+def int_loongarch_csrwr_w : Intrinsic<[llvm_i32_ty],
+                                      [llvm_i32_ty, llvm_i32_ty],
+                                      [ImmArg<ArgIndex<1>>]>;
+def int_loongarch_csrwr_d : Intrinsic<[llvm_i64_ty],
+                                      [llvm_i64_ty, llvm_i32_ty],
+                                      [ImmArg<ArgIndex<1>>]>;
+def int_loongarch_csrxchg_w : Intrinsic<[llvm_i32_ty],
+                                        [llvm_i32_ty, llvm_i32_ty,
+                                         llvm_i32_ty],
+                                        [ImmArg<ArgIndex<2>>]>;
+def int_loongarch_csrxchg_d : Intrinsic<[llvm_i64_ty],
+                                        [llvm_i64_ty, llvm_i64_ty,
+                                         llvm_i32_ty],
+                                        [ImmArg<ArgIndex<2>>]>;
 } // TargetPrefix = "loongarch"

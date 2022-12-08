@@ -1,5 +1,5 @@
-; RUN: opt < %s  -passes=loop-vectorize -mtriple=ve-linux -S | FileCheck %s -check-prefix=VE
-; RUN: opt < %s  -passes=loop-vectorize -mtriple=x86_64-pc_linux -mcpu=core-avx2 -S | FileCheck %s -check-prefix=AVX
+; RUN: opt < %s -passes=loop-vectorize -mtriple=ve-linux -S | FileCheck %s -check-prefix=VE
+; RUN: opt < %s -passes=loop-vectorize -mtriple=x86_64-pc_linux -mcpu=core-avx2 -S | FileCheck %s -check-prefix=AVX
 
 ; Make sure LV does not trigger for VE on an appealing loop that vectorizes for x86 AVX.
 

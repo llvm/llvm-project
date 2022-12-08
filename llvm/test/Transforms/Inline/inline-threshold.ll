@@ -8,7 +8,7 @@
 
 define i32 @simpleFunction(i32 %a) #0 {
 entry:
-  %a1 = load volatile i32, i32* @a
+  %a1 = load volatile i32, ptr @a
   %x1 = add i32 %a1,  %a
   ret i32 %x1
 }

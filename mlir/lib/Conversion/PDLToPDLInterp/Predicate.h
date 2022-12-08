@@ -231,8 +231,8 @@ struct OperandGroupPosition
     return llvm::hash_value(key);
   }
 
-  /// Returns the group number of this position. If None, this group refers to
-  /// all operands.
+  /// Returns the group number of this position. If std::nullopt, this group
+  /// refers to all operands.
   Optional<unsigned> getOperandGroupNumber() const { return std::get<1>(key); }
 
   /// Returns if the operand group has unknown size. If false, the operand group
@@ -309,8 +309,8 @@ struct ResultGroupPosition
     return llvm::hash_value(key);
   }
 
-  /// Returns the group number of this position. If None, this group refers to
-  /// all results.
+  /// Returns the group number of this position. If std::nullopt, this group
+  /// refers to all results.
   Optional<unsigned> getResultGroupNumber() const { return std::get<1>(key); }
 
   /// Returns if the result group has unknown size. If false, the result group

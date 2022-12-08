@@ -56,7 +56,10 @@ void mlir::sparse_tensor::buildSparseCompiler(
   pm.addPass(createSparsificationAndBufferizationPass(
       getBufferizationOptions(options.testBufferizationAnalysisOnly),
       options.sparsificationOptions(), options.sparseTensorConversionOptions(),
-      options.enableRuntimeLibrary, options.enableBufferInitialization));
+      options.enableRuntimeLibrary, options.enableBufferInitialization,
+      options.vectorLength,
+      /*enableVLAVectorization=*/options.armSVE,
+      /*enableSIMDIndex32=*/options.force32BitVectorIndices));
   if (options.testBufferizationAnalysisOnly)
     return;
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());

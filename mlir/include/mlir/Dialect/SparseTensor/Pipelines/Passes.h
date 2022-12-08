@@ -56,7 +56,6 @@ struct SparseCompilerOptions
   PassOptions::Option<bool> enableRuntimeLibrary{
       *this, "enable-runtime-library",
       desc("Enable runtime library for manipulating sparse tensors"),
-      // TODO: Disable runtime library by default after feature complete.
       init(true)};
 
   PassOptions::Option<bool> testBufferizationAnalysisOnly{
@@ -67,56 +66,62 @@ struct SparseCompilerOptions
       *this, "enable-buffer-initialization",
       desc("Enable zero-initialization of memory buffers"), init(false)};
 
-  /// Projects out the options for `createSparsificationPass`.
-  SparsificationOptions sparsificationOptions() const {
-    return SparsificationOptions(parallelization);
-  }
+  PassOptions::Option<int32_t> vectorLength{
+      *this, "vl", desc("Set the vector length (0 disables vectorization)"),
+      init(0)};
 
   // These options must be kept in sync with `SparseTensorConversionBase`.
   PassOptions::Option<int32_t> sparseToSparse{
       *this, "s2s-strategy",
       desc("Set the strategy for sparse-to-sparse conversion"), init(0)};
 
-  /// Projects out the options for `createSparsificationPass`.
-  SparseTensorConversionOptions sparseTensorConversionOptions() const {
-    return SparseTensorConversionOptions(
-        sparseToSparseConversionStrategy(sparseToSparse));
-  }
-
-  // These options must be kept in sync with `ConvertVectorToLLVMBase`.
-  // TODO(wrengr): does `indexOptimizations` differ from `enableSIMDIndex32`?
+  // These options must be kept in sync with the `ConvertVectorToLLVM`
+  // (defined in include/mlir/Dialect/SparseTensor/Pipelines/Passes.h).
   PassOptions::Option<bool> reassociateFPReductions{
       *this, "reassociate-fp-reductions",
       desc("Allows llvm to reassociate floating-point reductions for speed"),
       init(false)};
-  PassOptions::Option<bool> indexOptimizations{
+  PassOptions::Option<bool> force32BitVectorIndices{
       *this, "enable-index-optimizations",
       desc("Allows compiler to assume indices fit in 32-bit if that yields "
            "faster code"),
       init(true)};
   PassOptions::Option<bool> amx{
       *this, "enable-amx",
-      desc("Enables the use of AMX dialect while lowering the vector dialect."),
+      desc("Enables the use of AMX dialect while lowering the vector dialect"),
       init(false)};
-  PassOptions::Option<bool> armNeon{*this, "enable-arm-neon",
-                                    desc("Enables the use of ArmNeon dialect "
-                                         "while lowering the vector dialect."),
-                                    init(false)};
-  PassOptions::Option<bool> armSVE{*this, "enable-arm-sve",
-                                   desc("Enables the use of ArmSVE dialect "
-                                        "while lowering the vector dialect."),
-                                   init(false)};
+  PassOptions::Option<bool> armNeon{
+      *this, "enable-arm-neon",
+      desc("Enables the use of ArmNeon dialect while lowering the vector "
+           "dialect"),
+      init(false)};
+  PassOptions::Option<bool> armSVE{
+      *this, "enable-arm-sve",
+      desc("Enables the use of ArmSVE dialect while lowering the vector "
+           "dialect"),
+      init(false)};
   PassOptions::Option<bool> x86Vector{
       *this, "enable-x86vector",
       desc("Enables the use of X86Vector dialect while lowering the vector "
-           "dialect."),
+           "dialect"),
       init(false)};
+
+  /// Projects out the options for `createSparsificationPass`.
+  SparsificationOptions sparsificationOptions() const {
+    return SparsificationOptions(parallelization);
+  }
+
+  /// Projects out the options for `createSparseTensorConversionPass`.
+  SparseTensorConversionOptions sparseTensorConversionOptions() const {
+    return SparseTensorConversionOptions(
+        sparseToSparseConversionStrategy(sparseToSparse));
+  }
 
   /// Projects out the options for `createConvertVectorToLLVMPass`.
   LowerVectorToLLVMOptions lowerVectorToLLVMOptions() const {
     LowerVectorToLLVMOptions opts{};
     opts.enableReassociateFPReductions(reassociateFPReductions);
-    opts.enableIndexOptimizations(indexOptimizations);
+    opts.enableIndexOptimizations(force32BitVectorIndices);
     opts.enableArmNeon(armNeon);
     opts.enableArmSVE(armSVE);
     opts.enableAMX(amx);

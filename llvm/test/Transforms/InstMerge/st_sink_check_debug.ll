@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -debugify -mldst-motion -o - | FileCheck %s
+; RUN: opt < %s -S -passes=debugify,mldst-motion -o - | FileCheck %s
 
 %struct.S = type { i32 }
 

@@ -13,7 +13,6 @@
 #ifndef LLVM_OBJECTYAML_COFFYAML_H
 #define LLVM_OBJECTYAML_COFFYAML_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/ObjectYAML/CodeViewYAMLDebugSections.h"
