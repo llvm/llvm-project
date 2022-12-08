@@ -244,6 +244,20 @@ struct EndAssociateOpConversion
   }
 };
 
+struct NoReassocOpConversion
+    : public mlir::OpConversionPattern<hlfir::NoReassocOp> {
+  using mlir::OpConversionPattern<hlfir::NoReassocOp>::OpConversionPattern;
+  explicit NoReassocOpConversion(mlir::MLIRContext *ctx)
+      : mlir::OpConversionPattern<hlfir::NoReassocOp>{ctx} {}
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::NoReassocOp noreassoc, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<hlfir::NoReassocOp>(
+        noreassoc, getBufferizedExprStorage(adaptor.getVal()));
+    return mlir::success();
+  }
+};
+
 class BufferizeHLFIR : public hlfir::impl::BufferizeHLFIRBase<BufferizeHLFIR> {
 public:
   void runOnOperation() override {
@@ -257,9 +271,9 @@ public:
     auto module = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns
-        .insert<AsExprOpConversion, AssignOpConversion, AssociateOpConversion,
-                ConcatOpConversion, EndAssociateOpConversion>(context);
+    patterns.insert<AsExprOpConversion, AssignOpConversion,
+                    AssociateOpConversion, ConcatOpConversion,
+                    EndAssociateOpConversion, NoReassocOpConversion>(context);
     mlir::ConversionTarget target(*context);
     target.addIllegalOp<hlfir::AssociateOp, hlfir::EndAssociateOp>();
     target.markUnknownOpDynamicallyLegal([](mlir::Operation *op) {
