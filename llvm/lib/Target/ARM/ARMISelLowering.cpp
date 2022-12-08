@@ -21839,7 +21839,7 @@ void ARMTargetLowering::finalizeLowering(MachineFunction &MF) const {
 }
 
 bool ARMTargetLowering::isComplexDeinterleavingSupported() const {
-  return Subtarget->hasMVEFloatOps();
+  return Subtarget->hasMVEIntegerOps();
 }
 
 bool ARMTargetLowering::isComplexDeinterleavingOperationSupported(
@@ -21856,7 +21856,15 @@ bool ARMTargetLowering::isComplexDeinterleavingOperationSupported(
     return false;
 
   // Both VCADD and VCMUL/VCMLA support the same types, F16 and F32
-  return ScalarTy->isHalfTy() || ScalarTy->isFloatTy();
+  if (ScalarTy->isHalfTy() || ScalarTy->isFloatTy())
+    return Subtarget->hasMVEFloatOps();
+
+  if (Operation != ComplexDeinterleavingOperation::CAdd)
+    return false;
+
+  return Subtarget->hasMVEIntegerOps() &&
+         (ScalarTy->isIntegerTy(8) || ScalarTy->isIntegerTy(16) ||
+          ScalarTy->isIntegerTy(32));
 }
 
 Value *ARMTargetLowering::createComplexDeinterleavingIR(
