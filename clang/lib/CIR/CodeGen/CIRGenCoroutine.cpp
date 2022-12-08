@@ -353,3 +353,32 @@ RValue CIRGenFunction::buildCoawaitExpr(const CoawaitExpr &E,
       });
   return rval;
 }
+
+mlir::LogicalResult CIRGenFunction::buildCoreturnStmt(CoreturnStmt const &S) {
+  ++CurCoro.Data->CoreturnCount;
+  const Expr *RV = S.getOperand();
+  if (RV && RV->getType()->isVoidType() && !isa<InitListExpr>(RV)) {
+    // Make sure to evaluate the non initlist expression of a co_return
+    // with a void expression for side effects.
+    // FIXME(cir): add scope
+    // RunCleanupsScope cleanupScope(*this);
+    buildIgnoredExpr(RV);
+  }
+  if (buildStmt(S.getPromiseCall(), /*useCurrentScope=*/true).failed())
+    return mlir::failure();
+  // FIXME: do the proper things like ReturnStmt does
+  // EmitBranchThroughCleanup(CurCoro.Data->FinalJD);
+
+  // Create a new return block (if not existent) and add a branch to
+  // it. The actual return instruction is only inserted during current
+  // scope cleanup handling.
+  auto loc = getLoc(S.getSourceRange());
+  auto *retBlock = currLexScope->getOrCreateRetBlock(*this, loc);
+  builder.create<mlir::cir::BrOp>(loc, retBlock);
+
+  // Insert the new block to continue codegen after branch to ret block.
+  builder.createBlock(builder.getBlock()->getParent());
+
+  // TODO(cir): LLVM codegen for a cleanup on cleanupScope here.
+  return mlir::success();
+}

@@ -768,6 +768,7 @@ public:
 
   mlir::LogicalResult buildFunctionBody(const clang::Stmt *Body);
   mlir::LogicalResult buildCoroutineBody(const CoroutineBodyStmt &S);
+  mlir::LogicalResult buildCoreturnStmt(const CoreturnStmt &S);
 
   RValue buildCoawaitExpr(const CoawaitExpr &E,
                           AggValueSlot aggSlot = AggValueSlot::ignored(),
