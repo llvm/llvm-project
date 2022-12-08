@@ -3568,26 +3568,28 @@ bool AArch64DAGToDAGISel::tryWriteRegister(SDNode *N) {
     // pstatefield for the MSR (immediate) instruction, we also require that an
     // immediate value has been provided as an argument, we know that this is
     // the case as it has been ensured by semantic checking.
-    auto PMapper = AArch64PState::lookupPStateByName(RegString->getString());
-    if (PMapper) {
-      assert(isa<ConstantSDNode>(N->getOperand(2)) &&
-             "Expected a constant integer expression.");
-      unsigned Reg = PMapper->Encoding;
-      uint64_t Immed = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
-      unsigned State;
-      if (Reg == AArch64PState::PAN || Reg == AArch64PState::UAO ||
-          Reg == AArch64PState::SSBS) {
-        assert(Immed < 2 && "Bad imm");
-        State = AArch64::MSRpstateImm1;
-      } else {
-        assert(Immed < 16 && "Bad imm");
-        State = AArch64::MSRpstateImm4;
+    auto trySelectPState = [&](auto PMapper, unsigned State) {
+      if (PMapper) {
+        assert(isa<ConstantSDNode>(N->getOperand(2)) &&
+               "Expected a constant integer expression.");
+        unsigned Reg = PMapper->Encoding;
+        uint64_t Immed = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
+        CurDAG->SelectNodeTo(
+            N, State, MVT::Other, CurDAG->getTargetConstant(Reg, DL, MVT::i32),
+            CurDAG->getTargetConstant(Immed, DL, MVT::i16), N->getOperand(0));
+        return true;
       }
-      CurDAG->SelectNodeTo(
-          N, State, MVT::Other, CurDAG->getTargetConstant(Reg, DL, MVT::i32),
-          CurDAG->getTargetConstant(Immed, DL, MVT::i16), N->getOperand(0));
+      return false;
+    };
+
+    if (trySelectPState(
+            AArch64PState::lookupPStateImm0_15ByName(RegString->getString()),
+            AArch64::MSRpstateImm4))
       return true;
-    }
+    if (trySelectPState(
+            AArch64PState::lookupPStateImm0_1ByName(RegString->getString()),
+            AArch64::MSRpstateImm1))
+      return true;
   }
 
   int Imm = getIntOperandFromRegisterString(RegString->getString());
