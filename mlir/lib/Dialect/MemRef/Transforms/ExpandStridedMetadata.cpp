@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
+#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
@@ -403,15 +404,50 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
 
   auto [strides, offset] = getStridesAndOffset(sourceType);
 
-  SmallVector<OpFoldResult> collapsedStride;
-  int64_t innerMostDimForGroup = reassocGroup.back();
-  int64_t innerMostStrideForGroup = strides[innerMostDimForGroup];
-  collapsedStride.push_back(
-      ShapedType::isDynamic(innerMostStrideForGroup)
-          ? origStrides[innerMostDimForGroup]
-          : builder.getIndexAttr(innerMostStrideForGroup));
+  SmallVector<OpFoldResult> groupStrides;
+  ArrayRef<int64_t> srcShape = sourceType.getShape();
+  for (int64_t currentDim : reassocGroup) {
+    // Skip size-of-1 dimensions, since right now their strides may be
+    // meaningless.
+    // FIXME: size-of-1 dimensions shouldn't be used in collapse shape, unless
+    // they are truly contiguous. When they are truly contiguous, we shouldn't
+    // need to skip them.
+    if (srcShape[currentDim] == 1)
+      continue;
 
-  return collapsedStride;
+    int64_t currentStride = strides[currentDim];
+    groupStrides.push_back(ShapedType::isDynamic(currentStride)
+                               ? origStrides[currentDim]
+                               : builder.getIndexAttr(currentStride));
+  }
+  if (groupStrides.empty()) {
+    // We're dealing with a 1x1x...x1 shape. The stride is meaningless,
+    // but we still have to make the type system happy.
+    MemRefType collapsedType = collapseShape.getResultType();
+    auto [collapsedStrides, collapsedOffset] =
+        getStridesAndOffset(collapsedType);
+    int64_t finalStride = collapsedStrides[groupId];
+    if (ShapedType::isDynamic(finalStride)) {
+      // Look for a dynamic stride. At this point we don't know which one is
+      // desired, but they are all equally good/bad.
+      for (int64_t currentDim : reassocGroup) {
+        assert(srcShape[currentDim] == 1 &&
+               "We should be dealing with 1x1x...x1");
+
+        if (ShapedType::isDynamic(strides[currentDim]))
+          return {origStrides[currentDim]};
+      }
+      llvm_unreachable("We should have found a dynamic stride");
+    }
+    return {builder.getIndexAttr(finalStride)};
+  }
+
+  // For the general case, we just want the minimum stride
+  // since the collapsed dimensions are contiguous.
+  auto minMap = AffineMap::getMultiDimIdentityMap(groupStrides.size(),
+                                                  builder.getContext());
+  return {makeComposedFoldedAffineMin(builder, collapseShape.getLoc(), minMap,
+                                      groupStrides)};
 }
 /// Replace `baseBuffer, offset, sizes, strides =
 ///              extract_strided_metadata(reshapeLike(memref))`

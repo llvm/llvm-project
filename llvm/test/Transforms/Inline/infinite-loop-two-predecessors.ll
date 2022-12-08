@@ -1,4 +1,4 @@
-; RUN: opt -S -o - %s -inline | FileCheck %s
+; RUN: opt -S -o - %s -passes=inline | FileCheck %s
 
 define void @f1() {
 bb.0:

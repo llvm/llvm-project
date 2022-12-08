@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll -loop-simplify -S  < %s | FileCheck %s
+; RUN: opt -passes=loop-unroll,loop-simplify -S  < %s | FileCheck %s
 
 ; This test is one of the tests of PR33494. Its compilation takes
 ; excessive time if we don't mark visited nodes while looking for

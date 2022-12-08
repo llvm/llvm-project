@@ -1,4 +1,4 @@
-; RUN: opt < %s -callsite-splitting -verify-dom-info -S | FileCheck %s
+; RUN: opt < %s -passes=callsite-splitting -verify-dom-info -S | FileCheck %s
 
 ;CHECK-LABEL: @caller
 ;CHECK-LABEL: Top.split:

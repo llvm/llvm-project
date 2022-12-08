@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=aarch64--linux-gnu -mattr=+sve < %s -inline -S | FileCheck %s
+; RUN: opt -mtriple=aarch64--linux-gnu -mattr=+sve < %s -passes=inline -S | FileCheck %s
 
 define void @bar(<vscale x 2 x i64>* %a) {
 entry:

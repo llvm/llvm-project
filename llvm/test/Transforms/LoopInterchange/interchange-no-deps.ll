@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -loop-interchange -cache-line-size=64 -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -pass-remarks-output=%t \
+; RUN: opt < %s -passes='loop(loop-interchange),simplifycfg' -cache-line-size=64 -simplifycfg-require-and-preserve-domtree=1 -pass-remarks-output=%t \
 ; RUN:     -pass-remarks=loop-interchange -pass-remarks-missed=loop-interchange -stats -S 2>&1 \
 ; RUN:     | FileCheck -check-prefix=STATS %s
 ; RUN: FileCheck -input-file %t %s

@@ -1,4 +1,4 @@
-; RUN: opt < %s  -passes=loop-vectorize -force-vector-interleave=4 -force-vector-width=4 -debug-only=loop-vectorize -stats -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=4 -force-vector-width=4 -debug-only=loop-vectorize -stats -S 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ;

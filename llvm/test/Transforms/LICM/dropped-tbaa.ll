@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=licm -S | FileCheck %s
 
 ; This test case case is generated from the following C code with -fstrict-aliasing,
-; and after passing through -inline -mem2reg -loop-rotate -instcombine
+; and after passing through -passes=inline,mem2reg,loop-rotate,instcombine
 ; void add(ptr restrict data, int *restrict addend) {
 ;    *data += *addend;
 ; }

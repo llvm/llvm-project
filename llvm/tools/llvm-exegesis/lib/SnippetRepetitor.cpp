@@ -60,6 +60,17 @@ public:
             LoopBodySize](FunctionFiller &Filler) {
       const auto &ET = State.getExegesisTarget();
       auto Entry = Filler.getEntry();
+
+      // We can not use loop snippet repetitor for terminator instructions.
+      for (const MCInst &Inst : Instructions) {
+        const unsigned Opcode = Inst.getOpcode();
+        const MCInstrDesc &MCID = Filler.MCII->get(Opcode);
+        if (!MCID.isTerminator())
+          continue;
+        Entry.addReturn();
+        return;
+      }
+
       auto Loop = Filler.addBasicBlock();
       auto Exit = Filler.addBasicBlock();
 
@@ -81,13 +92,17 @@ public:
       // Set up the loop basic block.
       Entry.MBB->addSuccessor(Loop.MBB, BranchProbability::getOne());
       Loop.MBB->addSuccessor(Loop.MBB, BranchProbability::getOne());
-      // The live ins are: the loop counter, the registers that were setup by
-      // the entry block, and entry block live ins.
-      Loop.MBB->addLiveIn(LoopCounter);
-      for (unsigned Reg : Filler.getRegistersSetUp())
-        Loop.MBB->addLiveIn(Reg);
-      for (const auto &LiveIn : Entry.MBB->liveins())
-        Loop.MBB->addLiveIn(LiveIn);
+      // If the snippet setup completed, then we can track liveness.
+      if (Loop.MF.getProperties().hasProperty(
+              MachineFunctionProperties::Property::TracksLiveness)) {
+        // The live ins are: the loop counter, the registers that were setup by
+        // the entry block, and entry block live ins.
+        Loop.MBB->addLiveIn(LoopCounter);
+        for (unsigned Reg : Filler.getRegistersSetUp())
+          Loop.MBB->addLiveIn(Reg);
+        for (const auto &LiveIn : Entry.MBB->liveins())
+          Loop.MBB->addLiveIn(LiveIn);
+      }
       for (auto _ : seq(0U, LoopUnrollFactor)) {
         (void)_;
         Loop.addInstructions(Instructions);

@@ -1,18 +1,32 @@
 // Tests for the cfi-vcall feature:
-// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT --check-prefix=ITANIUM --check-prefix=TT-ITANIUM-HIDDEN --check-prefix=NDIAG %s
-// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT --check-prefix=ITANIUM --check-prefix=TT-ITANIUM-HIDDEN --check-prefix=ITANIUM-DIAG --check-prefix=DIAG --check-prefix=DIAG-ABORT %s
-// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -fsanitize-recover=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT --check-prefix=ITANIUM --check-prefix=TT-ITANIUM-HIDDEN --check-prefix=ITANIUM-DIAG --check-prefix=DIAG --check-prefix=DIAG-RECOVER %s
-// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-pc-windows-msvc -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT --check-prefix=MS --check-prefix=TT-MS --check-prefix=NDIAG %s
+// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT-NO-RV --check-prefix=ITANIUM --check-prefix=ITANIUM-MD --check-prefix=TT-ITANIUM-HIDDEN --check-prefix=NDIAG %s
+// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT-NO-RV --check-prefix=ITANIUM --check-prefix=ITANIUM-MD --check-prefix=TT-ITANIUM-HIDDEN --check-prefix=ITANIUM-MD-DIAG --check-prefix=ITANIUM-DIAG --check-prefix=DIAG --check-prefix=DIAG-ABORT %s
+// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -fsanitize-recover=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT-NO-RV --check-prefix=ITANIUM --check-prefix=ITANIUM-MD --check-prefix=TT-ITANIUM-HIDDEN --check-prefix=ITANIUM-MD-DIAG --check-prefix=ITANIUM-DIAG --check-prefix=DIAG --check-prefix=DIAG-RECOVER %s
+// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-pc-windows-msvc -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT-NO-RV --check-prefix=MS --check-prefix=TT-MS --check-prefix=NDIAG %s
 
 // Tests for the whole-program-vtables feature:
-// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=ITANIUM --check-prefix=TT-ITANIUM-HIDDEN %s
+// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=ITANIUM --check-prefix=ITANIUM-MD --check-prefix=TT-ITANIUM-HIDDEN %s
 // RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=ITANIUM-DEFAULTVIS --check-prefix=TT-ITANIUM-DEFAULT %s
-// RUN: %clang_cc1 -O2 -flto -flto-unit -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=ITANIUM-OPT %s
+// RUN: %clang_cc1 -O2 -flto -flto-unit -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=ITANIUM-OPT --check-prefix=ITANIUM-OPT-LAYOUT %s
 // RUN: %clang_cc1 -flto -flto-unit -triple x86_64-pc-windows-msvc -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=MS --check-prefix=TT-MS %s
 
 // Tests for cfi + whole-program-vtables:
-// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-VT --check-prefix=ITANIUM --check-prefix=TC-ITANIUM %s
+// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-VT --check-prefix=ITANIUM --check-prefix=TC-ITANIUM --check-prefix=ITANIUM-MD %s
 // RUN: %clang_cc1 -flto -flto-unit -triple x86_64-pc-windows-msvc -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-VT --check-prefix=MS --check-prefix=TC-MS %s
+
+// Equivalent tests for above, but with relative-vtables.
+// Tests for the cfi-vcall feature:
+// RUN: %clang_cc1 -fexperimental-relative-c++-abi-vtables -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT --check-prefix=RV-MD --check-prefix=ITANIUM --check-prefix=TT-ITANIUM-HIDDEN --check-prefix=NDIAG --check-prefix=CFI-NVT-RV %s
+// RUN: %clang_cc1 -fexperimental-relative-c++-abi-vtables -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT --check-prefix=CFI-NVT-RV --check-prefix=ITANIUM --check-prefix=RV-MD --check-prefix=TT-ITANIUM-HIDDEN --check-prefix=ITANIUM-DIAG --check-prefix=RV-MD-DIAG --check-prefix=DIAG --check-prefix=DIAG-ABORT %s
+// RUN: %clang_cc1 -fexperimental-relative-c++-abi-vtables -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -fsanitize-recover=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT --check-prefix=CFI-NVT-RV --check-prefix=ITANIUM --check-prefix=RV-MD --check-prefix=TT-ITANIUM-HIDDEN --check-prefix=ITANIUM-DIAG --check-prefix=RV-MD-DIAG --check-prefix=DIAG --check-prefix=DIAG-RECOVER %s
+
+// Tests for the whole-program-vtables feature:
+// RUN: %clang_cc1 -fexperimental-relative-c++-abi-vtables -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=ITANIUM -check-prefix=RV-MD --check-prefix=TT-ITANIUM-HIDDEN %s
+// RUN: %clang_cc1 -fexperimental-relative-c++-abi-vtables -flto -flto-unit -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=ITANIUM-DEFAULTVIS --check-prefix=TT-ITANIUM-DEFAULT %s
+// RUN: %clang_cc1 -fexperimental-relative-c++-abi-vtables -O2 -flto -flto-unit -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=ITANIUM-OPT --check-prefix=RV-OPT-LAYOUT %s
+
+// Tests for cfi + whole-program-vtables:
+// RUN: %clang_cc1 -fexperimental-relative-c++-abi-vtables -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-VT --check-prefix=ITANIUM --check-prefix=RV-MD --check-prefix=TC-ITANIUM %s
 
 // ITANIUM: @_ZTV1A = {{[^!]*}}, !type [[A16:![0-9]+]]
 // ITANIUM-DIAG-SAME: !type [[ALL16:![0-9]+]]
@@ -163,8 +177,10 @@ void af(A *a) {
   // DIAG-RECOVER-NEXT: br label %[[CONTBB]]
 
   // CFI: [[CONTBB]]
-  // CFI-NVT: [[PTR:%[^ ]*]] = load
-  // CFI-VT: [[PTRI8:%[^ ]*]] = extractvalue { ptr, i1 } [[PAIR]], 0
+  // CFI-NVT-NO-RV: [[PTR:%[^ ]*]] = load
+  // CFI-NVT-RV: [[PTR:%[^ ]*]] = call ptr @llvm.load.relative.i32
+  // CFI-VT: [[PTR:%[^ ]*]] = extractvalue { ptr, i1 } [[PAIR]], 0
+  // CFI: call void [[PTR]]
 #line 123
   a->f();
 }
@@ -278,41 +294,76 @@ void g() {
 
 }  // Test9
 
-// ITANIUM: [[A16]] = !{i64 16, !"_ZTS1A"}
-// ITANIUM-DIAG: [[ALL16]] = !{i64 16, !"all-vtables"}
-// ITANIUM: [[AF16]] = !{i64 16, !"_ZTSM1AFvvE.virtual"}
-// ITANIUM: [[A32]] = !{i64 32, !"_ZTS1A"}
-// ITANIUM-DIAG: [[ALL32]] = !{i64 32, !"all-vtables"}
-// ITANIUM: [[AF32]] = !{i64 32, !"_ZTSM1AFvvE.virtual"}
-// ITANIUM: [[AF40]] = !{i64 40, !"_ZTSM1AFvvE.virtual"}
-// ITANIUM: [[AF48]] = !{i64 48, !"_ZTSM1AFvvE.virtual"}
-// ITANIUM: [[B32]] = !{i64 32, !"_ZTS1B"}
-// ITANIUM: [[BF32]] = !{i64 32, !"_ZTSM1BFvvE.virtual"}
-// ITANIUM: [[BF40]] = !{i64 40, !"_ZTSM1BFvvE.virtual"}
-// ITANIUM: [[BF48]] = !{i64 48, !"_ZTSM1BFvvE.virtual"}
-// ITANIUM: [[C32]] = !{i64 32, !"_ZTS1C"}
-// ITANIUM: [[CF32]] = !{i64 32, !"_ZTSM1CFvvE.virtual"}
-// ITANIUM: [[C88]] = !{i64 88, !"_ZTS1C"}
-// ITANIUM-DIAG: [[ALL88]] = !{i64 88, !"all-vtables"}
-// ITANIUM: [[CF40]] = !{i64 40, !"_ZTSM1CFvvE.virtual"}
-// ITANIUM: [[CF48]] = !{i64 48, !"_ZTSM1CFvvE.virtual"}
-// ITANIUM: [[D32]] = !{i64 32, [[D_ID:![0-9]+]]}
-// ITANIUM: [[D_ID]] = distinct !{}
-// ITANIUM: [[DF32]] = !{i64 32, [[DF_ID:![0-9]+]]}
-// ITANIUM: [[DF_ID]] = distinct !{}
-// ITANIUM: [[DF40]] = !{i64 40, [[DF_ID]]}
-// ITANIUM: [[DF48]] = !{i64 48, [[DF_ID]]}
-// ITANIUM: [[A64]] = !{i64 64, !"_ZTS1A"}
-// ITANIUM-DIAG: [[ALL64]] = !{i64 64, !"all-vtables"}
-// ITANIUM: [[AF64]] = !{i64 64, !"_ZTSM1AFvvE.virtual"}
-// ITANIUM: [[CF64]] = !{i64 64, !"_ZTSM1CFvvE.virtual"}
-// ITANIUM: [[FA16]] = !{i64 16, [[FA_ID:![0-9]+]]}
-// ITANIUM: [[FA_ID]] = distinct !{}
-// ITANIUM: [[FAF16]] = !{i64 16, [[FAF_ID:![0-9]+]]}
-// ITANIUM: [[FAF_ID]] = distinct !{}
+// RV-MD: [[A16]] = !{i64 8, !"_ZTS1A"}
+// RV-MD-DIAG: [[ALL16]] = !{i64 8, !"all-vtables"}
+// RV-MD: [[AF16]] = !{i64 8, !"_ZTSM1AFvvE.virtual"}
+// RV-MD: [[A32]] = !{i64 16, !"_ZTS1A"}
+// RV-MD-DIAG: [[ALL32]] = !{i64 16, !"all-vtables"}
+// RV-MD: [[AF32]] = !{i64 16, !"_ZTSM1AFvvE.virtual"}
+// RV-MD: [[AF40]] = !{i64 20, !"_ZTSM1AFvvE.virtual"}
+// RV-MD: [[AF48]] = !{i64 24, !"_ZTSM1AFvvE.virtual"}
+// RV-MD: [[B32]] = !{i64 16, !"_ZTS1B"}
+// RV-MD: [[BF32]] = !{i64 16, !"_ZTSM1BFvvE.virtual"}
+// RV-MD: [[BF40]] = !{i64 20, !"_ZTSM1BFvvE.virtual"}
+// RV-MD: [[BF48]] = !{i64 24, !"_ZTSM1BFvvE.virtual"}
+// RV-MD: [[C32]] = !{i64 16, !"_ZTS1C"}
+// RV-MD: [[CF32]] = !{i64 16, !"_ZTSM1CFvvE.virtual"}
+// RV-MD: [[C88]] = !{i64 44, !"_ZTS1C"}
+// RV-MD-DIAG: [[ALL88]] = !{i64 44, !"all-vtables"}
+// RV-MD: [[CF40]] = !{i64 20, !"_ZTSM1CFvvE.virtual"}
+// RV-MD: [[CF48]] = !{i64 24, !"_ZTSM1CFvvE.virtual"}
+// RV-MD: [[D32]] = !{i64 16, [[D_ID:![0-9]+]]}
+// RV-MD: [[D_ID]] = distinct !{}
+// RV-MD: [[DF32]] = !{i64 16, [[DF_ID:![0-9]+]]}
+// RV-MD: [[DF_ID]] = distinct !{}
+// RV-MD: [[DF40]] = !{i64 20, [[DF_ID]]}
+// RV-MD: [[DF48]] = !{i64 24, [[DF_ID]]}
+// RV-MD: [[A64]] = !{i64 32, !"_ZTS1A"}
+// RV-MD-DIAG: [[ALL64]] = !{i64 32, !"all-vtables"}
+// RV-MD: [[AF64]] = !{i64 32, !"_ZTSM1AFvvE.virtual"}
+// RV-MD: [[CF64]] = !{i64 32, !"_ZTSM1CFvvE.virtual"}
+// RV-MD: [[FA16]] = !{i64 8, [[FA_ID:![0-9]+]]}
+// RV-MD: [[FA_ID]] = distinct !{}
+// RV-MD: [[FAF16]] = !{i64 8, [[FAF_ID:![0-9]+]]}
+// RV-MD: [[FAF_ID]] = distinct !{}
 
-// ITANIUM-OPT: [[E16]] = !{i64 16, !"_ZTSN5test31EE"}
-// ITANIUM-OPT: [[EF16]] = !{i64 16, !"_ZTSMN5test31EEFvvE.virtual"}
+// ITANIUM-MD: [[A16]] = !{i64 16, !"_ZTS1A"}
+// ITANIUM-MD-DIAG: [[ALL16]] = !{i64 16, !"all-vtables"}
+// ITANIUM-MD: [[AF16]] = !{i64 16, !"_ZTSM1AFvvE.virtual"}
+// ITANIUM-MD: [[A32]] = !{i64 32, !"_ZTS1A"}
+// ITANIUM-MD-DIAG: [[ALL32]] = !{i64 32, !"all-vtables"}
+// ITANIUM-MD: [[AF32]] = !{i64 32, !"_ZTSM1AFvvE.virtual"}
+// ITANIUM-MD: [[AF40]] = !{i64 40, !"_ZTSM1AFvvE.virtual"}
+// ITANIUM-MD: [[AF48]] = !{i64 48, !"_ZTSM1AFvvE.virtual"}
+// ITANIUM-MD: [[B32]] = !{i64 32, !"_ZTS1B"}
+// ITANIUM-MD: [[BF32]] = !{i64 32, !"_ZTSM1BFvvE.virtual"}
+// ITANIUM-MD: [[BF40]] = !{i64 40, !"_ZTSM1BFvvE.virtual"}
+// ITANIUM-MD: [[BF48]] = !{i64 48, !"_ZTSM1BFvvE.virtual"}
+// ITANIUM-MD: [[C32]] = !{i64 32, !"_ZTS1C"}
+// ITANIUM-MD: [[CF32]] = !{i64 32, !"_ZTSM1CFvvE.virtual"}
+// ITANIUM-MD: [[C88]] = !{i64 88, !"_ZTS1C"}
+// ITANIUM-MD-DIAG: [[ALL88]] = !{i64 88, !"all-vtables"}
+// ITANIUM-MD: [[CF40]] = !{i64 40, !"_ZTSM1CFvvE.virtual"}
+// ITANIUM-MD: [[CF48]] = !{i64 48, !"_ZTSM1CFvvE.virtual"}
+// ITANIUM-MD: [[D32]] = !{i64 32, [[D_ID:![0-9]+]]}
+// ITANIUM-MD: [[D_ID]] = distinct !{}
+// ITANIUM-MD: [[DF32]] = !{i64 32, [[DF_ID:![0-9]+]]}
+// ITANIUM-MD: [[DF_ID]] = distinct !{}
+// ITANIUM-MD: [[DF40]] = !{i64 40, [[DF_ID]]}
+// ITANIUM-MD: [[DF48]] = !{i64 48, [[DF_ID]]}
+// ITANIUM-MD: [[A64]] = !{i64 64, !"_ZTS1A"}
+// ITANIUM-MD-DIAG: [[ALL64]] = !{i64 64, !"all-vtables"}
+// ITANIUM-MD: [[AF64]] = !{i64 64, !"_ZTSM1AFvvE.virtual"}
+// ITANIUM-MD: [[CF64]] = !{i64 64, !"_ZTSM1CFvvE.virtual"}
+// ITANIUM-MD: [[FA16]] = !{i64 16, [[FA_ID:![0-9]+]]}
+// ITANIUM-MD: [[FA_ID]] = distinct !{}
+// ITANIUM-MD: [[FAF16]] = !{i64 16, [[FAF_ID:![0-9]+]]}
+// ITANIUM-MD: [[FAF_ID]] = distinct !{}
+
+// ITANIUM-OPT-LAYOUT: [[E16]] = !{i64 16, !"_ZTSN5test31EE"}
+// ITANIUM-OPT-LAYOUT: [[EF16]] = !{i64 16, !"_ZTSMN5test31EEFvvE.virtual"}
+// RV-OPT-LAYOUT: [[E16]] = !{i64 8, !"_ZTSN5test31EE"}
+// RV-OPT-LAYOUT: [[EF16]] = !{i64 8, !"_ZTSMN5test31EEFvvE.virtual"}
 
 // MS: [[A8]] = !{i64 8, !"?AUA@@"}
 // MS: [[B8]] = !{i64 8, !"?AUB@@"}

@@ -1,4 +1,4 @@
-; RUN: opt -S -inline -inline-threshold=275 < %s | FileCheck %s
+; RUN: opt -S -passes=inline -inline-threshold=275 < %s | FileCheck %s
 ; RUN: opt -S -passes='cgscc(inline)' -inline-threshold=275 < %s | FileCheck %s
 ; PR13095
 

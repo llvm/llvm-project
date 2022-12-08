@@ -3,20 +3,20 @@
 
 declare i32 @__gxx_personality_v0(...)
 
-define void @callee(void ()* %func) !prof !15 {
+define void @callee(ptr %func) !prof !15 {
   call void %func(), !prof !16
   ret void
 }
 
-define void @caller(void ()* %func) personality i32 (...)* @__gxx_personality_v0 {
-  invoke void @callee(void ()* %func)
+define void @caller(ptr %func) personality ptr @__gxx_personality_v0 {
+  invoke void @callee(ptr %func)
           to label %ret unwind label %lpad, !prof !17
 
 ret:
   ret void
 
 lpad:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
           cleanup
   unreachable
 }

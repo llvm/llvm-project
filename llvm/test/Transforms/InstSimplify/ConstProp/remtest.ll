@@ -1,6 +1,6 @@
 ; Ensure constant propagation of remainder instructions is working correctly.
 
-; RUN: opt < %s -instsimplify -dce -S | not grep rem
+; RUN: opt < %s -passes=instsimplify,dce -S | not grep rem
 
 define i32 @test1() {
         %R = srem i32 4, 3              ; <i32> [#uses=1]
