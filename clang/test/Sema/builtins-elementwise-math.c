@@ -4,6 +4,8 @@ typedef double double2 __attribute__((ext_vector_type(2)));
 typedef double double4 __attribute__((ext_vector_type(4)));
 typedef float float2 __attribute__((ext_vector_type(2)));
 typedef float float4 __attribute__((ext_vector_type(4)));
+
+typedef int int2 __attribute__((ext_vector_type(2)));
 typedef int int3 __attribute__((ext_vector_type(3)));
 typedef unsigned unsigned3 __attribute__((ext_vector_type(3)));
 typedef unsigned unsigned4 __attribute__((ext_vector_type(4)));
@@ -571,4 +573,85 @@ void test_builtin_elementwise_copysign(int i, short s, double d, float f, float4
 
   float2 tmp9 = __builtin_elementwise_copysign(v4f32, v4f32);
   // expected-error@-1 {{initializing 'float2' (vector of 2 'float' values) with an expression of incompatible type 'float4' (vector of 4 'float' values)}}
+}
+
+void test_builtin_elementwise_fma(int i32, int2 v2i32, short i16,
+                                  double f64, double2 v2f64, double2 v3f64,
+                                  float f32, float2 v2f32, float v3f32, float4 v4f32,
+                                  const float4 c_v4f32,
+                                  int3 v3i32, int *ptr) {
+
+  f32 = __builtin_elementwise_fma();
+  // expected-error@-1 {{too few arguments to function call, expected 3, have 0}}
+
+  f32 = __builtin_elementwise_fma(f32);
+  // expected-error@-1 {{too few arguments to function call, expected 3, have 1}}
+
+  f32 = __builtin_elementwise_fma(f32, f32);
+  // expected-error@-1 {{too few arguments to function call, expected 3, have 2}}
+
+  f32 = __builtin_elementwise_fma(f32, f32, f32, f32);
+  // expected-error@-1 {{too many arguments to function call, expected 3, have 4}}
+
+  f32 = __builtin_elementwise_fma(f64, f32, f32);
+  // expected-error@-1 {{arguments are of different types ('double' vs 'float')}}
+
+  f32 = __builtin_elementwise_fma(f32, f64, f32);
+  // expected-error@-1 {{arguments are of different types ('float' vs 'double')}}
+
+  f32 = __builtin_elementwise_fma(f32, f32, f64);
+  // expected-error@-1 {{arguments are of different types ('float' vs 'double')}}
+
+  f32 = __builtin_elementwise_fma(f32, f32, f64);
+  // expected-error@-1 {{arguments are of different types ('float' vs 'double')}}
+
+  f64 = __builtin_elementwise_fma(f64, f32, f32);
+  // expected-error@-1 {{arguments are of different types ('double' vs 'float')}}
+
+  f64 = __builtin_elementwise_fma(f64, f64, f32);
+  // expected-error@-1 {{arguments are of different types ('double' vs 'float')}}
+
+  f64 = __builtin_elementwise_fma(f64, f32, f64);
+  // expected-error@-1 {{arguments are of different types ('double' vs 'float')}}
+
+  v2f64 = __builtin_elementwise_fma(v2f32, f64, f64);
+  // expected-error@-1 {{arguments are of different types ('float2' (vector of 2 'float' values) vs 'double'}}
+
+  v2f64 = __builtin_elementwise_fma(v2f32, v2f64, f64);
+  // expected-error@-1 {{arguments are of different types ('float2' (vector of 2 'float' values) vs 'double2' (vector of 2 'double' values)}}
+
+  v2f64 = __builtin_elementwise_fma(v2f32, f64, v2f64);
+  // expected-error@-1 {{arguments are of different types ('float2' (vector of 2 'float' values) vs 'double'}}
+
+  v2f64 = __builtin_elementwise_fma(f64, v2f32, v2f64);
+  // expected-error@-1 {{arguments are of different types ('double' vs 'float2' (vector of 2 'float' values)}}
+
+  v2f64 = __builtin_elementwise_fma(f64, v2f64, v2f64);
+  // expected-error@-1 {{arguments are of different types ('double' vs 'double2' (vector of 2 'double' values)}}
+
+  i32 = __builtin_elementwise_fma(i32, i32, i32);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
+
+  v2i32 = __builtin_elementwise_fma(v2i32, v2i32, v2i32);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int2' (vector of 2 'int' values))}}
+
+  f32 = __builtin_elementwise_fma(f32, f32, i32);
+  // expected-error@-1 {{3rd argument must be a floating point type (was 'int')}}
+
+  f32 = __builtin_elementwise_fma(f32, i32, f32);
+  // expected-error@-1 {{2nd argument must be a floating point type (was 'int')}}
+
+  f32 = __builtin_elementwise_fma(f32, f32, i32);
+  // expected-error@-1 {{3rd argument must be a floating point type (was 'int')}}
+
+
+  _Complex float c1, c2, c3;
+  c1 = __builtin_elementwise_fma(c1, f32, f32);
+  // expected-error@-1 {{1st argument must be a floating point type (was '_Complex float')}}
+
+  c2 = __builtin_elementwise_fma(f32, c2, f32);
+  // expected-error@-1 {{2nd argument must be a floating point type (was '_Complex float')}}
+
+  c3 = __builtin_elementwise_fma(f32, f32, c3);
+  // expected-error@-1 {{3rd argument must be a floating point type (was '_Complex float')}}
 }
