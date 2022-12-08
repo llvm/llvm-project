@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -S | not grep "tail call void @llvm.memcpy.p0i8.p0i8.i32"
+; RUN: opt < %s -passes=inline -S | not grep "tail call void @llvm.memcpy.p0i8.p0i8.i32"
 ; PR3550
 
 define internal void @foo(i32* %p, i32* %q) {

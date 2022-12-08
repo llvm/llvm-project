@@ -3,7 +3,7 @@
 ; a direct call to g with bitcasted arguments, leaving the original bitcast
 ; as a dead use of g.
 
-; RUN: opt < %s -instcombine -inline -pass-remarks=inline -S 2>&1 \
+; RUN: opt < %s  -passes='function(instcombine),cgscc(inline)' -pass-remarks=inline -S 2>&1 \
 ; RUN:     | FileCheck %s
 
 ; Inline costs of f and g should be the same.

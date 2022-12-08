@@ -1,10 +1,10 @@
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 
 ; The verifier does catch problems with inlining of byval arguments that has a
 ; different address space compared to the alloca. But running instcombine
 ; after inline used to trigger asserts unless we disallow such inlining.
-; RUN: opt < %s -inline -instcombine -disable-output 2>/dev/null
+; RUN: opt < %s  -passes=inline,instcombine -disable-output 2>/dev/null
 
 target datalayout = "p:32:32-p1:64:64-p2:16:16-n16:32:64"
 

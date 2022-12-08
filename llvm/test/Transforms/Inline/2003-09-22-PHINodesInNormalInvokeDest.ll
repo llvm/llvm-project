@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -disable-output
+; RUN: opt < %s -passes=inline -disable-output
 
 define i32 @main() personality i32 (...)* @__gxx_personality_v0 {
 entry:

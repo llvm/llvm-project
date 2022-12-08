@@ -1,4 +1,4 @@
-; RUN: opt -S -inline %s -debug-only=inline-cost 2>&1 | FileCheck %s
+; RUN: opt -S -passes=inline %s -debug-only=inline-cost 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 @a = global i32 4

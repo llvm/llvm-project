@@ -1,7 +1,7 @@
 ; Inlining in the presence of recursion presents special challenges that we
 ; test here.
 ;
-; RUN: opt -inline -S < %s | FileCheck %s
+; RUN: opt -passes=inline -S < %s | FileCheck %s
 ; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
 
 define i32 @large_stack_callee(i32 %param) {

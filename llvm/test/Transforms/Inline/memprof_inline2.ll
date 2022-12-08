@@ -37,7 +37,7 @@
 ;;   return 0;
 ;; }
 
-; RUN: opt -inline %s -S | FileCheck %s
+; RUN: opt -passes=inline %s -S | FileCheck %s
 
 ; ModuleID = 'memprof_inline2.cc'
 source_filename = "memprof_inline2.cc"

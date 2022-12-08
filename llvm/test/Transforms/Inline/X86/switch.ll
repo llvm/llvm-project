@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -inline-threshold=1 -S -mtriple=x86_64-unknown-linux-gnu  | FileCheck %s
+; RUN: opt < %s -passes=inline -inline-threshold=1 -S -mtriple=x86_64-unknown-linux-gnu  | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -inline-threshold=1 -S -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
 
 define i32 @callee_range(i32 %a, i32* %P) {

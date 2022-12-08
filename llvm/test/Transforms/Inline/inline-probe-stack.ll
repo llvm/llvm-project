@@ -1,4 +1,4 @@
-; RUN: opt %s -inline -S | FileCheck %s
+; RUN: opt %s -passes=inline -S | FileCheck %s
 
 define internal void @inner() "probe-stack"="__probestackinner" {
   ret void

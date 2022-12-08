@@ -1,4 +1,4 @@
-; RUN: opt -inline < %s -S -o - -inline-threshold=10 | FileCheck %s
+; RUN: opt -passes=inline < %s -S -o - -inline-threshold=10 | FileCheck %s
 
 target datalayout = "p:32:32-p1:64:64-p2:16:16-n16:32:64"
 
