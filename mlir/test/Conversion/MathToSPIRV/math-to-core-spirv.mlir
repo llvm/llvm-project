@@ -65,3 +65,28 @@ func.func @copy_sign_tensor(%value: tensor<3x3xf32>, %sign: tensor<3x3xf32>) -> 
 // CHECK-LABEL: func @copy_sign_tensor
 // CHECK-NEXT:    math.copysign {{%.+}}, {{%.+}} : tensor<3x3xf32>
 // CHECK-NEXT:    return
+// -----
+
+module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Float16, Int16], []>, #spirv.resource_limits<>> } {
+
+func.func @copy_sign_vector_0D(%value: vector<1xf16>, %sign: vector<1xf16>) -> vector<1xf16> {
+  %0 = math.copysign %value, %sign : vector<1xf16>
+  return %0: vector<1xf16>
+}
+
+}
+
+// CHECK-LABEL: func @copy_sign_vector_0D
+//  CHECK-SAME: (%[[VALUE:.+]]: vector<1xf16>, %[[SIGN:.+]]: vector<1xf16>)
+//       CHECK:   %[[CASTVAL:.+]] = builtin.unrealized_conversion_cast %[[VALUE]] : vector<1xf16> to f16
+//       CHECK:   %[[CASTSIGN:.+]] = builtin.unrealized_conversion_cast %[[SIGN]] : vector<1xf16> to f16
+//       CHECK:   %[[SMASK:.+]] = spirv.Constant -32768 : i16
+//       CHECK:   %[[VMASK:.+]] = spirv.Constant 32767 : i16
+//       CHECK:   %[[VCAST:.+]] = spirv.Bitcast %[[CASTVAL]] : f16 to i16
+//       CHECK:   %[[SCAST:.+]] = spirv.Bitcast %[[CASTSIGN]] : f16 to i16
+//       CHECK:   %[[VAND:.+]] = spirv.BitwiseAnd %[[VCAST]], %[[VMASK]] : i16
+//       CHECK:   %[[SAND:.+]] = spirv.BitwiseAnd %[[SCAST]], %[[SMASK]] : i16
+//       CHECK:   %[[OR:.+]] = spirv.BitwiseOr %[[VAND]], %[[SAND]] : i16
+//       CHECK:   %[[RESULT:.+]] = spirv.Bitcast %[[OR]] : i16 to f16
+//       CHECK:   %[[CASTRESULT:.+]] = builtin.unrealized_conversion_cast %[[RESULT]] : f16 to vector<1xf16>
+//       CHECK:   return %[[CASTRESULT]]
