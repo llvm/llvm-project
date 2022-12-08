@@ -28,16 +28,18 @@ class ModuleOp;
 
 namespace cir {
 
+namespace direct {
+std::unique_ptr<llvm::Module>
+lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule,
+                             std::unique_ptr<mlir::MLIRContext> mlirCtx,
+                             llvm::LLVMContext &llvmCtx);
+}
+
 // Lower directly from pristine CIR to LLVMIR.
 std::unique_ptr<llvm::Module>
 lowerFromCIRToMLIRToLLVMIR(mlir::ModuleOp theModule,
                            std::unique_ptr<mlir::MLIRContext> mlirCtx,
                            llvm::LLVMContext &llvmCtx);
-
-std::unique_ptr<llvm::Module>
-lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule,
-                             std::unique_ptr<mlir::MLIRContext> mlirCtx,
-                             llvm::LLVMContext &llvmCtx);
 
 mlir::ModuleOp lowerFromCIRToMLIR(mlir::ModuleOp theModule,
                                   mlir::MLIRContext *mlirCtx);

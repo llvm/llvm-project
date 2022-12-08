@@ -17,14 +17,12 @@
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/IR/BuiltinDialect.h"
@@ -41,6 +39,7 @@ using namespace cir;
 using namespace llvm;
 
 namespace cir {
+namespace direct {
 
 class CIRReturnLowering
     : public mlir::OpConversionPattern<mlir::cir::ReturnOp> {
@@ -82,40 +81,27 @@ struct ConvertCIRToLLVMPass
 //   }
 // };
 
-// class CIRAllocaLowering : public mlir::OpRewritePattern<mlir::cir::AllocaOp>
-// { public:
-//   using OpRewritePattern<mlir::cir::AllocaOp>::OpRewritePattern;
+class CIRAllocaLowering
+    : public mlir::OpConversionPattern<mlir::cir::AllocaOp> {
+public:
+  using OpConversionPattern<mlir::cir::AllocaOp>::OpConversionPattern;
 
-//   mlir::LogicalResult
-//   matchAndRewrite(mlir::cir::AllocaOp op,
-//                   mlir::PatternRewriter &rewriter) const override {
-//     auto type = op.getAllocaType();
-//     mlir::MemRefType memreftype;
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::AllocaOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto elementTy = getTypeConverter()->convertType(op.getAllocaType());
 
-//     if (type.isa<mlir::cir::BoolType>()) {
-//       auto integerType =
-//           mlir::IntegerType::get(getContext(), 8,
-//           mlir::IntegerType::Signless);
-//       memreftype = mlir::MemRefType::get({}, integerType);
-//     } else if (type.isa<mlir::cir::ArrayType>()) {
-//       mlir::cir::ArrayType arraytype = type.dyn_cast<mlir::cir::ArrayType>();
-//       memreftype =
-//           mlir::MemRefType::get(arraytype.getSize(), arraytype.getEltType());
-//     } else if (type.isa<mlir::IntegerType>() || type.isa<mlir::FloatType>())
-//     {
-//       memreftype = mlir::MemRefType::get({}, op.getAllocaType());
-//     } else if (type.isa<mlir::cir::PointerType>()) {
-//       auto ptrType = type.cast<mlir::cir::PointerType>();
-//       auto innerMemref = mlir::MemRefType::get({-1}, ptrType.getPointee());
-//       memreftype = mlir::MemRefType::get({}, innerMemref);
-//     } else {
-//       llvm_unreachable("type to be allocated not supported yet");
-//     }
-//     rewriter.replaceOpWithNewOp<mlir::memref::AllocaOp>(op, memreftype,
-//                                                         op.getAlignmentAttr());
-//     return mlir::LogicalResult::success();
-//   }
-// };
+    mlir::Value one = rewriter.create<mlir::LLVM::ConstantOp>(
+        op.getLoc(), typeConverter->convertType(rewriter.getIndexType()),
+        rewriter.getIntegerAttr(rewriter.getIndexType(), 1));
+
+    auto resultTy = mlir::LLVM::LLVMPointerType::get(getContext());
+
+    rewriter.replaceOpWithNewOp<mlir::LLVM::AllocaOp>(
+        op, resultTy, elementTy, one, op.getAlignmentAttr().getInt());
+    return mlir::LogicalResult::success();
+  }
+};
 
 // class CIRLoadLowering : public mlir::OpConversionPattern<mlir::cir::LoadOp> {
 // public:
@@ -499,38 +485,42 @@ public:
 
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
-  patterns.add</*CIRAllocaLowering, CIRLoadLowering, CIRStoreLowering,
+  patterns.add</*CIRLoadLowering, CIRStoreLowering,
                CIRConstantLowering, CIRUnaryOpLowering, CIRBinOpLowering,
                CIRCmpOpLowering, CIRBrOpLowering,
                CIRCallLowering, */
                CIRReturnLowering>(patterns.getContext());
-  patterns.add<CIRFuncLowering>(converter, patterns.getContext());
+  patterns.add<CIRAllocaLowering, CIRFuncLowering>(converter,
+                                                   patterns.getContext());
 }
 
-static mlir::TypeConverter prepareTypeConverter() {
-  mlir::TypeConverter converter;
-  converter.addConversion([&](mlir::cir::PointerType type) -> mlir::Type {
-    return mlir::MemRefType::get({-1}, type.getPointee());
+static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
+                                 mlir::MLIRContext *ctx) {
+  // converter.addConversion([&](mlir::cir::PointerType type) -> mlir::Type {
+  //   return mlir::MemRefType::get({-1}, type.getPointee());
+  // });
+  // converter.addConversion(
+  //     [&](mlir::IntegerType type) -> mlir::Type { return type; });
+  // converter.addConversion(
+  //     [&](mlir::FloatType type) -> mlir::Type { return type; });
+  // converter.addConversion(
+  //     [&](mlir::IndexType type) -> mlir::Type { return type; });
+  converter.addConversion([&](mlir::cir::BoolType type) -> mlir::Type {
+    return mlir::IntegerType::get(type.getContext(), 8,
+                                  mlir::IntegerType::Signless);
   });
-  converter.addConversion(
-      [&](mlir::IntegerType type) -> mlir::Type { return type; });
-  converter.addConversion(
-      [&](mlir::FloatType type) -> mlir::Type { return type; });
-
-  return converter;
 }
 
 void ConvertCIRToLLVMPass::runOnOperation() {
   auto module = getOperation();
 
-  auto converter = prepareTypeConverter();
+  mlir::LLVMTypeConverter converter(&getContext());
+  prepareTypeConverter(converter, &getContext());
 
   mlir::RewritePatternSet patterns(&getContext());
 
-  mlir::LLVMTypeConverter llvmConverter(&getContext());
-
   populateCIRToLLVMConversionPatterns(patterns, converter);
-  mlir::populateFuncToLLVMConversionPatterns(llvmConverter, patterns);
+  mlir::populateFuncToLLVMConversionPatterns(converter, patterns);
 
   mlir::ConversionTarget target(getContext());
   target.addLegalOp<mlir::ModuleOp>();
@@ -572,4 +562,5 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule,
 
   return llvmModule;
 }
+} // namespace direct
 } // namespace cir
