@@ -24,7 +24,7 @@ struct Registers {
   uptr x[32];
 };
 
-__attribute__((always_inline)) static Registers GetRegisters() {
+__attribute__((always_inline, unused)) static Registers GetRegisters() {
   Registers regs;
   __asm__ volatile(
       "stp x0, x1, [%1, #(8 * 0)]\n"
