@@ -297,7 +297,6 @@
 })
 
 #define BUILTIN_CLAMP_F32(X,L,H) __builtin_amdgcn_fmed3f(X,L,H)
-#define BUILTIN_CLAMP_F16(X,L,H) __llvm_amdgcn_fmed3_f16(X,L,H)
 
 #define ROUND_RTE 0
 #define ROUND_RTP 1
