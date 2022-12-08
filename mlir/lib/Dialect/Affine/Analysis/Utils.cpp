@@ -634,9 +634,9 @@ Optional<int64_t> MemRefRegion::getRegionSize() {
   return getMemRefEltSizeInBytes(memRefType) * *numElements;
 }
 
-/// Returns the size of memref data in bytes if it's statically shaped, None
-/// otherwise.  If the element of the memref has vector type, takes into account
-/// size of the vector as well.
+/// Returns the size of memref data in bytes if it's statically shaped,
+/// std::nullopt otherwise.  If the element of the memref has vector type, takes
+/// into account size of the vector as well.
 //  TODO: improve/complete this when we have target data.
 Optional<uint64_t> mlir::getMemRefSizeInBytes(MemRefType memRefType) {
   if (!memRefType.hasStaticShape())
