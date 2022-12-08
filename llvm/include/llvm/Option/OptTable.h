@@ -102,9 +102,7 @@ public:
   const Option getOption(OptSpecifier Opt) const;
 
   /// Lookup the name of the given option.
-  const char *getOptionName(OptSpecifier id) const {
-    return getInfo(id).Name;
-  }
+  StringRef getOptionName(OptSpecifier id) const { return getInfo(id).Name; }
 
   /// Get the kind of the given option.
   unsigned getOptionKind(OptSpecifier id) const {
