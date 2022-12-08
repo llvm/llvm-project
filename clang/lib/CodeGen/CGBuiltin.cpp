@@ -19700,6 +19700,24 @@ Value *CodeGenFunction::EmitLoongArchBuiltinExpr(unsigned BuiltinID,
   case LoongArch::BI__builtin_loongarch_crcc_w_d_w:
     ID = Intrinsic::loongarch_crcc_w_d_w;
     break;
+  case LoongArch::BI__builtin_loongarch_csrrd_w:
+    ID = Intrinsic::loongarch_csrrd_w;
+    break;
+  case LoongArch::BI__builtin_loongarch_csrwr_w:
+    ID = Intrinsic::loongarch_csrwr_w;
+    break;
+  case LoongArch::BI__builtin_loongarch_csrxchg_w:
+    ID = Intrinsic::loongarch_csrxchg_w;
+    break;
+  case LoongArch::BI__builtin_loongarch_csrrd_d:
+    ID = Intrinsic::loongarch_csrrd_d;
+    break;
+  case LoongArch::BI__builtin_loongarch_csrwr_d:
+    ID = Intrinsic::loongarch_csrwr_d;
+    break;
+  case LoongArch::BI__builtin_loongarch_csrxchg_d:
+    ID = Intrinsic::loongarch_csrxchg_d;
+    break;
     // TODO: Support more Intrinsics.
   }
 

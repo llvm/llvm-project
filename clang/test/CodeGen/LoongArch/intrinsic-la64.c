@@ -74,3 +74,39 @@ int crcc_w_w_w(int a, int b) {
 int crcc_w_d_w(long int a, int b) {
   return __builtin_loongarch_crcc_w_d_w(a, b);
 }
+
+// CHECK-LABEL: @csrrd_d(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.loongarch.csrrd.d(i32 1)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.loongarch.csrrd.d(i32 1)
+// CHECK-NEXT:    ret i64 0
+//
+unsigned long int csrrd_d() {
+  unsigned long int a = __csrrd_d(1);
+  unsigned long int b = __builtin_loongarch_csrrd_d(1);
+  return 0;
+}
+
+// CHECK-LABEL: @csrwr_d(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.loongarch.csrwr.d(i64 [[A:%.*]], i32 1)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.loongarch.csrwr.d(i64 [[A]], i32 1)
+// CHECK-NEXT:    ret i64 0
+//
+unsigned long int csrwr_d(unsigned long int a) {
+  unsigned long int b = __csrwr_d(a, 1);
+  unsigned long int c = __builtin_loongarch_csrwr_d(a, 1);
+  return 0;
+}
+
+// CHECK-LABEL: @csrxchg_d(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.loongarch.csrxchg.d(i64 [[A:%.*]], i64 [[B:%.*]], i32 1)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.loongarch.csrxchg.d(i64 [[A]], i64 [[B]], i32 1)
+// CHECK-NEXT:    ret i64 0
+//
+unsigned long int csrxchg_d(unsigned long int a, unsigned long int b) {
+  unsigned long int c = __csrxchg_d(a, b, 1);
+  unsigned long int d = __builtin_loongarch_csrxchg_d(a, b, 1);
+  return 0;
+}

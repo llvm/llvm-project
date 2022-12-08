@@ -57,3 +57,33 @@ int crcc_w_w_w(int a, int b) {
 int crcc_w_d_w(long int a, int b) {
   return __builtin_loongarch_crcc_w_d_w(a, b); // expected-error {{this builtin requires target: loongarch64}}
 }
+
+unsigned long int csrrd_d() {
+  return __builtin_loongarch_csrrd_d(1); // expected-error {{this builtin requires target: loongarch64}}
+}
+
+unsigned long int csrwr_d(unsigned long int a) {
+  return __builtin_loongarch_csrwr_d(a, 1); // expected-error {{this builtin requires target: loongarch64}}
+}
+
+unsigned long int csrxchg_d(unsigned long int a, unsigned long int b) {
+  return __builtin_loongarch_csrxchg_d(a, b, 1); // expected-error {{this builtin requires target: loongarch64}}
+}
+
+void csrrd_w(int a) {
+    __builtin_loongarch_csrrd_w(16384); // expected-error {{argument value 16384 is outside the valid range [0, 16383]}}
+    __builtin_loongarch_csrrd_w(-1); // expected-error {{argument value 4294967295 is outside the valid range [0, 16383]}}
+    __builtin_loongarch_csrrd_w(a); // expected-error {{argument to '__builtin_loongarch_csrrd_w' must be a constant integer}}
+}
+
+void csrwr_w(unsigned int a) {
+    __builtin_loongarch_csrwr_w(a, 16384); // expected-error {{argument value 16384 is outside the valid range [0, 16383]}}
+    __builtin_loongarch_csrwr_w(a, -1); // expected-error {{argument value 4294967295 is outside the valid range [0, 16383]}}
+    __builtin_loongarch_csrwr_w(a, a); // expected-error {{argument to '__builtin_loongarch_csrwr_w' must be a constant integer}}
+}
+
+void csrxchg_w(unsigned int a, unsigned int b) {
+    __builtin_loongarch_csrxchg_w(a, b, 16384); // expected-error {{argument value 16384 is outside the valid range [0, 16383]}}
+    __builtin_loongarch_csrxchg_w(a, b, -1); // expected-error {{argument value 4294967295 is outside the valid range [0, 16383]}}
+    __builtin_loongarch_csrxchg_w(a, b, b); // expected-error {{argument to '__builtin_loongarch_csrxchg_w' must be a constant integer}}
+}
