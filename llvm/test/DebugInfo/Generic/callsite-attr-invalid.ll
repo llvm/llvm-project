@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax -verify < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=verify < %s 2>&1 | FileCheck %s
 
 ; CHECK: DIFlagAllCallsDescribed must be attached to a definition
 ; CHECK: warning: ignoring invalid debug info

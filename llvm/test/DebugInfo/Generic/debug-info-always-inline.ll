@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax < %s -always-inline -S | FileCheck %s
+; RUN: opt < %s -passes=always-inline -S | FileCheck %s
 ;
 ; Generated from the following C++ source with:
 ; clang -cc1 -disable-llvm-optzns -emit-llvm -g -stack-protector 2 test.cpp

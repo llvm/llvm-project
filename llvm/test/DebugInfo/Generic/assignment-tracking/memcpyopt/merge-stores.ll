@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax %s -S -memcpyopt -temporarily-allow-old-pass-syntax -o - -experimental-assignment-tracking | FileCheck %s
+; RUN: opt %s -S -passes=memcpyopt -o - -experimental-assignment-tracking | FileCheck %s
 
 ;; $ cat test.cpp
 ;; struct v {
@@ -16,10 +16,10 @@
 ;;   v g(0);
 ;;   esc(&g);
 ;; }
-;; IR grabbed before memcpyopt -temporarily-allow-old-pass-syntax in:
+;; IR grabbed before memcpyopt in:
 ;; clang++ -Xclang -fexperimental-assignment-tracking -g -c -O2 test.cpp
 
-;; Check that the memset that memcpyopt -temporarily-allow-old-pass-syntax creates to merge 4 stores merges the
+;; Check that the memset that memcpyopt creates to merge 4 stores merges the
 ;; DIASsignIDs from the stores.
 
 ; CHECK: call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata ![[ID:[0-9]+]], metadata ptr %arrayidx.i, metadata !DIExpression())

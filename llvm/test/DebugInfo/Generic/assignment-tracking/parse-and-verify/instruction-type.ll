@@ -1,7 +1,7 @@
-; RUN: opt -temporarily-allow-old-pass-syntax -S %s -verify -experimental-assignment-tracking 2>&1 \
+; RUN: opt -S %s -passes=verify -experimental-assignment-tracking 2>&1 \
 ; RUN: | FileCheck %s
 
-;; NOTE: Expect opt -temporarily-allow-old-pass-syntax to return zero because the badly formed debug info
+;; NOTE: Expect opt to return zero because the badly formed debug info
 ;; is going to be stripped.
 
 ;; Check that badly formed assignment tracking metadata is caught either
