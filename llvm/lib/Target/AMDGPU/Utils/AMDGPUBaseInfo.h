@@ -288,6 +288,11 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
 /// execution unit requirement for given subtarget \p STI.
 unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
 
+/// \returns Number of waves reachable for a given \p NumVGPRs usage for given
+/// subtarget \p STI.
+unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
+                                      unsigned NumVGPRs);
+
 /// \returns Number of VGPR blocks needed for given subtarget \p STI when
 /// \p NumVGPRs are used.
 ///

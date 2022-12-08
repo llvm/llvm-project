@@ -1901,7 +1901,7 @@ struct DSEState {
       // can modify the memory location.
       if (InitC && InitC == StoredConstant)
         return MSSA.isLiveOnEntryDef(
-            MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def));
+            MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def, BatchAA));
     }
 
     if (!Store)
@@ -1920,7 +1920,7 @@ struct DSEState {
         // does not match LoadAccess.
         SetVector<MemoryAccess *> ToCheck;
         MemoryAccess *Current =
-            MSSA.getWalker()->getClobberingMemoryAccess(Def);
+            MSSA.getWalker()->getClobberingMemoryAccess(Def, BatchAA);
         // We don't want to bail when we run into the store memory def. But,
         // the phi access may point to it. So, pretend like we've already
         // checked it.

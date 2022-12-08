@@ -420,6 +420,24 @@ func.func @truncConstant(%arg0: i8) -> i16 {
   return %tr : i16
 }
 
+// CHECK-LABEL: @truncExtui
+//       CHECK-NOT:  trunci
+//       CHECK:   return  %arg0
+func.func @truncExtui(%arg0: i32) -> i32 {
+  %extui = arith.extui %arg0 : i32 to i64
+  %trunci = arith.trunci %extui : i64 to i32
+  return %trunci : i32
+}
+
+// CHECK-LABEL: @truncExtsi
+//       CHECK-NOT:  trunci
+//       CHECK:   return  %arg0
+func.func @truncExtsi(%arg0: i32) -> i32 {
+  %extsi = arith.extsi %arg0 : i32 to i64
+  %trunci = arith.trunci %extsi : i64 to i32
+  return %trunci : i32
+}
+
 // CHECK-LABEL: @truncConstantSplat
 //       CHECK:   %[[cres:.+]] = arith.constant dense<-2> : vector<4xi8>
 //       CHECK:   return %[[cres]]

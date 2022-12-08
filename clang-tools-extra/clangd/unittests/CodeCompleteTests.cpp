@@ -11,6 +11,7 @@
 #include "ClangdServer.h"
 #include "CodeComplete.h"
 #include "Compiler.h"
+#include "Feature.h"
 #include "Matchers.h"
 #include "Protocol.h"
 #include "Quality.h"
@@ -78,6 +79,10 @@ MATCHER_P(hasInclude, IncludeHeader, "") {
 MATCHER_P(insertInclude, IncludeHeader, "") {
   return !arg.Includes.empty() && arg.Includes[0].Header == IncludeHeader &&
          bool(arg.Includes[0].Insertion);
+}
+MATCHER_P(insertIncludeText, InsertedText, "") {
+  return !arg.Includes.empty() && arg.Includes[0].Insertion &&
+         arg.Includes[0].Insertion->newText == InsertedText;
 }
 MATCHER(insertInclude, "") {
   return !arg.Includes.empty() && bool(arg.Includes[0].Insertion);
@@ -170,6 +175,7 @@ Symbol withReferences(int N, Symbol S) {
   return S;
 }
 
+#if CLANGD_DECISION_FOREST
 TEST(DecisionForestRankingModel, NameMatchSanityTest) {
   clangd::CodeCompleteOptions Opts;
   Opts.RankingModel = CodeCompleteOptions::DecisionForest;
@@ -203,6 +209,7 @@ TEST(DecisionForestRankingModel, ReferencesAffectRanking) {
           .Completions,
       ElementsAre(named("clangA"), named("clangD")));
 }
+#endif // CLANGD_DECISION_FOREST
 
 TEST(DecisionForestRankingModel, DecisionForestScorerCallbackTest) {
   clangd::CodeCompleteOptions Opts;
@@ -812,7 +819,7 @@ TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
 
   Symbol Sym = cls("ns::X");
   Sym.CanonicalDeclaration.FileURI = BarURI.c_str();
-  Sym.IncludeHeaders.emplace_back(BarURI, 1);
+  Sym.IncludeHeaders.emplace_back(BarURI, 1, Symbol::Include);
   // Shorten include path based on search directory and insert.
   Annotations Test("int main() { ns::^ }");
   TU.Code = Test.code().str();
@@ -843,8 +850,8 @@ TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
   auto BarURI = URI::create(BarHeader).toString();
   SymX.CanonicalDeclaration.FileURI = BarURI.c_str();
   SymY.CanonicalDeclaration.FileURI = BarURI.c_str();
-  SymX.IncludeHeaders.emplace_back("<bar>", 1);
-  SymY.IncludeHeaders.emplace_back("<bar>", 1);
+  SymX.IncludeHeaders.emplace_back("<bar>", 1, Symbol::Include);
+  SymY.IncludeHeaders.emplace_back("<bar>", 1, Symbol::Include);
   // Shorten include path based on search directory and insert.
   auto Results = completions(R"cpp(
           namespace ns {
@@ -1867,7 +1874,7 @@ TEST(CompletionTest, OverloadBundling) {
   // Differences in header-to-insert suppress bundling.
   std::string DeclFile = URI::create(testPath("foo")).toString();
   NoArgsGFunc.CanonicalDeclaration.FileURI = DeclFile.c_str();
-  NoArgsGFunc.IncludeHeaders.emplace_back("<foo>", 1);
+  NoArgsGFunc.IncludeHeaders.emplace_back("<foo>", 1, Symbol::Include);
   EXPECT_THAT(
       completions(Context + "int y = GFunc^", {NoArgsGFunc}, Opts).Completions,
       UnorderedElementsAre(AllOf(named("GFuncC"), insertInclude("<foo>")),
@@ -1901,8 +1908,8 @@ TEST(CompletionTest, OverloadBundlingSameFileDifferentURI) {
   SymX.CanonicalDeclaration.FileURI = BarURI.c_str();
   SymY.CanonicalDeclaration.FileURI = BarURI.c_str();
   // The include header is different, but really it's the same file.
-  SymX.IncludeHeaders.emplace_back("\"bar.h\"", 1);
-  SymY.IncludeHeaders.emplace_back(BarURI.c_str(), 1);
+  SymX.IncludeHeaders.emplace_back("\"bar.h\"", 1, Symbol::Include);
+  SymY.IncludeHeaders.emplace_back(BarURI.c_str(), 1, Symbol::Include);
 
   auto Results = completions("void f() { ::ns::^ }", {SymX, SymY}, Opts);
   // Expect both results are bundled, despite the different-but-same
@@ -2699,13 +2706,37 @@ TEST(CompletionTest, InsertTheMostPopularHeader) {
   std::string DeclFile = URI::create(testPath("foo")).toString();
   Symbol Sym = func("Func");
   Sym.CanonicalDeclaration.FileURI = DeclFile.c_str();
-  Sym.IncludeHeaders.emplace_back("\"foo.h\"", 2);
-  Sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000);
+  Sym.IncludeHeaders.emplace_back("\"foo.h\"", 2, Symbol::Include);
+  Sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000, Symbol::Include);
 
   auto Results = completions("Fun^", {Sym}).Completions;
   assert(!Results.empty());
   EXPECT_THAT(Results[0], AllOf(named("Func"), insertInclude("\"bar.h\"")));
   EXPECT_EQ(Results[0].Includes.size(), 2u);
+}
+
+TEST(CompletionTest, InsertIncludeOrImport) {
+  std::string DeclFile = URI::create(testPath("foo")).toString();
+  Symbol Sym = func("Func");
+  Sym.CanonicalDeclaration.FileURI = DeclFile.c_str();
+  Sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000,
+                                  Symbol::Include | Symbol::Import);
+
+  auto Results = completions("Fun^", {Sym}).Completions;
+  assert(!Results.empty());
+  EXPECT_THAT(Results[0],
+              AllOf(named("Func"), insertIncludeText("#include \"bar.h\"\n")));
+
+  Results = completions("Fun^", {Sym}, {}, "Foo.m").Completions;
+  assert(!Results.empty());
+  // TODO: Once #import integration support is done this should be #import.
+  EXPECT_THAT(Results[0],
+              AllOf(named("Func"), insertIncludeText("#include \"bar.h\"\n")));
+
+  Sym.IncludeHeaders[0].SupportedDirectives = Symbol::Import;
+  Results = completions("Fun^", {Sym}).Completions;
+  assert(!Results.empty());
+  EXPECT_THAT(Results[0], AllOf(named("Func"), Not(insertInclude())));
 }
 
 TEST(CompletionTest, NoInsertIncludeIfOnePresent) {
@@ -2719,8 +2750,8 @@ TEST(CompletionTest, NoInsertIncludeIfOnePresent) {
   std::string DeclFile = URI::create(testPath("foo")).toString();
   Symbol Sym = func("Func");
   Sym.CanonicalDeclaration.FileURI = DeclFile.c_str();
-  Sym.IncludeHeaders.emplace_back("\"foo.h\"", 2);
-  Sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000);
+  Sym.IncludeHeaders.emplace_back("\"foo.h\"", 2, Symbol::Include);
+  Sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000, Symbol::Include);
 
   EXPECT_THAT(completions(TU, Test.point(), {Sym}).Completions,
               UnorderedElementsAre(AllOf(named("Func"), hasInclude("\"foo.h\""),
@@ -3555,7 +3586,7 @@ TEST(CompletionTest, CompletionRange) {
   // heuristics as normal and reports a range. It'd be nice to be consistent.
   const char *NoCompletion = "/* foo [[]]^ */";
   Completions = completions(NoCompletion);
-  EXPECT_EQ(Completions.CompletionRange, llvm::None);
+  EXPECT_EQ(Completions.CompletionRange, std::nullopt);
   Completions = completionsNoCompile(NoCompletion);
   EXPECT_EQ(Completions.CompletionRange, Annotations(NoCompletion).range());
 }

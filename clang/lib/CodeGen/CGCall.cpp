@@ -1798,6 +1798,13 @@ bool CodeGenModule::MayDropFunctionReturn(const ASTContext &Context,
 
 static bool HasStrictReturn(const CodeGenModule &Module, QualType RetTy,
                             const Decl *TargetDecl) {
+  // As-is msan can not tolerate noundef mismatch between caller and
+  // implementation. Mismatch is possible for e.g. indirect calls from C-caller
+  // into C++. Such mismatches lead to confusing false reports. To avoid
+  // expensive workaround on msan we enforce initialization event in uncommon
+  // cases where it's allowed.
+  if (Module.getLangOpts().Sanitize.has(SanitizerKind::Memory))
+    return true;
   // C++ explicitly makes returning undefined values UB. C's rule only applies
   // to used values, so we never mark them noundef for now.
   if (!Module.getLangOpts().CPlusPlus)
@@ -1818,7 +1825,6 @@ static bool HasStrictReturn(const CodeGenModule &Module, QualType RetTy,
   // Try to respect what the programmer intended.
   return Module.getCodeGenOpts().StrictReturn ||
          !Module.MayDropFunctionReturn(Module.getContext(), RetTy) ||
-         Module.getLangOpts().Sanitize.has(SanitizerKind::Memory) ||
          Module.getLangOpts().Sanitize.has(SanitizerKind::Return);
 }
 

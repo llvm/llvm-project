@@ -16,8 +16,8 @@
 define i1 @p0_scalar_urem_by_const(i32 %x, i32 %y) {
 ; CHECK-LABEL: p0_scalar_urem_by_const:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testb $-128, %dil
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    setns %al
 ; CHECK-NEXT:    retq
   %t0 = and i32 %x, 128 ; clearly a power-of-two or zero
   %t1 = urem i32 %t0, 6 ; '6' is clearly not a power of two
@@ -28,8 +28,8 @@ define i1 @p0_scalar_urem_by_const(i32 %x, i32 %y) {
 define i1 @p1_scalar_urem_by_nonconst(i32 %x, i32 %y) {
 ; CHECK-LABEL: p1_scalar_urem_by_nonconst:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testb $-128, %dil
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    setns %al
 ; CHECK-NEXT:    retq
   %t0 = and i32 %x, 128 ; clearly a power-of-two or zero
   %t1 = or i32 %y, 6 ; two bits set, clearly not a power of two

@@ -13,7 +13,7 @@
 ;     }
 ;   }
 ; }
-; RUN: opt -S -loop-vectorize -enable-vplan-native-path < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -enable-vplan-native-path < %s | FileCheck %s
 ; CHECK: %[[ZeroTripChk:.*]] = icmp sgt i32 %jCount, 0
 ; CHECK-LABEL: vector.ph:
 ; CHECK: %[[CVal0:.*]] = insertelement <4 x i32> poison, i32 %c, i32 0

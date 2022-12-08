@@ -9,18 +9,14 @@
 ;   useint(x);
 ; }
 
-; FIXME: Find a way to describe variables optimized to constants.
-
 ; OBJ:        {{.*}}Proc{{.*}}Sym {
 ; OBJ:           DisplayName: constant_var
 ; OBJ:         }
-; OBJ:         LocalSym {
-; OBJ-NEXT:      Kind:
+; OBJ:         ConstantSym {
+; OBJ-NEXT:      Kind: S_CONSTANT
 ; OBJ-NEXT:      Type: int (0x74)
-; OBJ-NEXT:      Flags [ (0x100)
-; OBJ-NEXT:        IsOptimizedOut (0x100)
-; OBJ-NEXT:      ]
-; OBJ-NEXT:      VarName: x
+; OBJ-NEXT:      Value: 42
+; OBJ-NEXT:      Name: x
 ; OBJ-NEXT:    }
 ; OBJ-NOT:     DefRange
 ; OBJ:         ProcEnd

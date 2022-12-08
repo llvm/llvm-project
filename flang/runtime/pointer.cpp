@@ -87,9 +87,9 @@ void RTNAME(PointerAssociateLowerBounds)(Descriptor &pointer,
 void RTNAME(PointerAssociateRemapping)(Descriptor &pointer,
     const Descriptor &target, const Descriptor &bounds, const char *sourceFile,
     int sourceLine) {
+  int rank{pointer.rank()};
   pointer = target;
   pointer.raw().attribute = CFI_attribute_pointer;
-  int rank{pointer.rank()};
   Terminator terminator{sourceFile, sourceLine};
   SubscriptValue byteStride{/*captured from first dimension*/};
   std::size_t boundElementBytes{bounds.ElementBytes()};

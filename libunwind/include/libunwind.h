@@ -1023,6 +1023,16 @@ enum {
   UNW_RISCV_F29 = 61,
   UNW_RISCV_F30 = 62,
   UNW_RISCV_F31 = 63,
+  // 65-95 -- Reserved for future standard extensions
+  // 96-127 -- v0-v31 (Vector registers)
+  // 128-3071 -- Reserved for future standard extensions
+  // 3072-4095 -- Reserved for custom extensions
+  // 4096-8191 -- CSRs
+  //
+  // VLENB CSR number: 0xC22 -- defined by section 3 of v-spec:
+  // https://github.com/riscv/riscv-v-spec/blob/master/v-spec.adoc#3-vector-extension-programmers-model
+  // VLENB DWARF number: 0x1000 + 0xC22
+  UNW_RISCV_VLENB = 0x1C22,
 };
 
 // VE register numbers

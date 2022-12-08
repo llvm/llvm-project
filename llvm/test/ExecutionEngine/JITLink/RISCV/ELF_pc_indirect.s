@@ -38,6 +38,18 @@ test_pcrel32:
 
         .size   test_pcrel32, .-test_pcrel32
 
+# Test R_RISCV_PCREL_HI20 and R_RISCV_PCREL_LO12_S
+# jitlink-check: decode_operand(test_pcrel32_s, 1) = ((external_data - test_pcrel32_s) + 0x800)[31:12]
+# jitlink-check: decode_operand(test_pcrel32_s+4, 2)[11:0] = (external_data - test_pcrel32_s)[11:0]
+        .globl  test_pcrel32_s
+        .p2align  1
+        .type   test_pcrel32_s,@function
+test_pcrel32_s:
+        auipc a0, %pcrel_hi(external_data)
+        sw  a0, %pcrel_lo(test_pcrel32_s)(a0)
+
+        .size   test_pcrel32_s, .-test_pcrel32_s
+
 # Test R_RISCV_CALL
 # jitlink-check: decode_operand(test_call, 1) = ((external_func - test_call) + 0x800)[31:12]
 # jitlink-check: decode_operand(test_call+4, 2)[11:0] = (external_func - test_call)[11:0]

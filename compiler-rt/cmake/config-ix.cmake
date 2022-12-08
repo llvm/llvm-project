@@ -271,6 +271,9 @@ endfunction()
 # specific architecture.  When cross-compiling, this is controled via
 # COMPILER_RT_TEST_COMPILER and COMPILER_RT_TEST_COMPILER_CFLAGS.
 macro(get_test_cc_for_arch arch cc_out cflags_out)
+  if (NOT ${ARGC} EQUAL 3)
+    message(FATAL_ERROR "got too many args. expected 3, got ${ARGC} (namely: ${ARGV})")
+  endif()
   if(ANDROID OR (NOT APPLE AND ${arch} MATCHES "arm|aarch64|riscv32|riscv64"))
     # This is only true if we are cross-compiling.
     # Build all tests with host compiler and use host tools.
@@ -689,8 +692,8 @@ else()
   set(CAN_SYMBOLIZE 1)
 endif()
 
-find_program(GNU_LD_EXECUTABLE NAMES ${LLVM_TARGET_TRIPLE}-ld.bfd ld.bfd DOC "GNU ld")
-find_program(GOLD_EXECUTABLE NAMES ${LLVM_TARGET_TRIPLE}-ld.gold ld.gold DOC "GNU gold")
+find_program(GNU_LD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.bfd ld.bfd DOC "GNU ld")
+find_program(GOLD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.gold ld.gold DOC "GNU gold")
 
 if(COMPILER_RT_SUPPORTED_ARCH)
   list(REMOVE_DUPLICATES COMPILER_RT_SUPPORTED_ARCH)

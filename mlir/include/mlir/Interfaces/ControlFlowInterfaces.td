@@ -171,7 +171,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         regions yield normally, i.e. do not abort or invoke an infinite loop).
         The minimum number of invocations is at least 0. If the maximum number
         of invocations cannot be statically determined, then it will not have a
-        value (i.e., it is set to `llvm::None`).
+        value (i.e., it is set to `std::nullopt`).
 
         `operands` is a set of optional attributes that either correspond to
         constant values for each operand of this operation or null if that

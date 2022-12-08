@@ -136,10 +136,10 @@ define amdgpu_kernel void @global_system_unordered_load(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) {
 entry:
-  %val = load atomic i32, i32 addrspace(1)* %in unordered, align 4
-  store i32 %val, i32 addrspace(1)* %out
+  %val = load atomic i32, ptr addrspace(1) %in unordered, align 4
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -268,10 +268,10 @@ define amdgpu_kernel void @global_system_monotonic_load(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) {
 entry:
-  %val = load atomic i32, i32 addrspace(1)* %in monotonic, align 4
-  store i32 %val, i32 addrspace(1)* %out
+  %val = load atomic i32, ptr addrspace(1) %in monotonic, align 4
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -416,10 +416,10 @@ define amdgpu_kernel void @global_system_acquire_load(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) {
 entry:
-  %val = load atomic i32, i32 addrspace(1)* %in acquire, align 4
-  store i32 %val, i32 addrspace(1)* %out
+  %val = load atomic i32, ptr addrspace(1) %in acquire, align 4
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -571,10 +571,10 @@ define amdgpu_kernel void @global_system_seq_cst_load(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) {
 entry:
-  %val = load atomic i32, i32 addrspace(1)* %in seq_cst, align 4
-  store i32 %val, i32 addrspace(1)* %out
+  %val = load atomic i32, ptr addrspace(1) %in seq_cst, align 4
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -695,9 +695,9 @@ define amdgpu_kernel void @global_system_unordered_store(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 %in, i32 addrspace(1)* %out) {
+    i32 %in, ptr addrspace(1) %out) {
 entry:
-  store atomic i32 %in, i32 addrspace(1)* %out unordered, align 4
+  store atomic i32 %in, ptr addrspace(1) %out unordered, align 4
   ret void
 }
 
@@ -818,9 +818,9 @@ define amdgpu_kernel void @global_system_monotonic_store(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 %in, i32 addrspace(1)* %out) {
+    i32 %in, ptr addrspace(1) %out) {
 entry:
-  store atomic i32 %in, i32 addrspace(1)* %out monotonic, align 4
+  store atomic i32 %in, ptr addrspace(1) %out monotonic, align 4
   ret void
 }
 
@@ -960,9 +960,9 @@ define amdgpu_kernel void @global_system_release_store(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 %in, i32 addrspace(1)* %out) {
+    i32 %in, ptr addrspace(1) %out) {
 entry:
-  store atomic i32 %in, i32 addrspace(1)* %out release, align 4
+  store atomic i32 %in, ptr addrspace(1) %out release, align 4
   ret void
 }
 
@@ -1102,9 +1102,9 @@ define amdgpu_kernel void @global_system_seq_cst_store(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 %in, i32 addrspace(1)* %out) {
+    i32 %in, ptr addrspace(1) %out) {
 entry:
-  store atomic i32 %in, i32 addrspace(1)* %out seq_cst, align 4
+  store atomic i32 %in, ptr addrspace(1) %out seq_cst, align 4
   ret void
 }
 
@@ -1225,9 +1225,9 @@ define amdgpu_kernel void @global_system_monotonic_atomicrmw(
 ; GFX11-CU-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32 addrspace(1)* %out, i32 %in monotonic
+  %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in monotonic
   ret void
 }
 
@@ -1373,9 +1373,9 @@ define amdgpu_kernel void @global_system_acquire_atomicrmw(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32 addrspace(1)* %out, i32 %in acquire
+  %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in acquire
   ret void
 }
 
@@ -1515,9 +1515,9 @@ define amdgpu_kernel void @global_system_release_atomicrmw(
 ; GFX11-CU-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32 addrspace(1)* %out, i32 %in release
+  %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in release
   ret void
 }
 
@@ -1682,9 +1682,9 @@ define amdgpu_kernel void @global_system_acq_rel_atomicrmw(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32 addrspace(1)* %out, i32 %in acq_rel
+  %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in acq_rel
   ret void
 }
 
@@ -1849,9 +1849,9 @@ define amdgpu_kernel void @global_system_seq_cst_atomicrmw(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32 addrspace(1)* %out, i32 %in seq_cst
+  %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in seq_cst
   ret void
 }
 
@@ -2010,10 +2010,10 @@ define amdgpu_kernel void @global_system_acquire_ret_atomicrmw(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32 addrspace(1)* %out, i32 %in acquire
-  store i32 %val, i32 addrspace(1)* %out, align 4
+  %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in acquire
+  store i32 %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -2191,10 +2191,10 @@ define amdgpu_kernel void @global_system_acq_rel_ret_atomicrmw(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32 addrspace(1)* %out, i32 %in acq_rel
-  store i32 %val, i32 addrspace(1)* %out, align 4
+  %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in acq_rel
+  store i32 %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -2372,10 +2372,10 @@ define amdgpu_kernel void @global_system_seq_cst_ret_atomicrmw(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32 addrspace(1)* %out, i32 %in seq_cst
-  store i32 %val, i32 addrspace(1)* %out, align 4
+  %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in seq_cst
+  store i32 %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -2494,10 +2494,10 @@ define amdgpu_kernel void @global_system_monotonic_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], s[0:1] offset:16
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in monotonic monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in monotonic monotonic
   ret void
 }
 
@@ -2641,10 +2641,10 @@ define amdgpu_kernel void @global_system_acquire_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in acquire monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in acquire monotonic
   ret void
 }
 
@@ -2782,10 +2782,10 @@ define amdgpu_kernel void @global_system_release_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], s[0:1] offset:16
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in release monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in release monotonic
   ret void
 }
 
@@ -2948,10 +2948,10 @@ define amdgpu_kernel void @global_system_acq_rel_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in acq_rel monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in acq_rel monotonic
   ret void
 }
 
@@ -3114,10 +3114,10 @@ define amdgpu_kernel void @global_system_seq_cst_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in seq_cst monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst monotonic
   ret void
 }
 
@@ -3261,10 +3261,10 @@ define amdgpu_kernel void @global_system_monotonic_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in monotonic acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in monotonic acquire
   ret void
 }
 
@@ -3408,10 +3408,10 @@ define amdgpu_kernel void @global_system_acquire_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in acquire acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in acquire acquire
   ret void
 }
 
@@ -3574,10 +3574,10 @@ define amdgpu_kernel void @global_system_release_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in release acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in release acquire
   ret void
 }
 
@@ -3740,10 +3740,10 @@ define amdgpu_kernel void @global_system_acq_rel_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in acq_rel acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in acq_rel acquire
   ret void
 }
 
@@ -3906,10 +3906,10 @@ define amdgpu_kernel void @global_system_seq_cst_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in seq_cst acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst acquire
   ret void
 }
 
@@ -4072,10 +4072,10 @@ define amdgpu_kernel void @global_system_seq_cst_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in seq_cst seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
   ret void
 }
 
@@ -4218,12 +4218,12 @@ define amdgpu_kernel void @global_system_monotonic_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in monotonic monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in monotonic monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -4382,12 +4382,12 @@ define amdgpu_kernel void @global_system_acquire_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in acquire monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in acquire monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -4565,12 +4565,12 @@ define amdgpu_kernel void @global_system_acq_rel_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in acq_rel monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in acq_rel monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -4748,12 +4748,12 @@ define amdgpu_kernel void @global_system_seq_cst_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in seq_cst monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -4912,12 +4912,12 @@ define amdgpu_kernel void @global_system_monotonic_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in monotonic acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in monotonic acquire
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -5076,12 +5076,12 @@ define amdgpu_kernel void @global_system_acquire_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in acquire acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in acquire acquire
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -5259,12 +5259,12 @@ define amdgpu_kernel void @global_system_release_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in release acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in release acquire
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -5442,12 +5442,12 @@ define amdgpu_kernel void @global_system_acq_rel_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in acq_rel acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in acq_rel acquire
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -5625,12 +5625,12 @@ define amdgpu_kernel void @global_system_seq_cst_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in seq_cst acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst acquire
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -5808,12 +5808,12 @@ define amdgpu_kernel void @global_system_monotonic_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in monotonic seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in monotonic seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -5991,12 +5991,12 @@ define amdgpu_kernel void @global_system_acquire_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in acquire seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in acquire seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -6174,12 +6174,12 @@ define amdgpu_kernel void @global_system_relese_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in release seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in release seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -6357,12 +6357,12 @@ define amdgpu_kernel void @global_system_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in acq_rel seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in acq_rel seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -6540,12 +6540,12 @@ define amdgpu_kernel void @global_system_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in seq_cst seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -6674,10 +6674,10 @@ define amdgpu_kernel void @global_system_one_as_unordered_load(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) {
 entry:
-  %val = load atomic i32, i32 addrspace(1)* %in syncscope("one-as") unordered, align 4
-  store i32 %val, i32 addrspace(1)* %out
+  %val = load atomic i32, ptr addrspace(1) %in syncscope("one-as") unordered, align 4
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -6806,10 +6806,10 @@ define amdgpu_kernel void @global_system_one_as_monotonic_load(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) {
 entry:
-  %val = load atomic i32, i32 addrspace(1)* %in syncscope("one-as") monotonic, align 4
-  store i32 %val, i32 addrspace(1)* %out
+  %val = load atomic i32, ptr addrspace(1) %in syncscope("one-as") monotonic, align 4
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -6954,10 +6954,10 @@ define amdgpu_kernel void @global_system_one_as_acquire_load(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) {
 entry:
-  %val = load atomic i32, i32 addrspace(1)* %in syncscope("one-as") acquire, align 4
-  store i32 %val, i32 addrspace(1)* %out
+  %val = load atomic i32, ptr addrspace(1) %in syncscope("one-as") acquire, align 4
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -7109,10 +7109,10 @@ define amdgpu_kernel void @global_system_one_as_seq_cst_load(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) {
 entry:
-  %val = load atomic i32, i32 addrspace(1)* %in syncscope("one-as") seq_cst, align 4
-  store i32 %val, i32 addrspace(1)* %out
+  %val = load atomic i32, ptr addrspace(1) %in syncscope("one-as") seq_cst, align 4
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -7233,9 +7233,9 @@ define amdgpu_kernel void @global_system_one_as_unordered_store(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 %in, i32 addrspace(1)* %out) {
+    i32 %in, ptr addrspace(1) %out) {
 entry:
-  store atomic i32 %in, i32 addrspace(1)* %out syncscope("one-as") unordered, align 4
+  store atomic i32 %in, ptr addrspace(1) %out syncscope("one-as") unordered, align 4
   ret void
 }
 
@@ -7356,9 +7356,9 @@ define amdgpu_kernel void @global_system_one_as_monotonic_store(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 %in, i32 addrspace(1)* %out) {
+    i32 %in, ptr addrspace(1) %out) {
 entry:
-  store atomic i32 %in, i32 addrspace(1)* %out syncscope("one-as") monotonic, align 4
+  store atomic i32 %in, ptr addrspace(1) %out syncscope("one-as") monotonic, align 4
   ret void
 }
 
@@ -7498,9 +7498,9 @@ define amdgpu_kernel void @global_system_one_as_release_store(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 %in, i32 addrspace(1)* %out) {
+    i32 %in, ptr addrspace(1) %out) {
 entry:
-  store atomic i32 %in, i32 addrspace(1)* %out syncscope("one-as") release, align 4
+  store atomic i32 %in, ptr addrspace(1) %out syncscope("one-as") release, align 4
   ret void
 }
 
@@ -7640,9 +7640,9 @@ define amdgpu_kernel void @global_system_one_as_seq_cst_store(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 %in, i32 addrspace(1)* %out) {
+    i32 %in, ptr addrspace(1) %out) {
 entry:
-  store atomic i32 %in, i32 addrspace(1)* %out syncscope("one-as") seq_cst, align 4
+  store atomic i32 %in, ptr addrspace(1) %out syncscope("one-as") seq_cst, align 4
   ret void
 }
 
@@ -7763,9 +7763,9 @@ define amdgpu_kernel void @global_system_one_as_monotonic_atomicrmw(
 ; GFX11-CU-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32 addrspace(1)* %out, i32 %in syncscope("one-as") monotonic
+  %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("one-as") monotonic
   ret void
 }
 
@@ -7911,9 +7911,9 @@ define amdgpu_kernel void @global_system_one_as_acquire_atomicrmw(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32 addrspace(1)* %out, i32 %in syncscope("one-as") acquire
+  %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("one-as") acquire
   ret void
 }
 
@@ -8053,9 +8053,9 @@ define amdgpu_kernel void @global_system_one_as_release_atomicrmw(
 ; GFX11-CU-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32 addrspace(1)* %out, i32 %in syncscope("one-as") release
+  %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("one-as") release
   ret void
 }
 
@@ -8220,9 +8220,9 @@ define amdgpu_kernel void @global_system_one_as_acq_rel_atomicrmw(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32 addrspace(1)* %out, i32 %in syncscope("one-as") acq_rel
+  %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("one-as") acq_rel
   ret void
 }
 
@@ -8387,9 +8387,9 @@ define amdgpu_kernel void @global_system_one_as_seq_cst_atomicrmw(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32 addrspace(1)* %out, i32 %in syncscope("one-as") seq_cst
+  %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("one-as") seq_cst
   ret void
 }
 
@@ -8548,10 +8548,10 @@ define amdgpu_kernel void @global_system_one_as_acquire_ret_atomicrmw(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32 addrspace(1)* %out, i32 %in syncscope("one-as") acquire
-  store i32 %val, i32 addrspace(1)* %out, align 4
+  %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("one-as") acquire
+  store i32 %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -8729,10 +8729,10 @@ define amdgpu_kernel void @global_system_one_as_acq_rel_ret_atomicrmw(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32 addrspace(1)* %out, i32 %in syncscope("one-as") acq_rel
-  store i32 %val, i32 addrspace(1)* %out, align 4
+  %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("one-as") acq_rel
+  store i32 %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -8910,10 +8910,10 @@ define amdgpu_kernel void @global_system_one_as_seq_cst_ret_atomicrmw(
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) {
 entry:
-  %val = atomicrmw volatile xchg i32 addrspace(1)* %out, i32 %in syncscope("one-as") seq_cst
-  store i32 %val, i32 addrspace(1)* %out, align 4
+  %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("one-as") seq_cst
+  store i32 %val, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -9032,10 +9032,10 @@ define amdgpu_kernel void @global_system_one_as_monotonic_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], s[0:1] offset:16
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") monotonic monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") monotonic monotonic
   ret void
 }
 
@@ -9179,10 +9179,10 @@ define amdgpu_kernel void @global_system_one_as_acquire_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") acquire monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") acquire monotonic
   ret void
 }
 
@@ -9320,10 +9320,10 @@ define amdgpu_kernel void @global_system_one_as_release_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], s[0:1] offset:16
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") release monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") release monotonic
   ret void
 }
 
@@ -9486,10 +9486,10 @@ define amdgpu_kernel void @global_system_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") acq_rel monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") acq_rel monotonic
   ret void
 }
 
@@ -9652,10 +9652,10 @@ define amdgpu_kernel void @global_system_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") seq_cst monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") seq_cst monotonic
   ret void
 }
 
@@ -9799,10 +9799,10 @@ define amdgpu_kernel void @global_system_one_as_monotonic_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") monotonic acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") monotonic acquire
   ret void
 }
 
@@ -9946,10 +9946,10 @@ define amdgpu_kernel void @global_system_one_as_acquire_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") acquire acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") acquire acquire
   ret void
 }
 
@@ -10112,10 +10112,10 @@ define amdgpu_kernel void @global_system_one_as_release_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") release acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") release acquire
   ret void
 }
 
@@ -10278,10 +10278,10 @@ define amdgpu_kernel void @global_system_one_as_acq_rel_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") acq_rel acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") acq_rel acquire
   ret void
 }
 
@@ -10444,10 +10444,10 @@ define amdgpu_kernel void @global_system_one_as_seq_cst_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") seq_cst acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") seq_cst acquire
   ret void
 }
 
@@ -10610,10 +10610,10 @@ define amdgpu_kernel void @global_system_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") monotonic seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") monotonic seq_cst
   ret void
 }
 
@@ -10776,10 +10776,10 @@ define amdgpu_kernel void @global_system_one_as_acquire_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") acquire seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") acquire seq_cst
   ret void
 }
 
@@ -10942,10 +10942,10 @@ define amdgpu_kernel void @global_system_one_as_release_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") release seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") release seq_cst
   ret void
 }
 
@@ -11108,10 +11108,10 @@ define amdgpu_kernel void @global_system_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") acq_rel seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") acq_rel seq_cst
   ret void
 }
 
@@ -11274,10 +11274,10 @@ define amdgpu_kernel void @global_system_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    buffer_gl1_inv
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") seq_cst seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") seq_cst seq_cst
   ret void
 }
 
@@ -11420,12 +11420,12 @@ define amdgpu_kernel void @global_system_one_as_monotonic_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") monotonic monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") monotonic monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -11584,12 +11584,12 @@ define amdgpu_kernel void @global_system_one_as_acquire_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") acquire monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") acquire monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -11751,12 +11751,12 @@ define amdgpu_kernel void @global_system_one_as_release_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") release monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") release monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -11934,12 +11934,12 @@ define amdgpu_kernel void @global_system_one_as_acq_rel_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") acq_rel monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") acq_rel monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -12117,12 +12117,12 @@ define amdgpu_kernel void @global_system_one_as_seq_cst_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") seq_cst monotonic
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") seq_cst monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -12281,12 +12281,12 @@ define amdgpu_kernel void @global_system_one_as_monotonic_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") monotonic acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") monotonic acquire
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -12445,12 +12445,12 @@ define amdgpu_kernel void @global_system_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") acquire acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") acquire acquire
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -12628,12 +12628,12 @@ define amdgpu_kernel void @global_system_one_as_release_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") release acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") release acquire
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -12811,12 +12811,12 @@ define amdgpu_kernel void @global_system_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") acq_rel acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") acq_rel acquire
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -12994,12 +12994,12 @@ define amdgpu_kernel void @global_system_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") seq_cst acquire
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") seq_cst acquire
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -13177,12 +13177,12 @@ define amdgpu_kernel void @global_system_one_as_monotonic_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") monotonic seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") monotonic seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -13360,12 +13360,12 @@ define amdgpu_kernel void @global_system_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") acquire seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") acquire seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -13543,12 +13543,12 @@ define amdgpu_kernel void @global_system_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") release seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") release seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -13726,12 +13726,12 @@ define amdgpu_kernel void @global_system_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") acq_rel seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") acq_rel seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -13909,12 +13909,12 @@ define amdgpu_kernel void @global_system_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, i32 addrspace(1)* %out, i32 4
-  %val = cmpxchg volatile i32 addrspace(1)* %gep, i32 %old, i32 %in syncscope("one-as") seq_cst seq_cst
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("one-as") seq_cst seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
-  store i32 %val0, i32 addrspace(1)* %out, align 4
+  store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
 

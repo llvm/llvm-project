@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -loop-vectorize -S < %s -debug -prefer-predicate-over-epilogue=scalar-epilogue 2>%t | FileCheck %s
+; RUN: opt -passes=loop-vectorize -S < %s -debug -prefer-predicate-over-epilogue=scalar-epilogue 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=DEBUG
 
 target triple = "aarch64-unknown-linux-gnu"
@@ -29,7 +29,7 @@ define void @induction_i7(i64* %dst) #0 {
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP16]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i7> [[VEC_IND]], 
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i7> [[VEC_IND]],
 ;
 entry:
   br label %for.body
@@ -75,7 +75,7 @@ define void @induction_i3_zext(i64* %dst) #0 {
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP16]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i3> [[VEC_IND]], 
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i3> [[VEC_IND]],
 ;
 entry:
   br label %for.body

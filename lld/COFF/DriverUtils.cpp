@@ -34,6 +34,7 @@
 #include "llvm/WindowsManifest/WindowsManifestMerger.h"
 #include <limits>
 #include <memory>
+#include <optional>
 
 using namespace llvm::COFF;
 using namespace llvm;
@@ -931,11 +932,11 @@ ParsedDirectives ArgParser::parseDirectives(StringRef s) {
 // So you can pass extra arguments using them.
 void ArgParser::addLINK(SmallVector<const char *, 256> &argv) {
   // Concatenate LINK env and command line arguments, and then parse them.
-  if (Optional<std::string> s = Process::GetEnv("LINK")) {
+  if (std::optional<std::string> s = Process::GetEnv("LINK")) {
     std::vector<const char *> v = tokenize(*s);
     argv.insert(std::next(argv.begin()), v.begin(), v.end());
   }
-  if (Optional<std::string> s = Process::GetEnv("_LINK_")) {
+  if (std::optional<std::string> s = Process::GetEnv("_LINK_")) {
     std::vector<const char *> v = tokenize(*s);
     argv.insert(std::next(argv.begin()), v.begin(), v.end());
   }

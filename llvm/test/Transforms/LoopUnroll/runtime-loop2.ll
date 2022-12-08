@@ -1,5 +1,5 @@
-; RUN: opt < %s -S -loop-unroll -unroll-threshold=25 -unroll-partial-threshold=25 -unroll-runtime -unroll-runtime-epilog=true  -unroll-count=8 | FileCheck %s  -check-prefix=EPILOG
-; RUN: opt < %s -S -loop-unroll -unroll-threshold=25 -unroll-partial-threshold=25 -unroll-runtime -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
+; RUN: opt < %s -S -passes=loop-unroll -unroll-threshold=25 -unroll-partial-threshold=25 -unroll-runtime -unroll-runtime-epilog=true  -unroll-count=8 | FileCheck %s  -check-prefix=EPILOG
+; RUN: opt < %s -S -passes=loop-unroll -unroll-threshold=25 -unroll-partial-threshold=25 -unroll-runtime -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
 
 ; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll' -unroll-threshold=25 -unroll-partial-threshold=25 -unroll-runtime -unroll-runtime-epilog=true  -unroll-count=8 | FileCheck %s  -check-prefix=EPILOG
 ; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll' -unroll-threshold=25 -unroll-partial-threshold=25 -unroll-runtime -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG

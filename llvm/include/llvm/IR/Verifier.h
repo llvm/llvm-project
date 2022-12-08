@@ -119,11 +119,6 @@ public:
   static bool isRequired() { return true; }
 };
 
-/// Check a module for errors, but report debug info errors separately.
-/// Otherwise behaves as the normal verifyModule. Debug info errors can be
-/// "recovered" from by stripping the debug info.
-bool verifyModule(bool &BrokenDebugInfo, const Module &M, raw_ostream *OS);
-
 /// Create a verifier pass.
 ///
 /// Check a module or function for validity. This is essentially a pass wrapped

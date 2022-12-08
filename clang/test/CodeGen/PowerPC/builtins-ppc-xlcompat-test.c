@@ -54,7 +54,7 @@ int test_builtin_ppc_compare_exp_eq() {
 
 int test_builtin_ppc_test_data_class_d() {
 // CHECK-LABEL:       @test_builtin_ppc_test_data_class_d
-// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.test.data.class.d(double %0, i32 0)
+// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.test.data.class.f64(double %0, i32 0)
 // CHECK-NEXT:        ret i32 [[TMP]]
 // CHECK-NONPWR9-ERR: error: this builtin is only valid on POWER9 or later CPUs
 // CHECK-NOVSX-ERR: error: this builtin requires VSX to be enabled
@@ -63,7 +63,7 @@ int test_builtin_ppc_test_data_class_d() {
 
 int test_builtin_ppc_test_data_class_f() {
 // CHECK-LABEL:       @test_builtin_ppc_test_data_class_f
-// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.test.data.class.f(float %0, i32 0)
+// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.test.data.class.f32(float %0, i32 0)
 // CHECK-NEXT:        ret i32 [[TMP]]
 // CHECK-NONPWR9-ERR: error: this builtin is only valid on POWER9 or later CPUs
 // CHECK-NOVSX-ERR: error: this builtin requires VSX to be enabled
@@ -108,7 +108,7 @@ int test_compare_exp_eq() {
 
 int test_test_data_class_d() {
 // CHECK-LABEL:       @test_test_data_class_d
-// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.test.data.class.d(double %0, i32 127)
+// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.test.data.class.f64(double %0, i32 127)
 // CHECK-NEXT:        ret i32 [[TMP]]
 // CHECK-NONPWR9-ERR: error: this builtin is only valid on POWER9 or later CPUs
 // CHECK-NOVSX-ERR: error: this builtin requires VSX to be enabled
@@ -117,7 +117,7 @@ int test_test_data_class_d() {
 
 int test_test_data_class_f() {
 // CHECK-LABEL:       @test_test_data_class_f
-// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.test.data.class.f(float %0, i32 127)
+// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.test.data.class.f32(float %0, i32 127)
 // CHECK-NEXT:        ret i32 [[TMP]]
 // CHECK-NONPWR9-ERR: error: this builtin is only valid on POWER9 or later CPUs
 // CHECK-NOVSX-ERR: error: this builtin requires VSX to be enabled

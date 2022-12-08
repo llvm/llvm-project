@@ -101,7 +101,7 @@ static void emitPassOptionsStruct(const Pass &pass, raw_ostream &os) {
 
     os.indent(2) << llvm::formatv("{0} {1}", type, opt.getCppVariableName());
 
-    if (Optional<StringRef> defaultVal = opt.getDefaultValue())
+    if (std::optional<StringRef> defaultVal = opt.getDefaultValue())
       os << " = " << defaultVal;
 
     os << ";\n";
@@ -270,9 +270,9 @@ static void emitPassOptionDecls(const Pass &pass, raw_ostream &os) {
     os << llvm::formatv(R"(<{0}> {1}{{*this, "{2}", ::llvm::cl::desc("{3}"))",
                         opt.getType(), opt.getCppVariableName(),
                         opt.getArgument(), opt.getDescription());
-    if (Optional<StringRef> defaultVal = opt.getDefaultValue())
+    if (std::optional<StringRef> defaultVal = opt.getDefaultValue())
       os << ", ::llvm::cl::init(" << defaultVal << ")";
-    if (Optional<StringRef> additionalFlags = opt.getAdditionalFlags())
+    if (std::optional<StringRef> additionalFlags = opt.getAdditionalFlags())
       os << ", " << *additionalFlags;
     os << "};\n";
   }

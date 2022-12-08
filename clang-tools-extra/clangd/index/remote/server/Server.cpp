@@ -22,7 +22,6 @@
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
@@ -527,7 +526,7 @@ int main(int argc, char *argv[]) {
     TracingSession.emplace(*Tracer);
 
   clang::clangd::RealThreadsafeFS TFS;
-  auto FS = TFS.view(llvm::None);
+  auto FS = TFS.view(std::nullopt);
   auto Status = FS->status(IndexPath);
   if (!Status) {
     elog("{0} does not exist.", IndexPath);

@@ -18,6 +18,7 @@
 #include "llvm/Remarks/RemarkStringTable.h"
 #include "llvm/Support/Error.h"
 #include <memory>
+#include <optional>
 #include <set>
 
 namespace llvm {
@@ -51,7 +52,7 @@ private:
   std::set<std::unique_ptr<Remark>, RemarkPtrCompare> Remarks;
 
   /// A path to append before the external file path found in remark metadata.
-  Optional<std::string> PrependPath;
+  std::optional<std::string> PrependPath;
 
   /// Keep this remark. If it's already in the set, discard it.
   Remark &keep(std::unique_ptr<Remark> Remark);
@@ -65,12 +66,13 @@ public:
   /// \p Buffer.
   /// \p Buffer can be either a standalone remark container or just
   /// metadata. This takes care of uniquing and merging the remarks.
-  Error link(StringRef Buffer, Optional<Format> RemarkFormat = std::nullopt);
+  Error link(StringRef Buffer,
+             std::optional<Format> RemarkFormat = std::nullopt);
 
   /// Link the remarks found in \p Obj by looking for the right section and
   /// calling the method above.
   Error link(const object::ObjectFile &Obj,
-             Optional<Format> RemarkFormat = std::nullopt);
+             std::optional<Format> RemarkFormat = std::nullopt);
 
   /// Serialize the linked remarks to the stream \p OS, using the format \p
   /// RemarkFormat.
@@ -94,7 +96,7 @@ public:
 /// Returns a buffer with the contents of the remarks section depending on the
 /// format of the file. If the section doesn't exist, this returns an empty
 /// optional.
-Expected<Optional<StringRef>>
+Expected<std::optional<StringRef>>
 getRemarksSectionContents(const object::ObjectFile &Obj);
 
 } // end namespace remarks

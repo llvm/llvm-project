@@ -153,6 +153,9 @@ private:
   // File IDs for Symbol.IncludeHeaders.
   // The final spelling is calculated in finish().
   llvm::DenseMap<SymbolID, FileID> IncludeFiles;
+  // Files which contain ObjC symbols.
+  // This is finalized and used in finish().
+  llvm::DenseSet<FileID> FilesWithObjCConstructs;
   void setIncludeLocation(const Symbol &S, SourceLocation);
   // Indexed macros, to be erased if they turned out to be include guards.
   llvm::DenseSet<const IdentifierInfo *> IndexedMacros;
