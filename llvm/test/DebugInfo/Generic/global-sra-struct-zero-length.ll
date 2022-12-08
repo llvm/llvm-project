@@ -1,4 +1,4 @@
-; RUN: opt -S -globalopt < %s | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax -S -globalopt -temporarily-allow-old-pass-syntax < %s | FileCheck %s
 ; Generated at -O2 -g from:
 ; typedef struct {
 ; } a;

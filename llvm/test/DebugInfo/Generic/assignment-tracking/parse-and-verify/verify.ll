@@ -1,4 +1,4 @@
-; RUN: opt %s -S -verify -experimental-assignment-tracking 2>&1 \
+; RUN: opt -temporarily-allow-old-pass-syntax %s -S -verify -experimental-assignment-tracking 2>&1 \
 ; RUN: | FileCheck %s
 
 ;; Check that badly formed assignment tracking metadata is caught either

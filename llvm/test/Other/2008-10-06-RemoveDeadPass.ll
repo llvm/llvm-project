@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -internalize -disable-output
+; RUN: opt -temporarily-allow-old-pass-syntax < %s -inline -internalize -disable-output
 define void @foo() nounwind {
   ret void
 }

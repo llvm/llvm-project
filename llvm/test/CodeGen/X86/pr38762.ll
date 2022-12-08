@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -simplifycfg | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax < %s -S -simplifycfg | FileCheck %s
 
 ; Note: This patch is a complement to pr38763.
 ;
@@ -18,12 +18,12 @@
 ;   volatile int foo = 0;
 ;   int read1 = foo;
 ;   int brains = foo;
-; 
+;
 ;   if (read1 > 3) {
 ;     brains *= 2;
 ;     brains += 1;
 ;   }
-; 
+;
 ;   return brains;
 ; }
 

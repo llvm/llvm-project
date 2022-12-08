@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll -unroll-threshold=2000 -S < %s | llc -march=r600 -mcpu=cypress | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax -loop-unroll -unroll-threshold=2000 -S < %s | llc -march=r600 -mcpu=cypress | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK: {{^}}alu_limits:

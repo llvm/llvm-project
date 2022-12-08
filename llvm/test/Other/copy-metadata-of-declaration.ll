@@ -1,4 +1,4 @@
-; RUN: opt -run-twice -verify -S -o - %s | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax -run-twice -verify -S -o - %s | FileCheck %s
 
 ; This test is used to check metadata attached to global variable declarations
 ; are copied when CloneModule(). This is required by out-of-tree passes.

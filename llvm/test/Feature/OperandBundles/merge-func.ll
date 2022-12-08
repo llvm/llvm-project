@@ -1,4 +1,4 @@
-; RUN: opt -S -mergefunc < %s | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax -S -mergefunc < %s | FileCheck %s
 
 ; Minor note: functions need to be at least three instructions long
 ; to be considered by -mergefunc.

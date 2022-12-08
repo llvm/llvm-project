@@ -1,4 +1,4 @@
-; RUN: opt -run-twice -verify -S -o - %s | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax -run-twice -verify -S -o - %s | FileCheck %s
 
 ; If a module contains a DISubprogram referenced only indirectly from
 ; instruction-level debug info metadata, but not attached to any Function

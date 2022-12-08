@@ -1,10 +1,10 @@
-; RUN: opt -instcombine -S %s -o - | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax -instcombine -S %s -o - | FileCheck %s
 
 ; In pr40648 one of two dbg.values used to describe the variable bumble was
 ; being dropped by instcombine. Test that both dbg.values survive instcombine.
 
 ; $ clang -O0 -Xclang -disable-O0-optnone -g bees.c -emit-llvm -S -o - \
-;   | opt -opt-bisect-limit=10 -O2 -o -
+;   | opt -temporarily-allow-old-pass-syntax -opt-bisect-limit=10 -O2 -o -
 ; $ cat bees.c
 ; struct bees {
 ;  int a;

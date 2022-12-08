@@ -1,5 +1,5 @@
-; RUN: opt %s -disable-output -debugify-each -debugify-quiet -debugify-export - -globalopt | FileCheck %s
-; RUN: opt %s -disable-output -debugify-each -debugify-quiet -debugify-export - -passes=globalopt | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax %s -disable-output -debugify-each -debugify-quiet -debugify-export - -globalopt -temporarily-allow-old-pass-syntax | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax %s -disable-output -debugify-each -debugify-quiet -debugify-export - -passes=globalopt -temporarily-allow-old-pass-syntax | FileCheck %s
 
 ; CHECK: Pass Name
 ; CHECK-SAME: # of missing debug values

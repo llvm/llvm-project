@@ -1,5 +1,5 @@
-; RUN: opt < %s -print-callgraph -disable-output 2>&1 | FileCheck %s
-; RUN: opt < %s -passes=print-callgraph -disable-output 2>&1 | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax < %s -print-callgraph -disable-output 2>&1 | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax < %s -passes=print-callgraph -disable-output 2>&1 | FileCheck %s
 
 ; Check that intrinsics aren't added to the call graph
 
