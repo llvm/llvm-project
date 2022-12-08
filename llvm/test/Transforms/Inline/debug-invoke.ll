@@ -17,7 +17,7 @@ define void @inl() #0 {
   ret void
 }
 
-define void @caller() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @caller() personality ptr @__gxx_personality_v0 {
   invoke void @inl()
     to label %cont unwind label %lpad, !dbg !4
 
@@ -25,7 +25,7 @@ cont:
   ret void
 
 lpad:
-  landingpad { i8*, i32 }
+  landingpad { ptr, i32 }
     cleanup
   ret void
 }

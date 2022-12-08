@@ -4,7 +4,7 @@
 ; Check that the exception handling code is fully pruned, and does not
 ; leave behind invalid IR.
 
-define internal void @foo() personality i32 (...)* undef {
+define internal void @foo() personality ptr undef {
 entry:
   br i1 false, label %join, label %split
 
@@ -42,7 +42,7 @@ exit:
   ret void
 }
 
-define void @test() personality i32 (...)* undef {
+define void @test() personality ptr undef {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    ret void
 ;

@@ -37,7 +37,7 @@ define void @noop() {
 }
 
 ;; Test 2 - Printed InlineResult messages are followed by InlineCost.
-define void @test2(i8*) {
+define void @test2(ptr) {
 ; CHECK-LABEL: @test2
 ; CHECK-NEXT: call void @noop() [[ATTR3:#[0-9]+]] [ "CUSTOM_OPERAND_BUNDLE"() ]
 ; CHECK-NEXT: ret void

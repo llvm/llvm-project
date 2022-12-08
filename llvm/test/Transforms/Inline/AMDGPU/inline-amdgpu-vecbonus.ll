@@ -22,11 +22,11 @@ entry:
 ; CHECK-NOT: udiv
 ; CHECK: tail call <16 x i32> @div_vecbonus
 ; CHECK: ret void
-define amdgpu_kernel void @caller_vecbonus(<16 x i32> addrspace(1)* nocapture %x, <16 x i32> addrspace(1)* nocapture readonly %y) {
+define amdgpu_kernel void @caller_vecbonus(ptr addrspace(1) nocapture %x, ptr addrspace(1) nocapture readonly %y) {
 entry:
-  %tmp = load <16 x i32>, <16 x i32> addrspace(1)* %x
-  %tmp1 = load <16 x i32>, <16 x i32> addrspace(1)* %y
+  %tmp = load <16 x i32>, ptr addrspace(1) %x
+  %tmp1 = load <16 x i32>, ptr addrspace(1) %y
   %div.i = tail call <16 x i32> @div_vecbonus(<16 x i32> %tmp, <16 x i32> %tmp1)
-  store <16 x i32> %div.i, <16 x i32> addrspace(1)* %x
+  store <16 x i32> %div.i, ptr addrspace(1) %x
   ret void
 }

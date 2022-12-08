@@ -21,7 +21,7 @@ define internal fastcc void @parse() {
 	ret void
 }
 
-define void @main() personality i32 (...)* @__gxx_personality_v0 {
+define void @main() personality ptr @__gxx_personality_v0 {
 	invoke fastcc void @parse()
 			to label %invcont unwind label %lpad
 
@@ -29,7 +29,7 @@ invcont:
 	unreachable
 
 lpad:
-        %exn = landingpad {i8*, i32}
+        %exn = landingpad {ptr, i32}
                  cleanup
 	unreachable
 }
