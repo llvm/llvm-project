@@ -8761,9 +8761,13 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
   // We only care about non-constant SCEVs here, so we can ignore
   // EL.ConstantMaxNotTaken
   // and MaxBECount, which must be SCEVConstant.
-  for (const auto &Pair : ExitCounts)
+  for (const auto &Pair : ExitCounts) {
     if (!isa<SCEVConstant>(Pair.second.ExactNotTaken))
       BECountUsers[Pair.second.ExactNotTaken].insert({L, AllowPredicates});
+    if (!isa<SCEVConstant>(Pair.second.SymbolicMaxNotTaken))
+      BECountUsers[Pair.second.SymbolicMaxNotTaken].insert(
+          {L, AllowPredicates});
+  }
   return BackedgeTakenInfo(std::move(ExitCounts), CouldComputeBECount,
                            MaxBECount, MaxOrZero);
 }
@@ -13773,10 +13777,12 @@ void ScalarEvolution::forgetBackedgeTakenCounts(const Loop *L,
   auto It = BECounts.find(L);
   if (It != BECounts.end()) {
     for (const ExitNotTakenInfo &ENT : It->second.ExitNotTaken) {
-      if (!isa<SCEVConstant>(ENT.ExactNotTaken)) {
-        auto UserIt = BECountUsers.find(ENT.ExactNotTaken);
-        assert(UserIt != BECountUsers.end());
-        UserIt->second.erase({L, Predicated});
+      for (const SCEV *S : {ENT.ExactNotTaken, ENT.SymbolicMaxNotTaken}) {
+        if (!isa<SCEVConstant>(S)) {
+          auto UserIt = BECountUsers.find(S);
+          assert(UserIt != BECountUsers.end());
+          UserIt->second.erase({L, Predicated});
+        }
       }
     }
     BECounts.erase(It);
@@ -14120,14 +14126,16 @@ void ScalarEvolution::verify() const {
         Predicated ? PredicatedBackedgeTakenCounts : BackedgeTakenCounts;
     for (const auto &LoopAndBEInfo : BECounts) {
       for (const ExitNotTakenInfo &ENT : LoopAndBEInfo.second.ExitNotTaken) {
-        if (!isa<SCEVConstant>(ENT.ExactNotTaken)) {
-          auto UserIt = BECountUsers.find(ENT.ExactNotTaken);
-          if (UserIt != BECountUsers.end() &&
-              UserIt->second.contains({ LoopAndBEInfo.first, Predicated }))
-            continue;
-          dbgs() << "Value " << *ENT.ExactNotTaken << " for loop "
-                 << *LoopAndBEInfo.first << " missing from BECountUsers\n";
-          std::abort();
+        for (const SCEV *S : {ENT.ExactNotTaken, ENT.SymbolicMaxNotTaken}) {
+          if (!isa<SCEVConstant>(S)) {
+            auto UserIt = BECountUsers.find(S);
+            if (UserIt != BECountUsers.end() &&
+                UserIt->second.contains({ LoopAndBEInfo.first, Predicated }))
+              continue;
+            dbgs() << "Value " << *S << " for loop " << *LoopAndBEInfo.first
+                   << " missing from BECountUsers\n";
+            std::abort();
+          }
         }
       }
     }
