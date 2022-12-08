@@ -388,6 +388,33 @@ define amdgpu_ps void @v_omod_mul2_f32(float %a) #0 {
   ret void
 }
 
+define amdgpu_ps void @v_omod_mul2_med3(float %x, float %y, float %z) #0 {
+; SI-LABEL: v_omod_mul2_med3:
+; SI:       ; %bb.0:
+; SI-NEXT:    v_med3_f32 v0, v0, v1, v2 mul:2
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: v_omod_mul2_med3:
+; VI:       ; %bb.0:
+; VI-NEXT:    v_med3_f32 v0, v0, v1, v2 mul:2
+; VI-NEXT:    flat_store_dword v[0:1], v0
+; VI-NEXT:    s_endpgm
+;
+; GFX11-LABEL: v_omod_mul2_med3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_med3_f32 v0, v0, v1, v2 mul:2
+; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+  %fmed3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float %z)
+  %div2 = fmul float %fmed3, 2.0
+  store float %div2, float addrspace(1)* undef
+  ret void
+}
+
 define amdgpu_ps void @v_omod_mul2_f64(double %a) #5 {
 ; SI-LABEL: v_omod_mul2_f64:
 ; SI:       ; %bb.0:

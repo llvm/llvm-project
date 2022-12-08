@@ -48,12 +48,6 @@ public:
   bool SelectAddrModeS9(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrModeImm(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrModeFar(SDValue Addr, SDValue &Base, SDValue &Offset);
-  bool SelectCMOVPred(SDValue N, SDValue &Pred, SDValue &Reg) {
-    const ConstantSDNode *CN = cast<ConstantSDNode>(N);
-    Pred = CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(N), MVT::i32);
-    Reg = CurDAG->getRegister(ARC::STATUS32, MVT::i32);
-    return true;
-  }
 
   StringRef getPassName() const override {
     return "ARC DAG->DAG Pattern Instruction Selection";

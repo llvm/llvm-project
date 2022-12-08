@@ -1318,7 +1318,7 @@ public:
   matchAndRewrite(ConcatenateOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // The conversion works as follow:
-    // (1). When output is sparse, and mix of inputs:
+    // (1). When output is sparse and not all dims are dense, and mix of inputs:
     //    a_sparse = concat (b_dense, c_sparse, ....)
     // =>
     //    coo_for_a = newSparseCOO(shapeOf(a))
@@ -1331,10 +1331,10 @@ public:
     //    a = newSparseTensor(coo_for_a)
     //    return a
     //
-    // (2). When output is dense, and mix of inputs:
+    // (2). When output is dense or annotated all dense, and mix of inputs:
     //    a_dense = concat (b_dense, c_sparse, ....)
     // =>
-    //    a = malloc(shapeOf(a))
+    //    a = malloc(shapeOf(a)) or newSparseAllDense(shapeOf(a))
     //    for i, j, k // dense input
     //      a[ adjustForOffset(i,j,k) ] = b[i,j,k]
     //
@@ -1362,18 +1362,50 @@ public:
     concatSizesFromInputs(rewriter, sizes, loc, dstTp, op.getInputs(),
                           concatDim);
 
+    bool allDense = false;
+    Value dstTensor;
     if (encDst) {
-      // Start a new COO for the destination tensor.
-      dst =
-          params.genBuffers(encDst, sizes, dstTp).genNewCall(Action::kEmptyCOO);
-      dstPerm = params.getDim2LvlMap();
-      elemPtr = genAllocaScalar(rewriter, loc, elemTp);
+      allDense = llvm::all_of(encDst.getDimLevelType(),
+                              [](DimLevelType dlt) { return isDenseDLT(dlt); });
+      // Start a new COO or an initialized annotated all dense sparse tensor.
+      dst = params.genBuffers(encDst, sizes, dstTp)
+                .genNewCall(allDense ? Action::kEmpty : Action::kEmptyCOO);
       dstIdx = genAlloca(rewriter, loc, rank, rewriter.getIndexType());
+      if (allDense) {
+        dstTensor = dst;
+        // Get the values buffer for the sparse tensor and reshape it to the
+        // corresponding dense tensor shape.
+        dst = genValuesCall(rewriter, loc,
+                            MemRefType::get({ShapedType::kDynamic}, elemTp),
+                            {dst});
+
+        // Use the dstIdx to store the level sizes.
+        SmallVector<Value> lvlSizes;
+        for (unsigned i = 0; i < sizes.size(); i++)
+          lvlSizes.push_back(sizes[toOrigDim(encDst, i)]);
+        storeIndices(rewriter, loc, rank, dstIdx, lvlSizes);
+        // The memref ReshapeOp requires the sizes buffer to have a static
+        // shape.
+        Value typedBuffer = rewriter.create<memref::CastOp>(
+            loc, MemRefType::get({rank}, rewriter.getIndexType()), dstIdx);
+        SmallVector<int64_t> shape(rank, ShapedType::kDynamic);
+        dst = rewriter.create<memref::ReshapeOp>(
+            loc, MemRefType::get(shape, elemTp), dst, typedBuffer);
+      } else {
+        dstPerm = params.getDim2LvlMap();
+        elemPtr = genAllocaScalar(rewriter, loc, elemTp);
+      }
     } else {
       // TODO: Dense buffers should be allocated/deallocated via the callback
       // in BufferizationOptions.
       dst = allocDenseTensor(rewriter, loc, dstTp, sizes);
     }
+    auto dimIdx2LvlIdx = [&](ValueRange dIdx) -> SmallVector<Value> {
+      SmallVector<Value> lIdx;
+      for (unsigned i = 0; i < dIdx.size(); i++)
+        lIdx.push_back(dIdx[toOrigDim(encDst, i)]);
+      return lIdx;
+    };
     for (auto it : llvm::zip(op.getInputs(), adaptor.getInputs())) {
       Value orignalOp = std::get<0>(it); // Input (with encoding) from Op
       Value adaptedOp = std::get<1>(it); // Input (type converted) from adaptor
@@ -1384,24 +1416,29 @@ public:
             rewriter, loc, adaptedOp, srcTp,
             [&](OpBuilder &builder, Location loc, Value idx,
                 Value elemPtr) -> void {
-              auto indVec =
+              SmallVector<Value> dimInd =
                   loadIndices(builder, loc, rank, idx, concatDim, offset);
-              if (encDst) {
-                // Case: sparse => sparse
-                storeIndices(builder, loc, rank, dstIdx, indVec);
+              if (encDst && !allDense) {
+                // Case: sparse => sparse, except for annotated all dense.
+                storeIndices(builder, loc, rank, dstIdx, dimInd);
                 genAddEltCall(builder, loc, elemTp, dst, elemPtr, dstIdx,
                               dstPerm);
               } else {
-                // Case: sparse => dense
-                insertScalarIntoDenseTensor(builder, loc, elemPtr, dst, indVec);
+                // Case: sparse => dense, or annotated all dense.
+                SmallVector<Value> lvlInd;
+                if (allDense)
+                  lvlInd = dimIdx2LvlIdx(dimInd);
+                else
+                  lvlInd = dimInd;
+                insertScalarIntoDenseTensor(builder, loc, elemPtr, dst, lvlInd);
               }
             });
       } else {
         genDenseTensorIterationLoop(
             rewriter, loc, adaptedOp, srcTp,
             [&](OpBuilder &builder, Location loc, ValueRange idx) -> void {
-              if (encDst) {
-                // Case: dense => sparse
+              if (encDst && !allDense) {
+                // Case: dense => sparse, except for annotated all dense.
                 storeIndices(builder, loc, rank, dstIdx, idx, concatDim,
                              offset);
                 Value val = genValueForDense(builder, loc, adaptedOp, idx);
@@ -1409,13 +1446,15 @@ public:
                 genAddEltCall(builder, loc, elemTp, dst, elemPtr, dstIdx,
                               dstPerm);
               } else {
-                // Case: dense => dense
+                // Case: dense => dense, or annotated all dense.
                 Value val = genValueForDense(builder, loc, adaptedOp, idx);
-                SmallVector<Value> indVec(idx);
+                SmallVector<Value> lvlInd(idx);
                 // Apply offset.
-                indVec[concatDim] = builder.create<arith::AddIOp>(
-                    loc, indVec[concatDim], offset);
-                builder.create<memref::StoreOp>(loc, val, dst, indVec);
+                lvlInd[concatDim] = builder.create<arith::AddIOp>(
+                    loc, lvlInd[concatDim], offset);
+                if (allDense)
+                  lvlInd = dimIdx2LvlIdx(lvlInd);
+                builder.create<memref::StoreOp>(loc, val, dst, lvlInd);
               }
             });
       }
@@ -1427,11 +1466,15 @@ public:
       offset = rewriter.create<arith::AddIOp>(loc, offset, curDim);
     }
     if (encDst) {
-      // In sparse output case, the destination holds the COO.
-      Value coo = dst;
-      dst = params.genNewCall(Action::kFromCOO, coo);
-      // Release resources.
-      genDelCOOCall(rewriter, loc, elemTp, coo);
+      if (!allDense) {
+        // In sparse output case, the destination holds the COO.
+        Value coo = dst;
+        dst = params.genNewCall(Action::kFromCOO, coo);
+        // Release resources.
+        genDelCOOCall(rewriter, loc, elemTp, coo);
+      } else {
+        dst = dstTensor;
+      }
       rewriter.replaceOp(op, dst);
     } else {
       rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, dstTp, dst);

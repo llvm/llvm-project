@@ -1,4 +1,4 @@
-; RUN: opt %s -mergefunc -globalopt -S -o - | FileCheck %s
+; RUN: opt %s -passes=mergefunc,globalopt -S -o - | FileCheck %s
 
 ; Make sure we don't crash on this example. This test is supposed to test that
 ; MergeFunctions clears its GlobalNumbers value map. If this map still contains

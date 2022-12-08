@@ -817,7 +817,7 @@ define <16 x i64> @fshr_v16i64(<16 x i64> %a, <16 x i64> %b, <16 x i64> %c, <16 
 ; RV32-NEXT:    vxor.vv v8, v24, v8, v0.t
 ; RV32-NEXT:    vand.vx v8, v8, a0, v0.t
 ; RV32-NEXT:    addi a0, sp, 16
-; RV32-NEXT:    vl8re8.v v24, (a0) # Unknown-size Folded Reload
+; RV32-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
 ; RV32-NEXT:    vsll.vi v24, v24, 1, v0.t
 ; RV32-NEXT:    vsll.vv v8, v24, v8, v0.t
 ; RV32-NEXT:    vor.vv v8, v8, v16, v0.t
@@ -846,7 +846,7 @@ define <16 x i64> @fshr_v16i64(<16 x i64> %a, <16 x i64> %b, <16 x i64> %c, <16 
 ; RV64-NEXT:    vnot.v v8, v24, v0.t
 ; RV64-NEXT:    vand.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    vl8re8.v v24, (a0) # Unknown-size Folded Reload
+; RV64-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
 ; RV64-NEXT:    vsll.vi v24, v24, 1, v0.t
 ; RV64-NEXT:    vsll.vv v8, v24, v8, v0.t
 ; RV64-NEXT:    vor.vv v8, v8, v16, v0.t
@@ -885,7 +885,7 @@ define <16 x i64> @fshl_v16i64(<16 x i64> %a, <16 x i64> %b, <16 x i64> %c, <16 
 ; RV32-NEXT:    vxor.vv v16, v24, v16, v0.t
 ; RV32-NEXT:    vand.vx v16, v16, a0, v0.t
 ; RV32-NEXT:    addi a0, sp, 16
-; RV32-NEXT:    vl8re8.v v24, (a0) # Unknown-size Folded Reload
+; RV32-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
 ; RV32-NEXT:    vsrl.vi v24, v24, 1, v0.t
 ; RV32-NEXT:    vsrl.vv v16, v24, v16, v0.t
 ; RV32-NEXT:    vor.vv v8, v8, v16, v0.t
@@ -915,7 +915,7 @@ define <16 x i64> @fshl_v16i64(<16 x i64> %a, <16 x i64> %b, <16 x i64> %c, <16 
 ; RV64-NEXT:    vnot.v v16, v24, v0.t
 ; RV64-NEXT:    vand.vx v16, v16, a0, v0.t
 ; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    vl8re8.v v24, (a0) # Unknown-size Folded Reload
+; RV64-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
 ; RV64-NEXT:    vsrl.vi v24, v24, 1, v0.t
 ; RV64-NEXT:    vsrl.vv v16, v24, v16, v0.t
 ; RV64-NEXT:    vor.vv v8, v8, v16, v0.t

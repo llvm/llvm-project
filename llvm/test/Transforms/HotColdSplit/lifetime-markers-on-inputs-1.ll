@@ -1,4 +1,4 @@
-; RUN: opt -S -hotcoldsplit -hotcoldsplit-threshold=0 < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=hotcoldsplit -hotcoldsplit-threshold=0 < %s 2>&1 | FileCheck %s
 
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 
