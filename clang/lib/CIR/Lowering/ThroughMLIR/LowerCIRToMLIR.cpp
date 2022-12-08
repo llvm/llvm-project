@@ -515,8 +515,7 @@ void populateCIRToMLIRConversionPatterns(mlir::RewritePatternSet &patterns,
   patterns.add<CIRFuncLowering>(converter, patterns.getContext());
 }
 
-namespace {
-mlir::TypeConverter prepareTypeConverter() {
+static mlir::TypeConverter prepareTypeConverter() {
   mlir::TypeConverter converter;
   converter.addConversion([&](mlir::cir::PointerType type) -> mlir::Type {
     return mlir::MemRefType::get({-1}, type.getPointee());
@@ -528,7 +527,6 @@ mlir::TypeConverter prepareTypeConverter() {
 
   return converter;
 }
-} // namespace
 
 void ConvertCIRToMLIRPass::runOnOperation() {
   auto module = getOperation();
