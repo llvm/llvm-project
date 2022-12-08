@@ -1,4 +1,4 @@
-; RUN: not opt -S -verify < %s 2>&1 | FileCheck %s
+; RUN: not opt -S -passes=verify < %s 2>&1 | FileCheck %s
 
 ;; Arrays cannot contain scalable vectors; make sure we detect them even
 ;; when nested inside other aggregates.
