@@ -26,7 +26,6 @@
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/TypeName.h"
 #include "llvm/Support/raw_ostream.h"
-#include <any>
 #include <string>
 
 using namespace llvm;
@@ -302,9 +301,9 @@ void TimePassesHandler::registerCallbacks(PassInstrumentationCallbacks &PIC) {
     return;
 
   PIC.registerBeforeNonSkippedPassCallback(
-      [this](StringRef P, std::any) { this->startPassTimer(P); });
+      [this](StringRef P, Any) { this->startPassTimer(P); });
   PIC.registerAfterPassCallback(
-      [this](StringRef P, std::any, const PreservedAnalyses &) {
+      [this](StringRef P, Any, const PreservedAnalyses &) {
         this->stopPassTimer(P);
       });
   PIC.registerAfterPassInvalidatedCallback(
@@ -312,9 +311,9 @@ void TimePassesHandler::registerCallbacks(PassInstrumentationCallbacks &PIC) {
         this->stopPassTimer(P);
       });
   PIC.registerBeforeAnalysisCallback(
-      [this](StringRef P, std::any) { this->startAnalysisTimer(P); });
+      [this](StringRef P, Any) { this->startAnalysisTimer(P); });
   PIC.registerAfterAnalysisCallback(
-      [this](StringRef P, std::any) { this->stopAnalysisTimer(P); });
+      [this](StringRef P, Any) { this->stopAnalysisTimer(P); });
 }
 
 } // namespace llvm
