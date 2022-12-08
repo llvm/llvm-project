@@ -18,6 +18,81 @@
 namespace mlir {
 namespace sparse_tensor {
 
+enum class ExpArity {
+  kNullary,
+  kUnary,
+  kBinary,
+};
+
+static ExpArity getExpArity(Kind k) {
+  switch (k) {
+  // Leaf.
+  case kTensor:
+  case kInvariant:
+  case kIndex:
+    return ExpArity::kNullary;
+  case kAbsF:
+  case kAbsC:
+  case kAbsI:
+  case kCeilF:
+  case kFloorF:
+  case kSqrtF:
+  case kSqrtC:
+  case kExpm1F:
+  case kExpm1C:
+  case kLog1pF:
+  case kLog1pC:
+  case kSinF:
+  case kSinC:
+  case kTanhF:
+  case kTanhC:
+  case kTruncF:
+  case kExtF:
+  case kCastFS:
+  case kCastFU:
+  case kCastSF:
+  case kCastUF:
+  case kCastS:
+  case kCastU:
+  case kCastIdx:
+  case kTruncI:
+  case kCIm:
+  case kCRe:
+  case kBitCast:
+  case kBinaryBranch:
+  case kUnary:
+  case kSelect:
+  case kNegF:
+  case kNegC:
+  case kNegI:
+    return ExpArity::kUnary;
+  // Binary operations.
+  case kDivF:
+  case kDivC:
+  case kDivS:
+  case kDivU:
+  case kShrS:
+  case kShrU:
+  case kShlI:
+  case kMulF:
+  case kMulC:
+  case kMulI:
+  case kAndI:
+  case kAddF:
+  case kAddC:
+  case kAddI:
+  case kOrI:
+  case kXorI:
+  case kBinary:
+  case kReduce:
+  case kSubF:
+  case kSubC:
+  case kSubI:
+    return ExpArity::kBinary;
+  }
+  llvm_unreachable("unexpected kind");
+}
+
 //===----------------------------------------------------------------------===//
 // Constructors.
 //===----------------------------------------------------------------------===//
@@ -308,6 +383,57 @@ bool Merger::onlyDenseDiff(unsigned i, unsigned j) {
   BitVector tmp = latPoints[j].bits;
   tmp ^= latPoints[i].bits;
   return !hasAnySparse(tmp);
+}
+
+bool Merger::expContainsTensor(unsigned e, unsigned t) const {
+  if (tensorExps[e].kind == kTensor)
+    return tensorExps[e].tensor == t;
+
+  switch (getExpArity(tensorExps[e].kind)) {
+  case ExpArity::kNullary:
+    return false;
+  case ExpArity::kUnary: {
+    unsigned op = tensorExps[e].children.e0;
+    if (tensorExps[op].kind == kTensor && tensorExps[op].tensor == t)
+      return true;
+    return expContainsTensor(op, t);
+  }
+  case ExpArity::kBinary: {
+    unsigned op1 = tensorExps[e].children.e0;
+    unsigned op2 = tensorExps[e].children.e1;
+    if ((tensorExps[op1].kind == kTensor && tensorExps[op1].tensor == t) ||
+        (tensorExps[op2].kind == kTensor && tensorExps[op2].tensor == t))
+      return true;
+    return expContainsTensor(op1, t) || expContainsTensor(op2, t);
+  }
+  }
+  llvm_unreachable("unexpected arity");
+}
+
+bool Merger::hasNegateOnOut(unsigned e) const {
+  switch (tensorExps[e].kind) {
+  case kNegF:
+  case kNegC:
+  case kNegI:
+    return expContainsTensor(tensorExps[e].children.e0, outTensor);
+  case kSubF:
+  case kSubC:
+  case kSubI:
+    return expContainsTensor(tensorExps[e].children.e1, outTensor) ||
+           hasNegateOnOut(tensorExps[e].children.e0);
+  default: {
+    switch (getExpArity(tensorExps[e].kind)) {
+    case ExpArity::kNullary:
+      return false;
+    case ExpArity::kUnary:
+      return hasNegateOnOut(tensorExps[e].children.e0);
+    case ExpArity::kBinary:
+      return hasNegateOnOut(tensorExps[e].children.e0) ||
+             hasNegateOnOut(tensorExps[e].children.e1);
+    }
+  }
+  }
+  llvm_unreachable("unexpected kind");
 }
 
 bool Merger::isSingleCondition(unsigned t, unsigned e) const {
