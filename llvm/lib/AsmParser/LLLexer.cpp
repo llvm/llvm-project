@@ -774,14 +774,6 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(byte);
   KEYWORD(bit);
   KEYWORD(varFlags);
-  KEYWORD(callsites);
-  KEYWORD(clones);
-  KEYWORD(stackIds);
-  KEYWORD(allocs);
-  KEYWORD(versions);
-  KEYWORD(memProf);
-  KEYWORD(notcold);
-  KEYWORD(notcoldandcold);
 
 #undef KEYWORD
 

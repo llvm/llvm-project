@@ -4,7 +4,8 @@
 // RUN: %clang_asan %s -S -o %t.s
 // RUN: cat %t.s | FileCheck %s || exit 1
 
-// UNSUPPORTED: ios
+// We test x86_64-specific peculiarities of ld on Darwin.
+// REQUIRES: x86_64-target-arch
 
 int x, y, z;
 int main() { return 0; }

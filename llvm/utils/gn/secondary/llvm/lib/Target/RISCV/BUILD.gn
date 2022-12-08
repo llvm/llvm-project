@@ -62,8 +62,11 @@ static_library("LLVMRISCVCodeGen") {
   ]
   include_dirs = [ "." ]
   sources = [
+    "GISel/RISCVCallLowering.cpp",
+    "GISel/RISCVInstructionSelector.cpp",
+    "GISel/RISCVLegalizerInfo.cpp",
+    "GISel/RISCVRegisterBankInfo.cpp",
     "RISCVAsmPrinter.cpp",
-    "RISCVCallLowering.cpp",
     "RISCVCodeGenPrepare.cpp",
     "RISCVExpandAtomicPseudoInsts.cpp",
     "RISCVExpandPseudoInsts.cpp",
@@ -73,15 +76,12 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVISelLowering.cpp",
     "RISCVInsertVSETVLI.cpp",
     "RISCVInstrInfo.cpp",
-    "RISCVInstructionSelector.cpp",
-    "RISCVLegalizerInfo.cpp",
     "RISCVMCInstLower.cpp",
     "RISCVMachineFunctionInfo.cpp",
     "RISCVMacroFusion.cpp",
     "RISCVMakeCompressible.cpp",
     "RISCVMergeBaseOffset.cpp",
     "RISCVRedundantCopyElimination.cpp",
-    "RISCVRegisterBankInfo.cpp",
     "RISCVRegisterInfo.cpp",
     "RISCVSExtWRemoval.cpp",
     "RISCVSubtarget.cpp",

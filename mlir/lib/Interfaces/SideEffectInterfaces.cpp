@@ -154,3 +154,51 @@ bool mlir::wouldOpBeTriviallyDead(Operation *op) {
     return false;
   return wouldOpBeTriviallyDeadImpl(op);
 }
+
+bool mlir::isMemoryEffectFree(Operation *op) {
+  if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
+    if (!memInterface.hasNoEffect())
+      return false;
+    // If the op does not have recursive side effects, then it is memory effect
+    // free.
+    if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
+      return true;
+  } else if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
+    // Otherwise, if the op does not implement the memory effect interface and
+    // it does not have recursive side effects, then it cannot be known that the
+    // op is moveable.
+    return false;
+  }
+
+  // Recurse into the regions and ensure that all nested ops are memory effect
+  // free.
+  for (Region &region : op->getRegions())
+    for (Operation &op : region.getOps())
+      if (!isMemoryEffectFree(&op))
+        return false;
+  return true;
+}
+
+bool mlir::isSpeculatable(Operation *op) {
+  auto conditionallySpeculatable = dyn_cast<ConditionallySpeculatable>(op);
+  if (!conditionallySpeculatable)
+    return false;
+
+  switch (conditionallySpeculatable.getSpeculatability()) {
+  case Speculation::RecursivelySpeculatable:
+    for (Region &region : op->getRegions()) {
+      for (Operation &op : region.getOps())
+        if (!isSpeculatable(&op))
+          return false;
+    }
+    return true;
+
+  case Speculation::Speculatable:
+    return true;
+
+  case Speculation::NotSpeculatable:
+    return false;
+  }
+
+  llvm_unreachable("Unhandled enum in mlir::isSpeculatable!");
+}

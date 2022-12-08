@@ -644,7 +644,7 @@ public:
   // Accessors
 
   ConstString GetTypeName(lldb::opaque_compiler_type_t type,
-                          bool BaseOnly) override;
+                          bool base_only) override;
 
   ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) override;
 
@@ -1051,7 +1051,8 @@ private:
   clang::PrintingPolicy GetTypePrintingPolicy();
   /// Returns the internal type name for the given NamedDecl using the
   /// type printing policy.
-  std::string GetTypeNameForDecl(const clang::NamedDecl *named_decl);
+  std::string GetTypeNameForDecl(const clang::NamedDecl *named_decl,
+                                 bool qualified = true);
 
   const clang::ClassTemplateSpecializationDecl *
   GetAsTemplateSpecialization(lldb::opaque_compiler_type_t type);

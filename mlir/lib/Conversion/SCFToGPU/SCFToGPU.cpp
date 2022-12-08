@@ -24,6 +24,7 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
@@ -656,8 +657,8 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       cloningMap.map(op->getResults(), clone->getResults());
       // Check for side effects.
       // TODO: Handle region side effects properly.
-      seenSideeffects |= !MemoryEffectOpInterface::hasNoEffect(clone) ||
-                         clone->getNumRegions() != 0;
+      seenSideeffects |=
+          !isMemoryEffectFree(clone) || clone->getNumRegions() != 0;
       // If we are no longer in the innermost scope, sideeffects are disallowed.
       if (seenSideeffects && leftNestingScope)
         return failure();

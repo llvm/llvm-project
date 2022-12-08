@@ -18,6 +18,7 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_SCFPARALLELLOOPFUSION
@@ -155,8 +156,7 @@ void mlir::scf::naivelyFuseParallelOps(Region &region) {
         continue;
       }
       // TODO: Handle region side effects properly.
-      noSideEffects &=
-          MemoryEffectOpInterface::hasNoEffect(&op) && op.getNumRegions() == 0;
+      noSideEffects &= isMemoryEffectFree(&op) && op.getNumRegions() == 0;
     }
     for (ArrayRef<ParallelOp> ploops : ploopChains) {
       for (int i = 0, e = ploops.size(); i + 1 < e; ++i)

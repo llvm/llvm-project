@@ -4918,6 +4918,11 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandBSWAP(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand VP_BSWAP nodes. Expands VP_BSWAP nodes with
+  /// i16/i32/i64 scalar types. Returns SDValue() if expand fails. \param N Node
+  /// to expand \returns The expansion result or SDValue() if it fails.
+  SDValue expandVPBSWAP(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand BITREVERSE nodes. Expands scalar/vector BITREVERSE nodes.
   /// Returns SDValue() if expand fails.
   /// \param N Node to expand

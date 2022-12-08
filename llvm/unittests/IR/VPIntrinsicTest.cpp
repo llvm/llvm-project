@@ -65,6 +65,9 @@ protected:
            "i32)";
     Str << " declare <8 x float> @llvm.vp.rint.v8f32(<8 x float>, <8 x i1>, "
            "i32)";
+    Str << " declare <8 x float> @llvm.vp.nearbyint.v8f32(<8 x float>, <8 x "
+           "i1>, "
+           "i32)";
     Str << " declare <8 x float> @llvm.vp.ceil.v8f32(<8 x float>, <8 x i1>, "
            "i32)";
     Str << " declare <8 x float> @llvm.vp.fneg.v8f32(<8 x float>, <8 x i1>, "
@@ -141,6 +144,9 @@ protected:
         << "(<8 x float>, <8 x float>, metadata, <8 x i1>, i32) ";
     Str << " declare <8 x i1> @llvm.vp.icmp.v8i16"
         << "(<8 x i16>, <8 x i16>, metadata, <8 x i1>, i32) ";
+
+    Str << " declare <8 x i16> @llvm.vp.bswap.v8i16"
+        << "(<8 x i16>, <8 x i1>, i32) ";
 
     return parseAssemblyString(Str.str(), Err, C);
   }

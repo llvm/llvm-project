@@ -95,7 +95,7 @@ Value genIsNonzero(OpBuilder &builder, Location loc, Value v);
 /// used when operands have dynamic shape. The shape of the destination is
 /// stored into dstShape.
 void genReshapeDstShape(Location loc, PatternRewriter &rewriter,
-                        SmallVector<Value, 4> &dstShape,
+                        SmallVectorImpl<Value> &dstShape,
                         ArrayRef<Value> srcShape,
                         ArrayRef<int64_t> staticDstShape,
                         ArrayRef<ReassociationIndices> reassociation);
@@ -177,7 +177,7 @@ void genDenseTensorOrSparseConstantIterLoop(
     function_ref<void(OpBuilder &, Location, Value, ValueRange)> bodyBuilder);
 
 /// Populates given sizes array from dense tensor or sparse tensor constant.
-void sizesFromSrc(OpBuilder &builder, SmallVector<Value, 4> &sizes,
+void sizesFromSrc(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
                   Location loc, Value src);
 
 /// Scans to top of generated loop.
@@ -420,9 +420,9 @@ private:
         : tids(tids), dims(dims), loop(loop), iv(iv) {}
     // TODO: maybe use a vector<pair> for tid and dim?
     // The set of tensors that the loop is operating on
-    const llvm::SmallVector<size_t, 4> tids;
+    const llvm::SmallVector<size_t> tids;
     // The corresponding dims for the tensors
-    const llvm::SmallVector<size_t, 4> dims;
+    const llvm::SmallVector<size_t> dims;
     const Operation *loop; // the loop operation
     const Value iv;        // the induction variable for the loop
   };

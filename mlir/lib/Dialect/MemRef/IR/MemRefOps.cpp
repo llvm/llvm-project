@@ -1486,7 +1486,7 @@ LogicalResult GenericAtomicRMWOp::verify() {
 
   bool hasSideEffects =
       body.walk([&](Operation *nestedOp) {
-            if (MemoryEffectOpInterface::hasNoEffect(nestedOp))
+            if (isMemoryEffectFree(nestedOp))
               return WalkResult::advance();
             nestedOp->emitError(
                 "body of 'memref.generic_atomic_rmw' should contain "

@@ -51,7 +51,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseGreater()))
     return {};
   // Process the data from the parsed dictionary value into struct-like data.
-  SmallVector<DimLevelType, 4> dlt;
+  SmallVector<DimLevelType> dlt;
   AffineMap dimOrd = {};
   AffineMap higherOrd = {};
   unsigned ptr = 0;
@@ -601,7 +601,7 @@ void ForeachOp::build(
   auto rtp = tensor.getType().cast<RankedTensorType>();
   int64_t rank = rtp.getRank();
 
-  SmallVector<Type, 4> blockArgTypes;
+  SmallVector<Type> blockArgTypes;
   // Starts with n index.
   std::fill_n(std::back_inserter(blockArgTypes), rank, builder.getIndexType());
   // Followed by one value.
@@ -609,7 +609,7 @@ void ForeachOp::build(
   // Followed by reduction variable.
   blockArgTypes.append(initArgs.getTypes().begin(), initArgs.getTypes().end());
 
-  SmallVector<Location, 4> blockArgLocs;
+  SmallVector<Location> blockArgLocs;
   std::fill_n(std::back_inserter(blockArgLocs), blockArgTypes.size(),
               tensor.getLoc());
 

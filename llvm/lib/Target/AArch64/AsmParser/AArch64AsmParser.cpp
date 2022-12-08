@@ -3584,6 +3584,8 @@ static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
     Str += "ARMv8.7a";
   else if (FBS[AArch64::HasV8_8aOps])
     Str += "ARMv8.8a";
+  else if (FBS[AArch64::HasV8_9aOps])
+    Str += "ARMv8.9a";
   else if (FBS[AArch64::HasV9_0aOps])
     Str += "ARMv9-a";
   else if (FBS[AArch64::HasV9_1aOps])
@@ -3592,6 +3594,8 @@ static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
     Str += "ARMv9.2a";
   else if (FBS[AArch64::HasV9_3aOps])
     Str += "ARMv9.3a";
+  else if (FBS[AArch64::HasV9_4aOps])
+    Str += "ARMv9.4a";
   else if (FBS[AArch64::HasV8_0rOps])
     Str += "ARMv8r";
   else {
@@ -6646,10 +6650,12 @@ static void ExpandCryptoAEK(AArch64::ArchKind ArchKind,
     case AArch64::ArchKind::ARMV8_6A:
     case AArch64::ArchKind::ARMV8_7A:
     case AArch64::ArchKind::ARMV8_8A:
+    case AArch64::ArchKind::ARMV8_9A:
     case AArch64::ArchKind::ARMV9A:
     case AArch64::ArchKind::ARMV9_1A:
     case AArch64::ArchKind::ARMV9_2A:
     case AArch64::ArchKind::ARMV9_3A:
+    case AArch64::ArchKind::ARMV9_4A:
     case AArch64::ArchKind::ARMV8R:
       RequestedExtensions.push_back("sm4");
       RequestedExtensions.push_back("sha3");
@@ -6673,9 +6679,12 @@ static void ExpandCryptoAEK(AArch64::ArchKind ArchKind,
     case AArch64::ArchKind::ARMV8_6A:
     case AArch64::ArchKind::ARMV8_7A:
     case AArch64::ArchKind::ARMV8_8A:
+    case AArch64::ArchKind::ARMV8_9A:
     case AArch64::ArchKind::ARMV9A:
     case AArch64::ArchKind::ARMV9_1A:
     case AArch64::ArchKind::ARMV9_2A:
+    case AArch64::ArchKind::ARMV9_3A:
+    case AArch64::ArchKind::ARMV9_4A:
       RequestedExtensions.push_back("nosm4");
       RequestedExtensions.push_back("nosha3");
       RequestedExtensions.push_back("nosha2");

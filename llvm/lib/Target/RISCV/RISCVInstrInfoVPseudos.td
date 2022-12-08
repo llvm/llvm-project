@@ -120,15 +120,17 @@ class MxSet<int eew> {
                            !eq(eew, 64) : [V_M1, V_M2, V_M4, V_M8]);
 }
 
-class FPR_Info<RegisterClass regclass, string fx, list<LMULInfo> mxlist> {
+class FPR_Info<RegisterClass regclass, string fx, list<LMULInfo> mxlist,
+               list<LMULInfo> mxlistfw> {
   RegisterClass fprclass = regclass;
   string FX = fx;
   list<LMULInfo> MxList = mxlist;
+  list<LMULInfo> MxListFW = mxlistfw;
 }
 
-def SCALAR_F16 : FPR_Info<FPR16, "F16", MxSet<16>.m>;
-def SCALAR_F32 : FPR_Info<FPR32, "F32", MxSet<32>.m>;
-def SCALAR_F64 : FPR_Info<FPR64, "F64", MxSet<64>.m>;
+def SCALAR_F16 : FPR_Info<FPR16, "F16", MxSet<16>.m, [V_MF4, V_MF2, V_M1, V_M2, V_M4]>;
+def SCALAR_F32 : FPR_Info<FPR32, "F32", MxSet<32>.m, [V_MF2, V_M1, V_M2, V_M4]>;
+def SCALAR_F64 : FPR_Info<FPR64, "F64", MxSet<64>.m, []>;
 
 defvar FPList = [SCALAR_F16, SCALAR_F32, SCALAR_F64];
 
@@ -1030,6 +1032,22 @@ class VPseudoUnaryMaskTA<VReg RetClass, VReg OpClass, string Constraint = ""> :
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
+}
+
+class VPseudoUnaryMaskTA_NoExcept<VReg RetClass, VReg OpClass, string Constraint = ""> :
+        Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
+               (ins GetVRegNoV0<RetClass>.R:$merge, OpClass:$rs2, VMaskOp:$vm,
+                    AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []> {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let HasMergeOp = 1;
+  let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
+  let usesCustomInserter = 1;
 }
 
 class VPseudoUnaryMaskTA_FRM<VReg RetClass, VReg OpClass, string Constraint = ""> :
@@ -2012,7 +2030,7 @@ multiclass VPseudoBinaryW_VX_LMUL<LMULInfo m> {
 
 multiclass VPseudoBinaryW_VF {
   foreach f = FPListW in
-    foreach m = f.MxList in
+    foreach m = f.MxListFW in
       defm "_V" # f.FX : VPseudoBinary<m.wvrclass, m.vrclass,
                                        f.fprclass, m,
                                        "@earlyclobber $rd">;
@@ -2040,7 +2058,7 @@ multiclass VPseudoBinaryW_WX_LMUL<LMULInfo m> {
 
 multiclass VPseudoBinaryW_WF {
   foreach f = FPListW in
-    foreach m = f.MxList in
+    foreach m = f.MxListFW in
       defm "_W" # f.FX : VPseudoBinary<m.wvrclass, m.wvrclass,
                                        f.fprclass, m>;
 }
@@ -2868,7 +2886,7 @@ multiclass VPseudoTernaryW_VX<LMULInfo m> {
 multiclass VPseudoTernaryW_VF {
   defvar constraint = "@earlyclobber $rd";
   foreach f = FPListW in
-    foreach m = f.MxList in
+    foreach m = f.MxListFW in
       defm "_V" # f.FX : VPseudoTernaryWithPolicy<m.wvrclass, f.fprclass,
                                                   m.vrclass, m, constraint>;
 }
@@ -2888,10 +2906,10 @@ multiclass VPseudoVMAC_VV_VX_AAXA<string Constraint = ""> {
 
     defm "" : VPseudoTernaryV_VV_AAXA_LMUL<m, Constraint>,
               Sched<[WriteVIMulAddV_MX, ReadVIMulAddV_MX, ReadVIMulAddV_MX,
-                ReadVIMulAddV_MX, ReadVMask]>;
+                     ReadVIMulAddV_MX, ReadVMask]>;
     defm "" : VPseudoTernaryV_VX_AAXA<m, Constraint>,
               Sched<[WriteVIMulAddX_MX, ReadVIMulAddV_MX, ReadVIMulAddV_MX,
-                ReadVIMulAddX_MX, ReadVMask]>;
+                     ReadVIMulAddX_MX, ReadVMask]>;
   }
 }
 
@@ -2919,10 +2937,10 @@ multiclass VPseudoVWMAC_VV_VX {
 
     defm "" : VPseudoTernaryW_VV_LMUL<m>,
               Sched<[WriteVIWMulAddV_MX, ReadVIWMulAddV_MX, ReadVIWMulAddV_MX,
-                ReadVIWMulAddV_MX, ReadVMask]>;
+                     ReadVIWMulAddV_MX, ReadVMask]>;
     defm "" : VPseudoTernaryW_VX<m>,
               Sched<[WriteVIWMulAddX_MX, ReadVIWMulAddV_MX, ReadVIWMulAddV_MX,
-                ReadVIWMulAddX_MX, ReadVMask]>;
+                     ReadVIWMulAddX_MX, ReadVMask]>;
   }
 }
 
@@ -2935,7 +2953,7 @@ multiclass VPseudoVWMAC_VX {
 
     defm "" : VPseudoTernaryW_VX<m>,
               Sched<[WriteVIWMulAddX_MX, ReadVIWMulAddV_MX, ReadVIWMulAddV_MX,
-                ReadVIWMulAddX_MX, ReadVMask]>;
+                     ReadVIWMulAddX_MX, ReadVMask]>;
   }
 }
 
@@ -3064,6 +3082,15 @@ multiclass VPseudoConversionRM<VReg RetClass,
   }
 }
 
+multiclass VPseudoConversionNoExcept<VReg RetClass,
+                                     VReg Op1Class,
+                                     LMULInfo MInfo,
+                                     string Constraint = ""> {
+  let VLMul = MInfo.value in {
+    def "_" # MInfo.MX # "_MASK" : VPseudoUnaryMaskTA_NoExcept<RetClass, Op1Class, Constraint>;
+  }
+}
+
 multiclass VPseudoVCVTI_V {
   foreach m = MxListF in
     defm _V : VPseudoConversion<m.vrclass, m.vrclass, m>,
@@ -3073,6 +3100,12 @@ multiclass VPseudoVCVTI_V {
 multiclass VPseudoVCVTI_RM_V {
   foreach m = MxListF in
     defm _V : VPseudoConversionRM<m.vrclass, m.vrclass, m>,
+              Sched<[WriteVFCvtFToIV, ReadVFCvtFToIV, ReadVMask]>;
+}
+
+multiclass VPseudoVFROUND_NOEXCEPT_V {
+  foreach m = MxListF in
+    defm _V : VPseudoConversionNoExcept<m.vrclass, m.vrclass, m>,
               Sched<[WriteVFCvtFToIV, ReadVFCvtFToIV, ReadVMask]>;
 }
 
@@ -5154,6 +5187,7 @@ defm PseudoVFCVT_X_F : VPseudoVCVTI_V;
 defm PseudoVFCVT_RTZ_XU_F : VPseudoVCVTI_V;
 defm PseudoVFCVT_RTZ_X_F : VPseudoVCVTI_V;
 defm PseudoVFCVT_RM_X_F : VPseudoVCVTI_RM_V;
+defm PseudoVFROUND_NOEXCEPT : VPseudoVFROUND_NOEXCEPT_V;
 let Uses = [FRM] in {
 defm PseudoVFCVT_F_XU : VPseudoVCVTF_V;
 defm PseudoVFCVT_F_X : VPseudoVCVTF_V;

@@ -1457,7 +1457,7 @@ static DiagnosedSilenceableFailure unpackPDLOperations(
   }
 
   return DiagnosedSilenceableFailure(success());
-};
+}
 
 DiagnosedSilenceableFailure transform::tileToForeachThreadOpImpl(
     RewriterBase &rewriter, transform::TransformState &state,

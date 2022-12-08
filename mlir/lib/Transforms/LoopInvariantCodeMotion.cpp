@@ -13,8 +13,8 @@
 #include "mlir/Transforms/Passes.h"
 
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
-#include "mlir/Transforms/SideEffectUtils.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_LOOPINVARIANTCODEMOTION

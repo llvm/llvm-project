@@ -14,6 +14,7 @@ unittest("FormatTests") {
     "BracesInserterTest.cpp",
     "BracesRemoverTest.cpp",
     "CleanupTest.cpp",
+    "ConfigParseTest.cpp",
     "DefinitionBlockSeparatorTest.cpp",
     "FormatTest.cpp",
     "FormatTestCSharp.cpp",

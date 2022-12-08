@@ -73,6 +73,7 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   case ArchKind::ARMV8_6A:
   case ArchKind::ARMV8_7A:
   case ArchKind::ARMV8_8A:
+  case ArchKind::ARMV8_9A:
   case ArchKind::ARMV8R:
   case ArchKind::ARMV8MBaseline:
   case ArchKind::ARMV8MMainline:
@@ -82,6 +83,7 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   case ArchKind::ARMV9_1A:
   case ArchKind::ARMV9_2A:
   case ArchKind::ARMV9_3A:
+  case ArchKind::ARMV9_4A:
     return 9;
   case ArchKind::INVALID:
     return 0;
@@ -113,10 +115,12 @@ static ARM::ProfileKind getProfileKind(ARM::ArchKind AK) {
   case ARM::ArchKind::ARMV8_6A:
   case ARM::ArchKind::ARMV8_7A:
   case ARM::ArchKind::ARMV8_8A:
+  case ARM::ArchKind::ARMV8_9A:
   case ARM::ArchKind::ARMV9A:
   case ARM::ArchKind::ARMV9_1A:
   case ARM::ArchKind::ARMV9_2A:
   case ARM::ArchKind::ARMV9_3A:
+  case ARM::ArchKind::ARMV9_4A:
     return ARM::ProfileKind::A;
   case ARM::ArchKind::ARMV4:
   case ARM::ArchKind::ARMV4T:

@@ -48,7 +48,6 @@ extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
   initializeAnalysis(Registry);
   initializeTransformUtils(Registry);
   initializeInstCombine(Registry);
-  initializeAggressiveInstCombine(Registry);
   initializeTarget(Registry);
 
   CLArgs.push_back("-O2");

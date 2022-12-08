@@ -1056,7 +1056,12 @@ template <class T, bool Add> bool OffsetHelper(InterpState &S, CodePtr OpPC) {
   // Offset is valid - compute it on unsigned.
   int64_t WideIndex = static_cast<int64_t>(Index);
   int64_t WideOffset = static_cast<int64_t>(Offset);
-  int64_t Result = Add ? (WideIndex + WideOffset) : (WideIndex - WideOffset);
+  int64_t Result;
+  if constexpr (Add)
+    Result = WideIndex + WideOffset;
+  else
+    Result = WideIndex - WideOffset;
+
   S.Stk.push<Pointer>(Ptr.atIndex(static_cast<unsigned>(Result)));
   return true;
 }

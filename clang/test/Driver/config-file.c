@@ -44,9 +44,10 @@
 // CHECK-NESTED: Configuration file: {{.*}}Inputs{{.}}config-2.cfg
 // CHECK-NESTED: -Wundefined-func-template
 
-// RUN: %clang --config-system-dir=%S/Inputs --config-user-dir= --config config-2.cfg -S %s -### 2>&1 | FileCheck %s -check-prefix CHECK-NESTED2
-// CHECK-NESTED2: Configuration file: {{.*}}Inputs{{.}}config-2.cfg
-// CHECK-NESTED2: -Wundefined-func-template
+// RUN: %clang --config-system-dir=%S/Inputs --config-user-dir=%S/Inputs/config --config config-6.cfg -S %s -### 2>&1 | FileCheck %s -check-prefix CHECK-NESTED2
+// CHECK-NESTED2: Configuration file: {{.*}}Inputs{{.}}config-6.cfg
+// CHECK-NESTED2: -isysroot
+// CHECK-NESTED2-SAME: /opt/data
 
 
 // RUN: %clang --config %S/Inputs/config-2a.cfg -S %s -### 2>&1 | FileCheck %s -check-prefix CHECK-NESTEDa

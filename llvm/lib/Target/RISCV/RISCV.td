@@ -518,7 +518,7 @@ include "RISCVSchedule.td"
 include "RISCVRegisterInfo.td"
 include "RISCVCallingConv.td"
 include "RISCVInstrInfo.td"
-include "RISCVRegisterBanks.td"
+include "GISel/RISCVRegisterBanks.td"
 include "RISCVSchedRocket.td"
 include "RISCVSchedSiFive7.td"
 

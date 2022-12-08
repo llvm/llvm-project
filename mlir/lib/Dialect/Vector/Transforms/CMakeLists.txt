@@ -31,6 +31,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRLinalgDialect
   MLIRMemRefDialect
   MLIRSCFDialect
+  MLIRSideEffectInterfaces
   MLIRTransforms
   MLIRVectorDialect
   MLIRVectorInterfaces

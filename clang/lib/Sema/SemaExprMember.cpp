@@ -1621,16 +1621,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
   if (BaseType->isExtVectorType()) {
     // FIXME: this expr should store IsArrow.
     IdentifierInfo *Member = MemberName.getAsIdentifierInfo();
-    ExprValueKind VK;
-    if (IsArrow)
-      VK = VK_LValue;
-    else {
-      if (PseudoObjectExpr *POE = dyn_cast<PseudoObjectExpr>(BaseExpr.get()))
-        VK = POE->getSyntacticForm()->getValueKind();
-      else
-        VK = BaseExpr.get()->getValueKind();
-    }
-
+    ExprValueKind VK = (IsArrow ? VK_LValue : BaseExpr.get()->getValueKind());
     QualType ret = CheckExtVectorComponent(S, BaseType, VK, OpLoc,
                                            Member, MemberLoc);
     if (ret.isNull())

@@ -89,7 +89,7 @@ def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2"> {
       * bit encoding: S1E5M2
       * exponent bias: 15
       * infinities: supported with exponent set to all 1s and mantissa 0s
-      * NaNs: supported with exponent bits set to all 1s and mantissa of 
+      * NaNs: supported with exponent bits set to all 1s and mantissa of
         (01, 10, or 11)
       * denormals when exponent is 0
 
@@ -97,6 +97,27 @@ def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// Float8E4M3FNType
+
+def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN"> {
+  let summary = "8-bit floating point with 3 bit mantissa";
+  let description = [{
+    An 8-bit floating point type with 1 sign bit, 4 bits exponent and 3 bits
+    mantissa. This is not a standard type as defined by IEEE-754, but it follows
+    similar conventions, with the exception that there are no infinity values
+    and only two NaN representations. This type has the following
+    characteristics:
+
+      * bit encoding: S1E4M3
+      * exponent bias: 7
+      * infinities: Not supported
+      * NaNs: supported with exponent bits and mantissa bits set to all 1s
+      * denormals when exponent is 0
+
+    Described in: https://arxiv.org/abs/2209.05433
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // BFloat16Type

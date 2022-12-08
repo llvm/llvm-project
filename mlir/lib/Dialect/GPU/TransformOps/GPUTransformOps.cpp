@@ -247,10 +247,13 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapForeachToBlocksImpl(
 
   // Step 5. RAUW thread indices to thread ops.
   for (Value blockIdx : foreachThreadOp.getThreadIndices()) {
-    for (Operation *user : llvm::make_early_inc_range(blockIdx.getUsers())) {
-      rewriter.updateRootInPlace(user, [&]() {
-        user->replaceUsesOfWith(blockIdx, bvm.lookup(blockIdx));
-      });
+    Value val = bvm.lookup(blockIdx);
+    SmallVector<OpOperand *> uses;
+    for (OpOperand &use : blockIdx.getUses())
+      uses.push_back(&use);
+    for (OpOperand *operand : uses) {
+      Operation *op = operand->getOwner();
+      rewriter.updateRootInPlace(op, [&]() { operand->set(val); });
     }
   }
 
@@ -490,10 +493,13 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
 
   // Step 6. RAUW thread indices to thread ops.
   for (Value threadIdx : foreachThreadOp.getThreadIndices()) {
-    for (Operation *user : llvm::make_early_inc_range(threadIdx.getUsers())) {
-      rewriter.updateRootInPlace(user, [&]() {
-        user->replaceUsesOfWith(threadIdx, bvm.lookup(threadIdx));
-      });
+    Value val = bvm.lookup(threadIdx);
+    SmallVector<OpOperand *> uses;
+    for (OpOperand &use : threadIdx.getUses())
+      uses.push_back(&use);
+    for (OpOperand *operand : uses) {
+      Operation *op = operand->getOwner();
+      rewriter.updateRootInPlace(op, [&]() { operand->set(val); });
     }
   }
 

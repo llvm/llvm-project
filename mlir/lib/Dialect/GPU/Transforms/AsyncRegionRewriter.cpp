@@ -21,6 +21,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -45,9 +46,7 @@ class GpuAsyncRegionPass
 static bool isTerminator(Operation *op) {
   return op->mightHaveTrait<OpTrait::IsTerminator>();
 }
-static bool hasSideEffects(Operation *op) {
-  return !MemoryEffectOpInterface::hasNoEffect(op);
-}
+static bool hasSideEffects(Operation *op) { return !isMemoryEffectFree(op); }
 
 // Region walk callback which makes GPU ops implementing the AsyncOpInterface
 // execute asynchronously.

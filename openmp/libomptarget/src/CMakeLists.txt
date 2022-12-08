@@ -25,6 +25,7 @@ add_llvm_library(omptarget
   ompt_callback.cpp
   interop.cpp
   omptarget.cpp
+  ompt_callback.cpp
   rtl.cpp
   LegacyAPI.cpp
 

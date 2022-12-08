@@ -1401,6 +1401,8 @@ def err_omp_mapper_expected_declarator : Error<
   "expected declarator on 'omp declare mapper' directive">;
 def err_omp_unexpected_append_op : Error<
   "unexpected operation specified in 'append_args' clause, expected 'interop'">;
+def err_omp_unexpected_execution_modifier : Error<
+  "unexpected 'execution' modifier in non-executable context">;
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;

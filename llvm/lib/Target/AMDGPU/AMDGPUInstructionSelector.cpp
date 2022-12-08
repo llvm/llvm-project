@@ -2267,6 +2267,29 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
       return RBI.constrainGenericRegister(DstReg, AMDGPU::SReg_32RegClass, *MRI);
     }
 
+    // Using a single 32-bit SALU to calculate the high half is smaller than
+    // S_BFE with a literal constant operand.
+    if (DstSize > 32 && SrcSize == 32) {
+      Register HiReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      unsigned SubReg = InReg ? AMDGPU::sub0 : AMDGPU::NoSubRegister;
+      if (Signed) {
+        BuildMI(MBB, I, DL, TII.get(AMDGPU::S_ASHR_I32), HiReg)
+          .addReg(SrcReg, 0, SubReg)
+          .addImm(31);
+      } else {
+        BuildMI(MBB, I, DL, TII.get(AMDGPU::S_MOV_B32), HiReg)
+          .addImm(0);
+      }
+      BuildMI(MBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), DstReg)
+        .addReg(SrcReg, 0, SubReg)
+        .addImm(AMDGPU::sub0)
+        .addReg(HiReg)
+        .addImm(AMDGPU::sub1);
+      I.eraseFromParent();
+      return RBI.constrainGenericRegister(DstReg, AMDGPU::SReg_64RegClass,
+                                          *MRI);
+    }
+
     const unsigned BFE64 = Signed ? AMDGPU::S_BFE_I64 : AMDGPU::S_BFE_U64;
     const unsigned BFE32 = Signed ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32;
 
@@ -2275,7 +2298,7 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
       // We need a 64-bit register source, but the high bits don't matter.
       Register ExtReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
       Register UndefReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
-      unsigned SubReg = InReg ? AMDGPU::sub0 : 0;
+      unsigned SubReg = InReg ? AMDGPU::sub0 : AMDGPU::NoSubRegister;
 
       BuildMI(MBB, I, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefReg);
       BuildMI(MBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), ExtReg)

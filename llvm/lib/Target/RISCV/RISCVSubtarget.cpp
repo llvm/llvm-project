@@ -12,12 +12,12 @@
 
 #include "RISCVSubtarget.h"
 #include "RISCV.h"
-#include "RISCVCallLowering.h"
 #include "RISCVFrameLowering.h"
-#include "RISCVLegalizerInfo.h"
 #include "RISCVMacroFusion.h"
-#include "RISCVRegisterBankInfo.h"
 #include "RISCVTargetMachine.h"
+#include "GISel/RISCVCallLowering.h"
+#include "GISel/RISCVLegalizerInfo.h"
+#include "GISel/RISCVRegisterBankInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 

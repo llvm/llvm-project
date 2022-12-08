@@ -985,7 +985,10 @@ configuration file:
 Files included by ``@file`` directives in configuration files are resolved
 relative to the including file. For example, if a configuration file
 ``~/.llvm/target.cfg`` contains the directive ``@os/linux.opts``, the file
-``linux.opts`` is searched for in the directory ``~/.llvm/os``.
+``linux.opts`` is searched for in the directory ``~/.llvm/os``. Another way to
+include a file content is using the command line option ``--config=``. It works
+similarly but the included file is searched for using the rules for configuration
+files.
 
 To generate paths relative to the configuration file, the ``<CFGDIR>`` token may
 be used. This will expand to the absolute path of the directory containing the

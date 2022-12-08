@@ -318,6 +318,25 @@ bool isOpTriviallyDead(Operation *op);
 /// `isOpTriviallyDead` if `op` was unused.
 bool wouldOpBeTriviallyDead(Operation *op);
 
+/// Returns true if the given operation is free of memory effects.
+///
+/// An operation is free of memory effects if its implementation of
+/// `MemoryEffectOpInterface` indicates that it has no memory effects. For
+/// example, it may implement `NoMemoryEffect` in ODS. Alternatively, if the
+/// operation has the `HasRecursiveMemoryEffects` trait, then it is free of
+/// memory effects if all of its nested operations are free of memory effects.
+///
+/// If the operation has both, then it is free of memory effects if both
+/// conditions are satisfied.
+bool isMemoryEffectFree(Operation *op);
+
+/// Returns true if the given operation is speculatable, i.e. has no undefined
+/// behavior or other side effects.
+///
+/// An operation can indicate that it is speculatable by implementing the
+/// getSpeculatability hook in the ConditionallySpeculatable op interface.
+bool isSpeculatable(Operation *op);
+
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//

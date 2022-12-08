@@ -298,7 +298,7 @@ public:
   /// may cause data movement and invalidate the underlying memory address.
   TensorExp &exp(unsigned e) { return tensorExps[e]; }
   LatPoint &lat(unsigned l) { return latPoints[l]; }
-  SmallVector<unsigned, 16> &set(unsigned s) { return latSets[s]; }
+  SmallVector<unsigned> &set(unsigned s) { return latSets[s]; }
 
 #ifndef NDEBUG
   /// Print methods (for debugging).
@@ -341,9 +341,9 @@ private:
   std::vector<std::vector<DimLevelType>> dimTypes;
   // Map that converts pair<tensor id, loop id> to the corresponding dimension.
   std::vector<std::vector<Optional<unsigned>>> loopIdxToDim;
-  llvm::SmallVector<TensorExp, 32> tensorExps;
-  llvm::SmallVector<LatPoint, 16> latPoints;
-  llvm::SmallVector<SmallVector<unsigned, 16>, 8> latSets;
+  llvm::SmallVector<TensorExp> tensorExps;
+  llvm::SmallVector<LatPoint> latPoints;
+  llvm::SmallVector<SmallVector<unsigned>> latSets;
 };
 
 } // namespace sparse_tensor
