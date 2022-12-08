@@ -39,14 +39,14 @@
 #define BUILTIN_ABS_F32 __builtin_fabsf
 #define BUILTIN_ABS_F64 __builtin_fabs
 #define BUILTIN_ABS_F16 __builtin_fabsf16
-#define BUILTIN_ABS_2F16 __llvm_fabs_2f16
+#define BUILTIN_ABS_2F16 __builtin_elementwise_abs
 
 #define BUILTIN_BITALIGN_B32 __builtin_amdgcn_alignbit
 
 #define BUILTIN_CEIL_F32 __builtin_ceilf
 #define BUILTIN_CEIL_F64 __builtin_ceil
 #define BUILTIN_CEIL_F16 __builtin_ceilf16
-#define BUILTIN_CEIL_2F16 __llvm_ceil_2f16
+#define BUILTIN_CEIL_2F16 __builtin_elementwise_ceil
 
 #define BUILTIN_CLASS_F32 __builtin_amdgcn_classf
 #define BUILTIN_CLASS_F64 __builtin_amdgcn_class
@@ -88,7 +88,7 @@
 #define BUILTIN_FLOOR_F32 __builtin_floorf
 #define BUILTIN_FLOOR_F64 __builtin_floor
 #define BUILTIN_FLOOR_F16 __builtin_floorf16
-#define BUILTIN_FLOOR_2F16 __llvm_floor_2f16
+#define BUILTIN_FLOOR_2F16 __builtin_elementwise_floor
 
 #define BUILTIN_FRACTION_F32(X) ({ \
     float _fract_x = X; \
@@ -114,7 +114,7 @@
 #define BUILTIN_MAX_F32 __builtin_fmaxf
 #define BUILTIN_MAX_F64 __builtin_fmax
 #define BUILTIN_MAX_F16 __builtin_fmaxf16
-#define BUILTIN_MAX_2F16 __llvm_maxnum_2f16
+#define BUILTIN_MAX_2F16 __builtin_elementwise_max
 
 #define BUILTIN_MAX_S32(A,B) ((A) < (B) ? (B) : (A))
 #define BUILTIN_MAX_U32(A,B) ((A) < (B) ? (B) : (A))
@@ -122,7 +122,7 @@
 #define BUILTIN_MIN_F32 __builtin_fminf
 #define BUILTIN_MIN_F64 __builtin_fmin
 #define BUILTIN_MIN_F16 __builtin_fminf16
-#define BUILTIN_MIN_2F16 __llvm_minnum_2f16
+#define BUILTIN_MIN_2F16 __builtin_elementwise_min
 
 #define BUILTIN_MIN_S32(A,B) ((A) < (B) ? (A) : (B))
 #define BUILTIN_MIN_U32(A,B) ((A) < (B) ? (A) : (B))
@@ -164,7 +164,7 @@
 #define BUILTIN_TRUNC_F32 __builtin_truncf
 #define BUILTIN_TRUNC_F64 __builtin_trunc
 #define BUILTIN_TRUNC_F16 __builtin_truncf16
-#define BUILTIN_TRUNC_2F16 __llvm_trunc_2f16
+#define BUILTIN_TRUNC_2F16 __builtin_elementwise_trunc
 
 #define BUILTIN_ROUND_F32 __builtin_roundf
 #define BUILTIN_ROUND_F64 __builtin_round
@@ -213,12 +213,12 @@
 #define BUILTIN_CMAX_F32 __builtin_fmaxf
 #define BUILTIN_CMAX_F64 __builtin_fmax
 #define BUILTIN_CMAX_F16 __builtin_fmaxf16
-#define BUILTIN_CMAX_2F16 __llvm_maxnum_2f16
+#define BUILTIN_CMAX_2F16 __builtin_elementwise_max
 
 #define BUILTIN_CMIN_F32 __builtin_fminf
 #define BUILTIN_CMIN_F64 __builtin_fmin
 #define BUILTIN_CMIN_F16 __builtin_fminf16
-#define BUILTIN_CMIN_2F16 __llvm_minnum_2f16
+#define BUILTIN_CMIN_2F16 __builtin_elementwise_min
 
 #define BUILTIN_TRIG_PREOP_F64 __builtin_amdgcn_trig_preop
 
