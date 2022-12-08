@@ -1541,7 +1541,8 @@ static Instruction *foldTruncInsElt(InsertElementInst &InsElt, bool IsBigEndian,
 
   unsigned NumEltsInScalar = ScalarWidth / VecEltWidth;
   Value *X = T;
-  if (IndexC == (IsBigEndian ? NumEltsInScalar - 1 : 0)) {
+  if ((IsBigEndian && IndexC == NumEltsInScalar - 1) ||
+      (!IsBigEndian && IndexC == 0)) {
     // The insert is to the LSB end of the vector (depends on endian).
     // That's all we need.
   } else {
