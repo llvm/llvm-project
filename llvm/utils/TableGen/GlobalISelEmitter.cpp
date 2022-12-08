@@ -5858,6 +5858,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   // Emit a table containing the PredicateBitsets objects needed by the matcher
   // and an enum for the matcher to reference them with.
   std::vector<std::vector<Record *>> FeatureBitsets;
+  FeatureBitsets.reserve(Rules.size());
   for (auto &Rule : Rules)
     FeatureBitsets.push_back(Rule.getRequiredFeatures());
   llvm::sort(FeatureBitsets, [&](const std::vector<Record *> &A,
