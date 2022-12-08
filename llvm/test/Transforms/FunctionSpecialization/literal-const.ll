@@ -1,6 +1,6 @@
-; RUN: opt -S --passes=ipsccp -specialize-functions \
+; RUN: opt -S --passes=function-specialization \
 ; RUN:        -force-function-specialization < %s | FileCheck %s -check-prefix CHECK-NOLIT
-; RUN: opt -S --passes=ipsccp -specialize-functions \
+; RUN: opt -S --passes=function-specialization \
 ; RUN:        -function-specialization-for-literal-constant \
 ; RUN:        -force-function-specialization < %s | FileCheck %s -check-prefix CHECK-LIT
 
