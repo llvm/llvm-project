@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax %s -always-inline | opt -temporarily-allow-old-pass-syntax -passes='print<scalar-evolution>'
+; RUN: opt %s -passes=always-inline | opt -passes='print<scalar-evolution>'
 ; There was optimization bug in ScalarEvolution, that causes too long
 ; compute time and stack overflow crash.
 
