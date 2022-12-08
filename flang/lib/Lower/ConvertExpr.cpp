@@ -4654,6 +4654,37 @@ private:
       } break;
       case PassBy::Box:
       case PassBy::MutableBox:
+        // Handle polymorphic passed object.
+        if (fir::isPolymorphicType(argTy)) {
+          if (isArray(*expr)) {
+            ExtValue exv = asScalarRef(*expr);
+            mlir::Value tdesc;
+            if (fir::isPolymorphicType(fir::getBase(exv).getType())) {
+              mlir::Type tdescType =
+                  fir::TypeDescType::get(mlir::NoneType::get(builder.getContext()));
+              tdesc = builder.create<fir::BoxTypeDescOp>(
+                  loc, tdescType, fir::getBase(exv));
+            }
+            mlir::Type baseTy =
+                fir::dyn_cast_ptrOrBoxEleTy(fir::getBase(exv).getType());
+            mlir::Type innerTy = llvm::TypeSwitch<mlir::Type, mlir::Type>(baseTy)
+                .Case<fir::SequenceType>([](auto ty) { return ty.getEleTy(); })
+                .Default([](mlir::Type t) {return t; });
+
+            operands.emplace_back([=](IterSpace iters) -> ExtValue {
+              mlir::Value coord = builder.create<fir::CoordinateOp>(
+                loc, fir::ReferenceType::get(innerTy), fir::getBase(exv), iters.iterVec()); 
+              mlir::Value empty;
+              mlir::ValueRange emptyRange;
+              return builder.create<fir::EmboxOp>(loc, fir::ClassType::get(innerTy),
+                  coord, empty, empty, emptyRange, tdesc);
+            });
+          } else {
+            PushSemantics(ConstituentSemantics::BoxValue);
+            operands.emplace_back(genElementalArgument(*expr));
+          }
+          break;
+        }
         // See C15100 and C15101
         fir::emitFatalError(loc, "cannot be POINTER, ALLOCATABLE");
       }
