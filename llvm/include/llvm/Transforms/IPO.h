@@ -147,6 +147,11 @@ ModulePass *createDeadArgHackingPass();
 ModulePass *createIPSCCPPass();
 
 //===----------------------------------------------------------------------===//
+/// createFunctionSpecializationPass - This pass propagates constants from call
+/// sites to the specialized version of the callee function.
+ModulePass *createFunctionSpecializationPass();
+
+//===----------------------------------------------------------------------===//
 //
 /// createLoopExtractorPass - This pass extracts all natural loops from the
 /// program into a function if it can.
