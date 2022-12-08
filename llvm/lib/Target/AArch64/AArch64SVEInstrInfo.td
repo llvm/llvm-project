@@ -327,7 +327,8 @@ def SDT_AArch64PTest : SDTypeProfile<0, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
 def AArch64ptest     : SDNode<"AArch64ISD::PTEST", SDT_AArch64PTest>;
 def AArch64ptest_any : SDNode<"AArch64ISD::PTEST_ANY", SDT_AArch64PTest>;
 
-def SDT_AArch64DUP_PRED  : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0, 3>, SDTCisVec<1>, SDTCVecEltisVT<1,i1>]>;
+def SDT_AArch64DUP_PRED  : SDTypeProfile<1, 3,
+  [SDTCisVec<0>, SDTCisSameAs<0, 3>, SDTCisVec<1>, SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0, 1>]>;
 def AArch64dup_mt : SDNode<"AArch64ISD::DUP_MERGE_PASSTHRU", SDT_AArch64DUP_PRED>;
 
 def AArch64splice : SDNode<"AArch64ISD::SPLICE", SDT_AArch64Arith>;
@@ -2297,43 +2298,46 @@ let Predicates = [HasSVEorSME] in {
   }
 
   let AddedComplexity = 1 in {
-  class LD1RPat<ValueType vt, SDPatternOperator operator,
-                Instruction load, Instruction ptrue, ValueType index_vt, ComplexPattern CP, Operand immtype> :
-        Pat<(vt (splat_vector (index_vt (operator (CP GPR64:$base, immtype:$offset))))),
-            (load (ptrue 31), GPR64:$base, $offset)>;
+    multiclass LD1RPat<ValueType vt, SDPatternOperator operator,
+                  Instruction load, Instruction ptrue, ValueType index_vt, ComplexPattern CP, Operand immtype> {
+      def : Pat<(vt (splat_vector (index_vt (operator (CP GPR64:$base, immtype:$offset))))),
+                (load (ptrue 31), GPR64:$base, $offset)>;
+      def : Pat<(vt (AArch64dup_mt PPR:$pg, (index_vt (operator (CP GPR64:$base, immtype:$offset))), (SVEDup0Undef))),
+                (load $pg, GPR64:$base, $offset)>;
+    }
   }
 
   // LDR1 of 8-bit data
-  def : LD1RPat<nxv16i8, extloadi8,  LD1RB_IMM,    PTRUE_B, i32, am_indexed8_6b, uimm6s1>;
-  def : LD1RPat<nxv8i16, zextloadi8, LD1RB_H_IMM,  PTRUE_H, i32, am_indexed8_6b, uimm6s1>;
-  def : LD1RPat<nxv4i32, zextloadi8, LD1RB_S_IMM,  PTRUE_S, i32, am_indexed8_6b, uimm6s1>;
-  def : LD1RPat<nxv2i64, zextloadi8, LD1RB_D_IMM,  PTRUE_D, i64, am_indexed8_6b, uimm6s1>;
-  def : LD1RPat<nxv8i16, sextloadi8, LD1RSB_H_IMM, PTRUE_H, i32, am_indexed8_6b, uimm6s1>;
-  def : LD1RPat<nxv4i32, sextloadi8, LD1RSB_S_IMM, PTRUE_S, i32, am_indexed8_6b, uimm6s1>;
-  def : LD1RPat<nxv2i64, sextloadi8, LD1RSB_D_IMM, PTRUE_D, i64, am_indexed8_6b, uimm6s1>;
+  defm : LD1RPat<nxv16i8, extloadi8,  LD1RB_IMM,    PTRUE_B, i32, am_indexed8_6b, uimm6s1>;
+  defm : LD1RPat<nxv8i16, zextloadi8, LD1RB_H_IMM,  PTRUE_H, i32, am_indexed8_6b, uimm6s1>;
+  defm : LD1RPat<nxv4i32, zextloadi8, LD1RB_S_IMM,  PTRUE_S, i32, am_indexed8_6b, uimm6s1>;
+  defm : LD1RPat<nxv2i64, zextloadi8, LD1RB_D_IMM,  PTRUE_D, i64, am_indexed8_6b, uimm6s1>;
+  defm : LD1RPat<nxv8i16, sextloadi8, LD1RSB_H_IMM, PTRUE_H, i32, am_indexed8_6b, uimm6s1>;
+  defm : LD1RPat<nxv4i32, sextloadi8, LD1RSB_S_IMM, PTRUE_S, i32, am_indexed8_6b, uimm6s1>;
+  defm : LD1RPat<nxv2i64, sextloadi8, LD1RSB_D_IMM, PTRUE_D, i64, am_indexed8_6b, uimm6s1>;
 
   // LDR1 of 16-bit data
-  def : LD1RPat<nxv8i16, extloadi16,  LD1RH_IMM,    PTRUE_H, i32, am_indexed16_6b, uimm6s2>;
-  def : LD1RPat<nxv4i32, zextloadi16, LD1RH_S_IMM,  PTRUE_S, i32, am_indexed16_6b, uimm6s2>;
-  def : LD1RPat<nxv2i64, zextloadi16, LD1RH_D_IMM,  PTRUE_D, i64, am_indexed16_6b, uimm6s2>;
-  def : LD1RPat<nxv4i32, sextloadi16, LD1RSH_S_IMM, PTRUE_S, i32, am_indexed16_6b, uimm6s2>;
-  def : LD1RPat<nxv2i64, sextloadi16, LD1RSH_D_IMM, PTRUE_D, i64, am_indexed16_6b, uimm6s2>;
+  defm : LD1RPat<nxv8i16, extloadi16,  LD1RH_IMM,    PTRUE_H, i32, am_indexed16_6b, uimm6s2>;
+  defm : LD1RPat<nxv4i32, zextloadi16, LD1RH_S_IMM,  PTRUE_S, i32, am_indexed16_6b, uimm6s2>;
+  defm : LD1RPat<nxv2i64, zextloadi16, LD1RH_D_IMM,  PTRUE_D, i64, am_indexed16_6b, uimm6s2>;
+  defm : LD1RPat<nxv4i32, sextloadi16, LD1RSH_S_IMM, PTRUE_S, i32, am_indexed16_6b, uimm6s2>;
+  defm : LD1RPat<nxv2i64, sextloadi16, LD1RSH_D_IMM, PTRUE_D, i64, am_indexed16_6b, uimm6s2>;
 
   // LDR1 of 32-bit data
-  def : LD1RPat<nxv4i32, load,        LD1RW_IMM,   PTRUE_S, i32, am_indexed32_6b, uimm6s4>;
-  def : LD1RPat<nxv2i64, zextloadi32, LD1RW_D_IMM, PTRUE_D, i64, am_indexed32_6b, uimm6s4>;
-  def : LD1RPat<nxv2i64, sextloadi32, LD1RSW_IMM,  PTRUE_D, i64, am_indexed32_6b, uimm6s4>;
+  defm : LD1RPat<nxv4i32, load,        LD1RW_IMM,   PTRUE_S, i32, am_indexed32_6b, uimm6s4>;
+  defm : LD1RPat<nxv2i64, zextloadi32, LD1RW_D_IMM, PTRUE_D, i64, am_indexed32_6b, uimm6s4>;
+  defm : LD1RPat<nxv2i64, sextloadi32, LD1RSW_IMM,  PTRUE_D, i64, am_indexed32_6b, uimm6s4>;
 
   // LDR1 of 64-bit data
-  def : LD1RPat<nxv2i64, load, LD1RD_IMM, PTRUE_D, i64, am_indexed64_6b, uimm6s8>;
+  defm : LD1RPat<nxv2i64, load, LD1RD_IMM, PTRUE_D, i64, am_indexed64_6b, uimm6s8>;
 
   // LD1R of FP data
-  def : LD1RPat<nxv8f16, load, LD1RH_IMM,   PTRUE_H, f16, am_indexed16_6b, uimm6s2>;
-  def : LD1RPat<nxv4f16, load, LD1RH_S_IMM, PTRUE_S, f16, am_indexed16_6b, uimm6s2>;
-  def : LD1RPat<nxv2f16, load, LD1RH_D_IMM, PTRUE_D, f16, am_indexed16_6b, uimm6s2>;
-  def : LD1RPat<nxv4f32, load, LD1RW_IMM,   PTRUE_S, f32, am_indexed32_6b, uimm6s4>;
-  def : LD1RPat<nxv2f32, load, LD1RW_D_IMM, PTRUE_D, f32, am_indexed32_6b, uimm6s4>;
-  def : LD1RPat<nxv2f64, load, LD1RD_IMM,   PTRUE_D, f64, am_indexed64_6b, uimm6s8>;
+  defm : LD1RPat<nxv8f16, load, LD1RH_IMM,   PTRUE_H, f16, am_indexed16_6b, uimm6s2>;
+  defm : LD1RPat<nxv4f16, load, LD1RH_S_IMM, PTRUE_S, f16, am_indexed16_6b, uimm6s2>;
+  defm : LD1RPat<nxv2f16, load, LD1RH_D_IMM, PTRUE_D, f16, am_indexed16_6b, uimm6s2>;
+  defm : LD1RPat<nxv4f32, load, LD1RW_IMM,   PTRUE_S, f32, am_indexed32_6b, uimm6s4>;
+  defm : LD1RPat<nxv2f32, load, LD1RW_D_IMM, PTRUE_D, f32, am_indexed32_6b, uimm6s4>;
+  defm : LD1RPat<nxv2f64, load, LD1RD_IMM,   PTRUE_D, f64, am_indexed64_6b, uimm6s8>;
 
 // LD1R of 128-bit masked data
   multiclass ld1rq_pat<ValueType vt1, SDPatternOperator op, Instruction load_instr, ComplexPattern AddrCP>{

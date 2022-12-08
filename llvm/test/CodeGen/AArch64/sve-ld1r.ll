@@ -819,6 +819,373 @@ define <vscale x 16 x i8> @dupq_ld1rqw_i8(<16 x i8>* %a) #0 {
   ret <vscale x 16 x i8> %3
 }
 
+;
+;
+; Tests for dup:
+;
+; Positive tests:
+; * dup with passthru=undef or passthrue=zero.
+; * sign/zero extending.
+; * unpacked types.
+;
+; Negative tests:
+; * dup with passthru as a parameter.
+;
+;
+
+define <vscale x 16 x i8> @dup_ld1rb_i8_passthruundef_nxv16i8(<vscale x 16 x i1> %pg, i8* %addr) {
+; CHECK-LABEL: dup_ld1rb_i8_passthruundef_nxv16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rb { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i8, i8* %addr
+    %res = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> %pg, i8 %ld)
+    ret <vscale x 16 x i8> %res
+}
+define <vscale x 8 x i16> @dup_ld1rh_i16_passthruundef_nxv8i16(<vscale x 8 x i1> %pg, i16* %addr) {
+; CHECK-LABEL: dup_ld1rh_i16_passthruundef_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rh { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i16, i16* %addr
+    %res = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> %pg, i16 %ld)
+    ret <vscale x 8 x i16> %res
+}
+define <vscale x 8 x i16> @dup_ld1rh_i8_passthruundef_nxv8i16_sext(<vscale x 8 x i1> %pg, i8* %addr) {
+; CHECK-LABEL: dup_ld1rh_i8_passthruundef_nxv8i16_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rsb { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i8, i8* %addr
+    %ext = sext i8 %ld to i16
+    %res = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> %pg, i16 %ext)
+    ret <vscale x 8 x i16> %res
+}
+define <vscale x 8 x i16> @dup_ld1rh_i8_passthruundef_nxv8i16_zext(<vscale x 8 x i1> %pg, i8* %addr) {
+; CHECK-LABEL: dup_ld1rh_i8_passthruundef_nxv8i16_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rb { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i8, i8* %addr
+    %ext = zext i8 %ld to i16
+    %res = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> %pg, i16 %ext)
+    ret <vscale x 8 x i16> %res
+}
+define <vscale x 4 x i32> @dup_ld1rs_i32_passthruundef_nxv4i32(<vscale x 4 x i1> %pg, i32* %addr) {
+; CHECK-LABEL: dup_ld1rs_i32_passthruundef_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rw { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i32, i32* %addr
+    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> %pg, i32 %ld)
+    ret <vscale x 4 x i32> %res
+}
+define <vscale x 4 x i32> @dup_ld1rs_i8_passthruundef_nxv4i32_sext(<vscale x 4 x i1> %pg, i8* %addr) {
+; CHECK-LABEL: dup_ld1rs_i8_passthruundef_nxv4i32_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rsb { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i8, i8* %addr
+    %ext = sext i8 %ld to i32
+    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> %pg, i32 %ext)
+    ret <vscale x 4 x i32> %res
+}
+define <vscale x 4 x i32> @dup_ld1rs_i8_passthruundef_nxv4i32_zext(<vscale x 4 x i1> %pg, i8* %addr) {
+; CHECK-LABEL: dup_ld1rs_i8_passthruundef_nxv4i32_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rb { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i8, i8* %addr
+    %ext = zext i8 %ld to i32
+    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> %pg, i32 %ext)
+    ret <vscale x 4 x i32> %res
+}
+define <vscale x 4 x i32> @dup_ld1rs_i16_passthruundef_nxv4i32_sext(<vscale x 4 x i1> %pg, i16* %addr) {
+; CHECK-LABEL: dup_ld1rs_i16_passthruundef_nxv4i32_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rsh { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i16, i16* %addr
+    %ext = sext i16 %ld to i32
+    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> %pg, i32 %ext)
+    ret <vscale x 4 x i32> %res
+}
+define <vscale x 4 x i32> @dup_ld1rs_i16_passthruundef_nxv4i32_zext(<vscale x 4 x i1> %pg, i16* %addr) {
+; CHECK-LABEL: dup_ld1rs_i16_passthruundef_nxv4i32_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rh { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i16, i16* %addr
+    %ext = zext i16 %ld to i32
+    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> %pg, i32 %ext)
+    ret <vscale x 4 x i32> %res
+}
+define <vscale x 2 x i64> @dup_ld1rd_i64_passthruundef_nxv2i64(<vscale x 2 x i1> %pg, i64* %addr) {
+; CHECK-LABEL: dup_ld1rd_i64_passthruundef_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i64, i64* %addr
+    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg, i64 %ld)
+    ret <vscale x 2 x i64> %res
+}
+define <vscale x 2 x i64> @dup_ld1rs_i8_passthruundef_nxv2i64_sext(<vscale x 2 x i1> %pg, i8* %addr) {
+; CHECK-LABEL: dup_ld1rs_i8_passthruundef_nxv2i64_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rsb { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i8, i8* %addr
+    %ext = sext i8 %ld to i64
+    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg, i64 %ext)
+    ret <vscale x 2 x i64> %res
+}
+define <vscale x 2 x i64> @dup_ld1rs_i8_passthruundef_nxv2i64_zext(<vscale x 2 x i1> %pg, i8* %addr) {
+; CHECK-LABEL: dup_ld1rs_i8_passthruundef_nxv2i64_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rb { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i8, i8* %addr
+    %ext = zext i8 %ld to i64
+    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg, i64 %ext)
+    ret <vscale x 2 x i64> %res
+}
+define <vscale x 2 x i64> @dup_ld1rs_i16_passthruundef_nxv2i64_sext(<vscale x 2 x i1> %pg, i16* %addr) {
+; CHECK-LABEL: dup_ld1rs_i16_passthruundef_nxv2i64_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rsh { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i16, i16* %addr
+    %ext = sext i16 %ld to i64
+    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg, i64 %ext)
+    ret <vscale x 2 x i64> %res
+}
+define <vscale x 2 x i64> @dup_ld1rs_i16_passthruundef_nxv2i64_zext(<vscale x 2 x i1> %pg, i16* %addr) {
+; CHECK-LABEL: dup_ld1rs_i16_passthruundef_nxv2i64_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rh { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i16, i16* %addr
+    %ext = zext i16 %ld to i64
+    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg, i64 %ext)
+    ret <vscale x 2 x i64> %res
+}
+define <vscale x 2 x i64> @dup_ld1rs_i32_passthruundef_nxv2i64_sext(<vscale x 2 x i1> %pg, i32* %addr) {
+; CHECK-LABEL: dup_ld1rs_i32_passthruundef_nxv2i64_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rsw { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i32, i32* %addr
+    %ext = sext i32 %ld to i64
+    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg, i64 %ext)
+    ret <vscale x 2 x i64> %res
+}
+define <vscale x 2 x i64> @dup_ld1rs_i32_passthruundef_nxv2i64_zext(<vscale x 2 x i1> %pg, i32* %addr) {
+; CHECK-LABEL: dup_ld1rs_i32_passthruundef_nxv2i64_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rw { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i32, i32* %addr
+    %ext = zext i32 %ld to i64
+    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg, i64 %ext)
+    ret <vscale x 2 x i64> %res
+}
+define <vscale x 8 x half> @dup_ld1rh_half_passthruundef_nxv8f16(<vscale x 8 x i1> %pg, half* %addr) {
+; CHECK-LABEL: dup_ld1rh_half_passthruundef_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rh { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load half, half* %addr
+    %res = call <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> %pg, half %ld)
+    ret <vscale x 8 x half> %res
+}
+define <vscale x 4 x float> @dup_ld1rs_float_passthruundef_nxv4f32(<vscale x 4 x i1> %pg, float* %addr) {
+; CHECK-LABEL: dup_ld1rs_float_passthruundef_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rw { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load float, float* %addr
+    %res = call <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> %pg, float %ld)
+    ret <vscale x 4 x float> %res
+}
+define <vscale x 2 x double> @dup_ld1rd_double_passthruundef_nxv2f64(<vscale x 2 x i1> %pg, double* %addr) {
+; CHECK-LABEL: dup_ld1rd_double_passthruundef_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load double, double* %addr
+    %res = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> %pg, double %ld)
+    ret <vscale x 2 x double> %res
+}
+define <vscale x 4 x half> @dup_ld1rh_half_passthruundef_nxv4f16(<vscale x 4 x i1> %pg, half* %addr) {
+; CHECK-LABEL: dup_ld1rh_half_passthruundef_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rh { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load half, half* %addr
+    %res = call <vscale x 4 x half> @llvm.aarch64.sve.dup.nxv4f16(<vscale x 4 x half> undef, <vscale x 4 x i1> %pg, half %ld)
+    ret <vscale x 4 x half> %res
+}
+define <vscale x 16 x i8> @dup_ld1rb_i8_passthruzero_nxv16i8(<vscale x 16 x i1> %pg, i8* %addr) {
+; CHECK-LABEL: dup_ld1rb_i8_passthruzero_nxv16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rb { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i8, i8* %addr
+    %res = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i1> %pg, i8 %ld)
+    ret <vscale x 16 x i8> %res
+}
+define <vscale x 8 x i16> @dup_ld1rh_i16_passthruzero_nxv8i16(<vscale x 8 x i1> %pg, i16* %addr) {
+; CHECK-LABEL: dup_ld1rh_i16_passthruzero_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rh { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i16, i16* %addr
+    %res = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i1> %pg, i16 %ld)
+    ret <vscale x 8 x i16> %res
+}
+define <vscale x 4 x i32> @dup_ld1rs_i32_passthruzero_nxv4i32(<vscale x 4 x i1> %pg, i32* %addr) {
+; CHECK-LABEL: dup_ld1rs_i32_passthruzero_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rw { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i32, i32* %addr
+    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> %pg, i32 %ld)
+    ret <vscale x 4 x i32> %res
+}
+define <vscale x 2 x i64> @dup_ld1rd_i64_passthruzero_nxv2i64(<vscale x 2 x i1> %pg, i64* %addr) {
+; CHECK-LABEL: dup_ld1rd_i64_passthruzero_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load i64, i64* %addr
+    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> %pg, i64 %ld)
+    ret <vscale x 2 x i64> %res
+}
+define <vscale x 8 x half> @dup_ld1rh_half_passthruzero_nxv8f16(<vscale x 8 x i1> %pg, half* %addr) {
+; CHECK-LABEL: dup_ld1rh_half_passthruzero_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rh { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load half, half* %addr
+    %res = call <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half> zeroinitializer, <vscale x 8 x i1> %pg, half %ld)
+    ret <vscale x 8 x half> %res
+}
+define <vscale x 4 x float> @dup_ld1rs_float_passthruzero_nxv4f32(<vscale x 4 x i1> %pg, float* %addr) {
+; CHECK-LABEL: dup_ld1rs_float_passthruzero_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rw { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load float, float* %addr
+    %res = call <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float> zeroinitializer, <vscale x 4 x i1> %pg, float %ld)
+    ret <vscale x 4 x float> %res
+}
+define <vscale x 2 x double> @dup_ld1rd_double_passthruzero_nxv2f64(<vscale x 2 x i1> %pg, double* %addr) {
+; CHECK-LABEL: dup_ld1rd_double_passthruzero_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load double, double* %addr
+    %res = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> zeroinitializer, <vscale x 2 x i1> %pg, double %ld)
+    ret <vscale x 2 x double> %res
+}
+define <vscale x 4 x half> @dup_ld1rh_half_passthruzero_nxv4f16(<vscale x 4 x i1> %pg, half* %addr) {
+; CHECK-LABEL: dup_ld1rh_half_passthruzero_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rh { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load half, half* %addr
+    %res = call <vscale x 4 x half> @llvm.aarch64.sve.dup.nxv4f16(<vscale x 4 x half> zeroinitializer, <vscale x 4 x i1> %pg, half %ld)
+    ret <vscale x 4 x half> %res
+}
+define <vscale x 2 x half> @dup_ld1rh_half_passthruzero_nxv2f16(<vscale x 2 x i1> %pg, half* %addr) {
+; CHECK-LABEL: dup_ld1rh_half_passthruzero_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rh { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load half, half* %addr
+    %res = call <vscale x 2 x half> @llvm.aarch64.sve.dup.nxv2f16(<vscale x 2 x half> zeroinitializer, <vscale x 2 x i1> %pg, half %ld)
+    ret <vscale x 2 x half> %res
+}
+define <vscale x 2 x float> @dup_ld1rs_float_passthruzero_nxv2f32(<vscale x 2 x i1> %pg, float* %addr) {
+; CHECK-LABEL: dup_ld1rs_float_passthruzero_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1rw { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+    %ld = load float, float* %addr
+    %res = call <vscale x 2 x float> @llvm.aarch64.sve.dup.nxv2f32(<vscale x 2 x float> zeroinitializer, <vscale x 2 x i1> %pg, float %ld)
+    ret <vscale x 2 x float> %res
+}
+define <vscale x 16 x i8> @negtest_dup_ld1rb_i8_passthru_nxv16i8(<vscale x 16 x i8> %pt, <vscale x 16 x i1> %pg, i8* %addr) {
+; CHECK-LABEL: negtest_dup_ld1rb_i8_passthru_nxv16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    mov z0.b, p0/m, w8
+; CHECK-NEXT:    ret
+    %ld = load i8, i8* %addr
+    %res = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> %pt, <vscale x 16 x i1> %pg, i8 %ld)
+    ret <vscale x 16 x i8> %res
+}
+define <vscale x 8 x i16> @negtest_dup_ld1rh_i16_passthru_nxv8i16(<vscale x 8 x i16> %pt, <vscale x 8 x i1> %pg, i16* %addr) {
+; CHECK-LABEL: negtest_dup_ld1rh_i16_passthru_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    mov z0.h, p0/m, w8
+; CHECK-NEXT:    ret
+    %ld = load i16, i16* %addr
+    %res = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> %pt, <vscale x 8 x i1> %pg, i16 %ld)
+    ret <vscale x 8 x i16> %res
+}
+define <vscale x 4 x i32> @negtest_dup_ld1rs_i32_passthru_nxv4i32(<vscale x 4 x i32> %pt, <vscale x 4 x i1> %pg, i32* %addr) {
+; CHECK-LABEL: negtest_dup_ld1rs_i32_passthru_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    mov z0.s, p0/m, w8
+; CHECK-NEXT:    ret
+    %ld = load i32, i32* %addr
+    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> %pt, <vscale x 4 x i1> %pg, i32 %ld)
+    ret <vscale x 4 x i32> %res
+}
+define <vscale x 2 x i64> @negtest_dup_ld1rd_i64_passthru_nxv2i64(<vscale x 2 x i64> %pt, <vscale x 2 x i1> %pg, i64* %addr) {
+; CHECK-LABEL: negtest_dup_ld1rd_i64_passthru_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    mov z0.d, p0/m, x8
+; CHECK-NEXT:    ret
+    %ld = load i64, i64* %addr
+    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> %pt, <vscale x 2 x i1> %pg, i64 %ld)
+    ret <vscale x 2 x i64> %res
+}
+define <vscale x 8 x half> @negtest_dup_ld1rh_half_passthru_nxv8f16(<vscale x 8 x half> %pt, <vscale x 8 x i1> %pg, half* %addr) {
+; CHECK-LABEL: negtest_dup_ld1rh_half_passthru_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr h1, [x0]
+; CHECK-NEXT:    mov z0.h, p0/m, h1
+; CHECK-NEXT:    ret
+    %ld = load half, half* %addr
+    %res = call <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half> %pt, <vscale x 8 x i1> %pg, half %ld)
+    ret <vscale x 8 x half> %res
+}
+define <vscale x 4 x float> @negtest_dup_ld1rs_float_passthru_nxv4f32(<vscale x 4 x float> %pt, <vscale x 4 x i1> %pg, float* %addr) {
+; CHECK-LABEL: negtest_dup_ld1rs_float_passthru_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s1, [x0]
+; CHECK-NEXT:    mov z0.s, p0/m, s1
+; CHECK-NEXT:    ret
+    %ld = load float, float* %addr
+    %res = call <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float> %pt, <vscale x 4 x i1> %pg, float %ld)
+    ret <vscale x 4 x float> %res
+}
+define <vscale x 2 x double> @negtest_dup_ld1rd_double_passthru_nxv2f64(<vscale x 2 x double> %pt, <vscale x 2 x i1> %pg, double* %addr) {
+; CHECK-LABEL: negtest_dup_ld1rd_double_passthru_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    mov z0.d, p0/m, d1
+; CHECK-NEXT:    ret
+    %ld = load double, double* %addr
+    %res = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> %pt, <vscale x 2 x i1> %pg, double %ld)
+    ret <vscale x 2 x double> %res
+}
+
 declare <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8>, i64)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16>, i64)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32>, i64)
@@ -836,5 +1203,17 @@ declare <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32>,
 declare <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16>, <8 x i16>, i64)
 declare <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8>, <16 x i8>, i64)
 declare <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat>, <8 x bfloat>, i64)
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, i8)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, i16)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, i32)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, i64)
+declare <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, half)
+declare <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i1>, float)
+declare <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, double)
+declare <vscale x 4 x half> @llvm.aarch64.sve.dup.nxv4f16(<vscale x 4 x half>, <vscale x 4 x i1>, half)
+declare <vscale x 2 x half> @llvm.aarch64.sve.dup.nxv2f16(<vscale x 2 x half>, <vscale x 2 x i1>, half)
+declare <vscale x 2 x float> @llvm.aarch64.sve.dup.nxv2f32(<vscale x 2 x float>, <vscale x 2 x i1>, float)
+
 
 attributes #0 = { "target-features"="+sve,+bf16" }
