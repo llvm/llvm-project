@@ -29,7 +29,7 @@ static void runPasses(Oracle &O, Module &Program) {
 
   PassInstrumentationCallbacks PIC;
   PIC.registerShouldRunOptionalPassCallback(
-      [&](StringRef, Any) { return !O.shouldKeep(); });
+      [&](StringRef, std::any) { return !O.shouldKeep(); });
   PassBuilder PB(nullptr, PipelineTuningOptions(), std::nullopt, &PIC);
 
   PB.registerModuleAnalyses(MAM);

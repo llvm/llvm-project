@@ -46,8 +46,8 @@ public:
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
 private:
-  void printBeforePass(StringRef PassID, Any IR);
-  void printAfterPass(StringRef PassID, Any IR);
+  void printBeforePass(StringRef PassID, std::any IR);
+  void printAfterPass(StringRef PassID, std::any IR);
   void printAfterPassInvalidated(StringRef PassID);
 
   bool shouldPrintBeforePass(StringRef PassID);
@@ -55,7 +55,7 @@ private:
 
   using PrintModuleDesc = std::tuple<const Module *, std::string, StringRef>;
 
-  void pushModuleDesc(StringRef PassID, Any IR);
+  void pushModuleDesc(StringRef PassID, std::any IR);
   PrintModuleDesc popModuleDesc(StringRef PassID);
 
   PassInstrumentationCallbacks *PIC;
@@ -71,7 +71,7 @@ public:
 
 private:
   bool DebugLogging;
-  bool shouldRun(StringRef PassID, Any IR);
+  bool shouldRun(StringRef PassID, std::any IR);
 };
 
 class OptPassGateInstrumentation {
@@ -79,7 +79,7 @@ class OptPassGateInstrumentation {
   bool HasWrittenIR = false;
 public:
   OptPassGateInstrumentation(LLVMContext &Context) : Context(Context) {}
-  bool shouldRun(StringRef PassName, Any IR);
+  bool shouldRun(StringRef PassName, std::any IR);
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 };
 
@@ -181,9 +181,9 @@ public:
 
   // Determine if this pass/IR is interesting and if so, save the IR
   // otherwise it is left on the stack without data.
-  void saveIRBeforePass(Any IR, StringRef PassID, StringRef PassName);
+  void saveIRBeforePass(std::any IR, StringRef PassID, StringRef PassName);
   // Compare the IR from before the pass after the pass.
-  void handleIRAfterPass(Any IR, StringRef PassID, StringRef PassName);
+  void handleIRAfterPass(std::any IR, StringRef PassID, StringRef PassName);
   // Handle the situation where a pass is invalidated.
   void handleInvalidatedPass(StringRef PassID);
 
@@ -192,16 +192,16 @@ protected:
   void registerRequiredCallbacks(PassInstrumentationCallbacks &PIC);
 
   // Called on the first IR processed.
-  virtual void handleInitialIR(Any IR) = 0;
+  virtual void handleInitialIR(std::any IR) = 0;
   // Called before and after a pass to get the representation of the IR.
-  virtual void generateIRRepresentation(Any IR, StringRef PassID,
+  virtual void generateIRRepresentation(std::any IR, StringRef PassID,
                                         IRUnitT &Output) = 0;
   // Called when the pass is not iteresting.
   virtual void omitAfter(StringRef PassID, std::string &Name) = 0;
   // Called when an interesting IR has changed.
   virtual void handleAfter(StringRef PassID, std::string &Name,
                            const IRUnitT &Before, const IRUnitT &After,
-                           Any) = 0;
+                           std::any) = 0;
   // Called when an interesting pass is invalidated.
   virtual void handleInvalidated(StringRef PassID) = 0;
   // Called when the IR or pass is not interesting.
@@ -226,7 +226,7 @@ protected:
   TextChangeReporter(bool Verbose);
 
   // Print a module dump of the first IR that is changed.
-  void handleInitialIR(Any IR) override;
+  void handleInitialIR(std::any IR) override;
   // Report that the IR was omitted because it did not change.
   void omitAfter(StringRef PassID, std::string &Name) override;
   // Report that the pass was invalidated.
@@ -254,12 +254,12 @@ public:
 
 protected:
   // Called before and after a pass to get the representation of the IR.
-  void generateIRRepresentation(Any IR, StringRef PassID,
+  void generateIRRepresentation(std::any IR, StringRef PassID,
                                 std::string &Output) override;
   // Called when an interesting IR has changed.
   void handleAfter(StringRef PassID, std::string &Name,
                    const std::string &Before, const std::string &After,
-                   Any) override;
+                   std::any) override;
 };
 
 class IRChangedTester : public IRChangedPrinter {
@@ -272,7 +272,7 @@ protected:
   void handleIR(const std::string &IR, StringRef PassID);
 
   // Check initial IR
-  void handleInitialIR(Any IR) override;
+  void handleInitialIR(std::any IR) override;
   // Do nothing.
   void omitAfter(StringRef PassID, std::string &Name) override;
   // Do nothing.
@@ -285,7 +285,7 @@ protected:
   // Call test as interesting IR has changed.
   void handleAfter(StringRef PassID, std::string &Name,
                    const std::string &Before, const std::string &After,
-                   Any) override;
+                   std::any) override;
 };
 
 // Information that needs to be saved for a basic block in order to compare
@@ -385,7 +385,7 @@ public:
           CompareFunc);
 
   // Analyze \p IR and build the IR representation in \p Data.
-  static void analyzeIR(Any IR, IRDataT<T> &Data);
+  static void analyzeIR(std::any IR, IRDataT<T> &Data);
 
 protected:
   // Generate the data for \p F into \p Data.
@@ -411,13 +411,13 @@ public:
 
 protected:
   // Create a representation of the IR.
-  void generateIRRepresentation(Any IR, StringRef PassID,
+  void generateIRRepresentation(std::any IR, StringRef PassID,
                                 IRDataT<EmptyData> &Output) override;
 
   // Called when an interesting IR has changed.
   void handleAfter(StringRef PassID, std::string &Name,
                    const IRDataT<EmptyData> &Before,
-                   const IRDataT<EmptyData> &After, Any) override;
+                   const IRDataT<EmptyData> &After, std::any) override;
 
   void handleFunctionCompare(StringRef Name, StringRef Prefix, StringRef PassID,
                              StringRef Divider, bool InModule, unsigned Minor,
@@ -449,7 +449,7 @@ public:
 
 private:
   // Implementation of pass instrumentation callbacks.
-  void runBeforePass(StringRef PassID, Any IR);
+  void runBeforePass(StringRef PassID, std::any IR);
   void runAfterPass();
 };
 
@@ -497,16 +497,16 @@ protected:
   bool initializeHTML();
 
   // Called on the first IR processed.
-  void handleInitialIR(Any IR) override;
+  void handleInitialIR(std::any IR) override;
   // Called before and after a pass to get the representation of the IR.
-  void generateIRRepresentation(Any IR, StringRef PassID,
+  void generateIRRepresentation(std::any IR, StringRef PassID,
                                 IRDataT<DCData> &Output) override;
   // Called when the pass is not iteresting.
   void omitAfter(StringRef PassID, std::string &Name) override;
   // Called when an interesting IR has changed.
   void handleAfter(StringRef PassID, std::string &Name,
                    const IRDataT<DCData> &Before, const IRDataT<DCData> &After,
-                   Any) override;
+                   std::any) override;
   // Called when an interesting pass is invalidated.
   void handleInvalidated(StringRef PassID) override;
   // Called when the IR or pass is not interesting.
