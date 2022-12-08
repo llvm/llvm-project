@@ -221,6 +221,9 @@ def Arith_AddIOp : Arith_TotalIntBinaryOp<"addi", [Commutative]> {
   let hasCanonicalizer = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// AddUIExtendedOp
+//===----------------------------------------------------------------------===//
 
 def Arith_AddUIExtendedOp : Arith_Op<"addui_extended", [Pure, Commutative,
     AllTypesMatch<["lhs", "rhs", "sum"]>]> {
