@@ -13,7 +13,6 @@
 #include "TestTU.h"
 #include "index/MemIndex.h"
 #include "support/Path.h"
-#include "llvm/ADT/None.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

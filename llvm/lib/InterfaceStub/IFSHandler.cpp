@@ -18,6 +18,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <functional>
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::ifs;
@@ -216,10 +217,11 @@ Error ifs::writeIFSToOutputStream(raw_ostream &OS, const IFSStub &Stub) {
   return Error::success();
 }
 
-Error ifs::overrideIFSTarget(IFSStub &Stub, Optional<IFSArch> OverrideArch,
-                             Optional<IFSEndiannessType> OverrideEndianness,
-                             Optional<IFSBitWidthType> OverrideBitWidth,
-                             Optional<std::string> OverrideTriple) {
+Error ifs::overrideIFSTarget(
+    IFSStub &Stub, std::optional<IFSArch> OverrideArch,
+    std::optional<IFSEndiannessType> OverrideEndianness,
+    std::optional<IFSBitWidthType> OverrideBitWidth,
+    std::optional<std::string> OverrideTriple) {
   std::error_code OverrideEC(1, std::generic_category());
   if (OverrideArch) {
     if (Stub.Target.Arch && Stub.Target.Arch.value() != OverrideArch.value()) {

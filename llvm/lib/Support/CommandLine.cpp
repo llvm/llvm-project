@@ -21,7 +21,6 @@
 
 #include "llvm-c/Support.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -45,6 +44,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
+#include <optional>
 #include <string>
 using namespace llvm;
 using namespace cl;
@@ -1363,7 +1363,7 @@ bool cl::expandResponseFiles(int Argc, const char *const *Argv,
                       : cl::TokenizeGNUCommandLine;
   // The environment variable specifies initial options.
   if (EnvVar)
-    if (llvm::Optional<std::string> EnvValue = sys::Process::GetEnv(EnvVar))
+    if (std::optional<std::string> EnvValue = sys::Process::GetEnv(EnvVar))
       Tokenize(*EnvValue, Saver, NewArgv, /*MarkEOLs=*/false);
 
   // Command line options can override the environment variable.
@@ -1456,7 +1456,7 @@ bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
 
   // Parse options from environment variable.
   if (EnvVar) {
-    if (llvm::Optional<std::string> EnvValue =
+    if (std::optional<std::string> EnvValue =
             sys::Process::GetEnv(StringRef(EnvVar)))
       TokenizeGNUCommandLine(*EnvValue, Saver, NewArgv);
   }

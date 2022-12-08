@@ -60,8 +60,8 @@ cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                     cl::Prefix, cl::cat(Cat));
 } // namespace
 
-static Optional<std::string> preprocess(StringRef Buf,
-                                        yaml::ErrorHandler ErrHandler) {
+static std::optional<std::string> preprocess(StringRef Buf,
+                                             yaml::ErrorHandler ErrHandler) {
   DenseMap<StringRef, StringRef> Defines;
   for (StringRef Define : D) {
     StringRef Macro, Definition;
@@ -134,7 +134,8 @@ int main(int argc, char **argv) {
   if (!Buf)
     return 1;
 
-  Optional<std::string> Buffer = preprocess(Buf.get()->getBuffer(), ErrHandler);
+  std::optional<std::string> Buffer =
+      preprocess(Buf.get()->getBuffer(), ErrHandler);
   if (!Buffer)
     return 1;
 

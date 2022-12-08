@@ -51,13 +51,15 @@ static bool isSparseTensor(OpOperand *op) {
 // Helper method to find zero/uninitialized allocation.
 static bool isAlloc(OpOperand *op, bool isZero) {
   Value val = op->get();
+  // Check allocation, with zero alloc when required.
   if (auto alloc = val.getDefiningOp<AllocTensorOp>()) {
     Value copy = alloc.getCopy();
     if (isZero)
       return copy && isZeroValue(copy);
     return !copy;
   }
-  return false;
+  // Last resort for zero alloc: the whole value is zero.
+  return isZero && isZeroValue(val);
 }
 
 // Helper to detect sampling operation.

@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -loop-deletion -S |FileCheck %s
+; RUN: opt < %s -passes=indvars,loop-deletion -S |FileCheck %s
 
 ; Check IndVarSimplify should replace exit value even if the expansion cost
 ; is high because the loop can be deleted after the exit value rewrite.

@@ -581,9 +581,14 @@ struct UnaryOp<Fortran::evaluate::ComplexComponent<KIND>> {
 template <typename T>
 struct UnaryOp<Fortran::evaluate::Parentheses<T>> {
   using Op = Fortran::evaluate::Parentheses<T>;
-  static hlfir::EntityWithAttributes
-  gen(mlir::Location loc, fir::FirOpBuilder &, const Op &, hlfir::Entity) {
-    TODO(loc, "Parentheses lowering to HLFIR");
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs) {
+    if (lhs.isVariable())
+      return hlfir::EntityWithAttributes{
+          builder.create<hlfir::AsExprOp>(loc, lhs)};
+    return hlfir::EntityWithAttributes{
+        builder.create<hlfir::NoReassocOp>(loc, lhs.getType(), lhs)};
   }
 };
 

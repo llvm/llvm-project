@@ -184,6 +184,11 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
+      if (MI.getOpcode() == TargetOpcode::G_INVOKE_REGION_START) {
+        MI.eraseFromParent();
+        continue;
+      }
+
       if (!ISel->select(MI)) {
         // FIXME: It would be nice to dump all inserted instructions.  It's
         // not obvious how, esp. considering select() can insert after MI.
@@ -248,7 +253,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   // that the size of the now-constrained vreg is unchanged and that it has a
   // register class.
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
-    unsigned VReg = Register::index2VirtReg(I);
+    Register VReg = Register::index2VirtReg(I);
 
     MachineInstr *MI = nullptr;
     if (!MRI.def_empty(VReg))

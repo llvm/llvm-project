@@ -96,6 +96,7 @@ chrono sstream
 chrono stdexcept
 chrono string
 chrono string_view
+chrono tuple
 chrono type_traits
 chrono version
 cinttypes cstdint
@@ -277,6 +278,7 @@ format optional
 format stdexcept
 format string
 format string_view
+format tuple
 format type_traits
 format version
 forward_list compare
@@ -436,6 +438,7 @@ memory_resource mutex
 memory_resource new
 memory_resource stdexcept
 memory_resource tuple
+memory_resource type_traits
 memory_resource version
 mutex atomic
 mutex cstddef

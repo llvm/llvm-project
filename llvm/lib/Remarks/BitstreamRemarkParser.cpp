@@ -16,6 +16,7 @@
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::remarks;
@@ -230,7 +231,7 @@ Error BitstreamParserHelper::parseBlockInfoBlock() {
         "Error while parsing BLOCKINFO_BLOCK: expecting [ENTER_SUBBLOCK, "
         "BLOCKINFO_BLOCK, ...].");
 
-  Expected<Optional<BitstreamBlockInfo>> MaybeBlockInfo =
+  Expected<std::optional<BitstreamBlockInfo>> MaybeBlockInfo =
       Stream.ReadBlockInfoBlock();
   if (!MaybeBlockInfo)
     return MaybeBlockInfo.takeError();
@@ -307,8 +308,8 @@ static Error advanceToMetaBlock(BitstreamParserHelper &Helper) {
 
 Expected<std::unique_ptr<BitstreamRemarkParser>>
 remarks::createBitstreamParserFromMeta(
-    StringRef Buf, Optional<ParsedStringTable> StrTab,
-    Optional<StringRef> ExternalFilePrependPath) {
+    StringRef Buf, std::optional<ParsedStringTable> StrTab,
+    std::optional<StringRef> ExternalFilePrependPath) {
   BitstreamParserHelper Helper(Buf);
   Expected<std::array<char, 4>> MagicNumber = Helper.parseMagic();
   if (!MagicNumber)
@@ -367,14 +368,14 @@ Error BitstreamRemarkParser::parseMeta() {
 
 Error BitstreamRemarkParser::processCommonMeta(
     BitstreamMetaParserHelper &Helper) {
-  if (Optional<uint64_t> Version = Helper.ContainerVersion)
+  if (std::optional<uint64_t> Version = Helper.ContainerVersion)
     ContainerVersion = *Version;
   else
     return createStringError(
         std::make_error_code(std::errc::illegal_byte_sequence),
         "Error while parsing BLOCK_META: missing container version.");
 
-  if (Optional<uint8_t> Type = Helper.ContainerType) {
+  if (std::optional<uint8_t> Type = Helper.ContainerType) {
     // Always >= BitstreamRemarkContainerType::First since it's unsigned.
     if (*Type > static_cast<uint8_t>(BitstreamRemarkContainerType::Last))
       return createStringError(
@@ -391,7 +392,7 @@ Error BitstreamRemarkParser::processCommonMeta(
 }
 
 static Error processStrTab(BitstreamRemarkParser &P,
-                           Optional<StringRef> StrTabBuf) {
+                           std::optional<StringRef> StrTabBuf) {
   if (!StrTabBuf)
     return createStringError(
         std::make_error_code(std::errc::illegal_byte_sequence),
@@ -402,7 +403,7 @@ static Error processStrTab(BitstreamRemarkParser &P,
 }
 
 static Error processRemarkVersion(BitstreamRemarkParser &P,
-                                  Optional<uint64_t> RemarkVersion) {
+                                  std::optional<uint64_t> RemarkVersion) {
   if (!RemarkVersion)
     return createStringError(
         std::make_error_code(std::errc::illegal_byte_sequence),
@@ -412,7 +413,7 @@ static Error processRemarkVersion(BitstreamRemarkParser &P,
 }
 
 Error BitstreamRemarkParser::processExternalFilePath(
-    Optional<StringRef> ExternalFilePath) {
+    std::optional<StringRef> ExternalFilePath) {
   if (!ExternalFilePath)
     return createStringError(
         std::make_error_code(std::errc::illegal_byte_sequence),

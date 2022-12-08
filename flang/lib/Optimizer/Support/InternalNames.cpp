@@ -337,6 +337,8 @@ mangleTypeDescriptorKinds(llvm::ArrayRef<std::int64_t> kinds) {
 
 static std::string getDerivedTypeObjectName(llvm::StringRef mangledTypeName,
                                             const llvm::StringRef separator) {
+  if (mangledTypeName.ends_with(boxprocSuffix))
+    mangledTypeName = mangledTypeName.drop_back(boxprocSuffix.size());
   auto result = fir::NameUniquer::deconstruct(mangledTypeName);
   if (result.first != fir::NameUniquer::NameKind::DERIVED_TYPE)
     return "";

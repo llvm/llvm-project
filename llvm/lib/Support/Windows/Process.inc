@@ -17,6 +17,7 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WindowsError.h"
 #include <malloc.h>
+#include <optional>
 
 // The Windows.h header must be after LLVM and standard headers.
 #include "llvm/Support/Windows/WindowsSupport.h"
@@ -116,7 +117,7 @@ void Process::PreventCoreFiles() {
 
 /// Returns the environment variable \arg Name's value as a string encoded in
 /// UTF-8. \arg Name is assumed to be in UTF-8 encoding.
-Optional<std::string> Process::GetEnv(StringRef Name) {
+std::optional<std::string> Process::GetEnv(StringRef Name) {
   // Convert the argument to UTF-16 to pass it to _wgetenv().
   SmallVector<wchar_t, 128> NameUTF16;
   if (windows::UTF8ToUTF16(Name, NameUTF16))

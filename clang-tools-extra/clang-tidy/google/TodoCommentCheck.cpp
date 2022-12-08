@@ -9,6 +9,7 @@
 #include "TodoCommentCheck.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -17,7 +18,7 @@ namespace readability {
 
 class TodoCommentCheck::TodoCommentHandler : public CommentHandler {
 public:
-  TodoCommentHandler(TodoCommentCheck &Check, llvm::Optional<std::string> User)
+  TodoCommentHandler(TodoCommentCheck &Check, std::optional<std::string> User)
       : Check(Check), User(User ? *User : "unknown"),
         TodoMatch("^// *TODO *(\\(.*\\))?:?( )?(.*)$") {}
 

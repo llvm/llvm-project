@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
@@ -252,6 +253,10 @@ MachineBasicBlock::instr_iterator MachineBasicBlock::getFirstInstrTerminator() {
   while (I != E && !I->isTerminator())
     ++I;
   return I;
+}
+
+MachineBasicBlock::iterator MachineBasicBlock::getFirstTerminatorForward() {
+  return find_if(instrs(), [](auto &II) { return II.isTerminator(); });
 }
 
 MachineBasicBlock::iterator
@@ -556,6 +561,11 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       default:
         os << getSectionID().Number;
       }
+      hasAttributes = true;
+    }
+    if (getBBID().has_value()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "bb_id " << *getBBID();
       hasAttributes = true;
     }
   }
@@ -1644,6 +1654,11 @@ bool MachineBasicBlock::sizeWithoutDebugLargerThan(unsigned Limit) const {
       return true;
   }
   return false;
+}
+
+unsigned MachineBasicBlock::getBBIDOrNumber() const {
+  uint8_t BBAddrMapVersion = getParent()->getContext().getBBAddrMapVersion();
+  return BBAddrMapVersion < 2 ? getNumber() : *getBBID();
 }
 
 const MBBSectionID MBBSectionID::ColdSectionID(MBBSectionID::SectionType::Cold);

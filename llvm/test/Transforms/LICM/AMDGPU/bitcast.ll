@@ -1,4 +1,4 @@
-; RUN: opt -licm -mtriple=amdgcn -S -o - %s | FileCheck %s
+; RUN: opt -passes=licm -mtriple=amdgcn -S -o - %s | FileCheck %s
 
 ; CHECK-LABEL: foo
 ; CHECK: ret

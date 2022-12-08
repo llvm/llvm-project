@@ -46,7 +46,7 @@ struct AttrInfo {
 /// \param DIE die to look up in.
 /// \param AbbrevDecl abbrev declaration for the die.
 /// \param Index an index in Abbrev declaration entry.
-Optional<AttrInfo>
+std::optional<AttrInfo>
 findAttributeInfo(const DWARFDie DIE,
                   const DWARFAbbreviationDeclaration *AbbrevDecl,
                   uint32_t Index);
@@ -56,7 +56,8 @@ findAttributeInfo(const DWARFDie DIE,
 /// \param DIE die to look up in.
 /// \param Attr the attribute to extract.
 /// \return an optional AttrInfo with DWARFFormValue and Offset.
-Optional<AttrInfo> findAttributeInfo(const DWARFDie DIE, dwarf::Attribute Attr);
+std::optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
+                                          dwarf::Attribute Attr);
 
 // DWARF5 Header in order of encoding.
 // Types represent encodnig sizes.
@@ -430,7 +431,7 @@ public:
   void updateAddressMap(uint32_t Index, uint32_t Address);
 
   /// Writes out current sections entry into .debug_str_offsets.
-  void finalizeSection();
+  void finalizeSection(DWARFUnit &Unit);
 
   /// Returns False if no strings were added to .debug_str.
   bool isFinalized() const { return !StrOffsetsBuffer->empty(); }
@@ -444,8 +445,10 @@ private:
   std::unique_ptr<DebugStrOffsetsBufferVector> StrOffsetsBuffer;
   std::unique_ptr<raw_svector_ostream> StrOffsetsStream;
   std::map<uint32_t, uint32_t> IndexToAddressMap;
+  DenseSet<uint64_t> ProcessedBaseOffsets;
   // Section size not including header.
   uint32_t CurrentSectionSize{0};
+  bool StrOffsetSectionWasModified = false;
 };
 
 using DebugStrBufferVector = SmallVector<char, 16>;

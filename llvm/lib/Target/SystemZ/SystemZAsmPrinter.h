@@ -57,6 +57,7 @@ public:
   StringRef getPassName() const override { return "SystemZ Assembly Printer"; }
   void emitInstruction(const MachineInstr *MI) override;
   void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
+  void emitEndOfAsmFile(Module &M) override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &OS) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
@@ -74,6 +75,7 @@ private:
   void LowerFENTRY_CALL(const MachineInstr &MI, SystemZMCInstLower &MCIL);
   void LowerSTACKMAP(const MachineInstr &MI);
   void LowerPATCHPOINT(const MachineInstr &MI, SystemZMCInstLower &Lower);
+  void emitAttributes(Module &M);
 };
 } // end namespace llvm
 

@@ -11,6 +11,7 @@
 #include "Generators.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang::doc;
 
@@ -125,7 +126,7 @@ static void InfoMapping(IO &IO, Info &I) {
 
 static void SymbolInfoMapping(IO &IO, SymbolInfo &I) {
   InfoMapping(IO, I);
-  IO.mapOptional("DefLocation", I.DefLoc, Optional<Location>());
+  IO.mapOptional("DefLocation", I.DefLoc, std::optional<Location>());
   IO.mapOptional("Location", I.Loc, llvm::SmallVector<Location, 2>());
 }
 

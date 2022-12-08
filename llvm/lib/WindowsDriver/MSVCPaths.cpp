@@ -19,6 +19,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <optional>
 #include <string>
 
 #ifdef _WIN32
@@ -504,7 +505,7 @@ bool findVCToolChainViaEnvironment(vfs::FileSystem &VFS, std::string &Path,
                                    ToolsetLayout &VSLayout) {
   // These variables are typically set by vcvarsall.bat
   // when launching a developer command prompt.
-  if (Optional<std::string> VCToolsInstallDir =
+  if (std::optional<std::string> VCToolsInstallDir =
           sys::Process::GetEnv("VCToolsInstallDir")) {
     // This is only set by newer Visual Studios, and it leads straight to
     // the toolchain directory.
@@ -512,7 +513,7 @@ bool findVCToolChainViaEnvironment(vfs::FileSystem &VFS, std::string &Path,
     VSLayout = ToolsetLayout::VS2017OrNewer;
     return true;
   }
-  if (Optional<std::string> VCInstallDir =
+  if (std::optional<std::string> VCInstallDir =
           sys::Process::GetEnv("VCINSTALLDIR")) {
     // If the previous variable isn't set but this one is, then we've found
     // an older Visual Studio. This variable is set by newer Visual Studios too,
@@ -526,7 +527,7 @@ bool findVCToolChainViaEnvironment(vfs::FileSystem &VFS, std::string &Path,
   // We couldn't find any VC environment variables. Let's walk through PATH and
   // see if it leads us to a VC toolchain bin directory. If it does, pick the
   // first one that we find.
-  if (Optional<std::string> PathEnv = sys::Process::GetEnv("PATH")) {
+  if (std::optional<std::string> PathEnv = sys::Process::GetEnv("PATH")) {
     SmallVector<StringRef, 8> PathEntries;
     StringRef(*PathEnv).split(PathEntries, sys::EnvPathSeparator);
     for (StringRef PathEntry : PathEntries) {

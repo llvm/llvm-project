@@ -4004,7 +4004,7 @@ protected:
   /// Helper to track validity and fixpoint
   BooleanState BS;
 
-  /// An assumed simplified value. Initially, it is set to Optional::None, which
+  /// An assumed simplified value. Initially, it is set to std::nullopt, which
   /// means that the value is not clear under current assumption. If in the
   /// pessimistic state, getAssumedSimplifiedValue doesn't return this value but
   /// returns orignal associated value.
@@ -4040,7 +4040,7 @@ struct AAValueSimplify
 private:
   /// Return an assumed simplified value if a single candidate is found. If
   /// there cannot be one, return original value. If it is not clear yet, return
-  /// the Optional::NoneType.
+  /// std::nullopt.
   ///
   /// Use `Attributor::getAssumedSimplified` for value simplification.
   virtual std::optional<Value *>

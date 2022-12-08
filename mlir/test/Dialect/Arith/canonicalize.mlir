@@ -420,6 +420,24 @@ func.func @truncConstant(%arg0: i8) -> i16 {
   return %tr : i16
 }
 
+// CHECK-LABEL: @truncExtui
+//       CHECK-NOT:  trunci
+//       CHECK:   return  %arg0
+func.func @truncExtui(%arg0: i32) -> i32 {
+  %extui = arith.extui %arg0 : i32 to i64
+  %trunci = arith.trunci %extui : i64 to i32
+  return %trunci : i32
+}
+
+// CHECK-LABEL: @truncExtsi
+//       CHECK-NOT:  trunci
+//       CHECK:   return  %arg0
+func.func @truncExtsi(%arg0: i32) -> i32 {
+  %extsi = arith.extsi %arg0 : i32 to i64
+  %trunci = arith.trunci %extsi : i64 to i32
+  return %trunci : i32
+}
+
 // CHECK-LABEL: @truncConstantSplat
 //       CHECK:   %[[cres:.+]] = arith.constant dense<-2> : vector<4xi8>
 //       CHECK:   return %[[cres]]
@@ -622,7 +640,7 @@ func.func @doubleAddSub2(%arg0: index, %arg1 : index) -> index {
 //  CHECK-NEXT:   return %arg0, %[[false]]
 func.func @addiCarryZeroRhs(%arg0: i32) -> (i32, i1) {
   %zero = arith.constant 0 : i32
-  %sum, %carry = arith.addui_carry %arg0, %zero: i32, i1
+  %sum, %carry = arith.addui_extended %arg0, %zero: i32, i1
   return %sum, %carry : i32, i1
 }
 
@@ -631,7 +649,7 @@ func.func @addiCarryZeroRhs(%arg0: i32) -> (i32, i1) {
 //  CHECK-NEXT:   return %arg0, %[[false]]
 func.func @addiCarryZeroRhsSplat(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
   %zero = arith.constant dense<0> : vector<4xi32>
-  %sum, %carry = arith.addui_carry %arg0, %zero: vector<4xi32>, vector<4xi1>
+  %sum, %carry = arith.addui_extended %arg0, %zero: vector<4xi32>, vector<4xi1>
   return %sum, %carry : vector<4xi32>, vector<4xi1>
 }
 
@@ -640,7 +658,7 @@ func.func @addiCarryZeroRhsSplat(%arg0: vector<4xi32>) -> (vector<4xi32>, vector
 //  CHECK-NEXT:   return %arg0, %[[false]]
 func.func @addiCarryZeroLhs(%arg0: i32) -> (i32, i1) {
   %zero = arith.constant 0 : i32
-  %sum, %carry = arith.addui_carry %zero, %arg0: i32, i1
+  %sum, %carry = arith.addui_extended %zero, %arg0: i32, i1
   return %sum, %carry : i32, i1
 }
 
@@ -651,7 +669,7 @@ func.func @addiCarryZeroLhs(%arg0: i32) -> (i32, i1) {
 func.func @addiCarryConstants() -> (i32, i1) {
   %c13 = arith.constant 13 : i32
   %c37 = arith.constant 37 : i32
-  %sum, %carry = arith.addui_carry %c13, %c37: i32, i1
+  %sum, %carry = arith.addui_extended %c13, %c37: i32, i1
   return %sum, %carry : i32, i1
 }
 
@@ -662,7 +680,7 @@ func.func @addiCarryConstants() -> (i32, i1) {
 func.func @addiCarryConstantsOverflow1() -> (i32, i1) {
   %max = arith.constant 4294967295 : i32
   %c1 = arith.constant 1 : i32
-  %sum, %carry = arith.addui_carry %max, %c1: i32, i1
+  %sum, %carry = arith.addui_extended %max, %c1: i32, i1
   return %sum, %carry : i32, i1
 }
 
@@ -672,7 +690,7 @@ func.func @addiCarryConstantsOverflow1() -> (i32, i1) {
 // CHECK-NEXT:    return %[[c_2]], %[[true]]
 func.func @addiCarryConstantsOverflow2() -> (i32, i1) {
   %max = arith.constant 4294967295 : i32
-  %sum, %carry = arith.addui_carry %max, %max: i32, i1
+  %sum, %carry = arith.addui_extended %max, %max: i32, i1
   return %sum, %carry : i32, i1
 }
 
@@ -683,7 +701,7 @@ func.func @addiCarryConstantsOverflow2() -> (i32, i1) {
 func.func @addiCarryConstantsOverflowVector() -> (vector<4xi32>, vector<4xi1>) {
   %v1 = arith.constant dense<[1, 3, 3, 7]> : vector<4xi32>
   %v2 = arith.constant dense<[0, 3, 4294967295, 7]> : vector<4xi32>
-  %sum, %carry = arith.addui_carry %v1, %v2 : vector<4xi32>, vector<4xi1>
+  %sum, %carry = arith.addui_extended %v1, %v2 : vector<4xi32>, vector<4xi1>
   return %sum, %carry : vector<4xi32>, vector<4xi1>
 }
 
@@ -694,7 +712,7 @@ func.func @addiCarryConstantsOverflowVector() -> (vector<4xi32>, vector<4xi1>) {
 func.func @addiCarryConstantsSplatVector() -> (vector<4xi32>, vector<4xi1>) {
   %v1 = arith.constant dense<1> : vector<4xi32>
   %v2 = arith.constant dense<2> : vector<4xi32>
-  %sum, %carry = arith.addui_carry %v1, %v2 : vector<4xi32>, vector<4xi1>
+  %sum, %carry = arith.addui_extended %v1, %v2 : vector<4xi32>, vector<4xi1>
   return %sum, %carry : vector<4xi32>, vector<4xi1>
 }
 

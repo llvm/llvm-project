@@ -1,4 +1,4 @@
-; RUN: opt -S -partial-inliner -max-num-inline-blocks=3 -skip-partial-inlining-cost-analysis  < %s |   FileCheck %s
+; RUN: opt -S -passes=partial-inliner -max-num-inline-blocks=3 -skip-partial-inlining-cost-analysis  < %s |   FileCheck %s
 ; RUN: opt -S -passes=partial-inliner -max-num-inline-blocks=2  -skip-partial-inlining-cost-analysis < %s   | FileCheck %s
 
 %class.A = type { i32 }
@@ -10,7 +10,7 @@ define void @_Z3foov() local_unnamed_addr  {
 bb:
   %tmp = alloca %class.A, align 4
   %tmp1 = bitcast %class.A* %tmp to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %tmp1) 
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %tmp1)
   %tmp2 = load i32, i32* @cond, align 4, !tbaa !2
   %tmp3 = icmp eq i32 %tmp2, 0
   br i1 %tmp3, label %bb4, label %bb9
@@ -31,17 +31,17 @@ bb8:                                              ; preds = %bb4
   br label %bb9
 
 bb9:                                              ; preds = %bb8, %bb4, %bb
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %tmp1) 
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %tmp1)
   ret void
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) 
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 
-declare void @_ZN1A7memfuncEv(%class.A*) local_unnamed_addr 
+declare void @_ZN1A7memfuncEv(%class.A*) local_unnamed_addr
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) 
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 
 ; Function Attrs: uwtable
 define void @_Z3goov() local_unnamed_addr  {

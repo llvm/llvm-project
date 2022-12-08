@@ -81,6 +81,9 @@ void populateElementwiseOpsFusionPatterns(
     RewritePatternSet &patterns,
     const ControlFusionFn &controlElementwiseOpFusion);
 
+/// Patterns to bubble up or down data layout ops across other operations.
+void populateDataLayoutPropagationPatterns(RewritePatternSet &patterns);
+
 /// Pattern to remove dead operands and results of `linalg.generic` operations.
 /// This is effectively DCE for a linalg op.
 void populateEraseUnusedOperandsAndResultsPatterns(RewritePatternSet &patterns);
@@ -493,7 +496,8 @@ struct ForeachThreadReductionTilingResult {
 FailureOr<ForeachThreadReductionTilingResult>
 tileReductionUsingForeachThread(RewriterBase &b, PartialReductionOpInterface op,
                                 ArrayRef<OpFoldResult> numThreads,
-                                Optional<ArrayAttr> mapping);
+                                ArrayRef<OpFoldResult> tileSizes = {},
+                                Optional<ArrayAttr> mapping = llvm::None);
 
 /// All indices returned by IndexOp should be invariant with respect to
 /// tiling. Therefore, if an operation is tiled, we have to transform the

@@ -1776,6 +1776,10 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     static ShapedType inferPackedType(ShapedType sourceType,
         ArrayRef<int64_t> innerTileSizes, ArrayRef<int64_t> innerDimsPos,
         ArrayRef<int64_t> outerDimsPerm = {});
+
+    static Value createDestinationTensor(OpBuilder &b, Location loc,
+        Value source, ArrayRef<OpFoldResult> innerTileSizes,
+        ArrayRef<int64_t> innerDimsPos, ArrayRef<int64_t> outerDimsPerm);
   }];
 }
 
@@ -1822,6 +1826,13 @@ def Tensor_UnPackOp : Tensor_RelayoutOp<"unpack"> {
     custom<DynamicIndexList>($inner_tiles, $static_inner_tiles)
     `into` $dest attr-dict `:` type($source) `->` type($dest)
   }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$source, "Value":$dest,
+    "ArrayRef<int64_t>":$innerDimsPos,
+    "ArrayRef<OpFoldResult>":$innerTiles,
+    CArg<"ArrayRef<int64_t>", "{}">:$outerDimsPerm)>
+  ];
 
   let extraClassDeclaration = commonExtraClassDeclaration;
   let hasCanonicalizeMethod = 1;

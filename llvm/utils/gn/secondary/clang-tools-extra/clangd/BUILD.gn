@@ -12,6 +12,7 @@ write_cmake_config("features") {
   input = "Features.inc.in"
   output = "$target_gen_dir/Features.inc"
   values = [
+    "CLANGD_DECISION_FOREST=1",
     "CLANGD_ENABLE_REMOTE=0",
     "CLANGD_MALLOC_TRIM=1",
     "CLANGD_TIDY_CHECKS=1",
@@ -86,6 +87,7 @@ static_library("clangd") {
     "ConfigCompile.cpp",
     "ConfigProvider.cpp",
     "ConfigYAML.cpp",
+    "DecisionForest.cpp",
     "Diagnostics.cpp",
     "DraftStore.cpp",
     "DumpAST.cpp",

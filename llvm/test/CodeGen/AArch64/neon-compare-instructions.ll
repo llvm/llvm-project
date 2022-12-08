@@ -3583,9 +3583,7 @@ define <2 x i32> @fcmordz2xfloat(<2 x float> %A) {
 ;
 ; GISEL-LABEL: fcmordz2xfloat:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    fcmge v1.2s, v0.2s, #0.0
-; GISEL-NEXT:    fcmlt v0.2s, v0.2s, #0.0
-; GISEL-NEXT:    orr v0.8b, v0.8b, v1.8b
+; GISEL-NEXT:    fcmeq v0.2s, v0.2s, v0.2s
 ; GISEL-NEXT:    ret
   %tmp3 = fcmp ord <2 x float> %A, zeroinitializer
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
@@ -3603,9 +3601,7 @@ define <4 x i32> @fcmordz4xfloat(<4 x float> %A) {
 ;
 ; GISEL-LABEL: fcmordz4xfloat:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    fcmge v1.4s, v0.4s, #0.0
-; GISEL-NEXT:    fcmlt v0.4s, v0.4s, #0.0
-; GISEL-NEXT:    orr v0.16b, v0.16b, v1.16b
+; GISEL-NEXT:    fcmeq v0.4s, v0.4s, v0.4s
 ; GISEL-NEXT:    ret
   %tmp3 = fcmp ord <4 x float> %A, zeroinitializer
   %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
@@ -3623,9 +3619,7 @@ define <2 x i64> @fcmordz2xdouble(<2 x double> %A) {
 ;
 ; GISEL-LABEL: fcmordz2xdouble:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    fcmge v1.2d, v0.2d, #0.0
-; GISEL-NEXT:    fcmlt v0.2d, v0.2d, #0.0
-; GISEL-NEXT:    orr v0.16b, v0.16b, v1.16b
+; GISEL-NEXT:    fcmeq v0.2d, v0.2d, v0.2d
 ; GISEL-NEXT:    ret
   %tmp3 = fcmp ord <2 x double> %A, zeroinitializer
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
@@ -5014,9 +5008,7 @@ define <2 x i32> @fcmordz2xfloat_fast(<2 x float> %A) {
 ;
 ; GISEL-LABEL: fcmordz2xfloat_fast:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    fcmge v1.2s, v0.2s, #0.0
-; GISEL-NEXT:    fcmlt v0.2s, v0.2s, #0.0
-; GISEL-NEXT:    orr v0.8b, v0.8b, v1.8b
+; GISEL-NEXT:    fcmeq v0.2s, v0.2s, v0.2s
 ; GISEL-NEXT:    ret
   %tmp3 = fcmp fast ord <2 x float> %A, zeroinitializer
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
@@ -5033,9 +5025,7 @@ define <4 x i32> @fcmordz4xfloat_fast(<4 x float> %A) {
 ;
 ; GISEL-LABEL: fcmordz4xfloat_fast:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    fcmge v1.4s, v0.4s, #0.0
-; GISEL-NEXT:    fcmlt v0.4s, v0.4s, #0.0
-; GISEL-NEXT:    orr v0.16b, v0.16b, v1.16b
+; GISEL-NEXT:    fcmeq v0.4s, v0.4s, v0.4s
 ; GISEL-NEXT:    ret
   %tmp3 = fcmp fast ord <4 x float> %A, zeroinitializer
   %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
@@ -5052,9 +5042,7 @@ define <2 x i64> @fcmordz2xdouble_fast(<2 x double> %A) {
 ;
 ; GISEL-LABEL: fcmordz2xdouble_fast:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    fcmge v1.2d, v0.2d, #0.0
-; GISEL-NEXT:    fcmlt v0.2d, v0.2d, #0.0
-; GISEL-NEXT:    orr v0.16b, v0.16b, v1.16b
+; GISEL-NEXT:    fcmeq v0.2d, v0.2d, v0.2d
 ; GISEL-NEXT:    ret
   %tmp3 = fcmp fast ord <2 x double> %A, zeroinitializer
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>

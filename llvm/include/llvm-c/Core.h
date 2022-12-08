@@ -479,6 +479,16 @@ void LLVMInitializeCore(LLVMPassRegistryRef R);
     @see ManagedStatic */
 void LLVMShutdown(void);
 
+/*===-- Version query -----------------------------------------------------===*/
+
+/**
+ * Return the major, minor, and patch version of LLVM
+ *
+ * The version components are returned via the function's three output
+ * parameters or skipped if a NULL pointer was supplied.
+ */
+void LLVMGetVersion(unsigned *Major, unsigned *Minor, unsigned *Patch);
+
 /*===-- Error handling ----------------------------------------------------===*/
 
 char *LLVMCreateMessage(const char *Message);

@@ -40,7 +40,6 @@ define amdgpu_cs void @test_simple_indirect_call() {
 ; GFX9-NEXT:    s_mov_b64 s[2:3], s[10:11]
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX9-NEXT:    s_endpgm
-;
 ; GFX10-LABEL: test_simple_indirect_call:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_getpc_b64 s[8:9]
@@ -69,8 +68,8 @@ declare i64 @llvm.amdgcn.s.getpc() #0
 
 attributes #0 = { nounwind readnone speculatable willreturn }
 ;.
-; AKF_GCN: attributes #[[ATTR0:[0-9]+]] = { nounwind speculatable willreturn memory(none) }
+; AKF_GCN: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; ATTRIBUTOR_GCN: attributes #[[ATTR0]] = { "uniform-work-group-size"="false" }
-; ATTRIBUTOR_GCN: attributes #[[ATTR1:[0-9]+]] = { nounwind speculatable willreturn memory(none) }
+; ATTRIBUTOR_GCN: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.

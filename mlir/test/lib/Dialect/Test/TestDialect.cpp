@@ -680,7 +680,10 @@ static ParseResult parseCustomDirectiveAttributes(OpAsmParser &parser,
   }
   return success();
 }
-
+static ParseResult parseCustomDirectiveSpacing(OpAsmParser &parser,
+                                               mlir::StringAttr &attr) {
+  return parser.parseAttribute(attr);
+}
 static ParseResult parseCustomDirectiveAttrDict(OpAsmParser &parser,
                                                 NamedAttrList &attrs) {
   return parser.parseOptionalAttrDict(attrs);
@@ -759,7 +762,10 @@ static void printCustomDirectiveAttributes(OpAsmPrinter &printer, Operation *,
   if (optAttribute)
     printer << ", " << optAttribute;
 }
-
+static void printCustomDirectiveSpacing(OpAsmPrinter &printer, Operation *op,
+                                        Attribute attribute) {
+  printer << attribute;
+}
 static void printCustomDirectiveAttrDict(OpAsmPrinter &printer, Operation *op,
                                          DictionaryAttr attrs) {
   printer.printOptionalAttrDict(attrs.getValue());

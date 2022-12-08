@@ -6717,7 +6717,7 @@ MachineBasicBlock::iterator ARMBaseInstrInfo::insertOutlinedCall(
   const ARMFunctionInfo &AFI = *C.getMF()->getInfo<ARMFunctionInfo>();
   // Can we save to a register?
   if (C.CallConstructionID == MachineOutlinerRegSave) {
-    unsigned Reg = findRegisterToSaveLRTo(C);
+    Register Reg = findRegisterToSaveLRTo(C);
     assert(Reg != 0 && "No callee-saved register available?");
 
     // Save and restore LR from that register.

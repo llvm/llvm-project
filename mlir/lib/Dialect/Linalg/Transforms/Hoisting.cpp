@@ -536,18 +536,14 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
                 b, affineForOp, transferRead.getVector(),
                 SmallVector<Value>{transferWrite.getVector()},
                 transferWrite.getVector());
-            ArrayRef<BlockArgument> newBBArgs =
-                newForOp.getLoopBody().getArguments().take_back(1);
             // Replace all uses of the `transferRead` with the corresponding
             // basic block argument.
-            for (auto it :
-                 llvm::zip(ValueRange{transferRead.getVector()}, newBBArgs)) {
-              std::get<0>(it).replaceUsesWithIf(
-                  std::get<1>(it), [&](OpOperand &use) {
-                    Operation *user = use.getOwner();
-                    return newForOp->isProperAncestor(user);
-                  });
-            }
+            transferRead.getVector().replaceUsesWithIf(
+                newForOp.getLoopBody().getArguments().back(),
+                [&](OpOperand &use) {
+                  Operation *user = use.getOwner();
+                  return newForOp->isProperAncestor(user);
+                });
             transferWrite.getVectorMutable().assign(
                 newForOp.getResults().back());
             changed = true;

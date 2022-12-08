@@ -246,8 +246,8 @@ static int computeHostNumHardwareThreads() {
   return Threads;
 }
 
-// Finds the proper CPU socket where a thread number should go. Returns 'None'
-// if the thread shall remain on the actual CPU socket.
+// Finds the proper CPU socket where a thread number should go. Returns
+// 'std::nullopt' if the thread shall remain on the actual CPU socket.
 std::optional<unsigned>
 llvm::ThreadPoolStrategy::compute_cpu_socket(unsigned ThreadPoolNum) const {
   ArrayRef<ProcessorGroup> Groups = getProcessorGroups();

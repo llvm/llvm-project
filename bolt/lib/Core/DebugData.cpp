@@ -42,7 +42,7 @@ class MCSymbol;
 
 namespace bolt {
 
-Optional<AttrInfo>
+std::optional<AttrInfo>
 findAttributeInfo(const DWARFDie DIE,
                   const DWARFAbbreviationDeclaration *AbbrevDecl,
                   uint32_t Index) {
@@ -73,8 +73,8 @@ findAttributeInfo(const DWARFDie DIE,
   return AttrInfo{*Value, DIE.getAbbreviationDeclarationPtr(), Offset, ValSize};
 }
 
-Optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
-                                     dwarf::Attribute Attr) {
+std::optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
+                                          dwarf::Attribute Attr) {
   if (!DIE.isValid())
     return std::nullopt;
   const DWARFAbbreviationDeclaration *AbbrevDecl =
@@ -666,7 +666,7 @@ void DebugLoclistWriter::finalizeDWARF5(
   *LocStream << *LocBodyBuffer;
 
   if (!isSplitDwarf()) {
-    if (Optional<AttrInfo> AttrInfoVal =
+    if (std::optional<AttrInfo> AttrInfoVal =
             findAttributeInfo(CU.getUnitDIE(), dwarf::DW_AT_loclists_base))
       DebugInfoPatcher.addLE32Patch(AttrInfoVal->Offset,
                                     LoclistBaseOffset +
@@ -733,7 +733,7 @@ void DebugInfoBinaryPatcher::insertNewEntry(const DWARFDie &DIE,
   uint32_t Offset = DIE.getOffset() + 1;
   size_t NumOfAttributes = AbbrevDecl->getNumAttributes();
   if (NumOfAttributes) {
-    Optional<AttrInfo> Val =
+    std::optional<AttrInfo> Val =
         findAttributeInfo(DIE, AbbrevDecl, NumOfAttributes - 1);
     assert(Val && "Invalid Value.");
 
@@ -1083,20 +1083,37 @@ void DebugStrOffsetsWriter::initialize(
 void DebugStrOffsetsWriter::updateAddressMap(uint32_t Index, uint32_t Address) {
   assert(IndexToAddressMap.count(Index) > 0 && "Index is not found.");
   IndexToAddressMap[Index] = Address;
+  StrOffsetSectionWasModified = true;
 }
 
-void DebugStrOffsetsWriter::finalizeSection() {
+void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit) {
   if (IndexToAddressMap.empty())
     return;
-  // Writing out the header for each section.
-  support::endian::write(*StrOffsetsStream, CurrentSectionSize + 4,
-                         support::little);
-  support::endian::write(*StrOffsetsStream, static_cast<uint16_t>(5),
-                         support::little);
-  support::endian::write(*StrOffsetsStream, static_cast<uint16_t>(0),
-                         support::little);
-  for (const auto &Entry : IndexToAddressMap)
-    support::endian::write(*StrOffsetsStream, Entry.second, support::little);
+
+  std::optional<AttrInfo> AttrVal =
+      findAttributeInfo(Unit.getUnitDIE(), dwarf::DW_AT_str_offsets_base);
+  assert(AttrVal && "DW_AT_str_offsets_base not present.");
+  std::optional<uint64_t> Val = AttrVal->V.getAsSectionOffset();
+  assert(Val && "DW_AT_str_offsets_base Value not present.");
+  auto RetVal = ProcessedBaseOffsets.insert(*Val);
+  if (RetVal.second) {
+    // Writing out the header for each section.
+    support::endian::write(*StrOffsetsStream, CurrentSectionSize + 4,
+                           support::little);
+    support::endian::write(*StrOffsetsStream, static_cast<uint16_t>(5),
+                           support::little);
+    support::endian::write(*StrOffsetsStream, static_cast<uint16_t>(0),
+                           support::little);
+    for (const auto &Entry : IndexToAddressMap)
+      support::endian::write(*StrOffsetsStream, Entry.second, support::little);
+  }
+  // Will print error if we already processed this contribution, and now
+  // skipping it, but it was modified.
+  if (!RetVal.second && StrOffsetSectionWasModified)
+    errs() << "BOLT-WARNING: skipping string offsets section for CU at offset "
+           << Twine::utohexstr(Unit.getOffset()) << ", but it was modified\n";
+
+  StrOffsetSectionWasModified = false;
   IndexToAddressMap.clear();
 }
 

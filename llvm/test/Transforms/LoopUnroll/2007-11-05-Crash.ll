@@ -1,4 +1,4 @@
-; RUN: opt < %s -disable-output -loop-unroll
+; RUN: opt < %s -disable-output -passes=loop-unroll
 ; PR1770
 ; PR1947
 

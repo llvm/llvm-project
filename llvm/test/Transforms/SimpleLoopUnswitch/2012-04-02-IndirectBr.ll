@@ -1,5 +1,5 @@
-; RUN: opt < %s -S -simple-loop-unswitch -verify-loop-info -verify-dom-info -verify-memoryssa | FileCheck %s
-; PR12343: -simple-loop-unswitch crash on indirect branch
+; RUN: opt < %s -S -passes=simple-loop-unswitch -verify-loop-info -verify-dom-info -verify-memoryssa | FileCheck %s
+; PR12343: -passes=simple-loop-unswitch crash on indirect branch
 
 ; CHECK:       %0 = icmp eq i64 undef, 0
 ; CHECK-NEXT:  br i1 %0, label %"5", label %"4"

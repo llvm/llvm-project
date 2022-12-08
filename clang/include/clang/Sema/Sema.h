@@ -7139,7 +7139,8 @@ public:
                                           unsigned InitStyle, Expr *Init);
 
   /// Add an init-capture to a lambda scope.
-  void addInitCapture(sema::LambdaScopeInfo *LSI, VarDecl *Var);
+  void addInitCapture(sema::LambdaScopeInfo *LSI, VarDecl *Var,
+                      bool isReferenceType);
 
   /// Note that we have finished the explicit captures for the
   /// given lambda.

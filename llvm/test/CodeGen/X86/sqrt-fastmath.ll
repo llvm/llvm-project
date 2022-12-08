@@ -598,8 +598,8 @@ define float @div_sqrt_fabs_f32(float %x, float %y, float %z) {
 ; AVX1-NEXT:    vmulss %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX1-NEXT:    vmulss %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vmulss %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmulss %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: div_sqrt_fabs_f32:
@@ -610,8 +610,8 @@ define float @div_sqrt_fabs_f32(float %x, float %y, float %z) {
 ; AVX512-NEXT:    vmulss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm2 * xmm1) + mem
 ; AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX512-NEXT:    vmulss %xmm0, %xmm2, %xmm0
-; AVX512-NEXT:    vmulss %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vmulss %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %s = call fast float @llvm.sqrt.f32(float %z)
   %a = call fast float @llvm.fabs.f32(float %y)
@@ -778,8 +778,8 @@ define float @div_sqrt_f32(float %x, float %y) {
 ; AVX1-NEXT:    vmulss %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX1-NEXT:    vmulss %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vmulss %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmulss %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: div_sqrt_f32:
@@ -790,8 +790,8 @@ define float @div_sqrt_f32(float %x, float %y) {
 ; AVX512-NEXT:    vmulss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm2 * xmm1) + mem
 ; AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX512-NEXT:    vmulss %xmm0, %xmm2, %xmm0
-; AVX512-NEXT:    vmulss %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vmulss %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %s = call fast float @llvm.sqrt.f32(float %y)
   %m = fmul fast float %s, %y

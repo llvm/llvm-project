@@ -22,6 +22,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <optional>
 #include <system_error>
 
 #define AMDGPU_ARCH_PROGRAM_NAME "amdgpu-arch"
@@ -200,7 +201,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
     ROCmSearchDirs.emplace_back(RocmPathArg.str());
     DoPrintROCmSearchDirs();
     return ROCmSearchDirs;
-  } else if (Optional<std::string> RocmPathEnv =
+  } else if (std::optional<std::string> RocmPathEnv =
                  llvm::sys::Process::GetEnv("ROCM_PATH")) {
     if (!RocmPathEnv->empty()) {
       ROCmSearchDirs.emplace_back(std::move(*RocmPathEnv));
@@ -376,7 +377,7 @@ void RocmInstallationDetector::detectDeviceLibrary() {
 
   if (!RocmDeviceLibPathArg.empty())
     LibDevicePath = RocmDeviceLibPathArg[RocmDeviceLibPathArg.size() - 1];
-  else if (Optional<std::string> LibPathEnv =
+  else if (std::optional<std::string> LibPathEnv =
                llvm::sys::Process::GetEnv("HIP_DEVICE_LIB_PATH"))
     LibDevicePath = std::move(*LibPathEnv);
 

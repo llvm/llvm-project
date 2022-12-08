@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll -unroll-count=2 -S < %s | FileCheck %s
+; RUN: opt -passes=loop-unroll -unroll-count=2 -S < %s | FileCheck %s
 ;
 ; Check that the disable_nonforced loop property is honored by
 ; loop unroll.

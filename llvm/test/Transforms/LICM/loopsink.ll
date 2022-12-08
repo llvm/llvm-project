@@ -1,4 +1,4 @@
-; RUN: opt -S -verify-memoryssa -loop-sink < %s | FileCheck %s
+; RUN: opt -S -verify-memoryssa -passes=loop-sink < %s | FileCheck %s
 ; RUN: opt -S -verify-memoryssa -aa-pipeline=basic-aa -passes=loop-sink < %s | FileCheck %s
 
 @g = global i32 0, align 4

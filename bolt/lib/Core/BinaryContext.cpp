@@ -1846,7 +1846,8 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
     if (MIB->isTailCall(Instruction))
       OS << " # TAILCALL ";
     if (MIB->isInvoke(Instruction)) {
-      const Optional<MCPlus::MCLandingPad> EHInfo = MIB->getEHInfo(Instruction);
+      const std::optional<MCPlus::MCLandingPad> EHInfo =
+          MIB->getEHInfo(Instruction);
       OS << " # handler: ";
       if (EHInfo->first)
         OS << *EHInfo->first;
@@ -1864,7 +1865,7 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
       OS << " # UNKNOWN CONTROL FLOW";
     }
   }
-  if (Optional<uint32_t> Offset = MIB->getOffset(Instruction))
+  if (std::optional<uint32_t> Offset = MIB->getOffset(Instruction))
     OS << " # Offset: " << *Offset;
 
   MIB->printAnnotations(Instruction, OS);

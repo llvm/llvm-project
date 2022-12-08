@@ -10,7 +10,7 @@
 
 ; On Windows, we don't handle the relocations needed for AT_return_pc properly
 ; and fail with "failed to compute relocation: IMAGE_REL_AMD64_ADDR32".
-; UNSUPPORTED: cygwin,windows-gnu,windows-msvc
+; UNSUPPORTED: target={{.*-(cygwin|windows-gnu|windows-msvc)}}
 
 ; RUN: llc -mtriple=x86_64 < %s -o - | FileCheck %s -check-prefix=ASM
 ; RUN: llc -mtriple=x86_64 -debugger-tune=lldb < %s -filetype=obj -o %t.o

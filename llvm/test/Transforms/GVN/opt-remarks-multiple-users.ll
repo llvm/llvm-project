@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -o /dev/null  -pass-remarks-output=%t -S
+; RUN: opt < %s -passes=gvn -o /dev/null  -pass-remarks-output=%t -S
 ; RUN: cat %t | FileCheck %s
 
 ; CHECK:      --- !Missed

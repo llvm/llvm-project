@@ -8,9 +8,9 @@
 
 #include "BitcodeReader.h"
 #include "llvm/ADT/IndexedMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace clang {
 namespace doc {
@@ -81,7 +81,7 @@ llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,
   }
 }
 
-llvm::Error decodeRecord(const Record &R, llvm::Optional<Location> &Field,
+llvm::Error decodeRecord(const Record &R, std::optional<Location> &Field,
                          llvm::StringRef Blob) {
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -794,7 +794,7 @@ llvm::Error ClangDocBitcodeReader::validateStream() {
 }
 
 llvm::Error ClangDocBitcodeReader::readBlockInfoBlock() {
-  Expected<Optional<llvm::BitstreamBlockInfo>> MaybeBlockInfo =
+  Expected<std::optional<llvm::BitstreamBlockInfo>> MaybeBlockInfo =
       Stream.ReadBlockInfoBlock();
   if (!MaybeBlockInfo)
     return MaybeBlockInfo.takeError();
