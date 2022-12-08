@@ -319,6 +319,8 @@ static LValueOrRValue buildSuspendExpression(
         if (TryStmt) {
           llvm_unreachable("NYI");
         }
+
+        builder.create<mlir::cir::YieldOp>(loc);
       });
 
   assert(awaitBuild.succeeded() && "Should know how to codegen");

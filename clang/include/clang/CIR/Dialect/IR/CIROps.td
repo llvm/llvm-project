@@ -429,11 +429,11 @@ def YieldOpKind : I32EnumAttr<
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
                                ParentOneOf<["IfOp", "ScopeOp", "SwitchOp",
-                                            "LoopOp"]>]> {
+                                            "LoopOp", "AwaitOp"]>]> {
   let summary = "Terminate CIR regions";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations:
-    `cir.if`, `cir.scope`, `cir.switch` and `cir.loop`.
+    `cir.if`, `cir.scope`, `cir.switch`, `cir.loop` and `cir.await`.
 
     Might yield an SSA value and the semantics of how the values are yielded is
     defined by the parent operation. Note: there are currently no uses of
