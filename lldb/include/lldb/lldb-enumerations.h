@@ -375,6 +375,9 @@ FLAGS_ENUM(SymbolContextItem){
     /// from being used during frame PC lookups and many other
     /// potential address to symbol context lookups.
     eSymbolContextVariable = (1u << 7),
+
+    // Keep this last and up-to-date for what the last enum value is.
+    eSymbolContextLastItem = eSymbolContextVariable,
 };
 LLDB_MARK_AS_BITMASK_ENUM(SymbolContextItem)
 

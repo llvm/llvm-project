@@ -1,4 +1,4 @@
-; RUN: opt %s -loop-vectorize -force-vector-width=4 -S | FileCheck %s
+; RUN: opt %s -passes=loop-vectorize -force-vector-width=4 -S | FileCheck %s
 
 ; Ensure the array loads/stores are not optimized into vector operations when
 ; the element type has padding bits.

@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce -instcombine | FileCheck %s
+; RUN: opt < %s -S -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-vector-width=4 | FileCheck %s
 ; Make sure we vectorize with debugging turned on.
 
 source_filename = "test/Transforms/LoopVectorize/dbg.value.ll"

@@ -779,8 +779,12 @@ MLIR_SPARSETENSOR_FOREVERY_V(IMPL_OUTNEXT)
 //
 //===----------------------------------------------------------------------===//
 
-index_type sparseLvlSize(void *tensor, index_type x) {
-  return static_cast<SparseTensorStorageBase *>(tensor)->getLvlSize(x);
+index_type sparseLvlSize(void *tensor, index_type l) {
+  return static_cast<SparseTensorStorageBase *>(tensor)->getLvlSize(l);
+}
+
+index_type sparseDimSize(void *tensor, index_type d) {
+  return static_cast<SparseTensorStorageBase *>(tensor)->getDimSize(d);
 }
 
 void endInsert(void *tensor) {

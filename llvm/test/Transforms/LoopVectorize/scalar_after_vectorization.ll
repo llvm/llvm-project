@@ -1,5 +1,5 @@
-; RUN: opt < %s -force-vector-width=4 -force-vector-interleave=2 -loop-vectorize -instcombine -S | FileCheck %s
-; RUN: opt < %s -force-vector-width=4 -force-vector-interleave=2 -loop-vectorize -S | FileCheck %s --check-prefix=NO-IC
+; RUN: opt < %s -force-vector-width=4 -force-vector-interleave=2 -passes=loop-vectorize,instcombine -S | FileCheck %s
+; RUN: opt < %s -force-vector-width=4 -force-vector-interleave=2 -passes=loop-vectorize -S | FileCheck %s --check-prefix=NO-IC
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 

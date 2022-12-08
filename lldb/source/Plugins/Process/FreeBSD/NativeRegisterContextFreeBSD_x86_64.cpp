@@ -311,9 +311,9 @@ NativeRegisterContextFreeBSD_x86_64::GetSetForNativeRegNum(
     if (reg_num >= k_first_avx_i386 && reg_num <= k_last_avx_i386)
       return YMMRegSet;
     if (reg_num >= k_first_mpxr_i386 && reg_num <= k_last_mpxr_i386)
-      return llvm::None; // MPXR
+      return std::nullopt; // MPXR
     if (reg_num >= k_first_mpxc_i386 && reg_num <= k_last_mpxc_i386)
-      return llvm::None; // MPXC
+      return std::nullopt; // MPXC
     if (reg_num >= k_first_dbr_i386 && reg_num <= k_last_dbr_i386)
       return DBRegSet; // DBR
     break;
@@ -325,9 +325,9 @@ NativeRegisterContextFreeBSD_x86_64::GetSetForNativeRegNum(
     if (reg_num >= k_first_avx_x86_64 && reg_num <= k_last_avx_x86_64)
       return YMMRegSet;
     if (reg_num >= k_first_mpxr_x86_64 && reg_num <= k_last_mpxr_x86_64)
-      return llvm::None; // MPXR
+      return std::nullopt; // MPXR
     if (reg_num >= k_first_mpxc_x86_64 && reg_num <= k_last_mpxc_x86_64)
-      return llvm::None; // MPXC
+      return std::nullopt; // MPXC
     if (reg_num >= k_first_dbr_x86_64 && reg_num <= k_last_dbr_x86_64)
       return DBRegSet; // DBR
     break;
@@ -633,7 +633,7 @@ llvm::Optional<NativeRegisterContextFreeBSD_x86_64::YMMSplitPtr>
 NativeRegisterContextFreeBSD_x86_64::GetYMMSplitReg(uint32_t reg) {
   uint32_t offset = m_xsave_offsets[YMMRegSet];
   if (offset == LLDB_INVALID_XSAVE_OFFSET)
-    return llvm::None;
+    return std::nullopt;
 
   uint32_t reg_index;
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {

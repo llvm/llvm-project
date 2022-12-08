@@ -1789,7 +1789,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
                                    .Case("half", "fp16")
                                    .Case("neon", "neon")
                                    .Case("vfpv3", "vfp3")
-                                   .Case("vfpv3d16", "d16")
+                                   .Case("vfpv3d16", "vfp3d16")
                                    .Case("vfpv4", "vfp4")
                                    .Case("idiva", "hwdiv-arm")
                                    .Case("idivt", "hwdiv")

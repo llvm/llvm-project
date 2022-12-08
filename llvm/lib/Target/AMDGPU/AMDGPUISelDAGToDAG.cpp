@@ -2663,12 +2663,6 @@ bool AMDGPUDAGToDAGISel::SelectVOP3BMods(SDValue In, SDValue &Src,
   return false;
 }
 
-bool AMDGPUDAGToDAGISel::SelectVOP3Mods_NNaN(SDValue In, SDValue &Src,
-                                             SDValue &SrcMods) const {
-  SelectVOP3Mods(In, Src, SrcMods);
-  return CurDAG->isKnownNeverNaN(Src);
-}
-
 bool AMDGPUDAGToDAGISel::SelectVOP3NoMods(SDValue In, SDValue &Src) const {
   if (In.getOpcode() == ISD::FABS || In.getOpcode() == ISD::FNEG)
     return false;

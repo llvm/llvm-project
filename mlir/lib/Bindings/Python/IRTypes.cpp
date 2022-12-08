@@ -390,7 +390,7 @@ public:
         [](PyRankedTensorType &self) -> llvm::Optional<PyAttribute> {
           MlirAttribute encoding = mlirRankedTensorTypeGetEncoding(self.get());
           if (mlirAttributeIsNull(encoding))
-            return llvm::None;
+            return std::nullopt;
           return PyAttribute(self.getContext(), encoding);
         });
   }

@@ -2970,8 +2970,9 @@ static void genScalarUserDefinedAssignmentCall(fir::FirOpBuilder &builder,
       return fir::factory::CharacterExprHelper{builder, loc}.createEmbox(
           *charBox);
     }
-    if (argType.isa<fir::BoxType>()) {
-      mlir::Value box = builder.createBox(loc, value);
+    if (argType.isa<fir::BaseBoxType>()) {
+      mlir::Value box =
+          builder.createBox(loc, value, argType.isa<fir::ClassType>());
       return builder.createConvert(loc, argType, box);
     }
     // Simple pass by address.
@@ -5832,7 +5833,7 @@ private:
 
   CC genarr(const Fortran::evaluate::StaticDataObject::Pointer &,
             ComponentPath &components) {
-    fir::emitFatalError(getLoc(), "substring of static array object");
+    TODO(getLoc(), "substring of static object inside FORALL");
   }
 
   /// Substrings (see 9.4.1)

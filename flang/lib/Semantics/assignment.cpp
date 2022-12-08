@@ -98,9 +98,9 @@ static std::optional<std::string> GetPointerComponentDesignatorName(
     const SomeExpr &expr) {
   if (const auto *derived{
           evaluate::GetDerivedTypeSpec(evaluate::DynamicType::From(expr))}) {
-    UltimateComponentIterator ultimates{*derived};
+    PotentialAndPointerComponentIterator potentials{*derived};
     if (auto pointer{
-            std::find_if(ultimates.begin(), ultimates.end(), IsPointer)}) {
+            std::find_if(potentials.begin(), potentials.end(), IsPointer)}) {
       return pointer.BuildResultDesignatorName();
     }
   }
@@ -116,7 +116,7 @@ bool CheckCopyabilityInPureScope(parser::ContextualMessages &messages,
       if (auto pointer{GetPointerComponentDesignatorName(expr)}) {
         evaluate::SayWithDeclaration(messages, *base,
             "A pure subprogram may not copy the value of '%s' because it is %s"
-            " and has the POINTER component '%s'"_err_en_US,
+            " and has the POINTER potential subobject component '%s'"_err_en_US,
             base->name(), why, *pointer);
         return false;
       }

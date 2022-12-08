@@ -69,11 +69,7 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
     Location loc, MemRefType type, Value memRefDesc, ValueRange indices,
     ConversionPatternRewriter &rewriter) const {
 
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  auto successStrides = getStridesAndOffset(type, strides, offset);
-  assert(succeeded(successStrides) && "unexpected non-strided memref");
-  (void)successStrides;
+  auto [strides, offset] = getStridesAndOffset(type);
 
   MemRefDescriptor memRefDescriptor(memRefDesc);
   Value base = memRefDescriptor.alignedPtr(rewriter, loc);

@@ -1505,7 +1505,7 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
     MFI->reserveWWMRegister(ParsedReg);
   }
 
-  auto parseAndCheckArgument = [&](const Optional<yaml::SIArgument> &A,
+  auto parseAndCheckArgument = [&](const std::optional<yaml::SIArgument> &A,
                                    const TargetRegisterClass &RC,
                                    ArgDescriptor &Arg, unsigned UserSGPRs,
                                    unsigned SystemSGPRs) {

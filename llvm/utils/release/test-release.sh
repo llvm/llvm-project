@@ -405,6 +405,10 @@ function configure_llvmCore() {
     esac
 
     project_list=${projects// /;}
+    # Leading spaces will result in ";<runtime name>". This causes a CMake
+    # error because the empty string before the first ';' is treated as an
+    # unknown runtime name.
+    runtimes=$(echo $runtimes | sed -e 's/^\s*//')
     runtime_list=${runtimes// /;}
     echo "# Using C compiler: $c_compiler"
     echo "# Using C++ compiler: $cxx_compiler"

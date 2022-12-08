@@ -1,4 +1,4 @@
-; RUN: opt -data-layout=A5 -mtriple=amdgcn-unknown-amdhsa -loop-unroll -S %s | FileCheck %s
+; RUN: opt -data-layout=A5 -mtriple=amdgcn-unknown-amdhsa -passes=loop-unroll -S %s | FileCheck %s
 
 ; Check that we full unroll loop to be able to eliminate alloca
 ; CHECK-LABEL: @non_invariant_ind

@@ -1746,7 +1746,7 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
 
   if (!Call) {
     LLVM_DEBUG(dbgs() << "Builtin record was not found!\n");
-    return None;
+    return std::nullopt;
   }
 
   // TODO: check if the provided args meet the builtin requirments.

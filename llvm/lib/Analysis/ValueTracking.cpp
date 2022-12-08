@@ -15,7 +15,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -3694,7 +3693,10 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
     case Intrinsic::exp2:
     case Intrinsic::fabs:
       return true;
-
+    case Intrinsic::copysign:
+      // Only the sign operand matters.
+      return cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI, true,
+                                             Depth + 1);
     case Intrinsic::sqrt:
       // sqrt(x) is always >= -0 or NaN.  Moreover, sqrt(x) == -0 iff x == -0.
       if (!SignBitOnly)
@@ -5182,7 +5184,24 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
     if (auto *II = dyn_cast<IntrinsicInst>(Op)) {
       switch (II->getIntrinsicID()) {
       // TODO: Add more intrinsics.
+      case Intrinsic::ctlz:
+      case Intrinsic::cttz:
+      case Intrinsic::abs:
+        if (cast<ConstantInt>(II->getArgOperand(1))->isNullValue())
+          return false;
+        break;
       case Intrinsic::ctpop:
+      case Intrinsic::bswap:
+      case Intrinsic::bitreverse:
+      case Intrinsic::fshl:
+      case Intrinsic::fshr:
+      case Intrinsic::smax:
+      case Intrinsic::smin:
+      case Intrinsic::umax:
+      case Intrinsic::umin:
+      case Intrinsic::ptrmask:
+      case Intrinsic::fptoui_sat:
+      case Intrinsic::fptosi_sat:
       case Intrinsic::sadd_with_overflow:
       case Intrinsic::ssub_with_overflow:
       case Intrinsic::smul_with_overflow:

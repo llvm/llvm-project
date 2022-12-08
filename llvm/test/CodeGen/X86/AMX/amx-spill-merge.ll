@@ -46,7 +46,6 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    movabsq $64, %rax
 ; CHECK-NEXT:    tilestored %tmm5, 1088(%rsp,%rax) # 1024-byte Folded Spill
 ; CHECK-NEXT:    tdpbssd %tmm1, %tmm0, %tmm5
-; CHECK-NEXT:    movabsq $64, %rax
 ; CHECK-NEXT:    tilestored %tmm5, 64(%rsp,%rax) # 1024-byte Folded Spill
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vzeroupper
@@ -64,7 +63,6 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    movabsq $64, %rax
 ; CHECK-NEXT:    tilestored %tmm5, 1088(%rsp,%rax) # 1024-byte Folded Spill
 ; CHECK-NEXT:    tdpbssd %tmm3, %tmm2, %tmm5
-; CHECK-NEXT:    movabsq $64, %rax
 ; CHECK-NEXT:    tilestored %tmm5, 64(%rsp,%rax) # 1024-byte Folded Spill
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vzeroupper

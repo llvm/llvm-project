@@ -86,3 +86,13 @@ func.func @preserves_structure(%arg0 : memref<8xindex>) {
     }
     func.return
 }
+
+func.func private @external() -> i8
+
+// CHECK-LABEL: @dead_code
+func.func @dead_code() {
+  %0 = call @external() : () -> i8
+  // CHECK: arith.floordivsi
+  %1 = arith.floordivsi %0, %0 : i8
+  return
+}

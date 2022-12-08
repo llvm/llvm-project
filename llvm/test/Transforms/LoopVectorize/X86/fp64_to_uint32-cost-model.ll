@@ -1,4 +1,4 @@
-; RUN: opt < %s -mcpu=core-avx2 -loop-vectorize -S | llc -mcpu=core-avx2 | FileCheck %s
+; RUN: opt < %s -mcpu=core-avx2 -passes=loop-vectorize -S | llc -mcpu=core-avx2 | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx"

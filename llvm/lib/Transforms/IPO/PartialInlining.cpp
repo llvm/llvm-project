@@ -1489,16 +1489,6 @@ bool PartialInlinerImpl::run(Module &M) {
     if (CurrFunc->use_empty())
       continue;
 
-    bool Recursive = false;
-    for (User *U : CurrFunc->users())
-      if (Instruction *I = dyn_cast<Instruction>(U))
-        if (I->getParent()->getParent() == CurrFunc) {
-          Recursive = true;
-          break;
-        }
-    if (Recursive)
-      continue;
-
     std::pair<bool, Function *> Result = unswitchFunction(*CurrFunc);
     if (Result.second)
       Worklist.push_back(Result.second);

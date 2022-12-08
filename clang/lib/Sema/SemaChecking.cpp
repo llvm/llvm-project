@@ -4271,10 +4271,11 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                             diag::err_ppc_builtin_requires_vsx);
   case PPC::BI__builtin_ppc_test_data_class: {
     // Check if the first argument of the __builtin_ppc_test_data_class call is
-    // valid. The argument must be either a 'float' or a 'double'.
+    // valid. The argument must be 'float' or 'double' or '__float128'.
     QualType ArgType = TheCall->getArg(0)->getType();
     if (ArgType != QualType(Context.FloatTy) &&
-        ArgType != QualType(Context.DoubleTy))
+        ArgType != QualType(Context.DoubleTy) &&
+        ArgType != QualType(Context.Float128Ty))
       return Diag(TheCall->getBeginLoc(),
                   diag::err_ppc_invalid_test_data_class_type);
     return SemaFeatureCheck(*this, TheCall, "isa-v30-instructions",

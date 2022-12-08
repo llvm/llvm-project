@@ -1802,9 +1802,9 @@ public:
   /// \p DF: duplication factor
   /// \p CI: copy index
   ///
-  /// The return is None if the values cannot be encoded in 32 bits - for
-  /// example, values for BD or DF larger than 12 bits. Otherwise, the return is
-  /// the encoded value.
+  /// The return is std::nullopt if the values cannot be encoded in 32 bits -
+  /// for example, values for BD or DF larger than 12 bits. Otherwise, the
+  /// return is the encoded value.
   static std::optional<unsigned> encodeDiscriminator(unsigned BD, unsigned DF,
                                                      unsigned CI);
 
@@ -2120,6 +2120,11 @@ public:
   DILocalScope *getScope() const { return cast<DILocalScope>(getRawScope()); }
 
   Metadata *getRawScope() const { return getOperand(1); }
+
+  void replaceScope(DIScope *Scope) {
+    assert(!isUniqued());
+    setOperand(1, Scope);
+  }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DILexicalBlockKind ||

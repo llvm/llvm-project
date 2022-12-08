@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll -S < %s | FileCheck %s
+; RUN: opt -passes=loop-unroll -S < %s | FileCheck %s
 ;
 ; Check that the llvm.loop.unroll.full loop property overrides
 ; llvm.loop.disable_nonforced.

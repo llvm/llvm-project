@@ -2184,6 +2184,12 @@ LogicalResult LLVMFuncOp::verifyRegions() {
   return success();
 }
 
+Region *LLVMFuncOp::getCallableRegion() {
+  if (isExternal())
+    return nullptr;
+  return &getBody();
+}
+
 //===----------------------------------------------------------------------===//
 // Verification for LLVM::ConstantOp.
 //===----------------------------------------------------------------------===//

@@ -248,14 +248,15 @@ static void emitTypeDoc(const Type &type, raw_ostream &os) {
 static void emitAttrOrTypeDefAssemblyFormat(const AttrOrTypeDef &def,
                                             raw_ostream &os) {
   ArrayRef<AttrOrTypeParameter> parameters = def.getParameters();
+  char prefix = isa<AttrDef>(def) ? '#' : '!';
   if (parameters.empty()) {
-    os << "\nSyntax: `!" << def.getDialect().getName() << "."
+    os << "\nSyntax: `" << prefix << def.getDialect().getName() << "."
        << def.getMnemonic() << "`\n";
     return;
   }
 
-  os << "\nSyntax:\n\n```\n!" << def.getDialect().getName() << "."
-     << def.getMnemonic() << "<\n";
+  os << "\nSyntax:\n\n```\n"
+     << prefix << def.getDialect().getName() << "." << def.getMnemonic() << "<\n";
   for (const auto &it : llvm::enumerate(parameters)) {
     const AttrOrTypeParameter &param = it.value();
     os << "  " << param.getSyntax();
@@ -363,7 +364,7 @@ static bool emitDialectDoc(const RecordKeeper &recordKeeper, raw_ostream &os) {
   std::vector<Record *> dialectDefs =
       recordKeeper.getAllDerivedDefinitionsIfDefined("Dialect");
   SmallVector<Dialect> dialects(dialectDefs.begin(), dialectDefs.end());
-  Optional<Dialect> dialect = findDialectToGenerate(dialects);
+  std::optional<Dialect> dialect = findDialectToGenerate(dialects);
   if (!dialect)
     return true;
 

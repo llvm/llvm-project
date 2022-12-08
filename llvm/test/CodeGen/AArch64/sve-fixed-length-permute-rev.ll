@@ -223,6 +223,37 @@ define void @test_rev_elts_fail(ptr %a) #1 {
   ret void
 }
 
+; This is the same test as above, but with sve2p1 it can use the REVD instruction to reverse
+; the double-words within quard-words.
+define void @test_revdv4i64_sve2p1(ptr %a) #2 {
+; CHECK-LABEL: test_revdv4i64_sve2p1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    revd z0.q, p0/m, z0.q
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %tmp1 = load <4 x i64>, ptr %a
+  %tmp2 = shufflevector <4 x i64> %tmp1, <4 x i64> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  store <4 x i64> %tmp2, ptr %a
+  ret void
+}
+
+define void @test_revdv4f64_sve2p1(ptr %a) #2 {
+; CHECK-LABEL: test_revdv4f64_sve2p1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    revd z0.q, p1/m, z0.q
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %tmp1 = load <4 x double>, ptr %a
+  %tmp2 = shufflevector <4 x double> %tmp1, <4 x double> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  store <4 x double> %tmp2, ptr %a
+  ret void
+}
+
 ; REV instruction will reverse the order of all elements in the vector.
 ; When the vector length and the target register size are inconsistent,
 ; the correctness of generated REV instruction for shuffle pattern cannot be guaranteed.
@@ -472,3 +503,4 @@ define void @test_revv8i16v8i16(ptr %a, ptr %b, ptr %c) #1 {
 
 attributes #0 = { "target-features"="+sve" }
 attributes #1 = { "target-features"="+sve" vscale_range(2,2) }
+attributes #2 = { "target-features"="+sve2p1" }

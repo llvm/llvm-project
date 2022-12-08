@@ -1653,10 +1653,15 @@ void CGDebugInfo::CollectRecordFields(
       } else if (CGM.getCodeGenOpts().EmitCodeView) {
         // Debug info for nested types is included in the member list only for
         // CodeView.
-        if (const auto *nestedType = dyn_cast<TypeDecl>(I))
+        if (const auto *nestedType = dyn_cast<TypeDecl>(I)) {
+          // MSVC doesn't generate nested type for anonymous struct/union.
+          if (isa<RecordDecl>(I) &&
+              cast<RecordDecl>(I)->isAnonymousStructOrUnion())
+            continue;
           if (!nestedType->isImplicit() &&
               nestedType->getDeclContext() == record)
             CollectRecordNestedType(nestedType, elements);
+        }
       }
   }
 }

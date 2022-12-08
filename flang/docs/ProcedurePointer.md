@@ -113,13 +113,13 @@ end subroutine proc_pointer_dummy_argument
 
 **FIR for case 1**
 ```
-func.func private @foo1(!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>)
-func.func private @foo2(!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>)
+func.func private @foo1(!fir.boxproc<(!fir.ref<i32>) -> f32>)
+func.func private @foo2(!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>)
 
-func.func @proc_pointer_dummy_argument(%0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>) {
-  %1 = fir.load %0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>
-  fir.call @foo1(%1) : ((!fir.ref<i32>) -> !fir.ref<f32>) -> ()
-  fir.call @foo2(%0) : (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>) -> ()
+func.func @proc_pointer_dummy_argument(%0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>) {
+  %1 = fir.load %0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>
+  fir.call @foo1(%1) : (!fir.boxproc<(!fir.ref<i32>) -> f32>) -> ()
+  fir.call @foo2(%0) : (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>) -> ()
   return
 }
 ```
@@ -149,20 +149,20 @@ end subroutine proc_pointer_global
 
 **FIR for case 2**
 ```
-func.func private @foo1(!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>)
-func.func private @foo2(!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>)
+func.func private @foo1(!fir.boxproc<(!fir.ref<i32>) -> f32>)
+func.func private @foo2(!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>)
 
-fir.global internal @ProcedurePointer : !fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>> {
-  %0 = fir.zero_bits (!fir.ref<i32>) -> !fir.ref<f32>
-  %1 = fir.emboxproc %0 : ((!fir.ref<i32>) -> !fir.ref<f32>) -> !fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>
-  fir.has_value %1 : !fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>
+fir.global internal @ProcedurePointer : !fir.boxproc<(!fir.ref<i32>) -> f32> {
+  %0 = fir.zero_bits (!fir.ref<i32>) -> f32
+  %1 = fir.emboxproc %0 : ((!fir.ref<i32>) -> f32) -> !fir.boxproc<(!fir.ref<i32>) -> f32>
+  fir.has_value %1 : !fir.boxproc<(!fir.ref<i32>) -> f32>
 }
 
 func.func @proc_pointer_global() {
-  %0 = fir.address_of(@ProcedurePointer) : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>
-  %1 = fir.load %0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>
-  fir.call @foo1(%1) : (!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>) -> ()
-  fir.call @foo2(%0) : (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>) -> ()
+  %0 = fir.address_of(@ProcedurePointer) : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>
+  %1 = fir.load %0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>
+  fir.call @foo1(%1) : (!fir.boxproc<(!fir.ref<i32>) -> f32>) -> ()
+  fir.call @foo2(%0) : (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>) -> ()
   return
 }
 ```
@@ -192,18 +192,17 @@ end subroutine proc_pointer_local
 
 **FIR for case 3**
 ```
-func.func private @foo1(!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>)
-func.func private @foo2(!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>)
+func.func private @foo1(!fir.boxproc<(!fir.ref<i32>) -> f32>)
+func.func private @foo2(!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>)
 
 func.func @proc_pointer_local() {
-  %0 = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>
-  %1 = fir.load %0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>
-  %2 = fir.box_addr %1 : (!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>) -> ((!fir.ref<i32>) -> !fir.ref<f32>)
-  %3 = fir.zero_bits (!fir.ref<i32>) -> !fir.ref<f32>
-  fir.store %3 to %2 : !fir.ref<(!fir.ref<i32>) -> !fir.ref<f32>>
-  %4 = fir.load %0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>
-  fir.call @foo1(%4) : (!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>) -> ()
-  fir.call @foo2(%0) : (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>) -> ()
+  %0 = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> f32>
+  %1 = fir.zero_bits (!fir.ref<i32>) -> f32
+  %2 = fir.emboxproc %1 : ((!fir.ref<i32>) -> f32) -> !fir.boxproc<(!fir.ref<i32>) -> f32>
+  fir.store %2 to %0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>
+  %4 = fir.load %0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>
+  fir.call @foo1(%4) : (!fir.boxproc<(!fir.ref<i32>) -> f32>) -> ()
+  fir.call @foo2(%0) : (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>) -> ()
   return
 }
 ```
@@ -344,32 +343,35 @@ end
 
 **FIR**
 ```
-func.func @Procedure(%arg0 : !fir.ref<i32>) -> !fir.ref<f32> {
+func.func @Procedure(%arg0 : !fir.ref<i32>) -> f32 {
+  %0 = fir.alloca f32 {bindc_name = "res", uniq_name = "_QFfuncEres"}
   %1 = fir.load %arg0 : !fir.ref<i32>
   %2 = fir.convert %1 : (i32) -> f32
-  return %2 : f32
+  fir.store %2 to %0 : !fir.ref<f32>
+  %3 = fir.load %0 : !fir.ref<f32>
+  return %3 : f32
 }
 
-func.func @Reference2Function() -> !fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>> {
-  %0 = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>
-  %1 = fir.load %0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>
-  return %1 : !fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>
+func.func @Reference2Function() -> !fir.boxproc<(!fir.ref<i32>) -> f32> {
+  %0 = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> f32>
+  %1 = fir.load %0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>
+  return %1 : !fir.boxproc<(!fir.ref<i32>) -> f32>
 }
 
-func.func @proc_pointer_assignment(%arg0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>, %arg1 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>) {
-  %0 = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>> {bindc_name = ".result"}
+func.func @proc_pointer_assignment(%arg0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>, %arg1 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>) {
+  %0 = fir.alloca !fir.boxproc<(!fir.ref<i32>) -> f32> {bindc_name = ".result"}
   // case 1: assignment from external procedure
-  %1 = fir.address_of(@Procedure) : (!fir.ref<i32>) -> !fir.ref<f32>
-  %2 = fir.emboxproc %1 : ((!fir.ref<i32>) -> !fir.ref<f32>) -> !fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>
-  fir.store %2 to %arg0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>
+  %1 = fir.address_of(@Procedure) : (!fir.ref<i32>) -> f32
+  %2 = fir.emboxproc %1 : ((!fir.ref<i32>) -> f32) -> !fir.boxproc<(!fir.ref<i32>) -> f32>
+  fir.store %2 to %arg0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>
   // case2: assignment from procdure pointer
-  %3 = fir.load %arg1 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>
-  fir.store %3 to %arg0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>
+  %3 = fir.load %arg1 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>
+  fir.store %3 to %arg0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>
   // case3: assignment from a reference to a function whose result is a procedure pointer
-  %4 = fir.call @Reference2Function() : () -> !fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>
-  fir.store %4 to %0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>
-  %5 = fir.load %0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>
-  fir.store %5 to %arg0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>>
+  %4 = fir.call @Reference2Function() : () -> !fir.boxproc<(!fir.ref<i32>) -> f32>
+  fir.store %4 to %0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>
+  %5 = fir.load %0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>
+  fir.store %5 to %arg0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>
   return
 }
 ```
@@ -402,19 +404,18 @@ end subroutine proc_pointer_component
 
 **FIR**
 ```
-func.func @proc_pointer_component(%arg0 : (!fir.ref<i32>) -> !fir.ref<f32>, %arg1: !fir.ref<i32>) {
+func.func @proc_pointer_component(%arg0 : !fir.boxproc<(!fir.ref<i32>) -> f32>, %arg1: !fir.ref<i32>) {
   %0 = fir.alloca !fir.type<_QFtestTmatrix{element:!fir.array<2x2xf32>,solve:!fir.boxproc<() -> ()>}>
   %1 = fir.field_index solve, !fir.type<_QFtestTmatrix{element:!fir.array<2x2xf32>,solve:!fir.boxproc<() -> ()>}>
   %2 = fir.coordinate_of %0, %1 : (!fir.ref<!fir.type<_QFtestTmatrix{element:!fir.array<2x2xf32>,solve:!fir.boxproc<() -> ()>}>>, !fir.field) -> !fir.ref<!fir.boxproc<() -> ()>>
-  %3 = fir.emboxproc %arg0 : ((!fir.ref<i32>) -> !fir.ref<f32>) -> !fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>
-  %4 = fir.convert %3 : (!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>) ->  !fir.boxproc<() -> ()>
-  fir.store %4 to %2 : !fir.ref<!fir.boxproc<() -> ()>>
+  %3 = fir.convert %arg0 : (!fir.boxproc<(!fir.ref<i32>) -> f32>) ->  !fir.boxproc<() -> ()>
+  fir.store %3 to %2 : !fir.ref<!fir.boxproc<() -> ()>>
   %4 = fir.field_index solve, !fir.type<_QFtestTmatrix{element:!fir.array<2x2xf32>,solve:!fir.boxproc<() -> ()>}>
   %5 = fir.coordinate_of %0, %4 : (!fir.ref<!fir.type<_QFtestTmatrix{element:!fir.array<2x2xf32>,solve:!fir.boxproc<() -> ()>}>>, !fir.field) -> !fir.ref<!fir.boxproc<() -> ()>>
   %6 = fir.load %5 : !fir.ref<!fir.boxproc<() -> ()>>
-  %7 = fir.convert %6 : (!fir.boxproc<() -> ()>) -> !fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>
-  %8 = fir.box_addr %7 : (!fir.boxproc<(!fir.ref<i32>) -> !fir.ref<f32>>) -> ((!fir.ref<i32>) -> !fir.ref<f32>)
-  %9 = fir.call %8(%arg1) : (!fir.ref<i32>) -> !fir.ref<f32>
+  %7 = fir.convert %6 : (!fir.boxproc<() -> ()>) -> !fir.boxproc<(!fir.ref<i32>) -> f32>
+  %8 = fir.box_addr %7 : (!fir.boxproc<(!fir.ref<i32>) -> f32>) -> ((!fir.ref<i32>) -> f32)
+  %9 = fir.call %8(%arg1) : (!fir.ref<i32>) -> f32
   return
 }
 ```
@@ -469,12 +470,11 @@ Current list of TODOs in code generation:
 
 NOTE: There are any number of possible implementations.
 
-- `flang/lib/Optimizer/CodeGen/TypeConverter.h:64` TODO: BoxProcType type conversion
-- `flang/lib/Optimizer/CodeGen/BoxedProcedure.cpp:136` not yet implemented: record type with a boxproc type
-- fir.global for procedure pointers
+BoxedProcedure pass
 
 or
 
+- `flang/lib/Optimizer/CodeGen/TypeConverter.h:64` TODO: BoxProcType type conversion
 - `flang/lib/Optimizer/CodeGen/CodeGen.cpp:2080` not yet implemented: fir.emboxproc codegen
 - `flang/lib/Optimizer/CodeGen/CodeGen.cpp:629` not yet implemented: fir.boxproc_host codegen
 - `flang/lib/Optimizer/CodeGen/CodeGen.cpp:1078` not yet implemented: fir.len_param_index codegen

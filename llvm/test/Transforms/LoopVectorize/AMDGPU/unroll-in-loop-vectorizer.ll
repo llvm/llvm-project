@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=fiji -loop-vectorize < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=fiji -passes=loop-vectorize < %s | FileCheck %s
 
 
 ; For AMDGPU, loop unroll in loop vectorizer is disabled when VF==1.

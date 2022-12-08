@@ -1240,7 +1240,6 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-NEXT:    testl %ecx, %ecx
 ; X86-NEXT:    cmovsl %esi, %eax
-; X86-NEXT:    movl $0, %esi
 ; X86-NEXT:    movl $-1, %ebx
 ; X86-NEXT:    cmovsl %ebx, %edi
 ; X86-NEXT:    andl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload

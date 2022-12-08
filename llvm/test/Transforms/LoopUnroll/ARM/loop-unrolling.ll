@@ -1,9 +1,9 @@
-; RUN: opt -mtriple=armv7 -mcpu=cortex-a57 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-NOUNROLL
-; RUN: opt -mtriple=thumbv7 -mcpu=cortex-a57 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-NOUNROLL
-; RUN: opt -mtriple=thumbv7 -mcpu=cortex-a72 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-NOUNROLL
-; RUN: opt -mtriple=thumbv8m -mcpu=cortex-m23 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL
-; RUN: opt -mtriple=thumbv8m.main -mcpu=cortex-m33 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL
-; RUN: opt -mtriple=thumbv7em -mcpu=cortex-m7 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL
+; RUN: opt -mtriple=armv7 -mcpu=cortex-a57 -passes=loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-NOUNROLL
+; RUN: opt -mtriple=thumbv7 -mcpu=cortex-a57 -passes=loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-NOUNROLL
+; RUN: opt -mtriple=thumbv7 -mcpu=cortex-a72 -passes=loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-NOUNROLL
+; RUN: opt -mtriple=thumbv8m -mcpu=cortex-m23 -passes=loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL
+; RUN: opt -mtriple=thumbv8m.main -mcpu=cortex-m33 -passes=loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL
+; RUN: opt -mtriple=thumbv7em -mcpu=cortex-m7 -passes=loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL
 
 ; CHECK-LABEL: partial
 define arm_aapcs_vfpcc void @partial(i32* nocapture %C, i32* nocapture readonly %A, i32* nocapture readonly %B) local_unnamed_addr #0 {

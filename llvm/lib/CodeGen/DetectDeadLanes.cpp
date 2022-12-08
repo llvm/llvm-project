@@ -488,7 +488,7 @@ std::pair<bool, bool> DetectDeadLanes::runOnce(MachineFunction &MF) {
   // First pass: Populate defs/uses of vregs with initial values
   unsigned NumVirtRegs = MRI->getNumVirtRegs();
   for (unsigned RegIdx = 0; RegIdx < NumVirtRegs; ++RegIdx) {
-    unsigned Reg = Register::index2VirtReg(RegIdx);
+    Register Reg = Register::index2VirtReg(RegIdx);
 
     // Determine used/defined lanes and add copy instructions to worklist.
     VRegInfo &Info = VRegInfos[RegIdx];
@@ -502,7 +502,7 @@ std::pair<bool, bool> DetectDeadLanes::runOnce(MachineFunction &MF) {
     Worklist.pop_front();
     WorklistMembers.reset(RegIdx);
     VRegInfo &Info = VRegInfos[RegIdx];
-    unsigned Reg = Register::index2VirtReg(RegIdx);
+    Register Reg = Register::index2VirtReg(RegIdx);
 
     // Transfer UsedLanes to operands of DefMI (backwards dataflow).
     MachineOperand &Def = *MRI->def_begin(Reg);
@@ -516,7 +516,7 @@ std::pair<bool, bool> DetectDeadLanes::runOnce(MachineFunction &MF) {
   LLVM_DEBUG({
     dbgs() << "Defined/Used lanes:\n";
     for (unsigned RegIdx = 0; RegIdx < NumVirtRegs; ++RegIdx) {
-      unsigned Reg = Register::index2VirtReg(RegIdx);
+      Register Reg = Register::index2VirtReg(RegIdx);
       const VRegInfo &Info = VRegInfos[RegIdx];
       dbgs() << printReg(Reg, nullptr)
              << " Used: " << PrintLaneMask(Info.UsedLanes)

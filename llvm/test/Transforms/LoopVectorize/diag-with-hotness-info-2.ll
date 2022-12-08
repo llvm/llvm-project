@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -pass-remarks-analysis=loop-vectorize -pass-remarks-with-hotness < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -pass-remarks-analysis=loop-vectorize -pass-remarks-with-hotness < %s 2>&1 | FileCheck %s
 ; RUN: opt -S -passes=loop-vectorize -pass-remarks-analysis=loop-vectorize -pass-remarks-with-hotness < %s 2>&1 | FileCheck %s
 
 ;   1	void cold(char *A, char *B, char *C, char *D, char *E, int N) {

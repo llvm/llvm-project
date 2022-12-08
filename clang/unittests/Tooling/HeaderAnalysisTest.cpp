@@ -56,9 +56,40 @@ TEST(HeaderAnalysisTest, IsSelfContained) {
   EXPECT_TRUE(isSelfContainedHeader(FM.getFile("headerguard.h").get(), SM, HI));
   EXPECT_TRUE(isSelfContainedHeader(FM.getFile("pragmaonce.h").get(), SM, HI));
   EXPECT_TRUE(isSelfContainedHeader(FM.getFile("imported.h").get(), SM, HI));
+  EXPECT_TRUE(
+      isSelfContainedHeader(SM.getFileEntryForID(SM.getMainFileID()), SM, HI));
 
   EXPECT_FALSE(isSelfContainedHeader(FM.getFile("unguarded.h").get(), SM, HI));
   EXPECT_FALSE(isSelfContainedHeader(FM.getFile("bad.h").get(), SM, HI));
+}
+
+TEST(HeaderAnalysisTest, CodeContainsImports) {
+  EXPECT_TRUE(codeContainsImports(R"cpp(
+  #include "foo.h"
+  #import "NSFoo.h"
+
+  int main() {
+    foo();
+  }
+  )cpp"));
+
+  EXPECT_TRUE(codeContainsImports(R"cpp(
+  #include "foo.h"
+
+  int main() {
+    foo();
+  }
+
+  #import "NSFoo.h"
+  )cpp"));
+
+  EXPECT_FALSE(codeContainsImports(R"cpp(
+  #include "foo.h"
+
+  int main() {
+    foo();
+  }
+  )cpp"));
 }
 
 TEST(HeaderAnalysisTest, ParseIWYUPragma) {

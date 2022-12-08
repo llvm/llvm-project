@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 /// Define scheduler resources associated with def operands.
 
+defvar UpperBoundLMUL = "UpperBound";
 defvar SchedMxList = ["UpperBound", "M1", "M2", "M4", "M8", "MF2", "MF4", "MF8"];
 // Used for widening and narrowing instructions as it doesn't contain M8.
 defvar SchedMxListW = ["UpperBound", "MF8", "MF4", "MF2", "M1", "M2", "M4"];
@@ -114,51 +115,51 @@ def WriteVSETVL       : SchedWrite;
 
 // 7. Vector Loads and Stores
 // 7.4. Vector Unit-Stride Instructions
-def WriteVLDE         : SchedWrite;
-def WriteVSTE         : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVLDE">;
+defm "" : LMULSchedWrites<"WriteVSTE">;
 // 7.4.1. Vector Unit-Strided Mask
-def WriteVLDM         : SchedWrite;
-def WriteVSTM         : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVLDM">;
+defm "" : LMULSchedWrites<"WriteVSTM">;
 // 7.5. Vector Strided Instructions
-def WriteVLDS8        : SchedWrite;
-def WriteVLDS16       : SchedWrite;
-def WriteVLDS32       : SchedWrite;
-def WriteVLDS64       : SchedWrite;
-def WriteVSTS8        : SchedWrite;
-def WriteVSTS16       : SchedWrite;
-def WriteVSTS32       : SchedWrite;
-def WriteVSTS64       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVLDS8">;
+defm "" : LMULSchedWrites<"WriteVLDS16">;
+defm "" : LMULSchedWrites<"WriteVLDS32">;
+defm "" : LMULSchedWrites<"WriteVLDS64">;
+defm "" : LMULSchedWrites<"WriteVSTS8">;
+defm "" : LMULSchedWrites<"WriteVSTS16">;
+defm "" : LMULSchedWrites<"WriteVSTS32">;
+defm "" : LMULSchedWrites<"WriteVSTS64">;
 // 7.6. Vector Indexed Instructions
-def WriteVLDUX8       : SchedWrite;
-def WriteVLDUX16      : SchedWrite;
-def WriteVLDUX32      : SchedWrite;
-def WriteVLDUX64      : SchedWrite;
-def WriteVLDOX8       : SchedWrite;
-def WriteVLDOX16      : SchedWrite;
-def WriteVLDOX32      : SchedWrite;
-def WriteVLDOX64      : SchedWrite;
-def WriteVSTUX8       : SchedWrite;
-def WriteVSTUX16      : SchedWrite;
-def WriteVSTUX32      : SchedWrite;
-def WriteVSTUX64      : SchedWrite;
-def WriteVSTOX8       : SchedWrite;
-def WriteVSTOX16      : SchedWrite;
-def WriteVSTOX32      : SchedWrite;
-def WriteVSTOX64      : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVLDUX8">;
+defm "" : LMULSchedWrites<"WriteVLDUX16">;
+defm "" : LMULSchedWrites<"WriteVLDUX32">;
+defm "" : LMULSchedWrites<"WriteVLDUX64">;
+defm "" : LMULSchedWrites<"WriteVLDOX8">;
+defm "" : LMULSchedWrites<"WriteVLDOX16">;
+defm "" : LMULSchedWrites<"WriteVLDOX32">;
+defm "" : LMULSchedWrites<"WriteVLDOX64">;
+defm "" : LMULSchedWrites<"WriteVSTUX8">;
+defm "" : LMULSchedWrites<"WriteVSTUX16">;
+defm "" : LMULSchedWrites<"WriteVSTUX32">;
+defm "" : LMULSchedWrites<"WriteVSTUX64">;
+defm "" : LMULSchedWrites<"WriteVSTOX8">;
+defm "" : LMULSchedWrites<"WriteVSTOX16">;
+defm "" : LMULSchedWrites<"WriteVSTOX32">;
+defm "" : LMULSchedWrites<"WriteVSTOX64">;
 // 7.7. Vector Unit-stride Fault-Only-First Loads
-def WriteVLDFF        : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVLDFF">;
 // 7.8. Vector Segment Instructions
 foreach nf=2-8 in {
   foreach eew = [8, 16, 32, 64] in {
-    def WriteVLSEG # nf # e # eew : SchedWrite;
-    def WriteVSSEG # nf # e # eew : SchedWrite;
-    def WriteVLSEGFF # nf # e # eew : SchedWrite;
-    def WriteVLSSEG # nf # e # eew : SchedWrite;
-    def WriteVSSSEG # nf # e # eew : SchedWrite;
-    def WriteVLUXSEG # nf # e # eew : SchedWrite;
-    def WriteVLOXSEG # nf # e # eew : SchedWrite;
-    def WriteVSUXSEG # nf # e # eew : SchedWrite;
-    def WriteVSOXSEG # nf # e # eew : SchedWrite;
+    defm "" : LMULSchedWrites<"WriteVLSEG" # nf # e # eew>;
+    defm "" : LMULSchedWrites<"WriteVSSEG" # nf # e # eew>;
+    defm "" : LMULSchedWrites<"WriteVLSEGFF" # nf # e # eew>;
+    defm "" : LMULSchedWrites<"WriteVLSSEG" # nf # e # eew>;
+    defm "" : LMULSchedWrites<"WriteVSSSEG" # nf # e # eew>;
+    defm "" : LMULSchedWrites<"WriteVLUXSEG" # nf # e # eew>;
+    defm "" : LMULSchedWrites<"WriteVLOXSEG" # nf # e # eew>;
+    defm "" : LMULSchedWrites<"WriteVSUXSEG" # nf # e # eew>;
+    defm "" : LMULSchedWrites<"WriteVSOXSEG" # nf # e # eew>;
   }
 }
 // 7.9. Vector Whole Register Instructions
@@ -309,39 +310,40 @@ def WriteVFWRedOV     : SchedWrite;
 
 // 15. Vector Mask Instructions
 // 15.1. Vector Mask-Register Logical Instructions
-def WriteVMALUV       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVMALUV">;
 // 15.2. Vector Mask Population Count
-def WriteVMPopV       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVMPopV">;
 // 15.3. Vector Find-First-Set Mask Bit
-def WriteVMFFSV       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVMFFSV">;
 // 15.4. Vector Set-Before-First Mask Bit
 // 15.5. Vector Set-Including-First Mask Bit
 // 15.6. Vector Set-only-First Mask Bit
-def WriteVMSFSV       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVMSFSV">;
 // 15.8. Vector Iota Instruction
-def WriteVMIotV       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVMIotV">;
 // 15.9. Vector Element Index Instruction
-def WriteVMIdxV       : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVMIdxV">;
 
 // 16. Vector Permutation Instructions
 // 16.1. Integer Scalar Move Instructions
-def WriteVIMovVX      : SchedWrite;
-def WriteVIMovXV      : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVIMovVX">;
+defm "" : LMULSchedWrites<"WriteVIMovXV">;
 // 16.2. Floating-Point Scalar Move Instructions
-def WriteVFMovVF      : SchedWrite;
-def WriteVFMovFV      : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVFMovVF">;
+defm "" : LMULSchedWrites<"WriteVFMovFV">;
 // 16.3. Vector Slide Instructions
-def WriteVISlideX     : SchedWrite;
-def WriteVISlideI     : SchedWrite;
-def WriteVISlide1X    : SchedWrite;
-def WriteVFSlide1F    : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVISlideX">;
+defm "" : LMULSchedWrites<"WriteVISlideI">;
+defm "" : LMULSchedWrites<"WriteVISlide1X">;
+defm "" : LMULSchedWrites<"WriteVFSlide1F">;
 // 16.4. Vector Register Gather Instructions
-def WriteVGatherV     : SchedWrite;
-def WriteVGatherX     : SchedWrite;
-def WriteVGatherI     : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVGatherV">;
+defm "" : LMULSchedWrites<"WriteVGatherX">;
+defm "" : LMULSchedWrites<"WriteVGatherI">;
 // 16.5. Vector Compress Instruction
-def WriteVCompressV   : SchedWrite;
+defm "" : LMULSchedWrites<"WriteVCompressV">;
 // 16.6. Whole Vector Register Move
+// These are already LMUL aware
 def WriteVMov1V       : SchedWrite;
 def WriteVMov2V       : SchedWrite;
 def WriteVMov4V       : SchedWrite;
@@ -355,41 +357,42 @@ def ReadVSETVLI       : SchedRead;
 def ReadVSETVL        : SchedRead;
 
 // 7. Vector Loads and Stores
-def ReadVLDX          : SchedRead;
-def ReadVSTX          : SchedRead;
+defm "" : LMULSchedReads<"ReadVLDX">;
+defm "" : LMULSchedReads<"ReadVSTX">;
 // 7.4. Vector Unit-Stride Instructions
-def ReadVSTEV        : SchedRead;
+defm "" : LMULSchedReads<"ReadVSTEV">;
 // 7.4.1. Vector Unit-Strided Mask
-def ReadVSTM          : SchedRead;
+defm "" : LMULSchedReads<"ReadVSTM">;
 // 7.5. Vector Strided Instructions
-def ReadVLDSX         : SchedRead;
-def ReadVSTSX         : SchedRead;
-def ReadVSTS8V        : SchedRead;
-def ReadVSTS16V       : SchedRead;
-def ReadVSTS32V       : SchedRead;
-def ReadVSTS64V       : SchedRead;
+defm "" : LMULSchedReads<"ReadVLDSX">;
+defm "" : LMULSchedReads<"ReadVSTSX">;
+defm "" : LMULSchedReads<"ReadVSTS8V">;
+defm "" : LMULSchedReads<"ReadVSTS16V">;
+defm "" : LMULSchedReads<"ReadVSTS32V">;
+defm "" : LMULSchedReads<"ReadVSTS64V">;
 // 7.6. Vector Indexed Instructions
-def ReadVLDUXV        : SchedRead;
-def ReadVLDOXV        : SchedRead;
-def ReadVSTUX8        : SchedRead;
-def ReadVSTUX16       : SchedRead;
-def ReadVSTUX32       : SchedRead;
-def ReadVSTUX64       : SchedRead;
-def ReadVSTUXV        : SchedRead;
-def ReadVSTUX8V       : SchedRead;
-def ReadVSTUX16V      : SchedRead;
-def ReadVSTUX32V      : SchedRead;
-def ReadVSTUX64V      : SchedRead;
-def ReadVSTOX8        : SchedRead;
-def ReadVSTOX16       : SchedRead;
-def ReadVSTOX32       : SchedRead;
-def ReadVSTOX64       : SchedRead;
-def ReadVSTOXV        : SchedRead;
-def ReadVSTOX8V       : SchedRead;
-def ReadVSTOX16V      : SchedRead;
-def ReadVSTOX32V      : SchedRead;
-def ReadVSTOX64V      : SchedRead;
+defm "" : LMULSchedReads<"ReadVLDUXV">;
+defm "" : LMULSchedReads<"ReadVLDOXV">;
+defm "" : LMULSchedReads<"ReadVSTUX8">;
+defm "" : LMULSchedReads<"ReadVSTUX16">;
+defm "" : LMULSchedReads<"ReadVSTUX32">;
+defm "" : LMULSchedReads<"ReadVSTUX64">;
+defm "" : LMULSchedReads<"ReadVSTUXV">;
+defm "" : LMULSchedReads<"ReadVSTUX8V">;
+defm "" : LMULSchedReads<"ReadVSTUX16V">;
+defm "" : LMULSchedReads<"ReadVSTUX32V">;
+defm "" : LMULSchedReads<"ReadVSTUX64V">;
+defm "" : LMULSchedReads<"ReadVSTOX8">;
+defm "" : LMULSchedReads<"ReadVSTOX16">;
+defm "" : LMULSchedReads<"ReadVSTOX32">;
+defm "" : LMULSchedReads<"ReadVSTOX64">;
+defm "" : LMULSchedReads<"ReadVSTOXV">;
+defm "" : LMULSchedReads<"ReadVSTOX8V">;
+defm "" : LMULSchedReads<"ReadVSTOX16V">;
+defm "" : LMULSchedReads<"ReadVSTOX32V">;
+defm "" : LMULSchedReads<"ReadVSTOX64V">;
 // 7.9. Vector Whole Register Instructions
+// These are already LMUL aware
 def ReadVST1R         : SchedRead;
 def ReadVST2R         : SchedRead;
 def ReadVST4R         : SchedRead;
@@ -529,38 +532,39 @@ def ReadVFWRedOV0     : SchedRead;
 
 // 15. Vector Mask Instructions
 // 15.1. Vector Mask-Register Logical Instructions
-def ReadVMALUV        : SchedRead;
+defm "" : LMULSchedReads<"ReadVMALUV">;
 // 15.2. Vector Mask Population Count
-def ReadVMPopV        : SchedRead;
+defm "" : LMULSchedReads<"ReadVMPopV">;
 // 15.3. Vector Find-First-Set Mask Bit
-def ReadVMFFSV        : SchedRead;
+defm "" : LMULSchedReads<"ReadVMFFSV">;
 // 15.4. Vector Set-Before-First Mask Bit
 // 15.5. Vector Set-Including-First Mask Bit
 // 15.6. Vector Set-only-First Mask Bit
-def ReadVMSFSV        : SchedRead;
+defm "" : LMULSchedReads<"ReadVMSFSV">;
 // 15.8. Vector Iota Instruction
-def ReadVMIotV        : SchedRead;
+defm "" : LMULSchedReads<"ReadVMIotV">;
 
 // 16. Vector Permutation Instructions
 // 16.1. Integer Scalar Move Instructions
-def ReadVIMovVX       : SchedRead;
-def ReadVIMovXV       : SchedRead;
-def ReadVIMovXX       : SchedRead;
+defm "" : LMULSchedReads<"ReadVIMovVX">;
+defm "" : LMULSchedReads<"ReadVIMovXV">;
+defm "" : LMULSchedReads<"ReadVIMovXX">;
 // 16.2. Floating-Point Scalar Move Instructions
-def ReadVFMovVF       : SchedRead;
-def ReadVFMovFV       : SchedRead;
-def ReadVFMovFX       : SchedRead;
+defm "" : LMULSchedReads<"ReadVFMovVF">;
+defm "" : LMULSchedReads<"ReadVFMovFV">;
+defm "" : LMULSchedReads<"ReadVFMovFX">;
 // 16.3. Vector Slide Instructions
-def ReadVISlideV      : SchedRead;
-def ReadVISlideX      : SchedRead;
-def ReadVFSlideV      : SchedRead;
-def ReadVFSlideF      : SchedRead;
+defm "" : LMULSchedReads<"ReadVISlideV">;
+defm "" : LMULSchedReads<"ReadVISlideX">;
+defm "" : LMULSchedReads<"ReadVFSlideV">;
+defm "" : LMULSchedReads<"ReadVFSlideF">;
 // 16.4. Vector Register Gather Instructions
-def ReadVGatherV      : SchedRead;
-def ReadVGatherX      : SchedRead;
+defm "" : LMULSchedReads<"ReadVGatherV">;
+defm "" : LMULSchedReads<"ReadVGatherX">;
 // 16.5. Vector Compress Instruction
-def ReadVCompressV    : SchedRead;
+defm "" : LMULSchedReads<"ReadVCompressV">;
 // 16.6. Whole Vector Register Move
+// These are already LMUL aware
 def ReadVMov1V        : SchedRead;
 def ReadVMov2V        : SchedRead;
 def ReadVMov4V        : SchedRead;
@@ -584,35 +588,36 @@ def : WriteRes<WriteVSETIVLI, []>;
 def : WriteRes<WriteVSETVL, []>;
 
 // 7. Vector Loads and Stores
-def : WriteRes<WriteVLDE, []>;
-def : WriteRes<WriteVSTE, []>;
-def : WriteRes<WriteVLDM, []>;
-def : WriteRes<WriteVSTM, []>;
-def : WriteRes<WriteVLDS8, []>;
-def : WriteRes<WriteVLDS16, []>;
-def : WriteRes<WriteVLDS32, []>;
-def : WriteRes<WriteVLDS64, []>;
-def : WriteRes<WriteVSTS8, []>;
-def : WriteRes<WriteVSTS16, []>;
-def : WriteRes<WriteVSTS32, []>;
-def : WriteRes<WriteVSTS64, []>;
-def : WriteRes<WriteVLDUX8, []>;
-def : WriteRes<WriteVLDUX16, []>;
-def : WriteRes<WriteVLDUX32, []>;
-def : WriteRes<WriteVLDUX64, []>;
-def : WriteRes<WriteVLDOX8, []>;
-def : WriteRes<WriteVLDOX16, []>;
-def : WriteRes<WriteVLDOX32, []>;
-def : WriteRes<WriteVLDOX64, []>;
-def : WriteRes<WriteVSTUX8, []>;
-def : WriteRes<WriteVSTUX16, []>;
-def : WriteRes<WriteVSTUX32, []>;
-def : WriteRes<WriteVSTUX64, []>;
-def : WriteRes<WriteVSTOX8, []>;
-def : WriteRes<WriteVSTOX16, []>;
-def : WriteRes<WriteVSTOX32, []>;
-def : WriteRes<WriteVSTOX64, []>;
-def : WriteRes<WriteVLDFF, []>;
+defm "" : LMULWriteRes<"WriteVLDE", []>;
+defm "" : LMULWriteRes<"WriteVSTE", []>;
+defm "" : LMULWriteRes<"WriteVLDM", []>;
+defm "" : LMULWriteRes<"WriteVSTM", []>;
+defm "" : LMULWriteRes<"WriteVLDS8", []>;
+defm "" : LMULWriteRes<"WriteVLDS16", []>;
+defm "" : LMULWriteRes<"WriteVLDS32", []>;
+defm "" : LMULWriteRes<"WriteVLDS64", []>;
+defm "" : LMULWriteRes<"WriteVSTS8", []>;
+defm "" : LMULWriteRes<"WriteVSTS16", []>;
+defm "" : LMULWriteRes<"WriteVSTS32", []>;
+defm "" : LMULWriteRes<"WriteVSTS64", []>;
+defm "" : LMULWriteRes<"WriteVLDUX8", []>;
+defm "" : LMULWriteRes<"WriteVLDUX16", []>;
+defm "" : LMULWriteRes<"WriteVLDUX32", []>;
+defm "" : LMULWriteRes<"WriteVLDUX64", []>;
+defm "" : LMULWriteRes<"WriteVLDOX8", []>;
+defm "" : LMULWriteRes<"WriteVLDOX16", []>;
+defm "" : LMULWriteRes<"WriteVLDOX32", []>;
+defm "" : LMULWriteRes<"WriteVLDOX64", []>;
+defm "" : LMULWriteRes<"WriteVSTUX8", []>;
+defm "" : LMULWriteRes<"WriteVSTUX16", []>;
+defm "" : LMULWriteRes<"WriteVSTUX32", []>;
+defm "" : LMULWriteRes<"WriteVSTUX64", []>;
+defm "" : LMULWriteRes<"WriteVSTOX8", []>;
+defm "" : LMULWriteRes<"WriteVSTOX16", []>;
+defm "" : LMULWriteRes<"WriteVSTOX32", []>;
+defm "" : LMULWriteRes<"WriteVSTOX64", []>;
+defm "" : LMULWriteRes<"WriteVLDFF", []>;
+// These are already LMUL aware
 def : WriteRes<WriteVLD1R, []>;
 def : WriteRes<WriteVLD2R, []>;
 def : WriteRes<WriteVLD4R, []>;
@@ -624,15 +629,15 @@ def : WriteRes<WriteVST8R, []>;
 // Vector Segment Loads and Stores
 foreach nf=2-8 in {
   foreach eew = [8, 16, 32, 64] in {
-    def : WriteRes <!cast<SchedWrite>("WriteVLSEG" # nf # "e" # eew), []>;
-    def : WriteRes <!cast<SchedWrite>("WriteVLSEGFF" # nf # "e" # eew), []>;
-    def : WriteRes <!cast<SchedWrite>("WriteVSSEG" # nf # "e" # eew), []>;
-    def : WriteRes <!cast<SchedWrite>("WriteVLSSEG" # nf # "e" # eew), []>;
-    def : WriteRes <!cast<SchedWrite>("WriteVSSSEG" # nf # "e" # eew), []>;
-    def : WriteRes <!cast<SchedWrite>("WriteVLUXSEG" # nf # "e" # eew), []>;
-    def : WriteRes <!cast<SchedWrite>("WriteVLOXSEG" # nf # "e" # eew), []>;
-    def : WriteRes <!cast<SchedWrite>("WriteVSUXSEG" # nf # "e" # eew), []>;
-    def : WriteRes <!cast<SchedWrite>("WriteVSOXSEG" # nf # "e" # eew), []>;
+    defm "" : LMULWriteRes <"WriteVLSEG" # nf # "e" # eew, []>;
+    defm "" : LMULWriteRes <"WriteVLSEGFF" # nf # "e" # eew, []>;
+    defm "" : LMULWriteRes <"WriteVSSEG" # nf # "e" # eew, []>;
+    defm "" : LMULWriteRes <"WriteVLSSEG" # nf # "e" # eew, []>;
+    defm "" : LMULWriteRes <"WriteVSSSEG" # nf # "e" # eew, []>;
+    defm "" : LMULWriteRes <"WriteVLUXSEG" # nf # "e" # eew, []>;
+    defm "" : LMULWriteRes <"WriteVLOXSEG" # nf # "e" # eew, []>;
+    defm "" : LMULWriteRes <"WriteVSUXSEG" # nf # "e" # eew, []>;
+    defm "" : LMULWriteRes <"WriteVSOXSEG" # nf # "e" # eew, []>;
   }
 }
 
@@ -730,26 +735,27 @@ def : WriteRes<WriteVFWRedV, []>;
 def : WriteRes<WriteVFWRedOV, []>;
 
 // 15. Vector Mask Instructions
-def : WriteRes<WriteVMALUV, []>;
-def : WriteRes<WriteVMPopV, []>;
-def : WriteRes<WriteVMFFSV, []>;
-def : WriteRes<WriteVMSFSV, []>;
-def : WriteRes<WriteVMIotV, []>;
-def : WriteRes<WriteVMIdxV, []>;
+defm "" : LMULWriteRes<"WriteVMALUV", []>;
+defm "" : LMULWriteRes<"WriteVMPopV", []>;
+defm "" : LMULWriteRes<"WriteVMFFSV", []>;
+defm "" : LMULWriteRes<"WriteVMSFSV", []>;
+defm "" : LMULWriteRes<"WriteVMIotV", []>;
+defm "" : LMULWriteRes<"WriteVMIdxV", []>;
 
 // 16. Vector Permutation Instructions
-def : WriteRes<WriteVIMovVX, []>;
-def : WriteRes<WriteVIMovXV, []>;
-def : WriteRes<WriteVFMovVF, []>;
-def : WriteRes<WriteVFMovFV, []>;
-def : WriteRes<WriteVISlideX, []>;
-def : WriteRes<WriteVISlideI, []>;
-def : WriteRes<WriteVISlide1X, []>;
-def : WriteRes<WriteVFSlide1F, []>;
-def : WriteRes<WriteVGatherV, []>;
-def : WriteRes<WriteVGatherX, []>;
-def : WriteRes<WriteVGatherI, []>;
-def : WriteRes<WriteVCompressV, []>;
+defm "" : LMULWriteRes<"WriteVIMovVX", []>;
+defm "" : LMULWriteRes<"WriteVIMovXV", []>;
+defm "" : LMULWriteRes<"WriteVFMovVF", []>;
+defm "" : LMULWriteRes<"WriteVFMovFV", []>;
+defm "" : LMULWriteRes<"WriteVISlideX", []>;
+defm "" : LMULWriteRes<"WriteVISlideI", []>;
+defm "" : LMULWriteRes<"WriteVISlide1X", []>;
+defm "" : LMULWriteRes<"WriteVFSlide1F", []>;
+defm "" : LMULWriteRes<"WriteVGatherV", []>;
+defm "" : LMULWriteRes<"WriteVGatherX", []>;
+defm "" : LMULWriteRes<"WriteVGatherI", []>;
+defm "" : LMULWriteRes<"WriteVCompressV", []>;
+// These are already LMUL aware
 def : WriteRes<WriteVMov1V, []>;
 def : WriteRes<WriteVMov2V, []>;
 def : WriteRes<WriteVMov4V, []>;
@@ -760,36 +766,37 @@ def : ReadAdvance<ReadVSETVLI, 0>;
 def : ReadAdvance<ReadVSETVL, 0>;
 
 // 7. Vector Loads and Stores
-def : ReadAdvance<ReadVLDX, 0>;
-def : ReadAdvance<ReadVSTX, 0>;
-def : ReadAdvance<ReadVSTEV, 0>;
-def : ReadAdvance<ReadVSTM, 0>;
-def : ReadAdvance<ReadVLDSX, 0>;
-def : ReadAdvance<ReadVSTSX, 0>;
-def : ReadAdvance<ReadVSTS8V, 0>;
-def : ReadAdvance<ReadVSTS16V, 0>;
-def : ReadAdvance<ReadVSTS32V, 0>;
-def : ReadAdvance<ReadVSTS64V, 0>;
-def : ReadAdvance<ReadVLDUXV, 0>;
-def : ReadAdvance<ReadVLDOXV, 0>;
-def : ReadAdvance<ReadVSTUXV, 0>;
-def : ReadAdvance<ReadVSTUX8, 0>;
-def : ReadAdvance<ReadVSTUX16, 0>;
-def : ReadAdvance<ReadVSTUX32, 0>;
-def : ReadAdvance<ReadVSTUX64, 0>;
-def : ReadAdvance<ReadVSTUX8V, 0>;
-def : ReadAdvance<ReadVSTUX16V, 0>;
-def : ReadAdvance<ReadVSTUX32V, 0>;
-def : ReadAdvance<ReadVSTUX64V, 0>;
-def : ReadAdvance<ReadVSTOX8, 0>;
-def : ReadAdvance<ReadVSTOX16, 0>;
-def : ReadAdvance<ReadVSTOX32, 0>;
-def : ReadAdvance<ReadVSTOX64, 0>;
-def : ReadAdvance<ReadVSTOXV, 0>;
-def : ReadAdvance<ReadVSTOX8V, 0>;
-def : ReadAdvance<ReadVSTOX16V, 0>;
-def : ReadAdvance<ReadVSTOX32V, 0>;
-def : ReadAdvance<ReadVSTOX64V, 0>;
+defm "" : LMULReadAdvance<"ReadVLDX", 0>;
+defm "" : LMULReadAdvance<"ReadVSTX", 0>;
+defm "" : LMULReadAdvance<"ReadVSTEV", 0>;
+defm "" : LMULReadAdvance<"ReadVSTM", 0>;
+defm "" : LMULReadAdvance<"ReadVLDSX", 0>;
+defm "" : LMULReadAdvance<"ReadVSTSX", 0>;
+defm "" : LMULReadAdvance<"ReadVSTS8V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTS16V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTS32V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTS64V", 0>;
+defm "" : LMULReadAdvance<"ReadVLDUXV", 0>;
+defm "" : LMULReadAdvance<"ReadVLDOXV", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUXV", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUX8", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUX16", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUX32", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUX64", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUX8V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUX16V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUX32V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUX64V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOX8", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOX16", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOX32", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOX64", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOXV", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOX8V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOX16V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOX32V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOX64V", 0>;
+// These are already LMUL aware
 def : ReadAdvance<ReadVST1R, 0>;
 def : ReadAdvance<ReadVST2R, 0>;
 def : ReadAdvance<ReadVST4R, 0>;
@@ -885,26 +892,27 @@ def : ReadAdvance<ReadVFWRedOV, 0>;
 def : ReadAdvance<ReadVFWRedOV0, 0>;
 
 // 15. Vector Mask Instructions
-def : ReadAdvance<ReadVMALUV, 0>;
-def : ReadAdvance<ReadVMPopV, 0>;
-def : ReadAdvance<ReadVMFFSV, 0>;
-def : ReadAdvance<ReadVMSFSV, 0>;
-def : ReadAdvance<ReadVMIotV, 0>;
+defm "" : LMULReadAdvance<"ReadVMALUV", 0>;
+defm "" : LMULReadAdvance<"ReadVMPopV", 0>;
+defm "" : LMULReadAdvance<"ReadVMFFSV", 0>;
+defm "" : LMULReadAdvance<"ReadVMSFSV", 0>;
+defm "" : LMULReadAdvance<"ReadVMIotV", 0>;
 
 // 16. Vector Permutation Instructions
-def : ReadAdvance<ReadVIMovVX, 0>;
-def : ReadAdvance<ReadVIMovXV, 0>;
-def : ReadAdvance<ReadVIMovXX, 0>;
-def : ReadAdvance<ReadVFMovVF, 0>;
-def : ReadAdvance<ReadVFMovFV, 0>;
-def : ReadAdvance<ReadVFMovFX, 0>;
-def : ReadAdvance<ReadVISlideV, 0>;
-def : ReadAdvance<ReadVISlideX, 0>;
-def : ReadAdvance<ReadVFSlideV, 0>;
-def : ReadAdvance<ReadVFSlideF, 0>;
-def : ReadAdvance<ReadVGatherV, 0>;
-def : ReadAdvance<ReadVGatherX, 0>;
-def : ReadAdvance<ReadVCompressV, 0>;
+defm "" : LMULReadAdvance<"ReadVIMovVX", 0>;
+defm "" : LMULReadAdvance<"ReadVIMovXV", 0>;
+defm "" : LMULReadAdvance<"ReadVIMovXX", 0>;
+defm "" : LMULReadAdvance<"ReadVFMovVF", 0>;
+defm "" : LMULReadAdvance<"ReadVFMovFV", 0>;
+defm "" : LMULReadAdvance<"ReadVFMovFX", 0>;
+defm "" : LMULReadAdvance<"ReadVISlideV", 0>;
+defm "" : LMULReadAdvance<"ReadVISlideX", 0>;
+defm "" : LMULReadAdvance<"ReadVFSlideV", 0>;
+defm "" : LMULReadAdvance<"ReadVFSlideF", 0>;
+defm "" : LMULReadAdvance<"ReadVGatherV", 0>;
+defm "" : LMULReadAdvance<"ReadVGatherX", 0>;
+defm "" : LMULReadAdvance<"ReadVCompressV", 0>;
+// These are already LMUL aware
 def : ReadAdvance<ReadVMov1V, 0>;
 def : ReadAdvance<ReadVMov2V, 0>;
 def : ReadAdvance<ReadVMov4V, 0>;
