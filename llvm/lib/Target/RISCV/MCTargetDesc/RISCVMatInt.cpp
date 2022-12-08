@@ -175,9 +175,10 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   RISCVMatInt::InstSeq Res;
   generateInstSeqImpl(Val, ActiveFeatures, Res);
 
-  // If there are trailing zeros, try generating a sign extended constant with
-  // no trailing zeros and use a final SLLI to restore them.
-  if ((Val & 1) == 0 && Res.size() > 2) {
+  // If the low 12 bits are non-zero, the first expansion may end with an ADDI
+  // or ADDIW. If there are trailing zeros, try generating a sign extended
+  // constant with no trailing zeros and use a final SLLI to restore them.
+  if ((Val & 0xfff) != 0 && (Val & 1) == 0 && Res.size() > 2) {
     unsigned TrailingZeros = countTrailingZeros((uint64_t)Val);
     int64_t ShiftedVal = Val >> TrailingZeros;
     RISCVMatInt::InstSeq TmpSeq;
