@@ -404,6 +404,9 @@ HANDLE_TARGET_OPCODE(G_BRCOND)
 /// Generic indirect branch instruction.
 HANDLE_TARGET_OPCODE(G_BRINDIRECT)
 
+/// Begin an invoke region marker.
+HANDLE_TARGET_OPCODE(G_INVOKE_REGION_START)
+
 /// Generic intrinsic use (without side effects).
 HANDLE_TARGET_OPCODE(G_INTRINSIC)
 

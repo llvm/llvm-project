@@ -556,6 +556,7 @@ memory_resource mutex
 memory_resource new
 memory_resource stdexcept
 memory_resource tuple
+memory_resource type_traits
 memory_resource version
 mutex atomic
 mutex concepts

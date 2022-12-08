@@ -1,7 +1,7 @@
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=true < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_ON %s
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=true < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_ON %s
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=false < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_OFF %s
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=false < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_OFF %s
+; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=true --amdgpu-lower-module-lds-strategy=module < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_ON %s
+; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=true --amdgpu-lower-module-lds-strategy=module < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_ON %s
+; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=false --amdgpu-lower-module-lds-strategy=module < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_OFF %s
+; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=false --amdgpu-lower-module-lds-strategy=module < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_OFF %s
 
 ; CHECK: %llvm.amdgcn.kernel.k1.lds.t = type { [32 x i8] }
 ; CHECK: %llvm.amdgcn.kernel.k2.lds.t = type { i16, [2 x i8], i16 }

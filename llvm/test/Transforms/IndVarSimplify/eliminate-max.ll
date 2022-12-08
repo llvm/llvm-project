@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -indvars | FileCheck %s
+; RUN: opt < %s -S -passes=indvars | FileCheck %s
 ; PR4914.ll
 
 ; Indvars should be able to do range analysis and eliminate icmps.

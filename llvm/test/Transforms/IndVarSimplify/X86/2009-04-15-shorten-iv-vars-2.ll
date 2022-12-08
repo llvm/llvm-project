@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes='loop(indvars),instcombine' -S | FileCheck %s
 ; ModuleID = '<stdin>'
 ;extern int *a, *b, *c, *d, *e, *f;  /* 64 bit */
 ;extern int K[256];

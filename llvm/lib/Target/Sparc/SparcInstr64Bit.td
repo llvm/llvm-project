@@ -235,8 +235,7 @@ def UDIVXri : F3_2<2, 0b001101,
 let Predicates = [Is64Bit] in {
 
 // 64-bit loads.
-let DecoderMethod = "DecodeLoadInt" in
-  defm LDX   : Load<"ldx", 0b001011, load, I64Regs, i64>;
+defm LDX   : Load<"ldx", 0b001011, load, I64Regs, i64>;
 
 let mayLoad = 1, isAsmParserOnly = 1 in {
   def TLS_LDXrr : F3_1<3, 0b001011,
@@ -279,12 +278,10 @@ def : Pat<(i64 (extloadi32 ADDRrr:$addr)),  (LDrr ADDRrr:$addr)>;
 def : Pat<(i64 (extloadi32 ADDRri:$addr)),  (LDri ADDRri:$addr)>;
 
 // Sign-extending load of i32 into i64 is a new SPARC v9 instruction.
-let DecoderMethod = "DecodeLoadInt" in
-  defm LDSW   : Load<"ldsw", 0b001000, sextloadi32, I64Regs, i64>;
+defm LDSW   : Load<"ldsw", 0b001000, sextloadi32, I64Regs, i64>;
 
 // 64-bit stores.
-let DecoderMethod = "DecodeStoreInt" in
-  defm STX    : Store<"stx", 0b001110, store,  I64Regs, i64>;
+defm STX    : Store<"stx", 0b001110, store,  I64Regs, i64>;
 
 // Truncating stores from i64 are identical to the i32 stores.
 def : Pat<(truncstorei8  i64:$src, ADDRrr:$addr), (STBrr ADDRrr:$addr, $src)>;
@@ -388,47 +385,33 @@ defm : bpr_alias<"brgz",  BPGZnapt,  BPGZapt >;
 defm : bpr_alias<"brgez", BPGEZnapt, BPGEZapt>;
 
 // Move integer register on register condition (MOVr).
-multiclass MOVR< bits<3> rcond,  string OpcStr> {
-  def rr : F4_4r<0b101111, 0b00000, rcond, (outs I64Regs:$rd),
-                   (ins I64Regs:$rs1, IntRegs:$rs2),
-                   !strconcat(OpcStr, " $rs1, $rs2, $rd"), []>;
+let Predicates = [Is64Bit], Constraints = "$f = $rd" in {
+  def MOVRrr : F4_4r<0b101111, 0b00000, (outs IntRegs:$rd),
+                   (ins I64Regs:$rs1, IntRegs:$rs2, IntRegs:$f, RegCCOp:$rcond),
+                   "movr$rcond $rs1, $rs2, $rd",
+                   [(set i32:$rd, (SPselectreg i32:$rs2, i32:$f, imm:$rcond, i64:$rs1))]>;
 
-  def ri : F4_4i<0b101111, rcond, (outs I64Regs:$rd),
-                   (ins I64Regs:$rs1, i64imm:$simm10),
-                   !strconcat(OpcStr, " $rs1, $simm10, $rd"), []>;
+  def MOVRri : F4_4i<0b101111, (outs IntRegs:$rd),
+                   (ins I64Regs:$rs1, i32imm:$simm10, IntRegs:$f, RegCCOp:$rcond),
+                   "movr$rcond $rs1, $simm10, $rd",
+                   [(set i32:$rd, (SPselectreg simm10:$simm10, i32:$f, imm:$rcond, i64:$rs1))]>;
 }
-
-defm MOVRRZ  : MOVR<0b001, "movrz">;
-defm MOVRLEZ : MOVR<0b010, "movrlez">;
-defm MOVRLZ  : MOVR<0b011, "movrlz">;
-defm MOVRNZ  : MOVR<0b101, "movrnz">;
-defm MOVRGZ  : MOVR<0b110, "movrgz">;
-defm MOVRGEZ : MOVR<0b111, "movrgez">;
 
 // Move FP register on integer register condition (FMOVr).
-multiclass FMOVR<bits<3> rcond, string OpcStr> {
-
-  def S : F4_4r<0b110101, 0b00101, rcond,
-                (outs FPRegs:$rd), (ins I64Regs:$rs1, FPRegs:$rs2),
-                !strconcat(!strconcat("fmovrs", OpcStr)," $rs1, $rs2, $rd"),
-                []>;
-  def D : F4_4r<0b110101, 0b00110, rcond,
-                (outs FPRegs:$rd), (ins I64Regs:$rs1, FPRegs:$rs2),
-                !strconcat(!strconcat("fmovrd", OpcStr)," $rs1, $rs2, $rd"),
-                []>;
-  def Q : F4_4r<0b110101, 0b00111, rcond,
-                (outs FPRegs:$rd), (ins I64Regs:$rs1, FPRegs:$rs2),
-                !strconcat(!strconcat("fmovrq", OpcStr)," $rs1, $rs2, $rd"),
-                []>, Requires<[HasHardQuad]>;
-}
-
-let Predicates = [HasV9] in {
-  defm FMOVRZ   : FMOVR<0b001, "z">;
-  defm FMOVRLEZ : FMOVR<0b010, "lez">;
-  defm FMOVRLZ  : FMOVR<0b011, "lz">;
-  defm FMOVRNZ  : FMOVR<0b101, "nz">;
-  defm FMOVRGZ  : FMOVR<0b110, "gz">;
-  defm FMOVRGEZ : FMOVR<0b111, "gez">;
+let Predicates = [Is64Bit], Constraints = "$f = $rd" in {
+  def FMOVRS : F4_4r<0b110101, 0b00101,
+                (outs FPRegs:$rd), (ins I64Regs:$rs1, FPRegs:$rs2, FPRegs:$f,  RegCCOp:$rcond),
+                "fmovrs$rcond $rs1, $rs2, $rd",
+                [(set f32:$rd, (SPselectreg f32:$rs2, f32:$f, imm:$rcond, i64:$rs1))]>;
+  def FMOVRD : F4_4r<0b110101, 0b00110,
+                (outs DFPRegs:$rd), (ins I64Regs:$rs1, DFPRegs:$rs2, DFPRegs:$f, RegCCOp:$rcond),
+                "fmovrd$rcond $rs1, $rs2, $rd",
+                [(set f64:$rd, (SPselectreg f64:$rs2, f64:$f, imm:$rcond, i64:$rs1))]>;
+  let Predicates = [HasHardQuad] in
+  def FMOVRQ : F4_4r<0b110101, 0b00111,
+                (outs QFPRegs:$rd), (ins I64Regs:$rs1, QFPRegs:$rs2, QFPRegs:$f, RegCCOp:$rcond),
+                "fmovrq$rcond $rs1, $rs2, $rd",
+                [(set f128:$rd, (SPselectreg f128:$rs2, f128:$f, imm:$rcond, i64:$rs1))]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -481,6 +464,11 @@ def : Pat<(SPselectfcc i64:$t, i64:$f, imm:$cond),
           (MOVFCCrr $t, $f, imm:$cond)>;
 def : Pat<(SPselectfcc (i64 simm11:$t), i64:$f, imm:$cond),
           (MOVFCCri (as_i32imm $t), $f, imm:$cond)>;
+
+def : Pat<(SPselectreg i64:$t, i64:$f, imm:$rcond, i64:$rs1),
+          (MOVRrr $rs1, $t, $f, imm:$rcond)>;
+def : Pat<(SPselectreg (i64 simm10:$t), i64:$f, imm:$rcond, i64:$rs1),
+          (MOVRri $rs1, (as_i32imm $t), $f, imm:$rcond)>;
 
 } // Predicates = [Is64Bit]
 

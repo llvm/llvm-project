@@ -1174,7 +1174,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     Observer.changingInstr(MI);
     for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
       MachineBasicBlock &OpMBB = *MI.getOperand(i + 1).getMBB();
-      MIRBuilder.setInsertPt(OpMBB, OpMBB.getFirstTerminator());
+      MIRBuilder.setInsertPt(OpMBB, OpMBB.getFirstTerminatorForward());
       extractParts(MI.getOperand(i).getReg(), NarrowTy, NumParts,
                    SrcRegs[i / 2]);
     }
@@ -2459,7 +2459,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changingInstr(MI);
     for (unsigned I = 1; I < MI.getNumOperands(); I += 2) {
       MachineBasicBlock &OpMBB = *MI.getOperand(I + 1).getMBB();
-      MIRBuilder.setInsertPt(OpMBB, OpMBB.getFirstTerminator());
+      MIRBuilder.setInsertPt(OpMBB, OpMBB.getFirstTerminatorForward());
       widenScalarSrc(MI, WideTy, I, TargetOpcode::G_ANYEXT);
     }
 
@@ -3785,7 +3785,7 @@ LegalizerHelper::fewerElementsVectorPhi(GenericMachineInstr &MI,
   for (unsigned UseIdx = NumDefs, UseNo = 0; UseIdx < MI.getNumOperands();
        UseIdx += 2, ++UseNo) {
     MachineBasicBlock &OpMBB = *MI.getOperand(UseIdx + 1).getMBB();
-    MIRBuilder.setInsertPt(OpMBB, OpMBB.getFirstTerminator());
+    MIRBuilder.setInsertPt(OpMBB, OpMBB.getFirstTerminatorForward());
     extractVectorParts(MI.getReg(UseIdx), NumElts, InputOpsPieces[UseNo]);
   }
 

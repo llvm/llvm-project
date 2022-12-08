@@ -22,33 +22,55 @@
 namespace llvm {
 namespace exegesis {
 
-Expected<LLVMState> LLVMState::Create(std::string Triple, std::string CpuName,
+Expected<LLVMState> LLVMState::Create(std::string TripleName,
+                                      std::string CpuName,
                                       const StringRef Features) {
-  if (Triple.empty())
-    Triple = sys::getProcessTriple();
-  if (CpuName.empty())
-    CpuName = sys::getHostCPUName().str();
+  if (TripleName.empty())
+    TripleName = Triple::normalize(sys::getDefaultTargetTriple());
+
+  Triple TheTriple(TripleName);
+
+  // Get the target specific parser.
   std::string Error;
-  const Target *const TheTarget = TargetRegistry::lookupTarget(Triple, Error);
+  const Target *TheTarget =
+      TargetRegistry::lookupTarget(/*MArch=*/"", TheTriple, Error);
   if (!TheTarget) {
-    return llvm::make_error<llvm::StringError>(
-        "no LLVM target for triple " + Triple, llvm::inconvertibleErrorCode());
+    return llvm::make_error<llvm::StringError>("no LLVM target for triple " +
+                                                   TripleName,
+                                               llvm::inconvertibleErrorCode());
+  }
+
+  // Update Triple with the updated triple from the target lookup.
+  TripleName = TheTriple.str();
+
+  if (CpuName == "native")
+    CpuName = std::string(llvm::sys::getHostCPUName());
+
+  std::unique_ptr<MCSubtargetInfo> STI(
+      TheTarget->createMCSubtargetInfo(TripleName, CpuName, ""));
+  assert(STI && "Unable to create subtarget info!");
+  if (!STI->isCPUStringValid(CpuName)) {
+    return llvm::make_error<llvm::StringError>(Twine("invalid CPU name (")
+                                                   .concat(CpuName)
+                                                   .concat(") for triple ")
+                                                   .concat(TripleName),
+                                               llvm::inconvertibleErrorCode());
   }
   const TargetOptions Options;
   std::unique_ptr<const TargetMachine> TM(
       static_cast<LLVMTargetMachine *>(TheTarget->createTargetMachine(
-          Triple, CpuName, Features, Options, Reloc::Model::Static)));
+          TripleName, CpuName, Features, Options, Reloc::Model::Static)));
   if (!TM) {
     return llvm::make_error<llvm::StringError>(
         "unable to create target machine", llvm::inconvertibleErrorCode());
   }
 
   const ExegesisTarget *ET =
-      Triple.empty() ? &ExegesisTarget::getDefault()
-                     : ExegesisTarget::lookup(TM->getTargetTriple());
+      TripleName.empty() ? &ExegesisTarget::getDefault()
+                         : ExegesisTarget::lookup(TM->getTargetTriple());
   if (!ET) {
     return llvm::make_error<llvm::StringError>(
-        "no Exegesis target for triple " + Triple,
+        "no Exegesis target for triple " + TripleName,
         llvm::inconvertibleErrorCode());
   }
   return LLVMState(std::move(TM), ET, CpuName);

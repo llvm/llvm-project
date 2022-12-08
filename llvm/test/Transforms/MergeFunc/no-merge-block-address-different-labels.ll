@@ -1,4 +1,4 @@
-; RUN: opt -S -mergefunc < %s | FileCheck %s
+; RUN: opt -S -passes=mergefunc < %s | FileCheck %s
 
 ; There is a slight different in these two functions, in that the label values
 ; are switched. They are thus not mergeable. This tests that block addresses

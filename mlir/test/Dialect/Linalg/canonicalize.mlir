@@ -299,9 +299,10 @@ func.func @self_copy(%arg0 : memref<2x3x?x4xf32>) {
 // CHECK-LABEL: func @fold_fill_reshape()
 func.func @fold_fill_reshape() -> tensor<6x4xf32> {
   %zero = arith.constant 0.0 : f32
-  // CHECK: %[[INIT:.+]] = tensor.empty() : tensor<6x4xf32>
   %empty = tensor.empty() : tensor<1x2x3x4xf32>
-  // CHECK: %[[FILL:.+]] = linalg.fill ins(%cst : f32) outs(%[[INIT]] : tensor<6x4xf32>) -> tensor<6x4xf32>
+  // CHECK:      %[[COLLAPSE:.+]] = tensor.collapse_shape
+  // CHECK-NEXT: %[[FILL:.+]] = linalg.fill ins(%cst : f32)
+  // CHECK-SAME:   outs(%[[COLLAPSE]] : tensor<6x4xf32>)
   %fill = linalg.fill ins(%zero : f32) outs(%empty : tensor<1x2x3x4xf32>) -> tensor<1x2x3x4xf32>
   %reshape = tensor.collapse_shape %fill [[0, 1, 2], [3]]
       : tensor<1x2x3x4xf32> into tensor<6x4xf32>

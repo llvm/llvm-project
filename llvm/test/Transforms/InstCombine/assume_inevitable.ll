@@ -10,11 +10,11 @@ define i32 @assume_inevitable(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[M:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A:%.*]], align 32
 ; CHECK-NEXT:    [[LOADRES:%.*]] = load i32, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[LOADRES2:%.*]] = call i32 @llvm.annotation.i32(i32 [[LOADRES]], ptr nonnull @.str, ptr nonnull @.str1, i32 2)
+; CHECK-NEXT:    [[LOADRES2:%.*]] = call i32 @llvm.annotation.i32.p0(i32 [[LOADRES]], ptr nonnull @.str, ptr nonnull @.str1, i32 2)
 ; CHECK-NEXT:    store i32 [[LOADRES2]], ptr [[A]], align 32
 ; CHECK-NEXT:    [[DUMMY_EQ:%.*]] = icmp ugt i32 [[LOADRES]], 42
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[DUMMY_EQ]])
-; CHECK-NEXT:    [[M_A:%.*]] = call ptr @llvm.ptr.annotation.p0(ptr nonnull [[M]], ptr nonnull @.str, ptr nonnull @.str1, i32 2, ptr null)
+; CHECK-NEXT:    [[M_A:%.*]] = call ptr @llvm.ptr.annotation.p0.p0(ptr nonnull [[M]], ptr nonnull @.str, ptr nonnull @.str1, i32 2, ptr null)
 ; CHECK-NEXT:    [[OBJSZ:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[C:%.*]], i1 false, i1 false, i1 false)
 ; CHECK-NEXT:    store i64 [[OBJSZ]], ptr [[M_A]], align 4
 ; CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[A]] to i64
