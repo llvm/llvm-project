@@ -101,6 +101,36 @@ double3 ceil(double3);
 __attribute__((clang_builtin_alias(__builtin_elementwise_ceil)))
 double4 ceil(double4);
 
+// floor builtins
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_elementwise_floor)))
+half floor(half);
+__attribute__((clang_builtin_alias(__builtin_elementwise_floor)))
+half2 floor(half2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_floor)))
+half3 floor(half3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_floor)))
+half4 floor(half4);
+#endif
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_floor))) float
+floor(float);
+__attribute__((clang_builtin_alias(__builtin_elementwise_floor)))
+float2 floor(float2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_floor)))
+float3 floor(float3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_floor)))
+float4 floor(float4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_floor))) double
+floor(double);
+__attribute__((clang_builtin_alias(__builtin_elementwise_floor)))
+double2 floor(double2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_floor)))
+double3 floor(double3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_floor)))
+double4 floor(double4);
+
 // cos builtins
 #ifdef __HLSL_ENABLE_16_BIT
 __attribute__((clang_builtin_alias(__builtin_elementwise_cos))) half cos(half);
