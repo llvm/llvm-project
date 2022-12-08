@@ -384,3 +384,79 @@ void test_builtin_elementwise_trunc(int i, float f, double d, float4 v, int3 iv,
   uv = __builtin_elementwise_trunc(uv);
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 }
+
+void test_builtin_elementwise_canonicalize(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
+
+  struct Foo s = __builtin_elementwise_canonicalize(f);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  i = __builtin_elementwise_canonicalize();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_elementwise_canonicalize(i);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
+
+  i = __builtin_elementwise_canonicalize(f, f);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  u = __builtin_elementwise_canonicalize(u);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned int')}}
+
+  uv = __builtin_elementwise_canonicalize(uv);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
+}
+
+void test_builtin_elementwise_copysign(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
+  i = __builtin_elementwise_copysign(p, d);
+  // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}
+
+  struct Foo foo = __builtin_elementwise_copysign(i, i);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'int'}}
+
+  i = __builtin_elementwise_copysign(i);
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 1}}
+
+  i = __builtin_elementwise_copysign();
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 0}}
+
+  i = __builtin_elementwise_copysign(i, i, i);
+  // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
+
+  i = __builtin_elementwise_copysign(v, iv);
+  // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'int3' (vector of 3 'int' values))}}
+
+  i = __builtin_elementwise_copysign(uv, iv);
+  // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
+
+  s = __builtin_elementwise_copysign(i, s);
+
+  enum e { one,
+           two };
+  i = __builtin_elementwise_copysign(one, two);
+
+  enum f { three };
+  enum f x = __builtin_elementwise_copysign(one, three);
+
+  _BitInt(32) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
+  ext = __builtin_elementwise_copysign(ext, ext);
+
+  const int ci;
+  i = __builtin_elementwise_copysign(ci, i);
+  i = __builtin_elementwise_copysign(i, ci);
+  i = __builtin_elementwise_copysign(ci, ci);
+
+  i = __builtin_elementwise_copysign(i, int_as_one); // ok (attributes don't match)?
+  i = __builtin_elementwise_copysign(i, b);          // ok (sugar doesn't match)?
+
+  int A[10];
+  A = __builtin_elementwise_copysign(A, A);
+  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was 'int *')}}
+
+  int(ii);
+  int j;
+  j = __builtin_elementwise_copysign(i, j);
+
+  _Complex float c1, c2;
+  c1 = __builtin_elementwise_copysign(c1, c2);
+  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was '_Complex float')}}
+}
