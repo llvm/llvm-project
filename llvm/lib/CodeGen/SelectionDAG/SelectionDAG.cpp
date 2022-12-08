@@ -10961,6 +10961,16 @@ bool llvm::isBitwiseNot(SDValue V, bool AllowUndefs) {
 
 ConstantSDNode *llvm::isConstOrConstSplat(SDValue N, bool AllowUndefs,
                                           bool AllowTruncation) {
+  EVT VT = N.getValueType();
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorMinNumElements())
+                           : APInt(1, 1);
+  return isConstOrConstSplat(N, DemandedElts, AllowUndefs, AllowTruncation);
+}
+
+ConstantSDNode *llvm::isConstOrConstSplat(SDValue N, const APInt &DemandedElts,
+                                          bool AllowUndefs,
+                                          bool AllowTruncation) {
   if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N))
     return CN;
 
@@ -10978,34 +10988,11 @@ ConstantSDNode *llvm::isConstOrConstSplat(SDValue N, bool AllowUndefs,
 
   if (BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(N)) {
     BitVector UndefElements;
-    ConstantSDNode *CN = BV->getConstantSplatNode(&UndefElements);
-
-    // BuildVectors can truncate their operands. Ignore that case here unless
-    // AllowTruncation is set.
-    if (CN && (UndefElements.none() || AllowUndefs)) {
-      EVT CVT = CN->getValueType(0);
-      EVT NSVT = N.getValueType().getScalarType();
-      assert(CVT.bitsGE(NSVT) && "Illegal build vector element extension");
-      if (AllowTruncation || (CVT == NSVT))
-        return CN;
-    }
-  }
-
-  return nullptr;
-}
-
-ConstantSDNode *llvm::isConstOrConstSplat(SDValue N, const APInt &DemandedElts,
-                                          bool AllowUndefs,
-                                          bool AllowTruncation) {
-  if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N))
-    return CN;
-
-  if (BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(N)) {
-    BitVector UndefElements;
     ConstantSDNode *CN = BV->getConstantSplatNode(DemandedElts, &UndefElements);
 
     // BuildVectors can truncate their operands. Ignore that case here unless
     // AllowTruncation is set.
+    // TODO: Look into whether we should allow UndefElements in non-DemandedElts
     if (CN && (UndefElements.none() || AllowUndefs)) {
       EVT CVT = CN->getValueType(0);
       EVT NSVT = N.getValueType().getScalarType();
@@ -11019,21 +11006,11 @@ ConstantSDNode *llvm::isConstOrConstSplat(SDValue N, const APInt &DemandedElts,
 }
 
 ConstantFPSDNode *llvm::isConstOrConstSplatFP(SDValue N, bool AllowUndefs) {
-  if (ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(N))
-    return CN;
-
-  if (BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(N)) {
-    BitVector UndefElements;
-    ConstantFPSDNode *CN = BV->getConstantFPSplatNode(&UndefElements);
-    if (CN && (UndefElements.none() || AllowUndefs))
-      return CN;
-  }
-
-  if (N.getOpcode() == ISD::SPLAT_VECTOR)
-    if (ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(N.getOperand(0)))
-      return CN;
-
-  return nullptr;
+  EVT VT = N.getValueType();
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorMinNumElements())
+                           : APInt(1, 1);
+  return isConstOrConstSplatFP(N, DemandedElts, AllowUndefs);
 }
 
 ConstantFPSDNode *llvm::isConstOrConstSplatFP(SDValue N,
@@ -11046,9 +11023,14 @@ ConstantFPSDNode *llvm::isConstOrConstSplatFP(SDValue N,
     BitVector UndefElements;
     ConstantFPSDNode *CN =
         BV->getConstantFPSplatNode(DemandedElts, &UndefElements);
+    // TODO: Look into whether we should allow UndefElements in non-DemandedElts
     if (CN && (UndefElements.none() || AllowUndefs))
       return CN;
   }
+
+  if (N.getOpcode() == ISD::SPLAT_VECTOR)
+    if (ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(N.getOperand(0)))
+      return CN;
 
   return nullptr;
 }
