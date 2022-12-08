@@ -216,6 +216,8 @@ inline bool isCPlusPlus(SourceLanguage S) {
   case DW_LANG_C_plus_plus_03:
   case DW_LANG_C_plus_plus_11:
   case DW_LANG_C_plus_plus_14:
+  case DW_LANG_C_plus_plus_17:
+  case DW_LANG_C_plus_plus_20:
     result = true;
     break;
   case DW_LANG_C89:
@@ -256,6 +258,13 @@ inline bool isCPlusPlus(SourceLanguage S) {
   case DW_LANG_BORLAND_Delphi:
   case DW_LANG_lo_user:
   case DW_LANG_hi_user:
+  case DW_LANG_Kotlin:
+  case DW_LANG_Zig:
+  case DW_LANG_Crystal:
+  case DW_LANG_C17:
+  case DW_LANG_Fortran18:
+  case DW_LANG_Ada2005:
+  case DW_LANG_Ada2012:
     result = false;
     break;
   }
@@ -274,6 +283,7 @@ inline bool isFortran(SourceLanguage S) {
   case DW_LANG_Fortran95:
   case DW_LANG_Fortran03:
   case DW_LANG_Fortran08:
+  case DW_LANG_Fortran18:
     result = true;
     break;
   case DW_LANG_C89:
@@ -313,6 +323,14 @@ inline bool isFortran(SourceLanguage S) {
   case DW_LANG_BORLAND_Delphi:
   case DW_LANG_lo_user:
   case DW_LANG_hi_user:
+  case DW_LANG_Kotlin:
+  case DW_LANG_Zig:
+  case DW_LANG_Crystal:
+  case DW_LANG_C_plus_plus_17:
+  case DW_LANG_C_plus_plus_20:
+  case DW_LANG_C17:
+  case DW_LANG_Ada2005:
+  case DW_LANG_Ada2012:
     result = false;
     break;
   }

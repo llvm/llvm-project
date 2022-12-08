@@ -23,6 +23,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/GraphWriter.h"
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -231,7 +232,7 @@ MachineBlockFrequencyInfo::getBlockFreq(const MachineBasicBlock *MBB) const {
   return MBFI ? MBFI->getBlockFreq(MBB) : 0;
 }
 
-Optional<uint64_t> MachineBlockFrequencyInfo::getBlockProfileCount(
+std::optional<uint64_t> MachineBlockFrequencyInfo::getBlockProfileCount(
     const MachineBasicBlock *MBB) const {
   if (!MBFI)
     return std::nullopt;
@@ -240,7 +241,7 @@ Optional<uint64_t> MachineBlockFrequencyInfo::getBlockProfileCount(
   return MBFI->getBlockProfileCount(F, MBB);
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 MachineBlockFrequencyInfo::getProfileCountFromFreq(uint64_t Freq) const {
   if (!MBFI)
     return std::nullopt;

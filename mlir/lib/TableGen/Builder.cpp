@@ -34,11 +34,12 @@ StringRef Builder::Parameter::getCppType() const {
 
 /// Return an optional string containing the default value to use for this
 /// parameter.
-Optional<StringRef> Builder::Parameter::getDefaultValue() const {
+std::optional<StringRef> Builder::Parameter::getDefaultValue() const {
   if (isa<llvm::StringInit>(def))
     return std::nullopt;
   const llvm::Record *record = cast<llvm::DefInit>(def)->getDef();
-  Optional<StringRef> value = record->getValueAsOptionalString("defaultValue");
+  std::optional<StringRef> value =
+      record->getValueAsOptionalString("defaultValue");
   return value && !value->empty() ? value : std::nullopt;
 }
 
@@ -58,7 +59,8 @@ Builder::Builder(const llvm::Record *record, ArrayRef<SMLoc> loc)
   for (unsigned i = 0, e = dag->getNumArgs(); i < e; ++i) {
     const llvm::StringInit *paramName = dag->getArgName(i);
     const llvm::Init *paramValue = dag->getArg(i);
-    Parameter param(paramName ? paramName->getValue() : Optional<StringRef>(),
+    Parameter param(paramName ? paramName->getValue()
+                              : std::optional<StringRef>(),
                     paramValue);
 
     // Similarly to C++, once an argument with a default value is detected, the
@@ -75,7 +77,7 @@ Builder::Builder(const llvm::Record *record, ArrayRef<SMLoc> loc)
 }
 
 /// Return an optional string containing the body of the builder.
-Optional<StringRef> Builder::getBody() const {
-  Optional<StringRef> body = def->getValueAsOptionalString("body");
+std::optional<StringRef> Builder::getBody() const {
+  std::optional<StringRef> body = def->getValueAsOptionalString("body");
   return body && !body->empty() ? body : std::nullopt;
 }

@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include <array>
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -295,7 +296,7 @@ struct SymbolInfo : public Info {
 
   void merge(SymbolInfo &&I);
 
-  llvm::Optional<Location> DefLoc;    // Location where this decl is defined.
+  std::optional<Location> DefLoc;     // Location where this decl is defined.
   llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
 };
 
@@ -421,7 +422,7 @@ struct EnumInfo : public SymbolInfo {
   // Set to nonempty to the type when this is an explicitly typed enum. For
   //   enum Foo : short { ... };
   // this will be "short".
-  llvm::Optional<TypeInfo> BaseType;
+  std::optional<TypeInfo> BaseType;
 
   llvm::SmallVector<EnumValueInfo, 4> Members; // List of enum members.
 };

@@ -432,6 +432,7 @@ private:
 
   bool ParseDirectiveInsn(SMLoc L);
   bool ParseDirectiveMachine(SMLoc L);
+  bool ParseGNUAttribute(SMLoc L);
 
   OperandMatchResultTy parseAddress(OperandVector &Operands,
                                     MemoryKind MemKind,
@@ -1224,6 +1225,8 @@ bool SystemZAsmParser::ParseDirective(AsmToken DirectiveID) {
     return ParseDirectiveInsn(DirectiveID.getLoc());
   if (IDVal == ".machine")
     return ParseDirectiveMachine(DirectiveID.getLoc());
+  if (IDVal.startswith(".gnu_attribute"))
+    return ParseGNUAttribute(DirectiveID.getLoc());
 
   return true;
 }
@@ -1356,6 +1359,24 @@ bool SystemZAsmParser::ParseDirectiveMachine(SMLoc L) {
   getTargetStreamer().emitMachine(CPU);
 
   return false;
+}
+
+bool SystemZAsmParser::ParseGNUAttribute(SMLoc L) {
+  int64_t Tag;
+  int64_t IntegerValue;
+  if (!Parser.parseGNUAttribute(L, Tag, IntegerValue))
+    return false;
+
+  // Tag_GNU_S390_ABI_Vector tag is '8' and can be 0, 1, or 2.
+  if (Tag != 8 || (IntegerValue < 0 || IntegerValue > 2)) {
+    Error(Parser.getTok().getLoc(),
+          "Unrecognized .gnu_attribute tag/value pair.");
+    return false;
+  }
+
+  Parser.getStreamer().emitGNUAttribute(Tag, IntegerValue);
+
+  return true;
 }
 
 bool SystemZAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,

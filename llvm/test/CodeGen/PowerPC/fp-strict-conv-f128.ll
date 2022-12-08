@@ -618,7 +618,6 @@ define zeroext i32 @ppcq_to_u32(ppc_fp128 %m) #0 {
 ; P8-NEXT:    lfs f0, .LCPI13_0@toc@l(r3)
 ; P8-NEXT:    lis r3, -32768
 ; P8-NEXT:    fcmpo cr0, f2, f3
-; P8-NEXT:    xxlxor f3, f3, f3
 ; P8-NEXT:    fcmpo cr1, f1, f0
 ; P8-NEXT:    crand 4*cr5+lt, 4*cr1+eq, lt
 ; P8-NEXT:    crandc 4*cr5+gt, 4*cr1+lt, 4*cr1+eq
@@ -660,7 +659,6 @@ define zeroext i32 @ppcq_to_u32(ppc_fp128 %m) #0 {
 ; P9-NEXT:    lfs f0, .LCPI13_0@toc@l(r3)
 ; P9-NEXT:    fcmpo cr1, f2, f3
 ; P9-NEXT:    lis r3, -32768
-; P9-NEXT:    xxlxor f3, f3, f3
 ; P9-NEXT:    fcmpo cr0, f1, f0
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
 ; P9-NEXT:    crandc 4*cr5+gt, lt, eq

@@ -19,6 +19,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <cassert>
 #include <numeric>
 
@@ -32,6 +33,29 @@ namespace llvm {
 SUPPORTED_TENSOR_TYPES(TFUTILS_GETDATATYPE_IMPL)
 
 #undef TFUTILS_GETDATATYPE_IMPL
+
+static std::array<std::string, static_cast<size_t>(TensorType::Total)>
+    TensorTypeNames{"INVALID",
+#define TFUTILS_GETNAME_IMPL(T, _) #T,
+                    SUPPORTED_TENSOR_TYPES(TFUTILS_GETNAME_IMPL)
+#undef TFUTILS_GETNAME_IMPL
+    };
+
+StringRef toString(TensorType TT) {
+  return TensorTypeNames[static_cast<size_t>(TT)];
+}
+
+void TensorSpec::toJSON(json::OStream &OS) const {
+  OS.object([&]() {
+    OS.attribute("name", name());
+    OS.attribute("type", toString(type()));
+    OS.attribute("port", port());
+    OS.attributeArray("shape", [&]() {
+      for (size_t D : shape())
+        OS.value(static_cast<int64_t>(D));
+    });
+  });
+}
 
 TensorSpec::TensorSpec(const std::string &Name, int Port, TensorType Type,
                        size_t ElementSize, const std::vector<int64_t> &Shape)

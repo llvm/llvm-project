@@ -53,7 +53,7 @@ void convert(const BinaryFunction &BF,
         continue;
 
       yaml::bolt::CallSiteInfo CSI;
-      Optional<uint32_t> Offset = BC.MIB->getOffset(Instr);
+      std::optional<uint32_t> Offset = BC.MIB->getOffset(Instr);
       if (!Offset || *Offset < BB->getInputOffset())
         continue;
       CSI.Offset = *Offset - BB->getInputOffset();

@@ -4085,6 +4085,8 @@ inline bool Registers_riscv::validRegister(int regNum) const {
     return true;
   if (regNum < 0)
     return false;
+  if (regNum == UNW_RISCV_VLENB)
+    return true;
   if (regNum > UNW_RISCV_F31)
     return false;
   return true;
@@ -4099,6 +4101,11 @@ inline reg_t Registers_riscv::getRegister(int regNum) const {
     return 0;
   if ((regNum > 0) && (regNum < 32))
     return _registers[regNum];
+  if (regNum == UNW_RISCV_VLENB) {
+    reg_t vlenb;
+    __asm__("csrr %0, 0xC22" : "=r"(vlenb));
+    return vlenb;
+  }
   _LIBUNWIND_ABORT("unsupported riscv register");
 }
 
@@ -4250,6 +4257,8 @@ inline const char *Registers_riscv::getRegisterName(int regNum) {
     return "ft10";
   case UNW_RISCV_F31:
     return "ft11";
+  case UNW_RISCV_VLENB:
+    return "vlenb";
   default:
     return "unknown register";
   }

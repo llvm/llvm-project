@@ -16,7 +16,6 @@
 
 #include "llvm/DebugInfo/Symbolize/MarkupFilter.h"
 
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"

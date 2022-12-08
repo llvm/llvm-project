@@ -109,6 +109,7 @@ public:
   const llvm::DataLayout &getDataLayout() const {
     return TheModule.getDataLayout();
   }
+  CodeGenModule &getCGM() const { return CGM; }
   ASTContext &getContext() const { return Context; }
   const ABIInfo &getABIInfo() const { return TheABIInfo; }
   const TargetInfo &getTarget() const { return Target; }

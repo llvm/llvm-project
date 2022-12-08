@@ -34,7 +34,6 @@ define amdgpu_kernel void @test_inst_offset_kernel() {
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s0 ; 4-byte Folded Spill
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ;;#ASMEND
-; FLATSCR-NEXT:    s_movk_i32 s0, 0xffc
 ; FLATSCR-NEXT:    scratch_load_dword v0, off, s0 ; 4-byte Folded Reload
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, vcc_hi offset:8
@@ -71,7 +70,6 @@ define amdgpu_kernel void @test_sgpr_offset_kernel() {
 ; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s4 ; 4-byte Folded Spill
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ;;#ASMEND
-; MUBUF-NEXT:    s_mov_b32 s4, 0x40000
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s4 ; 4-byte Folded Reload
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:8
@@ -90,7 +88,6 @@ define amdgpu_kernel void @test_sgpr_offset_kernel() {
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s0 ; 4-byte Folded Spill
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ;;#ASMEND
-; FLATSCR-NEXT:    s_movk_i32 s0, 0x1000
 ; FLATSCR-NEXT:    scratch_load_dword v0, off, s0 ; 4-byte Folded Reload
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, vcc_hi offset:8
@@ -237,7 +234,6 @@ define amdgpu_kernel void @test_sgpr_offset_function_scavenge_fail_kernel() #3 {
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ;;#ASMEND
-; FLATSCR-NEXT:    s_movk_i32 s8, 0x1004
 ; FLATSCR-NEXT:    scratch_load_dword v0, off, s8 ; 4-byte Folded Reload
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    ;;#ASMSTART
@@ -320,7 +316,6 @@ define amdgpu_kernel void @test_sgpr_offset_subregs_kernel() {
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    scratch_load_dword v0, off, vcc_hi offset:8 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    s_movk_i32 s0, 0xff8
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s0 ; 8-byte Folded Reload
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    ;;#ASMSTART
@@ -367,7 +362,6 @@ define amdgpu_kernel void @test_inst_offset_subregs_kernel() {
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:8 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    s_mov_b32 s4, 0x3ff00
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s4 ; 4-byte Folded Reload
 ; MUBUF-NEXT:    s_nop 0
 ; MUBUF-NEXT:    buffer_load_dword v1, off, s[0:3], s4 offset:4 ; 4-byte Folded Reload
@@ -391,7 +385,6 @@ define amdgpu_kernel void @test_inst_offset_subregs_kernel() {
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    scratch_load_dword v0, off, vcc_hi offset:8 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    s_movk_i32 s0, 0xffc
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s0 ; 8-byte Folded Reload
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    ;;#ASMSTART

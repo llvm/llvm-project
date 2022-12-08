@@ -25,7 +25,6 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/Core/Replacement.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -943,7 +942,7 @@ void f() {}
   FS.Files[Path] = Code;
   runAddDocument(Server, Path, Code);
 
-  auto Replaces = runFormatFile(Server, Path, /*Rng=*/llvm::None);
+  auto Replaces = runFormatFile(Server, Path, /*Rng=*/std::nullopt);
   EXPECT_TRUE(static_cast<bool>(Replaces));
   auto Changed = tooling::applyAllReplacements(Code, *Replaces);
   EXPECT_TRUE(static_cast<bool>(Changed));

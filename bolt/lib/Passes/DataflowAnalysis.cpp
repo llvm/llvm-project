@@ -58,7 +58,7 @@ void doForAllPreds(const BinaryBasicBlock &BB,
     for (MCInst &Inst : *Thrower) {
       if (!MIB->isInvoke(Inst))
         continue;
-      const Optional<MCPlus::MCLandingPad> EHInfo = MIB->getEHInfo(Inst);
+      const std::optional<MCPlus::MCLandingPad> EHInfo = MIB->getEHInfo(Inst);
       if (!EHInfo || EHInfo->first != BB.getLabel())
         continue;
       Task(ProgramPoint(&Inst));

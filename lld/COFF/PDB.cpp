@@ -442,7 +442,6 @@ static bool symbolGoesInModuleStream(const CVSymbol &sym,
                                      unsigned symbolScopeDepth) {
   switch (sym.kind()) {
   case SymbolKind::S_GDATA32:
-  case SymbolKind::S_CONSTANT:
   case SymbolKind::S_GTHREAD32:
   // We really should not be seeing S_PROCREF and S_LPROCREF in the first place
   // since they are synthesized by the linker in response to S_GPROC32 and
@@ -451,8 +450,9 @@ static bool symbolGoesInModuleStream(const CVSymbol &sym,
   case SymbolKind::S_PROCREF:
   case SymbolKind::S_LPROCREF:
     return false;
-  // S_UDT records go in the module stream if it is not a global S_UDT.
+  // S_UDT and S_CONSTANT records go in the module stream if it is not a global record.
   case SymbolKind::S_UDT:
+  case SymbolKind::S_CONSTANT:
     return symbolScopeDepth > 0;
   // S_GDATA32 does not go in the module stream, but S_LDATA32 does.
   case SymbolKind::S_LDATA32:
@@ -465,7 +465,6 @@ static bool symbolGoesInModuleStream(const CVSymbol &sym,
 static bool symbolGoesInGlobalsStream(const CVSymbol &sym,
                                       unsigned symbolScopeDepth) {
   switch (sym.kind()) {
-  case SymbolKind::S_CONSTANT:
   case SymbolKind::S_GDATA32:
   case SymbolKind::S_GTHREAD32:
   case SymbolKind::S_GPROC32:
@@ -482,6 +481,7 @@ static bool symbolGoesInGlobalsStream(const CVSymbol &sym,
   case SymbolKind::S_UDT:
   case SymbolKind::S_LDATA32:
   case SymbolKind::S_LTHREAD32:
+  case SymbolKind::S_CONSTANT:
     return symbolScopeDepth == 0;
   default:
     return false;

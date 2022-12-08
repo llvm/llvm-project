@@ -74,9 +74,8 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
   SDValue InFlag;
   EVT AVT;
   SDValue Count;
-  ConstantSDNode *ValC = dyn_cast<ConstantSDNode>(Val);
   unsigned BytesLeft = 0;
-  if (ValC) {
+  if (auto *ValC = dyn_cast<ConstantSDNode>(Val)) {
     unsigned ValReg;
     uint64_t Val = ValC->getZExtValue() & 255;
 

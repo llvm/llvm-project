@@ -50,7 +50,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     >,
     InterfaceMethod<[{
         If there is a single induction variable return it, otherwise return
-        llvm::None.
+        std::nullopt.
       }],
       /*retTy=*/"::llvm::Optional<::mlir::Value>",
       /*methodName=*/"getSingleInductionVar",
@@ -62,7 +62,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     >,
     InterfaceMethod<[{
         Return the single lower bound value or attribute if it exists, otherwise
-        return llvm::None.
+        return std::nullopt.
       }],
       /*retTy=*/"::llvm::Optional<::mlir::OpFoldResult>",
       /*methodName=*/"getSingleLowerBound",
@@ -74,7 +74,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     >,
     InterfaceMethod<[{
         Return the single step value or attribute if it exists, otherwise
-        return llvm::None.
+        return std::nullopt.
       }],
       /*retTy=*/"::llvm::Optional<::mlir::OpFoldResult>",
       /*methodName=*/"getSingleStep",
@@ -86,7 +86,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     >,
     InterfaceMethod<[{
         Return the single upper bound value or attribute if it exists, otherwise
-        return llvm::None.
+        return std::nullopt.
       }],
       /*retTy=*/"::llvm::Optional<::mlir::OpFoldResult>",
       /*methodName=*/"getSingleUpperBound",

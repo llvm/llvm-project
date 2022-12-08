@@ -36,6 +36,7 @@ public:
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
     target.addIllegalOp<tosa::SliceOp>();
+    target.addIllegalOp<tosa::PadOp>();
     target.addLegalDialect<arith::ArithDialect>();
     target.addLegalDialect<tensor::TensorDialect>();
 

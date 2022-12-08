@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-force-peel-count=3 -verify-dom-info -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -instcombine | FileCheck %s
+; RUN: opt < %s -S -passes=loop-unroll,simplifycfg,instcombine -unroll-force-peel-count=3 -verify-dom-info -simplifycfg-require-and-preserve-domtree=1 | FileCheck %s
 ; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll,simplifycfg,instcombine' -unroll-force-peel-count=3 -verify-dom-info | FileCheck %s
 ; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll<peeling;no-runtime>,simplifycfg,instcombine' -unroll-force-peel-count=3 -verify-dom-info | FileCheck %s
 

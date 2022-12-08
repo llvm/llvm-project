@@ -794,6 +794,8 @@ public:
   /// def-use chain of uses.
   void ensureOptimizedUses();
 
+  AliasAnalysis &getAA() { return *AA; }
+
 protected:
   // Used by Memory SSA dumpers and wrapper pass
   friend class MemorySSAPrinterLegacyPass;
@@ -840,12 +842,12 @@ protected:
                                       bool CreationMustSucceed = true);
 
 private:
-  template <class AliasAnalysisType> class ClobberWalkerBase;
-  template <class AliasAnalysisType> class CachingWalker;
-  template <class AliasAnalysisType> class SkipSelfWalker;
+  class ClobberWalkerBase;
+  class CachingWalker;
+  class SkipSelfWalker;
   class OptimizeUses;
 
-  CachingWalker<AliasAnalysis> *getWalkerImpl();
+  CachingWalker *getWalkerImpl();
   void buildMemorySSA(BatchAAResults &BAA);
 
   void prepareForMoveTo(MemoryAccess *, BasicBlock *);
@@ -892,9 +894,9 @@ private:
   mutable DenseMap<const MemoryAccess *, unsigned long> BlockNumbering;
 
   // Memory SSA building info
-  std::unique_ptr<ClobberWalkerBase<AliasAnalysis>> WalkerBase;
-  std::unique_ptr<CachingWalker<AliasAnalysis>> Walker;
-  std::unique_ptr<SkipSelfWalker<AliasAnalysis>> SkipWalker;
+  std::unique_ptr<ClobberWalkerBase> WalkerBase;
+  std::unique_ptr<CachingWalker> Walker;
+  std::unique_ptr<SkipSelfWalker> SkipWalker;
   unsigned NextID = 0;
   bool IsOptimized = false;
 };
@@ -1041,15 +1043,17 @@ public:
   ///
   /// calling this API on load(%a) will return the MemoryPhi, not the MemoryDef
   /// in the if (a) branch.
-  MemoryAccess *getClobberingMemoryAccess(const Instruction *I) {
+  MemoryAccess *getClobberingMemoryAccess(const Instruction *I,
+                                          BatchAAResults &AA) {
     MemoryAccess *MA = MSSA->getMemoryAccess(I);
     assert(MA && "Handed an instruction that MemorySSA doesn't recognize?");
-    return getClobberingMemoryAccess(MA);
+    return getClobberingMemoryAccess(MA, AA);
   }
 
   /// Does the same thing as getClobberingMemoryAccess(const Instruction *I),
   /// but takes a MemoryAccess instead of an Instruction.
-  virtual MemoryAccess *getClobberingMemoryAccess(MemoryAccess *) = 0;
+  virtual MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
+                                                  BatchAAResults &AA) = 0;
 
   /// Given a potentially clobbering memory access and a new location,
   /// calling this will give you the nearest dominating clobbering MemoryAccess
@@ -1063,7 +1067,24 @@ public:
   /// will return that MemoryDef, whereas the above would return the clobber
   /// starting from the use side of  the memory def.
   virtual MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
-                                                  const MemoryLocation &) = 0;
+                                                  const MemoryLocation &,
+                                                  BatchAAResults &AA) = 0;
+
+  MemoryAccess *getClobberingMemoryAccess(const Instruction *I) {
+    BatchAAResults BAA(MSSA->getAA());
+    return getClobberingMemoryAccess(I, BAA);
+  }
+
+  MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA) {
+    BatchAAResults BAA(MSSA->getAA());
+    return getClobberingMemoryAccess(MA, BAA);
+  }
+
+  MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA,
+                                          const MemoryLocation &Loc) {
+    BatchAAResults BAA(MSSA->getAA());
+    return getClobberingMemoryAccess(MA, Loc, BAA);
+  }
 
   /// Given a memory access, invalidate anything this walker knows about
   /// that access.
@@ -1086,9 +1107,11 @@ public:
   // getClobberingMemoryAccess.
   using MemorySSAWalker::getClobberingMemoryAccess;
 
-  MemoryAccess *getClobberingMemoryAccess(MemoryAccess *) override;
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
-                                          const MemoryLocation &) override;
+                                          BatchAAResults &) override;
+  MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
+                                          const MemoryLocation &,
+                                          BatchAAResults &) override;
 };
 
 using MemoryAccessPair = std::pair<MemoryAccess *, MemoryLocation>;

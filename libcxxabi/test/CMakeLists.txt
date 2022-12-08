@@ -50,7 +50,7 @@ endif()
 if (CMAKE_CXX_COMPILER_TARGET)
   serialize_lit_param(target_triple "\"${CMAKE_CXX_COMPILER_TARGET}\"")
 else()
-  serialize_lit_param(target_triple "\"${LLVM_TARGET_TRIPLE}\"")
+  serialize_lit_param(target_triple "\"${LLVM_DEFAULT_TARGET_TRIPLE}\"")
 endif()
 
 foreach(param IN LISTS LIBCXXABI_TEST_PARAMS)

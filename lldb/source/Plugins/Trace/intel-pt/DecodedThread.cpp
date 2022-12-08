@@ -158,7 +158,7 @@ Optional<DecodedThread::TSCRange>
 DecodedThread::GetTSCRangeByIndex(uint64_t item_index) const {
   auto next_it = m_tscs.upper_bound(item_index);
   if (next_it == m_tscs.begin())
-    return None;
+    return std::nullopt;
   return prev(next_it)->second;
 }
 
@@ -166,7 +166,7 @@ Optional<DecodedThread::NanosecondsRange>
 DecodedThread::GetNanosecondsRangeByIndex(uint64_t item_index) {
   auto next_it = m_nanoseconds.upper_bound(item_index);
   if (next_it == m_nanoseconds.begin())
-    return None;
+    return std::nullopt;
   return prev(next_it)->second;
 }
 

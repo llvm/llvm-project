@@ -1481,13 +1481,13 @@ static unsigned getVGPRSpillSaveOpcode(unsigned Size) {
   case 32:
     return AMDGPU::SI_SPILL_V256_SAVE;
   case 36:
-    return AMDGPU::SI_SPILL_S288_SAVE;
+    return AMDGPU::SI_SPILL_V288_SAVE;
   case 40:
-    return AMDGPU::SI_SPILL_S320_SAVE;
+    return AMDGPU::SI_SPILL_V320_SAVE;
   case 44:
-    return AMDGPU::SI_SPILL_S352_SAVE;
+    return AMDGPU::SI_SPILL_V352_SAVE;
   case 48:
-    return AMDGPU::SI_SPILL_S384_SAVE;
+    return AMDGPU::SI_SPILL_V384_SAVE;
   case 64:
     return AMDGPU::SI_SPILL_V512_SAVE;
   case 128:
@@ -1515,6 +1515,14 @@ static unsigned getAGPRSpillSaveOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_A224_SAVE;
   case 32:
     return AMDGPU::SI_SPILL_A256_SAVE;
+  case 36:
+    return AMDGPU::SI_SPILL_A288_SAVE;
+  case 40:
+    return AMDGPU::SI_SPILL_A320_SAVE;
+  case 44:
+    return AMDGPU::SI_SPILL_A352_SAVE;
+  case 48:
+    return AMDGPU::SI_SPILL_A384_SAVE;
   case 64:
     return AMDGPU::SI_SPILL_A512_SAVE;
   case 128:
@@ -1542,6 +1550,14 @@ static unsigned getAVSpillSaveOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_AV224_SAVE;
   case 32:
     return AMDGPU::SI_SPILL_AV256_SAVE;
+  case 36:
+    return AMDGPU::SI_SPILL_AV288_SAVE;
+  case 40:
+    return AMDGPU::SI_SPILL_AV320_SAVE;
+  case 44:
+    return AMDGPU::SI_SPILL_AV352_SAVE;
+  case 48:
+    return AMDGPU::SI_SPILL_AV384_SAVE;
   case 64:
     return AMDGPU::SI_SPILL_AV512_SAVE;
   case 128:

@@ -443,7 +443,7 @@ SplitFunctions::createEHTrampolines(BinaryFunction &BF) const {
   std::vector<BinaryBasicBlock *> Blocks(BF.pbegin(), BF.pend());
   for (BinaryBasicBlock *BB : Blocks) {
     for (MCInst &Instr : *BB) {
-      const Optional<MCPlus::MCLandingPad> EHInfo = MIB->getEHInfo(Instr);
+      const std::optional<MCPlus::MCLandingPad> EHInfo = MIB->getEHInfo(Instr);
       if (!EHInfo || !EHInfo->first)
         continue;
 

@@ -3191,6 +3191,18 @@ the function signature. For example:
     fmt(fmt, "hello", 123); // warning: format string is not a string literal
   }
 
+When using the format attribute on a variadic function, the first data parameter
+_must_ be the index of the ellipsis in the parameter list. Clang will generate
+a diagnostic otherwise, as it wouldn't be possible to forward that argument list
+to `printf`-family functions. For instance, this is an error:
+
+.. code-block:: c
+
+  __attribute__((__format__(__printf__, 1, 2)))
+  void fmt(const char *s, int b, ...);
+  // ^ error: format attribute parameter 3 is out of bounds
+  // (must be __printf__, 1, 3)
+
 Using the ``format`` attribute on a non-variadic function emits a GCC
 compatibility diagnostic.
   }];

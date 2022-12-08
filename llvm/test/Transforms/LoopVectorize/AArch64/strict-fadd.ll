@@ -1,8 +1,8 @@
-; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=false -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-NOT-VECTORIZED
-; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=false -hints-allow-reordering=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
-; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=true  -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-ORDERED
-; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=true  -hints-allow-reordering=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
-; RUN: opt < %s -loop-vectorize -mtriple aarch64-unknown-linux-gnu -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-ORDERED
+; RUN: opt < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=false -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-NOT-VECTORIZED
+; RUN: opt < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=false -hints-allow-reordering=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
+; RUN: opt < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=true  -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-ORDERED
+; RUN: opt < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=true  -hints-allow-reordering=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
+; RUN: opt < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-ORDERED
 
 define float @fadd_strict(float* noalias nocapture readonly %a, i64 %n) {
 ; CHECK-ORDERED-LABEL: @fadd_strict
@@ -65,7 +65,7 @@ define float @fadd_strict_fmf(float* noalias nocapture readonly %a, i64 %n) {
 ; CHECK-UNORDERED: [[VEC_PHI:%.*]] = phi <8 x float> [ <float 0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %vector.ph ], [ [[FADD_VEC:%.*]], %vector.body ]
 ; CHECK-UNORDERED: [[LOAD_VEC:%.*]] = load <8 x float>, <8 x float>*
 ; CHECK-UNORDERED: [[FADD_VEC]] = fadd nnan <8 x float> [[LOAD_VEC]], [[VEC_PHI]]
-; CHECK-UNORDERED-NOT: @llvm.vector.reduce.fadd 
+; CHECK-UNORDERED-NOT: @llvm.vector.reduce.fadd
 ; CHECK-UNORDERED: middle.block:
 ; CHECK-UNORDERED: [[RDX:%.*]] = call nnan float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[FADD_VEC]])
 ; CHECK-UNORDERED: for.body:

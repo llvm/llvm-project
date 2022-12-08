@@ -18,7 +18,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -523,12 +522,12 @@ public:
   Scaled64 getFloatingBlockFreq(const BlockNode &Node) const;
 
   BlockFrequency getBlockFreq(const BlockNode &Node) const;
-  Optional<uint64_t> getBlockProfileCount(const Function &F,
-                                          const BlockNode &Node,
-                                          bool AllowSynthetic = false) const;
-  Optional<uint64_t> getProfileCountFromFreq(const Function &F,
-                                             uint64_t Freq,
-                                             bool AllowSynthetic = false) const;
+  std::optional<uint64_t>
+  getBlockProfileCount(const Function &F, const BlockNode &Node,
+                       bool AllowSynthetic = false) const;
+  std::optional<uint64_t>
+  getProfileCountFromFreq(const Function &F, uint64_t Freq,
+                          bool AllowSynthetic = false) const;
   bool isIrrLoopHeader(const BlockNode &Node);
 
   void setBlockFreq(const BlockNode &Node, uint64_t Freq);
@@ -1021,16 +1020,16 @@ public:
     return BlockFrequencyInfoImplBase::getBlockFreq(getNode(BB));
   }
 
-  Optional<uint64_t> getBlockProfileCount(const Function &F,
-                                          const BlockT *BB,
-                                          bool AllowSynthetic = false) const {
+  std::optional<uint64_t>
+  getBlockProfileCount(const Function &F, const BlockT *BB,
+                       bool AllowSynthetic = false) const {
     return BlockFrequencyInfoImplBase::getBlockProfileCount(F, getNode(BB),
                                                             AllowSynthetic);
   }
 
-  Optional<uint64_t> getProfileCountFromFreq(const Function &F,
-                                             uint64_t Freq,
-                                             bool AllowSynthetic = false) const {
+  std::optional<uint64_t>
+  getProfileCountFromFreq(const Function &F, uint64_t Freq,
+                          bool AllowSynthetic = false) const {
     return BlockFrequencyInfoImplBase::getProfileCountFromFreq(F, Freq,
                                                                AllowSynthetic);
   }
@@ -1730,7 +1729,7 @@ raw_ostream &BlockFrequencyInfoImpl<BT>::print(raw_ostream &OS) const {
     OS << " - " << bfi_detail::getBlockName(&BB) << ": float = ";
     getFloatingBlockFreq(&BB).print(OS, 5)
         << ", int = " << getBlockFreq(&BB).getFrequency();
-    if (Optional<uint64_t> ProfileCount =
+    if (std::optional<uint64_t> ProfileCount =
         BlockFrequencyInfoImplBase::getBlockProfileCount(
             F->getFunction(), getNode(&BB)))
       OS << ", count = " << ProfileCount.value();

@@ -143,7 +143,8 @@ public:
   ///   LogicalResult(PatternRewriter &rewriter, Operation *op, Attribute attr,
   ///                 StringRef failureStr);
   ///
-  Optional<StringRef> getAttrConstraintFn(const Constraint &constraint) const;
+  std::optional<StringRef>
+  getAttrConstraintFn(const Constraint &constraint) const;
 
   /// Get the name of the static function used for the given successor
   /// constraint. These functions are in the form:
@@ -228,8 +229,8 @@ struct stringifier<Twine> {
   static std::string apply(const Twine &twine) { return twine.str(); }
 };
 template <typename OptionalT>
-struct stringifier<Optional<OptionalT>> {
-  static std::string apply(Optional<OptionalT> optional) {
+struct stringifier<std::optional<OptionalT>> {
+  static std::string apply(std::optional<OptionalT> optional) {
     return optional ? stringifier<OptionalT>::apply(*optional) : std::string();
   }
 };

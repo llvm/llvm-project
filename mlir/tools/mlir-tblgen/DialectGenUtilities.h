@@ -17,7 +17,7 @@ class Dialect;
 
 /// Find the dialect selected by the user to generate for. Returns std::nullopt
 /// if no dialect was found, or if more than one potential dialect was found.
-Optional<Dialect> findDialectToGenerate(ArrayRef<Dialect> dialects);
+std::optional<Dialect> findDialectToGenerate(ArrayRef<Dialect> dialects);
 } // namespace tblgen
 } // namespace mlir
 

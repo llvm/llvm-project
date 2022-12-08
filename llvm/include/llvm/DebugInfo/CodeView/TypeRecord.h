@@ -347,7 +347,7 @@ public:
 
   TypeIndex ReferentType;
   uint32_t Attrs = 0;
-  Optional<MemberPointerInfo> MemberInfo;
+  std::optional<MemberPointerInfo> MemberInfo;
 
   void setAttrs(PointerKind PK, PointerMode PM, PointerOptions PO,
                 uint8_t Size) {

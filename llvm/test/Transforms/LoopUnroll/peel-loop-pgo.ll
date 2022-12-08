@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -debug-only=loop-unroll -loop-unroll 2>&1 | FileCheck %s
+; RUN: opt < %s -S -debug-only=loop-unroll -passes=loop-unroll 2>&1 | FileCheck %s
 ; RUN: opt < %s -S -debug-only=loop-unroll -passes='require<profile-summary>,function(require<opt-remark-emit>,loop-unroll)' 2>&1 | FileCheck %s
 ; Confirm that peeling is disabled if the number of counts required to reach
 ; the hot percentile is above the threshold.

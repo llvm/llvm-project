@@ -50,8 +50,6 @@ private:
   bool expandVSetVL(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandVMSET_VMCLR(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, unsigned Opcode);
-  bool expandVSPILL(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
-  bool expandVRELOAD(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
 };
 
 char RISCVExpandPseudo::ID = 0;
@@ -108,30 +106,6 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoVMSET_M_B64:
     // vmset.m vd => vmxnor.mm vd, vd, vd
     return expandVMSET_VMCLR(MBB, MBBI, RISCV::VMXNOR_MM);
-  case RISCV::PseudoVSPILL2_M1:
-  case RISCV::PseudoVSPILL2_M2:
-  case RISCV::PseudoVSPILL2_M4:
-  case RISCV::PseudoVSPILL3_M1:
-  case RISCV::PseudoVSPILL3_M2:
-  case RISCV::PseudoVSPILL4_M1:
-  case RISCV::PseudoVSPILL4_M2:
-  case RISCV::PseudoVSPILL5_M1:
-  case RISCV::PseudoVSPILL6_M1:
-  case RISCV::PseudoVSPILL7_M1:
-  case RISCV::PseudoVSPILL8_M1:
-    return expandVSPILL(MBB, MBBI);
-  case RISCV::PseudoVRELOAD2_M1:
-  case RISCV::PseudoVRELOAD2_M2:
-  case RISCV::PseudoVRELOAD2_M4:
-  case RISCV::PseudoVRELOAD3_M1:
-  case RISCV::PseudoVRELOAD3_M2:
-  case RISCV::PseudoVRELOAD4_M1:
-  case RISCV::PseudoVRELOAD4_M2:
-  case RISCV::PseudoVRELOAD5_M1:
-  case RISCV::PseudoVRELOAD6_M1:
-  case RISCV::PseudoVRELOAD7_M1:
-  case RISCV::PseudoVRELOAD8_M1:
-    return expandVRELOAD(MBB, MBBI);
   }
 
   return false;
@@ -231,101 +205,6 @@ bool RISCVExpandPseudo::expandVMSET_VMCLR(MachineBasicBlock &MBB,
       .addReg(DstReg, RegState::Undef)
       .addReg(DstReg, RegState::Undef);
   MBBI->eraseFromParent(); // The pseudo instruction is gone now.
-  return true;
-}
-
-bool RISCVExpandPseudo::expandVSPILL(MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator MBBI) {
-  const TargetRegisterInfo *TRI =
-      MBB.getParent()->getSubtarget().getRegisterInfo();
-  DebugLoc DL = MBBI->getDebugLoc();
-  Register SrcReg = MBBI->getOperand(0).getReg();
-  Register Base = MBBI->getOperand(1).getReg();
-  Register VL = MBBI->getOperand(2).getReg();
-  auto ZvlssegInfo = RISCV::isRVVSpillForZvlsseg(MBBI->getOpcode());
-  if (!ZvlssegInfo)
-    return false;
-  unsigned NF = ZvlssegInfo->first;
-  unsigned LMUL = ZvlssegInfo->second;
-  assert(NF * LMUL <= 8 && "Invalid NF/LMUL combinations.");
-  unsigned Opcode = RISCV::VS1R_V;
-  unsigned SubRegIdx = RISCV::sub_vrm1_0;
-  static_assert(RISCV::sub_vrm1_7 == RISCV::sub_vrm1_0 + 7,
-                "Unexpected subreg numbering");
-  if (LMUL == 2) {
-    Opcode = RISCV::VS2R_V;
-    SubRegIdx = RISCV::sub_vrm2_0;
-    static_assert(RISCV::sub_vrm2_3 == RISCV::sub_vrm2_0 + 3,
-                  "Unexpected subreg numbering");
-  } else if (LMUL == 4) {
-    Opcode = RISCV::VS4R_V;
-    SubRegIdx = RISCV::sub_vrm4_0;
-    static_assert(RISCV::sub_vrm4_1 == RISCV::sub_vrm4_0 + 1,
-                  "Unexpected subreg numbering");
-  } else
-    assert(LMUL == 1 && "LMUL must be 1, 2, or 4.");
-
-  for (unsigned I = 0; I < NF; ++I) {
-    // Adding implicit-use of super register to describe we are using part of
-    // super register, that prevents machine verifier complaining when part of
-    // subreg is undef, see comment in MachineVerifier::checkLiveness for more
-    // detail.
-    BuildMI(MBB, MBBI, DL, TII->get(Opcode))
-        .addReg(TRI->getSubReg(SrcReg, SubRegIdx + I))
-        .addReg(Base)
-        .addMemOperand(*(MBBI->memoperands_begin()))
-        .addReg(SrcReg, RegState::Implicit);
-    if (I != NF - 1)
-      BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD), Base)
-          .addReg(Base)
-          .addReg(VL);
-  }
-  MBBI->eraseFromParent();
-  return true;
-}
-
-bool RISCVExpandPseudo::expandVRELOAD(MachineBasicBlock &MBB,
-                                      MachineBasicBlock::iterator MBBI) {
-  const TargetRegisterInfo *TRI =
-      MBB.getParent()->getSubtarget().getRegisterInfo();
-  DebugLoc DL = MBBI->getDebugLoc();
-  Register DestReg = MBBI->getOperand(0).getReg();
-  Register Base = MBBI->getOperand(1).getReg();
-  Register VL = MBBI->getOperand(2).getReg();
-  auto ZvlssegInfo = RISCV::isRVVSpillForZvlsseg(MBBI->getOpcode());
-  if (!ZvlssegInfo)
-    return false;
-  unsigned NF = ZvlssegInfo->first;
-  unsigned LMUL = ZvlssegInfo->second;
-  assert(NF * LMUL <= 8 && "Invalid NF/LMUL combinations.");
-  unsigned Opcode = RISCV::VL1RE8_V;
-  unsigned SubRegIdx = RISCV::sub_vrm1_0;
-  static_assert(RISCV::sub_vrm1_7 == RISCV::sub_vrm1_0 + 7,
-                "Unexpected subreg numbering");
-  if (LMUL == 2) {
-    Opcode = RISCV::VL2RE8_V;
-    SubRegIdx = RISCV::sub_vrm2_0;
-    static_assert(RISCV::sub_vrm2_3 == RISCV::sub_vrm2_0 + 3,
-                  "Unexpected subreg numbering");
-  } else if (LMUL == 4) {
-    Opcode = RISCV::VL4RE8_V;
-    SubRegIdx = RISCV::sub_vrm4_0;
-    static_assert(RISCV::sub_vrm4_1 == RISCV::sub_vrm4_0 + 1,
-                  "Unexpected subreg numbering");
-  } else
-    assert(LMUL == 1 && "LMUL must be 1, 2, or 4.");
-
-  for (unsigned I = 0; I < NF; ++I) {
-    BuildMI(MBB, MBBI, DL, TII->get(Opcode),
-            TRI->getSubReg(DestReg, SubRegIdx + I))
-        .addReg(Base)
-        .addMemOperand(*(MBBI->memoperands_begin()));
-    if (I != NF - 1)
-      BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD), Base)
-          .addReg(Base)
-          .addReg(VL);
-  }
-  MBBI->eraseFromParent();
   return true;
 }
 

@@ -1,5 +1,5 @@
 ; PR 1334
-; RUN: opt < %s -loop-unroll -disable-output
+; RUN: opt < %s -passes=loop-unroll -disable-output
 
 define void @sal__math_float_manipulator_7__math__joint_array_dcv_ops__Omultiply__3([6 x float]* %agg.result) {
 entry:

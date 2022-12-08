@@ -417,29 +417,29 @@ static llvm::Optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
   DWORD dwFileSizeHi = 0;
   DWORD dwFileSizeLo = ::GetFileSize(hFile, &dwFileSizeHi);
   if (dwFileSizeLo == 0 && dwFileSizeHi == 0)
-    return llvm::None;
+    return std::nullopt;
 
   AutoHandle filemap(
       ::CreateFileMappingW(hFile, nullptr, PAGE_READONLY, 0, 1, NULL), nullptr);
   if (!filemap.IsValid())
-    return llvm::None;
+    return std::nullopt;
 
   auto view_deleter = [](void *pMem) { ::UnmapViewOfFile(pMem); };
   std::unique_ptr<void, decltype(view_deleter)> pMem(
       ::MapViewOfFile(filemap.get(), FILE_MAP_READ, 0, 0, 1), view_deleter);
   if (!pMem)
-    return llvm::None;
+    return std::nullopt;
 
   std::array<wchar_t, MAX_PATH + 1> mapped_filename;
   if (!::GetMappedFileNameW(::GetCurrentProcess(), pMem.get(),
                             mapped_filename.data(), mapped_filename.size()))
-    return llvm::None;
+    return std::nullopt;
 
   // A series of null-terminated strings, plus an additional null character
   std::array<wchar_t, 512> drive_strings;
   drive_strings[0] = L'\0';
   if (!::GetLogicalDriveStringsW(drive_strings.size(), drive_strings.data()))
-    return llvm::None;
+    return std::nullopt;
 
   std::array<wchar_t, 3> drive = {L"_:"};
   for (const wchar_t *it = drive_strings.data(); *it != L'\0';
@@ -464,7 +464,7 @@ static llvm::Optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
       }
     }
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 DWORD

@@ -54,7 +54,7 @@ public:
 
   // Returns the builder call for this constraint if this is a buildable type,
   // returns std::nullopt otherwise.
-  Optional<StringRef> getBuilderCall() const;
+  std::optional<StringRef> getBuilderCall() const;
 
   // Return the C++ class name for this type (which may just be ::mlir::Type).
   std::string getCPPClassName() const;

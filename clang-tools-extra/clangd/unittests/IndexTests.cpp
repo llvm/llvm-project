@@ -504,7 +504,7 @@ TEST(MergeIndexTest, Refs) {
   AST = Test.build();
   Dyn.updateMain(testPath(Test.Filename), AST);
 
-  Request.Limit = llvm::None;
+  Request.Limit = std::nullopt;
   RefSlab::Builder Results3;
   EXPECT_FALSE(
       Merge.refs(Request, [&](const Ref &O) { Results3.insert(Foo.ID, O); }));
@@ -567,9 +567,9 @@ TEST(MergeTest, MergeIncludesOnDifferentDefinitions) {
   L.Name = "left";
   R.Name = "right";
   L.ID = R.ID = SymbolID("hello");
-  L.IncludeHeaders.emplace_back("common", 1);
-  R.IncludeHeaders.emplace_back("common", 1);
-  R.IncludeHeaders.emplace_back("new", 1);
+  L.IncludeHeaders.emplace_back("common", 1, Symbol::Include);
+  R.IncludeHeaders.emplace_back("common", 1, Symbol::Include);
+  R.IncludeHeaders.emplace_back("new", 1, Symbol::Include);
 
   // Both have no definition.
   Symbol M = mergeSymbol(L, R);
@@ -615,7 +615,7 @@ TEST(MergeIndexTest, IncludeHeadersMerged) {
                     std::move(DynData), DynSize);
 
   SymbolSlab::Builder StaticB;
-  S.IncludeHeaders.push_back({"<header>", 0});
+  S.IncludeHeaders.push_back({"<header>", 0, Symbol::Include});
   StaticB.insert(S);
   auto StaticIndex =
       MemIndex::build(std::move(StaticB).build(), RefSlab(), RelationSlab());
