@@ -19,7 +19,7 @@ InlineAdvisor *DefaultAdvisorFactory(Module &M, FunctionAnalysisManager &FAM,
 
 struct DefaultDynamicAdvisor : PassInfoMixin<DefaultDynamicAdvisor> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
-    DynamicInlineAdvisorAnalysis DA(DefaultAdvisorFactory);
+    PluginInlineAdvisorAnalysis DA(DefaultAdvisorFactory);
     MAM.registerPass([&] { return DA; });
     return PreservedAnalyses::all();
   }

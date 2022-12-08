@@ -1,3 +1,4 @@
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/Config/config.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -11,14 +12,35 @@ namespace llvm {
 
 void anchor() {}
 
-static std::string libPath(const std::string Name = "DAdvisor") {
+static std::string libPath(const std::string Name = "InlineAdvisorPlugin") {
   const auto &Argvs = testing::internal::GetArgvs();
-  const char *Argv0 = Argvs.size() > 0 ? Argvs[0].c_str() : "PluginsTests";
+  const char *Argv0 =
+      Argvs.size() > 0 ? Argvs[0].c_str() : "PluginInlineAdvisorAnalysisTest";
   void *Ptr = (void *)(intptr_t)anchor;
   std::string Path = sys::fs::getMainExecutable(Argv0, Ptr);
   llvm::SmallString<256> Buf{sys::path::parent_path(Path)};
   sys::path::append(Buf, (Name + LLVM_PLUGIN_EXT).c_str());
   return std::string(Buf.str());
+}
+
+// Example of a custom InlineAdvisor that only inlines calls to functions called
+// "foo".
+class FooOnlyInlineAdvisor : public InlineAdvisor {
+public:
+  FooOnlyInlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
+                       InlineParams Params, InlineContext IC)
+      : InlineAdvisor(M, FAM, IC) {}
+
+  std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) override {
+    if (CB.getCalledFunction()->getName() == "foo")
+      return std::make_unique<InlineAdvice>(this, CB, getCallerORE(CB), true);
+    return std::make_unique<InlineAdvice>(this, CB, getCallerORE(CB), false);
+  }
+};
+
+static InlineAdvisor *fooOnlyFactory(Module &M, FunctionAnalysisManager &FAM,
+                                     InlineParams Params, InlineContext IC) {
+  return new FooOnlyInlineAdvisor(M, FAM, Params, IC);
 }
 
 struct CompilerInstance {
@@ -34,6 +56,7 @@ struct CompilerInstance {
 
   SMDiagnostic Error;
 
+  // connect the plugin to our compiler instance
   void setupPlugin() {
     auto PluginPath = libPath();
     ASSERT_NE("", PluginPath);
@@ -44,6 +67,12 @@ struct CompilerInstance {
                       Succeeded());
   }
 
+  // connect the FooOnlyInlineAdvisor to our compiler instance
+  void setupFooOnly() {
+    MAM.registerPass(
+        [&] { return PluginInlineAdvisorAnalysis(fooOnlyFactory); });
+  }
+
   CompilerInstance() {
     IP = getInlineParams(3, 0);
     PB.registerModuleAnalyses(MAM);
@@ -51,32 +80,37 @@ struct CompilerInstance {
     PB.registerFunctionAnalyses(FAM);
     PB.registerLoopAnalyses(LAM);
     PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
-    setupPlugin();
     MPM.addPass(ModuleInlinerPass(IP, InliningAdvisorMode::Default,
                                   ThinOrFullLTOPhase::None));
   }
 
   std::string output;
+  std::unique_ptr<Module> outputM;
 
+  // run with the default inliner
   auto run_default(StringRef IR) {
-    DynamicInlineAdvisorAnalysis::HasBeenRegistered = false;
-    std::unique_ptr<Module> M = parseAssemblyString(IR, Error, Ctx);
-    MPM.run(*M, MAM);
-    ASSERT_TRUE(M);
+    PluginInlineAdvisorAnalysis::HasBeenRegistered = false;
+    outputM = parseAssemblyString(IR, Error, Ctx);
+    MPM.run(*outputM, MAM);
+    ASSERT_TRUE(outputM);
     output.clear();
     raw_string_ostream o_stream{output};
-    M->print(o_stream, nullptr);
+    outputM->print(o_stream, nullptr);
     ASSERT_TRUE(true);
   }
 
+  // run with the dnamic inliner
   auto run_dynamic(StringRef IR) {
-    DynamicInlineAdvisorAnalysis::HasBeenRegistered = true;
-    std::unique_ptr<Module> M = parseAssemblyString(IR, Error, Ctx);
-    MPM.run(*M, MAM);
-    ASSERT_TRUE(M);
+    // note typically the constructor for the DynamicInlineAdvisorAnalysis
+    // will automatically set this to true, we controll it here only to
+    // altenate between the default and dynamic inliner in our test
+    PluginInlineAdvisorAnalysis::HasBeenRegistered = true;
+    outputM = parseAssemblyString(IR, Error, Ctx);
+    MPM.run(*outputM, MAM);
+    ASSERT_TRUE(outputM);
     output.clear();
     raw_string_ostream o_stream{output};
-    M->print(o_stream, nullptr);
+    outputM->print(o_stream, nullptr);
     ASSERT_TRUE(true);
   }
 };
@@ -85,10 +119,10 @@ StringRef TestIRS[] = {
     // Simple 3 function inline case
     R"(
 define void @f1() {
-  call void @f2()
+  call void @foo()
   ret void
 }
-define void @f2() {
+define void @foo() {
   call void @f3()
   ret void
 }
@@ -96,17 +130,17 @@ define void @f3() {
   ret void
 }
   )",
-    // Test that has 5 functionsof which 2 are recursive
+    // Test that has 5 functions of which 2 are recursive
     R"(
 define void @f1() {
-  call void @f3()
+  call void @foo()
   ret void
 }
 define void @f2() {
-  call void @f3()
+  call void @foo()
   ret void
 }
-define void @f3() {
+define void @foo() {
   call void @f4()
   call void @f5()
   ret void
@@ -115,7 +149,7 @@ define void @f4() {
   ret void
 }
 define void @f5() {
-  call void @f3()
+  call void @foo()
   ret void
 }
   )",
@@ -222,8 +256,15 @@ define i32 @fib_check(){
 }
   )"};
 
-TEST(DynamicInliningAdvisorTest, Foo) {
+// check that loading a plugin works
+// the plugin being loaded acts identically to the default inliner
+TEST(PluginInlineAdvisorTest, PluginLoad) {
+#if !defined(LLVM_ENABLE_PLUGINS)
+  // Disable the test if plugins are disabled.
+  return;
+#endif
   CompilerInstance CI{};
+  CI.setupPlugin();
 
   for (StringRef IR : TestIRS) {
     CI.run_default(IR);
@@ -231,6 +272,26 @@ TEST(DynamicInliningAdvisorTest, Foo) {
     CI.run_dynamic(IR);
     std::string dynamic_output = CI.output;
     ASSERT_EQ(default_output, dynamic_output);
+  }
+}
+
+// check that the behaviour of a custom inliner is correct
+// the custom inliner inlines all functions that are not named "foo"
+// this testdoes not require plugins to be enabled
+TEST(PluginInlineAdvisorTest, CustomAdvisor) {
+  CompilerInstance CI{};
+  CI.setupFooOnly();
+
+  for (StringRef IR : TestIRS) {
+    CI.run_dynamic(IR);
+    CallGraph CGraph = CallGraph(*CI.outputM);
+    for (auto &node : CGraph) {
+      for (auto &edge : *node.second) {
+        if (!edge.first)
+          continue;
+        ASSERT_NE(edge.second->getFunction()->getName(), "foo");
+      }
+    }
   }
 }
 

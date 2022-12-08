@@ -26,7 +26,7 @@ class ImportedFunctionsInliningStatistics;
 class OptimizationRemarkEmitter;
 struct ReplayInlinerSettings;
 
-/// There are 3 scenarios we can use the InlineAdvisor:
+/// There are 4 scenarios we can use the InlineAdvisor:
 /// - Default - use manual heuristics.
 ///
 /// - Release mode, the expected mode for production, day to day deployments.
@@ -39,6 +39,8 @@ struct ReplayInlinerSettings;
 /// requires the full C Tensorflow API library, and evaluates models
 /// dynamically. This mode also permits generating training logs, for offline
 /// training.
+///
+/// - Dynamically load an advisor via a plugin (PluginInlineAdvisorAnalysis)
 enum class InliningAdvisorMode : int { Default, Release, Development };
 
 // Each entry represents an inline driver.
@@ -238,8 +240,48 @@ private:
   InlineParams Params;
 };
 
-class DynamicInlineAdvisorAnalysis
-    : public AnalysisInfoMixin<DynamicInlineAdvisorAnalysis> {
+/// Used for dynamically registering InlineAdvisors as plugins
+/// 
+/// An advisor plugin adds a new advisor at runtime by registering an instance 
+/// of PluginInlineAdvisorAnalysis in the current ModuleAnalysisManager. 
+/// For example, the following code dynamically registers a DefaultInlineAdvisor:
+///
+/// namespace {
+/// 
+/// InlineAdvisor *defaultAdvisorFactory(Module &M, FunctionAnalysisManager &FAM,
+///                                      InlineParams Params, InlineContext IC) {
+///   return new DefaultInlineAdvisor(M, FAM, Params, IC);
+/// }
+/// 
+/// struct DefaultDynamicAdvisor : PassInfoMixin<DefaultDynamicAdvisor> {
+///   PreservedAnalyses run(Module &, ModuleAnalysisManager &MAM) {
+///     PluginInlineAdvisorAnalysis PA(defaultAdvisorFactory);
+///     MAM.registerPass([&] { return PA; });
+///     return PreservedAnalyses::all();
+///   }
+/// };
+/// 
+/// } // namespace
+/// 
+/// extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
+/// llvmGetPassPluginInfo() {
+///   return {LLVM_PLUGIN_API_VERSION, "DynamicDefaultAdvisor", LLVM_VERSION_STRING,
+///           [](PassBuilder &PB) {
+///             PB.registerPipelineStartEPCallback(
+///                 [](ModulePassManager &MPM, OptimizationLevel Level) {
+///                   MPM.addPass(DefaultDynamicAdvisor());
+///                 });
+///           }};
+/// }
+///
+/// A plugin must implement an AdvisorFactory and register it with a
+/// PluginInlineAdvisorAnlysis to the provided ModuleanAlysisManager.
+/// 
+/// If such a plugin has been registered InlineAdvisorAnalysis::Result::tryCreate 
+/// will return the dynamically loaded advisor.
+///
+class PluginInlineAdvisorAnalysis
+    : public AnalysisInfoMixin<PluginInlineAdvisorAnalysis> {
 public:
   static AnalysisKey Key;
   static bool HasBeenRegistered;
@@ -249,10 +291,10 @@ public:
                                            InlineParams Params,
                                            InlineContext IC);
 
-  DynamicInlineAdvisorAnalysis(AdvisorFactory Factory) : Factory(Factory) {
+  PluginInlineAdvisorAnalysis(AdvisorFactory Factory) : Factory(Factory) {
     HasBeenRegistered = true;
     assert(Factory != nullptr &&
-           "The dynamic advisor factory should not be a null pointer.");
+           "The plugin advisor factory should not be a null pointer.");
   }
 
   struct Result {
