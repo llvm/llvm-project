@@ -90,7 +90,7 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
   assert(Args.size() >= 1);
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
-  if (Optional<std::string> WarnOptsValue =
+  if (std::optional<std::string> WarnOptsValue =
           llvm::sys::Process::GetEnv("LLVM_CACHE_WARNINGS")) {
     SmallVector<const char *, 8> WarnOpts;
     WarnOpts.push_back(Args.front());
