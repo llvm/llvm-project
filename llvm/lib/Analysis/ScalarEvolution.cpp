@@ -8714,8 +8714,13 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
       // We couldn't compute an exact value for this exit, so
       // we won't be able to compute an exact value for the loop.
       CouldComputeBECount = false;
-    else
+    // Remember exit count if either exact or symbolic is known. Because
+    // Exact always implies symbolic, only check symbolic.
+    if (EL.SymbolicMaxNotTaken != getCouldNotCompute())
       ExitCounts.emplace_back(ExitBB, EL);
+    else
+      assert(EL.ExactNotTaken == getCouldNotCompute() &&
+             "Exact is known but symbolic isn't?");
 
     // 2. Derive the loop's MaxBECount from each exit's max number of
     // non-exiting iterations. Partition the loop exits into two kinds:
