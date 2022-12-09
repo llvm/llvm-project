@@ -428,7 +428,8 @@ private:
       }
     }
     fir::factory::genInlinedAllocation(builder, loc, box, lbounds, extents,
-                                       lenParams, mangleAlloc(alloc));
+                                       lenParams, mangleAlloc(alloc),
+                                       /*mustBeHeap=*/true);
   }
 
   void genSimpleAllocation(const Allocation &alloc,

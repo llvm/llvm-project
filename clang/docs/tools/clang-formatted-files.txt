@@ -2299,6 +2299,7 @@ flang/lib/Optimizer/Transforms/MemoryAllocation.cpp
 flang/lib/Optimizer/Transforms/MemRefDataFlowOpt.cpp
 flang/lib/Optimizer/Transforms/PassDetail.h
 flang/lib/Optimizer/Transforms/RewriteLoop.cpp
+flang/lib/Optimizer/Transforms/StackArrays.cpp
 flang/lib/Parser/basic-parsers.h
 flang/lib/Parser/char-block.cpp
 flang/lib/Parser/char-buffer.cpp
