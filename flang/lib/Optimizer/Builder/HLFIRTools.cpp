@@ -144,7 +144,7 @@ hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
                   fir::FortranVariableFlagsAttr flags) {
 
   mlir::Value base = fir::getBase(exv);
-  assert(fir::isa_passbyref_type(base.getType()) &&
+  assert(fir::conformsWithPassByRef(base.getType()) &&
          "entity being declared must be in memory");
   mlir::Value shapeOrShift;
   llvm::SmallVector<mlir::Value> lenParams;
