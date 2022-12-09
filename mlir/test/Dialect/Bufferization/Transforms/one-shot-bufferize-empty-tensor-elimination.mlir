@@ -137,3 +137,35 @@ func.func @shape_mismatch(%t: tensor<5x6x128xf32>) -> tensor<5x6x128xf32> {
       : tensor<1x1x128xf32> into tensor<5x6x128xf32>
   return %3 : tensor<5x6x128xf32>
 }
+
+// -----
+
+//      CHECK: func @parallel_insert_slice(
+// CHECK-SAME:   %[[FUNC_ARG:[0-9a-zA-Z]*]]: memref<?xf32>
+// CHECK-SAME:   %[[sz:[0-9a-zA-Z]*]]: index
+func.func @parallel_insert_slice(
+  %t: tensor<?xf32> {bufferization.buffer_layout = affine_map<(d0) -> (d0)>, bufferization.writable = true},
+  %sz: index)
+    -> (tensor<?xf32>)
+{
+  %f0 = arith.constant 0.0: f32
+  %c512 = arith.constant 512 : index
+
+  %r1 = scf.foreach_thread (%iv) in (%c512) shared_outs(%o = %t) -> (tensor<?xf32>) {
+    // tensor.empty itself does not alloc but forwards to the insert_slice.
+    // EmptyTensorOpElimination replaces the tensor.empty with an inplace
+    // extract_slice.
+    // CHECK: %[[T_SUBVIEW:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
+    %a = tensor.empty(%sz) : tensor<?xf32>
+
+    // CHECK: linalg.fill ins({{.*}} : f32) outs(%[[T_SUBVIEW]] : memref<?xf32
+    %f = linalg.fill ins(%f0 : f32) outs(%a : tensor<?xf32>) -> tensor<?xf32>
+
+    // Self-copy canonicalizes away later.
+    scf.foreach_thread.perform_concurrently {
+      tensor.parallel_insert_slice %f into %o[42][%sz][1]: tensor<?xf32> into tensor<?xf32>
+    }
+  }
+
+  return %r1: tensor<?xf32>
+}
