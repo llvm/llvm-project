@@ -127,6 +127,25 @@ static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
 static LogicalResult
 aliasingFuncOpBBArgsAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
                              FuncAnalysisState &funcState) {
+  if (funcOp.getBody().empty()) {
+    // No function body available. Conservatively assume that every tensor
+    // return value may alias with any tensor bbArg.
+    FunctionType type = funcOp.getFunctionType();
+    for (const auto &inputIt : llvm::enumerate(type.getInputs())) {
+      if (!inputIt.value().isa<TensorType>())
+        continue;
+      for (const auto &resultIt : llvm::enumerate(type.getResults())) {
+        if (!resultIt.value().isa<TensorType>())
+          continue;
+        int64_t returnIdx = resultIt.index();
+        int64_t bbArgIdx = inputIt.index();
+        funcState.aliasingFuncArgs[funcOp][returnIdx].push_back(bbArgIdx);
+        funcState.aliasingReturnVals[funcOp][bbArgIdx].push_back(returnIdx);
+      }
+    }
+    return success();
+  }
+
   // Support only single return-terminated block in the function.
   func::ReturnOp returnOp = getAssumedUniqueReturnOp(funcOp);
   assert(returnOp && "expected func with single return op");
@@ -151,8 +170,8 @@ aliasingFuncOpBBArgsAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
   return success();
 }
 
-static void annotateFuncArgAccess(func::FuncOp funcOp, BlockArgument bbArg,
-                                  bool isRead, bool isWritten) {
+static void annotateFuncArgAccess(func::FuncOp funcOp, int64_t idx, bool isRead,
+                                  bool isWritten) {
   OpBuilder b(funcOp.getContext());
   Attribute accessType;
   if (isRead && isWritten) {
@@ -164,7 +183,8 @@ static void annotateFuncArgAccess(func::FuncOp funcOp, BlockArgument bbArg,
   } else {
     accessType = b.getStringAttr("none");
   }
-  funcOp.setArgAttr(bbArg.getArgNumber(), "bufferization.access", accessType);
+  funcOp.setArgAttr(idx, BufferizationDialect::kBufferAccessAttrName,
+                    accessType);
 }
 
 /// Determine which FuncOp bbArgs are read and which are written. When run on a
@@ -173,28 +193,37 @@ static void annotateFuncArgAccess(func::FuncOp funcOp, BlockArgument bbArg,
 static LogicalResult
 funcOpBbArgReadWriteAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
                              FuncAnalysisState &funcState) {
-  // If the function has no body, conservatively assume that all args are
-  // read + written.
-  if (funcOp.getBody().empty()) {
-    for (BlockArgument bbArg : funcOp.getArguments()) {
-      funcState.readBbArgs[funcOp].insert(bbArg.getArgNumber());
-      funcState.writtenBbArgs[funcOp].insert(bbArg.getArgNumber());
+  for (int64_t idx = 0, e = funcOp.getFunctionType().getNumInputs(); idx < e;
+       ++idx) {
+    // Skip non-tensor arguments.
+    if (!funcOp.getFunctionType().getInput(idx).isa<TensorType>())
+      continue;
+    bool isRead;
+    bool isWritten;
+    if (auto accessAttr = funcOp.getArgAttrOfType<StringAttr>(
+            idx, BufferizationDialect::kBufferAccessAttrName)) {
+      // Buffer access behavior is specified on the function. Skip the analysis.
+      StringRef str = accessAttr.getValue();
+      isRead = str == "read" || str == "read-write";
+      isWritten = str == "write" || str == "read-write";
+    } else if (funcOp.getBody().empty()) {
+      // If the function has no body, conservatively assume that all args are
+      // read + written.
+      isRead = true;
+      isWritten = true;
+    } else {
+      // Analyze the body of the function.
+      BlockArgument bbArg = funcOp.getArgument(idx);
+      isRead = state.isValueRead(bbArg);
+      isWritten = state.isValueWritten(bbArg);
     }
 
-    return success();
-  }
-
-  for (BlockArgument bbArg : funcOp.getArguments()) {
-    if (!bbArg.getType().isa<TensorType>())
-      continue;
-    bool isRead = state.isValueRead(bbArg);
-    bool isWritten = state.isValueWritten(bbArg);
     if (state.getOptions().testAnalysisOnly)
-      annotateFuncArgAccess(funcOp, bbArg, isRead, isWritten);
+      annotateFuncArgAccess(funcOp, idx, isRead, isWritten);
     if (isRead)
-      funcState.readBbArgs[funcOp].insert(bbArg.getArgNumber());
+      funcState.readBbArgs[funcOp].insert(idx);
     if (isWritten)
-      funcState.writtenBbArgs[funcOp].insert(bbArg.getArgNumber());
+      funcState.writtenBbArgs[funcOp].insert(idx);
   }
 
   return success();
@@ -351,10 +380,6 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
 
   // Analyze ops.
   for (func::FuncOp funcOp : orderedFuncOps) {
-    // No body => no analysis.
-    if (funcOp.getBody().empty())
-      continue;
-
     // Now analyzing function.
     funcState.startFunctionAnalysis(funcOp);
 

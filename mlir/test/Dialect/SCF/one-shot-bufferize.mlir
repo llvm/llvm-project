@@ -129,7 +129,7 @@ func.func @scf_for_with_tensor.insert_slice(
 // CHECK-LABEL: func @execute_region_with_conflict(
 //  CHECK-SAME:     %[[m1:.*]]: memref<?xf32
 func.func @execute_region_with_conflict(
-    %t1 : tensor<?xf32> {bufferization.writable = "true"})
+    %t1 : tensor<?xf32> {bufferization.writable = true})
   -> (f32, tensor<?xf32>, f32)
 {
   %f1 = arith.constant 0.0 : f32
