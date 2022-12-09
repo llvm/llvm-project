@@ -54,11 +54,9 @@ using namespace llvm;
 enum AllocType : uint8_t {
   OpNewLike          = 1<<0, // allocates; never returns null
   MallocLike         = 1<<1, // allocates; may return null
-  CallocLike         = 1<<2, // allocates + bzero
-  StrDupLike         = 1<<3,
+  StrDupLike         = 1<<2,
   MallocOrOpNewLike  = MallocLike | OpNewLike,
-  MallocOrCallocLike = MallocLike | OpNewLike | CallocLike,
-  AllocLike          = MallocOrCallocLike | StrDupLike,
+  AllocLike          = MallocOrOpNewLike | StrDupLike,
   AnyAlloc           = AllocLike
 };
 
@@ -304,21 +302,10 @@ bool llvm::isNewLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
 }
 
 /// Tests if a value is a call or invoke to a library function that
-/// allocates uninitialized memory (such as malloc).
-static bool isMallocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
-  return getAllocationData(V, MallocOrOpNewLike, TLI).has_value();
-}
-
-/// Tests if a value is a call or invoke to a library function that
-/// allocates zero-filled memory (such as calloc).
-static bool isCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
-  return getAllocationData(V, CallocLike, TLI).has_value();
-}
-
-/// Tests if a value is a call or invoke to a library function that
 /// allocates memory similar to malloc or calloc.
 bool llvm::isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
-  return getAllocationData(V, MallocOrCallocLike, TLI).has_value();
+  // TODO: Function behavior does not match name.
+  return getAllocationData(V, MallocOrOpNewLike, TLI).has_value();
 }
 
 /// Tests if a value is a call or invoke to a library function that
@@ -447,12 +434,8 @@ Constant *llvm::getInitialValueOfAllocation(const Value *V,
     return nullptr;
 
   // malloc are uninitialized (undef)
-  if (isMallocLikeFn(Alloc, TLI))
+  if (getAllocationData(Alloc, MallocOrOpNewLike, TLI).has_value())
     return UndefValue::get(Ty);
-
-  // calloc zero initializes
-  if (isCallocLikeFn(Alloc, TLI))
-    return Constant::getNullValue(Ty);
 
   AllocFnKind AK = getAllocFnKind(Alloc);
   if ((AK & AllocFnKind::Uninitialized) != AllocFnKind::Unknown)
