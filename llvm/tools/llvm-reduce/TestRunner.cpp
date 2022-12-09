@@ -21,7 +21,7 @@ using namespace llvm;
 TestRunner::TestRunner(StringRef TestName,
                        const std::vector<std::string> &TestArgs,
                        std::unique_ptr<ReducerWorkItem> Program,
-                       std::unique_ptr<TargetMachine> TM, const char *ToolName,
+                       std::unique_ptr<TargetMachine> TM, StringRef ToolName,
                        StringRef OutputName, bool InputIsBitcode,
                        bool OutputBitcode)
     : TestName(TestName), ToolName(ToolName), TestArgs(TestArgs),
