@@ -464,7 +464,4 @@ def : Pat<(i64 (any_llround FPR16:$rs1)), (FCVT_L_S (FCVT_S_H $rs1), 0b100)>;
 // [u]int->fp. Match GCC and default to using dynamic rounding mode.
 def : Pat<(any_sint_to_fp (i64 GPR:$rs1)), (FCVT_H_S (FCVT_S_L $rs1, 0b111), 0b111)>;
 def : Pat<(any_uint_to_fp (i64 GPR:$rs1)), (FCVT_H_S (FCVT_S_LU $rs1, 0b111), 0b111)>;
-
-def : Pat<(riscv_any_fcvt_w_rv64 FPR16:$rs1, timm:$frm),  (FCVT_W_S (FCVT_S_H $rs1), timm:$frm)>;
-def : Pat<(riscv_any_fcvt_wu_rv64 FPR16:$rs1, timm:$frm), (FCVT_WU_S (FCVT_S_H $rs1), timm:$frm)>;
 } // Predicates = [HasStdExtZfhmin, NoStdExtZfh, IsRV64]
