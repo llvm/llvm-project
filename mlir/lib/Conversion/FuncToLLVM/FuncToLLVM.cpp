@@ -59,11 +59,12 @@ using namespace mlir;
 /// Only retain those attributes that are not constructed by
 /// `LLVMFuncOp::build`. If `filterArgAttrs` is set, also filter out argument
 /// attributes.
-static void filterFuncAttributes(func::FuncOp func, bool filterArgAndResAttrs,
+static void filterFuncAttributes(ArrayRef<NamedAttribute> attrs,
+                                 bool filterArgAndResAttrs,
                                  SmallVectorImpl<NamedAttribute> &result) {
-  for (const NamedAttribute &attr : func->getAttrs()) {
+  for (const auto &attr : attrs) {
     if (attr.getName() == SymbolTable::getSymbolAttrName() ||
-        attr.getName() == func.getFunctionTypeAttrName() ||
+        attr.getName() == FunctionOpInterface::getTypeAttrName() ||
         attr.getName() == "func.varargs" ||
         (filterArgAndResAttrs &&
          (attr.getName() == FunctionOpInterface::getArgDictAttrName() ||
@@ -137,7 +138,8 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
                                    LLVM::LLVMFuncOp newFuncOp) {
   auto type = funcOp.getFunctionType();
   SmallVector<NamedAttribute, 4> attributes;
-  filterFuncAttributes(funcOp, /*filterArgAndResAttrs=*/false, attributes);
+  filterFuncAttributes(funcOp->getAttrs(), /*filterArgAndResAttrs=*/false,
+                       attributes);
   auto [wrapperFuncType, resultIsNowArg] =
       typeConverter.convertFunctionTypeCWrapper(type);
   if (resultIsNowArg)
@@ -202,7 +204,8 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   assert(wrapperType && "unexpected type conversion failure");
 
   SmallVector<NamedAttribute, 4> attributes;
-  filterFuncAttributes(funcOp, /*filterArgAndResAttrs=*/false, attributes);
+  filterFuncAttributes(funcOp->getAttrs(), /*filterArgAndResAttrs=*/false,
+                       attributes);
 
   if (resultIsNowArg)
     prependResAttrsToArgAttrs(builder, attributes, funcOp.getNumArguments());
@@ -301,7 +304,8 @@ protected:
     // Propagate argument/result attributes to all converted arguments/result
     // obtained after converting a given original argument/result.
     SmallVector<NamedAttribute, 4> attributes;
-    filterFuncAttributes(funcOp, /*filterArgAndResAttrs=*/true, attributes);
+    filterFuncAttributes(funcOp->getAttrs(), /*filterArgAndResAttrs=*/true,
+                         attributes);
     if (ArrayAttr resAttrDicts = funcOp.getAllResultAttrs()) {
       assert(!resAttrDicts.empty() && "expected array to be non-empty");
       auto newResAttrDicts =

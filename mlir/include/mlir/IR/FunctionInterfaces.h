@@ -22,9 +22,11 @@
 #include "llvm/ADT/SmallString.h"
 
 namespace mlir {
-class FunctionOpInterface;
 
 namespace function_interface_impl {
+
+/// Return the name of the attribute used for function types.
+inline StringRef getTypeAttrName() { return "function_type"; }
 
 /// Return the name of the attribute used for function argument attributes.
 inline StringRef getArgDictAttrName() { return "arg_attrs"; }
@@ -70,29 +72,28 @@ inline ArrayRef<NamedAttribute> getResultAttrs(Operation *op, unsigned index) {
 }
 
 /// Insert the specified arguments and update the function type attribute.
-void insertFunctionArguments(FunctionOpInterface op,
-                             ArrayRef<unsigned> argIndices, TypeRange argTypes,
+void insertFunctionArguments(Operation *op, ArrayRef<unsigned> argIndices,
+                             TypeRange argTypes,
                              ArrayRef<DictionaryAttr> argAttrs,
                              ArrayRef<Location> argLocs,
                              unsigned originalNumArgs, Type newType);
 
 /// Insert the specified results and update the function type attribute.
-void insertFunctionResults(FunctionOpInterface op,
-                           ArrayRef<unsigned> resultIndices,
+void insertFunctionResults(Operation *op, ArrayRef<unsigned> resultIndices,
                            TypeRange resultTypes,
                            ArrayRef<DictionaryAttr> resultAttrs,
                            unsigned originalNumResults, Type newType);
 
 /// Erase the specified arguments and update the function type attribute.
-void eraseFunctionArguments(FunctionOpInterface op, const BitVector &argIndices,
+void eraseFunctionArguments(Operation *op, const BitVector &argIndices,
                             Type newType);
 
 /// Erase the specified results and update the function type attribute.
-void eraseFunctionResults(FunctionOpInterface op,
-                          const BitVector &resultIndices, Type newType);
+void eraseFunctionResults(Operation *op, const BitVector &resultIndices,
+                          Type newType);
 
 /// Set a FunctionOpInterface operation's type signature.
-void setFunctionType(FunctionOpInterface op, Type newType);
+void setFunctionType(Operation *op, Type newType);
 
 /// Insert a set of `newTypes` into `oldTypes` at the given `indices`. If any
 /// types are inserted, `storage` is used to hold the new type list. The new
@@ -206,6 +207,10 @@ Attribute removeResultAttr(ConcreteType op, unsigned index, StringAttr name) {
 /// method on FunctionOpInterface::Trait.
 template <typename ConcreteOp>
 LogicalResult verifyTrait(ConcreteOp op) {
+  if (!op.getFunctionTypeAttr())
+    return op.emitOpError("requires a type attribute '")
+           << function_interface_impl::getTypeAttrName() << '\'';
+
   if (failed(op.verifyType()))
     return failure();
 
