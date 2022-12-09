@@ -89,10 +89,6 @@ public:
     asImpl().Visit(E->getExpr());
   }
 
-  void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
-    asImpl().Visit(E->getExpr());
-  }
-
   void visitUsedDecl(SourceLocation Loc, Decl *D) {
     if (auto *CD = dyn_cast<CapturedDecl>(D)) {
       if (auto *S = CD->getBody()) {
