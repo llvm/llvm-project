@@ -8845,6 +8845,9 @@ def warn_redefine_extname_not_applied : Warning<
 
 // inline asm.
 let CategoryName = "Inline Assembly Issue" in {
+  def err_asm_pmf_through_constraint_not_permitted
+    : Error<"cannot pass a pointer-to-member through register-constrained "
+            "inline assembly parameter">;
   def err_asm_invalid_lvalue_in_output : Error<"invalid lvalue in asm output">;
   def err_asm_invalid_output_constraint : Error<
     "invalid output constraint '%0' in asm">;
