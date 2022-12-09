@@ -1190,7 +1190,7 @@ public:
       SmallPtrSetImpl<const SCEVPredicate *> &Preds);
 
   /// Compute \p LHS - \p RHS and returns the result as an APInt if it is a
-  /// constant, and None if it isn't.
+  /// constant, and std::nullopt if it isn't.
   ///
   /// This is intended to be a cheaper version of getMinusSCEV.  We can be
   /// frugal here since we just bail out of actually constructing and

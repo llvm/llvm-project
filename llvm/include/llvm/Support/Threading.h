@@ -139,8 +139,8 @@ constexpr bool llvm_is_multithreaded() { return LLVM_ENABLE_THREADS; }
     /// compute_thread_count()).
     void apply_thread_strategy(unsigned ThreadPoolNum) const;
 
-    /// Finds the CPU socket where a thread should go. Returns 'None' if the
-    /// thread shall remain on the actual CPU socket.
+    /// Finds the CPU socket where a thread should go. Returns 'std::nullopt' if
+    /// the thread shall remain on the actual CPU socket.
     std::optional<unsigned> compute_cpu_socket(unsigned ThreadPoolNum) const;
   };
 
