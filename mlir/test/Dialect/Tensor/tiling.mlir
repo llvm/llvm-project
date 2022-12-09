@@ -18,11 +18,9 @@
 // CHECK-DAG:         %[[IN_C_SZ:.*]] = affine.min #[[MAP2]]
 // CHECK:             %[[SUB_IN:.*]] = tensor.extract_slice %[[IN]][%[[IN_N]], %[[IN_C]]] [%[[IN_N_SZ]], %[[IN_C_SZ]]] [1, 1] : tensor<128x256xf32> to tensor<?x?xf32>
 // CHECK:             %[[SUB_OUT:.*]] = tensor.extract_slice %[[ITER1]][%[[N]], %[[C]], 0, 0] [2, 4, 32, 32] [1, 1, 1, 1] : tensor<4x8x32x32xf32> to tensor<2x4x32x32xf32>
-// CHECK:             %[[CAST_OUT:.*]] = tensor.cast %[[SUB_OUT]]
 // CHECK:             %[[SUB_RES:.*]] = tensor.pack
-// CHECK-SAME:          %[[SUB_IN]] inner_dims_pos = [0, 1] inner_tiles = [32, 32] into %[[CAST_OUT]]
-// CHECK:             %[[CAST_RES:.*]] = tensor.cast %[[SUB_RES]]
-// CHECK:             %[[INSERT:.*]] = tensor.insert_slice %[[CAST_RES]] into %[[ITER1]]
+// CHECK-SAME:          %[[SUB_IN]] inner_dims_pos = [0, 1] inner_tiles = [32, 32] into %[[SUB_OUT]]
+// CHECK:             %[[INSERT:.*]] = tensor.insert_slice %[[SUB_RES]] into %[[ITER1]]
 // CHECK:             scf.yield %[[INSERT]] : tensor<4x8x32x32xf32>
 // CHECK:           }
 // CHECK:           scf.yield %[[RES1:.*]] : tensor<4x8x32x32xf32>
@@ -55,12 +53,10 @@ transform.sequence failures(propagate) {
 // CHECK-DAG:         %[[IN_C_SZ:.+]] = affine.min #[[MAP1]](%[[C]])
 // CHECK:             %[[INPUT_SLICE:.+]] = tensor.extract_slice %[[IN]]
 // CHECK-SAME:          [0, %[[IN_C]]] [128, %[[IN_C_SZ]]]
-// CHECK:             %[[CAST_IN:.+]] = tensor.cast %[[INPUT_SLICE]]
 // CHECK:             %[[OUTPUT_SLICE:.+]] = tensor.extract_slice %{{.+}}[%[[C]], 0, 0, 0] [2, 4, 32, 8]
-// CHECK:             %[[CAST_OUT:.+]] = tensor.cast %[[OUTPUT_SLICE]]
 // CHECK:             tensor.pack
-// CHECK-SAME:          %[[CAST_IN]] outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [32, 8]
-// CHECK-SAME:          into %[[CAST_OUT]]
+// CHECK-SAME:          %[[INPUT_SLICE]] outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [32, 8]
+// CHECK-SAME:          into %[[OUTPUT_SLICE]]
 func.func @KC_to_CKkc(%arg0: tensor<128x256xf32>, %arg1: tensor<32x4x32x8xf32>) -> tensor<32x4x32x8xf32> {
   %0 = tensor.pack %arg0 outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [32, 8] into %arg1 : tensor<128x256xf32> -> tensor<32x4x32x8xf32>
   return %0 : tensor<32x4x32x8xf32>
@@ -87,14 +83,11 @@ transform.sequence failures(propagate) {
 // CHECK-DAG:         %[[IN_J:.*]] = affine.apply #[[MAP0]](%[[J]])
 // CHECK-DAG:         %[[IN_J_SZ:.*]] = affine.min #[[MAP1]](%[[J]])
 // CHECK:             %[[SUB_IN:.*]] = tensor.extract_slice %[[IN]][0, %[[IN_J]]] [13, %[[IN_J_SZ]]] [1, 1]
-// CHECK:             %[[CAST_IN:.*]] = tensor.cast %[[SUB_IN]]
 // CHECK:             %[[SUB_OUT:.*]] = tensor.extract_slice %[[ITER1]][0, %[[J]], 0, 0] [2, 4, 8, 2] [1, 1, 1, 1]
-// CHECK:             %[[CAST_OUT:.*]] = tensor.cast %[[SUB_OUT]]
 // CHECK:             %[[SUB_RES:.*]] = tensor.pack
-// CHECK-SAME:          %[[CAST_IN]] padding_value(%[[PAD]] : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 2]
-// CHECK-SAME:          into %[[CAST_OUT]]
-// CHECK:             %[[CAST_RES:.*]] = tensor.cast %[[SUB_RES]]
-// CHECK:             %[[INSERT:.*]] = tensor.insert_slice %[[CAST_RES]] into %[[ITER1]]
+// CHECK-SAME:          %[[SUB_IN]] padding_value(%[[PAD]] : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 2]
+// CHECK-SAME:          into %[[SUB_OUT]]
+// CHECK:             %[[INSERT:.*]] = tensor.insert_slice %[[SUB_RES]] into %[[ITER1]]
 // CHECK:             scf.yield %[[INSERT]] : tensor<2x8x8x2xf32>
 // CHECK:           }
 // CHECK:           return %[[RES0:.*]] : tensor<2x8x8x2xf32>
