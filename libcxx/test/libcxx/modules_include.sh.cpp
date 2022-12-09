@@ -19,6 +19,9 @@
 // The Windows headers don't appear to be compatible with modules
 // UNSUPPORTED: windows
 
+// The Android headers don't appear to be compatible with modules yet
+// XFAIL: LIBCXX-ANDROID-FIXME
+
 // Prevent <ext/hash_map> from generating deprecated warnings for this test.
 #if defined(__DEPRECATED)
 #    undef __DEPRECATED
