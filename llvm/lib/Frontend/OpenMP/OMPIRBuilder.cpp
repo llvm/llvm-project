@@ -914,34 +914,21 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
   AllocaInst *TIDAddr = Builder.CreateAlloca(Int32, nullptr, "tid.addr");
   AllocaInst *ZeroAddr = Builder.CreateAlloca(Int32, nullptr, "zero.addr");
 
-  // If there is an if condition we actually use the TIDAddr and ZeroAddr in the
-  // program, otherwise we only need them for modeling purposes to get the
-  // associated arguments in the outlined function. In the former case,
-  // initialize the allocas properly, in the latter case, delete them later.
-  if (IfCondition) {
-    Builder.CreateStore(Constant::getNullValue(Int32), TIDAddr);
-    Builder.CreateStore(Constant::getNullValue(Int32), ZeroAddr);
-  } else {
-    ToBeDeleted.push_back(TIDAddr);
-    ToBeDeleted.push_back(ZeroAddr);
-  }
+  // We only need TIDAddr and ZeroAddr for modeling purposes to get the
+  // associated arguments in the outlined function, so we delete them later.
+  ToBeDeleted.push_back(TIDAddr);
+  ToBeDeleted.push_back(ZeroAddr);
 
   // Create an artificial insertion point that will also ensure the blocks we
   // are about to split are not degenerated.
   auto *UI = new UnreachableInst(Builder.getContext(), InsertBB);
 
-  Instruction *ThenTI = UI, *ElseTI = nullptr;
-  if (IfCondition)
-    SplitBlockAndInsertIfThenElse(IfCondition, UI, &ThenTI, &ElseTI);
-
-  BasicBlock *ThenBB = ThenTI->getParent();
-  BasicBlock *PRegEntryBB = ThenBB->splitBasicBlock(ThenTI, "omp.par.entry");
-  BasicBlock *PRegBodyBB =
-      PRegEntryBB->splitBasicBlock(ThenTI, "omp.par.region");
+  BasicBlock *EntryBB = UI->getParent();
+  BasicBlock *PRegEntryBB = EntryBB->splitBasicBlock(UI, "omp.par.entry");
+  BasicBlock *PRegBodyBB = PRegEntryBB->splitBasicBlock(UI, "omp.par.region");
   BasicBlock *PRegPreFiniBB =
-      PRegBodyBB->splitBasicBlock(ThenTI, "omp.par.pre_finalize");
-  BasicBlock *PRegExitBB =
-      PRegPreFiniBB->splitBasicBlock(ThenTI, "omp.par.exit");
+      PRegBodyBB->splitBasicBlock(UI, "omp.par.pre_finalize");
+  BasicBlock *PRegExitBB = PRegPreFiniBB->splitBasicBlock(UI, "omp.par.exit");
 
   auto FiniCBWrapper = [&](InsertPointTy IP) {
     // Hide "open-ended" blocks from the given FiniCB by setting the right jump
@@ -975,7 +962,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
       Builder.CreateLoad(Int32, ZeroAddr, "zero.addr.use");
   ToBeDeleted.push_back(ZeroAddrUse);
 
-  // ThenBB
+  // EntryBB
   //   |
   //   V
   // PRegionEntryBB         <- Privatization allocas are placed here.
@@ -998,8 +985,12 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
   BodyGenCB(InnerAllocaIP, CodeGenIP);
 
   LLVM_DEBUG(dbgs() << "After  body codegen: " << *OuterFn << "\n");
+  FunctionCallee RTLFn;
+  if (IfCondition)
+    RTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_fork_call_if);
+  else
+    RTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_fork_call);
 
-  FunctionCallee RTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_fork_call);
   if (auto *F = dyn_cast<llvm::Function>(RTLFn.getCallee())) {
     if (!F->hasMetadata(llvm::LLVMContext::MD_callback)) {
       llvm::LLVMContext &Ctx = F->getContext();
@@ -1034,14 +1025,29 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     CI->getParent()->setName("omp_parallel");
     Builder.SetInsertPoint(CI);
 
-    // Build call __kmpc_fork_call(Ident, n, microtask, var1, .., varn);
+    // Build call __kmpc_fork_call[_if](Ident, n, microtask, var1, .., varn);
     Value *ForkCallArgs[] = {
         Ident, Builder.getInt32(NumCapturedVars),
         Builder.CreateBitCast(&OutlinedFn, ParallelTaskPtr)};
 
     SmallVector<Value *, 16> RealArgs;
     RealArgs.append(std::begin(ForkCallArgs), std::end(ForkCallArgs));
+    if (IfCondition) {
+      Value *Cond = Builder.CreateSExtOrTrunc(IfCondition,
+                                              Type::getInt32Ty(M.getContext()));
+      RealArgs.push_back(Cond);
+    }
     RealArgs.append(CI->arg_begin() + /* tid & bound tid */ 2, CI->arg_end());
+
+    // __kmpc_fork_call_if always expects a void ptr as the last argument
+    // If there are no arguments, pass a null pointer.
+    auto PtrTy = Type::getInt8PtrTy(M.getContext());
+    if (IfCondition && NumCapturedVars == 0) {
+      llvm::Value *Void = ConstantPointerNull::get(PtrTy);
+      RealArgs.push_back(Void);
+    }
+    if (IfCondition && RealArgs.back()->getType() != PtrTy)
+      RealArgs.back() = Builder.CreateBitCast(RealArgs.back(), PtrTy);
 
     Builder.CreateCall(RTLFn, RealArgs);
 
@@ -1055,35 +1061,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     Function::arg_iterator OutlinedAI = OutlinedFn.arg_begin();
     Builder.CreateStore(Builder.CreateLoad(Int32, OutlinedAI), PrivTIDAddr);
 
-    // If no "if" clause was present we do not need the call created during
-    // outlining, otherwise we reuse it in the serialized parallel region.
-    if (!ElseTI) {
-      CI->eraseFromParent();
-    } else {
-
-      // If an "if" clause was present we are now generating the serialized
-      // version into the "else" branch.
-      Builder.SetInsertPoint(ElseTI);
-
-      // Build calls __kmpc_serialized_parallel(&Ident, GTid);
-      Value *SerializedParallelCallArgs[] = {Ident, ThreadID};
-      Builder.CreateCall(
-          getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_serialized_parallel),
-          SerializedParallelCallArgs);
-
-      // OutlinedFn(&GTid, &zero, CapturedStruct);
-      CI->removeFromParent();
-      Builder.Insert(CI);
-
-      // __kmpc_end_serialized_parallel(&Ident, GTid);
-      Value *EndArgs[] = {Ident, ThreadID};
-      Builder.CreateCall(
-          getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_serialized_parallel),
-          EndArgs);
-
-      LLVM_DEBUG(dbgs() << "With serialized parallel region: "
-                        << *Builder.GetInsertBlock()->getParent() << "\n");
-    }
+    CI->eraseFromParent();
 
     for (Instruction *I : ToBeDeleted)
       I->eraseFromParent();
