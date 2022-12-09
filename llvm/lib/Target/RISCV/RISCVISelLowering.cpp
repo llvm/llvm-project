@@ -1959,6 +1959,11 @@ static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
   bool IsSigned = Op.getOpcode() == ISD::FP_TO_SINT_SAT;
 
   if (!DstVT.isVector()) {
+    // In absense, of Zfh, promote f16 to f32, then saturate the result.
+    if (Src.getSimpleValueType() == MVT::f16 && !Subtarget.hasStdExtZfh()) {
+      Src = DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), MVT::f32, Src);
+    }
+
     unsigned Opc;
     if (SatVT == DstVT)
       Opc = IsSigned ? RISCVISD::FCVT_X : RISCVISD::FCVT_XU;
