@@ -15,14 +15,14 @@ bb1:                                              ; preds = %bb
   %tmp = trunc i64 5 to i32
   %tmp2 = trunc i64 0 to i32
   %tmp3 = trunc i64 0 to i32
-  call void (...) @llvm.experimental.deoptimize.isVoid(i32 13) #0 [ "deopt"(i32 0, i32 1, i32 0, i32 502, i32 4, i32 35, i32 0, i32 0, ptr addrspace(1) null, i32 3, i32 -99, i32 0, ptr addrspace(1) null, i32 3, i32 -99, i32 0, ptr addrspace(1) null, i32 7, ptr null, i32 3, i32 0, i32 3, i32 0, i32 3, i32 %tmp3, i32 3, i32 0, i32 3, i32 0, i32 3, i32 %tmp, i32 3, i32 0, i32 3, i32 -99, i32 3, i32 0, i32 3, i32 14, i32 3, i32 0, i32 3, i32 -99, i32 3, i32 0, i32 3, i32 0, i32 3, i32 0, i32 3, i32 0, i32 0, ptr addrspace(1) null, i32 3, float 0.000000e+00, i32 4, double 0.000000e+00, i32 7, ptr null, i32 0, ptr addrspace(1) null, i32 0, ptr addrspace(1) null, i32 0, ptr addrspace(1) null, i32 7, ptr null, i32 7, ptr null, i32 0, ptr addrspace(1) null, i32 0, ptr addrspace(1) null, i32 0, ptr addrspace(1) null, i32 0, ptr addrspace(1) null, i32 7, ptr null, i32 7, ptr null, i32 7, ptr null, i32 7, ptr null) ]
+  call void (...) @llvm.experimental.deoptimize.isVoid(i32 13) #0 [ "deopt"() ]
   ret void
 
 bb4:                                              ; preds = %bb
   %tmp5 = trunc i64 5 to i32
   %tmp6 = trunc i64 1 to i32
   %tmp7 = trunc i64 0 to i32
-  call void (...) @llvm.experimental.deoptimize.isVoid(i32 13) #0 [ "deopt"(i32 0, i32 1, i32 0, i32 502, i32 4, i32 35, i32 0, i32 0, ptr addrspace(1) null, i32 3, i32 -99, i32 0, ptr addrspace(1) null, i32 3, i32 -99, i32 0, ptr addrspace(1) null, i32 7, ptr null, i32 3, i32 0, i32 3, i32 0, i32 3, i32 %tmp7, i32 3, i32 0, i32 3, i32 0, i32 3, i32 %tmp5, i32 3, i32 0, i32 3, i32 -99, i32 3, i32 0, i32 3, i32 14, i32 3, i32 0, i32 3, i32 -99, i32 3, i32 0, i32 3, i32 0, i32 3, i32 0, i32 3, i32 0, i32 0, ptr addrspace(1) null, i32 3, float 0.000000e+00, i32 4, double 0.000000e+00, i32 7, ptr null, i32 0, ptr addrspace(1) null, i32 0, ptr addrspace(1) null, i32 0, ptr addrspace(1) null, i32 7, ptr null, i32 7, ptr null, i32 0, ptr addrspace(1) null, i32 0, ptr addrspace(1) null, i32 0, ptr addrspace(1) null, i32 0, ptr addrspace(1) null, i32 7, ptr null, i32 7, ptr null, i32 7, ptr null, i32 7, ptr null) ]
+  call void (...) @llvm.experimental.deoptimize.isVoid(i32 13) #0 [ "deopt"() ]
   ret void
 }
 
