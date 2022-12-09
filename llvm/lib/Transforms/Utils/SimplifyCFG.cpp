@@ -1471,6 +1471,12 @@ static bool isSafeToHoistInstr(Instruction *I, unsigned Flags) {
   if ((Flags & SkipImplicitControlFlow) && !isSafeToSpeculativelyExecute(I))
     return false;
 
+  // Hoisting of llvm.deoptimize is only legal together with the next return
+  // instruction, which this pass is not always able to do.
+  if (auto *CB = dyn_cast<CallBase>(I))
+    if (CB->getIntrinsicID() == Intrinsic::experimental_deoptimize)
+      return false;
+
   // It's also unsafe/illegal to hoist an instruction above its instruction
   // operands
   BasicBlock *BB = I->getParent();
