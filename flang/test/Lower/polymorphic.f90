@@ -12,6 +12,10 @@ module polymorphic_test
     procedure :: elemental_fct
     procedure :: elemental_sub
     procedure, pass(this) :: elemental_sub_pass
+    procedure :: read_p1
+    procedure :: write_p1
+    generic :: read(formatted) => read_p1
+    generic :: write(formatted) => write_p1
     generic :: assignment(=) => assign_p1_int
     procedure :: host_assoc
     procedure, pass(poly) :: lt
@@ -680,6 +684,43 @@ module polymorphic_test
 ! CHECK:   %[[EMBOXED:.*]] = fir.embox %[[COORD]] tdesc %[[TDESC]] : (!fir.ref<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.tdesc<none>) -> !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
 ! CHECK:   fir.dispatch "elemental_sub_pass"(%[[EMBOXED]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %[[EMBOXED]] : !fir.ref<i32>, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
 ! CHECK: }
+
+  subroutine write_p1(dtv, unit, iotype, v_list, iostat, iomsg)
+    class(p1), intent(in) :: dtv
+    integer, intent(in) :: unit
+    character(*), intent(in) :: iotype
+    integer, intent(in) :: v_list(:)
+    integer, intent(out) :: iostat
+    character(*), intent(inout) :: iomsg
+    ! dummy subroutine for testing purpose
+  end subroutine
+
+  subroutine read_p1(dtv, unit, iotype, v_list, iostat, iomsg)
+    class(p1), intent(inout) :: dtv
+    integer, intent(in) :: unit
+    character(*), intent(in) :: iotype
+    integer, intent(in) :: v_list(:)
+    integer, intent(out) :: iostat
+    character(*), intent(inout) :: iomsg
+    ! dummy subroutine for testing purpose
+  end subroutine
+
+  subroutine test_polymorphic_io()
+    type(p1), target :: t
+    class(p1), pointer :: p
+    open(17, form='formatted', access='stream')
+    write(17, 1) t
+    1 Format(1X,I10)
+    p => t
+    rewind(17)
+    read(17, 1) p
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_polymorphic_io() {
+! CHECK: %[[P:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>> {bindc_name = "p", uniq_name = "_QMpolymorphic_testFtest_polymorphic_ioEp"}
+! CHECK: %[[LOAD_P:.*]] = fir.load %[[P]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>
+! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[LOAD_P]] : (!fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAioInputDescriptor(%{{.*}}, %[[BOX_NONE]]) {{.*}} : (!fir.ref<i8>, !fir.box<none>) -> i1
 
 end module
 
