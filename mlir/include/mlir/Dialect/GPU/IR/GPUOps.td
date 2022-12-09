@@ -242,9 +242,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     attribution.
   }];
 
-  let arguments = (ins TypeAttrOf<FunctionType>:$function_type,
-                       OptionalAttr<DictArrayAttr>:$arg_attrs,
-                       OptionalAttr<DictArrayAttr>:$res_attrs);
+  let arguments = (ins TypeAttrOf<FunctionType>:$function_type);
   let regions = (region AnyRegion:$body);
 
   let skipDefaultBuilders = 1;
