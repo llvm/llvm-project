@@ -232,8 +232,9 @@ void BitstreamRemarkSerializerHelper::setupBlockInfo() {
 }
 
 void BitstreamRemarkSerializerHelper::emitMetaBlock(
-    uint64_t ContainerVersion, Optional<uint64_t> RemarkVersion,
-    Optional<const StringTable *> StrTab, std::optional<StringRef> Filename) {
+    uint64_t ContainerVersion, std::optional<uint64_t> RemarkVersion,
+    std::optional<const StringTable *> StrTab,
+    std::optional<StringRef> Filename) {
   // Emit the meta block
   Bitstream.EnterSubblock(META_BLOCK_ID, 3);
 
@@ -354,7 +355,8 @@ void BitstreamRemarkSerializer::emit(const Remark &Remark) {
         Helper.ContainerType == BitstreamRemarkContainerType::Standalone;
     BitstreamMetaSerializer MetaSerializer(
         OS, Helper,
-        IsStandalone ? &*StrTab : Optional<const StringTable *>(std::nullopt));
+        IsStandalone ? &*StrTab
+                     : std::optional<const StringTable *>(std::nullopt));
     MetaSerializer.emit();
     DidSetUp = true;
   }
