@@ -413,4 +413,18 @@ exit:
   ret void
 }
 
+; NO-PHI-VALUES: MayAlias: i8* %a, i8* %phi
+; PHI-VALUES: MustAlias: i8* %a, i8* %phi
+define void @phi_contains_self() {
+entry:
+  %a = alloca i32
+  load i8, ptr %a
+  br label %loop
+
+loop:
+  %phi = phi ptr [ %phi, %loop ], [ %a, %entry ]
+  load i8, ptr %phi
+  br label %loop
+}
+
 declare i16 @call(i32)
