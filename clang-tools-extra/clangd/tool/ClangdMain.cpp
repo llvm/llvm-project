@@ -210,7 +210,7 @@ opt<CodeCompleteOptions::CodeCompletionRankingModel> RankingModel{
     cat(Features),
     desc("Model to use to rank code-completion items"),
     values(clEnumValN(CodeCompleteOptions::Heuristics, "heuristics",
-                      "Use hueristics to rank code completion items"),
+                      "Use heuristics to rank code completion items"),
            clEnumValN(CodeCompleteOptions::DecisionForest, "decision_forest",
                       "Use Decision Forest model to rank completion items")),
     init(CodeCompleteOptions().RankingModel),
