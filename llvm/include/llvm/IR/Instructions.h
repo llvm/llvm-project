@@ -5409,7 +5409,7 @@ inline Type *getLoadStoreType(Value *I) {
 }
 
 /// A helper function that returns an atomic operation's sync scope; returns
-/// None if it is not an atomic operation.
+/// std::nullopt if it is not an atomic operation.
 inline std::optional<SyncScope::ID> getAtomicSyncScopeID(const Instruction *I) {
   if (!I->isAtomic())
     return std::nullopt;

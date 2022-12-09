@@ -599,7 +599,7 @@ private:
 
   /// The main heuristic function. Analyze the set of instructions pointed to by
   /// LRI and return a candidate solution if these instructions can be sunk, or
-  /// None otherwise.
+  /// std::nullopt otherwise.
   Optional<SinkingInstructionCandidate> analyzeInstructionForSinking(
       LockstepReverseIterator &LRI, unsigned &InstNum, unsigned &MemoryInstNum,
       ModelledPHISet &NeededPHIs, SmallPtrSetImpl<Value *> &PHIContents);

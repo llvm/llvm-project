@@ -97,8 +97,8 @@ static unsigned bigEndianByteAt(const unsigned ByteWidth, const unsigned I) {
 /// \param MemOffset2Idx maps memory offsets to address offsets.
 /// \param LowestIdx is the lowest index in \p MemOffset2Idx.
 ///
-/// \returns true if the map corresponds to a big endian byte pattern, false
-/// if it corresponds to a little endian byte pattern, and None otherwise.
+/// \returns true if the map corresponds to a big endian byte pattern, false if
+/// it corresponds to a little endian byte pattern, and std::nullopt otherwise.
 ///
 /// E.g. given a 32-bit type x, and x[AddrOffset], the in-memory byte patterns
 /// are as follows:

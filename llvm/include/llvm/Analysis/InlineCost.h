@@ -312,7 +312,7 @@ Optional<InlineResult> getAttributeBasedInliningDecision(
 /// Contrary to getInlineCost, which makes a threshold-based final evaluation of
 /// should/shouldn't inline, captured in InlineResult, getInliningCostEstimate
 /// returns:
-/// - None, if the inlining cannot happen (is illegal)
+/// - std::nullopt, if the inlining cannot happen (is illegal)
 /// - an integer, representing the cost.
 Optional<int> getInliningCostEstimate(
     CallBase &Call, TargetTransformInfo &CalleeTTI,
