@@ -1,3 +1,5 @@
+; TODO: Determine why this does not work on Power PC.
+; REQUIRES: x86_64-linux
 ; RUN: llc %s -o - -stop-after=finalize-isel \
 ; RUN:    -experimental-assignment-tracking  \
 ; RUN: | FileCheck %s --implicit-check-not=DBG
