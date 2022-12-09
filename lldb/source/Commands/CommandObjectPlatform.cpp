@@ -456,12 +456,13 @@ public:
 
   Options *GetOptions() override {
     if (!m_options.DidFinalize()) {
-      m_options.Append(new OptionPermissions());
+      m_options.Append(&m_option_permissions);
       m_options.Finalize();
     }
     return &m_options;
   }
 
+  OptionPermissions m_option_permissions;
   OptionGroupOptions m_options;
 };
 
@@ -519,12 +520,13 @@ public:
 
   Options *GetOptions() override {
     if (!m_options.DidFinalize()) {
-      m_options.Append(new OptionPermissions());
+      m_options.Append(&m_option_permissions);
       m_options.Finalize();
     }
     return &m_options;
   }
 
+  OptionPermissions m_option_permissions;
   OptionGroupOptions m_options;
 };
 
