@@ -29,6 +29,7 @@
 ! HELP-NEXT: -fdefault-double-8     Set the default double precision kind to an 8 byte wide type
 ! HELP-NEXT: -fdefault-integer-8    Set the default integer kind to an 8 byte wide type
 ! HELP-NEXT: -fdefault-real-8       Set the default real kind to an 8 byte wide type
+! HELP-NEXT: -ffast-math            Allow aggressive, lossy floating-point optimizations
 ! HELP-NEXT: -ffixed-form           Process source files in fixed form
 ! HELP-NEXT: -ffixed-line-length=<value>
 ! HELP-NEXT: Use <value> as character line width in fixed mode
@@ -108,6 +109,7 @@
 ! HELP-FC1-NEXT: -fdefault-double-8  Set the default double precision kind to an 8 byte wide type
 ! HELP-FC1-NEXT: -fdefault-integer-8 Set the default integer kind to an 8 byte wide type
 ! HELP-FC1-NEXT: -fdefault-real-8    Set the default real kind to an 8 byte wide type
+! HELP-FC1-NEXT: -ffast-math            Allow aggressive, lossy floating-point optimizations
 ! HELP-FC1-NEXT: -ffixed-form           Process source files in fixed form
 ! HELP-FC1-NEXT: -ffixed-line-length=<value>
 ! HELP-FC1-NEXT: Use <value> as character line width in fixed mode
