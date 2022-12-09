@@ -1802,10 +1802,15 @@ bool LLParser::parseOptionalAddrSpace(unsigned &AddrSpace, unsigned DefaultAS) {
       }
       Lex.Lex();
       return false;
-    } else if (Lex.getKind() != lltok::APSInt) {
-      return tokError("expected integer or string constant");
     }
-    return parseUInt32(AddrSpace);
+    if (Lex.getKind() != lltok::APSInt)
+      return tokError("expected integer or string constant");
+    SMLoc Loc = Lex.getLoc();
+    if (parseUInt32(AddrSpace))
+      return true;
+    if (!isUInt<24>(AddrSpace))
+      return error(Loc, "invalid address space, must be a 24-bit integer");
+    return false;
   };
 
   return parseToken(lltok::lparen, "expected '(' in address space") ||
