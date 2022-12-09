@@ -524,42 +524,44 @@ define <2 x i64> @neg_scalar_broadcast_v2i64(i64 %a0, <2 x i64> %a1) {
   ret <2 x i64> %4
 }
 
-define <4 x i32> @neg_scalar_broadcast_v4i32(i32 %a0, <4 x i32> %a1) {
-; SSE-LABEL: neg_scalar_broadcast_v4i32:
+define <8 x i32> @neg_scalar_broadcast_v8i32(i32 %a0, <8 x i32> %a1) {
+; SSE-LABEL: neg_scalar_broadcast_v8i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    notl %edi
-; SSE-NEXT:    movd %edi, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    movd %edi, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: neg_scalar_broadcast_v4i32:
+; AVX1-LABEL: neg_scalar_broadcast_v8i32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    notl %edi
 ; AVX1-NEXT:    vmovd %edi, %xmm1
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; AVX1-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: neg_scalar_broadcast_v4i32:
+; AVX2-LABEL: neg_scalar_broadcast_v8i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    notl %edi
 ; AVX2-NEXT:    vmovd %edi, %xmm1
-; AVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
-; AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpbroadcastd %xmm1, %ymm1
+; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: neg_scalar_broadcast_v4i32:
+; AVX512-LABEL: neg_scalar_broadcast_v8i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    notl %edi
-; AVX512-NEXT:    vpbroadcastd %edi, %xmm1
-; AVX512-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vpbroadcastd %edi, %ymm1
+; AVX512-NEXT:    vpand %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %1 = xor i32 %a0, -1
-  %2 = insertelement <4 x i32> undef, i32 %1, i64 0
-  %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <4 x i32> zeroinitializer
-  %4 = and <4 x i32> %3, %a1
-  ret <4 x i32> %4
+  %2 = insertelement <8 x i32> undef, i32 %1, i64 0
+  %3 = shufflevector <8 x i32> %2, <8 x i32> poison, <8 x i32> zeroinitializer
+  %4 = and <8 x i32> %3, %a1
+  ret <8 x i32> %4
 }
 
 define <8 x i16> @neg_scalar_broadcast_v8i16(i16 %a0, <8 x i16> %a1) {
@@ -643,6 +645,53 @@ define <16 x i8> @neg_scalar_broadcast_v16i8(i8 %a0, <16 x i8> %a1) {
   ret <16 x i8> %4
 }
 
+define <64 x i8> @neg_scalar_broadcast_v64i8(i8 %a0, <64 x i8> %a1) {
+; SSE-LABEL: neg_scalar_broadcast_v64i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    notb %dil
+; SSE-NEXT:    movzbl %dil, %eax
+; SSE-NEXT:    movd %eax, %xmm4
+; SSE-NEXT:    pxor %xmm5, %xmm5
+; SSE-NEXT:    pshufb %xmm5, %xmm4
+; SSE-NEXT:    pand %xmm4, %xmm0
+; SSE-NEXT:    pand %xmm4, %xmm1
+; SSE-NEXT:    pand %xmm4, %xmm2
+; SSE-NEXT:    pand %xmm4, %xmm3
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: neg_scalar_broadcast_v64i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    notb %dil
+; AVX1-NEXT:    vmovd %edi, %xmm2
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm2, %ymm2
+; AVX1-NEXT:    vandps %ymm0, %ymm2, %ymm0
+; AVX1-NEXT:    vandps %ymm1, %ymm2, %ymm1
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: neg_scalar_broadcast_v64i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    notb %dil
+; AVX2-NEXT:    vmovd %edi, %xmm2
+; AVX2-NEXT:    vpbroadcastb %xmm2, %ymm2
+; AVX2-NEXT:    vpand %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpand %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: neg_scalar_broadcast_v64i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    notb %dil
+; AVX512-NEXT:    vpbroadcastb %edi, %zmm1
+; AVX512-NEXT:    vpandq %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    retq
+  %1 = xor i8 %a0, -1
+  %2 = insertelement <64 x i8> undef, i8 %1, i64 0
+  %3 = shufflevector <64 x i8> %2, <64 x i8> poison, <64 x i32> zeroinitializer
+  %4 = and <64 x i8> %3, %a1
+  ret <64 x i8> %4
+}
+
 define <2 x i64> @neg_scalar_broadcast_v16i8_v2i64(i8 %a0, <2 x i64> %a1) {
 ; SSE-LABEL: neg_scalar_broadcast_v16i8_v2i64:
 ; SSE:       # %bb.0:
@@ -685,43 +734,45 @@ define <2 x i64> @neg_scalar_broadcast_v16i8_v2i64(i8 %a0, <2 x i64> %a1) {
   ret <2 x i64> %5
 }
 
-define <2 x i64> @neg_scalar_broadcast_v4i32_v2i64(i32 %a0, <2 x i64> %a1) {
-; SSE-LABEL: neg_scalar_broadcast_v4i32_v2i64:
+define <4 x i64> @neg_scalar_broadcast_v8i32_v4i64(i32 %a0, <4 x i64> %a1) {
+; SSE-LABEL: neg_scalar_broadcast_v8i32_v4i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    notl %edi
-; SSE-NEXT:    movd %edi, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    movd %edi, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: neg_scalar_broadcast_v4i32_v2i64:
+; AVX1-LABEL: neg_scalar_broadcast_v8i32_v4i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    notl %edi
 ; AVX1-NEXT:    vmovd %edi, %xmm1
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; AVX1-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; AVX1-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: neg_scalar_broadcast_v4i32_v2i64:
+; AVX2-LABEL: neg_scalar_broadcast_v8i32_v4i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    notl %edi
 ; AVX2-NEXT:    vmovd %edi, %xmm1
-; AVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
-; AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpbroadcastd %xmm1, %ymm1
+; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: neg_scalar_broadcast_v4i32_v2i64:
+; AVX512-LABEL: neg_scalar_broadcast_v8i32_v4i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    notl %edi
-; AVX512-NEXT:    vpbroadcastd %edi, %xmm1
-; AVX512-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vpbroadcastd %edi, %ymm1
+; AVX512-NEXT:    vpand %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %1 = xor i32 %a0, -1
-  %2 = insertelement <4 x i32> undef, i32 %1, i64 0
-  %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <4 x i32> zeroinitializer
-  %4 = bitcast <4 x i32> %3 to <2 x i64>
-  %5 = and <2 x i64> %4, %a1
-  ret <2 x i64> %5
+  %2 = insertelement <8 x i32> undef, i32 %1, i64 0
+  %3 = shufflevector <8 x i32> %2, <8 x i32> poison, <8 x i32> zeroinitializer
+  %4 = bitcast <8 x i32> %3 to <4 x i64>
+  %5 = and <4 x i64> %4, %a1
+  ret <4 x i64> %5
 }
 
 define <4 x i32> @neg_scalar_broadcast_two_uses(i32 %a0, <4 x i32> %a1, ptr %a2) {
