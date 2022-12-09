@@ -93,19 +93,19 @@
 #define BUILTIN_FRACTION_F32(X) ({ \
     float _fract_x = X; \
     float _fract_r = __builtin_amdgcn_fractf(_fract_x); \
-    _fract_r = __builtin_amdgcn_classf(_fract_x, CLASS_PINF|CLASS_NINF) ? 0.0f : _fract_r; \
+    _fract_r = BUILTIN_ISINF_F32(_fract_x) ? 0.0f : _fract_r; \
     _fract_r; \
 })
 #define BUILTIN_FRACTION_F64(X) ({ \
     double _fract_x = X; \
     double _fract_r = __builtin_amdgcn_fract(_fract_x); \
-    _fract_r = __builtin_amdgcn_class(_fract_x, CLASS_PINF|CLASS_NINF) ? 0.0 : _fract_r; \
+    _fract_r = BUILTIN_ISINF_F64(_fract_x) ? 0.0 : _fract_r; \
     _fract_r; \
 })
 #define BUILTIN_FRACTION_F16(X) ({ \
     half _fract_x = X; \
     half _fract_r = __builtin_amdgcn_fracth(_fract_x); \
-    _fract_r = __builtin_amdgcn_classh(_fract_x, CLASS_PINF|CLASS_NINF) ? 0.0h : _fract_r; \
+    _fract_r = BUILTIN_ISINF_F16(_fract_x) ? 0.0h : _fract_r; \
     _fract_r; \
 })
 
