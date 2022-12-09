@@ -13,12 +13,17 @@ add_header_library(
 )
 
 add_header_library(
-  builtin_wrappers
+  compiler_features
   HDRS
-    builtin_wrappers.h
+    compiler_features.h
+)
+
+add_header_library(
+  sanitizer
+  HDRS
+    sanitizer.h
   DEPENDS
-    .named_pair
-    libc.src.__support.CPP.type_traits
+    libc.src.__support.compiler_features
 )
 
 add_header_library(
@@ -27,7 +32,17 @@ add_header_library(
     architectures.h
     common.h
     endian.h
-    sanitizer.h
+)
+
+add_header_library(
+  builtin_wrappers
+  HDRS
+    builtin_wrappers.h
+  DEPENDS
+    .named_pair
+    libc.src.__support.common
+    libc.src.__support.compiler_features
+    libc.src.__support.CPP.type_traits
 )
 
 add_header_library(
