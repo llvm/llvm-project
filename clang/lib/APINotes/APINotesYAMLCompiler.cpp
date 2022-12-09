@@ -17,7 +17,6 @@
 #include "clang/APINotes/Types.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Specifiers.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -790,9 +789,8 @@ namespace {
     }
 
     void convertNullability(const NullabilitySeq &nullability,
-                            Optional<NullabilityKind> nullabilityOfRet,
-                            FunctionInfo &outInfo,
-                            llvm::StringRef apiName) {
+                            std::optional<NullabilityKind> nullabilityOfRet,
+                            FunctionInfo &outInfo, llvm::StringRef apiName) {
       if (nullability.size() > FunctionInfo::getMaxNullabilityIndex()) {
         emitError("nullability info for " + apiName + " does not fit");
         return;

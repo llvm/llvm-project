@@ -232,7 +232,7 @@ static void handleAPINotedRetainCountAttribute(Sema &S, Decl *D,
 
 static void handleAPINotedRetainCountConvention(
     Sema &S, Decl *D, VersionedInfoMetadata metadata,
-    Optional<api_notes::RetainCountConventionKind> convention) {
+    std::optional<api_notes::RetainCountConventionKind> convention) {
   if (!convention)
     return;
   switch (*convention) {

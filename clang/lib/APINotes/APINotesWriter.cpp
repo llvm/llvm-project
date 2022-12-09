@@ -629,7 +629,7 @@ namespace {
     void emitUnversionedInfo(raw_ostream &out, const ObjCPropertyInfo &info) {
       emitVariableInfo(out, info);
       uint8_t flags = 0;
-      if (Optional<bool> value = info.getSwiftImportAsAccessors()) {
+      if (std::optional<bool> value = info.getSwiftImportAsAccessors()) {
         flags |= 1 << 0;
         flags |= *value << 1;
       }
@@ -1089,7 +1089,7 @@ namespace {
       }
 
       payload <<= 2;
-      if (Optional<bool> value = info.isFlagEnum()) {
+      if (std::optional<bool> value = info.isFlagEnum()) {
         payload |= 1 << 0;
         payload |= *value << 1;
       }

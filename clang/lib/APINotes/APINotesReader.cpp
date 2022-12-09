@@ -128,16 +128,16 @@ namespace {
     unsigned swiftBridgeLength =
         endian::readNext<uint16_t, little, unaligned>(data);
     if (swiftBridgeLength > 0) {
-      info.setSwiftBridge(
-        std::string(reinterpret_cast<const char *>(data), swiftBridgeLength-1));
+      info.setSwiftBridge(std::optional<std::string>(std::string(
+          reinterpret_cast<const char *>(data), swiftBridgeLength - 1)));
       data += swiftBridgeLength-1;
     }
 
     unsigned errorDomainLength =
       endian::readNext<uint16_t, little, unaligned>(data);
     if (errorDomainLength > 0) {
-      info.setNSErrorDomain(
-        std::string(reinterpret_cast<const char *>(data), errorDomainLength-1));
+      info.setNSErrorDomain(std::optional<std::string>(std::string(
+          reinterpret_cast<const char *>(data), errorDomainLength - 1)));
       data += errorDomainLength-1;
     }
   }
@@ -551,7 +551,7 @@ public:
 
   // The size and modification time of the source file from
   // which this API notes file was created, if known.
-  Optional<std::pair<off_t, time_t>> SourceFileSizeAndModTime;
+  std::optional<std::pair<off_t, time_t>> SourceFileSizeAndModTime;
 
   /// Various options and attributes for the module
   ModuleOptions ModuleOpts;
@@ -624,11 +624,11 @@ public:
 
   /// Retrieve the identifier ID for the given string, or an empty
   /// optional if the string is unknown.
-  Optional<IdentifierID> getIdentifier(StringRef str);
+  std::optional<IdentifierID> getIdentifier(StringRef str);
 
   /// Retrieve the selector ID for the given selector, or an empty
   /// optional if the string is unknown.
-  Optional<SelectorID> getSelector(ObjCSelectorRef selector);
+  std::optional<SelectorID> getSelector(ObjCSelectorRef selector);
 
   bool readControlBlock(llvm::BitstreamCursor &cursor, 
                         SmallVectorImpl<uint64_t> &scratch);
@@ -654,8 +654,8 @@ public:
                         SmallVectorImpl<uint64_t> &scratch);
 };
 
-Optional<IdentifierID> APINotesReader::Implementation::getIdentifier(
-                         StringRef str) {
+std::optional<IdentifierID>
+APINotesReader::Implementation::getIdentifier(StringRef str) {
   if (!IdentifierTable)
     return None;
 
@@ -669,8 +669,8 @@ Optional<IdentifierID> APINotesReader::Implementation::getIdentifier(
   return *known;
 }
 
-Optional<SelectorID> APINotesReader::Implementation::getSelector(
-                       ObjCSelectorRef selector) {
+std::optional<SelectorID>
+APINotesReader::Implementation::getSelector(ObjCSelectorRef selector) {
   if (!ObjCSelectorTable || !IdentifierTable)
     return None;
 
@@ -690,7 +690,6 @@ Optional<SelectorID> APINotesReader::Implementation::getSelector(
     return None;
 
   return *known;
-
 }
 
 bool APINotesReader::Implementation::readControlBlock(
@@ -1773,7 +1772,7 @@ StringRef APINotesReader::getModuleName() const {
   return Impl.ModuleName;
 }
 
-Optional<std::pair<off_t, time_t>>
+std::optional<std::pair<off_t, time_t>>
 APINotesReader::getSourceFileSizeAndModTime() const {
   return Impl.SourceFileSizeAndModTime;
 }
@@ -1814,11 +1813,12 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
     Selected = 0;
 }
 
-auto APINotesReader::lookupObjCClassID(StringRef name) -> Optional<ContextID> {
+auto APINotesReader::lookupObjCClassID(StringRef name)
+    -> std::optional<ContextID> {
   if (!Impl.ObjCContextIDTable)
     return None;
 
-  Optional<IdentifierID> classID = Impl.getIdentifier(name);
+  std::optional<IdentifierID> classID = Impl.getIdentifier(name);
   if (!classID)
     return None;
 
@@ -1834,7 +1834,7 @@ auto APINotesReader::lookupObjCClassInfo(StringRef name)
   if (!Impl.ObjCContextInfoTable)
     return None;
 
-  Optional<ContextID> contextID = lookupObjCClassID(name);
+  std::optional<ContextID> contextID = lookupObjCClassID(name);
   if (!contextID)
     return None;
 
@@ -1846,19 +1846,19 @@ auto APINotesReader::lookupObjCClassInfo(StringRef name)
 }
 
 auto APINotesReader::lookupObjCProtocolID(StringRef name)
-       -> Optional<ContextID> {
-   if (!Impl.ObjCContextIDTable)
-     return None;
+    -> std::optional<ContextID> {
+  if (!Impl.ObjCContextIDTable)
+    return None;
 
-   Optional<IdentifierID> classID = Impl.getIdentifier(name);
-   if (!classID)
-     return None;
+  std::optional<IdentifierID> classID = Impl.getIdentifier(name);
+  if (!classID)
+    return None;
 
-   auto knownID = Impl.ObjCContextIDTable->find({*classID, '\1'});
-   if (knownID == Impl.ObjCContextIDTable->end())
-     return None;
+  auto knownID = Impl.ObjCContextIDTable->find({*classID, '\1'});
+  if (knownID == Impl.ObjCContextIDTable->end())
+    return None;
 
-   return ContextID(*knownID);
+  return ContextID(*knownID);
 }
 
 auto APINotesReader::lookupObjCProtocolInfo(StringRef name)
@@ -1866,7 +1866,7 @@ auto APINotesReader::lookupObjCProtocolInfo(StringRef name)
    if (!Impl.ObjCContextInfoTable)
      return None;
 
-   Optional<ContextID> contextID = lookupObjCProtocolID(name);
+   std::optional<ContextID> contextID = lookupObjCProtocolID(name);
    if (!contextID)
      return None;
 
@@ -1885,7 +1885,7 @@ auto APINotesReader::lookupObjCProperty(ContextID contextID,
   if (!Impl.ObjCPropertyTable)
     return None;
 
-  Optional<IdentifierID> propertyID = Impl.getIdentifier(name);
+  std::optional<IdentifierID> propertyID = Impl.getIdentifier(name);
   if (!propertyID)
     return None;
 
@@ -1906,7 +1906,7 @@ auto APINotesReader::lookupObjCMethod(
   if (!Impl.ObjCMethodTable)
     return None;
 
-  Optional<SelectorID> selectorID = Impl.getSelector(selector);
+  std::optional<SelectorID> selectorID = Impl.getSelector(selector);
   if (!selectorID)
     return None;
 
@@ -1925,7 +1925,7 @@ auto APINotesReader::lookupGlobalVariable(
   if (!Impl.GlobalVariableTable)
     return None;
 
-  Optional<IdentifierID> nameID = Impl.getIdentifier(name);
+  std::optional<IdentifierID> nameID = Impl.getIdentifier(name);
   if (!nameID)
     return None;
 
@@ -1941,7 +1941,7 @@ auto APINotesReader::lookupGlobalFunction(StringRef name)
   if (!Impl.GlobalFunctionTable)
     return None;
 
-  Optional<IdentifierID> nameID = Impl.getIdentifier(name);
+  std::optional<IdentifierID> nameID = Impl.getIdentifier(name);
   if (!nameID)
     return None;
 
@@ -1957,7 +1957,7 @@ auto APINotesReader::lookupEnumConstant(StringRef name)
   if (!Impl.EnumConstantTable)
     return None;
 
-  Optional<IdentifierID> nameID = Impl.getIdentifier(name);
+  std::optional<IdentifierID> nameID = Impl.getIdentifier(name);
   if (!nameID)
     return None;
 
@@ -1972,7 +1972,7 @@ auto APINotesReader::lookupTag(StringRef name) -> VersionedInfo<TagInfo> {
   if (!Impl.TagTable)
     return None;
 
-  Optional<IdentifierID> nameID = Impl.getIdentifier(name);
+  std::optional<IdentifierID> nameID = Impl.getIdentifier(name);
   if (!nameID)
     return None;
 
@@ -1988,7 +1988,7 @@ auto APINotesReader::lookupTypedef(StringRef name)
   if (!Impl.TypedefTable)
     return None;
 
-  Optional<IdentifierID> nameID = Impl.getIdentifier(name);
+  std::optional<IdentifierID> nameID = Impl.getIdentifier(name);
   if (!nameID)
     return None;
 
