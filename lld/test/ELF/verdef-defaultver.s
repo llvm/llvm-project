@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/verdef-defaultver.s -o %t1
 # RUN: echo "V1 { global: a; b; local: *; };" > %t.script
 # RUN: echo "V2 { global: b; c; } V1;" >> %t.script
-# RUN: ld.lld --hash-style=sysv -shared -soname shared %t1 --version-script %t.script -o %t.so
+# RUN: ld.lld --hash-style=sysv -shared -soname shared %t1 --version-script %t.script --undefined-version -o %t.so
 # RUN: llvm-readobj -V --dyn-syms %t.so | FileCheck --check-prefix=DSO %s
 
 # DSO:      DynamicSymbols [
@@ -195,9 +195,9 @@
 # EXE-NEXT:  ]
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 b.s -o b.o
-# RUN: ld.lld -shared --version-script=%t.script --fatal-warnings %t.so b.o -o b.so
+# RUN: ld.lld -shared --version-script=%t.script --fatal-warnings --undefined-version %t.so b.o -o b.so
 # RUN: llvm-readelf --dyn-syms b.so | FileCheck %s --check-prefix=PREEMPT
-# RUN: ld.lld -shared --version-script=%t.script --fatal-warnings b.o %t.so -o b.so
+# RUN: ld.lld -shared --version-script=%t.script --fatal-warnings --undefined-version b.o %t.so -o b.so
 # RUN: llvm-readelf --dyn-syms b.so | FileCheck %s --check-prefix=PREEMPT
 
 # PREEMPT-DAG: a@@V1
