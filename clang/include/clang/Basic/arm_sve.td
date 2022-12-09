@@ -537,9 +537,9 @@ let ArchGuard = "defined(__ARM_FEATURE_SVE_BF16)" in {
   def SVBFDOT_N      : SInst<"svbfdot[_n_{0}]",      "MMda",  "b", MergeNone, "aarch64_sve_bfdot",        [IsOverloadNone]>;
   def SVBFMLAL_N     : SInst<"svbfmlalb[_n_{0}]",    "MMda",  "b", MergeNone, "aarch64_sve_bfmlalb",      [IsOverloadNone]>;
   def SVBFMLALT_N    : SInst<"svbfmlalt[_n_{0}]",    "MMda",  "b", MergeNone, "aarch64_sve_bfmlalt",      [IsOverloadNone]>;
-  def SVBFDOT_LANE   : SInst<"svbfdot_lane[_{0}]",   "MMddn", "b", MergeNone, "aarch64_sve_bfdot_lane",   [IsOverloadNone], [ImmCheck<3, ImmCheck0_3>]>;
-  def SVBFMLALB_LANE : SInst<"svbfmlalb_lane[_{0}]", "MMddn", "b", MergeNone, "aarch64_sve_bfmlalb_lane", [IsOverloadNone], [ImmCheck<3, ImmCheck0_7>]>;
-  def SVBFMLALT_LANE : SInst<"svbfmlalt_lane[_{0}]", "MMddn", "b", MergeNone, "aarch64_sve_bfmlalt_lane", [IsOverloadNone], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVBFDOT_LANE   : SInst<"svbfdot_lane[_{0}]",   "MMddi", "b", MergeNone, "aarch64_sve_bfdot_lane_v2",   [IsOverloadNone], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVBFMLALB_LANE : SInst<"svbfmlalb_lane[_{0}]", "MMddi", "b", MergeNone, "aarch64_sve_bfmlalb_lane_v2", [IsOverloadNone], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVBFMLALT_LANE : SInst<"svbfmlalt_lane[_{0}]", "MMddi", "b", MergeNone, "aarch64_sve_bfmlalt_lane_v2", [IsOverloadNone], [ImmCheck<3, ImmCheck0_7>]>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
