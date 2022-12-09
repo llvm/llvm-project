@@ -874,19 +874,19 @@ void transform::PrintOp::build(OpBuilder &builder, OperationState &result,
 DiagnosedSilenceableFailure
 transform::PrintOp::apply(transform::TransformResults &results,
                           transform::TransformState &state) {
-  llvm::errs() << "[[[ IR printer: ";
+  llvm::outs() << "[[[ IR printer: ";
   if (getName().has_value())
-    llvm::errs() << *getName() << " ";
+    llvm::outs() << *getName() << " ";
 
   if (!getTarget()) {
-    llvm::errs() << "top-level ]]]\n" << *state.getTopLevel() << "\n";
+    llvm::outs() << "top-level ]]]\n" << *state.getTopLevel() << "\n";
     return DiagnosedSilenceableFailure::success();
   }
 
-  llvm::errs() << "]]]\n";
+  llvm::outs() << "]]]\n";
   ArrayRef<Operation *> targets = state.getPayloadOps(getTarget());
   for (Operation *target : targets)
-    llvm::errs() << *target << "\n";
+    llvm::outs() << *target << "\n";
 
   return DiagnosedSilenceableFailure::success();
 }
