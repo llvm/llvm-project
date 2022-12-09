@@ -178,15 +178,21 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   // If the low 12 bits are non-zero, the first expansion may end with an ADDI
   // or ADDIW. If there are trailing zeros, try generating a sign extended
   // constant with no trailing zeros and use a final SLLI to restore them.
-  if ((Val & 0xfff) != 0 && (Val & 1) == 0 && Res.size() > 2) {
+  if ((Val & 0xfff) != 0 && (Val & 1) == 0 && Res.size() >= 2) {
     unsigned TrailingZeros = countTrailingZeros((uint64_t)Val);
     int64_t ShiftedVal = Val >> TrailingZeros;
+    // If we can use C.LI+C.SLLI instead of LUI+ADDI(W) prefer that since
+    // its more compressible. But only if LUI+ADDI(W) isn't fusable.
+    // NOTE: We don't check for C extension to minimize differences in generated
+    // code.
+    bool IsShiftedCompressible =
+              isInt<6>(ShiftedVal) && !ActiveFeatures[RISCV::TuneLUIADDIFusion];
     RISCVMatInt::InstSeq TmpSeq;
     generateInstSeqImpl(ShiftedVal, ActiveFeatures, TmpSeq);
     TmpSeq.emplace_back(RISCV::SLLI, TrailingZeros);
 
     // Keep the new sequence if it is an improvement.
-    if (TmpSeq.size() < Res.size())
+    if (TmpSeq.size() < Res.size() || IsShiftedCompressible)
       Res = TmpSeq;
   }
 

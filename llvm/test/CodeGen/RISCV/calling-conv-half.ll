@@ -529,14 +529,14 @@ define i32 @caller_half_on_stack() nounwind {
 define half @callee_half_ret() nounwind {
 ; RV32I-LABEL: callee_half_ret:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a0, 4
-; RV32I-NEXT:    addi a0, a0, -1024
+; RV32I-NEXT:    li a0, 15
+; RV32I-NEXT:    slli a0, a0, 10
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: callee_half_ret:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a0, 4
-; RV64I-NEXT:    addiw a0, a0, -1024
+; RV64I-NEXT:    li a0, 15
+; RV64I-NEXT:    slli a0, a0, 10
 ; RV64I-NEXT:    ret
 ;
 ; RV32IF-LABEL: callee_half_ret:
