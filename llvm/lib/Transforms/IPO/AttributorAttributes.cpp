@@ -1147,7 +1147,7 @@ struct AAPointerInfoImpl
     // succeeded for all or not.
     unsigned NumInterferingAccesses = InterferingAccesses.size();
     for (auto &It : InterferingAccesses) {
-      if (NumInterferingAccesses > MaxInterferingAccesses ||
+      if (!CanUseCFGResoning || NumInterferingAccesses > MaxInterferingAccesses ||
           !CanSkipAccess(*It.first, It.second)) {
         if (!UserCB(*It.first, It.second))
           return false;
