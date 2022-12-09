@@ -18,8 +18,8 @@
 @foo.alias = hidden alias void (), ptr @foo
 
 ;.
-; CHECK: @llvm.global_ctors = appending addrspace(1) global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @foo.alias, ptr null }, { i32, ptr, ptr } { i32 1, ptr inttoptr (i64 4096 to ptr), ptr null }]
-; CHECK: @llvm.global_dtors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr addrspacecast (ptr addrspace(1) @bar to ptr), ptr null }]
+; CHECK-NOT: @llvm.global_ctors
+; CHECK-NOT: @llvm.global_dtors
 ; CHECK: @llvm.used = appending global [2 x ptr] [ptr @amdgcn.device.init, ptr @amdgcn.device.fini], section "llvm.metadata"
 ; CHECK: @foo.alias = hidden alias void (), ptr @foo
 ;.
