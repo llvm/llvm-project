@@ -54,11 +54,10 @@ using namespace llvm;
 enum AllocType : uint8_t {
   OpNewLike          = 1<<0, // allocates; never returns null
   MallocLike         = 1<<1, // allocates; may return null
-  AlignedAllocLike   = 1<<2, // allocates with alignment; may return null
-  CallocLike         = 1<<3, // allocates + bzero
-  StrDupLike         = 1<<4,
+  CallocLike         = 1<<2, // allocates + bzero
+  StrDupLike         = 1<<3,
   MallocOrOpNewLike  = MallocLike | OpNewLike,
-  MallocOrCallocLike = MallocLike | OpNewLike | CallocLike | AlignedAllocLike,
+  MallocOrCallocLike = MallocLike | OpNewLike | CallocLike,
   AllocLike          = MallocOrCallocLike | StrDupLike,
   AnyAlloc           = AllocLike
 };
@@ -311,12 +310,6 @@ static bool isMallocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
 }
 
 /// Tests if a value is a call or invoke to a library function that
-/// allocates uninitialized memory with alignment (such as aligned_alloc).
-static bool isAlignedAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
-  return getAllocationData(V, AlignedAllocLike, TLI).has_value();
-}
-
-/// Tests if a value is a call or invoke to a library function that
 /// allocates zero-filled memory (such as calloc).
 static bool isCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
   return getAllocationData(V, CallocLike, TLI).has_value();
@@ -453,8 +446,8 @@ Constant *llvm::getInitialValueOfAllocation(const Value *V,
   if (!Alloc)
     return nullptr;
 
-  // malloc and aligned_alloc are uninitialized (undef)
-  if (isMallocLikeFn(Alloc, TLI) || isAlignedAllocLikeFn(Alloc, TLI))
+  // malloc are uninitialized (undef)
+  if (isMallocLikeFn(Alloc, TLI))
     return UndefValue::get(Ty);
 
   // calloc zero initializes
