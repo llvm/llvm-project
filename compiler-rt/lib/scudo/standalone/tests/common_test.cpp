@@ -71,19 +71,19 @@ TEST(ScudoCommonTest, Zeros) {
 
 #if SCUDO_LINUX
 TEST(ScudoCommonTest, GetRssFromBuffer) {
-  constexpr size_t AllocSize = 10000000;
-  constexpr u64 Error = 3000000;
+  constexpr int64_t AllocSize = 10000000;
+  constexpr int64_t Error = 3000000;
   constexpr size_t Runs = 10;
 
-  u64 Rss = scudo::GetRSS();
+  int64_t Rss = scudo::GetRSS();
   EXPECT_GT(Rss, 0);
 
   std::vector<std::unique_ptr<char[]>> Allocs(Runs);
   for (auto &Alloc : Allocs) {
     Alloc.reset(new char[AllocSize]());
-    u64 Prev = Rss;
+    int64_t Prev = Rss;
     Rss = scudo::GetRSS();
-    EXPECT_LE(std::abs(static_cast<int64_t>(Rss - AllocSize - Prev)), Error);
+    EXPECT_LE(std::abs(Rss - AllocSize - Prev), Error);
   }
 }
 #endif // SCUDO_LINUX
