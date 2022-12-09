@@ -778,6 +778,33 @@ ObjCMethodDecl *ObjCInterfaceDecl::lookupPrivateMethod(
   return Method;
 }
 
+unsigned ObjCInterfaceDecl::getODRHash() {
+  assert(hasDefinition() && "ODRHash only for records with definitions");
+
+  // Previously calculated hash is stored in DefinitionData.
+  if (hasODRHash())
+    return data().ODRHash;
+
+  // Only calculate hash on first call of getODRHash per record.
+  ODRHash Hasher;
+  Hasher.AddObjCInterfaceDecl(getDefinition());
+  data().ODRHash = Hasher.CalculateHash();
+  setHasODRHash(true);
+
+  return data().ODRHash;
+}
+
+bool ObjCInterfaceDecl::hasODRHash() const {
+  if (!hasDefinition())
+    return false;
+  return data().HasODRHash;
+}
+
+void ObjCInterfaceDecl::setHasODRHash(bool HasHash) {
+  assert(hasDefinition() && "Cannot set ODRHash without definition");
+  data().HasODRHash = HasHash;
+}
+
 //===----------------------------------------------------------------------===//
 // ObjCMethodDecl
 //===----------------------------------------------------------------------===//
