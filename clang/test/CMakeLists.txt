@@ -173,6 +173,7 @@ set_target_properties(check-clang PROPERTIES FOLDER "Clang tests")
 add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
   PARAMS ${CLANG_TEST_PARAMS}
   DEPENDS ${CLANG_TEST_DEPS}
+  FOLDER "Clang tests/Suites"
 )
 
 # Add a legacy target spelling: clang-test
