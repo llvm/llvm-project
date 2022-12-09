@@ -1059,6 +1059,21 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl GD,
   return ResTy;
 }
 
+static std::string getVersionedTmpName(llvm::StringRef name, unsigned cnt) {
+  SmallString<256> Buffer;
+  llvm::raw_svector_ostream Out(Buffer);
+  Out << name << cnt;
+  return std::string(Out.str());
+}
+
+std::string CIRGenFunction::getCounterAggTmpAsString() {
+  return getVersionedTmpName("agg.tmp", CounterAggTmp++);
+}
+
+std::string CIRGenFunction::getCounterRefTmpAsString() {
+  return getVersionedTmpName("ref.tmp", CounterRefTmp++);
+}
+
 CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &CGF,
                                                          const clang::Expr *E)
     : CGF(CGF) {
