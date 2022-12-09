@@ -1,4 +1,4 @@
-# REQUIRES: x86, aarch64
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=i386-apple-darwin %s -o %t.i386.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.x86_64.o
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos11.0 %s -o %t.arm64.o
