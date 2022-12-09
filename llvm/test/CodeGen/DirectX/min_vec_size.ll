@@ -1,4 +1,4 @@
-; RUN: opt -S -vector-combine < %s | FileCheck %s
+; RUN: opt -S -passes=vector-combine < %s | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
 target triple = "dxil-unknown-shadermodel6.7-library"
