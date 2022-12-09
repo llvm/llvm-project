@@ -348,6 +348,7 @@
 ; GCN-O1-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-NEXT:        Simple Register Coalescing
 ; GCN-O1-NEXT:        Rename Disconnected Subregister Components
+; GCN-O1-NEXT:        Rewrite Partial Register Uses
 ; GCN-O1-NEXT:        Machine Instruction Scheduler
 ; GCN-O1-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-NEXT:        SI Whole Quad Mode
@@ -655,6 +656,7 @@
 ; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-OPTS-NEXT:        Simple Register Coalescing
 ; GCN-O1-OPTS-NEXT:        Rename Disconnected Subregister Components
+; GCN-O1-OPTS-NEXT:        Rewrite Partial Register Uses
 ; GCN-O1-OPTS-NEXT:        AMDGPU Pre-RA optimizations
 ; GCN-O1-OPTS-NEXT:        Machine Instruction Scheduler
 ; GCN-O1-OPTS-NEXT:        MachinePostDominator Tree Construction
@@ -964,6 +966,7 @@
 ; GCN-O2-NEXT:        Machine Natural Loop Construction
 ; GCN-O2-NEXT:        Simple Register Coalescing
 ; GCN-O2-NEXT:        Rename Disconnected Subregister Components
+; GCN-O2-NEXT:        Rewrite Partial Register Uses
 ; GCN-O2-NEXT:        AMDGPU Pre-RA optimizations
 ; GCN-O2-NEXT:        Machine Instruction Scheduler
 ; GCN-O2-NEXT:        MachinePostDominator Tree Construction
@@ -1285,6 +1288,7 @@
 ; GCN-O3-NEXT:        Machine Natural Loop Construction
 ; GCN-O3-NEXT:        Simple Register Coalescing
 ; GCN-O3-NEXT:        Rename Disconnected Subregister Components
+; GCN-O3-NEXT:        Rewrite Partial Register Uses
 ; GCN-O3-NEXT:        AMDGPU Pre-RA optimizations
 ; GCN-O3-NEXT:        Machine Instruction Scheduler
 ; GCN-O3-NEXT:        MachinePostDominator Tree Construction
