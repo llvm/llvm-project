@@ -208,7 +208,7 @@ void AsanCheckIncompatibleRT() {
 }
 #endif // SANITIZER_ANDROID
 
-#if !SANITIZER_ANDROID
+#  if ASAN_INTERCEPT_SWAPCONTEXT
 void ReadContextStack(void *context, uptr *stack, uptr *ssize) {
   ucontext_t *ucp = (ucontext_t*)context;
   *stack = (uptr)ucp->uc_stack.ss_sp;
@@ -220,13 +220,7 @@ void ResetContextStack(void *context) {
   ucp->uc_stack.ss_sp = nullptr;
   ucp->uc_stack.ss_size = 0;
 }
-#  else
-void ReadContextStack(void *context, uptr *stack, uptr *ssize) {
-  UNIMPLEMENTED();
-}
-
-void ResetContextStack(void *context) { UNIMPLEMENTED(); }
-#  endif
+#  endif  // ASAN_INTERCEPT_SWAPCONTEXT
 
 void *AsanDlSymNext(const char *sym) {
   return dlsym(RTLD_NEXT, sym);
