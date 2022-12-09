@@ -80,6 +80,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyDebugFixupPass(PR);
   initializeWebAssemblyPeepholePass(PR);
   initializeWebAssemblyMCLowerPrePassPass(PR);
+  initializeWebAssemblyLowerRefTypesIntPtrConvPass(PR);
+  initializeWebAssemblyFixBrTableDefaultsPass(PR);
 }
 
 //===----------------------------------------------------------------------===//
