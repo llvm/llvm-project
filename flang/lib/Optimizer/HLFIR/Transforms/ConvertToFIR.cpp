@@ -258,6 +258,21 @@ public:
   }
 };
 
+class NoReassocOpConversion
+    : public mlir::OpRewritePattern<hlfir::NoReassocOp> {
+public:
+  explicit NoReassocOpConversion(mlir::MLIRContext *ctx)
+      : OpRewritePattern{ctx} {}
+
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::NoReassocOp noreassoc,
+                  mlir::PatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<fir::NoReassocOp>(noreassoc,
+                                                  noreassoc.getVal());
+    return mlir::success();
+  }
+};
+
 class ConvertHLFIRtoFIR
     : public hlfir::impl::ConvertHLFIRtoFIRBase<ConvertHLFIRtoFIR> {
 public:
@@ -269,9 +284,8 @@ public:
     auto module = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns
-        .insert<AssignOpConversion, DeclareOpConversion, DesignateOpConversion>(
-            context);
+    patterns.insert<AssignOpConversion, DeclareOpConversion,
+                    DesignateOpConversion, NoReassocOpConversion>(context);
     mlir::ConversionTarget target(*context);
     target.addIllegalDialect<hlfir::hlfirDialect>();
     target.markUnknownOpDynamicallyLegal(
@@ -284,7 +298,6 @@ public:
     }
   }
 };
-
 } // namespace
 
 std::unique_ptr<mlir::Pass> hlfir::createConvertHLFIRtoFIRPass() {
