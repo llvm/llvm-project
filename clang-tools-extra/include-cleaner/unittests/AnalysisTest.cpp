@@ -145,25 +145,33 @@ TEST_F(WalkUsedTest, MultipleProviders) {
 TEST_F(WalkUsedTest, MacroRefs) {
   llvm::Annotations Code(R"cpp(
     #include "hdr.h"
-    int x = ^ANSWER;
+    int x = $1^ANSWER;
+    int y = $2^ANSWER;
   )cpp");
   llvm::Annotations Hdr(guard("#define ^ANSWER 42"));
   Inputs.Code = Code.code();
   Inputs.ExtraFiles["hdr.h"] = Hdr.code();
   TestAST AST(Inputs);
   auto &SM = AST.sourceManager();
-  auto HdrFile = SM.getFileManager().getFile("hdr.h").get();
+  const auto *HdrFile = SM.getFileManager().getFile("hdr.h").get();
   auto HdrID = SM.translateFile(HdrFile);
 
   IdentifierTable Idents;
-  Symbol Answer =
+  Symbol Answer1 =
+      Macro{&Idents.get("ANSWER"), SM.getComposedLoc(HdrID, Hdr.point())};
+  Symbol Answer2 =
       Macro{&Idents.get("ANSWER"), SM.getComposedLoc(HdrID, Hdr.point())};
   EXPECT_THAT(
-      offsetToProviders(
-          AST, SM,
-          {SymbolReference{SM.getComposedLoc(SM.getMainFileID(), Code.point()),
-                           Answer, RefType::Explicit}}),
-      UnorderedElementsAre(Pair(Code.point(), UnorderedElementsAre(HdrFile))));
+      offsetToProviders(AST, SM,
+                        {SymbolReference{SM.getComposedLoc(SM.getMainFileID(),
+                                                           Code.point("1")),
+                                         Answer1, RefType::Explicit},
+                         SymbolReference{SM.getComposedLoc(SM.getMainFileID(),
+                                                           Code.point("2")),
+                                         Answer2, RefType::Explicit}}),
+      UnorderedElementsAre(
+          Pair(Code.point("1"), UnorderedElementsAre(HdrFile)),
+          Pair(Code.point("2"), UnorderedElementsAre(HdrFile))));
 }
 
 TEST(Analyze, Basic) {
