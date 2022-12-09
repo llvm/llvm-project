@@ -24,104 +24,27 @@ static bool isEmptyAttrDict(Attribute attr) {
   return attr.cast<DictionaryAttr>().empty();
 }
 
-DictionaryAttr function_interface_impl::getArgAttrDict(FunctionOpInterface op,
-                                                       unsigned index) {
-  ArrayAttr attrs = op.getArgAttrsAttr();
+DictionaryAttr mlir::function_interface_impl::getArgAttrDict(Operation *op,
+                                                             unsigned index) {
+  ArrayAttr attrs = op->getAttrOfType<ArrayAttr>(getArgDictAttrName());
   DictionaryAttr argAttrs =
       attrs ? attrs[index].cast<DictionaryAttr>() : DictionaryAttr();
   return argAttrs;
 }
 
 DictionaryAttr
-function_interface_impl::getResultAttrDict(FunctionOpInterface op,
-                                           unsigned index) {
-  ArrayAttr attrs = op.getResAttrsAttr();
+mlir::function_interface_impl::getResultAttrDict(Operation *op,
+                                                 unsigned index) {
+  ArrayAttr attrs = op->getAttrOfType<ArrayAttr>(getResultDictAttrName());
   DictionaryAttr resAttrs =
       attrs ? attrs[index].cast<DictionaryAttr>() : DictionaryAttr();
   return resAttrs;
 }
 
-ArrayRef<NamedAttribute>
-function_interface_impl::getArgAttrs(FunctionOpInterface op, unsigned index) {
-  auto argDict = getArgAttrDict(op, index);
-  return argDict ? argDict.getValue() : std::nullopt;
-}
-
-ArrayRef<NamedAttribute>
-function_interface_impl::getResultAttrs(FunctionOpInterface op,
-                                        unsigned index) {
-  auto resultDict = getResultAttrDict(op, index);
-  return resultDict ? resultDict.getValue() : std::nullopt;
-}
-
-/// Get either the argument or result attributes array.
-template <bool isArg>
-static ArrayAttr getArgResAttrs(FunctionOpInterface op) {
-  if constexpr (isArg)
-    return op.getArgAttrsAttr();
-  else
-    return op.getResAttrsAttr();
-}
-
-/// Set either the argument or result attributes array.
-template <bool isArg>
-static void setArgResAttrs(FunctionOpInterface op, ArrayAttr attrs) {
-  if constexpr (isArg)
-    op.setArgAttrsAttr(attrs);
-  else
-    op.setResAttrsAttr(attrs);
-}
-
-/// Erase either the argument or result attributes array.
-template <bool isArg>
-static void removeArgResAttrs(FunctionOpInterface op) {
-  if constexpr (isArg)
-    op.removeArgAttrsAttr();
-  else
-    op.removeResAttrsAttr();
-}
-
-/// Set all of the argument or result attribute dictionaries for a function.
-template <bool isArg>
-static void setAllArgResAttrDicts(FunctionOpInterface op,
-                                  ArrayRef<Attribute> attrs) {
-  if (llvm::all_of(attrs, isEmptyAttrDict))
-    removeArgResAttrs<isArg>(op);
-  else
-    setArgResAttrs<isArg>(op, ArrayAttr::get(op->getContext(), attrs));
-}
-
-void function_interface_impl::setAllArgAttrDicts(
-    FunctionOpInterface op, ArrayRef<DictionaryAttr> attrs) {
-  setAllArgAttrDicts(op, ArrayRef<Attribute>(attrs.data(), attrs.size()));
-}
-
-void function_interface_impl::setAllArgAttrDicts(FunctionOpInterface op,
-                                                 ArrayRef<Attribute> attrs) {
-  auto wrappedAttrs = llvm::map_range(attrs, [op](Attribute attr) -> Attribute {
-    return !attr ? DictionaryAttr::get(op->getContext()) : attr;
-  });
-  setAllArgResAttrDicts</*isArg=*/true>(op, llvm::to_vector<8>(wrappedAttrs));
-}
-
-void function_interface_impl::setAllResultAttrDicts(
-    FunctionOpInterface op, ArrayRef<DictionaryAttr> attrs) {
-  setAllResultAttrDicts(op, ArrayRef<Attribute>(attrs.data(), attrs.size()));
-}
-
-void function_interface_impl::setAllResultAttrDicts(FunctionOpInterface op,
-                                                    ArrayRef<Attribute> attrs) {
-  auto wrappedAttrs = llvm::map_range(attrs, [op](Attribute attr) -> Attribute {
-    return !attr ? DictionaryAttr::get(op->getContext()) : attr;
-  });
-  setAllArgResAttrDicts</*isArg=*/false>(op, llvm::to_vector<8>(wrappedAttrs));
-}
-
-/// Update the given index into an argument or result attribute dictionary.
-template <bool isArg>
-static void setArgResAttrDict(FunctionOpInterface op, unsigned numTotalIndices,
-                              unsigned index, DictionaryAttr attrs) {
-  ArrayAttr allAttrs = getArgResAttrs<isArg>(op);
+void mlir::function_interface_impl::detail::setArgResAttrDict(
+    Operation *op, StringRef attrName, unsigned numTotalIndices, unsigned index,
+    DictionaryAttr attrs) {
+  ArrayAttr allAttrs = op->getAttrOfType<ArrayAttr>(attrName);
   if (!allAttrs) {
     if (attrs.empty())
       return;
@@ -130,7 +53,7 @@ static void setArgResAttrDict(FunctionOpInterface op, unsigned numTotalIndices,
     SmallVector<Attribute, 8> newAttrs(numTotalIndices,
                                        DictionaryAttr::get(op->getContext()));
     newAttrs[index] = attrs;
-    setArgResAttrs<isArg>(op, ArrayAttr::get(op->getContext(), newAttrs));
+    op->setAttr(attrName, ArrayAttr::get(op->getContext(), newAttrs));
     return;
   }
   // Check to see if the attribute is different from what we already have.
@@ -142,51 +65,53 @@ static void setArgResAttrDict(FunctionOpInterface op, unsigned numTotalIndices,
   ArrayRef<Attribute> rawAttrArray = allAttrs.getValue();
   if (attrs.empty() &&
       llvm::all_of(rawAttrArray.take_front(index), isEmptyAttrDict) &&
-      llvm::all_of(rawAttrArray.drop_front(index + 1), isEmptyAttrDict))
-    return removeArgResAttrs<isArg>(op);
+      llvm::all_of(rawAttrArray.drop_front(index + 1), isEmptyAttrDict)) {
+    op->removeAttr(attrName);
+    return;
+  }
 
   // Otherwise, create a new attribute array with the updated dictionary.
   SmallVector<Attribute, 8> newAttrs(rawAttrArray.begin(), rawAttrArray.end());
   newAttrs[index] = attrs;
-  setArgResAttrs<isArg>(op, ArrayAttr::get(op->getContext(), newAttrs));
+  op->setAttr(attrName, ArrayAttr::get(op->getContext(), newAttrs));
 }
 
-void function_interface_impl::setArgAttrs(FunctionOpInterface op,
-                                          unsigned index,
-                                          ArrayRef<NamedAttribute> attributes) {
-  assert(index < op.getNumArguments() && "invalid argument number");
-  return setArgResAttrDict</*isArg=*/true>(
-      op, op.getNumArguments(), index,
-      DictionaryAttr::get(op->getContext(), attributes));
+/// Set all of the argument or result attribute dictionaries for a function.
+static void setAllArgResAttrDicts(Operation *op, StringRef attrName,
+                                  ArrayRef<Attribute> attrs) {
+  if (llvm::all_of(attrs, isEmptyAttrDict))
+    op->removeAttr(attrName);
+  else
+    op->setAttr(attrName, ArrayAttr::get(op->getContext(), attrs));
 }
 
-void function_interface_impl::setArgAttrs(FunctionOpInterface op,
-                                          unsigned index,
-                                          DictionaryAttr attributes) {
-  return setArgResAttrDict</*isArg=*/true>(
-      op, op.getNumArguments(), index,
-      attributes ? attributes : DictionaryAttr::get(op->getContext()));
+void mlir::function_interface_impl::setAllArgAttrDicts(
+    Operation *op, ArrayRef<DictionaryAttr> attrs) {
+  setAllArgAttrDicts(op, ArrayRef<Attribute>(attrs.data(), attrs.size()));
+}
+void mlir::function_interface_impl::setAllArgAttrDicts(
+    Operation *op, ArrayRef<Attribute> attrs) {
+  auto wrappedAttrs = llvm::map_range(attrs, [op](Attribute attr) -> Attribute {
+    return !attr ? DictionaryAttr::get(op->getContext()) : attr;
+  });
+  setAllArgResAttrDicts(op, getArgDictAttrName(),
+                        llvm::to_vector<8>(wrappedAttrs));
 }
 
-void function_interface_impl::setResultAttrs(
-    FunctionOpInterface op, unsigned index,
-    ArrayRef<NamedAttribute> attributes) {
-  assert(index < op.getNumResults() && "invalid result number");
-  return setArgResAttrDict</*isArg=*/false>(
-      op, op.getNumResults(), index,
-      DictionaryAttr::get(op->getContext(), attributes));
+void mlir::function_interface_impl::setAllResultAttrDicts(
+    Operation *op, ArrayRef<DictionaryAttr> attrs) {
+  setAllResultAttrDicts(op, ArrayRef<Attribute>(attrs.data(), attrs.size()));
+}
+void mlir::function_interface_impl::setAllResultAttrDicts(
+    Operation *op, ArrayRef<Attribute> attrs) {
+  auto wrappedAttrs = llvm::map_range(attrs, [op](Attribute attr) -> Attribute {
+    return !attr ? DictionaryAttr::get(op->getContext()) : attr;
+  });
+  setAllArgResAttrDicts(op, getResultDictAttrName(),
+                        llvm::to_vector<8>(wrappedAttrs));
 }
 
-void function_interface_impl::setResultAttrs(FunctionOpInterface op,
-                                             unsigned index,
-                                             DictionaryAttr attributes) {
-  assert(index < op.getNumResults() && "invalid result number");
-  return setArgResAttrDict</*isArg=*/false>(
-      op, op.getNumResults(), index,
-      attributes ? attributes : DictionaryAttr::get(op->getContext()));
-}
-
-void function_interface_impl::insertFunctionArguments(
+void mlir::function_interface_impl::insertFunctionArguments(
     FunctionOpInterface op, ArrayRef<unsigned> argIndices, TypeRange argTypes,
     ArrayRef<DictionaryAttr> argAttrs, ArrayRef<Location> argLocs,
     unsigned originalNumArgs, Type newType) {
@@ -203,7 +128,7 @@ void function_interface_impl::insertFunctionArguments(
   Block &entry = op->getRegion(0).front();
 
   // Update the argument attributes of the function.
-  ArrayAttr oldArgAttrs = op.getArgAttrsAttr();
+  auto oldArgAttrs = op->getAttrOfType<ArrayAttr>(getArgDictAttrName());
   if (oldArgAttrs || !argAttrs.empty()) {
     SmallVector<DictionaryAttr, 4> newArgAttrs;
     newArgAttrs.reserve(originalNumArgs + argIndices.size());
@@ -232,7 +157,7 @@ void function_interface_impl::insertFunctionArguments(
     entry.insertArgument(argIndices[i] + i, argTypes[i], argLocs[i]);
 }
 
-void function_interface_impl::insertFunctionResults(
+void mlir::function_interface_impl::insertFunctionResults(
     FunctionOpInterface op, ArrayRef<unsigned> resultIndices,
     TypeRange resultTypes, ArrayRef<DictionaryAttr> resultAttrs,
     unsigned originalNumResults, Type newType) {
@@ -246,7 +171,7 @@ void function_interface_impl::insertFunctionResults(
   // - Result attrs.
 
   // Update the result attributes of the function.
-  ArrayAttr oldResultAttrs = op.getResAttrsAttr();
+  auto oldResultAttrs = op->getAttrOfType<ArrayAttr>(getResultDictAttrName());
   if (oldResultAttrs || !resultAttrs.empty()) {
     SmallVector<DictionaryAttr, 4> newResultAttrs;
     newResultAttrs.reserve(originalNumResults + resultIndices.size());
@@ -274,7 +199,7 @@ void function_interface_impl::insertFunctionResults(
   op.setFunctionTypeAttr(TypeAttr::get(newType));
 }
 
-void function_interface_impl::eraseFunctionArguments(
+void mlir::function_interface_impl::eraseFunctionArguments(
     FunctionOpInterface op, const BitVector &argIndices, Type newType) {
   // There are 3 things that need to be updated:
   // - Function type.
@@ -283,7 +208,7 @@ void function_interface_impl::eraseFunctionArguments(
   Block &entry = op->getRegion(0).front();
 
   // Update the argument attributes of the function.
-  if (ArrayAttr argAttrs = op.getArgAttrsAttr()) {
+  if (auto argAttrs = op->getAttrOfType<ArrayAttr>(getArgDictAttrName())) {
     SmallVector<DictionaryAttr, 4> newArgAttrs;
     newArgAttrs.reserve(argAttrs.size());
     for (unsigned i = 0, e = argIndices.size(); i < e; ++i)
@@ -297,14 +222,14 @@ void function_interface_impl::eraseFunctionArguments(
   entry.eraseArguments(argIndices);
 }
 
-void function_interface_impl::eraseFunctionResults(
+void mlir::function_interface_impl::eraseFunctionResults(
     FunctionOpInterface op, const BitVector &resultIndices, Type newType) {
   // There are 2 things that need to be updated:
   // - Function type.
   // - Result attrs.
 
   // Update the result attributes of the function.
-  if (ArrayAttr resAttrs = op.getResAttrsAttr()) {
+  if (auto resAttrs = op->getAttrOfType<ArrayAttr>(getResultDictAttrName())) {
     SmallVector<DictionaryAttr, 4> newResultAttrs;
     newResultAttrs.reserve(resAttrs.size());
     for (unsigned i = 0, e = resultIndices.size(); i < e; ++i)
@@ -317,7 +242,7 @@ void function_interface_impl::eraseFunctionResults(
   op.setFunctionTypeAttr(TypeAttr::get(newType));
 }
 
-TypeRange function_interface_impl::insertTypesInto(
+TypeRange mlir::function_interface_impl::insertTypesInto(
     TypeRange oldTypes, ArrayRef<unsigned> indices, TypeRange newTypes,
     SmallVectorImpl<Type> &storage) {
   assert(indices.size() == newTypes.size() &&
@@ -336,7 +261,7 @@ TypeRange function_interface_impl::insertTypesInto(
   return storage;
 }
 
-TypeRange function_interface_impl::filterTypesOut(
+TypeRange mlir::function_interface_impl::filterTypesOut(
     TypeRange types, const BitVector &indices, SmallVectorImpl<Type> &storage) {
   if (indices.none())
     return types;
@@ -351,8 +276,8 @@ TypeRange function_interface_impl::filterTypesOut(
 // Function type signature.
 //===----------------------------------------------------------------------===//
 
-void function_interface_impl::setFunctionType(FunctionOpInterface op,
-                                              Type newType) {
+void mlir::function_interface_impl::setFunctionType(FunctionOpInterface op,
+                                                    Type newType) {
   unsigned oldNumArgs = op.getNumArguments();
   unsigned oldNumResults = op.getNumResults();
   op.setFunctionTypeAttr(TypeAttr::get(newType));
@@ -360,31 +285,35 @@ void function_interface_impl::setFunctionType(FunctionOpInterface op,
   unsigned newNumResults = op.getNumResults();
 
   // Functor used to update the argument and result attributes of the function.
-  auto updateAttrFn = [&](auto isArg, unsigned oldCount, unsigned newCount) {
-    constexpr bool isArgVal = std::is_same_v<decltype(isArg), std::true_type>;
-
+  auto updateAttrFn = [&](StringRef attrName, unsigned oldCount,
+                          unsigned newCount, auto setAttrFn) {
     if (oldCount == newCount)
       return;
     // The new type has no arguments/results, just drop the attribute.
-    if (newCount == 0)
-      return removeArgResAttrs<isArgVal>(op);
-    ArrayAttr attrs = getArgResAttrs<isArgVal>(op);
+    if (newCount == 0) {
+      op->removeAttr(attrName);
+      return;
+    }
+    ArrayAttr attrs = op->getAttrOfType<ArrayAttr>(attrName);
     if (!attrs)
       return;
 
     // The new type has less arguments/results, take the first N attributes.
     if (newCount < oldCount)
-      return setAllArgResAttrDicts<isArgVal>(
-          op, attrs.getValue().take_front(newCount));
+      return setAttrFn(op, attrs.getValue().take_front(newCount));
 
     // Otherwise, the new type has more arguments/results. Initialize the new
     // arguments/results with empty attributes.
     SmallVector<Attribute> newAttrs(attrs.begin(), attrs.end());
     newAttrs.resize(newCount);
-    setAllArgResAttrDicts<isArgVal>(op, newAttrs);
+    setAttrFn(op, newAttrs);
   };
 
   // Update the argument and result attributes.
-  updateAttrFn(std::true_type{}, oldNumArgs, newNumArgs);
-  updateAttrFn(std::false_type{}, oldNumResults, newNumResults);
+  updateAttrFn(
+      getArgDictAttrName(), oldNumArgs, newNumArgs,
+      [&](Operation *op, auto &&attrs) { setAllArgAttrDicts(op, attrs); });
+  updateAttrFn(
+      getResultDictAttrName(), oldNumResults, newNumResults,
+      [&](Operation *op, auto &&attrs) { setAllResultAttrDicts(op, attrs); });
 }

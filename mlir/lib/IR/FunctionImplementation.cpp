@@ -113,7 +113,7 @@ parseFunctionResultList(OpAsmParser &parser, SmallVectorImpl<Type> &resultTypes,
   return parser.parseRParen();
 }
 
-ParseResult function_interface_impl::parseFunctionSignature(
+ParseResult mlir::function_interface_impl::parseFunctionSignature(
     OpAsmParser &parser, bool allowVariadic,
     SmallVectorImpl<OpAsmParser::Argument> &arguments, bool &isVariadic,
     SmallVectorImpl<Type> &resultTypes,
@@ -125,10 +125,9 @@ ParseResult function_interface_impl::parseFunctionSignature(
   return success();
 }
 
-void function_interface_impl::addArgAndResultAttrs(
+void mlir::function_interface_impl::addArgAndResultAttrs(
     Builder &builder, OperationState &result, ArrayRef<DictionaryAttr> argAttrs,
-    ArrayRef<DictionaryAttr> resultAttrs, StringAttr argAttrsName,
-    StringAttr resAttrsName) {
+    ArrayRef<DictionaryAttr> resultAttrs) {
   auto nonEmptyAttrsFn = [](DictionaryAttr attrs) {
     return attrs && !attrs.empty();
   };
@@ -143,28 +142,28 @@ void function_interface_impl::addArgAndResultAttrs(
 
   // Add the attributes to the function arguments.
   if (llvm::any_of(argAttrs, nonEmptyAttrsFn))
-    result.addAttribute(argAttrsName, getArrayAttr(argAttrs));
+    result.addAttribute(function_interface_impl::getArgDictAttrName(),
+                        getArrayAttr(argAttrs));
 
   // Add the attributes to the function results.
   if (llvm::any_of(resultAttrs, nonEmptyAttrsFn))
-    result.addAttribute(resAttrsName, getArrayAttr(resultAttrs));
+    result.addAttribute(function_interface_impl::getResultDictAttrName(),
+                        getArrayAttr(resultAttrs));
 }
 
-void function_interface_impl::addArgAndResultAttrs(
+void mlir::function_interface_impl::addArgAndResultAttrs(
     Builder &builder, OperationState &result,
-    ArrayRef<OpAsmParser::Argument> args, ArrayRef<DictionaryAttr> resultAttrs,
-    StringAttr argAttrsName, StringAttr resAttrsName) {
+    ArrayRef<OpAsmParser::Argument> args,
+    ArrayRef<DictionaryAttr> resultAttrs) {
   SmallVector<DictionaryAttr> argAttrs;
   for (const auto &arg : args)
     argAttrs.push_back(arg.attrs);
-  addArgAndResultAttrs(builder, result, argAttrs, resultAttrs, argAttrsName,
-                       resAttrsName);
+  addArgAndResultAttrs(builder, result, argAttrs, resultAttrs);
 }
 
-ParseResult function_interface_impl::parseFunctionOp(
+ParseResult mlir::function_interface_impl::parseFunctionOp(
     OpAsmParser &parser, OperationState &result, bool allowVariadic,
-    StringAttr typeAttrName, FuncTypeBuilder funcTypeBuilder,
-    StringAttr argAttrsName, StringAttr resAttrsName) {
+    StringAttr typeAttrName, FuncTypeBuilder funcTypeBuilder) {
   SmallVector<OpAsmParser::Argument> entryArgs;
   SmallVector<DictionaryAttr> resultAttrs;
   SmallVector<Type> resultTypes;
@@ -221,8 +220,7 @@ ParseResult function_interface_impl::parseFunctionOp(
 
   // Add the attributes to the function arguments.
   assert(resultAttrs.size() == resultTypes.size());
-  addArgAndResultAttrs(builder, result, entryArgs, resultAttrs, argAttrsName,
-                       resAttrsName);
+  addArgAndResultAttrs(builder, result, entryArgs, resultAttrs);
 
   // Parse the optional function body. The printer will not print the body if
   // its empty, so disallow parsing of empty body in the parser.
@@ -263,14 +261,14 @@ static void printFunctionResultList(OpAsmPrinter &p, ArrayRef<Type> types,
     os << ')';
 }
 
-void function_interface_impl::printFunctionSignature(
-    OpAsmPrinter &p, FunctionOpInterface op, ArrayRef<Type> argTypes,
-    bool isVariadic, ArrayRef<Type> resultTypes) {
+void mlir::function_interface_impl::printFunctionSignature(
+    OpAsmPrinter &p, Operation *op, ArrayRef<Type> argTypes, bool isVariadic,
+    ArrayRef<Type> resultTypes) {
   Region &body = op->getRegion(0);
   bool isExternal = body.empty();
 
   p << '(';
-  ArrayAttr argAttrs = op.getArgAttrsAttr();
+  ArrayAttr argAttrs = op->getAttrOfType<ArrayAttr>(getArgDictAttrName());
   for (unsigned i = 0, e = argTypes.size(); i < e; ++i) {
     if (i > 0)
       p << ", ";
@@ -297,23 +295,26 @@ void function_interface_impl::printFunctionSignature(
 
   if (!resultTypes.empty()) {
     p.getStream() << " -> ";
-    auto resultAttrs = op.getResAttrsAttr();
+    auto resultAttrs = op->getAttrOfType<ArrayAttr>(getResultDictAttrName());
     printFunctionResultList(p, resultTypes, resultAttrs);
   }
 }
 
-void function_interface_impl::printFunctionAttributes(
+void mlir::function_interface_impl::printFunctionAttributes(
     OpAsmPrinter &p, Operation *op, ArrayRef<StringRef> elided) {
   // Print out function attributes, if present.
-  SmallVector<StringRef, 8> ignoredAttrs = {SymbolTable::getSymbolAttrName()};
+  SmallVector<StringRef, 2> ignoredAttrs = {SymbolTable::getSymbolAttrName(),
+                                            getArgDictAttrName(),
+                                            getResultDictAttrName()};
   ignoredAttrs.append(elided.begin(), elided.end());
 
   p.printOptionalAttrDictWithKeyword(op->getAttrs(), ignoredAttrs);
 }
 
-void function_interface_impl::printFunctionOp(
-    OpAsmPrinter &p, FunctionOpInterface op, bool isVariadic,
-    StringRef typeAttrName, StringAttr argAttrsName, StringAttr resAttrsName) {
+void mlir::function_interface_impl::printFunctionOp(OpAsmPrinter &p,
+                                                    FunctionOpInterface op,
+                                                    bool isVariadic,
+                                                    StringRef typeAttrName) {
   // Print the operation and the function name.
   auto funcName =
       op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName())
@@ -328,8 +329,7 @@ void function_interface_impl::printFunctionOp(
   ArrayRef<Type> argTypes = op.getArgumentTypes();
   ArrayRef<Type> resultTypes = op.getResultTypes();
   printFunctionSignature(p, op, argTypes, isVariadic, resultTypes);
-  printFunctionAttributes(
-      p, op, {visibilityAttrName, typeAttrName, argAttrsName, resAttrsName});
+  printFunctionAttributes(p, op, {visibilityAttrName, typeAttrName});
   // Print the body if this is not an external function.
   Region &body = op->getRegion(0);
   if (!body.empty()) {

@@ -934,9 +934,8 @@ ParseResult GPUFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(type));
 
-  function_interface_impl::addArgAndResultAttrs(
-      builder, result, entryArgs, resultAttrs, getArgAttrsAttrName(result.name),
-      getResAttrsAttrName(result.name));
+  function_interface_impl::addArgAndResultAttrs(builder, result, entryArgs,
+                                                resultAttrs);
 
   // Parse workgroup memory attributions.
   if (failed(parseAttributions(parser, GPUFuncOp::getWorkgroupKeyword(),
@@ -997,8 +996,7 @@ void GPUFuncOp::print(OpAsmPrinter &p) {
   function_interface_impl::printFunctionAttributes(
       p, *this,
       {getNumWorkgroupAttributionsAttrName(),
-       GPUDialect::getKernelFuncAttrName(), getFunctionTypeAttrName(),
-       getArgAttrsAttrName(), getResAttrsAttrName()});
+       GPUDialect::getKernelFuncAttrName(), getFunctionTypeAttrName()});
   p << ' ';
   p.printRegion(getBody(), /*printEntryBlockArgs=*/false);
 }
