@@ -373,12 +373,13 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     # !if(!gt(numResults, 0), "$res = inst;", "");
 
   string mlirBuilder = [{
+    FailureOr<SmallVector<Value>> mlirOperands = convertValues(llvmOperands);
+    if (failed(mlirOperands))
+      return failure();
     SmallVector<Type> resultTypes =
     }] # !if(!gt(numResults, 0), "{$_resultType};", "{};") # [{
     Operation *op = $_builder.create<$_qualCppClassName>(
-      $_location,
-      resultTypes,
-      convertValues(llvmOperands));
+      $_location, resultTypes, *mlirOperands);
     }] # !if(!gt(numResults, 0), "$res = op->getResult(0);", "(void)op;");
 }
 

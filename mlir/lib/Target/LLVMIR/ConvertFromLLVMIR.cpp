@@ -34,6 +34,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -363,18 +364,20 @@ public:
     return blockMapping.lookup(block);
   }
 
-  /// Converts an LLVM value either to the mapped MLIR value or to a constant
-  /// using the `convertConstant` method.
-  Value convertValue(llvm::Value *value);
+  /// Converts an LLVM value to an MLIR value, or returns failure if the
+  /// conversion fails. Uses the `convertConstant` method to translate constant
+  /// LLVM values.
+  FailureOr<Value> convertValue(llvm::Value *value);
 
   /// Converts a range of LLVM values to a range of MLIR values using the
-  /// `convertValue` method.
-  SmallVector<Value> convertValues(ArrayRef<llvm::Value *> values);
+  /// `convertValue` method, or returns failure if the conversion fails.
+  FailureOr<SmallVector<Value>> convertValues(ArrayRef<llvm::Value *> values);
 
-  /// Converts `value` to an integer attribute. Asserts if the conversion fails.
+  /// Converts `value` to an integer attribute. Asserts if the matching fails.
   IntegerAttr matchIntegerAttr(llvm::Value *value);
 
-  /// Converts `value` to a local variable attribute.
+  /// Converts `value` to a local variable attribute. Asserts if the matching
+  /// fails.
   DILocalVariableAttr matchLocalVariableAttr(llvm::Value *value);
 
   /// Translates the debug location.
@@ -389,10 +392,11 @@ public:
 
   /// Converts an LLVM intrinsic to an MLIR LLVM dialect operation if an MLIR
   /// counterpart exists. Otherwise, returns failure.
-  LogicalResult convertIntrinsic(OpBuilder &odsBuilder, llvm::CallInst *inst);
+  LogicalResult convertIntrinsic(OpBuilder &odsBuilder, llvm::CallInst *inst,
+                                 llvm::Intrinsic::ID intrinsicID);
 
-  /// Converts an LLVM instruction to an MLIR LLVM dialect operation if the
-  /// operation defines an MLIR Builder. Otherwise, returns failure.
+  /// Converts an LLVM instruction to an MLIR LLVM dialect operation if an MLIR
+  /// counterpart exists. Otherwise, returns failure.
   LogicalResult convertOperation(OpBuilder &odsBuilder,
                                  llvm::Instruction *inst);
 
@@ -435,9 +439,9 @@ private:
   /// Appends the converted result type and operands of `callInst` to the
   /// `types` and `operands` arrays. For indirect calls, the method additionally
   /// inserts the called function at the beginning of the `operands` array.
-  void convertCallTypeAndOperands(llvm::CallBase *callInst,
-                                  SmallVectorImpl<Type> &types,
-                                  SmallVectorImpl<Value> &operands);
+  LogicalResult convertCallTypeAndOperands(llvm::CallBase *callInst,
+                                           SmallVectorImpl<Type> &types,
+                                           SmallVectorImpl<Value> &operands);
   /// Returns the builtin type equivalent to be used in attributes for the given
   /// LLVM IR dialect type.
   Type getStdTypeForAttr(Type type);
@@ -446,15 +450,17 @@ private:
   /// Returns the topologically sorted set of transitive dependencies needed to
   /// convert the given constant.
   SetVector<llvm::Constant *> getConstantsToConvert(llvm::Constant *constant);
-  /// Converts an LLVM constant to an MLIR value produced by a ConstantOp,
+  /// Converts an LLVM constant to an MLIR value, or returns failure if the
+  /// conversion fails. The MLIR value may be produced by a ConstantOp,
   /// AddressOfOp, NullOp, or a side-effect free operation (for ConstantExprs or
   /// ConstantGEPs).
-  Value convertConstant(llvm::Constant *constant);
-  /// Converts an LLVM constant and its transitive dependencies to MLIR
+  FailureOr<Value> convertConstant(llvm::Constant *constant);
+  /// Converts an LLVM constant and its transitive constant dependencies to MLIR
   /// operations by converting them in topological order using the
-  /// `convertConstant` method. All operations are inserted at the
-  /// start of the current function entry block.
-  Value convertConstantExpr(llvm::Constant *constant);
+  /// `convertConstant` method, or returns failure if the conversion of any of
+  /// them fails. All operations are inserted at the start of the current
+  /// function entry block.
+  FailureOr<Value> convertConstantExpr(llvm::Constant *constant);
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
@@ -481,38 +487,6 @@ private:
   DebugImporter debugImporter;
 };
 } // namespace
-
-LogicalResult Importer::convertIntrinsic(OpBuilder &odsBuilder,
-                                         llvm::CallInst *inst) {
-  // Check if the callee is an intrinsic.
-  llvm::Function *callee = inst->getCalledFunction();
-  if (!callee || !callee->isIntrinsic())
-    return failure();
-
-  // Check if the intrinsic is convertible to an MLIR dialect counterpart.
-  llvm::Intrinsic::ID intrinsicID = callee->getIntrinsicID();
-  if (!isConvertibleIntrinsic(intrinsicID))
-    return failure();
-
-  // Copy the call arguments to initialize operands array reference used by
-  // the conversion.
-  SmallVector<llvm::Value *> args(inst->args());
-  ArrayRef<llvm::Value *> llvmOperands(args);
-#include "mlir/Dialect/LLVMIR/LLVMIntrinsicFromLLVMIRConversions.inc"
-
-  return failure();
-}
-
-LogicalResult Importer::convertOperation(OpBuilder &odsBuilder,
-                                         llvm::Instruction *inst) {
-  // Copy the instruction operands to initialize the operands array reference
-  // used by the conversion.
-  SmallVector<llvm::Value *> operands(inst->operands());
-  ArrayRef<llvm::Value *> llvmOperands(operands);
-#include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
-
-  return failure();
-}
 
 // We only need integers, floats, doubles, and vectors and tensors thereof for
 // attributes. Scalar and vector types are converted to the standard
@@ -690,8 +664,11 @@ GlobalOp Importer::processGlobal(llvm::GlobalVariable *globalVar) {
     clearBlockAndValueMapping();
     Block *block = builder.createBlock(&globalOp.getInitializerRegion());
     setConstantInsertionPointToStart(block);
-    Value value = convertConstantExpr(globalVar->getInitializer());
-    builder.create<ReturnOp>(globalOp.getLoc(), value);
+    FailureOr<Value> initializer =
+        convertConstantExpr(globalVar->getInitializer());
+    if (failed(initializer))
+      return {};
+    builder.create<ReturnOp>(globalOp.getLoc(), initializer.value());
   }
   if (globalVar->hasAtLeastLocalUnnamedAddr()) {
     globalOp.setUnnamedAddr(
@@ -715,12 +692,12 @@ Importer::getConstantsToConvert(llvm::Constant *constant) {
     if (valueMapping.count(constant))
       continue;
     orderedList.push_back(current);
-    // Add the current constant's dependencies to the work list.
-    for (llvm::Value *operand : current->operands()) {
-      assert(isa<llvm::Constant>(operand) &&
-             "expected constants to have constant operands only");
-      workList.push_back(cast<llvm::Constant>(operand));
-    }
+    // Add the current constant's dependencies to the work list. Only add
+    // constant dependencies and skip any other values such as basic block
+    // addresses.
+    for (llvm::Value *operand : current->operands())
+      if (auto *constDependency = dyn_cast<llvm::Constant>(operand))
+        workList.push_back(constDependency);
     // Use the `getElementValue` method to add the dependencies of zero
     // initialized aggregate constants since they do not take any operands.
     if (auto *constAgg = dyn_cast<llvm::ConstantAggregateZero>(current)) {
@@ -739,33 +716,37 @@ Importer::getConstantsToConvert(llvm::Constant *constant) {
   return orderedSet;
 }
 
-Value Importer::convertConstant(llvm::Constant *constant) {
+FailureOr<Value> Importer::convertConstant(llvm::Constant *constant) {
   // Constants have no location attached.
   Location loc = UnknownLoc::get(context);
 
   // Convert constants that can be represented as attributes.
   if (Attribute attr = getConstantAsAttr(constant)) {
     Type type = convertType(constant->getType());
-    if (auto symbolRef = attr.dyn_cast<FlatSymbolRefAttr>())
-      return builder.create<AddressOfOp>(loc, type, symbolRef.getValue());
-    return builder.create<ConstantOp>(loc, type, attr);
+    if (auto symbolRef = attr.dyn_cast<FlatSymbolRefAttr>()) {
+      return builder.create<AddressOfOp>(loc, type, symbolRef.getValue())
+          .getResult();
+    }
+    return builder.create<ConstantOp>(loc, type, attr).getResult();
   }
 
   // Convert null pointer constants.
   if (auto *nullPtr = dyn_cast<llvm::ConstantPointerNull>(constant)) {
     Type type = convertType(nullPtr->getType());
-    return builder.create<NullOp>(loc, type);
+    return builder.create<NullOp>(loc, type).getResult();
   }
 
   // Convert undef.
   if (auto *undefVal = dyn_cast<llvm::UndefValue>(constant)) {
     Type type = convertType(undefVal->getType());
-    return builder.create<UndefOp>(loc, type);
+    return builder.create<UndefOp>(loc, type).getResult();
   }
 
   // Convert global variable accesses.
-  if (auto *globalVar = dyn_cast<llvm::GlobalVariable>(constant))
-    return builder.create<AddressOfOp>(loc, processGlobal(globalVar));
+  if (auto *globalVar = dyn_cast<llvm::GlobalVariable>(constant)) {
+    return builder.create<AddressOfOp>(loc, processGlobal(globalVar))
+        .getResult();
+  }
 
   // Convert constant expressions.
   if (auto *constExpr = dyn_cast<llvm::ConstantExpr>(constant)) {
@@ -785,7 +766,7 @@ Value Importer::convertConstant(llvm::Constant *constant) {
       return valueMapping.count(value);
     }));
     if (failed(processInstruction(inst)))
-      return nullptr;
+      return failure();
     return lookupValue(inst);
   }
 
@@ -828,10 +809,10 @@ Value Importer::convertConstant(llvm::Constant *constant) {
     return root;
   }
 
-  return nullptr;
+  return emitError(loc) << "unhandled constant " << diag(*constant);
 }
 
-Value Importer::convertConstantExpr(llvm::Constant *constant) {
+FailureOr<Value> Importer::convertConstantExpr(llvm::Constant *constant) {
   assert(constantInsertionBlock &&
          "expected the constant insertion block to be non-null");
 
@@ -847,13 +828,10 @@ Value Importer::convertConstantExpr(llvm::Constant *constant) {
   SetVector<llvm::Constant *> constantsToConvert =
       getConstantsToConvert(constant);
   for (llvm::Constant *constantToConvert : constantsToConvert) {
-    if (Value value = convertConstant(constantToConvert)) {
-      mapValue(constantToConvert, value);
-      continue;
-    }
-
-    llvm::errs() << diag(*constantToConvert) << "\n";
-    llvm_unreachable("unhandled constant");
+    FailureOr<Value> converted = convertConstant(constantToConvert);
+    if (failed(converted))
+      return failure();
+    mapValue(constantToConvert, converted.value());
   }
 
   // Update the constant insertion point and return the converted constant.
@@ -862,7 +840,7 @@ Value Importer::convertConstantExpr(llvm::Constant *constant) {
   return result;
 }
 
-Value Importer::convertValue(llvm::Value *value) {
+FailureOr<Value> Importer::convertValue(llvm::Value *value) {
   // A value may be wrapped as metadata, for example, when passed to a debug
   // intrinsic. Unwrap these values before the conversion.
   if (auto *nodeAsVal = dyn_cast<llvm::MetadataAsValue>(value))
@@ -877,21 +855,30 @@ Value Importer::convertValue(llvm::Value *value) {
   if (auto *constant = dyn_cast<llvm::Constant>(value))
     return convertConstantExpr(constant);
 
-  llvm::errs() << diag(*value) << "\n";
-  llvm_unreachable("unhandled value");
+  Location loc = UnknownLoc::get(context);
+  if (auto *inst = dyn_cast<llvm::Instruction>(value))
+    loc = translateLoc(inst->getDebugLoc());
+  return emitError(loc) << "unhandled value " << diag(*value);
 }
 
-SmallVector<Value> Importer::convertValues(ArrayRef<llvm::Value *> values) {
+FailureOr<SmallVector<Value>>
+Importer::convertValues(ArrayRef<llvm::Value *> values) {
   SmallVector<Value> remapped;
   remapped.reserve(values.size());
-  for (llvm::Value *value : values)
-    remapped.push_back(convertValue(value));
+  for (llvm::Value *value : values) {
+    FailureOr<Value> converted = convertValue(value);
+    if (failed(converted))
+      return failure();
+    remapped.push_back(converted.value());
+  }
   return remapped;
 }
 
 IntegerAttr Importer::matchIntegerAttr(llvm::Value *value) {
   IntegerAttr integerAttr;
-  bool success = matchPattern(convertValue(value), m_Constant(&integerAttr));
+  FailureOr<Value> converted = convertValue(value);
+  bool success = succeeded(converted) &&
+                 matchPattern(converted.value(), m_Constant(&integerAttr));
   assert(success && "expected a constant value");
   (void)success;
   return integerAttr;
@@ -907,42 +894,61 @@ LogicalResult
 Importer::convertBranchArgs(llvm::Instruction *branch, llvm::BasicBlock *target,
                             SmallVectorImpl<Value> &blockArguments) {
   for (auto inst = target->begin(); isa<llvm::PHINode>(inst); ++inst) {
-    auto *phi = cast<llvm::PHINode>(&*inst);
-    llvm::Value *value = phi->getIncomingValueForBlock(branch->getParent());
-    blockArguments.push_back(convertValue(value));
+    auto *phiInst = cast<llvm::PHINode>(&*inst);
+    llvm::Value *value = phiInst->getIncomingValueForBlock(branch->getParent());
+    FailureOr<Value> converted = convertValue(value);
+    if (failed(converted))
+      return failure();
+    blockArguments.push_back(converted.value());
   }
   return success();
 }
 
-void Importer::convertCallTypeAndOperands(llvm::CallBase *callInst,
-                                          SmallVectorImpl<Type> &types,
-                                          SmallVectorImpl<Value> &operands) {
+LogicalResult
+Importer::convertCallTypeAndOperands(llvm::CallBase *callInst,
+                                     SmallVectorImpl<Type> &types,
+                                     SmallVectorImpl<Value> &operands) {
   if (!callInst->getType()->isVoidTy())
     types.push_back(convertType(callInst->getType()));
 
   if (!callInst->getCalledFunction()) {
-    Value called = convertValue(callInst->getCalledOperand());
-    operands.push_back(called);
+    FailureOr<Value> called = convertValue(callInst->getCalledOperand());
+    if (failed(called))
+      return failure();
+    operands.push_back(called.value());
   }
   SmallVector<llvm::Value *> args(callInst->args());
-  llvm::append_range(operands, convertValues(args));
+  FailureOr<SmallVector<Value>> arguments = convertValues(args);
+  if (failed(arguments))
+    return failure();
+  llvm::append_range(operands, arguments.value());
+  return success();
 }
 
-LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
-  // FIXME: Support uses of SubtargetData.
-  // FIXME: Add support for inbounds GEPs.
-  // FIXME: Add support for fast-math flags and call / operand attributes.
-  // FIXME: Add support for the indirectbr, cleanupret, catchret, catchswitch,
-  // callbr, vaarg, landingpad, catchpad, cleanuppad instructions.
+LogicalResult Importer::convertIntrinsic(OpBuilder &odsBuilder,
+                                         llvm::CallInst *inst,
+                                         llvm::Intrinsic::ID intrinsicID) {
+  Location loc = translateLoc(inst->getDebugLoc());
 
-  // Convert all intrinsics that provide an MLIR builder.
-  if (auto *callInst = dyn_cast<llvm::CallInst>(inst))
-    if (succeeded(convertIntrinsic(builder, callInst)))
-      return success();
+  // Check if the intrinsic is convertible to an MLIR dialect counterpart and
+  // copy the arguments to an an LLVM operands array reference for conversion.
+  if (isConvertibleIntrinsic(intrinsicID)) {
+    SmallVector<llvm::Value *> args(inst->args());
+    ArrayRef<llvm::Value *> llvmOperands(args);
+#include "mlir/Dialect/LLVMIR/LLVMIntrinsicFromLLVMIRConversions.inc"
+  }
 
-  // Convert all operations that provide an MLIR builder.
-  if (succeeded(convertOperation(builder, inst)))
-    return success();
+  return emitError(loc) << "unhandled intrinsic " << diag(*inst);
+}
+
+LogicalResult Importer::convertOperation(OpBuilder &odsBuilder,
+                                         llvm::Instruction *inst) {
+  // Copy the operands to an LLVM operands array reference for conversion.
+  SmallVector<llvm::Value *> operands(inst->operands());
+  ArrayRef<llvm::Value *> llvmOperands(operands);
+
+  // Convert all instructions that provide an MLIR builder.
+#include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
 
   // Convert all remaining instructions that do not provide an MLIR builder.
   Location loc = translateLoc(inst->getDebugLoc());
@@ -961,8 +967,10 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     }
 
     if (brInst->isConditional()) {
-      Value condition = convertValue(brInst->getCondition());
-      builder.create<LLVM::CondBrOp>(loc, condition, succBlocks.front(),
+      FailureOr<Value> condition = convertValue(brInst->getCondition());
+      if (failed(condition))
+        return failure();
+      builder.create<LLVM::CondBrOp>(loc, condition.value(), succBlocks.front(),
                                      succBlockArgs.front(), succBlocks.back(),
                                      succBlockArgs.back());
     } else {
@@ -974,7 +982,9 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
   if (inst->getOpcode() == llvm::Instruction::Switch) {
     auto *swInst = cast<llvm::SwitchInst>(inst);
     // Process the condition value.
-    Value condition = convertValue(swInst->getCondition());
+    FailureOr<Value> condition = convertValue(swInst->getCondition());
+    if (failed(condition))
+      return failure();
     SmallVector<Value> defaultBlockArgs;
     // Process the default case.
     llvm::BasicBlock *defaultBB = swInst->getDefaultDest();
@@ -997,7 +1007,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
       caseBlocks[it.index()] = lookupBlock(succBB);
     }
 
-    builder.create<SwitchOp>(loc, condition, lookupBlock(defaultBB),
+    builder.create<SwitchOp>(loc, condition.value(), lookupBlock(defaultBB),
                              defaultBlockArgs, caseValues, caseBlocks,
                              caseOperandRefs);
     return success();
@@ -1013,7 +1023,8 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
 
     SmallVector<Type> types;
     SmallVector<Value> operands;
-    convertCallTypeAndOperands(callInst, types, operands);
+    if (failed(convertCallTypeAndOperands(callInst, types, operands)))
+      return failure();
 
     CallOp callOp;
     if (llvm::Function *callee = callInst->getCalledFunction()) {
@@ -1032,8 +1043,10 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     SmallVector<Value> operands;
     operands.reserve(lpInst->getNumClauses());
     for (auto i : llvm::seq<unsigned>(0, lpInst->getNumClauses())) {
-      Value operand = convertConstantExpr(lpInst->getClause(i));
-      operands.push_back(operand);
+      FailureOr<Value> operand = convertConstantExpr(lpInst->getClause(i));
+      if (failed(operand))
+        return failure();
+      operands.push_back(operand.value());
     }
 
     Type type = convertType(lpInst->getType());
@@ -1047,7 +1060,8 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
 
     SmallVector<Type> types;
     SmallVector<Value> operands;
-    convertCallTypeAndOperands(invokeInst, types, operands);
+    if (failed(convertCallTypeAndOperands(invokeInst, types, operands)))
+      return failure();
 
     SmallVector<Value> normalArgs, unwindArgs;
     (void)convertBranchArgs(invokeInst, invokeInst->getNormalDest(),
@@ -1075,7 +1089,9 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     // FIXME: Support inbounds GEPs.
     auto *gepInst = cast<llvm::GetElementPtrInst>(inst);
     Type sourceElementType = convertType(gepInst->getSourceElementType());
-    Value basePtr = convertValue(gepInst->getOperand(0));
+    FailureOr<Value> basePtr = convertValue(gepInst->getOperand(0));
+    if (failed(basePtr))
+      return failure();
 
     // Treat every indices as dynamic since GEPOp::build will refine those
     // indices into static attributes later. One small downside of this
@@ -1083,18 +1099,38 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     // at first place.
     SmallVector<GEPArg> indices;
     for (llvm::Value *operand : llvm::drop_begin(gepInst->operand_values())) {
-      Value index = convertValue(operand);
-      indices.push_back(index);
+      FailureOr<Value> index = convertValue(operand);
+      if (failed(index))
+        return failure();
+      indices.push_back(index.value());
     }
 
     Type type = convertType(inst->getType());
-    Value res =
-        builder.create<GEPOp>(loc, type, sourceElementType, basePtr, indices);
+    Value res = builder.create<GEPOp>(loc, type, sourceElementType,
+                                      basePtr.value(), indices);
     mapValue(inst, res);
     return success();
   }
 
-  return emitError(loc) << "unknown instruction: " << diag(*inst);
+  return emitError(loc) << "unhandled instruction " << diag(*inst);
+}
+
+LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
+  // FIXME: Support uses of SubtargetData.
+  // FIXME: Add support for inbounds GEPs.
+  // FIXME: Add support for fast-math flags and call / operand attributes.
+  // FIXME: Add support for the indirectbr, cleanupret, catchret, catchswitch,
+  // callbr, vaarg, landingpad, catchpad, cleanuppad instructions.
+
+  // Convert LLVM intrinsics calls to MLIR intrinsics.
+  if (auto *callInst = dyn_cast<llvm::CallInst>(inst)) {
+    llvm::Function *callee = callInst->getCalledFunction();
+    if (callee && callee->isIntrinsic())
+      return convertIntrinsic(builder, callInst, callInst->getIntrinsicID());
+  }
+
+  // Convert all remaining LLVM instructions to MLIR operations.
+  return convertOperation(builder, inst);
 }
 
 FlatSymbolRefAttr Importer::getPersonalityAsAttr(llvm::Function *f) {
