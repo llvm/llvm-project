@@ -1,5 +1,4 @@
 ; RUN: opt -S -passes=rewrite-statepoints-for-gc < %s | FileCheck %s
-; RUN: opt -S -passes=rewrite-statepoints-for-gc < %s | FileCheck %s
 ;
 ; A test to make sure that we can look through bitcasts of
 ; vector types when a base pointer is contained in a vector.

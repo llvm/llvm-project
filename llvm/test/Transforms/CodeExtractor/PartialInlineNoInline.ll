@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=partial-inliner -S -stats -pass-remarks=partial-inlining 2>&1 | FileCheck %s
-; RUN: opt < %s -passes=partial-inliner -S -stats -pass-remarks=partial-inlining 2>&1 | FileCheck %s
 
 @stat = external global i32, align 4
 
