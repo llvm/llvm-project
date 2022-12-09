@@ -14,9 +14,11 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/BLAKE3.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/StringSaver.h"
 
 using namespace clang;
@@ -123,9 +125,6 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   CI.getFrontendOpts().ProgramAction = frontend::GenerateModule;
   CI.getLangOpts()->ModuleName = Deps.ID.ModuleName;
   CI.getFrontendOpts().IsSystemModule = Deps.IsSystem;
-  CI.getCASOpts() = CASOpts;
-  CI.getFrontendOpts().CacheCompileJob = CacheCompileJob;
-  CI.getFrontendOpts().IncludeTimestamps = false;
 
   // Inputs
   InputKind ModuleMapInputKind(CI.getFrontendOpts().DashX.getLanguage(),
@@ -191,6 +190,10 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   // incompatible modules (e.g. with differences in search paths).
   CI.getHeaderSearchOpts().ModulesStrictContextHash = true;
 
+  if (auto ID = Deps.CASFileSystemRootID)
+    configureInvocationForCaching(CI, CASOpts, ID->toString(), WorkingDirectory,
+                                  /*ProduceIncludeTree=*/false);
+
   return CI;
 }
 
@@ -254,15 +257,6 @@ static bool needsModules(FrontendInputFile FIF) {
 void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
   CI.clearImplicitModuleBuildOptions();
 
-  // FIXME: refactor to share common code with scanAndUpdateCC1InlineWithTool
-  // and apply prefix mappings, if available.
-  CI.getCASOpts() = CASOpts;
-  CI.getFrontendOpts().CacheCompileJob = CacheCompileJob;
-  if (auto ID = MainFileCASFileSystemRootID)
-    CI.getFileSystemOpts().CASFileSystemRootID = ID->toString();
-  if (CacheCompileJob)
-    CI.getFrontendOpts().IncludeTimestamps = false;
-
   if (llvm::any_of(CI.getFrontendOpts().Inputs, needsModules)) {
     Preprocessor &PP = ScanInstance.getPreprocessor();
     if (Module *CurrentModule = PP.getCurrentModuleImplementation())
@@ -286,6 +280,10 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
     for (const auto &KV : DirectPrebuiltModularDeps)
       CI.getFrontendOpts().ModuleFiles.push_back(KV.second.PCMFile);
   }
+
+  if (auto ID = MainFileCASFileSystemRootID)
+    configureInvocationForCaching(CI, CASOpts, ID->toString(), WorkingDirectory,
+                                  /*ProduceIncludeTree=*/false);
 }
 
 void ModuleDepCollector::setMainFileCASFileSystemRootID(cas::CASID ID) {
@@ -305,6 +303,12 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   // will be readable.
   HashBuilder.add(getClangFullRepositoryVersion());
   HashBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
+
+  // Save and restore options that should not affect the hash, e.g. the exact
+  // contents of input files.
+  auto &MutableCI = const_cast<CompilerInvocation &>(CI);
+  llvm::SaveAndRestore<std::string> RestoreCASFSRootID(
+      MutableCI.getFileSystemOpts().CASFileSystemRootID);
 
   // Hash the BuildInvocation without any input files.
   SmallVector<const char *, 32> DummyArgs;
@@ -509,13 +513,6 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
 
   MDC.associateWithContextHash(CI, MD);
 
-  // Set CAS filesystem root ID after we compute the module hash. The root ID
-  // represents the contents of the filesystem which is not part of the hash.
-  // FIXME: refactor to share common code with scanAndUpdateCC1InlineWithTool
-  // and apply prefix mappings, if available.
-  if (auto ID = MD.CASFileSystemRootID)
-    CI.getFileSystemOpts().CASFileSystemRootID = ID->toString();
-
   // Finish the compiler invocation. Requires dependencies and the context hash.
   MDC.addOutputPaths(CI, MD);
 
@@ -616,9 +613,11 @@ void ModuleDepCollectorPP::addAffectingClangModule(
 ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
-    CompilerInvocation OriginalCI, bool OptimizeArgs, bool EagerLoadModules)
+    CompilerInvocation OriginalCI, StringRef WorkingDirectory,
+    bool OptimizeArgs, bool EagerLoadModules)
     : ScanInstance(ScanInstance), Consumer(C), Opts(std::move(Opts)),
       OriginalInvocation(std::move(OriginalCI)),
+      WorkingDirectory(WorkingDirectory.str()),
       CASOpts(ScanInstance.getCASOpts()),
       CacheCompileJob(ScanInstance.getFrontendOpts().CacheCompileJob),
       OptimizeArgs(OptimizeArgs), EagerLoadModules(EagerLoadModules) {}

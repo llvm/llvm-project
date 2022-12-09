@@ -190,8 +190,8 @@ class ModuleDepCollector final : public DependencyCollector {
 public:
   ModuleDepCollector(std::unique_ptr<DependencyOutputOptions> Opts,
                      CompilerInstance &ScanInstance, DependencyConsumer &C,
-                     CompilerInvocation OriginalCI, bool OptimizeArgs,
-                     bool EagerLoadModules);
+                     CompilerInvocation OriginalCI, StringRef WorkingDirectory,
+                     bool OptimizeArgs, bool EagerLoadModules);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -229,6 +229,8 @@ private:
   std::unique_ptr<DependencyOutputOptions> Opts;
   /// The original Clang invocation passed to dependency scanner.
   CompilerInvocation OriginalInvocation;
+  /// The original working directory.
+  std::string WorkingDirectory;
   /// The CAS filesystem root ID for the main input file, if any. This is used
   /// in \c applyDiscoveredDependencies.
   Optional<cas::CASID> MainFileCASFileSystemRootID;

@@ -34,6 +34,12 @@ namespace tooling {
 namespace dependencies {
 class DependencyScanningTool;
 
+/// Apply CAS inputs for compilation caching to the given invocation, if
+/// enabled.
+void configureInvocationForCaching(CompilerInvocation &CI, CASOptions CASOpts,
+                                   std::string RootID, std::string WorkingDir,
+                                   bool ProduceIncludeTree);
+
 struct DepscanPrefixMapping {
   Optional<StringRef> NewSDKPath;
   Optional<StringRef> NewToolchainPath;

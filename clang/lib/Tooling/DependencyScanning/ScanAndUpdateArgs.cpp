@@ -19,27 +19,32 @@ using namespace clang;
 using namespace clang::tooling::dependencies;
 using llvm::Error;
 
-static void updateCompilerInvocation(CompilerInvocation &Invocation,
-                                     llvm::StringSaver &Saver,
-                                     bool ProduceIncludeTree,
-                                     std::string RootID,
-                                     StringRef CASWorkingDirectory,
-                                     llvm::PrefixMapper &Mapper) {
+void tooling::dependencies::configureInvocationForCaching(
+    CompilerInvocation &CI, CASOptions CASOpts, std::string RootID,
+    std::string WorkingDir, bool ProduceIncludeTree) {
+  CI.getCASOpts() = std::move(CASOpts);
+  auto &FrontendOpts = CI.getFrontendOpts();
+  FrontendOpts.CacheCompileJob = true;
+  FrontendOpts.IncludeTimestamps = false;
+  // Clear this otherwise it defeats the purpose of making the compilation key
+  // independent of certain arguments.
+  CI.getCodeGenOpts().DwarfDebugFlags.clear();
+
   // "Fix" the CAS options.
-  auto &FileSystemOpts = Invocation.getFileSystemOpts();
+  auto &FileSystemOpts = CI.getFileSystemOpts();
   if (ProduceIncludeTree) {
-    Invocation.getFrontendOpts().CASIncludeTreeID = RootID;
-    Invocation.getFrontendOpts().Inputs.clear();
+    FrontendOpts.CASIncludeTreeID = std::move(RootID);
+    FrontendOpts.Inputs.clear();
     // Preserve sysroot path to accommodate lookup for 'SDKSettings.json' during
     // availability checking.
-    std::string OriginalSysroot = Invocation.getHeaderSearchOpts().Sysroot;
-    Invocation.getHeaderSearchOpts() = HeaderSearchOptions();
-    Invocation.getHeaderSearchOpts().Sysroot = OriginalSysroot;
-    auto &PPOpts = Invocation.getPreprocessorOpts();
+    std::string OriginalSysroot = CI.getHeaderSearchOpts().Sysroot;
+    CI.getHeaderSearchOpts() = HeaderSearchOptions();
+    CI.getHeaderSearchOpts().Sysroot = OriginalSysroot;
+    auto &PPOpts = CI.getPreprocessorOpts();
     // We don't need this because we save the contents of the PCH file in the
     // include tree root.
     PPOpts.ImplicitPCHInclude.clear();
-    if (Invocation.getFrontendOpts().ProgramAction != frontend::GeneratePCH) {
+    if (FrontendOpts.ProgramAction != frontend::GeneratePCH) {
       // We don't need these because we save the contents of the predefines
       // buffer in the include tree. But if we generate a PCH file we still need
       // to keep them as preprocessor options so that they are preserved in a
@@ -50,32 +55,26 @@ static void updateCompilerInvocation(CompilerInvocation &Invocation,
       PPOpts.Includes.clear();
     }
   } else {
-    FileSystemOpts.CASFileSystemRootID = RootID;
-    FileSystemOpts.CASFileSystemWorkingDirectory = CASWorkingDirectory.str();
+    FileSystemOpts.CASFileSystemRootID = std::move(RootID);
+    FileSystemOpts.CASFileSystemWorkingDirectory = std::move(WorkingDir);
   }
-  auto &FrontendOpts = Invocation.getFrontendOpts();
-  FrontendOpts.CacheCompileJob = true; // FIXME: Don't set.
+}
 
+void DepscanPrefixMapping::remapInvocationPaths(CompilerInvocation &Invocation,
+                                                llvm::PrefixMapper &Mapper) {
+  auto &FrontendOpts = Invocation.getFrontendOpts();
   FrontendOpts.PathPrefixMappings.clear();
+
+  // If there are no mappings, we're done. Otherwise, continue and remap
+  // everything.
+  if (Mapper.empty())
+    return;
+
   // Pass the remappings so that we can map cached diagnostics to the local
   // paths during diagnostic rendering.
   for (const llvm::MappedPrefix &Map : Mapper.getMappings()) {
     FrontendOpts.PathPrefixMappings.push_back(Map.Old + "=" + Map.New);
   }
-
-  // Turn off dependency outputs. Should have already been emitted.
-  Invocation.getDependencyOutputOpts().OutputFile.clear();
-
-  // Apply path remappings.
-  DepscanPrefixMapping::remapInvocationPaths(Invocation, Mapper);
-}
-
-void DepscanPrefixMapping::remapInvocationPaths(CompilerInvocation &Invocation,
-                                                llvm::PrefixMapper &Mapper) {
-  // If there are no mappings, we're done. Otherwise, continue and remap
-  // everything.
-  if (Mapper.empty())
-    return;
 
   // Returns "false" on success, "true" if the path doesn't exist.
   auto remapInPlace = [&](std::string &S) -> bool {
@@ -129,7 +128,6 @@ void DepscanPrefixMapping::remapInvocationPaths(CompilerInvocation &Invocation,
   Mapper.mapInPlaceOrClear(PPOpts.ImplicitPCHInclude);
 
   // Frontend options.
-  auto &FrontendOpts = Invocation.getFrontendOpts();
   remapInPlaceOrFilterOutWith(
       FrontendOpts.Inputs, [&](FrontendInputFile &Input) {
         if (Input.isBuffer())
@@ -288,7 +286,12 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
                 .moveInto(Root))
       return std::move(E);
   }
-  updateCompilerInvocation(Invocation, Saver, ProduceIncludeTree,
-                           Root->toString(), WorkingDirectory, Mapper);
+
+  // Turn off dependency outputs. Should have already been emitted.
+  Invocation.getDependencyOutputOpts().OutputFile.clear();
+
+  configureInvocationForCaching(Invocation, Tool.getCASOpts(), Root->toString(),
+                                WorkingDirectory.str(), ProduceIncludeTree);
+  DepscanPrefixMapping::remapInvocationPaths(Invocation, Mapper);
   return *Root;
 }

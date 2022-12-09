@@ -438,7 +438,7 @@ public:
     case ScanningOutputFormat::FullTree:
       MDC = std::make_shared<ModuleDepCollector>(
           std::move(Opts), ScanInstance, Consumer, OriginalInvocation,
-          OptimizeArgs, EagerLoadModules);
+          WorkingDirectory, OptimizeArgs, EagerLoadModules);
       ScanInstance.addDependencyCollector(MDC);
       if (CacheFS) {
         ScanInstance.setGenModuleActionWrapper(
