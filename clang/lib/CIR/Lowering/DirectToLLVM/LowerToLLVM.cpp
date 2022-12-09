@@ -115,20 +115,18 @@ public:
 //   }
 // };
 
-// class CIRStoreLowering : public mlir::ConversionPattern {
-// public:
-//   CIRStoreLowering(mlir::MLIRContext *ctx)
-//       : mlir::ConversionPattern(mlir::cir::StoreOp::getOperationName(), 1,
-//                                 ctx) {}
+class CIRStoreLowering : public mlir::OpConversionPattern<mlir::cir::StoreOp> {
+public:
+  using OpConversionPattern<mlir::cir::StoreOp>::OpConversionPattern;
 
-//   mlir::LogicalResult
-//   matchAndRewrite(mlir::Operation *op, ArrayRef<mlir::Value> operands,
-//                   mlir::ConversionPatternRewriter &rewriter) const override {
-//     rewriter.replaceOpWithNewOp<mlir::memref::StoreOp>(op, operands[0],
-//                                                        operands[1]);
-//     return mlir::LogicalResult::success();
-//   }
-// };
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::StoreOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::StoreOp>(op, adaptor.getValue(),
+                                                     adaptor.getAddr());
+    return mlir::LogicalResult::success();
+  }
+};
 
 class CIRConstantLowering
     : public mlir::OpConversionPattern<mlir::cir::ConstantOp> {
@@ -473,20 +471,19 @@ public:
 
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
-  patterns.add</*CIRLoadLowering, CIRStoreLowering,
+  patterns.add</*CIRLoadLowering,
                CIRUnaryOpLowering, CIRBinOpLowering,
                CIRCmpOpLowering, CIRBrOpLowering,
                CIRCallLowering, */
                CIRReturnLowering>(patterns.getContext());
-  patterns.add<CIRConstantLowering, CIRAllocaLowering, CIRFuncLowering>(
-      converter, patterns.getContext());
+  patterns.add<CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering,
+               CIRFuncLowering>(converter, patterns.getContext());
 }
 
-static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
-                                 mlir::MLIRContext *ctx) {
-  // converter.addConversion([&](mlir::cir::PointerType type) -> mlir::Type {
-  //   return mlir::MemRefType::get({-1}, type.getPointee());
-  // });
+static void prepareTypeConverter(mlir::LLVMTypeConverter &converter) {
+  converter.addConversion([&](mlir::cir::PointerType type) -> mlir::Type {
+    return mlir::LLVM::LLVMPointerType::get(type.getContext());
+  });
   // converter.addConversion(
   //     [&](mlir::IntegerType type) -> mlir::Type { return type; });
   // converter.addConversion(
@@ -503,7 +500,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   auto module = getOperation();
 
   mlir::LLVMTypeConverter converter(&getContext());
-  prepareTypeConverter(converter, &getContext());
+  prepareTypeConverter(converter);
 
   mlir::RewritePatternSet patterns(&getContext());
 

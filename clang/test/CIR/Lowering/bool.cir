@@ -1,11 +1,12 @@
 // RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
 // RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+// XFAIL: *
 
 module {
   cir.func @foo() {
     %1 = cir.cst(true) : !cir.bool
     %0 = cir.alloca !cir.bool, cir.ptr <!cir.bool>, ["a", init] {alignment = 1 : i64}
-    // cir.store %1, %0 : !cir.bool, cir.ptr <!cir.bool>
+    cir.store %1, %0 : !cir.bool, cir.ptr <!cir.bool>
     cir.return
   }
 }
@@ -14,8 +15,10 @@ module {
 //  MLIR-DAG: = llvm.mlir.constant(true) : i8
 //  MLIR-DAG: [[Value:%[a-z0-9]+]] = llvm.mlir.constant(1 : index) : i64
 //  MLIR-DAG: = llvm.alloca [[Value]] x i8 {alignment = 1 : i64} : (i64) -> !llvm.ptr
+//  MLIR-DAG: llvm.store %0, %2 : !llvm.ptr
 // MLIR-NEXT: llvm.return
 
 //      LLVM: define void @foo()
 // LLVM-NEXT:   %1 = alloca i8, i64 1, align 1
+// LLVM-NEXT:   store i8 -1, ptr %1, align 1
 // LLVM-NEXT:   ret void
