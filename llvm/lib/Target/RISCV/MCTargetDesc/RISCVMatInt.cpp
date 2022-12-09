@@ -20,7 +20,7 @@ static int getInstSeqCost(RISCVMatInt::InstSeq &Res, bool HasRVC) {
   for (auto Instr : Res) {
     // Assume instructions that aren't listed aren't compressible.
     bool Compressed = false;
-    switch (Instr.Opc) {
+    switch (Instr.getOpcode()) {
     case RISCV::SLLI:
     case RISCV::SRLI:
       Compressed = true;
@@ -28,7 +28,7 @@ static int getInstSeqCost(RISCVMatInt::InstSeq &Res, bool HasRVC) {
     case RISCV::ADDI:
     case RISCV::ADDIW:
     case RISCV::LUI:
-      Compressed = isInt<6>(Instr.Imm);
+      Compressed = isInt<6>(Instr.getImm());
       break;
     }
     // Two RVC instructions take the same space as one RVI instruction, but
@@ -49,6 +49,13 @@ static void generateInstSeqImpl(int64_t Val,
                                 const FeatureBitset &ActiveFeatures,
                                 RISCVMatInt::InstSeq &Res) {
   bool IsRV64 = ActiveFeatures[RISCV::Feature64Bit];
+
+  // Use BSETI for a single bit that can't be expressed by a single LUI or ADDI.
+  if (ActiveFeatures[RISCV::FeatureStdExtZbs] && isPowerOf2_64(Val) &&
+      (!isInt<32>(Val) || Val == 0x800)) {
+    Res.emplace_back(RISCV::BSETI, Log2_64(Val));
+    return;
+  }
 
   if (isInt<32>(Val)) {
     // Depending on the active bits in the immediate Value v, the following
@@ -72,12 +79,6 @@ static void generateInstSeqImpl(int64_t Val,
   }
 
   assert(IsRV64 && "Can't emit >32-bit imm for non-RV64 target");
-
-  // Use BSETI for a single bit.
-  if (ActiveFeatures[RISCV::FeatureStdExtZbs] && isPowerOf2_64(Val)) {
-    Res.emplace_back(RISCV::BSETI, Log2_64(Val));
-    return;
-  }
 
   // In the worst case, for a full 64-bit constant, a sequence of 8 instructions
   // (i.e., LUI+ADDIW+SLLI+ADDI+SLLI+ADDI+SLLI+ADDI) has to be emitted. Note

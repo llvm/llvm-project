@@ -1,4 +1,4 @@
-; RUN: opt < %s -print-callgraph -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=print-callgraph -disable-output 2>&1 | FileCheck %s
 
 @a = global ptr @f		; <ptr> [#uses=0]
 

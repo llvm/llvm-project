@@ -7,7 +7,7 @@ llvm.func @test_stand_alone_directives() {
   omp.barrier
 
   // CHECK: [[OMP_THREAD1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @{{[0-9]+}})
-  // CHECK-NEXT:  [[RET_VAL:%.*]] = call i32 @__kmpc_omp_taskwait(ptr @{{[0-9]+}}, i32 [[OMP_THREAD1]])
+  // CHECK-NEXT:  [[RET_VAL:%.*]] = call i32 @__kmpc_omp_taskwait_51(ptr @{{[0-9]+}}, i32 [[OMP_THREAD1]], i32 0)
   omp.taskwait
 
   // CHECK: [[OMP_THREAD2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @{{[0-9]+}})

@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: opt -loop-rotate -licm %s -disable-output -debug-only=licm 2>&1 | FileCheck %s -check-prefix=LICM
-; RUN: opt -loop-rotate -licm %s -S  | FileCheck %s
+; RUN: opt -passes='loop-mssa(loop-rotate,licm)' %s -disable-output -debug-only=licm 2>&1 | FileCheck %s -check-prefix=LICM
+; RUN: opt -passes='loop-mssa(loop-rotate,licm)' %s -S  | FileCheck %s
 
 ; LICM-NOT: LICM sinking instruction:   %.pre = load i8, ptr %arrayidx.phi.trans.insert
 

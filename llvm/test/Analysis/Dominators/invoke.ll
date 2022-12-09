@@ -1,4 +1,4 @@
-; RUN: opt -verify -disable-output < %s
+; RUN: opt -passes=verify -disable-output < %s
 ; This tests that we handle unreachable blocks correctly
 
 define void @f() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {

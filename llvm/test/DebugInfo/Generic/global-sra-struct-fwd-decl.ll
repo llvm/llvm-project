@@ -1,4 +1,4 @@
-; RUN: opt -S -globalopt < %s | FileCheck %s
+; RUN: opt -S -passes=globalopt < %s | FileCheck %s
 ; Generated at -O2 -g from:
 ; typedef struct {} a;
 ; static struct {

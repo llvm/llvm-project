@@ -1,4 +1,4 @@
-; RUN: opt -S -print-callgraph -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=print-callgraph -disable-output < %s 2>&1 | FileCheck %s
 
 declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)
 declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)

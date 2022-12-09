@@ -1,4 +1,4 @@
-; RUN: opt -lower-constant-intrinsics -S < %s | FileCheck %s
+; RUN: opt -passes=lower-constant-intrinsics -S < %s | FileCheck %s
 
 ;; Ensure that an unfoldable is.constant gets lowered reasonably in
 ;; optimized codegen, in particular, that the "true" branch is

@@ -1,4 +1,4 @@
-; RUN: opt %s -S -memcpyopt -o - -experimental-assignment-tracking | FileCheck %s
+; RUN: opt %s -S -passes=memcpyopt -o - -experimental-assignment-tracking | FileCheck %s
 
 ;; $ cat test.cpp
 ;; struct v {

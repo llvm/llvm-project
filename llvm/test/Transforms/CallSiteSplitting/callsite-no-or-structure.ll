@@ -1,5 +1,5 @@
-; RUN: opt < %s -callsite-splitting -S | FileCheck %s
-; RUN: opt < %s  -passes='function(callsite-splitting)' -S | FileCheck %s
+; RUN: opt < %s -passes=callsite-splitting -S | FileCheck %s
+; RUN: opt < %s -passes='function(callsite-splitting)' -S | FileCheck %s
 
 ; CHECK-LABEL: @test_simple
 ; CHECK-LABEL: Header:

@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-unknown -amdgpu-printf-runtime-binding < %s 2>&1 | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-printf-runtime-binding < %s 2>&1 | FileCheck %s
 
 @.str = private unnamed_addr addrspace(4) constant [6 x i8] c"%s:%d\00", align 1
 

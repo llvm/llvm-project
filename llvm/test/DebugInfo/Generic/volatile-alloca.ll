@@ -1,4 +1,4 @@
-; RUN: opt -mem2reg -instcombine %s -o - -S | FileCheck %s
+; RUN: opt -passes=mem2reg,instcombine %s -o - -S | FileCheck %s
 ;
 ; Test that a dbg.declare describing am alloca with volatile
 ; load/stores is not lowered into a dbg.value, since the alloca won't

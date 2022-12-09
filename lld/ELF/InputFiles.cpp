@@ -581,30 +581,6 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       }
     }
 
-    if (sec.sh_type == SHT_RISCV_ATTRIBUTES && config->emachine == EM_RISCV) {
-      RISCVAttributeParser attributes;
-      ArrayRef<uint8_t> contents =
-          check(this->getObj().getSectionContents(sec));
-      StringRef name = check(obj.getSectionName(sec, shstrtab));
-      this->sections[i] = &InputSection::discarded;
-      if (Error e = attributes.parse(contents, support::little)) {
-        InputSection isec(*this, sec, name);
-        warn(toString(&isec) + ": " + llvm::toString(std::move(e)));
-      } else {
-        // FIXME: Validate arch tag contains C if and only if EF_RISCV_RVC is
-        // present.
-
-        // FIXME: Retain the first attribute section we see. Tools such as
-        // llvm-objdump make use of the attribute section to determine which
-        // standard extensions to enable. In a full implementation we would
-        // merge all attribute sections.
-        if (in.attributes == nullptr) {
-          in.attributes = std::make_unique<InputSection>(*this, sec, name);
-          this->sections[i] = in.attributes.get();
-        }
-      }
-    }
-
     if (sec.sh_type != SHT_GROUP)
       continue;
     StringRef signature = getShtGroupSignature(objSections, sec);

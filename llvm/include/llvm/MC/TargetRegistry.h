@@ -19,7 +19,6 @@
 #define LLVM_MC_TARGETREGISTRY_H
 
 #include "llvm-c/DisassemblerTypes.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"

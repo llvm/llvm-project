@@ -1,5 +1,5 @@
 ; RUN: not llvm-as < %s 2>&1 | FileCheck %s
-; RUN: llvm-as -disable-verify < %s | opt -verify -S | FileCheck %s  --check-prefix=STRIP
+; RUN: llvm-as -disable-verify < %s | opt -passes=verify -S | FileCheck %s  --check-prefix=STRIP
 
 ; STRIP-NOT: tbaa
 ; STRIP: @f_0

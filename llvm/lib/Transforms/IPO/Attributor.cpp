@@ -226,7 +226,7 @@ bool AA::isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
 Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty,
                                     const TargetLibraryInfo *TLI,
                                     const DataLayout &DL,
-                                    AA::OffsetAndSize *OASPtr) {
+                                    AA::RangeTy *RangePtr) {
   if (isa<AllocaInst>(Obj))
     return UndefValue::get(&Ty);
   if (Constant *Init = getInitialValueOfAllocation(&Obj, TLI, &Ty))
@@ -239,8 +239,8 @@ Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty,
   if (!GV->hasInitializer())
     return UndefValue::get(&Ty);
 
-  if (OASPtr && !OASPtr->offsetOrSizeAreUnknown()) {
-    APInt Offset = APInt(64, OASPtr->Offset);
+  if (RangePtr && !RangePtr->offsetOrSizeAreUnknown()) {
+    APInt Offset = APInt(64, RangePtr->Offset);
     return ConstantFoldLoadFromConst(GV->getInitializer(), &Ty, Offset, DL);
   }
 
@@ -405,7 +405,7 @@ static bool getPotentialCopiesOfMemoryValue(
     };
 
     auto CheckAccess = [&](const AAPointerInfo::Access &Acc, bool IsExact) {
-      if ((IsLoad && !Acc.isWrite()) || (!IsLoad && !Acc.isRead()))
+      if ((IsLoad && !Acc.isWriteOrAssumption()) || (!IsLoad && !Acc.isRead()))
         return true;
       if (IsLoad && Acc.isWrittenValueYetUndetermined())
         return true;
@@ -456,11 +456,11 @@ static bool getPotentialCopiesOfMemoryValue(
     // object.
     bool HasBeenWrittenTo = false;
 
-    AA::OffsetAndSize OAS;
+    AA::RangeTy Range;
     auto &PI = A.getAAFor<AAPointerInfo>(QueryingAA, IRPosition::value(*Obj),
                                          DepClassTy::NONE);
     if (!PI.forallInterferingAccesses(A, QueryingAA, I, CheckAccess,
-                                      HasBeenWrittenTo, OAS)) {
+                                      HasBeenWrittenTo, Range)) {
       LLVM_DEBUG(
           dbgs()
           << "Failed to verify all interfering accesses for underlying object: "
@@ -468,10 +468,10 @@ static bool getPotentialCopiesOfMemoryValue(
       return false;
     }
 
-    if (IsLoad && !HasBeenWrittenTo && !OAS.isUnassigned()) {
+    if (IsLoad && !HasBeenWrittenTo && !Range.isUnassigned()) {
       const DataLayout &DL = A.getDataLayout();
       Value *InitialValue =
-          AA::getInitialValueForObj(*Obj, *I.getType(), TLI, DL, &OAS);
+          AA::getInitialValueForObj(*Obj, *I.getType(), TLI, DL, &Range);
       if (!InitialValue) {
         LLVM_DEBUG(dbgs() << "Could not determine required initial value of "
                              "underlying object, abort!\n");
@@ -2823,6 +2823,7 @@ void InformationCache::initializeInformationCache(const Function &CF,
       // For `llvm.assume` calls we also fill the KnowledgeMap as we find them.
       // For `must-tail` calls we remember the caller and callee.
       if (auto *Assume = dyn_cast<AssumeInst>(&I)) {
+        AssumeOnlyValues.insert(Assume);
         fillMapFromAssume(*Assume, KnowledgeMap);
         AddToAssumeUsesMap(*Assume->getArgOperand(0));
       } else if (cast<CallInst>(I).isMustTailCall()) {

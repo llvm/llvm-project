@@ -1,4 +1,4 @@
-; RUN: not opt -verify -S < %s 2>&1 >/dev/null | FileCheck %s
+; RUN: not opt -passes=verify -S < %s 2>&1 >/dev/null | FileCheck %s
 
 ; CHECK: The splice index exceeds the range [-VL, VL-1] where VL is the known minimum number of elements in the vector
 define <2 x double> @splice_v2f64_idx_neg3(<2 x double> %a, <2 x double> %b) #0 {

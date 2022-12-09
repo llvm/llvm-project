@@ -729,7 +729,8 @@ public:
   /// Generator for '#omp taskwait'
   ///
   /// \param Loc The location where the taskwait directive was encountered.
-  void createTaskwait(const LocationDescription &Loc);
+  void createTaskwait(const LocationDescription &Loc,
+                      bool HasNowaitClause = false);
 
   /// Generator for '#omp taskyield'
   ///
@@ -1018,7 +1019,8 @@ public:
   /// Generate a taskwait runtime call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
-  void emitTaskwaitImpl(const LocationDescription &Loc);
+  void emitTaskwaitImpl(const LocationDescription &Loc,
+                        bool HasNowaitClause = false);
 
   /// Generate a taskyield runtime call.
   ///
@@ -1077,7 +1079,7 @@ public:
   /// <critical_section_name> + ".var" for "omp critical" directives; 2)
   /// <mangled_name_for_global_var> + ".cache." for cache for threadprivate
   /// variables.
-  StringMap<AssertingVH<Constant>, BumpPtrAllocator> InternalVars;
+  StringMap<Constant*, BumpPtrAllocator> InternalVars;
 
   /// Create the global variable holding the offload mappings information.
   GlobalVariable *createOffloadMaptypes(SmallVectorImpl<uint64_t> &Mappings,

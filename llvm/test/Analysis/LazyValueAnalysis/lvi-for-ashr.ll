@@ -1,4 +1,4 @@
-; RUN: opt -correlated-propagation -S %s | FileCheck %s
+; RUN: opt -passes=correlated-propagation -S %s | FileCheck %s
 ; CHECK-LABEL: @test-ashr
 ; CHECK: bb_then
 ; CHECK:  %. = select i1 true, i32 3, i32 2

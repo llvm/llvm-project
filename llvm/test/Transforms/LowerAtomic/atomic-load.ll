@@ -1,4 +1,3 @@
-; RUN: opt < %s -loweratomic -S | FileCheck %s
 ; RUN: opt < %s -passes=loweratomic -S | FileCheck %s
 
 define i8 @add() {

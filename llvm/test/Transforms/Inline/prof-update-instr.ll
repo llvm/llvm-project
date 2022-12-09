@@ -2,8 +2,8 @@
 ; Checks if inliner updates VP metadata for indrect call instructions
 ; with instrumentation based profile.
 
-@func = global void ()* null
-@func2 = global void ()* null
+@func = global ptr null
+@func2 = global ptr null
 
 ; CHECK: define void @callee(i32 %n) !prof ![[ENTRY_COUNT:[0-9]*]]
 define void  @callee(i32 %n) !prof !15 {
@@ -11,12 +11,12 @@ define void  @callee(i32 %n) !prof !15 {
   br i1 %cond, label %cond_true, label %cond_false, !prof !20
 cond_true:
 ; f2 is optimized away, thus not updated.
-  %f2 = load void ()*, void ()** @func2
+  %f2 = load ptr, ptr @func2
 ; CHECK: call void %f2(), !prof ![[COUNT_IND_CALLEE1:[0-9]*]]
   call void %f2(), !prof !19
   ret void
 cond_false:
-  %f = load void ()*, void ()** @func
+  %f = load ptr, ptr @func
 ; CHECK: call void %f(), !prof ![[COUNT_IND_CALLEE:[0-9]*]]
   call void %f(), !prof !18
   ret void

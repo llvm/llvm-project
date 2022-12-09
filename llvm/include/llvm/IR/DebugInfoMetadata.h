@@ -599,11 +599,12 @@ public:
 
 private:
   std::optional<ChecksumInfo<MDString *>> Checksum;
-  std::optional<MDString *> Source;
+  /// An optional source. A nullptr means none.
+  MDString *Source;
 
   DIFile(LLVMContext &C, StorageType Storage,
-         std::optional<ChecksumInfo<MDString *>> CS,
-         std::optional<MDString *> Src, ArrayRef<Metadata *> Ops);
+         std::optional<ChecksumInfo<MDString *>> CS, MDString *Src,
+         ArrayRef<Metadata *> Ops);
   ~DIFile() = default;
 
   static DIFile *getImpl(LLVMContext &Context, StringRef Filename,
@@ -616,15 +617,13 @@ private:
       MDChecksum.emplace(CS->Kind, getCanonicalMDString(Context, CS->Value));
     return getImpl(Context, getCanonicalMDString(Context, Filename),
                    getCanonicalMDString(Context, Directory), MDChecksum,
-                   Source ? std::optional<MDString *>(
-                                getCanonicalMDString(Context, *Source))
-                          : std::nullopt,
-                   Storage, ShouldCreate);
+                   Source ? MDString::get(Context, *Source) : nullptr, Storage,
+                   ShouldCreate);
   }
   static DIFile *getImpl(LLVMContext &Context, MDString *Filename,
                          MDString *Directory,
                          std::optional<ChecksumInfo<MDString *>> CS,
-                         std::optional<MDString *> Source, StorageType Storage,
+                         MDString *Source, StorageType Storage,
                          bool ShouldCreate = true);
 
   TempDIFile cloneImpl() const {
@@ -641,7 +640,7 @@ public:
   DEFINE_MDNODE_GET(DIFile,
                     (MDString * Filename, MDString *Directory,
                      std::optional<ChecksumInfo<MDString *>> CS = std::nullopt,
-                     std::optional<MDString *> Source = std::nullopt),
+                     MDString *Source = nullptr),
                     (Filename, Directory, CS, Source))
 
   TempDIFile clone() const { return cloneImpl(); }
@@ -655,7 +654,7 @@ public:
     return StringRefChecksum;
   }
   std::optional<StringRef> getSource() const {
-    return Source ? std::optional<StringRef>((*Source)->getString())
+    return Source ? std::optional<StringRef>(Source->getString())
                   : std::nullopt;
   }
 
@@ -664,7 +663,7 @@ public:
   std::optional<ChecksumInfo<MDString *>> getRawChecksum() const {
     return Checksum;
   }
-  std::optional<MDString *> getRawSource() const { return Source; }
+  MDString *getRawSource() const { return Source; }
 
   static StringRef getChecksumKindAsString(ChecksumKind CSKind);
   static std::optional<ChecksumKind> getChecksumKind(StringRef CSKindStr);

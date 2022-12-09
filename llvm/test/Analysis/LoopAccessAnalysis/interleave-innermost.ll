@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-interleave=1 -S < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -S < %s | FileCheck %s
 ; CHECK-LABEL: TestFoo
 ; CHECK-NOT: %wide.vec
 

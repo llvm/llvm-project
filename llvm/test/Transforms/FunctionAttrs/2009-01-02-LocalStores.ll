@@ -1,4 +1,3 @@
-; RUN: opt < %s -function-attrs -S | FileCheck %s
 ; RUN: opt < %s -passes=function-attrs -S | FileCheck %s
 
 ; CHECK: define ptr @a(ptr nocapture readonly %p)

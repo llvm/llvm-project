@@ -1,4 +1,4 @@
-; RUN: not opt -verify -S < %s 2>&1 >/dev/null | FileCheck %s
+; RUN: not opt -passes=verify -S < %s 2>&1 >/dev/null | FileCheck %s
 
 ;
 ; Test that extractions/insertion indices are validated.

@@ -1,4 +1,3 @@
-; RUN: opt -S -loop-versioning-licm -licm-versioning-invariant-threshold=0 %s | FileCheck %s
 ; RUN: opt -S -passes='loop-versioning-licm' -licm-versioning-invariant-threshold=0 %s | FileCheck %s
 
 ; Make sure the convergent attribute is respected, and no condition is

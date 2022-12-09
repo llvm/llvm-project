@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=aarch64-linux-gnu -mattr=+sve -scalarize-masked-mem-intrin -S < %s | FileCheck %s
+; RUN: opt -mtriple=aarch64-linux-gnu -mattr=+sve -passes=scalarize-masked-mem-intrin -S < %s | FileCheck %s
 
 ; Testing that masked gathers operating on scalable vectors that are
 ; packed in SVE registers are not scalarized.

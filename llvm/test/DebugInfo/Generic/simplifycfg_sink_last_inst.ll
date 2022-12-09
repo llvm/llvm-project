@@ -1,4 +1,4 @@
-; RUN: opt -simplifycfg -sink-common-insts -S < %s | FileCheck %s
+; RUN: opt -passes=simplifycfg -sink-common-insts -S < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -13,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; extern int foo(void);
 ; extern int bar(void);
-; 
+;
 ; int test(int a, int b) {
 ;   if(a)
 ;     b -= foo();

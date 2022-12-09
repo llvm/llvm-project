@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S |FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S |FileCheck %s
 ; SCEV expansion uses existing value or value + offset to reduce duplicate code expansion so foo should only generate one select inst after loop vectorization.
 ; CHECK-LABEL: @foo(
 ; CHECK: select

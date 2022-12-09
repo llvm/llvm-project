@@ -1,4 +1,4 @@
-; RUN: opt -verify-loop-info -irce-print-changed-loops -irce < %s 2>&1 | FileCheck %s
+; RUN: opt -verify-loop-info -irce-print-changed-loops -passes=irce < %s 2>&1 | FileCheck %s
 ;
 ; TODO: new-pm version should be enabled after we decide on branch-probability handling for loop passes
 ; TODO: opt -verify-loop-info -irce-print-changed-loops -passes='require<branch-prob>,irce' < %s 2>&1 | FileCheck %s

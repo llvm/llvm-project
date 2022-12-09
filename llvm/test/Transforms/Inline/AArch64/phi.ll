@@ -1,4 +1,4 @@
-; RUN: opt -inline -mtriple=aarch64--linux-gnu -S -o - < %s -inline-threshold=0 | FileCheck %s
+; RUN: opt -passes=inline -mtriple=aarch64--linux-gnu -S -o - < %s -inline-threshold=0 | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
@@ -22,11 +22,11 @@ if_true:
   br i1 %phi, label %if_true, label %exit
 
 exit:
-  store i32 0, i32* @glbl
-  store i32 1, i32* @glbl
-  store i32 2, i32* @glbl
-  store i32 3, i32* @glbl
-  store i32 4, i32* @glbl
+  store i32 0, ptr @glbl
+  store i32 1, ptr @glbl
+  store i32 2, ptr @glbl
+  store i32 3, ptr @glbl
+  store i32 4, ptr @glbl
   ret i1 %phi
 }
 
@@ -69,11 +69,11 @@ if_true:
 exit:
   %phi = phi i32 [0, %entry], [0, %if_true] ; Simplified to 0
   %cmp = icmp eq i32 %phi, 0
-  store i32 0, i32* @glbl
-  store i32 1, i32* @glbl
-  store i32 2, i32* @glbl
-  store i32 3, i32* @glbl
-  store i32 4, i32* @glbl
+  store i32 0, ptr @glbl
+  store i32 1, ptr @glbl
+  store i32 2, ptr @glbl
+  store i32 3, ptr @glbl
+  store i32 4, ptr @glbl
   ret i1 %cmp
 }
 
@@ -126,7 +126,7 @@ exit:
   %phi = phi i32 [%val1, %entry], [%val2, %if_true] ; Can be simplified to a constant if %val1 and %val2 are the same constants
   %cmp = icmp eq i32 %phi, 0
   call void @pad()
-  store i32 0, i32* @glbl
+  store i32 0, ptr @glbl
   ret i1 %cmp
 }
 
@@ -149,8 +149,8 @@ exit:
   %phi = phi i32 [%val1, %entry], [%val2, %if_true] ; Simplified to 0
   %cmp = icmp eq i32 %phi, 0
   call void @pad()
-  store i32 0, i32* @glbl
-  store i32 1, i32* @glbl
+  store i32 0, ptr @glbl
+  store i32 1, ptr @glbl
   ret i1 %cmp
 }
 
@@ -173,8 +173,8 @@ exit:
   %phi = phi i32 [%val1, %entry], [%val2, %if_true] ; Simplified to 0
   %cmp = icmp eq i32 %phi, 0
   call void @pad()
-  store i32 0, i32* @glbl
-  store i32 1, i32* @glbl
+  store i32 0, ptr @glbl
+  store i32 1, ptr @glbl
   ret i1 %cmp
 }
 
@@ -253,7 +253,7 @@ exit:
   %phi = phi i32 [0, %zero], [1, %one], [2, %two_true], [2, %two_false], [-1, %entry] ; Simplified to 0
   %cmp = icmp eq i32 %phi, 0
   call void @pad()
-  store i32 0, i32* @glbl
+  store i32 0, ptr @glbl
   ret i1 %cmp
 }
 
@@ -262,17 +262,17 @@ define i32 @outer10(i1 %cond) {
 ; CHECK-LABEL: @outer10(
 ; CHECK-NOT: call i32 @inner10
   %A = alloca i32
-  %C = call i32 @inner10(i1 %cond, i32* %A)
+  %C = call i32 @inner10(i1 %cond, ptr %A)
   ret i32 %C
 }
 
-define i32 @inner10(i1 %cond, i32* %A) {
+define i32 @inner10(i1 %cond, ptr %A) {
 entry:
   br label %if_true
 
 if_true:
-  %phi = phi i32* [%A, %entry], [%phi, %if_true] ; Simplified to %A
-  %load = load i32, i32* %phi
+  %phi = phi ptr [%A, %entry], [%phi, %if_true] ; Simplified to %A
+  %load = load i32, ptr %phi
   br i1 %cond, label %if_true, label %exit
 
 exit:
@@ -281,20 +281,20 @@ exit:
 }
 
 
-define i32 @outer11(i1 %cond, i32* %ptr) {
+define i32 @outer11(i1 %cond, ptr %ptr) {
 ; CHECK-LABEL: @outer11(
 ; CHECK: call i32 @inner11
-  %C = call i32 @inner11(i1 %cond, i32* %ptr)
+  %C = call i32 @inner11(i1 %cond, ptr %ptr)
   ret i32 %C
 }
 
-define i32 @inner11(i1 %cond, i32* %ptr) {
+define i32 @inner11(i1 %cond, ptr %ptr) {
 entry:
   br label %if_true
 
 if_true:
-  %phi = phi i32* [%ptr, %entry], [%phi, %if_true] ; Cannot be simplified
-  %load = load i32, i32* %phi
+  %phi = phi ptr [%ptr, %entry], [%phi, %if_true] ; Cannot be simplified
+  %load = load i32, ptr %phi
   br i1 %cond, label %if_true, label %exit
 
 exit:
@@ -307,11 +307,11 @@ define i32 @outer12(i1 %cond) {
 ; CHECK-LABEL: @outer12(
 ; CHECK-NOT: call i32 @inner12
   %A = alloca i32
-  %C = call i32 @inner12(i1 %cond, i32* %A)
+  %C = call i32 @inner12(i1 %cond, ptr %A)
   ret i32 %C
 }
 
-define i32 @inner12(i1 %cond, i32* %ptr) {
+define i32 @inner12(i1 %cond, ptr %ptr) {
 entry:
   br i1 %cond, label %if_true, label %exit
 
@@ -319,8 +319,8 @@ if_true:
   br label %exit
 
 exit:
-  %phi = phi i32* [%ptr, %entry], [%ptr, %if_true] ; Simplified to %A
-  %load = load i32, i32* %phi
+  %phi = phi ptr [%ptr, %entry], [%ptr, %if_true] ; Simplified to %A
+  %load = load i32, ptr %phi
   call void @pad()
   ret i32 %load
 }
@@ -330,23 +330,23 @@ define i32 @outer13(i1 %cond) {
 ; CHECK-LABEL: @outer13(
 ; CHECK-NOT: call i32 @inner13
   %A = alloca i32
-  %C = call i32 @inner13(i1 %cond, i32* %A)
+  %C = call i32 @inner13(i1 %cond, ptr %A)
   ret i32 %C
 }
 
-define i32 @inner13(i1 %cond, i32* %ptr) {
+define i32 @inner13(i1 %cond, ptr %ptr) {
 entry:
-  %gep1 = getelementptr inbounds i32, i32* %ptr, i32 2
-  %gep2 = getelementptr inbounds i32, i32* %ptr, i32 1
+  %gep1 = getelementptr inbounds i32, ptr %ptr, i32 2
+  %gep2 = getelementptr inbounds i32, ptr %ptr, i32 1
   br i1 %cond, label %if_true, label %exit
 
 if_true:
-  %gep3 = getelementptr inbounds i32, i32* %gep2, i32 1
+  %gep3 = getelementptr inbounds i32, ptr %gep2, i32 1
   br label %exit
 
 exit:
-  %phi = phi i32* [%gep1, %entry], [%gep3, %if_true] ; Simplifeid to %gep1
-  %load = load i32, i32* %phi
+  %phi = phi ptr [%gep1, %entry], [%gep3, %if_true] ; Simplifeid to %gep1
+  %load = load i32, ptr %phi
   call void @pad()
   ret i32 %load
 }
@@ -357,11 +357,11 @@ define i32 @outer14(i1 %cond) {
 ; CHECK: call i32 @inner14
   %A1 = alloca i32
   %A2 = alloca i32
-  %C = call i32 @inner14(i1 %cond, i32* %A1, i32* %A2)
+  %C = call i32 @inner14(i1 %cond, ptr %A1, ptr %A2)
   ret i32 %C
 }
 
-define i32 @inner14(i1 %cond, i32* %ptr1, i32* %ptr2) {
+define i32 @inner14(i1 %cond, ptr %ptr1, ptr %ptr2) {
 entry:
   br i1 %cond, label %if_true, label %exit
 
@@ -369,23 +369,23 @@ if_true:
   br label %exit
 
 exit:
-  %phi = phi i32* [%ptr1, %entry], [%ptr2, %if_true] ; Cannot be simplified
-  %load = load i32, i32* %phi
+  %phi = phi ptr [%ptr1, %entry], [%ptr2, %if_true] ; Cannot be simplified
+  %load = load i32, ptr %phi
   call void @pad()
-  store i32 0, i32* @glbl
+  store i32 0, ptr @glbl
   ret i32 %load
 }
 
 
-define i32 @outer15(i1 %cond, i32* %ptr) {
+define i32 @outer15(i1 %cond, ptr %ptr) {
 ; CHECK-LABEL: @outer15(
 ; CHECK-NOT: call i32 @inner15
   %A = alloca i32
-  %C = call i32 @inner15(i1 true, i32* %ptr, i32* %A)
+  %C = call i32 @inner15(i1 true, ptr %ptr, ptr %A)
   ret i32 %C
 }
 
-define i32 @inner15(i1 %cond, i32* %ptr1, i32* %ptr2) {
+define i32 @inner15(i1 %cond, ptr %ptr1, ptr %ptr2) {
 entry:
   br i1 %cond, label %if_true, label %exit
 
@@ -393,24 +393,24 @@ if_true:
   br label %exit
 
 exit:
-  %phi = phi i32* [%ptr1, %entry], [%ptr2, %if_true] ; Simplified to %A
-  %load = load i32, i32* %phi
+  %phi = phi ptr [%ptr1, %entry], [%ptr2, %if_true] ; Simplified to %A
+  %load = load i32, ptr %phi
   call void @pad()
-  store i32 0, i32* @glbl
-  store i32 1, i32* @glbl
+  store i32 0, ptr @glbl
+  store i32 1, ptr @glbl
   ret i32 %load
 }
 
 
-define i32 @outer16(i1 %cond, i32* %ptr) {
+define i32 @outer16(i1 %cond, ptr %ptr) {
 ; CHECK-LABEL: @outer16(
 ; CHECK-NOT: call i32 @inner16
   %A = alloca i32
-  %C = call i32 @inner16(i1 false, i32* %A, i32* %ptr)
+  %C = call i32 @inner16(i1 false, ptr %A, ptr %ptr)
   ret i32 %C
 }
 
-define i32 @inner16(i1 %cond, i32* %ptr1, i32* %ptr2) {
+define i32 @inner16(i1 %cond, ptr %ptr1, ptr %ptr2) {
 entry:
   br i1 %cond, label %if_true, label %exit
 
@@ -418,11 +418,11 @@ if_true:
   br label %exit
 
 exit:
-  %phi = phi i32* [%ptr1, %entry], [%ptr2, %if_true] ; Simplified to %A
-  %load = load i32, i32* %phi
+  %phi = phi ptr [%ptr1, %entry], [%ptr2, %if_true] ; Simplified to %A
+  %load = load i32, ptr %phi
   call void @pad()
-  store i32 0, i32* @glbl
-  store i32 1, i32* @glbl
+  store i32 0, ptr @glbl
+  store i32 1, ptr @glbl
   ret i32 %load
 }
 
@@ -431,11 +431,11 @@ define i1 @outer17(i1 %cond) {
 ; CHECK-LABEL: @outer17(
 ; CHECK: call i1 @inner17
   %A = alloca i32
-  %C = call i1 @inner17(i1 %cond, i32* %A)
+  %C = call i1 @inner17(i1 %cond, ptr %A)
   ret i1 %C
 }
 
-define i1 @inner17(i1 %cond, i32* %ptr) {
+define i1 @inner17(i1 %cond, ptr %ptr) {
 entry:
   br i1 %cond, label %if_true, label %exit
 
@@ -443,8 +443,8 @@ if_true:
   br label %exit
 
 exit:
-  %phi = phi i32* [null, %entry], [%ptr, %if_true] ; Cannot be mapped to a constant
-  %cmp = icmp eq i32* %phi, null
+  %phi = phi ptr [null, %entry], [%ptr, %if_true] ; Cannot be mapped to a constant
+  %cmp = icmp eq ptr %phi, null
   call void @pad()
   ret i1 %cmp
 }
@@ -485,11 +485,11 @@ define i1 @outer19(i1 %cond) {
 ; CHECK-LABEL: @outer19(
 ; CHECK: call i1 @inner19
   %A = alloca i32
-  %C = call i1 @inner19(i1 %cond, i32* %A)
+  %C = call i1 @inner19(i1 %cond, ptr %A)
   ret i1 %C
 }
 
-define i1 @inner19(i1 %cond, i32* %ptr) {
+define i1 @inner19(i1 %cond, ptr %ptr) {
 entry:
   br i1 %cond, label %if_true, label %exit
 
@@ -497,8 +497,8 @@ if_true:
   br label %exit
 
 exit:
-  %phi = phi i32* [%ptr, %entry], [null, %if_true] ; Cannot be mapped to a constant
-  %cmp = icmp eq i32* %phi, null
+  %phi = phi ptr [%ptr, %entry], [null, %if_true] ; Cannot be mapped to a constant
+  %cmp = icmp eq ptr %phi, null
   call void @pad()
   ret i1 %cmp
 }

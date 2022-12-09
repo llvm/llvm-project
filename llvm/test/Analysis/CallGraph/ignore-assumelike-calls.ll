@@ -1,4 +1,4 @@
-; RUN: opt < %s -print-callgraph -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=print-callgraph -disable-output 2>&1 | FileCheck %s
 ; CHECK: Call graph node <<null function>><<{{.*}}>>  #uses=0
 ; CHECK-NEXT:   CS<None> calls function 'other_intrinsic_use'
 ; CHECK-NEXT:   CS<None> calls function 'other_cast_intrinsic_use'

@@ -1,4 +1,4 @@
-; RUN: opt < %s -verify -S | FileCheck %s
+; RUN: opt < %s -passes=verify -S | FileCheck %s
 
 ; CHECK: DW_LANG_Mips_Assembler
 

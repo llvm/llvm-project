@@ -1,4 +1,4 @@
-; RUN: opt -loop-versioning -S < %s | FileCheck %s
+; RUN: opt -passes=loop-versioning -S < %s | FileCheck %s
 
 ; NB: addrspaces 10-13 are non-integral
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:10:11:12:13"
@@ -10,7 +10,7 @@ define void @"japi1_permutedims!_33509"(%jl_value_t addrspace(10)**) {
 ; CHECK: [[CMP:%[^ ]*]] = icmp ult double addrspace(13)* [[A:%[^ ]*]], [[B:%[^ ]*]]
 ; CHECK: [[SELECT:%[^ ]*]] = select i1 %18, double addrspace(13)* [[A]], double addrspace(13)* [[B]]
 top:
-  %1 = alloca [3 x i64], align 8 
+  %1 = alloca [3 x i64], align 8
   %2 = load %jl_value_t addrspace(10)*, %jl_value_t addrspace(10)** %0, align 8
   %3 = getelementptr inbounds %jl_value_t addrspace(10)*, %jl_value_t addrspace(10)** %0, i64 1
   %4 = load %jl_value_t addrspace(10)*, %jl_value_t addrspace(10)** %3, align 8
@@ -46,5 +46,5 @@ L74:
   br i1 %24, label %L94, label %L74
 
 L94:
-  ret void 
+  ret void
 }

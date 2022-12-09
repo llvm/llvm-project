@@ -1,4 +1,4 @@
-; RUN: opt -verify-loop-info -irce-print-changed-loops -irce -S
+; RUN: opt -verify-loop-info -irce-print-changed-loops -passes=irce -S
 ; RUN: opt -verify-loop-info -irce-print-changed-loops -passes='require<branch-prob>,irce' -S
 
 ; Make sure that IRCE doesn't apply in case of empty ranges.

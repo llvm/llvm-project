@@ -1,23 +1,3 @@
-; RUN: opt < %s -S -inline -pass-remarks-missed=inline \
-; RUN:     -pass-remarks-with-hotness -pass-remarks-hotness-threshold 15 \
-; RUN:     -pass-remarks-output=%t 2>&1 | FileCheck %s
-; RUN: cat %t | FileCheck -check-prefix=YAML %s
-; RUN: opt < %s -S -inline -pass-remarks-with-hotness -pass-remarks-output=%t
-; RUN: cat %t | FileCheck -check-prefix=YAML %s
-;
-; Verify that remarks that don't meet the hotness threshold are not output.
-; RUN: opt < %s -S -inline -pass-remarks-missed=inline \
-; RUN:     -pass-remarks-with-hotness -pass-remarks-hotness-threshold 100 \
-; RUN:     -pass-remarks-output=%t.threshold 2>&1 | \
-; RUN:     FileCheck -check-prefix=THRESHOLD %s
-; RUN: test ! -s %t.threshold
-; RUN: opt < %s -S -inline \
-; RUN:     -pass-remarks-with-hotness -pass-remarks-hotness-threshold 100 \
-; RUN:     -pass-remarks-output=%t.threshold
-; The remarks output file should be empty.
-; RUN: test ! -s %t.threshold
-
-; NewPM:
 ; RUN: opt < %s -S -passes=inline -pass-remarks-missed=inline \
 ; RUN:     -pass-remarks-with-hotness -pass-remarks-hotness-threshold 15 \
 ; RUN:     -pass-remarks-output=%t 2>&1 | FileCheck %s
@@ -34,6 +14,8 @@
 ; RUN: opt < %s -S -passes=inline \
 ; RUN:     -pass-remarks-with-hotness -pass-remarks-hotness-threshold 100 \
 ; RUN:     -pass-remarks-output=%t.threshold
+; The remarks output file should be empty.
+; RUN: test ! -s %t.threshold
 
 ; Inliner - Module Wrapper
 ; RUN: opt < %s -S -passes=inliner-wrapper -pass-remarks-missed=inline \

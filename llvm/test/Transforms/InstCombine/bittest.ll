@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S |\
+; RUN: opt < %s -passes=instcombine,simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S |\
 ; RUN:    not grep "call void @abort"
 
 @b_rec.0 = external global i32          ; <ptr> [#uses=2]

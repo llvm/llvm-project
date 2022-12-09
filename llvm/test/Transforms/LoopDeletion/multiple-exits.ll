@@ -3,9 +3,7 @@
 ; critical components remain after those passes and are visible to the loop
 ; deletion pass.
 ;
-; RUN: opt < %s -loop-simplify -lcssa -S | FileCheck %s --check-prefixes=CHECK,BEFORE
-; RUN: opt < %s -loop-deletion -S | FileCheck %s --check-prefixes=CHECK,AFTER
-;
+; RUN: opt < %s -passes=loop-simplify,lcssa -S | FileCheck %s --check-prefixes=CHECK,BEFORE
 ; RUN: opt < %s -passes=no-op-loop -S | FileCheck %s --check-prefixes=CHECK,BEFORE
 ; RUN: opt < %s -passes=loop-deletion -S | FileCheck %s --check-prefixes=CHECK,AFTER
 

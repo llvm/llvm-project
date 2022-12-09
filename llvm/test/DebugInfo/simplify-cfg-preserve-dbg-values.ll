@@ -1,4 +1,4 @@
-; RUN: opt %s -simplifycfg -verify -S -o - | FileCheck %s
+; RUN: opt %s -passes=simplifycfg,verify -S -o - | FileCheck %s
 ;
 ; Verify that SimplifyCFG does not invalidate operands for
 ; llvm.dbg.value intrinsics.

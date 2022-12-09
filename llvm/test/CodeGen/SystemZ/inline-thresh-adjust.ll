@@ -1,4 +1,4 @@
-; RUN: opt < %s -mtriple=systemz-unknown -mcpu=z15 -inline -disable-output \
+; RUN: opt < %s -mtriple=systemz-unknown -mcpu=z15 -passes='cgscc(inline)' -disable-output \
 ; RUN:   -debug-only=inline,systemztti 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 ;

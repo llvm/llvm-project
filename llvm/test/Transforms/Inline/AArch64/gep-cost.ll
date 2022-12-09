@@ -1,21 +1,21 @@
 ; REQUIRES: asserts
-; RUN: opt -inline -mtriple=aarch64--linux-gnu -mcpu=kryo -S -debug-only=inline-cost < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=inline -mtriple=aarch64--linux-gnu -mcpu=kryo -S -debug-only=inline-cost < %s 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
 
-define void @outer1([4 x i32]* %ptr, i32 %i) {
-  call void @inner1([4 x i32]* %ptr, i32 %i)
+define void @outer1(ptr %ptr, i32 %i) {
+  call void @inner1(ptr %ptr, i32 %i)
   ret void
 }
 
-define void @outer2([4 x i32]* %ptr, i32 %i) {
-  call void @inner2([4 x i32]* %ptr, i32 %i)
+define void @outer2(ptr %ptr, i32 %i) {
+  call void @inner2(ptr %ptr, i32 %i)
   ret void
 }
 
-define void @outer3([4 x i32]* %ptr, i32 %j) {
-  call void @inner3([4 x i32]* %ptr, i32 0, i32 %j)
+define void @outer3(ptr %ptr, i32 %j) {
+  call void @inner3(ptr %ptr, i32 0, i32 %j)
   ret void
 }
 
@@ -24,8 +24,8 @@ define void @outer3([4 x i32]* %ptr, i32 %j) {
 ; CHECK: Analyzing call of inner1
 ; CHECK: NumInstructionsSimplified: 2
 ; CHECK: NumInstructions: 2
-define void @inner1([4 x i32]* %ptr, i32 %i) {
-  %G = getelementptr inbounds [4 x i32], [4 x i32]* %ptr, i32 0, i32 %i
+define void @inner1(ptr %ptr, i32 %i) {
+  %G = getelementptr inbounds [4 x i32], ptr %ptr, i32 0, i32 %i
   ret void
 }
 
@@ -34,8 +34,8 @@ define void @inner1([4 x i32]* %ptr, i32 %i) {
 ; CHECK: Analyzing call of inner2
 ; CHECK: NumInstructionsSimplified: 1
 ; CHECK: NumInstructions: 2
-define void @inner2([4 x i32]* %ptr, i32 %i) {
-  %G = getelementptr inbounds [4 x i32], [4 x i32]* %ptr, i32 1, i32 %i
+define void @inner2(ptr %ptr, i32 %i) {
+  %G = getelementptr inbounds [4 x i32], ptr %ptr, i32 1, i32 %i
   ret void
 }
 
@@ -45,7 +45,7 @@ define void @inner2([4 x i32]* %ptr, i32 %i) {
 ; CHECK: Analyzing call of inner3
 ; CHECK: NumInstructionsSimplified: 2
 ; CHECK: NumInstructions: 2
-define void @inner3([4 x i32]* %ptr, i32 %i, i32 %j) {
-  %G = getelementptr inbounds [4 x i32], [4 x i32]* %ptr, i32 %i, i32 %j
+define void @inner3(ptr %ptr, i32 %i, i32 %j) {
+  %G = getelementptr inbounds [4 x i32], ptr %ptr, i32 %i, i32 %j
   ret void
 }

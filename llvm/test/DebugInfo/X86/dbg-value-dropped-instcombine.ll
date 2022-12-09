@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S %s -o - | FileCheck %s
+; RUN: opt -passes=instcombine -S %s -o - | FileCheck %s
 
 ; In pr40648 one of two dbg.values used to describe the variable bumble was
 ; being dropped by instcombine. Test that both dbg.values survive instcombine.

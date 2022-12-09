@@ -1,4 +1,4 @@
-; RUN: opt < %s -print-callgraph -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=print-callgraph -disable-output 2>&1 | FileCheck %s
 
 ; The test will report used1 and used2 functions as used on the grounds
 ; of llvm.*.used references. Passing IgnoreLLVMUsed = true into the

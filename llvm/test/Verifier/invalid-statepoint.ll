@@ -1,4 +1,4 @@
-; RUN: not opt -verify 2>&1 < %s | FileCheck %s
+; RUN: not opt -passes=verify 2>&1 < %s | FileCheck %s
 
 declare zeroext i1 @return0i1()
 
