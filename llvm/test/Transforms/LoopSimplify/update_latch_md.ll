@@ -1,4 +1,4 @@
-; RUN: opt -loop-simplify -S < %s | FileCheck %s
+; RUN: opt -passes=loop-simplify -S < %s | FileCheck %s
 
 ; This will test whether or not the metadata from the current loop 1 latch
 ; is removed, and applied to the new latch after running the loop-simplify

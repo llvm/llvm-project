@@ -1,4 +1,4 @@
-; RUN: opt -loop-simplify -S < %s | FileCheck %s
+; RUN: opt -passes=loop-simplify -S < %s | FileCheck %s
 
 ; LoopSimplify shouldn't split loop backedges that use indirectbr.
 
