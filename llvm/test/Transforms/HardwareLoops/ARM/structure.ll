@@ -1,8 +1,8 @@
-; RUN: opt -temporarily-allow-old-pass-syntax -mtriple=thumbv8.1m.main-none-none-eabi -hardware-loops %s -S -o - | \
+; RUN: opt -mtriple=thumbv8.1m.main-none-none-eabi -hardware-loops %s -S -o - | \
 ; RUN:     FileCheck %s
-; RUN: opt -temporarily-allow-old-pass-syntax -mtriple=thumbv8.1m.main -loop-unroll -unroll-remainder=false -S < %s | \
+; RUN: opt -mtriple=thumbv8.1m.main -passes=loop-unroll -unroll-remainder=false -S < %s | \
 ; RUN:     llc -mtriple=thumbv8.1m.main | FileCheck %s --check-prefix=CHECK-UNROLL
-; RUN: opt -temporarily-allow-old-pass-syntax -mtriple=thumbv8.1m.main-none-none-eabi -hardware-loops \
+; RUN: opt -mtriple=thumbv8.1m.main-none-none-eabi -hardware-loops \
 ; RUN:     -pass-remarks-analysis=hardware-loops  %s -S -o - 2>&1 | \
 ; RUN:     FileCheck %s --check-prefix=CHECK-REMARKS
 
