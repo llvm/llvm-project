@@ -9,29 +9,29 @@ target triple = "x86_64-apple-darwin13.4.0"
 ; CHECK: NoAlias:	i32* %arrayidx14, i32* %out
 ; CHECK: MayAlias:	i32* %arrayidx14, i32* %arrayidx8
 ; CHECK: MayAlias:	i32* %arrayidx11, i32* %arrayidx14
-define void @compute1(i32 %num.0.lcssa, i32* %out) {
+define void @compute1(i32 %num.0.lcssa, ptr %out) {
   %idxprom = zext i32 %num.0.lcssa to i64
-  %arrayidx8 = getelementptr inbounds i32, i32* %out, i64 %idxprom
+  %arrayidx8 = getelementptr inbounds i32, ptr %out, i64 %idxprom
   %add9 = or i32 %num.0.lcssa, 1
   %idxprom10 = zext i32 %add9 to i64
-  %arrayidx11 = getelementptr inbounds i32, i32* %out, i64 %idxprom10
+  %arrayidx11 = getelementptr inbounds i32, ptr %out, i64 %idxprom10
   %add12 = or i32 %num.0.lcssa, 2
   %idxprom13 = zext i32 %add12 to i64
-  %arrayidx14 = getelementptr inbounds i32, i32* %out, i64 %idxprom13
-  load i32, i32* %out
-  load i32, i32* %arrayidx8
-  load i32, i32* %arrayidx11
-  load i32, i32* %arrayidx14
+  %arrayidx14 = getelementptr inbounds i32, ptr %out, i64 %idxprom13
+  load i32, ptr %out
+  load i32, ptr %arrayidx8
+  load i32, ptr %arrayidx11
+  load i32, ptr %arrayidx14
   ret void
 }
 
 ; CHECK-LABEL: compute2
 ; CHECK: MayAlias: i32* %arrayidx11, i32* %out.addr
-define void @compute2(i32 %num, i32* %out.addr) {
+define void @compute2(i32 %num, ptr %out.addr) {
   %add9 = add i32 %num, 1
   %idxprom10 = zext i32 %add9 to i64
-  %arrayidx11 = getelementptr inbounds i32, i32* %out.addr, i64 %idxprom10
-  load i32, i32* %out.addr
-  load i32, i32* %arrayidx11
+  %arrayidx11 = getelementptr inbounds i32, ptr %out.addr, i64 %idxprom10
+  load i32, ptr %out.addr
+  load i32, ptr %arrayidx11
   ret void
 }
