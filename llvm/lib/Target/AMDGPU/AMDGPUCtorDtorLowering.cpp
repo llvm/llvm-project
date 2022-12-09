@@ -56,16 +56,17 @@ public:
     ConstantArray *GA = dyn_cast<ConstantArray>(GV->getInitializer());
     if (!GA || GA->getNumOperands() == 0)
       return false;
+
     Function *InitOrFiniKernel = createInitOrFiniKernelFunction(M, IsCtor);
     IRBuilder<> IRB(InitOrFiniKernel->getEntryBlock().getTerminator());
+
+    FunctionType *ConstructorTy = InitOrFiniKernel->getFunctionType();
+
     for (Value *V : GA->operands()) {
       auto *CS = cast<ConstantStruct>(V);
-      if (Function *F = dyn_cast<Function>(CS->getOperand(1))) {
-        FunctionCallee Ctor =
-            M.getOrInsertFunction(F->getName(), IRB.getVoidTy());
-        IRB.CreateCall(Ctor);
-      }
+      IRB.CreateCall(ConstructorTy, CS->getOperand(1));
     }
+
     appendToUsed(M, {InitOrFiniKernel});
     return true;
   }
