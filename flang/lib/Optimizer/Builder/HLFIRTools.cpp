@@ -73,9 +73,13 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
                                 hlfir::Entity entity) {
   if (auto variable = entity.getIfVariableInterface())
     return {hlfir::translateToExtendedValue(loc, builder, variable), {}};
-  if (entity.isVariable())
+  if (entity.isVariable()) {
+    if (entity.isScalar() && !entity.hasLengthParameters() &&
+        !hlfir::isBoxAddressOrValueType(entity.getType()))
+      return {fir::ExtendedValue{entity.getBase()}, llvm::None};
     TODO(loc, "HLFIR variable to fir::ExtendedValue without a "
               "FortranVariableOpInterface");
+  }
   if (entity.getType().isa<hlfir::ExprType>()) {
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
         loc, builder, entity, entity.getType(), "adapt.valuebyref");
