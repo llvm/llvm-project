@@ -1,5 +1,5 @@
 ; RUN: opt < %s -O2 -S
-; RUN: opt -S -hoist-common-insts -hoist-common-insts -simplifycfg < %s | FileCheck %s --check-prefixes=CHECK
+; RUN: opt -S -hoist-common-insts -hoist-common-insts -passes=simplifycfg < %s | FileCheck %s --check-prefixes=CHECK
 target datalayout = "p:64:64:64"
 %swift.async_func_pointer = type <{ i32, i32 }>
 %swift.context = type { %swift.context*, void (%swift.context*)* }
@@ -68,7 +68,7 @@ declare swifttailcc void @swift_task_switch(%swift.context*, i8*)
 
 define internal swifttailcc void @repo.1(i8* %0, %swift.context* %1) {
 entry:
-  musttail call swifttailcc void @swift_task_switch(%swift.context* swiftasync %1, i8* %0) 
+  musttail call swifttailcc void @swift_task_switch(%swift.context* swiftasync %1, i8* %0)
   ret void
 }
 
