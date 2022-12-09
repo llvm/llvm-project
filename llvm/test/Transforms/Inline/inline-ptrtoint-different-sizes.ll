@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 
 ; InlineCost used to have problems with the ptrtoint, leading to
 ; crashes when visiting the trunc in pr47969_help and the icmp in

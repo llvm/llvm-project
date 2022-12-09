@@ -1,7 +1,7 @@
-; RUN: opt < %s -inline -pass-remarks=inline -pass-remarks-missed=inline \
+; RUN: opt < %s -passes=inline -pass-remarks=inline -pass-remarks-missed=inline \
 ; RUN:       -pass-remarks-analysis=inline -S 2>&1 | \
 ; RUN:       FileCheck -check-prefixes=CHECK,NO_HOTNESS,ALWAYS %s
-; RUN: opt < %s -inline -pass-remarks=inline -pass-remarks-missed=inline \
+; RUN: opt < %s -passes=inline -pass-remarks=inline -pass-remarks-missed=inline \
 ; RUN:       -pass-remarks-analysis=inline -pass-remarks-with-hotness -S 2>&1 | \
 ; RUN:       FileCheck -check-prefixes=CHECK,HOTNESS,ALWAYS %s
 
@@ -77,7 +77,7 @@ entry:
   %mul = fmul float %conv, %call2
   %conv3 = fptosi float %mul to i32
   %call3 = call i32 @fox()
-  %add = add i32 %conv3, %call 
+  %add = add i32 %conv3, %call
   ret i32 %add
 }
 

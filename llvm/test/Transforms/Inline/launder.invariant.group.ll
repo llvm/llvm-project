@@ -1,6 +1,6 @@
-; RUN: opt -S -inline < %s | FileCheck %s
+; RUN: opt -S -passes=inline < %s | FileCheck %s
 ; RUN: opt -S -O3 < %s | FileCheck %s
-; RUN: opt -S -inline -inline-threshold=1 < %s | FileCheck %s
+; RUN: opt -S -passes=inline -inline-threshold=1 < %s | FileCheck %s
 
 %struct.A = type <{ i32 (...)**, i32, [4 x i8] }>
 

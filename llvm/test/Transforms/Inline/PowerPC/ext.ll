@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -inline -S -debug-only=inline-cost < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=inline -S -debug-only=inline-cost < %s 2>&1 | FileCheck %s
 
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64le-ibm-linux-gnu"

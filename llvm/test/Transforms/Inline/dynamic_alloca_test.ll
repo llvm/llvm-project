@@ -3,7 +3,7 @@
 ; Functions with dynamic allocas can only be inlined into functions that
 ; already have dynamic allocas.
 
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 ;
 ; FIXME: This test is xfailed because the inline cost rewrite disabled *all*
 ; inlining of functions which contain a dynamic alloca. It should be re-enabled

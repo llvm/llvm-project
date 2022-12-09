@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -loop-rotate -verify-dom-info -verify-loop-info -disable-output
+; RUN: opt < %s  -passes=inline,loop-rotate -verify-dom-info -verify-loop-info -disable-output
 ; PR3601
 declare void @solve()
 

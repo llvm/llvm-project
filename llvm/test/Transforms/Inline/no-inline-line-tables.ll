@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 
 ; This tests that functions with the attribute `no-inline-line-tables` have the
 ; correct debug information when they are inlined.

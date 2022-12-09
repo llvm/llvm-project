@@ -1,7 +1,7 @@
 ; Test that we can inline a simple function, turning the calls in it into invoke
 ; instructions
 
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 ; RUN: opt < %s -passes='module-inline' -S | FileCheck %s
 

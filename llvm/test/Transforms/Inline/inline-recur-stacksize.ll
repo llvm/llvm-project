@@ -1,6 +1,6 @@
 ; Check the recursive inliner doesn't inline a function with a stack size exceeding a given limit.
-; RUN: opt < %s -inline -S | FileCheck --check-prefixes=ALL,UNLIMITED %s
-; RUN: opt < %s -inline -S -recursive-inline-max-stacksize=256 | FileCheck --check-prefixes=ALL,LIMITED %s
+; RUN: opt < %s -passes=inline -S | FileCheck --check-prefixes=ALL,UNLIMITED %s
+; RUN: opt < %s -passes=inline -S -recursive-inline-max-stacksize=256 | FileCheck --check-prefixes=ALL,LIMITED %s
 
 declare void @init([65 x i32]*)
 

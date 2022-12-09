@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -inline-threshold=20 -S | FileCheck %s
+; RUN: opt < %s -passes=inline -inline-threshold=20 -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -inline-threshold=20 -S | FileCheck %s
 
 define internal i32 @callee1(i32 %A, i32 %B) {
