@@ -10,7 +10,7 @@ declare noalias nonnull ptr @_Znam(i64) ; throwing version of 'new'
 declare noalias nonnull ptr @_Znwm(i64) ; throwing version of 'new'
 declare noalias ptr @strdup(ptr)
 declare noalias ptr @aligned_alloc(i64 allocalign, i64) allockind("alloc,uninitialized,aligned") allocsize(1) "alloc-family"="malloc"
-declare noalias align 16 ptr @memalign(i64, i64)
+declare noalias align 16 ptr @memalign(i64 allocalign, i64) allocsize(1)
 ; new[](unsigned int, align_val_t)
 declare noalias ptr @_ZnamSt11align_val_t(i64 %size, i64 %align)
 
