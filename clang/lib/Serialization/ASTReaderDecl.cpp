@@ -1207,6 +1207,8 @@ void ASTDeclReader::ReadObjCDefinitionData(
 
   Data.EndLoc = readSourceLocation();
   Data.HasDesignatedInitializers = Record.readInt();
+  Data.ODRHash = Record.readInt();
+  Data.HasODRHash = true;
 
   // Read the directly referenced protocols and their SourceLocations.
   unsigned NumProtocols = Record.readInt();
@@ -1234,13 +1236,16 @@ void ASTDeclReader::ReadObjCDefinitionData(
 void ASTDeclReader::MergeDefinitionData(ObjCInterfaceDecl *D,
          struct ObjCInterfaceDecl::DefinitionData &&NewDD) {
   struct ObjCInterfaceDecl::DefinitionData &DD = D->data();
-  if (DD.Definition != NewDD.Definition) {
-    Reader.MergedDeclContexts.insert(
-        std::make_pair(NewDD.Definition, DD.Definition));
-    Reader.mergeDefinitionVisibility(DD.Definition, NewDD.Definition);
-  }
+  if (DD.Definition == NewDD.Definition)
+    return;
 
-  // FIXME: odr checking?
+  Reader.MergedDeclContexts.insert(
+      std::make_pair(NewDD.Definition, DD.Definition));
+  Reader.mergeDefinitionVisibility(DD.Definition, NewDD.Definition);
+
+  if (D->getODRHash() != NewDD.ODRHash)
+    Reader.PendingObjCInterfaceOdrMergeFailures[DD.Definition].push_back(
+        {NewDD.Definition, &NewDD});
 }
 
 void ASTDeclReader::VisitObjCInterfaceDecl(ObjCInterfaceDecl *ID) {
