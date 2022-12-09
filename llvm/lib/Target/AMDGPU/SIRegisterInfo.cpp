@@ -3194,3 +3194,19 @@ ArrayRef<MCPhysReg>
 SIRegisterInfo::getAllSGPR32(const MachineFunction &MF) const {
   return ArrayRef(AMDGPU::SGPR_32RegClass.begin(), ST.getMaxNumSGPRs(MF));
 }
+
+unsigned
+SIRegisterInfo::getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
+                                          unsigned SubReg) const {
+  switch (RC->TSFlags & SIRCFlags::RegKindMask) {
+  case SIRCFlags::HasSGPR:
+    return std::min(128u, getSubRegIdxSize(SubReg));
+  case SIRCFlags::HasAGPR:
+  case SIRCFlags::HasVGPR:
+  case SIRCFlags::HasVGPR | SIRCFlags::HasAGPR:
+    return std::min(32u, getSubRegIdxSize(SubReg));
+  default:
+    break;
+  }
+  return 0;
+}

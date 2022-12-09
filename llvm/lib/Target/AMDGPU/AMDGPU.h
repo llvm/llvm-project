@@ -361,6 +361,9 @@ extern char &GCNPreRAOptimizationsID;
 FunctionPass *createAMDGPUSetWavePriorityPass();
 void initializeAMDGPUSetWavePriorityPass(PassRegistry &);
 
+void initializeGCNRewritePartialRegUsesPass(llvm::PassRegistry &);
+extern char &GCNRewritePartialRegUsesID;
+
 namespace AMDGPU {
 enum TargetIndex {
   TI_CONSTDATA_START,
