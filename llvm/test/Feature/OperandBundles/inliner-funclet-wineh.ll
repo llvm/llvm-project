@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax -S -always-inline -mtriple=x86_64-windows-msvc < %s | FileCheck %s
+; RUN: opt -S -passes=always-inline -mtriple=x86_64-windows-msvc < %s | FileCheck %s
 
 ; WinEH requires funclet tokens on nounwind intrinsics if they can lower to
 ; regular function calls in the course of IR transformations.
