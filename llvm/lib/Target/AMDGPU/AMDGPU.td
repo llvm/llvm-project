@@ -735,6 +735,12 @@ def FeatureSALUFloatInsts : SubtargetFeature<"salu-float",
   "Has SALU floating point instructions"
 >;
 
+def FeatureVGPRSingleUseHintInsts : SubtargetFeature<"vgpr-singleuse-hint",
+  "HasVGPRSingleUseHintInsts",
+  "true",
+  "Has single-use VGPR hint instructions"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1344,7 +1350,8 @@ def FeatureISAVersion11_0_3 : FeatureSet<
 // Features for GFX 11.5.0
 def FeatureISAVersion11_5_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureSALUFloatInsts])>;
+    [FeatureSALUFloatInsts,
+     FeatureVGPRSingleUseHintInsts])>;
 
 //===----------------------------------------------------------------------===//
 
@@ -1820,6 +1827,9 @@ def HasNotMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
 
 def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
   AssemblerPredicate<(all_of FeatureSALUFloatInsts)>;
+
+def HasVGPRSingleUseHintInsts : Predicate<"Subtarget->hasVGPRSingleUseHintInsts()">,
+  AssemblerPredicate<(all_of FeatureVGPRSingleUseHintInsts)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"
