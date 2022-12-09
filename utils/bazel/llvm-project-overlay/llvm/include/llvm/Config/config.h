@@ -73,7 +73,7 @@
 #define HAVE_DLOPEN 1
 
 /* Define if dladdr() is available on this platform. */
-/* #undef HAVE_DLADDR */
+#define HAVE_DLADDR 1
 
 /* Define to 1 if we can register EH frames on this platform. */
 /* HAVE_REGISTER_FRAME defined in Bazel*/
