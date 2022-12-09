@@ -321,13 +321,49 @@ static Optional<unsigned> getInsertIndex(const Value *InsertInst,
   return Index;
 }
 
+namespace {
+/// Specifies the way the mask should be analyzed for undefs/poisonous elements
+/// in the shuffle mask.
+enum class UseMask {
+  FirstArg, ///< The mask is expected to be for permutation of 1-2 vectors,
+            ///< check for the mask elements for the first argument (mask
+            ///< indices are in range [0:VF)).
+  SecondArg, ///< The mask is expected to be for permutation of 2 vectors, check
+             ///< for the mask elements for the second argument (mask indices
+             ///< are in range [VF:2*VF))
+  UndefsAsMask ///< Consider undef mask elements (-1) as placeholders for
+               ///< future shuffle elements and mark them as ones as being used
+               ///< in future. Non-undef elements are considered as unused since
+               ///< they're already marked as used in the mask.
+};
+} // namespace
+
+/// Prepares a use bitset for the given mask either for the first argument or
+/// for the second.
+static SmallBitVector buildUseMask(int VF, ArrayRef<int> Mask,
+                                   UseMask MaskArg) {
+  SmallBitVector UseMask(VF, true);
+  for (auto P : enumerate(Mask)) {
+    if (P.value() == UndefMaskElem) {
+      if (MaskArg == UseMask::UndefsAsMask)
+        UseMask.reset(P.index());
+      continue;
+    }
+    if (MaskArg == UseMask::FirstArg && P.value() < VF)
+      UseMask.reset(P.value());
+    else if (MaskArg == UseMask::SecondArg && P.value() >= VF)
+      UseMask.reset(P.value() - VF);
+  }
+  return UseMask;
+}
+
 /// Checks if the given value is actually an undefined constant vector.
-/// Also, if the\p ShuffleMask is not empty, tries to check if the non-masked
+/// Also, if the \p UseMask is not empty, tries to check if the non-masked
 /// elements actually mask the insertelement buildvector, if any.
 template <bool IsPoisonOnly = false>
 static SmallBitVector isUndefVector(const Value *V,
-                                    ArrayRef<int> ShuffleMask = std::nullopt) {
-  SmallBitVector Res(ShuffleMask.empty() ? 1 : ShuffleMask.size(), true);
+                                    const SmallBitVector &UseMask = {}) {
+  SmallBitVector Res(UseMask.empty() ? 1 : UseMask.size(), true);
   using T = std::conditional_t<IsPoisonOnly, PoisonValue, UndefValue>;
   if (isa<T>(V))
     return Res;
@@ -336,7 +372,7 @@ static SmallBitVector isUndefVector(const Value *V,
     return Res.reset();
   auto *C = dyn_cast<Constant>(V);
   if (!C) {
-    if (!ShuffleMask.empty()) {
+    if (!UseMask.empty()) {
       const Value *Base = V;
       while (auto *II = dyn_cast<InsertElementInst>(Base)) {
         if (isa<T>(II->getOperand(1)))
@@ -345,14 +381,14 @@ static SmallBitVector isUndefVector(const Value *V,
         Optional<unsigned> Idx = getInsertIndex(II);
         if (!Idx)
           continue;
-        if (*Idx < ShuffleMask.size() && ShuffleMask[*Idx] == UndefMaskElem)
+        if (*Idx < UseMask.size() && !UseMask.test(*Idx))
           Res.reset(*Idx);
       }
       // TODO: Add analysis for shuffles here too.
       if (V == Base) {
         Res.reset();
       } else {
-        SmallVector<int> SubMask(ShuffleMask.size(), UndefMaskElem);
+        SmallBitVector SubMask(UseMask.size(), false);
         Res &= isUndefVector<IsPoisonOnly>(Base, SubMask);
       }
     } else {
@@ -363,8 +399,7 @@ static SmallBitVector isUndefVector(const Value *V,
   for (unsigned I = 0, E = VecTy->getNumElements(); I != E; ++I) {
     if (Constant *Elem = C->getAggregateElement(I))
       if (!isa<T>(Elem) &&
-          (ShuffleMask.empty() ||
-           (I < ShuffleMask.size() && ShuffleMask[I] == UndefMaskElem)))
+          (UseMask.empty() || (I < UseMask.size() && !UseMask.test(I))))
         Res.reset(I);
   }
   return Res;
@@ -6720,7 +6755,8 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
     // TODO: Implement the analysis of the FirstInsert->getOperand(0)
     // subvector of ActualVecTy.
     SmallBitVector InMask =
-        isUndefVector(FirstInsert->getOperand(0), InsertMask);
+        isUndefVector(FirstInsert->getOperand(0),
+                      buildUseMask(NumElts, InsertMask, UseMask::UndefsAsMask));
     if (!InMask.all() && NumScalars != NumElts && !IsWholeSubvector) {
       if (InsertVecSz != VecSz) {
         auto *ActualVecTy =
@@ -7350,12 +7386,14 @@ static T *performExtractsShuffleAction(
   SmallVector<int> Mask(ShuffleMask.begin()->second);
   auto VMIt = std::next(ShuffleMask.begin());
   T *Prev = nullptr;
-  SmallBitVector IsBaseUndef = isUndefVector(Base, Mask);
+  SmallBitVector UseMask =
+      buildUseMask(Mask.size(), Mask, UseMask::UndefsAsMask);
+  SmallBitVector IsBaseUndef = isUndefVector(Base, UseMask);
   if (!IsBaseUndef.all()) {
     // Base is not undef, need to combine it with the next subvectors.
     std::pair<T *, bool> Res =
         ResizeAction(ShuffleMask.begin()->first, Mask, /*ForSingleMask=*/false);
-    SmallBitVector IsBasePoison = isUndefVector<true>(Base, Mask);
+    SmallBitVector IsBasePoison = isUndefVector<true>(Base, UseMask);
     for (unsigned Idx = 0, VF = Mask.size(); Idx < VF; ++Idx) {
       if (Mask[Idx] == UndefMaskElem)
         Mask[Idx] = IsBasePoison.test(Idx) ? UndefMaskElem : Idx;
@@ -8512,19 +8550,21 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         if (Mask[I] != UndefMaskElem)
           InsertMask[Offset + I] = I;
       }
+      SmallBitVector UseMask =
+          buildUseMask(NumElts, InsertMask, UseMask::UndefsAsMask);
       SmallBitVector IsFirstUndef =
-          isUndefVector(FirstInsert->getOperand(0), InsertMask);
+          isUndefVector(FirstInsert->getOperand(0), UseMask);
       if ((!IsIdentity || Offset != 0 || !IsFirstUndef.all()) &&
           NumElts != NumScalars) {
         if (IsFirstUndef.all()) {
           if (!ShuffleVectorInst::isIdentityMask(InsertMask)) {
-            SmallBitVector IsFirstPoison =
-              isUndefVector<true>(FirstInsert->getOperand(0), InsertMask);
-            if (!IsFirstPoison.all()) {
-              for (unsigned I = 0; I < NumElts; I++) {
-                if (InsertMask[I] == UndefMaskElem && !IsFirstPoison.test(I))
-                  InsertMask[I] = I + NumElts;
-              }
+          SmallBitVector IsFirstPoison =
+              isUndefVector<true>(FirstInsert->getOperand(0), UseMask);
+          if (!IsFirstPoison.all()) {
+            for (unsigned I = 0; I < NumElts; I++) {
+              if (InsertMask[I] == UndefMaskElem && !IsFirstPoison.test(I))
+                InsertMask[I] = I + NumElts;
+            }
             }
             V = Builder.CreateShuffleVector(
                 V,
@@ -8538,7 +8578,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           }
         } else {
           SmallBitVector IsFirstPoison =
-              isUndefVector<true>(FirstInsert->getOperand(0), InsertMask);
+              isUndefVector<true>(FirstInsert->getOperand(0), UseMask);
           for (unsigned I = 0; I < NumElts; I++) {
             if (InsertMask[I] == UndefMaskElem)
               InsertMask[I] = IsFirstPoison.test(I) ? UndefMaskElem : I;
@@ -9268,8 +9308,18 @@ Value *BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues,
           if (IsIdentityMask(Mask, cast<FixedVectorType>(SV->getType())) ||
               SV->isZeroEltSplat())
             break;
-          bool IsOp1Undef = isUndefVector(SV->getOperand(0), Mask).all();
-          bool IsOp2Undef = isUndefVector(SV->getOperand(1), Mask).all();
+          int LocalVF = Mask.size();
+          if (auto *SVOpTy =
+                  dyn_cast<FixedVectorType>(SV->getOperand(0)->getType()))
+            LocalVF = SVOpTy->getNumElements();
+          bool IsOp1Undef =
+              isUndefVector(SV->getOperand(0),
+                            buildUseMask(LocalVF, Mask, UseMask::FirstArg))
+                  .all();
+          bool IsOp2Undef =
+              isUndefVector(SV->getOperand(1),
+                            buildUseMask(LocalVF, Mask, UseMask::SecondArg))
+                  .all();
           if (!IsOp1Undef && !IsOp2Undef)
             break;
           SmallVector<int> ShuffleMask(SV->getShuffleMask().begin(),
@@ -9289,7 +9339,11 @@ Value *BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues,
                           &CombineMasks](Value *V1, Value *V2,
                                          ArrayRef<int> Mask) -> Value * {
     assert(V1 && "Expected at least one vector value.");
-    if (V2 && !isUndefVector(V2, Mask).all()) {
+    int VF = Mask.size();
+    if (auto *FTy = dyn_cast<FixedVectorType>(V1->getType()))
+      VF = FTy->getNumElements();
+    if (V2 &&
+        !isUndefVector(V2, buildUseMask(VF, Mask, UseMask::SecondArg)).all()) {
       // Peek through shuffles.
       Value *Op1 = V1;
       Value *Op2 = V2;
@@ -9313,12 +9367,20 @@ Value *BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues,
         // Check if we have 2 resizing shuffles - need to peek through operands
         // again.
         if (auto *SV1 = dyn_cast<ShuffleVectorInst>(Op1))
-          if (auto *SV2 = dyn_cast<ShuffleVectorInst>(Op2))
+          if (auto *SV2 = dyn_cast<ShuffleVectorInst>(Op2)) {
+            SmallBitVector UseMask1 = buildUseMask(
+                cast<FixedVectorType>(SV1->getOperand(1)->getType())
+                    ->getNumElements(),
+                CombinedMask1, UseMask::FirstArg);
+            SmallBitVector UseMask2 = buildUseMask(
+                cast<FixedVectorType>(SV2->getOperand(1)->getType())
+                    ->getNumElements(),
+                CombinedMask2, UseMask::FirstArg);
             if (SV1->getOperand(0)->getType() ==
                     SV2->getOperand(0)->getType() &&
                 SV1->getOperand(0)->getType() != SV1->getType() &&
-                isUndefVector(SV1->getOperand(1), CombinedMask1).all() &&
-                isUndefVector(SV2->getOperand(1), CombinedMask2).all()) {
+                isUndefVector(SV1->getOperand(1), UseMask1).all() &&
+                isUndefVector(SV2->getOperand(1), UseMask2).all()) {
               Op1 = SV1->getOperand(0);
               Op2 = SV2->getOperand(0);
               SmallVector<int> ShuffleMask1(SV1->getShuffleMask().begin(),
@@ -9330,6 +9392,7 @@ Value *BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues,
               CombineMasks(ShuffleMask2, CombinedMask2);
               CombinedMask2.swap(ShuffleMask2);
             }
+          }
       } while (PrevOp1 != Op1 || PrevOp2 != Op2);
       VF = cast<VectorType>(Op1->getType())
                ->getElementCount()
