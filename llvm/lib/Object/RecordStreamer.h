@@ -52,7 +52,7 @@ public:
   void emitZerofill(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                     Align ByteAlignment, SMLoc Loc = SMLoc()) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                        unsigned ByteAlignment) override;
+                        Align ByteAlignment) override;
 
   // Ignore COFF-specific directives; we do not need any information from them,
   // but the default implementation of these methods crashes, so we override
