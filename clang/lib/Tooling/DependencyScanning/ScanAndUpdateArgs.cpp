@@ -67,7 +67,7 @@ void DepscanPrefixMapping::remapInvocationPaths(CompilerInvocation &Invocation,
                                                 llvm::PrefixMapper &Mapper) {
   // If there are no mappings, we're done. Otherwise, continue and remap
   // everything.
-  if (Mapper.getMappings().empty())
+  if (Mapper.empty())
     return;
 
   // Returns "false" on success, "true" if the path doesn't exist.
@@ -234,15 +234,24 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
     raw_ostream *VerboseOS, CompilerInvocation &Invocation,
     StringRef WorkingDirectory, const DepscanPrefixMapping &PrefixMapping,
     llvm::cas::ObjectStore &DB) {
-  llvm::cas::CachingOnDiskFileSystem &FS = Tool.getCachingFileSystem();
-
   // Override the CASOptions. They may match (the caller having sniffed them
   // out of InputArgs) but if they have been overridden we want the new ones.
   Invocation.getCASOpts() = Tool.getCASOpts();
 
+  bool ProduceIncludeTree =
+      Tool.getScanningFormat() ==
+      tooling::dependencies::ScanningOutputFormat::IncludeTree;
+
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver(Alloc);
-  llvm::TreePathPrefixMapper Mapper(&FS);
+  std::unique_ptr<llvm::PrefixMapper> MapperPtr;
+  if (ProduceIncludeTree) {
+    MapperPtr = std::make_unique<llvm::PrefixMapper>();
+  } else {
+    MapperPtr = std::make_unique<llvm::TreePathPrefixMapper>(
+        &Tool.getCachingFileSystem());
+  }
+  llvm::PrefixMapper &Mapper = *MapperPtr;
   if (Error E = PrefixMapping.configurePrefixMapper(Invocation, Mapper))
     return std::move(E);
 
@@ -252,25 +261,24 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
   ScanInvocation->getDiagnosticOpts().IgnoreWarnings = true;
 
   Optional<llvm::cas::CASID> Root;
-  bool ProduceIncludeTree =
-      Tool.getScanningFormat() ==
-      tooling::dependencies::ScanningOutputFormat::IncludeTree;
   if (ProduceIncludeTree) {
     if (Error E = Tool.getIncludeTreeFromCompilerInvocation(
                           DB, std::move(ScanInvocation), WorkingDirectory,
-                          DiagsConsumer, VerboseOS,
+                          PrefixMapping, DiagsConsumer, VerboseOS,
                           /*DiagGenerationAsCompilation*/ true)
                       .moveInto(Root))
       return std::move(E);
   } else {
-    if (Error E = Tool.getDependencyTreeFromCompilerInvocation(
-                          std::move(ScanInvocation), WorkingDirectory,
-                          DiagsConsumer, VerboseOS,
-                          /*DiagGenerationAsCompilation*/ true,
-                          [&](const llvm::vfs::CachedDirectoryEntry &Entry) {
-                            return Mapper.mapDirEntry(Entry, Saver);
-                          })
-                      .moveInto(Root))
+    if (Error E =
+            Tool.getDependencyTreeFromCompilerInvocation(
+                    std::move(ScanInvocation), WorkingDirectory, DiagsConsumer,
+                    VerboseOS,
+                    /*DiagGenerationAsCompilation*/ true,
+                    [&](const llvm::vfs::CachedDirectoryEntry &Entry) {
+                      return static_cast<llvm::TreePathPrefixMapper &>(Mapper)
+                          .mapDirEntry(Entry, Saver);
+                    })
+                .moveInto(Root))
       return std::move(E);
   }
   updateCompilerInvocation(Invocation, Saver, ProduceIncludeTree,

@@ -46,4 +46,13 @@
 // RUN: %clang @%t4.rsp 2>&1 | FileCheck %s --check-prefix=CACHE-MISS
 // RUN: %clang @%t5.rsp 2>&1 | FileCheck %s --check-prefix=CACHE-HIT
 
+// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t4.inc.rsp -fdepscan-prefix-map=%t.dir/a=/^testdir -cc1-args -cc1 -triple x86_64-apple-macosx12.0.0 -emit-obj -O3 -Rcompile-job-cache \
+// RUN:   -x c %s -o %t.o -fcas-path %t.dir/cas -faction-cache-path %t.dir/cache -fprofile-instrument-use-path=%t.dir/a/a.profdata
+// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t5.inc.rsp -fdepscan-prefix-map=%t.dir/b=/^testdir -cc1-args -cc1 -triple x86_64-apple-macosx12.0.0 -emit-obj -O3 -Rcompile-job-cache \
+// RUN:   -x c %s -o %t.o -fcas-path %t.dir/cas -faction-cache-path %t.dir/cache -fprofile-instrument-use-path=%t.dir/b/a.profdata
+// RUN: diff -u %t4.inc.rsp %t5.inc.rsp
+// RUN: cat %t4.inc.rsp | FileCheck %s --check-prefix=REMAP
+// RUN: %clang @%t4.inc.rsp 2>&1 | FileCheck %s --check-prefix=CACHE-MISS
+// RUN: %clang @%t5.inc.rsp 2>&1 | FileCheck %s --check-prefix=CACHE-HIT
+
 // REMAP: -fprofile-instrument-use-path=/^testdir/a.profdata

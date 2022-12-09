@@ -137,6 +137,8 @@ public:
       consumeError(add(M.getInverse()));
   }
 
+  bool empty() const { return getMappings().empty(); }
+
   ArrayRef<MappedPrefix> getMappings() const { return Mappings; }
 
   sys::path::Style getPathStyle() const { return PathStyle; }
