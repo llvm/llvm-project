@@ -1990,17 +1990,10 @@ MachOObjectFile::getSectionContents(DataRefImpl Sec) const {
   return getSectionContents(Offset, Size);
 }
 
-uint64_t MachOObjectFile::getSectionAlignment(DataRefImpl Sec) const {
-  uint32_t Align;
-  if (is64Bit()) {
-    MachO::section_64 Sect = getSection64(Sec);
-    Align = Sect.align;
-  } else {
-    MachO::section Sect = getSection(Sec);
-    Align = Sect.align;
-  }
+Align MachOObjectFile::getSectionAlignment(DataRefImpl Sec) const {
 
-  return uint64_t(1) << Align;
+  return is64Bit() ? Align(1ULL << getSection64(Sec).align)
+                   : Align(1ULL << getSection(Sec).align);
 }
 
 Expected<SectionRef> MachOObjectFile::getSection(unsigned SectionIndex) const {
