@@ -44,7 +44,13 @@ class DependencyConsumer {
 public:
   virtual ~DependencyConsumer() {}
 
-  virtual void finalize(CompilerInstance &CI) {}
+  virtual llvm::Error initialize(CompilerInstance &CI) {
+    return llvm::Error::success();
+  }
+
+  virtual llvm::Error finalize(CompilerInstance &CI) {
+    return llvm::Error::success();
+  }
 
   virtual void handleBuildCommand(Command Cmd) = 0;
 

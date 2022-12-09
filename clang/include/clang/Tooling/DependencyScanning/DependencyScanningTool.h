@@ -33,6 +33,8 @@ class IncludeTreeRoot;
 namespace tooling {
 namespace dependencies {
 
+struct DepscanPrefixMapping;
+
 /// A callback to lookup module outputs for "-fmodule-file=", "-o" etc.
 using LookupModuleOutputCallback =
     llvm::function_ref<std::string(const ModuleID &, ModuleOutputKind)>;
@@ -117,7 +119,8 @@ public:
 
   Expected<cas::IncludeTreeRoot>
   getIncludeTree(cas::ObjectStore &DB,
-                 const std::vector<std::string> &CommandLine, StringRef CWD);
+                 const std::vector<std::string> &CommandLine, StringRef CWD,
+                 const DepscanPrefixMapping &PrefixMapping);
 
   /// If \p DiagGenerationAsCompilation is true it will generate error
   /// diagnostics same way as the normal compilation, with "N errors generated"
@@ -125,7 +128,8 @@ public:
   /// \p DiagOpts.DiagnosticSerializationFile setting is set for the invocation.
   Expected<cas::IncludeTreeRoot> getIncludeTreeFromCompilerInvocation(
       cas::ObjectStore &DB, std::shared_ptr<CompilerInvocation> Invocation,
-      StringRef CWD, DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
+      StringRef CWD, const DepscanPrefixMapping &PrefixMapping,
+      DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
       bool DiagGenerationAsCompilation);
 
   /// Collect the full module dependency graph for the input, ignoring any

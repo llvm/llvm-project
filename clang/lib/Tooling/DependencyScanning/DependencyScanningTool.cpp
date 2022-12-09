@@ -11,12 +11,16 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/Support/PrefixMapper.h"
+#include "llvm/Support/PrefixMappingFileSystem.h"
 
 using namespace clang;
 using namespace tooling;
 using namespace dependencies;
+using llvm::Error;
 
 static std::vector<std::string>
 makeTUCommandLineWithoutPaths(ArrayRef<std::string> OriginalCommandLine) {
@@ -177,11 +181,15 @@ DependencyScanningTool::getDependencyTreeFromCompilerInvocation(
 namespace {
 class IncludeTreePPConsumer : public PPIncludeActionsConsumer {
 public:
-  explicit IncludeTreePPConsumer(cas::ObjectStore &DB) : DB(DB) {}
+  IncludeTreePPConsumer(cas::ObjectStore &DB,
+                        const DepscanPrefixMapping &PrefixMapping)
+      : DB(DB), PrefixMapping(PrefixMapping) {}
 
   Expected<cas::IncludeTreeRoot> getIncludeTree();
 
 private:
+  Error initialize(CompilerInstance &CI) override;
+
   void enteredInclude(Preprocessor &PP, FileID FID) override;
 
   void exitedInclude(Preprocessor &PP, FileID IncludedBy, FileID Include,
@@ -189,7 +197,7 @@ private:
 
   void handleHasIncludeCheck(Preprocessor &PP, bool Result) override;
 
-  void finalize(CompilerInstance &CI) override;
+  Error finalize(CompilerInstance &CI) override;
 
   Expected<cas::ObjectRef> getObjectForFile(Preprocessor &PP, FileID FID);
   Expected<cas::ObjectRef>
@@ -206,6 +214,9 @@ private:
 
   Expected<cas::IncludeTree> getCASTreeForFileIncludes(FilePPState &&PPState);
 
+  Expected<cas::IncludeFile> createIncludeFile(StringRef Filename,
+                                               cas::ObjectRef Contents);
+
   bool hasErrorOccurred() const { return ErrorToReport.has_value(); }
 
   template <typename T> Optional<T> check(Expected<T> &&E) {
@@ -217,6 +228,8 @@ private:
   }
 
   cas::ObjectStore &DB;
+  const DepscanPrefixMapping &PrefixMapping;
+  llvm::PrefixMapper PrefixMapper;
   Optional<cas::ObjectRef> PCHRef;
   bool StartedEnteringIncludes = false;
   // When a PCH is used this lists the filenames of the included files as they
@@ -230,6 +243,39 @@ private:
   Optional<llvm::Error> ErrorToReport;
 };
 } // namespace
+
+Error IncludeTreePPConsumer::initialize(CompilerInstance &CI) {
+  if (Error E =
+          PrefixMapping.configurePrefixMapper(CI.getInvocation(), PrefixMapper))
+    return E;
+
+  auto ensurePathRemapping = [&]() {
+    if (PrefixMapper.empty())
+      return;
+
+    PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
+    if (PPOpts.Includes.empty() && PPOpts.ImplicitPCHInclude.empty())
+      return;
+
+    // The PCH recorded file paths with canonical paths, create a VFS that
+    // allows remapping back to the non-canonical source paths so that they are
+    // found during dep-scanning.
+    llvm::PrefixMapper ReverseMapper;
+    cantFail(ReverseMapper.addInverseRange(PrefixMapper.getMappings()));
+    ReverseMapper.sort();
+    std::unique_ptr<llvm::vfs::FileSystem> FS =
+        llvm::vfs::createPrefixMappingFileSystem(std::move(ReverseMapper),
+                                                 &CI.getVirtualFileSystem());
+    CI.getFileManager().setVirtualFileSystem(std::move(FS));
+
+    // These are written in the predefines buffer, so we need to remap them.
+    for (std::string &Include : PPOpts.Includes)
+      cantFail(PrefixMapper.mapInPlace(Include));
+  };
+  ensurePathRemapping();
+
+  return Error::success();
+}
 
 void IncludeTreePPConsumer::enteredInclude(Preprocessor &PP, FileID FID) {
   if (hasErrorOccurred())
@@ -282,37 +328,38 @@ void IncludeTreePPConsumer::handleHasIncludeCheck(Preprocessor &PP,
   IncludeStack.back().HasIncludeChecks.push_back(Result);
 }
 
-void IncludeTreePPConsumer::finalize(CompilerInstance &CI) {
+Error IncludeTreePPConsumer::finalize(CompilerInstance &CI) {
   FileManager &FM = CI.getFileManager();
 
-  auto addFile = [&](StringRef FilePath, bool IgnoreFileError = false) -> bool {
+  auto addFile = [&](StringRef FilePath,
+                     bool IgnoreFileError = false) -> Error {
     llvm::ErrorOr<const FileEntry *> FE = FM.getFile(FilePath);
     if (!FE) {
       if (IgnoreFileError)
-        return true;
-      ErrorToReport = llvm::errorCodeToError(FE.getError());
-      return false;
+        return Error::success();
+      return llvm::errorCodeToError(FE.getError());
     }
-    Expected<cas::ObjectRef> Ref = addToFileList(FM, *FE);
-    if (!Ref) {
-      ErrorToReport = Ref.takeError();
-      return false;
-    }
-    return true;
+    Optional<cas::ObjectRef> Ref;
+    return addToFileList(FM, *FE).moveInto(Ref);
   };
 
   for (StringRef FilePath : CI.getLangOpts().NoSanitizeFiles) {
-    if (!addFile(FilePath))
-      return;
+    if (Error E = addFile(FilePath))
+      return E;
   }
   // Add profile files.
   // FIXME: Do not have the logic here to determine which path should be set
   // but ideally only the path needed for the compilation is set and we already
   // checked the file needed exists. Just try load and ignore errors.
-  addFile(CI.getCodeGenOpts().ProfileInstrumentUsePath,
-          /*IgnoreFileError=*/true);
-  addFile(CI.getCodeGenOpts().SampleProfileFile, /*IgnoreFileError=*/true);
-  addFile(CI.getCodeGenOpts().ProfileRemappingFile, /*IgnoreFileError=*/true);
+  if (Error E = addFile(CI.getCodeGenOpts().ProfileInstrumentUsePath,
+                        /*IgnoreFileError=*/true))
+    return E;
+  if (Error E = addFile(CI.getCodeGenOpts().SampleProfileFile,
+                        /*IgnoreFileError=*/true))
+    return E;
+  if (Error E = addFile(CI.getCodeGenOpts().ProfileRemappingFile,
+                        /*IgnoreFileError=*/true))
+    return E;
 
   StringRef Sysroot = CI.getHeaderSearchOpts().Sysroot;
   if (!Sysroot.empty()) {
@@ -320,12 +367,13 @@ void IncludeTreePPConsumer::finalize(CompilerInstance &CI) {
     // checks during the compilation.
     llvm::SmallString<256> FilePath = Sysroot;
     llvm::sys::path::append(FilePath, "SDKSettings.json");
-    addFile(FilePath, /*IgnoreFileError*/ true);
+    if (Error E = addFile(FilePath, /*IgnoreFileError*/ true))
+      return E;
   }
 
   PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
   if (PPOpts.ImplicitPCHInclude.empty())
-    return; // no need for additional work.
+    return Error::success(); // no need for additional work.
 
   // Go through all the recorded included files; we'll get additional files from
   // the PCH that we need to include in the file list, in case they are
@@ -343,19 +391,17 @@ void IncludeTreePPConsumer::finalize(CompilerInstance &CI) {
 
   for (const FileEntry *FE : NotSeenIncludes) {
     auto FileNode = addToFileList(FM, FE);
-    if (!FileNode) {
-      ErrorToReport = FileNode.takeError();
-      return;
-    }
+    if (!FileNode)
+      return FileNode.takeError();
   }
 
   llvm::ErrorOr<Optional<cas::ObjectRef>> CASContents =
       FM.getObjectRefForFileContent(PPOpts.ImplicitPCHInclude);
-  if (!CASContents) {
-    ErrorToReport = llvm::errorCodeToError(CASContents.getError());
-    return;
-  }
+  if (!CASContents)
+    return llvm::errorCodeToError(CASContents.getError());
   PCHRef = **CASContents;
+
+  return Error::success();
 }
 
 Expected<cas::ObjectRef>
@@ -403,8 +449,7 @@ IncludeTreePPConsumer::getObjectForBuffer(const SrcMgr::FileInfo &FI) {
       {}, FI.getContentCache().getBufferIfLoaded()->getBuffer());
   if (!Ref)
     return Ref.takeError();
-  Expected<cas::IncludeFile> FileNode =
-      cas::IncludeFile::create(DB, FI.getName(), *Ref);
+  Expected<cas::IncludeFile> FileNode = createIncludeFile(FI.getName(), *Ref);
   if (!FileNode)
     return FileNode.takeError();
   return FileNode->getRef();
@@ -421,7 +466,7 @@ IncludeTreePPConsumer::addToFileList(FileManager &FM, const FileEntry *FE) {
 
   auto addFile = [&](StringRef Filename) -> Expected<cas::ObjectRef> {
     assert(!Filename.empty());
-    auto FileNode = cas::IncludeFile::create(DB, Filename, **CASContents);
+    auto FileNode = createIncludeFile(Filename, **CASContents);
     if (!FileNode)
       return FileNode.takeError();
     IncludedFiles.push_back(
@@ -449,6 +494,17 @@ IncludeTreePPConsumer::getCASTreeForFileIncludes(FilePPState &&PPState) {
                                   PPState.Includes, PPState.HasIncludeChecks);
 }
 
+Expected<cas::IncludeFile>
+IncludeTreePPConsumer::createIncludeFile(StringRef Filename,
+                                         cas::ObjectRef Contents) {
+  SmallString<256> MappedPath;
+  if (!PrefixMapper.empty()) {
+    cantFail(PrefixMapper.map(Filename, MappedPath));
+    Filename = MappedPath;
+  }
+  return cas::IncludeFile::create(DB, Filename, std::move(Contents));
+}
+
 Expected<cas::IncludeTreeRoot> IncludeTreePPConsumer::getIncludeTree() {
   if (ErrorToReport)
     return std::move(*ErrorToReport);
@@ -468,8 +524,8 @@ Expected<cas::IncludeTreeRoot> IncludeTreePPConsumer::getIncludeTree() {
 
 Expected<cas::IncludeTreeRoot> DependencyScanningTool::getIncludeTree(
     cas::ObjectStore &DB, const std::vector<std::string> &CommandLine,
-    StringRef CWD) {
-  IncludeTreePPConsumer Consumer(DB);
+    StringRef CWD, const DepscanPrefixMapping &PrefixMapping) {
+  IncludeTreePPConsumer Consumer(DB, PrefixMapping);
   llvm::Error Result = Worker.computeDependencies(CWD, CommandLine, Consumer);
   if (Result)
     return std::move(Result);
@@ -479,9 +535,10 @@ Expected<cas::IncludeTreeRoot> DependencyScanningTool::getIncludeTree(
 Expected<cas::IncludeTreeRoot>
 DependencyScanningTool::getIncludeTreeFromCompilerInvocation(
     cas::ObjectStore &DB, std::shared_ptr<CompilerInvocation> Invocation,
-    StringRef CWD, DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
+    StringRef CWD, const DepscanPrefixMapping &PrefixMapping,
+    DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
     bool DiagGenerationAsCompilation) {
-  IncludeTreePPConsumer Consumer(DB);
+  IncludeTreePPConsumer Consumer(DB, PrefixMapping);
   Worker.computeDependenciesFromCompilerInvocation(
       std::move(Invocation), CWD, Consumer, /*RemapPath=*/nullptr,
       DiagsConsumer, VerboseOS, DiagGenerationAsCompilation);

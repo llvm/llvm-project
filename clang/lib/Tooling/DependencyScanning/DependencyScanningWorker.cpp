@@ -31,6 +31,7 @@
 using namespace clang;
 using namespace tooling;
 using namespace dependencies;
+using llvm::Error;
 
 namespace {
 
@@ -223,7 +224,7 @@ public:
       M.setCASFileSystemRootID(Tree->getID().toString());
     else
       Ctx.getDiagnostics().Report(diag::err_cas_depscan_failed)
-          << toString(Tree.takeError());
+          << Tree.takeError();
   }
 
 private:
@@ -464,8 +465,19 @@ public:
     else
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
 
+    auto reportError = [&ScanInstance](Error &&E) -> bool {
+      ScanInstance.getDiagnostics().Report(diag::err_cas_depscan_failed)
+          << std::move(E);
+      return false;
+    };
+
+    if (Error E = Consumer.initialize(ScanInstance))
+      return reportError(std::move(E));
+
     const bool Result = ScanInstance.ExecuteAction(*Action);
-    Consumer.finalize(ScanInstance);
+
+    if (Error E = Consumer.finalize(ScanInstance))
+      return reportError(std::move(E));
 
     if (CacheFS) {
       // Exclude the module cache from tracking. The implicit build pcms should

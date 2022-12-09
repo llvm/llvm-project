@@ -1,5 +1,6 @@
 #include "clang/CAS/IncludeTree.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
+#include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
@@ -52,8 +53,10 @@ TEST(IncludeTree, IncludeTreeScan) {
                                           "-o"
                                           "t.cpp.o"};
   Optional<IncludeTreeRoot> Root;
+  DepscanPrefixMapping PrefixMapping;
   ASSERT_THAT_ERROR(
-      ScanTool.getIncludeTree(*DB, CommandLine, /*CWD*/ "").moveInto(Root),
+      ScanTool.getIncludeTree(*DB, CommandLine, /*CWD*/ "", PrefixMapping)
+          .moveInto(Root),
       llvm::Succeeded());
 
   Optional<IncludeFile> MainFile;

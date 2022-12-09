@@ -234,6 +234,17 @@ llvm::cl::opt<bool> InMemoryCAS(
     llvm::cl::init(false), llvm::cl::cat(DependencyScannerCategory));
 
 llvm::cl::opt<std::string>
+    PrefixMapToolchain("prefix-map-toolchain",
+                       llvm::cl::desc("Path to remap toolchain path to."),
+                       llvm::cl::cat(DependencyScannerCategory));
+llvm::cl::opt<std::string>
+    PrefixMapSDK("prefix-map-sdk", llvm::cl::desc("Path to remap SDK path to."),
+                 llvm::cl::cat(DependencyScannerCategory));
+llvm::cl::list<std::string>
+    PrefixMaps("prefix-map",
+               llvm::cl::desc("Path to remap, as \"<old>=<new>\"."),
+               llvm::cl::cat(DependencyScannerCategory));
+llvm::cl::opt<std::string>
     ActionCachePath("action-cache-path",
                     llvm::cl::desc("Path for on-disk action cache."),
                     llvm::cl::cat(DependencyScannerCategory));
@@ -824,6 +835,14 @@ int main(int argc, const char **argv) {
     if (Format != ScanningOutputFormat::IncludeTree)
       FS = llvm::cantFail(llvm::cas::createCachingOnDiskFileSystem(*CAS));
   }
+
+  DepscanPrefixMapping PrefixMapping;
+  if (!PrefixMapToolchain.empty())
+    PrefixMapping.NewToolchainPath = PrefixMapToolchain;
+  if (!PrefixMapSDK.empty())
+    PrefixMapping.NewSDKPath = PrefixMapSDK;
+  PrefixMapping.PrefixMap.append(PrefixMaps.begin(), PrefixMaps.end());
+
   DependencyScanningService Service(ScanMode, Format, CASOpts, Cache, FS,
                                     OptimizeArgs, EagerLoadModules);
   llvm::ThreadPool Pool(llvm::hardware_concurrency(NumThreads));
@@ -833,8 +852,6 @@ int main(int argc, const char **argv) {
       llvm::errs() << "'-emit-cas-compdb' needs CAS setup\n";
       return 1;
     }
-    // FIXME: Configure this.
-    DepscanPrefixMapping PrefixMapping;
     return emitCompilationDBWithCASTreeArguments(
         CAS, AdjustingCompilations->getAllCompileCommands(), *DiagsConsumer,
         PrefixMapping, Service, Pool, llvm::outs());
@@ -880,8 +897,8 @@ int main(int argc, const char **argv) {
                  << " files using " << Pool.getThreadCount() << " workers\n";
   }
   for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
-    Pool.async([I, &CAS, &Lock, &Index, &Inputs, &TreeResults, &HadErrors, &FD,
-                &WorkerTools, &DependencyOS, &Errs]() {
+    Pool.async([I, &CAS, &PrefixMapping, &Lock, &Index, &Inputs, &TreeResults,
+                &HadErrors, &FD, &WorkerTools, &DependencyOS, &Errs]() {
       llvm::StringSet<> AlreadySeenModules;
       while (true) {
         const tooling::CompileCommand *Input;
@@ -923,8 +940,8 @@ int main(int argc, const char **argv) {
           TreeResults.emplace_back(LocalIndex, std::move(Filename),
                                    std::move(MaybeTree));
         } else if (Format == ScanningOutputFormat::IncludeTree) {
-          auto MaybeTree =
-              WorkerTools[I]->getIncludeTree(*CAS, Input->CommandLine, CWD);
+          auto MaybeTree = WorkerTools[I]->getIncludeTree(
+              *CAS, Input->CommandLine, CWD, PrefixMapping);
           std::unique_lock<std::mutex> LockGuard(Lock);
           TreeResults.emplace_back(LocalIndex, std::move(Filename),
                                    std::move(MaybeTree));
