@@ -212,6 +212,77 @@ func.func @udot_vector_4xi16_i64_missing_capability2(%operand: vector<4xi16>) ->
 } {
   // CHECK: test.convert_to_udot_op
   %0 = "test.convert_to_udot_op"(%operand, %operand): (vector<4xi16>, vector<4xi16>) -> (i64)
+  return %0 : i64
+}
+
+// CHECK-LABEL: @sdot_acc_sat_scalar_i32_i32_capabilities
+func.func @sdot_acc_sat_scalar_i32_i32_capabilities(%operand: i32) -> i32 attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0,
+    [DotProduct, DotProductInput4x8BitPacked], [SPV_KHR_integer_dot_product]>, #spirv.resource_limits<>>
+} {
+  // CHECK: spirv.SDotAccSat
+  %0 = "test.convert_to_sdot_acc_sat_op"(%operand, %operand, %operand)
+         {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32, i32) -> (i32)
+  return %0: i32
+}
+
+// CHECK-LABEL: @sudot_acc_sat_vector_4xi8_i32_capabilities
+func.func @sudot_acc_sat_vector_4xi8_i32_capabilities(%operand: vector<4xi8>, %acc: i32) -> i32 attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0,
+    [DotProduct, DotProductInput4x8Bit], [SPV_KHR_integer_dot_product]>, #spirv.resource_limits<>>
+} {
+  // CHECK: spirv.SUDotAccSat
+  %0 = "test.convert_to_sudot_acc_sat_op"(%operand, %operand, %acc): (vector<4xi8>, vector<4xi8>, i32) -> (i32)
+  return %0: i32
+}
+
+// CHECK-LABEL: @udot_acc_sat_vector_4xi8_i32_missing_capability1
+func.func @udot_acc_sat_vector_4xi8_i32_missing_capability1(%operand: vector<4xi8>, %acc: i32) -> i32 attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0,
+    [DotProduct, DotProductInputAll, Int16, Int64], [SPV_KHR_integer_dot_product]>, #spirv.resource_limits<>>
+} {
+  // CHECK: test.convert_to_udot_acc_sat_op
+  %0 = "test.convert_to_udot_acc_sat_op"(%operand, %operand, %acc): (vector<4xi8>, vector<4xi8>, i32) -> (i32)
+  return %0: i32
+}
+
+// CHECK-LABEL: @udot_acc_sat_vector_4xi8_i32_missing_capability2
+func.func @udot_acc_sat_vector_4xi8_i32_missing_capability2(%operand: vector<4xi8>, %acc: i32) -> i32 attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0,
+    [DotProductInputAll, DotProductInput4x8Bit, Int16, Int64], [SPV_KHR_integer_dot_product]>, #spirv.resource_limits<>>
+} {
+  // CHECK: test.convert_to_udot_acc_sat_op
+  %0 = "test.convert_to_udot_acc_sat_op"(%operand, %operand, %acc): (vector<4xi8>, vector<4xi8>, i32) -> (i32)
+  return %0: i32
+}
+
+// CHECK-LABEL: @udot_acc_sat_vector_4xi16_i64_capabilities
+func.func @udot_acc_sat_vector_4xi16_i64_capabilities(%operand: vector<4xi16>, %acc: i64) -> i64 attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0,
+    [DotProduct, DotProductInputAll, Int16, Int64], [SPV_KHR_integer_dot_product]>, #spirv.resource_limits<>>
+} {
+  // CHECK: spirv.UDotAccSat
+  %0 = "test.convert_to_udot_acc_sat_op"(%operand, %operand, %acc): (vector<4xi16>, vector<4xi16>, i64) -> (i64)
+  return %0: i64
+}
+
+// CHECK-LABEL: @udot_acc_sat_vector_4xi16_i64_missing_capability1
+func.func @udot_acc_sat_vector_4xi16_i64_missing_capability1(%operand: vector<4xi16>, %acc: i64) -> i64 attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0,
+    [DotProductInputAll, Int16, Int64], [SPV_KHR_integer_dot_product]>, #spirv.resource_limits<>>
+} {
+  // CHECK: test.convert_to_udot_acc_sat_op
+  %0 = "test.convert_to_udot_acc_sat_op"(%operand, %operand, %acc): (vector<4xi16>, vector<4xi16>, i64) -> (i64)
+  return %0: i64
+}
+
+// CHECK-LABEL: @udot_acc_sat_vector_4xi16_i64_missing_capability2
+func.func @udot_acc_sat_vector_4xi16_i64_missing_capability2(%operand: vector<4xi16>, %acc: i64) -> i64 attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0,
+    [DotProduct, Int16, Int64], [SPV_KHR_integer_dot_product]>, #spirv.resource_limits<>>
+} {
+  // CHECK: test.convert_to_udot_acc_sat_op
+  %0 = "test.convert_to_udot_acc_sat_op"(%operand, %operand, %acc): (vector<4xi16>, vector<4xi16>, i64) -> (i64)
   return %0: i64
 }
 
@@ -302,5 +373,27 @@ func.func @udot_vector_4xi16_i64_missing_extension(%operand: vector<4xi16>) -> i
 } {
   // CHECK: test.convert_to_udot_op
   %0 = "test.convert_to_udot_op"(%operand, %operand): (vector<4xi16>, vector<4xi16>) -> (i64)
+  return %0: i64
+}
+
+// CHECK-LABEL: @sdot_acc_sat_vector_4xi16_i64_implied_extension
+func.func @sdot_acc_sat_vector_4xi16_i64_implied_extension(%operand: vector<4xi16>, %acc: i64) -> i64 attributes {
+  // Version 1.6 implies SPV_KHR_integer_to_product.
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.6,
+    [DotProduct, DotProductInputAll, Int16, Int64], []>, #spirv.resource_limits<>>
+} {
+  // CHECK: spirv.SDotAccSat
+  %0 = "test.convert_to_sdot_acc_sat_op"(%operand, %operand, %acc): (vector<4xi16>, vector<4xi16>, i64) -> (i64)
+  return %0: i64
+}
+
+// CHECK-LABEL: @sdot_acc_sat_vector_4xi16_i64_missing_extension
+func.func @sdot_acc_sat_vector_4xi16_i64_missing_extension(%operand: vector<4xi16>, %acc: i64) -> i64 attributes {
+  // Version 1.5 does not imply SPV_KHR_integer_to_product.
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.5,
+    [DotProduct, DotProductInputAll, Int16, Int64], []>, #spirv.resource_limits<>>
+} {
+  // CHECK: test.convert_to_sdot_acc_sat_op
+  %0 = "test.convert_to_sdot_acc_sat_op"(%operand, %operand, %acc): (vector<4xi16>, vector<4xi16>, i64) -> (i64)
   return %0: i64
 }

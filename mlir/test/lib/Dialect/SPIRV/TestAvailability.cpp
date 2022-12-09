@@ -223,14 +223,24 @@ void ConvertToTargetEnv::runOnOperation() {
   static constexpr char sDotTestOpName[] = "test.convert_to_sdot_op";
   static constexpr char suDotTestOpName[] = "test.convert_to_sudot_op";
   static constexpr char uDotTestOpName[] = "test.convert_to_udot_op";
+  static constexpr char sDotAccSatTestOpName[] =
+      "test.convert_to_sdot_acc_sat_op";
+  static constexpr char suDotAccSatTestOpName[] =
+      "test.convert_to_sudot_acc_sat_op";
+  static constexpr char uDotAccSatTestOpName[] =
+      "test.convert_to_udot_acc_sat_op";
 
   RewritePatternSet patterns(context);
-  patterns.add<ConvertToAtomCmpExchangeWeak, ConvertToBitReverse,
-               ConvertToGroupNonUniformBallot, ConvertToModule,
-               ConvertToSubgroupBallot,
-               ConvertToIntegerDotProd<sDotTestOpName, spirv::SDotOp>,
-               ConvertToIntegerDotProd<suDotTestOpName, spirv::SUDotOp>,
-               ConvertToIntegerDotProd<uDotTestOpName, spirv::UDotOp>>(context);
+  patterns.add<
+      ConvertToAtomCmpExchangeWeak, ConvertToBitReverse,
+      ConvertToGroupNonUniformBallot, ConvertToModule, ConvertToSubgroupBallot,
+      ConvertToIntegerDotProd<sDotTestOpName, spirv::SDotOp>,
+      ConvertToIntegerDotProd<suDotTestOpName, spirv::SUDotOp>,
+      ConvertToIntegerDotProd<uDotTestOpName, spirv::UDotOp>,
+      ConvertToIntegerDotProd<sDotAccSatTestOpName, spirv::SDotAccSatOp>,
+      ConvertToIntegerDotProd<suDotAccSatTestOpName, spirv::SUDotAccSatOp>,
+      ConvertToIntegerDotProd<uDotAccSatTestOpName, spirv::UDotAccSatOp>>(
+      context);
 
   if (failed(applyPartialConversion(fn, *target, std::move(patterns))))
     return signalPassFailure();

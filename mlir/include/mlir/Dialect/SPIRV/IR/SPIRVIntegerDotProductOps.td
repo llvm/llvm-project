@@ -187,4 +187,154 @@ def SPIRV_UDotOp : SPIRV_IntegerDotProductBinaryOp<"UDot",
   }];
 }
 
+// -----
+
+def SPIRV_SDotAccSatOp : SPIRV_IntegerDotProductTernaryOp<"SDotAccSat",
+                                                          [SignedOp]> {
+  let summary = [{
+    Signed integer dot product of Vector 1 and Vector 2 and signed
+    saturating addition of the result with Accumulator.
+  }];
+
+  let description = [{
+    Result Type must be an integer type whose Width must be greater than or
+    equal to that of the components of Vector 1 and Vector 2.
+
+    Vector 1 and Vector 2 must have the same type.
+
+    Vector 1 and Vector 2 must be either 32-bit integers (enabled by the
+    DotProductInput4x8BitPacked capability) or vectors of integer type
+    (enabled by the DotProductInput4x8Bit or DotProductInputAll capability).
+
+    The type of Accumulator must be the same as Result Type.
+
+    When Vector 1 and Vector 2 are scalar integer types, Packed Vector
+    Format must be specified to select how the integers are to be
+    interpreted as vectors.
+
+    All components of the input vectors are sign-extended to the bit width
+    of the result's type. The sign-extended input vectors are then
+    multiplied component-wise and all components of the vector resulting
+    from the component-wise multiplication are added together. Finally, the
+    resulting sum is added to the input accumulator. This final addition is
+    saturating.
+
+    If any of the multiplications or additions, with the exception of the
+    final accumulation, overflow or underflow, the result of the instruction
+    is undefined.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %r = spirv.SDotAccSat %a, %b, %acc {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32, i32) -> i32
+    %r = spirv.SDotAccSat %a, %b, %acc {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32, i64) -> i64
+    %r = spirv.SDotAccSat %a, %b, %acc : (vector<4xi8>, vector<4xi8>, i32) -> i32
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_SUDotAccSatOp : SPIRV_IntegerDotProductTernaryOp<"SUDotAccSat",
+                                                           [SignedOp,
+                                                            UnsignedOp]> {
+  let summary = [{
+    Mixed-signedness integer dot product of Vector 1 and Vector 2 and signed
+    saturating addition of the result with Accumulator. Components of Vector
+    1 are treated as signed, components of Vector 2 are treated as unsigned.
+  }];
+
+  let description = [{
+    Result Type must be an integer type whose Width must be greater than or
+    equal to that of the components of Vector 1 and Vector 2.
+
+    Vector 1 and Vector 2 must be either 32-bit integers (enabled by the
+    DotProductInput4x8BitPacked capability) or vectors of integer type with
+    the same number of components and same component Width (enabled by the
+    DotProductInput4x8Bit or DotProductInputAll capability). When Vector 1
+    and Vector 2 are vectors, the components of Vector 2 must have a
+    Signedness of 0.
+
+    The type of Accumulator must be the same as Result Type.
+
+    When Vector 1 and Vector 2 are scalar integer types, Packed Vector
+    Format must be specified to select how the integers are to be
+    interpreted as vectors.
+
+    All components of Vector 1 are sign-extended to the bit width of the
+    result's type. All components of Vector 2 are zero-extended to the bit
+    width of the result's type. The sign- or zero-extended input vectors are
+    then multiplied component-wise and all components of the vector
+    resulting from the component-wise multiplication are added together.
+    Finally, the resulting sum is added to the input accumulator. This final
+    addition is saturating.
+
+    If any of the multiplications or additions, with the exception of the
+    final accumulation, overflow or underflow, the result of the instruction
+    is undefined.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %r = spirv.SUDotAccSat %a, %b, %acc {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32, i32) -> i32
+    %r = spirv.SUDotAccSat %a, %b, %acc {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32, i64) -> i64
+    %r = spirv.SUDotAccSat %a, %b, %acc : (vector<4xi8>, vector<4xi8>, i32) -> i32
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_UDotAccSatOp :
+    SPIRV_IntegerDotProductTernaryOp<"UDotAccSat", [UnsignedOp]> {
+  let summary = [{
+    Unsigned integer dot product of Vector 1 and Vector 2 and unsigned
+    saturating addition of the result with Accumulator.
+  }];
+
+  let description = [{
+    Result Type must be an integer type with Signedness of 0 whose Width
+    must be greater than or equal to that of the components of Vector 1 and
+    Vector 2.
+
+    Vector 1 and Vector 2 must have the same type.
+
+    Vector 1 and Vector 2 must be either 32-bit integers (enabled by the
+    DotProductInput4x8BitPacked capability) or vectors of integer type with
+    Signedness of 0 (enabled by the DotProductInput4x8Bit or
+    DotProductInputAll capability).
+
+    The type of Accumulator must be the same as Result Type.
+
+    When Vector 1 and Vector 2 are scalar integer types, Packed Vector
+    Format must be specified to select how the integers are to be
+    interpreted as vectors.
+
+    All components of the input vectors are zero-extended to the bit width
+    of the result's type. The zero-extended input vectors are then
+    multiplied component-wise and all components of the vector resulting
+    from the component-wise multiplication are added together. Finally, the
+    resulting sum is added to the input accumulator. This final addition is
+    saturating.
+
+    If any of the multiplications or additions, with the exception of the
+    final accumulation, overflow or underflow, the result of the instruction
+    is undefined.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %r = spirv.UDotAccSat %a, %b, %acc {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32, i32) -> i32
+    %r = spirv.UDotAccSat %a, %b, %acc {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32, i64) -> i64
+    %r = spirv.UDotAccSat %a, %b, %acc : (vector<4xi8>, vector<4xi8>, i32) -> i32
+    ```
+  }];
+}
+
 #endif // MLIR_DIALECT_SPIRV_IR_INTEGER_DOT_PRODUCT_OPS
