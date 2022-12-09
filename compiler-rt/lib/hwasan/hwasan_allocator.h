@@ -34,10 +34,10 @@ struct Metadata {
   u32 requested_size_low;
   u32 requested_size_high;
   u32 alloc_context_id;
-  u64 get_requested_size() {
+  u64 GetRequestedSize() {
     return (static_cast<u64>(requested_size_high) << 32) + requested_size_low;
   }
-  void set_requested_size(u64 size) {
+  void SetRequestedSize(u64 size) {
     requested_size_low = size & ((1ul << 32) - 1);
     requested_size_high = size >> 32;
   }
