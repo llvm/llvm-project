@@ -1,4 +1,5 @@
 ; RUN: opt -S -mtriple=amdgcn--  -amdgpu-lower-ctor-dtor < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn--  -passes=amdgpu-lower-ctor-dtor < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readelf -s - 2>&1 | FileCheck %s -check-prefix=CHECK-VIS
 
 @llvm.global_ctors = appending addrspace(1) global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* @foo, i8* null }]
@@ -24,4 +25,4 @@ define internal void @bar() {
 }
 
 ; CHECK: attributes #0 = { "device-init" }
-; CHECK: attributes #1 = { "device-fini" } 
+; CHECK: attributes #1 = { "device-fini" }
