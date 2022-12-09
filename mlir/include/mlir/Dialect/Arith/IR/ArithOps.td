@@ -292,6 +292,49 @@ def Arith_MulIOp : Arith_TotalIntBinaryOp<"muli", [Commutative]> {
 }
 
 //===----------------------------------------------------------------------===//
+// MulUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+def Arith_MulUIExtendedOp : Arith_Op<"mului_extended", [Pure, Commutative,
+    AllTypesMatch<["lhs", "rhs", "low", "high"]>]> {
+  let summary = [{
+    extended unsigned integer multiplication operation
+  }];
+
+  let description = [{
+    Performs (2*N)-bit multiplication on zero-extended operands. Returns two
+    N-bit results: the low and the high halves of the product. The low half has
+    the same value as the result of regular multiplication `arith.muli` with
+    the same operands.
+
+    Example:
+
+    ```mlir
+    // Scalar multiplication.
+    %low, %high = arith.mului_extended %a, %b : i32
+
+    // Vector element-wise multiplication.
+    %c:2 = arith.mului_extended %d, %e : vector<4xi32>
+
+    // Tensor element-wise multiplication.
+    %x:2 = arith.mului_extended %y, %z : tensor<4x?xi8>
+    ```
+  }];
+
+  let arguments = (ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs);
+  let results = (outs SignlessIntegerLike:$low, SignlessIntegerLike:$high);
+
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs)";
+
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
+
+  let extraClassDeclaration = [{
+    ::llvm::Optional<::llvm::SmallVector<int64_t, 4>> getShapeForUnroll();
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // DivUIOp
 //===----------------------------------------------------------------------===//
 
