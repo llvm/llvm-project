@@ -301,7 +301,7 @@ def HasStdExtCOrZcd
                 AssemblerPredicate<(any_of FeatureStdExtC, FeatureExtZcd),
                                    "'C' (Compressed Instructions) or "
                                    "'Zcd' (Compressed Double-Precision Floating-Point Instructions)">;
-                                   
+
 def FeatureExtZcf
     : SubtargetFeature<"experimental-zcf", "HasStdExtZcf", "true",
                        "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
