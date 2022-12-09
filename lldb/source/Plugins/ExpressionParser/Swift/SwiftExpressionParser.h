@@ -42,6 +42,12 @@ class IRExecutionUnit;
 //----------------------------------------------------------------------
 class SwiftExpressionParser : public ExpressionParser {
 public:
+  enum class ParseResult {
+    success,
+    retry_fresh_context, 
+    retry_no_bind_generic_params,
+    unrecoverable_error
+  };
   //------------------------------------------------------------------
   /// Constructor
   ///
@@ -83,8 +89,8 @@ public:
   ///     The number of errors encountered during parsing.  0 means
   ///     success.
   //------------------------------------------------------------------
-  unsigned Parse(DiagnosticManager &diagnostic_manager, uint32_t first_line = 0,
-                 uint32_t last_line = UINT32_MAX);
+  ParseResult Parse(DiagnosticManager &diagnostic_manager,
+                    uint32_t first_line = 0, uint32_t last_line = UINT32_MAX);
 
   //------------------------------------------------------------------
   /// Ready an already-parsed expression for execution, possibly
