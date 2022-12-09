@@ -67,6 +67,77 @@ void DebugLoc::setImplicitCode(bool ImplicitCode) {
   }
 }
 
+/// Traverses the scope chain rooted at RootScope until it hits a Subprogram,
+/// recreating the chain with "NewSP" instead.
+static DIScope *
+cloneScopeForSubprogram(DILocalScope &RootScope, DISubprogram &NewSP,
+                        LLVMContext &Ctx,
+                        DenseMap<const MDNode *, MDNode *> &Cache) {
+  SmallVector<DIScope *> ScopeChain;
+  DIScope *CachedResult = nullptr;
+
+  for (DIScope *Scope = &RootScope; !isa<DISubprogram>(Scope);
+       Scope = Scope->getScope()) {
+    if (auto It = Cache.find(Scope); It != Cache.end()) {
+      CachedResult = cast<DIScope>(It->second);
+      break;
+    }
+    ScopeChain.push_back(Scope);
+  }
+
+  // Recreate the scope chain, bottom-up, starting at the new subprogram (or a
+  // cached result).
+  DIScope *UpdatedScope = CachedResult ? CachedResult : &NewSP;
+  for (DIScope *ScopeToUpdate : reverse(ScopeChain)) {
+    TempMDNode ClonedScope = ScopeToUpdate->clone();
+    cast<DILexicalBlockBase>(*ClonedScope).replaceScope(UpdatedScope);
+    UpdatedScope =
+        cast<DIScope>(MDNode::replaceWithUniqued(std::move(ClonedScope)));
+    Cache[ScopeToUpdate] = UpdatedScope;
+  }
+  return UpdatedScope;
+}
+
+DebugLoc DebugLoc::replaceInlinedAtSubprogram(
+    const DebugLoc &RootLoc, DISubprogram &NewSP, LLVMContext &Ctx,
+    DenseMap<const MDNode *, MDNode *> &Cache) {
+  SmallVector<DILocation *> LocChain;
+  DILocation *CachedResult = nullptr;
+
+  // Collect the inline chain, stopping if we find a location that has already
+  // been processed.
+  for (DILocation *Loc = RootLoc; Loc; Loc = Loc->getInlinedAt()) {
+    if (auto It = Cache.find(Loc); It != Cache.end()) {
+      CachedResult = cast<DILocation>(It->second);
+      break;
+    }
+    LocChain.push_back(Loc);
+  }
+
+  DILocation *UpdatedLoc = CachedResult;
+  if (!UpdatedLoc) {
+    // If no cache hits, then back() is the end of the inline chain, that is,
+    // the DILocation whose scope ends in the Subprogram to be replaced.
+    DILocation *LocToUpdate = LocChain.pop_back_val();
+    DIScope *NewScope =
+        cloneScopeForSubprogram(*LocToUpdate->getScope(), NewSP, Ctx, Cache);
+    UpdatedLoc = DILocation::get(Ctx, LocToUpdate->getLine(),
+                                 LocToUpdate->getColumn(), NewScope);
+    Cache[LocToUpdate] = UpdatedLoc;
+  }
+
+  // Recreate the location chain, bottom-up, starting at the new scope (or a
+  // cached result).
+  for (const DILocation *LocToUpdate : reverse(LocChain)) {
+    UpdatedLoc =
+        DILocation::get(Ctx, LocToUpdate->getLine(), LocToUpdate->getColumn(),
+                        LocToUpdate->getScope(), UpdatedLoc);
+    Cache[LocToUpdate] = UpdatedLoc;
+  }
+
+  return UpdatedLoc;
+}
+
 DebugLoc DebugLoc::appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt,
                                    LLVMContext &Ctx,
                                    DenseMap<const MDNode *, MDNode *> &Cache) {
