@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-unroll -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=loop-unroll,instcombine -S | FileCheck %s
 
 ; This test is a worst-case scenario for bitreversal/byteswap detection.
 ; After loop unrolling (the unrolled loop is unreadably large so it has been kept
