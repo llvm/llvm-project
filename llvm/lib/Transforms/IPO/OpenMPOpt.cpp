@@ -1484,8 +1484,9 @@ private:
         // A barrier in a barrier pair is removeable if all instructions
         // between the barriers in the pair are side-effect free modulo the
         // barrier operation.
-        auto IsBarrierRemoveable = [&Kernel](BarrierInfo *StartBI,
-                                             BarrierInfo *EndBI) {
+        auto IsBarrierRemoveable = [&Kernel](
+                                       BarrierInfo *StartBI, BarrierInfo *EndBI,
+                                       SmallVector<AssumeInst *> &Assumptions) {
           assert(
               !StartBI->isImplicitExit() &&
               "Expected start barrier to be other than a kernel exit barrier");
@@ -1552,6 +1553,11 @@ private:
               continue;
             }
 
+            if (auto *AI = dyn_cast<AssumeInst>(I)) {
+              Assumptions.push_back(AI);
+              continue;
+            }
+
             if (auto *LI = dyn_cast<LoadInst>(I))
               if (LI->hasMetadata(LLVMContext::MD_invariant_load))
                 continue;
@@ -1577,11 +1583,15 @@ private:
           if (StartBI->isImplicit() && EndBI->isImplicit())
             continue;
 
-          if (!IsBarrierRemoveable(StartBI, EndBI))
+          SmallVector<AssumeInst *> Assumptions;
+          if (!IsBarrierRemoveable(StartBI, EndBI, Assumptions))
             continue;
 
           assert(!(StartBI->isImplicit() && EndBI->isImplicit()) &&
                  "Expected at least one explicit barrier to remove.");
+
+          for (auto *Assumption : Assumptions)
+            Assumption->eraseFromParent();
 
           // Remove an explicit barrier, check first, then second.
           if (!StartBI->isImplicit()) {
