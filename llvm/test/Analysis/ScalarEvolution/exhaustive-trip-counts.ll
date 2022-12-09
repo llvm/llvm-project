@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @f_0() {
 ; CHECK-LABEL: Printing analysis 'Scalar Evolution Analysis' for function 'f_0':
 ; CHECK: Loop %for.body: backedge-taken count is 5
-; CHECK: Loop %for.body: max backedge-taken count is 5
+; CHECK: Loop %for.body: constant max backedge-taken count is 5
 ; CHECK: Loop %for.body: Predicated backedge-taken count is 5
 
 entry:

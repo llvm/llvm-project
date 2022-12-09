@@ -19,6 +19,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include <optional>
 using namespace llvm;
 
 #define DEBUG_TYPE "release-vgprs"
@@ -46,7 +47,8 @@ public:
   class LastVGPRUseIsVMEMStore {
     BitVector BlockVMEMStore;
 
-    static Optional<bool> lastVGPRUseIsStore(const MachineBasicBlock &MBB) {
+    static std::optional<bool>
+    lastVGPRUseIsStore(const MachineBasicBlock &MBB) {
       for (auto &MI : reverse(MBB.instrs())) {
         // If it's a VMEM store, a VGPR will be used, return true.
         if ((SIInstrInfo::isVMEM(MI) || SIInstrInfo::isFLAT(MI)) &&

@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 using namespace llvm;
@@ -104,9 +103,6 @@ private:
 
   // Common implementation of LPMWRdZ and ELPMWRdZ.
   bool expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsExt);
-
-  /// Scavenges a free GPR8 register for use.
-  Register scavengeGPR8(MachineInstr &MI);
 };
 
 char AVRExpandPseudo::ID = 0;
@@ -130,9 +126,6 @@ bool AVRExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
   TRI = STI.getRegisterInfo();
   TII = STI.getInstrInfo();
-
-  // We need to track liveness in order to use register scavenging.
-  MF.getProperties().set(MachineFunctionProperties::Property::TracksLiveness);
 
   for (Block &MBB : MF) {
     bool ContinueExpanding = true;
@@ -783,7 +776,6 @@ bool AVRExpandPseudo::expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsExt) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
-  Register TmpReg = 0; // 0 for no temporary register
   Register SrcReg = MI.getOperand(1).getReg();
   bool SrcIsKill = MI.getOperand(1).isKill();
   unsigned OpLo = IsExt ? AVR::ELPMRdZPi : AVR::LPMRdZPi;
@@ -798,34 +790,18 @@ bool AVRExpandPseudo::expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsExt) {
     buildMI(MBB, MBBI, AVR::OUTARr).addImm(STI.getIORegRAMPZ()).addReg(Bank);
   }
 
-  // Use a temporary register if src and dst registers are the same.
-  if (DstReg == SrcReg)
-    TmpReg = scavengeGPR8(MI);
-
-  Register CurDstLoReg = (DstReg == SrcReg) ? TmpReg : DstLoReg;
-  Register CurDstHiReg = (DstReg == SrcReg) ? TmpReg : DstHiReg;
+  // This is enforced by the @earlyclobber constraint.
+  assert(DstReg != SrcReg && "SrcReg and DstReg cannot be the same");
 
   // Load low byte.
   auto MIBLO = buildMI(MBB, MBBI, OpLo)
-                   .addReg(CurDstLoReg, RegState::Define)
+                   .addReg(DstLoReg, RegState::Define)
                    .addReg(SrcReg);
-
-  // Push low byte onto stack if necessary.
-  if (TmpReg)
-    buildMI(MBB, MBBI, AVR::PUSHRr).addReg(TmpReg);
 
   // Load high byte.
   auto MIBHI = buildMI(MBB, MBBI, OpHi)
-                   .addReg(CurDstHiReg, RegState::Define)
+                   .addReg(DstHiReg, RegState::Define)
                    .addReg(SrcReg, getKillRegState(SrcIsKill));
-
-  if (TmpReg) {
-    // Move the high byte into the final destination.
-    buildMI(MBB, MBBI, AVR::MOVRdRr, DstHiReg).addReg(TmpReg);
-
-    // Move the low byte from the scratch space into the final destination.
-    buildMI(MBB, MBBI, AVR::POPRd, DstLoReg);
-  }
 
   MIBLO.setMemRefs(MI.memoperands());
   MIBHI.setMemRefs(MI.memoperands());
@@ -922,31 +898,6 @@ bool AVRExpandPseudo::expandAtomicBinaryOp(unsigned Opcode, Block &MBB,
 bool AVRExpandPseudo::expandAtomicBinaryOp(unsigned Opcode, Block &MBB,
                                            BlockIt MBBI) {
   return expandAtomicBinaryOp(Opcode, MBB, MBBI, [](MachineInstr &MI) {});
-}
-
-Register AVRExpandPseudo::scavengeGPR8(MachineInstr &MI) {
-  MachineBasicBlock &MBB = *MI.getParent();
-  RegScavenger RS;
-
-  RS.enterBasicBlock(MBB);
-  RS.forward(MI);
-
-  BitVector Candidates =
-      TRI->getAllocatableSet(*MBB.getParent(), &AVR::GPR8RegClass);
-
-  // Exclude all the registers being used by the instruction.
-  for (MachineOperand &MO : MI.operands()) {
-    if (MO.isReg() && MO.getReg() != 0 && !MO.isDef() &&
-        !Register::isVirtualRegister(MO.getReg()))
-      Candidates.reset(MO.getReg());
-  }
-
-  BitVector Available = RS.getRegsAvailable(&AVR::GPR8RegClass);
-  Available &= Candidates;
-
-  signed Reg = Available.find_first();
-  assert(Reg != -1 && "ran out of registers");
-  return Reg;
 }
 
 template <>

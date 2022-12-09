@@ -37,6 +37,15 @@ ISAKind parseArchISA(StringRef Arch);
 // Little/Big endian
 EndianKind parseArchEndian(StringRef Arch);
 
+struct ParsedBranchProtection {
+  StringRef Scope;
+  StringRef Key;
+  bool BranchTargetEnforcement;
+};
+
+bool parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
+                           StringRef &Err);
+
 } // namespace ARM
 } // namespace llvm
 #endif

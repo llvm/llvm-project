@@ -16,8 +16,8 @@
 // and a second thread to run the TimerAPCProc.
 
 namespace llvm {
-  namespace sys {
-    Watchdog::Watchdog(unsigned int seconds) {}
-    Watchdog::~Watchdog() {}
-  }
-}
+namespace sys {
+Watchdog::Watchdog(unsigned int seconds) {}
+Watchdog::~Watchdog() {}
+} // namespace sys
+} // namespace llvm

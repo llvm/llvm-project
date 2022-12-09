@@ -96,7 +96,6 @@ public:
 private:
   /// Hide the bool conversion as it easily creates confusion.
   using Optional<T>::operator bool;
-  using Optional<T>::hasValue;
   using Optional<T>::has_value;
 };
 

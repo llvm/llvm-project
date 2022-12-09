@@ -1877,12 +1877,12 @@ public:
         S.IsNameUnique = false;
   }
 
-  Optional<RelocAddrEntry> find(const DWARFSection &S,
-                                uint64_t Pos) const override {
+  std::optional<RelocAddrEntry> find(const DWARFSection &S,
+                                     uint64_t Pos) const override {
     auto &Sec = static_cast<const DWARFSectionMap &>(S);
     RelocAddrMap::const_iterator AI = Sec.Relocs.find(Pos);
     if (AI == Sec.Relocs.end())
-      return None;
+      return std::nullopt;
     return AI->second;
   }
 

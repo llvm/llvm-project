@@ -7,9 +7,9 @@ target triple = "wasm32-unknown-unknown"
 
 @foo = external global i32, align 4
 @bar = global i64 7, align 4
-@a = global i32* getelementptr (i32, i32* @foo, i32 2), align 8
-@b = global i64* getelementptr (i64, i64* @bar, i64 -2), align 8
-@c = global [3 x i32*] [i32* @foo, i32* @foo, i32* @foo], align 16
+@a = global ptr getelementptr (i32, ptr @foo, i32 2), align 8
+@b = global ptr getelementptr (i64, ptr @bar, i64 -2), align 8
+@c = global [3 x ptr] [ptr @foo, ptr @foo, ptr @foo], align 16
 
 ; CHECK:      Format: WASM
 ; CHECK:      Relocations [

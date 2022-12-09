@@ -94,7 +94,7 @@ static bool contractSupportsMMAMatrixType(vector::ContractionOp contract,
 
 // Return the stide for the dimension 0 of |type| if it is a memref and has a
 // constant stride.
-static llvm::Optional<int64_t>
+static std::optional<int64_t>
 getMemrefConstantHorizontalStride(ShapedType type) {
   auto memrefType = type.dyn_cast<MemRefType>();
   if (!memrefType)
@@ -172,7 +172,7 @@ static bool broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
 
 /// Return the MMA elementwise enum associated with `op` if it is supported.
 /// Return `llvm::None` otherwise.
-static llvm::Optional<gpu::MMAElementwiseOp>
+static std::optional<gpu::MMAElementwiseOp>
 convertElementwiseOpToMMA(Operation *op) {
   if (isa<arith::AddFOp>(op))
     return gpu::MMAElementwiseOp::ADDF;
@@ -431,7 +431,7 @@ static void convertTransferReadOp(vector::TransferReadOp op,
                                   llvm::DenseMap<Value, Value> &valueMapping) {
   assert(op.getTransferRank() > 0 && "unexpected 0-d transfer");
   assert(transferReadSupportsMMAMatrixType(op, /*useNvGpu=*/false));
-  Optional<int64_t> stride =
+  std::optional<int64_t> stride =
       getMemrefConstantHorizontalStride(op.getShapedType());
   AffineMap map = op.getPermutationMap();
   // Handle broadcast by setting the stride to 0.
@@ -454,7 +454,7 @@ static void convertTransferReadOp(vector::TransferReadOp op,
 static void convertTransferWriteOp(vector::TransferWriteOp op,
                                    llvm::DenseMap<Value, Value> &valueMapping) {
   assert(transferWriteSupportsMMAMatrixType(op));
-  Optional<int64_t> stride =
+  std::optional<int64_t> stride =
       getMemrefConstantHorizontalStride(op.getShapedType());
   assert(stride);
   OpBuilder b(op);

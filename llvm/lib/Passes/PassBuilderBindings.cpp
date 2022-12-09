@@ -65,7 +65,7 @@ LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
   PB.registerModuleAnalyses(MAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  StandardInstrumentations SI(Debug, VerifyEach);
+  StandardInstrumentations SI(Mod->getContext(), Debug, VerifyEach);
   SI.registerCallbacks(PIC, &FAM);
   ModulePassManager MPM;
   if (VerifyEach) {

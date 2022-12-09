@@ -206,6 +206,8 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xd02", "cortex-a34")
         .Case("0xd04", "cortex-a35")
         .Case("0xd03", "cortex-a53")
+        .Case("0xd05", "cortex-a55")
+        .Case("0xd46", "cortex-a510")
         .Case("0xd07", "cortex-a57")
         .Case("0xd08", "cortex-a72")
         .Case("0xd09", "cortex-a73")
@@ -213,9 +215,11 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xd0b", "cortex-a76")
         .Case("0xd0d", "cortex-a77")
         .Case("0xd41", "cortex-a78")
+        .Case("0xd47", "cortex-a710")
         .Case("0xd4d", "cortex-a715")
         .Case("0xd44", "cortex-x1")
         .Case("0xd4c", "cortex-x1c")
+        .Case("0xd48", "cortex-x2")
         .Case("0xd4e", "cortex-x3")
         .Case("0xd0c", "neoverse-n1")
         .Case("0xd49", "neoverse-n2")
@@ -1556,7 +1560,7 @@ VendorSignatures getVendorSignature(unsigned *MaxLeaf) {
 // On Linux, the number of physical cores can be computed from /proc/cpuinfo,
 // using the number of unique physical/core id pairs. The following
 // implementation reads the /proc/cpuinfo format on an x86_64 system.
-int computeHostNumPhysicalCores() {
+static int computeHostNumPhysicalCores() {
   // Enabled represents the number of physical id/core id pairs with at least
   // one processor id enabled by the CPU affinity mask.
   cpu_set_t Affinity, Enabled;
@@ -1601,9 +1605,11 @@ int computeHostNumPhysicalCores() {
   return CPU_COUNT(&Enabled);
 }
 #elif defined(__linux__) && defined(__s390x__)
-int computeHostNumPhysicalCores() { return sysconf(_SC_NPROCESSORS_ONLN); }
+static int computeHostNumPhysicalCores() {
+  return sysconf(_SC_NPROCESSORS_ONLN);
+}
 #elif defined(__linux__) && !defined(__ANDROID__)
-int computeHostNumPhysicalCores() {
+static int computeHostNumPhysicalCores() {
   cpu_set_t Affinity;
   if (sched_getaffinity(0, sizeof(Affinity), &Affinity) == 0)
     return CPU_COUNT(&Affinity);
@@ -1623,7 +1629,7 @@ int computeHostNumPhysicalCores() {
 }
 #elif defined(__APPLE__)
 // Gets the number of *physical cores* on the machine.
-int computeHostNumPhysicalCores() {
+static int computeHostNumPhysicalCores() {
   uint32_t count;
   size_t len = sizeof(count);
   sysctlbyname("hw.physicalcpu", &count, &len, NULL, 0);
@@ -1638,7 +1644,7 @@ int computeHostNumPhysicalCores() {
   return count;
 }
 #elif defined(__MVS__)
-int computeHostNumPhysicalCores() {
+static int computeHostNumPhysicalCores() {
   enum {
     // Byte offset of the pointer to the Communications Vector Table (CVT) in
     // the Prefixed Save Area (PSA). The table entry is a 31-bit pointer and

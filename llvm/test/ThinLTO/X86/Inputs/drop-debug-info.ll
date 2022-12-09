@@ -9,7 +9,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 
 define void @globalfunc() {
 entry:
-  %0 = load i8, i8* @argc, align 1
+  %0 = load i8, ptr @argc, align 1
   tail call void @llvm.dbg.value(metadata i8 %0, i64 0, metadata !19, metadata !29), !dbg !DILocation(scope: !13)
   ret void
 }

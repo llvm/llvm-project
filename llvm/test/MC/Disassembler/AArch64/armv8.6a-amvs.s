@@ -1,6 +1,8 @@
 // RUN: llvm-mc -triple aarch64 -show-encoding -disassemble -mattr=+amvs %s  | FileCheck %s
 // RUN: llvm-mc -triple aarch64 -show-encoding -disassemble -mattr=+v8.6a -o - %s | FileCheck %s
 // RUN: llvm-mc -triple aarch64 -show-encoding -disassemble -o - %s | FileCheck --check-prefix=NOAMVS %s
+[0xc0,0xd2,0x1b,0xd5]
+[0xc0,0xd2,0x3b,0xd5]
 [0x00,0xd8,0x1c,0xd5]
 [0x20,0xd8,0x1c,0xd5]
 [0x40,0xd8,0x1c,0xd5]
@@ -66,6 +68,8 @@
 [0xc0,0xdb,0x3c,0xd5]
 [0xe0,0xdb,0x3c,0xd5]
 // CHECK:  .text
+// CHECK-NEXT:  msr     S3_3_C13_C2_6, x0       // encoding: [0xc0,0xd2,0x1b,0xd5]
+// CHECK-NEXT:  mrs     x0, AMCG1IDR_EL0        // encoding: [0xc0,0xd2,0x3b,0xd5]
 // CHECK-NEXT:  msr     AMEVCNTVOFF00_EL2, x0   // encoding: [0x00,0xd8,0x1c,0xd5]
 // CHECK-NEXT:  msr     AMEVCNTVOFF01_EL2, x0   // encoding: [0x20,0xd8,0x1c,0xd5]
 // CHECK-NEXT:  msr     AMEVCNTVOFF02_EL2, x0   // encoding: [0x40,0xd8,0x1c,0xd5]
@@ -131,6 +135,8 @@
 // CHECK-NEXT:  mrs     x0, AMEVCNTVOFF114_EL2  // encoding: [0xc0,0xdb,0x3c,0xd5]
 // CHECK-NEXT:  mrs     x0, AMEVCNTVOFF115_EL2  // encoding: [0xe0,0xdb,0x3c,0xd5]
 // NOAMVS:  .text
+// NOAMVS-NEXT:  msr     S3_3_C13_C2_6, x0       // encoding: [0xc0,0xd2,0x1b,0xd5]
+// NOAMVS-NEXT:  mrs     x0, S3_3_C13_C2_6       // encoding: [0xc0,0xd2,0x3b,0xd5]
 // NOAMVS-NEXT:  msr     S3_4_C13_C8_0, x0       // encoding: [0x00,0xd8,0x1c,0xd5]
 // NOAMVS-NEXT:  msr     S3_4_C13_C8_1, x0       // encoding: [0x20,0xd8,0x1c,0xd5]
 // NOAMVS-NEXT:  msr     S3_4_C13_C8_2, x0       // encoding: [0x40,0xd8,0x1c,0xd5]

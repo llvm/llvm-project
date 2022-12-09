@@ -32,6 +32,7 @@
 #include "llvm/TextAPI/InterfaceFile.h"
 #include "llvm/TextAPI/TextAPIReader.h"
 #include "llvm/TextAPI/TextAPIWriter.h"
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -86,7 +87,7 @@ struct DriverConfig {
   Optional<FileFormat> InputFormat;
   Optional<FileFormat> OutputFormat;
 
-  Optional<std::string> HintIfsTarget;
+  std::optional<std::string> HintIfsTarget;
   Optional<std::string> OptTargetTriple;
   Optional<IFSArch> OverrideArch;
   Optional<IFSBitWidthType> OverrideBitWidth;
@@ -102,12 +103,12 @@ struct DriverConfig {
 
   std::vector<std::string> Exclude;
 
-  Optional<std::string> SoName;
+  std::optional<std::string> SoName;
 
-  Optional<std::string> Output;
-  Optional<std::string> OutputElf;
-  Optional<std::string> OutputIfs;
-  Optional<std::string> OutputTbd;
+  std::optional<std::string> Output;
+  std::optional<std::string> OutputElf;
+  std::optional<std::string> OutputIfs;
+  std::optional<std::string> OutputTbd;
 
   bool WriteIfChanged = false;
 };

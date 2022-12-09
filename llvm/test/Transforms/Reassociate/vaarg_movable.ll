@@ -9,27 +9,25 @@
 define i32 @func(i32 %dummy, ...) {
 ;
 ; CHECK-LABEL: @func(
-; CHECK-NEXT:    [[VARARGS:%.*]] = alloca i8*, align 8
-; CHECK-NEXT:    [[VARARGS1:%.*]] = bitcast i8** [[VARARGS]] to i8*
-; CHECK-NEXT:    call void @llvm.va_start(i8* [[VARARGS1]])
-; CHECK-NEXT:    [[V0:%.*]] = va_arg i8** [[VARARGS]], i32
-; CHECK-NEXT:    [[V1:%.*]] = va_arg i8** [[VARARGS]], i32
+; CHECK-NEXT:    [[VARARGS:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    call void @llvm.va_start(ptr [[VARARGS]])
+; CHECK-NEXT:    [[V0:%.*]] = va_arg ptr [[VARARGS]], i32
+; CHECK-NEXT:    [[V1:%.*]] = va_arg ptr [[VARARGS]], i32
 ; CHECK-NEXT:    [[V0_NEG:%.*]] = sub i32 0, [[V0]]
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[V0_NEG]], 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUB]], [[V1]]
-; CHECK-NEXT:    call void @llvm.va_end(i8* [[VARARGS1]])
+; CHECK-NEXT:    call void @llvm.va_end(ptr [[VARARGS]])
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
-  %varargs = alloca i8*, align 8
-  %varargs1 = bitcast i8** %varargs to i8*
-  call void @llvm.va_start(i8* %varargs1)
-  %v0 = va_arg i8** %varargs, i32
-  %v1 = va_arg i8** %varargs, i32
+  %varargs = alloca ptr, align 8
+  call void @llvm.va_start(ptr %varargs)
+  %v0 = va_arg ptr %varargs, i32
+  %v1 = va_arg ptr %varargs, i32
   %sub = sub nsw i32 %v1, %v0
   %add = add nsw i32 %sub, 1
-  call void @llvm.va_end(i8* %varargs1)
+  call void @llvm.va_end(ptr %varargs)
   ret i32 %add
 }
 
-declare void @llvm.va_start(i8*)
-declare void @llvm.va_end(i8*)
+declare void @llvm.va_start(ptr)
+declare void @llvm.va_end(ptr)

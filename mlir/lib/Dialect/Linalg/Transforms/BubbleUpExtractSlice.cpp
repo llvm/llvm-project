@@ -124,7 +124,7 @@ struct BubbleUpExtractSliceOpPattern
           tiledOperands[opOperand->getOperandNumber()].getType());
 
     Operation *newOp =
-        linalgOp.clone(rewriter, linalgLoc, resultTensorTypes, tiledOperands);
+        clone(rewriter, linalgOp, resultTensorTypes, tiledOperands);
     rewriter.replaceOp(sliceOp, newOp->getResults());
     return success();
   }

@@ -28,29 +28,29 @@ define i32 @call() {
 
 declare i32 @__gxx_personality_v0(...)
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 
 declare void @g(...)
 
 ; CHECK-LABEL: @h.dfsan
-; CHECK: personality {{.*}} @__gxx_personality_v0.dfsan {{.*}} {
-define i32 @h() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK: personality {{.*}} @__gxx_personality_v0.dfsan {
+define i32 @h() personality ptr @__gxx_personality_v0 {
 entry:
 ; CHECK: invoke void (...) @g.dfsan(i32 42)
   invoke void (...) @g(i32 42)
           to label %try.cont unwind label %lpad
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
-  %1 = extractvalue { i8*, i32 } %0, 0
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
+  %1 = extractvalue { ptr, i32 } %0, 0
 
-  ; CHECK: store {{.*}} @__dfsan_arg_tls  
+  ; CHECK: store {{.*}} @__dfsan_arg_tls
   ; CHECK: call {{.*}} @__cxa_begin_catch.dfsan
   ; CHECK: load {{.*}} @__dfsan_retval_tls
-  %2 = tail call i8* @__cxa_begin_catch(i8* %1)
+  %2 = tail call ptr @__cxa_begin_catch(ptr %1)
 
   ; CHECK: call {{.*}} @__cxa_end_catch.dfsan
   tail call void @__cxa_end_catch()

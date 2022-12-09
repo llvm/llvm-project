@@ -6,18 +6,18 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-unknown-linux-gnu"
-; CHECK: @llvm.used = appending global [1 x i8*] [i8* bitcast (void ()* @asan.module_ctor to i8*)]
-; CHECK: @llvm.global_ctors = {{.*}}{ i32 1, void ()* @asan.module_ctor, i8* bitcast (void ()* @asan.module_ctor to i8*) }
+; CHECK: @llvm.used = appending global [1 x ptr] [ptr @asan.module_ctor]
+; CHECK: @llvm.global_ctors = {{.*}}{ i32 1, ptr @asan.module_ctor, ptr @asan.module_ctor }
 
-define i32 @test_load(i32* %a) sanitize_address {
+define i32 @test_load(ptr %a) sanitize_address {
 ; CHECK-LABEL: @test_load
 ; CHECK-NOT: load
-; CHECK:   %[[LOAD_ADDR:[^ ]*]] = ptrtoint i32* %a to i64
+; CHECK:   %[[LOAD_ADDR:[^ ]*]] = ptrtoint ptr %a to i64
 ; CHECK-S3:   lshr i64 %[[LOAD_ADDR]], 3
 ; CHECK-S5:   lshr i64 %[[LOAD_ADDR]], 5
 ; CHECK:   {{or|add}}
 ; CHECK:   %[[LOAD_SHADOW_PTR:[^ ]*]] = inttoptr
-; CHECK:   %[[LOAD_SHADOW:[^ ]*]] = load i8, i8* %[[LOAD_SHADOW_PTR]]
+; CHECK:   %[[LOAD_SHADOW:[^ ]*]] = load i8, ptr %[[LOAD_SHADOW_PTR]]
 ; CHECK:   icmp ne i8
 ; CHECK:   br i1 %{{.*}}, label %{{.*}}, label %{{.*}}!prof ![[PROF:[0-9]+]]
 ;
@@ -34,25 +34,25 @@ define i32 @test_load(i32* %a) sanitize_address {
 ; CHECK:   unreachable
 ;
 ; The actual load.
-; CHECK:   %tmp1 = load i32, i32* %a
+; CHECK:   %tmp1 = load i32, ptr %a
 ; CHECK:   ret i32 %tmp1
 
 
 
 entry:
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   ret i32 %tmp1
 }
 
-define void @test_store(i32* %a) sanitize_address {
+define void @test_store(ptr %a) sanitize_address {
 ; CHECK-LABEL: @test_store
 ; CHECK-NOT: store
-; CHECK:   %[[STORE_ADDR:[^ ]*]] = ptrtoint i32* %a to i64
+; CHECK:   %[[STORE_ADDR:[^ ]*]] = ptrtoint ptr %a to i64
 ; CHECK-S3:   lshr i64 %[[STORE_ADDR]], 3
 ; CHECK-S5:   lshr i64 %[[STORE_ADDR]], 5
 ; CHECK:   {{or|add}}
 ; CHECK:   %[[STORE_SHADOW_PTR:[^ ]*]] = inttoptr
-; CHECK:   %[[STORE_SHADOW:[^ ]*]] = load i8, i8* %[[STORE_SHADOW_PTR]]
+; CHECK:   %[[STORE_SHADOW:[^ ]*]] = load i8, ptr %[[STORE_SHADOW_PTR]]
 ; CHECK:   icmp ne i8
 ; CHECK:   br i1 %{{.*}}, label %{{.*}}, label %{{.*}}
 ;
@@ -69,26 +69,26 @@ define void @test_store(i32* %a) sanitize_address {
 ; CHECK:   unreachable
 ;
 ; The actual load.
-; CHECK:   store i32 42, i32* %a
+; CHECK:   store i32 42, ptr %a
 ; CHECK:   ret void
 ;
 
 entry:
-  store i32 42, i32* %a, align 4
+  store i32 42, ptr %a, align 4
   ret void
 }
 
 ; Check that asan leaves just one alloca.
 
-declare void @alloca_test_use([10 x i8]*)
+declare void @alloca_test_use(ptr)
 define void @alloca_test() sanitize_address {
 entry:
   %x = alloca [10 x i8], align 1
   %y = alloca [10 x i8], align 1
   %z = alloca [10 x i8], align 1
-  call void @alloca_test_use([10 x i8]* %x)
-  call void @alloca_test_use([10 x i8]* %y)
-  call void @alloca_test_use([10 x i8]* %z)
+  call void @alloca_test_use(ptr %x)
+  call void @alloca_test_use(ptr %y)
+  call void @alloca_test_use(ptr %z)
   ret void
 }
 
@@ -98,9 +98,9 @@ entry:
 ; CHECK-NOT: = alloca
 ; CHECK: ret void
 
-define void @LongDoubleTest(x86_fp80* nocapture %a) nounwind uwtable sanitize_address {
+define void @LongDoubleTest(ptr nocapture %a) nounwind uwtable sanitize_address {
 entry:
-    store x86_fp80 0xK3FFF8000000000000000, x86_fp80* %a, align 16
+    store x86_fp80 0xK3FFF8000000000000000, ptr %a, align 16
     ret void
 }
 
@@ -110,10 +110,10 @@ entry:
 ; CHECK: ret void
 
 
-define void @i40test(i40* %a, i40* %b) nounwind uwtable sanitize_address {
+define void @i40test(ptr %a, ptr %b) nounwind uwtable sanitize_address {
   entry:
-  %t = load i40, i40* %a
-  store i40 %t, i40* %b, align 8
+  %t = load i40, ptr %a
+  store i40 %t, ptr %b, align 8
   ret void
 }
 
@@ -124,9 +124,9 @@ define void @i40test(i40* %a, i40* %b) nounwind uwtable sanitize_address {
 ; CHECK: __asan_report_store_n{{.*}}, i64 5)
 ; CHECK: ret void
 
-define void @i64test_align1(i64* %b) nounwind uwtable sanitize_address {
+define void @i64test_align1(ptr %b) nounwind uwtable sanitize_address {
   entry:
-  store i64 0, i64* %b, align 1
+  store i64 0, ptr %b, align 1
   ret void
 }
 
@@ -136,10 +136,10 @@ define void @i64test_align1(i64* %b) nounwind uwtable sanitize_address {
 ; CHECK: ret void
 
 
-define void @i80test(i80* %a, i80* %b) nounwind uwtable sanitize_address {
+define void @i80test(ptr %a, ptr %b) nounwind uwtable sanitize_address {
   entry:
-  %t = load i80, i80* %a
-  store i80 %t, i80* %b, align 8
+  %t = load i80, ptr %a
+  store i80 %t, ptr %b, align 8
   ret void
 }
 
@@ -151,9 +151,9 @@ define void @i80test(i80* %a, i80* %b) nounwind uwtable sanitize_address {
 ; CHECK: ret void
 
 ; asan should not instrument functions with available_externally linkage.
-define available_externally i32 @f_available_externally(i32* %a) sanitize_address  {
+define available_externally i32 @f_available_externally(ptr %a) sanitize_address  {
 entry:
-  %tmp1 = load i32, i32* %a
+  %tmp1 = load i32, ptr %a
   ret i32 %tmp1
 }
 ; CHECK-LABEL: @f_available_externally
@@ -164,16 +164,16 @@ entry:
 ; CHECK-LABEL: @test_swifterror
 ; CHECK-NOT: __asan_report_load
 ; CHECK: ret void
-define void @test_swifterror(i8** swifterror) sanitize_address {
-  %swifterror_ptr_value = load i8*, i8** %0
+define void @test_swifterror(ptr swifterror) sanitize_address {
+  %swifterror_ptr_value = load ptr, ptr %0
   ret void
 }
 
 ; CHECK-LABEL: @test_swifterror_2
 ; CHECK-NOT: __asan_report_store
 ; CHECK: ret void
-define void @test_swifterror_2(i8** swifterror) sanitize_address {
-  store i8* null, i8** %0
+define void @test_swifterror_2(ptr swifterror) sanitize_address {
+  store ptr null, ptr %0
   ret void
 }
 
@@ -181,9 +181,9 @@ define void @test_swifterror_2(i8** swifterror) sanitize_address {
 ; CHECK-NOT: __asan_report_store
 ; CHECK: ret void
 define void @test_swifterror_3() sanitize_address {
-  %swifterror_addr = alloca swifterror i8*
-  store i8* null, i8** %swifterror_addr
-  call void @test_swifterror_2(i8** swifterror %swifterror_addr)
+  %swifterror_addr = alloca swifterror ptr
+  store ptr null, ptr %swifterror_addr
+  call void @test_swifterror_2(ptr swifterror %swifterror_addr)
   ret void
 }
 

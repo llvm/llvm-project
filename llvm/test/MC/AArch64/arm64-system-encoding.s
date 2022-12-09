@@ -609,6 +609,7 @@ foo:
  mrs x0, ID_PFR0_EL1
  mrs x0, ID_PFR1_EL1
  mrs x0, ID_DFR0_EL1
+ mrs x0, ID_DFR1_EL1
  mrs x0, ID_AFR0_EL1
  mrs x0, ID_ISAR0_EL1
  mrs x0, ID_ISAR1_EL1
@@ -622,6 +623,7 @@ foo:
 ; CHECK: mrs	x0, ID_PFR0_EL1         ; encoding: [0x00,0x01,0x38,0xd5]
 ; CHECK: mrs	x0, ID_PFR1_EL1         ; encoding: [0x20,0x01,0x38,0xd5]
 ; CHECK: mrs	x0, ID_DFR0_EL1         ; encoding: [0x40,0x01,0x38,0xd5]
+; CHECK: mrs	x0, ID_DFR1_EL1         ; encoding: [0xa0,0x03,0x38,0xd5]
 ; CHECK: mrs	x0, ID_AFR0_EL1         ; encoding: [0x60,0x01,0x38,0xd5]
 ; CHECK: mrs	x0, ID_ISAR0_EL1        ; encoding: [0x00,0x02,0x38,0xd5]
 ; CHECK: mrs	x0, ID_ISAR1_EL1        ; encoding: [0x20,0x02,0x38,0xd5]

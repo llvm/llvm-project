@@ -105,7 +105,7 @@ TEST(TBDv2, ReadFile) {
   }
   llvm::sort(Exports);
 
-  EXPECT_EQ(sizeof(TBDv2Symbols) / sizeof(ExportedSymbol), Exports.size());
+  EXPECT_EQ(std::size(TBDv2Symbols), Exports.size());
   EXPECT_TRUE(
       std::equal(Exports.begin(), Exports.end(), std::begin(TBDv2Symbols)));
 }

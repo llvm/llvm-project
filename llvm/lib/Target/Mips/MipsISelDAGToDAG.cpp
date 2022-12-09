@@ -296,8 +296,8 @@ void MipsDAGToDAGISel::Select(SDNode *Node) {
   case ISD::LOAD:
   case ISD::STORE:
     assert((Subtarget->systemSupportsUnalignedAccess() ||
-            cast<MemSDNode>(Node)->getMemoryVT().getSizeInBits() / 8 <=
-            cast<MemSDNode>(Node)->getAlignment()) &&
+            cast<MemSDNode>(Node)->getAlign() >=
+                cast<MemSDNode>(Node)->getMemoryVT().getStoreSize()) &&
            "Unexpected unaligned loads/stores.");
     break;
 #endif

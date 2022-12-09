@@ -1139,7 +1139,7 @@ bool isCodeObjectCompatible(OffloadTargetInfo &CodeObjectInfo,
 
   // Both TargetProc and CodeObjectProc can't be empty here.
   if (!TargetProc || !CodeObjectProc ||
-      CodeObjectProc.getValue() != TargetProc.getValue()) {
+      CodeObjectProc.value() != TargetProc.value()) {
     DEBUG_WITH_TYPE("CodeObjectCompatibility",
                     dbgs() << "Incompatible: Processor mismatch \t[CodeObject: "
                            << CodeObjectInfo.str()
@@ -1276,8 +1276,8 @@ static Error CheckHeterogeneousArchive(StringRef ArchiveName,
     auto &&ConflictingArchs = clang::getConflictTargetIDCombination(BundleIds);
     if (ConflictingArchs) {
       std::string ErrMsg =
-          Twine("conflicting TargetIDs [" + ConflictingArchs.getValue().first +
-                ", " + ConflictingArchs.getValue().second + "] found in " +
+          Twine("conflicting TargetIDs [" + ConflictingArchs.value().first +
+                ", " + ConflictingArchs.value().second + "] found in " +
                 ArchiveChildNameOrErr.get() + " of " + ArchiveName)
               .str();
       return createStringError(inconvertibleErrorCode(), ErrMsg);

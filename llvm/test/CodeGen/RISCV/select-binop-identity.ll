@@ -174,10 +174,10 @@ define i64 @add_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    beqz a0, .LBB7_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    add a0, a4, a2
+; RV32I-NEXT:    add a2, a4, a2
 ; RV32I-NEXT:    add a1, a3, a1
-; RV32I-NEXT:    sltu a2, a1, a3
-; RV32I-NEXT:    add a4, a0, a2
+; RV32I-NEXT:    sltu a4, a1, a3
+; RV32I-NEXT:    add a4, a2, a4
 ; RV32I-NEXT:    mv a3, a1
 ; RV32I-NEXT:  .LBB7_2:
 ; RV32I-NEXT:    mv a0, a3

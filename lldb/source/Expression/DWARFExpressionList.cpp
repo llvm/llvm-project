@@ -90,7 +90,7 @@ bool DWARFExpressionList::ContainsThreadLocalStorage() const {
     return false;
 
   const DWARFExpression &expr = m_exprs.GetEntryRef(0).data;
-  return expr.ContainsThreadLocalStorage();
+  return expr.ContainsThreadLocalStorage(m_dwarf_cu);
 }
 
 bool DWARFExpressionList::LinkThreadLocalStorage(
@@ -107,7 +107,7 @@ bool DWARFExpressionList::LinkThreadLocalStorage(
   // If we linked the TLS address correctly, update the module so that when the
   // expression is evaluated it can resolve the file address to a load address
   // and read the TLS data
-  if (expr.LinkThreadLocalStorage(link_address_callback))
+  if (expr.LinkThreadLocalStorage(m_dwarf_cu, link_address_callback))
     m_module_wp = new_module_sp;
   return true;
 }

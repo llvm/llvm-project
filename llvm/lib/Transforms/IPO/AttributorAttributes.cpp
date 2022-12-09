@@ -64,6 +64,7 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
 #include <numeric>
+#include <optional>
 
 using namespace llvm;
 
@@ -6155,7 +6156,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
 
   LoopInfo *LI =
       A.getInfoCache().getAnalysisResultForFunction<LoopAnalysis>(*F);
-  Optional<bool> MayContainIrreducibleControl;
+  std::optional<bool> MayContainIrreducibleControl;
   auto IsInLoop = [&](BasicBlock &BB) {
     if (&F->getEntryBlock() == &BB)
       return false;

@@ -851,7 +851,7 @@ class PatFrags<dag ops, list<dag> frags, code pred = [{}],
   // If this empty, accept any address space.
   list<int> AddressSpaces = ?;
 
-  // cast<MemSDNode>(N)->getAlignment() >=
+  // cast<MemSDNode>(N)->getAlign() >=
   // If this is empty, accept any alignment.
   int MinAlignment = ?;
 
@@ -1331,7 +1331,7 @@ def nontemporalstore : PatFrag<(ops node:$val, node:$ptr),
 def alignednontemporalstore : PatFrag<(ops node:$val, node:$ptr),
                                       (nontemporalstore node:$val, node:$ptr), [{
   StoreSDNode *St = cast<StoreSDNode>(N);
-  return St->getAlignment() >= St->getMemoryVT().getStoreSize();
+  return St->getAlign() >= St->getMemoryVT().getStoreSize();
 }]>;
 
 def unalignednontemporalstore : PatFrag<(ops node:$val, node:$ptr),
@@ -1349,7 +1349,7 @@ def nontemporalload : PatFrag<(ops node:$ptr),
 def alignednontemporalload : PatFrag<(ops node:$ptr),
                                       (nontemporalload node:$ptr), [{
   LoadSDNode *Ld = cast<LoadSDNode>(N);
-  return Ld->getAlignment() >= Ld->getMemoryVT().getStoreSize();
+  return Ld->getAlign() >= Ld->getMemoryVT().getStoreSize();
 }]>;
 
 // setcc convenience fragments.

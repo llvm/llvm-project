@@ -101,7 +101,9 @@ static Value genVectorInvariantValue(PatternRewriter &rewriter, VL vl,
 }
 
 /// Generates a vectorized load lhs = a[ind[lo:hi]] or lhs = a[lo:hi],
-/// where 'lo' denotes the current index and 'hi = lo + vl - 1'.
+/// where 'lo' denotes the current index and 'hi = lo + vl - 1'. Note
+/// that the sparse compiler can only generate indirect loads in
+/// the last index, i.e. back().
 static Value genVectorLoad(PatternRewriter &rewriter, Location loc, VL vl,
                            Value ptr, ArrayRef<Value> idxs, Value vmask) {
   VectorType vtp = vectorType(vl, ptr);
@@ -118,7 +120,9 @@ static Value genVectorLoad(PatternRewriter &rewriter, Location loc, VL vl,
 }
 
 /// Generates a vectorized store a[ind[lo:hi]] = rhs or a[lo:hi] = rhs
-/// where 'lo' denotes the current index and 'hi = lo + vl - 1'.
+/// where 'lo' denotes the current index and 'hi = lo + vl - 1'. Note
+/// that the sparse compiler can only generate indirect stores in
+/// the last index, i.e. back().
 static void genVectorStore(PatternRewriter &rewriter, Location loc, Value ptr,
                            ArrayRef<Value> idxs, Value vmask, Value rhs) {
   if (idxs.back().getType().isa<VectorType>()) {
@@ -132,32 +136,60 @@ static void genVectorStore(PatternRewriter &rewriter, Location loc, Value ptr,
   rewriter.create<vector::MaskedStoreOp>(loc, ptr, idxs, vmask, rhs);
 }
 
-/// Maps operation to combining kind for reduction.
-static vector::CombiningKind getCombiningKind(Operation *def) {
-  if (isa<arith::AddFOp>(def) || isa<arith::AddIOp>(def) ||
-      isa<arith::SubFOp>(def) || isa<arith::SubIOp>(def))
-    return vector::CombiningKind::ADD;
-  if (isa<arith::MulFOp>(def) || isa<arith::MulIOp>(def))
-    return vector::CombiningKind::MUL;
-  if (isa<arith::AndIOp>(def))
-    return vector::CombiningKind::AND;
-  if (isa<arith::OrIOp>(def))
-    return vector::CombiningKind::OR;
-  if (isa<arith::XOrIOp>(def))
-    return vector::CombiningKind::XOR;
-  llvm_unreachable("unknown reduction kind");
+/// Detects a vectorizable reduction operations and returns the
+/// combining kind of reduction on success in `kind`.
+static bool isVectorizableReduction(Value red, Value iter,
+                                    vector::CombiningKind &kind) {
+  if (auto addf = red.getDefiningOp<arith::AddFOp>()) {
+    kind = vector::CombiningKind::ADD;
+    return addf->getOperand(0) == iter || addf->getOperand(1) == iter;
+  }
+  if (auto addi = red.getDefiningOp<arith::AddIOp>()) {
+    kind = vector::CombiningKind::ADD;
+    return addi->getOperand(0) == iter || addi->getOperand(1) == iter;
+  }
+  if (auto subf = red.getDefiningOp<arith::SubFOp>()) {
+    kind = vector::CombiningKind::ADD;
+    return subf->getOperand(0) == iter;
+  }
+  if (auto subi = red.getDefiningOp<arith::SubIOp>()) {
+    kind = vector::CombiningKind::ADD;
+    return subi->getOperand(0) == iter;
+  }
+  if (auto mulf = red.getDefiningOp<arith::MulFOp>()) {
+    kind = vector::CombiningKind::MUL;
+    return mulf->getOperand(0) == iter || mulf->getOperand(1) == iter;
+  }
+  if (auto muli = red.getDefiningOp<arith::MulIOp>()) {
+    kind = vector::CombiningKind::MUL;
+    return muli->getOperand(0) == iter || muli->getOperand(1) == iter;
+  }
+  if (auto andi = red.getDefiningOp<arith::AndIOp>()) {
+    kind = vector::CombiningKind::AND;
+    return andi->getOperand(0) == iter || andi->getOperand(1) == iter;
+  }
+  if (auto ori = red.getDefiningOp<arith::OrIOp>()) {
+    kind = vector::CombiningKind::OR;
+    return ori->getOperand(0) == iter || ori->getOperand(1) == iter;
+  }
+  if (auto xori = red.getDefiningOp<arith::XOrIOp>()) {
+    kind = vector::CombiningKind::XOR;
+    return xori->getOperand(0) == iter || xori->getOperand(1) == iter;
+  }
+  return false;
 }
 
 /// Generates an initial value for a vector reduction, following the scheme
 /// given in Chapter 5 of "The Software Vectorization Handbook", where the
 /// initial scalar value is correctly embedded in the vector reduction value,
 /// and a straightforward horizontal reduction will complete the operation.
-/// The value 'r' denotes the initial value of the accumulator. Value 'rd'
-/// denotes the accumulation operation, which is solely used here to determine
-/// the kind of combining reduction (viz. addf -> sum-accumulation).
+/// Value 'r' denotes the initial value of the reduction outside the loop.
 static Value genVectorReducInit(PatternRewriter &rewriter, Location loc,
-                                VectorType vtp, Value r, Value rd) {
-  vector::CombiningKind kind = getCombiningKind(rd.getDefiningOp());
+                                Value red, Value iter, Value r,
+                                VectorType vtp) {
+  vector::CombiningKind kind;
+  if (!isVectorizableReduction(red, iter, kind))
+    llvm_unreachable("unknown reduction");
   switch (kind) {
   case vector::CombiningKind::ADD:
   case vector::CombiningKind::XOR:
@@ -178,13 +210,6 @@ static Value genVectorReducInit(PatternRewriter &rewriter, Location loc,
     break;
   }
   llvm_unreachable("unknown reduction kind");
-}
-
-/// Generates final value for a vector reduction.
-static Value genVectorReducEnd(PatternRewriter &rewriter, Location loc,
-                               Value vexp, Value rd) {
-  vector::CombiningKind kind = getCombiningKind(rd.getDefiningOp());
-  return rewriter.create<vector::ReductionOp>(loc, kind, vexp);
 }
 
 /// This method is called twice to analyze and rewrite the given subscripts.
@@ -379,10 +404,14 @@ static bool vectorizeStmt(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
     if (!yield.getResults().empty()) {
       Value init = forOp.getInitArgs()[0];
       VectorType vtp = vectorType(vl, init.getType());
-      Value vinit =
-          genVectorReducInit(rewriter, loc, vtp, init, yield->getOperand(0));
+      Value vinit = genVectorReducInit(rewriter, loc, yield->getOperand(0),
+                                       forOp.getRegionIterArg(0), init, vtp);
       forOpNew = rewriter.create<scf::ForOp>(
           loc, forOp.getLowerBound(), forOp.getUpperBound(), step, vinit);
+      forOpNew->setAttr(
+          SparseTensorLoopEmitter::getLoopEmitterLoopAttrName(),
+          forOp->getAttr(
+              SparseTensorLoopEmitter::getLoopEmitterLoopAttrName()));
       rewriter.setInsertionPointToStart(forOpNew.getBody());
     } else {
       forOp.setStep(step);
@@ -395,20 +424,22 @@ static bool vectorizeStmt(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
   // Sparse for-loops either are terminated by a non-empty yield operation
   // (reduction loop) or otherwise by a store operation (pararallel loop).
   if (!yield.getResults().empty()) {
+    // Analyze/vectorize reduction.
     if (yield->getNumOperands() != 1)
       return false;
-    Value redOp = yield->getOperand(0);
-    // Analyze/vectorize reduction.
-    // TODO: use linalg utils to verify the actual reduction?
+    Value red = yield->getOperand(0);
+    Value iter = forOp.getRegionIterArg(0);
+    vector::CombiningKind kind;
     Value vrhs;
-    if (vectorizeExpr(rewriter, forOp, vl, redOp, codegen, vmask, vrhs)) {
+    if (isVectorizableReduction(red, iter, kind) &&
+        vectorizeExpr(rewriter, forOp, vl, red, codegen, vmask, vrhs)) {
       if (codegen) {
-        Value vpass =
-            genVectorInvariantValue(rewriter, vl, forOp.getRegionIterArg(0));
+        Value partial = forOpNew.getResult(0);
+        Value vpass = genVectorInvariantValue(rewriter, vl, iter);
         Value vred = rewriter.create<arith::SelectOp>(loc, vmask, vrhs, vpass);
         rewriter.create<scf::YieldOp>(loc, vred);
         rewriter.setInsertionPointAfter(forOpNew);
-        Value vres = genVectorReducEnd(rewriter, loc, forOpNew.getResult(0), redOp);
+        Value vres = rewriter.create<vector::ReductionOp>(loc, kind, partial);
         // Now do some relinking (last one is not completely type safe
         // but all bad ones are removed right away). This also folds away
         // nop broadcast operations.
@@ -469,6 +500,32 @@ private:
   const VL vl;
 };
 
+/// Reduction chain cleanup.
+///   v = for { }
+///   s = vsum(v)               v = for { }
+///   u = expand(s)       ->    for (v) { }
+///   for (u) { }
+template <typename VectorOp>
+struct ReducChainRewriter : public OpRewritePattern<VectorOp> {
+public:
+  using OpRewritePattern<VectorOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(VectorOp op,
+                                PatternRewriter &rewriter) const override {
+    Value inp = op.getSource();
+    if (auto redOp = inp.getDefiningOp<vector::ReductionOp>()) {
+      if (auto forOp = redOp.getVector().getDefiningOp<scf::ForOp>()) {
+        if (forOp->hasAttr(
+                SparseTensorLoopEmitter::getLoopEmitterLoopAttrName())) {
+          rewriter.replaceOp(op, redOp.getVector());
+          return success();
+        }
+      }
+    }
+    return failure();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -482,4 +539,6 @@ void mlir::populateSparseVectorizationPatterns(RewritePatternSet &patterns,
                                                bool enableSIMDIndex32) {
   patterns.add<ForOpRewriter>(patterns.getContext(), vectorLength,
                               enableVLAVectorization, enableSIMDIndex32);
+  patterns.add<ReducChainRewriter<vector::InsertElementOp>,
+               ReducChainRewriter<vector::BroadcastOp>>(patterns.getContext());
 }

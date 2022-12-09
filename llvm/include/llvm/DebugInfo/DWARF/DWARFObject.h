@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/Object/ObjectFile.h"
+#include <optional>
 
 namespace llvm {
 // This is responsible for low level access to the object file. It
@@ -81,8 +82,8 @@ public:
   virtual StringRef getCUIndexSection() const { return ""; }
   virtual StringRef getGdbIndexSection() const { return ""; }
   virtual StringRef getTUIndexSection() const { return ""; }
-  virtual Optional<RelocAddrEntry> find(const DWARFSection &Sec,
-                                        uint64_t Pos) const = 0;
+  virtual std::optional<RelocAddrEntry> find(const DWARFSection &Sec,
+                                             uint64_t Pos) const = 0;
 };
 
 } // namespace llvm

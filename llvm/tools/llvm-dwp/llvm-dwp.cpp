@@ -29,6 +29,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -187,7 +188,7 @@ int main(int argc, char **argv) {
   // Create the output file.
   std::error_code EC;
   ToolOutputFile OutFile(OutputFilename, EC, sys::fs::OF_None);
-  Optional<buffer_ostream> BOS;
+  std::optional<buffer_ostream> BOS;
   raw_pwrite_stream *OS;
   if (EC)
     return error(Twine(OutputFilename) + ": " + EC.message(), Context);

@@ -580,7 +580,10 @@ const uint8_t *processExportNode(const uint8_t *CurrPtr,
 
 void MachODumper::dumpExportTrie(std::unique_ptr<MachOYAML::Object> &Y) {
   MachOYAML::LinkEditData &LEData = Y->LinkEdit;
+  // The exports trie can be in LC_DYLD_INFO or LC_DYLD_EXPORTS_TRIE
   auto ExportsTrie = Obj.getDyldInfoExportsTrie();
+  if (ExportsTrie.empty())
+    ExportsTrie = Obj.getDyldExportsTrie();
   processExportNode(ExportsTrie.begin(), ExportsTrie.end(), LEData.ExportTrie);
 }
 

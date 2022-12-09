@@ -57,14 +57,14 @@ struct HoistableRead {
 
 /// Return true if op1 and op2 are the same constant or the same SSA value.
 static bool isEqualOffsetSizeOrStride(OpFoldResult op1, OpFoldResult op2) {
-  auto getConstantIntValue = [](OpFoldResult ofr) -> llvm::Optional<int64_t> {
+  auto getConstantIntValue = [](OpFoldResult ofr) -> std::optional<int64_t> {
     Attribute attr = ofr.dyn_cast<Attribute>();
     // Note: isa+cast-like pattern allows writing the condition below as 1 line.
     if (!attr && ofr.get<Value>().getDefiningOp<arith::ConstantOp>())
       attr = ofr.get<Value>().getDefiningOp<arith::ConstantOp>().getValue();
     if (auto intAttr = attr.dyn_cast_or_null<IntegerAttr>())
       return intAttr.getValue().getSExtValue();
-    return llvm::None;
+    return std::nullopt;
   };
   auto cst1 = getConstantIntValue(op1), cst2 = getConstantIntValue(op2);
   if (cst1 && cst2 && *cst1 == *cst2)

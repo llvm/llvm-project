@@ -671,8 +671,8 @@ s_atc_probe_buffer 0x1, s[8:11], 0x1FFFFF
 // NOVI: error: expected a 20-bit unsigned offset
 
 s_load_dword s1, s[2:3], s0 offset:0x1FFFFF
-// NOSICI: error: operands are not valid for this GPU or mode
-// NOVI: error: operands are not valid for this GPU or mode
+// NOSICI: error: not a valid operand.
+// NOVI: error: not a valid operand.
 // NOGFX9: error: expected a 21-bit signed offset
 // NOGFX10: error: expected a 21-bit signed offset
 
@@ -682,8 +682,8 @@ s_store_dword s1, s[2:3], 0x1FFFFF
 // NOVI: error: expected a 20-bit unsigned offset
 
 s_buffer_load_dword s10, s[92:95], s0 offset:-1
-// NOSICI: error: operands are not valid for this GPU or mode
-// NOVI: error: operands are not valid for this GPU or mode
+// NOSICI: error: not a valid operand.
+// NOVI: error: not a valid operand.
 // NOGFX9: error: expected a 20-bit unsigned offset
 // NOGFX10: error: expected a 20-bit unsigned offset
 

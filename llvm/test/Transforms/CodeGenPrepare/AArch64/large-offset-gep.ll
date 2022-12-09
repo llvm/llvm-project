@@ -258,40 +258,40 @@ while_end:
 
 declare i8* @llvm.strip.invariant.group.p0i8(i8*)
 
-define void @test_invariant_group(i32) {
+define void @test_invariant_group(i32 %arg) {
 ; CHECK-LABEL: test_invariant_group:
-; CHECK:       // %bb.0:
+; CHECK:       // %bb.0: // %bb
 ; CHECK-NEXT:    cbz wzr, .LBB5_2
-; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:  // %bb.1: // %bb6
 ; CHECK-NEXT:    cbz w0, .LBB5_3
-; CHECK-NEXT:  .LBB5_2:
+; CHECK-NEXT:  .LBB5_2: // %bb5
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB5_3:
+; CHECK-NEXT:  .LBB5_3: // %bb2
 ; CHECK-NEXT:    cbnz wzr, .LBB5_2
-; CHECK-NEXT:  // %bb.4:
+; CHECK-NEXT:  // %bb.4: // %bb4
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    str x8, [x8]
 ; CHECK-NEXT:    ret
-  br i1 undef, label %8, label %7
+bb:
+  br i1 undef, label %bb6, label %bb5
 
-; <label>:2:                                      ; preds = %8, %2
-  br i1 undef, label %2, label %7
+bb1:                                              ; preds = %bb6, %bb1
+  br i1 undef, label %bb1, label %bb5
 
-; <label>:3:                                      ; preds = %8
-  %4 = getelementptr inbounds i8, i8* %9, i32 40000
-  %5 = bitcast i8* %4 to i64*
-  br i1 undef, label %7, label %6
+bb2:                                              ; preds = %bb6
+  %i = getelementptr inbounds i8, i8* %i7, i32 40000
+  %i3 = bitcast i8* %i to i64*
+  br i1 undef, label %bb5, label %bb4
 
-; <label>:6:                                      ; preds = %3
-  store i64 1, i64* %5, align 8
-  br label %7
+bb4:                                              ; preds = %bb2
+  store i64 1, i64* %i3, align 8
+  br label %bb5
 
-; <label>:7:                                      ; preds = %6, %3, %2, %1
+bb5:                                              ; preds = %bb4, %bb2, %bb1, %bb
   ret void
 
-; <label>:8:                                      ; preds = %1
-  %9 = call i8* @llvm.strip.invariant.group.p0i8(i8* nonnull undef)
-  %10 = icmp eq i32 %0, 0
-  br i1 %10, label %3, label %2
+bb6:                                              ; preds = %bb
+  %i7 = call i8* @llvm.strip.invariant.group.p0i8(i8* nonnull undef)
+  %i8 = icmp eq i32 %arg, 0
+  br i1 %i8, label %bb2, label %bb1
 }
-

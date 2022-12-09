@@ -73,13 +73,89 @@ BasicBlock *splitBB(IRBuilder<> &Builder, bool CreateBranch, llvm::Twine Name);
 BasicBlock *splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
                               llvm::Twine Suffix = ".split");
 
+/// Captures attributes that affect generating LLVM-IR using the
+/// OpenMPIRBuilder and related classes. Note that not all attributes are
+/// required for all classes or functions. In some use cases the configuration
+/// is not necessary at all, because because the only functions that are called
+/// are ones that are not dependent on the configuration.
+class OpenMPIRBuilderConfig {
+public:
+  /// Flag for specifying if the compilation is done for embedded device code
+  /// or host code.
+  Optional<bool> IsEmbedded;
+
+  /// Flag for specifying if the compilation is done for an offloading target,
+  /// like GPU.
+  Optional<bool> IsTargetCodegen;
+
+  /// Flag for specifying weather a requires unified_shared_memory
+  /// directive is present or not.
+  Optional<bool> HasRequiresUnifiedSharedMemory;
+
+  /// First separator used between the initial two parts of a name.
+  Optional<StringRef> FirstSeparator;
+  /// Separator used between all of the rest consecutive parts of s name
+  Optional<StringRef> Separator;
+
+  OpenMPIRBuilderConfig() {}
+  OpenMPIRBuilderConfig(bool IsEmbedded, bool IsTargetCodegen,
+                        bool HasRequiresUnifiedSharedMemory)
+      : IsEmbedded(IsEmbedded), IsTargetCodegen(IsTargetCodegen),
+        HasRequiresUnifiedSharedMemory(HasRequiresUnifiedSharedMemory) {}
+
+  // Getters functions that assert if the required values are not present.
+  bool isEmbedded() const {
+    assert(IsEmbedded.has_value() && "IsEmbedded is not set");
+    return IsEmbedded.value();
+  }
+
+  bool isTargetCodegen() const {
+    assert(IsTargetCodegen.has_value() && "IsTargetCodegen is not set");
+    return IsTargetCodegen.value();
+  }
+
+  bool hasRequiresUnifiedSharedMemory() const {
+    assert(HasRequiresUnifiedSharedMemory.has_value() &&
+           "HasUnifiedSharedMemory is not set");
+    return HasRequiresUnifiedSharedMemory.value();
+  }
+
+  // Returns the FirstSeparator if set, otherwise use the default
+  // separator depending on isTargetCodegen
+  StringRef firstSeparator() const {
+    if (FirstSeparator.has_value())
+      return FirstSeparator.value();
+    if (isTargetCodegen())
+      return "_";
+    return ".";
+  }
+
+  // Returns the Separator if set, otherwise use the default
+  // separator depending on isTargetCodegen
+  StringRef separator() const {
+    if (Separator.has_value())
+      return Separator.value();
+    if (isTargetCodegen())
+      return "$";
+    return ".";
+  }
+
+  void setIsEmbedded(bool Value) { IsEmbedded = Value; }
+  void setIsTargetCodegen(bool Value) { IsTargetCodegen = Value; }
+  void setHasRequiresUnifiedSharedMemory(bool Value) {
+    HasRequiresUnifiedSharedMemory = Value;
+  }
+  void setFirstSeparator(StringRef FS) { FirstSeparator = FS; }
+  void setSeparator(StringRef S) { Separator = S; }
+};
+
 /// An interface to create LLVM-IR for OpenMP directives.
 ///
 /// Each OpenMP directive has a corresponding public generator method.
 class OpenMPIRBuilder {
 public:
   /// Create a new OpenMPIRBuilder operating on the given module \p M. This will
-  /// not have an effect on \p M (see initialize).
+  /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M) : M(M), Builder(M.getContext()) {}
   ~OpenMPIRBuilder();
 
@@ -87,6 +163,8 @@ public:
   /// potentially other helpers into the underlying module. Must be called
   /// before any other method and only once!
   void initialize();
+
+  void setConfig(OpenMPIRBuilderConfig C) { Config = C; }
 
   /// Finalize the underlying module, e.g., by outlining regions.
   /// \param Fn                    The function to be finalized. If not used,
@@ -98,6 +176,16 @@ public:
 
   /// Type used throughout for insertion points.
   using InsertPointTy = IRBuilder<>::InsertPoint;
+
+  /// Get the create a name using the platform specific separators.
+  /// \param Parts parts of the final name that needs separation
+  /// The created name has a first separator between the first and second part
+  /// and a second separator between all other parts.
+  /// E.g. with FirstSeparator "$" and Separator "." and
+  /// parts: "p1", "p2", "p3", "p4"
+  /// The resulting name is "p1$p2.p3.p4"
+  /// The separators are retrieved from the OpenMPIRBuilderConfig.
+  std::string createPlatformSpecificName(ArrayRef<StringRef> Parts) const;
 
   /// Callback type for variable finalization (think destructors).
   ///
@@ -942,6 +1030,9 @@ public:
   /// \param Ident The ident (ident_t*) describing the query origin.
   Value *getOrCreateThreadID(Value *Ident);
 
+  /// The OpenMPIRBuilder Configuration
+  OpenMPIRBuilderConfig Config;
+
   /// The underlying LLVM-IR module
   Module &M;
 
@@ -1094,11 +1185,10 @@ public:
                                     bool EmitDebug = false,
                                     bool ForEndCall = false);
 
-  /// Creates offloading entry for the provided entry ID \a ID,
-  /// address \a Addr, size \a Size, and flags \a Flags.
-  void createOffloadEntry(bool IsTargetCodegen, Constant *ID, Constant *Addr,
-                          uint64_t Size, int32_t Flags,
-                          GlobalValue::LinkageTypes);
+  /// Creates offloading entry for the provided entry ID \a ID, address \a
+  /// Addr, size \a Size, and flags \a Flags.
+  void createOffloadEntry(Constant *ID, Constant *Addr, uint64_t Size,
+                          int32_t Flags, GlobalValue::LinkageTypes);
 
   /// The kind of errors that can occur when emitting the offload entries and
   /// metadata.
@@ -1121,8 +1211,6 @@ public:
   // We only generate metadata for function that contain target regions.
   void createOffloadEntriesAndInfoMetadata(
       OffloadEntriesInfoManager &OffloadEntriesInfoManager,
-      bool IsTargetCodegen, bool IsEmbedded,
-      bool HasRequiresUnifiedSharedMemory,
       EmitMetadataErrorReportFunctionTy &ErrorReportFunction);
 
 public:
@@ -1759,9 +1847,12 @@ struct TargetRegionEntryInfo {
 /// Class that manages information about offload code regions and data
 class OffloadEntriesInfoManager {
   /// Number of entries registered so far.
+  OpenMPIRBuilderConfig Config;
   unsigned OffloadingEntriesNum = 0;
 
 public:
+  void setConfig(OpenMPIRBuilderConfig C) { Config = C; }
+
   /// Base class of the entries info.
   class OffloadEntryInfo {
   public:
@@ -1813,7 +1904,8 @@ public:
   bool empty() const;
   /// Return number of entries defined so far.
   unsigned size() const { return OffloadingEntriesNum; }
-  explicit OffloadEntriesInfoManager() {}
+
+  OffloadEntriesInfoManager() : Config() {}
 
   //
   // Target region entries related.
@@ -1862,8 +1954,7 @@ public:
   /// Register target region entry.
   void registerTargetRegionEntryInfo(TargetRegionEntryInfo EntryInfo,
                                      Constant *Addr, Constant *ID,
-                                     OMPTargetRegionEntryKind Flags,
-                                     bool IsDevice);
+                                     OMPTargetRegionEntryKind Flags);
   /// Return true if a target region entry with the provided information
   /// exists.
   bool hasTargetRegionEntryInfo(TargetRegionEntryInfo EntryInfo,
@@ -1932,8 +2023,7 @@ public:
   void registerDeviceGlobalVarEntryInfo(StringRef VarName, Constant *Addr,
                                         int64_t VarSize,
                                         OMPTargetGlobalVarEntryKind Flags,
-                                        GlobalValue::LinkageTypes Linkage,
-                                        bool IsDevice);
+                                        GlobalValue::LinkageTypes Linkage);
   /// Checks if the variable with the given name has been registered already.
   bool hasDeviceGlobalVarEntryInfo(StringRef VarName) const {
     return OffloadEntriesDeviceGlobalVar.count(VarName) > 0;

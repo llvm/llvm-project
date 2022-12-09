@@ -40,12 +40,12 @@ v_wmma_f32_16x16x16_f16 v[16:19], v[0:7], v[8:15], 1.0
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 v_wmma_f32_16x16x16_f16 v[16:23], v[0:7], v[8:15], v[16:23] op_sel:[0,0,1]
-// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
 v_wmma_f32_16x16x16_f16 v[16:19], v[0:7], v[8:15], v[16:19] op_sel:[0,0,1]
-// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
 v_wmma_f32_16x16x16_f16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[1,0,0] neg_hi:[1,0,0]
 // W32: v_wmma_f32_16x16x16_f16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[1,0,0] neg_hi:[1,0,0] ; encoding: [0x10,0x41,0x40,0xcc,0x00,0x11,0x42,0x3c]
@@ -116,12 +116,12 @@ v_wmma_f32_16x16x16_bf16 v[16:19], v[0:7], v[8:15], 1.0
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 v_wmma_f32_16x16x16_bf16 v[16:23], v[0:7], v[8:15], v[16:23] op_sel:[0,0,1]
-// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
 v_wmma_f32_16x16x16_bf16 v[16:19], v[0:7], v[8:15], v[16:19] op_sel:[0,0,1]
-// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
 v_wmma_f32_16x16x16_bf16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[1,0,0] neg_hi:[1,0,0]
 // W32: v_wmma_f32_16x16x16_bf16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[1,0,0] neg_hi:[1,0,0] ; encoding: [0x10,0x41,0x41,0xcc,0x00,0x11,0x42,0x3c]
@@ -344,12 +344,12 @@ v_wmma_i32_16x16x16_iu8 v[8:11], v[0:3], v[4:7], 1
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 v_wmma_i32_16x16x16_iu8 v[16:23], v[0:7], v[8:15], v[16:23] op_sel:[0,0,1]
-// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
 v_wmma_i32_16x16x16_iu8 v[16:19], v[0:7], v[8:15], v[16:19] op_sel:[0,0,1]
-// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
 v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], v[8:15] neg_lo:[1,0,0] neg_hi:[1,0,0]
 // W32: v_wmma_i32_16x16x16_iu8 v[8:15], v[0:3], v[4:7], v[8:15] neg_lo:[1,0,0] neg_hi:[1,0,0] ; encoding: [0x08,0x41,0x44,0xcc,0x00,0x09,0x22,0x3c]
@@ -420,12 +420,12 @@ v_wmma_i32_16x16x16_iu4 v[4:7], v[0:1], v[2:3], 1
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 v_wmma_i32_16x16x16_iu4 v[16:23], v[0:7], v[8:15], v[16:23] op_sel:[0,0,1]
-// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
 v_wmma_i32_16x16x16_iu4 v[16:19], v[0:7], v[8:15], v[16:19] op_sel:[0,0,1]
-// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
 v_wmma_i32_16x16x16_iu4 v[4:11], v[0:1], v[2:3], v[4:11] neg_lo:[1,0,0] neg_hi:[1,0,0]
 // W32: v_wmma_i32_16x16x16_iu4 v[4:11], v[0:1], v[2:3], v[4:11] neg_lo:[1,0,0] neg_hi:[1,0,0] ; encoding: [0x04,0x41,0x45,0xcc,0x00,0x05,0x12,0x3c]

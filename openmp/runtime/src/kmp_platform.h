@@ -101,6 +101,9 @@
 #elif defined(__aarch64__) || defined(_M_ARM64)
 #undef KMP_ARCH_AARCH64
 #define KMP_ARCH_AARCH64 1
+#elif defined(__arm__) || defined(_M_ARM)
+#undef KMP_ARCH_ARMV7
+#define KMP_ARCH_ARMV7 1
 #else
 #undef KMP_ARCH_X86
 #define KMP_ARCH_X86 1

@@ -118,6 +118,24 @@ func.func @target_env() attributes {
 
 // -----
 
+func.func @target_env_client_api() attributes {
+  // CHECK:      spirv.target_env = #spirv.target_env<
+  // CHECK-SAME:   #spirv.vce<v1.0, [], []>,
+  // CHECK-SAME:   api=Metal,
+  // CHECK-SAME:   #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, api=Metal, #spirv.resource_limits<>>
+} { return }
+
+// -----
+
+func.func @target_env_client_api() attributes {
+  // CHECK:      spirv.target_env = #spirv.target_env
+  // CHECK-NOT:   api=
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, api=Unknown, #spirv.resource_limits<>>
+} { return }
+
+// -----
+
 func.func @target_env_vendor_id() attributes {
   // CHECK:      spirv.target_env = #spirv.target_env<
   // CHECK-SAME:   #spirv.vce<v1.0, [], []>,
@@ -144,6 +162,17 @@ func.func @target_env_vendor_id_device_type_device_id() attributes {
   // CHECK-SAME:   Qualcomm:IntegratedGPU:100925441,
   // CHECK-SAME:   #spirv.resource_limits<>>
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, Qualcomm:IntegratedGPU:0x6040001, #spirv.resource_limits<>>
+} { return }
+
+// -----
+
+func.func @target_env_client_api_vendor_id_device_type_device_id() attributes {
+  // CHECK:      spirv.target_env = #spirv.target_env<
+  // CHECK-SAME:   #spirv.vce<v1.0, [], []>,
+  // CHECK-SAME:   api=Vulkan,
+  // CHECK-SAME:   Qualcomm:IntegratedGPU:100925441,
+  // CHECK-SAME:   #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, api=Vulkan, Qualcomm:IntegratedGPU:0x6040001, #spirv.resource_limits<>>
 } { return }
 
 // -----

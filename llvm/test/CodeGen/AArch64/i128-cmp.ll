@@ -116,8 +116,8 @@ define i1 @cmp_i128_sle(i128 %a, i128 %b) {
 define void @br_on_cmp_i128_eq(i128 %a, i128 %b) nounwind {
 ; CHECK-LABEL: br_on_cmp_i128_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, x2
-; CHECK-NEXT:    ccmp x1, x3, #0, eq
+; CHECK-NEXT:    cmp x1, x3
+; CHECK-NEXT:    ccmp x0, x2, #0, eq
 ; CHECK-NEXT:    b.ne .LBB10_2
 ; CHECK-NEXT:  // %bb.1: // %call
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
@@ -137,8 +137,8 @@ exit:
 define void @br_on_cmp_i128_ne(i128 %a, i128 %b) nounwind {
 ; CHECK-LABEL: br_on_cmp_i128_ne:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, x2
-; CHECK-NEXT:    ccmp x1, x3, #0, eq
+; CHECK-NEXT:    cmp x1, x3
+; CHECK-NEXT:    ccmp x0, x2, #0, eq
 ; CHECK-NEXT:    b.eq .LBB11_2
 ; CHECK-NEXT:  // %bb.1: // %call
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill

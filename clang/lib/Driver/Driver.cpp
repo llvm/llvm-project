@@ -1040,8 +1040,8 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
             getConflictTargetIDCombination(OffloadArchsRef);
         if (ConflictingArchs) {
           C.getDriver().Diag(clang::diag::err_drv_bad_offload_arch_combo)
-              << ConflictingArchs.getValue().first
-              << ConflictingArchs.getValue().second;
+              << ConflictingArchs.value().first
+              << ConflictingArchs.value().second;
           C.setContainsError();
           return;
         }
@@ -1061,7 +1061,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
           C.setContainsError();
           return;
         } else
-          OpenMPTargetArch = getCanonicalTargetID(ArchStr.getValue(), Features);
+          OpenMPTargetArch = getCanonicalTargetID(ArchStr.value(), Features);
 
         std::string NormalizedName =
             Twine(TT.normalize() + "-" + OpenMPTargetArch).str();

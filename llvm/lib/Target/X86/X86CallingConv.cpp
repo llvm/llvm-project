@@ -240,7 +240,7 @@ static bool CC_X86_32_MCUInReg(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   // This is similar to CCAssignToReg<[EAX, EDX, ECX]>, but makes sure
   // not to split i64 and double between a register and stack
   static const MCPhysReg RegList[] = {X86::EAX, X86::EDX, X86::ECX};
-  static const unsigned NumRegs = sizeof(RegList) / sizeof(RegList[0]);
+  static const unsigned NumRegs = std::size(RegList);
 
   SmallVectorImpl<CCValAssign> &PendingMembers = State.getPendingLocs();
 

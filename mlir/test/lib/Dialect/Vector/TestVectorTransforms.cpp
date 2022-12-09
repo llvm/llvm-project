@@ -72,11 +72,11 @@ struct TestVectorToVectorLowering
 
 private:
   // Return the target shape based on op type.
-  static Optional<SmallVector<int64_t, 4>> getShape(Operation *op) {
+  static Optional<SmallVector<int64_t>> getShape(Operation *op) {
     if (isa<arith::AddFOp, arith::SelectOp, arith::CmpFOp>(op))
-      return SmallVector<int64_t, 4>(2, 2);
+      return SmallVector<int64_t>(2, 2);
     if (isa<vector::ContractionOp>(op))
-      return SmallVector<int64_t, 4>(3, 2);
+      return SmallVector<int64_t>(3, 2);
     // For transfer ops, just propagate the shape coming from
     // InsertStridedSlices/ExtractStridedSlices.
     if (auto readOp = dyn_cast<vector::TransferReadOp>(op)) {
@@ -90,15 +90,15 @@ private:
           return llvm::None;
         dstVec = vecType;
       }
-      return SmallVector<int64_t, 4>(dstVec.getShape().begin(),
-                                     dstVec.getShape().end());
+      return SmallVector<int64_t>(dstVec.getShape().begin(),
+                                  dstVec.getShape().end());
     }
     if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op)) {
       auto insert = writeOp.getVector().getDefiningOp<InsertStridedSliceOp>();
       if (!insert)
         return llvm::None;
       ArrayRef<int64_t> shape = insert.getSourceVectorType().getShape();
-      return SmallVector<int64_t, 4>(shape.begin(), shape.end());
+      return SmallVector<int64_t>(shape.begin(), shape.end());
     }
     return llvm::None;
   }
@@ -314,10 +314,10 @@ struct TestVectorUnrollingPatterns
 
     if (unrollBasedOnType) {
       UnrollVectorOptions::NativeShapeFnType nativeShapeFn =
-          [](Operation *op) -> Optional<SmallVector<int64_t, 4>> {
+          [](Operation *op) -> Optional<SmallVector<int64_t>> {
         vector::ContractionOp contractOp = cast<vector::ContractionOp>(op);
-        SmallVector<int64_t, 4> nativeShape(
-            contractOp.getIteratorTypes().size(), 4);
+        SmallVector<int64_t> nativeShape(contractOp.getIteratorTypes().size(),
+                                         4);
         Type lhsType = contractOp.getLhsType().getElementType();
         nativeShape[nativeShape.size() - 1] = lhsType.isF16() ? 4 : 2;
         return nativeShape;
@@ -339,12 +339,11 @@ struct TestVectorUnrollingPatterns
       }
       populateVectorUnrollPatterns(patterns, opts);
     } else {
-      auto nativeShapeFn =
-          [](Operation *op) -> Optional<SmallVector<int64_t, 4>> {
+      auto nativeShapeFn = [](Operation *op) -> Optional<SmallVector<int64_t>> {
         auto contractOp = dyn_cast<ContractionOp>(op);
         if (!contractOp)
           return None;
-        return SmallVector<int64_t, 4>(contractOp.getIteratorTypes().size(), 2);
+        return SmallVector<int64_t>(contractOp.getIteratorTypes().size(), 2);
       };
       populateVectorUnrollPatterns(patterns,
                                    UnrollVectorOptions()

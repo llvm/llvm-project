@@ -32,13 +32,13 @@ define i64 @addcarry(i64 %x, i64 %y) nounwind {
 ; RISCV32-NEXT:  # %bb.3:
 ; RISCV32-NEXT:    sub a5, a5, a0
 ; RISCV32-NEXT:  .LBB0_4:
-; RISCV32-NEXT:    slli a1, a5, 30
-; RISCV32-NEXT:    srli a3, a4, 2
-; RISCV32-NEXT:    or a1, a1, a3
-; RISCV32-NEXT:    slli a3, a4, 30
+; RISCV32-NEXT:    slli a5, a5, 30
+; RISCV32-NEXT:    srli a1, a4, 2
+; RISCV32-NEXT:    or a1, a5, a1
+; RISCV32-NEXT:    slli a4, a4, 30
 ; RISCV32-NEXT:    mul a0, a0, a2
 ; RISCV32-NEXT:    srli a0, a0, 2
-; RISCV32-NEXT:    or a0, a3, a0
+; RISCV32-NEXT:    or a0, a4, a0
 ; RISCV32-NEXT:    ret
   %tmp = call i64 @llvm.smul.fix.i64(i64 %x, i64 %y, i32 2);
   ret i64 %tmp;

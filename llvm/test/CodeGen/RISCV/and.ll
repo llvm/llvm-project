@@ -187,8 +187,8 @@ define i64 @and64_0xffffffff00000000(i64 %x) {
 define i64 @and64_0x7fffffff00000000(i64 %x) {
 ; RV32I-LABEL: and64_0x7fffffff00000000:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a1, 1
-; RV32I-NEXT:    srli a1, a0, 1
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    srli a1, a1, 1
 ; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    ret
 ;

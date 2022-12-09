@@ -335,8 +335,8 @@ define i64 @callee_aligned_stack(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i128 %f
 ; RV64I-NEXT:    ld a1, 0(sp)
 ; RV64I-NEXT:    ld a2, 16(sp)
 ; RV64I-NEXT:    ld a3, 32(sp)
-; RV64I-NEXT:    add a4, a5, a7
-; RV64I-NEXT:    add a1, a4, a1
+; RV64I-NEXT:    add a5, a5, a7
+; RV64I-NEXT:    add a1, a5, a1
 ; RV64I-NEXT:    add a1, a1, a2
 ; RV64I-NEXT:    add a1, a1, a3
 ; RV64I-NEXT:    add a0, a1, a0

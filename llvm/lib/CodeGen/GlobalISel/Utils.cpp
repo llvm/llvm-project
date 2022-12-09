@@ -34,6 +34,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include <numeric>
+#include <optional>
 
 #define DEBUG_TYPE "globalisel-utils"
 
@@ -792,7 +793,7 @@ Optional<SmallVector<unsigned>>
 llvm::ConstantFoldCTLZ(Register Src, const MachineRegisterInfo &MRI) {
   LLT Ty = MRI.getType(Src);
   SmallVector<unsigned> FoldedCTLZs;
-  auto tryFoldScalar = [&](Register R) -> Optional<unsigned> {
+  auto tryFoldScalar = [&](Register R) -> std::optional<unsigned> {
     auto MaybeCst = getIConstantVRegVal(R, MRI);
     if (!MaybeCst)
       return None;

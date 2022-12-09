@@ -868,7 +868,7 @@ bool ELFAsmParser::ParseDirectiveVersion(StringRef, SMLoc) {
   getStreamer().emitInt32(1);               // type = NT_VERSION
   getStreamer().emitBytes(Data);            // name
   getStreamer().emitInt8(0);                // NUL
-  getStreamer().emitValueToAlignment(4);
+  getStreamer().emitValueToAlignment(Align(4));
   getStreamer().popSection();
   return false;
 }

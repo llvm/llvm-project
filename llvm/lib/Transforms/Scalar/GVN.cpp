@@ -76,6 +76,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -809,7 +810,7 @@ static bool IsValueFullyAvailableInBlock(
     BasicBlock *BB,
     DenseMap<BasicBlock *, AvailabilityState> &FullyAvailableBlocks) {
   SmallVector<BasicBlock *, 32> Worklist;
-  Optional<BasicBlock *> UnavailableBB;
+  std::optional<BasicBlock *> UnavailableBB;
 
   // The number of times we didn't find an entry for a block in a map and
   // optimistically inserted an entry marking block as speculatively available.
@@ -1121,7 +1122,7 @@ static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
 /// basic block, before the pointer select.
 /// 3. There must be no instructions between the found loads and \p End that may
 /// clobber the loads.
-static Optional<AvailableValue>
+static std::optional<AvailableValue>
 tryToConvertLoadOfPtrSelect(BasicBlock *DepBB, BasicBlock::iterator End,
                             Value *Address, Type *LoadTy, DominatorTree &DT,
                             AAResults *AA) {

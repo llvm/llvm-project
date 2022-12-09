@@ -8,7 +8,7 @@
 ;; template <typename T>
 ;; struct A final { virtual ~A() {} };
 ;; template struct A<int>;
-;; extern "C" void bb(A<int> *a) { delete a; }
+;; extern "C" void bb(Aptr a) { delete a; }
 ;;
 ;; clang -c -fpic -O0 -flto=thin a.cc && ld.lld -shared a.o b.o
 ;;

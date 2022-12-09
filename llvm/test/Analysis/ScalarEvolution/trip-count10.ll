@@ -7,7 +7,8 @@ define void @a(i64 %n) nounwind {
 ; CHECK-LABEL: 'a'
 ; CHECK-NEXT:  Determining loop execution counts for: @a
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -27,7 +28,8 @@ define void @b(i64 %n) nounwind {
 ; CHECK-LABEL: 'b'
 ; CHECK-NEXT:  Determining loop execution counts for: @b
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is false
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is false
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is false
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is false
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is false
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -49,7 +51,8 @@ define void @c(i64 %n) nounwind {
 ; CHECK-LABEL: 'c'
 ; CHECK-NEXT:  Determining loop execution counts for: @c
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is false
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is false
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is false
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is false
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is false
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -71,7 +74,8 @@ define void @d(i64 %n) nounwind {
 ; CHECK-LABEL: 'd'
 ; CHECK-NEXT:  Determining loop execution counts for: @d
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -99,7 +103,8 @@ define void @nonpolynomial() {
 ; CHECK-LABEL: 'nonpolynomial'
 ; CHECK-NEXT:  Determining loop execution counts for: @nonpolynomial
 ; CHECK-NEXT:  Loop %loophead: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loophead: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loophead: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loophead: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %loophead: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -127,7 +132,8 @@ define void @constant_phi_operands() nounwind {
 ; CHECK-LABEL: 'constant_phi_operands'
 ; CHECK-NEXT:  Determining loop execution counts for: @constant_phi_operands
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 1
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 1
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 2
@@ -152,7 +158,8 @@ define void @exit_orcond_nsw(i32 *%a) nounwind {
 ; CHECK-LABEL: 'exit_orcond_nsw'
 ; CHECK-NEXT:  Determining loop execution counts for: @exit_orcond_nsw
 ; CHECK-NEXT:  Loop %for.body.i: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body.i: max backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body.i: constant max backedge-taken count is 1
+; CHECK-NEXT:  Loop %for.body.i: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body.i: Unpredictable predicated backedge-taken count.
 ;
 entry:

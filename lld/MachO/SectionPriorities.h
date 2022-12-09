@@ -69,7 +69,7 @@ private:
     llvm::DenseMap<llvm::StringRef, size_t> objectFiles;
   };
 
-  llvm::Optional<size_t> getSymbolPriority(const Defined *sym);
+  std::optional<size_t> getSymbolPriority(const Defined *sym);
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
   llvm::MapVector<SectionPair, uint64_t> callGraphProfile;
 };

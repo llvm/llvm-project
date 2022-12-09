@@ -2,7 +2,7 @@
 
 %struct = type { i32, i32, i32 }
 
-define i32 @test1(%struct* %ptr, i64 %idx) {
+define i32 @test1(ptr %ptr, i64 %idx) {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #12
@@ -16,14 +16,14 @@ define i32 @test1(%struct* %ptr, i64 %idx) {
 ; CHECK-NEXT:    ldr w8, [x8, #8]
 ; CHECK-NEXT:    add w0, w9, w8
 ; CHECK-NEXT:    ret
- %gep.1 = getelementptr %struct, %struct* %ptr, i64 %idx, i32 1
- %lv.1 = load i32, i32* %gep.1
+ %gep.1 = getelementptr %struct, ptr %ptr, i64 %idx, i32 1
+ %lv.1 = load i32, ptr %gep.1
  %c = icmp slt i32 %lv.1, 0
  br i1 %c, label %then, label %else
 
 then:
- %gep.2 = getelementptr %struct, %struct* %ptr, i64 %idx, i32 2
- %lv.2 = load i32, i32* %gep.2
+ %gep.2 = getelementptr %struct, ptr %ptr, i64 %idx, i32 2
+ %lv.2 = load i32, ptr %gep.2
  %res = add i32 %lv.1, %lv.2
  ret i32 %res
 

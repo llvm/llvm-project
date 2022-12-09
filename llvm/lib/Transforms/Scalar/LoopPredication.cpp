@@ -200,6 +200,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
+#include <optional>
 
 #define DEBUG_TYPE "loop-predication"
 
@@ -482,10 +483,10 @@ static bool isSafeToTruncateWideIVType(const DataLayout &DL,
 
 // Return an LoopICmp describing a latch check equivlent to LatchCheck but with
 // the requested type if safe to do so.  May involve the use of a new IV.
-static Optional<LoopICmp> generateLoopLatchCheck(const DataLayout &DL,
-                                                 ScalarEvolution &SE,
-                                                 const LoopICmp LatchCheck,
-                                                 Type *RangeCheckType) {
+static std::optional<LoopICmp> generateLoopLatchCheck(const DataLayout &DL,
+                                                      ScalarEvolution &SE,
+                                                      const LoopICmp LatchCheck,
+                                                      Type *RangeCheckType) {
 
   auto *LatchType = LatchCheck.IV->getType();
   if (RangeCheckType == LatchType)

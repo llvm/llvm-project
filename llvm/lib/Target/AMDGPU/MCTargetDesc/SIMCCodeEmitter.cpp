@@ -26,6 +26,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Casting.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -35,8 +36,9 @@ class SIMCCodeEmitter : public  AMDGPUMCCodeEmitter {
   const MCRegisterInfo &MRI;
 
   /// Encode an fp or int literal
-  uint32_t getLitEncoding(const MCOperand &MO, const MCOperandInfo &OpInfo,
-                          const MCSubtargetInfo &STI) const;
+  std::optional<uint32_t> getLitEncoding(const MCOperand &MO,
+                                         const MCOperandInfo &OpInfo,
+                                         const MCSubtargetInfo &STI) const;
 
 public:
   SIMCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
@@ -216,9 +218,10 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI) {
   return 255;
 }
 
-uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
-                                         const MCOperandInfo &OpInfo,
-                                         const MCSubtargetInfo &STI) const {
+std::optional<uint32_t>
+SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
+                                const MCOperandInfo &OpInfo,
+                                const MCSubtargetInfo &STI) const {
   int64_t Imm;
   if (MO.isExpr()) {
     const auto *C = dyn_cast<MCConstantExpr>(MO.getExpr());
@@ -231,7 +234,7 @@ uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
     assert(!MO.isDFPImm());
 
     if (!MO.isImm())
-      return ~0;
+      return {};
 
     Imm = MO.getImm();
   }
@@ -381,7 +384,8 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
 
     // Is this operand a literal immediate?
     const MCOperand &Op = MI.getOperand(i);
-    if (getLitEncoding(Op, Desc.OpInfo[i], STI) != 255)
+    auto Enc = getLitEncoding(Op, Desc.OpInfo[i], STI);
+    if (!Enc || *Enc != 255)
       continue;
 
     // Yes! Encode it
@@ -452,9 +456,9 @@ void SIMCCodeEmitter::getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,
     return;
   } else {
     const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
-    uint32_t Enc = getLitEncoding(MO, Desc.OpInfo[OpNo], STI);
-    if (Enc != ~0U && Enc != 255) {
-      Op = Enc | SDWA9EncValues::SRC_SGPR_MASK;
+    auto Enc = getLitEncoding(MO, Desc.OpInfo[OpNo], STI);
+    if (Enc && *Enc != 255) {
+      Op = *Enc | SDWA9EncValues::SRC_SGPR_MASK;
       return;
     }
   }
@@ -571,9 +575,8 @@ void SIMCCodeEmitter::getMachineOpValueCommon(
 
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   if (AMDGPU::isSISrcOperand(Desc, OpNo)) {
-    uint32_t Enc = getLitEncoding(MO, Desc.OpInfo[OpNo], STI);
-    if (Enc != ~0U) {
-      Op = Enc;
+    if (auto Enc = getLitEncoding(MO, Desc.OpInfo[OpNo], STI)) {
+      Op = *Enc;
       return;
     }
   } else if (MO.isImm()) {

@@ -138,37 +138,35 @@ entry:
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 declare !dbg !4 dso_local void @fn2(i32) local_unnamed_addr
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @f() local_unnamed_addr !dbg !27 {
 entry:
   %l = alloca i32, align 4
   %k = alloca i32, align 4
-  %0 = bitcast i32* %l to i8*, !dbg !33
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0), !dbg !33
-  %1 = bitcast i32* %k to i8*, !dbg !33
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %1), !dbg !33
-  call void @llvm.dbg.value(metadata i32* %l, metadata !31, metadata !DIExpression(DW_OP_deref)), !dbg !34
-  call void @fn3(i32* nonnull %l), !dbg !35
-  call void @llvm.dbg.value(metadata i32* %k, metadata !32, metadata !DIExpression(DW_OP_deref)), !dbg !34
-  call void @fn3(i32* nonnull %k), !dbg !36
-  %2 = load i32, i32* %l, align 4, !dbg !37
-  call void @llvm.dbg.value(metadata i32 %2, metadata !31, metadata !DIExpression()), !dbg !34
-  %3 = load i32, i32* %k, align 4, !dbg !37
-  call void @llvm.dbg.value(metadata i32 %3, metadata !32, metadata !DIExpression()), !dbg !34
-  call void @fn1(i32 %2, i32 %3), !dbg !37
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %1), !dbg !37
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0), !dbg !37
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %l), !dbg !33
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %k), !dbg !33
+  call void @llvm.dbg.value(metadata ptr %l, metadata !31, metadata !DIExpression(DW_OP_deref)), !dbg !34
+  call void @fn3(ptr nonnull %l), !dbg !35
+  call void @llvm.dbg.value(metadata ptr %k, metadata !32, metadata !DIExpression(DW_OP_deref)), !dbg !34
+  call void @fn3(ptr nonnull %k), !dbg !36
+  %0 = load i32, ptr %l, align 4, !dbg !37
+  call void @llvm.dbg.value(metadata i32 %0, metadata !31, metadata !DIExpression()), !dbg !34
+  %1 = load i32, ptr %k, align 4, !dbg !37
+  call void @llvm.dbg.value(metadata i32 %1, metadata !32, metadata !DIExpression()), !dbg !34
+  call void @fn1(i32 %0, i32 %1), !dbg !37
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %k), !dbg !37
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %l), !dbg !37
   ret i32 0, !dbg !37
 }
 
-declare !dbg !8 dso_local void @fn3(i32*) local_unnamed_addr
+declare !dbg !8 dso_local void @fn3(ptr) local_unnamed_addr
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata)

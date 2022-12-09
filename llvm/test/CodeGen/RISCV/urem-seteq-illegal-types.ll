@@ -357,18 +357,18 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV32-NEXT:    addi a0, a0, -1463
 ; RV32-NEXT:    andi a0, a0, 2047
 ; RV32-NEXT:    sltiu a0, a0, 293
-; RV32-NEXT:    addi a1, s3, -1
+; RV32-NEXT:    addi s3, s3, -1
 ; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    addi a2, s1, -1
-; RV32-NEXT:    slli a3, a2, 21
-; RV32-NEXT:    srli a3, a3, 31
-; RV32-NEXT:    sb a3, 4(s0)
-; RV32-NEXT:    andi a1, a1, 2047
+; RV32-NEXT:    addi s1, s1, -1
+; RV32-NEXT:    slli a1, s1, 21
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    sb a1, 4(s0)
+; RV32-NEXT:    andi a1, s3, 2047
 ; RV32-NEXT:    andi a0, a0, 2047
 ; RV32-NEXT:    slli a0, a0, 11
 ; RV32-NEXT:    or a0, a1, a0
-; RV32-NEXT:    slli a1, a2, 22
-; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    slli s1, s1, 22
+; RV32-NEXT:    or a0, a0, s1
 ; RV32-NEXT:    sw a0, 0(s0)
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -414,11 +414,11 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64-NEXT:    addiw a0, a0, -1638
 ; RV64-NEXT:    andi a0, a0, 2047
 ; RV64-NEXT:    sltiu a0, a0, 2
-; RV64-NEXT:    addiw a1, s3, -1
+; RV64-NEXT:    addiw s3, s3, -1
 ; RV64-NEXT:    addi a0, a0, -1
-; RV64-NEXT:    addiw a2, s2, -1
-; RV64-NEXT:    andi a1, a1, 2047
-; RV64-NEXT:    andi a2, a2, 2047
+; RV64-NEXT:    addiw s2, s2, -1
+; RV64-NEXT:    andi a1, s3, 2047
+; RV64-NEXT:    andi a2, s2, 2047
 ; RV64-NEXT:    slli a2, a2, 11
 ; RV64-NEXT:    or a1, a1, a2
 ; RV64-NEXT:    slli a0, a0, 22

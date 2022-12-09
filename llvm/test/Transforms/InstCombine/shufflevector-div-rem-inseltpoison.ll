@@ -8,11 +8,8 @@
 ; extracting the second element in the vector).
 define i16 @test_srem_orig(i16 %a, i1 %cmp) {
 ; CHECK-LABEL: @test_srem_orig(
-; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = srem <2 x i16> [[SPLATINSERT]], <i16 2, i16 1>
-; CHECK-NEXT:    [[SPLAT_OP:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <2 x i32> <i32 undef, i32 0>
-; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x i16> <i16 poison, i16 1>, <2 x i16> [[SPLAT_OP]]
-; CHECK-NEXT:    [[T3:%.*]] = extractelement <2 x i16> [[T2]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = srem i16 [[A:%.*]], 2
+; CHECK-NEXT:    [[T3:%.*]] = select i1 [[CMP:%.*]], i16 1, i16 [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[T3]]
 ;
   %splatinsert = insertelement <2 x i16> poison, i16 %a, i32 0

@@ -20,6 +20,8 @@
 namespace hlfir {
 /// Is this a type that can be used for an HLFIR variable ?
 bool isFortranVariableType(mlir::Type);
+bool isFortranScalarCharacterType(mlir::Type);
+bool isFortranScalarCharacterExprType(mlir::Type);
 } // namespace hlfir
 
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h.inc"

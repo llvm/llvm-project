@@ -490,7 +490,12 @@ bool SBType::IsTypeComplete() {
 
   if (!IsValid())
     return false;
-  return m_opaque_sp->GetCompilerType(false).IsCompleteType();
+  CompilerType compiler_type = m_opaque_sp->GetCompilerType(false);
+  // Only return true if we have a complete type and it wasn't forcefully
+  // completed.
+  if (compiler_type.IsCompleteType())
+    return !compiler_type.IsForcefullyCompleted();
+  return false;
 }
 
 uint32_t SBType::GetTypeFlags() {

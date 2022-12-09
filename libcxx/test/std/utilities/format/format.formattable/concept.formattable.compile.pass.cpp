@@ -81,8 +81,10 @@ void test_P0645() {
   assert_is_formattable<CharT*, CharT>();
   assert_is_formattable<const CharT*, CharT>();
   assert_is_formattable<CharT[42], CharT>();
-  assert_is_formattable<std::basic_string<CharT>, CharT>();
-  assert_is_formattable<std::basic_string_view<CharT>, CharT>();
+  if constexpr (!std::same_as<CharT, int>) { // string and string_view only work with proper character types
+    assert_is_formattable<std::basic_string<CharT>, CharT>();
+    assert_is_formattable<std::basic_string_view<CharT>, CharT>();
+  }
 
   assert_is_formattable<bool, CharT>();
 

@@ -1,4 +1,4 @@
-; RUN: opt -jump-threading -S -verify < %s | FileCheck %s
+; RUN: opt -S -passes=jump-threading,verify < %s | FileCheck %s
 
 ; This is reduced from the Linux net/ipv4/tcp.c file built with ASAN. We
 ; don't want jump threading to split up a basic block which has a PHI node with

@@ -22,7 +22,6 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
@@ -250,7 +249,8 @@ DenseMap<const InputSection *, size_t> CallGraphSort::run() {
   return orderMap;
 }
 
-Optional<size_t> macho::PriorityBuilder::getSymbolPriority(const Defined *sym) {
+std::optional<size_t>
+macho::PriorityBuilder::getSymbolPriority(const Defined *sym) {
   if (sym->isAbsolute())
     return None;
 
@@ -295,7 +295,7 @@ void macho::PriorityBuilder::extractCallGraphProfile() {
 void macho::PriorityBuilder::parseOrderFile(StringRef path) {
   assert(callGraphProfile.empty() &&
          "Order file must be parsed before call graph profile is processed");
-  Optional<MemoryBufferRef> buffer = readFile(path);
+  std::optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer) {
     error("Could not read order file at " + path);
     return;
@@ -367,7 +367,7 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
     return sectionPriorities;
 
   auto addSym = [&](const Defined *sym) {
-    Optional<size_t> symbolPriority = getSymbolPriority(sym);
+    std::optional<size_t> symbolPriority = getSymbolPriority(sym);
     if (!symbolPriority)
       return;
     size_t &priority = sectionPriorities[sym->isec];

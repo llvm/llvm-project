@@ -33,7 +33,7 @@ class Cursor {
   const char *End = nullptr;
 
 public:
-  Cursor(NoneType) {}
+  Cursor(std::nullopt_t) {}
 
   explicit Cursor(StringRef Str) {
     Ptr = Str.data();

@@ -46,8 +46,8 @@
  * 1. Length of the entry (4 or 12 bytes)
  * 2. CIE offset (4 bytes pcrel offset that points backwards to this FDE's CIE)
  * 3. Function address (pointer-sized pcrel offset)
- * 4. (Optional) Augmentation data length
- * 5. (Optional) LSDA address (pointer-sized pcrel offset)
+ * 4. (std::optional) Augmentation data length
+ * 5. (std::optional) LSDA address (pointer-sized pcrel offset)
  * 6. DWARF instructions (ignored by LLD)
  */
 namespace lld::macho {

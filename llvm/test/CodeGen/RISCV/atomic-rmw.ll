@@ -8350,8 +8350,8 @@ define i16 @atomicrmw_umax_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
-; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s2, a0, -1
+; RV32I-NEXT:    lui s2, 16
+; RV32I-NEXT:    addi s2, s2, -1
 ; RV32I-NEXT:    and s3, s0, s2
 ; RV32I-NEXT:    j .LBB100_2
 ; RV32I-NEXT:  .LBB100_1: # %atomicrmw.start
@@ -8419,8 +8419,8 @@ define i16 @atomicrmw_umax_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    lhu a1, 0(a0)
-; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw s2, a0, -1
+; RV64I-NEXT:    lui s2, 16
+; RV64I-NEXT:    addiw s2, s2, -1
 ; RV64I-NEXT:    and s3, s0, s2
 ; RV64I-NEXT:    j .LBB100_2
 ; RV64I-NEXT:  .LBB100_1: # %atomicrmw.start
@@ -8492,8 +8492,8 @@ define i16 @atomicrmw_umax_i16_acquire(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
-; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s2, a0, -1
+; RV32I-NEXT:    lui s2, 16
+; RV32I-NEXT:    addi s2, s2, -1
 ; RV32I-NEXT:    and s3, s0, s2
 ; RV32I-NEXT:    j .LBB101_2
 ; RV32I-NEXT:  .LBB101_1: # %atomicrmw.start
@@ -8561,8 +8561,8 @@ define i16 @atomicrmw_umax_i16_acquire(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    lhu a1, 0(a0)
-; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw s2, a0, -1
+; RV64I-NEXT:    lui s2, 16
+; RV64I-NEXT:    addiw s2, s2, -1
 ; RV64I-NEXT:    and s3, s0, s2
 ; RV64I-NEXT:    j .LBB101_2
 ; RV64I-NEXT:  .LBB101_1: # %atomicrmw.start
@@ -8634,8 +8634,8 @@ define i16 @atomicrmw_umax_i16_release(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
-; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s2, a0, -1
+; RV32I-NEXT:    lui s2, 16
+; RV32I-NEXT:    addi s2, s2, -1
 ; RV32I-NEXT:    and s3, s0, s2
 ; RV32I-NEXT:    j .LBB102_2
 ; RV32I-NEXT:  .LBB102_1: # %atomicrmw.start
@@ -8703,8 +8703,8 @@ define i16 @atomicrmw_umax_i16_release(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    lhu a1, 0(a0)
-; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw s2, a0, -1
+; RV64I-NEXT:    lui s2, 16
+; RV64I-NEXT:    addiw s2, s2, -1
 ; RV64I-NEXT:    and s3, s0, s2
 ; RV64I-NEXT:    j .LBB102_2
 ; RV64I-NEXT:  .LBB102_1: # %atomicrmw.start
@@ -8776,8 +8776,8 @@ define i16 @atomicrmw_umax_i16_acq_rel(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
-; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s2, a0, -1
+; RV32I-NEXT:    lui s2, 16
+; RV32I-NEXT:    addi s2, s2, -1
 ; RV32I-NEXT:    and s3, s0, s2
 ; RV32I-NEXT:    j .LBB103_2
 ; RV32I-NEXT:  .LBB103_1: # %atomicrmw.start
@@ -8845,8 +8845,8 @@ define i16 @atomicrmw_umax_i16_acq_rel(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    lhu a1, 0(a0)
-; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw s2, a0, -1
+; RV64I-NEXT:    lui s2, 16
+; RV64I-NEXT:    addiw s2, s2, -1
 ; RV64I-NEXT:    and s3, s0, s2
 ; RV64I-NEXT:    j .LBB103_2
 ; RV64I-NEXT:  .LBB103_1: # %atomicrmw.start
@@ -8918,8 +8918,8 @@ define i16 @atomicrmw_umax_i16_seq_cst(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
-; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s2, a0, -1
+; RV32I-NEXT:    lui s2, 16
+; RV32I-NEXT:    addi s2, s2, -1
 ; RV32I-NEXT:    and s3, s0, s2
 ; RV32I-NEXT:    j .LBB104_2
 ; RV32I-NEXT:  .LBB104_1: # %atomicrmw.start
@@ -8987,8 +8987,8 @@ define i16 @atomicrmw_umax_i16_seq_cst(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    lhu a1, 0(a0)
-; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw s2, a0, -1
+; RV64I-NEXT:    lui s2, 16
+; RV64I-NEXT:    addiw s2, s2, -1
 ; RV64I-NEXT:    and s3, s0, s2
 ; RV64I-NEXT:    j .LBB104_2
 ; RV64I-NEXT:  .LBB104_1: # %atomicrmw.start
@@ -9060,8 +9060,8 @@ define i16 @atomicrmw_umin_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
-; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s2, a0, -1
+; RV32I-NEXT:    lui s2, 16
+; RV32I-NEXT:    addi s2, s2, -1
 ; RV32I-NEXT:    and s3, s0, s2
 ; RV32I-NEXT:    j .LBB105_2
 ; RV32I-NEXT:  .LBB105_1: # %atomicrmw.start
@@ -9129,8 +9129,8 @@ define i16 @atomicrmw_umin_i16_monotonic(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    lhu a1, 0(a0)
-; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw s2, a0, -1
+; RV64I-NEXT:    lui s2, 16
+; RV64I-NEXT:    addiw s2, s2, -1
 ; RV64I-NEXT:    and s3, s0, s2
 ; RV64I-NEXT:    j .LBB105_2
 ; RV64I-NEXT:  .LBB105_1: # %atomicrmw.start
@@ -9202,8 +9202,8 @@ define i16 @atomicrmw_umin_i16_acquire(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
-; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s2, a0, -1
+; RV32I-NEXT:    lui s2, 16
+; RV32I-NEXT:    addi s2, s2, -1
 ; RV32I-NEXT:    and s3, s0, s2
 ; RV32I-NEXT:    j .LBB106_2
 ; RV32I-NEXT:  .LBB106_1: # %atomicrmw.start
@@ -9271,8 +9271,8 @@ define i16 @atomicrmw_umin_i16_acquire(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    lhu a1, 0(a0)
-; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw s2, a0, -1
+; RV64I-NEXT:    lui s2, 16
+; RV64I-NEXT:    addiw s2, s2, -1
 ; RV64I-NEXT:    and s3, s0, s2
 ; RV64I-NEXT:    j .LBB106_2
 ; RV64I-NEXT:  .LBB106_1: # %atomicrmw.start
@@ -9344,8 +9344,8 @@ define i16 @atomicrmw_umin_i16_release(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
-; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s2, a0, -1
+; RV32I-NEXT:    lui s2, 16
+; RV32I-NEXT:    addi s2, s2, -1
 ; RV32I-NEXT:    and s3, s0, s2
 ; RV32I-NEXT:    j .LBB107_2
 ; RV32I-NEXT:  .LBB107_1: # %atomicrmw.start
@@ -9413,8 +9413,8 @@ define i16 @atomicrmw_umin_i16_release(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    lhu a1, 0(a0)
-; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw s2, a0, -1
+; RV64I-NEXT:    lui s2, 16
+; RV64I-NEXT:    addiw s2, s2, -1
 ; RV64I-NEXT:    and s3, s0, s2
 ; RV64I-NEXT:    j .LBB107_2
 ; RV64I-NEXT:  .LBB107_1: # %atomicrmw.start
@@ -9486,8 +9486,8 @@ define i16 @atomicrmw_umin_i16_acq_rel(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
-; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s2, a0, -1
+; RV32I-NEXT:    lui s2, 16
+; RV32I-NEXT:    addi s2, s2, -1
 ; RV32I-NEXT:    and s3, s0, s2
 ; RV32I-NEXT:    j .LBB108_2
 ; RV32I-NEXT:  .LBB108_1: # %atomicrmw.start
@@ -9555,8 +9555,8 @@ define i16 @atomicrmw_umin_i16_acq_rel(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    lhu a1, 0(a0)
-; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw s2, a0, -1
+; RV64I-NEXT:    lui s2, 16
+; RV64I-NEXT:    addiw s2, s2, -1
 ; RV64I-NEXT:    and s3, s0, s2
 ; RV64I-NEXT:    j .LBB108_2
 ; RV64I-NEXT:  .LBB108_1: # %atomicrmw.start
@@ -9628,8 +9628,8 @@ define i16 @atomicrmw_umin_i16_seq_cst(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    lhu a1, 0(a0)
-; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi s2, a0, -1
+; RV32I-NEXT:    lui s2, 16
+; RV32I-NEXT:    addi s2, s2, -1
 ; RV32I-NEXT:    and s3, s0, s2
 ; RV32I-NEXT:    j .LBB109_2
 ; RV32I-NEXT:  .LBB109_1: # %atomicrmw.start
@@ -9697,8 +9697,8 @@ define i16 @atomicrmw_umin_i16_seq_cst(i16 *%a, i16 %b) nounwind {
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    lhu a1, 0(a0)
-; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw s2, a0, -1
+; RV64I-NEXT:    lui s2, 16
+; RV64I-NEXT:    addiw s2, s2, -1
 ; RV64I-NEXT:    and s3, s0, s2
 ; RV64I-NEXT:    j .LBB109_2
 ; RV64I-NEXT:  .LBB109_1: # %atomicrmw.start

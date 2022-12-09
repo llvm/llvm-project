@@ -18,26 +18,24 @@ target triple = "aarch64-unknown-linux-android29"
 
 define i32 @myCall_w2(i32 %in) sanitize_hwaddress {
 entry:
-  %a = alloca [17 x i8*], align 8
-  %a2 = alloca [16 x i8*], align 8
-  %b = bitcast [17 x i8*]* %a to i8*
-  %b2 = bitcast [16 x i8*]* %a2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 136, i8* %b)
-  %t1 = call i32 @foo(i32 %in, i8* %b)
-  %t2 = call i32 @foo(i32 %in, i8* %b)
-  call void @llvm.lifetime.end.p0i8(i64 136, i8* %b)
-  call void @llvm.lifetime.start.p0i8(i64 128, i8* %b2)
-  %t3 = call i32 @foo(i32 %in, i8* %b2)
-  %t4 = call i32 @foo(i32 %in, i8* %b2)
-  call void @llvm.lifetime.end.p0i8(i64 128, i8* %b2)
+  %a = alloca [17 x ptr], align 8
+  %a2 = alloca [16 x ptr], align 8
+  call void @llvm.lifetime.start.p0(i64 136, ptr %a)
+  %t1 = call i32 @foo(i32 %in, ptr %a)
+  %t2 = call i32 @foo(i32 %in, ptr %a)
+  call void @llvm.lifetime.end.p0(i64 136, ptr %a)
+  call void @llvm.lifetime.start.p0(i64 128, ptr %a2)
+  %t3 = call i32 @foo(i32 %in, ptr %a2)
+  %t4 = call i32 @foo(i32 %in, ptr %a2)
+  call void @llvm.lifetime.end.p0(i64 128, ptr %a2)
   %t5 = add i32 %t1, %t2
   %t6 = add i32 %t3, %t4
   %t7 = add i32 %t5, %t6
   ret i32 %t7
 }
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
 
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
 
-declare i32 @foo(i32, i8*)
+declare i32 @foo(i32, ptr)

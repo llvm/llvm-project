@@ -32,8 +32,8 @@ static cl::opt<SampleProfileFormat> OutputFormat(
         clEnumValN(SPF_GCC, "gcc",
                    "GCC encoding (only meaningful for -sample)")));
 
-cl::opt<bool> UseMD5(
-    "use-md5", cl::init(false), cl::Hidden,
+static cl::opt<bool> UseMD5(
+    "use-md5", cl::Hidden,
     cl::desc("Use md5 to represent function names in the output profile (only "
              "meaningful for -extbinary)"));
 
@@ -90,9 +90,6 @@ static cl::opt<bool> UpdateTotalSamples(
         "Update total samples by accumulating all its body samples."),
     llvm::cl::Optional);
 
-extern cl::opt<int> ProfileSummaryCutoffHot;
-extern cl::opt<bool> UseContextLessSummary;
-
 static cl::opt<bool> GenCSNestedProfile(
     "gen-cs-nested-profile", cl::Hidden, cl::init(true),
     cl::desc("Generate nested function profiles for CSSPGO"));
@@ -101,6 +98,9 @@ using namespace llvm;
 using namespace sampleprof;
 
 namespace llvm {
+extern cl::opt<int> ProfileSummaryCutoffHot;
+extern cl::opt<bool> UseContextLessSummary;
+
 namespace sampleprof {
 
 // Initialize the MaxCompressionSize to -1 which means no size limit

@@ -63,7 +63,8 @@ def hlfir_ExprType : TypeDef<hlfir_Dialect, "Expr"> {
   let extraClassDeclaration = [{
     using Shape = llvm::SmallVector<int64_t>;
     mlir::Type getEleTy() const {return getElementType();}
-    bool isArray() const { return !getShape().empty(); }
+    bool isScalar() const { return getShape().empty(); }
+    bool isArray() const { return !isScalar(); }
     bool isPolymorphic() const { return getPolymorphic(); }
   }];
 
@@ -85,5 +86,14 @@ def AnyFortranValue : TypeConstraint<Or<[AnyLogicalLike.predicate,
 def AnyFortranEntity : TypeConstraint<Or<[AnyFortranVariable.predicate,
     AnyFortranValue.predicate]>, "any Fortran value or variable type">;
 
+def IsFortranScalarCharacterPred
+        : CPred<"::hlfir::isFortranScalarCharacterType($_self)">;
+def AnyScalarCharacterEntity : Type<IsFortranScalarCharacterPred,
+    "any character scalar type">;
+
+def IsFortranScalarCharacterExprPred
+        : CPred<"::hlfir::isFortranScalarCharacterExprType($_self)">;
+def AnyScalarCharacterExpr : Type<IsFortranScalarCharacterExprPred,
+    "any character scalar expression type">;
 
 #endif // FORTRAN_DIALECT_HLFIR_OP_BASE

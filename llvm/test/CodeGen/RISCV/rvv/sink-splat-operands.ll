@@ -2174,9 +2174,9 @@ define void @sink_splat_fma_scalable(float* noalias nocapture %a, float* noalias
 ; CHECK-NEXT:    beqz a5, .LBB34_7
 ; CHECK-NEXT:  .LBB34_5: # %for.body.preheader
 ; CHECK-NEXT:    addi a2, a4, -1024
-; CHECK-NEXT:    slli a3, a4, 2
-; CHECK-NEXT:    add a1, a1, a3
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    slli a4, a4, 2
+; CHECK-NEXT:    add a1, a1, a4
+; CHECK-NEXT:    add a0, a0, a4
 ; CHECK-NEXT:  .LBB34_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    flw ft0, 0(a0)
@@ -2277,9 +2277,9 @@ define void @sink_splat_fma_commute_scalable(float* noalias nocapture %a, float*
 ; CHECK-NEXT:    beqz a5, .LBB35_7
 ; CHECK-NEXT:  .LBB35_5: # %for.body.preheader
 ; CHECK-NEXT:    addi a2, a4, -1024
-; CHECK-NEXT:    slli a3, a4, 2
-; CHECK-NEXT:    add a1, a1, a3
-; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    slli a4, a4, 2
+; CHECK-NEXT:    add a1, a1, a4
+; CHECK-NEXT:    add a0, a0, a4
 ; CHECK-NEXT:  .LBB35_6: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    flw ft0, 0(a0)

@@ -202,6 +202,10 @@ public:
 
   virtual bool GetCompleteType(lldb::opaque_compiler_type_t type) = 0;
 
+  virtual bool IsForcefullyCompleted(lldb::opaque_compiler_type_t type) {
+    return false;
+  }
+
   // AST related queries
 
   virtual uint32_t GetPointerByteSize() = 0;

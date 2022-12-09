@@ -38,6 +38,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <optional>
 
 namespace llvm {
 
@@ -3618,7 +3619,7 @@ public:
 /// their prof branch_weights metadata.
 class SwitchInstProfUpdateWrapper {
   SwitchInst &SI;
-  Optional<SmallVector<uint32_t, 8> > Weights = None;
+  std::optional<SmallVector<uint32_t, 8>> Weights = None;
   bool Changed = false;
 
 protected:
@@ -3629,7 +3630,7 @@ protected:
   void init();
 
 public:
-  using CaseWeightOpt = Optional<uint32_t>;
+  using CaseWeightOpt = std::optional<uint32_t>;
   SwitchInst *operator->() { return &SI; }
   SwitchInst &operator*() { return SI; }
   operator SwitchInst *() { return &SI; }
@@ -5412,7 +5413,7 @@ inline Type *getLoadStoreType(Value *I) {
 
 /// A helper function that returns an atomic operation's sync scope; returns
 /// None if it is not an atomic operation.
-inline Optional<SyncScope::ID> getAtomicSyncScopeID(const Instruction *I) {
+inline std::optional<SyncScope::ID> getAtomicSyncScopeID(const Instruction *I) {
   if (!I->isAtomic())
     return None;
   if (auto *AI = dyn_cast<LoadInst>(I))

@@ -334,6 +334,13 @@ static LogicalResult isMatchingWidth(Value result, unsigned width) {
   return failure();
 }
 
+LogicalResult NewOp::verify() {
+  if (getExpandSymmetry() &&
+      getResult().getType().cast<RankedTensorType>().getRank() != 2)
+    return emitOpError("expand_symmetry can only be used for 2D tensors");
+  return success();
+}
+
 LogicalResult ConvertOp::verify() {
   if (auto tp1 = getSource().getType().dyn_cast<RankedTensorType>()) {
     if (auto tp2 = getDest().getType().dyn_cast<RankedTensorType>()) {

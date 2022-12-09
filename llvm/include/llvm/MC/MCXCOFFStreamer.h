@@ -27,8 +27,7 @@ public:
                     SMLoc Loc = SMLoc()) override;
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
   void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
-                                  MCSymbol *CsectSym,
-                                  unsigned ByteAlign) override;
+                                  MCSymbol *CsectSym, Align Alignment) override;
   void emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
                                             MCSymbolAttr Linkage,
                                             MCSymbolAttr Visibility) override;

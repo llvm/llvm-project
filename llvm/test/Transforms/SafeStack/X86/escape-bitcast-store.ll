@@ -4,20 +4,19 @@
 @.str = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
 
 ; Addr-of a local cast to a ptr of a different type
-;   (e.g., int a; ... ; float *b = &a;)
+;   (e.g., int a; ... ; ptr b = &a;)
 ;  safestack attribute
 ; Requires protector.
 define void @foo() nounwind uwtable safestack {
 entry:
   ; CHECK: __safestack_unsafe_stack_ptr
   %a = alloca i32, align 4
-  %b = alloca float*, align 8
-  store i32 0, i32* %a, align 4
-  %0 = bitcast i32* %a to float*
-  store float* %0, float** %b, align 8
-  %1 = load float*, float** %b, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), float* %1)
+  %b = alloca ptr, align 8
+  store i32 0, ptr %a, align 4
+  store ptr %a, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %0)
   ret void
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)

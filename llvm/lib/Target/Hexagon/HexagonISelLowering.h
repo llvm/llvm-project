@@ -447,6 +447,29 @@ private:
   VectorPair opSplit(SDValue Vec, const SDLoc &dl, SelectionDAG &DAG) const;
   SDValue opCastElem(SDValue Vec, MVT ElemTy, SelectionDAG &DAG) const;
 
+  SDValue LoHalf(SDValue V, SelectionDAG &DAG) const {
+    MVT Ty = ty(V);
+    const SDLoc &dl(V);
+    if (!Ty.isVector()) {
+      assert(Ty.getSizeInBits() == 64);
+      return DAG.getTargetExtractSubreg(Hexagon::isub_lo, dl, MVT::i32, V);
+    }
+    MVT HalfTy = typeSplit(Ty).first;
+    SDValue Idx = getZero(dl, MVT::i32, DAG);
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, HalfTy, V, Idx);
+  }
+  SDValue HiHalf(SDValue V, SelectionDAG &DAG) const {
+    MVT Ty = ty(V);
+    const SDLoc &dl(V);
+    if (!Ty.isVector()) {
+      assert(Ty.getSizeInBits() == 64);
+      return DAG.getTargetExtractSubreg(Hexagon::isub_hi, dl, MVT::i32, V);
+    }
+    MVT HalfTy = typeSplit(Ty).first;
+    SDValue Idx = DAG.getConstant(HalfTy.getVectorNumElements(), dl, MVT::i32);
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, HalfTy, V, Idx);
+  }
+
   bool allowsHvxMemoryAccess(MVT VecTy, MachineMemOperand::Flags Flags,
                              unsigned *Fast) const;
   bool allowsHvxMisalignedMemoryAccesses(MVT VecTy,
@@ -478,8 +501,9 @@ private:
                               const SDLoc &dl, SelectionDAG &DAG) const;
   SDValue insertHvxElementPred(SDValue VecV, SDValue IdxV, SDValue ValV,
                                const SDLoc &dl, SelectionDAG &DAG) const;
-  SDValue extractHvxSubvectorReg(SDValue VecV, SDValue IdxV, const SDLoc &dl,
-                                 MVT ResTy, SelectionDAG &DAG) const;
+  SDValue extractHvxSubvectorReg(SDValue OrigOp, SDValue VecV, SDValue IdxV,
+                                 const SDLoc &dl, MVT ResTy, SelectionDAG &DAG)
+                                 const;
   SDValue extractHvxSubvectorPred(SDValue VecV, SDValue IdxV, const SDLoc &dl,
                                   MVT ResTy, SelectionDAG &DAG) const;
   SDValue insertHvxSubvectorReg(SDValue VecV, SDValue SubV, SDValue IdxV,

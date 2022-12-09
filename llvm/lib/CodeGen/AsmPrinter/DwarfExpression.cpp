@@ -1097,9 +1097,9 @@ void DwarfExprAST::lowerBitOrByteOffset(DwarfExprAST::Node *OpNode) {
   readToValue(OpNode->getChildren()[1].get(), /*NeedsSwap=*/false);
 
   Optional<uint8_t> DwarfOp = OpNode->getEquivalentDwarfOp();
-  assert(DwarfOp.hasValue() && "Expected equivalent dwarf operation");
+  assert(DwarfOp.has_value() && "Expected equivalent dwarf operation");
 
-  emitDwarfOp(DwarfOp.getValue());
+  emitDwarfOp(DwarfOp.value());
 
   OpNode->setIsLowered();
   // FIXME(KZHURAVL): Is the following result type correct?
@@ -1130,9 +1130,9 @@ void DwarfExprAST::lowerMathOp(DwarfExprAST::Node *OpNode) {
   }
 
   Optional<uint8_t> DwarfOp = OpNode->getEquivalentDwarfOp();
-  assert(DwarfOp.hasValue() && "Expected equivalent dwarf operation");
+  assert(DwarfOp.has_value() && "Expected equivalent dwarf operation");
 
-  emitDwarfOp(DwarfOp.getValue());
+  emitDwarfOp(DwarfOp.value());
   emitDwarfOp(dwarf::DW_OP_stack_value);
 
   OpNode->setIsLowered();

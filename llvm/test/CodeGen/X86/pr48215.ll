@@ -57,7 +57,6 @@ define i32 @PR48215(i32 %a0, i32 %a1)  {
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    movzbl %al, %ecx
 ; AVX512-NEXT:    kmovw %k1, %eax
-; AVX512-NEXT:    andl $15, %eax
 ; AVX512-NEXT:    addl %ecx, %eax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

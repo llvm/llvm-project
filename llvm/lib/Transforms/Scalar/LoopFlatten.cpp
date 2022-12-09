@@ -75,6 +75,7 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -913,7 +914,7 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
 
   bool Changed = false;
 
-  Optional<MemorySSAUpdater> MSSAU;
+  std::optional<MemorySSAUpdater> MSSAU;
   if (AR.MSSA) {
     MSSAU = MemorySSAUpdater(AR.MSSA);
     if (VerifyMemorySSA)
@@ -983,7 +984,7 @@ bool LoopFlattenLegacyPass::runOnFunction(Function &F) {
   auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto *MSSA = getAnalysisIfAvailable<MemorySSAWrapperPass>();
 
-  Optional<MemorySSAUpdater> MSSAU;
+  std::optional<MemorySSAUpdater> MSSAU;
   if (MSSA)
     MSSAU = MemorySSAUpdater(&MSSA->getMSSA());
 

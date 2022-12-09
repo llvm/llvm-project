@@ -6311,10 +6311,10 @@ static bool canUseAMDGPUFastFPAtomics(CodeGenFunction &CGF, LValue X,
   //(no-unsafe)|       |      |      |
   //----------------------------------
   bool userRequestsAMDGPUFastFPAtomics =
-      (Hint && Hint->getIntegerConstantExpr(Context).getValue() ==
+      (Hint && Hint->getIntegerConstantExpr(Context).value() ==
                    HintClause::OpenMPSyncHintExpr::AMD_fast_fp_atomics)
           ? true
-          : (Hint && Hint->getIntegerConstantExpr(Context).getValue() ==
+          : (Hint && Hint->getIntegerConstantExpr(Context).value() ==
                          HintClause::OpenMPSyncHintExpr::AMD_safe_fp_atomics)
                 ? false
                 : Context.getTargetInfo().allowAMDGPUUnsafeFPAtomics();

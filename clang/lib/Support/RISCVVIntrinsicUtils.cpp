@@ -16,8 +16,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 #include <numeric>
-#include <set>
-#include <unordered_map>
 
 using namespace llvm;
 
@@ -786,8 +784,8 @@ void RVVType::applyFixedLog2LMUL(int Log2LMUL, enum FixedLMULType Type) {
 }
 
 Optional<RVVTypes>
-RVVType::computeTypes(BasicType BT, int Log2LMUL, unsigned NF,
-                      ArrayRef<PrototypeDescriptor> Prototype) {
+RVVTypeCache::computeTypes(BasicType BT, int Log2LMUL, unsigned NF,
+                           ArrayRef<PrototypeDescriptor> Prototype) {
   // LMUL x NF must be less than or equal to 8.
   if ((Log2LMUL >= 1) && (1 << Log2LMUL) * NF > 8)
     return llvm::None;
@@ -816,11 +814,8 @@ static uint64_t computeRVVTypeHashValue(BasicType BT, int Log2LMUL,
          ((uint64_t)(Proto.VTM & 0xff) << 32);
 }
 
-Optional<RVVTypePtr> RVVType::computeType(BasicType BT, int Log2LMUL,
-                                          PrototypeDescriptor Proto) {
-  // Concat BasicType, LMUL and Proto as key
-  static std::unordered_map<uint64_t, RVVType> LegalTypes;
-  static std::set<uint64_t> IllegalTypes;
+Optional<RVVTypePtr> RVVTypeCache::computeType(BasicType BT, int Log2LMUL,
+                                               PrototypeDescriptor Proto) {
   uint64_t Idx = computeRVVTypeHashValue(BT, Log2LMUL, Proto);
   // Search first
   auto It = LegalTypes.find(Idx);
@@ -834,8 +829,9 @@ Optional<RVVTypePtr> RVVType::computeType(BasicType BT, int Log2LMUL,
   RVVType T(BT, Log2LMUL, Proto);
   if (T.isValid()) {
     // Record legal type index and value.
-    LegalTypes.insert({Idx, T});
-    return &(LegalTypes[Idx]);
+    std::pair<std::unordered_map<uint64_t, RVVType>::iterator, bool>
+        InsertResult = LegalTypes.insert({Idx, T});
+    return &(InsertResult.first->second);
   }
   // Record illegal type index.
   IllegalTypes.insert(Idx);
@@ -900,11 +896,11 @@ std::string RVVIntrinsic::getBuiltinTypeStr() const {
 }
 
 std::string RVVIntrinsic::getSuffixStr(
-    BasicType Type, int Log2LMUL,
+    RVVTypeCache &TypeCache, BasicType Type, int Log2LMUL,
     llvm::ArrayRef<PrototypeDescriptor> PrototypeDescriptors) {
   SmallVector<std::string> SuffixStrs;
   for (auto PD : PrototypeDescriptors) {
-    auto T = RVVType::computeType(Type, Log2LMUL, PD);
+    auto T = TypeCache.computeType(Type, Log2LMUL, PD);
     SuffixStrs.push_back((*T)->getShortStr());
   }
   return join(SuffixStrs, "_");

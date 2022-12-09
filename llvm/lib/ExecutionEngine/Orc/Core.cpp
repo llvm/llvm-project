@@ -17,6 +17,7 @@
 
 #include <condition_variable>
 #include <future>
+#include <optional>
 
 #define DEBUG_TYPE "orc"
 
@@ -2243,8 +2244,8 @@ void ExecutionSession::dump(raw_ostream &OS) {
 void ExecutionSession::dispatchOutstandingMUs() {
   LLVM_DEBUG(dbgs() << "Dispatching MaterializationUnits...\n");
   while (true) {
-    Optional<std::pair<std::unique_ptr<MaterializationUnit>,
-                       std::unique_ptr<MaterializationResponsibility>>>
+    std::optional<std::pair<std::unique_ptr<MaterializationUnit>,
+                            std::unique_ptr<MaterializationResponsibility>>>
         JMU;
 
     {

@@ -6005,9 +6005,9 @@ define void @mscatter_baseidx_v8i64(<8 x i64> %val, i64* %base, <8 x i64> %idxs,
 ; RV64ZVE32F-NEXT:    andi a0, a7, -128
 ; RV64ZVE32F-NEXT:    beqz a0, .LBB51_9
 ; RV64ZVE32F-NEXT:  .LBB51_8: # %cond.store13
-; RV64ZVE32F-NEXT:    slli a0, a5, 3
-; RV64ZVE32F-NEXT:    add a0, a1, a0
-; RV64ZVE32F-NEXT:    sd a3, 0(a0)
+; RV64ZVE32F-NEXT:    slli a5, a5, 3
+; RV64ZVE32F-NEXT:    add a1, a1, a5
+; RV64ZVE32F-NEXT:    sd a3, 0(a1)
 ; RV64ZVE32F-NEXT:  .LBB51_9: # %else14
 ; RV64ZVE32F-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
 ; RV64ZVE32F-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload
@@ -6024,39 +6024,39 @@ define void @mscatter_baseidx_v8i64(<8 x i64> %val, i64* %base, <8 x i64> %idxs,
 ; RV64ZVE32F-NEXT:    andi a0, a7, 2
 ; RV64ZVE32F-NEXT:    beqz a0, .LBB51_2
 ; RV64ZVE32F-NEXT:  .LBB51_11: # %cond.store1
-; RV64ZVE32F-NEXT:    slli a0, s2, 3
-; RV64ZVE32F-NEXT:    add a0, a1, a0
-; RV64ZVE32F-NEXT:    sd s1, 0(a0)
+; RV64ZVE32F-NEXT:    slli s2, s2, 3
+; RV64ZVE32F-NEXT:    add s2, a1, s2
+; RV64ZVE32F-NEXT:    sd s1, 0(s2)
 ; RV64ZVE32F-NEXT:    andi a0, a7, 4
 ; RV64ZVE32F-NEXT:    beqz a0, .LBB51_3
 ; RV64ZVE32F-NEXT:  .LBB51_12: # %cond.store3
-; RV64ZVE32F-NEXT:    slli a0, s0, 3
-; RV64ZVE32F-NEXT:    add a0, a1, a0
-; RV64ZVE32F-NEXT:    sd t6, 0(a0)
+; RV64ZVE32F-NEXT:    slli s0, s0, 3
+; RV64ZVE32F-NEXT:    add s0, a1, s0
+; RV64ZVE32F-NEXT:    sd t6, 0(s0)
 ; RV64ZVE32F-NEXT:    andi a0, a7, 8
 ; RV64ZVE32F-NEXT:    beqz a0, .LBB51_4
 ; RV64ZVE32F-NEXT:  .LBB51_13: # %cond.store5
-; RV64ZVE32F-NEXT:    slli a0, t5, 3
-; RV64ZVE32F-NEXT:    add a0, a1, a0
-; RV64ZVE32F-NEXT:    sd t3, 0(a0)
+; RV64ZVE32F-NEXT:    slli t5, t5, 3
+; RV64ZVE32F-NEXT:    add t5, a1, t5
+; RV64ZVE32F-NEXT:    sd t3, 0(t5)
 ; RV64ZVE32F-NEXT:    andi a0, a7, 16
 ; RV64ZVE32F-NEXT:    beqz a0, .LBB51_5
 ; RV64ZVE32F-NEXT:  .LBB51_14: # %cond.store7
-; RV64ZVE32F-NEXT:    slli a0, t4, 3
-; RV64ZVE32F-NEXT:    add a0, a1, a0
-; RV64ZVE32F-NEXT:    sd t1, 0(a0)
+; RV64ZVE32F-NEXT:    slli t4, t4, 3
+; RV64ZVE32F-NEXT:    add t4, a1, t4
+; RV64ZVE32F-NEXT:    sd t1, 0(t4)
 ; RV64ZVE32F-NEXT:    andi a0, a7, 32
 ; RV64ZVE32F-NEXT:    beqz a0, .LBB51_6
 ; RV64ZVE32F-NEXT:  .LBB51_15: # %cond.store9
-; RV64ZVE32F-NEXT:    slli a0, t2, 3
-; RV64ZVE32F-NEXT:    add a0, a1, a0
-; RV64ZVE32F-NEXT:    sd a6, 0(a0)
+; RV64ZVE32F-NEXT:    slli t2, t2, 3
+; RV64ZVE32F-NEXT:    add t2, a1, t2
+; RV64ZVE32F-NEXT:    sd a6, 0(t2)
 ; RV64ZVE32F-NEXT:    andi a0, a7, 64
 ; RV64ZVE32F-NEXT:    beqz a0, .LBB51_7
 ; RV64ZVE32F-NEXT:  .LBB51_16: # %cond.store11
-; RV64ZVE32F-NEXT:    slli a0, t0, 3
-; RV64ZVE32F-NEXT:    add a0, a1, a0
-; RV64ZVE32F-NEXT:    sd a4, 0(a0)
+; RV64ZVE32F-NEXT:    slli t0, t0, 3
+; RV64ZVE32F-NEXT:    add t0, a1, t0
+; RV64ZVE32F-NEXT:    sd a4, 0(t0)
 ; RV64ZVE32F-NEXT:    andi a0, a7, -128
 ; RV64ZVE32F-NEXT:    bnez a0, .LBB51_8
 ; RV64ZVE32F-NEXT:    j .LBB51_9
@@ -10701,44 +10701,44 @@ define void @mscatter_baseidx_v8f64(<8 x double> %val, double* %base, <8 x i64> 
 ; RV64ZVE32F-NEXT:    andi a1, a3, 2
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB90_2
 ; RV64ZVE32F-NEXT:  .LBB90_10: # %cond.store1
-; RV64ZVE32F-NEXT:    slli a1, t1, 3
-; RV64ZVE32F-NEXT:    add a1, a0, a1
-; RV64ZVE32F-NEXT:    fsd fa1, 0(a1)
+; RV64ZVE32F-NEXT:    slli t1, t1, 3
+; RV64ZVE32F-NEXT:    add t1, a0, t1
+; RV64ZVE32F-NEXT:    fsd fa1, 0(t1)
 ; RV64ZVE32F-NEXT:    andi a1, a3, 4
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB90_3
 ; RV64ZVE32F-NEXT:  .LBB90_11: # %cond.store3
-; RV64ZVE32F-NEXT:    slli a1, t0, 3
-; RV64ZVE32F-NEXT:    add a1, a0, a1
-; RV64ZVE32F-NEXT:    fsd fa2, 0(a1)
+; RV64ZVE32F-NEXT:    slli t0, t0, 3
+; RV64ZVE32F-NEXT:    add t0, a0, t0
+; RV64ZVE32F-NEXT:    fsd fa2, 0(t0)
 ; RV64ZVE32F-NEXT:    andi a1, a3, 8
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB90_4
 ; RV64ZVE32F-NEXT:  .LBB90_12: # %cond.store5
-; RV64ZVE32F-NEXT:    slli a1, a7, 3
-; RV64ZVE32F-NEXT:    add a1, a0, a1
-; RV64ZVE32F-NEXT:    fsd fa3, 0(a1)
+; RV64ZVE32F-NEXT:    slli a7, a7, 3
+; RV64ZVE32F-NEXT:    add a7, a0, a7
+; RV64ZVE32F-NEXT:    fsd fa3, 0(a7)
 ; RV64ZVE32F-NEXT:    andi a1, a3, 16
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB90_5
 ; RV64ZVE32F-NEXT:  .LBB90_13: # %cond.store7
-; RV64ZVE32F-NEXT:    slli a1, a6, 3
-; RV64ZVE32F-NEXT:    add a1, a0, a1
-; RV64ZVE32F-NEXT:    fsd fa4, 0(a1)
+; RV64ZVE32F-NEXT:    slli a6, a6, 3
+; RV64ZVE32F-NEXT:    add a6, a0, a6
+; RV64ZVE32F-NEXT:    fsd fa4, 0(a6)
 ; RV64ZVE32F-NEXT:    andi a1, a3, 32
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB90_6
 ; RV64ZVE32F-NEXT:  .LBB90_14: # %cond.store9
-; RV64ZVE32F-NEXT:    slli a1, a5, 3
-; RV64ZVE32F-NEXT:    add a1, a0, a1
-; RV64ZVE32F-NEXT:    fsd fa5, 0(a1)
+; RV64ZVE32F-NEXT:    slli a5, a5, 3
+; RV64ZVE32F-NEXT:    add a5, a0, a5
+; RV64ZVE32F-NEXT:    fsd fa5, 0(a5)
 ; RV64ZVE32F-NEXT:    andi a1, a3, 64
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB90_7
 ; RV64ZVE32F-NEXT:  .LBB90_15: # %cond.store11
-; RV64ZVE32F-NEXT:    slli a1, a4, 3
-; RV64ZVE32F-NEXT:    add a1, a0, a1
-; RV64ZVE32F-NEXT:    fsd fa6, 0(a1)
+; RV64ZVE32F-NEXT:    slli a4, a4, 3
+; RV64ZVE32F-NEXT:    add a4, a0, a4
+; RV64ZVE32F-NEXT:    fsd fa6, 0(a4)
 ; RV64ZVE32F-NEXT:    andi a1, a3, -128
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB90_8
 ; RV64ZVE32F-NEXT:  .LBB90_16: # %cond.store13
-; RV64ZVE32F-NEXT:    slli a1, a2, 3
-; RV64ZVE32F-NEXT:    add a0, a0, a1
+; RV64ZVE32F-NEXT:    slli a2, a2, 3
+; RV64ZVE32F-NEXT:    add a0, a0, a2
 ; RV64ZVE32F-NEXT:    fsd fa7, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
   %ptrs = getelementptr inbounds double, double* %base, <8 x i64> %idxs

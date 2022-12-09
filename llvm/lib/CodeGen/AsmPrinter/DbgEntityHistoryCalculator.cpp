@@ -26,6 +26,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <map>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -110,7 +111,7 @@ void DbgValueHistoryMap::Entry::endEntry(EntryIndex Index) {
 /// range in Ranges. EndMI can be nullptr to indicate that the range is
 /// unbounded. Assumes Ranges is ordered and disjoint. Returns true and points
 /// to the first intersecting scope range if one exists.
-static Optional<ArrayRef<InsnRange>::iterator>
+static std::optional<ArrayRef<InsnRange>::iterator>
 intersects(const MachineInstr *StartMI, const MachineInstr *EndMI,
            const ArrayRef<InsnRange> &Ranges,
            const InstructionOrdering &Ordering) {

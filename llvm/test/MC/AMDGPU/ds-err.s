@@ -10,7 +10,7 @@ ds_add_u32 v2, v4 offset:1000000000
 ds_add_u32 v2, v4 offset:0x10000
 
 // offset0 twice
-// CHECK:  error: invalid operand for instruction
+// CHECK:  error: not a valid operand.
 ds_write2_b32 v2, v4, v6 offset0:4 offset0:8
 
 // offset1 twice

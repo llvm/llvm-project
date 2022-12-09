@@ -908,9 +908,7 @@ void DimOp::build(OpBuilder &builder, OperationState &result, Value source,
 }
 
 Optional<int64_t> DimOp::getConstantIndex() {
-  if (auto constantOp = getIndex().getDefiningOp<arith::ConstantOp>())
-    return constantOp.getValue().cast<IntegerAttr>().getInt();
-  return {};
+  return getConstantIntValue(getIndex());
 }
 
 Speculation::Speculatability DimOp::getSpeculatability() {
@@ -1778,8 +1776,9 @@ void ReinterpretCastOp::build(OpBuilder &b, OperationState &result,
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides,
                              ShapedType::kDynamic);
   build(b, result, resultType, source, dynamicOffsets, dynamicSizes,
-        dynamicStrides, b.getI64ArrayAttr(staticOffsets),
-        b.getI64ArrayAttr(staticSizes), b.getI64ArrayAttr(staticStrides));
+        dynamicStrides, b.getDenseI64ArrayAttr(staticOffsets),
+        b.getDenseI64ArrayAttr(staticSizes),
+        b.getDenseI64ArrayAttr(staticStrides));
   result.addAttributes(attrs);
 }
 
@@ -1825,8 +1824,8 @@ LogicalResult ReinterpretCastOp::verify() {
            << srcType << " and result memref type " << resultType;
 
   // Match sizes in result memref type and in static_sizes attribute.
-  for (auto &en : llvm::enumerate(llvm::zip(
-           resultType.getShape(), extractFromI64ArrayAttr(getStaticSizes())))) {
+  for (auto &en :
+       llvm::enumerate(llvm::zip(resultType.getShape(), getStaticSizes()))) {
     int64_t resultSize = std::get<0>(en.value());
     int64_t expectedSize = std::get<1>(en.value());
     if (!ShapedType::isDynamic(resultSize) &&
@@ -1846,7 +1845,7 @@ LogicalResult ReinterpretCastOp::verify() {
            << resultType;
 
   // Match offset in result memref type and in static_offsets attribute.
-  int64_t expectedOffset = extractFromI64ArrayAttr(getStaticOffsets()).front();
+  int64_t expectedOffset = getStaticOffsets().front();
   if (!ShapedType::isDynamic(resultOffset) &&
       !ShapedType::isDynamic(expectedOffset) &&
       resultOffset != expectedOffset)
@@ -1854,8 +1853,8 @@ LogicalResult ReinterpretCastOp::verify() {
            << resultOffset << " instead of " << expectedOffset;
 
   // Match strides in result memref type and in static_strides attribute.
-  for (auto &en : llvm::enumerate(llvm::zip(
-           resultStrides, extractFromI64ArrayAttr(getStaticStrides())))) {
+  for (auto &en :
+       llvm::enumerate(llvm::zip(resultStrides, getStaticStrides()))) {
     int64_t resultStride = std::get<0>(en.value());
     int64_t expectedStride = std::get<1>(en.value());
     if (!ShapedType::isDynamic(resultStride) &&
@@ -2221,6 +2220,10 @@ LogicalResult ExpandShapeOp::verify() {
   MemRefType srcType = getSrcType();
   MemRefType resultType = getResultType();
 
+  if (srcType.getRank() >= resultType.getRank())
+    return emitOpError("expected rank expansion, but found source rank ")
+           << srcType.getRank() << " >= result rank " << resultType.getRank();
+
   // Verify result shape.
   if (failed(verifyCollapsedShape(getOperation(), srcType.getShape(),
                                   resultType.getShape(),
@@ -2372,6 +2375,10 @@ LogicalResult CollapseShapeOp::verify() {
   MemRefType srcType = getSrcType();
   MemRefType resultType = getResultType();
 
+  if (srcType.getRank() <= resultType.getRank())
+    return emitOpError("expected rank reduction, but found source rank ")
+           << srcType.getRank() << " <= result rank " << resultType.getRank();
+
   // Verify result shape.
   if (failed(verifyCollapsedShape(getOperation(), resultType.getShape(),
                                   srcType.getShape(), getReassociationIndices(),
@@ -2441,7 +2448,7 @@ public:
 void CollapseShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
   results.add<ComposeReassociativeReshapeOps<CollapseShapeOp>,
-              ComposeCollapseOfExpandOp<CollapseShapeOp, ExpandShapeOp>,
+              ComposeCollapseOfExpandOp<CollapseShapeOp, ExpandShapeOp, CastOp>,
               CollapseShapeOpMemRefCastFolder>(context);
 }
 
@@ -2659,8 +2666,9 @@ void SubViewOp::build(OpBuilder &b, OperationState &result,
                      .cast<MemRefType>();
   }
   build(b, result, resultType, source, dynamicOffsets, dynamicSizes,
-        dynamicStrides, b.getI64ArrayAttr(staticOffsets),
-        b.getI64ArrayAttr(staticSizes), b.getI64ArrayAttr(staticStrides));
+        dynamicStrides, b.getDenseI64ArrayAttr(staticOffsets),
+        b.getDenseI64ArrayAttr(staticSizes),
+        b.getDenseI64ArrayAttr(staticStrides));
   result.addAttributes(attrs);
 }
 
@@ -2825,9 +2833,7 @@ LogicalResult SubViewOp::verify() {
 
   // Verify result type against inferred type.
   auto expectedType = SubViewOp::inferResultType(
-      baseType, extractFromI64ArrayAttr(getStaticOffsets()),
-      extractFromI64ArrayAttr(getStaticSizes()),
-      extractFromI64ArrayAttr(getStaticStrides()));
+      baseType, getStaticOffsets(), getStaticSizes(), getStaticStrides());
 
   auto result = isRankReducedMemRefType(expectedType.cast<MemRefType>(),
                                         subViewType, getMixedSizes());

@@ -54,8 +54,8 @@ define i64 @bclr_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    neg a6, a5
 ; RV32I-NEXT:    and a4, a6, a4
 ; RV32I-NEXT:    sll a2, a3, a2
-; RV32I-NEXT:    addi a3, a5, -1
-; RV32I-NEXT:    and a2, a3, a2
+; RV32I-NEXT:    addi a5, a5, -1
+; RV32I-NEXT:    and a2, a5, a2
 ; RV32I-NEXT:    not a3, a4
 ; RV32I-NEXT:    not a2, a2
 ; RV32I-NEXT:    and a0, a3, a0
@@ -176,8 +176,8 @@ define signext i64 @bset_i64_zero(i64 signext %a) nounwind {
 ; RV32I-NEXT:    neg a0, a4
 ; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    sll a1, a1, a3
-; RV32I-NEXT:    addi a2, a4, -1
-; RV32I-NEXT:    and a1, a2, a1
+; RV32I-NEXT:    addi a4, a4, -1
+; RV32I-NEXT:    and a1, a4, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBS-LABEL: bset_i64_zero:

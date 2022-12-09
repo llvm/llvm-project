@@ -13,10 +13,11 @@ v_mqsad_u32_u8 v[0:3], s[2:3], v4, v[0:3]
 // GFX67: error: instruction not supported on this GPU
 
 v_cmp_eq_f32_e64 vcc, v0, v1 mul:2
-// GCN: error: invalid operand for instruction
+// GFX67: error: not a valid operand.
+// GFX89: error: not a valid operand.
 
 v_cmp_le_f64_e64 vcc, v0, v1 mul:4
-// GCN: error: invalid operand for instruction
+// GCN: error: not a valid operand.
 
 //
 // mul
@@ -63,7 +64,7 @@ v_interp_p1ll_f16 v5, v2, attr31.x v0
 
 v_interp_p2_f16 v5, v2, attr1.x, v3 mul:2
 // GFX67: error: instruction not supported on this GPU
-// GFX89: error: invalid operand for instruction
+// GFX89: error: not a valid operand.
 
 //
 // v_div_scale_*

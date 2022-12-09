@@ -3,7 +3,7 @@
 ;; template <typename T>
 ;; struct A { A() {} virtual ~A() {} };
 ;; template struct A<void>;
-;; void *foo() { return new A<void>; }
+;; ptr foo() { return new A<void>; }
 ;;
 ;; clang -c -fpic -O1 -flto=thin a.cc && cp a.o b.o && ld.lld -shared a.o b.so
 

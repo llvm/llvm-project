@@ -6041,7 +6041,7 @@ public:
                                SourceLocation IdentLoc, IdentifierInfo *Ident,
                                SourceLocation LBrace,
                                const ParsedAttributesView &AttrList,
-                               UsingDirectiveDecl *&UsingDecl);
+                               UsingDirectiveDecl *&UsingDecl, bool IsNested);
   void ActOnFinishNamespaceDef(Decl *Dcl, SourceLocation RBrace);
 
   NamespaceDecl *getStdNamespace() const;

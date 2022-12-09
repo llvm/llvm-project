@@ -96,8 +96,8 @@ define void @fp2si_v8f32_v8i32(<8 x float>* %x, <8 x i32>* %y) {
 ; LMULMAX1-NEXT:    vfcvt.rtz.x.f.v v8, v8
 ; LMULMAX1-NEXT:    vfcvt.rtz.x.f.v v9, v9
 ; LMULMAX1-NEXT:    vse32.v v9, (a1)
-; LMULMAX1-NEXT:    addi a0, a1, 16
-; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    addi a1, a1, 16
+; LMULMAX1-NEXT:    vse32.v v8, (a1)
 ; LMULMAX1-NEXT:    ret
   %a = load <8 x float>, <8 x float>* %x
   %d = fptosi <8 x float> %a to <8 x i32>
@@ -123,8 +123,8 @@ define void @fp2ui_v8f32_v8i32(<8 x float>* %x, <8 x i32>* %y) {
 ; LMULMAX1-NEXT:    vfcvt.rtz.xu.f.v v8, v8
 ; LMULMAX1-NEXT:    vfcvt.rtz.xu.f.v v9, v9
 ; LMULMAX1-NEXT:    vse32.v v9, (a1)
-; LMULMAX1-NEXT:    addi a0, a1, 16
-; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    addi a1, a1, 16
+; LMULMAX1-NEXT:    vse32.v v8, (a1)
 ; LMULMAX1-NEXT:    ret
   %a = load <8 x float>, <8 x float>* %x
   %d = fptoui <8 x float> %a to <8 x i32>

@@ -37,11 +37,11 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) #0 {
 ; RISCV32-NEXT:    add s4, s3, t1
 ; RISCV32-NEXT:    add t1, s0, s4
 ; RISCV32-NEXT:    sltu t2, t1, s0
-; RISCV32-NEXT:    sltu t6, s0, t6
+; RISCV32-NEXT:    sltu s0, s0, t6
 ; RISCV32-NEXT:    sltu t4, t5, t4
 ; RISCV32-NEXT:    mulhu t5, t3, a2
 ; RISCV32-NEXT:    add t4, t5, t4
-; RISCV32-NEXT:    add s0, t4, t6
+; RISCV32-NEXT:    add s0, t4, s0
 ; RISCV32-NEXT:    mul t4, t3, t0
 ; RISCV32-NEXT:    mul t5, a7, a5
 ; RISCV32-NEXT:    add t4, t5, t4

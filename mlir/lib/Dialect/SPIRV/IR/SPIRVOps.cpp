@@ -24,6 +24,7 @@
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/ADT/APFloat.h"
@@ -31,6 +32,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
+#include <cassert>
 #include <numeric>
 
 using namespace mlir;
@@ -761,6 +763,53 @@ static Type getElementType(Type type, Attribute indices, OpAsmParser &parser,
 static inline bool isMergeBlock(Block &block) {
   return !block.empty() && std::next(block.begin()) == block.end() &&
          isa<spirv::MergeOp>(block.front());
+}
+
+template <typename ExtendedBinaryOp>
+static LogicalResult verifyArithmeticExtendedBinaryOp(ExtendedBinaryOp op) {
+  auto resultType = op.getType().template cast<spirv::StructType>();
+  if (resultType.getNumElements() != 2)
+    return op.emitOpError("expected result struct type containing two members");
+
+  if (!llvm::all_equal({op.getOperand1().getType(), op.getOperand2().getType(),
+                        resultType.getElementType(0),
+                        resultType.getElementType(1)}))
+    return op.emitOpError(
+        "expected all operand types and struct member types are the same");
+
+  return success();
+}
+
+static ParseResult parseArithmeticExtendedBinaryOp(OpAsmParser &parser,
+                                                   OperationState &result) {
+  SmallVector<OpAsmParser::UnresolvedOperand, 2> operands;
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseOperandList(operands) || parser.parseColon())
+    return failure();
+
+  Type resultType;
+  SMLoc loc = parser.getCurrentLocation();
+  if (parser.parseType(resultType))
+    return failure();
+
+  auto structType = resultType.dyn_cast<spirv::StructType>();
+  if (!structType || structType.getNumElements() != 2)
+    return parser.emitError(loc, "expected spirv.struct type with two members");
+
+  SmallVector<Type, 2> operandTypes(2, structType.getElementType(0));
+  if (parser.resolveOperands(operands, operandTypes, loc, result.operands))
+    return failure();
+
+  result.addTypes(resultType);
+  return success();
+}
+
+static void printArithmeticExtendedBinaryOp(Operation *op,
+                                            OpAsmPrinter &printer) {
+  printer << ' ';
+  printer.printOptionalAttrDict(op->getAttrs());
+  printer.printOperands(op->getOperands());
+  printer << " : " << op->getResultTypes().front();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2990,48 +3039,16 @@ void spirv::GroupNonUniformUMinOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::IAddCarryOp::verify() {
-  auto resultType = getType().cast<spirv::StructType>();
-  if (resultType.getNumElements() != 2)
-    return emitOpError("expected result struct type containing two members");
-
-  if (!llvm::all_equal({getOperand1().getType(), getOperand2().getType(),
-                        resultType.getElementType(0),
-                        resultType.getElementType(1)}))
-    return emitOpError(
-        "expected all operand types and struct member types are the same");
-
-  return success();
+  return ::verifyArithmeticExtendedBinaryOp(*this);
 }
 
 ParseResult spirv::IAddCarryOp::parse(OpAsmParser &parser,
                                       OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 2> operands;
-  if (parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseOperandList(operands) || parser.parseColon())
-    return failure();
-
-  Type resultType;
-  SMLoc loc = parser.getCurrentLocation();
-  if (parser.parseType(resultType))
-    return failure();
-
-  auto structType = resultType.dyn_cast<spirv::StructType>();
-  if (!structType || structType.getNumElements() != 2)
-    return parser.emitError(loc, "expected spirv.struct type with two members");
-
-  SmallVector<Type, 2> operandTypes(2, structType.getElementType(0));
-  if (parser.resolveOperands(operands, operandTypes, loc, result.operands))
-    return failure();
-
-  result.addTypes(resultType);
-  return success();
+  return ::parseArithmeticExtendedBinaryOp(parser, result);
 }
 
 void spirv::IAddCarryOp::print(OpAsmPrinter &printer) {
-  printer << ' ';
-  printer.printOptionalAttrDict((*this)->getAttrs());
-  printer.printOperands((*this)->getOperands());
-  printer << " : " << getType();
+  ::printArithmeticExtendedBinaryOp(*this, printer);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3039,48 +3056,50 @@ void spirv::IAddCarryOp::print(OpAsmPrinter &printer) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::ISubBorrowOp::verify() {
-  auto resultType = getType().cast<spirv::StructType>();
-  if (resultType.getNumElements() != 2)
-    return emitOpError("expected result struct type containing two members");
-
-  if (!llvm::all_equal({getOperand1().getType(), getOperand2().getType(),
-                        resultType.getElementType(0),
-                        resultType.getElementType(1)}))
-    return emitOpError(
-        "expected all operand types and struct member types are the same");
-
-  return success();
+  return ::verifyArithmeticExtendedBinaryOp(*this);
 }
 
 ParseResult spirv::ISubBorrowOp::parse(OpAsmParser &parser,
                                        OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 2> operands;
-  if (parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseOperandList(operands) || parser.parseColon())
-    return failure();
-
-  Type resultType;
-  auto loc = parser.getCurrentLocation();
-  if (parser.parseType(resultType))
-    return failure();
-
-  auto structType = resultType.dyn_cast<spirv::StructType>();
-  if (!structType || structType.getNumElements() != 2)
-    return parser.emitError(loc, "expected spirv.struct type with two members");
-
-  SmallVector<Type, 2> operandTypes(2, structType.getElementType(0));
-  if (parser.resolveOperands(operands, operandTypes, loc, result.operands))
-    return failure();
-
-  result.addTypes(resultType);
-  return success();
+  return ::parseArithmeticExtendedBinaryOp(parser, result);
 }
 
 void spirv::ISubBorrowOp::print(OpAsmPrinter &printer) {
-  printer << ' ';
-  printer.printOptionalAttrDict((*this)->getAttrs());
-  printer.printOperands((*this)->getOperands());
-  printer << " : " << getType();
+  ::printArithmeticExtendedBinaryOp(*this, printer);
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.SMulExtended
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::SMulExtendedOp::verify() {
+  return ::verifyArithmeticExtendedBinaryOp(*this);
+}
+
+ParseResult spirv::SMulExtendedOp::parse(OpAsmParser &parser,
+                                         OperationState &result) {
+  return ::parseArithmeticExtendedBinaryOp(parser, result);
+}
+
+void spirv::SMulExtendedOp::print(OpAsmPrinter &printer) {
+  ::printArithmeticExtendedBinaryOp(*this, printer);
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.UMulExtended
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::UMulExtendedOp::verify() {
+  return ::verifyArithmeticExtendedBinaryOp(*this);
+}
+
+ParseResult spirv::UMulExtendedOp::parse(OpAsmParser &parser,
+                                         OperationState &result) {
+  return ::parseArithmeticExtendedBinaryOp(parser, result);
+}
+
+void spirv::UMulExtendedOp::print(OpAsmPrinter &printer) {
+  ::printArithmeticExtendedBinaryOp(*this, printer);
 }
 
 //===----------------------------------------------------------------------===//

@@ -61,72 +61,65 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
 
-%struct.A = type { i32 (...)** }
+%struct.A = type { ptr }
 %struct.B = type { %struct.A }
 %struct.C = type { %struct.A }
-%struct.D = type { i32 (...)** }
+%struct.D = type { ptr }
 
-@_ZTV1B = constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.B*, i32)* @_ZN1B1fEi to i8*), i8* bitcast (i32 (%struct.A*, i32)* @_ZN1A1nEi to i8*)] }, !type !0, !type !1, !vcall_visibility !5
-@_ZTV1C = constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.C*, i32)* @_ZN1C1fEi to i8*), i8* bitcast (i32 (%struct.A*, i32)* @_ZN1A1nEi to i8*)] }, !type !0, !type !2, !vcall_visibility !5
-@_ZTV1D = constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.D*, i32)* @_ZN1D1mEi to i8*)] }, !type !3, !vcall_visibility !5
+@_ZTV1B = constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr undef, ptr @_ZN1B1fEi, ptr @_ZN1A1nEi] }, !type !0, !type !1, !vcall_visibility !5
+@_ZTV1C = constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr undef, ptr @_ZN1C1fEi, ptr @_ZN1A1nEi] }, !type !0, !type !2, !vcall_visibility !5
+@_ZTV1D = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr undef, ptr @_ZN1D1mEi] }, !type !3, !vcall_visibility !5
 
 
 ; CHECK-IR-LABEL: define i32 @test
-define i32 @test(%struct.A* %obj, %struct.D* %obj2, i32 %a) {
+define i32 @test(ptr %obj, ptr %obj2, i32 %a) {
 entry:
-  %0 = bitcast %struct.A* %obj to i8***
-  %vtable = load i8**, i8*** %0
-  %1 = bitcast i8** %vtable to i8*
-  %p = call i1 @llvm.type.test(i8* %1, metadata !"_ZTS1A")
+  %vtable = load ptr, ptr %obj
+  %p = call i1 @llvm.type.test(ptr %vtable, metadata !"_ZTS1A")
   call void @llvm.assume(i1 %p)
-  %fptrptr = getelementptr i8*, i8** %vtable, i32 1
-  %2 = bitcast i8** %fptrptr to i32 (%struct.A*, i32)**
-  %fptr1 = load i32 (%struct.A*, i32)*, i32 (%struct.A*, i32)** %2, align 8
+  %fptrptr = getelementptr ptr, ptr %vtable, i32 1
+  %fptr1 = load ptr, ptr %fptrptr, align 8
 
   ; Check that the call was devirtualized.
   ; CHECK-IR: %call = tail call i32 @_ZN1A1nEi
-  %call = tail call i32 %fptr1(%struct.A* nonnull %obj, i32 %a)
+  %call = tail call i32 %fptr1(ptr nonnull %obj, i32 %a)
 
-  %3 = bitcast i8** %vtable to i32 (%struct.A*, i32)**
-  %fptr22 = load i32 (%struct.A*, i32)*, i32 (%struct.A*, i32)** %3, align 8
+  %fptr22 = load ptr, ptr %vtable, align 8
 
   ; We still have to call it as virtual.
   ; CHECK-IR: %call3 = tail call i32 %fptr22
-  %call3 = tail call i32 %fptr22(%struct.A* nonnull %obj, i32 %call)
+  %call3 = tail call i32 %fptr22(ptr nonnull %obj, i32 %call)
 
-  %4 = bitcast %struct.D* %obj2 to i8***
-  %vtable2 = load i8**, i8*** %4
-  %5 = bitcast i8** %vtable2 to i8*
-  %p2 = call i1 @llvm.type.test(i8* %5, metadata !4)
+  %vtable2 = load ptr, ptr %obj2
+  %p2 = call i1 @llvm.type.test(ptr %vtable2, metadata !4)
   call void @llvm.assume(i1 %p2)
 
-  %6 = bitcast i8** %vtable2 to i32 (%struct.D*, i32)**
-  %fptr33 = load i32 (%struct.D*, i32)*, i32 (%struct.D*, i32)** %6, align 8
+  %fptr33 = load ptr, ptr %vtable2, align 8
 
   ; Check that the call was devirtualized.
   ; CHECK-IR: %call4 = tail call i32 @_ZN1D1mEi
-  %call4 = tail call i32 %fptr33(%struct.D* nonnull %obj2, i32 %call3)
+  %call4 = tail call i32 %fptr33(ptr nonnull %obj2, i32 %call3)
   ret i32 %call4
 }
 ; CHECK-IR-LABEL: ret i32
 ; CHECK-IR-LABEL: }
 
-declare i1 @llvm.type.test(i8*, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 declare void @llvm.assume(i1)
 
-define i32 @_ZN1B1fEi(%struct.B* %this, i32 %a) #0 {
+define i32 @_ZN1B1fEi(ptr %this, i32 %a) #0 {
    ret i32 0;
 }
 
-define i32 @_ZN1A1nEi(%struct.A* %this, i32 %a) #0 {
+define i32 @_ZN1A1nEi(ptr %this, i32 %a) #0 {
    ret i32 0;
 }
 
-define i32 @_ZN1C1fEi(%struct.C* %this, i32 %a) #0 {
+define i32 @_ZN1C1fEi(ptr %this, i32 %a) #0 {
    ret i32 0;
 }
 
-define i32 @_ZN1D1mEi(%struct.D* %this, i32 %a) #0 {
+define i32 @_ZN1D1mEi(ptr %this, i32 %a) #0 {
    ret i32 0;
 }
 

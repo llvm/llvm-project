@@ -11,14 +11,14 @@ declare i32 @bar()
 ; differently with respect to signature checking.
 declare i32 @foo()
 
-@ptr = global i8* bitcast (i32 ()* @foo to i8*), align 8
+@ptr = global ptr @foo, align 8
 ; Ensure access to ptr is not inlined below, even under LTO
-@llvm.used = appending global [1 x i8**] [i8** @ptr], section "llvm.metadata"
+@llvm.used = appending global [1 x ptr] [ptr @ptr], section "llvm.metadata"
 
 define void @_start() {
   call i32 @bar()
 
-  %addr = load i32 ()*, i32 ()** bitcast (i8** @ptr to i32 ()**), align 8
+  %addr = load ptr, ptr @ptr, align 8
   call i32 %addr()
 
   ret void

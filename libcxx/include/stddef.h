@@ -7,7 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STDDEF_H
+#if defined(__need_ptrdiff_t) || defined(__need_size_t) || \
+    defined(__need_wchar_t) || defined(__need_NULL) || defined(__need_wint_t)
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+#include_next <stddef.h>
+
+#elif !defined(_LIBCPP_STDDEF_H)
 #define _LIBCPP_STDDEF_H
 
 /*
@@ -33,38 +42,9 @@ Types:
 #  pragma GCC system_header
 #endif
 
-#if __has_include_next(<stddef.h>)
-    // The Clang builtin headers only define the types we need when we request it explicitly.
-    // TODO: We should fix that in Clang and drop these defines.
-#  ifndef __need_ptrdiff_t
-#    define __need_ptrdiff_t
+#  if __has_include_next(<stddef.h>)
+#    include_next <stddef.h>
 #  endif
-#  ifndef __need_size_t
-#    define __need_size_t
-#  endif
-#  ifndef __need_wchar_t
-#    define __need_wchar_t
-#  endif
-#  ifndef __need_NULL
-#    define __need_NULL
-#  endif
-#  ifndef __need_STDDEF_H_misc
-#    define __need_STDDEF_H_misc
-#  endif
-
-#  include_next <stddef.h>
-
-    // Now re-include the header without requesting any specific types, so as to get
-    // any other remaining types from stddef.h. This can all go away once the Clang
-    // buitin headers stop using these macros.
-#  undef __need_ptrdiff_t
-#  undef __need_size_t
-#  undef __need_wchar_t
-#  undef __need_NULL
-#  undef __need_STDDEF_H_misc
-
-#  include_next <stddef.h>
-#endif
 
 #ifdef __cplusplus
     typedef decltype(nullptr) nullptr_t;

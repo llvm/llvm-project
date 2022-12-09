@@ -23,6 +23,11 @@ public:
   GetRegisterInfoCount(const lldb_private::ArchSpec &target_arch);
 
 public:
+  enum RegSetKind {
+    GPRegSet,
+    FPRegSet,
+  };
+
   struct GPR {
     uint64_t gpr[32];
 

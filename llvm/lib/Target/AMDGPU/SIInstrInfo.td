@@ -135,6 +135,8 @@ def SIbuffer_load_short: SDNode <"AMDGPUISD::BUFFER_LOAD_SHORT", SDTBufferLoad,
                             [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
 def SIbuffer_load_format : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT", SDTBufferLoad,
                             [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
+def SIbuffer_load_format_tfe : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT_TFE", SDTBufferLoad,
+                               [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
 def SIbuffer_load_format_d16 : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT_D16",
                                 SDTBufferLoad,
                                 [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
@@ -555,7 +557,7 @@ def store_align16_local_m0 : PatFrag <(ops node:$value, node:$ptr),
   let IsStore = 1;
 }
 
-let PredicateCode = [{return cast<MemSDNode>(N)->getAlignment() < 4;}],
+let PredicateCode = [{return cast<MemSDNode>(N)->getAlign() < 4;}],
     GISelPredicateCode = [{return (*MI.memoperands_begin())->getAlign() < 4;}],
     AddressSpaces = [ AddrSpaces.Local ] in {
 def load_align_less_than_4_local : PatFrag<(ops node:$ptr),
@@ -1149,7 +1151,7 @@ def SDWAVopcDst : BoolRC {
 class NamedMatchClass<string CName, bit Optional = 1> : AsmOperandClass {
   let Name = "Imm"#CName;
   let PredicateMethod = "is"#CName;
-  let ParserMethod = !if(Optional, "parseOptionalOperand", "parse"#CName);
+  let ParserMethod = !if(Optional, "", "parse"#CName);
   let RenderMethod = "addImmOperands";
   let IsOptional = Optional;
   let DefaultMethod = !if(Optional, "default"#CName, ?);
@@ -1206,10 +1208,6 @@ class NamedOperandU32Default1<string Name, AsmOperandClass MatchClass> :
 }
 
 let OperandType = "OPERAND_IMMEDIATE" in {
-
-def offen : NamedOperandBit<"Offen", NamedMatchClass<"Offen">>;
-def idxen : NamedOperandBit<"Idxen", NamedMatchClass<"Idxen">>;
-def addr64 : NamedOperandBit<"Addr64", NamedMatchClass<"Addr64">>;
 
 def flat_offset : NamedOperandU16<"FlatOffset", NamedMatchClass<"FlatOffset">>;
 def offset : NamedOperandU16<"Offset", NamedMatchClass<"Offset">>;

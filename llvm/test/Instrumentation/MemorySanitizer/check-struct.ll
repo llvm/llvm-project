@@ -6,10 +6,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-LABEL: @main
 define { i32, i8 } @main() sanitize_memory {
-; CHECK: [[P:%.*]] = inttoptr i64 0 to { i32, i8 }*
-  %p = inttoptr i64 0 to { i32, i8 } *
-; CHECK: [[O:%.*]] = load { i32, i8 }, { i32, i8 }* [[P]]
-  %o = load { i32, i8 }, { i32, i8 } *%p
+; CHECK: [[P:%.*]] = inttoptr i64 0 to ptr
+  %p = inttoptr i64 0 to ptr
+; CHECK: [[O:%.*]] = load { i32, i8 }, ptr [[P]]
+  %o = load { i32, i8 }, ptr %p
 ; CHECK: [[FIELD0:%.+]] = extractvalue { i32, i8 } %_msld, 0
 ; CHECK: [[F0_POISONED:%.+]] = icmp ne i32 [[FIELD0]]
 ; CHECK: [[FIELD1:%.+]] = extractvalue { i32, i8 } %_msld, 1

@@ -50,6 +50,7 @@
 #include <functional>
 #include <iterator>
 #include <limits>
+#include <optional>
 
 using namespace llvm;
 
@@ -1531,7 +1532,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   int OffsetStride = IsUnscaled ? TII->getMemScale(FirstMI) : 1;
   bool IsPromotableZeroStore = isPromotableZeroStoreInst(FirstMI);
 
-  Optional<bool> MaybeCanRename;
+  std::optional<bool> MaybeCanRename;
   if (!EnableRenaming)
     MaybeCanRename = {false};
 

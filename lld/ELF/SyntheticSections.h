@@ -500,7 +500,7 @@ public:
   /// Add a dynamic relocation against \p sym with an optional addend.
   void addSymbolReloc(RelType dynType, InputSectionBase &isec,
                       uint64_t offsetInSec, Symbol &sym, int64_t addend = 0,
-                      llvm::Optional<RelType> addendRelType = llvm::None);
+                      std::optional<RelType> addendRelType = {});
   /// Add a relative dynamic relocation that uses the target address of \p sym
   /// (i.e. InputSection::getRelocTargetVA()) + \p addend as the addend.
   /// This function should only be called for non-preemptible symbols or
@@ -1163,7 +1163,7 @@ class PPC64LongBranchTargetSection final : public SyntheticSection {
 public:
   PPC64LongBranchTargetSection();
   uint64_t getEntryVA(const Symbol *sym, int64_t addend);
-  llvm::Optional<uint32_t> addEntry(const Symbol *sym, int64_t addend);
+  std::optional<uint32_t> addEntry(const Symbol *sym, int64_t addend);
   size_t getSize() const override;
   void writeTo(uint8_t *buf) override;
   bool isNeeded() const override;

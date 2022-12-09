@@ -1793,8 +1793,7 @@ struct FoldTensorCastProducerOp : public OpInterfaceRewritePattern<LinalgOp> {
         newResultTypes.push_back(newOperands.back().getType());
     }
     // Clone op.
-    Operation *newOp =
-        op.clone(rewriter, op->getLoc(), newResultTypes, newOperands);
+    Operation *newOp = clone(rewriter, op, newResultTypes, newOperands);
     SmallVector<Value, 4> replacements;
     replacements.reserve(newOp->getNumResults());
     for (auto result : llvm::zip(op->getResults(), newOp->getResults())) {
@@ -1856,7 +1855,7 @@ struct FoldTensorCastConsumerOp : public OpRewritePattern<tensor::CastOp> {
     SmallVector<Type> resultTypes(linalgOp->result_type_begin(),
                                   linalgOp->result_type_end());
     resultTypes[resultNumber] = resultType;
-    Operation *newOp = linalgOp.clone(rewriter, loc, resultTypes, newOperands);
+    Operation *newOp = clone(rewriter, linalgOp, resultTypes, newOperands);
 
     // Create a tensor.cast operation back to the original type.
     Value castBack = rewriter.create<tensor::CastOp>(
@@ -2006,8 +2005,7 @@ struct InferStaticShapeOfOperands : public OpInterfaceRewritePattern<LinalgOp> {
       return failure();
 
     // Clone op.
-    Operation *newOp =
-        linalgOp.clone(rewriter, linalgOp->getLoc(), resultTypes, newOperands);
+    Operation *newOp = clone(rewriter, linalgOp, resultTypes, newOperands);
     SmallVector<Value> replacements;
     replacements.reserve(newOp->getNumResults());
     for (auto it : llvm::zip(linalgOp->getResults(), newOp->getResults())) {

@@ -807,7 +807,7 @@ static const uint16_t SysRegDecoderTable[] = {
 static DecodeStatus DecodeSysRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t /*Address*/,
                                                const MCDisassembler *Decoder) {
-  if (RegNo >= sizeof(SysRegDecoderTable) / sizeof(SysRegDecoderTable[0]))
+  if (RegNo >= std::size(SysRegDecoderTable))
     return MCDisassembler::Fail;
 
   if (SysRegDecoderTable[RegNo] == Hexagon::NoRegister)
@@ -835,7 +835,7 @@ static DecodeStatus
 DecodeSysRegs64RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t /*Address*/,
                              const MCDisassembler *Decoder) {
   RegNo = RegNo >> 1;
-  if (RegNo >= sizeof(SysReg64DecoderTable) / sizeof(SysReg64DecoderTable[0]))
+  if (RegNo >= std::size(SysReg64DecoderTable))
     return MCDisassembler::Fail;
 
   if (SysReg64DecoderTable[RegNo] == Hexagon::NoRegister)

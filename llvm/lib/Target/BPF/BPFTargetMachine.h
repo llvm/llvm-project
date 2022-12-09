@@ -40,7 +40,6 @@ public:
     return TLOF.get();
   }
 
-  void adjustPassManager(PassManagerBuilder &) override;
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
 };
 }

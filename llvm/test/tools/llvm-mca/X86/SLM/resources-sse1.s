@@ -268,7 +268,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      4     1.00    *                   pavgb	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        pavgw	%mm0, %mm2
 # CHECK-NEXT:  1      4     1.00    *                   pavgw	(%rax), %mm2
-# CHECK-NEXT:  1      1     1.00                        pextrw	$1, %mm0, %ecx
+# CHECK-NEXT:  2      1     1.00                        pextrw	$1, %mm0, %ecx
 # CHECK-NEXT:  1      1     1.00                        pinsrw	$1, %eax, %mm2
 # CHECK-NEXT:  1      4     1.00    *                   pinsrw	$1, (%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        pmaxsw	%mm0, %mm2

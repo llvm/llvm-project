@@ -1155,6 +1155,8 @@ module {
 
 // Simplification of maps exploiting operand info.
 
+// CHECK: #[[$MAP_SIMPLER:.*]] = affine_map<(d0, d1) -> (((d0 + d1) mod 458313) floordiv 227)>
+
 // CHECK-LABEL: func @simplify_with_operands
 func.func @simplify_with_operands(%N: index, %A: memref<?x32xf32>) {
   // CHECK-NEXT: affine.for %[[I:.*]] = 0 to %{{.*}}
@@ -1184,6 +1186,16 @@ func.func @simplify_with_operands(%N: index, %A: memref<?x32xf32>) {
     // CHECK: affine.load %{{.*}}[%{{.*}} floordiv {{.*}}, %{{.*}} mod {{.*}}] :
     %x = affine.load %A[%i floordiv 32, %i mod 32] : memref<?x32xf32>
     "test.foo"(%x) : (f32) -> ()
+  }
+
+  affine.for %arg0 = 0 to %N step 128 {
+    affine.for %arg4 = 0 to 32 step 32 {
+      affine.for %arg5 = 0 to 128 {
+        // CHECK: affine.apply #[[$MAP_SIMPLER]]
+        %x = affine.apply affine_map<(d0, d1, d2) -> (((d0 + d2) mod 458313) floordiv 227 + d1 floordiv 256)>(%arg0, %arg4, %arg5)
+        "test.foo"(%x) : (index) -> ()
+      }
+    }
   }
 
   return

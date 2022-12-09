@@ -1386,6 +1386,11 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
                *this, Load, I, &DyldChainedFixupsLoadCmd,
                "LC_DYLD_CHAINED_FIXUPS", Elements, "chained fixups")))
         return;
+    } else if (Load.C.cmd == MachO::LC_DYLD_EXPORTS_TRIE) {
+      if ((Err = checkLinkeditDataCommand(
+               *this, Load, I, &DyldExportsTrieLoadCmd, "LC_DYLD_EXPORTS_TRIE",
+               Elements, "exports trie")))
+        return;
     } else if (Load.C.cmd == MachO::LC_UUID) {
       if (Load.C.cmdsize != sizeof(MachO::uuid_command)) {
         Err = malformedError("LC_UUID command " + Twine(I) + " has incorrect "
@@ -3225,7 +3230,13 @@ MachOObjectFile::exports(Error &E, ArrayRef<uint8_t> Trie,
 }
 
 iterator_range<export_iterator> MachOObjectFile::exports(Error &Err) const {
-  return exports(Err, getDyldInfoExportsTrie(), this);
+  ArrayRef<uint8_t> Trie;
+  if (DyldInfoLoadCmd)
+    Trie = getDyldInfoExportsTrie();
+  else if (DyldExportsTrieLoadCmd)
+    Trie = getDyldExportsTrie();
+
+  return exports(Err, Trie, this);
 }
 
 MachOAbstractFixupEntry::MachOAbstractFixupEntry(Error *E,
@@ -4932,6 +4943,20 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoLazyBindOpcodes() const {
   return makeArrayRef(Ptr, DyldInfo.lazy_bind_size);
 }
 
+ArrayRef<uint8_t> MachOObjectFile::getDyldInfoExportsTrie() const {
+  if (!DyldInfoLoadCmd)
+    return None;
+
+  auto DyldInfoOrErr =
+      getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
+  if (!DyldInfoOrErr)
+    return None;
+  MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
+  const uint8_t *Ptr =
+      reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.export_off));
+  return makeArrayRef(Ptr, DyldInfo.export_size);
+}
+
 Expected<Optional<MachO::linkedit_data_command>>
 MachOObjectFile::getChainedFixupsLoadCommand() const {
   // Load the dyld chained fixups load command.
@@ -5209,18 +5234,18 @@ MachOObjectFile::getDyldChainedFixupTargets() const {
   return std::move(Targets);
 }
 
-ArrayRef<uint8_t> MachOObjectFile::getDyldInfoExportsTrie() const {
-  if (!DyldInfoLoadCmd)
+ArrayRef<uint8_t> MachOObjectFile::getDyldExportsTrie() const {
+  if (!DyldExportsTrieLoadCmd)
     return None;
 
-  auto DyldInfoOrErr =
-    getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
-  if (!DyldInfoOrErr)
+  auto DyldExportsTrieOrError = getStructOrErr<MachO::linkedit_data_command>(
+      *this, DyldExportsTrieLoadCmd);
+  if (!DyldExportsTrieOrError)
     return None;
-  MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
+  MachO::linkedit_data_command DyldExportsTrie = DyldExportsTrieOrError.get();
   const uint8_t *Ptr =
-      reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.export_off));
-  return makeArrayRef(Ptr, DyldInfo.export_size);
+      reinterpret_cast<const uint8_t *>(getPtr(*this, DyldExportsTrie.dataoff));
+  return makeArrayRef(Ptr, DyldExportsTrie.datasize);
 }
 
 SmallVector<uint64_t> MachOObjectFile::getFunctionStarts() const {

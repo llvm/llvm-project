@@ -59,12 +59,12 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: noinline nounwind uwtable
-define dso_local i32 @fn1(i32* nocapture readonly %0, i32* nocapture readonly %1) local_unnamed_addr !dbg !7 {
-  call void @llvm.dbg.value(metadata i32* %0, metadata !13, metadata !DIExpression()), !dbg !19
-  call void @llvm.dbg.value(metadata i32* %1, metadata !14, metadata !DIExpression()), !dbg !19
-  %3 = load i32, i32* %0, align 4, !dbg !20
+define dso_local i32 @fn1(ptr nocapture readonly %0, ptr nocapture readonly %1) local_unnamed_addr !dbg !7 {
+  call void @llvm.dbg.value(metadata ptr %0, metadata !13, metadata !DIExpression()), !dbg !19
+  call void @llvm.dbg.value(metadata ptr %1, metadata !14, metadata !DIExpression()), !dbg !19
+  %3 = load i32, ptr %0, align 4, !dbg !20
   call void @llvm.dbg.value(metadata i32 %3, metadata !15, metadata !DIExpression()), !dbg !19
-  %4 = load i32, i32* %1, align 4, !dbg !20
+  %4 = load i32, ptr %1, align 4, !dbg !20
   call void @llvm.dbg.value(metadata i32 %4, metadata !16, metadata !DIExpression()), !dbg !19
   %5 = add nsw i32 %4, %3, !dbg !20
   call void @llvm.dbg.value(metadata i32 %5, metadata !17, metadata !DIExpression()), !dbg !19
@@ -113,14 +113,12 @@ declare dso_local i32 @fn2(i32) local_unnamed_addr
 define dso_local i32 @f() local_unnamed_addr !dbg !35 {
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
-  %3 = bitcast i32* %1 to i8*, !dbg !42
-  %4 = bitcast i32* %2 to i8*, !dbg !42
   call void @llvm.dbg.value(metadata i32 0, metadata !41, metadata !DIExpression()), !dbg !42
-  call void @llvm.dbg.value(metadata i32* %1, metadata !39, metadata !DIExpression(DW_OP_deref)), !dbg !42
-  call void @llvm.dbg.value(metadata i32* %2, metadata !40, metadata !DIExpression(DW_OP_deref)), !dbg !42
-  %5 = call i32 @fn1(i32* nonnull %1, i32* nonnull %2), !dbg !42
-  call void @llvm.dbg.value(metadata i32 %5, metadata !41, metadata !DIExpression()), !dbg !42
-  ret i32 %5, !dbg !42
+  call void @llvm.dbg.value(metadata ptr %1, metadata !39, metadata !DIExpression(DW_OP_deref)), !dbg !42
+  call void @llvm.dbg.value(metadata ptr %2, metadata !40, metadata !DIExpression(DW_OP_deref)), !dbg !42
+  %3 = call i32 @fn1(ptr nonnull %1, ptr nonnull %2), !dbg !42
+  call void @llvm.dbg.value(metadata i32 %3, metadata !41, metadata !DIExpression()), !dbg !42
+  ret i32 %3, !dbg !42
 }
 
 ; Function Attrs: nounwind readnone speculatable willreturn

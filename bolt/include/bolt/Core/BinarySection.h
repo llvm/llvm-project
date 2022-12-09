@@ -254,6 +254,7 @@ public:
   uint64_t getEndAddress() const { return Address + Size; }
   uint64_t getSize() const { return Size; }
   uint64_t getInputFileOffset() const { return InputFileOffset; }
+  Align getAlign() const { return Align(Alignment); }
   uint64_t getAlignment() const { return Alignment; }
   bool isText() const {
     if (isELF())

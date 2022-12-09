@@ -37,6 +37,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Target/TargetOptions.h"
 #include <cstring>
+#include <optional>
 #include <system_error>
 #include <utility>
 
@@ -396,7 +397,7 @@ void ObjFile::initializeSymbols() {
       symbols[i] = createUndefined(coffSym);
       uint32_t tagIndex = coffSym.getAux<coff_aux_weak_external>()->TagIndex;
       weakAliases.emplace_back(symbols[i], tagIndex);
-    } else if (Optional<Symbol *> optSym =
+    } else if (std::optional<Symbol *> optSym =
                    createDefined(coffSym, comdatDefs, prevailingComdat)) {
       symbols[i] = *optSym;
       if (config->mingw && prevailingComdat)
@@ -581,7 +582,7 @@ void ObjFile::handleComdatSelection(
   }
 }
 
-Optional<Symbol *> ObjFile::createDefined(
+std::optional<Symbol *> ObjFile::createDefined(
     COFFSymbolRef sym,
     std::vector<const coff_aux_section_definition *> &comdatDefs,
     bool &prevailing) {
@@ -676,7 +677,7 @@ Optional<Symbol *> ObjFile::createDefined(
       if (def->Selection != IMAGE_COMDAT_SELECT_ASSOCIATIVE)
         comdatDefs[sectionNumber] = def;
     }
-    return None;
+    return std::nullopt;
   }
 
   return createRegular(sym);
@@ -840,8 +841,8 @@ static std::string normalizePdbPath(StringRef path) {
 }
 
 // If existing, return the actual PDB path on disk.
-static Optional<std::string> findPdbPath(StringRef pdbPath,
-                                         ObjFile *dependentFile) {
+static std::optional<std::string> findPdbPath(StringRef pdbPath,
+                                              ObjFile *dependentFile) {
   // Ensure the file exists before anything else. In some cases, if the path
   // points to a removable device, Driver::enqueuePath() would fail with an
   // error (EAGAIN, "resource unavailable try again") which we want to skip
@@ -851,7 +852,7 @@ static Optional<std::string> findPdbPath(StringRef pdbPath,
   std::string ret = getPdbBaseName(dependentFile, pdbPath);
   if (llvm::sys::fs::exists(ret))
     return normalizePdbPath(ret);
-  return None;
+  return std::nullopt;
 }
 
 PDBInputFile::PDBInputFile(COFFLinkerContext &ctx, MemoryBufferRef m)
@@ -896,29 +897,30 @@ void PDBInputFile::parse() {
 // Used only for DWARF debug info, which is not common (except in MinGW
 // environments). This returns an optional pair of file name and line
 // number for where the variable was defined.
-Optional<std::pair<StringRef, uint32_t>>
+std::optional<std::pair<StringRef, uint32_t>>
 ObjFile::getVariableLocation(StringRef var) {
   if (!dwarf) {
     dwarf = make<DWARFCache>(DWARFContext::create(*getCOFFObj()));
     if (!dwarf)
-      return None;
+      return std::nullopt;
   }
   if (config->machine == I386)
     var.consume_front("_");
-  Optional<std::pair<std::string, unsigned>> ret = dwarf->getVariableLoc(var);
+  std::optional<std::pair<std::string, unsigned>> ret =
+      dwarf->getVariableLoc(var);
   if (!ret)
-    return None;
+    return std::nullopt;
   return std::make_pair(saver().save(ret->first), ret->second);
 }
 
 // Used only for DWARF debug info, which is not common (except in MinGW
 // environments).
-Optional<DILineInfo> ObjFile::getDILineInfo(uint32_t offset,
-                                            uint32_t sectionIndex) {
+std::optional<DILineInfo> ObjFile::getDILineInfo(uint32_t offset,
+                                                 uint32_t sectionIndex) {
   if (!dwarf) {
     dwarf = make<DWARFCache>(DWARFContext::create(*getCOFFObj()));
     if (!dwarf)
-      return None;
+      return std::nullopt;
   }
 
   return dwarf->getDILineInfo(offset, sectionIndex);

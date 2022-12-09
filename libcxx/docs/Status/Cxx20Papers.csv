@@ -171,7 +171,6 @@
 "`P1739R4 <https://wg21.link/P1739R4>`__","LWG","Avoid template bloat for safe_ranges in combination with ""subrange-y"" view adaptors","Prague","|Complete|","15.0"
 "`P1831R1 <https://wg21.link/P1831R1>`__","LWG","Deprecating volatile: library","Prague","* *",""
 "`P1868R2 <https://wg21.link/P1868R2>`__","LWG","width: clarifying units of width and precision in std::format","Prague","|Complete|","14.0"
-"`P1908R1 <https://wg21.link/P1908R1>`__","CWG","Reserving Attribute Namespaces for Future Use","Prague","* *",""
 "`P1937R2 <https://wg21.link/P1937R2>`__","CWG","Fixing inconsistencies between constexpr and consteval functions","Prague","* *",""
 "`P1956R1 <https://wg21.link/P1956R1>`__","LWG","On the names of low-level bit manipulation functions","Prague","|Complete|","12.0"
 "`P1957R2 <https://wg21.link/P1957R2>`__","CWG","Converting from ``T*``\  to bool should be considered narrowing (re: US 212)","Prague","* *",""

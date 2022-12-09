@@ -102,6 +102,12 @@ Deprecations and Removals
 
 Upcoming Deprecations and Removals
 ----------------------------------
+- The base template for ``std::char_traits`` has been marked as deprecated and will be removed in LLVM 18. If
+  you are using ``std::char_traits`` with types other than ``char``, ``wchar_t``, ``char8_t``, ``char16_t``,
+  ``char32_t`` or a custom character type for which you specialized ``std::char_traits``, your code will stop
+  working when we remove the base template. The Standard does not mandate that a base template is provided,
+  and such a base template is bound to be incorrect for some types, which could currently cause unexpected
+  behavior while going undetected.
 
 API Changes
 -----------
@@ -129,6 +135,11 @@ ABI Affecting Changes
 
   This ABI break only affects users that compile with ``-ffreestanding``, and only for ``atomic<T>`` where ``T``
   is a non-builtin type that could be lockfree on the platform. See https://llvm.org/D133377 for more details.
+
+- When building libc++ against newlib/picolibc, the type of ``regex_type_traits::char_class_type`` was changed to
+  ``uint16_t`` since all values of ``ctype_base::mask`` are taken. This is technically an ABI break, but including
+  ``<regex> `` has triggered a ``static_assert`` failure since libc++ 14, so it is unlikely that this causes
+  problems for existing users.
 
 Build System Changes
 --------------------

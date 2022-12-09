@@ -28,6 +28,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -877,7 +878,7 @@ ExpandMemCmpPass::runImpl(Function &F, const TargetLibraryInfo *TLI,
                           const TargetTransformInfo *TTI,
                           const TargetLowering *TL, ProfileSummaryInfo *PSI,
                           BlockFrequencyInfo *BFI, DominatorTree *DT) {
-  Optional<DomTreeUpdater> DTU;
+  std::optional<DomTreeUpdater> DTU;
   if (DT)
     DTU.emplace(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 

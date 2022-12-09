@@ -319,11 +319,11 @@
 // RUN: %clang -fPIC -c %s -target armv7-pc-windows-gnu -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
 
-// RUN: %clang -c --target=s390x-linux-gnu -mno-pic-data-is-text-relative %s \
+// RUN: %clang -fpic -c --target=s390x-linux-gnu -mno-pic-data-is-text-relative %s \
 // RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIC-DATA-TEXT-REL
-// RUN: %clang -c --target=s390x-linux-gnu -mpic-data-is-text-relative %s -### \
+// RUN: %clang -fpic -c --target=s390x-linux-gnu -mpic-data-is-text-relative %s -### \
 // RUN:   2>&1 | FileCheck %s --check-prefix=CHECK-PIC-DATA-TEXT-REL
-// RUN: %clang -c --target=arm-arm-none-eabi -mno-pic-data-is-text-relative %s \
+// RUN: %clang -fpic -c --target=arm-arm-none-eabi -mno-pic-data-is-text-relative %s \
 // RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIC-DATA-TEXT-REL-NON-SYSTEMZ
-// RUN: %clang -c --target=arm-arm-none-eabi -mpic-data-is-text-relative %s \
+// RUN: %clang -fpic -c --target=arm-arm-none-eabi -mpic-data-is-text-relative %s \
 // RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIC-DATA-TEXT-REL-NON-SYSTEMZ

@@ -490,7 +490,7 @@ public:
   using size_type = size_t;
 
   NamedAttrList() : dictionarySorted({}, true) {}
-  NamedAttrList(llvm::NoneType none) : NamedAttrList() {}
+  NamedAttrList(std::nullopt_t none) : NamedAttrList() {}
   NamedAttrList(ArrayRef<NamedAttribute> attributes);
   NamedAttrList(DictionaryAttr attributes);
   NamedAttrList(const_iterator inStart, const_iterator inEnd);
@@ -759,7 +759,7 @@ private:
 class OpPrintingFlags {
 public:
   OpPrintingFlags();
-  OpPrintingFlags(llvm::NoneType) : OpPrintingFlags() {}
+  OpPrintingFlags(std::nullopt_t) : OpPrintingFlags() {}
 
   /// Enables the elision of large elements attributes by printing a lexically
   /// valid but otherwise meaningless form instead of the element data. The

@@ -642,7 +642,7 @@ TEST(ParseFixedCompilationDatabase, ReturnsEmptyCommandLine) {
 
 TEST(ParseFixedCompilationDatabase, HandlesPositionalArgs) {
   const char *Argv[] = {"1", "2", "--", "-c", "somefile.cpp", "-DDEF3"};
-  int Argc = sizeof(Argv) / sizeof(char*);
+  int Argc = std::size(Argv);
   std::string ErrorMsg;
   std::unique_ptr<FixedCompilationDatabase> Database =
       FixedCompilationDatabase::loadFromCommandLine(Argc, Argv, ErrorMsg);
@@ -677,7 +677,7 @@ TEST(ParseFixedCompilationDatabase, HandlesPositionalArgsSyntaxOnly) {
 
 TEST(ParseFixedCompilationDatabase, HandlesArgv0) {
   const char *Argv[] = {"1", "2", "--", "mytool", "somefile.cpp"};
-  int Argc = sizeof(Argv) / sizeof(char*);
+  int Argc = std::size(Argv);
   std::string ErrorMsg;
   std::unique_ptr<FixedCompilationDatabase> Database =
       FixedCompilationDatabase::loadFromCommandLine(Argc, Argv, ErrorMsg);

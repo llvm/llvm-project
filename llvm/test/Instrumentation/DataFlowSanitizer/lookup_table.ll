@@ -13,33 +13,33 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i8 @load_lookup_table_a(i8 %p) {
   ; CHECK-LABEL:           @load_lookup_table_a.dfsan
-  ; CHECK-NEXT:            %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
+  ; CHECK-NEXT:            %[[#PS:]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align [[ALIGN:2]]
   ; CHECK-NEXT:            %c = zext i8 %p to i64
-  ; CHECK-NEXT:            %b = getelementptr inbounds [256 x i8], [256 x i8]* @lookup_table_a, i64 0, i64 %c
-  ; CHECK-NEXT:            %a = load i8, i8* %b, align 1
+  ; CHECK-NEXT:            %b = getelementptr inbounds [256 x i8], ptr @lookup_table_a, i64 0, i64 %c
+  ; CHECK-NEXT:            %a = load i8, ptr %b, align 1
   ; Propagates p shadow when lookup_table_a flag is provided, otherwise propagates 0 shadow
-  ; LOOKUP_A-NEXT:         store i[[#SBITS]] %[[#PS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
-  ; NO_LOOKUP_A-NEXT:      store i[[#SBITS]] 0, i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
+  ; LOOKUP_A-NEXT:         store i[[#SBITS]] %[[#PS]], ptr @__dfsan_retval_tls, align [[ALIGN]]
+  ; NO_LOOKUP_A-NEXT:      store i[[#SBITS]] 0, ptr @__dfsan_retval_tls, align [[ALIGN]]
   ; CHECK-NEXT:            ret i8 %a
 
   %c = zext i8 %p to i64
-  %b = getelementptr inbounds [256 x i8], [256 x i8]* @lookup_table_a, i64 0, i64 %c
-  %a = load i8, i8* %b
+  %b = getelementptr inbounds [256 x i8], ptr @lookup_table_a, i64 0, i64 %c
+  %a = load i8, ptr %b
   ret i8 %a
 }
 
 define i8 @load_lookup_table_b(i8 %p) {
   ; CHECK-LABEL:           @load_lookup_table_b.dfsan
-  ; CHECK-NEXT:            %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align 2
+  ; CHECK-NEXT:            %[[#PS:]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align 2
   ; CHECK-NEXT:            %c = zext i8 %p to i64
-  ; CHECK-NEXT:            %b = getelementptr inbounds [256 x i8], [256 x i8]* @lookup_table_b, i64 0, i64 %c
-  ; CHECK-NEXT:            %a = load i8, i8* %b, align 1
+  ; CHECK-NEXT:            %b = getelementptr inbounds [256 x i8], ptr @lookup_table_b, i64 0, i64 %c
+  ; CHECK-NEXT:            %a = load i8, ptr %b, align 1
   ; Propagates 0 shadow
-  ; CHECK-NEXT:            store i[[#SBITS]] 0, i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
+  ; CHECK-NEXT:            store i[[#SBITS]] 0, ptr @__dfsan_retval_tls, align [[ALIGN]]
   ; CHECK-NEXT:            ret i8 %a
 
   %c = zext i8 %p to i64
-  %b = getelementptr inbounds [256 x i8], [256 x i8]* @lookup_table_b, i64 0, i64 %c
-  %a = load i8, i8* %b, align 1
+  %b = getelementptr inbounds [256 x i8], ptr @lookup_table_b, i64 0, i64 %c
+  %a = load i8, ptr %b, align 1
   ret i8 %a
 }

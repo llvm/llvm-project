@@ -11,11 +11,11 @@ target triple = "x86_64-pc-windows-msvc18.0.0"
 %CommonStruct = type { i32 }
 ; The Src module will re-use our DINode for this type.
 %Tricky = type opaque
-%Tricky.1 = type { %DstType* }
+%Tricky.1 = type { ptr }
 
 @x = global %DstType zeroinitializer
 @foo = internal global %CommonStruct zeroinitializer, !dbg !0
-; That DINode will refer to this value, casted to %Tricky.1* (!11),
+; That DINode will refer to this value, casted to ptr (!11),
 ; which will then show up in Src's getIdentifiedStructTypes().
 @templateValueParam = global i8 0
 ; Because of the names, we would try to map %Tricky.1 to %Tricky --
@@ -24,7 +24,7 @@ target triple = "x86_64-pc-windows-msvc18.0.0"
 ; a destination type. Since these types are not in the source module,
 ; there should be no attempt to create a mapping involving them;
 ; both types should be left as they are.
-@use = global %Tricky* null
+@use = global ptr null
 
 ; Mark %Tricky used.
 !llvm.dbg.cu = !{!2}
@@ -41,7 +41,7 @@ target triple = "x86_64-pc-windows-msvc18.0.0"
 !8 = !DIDerivedType(tag: DW_TAG_inheritance, scope: !6, baseType: !9)
 !9 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Template<&x>", file: !3, line: 3, size: 8, elements: !4, templateParams: !10, identifier: ".?AU?$Template@$1?x@@3UX@@A@@")
 !10 = !{!11}
-!11 = !DITemplateValueParameter(type: !12, value: %Tricky.1* bitcast (i8* @templateValueParam to %Tricky.1*))
+!11 = !DITemplateValueParameter(type: !12, value: ptr @templateValueParam)
 !12 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !13, size: 64)
 !13 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "X", file: !3, line: 1, size: 8, elements: !4, identifier: ".?AUX@@")
 !14 = !{i32 2, !"Debug Info Version", i32 3}

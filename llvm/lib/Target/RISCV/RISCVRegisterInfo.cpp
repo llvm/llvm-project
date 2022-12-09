@@ -29,6 +29,12 @@
 
 using namespace llvm;
 
+static cl::opt<bool>
+    DisableRegAllocHints("riscv-disable-regalloc-hints", cl::Hidden,
+                         cl::init(false),
+                         cl::desc("Disable two address hints for register "
+                                  "allocation"));
+
 static_assert(RISCV::X1 == RISCV::X0 + 1, "Register list not consecutive");
 static_assert(RISCV::X31 == RISCV::X0 + 31, "Register list not consecutive");
 static_assert(RISCV::F1_H == RISCV::F0_H + 1, "Register list not consecutive");
@@ -375,4 +381,72 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
 unsigned
 RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
   return MF.getSubtarget<RISCVSubtarget>().hasStdExtC() ? 1 : 0;
+}
+
+// Add two address hints to improve chances of being able to use a compressed
+// instruction.
+bool RISCVRegisterInfo::getRegAllocationHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
+  const MachineRegisterInfo *MRI = &MF.getRegInfo();
+
+  bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
+      VirtReg, Order, Hints, MF, VRM, Matrix);
+
+  if (!VRM || DisableRegAllocHints)
+    return BaseImplRetVal;
+
+  // Add any two address hints after any copy hints.
+  SmallSet<unsigned, 4> TwoAddrHints;
+
+  auto tryAddHint = [&](const MachineOperand &VRRegMO,
+                        const MachineOperand &MO) -> void {
+    Register Reg = MO.getReg();
+    Register PhysReg =
+        Register::isPhysicalRegister(Reg) ? Reg : Register(VRM->getPhys(Reg));
+    if (PhysReg) {
+      assert(!MO.getSubReg() && !VRRegMO.getSubReg() && "Unexpected subreg!");
+      if (!MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
+        TwoAddrHints.insert(PhysReg);
+    }
+  };
+
+  // For now we support the compressible instructions which can encode all
+  // registers and have a single register source.
+  // TODO: Add more compressed instructions.
+  auto isCompressible = [](const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    default:
+      return false;
+    case RISCV::ADD:
+    case RISCV::SLLI:
+      return true;
+    case RISCV::ADDI:
+    case RISCV::ADDIW:
+      return MI.getOperand(2).isImm() && isInt<6>(MI.getOperand(2).getImm());
+    }
+  };
+
+  for (auto &MO : MRI->reg_nodbg_operands(VirtReg)) {
+    const MachineInstr &MI = *MO.getParent();
+    if (isCompressible(MI)) {
+      unsigned OpIdx = MI.getOperandNo(&MO);
+      if (OpIdx == 0 && MI.getOperand(1).isReg()) {
+        tryAddHint(MO, MI.getOperand(1));
+        if (MI.isCommutable() && MI.getOperand(2).isReg())
+          tryAddHint(MO, MI.getOperand(2));
+      } else if (OpIdx == 1) {
+        tryAddHint(MO, MI.getOperand(0));
+      } else if (MI.isCommutable() && OpIdx == 2) {
+        tryAddHint(MO, MI.getOperand(0));
+      }
+    }
+  }
+
+  for (MCPhysReg OrderReg : Order)
+    if (TwoAddrHints.count(OrderReg))
+      Hints.push_back(OrderReg);
+
+  return BaseImplRetVal;
 }

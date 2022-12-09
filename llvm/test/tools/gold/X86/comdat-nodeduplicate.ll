@@ -46,14 +46,14 @@ target triple = "x86_64-unknown-linux-gnu"
 
 $__profc_foo = comdat nodeduplicate
 @__profc_foo = private global i64 1, comdat, align 8
-@__profd_foo = private global i64* @__profc_foo, comdat($__profc_foo), align 8
+@__profd_foo = private global ptr @__profc_foo, comdat($__profc_foo), align 8
 
 declare void @b()
 
 define i64 @foo() {
-  %v = load i64, i64* @__profc_foo
+  %v = load i64, ptr @__profc_foo
   %inc = add i64 1, %v
-  store i64 %inc, i64* @__profc_foo
+  store i64 %inc, ptr @__profc_foo
   ret i64 %inc
 }
 
@@ -68,12 +68,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 $__profc_foo = comdat nodeduplicate
 @__profc_foo = weak hidden global i64 2, comdat, align 8
-@__profd_foo = private global i64* @__profc_foo, comdat($__profc_foo)
+@__profd_foo = private global ptr @__profc_foo, comdat($__profc_foo)
 
 define weak i64 @foo() {
-  %v = load i64, i64* @__profc_foo
+  %v = load i64, ptr @__profc_foo
   %inc = add i64 1, %v
-  store i64 %inc, i64* @__profc_foo
+  store i64 %inc, ptr @__profc_foo
   ret i64 %inc
 }
 
@@ -87,12 +87,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 $__profc_foo = comdat nodeduplicate
 @__profc_foo = weak hidden global i64 3, comdat, align 8
-@__profd_foo = private global i64* @__profc_foo, comdat($__profc_foo)
+@__profd_foo = private global ptr @__profc_foo, comdat($__profc_foo)
 
 define weak i64 @foo() {
-  %v = load i64, i64* @__profc_foo
+  %v = load i64, ptr @__profc_foo
   %inc = add i64 1, %v
-  store i64 %inc, i64* @__profc_foo
+  store i64 %inc, ptr @__profc_foo
   ret i64 %inc
 }
 

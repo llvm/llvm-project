@@ -18,6 +18,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetOptions.h"
+#include <optional>
 #include <set>
 using namespace llvm;
 
@@ -341,7 +342,7 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
   // Lo:   addi  vreg2, vreg1, %pcrel_lo(1b) ---> lw vreg3, %pcrel_lo(1b)(vreg1)
   // Tail: lw vreg3, 8(vreg2)
 
-  Optional<int64_t> CommonOffset;
+  std::optional<int64_t> CommonOffset;
   for (const MachineInstr &UseMI : MRI->use_instructions(DestReg)) {
     switch (UseMI.getOpcode()) {
     default:

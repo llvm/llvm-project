@@ -11,6 +11,7 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::ARMBuildAttrs;
@@ -385,7 +386,7 @@ Error ARMAttributeParser::nodefaults(AttrType tag) {
 Error ARMAttributeParser::also_compatible_with(AttrType tag) {
   // Parse value as a C string first in order to print it in escaped form later.
   // Then, parse it again to catch errors or to pretty print if Tag_CPU_arch.
-  Optional<Error> returnValue;
+  std::optional<Error> returnValue;
 
   SmallString<8> Description;
   raw_svector_ostream DescStream(Description);

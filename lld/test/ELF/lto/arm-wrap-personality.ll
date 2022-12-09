@@ -22,13 +22,13 @@ define i32 @__gxx_personality_v0(...) {
   ret i32 0
 }
 
-define void @dummy() optnone noinline personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @dummy() optnone noinline personality ptr @__gxx_personality_v0 {
   invoke void @dummy() to label %cont unwind label %lpad
 
 cont:
   ret void
 
 lpad:
-  %lp = landingpad { i8*, i32 } cleanup
-  resume { i8*, i32 } %lp
+  %lp = landingpad { ptr, i32 } cleanup
+  resume { ptr, i32 } %lp
 }

@@ -8,7 +8,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41002802FFFFFFFF0F0B
 define i32 @load_i32_from_negative_address() {
-  %t = load i32, i32* inttoptr (i32 -1 to i32*)
+  %t = load i32, ptr inttoptr (i32 -1 to ptr)
   ret i32 %t
 }
 
@@ -16,6 +16,6 @@ define i32 @load_i32_from_negative_address() {
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41002802030B
 define i32 @load_i32_from_wrapped_address() {
-  %t = load i32, i32* inttoptr (i32 4294967299 to i32*)
+  %t = load i32, ptr inttoptr (i32 4294967299 to ptr)
   ret i32 %t
 }

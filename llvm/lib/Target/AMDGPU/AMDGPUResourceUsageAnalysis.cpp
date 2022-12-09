@@ -273,9 +273,13 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
         case AMDGPU::M0:
         case AMDGPU::M0_LO16:
         case AMDGPU::M0_HI16:
+        case AMDGPU::SRC_SHARED_BASE_LO:
         case AMDGPU::SRC_SHARED_BASE:
+        case AMDGPU::SRC_SHARED_LIMIT_LO:
         case AMDGPU::SRC_SHARED_LIMIT:
+        case AMDGPU::SRC_PRIVATE_BASE_LO:
         case AMDGPU::SRC_PRIVATE_BASE:
+        case AMDGPU::SRC_PRIVATE_LIMIT_LO:
         case AMDGPU::SRC_PRIVATE_LIMIT:
         case AMDGPU::SGPR_NULL:
         case AMDGPU::SGPR_NULL64:

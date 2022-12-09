@@ -9,14 +9,14 @@ target triple = "x86_64-apple-macosx"
 ;
 ; Test case from PR47671.
 
-define i32 @test(i32* readonly %p, i32* readnone %q) {
+define i32 @test(ptr readonly %p, ptr readnone %q) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK: vector.body:
 ; CHECK:   %index.next = add nuw i64 %index, 8
 ; CHECK: middle.block:
 ;
 entry:
-  %cmp.not7 = icmp eq i32* %p, %q
+  %cmp.not7 = icmp eq ptr %p, %q
   br i1 %cmp.not7, label %exit, label %loop.ph
 
 loop.ph:
@@ -25,13 +25,13 @@ loop.ph:
 loop:
   %sum = phi i32 [ %sum.next, %loop ], [ 0, %loop.ph ]
   %first = phi i1 [ false, %loop ], [ true, %loop.ph ]
-  %iv = phi i32* [ %iv.next, %loop ], [ %p, %loop.ph ]
+  %iv = phi ptr [ %iv.next, %loop ], [ %p, %loop.ph ]
   %add = add nsw i32 %sum, 2
   %spec.select = select i1 %first, i32 %sum, i32 %add
-  %lv = load i32, i32* %iv, align 4
+  %lv = load i32, ptr %iv, align 4
   %sum.next = add nsw i32 %lv, %spec.select
-  %iv.next = getelementptr inbounds i32, i32* %iv, i64 1
-  %cmp.not = icmp eq i32* %iv.next, %q
+  %iv.next = getelementptr inbounds i32, ptr %iv, i64 1
+  %cmp.not = icmp eq ptr %iv.next, %q
   br i1 %cmp.not, label %loopexit, label %loop
 
 loopexit:

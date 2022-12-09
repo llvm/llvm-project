@@ -83,8 +83,8 @@ define i64 @udiv64_constant_no_add(i64 %a) nounwind {
 ; RV32-NEXT:    add a3, a6, a3
 ; RV32-NEXT:    sltu a0, a0, a2
 ; RV32-NEXT:    sub a0, a1, a0
-; RV32-NEXT:    mul a0, a0, a4
-; RV32-NEXT:    add a1, a3, a0
+; RV32-NEXT:    mul a1, a0, a4
+; RV32-NEXT:    add a1, a3, a1
 ; RV32-NEXT:    mul a0, a5, a4
 ; RV32-NEXT:    ret
 ;

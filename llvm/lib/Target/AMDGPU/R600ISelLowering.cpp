@@ -1003,10 +1003,10 @@ SDValue R600TargetLowering::lowerPrivateTruncStore(StoreSDNode *Store,
 
   SDValue Mask;
   if (Store->getMemoryVT() == MVT::i8) {
-    assert(Store->getAlignment() >= 1);
+    assert(Store->getAlign() >= 1);
     Mask = DAG.getConstant(0xff, DL, MVT::i32);
   } else if (Store->getMemoryVT() == MVT::i16) {
-    assert(Store->getAlignment() >= 2);
+    assert(Store->getAlign() >= 2);
     Mask = DAG.getConstant(0xffff, DL, MVT::i32);
   } else {
     llvm_unreachable("Unsupported private trunc store");
@@ -1138,7 +1138,7 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
         MaskConstant = DAG.getConstant(0xFF, DL, MVT::i32);
       } else {
         assert(MemVT == MVT::i16);
-        assert(StoreNode->getAlignment() >= 2);
+        assert(StoreNode->getAlign() >= 2);
         MaskConstant = DAG.getConstant(0xFFFF, DL, MVT::i32);
       }
 
@@ -1245,7 +1245,7 @@ SDValue R600TargetLowering::lowerPrivateExtLoad(SDValue Op,
   LoadSDNode *Load = cast<LoadSDNode>(Op);
   ISD::LoadExtType ExtType = Load->getExtensionType();
   EVT MemVT = Load->getMemoryVT();
-  assert(Load->getAlignment() >= MemVT.getStoreSize());
+  assert(Load->getAlign() >= MemVT.getStoreSize());
 
   SDValue BasePtr = Load->getBasePtr();
   SDValue Chain = Load->getChain();

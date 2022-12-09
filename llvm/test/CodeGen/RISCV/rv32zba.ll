@@ -44,9 +44,9 @@ define i64 @sh3add(i64 %0, i64* %1) {
 ; RV32I-LABEL: sh3add:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a0, a0, 3
-; RV32I-NEXT:    add a1, a2, a0
-; RV32I-NEXT:    lw a0, 0(a1)
-; RV32I-NEXT:    lw a1, 4(a1)
+; RV32I-NEXT:    add a2, a2, a0
+; RV32I-NEXT:    lw a0, 0(a2)
+; RV32I-NEXT:    lw a1, 4(a2)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: sh3add:

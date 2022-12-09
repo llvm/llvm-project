@@ -49,6 +49,15 @@ def _get_int_array_attr(
 
   return ArrayAttr.get([_get_int64_attr(v) for v in values])
 
+def _get_dense_int64_array_attr(
+        values: Sequence[int]) -> DenseI64ArrayAttr:
+    """Creates a dense integer array from a sequence of integers.
+    Expects the thread-local MLIR context to have been set by the context 
+    manager.
+    """
+    if values is None:
+        return DenseI64ArrayAttr.get([])
+    return DenseI64ArrayAttr.get(values)
 
 def _get_int_int_array_attr(
     values: Optional[Union[ArrayAttr, Sequence[Union[ArrayAttr,
@@ -250,14 +259,11 @@ class TileOp:
     else:
       for size in sizes:
         if isinstance(size, int):
-          static_sizes.append(IntegerAttr.get(i64_type, size))
-        elif isinstance(size, IntegerAttr):
           static_sizes.append(size)
         else:
-          static_sizes.append(
-              IntegerAttr.get(i64_type, ShapedType.get_dynamic_size()))
+          static_sizes.append(ShapedType.get_dynamic_size())
           dynamic_sizes.append(_get_op_result_or_value(size))
-      sizes_attr = ArrayAttr.get(static_sizes)
+      sizes_attr = DenseI64ArrayAttr.get(static_sizes)
 
     num_loops = sum(
         v if v == 0 else 1 for v in self.__extract_values(sizes_attr))
@@ -266,14 +272,14 @@ class TileOp:
         _get_op_result_or_value(target),
         dynamic_sizes=dynamic_sizes,
         static_sizes=sizes_attr,
-        interchange=_get_int_array_attr(interchange) if interchange else None,
+        interchange=_get_dense_int64_array_attr(interchange) if interchange else None,
         loc=loc,
         ip=ip)
 
-  def __extract_values(self, attr: Optional[ArrayAttr]) -> List[int]:
+  def __extract_values(self, attr: Optional[DenseI64ArrayAttr]) -> List[int]:
     if not attr:
       return []
-    return [IntegerAttr(element).value for element in attr]
+    return [element for element in attr]
 
 
 class VectorizeOp:

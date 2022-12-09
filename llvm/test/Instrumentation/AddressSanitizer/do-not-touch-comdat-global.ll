@@ -6,9 +6,9 @@ target triple = "i686-pc-windows-msvc"
 ; no action should be taken for these globals
 $global_noinst = comdat largest
 @aliasee = private unnamed_addr constant [2 x i8] [i8 1, i8 2], comdat($global_noinst)
-@global_noinst = unnamed_addr alias [2 x i8], [2 x i8]* @aliasee
+@global_noinst = unnamed_addr alias [2 x i8], ptr @aliasee
 ; CHECK-NOT: {{asan_gen.*global_noinst}}
-; CHECK-DAG: @global_noinst = unnamed_addr alias [2 x i8], [2 x i8]* @aliasee
+; CHECK-DAG: @global_noinst = unnamed_addr alias [2 x i8], ptr @aliasee
 @global_inst = private constant [2 x i8] [i8 1, i8 2]
 ; CHECK-DAG: {{asan_gen.*global_inst}}
 ; CHECK: @asan.module_ctor

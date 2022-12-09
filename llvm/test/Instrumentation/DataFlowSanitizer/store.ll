@@ -6,98 +6,101 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 
-define void @store0({} %v, {}* %p) {
+define void @store0({} %v, ptr %p) {
   ; CHECK-LABEL: @store0.dfsan
-  ; CHECK:       store {} %v, {}* %p
+  ; CHECK:       store {} %v, ptr %p
   ; CHECK-NOT:   store
   ; CHECK:       ret void
 
-  store {} %v, {}* %p
+  store {} %v, ptr %p
   ret void
 }
 
-define void @store8(i8 %v, i8* %p) {
+define void @store8(i8 %v, ptr %p) {
   ; CHECK-LABEL:       @store8.dfsan
-  ; CHECK:             load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
-  ; COMBINE_PTR_LABEL: load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
+  ; NO_COMBINE_PTR_LABEL: load i[[#SBITS]], ptr @__dfsan_arg_tls
+  ; COMBINE_PTR_LABEL:    load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+
+  ; COMBINE_PTR_LABEL: load i[[#SBITS]], ptr @__dfsan_arg_tls
   ; COMBINE_PTR_LABEL: or i[[#SBITS]]
-  ; CHECK:             ptrtoint i8* {{.*}} i64
+  ; CHECK:             ptrtoint ptr {{.*}} i64
   ; CHECK-NEXT:        xor i64
-  ; CHECK-NEXT:        inttoptr i64 {{.*}} i[[#SBITS]]*
-  ; CHECK-NEXT:        getelementptr i[[#SBITS]], i[[#SBITS]]*
+  ; CHECK-NEXT:        inttoptr i64 {{.*}} ptr
+  ; CHECK-NEXT:        getelementptr i[[#SBITS]], ptr
   ; CHECK-NEXT:        store i[[#SBITS]]
-  ; CHECK-NEXT:        store i8 %v, i8* %p
+  ; CHECK-NEXT:        store i8 %v, ptr %p
   ; CHECK-NEXT:        ret void
 
-  store i8 %v, i8* %p
+  store i8 %v, ptr %p
   ret void
 }
 
-define void @store16(i16 %v, i16* %p) {
+define void @store16(i16 %v, ptr %p) {
   ; CHECK-LABEL:       @store16.dfsan
-  ; CHECK:             load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
-  ; COMBINE_PTR_LABEL: load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
+  ; NO_COMBINE_PTR_LABEL: load i[[#SBITS]], ptr @__dfsan_arg_tls
+  ; COMBINE_PTR_LABEL:    load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; COMBINE_PTR_LABEL: load i[[#SBITS]], ptr @__dfsan_arg_tls
   ; COMBINE_PTR_LABEL: or i[[#SBITS]]
-  ; CHECK:             ptrtoint i16* {{.*}} i64
+  ; CHECK:             ptrtoint ptr {{.*}} i64
   ; CHECK-NEXT:        xor i64
-  ; CHECK-NEXT:        inttoptr i64 {{.*}} i[[#SBITS]]*
-  ; CHECK-NEXT:        getelementptr i[[#SBITS]], i[[#SBITS]]*
+  ; CHECK-NEXT:        inttoptr i64 {{.*}} ptr
+  ; CHECK-NEXT:        getelementptr i[[#SBITS]], ptr
   ; CHECK-NEXT:        store i[[#SBITS]]
-  ; CHECK-NEXT:        getelementptr i[[#SBITS]], i[[#SBITS]]*
+  ; CHECK-NEXT:        getelementptr i[[#SBITS]], ptr
   ; CHECK-NEXT:        store i[[#SBITS]]
-  ; CHECK-NEXT:        store i16 %v, i16* %p
+  ; CHECK-NEXT:        store i16 %v, ptr %p
   ; CHECK-NEXT:        ret void
 
-  store i16 %v, i16* %p
+  store i16 %v, ptr %p
   ret void
 }
 
-define void @store32(i32 %v, i32* %p) {
+define void @store32(i32 %v, ptr %p) {
   ; CHECK-LABEL:       @store32.dfsan
-  ; CHECK:             load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
-  ; COMBINE_PTR_LABEL: load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
+  ; NO_COMBINE_PTR_LABEL: load i[[#SBITS]], ptr @__dfsan_arg_tls
+  ; COMBINE_PTR_LABEL:    load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; COMBINE_PTR_LABEL: load i[[#SBITS]], ptr @__dfsan_arg_tls
   ; COMBINE_PTR_LABEL: or i[[#SBITS]]
-  ; CHECK:             ptrtoint i32* {{.*}} i64
+  ; CHECK:             ptrtoint ptr {{.*}} i64
   ; CHECK-NEXT:        xor i64
-  ; CHECK-NEXT:        inttoptr i64 {{.*}} i[[#SBITS]]*
-  ; CHECK-NEXT:        getelementptr i[[#SBITS]], i[[#SBITS]]*
+  ; CHECK-NEXT:        inttoptr i64 {{.*}} ptr
+  ; CHECK-NEXT:        getelementptr i[[#SBITS]], ptr
   ; CHECK-NEXT:        store i[[#SBITS]]
-  ; CHECK-NEXT:        getelementptr i[[#SBITS]], i[[#SBITS]]*
+  ; CHECK-NEXT:        getelementptr i[[#SBITS]], ptr
   ; CHECK-NEXT:        store i[[#SBITS]]
-  ; CHECK-NEXT:        getelementptr i[[#SBITS]], i[[#SBITS]]*
+  ; CHECK-NEXT:        getelementptr i[[#SBITS]], ptr
   ; CHECK-NEXT:        store i[[#SBITS]]
-  ; CHECK-NEXT:        getelementptr i[[#SBITS]], i[[#SBITS]]*
+  ; CHECK-NEXT:        getelementptr i[[#SBITS]], ptr
   ; CHECK-NEXT:        store i[[#SBITS]]
-  ; CHECK-NEXT:        store i32 %v, i32* %p
+  ; CHECK-NEXT:        store i32 %v, ptr %p
   ; CHECK-NEXT:        ret void
 
-  store i32 %v, i32* %p
+  store i32 %v, ptr %p
   ret void
 }
 
-define void @store64(i64 %v, i64* %p) {
+define void @store64(i64 %v, ptr %p) {
   ; CHECK-LABEL:       @store64.dfsan
-  ; CHECK:             load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
-  ; COMBINE_PTR_LABEL: load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
+  ; NO_COMBINE_PTR_LABEL: load i[[#SBITS]], ptr @__dfsan_arg_tls
+  ; COMBINE_PTR_LABEL:    load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; COMBINE_PTR_LABEL: load i[[#SBITS]], ptr @__dfsan_arg_tls
   ; COMBINE_PTR_LABEL: or i[[#SBITS]]
-  ; CHECK:             ptrtoint i64* {{.*}} i64
+  ; CHECK:             ptrtoint ptr {{.*}} i64
   ; CHECK-NEXT:        xor i64
-  ; CHECK-NEXT:        inttoptr i64 {{.*}} i[[#SBITS]]*
+  ; CHECK-NEXT:        inttoptr i64 {{.*}} ptr
   ; CHECK-COUNT-8:     insertelement {{.*}} i[[#SBITS]]
-  ; CHECK-NEXT:        bitcast i[[#SBITS]]* {{.*}} <8 x i[[#SBITS]]>*
   ; CHECK-NEXT:        getelementptr <8 x i[[#SBITS]]>
   ; CHECK-NEXT:        store <8 x i[[#SBITS]]>
-  ; CHECK-NEXT:        store i64 %v, i64* %p
+  ; CHECK-NEXT:        store i64 %v, ptr %p
   ; CHECK-NEXT:        ret void
 
-  store i64 %v, i64* %p
+  store i64 %v, ptr %p
   ret void
 }
 
-define void @store_zero(i32* %p) {
+define void @store_zero(ptr %p) {
   ; CHECK-LABEL:          @store_zero.dfsan
-  ; NO_COMBINE_PTR_LABEL: bitcast i[[#SBITS]]* {{.*}} to i[[#mul(4, SBITS)]]*
-  ; NO_COMBINE_PTR_LABEL: store i[[#mul(4, SBITS)]] 0, i[[#mul(4, SBITS)]]* {{.*}}
-  store i32 0, i32* %p
+  ; NO_COMBINE_PTR_LABEL: store i[[#mul(4, SBITS)]] 0, ptr {{.*}}
+  store i32 0, ptr %p
   ret void
 }

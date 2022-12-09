@@ -859,3 +859,19 @@ func.func @memref_realloc_dead(%src : memref<2xf32>, %v : f32) -> memref<2xf32>{
   memref.store %v, %0[%i2] : memref<4xf32>
   return %src : memref<2xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @collapse_expand_fold_to_cast(
+//  CHECK-SAME:     %[[m:.*]]: memref<?xf32, strided<[1]>, 3>
+//       CHECK:   %[[casted:.*]] = memref.cast %[[m]] : memref<?xf32, strided<[1]>, 3> to memref<?xf32, 3
+//       CHECK:   return %[[casted]]
+func.func @collapse_expand_fold_to_cast(%m: memref<?xf32, strided<[1]>, 3>)
+    -> (memref<?xf32, 3>)
+{
+  %0 = memref.expand_shape %m [[0, 1]]
+      : memref<?xf32, strided<[1]>, 3> into memref<1x?xf32, 3>
+  %1 = memref.collapse_shape %0 [[0, 1]]
+      : memref<1x?xf32, 3> into memref<?xf32, 3>
+  return %1 : memref<?xf32, 3>
+}

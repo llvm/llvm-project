@@ -54,7 +54,8 @@ DataFileCache::DataFileCache(llvm::StringRef path, llvm::CachePruningPolicy poli
   // m_take_ownership member variable to indicate if we need to take
   // ownership.
 
-  auto add_buffer = [this](unsigned task, std::unique_ptr<llvm::MemoryBuffer> m) {
+  auto add_buffer = [this](unsigned task, const llvm::Twine &moduleName,
+                           std::unique_ptr<llvm::MemoryBuffer> m) {
     if (m_take_ownership)
       m_mem_buff_up = std::move(m);
   };
@@ -80,7 +81,7 @@ DataFileCache::GetCachedData(llvm::StringRef key) {
   // turn take ownership of the member buffer that is passed to the callback and
   // put it into a member variable.
   llvm::Expected<llvm::AddStreamFn> add_stream_or_err =
-      m_cache_callback(task, key);
+      m_cache_callback(task, key, "");
   m_take_ownership = false;
   // At this point we either already called the "add_buffer" lambda with
   // the data or we haven't. We can tell if we got the cached data by checking
@@ -112,7 +113,7 @@ bool DataFileCache::SetCachedData(llvm::StringRef key,
   // add_buffer lambda function from the constructor which will ignore the
   // data.
   llvm::Expected<llvm::AddStreamFn> add_stream_or_err =
-      m_cache_callback(task, key);
+      m_cache_callback(task, key, "");
   // If we reach this code then we either already called the callback with
   // the data or we haven't. We can tell if we had the cached data by checking
   // the CacheAddStream function pointer value below.
@@ -127,7 +128,7 @@ bool DataFileCache::SetCachedData(llvm::StringRef key,
     // want to write the data.
     if (add_stream) {
       llvm::Expected<std::unique_ptr<llvm::CachedFileStream>> file_or_err =
-          add_stream(task);
+          add_stream(task, "");
       if (file_or_err) {
         llvm::CachedFileStream *cfs = file_or_err->get();
         cfs->OS->write((const char *)data.data(), data.size());

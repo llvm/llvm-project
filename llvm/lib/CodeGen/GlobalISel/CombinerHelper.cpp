@@ -33,6 +33,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cmath>
+#include <optional>
 #include <tuple>
 
 #define DEBUG_TYPE "gi-combiner"
@@ -3274,7 +3275,7 @@ CombinerHelper::findCandidatesForLoadOrCombine(const MachineInstr *Root) const {
 /// e.g. x[i] << 24
 ///
 /// \returns The load instruction and the byte offset it is moved into.
-static Optional<std::pair<GZExtLoad *, int64_t>>
+static std::optional<std::pair<GZExtLoad *, int64_t>>
 matchLoadAndBytePosition(Register Reg, unsigned MemSizeInBits,
                          const MachineRegisterInfo &MRI) {
   assert(MRI.hasOneNonDBGUse(Reg) &&
@@ -3554,8 +3555,9 @@ bool CombinerHelper::matchLoadOrCombine(
 /// value found.
 /// On match, returns the start byte offset of the \p SrcVal that is being
 /// stored.
-static Optional<int64_t> getTruncStoreByteOffset(GStore &Store, Register &SrcVal,
-                                                 MachineRegisterInfo &MRI) {
+static std::optional<int64_t>
+getTruncStoreByteOffset(GStore &Store, Register &SrcVal,
+                        MachineRegisterInfo &MRI) {
   Register TruncVal;
   if (!mi_match(Store.getValueReg(), MRI, m_GTrunc(m_Reg(TruncVal))))
     return None;

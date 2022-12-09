@@ -42,26 +42,26 @@ target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:
 target triple = "amdgcn-amd-amdhsa"
 
 ; Function Attrs: noinline nounwind
-define amdgpu_kernel void @source_lines_test(i32 addrspace(1)* %Out) #0 !dbg !7 !kernel_arg_addr_space !12 !kernel_arg_access_qual !13 !kernel_arg_type !14 !kernel_arg_base_type !14 !kernel_arg_type_qual !15 {
+define amdgpu_kernel void @source_lines_test(ptr addrspace(1) %Out) #0 !dbg !7 !kernel_arg_addr_space !12 !kernel_arg_access_qual !13 !kernel_arg_type !14 !kernel_arg_base_type !14 !kernel_arg_type_qual !15 {
 entry:
-  %Out.addr = alloca i32 addrspace(1)*, align 4, addrspace(5)
+  %Out.addr = alloca ptr addrspace(1), align 4, addrspace(5)
   %var0 = alloca i32, align 4, addrspace(5)
   %var1 = alloca i32, align 4, addrspace(5)
   %var2 = alloca i32, align 4, addrspace(5)
-  store i32 addrspace(1)* %Out, i32 addrspace(1)* addrspace(5)* %Out.addr, align 4
-  call void @llvm.dbg.declare(metadata i32 addrspace(1)* addrspace(5)* %Out.addr, metadata !16, metadata !17), !dbg !18
-  call void @llvm.dbg.declare(metadata i32 addrspace(5)* %var0, metadata !19, metadata !17), !dbg !20
-  store i32 1911, i32 addrspace(5)* %var0, align 4, !dbg !20
-  call void @llvm.dbg.declare(metadata i32 addrspace(5)* %var1, metadata !21, metadata !17), !dbg !22
-  store i32 2184, i32 addrspace(5)* %var1, align 4, !dbg !22
-  call void @llvm.dbg.declare(metadata i32 addrspace(5)* %var2, metadata !23, metadata !17), !dbg !24
-  %0 = load i32, i32 addrspace(5)* %var0, align 4, !dbg !25
-  %1 = load i32, i32 addrspace(5)* %var1, align 4, !dbg !26
+  store ptr addrspace(1) %Out, ptr addrspace(5) %Out.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr addrspace(5) %Out.addr, metadata !16, metadata !17), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr addrspace(5) %var0, metadata !19, metadata !17), !dbg !20
+  store i32 1911, ptr addrspace(5) %var0, align 4, !dbg !20
+  call void @llvm.dbg.declare(metadata ptr addrspace(5) %var1, metadata !21, metadata !17), !dbg !22
+  store i32 2184, ptr addrspace(5) %var1, align 4, !dbg !22
+  call void @llvm.dbg.declare(metadata ptr addrspace(5) %var2, metadata !23, metadata !17), !dbg !24
+  %0 = load i32, ptr addrspace(5) %var0, align 4, !dbg !25
+  %1 = load i32, ptr addrspace(5) %var1, align 4, !dbg !26
   %add = add nsw i32 %0, %1, !dbg !27
-  store i32 %add, i32 addrspace(5)* %var2, align 4, !dbg !24
-  %2 = load i32, i32 addrspace(5)* %var2, align 4, !dbg !28
-  %3 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(5)* %Out.addr, align 4, !dbg !29
-  store i32 %2, i32 addrspace(1)* %3, align 4, !dbg !30
+  store i32 %add, ptr addrspace(5) %var2, align 4, !dbg !24
+  %2 = load i32, ptr addrspace(5) %var2, align 4, !dbg !28
+  %3 = load ptr addrspace(1), ptr addrspace(5) %Out.addr, align 4, !dbg !29
+  store i32 %2, ptr addrspace(1) %3, align 4, !dbg !30
   ret void, !dbg !31
 }
 

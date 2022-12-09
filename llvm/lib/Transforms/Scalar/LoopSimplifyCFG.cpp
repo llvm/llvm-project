@@ -32,6 +32,7 @@
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include <optional>
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-simplifycfg"
@@ -717,7 +718,7 @@ static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
 PreservedAnalyses LoopSimplifyCFGPass::run(Loop &L, LoopAnalysisManager &AM,
                                            LoopStandardAnalysisResults &AR,
                                            LPMUpdater &LPMU) {
-  Optional<MemorySSAUpdater> MSSAU;
+  std::optional<MemorySSAUpdater> MSSAU;
   if (AR.MSSA)
     MSSAU = MemorySSAUpdater(AR.MSSA);
   bool DeleteCurrentLoop = false;
@@ -750,7 +751,7 @@ public:
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     auto *MSSAA = getAnalysisIfAvailable<MemorySSAWrapperPass>();
-    Optional<MemorySSAUpdater> MSSAU;
+    std::optional<MemorySSAUpdater> MSSAU;
     if (MSSAA)
       MSSAU = MemorySSAUpdater(&MSSAA->getMSSA());
     if (MSSAA && VerifyMemorySSA)

@@ -7,8 +7,8 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: @llvm.used = appending global [1 x i8*] [i8* bitcast (void ()* @msan.module_ctor to i8*)]
-; CHECK: @llvm.global_ctors {{.*}} { i32 0, void ()* @msan.module_ctor, i8* null }
+; CHECK: @llvm.used = appending global [1 x ptr] [ptr @msan.module_ctor]
+; CHECK: @llvm.global_ctors {{.*}} { i32 0, ptr @msan.module_ctor, ptr null }
 
 ; Check the presence and the linkage type of __msan_track_origins and
 ; other interface symbols.
@@ -25,9 +25,9 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Check instrumentation of stores
 
-define void @Store(i32* nocapture %p, i32 %x) nounwind uwtable sanitize_memory {
+define void @Store(ptr nocapture %p, i32 %x) nounwind uwtable sanitize_memory {
 entry:
-  store i32 %x, i32* %p, align 4
+  store i32 %x, ptr %p, align 4
   ret void
 }
 
@@ -49,9 +49,9 @@ entry:
 ; Shadow store has the same alignment as the original store; origin store
 ; does not specify explicit alignment.
 
-define void @AlignedStore(i32* nocapture %p, i32 %x) nounwind uwtable sanitize_memory {
+define void @AlignedStore(ptr nocapture %p, i32 %x) nounwind uwtable sanitize_memory {
 entry:
-  store i32 %x, i32* %p, align 32
+  store i32 %x, ptr %p, align 32
   ret void
 }
 
@@ -70,9 +70,9 @@ entry:
 
 
 ; load followed by cmp: check that we load the shadow and call __msan_warning_with_origin.
-define void @LoadAndCmp(i32* nocapture %a) nounwind uwtable sanitize_memory {
+define void @LoadAndCmp(ptr nocapture %a) nounwind uwtable sanitize_memory {
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %if.end, label %if.then
 
@@ -108,10 +108,10 @@ entry:
 ; CHECK: ret i32
 
 ; Check that we get the shadow for the retval.
-define void @CopyRetVal(i32* nocapture %a) nounwind uwtable sanitize_memory {
+define void @CopyRetVal(ptr nocapture %a) nounwind uwtable sanitize_memory {
 entry:
   %call = tail call i32 @ReturnInt() nounwind
-  store i32 %call, i32* %a, align 4
+  store i32 %call, ptr %a, align 4
   ret void
 }
 
@@ -123,22 +123,22 @@ entry:
 
 
 ; Check that we generate PHIs for shadow.
-define void @FuncWithPhi(i32* nocapture %a, i32* %b, i32* nocapture %c) nounwind uwtable sanitize_memory {
+define void @FuncWithPhi(ptr nocapture %a, ptr %b, ptr nocapture %c) nounwind uwtable sanitize_memory {
 entry:
-  %tobool = icmp eq i32* %b, null
+  %tobool = icmp eq ptr %b, null
   br i1 %tobool, label %if.else, label %if.then
 
   if.then:                                          ; preds = %entry
-  %0 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %b, align 4
   br label %if.end
 
   if.else:                                          ; preds = %entry
-  %1 = load i32, i32* %c, align 4
+  %1 = load i32, ptr %c, align 4
   br label %if.end
 
   if.end:                                           ; preds = %if.else, %if.then
   %t.0 = phi i32 [ %0, %if.then ], [ %1, %if.else ]
-  store i32 %t.0, i32* %a, align 4
+  store i32 %t.0, ptr %a, align 4
   ret void
 }
 
@@ -152,11 +152,11 @@ entry:
 ; CHECK: ret void
 
 ; Compute shadow for "x << 10"
-define void @ShlConst(i32* nocapture %x) nounwind uwtable sanitize_memory {
+define void @ShlConst(ptr nocapture %x) nounwind uwtable sanitize_memory {
 entry:
-  %0 = load i32, i32* %x, align 4
+  %0 = load i32, ptr %x, align 4
   %1 = shl i32 %0, 10
-  store i32 %1, i32* %x, align 4
+  store i32 %1, ptr %x, align 4
   ret void
 }
 
@@ -170,11 +170,11 @@ entry:
 ; CHECK: ret void
 
 ; Compute shadow for "10 << x": it should have 'sext i1'.
-define void @ShlNonConst(i32* nocapture %x) nounwind uwtable sanitize_memory {
+define void @ShlNonConst(ptr nocapture %x) nounwind uwtable sanitize_memory {
 entry:
-  %0 = load i32, i32* %x, align 4
+  %0 = load i32, ptr %x, align 4
   %1 = shl i32 10, %0
-  store i32 %1, i32* %x, align 4
+  store i32 %1, ptr %x, align 4
   ret void
 }
 
@@ -187,11 +187,11 @@ entry:
 ; CHECK: ret void
 
 ; SExt
-define void @SExt(i32* nocapture %a, i16* nocapture %b) nounwind uwtable sanitize_memory {
+define void @SExt(ptr nocapture %a, ptr nocapture %b) nounwind uwtable sanitize_memory {
 entry:
-  %0 = load i16, i16* %b, align 2
+  %0 = load i16, ptr %b, align 2
   %1 = sext i16 %0 to i32
-  store i32 %1, i32* %a, align 4
+  store i32 %1, ptr %a, align 4
   ret void
 }
 
@@ -206,69 +206,69 @@ entry:
 
 
 ; memset
-define void @MemSet(i8* nocapture %x) nounwind uwtable sanitize_memory {
+define void @MemSet(ptr nocapture %x) nounwind uwtable sanitize_memory {
 entry:
-  call void @llvm.memset.p0i8.i64(i8* %x, i8 42, i64 10, i1 false)
+  call void @llvm.memset.p0.i64(ptr %x, i8 42, i64 10, i1 false)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 
 ; CHECK-LABEL: @MemSet
-; CHECK: call i8* @__msan_memset
+; CHECK: call ptr @__msan_memset
 ; CHECK: ret void
 
 
 ; memcpy
-define void @MemCpy(i8* nocapture %x, i8* nocapture %y) nounwind uwtable sanitize_memory {
+define void @MemCpy(ptr nocapture %x, ptr nocapture %y) nounwind uwtable sanitize_memory {
 entry:
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %x, i8* %y, i64 10, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %x, ptr %y, i64 10, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
 
 ; CHECK-LABEL: @MemCpy
-; CHECK: call i8* @__msan_memcpy
+; CHECK: call ptr @__msan_memcpy
 ; CHECK: ret void
 
 ; memset.inline
-define void @MemSetInline(i8* nocapture %x) nounwind uwtable sanitize_memory {
+define void @MemSetInline(ptr nocapture %x) nounwind uwtable sanitize_memory {
 entry:
-  call void @llvm.memset.inline.p0i8.i64(i8* %x, i8 42, i64 10, i1 false)
+  call void @llvm.memset.inline.p0.i64(ptr %x, i8 42, i64 10, i1 false)
   ret void
 }
 
-declare void @llvm.memset.inline.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.inline.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 
 ; CHECK-LABEL: @MemSetInline
-; CHECK: call i8* @__msan_memset
+; CHECK: call ptr @__msan_memset
 ; CHECK: ret void
 
 ; memcpy.inline
-define void @MemCpyInline(i8* nocapture %x, i8* nocapture %y) nounwind uwtable sanitize_memory {
+define void @MemCpyInline(ptr nocapture %x, ptr nocapture %y) nounwind uwtable sanitize_memory {
 entry:
-  call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* %x, i8* %y, i64 10, i1 false)
+  call void @llvm.memcpy.inline.p0.p0.i64(ptr %x, ptr %y, i64 10, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.inline.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
 
 ; CHECK-LABEL: @MemCpyInline
-; CHECK: call i8* @__msan_memcpy
+; CHECK: call ptr @__msan_memcpy
 ; CHECK: ret void
 
 ; memmove is lowered to a call
-define void @MemMove(i8* nocapture %x, i8* nocapture %y) nounwind uwtable sanitize_memory {
+define void @MemMove(ptr nocapture %x, ptr nocapture %y) nounwind uwtable sanitize_memory {
 entry:
-  call void @llvm.memmove.p0i8.p0i8.i64(i8* %x, i8* %y, i64 10, i1 false)
+  call void @llvm.memmove.p0.p0.i64(ptr %x, ptr %y, i64 10, i1 false)
   ret void
 }
 
-declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memmove.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
 
 ; CHECK-LABEL: @MemMove
-; CHECK: call i8* @__msan_memmove
+; CHECK: call ptr @__msan_memmove
 ; CHECK: ret void
 
 ;; ------------
@@ -276,34 +276,34 @@ declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) 
 ;; been added to the MemIntrinsic class hierarchy. These will act as a reminder to
 ;; verify that MSAN handles these intrinsics properly once they have been
 ;; added to that class hierarchy.
-declare void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* nocapture writeonly, i8, i64, i32) nounwind
-declare void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32) nounwind
-declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32) nounwind
+declare void @llvm.memset.element.unordered.atomic.p0.i64(ptr nocapture writeonly, i8, i64, i32) nounwind
+declare void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i32) nounwind
+declare void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i32) nounwind
 
-define void @atomic_memcpy(i8* nocapture %x, i8* nocapture %y) nounwind {
+define void @atomic_memcpy(ptr nocapture %x, ptr nocapture %y) nounwind {
   ; CHECK-LABEL: atomic_memcpy
   ; CHECK-NEXT: call void @llvm.donothing
-  ; CHECK-NEXT: call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1)
+  ; CHECK-NEXT: call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 1 %x, ptr align 2 %y, i64 16, i32 1)
   ; CHECK-NEXT: ret void
-  call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1)
+  call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 1 %x, ptr align 2 %y, i64 16, i32 1)
   ret void
 }
 
-define void @atomic_memmove(i8* nocapture %x, i8* nocapture %y) nounwind {
+define void @atomic_memmove(ptr nocapture %x, ptr nocapture %y) nounwind {
   ; CHECK-LABEL: atomic_memmove
   ; CHECK-NEXT: call void @llvm.donothing
-  ; CHECK-NEXT: call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1)
+  ; CHECK-NEXT: call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 1 %x, ptr align 2 %y, i64 16, i32 1)
   ; CHECK-NEXT: ret void
-  call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1)
+  call void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr align 1 %x, ptr align 2 %y, i64 16, i32 1)
   ret void
 }
 
-define void @atomic_memset(i8* nocapture %x) nounwind {
+define void @atomic_memset(ptr nocapture %x) nounwind {
   ; CHECK-LABEL: atomic_memset
   ; CHECK-NEXT: call void @llvm.donothing
-  ; CHECK-NEXT: call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %x, i8 88, i64 16, i32 1)
+  ; CHECK-NEXT: call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 1 %x, i8 88, i64 16, i32 1)
   ; CHECK-NEXT: ret void
-  call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %x, i8 88, i64 16, i32 1)
+  call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 1 %x, i8 88, i64 16, i32 1)
   ret void
 }
 
@@ -393,10 +393,10 @@ entry:
 ; CHECK: ret { i64, i64 }
 
 
-define { i64*, double } @SelectStruct2(i1 zeroext %x, { i64*, double } %a, { i64*, double } %b) readnone sanitize_memory {
+define { ptr, double } @SelectStruct2(i1 zeroext %x, { ptr, double } %a, { ptr, double } %b) readnone sanitize_memory {
 entry:
-  %c = select i1 %x, { i64*, double } %a, { i64*, double } %b
-  ret { i64*, double } %c
+  %c = select i1 %x, { ptr, double } %a, { ptr, double } %b
+  ret { ptr, double } %c
 }
 
 ; CHECK-LABEL: @SelectStruct2
@@ -404,37 +404,37 @@ entry:
 ; CHECK-NEXT: select i1 {{.*}}, { i64, i64 } { i64 -1, i64 -1 }, { i64, i64 }
 ; ORIGINS: select i1
 ; ORIGINS: select i1
-; CHECK-NEXT: select i1 {{.*}}, { i64*, double }
-; CHECK: ret { i64*, double }
+; CHECK-NEXT: select i1 {{.*}}, { ptr, double }
+; CHECK: ret { ptr, double }
 
 
-define i8* @IntToPtr(i64 %x) nounwind uwtable readnone sanitize_memory {
+define ptr @IntToPtr(i64 %x) nounwind uwtable readnone sanitize_memory {
 entry:
-  %0 = inttoptr i64 %x to i8*
-  ret i8* %0
+  %0 = inttoptr i64 %x to ptr
+  ret ptr %0
 }
 
 ; CHECK-LABEL: @IntToPtr
-; CHECK: load i64, i64*{{.*}}__msan_param_tls
-; ORIGINS-NEXT: load i32, i32*{{.*}}__msan_param_origin_tls
+; CHECK: load i64, ptr{{.*}}__msan_param_tls
+; ORIGINS-NEXT: load i32, ptr{{.*}}__msan_param_origin_tls
 ; CHECK-NEXT: call void @llvm.donothing
 ; CHECK-NEXT: inttoptr
 ; CHECK-NEXT: store i64{{.*}}__msan_retval_tls
-; CHECK: ret i8*
+; CHECK: ret ptr
 
 
-define i8* @IntToPtr_ZExt(i16 %x) nounwind uwtable readnone sanitize_memory {
+define ptr @IntToPtr_ZExt(i16 %x) nounwind uwtable readnone sanitize_memory {
 entry:
-  %0 = inttoptr i16 %x to i8*
-  ret i8* %0
+  %0 = inttoptr i16 %x to ptr
+  ret ptr %0
 }
 
 ; CHECK-LABEL: @IntToPtr_ZExt
-; CHECK: load i16, i16*{{.*}}__msan_param_tls
+; CHECK: load i16, ptr{{.*}}__msan_param_tls
 ; CHECK: zext
 ; CHECK-NEXT: inttoptr
 ; CHECK-NEXT: store i64{{.*}}__msan_retval_tls
-; CHECK: ret i8*
+; CHECK: ret ptr
 
 
 ; Check that we insert exactly one check on udiv
@@ -468,7 +468,7 @@ entry:
 ; CHECK: %[[SB:.*]] = load i32,{{.*}}@__msan_param_tls
 ; CHECK: %[[SC:.*]] = or i32 %[[SA]], %[[SB]]
 ; CHECK: = fdiv float
-; CHECK: store i32 %[[SC]], i32* {{.*}}@__msan_retval_tls
+; CHECK: store i32 %[[SC]], ptr {{.*}}@__msan_retval_tls
 ; CHECK: ret float
 
 ; Check that fneg simply propagates shadow.
@@ -483,7 +483,7 @@ entry:
 ; CHECK: %[[SA:.*]] = load i32,{{.*}}@__msan_param_tls
 ; ORIGINS: %[[SB:.*]] = load i32,{{.*}}@__msan_param_origin_tls
 ; CHECK: = fneg float
-; CHECK: store i32 %[[SA]], i32* {{.*}}@__msan_retval_tls
+; CHECK: store i32 %[[SA]], ptr {{.*}}@__msan_retval_tls
 ; ORIGINS: store i32{{.*}}@__msan_retval_origin_tls
 ; CHECK: ret float
 
@@ -592,15 +592,15 @@ define zeroext i1 @ICmpSLEAllOnes(i32 %x) nounwind uwtable readnone sanitize_mem
 ; Check that we propagate shadow for x<0, x>=0, etc (i.e. sign bit tests)
 ; of the vector arguments.
 
-define <2 x i1> @ICmpSLT_vector_Zero(<2 x i32*> %x) nounwind uwtable readnone sanitize_memory {
-  %1 = icmp slt <2 x i32*> %x, zeroinitializer
+define <2 x i1> @ICmpSLT_vector_Zero(<2 x ptr> %x) nounwind uwtable readnone sanitize_memory {
+  %1 = icmp slt <2 x ptr> %x, zeroinitializer
   ret <2 x i1> %1
 }
 
 ; CHECK-LABEL: @ICmpSLT_vector_Zero
 ; CHECK: icmp slt <2 x i64>
 ; CHECK-NOT: call void @__msan_warning
-; CHECK: icmp slt <2 x i32*>
+; CHECK: icmp slt <2 x ptr>
 ; CHECK-NOT: call void @__msan_warning
 ; CHECK: ret <2 x i1>
 
@@ -644,25 +644,25 @@ entry:
 
 define i32 @ShadowLoadAlignmentLarge() nounwind uwtable sanitize_memory {
   %y = alloca i32, align 64
-  %1 = load volatile i32, i32* %y, align 64
+  %1 = load volatile i32, ptr %y, align 64
   ret i32 %1
 }
 
 ; CHECK-LABEL: @ShadowLoadAlignmentLarge
-; CHECK: load volatile i32, i32* {{.*}} align 64
-; CHECK: load i32, i32* {{.*}} align 64
+; CHECK: load volatile i32, ptr {{.*}} align 64
+; CHECK: load i32, ptr {{.*}} align 64
 ; CHECK: ret i32
 
 define i32 @ShadowLoadAlignmentSmall() nounwind uwtable sanitize_memory {
   %y = alloca i32, align 2
-  %1 = load volatile i32, i32* %y, align 2
+  %1 = load volatile i32, ptr %y, align 2
   ret i32 %1
 }
 
 ; CHECK-LABEL: @ShadowLoadAlignmentSmall
-; CHECK: load volatile i32, i32* {{.*}} align 2
-; CHECK: load i32, i32* {{.*}} align 2
-; ORIGINS: load i32, i32* {{.*}} align 4
+; CHECK: load volatile i32, ptr {{.*}} align 2
+; CHECK: load i32, ptr {{.*}} align 2
+; ORIGINS: load i32, ptr {{.*}} align 4
 ; CHECK: ret i32
 
 
@@ -726,46 +726,44 @@ declare i32 @llvm.bswap.i32(i32) nounwind readnone
 ; Test handling of vectors of pointers.
 ; Check that shadow of such vector is a vector of integers.
 
-define <8 x i8*> @VectorOfPointers(<8 x i8*>* %p) nounwind uwtable sanitize_memory {
-  %x = load <8 x i8*>, <8 x i8*>* %p
-  ret <8 x i8*> %x
+define <8 x ptr> @VectorOfPointers(ptr %p) nounwind uwtable sanitize_memory {
+  %x = load <8 x ptr>, ptr %p
+  ret <8 x ptr> %x
 }
 
 ; CHECK-LABEL: @VectorOfPointers
-; CHECK: load <8 x i8*>, <8 x i8*>*
-; CHECK: load <8 x i64>, <8 x i64>*
+; CHECK: load <8 x ptr>, ptr
+; CHECK: load <8 x i64>, ptr
 ; CHECK: store <8 x i64> {{.*}} @__msan_retval_tls
-; CHECK: ret <8 x i8*>
+; CHECK: ret <8 x ptr>
 
 ; Test handling of va_copy.
 
-declare void @llvm.va_copy(i8*, i8*) nounwind
+declare void @llvm.va_copy(ptr, ptr) nounwind
 
-define void @VACopy(i8* %p1, i8* %p2) nounwind uwtable sanitize_memory {
-  call void @llvm.va_copy(i8* %p1, i8* %p2) nounwind
+define void @VACopy(ptr %p1, ptr %p2) nounwind uwtable sanitize_memory {
+  call void @llvm.va_copy(ptr %p1, ptr %p2) nounwind
   ret void
 }
 
 ; CHECK-LABEL: @VACopy
-; CHECK: call void @llvm.memset.p0i8.i64({{.*}}, i8 0, i64 24, i1 false)
+; CHECK: call void @llvm.memset.p0.i64({{.*}}, i8 0, i64 24, i1 false)
 ; CHECK: ret void
 
 
 ; Test that va_start instrumentation does not use va_arg_tls*.
 ; It should work with a local stack copy instead.
 
-%struct.__va_list_tag = type { i32, i32, i8*, i8* }
-declare void @llvm.va_start(i8*) nounwind
+%struct.__va_list_tag = type { i32, i32, ptr, ptr }
+declare void @llvm.va_start(ptr) nounwind
 
 ; Function Attrs: nounwind uwtable
 define void @VAStart(i32 %x, ...) sanitize_memory {
 entry:
   %x.addr = alloca i32, align 4
   %va = alloca [1 x %struct.__va_list_tag], align 16
-  store i32 %x, i32* %x.addr, align 4
-  %arraydecay = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %va, i32 0, i32 0
-  %arraydecay1 = bitcast %struct.__va_list_tag* %arraydecay to i8*
-  call void @llvm.va_start(i8* %arraydecay1)
+  store i32 %x, ptr %x.addr, align 4
+  call void @llvm.va_start(ptr %va)
   ret void
 }
 
@@ -779,9 +777,9 @@ entry:
 ; Test handling of volatile stores.
 ; Check that MemorySanitizer does not add a check of the value being stored.
 
-define void @VolatileStore(i32* nocapture %p, i32 %x) nounwind uwtable sanitize_memory {
+define void @VolatileStore(ptr nocapture %p, i32 %x) nounwind uwtable sanitize_memory {
 entry:
-  store volatile i32 %x, i32* %p, align 4
+  store volatile i32 %x, ptr %p, align 4
   ret void
 }
 
@@ -821,15 +819,15 @@ declare void @bar()
 define i32 @NoSanitizeMemoryAlloca() {
 entry:
   %p = alloca i32, align 4
-  %x = call i32 @NoSanitizeMemoryAllocaHelper(i32* %p)
+  %x = call i32 @NoSanitizeMemoryAllocaHelper(ptr %p)
   ret i32 %x
 }
 
-declare i32 @NoSanitizeMemoryAllocaHelper(i32* %p)
+declare i32 @NoSanitizeMemoryAllocaHelper(ptr %p)
 
 ; CHECK-LABEL: @NoSanitizeMemoryAlloca
-; CHECK: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 0, i64 4, i1 false)
-; CHECK: call i32 @NoSanitizeMemoryAllocaHelper(i32*
+; CHECK: call void @llvm.memset.p0.i64(ptr align 4 {{.*}}, i8 0, i64 4, i1 false)
+; CHECK: call i32 @NoSanitizeMemoryAllocaHelper(ptr
 ; CHECK: ret i32
 
 
@@ -845,7 +843,7 @@ entry:
 declare i32 @NoSanitizeMemoryUndefHelper(i32 %x)
 
 ; CHECK-LABEL: @NoSanitizeMemoryUndef
-; CHECK: store i32 0, i32* {{.*}} @__msan_param_tls
+; CHECK: store i32 0, ptr @__msan_param_tls
 ; CHECK: call i32 @NoSanitizeMemoryUndefHelper(i32 undef)
 ; CHECK: ret i32
 
@@ -869,7 +867,7 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 }
 
 ; CHECK: [[A:%.*]] = phi i32 [ undef, %cond.true ], [ undef, %cond.false ]
-; CHECK: store i32 0, i32* bitcast {{.*}} @__msan_retval_tls
+; CHECK: store i32 0, ptr @__msan_retval_tls
 ; CHECK: ret i32 [[A]]
 
 
@@ -877,9 +875,9 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 ; argument shadow is a compile-time zero constant (which is always the case
 ; in functions missing sanitize_memory attribute).
 
-define i32 @NoSanitizeMemoryParamTLS(i32* nocapture readonly %x) {
+define i32 @NoSanitizeMemoryParamTLS(ptr nocapture readonly %x) {
 entry:
-  %0 = load i32, i32* %x, align 4
+  %0 = load i32, ptr %x, align 4
   %call = tail call i32 @NoSanitizeMemoryParamTLSHelper(i32 %0)
   ret i32 %call
 }
@@ -899,8 +897,8 @@ entry:
 }
 
 ; CHECK-LABEL: @ArgumentShadowAlignment
-; CHECK: load <2 x i64>, <2 x i64>* {{.*}} @__msan_param_tls {{.*}}, align 8
-; CHECK: store <2 x i64> {{.*}} @__msan_retval_tls {{.*}}, align 8
+; CHECK: load <2 x i64>, ptr {{.*}} @__msan_param_tls {{.*}}, align 8
+; CHECK: store <2 x i64> {{.*}}, ptr @__msan_retval_tls, align 8
 ; CHECK: ret <2 x i64>
 
 
@@ -937,18 +935,14 @@ entry:
 
 declare void @VAArgStructFn(i32 %guard, ...)
 
-define void @VAArgStruct(%struct.StructByVal* nocapture %s) sanitize_memory {
+define void @VAArgStruct(ptr nocapture %s) sanitize_memory {
 entry:
   %agg.tmp2 = alloca %struct.StructByVal, align 8
-  %0 = bitcast %struct.StructByVal* %s to i8*
-  %agg.tmp.sroa.0.0..sroa_cast = bitcast %struct.StructByVal* %s to i64*
-  %agg.tmp.sroa.0.0.copyload = load i64, i64* %agg.tmp.sroa.0.0..sroa_cast, align 4
-  %agg.tmp.sroa.2.0..sroa_idx = getelementptr inbounds %struct.StructByVal, %struct.StructByVal* %s, i64 0, i32 2
-  %agg.tmp.sroa.2.0..sroa_cast = bitcast i32* %agg.tmp.sroa.2.0..sroa_idx to i64*
-  %agg.tmp.sroa.2.0.copyload = load i64, i64* %agg.tmp.sroa.2.0..sroa_cast, align 4
-  %1 = bitcast %struct.StructByVal* %agg.tmp2 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %1, i8* align 4 %0, i64 16, i1 false)
-  call void (i32, ...) @VAArgStructFn(i32 undef, i64 %agg.tmp.sroa.0.0.copyload, i64 %agg.tmp.sroa.2.0.copyload, i64 %agg.tmp.sroa.0.0.copyload, i64 %agg.tmp.sroa.2.0.copyload, %struct.StructByVal* byval(%struct.StructByVal) align 8 %agg.tmp2)
+  %agg.tmp.sroa.0.0.copyload = load i64, ptr %s, align 4
+  %agg.tmp.sroa.2.0..sroa_idx = getelementptr inbounds %struct.StructByVal, ptr %s, i64 0, i32 2
+  %agg.tmp.sroa.2.0.copyload = load i64, ptr %agg.tmp.sroa.2.0..sroa_idx, align 4
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp2, ptr align 4 %s, i64 16, i1 false)
+  call void (i32, ...) @VAArgStructFn(i32 undef, i64 %agg.tmp.sroa.0.0.copyload, i64 %agg.tmp.sroa.2.0.copyload, i64 %agg.tmp.sroa.0.0.copyload, i64 %agg.tmp.sroa.2.0.copyload, ptr byval(%struct.StructByVal) align 8 %agg.tmp2)
   ret void
 }
 
@@ -958,38 +952,34 @@ entry:
 ; CHECK-LABEL: @VAArgStruct
 ; undef not stored to __msan_va_arg_tls - it's a fixed argument
 ; first struct through general purpose registers
-; CHECK: store i64 {{.*}}, i64* {{.*}}@__msan_va_arg_tls{{.*}}, i64 8){{.*}}, align 8
-; CHECK: store i64 {{.*}}, i64* {{.*}}@__msan_va_arg_tls{{.*}}, i64 16){{.*}}, align 8
+; CHECK: store i64 {{.*}}, ptr {{.*}}@__msan_va_arg_tls{{.*}}, i64 8){{.*}}, align 8
+; CHECK: store i64 {{.*}}, ptr {{.*}}@__msan_va_arg_tls{{.*}}, i64 16){{.*}}, align 8
 ; second struct through general purpose registers
-; CHECK: store i64 {{.*}}, i64* {{.*}}@__msan_va_arg_tls{{.*}}, i64 24){{.*}}, align 8
-; CHECK: store i64 {{.*}}, i64* {{.*}}@__msan_va_arg_tls{{.*}}, i64 32){{.*}}, align 8
+; CHECK: store i64 {{.*}}, ptr {{.*}}@__msan_va_arg_tls{{.*}}, i64 24){{.*}}, align 8
+; CHECK: store i64 {{.*}}, ptr {{.*}}@__msan_va_arg_tls{{.*}}, i64 32){{.*}}, align 8
 ; third struct through the overflow area byval
-; CHECK: ptrtoint %struct.StructByVal* {{.*}} to i64
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64{{.*}}@__msan_va_arg_tls {{.*}}, i64 176
-; CHECK: store i64 16, i64* @__msan_va_arg_overflow_size_tls
+; CHECK: ptrtoint ptr {{.*}} to i64
+; CHECK: call void @llvm.memcpy.p0.p0.i64{{.*}}@__msan_va_arg_tls {{.*}}, i64 176
+; CHECK: store i64 16, ptr @__msan_va_arg_overflow_size_tls
 ; CHECK: call void (i32, ...) @VAArgStructFn
 ; CHECK: ret void
 
 ; Same code compiled without SSE (see attributes below).
 ; The register save area is only 48 bytes instead of 176.
-define void @VAArgStructNoSSE(%struct.StructByVal* nocapture %s) sanitize_memory #0 {
+define void @VAArgStructNoSSE(ptr nocapture %s) sanitize_memory #0 {
 entry:
   %agg.tmp2 = alloca %struct.StructByVal, align 8
-  %0 = bitcast %struct.StructByVal* %s to i8*
-  %agg.tmp.sroa.0.0..sroa_cast = bitcast %struct.StructByVal* %s to i64*
-  %agg.tmp.sroa.0.0.copyload = load i64, i64* %agg.tmp.sroa.0.0..sroa_cast, align 4
-  %agg.tmp.sroa.2.0..sroa_idx = getelementptr inbounds %struct.StructByVal, %struct.StructByVal* %s, i64 0, i32 2
-  %agg.tmp.sroa.2.0..sroa_cast = bitcast i32* %agg.tmp.sroa.2.0..sroa_idx to i64*
-  %agg.tmp.sroa.2.0.copyload = load i64, i64* %agg.tmp.sroa.2.0..sroa_cast, align 4
-  %1 = bitcast %struct.StructByVal* %agg.tmp2 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %1, i8* align 4 %0, i64 16, i1 false)
-  call void (i32, ...) @VAArgStructFn(i32 undef, i64 %agg.tmp.sroa.0.0.copyload, i64 %agg.tmp.sroa.2.0.copyload, i64 %agg.tmp.sroa.0.0.copyload, i64 %agg.tmp.sroa.2.0.copyload, %struct.StructByVal* byval(%struct.StructByVal) align 8 %agg.tmp2)
+  %agg.tmp.sroa.0.0.copyload = load i64, ptr %s, align 4
+  %agg.tmp.sroa.2.0..sroa_idx = getelementptr inbounds %struct.StructByVal, ptr %s, i64 0, i32 2
+  %agg.tmp.sroa.2.0.copyload = load i64, ptr %agg.tmp.sroa.2.0..sroa_idx, align 4
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp2, ptr align 4 %s, i64 16, i1 false)
+  call void (i32, ...) @VAArgStructFn(i32 undef, i64 %agg.tmp.sroa.0.0.copyload, i64 %agg.tmp.sroa.2.0.copyload, i64 %agg.tmp.sroa.0.0.copyload, i64 %agg.tmp.sroa.2.0.copyload, ptr byval(%struct.StructByVal) align 8 %agg.tmp2)
   ret void
 }
 
 attributes #0 = { "target-features"="+fxsr,+x87,-sse" }
 
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64{{.*}}@__msan_va_arg_tls {{.*}}, i64 48
+; CHECK: call void @llvm.memcpy.p0.p0.i64{{.*}}@__msan_va_arg_tls {{.*}}, i64 48
 
 declare i32 @InnerTailCall(i32 %a)
 
@@ -1022,35 +1012,33 @@ define i32 @CallMustTailCall(i32 %a) sanitize_memory {
 ; No instrumentation between call and ret.
 ; CHECK-NEXT: ret i32
 
-declare i32* @MismatchingMustTailCall(i32 %a)
+declare ptr @MismatchingMustTailCall(i32 %a)
 
-define i8* @MismatchingCallMustTailCall(i32 %a) sanitize_memory {
-  %b = musttail call i32* @MismatchingMustTailCall(i32 %a)
-  %c = bitcast i32* %b to i8*
-  ret i8* %c
+define ptr @MismatchingCallMustTailCall(i32 %a) sanitize_memory {
+  %b = musttail call ptr @MismatchingMustTailCall(i32 %a)
+  ret ptr %b
 }
 
 ; For "musttail" calls we can not insert any shadow manipulating code between
 ; call and the return instruction. And we don't need to, because everything is
 ; taken care of in the callee.
 
-; CHECK-LABEL: define i8* @MismatchingCallMustTailCall
-; CHECK: musttail call i32* @MismatchingMustTailCall
+; CHECK-LABEL: define ptr @MismatchingCallMustTailCall
+; CHECK: musttail call ptr @MismatchingMustTailCall
 ; No instrumentation between call and ret.
-; CHECK-NEXT: bitcast i32* {{.*}} to i8*
-; CHECK-NEXT: ret i8*
+; CHECK-NEXT: ret ptr
 
 
 ; CHECK-LABEL: define internal void @msan.module_ctor() #[[#ATTR:]] {
 ; CHECK: call void @__msan_init()
 
 ; CHECK-CALLS: declare void @__msan_maybe_warning_1(i8 zeroext, i32 zeroext)
-; CHECK-CALLS: declare void @__msan_maybe_store_origin_1(i8 zeroext, i8*, i32 zeroext)
+; CHECK-CALLS: declare void @__msan_maybe_store_origin_1(i8 zeroext, ptr, i32 zeroext)
 ; CHECK-CALLS: declare void @__msan_maybe_warning_2(i16 zeroext, i32 zeroext)
-; CHECK-CALLS: declare void @__msan_maybe_store_origin_2(i16 zeroext, i8*, i32 zeroext)
+; CHECK-CALLS: declare void @__msan_maybe_store_origin_2(i16 zeroext, ptr, i32 zeroext)
 ; CHECK-CALLS: declare void @__msan_maybe_warning_4(i32 zeroext, i32 zeroext)
-; CHECK-CALLS: declare void @__msan_maybe_store_origin_4(i32 zeroext, i8*, i32 zeroext)
+; CHECK-CALLS: declare void @__msan_maybe_store_origin_4(i32 zeroext, ptr, i32 zeroext)
 ; CHECK-CALLS: declare void @__msan_maybe_warning_8(i64 zeroext, i32 zeroext)
-; CHECK-CALLS: declare void @__msan_maybe_store_origin_8(i64 zeroext, i8*, i32 zeroext)
+; CHECK-CALLS: declare void @__msan_maybe_store_origin_8(i64 zeroext, ptr, i32 zeroext)
 
 ; CHECK:       attributes #[[#ATTR]] = { nounwind }

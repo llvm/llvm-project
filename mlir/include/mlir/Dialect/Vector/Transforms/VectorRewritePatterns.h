@@ -111,7 +111,7 @@ struct UnrollVectorOptions {
   }
 
   using NativeShapeFnType =
-      std::function<Optional<SmallVector<int64_t, 4>>(Operation *op)>;
+      std::function<Optional<SmallVector<int64_t>>(Operation *op)>;
   /// Function that returns the shape of the vector to unroll to for a given
   /// operation. The unrolling is aborted if the function returns `llvm::None`.
   NativeShapeFnType nativeShape = nullptr;
@@ -122,8 +122,8 @@ struct UnrollVectorOptions {
 
   /// Set the native shape to use for unrolling.
   UnrollVectorOptions &setNativeShape(ArrayRef<int64_t> shape) {
-    SmallVector<int64_t, 4> tsShape(shape.begin(), shape.end());
-    nativeShape = [=](Operation *) -> Optional<SmallVector<int64_t, 4>> {
+    SmallVector<int64_t> tsShape(shape.begin(), shape.end());
+    nativeShape = [=](Operation *) -> Optional<SmallVector<int64_t>> {
       return tsShape;
     };
     return *this;

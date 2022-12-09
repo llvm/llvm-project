@@ -5,45 +5,45 @@
 
 ; Both aliases should be converted to declarations
 ; CHECK:      @zeda0 = external global i32
-; CHECK:      define i32* @foo() {
+; CHECK:      define ptr @foo() {
 ; CHECK-NEXT:  call void @a0bar()
-; CHECK-NEXT:  ret i32* @zeda0
+; CHECK-NEXT:  ret ptr @zeda0
 ; CHECK-NEXT: }
 ; CHECK:      declare void @a0bar()
 
 ; DELETE:      @zed = global i32 0
-; DELETE:      @zeda0 = alias i32, i32* @zed
-; DELETE-NEXT: @a0foo = alias i32* (), i32* ()* @foo
-; DELETE-NEXT: @a0a0bar = alias void (), void ()* @bar
-; DELETE-NEXT: @a0bar = alias void (), void ()* @bar
-; DELETE:      declare i32* @foo()
+; DELETE:      @zeda0 = alias i32, ptr @zed
+; DELETE-NEXT: @a0foo = alias ptr (), ptr @foo
+; DELETE-NEXT: @a0a0bar = alias void (), ptr @bar
+; DELETE-NEXT: @a0bar = alias void (), ptr @bar
+; DELETE:      declare ptr @foo()
 ; DELETE:      define void @bar() {
-; DELETE-NEXT:  %c = call i32* @foo()
+; DELETE-NEXT:  %c = call ptr @foo()
 ; DELETE-NEXT:  ret void
 ; DELETE-NEXT: }
 
 ; ALIAS: @zed = external global i32
-; ALIAS: @zeda0 = alias i32, i32* @zed
+; ALIAS: @zeda0 = alias i32, ptr @zed
 
-; ALIASRE: @a0a0bar = alias void (), void ()* @bar
-; ALIASRE: @a0bar = alias void (), void ()* @bar
+; ALIASRE: @a0a0bar = alias void (), ptr @bar
+; ALIASRE: @a0bar = alias void (), ptr @bar
 ; ALIASRE: declare void @bar()
 
 @zed = global i32 0
-@zeda0 = alias i32, i32* @zed
+@zeda0 = alias i32, ptr @zed
 
-@a0foo = alias i32* (), i32* ()* @foo
+@a0foo = alias ptr (), ptr @foo
 
-define i32* @foo() {
+define ptr @foo() {
   call void @a0bar()
-  ret i32* @zeda0
+  ret ptr @zeda0
 }
 
-@a0a0bar = alias void (), void ()* @bar
+@a0a0bar = alias void (), ptr @bar
 
-@a0bar = alias void (), void ()* @bar
+@a0bar = alias void (), ptr @bar
 
 define void @bar() {
-  %c = call i32* @foo()
+  %c = call ptr @foo()
   ret void
 }

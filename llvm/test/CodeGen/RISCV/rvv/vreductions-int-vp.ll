@@ -1153,11 +1153,11 @@ declare i32 @llvm.vp.reduce.umax.nxv32i32(i32, <vscale x 32 x i32>, <vscale x 32
 define signext i32 @vpreduce_umax_nxv32i32(i32 signext %s, <vscale x 32 x i32> %v, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpreduce_umax_nxv32i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrr a2, vlenb
-; RV32-NEXT:    srli a3, a2, 2
+; RV32-NEXT:    csrr a3, vlenb
+; RV32-NEXT:    srli a2, a3, 2
 ; RV32-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
-; RV32-NEXT:    vslidedown.vx v24, v0, a3
-; RV32-NEXT:    slli a3, a2, 1
+; RV32-NEXT:    vslidedown.vx v24, v0, a2
+; RV32-NEXT:    slli a3, a3, 1
 ; RV32-NEXT:    sub a2, a1, a3
 ; RV32-NEXT:    sltu a4, a1, a2
 ; RV32-NEXT:    addi a4, a4, -1

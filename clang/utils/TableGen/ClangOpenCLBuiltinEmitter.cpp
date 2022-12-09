@@ -598,7 +598,7 @@ static unsigned short EncodeVersions(unsigned int MinVersion,
   }
 
   unsigned VersionIDs[] = {100, 110, 120, 200, 300};
-  for (unsigned I = 0; I < sizeof(VersionIDs) / sizeof(VersionIDs[0]); I++) {
+  for (unsigned I = 0; I < std::size(VersionIDs); I++) {
     if (VersionIDs[I] >= MinVersion && VersionIDs[I] < MaxVersion) {
       Encoded |= 1 << I;
     }

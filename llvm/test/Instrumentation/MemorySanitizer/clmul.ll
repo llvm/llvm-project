@@ -67,4 +67,4 @@ entry:
 ; ORIGIN: %[[I:.*]] = icmp ne i512 %[[FLAT]], 0
 ; ORIGIN: %[[O:.*]] = select i1 %[[I]],
 ; CHECK: store <8 x i64> %[[SRET]], ptr {{.*}}@__msan_retval_tls
-; ORIGIN: store i32 %[[O]], i32* @__msan_retval_origin_tls
+; ORIGIN: store i32 %[[O]], ptr @__msan_retval_origin_tls

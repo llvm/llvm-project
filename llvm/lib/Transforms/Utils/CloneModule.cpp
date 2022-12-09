@@ -109,6 +109,15 @@ std::unique_ptr<Module> llvm::CloneModule(
     VMap[&I] = GA;
   }
 
+  for (const GlobalIFunc &I : M.ifuncs()) {
+    // Defer setting the resolver function until after functions are cloned.
+    auto *GI =
+        GlobalIFunc::create(I.getValueType(), I.getAddressSpace(),
+                            I.getLinkage(), I.getName(), nullptr, New.get());
+    GI->copyAttributesFrom(&I);
+    VMap[&I] = GI;
+  }
+
   // Now that all of the things that global variable initializer can refer to
   // have been created, loop through and copy the global variable referrers
   // over...  We also set the attributes on the global now.
@@ -182,6 +191,12 @@ std::unique_ptr<Module> llvm::CloneModule(
     GlobalAlias *GA = cast<GlobalAlias>(VMap[&I]);
     if (const Constant *C = I.getAliasee())
       GA->setAliasee(MapValue(C, VMap));
+  }
+
+  for (const GlobalIFunc &I : M.ifuncs()) {
+    GlobalIFunc *GI = cast<GlobalIFunc>(VMap[&I]);
+    if (const Constant *Resolver = I.getResolver())
+      GI->setResolver(MapValue(Resolver, VMap));
   }
 
   // And named metadata....

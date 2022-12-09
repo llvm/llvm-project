@@ -14,9 +14,9 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-define i32 @read_value(i32* %a) sanitize_memory {
+define i32 @read_value(ptr %a) sanitize_memory {
 entry:
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   ret i32 %tmp1
 }
 ; CHECK-BASE-LABEL: @read_value

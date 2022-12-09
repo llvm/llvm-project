@@ -6,140 +6,139 @@ target triple = "x86_64-unknown-linux-gnu"
 @.str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
 
 ; Function Attrs: nounwind uwtable
-define dso_local i32 @bar(i32 %0) #0 !dbg !13 {
-  %2 = alloca i32, align 4
-  store i32 %0, i32* %2, align 4, !tbaa !19
-  call void @llvm.dbg.declare(metadata i32* %2, metadata !18, metadata !DIExpression()), !dbg !23
+define dso_local i32 @bar(i32 %arg) #0 !dbg !13 {
+bb:
+  %i = alloca i32, align 4
+  store i32 %arg, ptr %i, align 4, !tbaa !19
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !18, metadata !DIExpression()), !dbg !23
   call void @llvm.pseudoprobe(i64 -2012135647395072713, i64 1, i32 0, i64 -1), !dbg !24
-  %3 = load i32, i32* %2, align 4, !dbg !24, !tbaa !19
-  %4 = add nsw i32 %3, 1, !dbg !24
-  store i32 %4, i32* %2, align 4, !dbg !24, !tbaa !19
-  %5 = load i32, i32* %2, align 4, !dbg !25, !tbaa !19
-  %6 = add nsw i32 %5, 1, !dbg !26
-  ret i32 %6, !dbg !27
+  %i1 = load i32, ptr %i, align 4, !dbg !24, !tbaa !19
+  %i2 = add nsw i32 %i1, 1, !dbg !24
+  store i32 %i2, ptr %i, align 4, !dbg !24, !tbaa !19
+  %i3 = load i32, ptr %i, align 4, !dbg !25, !tbaa !19
+  %i4 = add nsw i32 %i3, 1, !dbg !26
+  ret i32 %i4, !dbg !27
 }
 
-; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind uwtable
-define dso_local i32 @baz(i32 %0) #0 !dbg !28 {
-  %2 = alloca i32, align 4
-  store i32 %0, i32* %2, align 4, !tbaa !19
-  call void @llvm.dbg.declare(metadata i32* %2, metadata !30, metadata !DIExpression()), !dbg !31
+define dso_local i32 @baz(i32 %arg) #0 !dbg !28 {
+bb:
+  %i = alloca i32, align 4
+  store i32 %arg, ptr %i, align 4, !tbaa !19
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !30, metadata !DIExpression()), !dbg !31
   call void @llvm.pseudoprobe(i64 7546896869197086323, i64 1, i32 0, i64 -1), !dbg !32
-  %3 = load i32, i32* %2, align 4, !dbg !32, !tbaa !19
-  %4 = add nsw i32 %3, 10, !dbg !33
-  ret i32 %4, !dbg !34
+  %i1 = load i32, ptr %i, align 4, !dbg !32, !tbaa !19
+  %i2 = add nsw i32 %i1, 10, !dbg !33
+  ret i32 %i2, !dbg !34
 }
 
 ; Function Attrs: nounwind uwtable
-define dso_local i32 @foo(i32 %0, i32 (...)* %1) #0 !dbg !35 {
-  %3 = alloca i32, align 4
-  %4 = alloca i32 (...)*, align 8
-  store i32 %0, i32* %3, align 4, !tbaa !19
-  call void @llvm.dbg.declare(metadata i32* %3, metadata !42, metadata !DIExpression()), !dbg !44
-  store i32 (...)* %1, i32 (...)** %4, align 8, !tbaa !45
-  call void @llvm.dbg.declare(metadata i32 (...)** %4, metadata !43, metadata !DIExpression()), !dbg !47
+define dso_local i32 @foo(i32 %arg, ptr %arg1) #0 !dbg !35 {
+bb:
+  %i = alloca i32, align 4
+  %i2 = alloca ptr, align 8
+  store i32 %arg, ptr %i, align 4, !tbaa !19
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !42, metadata !DIExpression()), !dbg !44
+  store ptr %arg1, ptr %i2, align 8, !tbaa !45
+  call void @llvm.dbg.declare(metadata ptr %i2, metadata !43, metadata !DIExpression()), !dbg !47
   call void @llvm.pseudoprobe(i64 6699318081062747564, i64 1, i32 0, i64 -1), !dbg !48
-  %5 = load i32 (...)*, i32 (...)** %4, align 8, !dbg !48, !tbaa !45
-  %6 = load i32, i32* %3, align 4, !dbg !49, !tbaa !19
-  %7 = bitcast i32 (...)* %5 to i32 (i32, ...)*, !dbg !48
-  %8 = call i32 (i32, ...) %7(i32 %6), !dbg !50
-  ret i32 %8, !dbg !52
+  %i3 = load ptr, ptr %i2, align 8, !dbg !48, !tbaa !45
+  %i4 = load i32, ptr %i, align 4, !dbg !49, !tbaa !19
+  %i6 = call i32 (i32, ...) %i3(i32 %i4), !dbg !50
+  ret i32 %i6, !dbg !52
 }
 
 ; Function Attrs: nounwind uwtable
 define dso_local i32 @main() #0 !dbg !53 {
-  %1 = alloca i32, align 4
-  %2 = alloca i32 (i32)*, align 8
-  %3 = alloca i32, align 4
-  %4 = alloca i32, align 4
-  store i32 0, i32* %1, align 4
+bb:
+  %i = alloca i32, align 4
+  %i1 = alloca ptr, align 8
+  %i2 = alloca i32, align 4
+  %i3 = alloca i32, align 4
+  store i32 0, ptr %i, align 4
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 1, i32 0, i64 -1), !dbg !62
-  %5 = bitcast i32 (i32)** %2 to i8*, !dbg !62
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %5) #5, !dbg !62
-  call void @llvm.dbg.declare(metadata i32 (i32)** %2, metadata !57, metadata !DIExpression()), !dbg !63
-  %6 = bitcast i32* %3 to i8*, !dbg !64
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %6) #5, !dbg !64
-  call void @llvm.dbg.declare(metadata i32* %3, metadata !59, metadata !DIExpression()), !dbg !65
-  store i32 0, i32* %3, align 4, !dbg !65, !tbaa !19
-  %7 = bitcast i32* %4 to i8*, !dbg !66
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %7) #5, !dbg !66
-  call void @llvm.dbg.declare(metadata i32* %4, metadata !60, metadata !DIExpression()), !dbg !67
-  store i32 0, i32* %4, align 4, !dbg !67, !tbaa !19
-  br label %8, !dbg !66
+  call void @llvm.lifetime.start.p0(i64 8, ptr %i1), !dbg !62
+  call void @llvm.dbg.declare(metadata ptr %i1, metadata !57, metadata !DIExpression()), !dbg !63
+  call void @llvm.lifetime.start.p0(i64 4, ptr %i2), !dbg !64
+  call void @llvm.dbg.declare(metadata ptr %i2, metadata !59, metadata !DIExpression()), !dbg !65
+  store i32 0, ptr %i2, align 4, !dbg !65, !tbaa !19
+  call void @llvm.lifetime.start.p0(i64 4, ptr %i3), !dbg !66
+  call void @llvm.dbg.declare(metadata ptr %i3, metadata !60, metadata !DIExpression()), !dbg !67
+  store i32 0, ptr %i3, align 4, !dbg !67, !tbaa !19
+  br label %bb7, !dbg !66
 
-8:                                                ; preds = %26, %0
+bb7:                                              ; preds = %bb25, %bb
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 2, i32 0, i64 -1), !dbg !68
-  %9 = load i32, i32* %4, align 4, !dbg !68, !tbaa !19
-  %10 = icmp slt i32 %9, 1000000000, !dbg !70
-  br i1 %10, label %13, label %11, !dbg !71
+  %i8 = load i32, ptr %i3, align 4, !dbg !68, !tbaa !19
+  %i9 = icmp slt i32 %i8, 1000000000, !dbg !70
+  br i1 %i9, label %bb12, label %bb10, !dbg !71
 
-11:                                               ; preds = %8
+bb10:                                             ; preds = %bb7
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 3, i32 0, i64 -1), !dbg !72
-  %12 = bitcast i32* %4 to i8*, !dbg !72
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %12) #5, !dbg !72
-  br label %29
+  call void @llvm.lifetime.end.p0(i64 4, ptr %i3), !dbg !72
+  br label %bb28
 
-13:                                               ; preds = %8
+bb12:                                             ; preds = %bb7
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 4, i32 0, i64 -1), !dbg !73
-  %14 = load i32, i32* %4, align 4, !dbg !73, !tbaa !19
-  %15 = srem i32 %14, 100, !dbg !76
-  %16 = icmp eq i32 %15, 0, !dbg !77
-  br i1 %16, label %17, label %18, !dbg !78
+  %i13 = load i32, ptr %i3, align 4, !dbg !73, !tbaa !19
+  %i14 = srem i32 %i13, 100, !dbg !76
+  %i15 = icmp eq i32 %i14, 0, !dbg !77
+  br i1 %i15, label %bb16, label %bb17, !dbg !78
 
-17:                                               ; preds = %13
+bb16:                                             ; preds = %bb12
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 5, i32 0, i64 -1), !dbg !79
-  store i32 (i32)* @bar, i32 (i32)** %2, align 8, !dbg !79, !tbaa !45
-  br label %19, !dbg !80
+  store ptr @bar, ptr %i1, align 8, !dbg !79, !tbaa !45
+  br label %bb18, !dbg !80
 
-18:                                               ; preds = %13
+bb17:                                             ; preds = %bb12
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 6, i32 0, i64 -1), !dbg !81
-  store i32 (i32)* @baz, i32 (i32)** %2, align 8, !dbg !81, !tbaa !45
-  br label %19
+  store ptr @baz, ptr %i1, align 8, !dbg !81, !tbaa !45
+  br label %bb18
 
-19:                                               ; preds = %18, %17
+bb18:                                             ; preds = %bb17, %bb16
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 7, i32 0, i64 -1), !dbg !82
-  %20 = load i32, i32* %4, align 4, !dbg !82, !tbaa !19
-  %21 = load i32 (i32)*, i32 (i32)** %2, align 8, !dbg !83, !tbaa !45
-  %22 = bitcast i32 (i32)* %21 to i32 (...)*, !dbg !83
-  %23 = call i32 @foo(i32 %20, i32 (...)* %22), !dbg !84
-  %24 = load i32, i32* %3, align 4, !dbg !86, !tbaa !19
-  %25 = add nsw i32 %24, %23, !dbg !86
-  store i32 %25, i32* %3, align 4, !dbg !86, !tbaa !19
-  br label %26, !dbg !87
+  %i19 = load i32, ptr %i3, align 4, !dbg !82, !tbaa !19
+  %i20 = load ptr, ptr %i1, align 8, !dbg !83, !tbaa !45
+  %i22 = call i32 @foo(i32 %i19, ptr %i20), !dbg !84
+  %i23 = load i32, ptr %i2, align 4, !dbg !86, !tbaa !19
+  %i24 = add nsw i32 %i23, %i22, !dbg !86
+  store i32 %i24, ptr %i2, align 4, !dbg !86, !tbaa !19
+  br label %bb25, !dbg !87
 
-26:                                               ; preds = %19
+bb25:                                             ; preds = %bb18
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 8, i32 0, i64 -1), !dbg !88
-  %27 = load i32, i32* %4, align 4, !dbg !88, !tbaa !19
-  %28 = add nsw i32 %27, 1, !dbg !88
-  store i32 %28, i32* %4, align 4, !dbg !88, !tbaa !19
-  br label %8, !dbg !72, !llvm.loop !89
+  %i26 = load i32, ptr %i3, align 4, !dbg !88, !tbaa !19
+  %i27 = add nsw i32 %i26, 1, !dbg !88
+  store i32 %i27, ptr %i3, align 4, !dbg !88, !tbaa !19
+  br label %bb7, !dbg !72, !llvm.loop !89
 
-29:                                               ; preds = %11
+bb28:                                             ; preds = %bb10
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 9, i32 0, i64 -1), !dbg !92
-  %30 = load i32, i32* %3, align 4, !dbg !92, !tbaa !19
-  %31 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32 %30), !dbg !93
-  %32 = bitcast i32* %3 to i8*, !dbg !95
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %32) #5, !dbg !95
-  %33 = bitcast i32 (i32)** %2 to i8*, !dbg !95
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %33) #5, !dbg !95
+  %i29 = load i32, ptr %i2, align 4, !dbg !92, !tbaa !19
+  %i30 = call i32 (ptr, ...) @printf(ptr @.str, i32 %i29), !dbg !93
+  call void @llvm.lifetime.end.p0(i64 4, ptr %i2), !dbg !95
+  call void @llvm.lifetime.end.p0(i64 8, ptr %i1), !dbg !95
   ret i32 0, !dbg !96
 }
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #2
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #2
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
 
-declare dso_local i32 @printf(i8*, ...) #3
+declare dso_local i32 @printf(ptr, ...)
 
-; Function Attrs: inaccessiblememonly nounwind willreturn
-declare void @llvm.pseudoprobe(i64, i64, i32, i64) #4
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
+declare void @llvm.pseudoprobe(i64, i64, i32, i64) #3
 
 attributes #0 = { nounwind uwtable "disable-tail-calls"="true" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-sample-profile" "use-soft-float"="false" }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #3 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6, !7}
@@ -249,7 +248,7 @@ attributes #0 = { nounwind uwtable "disable-tail-calls"="true" "frame-pointer"="
 !96 = !DILocation(line: 35, column: 5, scope: !53)
 
 ; CHECK: define dso_local i32 @main
-; CHECK: %[[#]] = call i32 (i32, ...) %[[#]](i32 %[[#]]) #[[#]], !dbg ![[#DBGID:]], !prof ![[#PROF:]]
+; CHECK: %{{.+}} = call i32 (i32, ...) %{{.+}}(i32 %{{.+}}) #[[#]], !dbg ![[#DBGID:]], !prof ![[#PROF:]]
 
 ;; A discriminator of 106430487 which is 0x6580017 in hexdecimal, stands for an indirect call probe
 ;; with an index of 2 and probe factor of 0.75, which is from 0.95 * 0.79.

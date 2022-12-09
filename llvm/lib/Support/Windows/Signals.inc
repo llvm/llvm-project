@@ -26,98 +26,99 @@
 #include "llvm/Support/Windows/WindowsSupport.h"
 
 #ifdef __MINGW32__
- #include <imagehlp.h>
+#include <imagehlp.h>
 #else
- #include <crtdbg.h>
- #include <dbghelp.h>
+#include <crtdbg.h>
+#include <dbghelp.h>
 #endif
 #include <psapi.h>
 
 #ifdef _MSC_VER
- #pragma comment(lib, "psapi.lib")
+#pragma comment(lib, "psapi.lib")
 #elif __MINGW32__
- // The version of g++ that comes with MinGW does *not* properly understand
- // the ll format specifier for printf. However, MinGW passes the format
- // specifiers on to the MSVCRT entirely, and the CRT understands the ll
- // specifier. So these warnings are spurious in this case. Since we compile
- // with -Wall, this will generate these warnings which should be ignored. So
- // we will turn off the warnings for this just file. However, MinGW also does
- // not support push and pop for diagnostics, so we have to manually turn it
- // back on at the end of the file.
- #pragma GCC diagnostic ignored "-Wformat"
- #pragma GCC diagnostic ignored "-Wformat-extra-args"
+// The version of g++ that comes with MinGW does *not* properly understand
+// the ll format specifier for printf. However, MinGW passes the format
+// specifiers on to the MSVCRT entirely, and the CRT understands the ll
+// specifier. So these warnings are spurious in this case. Since we compile
+// with -Wall, this will generate these warnings which should be ignored. So
+// we will turn off the warnings for this just file. However, MinGW also does
+// not support push and pop for diagnostics, so we have to manually turn it
+// back on at the end of the file.
+#pragma GCC diagnostic ignored "-Wformat"
+#pragma GCC diagnostic ignored "-Wformat-extra-args"
 
- #if !defined(__MINGW64_VERSION_MAJOR)
- // MinGW.org does not have updated support for the 64-bit versions of the
- // DebugHlp APIs. So we will have to load them manually. The structures and
- // method signatures were pulled from DbgHelp.h in the Windows Platform SDK,
- // and adjusted for brevity.
- typedef struct _IMAGEHLP_LINE64 {
-   DWORD    SizeOfStruct;
-   PVOID    Key;
-   DWORD    LineNumber;
-   PCHAR    FileName;
-   DWORD64  Address;
- } IMAGEHLP_LINE64, *PIMAGEHLP_LINE64;
+#if !defined(__MINGW64_VERSION_MAJOR)
+// MinGW.org does not have updated support for the 64-bit versions of the
+// DebugHlp APIs. So we will have to load them manually. The structures and
+// method signatures were pulled from DbgHelp.h in the Windows Platform SDK,
+// and adjusted for brevity.
+typedef struct _IMAGEHLP_LINE64 {
+  DWORD SizeOfStruct;
+  PVOID Key;
+  DWORD LineNumber;
+  PCHAR FileName;
+  DWORD64 Address;
+} IMAGEHLP_LINE64, *PIMAGEHLP_LINE64;
 
- typedef struct _IMAGEHLP_SYMBOL64 {
-   DWORD   SizeOfStruct;
-   DWORD64 Address;
-   DWORD   Size;
-   DWORD   Flags;
-   DWORD   MaxNameLength;
-   CHAR    Name[1];
- } IMAGEHLP_SYMBOL64, *PIMAGEHLP_SYMBOL64;
+typedef struct _IMAGEHLP_SYMBOL64 {
+  DWORD SizeOfStruct;
+  DWORD64 Address;
+  DWORD Size;
+  DWORD Flags;
+  DWORD MaxNameLength;
+  CHAR Name[1];
+} IMAGEHLP_SYMBOL64, *PIMAGEHLP_SYMBOL64;
 
- typedef struct _tagADDRESS64 {
-   DWORD64       Offset;
-   WORD          Segment;
-   ADDRESS_MODE  Mode;
- } ADDRESS64, *LPADDRESS64;
+typedef struct _tagADDRESS64 {
+  DWORD64 Offset;
+  WORD Segment;
+  ADDRESS_MODE Mode;
+} ADDRESS64, *LPADDRESS64;
 
- typedef struct _KDHELP64 {
-   DWORD64   Thread;
-   DWORD   ThCallbackStack;
-   DWORD   ThCallbackBStore;
-   DWORD   NextCallback;
-   DWORD   FramePointer;
-   DWORD64   KiCallUserMode;
-   DWORD64   KeUserCallbackDispatcher;
-   DWORD64   SystemRangeStart;
-   DWORD64   KiUserExceptionDispatcher;
-   DWORD64   StackBase;
-   DWORD64   StackLimit;
-   DWORD64   Reserved[5];
- } KDHELP64, *PKDHELP64;
+typedef struct _KDHELP64 {
+  DWORD64 Thread;
+  DWORD ThCallbackStack;
+  DWORD ThCallbackBStore;
+  DWORD NextCallback;
+  DWORD FramePointer;
+  DWORD64 KiCallUserMode;
+  DWORD64 KeUserCallbackDispatcher;
+  DWORD64 SystemRangeStart;
+  DWORD64 KiUserExceptionDispatcher;
+  DWORD64 StackBase;
+  DWORD64 StackLimit;
+  DWORD64 Reserved[5];
+} KDHELP64, *PKDHELP64;
 
- typedef struct _tagSTACKFRAME64 {
-   ADDRESS64   AddrPC;
-   ADDRESS64   AddrReturn;
-   ADDRESS64   AddrFrame;
-   ADDRESS64   AddrStack;
-   ADDRESS64   AddrBStore;
-   PVOID       FuncTableEntry;
-   DWORD64     Params[4];
-   BOOL        Far;
-   BOOL        Virtual;
-   DWORD64     Reserved[3];
-   KDHELP64    KdHelp;
- } STACKFRAME64, *LPSTACKFRAME64;
- #endif // !defined(__MINGW64_VERSION_MAJOR)
+typedef struct _tagSTACKFRAME64 {
+  ADDRESS64 AddrPC;
+  ADDRESS64 AddrReturn;
+  ADDRESS64 AddrFrame;
+  ADDRESS64 AddrStack;
+  ADDRESS64 AddrBStore;
+  PVOID FuncTableEntry;
+  DWORD64 Params[4];
+  BOOL Far;
+  BOOL Virtual;
+  DWORD64 Reserved[3];
+  KDHELP64 KdHelp;
+} STACKFRAME64, *LPSTACKFRAME64;
+#endif // !defined(__MINGW64_VERSION_MAJOR)
 #endif // __MINGW32__
 
-typedef BOOL (__stdcall *PREAD_PROCESS_MEMORY_ROUTINE64)(HANDLE hProcess,
-                      DWORD64 qwBaseAddress, PVOID lpBuffer, DWORD nSize,
-                      LPDWORD lpNumberOfBytesRead);
+typedef BOOL(__stdcall *PREAD_PROCESS_MEMORY_ROUTINE64)(
+    HANDLE hProcess, DWORD64 qwBaseAddress, PVOID lpBuffer, DWORD nSize,
+    LPDWORD lpNumberOfBytesRead);
 
-typedef PVOID (__stdcall *PFUNCTION_TABLE_ACCESS_ROUTINE64)( HANDLE ahProcess,
-                      DWORD64 AddrBase);
+typedef PVOID(__stdcall *PFUNCTION_TABLE_ACCESS_ROUTINE64)(HANDLE ahProcess,
+                                                           DWORD64 AddrBase);
 
-typedef DWORD64 (__stdcall *PGET_MODULE_BASE_ROUTINE64)(HANDLE hProcess,
-                      DWORD64 Address);
+typedef DWORD64(__stdcall *PGET_MODULE_BASE_ROUTINE64)(HANDLE hProcess,
+                                                       DWORD64 Address);
 
-typedef DWORD64 (__stdcall *PTRANSLATE_ADDRESS_ROUTINE64)(HANDLE hProcess,
-                      HANDLE hThread, LPADDRESS64 lpaddr);
+typedef DWORD64(__stdcall *PTRANSLATE_ADDRESS_ROUTINE64)(HANDLE hProcess,
+                                                         HANDLE hThread,
+                                                         LPADDRESS64 lpaddr);
 
 typedef BOOL(WINAPI *fpMiniDumpWriteDump)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE,
                                           PMINIDUMP_EXCEPTION_INFORMATION,
@@ -125,38 +126,40 @@ typedef BOOL(WINAPI *fpMiniDumpWriteDump)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE,
                                           PMINIDUMP_CALLBACK_INFORMATION);
 static fpMiniDumpWriteDump fMiniDumpWriteDump;
 
-typedef BOOL (WINAPI *fpStackWalk64)(DWORD, HANDLE, HANDLE, LPSTACKFRAME64,
-                      PVOID, PREAD_PROCESS_MEMORY_ROUTINE64,
-                      PFUNCTION_TABLE_ACCESS_ROUTINE64,
-                      PGET_MODULE_BASE_ROUTINE64,
-                      PTRANSLATE_ADDRESS_ROUTINE64);
+typedef BOOL(WINAPI *fpStackWalk64)(DWORD, HANDLE, HANDLE, LPSTACKFRAME64,
+                                    PVOID, PREAD_PROCESS_MEMORY_ROUTINE64,
+                                    PFUNCTION_TABLE_ACCESS_ROUTINE64,
+                                    PGET_MODULE_BASE_ROUTINE64,
+                                    PTRANSLATE_ADDRESS_ROUTINE64);
 static fpStackWalk64 fStackWalk64;
 
-typedef DWORD64 (WINAPI *fpSymGetModuleBase64)(HANDLE, DWORD64);
+typedef DWORD64(WINAPI *fpSymGetModuleBase64)(HANDLE, DWORD64);
 static fpSymGetModuleBase64 fSymGetModuleBase64;
 
-typedef BOOL (WINAPI *fpSymGetSymFromAddr64)(HANDLE, DWORD64,
-                      PDWORD64, PIMAGEHLP_SYMBOL64);
+typedef BOOL(WINAPI *fpSymGetSymFromAddr64)(HANDLE, DWORD64, PDWORD64,
+                                            PIMAGEHLP_SYMBOL64);
 static fpSymGetSymFromAddr64 fSymGetSymFromAddr64;
 
-typedef BOOL (WINAPI *fpSymGetLineFromAddr64)(HANDLE, DWORD64,
-                      PDWORD, PIMAGEHLP_LINE64);
+typedef BOOL(WINAPI *fpSymGetLineFromAddr64)(HANDLE, DWORD64, PDWORD,
+                                             PIMAGEHLP_LINE64);
 static fpSymGetLineFromAddr64 fSymGetLineFromAddr64;
 
 typedef BOOL(WINAPI *fpSymGetModuleInfo64)(HANDLE hProcess, DWORD64 dwAddr,
                                            PIMAGEHLP_MODULE64 ModuleInfo);
 static fpSymGetModuleInfo64 fSymGetModuleInfo64;
 
-typedef PVOID (WINAPI *fpSymFunctionTableAccess64)(HANDLE, DWORD64);
+typedef PVOID(WINAPI *fpSymFunctionTableAccess64)(HANDLE, DWORD64);
 static fpSymFunctionTableAccess64 fSymFunctionTableAccess64;
 
-typedef DWORD (WINAPI *fpSymSetOptions)(DWORD);
+typedef DWORD(WINAPI *fpSymSetOptions)(DWORD);
 static fpSymSetOptions fSymSetOptions;
 
-typedef BOOL (WINAPI *fpSymInitialize)(HANDLE, PCSTR, BOOL);
+typedef BOOL(WINAPI *fpSymInitialize)(HANDLE, PCSTR, BOOL);
 static fpSymInitialize fSymInitialize;
 
-typedef BOOL (WINAPI *fpEnumerateLoadedModules)(HANDLE,PENUMLOADED_MODULES_CALLBACK64,PVOID);
+typedef BOOL(WINAPI *fpEnumerateLoadedModules)(HANDLE,
+                                               PENUMLOADED_MODULES_CALLBACK64,
+                                               PVOID);
 static fpEnumerateLoadedModules fEnumerateLoadedModules;
 
 static bool isDebugHelpInitialized() {
@@ -166,24 +169,23 @@ static bool isDebugHelpInitialized() {
 static bool load64BitDebugHelp(void) {
   HMODULE hLib = ::LoadLibraryW(L"Dbghelp.dll");
   if (hLib) {
-    fMiniDumpWriteDump = (fpMiniDumpWriteDump)
-                      ::GetProcAddress(hLib, "MiniDumpWriteDump");
-    fStackWalk64 = (fpStackWalk64)
-                      ::GetProcAddress(hLib, "StackWalk64");
-    fSymGetModuleBase64 = (fpSymGetModuleBase64)
-                      ::GetProcAddress(hLib, "SymGetModuleBase64");
-    fSymGetSymFromAddr64 = (fpSymGetSymFromAddr64)
-                      ::GetProcAddress(hLib, "SymGetSymFromAddr64");
-    fSymGetLineFromAddr64 = (fpSymGetLineFromAddr64)
-                      ::GetProcAddress(hLib, "SymGetLineFromAddr64");
-    fSymGetModuleInfo64 = (fpSymGetModuleInfo64)
-                      ::GetProcAddress(hLib, "SymGetModuleInfo64");
-    fSymFunctionTableAccess64 = (fpSymFunctionTableAccess64)
-                     ::GetProcAddress(hLib, "SymFunctionTableAccess64");
+    fMiniDumpWriteDump =
+        (fpMiniDumpWriteDump)::GetProcAddress(hLib, "MiniDumpWriteDump");
+    fStackWalk64 = (fpStackWalk64)::GetProcAddress(hLib, "StackWalk64");
+    fSymGetModuleBase64 =
+        (fpSymGetModuleBase64)::GetProcAddress(hLib, "SymGetModuleBase64");
+    fSymGetSymFromAddr64 =
+        (fpSymGetSymFromAddr64)::GetProcAddress(hLib, "SymGetSymFromAddr64");
+    fSymGetLineFromAddr64 =
+        (fpSymGetLineFromAddr64)::GetProcAddress(hLib, "SymGetLineFromAddr64");
+    fSymGetModuleInfo64 =
+        (fpSymGetModuleInfo64)::GetProcAddress(hLib, "SymGetModuleInfo64");
+    fSymFunctionTableAccess64 = (fpSymFunctionTableAccess64)::GetProcAddress(
+        hLib, "SymFunctionTableAccess64");
     fSymSetOptions = (fpSymSetOptions)::GetProcAddress(hLib, "SymSetOptions");
     fSymInitialize = (fpSymInitialize)::GetProcAddress(hLib, "SymInitialize");
-    fEnumerateLoadedModules = (fpEnumerateLoadedModules)
-      ::GetProcAddress(hLib, "EnumerateLoadedModules64");
+    fEnumerateLoadedModules = (fpEnumerateLoadedModules)::GetProcAddress(
+        hLib, "EnumerateLoadedModules64");
   }
   return isDebugHelpInitialized();
 }
@@ -261,12 +263,11 @@ struct FindModuleData {
   intptr_t *Offsets;
   StringSaver *StrPool;
 };
-}
+} // namespace
 
-static BOOL CALLBACK findModuleCallback(PCSTR ModuleName,
-                                        DWORD64 ModuleBase, ULONG ModuleSize,
-                                        void *VoidData) {
-  FindModuleData *Data = (FindModuleData*)VoidData;
+static BOOL CALLBACK findModuleCallback(PCSTR ModuleName, DWORD64 ModuleBase,
+                                        ULONG ModuleSize, void *VoidData) {
+  FindModuleData *Data = (FindModuleData *)VoidData;
   intptr_t Beg = ModuleBase;
   intptr_t End = Beg + ModuleSize;
   for (int I = 0; I < Data->Depth; I++) {
@@ -454,7 +455,7 @@ static void RegisterHandler() {
 }
 
 // The public API
-bool sys::RemoveFileOnSignal(StringRef Filename, std::string* ErrMsg) {
+bool sys::RemoveFileOnSignal(StringRef Filename, std::string *ErrMsg) {
   RegisterHandler();
 
   if (CleanupExecuted) {
@@ -482,7 +483,7 @@ void sys::DontRemoveFileOnSignal(StringRef Filename) {
   std::vector<std::string>::reverse_iterator I =
       find(reverse(*FilesToRemove), Filename);
   if (I != FilesToRemove->rend())
-    FilesToRemove->erase(I.base()-1);
+    FilesToRemove->erase(I.base() - 1);
 
   LeaveCriticalSection(&CriticalSection);
 }
@@ -519,7 +520,7 @@ void sys::PrintStackTraceOnErrorSignal(StringRef Argv0,
   RegisterHandler();
   LeaveCriticalSection(&CriticalSection);
 }
-}
+} // namespace llvm
 
 #if defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)
 // Provide a prototype for RtlCaptureContext, mingw32 from mingw.org is
@@ -697,8 +698,7 @@ static bool GetDumpType(HKEY Key, MINIDUMP_TYPE &ResultType) {
   DWORD DumpType;
   DWORD TypeSize = sizeof(DumpType);
   if (ERROR_SUCCESS != ::RegGetValueW(Key, NULL, L"DumpType", RRF_RT_REG_DWORD,
-                                      NULL, &DumpType,
-                                      &TypeSize))
+                                      NULL, &DumpType, &TypeSize))
     return false;
 
   switch (DumpType) {
@@ -865,14 +865,14 @@ static BOOL WINAPI LLVMConsoleCtrlHandler(DWORD dwCtrlType) {
   // If an interrupt function has been set, go and run one it; otherwise,
   // the process dies.
   void (*IF)() = InterruptFunction;
-  InterruptFunction = 0;      // Don't run it on another CTRL-C.
+  InterruptFunction = 0; // Don't run it on another CTRL-C.
 
   if (IF) {
     // Note: if the interrupt function throws an exception, there is nothing
     // to catch it in this thread so it will kill the process.
-    IF();                     // Run it now.
+    IF(); // Run it now.
     LeaveCriticalSection(&CriticalSection);
-    return TRUE;              // Don't kill the process.
+    return TRUE; // Don't kill the process.
   }
 
   // Allow normal processing to take place; i.e., the process dies.
@@ -881,12 +881,12 @@ static BOOL WINAPI LLVMConsoleCtrlHandler(DWORD dwCtrlType) {
 }
 
 #if __MINGW32__
- // We turned these warnings off for this file so that MinGW-g++ doesn't
- // complain about the ll format specifiers used.  Now we are turning the
- // warnings back on.  If MinGW starts to support diagnostic stacks, we can
- // replace this with a pop.
- #pragma GCC diagnostic warning "-Wformat"
- #pragma GCC diagnostic warning "-Wformat-extra-args"
+// We turned these warnings off for this file so that MinGW-g++ doesn't
+// complain about the ll format specifiers used.  Now we are turning the
+// warnings back on.  If MinGW starts to support diagnostic stacks, we can
+// replace this with a pop.
+#pragma GCC diagnostic warning "-Wformat"
+#pragma GCC diagnostic warning "-Wformat-extra-args"
 #endif
 
 void sys::unregisterHandlers() {}

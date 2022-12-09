@@ -3345,7 +3345,7 @@ define void @atomic64_cas_seq_cst_ptr_ty(i8** %a, i8* %v1, i8* %v2) nounwind uwt
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i64, i1 } [[TMP3]], 0, !pcsections !0
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { i64, i1 } [[TMP3]], 1, !pcsections !0
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP4]] to i8*, !pcsections !0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8*, i1 } undef, i8* [[TMP6]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8*, i1 } poison, i8* [[TMP6]], 0, !pcsections !0
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertvalue { i8*, i1 } [[TMP7]], i1 [[TMP5]], 1, !pcsections !0
 ; CHECK-NEXT:    ret void
 ;

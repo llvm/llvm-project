@@ -7,5 +7,5 @@ target triple = "amdgcn-amd-amdhsa"
 ;CHECK: llvm.asan.globals
 
 !llvm.asan.globals = !{!0, !1}
-!0 = !{[1 x i32] addrspace(1)* @g, null, !"name", i1 false, i1 false}
-!1 = !{i8* addrspacecast (i8 addrspace(1)* bitcast ( [1 x i32] addrspace(1)* @g to i8 addrspace(1)*) to  i8*), null, !"name", i1 false, i1 false}
+!0 = !{ptr addrspace(1) @g, null, !"name", i1 false, i1 false}
+!1 = !{ptr addrspacecast (ptr addrspace(1) @g to  ptr), null, !"name", i1 false, i1 false}

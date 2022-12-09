@@ -1122,18 +1122,17 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
     // sizeof(int64).
     //
     // Emit an uglygep in this case.
-    Type *I8PtrTy = Type::getInt8PtrTy(GEP->getContext(),
-                                       GEP->getPointerAddressSpace());
-    NewGEP = new BitCastInst(NewGEP, I8PtrTy, "", GEP);
-    NewGEP = GetElementPtrInst::Create(
-        Type::getInt8Ty(GEP->getContext()), NewGEP,
-        ConstantInt::get(IntPtrTy, AccumulativeByteOffset, true), "uglygep",
-        GEP);
+    IRBuilder<> Builder(GEP);
+    Type *I8PtrTy =
+        Builder.getInt8Ty()->getPointerTo(GEP->getPointerAddressSpace());
+
+    NewGEP = cast<Instruction>(Builder.CreateGEP(
+        Builder.getInt8Ty(), Builder.CreateBitCast(NewGEP, I8PtrTy),
+        {ConstantInt::get(IntPtrTy, AccumulativeByteOffset, true)}, "uglygep",
+        GEPWasInBounds));
+
     NewGEP->copyMetadata(*GEP);
-    // Inherit the inbounds attribute of the original GEP.
-    cast<GetElementPtrInst>(NewGEP)->setIsInBounds(GEPWasInBounds);
-    if (GEP->getType() != I8PtrTy)
-      NewGEP = new BitCastInst(NewGEP, GEP->getType(), GEP->getName(), GEP);
+    NewGEP = cast<Instruction>(Builder.CreateBitCast(NewGEP, GEP->getType()));
   }
 
   GEP->replaceAllUsesWith(NewGEP);

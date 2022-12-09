@@ -875,6 +875,10 @@ def: OpmR_RR_pat<Outn<F2_dfcmpuo>, seto,   i1, F64>;
 
 def: Pat<(select I1:$Pu, I32:$Rs, I32:$Rt),
          (C2_mux I1:$Pu, I32:$Rs, I32:$Rt)>;
+def: Pat<(select I1:$Pu, v4i8:$Rs, v4i8:$Rt),
+         (C2_mux I1:$Pu, v4i8:$Rs, v4i8:$Rt)>;
+def: Pat<(select I1:$Pu, v2i16:$Rs, v2i16:$Rt),
+         (C2_mux I1:$Pu, v2i16:$Rs, v2i16:$Rt)>;
 def: Pat<(select I1:$Pu, anyimm:$s8, I32:$Rs),
          (C2_muxri I1:$Pu, imm:$s8, I32:$Rs)>;
 def: Pat<(select I1:$Pu, I32:$Rs, anyimm:$s8),
@@ -894,6 +898,10 @@ def: Pat<(select (not I1:$Pu), I32:$Rs, anyimm:$s8),
 // Map from a 64-bit select to an emulated 64-bit mux.
 // Hexagon does not support 64-bit MUXes; so emulate with combines.
 def: Pat<(select I1:$Pu, I64:$Rs, I64:$Rt),
+         (Combinew (C2_mux I1:$Pu, (HiReg $Rs), (HiReg $Rt)),
+                   (C2_mux I1:$Pu, (LoReg $Rs), (LoReg $Rt)))>;
+
+def: Pat<(select I1:$Pu, v2i32:$Rs, v2i32:$Rt),
          (Combinew (C2_mux I1:$Pu, (HiReg $Rs), (HiReg $Rt)),
                    (C2_mux I1:$Pu, (LoReg $Rs), (LoReg $Rt)))>;
 

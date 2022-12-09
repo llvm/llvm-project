@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @tsp_int = thread_local global i32 1
 
 define void @_start() {
-  %val = load i32, i32* @tsp_int
+  %val = load i32, ptr @tsp_int
   ret void
 }
 

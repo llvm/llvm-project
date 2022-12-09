@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare i32 @__gxx_personality_v0(...)
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 
@@ -16,15 +16,15 @@ declare void @g(...)
 ; CHECK-SAME: personality {{.*}}@"dfsw$__gxx_personality_v0"{{.*}}
 ; CHECK-IGNORE-LABEL: @h.dfsan
 ; CHECK-IGNORE-SAME: personality {{.*}}__gxx_personality_v0{{.*}}
-define i32 @h() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @h() personality ptr @__gxx_personality_v0 {
   invoke void (...) @g(i32 42)
           to label %try.cont unwind label %lpad
 
 lpad:
-  %1 = landingpad { i8*, i32 }
-          catch i8* null
-  %2 = extractvalue { i8*, i32 } %1, 0
-  %3 = tail call i8* @__cxa_begin_catch(i8* %2)
+  %1 = landingpad { ptr, i32 }
+          catch ptr null
+  %2 = extractvalue { ptr, i32 } %1, 0
+  %3 = tail call ptr @__cxa_begin_catch(ptr %2)
   tail call void @__cxa_end_catch()
   br label %try.cont
 

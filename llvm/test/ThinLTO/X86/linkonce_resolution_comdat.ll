@@ -2,22 +2,22 @@
 ; comdats after making it available_externally. If not we would get a
 ; verification error. g_internal/g_private are changed to available_externally
 ; as well since it is in the same comdat of g.
-; RUN: opt --opaque-pointers=0 -module-summary %s -o %t1.bc
-; RUN: opt --opaque-pointers=0 -module-summary %p/Inputs/linkonce_resolution_comdat.ll -o %t2.bc
-; RUN: llvm-lto --opaque-pointers=0 -thinlto-action=run -disable-thinlto-funcattrs=0 %t1.bc %t2.bc -exported-symbol=f -exported-symbol=g -exported-symbol=h -thinlto-save-temps=%t3.
+; RUN: opt  -module-summary %s -o %t1.bc
+; RUN: opt  -module-summary %p/Inputs/linkonce_resolution_comdat.ll -o %t2.bc
+; RUN: llvm-lto  -thinlto-action=run -disable-thinlto-funcattrs=0 %t1.bc %t2.bc -exported-symbol=f -exported-symbol=g -exported-symbol=h -thinlto-save-temps=%t3.
 
-; RUN: llvm-dis --opaque-pointers=0 %t3.0.3.imported.bc -o - | FileCheck %s --check-prefix=IMPORT1
-; RUN: llvm-dis --opaque-pointers=0 %t3.1.3.imported.bc -o - | FileCheck %s --check-prefix=IMPORT2
+; RUN: llvm-dis  %t3.0.3.imported.bc -o - | FileCheck %s --check-prefix=IMPORT1
+; RUN: llvm-dis  %t3.1.3.imported.bc -o - | FileCheck %s --check-prefix=IMPORT2
 ; Copy from first module is prevailing and converted to weak_odr, copy
 ; from second module is preempted and converted to available_externally and
 ; removed from comdat.
 ; IMPORT1: @g_private = private global i32 43, comdat($g)
-; IMPORT1: define weak_odr i32 @f(i8* %0) unnamed_addr [[ATTR:#[0-9]+]] comdat {
+; IMPORT1: define weak_odr i32 @f(ptr %0) unnamed_addr [[ATTR:#[0-9]+]] comdat {
 ; IMPORT1: define weak_odr i32 @g() unnamed_addr [[ATTR]] comdat {
 ; IMPORT1: define internal void @g_internal() unnamed_addr comdat($g) {
 
 ; IMPORT2: @g_private = available_externally dso_local global i32 41{{$}}
-; IMPORT2: define available_externally i32 @f(i8* %0) unnamed_addr [[ATTR:#[0-9]+]] {
+; IMPORT2: define available_externally i32 @f(ptr %0) unnamed_addr [[ATTR:#[0-9]+]] {
 ; IMPORT2: define available_externally i32 @g() unnamed_addr [[ATTR]] {
 ; IMPORT2: define available_externally dso_local void @g_internal() unnamed_addr {
 
@@ -41,7 +41,7 @@ $g = comdat any
 
 @g_private = private global i32 43, comdat($g)
 
-define linkonce_odr i32 @f(i8*) unnamed_addr comdat {
+define linkonce_odr i32 @f(ptr) unnamed_addr comdat {
     ret i32 43
 }
 

@@ -951,8 +951,7 @@ SDValue LanaiTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
 
   // Assemble multiplication from shift, add, sub using NAF form and running
   // sum.
-  for (unsigned int I = 0; I < sizeof(SignedDigit) / sizeof(SignedDigit[0]);
-       ++I) {
+  for (unsigned int I = 0; I < std::size(SignedDigit); ++I) {
     if (SignedDigit[I] == 0)
       continue;
 

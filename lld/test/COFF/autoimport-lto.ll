@@ -23,6 +23,6 @@ target triple = "x86_64-w64-windows-gnu"
 
 define i32 @entry() {
 entry:
-  %0 = load i32, i32* @variable
+  %0 = load i32, ptr @variable
   ret i32 %0
 }

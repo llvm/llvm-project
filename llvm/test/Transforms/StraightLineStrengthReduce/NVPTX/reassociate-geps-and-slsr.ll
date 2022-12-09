@@ -27,7 +27,7 @@ target triple = "nvptx64-unknown-unknown"
 ; *(p3 + 5)
 ; p4 = p3 + i
 ; *(p4 + 5)
-define void @slsr_after_reassociate_geps(float* %arr, i32 %i) {
+define void @slsr_after_reassociate_geps(ptr %arr, i32 %i) {
 ; CHECK-LABEL: @slsr_after_reassociate_geps(
 ; PTX-LABEL: .visible .func slsr_after_reassociate_geps(
 ; PTX: ld.param.u64 [[arr:%rd[0-9]+]], [slsr_after_reassociate_geps_param_0];
@@ -37,35 +37,35 @@ define void @slsr_after_reassociate_geps(float* %arr, i32 %i) {
   %i4 = shl nsw i32 %i, 2
 
   %j1 = add nsw i32 %i, 5
-  %p1 = getelementptr inbounds float, float* %arr, i32 %j1
-; CHECK: [[b1:%[0-9]+]] = getelementptr float, float* %arr, i64 [[bump:%[0-9]+]]
+  %p1 = getelementptr inbounds float, ptr %arr, i32 %j1
+; CHECK: [[b1:%[0-9]+]] = getelementptr float, ptr %arr, i64 [[bump:%[0-9]+]]
 ; PTX: mul.wide.s32 [[i4:%rd[0-9]+]], [[i]], 4;
 ; PTX: add.s64 [[base1:%rd[0-9]+]], [[arr]], [[i4]];
-  %v1 = load float, float* %p1, align 4
+  %v1 = load float, ptr %p1, align 4
 ; PTX: ld.f32 {{%f[0-9]+}}, [[[base1]]+20];
   call void @foo(float %v1)
 
   %j2 = add nsw i32 %i2, 5
-  %p2 = getelementptr inbounds float, float* %arr, i32 %j2
-; CHECK: [[b2:%[0-9]+]] = getelementptr float, float* [[b1]], i64 [[bump]]
+  %p2 = getelementptr inbounds float, ptr %arr, i32 %j2
+; CHECK: [[b2:%[0-9]+]] = getelementptr float, ptr [[b1]], i64 [[bump]]
 ; PTX: add.s64 [[base2:%rd[0-9]+]], [[base1]], [[i4]];
-  %v2 = load float, float* %p2, align 4
+  %v2 = load float, ptr %p2, align 4
 ; PTX: ld.f32 {{%f[0-9]+}}, [[[base2]]+20];
   call void @foo(float %v2)
 
   %j3 = add nsw i32 %i3, 5
-  %p3 = getelementptr inbounds float, float* %arr, i32 %j3
-; CHECK: [[b3:%[0-9]+]] = getelementptr float, float* [[b2]], i64 [[bump]]
+  %p3 = getelementptr inbounds float, ptr %arr, i32 %j3
+; CHECK: [[b3:%[0-9]+]] = getelementptr float, ptr [[b2]], i64 [[bump]]
 ; PTX: add.s64 [[base3:%rd[0-9]+]], [[base2]], [[i4]];
-  %v3 = load float, float* %p3, align 4
+  %v3 = load float, ptr %p3, align 4
 ; PTX: ld.f32 {{%f[0-9]+}}, [[[base3]]+20];
   call void @foo(float %v3)
 
   %j4 = add nsw i32 %i4, 5
-  %p4 = getelementptr inbounds float, float* %arr, i32 %j4
-; CHECK: [[b4:%[0-9]+]] = getelementptr float, float* [[b3]], i64 [[bump]]
+  %p4 = getelementptr inbounds float, ptr %arr, i32 %j4
+; CHECK: [[b4:%[0-9]+]] = getelementptr float, ptr [[b3]], i64 [[bump]]
 ; PTX: add.s64 [[base4:%rd[0-9]+]], [[base3]], [[i4]];
-  %v4 = load float, float* %p4, align 4
+  %v4 = load float, ptr %p4, align 4
 ; PTX: ld.f32 {{%f[0-9]+}}, [[[base4]]+20];
   call void @foo(float %v4)
 

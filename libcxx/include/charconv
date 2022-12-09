@@ -250,7 +250,7 @@ struct _LIBCPP_HIDDEN __traits : __traits_base<_Tp>
         int __i = digits;
         do
         {
-            if (!('0' <= *__p && *__p <= '9'))
+            if (*__p < '0' || *__p > '9')
                 break;
             __cprod[--__i] = *__p++ - '0';
         } while (__p != __ep && __i != 0);

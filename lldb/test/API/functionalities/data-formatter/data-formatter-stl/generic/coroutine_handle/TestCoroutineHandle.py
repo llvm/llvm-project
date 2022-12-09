@@ -38,13 +38,6 @@ class TestCoroutineHandle(TestBase):
                     ValueCheck(name="current_value", value = "-1"),
                 ])
             ])
-        # We recognize and pretty-print `std::noop_coroutine`. We don't display
-        # any children as those are irrelevant for the noop coroutine.
-        # clang version < 16 did not yet write debug info for the noop coroutines.
-        if not (is_clang and self.expectedCompilerVersion(["<", "16"])):
-            self.expect_expr("noop_hdl",
-                result_summary="noop_coroutine",
-                result_children=[])
         if is_clang:
             # For a type-erased `coroutine_handle<>`, we can still devirtualize
             # the promise call and display the correctly typed promise.
@@ -68,7 +61,7 @@ class TestCoroutineHandle(TestBase):
                 result_children=[
                     ValueCheck(name="resume", summary = test_generator_func_ptr_re),
                     ValueCheck(name="destroy", summary = test_generator_func_ptr_re),
-                    ValueCheck(name="promise", dereference=ValueCheck(value="-1"))
+                    ValueCheck(name="promise", value="-1")
                 ])
 
         # Run until after the `co_yield`

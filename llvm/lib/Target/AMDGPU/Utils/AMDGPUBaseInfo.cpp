@@ -23,6 +23,7 @@
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetParser.h"
+#include <optional>
 
 #define GET_INSTRINFO_NAMED_OPS
 #define GET_INSTRMAP_INFO
@@ -583,8 +584,8 @@ void AMDGPUTargetID::setTargetIDFromFeaturesString(StringRef FS) {
   // absence of the target features we assume we must generate code that can run
   // in any environment.
   SubtargetFeatures Features(FS);
-  Optional<bool> XnackRequested;
-  Optional<bool> SramEccRequested;
+  std::optional<bool> XnackRequested;
+  std::optional<bool> SramEccRequested;
 
   for (const std::string &Feature : Features.getFeatures()) {
     if (Feature == "+xnack")

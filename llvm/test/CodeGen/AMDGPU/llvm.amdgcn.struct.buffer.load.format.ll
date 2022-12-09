@@ -1,5 +1,6 @@
-;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
+;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck --check-prefixes=CHECK,GFX6 %s
+;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefixes=CHECK,GFX8PLUS %s
+;RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck --check-prefixes=CHECK,GFX8PLUS %s
 
 ;CHECK-LABEL: {{^}}buffer_load:
 ;CHECK: buffer_load_format_xyzw v[0:3], {{v[0-9]+}}, s[0:3], 0 idxen
@@ -118,9 +119,115 @@ main_body:
   ret <2 x float> %data
 }
 
+;CHECK-LABEL: {{^}}buffer_load_v4i32_tfe:
+;CHECK: buffer_load_format_xyzw v[2:6], {{v[0-9]+}}, s[0:3], 0 idxen tfe
+;CHECK: s_waitcnt
+define amdgpu_cs float @buffer_load_v4i32_tfe(<4 x i32> inreg %rsrc, <4 x i32> addrspace(1)* %out) {
+  %load = call { <4 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4i32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %data = extractvalue { <4 x i32>, i32 } %load, 0
+  store <4 x i32> %data, <4 x i32> addrspace(1)* %out
+  %status = extractvalue { <4 x i32>, i32 } %load, 1
+  %fstatus = bitcast i32 %status to float
+  ret float %fstatus
+}
+
+;CHECK-LABEL: {{^}}buffer_load_v4f32_tfe:
+;CHECK: buffer_load_format_xyzw v[2:6], {{v[0-9]+}}, s[0:3], 0 idxen tfe
+;CHECK: s_waitcnt
+define amdgpu_cs float @buffer_load_v4f32_tfe(<4 x i32> inreg %rsrc, <4 x float> addrspace(1)* %out) {
+  %load = call { <4 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4f32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %data = extractvalue { <4 x float>, i32 } %load, 0
+  store <4 x float> %data, <4 x float> addrspace(1)* %out
+  %status = extractvalue { <4 x float>, i32 } %load, 1
+  %fstatus = bitcast i32 %status to float
+  ret float %fstatus
+}
+
+;CHECK-LABEL: {{^}}buffer_load_v3i32_tfe:
+;CHECK: buffer_load_format_xyz v[2:5], {{v[0-9]+}}, s[0:3], 0 idxen tfe
+;CHECK: s_waitcnt
+define amdgpu_cs float @buffer_load_v3i32_tfe(<4 x i32> inreg %rsrc, <3 x i32> addrspace(1)* %out) {
+  %load = call { <3 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v3i32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %data = extractvalue { <3 x i32>, i32 } %load, 0
+  store <3 x i32> %data, <3 x i32> addrspace(1)* %out
+  %status = extractvalue { <3 x i32>, i32 } %load, 1
+  %fstatus = bitcast i32 %status to float
+  ret float %fstatus
+}
+
+;CHECK-LABEL: {{^}}buffer_load_v3f32_tfe:
+;CHECK: buffer_load_format_xyz v[2:5], {{v[0-9]+}}, s[0:3], 0 idxen tfe
+;CHECK: s_waitcnt
+define amdgpu_cs float @buffer_load_v3f32_tfe(<4 x i32> inreg %rsrc, <3 x float> addrspace(1)* %out) {
+  %load = call { <3 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v3f32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %data = extractvalue { <3 x float>, i32 } %load, 0
+  store <3 x float> %data, <3 x float> addrspace(1)* %out
+  %status = extractvalue { <3 x float>, i32 } %load, 1
+  %fstatus = bitcast i32 %status to float
+  ret float %fstatus
+}
+
+;CHECK-LABEL: {{^}}buffer_load_v2i32_tfe:
+;GFX6: buffer_load_format_xyz v[2:5], {{v[0-9]+}}, s[0:3], 0 idxen tfe
+;GFX8PLUS: buffer_load_format_xy v[2:4], {{v[0-9]+}}, s[0:3], 0 idxen tfe
+;CHECK: s_waitcnt
+define amdgpu_cs float @buffer_load_v2i32_tfe(<4 x i32> inreg %rsrc, <2 x i32> addrspace(1)* %out) {
+  %load = call { <2 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v2i32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %data = extractvalue { <2 x i32>, i32 } %load, 0
+  store <2 x i32> %data, <2 x i32> addrspace(1)* %out
+  %status = extractvalue { <2 x i32>, i32 } %load, 1
+  %fstatus = bitcast i32 %status to float
+  ret float %fstatus
+}
+
+;CHECK-LABEL: {{^}}buffer_load_v2f32_tfe:
+;GFX6: buffer_load_format_xyz v[2:5], {{v[0-9]+}}, s[0:3], 0 idxen tfe
+;GFX8PLUS: buffer_load_format_xy v[2:4], {{v[0-9]+}}, s[0:3], 0 idxen tfe
+;CHECK: s_waitcnt
+define amdgpu_cs float @buffer_load_v2f32_tfe(<4 x i32> inreg %rsrc, <2 x float> addrspace(1)* %out) {
+  %load = call { <2 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v2f32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %data = extractvalue { <2 x float>, i32 } %load, 0
+  store <2 x float> %data, <2 x float> addrspace(1)* %out
+  %status = extractvalue { <2 x float>, i32 } %load, 1
+  %fstatus = bitcast i32 %status to float
+  ret float %fstatus
+}
+
+;CHECK-LABEL: {{^}}buffer_load_i32_tfe:
+;CHECK: buffer_load_format_x v[2:3], {{v[0-9]+}}, s[0:3], 0 idxen tfe
+;CHECK: s_waitcnt
+define amdgpu_cs float @buffer_load_i32_tfe(<4 x i32> inreg %rsrc, i32 addrspace(1)* %out) {
+  %load = call { i32, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_i32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %data = extractvalue { i32, i32 } %load, 0
+  store i32 %data, i32 addrspace(1)* %out
+  %status = extractvalue { i32, i32 } %load, 1
+  %fstatus = bitcast i32 %status to float
+  ret float %fstatus
+}
+
+;CHECK-LABEL: {{^}}buffer_load_f32_tfe:
+;CHECK: buffer_load_format_x v[2:3], {{v[0-9]+}}, s[0:3], 0 idxen tfe
+;CHECK: s_waitcnt
+define amdgpu_cs float @buffer_load_f32_tfe(<4 x i32> inreg %rsrc, float addrspace(1)* %out) {
+  %load = call { float, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_f32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %data = extractvalue { float, i32 } %load, 0
+  store float %data, float addrspace(1)* %out
+  %status = extractvalue { float, i32 } %load, 1
+  %fstatus = bitcast i32 %status to float
+  ret float %fstatus
+}
+
 declare float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32>, i32, i32, i32, i32) #0
 declare <2 x float> @llvm.amdgcn.struct.buffer.load.format.v2f32(<4 x i32>, i32, i32, i32, i32) #0
 declare <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32, i32) #0
 declare i32 @llvm.amdgcn.struct.buffer.load.format.i32(<4 x i32>, i32, i32, i32, i32) #0
+declare { <4 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4i32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
+declare { <4 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4f32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
+declare { <3 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v3i32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
+declare { <3 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v3f32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
+declare { <2 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v2i32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
+declare { <2 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v2f32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
+declare { i32, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_i32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
+declare { float, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_f32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
 
 attributes #0 = { nounwind readonly }

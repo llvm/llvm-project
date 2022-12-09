@@ -456,8 +456,7 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
          ++I) {
       const Optional<COFF::DataDirectory> *DataDirectories =
           CP.Obj.OptionalHeader->DataDirectories;
-      uint32_t NumDataDir = sizeof(CP.Obj.OptionalHeader->DataDirectories) /
-                            sizeof(Optional<COFF::DataDirectory>);
+      uint32_t NumDataDir = std::size(CP.Obj.OptionalHeader->DataDirectories);
       if (I >= NumDataDir || !DataDirectories[I]) {
         OS << zeros(uint32_t(0));
         OS << zeros(uint32_t(0));

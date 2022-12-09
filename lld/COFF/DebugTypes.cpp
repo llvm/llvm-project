@@ -284,14 +284,14 @@ static bool canUseDebugH(ArrayRef<uint8_t> debugH) {
          (debugH.size() % 8 == 0);
 }
 
-static Optional<ArrayRef<uint8_t>> getDebugH(ObjFile *file) {
+static std::optional<ArrayRef<uint8_t>> getDebugH(ObjFile *file) {
   SectionChunk *sec =
       SectionChunk::findByName(file->getDebugChunks(), ".debug$H");
   if (!sec)
     return llvm::None;
   ArrayRef<uint8_t> contents = sec->getContents();
   if (!canUseDebugH(contents))
-    return None;
+    return std::nullopt;
   return contents;
 }
 
@@ -579,7 +579,7 @@ void PrecompSource::registerMapping() {
 //===----------------------------------------------------------------------===//
 
 void TpiSource::loadGHashes() {
-  if (Optional<ArrayRef<uint8_t>> debugH = getDebugH(file)) {
+  if (std::optional<ArrayRef<uint8_t>> debugH = getDebugH(file)) {
     ghashes = getHashesFromDebugH(*debugH);
     ownedGHashes = false;
   } else {

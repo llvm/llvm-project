@@ -27,7 +27,7 @@ source_filename = "-"
 ; from, to test handling of a global variable with an entry in the distributed
 ; index but not with a copy in the source module (since we can't import
 ; appending linkage globals).
-@llvm.global_ctors = appending global [0 x { i32, void ()*, i8* }] zeroinitializer
+@llvm.global_ctors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
 
 define i64 @H() {
   call i64 @G()

@@ -326,20 +326,17 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     Variadic<Index>:$offsets,
     Variadic<Index>:$sizes,
     Variadic<Index>:$strides,
-    I64ArrayAttr:$static_offsets,
-    I64ArrayAttr:$static_sizes,
-    I64ArrayAttr:$static_strides
+    DenseI64ArrayAttr:$static_offsets,
+    DenseI64ArrayAttr:$static_sizes,
+    DenseI64ArrayAttr:$static_strides
   );
   let results = (outs AnyRankedTensor:$result);
 
   let assemblyFormat = [{
     $source ``
-    custom<DynamicIndexList>($offsets, $static_offsets,
-                               "ShapedType::kDynamic")
-    custom<DynamicIndexList>($sizes, $static_sizes,
-                               "ShapedType::kDynamic")
-    custom<DynamicIndexList>($strides, $static_strides,
-                               "ShapedType::kDynamic")
+    custom<DynamicIndexList>($offsets, $static_offsets)
+    custom<DynamicIndexList>($sizes, $static_sizes)
+    custom<DynamicIndexList>($strides, $static_strides)
     attr-dict `:` type($source) `to` type($result)
   }];
 
@@ -810,20 +807,17 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     Variadic<Index>:$offsets,
     Variadic<Index>:$sizes,
     Variadic<Index>:$strides,
-    I64ArrayAttr:$static_offsets,
-    I64ArrayAttr:$static_sizes,
-    I64ArrayAttr:$static_strides
+    DenseI64ArrayAttr:$static_offsets,
+    DenseI64ArrayAttr:$static_sizes,
+    DenseI64ArrayAttr:$static_strides
   );
   let results = (outs AnyRankedTensor:$result);
 
   let assemblyFormat = [{
     $source `into` $dest ``
-    custom<DynamicIndexList>($offsets, $static_offsets,
-                               "ShapedType::kDynamic")
-    custom<DynamicIndexList>($sizes, $static_sizes,
-                               "ShapedType::kDynamic")
-    custom<DynamicIndexList>($strides, $static_strides,
-                               "ShapedType::kDynamic")
+    custom<DynamicIndexList>($offsets, $static_offsets)
+    custom<DynamicIndexList>($sizes, $static_sizes)
+    custom<DynamicIndexList>($strides, $static_strides)
     attr-dict `:` type($source) `into` type($dest)
   }];
 
@@ -1019,7 +1013,7 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
     rank whose sizes are a reassociation of the original `src`.
 
     A reassociation is defined as a continuous grouping of dimensions and is
-    represented with an array of I64ArrayAttr attribute.
+    represented with an array of DenseI64ArrayAttr attribute.
 
     The verification rule is that the reassociation maps are applied to the
     result tensor with the higher rank to obtain the operand tensor with the
@@ -1057,7 +1051,10 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
     }]>
   ];
 
-  let extraClassDeclaration = commonExtraClassDeclaration;
+  let extraClassDeclaration = commonExtraClassDeclaration # [{
+    int64_t getCorrespondingSourceDim(int64_t resultDim);
+  }];
+
   let hasVerifier = 1;
 }
 
@@ -1068,7 +1065,7 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
     rank whose sizes are a reassociation of the original `src`.
 
     A reassociation is defined as a continuous grouping of dimensions and is
-    represented with an array of I64ArrayAttr attribute.
+    represented with an array of DenseI64ArrayAttr attribute.
 
     The verification rule is that the reassociation maps are applied to the
     operand tensor with the higher rank to obtain the result tensor with the
@@ -1209,8 +1206,8 @@ def Tensor_PadOp : Tensor_Op<"pad", [
     AnyTensor:$source,
     Variadic<Index>:$low,
     Variadic<Index>:$high,
-    I64ArrayAttr:$static_low,
-    I64ArrayAttr:$static_high,
+    DenseI64ArrayAttr:$static_low,
+    DenseI64ArrayAttr:$static_high,
     UnitAttr:$nofold);
 
   let regions = (region SizedRegion<1>:$region);
@@ -1221,10 +1218,8 @@ def Tensor_PadOp : Tensor_Op<"pad", [
   let assemblyFormat = [{
     $source
     (`nofold` $nofold^)?
-    `low` `` custom<DynamicIndexList>($low, $static_low,
-                                        "ShapedType::kDynamic")
-    `high` `` custom<DynamicIndexList>($high, $static_high,
-                                         "ShapedType::kDynamic")
+    `low` `` custom<DynamicIndexList>($low, $static_low)
+    `high` `` custom<DynamicIndexList>($high, $static_high)
     $region attr-dict `:` type($source) `to` type($result)
   }];
 
@@ -1259,16 +1254,17 @@ def Tensor_PadOp : Tensor_Op<"pad", [
 
     // Return a vector of all the static or dynamic values (low/high padding) of
     // the op.
-    inline SmallVector<OpFoldResult> getMixedPadImpl(ArrayAttr staticAttrs,
+    inline SmallVector<OpFoldResult> getMixedPadImpl(ArrayRef<int64_t> staticAttrs,
                                                      ValueRange values) {
+      Builder builder(*this);
       SmallVector<OpFoldResult> res;
       unsigned numDynamic = 0;
       unsigned count = staticAttrs.size();
       for (unsigned idx = 0; idx < count; ++idx) {
-        if (ShapedType::isDynamic(staticAttrs[idx].cast<IntegerAttr>().getInt()))
+        if (ShapedType::isDynamic(staticAttrs[idx]))
           res.push_back(values[numDynamic++]);
         else
-          res.push_back(staticAttrs[idx]);
+          res.push_back(builder.getI64IntegerAttr(staticAttrs[idx]));
       }
       return res;
     }
@@ -1405,18 +1401,15 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
     Variadic<Index>:$offsets,
     Variadic<Index>:$sizes,
     Variadic<Index>:$strides,
-    I64ArrayAttr:$static_offsets,
-    I64ArrayAttr:$static_sizes,
-    I64ArrayAttr:$static_strides
+    DenseI64ArrayAttr:$static_offsets,
+    DenseI64ArrayAttr:$static_sizes,
+    DenseI64ArrayAttr:$static_strides
   );
   let assemblyFormat = [{
     $source `into` $dest ``
-    custom<DynamicIndexList>($offsets, $static_offsets,
-                               "ShapedType::kDynamic")
-    custom<DynamicIndexList>($sizes, $static_sizes,
-                               "ShapedType::kDynamic")
-    custom<DynamicIndexList>($strides, $static_strides,
-                               "ShapedType::kDynamic")
+    custom<DynamicIndexList>($offsets, $static_offsets)
+    custom<DynamicIndexList>($sizes, $static_sizes)
+    custom<DynamicIndexList>($strides, $static_strides)
     attr-dict `:` type($source) `into` type($dest)
   }];
 
@@ -1756,7 +1749,7 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
                        DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$outer_dims_perm,
                        DenseI64ArrayAttr:$inner_dims_pos,
                        Variadic<Index>:$inner_tiles,
-                       I64ArrayAttr:$static_inner_tiles);
+                       DenseI64ArrayAttr:$static_inner_tiles);
   let results = (outs AnyRankedTensor:$result);
   let assemblyFormat = [{
     $source 
@@ -1764,8 +1757,7 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     (`outer_dims_perm` `=` $outer_dims_perm^)?  
     `inner_dims_pos` `=` $inner_dims_pos
     `inner_tiles` `=`
-    custom<DynamicIndexList>($inner_tiles, $static_inner_tiles,
-                             "ShapedType::kDynamic")
+    custom<DynamicIndexList>($inner_tiles, $static_inner_tiles)
     `into` $dest attr-dict `:` type($source) `->` type($dest)
   }];
 
@@ -1812,15 +1804,14 @@ def Tensor_UnPackOp : Tensor_RelayoutOp<"unpack"> {
                        DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$outer_dims_perm,
                        DenseI64ArrayAttr:$inner_dims_pos,
                        Variadic<Index>:$inner_tiles,
-                       I64ArrayAttr:$static_inner_tiles);
+                       DenseI64ArrayAttr:$static_inner_tiles);
   let results = (outs AnyRankedTensor:$result);
   let assemblyFormat = [{
     $source
     (`outer_dims_perm` `=` $outer_dims_perm^)?
     `inner_dims_pos` `=` $inner_dims_pos
     `inner_tiles` `=`
-    custom<DynamicIndexList>($inner_tiles, $static_inner_tiles,
-                             "ShapedType::kDynamic")
+    custom<DynamicIndexList>($inner_tiles, $static_inner_tiles)
     `into` $dest attr-dict `:` type($source) `->` type($dest)
   }];
 

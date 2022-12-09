@@ -47,7 +47,8 @@ define void @f(i32* %A, i32 %N) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><%bb1> U: [1,-2147483647) S: [1,-2147483647) Exits: (1 + (0 smax %N))<nuw> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f
 ; CHECK-NEXT:  Loop %bb1: backedge-taken count is (0 smax %N)
-; CHECK-NEXT:  Loop %bb1: max backedge-taken count is 2147483647
+; CHECK-NEXT:  Loop %bb1: constant max backedge-taken count is 2147483647
+; CHECK-NEXT:  Loop %bb1: symbolic max backedge-taken count is (0 smax %N)
 ; CHECK-NEXT:  Loop %bb1: Predicated backedge-taken count is (0 smax %N)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %bb1: Trip multiple is 1

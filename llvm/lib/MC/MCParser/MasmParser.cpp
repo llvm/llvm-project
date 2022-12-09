@@ -67,6 +67,7 @@
 #include <ctime>
 #include <deque>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -74,8 +75,6 @@
 #include <vector>
 
 using namespace llvm;
-
-extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
 
 namespace {
 
@@ -109,7 +108,7 @@ struct ParseStatementInfo {
   bool ParseError = false;
 
   /// The value associated with a macro exit.
-  Optional<std::string> ExitValue;
+  std::optional<std::string> ExitValue;
 
   SmallVectorImpl<AsmRewrite> *AsmRewrites = nullptr;
 
@@ -1081,6 +1080,8 @@ private:
 } // end anonymous namespace
 
 namespace llvm {
+
+extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
 
 extern MCAsmParserExtension *createCOFFMasmParser();
 
@@ -2883,7 +2884,7 @@ bool MasmParser::expandMacro(raw_svector_ostream &OS, StringRef Body,
     Name.clear();
   }
 
-  Optional<char> CurrentQuote;
+  std::optional<char> CurrentQuote;
   while (!Body.empty()) {
     // Scan for the next substitution.
     std::size_t End = Body.size(), Pos = 0;
@@ -4214,7 +4215,7 @@ bool MasmParser::parseStructInitializer(const StructInfo &Structure,
                                         StructInitializer &Initializer) {
   const AsmToken FirstToken = getTok();
 
-  Optional<AsmToken::TokenKind> EndToken;
+  std::optional<AsmToken::TokenKind> EndToken;
   if (parseOptionalToken(AsmToken::LCurly)) {
     EndToken = AsmToken::RCurly;
   } else if (parseOptionalAngleBracketOpen()) {
@@ -4742,11 +4743,12 @@ bool MasmParser::emitAlignTo(int64_t Alignment) {
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
     if (Section->useCodeAlign()) {
-      getStreamer().emitCodeAlignment(Alignment, &getTargetParser().getSTI(),
+      getStreamer().emitCodeAlignment(Align(Alignment),
+                                      &getTargetParser().getSTI(),
                                       /*MaxBytesToEmit=*/0);
     } else {
       // FIXME: Target specific behavior about how the "extra" bytes are filled.
-      getStreamer().emitValueToAlignment(Alignment, /*Value=*/0,
+      getStreamer().emitValueToAlignment(Align(Alignment), /*Value=*/0,
                                          /*ValueSize=*/1,
                                          /*MaxBytesToEmit=*/0);
     }

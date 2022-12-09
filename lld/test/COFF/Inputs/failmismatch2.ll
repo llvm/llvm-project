@@ -3,7 +3,7 @@
 ; Function Attrs: noinline norecurse nounwind optnone sspstrong uwtable
 define dso_local i32 @main() #0 {
   %1 = alloca i32, align 4
-  store i32 0, i32* %1, align 4
+  store i32 0, ptr %1, align 4
   %2 = call i32 @"?f@@YAHXZ"()
   ret i32 %2
 }

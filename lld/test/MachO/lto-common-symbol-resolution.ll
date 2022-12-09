@@ -106,6 +106,6 @@ target triple = "x86_64-apple-macosx10.15.0"
 @foo = external global i8
 
 define void @f() {
-  %1 = load i8, i8* @foo
+  %1 = load i8, ptr @foo
   ret void
 }

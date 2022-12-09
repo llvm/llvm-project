@@ -129,6 +129,7 @@
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
 #include <map>
+#include <optional>
 
 namespace llvm {
 
@@ -1347,7 +1348,7 @@ struct AttributorConfig {
   DenseSet<const char *> *Allowed = nullptr;
 
   /// Maximum number of iterations to run until fixpoint.
-  Optional<unsigned> MaxFixpointIterations = None;
+  std::optional<unsigned> MaxFixpointIterations = None;
 
   /// A callback function that returns an ORE object from a Function pointer.
   ///{
@@ -3141,11 +3142,6 @@ ChangeStatus clampStateAndIndicateChange(StateType &S, const StateType &R) {
 struct AAReturnedValues
     : public IRAttribute<Attribute::Returned, AbstractAttribute> {
   AAReturnedValues(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
-
-  /// Return an assumed unique return value if a single candidate is found. If
-  /// there cannot be one, return a nullptr. If it is not clear yet, return the
-  /// Optional::NoneType.
-  Optional<Value *> getAssumedUniqueReturnValue(Attributor &A) const;
 
   /// Check \p Pred on all returned values.
   ///

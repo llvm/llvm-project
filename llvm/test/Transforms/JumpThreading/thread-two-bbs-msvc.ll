@@ -1,4 +1,4 @@
-; RUN: opt < %s -jump-threading -S -verify | FileCheck %s
+; RUN: opt -S -passes=jump-threading,verify < %s | FileCheck %s
 
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.16.27026"
@@ -6,7 +6,7 @@ target triple = "x86_64-pc-windows-msvc19.16.27026"
 ; Verify that we do *not* thread any edge.  On Windows, we used to
 ; improperly duplicate EH pads like bb_cleanup below, resulting in an
 ; assertion failure later down the pass pipeline.
-define void @foo([2 x i8]* %0) personality i8* bitcast (i32 ()* @baz to i8*) {
+define void @foo(ptr %0) personality ptr @baz {
 ; CHECK-LABEL: @foo
 ; CHECK-NOT: bb_{{[^ ]*}}.thread:
 entry:

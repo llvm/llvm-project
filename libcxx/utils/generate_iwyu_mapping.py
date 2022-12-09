@@ -35,29 +35,28 @@ def generate_map(include):
 
     for i in detail_files:
         public = []
-        match i:
-            case '__assert': continue
-            case '__availability': continue
-            case '__bit_reference': continue
-            case '__bits': public = ['bits']
-            case '__bsd_locale_defaults.h': continue
-            case '__bsd_locale_fallbacks.h': continue
-            case '__config_site.in': continue
-            case '__config': continue
-            case '__debug': continue
-            case '__errc': continue
-            case '__hash_table': public = ['unordered_map', 'unordered_set']
-            case '__locale': public = ['locale']
-            case '__mbstate_t.h': continue
-            case '__mutex_base': continue
-            case '__node_handle': public = ['map', 'set', 'unordered_map', 'unordered_set']
-            case '__split_buffer': public = ['deque', 'vector']
-            case '__std_stream': public = ['iostream']
-            case '__threading_support': public = ['atomic', 'mutex', 'semaphore', 'thread']
-            case '__tree': public = ['map', 'set']
-            case '__undef_macros': continue
-            case '__verbose_abort': continue
-            case _: panic()
+        if   i == '__assert': continue
+        elif i == '__availability': continue
+        elif i == '__bit_reference': continue
+        elif i == '__bits': public = ['bits']
+        elif i == '__bsd_locale_defaults.h': continue
+        elif i == '__bsd_locale_fallbacks.h': continue
+        elif i == '__config_site.in': continue
+        elif i == '__config': continue
+        elif i == '__debug': continue
+        elif i == '__errc': continue
+        elif i == '__hash_table': public = ['unordered_map', 'unordered_set']
+        elif i == '__locale': public = ['locale']
+        elif i == '__mbstate_t.h': continue
+        elif i == '__mutex_base': continue
+        elif i == '__node_handle': public = ['map', 'set', 'unordered_map', 'unordered_set']
+        elif i == '__split_buffer': public = ['deque', 'vector']
+        elif i == '__std_stream': public = ['iostream']
+        elif i == '__threading_support': public = ['atomic', 'mutex', 'semaphore', 'thread']
+        elif i == '__tree': public = ['map', 'set']
+        elif i == '__undef_macros': continue
+        elif i == '__verbose_abort': continue
+        else: panic()
 
         for p in public:
             result.append(f'{generate(f"<{i}>", p)},')

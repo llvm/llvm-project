@@ -54,6 +54,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
+#include <optional>
 
 namespace llvm {
 class Module;
@@ -127,7 +128,7 @@ struct IRInstructionData
   /// This is only relevant if we are wrapping a CmpInst where we needed to
   /// change the predicate of a compare instruction from a greater than form
   /// to a less than form.  It is None otherwise.
-  Optional<CmpInst::Predicate> RevisedPredicate;
+  std::optional<CmpInst::Predicate> RevisedPredicate;
 
   /// This is only relevant if we are wrapping a CallInst. If we are requiring
   /// that the function calls have matching names as well as types, and the
@@ -137,7 +138,7 @@ struct IRInstructionData
   /// function call type.  The value held here is used to create the hash of the
   /// instruction, and check to make sure two instructions are close to one
   /// another.
-  Optional<std::string> CalleeName;
+  std::optional<std::string> CalleeName;
 
   /// This structure holds the distances of how far "ahead of" or "behind" the
   /// target blocks of a branch, or the incoming blocks of a phi nodes are.

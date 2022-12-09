@@ -64,7 +64,7 @@ target triple = "x86_64-unknown-linux-gnu"
 module asm ".weak foo"
 module asm ".equ foo,bar"
 
-@llvm.compiler.used = appending global [1 x i8*] [i8* bitcast (i32 (i32)* @bar to i8*)], section "llvm.metadata"
+@llvm.compiler.used = appending global [1 x ptr] [ptr @bar], section "llvm.metadata"
 
 define internal i32 @bar(i32 %0) {
   %2 = add nsw i32 %0, 1

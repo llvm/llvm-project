@@ -12,21 +12,21 @@ define signext i32 @twoPairs(i32 signext %0, i32 signext %1, i32 signext %2, i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[TMP1:%.*]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], [[TMP3:%.*]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP8]], [[TMP4:%.*]]
-; CHECK-NEXT:    store i32 [[TMP9]], i32* @num1, align 4
-; CHECK-NEXT:    store i32 [[TMP6]], i32* @num2, align 4
+; CHECK-NEXT:    store i32 [[TMP9]], ptr @num1, align 4
+; CHECK-NEXT:    store i32 [[TMP6]], ptr @num2, align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    store i32 [[TMP10]], i32* @num3, align 4
+; CHECK-NEXT:    store i32 [[TMP10]], ptr @num3, align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
   %6 = add i32 %2, %0
   %7 = add i32 %6, %1
   %8 = add i32 %7, %3
   %9 = add i32 %8, %4
-  store i32 %9, i32* @num1, align 4
+  store i32 %9, ptr @num1, align 4
   %10 = add nsw i32 %2, %0
-  store i32 %10, i32* @num2, align 4
+  store i32 %10, ptr @num2, align 4
   %11 = add nsw i32 %3, %1
-  store i32 %11, i32* @num3, align 4
+  store i32 %11, ptr @num3, align 4
   ret i32 undef
 }
 
@@ -35,20 +35,20 @@ define signext i32 @twoPairsAllOpInPairs(i32 signext %0, i32 signext %1, i32 sig
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP2:%.*]], [[TMP1:%.*]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], [[TMP0:%.*]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[TMP3:%.*]]
-; CHECK-NEXT:    store i32 [[TMP7]], i32* @num1, align 4
-; CHECK-NEXT:    store i32 [[TMP5]], i32* @num2, align 4
+; CHECK-NEXT:    store i32 [[TMP7]], ptr @num1, align 4
+; CHECK-NEXT:    store i32 [[TMP5]], ptr @num2, align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP3]], [[TMP0]]
-; CHECK-NEXT:    store i32 [[TMP8]], i32* @num3, align 4
+; CHECK-NEXT:    store i32 [[TMP8]], ptr @num3, align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
   %5 = add nsw i32 %0, %1
   %6 = add nsw i32 %5, %2
   %7 = add nsw i32 %6, %3
-  store i32 %7, i32* @num1, align 4
+  store i32 %7, ptr @num1, align 4
   %8 = add nsw i32 %1, %2
-  store i32 %8, i32* @num2, align 4
+  store i32 %8, ptr @num2, align 4
   %9 = add nsw i32 %0, %3
-  store i32 %9, i32* @num3, align 4
+  store i32 %9, ptr @num3, align 4
   ret i32 undef
 }
 
@@ -59,12 +59,12 @@ define signext i32 @threePairsAllOpInPairs(i32 signext %0, i32 signext %1, i32 s
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP8]], [[TMP1:%.*]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], [[TMP4:%.*]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP10]], [[TMP5:%.*]]
-; CHECK-NEXT:    store i32 [[TMP11]], i32* @num1, align 4
+; CHECK-NEXT:    store i32 [[TMP11]], ptr @num1, align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i32 [[TMP5]], [[TMP0]]
-; CHECK-NEXT:    store i32 [[TMP12]], i32* @num2, align 4
+; CHECK-NEXT:    store i32 [[TMP12]], ptr @num2, align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = add nsw i32 [[TMP4]], [[TMP1]]
-; CHECK-NEXT:    store i32 [[TMP13]], i32* @num3, align 4
-; CHECK-NEXT:    store i32 [[TMP7]], i32* @num4, align 4
+; CHECK-NEXT:    store i32 [[TMP13]], ptr @num3, align 4
+; CHECK-NEXT:    store i32 [[TMP7]], ptr @num4, align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
   %7 = add nsw i32 %0, %1
@@ -72,12 +72,12 @@ define signext i32 @threePairsAllOpInPairs(i32 signext %0, i32 signext %1, i32 s
   %9 = add nsw i32 %8, %3
   %10 = add nsw i32 %9, %4
   %11 = add nsw i32 %10, %5
-  store i32 %11, i32* @num1, align 4
+  store i32 %11, ptr @num1, align 4
   %12 = add nsw i32 %0, %5
-  store i32 %12, i32* @num2, align 4
+  store i32 %12, ptr @num2, align 4
   %13 = add nsw i32 %1, %4
-  store i32 %13, i32* @num3, align 4
+  store i32 %13, ptr @num3, align 4
   %14 = add nsw i32 %2, %3
-  store i32 %14, i32* @num4, align 4
+  store i32 %14, ptr @num4, align 4
   ret i32 undef
 }

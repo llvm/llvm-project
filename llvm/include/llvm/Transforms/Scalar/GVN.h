@@ -26,6 +26,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -71,11 +72,11 @@ class GVNLegacyPass;
 /// Intended use is to create a default object, modify parameters with
 /// additional setters and then pass it to GVN.
 struct GVNOptions {
-  Optional<bool> AllowPRE = None;
-  Optional<bool> AllowLoadPRE = None;
-  Optional<bool> AllowLoadInLoopPRE = None;
-  Optional<bool> AllowLoadPRESplitBackedge = None;
-  Optional<bool> AllowMemDep = None;
+  std::optional<bool> AllowPRE = None;
+  std::optional<bool> AllowLoadPRE = None;
+  std::optional<bool> AllowLoadInLoopPRE = None;
+  std::optional<bool> AllowLoadPRESplitBackedge = None;
+  std::optional<bool> AllowMemDep = None;
 
   GVNOptions() = default;
 

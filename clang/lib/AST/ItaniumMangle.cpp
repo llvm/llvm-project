@@ -602,9 +602,9 @@ NamespaceDecl *ItaniumMangleContextImpl::getStdNamespace() {
   if (!StdNamespace) {
     StdNamespace = NamespaceDecl::Create(
         getASTContext(), getASTContext().getTranslationUnitDecl(),
-        /*Inline*/ false, SourceLocation(), SourceLocation(),
+        /*Inline=*/false, SourceLocation(), SourceLocation(),
         &getASTContext().Idents.get("std"),
-        /*PrevDecl*/ nullptr);
+        /*PrevDecl=*/nullptr, /*Nested=*/false);
     StdNamespace->setImplicit();
   }
   return StdNamespace;

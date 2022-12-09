@@ -151,6 +151,8 @@ AARCH64_ARCH_EXT_NAME("sme2p1",       AArch64::AEK_SME2p1,      "+sme2p1",      
 AARCH64_ARCH_EXT_NAME("hbc",          AArch64::AEK_HBC,         "+hbc",          "-hbc")
 AARCH64_ARCH_EXT_NAME("mops",         AArch64::AEK_MOPS,        "+mops",         "-mops")
 AARCH64_ARCH_EXT_NAME("pmuv3",        AArch64::AEK_PERFMON,     "+perfmon",      "-perfmon")
+AARCH64_ARCH_EXT_NAME("cssc",         AArch64::AEK_CSSC,        "+cssc",         "-cssc")
+AARCH64_ARCH_EXT_NAME("rcpc3",        AArch64::AEK_RCPC3,       "+rcpc3",        "-rcpc3")
 #undef AARCH64_ARCH_EXT_NAME
 
 #ifndef AARCH64_CPU_NAME

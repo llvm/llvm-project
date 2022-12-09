@@ -227,7 +227,7 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
   UsingDirectiveDecl *ImplicitUsingDirectiveDecl = nullptr;
   Decl *NamespcDecl = Actions.ActOnStartNamespaceDef(
       getCurScope(), InlineLoc, NamespaceLoc, IdentLoc, Ident,
-      T.getOpenLocation(), attrs, ImplicitUsingDirectiveDecl);
+      T.getOpenLocation(), attrs, ImplicitUsingDirectiveDecl, false);
 
   PrettyDeclStackTraceEntry CrashInfo(Actions.Context, NamespcDecl,
                                       NamespaceLoc, "parsing namespace");
@@ -275,7 +275,7 @@ void Parser::ParseInnerNamespace(const InnerNamespaceInfoList &InnerNSs,
   Decl *NamespcDecl = Actions.ActOnStartNamespaceDef(
       getCurScope(), InnerNSs[index].InlineLoc, InnerNSs[index].NamespaceLoc,
       InnerNSs[index].IdentLoc, InnerNSs[index].Ident,
-      Tracker.getOpenLocation(), attrs, ImplicitUsingDirectiveDecl);
+      Tracker.getOpenLocation(), attrs, ImplicitUsingDirectiveDecl, true);
   assert(!ImplicitUsingDirectiveDecl &&
          "nested namespace definition cannot define anonymous namespace");
 

@@ -27,24 +27,19 @@ using namespace mlir::vector;
 
 /// During unrolling from `originalShape` to `targetShape` return the offset for
 /// the slice `index`.
-static SmallVector<int64_t, 4> getVectorOffset(ArrayRef<int64_t> originalShape,
-                                               ArrayRef<int64_t> targetShape,
-                                               int64_t index) {
-  SmallVector<int64_t, 4> dstSliceStrides =
-      computeStrides(originalShape, targetShape);
-  SmallVector<int64_t, 4> vectorOffsets = delinearize(dstSliceStrides, index);
-  SmallVector<int64_t, 4> elementOffsets =
-      computeElementOffsetsFromVectorSliceOffsets(targetShape, vectorOffsets);
-  return elementOffsets;
+static SmallVector<int64_t> getVectorOffset(ArrayRef<int64_t> ratioStrides,
+                                            int64_t index,
+                                            ArrayRef<int64_t> targetShape) {
+  return computeElementwiseMul(delinearize(ratioStrides, index), targetShape);
 }
 
-/// A functor that accomplishes the same thing as `getVectorOffset` but allows
-/// for reordering the traversal of the dimensions. The order of traversal is
-/// given in "for loop order" (outer to inner).
+/// A functor that accomplishes the same thing as `getVectorOffset` but
+/// allows for reordering the traversal of the dimensions. The order of
+/// traversal is given in "for loop order" (outer to inner).
 namespace {
 class DecomposeShapeIterator {
 private:
-  SmallVector<int64_t, 4> vectorShape;
+  SmallVector<int64_t> vectorShape;
   SmallVector<int64_t> loopOrder;
   SmallVector<int64_t> sliceStrides;
   int64_t maxIndexVal{1};
@@ -56,15 +51,15 @@ public:
       : vectorShape(targetShape.begin(), targetShape.end()),
         loopOrder(loopOrder.begin(), loopOrder.end()),
         sliceStrides(originalShape.size()) {
-    assert(originalShape.size() == targetShape.size());
-    assert(loopOrder.size() == targetShape.size());
+    assert(originalShape.size() >= targetShape.size());
+    assert(loopOrder.size() == originalShape.size());
 
     // Compute the count for each dimension.
-    SmallVector<int64_t> sliceDimCounts(originalShape.size());
-    for (unsigned r = 0; r < originalShape.size(); ++r) {
-      sliceDimCounts[r] = ceilDiv(originalShape[r], targetShape[r]);
-      maxIndexVal *= sliceDimCounts[r];
-    }
+    auto maybeShapeRatio = computeShapeRatio(originalShape, targetShape);
+    assert(maybeShapeRatio && "Shape does not evenly divide");
+    // Pad `sliceDimCounts` with leading 1s so that all sizes match.
+    SmallVector<int64_t> sliceDimCounts = *maybeShapeRatio;
+    maxIndexVal = computeMaxLinearIndex(sliceDimCounts);
 
     // Reversing "loop order" gives dimensions from fastest varying to slowest
     // varying (smallest stride to largest stride).
@@ -95,7 +90,7 @@ public:
   SmallVector<int64_t> getVectorOffset(int64_t index) const {
     SmallVector<int64_t> vectorOffsets = delinearize(index);
     SmallVector<int64_t> elementOffsets =
-        computeElementOffsetsFromVectorSliceOffsets(vectorShape, vectorOffsets);
+        computeElementwiseMul(vectorShape, vectorOffsets);
     return elementOffsets;
   }
 };
@@ -139,7 +134,7 @@ static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
 
 /// Return the target shape for unrolling for the given `op`. Return llvm::None
 /// if the op shouldn't be or cannot be unrolled.
-static Optional<SmallVector<int64_t, 4>>
+static Optional<SmallVector<int64_t>>
 getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
   if (options.filterConstraint && failed(options.filterConstraint(op)))
     return llvm::None;
@@ -152,10 +147,10 @@ getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
   auto maybeUnrollShape = unrollableVectorOp.getShapeForUnroll();
   if (!maybeUnrollShape)
     return llvm::None;
-  Optional<SmallVector<int64_t, 4>> targetShape = options.nativeShape(op);
+  Optional<SmallVector<int64_t>> targetShape = options.nativeShape(op);
   if (!targetShape)
     return llvm::None;
-  auto maybeShapeRatio = shapeRatio(*maybeUnrollShape, *targetShape);
+  auto maybeShapeRatio = computeShapeRatio(*maybeUnrollShape, *targetShape);
   if (!maybeShapeRatio ||
       llvm::all_of(*maybeShapeRatio, [](int64_t v) { return v == 1; }))
     return llvm::None;
@@ -197,7 +192,7 @@ struct UnrollTransferReadPattern
     if (!targetShape)
       return failure();
     auto sourceVectorType = readOp.getVectorType();
-    SmallVector<int64_t, 4> strides(targetShape->size(), 1);
+    SmallVector<int64_t> strides(targetShape->size(), 1);
     Location loc = readOp.getLoc();
     ArrayRef<int64_t> originalSize = readOp.getVectorType().getShape();
 
@@ -206,17 +201,16 @@ struct UnrollTransferReadPattern
         loc, sourceVectorType, rewriter.getZeroAttr(sourceVectorType));
     auto targetType =
         VectorType::get(*targetShape, sourceVectorType.getElementType());
-    SmallVector<Value, 4> originalIndices(readOp.getIndices().begin(),
-                                          readOp.getIndices().end());
+    SmallVector<Value> originalIndices(readOp.getIndices().begin(),
+                                       readOp.getIndices().end());
 
     SmallVector<int64_t> loopOrder =
         getUnrollOrder(originalSize.size(), readOp, options);
     DecomposeShapeIterator indexToOffsets(originalSize, *targetShape,
                                           loopOrder);
     for (int64_t i = 0; i < indexToOffsets.maxIndex(); i++) {
-      SmallVector<int64_t, 4> elementOffsets =
-          indexToOffsets.getVectorOffset(i);
-      SmallVector<Value, 4> indices =
+      SmallVector<int64_t> elementOffsets = indexToOffsets.getVectorOffset(i);
+      SmallVector<Value> indices =
           sliceTransferIndices(elementOffsets, originalIndices,
                                readOp.getPermutationMap(), loc, rewriter);
       auto slicedRead = rewriter.create<vector::TransferReadOp>(
@@ -255,11 +249,11 @@ struct UnrollTransferWritePattern
     if (!targetShape)
       return failure();
     auto sourceVectorType = writeOp.getVectorType();
-    SmallVector<int64_t, 4> strides(targetShape->size(), 1);
+    SmallVector<int64_t> strides(targetShape->size(), 1);
     Location loc = writeOp.getLoc();
     ArrayRef<int64_t> originalSize = sourceVectorType.getShape();
-    SmallVector<Value, 4> originalIndices(writeOp.getIndices().begin(),
-                                          writeOp.getIndices().end());
+    SmallVector<Value> originalIndices(writeOp.getIndices().begin(),
+                                       writeOp.getIndices().end());
 
     SmallVector<int64_t> loopOrder =
         getUnrollOrder(originalSize.size(), writeOp, options);
@@ -267,11 +261,10 @@ struct UnrollTransferWritePattern
                                           loopOrder);
     Value resultTensor;
     for (int64_t i = 0; i < indexToOffsets.maxIndex(); i++) {
-      SmallVector<int64_t, 4> elementOffsets =
-          indexToOffsets.getVectorOffset(i);
+      SmallVector<int64_t> elementOffsets = indexToOffsets.getVectorOffset(i);
       Value slicedVector = rewriter.create<vector::ExtractStridedSliceOp>(
           loc, writeOp.getVector(), elementOffsets, *targetShape, strides);
-      SmallVector<Value, 4> indices =
+      SmallVector<Value> indices =
           sliceTransferIndices(elementOffsets, originalIndices,
                                writeOp.getPermutationMap(), loc, rewriter);
       Operation *slicedWrite = rewriter.create<vector::TransferWriteOp>(
@@ -321,7 +314,7 @@ struct UnrollContractionPattern
     if (!targetShape)
       return failure();
     auto dstVecType = contractOp.getResultType().cast<VectorType>();
-    SmallVector<int64_t, 4> originalSize = *contractOp.getShapeForUnroll();
+    SmallVector<int64_t> originalSize = *contractOp.getShapeForUnroll();
 
     Location loc = contractOp.getLoc();
     unsigned accIndex = vector::ContractionOp::getAccOperandIndex();
@@ -337,16 +330,16 @@ struct UnrollContractionPattern
                                           loopOrder);
     const int64_t sliceCount = indexToOffsets.maxIndex();
     for (int64_t i = 0; i < sliceCount; i++) {
-      SmallVector<int64_t, 4> offsets = indexToOffsets.getVectorOffset(i);
-      SmallVector<Value, 4> slicesOperands(contractOp.getNumOperands());
+      SmallVector<int64_t> offsets = indexToOffsets.getVectorOffset(i);
+      SmallVector<Value> slicesOperands(contractOp.getNumOperands());
 
-      // Helper to coompute the new shape of each operand and extract the slice.
+      // Helper to compute the new shape of each operand and extract the slice.
       auto extractOperand = [&](unsigned index, Value operand,
                                 AffineMap permutationMap,
                                 ArrayRef<int64_t> operandOffets) {
         SmallVector<int64_t> operandShape = applyPermutationMap(
             permutationMap, ArrayRef<int64_t>(*targetShape));
-        SmallVector<int64_t, 4> operandStrides(operandOffets.size(), 1);
+        SmallVector<int64_t> operandStrides(operandOffets.size(), 1);
         slicesOperands[index] = rewriter.create<vector::ExtractStridedSliceOp>(
             loc, operand, operandOffets, operandShape, operandStrides);
       };
@@ -420,12 +413,12 @@ struct UnrollMultiReductionPattern
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp reductionOp,
                                 PatternRewriter &rewriter) const override {
-    Optional<SmallVector<int64_t, 4>> targetShape =
+    Optional<SmallVector<int64_t>> targetShape =
         getTargetShape(options, reductionOp);
     if (!targetShape)
       return failure();
-    SmallVector<int64_t, 4> originalSize = *reductionOp.getShapeForUnroll();
-    SmallVector<int64_t, 4> ratio = *shapeRatio(originalSize, *targetShape);
+    SmallVector<int64_t> originalSize = *reductionOp.getShapeForUnroll();
+    SmallVector<int64_t> ratio = *computeShapeRatio(originalSize, *targetShape);
     llvm::MapVector<
         SmallVector<int64_t>, Value,
         llvm::DenseMap<SmallVector<int64_t>, unsigned, OffsetMapInfo>>
@@ -433,12 +426,16 @@ struct UnrollMultiReductionPattern
     // Compute shape ratio of 'shape' and 'sizes'.
     int64_t sliceCount = computeMaxLinearIndex(ratio);
     Location loc = reductionOp.getLoc();
+
+    // Stride of the ratios, this gives us the offsets of sliceCount in a basis
+    // of multiples of the targetShape.
+    auto ratioStrides = computeStrides(ratio);
     for (int64_t i = 0; i < sliceCount; i++) {
-      SmallVector<int64_t, 4> offsets =
-          getVectorOffset(originalSize, *targetShape, i);
+      SmallVector<int64_t> offsets =
+          getVectorOffset(ratioStrides, i, *targetShape);
 
       SmallVector<Value> operands;
-      SmallVector<int64_t, 4> operandStrides(offsets.size(), 1);
+      SmallVector<int64_t> operandStrides(offsets.size(), 1);
       Value slicedOperand = rewriter.create<vector::ExtractStridedSliceOp>(
           loc, reductionOp.getSource(), offsets, *targetShape, operandStrides);
       operands.push_back(slicedOperand);
@@ -451,7 +448,7 @@ struct UnrollMultiReductionPattern
         }
       }
       Value acc;
-      SmallVector<int64_t, 4> accStrides(destOffset.size(), 1);
+      SmallVector<int64_t> accStrides(destOffset.size(), 1);
       // If a version of the accumulator has already been computed, use it
       // otherwise extract the first version from the original operand.
       auto accIt = accCache.find(destOffset);
@@ -500,21 +497,25 @@ struct UnrollElementwisePattern : public RewritePattern {
     if (!targetShape)
       return failure();
     auto dstVecType = op->getResult(0).getType().cast<VectorType>();
-    SmallVector<int64_t, 4> originalSize =
+    SmallVector<int64_t> originalSize =
         *cast<VectorUnrollOpInterface>(op).getShapeForUnroll();
-    SmallVector<int64_t, 4> ratio = *shapeRatio(originalSize, *targetShape);
+    SmallVector<int64_t> ratio = *computeShapeRatio(originalSize, *targetShape);
     int64_t sliceCount = computeMaxLinearIndex(ratio);
     Location loc = op->getLoc();
     // Prepare the result vector.
     Value result = rewriter.create<arith::ConstantOp>(
         loc, dstVecType, rewriter.getZeroAttr(dstVecType));
-    SmallVector<int64_t, 4> strides(targetShape->size(), 1);
+    SmallVector<int64_t> strides(targetShape->size(), 1);
     VectorType newVecType =
         VectorType::get(*targetShape, dstVecType.getElementType());
+
+    // Stride of the ratios, this gives us the offsets of sliceCount in a basis
+    // of multiples of the targetShape.
+    auto ratioStrides = computeStrides(ratio);
     for (int64_t i = 0; i < sliceCount; i++) {
-      SmallVector<int64_t, 4> offsets =
-          getVectorOffset(originalSize, *targetShape, i);
-      SmallVector<Value, 4> extractOperands;
+      SmallVector<int64_t> offsets =
+          getVectorOffset(ratioStrides, i, *targetShape);
+      SmallVector<Value> extractOperands;
       for (OpOperand &operand : op->getOpOperands()) {
         auto vecType = operand.get().getType().template dyn_cast<VectorType>();
         if (!vecType) {
@@ -547,19 +548,24 @@ struct UnrollReductionPattern : public OpRewritePattern<vector::ReductionOp> {
 
   LogicalResult matchAndRewrite(vector::ReductionOp reductionOp,
                                 PatternRewriter &rewriter) const override {
-    Optional<SmallVector<int64_t, 4>> targetShape =
+    Optional<SmallVector<int64_t>> targetShape =
         getTargetShape(options, reductionOp);
     if (!targetShape)
       return failure();
     SmallVector<int64_t> originalSize = *reductionOp.getShapeForUnroll();
-    int64_t ratio = (*shapeRatio(originalSize, *targetShape))[0];
+    auto ratio = *computeShapeRatio(originalSize, *targetShape);
+    int64_t sliceCount = ratio[0];
 
     // Create unrolled vector reduction.
     Location loc = reductionOp.getLoc();
     Value accumulator = nullptr;
-    for (int64_t i = 0; i < ratio; ++i) {
+
+    // Stride of the ratios, this gives us the offsets of sliceCount in a basis
+    // of multiples of the targetShape.
+    auto ratioStrides = computeStrides(ratio);
+    for (int64_t i = 0; i < sliceCount; ++i) {
       SmallVector<int64_t> offsets =
-          getVectorOffset(originalSize, *targetShape, i);
+          getVectorOffset(ratioStrides, i, *targetShape);
       SmallVector<int64_t> strides(offsets.size(), 1);
       Value slicedOperand = rewriter.create<vector::ExtractStridedSliceOp>(
           loc, reductionOp.getVector(), offsets, *targetShape, strides);
@@ -600,21 +606,25 @@ struct UnrollTranposePattern : public OpRewritePattern<vector::TransposeOp> {
     if (!targetShape)
       return failure();
     auto originalVectorType = tranposeOp.getResultType();
-    SmallVector<int64_t, 4> strides(targetShape->size(), 1);
+    SmallVector<int64_t> strides(targetShape->size(), 1);
     Location loc = tranposeOp.getLoc();
     ArrayRef<int64_t> originalSize = originalVectorType.getShape();
-    SmallVector<int64_t, 4> ratio = *shapeRatio(originalSize, *targetShape);
+    SmallVector<int64_t> ratio = *computeShapeRatio(originalSize, *targetShape);
     int64_t sliceCount = computeMaxLinearIndex(ratio);
     // Prepare the result vector;
     Value result = rewriter.create<arith::ConstantOp>(
         loc, originalVectorType, rewriter.getZeroAttr(originalVectorType));
     SmallVector<int64_t> permutation;
     tranposeOp.getTransp(permutation);
+
+    // Stride of the ratios, this gives us the offsets of sliceCount in a basis
+    // of multiples of the targetShape.
+    auto ratioStrides = computeStrides(ratio);
     for (int64_t i = 0; i < sliceCount; i++) {
-      SmallVector<int64_t, 4> elementOffsets =
-          getVectorOffset(originalSize, *targetShape, i);
-      SmallVector<int64_t, 4> permutedOffsets(elementOffsets.size());
-      SmallVector<int64_t, 4> permutedShape(elementOffsets.size());
+      SmallVector<int64_t> elementOffsets =
+          getVectorOffset(ratioStrides, i, *targetShape);
+      SmallVector<int64_t> permutedOffsets(elementOffsets.size());
+      SmallVector<int64_t> permutedShape(elementOffsets.size());
       // Compute the source offsets and shape.
       for (auto &indices : llvm::enumerate(permutation)) {
         permutedOffsets[indices.value()] = elementOffsets[indices.index()];

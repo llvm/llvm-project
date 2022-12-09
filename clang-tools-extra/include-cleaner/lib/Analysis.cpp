@@ -38,8 +38,7 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
   }
   for (const SymbolReference &MacroRef : MacroRefs) {
     assert(MacroRef.Target.kind() == Symbol::Macro);
-    return CB(MacroRef,
-              findHeaders(MacroRef.Target.macro().Definition, SM, PI));
+    CB(MacroRef, findHeaders(MacroRef.Target.macro().Definition, SM, PI));
   }
 }
 

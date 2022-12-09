@@ -263,8 +263,8 @@ LogicalResult CSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op,
   // Don't simplify operations with nested blocks. We don't currently model
   // equality comparisons correctly among other things. It is also unclear
   // whether we would want to CSE such operations.
-  if (!(op->getNumRegions() == 0 ||
-        (op->getNumRegions() == 1 && llvm::hasSingleElement(op->getRegion(0)))))
+  if (op->getNumRegions() != 0 &&
+      (op->getNumRegions() != 1 || !llvm::hasSingleElement(op->getRegion(0))))
     return failure();
 
   // Some simple use case of operation with memory side-effect are dealt with

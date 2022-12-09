@@ -85,7 +85,7 @@ private:
   // This mapping is 1:N because two symbols with different versions
   // can have the same name. We use this map to handle "extern C++ {}"
   // directive in version scripts.
-  llvm::Optional<llvm::StringMap<SmallVector<Symbol *, 0>>> demangledSyms;
+  std::optional<llvm::StringMap<SmallVector<Symbol *, 0>>> demangledSyms;
 };
 
 LLVM_LIBRARY_VISIBILITY extern SymbolTable symtab;

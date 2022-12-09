@@ -38,6 +38,7 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 using namespace llvm;
 using namespace PatternMatch;
 
@@ -164,7 +165,7 @@ namespace {
       SmallDenseSet<AssertingVH<Value>, 4> OverDefined;
       // None indicates that the nonnull pointers for this basic block
       // block have not been computed yet.
-      Optional<NonNullPointerSet> NonNullPointers;
+      std::optional<NonNullPointerSet> NonNullPointers;
     };
 
     /// Cached information per basic block.
@@ -1296,7 +1297,7 @@ static ValueLatticeElement constantFoldUser(User *Usr, Value *Op,
 /// Compute the value of Val on the edge BBFrom -> BBTo. Returns false if
 /// Val is not constrained on the edge.  Result is unspecified if return value
 /// is false.
-static Optional<ValueLatticeElement> getEdgeValueLocal(Value *Val,
+static std::optional<ValueLatticeElement> getEdgeValueLocal(Value *Val,
                                                        BasicBlock *BBFrom,
                                                        BasicBlock *BBTo) {
   // TODO: Handle more complex conditionals. If (v == 0 || v2 < 1) is false, we

@@ -18,6 +18,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include <functional>
+#include <optional>
 
 namespace llvm {
 
@@ -55,7 +56,7 @@ public:
 
 /// Legacy wrapper pass to provide the ModuleSummaryIndex object.
 class ModuleSummaryIndexWrapperPass : public ModulePass {
-  Optional<ModuleSummaryIndex> Index;
+  std::optional<ModuleSummaryIndex> Index;
 
 public:
   static char ID;

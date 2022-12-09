@@ -92,6 +92,9 @@ public:
     return WriteMemoryUnsigned(ctx, addr, value, sizeof(T));
   }
 
+  llvm::RoundingMode GetRoundingMode();
+  bool SetAccruedExceptions(llvm::APFloatBase::opStatus);
+
 private:
   /// Last decoded instruction from m_opcode
   DecodeResult m_decoded;

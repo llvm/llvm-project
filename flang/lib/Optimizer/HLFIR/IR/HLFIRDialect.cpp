@@ -85,3 +85,17 @@ bool hlfir::isFortranVariableType(mlir::Type type) {
       .Case<fir::BaseBoxType, fir::BoxCharType>([](auto) { return true; })
       .Default([](mlir::Type) { return false; });
 }
+
+bool hlfir::isFortranScalarCharacterType(mlir::Type type) {
+  return isFortranScalarCharacterExprType(type) ||
+         type.isa<fir::BoxCharType>() ||
+         fir::unwrapPassByRefType(fir::unwrapRefType(type))
+             .isa<fir::CharacterType>();
+}
+
+bool hlfir::isFortranScalarCharacterExprType(mlir::Type type) {
+  if (auto exprType = type.dyn_cast<hlfir::ExprType>())
+    return exprType.isScalar() &&
+           exprType.getElementType().isa<fir::CharacterType>();
+  return false;
+}

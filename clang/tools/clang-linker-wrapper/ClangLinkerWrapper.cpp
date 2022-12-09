@@ -843,7 +843,9 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
   // Run the LTO job to compile the bitcode.
   size_t MaxTasks = LTOBackend->getMaxTasks();
   SmallVector<StringRef> Files(MaxTasks);
-  auto AddStream = [&](size_t Task) -> std::unique_ptr<CachedFileStream> {
+  auto AddStream =
+      [&](size_t Task,
+          const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
     int FD = -1;
     auto &TempFile = Files[Task];
     StringRef Extension = (Triple.isNVPTX()) ? "s" : "o";

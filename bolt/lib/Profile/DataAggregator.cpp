@@ -2233,7 +2233,7 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
     OutFile << "boltedcollection\n";
   if (opts::BasicAggregation) {
     OutFile << "no_lbr";
-    for (const StringMapEntry<NoneType> &Entry : EventNames)
+    for (const StringMapEntry<std::nullopt_t> &Entry : EventNames)
       OutFile << " " << Entry.getKey();
     OutFile << "\n";
 

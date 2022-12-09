@@ -14,10 +14,10 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @f(i32 %x, i32 %y) {
   ; CHECK: or i[[#SBITS]]
   %xay = add i32 %x, %y
-  store i32 %xay, i32* @a
+  store i32 %xay, ptr @a
   ; CHECK-NOT: or i[[#SBITS]]
   %xmy = mul i32 %x, %y
-  store i32 %xmy, i32* @b
+  store i32 %xmy, ptr @b
   ret void
 }
 
@@ -31,13 +31,13 @@ define void @g(i1 %p, i32 %x, i32 %y) {
 l1:
   ; CHECK: or i[[#SBITS]]
   %xay = add i32 %x, %y
-  store i32 %xay, i32* @a
+  store i32 %xay, ptr @a
   br label %l3
 
 l2:
   ; CHECK: or i[[#SBITS]]
   %xmy = mul i32 %x, %y
-  store i32 %xmy, i32* @b
+  store i32 %xmy, ptr @b
   br label %l3
 
 l3:

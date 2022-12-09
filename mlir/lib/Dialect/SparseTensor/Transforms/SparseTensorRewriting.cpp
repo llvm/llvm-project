@@ -469,9 +469,12 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
           Value v =
               createOrFoldDimOp(rewriter, loc, op.getOperand(0), d.index());
           rewriter.create<tensor::DimOp>(loc, op.getOperand(0), d.index());
-          for (const auto &opnd : op.getOperands().drop_front()) {
-            Value t = createOrFoldDimOp(rewriter, loc, opnd, d.index());
-            v = rewriter.create<arith::AddIOp>(loc, v, t);
+          if (conDim == d.index()) {
+            // Adding the size of the concatenating dimension.
+            for (const auto &opnd : op.getOperands().drop_front()) {
+              Value t = createOrFoldDimOp(rewriter, loc, opnd, d.index());
+              v = rewriter.create<arith::AddIOp>(loc, v, t);
+            }
           }
           dynSizes.push_back(v);
         }
@@ -912,8 +915,8 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
                                {indexTp}, {reader}, EmitCInterface::Off)
                     .getResult(0);
     Value symmetric;
-    // We assume only rank 2 tensors may have the isSymmetric flag set.
-    if (rank == 2) {
+    // The verifier ensures only 2D tensors can have the expandSymmetry flag.
+    if (rank == 2 && op.getExpandSymmetry()) {
       symmetric =
           createFuncCall(rewriter, loc, "getSparseTensorReaderIsSymmetric",
                          {rewriter.getI1Type()}, {reader}, EmitCInterface::Off)

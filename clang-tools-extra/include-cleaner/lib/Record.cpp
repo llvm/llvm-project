@@ -83,14 +83,54 @@ public:
       recordMacroRef(MacroName, *MI);
   }
 
+  void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
+             const MacroDefinition &MD) override {
+    if (!Active)
+      return;
+    if (const auto *MI = MD.getMacroInfo())
+      recordMacroRef(MacroNameTok, *MI, RefType::Ambiguous);
+  }
+
+  void Ifndef(SourceLocation Loc, const Token &MacroNameTok,
+              const MacroDefinition &MD) override {
+    if (!Active)
+      return;
+    if (const auto *MI = MD.getMacroInfo())
+      recordMacroRef(MacroNameTok, *MI, RefType::Ambiguous);
+  }
+
+  void Elifdef(SourceLocation Loc, const Token &MacroNameTok,
+               const MacroDefinition &MD) override {
+    if (!Active)
+      return;
+    if (const auto *MI = MD.getMacroInfo())
+      recordMacroRef(MacroNameTok, *MI, RefType::Ambiguous);
+  }
+
+  void Elifndef(SourceLocation Loc, const Token &MacroNameTok,
+                const MacroDefinition &MD) override {
+    if (!Active)
+      return;
+    if (const auto *MI = MD.getMacroInfo())
+      recordMacroRef(MacroNameTok, *MI, RefType::Ambiguous);
+  }
+
+  void Defined(const Token &MacroNameTok, const MacroDefinition &MD,
+               SourceRange Range) override {
+    if (!Active)
+      return;
+    if (const auto *MI = MD.getMacroInfo())
+      recordMacroRef(MacroNameTok, *MI, RefType::Ambiguous);
+  }
+
 private:
-  void recordMacroRef(const Token &Tok, const MacroInfo &MI) {
+  void recordMacroRef(const Token &Tok, const MacroInfo &MI,
+                      RefType RT = RefType::Explicit) {
     if (MI.isBuiltinMacro())
       return; // __FILE__ is not a reference.
-    Recorded.MacroReferences.push_back(
-        SymbolReference{Tok.getLocation(),
-                        Macro{Tok.getIdentifierInfo(), MI.getDefinitionLoc()},
-                        RefType::Explicit});
+    Recorded.MacroReferences.push_back(SymbolReference{
+        Tok.getLocation(),
+        Macro{Tok.getIdentifierInfo(), MI.getDefinitionLoc()}, RT});
   }
 
   bool Active = false;
@@ -193,14 +233,18 @@ public:
     if (!Pragma)
       return false;
 
-    if (Pragma->consume_front("private, include ")) {
-      // We always insert using the spelling from the pragma.
-      if (auto *FE = SM.getFileEntryForID(SM.getFileID(Range.getBegin())))
-        Out->IWYUPublic.insert(
-            {FE->getLastRef().getUniqueID(),
-             save(Pragma->startswith("<") || Pragma->startswith("\"")
-                      ? (*Pragma)
-                      : ("\"" + *Pragma + "\"").str())});
+    if (Pragma->consume_front("private")) {
+      auto *FE = SM.getFileEntryForID(SM.getFileID(Range.getBegin()));
+      if (!FE)
+        return false;
+      StringRef PublicHeader;
+      if (Pragma->consume_front(", include ")) {
+        // We always insert using the spelling from the pragma.
+        PublicHeader = save(Pragma->startswith("<") || Pragma->startswith("\"")
+                                ? (*Pragma)
+                                : ("\"" + *Pragma + "\"").str());
+      }
+      Out->IWYUPublic.insert({FE->getLastRef().getUniqueID(), PublicHeader});
       return false;
     }
     FileID CommentFID = SM.getFileID(Range.getBegin());
@@ -306,6 +350,10 @@ bool PragmaIncludes::isSelfContained(const FileEntry *FE) const {
   return !NonSelfContainedFiles.contains(FE->getUniqueID());
 }
 
+bool PragmaIncludes::isPrivate(const FileEntry *FE) const {
+  return IWYUPublic.find(FE->getUniqueID()) != IWYUPublic.end();
+}
+
 std::unique_ptr<ASTConsumer> RecordedAST::record() {
   class Recorder : public ASTConsumer {
     RecordedAST *Out;
@@ -337,6 +385,13 @@ void RecordedPP::RecordedIncludes::add(const Include &I) {
   BySpellingIt->second.push_back(Index);
   if (I.Resolved)
     ByFile[I.Resolved].push_back(Index);
+  ByLine[I.Line] = Index;
+}
+
+const Include *
+RecordedPP::RecordedIncludes::atLine(unsigned OneBasedIndex) const {
+  auto It = ByLine.find(OneBasedIndex);
+  return (It == ByLine.end()) ? nullptr : &All[It->second];
 }
 
 llvm::SmallVector<const Include *>

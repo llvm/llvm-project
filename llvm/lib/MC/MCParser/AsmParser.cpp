@@ -74,8 +74,6 @@ using namespace llvm;
 
 MCAsmParserSemaCallback::~MCAsmParserSemaCallback() = default;
 
-extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
-
 namespace {
 
 /// Helper types for tracking macro definitions.
@@ -752,6 +750,8 @@ public:
 } // end anonymous namespace
 
 namespace llvm {
+
+extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
 
 extern MCAsmParserExtension *createDarwinAsmParser();
 extern MCAsmParserExtension *createELFAsmParser();
@@ -3485,11 +3485,11 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
   bool useCodeAlign = Section->useCodeAlign();
   if ((!HasFillExpr || Lexer.getMAI().getTextAlignFillValue() == FillExpr) &&
       ValueSize == 1 && useCodeAlign) {
-    getStreamer().emitCodeAlignment(Alignment, &getTargetParser().getSTI(),
-                                    MaxBytesToFill);
+    getStreamer().emitCodeAlignment(
+        Align(Alignment), &getTargetParser().getSTI(), MaxBytesToFill);
   } else {
     // FIXME: Target specific behavior about how the "extra" bytes are filled.
-    getStreamer().emitValueToAlignment(Alignment, FillExpr, ValueSize,
+    getStreamer().emitValueToAlignment(Align(Alignment), FillExpr, ValueSize,
                                        MaxBytesToFill);
   }
 
@@ -4808,9 +4808,7 @@ bool AsmParser::parseDirectiveBundleAlignMode() {
             "invalid bundle alignment size (expected between 0 and 30)"))
     return true;
 
-  // Because of AlignSizePow2's verified range we can safely truncate it to
-  // unsigned.
-  getStreamer().emitBundleAlignMode(static_cast<unsigned>(AlignSizePow2));
+  getStreamer().emitBundleAlignMode(Align(1ULL << AlignSizePow2));
   return false;
 }
 

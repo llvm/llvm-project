@@ -15,11 +15,11 @@ entry:
 define internal void @__cxx_global_var_init() section ".text.startup" {
 entry:
   %call = call i32 @initializer()
-  store i32 %call, i32* @xxx, align 4
+  store i32 %call, ptr @xxx, align 4
   ret void
 }
 
-@llvm.global_ctors = appending global [2 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @__late_ctor, i8* null }, { i32, void ()*, i8* } { i32 0, void ()* @__early_ctor, i8* null }]
+@llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__late_ctor, ptr null }, { i32, ptr, ptr } { i32 0, ptr @__early_ctor, ptr null }]
 
 define internal void @__late_ctor() sanitize_address section ".text.startup" {
 entry:
@@ -49,7 +49,7 @@ entry:
 
 ; Check that xxx is instrumented.
 define void @touch_xxx() sanitize_address {
-  store i32 0, i32 *@xxx, align 4
+  store i32 0, ptr @xxx, align 4
   ret void
 ; CHECK-LABEL: touch_xxx
 ; CHECK: call void @__asan_report_store4
@@ -58,7 +58,7 @@ define void @touch_xxx() sanitize_address {
 
 ; Check that XXX is instrumented.
 define void @touch_XXX() sanitize_address {
-  store i32 0, i32 *@XXX, align 4
+  store i32 0, ptr @XXX, align 4
   ret void
 ; CHECK: define void @touch_XXX
 ; CHECK: call void @__asan_report_store4
@@ -68,7 +68,7 @@ define void @touch_XXX() sanitize_address {
 
 ; Check that yyy is NOT instrumented (as it does not have dynamic initializer).
 define void @touch_yyy() sanitize_address {
-  store i32 0, i32 *@yyy, align 4
+  store i32 0, ptr @yyy, align 4
   ret void
 ; CHECK: define void @touch_yyy
 ; CHECK-NOT: call void @__asan_report_store4
@@ -77,7 +77,7 @@ define void @touch_yyy() sanitize_address {
 
 ; Check that YYY is NOT instrumented (as it does not have dynamic initializer).
 define void @touch_YYY() sanitize_address {
-  store i32 0, i32 *@YYY, align 4
+  store i32 0, ptr @YYY, align 4
   ret void
 ; CHECK: define void @touch_YYY
 ; CHECK-NOT: call void @__asan_report_store4

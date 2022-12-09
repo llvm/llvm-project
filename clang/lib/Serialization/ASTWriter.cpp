@@ -1979,6 +1979,14 @@ static void emitBlob(llvm::BitstreamWriter &Stream, StringRef Blob,
   // Compress the buffer if possible. We expect that almost all PCM
   // consumers will not want its contents.
   SmallVector<uint8_t, 0> CompressedBuffer;
+  if (llvm::compression::zstd::isAvailable()) {
+    llvm::compression::zstd::compress(
+        llvm::arrayRefFromStringRef(Blob.drop_back(1)), CompressedBuffer, 9);
+    RecordDataType Record[] = {SM_SLOC_BUFFER_BLOB_COMPRESSED, Blob.size() - 1};
+    Stream.EmitRecordWithBlob(SLocBufferBlobCompressedAbbrv, Record,
+                              llvm::toStringRef(CompressedBuffer));
+    return;
+  }
   if (llvm::compression::zlib::isAvailable()) {
     llvm::compression::zlib::compress(
         llvm::arrayRefFromStringRef(Blob.drop_back(1)), CompressedBuffer);
@@ -2998,7 +3006,9 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
       continue;
     ++NumLocations;
 
-    AddFileID(FileIDAndFile.first, Record);
+    SourceLocation Loc = Diag.SourceMgr->getComposedLoc(FileIDAndFile.first, 0);
+    assert(!Loc.isInvalid() && "start loc for valid FileID is invalid");
+    AddSourceLocation(Loc, Record);
 
     Record.push_back(FileIDAndFile.second.StateTransitions.size());
     for (auto &StatePoint : FileIDAndFile.second.StateTransitions) {

@@ -15,6 +15,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include <optional>
 #include <type_traits>
 
 using namespace llvm;
@@ -87,7 +88,7 @@ int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
 double
 MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
                                       const MCSchedClassDesc &SCDesc) {
-  Optional<double> Throughput;
+  std::optional<double> Throughput;
   const MCSchedModel &SM = STI.getSchedModel();
   const MCWriteProcResEntry *I = STI.getWriteProcResBegin(&SCDesc);
   const MCWriteProcResEntry *E = STI.getWriteProcResEnd(&SCDesc);
@@ -133,7 +134,7 @@ MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
 double
 MCSchedModel::getReciprocalThroughput(unsigned SchedClass,
                                       const InstrItineraryData &IID) {
-  Optional<double> Throughput;
+  std::optional<double> Throughput;
   const InstrStage *I = IID.beginStage(SchedClass);
   const InstrStage *E = IID.endStage(SchedClass);
   for (; I != E; ++I) {

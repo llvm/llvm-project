@@ -465,7 +465,7 @@ void MCMachOStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
 
   // The symbol may not be present, which only creates the section.
   if (Symbol) {
-    emitValueToAlignment(ByteAlignment, 0, 1, 0);
+    emitValueToAlignment(Align(ByteAlignment), 0, 1, 0);
     emitLabel(Symbol);
     emitZeros(Size);
   }

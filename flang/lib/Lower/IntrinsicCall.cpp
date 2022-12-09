@@ -530,6 +530,7 @@ struct IntrinsicLibrary {
   mlir::Value genLeadz(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLen(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genLenTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   template <typename Shift>
   mlir::Value genMask(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genMatmul(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -879,6 +880,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"lgt", &I::genCharacterCompare<mlir::arith::CmpIPredicate::sgt>},
     {"lle", &I::genCharacterCompare<mlir::arith::CmpIPredicate::sle>},
     {"llt", &I::genCharacterCompare<mlir::arith::CmpIPredicate::slt>},
+    {"loc", &I::genLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"maskl", &I::genMask<mlir::arith::ShLIOp>},
     {"maskr", &I::genMask<mlir::arith::ShRUIOp>},
     {"matmul",
@@ -2672,6 +2674,22 @@ mlir::Value IntrinsicLibrary::genBtest(mlir::Type resultType,
   return builder.createConvert(loc, resultType, res);
 }
 
+static mlir::Value getAddrFromBox(fir::FirOpBuilder &builder,
+                                  mlir::Location loc, fir::ExtendedValue arg,
+                                  bool isFunc) {
+  mlir::Value argValue = fir::getBase(arg);
+  mlir::Value addr{nullptr};
+  if (isFunc) {
+    auto funcTy = argValue.getType().cast<fir::BoxProcType>().getEleTy();
+    addr = builder.create<fir::BoxAddrOp>(loc, funcTy, argValue);
+  } else {
+    const auto *box = arg.getBoxOf<fir::BoxValue>();
+    addr = builder.create<fir::BoxAddrOp>(loc, box->getMemTy(),
+                                          fir::getBase(*box));
+  }
+  return addr;
+}
+
 static fir::ExtendedValue
 genCLocOrCFunLoc(fir::FirOpBuilder &builder, mlir::Location loc,
                  mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args,
@@ -2680,19 +2698,9 @@ genCLocOrCFunLoc(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Value res = builder.create<fir::AllocaOp>(loc, resultType);
   mlir::Value resAddr =
       fir::factory::genCPtrOrCFunptrAddr(builder, loc, res, resultType);
-  mlir::Value argAddr;
-  if (isFunc) {
-    mlir::Value argValue = fir::getBase(args[0]);
-    assert(argValue.getType().isa<fir::BoxProcType>() &&
-           "c_funloc argument must have been lowered to a fir.boxproc");
-    auto funcTy = argValue.getType().cast<fir::BoxProcType>().getEleTy();
-    argAddr = builder.create<fir::BoxAddrOp>(loc, funcTy, argValue);
-  } else {
-    const auto *box = args[0].getBoxOf<fir::BoxValue>();
-    assert(box && "c_loc argument must have been lowered to a fir.box");
-    argAddr = builder.create<fir::BoxAddrOp>(loc, box->getMemTy(),
-                                             fir::getBase(*box));
-  }
+  assert(fir::isa_box_type(fir::getBase(args[0]).getType()) &&
+         "argument must have been lowered to box type");
+  mlir::Value argAddr = getAddrFromBox(builder, loc, args[0], isFunc);
   mlir::Value argAddrVal = builder.createConvert(
       loc, fir::unwrapRefType(resAddr.getType()), argAddr);
   builder.create<fir::StoreOp>(loc, argAddrVal, resAddr);
@@ -3746,6 +3754,19 @@ IntrinsicLibrary::genCharacterCompare(mlir::Type resultType,
   return fir::runtime::genCharCompare(
       builder, loc, pred, fir::getBase(args[0]), fir::getLen(args[0]),
       fir::getBase(args[1]), fir::getLen(args[1]));
+}
+
+// LOC
+fir::ExtendedValue
+IntrinsicLibrary::genLoc(mlir::Type resultType,
+                         llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value argValue = fir::getBase(args[0]);
+  assert(fir::isa_box_type(argValue.getType()) &&
+         "argument must have been lowered to box type");
+  bool isFunc = argValue.getType().isa<fir::BoxProcType>();
+  mlir::Value argAddr = getAddrFromBox(builder, loc, args[0], isFunc);
+  return builder.createConvert(loc, fir::unwrapRefType(resultType), argAddr);
 }
 
 // MASKL, MASKR

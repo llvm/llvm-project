@@ -18,7 +18,7 @@
 
 namespace llvm {
 
-bool canPeel(Loop *L);
+bool canPeel(const Loop *L);
 
 bool peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI, ScalarEvolution *SE,
               DominatorTree &DT, AssumptionCache *AC, bool PreserveLCSSA);

@@ -18,6 +18,7 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include <optional>
 
 namespace llvm {
 class DiagnosticInfoOptimizationBase;
@@ -117,7 +118,7 @@ private:
   // Make a copy of the FPI of the caller right before inlining. If inlining
   // fails, we can just update the cache with that value.
   const FunctionPropertiesInfo PreInlineCallerFPI;
-  Optional<FunctionPropertiesUpdater> FPU;
+  std::optional<FunctionPropertiesUpdater> FPU;
 };
 
 } // namespace llvm

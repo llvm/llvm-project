@@ -42,6 +42,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -80,7 +81,7 @@ static cl::opt<bool> DisableAdvancedPeeling(
 static const char *PeeledCountMetaData = "llvm.loop.peeled.count";
 
 // Check whether we are capable of peeling this loop.
-bool llvm::canPeel(Loop *L) {
+bool llvm::canPeel(const Loop *L) {
   // Make sure the loop is in simplified form
   if (!L->isLoopSimplifyForm())
     return false;
@@ -100,56 +101,159 @@ bool llvm::canPeel(Loop *L) {
   return llvm::all_of(Exits, IsBlockFollowedByDeoptOrUnreachable);
 }
 
-// This function calculates the number of iterations after which the given Phi
-// becomes an invariant. The pre-calculated values are memorized in the map. The
-// function (shortcut is I) is calculated according to the following definition:
+namespace {
+
+// As a loop is peeled, it may be the case that Phi nodes become
+// loop-invariant (ie, known because there is only one choice).
+// For example, consider the following function:
+//   void g(int);
+//   void binary() {
+//     int x = 0;
+//     int y = 0;
+//     int a = 0;
+//     for(int i = 0; i <100000; ++i) {
+//       g(x);
+//       x = y;
+//       g(a);
+//       y = a + 1;
+//       a = 5;
+//     }
+//   }
+// Peeling 3 iterations is beneficial because the values for x, y and a
+// become known.  The IR for this loop looks something like the following:
+//
+//   %i = phi i32 [ 0, %entry ], [ %inc, %if.end ]
+//   %a = phi i32 [ 0, %entry ], [ 5, %if.end ]
+//   %y = phi i32 [ 0, %entry ], [ %add, %if.end ]
+//   %x = phi i32 [ 0, %entry ], [ %y, %if.end ]
+//   ...
+//   tail call void @_Z1gi(i32 signext %x)
+//   tail call void @_Z1gi(i32 signext %a)
+//   %add = add nuw nsw i32 %a, 1
+//   %inc = add nuw nsw i32 %i, 1
+//   %exitcond = icmp eq i32 %inc, 100000
+//   br i1 %exitcond, label %for.cond.cleanup, label %for.body
+//
+// The arguments for the calls to g will become known after 3 iterations
+// of the loop, because the phi nodes values become known after 3 iterations
+// of the loop (ie, they are known on the 4th iteration, so peel 3 iterations).
+// The first iteration has g(0), g(0); the second has g(0), g(5); the
+// third has g(1), g(5) and the fourth (and all subsequent) have g(6), g(5).
+// Now consider the phi nodes:
+//   %a is a phi with constants so it is determined after iteration 1.
+//   %y is a phi based on a constant and %a so it is determined on
+//     the iteration after %a is determined, so iteration 2.
+//   %x is a phi based on a constant and %y so it is determined on
+//     the iteration after %y, so iteration 3.
+//   %i is based on itself (and is an induction variable) so it is
+//     never determined.
+// This means that peeling off 3 iterations will result in being able to
+// remove the phi nodes for %a, %y, and %x.  The arguments for the
+// corresponding calls to g are determined and the code for computing
+// x, y, and a can be removed.
+//
+// The PhiAnalyzer class calculates how many times a loop should be
+// peeled based on the above analysis of the phi nodes in the loop while
+// respecting the maximum specified.
+class PhiAnalyzer {
+public:
+  PhiAnalyzer(const Loop &L, unsigned MaxIterations);
+
+  // Calculate the sufficient minimum number of iterations of the loop to peel
+  // such that phi instructions become determined (subject to allowable limits)
+  Optional<unsigned> calculateIterationsToPeel();
+
+protected:
+  using PeelCounter = std::optional<unsigned>;
+  const PeelCounter Unknown = None;
+
+  // Add 1 respecting Unknown and return Unknown if result over MaxIterations
+  PeelCounter addOne(PeelCounter PC) const {
+    if (PC == Unknown)
+      return Unknown;
+    return (*PC + 1 <= MaxIterations) ? PeelCounter{*PC + 1} : Unknown;
+  }
+
+  // Calculate the number of iterations after which the given value
+  // becomes an invariant.
+  PeelCounter calculate(const Value &);
+
+  const Loop &L;
+  const unsigned MaxIterations;
+
+  // Map of Values to number of iterations to invariance
+  SmallDenseMap<const Value *, PeelCounter> IterationsToInvariance;
+};
+
+PhiAnalyzer::PhiAnalyzer(const Loop &L, unsigned MaxIterations)
+    : L(L), MaxIterations(MaxIterations) {
+  assert(canPeel(&L) && "loop is not suitable for peeling");
+  assert(MaxIterations > 0 && "no peeling is allowed?");
+}
+
+// This function calculates the number of iterations after which the value
+// becomes an invariant. The pre-calculated values are memorized in a map.
+// N.B. This number will be Unknown or <= MaxIterations.
+// The function is calculated according to the following definition:
 // Given %x = phi <Inputs from above the loop>, ..., [%y, %back.edge].
-//   If %y is a loop invariant, then I(%x) = 1.
-//   If %y is a Phi from the loop header, I(%x) = I(%y) + 1.
-//   Otherwise, I(%x) is infinite.
-// TODO: Actually if %y is an expression that depends only on Phi %z and some
-//       loop invariants, we can estimate I(%x) = I(%z) + 1. The example
-//       looks like:
-//         %x = phi(0, %a),  <-- becomes invariant starting from 3rd iteration.
-//         %y = phi(0, 5),
-//         %a = %y + 1.
-static Optional<unsigned> calculateIterationsToInvariance(
-    PHINode *Phi, Loop *L, BasicBlock *BackEdge,
-    SmallDenseMap<PHINode *, Optional<unsigned> > &IterationsToInvariance) {
-  assert(Phi->getParent() == L->getHeader() &&
-         "Non-loop Phi should not be checked for turning into invariant.");
-  assert(BackEdge == L->getLoopLatch() && "Wrong latch?");
+//   F(%x) = G(%y) + 1 (N.B. [MaxIterations | Unknown] + 1 => Unknown)
+//   G(%y) = 0 if %y is a loop invariant
+//   G(%y) = G(%BackEdgeValue) if %y is a phi in the header block
+//   G(%y) = TODO: if %y is an expression based on phis and loop invariants
+//           The example looks like:
+//           %x = phi(0, %a) <-- becomes invariant starting from 3rd iteration.
+//           %y = phi(0, 5)
+//           %a = %y + 1
+//   G(%y) = Unknown otherwise (including phi not in header block)
+PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(const Value &V) {
   // If we already know the answer, take it from the map.
-  auto I = IterationsToInvariance.find(Phi);
+  auto I = IterationsToInvariance.find(&V);
   if (I != IterationsToInvariance.end())
     return I->second;
 
-  // Otherwise we need to analyze the input from the back edge.
-  Value *Input = Phi->getIncomingValueForBlock(BackEdge);
-  // Place infinity to map to avoid infinite recursion for cycled Phis. Such
+  // Place Unknown to map to avoid infinite recursion. Such
   // cycles can never stop on an invariant.
-  IterationsToInvariance[Phi] = None;
-  Optional<unsigned> ToInvariance;
+  IterationsToInvariance[&V] = Unknown;
 
-  if (L->isLoopInvariant(Input))
-    ToInvariance = 1u;
-  else if (PHINode *IncPhi = dyn_cast<PHINode>(Input)) {
-    // Only consider Phis in header block.
-    if (IncPhi->getParent() != L->getHeader())
-      return None;
-    // If the input becomes an invariant after X iterations, then our Phi
-    // becomes an invariant after X + 1 iterations.
-    auto InputToInvariance = calculateIterationsToInvariance(
-        IncPhi, L, BackEdge, IterationsToInvariance);
-    if (InputToInvariance)
-      ToInvariance = *InputToInvariance + 1u;
+  if (L.isLoopInvariant(&V))
+    // Loop invariant so known at start.
+    return (IterationsToInvariance[&V] = 0);
+  if (const PHINode *Phi = dyn_cast<PHINode>(&V)) {
+    if (Phi->getParent() != L.getHeader()) {
+      // Phi is not in header block so Unknown.
+      assert(IterationsToInvariance[&V] == Unknown && "unexpected value saved");
+      return Unknown;
+    }
+    // We need to analyze the input from the back edge and add 1.
+    Value *Input = Phi->getIncomingValueForBlock(L.getLoopLatch());
+    PeelCounter Iterations = calculate(*Input);
+    assert(IterationsToInvariance[Input] == Iterations &&
+           "unexpected value saved");
+    return (IterationsToInvariance[Phi] = addOne(Iterations));
   }
+  // TODO: handle expressions
 
-  // If we found that this Phi lies in an invariant chain, update the map.
-  if (ToInvariance)
-    IterationsToInvariance[Phi] = ToInvariance;
-  return ToInvariance;
+  // Everything else is Unknown.
+  assert(IterationsToInvariance[&V] == Unknown && "unexpected value saved");
+  return Unknown;
 }
+
+Optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
+  unsigned Iterations = 0;
+  for (auto &PHI : L.getHeader()->phis()) {
+    PeelCounter ToInvariance = calculate(PHI);
+    if (ToInvariance != Unknown) {
+      assert(*ToInvariance <= MaxIterations && "bad result in phi analysis");
+      Iterations = std::max(Iterations, *ToInvariance);
+      if (Iterations == MaxIterations)
+        break;
+    }
+  }
+  assert((Iterations <= MaxIterations) && "bad result in phi analysis");
+  return Iterations ? Optional<unsigned>(Iterations) : None;
+}
+
+} // unnamed namespace
 
 // Try to find any invariant memory reads that will become dereferenceable in
 // the remainder loop after peeling. The load must also be used (transitively)
@@ -395,32 +499,25 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   if (AlreadyPeeled >= UnrollPeelMaxCount)
     return;
 
+  // Pay respect to limitations implied by loop size and the max peel count.
+  unsigned MaxPeelCount = UnrollPeelMaxCount;
+  MaxPeelCount = std::min(MaxPeelCount, Threshold / LoopSize - 1);
+
+  // Start the max computation with the PP.PeelCount value set by the target
+  // in TTI.getPeelingPreferences or by the flag -unroll-peel-count.
+  unsigned DesiredPeelCount = TargetPeelCount;
+
   // Here we try to get rid of Phis which become invariants after 1, 2, ..., N
   // iterations of the loop. For this we compute the number for iterations after
   // which every Phi is guaranteed to become an invariant, and try to peel the
   // maximum number of iterations among these values, thus turning all those
   // Phis into invariants.
-
-  // Store the pre-calculated values here.
-  SmallDenseMap<PHINode *, Optional<unsigned>> IterationsToInvariance;
-  // Now go through all Phis to calculate their the number of iterations they
-  // need to become invariants.
-  // Start the max computation with the PP.PeelCount value set by the target
-  // in TTI.getPeelingPreferences or by the flag -unroll-peel-count.
-  unsigned DesiredPeelCount = TargetPeelCount;
-  BasicBlock *BackEdge = L->getLoopLatch();
-  assert(BackEdge && "Loop is not in simplified form?");
-  for (auto BI = L->getHeader()->begin(); isa<PHINode>(&*BI); ++BI) {
-    PHINode *Phi = cast<PHINode>(&*BI);
-    auto ToInvariance = calculateIterationsToInvariance(Phi, L, BackEdge,
-                                                        IterationsToInvariance);
-    if (ToInvariance)
-      DesiredPeelCount = std::max(DesiredPeelCount, *ToInvariance);
+  if (MaxPeelCount > DesiredPeelCount) {
+    // Check how many iterations are useful for resolving Phis
+    auto NumPeels = PhiAnalyzer(*L, MaxPeelCount).calculateIterationsToPeel();
+    if (NumPeels)
+      DesiredPeelCount = std::max(DesiredPeelCount, *NumPeels);
   }
-
-  // Pay respect to limitations implied by loop size and the max peel count.
-  unsigned MaxPeelCount = UnrollPeelMaxCount;
-  MaxPeelCount = std::min(MaxPeelCount, Threshold / LoopSize - 1);
 
   DesiredPeelCount = std::max(DesiredPeelCount,
                               countToEliminateCompares(*L, MaxPeelCount, SE));
@@ -673,7 +770,7 @@ static void cloneLoopBlocks(
       else
         VMap[&*I] = LatchVal;
     }
-    cast<BasicBlock>(VMap[Header])->getInstList().erase(NewPHI);
+    NewPHI->eraseFromParent();
   }
 
   // Fix up the outgoing values - we need to add a value for the iteration

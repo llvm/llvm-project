@@ -193,7 +193,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 define dso_local i32 @bar(i32 signext %i) local_unnamed_addr {
 entry:
   %idxprom = sext i32 %i to i64
-  %arrayidx = getelementptr inbounds [5 x i32], [5 x i32]* @block, i64 0, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds [5 x i32], ptr @block, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 8
   ret i32 %0
 }

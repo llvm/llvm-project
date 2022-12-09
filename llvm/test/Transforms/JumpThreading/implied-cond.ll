@@ -1,4 +1,4 @@
-; RUN: opt -jump-threading -S < %s | FileCheck %s
+; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
 
 declare void @side_effect(i32)
 
@@ -62,7 +62,7 @@ define void @test1(i32 %i, i32 %len) {
   ret void
 }
 
-define void @test2(i32 %i, i32 %len, i1* %c.ptr) {
+define void @test2(i32 %i, i32 %len, ptr %c.ptr) {
 ; CHECK-LABEL: @test2(
 
 ; CHECK: entry:
@@ -79,7 +79,7 @@ define void @test2(i32 %i, i32 %len, i1* %c.ptr) {
   br i1 %c0, label %cont, label %right
 
  cont:
-  %c = load i1, i1* %c.ptr
+  %c = load i1, ptr %c.ptr
   br i1 %c, label %left, label %right
 
  left:

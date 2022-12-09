@@ -30,19 +30,19 @@ target triple = "wasm32-unknown-unknown"
 ; @foo - @bar
 @foo = external global i32, align 4
 @bar = constant i32 sub (
-    i32 ptrtoint (i32* @foo to i32),
-    i32 ptrtoint (i32* @bar to i32)
+    i32 ptrtoint (ptr @foo to i32),
+    i32 ptrtoint (ptr @bar to i32)
 ), section ".sec1"
 
 
 ; @foo - @addend + 4
 @fizz = constant i32 42, align 4, section ".sec2"
 @addend = constant i32 sub (
-    i32 ptrtoint (i32* @foo to i32),
-    i32 ptrtoint (i32* @fizz to i32)
+    i32 ptrtoint (ptr @foo to i32),
+    i32 ptrtoint (ptr @fizz to i32)
 ), section ".sec2"
 
 @x_sec = constant i32 sub (
-    i32 ptrtoint (i32* @fizz to i32),
-    i32 ptrtoint (i32* @x_sec to i32)
+    i32 ptrtoint (ptr @fizz to i32),
+    i32 ptrtoint (ptr @x_sec to i32)
 ), section ".sec1"

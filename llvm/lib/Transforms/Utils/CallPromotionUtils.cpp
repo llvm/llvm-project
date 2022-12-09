@@ -415,18 +415,8 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
   // site.
   unsigned I = 0;
   for (; I < NumParams; ++I) {
-    Type *FormalTy = Callee->getFunctionType()->getFunctionParamType(I);
-    Type *ActualTy = CB.getArgOperand(I)->getType();
-    if (FormalTy == ActualTy)
-      continue;
-    if (!CastInst::isBitOrNoopPointerCastable(ActualTy, FormalTy, DL)) {
-      if (FailureReason)
-        *FailureReason = "Argument type mismatch";
-      return false;
-    }
     // Make sure that the callee and call agree on byval/inalloca. The types do
     // not have to match.
-
     if (Callee->hasParamAttribute(I, Attribute::ByVal) !=
         CB.getAttributes().hasParamAttr(I, Attribute::ByVal)) {
       if (FailureReason)
@@ -437,6 +427,16 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
         CB.getAttributes().hasParamAttr(I, Attribute::InAlloca)) {
       if (FailureReason)
         *FailureReason = "inalloca mismatch";
+      return false;
+    }
+
+    Type *FormalTy = Callee->getFunctionType()->getFunctionParamType(I);
+    Type *ActualTy = CB.getArgOperand(I)->getType();
+    if (FormalTy == ActualTy)
+      continue;
+    if (!CastInst::isBitOrNoopPointerCastable(ActualTy, FormalTy, DL)) {
+      if (FailureReason)
+        *FailureReason = "Argument type mismatch";
       return false;
     }
   }

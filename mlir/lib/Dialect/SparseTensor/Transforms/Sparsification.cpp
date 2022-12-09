@@ -90,6 +90,11 @@ struct CodeGen {
   // Topsort (reference should remain in scope).
   std::vector<unsigned> &topSort;
 
+  ArrayRef<unsigned> getLoopCurStack() const {
+    ArrayRef<unsigned> topSortRef = topSort;
+    return topSortRef.slice(0, loopEmitter.getCurrentDepth());
+  }
+
   Value getLoopIdxValue(size_t loopIdx) const {
     for (unsigned lv = 0; lv < topSort.size(); lv++)
       if (topSort[lv] == loopIdx)
@@ -134,29 +139,93 @@ private:
 // Sparse compiler analysis methods.
 //===----------------------------------------------------------------------===//
 
+/// Determines if affine expression is invariant.
+static bool isInvariantAffine(AffineExpr a, ArrayRef<unsigned> loopStack,
+                              unsigned ldx, bool &atLevel) {
+  switch (a.getKind()) {
+  case AffineExprKind::DimId: {
+    unsigned idx = a.cast<AffineDimExpr>().getPosition();
+    if (idx == ldx) {
+      atLevel = true;
+      // Must be invariant if we are at the level.
+      return true;
+    }
+    bool isInvariant = false;
+    for (unsigned loop : loopStack) {
+      isInvariant = (loop == idx);
+      if (isInvariant)
+        break;
+    }
+    return isInvariant;
+  }
+  case AffineExprKind::Add:
+  case AffineExprKind::Mul: {
+    auto binOp = a.cast<AffineBinaryOpExpr>();
+    return isInvariantAffine(binOp.getLHS(), loopStack, ldx, atLevel) &&
+           isInvariantAffine(binOp.getRHS(), loopStack, ldx, atLevel);
+  }
+  default: {
+    assert(a.isa<AffineConstantExpr>());
+    return true;
+  }
+  }
+}
+
+/// Determines if affine expression is invariant.
+static bool isInvariantAffine(const CodeGen &codegen, AffineExpr a,
+                              unsigned ldx, bool &atLevel) {
+  return isInvariantAffine(a, codegen.getLoopCurStack(), ldx, atLevel);
+}
+
 /// Helper method to construct a permuted dimension ordering
 /// that adheres to the given topological sort.
-static AffineMap permute(MLIRContext *context, AffineMap m,
-                         std::vector<unsigned> &topSort) {
-  unsigned sz = topSort.size();
-  assert(m.getNumResults() == sz && "TopoSort/AffineMap size mismatch");
+static AffineMap permute(const Merger &merger, MLIRContext *context,
+                         AffineMap m, ArrayRef<unsigned> topSort) {
+  assert(m.getNumDims() + merger.getNumFilterLoops() == topSort.size() &&
+         "TopoSort/AffineMap size mismatch");
   // Construct the inverse of `m`; to avoid the asymptotic complexity
   // of calling `m.getPermutedPosition` repeatedly.
-  SmallVector<unsigned> inv(sz);
-  for (unsigned i = 0; i < sz; i++)
-    inv[i] = m.getDimPosition(i);
+  SmallVector<unsigned> perm;
+  unsigned numResults = m.getNumResults();
+  BitVector worklist(numResults, true);
+  unsigned loopDepth = 1;
+
   // Construct the permutation.
-  SmallVector<unsigned> perm(sz);
-  for (unsigned i = 0; i < sz; i++)
-    perm[i] = inv[topSort[i]];
+  while (worklist.any() && loopDepth <= topSort.size()) {
+    unsigned preSize = perm.size();
+    for (auto dim : worklist.set_bits()) {
+      bool atLevel = false;
+      if (m.getResult(dim).isa<AffineConstantExpr>() ||
+          (isInvariantAffine(m.getResult(dim), topSort.slice(0, loopDepth),
+                             topSort[loopDepth - 1], atLevel) &&
+           atLevel)) {
+        // If the matching affine is constant expression or just become
+        // invariant. We can visit the dimension now without breaking the
+        // topSort constraint.
+        perm.push_back(dim);
+      }
+    }
+
+    // Removes resolved dimension.
+    for (unsigned i = preSize, e = perm.size(); i < e; i++)
+      worklist.reset(perm[i]);
+
+    // Tries to entering the next loop level.
+    loopDepth += 1;
+  }
+
+  assert(perm.size() == numResults);
   return AffineMap::getPermutationMap(perm, context);
 }
 
 /// Helper method to inspect affine expressions. Rejects cases where the
 /// same index is used more than once. Also rejects compound affine
 /// expressions in sparse dimensions.
+/// filterIdx stores the current filter loop idx should be used for the next
+/// compound affine sparse level, and it will be incremented by one when
+/// used.
 static bool findAffine(Merger &merger, unsigned tensor, unsigned dim,
-                       AffineExpr a, DimLevelType dlt,
+                       AffineExpr a, DimLevelType dlt, unsigned &filterLdx,
                        bool setLvlFormat = true) {
   switch (a.getKind()) {
   case AffineExprKind::DimId: {
@@ -169,20 +238,66 @@ static bool findAffine(Merger &merger, unsigned tensor, unsigned dim,
     return true;
   }
   case AffineExprKind::Add:
-  case AffineExprKind::Mul: {
-    if (!isDenseDLT(dlt))
-      return false; // compound only in dense dim
-    auto binOp = a.cast<AffineBinaryOpExpr>();
-    // We do not set dim level format for affine expresssion like d0 + d1 on
-    // both loop index at d0 and d1,
-    return findAffine(merger, tensor, dim, binOp.getLHS(), dlt, false) &&
-           findAffine(merger, tensor, dim, binOp.getRHS(), dlt, false);
+  case AffineExprKind::Mul:
+  case AffineExprKind::Constant: {
+    if (!isDenseDLT(dlt) && setLvlFormat) {
+      assert(isUndefDLT(merger.getDimLevelType(tensor, filterLdx)));
+      // Use a filter loop for sparse affine expression.
+      merger.setDimAndDimLevelType(tensor, filterLdx++, dim, dlt);
+    }
+
+    if (auto binOp = a.dyn_cast<AffineBinaryOpExpr>()) {
+      // We do not set dim level format for affine expresssion like d0 + d1 on
+      // either loop index at d0 or d1.
+      // We continue the recursion merely to check whether current affine is
+      // admissible or not.
+      return findAffine(merger, tensor, dim, binOp.getLHS(), dlt, filterLdx,
+                        false) &&
+             findAffine(merger, tensor, dim, binOp.getRHS(), dlt, filterLdx,
+                        false);
+    }
+    // Falls through when it is a constant Affine
+    return true;
   }
-  case AffineExprKind::Constant:
-    return isDenseDLT(dlt); // const only in dense dim
   default:
     return false;
   }
+}
+
+/// Get the total number of compound affine expressions in affineMap that are
+/// attached to the given tensor. For the following inputs:
+///
+/// affineMap = (d0, d1, d2) => (d0 + d1, d2)
+/// tensor = ["compressed", "compressed"]
+///
+/// Returns 1 (because the first level is compressed and its corresponding
+/// affineMap is d0 + d1)
+static unsigned getNumCompoundAffineOnSparseDims(AffineMap affineMap,
+                                                 Value tensor) {
+  unsigned num = 0;
+  auto enc = getSparseTensorEncoding(tensor.getType());
+  if (enc) {
+    ArrayRef<AffineExpr> exps = affineMap.getResults();
+    for (unsigned rank = 0; rank < exps.size(); rank++) {
+      auto aidx = toOrigDim(enc, rank);
+      auto affine = exps[aidx];
+      if (!affine.isa<AffineDimExpr>())
+        if (!isDenseDLT(getDimLevelType(enc, rank)))
+          num++;
+    }
+  }
+
+  return num;
+}
+
+/// Get the total number of compound affine expressions attached on a sparse
+/// level in the given GenericOp.
+static unsigned getNumCompoundAffineOnSparseDims(linalg::GenericOp op) {
+  unsigned num = 0;
+  for (OpOperand &t : op->getOpOperands())
+    num += getNumCompoundAffineOnSparseDims(op.getMatchingIndexingMap(&t),
+                                            t.get());
+  return num;
 }
 
 /// Helper method to inspect sparse encodings in the tensor types.
@@ -192,19 +307,22 @@ static bool findAffine(Merger &merger, unsigned tensor, unsigned dim,
 /// no annotations are found or inadmissible constructs occur.
 static bool findSparseAnnotations(Merger &merger, linalg::GenericOp op) {
   bool annotated = false;
+  unsigned filterLdx = merger.getFilterLoopStartingIdx();
   for (OpOperand &t : op->getOpOperands()) {
     auto map = op.getMatchingIndexingMap(&t);
     auto enc = getSparseTensorEncoding(t.get().getType());
     if (enc)
       annotated = true;
     assert(map.getNumResults() == op.getRank(&t));
+
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
       unsigned tensor = t.getOperandNumber();
       AffineExpr a = map.getResult(toOrigDim(enc, d));
-      if (!findAffine(merger, tensor, d, a, getDimLevelType(enc, d)))
+      if (!findAffine(merger, tensor, d, a, getDimLevelType(enc, d), filterLdx))
         return false; // inadmissible affine expression
     }
   }
+  assert(filterLdx == merger.getNumLoops());
   return annotated;
 }
 
@@ -214,34 +332,58 @@ static bool findSparseAnnotations(Merger &merger, linalg::GenericOp op) {
 /// latest possible index.
 static bool topSortOptimal(unsigned n,
                            ArrayRef<utils::IteratorType> iteratorTypes,
-                           std::vector<unsigned> &topSort,
+                           const Merger &merger, std::vector<unsigned> &topSort,
                            std::vector<unsigned> &inDegree,
                            std::vector<std::vector<bool>> &adjM) {
-  std::vector<unsigned> redIt; // reduce iterator with 0 degree
-  std::vector<unsigned> parIt; // parallel iterator with 0 degree
+  std::vector<unsigned> redIt;    // reduce iterator with 0 degree
+  std::vector<unsigned> parIt;    // parallel iterator with 0 degree
+  std::vector<unsigned> filterIt; // filter loop with 0 degree
   for (unsigned i = 0; i < n; i++) {
     if (inDegree[i] == 0) {
-      if (linalg::isReductionIterator(iteratorTypes[i]))
+      if (merger.isFilterLoop(i))
+        filterIt.push_back(i);
+      else if (linalg::isReductionIterator(iteratorTypes[i]))
         redIt.push_back(i);
       else
         parIt.push_back(i);
     }
   }
 
-  while (!redIt.empty() || !parIt.empty()) {
-    // We always choose parallel iterator if there is any.
-    auto &it = !parIt.empty() ? parIt : redIt;
+  while (!redIt.empty() || !parIt.empty() || !filterIt.empty()) {
+    // We always choose in order of filter loop -> parallel loop -> reduction
+    // loop because
+    // 1. Putting reduction loop early might make the loop sequence
+    // inadmissible.
+    // 2. Filter loops should be put as early as possible for better
+    // performance, since only one (if any) iteration will carry the
+    // computation. E.g., for (1 to N)
+    //  for (1 to M)
+    //    for (1 to K)
+    //      if (xxx)
+    //        O(X) computation  => O(NMK+NMX) time complexity
+    //
+    // By putting the filter loop one level up, we got
+    //
+    // for (1 to N)
+    //  for (1 to K)
+    //    if (xxx)
+    //      for (1 to M)
+    //        O(X) computation  => O(NK+NMX) time complexity
+    auto &it = !filterIt.empty() ? filterIt : (!parIt.empty() ? parIt : redIt);
     auto src = it.back();
     topSort.push_back(src);
     it.pop_back();
     // Update in-degree, and push 0-degree node into worklist.
-    for (unsigned dst = 0; dst < n; dst++)
+    for (unsigned dst = 0; dst < n; dst++) {
       if (adjM[src][dst] && --inDegree[dst] == 0) {
-        if (linalg::isReductionIterator(iteratorTypes[dst]))
+        if (merger.isFilterLoop(dst))
+          filterIt.push_back(dst);
+        else if (linalg::isReductionIterator(iteratorTypes[dst]))
           redIt.push_back(dst);
         else
           parIt.push_back(dst);
       }
+    }
   }
   return topSort.size() == n;
 }
@@ -340,19 +482,16 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
                                   OpOperand *skip = nullptr) {
   // Set up an n x n from/to adjacency matrix of the iteration graph
   // for the implicit loop indices i_0 .. i_n-1.
-  unsigned n = op.getNumLoops();
+  unsigned n = merger.getNumLoops();
   std::vector<std::vector<bool>> adjM(n, std::vector<bool>(n, false));
   std::vector<unsigned> inDegree(n, 0); // in-degree of each node.
   auto iteratorTypes = op.getIteratorTypesArray();
   // Iterate over the indexing maps of every tensor in the tensor expression.
   for (OpOperand &t : op->getOpOperands()) {
-    // Skip tensor during cycle resolution.
-    if (&t == skip)
-      continue;
     // Get map and encoding.
     auto map = op.getMatchingIndexingMap(&t);
     auto enc = getSparseTensorEncoding(t.get().getType());
-    assert(map.getNumDims() == n);
+    assert(map.getNumDims() + getNumCompoundAffineOnSparseDims(op) == n);
     // Skip dense tensor constraints when not requested.
     if (!(mask & SortMask::kIncludeDense) && !enc)
       continue;
@@ -363,6 +502,24 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
       AffineExpr ta = map.getResult(toOrigDim(enc, d));
       Optional<unsigned> tldx = merger.getLoopIdx(t.getOperandNumber(), d);
+
+      // Filter loops should be constructed after all the dependent loops,
+      // i.e., d0 + d1 < filter_loop(d0 + d1)
+      if (tldx && merger.isFilterLoop(tldx.value())) {
+        assert(!ta.isa<AffineDimExpr>() &&
+               !isDenseDLT(getDimLevelType(enc, d)));
+        addAffineOrderings(adjM, inDegree, ta, AffineExpr(), llvm::None, tldx);
+        // Now that the ordering of affine expression is captured by filter
+        // loop idx, we only need to ensure the affine ordering against filter
+        // loop. Thus, we reset the affine express to nil here to mark it as
+        // resolved.
+        ta = AffineExpr();
+      }
+
+      // Skip tensor during cycle resolution, though order between filter loop
+      // and dependent loops need to be guaranteed unconditionally.
+      if (&t == skip)
+        continue;
 
       if (d > 0) {
         AffineExpr fa = map.getResult(toOrigDim(enc, d - 1));
@@ -377,6 +534,11 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
         if (!(mask & SortMask::kIncludeDense))
           tryLoosenAffineDenseConstraints(op, fldx, fa, tldx, ta);
 
+        // (d0 + d1) < (d2 + d3), or
+        // filter_loop_d-1 < (d2 + d3), or
+        // (d0 + d1) < filter_loop_d, or
+        // filter_loop_d-1 < filter_loop_d depending on whether fa/ta is reset
+        // above.
         addAffineOrderings(adjM, inDegree, fa, ta, fldx, tldx);
       }
     }
@@ -402,7 +564,7 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
   // Report failure for a cyclic iteration graph.
   topSort.clear();
   topSort.reserve(n);
-  return topSortOptimal(n, iteratorTypes, topSort, inDegree, adjM);
+  return topSortOptimal(n, iteratorTypes, merger, topSort, inDegree, adjM);
 }
 
 /// Returns true if tensor materializes uninitialized into the computation.
@@ -430,9 +592,8 @@ static bool isAdmissibleTensorExp(Merger &merger, linalg::GenericOp op,
   // An all-dense annotated "sparse" output tensor becomes a linearized random
   // access 1-dim memref. Also admissible since insertions cannot occur.
   bool allDense = true;
-  auto iteratorTypes = op.getIteratorTypesArray();
-  unsigned numLoops = iteratorTypes.size();
-  for (unsigned i = 0; i < numLoops; i++)
+  unsigned numLoops = merger.getNumLoops(); // numNativeLoops + numFilterLoops
+  for (unsigned i = 0; i < merger.getNumLoops(); i++)
     if (isCompressedDLT(merger.getDimLevelType(tensor, i)) ||
         isSingletonDLT(merger.getDimLevelType(tensor, i))) {
       allDense = false;
@@ -443,19 +604,31 @@ static bool isAdmissibleTensorExp(Merger &merger, linalg::GenericOp op,
     }
   if (allDense)
     return true;
+
+  // TODO: support compound affine expression on sparse output.
+  if (getNumCompoundAffineOnSparseDims(op.getMatchingIndexingMap(lhs),
+                                       lhs->get()) != 0)
+    return false;
+
   // A tensor expression with a sparse output tensor that changes its values
   // but not its nonzero structure, an operation called "simply dynamic" in
   // [Bik96,Ch9], is also admissible without special codegen.
   if (merger.isSingleCondition(tensor, exp))
     return true;
+
   // Accept "truly dynamic" if the output tensor materializes uninitialized
   // into the computation and insertions occur in lexicographic index order.
   if (isMaterializing(lhs->get())) {
+    auto iteratorTypes = op.getIteratorTypesArray();
     unsigned nest = 0;
     for (unsigned i = 0; i < numLoops; i++) {
-      if (linalg::isReductionIterator(iteratorTypes[topSort[i]]))
-        break; // terminate at first reduction
-      nest++;
+      if (!merger.isFilterLoop(topSort[i])) {
+        // We only count non-filter loops as filter loops should be considered
+        // as a special type of parallel loops.
+        if (linalg::isReductionIterator(iteratorTypes[topSort[i]]))
+          break; // terminate at first reduction
+        nest++;
+      }
     }
     // Determine admissible dynamic insertion situations:
     // (1) fully injective, since there are no reductions,
@@ -840,30 +1013,6 @@ static Value genExp(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
   return ee;
 }
 
-/// Determines if affine expression is invariant.
-static bool isInvariantAffine(const CodeGen &codegen, AffineExpr a,
-                              unsigned ldx, bool &atLevel) {
-  switch (a.getKind()) {
-  case AffineExprKind::DimId: {
-    unsigned idx = a.cast<AffineDimExpr>().getPosition();
-    if (idx == ldx) {
-      atLevel = true;
-      // Must be invariant if we are at the level.
-      return true;
-    }
-    return codegen.getLoopIdxValue(idx) != nullptr; // no longer in play?
-  }
-  case AffineExprKind::Add:
-  case AffineExprKind::Mul: {
-    auto binOp = a.cast<AffineBinaryOpExpr>();
-    return isInvariantAffine(codegen, binOp.getLHS(), ldx, atLevel) &&
-           isInvariantAffine(codegen, binOp.getRHS(), ldx, atLevel);
-  }
-  default:
-    return true;
-  }
-}
-
 /// Hoists loop invariant tensor loads for which indices have been exhausted.
 static void genInvariants(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                           linalg::GenericOp op, unsigned exp, unsigned ldx,
@@ -878,7 +1027,14 @@ static void genInvariants(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     auto enc = getSparseTensorEncoding(t.get().getType());
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
       AffineExpr a = map.getResult(toOrigDim(enc, d));
-      if (!isInvariantAffine(codegen, a, ldx, atLevel))
+      Optional<unsigned> sldx = merger.getLoopIdx(t.getOperandNumber(), d);
+      if (sldx && merger.isFilterLoop(sldx.value())) {
+        if (!codegen.getLoopIdxValue(sldx.value()))
+          // The filter loops has not been constructed.
+          return;
+        if (sldx.value() == ldx)
+          atLevel = true;
+      } else if (!isInvariantAffine(codegen, a, ldx, atLevel))
         return; // still in play
     }
     // All exhausted at this level (atLevel denotes exactly at this level).
@@ -997,13 +1153,24 @@ static Operation *genFor(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                          ArrayRef<size_t> extraTids,
                          ArrayRef<size_t> extraDims) {
   Location loc = op.getLoc();
-  auto iteratorTypes = op.getIteratorTypesArray();
   bool isSparse = isCompressedDLT(merger.getDimLevelType(tid, idx)) ||
                   isSingletonDLT(merger.getDimLevelType(tid, idx));
   bool isParallel = isParallelFor(codegen, isOuter, isSparse);
 
   Operation *loop =
       genLoopBoundary(codegen, merger, [&](MutableArrayRef<Value> reduc) {
+        if (merger.isFilterLoop(idx)) {
+          // extraTids/extraDims must be empty because filter loops only
+          // corresponding to the one and only sparse tensor level.
+          assert(isSparse && extraTids.empty() && extraDims.empty());
+          OpOperand *t = &op->getOpOperand(tid);
+          auto enc = getSparseTensorEncoding(t->get().getType());
+          // Retrieves the affine expression for the filter loop.
+          AffineExpr a =
+              op.getMatchingIndexingMap(t).getResult(toOrigDim(enc, dim));
+          return codegen.loopEmitter.enterFilterLoopOverTensorAtDim(
+              builder, loc, tid, dim, a, reduc);
+        }
         return codegen.loopEmitter.enterLoopOverTensorAtDim(
             builder, loc, tid, dim, reduc, isParallel, extraTids, extraDims);
       }).value();
@@ -1189,6 +1356,42 @@ static bool startLoopSeq(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   return false;
 }
 
+static void genConstantDenseAddressFromLevel(CodeGen &codegen,
+                                             OpBuilder &builder,
+                                             linalg::GenericOp op, unsigned tid,
+                                             unsigned lvl) {
+  // TODO: Handle affine expression on output tensor.
+  assert(tid < op.getNumDpsInputs());
+
+  OpOperand *input = op.getDpsInputOperands()[tid];
+  ArrayRef<AffineExpr> affines = op.getMatchingIndexingMap(input).getResults();
+  auto enc = getSparseTensorEncoding(input->get().getType());
+  if (enc) {
+    for (unsigned i = lvl, e = affines.size(); i < e; i++) {
+      AffineExpr affine = affines[toOrigDim(enc, i)];
+      if (isDenseDLT(getDimLevelType(enc, i)) &&
+          affine.isa<AffineConstantExpr>()) {
+        codegen.loopEmitter.genDenseAffineAddressAtCurLevel(
+            builder, op.getLoc(), input->getOperandNumber(), i, affine);
+      } else {
+        // Breaks on first non-dense non-constant level.
+        return;
+      }
+    }
+  }
+}
+
+static void genInitConstantDenseAddress(CodeGen &codegen,
+                                        RewriterBase &rewriter,
+                                        linalg::GenericOp op) {
+  // We can generates address for constant affine expression before any loops
+  // starting from the first level as they do not depend on any thing.
+  // E.g., [Dense, Dense, Sparse] -> (1, 2, d0), the addresses for the first two
+  // levels can be determined before loops.
+  for (unsigned tid = 0, e = op.getNumDpsInputs(); tid < e; tid++)
+    genConstantDenseAddressFromLevel(codegen, rewriter, op, tid, 0);
+}
+
 static void translateBitsToTidDimPairs(
     Merger &merger, CodeGen &codegen, linalg::GenericOp op, unsigned li,
     unsigned idx, SmallVectorImpl<size_t> &condTids,
@@ -1244,30 +1447,22 @@ static void translateBitsToTidDimPairs(
         if (exp.isa<AffineDimExpr>() || !isDenseDLT(getDimLevelType(enc, i)))
           continue;
 
-        // Constant affine expressions on dense level required to be generated
-        // when
-        // 1. The previous level is an (at-level) invariant compound dense
-        // affine (with no corresponding loop idx); or
-        // 2. The previous level is being generated right now.
-        if (exp.isa<AffineConstantExpr>()) {
-          // TODO:  Should we come up with a more adhersive way to handle
-          // constant expression? We now requires two (somehow ad-hoc) code for
-          // it.
-          assert(false && "do not support constant affine");
-        }
-
-        bool atLevel = false;
-        if (isInvariantAffine(codegen, exp, idx, atLevel) && atLevel) {
-          // If the compound affine is invariant and we are right at the
-          // level. We need to generate the address according to the affine
-          // expression. This is also the best place we can do it to avoid
-          // putting it inside inner loops.
-          // NOTE: It assumes that the levels of the input tensor are
-          // initialized in order, another more admissible approach might be
-          // accepting out-of-order access between consecutive dense levels.
-          affineTids.push_back(tid);
-          affineDims.push_back(i);
-          exps.push_back(exp);
+        // Constant affine expression are handled in genLoop
+        if (!exp.isa<AffineConstantExpr>()) {
+          bool atLevel = false;
+          if (isInvariantAffine(codegen, exp, idx, atLevel) && atLevel) {
+            // If the compound affine is invariant and we are right at the
+            // level. We need to generate the address according to the affine
+            // expression. This is also the best place we can do it to avoid
+            // putting it inside inner loops.
+            // NOTE: It assumes that the levels of the input tensor are
+            // initialized in order (and it is also currently guaranteed by
+            // computeIterationGraph), another more admissible approach might be
+            // accepting out-of-order access between consecutive dense levels.
+            affineTids.push_back(tid);
+            affineDims.push_back(i);
+            exps.push_back(exp);
+          }
         }
       }
     }
@@ -1277,7 +1472,6 @@ static void translateBitsToTidDimPairs(
     // Note that we generate dense indices of the output tensor
     // unconditionally, since they may not appear in the lattice, but may be
     // needed for linearized codegen.
-    // Only dense dimensions should be optimized from conditions.
     auto dim = merger.getDimNum(merger.getOutTensorID(), idx).value();
     extraTids.push_back(merger.getOutTensorID());
     extraDims.push_back(dim);
@@ -1310,6 +1504,17 @@ static Operation *startLoop(Merger &merger, CodeGen &codegen,
     codegen.loopEmitter.genDenseAffineAddressAtCurLevel(builder, op.getLoc(),
                                                         tid, dim, exp);
   }
+
+  // Until now, we have entered every <tid, dim> pair in {cond, extra,
+  // affine}Tids/Dims. The addresses of the upcoming levels which are dependent
+  // on constant affines expression may now be determined.
+  auto allTids = llvm::concat<size_t>(condTids, extraTids, affineTids);
+  auto allDims = llvm::concat<size_t>(condDims, extraDims, affineDims);
+  for (auto [tid, dim] : llvm::zip(allTids, allDims)) {
+    if (tid != merger.getOutTensorID())
+      genConstantDenseAddressFromLevel(codegen, builder, op, tid, dim + 1);
+  }
+
   return loop;
 }
 
@@ -1437,7 +1642,6 @@ static void genResult(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
 //===----------------------------------------------------------------------===//
 
 namespace {
-
 /// Sparse rewriting rule for generic Lingalg operation.
 struct GenericOpSparsifier : public OpRewritePattern<linalg::GenericOp> {
 public:
@@ -1452,7 +1656,8 @@ public:
       return failure();
     unsigned numTensors = op->getNumOperands();
     unsigned numLoops = op.getNumLoops();
-    Merger merger(numTensors, numLoops);
+    unsigned numFilterLoops = getNumCompoundAffineOnSparseDims(op);
+    Merger merger(numTensors, numLoops, numFilterLoops);
     if (!findSparseAnnotations(merger, op))
       return failure();
 
@@ -1505,6 +1710,7 @@ public:
     CodeGen codegen(options, op.getContext(), tensors, numTensors, numLoops,
                     sparseOut, outerParNest, topSort);
     genBuffers(merger, codegen, rewriter, op);
+    genInitConstantDenseAddress(codegen, rewriter, op);
     genStmt(merger, codegen, rewriter, op, exp, 0);
     genResult(merger, codegen, rewriter, op);
     return success();
@@ -1535,7 +1741,7 @@ private:
       auto srcTp = tval.getType().cast<RankedTensorType>();
       auto dstEnc = SparseTensorEncodingAttr::get(
           op->getContext(), srcEnc.getDimLevelType(),
-          permute(getContext(), op.getMatchingIndexingMap(t),
+          permute(merger, getContext(), op.getMatchingIndexingMap(t),
                   topSort), // new order
           srcEnc.getHigherOrdering(), srcEnc.getPointerBitWidth(),
           srcEnc.getIndexBitWidth());

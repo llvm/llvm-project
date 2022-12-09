@@ -31,6 +31,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TextAPI/Architecture.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -105,7 +106,7 @@ enum class LipoAction {
 };
 
 struct InputFile {
-  Optional<StringRef> ArchType;
+  std::optional<StringRef> ArchType;
   StringRef FileName;
 };
 

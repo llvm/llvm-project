@@ -33,7 +33,7 @@
 #if defined(__APPLE__)
 extern "C" void sys_icache_invalidate(const void *Addr, size_t len);
 #else
-extern "C" void __clear_cache(void *, void*);
+extern "C" void __clear_cache(void *, void *);
 #endif
 
 static int getPosixProtectionFlags(unsigned Flags) {
@@ -42,9 +42,9 @@ static int getPosixProtectionFlags(unsigned Flags) {
     return PROT_READ;
   case llvm::sys::Memory::MF_WRITE:
     return PROT_WRITE;
-  case llvm::sys::Memory::MF_READ|llvm::sys::Memory::MF_WRITE:
+  case llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_WRITE:
     return PROT_READ | PROT_WRITE;
-  case llvm::sys::Memory::MF_READ|llvm::sys::Memory::MF_EXEC:
+  case llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_EXEC:
     return PROT_READ | PROT_EXEC;
   case llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_WRITE |
       llvm::sys::Memory::MF_EXEC:
@@ -70,11 +70,9 @@ static int getPosixProtectionFlags(unsigned Flags) {
 namespace llvm {
 namespace sys {
 
-MemoryBlock
-Memory::allocateMappedMemory(size_t NumBytes,
-                             const MemoryBlock *const NearBlock,
-                             unsigned PFlags,
-                             std::error_code &EC) {
+MemoryBlock Memory::allocateMappedMemory(size_t NumBytes,
+                                         const MemoryBlock *const NearBlock,
+                                         unsigned PFlags, std::error_code &EC) {
   EC = std::error_code();
   if (NumBytes == 0)
     return MemoryBlock();
@@ -105,18 +103,19 @@ Memory::allocateMappedMemory(size_t NumBytes,
 
   // Use any near hint and the page size to set a page-aligned starting address
   uintptr_t Start = NearBlock ? reinterpret_cast<uintptr_t>(NearBlock->base()) +
-                                      NearBlock->allocatedSize() : 0;
+                                    NearBlock->allocatedSize()
+                              : 0;
   static const size_t PageSize = Process::getPageSizeEstimate();
-  const size_t NumPages = (NumBytes+PageSize-1)/PageSize;
+  const size_t NumPages = (NumBytes + PageSize - 1) / PageSize;
 
   if (Start && Start % PageSize)
     Start += PageSize - Start % PageSize;
 
   // FIXME: Handle huge page requests (MF_HUGE_HINT).
-  void *Addr = ::mmap(reinterpret_cast<void *>(Start), PageSize*NumPages, Protect,
-                      MMFlags, fd, 0);
+  void *Addr = ::mmap(reinterpret_cast<void *>(Start), PageSize * NumPages,
+                      Protect, MMFlags, fd, 0);
   if (Addr == MAP_FAILED) {
-    if (NearBlock) { //Try again without a near hint
+    if (NearBlock) { // Try again without a near hint
 #if !defined(MAP_ANON)
       close(fd);
 #endif
@@ -136,12 +135,12 @@ Memory::allocateMappedMemory(size_t NumBytes,
 
   MemoryBlock Result;
   Result.Address = Addr;
-  Result.AllocatedSize = PageSize*NumPages;
+  Result.AllocatedSize = PageSize * NumPages;
   Result.Flags = PFlags;
 
   // Rely on protectMappedMemory to invalidate instruction cache.
   if (PFlags & MF_EXEC) {
-    EC = Memory::protectMappedMemory (Result, PFlags);
+    EC = Memory::protectMappedMemory(Result, PFlags);
     if (EC != std::error_code())
       return MemoryBlock();
   }
@@ -149,8 +148,7 @@ Memory::allocateMappedMemory(size_t NumBytes,
   return Result;
 }
 
-std::error_code
-Memory::releaseMappedMemory(MemoryBlock &M) {
+std::error_code Memory::releaseMappedMemory(MemoryBlock &M) {
   if (M.Address == nullptr || M.AllocatedSize == 0)
     return std::error_code();
 
@@ -163,8 +161,8 @@ Memory::releaseMappedMemory(MemoryBlock &M) {
   return std::error_code();
 }
 
-std::error_code
-Memory::protectMappedMemory(const MemoryBlock &M, unsigned Flags) {
+std::error_code Memory::protectMappedMemory(const MemoryBlock &M,
+                                            unsigned Flags) {
   static const Align PageSize = Align(Process::getPageSizeEstimate());
   if (M.Address == nullptr || M.AllocatedSize == 0)
     return std::error_code();
@@ -173,15 +171,18 @@ Memory::protectMappedMemory(const MemoryBlock &M, unsigned Flags) {
     return std::error_code(EINVAL, std::generic_category());
 
   int Protect = getPosixProtectionFlags(Flags);
-  uintptr_t Start = alignAddr((const uint8_t *)M.Address - PageSize.value() + 1, PageSize);
-  uintptr_t End = alignAddr((const uint8_t *)M.Address + M.AllocatedSize, PageSize);
+  uintptr_t Start =
+      alignAddr((const uint8_t *)M.Address - PageSize.value() + 1, PageSize);
+  uintptr_t End =
+      alignAddr((const uint8_t *)M.Address + M.AllocatedSize, PageSize);
 
   bool InvalidateCache = (Flags & MF_EXEC);
 
 #if defined(__arm__) || defined(__aarch64__)
-  // Certain ARM implementations treat icache clear instruction as a memory read,
-  // and CPU segfaults on trying to clear cache on !PROT_READ page.  Therefore we need
-  // to temporarily add PROT_READ for the sake of flushing the instruction caches.
+  // Certain ARM implementations treat icache clear instruction as a memory
+  // read, and CPU segfaults on trying to clear cache on !PROT_READ page.
+  // Therefore we need to temporarily add PROT_READ for the sake of flushing the
+  // instruction caches.
   if (InvalidateCache && !(Protect & PROT_READ)) {
     int Result = ::mprotect((void *)Start, End - Start, Protect | PROT_READ);
     if (Result != 0)
@@ -206,15 +207,14 @@ Memory::protectMappedMemory(const MemoryBlock &M, unsigned Flags) {
 /// InvalidateInstructionCache - Before the JIT can run a block of code
 /// that has been emitted it must invalidate the instruction cache on some
 /// platforms.
-void Memory::InvalidateInstructionCache(const void *Addr,
-                                        size_t Len) {
+void Memory::InvalidateInstructionCache(const void *Addr, size_t Len) {
 
 // icache invalidation for PPC and ARM.
 #if defined(__APPLE__)
 
-#  if (defined(__powerpc__) || defined(__arm__) || defined(__arm64__))
+#if (defined(__powerpc__) || defined(__arm__) || defined(__arm64__))
   sys_icache_invalidate(const_cast<void *>(Addr), Len);
-#  endif
+#endif
 
 #elif defined(__Fuchsia__)
 
@@ -223,12 +223,12 @@ void Memory::InvalidateInstructionCache(const void *Addr,
 
 #else
 
-#  if defined(__powerpc__) && defined(__GNUC__)
+#if defined(__powerpc__) && defined(__GNUC__)
   const size_t LineSize = 32;
 
   const intptr_t Mask = ~(LineSize - 1);
-  const intptr_t StartLine = ((intptr_t) Addr) & Mask;
-  const intptr_t EndLine = ((intptr_t) Addr + Len + LineSize - 1) & Mask;
+  const intptr_t StartLine = ((intptr_t)Addr) & Mask;
+  const intptr_t EndLine = ((intptr_t)Addr + Len + LineSize - 1) & Mask;
 
   for (intptr_t Line = StartLine; Line < EndLine; Line += LineSize)
     asm volatile("dcbf 0, %0" : : "r"(Line));
@@ -237,15 +237,15 @@ void Memory::InvalidateInstructionCache(const void *Addr,
   for (intptr_t Line = StartLine; Line < EndLine; Line += LineSize)
     asm volatile("icbi 0, %0" : : "r"(Line));
   asm volatile("isync");
-#  elif (defined(__arm__) || defined(__aarch64__) || defined(__mips__)) && \
-        defined(__GNUC__)
+#elif (defined(__arm__) || defined(__aarch64__) || defined(__mips__)) &&       \
+    defined(__GNUC__)
   // FIXME: Can we safely always call this for __GNUC__ everywhere?
   const char *Start = static_cast<const char *>(Addr);
   const char *End = Start + Len;
   __clear_cache(const_cast<char *>(Start), const_cast<char *>(End));
-#  endif
+#endif
 
-#endif  // end apple
+#endif // end apple
 
   ValgrindDiscardTranslations(Addr, Len);
 }

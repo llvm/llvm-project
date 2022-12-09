@@ -43,7 +43,7 @@ class Symbol;
 extern std::unique_ptr<llvm::TarWriter> tar;
 
 // Opens a given file.
-llvm::Optional<MemoryBufferRef> readFile(StringRef path);
+std::optional<MemoryBufferRef> readFile(StringRef path);
 
 // Add symbols in File to the symbol table.
 void parseFile(InputFile *file);
@@ -248,8 +248,9 @@ public:
     return getSymbol(symIndex);
   }
 
-  llvm::Optional<llvm::DILineInfo> getDILineInfo(InputSectionBase *, uint64_t);
-  llvm::Optional<std::pair<std::string, unsigned>> getVariableLoc(StringRef name);
+  std::optional<llvm::DILineInfo> getDILineInfo(InputSectionBase *, uint64_t);
+  std::optional<std::pair<std::string, unsigned>>
+  getVariableLoc(StringRef name);
 
   // Name of source file obtained from STT_FILE symbol value,
   // or empty string if there is no such symbol in object file

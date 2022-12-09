@@ -5,6 +5,7 @@ add_flang_library(FortranLower
   Bridge.cpp
   CallInterface.cpp
   Coarray.cpp
+  ConvertCall.cpp
   ConvertConstant.cpp
   ConvertExpr.cpp
   ConvertExprToHLFIR.cpp

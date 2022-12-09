@@ -1,5 +1,5 @@
 
-@foo = alias i32 (...), bitcast (i32 ()* @foo2 to i32 (...)*)
+@foo = alias i32 (...), @foo2
 
 define linkonce_odr i32 @foo2() {
     %ret = add i32 42, 42

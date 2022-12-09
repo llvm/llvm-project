@@ -2,7 +2,7 @@
 
 ; Check that reassociate pass now salvages debug info when dropping instructions.
 
-define hidden i32 @main(i32 %argc, i8** %argv) {
+define hidden i32 @main(i32 %argc, ptr %argv) {
 entry:
   ; CHECK: call void @llvm.dbg.value(metadata i32 %argc, metadata [[VAR_B:![0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value))
   %add = add nsw i32 %argc, 1, !dbg !26

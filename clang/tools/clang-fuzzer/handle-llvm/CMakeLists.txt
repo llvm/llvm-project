@@ -4,10 +4,12 @@ set(LLVM_LINK_COMPONENTS
   Core
   ExecutionEngine
   IPO
+  IRPrinter
   IRReader
   MC
   MCJIT
   Object
+  Passes
   RuntimeDyld
   SelectionDAG
   Support

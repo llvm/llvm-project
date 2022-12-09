@@ -312,10 +312,16 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
   auto TRI = getRegisterInfo();
   StringSet<> ReservedRegNames;
   ReservedRegNames.insert(ReservedRegsForRA.begin(), ReservedRegsForRA.end());
-  for (unsigned i = 0; i < 31; ++i) {
+  for (unsigned i = 0; i < 29; ++i) {
     if (ReservedRegNames.count(TRI->getName(AArch64::X0 + i)))
       ReserveXRegisterForRA.set(i);
   }
+  // X30 is named LR, so we can't use TRI->getName to check X30.
+  if (ReservedRegNames.count("X30") || ReservedRegNames.count("LR"))
+    ReserveXRegisterForRA.set(30);
+  // X29 is named FP, so we can't use TRI->getName to check X29.
+  if (ReservedRegNames.count("X29") || ReservedRegNames.count("FP"))
+    ReserveXRegisterForRA.set(29);
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {
@@ -453,8 +459,8 @@ bool AArch64Subtarget::useAA() const { return UseAA; }
 
 bool AArch64Subtarget::forceStreamingCompatibleSVE() const {
   if (ForceStreamingCompatibleSVE) {
-    assert((hasSVE() || hasSME()) && "Expected SVE to be available");
-    return hasSVE() || hasSME();
+    assert(hasSVEorSME() && "Expected SVE to be available");
+    return hasSVEorSME();
   }
   return false;
 }

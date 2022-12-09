@@ -357,14 +357,14 @@ private:
   /// If WithFrameRecord is true, then __hwasan_tls will be used to access the
   /// ring buffer for storing stack allocations on targets that support it.
   struct ShadowMapping {
-    int Scale;
+    uint8_t Scale;
     uint64_t Offset;
     bool InGlobal;
     bool InTls;
     bool WithFrameRecord;
 
     void init(Triple &TargetTriple, bool InstrumentWithCalls);
-    uint64_t getObjectAlignment() const { return 1ULL << Scale; }
+    Align getObjectAlignment() const { return Align(1ULL << Scale); }
   };
 
   ShadowMapping Mapping;
@@ -959,7 +959,7 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
   IRBuilder<> IRB(O.getInsn());
   if (isPowerOf2_64(O.TypeSize) &&
       (O.TypeSize / 8 <= (1ULL << (kNumberOfAccessSizes - 1))) &&
-      (!O.Alignment || *O.Alignment >= (1ULL << Mapping.Scale) ||
+      (!O.Alignment || *O.Alignment >= Mapping.getObjectAlignment() ||
        *O.Alignment >= O.TypeSize / 8)) {
     size_t AccessSizeIndex = TypeSizeToSizeIndex(O.TypeSize);
     if (InstrumentWithCalls) {
@@ -1003,9 +1003,9 @@ void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
     if (ShadowSize)
       IRB.CreateMemSet(ShadowPtr, JustTag, ShadowSize, Align(1));
     if (Size != AlignedSize) {
-      IRB.CreateStore(
-          ConstantInt::get(Int8Ty, Size % Mapping.getObjectAlignment()),
-          IRB.CreateConstGEP1_32(Int8Ty, ShadowPtr, ShadowSize));
+      const uint8_t SizeRemainder = Size % Mapping.getObjectAlignment().value();
+      IRB.CreateStore(ConstantInt::get(Int8Ty, SizeRemainder),
+                      IRB.CreateConstGEP1_32(Int8Ty, ShadowPtr, ShadowSize));
       IRB.CreateStore(JustTag, IRB.CreateConstGEP1_32(
                                    Int8Ty, IRB.CreateBitCast(AI, Int8PtrTy),
                                    AlignedSize - 1));
@@ -1031,7 +1031,7 @@ unsigned HWAddressSanitizer::retagMask(unsigned AllocaNo) {
                                  48, 16,  120, 248, 56,  24,  8,   124, 252,
                                  60, 28,  12,  4,   126, 254, 62,  30,  14,
                                  6,  2,   127, 63,  31,  15,  7,   3,   1};
-  return FastMasks[AllocaNo % (sizeof(FastMasks) / sizeof(FastMasks[0]))];
+  return FastMasks[AllocaNo % std::size(FastMasks)];
 }
 
 Value *HWAddressSanitizer::applyTagMask(IRBuilder<> &IRB, Value *OldTag) {
@@ -1386,7 +1386,7 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
       for (auto &II : Info.LifetimeEnd)
         II->eraseFromParent();
     }
-    memtag::alignAndPadAlloca(Info, Align(Mapping.getObjectAlignment()));
+    memtag::alignAndPadAlloca(Info, Mapping.getObjectAlignment());
   }
   for (auto &I : SInfo.UnrecognizedLifetimes)
     I->eraseFromParent();
@@ -1512,7 +1512,7 @@ void HWAddressSanitizer::instrumentGlobal(GlobalVariable *GV, uint8_t Tag) {
   NewGV->setLinkage(GlobalValue::PrivateLinkage);
   NewGV->copyMetadata(GV, 0);
   NewGV->setAlignment(
-      MaybeAlign(std::max(GV->getAlignment(), Mapping.getObjectAlignment())));
+      std::max(GV->getAlign().valueOrOne(), Mapping.getObjectAlignment()));
 
   // It is invalid to ICF two globals that have different tags. In the case
   // where the size of the global is a multiple of the tag granularity the

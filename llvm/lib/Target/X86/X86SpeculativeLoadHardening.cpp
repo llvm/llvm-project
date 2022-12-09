@@ -57,6 +57,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -164,7 +165,7 @@ private:
   const X86InstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
 
-  Optional<PredState> PS;
+  std::optional<PredState> PS;
 
   void hardenEdgesWithLFENCE(MachineFunction &MF);
 

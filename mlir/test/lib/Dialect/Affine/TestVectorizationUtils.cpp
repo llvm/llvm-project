@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/Builders.h"
@@ -126,7 +127,8 @@ void VectorizerTestPass::testVectorShapeRatio(llvm::raw_ostream &outs) {
     // purpose of this test. If we need to test more intricate behavior in the
     // future we can always extend.
     auto superVectorType = opInst->getResult(0).getType().cast<VectorType>();
-    auto ratio = shapeRatio(superVectorType, subVectorType);
+    auto ratio =
+        computeShapeRatio(superVectorType.getShape(), subVectorType.getShape());
     if (!ratio) {
       opInst->emitRemark("NOT MATCHED");
     } else {

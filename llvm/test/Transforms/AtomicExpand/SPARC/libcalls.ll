@@ -48,7 +48,7 @@ define i16 @test_exchange_i16(i16* %arg, i16 %val) {
 ; CHECK:  %4 = call zeroext i1 @__atomic_compare_exchange_2(i8* %1, i8* %3, i16 %new, i32 5, i32 0)
 ; CHECK:  %5 = load i16, i16* %2, align 2
 ; CHECK:  call void @llvm.lifetime.end.p0i8(i64 2, i8* %3)
-; CHECK:  %6 = insertvalue { i16, i1 } undef, i16 %5, 0
+; CHECK:  %6 = insertvalue { i16, i1 } poison, i16 %5, 0
 ; CHECK:  %7 = insertvalue { i16, i1 } %6, i1 %4, 1
 ; CHECK:  %ret = extractvalue { i16, i1 } %7, 0
 ; CHECK:  ret i16 %ret
@@ -133,7 +133,7 @@ define i128 @test_exchange_i128(i128* %arg, i128 %val) {
 ; CHECK:  call void @llvm.lifetime.end.p0i8(i64 16, i8* %5)
 ; CHECK:  %7 = load i128, i128* %2, align 8
 ; CHECK:  call void @llvm.lifetime.end.p0i8(i64 16, i8* %3)
-; CHECK:  %8 = insertvalue { i128, i1 } undef, i128 %7, 0
+; CHECK:  %8 = insertvalue { i128, i1 } poison, i128 %7, 0
 ; CHECK:  %9 = insertvalue { i128, i1 } %8, i1 %6, 1
 ; CHECK:  %ret = extractvalue { i128, i1 } %9, 0
 ; CHECK:  ret i128 %ret
@@ -166,7 +166,7 @@ define i128 @test_cmpxchg_i128(i128* %arg, i128 %old, i128 %new) {
 ; CHECK:  call void @llvm.lifetime.end.p0i8(i64 16, i8* %6)
 ; CHECK:  %8 = load i128, i128* %1, align 8
 ; CHECK:  call void @llvm.lifetime.end.p0i8(i64 16, i8* %5)
-; CHECK:  %9 = insertvalue { i128, i1 } undef, i128 %8, 0
+; CHECK:  %9 = insertvalue { i128, i1 } poison, i128 %8, 0
 ; CHECK:  %10 = insertvalue { i128, i1 } %9, i1 %7, 1
 ; CHECK:  %success = extractvalue { i128, i1 } %10, 1
 ; CHECK:  %newloaded = extractvalue { i128, i1 } %10, 0
@@ -210,7 +210,7 @@ define void @test_store_double(double* %arg, double %val) {
 ; CHECK:   %5 = call zeroext i1 @__atomic_compare_exchange_4(i8* %1, i8* %3, i32 %4, i32 5, i32 2)
 ; CHECK:   %6 = load i16*, i16** %2, align 4
 ; CHECK:   call void @llvm.lifetime.end.p0i8(i64 4, i8* %3)
-; CHECK:   %7 = insertvalue { i16*, i1 } undef, i16* %6, 0
+; CHECK:   %7 = insertvalue { i16*, i1 } poison, i16* %6, 0
 ; CHECK:   %8 = insertvalue { i16*, i1 } %7, i1 %5, 1
 ; CHECK:   %ret = extractvalue { i16*, i1 } %8, 0
 ; CHECK:   ret i16* %ret

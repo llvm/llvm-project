@@ -334,6 +334,25 @@ private:
     TODO(getLoc(), "lowering binary op to HLFIR");
   }
 
+  template <int KIND>
+  hlfir::EntityWithAttributes gen(const Fortran::evaluate::Concat<KIND> &op) {
+    auto lhs = gen(op.left());
+    auto rhs = gen(op.right());
+    llvm::SmallVector<mlir::Value> lengths;
+    auto &builder = getBuilder();
+    mlir::Location loc = getLoc();
+    hlfir::genLengthParameters(loc, builder, lhs, lengths);
+    hlfir::genLengthParameters(loc, builder, rhs, lengths);
+    assert(lengths.size() == 2 && "lacks rhs or lhs length");
+    mlir::Type idxType = builder.getIndexType();
+    mlir::Value lhsLen = builder.createConvert(loc, idxType, lengths[0]);
+    mlir::Value rhsLen = builder.createConvert(loc, idxType, lengths[1]);
+    mlir::Value len = builder.create<mlir::arith::AddIOp>(loc, lhsLen, rhsLen);
+    auto concat =
+        builder.create<hlfir::ConcatOp>(loc, mlir::ValueRange{lhs, rhs}, len);
+    return hlfir::EntityWithAttributes{concat.getResult()};
+  }
+
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &op) {
     return std::visit([&](const auto &x) { return gen(x); }, op.u);

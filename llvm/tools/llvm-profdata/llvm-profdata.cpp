@@ -40,6 +40,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cmath>
+#include <optional>
 #include <queue>
 
 using namespace llvm;
@@ -866,8 +867,8 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
   SmallVector<std::unique_ptr<sampleprof::SampleProfileReader>, 5> Readers;
   LLVMContext Context;
   sampleprof::ProfileSymbolList WriterList;
-  Optional<bool> ProfileIsProbeBased;
-  Optional<bool> ProfileIsCS;
+  std::optional<bool> ProfileIsProbeBased;
+  std::optional<bool> ProfileIsCS;
   for (const auto &Input : Inputs) {
     auto ReaderOrErr = SampleProfileReader::create(Input.Filename, Context,
                                                    FSDiscriminatorPassOption);

@@ -534,10 +534,9 @@ define <2 x float> @test11(<4 x i16> %x, i32 %y) {
 ; heuristic for making a deterministic decision.
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[Y:%.*]] to <2 x i16>
-; CHECK-NEXT:    [[A_SROA_0_4_VEC_EXPAND:%.*]] = shufflevector <2 x i16> [[TMP0]], <2 x i16> poison, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
-; CHECK-NEXT:    [[A_SROA_0_4_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x i16> [[A_SROA_0_4_VEC_EXPAND]], <4 x i16> [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[A_SROA_0_4_VECBLEND]] to <2 x float>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[A_SROA_0_4_VEC_INSERT:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[A_SROA_0_4_VEC_INSERT]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[TMP1]]
 ;
 entry:
@@ -565,3 +564,65 @@ define <4 x float> @test12(<4 x i32> %val) {
 
   ret <4 x float> %vec
 }
+
+define void @swap-8bytes(ptr %x, ptr %y) {
+; CHECK-LABEL: @swap-8bytes(
+; CHECK-NEXT:    [[TMP_SROA_0_0_COPYLOAD:%.*]] = load i64, ptr [[X:%.*]], align 1
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    store i64 [[TMP_SROA_0_0_COPYLOAD]], ptr [[Y]], align 1
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca [2 x i32]
+  call void @llvm.memcpy.p0.p0.i64(ptr %tmp, ptr %x, i64 8, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %x, ptr %y, i64 8, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %y, ptr %tmp, i64 8, i1 false)
+  ret void
+}
+
+define void @swap-7bytes(ptr %x, ptr %y) {
+; CHECK-LABEL: @swap-7bytes(
+; CHECK-NEXT:    [[TMP:%.*]] = alloca [7 x i8], align 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 7, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 7, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 7, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca [7 x i8]
+  call void @llvm.memcpy.p0.p0.i64(ptr %tmp, ptr %x, i64 7, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %x, ptr %y, i64 7, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %y, ptr %tmp, i64 7, i1 false)
+  ret void
+}
+
+define void @swap-16bytes(ptr %x, ptr %y) {
+; CHECK-LABEL: @swap-16bytes(
+; CHECK-NEXT:    [[TMP:%.*]] = alloca [2 x i64], align 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca [2 x i64]
+  call void @llvm.memcpy.p0.p0.i64(ptr %tmp, ptr %x, i64 16, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %x, ptr %y, i64 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %y, ptr %tmp, i64 16, i1 false)
+  ret void
+}
+
+define void @swap-15bytes(ptr %x, ptr %y) {
+; CHECK-LABEL: @swap-15bytes(
+; CHECK-NEXT:    [[TMP:%.*]] = alloca [15 x i8], align 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 15, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 15, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 15, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca [15 x i8]
+  call void @llvm.memcpy.p0.p0.i64(ptr %tmp, ptr %x, i64 15, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %x, ptr %y, i64 15, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %y, ptr %tmp, i64 15, i1 false)
+  ret void
+}
+
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
+declare void @llvm.lifetime.end.p0(i64, ptr)

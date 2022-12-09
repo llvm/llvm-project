@@ -1785,6 +1785,7 @@ public:
     return *this;
   }
 
+  Align getAlign() const { return Align(Alignment); }
   uint16_t getAlignment() const { return Alignment; }
 
   BinaryFunction &setMaxAlignmentBytes(uint16_t MaxAlignBytes) {

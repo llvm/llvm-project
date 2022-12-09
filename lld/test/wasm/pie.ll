@@ -7,24 +7,24 @@ target triple = "wasm32-unknown-emscripten"
 
 @data = global i32 2, align 4
 @data_external = external global i32
-@indirect_func = local_unnamed_addr global i32 ()* @foo, align 4
+@indirect_func = local_unnamed_addr global ptr @foo, align 4
 
-@data_addr = local_unnamed_addr global i32* @data, align 4
-@data_addr_external = local_unnamed_addr global i32* @data_external, align 4
+@data_addr = local_unnamed_addr global ptr @data, align 4
+@data_addr_external = local_unnamed_addr global ptr @data_external, align 4
 
 define hidden i32 @foo() {
 entry:
   ; To ensure we use __stack_pointer
   %ptr = alloca i32
-  %0 = load i32, i32* @data, align 4
-  %1 = load i32 ()*, i32 ()** @indirect_func, align 4
+  %0 = load i32, ptr @data, align 4
+  %1 = load ptr, ptr @indirect_func, align 4
   call i32 %1()
   ret i32 %0
 }
 
-define default i32** @get_data_address() {
+define default ptr @get_data_address() {
 entry:
-  ret i32** @data_addr_external
+  ret ptr @data_addr_external
 }
 
 define void @_start() {

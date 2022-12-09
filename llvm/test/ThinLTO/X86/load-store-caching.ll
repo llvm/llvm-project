@@ -8,17 +8,17 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-%struct.S = type { %struct.Derived* }
+%struct.S = type { ptr }
 %struct.Derived = type { i32 }
 %struct.Base = type { i32 }
 
 @obj = dso_local local_unnamed_addr global %struct.S zeroinitializer, align 8
 
-define dso_local %struct.Base* @foo() local_unnamed_addr {
+define dso_local ptr @foo() local_unnamed_addr {
 entry:
-  %0 = load %struct.Base*, %struct.Base** bitcast (%struct.S* @obj to %struct.Base**), align 8
-  store %struct.Base* null, %struct.Base** bitcast (%struct.S* @obj to %struct.Base**), align 8
-  ret %struct.Base* %0
+  %0 = load ptr, ptr @obj, align 8
+  store ptr null, ptr @obj, align 8
+  ret ptr %0
 }
 
 ; CHECK:       ^0 = module:

@@ -14,19 +14,19 @@
 
 define void @zot12() {
 bb:
-  store i32 0, i32* @global5, align 4
-  store i32 0, i32* @global6, align 4
+  store i32 0, ptr @global5, align 4
+  store i32 0, ptr @global6, align 4
   br label %bb2
 
 bb1:                                              ; preds = %bb11
-  %tmp = load i32, i32* @global5, align 4
+  %tmp = load i32, ptr @global5, align 4
   br label %bb2
 
 bb2:                                              ; preds = %bb1, %bb
   %tmp3 = phi i32 [ %tmp, %bb1 ], [ 0, %bb ]
-  %tmp4 = xor i32 %tmp3, zext (i1 icmp ne (i64 ptrtoint (i32* @global5 to i64), i64 1) to i32)
-  store i32 %tmp4, i32* @global5, align 4
-  %tmp5 = icmp eq i32 %tmp3, zext (i1 icmp ne (i64 ptrtoint (i32* @global5 to i64), i64 1) to i32)
+  %tmp4 = xor i32 %tmp3, zext (i1 icmp ne (i64 ptrtoint (ptr @global5 to i64), i64 1) to i32)
+  store i32 %tmp4, ptr @global5, align 4
+  %tmp5 = icmp eq i32 %tmp3, zext (i1 icmp ne (i64 ptrtoint (ptr @global5 to i64), i64 1) to i32)
   br i1 %tmp5, label %bb8, label %bb6
 
 bb6:                                              ; preds = %bb2
@@ -34,14 +34,14 @@ bb6:                                              ; preds = %bb2
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb2
-  %tmp9 = load i32, i32* @global7, align 4
+  %tmp9 = load i32, ptr @global7, align 4
   %tmp10 = icmp eq i32 %tmp9, 0
   br i1 %tmp10, label %bb11, label %bb15
 
 bb11:                                             ; preds = %bb8
-  %tmp12 = load i32, i32* @global6, align 4
+  %tmp12 = load i32, ptr @global6, align 4
   %tmp13 = add nsw i32 %tmp12, 1
-  store i32 %tmp13, i32* @global6, align 4
+  store i32 %tmp13, ptr @global6, align 4
   %tmp14 = icmp slt i32 %tmp13, 42
   br i1 %tmp14, label %bb1, label %bb15
 
@@ -51,7 +51,7 @@ bb15:                                             ; preds = %bb11, %bb8
 
 define i32 @quux13() {
 bb:
-  store i32 1, i32* @global5, align 4
+  store i32 1, ptr @global5, align 4
   ret i32 1
 }
 
@@ -69,9 +69,9 @@ bb:
 
 define void @blam() {
 bb:
-  store i32 ptrtoint (i32* @global to i32), i32* getelementptr inbounds (%struct.ham, %struct.ham* @global8, i64 0, i32 0), align 4
-  store i32 0, i32* @global9, align 4
-  %tmp = load i32, i32* getelementptr inbounds (%struct.ham, %struct.ham* @global8, i64 0, i32 0), align 4
+  store i32 ptrtoint (ptr @global to i32), ptr @global8, align 4
+  store i32 0, ptr @global9, align 4
+  %tmp = load i32, ptr @global8, align 4
   br label %bb1
 
 bb1:                                              ; preds = %bb1, %bb
@@ -89,9 +89,9 @@ bb1:                                              ; preds = %bb1, %bb
   br i1 %tmp12, label %bb13, label %bb1
 
 bb13:                                             ; preds = %bb1
-  store i32 %tmp10, i32* getelementptr inbounds (%struct.ham, %struct.ham* @global8, i64 0, i32 0), align 4
-  store i32 0, i32* @global10, align 4
-  store i32 %tmp6, i32* @global11, align 4
-  store i32 20, i32* @global9, align 4
+  store i32 %tmp10, ptr @global8, align 4
+  store i32 0, ptr @global10, align 4
+  store i32 %tmp6, ptr @global11, align 4
+  store i32 20, ptr @global9, align 4
   ret void
 }

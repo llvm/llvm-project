@@ -10,7 +10,7 @@
 ; Function Attrs: nounwind
 define i32 @foo() #0 !dbg !4 {
 entry:
-  %call = call i32 bitcast (i32 (...)* @bar to i32 ()*)(), !dbg !12
+  %call = call i32 @bar(), !dbg !12
   %add = add nsw i32 %call, 1, !dbg !12
   ret i32 %add, !dbg !12
 }

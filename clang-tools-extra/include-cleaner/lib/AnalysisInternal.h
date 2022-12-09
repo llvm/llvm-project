@@ -29,6 +29,7 @@
 namespace clang {
 class ASTContext;
 class Decl;
+class HeaderSearch;
 class NamedDecl;
 namespace include_cleaner {
 
@@ -84,9 +85,11 @@ llvm::SmallVector<Header> findHeaders(const SymbolLocation &Loc,
                                       const PragmaIncludes *PI);
 
 /// Write an HTML summary of the analysis to the given stream.
-void writeHTMLReport(FileID File, llvm::ArrayRef<Decl *> Roots,
+void writeHTMLReport(FileID File, const RecordedPP::RecordedIncludes &Includes,
+                     llvm::ArrayRef<Decl *> Roots,
                      llvm::ArrayRef<SymbolReference> MacroRefs, ASTContext &Ctx,
-                     PragmaIncludes *PI, llvm::raw_ostream &OS);
+                     HeaderSearch &HS, PragmaIncludes *PI,
+                     llvm::raw_ostream &OS);
 
 } // namespace include_cleaner
 } // namespace clang

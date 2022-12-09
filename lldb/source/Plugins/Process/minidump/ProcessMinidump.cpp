@@ -290,7 +290,8 @@ Status ProcessMinidump::DoLoadCore() {
   SetUnixSignals(UnixSignals::Create(GetArchitecture()));
 
   ReadModuleList();
-
+  if (ModuleSP module = GetTarget().GetExecutableModule())
+    GetTarget().MergeArchitecture(module->GetArchitecture());
   llvm::Optional<lldb::pid_t> pid = m_minidump_parser->GetPid();
   if (!pid) {
     Debugger::ReportWarning("unable to retrieve process ID from minidump file, "

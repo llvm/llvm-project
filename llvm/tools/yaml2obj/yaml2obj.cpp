@@ -24,6 +24,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <system_error>
 
 using namespace llvm;
@@ -88,7 +89,7 @@ static Optional<std::string> preprocess(StringRef Buf,
         // When the -D option is requested, we use the provided value.
         // Otherwise we use a default macro value if present.
         auto It = Defines.find(Macro);
-        Optional<StringRef> Value;
+        std::optional<StringRef> Value;
         if (It != Defines.end())
           Value = It->second;
         else if (!Default.empty() || MacroExpr.endswith("="))

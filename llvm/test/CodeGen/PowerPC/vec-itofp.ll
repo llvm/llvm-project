@@ -203,13 +203,13 @@ define void @test2(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ;
 ; CHECK-P9-LABEL: test2:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-P9-NEXT:    lxv vs1, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI2_0@toc@ha
-; CHECK-P9-NEXT:    xxlxor v4, v4, v4
+; CHECK-P9-NEXT:    xxlxor vs0, vs0, vs0
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI2_0@toc@l
-; CHECK-P9-NEXT:    lxv v3, 0(r4)
-; CHECK-P9-NEXT:    vperm v2, v4, v2, v3
-; CHECK-P9-NEXT:    xvcvuxddp vs0, v2
+; CHECK-P9-NEXT:    lxv vs2, 0(r4)
+; CHECK-P9-NEXT:    xxperm vs1, vs0, vs2
+; CHECK-P9-NEXT:    xvcvuxddp vs0, vs1
 ; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    blr
 ;
@@ -459,8 +459,8 @@ define void @stest2(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P9-NEXT:    lxv v2, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI5_0@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI5_0@toc@l
-; CHECK-P9-NEXT:    lxv v3, 0(r4)
-; CHECK-P9-NEXT:    vperm v2, v2, v2, v3
+; CHECK-P9-NEXT:    lxv vs0, 0(r4)
+; CHECK-P9-NEXT:    xxperm v2, v2, vs0
 ; CHECK-P9-NEXT:    vextsh2d v2, v2
 ; CHECK-P9-NEXT:    xvcvsxddp vs0, v2
 ; CHECK-P9-NEXT:    stxv vs0, 0(r3)
@@ -471,8 +471,8 @@ define void @stest2(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-BE-NEXT:    lxv v2, 0(r4)
 ; CHECK-BE-NEXT:    addis r4, r2, .LCPI5_0@toc@ha
 ; CHECK-BE-NEXT:    addi r4, r4, .LCPI5_0@toc@l
-; CHECK-BE-NEXT:    lxv v3, 0(r4)
-; CHECK-BE-NEXT:    vperm v2, v2, v2, v3
+; CHECK-BE-NEXT:    lxv vs0, 0(r4)
+; CHECK-BE-NEXT:    xxperm v2, v2, vs0
 ; CHECK-BE-NEXT:    vextsh2d v2, v2
 ; CHECK-BE-NEXT:    xvcvsxddp vs0, v2
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)

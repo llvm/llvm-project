@@ -207,8 +207,8 @@ define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    sll a0, a0, a5
 ; CHECK-NEXT:    or a0, a0, a4
 ; CHECK-NEXT:    srl a1, a1, a2
-; CHECK-NEXT:    slli a2, a3, 1
-; CHECK-NEXT:    sll a2, a2, a5
+; CHECK-NEXT:    slli a3, a3, 1
+; CHECK-NEXT:    sll a2, a3, a5
 ; CHECK-NEXT:    or a1, a2, a1
 ; CHECK-NEXT:    ret
   %or = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 %b)
@@ -305,8 +305,8 @@ define i64 @not_shl_one_i64(i64 %x) {
 ; CHECK-NEXT:    neg a4, a3
 ; CHECK-NEXT:    and a2, a4, a2
 ; CHECK-NEXT:    sll a0, a1, a0
-; CHECK-NEXT:    addi a1, a3, -1
-; CHECK-NEXT:    and a1, a1, a0
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    and a1, a3, a0
 ; CHECK-NEXT:    not a0, a2
 ; CHECK-NEXT:    not a1, a1
 ; CHECK-NEXT:    ret

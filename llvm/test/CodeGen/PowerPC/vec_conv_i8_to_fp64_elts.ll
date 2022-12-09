@@ -24,24 +24,24 @@ define <2 x double> @test2elt(i16 %a.coerce) local_unnamed_addr #0 {
 ;
 ; CHECK-P9-LABEL: test2elt:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    mtvsrwz v2, r3
+; CHECK-P9-NEXT:    mtfprwz f1, r3
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
-; CHECK-P9-NEXT:    xxlxor v4, v4, v4
+; CHECK-P9-NEXT:    xxlxor vs0, vs0, vs0
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; CHECK-P9-NEXT:    lxv v3, 0(r3)
-; CHECK-P9-NEXT:    vperm v2, v4, v2, v3
-; CHECK-P9-NEXT:    xvcvuxddp v2, v2
+; CHECK-P9-NEXT:    lxv vs2, 0(r3)
+; CHECK-P9-NEXT:    xxperm vs1, vs0, vs2
+; CHECK-P9-NEXT:    xvcvuxddp v2, vs1
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test2elt:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mtvsrwz v2, r3
+; CHECK-BE-NEXT:    mtfprwz f1, r3
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
-; CHECK-BE-NEXT:    xxlxor v4, v4, v4
+; CHECK-BE-NEXT:    xxlxor vs0, vs0, vs0
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; CHECK-BE-NEXT:    lxv v3, 0(r3)
-; CHECK-BE-NEXT:    vperm v2, v4, v2, v3
-; CHECK-BE-NEXT:    xvcvuxddp v2, v2
+; CHECK-BE-NEXT:    lxv vs2, 0(r3)
+; CHECK-BE-NEXT:    xxperm vs1, vs0, vs2
+; CHECK-BE-NEXT:    xvcvuxddp v2, vs1
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = bitcast i16 %a.coerce to <2 x i8>
@@ -434,8 +434,8 @@ define <2 x double> @test2elt_signed(i16 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-P9-NEXT:    mtvsrwz v2, r3
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI4_0@toc@l
-; CHECK-P9-NEXT:    lxv v3, 0(r3)
-; CHECK-P9-NEXT:    vperm v2, v2, v2, v3
+; CHECK-P9-NEXT:    lxv vs0, 0(r3)
+; CHECK-P9-NEXT:    xxperm v2, v2, vs0
 ; CHECK-P9-NEXT:    vextsb2d v2, v2
 ; CHECK-P9-NEXT:    xvcvsxddp v2, v2
 ; CHECK-P9-NEXT:    blr
@@ -445,8 +445,8 @@ define <2 x double> @test2elt_signed(i16 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    mtvsrwz v2, r3
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI4_0@toc@l
-; CHECK-BE-NEXT:    lxv v3, 0(r3)
-; CHECK-BE-NEXT:    vperm v2, v2, v2, v3
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
+; CHECK-BE-NEXT:    xxperm v2, v2, vs0
 ; CHECK-BE-NEXT:    vextsb2d v2, v2
 ; CHECK-BE-NEXT:    xvcvsxddp v2, v2
 ; CHECK-BE-NEXT:    blr

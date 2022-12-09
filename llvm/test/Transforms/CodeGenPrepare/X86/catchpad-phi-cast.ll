@@ -14,7 +14,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
 
 ; CodeGenPrepare will want to sink these bitcasts, but it selects the catchpad
 ; blocks as the place to which the bitcast should be sunk.  Since catchpads
-; do not allow non-phi instructions before the terminator, this isn't possible. 
+; do not allow non-phi instructions before the terminator, this isn't possible.
 
 ; CHECK-LABEL: @test(
 define void @test(i32* %addr) personality i32 (...)* @__CxxFrameHandler3 {
@@ -88,7 +88,7 @@ catch:
   catchret from %cp1 to label %ret
 
 ; CHECK: catch.dispatch:
-; CHECK-NEXT: phi i8
+; CHECK-NEXT: phi i8*
 ; CHECK-NEXT: catchswitch
 ; CHECK-NOT: llvm.dbg.value
 

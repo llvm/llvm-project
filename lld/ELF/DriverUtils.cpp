@@ -16,7 +16,6 @@
 #include "Driver.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Reproduce.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
@@ -24,6 +23,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::sys;
@@ -207,7 +207,8 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
 
 // Find a file by concatenating given paths. If a resulting path
 // starts with "=", the character is replaced with a --sysroot value.
-static Optional<std::string> findFile(StringRef path1, const Twine &path2) {
+static std::optional<std::string> findFile(StringRef path1,
+                                           const Twine &path2) {
   SmallString<128> s;
   if (path1.startswith("="))
     path::append(s, config->sysroot, path1.substr(1), path2);
@@ -216,31 +217,31 @@ static Optional<std::string> findFile(StringRef path1, const Twine &path2) {
 
   if (fs::exists(s))
     return std::string(s);
-  return None;
+  return std::nullopt;
 }
 
-Optional<std::string> elf::findFromSearchPaths(StringRef path) {
+std::optional<std::string> elf::findFromSearchPaths(StringRef path) {
   for (StringRef dir : config->searchPaths)
-    if (Optional<std::string> s = findFile(dir, path))
+    if (std::optional<std::string> s = findFile(dir, path))
       return s;
-  return None;
+  return std::nullopt;
 }
 
 // This is for -l<basename>. We'll look for lib<basename>.so or lib<basename>.a from
 // search paths.
-Optional<std::string> elf::searchLibraryBaseName(StringRef name) {
+std::optional<std::string> elf::searchLibraryBaseName(StringRef name) {
   for (StringRef dir : config->searchPaths) {
     if (!config->isStatic)
-      if (Optional<std::string> s = findFile(dir, "lib" + name + ".so"))
+      if (std::optional<std::string> s = findFile(dir, "lib" + name + ".so"))
         return s;
-    if (Optional<std::string> s = findFile(dir, "lib" + name + ".a"))
+    if (std::optional<std::string> s = findFile(dir, "lib" + name + ".a"))
       return s;
   }
-  return None;
+  return std::nullopt;
 }
 
 // This is for -l<namespec>.
-Optional<std::string> elf::searchLibrary(StringRef name) {
+std::optional<std::string> elf::searchLibrary(StringRef name) {
   llvm::TimeTraceScope timeScope("Locate library", name);
   if (name.startswith(":"))
     return findFromSearchPaths(name.substr(1));
@@ -250,7 +251,7 @@ Optional<std::string> elf::searchLibrary(StringRef name) {
 // If a linker/version script doesn't exist in the current directory, we also
 // look for the script in the '-L' search paths. This matches the behaviour of
 // '-T', --version-script=, and linker script INPUT() command in ld.bfd.
-Optional<std::string> elf::searchScript(StringRef name) {
+std::optional<std::string> elf::searchScript(StringRef name) {
   if (fs::exists(name))
     return name.str();
   return findFromSearchPaths(name);

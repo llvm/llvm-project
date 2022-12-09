@@ -204,7 +204,12 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   NewAI->setSwiftError(Info.AI->isSwiftError());
   NewAI->copyMetadata(*Info.AI);
 
-  auto *NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI);
+  Value *NewPtr = NewAI;
+
+  // TODO: Remove when typed pointers dropped
+  if (Info.AI->getType() != NewAI->getType())
+    NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI);
+
   Info.AI->replaceAllUsesWith(NewPtr);
   Info.AI->eraseFromParent();
   Info.AI = NewAI;

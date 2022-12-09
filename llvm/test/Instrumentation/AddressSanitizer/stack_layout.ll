@@ -8,9 +8,9 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare void @Use(i8*)
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind
+declare void @Use(ptr)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
 
 ; CHECK: private unnamed_addr constant{{.*}}3 32 10 3 XXX 64 20 3 YYY 128 30 3 ZZZ\0
 ; CHECK: private unnamed_addr constant{{.*}}3 32 5 3 AAA 64 55 3 BBB 160 555 3 CCC\0
@@ -30,12 +30,9 @@ entry:
   %XXX = alloca [10 x i8], align 1
   %YYY = alloca [20 x i8], align 1
   %ZZZ = alloca [30 x i8], align 1
-  %arr1.ptr = bitcast [10 x i8]* %XXX to i8*
-  store volatile i8 0, i8* %arr1.ptr
-  %arr2.ptr = bitcast [20 x i8]* %YYY to i8*
-  store volatile i8 0, i8* %arr2.ptr
-  %arr3.ptr = bitcast [30 x i8]* %ZZZ to i8*
-  store volatile i8 0, i8* %arr3.ptr
+  store volatile i8 0, ptr %XXX
+  store volatile i8 0, ptr %YYY
+  store volatile i8 0, ptr %ZZZ
   ret void
 }
 
@@ -52,12 +49,9 @@ entry:
   %AAA = alloca [5 x i8], align 1
   %BBB = alloca [55 x i8], align 1
   %CCC = alloca [555 x i8], align 1
-  %arr1.ptr = bitcast [5 x i8]* %AAA to i8*
-  store volatile i8 0, i8* %arr1.ptr
-  %arr2.ptr = bitcast [55 x i8]* %BBB to i8*
-  store volatile i8 0, i8* %arr2.ptr
-  %arr3.ptr = bitcast [555 x i8]* %CCC to i8*
-  store volatile i8 0, i8* %arr3.ptr
+  store volatile i8 0, ptr %AAA
+  store volatile i8 0, ptr %BBB
+  store volatile i8 0, ptr %CCC
   ret void
 }
 
@@ -75,12 +69,9 @@ entry:
   %AAA = alloca [128 x i8], align 16
   %BBB = alloca [128 x i8], align 64
   %CCC = alloca [128 x i8], align 256
-  %arr1.ptr = bitcast [128 x i8]* %AAA to i8*
-  store volatile i8 0, i8* %arr1.ptr
-  %arr2.ptr = bitcast [128 x i8]* %BBB to i8*
-  store volatile i8 0, i8* %arr2.ptr
-  %arr3.ptr = bitcast [128 x i8]* %CCC to i8*
-  store volatile i8 0, i8* %arr3.ptr
+  store volatile i8 0, ptr %AAA
+  store volatile i8 0, ptr %BBB
+  store volatile i8 0, ptr %CCC
   ret void
 }
 
@@ -89,14 +80,12 @@ entry:
 define void @Func5() sanitize_address #0 !dbg !11 {
   %AAA = alloca i32, align 4  ; File is not the same as !11
   %BBB = alloca i32, align 4  ; File is the same as !11
-  %BBB.ptr = bitcast i32* %BBB to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %BBB.ptr), !dbg !12
-  store volatile i32 5, i32* %BBB, align 4
-  %AAA.ptr = bitcast i32* %AAA to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %AAA.ptr), !dbg !14
-  store volatile i32 3, i32* %AAA, align 4
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %AAA.ptr), !dbg !17
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %BBB.ptr), !dbg !18
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %BBB), !dbg !12
+  store volatile i32 5, ptr %BBB, align 4
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %AAA), !dbg !14
+  store volatile i32 3, ptr %AAA, align 4
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %AAA), !dbg !17
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %BBB), !dbg !18
   ret void
 }
 

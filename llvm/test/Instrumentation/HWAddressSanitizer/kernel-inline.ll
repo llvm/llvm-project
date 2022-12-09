@@ -6,12 +6,12 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @test_load(i32* %a, i64* %b, i512* %c, i80* %d) sanitize_address {
+define void @test_load(ptr %a, ptr %b, ptr %c, ptr %d) sanitize_address {
 entry:
-  %tmp1 = load i32, i32* %a, align 4
-  %tmp2 = load i64, i64* %b, align 8
-  %tmp3 = load i512, i512* %c, align 32
-  %tmp4 = load i80, i80* %d, align 8
+  %tmp1 = load i32, ptr %a, align 4
+  %tmp2 = load i64, ptr %b, align 8
+  %tmp3 = load i512, ptr %c, align 32
+  %tmp4 = load i80, ptr %d, align 8
   ret void
 }
 ; CHECK-INLINE: call void @__asan_report_load4_noabort

@@ -81,6 +81,12 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
       return;
     }
 
+  // RPRFM overlaps PRFM (reg), so try to print it as RPRFM here.
+  if ((Opcode == AArch64::PRFMroX) || (Opcode == AArch64::PRFMroW)) {
+    if (printRangePrefetchAlias(MI, STI, O, Annot))
+      return;
+  }
+
   // SBFM/UBFM should print to a nicer aliased form if possible.
   if (Opcode == AArch64::SBFMXri || Opcode == AArch64::SBFMWri ||
       Opcode == AArch64::UBFMXri || Opcode == AArch64::UBFMWri) {
@@ -808,6 +814,56 @@ void AArch64AppleInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   AArch64InstPrinter::printInst(MI, Address, Annot, STI, O);
 }
 
+bool AArch64InstPrinter::printRangePrefetchAlias(const MCInst *MI,
+                                                 const MCSubtargetInfo &STI,
+                                                 raw_ostream &O,
+                                                 StringRef Annot) {
+  unsigned Opcode = MI->getOpcode();
+
+#ifndef NDEBUG
+  assert(((Opcode == AArch64::PRFMroX) || (Opcode == AArch64::PRFMroW)) &&
+         "Invalid opcode for RPRFM alias!");
+#endif
+
+  unsigned PRFOp = MI->getOperand(0).getImm();
+  unsigned Mask = 0x18; // 0b11000
+  if ((PRFOp & Mask) != Mask)
+    return false; // Rt != '11xxx', it's a PRFM instruction.
+
+  unsigned Rm = MI->getOperand(2).getReg();
+
+  // "Rm" must be a 64-bit GPR for RPRFM.
+  if (MRI.getRegClass(AArch64::GPR32RegClassID).contains(Rm))
+    Rm = MRI.getMatchingSuperReg(Rm, AArch64::sub_32,
+                                 &MRI.getRegClass(AArch64::GPR64RegClassID));
+
+  unsigned SignExtend = MI->getOperand(3).getImm(); // encoded in "option<2>".
+  unsigned Shift = MI->getOperand(4).getImm();      // encoded in "S".
+
+  assert((SignExtend <= 1) && "sign extend should be a single bit!");
+  assert((Shift <= 1) && "Shift should be a single bit!");
+
+  unsigned Option0 = (Opcode == AArch64::PRFMroX) ? 1 : 0;
+
+  // encoded in "option<2>:option<0>:S:Rt<2:0>".
+  unsigned RPRFOp =
+      (SignExtend << 5) | (Option0 << 4) | (Shift << 3) | (PRFOp & 0x7);
+
+  O << "\trprfm ";
+  if (auto RPRFM = AArch64RPRFM::lookupRPRFMByEncoding(RPRFOp))
+    O << RPRFM->Name << ", ";
+  else
+    O << "#" << formatImm(RPRFOp) << ", ";
+  O << getRegisterName(Rm);
+  O << ", [";
+  printOperand(MI, 1, STI, O); // "Rn".
+  O << "]";
+
+  printAnnotation(O, Annot);
+
+  return true;
+}
+
 bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O) {
@@ -1287,6 +1343,18 @@ void AArch64InstPrinter::printAMIndexedWB(const MCInst *MI, unsigned OpNum,
     MO1.getExpr()->print(O, &MAI);
   }
   O << ']';
+}
+
+void AArch64InstPrinter::printRPRFMOperand(const MCInst *MI, unsigned OpNum,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  unsigned prfop = MI->getOperand(OpNum).getImm();
+  if (auto PRFM = AArch64RPRFM::lookupRPRFMByEncoding(prfop)) {
+    O << PRFM->Name;
+    return;
+  }
+
+  O << '#' << formatImm(prfop);
 }
 
 template <bool IsSVEPrefetch>

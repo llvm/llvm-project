@@ -363,13 +363,14 @@ cl::opt<bool> llvm::EnableLoopVectorization(
     "vectorize-loops", cl::init(true), cl::Hidden,
     cl::desc("Run the Loop vectorization passes"));
 
-cl::opt<bool> PrintVPlansInDotFormat(
-    "vplan-print-in-dot-format", cl::init(false), cl::Hidden,
+static cl::opt<bool> PrintVPlansInDotFormat(
+    "vplan-print-in-dot-format", cl::Hidden,
     cl::desc("Use dot format instead of plain text when dumping VPlans"));
 
-cl::opt<cl::boolOrDefault> ForceSafeDivisor(
+static cl::opt<cl::boolOrDefault> ForceSafeDivisor(
     "force-widen-divrem-via-safe-divisor", cl::Hidden,
-    cl::desc("Override cost based safe divisor widening for div/rem instructions"));
+    cl::desc(
+        "Override cost based safe divisor widening for div/rem instructions"));
 
 /// A helper function that returns true if the given type is irregular. The
 /// type is irregular if its allocated size doesn't equal the store size of an
@@ -2332,11 +2333,19 @@ static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
 /// variable on which to base the steps, \p Step is the size of the step.
 static void buildScalarSteps(Value *ScalarIV, Value *Step,
                              const InductionDescriptor &ID, VPValue *Def,
-                             VPTransformState &State) {
+                             Type *TruncToTy, VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
+  Type *ScalarIVTy = ScalarIV->getType()->getScalarType();
+  if (TruncToTy) {
+    assert(Step->getType()->isIntegerTy() &&
+           "Truncation requires an integer step");
+    ScalarIV = State.Builder.CreateTrunc(ScalarIV, TruncToTy);
+    Step = State.Builder.CreateTrunc(Step, TruncToTy);
+    ScalarIVTy = ScalarIV->getType()->getScalarType();
+  }
+
   // We shouldn't have to build scalar steps if we aren't vectorizing.
   // Get the value type and ensure it and the step have the same integer type.
-  Type *ScalarIVTy = ScalarIV->getType()->getScalarType();
   assert(ScalarIVTy == Step->getType() &&
          "Val and Step should have the same type");
 
@@ -2427,8 +2436,14 @@ static Value *CreateStepValue(const SCEV *Step, ScalarEvolution &SE,
 static Value *emitTransformedIndex(IRBuilderBase &B, Value *Index,
                                    Value *StartValue, Value *Step,
                                    const InductionDescriptor &ID) {
-  assert(Index->getType()->getScalarType() == Step->getType() &&
-         "Index scalar type does not match StepValue type");
+  Type *StepTy = Step->getType();
+  Value *CastedIndex = StepTy->isIntegerTy()
+                           ? B.CreateSExtOrTrunc(Index, StepTy)
+                           : B.CreateCast(Instruction::SIToFP, Index, StepTy);
+  if (CastedIndex != Index) {
+    CastedIndex->setName(CastedIndex->getName() + ".cast");
+    Index = CastedIndex;
+  }
 
   // Note: the IR at this point is broken. We cannot use SE to create any new
   // SCEV and then expand it, hoping that SCEV's simplification will give us
@@ -2694,6 +2709,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   for (unsigned Part = 0; Part < UF; Part++) {
     // Collect the stored vector from each member.
     SmallVector<Value *, 4> StoredVecs;
+    unsigned StoredIdx = 0;
     for (unsigned i = 0; i < InterleaveFactor; i++) {
       assert((Group->getMember(i) || MaskForGaps) &&
              "Fail to get a member from an interleaved store group");
@@ -2706,7 +2722,8 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         continue;
       }
 
-      Value *StoredVec = State.get(StoredValues[i], Part);
+      Value *StoredVec = State.get(StoredValues[StoredIdx], Part);
+      ++StoredIdx;
 
       if (Group->isReverse())
         StoredVec = Builder.CreateVectorReverse(StoredVec, "reverse");
@@ -3132,25 +3149,19 @@ PHINode *InnerLoopVectorizer::createInductionResumeValue(
     if (II.getInductionBinOp() && isa<FPMathOperator>(II.getInductionBinOp()))
       B.setFastMathFlags(II.getInductionBinOp()->getFastMathFlags());
 
-    Type *StepType = II.getStep()->getType();
-    Instruction::CastOps CastOp =
-        CastInst::getCastOpcode(VectorTripCount, true, StepType, true);
-    Value *VTC = B.CreateCast(CastOp, VectorTripCount, StepType, "cast.vtc");
     Value *Step =
         CreateStepValue(II.getStep(), *PSE.getSE(), &*B.GetInsertPoint());
-    EndValue = emitTransformedIndex(B, VTC, II.getStartValue(), Step, II);
+    EndValue =
+        emitTransformedIndex(B, VectorTripCount, II.getStartValue(), Step, II);
     EndValue->setName("ind.end");
 
     // Compute the end value for the additional bypass (if applicable).
     if (AdditionalBypass.first) {
       B.SetInsertPoint(&(*AdditionalBypass.first->getFirstInsertionPt()));
-      CastOp = CastInst::getCastOpcode(AdditionalBypass.second, true, StepType,
-                                       true);
       Value *Step =
           CreateStepValue(II.getStep(), *PSE.getSE(), &*B.GetInsertPoint());
-      VTC = B.CreateCast(CastOp, AdditionalBypass.second, StepType, "cast.vtc");
-      EndValueFromAdditionalBypass =
-          emitTransformedIndex(B, VTC, II.getStartValue(), Step, II);
+      EndValueFromAdditionalBypass = emitTransformedIndex(
+          B, AdditionalBypass.second, II.getStartValue(), Step, II);
       EndValueFromAdditionalBypass->setName("ind.end");
     }
   }
@@ -3347,17 +3358,11 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
 
       Value *CountMinusOne = B.CreateSub(
           VectorTripCount, ConstantInt::get(VectorTripCount->getType(), 1));
-      Value *CMO =
-          !II.getStep()->getType()->isIntegerTy()
-              ? B.CreateCast(Instruction::SIToFP, CountMinusOne,
-                             II.getStep()->getType())
-              : B.CreateSExtOrTrunc(CountMinusOne, II.getStep()->getType());
-      CMO->setName("cast.cmo");
-
+      CountMinusOne->setName("cmo");
       Value *Step = CreateStepValue(II.getStep(), *PSE.getSE(),
                                     VectorHeader->getTerminator());
       Value *Escape =
-          emitTransformedIndex(B, CMO, II.getStartValue(), Step, II);
+          emitTransformedIndex(B, CountMinusOne, II.getStartValue(), Step, II);
       Escape->setName("ind.escape");
       MissingVals[UI] = Escape;
     }
@@ -9542,27 +9547,17 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   auto CreateScalarIV = [&](Value *&Step) -> Value * {
     Value *ScalarIV = State.get(getCanonicalIV(), VPIteration(0, 0));
     auto *CanonicalIV = State.get(getParent()->getPlan()->getCanonicalIV(), 0);
-    if (!isCanonical() || CanonicalIV->getType() != Ty) {
-      ScalarIV =
-          Ty->isIntegerTy()
-              ? State.Builder.CreateSExtOrTrunc(ScalarIV, Ty)
-              : State.Builder.CreateCast(Instruction::SIToFP, ScalarIV, Ty);
+    if (!isCanonical() || CanonicalIV->getType() != Step->getType()) {
       ScalarIV = emitTransformedIndex(State.Builder, ScalarIV,
                                       getStartValue()->getLiveInIRValue(), Step,
                                       IndDesc);
       ScalarIV->setName("offset.idx");
     }
-    if (TruncToTy) {
-      assert(Step->getType()->isIntegerTy() &&
-             "Truncation requires an integer step");
-      ScalarIV = State.Builder.CreateTrunc(ScalarIV, TruncToTy);
-      Step = State.Builder.CreateTrunc(Step, TruncToTy);
-    }
     return ScalarIV;
   };
 
   Value *ScalarIV = CreateScalarIV(Step);
-  buildScalarSteps(ScalarIV, Step, IndDesc, this, State);
+  buildScalarSteps(ScalarIV, Step, IndDesc, this, TruncToTy, State);
 }
 
 void VPInterleaveRecipe::execute(VPTransformState &State) {

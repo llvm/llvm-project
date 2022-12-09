@@ -10,6 +10,7 @@
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::minidump;
@@ -173,7 +174,7 @@ static Directory layout(BlobAllocator &File, Stream &S) {
   Directory Result;
   Result.Type = S.Type;
   Result.Location.RVA = File.tell();
-  Optional<size_t> DataEnd;
+  std::optional<size_t> DataEnd;
   switch (S.Kind) {
   case Stream::StreamKind::Exception:
     DataEnd = layout(File, cast<MinidumpYAML::ExceptionStream>(S));

@@ -110,6 +110,7 @@
 
 #define DEBUG_TYPE "instcombine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -1068,6 +1069,9 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
     assert(isa<Constant>(II->getArgOperand(1)) && "Expected constant operand");
     return Builder.CreateBinaryIntrinsic(IID, SO, II->getArgOperand(1));
   }
+
+  if (auto *EI = dyn_cast<ExtractElementInst>(&I))
+    return Builder.CreateExtractElement(SO, EI->getIndexOperand());
 
   assert(I.isBinaryOp() && "Unexpected opcode for select folding");
 
@@ -4241,7 +4245,7 @@ bool InstCombinerImpl::run() {
     // prove that the successor is not executed more frequently than our block.
     // Return the UserBlock if successful.
     auto getOptionalSinkBlockForInst =
-        [this](Instruction *I) -> Optional<BasicBlock *> {
+        [this](Instruction *I) -> std::optional<BasicBlock *> {
       if (!EnableCodeSinking)
         return None;
 

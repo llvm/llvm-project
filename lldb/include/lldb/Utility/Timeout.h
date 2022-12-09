@@ -36,7 +36,7 @@ private:
   using Base = llvm::Optional<Dur<Ratio>>;
 
 public:
-  Timeout(llvm::NoneType none) : Base(none) {}
+  Timeout(std::nullopt_t none) : Base(none) {}
 
   template <typename Ratio2,
             typename = typename EnableIf<int64_t, Ratio2>::type>

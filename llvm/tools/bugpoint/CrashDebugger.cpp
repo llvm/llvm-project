@@ -484,7 +484,7 @@ bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock *> &BBs) {
           BBTerm->replaceAllUsesWith(Constant::getNullValue(BBTerm->getType()));
 
         // Replace the old terminator instruction.
-        BB.getInstList().pop_back();
+        BB.back().eraseFromParent();
         new UnreachableInst(BB.getContext(), &BB);
       }
     }

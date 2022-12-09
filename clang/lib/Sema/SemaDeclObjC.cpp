@@ -4438,6 +4438,11 @@ void Sema::CheckObjCMethodOverrides(ObjCMethodDecl *ObjCMethod,
                                     ResultTypeCompatibilityKind RTC) {
   if (!ObjCMethod)
     return;
+  auto IsMethodInCurrentClass = [CurrentClass](const ObjCMethodDecl *M) {
+    // Checking canonical decl works across modules.
+    return M->getClassInterface()->getCanonicalDecl() ==
+           CurrentClass->getCanonicalDecl();
+  };
   // Search for overridden methods and merge information down from them.
   OverrideSearch overrides(*this, ObjCMethod);
   // Keep track if the method overrides any method in the class's base classes,
@@ -4449,8 +4454,7 @@ void Sema::CheckObjCMethodOverrides(ObjCMethodDecl *ObjCMethod,
   for (ObjCMethodDecl *overridden : overrides) {
     if (!hasOverriddenMethodsInBaseOrProtocol) {
       if (isa<ObjCProtocolDecl>(overridden->getDeclContext()) ||
-          CurrentClass != overridden->getClassInterface() ||
-          overridden->isOverriding()) {
+          !IsMethodInCurrentClass(overridden) || overridden->isOverriding()) {
         CheckObjCMethodDirectOverrides(ObjCMethod, overridden);
         hasOverriddenMethodsInBaseOrProtocol = true;
       } else if (isa<ObjCImplDecl>(ObjCMethod->getDeclContext())) {
@@ -4475,7 +4479,7 @@ void Sema::CheckObjCMethodOverrides(ObjCMethodDecl *ObjCMethod,
               OverrideSearch overrides(*this, overridden);
               for (ObjCMethodDecl *SuperOverridden : overrides) {
                 if (isa<ObjCProtocolDecl>(SuperOverridden->getDeclContext()) ||
-                    CurrentClass != SuperOverridden->getClassInterface()) {
+                    !IsMethodInCurrentClass(SuperOverridden)) {
                   CheckObjCMethodDirectOverrides(ObjCMethod, SuperOverridden);
                   hasOverriddenMethodsInBaseOrProtocol = true;
                   overridden->setOverriding(true);

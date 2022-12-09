@@ -235,6 +235,26 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
          "Incorrect tail offset");
   Offset = std::max(Offset, HeaderSize + O.Header.SizeOfCmds);
 
+  // The exports trie can be in either LC_DYLD_INFO or in
+  // LC_DYLD_EXPORTS_TRIE, but not both.
+  size_t DyldInfoExportsTrieSize = 0;
+  size_t DyldExportsTrieSize = 0;
+  for (const auto &LC : O.LoadCommands) {
+    switch (LC.MachOLoadCommand.load_command_data.cmd) {
+    case MachO::LC_DYLD_INFO:
+    case MachO::LC_DYLD_INFO_ONLY:
+      DyldInfoExportsTrieSize = O.Exports.Trie.size();
+      break;
+    case MachO::LC_DYLD_EXPORTS_TRIE:
+      DyldExportsTrieSize = O.Exports.Trie.size();
+      break;
+    default:
+      break;
+    }
+  }
+  assert((DyldInfoExportsTrieSize == 0 || DyldExportsTrieSize == 0) &&
+         "Export trie in both LCs");
+
   uint64_t NListSize = Is64Bit ? sizeof(MachO::nlist_64) : sizeof(MachO::nlist);
   uint64_t StartOfLinkEdit = Offset;
 
@@ -253,9 +273,9 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
   uint64_t StartOfBindingInfo = updateOffset(O.Binds.Opcodes.size());
   uint64_t StartOfWeakBindingInfo = updateOffset(O.WeakBinds.Opcodes.size());
   uint64_t StartOfLazyBindingInfo = updateOffset(O.LazyBinds.Opcodes.size());
-  uint64_t StartOfExportTrie = updateOffset(O.Exports.Trie.size());
+  uint64_t StartOfExportTrie = updateOffset(DyldInfoExportsTrieSize);
   uint64_t StartOfChainedFixups = updateOffset(O.ChainedFixups.Data.size());
-  uint64_t StartOfDyldExportsTrie = updateOffset(O.ExportsTrie.Data.size());
+  uint64_t StartOfDyldExportsTrie = updateOffset(DyldExportsTrieSize);
   uint64_t StartOfFunctionStarts = updateOffset(O.FunctionStarts.Data.size());
   uint64_t StartOfDataInCode = updateOffset(O.DataInCode.Data.size());
   uint64_t StartOfLinkerOptimizationHint =
@@ -368,7 +388,7 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
       break;
     case MachO::LC_DYLD_EXPORTS_TRIE:
       MLC.linkedit_data_command_data.dataoff = StartOfDyldExportsTrie;
-      MLC.linkedit_data_command_data.datasize = O.ExportsTrie.Data.size();
+      MLC.linkedit_data_command_data.datasize = DyldExportsTrieSize;
       break;
     case MachO::LC_DYLD_INFO:
     case MachO::LC_DYLD_INFO_ONLY:
@@ -386,7 +406,7 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
       MLC.dyld_info_command_data.lazy_bind_size = O.LazyBinds.Opcodes.size();
       MLC.dyld_info_command_data.export_off =
           O.Exports.Trie.empty() ? 0 : StartOfExportTrie;
-      MLC.dyld_info_command_data.export_size = O.Exports.Trie.size();
+      MLC.dyld_info_command_data.export_size = DyldInfoExportsTrieSize;
       break;
     // Note that LC_ENCRYPTION_INFO.cryptoff despite its name and the comment in
     // <mach-o/loader.h> is not an offset in the binary file, instead, it is a

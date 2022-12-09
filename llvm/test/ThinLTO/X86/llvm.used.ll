@@ -16,7 +16,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 define internal void @_ZN12_GLOBAL__N_16Module4dumpEv() {
     ret void
 }
-@llvm.used = appending global [1 x i8*] [i8* bitcast (void ()* @_ZN12_GLOBAL__N_16Module4dumpEv to i8*)], section "llvm.metadata"
+@llvm.used = appending global [1 x ptr] [ptr @_ZN12_GLOBAL__N_16Module4dumpEv], section "llvm.metadata"
 
 
 define void @globalfunc() #0 {

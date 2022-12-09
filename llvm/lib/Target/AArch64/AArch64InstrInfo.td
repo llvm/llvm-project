@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 // ARM Instruction Predicate Definitions.
 //
+def HasV8_0a         : Predicate<"Subtarget->hasV8_0aOps()">,
+                                 AssemblerPredicate<(all_of HasV8_0aOps), "armv8.0a">;
 def HasV8_1a         : Predicate<"Subtarget->hasV8_1aOps()">,
                                  AssemblerPredicateWithAll<(all_of HasV8_1aOps), "armv8.1a">;
 def HasV8_2a         : Predicate<"Subtarget->hasV8_2aOps()">,
@@ -113,6 +115,8 @@ def HasDotProd       : Predicate<"Subtarget->hasDotProd()">,
                                  AssemblerPredicateWithAll<(all_of FeatureDotProd), "dotprod">;
 def HasCRC           : Predicate<"Subtarget->hasCRC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCRC), "crc">;
+def HasCSSC           : Predicate<"Subtarget->hasCSSC()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureCSSC), "cssc">;
 def HasLSE           : Predicate<"Subtarget->hasLSE()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSE), "lse">;
 def HasNoLSE         : Predicate<"!Subtarget->hasLSE()">;
@@ -162,7 +166,7 @@ def HasSME2p1        : Predicate<"Subtarget->hasSME2p1()">,
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVEorSME
-    : Predicate<"Subtarget->hasSVE() || Subtarget->hasSME()">,
+    : Predicate<"Subtarget->hasSVEorSME()">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME),
                 "sve or sme">;
 def HasSVE2orSME
@@ -228,6 +232,10 @@ def HasHBC           : Predicate<"Subtarget->hasHBC()">,
                        AssemblerPredicateWithAll<(all_of FeatureHBC), "hbc">;
 def HasMOPS          : Predicate<"Subtarget->hasMOPS()">,
                        AssemblerPredicateWithAll<(all_of FeatureMOPS), "mops">;
+def HasITE           : Predicate<"Subtarget->hasITE()">,
+                       AssemblerPredicateWithAll<(all_of FeatureITE), "ite">;
+def HasRCPC3         : Predicate<"Subtarget->hasRCPC3()">,
+                       AssemblerPredicate<(all_of FeatureRCPC3), "rcpc3">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -2009,12 +2017,11 @@ defm : STOPregister<"stumin","LDUMIN">;// STUMINx
 // v8.5 Memory Tagging Extension
 let Predicates = [HasMTE] in {
 
-def IRG   : BaseTwoOperand<0b0100, GPR64sp, "irg", int_aarch64_irg, GPR64sp, GPR64>,
-            Sched<[]>{
-  let Inst{31} = 1;
-}
-def GMI   : BaseTwoOperand<0b0101, GPR64, "gmi", int_aarch64_gmi, GPR64sp>, Sched<[]>{
-  let Inst{31} = 1;
+def IRG   : BaseTwoOperandRegReg<0b1, 0b0, 0b000100, GPR64sp, "irg",
+                                 int_aarch64_irg, GPR64sp, GPR64>, Sched<[]>;
+
+def GMI   : BaseTwoOperandRegReg<0b1, 0b0, 0b000101, GPR64, "gmi",
+                                 int_aarch64_gmi, GPR64sp>, Sched<[]> {
   let isNotDuplicable = 1;
 }
 def ADDG  : AddSubG<0, "addg", null_frag>;
@@ -2180,13 +2187,13 @@ def : Pat<(not GPR64:$Xm), (ORNXrr XZR, GPR64:$Xm)>;
 // One operand data processing instructions.
 //===----------------------------------------------------------------------===//
 
-defm CLS    : OneOperandData<0b101, "cls">;
-defm CLZ    : OneOperandData<0b100, "clz", ctlz>;
-defm RBIT   : OneOperandData<0b000, "rbit", bitreverse>;
+defm CLS    : OneOperandData<0b000101, "cls">;
+defm CLZ    : OneOperandData<0b000100, "clz", ctlz>;
+defm RBIT   : OneOperandData<0b000000, "rbit", bitreverse>;
 
-def  REV16Wr : OneWRegData<0b001, "rev16",
-                                  UnOpFrag<(rotr (bswap node:$LHS), (i64 16))>>;
-def  REV16Xr : OneXRegData<0b001, "rev16", null_frag>;
+def  REV16Wr : OneWRegData<0b000001, "rev16",
+                                     UnOpFrag<(rotr (bswap node:$LHS), (i64 16))>>;
+def  REV16Xr : OneXRegData<0b000001, "rev16", null_frag>;
 
 def : Pat<(cttz GPR32:$Rn),
           (CLZWr (RBITWr GPR32:$Rn))>;
@@ -2204,10 +2211,10 @@ def : Pat<(int_aarch64_cls64 GPR64:$Rm), (EXTRACT_SUBREG (CLSXr GPR64:$Rm), sub_
 // Unlike the other one operand instructions, the instructions with the "rev"
 // mnemonic do *not* just different in the size bit, but actually use different
 // opcode bits for the different sizes.
-def REVWr   : OneWRegData<0b010, "rev", bswap>;
-def REVXr   : OneXRegData<0b011, "rev", bswap>;
-def REV32Xr : OneXRegData<0b010, "rev32",
-                                 UnOpFrag<(rotr (bswap node:$LHS), (i64 32))>>;
+def REVWr   : OneWRegData<0b000010, "rev", bswap>;
+def REVXr   : OneXRegData<0b000011, "rev", bswap>;
+def REV32Xr : OneXRegData<0b000010, "rev32",
+                                    UnOpFrag<(rotr (bswap node:$LHS), (i64 32))>>;
 
 def : InstAlias<"rev64 $Rd, $Rn", (REVXr GPR64:$Rd, GPR64:$Rn), 0>;
 
@@ -3898,6 +3905,21 @@ def STLRX  : StoreRelease  <0b11, 1, 0, 0, 1, GPR64, "stlr">;
 def STLRB  : StoreRelease  <0b00, 1, 0, 0, 1, GPR32, "stlrb">;
 def STLRH  : StoreRelease  <0b01, 1, 0, 0, 1, GPR32, "stlrh">;
 
+/*
+Aliases for when offset=0. Note that in contrast to LoadAcquire which has a $Rn
+of type GPR64sp0, we deliberately choose to make $Rn of type GPR64sp and add an
+alias for the case of immediate #0. This is because new STLR versions (from
+LRCPC3 extension) do have a non-zero immediate value, so GPR64sp0 is not
+appropriate anymore (it parses and discards the optional zero). This is not the
+case for LoadAcquire because the new LRCPC3 LDAR instructions are post-indexed,
+and the immediate values are not inside the [] brackets and thus not accepted
+by GPR64sp0 parser.
+*/
+def STLRW0  : InstAlias<"stlr\t$Rt, [$Rn, #0]" , (STLRW   GPR32: $Rt, GPR64sp:$Rn)>;
+def STLRX0  : InstAlias<"stlr\t$Rt, [$Rn, #0]" , (STLRX   GPR64: $Rt, GPR64sp:$Rn)>;
+def STLRB0  : InstAlias<"stlrb\t$Rt, [$Rn, #0]", (STLRB   GPR32: $Rt, GPR64sp:$Rn)>;
+def STLRH0  : InstAlias<"stlrh\t$Rt, [$Rn, #0]", (STLRH   GPR32: $Rt, GPR64sp:$Rn)>;
+
 def STLXRW : StoreExclusive<0b10, 0, 0, 0, 1, GPR32, "stlxr">;
 def STLXRX : StoreExclusive<0b11, 0, 0, 0, 1, GPR64, "stlxr">;
 def STLXRB : StoreExclusive<0b00, 0, 0, 0, 1, GPR32, "stlxrb">;
@@ -3932,6 +3954,12 @@ let Predicates = [HasLOR] in {
   def STLLRX  : StoreRelease   <0b11, 1, 0, 0, 0, GPR64, "stllr">;
   def STLLRB  : StoreRelease   <0b00, 1, 0, 0, 0, GPR32, "stllrb">;
   def STLLRH  : StoreRelease   <0b01, 1, 0, 0, 0, GPR32, "stllrh">;
+
+  // Aliases for when offset=0
+  def STLLRW0 : InstAlias<"stllr\t$Rt,  [$Rn, #0]",  (STLLRW   GPR32: $Rt, GPR64sp:$Rn)>;
+  def STLLRX0 : InstAlias<"stllr\t$Rt,  [$Rn, #0]",  (STLLRX   GPR64: $Rt, GPR64sp:$Rn)>;
+  def STLLRB0 : InstAlias<"stllrb\t$Rt, [$Rn, #0]",  (STLLRB   GPR32: $Rt, GPR64sp:$Rn)>;
+  def STLLRH0 : InstAlias<"stllrh\t$Rt, [$Rn, #0]",  (STLLRH   GPR32: $Rt, GPR64sp:$Rn)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -8481,6 +8509,94 @@ def StoreSwiftAsyncContext
 def AArch64AssertZExtBool : SDNode<"AArch64ISD::ASSERT_ZEXT_BOOL", SDT_assert>;
 def : Pat<(AArch64AssertZExtBool GPR32:$op),
           (i32 GPR32:$op)>;
+
+//===----------------------------===//
+// 2022 Architecture Extensions:
+//===----------------------------===//
+
+//===----------------------------------------------------------------------===//
+// General Data-Processing Instructions (FEAT_V94_DP)
+//===----------------------------------------------------------------------===//
+defm ABS : OneOperandData<0b001000, "abs">, Requires<[HasCSSC]>;
+defm CNT : OneOperandData<0b000111, "cnt">, Requires<[HasCSSC]>;
+defm CTZ : OneOperandData<0b000110, "ctz">, Requires<[HasCSSC]>;
+
+defm SMAX : ComparisonOp<0, 0, "smax">, Requires<[HasCSSC]>;
+defm SMIN : ComparisonOp<0, 1, "smin">, Requires<[HasCSSC]>;
+defm UMAX : ComparisonOp<1, 0, "umax">, Requires<[HasCSSC]>;
+defm UMIN : ComparisonOp<1, 1, "umin">, Requires<[HasCSSC]>;
+
+def RPRFM:
+    I<(outs), (ins rprfop:$Rt, GPR64:$Rm, GPR64sp:$Rn),
+      "rprfm", "\t$Rt, $Rm, [$Rn]", "", []>,
+    Sched<[]> {
+  bits<6> Rt;
+  bits<5> Rn;
+  bits<5> Rm;
+  let Inst{2-0} = Rt{2-0};
+  let Inst{4-3} = 0b11;
+  let Inst{9-5} = Rn;
+  let Inst{11-10} = 0b10;
+  let Inst{13-12} = Rt{4-3};
+  let Inst{14} = 0b1;
+  let Inst{15} = Rt{5};
+  let Inst{20-16} = Rm;
+  let Inst{31-21} = 0b11111000101;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 1;
+  // RPRFM overlaps with PRFM (reg), when the decoder method of PRFM returns
+  // Fail, the decoder should attempt to decode RPRFM. This requires setting
+  // the decoder namespace to "Fallback".
+  let DecoderNamespace = "Fallback";
+}
+
+//===----------------------------------------------------------------------===//
+// RCPC Instructions (FEAT_LRCPC3)
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasRCPC3] in {
+  //                                             size   opc    opc2
+  def STILPWpre:  BaseLRCPC3IntegerLoadStorePair<0b10, 0b00, 0b0000, (outs GPR64sp:$wback), (ins GPR32:$Rt, GPR32:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn, #-8]!", "$Rn = $wback">;
+  def STILPXpre:  BaseLRCPC3IntegerLoadStorePair<0b11, 0b00, 0b0000, (outs GPR64sp:$wback), (ins GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn, #-16]!", "$Rn = $wback">;
+  def STILPW:     BaseLRCPC3IntegerLoadStorePair<0b10, 0b00, 0b0001, (outs), (ins GPR32:$Rt, GPR32:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn]", "">;
+  def STILPX:     BaseLRCPC3IntegerLoadStorePair<0b11, 0b00, 0b0001, (outs), (ins GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn]", "">;
+  def LDIAPPWpre: BaseLRCPC3IntegerLoadStorePair<0b10, 0b01, 0b0000, (outs GPR64sp:$wback, GPR32:$Rt, GPR32:$Rt2), (ins GPR64sp:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn], #8", "$Rn = $wback">;
+  def LDIAPPXpre: BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0000, (outs GPR64sp:$wback, GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn], #16", "$Rn = $wback">;
+  def LDIAPPW:    BaseLRCPC3IntegerLoadStorePair<0b10, 0b01, 0b0001, (outs GPR32:$Rt, GPR32:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
+  def LDIAPPX:    BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0001, (outs GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
+
+  // Aliases for when offset=0
+  def : InstAlias<"stilp\t$Rt, $Rt2, [$Rn, #0]", (STILPW GPR32: $Rt, GPR32: $Rt2, GPR64sp:$Rn)>;
+  def : InstAlias<"stilp\t$Rt, $Rt2, [$Rn, #0]", (STILPX GPR64: $Rt, GPR64: $Rt2, GPR64sp:$Rn)>;
+
+  //                                        size   opc
+  def STLRWpre:  BaseLRCPC3IntegerLoadStore<0b10, 0b10, (outs GPR64sp:$wback),            (ins GPR32:$Rt, GPR64sp:$Rn), "stlr",  "\t$Rt, [$Rn, #-4]!", "$Rn = $wback">;
+  def STLRXpre:  BaseLRCPC3IntegerLoadStore<0b11, 0b10, (outs GPR64sp:$wback),            (ins GPR64:$Rt, GPR64sp:$Rn), "stlr",  "\t$Rt, [$Rn, #-8]!", "$Rn = $wback">;
+  def LDAPRWpre: BaseLRCPC3IntegerLoadStore<0b10, 0b11, (outs GPR64sp:$wback, GPR32:$Rt), (ins GPR64sp:$Rn),            "ldapr", "\t$Rt, [$Rn], #4",   "$Rn = $wback">;
+  def LDAPRXpre: BaseLRCPC3IntegerLoadStore<0b11, 0b11, (outs GPR64sp:$wback, GPR64:$Rt), (ins GPR64sp:$Rn),            "ldapr", "\t$Rt, [$Rn], #8",   "$Rn = $wback">;
+}
+
+let Predicates = [HasRCPC3, HasNEON] in {
+  //                                              size   opc regtype
+  defm STLURb:  LRCPC3NEONLoadStoreUnscaledOffset<0b00, 0b00, FPR8  , (outs), (ins FPR8  :$Rt, GPR64sp:$Rn, simm9:$simm), "stlur">;
+  defm STLURh:  LRCPC3NEONLoadStoreUnscaledOffset<0b01, 0b00, FPR16 , (outs), (ins FPR16 :$Rt, GPR64sp:$Rn, simm9:$simm), "stlur">;
+  defm STLURs:  LRCPC3NEONLoadStoreUnscaledOffset<0b10, 0b00, FPR32 , (outs), (ins FPR32 :$Rt, GPR64sp:$Rn, simm9:$simm), "stlur">;
+  defm STLURd:  LRCPC3NEONLoadStoreUnscaledOffset<0b11, 0b00, FPR64 , (outs), (ins FPR64 :$Rt, GPR64sp:$Rn, simm9:$simm), "stlur">;
+  defm STLURq:  LRCPC3NEONLoadStoreUnscaledOffset<0b00, 0b10, FPR128, (outs), (ins FPR128:$Rt, GPR64sp:$Rn, simm9:$simm), "stlur">;
+  defm LDAPURb: LRCPC3NEONLoadStoreUnscaledOffset<0b00, 0b01, FPR8  , (outs FPR8  :$Rt), (ins GPR64sp:$Rn, simm9:$simm), "ldapur">;
+  defm LDAPURh: LRCPC3NEONLoadStoreUnscaledOffset<0b01, 0b01, FPR16 , (outs FPR16 :$Rt), (ins GPR64sp:$Rn, simm9:$simm), "ldapur">;
+  defm LDAPURs: LRCPC3NEONLoadStoreUnscaledOffset<0b10, 0b01, FPR32 , (outs FPR32 :$Rt), (ins GPR64sp:$Rn, simm9:$simm), "ldapur">;
+  defm LDAPURd: LRCPC3NEONLoadStoreUnscaledOffset<0b11, 0b01, FPR64 , (outs FPR64 :$Rt), (ins GPR64sp:$Rn, simm9:$simm), "ldapur">;
+  defm LDAPURq: LRCPC3NEONLoadStoreUnscaledOffset<0b00, 0b11, FPR128, (outs FPR128:$Rt), (ins GPR64sp:$Rn, simm9:$simm), "ldapur">;
+
+  //                                L
+  def STL1:  LRCPC3NEONLdStSingle<0b0, (outs), (ins VecListOned:$Vt, VectorIndexD:$Q, GPR64sp:$Rn) , "stl1", "">;
+  def LDAP1: LRCPC3NEONLdStSingle<0b1, (outs VecListOned:$dst), (ins VecListOned:$Vt, VectorIndexD:$Q, GPR64sp0:$Rn), "ldap1", "$Vt = $dst">;
+
+  // Aliases for when offset=0
+  def : InstAlias<"stl1\t$Vt$Q, [$Rn, #0]", (STL1 VecListOned:$Vt, VectorIndexD:$Q, GPR64sp:$Rn)>;
+}
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"

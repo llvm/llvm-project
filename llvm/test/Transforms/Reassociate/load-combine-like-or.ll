@@ -2,23 +2,23 @@
 ; RUN: opt < %s -passes=reassociate -S | FileCheck %s
 
 ; Basic pattern where two contiguous i8 loads form a wider i16 load
-define i16 @p0_i8_i8_i16(i8* %ptr) {
+define i16 @p0_i8_i8_i16(ptr %ptr) {
 ; CHECK-LABEL: @p0_i8_i8_i16(
-; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 1
-; CHECK-NEXT:    [[I2:%.*]] = load i8, i8* [[I]], align 1
+; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 1
+; CHECK-NEXT:    [[I2:%.*]] = load i8, ptr [[I]], align 1
 ; CHECK-NEXT:    [[I3:%.*]] = zext i8 [[I2]] to i16
 ; CHECK-NEXT:    [[I4:%.*]] = shl i16 [[I3]], 8
-; CHECK-NEXT:    [[I5:%.*]] = load i8, i8* [[PTR]], align 1
+; CHECK-NEXT:    [[I5:%.*]] = load i8, ptr [[PTR]], align 1
 ; CHECK-NEXT:    [[I6:%.*]] = zext i8 [[I5]] to i16
 ; CHECK-NEXT:    [[I7:%.*]] = or i16 [[I4]], [[I6]]
 ; CHECK-NEXT:    [[I8:%.*]] = add i16 [[I7]], 42
 ; CHECK-NEXT:    ret i16 [[I8]]
 ;
-  %i = getelementptr inbounds i8, i8* %ptr, i64 1
-  %i2 = load i8, i8* %i
+  %i = getelementptr inbounds i8, ptr %ptr, i64 1
+  %i2 = load i8, ptr %i
   %i3 = zext i8 %i2 to i16
   %i4 = shl i16 %i3, 8
-  %i5 = load i8, i8* %ptr
+  %i5 = load i8, ptr %ptr
   %i6 = zext i8 %i5 to i16
   %i7 = or i16 %i4, %i6
   %i8 = add i16 %i7, 42
@@ -26,23 +26,23 @@ define i16 @p0_i8_i8_i16(i8* %ptr) {
 }
 
 ; Basic pattern where two contiguous i8 loads form a wider i16 load, with swapped endianness
-define i16 @p1_i8_i8_i16_swapped(i8* %ptr) {
+define i16 @p1_i8_i8_i16_swapped(ptr %ptr) {
 ; CHECK-LABEL: @p1_i8_i8_i16_swapped(
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    [[I2:%.*]] = zext i8 [[I]] to i16
 ; CHECK-NEXT:    [[I3:%.*]] = shl i16 [[I2]], 8
-; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i64 1
-; CHECK-NEXT:    [[I5:%.*]] = load i8, i8* [[I4]], align 1
+; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[I5:%.*]] = load i8, ptr [[I4]], align 1
 ; CHECK-NEXT:    [[I6:%.*]] = zext i8 [[I5]] to i16
 ; CHECK-NEXT:    [[I7:%.*]] = or i16 [[I3]], [[I6]]
 ; CHECK-NEXT:    [[I8:%.*]] = add i16 [[I7]], 42
 ; CHECK-NEXT:    ret i16 [[I8]]
 ;
-  %i = load i8, i8* %ptr
+  %i = load i8, ptr %ptr
   %i2 = zext i8 %i to i16
   %i3 = shl i16 %i2, 8
-  %i4 = getelementptr inbounds i8, i8* %ptr, i64 1
-  %i5 = load i8, i8* %i4
+  %i4 = getelementptr inbounds i8, ptr %ptr, i64 1
+  %i5 = load i8, ptr %i4
   %i6 = zext i8 %i5 to i16
   %i7 = or i16 %i3, %i6
   %i8 = add i16 %i7, 42
@@ -50,23 +50,23 @@ define i16 @p1_i8_i8_i16_swapped(i8* %ptr) {
 }
 
 ; Loads are spaced out by a bit, but we don't check for that.
-define i16 @p2(i8* %ptr) {
+define i16 @p2(ptr %ptr) {
 ; CHECK-LABEL: @p2(
-; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 1
-; CHECK-NEXT:    [[I2:%.*]] = load i8, i8* [[I]], align 1
+; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 1
+; CHECK-NEXT:    [[I2:%.*]] = load i8, ptr [[I]], align 1
 ; CHECK-NEXT:    [[I3:%.*]] = zext i8 [[I2]] to i16
 ; CHECK-NEXT:    [[I4:%.*]] = shl i16 [[I3]], 9
-; CHECK-NEXT:    [[I5:%.*]] = load i8, i8* [[PTR]], align 1
+; CHECK-NEXT:    [[I5:%.*]] = load i8, ptr [[PTR]], align 1
 ; CHECK-NEXT:    [[I6:%.*]] = zext i8 [[I5]] to i16
 ; CHECK-NEXT:    [[I7:%.*]] = or i16 [[I4]], [[I6]]
 ; CHECK-NEXT:    [[I8:%.*]] = add i16 [[I7]], 42
 ; CHECK-NEXT:    ret i16 [[I8]]
 ;
-  %i = getelementptr inbounds i8, i8* %ptr, i64 1
-  %i2 = load i8, i8* %i
+  %i = getelementptr inbounds i8, ptr %ptr, i64 1
+  %i2 = load i8, ptr %i
   %i3 = zext i8 %i2 to i16
   %i4 = shl i16 %i3, 9 ; wrong shift amount
-  %i5 = load i8, i8* %ptr
+  %i5 = load i8, ptr %ptr
   %i6 = zext i8 %i5 to i16
   %i7 = or i16 %i4, %i6
   %i8 = add i16 %i7, 42
@@ -74,16 +74,16 @@ define i16 @p2(i8* %ptr) {
 }
 
 ; Both bytes are the same, but we don't check for that.
-define i16 @p3(i8* %ptr) {
+define i16 @p3(ptr %ptr) {
 ; CHECK-LABEL: @p3(
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    [[I2:%.*]] = zext i8 [[I]] to i16
 ; CHECK-NEXT:    [[I3:%.*]] = shl i16 [[I2]], 8
 ; CHECK-NEXT:    [[I4:%.*]] = or i16 [[I3]], [[I2]]
 ; CHECK-NEXT:    [[I5:%.*]] = add i16 [[I4]], 42
 ; CHECK-NEXT:    ret i16 [[I5]]
 ;
-  %i = load i8, i8* %ptr
+  %i = load i8, ptr %ptr
   %i2 = zext i8 %i to i16
   %i3 = shl i16 %i2, 8
   %i4 = or i16 %i3, %i2
@@ -95,15 +95,15 @@ define i16 @p3(i8* %ptr) {
 ; Negative tests, should be transformed.
 
 ; Low bits are not a load
-define i16 @n4(i8* %ptr) {
+define i16 @n4(ptr %ptr) {
 ; CHECK-LABEL: @n4(
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    [[I2:%.*]] = zext i8 [[I]] to i16
 ; CHECK-NEXT:    [[I3:%.*]] = shl i16 [[I2]], 8
 ; CHECK-NEXT:    [[I5:%.*]] = add i16 [[I3]], 84
 ; CHECK-NEXT:    ret i16 [[I5]]
 ;
-  %i = load i8, i8* %ptr
+  %i = load i8, ptr %ptr
   %i2 = zext i8 %i to i16
   %i3 = shl i16 %i2, 8
   %i4 = or i16 %i3, 42 ; Second operand is bad
@@ -112,9 +112,9 @@ define i16 @n4(i8* %ptr) {
 }
 
 ; Low bits are not a load
-define i16 @n5(i8* %ptr, i8 %lowbits) {
+define i16 @n5(ptr %ptr, i8 %lowbits) {
 ; CHECK-LABEL: @n5(
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    [[I2:%.*]] = zext i8 [[I]] to i16
 ; CHECK-NEXT:    [[I3:%.*]] = shl i16 [[I2]], 8
 ; CHECK-NEXT:    [[I4:%.*]] = zext i8 [[LOWBITS:%.*]] to i16
@@ -122,7 +122,7 @@ define i16 @n5(i8* %ptr, i8 %lowbits) {
 ; CHECK-NEXT:    [[I6:%.*]] = add i16 [[I5]], [[I3]]
 ; CHECK-NEXT:    ret i16 [[I6]]
 ;
-  %i = load i8, i8* %ptr
+  %i = load i8, ptr %ptr
   %i2 = zext i8 %i to i16
   %i3 = shl i16 %i2, 8
   %i4 = zext i8 %lowbits to i16 ; base operand is bad
@@ -132,20 +132,20 @@ define i16 @n5(i8* %ptr, i8 %lowbits) {
 }
 
 ; High bits are not a load
-define i16 @n6(i8* %ptr, i8 %highbits) {
+define i16 @n6(ptr %ptr, i8 %highbits) {
 ; CHECK-LABEL: @n6(
-; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 1
+; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 1
 ; CHECK-NEXT:    [[I4:%.*]] = shl i16 42, 8
-; CHECK-NEXT:    [[I5:%.*]] = load i8, i8* [[PTR]], align 1
+; CHECK-NEXT:    [[I5:%.*]] = load i8, ptr [[PTR]], align 1
 ; CHECK-NEXT:    [[I6:%.*]] = zext i8 [[I5]] to i16
 ; CHECK-NEXT:    [[I7:%.*]] = add i16 [[I4]], 42
 ; CHECK-NEXT:    [[I8:%.*]] = add i16 [[I7]], [[I6]]
 ; CHECK-NEXT:    ret i16 [[I8]]
 ;
-  %i = getelementptr inbounds i8, i8* %ptr, i64 1
-  %i2 = load i8, i8* %i
+  %i = getelementptr inbounds i8, ptr %ptr, i64 1
+  %i2 = load i8, ptr %i
   %i4 = shl i16 42, 8 ; base operand is bad
-  %i5 = load i8, i8* %ptr
+  %i5 = load i8, ptr %ptr
   %i6 = zext i8 %i5 to i16
   %i7 = or i16 %i4, %i6
   %i8 = add i16 %i7, 42

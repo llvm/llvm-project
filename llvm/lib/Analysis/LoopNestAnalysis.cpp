@@ -295,7 +295,7 @@ const BasicBlock &LoopNest::skipEmptyBlockUntil(const BasicBlock *From,
     return *From;
 
   auto IsEmpty = [](const BasicBlock *BB) {
-    return (BB->getInstList().size() == 1);
+    return (BB->size() == 1);
   };
 
   // Visited is used to avoid running into an infinite loop.
@@ -379,7 +379,7 @@ static bool checkLoopsStructure(const Loop &OuterLoop, const Loop &InnerLoop,
 
         // Ensure the inner loop guard successor is empty before skipping
         // blocks.
-        if (Succ->getInstList().size() == 1) {
+        if (Succ->size() == 1) {
           PotentialInnerPreHeader =
               &LoopNest::skipEmptyBlockUntil(Succ, InnerLoopPreHeader);
           PotentialOuterLatch =

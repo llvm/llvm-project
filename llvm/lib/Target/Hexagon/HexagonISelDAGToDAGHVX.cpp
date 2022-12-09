@@ -833,6 +833,7 @@ namespace llvm {
       return MVT::getVectorVT(MVT::i1, HwLen);
     }
 
+    void selectExtractSubvector(SDNode *N);
     void selectShuffle(SDNode *N);
     void selectRor(SDNode *N);
     void selectVAlign(SDNode *N);
@@ -2281,6 +2282,24 @@ SDValue HvxSelector::getVectorConstant(ArrayRef<uint8_t> Data,
   return DAG.getNode(HexagonISD::ISEL, dl, VecTy, LV);
 }
 
+void HvxSelector::selectExtractSubvector(SDNode *N) {
+  SDValue Inp = N->getOperand(0);
+  MVT ResTy = N->getValueType(0).getSimpleVT();
+  auto IdxN = cast<ConstantSDNode>(N->getOperand(1));
+  unsigned Idx = IdxN->getZExtValue();
+#ifndef NDEBUG
+  MVT InpTy = Inp.getValueType().getSimpleVT();
+  assert(InpTy.getVectorElementType() == ResTy.getVectorElementType());
+  unsigned ResLen = ResTy.getVectorNumElements();
+  assert(2 * ResLen == InpTy.getVectorNumElements());
+  assert(Idx == 0 || Idx == ResLen);
+#endif
+  unsigned SubReg = Idx == 0 ? Hexagon::vsub_lo : Hexagon::vsub_hi;
+  SDValue Ext = DAG.getTargetExtractSubreg(SubReg, SDLoc(N), ResTy, Inp);
+
+  ISel.ReplaceNode(N, Ext.getNode());
+}
+
 void HvxSelector::selectShuffle(SDNode *N) {
   DEBUG_WITH_TYPE("isel", {
     dbgs() << "Starting " << __func__ << " on node:\n";
@@ -2388,6 +2407,10 @@ void HvxSelector::selectVAlign(SDNode *N) {
                                     N->getValueType(0), {Vv, Vu, Rt});
   ISel.ReplaceNode(N, NewN);
   DAG.RemoveDeadNode(N);
+}
+
+void HexagonDAGToDAGISel::SelectHvxExtractSubvector(SDNode *N) {
+  HvxSelector(*this, *CurDAG).selectExtractSubvector(N);
 }
 
 void HexagonDAGToDAGISel::SelectHvxShuffle(SDNode *N) {

@@ -288,6 +288,9 @@ bool isPolymorphicType(mlir::Type ty);
 /// value.
 bool isUnlimitedPolymorphicType(mlir::Type ty);
 
+/// Return the inner type of the given type.
+mlir::Type unwrapInnerType(mlir::Type ty);
+
 /// Return true iff `ty` is a RecordType with members that are allocatable.
 bool isRecordWithAllocatableMember(mlir::Type ty);
 

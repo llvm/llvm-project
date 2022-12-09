@@ -3168,7 +3168,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
     InMessageExpressionRAIIObject InMessage(*this, false);
 
     Result = ParseExpression(MaybeTypeCast);
-    if (!getLangOpts().CPlusPlus && MaybeTypeCast && Result.isUsable()) {
+    if (!getLangOpts().CPlusPlus && Result.isUsable()) {
       // Correct typos in non-C++ code earlier so that implicit-cast-like
       // expressions are parsed correctly.
       Result = Actions.CorrectDelayedTyposInExpr(Result);

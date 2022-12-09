@@ -922,6 +922,23 @@ protected:
     GV->addMetadata(LLVMContext::MD_type, *MDNode::get(C, {}));
     GV->setComdat(CD);
 
+    // Add ifuncs
+    {
+      const unsigned AddrSpace = 123;
+      auto *FuncPtrTy = Type::getInt8Ty(C)->getPointerTo(123);
+      auto *FuncTy = FunctionType::get(FuncPtrTy, false);
+
+      auto *ResolverF = Function::Create(FuncTy, GlobalValue::PrivateLinkage,
+                                         AddrSpace, "resolver", OldM);
+      BasicBlock *ResolverBody = BasicBlock::Create(C, "", ResolverF);
+      ReturnInst::Create(C, ConstantPointerNull::get(FuncPtrTy), ResolverBody);
+
+      GlobalIFunc *GI = GlobalIFunc::create(FuncTy, AddrSpace,
+                                            GlobalValue::LinkOnceODRLinkage,
+                                            "an_ifunc", ResolverF, OldM);
+      GI->setVisibility(GlobalValue::ProtectedVisibility);
+    }
+
     {
       // Add an empty compile unit first that isn't otherwise referenced, to
       // confirm that compile units get cloned in the correct order.
@@ -1086,5 +1103,20 @@ TEST_F(CloneModule, Comdat) {
 
   Function *NewF = NewM->getFunction("f");
   EXPECT_EQ(CD, NewF->getComdat());
+}
+
+TEST_F(CloneModule, IFunc) {
+  ASSERT_EQ(1u, NewM->ifunc_size());
+
+  const GlobalIFunc &IFunc = *NewM->ifunc_begin();
+  EXPECT_EQ("an_ifunc", IFunc.getName());
+  EXPECT_EQ(GlobalValue::LinkOnceODRLinkage, IFunc.getLinkage());
+  EXPECT_EQ(GlobalValue::ProtectedVisibility, IFunc.getVisibility());
+  EXPECT_EQ(123u, IFunc.getAddressSpace());
+
+  const Function *Resolver = IFunc.getResolverFunction();
+  ASSERT_NE(nullptr, Resolver);
+  EXPECT_EQ("resolver", Resolver->getName());
+  EXPECT_EQ(GlobalValue::PrivateLinkage, Resolver->getLinkage());
 }
 }

@@ -47,7 +47,8 @@ define i32 @d(i32 %base) {
 ; CHECK-NEXT:    --> {(1 + %base),+,1}<nw><%for.cond> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @d
 ; CHECK-NEXT:  Loop %for.cond: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.cond: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %for.cond: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.cond: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.cond: Unpredictable predicated backedge-taken count.
 ;
 entry:

@@ -41,7 +41,7 @@ public:
   OptionalParseResult(ParseResult result) : impl(result) {}
   OptionalParseResult(const InFlightDiagnostic &)
       : OptionalParseResult(failure()) {}
-  OptionalParseResult(llvm::NoneType) : impl(llvm::None) {}
+  OptionalParseResult(std::nullopt_t) : impl(llvm::None) {}
 
   /// Returns true if we contain a valid ParseResult value.
   bool has_value() const { return impl.has_value(); }

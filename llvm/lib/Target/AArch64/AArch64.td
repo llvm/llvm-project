@@ -493,6 +493,9 @@ def FeatureEL2VMSA : SubtargetFeature<"el2vmsa", "HasEL2VMSA", "true",
 def FeatureEL3 : SubtargetFeature<"el3", "HasEL3", "true",
   "Enable Exception Level 3">;
 
+def FeatureCSSC : SubtargetFeature<"cssc", "HasCSSC", "true",
+  "Enable Common Short Sequence Compression (CSSC) instructions (FEAT_CSSC)">;
+
 def FeatureFixCortexA53_835769 : SubtargetFeature<"fix-cortex-a53-835769",
   "FixCortexA53_835769", "true", "Mitigate Cortex-A53 Erratum 835769">;
 
@@ -503,6 +506,14 @@ def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
 
 def FeatureMEC : SubtargetFeature<"mec", "HasMEC",
     "true", "Enable Memory Encryption Contexts Extension", [FeatureRME]>;
+
+def FeatureITE : SubtargetFeature<"ite", "HasITE",
+    "true", "Enable Armv9.4-A Instrumentation Extension FEAT_ITE", [FeatureETE,
+    FeatureTRBE]>;
+
+def FeatureRCPC3 : SubtargetFeature<"rcpc3", "HasRCPC3",
+    "true", "Enable Armv8.9-A RCPC instructions for A64 and Advanced SIMD and floating-point instruction set (FEAT_LRCPC3)",
+    [FeatureRCPC_IMMO]>;
 
 //===----------------------------------------------------------------------===//
 // Architectures.
@@ -549,7 +560,7 @@ def HasV8_8aOps : SubtargetFeature<
 
 def HasV8_9aOps : SubtargetFeature<
   "v8.9a", "HasV8_9aOps", "true", "Support ARM v8.9a instructions",
-  [HasV8_8aOps]>;
+  [HasV8_8aOps, FeatureCSSC]>;
 
 def HasV9_0aOps : SubtargetFeature<
   "v9a", "HasV9_0aOps", "true", "Support ARM v9a instructions",

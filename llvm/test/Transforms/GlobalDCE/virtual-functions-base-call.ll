@@ -22,53 +22,49 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; The virtual call in test could be dispatched to either A::foo or B::foo, so
 ; both must be retained.
 
-%struct.A = type { i32 (...)** }
+%struct.A = type { ptr }
 %struct.B = type { %struct.A }
 
-; CHECK: @_ZTV1A = internal unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* null, i8* bitcast (i32 (%struct.A*)* @_ZN1A3fooEv to i8*)] }
-@_ZTV1A = internal unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* null, i8* bitcast (i32 (%struct.A*)* @_ZN1A3fooEv to i8*)] }, align 8, !type !0, !type !1, !vcall_visibility !2
+; CHECK: @_ZTV1A = internal unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN1A3fooEv] }
+@_ZTV1A = internal unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN1A3fooEv] }, align 8, !type !0, !type !1, !vcall_visibility !2
 
-; CHECK: @_ZTV1B = internal unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* null, i8* bitcast (i32 (%struct.B*)* @_ZN1B3fooEv to i8*)] }
-@_ZTV1B = internal unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* null, i8* bitcast (i32 (%struct.B*)* @_ZN1B3fooEv to i8*)] }, align 8, !type !0, !type !1, !type !3, !type !4, !vcall_visibility !2
+; CHECK: @_ZTV1B = internal unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN1B3fooEv] }
+@_ZTV1B = internal unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN1B3fooEv] }, align 8, !type !0, !type !1, !type !3, !type !4, !vcall_visibility !2
 
 ; CHECK: define internal i32 @_ZN1A3fooEv(
-define internal i32 @_ZN1A3fooEv(%struct.A* nocapture readnone %this) {
+define internal i32 @_ZN1A3fooEv(ptr nocapture readnone %this) {
 entry:
   ret i32 42
 }
 
 ; CHECK: define internal i32 @_ZN1B3fooEv(
-define internal i32 @_ZN1B3fooEv(%struct.B* nocapture readnone %this) {
+define internal i32 @_ZN1B3fooEv(ptr nocapture readnone %this) {
 entry:
   ret i32 1337
 }
 
-define hidden void @_ZN1AC2Ev(%struct.A* nocapture %this) {
+define hidden void @_ZN1AC2Ev(ptr nocapture %this) {
 entry:
-  %0 = getelementptr inbounds %struct.A, %struct.A* %this, i64 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV1A, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %0, align 8
+  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1A, i64 0, inrange i32 0, i64 2), ptr %this, align 8
   ret void
 }
 
-define hidden void @_ZN1BC2Ev(%struct.B* nocapture %this) {
+define hidden void @_ZN1BC2Ev(ptr nocapture %this) {
 entry:
-  %0 = getelementptr inbounds %struct.B, %struct.B* %this, i64 0, i32 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV1B, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %0, align 8
+  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1B, i64 0, inrange i32 0, i64 2), ptr %this, align 8
   ret void
 }
 
-define hidden i32 @test(%struct.A* %p) {
+define hidden i32 @test(ptr %p) {
 entry:
-  %0 = bitcast %struct.A* %p to i8**
-  %vtable1 = load i8*, i8** %0, align 8
-  %1 = tail call { i8*, i1 } @llvm.type.checked.load(i8* %vtable1, i32 0, metadata !"_ZTS1A"), !nosanitize !10
-  %2 = extractvalue { i8*, i1 } %1, 0, !nosanitize !10
-  %3 = bitcast i8* %2 to i32 (%struct.A*)*, !nosanitize !10
-  %call = tail call i32 %3(%struct.A* %p)
+  %vtable1 = load ptr, ptr %p, align 8
+  %0 = tail call { ptr, i1 } @llvm.type.checked.load(ptr %vtable1, i32 0, metadata !"_ZTS1A"), !nosanitize !10
+  %1 = extractvalue { ptr, i1 } %0, 0, !nosanitize !10
+  %call = tail call i32 %1(ptr %p)
   ret i32 %call
 }
 
-declare { i8*, i1 } @llvm.type.checked.load(i8*, i32, metadata) #2
+declare { ptr, i1 } @llvm.type.checked.load(ptr, i32, metadata) #2
 
 !llvm.module.flags = !{!5}
 

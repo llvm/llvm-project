@@ -4,7 +4,7 @@
 target datalayout = "e-i64:64-f80:128-s:64-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare void @Foo(i8*)
+declare void @Foo(ptr)
 
 define void @Bar() uwtable sanitize_address {
 entry:
@@ -13,7 +13,7 @@ entry:
 ; CHECK-PLAIN: ret void
 
 ; CHECK-UAR-LABEL: Bar
-; CHECK-UAR-RUNTIME: load i32, i32* @__asan_option_detect_stack_use_after_return
+; CHECK-UAR-RUNTIME: load i32, ptr @__asan_option_detect_stack_use_after_return
 ; CHECK-UAR-RUNTIME: label
 ; CHECK-UAR-RUNTIME: call i64 @__asan_stack_malloc_4
 ; CHECK-UAR-ALWAYS: call i64 @__asan_stack_malloc_always_4
@@ -48,12 +48,9 @@ entry:
   %x = alloca [20 x i8], align 16
   %y = alloca [25 x i8], align 1
   %z = alloca [500 x i8], align 1
-  %xx = getelementptr inbounds [20 x i8], [20 x i8]* %x, i64 0, i64 0
-  call void @Foo(i8* %xx)
-  %yy = getelementptr inbounds [25 x i8], [25 x i8]* %y, i64 0, i64 0
-  call void @Foo(i8* %yy)
-  %zz = getelementptr inbounds [500 x i8], [500 x i8]* %z, i64 0, i64 0
-  call void @Foo(i8* %zz)
+  call void @Foo(ptr %x)
+  call void @Foo(ptr %y)
+  call void @Foo(ptr %z)
   ret void
 }
 

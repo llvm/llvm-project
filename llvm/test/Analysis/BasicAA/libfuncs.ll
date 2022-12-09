@@ -315,3 +315,53 @@ entry:
   store i8 1, i8* %a.gep.5
   ret i8* %res
 }
+
+declare i8* @__memcpy_chk(i8* writeonly, i8* readonly, i64, i64)
+
+define i8* @test_memcpy_chk_const_size(i8* noalias %a, i8* noalias %b, i64 %n) {
+; CHECK-LABEL: Function: test_memcpy_chk_const_size
+; CHECK:       Just Mod:  Ptr: i8* %a	<->  %res = tail call i8* @__memcpy_chk(i8* %a, i8* %b, i64 4, i64 %n)
+; CHECK-NEXT:  Just Mod:  Ptr: i8* %res	<->  %res = tail call i8* @__memcpy_chk(i8* %a, i8* %b, i64 4, i64 %n)
+; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.1	<->  %res = tail call i8* @__memcpy_chk(i8* %a, i8* %b, i64 4, i64 %n)
+; CHECK-NEXT:  NoModRef:  Ptr: i8* %a.gep.5	<->  %res = tail call i8* @__memcpy_chk(i8* %a, i8* %b, i64 4, i64 %n)
+; CHECK-NEXT:  Just Ref:  Ptr: i8* %b.gep.1	<->  %res = tail call i8* @__memcpy_chk(i8* %a, i8* %b, i64 4, i64 %n)
+; CHECK-NEXT:  NoModRef:  Ptr: i8* %b.gep.5	<->  %res = tail call i8* @__memcpy_chk(i8* %a, i8* %b, i64 4, i64 %n)
+;
+entry:
+  load i8, i8* %a
+  %res = tail call i8* @__memcpy_chk(i8* %a, i8* %b, i64 4, i64 %n)
+  load i8, i8* %res
+  %a.gep.1 = getelementptr i8, i8* %a, i32 1
+  store i8 0, i8* %a.gep.1
+  %a.gep.5 = getelementptr i8, i8* %a, i32 5
+  store i8 1, i8* %a.gep.5
+  %b.gep.1 = getelementptr i8, i8* %b, i32 1
+  store i8 0, i8* %b.gep.1
+  %b.gep.5 = getelementptr i8, i8* %b, i32 5
+  store i8 1, i8* %b.gep.5
+  ret i8* %res
+}
+
+define i8* @test_memcpy_chk_variable_size(i8* noalias %a, i8* noalias %b, i64 %n.1, i64 %n.2) {
+; CHECK-LABEL: Function: test_memcpy_chk_variable_size
+; CHECK:       Just Mod:  Ptr: i8* %a	<->  %res = tail call i8* @__memcpy_chk(i8* %a, i8* %b, i64 %n.1, i64 %n.2)
+; CHECK-NEXT:  Just Mod:  Ptr: i8* %res	<->  %res = tail call i8* @__memcpy_chk(i8* %a, i8* %b, i64 %n.1, i64 %n.2)
+; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.1	<->  %res = tail call i8* @__memcpy_chk(i8* %a, i8* %b, i64 %n.1, i64 %n.2)
+; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.5	<->  %res = tail call i8* @__memcpy_chk(i8* %a, i8* %b, i64 %n.1, i64 %n.2)
+; CHECK-NEXT:  Just Ref:  Ptr: i8* %b.gep.1	<->  %res = tail call i8* @__memcpy_chk(i8* %a, i8* %b, i64 %n.1, i64 %n.2)
+; CHECK-NEXT:  Just Ref:  Ptr: i8* %b.gep.5	<->  %res = tail call i8* @__memcpy_chk(i8* %a, i8* %b, i64 %n.1, i64 %n.2)
+;
+entry:
+  load i8, i8* %a
+  %res = tail call i8* @__memcpy_chk(i8* %a, i8* %b, i64 %n.1, i64 %n.2)
+  load i8, i8* %res
+  %a.gep.1 = getelementptr i8, i8* %a, i32 1
+  store i8 0, i8* %a.gep.1
+  %a.gep.5 = getelementptr i8, i8* %a, i32 5
+  store i8 1, i8* %a.gep.5
+  %b.gep.1 = getelementptr i8, i8* %b, i32 1
+  store i8 0, i8* %b.gep.1
+  %b.gep.5 = getelementptr i8, i8* %b, i32 5
+  store i8 1, i8* %b.gep.5
+  ret i8* %res
+}

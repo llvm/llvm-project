@@ -413,12 +413,12 @@ define <4 x i16> @combine_urem_udiv(<4 x i16> %x) nounwind {
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    call __udivsi3@plt
 ; RV32I-NEXT:    add a0, s8, a0
-; RV32I-NEXT:    add a1, s7, s2
-; RV32I-NEXT:    add a2, s6, s3
-; RV32I-NEXT:    add a3, s5, s4
-; RV32I-NEXT:    sh a3, 6(s0)
-; RV32I-NEXT:    sh a2, 4(s0)
-; RV32I-NEXT:    sh a1, 2(s0)
+; RV32I-NEXT:    add s2, s7, s2
+; RV32I-NEXT:    add s3, s6, s3
+; RV32I-NEXT:    add s4, s5, s4
+; RV32I-NEXT:    sh s4, 6(s0)
+; RV32I-NEXT:    sh s3, 4(s0)
+; RV32I-NEXT:    sh s2, 2(s0)
 ; RV32I-NEXT:    sh a0, 0(s0)
 ; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload

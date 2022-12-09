@@ -1705,10 +1705,8 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<memref::SubViewOp> {
     auto viewMemRefType = subViewOp.getType();
     auto inferredType =
         memref::SubViewOp::inferResultType(
-            subViewOp.getSourceType(),
-            extractFromI64ArrayAttr(subViewOp.getStaticOffsets()),
-            extractFromI64ArrayAttr(subViewOp.getStaticSizes()),
-            extractFromI64ArrayAttr(subViewOp.getStaticStrides()))
+            subViewOp.getSourceType(), subViewOp.getStaticOffsets(),
+            subViewOp.getStaticSizes(), subViewOp.getStaticStrides())
             .cast<MemRefType>();
     auto targetElementTy =
         typeConverter->convertType(viewMemRefType.getElementType());

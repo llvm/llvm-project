@@ -394,8 +394,8 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
         vputils::getOrCreateVPValueForSCEVExpr(Plan, ID.getStep(), SE);
     Instruction *TruncI = IV->getTruncInst();
     VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(
-        IV->getPHINode()->getType(), ID, Plan.getCanonicalIV(),
-        IV->getStartValue(), Step, TruncI ? TruncI->getType() : nullptr);
+        ID, Plan.getCanonicalIV(), IV->getStartValue(), Step,
+        TruncI ? TruncI->getType() : nullptr);
     HeaderVPBB->insert(Steps, HeaderVPBB->getFirstNonPhi());
 
     // Update scalar users of IV to use Step instead. Use SetVector to ensure

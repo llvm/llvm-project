@@ -222,7 +222,7 @@ enum class TemplateSubstitutionKind : char {
       TemplateArgumentLists.push_back({{}, Args});
     }
 
-    void addOuterTemplateArguments(llvm::NoneType) {
+    void addOuterTemplateArguments(std::nullopt_t) {
       assert(!NumRetainedOuterLevels &&
              "substituted args outside retained args?");
       TemplateArgumentLists.push_back({});

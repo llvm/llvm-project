@@ -1580,11 +1580,9 @@ RelocationBaseSection::RelocationBaseSection(StringRef name, uint32_t type,
       dynamicTag(dynamicTag), sizeDynamicTag(sizeDynamicTag),
       relocsVec(concurrency), combreloc(combreloc) {}
 
-void RelocationBaseSection::addSymbolReloc(RelType dynType,
-                                           InputSectionBase &isec,
-                                           uint64_t offsetInSec, Symbol &sym,
-                                           int64_t addend,
-                                           Optional<RelType> addendRelType) {
+void RelocationBaseSection::addSymbolReloc(
+    RelType dynType, InputSectionBase &isec, uint64_t offsetInSec, Symbol &sym,
+    int64_t addend, std::optional<RelType> addendRelType) {
   addReloc(DynamicReloc::AgainstSymbol, dynType, isec, offsetInSec, sym, addend,
            R_ADDEND, addendRelType ? *addendRelType : target->noneRel);
 }
@@ -3432,11 +3430,11 @@ static bool isDuplicateArmExidxSec(InputSection *prev, InputSection *cur) {
 }
 
 // The .ARM.exidx table must be sorted in ascending order of the address of the
-// functions the table describes. Optionally duplicate adjacent table entries
-// can be removed. At the end of the function the executableSections must be
-// sorted in ascending order of address, Sentinel is set to the InputSection
-// with the highest address and any InputSections that have mergeable
-// .ARM.exidx table entries are removed from it.
+// functions the table describes. std::optionally duplicate adjacent table
+// entries can be removed. At the end of the function the executableSections
+// must be sorted in ascending order of address, Sentinel is set to the
+// InputSection with the highest address and any InputSections that have
+// mergeable .ARM.exidx table entries are removed from it.
 void ARMExidxSyntheticSection::finalizeContents() {
   // The executableSections and exidxSections that we use to derive the final
   // contents of this SyntheticSection are populated before
@@ -3472,7 +3470,7 @@ void ARMExidxSyntheticSection::finalizeContents() {
   };
   llvm::stable_sort(executableSections, compareByFilePosition);
   sentinel = executableSections.back();
-  // Optionally merge adjacent duplicate entries.
+  // std::optionally merge adjacent duplicate entries.
   if (config->mergeArmExidx) {
     SmallVector<InputSection *, 0> selectedSections;
     selectedSections.reserve(executableSections.size());
@@ -3638,12 +3636,12 @@ uint64_t PPC64LongBranchTargetSection::getEntryVA(const Symbol *sym,
   return getVA() + entry_index.find({sym, addend})->second * 8;
 }
 
-Optional<uint32_t> PPC64LongBranchTargetSection::addEntry(const Symbol *sym,
-                                                          int64_t addend) {
+std::optional<uint32_t>
+PPC64LongBranchTargetSection::addEntry(const Symbol *sym, int64_t addend) {
   auto res =
       entry_index.try_emplace(std::make_pair(sym, addend), entries.size());
   if (!res.second)
-    return None;
+    return std::nullopt;
   entries.emplace_back(sym, addend);
   return res.first->second;
 }

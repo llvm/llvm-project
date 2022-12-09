@@ -25,25 +25,21 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@f1 = alias i1(i8*), i1 (i8*)* @f1_actual
+@f1 = alias i1(ptr), ptr @f1_actual
 
-define i1 @f1_actual(i8* %p) {
-  %x = call i1 @llvm.type.test(i8* %p, metadata !"typeid1")
+define i1 @f1_actual(ptr %p) {
+  %x = call i1 @llvm.type.test(ptr %p, metadata !"typeid1")
   ret i1 %x
 }
 
-define i1 @f2(i8* %obj) {
-  %vtableptr = bitcast i8* %obj to [3 x i8*]**
-  %vtable = load [3 x i8*]*, [3 x i8*]** %vtableptr
-  %vtablei8 = bitcast [3 x i8*]* %vtable to i8*
-  %p = call i1 @llvm.type.test(i8* %vtablei8, metadata !"typeid2")
+define i1 @f2(ptr %obj) {
+  %vtable = load ptr, ptr %obj
+  %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid2")
   call void @llvm.assume(i1 %p)
-  %fptrptr = getelementptr [3 x i8*], [3 x i8*]* %vtable, i32 0, i32 0
-  %fptr = load i8*, i8** %fptrptr
-  %fptr_casted = bitcast i8* %fptr to i1 (i8*)*
-  %result = call i1 %fptr_casted(i8* %obj)
+  %fptr = load ptr, ptr %vtable
+  %result = call i1 %fptr(ptr %obj)
   ret i1 %result
 }
 
-declare i1 @llvm.type.test(i8*, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 declare void @llvm.assume(i1)

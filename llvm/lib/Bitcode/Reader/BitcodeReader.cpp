@@ -80,6 +80,7 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <system_error>
@@ -593,7 +594,7 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   /// ValueList must be destroyed before Alloc.
   BumpPtrAllocator Alloc;
   BitcodeReaderValueList ValueList;
-  Optional<MetadataLoader> MDLoader;
+  std::optional<MetadataLoader> MDLoader;
   std::vector<Comdat *> ComdatList;
   DenseSet<GlobalObject *> ImplicitComdatObjects;
   SmallVector<Instruction *, 64> InstructionList;
@@ -2871,8 +2872,8 @@ Error BitcodeReader::resolveGlobalAndIndirectSymbolInits() {
         Type *ResolverFTy =
             GlobalIFunc::getResolverFunctionType(GI->getValueType());
         // Transparently fix up the type for compatibility with older bitcode
-        GI->setResolver(
-            ConstantExpr::getBitCast(C, ResolverFTy->getPointerTo()));
+        GI->setResolver(ConstantExpr::getBitCast(
+            C, ResolverFTy->getPointerTo(GI->getAddressSpace())));
       } else {
         return error("Expected an alias or an ifunc");
       }
@@ -3203,7 +3204,7 @@ Error BitcodeReader::parseConstants() {
         PointeeType = getTypeByID(Record[OpNum++]);
 
       bool InBounds = false;
-      Optional<unsigned> InRangeIndex;
+      std::optional<unsigned> InRangeIndex;
       if (BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE_INDEX) {
         uint64_t Op = Record[OpNum++];
         InBounds = Op & 1;

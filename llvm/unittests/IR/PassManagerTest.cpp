@@ -826,7 +826,7 @@ TEST_F(PassManagerTest, FunctionPassCFGChecker) {
   FunctionAnalysisManager FAM;
   FunctionPassManager FPM;
   PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI(/*DebugLogging*/ true);
+  StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ true);
   SI.registerCallbacks(PIC, &FAM);
   FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
   FAM.registerPass([&] { return DominatorTreeAnalysis(); });
@@ -872,7 +872,7 @@ TEST_F(PassManagerTest, FunctionPassCFGCheckerInvalidateAnalysis) {
   FunctionAnalysisManager FAM;
   FunctionPassManager FPM;
   PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI(/*DebugLogging*/ true);
+  StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ true);
   SI.registerCallbacks(PIC, &FAM);
   FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
   FAM.registerPass([&] { return DominatorTreeAnalysis(); });
@@ -937,7 +937,7 @@ TEST_F(PassManagerTest, FunctionPassCFGCheckerWrapped) {
   FunctionAnalysisManager FAM;
   FunctionPassManager FPM;
   PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI(/*DebugLogging*/ true);
+  StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ true);
   SI.registerCallbacks(PIC, &FAM);
   FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
   FAM.registerPass([&] { return DominatorTreeAnalysis(); });

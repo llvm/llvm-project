@@ -1053,7 +1053,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   //
   // .align 2
   //
-  OutStreamer->emitValueToAlignment(4);
+  OutStreamer->emitValueToAlignment(Align(4));
   MipsTargetStreamer &TS = getTargetStreamer();
   //
   // .set nomips16
@@ -1202,7 +1202,7 @@ void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
   //   LD       RA, 8(SP)
   //   DADDIU   SP, SP, 16
   //
-  OutStreamer->emitCodeAlignment(4, &getSubtargetInfo());
+  OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
   OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();

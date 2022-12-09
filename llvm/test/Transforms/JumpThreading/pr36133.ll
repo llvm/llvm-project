@@ -1,5 +1,5 @@
-; RUN: opt -jump-threading -S < %s | FileCheck %s
-@global = external global i8*, align 8
+; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
+@global = external global ptr, align 8
 
 define i32 @foo(i32 %arg) {
 ; CHECK-LABEL: @foo
@@ -7,8 +7,8 @@ define i32 @foo(i32 %arg) {
 ; CHECK: icmp eq
 ; CHECK-NEXT: br i1 %tmp1, label %bb7, label %bb7
 bb:
-  %tmp = load i8*, i8** @global, align 8
-  %tmp1 = icmp eq i8* %tmp, null
+  %tmp = load ptr, ptr @global, align 8
+  %tmp1 = icmp eq ptr %tmp, null
   br i1 %tmp1, label %bb3, label %bb2
 
 ; CHECK-NOT: bb2:

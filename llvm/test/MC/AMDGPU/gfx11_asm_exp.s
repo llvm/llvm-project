@@ -11,9 +11,9 @@ exp dual_src_blend1 v2, v3, off, off
 // GFX11: exp dual_src_blend1 v2, v3, off, off    ; encoding: [0x63,0x01,0x00,0xf8,0x02,0x03,0x00,0x00]
 
 exp mrtz v4, v3, v2, v1 row_en
-// PREGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// PREGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX11: exp mrtz v4, v3, v2, v1 row_en          ; encoding: [0x8f,0x20,0x00,0xf8,0x04,0x03,0x02,0x01]
 
 exp mrtz v4, v3, off, off done row_en
-// PREGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// PREGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX11: exp mrtz v4, v3, off, off done row_en   ; encoding: [0x83,0x28,0x00,0xf8,0x04,0x03,0x00,0x00]

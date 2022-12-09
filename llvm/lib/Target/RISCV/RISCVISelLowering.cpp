@@ -39,6 +39,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -977,7 +978,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   // Function alignments.
-  const Align FunctionAlignment(Subtarget.hasStdExtC() ? 2 : 4);
+  const Align FunctionAlignment(Subtarget.hasStdExtCOrZca() ? 2 : 4);
   setMinFunctionAlignment(FunctionAlignment);
   setPrefFunctionAlignment(FunctionAlignment);
 
@@ -2158,8 +2159,8 @@ struct VIDSequence {
   int64_t Addend;
 };
 
-static Optional<uint64_t> getExactInteger(const APFloat &APF,
-                                          uint32_t BitWidth) {
+static std::optional<uint64_t> getExactInteger(const APFloat &APF,
+                                               uint32_t BitWidth) {
   APSInt ValInt(BitWidth, !APF.isNegative());
   // We use an arbitrary rounding mode here. If a floating-point is an exact
   // integer (e.g., 1.0), the rounding mode does not affect the output value. If
@@ -2186,14 +2187,14 @@ static Optional<uint64_t> getExactInteger(const APFloat &APF,
 // Note that this method will also match potentially unappealing index
 // sequences, like <i32 0, i32 50939494>, however it is left to the caller to
 // determine whether this is worth generating code for.
-static Optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
+static std::optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
   unsigned NumElts = Op.getNumOperands();
   assert(Op.getOpcode() == ISD::BUILD_VECTOR && "Unexpected BUILD_VECTOR");
   bool IsInteger = Op.getValueType().isInteger();
 
-  Optional<unsigned> SeqStepDenom;
-  Optional<int64_t> SeqStepNum, SeqAddend;
-  Optional<std::pair<uint64_t, unsigned>> PrevElt;
+  std::optional<unsigned> SeqStepDenom;
+  std::optional<int64_t> SeqStepNum, SeqAddend;
+  std::optional<std::pair<uint64_t, unsigned>> PrevElt;
   unsigned EltSizeInBits = Op.getValueType().getScalarSizeInBits();
   for (unsigned Idx = 0; Idx < NumElts; Idx++) {
     // Assume undef elements match the sequence; we just have to be careful
@@ -5496,8 +5497,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 
     // TODO: We restrict this to unmasked loads currently in consideration of
     // the complexity of hanlding all falses masks.
-    if (IsUnmasked && isNullConstant(Stride) &&
-        !Subtarget.hasOptimizedZeroStrideLoad()) {
+    if (IsUnmasked && isNullConstant(Stride)) {
       MVT ScalarVT = ContainerVT.getVectorElementType();
       SDValue ScalarLoad =
           DAG.getExtLoad(ISD::ZEXTLOAD, DL, XLenVT, Load->getChain(), Ptr,
@@ -9698,6 +9698,33 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
         return DAG.getNode(Opcode, DL, VT, And, Src2);           // And Op y
       }
+    }
+
+    // (select (x < 0), y, z)  -> x >> (XLEN - 1) & (y - z) + z
+    // (select (x >= 0), y, z) -> x >> (XLEN - 1) & (z - y) + y
+    if (!Subtarget.hasShortForwardBranchOpt() && isa<ConstantSDNode>(TrueV) &&
+        isa<ConstantSDNode>(FalseV) && isNullConstant(RHS) &&
+        (CCVal == ISD::CondCode::SETLT || CCVal == ISD::CondCode::SETGE)) {
+      if (CCVal == ISD::CondCode::SETGE)
+        std::swap(TrueV, FalseV);
+
+      int64_t TrueSImm = cast<ConstantSDNode>(TrueV)->getSExtValue();
+      int64_t FalseSImm = cast<ConstantSDNode>(FalseV)->getSExtValue();
+      // Only handle simm12, if it is not in this range, it can be considered as
+      // register.
+      if (isInt<12>(TrueSImm) && isInt<12>(FalseSImm) &&
+          isInt<12>(TrueSImm - FalseSImm)) {
+        SDValue SRA =
+            DAG.getNode(ISD::SRA, DL, VT, LHS,
+                        DAG.getConstant(Subtarget.getXLen() - 1, DL, VT));
+        SDValue AND =
+            DAG.getNode(ISD::AND, DL, VT, SRA,
+                        DAG.getConstant(TrueSImm - FalseSImm, DL, VT));
+        return DAG.getNode(ISD::ADD, DL, VT, AND, FalseV);
+      }
+
+      if (CCVal == ISD::CondCode::SETGE)
+        std::swap(TrueV, FalseV);
     }
 
     if (combine_CC(LHS, RHS, CC, DL, DAG, Subtarget))

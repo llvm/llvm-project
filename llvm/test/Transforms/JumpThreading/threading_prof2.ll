@@ -1,4 +1,4 @@
-; RUN: opt -jump-threading -S < %s | FileCheck %s
+; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
 ; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
 define void @test() {
 bb:
@@ -7,25 +7,25 @@ bb:
   br i1 %tmp1, label %bb5, label %bb2
 ; CHECK: br i1 %tmp1,{{.*}} !prof ![[PROF1:[0-9]+]]
 
-bb2:                                              
+bb2:
   %tmp3 = call i32 @b()
   %tmp4 = icmp ne i32 %tmp3, 1
   br label %bb5
 ; CHECK: br i1 %tmp4, {{.*}} !prof ![[PROF2:[0-9]+]]
 
-bb5:                                             
+bb5:
   %tmp6 = phi i1 [ false, %bb ], [ %tmp4, %bb2 ]
   br i1 %tmp6, label %bb8, label %bb7, !prof !0
 
-bb7:                                            
+bb7:
   call void @bar()
   br label %bb9
 
-bb8: 
+bb8:
   call void @foo()
   br label %bb9
 
-bb9:                                           
+bb9:
   ret void
 }
 

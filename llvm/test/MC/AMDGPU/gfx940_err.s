@@ -88,13 +88,13 @@ v_cvt_sr_fp8_f32 v1, v2, v3 clamp
 // GFX940: error: invalid operand for instruction
 
 v_cvt_sr_fp8_f32 v1, v2, v3 mul:2
-// GFX940: error: invalid operand for instruction
+// GFX940: error: not a valid operand.
 
 v_cvt_pk_fp8_f32 v1, v2, v3 clamp
 // GFX940: error: invalid operand for instruction
 
 v_cvt_pk_fp8_f32 v1, v2, v3 mul:2
-// GFX940: error: invalid operand for instruction
+// GFX940: error: not a valid operand.
 
 s_getreg_b32 s1, hwreg(HW_REG_FLAT_SCR_LO)
 // GFX940: error: specified hardware register is not supported on this GPU
@@ -121,7 +121,7 @@ exp pos0 v3, v2, v1, v0
 // GFX940: error: instruction not supported on this GPU
 
 global_load_dword v[2:3], off lds
-// GFX940: error: operands are not valid for this GPU or mode
+// GFX940: error: invalid operand for instruction
 
 scratch_load_dword v2, off lds
-// GFX940: error: operands are not valid for this GPU or mode
+// GFX940: error: invalid operand for instruction

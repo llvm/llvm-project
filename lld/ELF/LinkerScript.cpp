@@ -1405,12 +1405,12 @@ ExprValue LinkerScript::getSymbolValue(StringRef name, const Twine &loc) {
 }
 
 // Returns the index of the segment named Name.
-static Optional<size_t> getPhdrIndex(ArrayRef<PhdrsCommand> vec,
-                                     StringRef name) {
+static std::optional<size_t> getPhdrIndex(ArrayRef<PhdrsCommand> vec,
+                                          StringRef name) {
   for (size_t i = 0; i < vec.size(); ++i)
     if (vec[i].name == name)
       return i;
-  return None;
+  return std::nullopt;
 }
 
 // Returns indices of ELF headers containing specific section. Each index is a
@@ -1419,7 +1419,7 @@ SmallVector<size_t, 0> LinkerScript::getPhdrIndices(OutputSection *cmd) {
   SmallVector<size_t, 0> ret;
 
   for (StringRef s : cmd->phdrs) {
-    if (Optional<size_t> idx = getPhdrIndex(phdrsCommands, s))
+    if (std::optional<size_t> idx = getPhdrIndex(phdrsCommands, s))
       ret.push_back(*idx);
     else if (s != "NONE")
       error(cmd->location + ": program header '" + s +

@@ -6,10 +6,10 @@ target triple = "x86_64-unknown-linux-gnu"
 module asm ".symver f1,f@@version1"
 
 ; CHECK: @f2.dfsan = alias {{.*}} @f1.dfsan
-@f2 = alias void (), void ()* @f1
+@f2 = alias void (), ptr @f1
 
 ; CHECK: @g2.dfsan = alias {{.*}} @g1.dfsan
-@g2 = alias void (i16*), bitcast (void (i8*)* @g1 to void (i16*)*)
+@g2 = alias void (ptr), ptr @g1
 
 ; CHECK: define void @f1.dfsan
 define void @f1() {
@@ -17,6 +17,6 @@ define void @f1() {
 }
 
 ; CHECK: define void @g1.dfsan
-define void @g1(i8*) {
+define void @g1(ptr) {
   ret void
 }

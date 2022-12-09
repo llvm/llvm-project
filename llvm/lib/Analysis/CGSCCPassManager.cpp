@@ -30,6 +30,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <iterator>
+#include <optional>
 
 #define DEBUG_TYPE "cgscc"
 
@@ -613,7 +614,7 @@ bool CGSCCAnalysisManagerModuleProxy::Result::invalidate(
   G->buildRefSCCs();
   for (auto &RC : G->postorder_ref_sccs())
     for (auto &C : RC) {
-      Optional<PreservedAnalyses> InnerPA;
+      std::optional<PreservedAnalyses> InnerPA;
 
       // Check to see whether the preserved set needs to be adjusted based on
       // module-level analysis invalidation triggering deferred invalidation
@@ -716,7 +717,7 @@ bool FunctionAnalysisManagerCGSCCProxy::Result::invalidate(
   // necessary.
   for (LazyCallGraph::Node &N : C) {
     Function &F = N.getFunction();
-    Optional<PreservedAnalyses> FunctionPA;
+    std::optional<PreservedAnalyses> FunctionPA;
 
     // Check to see whether the preserved set needs to be pruned based on
     // SCC-level analysis invalidation that triggers deferred invalidation

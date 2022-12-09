@@ -570,6 +570,7 @@ public:
   }
 
   /// Return required alignment for the block.
+  Align getAlign() const { return Align(Alignment); }
   uint32_t getAlignment() const { return Alignment; }
 
   /// Set the maximum number of bytes to use for the block alignment.

@@ -48,32 +48,32 @@ define i32 @_Z1av() #0 !dbg !10 {
 entry:
   %retval.i = alloca i32, align 4
   %i.i = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %i.i, metadata !14, metadata !DIExpression()), !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %i.i, metadata !14, metadata !DIExpression()), !dbg !21
   %i2.i = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %i2.i, metadata !23, metadata !DIExpression()), !dbg !25
+  call void @llvm.dbg.declare(metadata ptr %i2.i, metadata !23, metadata !DIExpression()), !dbg !25
   %a = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %a, metadata !26, metadata !DIExpression()), !dbg !27
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !26, metadata !DIExpression()), !dbg !27
   %call.i = call i32 @getchar(), !dbg !28
   %cmp.i = icmp eq i32 %call.i, 97, !dbg !28
   br i1 %cmp.i, label %if.then.i, label %if.else.i, !dbg !29
 
 if.then.i:                                        ; preds = %entry
   %call1.i = call i32 @getchar(), !dbg !21
-  store i32 %call1.i, i32* %i.i, align 4, !dbg !21
-  %0 = load i32, i32* %i.i, align 4, !dbg !30
-  store i32 %0, i32* %retval.i, align 4, !dbg !30
+  store i32 %call1.i, ptr %i.i, align 4, !dbg !21
+  %0 = load i32, ptr %i.i, align 4, !dbg !30
+  store i32 %0, ptr %retval.i, align 4, !dbg !30
   br label %_Z7inlinedIiET_v.exit, !dbg !30
 
 if.else.i:                                        ; preds = %entry
-  store i32 97, i32* %i2.i, align 4, !dbg !25
-  %1 = load i32, i32* %i2.i, align 4, !dbg !31
-  store i32 %1, i32* %retval.i, align 4, !dbg !31
+  store i32 97, ptr %i2.i, align 4, !dbg !25
+  %1 = load i32, ptr %i2.i, align 4, !dbg !31
+  store i32 %1, ptr %retval.i, align 4, !dbg !31
   br label %_Z7inlinedIiET_v.exit, !dbg !31
 
 _Z7inlinedIiET_v.exit:                            ; preds = %if.else.i, %if.then.i
-  %2 = load i32, i32* %retval.i, align 4, !dbg !32
-  store i32 %2, i32* %a, align 4, !dbg !27
-  %3 = load i32, i32* %a, align 4, !dbg !33
+  %2 = load i32, ptr %retval.i, align 4, !dbg !32
+  store i32 %2, ptr %a, align 4, !dbg !27
+  %3 = load i32, ptr %a, align 4, !dbg !33
   %add = add nsw i32 %3, 1, !dbg !33
   ret i32 %add, !dbg !33
 }
@@ -87,7 +87,7 @@ declare i32 @getchar()
 define i32 @main() #3 !dbg !34 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   %call = call i32 @_Z1av(), !dbg !35
   %call1 = call i32 @_Z1bv(), !dbg !35
   %add = add nsw i32 %call, %call1, !dbg !35
@@ -99,32 +99,32 @@ define i32 @_Z1bv() #0 !dbg !36 {
 entry:
   %retval.i = alloca i32, align 4
   %i.i = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %i.i, metadata !37, metadata !DIExpression()), !dbg !41
+  call void @llvm.dbg.declare(metadata ptr %i.i, metadata !37, metadata !DIExpression()), !dbg !41
   %i2.i = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %i2.i, metadata !43, metadata !DIExpression()), !dbg !45
+  call void @llvm.dbg.declare(metadata ptr %i2.i, metadata !43, metadata !DIExpression()), !dbg !45
   %b = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %b, metadata !46, metadata !DIExpression()), !dbg !47
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !46, metadata !DIExpression()), !dbg !47
   %call.i = call i32 @getchar(), !dbg !48
   %cmp.i = icmp eq i32 %call.i, 97, !dbg !48
   br i1 %cmp.i, label %if.then.i, label %if.else.i, !dbg !49
 
 if.then.i:                                        ; preds = %entry
   %call1.i = call i32 @getchar(), !dbg !41
-  store i32 %call1.i, i32* %i.i, align 4, !dbg !41
-  %0 = load i32, i32* %i.i, align 4, !dbg !50
-  store i32 %0, i32* %retval.i, align 4, !dbg !50
+  store i32 %call1.i, ptr %i.i, align 4, !dbg !41
+  %0 = load i32, ptr %i.i, align 4, !dbg !50
+  store i32 %0, ptr %retval.i, align 4, !dbg !50
   br label %_Z7inlinedIiET_v.exit, !dbg !50
 
 if.else.i:                                        ; preds = %entry
-  store i32 97, i32* %i2.i, align 4, !dbg !45
-  %1 = load i32, i32* %i2.i, align 4, !dbg !51
-  store i32 %1, i32* %retval.i, align 4, !dbg !51
+  store i32 97, ptr %i2.i, align 4, !dbg !45
+  %1 = load i32, ptr %i2.i, align 4, !dbg !51
+  store i32 %1, ptr %retval.i, align 4, !dbg !51
   br label %_Z7inlinedIiET_v.exit, !dbg !51
 
 _Z7inlinedIiET_v.exit:                            ; preds = %if.else.i, %if.then.i
-  %2 = load i32, i32* %retval.i, align 4, !dbg !52
-  store i32 %2, i32* %b, align 4, !dbg !47
-  %3 = load i32, i32* %b, align 4, !dbg !53
+  %2 = load i32, ptr %retval.i, align 4, !dbg !52
+  store i32 %2, ptr %b, align 4, !dbg !47
+  %3 = load i32, ptr %b, align 4, !dbg !53
   %add = add nsw i32 %3, 1, !dbg !53
   ret i32 %add, !dbg !53
 }

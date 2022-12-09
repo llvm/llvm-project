@@ -151,18 +151,18 @@ define i1 @extractelt_nxv128i1(<vscale x 128 x i8>* %x, i64 %idx) nounwind {
 ; RV32-NEXT:    add a4, a0, a2
 ; RV32-NEXT:    vl8r.v v16, (a4)
 ; RV32-NEXT:    vl8r.v v24, (a0)
-; RV32-NEXT:    add a0, a3, a1
-; RV32-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
+; RV32-NEXT:    add a1, a3, a1
+; RV32-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; RV32-NEXT:    vmseq.vi v8, v16, 0
 ; RV32-NEXT:    vmseq.vi v0, v24, 0
 ; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    vmerge.vim v24, v16, 1, v0
 ; RV32-NEXT:    vs8r.v v24, (a3)
-; RV32-NEXT:    add a1, a3, a2
+; RV32-NEXT:    add a2, a3, a2
 ; RV32-NEXT:    vmv1r.v v0, v8
 ; RV32-NEXT:    vmerge.vim v8, v16, 1, v0
-; RV32-NEXT:    vs8r.v v8, (a1)
-; RV32-NEXT:    lb a0, 0(a0)
+; RV32-NEXT:    vs8r.v v8, (a2)
+; RV32-NEXT:    lb a0, 0(a1)
 ; RV32-NEXT:    addi sp, s0, -80
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
@@ -191,18 +191,18 @@ define i1 @extractelt_nxv128i1(<vscale x 128 x i8>* %x, i64 %idx) nounwind {
 ; RV64-NEXT:    add a4, a0, a2
 ; RV64-NEXT:    vl8r.v v16, (a4)
 ; RV64-NEXT:    vl8r.v v24, (a0)
-; RV64-NEXT:    add a0, a3, a1
-; RV64-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
+; RV64-NEXT:    add a1, a3, a1
+; RV64-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; RV64-NEXT:    vmseq.vi v8, v16, 0
 ; RV64-NEXT:    vmseq.vi v0, v24, 0
 ; RV64-NEXT:    vmv.v.i v16, 0
 ; RV64-NEXT:    vmerge.vim v24, v16, 1, v0
 ; RV64-NEXT:    vs8r.v v24, (a3)
-; RV64-NEXT:    add a1, a3, a2
+; RV64-NEXT:    add a2, a3, a2
 ; RV64-NEXT:    vmv1r.v v0, v8
 ; RV64-NEXT:    vmerge.vim v8, v16, 1, v0
-; RV64-NEXT:    vs8r.v v8, (a1)
-; RV64-NEXT:    lb a0, 0(a0)
+; RV64-NEXT:    vs8r.v v8, (a2)
+; RV64-NEXT:    lb a0, 0(a1)
 ; RV64-NEXT:    addi sp, s0, -80
 ; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload

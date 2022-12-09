@@ -7,16 +7,16 @@
 
 ; Generate unsplit module with summary for ThinLTO index-based WPD.
 ; RUN: opt --opaque-pointers=0 -thinlto-bc -o %t3.o %s
-; RUN: opt --opaque-pointers=0 -thinlto-bc -o %t4.o %p/Inputs/devirt_promote.ll
+; RUN: opt --opaque-pointers=1 -thinlto-bc -o %t4.o %p/Inputs/devirt_promote.ll
 
-; RUN: llvm-lto --opaque-pointers=0 -thinlto-action=run %t3.o %t4.o --thinlto-save-temps=%t5. \
+; RUN: llvm-lto --opaque-pointers=1 -thinlto-action=run %t3.o %t4.o --thinlto-save-temps=%t5. \
 ; RUN:   -whole-program-visibility \
 ; RUN:   --pass-remarks=. \
 ; RUN:   --exported-symbol=test \
 ; RUN:   --exported-symbol=test2 \
 ; RUN:   --exported-symbol=_ZTV1B 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis --opaque-pointers=0 %t5.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR1
-; RUN: llvm-dis --opaque-pointers=0 %t5.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR2
+; RUN: llvm-dis --opaque-pointers=1 %t5.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR1
+; RUN: llvm-dis --opaque-pointers=1 %t5.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR2
 
 ; We should devirt call to _ZN1A1nEi once in importing module and once
 ; in original (exporting) module.
@@ -40,7 +40,7 @@ entry:
   %fptr1 = load i32 (%struct.A*, i32)*, i32 (%struct.A*, i32)** %2, align 8
 
   ; Check that the call was devirtualized.
-  ; CHECK-IR1: = tail call i32 bitcast (void ()* @_ZN1A1nEi
+  ; CHECK-IR1: = tail call i32 @_ZN1A1nEi
   %call = tail call i32 %fptr1(%struct.A* nonnull %obj, i32 %a)
 
   ret i32 %call

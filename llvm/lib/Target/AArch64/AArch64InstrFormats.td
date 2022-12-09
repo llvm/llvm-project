@@ -294,7 +294,6 @@ class SImmOperand<int width> : AsmOperandClass {
   let PredicateMethod = "isSImm<" # width # ">";
 }
 
-
 class AsmImmRange<int Low, int High> : AsmOperandClass {
   let Name = "Imm" # Low # "_" # High;
   let DiagnosticType = "InvalidImm" # Low # "_" # High;
@@ -336,8 +335,22 @@ def simm9 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -256 && Imm < 256; }]> {
   let DecoderMethod = "DecodeSImm<9>";
 }
 
+// imm0_255 predicate - True if the immediate is in the range [0,255].
+def Imm0_255Operand : AsmImmRange<0,255>;
+
+def uimm8_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 256; }]> {
+  let ParserMatchClass = Imm0_255Operand;
+}
+def uimm8_64b : Operand<i64>, ImmLeaf<i64, [{ return Imm >= 0 && Imm < 256; }]> {
+  let ParserMatchClass = Imm0_255Operand;
+}
+
 def SImm8Operand : SImmOperand<8>;
-def simm8 : Operand<i32>, ImmLeaf<i32, [{ return Imm >= -128 && Imm < 128; }]> {
+def simm8_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= -128 && Imm < 128; }]> {
+  let ParserMatchClass = SImm8Operand;
+  let DecoderMethod = "DecodeSImm<8>";
+}
+def simm8_64b : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -128 && Imm < 128; }]> {
   let ParserMatchClass = SImm8Operand;
   let DecoderMethod = "DecodeSImm<8>";
 }
@@ -862,9 +875,6 @@ def timm64_0_65535 : Operand<i64>, TImmLeaf<i64, [{
   return ((uint64_t)Imm) < 65536;
 }]>;
 }
-
-// imm0_255 predicate - True if the immediate is in the range [0,255].
-def Imm0_255Operand : AsmImmRange<0,255>;
 
 def imm0_255 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint32_t)Imm) < 256;
@@ -1816,6 +1826,19 @@ class SystemLXtI<bit L, string asm>
   let Inst{7-5}   = op2;
 }
 
+def RangePrefetchOperand : AsmOperandClass {
+  let Name = "RangePrefetch";
+  let ParserMethod = "tryParseRPRFMOperand";
+  let PredicateMethod = "isPrefetch";
+  let RenderMethod = "addPrefetchOperands";
+}
+
+def rprfop : Operand<i32>, TImmLeaf<i32, [{
+    return (((uint32_t)Imm) <= 63);
+  }]> {
+  let PrintMethod = "printRPRFMOperand";
+  let ParserMatchClass = RangePrefetchOperand;
+}
 
 // Branch (register) instructions:
 //
@@ -2124,7 +2147,8 @@ class CallImm<bit op, string asm, list<dag> pattern>
 //---
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
-class BaseOneOperandData<bits<3> opc, RegisterClass regtype, string asm,
+class BaseOneOperandData<bit sf, bit S, bits<5> opc2, bits<6> opc,
+                         RegisterClass regtype, string asm,
                          SDPatternOperator node>
   : I<(outs regtype:$Rd), (ins regtype:$Rn), asm, "\t$Rd, $Rn", "",
       [(set regtype:$Rd, (node regtype:$Rn))]>,
@@ -2132,33 +2156,29 @@ class BaseOneOperandData<bits<3> opc, RegisterClass regtype, string asm,
   bits<5> Rd;
   bits<5> Rn;
 
-  let Inst{30-13} = 0b101101011000000000;
-  let Inst{12-10} = opc;
+  let Inst{31} = sf;
+  let Inst{30} = 0b1;
+  let Inst{29} = S;
+  let Inst{28-21} = 0b11010110;
+  let Inst{20-16} = opc2;
+  let Inst{15-10} = opc;
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Rd;
 }
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
-multiclass OneOperandData<bits<3> opc, string asm,
+multiclass OneOperandData<bits<6> opc, string asm,
                           SDPatternOperator node = null_frag> {
-  def Wr : BaseOneOperandData<opc, GPR32, asm, node> {
-    let Inst{31} = 0;
-  }
+  def Wr : BaseOneOperandData<0b0, 0b0, 0b00000, opc, GPR32, asm, node>;
 
-  def Xr : BaseOneOperandData<opc, GPR64, asm, node> {
-    let Inst{31} = 1;
-  }
+  def Xr : BaseOneOperandData<0b1, 0b0, 0b00000, opc, GPR64, asm, node>;
 }
 
-class OneWRegData<bits<3> opc, string asm, SDPatternOperator node>
-    : BaseOneOperandData<opc, GPR32, asm, node> {
-  let Inst{31} = 0;
-}
+class OneWRegData<bits<6> opc, string asm, SDPatternOperator node>
+    : BaseOneOperandData<0b0, 0b0, 0b00000, opc, GPR32, asm, node>;
 
-class OneXRegData<bits<3> opc, string asm, SDPatternOperator node>
-    : BaseOneOperandData<opc, GPR64, asm, node> {
-  let Inst{31} = 1;
-}
+class OneXRegData<bits<6> opc, string asm, SDPatternOperator node>
+    : BaseOneOperandData<0b1, 0b0, 0b00000, opc, GPR64, asm, node>;
 
 class SignAuthOneData<bits<3> opcode_prefix, bits<2> opcode, string asm,
                       SDPatternOperator op>
@@ -2295,56 +2315,51 @@ multiclass AddSubCarry<bit isSub, string asm, string asm_setflags,
   }
 }
 
-class BaseTwoOperand<bits<4> opc, RegisterClass regtype, string asm,
-                     SDPatternOperator OpNode,
-                     RegisterClass in1regtype = regtype,
-                     RegisterClass in2regtype = regtype>
+class BaseTwoOperandRegReg<bit sf, bit S, bits<6> opc, RegisterClass regtype,
+                           string asm, SDPatternOperator OpNode,
+                           RegisterClass in1regtype = regtype,
+                           RegisterClass in2regtype = regtype>
   : I<(outs regtype:$Rd), (ins in1regtype:$Rn, in2regtype:$Rm),
       asm, "\t$Rd, $Rn, $Rm", "",
       [(set regtype:$Rd, (OpNode in1regtype:$Rn, in2regtype:$Rm))]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
-  let Inst{30-21} = 0b0011010110;
+  let Inst{31}    = sf;
+  let Inst{30}    = 0b0;
+  let Inst{29}    = S;
+  let Inst{28-21} = 0b11010110;
   let Inst{20-16} = Rm;
-  let Inst{15-14} = 0b00;
-  let Inst{13-10} = opc;
+  let Inst{15-10} = opc;
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Rd;
 }
 
-class BaseDiv<bit isSigned, RegisterClass regtype, string asm,
+class BaseDiv<bit size, bit isSigned, RegisterClass regtype, string asm,
               SDPatternOperator OpNode>
-    : BaseTwoOperand<{0,0,1,?}, regtype, asm, OpNode> {
+    : BaseTwoOperandRegReg<size, 0b0, {0,0,0,0,1,?}, regtype, asm, OpNode> {
   let Inst{10}    = isSigned;
 }
 
 multiclass Div<bit isSigned, string asm, SDPatternOperator OpNode> {
-  def Wr : BaseDiv<isSigned, GPR32, asm, OpNode>,
-           Sched<[WriteID32, ReadID, ReadID]> {
-    let Inst{31} = 0;
-  }
-  def Xr : BaseDiv<isSigned, GPR64, asm, OpNode>,
-           Sched<[WriteID64, ReadID, ReadID]> {
-    let Inst{31} = 1;
-  }
+  def Wr : BaseDiv<0b0, isSigned, GPR32, asm, OpNode>,
+           Sched<[WriteID32, ReadID, ReadID]>;
+
+  def Xr : BaseDiv<0b1, isSigned, GPR64, asm, OpNode>,
+           Sched<[WriteID64, ReadID, ReadID]>;
 }
 
-class BaseShift<bits<2> shift_type, RegisterClass regtype, string asm,
+class BaseShift<bit size, bits<2> shift_type, RegisterClass regtype, string asm,
                 SDPatternOperator OpNode = null_frag>
-  : BaseTwoOperand<{1,0,?,?}, regtype, asm, OpNode>,
+  : BaseTwoOperandRegReg<size, 0b0, {0,0,1,0,?,?}, regtype, asm, OpNode>,
     Sched<[WriteIS, ReadI]> {
   let Inst{11-10} = shift_type;
 }
 
 multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
-  def Wr : BaseShift<shift_type, GPR32, asm> {
-    let Inst{31} = 0;
-  }
+  def Wr : BaseShift<0b0, shift_type, GPR32, asm>;
 
-  def Xr : BaseShift<shift_type, GPR64, asm, OpNode> {
-    let Inst{31} = 1;
-  }
+  def Xr : BaseShift<0b1, shift_type, GPR64, asm, OpNode>;
 
   def : Pat<(i32 (OpNode GPR32:$Rn, i64:$Rm)),
             (!cast<Instruction>(NAME # "Wr") GPR32:$Rn,
@@ -2874,10 +2889,8 @@ class AddSubG<bit isSub, string asm_inst, SDPatternOperator OpNode>
 }
 
 class SUBP<bit setsFlags, string asm_instr, SDPatternOperator OpNode>
-      : BaseTwoOperand<0b0000, GPR64, asm_instr, OpNode, GPR64sp, GPR64sp> {
-  let Inst{31} = 1;
-  let Inst{29} = setsFlags;
-}
+      : BaseTwoOperandRegReg<0b1, setsFlags, 0b000000, GPR64, asm_instr, OpNode,
+                             GPR64sp, GPR64sp>;
 
 //---
 // Extract
@@ -3992,6 +4005,11 @@ class BasePrefetchRO<bits<2> sz, bit V, bits<2> opc, dag outs, dag ins,
   let Inst{11-10} = 0b10;
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Rt;
+  let DecoderMethod = "DecodePRFMRegInstruction";
+  // PRFM (reg) aliases with RPRFM added to the base A64 instruction set. When
+  // the decoder method returns Fail, the decoder should attempt to decode the
+  // instruction as RPRFM.
+  let hasCompleteDecoder = 0;
 }
 
 multiclass PrefetchRO<bits<2> sz, bit V, bits<2> opc, string asm> {
@@ -4534,7 +4552,7 @@ let mayLoad = 0, mayStore = 1 in
 class StoreRelease<bits<2> sz, bit o2, bit L, bit o1, bit o0,
                    RegisterClass regtype, string asm>
     : LoadStoreExclusiveSimple<sz, o2, L, o1, o0, (outs),
-                               (ins regtype:$Rt, GPR64sp0:$Rn),
+                               (ins regtype:$Rt, GPR64sp:$Rn),
                                asm, "\t$Rt, [$Rn]">,
       Sched<[WriteST]>;
 
@@ -11674,6 +11692,154 @@ multiclass MOPSMemorySetTaggingInsns<bits<2> opcode, string asm> {
   def T  : MOPSMemorySetTagging<opcode, 1, 0, asm # "t">;
   def N  : MOPSMemorySetTagging<opcode, 0, 1, asm # "n">;
   def TN : MOPSMemorySetTagging<opcode, 1, 1, asm # "tn">;
+}
+
+//---
+// 2022 Architecture Extensions: General Data Processing (FEAT_CSSC)
+//---
+
+class BaseTwoOperandRegImm<bit sf, bit Op, bit S, bits<4> opc,
+                           RegisterClass regtype, ImmLeaf immtype, string asm,
+                           SDPatternOperator OpNode>
+    : I<(outs regtype:$Rd), (ins regtype:$Rn, immtype:$imm),
+        asm, "\t$Rd, $Rn, $imm", "",
+        [(set regtype:$Rd, (OpNode regtype:$Rn, immtype:$imm))]> {
+  bits<5> Rd;
+  bits<5> Rn;
+  bits<8> imm;
+
+  let Inst{31}    = sf;
+  let Inst{30}    = Op;
+  let Inst{29}    = S;
+  let Inst{28-22} = 0b1000111;
+  let Inst{21-18} = opc;
+  let Inst{17-10} = imm;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rd;
+}
+
+class BaseComparisonOpReg<bit size, bit isUnsigned, bit isMin,
+                          RegisterClass regtype, string asm,
+                          SDPatternOperator OpNode>
+    : BaseTwoOperandRegReg<size, 0b0, {0,1,1,0,?,?}, regtype, asm, OpNode>,
+      Sched<[WriteI]> {
+  let Inst{11} = isMin;
+  let Inst{10} = isUnsigned;
+  let mayLoad  = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+}
+
+class BaseComparisonOpImm<bit size, bit isUnsigned, bit isMin,
+                          RegisterClass regtype, ImmLeaf immtype, string asm,
+                          SDPatternOperator OpNode>
+    : BaseTwoOperandRegImm<size, 0b0, 0b0, {0,0,?,?}, regtype, immtype, asm,
+                           OpNode>,
+      Sched<[]> {
+  let Inst{19} = isMin;
+  let Inst{18} = isUnsigned;
+  let mayLoad  = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+}
+
+multiclass ComparisonOp<bit isUnsigned, bit isMin, string asm,
+                        SDPatternOperator OpNode = null_frag> {
+  def Wrr : BaseComparisonOpReg<0b0, isUnsigned, isMin, GPR32, asm, OpNode>;
+
+  def Wri : BaseComparisonOpImm<0b0, isUnsigned, isMin, GPR32,
+                                !cond(isUnsigned : uimm8_32b,
+                                      !not(isUnsigned) : simm8_32b), asm, OpNode>;
+
+  def Xrr : BaseComparisonOpReg<0b1, isUnsigned, isMin, GPR64, asm, OpNode>;
+
+  def Xri : BaseComparisonOpImm<0b1, isUnsigned, isMin, GPR64,
+                                !cond(isUnsigned : uimm8_64b,
+                                      !not(isUnsigned) : simm8_64b), asm, OpNode>;
+}
+
+//----------------------------------------------------------------------------
+// 2022 Armv8.9/Armv9.4 Extensions
+//----------------------------------------------------------------------------
+
+//---
+// RCPC instructions (FEAT_LRCPC3)
+//---
+
+class BaseLRCPC3<bits<2> size, bit V, bits<2> opc, dag oops, dag iops,
+                 string asm, string operands, string cstr = "">
+      : I<oops, iops, asm, operands, cstr, []>,
+        Sched<[WriteAtomic]> {
+  bits<5> Rt;
+  bits<5> Rn;
+  let Inst{31-30}    = size;
+  let Inst{29-24}    = {0,1,1,V,0,1};
+  let Inst{23-22}    = opc;
+  let Inst{21}       = 0b0;
+  //  Inst{20-12}
+  let Inst{11-10}    = 0b10;
+  let Inst{9-5}      = Rn;
+  let Inst{4-0}      = Rt;
+
+  let mayLoad = Inst{22};
+  let mayStore = !not(Inst{22});
+  let hasSideEffects = 0;
+}
+
+class BaseLRCPC3IntegerLoadStorePair<bits<2> size, bits<2> opc, bits<4> opc2,
+                                     dag oops, dag iops, string asm,
+                                     string operands, string cstr>
+      : BaseLRCPC3<size, /*V*/0, opc, oops, iops, asm, operands, cstr> {
+  bits<5> Rt2;
+  let Inst{20-16} = Rt2;
+  let Inst{15-12} = opc2;
+}
+
+class BaseLRCPC3IntegerLoadStore<bits<2> size, bits<2> opc, dag oops, dag iops,
+                                 string asm, string operands, string cstr>
+      : BaseLRCPC3<size, /*V*/0, opc, oops, iops, asm, operands, cstr> {
+  let Inst{20-12} = 0b000000000; // imm9
+}
+
+multiclass LRCPC3NEONLoadStoreUnscaledOffset<bits<2> size, bits<2> opc, RegisterClass regtype,
+                                             dag oops, dag iops, string asm> {
+  def i : BaseLRCPC3<size, /*V*/1, opc, oops, iops, asm, "\t$Rt, [$Rn{, $simm}]", /*cstr*/""> {
+    bits<9> simm; // signed immediate encoded in imm9=Rt2:imm4
+    let Inst{20-12} = simm;
+  }
+
+  def a : InstAlias<asm # "\t$Rt, [$Rn]",
+                  (!cast<Instruction>(NAME # "i") regtype:$Rt, GPR64sp:$Rn, 0)>;
+}
+
+class LRCPC3NEONLdStSingle<bit L, dag oops, dag iops, string asm, string cst>
+      : BaseSIMDLdStSingle<L, /*R*/0b0, /*opcode*/0b100, asm,
+                           "\t$Vt$Q, [$Rn]", cst, oops, iops, []>,
+        Sched<[]> {
+  bit Q;
+  let Inst{31}       = 0;
+  let Inst{30}       = Q;
+  let Inst{23}       = 0;
+  let Inst{20-16}    = 0b00001;
+  let Inst{12}       = 0; // S
+  let Inst{11-10}    = 0b01; // size
+
+  let mayLoad = L;
+  let mayStore = !not(L);
+  let hasSideEffects = 1;
+}
+
+//---
+// Instrumentation Extension (FEAT_ITE)
+//---
+
+let Predicates = [HasITE] in
+def TRCIT : RtSystemI<0b0, (outs), (ins GPR64:$Rt), "trcit", "\t$Rt"> {
+  let Inst{20-19} = 0b01;
+  let Inst{18-16} = 0b011;
+  let Inst{15-12} = 0b0111;
+  let Inst{11-8}  = 0b0010;
+  let Inst{7-5}   = 0b111;
 }
 
 //----------------------------------------------------------------------------

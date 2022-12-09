@@ -5,17 +5,16 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 
-define void @store_threshold([2 x i64]* %p, [2 x i64] %a) {
+define void @store_threshold(ptr %p, [2 x i64] %a) {
   ; CHECK: @store_threshold.dfsan
-  ; CHECK: [[AO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
-  ; CHECK: [[AS:%.*]] = load [2 x i[[#SBITS]]], [2 x i[[#SBITS]]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 2) to [2 x i[[#SBITS]]]*), align 2
+  ; CHECK: [[AO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+  ; CHECK: [[AS:%.*]] = load [2 x i[[#SBITS]]], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
   ; CHECK: [[AS0:%.*]] = extractvalue [2 x i[[#SBITS]]] [[AS]], 0
   ; CHECK: [[AS1:%.*]] = extractvalue [2 x i[[#SBITS]]] [[AS]], 1
   ; CHECK: [[AS01:%.*]] = or i[[#SBITS]] [[AS0]], [[AS1]]
-  ; CHECK: [[ADDR:%.*]] = bitcast [2 x i64]* %p to i8*
-  ; CHECK: call void @__dfsan_maybe_store_origin(i[[#SBITS]] [[AS01]], i8* [[ADDR]], i64 16, i32 [[AO]])
-  ; CHECK: store [2 x i64] %a, [2 x i64]* %p, align 8
+  ; CHECK: call void @__dfsan_maybe_store_origin(i[[#SBITS]] [[AS01]], ptr %p, i64 16, i32 [[AO]])
+  ; CHECK: store [2 x i64] %a, ptr %p, align 8
 
-  store [2 x i64] %a, [2 x i64]* %p
+  store [2 x i64] %a, ptr %p
   ret void
 }

@@ -191,10 +191,7 @@ define i32 @combine_setcc_glue(i128 noundef %x, i128 noundef %y) {
 ; CHECK-LABEL: combine_setcc_glue:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp x0, x2
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    ccmp x1, x3, #0, eq
-; CHECK-NEXT:    cset w9, eq
-; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
   %cmp3 = icmp eq i128 %x, %y
@@ -218,11 +215,12 @@ define [2 x i64] @PR58675(i128 %a.addr, i128 %b.addr) {
 ; CHECK-NEXT:    csel x10, x0, x8, lo
 ; CHECK-NEXT:    cmp x1, x9
 ; CHECK-NEXT:    csel x8, x0, x8, lo
-; CHECK-NEXT:    csel x8, x10, x8, eq
-; CHECK-NEXT:    csel x10, x1, x9, lo
-; CHECK-NEXT:    subs x8, x2, x8
-; CHECK-NEXT:    sbc x9, x3, x10
-; CHECK-NEXT:    ccmp x3, x10, #0, eq
+; CHECK-NEXT:    csel x11, x1, x9, lo
+; CHECK-NEXT:    csel x10, x10, x8, eq
+; CHECK-NEXT:    subs x8, x2, x10
+; CHECK-NEXT:    sbc x9, x3, x11
+; CHECK-NEXT:    cmp x3, x11
+; CHECK-NEXT:    ccmp x2, x10, #0, eq
 ; CHECK-NEXT:    b.ne .LBB12_1
 ; CHECK-NEXT:  // %bb.2: // %do.end
 ; CHECK-NEXT:    mov x0, xzr

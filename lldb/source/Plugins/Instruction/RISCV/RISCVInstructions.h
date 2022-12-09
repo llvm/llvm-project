@@ -13,6 +13,7 @@
 #include <variant>
 
 #include "EmulateInstructionRISCV.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Optional.h"
 
 namespace lldb_private {
@@ -22,6 +23,7 @@ class EmulateInstructionRISCV;
 struct Rd {
   uint32_t rd;
   bool Write(EmulateInstructionRISCV &emulator, uint64_t value);
+  bool WriteAPFloat(EmulateInstructionRISCV &emulator, llvm::APFloat value);
 };
 
 struct Rs {
@@ -30,6 +32,8 @@ struct Rs {
   llvm::Optional<int32_t> ReadI32(EmulateInstructionRISCV &emulator);
   llvm::Optional<int64_t> ReadI64(EmulateInstructionRISCV &emulator);
   llvm::Optional<uint32_t> ReadU32(EmulateInstructionRISCV &emulator);
+  llvm::Optional<llvm::APFloat> ReadAPFloat(EmulateInstructionRISCV &emulator,
+                                            bool isDouble);
 };
 
 #define I_TYPE_INST(NAME)                                                      \
@@ -67,6 +71,14 @@ struct Rs {
   struct NAME {                                                                \
     Rd rd;                                                                     \
     Rs rs1;                                                                    \
+  }
+#define R4_TYPE_INST(NAME)                                                     \
+  struct NAME {                                                                \
+    Rd rd;                                                                     \
+    Rs rs1;                                                                    \
+    Rs rs2;                                                                    \
+    Rs rs3;                                                                    \
+    int32_t rm;                                                                \
   }
 /// The `inst` fields are used for debugging.
 #define INVALID_INST(NAME)                                                     \
@@ -170,6 +182,34 @@ R_TYPE_INST(AMOMAX_D);
 R_TYPE_INST(AMOMINU_D);
 R_TYPE_INST(AMOMAXU_D);
 
+// RV32F inst (The standard single-precision floating-point extension)
+I_TYPE_INST(FLW);
+S_TYPE_INST(FSW);
+R4_TYPE_INST(FMADD_S);
+R4_TYPE_INST(FMSUB_S);
+R4_TYPE_INST(FNMADD_S);
+R4_TYPE_INST(FNMSUB_S);
+R_TYPE_INST(FADD_S);
+R_TYPE_INST(FSUB_S);
+R_TYPE_INST(FMUL_S);
+R_TYPE_INST(FDIV_S);
+R_TYPE_INST(FSQRT_S);
+R_TYPE_INST(FSGNJ_S);
+R_TYPE_INST(FSGNJN_S);
+R_TYPE_INST(FSGNJX_S);
+R_TYPE_INST(FMIN_S);
+R_TYPE_INST(FMAX_S);
+R_TYPE_INST(FCVT_W_S);
+R_TYPE_INST(FCVT_WU_S);
+R_TYPE_INST(FMV_X_W);
+R_TYPE_INST(FEQ_S);
+R_TYPE_INST(FLT_S);
+R_TYPE_INST(FLE_S);
+R_TYPE_INST(FCLASS_S);
+R_TYPE_INST(FCVT_S_W);
+R_TYPE_INST(FCVT_S_WU);
+R_TYPE_INST(FMV_W_X);
+
 /// Invalid and reserved instructions, the `inst` fields are used for debugging.
 INVALID_INST(INVALID);
 INVALID_INST(RESERVED);
@@ -185,7 +225,10 @@ using RISCVInst = std::variant<
     DIVUW, REMW, REMUW, LR_W, SC_W, AMOSWAP_W, AMOADD_W, AMOXOR_W, AMOAND_W,
     AMOOR_W, AMOMIN_W, AMOMAX_W, AMOMINU_W, AMOMAXU_W, LR_D, SC_D, AMOSWAP_D,
     AMOADD_D, AMOXOR_D, AMOAND_D, AMOOR_D, AMOMIN_D, AMOMAX_D, AMOMINU_D,
-    AMOMAXU_D, INVALID, EBREAK, RESERVED, HINT, NOP>;
+    AMOMAXU_D, FLW, FSW, FMADD_S, FMSUB_S, FNMADD_S, FNMSUB_S, FADD_S, FSUB_S,
+    FMUL_S, FDIV_S, FSQRT_S, FSGNJ_S, FSGNJN_S, FSGNJX_S, FMIN_S, FMAX_S,
+    FCVT_W_S, FCVT_WU_S, FMV_X_W, FEQ_S, FLT_S, FLE_S, FCLASS_S, FCVT_S_W,
+    FCVT_S_WU, FMV_W_X, INVALID, EBREAK, RESERVED, HINT, NOP>;
 
 struct InstrPattern {
   const char *name;
@@ -206,6 +249,26 @@ struct DecodeResult {
 constexpr uint32_t DecodeRD(uint32_t inst) { return (inst & 0xF80) >> 7; }
 constexpr uint32_t DecodeRS1(uint32_t inst) { return (inst & 0xF8000) >> 15; }
 constexpr uint32_t DecodeRS2(uint32_t inst) { return (inst & 0x1F00000) >> 20; }
+constexpr uint32_t DecodeRS3(uint32_t inst) {
+  return (inst & 0xF0000000) >> 27;
+}
+constexpr uint32_t DecodeFunct3(uint32_t inst) { return (inst & 0x7000) >> 12; }
+constexpr uint32_t DecodeFunct2(uint32_t inst) {
+  return (inst & 0xE000000) >> 25;
+}
+constexpr uint32_t DecodeFunct7(uint32_t inst) {
+  return (inst & 0xFE000000) >> 25;
+}
+
+constexpr int32_t DecodeRM(uint32_t inst) { return DecodeFunct3(inst); }
+
+/// RISC-V spec: The upper bits of a valid NaN-boxed value must be all 1s.
+constexpr uint64_t NanBoxing(uint64_t val) {
+  return val | 0xFFFF'FFFF'0000'0000;
+}
+constexpr uint32_t NanUnBoxing(uint64_t val) {
+  return val & (~0xFFFF'FFFF'0000'0000);
+}
 
 } // namespace lldb_private
 #endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVINSTRUCTION_H

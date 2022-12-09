@@ -4562,6 +4562,8 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
 
   switch (Opcode) {
   case ISD::VALUETYPE:
+  case ISD::FrameIndex:
+  case ISD::TargetFrameIndex:
     return true;
 
   case ISD::UNDEF:

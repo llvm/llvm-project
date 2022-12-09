@@ -137,6 +137,11 @@ public:
   void lowerACCRestore(MachineBasicBlock::iterator II,
                        unsigned FrameIndex) const;
 
+  void lowerWACCSpilling(MachineBasicBlock::iterator II,
+                         unsigned FrameIndex) const;
+  void lowerWACCRestore(MachineBasicBlock::iterator II,
+                        unsigned FrameIndex) const;
+
   void lowerQuadwordSpilling(MachineBasicBlock::iterator II,
                              unsigned FrameIndex) const;
   void lowerQuadwordRestore(MachineBasicBlock::iterator II,

@@ -8,21 +8,21 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define i1 @foo(i8* %p) !type !0 {
+define i1 @foo(ptr %p) !type !0 {
 entry:
-  %x = call i1 @llvm.type.test(i8* %p, metadata !"typeid1")
+  %x = call i1 @llvm.type.test(ptr %p, metadata !"typeid1")
   ret i1 %x
 }
 
-declare !type !0 i1 @bar(i8*)
+declare !type !0 i1 @bar(ptr)
 
 ; Functions must be address taken to have jump table entries emitted
 define void @addrtaken(i1 %i) {
-  %1 = select i1 %i, i1(i8*)* @foo, i1(i8*)* @bar
+  %1 = select i1 %i, ptr @foo, ptr @bar
   ret void
 }
 
-declare i1 @llvm.type.test(i8* %ptr, metadata %type) nounwind readnone
+declare i1 @llvm.type.test(ptr %ptr, metadata %type) nounwind readnone
 
 !0 = !{i64 0, !"typeid1"}
 

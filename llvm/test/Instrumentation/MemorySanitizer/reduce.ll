@@ -11,12 +11,12 @@ declare i32 @llvm.vector.reduce.or(<3 x i32>)
 
 ; CHECK-LABEL: @reduce_add
 define i32 @reduce_add() sanitize_memory {
-; CHECK: [[P:%.*]] = inttoptr i64 0 to <3 x i32>*
-  %p = inttoptr i64 0 to <3 x i32> *
-; CHECK: [[O:%.*]] = load <3 x i32>, <3 x i32>* [[P]]
-  %o = load <3 x i32>, <3 x i32> *%p
-; CHECK: [[O_SHADOW:%.*]] = load <3 x i32>, <3 x i32>*
-; CHECK: [[O_ORIGIN:%.*]] = load i32, i32*
+; CHECK: [[P:%.*]] = inttoptr i64 0 to ptr
+  %p = inttoptr i64 0 to ptr
+; CHECK: [[O:%.*]] = load <3 x i32>, ptr [[P]]
+  %o = load <3 x i32>, ptr %p
+; CHECK: [[O_SHADOW:%.*]] = load <3 x i32>, ptr
+; CHECK: [[O_ORIGIN:%.*]] = load i32, ptr
 ; CHECK: [[R_SHADOW:%.*]] = call i32 @llvm.vector.reduce.or.v3i32(<3 x i32> [[O_SHADOW]])
 ; CHECK: [[R:%.*]] = call i32 @llvm.vector.reduce.add.v3i32(<3 x i32> [[O]])
   %r = call i32 @llvm.vector.reduce.add(<3 x i32> %o)
@@ -28,12 +28,12 @@ define i32 @reduce_add() sanitize_memory {
 
 ; CHECK-LABEL: @reduce_and
 define i32 @reduce_and() sanitize_memory {
-; CHECK: [[P:%.*]] = inttoptr i64 0 to <3 x i32>*
-  %p = inttoptr i64 0 to <3 x i32> *
-; CHECK: [[O:%.*]] = load <3 x i32>, <3 x i32>* [[P]]
-  %o = load <3 x i32>, <3 x i32> *%p
-; CHECK: [[O_SHADOW:%.*]] = load <3 x i32>, <3 x i32>*
-; CHECK: [[O_ORIGIN:%.*]] = load i32, i32*
+; CHECK: [[P:%.*]] = inttoptr i64 0 to ptr
+  %p = inttoptr i64 0 to ptr
+; CHECK: [[O:%.*]] = load <3 x i32>, ptr [[P]]
+  %o = load <3 x i32>, ptr %p
+; CHECK: [[O_SHADOW:%.*]] = load <3 x i32>, ptr
+; CHECK: [[O_ORIGIN:%.*]] = load i32, ptr
 ; CHECK: [[O_SHADOW_1:%.*]] = or <3 x i32> [[O]], [[O_SHADOW]]
 ; CHECK: [[O_SHADOW_2:%.*]] = call i32 @llvm.vector.reduce.and.v3i32(<3 x i32> [[O_SHADOW_1]]
 ; CHECK: [[O_SHADOW_3:%.*]] = call i32 @llvm.vector.reduce.or.v3i32(<3 x i32> [[O_SHADOW]])
@@ -48,12 +48,12 @@ define i32 @reduce_and() sanitize_memory {
 
 ; CHECK-LABEL: @reduce_or
 define i32 @reduce_or() sanitize_memory {
-; CHECK: [[P:%.*]] = inttoptr i64 0 to <3 x i32>*
-  %p = inttoptr i64 0 to <3 x i32> *
-; CHECK: [[O:%.*]] = load <3 x i32>, <3 x i32>* [[P]]
-  %o = load <3 x i32>, <3 x i32> *%p
-; CHECK: [[O_SHADOW:%.*]] = load <3 x i32>, <3 x i32>*
-; CHECK: [[O_ORIGIN:%.*]] = load i32, i32*
+; CHECK: [[P:%.*]] = inttoptr i64 0 to ptr
+  %p = inttoptr i64 0 to ptr
+; CHECK: [[O:%.*]] = load <3 x i32>, ptr [[P]]
+  %o = load <3 x i32>, ptr %p
+; CHECK: [[O_SHADOW:%.*]] = load <3 x i32>, ptr
+; CHECK: [[O_ORIGIN:%.*]] = load i32, ptr
 ; CHECK: [[NOT_O:%.*]] = xor <3 x i32> [[O]], <i32 -1, i32 -1, i32 -1>
 ; CHECK: [[O_SHADOW_1:%.*]] = or <3 x i32> [[NOT_O]], [[O_SHADOW]]
 ; CHECK: [[O_SHADOW_2:%.*]] = call i32 @llvm.vector.reduce.and.v3i32(<3 x i32> [[O_SHADOW_1]]

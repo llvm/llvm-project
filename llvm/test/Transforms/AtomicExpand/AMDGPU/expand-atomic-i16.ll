@@ -418,7 +418,7 @@ define i16 @test_cmpxchg_i16_global(i16 addrspace(1)* %out, i16 %in, i16 %old) {
 ; CHECK:       partword.cmpxchg.end:
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP13]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
-; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i16, i1 } undef, i16 [[EXTRACTED]], 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i16, i1 } poison, i16 [[EXTRACTED]], 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertvalue { i16, i1 } [[TMP17]], i1 [[TMP14]], 1
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractvalue { i16, i1 } [[TMP18]], 0
 ; CHECK-NEXT:    ret i16 [[EXTRACT]]
@@ -452,7 +452,7 @@ define i16 @test_cmpxchg_i16_global_align4(i16 addrspace(1)* %out, i16 %in, i16 
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[PARTWORD_CMPXCHG_LOOP]], label [[PARTWORD_CMPXCHG_END]]
 ; CHECK:       partword.cmpxchg.end:
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP9]] to i16
-; CHECK-NEXT:    [[TMP13:%.*]] = insertvalue { i16, i1 } undef, i16 [[EXTRACTED]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = insertvalue { i16, i1 } poison, i16 [[EXTRACTED]], 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertvalue { i16, i1 } [[TMP13]], i1 [[TMP10]], 1
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractvalue { i16, i1 } [[TMP14]], 0
 ; CHECK-NEXT:    ret i16 [[EXTRACT]]
@@ -525,7 +525,7 @@ define i16 @test_cmpxchg_i16_local(i16 addrspace(3)* %out, i16 %in, i16 %old) {
 ; CHECK:       partword.cmpxchg.end:
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP13]], [[TMP2]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
-; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i16, i1 } undef, i16 [[EXTRACTED]], 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i16, i1 } poison, i16 [[EXTRACTED]], 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertvalue { i16, i1 } [[TMP17]], i1 [[TMP14]], 1
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractvalue { i16, i1 } [[TMP18]], 0
 ; CHECK-NEXT:    ret i16 [[EXTRACT]]

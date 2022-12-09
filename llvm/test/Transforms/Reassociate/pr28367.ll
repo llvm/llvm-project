@@ -6,7 +6,7 @@
 ; aggressive with retrying instructions it's possible to invalidate our
 ; iterator.  See PR28367 for complete details.
 
-define void @fn1(i32 %a, i1 %c, i32* %ptr)  {
+define void @fn1(i32 %a, i1 %c, ptr %ptr)  {
 entry:
   br label %for.cond
 
@@ -20,7 +20,7 @@ for.body:
   %dead2 = mul i32 %dead1, 3
   %dead3 = mul i32 %dead2, %sub1
   %sub2 = sub nsw i32 0, %d.0
-  store i32 %sub2, i32* %ptr, align 4
+  store i32 %sub2, ptr %ptr, align 4
   br label %for.cond
 
 for.end:

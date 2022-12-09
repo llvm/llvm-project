@@ -405,7 +405,7 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
 
   RecordDecl *empty_base_decl = TypeSystemClang::GetAsRecordDecl(empty_base);
   EXPECT_NE(nullptr, empty_base_decl);
-  EXPECT_FALSE(TypeSystemClang::RecordHasFields(empty_base_decl));
+  EXPECT_FALSE(m_ast->RecordHasFields(empty_base_decl));
 
   // Test that a record with direct fields returns true
   CompilerType non_empty_base = m_ast->CreateRecordType(
@@ -419,7 +419,7 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
       TypeSystemClang::GetAsRecordDecl(non_empty_base);
   EXPECT_NE(nullptr, non_empty_base_decl);
   EXPECT_NE(nullptr, non_empty_base_field_decl);
-  EXPECT_TRUE(TypeSystemClang::RecordHasFields(non_empty_base_decl));
+  EXPECT_TRUE(m_ast->RecordHasFields(non_empty_base_decl));
 
   std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases;
 
@@ -440,10 +440,9 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
       m_ast->GetAsCXXRecordDecl(empty_derived.GetOpaqueQualType());
   RecordDecl *empty_derived_non_empty_base_decl =
       TypeSystemClang::GetAsRecordDecl(empty_derived);
-  EXPECT_EQ(1u, TypeSystemClang::GetNumBaseClasses(
+  EXPECT_EQ(1u, m_ast->GetNumBaseClasses(
                     empty_derived_non_empty_base_cxx_decl, false));
-  EXPECT_TRUE(
-      TypeSystemClang::RecordHasFields(empty_derived_non_empty_base_decl));
+  EXPECT_TRUE(m_ast->RecordHasFields(empty_derived_non_empty_base_decl));
 
   // Test that a record with no direct fields, but fields in a virtual base
   // returns true
@@ -463,10 +462,10 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
       m_ast->GetAsCXXRecordDecl(empty_derived2.GetOpaqueQualType());
   RecordDecl *empty_derived_non_empty_vbase_decl =
       TypeSystemClang::GetAsRecordDecl(empty_derived2);
-  EXPECT_EQ(1u, TypeSystemClang::GetNumBaseClasses(
+  EXPECT_EQ(1u, m_ast->GetNumBaseClasses(
                     empty_derived_non_empty_vbase_cxx_decl, false));
   EXPECT_TRUE(
-      TypeSystemClang::RecordHasFields(empty_derived_non_empty_vbase_decl));
+      m_ast->RecordHasFields(empty_derived_non_empty_vbase_decl));
 }
 
 TEST_F(TestTypeSystemClang, TemplateArguments) {
@@ -980,4 +979,3 @@ TEST_F(TestTypeSystemClang, GetExeModuleWhenMissingSymbolFile) {
   ModuleSP module = t.GetExeModule();
   EXPECT_EQ(module.get(), nullptr);
 }
-

@@ -41,7 +41,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 24;
+const unsigned VERSION_MAJOR = 23;
 
 /// AST file minor version number supported by this version of
 /// Clang.

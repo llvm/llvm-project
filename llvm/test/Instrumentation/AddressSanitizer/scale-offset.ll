@@ -5,9 +5,9 @@
 ; RUN: opt < %s -passes=asan -asan-mapping-offset 0xc0ffee -asan-mapping-scale 0 -S | FileCheck --check-prefix=CHECK-BOTH %s
 target triple = "x86_64-unknown-linux-gnu"
 
-define i32 @read_offset(i32* %a) sanitize_address {
+define i32 @read_offset(ptr %a) sanitize_address {
 entry:
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   ret i32 %tmp1
 }
 ; CHECK-OFFSET-LABEL: @read_offset
@@ -16,9 +16,9 @@ entry:
 ; CHECK-OFFSET-NEXT: add{{.*}}3735928559
 ; CHECK-OFFSET: ret
 
-define i32 @read_scale(i32* %a) sanitize_address {
+define i32 @read_scale(ptr %a) sanitize_address {
 entry:
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   ret i32 %tmp1
 }
 ; CHECK-SCALE-LABEL: @read_scale
@@ -27,9 +27,9 @@ entry:
 ; CHECK-SCALE-NEXT: add{{.*}}
 ; CHECK-SCALE: ret
 
-define i32 @read_both(i32* %a) sanitize_address {
+define i32 @read_both(ptr %a) sanitize_address {
 entry:
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   ret i32 %tmp1
 }
 ; CHECK-BOTH-LABEL: @read_both

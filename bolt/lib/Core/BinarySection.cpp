@@ -74,7 +74,7 @@ void BinarySection::emitAsData(MCStreamer &Streamer,
       BC.Ctx->getELFSection(SectionName, getELFType(), getELFFlags());
 
   Streamer.switchSection(ELFSection);
-  Streamer.emitValueToAlignment(getAlignment());
+  Streamer.emitValueToAlignment(getAlign());
 
   if (BC.HasRelocations && opts::HotData && isReordered())
     Streamer.emitLabel(BC.Ctx->getOrCreateSymbol("__hot_data_start"));

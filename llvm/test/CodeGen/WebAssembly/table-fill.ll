@@ -14,7 +14,6 @@ define void @table_fill(i32 %start, i32 %len, %externref %val) {
 ; CHECK-NEXT:  local.get    1
 ; CHECK-NEXT:  table.fill	externref_table
 ; CHECK-NEXT:  end_function
-  %tableptr = getelementptr [0 x %externref], ptr addrspace(1) @externref_table, i32 0, i32 0
-  call void @llvm.wasm.table.fill.externref(ptr addrspace(1) %tableptr, i32 %start, %externref %val, i32 %len)
+  call void @llvm.wasm.table.fill.externref(ptr addrspace(1) @externref_table, i32 %start, %externref %val, i32 %len)
   ret void
 }

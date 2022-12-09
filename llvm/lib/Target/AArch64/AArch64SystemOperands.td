@@ -288,6 +288,26 @@ def : SVEPRFM<"pstl3strm", 0x0d>;
 }
 
 //===----------------------------------------------------------------------===//
+// RPRFM (prefetch) instruction options.
+//===----------------------------------------------------------------------===//
+
+class RPRFM<string name, bits<1> type_encoding, bits<5> policy_encoding> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<6> Encoding;
+  let Encoding{0} = type_encoding;
+  let Encoding{5-1} = policy_encoding;
+  code Requires = [{ {} }];
+}
+
+def : RPRFM<"pldkeep", 0b0, 0b00000>;
+def : RPRFM<"pstkeep", 0b1, 0b00000>;
+def : RPRFM<"pldstrm", 0b0, 0b00010>;
+def : RPRFM<"pststrm", 0b1, 0b00010>;
+
+//===----------------------------------------------------------------------===//
 // SVE Predicate patterns
 //===----------------------------------------------------------------------===//
 
@@ -672,6 +692,7 @@ def : ROSysReg<"ID_PFR2_EL1",        0b11, 0b000, 0b0000, 0b0011, 0b100> {
     let Requires = [{ {AArch64::FeatureSpecRestrict} }];
 }
 def : ROSysReg<"ID_DFR0_EL1",        0b11, 0b000, 0b0000, 0b0001, 0b010>;
+def : ROSysReg<"ID_DFR1_EL1",        0b11, 0b000, 0b0000, 0b0011, 0b101>;
 def : ROSysReg<"ID_AFR0_EL1",        0b11, 0b000, 0b0000, 0b0001, 0b011>;
 def : ROSysReg<"ID_MMFR0_EL1",       0b11, 0b000, 0b0000, 0b0001, 0b100>;
 def : ROSysReg<"ID_MMFR1_EL1",       0b11, 0b000, 0b0000, 0b0001, 0b101>;
@@ -846,7 +867,7 @@ def : WOSysReg<"ICC_SGI0R_EL1",      0b11, 0b000, 0b1100, 0b1011, 0b111>;
 // Read-write regs
 //===----------------------
 
-//                                 Op0    Op1     CRn     CRm    Op2
+//                                   Op0   Op1    CRn     CRm     Op2
 def : RWSysReg<"OSDTRRX_EL1",        0b10, 0b000, 0b0000, 0b0000, 0b010>;
 def : RWSysReg<"OSDTRTX_EL1",        0b10, 0b000, 0b0000, 0b0011, 0b010>;
 def : RWSysReg<"TEECR32_EL1",        0b10, 0b010, 0b0000, 0b0000, 0b000>;
@@ -855,70 +876,15 @@ def : RWSysReg<"MDSCR_EL1",          0b10, 0b000, 0b0000, 0b0010, 0b010>;
 def : RWSysReg<"DBGDTR_EL0",         0b10, 0b011, 0b0000, 0b0100, 0b000>;
 def : RWSysReg<"OSECCR_EL1",         0b10, 0b000, 0b0000, 0b0110, 0b010>;
 def : RWSysReg<"DBGVCR32_EL2",       0b10, 0b100, 0b0000, 0b0111, 0b000>;
-def : RWSysReg<"DBGBVR0_EL1",        0b10, 0b000, 0b0000, 0b0000, 0b100>;
-def : RWSysReg<"DBGBVR1_EL1",        0b10, 0b000, 0b0000, 0b0001, 0b100>;
-def : RWSysReg<"DBGBVR2_EL1",        0b10, 0b000, 0b0000, 0b0010, 0b100>;
-def : RWSysReg<"DBGBVR3_EL1",        0b10, 0b000, 0b0000, 0b0011, 0b100>;
-def : RWSysReg<"DBGBVR4_EL1",        0b10, 0b000, 0b0000, 0b0100, 0b100>;
-def : RWSysReg<"DBGBVR5_EL1",        0b10, 0b000, 0b0000, 0b0101, 0b100>;
-def : RWSysReg<"DBGBVR6_EL1",        0b10, 0b000, 0b0000, 0b0110, 0b100>;
-def : RWSysReg<"DBGBVR7_EL1",        0b10, 0b000, 0b0000, 0b0111, 0b100>;
-def : RWSysReg<"DBGBVR8_EL1",        0b10, 0b000, 0b0000, 0b1000, 0b100>;
-def : RWSysReg<"DBGBVR9_EL1",        0b10, 0b000, 0b0000, 0b1001, 0b100>;
-def : RWSysReg<"DBGBVR10_EL1",       0b10, 0b000, 0b0000, 0b1010, 0b100>;
-def : RWSysReg<"DBGBVR11_EL1",       0b10, 0b000, 0b0000, 0b1011, 0b100>;
-def : RWSysReg<"DBGBVR12_EL1",       0b10, 0b000, 0b0000, 0b1100, 0b100>;
-def : RWSysReg<"DBGBVR13_EL1",       0b10, 0b000, 0b0000, 0b1101, 0b100>;
-def : RWSysReg<"DBGBVR14_EL1",       0b10, 0b000, 0b0000, 0b1110, 0b100>;
-def : RWSysReg<"DBGBVR15_EL1",       0b10, 0b000, 0b0000, 0b1111, 0b100>;
-def : RWSysReg<"DBGBCR0_EL1",        0b10, 0b000, 0b0000, 0b0000, 0b101>;
-def : RWSysReg<"DBGBCR1_EL1",        0b10, 0b000, 0b0000, 0b0001, 0b101>;
-def : RWSysReg<"DBGBCR2_EL1",        0b10, 0b000, 0b0000, 0b0010, 0b101>;
-def : RWSysReg<"DBGBCR3_EL1",        0b10, 0b000, 0b0000, 0b0011, 0b101>;
-def : RWSysReg<"DBGBCR4_EL1",        0b10, 0b000, 0b0000, 0b0100, 0b101>;
-def : RWSysReg<"DBGBCR5_EL1",        0b10, 0b000, 0b0000, 0b0101, 0b101>;
-def : RWSysReg<"DBGBCR6_EL1",        0b10, 0b000, 0b0000, 0b0110, 0b101>;
-def : RWSysReg<"DBGBCR7_EL1",        0b10, 0b000, 0b0000, 0b0111, 0b101>;
-def : RWSysReg<"DBGBCR8_EL1",        0b10, 0b000, 0b0000, 0b1000, 0b101>;
-def : RWSysReg<"DBGBCR9_EL1",        0b10, 0b000, 0b0000, 0b1001, 0b101>;
-def : RWSysReg<"DBGBCR10_EL1",       0b10, 0b000, 0b0000, 0b1010, 0b101>;
-def : RWSysReg<"DBGBCR11_EL1",       0b10, 0b000, 0b0000, 0b1011, 0b101>;
-def : RWSysReg<"DBGBCR12_EL1",       0b10, 0b000, 0b0000, 0b1100, 0b101>;
-def : RWSysReg<"DBGBCR13_EL1",       0b10, 0b000, 0b0000, 0b1101, 0b101>;
-def : RWSysReg<"DBGBCR14_EL1",       0b10, 0b000, 0b0000, 0b1110, 0b101>;
-def : RWSysReg<"DBGBCR15_EL1",       0b10, 0b000, 0b0000, 0b1111, 0b101>;
-def : RWSysReg<"DBGWVR0_EL1",        0b10, 0b000, 0b0000, 0b0000, 0b110>;
-def : RWSysReg<"DBGWVR1_EL1",        0b10, 0b000, 0b0000, 0b0001, 0b110>;
-def : RWSysReg<"DBGWVR2_EL1",        0b10, 0b000, 0b0000, 0b0010, 0b110>;
-def : RWSysReg<"DBGWVR3_EL1",        0b10, 0b000, 0b0000, 0b0011, 0b110>;
-def : RWSysReg<"DBGWVR4_EL1",        0b10, 0b000, 0b0000, 0b0100, 0b110>;
-def : RWSysReg<"DBGWVR5_EL1",        0b10, 0b000, 0b0000, 0b0101, 0b110>;
-def : RWSysReg<"DBGWVR6_EL1",        0b10, 0b000, 0b0000, 0b0110, 0b110>;
-def : RWSysReg<"DBGWVR7_EL1",        0b10, 0b000, 0b0000, 0b0111, 0b110>;
-def : RWSysReg<"DBGWVR8_EL1",        0b10, 0b000, 0b0000, 0b1000, 0b110>;
-def : RWSysReg<"DBGWVR9_EL1",        0b10, 0b000, 0b0000, 0b1001, 0b110>;
-def : RWSysReg<"DBGWVR10_EL1",       0b10, 0b000, 0b0000, 0b1010, 0b110>;
-def : RWSysReg<"DBGWVR11_EL1",       0b10, 0b000, 0b0000, 0b1011, 0b110>;
-def : RWSysReg<"DBGWVR12_EL1",       0b10, 0b000, 0b0000, 0b1100, 0b110>;
-def : RWSysReg<"DBGWVR13_EL1",       0b10, 0b000, 0b0000, 0b1101, 0b110>;
-def : RWSysReg<"DBGWVR14_EL1",       0b10, 0b000, 0b0000, 0b1110, 0b110>;
-def : RWSysReg<"DBGWVR15_EL1",       0b10, 0b000, 0b0000, 0b1111, 0b110>;
-def : RWSysReg<"DBGWCR0_EL1",        0b10, 0b000, 0b0000, 0b0000, 0b111>;
-def : RWSysReg<"DBGWCR1_EL1",        0b10, 0b000, 0b0000, 0b0001, 0b111>;
-def : RWSysReg<"DBGWCR2_EL1",        0b10, 0b000, 0b0000, 0b0010, 0b111>;
-def : RWSysReg<"DBGWCR3_EL1",        0b10, 0b000, 0b0000, 0b0011, 0b111>;
-def : RWSysReg<"DBGWCR4_EL1",        0b10, 0b000, 0b0000, 0b0100, 0b111>;
-def : RWSysReg<"DBGWCR5_EL1",        0b10, 0b000, 0b0000, 0b0101, 0b111>;
-def : RWSysReg<"DBGWCR6_EL1",        0b10, 0b000, 0b0000, 0b0110, 0b111>;
-def : RWSysReg<"DBGWCR7_EL1",        0b10, 0b000, 0b0000, 0b0111, 0b111>;
-def : RWSysReg<"DBGWCR8_EL1",        0b10, 0b000, 0b0000, 0b1000, 0b111>;
-def : RWSysReg<"DBGWCR9_EL1",        0b10, 0b000, 0b0000, 0b1001, 0b111>;
-def : RWSysReg<"DBGWCR10_EL1",       0b10, 0b000, 0b0000, 0b1010, 0b111>;
-def : RWSysReg<"DBGWCR11_EL1",       0b10, 0b000, 0b0000, 0b1011, 0b111>;
-def : RWSysReg<"DBGWCR12_EL1",       0b10, 0b000, 0b0000, 0b1100, 0b111>;
-def : RWSysReg<"DBGWCR13_EL1",       0b10, 0b000, 0b0000, 0b1101, 0b111>;
-def : RWSysReg<"DBGWCR14_EL1",       0b10, 0b000, 0b0000, 0b1110, 0b111>;
-def : RWSysReg<"DBGWCR15_EL1",       0b10, 0b000, 0b0000, 0b1111, 0b111>;
+foreach n = 0-15 in {
+  defvar nb = !cast<bits<4>>(n);
+  //                                 Op0   Op1    CRn     CRm Op2
+  def : RWSysReg<"DBGBVR"#n#"_EL1",  0b10, 0b000, 0b0000, nb, 0b100>;
+  def : RWSysReg<"DBGBCR"#n#"_EL1",  0b10, 0b000, 0b0000, nb, 0b101>;
+  def : RWSysReg<"DBGWVR"#n#"_EL1",  0b10, 0b000, 0b0000, nb, 0b110>;
+  def : RWSysReg<"DBGWCR"#n#"_EL1",  0b10, 0b000, 0b0000, nb, 0b111>;
+}
+//                                   Op0   Op1    CRn     CRm     Op2
 def : RWSysReg<"TEEHBR32_EL1",       0b10, 0b010, 0b0001, 0b0000, 0b000>;
 def : RWSysReg<"OSDLR_EL1",          0b10, 0b000, 0b0001, 0b0011, 0b100>;
 def : RWSysReg<"DBGPRCR_EL1",        0b10, 0b000, 0b0001, 0b0100, 0b100>;
@@ -1667,6 +1633,8 @@ def : ROSysReg<"TRBIDR_EL1",    0b11, 0b000, 0b1001, 0b1011, 0b111>;
 
 // v8.6a Activity Monitors Virtualization Support
 let Requires = [{ {AArch64::FeatureAMVS} }] in {
+//              Name            Op0   Op1    CRn     CRm     Op2
+def : ROSysReg<"AMCG1IDR_EL0",  0b11, 0b011, 0b1101, 0b0010, 0b110>;
 foreach n = 0-15 in {
   foreach x = 0-1 in {
   def : RWSysReg<"AMEVCNTVOFF"#x#n#"_EL2",
@@ -1686,6 +1654,14 @@ def : RWSysReg<"HFGWTR_EL2",       0b11, 0b100, 0b0001, 0b0001, 0b101>;
 def : RWSysReg<"HFGITR_EL2",       0b11, 0b100, 0b0001, 0b0001, 0b110>;
 def : RWSysReg<"HDFGRTR_EL2",      0b11, 0b100, 0b0011, 0b0001, 0b100>;
 def : RWSysReg<"HDFGWTR_EL2",      0b11, 0b100, 0b0011, 0b0001, 0b101>;
+def : RWSysReg<"HAFGRTR_EL2",      0b11, 0b100, 0b0011, 0b0001, 0b110>;
+
+// v8.9a/v9.4a additions to Fine Grained Traps (FEAT_FGT2)
+//                                 Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"HDFGRTR2_EL2",     0b11, 0b100, 0b0011, 0b0001, 0b000>;
+def : RWSysReg<"HDFGWTR2_EL2",     0b11, 0b100, 0b0011, 0b0001, 0b001>;
+def : RWSysReg<"HFGRTR2_EL2",      0b11, 0b100, 0b0011, 0b0001, 0b010>;
+def : RWSysReg<"HFGWTR2_EL2",      0b11, 0b100, 0b0011, 0b0001, 0b011>;
 }
 
 // v8.6a Enhanced Counter Virtualization
@@ -1750,3 +1726,80 @@ def : RWSysReg<"TPIDR2_EL0",       0b11, 0b011, 0b1101, 0b0000, 0b101>;
 let Requires = [{ {AArch64::FeatureMPAM, AArch64::FeatureSME} }] in {
 def : RWSysReg<"MPAMSM_EL1",    0b11, 0b000, 0b1010, 0b0101, 0b011>;
 } // HasMPAM, HasSME
+
+// v8.9a/9.4a new Debug feature (FEAT_DEBUGv8p9)
+//                            Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"MDSELR_EL1", 0b10, 0b000, 0b0000, 0b0100, 0b010>;
+
+// v8.9a/9.4a new Performance Monitors Extension (FEAT_PMUv3p9)
+//                            Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"PMUACR_EL1", 0b11, 0b000, 0b1001, 0b1110, 0b100>;
+
+// v8.9a/9.4a PMU Snapshot Extension (FEAT_PMUv3_SS)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : ROSysReg<"PMCCNTSVR_EL1",     0b10, 0b000, 0b1110, 0b1011, 0b111>;
+def : ROSysReg<"PMICNTSVR_EL1",     0b10, 0b000, 0b1110, 0b1100, 0b000>;
+def : RWSysReg<"PMSSCR_EL1",        0b11, 0b000, 0b1001, 0b1101, 0b011>;
+foreach n = 0-30 in {
+  defvar nb = !cast<bits<5>>(n);
+  def : ROSysReg<"PMEVCNTSVR"#n#"_EL1", 0b10, 0b000, 0b1110, {0b10,nb{4-3}}, nb{2-0}>;
+}
+
+// v8.9a/v9.4a PMUv3 Fixed-function instruction counter (FEAT_PMUv3_ICNTR)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"PMICNTR_EL0",       0b11, 0b011, 0b1001, 0b0100, 0b000>;
+def : RWSysReg<"PMICFILTR_EL0",     0b11, 0b011, 0b1001, 0b0110, 0b000>;
+
+// v8.9a/v9.4a PMUv3 Performance Monitors Zero with Mask (FEAT_PMUv3p9/FEAT_PMUv3_ICNTR)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : WOSysReg<"PMZR_EL0",          0b11, 0b011, 0b1001, 0b1101, 0b100>;
+
+// v8.9a/9.4a Synchronous-Exception-Based Event Profiling extension (FEAT_SEBEP)
+//                              Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"PMECR_EL1",     0b11, 0b000, 0b1001, 0b1110, 0b101>;
+def : RWSysReg<"PMIAR_EL1",     0b11, 0b000, 0b1001, 0b1110, 0b111>;
+
+// v8.9a/9.4a System Performance Monitors Extension (FEAT_SPMU)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"SPMACCESSR_EL1",    0b10, 0b000, 0b1001, 0b1101, 0b011>;
+def : RWSysReg<"SPMACCESSR_EL12",   0b10, 0b101, 0b1001, 0b1101, 0b011>;
+def : RWSysReg<"SPMACCESSR_EL2",    0b10, 0b100, 0b1001, 0b1101, 0b011>;
+def : RWSysReg<"SPMACCESSR_EL3",    0b10, 0b110, 0b1001, 0b1101, 0b011>;
+def : RWSysReg<"SPMCNTENCLR_EL0",   0b10, 0b011, 0b1001, 0b1100, 0b010>;
+def : RWSysReg<"SPMCNTENSET_EL0",   0b10, 0b011, 0b1001, 0b1100, 0b001>;
+def : RWSysReg<"SPMCR_EL0",         0b10, 0b011, 0b1001, 0b1100, 0b000>;
+def : ROSysReg<"SPMDEVAFF_EL1",     0b10, 0b000, 0b1001, 0b1101, 0b110>;
+def : ROSysReg<"SPMDEVARCH_EL1",    0b10, 0b000, 0b1001, 0b1101, 0b101>;
+foreach n = 0-15 in {
+  defvar nb = !cast<bits<4>>(n);
+  //                                     Op0   Op1    CRn     CRm            Op2
+  def : RWSysReg<"SPMEVCNTR"#n#"_EL0",   0b10, 0b011, 0b1110, {0b000,nb{3}}, nb{2-0}>;
+  def : RWSysReg<"SPMEVFILT2R"#n#"_EL0", 0b10, 0b011, 0b1110, {0b011,nb{3}}, nb{2-0}>;
+  def : RWSysReg<"SPMEVFILTR"#n#"_EL0",  0b10, 0b011, 0b1110, {0b010,nb{3}}, nb{2-0}>;
+  def : RWSysReg<"SPMEVTYPER"#n#"_EL0",  0b10, 0b011, 0b1110, {0b001,nb{3}}, nb{2-0}>;
+}
+//                                  Op0   Op1    CRn     CRm     Op2
+def : ROSysReg<"SPMIIDR_EL1",       0b10, 0b000, 0b1001, 0b1101, 0b100>;
+def : RWSysReg<"SPMINTENCLR_EL1",   0b10, 0b000, 0b1001, 0b1110, 0b010>;
+def : RWSysReg<"SPMINTENSET_EL1",   0b10, 0b000, 0b1001, 0b1110, 0b001>;
+def : RWSysReg<"SPMOVSCLR_EL0",     0b10, 0b011, 0b1001, 0b1100, 0b011>;
+def : RWSysReg<"SPMOVSSET_EL0",     0b10, 0b011, 0b1001, 0b1110, 0b011>;
+def : RWSysReg<"SPMSELR_EL0",       0b10, 0b011, 0b1001, 0b1100, 0b101>;
+def : ROSysReg<"SPMCGCR0_EL1",      0b10, 0b000, 0b1001, 0b1101, 0b000>;
+def : ROSysReg<"SPMCGCR1_EL1",      0b10, 0b000, 0b1001, 0b1101, 0b001>;
+def : ROSysReg<"SPMCFGR_EL1",       0b10, 0b000, 0b1001, 0b1101, 0b111>;
+def : RWSysReg<"SPMROOTCR_EL3",     0b10, 0b110, 0b1001, 0b1110, 0b111>;
+def : RWSysReg<"SPMSCR_EL1",        0b10, 0b111, 0b1001, 0b1110, 0b111>;
+
+// v8.9a/9.4a Instrumentation Extension (FEAT_ITE)
+//                                  Op0   Op1    CRn     CRm     Op2
+let Requires = [{ {AArch64::FeatureITE} }] in {
+def : RWSysReg<"TRCITEEDCR",        0b10, 0b001, 0b0000, 0b0010, 0b001>;
+def : RWSysReg<"TRCITECR_EL1",      0b11, 0b000, 0b0001, 0b0010, 0b011>;
+def : RWSysReg<"TRCITECR_EL12",     0b11, 0b101, 0b0001, 0b0010, 0b011>;
+def : RWSysReg<"TRCITECR_EL2",      0b11, 0b100, 0b0001, 0b0010, 0b011>;
+}
+
+// v8.9a/9.4a SPE Data Source Filtering (FEAT_SPE_FDS)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"PMSDSFR_EL1",       0b11, 0b000, 0b1001, 0b1010, 0b100>;

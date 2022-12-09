@@ -26,7 +26,7 @@ class SparseTensor_Op<string mnemonic, list<Trait> traits = []>
 //===----------------------------------------------------------------------===//
 
 def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
-    Arguments<(ins AnyType:$source)>,
+    Arguments<(ins AnyType:$source, UnitAttr:$expandSymmetry)>,
     Results<(outs AnySparseTensor:$result)> {
   string summary = "Materializes a new sparse tensor from given source";
   string description = [{
@@ -39,13 +39,22 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
     code. The operation is provided as an anchor that materializes a properly
     typed sparse tensor with inital contents into a computation.
 
+    An optional attribute `expandSymmetry` can be used to extend this operation
+    to make symmetry in external formats explicit in the storage. That is, when
+    the attribute presents and a non-zero value is discovered at (i, j) where
+    i!=j, we add the same value to (j, i). This claims more storage than a pure
+    symmetric storage, and thus may cause a bad performance hit. True symmetric
+    storage is planned for the future.
+
     Example:
 
     ```mlir
     sparse_tensor.new %source : !Source to tensor<1024x1024xf64, #CSR>
     ```
   }];
-  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
+  let assemblyFormat = "(`expand_symmetry` $expandSymmetry^)? $source attr-dict"
+                       "`:` type($source) `to` type($result)";
+  let hasVerifier = 1;
 }
 
 def SparseTensor_ConvertOp : SparseTensor_Op<"convert",

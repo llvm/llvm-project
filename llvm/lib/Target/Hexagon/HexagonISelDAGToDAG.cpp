@@ -692,6 +692,25 @@ void HexagonDAGToDAGISel::SelectIntrinsicWOChain(SDNode *N) {
   SelectCode(N);
 }
 
+void HexagonDAGToDAGISel::SelectExtractSubvector(SDNode *N) {
+  SDValue Inp = N->getOperand(0);
+  MVT ResTy = N->getValueType(0).getSimpleVT();
+  auto IdxN = cast<ConstantSDNode>(N->getOperand(1));
+  unsigned Idx = IdxN->getZExtValue();
+#ifndef NDEBUG
+  MVT InpTy = Inp.getValueType().getSimpleVT();
+  assert(InpTy.getVectorElementType() == ResTy.getVectorElementType());
+  unsigned ResLen = ResTy.getVectorNumElements();
+  assert(2 * ResLen == InpTy.getVectorNumElements());
+  assert(ResTy.getSizeInBits() == 32);
+  assert(Idx == 0 || Idx == ResLen);
+#endif
+  unsigned SubReg = Idx == 0 ? Hexagon::isub_lo : Hexagon::isub_hi;
+  SDValue Ext = CurDAG->getTargetExtractSubreg(SubReg, SDLoc(N), ResTy, Inp);
+
+  ReplaceNode(N, Ext.getNode());
+}
+
 //
 // Map floating point constant values.
 //
@@ -884,6 +903,28 @@ void HexagonDAGToDAGISel::Select(SDNode *N) {
   if (N->isMachineOpcode())
     return N->setNodeId(-1);  // Already selected.
 
+  auto isHvxOp = [this](SDNode *N) {
+    auto &HST = MF->getSubtarget<HexagonSubtarget>();
+    for (unsigned i = 0, e = N->getNumValues(); i != e; ++i) {
+      if (HST.isHVXVectorType(N->getValueType(i), true))
+        return true;
+    }
+    for (SDValue I : N->ops()) {
+      if (HST.isHVXVectorType(I.getValueType(), true))
+        return true;
+    }
+    return false;
+  };
+
+  if (HST->useHVXOps() && isHvxOp(N)) {
+    switch (N->getOpcode()) {
+    case ISD::EXTRACT_SUBVECTOR:  return SelectHvxExtractSubvector(N);
+    case ISD::VECTOR_SHUFFLE:     return SelectHvxShuffle(N);
+
+    case HexagonISD::VROR:        return SelectHvxRor(N);
+    }
+  }
+
   switch (N->getOpcode()) {
   case ISD::Constant:             return SelectConstant(N);
   case ISD::ConstantFP:           return SelectConstantFP(N);
@@ -893,6 +934,7 @@ void HexagonDAGToDAGISel::Select(SDNode *N) {
   case ISD::STORE:                return SelectStore(N);
   case ISD::INTRINSIC_W_CHAIN:    return SelectIntrinsicWChain(N);
   case ISD::INTRINSIC_WO_CHAIN:   return SelectIntrinsicWOChain(N);
+  case ISD::EXTRACT_SUBVECTOR:    return SelectExtractSubvector(N);
 
   case HexagonISD::ADDC:
   case HexagonISD::SUBC:          return SelectAddSubCarry(N);
@@ -903,13 +945,6 @@ void HexagonDAGToDAGISel::Select(SDNode *N) {
   case HexagonISD::D2P:           return SelectD2P(N);
   case HexagonISD::Q2V:           return SelectQ2V(N);
   case HexagonISD::V2Q:           return SelectV2Q(N);
-  }
-
-  if (HST->useHVXOps()) {
-    switch (N->getOpcode()) {
-    case ISD::VECTOR_SHUFFLE:     return SelectHvxShuffle(N);
-    case HexagonISD::VROR:        return SelectHvxRor(N);
-    }
   }
 
   SelectCode(N);

@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @test_load() sanitize_address {
 entry:
-  %tmp = load i32, i32* @g, align 4
+  %tmp = load i32, ptr @g, align 4
   ret i32 %tmp
 }
 

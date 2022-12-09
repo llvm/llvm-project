@@ -149,8 +149,8 @@ static void CheckODRViolationViaIndicator(const Global *g) {
     if (g->odr_indicator == l->g->odr_indicator &&
         (flags()->detect_odr_violation >= 2 || g->size != l->g->size) &&
         !IsODRViolationSuppressed(g->name))
-      ReportODRViolation(g, FindRegistrationSite(g), l->g,
-                         FindRegistrationSite(l->g));
+      ReportODRViolation(g, FindRegistrationSite(g),
+                         l->g, FindRegistrationSite(l->g));
   }
 }
 

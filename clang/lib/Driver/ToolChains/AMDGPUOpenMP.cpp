@@ -181,9 +181,9 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
 
   // Get the environment variable ROCM_LINK_ARGS and add to llvm-link.
   Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LINK_ARGS");
-  if (OptEnv.hasValue()) {
+  if (OptEnv.has_value()) {
     SmallVector<StringRef, 8> Envs;
-    SplitString(OptEnv.getValue(), Envs);
+    SplitString(OptEnv.value(), Envs);
     for (StringRef Env : Envs)
       LastLinkArgs.push_back(Args.MakeArgString(Env.trim()));
   }
@@ -260,9 +260,9 @@ const char *AMDGCN::OpenMPLinker::constructOptCommand(
 
   // Get the environment variable ROCM_OPT_ARGS and add to opt.
   Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_OPT_ARGS");
-  if (OptEnv.hasValue()) {
+  if (OptEnv.has_value()) {
     SmallVector<StringRef, 8> Envs;
-    SplitString(OptEnv.getValue(), Envs);
+    SplitString(OptEnv.value(), Envs);
     for (StringRef Env : Envs)
       OptArgs.push_back(Args.MakeArgString(Env.trim()));
   }
@@ -328,9 +328,9 @@ const char *AMDGCN::OpenMPLinker::constructLlcCommand(
 
   // Get the environment variable ROCM_LLC_ARGS and add to llc.
   Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LLC_ARGS");
-  if (OptEnv.hasValue()) {
+  if (OptEnv.has_value()) {
     SmallVector<StringRef, 8> Envs;
-    SplitString(OptEnv.getValue(), Envs);
+    SplitString(OptEnv.value(), Envs);
     for (StringRef Env : Envs)
       LlcArgs.push_back(Args.MakeArgString(Env.trim()));
   }
@@ -389,9 +389,9 @@ void AMDGCN::OpenMPLinker::constructLldCommand(
   LldArgs.push_back(Args.MakeArgString(InputFileName));
   // Get the environment variable ROCM_LLD_ARGS and add to lld.
   Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LLD_ARGS");
-  if (OptEnv.hasValue()) {
+  if (OptEnv.has_value()) {
     SmallVector<StringRef, 8> Envs;
-    SplitString(OptEnv.getValue(), Envs);
+    SplitString(OptEnv.value(), Envs);
     for (StringRef Env : Envs)
       LldArgs.push_back(Args.MakeArgString(Env.trim()));
   }

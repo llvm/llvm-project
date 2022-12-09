@@ -49,19 +49,13 @@ void llvm_thread_detach_impl(HANDLE hThread) {
   }
 }
 
-DWORD llvm_thread_get_id_impl(HANDLE hThread) {
-  return ::GetThreadId(hThread);
-}
+DWORD llvm_thread_get_id_impl(HANDLE hThread) { return ::GetThreadId(hThread); }
 
-DWORD llvm_thread_get_current_id_impl() {
-  return ::GetCurrentThreadId();
-}
+DWORD llvm_thread_get_current_id_impl() { return ::GetCurrentThreadId(); }
 
 } // namespace llvm
 
-uint64_t llvm::get_threadid() {
-  return uint64_t(::GetCurrentThreadId());
-}
+uint64_t llvm::get_threadid() { return uint64_t(::GetCurrentThreadId()); }
 
 uint32_t llvm::get_max_thread_name_length() { return 0; }
 
@@ -86,9 +80,8 @@ static void SetThreadName(DWORD Id, LPCSTR Name) {
 
   __try {
     ::RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR),
-      (ULONG_PTR *)&info);
-  }
-  __except (EXCEPTION_EXECUTE_HANDLER) {
+                     (ULONG_PTR *)&info);
+  } __except (EXCEPTION_EXECUTE_HANDLER) {
   }
 }
 #endif
@@ -247,7 +240,7 @@ int computeHostNumPhysicalCores() {
   return Cores;
 }
 
-int computeHostNumHardwareThreads() {
+static int computeHostNumHardwareThreads() {
   static unsigned Threads =
       aggregate(getProcessorGroups(),
                 [](const ProcessorGroup &G) { return G.UsableThreads; });

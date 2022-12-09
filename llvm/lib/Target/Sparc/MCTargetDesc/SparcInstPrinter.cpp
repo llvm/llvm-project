@@ -222,7 +222,7 @@ void SparcInstPrinter::printMembarTag(const MCInst *MI, int opNum,
   }
 
   bool First = true;
-  for (unsigned i = 0; i < sizeof(TagNames) / sizeof(char *); i++) {
+  for (unsigned i = 0; i < std::size(TagNames); i++) {
     if (Imm & (1 << i)) {
       O << (First ? "" : " | ") << TagNames[i];
       First = false;

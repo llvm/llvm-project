@@ -28,62 +28,62 @@ entry:
   br i1 %i1, label %bb10, label %bb11
 
 bb10:                                             ; preds = %entry
-  store i8 1, i8* %_4, align 1
+  store i8 1, ptr %_4, align 1
   br label %bb12
 
 bb11:                                             ; preds = %entry
   %_6 = icmp eq i32 %c, 109
   %i2 = zext i1 %_6 to i8
-  store i8 %i2, i8* %_4, align 1
+  store i8 %i2, ptr %_4, align 1
   br label %bb12
 
 bb12:                                             ; preds = %bb11, %bb10
-  %i3 = load i8, i8* %_4, align 1
+  %i3 = load i8, ptr %_4, align 1
   %i4 = trunc i8 %i3 to i1
   br i1 %i4, label %bb7, label %bb8
 
 bb8:                                              ; preds = %bb12
   %_8 = icmp eq i32 %c, 104
   %i5 = zext i1 %_8 to i8
-  store i8 %i5, i8* %_3, align 1
+  store i8 %i5, ptr %_3, align 1
   br label %bb9
 
 bb7:                                              ; preds = %bb12
-  store i8 1, i8* %_3, align 1
+  store i8 1, ptr %_3, align 1
   br label %bb9
 
 bb9:                                              ; preds = %bb7, %bb8
-  %i6 = load i8, i8* %_3, align 1
+  %i6 = load i8, ptr %_3, align 1
   %i7 = trunc i8 %i6 to i1
   br i1 %i7, label %bb4, label %bb5
 
 bb5:                                              ; preds = %bb9
   %_10 = icmp eq i32 %c, 100
   %i8 = zext i1 %_10 to i8
-  store i8 %i8, i8* %_2, align 1
+  store i8 %i8, ptr %_2, align 1
   br label %bb6
 
 bb4:                                              ; preds = %bb9
-  store i8 1, i8* %_2, align 1
+  store i8 1, ptr %_2, align 1
   br label %bb6
 
 bb6:                                              ; preds = %bb4, %bb5
-  %i9 = load i8, i8* %_2, align 1
+  %i9 = load i8, ptr %_2, align 1
   %i10 = trunc i8 %i9 to i1
   br i1 %i10, label %bb1, label %bb2
 
 bb2:                                              ; preds = %bb6
   %_12 = icmp eq i32 %c, 119
   %i11 = zext i1 %_12 to i8
-  store i8 %i11, i8* %i, align 1
+  store i8 %i11, ptr %i, align 1
   br label %bb3
 
 bb1:                                              ; preds = %bb6
-  store i8 1, i8* %i, align 1
+  store i8 1, ptr %i, align 1
   br label %bb3
 
 bb3:                                              ; preds = %bb1, %bb2
-  %i12 = load i8, i8* %i, align 1
+  %i12 = load i8, ptr %i, align 1
   %i13 = trunc i8 %i12 to i1
   ret i1 %i13
 }
@@ -104,15 +104,15 @@ entry:
   ]
 
 bb1:                                              ; preds = %entry
-  store i8 0, i8* %i, align 1
+  store i8 0, ptr %i, align 1
   br label %bb3
 
 bb2:                                              ; preds = %entry, %entry, %entry, %entry, %entry
-  store i8 1, i8* %i, align 1
+  store i8 1, ptr %i, align 1
   br label %bb3
 
 bb3:                                              ; preds = %bb2, %bb1
-  %i1 = load i8, i8* %i, align 1
+  %i1 = load i8, ptr %i, align 1
   %i2 = trunc i8 %i1 to i1
   ret i1 %i2
 }

@@ -830,8 +830,8 @@ define i64 @extractelt_nxv16i64_neg1(<vscale x 16 x i64> %v) {
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB72_2:
-; CHECK-NEXT:    slli a1, a2, 3
-; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    ld a0, 0(a0)
 ; CHECK-NEXT:    addi sp, s0, -80
 ; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload

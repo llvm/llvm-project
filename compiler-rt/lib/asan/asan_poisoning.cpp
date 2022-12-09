@@ -370,6 +370,37 @@ void __asan_unpoison_stack_memory(uptr addr, uptr size) {
   PoisonAlignedStackMemory(addr, size, false);
 }
 
+static void FixUnalignedStorage(uptr storage_beg, uptr storage_end,
+                                uptr &old_end, uptr &new_end) {
+  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
+  if (UNLIKELY(!AddrIsAlignedByGranularity(storage_end))) {
+    uptr end_down = RoundDownTo(storage_end, granularity);
+    // Ignore the last unaligned granule if the storage is followed by
+    // unpoisoned byte, because we can't poison the prefix anyway. Don't call
+    // AddressIsPoisoned at all if container changes does not affect the last
+    // granule at all.
+    if (Max(old_end, new_end) > end_down && !AddressIsPoisoned(storage_end)) {
+      old_end = Min(end_down, old_end);
+      new_end = Min(end_down, new_end);
+    }
+  }
+
+  // Handle misaligned begin and cut it off.
+  if (UNLIKELY(!AddrIsAlignedByGranularity(storage_beg))) {
+    uptr beg_up = RoundUpTo(storage_beg, granularity);
+    // The first unaligned granule needs special handling only if we had bytes
+    // there before and will have none after.
+    if (storage_beg == new_end && storage_beg != old_end &&
+        storage_beg < beg_up) {
+      // Keep granule prefix outside of the storage unpoisoned.
+      uptr beg_down = RoundDownTo(storage_beg, granularity);
+      *(u8 *)MemToShadow(beg_down) = storage_beg - beg_down;
+      old_end = Max(beg_up, old_end);
+      new_end = Max(beg_up, new_end);
+    }
+  }
+}
+
 void __sanitizer_annotate_contiguous_container(const void *beg_p,
                                                const void *end_p,
                                                const void *old_mid_p,
@@ -378,71 +409,28 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
     return;
   VPrintf(2, "contiguous_container: %p %p %p %p\n", beg_p, end_p, old_mid_p,
           new_mid_p);
-  uptr beg = reinterpret_cast<uptr>(beg_p);
-  uptr end = reinterpret_cast<uptr>(end_p);
-  uptr old_mid = reinterpret_cast<uptr>(old_mid_p);
-  uptr new_mid = reinterpret_cast<uptr>(new_mid_p);
+  uptr storage_beg = reinterpret_cast<uptr>(beg_p);
+  uptr storage_end = reinterpret_cast<uptr>(end_p);
+  uptr old_end = reinterpret_cast<uptr>(old_mid_p);
+  uptr new_end = reinterpret_cast<uptr>(new_mid_p);
   uptr granularity = ASAN_SHADOW_GRANULARITY;
-  if (!(beg <= old_mid && beg <= new_mid && old_mid <= end && new_mid <= end)) {
+  if (!(storage_beg <= old_end && storage_beg <= new_end &&
+        old_end <= storage_end && new_end <= storage_end)) {
     GET_STACK_TRACE_FATAL_HERE;
-    ReportBadParamsToAnnotateContiguousContainer(beg, end, old_mid, new_mid,
-                                                 &stack);
+    ReportBadParamsToAnnotateContiguousContainer(storage_beg, storage_end,
+                                                 old_end, new_end, &stack);
   }
-  CHECK_LE(end - beg,
+  CHECK_LE(storage_end - storage_beg,
            FIRST_32_SECOND_64(1UL << 30, 1ULL << 40));  // Sanity check.
 
-  if (old_mid == new_mid)
+  if (old_end == new_end)
     return;  // Nothing to do here.
 
-  // Handle misaligned end and cut it off.
-  if (UNLIKELY(!AddrIsAlignedByGranularity(end))) {
-    uptr end_down = RoundDownTo(end, granularity);
-    // Either new or old mid must be in the granule to affect it.
-    if (new_mid > end_down || old_mid > end_down) {
-      // Do nothing if the byte after the container is unpoisoned. Asan can't
-      // poison only the begining of the granule.
-      if (AddressIsPoisoned(end)) {
-        *(u8 *)MemToShadow(end_down) = new_mid > end_down
-                                           ? static_cast<u8>(new_mid - end_down)
-                                           : kAsanContiguousContainerOOBMagic;
-      }
-      old_mid = Min(end_down, old_mid);
-      new_mid = Min(end_down, new_mid);
+  FixUnalignedStorage(storage_beg, storage_end, old_end, new_end);
 
-      if (old_mid == new_mid)
-        return;
-    }
-
-    if (beg >= end_down)
-      return;  // Same granule.
-
-    end = end_down;
-  }
-
-  // Handle misaligned begin and cut it off.
-  if (UNLIKELY(!AddrIsAlignedByGranularity(beg))) {
-    uptr beg_up = RoundUpTo(beg, granularity);
-    // As soon as we add first byte into container we will not be able to
-    // determine the state of the byte before the container. So we assume it's
-    // always unpoison.
-
-    // Either new or old mid must be in the granule to affect it.
-    if (new_mid < beg_up || old_mid < beg_up) {
-      uptr beg_down = RoundDownTo(beg, granularity);
-      *(u8 *)MemToShadow(beg_down) =
-          new_mid < beg_up ? static_cast<u8>(new_mid - beg_down) : 0;
-      old_mid = Max(beg_up, old_mid);
-      new_mid = Max(beg_up, new_mid);
-      if (old_mid == new_mid)
-        return;
-    }
-
-    beg = beg_up;
-  }
-
-  uptr a = RoundDownTo(Min(old_mid, new_mid), granularity);
-  uptr c = RoundUpTo(Max(old_mid, new_mid), granularity);
-  uptr d1 = RoundDownTo(old_mid, granularity);
+  uptr a = RoundDownTo(Min(old_end, new_end), granularity);
+  uptr c = RoundUpTo(Max(old_end, new_end), granularity);
+  uptr d1 = RoundDownTo(old_end, granularity);
   // uptr d2 = RoundUpTo(old_mid, granularity);
   // Currently we should be in this state:
   // [a, d1) is good, [d2, c) is bad, [d1, d2) is partially good.
@@ -458,8 +446,8 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
   //   CHECK_EQ(*(u8 *)MemToShadow(c - granularity),
   //            kAsanContiguousContainerOOBMagic);
 
-  uptr b1 = RoundDownTo(new_mid, granularity);
-  uptr b2 = RoundUpTo(new_mid, granularity);
+  uptr b1 = RoundDownTo(new_end, granularity);
+  uptr b2 = RoundUpTo(new_end, granularity);
   // New state:
   // [a, b1) is good, [b2, c) is bad, [b1, b2) is partially good.
   if (b1 > a)
@@ -468,7 +456,7 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
     PoisonShadow(b2, c - b2, kAsanContiguousContainerOOBMagic);
   if (b1 != b2) {
     CHECK_EQ(b2 - b1, granularity);
-    *(u8 *)MemToShadow(b1) = static_cast<u8>(new_mid - b1);
+    *(u8 *)MemToShadow(b1) = static_cast<u8>(new_end - b1);
   }
 }
 
@@ -504,6 +492,12 @@ void __sanitizer_annotate_double_ended_contiguous_container(
     ReportBadParamsToAnnotateDoubleEndedContiguousContainer(
         storage_beg, storage_end, old_beg, old_end, new_beg, new_end, &stack);
   }
+  CHECK_LE(storage_end - storage_beg,
+           FIRST_32_SECOND_64(1UL << 30, 1ULL << 40));  // Sanity check.
+
+  if ((old_beg == old_end && new_beg == new_end) ||
+      (old_beg == new_beg && old_end == new_end))
+    return;  // Nothing to do here.
 
   // Right now, the function does not support:
   // - unaligned storage beginning
@@ -525,9 +519,6 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   }
 
   if (old_beg != new_beg) {
-    CHECK_LE(storage_end - storage_beg,
-             FIRST_32_SECOND_64(1UL << 30, 1ULL << 40));  // Sanity check.
-
     // There are two situations: we are poisoning or unpoisoning.
     // WARNING: at the moment we do not poison prefixes of blocks described by
     // one byte in shadow memory, so we have to unpoison prefixes of blocks with
@@ -578,9 +569,6 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   }
 
   if (old_end != new_end) {
-    CHECK_LE(storage_end - storage_beg,
-             FIRST_32_SECOND_64(1UL << 30, 1ULL << 40));  // Sanity check.
-
     if (old_end < new_end) {  // We are unpoisoning memory
       uptr a = RoundDownTo(old_end, granularity);
       uptr c = RoundDownTo(new_end, granularity);
@@ -614,6 +602,22 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   }
 }
 
+static const void *FindBadAddress(uptr begin, uptr end, bool poisoned) {
+  CHECK_LE(begin, end);
+  constexpr uptr kMaxRangeToCheck = 32;
+  if (end - begin > kMaxRangeToCheck * 2) {
+    if (auto *bad = FindBadAddress(begin, begin + kMaxRangeToCheck, poisoned))
+      return bad;
+    if (auto *bad = FindBadAddress(end - kMaxRangeToCheck, end, poisoned))
+      return bad;
+  }
+
+  for (uptr i = begin; i < end; ++i)
+    if (AddressIsPoisoned(i) != poisoned)
+      return reinterpret_cast<const void *>(i);
+  return nullptr;
+}
+
 const void *__sanitizer_contiguous_container_find_bad_address(
     const void *beg_p, const void *mid_p, const void *end_p) {
   if (!flags()->detect_container_overflow)
@@ -621,35 +625,22 @@ const void *__sanitizer_contiguous_container_find_bad_address(
   uptr granularity = ASAN_SHADOW_GRANULARITY;
   uptr beg = reinterpret_cast<uptr>(beg_p);
   uptr end = reinterpret_cast<uptr>(end_p);
+  uptr mid = reinterpret_cast<uptr>(mid_p);
+  CHECK_LE(beg, mid);
+  CHECK_LE(mid, end);
+  // If the byte after the storage is unpoisoned, everything in the granule
+  // before must stay unpoisoned.
   uptr annotations_end =
       (!AddrIsAlignedByGranularity(end) && !AddressIsPoisoned(end))
           ? RoundDownTo(end, granularity)
           : end;
-  uptr mid = reinterpret_cast<uptr>(mid_p);
-  CHECK_LE(beg, mid);
-  CHECK_LE(mid, end);
-  // Check some bytes starting from storage_beg, some bytes around mid, and some
-  // bytes ending with end.
-  uptr kMaxRangeToCheck = 32;
-  uptr r1_beg = beg;
-  uptr r1_end = Min(beg + kMaxRangeToCheck, mid);
-  uptr r2_beg = Max(beg, mid - kMaxRangeToCheck);
-  uptr r2_end = Min(annotations_end, mid + kMaxRangeToCheck);
-  uptr r3_beg = Max(annotations_end - kMaxRangeToCheck, mid);
-  uptr r3_end = annotations_end;
-  for (uptr i = r1_beg; i < r1_end; i++)
-    if (AddressIsPoisoned(i))
-      return reinterpret_cast<const void *>(i);
-  for (uptr i = r2_beg; i < mid; i++)
-    if (AddressIsPoisoned(i))
-      return reinterpret_cast<const void *>(i);
-  for (uptr i = mid; i < r2_end; i++)
-    if (!AddressIsPoisoned(i))
-      return reinterpret_cast<const void *>(i);
-  for (uptr i = r3_beg; i < r3_end; i++)
-    if (!AddressIsPoisoned(i))
-      return reinterpret_cast<const void *>(i);
-  return nullptr;
+  beg = Min(beg, annotations_end);
+  mid = Min(mid, annotations_end);
+  if (auto *bad = FindBadAddress(beg, mid, false))
+    return bad;
+  if (auto *bad = FindBadAddress(mid, annotations_end, true))
+    return bad;
+  return FindBadAddress(annotations_end, end, false);
 }
 
 int __sanitizer_verify_contiguous_container(const void *beg_p,
@@ -662,58 +653,35 @@ int __sanitizer_verify_contiguous_container(const void *beg_p,
 const void *__sanitizer_double_ended_contiguous_container_find_bad_address(
     const void *storage_beg_p, const void *container_beg_p,
     const void *container_end_p, const void *storage_end_p) {
+  if (!flags()->detect_container_overflow)
+    return nullptr;
   uptr granularity = ASAN_SHADOW_GRANULARITY;
-  // This exists to verify double ended containers.
-  // We assume that such collection's internal memory layout
-  // consists of contiguous blocks:
-  // [a; b) [b; c) [c; d)
-  // where
-  // a - beginning address of contiguous memory block,
-  // b - beginning address of contiguous memory in use
-  //      (address of the first element in the block)
-  // c - end address of contiguous memory in use
-  //      (address just after the last element in the block)
-  // d - end address of contiguous memory block
-  // [a; b) - poisoned
-  // [b; c) - accessible
-  // [c; d) - poisoned
-  // WARNING: We can't poison [a; b) fully in all cases.
-  // This is because the current shadow memory encoding
-  // does not allow for marking/poisoning that a prefix
-  // of an 8-byte block (or, ASAN_SHADOW_GRANULARITY sized block)
-  // cannot be used by the instrumented program. It only has the
-  // 01, 02, 03, 04, 05, 06, 07 and 00 encodings
-  // for usable/addressable memory
-  // (where 00 means that the whole 8-byte block can be used).
-  //
-  // This means that there are cases where not whole of the [a; b)
-  // region is poisoned and instead only the [a; RoundDown(b))
-  // region is poisoned and we may not detect invalid memory accesses on
-  // [RegionDown(b), b).
-  // This is an inherent design limitation of how AddressSanitizer granularity
-  // and shadow memory encoding works at the moment.
+  uptr storage_beg = reinterpret_cast<uptr>(storage_beg_p);
+  uptr storage_end = reinterpret_cast<uptr>(storage_end_p);
+  uptr beg = reinterpret_cast<uptr>(container_beg_p);
+  uptr end = reinterpret_cast<uptr>(container_end_p);
 
-  // If empty, storage_beg_p == container_beg_p == container_end_p
+  // The prefix of the firs granule of the container is unpoisoned.
+  if (beg != end)
+    beg = Max(storage_beg, RoundDownTo(beg, granularity));
 
-  const void *a = storage_beg_p;
-  // We do not suport poisoning prefixes of blocks, so
-  // memory in the first block with data in us,
-  // just before container beginning cannot be poisoned, as described above.
-  const void *b = reinterpret_cast<const void *>(
-      RoundDownTo(reinterpret_cast<uptr>(container_beg_p), granularity));
-  const void *c = container_end_p;
-  const void *d = storage_end_p;
-  if (container_beg_p == container_end_p)
-    return __sanitizer_contiguous_container_find_bad_address(a, a, d);
-  const void *result;
-  if (a < b &&
-      (result = __sanitizer_contiguous_container_find_bad_address(a, a, b)))
-    return result;
-  if (b < d &&
-      (result = __sanitizer_contiguous_container_find_bad_address(b, c, d)))
-    return result;
+  // If the byte after the storage is unpoisoned, the prefix of the last granule
+  // is unpoisoned.
+  uptr annotations_end = (!AddrIsAlignedByGranularity(storage_end) &&
+                          !AddressIsPoisoned(storage_end))
+                             ? RoundDownTo(storage_end, granularity)
+                             : storage_end;
+  storage_beg = Min(storage_beg, annotations_end);
+  beg = Min(beg, annotations_end);
+  end = Min(end, annotations_end);
 
-  return nullptr;
+  if (auto *bad = FindBadAddress(storage_beg, beg, true))
+    return bad;
+  if (auto *bad = FindBadAddress(beg, end, false))
+    return bad;
+  if (auto *bad = FindBadAddress(end, annotations_end, true))
+    return bad;
+  return FindBadAddress(annotations_end, storage_end, false);
 }
 
 int __sanitizer_verify_double_ended_contiguous_container(

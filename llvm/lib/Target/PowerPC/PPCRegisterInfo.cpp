@@ -575,6 +575,13 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
   // as we are just looking to provide a hint.
   bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
       VirtReg, Order, Hints, MF, VRM, Matrix);
+
+  // Don't use the allocation hints for ISAFuture.
+  // The WACC registers used in ISAFuture are unlike the ACC registers on
+  // Power 10 and so this logic to register allocation hints does not apply.
+  if (MF.getSubtarget<PPCSubtarget>().isISAFuture())
+    return BaseImplRetVal;
+
   // We are interested in instructions that copy values to ACC/UACC.
   // The copy into UACC will be simply a COPY to a subreg so we
   // want to allocate the corresponding physical subreg for the source.
@@ -1234,6 +1241,11 @@ static void spillRegPairs(MachineBasicBlock &MBB,
                           unsigned FrameIndex, bool IsLittleEndian,
                           bool IsKilled, bool TwoPairs) {
   unsigned Offset = 0;
+  // The register arithmetic in this function does not support virtual
+  // registers.
+  assert(!SrcReg.isVirtual() &&
+         "Spilling register pairs does not support virtual registers.");
+
   if (TwoPairs)
     Offset = IsLittleEndian ? 48 : 0;
   else
@@ -1279,6 +1291,18 @@ void PPCRegisterInfo::lowerOctWordSpilling(MachineBasicBlock::iterator II,
                 /* TwoPairs */ false);
   // Discard the original instruction.
   MBB.erase(II);
+}
+
+static void emitWAccSpillRestoreInfo(MachineBasicBlock &MBB, bool IsRestore) {
+#ifdef NDEBUG
+  return;
+#else
+  if (ReportAccMoves) {
+    dbgs() << "Emitting wacc register " << (IsRestore ? "restore" : "spill")
+           << ":\n";
+    MBB.dump();
+  }
+#endif
 }
 
 /// lowerACCSpilling - Generate the code for spilling the accumulator register.
@@ -1357,6 +1381,73 @@ void PPCRegisterInfo::lowerACCRestore(MachineBasicBlock::iterator II,
                     FrameIndex, IsLittleEndian ? 0 : 32);
   if (IsPrimed)
     BuildMI(MBB, II, DL, TII.get(PPC::XXMTACC), DestReg).addReg(DestReg);
+
+  // Discard the pseudo instruction.
+  MBB.erase(II);
+}
+
+/// lowerWACCSpilling - Generate the code for spilling the wide accumulator
+/// register.
+void PPCRegisterInfo::lowerWACCSpilling(MachineBasicBlock::iterator II,
+                                        unsigned FrameIndex) const {
+  MachineInstr &MI = *II; // SPILL_WACC <SrcReg>, <offset>
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  bool IsLittleEndian = Subtarget.isLittleEndian();
+
+  emitWAccSpillRestoreInfo(MBB, false);
+
+  const TargetRegisterClass *RC = &PPC::VSRpRCRegClass;
+  Register VSRpReg0 = MF.getRegInfo().createVirtualRegister(RC);
+  Register VSRpReg1 = MF.getRegInfo().createVirtualRegister(RC);
+  Register SrcReg = MI.getOperand(0).getReg();
+
+  BuildMI(MBB, II, DL, TII.get(PPC::DMXXEXTFDMR512), VSRpReg0)
+      .addDef(VSRpReg1)
+      .addReg(SrcReg);
+
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+                        .addReg(VSRpReg0, RegState::Kill),
+                    FrameIndex, IsLittleEndian ? 32 : 0);
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+                        .addReg(VSRpReg1, RegState::Kill),
+                    FrameIndex, IsLittleEndian ? 0 : 32);
+
+  // Discard the pseudo instruction.
+  MBB.erase(II);
+}
+
+/// lowerWACCRestore - Generate the code to restore the wide accumulator
+/// register.
+void PPCRegisterInfo::lowerWACCRestore(MachineBasicBlock::iterator II,
+                                       unsigned FrameIndex) const {
+  MachineInstr &MI = *II; // <DestReg> = RESTORE_WACC <offset>
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  bool IsLittleEndian = Subtarget.isLittleEndian();
+
+  emitWAccSpillRestoreInfo(MBB, true);
+
+  const TargetRegisterClass *RC = &PPC::VSRpRCRegClass;
+  Register VSRpReg0 = MF.getRegInfo().createVirtualRegister(RC);
+  Register VSRpReg1 = MF.getRegInfo().createVirtualRegister(RC);
+  Register DestReg = MI.getOperand(0).getReg();
+
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg0),
+                    FrameIndex, IsLittleEndian ? 32 : 0);
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg1),
+                    FrameIndex, IsLittleEndian ? 0 : 32);
+
+  // Kill VSRpReg0, VSRpReg1   (killedRegState::Killed)
+  BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTFDMR512), DestReg)
+      .addReg(VSRpReg0, RegState::Kill)
+      .addReg(VSRpReg1, RegState::Kill);
 
   // Discard the pseudo instruction.
   MBB.erase(II);
@@ -1561,6 +1652,12 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     return true;
   } else if (OpC == PPC::STXVP && DisableAutoPairedVecSt) {
     lowerOctWordSpilling(II, FrameIndex);
+    return true;
+  } else if (OpC == PPC::SPILL_WACC) {
+    lowerWACCSpilling(II, FrameIndex);
+    return true;
+  } else if (OpC == PPC::RESTORE_WACC) {
+    lowerWACCRestore(II, FrameIndex);
     return true;
   } else if (OpC == PPC::SPILL_QUADWORD) {
     lowerQuadwordSpilling(II, FrameIndex);

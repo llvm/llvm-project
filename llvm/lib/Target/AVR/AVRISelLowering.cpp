@@ -1216,8 +1216,12 @@ static void analyzeReturnValues(const SmallVectorImpl<ArgT> &Args,
   unsigned NumArgs = Args.size();
   unsigned TotalBytes = getTotalArgumentsSizeInBytes(Args);
   // CanLowerReturn() guarantees this assertion.
-  assert(TotalBytes <= 8 &&
-         "return values greater than 8 bytes cannot be lowered");
+  if (Tiny)
+    assert(TotalBytes <= 4 &&
+           "return values greater than 4 bytes cannot be lowered on AVRTiny");
+  else
+    assert(TotalBytes <= 8 &&
+           "return values greater than 8 bytes cannot be lowered on AVR");
 
   // Choose the proper register list for argument passing according to the ABI.
   ArrayRef<MCPhysReg> RegList8;
@@ -1578,7 +1582,7 @@ bool AVRTargetLowering::CanLowerReturn(
   }
 
   unsigned TotalBytes = getTotalArgumentsSizeInBytes(Outs);
-  return TotalBytes <= 8;
+  return TotalBytes <= (unsigned)(Subtarget.hasTinyEncoding() ? 4 : 8);
 }
 
 SDValue

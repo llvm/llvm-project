@@ -55,6 +55,7 @@
 #include <cctype>
 #include <cstdint>
 #include <cstdio>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -252,6 +253,7 @@ private:
   OperandMatchResultTy tryParseSysCROperand(OperandVector &Operands);
   template <bool IsSVEPrefetch = false>
   OperandMatchResultTy tryParsePrefetch(OperandVector &Operands);
+  OperandMatchResultTy tryParseRPRFMOperand(OperandVector &Operands);
   OperandMatchResultTy tryParsePSBHint(OperandVector &Operands);
   OperandMatchResultTy tryParseBTIHint(OperandVector &Operands);
   OperandMatchResultTy tryParseAdrpLabel(OperandVector &Operands);
@@ -937,7 +939,7 @@ public:
   /// a shifted immediate by value 'Shift' or '0', or if it is an unshifted
   /// immediate that can be shifted by 'Shift'.
   template <unsigned Width>
-  Optional<std::pair<int64_t, unsigned> > getShiftedVal() const {
+  std::optional<std::pair<int64_t, unsigned>> getShiftedVal() const {
     if (isShiftedImm() && Width == getShiftedImmShift())
       if (auto *CE = dyn_cast<MCConstantExpr>(getShiftedImmVal()))
         return std::make_pair(CE->getValue(), Width);
@@ -2940,6 +2942,56 @@ AArch64AsmParser::tryParseSysCROperand(OperandVector &Operands) {
   Lex(); // Eat identifier token.
   Operands.push_back(
       AArch64Operand::CreateSysCR(CRNum, S, getLoc(), getContext()));
+  return MatchOperand_Success;
+}
+
+// Either an identifier for named values or a 6-bit immediate.
+OperandMatchResultTy
+AArch64AsmParser::tryParseRPRFMOperand(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  const AsmToken &Tok = getTok();
+
+  unsigned MaxVal = 63;
+
+  // Immediate case, with optional leading hash:
+  if (parseOptionalToken(AsmToken::Hash) ||
+      Tok.is(AsmToken::Integer)) {
+    const MCExpr *ImmVal;
+    if (getParser().parseExpression(ImmVal))
+      return MatchOperand_ParseFail;
+
+    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(ImmVal);
+    if (!MCE) {
+      TokError("immediate value expected for prefetch operand");
+      return MatchOperand_ParseFail;
+    }
+    unsigned prfop = MCE->getValue();
+    if (prfop > MaxVal) {
+      TokError("prefetch operand out of range, [0," + utostr(MaxVal) +
+               "] expected");
+      return MatchOperand_ParseFail;
+    }
+
+    auto RPRFM = AArch64RPRFM::lookupRPRFMByEncoding(MCE->getValue());
+    Operands.push_back(AArch64Operand::CreatePrefetch(
+        prfop, RPRFM ? RPRFM->Name : "", S, getContext()));
+    return MatchOperand_Success;
+  }
+
+  if (Tok.isNot(AsmToken::Identifier)) {
+    TokError("prefetch hint expected");
+    return MatchOperand_ParseFail;
+  }
+
+  auto RPRFM = AArch64RPRFM::lookupRPRFMByName(Tok.getString());
+  if (!RPRFM) {
+    TokError("prefetch hint expected");
+    return MatchOperand_ParseFail;
+  }
+
+  Operands.push_back(AArch64Operand::CreatePrefetch(
+      RPRFM->Encoding, Tok.getString(), S, getContext()));
+  Lex(); // Eat identifier token.
   return MatchOperand_Success;
 }
 
@@ -7495,6 +7547,15 @@ unsigned AArch64AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     break;
   case MCK__HASH_8:
     ExpectedVal = 8;
+    break;
+  case MCK__HASH__MINUS_4:
+    ExpectedVal = -4;
+    break;
+  case MCK__HASH__MINUS_8:
+    ExpectedVal = -8;
+    break;
+  case MCK__HASH__MINUS_16:
+    ExpectedVal = -16;
     break;
   case MCK_MPR:
     // If the Kind is a token for the MPR register class which has the "za"

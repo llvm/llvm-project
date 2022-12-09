@@ -25,6 +25,7 @@ Checks: >
   readability-redundant-control-flow,
   readability-redundant-function-ptr-dereference,
   readability-redundant-preprocessor,
+  readability-simplify-boolean-expr,
   readability-simplify-subscript-expr,
   readability-uniqueptr-delete-release,
 
@@ -63,4 +64,4 @@ CheckOptions:
 # readability-redundant-access-specifiers,
 # readability-redundant-declaration,
 # readability-redundant-member-init,
-# readability-simplify-boolean-expr,
+#

@@ -600,8 +600,7 @@ enum AttributeProperty {
 static bool hasAttributeProperty(Attribute::AttrKind Kind,
                                  AttributeProperty Prop) {
   unsigned Index = Kind - 1;
-  assert(Index < sizeof(AttrPropTable) / sizeof(AttrPropTable[0]) &&
-         "Invalid attribute kind");
+  assert(Index < std::size(AttrPropTable) && "Invalid attribute kind");
   return AttrPropTable[Index] & Prop;
 }
 

@@ -22,6 +22,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -2636,7 +2637,7 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
     return false;
 
   // Retrieve the tail policy operand index, if any.
-  Optional<unsigned> TailPolicyOpIdx;
+  std::optional<unsigned> TailPolicyOpIdx;
   const RISCVInstrInfo &TII = *Subtarget->getInstrInfo();
   const MCInstrDesc &MaskedMCID = TII.get(N->getMachineOpcode());
 

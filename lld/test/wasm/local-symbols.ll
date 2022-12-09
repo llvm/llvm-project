@@ -10,7 +10,7 @@ target triple = "wasm32-unknown-unknown"
 
 define internal i32 @baz() local_unnamed_addr {
 entry:
-  %0 = load i32, i32* @bar, align 4
+  %0 = load i32, ptr @bar, align 4
   ret i32 %0
 }
 

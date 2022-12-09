@@ -192,7 +192,7 @@ public:
   // When using Microsoft precompiled headers, this is the PCH's key.
   // The same key is used by both the precompiled object, and objects using the
   // precompiled object. Any difference indicates out-of-date objects.
-  llvm::Optional<uint32_t> pchSignature;
+  std::optional<uint32_t> pchSignature;
 
   // Whether this file was compiled with /hotpatch.
   bool hotPatchable = false;
@@ -206,11 +206,11 @@ public:
   // The .debug$P or .debug$T section data if present. Empty otherwise.
   ArrayRef<uint8_t> debugTypes;
 
-  llvm::Optional<std::pair<StringRef, uint32_t>>
+  std::optional<std::pair<StringRef, uint32_t>>
   getVariableLocation(StringRef var);
 
-  llvm::Optional<llvm::DILineInfo> getDILineInfo(uint32_t offset,
-                                                 uint32_t sectionIndex);
+  std::optional<llvm::DILineInfo> getDILineInfo(uint32_t offset,
+                                                uint32_t sectionIndex);
 
 private:
   const coff_section* getSection(uint32_t i);
@@ -258,7 +258,7 @@ private:
                         bool &prevailing, DefinedRegular *leader,
                         const llvm::object::coff_aux_section_definition *def);
 
-  llvm::Optional<Symbol *>
+  std::optional<Symbol *>
   createDefined(COFFSymbolRef sym,
                 std::vector<const llvm::object::coff_aux_section_definition *>
                     &comdatDefs,
@@ -319,7 +319,7 @@ public:
                                           StringRef path, ObjFile *fromFile);
 
   // Record possible errors while opening the PDB file
-  llvm::Optional<Error> loadErr;
+  std::optional<Error> loadErr;
 
   // This is the actual interface to the PDB (if it was opened successfully)
   std::unique_ptr<llvm::pdb::NativeSession> session;

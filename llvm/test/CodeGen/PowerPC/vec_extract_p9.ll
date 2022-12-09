@@ -192,11 +192,11 @@ define double @test10(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    addis 3, 2, .LCPI9_0@toc@ha
 ; CHECK-LE-NEXT:    addi 3, 3, .LCPI9_0@toc@l
-; CHECK-LE-NEXT:    lxv 36, 0(3)
+; CHECK-LE-NEXT:    lxv 0, 0(3)
 ; CHECK-LE-NEXT:    addis 3, 2, .LCPI9_1@toc@ha
 ; CHECK-LE-NEXT:    lfs 1, .LCPI9_1@toc@l(3)
-; CHECK-LE-NEXT:    vperm 2, 2, 3, 4
-; CHECK-LE-NEXT:    xxswapd 0, 34
+; CHECK-LE-NEXT:    xxperm 35, 34, 0
+; CHECK-LE-NEXT:    xxswapd 0, 35
 ; CHECK-LE-NEXT:    xsadddp 1, 0, 1
 ; CHECK-LE-NEXT:    blr
 ;
@@ -204,10 +204,10 @@ define double @test10(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI9_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI9_0@toc@l
-; CHECK-BE-NEXT:    lxv 36, 0(3)
+; CHECK-BE-NEXT:    lxv 0, 0(3)
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI9_1@toc@ha
+; CHECK-BE-NEXT:    xxperm 34, 35, 0
 ; CHECK-BE-NEXT:    lfs 0, .LCPI9_1@toc@l(3)
-; CHECK-BE-NEXT:    vperm 2, 3, 2, 4
 ; CHECK-BE-NEXT:    xsadddp 1, 34, 0
 ; CHECK-BE-NEXT:    blr
 entry:

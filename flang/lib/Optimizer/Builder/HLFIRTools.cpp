@@ -212,10 +212,16 @@ void hlfir::genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
                                 llvm::SmallVectorImpl<mlir::Value> &result) {
   if (!entity.hasLengthParameters())
     return;
-  if (entity.getType().isa<hlfir::ExprType>())
+  if (entity.getType().isa<hlfir::ExprType>()) {
     // Going through fir::ExtendedValue would create a temp,
     // which is not desired for an inquiry.
+    // TODO: make this an interface when adding further character producing ops.
+    if (auto concat = entity.getDefiningOp<hlfir::ConcatOp>()) {
+      result.push_back(concat.getLength());
+      return;
+    }
     TODO(loc, "inquire type parameters of hlfir.expr");
+  }
 
   if (entity.isCharacter()) {
     auto [exv, cleanup] = translateToExtendedValue(loc, builder, entity);

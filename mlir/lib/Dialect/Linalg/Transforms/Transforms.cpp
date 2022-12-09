@@ -195,7 +195,7 @@ linalg::rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
   // Clone `opToPad` to operate on the statically padded shapes.
   auto resultTensorTypes =
       ValueRange(newOperands).take_back(opToPad.getNumDpsInits()).getTypes();
-  paddedOp = opToPad.clone(b, loc, resultTensorTypes, newOperands);
+  paddedOp = clone(b, opToPad, resultTensorTypes, newOperands);
 
   // Recover the slice out of the new static results. This keeps the original
   // linalg op around because it uses the dims of the original results.
@@ -348,7 +348,7 @@ PadOpTransformationPattern::matchAndRewrite(tensor::PadOp padOp,
   SmallVector<AffineExpr, 4> outputExprs;
   for (unsigned i = 0; i < resultShapedType.getRank(); ++i) {
     outputExprs.push_back(getAffineDimExpr(i, rewriter.getContext()) +
-                          padOp.getStaticLow()[i].cast<IntegerAttr>().getInt());
+                          padOp.getStaticLow()[i]);
   }
 
   SmallVector<AffineMap, 2> transferMaps = {

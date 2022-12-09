@@ -176,6 +176,14 @@ code bases.
       g(42);
     }
 
+- Clang's resource dir used to include the full clang version. It will now
+  include only the major version. The new resource directory is
+  ``$prefix/lib/clang/$CLANG_MAJOR_VERSION`` and can be queried using
+  ``clang -print-resource-dir``, just like before.
+
+- To match GCC, ``__ppc64__`` is no longer defined on PowerPC64 targets. Use
+  ``__powerpc64__`` instead.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
@@ -818,6 +826,16 @@ Static Analyzer
   ``-analyzer-opt-analyze-nested-blocks`` analyzer flags.
   ``scanbuild`` was also updated accordingly.
   Passing these flags will result in a hard error.
+
+- Deprecate the ``consider-single-element-arrays-as-flexible-array-members``
+  analyzer-config option.
+  This option will be still accepted, but a warning will be displayed.
+  This option will be rejected, thus turned into a hard error starting with
+  ``clang-17``. Use ``-fstrict-flex-array=<N>`` instead if necessary.
+
+- Trailing array objects of structs with single elements will be considered
+  as flexible-array-members. Use ``-fstrict-flex-array=<N>`` to define
+  what should be considered as flexible-array-member if needed.
 
 .. _release-notes-sanitizers:
 

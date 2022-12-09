@@ -39,6 +39,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include <cassert>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -305,7 +306,7 @@ bool ShadowStackGCLowering::runOnFunction(Function &F) {
   if (Roots.empty())
     return false;
 
-  Optional<DomTreeUpdater> DTU;
+  std::optional<DomTreeUpdater> DTU;
   if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
     DTU.emplace(DTWP->getDomTree(), DomTreeUpdater::UpdateStrategy::Lazy);
 

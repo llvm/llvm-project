@@ -127,6 +127,7 @@
 
 #include "InstrRefBasedImpl.h"
 #include "LiveDebugValues.h"
+#include <optional>
 
 using namespace llvm;
 using namespace LiveDebugValues;
@@ -740,7 +741,7 @@ public:
 
     // Examine the remaining variable locations: if we can find the same value
     // again, we can recover the location.
-    Optional<LocIdx> NewLoc;
+    std::optional<LocIdx> NewLoc;
     for (auto Loc : MTracker->locations())
       if (Loc.Value == OldValue)
         NewLoc = Loc.Idx;
@@ -1560,7 +1561,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
 
   // Pick a location for the machine value number, if such a location exists.
   // (This information could be stored in TransferTracker to make it faster).
-  Optional<LocIdx> FoundLoc;
+  std::optional<LocIdx> FoundLoc;
   for (auto Location : MTracker->locations()) {
     LocIdx CurL = Location.Idx;
     ValueIDNum ID = MTracker->readMLoc(CurL);
@@ -1913,7 +1914,7 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
     // continue past this store.
     for (unsigned SlotIdx = 0; SlotIdx < MTracker->NumSlotIdxes; ++SlotIdx) {
       unsigned SpillID = MTracker->getSpillIDWithIdx(*Loc, SlotIdx);
-      Optional<LocIdx> MLoc = MTracker->getSpillMLoc(SpillID);
+      std::optional<LocIdx> MLoc = MTracker->getSpillMLoc(SpillID);
       if (!MLoc)
         continue;
 

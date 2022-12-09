@@ -1636,6 +1636,7 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
   using namespace AMDGPU;
 
   switch (Val) {
+  // clang-format off
   case 102: return createRegOperand(FLAT_SCR_LO);
   case 103: return createRegOperand(FLAT_SCR_HI);
   case 104: return createRegOperand(XNACK_MASK_LO);
@@ -1652,16 +1653,17 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
     return isGFX11Plus() ? createRegOperand(M0) : createRegOperand(SGPR_NULL);
   case 126: return createRegOperand(EXEC_LO);
   case 127: return createRegOperand(EXEC_HI);
-  case 235: return createRegOperand(SRC_SHARED_BASE);
-  case 236: return createRegOperand(SRC_SHARED_LIMIT);
-  case 237: return createRegOperand(SRC_PRIVATE_BASE);
-  case 238: return createRegOperand(SRC_PRIVATE_LIMIT);
+  case 235: return createRegOperand(SRC_SHARED_BASE_LO);
+  case 236: return createRegOperand(SRC_SHARED_LIMIT_LO);
+  case 237: return createRegOperand(SRC_PRIVATE_BASE_LO);
+  case 238: return createRegOperand(SRC_PRIVATE_LIMIT_LO);
   case 239: return createRegOperand(SRC_POPS_EXITING_WAVE_ID);
   case 251: return createRegOperand(SRC_VCCZ);
   case 252: return createRegOperand(SRC_EXECZ);
   case 253: return createRegOperand(SRC_SCC);
   case 254: return createRegOperand(LDS_DIRECT);
   default: break;
+    // clang-format on
   }
   return errOperand(Val, "unknown operand encoding " + Twine(Val));
 }

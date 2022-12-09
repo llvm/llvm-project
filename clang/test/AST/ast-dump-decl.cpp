@@ -53,6 +53,23 @@ inline namespace TestNamespaceDeclInline {
 }
 // CHECK:      NamespaceDecl{{.*}} TestNamespaceDeclInline inline
 
+namespace TestNestedNameSpace::Nested {
+}
+// CHECK:      NamespaceDecl{{.*}} TestNestedNameSpace
+// CHECK:      NamespaceDecl{{.*}} Nested nested{{\s*$}}
+
+namespace TestMultipleNested::SecondLevelNested::Nested {
+}
+// CHECK:      NamespaceDecl{{.*}} TestMultipleNested
+// CHECK:      NamespaceDecl{{.*}} SecondLevelNested nested
+// CHECK:      NamespaceDecl{{.*}} Nested nested{{\s*$}}
+
+namespace TestInlineNested::inline SecondLevel::inline Nested {
+}
+// CHECK:      NamespaceDecl{{.*}} TestInlineNested
+// CHECK:      NamespaceDecl{{.*}} SecondLevel inline nested
+// CHECK:      NamespaceDecl{{.*}} Nested inline nested{{\s*$}}
+
 namespace testUsingDirectiveDecl {
   namespace A {
   }

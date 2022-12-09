@@ -74,8 +74,8 @@ bufferizeDestinationStyleOpInterface(RewriterBase &rewriter,
   // new op. Since the new op does not have any tensor results, it does not
   // return anything.
   assert(op->getNumRegions() == 1 && "expected that op has 1 region");
-  auto newOp = cast<DestinationStyleOpInterface>(op.cloneWithoutRegions(
-      rewriter, op.getLoc(), /*resultTypes=*/TypeRange{}, newOperands));
+  auto newOp = cast<DestinationStyleOpInterface>(cloneWithoutRegions(
+      rewriter, op, /*resultTypes=*/TypeRange{}, newOperands));
   rewriter.inlineRegionBefore(op->getRegion(0), newOp->getRegion(0),
                               newOp->getRegion(0).begin());
 

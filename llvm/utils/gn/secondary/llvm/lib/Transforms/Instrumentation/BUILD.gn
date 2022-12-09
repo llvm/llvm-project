@@ -20,6 +20,7 @@ static_library("Instrumentation") {
     "InstrOrderFile.cpp",
     "InstrProfiling.cpp",
     "Instrumentation.cpp",
+    "KCFI.cpp",
     "MemProfiler.cpp",
     "MemorySanitizer.cpp",
     "PGOInstrumentation.cpp",

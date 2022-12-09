@@ -203,6 +203,12 @@ void f() {
   printf(string_linebreak(), 1, 2, 3, 4); // expected-warning {{format specifies type 'char *' but the argument has type 'int'}}
   printf(not_literal(), 1, 2, 3, 4); // expected-warning {{format string is not a string literal}}
   printf(wrap_constexpr(), 1, 2); // expected-warning {{format specifies type 'char *' but the argument has type 'int'}}
+
+  constexpr const char *fmt {"%d%d"};
+  printf(fmt, 1, 1); // no-warning
+
+  constexpr const char *fmt2 {"%d"}; // expected-note{{format string is defined here}}
+  printf(fmt2, "oops"); // expected-warning{{format specifies type 'int' but the argument has type}}
 }
 
 

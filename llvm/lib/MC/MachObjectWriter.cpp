@@ -129,7 +129,7 @@ uint64_t MachObjectWriter::getPaddingSize(const MCSection *Sec,
   const MCSection &NextSec = *Layout.getSectionOrder()[Next];
   if (NextSec.isVirtualSection())
     return 0;
-  return offsetToAlignment(EndAddr, Align(NextSec.getAlignment()));
+  return offsetToAlignment(EndAddr, NextSec.getAlign());
 }
 
 void MachObjectWriter::writeHeader(MachO::HeaderFileType Type,
@@ -244,8 +244,7 @@ void MachObjectWriter::writeSection(const MCAsmLayout &Layout,
   }
   W.write<uint32_t>(FileOffset);
 
-  assert(isPowerOf2_32(Section.getAlignment()) && "Invalid alignment!");
-  W.write<uint32_t>(Log2_32(Section.getAlignment()));
+  W.write<uint32_t>(Log2(Section.getAlign()));
   W.write<uint32_t>(NumRelocations ? RelocationsStart : 0);
   W.write<uint32_t>(NumRelocations);
   W.write<uint32_t>(Flags);
@@ -645,7 +644,7 @@ void MachObjectWriter::computeSectionAddresses(const MCAssembler &Asm,
                                                const MCAsmLayout &Layout) {
   uint64_t StartAddress = 0;
   for (const MCSection *Sec : Layout.getSectionOrder()) {
-    StartAddress = alignTo(StartAddress, Sec->getAlignment());
+    StartAddress = alignTo(StartAddress, Sec->getAlign());
     SectionAddress[Sec] = StartAddress;
     StartAddress += Layout.getSectionAddressSize(Sec);
 

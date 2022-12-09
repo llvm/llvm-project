@@ -44,6 +44,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -729,7 +730,7 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
 
   // What is the smallest bit width that can accommodate the entire value ranges
   // of both of the operands?
-  std::array<Optional<ConstantRange>, 2> CRs;
+  std::array<std::optional<ConstantRange>, 2> CRs;
   unsigned MinSignedBits = 0;
   for (auto I : zip(Instr->operands(), CRs)) {
     std::get<1>(I) = LVI->getConstantRange(std::get<0>(I), Instr);

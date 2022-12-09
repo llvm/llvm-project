@@ -267,7 +267,7 @@ def SPIRV_DT_IntegratedGPU : I32EnumAttrCase<"IntegratedGPU", 2>;
 // An accelerator other than GPU or CPU
 def SPIRV_DT_Other         : I32EnumAttrCase<"Other", 3>;
 // Information missing.
-def SPIRV_DT_Unknown       : I32EnumAttrCase<"Unknown", 4>;
+def SPIRV_DT_Unknown       : I32EnumAttrCase<"Unknown", 0xffffffff>;
 
 def SPIRV_DeviceTypeAttr : SPIRV_I32EnumAttr<
   "DeviceType", "valid SPIR-V device types", "device_type", [
@@ -283,13 +283,25 @@ def SPIRV_V_Intel       : I32EnumAttrCase<"Intel", 4>;
 def SPIRV_V_NVIDIA      : I32EnumAttrCase<"NVIDIA", 5>;
 def SPIRV_V_Qualcomm    : I32EnumAttrCase<"Qualcomm", 6>;
 def SPIRV_V_SwiftShader : I32EnumAttrCase<"SwiftShader", 7>;
-def SPIRV_V_Unknown     : I32EnumAttrCase<"Unknown", 0xff>;
+def SPIRV_V_Unknown     : I32EnumAttrCase<"Unknown", 0xffffffff>;
 
 def SPIRV_VendorAttr : SPIRV_I32EnumAttr<
   "Vendor", "recognized SPIR-V vendor strings", "vendor", [
     SPIRV_V_AMD, SPIRV_V_Apple, SPIRV_V_ARM, SPIRV_V_Imagination,
     SPIRV_V_Intel, SPIRV_V_NVIDIA, SPIRV_V_Qualcomm, SPIRV_V_SwiftShader,
     SPIRV_V_Unknown
+  ]>;
+
+def SPIRV_CA_Metal   : I32EnumAttrCase<"Metal", 0>;
+def SPIRV_CA_OpenCL  : I32EnumAttrCase<"OpenCL", 1>;
+def SPIRV_CA_Vulkan  : I32EnumAttrCase<"Vulkan", 2>;
+def SPIRV_CA_WebGPU  : I32EnumAttrCase<"WebGPU", 3>;
+def SPIRV_CA_Unknown : I32EnumAttrCase<"Unknown", 0xffffffff>;
+
+def SPIRV_ClientAPIAttr : SPIRV_I32EnumAttr<
+  "ClientAPI", "recognized SPIR-V client APIs", "client_api", [
+    SPIRV_CA_Metal, SPIRV_CA_OpenCL, SPIRV_CA_Vulkan, SPIRV_CA_WebGPU,
+    SPIRV_CA_Unknown
   ]>;
 
 //===----------------------------------------------------------------------===//
@@ -4243,6 +4255,8 @@ def SPIRV_OC_OpMatrixTimesScalar          : I32EnumAttrCase<"OpMatrixTimesScalar
 def SPIRV_OC_OpMatrixTimesMatrix          : I32EnumAttrCase<"OpMatrixTimesMatrix", 146>;
 def SPIRV_OC_OpIAddCarry                  : I32EnumAttrCase<"OpIAddCarry", 149>;
 def SPIRV_OC_OpISubBorrow                 : I32EnumAttrCase<"OpISubBorrow", 150>;
+def SPIRV_OC_OpUMulExtended               : I32EnumAttrCase<"OpUMulExtended", 151>;
+def SPIRV_OC_OpSMulExtended               : I32EnumAttrCase<"OpSMulExtended", 152>;
 def SPIRV_OC_OpIsNan                      : I32EnumAttrCase<"OpIsNan", 156>;
 def SPIRV_OC_OpIsInf                      : I32EnumAttrCase<"OpIsInf", 157>;
 def SPIRV_OC_OpOrdered                    : I32EnumAttrCase<"OpOrdered", 162>;
@@ -4372,17 +4386,17 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpCompositeInsert, SPIRV_OC_OpTranspose, SPIRV_OC_OpImageDrefGather,
       SPIRV_OC_OpImage, SPIRV_OC_OpImageQuerySize, SPIRV_OC_OpConvertFToU,
       SPIRV_OC_OpConvertFToS, SPIRV_OC_OpConvertSToF, SPIRV_OC_OpConvertUToF,
-      SPIRV_OC_OpUConvert, SPIRV_OC_OpSConvert, SPIRV_OC_OpFConvert, SPIRV_OC_OpPtrCastToGeneric, 
+      SPIRV_OC_OpUConvert, SPIRV_OC_OpSConvert, SPIRV_OC_OpFConvert, SPIRV_OC_OpPtrCastToGeneric,
       SPIRV_OC_OpGenericCastToPtr, SPIRV_OC_OpGenericCastToPtrExplicit, SPIRV_OC_OpBitcast,
       SPIRV_OC_OpSNegate, SPIRV_OC_OpFNegate, SPIRV_OC_OpIAdd, SPIRV_OC_OpFAdd,
       SPIRV_OC_OpISub, SPIRV_OC_OpFSub, SPIRV_OC_OpIMul, SPIRV_OC_OpFMul, SPIRV_OC_OpUDiv,
       SPIRV_OC_OpSDiv, SPIRV_OC_OpFDiv, SPIRV_OC_OpUMod, SPIRV_OC_OpSRem, SPIRV_OC_OpSMod,
       SPIRV_OC_OpFRem, SPIRV_OC_OpFMod, SPIRV_OC_OpVectorTimesScalar,
       SPIRV_OC_OpMatrixTimesScalar, SPIRV_OC_OpMatrixTimesMatrix, SPIRV_OC_OpIAddCarry,
-      SPIRV_OC_OpISubBorrow, SPIRV_OC_OpIsNan, SPIRV_OC_OpIsInf, SPIRV_OC_OpOrdered,
-      SPIRV_OC_OpUnordered, SPIRV_OC_OpLogicalEqual, SPIRV_OC_OpLogicalNotEqual,
-      SPIRV_OC_OpLogicalOr, SPIRV_OC_OpLogicalAnd, SPIRV_OC_OpLogicalNot, SPIRV_OC_OpSelect,
-      SPIRV_OC_OpIEqual, SPIRV_OC_OpINotEqual, SPIRV_OC_OpUGreaterThan,
+      SPIRV_OC_OpISubBorrow, SPIRV_OC_OpUMulExtended, SPIRV_OC_OpSMulExtended, SPIRV_OC_OpIsNan,
+      SPIRV_OC_OpIsInf, SPIRV_OC_OpOrdered, SPIRV_OC_OpUnordered, SPIRV_OC_OpLogicalEqual,
+      SPIRV_OC_OpLogicalNotEqual, SPIRV_OC_OpLogicalOr, SPIRV_OC_OpLogicalAnd, SPIRV_OC_OpLogicalNot,
+      SPIRV_OC_OpSelect, SPIRV_OC_OpIEqual, SPIRV_OC_OpINotEqual, SPIRV_OC_OpUGreaterThan,
       SPIRV_OC_OpSGreaterThan, SPIRV_OC_OpUGreaterThanEqual, SPIRV_OC_OpSGreaterThanEqual,
       SPIRV_OC_OpULessThan, SPIRV_OC_OpSLessThan, SPIRV_OC_OpULessThanEqual,
       SPIRV_OC_OpSLessThanEqual, SPIRV_OC_OpFOrdEqual, SPIRV_OC_OpFUnordEqual,

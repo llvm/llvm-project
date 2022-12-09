@@ -1,5 +1,5 @@
 ; PR45220
-; RUN: opt -S -jump-threading < %s | FileCheck %s
+; RUN: opt -S -passes=jump-threading < %s | FileCheck %s
 
 declare i1 @NOP()
 

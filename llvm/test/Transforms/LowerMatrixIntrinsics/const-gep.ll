@@ -11,10 +11,10 @@ define void @test(i32 %r, i32 %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[R_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 [[R:%.*]], i32* [[R_ADDR]], align 4
-; CHECK-NEXT:    store i32 [[C:%.*]], i32* [[C_ADDR]], align 4
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, <2 x double>* bitcast ([5 x <4 x double>]* @foo to <2 x double>*), align 8
-; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, <2 x double>* bitcast (double* getelementptr ([5 x <4 x double>], [5 x <4 x double>]* @foo, i32 0, i32 0, i64 2) to <2 x double>*), align 8
+; CHECK-NEXT:    store i32 [[R:%.*]], ptr [[R_ADDR]], align 4
+; CHECK-NEXT:    store i32 [[C:%.*]], ptr [[C_ADDR]], align 4
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr @foo, align 8
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr getelementptr (double, ptr @foo, i64 2), align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x double> [[COL_LOAD]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x double> poison, double [[TMP0]], i32 0
@@ -67,18 +67,18 @@ define void @test(i32 %r, i32 %c) {
 ; CHECK-NEXT:    [[TMP25:%.*]] = fadd <1 x double> [[TMP22]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <1 x double> [[TMP25]], <1 x double> poison, <2 x i32> <i32 0, i32 undef>
 ; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <2 x double> [[TMP20]], <2 x double> [[TMP26]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    store <2 x double> [[COL_LOAD]], <2 x double>* bitcast (double* getelementptr inbounds ([5 x <4 x double>], [5 x <4 x double>]* @foo, i64 0, i64 2, i32 0) to <2 x double>*), align 8
-; CHECK-NEXT:    store <2 x double> [[COL_LOAD1]], <2 x double>* bitcast (double* getelementptr ([5 x <4 x double>], [5 x <4 x double>]* @foo, i64 0, i64 2, i64 2) to <2 x double>*), align 8
+; CHECK-NEXT:    store <2 x double> [[COL_LOAD]], ptr getelementptr inbounds ([5 x <4 x double>], ptr @foo, i64 0, i64 2), align 8
+; CHECK-NEXT:    store <2 x double> [[COL_LOAD1]], ptr getelementptr (double, ptr getelementptr inbounds ([5 x <4 x double>], ptr @foo, i64 0, i64 2), i64 2), align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %r.addr = alloca i32, align 4
   %c.addr = alloca i32, align 4
-  store i32 %r, i32* %r.addr, align 4
-  store i32 %c, i32* %c.addr, align 4
-  %0 = load <4 x double>, <4 x double>* getelementptr inbounds ([5 x <4 x double>], [5 x <4 x double>]* @foo, i64 0, i64 0), align 8
+  store i32 %r, ptr %r.addr, align 4
+  store i32 %c, ptr %c.addr, align 4
+  %0 = load <4 x double>, ptr @foo, align 8
   %mul = call <4 x double> @llvm.matrix.multiply(<4 x double> %0, <4 x double> %0, i32 2, i32 2, i32 2)
-  store <4 x double> %0, <4 x double>* getelementptr inbounds ([5 x <4 x double>], [5 x <4 x double>]* @foo, i64 0, i64 2), align 8
+  store <4 x double> %0, ptr getelementptr inbounds ([5 x <4 x double>], ptr @foo, i64 0, i64 2), align 8
   ret void
 }
 

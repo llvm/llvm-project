@@ -462,9 +462,7 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(i64 addrspace(1)* %ptr)  {
 ; GFX9V3:       ; %bb.0:
 ; GFX9V3-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9V3-NEXT:    global_load_ubyte v0, v2, s[6:7] glc
-; GFX9V3-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V3-NEXT:    global_load_ubyte v0, v2, s[8:9] offset:8 glc
-; GFX9V3-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V3-NEXT:    global_load_ubyte v0, v2, s[4:5] glc
 ; GFX9V3-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9V3-NEXT:    s_waitcnt vmcnt(0)
@@ -481,9 +479,7 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(i64 addrspace(1)* %ptr)  {
 ; GFX9V4:       ; %bb.0:
 ; GFX9V4-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9V4-NEXT:    global_load_ubyte v0, v2, s[6:7] glc
-; GFX9V4-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V4-NEXT:    global_load_ubyte v0, v2, s[8:9] offset:8 glc
-; GFX9V4-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V4-NEXT:    global_load_ubyte v0, v2, s[4:5] glc
 ; GFX9V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9V4-NEXT:    s_waitcnt vmcnt(0)
@@ -500,9 +496,7 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(i64 addrspace(1)* %ptr)  {
 ; GFX9V5:       ; %bb.0:
 ; GFX9V5-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9V5-NEXT:    global_load_ubyte v0, v2, s[0:1] glc
-; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V5-NEXT:    global_load_ubyte v0, v2, s[6:7] offset:8 glc
-; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V5-NEXT:    global_load_ubyte v0, v2, s[4:5] glc
 ; GFX9V5-NEXT:    ; kill: killed $sgpr0_sgpr1
 ; GFX9V5-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0

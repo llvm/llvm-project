@@ -54,6 +54,7 @@
 #endif
 
 #include <cassert>
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -737,7 +738,7 @@ Argument *IRPosition::getAssociatedArgument() const {
   // values and the ones in callbacks. If a callback was found that makes use
   // of the underlying call site operand, we want the corresponding callback
   // callee argument and not the direct callee argument.
-  Optional<Argument *> CBCandidateArg;
+  std::optional<Argument *> CBCandidateArg;
   SmallVector<const Use *, 4> CallbackUses;
   const auto &CB = cast<CallBase>(getAnchorValue());
   AbstractCallSite::getCallbackUses(CB, CallbackUses);

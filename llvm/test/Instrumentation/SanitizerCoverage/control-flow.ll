@@ -5,12 +5,12 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-unknown-linux-gnu"
 define void @foo(ptr %a) sanitize_address {
 entry:
-  %tobool = icmp eq i32* %a, null
+  %tobool = icmp eq ptr %a, null
   br i1 %tobool, label %if.end, label %if.then
 
   if.then:                                          ; preds = %entry
-  store i32 0, i32* %a, align 4
-  call void @foo(i32* %a)
+  store i32 0, ptr %a, align 4
+  call void @foo(ptr %a)
   br label %if.end
 
   if.end:                                           ; preds = %entry, %if.then

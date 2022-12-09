@@ -13,6 +13,7 @@
 #include "Utils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalIFunc.h"
 
 using namespace llvm;
 
@@ -27,5 +28,7 @@ Value *llvm::getDefaultValue(Type *T) {
 }
 
 bool llvm::hasAliasUse(Function &F) {
-  return any_of(F.users(), [](User *U) { return isa<GlobalAlias>(U); });
+  return any_of(F.users(), [](User *U) {
+      return isa<GlobalAlias>(U) || isa<GlobalIFunc>(U);
+    });
 }

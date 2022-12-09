@@ -925,6 +925,10 @@ def: Pat<(VecI8  (mulhu  HVI8:$Vu,  HVI8:$Vv)),
 def: Pat<(VecI16 (mulhu HVI16:$Vu, HVI16:$Vv)),
          (V6_vshufoh (HiVec (V6_vmpyuhv $Vu, $Vv)),
                      (LoVec (V6_vmpyuhv $Vu, $Vv)))>;
+let Predicates = [UseHVXV69], AddedComplexity = 20 in {
+  def: Pat<(VecI16 (mulhu HVI16:$Vu, HVI16:$Vv)),
+           (V6_vmpyuhvs $Vu, $Vv)>;
+}
 
 let Predicates = [UseHVXV60] in {
   // V60 doesn't have vabsb or byte shifts.

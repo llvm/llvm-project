@@ -5,8 +5,8 @@
 target triple = "thumbv7-apple-ios9.0.0"
 
 @b = external thread_local global i32
-define i32* @func(i32 %a) !dbg !9 {
-  ret i32* @b
+define ptr @func(i32 %a) !dbg !9 {
+  ret ptr @b
 }
 
 !llvm.dbg.cu = !{!0}

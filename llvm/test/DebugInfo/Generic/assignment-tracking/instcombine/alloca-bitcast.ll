@@ -23,7 +23,7 @@
 ; CHECK: entry:
 ; CHECK-NEXT: %retval = alloca i64, align 8, !DIAssignID ![[ID:[0-9]+]]
 ; CHECK-NEXT: %tmpcast = bitcast i64* %retval to %struct.c*
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[e:[0-9]+]], metadata !DIExpression(), metadata ![[ID]], metadata %struct.c* %tmpcast, metadata !DIExpression()), !dbg
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[e:[0-9]+]], metadata !DIExpression(), metadata ![[ID]], metadata i64* %retval, metadata !DIExpression()), !dbg
 ; CHECK: ![[e]] = !DILocalVariable(name: "e",
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

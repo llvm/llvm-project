@@ -24,7 +24,6 @@ using namespace mlir::detail;
 //===----------------------------------------------------------------------===//
 
 constexpr int64_t ShapedType::kDynamic;
-constexpr int64_t ShapedType::kDynamic;
 
 int64_t ShapedType::getNumElements(ArrayRef<int64_t> shape) {
   int64_t num = 1;

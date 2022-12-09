@@ -15,7 +15,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
+#include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -182,9 +184,12 @@ struct LMULType {
 class RVVType;
 using RVVTypePtr = RVVType *;
 using RVVTypes = std::vector<RVVTypePtr>;
+class RVVTypeCache;
 
 // This class is compact representation of a valid and invalid RVVType.
 class RVVType {
+  friend class RVVTypeCache;
+
   BasicType BT;
   ScalarTypeKind ScalarType = Invalid;
   LMULType LMUL;
@@ -204,10 +209,9 @@ class RVVType {
 
   enum class FixedLMULType { LargerThan, SmallerThan };
 
-public:
-  RVVType() : BT(BasicType::Unknown), LMUL(0), Valid(false) {}
   RVVType(BasicType BT, int Log2LMUL, const PrototypeDescriptor &Profile);
 
+public:
   // Return the string representation of a type, which is an encoded string for
   // passing to the BUILTIN() macro in Builtins.def.
   const std::string &getBuiltinStr() const { return BuiltinStr; }
@@ -275,17 +279,25 @@ private:
   void initTypeStr();
   // Compute and record a short name of a type for C/C++ name suffix.
   void initShortStr();
+};
+
+// This class is used to manage RVVType, RVVType should only created by this
+// class, also provided thread-safe cache capability.
+class RVVTypeCache {
+private:
+  std::unordered_map<uint64_t, RVVType> LegalTypes;
+  std::set<uint64_t> IllegalTypes;
 
 public:
   /// Compute output and input types by applying different config (basic type
   /// and LMUL with type transformers). It also record result of type in legal
   /// or illegal set to avoid compute the same config again. The result maybe
   /// have illegal RVVType.
-  static llvm::Optional<RVVTypes>
+  llvm::Optional<RVVTypes>
   computeTypes(BasicType BT, int Log2LMUL, unsigned NF,
                llvm::ArrayRef<PrototypeDescriptor> Prototype);
-  static llvm::Optional<RVVTypePtr> computeType(BasicType BT, int Log2LMUL,
-                                                PrototypeDescriptor Proto);
+  llvm::Optional<RVVTypePtr> computeType(BasicType BT, int Log2LMUL,
+                                         PrototypeDescriptor Proto);
 };
 
 enum PolicyScheme : uint8_t {
@@ -373,7 +385,7 @@ public:
   std::string getBuiltinTypeStr() const;
 
   static std::string
-  getSuffixStr(BasicType Type, int Log2LMUL,
+  getSuffixStr(RVVTypeCache &TypeCache, BasicType Type, int Log2LMUL,
                llvm::ArrayRef<PrototypeDescriptor> PrototypeDescriptors);
 
   static llvm::SmallVector<PrototypeDescriptor>

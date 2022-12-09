@@ -648,8 +648,8 @@ define double @extractelt_nxv16f64_neg1(<vscale x 16 x double> %v) {
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a2, a1
 ; RV64-NEXT:  .LBB52_2:
-; RV64-NEXT:    slli a1, a2, 3
-; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    slli a2, a2, 3
+; RV64-NEXT:    add a0, a0, a2
 ; RV64-NEXT:    fld fa0, 0(a0)
 ; RV64-NEXT:    addi sp, s0, -80
 ; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload

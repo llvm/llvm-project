@@ -520,7 +520,7 @@ void ProcessSwitchInst(SwitchInst *SI,
 
   // We are now done with the switch instruction, delete it.
   BasicBlock *OldDefault = SI->getDefaultDest();
-  OrigBlock->getInstList().erase(SI);
+  SI->eraseFromParent();
 
   // If the Default block has no more predecessors just add it to DeleteList.
   if (pred_empty(OldDefault))

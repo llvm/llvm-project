@@ -48,7 +48,7 @@
 #include <algorithm>
 #include <string>
 #ifdef HAVE_BACKTRACE
-# include BACKTRACE_HEADER         // For backtrace().
+#include BACKTRACE_HEADER // For backtrace().
 #endif
 #if HAVE_SIGNAL_H
 #include <signal.h>
@@ -79,8 +79,8 @@
 
 using namespace llvm;
 
-static void SignalHandler(int Sig);  // defined below.
-static void InfoSignalHandler(int Sig);  // defined below.
+static void SignalHandler(int Sig);     // defined below.
+static void InfoSignalHandler(int Sig); // defined below.
 
 using SignalHandlerFunctionType = void (*)();
 /// The function to call if ctrl-c is pressed.
@@ -208,40 +208,45 @@ static StringRef Argv0;
 /// Signals that represent requested termination. There's no bug or failure, or
 /// if there is, it's not our direct responsibility. For whatever reason, our
 /// continued execution is no longer desirable.
-static const int IntSigs[] = {
-  SIGHUP, SIGINT, SIGTERM, SIGUSR2
-};
+static const int IntSigs[] = {SIGHUP, SIGINT, SIGTERM, SIGUSR2};
 
 /// Signals that represent that we have a bug, and our prompt termination has
 /// been ordered.
-static const int KillSigs[] = {
-  SIGILL, SIGTRAP, SIGABRT, SIGFPE, SIGBUS, SIGSEGV, SIGQUIT
+static const int KillSigs[] = {SIGILL,
+                               SIGTRAP,
+                               SIGABRT,
+                               SIGFPE,
+                               SIGBUS,
+                               SIGSEGV,
+                               SIGQUIT
 #ifdef SIGSYS
-  , SIGSYS
+                               ,
+                               SIGSYS
 #endif
 #ifdef SIGXCPU
-  , SIGXCPU
+                               ,
+                               SIGXCPU
 #endif
 #ifdef SIGXFSZ
-  , SIGXFSZ
+                               ,
+                               SIGXFSZ
 #endif
 #ifdef SIGEMT
-  , SIGEMT
+                               ,
+                               SIGEMT
 #endif
 };
 
 /// Signals that represent requests for status.
-static const int InfoSigs[] = {
-  SIGUSR1
+static const int InfoSigs[] = {SIGUSR1
 #ifdef SIGINFO
-  , SIGINFO
+                               ,
+                               SIGINFO
 #endif
 };
 
-static const size_t NumSigs =
-    std::size(IntSigs) + std::size(KillSigs) +
-    std::size(InfoSigs) + 1 /* SIGPIPE */;
-
+static const size_t NumSigs = std::size(IntSigs) + std::size(KillSigs) +
+                              std::size(InfoSigs) + 1 /* SIGPIPE */;
 
 static std::atomic<unsigned> NumRegisteredSignals = ATOMIC_VAR_INIT(0);
 static struct {
@@ -334,8 +339,8 @@ static void RegisterHandlers() { // Not signal-safe.
 void sys::unregisterHandlers() {
   // Restore all of the signal handlers to how they were before we showed up.
   for (unsigned i = 0, e = NumRegisteredSignals.load(); i != e; ++i) {
-    sigaction(RegisteredSignalInfo[i].SigNo,
-              &RegisteredSignalInfo[i].SA, nullptr);
+    sigaction(RegisteredSignalInfo[i].SigNo, &RegisteredSignalInfo[i].SA,
+              nullptr);
     --NumRegisteredSignals;
   }
 }
@@ -412,9 +417,7 @@ static void InfoSignalHandler(int Sig) {
     CurrentInfoFunction();
 }
 
-void llvm::sys::RunInterruptHandlers() {
-  RemoveFilesToRemove();
-}
+void llvm::sys::RunInterruptHandlers() { RemoveFilesToRemove(); }
 
 void llvm::sys::SetInterruptFunction(void (*IF)()) {
   InterruptFunction.exchange(IF);
@@ -437,8 +440,7 @@ void llvm::sys::DefaultOneShotPipeSignalHandler() {
 }
 
 // The public API
-bool llvm::sys::RemoveFileOnSignal(StringRef Filename,
-                                   std::string* ErrMsg) {
+bool llvm::sys::RemoveFileOnSignal(StringRef Filename, std::string *ErrMsg) {
   // Ensure that cleanup will occur as soon as one file is added.
   static ManagedStatic<FilesToRemoveCleanup> FilesToRemoveCleanup;
   *FilesToRemoveCleanup;
@@ -461,7 +463,7 @@ void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
   RegisterHandlers();
 }
 
-#if defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES && HAVE_LINK_H &&    \
+#if defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES && HAVE_LINK_H &&             \
     (defined(__linux__) || defined(__FreeBSD__) ||                             \
      defined(__FreeBSD_kernel__) || defined(__NetBSD__))
 struct DlIteratePhdrData {
@@ -474,7 +476,7 @@ struct DlIteratePhdrData {
 };
 
 static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
-  DlIteratePhdrData *data = (DlIteratePhdrData*)arg;
+  DlIteratePhdrData *data = (DlIteratePhdrData *)arg;
   const char *name = data->first ? data->main_exec_name : info->dlpi_name;
   data->first = false;
   for (int i = 0; i < info->dlpi_phnum; i++) {
@@ -567,8 +569,8 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
 #if defined(HAVE__UNWIND_BACKTRACE)
   // Try _Unwind_Backtrace() if backtrace() failed.
   if (!depth)
-    depth = unwindBacktrace(StackTrace,
-                        static_cast<int>(std::size(StackTrace)));
+    depth =
+        unwindBacktrace(StackTrace, static_cast<int>(std::size(StackTrace)));
 #endif
   if (!depth)
     return;
@@ -586,13 +588,16 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
   for (int i = 0; i < depth; ++i) {
     Dl_info dlinfo;
     dladdr(StackTrace[i], &dlinfo);
-    const char* name = strrchr(dlinfo.dli_fname, '/');
+    const char *name = strrchr(dlinfo.dli_fname, '/');
 
     int nwidth;
-    if (!name) nwidth = strlen(dlinfo.dli_fname);
-    else       nwidth = strlen(name) - 1;
+    if (!name)
+      nwidth = strlen(dlinfo.dli_fname);
+    else
+      nwidth = strlen(name) - 1;
 
-    if (nwidth > width) width = nwidth;
+    if (nwidth > width)
+      width = nwidth;
   }
 
   for (int i = 0; i < depth; ++i) {
@@ -601,23 +606,27 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
 
     OS << format("%-2d", i);
 
-    const char* name = strrchr(dlinfo.dli_fname, '/');
-    if (!name) OS << format(" %-*s", width, dlinfo.dli_fname);
-    else       OS << format(" %-*s", width, name+1);
+    const char *name = strrchr(dlinfo.dli_fname, '/');
+    if (!name)
+      OS << format(" %-*s", width, dlinfo.dli_fname);
+    else
+      OS << format(" %-*s", width, name + 1);
 
-    OS << format(" %#0*lx", (int)(sizeof(void*) * 2) + 2,
+    OS << format(" %#0*lx", (int)(sizeof(void *) * 2) + 2,
                  (unsigned long)StackTrace[i]);
 
     if (dlinfo.dli_sname != nullptr) {
       OS << ' ';
       int res;
-      char* d = itaniumDemangle(dlinfo.dli_sname, nullptr, nullptr, &res);
-      if (!d) OS << dlinfo.dli_sname;
-      else    OS << d;
+      char *d = itaniumDemangle(dlinfo.dli_sname, nullptr, nullptr, &res);
+      if (!d)
+        OS << dlinfo.dli_sname;
+      else
+        OS << d;
       free(d);
 
-      OS << format(" + %tu", (static_cast<const char*>(StackTrace[i])-
-                              static_cast<const char*>(dlinfo.dli_saddr)));
+      OS << format(" + %tu", (static_cast<const char *>(StackTrace[i]) -
+                              static_cast<const char *>(dlinfo.dli_saddr)));
     }
     OS << '\n';
   }
@@ -648,11 +657,9 @@ void llvm::sys::PrintStackTraceOnErrorSignal(StringRef Argv0,
 
     exception_mask_t mask = EXC_MASK_CRASH;
 
-    kern_return_t ret = task_set_exception_ports(self,
-                             mask,
-                             MACH_PORT_NULL,
-                             EXCEPTION_STATE_IDENTITY | MACH_EXCEPTION_CODES,
-                             THREAD_STATE_NONE);
+    kern_return_t ret = task_set_exception_ports(
+        self, mask, MACH_PORT_NULL,
+        EXCEPTION_STATE_IDENTITY | MACH_EXCEPTION_CODES, THREAD_STATE_NONE);
     (void)ret;
   }
 #endif

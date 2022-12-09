@@ -1,6 +1,4 @@
 # REQUIRES: target-x86_64
-# https://github.com/llvm/llvm-project/issues/56085
-# XFAIL: system-freebsd
 # XFAIL: system-windows
 
 # RuntimeDyld can be used to link and load emitted code for both, MCJIT and Orc.

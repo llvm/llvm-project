@@ -8,11 +8,11 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @_Z3barv() uwtable sanitize_address {
 entry:
   %a = alloca i32, align 4
-  call void @_Z3fooPi(i32* %a)
+  call void @_Z3fooPi(ptr %a)
   ret void
 }
 
-declare void @_Z3fooPi(i32*)
+declare void @_Z3fooPi(ptr)
 ; We create one global string constant for the stack frame above.
 ; It should have unnamed_addr and align 1.
 ; Make sure we don't create any other global constants.

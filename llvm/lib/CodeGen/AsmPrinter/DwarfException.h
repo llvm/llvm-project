@@ -31,7 +31,6 @@ protected:
   bool hasEmittedCFISections = false;
 
   void markFunctionEnd() override;
-  void endFragment() override;
 };
 
 class LLVM_LIBRARY_VISIBILITY DwarfCFIException : public DwarfCFIExceptionBase {
@@ -61,11 +60,8 @@ public:
   /// Gather and emit post-function exception information.
   void endFunction(const MachineFunction *) override;
 
-  void beginFragment(const MachineBasicBlock *MBB,
-                     ExceptionSymbolProvider ESP) override;
-
-  void beginBasicBlock(const MachineBasicBlock &MBB) override;
-  void endBasicBlock(const MachineBasicBlock &MBB) override;
+  void beginBasicBlockSection(const MachineBasicBlock &MBB) override;
+  void endBasicBlockSection(const MachineBasicBlock &MBB) override;
 };
 
 class LLVM_LIBRARY_VISIBILITY ARMException : public DwarfCFIExceptionBase {
@@ -88,6 +84,8 @@ public:
 
   /// Gather and emit post-function exception information.
   void endFunction(const MachineFunction *) override;
+
+  void markFunctionEnd() override;
 };
 
 class LLVM_LIBRARY_VISIBILITY AIXException : public DwarfCFIExceptionBase {
@@ -102,7 +100,6 @@ public:
 
   void endModule() override {}
   void beginFunction(const MachineFunction *MF) override {}
-
   void endFunction(const MachineFunction *MF) override;
 };
 } // End of namespace llvm

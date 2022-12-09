@@ -14,6 +14,7 @@
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include <optional>
 using namespace llvm;
 
 void LocationSize::print(raw_ostream &OS) const {
@@ -126,7 +127,7 @@ MemoryLocation::getForDest(const CallBase *CB, const TargetLibraryInfo &TLI) {
     return None;
 
   Value *UsedV = nullptr;
-  Optional<unsigned> UsedIdx;
+  std::optional<unsigned> UsedIdx;
   for (unsigned i = 0; i < CB->arg_size(); i++) {
     if (!CB->getArgOperand(i)->getType()->isPointerTy())
       continue;
@@ -253,12 +254,17 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       assert((ArgIdx == 0 || ArgIdx == 1) && "Invalid argument index for str function");
       return MemoryLocation::getAfter(Arg, AATags);
 
-    case LibFunc_memset_chk: {
+    case LibFunc_memset_chk:
       assert(ArgIdx == 0 && "Invalid argument index for memset_chk");
+      LLVM_FALLTHROUGH;
+    case LibFunc_memcpy_chk: {
+      assert((ArgIdx == 0 || ArgIdx == 1) &&
+             "Invalid argument index for memcpy_chk");
       LocationSize Size = LocationSize::afterPointer();
       if (const auto *Len = dyn_cast<ConstantInt>(Call->getArgOperand(2))) {
-        // memset_chk writes at most Len bytes. It may write less, if Len
-        // exceeds the specified max size and aborts.
+        // memset_chk writes at most Len bytes, memcpy_chk reads/writes at most
+        // Len bytes. They may read/write less, if Len exceeds the specified max
+        // size and aborts.
         Size = LocationSize::upperBound(Len->getZExtValue());
       }
       return MemoryLocation(Arg, Size, AATags);

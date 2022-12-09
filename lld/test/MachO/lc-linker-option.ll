@@ -144,7 +144,7 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 declare void @_CFBigNumGetInt128(...)
 
 define void @main() {
-  call void bitcast (void (...)* @_CFBigNumGetInt128 to void ()*)()
+  call void @_CFBigNumGetInt128()
   ret void
 }
 
@@ -157,11 +157,11 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 !llvm.linker.options = !{!0, !0, !1}
 
 declare void @_CFBigNumGetInt128(...)
-declare i8* @__cxa_allocate_exception(i64)
+declare ptr @__cxa_allocate_exception(i64)
 
 define void @main() {
-  call void bitcast (void (...)* @_CFBigNumGetInt128 to void ()*)()
-  call i8* @__cxa_allocate_exception(i64 4)
+  call void @_CFBigNumGetInt128()
+  call ptr @__cxa_allocate_exception(i64 4)
   ret void
 }
 

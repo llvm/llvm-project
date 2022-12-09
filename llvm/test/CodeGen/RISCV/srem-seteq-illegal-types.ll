@@ -325,8 +325,8 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32-NEXT:    srli a0, a0, 1
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    lw s4, 0(s0)
-; RV32-NEXT:    slli a1, a2, 30
-; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    slli a2, a2, 30
+; RV32-NEXT:    srli a1, a2, 31
 ; RV32-NEXT:    neg a1, a1
 ; RV32-NEXT:    li a2, 7
 ; RV32-NEXT:    li a3, 0
@@ -353,21 +353,21 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32-NEXT:    seqz a3, a3
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    snez a0, a0
-; RV32-NEXT:    addi a1, a3, -1
+; RV32-NEXT:    addi a3, a3, -1
 ; RV32-NEXT:    addi a2, a2, -1
-; RV32-NEXT:    neg a3, a0
-; RV32-NEXT:    sw a3, 0(s0)
-; RV32-NEXT:    andi a3, a2, 7
-; RV32-NEXT:    sb a3, 12(s0)
-; RV32-NEXT:    slli a3, a1, 1
-; RV32-NEXT:    or a0, a3, a0
+; RV32-NEXT:    neg a1, a0
+; RV32-NEXT:    sw a1, 0(s0)
+; RV32-NEXT:    andi a1, a2, 7
+; RV32-NEXT:    sb a1, 12(s0)
+; RV32-NEXT:    slli a1, a3, 1
+; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    sw a0, 4(s0)
-; RV32-NEXT:    srli a0, a1, 31
-; RV32-NEXT:    andi a1, a1, 1
+; RV32-NEXT:    srli a0, a3, 31
+; RV32-NEXT:    andi a1, a3, 1
 ; RV32-NEXT:    slli a1, a1, 1
 ; RV32-NEXT:    or a0, a0, a1
-; RV32-NEXT:    slli a1, a2, 2
-; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    slli a2, a2, 2
+; RV32-NEXT:    or a0, a0, a2
 ; RV32-NEXT:    sw a0, 8(s0)
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -400,8 +400,8 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV64-NEXT:    slli a1, a1, 62
 ; RV64-NEXT:    or a0, a1, a0
 ; RV64-NEXT:    srai a0, a0, 31
-; RV64-NEXT:    slli a1, a2, 31
-; RV64-NEXT:    srai s2, a1, 31
+; RV64-NEXT:    slli a2, a2, 31
+; RV64-NEXT:    srai s2, a2, 31
 ; RV64-NEXT:    li a1, 7
 ; RV64-NEXT:    call __moddi3@plt
 ; RV64-NEXT:    mv s3, a0
@@ -420,10 +420,10 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV64-NEXT:    srli a0, a0, 1
 ; RV64-NEXT:    or a0, a0, a2
 ; RV64-NEXT:    sltu a0, a1, a0
-; RV64-NEXT:    addi a1, s1, -2
-; RV64-NEXT:    seqz a1, a1
-; RV64-NEXT:    addi a2, s3, -1
-; RV64-NEXT:    seqz a2, a2
+; RV64-NEXT:    addi s1, s1, -2
+; RV64-NEXT:    seqz a1, s1
+; RV64-NEXT:    addi s3, s3, -1
+; RV64-NEXT:    seqz a2, s3
 ; RV64-NEXT:    neg a0, a0
 ; RV64-NEXT:    addi a2, a2, -1
 ; RV64-NEXT:    addi a1, a1, -1
@@ -437,8 +437,8 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV64-NEXT:    sb a1, 12(s0)
 ; RV64-NEXT:    slli a0, a0, 31
 ; RV64-NEXT:    srli a0, a0, 31
-; RV64-NEXT:    slli a1, a2, 33
-; RV64-NEXT:    or a0, a0, a1
+; RV64-NEXT:    slli a2, a2, 33
+; RV64-NEXT:    or a0, a0, a2
 ; RV64-NEXT:    sd a0, 0(s0)
 ; RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
@@ -475,8 +475,8 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32M-NEXT:    srli a0, a0, 1
 ; RV32M-NEXT:    or a0, a0, a1
 ; RV32M-NEXT:    lw s4, 0(s0)
-; RV32M-NEXT:    slli a1, a2, 30
-; RV32M-NEXT:    srli a1, a1, 31
+; RV32M-NEXT:    slli a2, a2, 30
+; RV32M-NEXT:    srli a1, a2, 31
 ; RV32M-NEXT:    neg a1, a1
 ; RV32M-NEXT:    li a2, 7
 ; RV32M-NEXT:    li a3, 0
@@ -503,21 +503,21 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32M-NEXT:    seqz a3, a3
 ; RV32M-NEXT:    or a0, a0, a1
 ; RV32M-NEXT:    snez a0, a0
-; RV32M-NEXT:    addi a1, a3, -1
+; RV32M-NEXT:    addi a3, a3, -1
 ; RV32M-NEXT:    addi a2, a2, -1
-; RV32M-NEXT:    neg a3, a0
-; RV32M-NEXT:    sw a3, 0(s0)
-; RV32M-NEXT:    andi a3, a2, 7
-; RV32M-NEXT:    sb a3, 12(s0)
-; RV32M-NEXT:    slli a3, a1, 1
-; RV32M-NEXT:    or a0, a3, a0
+; RV32M-NEXT:    neg a1, a0
+; RV32M-NEXT:    sw a1, 0(s0)
+; RV32M-NEXT:    andi a1, a2, 7
+; RV32M-NEXT:    sb a1, 12(s0)
+; RV32M-NEXT:    slli a1, a3, 1
+; RV32M-NEXT:    or a0, a1, a0
 ; RV32M-NEXT:    sw a0, 4(s0)
-; RV32M-NEXT:    srli a0, a1, 31
-; RV32M-NEXT:    andi a1, a1, 1
+; RV32M-NEXT:    srli a0, a3, 31
+; RV32M-NEXT:    andi a1, a3, 1
 ; RV32M-NEXT:    slli a1, a1, 1
 ; RV32M-NEXT:    or a0, a0, a1
-; RV32M-NEXT:    slli a1, a2, 2
-; RV32M-NEXT:    or a0, a0, a1
+; RV32M-NEXT:    slli a2, a2, 2
+; RV32M-NEXT:    or a0, a0, a2
 ; RV32M-NEXT:    sw a0, 8(s0)
 ; RV32M-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32M-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -590,8 +590,8 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV64M-NEXT:    srli a3, a3, 62
 ; RV64M-NEXT:    or a1, a3, a1
 ; RV64M-NEXT:    sw a1, 8(a0)
-; RV64M-NEXT:    slli a1, a2, 29
-; RV64M-NEXT:    srli a1, a1, 61
+; RV64M-NEXT:    slli a2, a2, 29
+; RV64M-NEXT:    srli a1, a2, 61
 ; RV64M-NEXT:    sb a1, 12(a0)
 ; RV64M-NEXT:    ret
 ;
@@ -620,8 +620,8 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32MV-NEXT:    slli a3, a2, 30
 ; RV32MV-NEXT:    srli a0, a0, 2
 ; RV32MV-NEXT:    or s5, a0, a3
-; RV32MV-NEXT:    slli a0, a2, 29
-; RV32MV-NEXT:    srli a2, a0, 31
+; RV32MV-NEXT:    slli a2, a2, 29
+; RV32MV-NEXT:    srli a2, a2, 31
 ; RV32MV-NEXT:    lw a0, 0(s2)
 ; RV32MV-NEXT:    neg s6, a2
 ; RV32MV-NEXT:    andi a1, a1, 1
@@ -779,10 +779,10 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV64MV-NEXT:    slli a4, a3, 33
 ; RV64MV-NEXT:    or a1, a1, a4
 ; RV64MV-NEXT:    sd a1, 0(a0)
-; RV64MV-NEXT:    slli a1, a2, 2
-; RV64MV-NEXT:    slli a2, a3, 31
-; RV64MV-NEXT:    srli a2, a2, 62
-; RV64MV-NEXT:    or a1, a2, a1
+; RV64MV-NEXT:    slli a2, a2, 2
+; RV64MV-NEXT:    slli a3, a3, 31
+; RV64MV-NEXT:    srli a1, a3, 62
+; RV64MV-NEXT:    or a1, a1, a2
 ; RV64MV-NEXT:    sw a1, 8(a0)
 ; RV64MV-NEXT:    addi sp, s0, -64
 ; RV64MV-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload

@@ -1774,9 +1774,9 @@ define void @PR25873(ptr %outData) {
 ; CHECK-LABEL: @PR25873(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 1123418112, ptr [[OUTDATA:%.*]], align 4
-; CHECK-NEXT:    [[DOTSROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OUTDATA:%.*]], i64 4
-; CHECK-NEXT:    store i32 1139015680, ptr [[DOTSROA_IDX]], align 4
-; CHECK-NEXT:    [[TMPDATA_SROA_6_0__SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OUTDATA:%.*]], i64 8
+; CHECK-NEXT:    [[OUTDATA_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OUTDATA]], i64 4
+; CHECK-NEXT:    store i32 1139015680, ptr [[OUTDATA_SROA_IDX]], align 4
+; CHECK-NEXT:    [[TMPDATA_SROA_6_0_OUTDATA_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OUTDATA]], i64 8
 ; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_4_0_INSERT_EXT:%.*]] = zext i32 1139015680 to i64
 ; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_4_0_INSERT_SHIFT:%.*]] = shl i64 [[TMPDATA_SROA_6_SROA_4_0_INSERT_EXT]], 32
 ; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_4_0_INSERT_MASK:%.*]] = and i64 undef, 4294967295
@@ -1784,7 +1784,7 @@ define void @PR25873(ptr %outData) {
 ; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_0_0_INSERT_EXT:%.*]] = zext i32 1123418112 to i64
 ; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_0_0_INSERT_MASK:%.*]] = and i64 [[TMPDATA_SROA_6_SROA_4_0_INSERT_INSERT]], -4294967296
 ; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_0_0_INSERT_INSERT:%.*]] = or i64 [[TMPDATA_SROA_6_SROA_0_0_INSERT_MASK]], [[TMPDATA_SROA_6_SROA_0_0_INSERT_EXT]]
-; CHECK-NEXT:    store i64 [[TMPDATA_SROA_6_SROA_0_0_INSERT_INSERT]], ptr [[TMPDATA_SROA_6_0__SROA_IDX]], align 4
+; CHECK-NEXT:    store i64 [[TMPDATA_SROA_6_SROA_0_0_INSERT_INSERT]], ptr [[TMPDATA_SROA_6_0_OUTDATA_SROA_IDX]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

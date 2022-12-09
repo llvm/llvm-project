@@ -9,8 +9,6 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 // TODO FMT Evaluate gcc-12 status
 // UNSUPPORTED: gcc-12
-// TODO FMT Investigate AppleClang ICE
-// UNSUPPORTED: apple-clang-13
 
 // <format>
 

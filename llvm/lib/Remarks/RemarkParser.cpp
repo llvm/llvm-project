@@ -16,6 +16,7 @@
 #include "YAMLRemarkParser.h"
 #include "llvm-c/Remarks.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::remarks;
@@ -109,10 +110,10 @@ namespace {
 // Wrapper that holds the state needed to interact with the C API.
 struct CParser {
   std::unique_ptr<RemarkParser> TheParser;
-  Optional<std::string> Err;
+  std::optional<std::string> Err;
 
   CParser(Format ParserFormat, StringRef Buf,
-          Optional<ParsedStringTable> StrTab = None)
+          std::optional<ParsedStringTable> StrTab = None)
       : TheParser(cantFail(
             StrTab ? createRemarkParser(ParserFormat, Buf, std::move(*StrTab))
                    : createRemarkParser(ParserFormat, Buf))) {}

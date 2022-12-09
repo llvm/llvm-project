@@ -41,162 +41,142 @@ define dso_local void @_Z3fooi(i32 %cnt) {
 entry:
   %cnt.addr = alloca i32
   %arr = alloca %"struct.std::array"
-  %__range1 = alloca %"struct.std::array"*
-  %__begin1 = alloca i32*
-  %__end1 = alloca i32*
-  %elt = alloca i32*
-  %__range12 = alloca %"struct.std::array"*
-  %__begin13 = alloca i32*
-  %__end15 = alloca i32*
-  %elt11 = alloca i32*
-  store i32 %cnt, i32* %cnt.addr
-  %0 = bitcast %"struct.std::array"* %arr to i8*
-  call void @llvm.lifetime.start.p0i8(i64 24, i8* %0)
-  %1 = bitcast %"struct.std::array"** %__range1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %1)
-  store %"struct.std::array"* %arr, %"struct.std::array"** %__range1
-  %2 = bitcast i32** %__begin1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %2)
-  %3 = load %"struct.std::array"*, %"struct.std::array"** %__range1
-  %call = call i32* @_ZNSt5arrayIiLm6EE5beginEv(%"struct.std::array"* %3)
-  store i32* %call, i32** %__begin1
-  %4 = bitcast i32** %__end1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %4)
-  %5 = load %"struct.std::array"*, %"struct.std::array"** %__range1
-  %call1 = call i32* @_ZNSt5arrayIiLm6EE3endEv(%"struct.std::array"* %5)
-  store i32* %call1, i32** %__end1
+  %__range1 = alloca ptr
+  %__begin1 = alloca ptr
+  %__end1 = alloca ptr
+  %elt = alloca ptr
+  %__range12 = alloca ptr
+  %__begin13 = alloca ptr
+  %__end15 = alloca ptr
+  %elt11 = alloca ptr
+  store i32 %cnt, ptr %cnt.addr
+  call void @llvm.lifetime.start.p0(i64 24, ptr %arr)
+  call void @llvm.lifetime.start.p0(i64 8, ptr %__range1)
+  store ptr %arr, ptr %__range1
+  call void @llvm.lifetime.start.p0(i64 8, ptr %__begin1)
+  %0 = load ptr, ptr %__range1
+  %call = call ptr @_ZNSt5arrayIiLm6EE5beginEv(ptr %0)
+  store ptr %call, ptr %__begin1
+  call void @llvm.lifetime.start.p0(i64 8, ptr %__end1)
+  %1 = load ptr, ptr %__range1
+  %call1 = call ptr @_ZNSt5arrayIiLm6EE3endEv(ptr %1)
+  store ptr %call1, ptr %__end1
   br label %for.cond
 
 for.cond:
-  %6 = load i32*, i32** %__begin1
-  %7 = load i32*, i32** %__end1
-  %cmp = icmp ne i32* %6, %7
+  %2 = load ptr, ptr %__begin1
+  %3 = load ptr, ptr %__end1
+  %cmp = icmp ne ptr %2, %3
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:
-  %8 = bitcast i32** %__end1 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %8)
-  %9 = bitcast i32** %__begin1 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %9)
-  %10 = bitcast %"struct.std::array"** %__range1 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %10)
+  call void @llvm.lifetime.end.p0(i64 8, ptr %__end1)
+  call void @llvm.lifetime.end.p0(i64 8, ptr %__begin1)
+  call void @llvm.lifetime.end.p0(i64 8, ptr %__range1)
   br label %for.end
 
 for.body:
-  %11 = bitcast i32** %elt to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %11)
-  %12 = load i32*, i32** %__begin1
-  store i32* %12, i32** %elt
-  %13 = load i32, i32* %cnt.addr
-  %inc = add nsw i32 %13, 1
-  store i32 %inc, i32* %cnt.addr
-  %14 = load i32*, i32** %elt
-  store i32 %inc, i32* %14
-  %15 = bitcast i32** %elt to i8*
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %15)
+  call void @llvm.lifetime.start.p0(i64 8, ptr %elt)
+  %4 = load ptr, ptr %__begin1
+  store ptr %4, ptr %elt
+  %5 = load i32, ptr %cnt.addr
+  %inc = add nsw i32 %5, 1
+  store i32 %inc, ptr %cnt.addr
+  %6 = load ptr, ptr %elt
+  store i32 %inc, ptr %6
+  call void @llvm.lifetime.end.p0(i64 8, ptr %elt)
   br label %for.inc
 
 for.inc:
-  %16 = load i32*, i32** %__begin1
-  %incdec.ptr = getelementptr inbounds i32, i32* %16, i32 1
-  store i32* %incdec.ptr, i32** %__begin1
+  %7 = load ptr, ptr %__begin1
+  %incdec.ptr = getelementptr inbounds i32, ptr %7, i32 1
+  store ptr %incdec.ptr, ptr %__begin1
   br label %for.cond
 
 for.end:
-  %17 = bitcast %"struct.std::array"** %__range12 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %17)
-  store %"struct.std::array"* %arr, %"struct.std::array"** %__range12
-  %18 = bitcast i32** %__begin13 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %18)
-  %19 = load %"struct.std::array"*, %"struct.std::array"** %__range12
-  %call4 = call i32* @_ZNSt5arrayIiLm6EE5beginEv(%"struct.std::array"* %19)
-  store i32* %call4, i32** %__begin13
-  %20 = bitcast i32** %__end15 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %20)
-  %21 = load %"struct.std::array"*, %"struct.std::array"** %__range12
-  %call6 = call i32* @_ZNSt5arrayIiLm6EE3endEv(%"struct.std::array"* %21)
-  store i32* %call6, i32** %__end15
+  call void @llvm.lifetime.start.p0(i64 8, ptr %__range12)
+  store ptr %arr, ptr %__range12
+  call void @llvm.lifetime.start.p0(i64 8, ptr %__begin13)
+  %8 = load ptr, ptr %__range12
+  %call4 = call ptr @_ZNSt5arrayIiLm6EE5beginEv(ptr %8)
+  store ptr %call4, ptr %__begin13
+  call void @llvm.lifetime.start.p0(i64 8, ptr %__end15)
+  %9 = load ptr, ptr %__range12
+  %call6 = call ptr @_ZNSt5arrayIiLm6EE3endEv(ptr %9)
+  store ptr %call6, ptr %__end15
   br label %for.cond7
 
 for.cond7:
-  %22 = load i32*, i32** %__begin13
-  %23 = load i32*, i32** %__end15
-  %cmp8 = icmp ne i32* %22, %23
+  %10 = load ptr, ptr %__begin13
+  %11 = load ptr, ptr %__end15
+  %cmp8 = icmp ne ptr %10, %11
   br i1 %cmp8, label %for.body10, label %for.cond.cleanup9
 
 for.cond.cleanup9:
-  %24 = bitcast i32** %__end15 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %24)
-  %25 = bitcast i32** %__begin13 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %25)
-  %26 = bitcast %"struct.std::array"** %__range12 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %26)
+  call void @llvm.lifetime.end.p0(i64 8, ptr %__end15)
+  call void @llvm.lifetime.end.p0(i64 8, ptr %__begin13)
+  call void @llvm.lifetime.end.p0(i64 8, ptr %__range12)
   br label %for.end14
 
 for.body10:
-  %27 = bitcast i32** %elt11 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %27)
-  %28 = load i32*, i32** %__begin13
-  store i32* %28, i32** %elt11
-  %29 = load i32*, i32** %elt11
-  %30 = load i32, i32* %29
-  call void @_Z3usei(i32 %30)
-  %31 = bitcast i32** %elt11 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %31)
+  call void @llvm.lifetime.start.p0(i64 8, ptr %elt11)
+  %12 = load ptr, ptr %__begin13
+  store ptr %12, ptr %elt11
+  %13 = load ptr, ptr %elt11
+  %14 = load i32, ptr %13
+  call void @_Z3usei(i32 %14)
+  call void @llvm.lifetime.end.p0(i64 8, ptr %elt11)
   br label %for.inc12
 
 for.inc12:
-  %32 = load i32*, i32** %__begin13
-  %incdec.ptr13 = getelementptr inbounds i32, i32* %32, i32 1
-  store i32* %incdec.ptr13, i32** %__begin13
+  %15 = load ptr, ptr %__begin13
+  %incdec.ptr13 = getelementptr inbounds i32, ptr %15, i32 1
+  store ptr %incdec.ptr13, ptr %__begin13
   br label %for.cond7
 
 for.end14:
-  %33 = bitcast %"struct.std::array"* %arr to i8*
-  call void @llvm.lifetime.end.p0i8(i64 24, i8* %33)
+  call void @llvm.lifetime.end.p0(i64 24, ptr %arr)
   ret void
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
-define linkonce_odr dso_local i32* @_ZNSt5arrayIiLm6EE5beginEv(%"struct.std::array"* %this) {
+define linkonce_odr dso_local ptr @_ZNSt5arrayIiLm6EE5beginEv(ptr %this) {
 entry:
-  %this.addr = alloca %"struct.std::array"*
-  store %"struct.std::array"* %this, %"struct.std::array"** %this.addr
-  %this1 = load %"struct.std::array"*, %"struct.std::array"** %this.addr
-  %call = call i32* @_ZNSt5arrayIiLm6EE4dataEv(%"struct.std::array"* %this1)
-  ret i32* %call
+  %this.addr = alloca ptr
+  store ptr %this, ptr %this.addr
+  %this1 = load ptr, ptr %this.addr
+  %call = call ptr @_ZNSt5arrayIiLm6EE4dataEv(ptr %this1)
+  ret ptr %call
 }
 
-define linkonce_odr dso_local i32* @_ZNSt5arrayIiLm6EE3endEv(%"struct.std::array"* %this) {
+define linkonce_odr dso_local ptr @_ZNSt5arrayIiLm6EE3endEv(ptr %this) {
 entry:
-  %this.addr = alloca %"struct.std::array"*
-  store %"struct.std::array"* %this, %"struct.std::array"** %this.addr
-  %this1 = load %"struct.std::array"*, %"struct.std::array"** %this.addr
-  %call = call i32* @_ZNSt5arrayIiLm6EE4dataEv(%"struct.std::array"* %this1)
-  %add.ptr = getelementptr inbounds i32, i32* %call, i64 6
-  ret i32* %add.ptr
+  %this.addr = alloca ptr
+  store ptr %this, ptr %this.addr
+  %this1 = load ptr, ptr %this.addr
+  %call = call ptr @_ZNSt5arrayIiLm6EE4dataEv(ptr %this1)
+  %add.ptr = getelementptr inbounds i32, ptr %call, i64 6
+  ret ptr %add.ptr
 }
 
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 declare dso_local void @_Z3usei(i32)
 
-define linkonce_odr dso_local i32* @_ZNSt5arrayIiLm6EE4dataEv(%"struct.std::array"* %this) {
+define linkonce_odr dso_local ptr @_ZNSt5arrayIiLm6EE4dataEv(ptr %this) {
 entry:
-  %this.addr = alloca %"struct.std::array"*
-  store %"struct.std::array"* %this, %"struct.std::array"** %this.addr
-  %this1 = load %"struct.std::array"*, %"struct.std::array"** %this.addr
-  %_M_elems = getelementptr inbounds %"struct.std::array", %"struct.std::array"* %this1, i32 0, i32 0
-  %call = call i32* @_ZNSt14__array_traitsIiLm6EE6_S_ptrERA6_Ki([6 x i32]* nonnull align 4 dereferenceable(24) %_M_elems)
-  ret i32* %call
+  %this.addr = alloca ptr
+  store ptr %this, ptr %this.addr
+  %this1 = load ptr, ptr %this.addr
+  %call = call ptr @_ZNSt14__array_traitsIiLm6EE6_S_ptrERA6_Ki(ptr nonnull align 4 dereferenceable(24) %this1)
+  ret ptr %call
 }
 
-define linkonce_odr dso_local i32* @_ZNSt14__array_traitsIiLm6EE6_S_ptrERA6_Ki([6 x i32]* nonnull align 4 dereferenceable(24) %__t) {
+define linkonce_odr dso_local ptr @_ZNSt14__array_traitsIiLm6EE6_S_ptrERA6_Ki(ptr nonnull align 4 dereferenceable(24) %__t) {
 entry:
-  %__t.addr = alloca [6 x i32]*
-  store [6 x i32]* %__t, [6 x i32]** %__t.addr
-  %0 = load [6 x i32]*, [6 x i32]** %__t.addr
-  %arraydecay = getelementptr inbounds [6 x i32], [6 x i32]* %0, i64 0, i64 0
-  ret i32* %arraydecay
+  %__t.addr = alloca ptr
+  store ptr %__t, ptr %__t.addr
+  %0 = load ptr, ptr %__t.addr
+  ret ptr %0
 }

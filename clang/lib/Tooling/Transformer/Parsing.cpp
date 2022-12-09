@@ -152,7 +152,7 @@ static StringRef consumeWhitespace(StringRef S) {
 
 // Parses a single expected character \c c from \c State, skipping preceding
 // whitespace.  Error if the expected character isn't found.
-static ExpectedProgress<llvm::NoneType> parseChar(char c, ParseState State) {
+static ExpectedProgress<std::nullopt_t> parseChar(char c, ParseState State) {
   State.Input = consumeWhitespace(State.Input);
   if (State.Input.empty() || State.Input.front() != c)
     return makeParseError(State,

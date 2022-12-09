@@ -108,8 +108,8 @@ define void @insertelt_v32i16(<32 x i16>* %x, i16 %y, i32 %idx) {
 ; RV64-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
 ; RV64-NEXT:    vle16.v v8, (a0)
 ; RV64-NEXT:    vmv.s.x v12, a1
-; RV64-NEXT:    slli a1, a2, 32
-; RV64-NEXT:    srli a1, a1, 32
+; RV64-NEXT:    slli a2, a2, 32
+; RV64-NEXT:    srli a1, a2, 32
 ; RV64-NEXT:    addi a2, a1, 1
 ; RV64-NEXT:    vsetvli zero, a2, e16, m4, tu, ma
 ; RV64-NEXT:    vslideup.vx v8, v12, a1

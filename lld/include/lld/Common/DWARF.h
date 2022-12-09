@@ -26,9 +26,9 @@ namespace lld {
 class DWARFCache {
 public:
   DWARFCache(std::unique_ptr<llvm::DWARFContext> dwarf);
-  llvm::Optional<llvm::DILineInfo> getDILineInfo(uint64_t offset,
-                                                 uint64_t sectionIndex);
-  llvm::Optional<std::pair<std::string, unsigned>>
+  std::optional<llvm::DILineInfo> getDILineInfo(uint64_t offset,
+                                                uint64_t sectionIndex);
+  std::optional<std::pair<std::string, unsigned>>
   getVariableLoc(StringRef name);
 
   llvm::DWARFContext *getContext() { return dwarf.get(); }

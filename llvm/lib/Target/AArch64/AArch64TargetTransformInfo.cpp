@@ -2171,6 +2171,18 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
           Cost *= 4;
         return Cost;
       } else {
+        // If one of the operands is a uniform constant then the cost for each
+        // element is Cost for insertion, extraction and division.
+        // Insertion cost = 2, Extraction Cost = 2, Division = cost for the
+        // operation with scalar type
+        if ((Op1Info.isConstant() && Op1Info.isUniform()) ||
+            (Op2Info.isConstant() && Op2Info.isUniform())) {
+          if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
+            InstructionCost DivCost = BaseT::getArithmeticInstrCost(
+                Opcode, Ty->getScalarType(), CostKind, Op1Info, Op2Info);
+            return (4 + DivCost) * VTy->getNumElements();
+          }
+        }
         // On AArch64, without SVE, vector divisions are expanded
         // into scalar divisions of each pair of elements.
         Cost += getArithmeticInstrCost(Instruction::ExtractElement, Ty,

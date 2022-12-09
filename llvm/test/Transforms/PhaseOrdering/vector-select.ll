@@ -14,65 +14,46 @@ define <3 x float> @PR52631(<3 x float> %a, <3 x float> %b, <3 x i32> %c) {
   %mask = alloca <3 x i32>, align 16
   %res = alloca <3 x i32>, align 16
   %extractVec = shufflevector <3 x float> %a, <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
-  %storetmp = bitcast <3 x float>* %a.addr to <4 x float>*
-  store <4 x float> %extractVec, <4 x float>* %storetmp, align 16
+  store <4 x float> %extractVec, ptr %a.addr, align 16
   %extractVec1 = shufflevector <3 x float> %b, <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
-  %storetmp2 = bitcast <3 x float>* %b.addr to <4 x float>*
-  store <4 x float> %extractVec1, <4 x float>* %storetmp2, align 16
+  store <4 x float> %extractVec1, ptr %b.addr, align 16
   %extractVec3 = shufflevector <3 x i32> %c, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
-  %storetmp4 = bitcast <3 x i32>* %c.addr to <4 x i32>*
-  store <4 x i32> %extractVec3, <4 x i32>* %storetmp4, align 16
-  %t0 = bitcast <3 x i32>* %zero to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* %t0) #2
-  %storetmp5 = bitcast <3 x i32>* %zero to <4 x i32>*
-  store <4 x i32> <i32 0, i32 0, i32 0, i32 undef>, <4 x i32>* %storetmp5, align 16
-  %t1 = bitcast <3 x i32>* %mask to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* %t1) #2
-  %castToVec4 = bitcast <3 x i32>* %zero to <4 x i32>*
-  %loadVec4 = load <4 x i32>, <4 x i32>* %castToVec4, align 16
+  store <4 x i32> %extractVec3, ptr %c.addr, align 16
+  call void @llvm.lifetime.start.p0(i64 16, ptr %zero) #2
+  store <4 x i32> <i32 0, i32 0, i32 0, i32 undef>, ptr %zero, align 16
+  call void @llvm.lifetime.start.p0(i64 16, ptr %mask) #2
+  %loadVec4 = load <4 x i32>, ptr %zero, align 16
   %extractVec6 = shufflevector <4 x i32> %loadVec4, <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
-  %castToVec47 = bitcast <3 x i32>* %c.addr to <4 x i32>*
-  %loadVec48 = load <4 x i32>, <4 x i32>* %castToVec47, align 16
+  %loadVec48 = load <4 x i32>, ptr %c.addr, align 16
   %extractVec9 = shufflevector <4 x i32> %loadVec48, <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
   %cmp = icmp sgt <3 x i32> %extractVec6, %extractVec9
   %sext = sext <3 x i1> %cmp to <3 x i32>
   %extractVec10 = shufflevector <3 x i32> %sext, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
-  %storetmp11 = bitcast <3 x i32>* %mask to <4 x i32>*
-  store <4 x i32> %extractVec10, <4 x i32>* %storetmp11, align 16
-  %t2 = bitcast <3 x i32>* %res to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* %t2) #2
-  %castToVec412 = bitcast <3 x i32>* %mask to <4 x i32>*
-  %loadVec413 = load <4 x i32>, <4 x i32>* %castToVec412, align 16
+  store <4 x i32> %extractVec10, ptr %mask, align 16
+  call void @llvm.lifetime.start.p0(i64 16, ptr %res) #2
+  %loadVec413 = load <4 x i32>, ptr %mask, align 16
   %extractVec14 = shufflevector <4 x i32> %loadVec413, <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
-  %castToVec415 = bitcast <3 x float>* %b.addr to <4 x float>*
-  %loadVec416 = load <4 x float>, <4 x float>* %castToVec415, align 16
+  %loadVec416 = load <4 x float>, ptr %b.addr, align 16
   %extractVec17 = shufflevector <4 x float> %loadVec416, <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
   %astype = bitcast <3 x float> %extractVec17 to <3 x i32>
   %and = and <3 x i32> %extractVec14, %astype
   %extractVec18 = shufflevector <3 x i32> %and, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
-  %storetmp19 = bitcast <3 x i32>* %res to <4 x i32>*
-  store <4 x i32> %extractVec18, <4 x i32>* %storetmp19, align 16
-  %castToVec420 = bitcast <3 x i32>* %mask to <4 x i32>*
-  %loadVec421 = load <4 x i32>, <4 x i32>* %castToVec420, align 16
+  store <4 x i32> %extractVec18, ptr %res, align 16
+  %loadVec421 = load <4 x i32>, ptr %mask, align 16
   %extractVec22 = shufflevector <4 x i32> %loadVec421, <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
   %cmp23 = icmp eq <3 x i32> %extractVec22, zeroinitializer
   %sext24 = sext <3 x i1> %cmp23 to <3 x i32>
-  %castToVec425 = bitcast <3 x float>* %a.addr to <4 x float>*
-  %loadVec426 = load <4 x float>, <4 x float>* %castToVec425, align 16
+  %loadVec426 = load <4 x float>, ptr %a.addr, align 16
   %extractVec27 = shufflevector <4 x float> %loadVec426, <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
   %astype28 = bitcast <3 x float> %extractVec27 to <3 x i32>
   %and29 = and <3 x i32> %sext24, %astype28
-  %castToVec430 = bitcast <3 x i32>* %res to <4 x i32>*
-  %loadVec431 = load <4 x i32>, <4 x i32>* %castToVec430, align 16
+  %loadVec431 = load <4 x i32>, ptr %res, align 16
   %extractVec32 = shufflevector <4 x i32> %loadVec431, <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
   %or = or <3 x i32> %and29, %extractVec32
   %astype33 = bitcast <3 x i32> %or to <3 x float>
-  %t3 = bitcast <3 x i32>* %res to i8*
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* %t3) #2
-  %t4 = bitcast <3 x i32>* %mask to i8*
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* %t4) #2
-  %t5 = bitcast <3 x i32>* %zero to i8*
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* %t5) #2
+  call void @llvm.lifetime.end.p0(i64 16, ptr %res) #2
+  call void @llvm.lifetime.end.p0(i64 16, ptr %mask) #2
+  call void @llvm.lifetime.end.p0(i64 16, ptr %zero) #2
   ret <3 x float> %astype33
 }
 
@@ -131,5 +112,5 @@ for.end:
   ret <4 x i32> %min.addr.0
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1

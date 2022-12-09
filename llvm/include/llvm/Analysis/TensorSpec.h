@@ -16,6 +16,7 @@
 #include "llvm/Support/JSON.h"
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -107,7 +108,7 @@ Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
 
 struct LoggedFeatureSpec {
   TensorSpec Spec;
-  Optional<std::string> LoggingName;
+  std::optional<std::string> LoggingName;
   const std::string &getLoggingName() const {
     return LoggingName ? *LoggingName : Spec.name();
   }

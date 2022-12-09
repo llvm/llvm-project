@@ -353,7 +353,9 @@ def AffineForOp : Affine_Op<"for",
 
 def AffineIfOp : Affine_Op<"if",
                            [ImplicitAffineTerminator, RecursivelySpeculatable,
-                            RecursiveMemoryEffects, NoRegionArguments]> {
+                            RecursiveMemoryEffects, NoRegionArguments,
+                            DeclareOpInterfaceMethods<RegionBranchOpInterface>
+                           ]> {
   let summary = "if-then-else operation";
   let description = [{
     Syntax:

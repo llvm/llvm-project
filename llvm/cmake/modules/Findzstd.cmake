@@ -11,10 +11,8 @@
 # zstd::libzstd_static
 
 if(MSVC)
-  set(zstd_SHARED_LIBRARY_SUFFIX "\\${CMAKE_LINK_LIBRARY_SUFFIX}$")
   set(zstd_STATIC_LIBRARY_SUFFIX "_static\\${CMAKE_STATIC_LIBRARY_SUFFIX}$")
 else()
-  set(zstd_SHARED_LIBRARY_SUFFIX "\\${CMAKE_SHARED_LIBRARY_SUFFIX}$")
   set(zstd_STATIC_LIBRARY_SUFFIX "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$")
 endif()
 
@@ -31,8 +29,9 @@ find_package_handle_standard_args(
 )
 
 if(zstd_FOUND)
-  if(zstd_LIBRARY MATCHES "${zstd_SHARED_LIBRARY_SUFFIX}$" AND
-     NOT TARGET zstd::libzstd_shared)
+  if(zstd_LIBRARY MATCHES "${zstd_STATIC_LIBRARY_SUFFIX}$")
+    set(zstd_STATIC_LIBRARY "${zstd_LIBRARY}")
+  elseif (NOT TARGET zstd::libzstd_shared)
     add_library(zstd::libzstd_shared SHARED IMPORTED)
     if(MSVC)
       # IMPORTED_LOCATION is the path to the DLL and IMPORTED_IMPLIB is the "library".
@@ -51,8 +50,6 @@ if(zstd_FOUND)
           INTERFACE_INCLUDE_DIRECTORIES "${zstd_INCLUDE_DIR}"
           IMPORTED_LOCATION "${zstd_LIBRARY}")
     endif()
-  else()
-    set(zstd_STATIC_LIBRARY "${zstd_LIBRARY}")
   endif()
   if(zstd_STATIC_LIBRARY MATCHES "${zstd_STATIC_LIBRARY_SUFFIX}$" AND
      NOT TARGET zstd::libzstd_static)
@@ -63,7 +60,6 @@ if(zstd_FOUND)
   endif()
 endif()
 
-unset(zstd_SHARED_LIBRARY_SUFFIX)
 unset(zstd_STATIC_LIBRARY_SUFFIX)
 
 mark_as_advanced(zstd_INCLUDE_DIR zstd_LIBRARY zstd_STATIC_LIBRARY)

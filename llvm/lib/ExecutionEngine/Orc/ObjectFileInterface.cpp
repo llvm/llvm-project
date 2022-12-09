@@ -15,6 +15,7 @@
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "orc"
 
@@ -151,7 +152,7 @@ static Expected<MaterializationUnit::Interface>
 getCOFFObjectFileSymbolInfo(ExecutionSession &ES,
                             const object::COFFObjectFile &Obj) {
   MaterializationUnit::Interface I;
-  std::vector<Optional<object::coff_aux_section_definition>> ComdatDefs(
+  std::vector<std::optional<object::coff_aux_section_definition>> ComdatDefs(
       Obj.getNumberOfSections() + 1);
   for (auto &Sym : Obj.symbols()) {
     Expected<uint32_t> SymFlagsOrErr = Sym.getFlags();

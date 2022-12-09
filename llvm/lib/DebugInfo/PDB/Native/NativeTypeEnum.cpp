@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 
 #include <cassert>
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -54,7 +55,7 @@ private:
   NativeSession &Session;
   const NativeTypeEnum &ClassParent;
   std::vector<EnumeratorRecord> Enumerators;
-  Optional<TypeIndex> ContinuationIndex;
+  std::optional<TypeIndex> ContinuationIndex;
   uint32_t Index = 0;
 };
 } // namespace

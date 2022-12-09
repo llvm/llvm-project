@@ -162,6 +162,11 @@ public:
     else
       return static_cast<const AnalysisRegions &>(*RegionsOrErr);
   }
+
+  Expected<const CodeRegions &>
+  parseCodeRegions(const std::unique_ptr<MCInstPrinter> &IP) override {
+    return AsmCodeRegionGenerator::parseCodeRegions(IP);
+  }
 };
 
 class AsmInstrumentRegionGenerator final : public InstrumentRegionGenerator,
@@ -186,6 +191,11 @@ public:
       return RegionsOrErr.takeError();
     else
       return static_cast<const InstrumentRegions &>(*RegionsOrErr);
+  }
+
+  Expected<const CodeRegions &>
+  parseCodeRegions(const std::unique_ptr<MCInstPrinter> &IP) override {
+    return AsmCodeRegionGenerator::parseCodeRegions(IP);
   }
 };
 

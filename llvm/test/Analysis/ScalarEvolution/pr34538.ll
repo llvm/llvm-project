@@ -3,7 +3,7 @@
 
 define i32 @pr34538() local_unnamed_addr #0 {
 ; CHECK-ANALYSIS-1: Loop %do.body: backedge-taken count is 10000
-; CHECK-ANALYSIS-1: Loop %do.body: max backedge-taken count is 10000
+; CHECK-ANALYSIS-1: Loop %do.body: constant max backedge-taken count is 10000
 ; CHECK-ANALYSIS-1: Loop %do.body: Predicated backedge-taken count is 10000
 entry:
   br label %do.body
@@ -34,6 +34,6 @@ do.body:                                          ; preds = %do.body, %entry
 do.end:                                           ; preds = %do.body
   ret i32 0
 ; CHECK-ANALYSIS-2: Loop %do.body: backedge-taken count is 5000
-; CHECK-ANALYSIS-2: Loop %do.body: max backedge-taken count is 5000
+; CHECK-ANALYSIS-2: Loop %do.body: constant max backedge-taken count is 5000
 ; CHECK-ANALYSIS-2: Loop %do.body: Predicated backedge-taken count is 5000
 }

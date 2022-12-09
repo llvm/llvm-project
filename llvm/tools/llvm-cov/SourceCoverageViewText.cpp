@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -102,7 +103,7 @@ void SourceCoverageViewText::renderLine(raw_ostream &OS, LineRef L,
   auto *WrappedSegment = LCS.getWrappedSegment();
   CoverageSegmentArray Segments = LCS.getLineSegments();
 
-  Optional<raw_ostream::Colors> Highlight;
+  std::optional<raw_ostream::Colors> Highlight;
   SmallVector<std::pair<unsigned, unsigned>, 2> HighlightedRanges;
 
   // The first segment overlaps from a previous line, so we treat it specially.
