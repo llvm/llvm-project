@@ -1,4 +1,5 @@
-/* RUN: %clang_cc1 -std=c89 -fsyntax-only -fms-extensions -pedantic -verify %s
+/* RUN: touch %s
+   RUN: %clang_cc1 -std=c89 -fsyntax-only -fms-extensions -pedantic -verify %s
    RUN: %clang_cc1 -std=c99 -fsyntax-only -fms-extensions -pedantic -verify %s
    RUN: %clang_cc1 -std=c11 -fsyntax-only -fms-extensions -pedantic -verify %s
    RUN: %clang_cc1 -std=c17 -fsyntax-only -fms-extensions -pedantic -verify %s
