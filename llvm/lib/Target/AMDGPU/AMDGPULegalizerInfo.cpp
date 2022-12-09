@@ -978,10 +978,20 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0)
     .widenScalarToNextPow2(0, 32);
 
-  getActionDefinitionsBuilder(G_IS_FPCLASS)
-    .legalForCartesianProduct({S1}, ST.has16BitInsts() ? FPTypes16 : FPTypesBase)
-    .widenScalarToNextPow2(1)
-    .scalarize(0);
+  // If no 16 bit instr is available, lower into different instructions.
+  if (ST.has16BitInsts())
+    getActionDefinitionsBuilder(G_IS_FPCLASS)
+        .legalForCartesianProduct({S1}, FPTypes16)
+        .widenScalarToNextPow2(1)
+        .scalarize(0)
+        .lower();
+  else
+    getActionDefinitionsBuilder(G_IS_FPCLASS)
+        .legalForCartesianProduct({S1}, FPTypesBase)
+        .lowerFor({S1, S16})
+        .widenScalarToNextPow2(1)
+        .scalarize(0)
+        .lower();
 
   // The hardware instructions return a different result on 0 than the generic
   // instructions expect. The hardware produces -1, but these produce the
