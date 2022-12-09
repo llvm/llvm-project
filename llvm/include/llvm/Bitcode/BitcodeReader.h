@@ -23,6 +23,7 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -33,7 +34,7 @@ class Module;
 class MemoryBuffer;
 class ModuleSummaryIndex;
 
-typedef llvm::function_ref<Optional<std::string>(StringRef)>
+typedef llvm::function_ref<std::optional<std::string>(StringRef)>
     DataLayoutCallbackTy;
 
   // These functions are for converting Expected/Error values to
