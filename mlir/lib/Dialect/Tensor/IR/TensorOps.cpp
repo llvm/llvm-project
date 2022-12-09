@@ -3349,6 +3349,37 @@ ShapedType PackOp::inferPackedType(ShapedType sourceType,
   return RankedTensorType::get(resultShape, sourceType.getElementType());
 }
 
+Value PackOp::createDestinationTensor(OpBuilder &b, Location loc, Value source,
+                                      ArrayRef<OpFoldResult> innerTileSizes,
+                                      ArrayRef<int64_t> innerDimsPos,
+                                      ArrayRef<int64_t> outerDimsPerm) {
+  AffineExpr dim0, dim1;
+  bindDims(b.getContext(), dim0, dim1);
+  auto ceilDiv = [&](OpFoldResult v1, OpFoldResult v2) -> OpFoldResult {
+    return makeComposedFoldedAffineApply(b, loc, dim0.ceilDiv(dim1), {v1, v2});
+  };
+
+  SmallVector<OpFoldResult> mixedSizes;
+  for (auto [index, value] :
+       llvm::enumerate(source.getType().cast<RankedTensorType>().getShape())) {
+    if (ShapedType::isDynamic(value))
+      mixedSizes.push_back(b.create<DimOp>(loc, source, index).getResult());
+    else
+      mixedSizes.push_back(b.getIndexAttr(value));
+  }
+  for (auto it : llvm::zip(innerDimsPos, innerTileSizes)) {
+    int64_t dimPos = std::get<0>(it);
+    OpFoldResult tileSize = std::get<1>(it);
+    mixedSizes[dimPos] = ceilDiv(mixedSizes[dimPos], tileSize);
+  }
+  if (!outerDimsPerm.empty())
+    applyPermutationToVector<OpFoldResult>(mixedSizes, outerDimsPerm);
+
+  mixedSizes.append(innerTileSizes.begin(), innerTileSizes.end());
+  auto elemType = source.getType().cast<ShapedType>().getElementType();
+  return b.create<tensor::EmptyOp>(loc, mixedSizes, elemType);
+}
+
 /// Returns true if the tiles and the tiled dims are constant.
 template <typename OpTy>
 bool areTilesAndTiledDimsAllConstant(OpTy op) {
