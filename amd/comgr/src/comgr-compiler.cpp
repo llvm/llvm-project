@@ -842,7 +842,7 @@ amd_comgr_status_t AMDGPUCompiler::executeOutOfProcessHIPCompilation(
   }
 
   ArgsV.push_back("--genco");
-  std::vector<Optional<StringRef>> Redirects;
+  llvm::ArrayRef<std::optional<StringRef>> Redirects;
   std::string ErrMsg;
   int RC = sys::ExecuteAndWait(Exec, ArgsV,
                                /*env=*/None, Redirects, /*secondsToWait=*/0,
