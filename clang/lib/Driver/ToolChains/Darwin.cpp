@@ -3277,11 +3277,10 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
       !(isTargetIPhoneOS() && isIPhoneOSVersionLT(5, 0)))
     Res |= SanitizerKind::Vptr;
 
-  if ((IsX86_64 || IsAArch64) && isTargetMacOSBased()) {
+  if ((IsX86_64 || IsAArch64) &&
+      (isTargetMacOSBased() || isTargetIOSSimulator() ||
+       isTargetTvOSSimulator() || isTargetWatchOSSimulator())) {
     Res |= SanitizerKind::Thread;
-  } else if (isTargetIOSSimulator() || isTargetTvOSSimulator()) {
-    if (IsX86_64)
-      Res |= SanitizerKind::Thread;
   }
   return Res;
 }
