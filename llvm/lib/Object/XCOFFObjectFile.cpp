@@ -417,9 +417,10 @@ XCOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
   return makeArrayRef(ContentStart,SectionSize);
 }
 
-Align XCOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
+uint64_t XCOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
+  uint64_t Result = 0;
   llvm_unreachable("Not yet implemented!");
-  return {};
+  return Result;
 }
 
 uint64_t XCOFFObjectFile::getSectionFileOffsetToRawData(DataRefImpl Sec) const {

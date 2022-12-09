@@ -446,7 +446,7 @@ public:
   ArrayRef<uint8_t> getSectionContents(uint32_t Offset, uint64_t Size) const;
   Expected<ArrayRef<uint8_t>>
   getSectionContents(DataRefImpl Sec) const override;
-  Align getSectionAlignment(DataRefImpl Sec) const override;
+  uint64_t getSectionAlignment(DataRefImpl Sec) const override;
   Expected<SectionRef> getSection(unsigned SectionIndex) const;
   Expected<SectionRef> getSection(StringRef SectionName) const;
   bool isSectionCompressed(DataRefImpl Sec) const override;

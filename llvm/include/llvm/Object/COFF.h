@@ -456,16 +456,18 @@ struct coff_section {
            NumberOfRelocations == UINT16_MAX;
   }
 
-  Align getAlignment() const {
+  uint32_t getAlignment() const {
     // The IMAGE_SCN_TYPE_NO_PAD bit is a legacy way of getting to
     // IMAGE_SCN_ALIGN_1BYTES.
     if (Characteristics & COFF::IMAGE_SCN_TYPE_NO_PAD)
-      return Align(1);
+      return 1;
 
     // Bit [20:24] contains section alignment. 0 means use a default alignment
     // of 16.
-    uint32_t EncodedLogValue = (Characteristics >> 20) & 0xF;
-    return decodeMaybeAlign(EncodedLogValue).value_or(Align(16));
+    uint32_t Shift = (Characteristics >> 20) & 0xF;
+    if (Shift > 0)
+      return 1U << (Shift - 1);
+    return 16;
   }
 };
 
@@ -944,7 +946,7 @@ protected:
   uint64_t getSectionSize(DataRefImpl Sec) const override;
   Expected<ArrayRef<uint8_t>>
   getSectionContents(DataRefImpl Sec) const override;
-  Align getSectionAlignment(DataRefImpl Sec) const override;
+  uint64_t getSectionAlignment(DataRefImpl Sec) const override;
   bool isSectionCompressed(DataRefImpl Sec) const override;
   bool isSectionText(DataRefImpl Sec) const override;
   bool isSectionData(DataRefImpl Sec) const override;

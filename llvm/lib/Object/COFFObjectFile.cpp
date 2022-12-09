@@ -299,9 +299,9 @@ COFFObjectFile::getSectionContents(DataRefImpl Ref) const {
   return Res;
 }
 
-Align COFFObjectFile::getSectionAlignment(DataRefImpl Ref) const {
+uint64_t COFFObjectFile::getSectionAlignment(DataRefImpl Ref) const {
   const coff_section *Sec = toSec(Ref);
-  return Align(Sec->getAlignment());
+  return Sec->getAlignment();
 }
 
 bool COFFObjectFile::isSectionCompressed(DataRefImpl Sec) const {
