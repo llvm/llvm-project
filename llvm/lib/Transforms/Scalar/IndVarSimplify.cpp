@@ -1602,8 +1602,8 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     return false;
 
   // Get a symbolic upper bound on the loop backedge taken count.
-  const SCEV *MaxExitCount = SE->getSymbolicMaxBackedgeTakenCount(L);
-  if (isa<SCEVCouldNotCompute>(MaxExitCount))
+  const SCEV *MaxBECount = SE->getSymbolicMaxBackedgeTakenCount(L);
+  if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
 
   // Visit our exit blocks in order of dominance. We know from the fact that
@@ -1629,22 +1629,22 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
 
   bool Changed = false;
   bool SkipLastIter = false;
-  SmallSet<const SCEV*, 8> DominatingExitCounts;
+  SmallSet<const SCEV *, 8> DominatingExactExitCounts;
   for (BasicBlock *ExitingBB : ExitingBlocks) {
-    const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
-    if (isa<SCEVCouldNotCompute>(ExitCount)) {
+    const SCEV *ExactExitCount = SE->getExitCount(L, ExitingBB);
+    if (isa<SCEVCouldNotCompute>(ExactExitCount)) {
       // Okay, we do not know the exit count here. Can we at least prove that it
       // will remain the same within iteration space?
       auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
       auto OptimizeCond = [&](bool Inverted, bool SkipLastIter) {
         return optimizeLoopExitWithUnknownExitCount(
-            L, BI, ExitingBB, MaxExitCount, Inverted, SkipLastIter, SE,
-            Rewriter, DeadInsts);
+            L, BI, ExitingBB, MaxBECount, Inverted, SkipLastIter, SE, Rewriter,
+            DeadInsts);
       };
 
       // TODO: We might have proved that we can skip the last iteration for
       // this check. In this case, we only want to check the condition on the
-      // pre-last iteration (MaxExitCount - 1). However, there is a nasty
+      // pre-last iteration (MaxBECount - 1). However, there is a nasty
       // corner case:
       //
       //   for (i = len; i != 0; i--) { ... check (i ult X) ... }
@@ -1656,8 +1656,8 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       //
       // As a temporary solution, we query both last and pre-last iterations in
       // hope that we will be able to prove triviality for at least one of
-      // them. We can stop querying MaxExitCount for this case once SCEV
-      // understands that (MaxExitCount - 1) will not overflow here.
+      // them. We can stop querying MaxBECount for this case once SCEV
+      // understands that (MaxBECount - 1) will not overflow here.
       if (OptimizeCond(false, false) || OptimizeCond(true, false))
         Changed = true;
       else if (SkipLastIter)
@@ -1666,7 +1666,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       continue;
     }
 
-    if (MaxExitCount == ExitCount)
+    if (MaxBECount == ExactExitCount)
       // If the loop has more than 1 iteration, all further checks will be
       // executed 1 iteration less.
       SkipLastIter = true;
@@ -1676,27 +1676,27 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // exit; there may be an earlier one taken on the first iteration.
     // We know that the backedge can't be taken, so we replace all
     // the header PHIs with values coming from the preheader.
-    if (ExitCount->isZero()) {
+    if (ExactExitCount->isZero()) {
       foldExit(L, ExitingBB, true, DeadInsts);
       replaceLoopPHINodesWithPreheaderValues(LI, L, DeadInsts, *SE);
       Changed = true;
       continue;
     }
 
-    assert(ExitCount->getType()->isIntegerTy() &&
-           MaxExitCount->getType()->isIntegerTy() &&
+    assert(ExactExitCount->getType()->isIntegerTy() &&
+           MaxBECount->getType()->isIntegerTy() &&
            "Exit counts must be integers");
 
     Type *WiderType =
-      SE->getWiderType(MaxExitCount->getType(), ExitCount->getType());
-    ExitCount = SE->getNoopOrZeroExtend(ExitCount, WiderType);
-    MaxExitCount = SE->getNoopOrZeroExtend(MaxExitCount, WiderType);
-    assert(MaxExitCount->getType() == ExitCount->getType());
+        SE->getWiderType(MaxBECount->getType(), ExactExitCount->getType());
+    ExactExitCount = SE->getNoopOrZeroExtend(ExactExitCount, WiderType);
+    MaxBECount = SE->getNoopOrZeroExtend(MaxBECount, WiderType);
+    assert(MaxBECount->getType() == ExactExitCount->getType());
 
     // Can we prove that some other exit must be taken strictly before this
     // one?
-    if (SE->isLoopEntryGuardedByCond(L, CmpInst::ICMP_ULT,
-                                     MaxExitCount, ExitCount)) {
+    if (SE->isLoopEntryGuardedByCond(L, CmpInst::ICMP_ULT, MaxBECount,
+                                     ExactExitCount)) {
       foldExit(L, ExitingBB, false, DeadInsts);
       Changed = true;
       continue;
@@ -1706,7 +1706,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // find a duplicate, we've found an exit which would have exited on the
     // exiting iteration, but (from the visit order) strictly follows another
     // which does the same and is thus dead.
-    if (!DominatingExitCounts.insert(ExitCount).second) {
+    if (!DominatingExactExitCounts.insert(ExactExitCount).second) {
       foldExit(L, ExitingBB, false, DeadInsts);
       Changed = true;
       continue;
