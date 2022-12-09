@@ -1222,7 +1222,7 @@ transform::TileReductionUsingForeachThreadOp::applyToOne(
   FailureOr<linalg::ForeachThreadReductionTilingResult> result =
       linalg::tileReductionUsingForeachThread(
           rewriter, cast<PartialReductionOpInterface>(target.getOperation()),
-          numThreads, tileSizes, /*mapping=*/std::nullopt);
+          numThreads, tileSizes, getMapping());
 
   if (failed(result)) {
     results.assign(3, nullptr);
