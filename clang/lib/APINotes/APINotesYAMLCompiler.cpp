@@ -21,6 +21,7 @@
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <optional>
 #include <vector>
 using namespace clang;
 using namespace api_notes;
@@ -183,9 +184,9 @@ template <> struct ScalarEnumerationTraits<MethodKind> {
 namespace {
 struct Param {
   unsigned Position;
-  Optional<bool> NoEscape = false;
-  Optional<NullabilityKind> Nullability;
-  Optional<RetainCountConventionKind> RetainCountConvention;
+  std::optional<bool> NoEscape = false;
+  std::optional<NullabilityKind> Nullability;
+  std::optional<RetainCountConventionKind> RetainCountConvention;
   StringRef Type;
 };
 
@@ -264,10 +265,10 @@ struct Method {
   MethodKind Kind;
   ParamsSeq Params;
   NullabilitySeq Nullability;
-  Optional<NullabilityKind> NullabilityOfRet;
-  Optional<RetainCountConventionKind> RetainCountConvention;
+  std::optional<NullabilityKind> NullabilityOfRet;
+  std::optional<RetainCountConventionKind> RetainCountConvention;
   AvailabilityItem Availability;
-  Optional<bool> SwiftPrivate;
+  std::optional<bool> SwiftPrivate;
   StringRef SwiftName;
   FactoryAsInitKind FactoryAsInit = FactoryAsInitKind::Infer;
   bool DesignatedInit = false;
@@ -315,12 +316,12 @@ template <> struct MappingTraits<Method> {
 namespace {
 struct Property {
   StringRef Name;
-  llvm::Optional<MethodKind> Kind;
-  llvm::Optional<NullabilityKind> Nullability;
+  std::optional<MethodKind> Kind;
+  std::optional<NullabilityKind> Nullability;
   AvailabilityItem Availability;
-  Optional<bool> SwiftPrivate;
+  std::optional<bool> SwiftPrivate;
   StringRef SwiftName;
-  Optional<bool> SwiftImportAsAccessors;
+  std::optional<bool> SwiftImportAsAccessors;
   StringRef Type;
 };
 
@@ -353,12 +354,12 @@ struct Class {
   StringRef Name;
   bool AuditedForNullability = false;
   AvailabilityItem Availability;
-  Optional<bool> SwiftPrivate;
+  std::optional<bool> SwiftPrivate;
   StringRef SwiftName;
-  Optional<StringRef> SwiftBridge;
-  Optional<StringRef> NSErrorDomain;
-  Optional<bool> SwiftImportAsNonGeneric;
-  Optional<bool> SwiftObjCMembers;
+  std::optional<StringRef> SwiftBridge;
+  std::optional<StringRef> NSErrorDomain;
+  std::optional<bool> SwiftImportAsNonGeneric;
+  std::optional<bool> SwiftObjCMembers;
   MethodsSeq Methods;
   PropertiesSeq Properties;
 };
@@ -395,10 +396,10 @@ struct Function {
   StringRef Name;
   ParamsSeq Params;
   NullabilitySeq Nullability;
-  Optional<NullabilityKind> NullabilityOfRet;
-  Optional<api_notes::RetainCountConventionKind> RetainCountConvention;
+  std::optional<NullabilityKind> NullabilityOfRet;
+  std::optional<api_notes::RetainCountConventionKind> RetainCountConvention;
   AvailabilityItem Availability;
-  Optional<bool> SwiftPrivate;
+  std::optional<bool> SwiftPrivate;
   StringRef SwiftName;
   StringRef Type;
   StringRef ResultType;
@@ -432,9 +433,9 @@ template <> struct MappingTraits<Function> {
 namespace {
 struct GlobalVariable {
   StringRef Name;
-  llvm::Optional<NullabilityKind> Nullability;
+  std::optional<NullabilityKind> Nullability;
   AvailabilityItem Availability;
-  Optional<bool> SwiftPrivate;
+  std::optional<bool> SwiftPrivate;
   StringRef SwiftName;
   StringRef Type;
 };
@@ -465,7 +466,7 @@ namespace {
 struct EnumConstant {
   StringRef Name;
   AvailabilityItem Availability;
-  Optional<bool> SwiftPrivate;
+  std::optional<bool> SwiftPrivate;
   StringRef SwiftName;
 };
 
@@ -524,12 +525,12 @@ struct Tag {
   StringRef Name;
   AvailabilityItem Availability;
   StringRef SwiftName;
-  Optional<bool> SwiftPrivate;
-  Optional<StringRef> SwiftBridge;
-  Optional<StringRef> NSErrorDomain;
-  Optional<EnumExtensibilityKind> EnumExtensibility;
-  Optional<bool> FlagEnum;
-  Optional<EnumConvenienceAliasKind> EnumConvenienceKind;
+  std::optional<bool> SwiftPrivate;
+  std::optional<StringRef> SwiftBridge;
+  std::optional<StringRef> NSErrorDomain;
+  std::optional<EnumExtensibilityKind> EnumExtensibility;
+  std::optional<bool> FlagEnum;
+  std::optional<EnumConvenienceAliasKind> EnumConvenienceKind;
 };
 
 typedef std::vector<Tag> TagsSeq;
@@ -570,10 +571,10 @@ struct Typedef {
   StringRef Name;
   AvailabilityItem Availability;
   StringRef SwiftName;
-  Optional<bool> SwiftPrivate;
-  Optional<StringRef> SwiftBridge;
-  Optional<StringRef> NSErrorDomain;
-  Optional<SwiftNewTypeKind> SwiftType;
+  std::optional<bool> SwiftPrivate;
+  std::optional<StringRef> SwiftBridge;
+  std::optional<StringRef> NSErrorDomain;
+  std::optional<SwiftNewTypeKind> SwiftType;
 };
 
 typedef std::vector<Typedef> TypedefsSeq;
@@ -662,7 +663,7 @@ struct Module {
   TopLevelItems TopLevel;
   VersionedSeq SwiftVersions;
 
-  llvm::Optional<bool> SwiftInferImportAsMember = {std::nullopt};
+  std::optional<bool> SwiftInferImportAsMember = std::nullopt;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() /*const*/;

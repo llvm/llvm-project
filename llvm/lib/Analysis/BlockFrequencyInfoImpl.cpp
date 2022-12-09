@@ -31,6 +31,7 @@
 #include <iterator>
 #include <list>
 #include <numeric>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -585,7 +586,7 @@ BlockFrequencyInfoImplBase::getBlockFreq(const BlockNode &Node) const {
   return Freqs[Node.Index].Integer;
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 BlockFrequencyInfoImplBase::getBlockProfileCount(const Function &F,
                                                  const BlockNode &Node,
                                                  bool AllowSynthetic) const {
@@ -593,7 +594,7 @@ BlockFrequencyInfoImplBase::getBlockProfileCount(const Function &F,
                                  AllowSynthetic);
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 BlockFrequencyInfoImplBase::getProfileCountFromFreq(const Function &F,
                                                     uint64_t Freq,
                                                     bool AllowSynthetic) const {

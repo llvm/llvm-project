@@ -26,6 +26,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
+#include <optional>
 
 using namespace clang::tooling;
 using namespace llvm;
@@ -308,19 +309,10 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider(
   DefaultOptions.HeaderFilterRegex = HeaderFilter;
   DefaultOptions.SystemHeaders = SystemHeaders;
   DefaultOptions.FormatStyle = FormatStyle;
-  if (auto User = llvm::sys::Process::GetEnv("USER")) // FIXME(kparzysz-quic)
-    DefaultOptions.User = *User;
-  else
-    DefaultOptions.User = std::nullopt;
+  DefaultOptions.User = llvm::sys::Process::GetEnv("USER");
   // USERNAME is used on Windows.
-  // if (!DefaultOptions.User)
-  //  DefaultOptions.User = llvm::sys::Process::GetEnv("USERNAME");
-  if (!DefaultOptions.User) { // FIXME(kparzysz-quic)
-    if (auto Username = llvm::sys::Process::GetEnv("USERNAME"))
-      DefaultOptions.User = *Username;
-    else
-      DefaultOptions.User = std::nullopt;
-  }
+  if (!DefaultOptions.User)
+    DefaultOptions.User = llvm::sys::Process::GetEnv("USERNAME");
 
   ClangTidyOptions OverrideOptions;
   if (Checks.getNumOccurrences() > 0)

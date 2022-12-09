@@ -33,6 +33,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -552,7 +553,7 @@ static void writeLineTableOpcode(const DWARFYAML::LineTableOpcode &Op,
 }
 
 static std::vector<uint8_t>
-getStandardOpcodeLengths(uint16_t Version, Optional<uint8_t> OpcodeBase) {
+getStandardOpcodeLengths(uint16_t Version, std::optional<uint8_t> OpcodeBase) {
   // If the opcode_base field isn't specified, we returns the
   // standard_opcode_lengths array according to the version by default.
   std::vector<uint8_t> StandardOpcodeLengths{0, 1, 1, 1, 1, 0,
