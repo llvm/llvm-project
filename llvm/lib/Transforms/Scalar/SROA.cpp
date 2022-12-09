@@ -1484,7 +1484,7 @@ static bool rewriteSelectInstLoads(SelectInst &SI,
     if (Spec.areAllSpeculatable()) {
       speculateSelectInstLoads(SI, *LI, IRB);
     } else {
-      assert("Should not get here when not allowed to modify the CFG!");
+      assert(false && "Should not get here when not allowed to modify the CFG");
       rewriteLoadOfSelect(SI, *LI, Spec, *DTU);
       CFGChanged = true;
     }
