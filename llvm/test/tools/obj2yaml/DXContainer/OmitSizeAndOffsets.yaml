@@ -9,19 +9,19 @@ Header:
     Minor:           0
   PartCount:       7
 Parts:
-  - Name:            SFI0
+  - Name:            FKE0
     Size:            8
-  - Name:            ISG1
+  - Name:            FKE1
     Size:            8
-  - Name:            OSG1
+  - Name:            FKE2
     Size:            8
-  - Name:            PSV0
+  - Name:            FKE3
     Size:            8
-  - Name:            STAT
+  - Name:            FKE4
     Size:            8
-  - Name:            HASH
+  - Name:            FKE5
     Size:            20
-  - Name:            CXIL
+  - Name:            FKE6
     Size:            8
 ...
 
@@ -36,18 +36,18 @@ Parts:
 # CHECK-NEXT:   PartCount:       7
 # CHECK-NEXT:   PartOffsets:     [ 60, 76, 92, 108, 124, 140, 168 ]
 # CHECK-NEXT: Parts:
-# CHECK-NEXT:   - Name:            SFI0
+# CHECK-NEXT:   - Name:            FKE0
 # CHECK-NEXT:     Size:            8
-# CHECK-NEXT:   - Name:            ISG1
+# CHECK-NEXT:   - Name:            FKE1
 # CHECK-NEXT:     Size:            8
-# CHECK-NEXT:   - Name:            OSG1
+# CHECK-NEXT:   - Name:            FKE2
 # CHECK-NEXT:     Size:            8
-# CHECK-NEXT:   - Name:            PSV0
+# CHECK-NEXT:   - Name:            FKE3
 # CHECK-NEXT:     Size:            8
-# CHECK-NEXT:   - Name:            STAT
+# CHECK-NEXT:   - Name:            FKE4
 # CHECK-NEXT:     Size:            8
-# CHECK-NEXT:   - Name:            HASH
+# CHECK-NEXT:   - Name:            FKE5
 # CHECK-NEXT:     Size:            20
-# CHECK-NEXT:   - Name:            CXIL
+# CHECK-NEXT:   - Name:            FKE6
 # CHECK-NEXT:     Size:            8
 # CHECK-NEXT: ...
