@@ -60,6 +60,17 @@ public:
             LoopBodySize](FunctionFiller &Filler) {
       const auto &ET = State.getExegesisTarget();
       auto Entry = Filler.getEntry();
+
+      // We can not use loop snippet repetitor for terminator instructions.
+      for (const MCInst &Inst : Instructions) {
+        const unsigned Opcode = Inst.getOpcode();
+        const MCInstrDesc &MCID = Filler.MCII->get(Opcode);
+        if (!MCID.isTerminator())
+          continue;
+        Entry.addReturn();
+        return;
+      }
+
       auto Loop = Filler.addBasicBlock();
       auto Exit = Filler.addBasicBlock();
 
