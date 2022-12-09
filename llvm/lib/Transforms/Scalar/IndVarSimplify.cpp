@@ -1632,6 +1632,8 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
   SmallSet<const SCEV *, 8> DominatingExactExitCounts;
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     const SCEV *ExactExitCount = SE->getExitCount(L, ExitingBB);
+    const SCEV *MaxExitCount = SE->getExitCount(
+        L, ExitingBB, ScalarEvolution::ExitCountKind::SymbolicMaximum);
     if (isa<SCEVCouldNotCompute>(ExactExitCount)) {
       // Okay, we do not know the exit count here. Can we at least prove that it
       // will remain the same within iteration space?
@@ -1663,10 +1665,14 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       else if (SkipLastIter)
         if (OptimizeCond(false, true) || OptimizeCond(true, true))
           Changed = true;
+      if (MaxBECount == MaxExitCount)
+        // If the loop has more than 1 iteration, all further checks will be
+        // executed 1 iteration less.
+        SkipLastIter = true;
       continue;
     }
 
-    if (MaxBECount == ExactExitCount)
+    if (MaxBECount == MaxExitCount)
       // If the loop has more than 1 iteration, all further checks will be
       // executed 1 iteration less.
       SkipLastIter = true;
