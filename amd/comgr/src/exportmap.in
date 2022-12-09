@@ -27,7 +27,6 @@ global: amd_comgr_action_data_count;
         amd_comgr_get_data_metadata;
         amd_comgr_get_data_name;
         amd_comgr_get_data;
-        amd_comgr_get_isa_count;
         amd_comgr_get_metadata_kind;
         amd_comgr_get_metadata_list_size;
         amd_comgr_get_metadata_map_size;
