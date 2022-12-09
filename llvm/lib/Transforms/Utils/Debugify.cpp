@@ -29,6 +29,8 @@
 #include "llvm/Support/JSON.h"
 #include <optional>
 
+#include <any>
+
 #define DEBUG_TYPE "debugify"
 
 using namespace llvm;
@@ -1028,22 +1030,22 @@ static bool isIgnoredPass(StringRef PassID) {
 
 void DebugifyEachInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
-  PIC.registerBeforeNonSkippedPassCallback([this](StringRef P, Any IR) {
+  PIC.registerBeforeNonSkippedPassCallback([this](StringRef P, std::any IR) {
     if (isIgnoredPass(P))
       return;
-    if (any_isa<const Function *>(IR))
-      applyDebugify(*const_cast<Function *>(any_cast<const Function *>(IR)),
+    if (const auto **F = std::any_cast<const Function *>(&IR))
+      applyDebugify(*const_cast<Function *>(*F),
                     Mode, DebugInfoBeforePass, P);
-    else if (any_isa<const Module *>(IR))
-      applyDebugify(*const_cast<Module *>(any_cast<const Module *>(IR)),
+    else if (const auto **M = std::any_cast<const Module *>(&IR))
+      applyDebugify(*const_cast<Module *>(*M),
                     Mode, DebugInfoBeforePass, P);
   });
-  PIC.registerAfterPassCallback([this](StringRef P, Any IR,
+  PIC.registerAfterPassCallback([this](StringRef P, std::any IR,
                                        const PreservedAnalyses &PassPA) {
     if (isIgnoredPass(P))
       return;
-    if (any_isa<const Function *>(IR)) {
-      auto &F = *const_cast<Function *>(any_cast<const Function *>(IR));
+    if (const auto **CF = std::any_cast<const Function *>(&IR)) {
+      auto &F = *const_cast<Function *>(*CF);
       Module &M = *F.getParent();
       auto It = F.getIterator();
       if (Mode == DebugifyMode::SyntheticDebugInfo)
@@ -1054,8 +1056,8 @@ void DebugifyEachInstrumentation::registerCallbacks(
           M, make_range(It, std::next(It)), *DebugInfoBeforePass,
           "CheckModuleDebugify (original debuginfo)",
           P, OrigDIVerifyBugsReportFilePath);
-    } else if (any_isa<const Module *>(IR)) {
-      auto &M = *const_cast<Module *>(any_cast<const Module *>(IR));
+    } else if (const auto **CM = std::any_cast<const Module *>(&IR)) {
+      auto &M = *const_cast<Module *>(*CM);
       if (Mode == DebugifyMode::SyntheticDebugInfo)
        checkDebugifyMetadata(M, M.functions(), P, "CheckModuleDebugify",
                             /*Strip=*/true, DIStatsMap);

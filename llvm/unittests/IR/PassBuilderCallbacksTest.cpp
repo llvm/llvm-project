@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Testing/Support/Error.h"
+#include <any>
 #include <functional>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <llvm/ADT/Any.h>
 #include <llvm/Analysis/CGSCCPassManager.h>
 #include <llvm/Analysis/LoopAnalysisManager.h>
 #include <llvm/AsmParser/Parser.h>
@@ -281,7 +281,7 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
 }
 
 /// Helper for HasName matcher that returns getName both for IRUnit and
-/// for IRUnit pointer wrapper into llvm::Any (wrapped by PassInstrumentation).
+/// for IRUnit pointer wrapper into std::any (wrapped by PassInstrumentation).
 template <typename IRUnitT> std::string getName(const IRUnitT &IR) {
   return std::string(IR.getName());
 }
@@ -290,17 +290,17 @@ template <> std::string getName(const StringRef &name) {
   return std::string(name);
 }
 
-template <> std::string getName(const llvm::Any &WrappedIR) {
-  if (any_isa<const Module *>(WrappedIR))
-    return any_cast<const Module *>(WrappedIR)->getName().str();
-  if (any_isa<const Function *>(WrappedIR))
-    return any_cast<const Function *>(WrappedIR)->getName().str();
-  if (any_isa<const Loop *>(WrappedIR))
-    return any_cast<const Loop *>(WrappedIR)->getName().str();
-  if (any_isa<const LoopNest *>(WrappedIR))
-    return any_cast<const LoopNest *>(WrappedIR)->getName().str();
-  if (any_isa<const LazyCallGraph::SCC *>(WrappedIR))
-    return any_cast<const LazyCallGraph::SCC *>(WrappedIR)->getName();
+template <> std::string getName(const std::any &WrappedIR) {
+  if (const auto *const *M = std::any_cast<const Module *>(&WrappedIR))
+    return (*M)->getName().str();
+  if (const auto *const *F = std::any_cast<const Function *>(&WrappedIR))
+    return (*F)->getName().str();
+  if (const auto *const *L = std::any_cast<const Loop *>(&WrappedIR))
+    return (*L)->getName().str();
+  if (const auto *const *L = std::any_cast<const LoopNest *>(&WrappedIR))
+    return (*L)->getName().str();
+  if (const auto *const *C = std::any_cast<const LazyCallGraph::SCC *>(&WrappedIR))
+    return (*C)->getName();
   return "<UNKNOWN>";
 }
 /// Define a custom matcher for objects which support a 'getName' method.
@@ -334,42 +334,42 @@ struct MockPassInstrumentationCallbacks {
   MockPassInstrumentationCallbacks() {
     ON_CALL(*this, runBeforePass(_, _)).WillByDefault(Return(true));
   }
-  MOCK_METHOD2(runBeforePass, bool(StringRef PassID, llvm::Any));
-  MOCK_METHOD2(runBeforeSkippedPass, void(StringRef PassID, llvm::Any));
-  MOCK_METHOD2(runBeforeNonSkippedPass, void(StringRef PassID, llvm::Any));
+  MOCK_METHOD2(runBeforePass, bool(StringRef PassID, std::any));
+  MOCK_METHOD2(runBeforeSkippedPass, void(StringRef PassID, std::any));
+  MOCK_METHOD2(runBeforeNonSkippedPass, void(StringRef PassID, std::any));
   MOCK_METHOD3(runAfterPass,
-               void(StringRef PassID, llvm::Any, const PreservedAnalyses &PA));
+               void(StringRef PassID, std::any, const PreservedAnalyses &PA));
   MOCK_METHOD2(runAfterPassInvalidated,
                void(StringRef PassID, const PreservedAnalyses &PA));
-  MOCK_METHOD2(runBeforeAnalysis, void(StringRef PassID, llvm::Any));
-  MOCK_METHOD2(runAfterAnalysis, void(StringRef PassID, llvm::Any));
+  MOCK_METHOD2(runBeforeAnalysis, void(StringRef PassID, std::any));
+  MOCK_METHOD2(runAfterAnalysis, void(StringRef PassID, std::any));
 
   void registerPassInstrumentation() {
     Callbacks.registerShouldRunOptionalPassCallback(
-        [this](StringRef P, llvm::Any IR) {
+        [this](StringRef P, std::any IR) {
           return this->runBeforePass(P, IR);
         });
     Callbacks.registerBeforeSkippedPassCallback(
-        [this](StringRef P, llvm::Any IR) {
+        [this](StringRef P, std::any IR) {
           this->runBeforeSkippedPass(P, IR);
         });
     Callbacks.registerBeforeNonSkippedPassCallback(
-        [this](StringRef P, llvm::Any IR) {
+        [this](StringRef P, std::any IR) {
           this->runBeforeNonSkippedPass(P, IR);
         });
     Callbacks.registerAfterPassCallback(
-        [this](StringRef P, llvm::Any IR, const PreservedAnalyses &PA) {
+        [this](StringRef P, std::any IR, const PreservedAnalyses &PA) {
           this->runAfterPass(P, IR, PA);
         });
     Callbacks.registerAfterPassInvalidatedCallback(
         [this](StringRef P, const PreservedAnalyses &PA) {
           this->runAfterPassInvalidated(P, PA);
         });
-    Callbacks.registerBeforeAnalysisCallback([this](StringRef P, llvm::Any IR) {
+    Callbacks.registerBeforeAnalysisCallback([this](StringRef P, std::any IR) {
       return this->runBeforeAnalysis(P, IR);
     });
     Callbacks.registerAfterAnalysisCallback(
-        [this](StringRef P, llvm::Any IR) { this->runAfterAnalysis(P, IR); });
+        [this](StringRef P, std::any IR) { this->runAfterAnalysis(P, IR); });
   }
 
   void ignoreNonMockPassInstrumentation(StringRef IRName) {
