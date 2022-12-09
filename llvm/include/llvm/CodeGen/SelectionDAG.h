@@ -68,6 +68,7 @@ class ConstantInt;
 class DataLayout;
 struct fltSemantics;
 class FunctionLoweringInfo;
+class FunctionVarLocs;
 class GlobalValue;
 struct KnownBits;
 class LegacyDivergenceAnalysis;
@@ -222,6 +223,7 @@ class SelectionDAG {
   const SelectionDAGTargetInfo *TSI = nullptr;
   const TargetLowering *TLI = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
+  const FunctionVarLocs *FnVarLocs = nullptr;
   MachineFunction *MF;
   Pass *SDAGISelPass = nullptr;
   LLVMContext *Context;
@@ -452,8 +454,8 @@ public:
   /// Prepare this SelectionDAG to process code in the given MachineFunction.
   void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
             Pass *PassPtr, const TargetLibraryInfo *LibraryInfo,
-            LegacyDivergenceAnalysis * Divergence,
-            ProfileSummaryInfo *PSIin, BlockFrequencyInfo *BFIin);
+            LegacyDivergenceAnalysis *Divergence, ProfileSummaryInfo *PSIin,
+            BlockFrequencyInfo *BFIin, FunctionVarLocs const *FnVarLocs);
 
   void setFunctionLoweringInfo(FunctionLoweringInfo * FuncInfo) {
     FLI = FuncInfo;
@@ -476,6 +478,9 @@ public:
   const TargetLibraryInfo &getLibInfo() const { return *LibInfo; }
   const SelectionDAGTargetInfo &getSelectionDAGInfo() const { return *TSI; }
   const LegacyDivergenceAnalysis *getDivergenceAnalysis() const { return DA; }
+  /// Returns the result of the AssignmentTrackingAnalysis pass if it's
+  /// available, otherwise return nullptr.
+  const FunctionVarLocs *getFunctionVarLocs() const { return FnVarLocs; }
   LLVMContext *getContext() const { return Context; }
   OptimizationRemarkEmitter &getORE() const { return *ORE; }
   ProfileSummaryInfo *getPSI() const { return PSI; }
