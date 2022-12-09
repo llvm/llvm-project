@@ -130,31 +130,19 @@ public:
 //   }
 // };
 
-// class CIRConstantLowering
-//     : public mlir::OpRewritePattern<mlir::cir::ConstantOp> {
-// public:
-//   using OpRewritePattern<mlir::cir::ConstantOp>::OpRewritePattern;
+class CIRConstantLowering
+    : public mlir::OpConversionPattern<mlir::cir::ConstantOp> {
+public:
+  using OpConversionPattern<mlir::cir::ConstantOp>::OpConversionPattern;
 
-//   mlir::LogicalResult
-//   matchAndRewrite(mlir::cir::ConstantOp op,
-//                   mlir::PatternRewriter &rewriter) const override {
-//     if (op.getType().isa<mlir::cir::BoolType>()) {
-//       mlir::Type type =
-//           mlir::IntegerType::get(getContext(), 8,
-//           mlir::IntegerType::Signless);
-//       mlir::Attribute IntegerAttr;
-//       if (op.getValue() == mlir::BoolAttr::get(getContext(), true))
-//         IntegerAttr = mlir::IntegerAttr::get(type, 1);
-//       else
-//         IntegerAttr = mlir::IntegerAttr::get(type, 0);
-//       rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(op, type,
-//                                                            IntegerAttr);
-//     } else
-//       rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(op, op.getType(),
-//                                                            op.getValue());
-//     return mlir::LogicalResult::success();
-//   }
-// };
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::ConstantOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
+        op, getTypeConverter()->convertType(op.getType()), op.getValue());
+    return mlir::LogicalResult::success();
+  }
+};
 
 class CIRFuncLowering : public mlir::OpConversionPattern<mlir::cir::FuncOp> {
 public:
@@ -486,12 +474,12 @@ public:
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add</*CIRLoadLowering, CIRStoreLowering,
-               CIRConstantLowering, CIRUnaryOpLowering, CIRBinOpLowering,
+               CIRUnaryOpLowering, CIRBinOpLowering,
                CIRCmpOpLowering, CIRBrOpLowering,
                CIRCallLowering, */
                CIRReturnLowering>(patterns.getContext());
-  patterns.add<CIRAllocaLowering, CIRFuncLowering>(converter,
-                                                   patterns.getContext());
+  patterns.add<CIRConstantLowering, CIRAllocaLowering, CIRFuncLowering>(
+      converter, patterns.getContext());
 }
 
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
