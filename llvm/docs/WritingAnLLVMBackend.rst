@@ -1317,12 +1317,10 @@ below:
 .. code-block:: text
 
   def store : PatFrag<(ops node:$val, node:$ptr),
-                      (st node:$val, node:$ptr), [{
-    if (StoreSDNode *ST = dyn_cast<StoreSDNode>(N))
-      return !ST->isTruncatingStore() &&
-             ST->getAddressingMode() == ISD::UNINDEXED;
-    return false;
-  }]>;
+                      (unindexedstore node:$val, node:$ptr)> {
+    let IsStore = true;
+    let IsTruncStore = false;
+  }
 
 ``XXXInstrInfo.td`` also generates (in ``XXXGenDAGISel.inc``) the
 ``SelectCode`` method that is used to call the appropriate processing method
