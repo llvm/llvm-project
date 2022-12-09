@@ -266,7 +266,7 @@ protected:
   virtual uint64_t getSectionSize(DataRefImpl Sec) const = 0;
   virtual Expected<ArrayRef<uint8_t>>
   getSectionContents(DataRefImpl Sec) const = 0;
-  virtual Align getSectionAlignment(DataRefImpl Sec) const = 0;
+  virtual uint64_t getSectionAlignment(DataRefImpl Sec) const = 0;
   virtual bool isSectionCompressed(DataRefImpl Sec) const = 0;
   virtual bool isSectionText(DataRefImpl Sec) const = 0;
   virtual bool isSectionData(DataRefImpl Sec) const = 0;
@@ -482,7 +482,7 @@ inline Expected<StringRef> SectionRef::getContents() const {
 }
 
 inline uint64_t SectionRef::getAlignment() const {
-  return OwningObject->getSectionAlignment(SectionPimpl).value();
+  return OwningObject->getSectionAlignment(SectionPimpl);
 }
 
 inline bool SectionRef::isCompressed() const {
