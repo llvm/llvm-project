@@ -205,7 +205,8 @@ void InitTlsSize() {
   g_use_dlpi_tls_data =
       GetLibcVersion(&major, &minor, &patch) && major == 2 && minor >= 25;
 
-#if defined(__aarch64__) || defined(__x86_64__) || defined(__powerpc64__)
+#if defined(__aarch64__) || defined(__x86_64__) || defined(__powerpc64__) || \
+    defined(__loongarch__)
   void *get_tls_static_info = dlsym(RTLD_NEXT, "_dl_get_tls_static_info");
   size_t tls_align;
   ((void (*)(size_t *, size_t *))get_tls_static_info)(&g_tls_size, &tls_align);
@@ -265,6 +266,8 @@ static uptr ThreadDescriptorSizeFallback() {
 #elif defined(__mips__)
   // TODO(sagarthakur): add more values as per different glibc versions.
   val = FIRST_32_SECOND_64(1152, 1776);
+#elif SANITIZER_LOONGARCH64
+  val = 1856; // from glibc 2.36
 #elif SANITIZER_RISCV64
   int major;
   int minor;
@@ -304,7 +307,8 @@ uptr ThreadDescriptorSize() {
   return val;
 }
 
-#if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64
+#if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64 || \
+    SANITIZER_LOONGARCH64
 // TlsPreTcbSize includes size of struct pthread_descr and size of tcb
 // head structure. It lies before the static tls blocks.
 static uptr TlsPreTcbSize() {
@@ -313,6 +317,8 @@ static uptr TlsPreTcbSize() {
 #elif defined(__powerpc64__)
   const uptr kTcbHead = 88; // sizeof (tcbhead_t)
 #elif SANITIZER_RISCV64
+  const uptr kTcbHead = 16;  // sizeof (tcbhead_t)
+#elif SANITIZER_LOONGARCH64
   const uptr kTcbHead = 16;  // sizeof (tcbhead_t)
 #endif
   const uptr kTlsAlign = 16;
@@ -497,6 +503,10 @@ static void GetTls(uptr *addr, uptr *size) {
   *addr -= *size;
   *addr += ThreadDescriptorSize();
 #elif SANITIZER_GLIBC && defined(__aarch64__)
+  *addr = reinterpret_cast<uptr>(__builtin_thread_pointer()) -
+          ThreadDescriptorSize();
+  *size = g_tls_size + ThreadDescriptorSize();
+#elif SANITIZER_GLIBC && defined(__loongarch__)
   *addr = reinterpret_cast<uptr>(__builtin_thread_pointer()) -
           ThreadDescriptorSize();
   *size = g_tls_size + ThreadDescriptorSize();
