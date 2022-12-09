@@ -729,7 +729,8 @@ public:
   /// Generator for '#omp taskwait'
   ///
   /// \param Loc The location where the taskwait directive was encountered.
-  void createTaskwait(const LocationDescription &Loc);
+  void createTaskwait(const LocationDescription &Loc,
+                      bool HasNowaitClause = false);
 
   /// Generator for '#omp taskyield'
   ///
@@ -1018,7 +1019,8 @@ public:
   /// Generate a taskwait runtime call.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
-  void emitTaskwaitImpl(const LocationDescription &Loc);
+  void emitTaskwaitImpl(const LocationDescription &Loc,
+                        bool HasNowaitClause = false);
 
   /// Generate a taskyield runtime call.
   ///
