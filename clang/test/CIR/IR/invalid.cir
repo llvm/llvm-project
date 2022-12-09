@@ -53,7 +53,7 @@ cir.func @yieldfallthrough() {
 cir.func @yieldbreak() {
   %0 = cir.cst(true) : !cir.bool
   cir.if %0 {
-    cir.yield break // expected-error {{shall be dominated by 'cir.loop' or 'cir.switch'}}
+    cir.yield break // expected-error {{shall be dominated by 'cir.loop', 'cir.switch' or 'cir.await'}}
   }
   cir.return
 }

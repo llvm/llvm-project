@@ -272,13 +272,24 @@ static LValueOrRValue buildSuspendExpression(
         cond = cond->IgnoreParens();
         mlir::Value condV = CGF.evaluateExprAsBool(cond);
 
+        builder.create<mlir::cir::IfOp>(
+            loc, condV, /*withElseRegion=*/false,
+            /*thenBuilder=*/
+            [&](mlir::OpBuilder &b, mlir::Location loc) {
+              // If expression is ready, no need to suspend,
+              // `YieldOpKind::Break` tells control flow to return to parent, no
+              // more regions to be executed.
+              builder.create<mlir::cir::YieldOp>(loc,
+                                                 mlir::cir::YieldOpKind::Break);
+            });
+
         if (!condV) {
           awaitBuild = mlir::failure();
           return;
         }
 
-        // If expression is ready, no need to suspend.
-        builder.create<mlir::cir::YieldOp>(loc, condV);
+        // Signals the parent that execution flows to next region.
+        builder.create<mlir::cir::YieldOp>(loc);
       },
       /*suspendBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -292,10 +303,8 @@ static LValueOrRValue buildSuspendExpression(
           llvm_unreachable("NYI");
         }
 
-        auto alwaysSuspend = b.create<mlir::cir::ConstantOp>(
-            loc, mlir::cir::BoolType::get(b.getContext()), b.getBoolAttr(true));
-        builder.create<mlir::cir::YieldOp>(loc,
-                                           mlir::ValueRange{alwaysSuspend});
+        // Signals the parent that execution flows to next region.
+        builder.create<mlir::cir::YieldOp>(loc);
       },
       /*resumeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -320,6 +329,7 @@ static LValueOrRValue buildSuspendExpression(
           llvm_unreachable("NYI");
         }
 
+        // Returns control back to parent.
         builder.create<mlir::cir::YieldOp>(loc);
       });
 
