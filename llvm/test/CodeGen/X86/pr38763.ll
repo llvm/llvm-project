@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax < %s -S -simplifycfg | FileCheck %s
+; RUN: opt < %s -S -passes=simplifycfg | FileCheck %s
 
 ; When SimplifyCFG changes the PHI node into a select instruction, the debug
 ; information becomes ambiguous. It causes the debugger to display wrong
