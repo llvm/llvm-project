@@ -1,7 +1,7 @@
 ; RUN: opt -passes='default<O0>,mergefunc' -S -mergefunc-preserve-debug-info < %s | FileCheck %s --check-prefix=OPTIMIZATION_LEVEL_0
 ; RUN: opt -passes='default<O2>,mergefunc' -S -mergefunc-preserve-debug-info < %s | FileCheck %s --check-prefix=OPTIMIZATION_LEVEL_2
 
-; Preserve debug info in thunks under -mergefunc -mergefunc-preserve-debug-info
+; Preserve debug info in thunks under -passes=mergefunc -mergefunc-preserve-debug-info
 ;
 ; We test that:
 ; At -O0 we have preserved the generated @llvm.dbg.declare debug intrinsics.
@@ -11,7 +11,7 @@
 ; Debug info got generated for the call made by the thunk and for its return value.
 ; The foregoing is the only content of a thunk's entry block.
 ; A thunk makes a tail call to the shared implementation.
-; A thunk's call site is preserved to point to the thunk (with only -mergefunc the
+; A thunk's call site is preserved to point to the thunk (with only -passes=mergefunc the
 ;   call site is modified to point to the shared implementation) when both occur
 ;   within the same translation unit.
 

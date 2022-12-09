@@ -1,4 +1,4 @@
-; RUN: opt -S -mergefunc %s | FileCheck %s
+; RUN: opt -S -passes=mergefunc %s | FileCheck %s
 
 @symbols = linkonce_odr global <{ i8*, i8* }> <{ i8* bitcast (i32 (i32, i32)* @f to i8*), i8* bitcast (i32 (i32, i32)* @g to i8*) }>
 
