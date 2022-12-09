@@ -847,6 +847,7 @@ public:
     SRL,
     LISTCONCAT,
     LISTSPLAT,
+    LISTREMOVE,
     STRCONCAT,
     INTERLEAVE,
     CONCAT,
@@ -899,6 +900,8 @@ public:
   BinaryOp getOpcode() const { return (BinaryOp)Opc; }
   Init *getLHS() const { return LHS; }
   Init *getRHS() const { return RHS; }
+
+  std::optional<bool> CompareInit(unsigned Opc, Init *LHS, Init *RHS) const;
 
   // Fold - If possible, fold this to a simpler init.  Return this if not
   // possible to fold.

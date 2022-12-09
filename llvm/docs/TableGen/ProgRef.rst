@@ -223,10 +223,10 @@ TableGen provides "bang operators" that have a wide variety of uses:
                : !div        !empty       !eq          !filter      !find
                : !foldl      !foreach     !ge          !getdagop    !gt
                : !head       !if          !interleave  !isa         !le
-               : !listconcat !listsplat   !logtwo      !lt          !mul
-               : !ne         !not         !or          !setdagop    !shl
-               : !size       !sra         !srl         !strconcat   !sub
-               : !subst      !substr      !tail        !xor
+               : !listconcat !listremove  !listsplat   !logtwo      !lt
+               : !mul        !ne          !not         !or          !setdagop
+               : !shl        !size        !sra         !srl         !strconcat
+               : !sub        !subst       !substr      !tail        !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1739,6 +1739,10 @@ and non-0 as true.
 ``!listconcat(``\ *list1*\ ``,`` *list2*\ ``, ...)``
     This operator concatenates the list arguments *list1*, *list2*, etc., and
     produces the resulting list. The lists must have the same element type.
+
+``!listremove(``\ *list1*\ ``,`` *list2*\ ``)``
+    This operator returns a copy of *list1* removing all elements that also occur in
+    *list2*. The lists must have the same element type.
 
 ``!listsplat(``\ *value*\ ``,`` *count*\ ``)``
     This operator produces a list of length *count* whose elements are all
