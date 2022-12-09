@@ -121,8 +121,9 @@ static hsa_status_t locking_async_memcpy(enum CopyDirection direction,
     if (err != HSA_STATUS_SUCCESS)
       return err;
     *user_locked = false;
+    hsa_agent_t agents[1] = {agent};
     err =
-        hsa_amd_memory_lock(lockingPtr, size, nullptr, 0, (void **)&lockedPtr);
+      hsa_amd_memory_lock(lockingPtr, size, agents, 1, (void **)&lockedPtr);
     if (err != HSA_STATUS_SUCCESS)
       return err;
     DP("locking_async_memcpy: lockingPtr=%p lockedPtr=%p Size = %lu\n",
