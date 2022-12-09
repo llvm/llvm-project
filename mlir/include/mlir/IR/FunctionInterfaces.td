@@ -50,16 +50,6 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
   }];
   let methods = [
     InterfaceMethod<[{
-      Returns the type of the function.
-    }],
-    "::mlir::Type", "getFunctionType">,
-    InterfaceMethod<[{
-      Set the type of the function. This method should perform an unsafe
-      modification to the function type; it should not update argument or
-      result attributes.
-    }],
-    "void", "setFunctionTypeAttr", (ins "::mlir::TypeAttr":$type)>,
-    InterfaceMethod<[{
       Returns the function argument types based exclusively on
       the type (to allow for this method may be called on function
       declarations).
@@ -149,7 +139,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
         ArrayRef<NamedAttribute> attrs, TypeRange inputTypes) {
       state.addAttribute(SymbolTable::getSymbolAttrName(),
                         builder.getStringAttr(name));
-      state.addAttribute(ConcreteOp::getFunctionTypeAttrName(state.name),
+      state.addAttribute(function_interface_impl::getTypeAttrName(),
                         TypeAttr::get(type));
       state.attributes.append(attrs.begin(), attrs.end());
 
@@ -254,6 +244,11 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     // the derived operation, which should already have these defined
     // (via ODS).
 
+    /// Returns the name of the attribute used for function types.
+    static StringRef getTypeAttrName() {
+      return function_interface_impl::getTypeAttrName();
+    }
+
     /// Returns the name of the attribute used for function argument attributes.
     static StringRef getArgDictAttrName() {
       return function_interface_impl::getArgDictAttrName();
@@ -263,6 +258,15 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     static StringRef getResultDictAttrName() {
       return function_interface_impl::getResultDictAttrName();
     }
+
+    /// Return the attribute containing the type of this function.
+    TypeAttr getFunctionTypeAttr() {
+      return this->getOperation()->template getAttrOfType<TypeAttr>(
+          getTypeAttrName());
+    }
+
+    /// Return the type of this function.
+    Type getFunctionType() { return getFunctionTypeAttr().getValue(); }
 
     //===------------------------------------------------------------------===//
     // Argument and Result Handling
