@@ -22,7 +22,6 @@ namespace llvm {
 
 enum class RunOutliner { TargetDefault, AlwaysOutline, NeverOutline };
 enum class RegAllocType { Default, Basic, Fast, Greedy, PBQP };
-enum class CFLAAType { None, Steensgaard, Andersen, Both };
 
 // Not one-on-one but mostly corresponding to commandline options in
 // TargetPassConfig.cpp.
@@ -49,7 +48,6 @@ struct CGPassBuilderOption {
 
   RunOutliner EnableMachineOutliner = RunOutliner::TargetDefault;
   RegAllocType RegAlloc = RegAllocType::Default;
-  CFLAAType UseCFLAA = CFLAAType::None;
   std::optional<GlobalISelAbortMode> EnableGlobalISelAbort;
 
   std::optional<bool> VerifyMachineCode;
