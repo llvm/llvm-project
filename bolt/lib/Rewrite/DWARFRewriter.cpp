@@ -317,7 +317,7 @@ void DWARFRewriter::updateDebugInfo() {
       RangesBase = RangesSectionWriter->getSectionOffset() +
                    getDWARF5RngListLocListHeaderSize();
       RangesSectionWriter->initSection(*Unit);
-      StrOffstsWriter->finalizeSection();
+      StrOffstsWriter->finalizeSection(*Unit);
     }
 
     DebugInfoPatcher->addUnitBaseOffsetLabel(Unit->getOffset());
