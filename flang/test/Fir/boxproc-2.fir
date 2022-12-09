@@ -44,3 +44,24 @@ func.func @proc_pointer_component(%arg0 : !fir.boxproc<(!fir.ref<i32>) -> f32>, 
 // CHECK:           %[[VAL_11:.*]] = fir.call %[[VAL_10]](%[[VAL_1]]) : (!fir.ref<i32>) -> f32
 
 }
+
+// CHECK-LABEL: fir.global internal @ProcedurePointer : (!fir.ref<i32>) -> f32 {
+fir.global internal @ProcedurePointer : !fir.boxproc<(!fir.ref<i32>) -> f32> {
+  %0 = fir.zero_bits (!fir.ref<i32>) -> f32
+  %1 = fir.emboxproc %0 : ((!fir.ref<i32>) -> f32) -> !fir.boxproc<(!fir.ref<i32>) -> f32>
+  fir.has_value %1 : !fir.boxproc<(!fir.ref<i32>) -> f32>
+
+// CHECK: %[[VAL_0:.*]] = fir.zero_bits (!fir.ref<i32>) -> f32
+// CHECK: %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : ((!fir.ref<i32>) -> f32) -> ((!fir.ref<i32>) -> f32)
+// CHECK: fir.has_value %[[VAL_1]] : (!fir.ref<i32>) -> f32
+}
+
+// CHECK-LABEL: func.func @proc_pointer_global() {
+func.func @proc_pointer_global() {
+  %0 = fir.address_of(@ProcedurePointer) : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>
+  %1 = fir.load %0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> f32>>
+  return
+
+// CHECK: %[[VAL_0:.*]] = fir.address_of(@ProcedurePointer) : !fir.ref<(!fir.ref<i32>) -> f32>
+// CHECK: %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<(!fir.ref<i32>) -> f32>
+}

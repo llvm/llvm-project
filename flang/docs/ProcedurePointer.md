@@ -470,7 +470,7 @@ Current list of TODOs in code generation:
 
 NOTE: There are any number of possible implementations.
 
-- fir.global for procedure pointers
+BoxedProcedure pass
 
 or
 
