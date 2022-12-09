@@ -1,7 +1,7 @@
 // RUN: mlir-opt -emit-bytecode -allow-unregistered-dialect %s | mlir-opt -allow-unregistered-dialect -mlir-print-local-scope | FileCheck %s
 
 // Bytecode currently does not support big-endian platforms
-// UNSUPPORTED: s390x-
+// UNSUPPORTED: target=s390x-{{.*}}
 
 //===----------------------------------------------------------------------===//
 // ArrayAttr
