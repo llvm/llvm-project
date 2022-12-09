@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -amdgpu-promote-alloca < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-promote-alloca < %s | FileCheck %s
 
 ; Do not promote an alloca with users of vector/aggregate type.
 

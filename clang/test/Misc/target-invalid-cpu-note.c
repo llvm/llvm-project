@@ -69,7 +69,7 @@
 
 // RUN: not %clang_cc1 -triple hexagon--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix HEXAGON
 // HEXAGON: error: unknown target CPU 'not-a-cpu'
-// HEXAGON-NEXT: note: valid target CPU values are: hexagonv5, hexagonv55, hexagonv60, hexagonv62, hexagonv65, hexagonv66, hexagonv67, hexagonv67t, hexagonv68, hexagonv69{{$}}
+// HEXAGON-NEXT: note: valid target CPU values are: hexagonv5, hexagonv55, hexagonv60, hexagonv62, hexagonv65, hexagonv66, hexagonv67, hexagonv67t, hexagonv68, hexagonv69, hexagonv71, hexagonv71t, hexagonv73{{$}}
 
 // RUN: not %clang_cc1 -triple bpf--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix BPF
 // BPF: error: unknown target CPU 'not-a-cpu'

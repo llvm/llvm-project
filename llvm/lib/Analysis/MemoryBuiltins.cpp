@@ -783,9 +783,6 @@ bool ObjectSizeOffsetVisitor::CheckedZextOrTrunc(APInt &I) {
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
-  if (!I.getAllocatedType()->isSized())
-    return unknown();
-
   TypeSize ElemSize = DL.getTypeAllocSize(I.getAllocatedType());
   if (ElemSize.isScalable() && Options.EvalMode != ObjectSizeOpts::Mode::Min)
     return unknown();

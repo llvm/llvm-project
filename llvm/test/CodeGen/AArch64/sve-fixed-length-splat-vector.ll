@@ -712,4 +712,82 @@ define void @splat_imm_v8f64(ptr %a) vscale_range(4,0) #0 {
   ret void
 }
 
+define <8 x float> @load_splat_v8f32(ptr %p) vscale_range(2,2) #0 {
+; CHECK-LABEL: load_splat_v8f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.s, s0
+; CHECK-NEXT:    st1w { z0.s }, p0, [x8]
+; CHECK-NEXT:    ret
+  %v = load <8 x float>, ptr %p
+  %splat = shufflevector <8 x float> %v, <8 x float> undef, <8 x i32> zeroinitializer
+  ret <8 x float> %splat
+}
+
+define <4 x double> @load_splat_v4f64(ptr %p) vscale_range(2,2) #0 {
+; CHECK-LABEL: load_splat_v4f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.d, d0
+; CHECK-NEXT:    st1d { z0.d }, p0, [x8]
+; CHECK-NEXT:    ret
+  %v = load <4 x double>, ptr %p
+  %splat = shufflevector <4 x double> %v, <4 x double> undef, <4 x i32> zeroinitializer
+  ret <4 x double> %splat
+}
+
+define <32 x i8> @load_splat_v32i8(ptr %p) vscale_range(2,2) #0 {
+; CHECK-LABEL: load_splat_v32i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.b, b0
+; CHECK-NEXT:    st1b { z0.b }, p0, [x8]
+; CHECK-NEXT:    ret
+  %v = load <32 x i8>, ptr %p
+  %splat = shufflevector <32 x i8> %v, <32 x i8> undef, <32 x i32> zeroinitializer
+  ret <32 x i8> %splat
+}
+
+define <16 x i16> @load_splat_v16i16(ptr %p) vscale_range(2,2) #0 {
+; CHECK-LABEL: load_splat_v16i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.h, h0
+; CHECK-NEXT:    st1h { z0.h }, p0, [x8]
+; CHECK-NEXT:    ret
+  %v = load <16 x i16>, ptr %p
+  %splat = shufflevector <16 x i16> %v, <16 x i16> undef, <16 x i32> zeroinitializer
+  ret <16 x i16> %splat
+}
+
+define <8 x i32> @load_splat_v8i32(ptr %p) vscale_range(2,2) #0 {
+; CHECK-LABEL: load_splat_v8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.s, s0
+; CHECK-NEXT:    st1w { z0.s }, p0, [x8]
+; CHECK-NEXT:    ret
+  %v = load <8 x i32>, ptr %p
+  %splat = shufflevector <8 x i32> %v, <8 x i32> undef, <8 x i32> zeroinitializer
+  ret <8 x i32> %splat
+}
+
+define <4 x i64> @load_splat_v4i64(ptr %p) vscale_range(2,2) #0 {
+; CHECK-LABEL: load_splat_v4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.d, d0
+; CHECK-NEXT:    st1d { z0.d }, p0, [x8]
+; CHECK-NEXT:    ret
+  %v = load <4 x i64>, ptr %p
+  %splat = shufflevector <4 x i64> %v, <4 x i64> undef, <4 x i32> zeroinitializer
+  ret <4 x i64> %splat
+}
+
 attributes #0 = { "target-features"="+sve" }

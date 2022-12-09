@@ -140,10 +140,25 @@ static SPCC::CondCodes GetOppositeBranchCondition(SPCC::CondCodes CC)
   llvm_unreachable("Invalid cond code");
 }
 
-static bool isUncondBranchOpcode(int Opc) { return Opc == SP::BA; }
+static bool isUncondBranchOpcode(int Opc) {
+  return Opc == SP::BA || Opc == SP::BPA;
+}
+
+static bool isI32CondBranchOpcode(int Opc) {
+  return Opc == SP::BCOND || Opc == SP::BPICC || Opc == SP::BPICCA ||
+         Opc == SP::BPICCNT || Opc == SP::BPICCANT;
+}
+
+static bool isI64CondBranchOpcode(int Opc) {
+  return Opc == SP::BPXCC || Opc == SP::BPXCCA || Opc == SP::BPXCCNT ||
+         Opc == SP::BPXCCANT;
+}
+
+static bool isFCondBranchOpcode(int Opc) { return Opc == SP::FBCOND; }
 
 static bool isCondBranchOpcode(int Opc) {
-  return Opc == SP::FBCOND || Opc == SP::BCOND;
+  return isI32CondBranchOpcode(Opc) || isI64CondBranchOpcode(Opc) ||
+         isFCondBranchOpcode(Opc);
 }
 
 static bool isIndirectBranchOpcode(int Opc) {
@@ -152,7 +167,14 @@ static bool isIndirectBranchOpcode(int Opc) {
 
 static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
                             SmallVectorImpl<MachineOperand> &Cond) {
-  Cond.push_back(MachineOperand::CreateImm(LastInst->getOperand(1).getImm()));
+  unsigned Opc = LastInst->getOpcode();
+  int64_t CC = LastInst->getOperand(1).getImm();
+
+  // Push the branch opcode into Cond too so later in insertBranch
+  // it can use the information to emit the correct SPARC branch opcode.
+  Cond.push_back(MachineOperand::CreateImm(Opc));
+  Cond.push_back(MachineOperand::CreateImm(CC));
+
   Target = LastInst->getOperand(0).getMBB();
 }
 
@@ -246,27 +268,29 @@ unsigned SparcInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                       const DebugLoc &DL,
                                       int *BytesAdded) const {
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
-  assert((Cond.size() == 1 || Cond.size() == 0) &&
-         "Sparc branch conditions should have one component!");
+  assert((Cond.size() <= 2) &&
+         "Sparc branch conditions should have at most two components!");
   assert(!BytesAdded && "code size not handled");
 
   if (Cond.empty()) {
     assert(!FBB && "Unconditional branch with multiple successors!");
-    BuildMI(&MBB, DL, get(SP::BA)).addMBB(TBB);
+    BuildMI(&MBB, DL, get(Subtarget.isV9() ? SP::BPA : SP::BA)).addMBB(TBB);
     return 1;
   }
 
   // Conditional branch
-  unsigned CC = Cond[0].getImm();
+  unsigned Opc = Cond[0].getImm();
+  unsigned CC = Cond[1].getImm();
 
-  if (IsIntegerCC(CC))
-    BuildMI(&MBB, DL, get(SP::BCOND)).addMBB(TBB).addImm(CC);
-  else
+  if (IsIntegerCC(CC)) {
+    BuildMI(&MBB, DL, get(Opc)).addMBB(TBB).addImm(CC);
+  } else {
     BuildMI(&MBB, DL, get(SP::FBCOND)).addMBB(TBB).addImm(CC);
+  }
   if (!FBB)
     return 1;
 
-  BuildMI(&MBB, DL, get(SP::BA)).addMBB(FBB);
+  BuildMI(&MBB, DL, get(Subtarget.isV9() ? SP::BPA : SP::BA)).addMBB(FBB);
   return 2;
 }
 
@@ -282,9 +306,8 @@ unsigned SparcInstrInfo::removeBranch(MachineBasicBlock &MBB,
     if (I->isDebugInstr())
       continue;
 
-    if (I->getOpcode() != SP::BA
-        && I->getOpcode() != SP::BCOND
-        && I->getOpcode() != SP::FBCOND)
+    if (!isCondBranchOpcode(I->getOpcode()) &&
+        !isUncondBranchOpcode(I->getOpcode()))
       break; // Not a branch
 
     I->eraseFromParent();
@@ -296,9 +319,9 @@ unsigned SparcInstrInfo::removeBranch(MachineBasicBlock &MBB,
 
 bool SparcInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
-  assert(Cond.size() == 1);
-  SPCC::CondCodes CC = static_cast<SPCC::CondCodes>(Cond[0].getImm());
-  Cond[0].setImm(GetOppositeBranchCondition(CC));
+  assert(Cond.size() <= 2);
+  SPCC::CondCodes CC = static_cast<SPCC::CondCodes>(Cond[1].getImm());
+  Cond[1].setImm(GetOppositeBranchCondition(CC));
   return false;
 }
 

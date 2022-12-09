@@ -12,7 +12,6 @@
 #include "FormatTestUtils.h"
 
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "gtest/gtest.h"
 
 #define DEBUG_TYPE "format-test"

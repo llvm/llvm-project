@@ -870,9 +870,7 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
   AlignTokens(
       Style,
       [](Change const &C) {
-        // tok::kw_operator is necessary for aligning operator overload
-        // definitions.
-        if (C.Tok->isOneOf(TT_FunctionDeclarationName, tok::kw_operator))
+        if (C.Tok->is(TT_FunctionDeclarationName))
           return true;
         if (C.Tok->isNot(TT_StartOfName))
           return false;
@@ -1051,7 +1049,7 @@ void WhitespaceManager::alignTrailingComments(unsigned Start, unsigned End,
               Changes[i].StartOfBlockComment->StartOfTokenColumn -
               Changes[i].StartOfTokenColumn;
     }
-    if (Shift < 0)
+    if (Shift <= 0)
       continue;
     Changes[i].Spaces += Shift;
     if (i + 1 != Changes.size())

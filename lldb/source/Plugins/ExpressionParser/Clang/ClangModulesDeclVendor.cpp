@@ -125,7 +125,7 @@ private:
   ImportedModuleSet m_user_imported_modules;
   // We assume that every ASTContext has an TypeSystemClang, so we also store
   // a custom TypeSystemClang for our internal ASTContext.
-  std::unique_ptr<TypeSystemClang> m_ast_context;
+  std::shared_ptr<TypeSystemClang> m_ast_context;
 };
 } // anonymous namespace
 
@@ -190,7 +190,7 @@ ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
 
   // Initialize our TypeSystemClang.
   m_ast_context =
-      std::make_unique<TypeSystemClang>("ClangModulesDeclVendor ASTContext",
+      std::make_shared<TypeSystemClang>("ClangModulesDeclVendor ASTContext",
                                         m_compiler_instance->getASTContext());
 }
 

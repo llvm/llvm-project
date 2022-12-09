@@ -129,6 +129,10 @@ public:
     return KB;
   }
 
+  MachineIRBuilder &getBuilder() const {
+    return Builder;
+  }
+
   const TargetLowering &getTargetLowering() const;
 
   /// \returns true if the combiner is running pre-legalization.

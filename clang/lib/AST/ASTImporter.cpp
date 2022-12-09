@@ -223,7 +223,7 @@ namespace clang {
     template<typename T>
     Expected<Optional<T>> import(Optional<T> From) {
       if (!From)
-        return Optional<T>();
+        return None;
       return import(*From);
     }
 
@@ -10022,7 +10022,7 @@ ASTImporter::getImportDeclErrorIfAny(Decl *FromD) const {
   if (Pos != ImportDeclErrors.end())
     return Pos->second;
   else
-    return Optional<ASTImportError>();
+    return None;
 }
 
 void ASTImporter::setImportDeclError(Decl *From, ASTImportError Error) {

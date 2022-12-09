@@ -9,7 +9,7 @@ void foo(void) {}
 
 // The sysroot and sdk are LLDB-tuning-specific attributes.
 
-// LLDB: distinct !DICompileUnit({{.*}}sysroot: "/CLANG_SYSROOT/MacOSX.sdk",
+// LLDB: distinct !DICompileUnit({{.*}}sysroot: "/CLANG_SYSROOT/MacOSX.sdk"
 // LLDB-SAME:                          sdk: "MacOSX.sdk"
 // GDB: distinct !DICompileUnit(
 // GDB-NOT: sysroot: "/CLANG_SYSROOT/MacOSX.sdk"

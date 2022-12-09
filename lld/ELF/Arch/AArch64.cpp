@@ -747,9 +747,9 @@ void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   uint64_t secAddr = sec.getOutputSection()->addr;
   if (auto *s = dyn_cast<InputSection>(&sec))
     secAddr += s->outSecOff;
-  AArch64Relaxer relaxer(sec.relocations);
-  for (size_t i = 0, size = sec.relocations.size(); i != size; ++i) {
-    const Relocation &rel = sec.relocations[i];
+  AArch64Relaxer relaxer(sec.relocs());
+  for (size_t i = 0, size = sec.relocs().size(); i != size; ++i) {
+    const Relocation &rel = sec.relocs()[i];
     uint8_t *loc = buf + rel.offset;
     const uint64_t val =
         sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
@@ -757,14 +757,14 @@ void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     switch (rel.expr) {
     case R_AARCH64_GOT_PAGE_PC:
       if (i + 1 < size &&
-          relaxer.tryRelaxAdrpLdr(rel, sec.relocations[i + 1], secAddr, buf)) {
+          relaxer.tryRelaxAdrpLdr(rel, sec.relocs()[i + 1], secAddr, buf)) {
         ++i;
         continue;
       }
       break;
     case R_AARCH64_PAGE_PC:
       if (i + 1 < size &&
-          relaxer.tryRelaxAdrpAdd(rel, sec.relocations[i + 1], secAddr, buf)) {
+          relaxer.tryRelaxAdrpAdd(rel, sec.relocs()[i + 1], secAddr, buf)) {
         ++i;
         continue;
       }

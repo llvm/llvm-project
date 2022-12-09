@@ -40,6 +40,12 @@ public:
   void replaceElementsIn(Operation *op, bool replaceAttrs = true,
                          bool replaceLocs = false, bool replaceTypes = false);
 
+  /// Replace the elements within the given operation, and all nested
+  /// operations.
+  void recursivelyReplaceElementsIn(Operation *op, bool replaceAttrs = true,
+                                    bool replaceLocs = false,
+                                    bool replaceTypes = false);
+
   /// Replace the given attribute/type, and recursively replace any sub
   /// elements. Returns either the new attribute/type, or nullptr in the case of
   /// failure.

@@ -1213,7 +1213,7 @@ ObjCProtocolDecl *Sema::ActOnStartProtocolInterface(
     SourceLocation AtProtoInterfaceLoc, IdentifierInfo *ProtocolName,
     SourceLocation ProtocolLoc, Decl *const *ProtoRefs, unsigned NumProtoRefs,
     const SourceLocation *ProtoLocs, SourceLocation EndProtoLoc,
-    const ParsedAttributesView &AttrList) {
+    const ParsedAttributesView &AttrList, SkipBodyInfo *SkipBody) {
   bool err = false;
   // FIXME: Deal with AttrList.
   assert(ProtocolName && "Missing protocol identifier");
@@ -1221,23 +1221,29 @@ ObjCProtocolDecl *Sema::ActOnStartProtocolInterface(
                                               forRedeclarationInCurContext());
   ObjCProtocolDecl *PDecl = nullptr;
   if (ObjCProtocolDecl *Def = PrevDecl? PrevDecl->getDefinition() : nullptr) {
-    // If we already have a definition, complain.
-    Diag(ProtocolLoc, diag::warn_duplicate_protocol_def) << ProtocolName;
-    Diag(Def->getLocation(), diag::note_previous_definition);
-
     // Create a new protocol that is completely distinct from previous
     // declarations, and do not make this protocol available for name lookup.
     // That way, we'll end up completely ignoring the duplicate.
     // FIXME: Can we turn this into an error?
     PDecl = ObjCProtocolDecl::Create(Context, CurContext, ProtocolName,
                                      ProtocolLoc, AtProtoInterfaceLoc,
-                                     /*PrevDecl=*/nullptr);
+                                     /*PrevDecl=*/Def);
+
+    if (SkipBody && !hasVisibleDefinition(Def)) {
+      SkipBody->CheckSameAsPrevious = true;
+      SkipBody->New = PDecl;
+      SkipBody->Previous = Def;
+    } else {
+      // If we already have a definition, complain.
+      Diag(ProtocolLoc, diag::warn_duplicate_protocol_def) << ProtocolName;
+      Diag(Def->getLocation(), diag::note_previous_definition);
+    }
 
     // If we are using modules, add the decl to the context in order to
     // serialize something meaningful.
     if (getLangOpts().Modules)
       PushOnScopeChains(PDecl, TUScope);
-    PDecl->startDefinition();
+    PDecl->startDuplicateDefinitionForComparison();
   } else {
     if (PrevDecl) {
       // Check for circular dependencies among protocol declarations. This can

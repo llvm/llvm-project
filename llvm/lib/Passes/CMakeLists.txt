@@ -20,6 +20,7 @@ add_llvm_component_library(LLVMPasses
   Coroutines
   IPO
   InstCombine
+  IRPrinter
   ObjCARC
   Scalar
   Support

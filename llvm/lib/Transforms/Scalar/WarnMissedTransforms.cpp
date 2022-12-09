@@ -50,7 +50,7 @@ static void warnAboutLeftoverTransformations(Loop *L,
     LLVM_DEBUG(dbgs() << "Leftover vectorization transformation\n");
     Optional<ElementCount> VectorizeWidth =
         getOptionalElementCountLoopAttribute(L);
-    Optional<int> InterleaveCount =
+    std::optional<int> InterleaveCount =
         getOptionalIntLoopAttribute(L, "llvm.loop.interleave.count");
 
     if (!VectorizeWidth || VectorizeWidth->isVector())

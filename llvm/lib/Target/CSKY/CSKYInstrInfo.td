@@ -1117,6 +1117,7 @@ def : Pat<(CSKY_LOAD_ADDR tglobaladdr, tconstpool:$src2), (LRW32 tconstpool:$src
 def : Pat<(CSKY_LOAD_ADDR tblockaddress, tconstpool:$src2), (LRW32 tconstpool:$src2)>;
 def : Pat<(CSKY_LOAD_ADDR tjumptable:$src1, tconstpool:$src2), (LRW32_Gen tjumptable:$src1, tconstpool:$src2)>;
 def : Pat<(CSKY_LOAD_ADDR texternalsym, tconstpool:$src2), (LRW32 tconstpool:$src2)>;
+def : Pat<(CSKY_LOAD_ADDR tconstpool:$src1, tconstpool:$src2), (LRW32_Gen tconstpool:$src1, tconstpool:$src2)>;
 
 let Predicates = [iHas2E3] in
   def : Pat<(i32 constpool:$src), (GRS32 (to_tconstpool tconstpool:$src))>;

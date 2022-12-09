@@ -998,3 +998,103 @@ fir.global linkonce @_QQcl.2E2F746573742E66393000 constant : !fir.char<1,11> {
 // CHECK-NOT: call{{.*}}_FortranASumInteger8(
 // CHECK: call @_FortranASumInteger8x2_simplified(
 // CHECK-NOT: call{{.*}}_FortranASumInteger8(
+
+// -----
+
+func.func @dot_f32_contract_reassoc(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "b"}) -> f32 {
+  %0 = fir.alloca f32 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %c3_i32 = arith.constant 3 : i32
+  %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
+  %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
+  %4 = fir.convert %1 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
+  %5 = fir.call @_FortranADotProductReal4(%2, %3, %4, %c3_i32) fastmath<contract,reassoc> : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f32
+  fir.store %5 to %0 : !fir.ref<f32>
+  %6 = fir.load %0 : !fir.ref<f32>
+  return %6 : f32
+}
+
+func.func @dot_f32_fast(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "b"}) -> f32 {
+  %0 = fir.alloca f32 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %c3_i32 = arith.constant 3 : i32
+  %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
+  %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
+  %4 = fir.convert %1 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
+  %5 = fir.call @_FortranADotProductReal4(%2, %3, %4, %c3_i32) fastmath<fast> : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f32
+  fir.store %5 to %0 : !fir.ref<f32>
+  %6 = fir.load %0 : !fir.ref<f32>
+  return %6 : f32
+}
+
+func.func private @_FortranADotProductReal4(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f32 attributes {fir.runtime}
+fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+  %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
+  fir.has_value %0 : !fir.char<1,10>
+}
+
+// CHECK-LABEL: @dot_f32_contract_reassoc
+// CHECK: fir.call @_FortranADotProductReal4_reassoc_contract_f32_f32_simplified(%2, %3) fastmath<reassoc,contract>
+// CHECK-LABEL: @dot_f32_fast
+// CHECK: fir.call @_FortranADotProductReal4_fast_f32_f32_simplified(%2, %3) fastmath<fast>
+// CHECK-LABEL: func.func private @_FortranADotProductReal4_reassoc_contract_f32_f32_simplified
+// CHECK: arith.mulf %{{.*}}, %{{.*}} fastmath<reassoc,contract> : f32
+// CHECK: arith.addf %{{.*}}, %{{.*}} fastmath<reassoc,contract> : f32
+// CHECK-LABEL: func.func private @_FortranADotProductReal4_fast_f32_f32_simplified
+// CHECK: arith.mulf %{{.*}}, %{{.*}} fastmath<fast> : f32
+// CHECK: arith.addf %{{.*}}, %{{.*}} fastmath<fast> : f32
+
+// -----
+
+func.func @sum_1d_real_contract_reassoc(%arg0: !fir.ref<!fir.array<10xf64>> {fir.bindc_name = "a"}) -> f64 {
+  %c10 = arith.constant 10 : index
+  %0 = fir.alloca f64 {bindc_name = "sum_1d_real", uniq_name = "_QFsum_1d_realEsum_1d_real"}
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
+  %3 = fir.absent !fir.box<i1>
+  %c0 = arith.constant 0 : index
+  %4 = fir.address_of(@_QQcl.2E2F6973756D5F352E66393000) : !fir.ref<!fir.char<1,13>>
+  %c5_i32 = arith.constant 5 : i32
+  %5 = fir.convert %2 : (!fir.box<!fir.array<10xf64>>) -> !fir.box<none>
+  %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
+  %7 = fir.convert %c0 : (index) -> i32
+  %8 = fir.convert %3 : (!fir.box<i1>) -> !fir.box<none>
+  %9 = fir.call @_FortranASumReal8(%5, %6, %c5_i32, %7, %8) fastmath<contract,reassoc> : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> f64
+  fir.store %9 to %0 : !fir.ref<f64>
+  %10 = fir.load %0 : !fir.ref<f64>
+  return %10 : f64
+}
+
+func.func @sum_1d_real_fast(%arg0: !fir.ref<!fir.array<10xf64>> {fir.bindc_name = "a"}) -> f64 {
+  %c10 = arith.constant 10 : index
+  %0 = fir.alloca f64 {bindc_name = "sum_1d_real", uniq_name = "_QFsum_1d_realEsum_1d_real"}
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
+  %3 = fir.absent !fir.box<i1>
+  %c0 = arith.constant 0 : index
+  %4 = fir.address_of(@_QQcl.2E2F6973756D5F352E66393000) : !fir.ref<!fir.char<1,13>>
+  %c5_i32 = arith.constant 5 : i32
+  %5 = fir.convert %2 : (!fir.box<!fir.array<10xf64>>) -> !fir.box<none>
+  %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
+  %7 = fir.convert %c0 : (index) -> i32
+  %8 = fir.convert %3 : (!fir.box<i1>) -> !fir.box<none>
+  %9 = fir.call @_FortranASumReal8(%5, %6, %c5_i32, %7, %8) fastmath<fast> : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> f64
+  fir.store %9 to %0 : !fir.ref<f64>
+  %10 = fir.load %0 : !fir.ref<f64>
+  return %10 : f64
+}
+
+func.func private @_FortranASumReal8(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> f64 attributes {fir.runtime}
+fir.global linkonce @_QQcl.2E2F6973756D5F352E66393000 constant : !fir.char<1,13> {
+  %0 = fir.string_lit "./isum_5.f90\00"(13) : !fir.char<1,13>
+  fir.has_value %0 : !fir.char<1,13>
+}
+
+// CHECK-LABEL: @sum_1d_real_contract_reassoc
+// CHECK: fir.call @_FortranASumReal8x1_reassoc_contract_simplified(%5) fastmath<reassoc,contract>
+// CHECK-LABEL: @sum_1d_real_fast
+// CHECK: fir.call @_FortranASumReal8x1_fast_simplified(%5) fastmath<fast>
+// CHECK-LABEL: func.func private @_FortranASumReal8x1_reassoc_contract_simplified
+// CHECK: arith.addf %{{.*}}, %{{.*}} fastmath<reassoc,contract> : f64
+// CHECK-LABEL: func.func private @_FortranASumReal8x1_fast_simplified
+// CHECK: arith.addf %{{.*}}, %{{.*}} fastmath<fast> : f64

@@ -871,284 +871,9 @@ void GenericOp::getEffects(
                         getDpsInputOperands(), getDpsInitOperands());
 }
 
-static bool isResultValueDead(linalg::GenericOp genericOp, OpResult result) {
-  if (!result.use_empty())
-    return false;
-  // If out operand not used in payload, we can drop it.
-  OpOperand *outputOpOperand =
-      genericOp.getDpsInitOperand(result.getResultNumber());
-  if (!genericOp.payloadUsesValueFromOperand(outputOpOperand))
-    return true;
-
-  // The out operand that is part of a payload can be dropped if
-  // these conditions are met:
-  // - Result from out operand is dead.
-  // - User of arg is yield.
-  // - outArg data is not being used by other outArgs.
-
-  // Check block arg and cycle from out operand has a single use.
-  BlockArgument outputArg =
-      genericOp.getRegionOutputArgs()[result.getResultNumber()];
-  if (!outputArg.hasOneUse())
-    return false;
-  Operation *argUserOp = *outputArg.user_begin();
-
-  // Check argUser has no other use.
-  if (!argUserOp->use_empty())
-    return false;
-
-  // Check that argUser is a yield.
-  auto yieldOp = dyn_cast<linalg::YieldOp>(argUserOp);
-  if (!yieldOp)
-    return false;
-
-  // Check outArg data is not being used by other outArgs.
-  if (yieldOp.getOperand(result.getResultNumber()) != outputArg)
-    return false;
-
-  return true;
-}
-
 LogicalResult GenericOp::verify() { return success(); }
 
 namespace {
-
-struct DeduplicateAndRemoveDeadOperandsAndResults
-    : public OpRewritePattern<GenericOp> {
-  using OpRewritePattern<GenericOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(GenericOp genericOp,
-                                PatternRewriter &rewriter) const override {
-    // Create a map from argument position in the original op to the argument
-    // position in the new op. If the argument is dropped it wont have an entry.
-    SmallVector<OpOperand *> droppedOpOperands;
-
-    // Information needed to build the new op.
-    SmallVector<Value> newInputOperands, newOutputOperands;
-    SmallVector<AffineMap> newIndexingMaps;
-
-    // Gather information about duplicate input operands.
-    llvm::SmallDenseMap<unsigned, unsigned> origInsToNewInsPos =
-        deduplicateInputOperands(genericOp, droppedOpOperands, newInputOperands,
-                                 newIndexingMaps);
-
-    // Gather information about the dropped outputs.
-    llvm::SmallDenseMap<unsigned, unsigned> origOutsToNewOutsPos =
-        deduplicateOutputOperands(genericOp, droppedOpOperands,
-                                  newOutputOperands, newIndexingMaps);
-
-    // Check if there is any change to operands.
-    if (newInputOperands.size() + newOutputOperands.size() ==
-        genericOp->getNumOperands())
-      return failure();
-
-    // Create the new op with the body being empty.
-    Location loc = genericOp.getLoc();
-    SmallVector<Type> newResultTypes;
-    for (Value v : newOutputOperands)
-      if (v.getType().isa<TensorType>())
-        newResultTypes.push_back(v.getType());
-    auto newOp = rewriter.create<GenericOp>(
-        loc, newResultTypes, newInputOperands, newOutputOperands,
-        rewriter.getAffineMapArrayAttr(newIndexingMaps),
-        genericOp.getIteratorTypes(), genericOp.getDocAttr(),
-        genericOp.getLibraryCallAttr(),
-        [](OpBuilder & /*builder*/, Location /*loc*/, ValueRange /*args*/) {
-          return;
-        });
-    // Copy over unknown attributes. They might be load bearing for some flow.
-    ArrayRef<StringRef> odsAttrs = genericOp.getAttributeNames();
-    for (NamedAttribute kv : genericOp->getAttrs())
-      if (!llvm::is_contained(odsAttrs, kv.getName().getValue()))
-        newOp->setAttr(kv.getName(), kv.getValue());
-
-    // Fix up the payload of the canonicalized operation.
-    populateOpPayload(genericOp, newOp, origInsToNewInsPos,
-                      origOutsToNewOutsPos, rewriter);
-
-    // Replace all live uses of the op.
-    SmallVector<Value> replacementsVals(genericOp->getNumResults(), nullptr);
-    for (const auto &result : llvm::enumerate(genericOp.getResults())) {
-      auto it = origOutsToNewOutsPos.find(result.index());
-      if (it == origOutsToNewOutsPos.end())
-        continue;
-      replacementsVals[result.index()] = newOp.getResult(it->second);
-    }
-    rewriter.replaceOp(genericOp, replacementsVals);
-    return success();
-  }
-
-private:
-  // Deduplicate input operands, and return the
-  // - Mapping from operand position in the original op, to operand position in
-  // the canonicalized op.
-  // - The preserved input operands list (by reference).
-  llvm::SmallDenseMap<unsigned, unsigned>
-  deduplicateInputOperands(GenericOp genericOp,
-                           SmallVector<OpOperand *> &droppedOpOperands,
-                           SmallVector<Value> &newInputOperands,
-                           SmallVector<AffineMap> &newIndexingMaps) const {
-    llvm::SmallDenseMap<unsigned, unsigned> origToNewPos;
-    llvm::SmallDenseMap<std::pair<Value, AffineMap>, unsigned> dedupedInputs;
-    for (const auto &en : llvm::enumerate(genericOp.getDpsInputOperands())) {
-      OpOperand *inputOpOperand = en.value();
-      // Check if operand is dead and if dropping the indexing map makes the
-      // loops to shape computation invalid.
-      if (!genericOp.payloadUsesValueFromOperand(inputOpOperand)) {
-        // Add the current operands to the list of potentially droppable
-        // operands. If it cannot be dropped, this needs to be popped back.
-        droppedOpOperands.push_back(inputOpOperand);
-        if (genericOp.canOpOperandsBeDropped(droppedOpOperands))
-          continue;
-        droppedOpOperands.pop_back();
-      }
-
-      // Check if this operand is a duplicate.
-      AffineMap indexingMap = genericOp.getMatchingIndexingMap(inputOpOperand);
-      auto it = dedupedInputs.find(
-          std::make_pair(inputOpOperand->get(), indexingMap));
-      if (it != dedupedInputs.end()) {
-        origToNewPos[en.index()] = it->second;
-        droppedOpOperands.push_back(inputOpOperand);
-        continue;
-      }
-
-      // This is a preserved argument.
-      origToNewPos[en.index()] = newInputOperands.size();
-      dedupedInputs[{inputOpOperand->get(), indexingMap}] =
-          newInputOperands.size();
-      newInputOperands.push_back(inputOpOperand->get());
-      newIndexingMaps.push_back(indexingMap);
-    }
-    return origToNewPos;
-  }
-
-  // Deduplicate output operands, and return the
-  // - Mapping from operand position in the original op, to operand position in
-  // the canonicalized op.
-  // - The preserved output operands list (by reference).
-  llvm::SmallDenseMap<unsigned, unsigned>
-  deduplicateOutputOperands(GenericOp genericOp,
-                            SmallVector<OpOperand *> &droppedOpOperands,
-                            SmallVector<Value> &newOutputOperands,
-                            SmallVector<AffineMap> &newIndexingMaps) const {
-    llvm::SmallDenseMap<unsigned, unsigned> origToNewPos;
-    llvm::SmallDenseMap<std::tuple<Value, AffineMap, Value>, unsigned>
-        dedupedOutpts;
-    // If the op doesnt have tensor semantics, keep all the outputs as
-    // preserved.
-    if (!genericOp.hasTensorSemantics()) {
-      for (const auto &en : llvm::enumerate(genericOp.getDpsInitOperands())) {
-        origToNewPos[en.index()] = newOutputOperands.size();
-        newOutputOperands.push_back(en.value()->get());
-        newIndexingMaps.push_back(genericOp.getMatchingIndexingMap(en.value()));
-      }
-      return origToNewPos;
-    }
-    // Output argument can be dropped if the result has
-    // - no users, and
-    // - it is not used in the payload, and
-    // - the corresponding indexing maps are not needed for loop bound
-    //   computation.
-    auto yieldOp = cast<YieldOp>(genericOp.getBody()->getTerminator());
-    for (const auto &outputOpOperand :
-         llvm::enumerate(genericOp.getDpsInitOperands())) {
-      OpResult result = genericOp.getTiedOpResult(outputOpOperand.value());
-      AffineMap indexingMap =
-          genericOp.getMatchingIndexingMap(outputOpOperand.value());
-      auto key = std::make_tuple(outputOpOperand.value()->get(), indexingMap,
-                                 yieldOp->getOperand(outputOpOperand.index()));
-      if (isResultValueDead(genericOp, result)) {
-        // Check if the opoperand can be dropped without affecting loop
-        // bound computation. Add the operand to the list of dropped op
-        // operand for checking. If it cannot be dropped, need to pop the
-        // value back.
-        droppedOpOperands.push_back(outputOpOperand.value());
-        if (genericOp.canOpOperandsBeDropped(droppedOpOperands)) {
-          continue;
-        }
-        droppedOpOperands.pop_back();
-      }
-
-      if (!genericOp.payloadUsesValueFromOperand(outputOpOperand.value())) {
-        // The out operand can also be dropped if it is computed redundantly
-        // by another result, the conditions for that are
-        // - The same operand is used as the out operand
-        // - The same indexing map is used
-        // - The same yield value is used.
-        auto it = dedupedOutpts.find(key);
-        if (it != dedupedOutpts.end()) {
-          origToNewPos[outputOpOperand.index()] = it->second;
-          droppedOpOperands.push_back(outputOpOperand.value());
-          continue;
-        }
-      }
-
-      origToNewPos[outputOpOperand.index()] = newOutputOperands.size();
-      dedupedOutpts[key] = newOutputOperands.size();
-      newOutputOperands.push_back(outputOpOperand.value()->get());
-      newIndexingMaps.push_back(
-          genericOp.getMatchingIndexingMap(outputOpOperand.value()));
-    }
-    return origToNewPos;
-  }
-
-  // Populate the body of the canonicalized operation.
-  void populateOpPayload(
-      GenericOp genericOp, GenericOp newOp,
-      const llvm::SmallDenseMap<unsigned, unsigned> &origInsToNewInsPos,
-      const llvm::SmallDenseMap<unsigned, unsigned> &origOutsToNewOutsPos,
-      PatternRewriter &rewriter) const {
-    // Merge the body of the original op with the new op.
-    Block *newOpBlock = &newOp.getRegion().front();
-    assert(newOpBlock->empty() && "expected new op to have an empty payload");
-    Block *origOpBlock = &genericOp.getRegion().front();
-    SmallVector<Value> replacements(origOpBlock->getNumArguments(), nullptr);
-
-    // Replace all arguments in the original op, with arguments from the
-    // canonicalized op.
-    auto updateReplacements =
-        [&](OpOperandVector &origOperands, OpOperandVector &newOperands,
-            const llvm::SmallDenseMap<unsigned, unsigned> &map) {
-          for (const auto &origOperand : llvm::enumerate(origOperands)) {
-            auto it = map.find(origOperand.index());
-            if (it == map.end())
-              continue;
-            OpOperand *newOperand = newOperands[it->second];
-            replacements[origOperand.value()->getOperandNumber()] =
-                newOpBlock->getArgument(newOperand->getOperandNumber());
-          }
-        };
-
-    OpOperandVector origInputOperands = genericOp.getDpsInputOperands();
-    OpOperandVector newInputOperands = newOp.getDpsInputOperands();
-    updateReplacements(origInputOperands, newInputOperands, origInsToNewInsPos);
-
-    OpOperandVector origOutputOperands = genericOp.getDpsInitOperands();
-    OpOperandVector newOutputOperands = newOp.getDpsInitOperands();
-    updateReplacements(origOutputOperands, newOutputOperands,
-                       origOutsToNewOutsPos);
-
-    // Drop the unused yield args.
-    if (newOp.getNumDpsInits() != genericOp.getNumDpsInits()) {
-      OpBuilder::InsertionGuard g(rewriter);
-      YieldOp origYieldOp = cast<YieldOp>(origOpBlock->getTerminator());
-      rewriter.setInsertionPoint(origYieldOp);
-
-      SmallVector<Value> newYieldVals(newOp.getNumDpsInits(), nullptr);
-      for (const auto &yieldOpOperands :
-           llvm::enumerate(origYieldOp.getValues())) {
-        auto it = origOutsToNewOutsPos.find(yieldOpOperands.index());
-        if (it == origOutsToNewOutsPos.end())
-          continue;
-        newYieldVals[it->second] = yieldOpOperands.value();
-      }
-      rewriter.replaceOpWithNewOp<YieldOp>(origYieldOp, newYieldVals);
-    }
-
-    rewriter.mergeBlocks(origOpBlock, newOpBlock, replacements);
-  }
-};
 
 /// Remove generic operations (on tensors) that are just copying
 /// the values from inputs to the results. Requirements are
@@ -1227,74 +952,11 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
   }
 };
 
-/// Remove unused cycles.
-/// We can remove unused cycle within a payload of generic region
-/// if these conditions are met:
-/// - Result from out operand is dead.
-/// - Block arg from out operand has a single use in the %cycle
-/// instruction.
-/// - Cycle has a single use and it is in yield.
-struct RemoveUnusedCycleInGenericOp : public OpRewritePattern<GenericOp> {
-  using OpRewritePattern<GenericOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(GenericOp genericOp,
-                                PatternRewriter &rewriter) const override {
-
-    // If the op doesnt have tensor semantics, preserve the outputs as is.
-    if (!genericOp.hasTensorSemantics())
-      return failure();
-
-    bool hasRemovedCycles = false;
-    // Iterate over output operands and remove any unused cycles.
-    for (const auto &outputOpOperand :
-         llvm::enumerate(genericOp.getDpsInitOperands())) {
-
-      // Check that result from out operand is dead.
-      Value result = genericOp.getResult(outputOpOperand.index());
-      if (!result.use_empty())
-        continue;
-
-      // Check that outputArg has one use in cycle.
-      BlockArgument outputArg =
-          genericOp.getRegionOutputArgs()[outputOpOperand.index()];
-      if (!outputArg.hasOneUse())
-        continue;
-
-      // Check cycle has at most one use.
-      Operation *cycleOp = *outputArg.user_begin();
-      if (!cycleOp->hasOneUse())
-        continue;
-
-      // Check that the cycleUser is a yield.
-      Operation *cycleUserOp = *cycleOp->user_begin();
-      if (!isa<linalg::YieldOp>(cycleUserOp))
-        continue;
-
-      // Check that argIndex matches yieldIndex, else data is being used.
-      if (cycleUserOp->getOperand(outputOpOperand.index()) !=
-          cycleOp->getResult(0))
-        continue;
-
-      // Directly replace the cycle with the blockArg such that
-      // Deduplicate pattern can eliminate it along with unused yield.
-      rewriter.replaceOp(cycleOp, outputArg);
-      rewriter.updateRootInPlace(genericOp, [] {});
-      hasRemovedCycles = true;
-    }
-
-    if (hasRemovedCycles) {
-      return success();
-    }
-
-    return failure();
-  }
-};
 } // namespace
 
 void GenericOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<DeduplicateAndRemoveDeadOperandsAndResults,
-              EraseIdentityGenericOp, RemoveUnusedCycleInGenericOp>(context);
+  results.add<EraseIdentityGenericOp>(context);
 }
 
 LogicalResult GenericOp::fold(ArrayRef<Attribute>,
@@ -1849,10 +1511,6 @@ void BroadcastOp::print(OpAsmPrinter &p) {
 LogicalResult BroadcastOp::verify() {
   ArrayRef<int64_t> dimensionsRef = getDimensions();
 
-  if (!llvm::is_sorted(dimensionsRef))
-    return emitOpError() << "dimensions should be in sorted order, implicit "
-                            "transpose is not supported";
-
   auto inputType = getInput().getType();
   auto initType = getInit().getType();
 
@@ -1862,40 +1520,35 @@ LogicalResult BroadcastOp::verify() {
   auto inputShape = inputType.getShape();
   auto initShape = initType.getShape();
 
-  if ((size_t)inputRank != dimensionsRef.size())
-    return emitOpError()
-           << "input rank does match the number of dimensions. expected: "
-           << inputRank << ", got: " << dimensionsRef.size();
-
-  // Mapping from init dims to input dims.
-  const int64_t kUnmappedDim = -1;
-  SmallVector<int64_t> reverseDimMap(initRank, kUnmappedDim);
+  if ((size_t)inputRank + dimensionsRef.size() != (size_t)initRank)
+    return emitOpError() << "input rank plus added dimensions does not "
+                            "match init rank. input rank: "
+                         << inputRank
+                         << ", dimensions size: " << dimensionsRef.size()
+                         << ", init rank: " << initRank;
 
   for (const auto &[idx, dim] : llvm::enumerate(dimensionsRef)) {
     if (dim < 0 || dim >= initRank)
       return emitOpError() << "dimension " << idx
                            << " is out of range. expected range: [0, "
                            << initRank - 1 << "], got: " << dim;
-
-    reverseDimMap[dim] = idx;
   }
 
-  for (const auto &[idx, inputDimIdx] : llvm::enumerate(reverseDimMap)) {
-    if (inputDimIdx == kUnmappedDim) {
-      // This dimensions is being added. Should be statically known.
-      if (ShapedType::isDynamic(initShape[idx]))
-        return emitOpError()
-               << "init dim " << idx
-               << " can't be dynamic, because it's not matched to input";
-    } else {
-      // This dimensions is mapped from the input. Init and input dims should
-      // match.
-      if (inputShape[inputDimIdx] != initShape[idx])
-        return emitOpError()
-               << "input dim " << inputDimIdx << " should match init dim "
-               << idx << ". input: " << inputShape[inputDimIdx]
-               << ", init: " << initShape[idx];
-    }
+  // Mapping from input dims to init dims.
+  SmallVector<int64_t> dimMap;
+  for (auto dim : llvm::seq<int64_t>(0, initRank)) {
+    if (!llvm::is_contained(dimensionsRef, dim))
+      dimMap.push_back(dim);
+  }
+
+  for (const auto &[inputDimIdx, initDimIdx] : llvm::enumerate(dimMap)) {
+    // This dimensions is mapped from the input. Init and input dims should
+    // match.
+    if (inputShape[inputDimIdx] != initShape[initDimIdx])
+      return emitOpError() << "input dim " << inputDimIdx
+                           << " should match init dim " << initDimIdx
+                           << ". input: " << inputShape[inputDimIdx]
+                           << ", init: " << initShape[initDimIdx];
   }
 
   return success();
@@ -1910,8 +1563,7 @@ ArrayAttr BroadcastOp::getIndexingMaps() {
   Builder builder(getContext());
   int64_t rank = getInit().getType().getRank();
   return builder.getAffineMapArrayAttr(
-      {builder.getMultiDimIdentityMap(rank).getSubMap(
-           llvm::to_vector_of<unsigned>(getDimensions())),
+      {builder.getMultiDimIdentityMap(rank).dropResults(getDimensions()),
        builder.getMultiDimIdentityMap(rank)});
 }
 
@@ -2137,7 +1789,8 @@ struct FoldTensorCastProducerOp : public OpInterfaceRewritePattern<LinalgOp> {
       auto tensorCastOp = output->get().getDefiningOp<tensor::CastOp>();
       bool fold = canFoldIntoConsumerOp(tensorCastOp);
       newOperands.push_back(fold ? tensorCastOp.getOperand() : output->get());
-      newResultTypes.push_back(newOperands.back().getType());
+      if (!newOperands.back().getType().isa<MemRefType>())
+        newResultTypes.push_back(newOperands.back().getType());
     }
     // Clone op.
     Operation *newOp =

@@ -159,7 +159,7 @@ bool ARCRegisterInfo::useFPForScavengingIndex(const MachineFunction &MF) const {
   return true;
 }
 
-void ARCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+bool ARCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                           int SPAdj, unsigned FIOperandNum,
                                           RegScavenger *RS) const {
   assert(SPAdj == 0 && "Unexpected");
@@ -190,7 +190,7 @@ void ARCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     Register FrameReg = getFrameRegister(MF);
     MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false /*isDef*/);
     MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
-    return;
+    return false;
   }
 
   // fold constant into offset.
@@ -218,6 +218,7 @@ void ARCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   }
   replaceFrameIndex(II, TII, Reg, getFrameRegister(MF), Offset, StackSize,
                     ObjSize, RS, SPAdj);
+  return true;                  
 }
 
 Register ARCRegisterInfo::getFrameRegister(const MachineFunction &MF) const {

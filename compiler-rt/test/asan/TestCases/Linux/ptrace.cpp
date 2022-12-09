@@ -14,8 +14,8 @@
 #include <unistd.h>
 #include <sys/uio.h> // for iovec
 #include <elf.h> // for NT_PRSTATUS
-#ifdef __aarch64__
-# include <asm/ptrace.h>
+#if defined(__aarch64__) || defined(__loongarch__)
+#  include <asm/ptrace.h>
 #endif
 
 #if defined(__i386__) || defined(__x86_64__)
@@ -36,6 +36,13 @@ typedef struct user_fpsimd_state fpregs_struct;
 #define PRINT_REG_PC(__regs)    printf ("%x\n", (unsigned) (__regs.pc))
 #define PRINT_REG_FP(__fpregs)  printf ("%x\n", (unsigned) (__fpregs.fpsr))
 #define ARCH_IOVEC_FOR_GETREGSET
+
+#elif defined(__loongarch__)
+typedef struct user_pt_regs regs_struct;
+typedef struct user_fp_state fpregs_struct;
+#  define PRINT_REG_PC(__regs) printf("%lx\n", (unsigned long)(__regs.csr_era))
+#  define PRINT_REG_FP(__fpregs) printf("%x\n", (unsigned)(__fpregs.fcsr))
+#  define ARCH_IOVEC_FOR_GETREGSET
 
 #elif defined(__powerpc64__)
 typedef struct pt_regs regs_struct;

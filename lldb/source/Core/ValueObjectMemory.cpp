@@ -83,8 +83,7 @@ ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
     : ValueObject(exe_scope, manager), m_address(address), m_type_sp(),
       m_compiler_type(ast_type) {
   // Do not attempt to construct one of these objects with no variable!
-  assert(m_compiler_type.GetTypeSystem());
-  assert(m_compiler_type.GetOpaqueQualType());
+  assert(m_compiler_type.IsValid());
 
   TargetSP target_sp(GetTargetSP());
 

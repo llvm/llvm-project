@@ -94,7 +94,7 @@
 # include <utime.h>
 # include <sys/ptrace.h>
 #    if defined(__mips64) || defined(__aarch64__) || defined(__arm__) || \
-        defined(__hexagon__) || SANITIZER_RISCV64
+        defined(__hexagon__) || defined(__loongarch__) ||SANITIZER_RISCV64
 #      include <asm/ptrace.h>
 #      ifdef __arm__
 typedef struct user_fpregs elf_fpregset_t;
@@ -352,7 +352,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
 #if SANITIZER_LINUX && !SANITIZER_ANDROID &&                               \
     (defined(__i386) || defined(__x86_64) || defined(__mips64) ||          \
      defined(__powerpc64__) || defined(__aarch64__) || defined(__arm__) || \
-     defined(__s390__) || SANITIZER_RISCV64)
+     defined(__s390__) || defined(__loongarch__)|| SANITIZER_RISCV64)
 #if defined(__mips64) || defined(__powerpc64__) || defined(__arm__)
   unsigned struct_user_regs_struct_sz = sizeof(struct pt_regs);
   unsigned struct_user_fpregs_struct_sz = sizeof(elf_fpregset_t);
@@ -362,21 +362,24 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
 #elif defined(__aarch64__)
   unsigned struct_user_regs_struct_sz = sizeof(struct user_pt_regs);
   unsigned struct_user_fpregs_struct_sz = sizeof(struct user_fpsimd_state);
+#elif defined(__loongarch__)
+  unsigned struct_user_regs_struct_sz = sizeof(struct user_pt_regs);
+  unsigned struct_user_fpregs_struct_sz = sizeof(struct user_fp_state);
 #elif defined(__s390__)
   unsigned struct_user_regs_struct_sz = sizeof(struct _user_regs_struct);
   unsigned struct_user_fpregs_struct_sz = sizeof(struct _user_fpregs_struct);
 #else
   unsigned struct_user_regs_struct_sz = sizeof(struct user_regs_struct);
   unsigned struct_user_fpregs_struct_sz = sizeof(struct user_fpregs_struct);
-#endif // __mips64 || __powerpc64__ || __aarch64__
+#endif // __mips64 || __powerpc64__ || __aarch64__ || __loongarch__
 #if defined(__x86_64) || defined(__mips64) || defined(__powerpc64__) || \
     defined(__aarch64__) || defined(__arm__) || defined(__s390__) ||    \
-    SANITIZER_RISCV64
+    defined(__loongarch__) || SANITIZER_RISCV64
   unsigned struct_user_fpxregs_struct_sz = 0;
 #else
   unsigned struct_user_fpxregs_struct_sz = sizeof(struct user_fpxregs_struct);
 #endif // __x86_64 || __mips64 || __powerpc64__ || __aarch64__ || __arm__
-// || __s390__
+// || __s390__ || __loongarch__
 #ifdef __arm__
   unsigned struct_user_vfpregs_struct_sz = ARM_VFPREGS_SIZE;
 #else

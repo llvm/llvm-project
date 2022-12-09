@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck %s
 
 ; This kernel starts with the amdgpu-no-workitem-id-* attributes, but
 ; need to be removed when these intrinsic uses are introduced.

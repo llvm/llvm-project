@@ -337,6 +337,15 @@ public:
     Inherited::VisitFieldDecl(D);
   }
 
+  void VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
+    ID.AddInteger(D->getPropertyAttributes());
+    ID.AddInteger(D->getPropertyImplementation());
+    AddQualType(D->getType());
+    AddDecl(D);
+
+    Inherited::VisitObjCPropertyDecl(D);
+  }
+
   void VisitFunctionDecl(const FunctionDecl *D) {
     // Handled by the ODRHash for FunctionDecl
     ID.AddInteger(D->getODRHash());
@@ -522,6 +531,7 @@ bool ODRHash::isSubDeclToBeProcessed(const Decl *D, const DeclContext *Parent) {
     case Decl::Typedef:
     case Decl::Var:
     case Decl::ObjCMethod:
+    case Decl::ObjCProperty:
       return true;
   }
 }

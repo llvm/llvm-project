@@ -271,6 +271,18 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   return glob;
 }
 
+fir::DispatchTableOp fir::FirOpBuilder::createDispatchTableOp(
+    mlir::Location loc, llvm::StringRef name, llvm::StringRef parentName) {
+  auto module = getModule();
+  auto insertPt = saveInsertionPoint();
+  if (auto dt = module.lookupSymbol<fir::DispatchTableOp>(name))
+    return dt;
+  setInsertionPoint(module.getBody(), module.getBody()->end());
+  auto dt = create<fir::DispatchTableOp>(loc, name, mlir::Type{}, parentName);
+  restoreInsertionPoint(insertPt);
+  return dt;
+}
+
 mlir::Value
 fir::FirOpBuilder::convertWithSemantics(mlir::Location loc, mlir::Type toTy,
                                         mlir::Value val,
@@ -492,7 +504,8 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
         mlir::ValueRange emptyRange;
         mlir::Value s = createShape(loc, exv);
         return create<fir::EmboxOp>(loc, boxTy, itemAddr, s, /*slice=*/empty,
-                                    /*typeparams=*/emptyRange, box.getTdesc());
+                                    /*typeparams=*/emptyRange,
+                                    isPolymorphic ? box.getTdesc() : tdesc);
       },
       [&](const fir::CharArrayBoxValue &box) -> mlir::Value {
         mlir::Value s = createShape(loc, exv);
@@ -520,7 +533,8 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
         mlir::Value empty;
         mlir::ValueRange emptyRange;
         return create<fir::EmboxOp>(loc, boxTy, itemAddr, empty, empty,
-                                    emptyRange, p.getTdesc());
+                                    emptyRange,
+                                    isPolymorphic ? p.getTdesc() : tdesc);
       },
       [&](const auto &) -> mlir::Value {
         mlir::Value empty;

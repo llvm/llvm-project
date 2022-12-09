@@ -1352,9 +1352,8 @@ private:
       next();
       next(); // Consume first token (so we fix leading whitespace).
       while (CurrentToken) {
-        if (IsMarkOrRegion || CurrentToken->Previous->is(TT_BinaryOperator)) {
+        if (IsMarkOrRegion || CurrentToken->Previous->is(TT_BinaryOperator))
           CurrentToken->setType(TT_ImplicitStringLiteral);
-        }
         next();
       }
     }
@@ -2584,7 +2583,7 @@ public:
           (Start->Previous &&
            Start->Previous->isOneOf(TT_RequiresClause,
                                     TT_RequiresClauseInARequiresExpression))
-              ? [this](){
+              ? [this]() {
                   auto Ret = Current ? Current : Line.Last;
                   while (!Ret->ClosesRequiresClause && Ret->Previous)
                     Ret = Ret->Previous;
@@ -2852,6 +2851,8 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
           return false;
       } else if (isCppAttribute(IsCpp, *Next)) {
         Next = Next->MatchingParen;
+        if (!Next)
+          return false;
       } else if (Next->is(tok::l_paren)) {
         break;
       } else {
@@ -3441,7 +3442,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         return false;
       return !Style.Cpp11BracedListStyle;
     }
-    return false;
+    // Don't attempt to format operator<(), as it is handled later.
+    if (Right.isNot(TT_OverloadedOperatorLParen))
+      return false;
   }
   if (Right.is(tok::ellipsis)) {
     return Left.Tok.isLiteral() || (Left.is(tok::identifier) && Left.Previous &&
@@ -5093,8 +5096,9 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
 }
 
 void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) const {
-  llvm::errs() << "AnnotatedTokens(L=" << Line.Level << ", T=" << Line.Type
-               << ", C=" << Line.IsContinuation << "):\n";
+  llvm::errs() << "AnnotatedTokens(L=" << Line.Level << ", P=" << Line.PPLevel
+               << ", T=" << Line.Type << ", C=" << Line.IsContinuation
+               << "):\n";
   const FormatToken *Tok = Line.First;
   while (Tok) {
     llvm::errs() << " M=" << Tok->MustBreakBefore

@@ -22,7 +22,7 @@ subroutine test_assumed_shape_1(x)
   ! CHECK: %[[shape:.*]] = fir.shape_shift %[[c1]], %[[dims]]#1 : (index, index) -> !fir.shapeshift<1>
   ! CHECK: %[[newbox:.*]] = fir.embox %[[addr]](%[[shape]]) : (!fir.ref<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<?xi32>>
   ! CHECK: %[[castedBox:.*]] = fir.convert %[[newbox]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
-  ! CHECK: fir.call @_FortranAioOutputDescriptor(%[[cookie]], %[[castedBox]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
+  ! CHECK: fir.call @_FortranAioOutputDescriptor(%[[cookie]], %[[castedBox]]) {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
 end subroutine
 
 ! lower bounds all ones

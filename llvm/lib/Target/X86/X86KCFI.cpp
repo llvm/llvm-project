@@ -63,6 +63,33 @@ bool X86KCFI::emitCheck(MachineBasicBlock &MBB,
   if (MBBI->isBundled() && !std::prev(MBBI)->isBundle())
     report_fatal_error("Cannot emit a KCFI check for a bundled call");
 
+  MachineFunction &MF = *MBB.getParent();
+  // If the call target is a memory operand, unfold it and use R11 for the
+  // call, so KCFI_CHECK won't have to recompute the address.
+  switch (MBBI->getOpcode()) {
+  case X86::CALL64m:
+  case X86::CALL64m_NT:
+  case X86::TAILJMPm64:
+  case X86::TAILJMPm64_REX: {
+    MachineBasicBlock::instr_iterator OrigCall = MBBI;
+    SmallVector<MachineInstr *, 2> NewMIs;
+    if (!TII->unfoldMemoryOperand(MF, *OrigCall, X86::R11, /*UnfoldLoad=*/true,
+                                  /*UnfoldStore=*/false, NewMIs))
+      report_fatal_error("Failed to unfold memory operand for a KCFI check");
+    for (auto *NewMI : NewMIs)
+      MBBI = MBB.insert(OrigCall, NewMI);
+    assert(MBBI->isCall() &&
+           "Unexpected instruction after memory operand unfolding");
+    if (OrigCall->shouldUpdateCallSiteInfo())
+      MF.moveCallSiteInfo(&*OrigCall, &*MBBI);
+    MBBI->setCFIType(MF, OrigCall->getCFIType());
+    OrigCall->eraseFromParent();
+    break;
+  }
+  default:
+    break;
+  }
+
   MachineInstr *Check =
       BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(X86::KCFI_CHECK))
           .getInstr();
@@ -73,9 +100,6 @@ bool X86KCFI::emitCheck(MachineBasicBlock &MBB,
   case X86::TAILJMPr64:
   case X86::TAILJMPr64_REX:
     assert(Target.isReg() && "Unexpected target operand for an indirect call");
-    // KCFI_CHECK uses r10 as a temporary register.
-    assert(Target.getReg() != X86::R10 &&
-           "Unsupported target register for a KCFI call");
     Check->addOperand(MachineOperand::CreateReg(Target.getReg(), false));
     Target.setIsRenamable(false);
     break;
@@ -93,7 +117,7 @@ bool X86KCFI::emitCheck(MachineBasicBlock &MBB,
   }
 
   Check->addOperand(MachineOperand::CreateImm(MBBI->getCFIType()));
-  MBBI->setCFIType(*MBB.getParent(), 0);
+  MBBI->setCFIType(MF, 0);
 
   // If not already bundled, bundle the check and the call to prevent
   // further changes.

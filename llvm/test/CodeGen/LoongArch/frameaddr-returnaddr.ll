@@ -33,6 +33,36 @@ define ptr @test_frameaddress_0() nounwind {
   ret ptr %1
 }
 
+define ptr @test_frameaddress_2() nounwind {
+; LA32-LABEL: test_frameaddress_2:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $sp, $sp, -16
+; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
+; LA32-NEXT:    addi.w $fp, $sp, 16
+; LA32-NEXT:    ld.w $a0, $fp, -8
+; LA32-NEXT:    ld.w $a0, $a0, -8
+; LA32-NEXT:    ld.w $fp, $sp, 8 # 4-byte Folded Reload
+; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 16
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: test_frameaddress_2:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $sp, $sp, -16
+; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
+; LA64-NEXT:    addi.d $fp, $sp, 16
+; LA64-NEXT:    ld.d $a0, $fp, -16
+; LA64-NEXT:    ld.d $a0, $a0, -16
+; LA64-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 16
+; LA64-NEXT:    ret
+  %1 = call ptr @llvm.frameaddress(i32 2)
+  ret ptr %1
+}
+
 define ptr @test_returnaddress_0() nounwind {
 ; LA32-LABEL: test_returnaddress_0:
 ; LA32:       # %bb.0:

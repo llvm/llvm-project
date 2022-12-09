@@ -9,6 +9,7 @@
 #ifndef LLDB_LLDB_ENUMERATIONS_H
 #define LLDB_LLDB_ENUMERATIONS_H
 
+#include <cstdint>
 #include <type_traits>
 
 #ifndef SWIG
@@ -433,7 +434,7 @@ FLAGS_ENUM(WatchpointEventType){
 /// specification for ease of use and consistency.
 /// The enum -> string code is in Language.cpp, don't change this
 /// table without updating that code as well.
-enum LanguageType {
+enum LanguageType : uint16_t {
   eLanguageTypeUnknown = 0x0000,        ///< Unknown or invalid language value.
   eLanguageTypeC89 = 0x0001,            ///< ISO C:1989.
   eLanguageTypeC = 0x0002,              ///< Non-standardized C, such as K&R.

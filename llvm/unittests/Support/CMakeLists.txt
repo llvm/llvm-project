@@ -40,7 +40,6 @@ add_llvm_unittest(SupportTests
   FileCollectorTest.cpp
   FileOutputBufferTest.cpp
   FileUtilitiesTest.cpp
-  FormatChkTest.cpp
   FormatVariadicTest.cpp
   FSUniqueIDTest.cpp
   GlobPatternTest.cpp

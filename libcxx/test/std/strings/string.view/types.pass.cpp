@@ -72,7 +72,9 @@ test()
 int main(int, char**)
 {
     test<std::char_traits<char> >();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<std::char_traits<wchar_t> >();
+#endif
 #ifndef TEST_HAS_NO_CHAR8_T
     test<std::char_traits<char8_t> >();
 #endif

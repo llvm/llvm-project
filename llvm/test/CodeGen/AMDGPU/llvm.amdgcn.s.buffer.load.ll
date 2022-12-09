@@ -205,6 +205,8 @@ main_body:
   ret void
 }
 
+@gv = external addrspace(1) global i32
+
 ;GCN-LABEL: {{^}}s_buffer_load_index_across_bb:
 ;GCN-NOT: s_waitcnt;
 ;GCN: v_or_b32
@@ -212,6 +214,7 @@ main_body:
 define amdgpu_ps void @s_buffer_load_index_across_bb(<4 x i32> inreg %desc, i32 %index) {
 main_body:
   %tmp = shl i32 %index, 4
+  store i32 %tmp, i32 addrspace(1)* @gv
   br label %bb1
 
 bb1:                                              ; preds = %main_body
@@ -224,10 +227,7 @@ bb1:                                              ; preds = %main_body
 
 ;GCN-LABEL: {{^}}s_buffer_load_index_across_bb_merged:
 ;GCN-NOT: s_waitcnt;
-;GCN: v_or_b32
-;GCN: v_or_b32
-;GCN: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
-;GCN: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
+;GCN: buffer_load_dwordx2 v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen offset:8
 define amdgpu_ps void @s_buffer_load_index_across_bb_merged(<4 x i32> inreg %desc, i32 %index) {
 main_body:
   %tmp = shl i32 %index, 4

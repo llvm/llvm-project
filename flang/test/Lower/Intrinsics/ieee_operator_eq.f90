@@ -10,7 +10,7 @@ subroutine s(r1,r2)
   ! CHECK:   %[[V_6:[0-9]+]] = fir.coordinate_of %arg1, %[[V_3]] : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_round_type{mode:i8}>>, !fir.field) -> !fir.ref<i8>
   ! CHECK:   %[[V_7:[0-9]+]] = fir.load %[[V_6]] : !fir.ref<i8>
   ! CHECK:   %[[V_8:[0-9]+]] = arith.cmpi eq, %[[V_5]], %[[V_7]] : i8
-  ! CHECK:   %[[V_9:[0-9]+]] = fir.call @_FortranAioOutputLogical(%{{.*}}, %[[V_8]]) : (!fir.ref<i8>, i1) -> i1
+  ! CHECK:   %[[V_9:[0-9]+]] = fir.call @_FortranAioOutputLogical(%{{.*}}, %[[V_8]]) {{.*}}: (!fir.ref<i8>, i1) -> i1
   print*, r1 == r2
 end
 
@@ -34,13 +34,13 @@ end
   ! CHECK:   fir.store %c1{{.*}} to %[[V_7]] : !fir.ref<i8>
   call s(ieee_to_zero, ieee_nearest)
 
-  ! CHECK:   fir.call @_QPs(%[[V_3]], %[[V_2]]) : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_round_type{mode:i8}>>, !fir.ref<!fir.type<_QMieee_arithmeticTieee_round_type{mode:i8}>>) -> ()
+  ! CHECK:   fir.call @_QPs(%[[V_3]], %[[V_2]]) {{.*}}: (!fir.ref<!fir.type<_QMieee_arithmeticTieee_round_type{mode:i8}>>, !fir.ref<!fir.type<_QMieee_arithmeticTieee_round_type{mode:i8}>>) -> ()
   ! CHECK:   %[[V_8:[0-9]+]] = fir.field_index mode, !fir.type<_QMieee_arithmeticTieee_round_type{mode:i8}>
   ! CHECK:   %[[V_9:[0-9]+]] = fir.coordinate_of %[[V_1]], %[[V_8]] : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_round_type{mode:i8}>>, !fir.field) -> !fir.ref<i8>
   ! CHECK:   fir.store %c1{{.*}} to %[[V_9]] : !fir.ref<i8>
   ! CHECK:   %[[V_10:[0-9]+]] = fir.field_index mode, !fir.type<_QMieee_arithmeticTieee_round_type{mode:i8}>
   ! CHECK:   %[[V_11:[0-9]+]] = fir.coordinate_of %[[V_0]], %[[V_10]] : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_round_type{mode:i8}>>, !fir.field) -> !fir.ref<i8>
   ! CHECK:   fir.store %c1{{.*}} to %[[V_11]] : !fir.ref<i8>
-  ! CHECK:   fir.call @_QPs(%[[V_1]], %[[V_0]]) : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_round_type{mode:i8}>>, !fir.ref<!fir.type<_QMieee_arithmeticTieee_round_type{mode:i8}>>) -> ()
+  ! CHECK:   fir.call @_QPs(%[[V_1]], %[[V_0]]) {{.*}}: (!fir.ref<!fir.type<_QMieee_arithmeticTieee_round_type{mode:i8}>>, !fir.ref<!fir.type<_QMieee_arithmeticTieee_round_type{mode:i8}>>) -> ()
   call s(ieee_nearest, ieee_nearest)
 end

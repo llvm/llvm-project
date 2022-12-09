@@ -4,10 +4,12 @@
 ; RUN:   --ppc-asm-full-reg-names -mcpu=pwr7 < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-aix \
 ; RUN:   --ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s -check-prefix=AIX
-; RUN: not --crash llc -verify-machineinstrs -mtriple=powerpc64-unknown-aix \
-; RUN:   --ppc-asm-full-reg-names -mcpu=pwr8 --filetype=obj -o /dev/null %s 2>&1 | FileCheck %s -check-prefix=OBJ
+; RUN: llc -mtriple=powerpc64-unknown-aix -filetype=obj -o %t_64.o < %s
+; RUN: llvm-readobj --exception-section %t_64.o | FileCheck %s --check-prefix=OBJ64
 
-; OBJ: LLVM ERROR: emitXCOFFExceptDirective not yet supported for integrated assembler path.
+; Check that we do not crash in object mode
+; OBJ64:       Exception section {
+; OBJ64-NEXT:    Symbol: .test__tdw_annotation (6)
 
 !1 = !{!"ppc-trap-reason", !"1", !"2"}
 declare void @llvm.ppc.trapd(i64 %a)

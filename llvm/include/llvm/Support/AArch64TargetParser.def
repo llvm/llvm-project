@@ -13,85 +13,85 @@
 // NOTE: NO INCLUDE GUARD DESIRED!
 
 #ifndef AARCH64_ARCH
-#define AARCH64_ARCH(NAME, ID, SUB_ARCH, ARCH_BASE_EXT)
+#define AARCH64_ARCH(NAME, ID, ARCH_FEATURE, ARCH_BASE_EXT)
 #endif
 // NOTE: The order and the grouping of the elements matter to make ArchKind iterable.
 // List is organised as armv8a -> armv8n-a, armv9a -> armv9m-a and armv8-r.
-AARCH64_ARCH("invalid", INVALID, "",
+AARCH64_ARCH("invalid", INVALID, "+",
              AArch64::AEK_NONE)
-AARCH64_ARCH("armv8-a", ARMV8A, "v8a",
+AARCH64_ARCH("armv8-a", ARMV8A, "+v8a",
              (AArch64::AEK_CRYPTO | AArch64::AEK_FP | AArch64::AEK_SIMD))
-AARCH64_ARCH("armv8.1-a", ARMV8_1A, "v8.1a",
+AARCH64_ARCH("armv8.1-a", ARMV8_1A, "+v8.1a",
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_LSE | AArch64::AEK_RDM))
-AARCH64_ARCH("armv8.2-a", ARMV8_2A, "v8.2a",
+AARCH64_ARCH("armv8.2-a", ARMV8_2A, "+v8.2a",
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM))
-AARCH64_ARCH("armv8.3-a", ARMV8_3A, "v8.3a",
+AARCH64_ARCH("armv8.3-a", ARMV8_3A, "+v8.3a",
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC))
-AARCH64_ARCH("armv8.4-a", ARMV8_4A, "v8.4a",
+AARCH64_ARCH("armv8.4-a", ARMV8_4A, "+v8.4a",
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD))
-AARCH64_ARCH("armv8.5-a", ARMV8_5A, "v8.5a",
+AARCH64_ARCH("armv8.5-a", ARMV8_5A, "+v8.5a",
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD))
-AARCH64_ARCH("armv8.6-a", ARMV8_6A, "v8.6a",
+AARCH64_ARCH("armv8.6-a", ARMV8_6A, "+v8.6a",
              (AArch64::AEK_CRC  | AArch64::AEK_FP   |
               AArch64::AEK_SIMD | AArch64::AEK_RAS  | AArch64::AEK_LSE     |
               AArch64::AEK_RDM  | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
               AArch64::AEK_SM4  | AArch64::AEK_SHA3 | AArch64::AEK_BF16    |
               AArch64::AEK_SHA2 | AArch64::AEK_AES  | AArch64::AEK_I8MM))
-AARCH64_ARCH("armv8.7-a", ARMV8_7A, "v8.7a",
+AARCH64_ARCH("armv8.7-a", ARMV8_7A, "+v8.7a",
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
               AArch64::AEK_SM4 | AArch64::AEK_SHA3 | AArch64::AEK_BF16 |
               AArch64::AEK_SHA2 | AArch64::AEK_AES | AArch64::AEK_I8MM))
-AARCH64_ARCH("armv8.8-a", ARMV8_8A, "v8.8a",
+AARCH64_ARCH("armv8.8-a", ARMV8_8A, "+v8.8a",
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
               AArch64::AEK_SM4 | AArch64::AEK_SHA3 | AArch64::AEK_BF16 |
               AArch64::AEK_SHA2 | AArch64::AEK_AES | AArch64::AEK_I8MM))
-AARCH64_ARCH("armv8.9-a", ARMV8_9A, "v8.9a",
+AARCH64_ARCH("armv8.9-a", ARMV8_9A, "+v8.9a",
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
               AArch64::AEK_SM4 | AArch64::AEK_SHA3 | AArch64::AEK_BF16 |
               AArch64::AEK_SHA2 | AArch64::AEK_AES | AArch64::AEK_I8MM))
-AARCH64_ARCH("armv9-a",   ARMV9A, "v9a",
+AARCH64_ARCH("armv9-a",   ARMV9A, "+v9a",
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
               AArch64::AEK_SVE2))
-AARCH64_ARCH("armv9.1-a", ARMV9_1A, "v9.1a",
+AARCH64_ARCH("armv9.1-a", ARMV9_1A, "+v9.1a",
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
               AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE2))
-AARCH64_ARCH("armv9.2-a", ARMV9_2A, "v9.2a",
+AARCH64_ARCH("armv9.2-a", ARMV9_2A, "+v9.2a",
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
               AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE2))
-AARCH64_ARCH("armv9.3-a", ARMV9_3A, "v9.3a",
+AARCH64_ARCH("armv9.3-a", ARMV9_3A, "+v9.3a",
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
               AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE2))
-AARCH64_ARCH("armv9.4-a", ARMV9_4A, "v9.4a",
+AARCH64_ARCH("armv9.4-a", ARMV9_4A, "+v9.4a",
              (AArch64::AEK_CRC | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
               AArch64::AEK_BF16 | AArch64::AEK_I8MM | AArch64::AEK_SVE2))
 // For v8-R, we do not enable crypto and align with GCC that enables a more
 // minimal set of optional architecture extensions.
-AARCH64_ARCH("armv8-r", ARMV8R, "v8r",
+AARCH64_ARCH("armv8-r", ARMV8R, "+v8r",
              (AArch64::AEK_CRC     | AArch64::AEK_RDM  | AArch64::AEK_SSBS |
               AArch64::AEK_DOTPROD | AArch64::AEK_FP   | AArch64::AEK_SIMD |
               AArch64::AEK_FP16    | AArch64::AEK_FP16FML | AArch64::AEK_RAS |
@@ -102,8 +102,8 @@ AARCH64_ARCH("armv8-r", ARMV8R, "v8r",
 #define AARCH64_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE)
 #endif
 // FIXME: This would be nicer were it tablegen
-AARCH64_ARCH_EXT_NAME("invalid",      AArch64::AEK_INVALID,     nullptr,         nullptr)
-AARCH64_ARCH_EXT_NAME("none",         AArch64::AEK_NONE,        nullptr,         nullptr)
+AARCH64_ARCH_EXT_NAME("invalid",      AArch64::AEK_INVALID,     {},                  {})
+AARCH64_ARCH_EXT_NAME("none",         AArch64::AEK_NONE,        {},                  {})
 AARCH64_ARCH_EXT_NAME("crc",          AArch64::AEK_CRC,         "+crc",          "-crc")
 AARCH64_ARCH_EXT_NAME("lse",          AArch64::AEK_LSE,         "+lse",          "-lse")
 AARCH64_ARCH_EXT_NAME("rdm",          AArch64::AEK_RDM,         "+rdm",          "-rdm")

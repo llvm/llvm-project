@@ -118,7 +118,7 @@ lldb::TypeSP SymbolFileDWARFDwo::FindCompleteObjCDefinitionTypeForDIE(
       die, type_name, must_be_implementation);
 }
 
-llvm::Expected<TypeSystem &>
+llvm::Expected<lldb::TypeSystemSP>
 SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
   return GetBaseSymbolFile().GetTypeSystemForLanguage(language);
 }

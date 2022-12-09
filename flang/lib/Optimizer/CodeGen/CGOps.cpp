@@ -56,7 +56,7 @@ unsigned fir::cg::XReboxOp::getRank() {
 
 unsigned fir::cg::XArrayCoorOp::getRank() {
   auto memrefTy = getMemref().getType();
-  if (memrefTy.isa<fir::BoxType>())
+  if (memrefTy.isa<fir::BaseBoxType>())
     if (auto seqty =
             fir::dyn_cast_ptrOrBoxEleTy(memrefTy).dyn_cast<fir::SequenceType>())
       return seqty.getDimension();

@@ -943,7 +943,7 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
   SmallVector<std::pair<uint64_t, uint64_t>, 16> Res;
 
   if (!recordTrace(BF, FirstLBR, SecondLBR, Count, &Res))
-    return NoneType();
+    return None;
 
   return Res;
 }
@@ -1820,13 +1820,13 @@ Optional<int32_t> DataAggregator::parseCommExecEvent() {
   if (LineEnd == StringRef::npos) {
     reportError("expected rest of line");
     Diag << "Found: " << ParsingBuf << "\n";
-    return NoneType();
+    return None;
   }
   StringRef Line = ParsingBuf.substr(0, LineEnd);
 
   size_t Pos = Line.find("PERF_RECORD_COMM exec");
   if (Pos == StringRef::npos)
-    return NoneType();
+    return None;
   Line = Line.drop_front(Pos);
 
   // Line:
@@ -1836,7 +1836,7 @@ Optional<int32_t> DataAggregator::parseCommExecEvent() {
   if (PIDStr.getAsInteger(10, PID)) {
     reportError("expected PID");
     Diag << "Found: " << PIDStr << "in '" << Line << "'\n";
-    return NoneType();
+    return None;
   }
 
   return PID;
@@ -1850,7 +1850,7 @@ Optional<uint64_t> parsePerfTime(const StringRef TimeStr) {
   uint64_t USecTime;
   if (SecTimeStr.getAsInteger(10, SecTime) ||
       USecTimeStr.getAsInteger(10, USecTime))
-    return NoneType();
+    return None;
   return SecTime * 1000000ULL + USecTime;
 }
 }
@@ -1863,14 +1863,14 @@ Optional<DataAggregator::ForkInfo> DataAggregator::parseForkEvent() {
   if (LineEnd == StringRef::npos) {
     reportError("expected rest of line");
     Diag << "Found: " << ParsingBuf << "\n";
-    return NoneType();
+    return None;
   }
   StringRef Line = ParsingBuf.substr(0, LineEnd);
 
   size_t Pos = Line.find("PERF_RECORD_FORK");
   if (Pos == StringRef::npos) {
     consumeRestOfLine();
-    return NoneType();
+    return None;
   }
 
   ForkInfo FI;
@@ -1889,14 +1889,14 @@ Optional<DataAggregator::ForkInfo> DataAggregator::parseForkEvent() {
   if (ChildPIDStr.getAsInteger(10, FI.ChildPID)) {
     reportError("expected PID");
     Diag << "Found: " << ChildPIDStr << "in '" << Line << "'\n";
-    return NoneType();
+    return None;
   }
 
   const StringRef ParentPIDStr = Line.rsplit('(').second.split(':').first;
   if (ParentPIDStr.getAsInteger(10, FI.ParentPID)) {
     reportError("expected PID");
     Diag << "Found: " << ParentPIDStr << "in '" << Line << "'\n";
-    return NoneType();
+    return None;
   }
 
   consumeRestOfLine();
@@ -2147,17 +2147,17 @@ DataAggregator::parseNameBuildIDPair() {
 
   ErrorOr<StringRef> BuildIDStr = parseString(FieldSeparator, true);
   if (std::error_code EC = BuildIDStr.getError())
-    return NoneType();
+    return None;
 
   // If one of the strings is missing, don't issue a parsing error, but still
   // do not return a value.
   consumeAllRemainingFS();
   if (checkNewLine())
-    return NoneType();
+    return None;
 
   ErrorOr<StringRef> NameStr = parseString(FieldSeparator, true);
   if (std::error_code EC = NameStr.getError())
-    return NoneType();
+    return None;
 
   consumeRestOfLine();
   return std::make_pair(NameStr.get(), BuildIDStr.get());
@@ -2205,7 +2205,7 @@ DataAggregator::getFileNameForBuildID(StringRef FileBuildID) {
   if (!FileName.empty())
     return FileName;
 
-  return NoneType();
+  return None;
 }
 
 std::error_code

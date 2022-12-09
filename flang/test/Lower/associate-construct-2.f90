@@ -15,7 +15,7 @@
 ! CHECK:         %[[VAL_14:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 ! CHECK:         %[[VAL_15:.*]] = fir.slice %[[VAL_7]], %[[VAL_13]], %[[VAL_10]] : (index, index, index) -> !fir.slice<1>
 ! CHECK:         %[[VAL_16:.*]] = fir.embox %[[VAL_0]](%[[VAL_14]]) {{\[}}%[[VAL_15]]] : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:         fir.call @_QPbob(%[[VAL_16]]) : (!fir.box<!fir.array<?xf32>>) -> ()
+! CHECK:         fir.call @_QPbob(%[[VAL_16]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:         return
 ! CHECK:       }
 
@@ -42,7 +42,7 @@ subroutine test2(n)
   ! CHECK: %[[n:.*]] = fir.load %[[nadd]] : !fir.ref<i32>
   ! CHECK: %[[n10:.*]] = arith.addi %[[n]], %c10{{.*}} : i32
   ! CHECK: fir.store %[[n10]] to %{{.*}} : !fir.ref<i32>
-  ! CHECK: %[[foo:.*]] = fir.call @_QPfoo(%{{.*}}) : (!fir.ref<i32>) -> i32
+  ! CHECK: %[[foo:.*]] = fir.call @_QPfoo(%{{.*}}) {{.*}}: (!fir.ref<i32>) -> i32
   ! CHECK: fir.store %[[foo]] to %{{.*}} : !fir.ref<i32>
   associate (i => n, j => n + 10, k => foo(20))
     print *, i, j, k, n

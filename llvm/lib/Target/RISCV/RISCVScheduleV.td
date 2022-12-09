@@ -613,7 +613,7 @@ defm "" : LMULWriteRes<"WriteVIMovV", []>;
 defm "" : LMULWriteRes<"WriteVIMovX", []>;
 defm "" : LMULWriteRes<"WriteVIMovI", []>;
 
-// 13. Vector Fixed-Point Arithmetic Instructions
+// 12. Vector Fixed-Point Arithmetic Instructions
 def : WriteRes<WriteVSALUV, []>;
 def : WriteRes<WriteVSALUX, []>;
 def : WriteRes<WriteVSALUI, []>;
@@ -628,7 +628,7 @@ def : WriteRes<WriteVNClipV, []>;
 def : WriteRes<WriteVNClipX, []>;
 def : WriteRes<WriteVNClipI, []>;
 
-// 14. Vector Floating-Point Instructions
+// 13. Vector Floating-Point Instructions
 def : WriteRes<WriteVFALUV, []>;
 def : WriteRes<WriteVFALUF, []>;
 def : WriteRes<WriteVFWALUV, []>;
@@ -661,7 +661,7 @@ def : WriteRes<WriteVFNCvtIToFV, []>;
 def : WriteRes<WriteVFNCvtFToIV, []>;
 def : WriteRes<WriteVFNCvtFToFV, []>;
 
-// 15. Vector Reduction Operations
+// 14. Vector Reduction Operations
 def : WriteRes<WriteVIRedV, []>;
 def : WriteRes<WriteVIWRedV, []>;
 def : WriteRes<WriteVFRedV, []>;
@@ -669,7 +669,7 @@ def : WriteRes<WriteVFRedOV, []>;
 def : WriteRes<WriteVFWRedV, []>;
 def : WriteRes<WriteVFWRedOV, []>;
 
-// 16. Vector Mask Instructions
+// 15. Vector Mask Instructions
 def : WriteRes<WriteVMALUV, []>;
 def : WriteRes<WriteVMPopV, []>;
 def : WriteRes<WriteVMFFSV, []>;
@@ -677,7 +677,7 @@ def : WriteRes<WriteVMSFSV, []>;
 def : WriteRes<WriteVMIotV, []>;
 def : WriteRes<WriteVMIdxV, []>;
 
-// 17. Vector Permutation Instructions
+// 16. Vector Permutation Instructions
 def : WriteRes<WriteVIMovVX, []>;
 def : WriteRes<WriteVIMovXV, []>;
 def : WriteRes<WriteVFMovVF, []>;
@@ -764,7 +764,7 @@ defm "" : LMULReadAdvance<"ReadVIMergeX", 0>;
 defm "" : LMULReadAdvance<"ReadVIMovV", 0>;
 defm "" : LMULReadAdvance<"ReadVIMovX", 0>;
 
-// 13. Vector Fixed-Point Arithmetic Instructions
+// 12. Vector Fixed-Point Arithmetic Instructions
 def : ReadAdvance<ReadVSALUV, 0>;
 def : ReadAdvance<ReadVSALUX, 0>;
 def : ReadAdvance<ReadVAALUV, 0>;
@@ -776,7 +776,7 @@ def : ReadAdvance<ReadVSShiftX, 0>;
 def : ReadAdvance<ReadVNClipV, 0>;
 def : ReadAdvance<ReadVNClipX, 0>;
 
-// 14. Vector Floating-Point Instructions
+// 13. Vector Floating-Point Instructions
 def : ReadAdvance<ReadVFALUV, 0>;
 def : ReadAdvance<ReadVFALUF, 0>;
 def : ReadAdvance<ReadVFWALUV, 0>;
@@ -810,7 +810,7 @@ def : ReadAdvance<ReadVFNCvtIToFV, 0>;
 def : ReadAdvance<ReadVFNCvtFToIV, 0>;
 def : ReadAdvance<ReadVFNCvtFToFV, 0>;
 
-// 15. Vector Reduction Operations
+// 14. Vector Reduction Operations
 def : ReadAdvance<ReadVIRedV, 0>;
 def : ReadAdvance<ReadVIRedV0, 0>;
 def : ReadAdvance<ReadVIWRedV, 0>;
@@ -824,14 +824,14 @@ def : ReadAdvance<ReadVFWRedV0, 0>;
 def : ReadAdvance<ReadVFWRedOV, 0>;
 def : ReadAdvance<ReadVFWRedOV0, 0>;
 
-// 16. Vector Mask Instructions
+// 15. Vector Mask Instructions
 def : ReadAdvance<ReadVMALUV, 0>;
 def : ReadAdvance<ReadVMPopV, 0>;
 def : ReadAdvance<ReadVMFFSV, 0>;
 def : ReadAdvance<ReadVMSFSV, 0>;
 def : ReadAdvance<ReadVMIotV, 0>;
 
-// 17. Vector Permutation Instructions
+// 16. Vector Permutation Instructions
 def : ReadAdvance<ReadVIMovVX, 0>;
 def : ReadAdvance<ReadVIMovXV, 0>;
 def : ReadAdvance<ReadVIMovXX, 0>;

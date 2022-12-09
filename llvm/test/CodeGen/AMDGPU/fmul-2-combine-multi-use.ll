@@ -1,8 +1,10 @@
-; XUN: llc -mtriple=amdgcn-amd-amdhsa -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,SIVI,VI-DENORM %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,SIVI,VI-FLUSH %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,GFX8_10,GFX10-DENORM %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,GFX8_10,GFX10-FLUSH %s
+; XUN: llc -mtriple=amdgcn-amd-amdhsa -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,SIVI,VI-DENORM %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,SIVI,VI-FLUSH %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_10,GFX10-DENORM %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_10,GFX10-FLUSH %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_10,GFX10-DENORM %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_10,GFX10-FLUSH %s
 
 ; Make sure (fmul (fadd x, x), c) -> (fmul x, (fmul 2.0, c)) doesn't
 ; make add an instruction if the fadd has more than one use.
@@ -44,8 +46,8 @@ define amdgpu_kernel void @multiple_fadd_use_test_f32(float addrspace(1)* %out, 
 ; GCN-DAG:   v_add_f32_e64 [[MUL2:v[0-9]+]], [[X:s[0-9]+]], s{{[0-9]+}}
 ; SIVI-DAG:  v_mac_f32_e64 [[MAD:v[0-9]+]], [[X]], 2.0
 ; GFX10-DAG: v_fma_f32 [[MAD:v[0-9]+]], [[X]], 2.0, s{{[0-9]+}}
-; GCN-DAG:   buffer_store_dword [[MUL2]]
-; GCN-DAG:   buffer_store_dword [[MAD]]
+; GCN-DAG:   buffer_store_{{dword|b32}} [[MUL2]]
+; GCN-DAG:   buffer_store_{{dword|b32}} [[MAD]]
 ; GCN:       s_endpgm
 define amdgpu_kernel void @multiple_use_fadd_fmac_f32(float addrspace(1)* %out, float %x, [8 x i32], float %y) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
@@ -60,8 +62,8 @@ define amdgpu_kernel void @multiple_use_fadd_fmac_f32(float addrspace(1)* %out, 
 ; GCN-DAG:   v_add_f32_e64 [[MUL2:v[0-9]+]], |[[X:s[0-9]+]]|, |s{{[0-9]+}}|
 ; SIVI-DAG:  v_mad_f32 [[MAD:v[0-9]+]], |[[X]]|, 2.0, v{{[0-9]+}}
 ; GFX10-DAG: v_fma_f32 [[MAD:v[0-9]+]], |[[X]]|, 2.0, s{{[0-9]+}}
-; GCN-DAG:   buffer_store_dword [[MUL2]]
-; GCN-DAG:   buffer_store_dword [[MAD]]
+; GCN-DAG:   buffer_store_{{dword|b32}} [[MUL2]]
+; GCN-DAG:   buffer_store_{{dword|b32}} [[MAD]]
 ; GCN:       s_endpgm
 define amdgpu_kernel void @multiple_use_fadd_fmad_f32(float addrspace(1)* %out, float %x, float %y) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
@@ -92,7 +94,7 @@ define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f32(float addrspace(1)* 
 ; GCN-LABEL: {{^}}fmul_x2_xn2_f32:
 ; GCN: v_mul_f32_e64 [[TMP0:v[0-9]+]], [[X:s[0-9]+]], -4.0
 ; GCN: v_mul_f32_e32 [[RESULT:v[0-9]+]], [[X]], [[TMP0]]
-; GCN: buffer_store_dword [[RESULT]]
+; GCN: buffer_store_{{dword|b32}} [[RESULT]]
 define amdgpu_kernel void @fmul_x2_xn2_f32(float addrspace(1)* %out, float %x, float %y) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
   %mul2 = fmul fast float %x, 2.0
@@ -107,7 +109,7 @@ define amdgpu_kernel void @fmul_x2_xn2_f32(float addrspace(1)* %out, float %x, f
 ; SIVI:  v_mul_f32_e32 [[TMP0:v[0-9]+]], [[X:s[0-9]+]], [[K]]
 ; GFX10: v_mul_f32_e64 [[TMP0:v[0-9]+]], 0xc0c00000, [[X:s[0-9]+]]
 ; GCN:   v_mul_f32_e32 [[RESULT:v[0-9]+]], [[X]], [[TMP0]]
-; GCN:   buffer_store_dword [[RESULT]]
+; GCN:   buffer_store_{{dword|b32}} [[RESULT]]
 define amdgpu_kernel void @fmul_x2_xn3_f32(float addrspace(1)* %out, float %x, float %y) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
   %mul2 = fmul fast float %x, 2.0
@@ -154,8 +156,8 @@ define amdgpu_kernel void @multiple_fadd_use_test_f16(half addrspace(1)* %out, i
 ; GFX10-FLUSH-DAG:  v_add_f16_e32 [[MAD:v[0-9]+]], s{{[0-9]+}}, [[MUL2]]
 ; GFX10-DENORM-DAG: v_fma_f16 [[MAD:v[0-9]+]], [[X]], 2.0, s{{[0-9]+}}
 
-; GCN-DAG: buffer_store_short [[MUL2]]
-; GCN-DAG: buffer_store_short [[MAD]]
+; GCN-DAG: buffer_store_{{short|b16}} [[MUL2]]
+; GCN-DAG: buffer_store_{{short|b16}} [[MAD]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @multiple_use_fadd_fmac_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg) #0 {
   %x = bitcast i16 %x.arg to half
@@ -176,8 +178,8 @@ define amdgpu_kernel void @multiple_use_fadd_fmac_f16(half addrspace(1)* %out, i
 ; GFX10-FLUSH-DAG:  v_add_f16_e32 [[MAD:v[0-9]+]], s{{[0-9]+}}, [[MUL2]]
 ; GFX10-DENORM-DAG: v_fma_f16 [[MAD:v[0-9]+]], |[[X]]|, 2.0, s{{[0-9]+}}
 
-; GCN-DAG: buffer_store_short [[MUL2]]
-; GCN-DAG: buffer_store_short [[MAD]]
+; GCN-DAG: buffer_store_{{short|b16}} [[MUL2]]
+; GCN-DAG: buffer_store_{{short|b16}} [[MAD]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @multiple_use_fadd_fmad_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg) #0 {
   %x = bitcast i16 %x.arg to half
@@ -221,7 +223,7 @@ define amdgpu_kernel void @multiple_use_fadd_multi_fmad_f16(half addrspace(1)* %
 ; GCN-LABEL: {{^}}fmul_x2_xn2_f16:
 ; GCN: v_mul_f16_e64 [[TMP0:v[0-9]+]], [[X:s[0-9]+]], -4.0
 ; GCN: v_mul_f16_e32 [[RESULT:v[0-9]+]], [[X]], [[TMP0]]
-; GCN: buffer_store_short [[RESULT]]
+; GCN: buffer_store_{{short|b16}} [[RESULT]]
 define amdgpu_kernel void @fmul_x2_xn2_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg) #0 {
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half
@@ -238,7 +240,7 @@ define amdgpu_kernel void @fmul_x2_xn2_f16(half addrspace(1)* %out, i16 zeroext 
 ; SIVI:  v_mul_f16_e32 [[TMP0:v[0-9]+]], [[X:s[0-9]+]], [[K]]
 ; GFX10: v_mul_f16_e64 [[TMP0:v[0-9]+]], 0xc600, [[X:s[0-9]+]]
 ; GCN:   v_mul_f16_e32 [[RESULT:v[0-9]+]], [[X]], [[TMP0]]
-; GCN:   buffer_store_short [[RESULT]]
+; GCN:   buffer_store_{{short|b16}} [[RESULT]]
 define amdgpu_kernel void @fmul_x2_xn3_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg) #0 {
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half

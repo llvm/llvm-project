@@ -89,7 +89,6 @@ include(CheckAtomic)
 include(LLVMDistributionSupport)
 
 set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
-set(LLVM_INCLUDE_TESTS ON CACHE INTERNAL "")
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories(

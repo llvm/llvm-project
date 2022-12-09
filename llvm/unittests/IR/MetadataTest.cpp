@@ -3683,9 +3683,9 @@ TEST_F(DebugVariableTest, DenseMap) {
   DILocalVariable *VarB =
       DILocalVariable::get(Context, Scope, "B", File, 7, Type, 3, Flags, 8, nullptr);
 
-  DebugVariable DebugVariableA(VarA, NoneType(), nullptr);
-  DebugVariable DebugVariableInlineA(VarA, NoneType(), InlinedLoc);
-  DebugVariable DebugVariableB(VarB, NoneType(), nullptr);
+  DebugVariable DebugVariableA(VarA, None, nullptr);
+  DebugVariable DebugVariableInlineA(VarA, None, InlinedLoc);
+  DebugVariable DebugVariableB(VarB, None, nullptr);
   DebugVariable DebugVariableFragB(VarB, {{16, 16}}, nullptr);
 
   DebugVariableMap.insert({DebugVariableA, 2});

@@ -28,7 +28,7 @@ struct ConstantOpInterface
 
     // TODO: Implement memory space for this op. E.g., by adding a memory_space
     // attribute to ConstantOp.
-    if (options.defaultMemorySpace != static_cast<unsigned>(0))
+    if (options.defaultMemorySpace != Attribute())
       return op->emitError("memory space not implemented yet");
 
     // Only ranked tensors are supported.
@@ -188,7 +188,7 @@ struct SelectOpInterface
       return failure();
     if (*trueType == *falseType)
       return *trueType;
-    if (trueType->getMemorySpaceAsInt() != falseType->getMemorySpaceAsInt())
+    if (trueType->getMemorySpace() != falseType->getMemorySpace())
       return op->emitError("inconsistent memory space on true/false operands");
 
     // If the buffers have different types, they differ only in their layout
@@ -197,7 +197,7 @@ struct SelectOpInterface
     return getMemRefTypeWithFullyDynamicLayout(
         RankedTensorType::get(memrefType.getShape(),
                               memrefType.getElementType()),
-        memrefType.getMemorySpaceAsInt());
+        memrefType.getMemorySpace());
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,

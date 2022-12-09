@@ -48,6 +48,7 @@ template <typename T> int UsedInTemplateFunc() { return 1; }
 void OverloadFunc(int);
 void OverloadFunc(double);
 int FuncUsedByUsingDeclInMacro() { return 1; }
+long double operator""_w(long double);
 
 class ostream {
 public:
@@ -106,6 +107,7 @@ using n::UnusedInstance; // UnusedInstance
 using n::UnusedFunc; // UnusedFunc
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: using decl 'UnusedFunc' is unused
 // CHECK-FIXES: {{^}}// UnusedFunc
+using n::operator""_w;
 using n::cout;
 using n::endl;
 
@@ -183,6 +185,7 @@ void g() {
   UsedInstance.i;
   UsedFunc();
   UsedTemplateFunc<int>();
+  1.5_w;
   cout << endl;
   Color2 color2;
   int t1 = Color3::Yellow;

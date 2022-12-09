@@ -514,7 +514,7 @@ Parser::parseDimensionListRanked(SmallVectorImpl<int64_t> &dimensions,
     if (consumeIf(Token::question)) {
       if (!allowDynamic)
         return emitError(loc, "expected static shape");
-      dimensions.push_back(ShapedType::kDynamicSize);
+      dimensions.push_back(ShapedType::kDynamic);
     } else {
       int64_t value;
       if (failed(parseIntegerInDimensionList(value)))

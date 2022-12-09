@@ -328,8 +328,11 @@ void MetadataStreamerYamlV2::emitKernelArg(const Argument &Arg) {
 
   MaybeAlign PointeeAlign;
   if (auto PtrTy = dyn_cast<PointerType>(Arg.getType())) {
-    if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+    if (!PtrTy->isOpaquePointerTy() &&
+        PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
       // FIXME: Should report this for all address spaces
+      // FIXME: Handle opaque-pointers: deduce the right alignment of the
+      // argument
       PointeeAlign = DL.getValueOrABITypeAlignment(
           Arg.getParamAlign(), PtrTy->getPointerElementType());
     }

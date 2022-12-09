@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfNoSBHeaders
 class SBBreakpointCallbackCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
@@ -25,7 +26,6 @@ class SBBreakpointCallbackCase(TestBase):
         self.generateSource('test_stop-hook.cpp')
 
     @skipIfRemote
-    @skipIfNoSBHeaders
     # clang-cl does not support throw or catch (llvm.org/pr24538)
     @skipIfWindows
     def test_python_stop_hook(self):
@@ -34,7 +34,6 @@ class SBBreakpointCallbackCase(TestBase):
                             'test_python_stop_hook')
 
     @skipIfRemote
-    @skipIfNoSBHeaders
     # clang-cl does not support throw or catch (llvm.org/pr24538)
     @skipIfWindows
     def test_breakpoint_callback(self):
@@ -43,7 +42,6 @@ class SBBreakpointCallbackCase(TestBase):
                             'test_breakpoint_callback')
 
     @skipIfRemote
-    @skipIfNoSBHeaders
     # clang-cl does not support throw or catch (llvm.org/pr24538)
     @skipIfWindows
     def test_breakpoint_location_callback(self):
@@ -52,7 +50,6 @@ class SBBreakpointCallbackCase(TestBase):
                             'test_breakpoint_location_callback')
 
     @skipIfRemote
-    @skipIfNoSBHeaders
     # clang-cl does not support throw or catch (llvm.org/pr24538)
     @skipIfWindows
     @expectedFlakeyFreeBSD
@@ -63,7 +60,6 @@ class SBBreakpointCallbackCase(TestBase):
             'test_listener_event_description')
 
     @skipIfRemote
-    @skipIfNoSBHeaders
     # clang-cl does not support throw or catch (llvm.org/pr24538)
     @skipIfWindows
     @expectedFlakeyFreeBSD
@@ -76,7 +72,6 @@ class SBBreakpointCallbackCase(TestBase):
             'test_listener_event_process_state')
 
     @skipIfRemote
-    @skipIfNoSBHeaders
     # clang-cl does not support throw or catch (llvm.org/pr24538)
     @skipIfWindows
     @expectedFlakeyFreeBSD

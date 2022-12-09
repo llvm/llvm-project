@@ -1008,7 +1008,7 @@ void AMDGPUDAGToDAGISel::SelectMAD_64_32(SDNode *N) {
   SDLoc SL(N);
   bool Signed = N->getOpcode() == AMDGPUISD::MAD_I64_I32;
   unsigned Opc;
-  if (Subtarget->getGeneration() == AMDGPUSubtarget::GFX11)
+  if (Subtarget->hasMADIntraFwdBug())
     Opc = Signed ? AMDGPU::V_MAD_I64_I32_gfx11_e64
                  : AMDGPU::V_MAD_U64_U32_gfx11_e64;
   else
@@ -1026,7 +1026,7 @@ void AMDGPUDAGToDAGISel::SelectMUL_LOHI(SDNode *N) {
   SDLoc SL(N);
   bool Signed = N->getOpcode() == ISD::SMUL_LOHI;
   unsigned Opc;
-  if (Subtarget->getGeneration() == AMDGPUSubtarget::GFX11)
+  if (Subtarget->hasMADIntraFwdBug())
     Opc = Signed ? AMDGPU::V_MAD_I64_I32_gfx11_e64
                  : AMDGPU::V_MAD_U64_U32_gfx11_e64;
   else

@@ -1007,7 +1007,7 @@ namespace llvm {
     /// specified type. Returns whether it is "fast" in the last argument.
     bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, Align Alignment,
                                         MachineMemOperand::Flags Flags,
-                                        bool *Fast) const override;
+                                        unsigned *Fast) const override;
 
     /// Provide custom lowering hooks for some operations.
     ///
@@ -1516,6 +1516,12 @@ namespace llvm {
 
     Align getPrefLoopAlignment(MachineLoop *ML) const override;
 
+    EVT getTypeToTransformTo(LLVMContext &Context, EVT VT) const override {
+      if (VT == MVT::f80)
+        return EVT::getIntegerVT(Context, 96);
+      return TargetLoweringBase::getTypeToTransformTo(Context, VT);
+    }
+
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,
@@ -1684,6 +1690,7 @@ namespace llvm {
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const;
     void emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
+    void emitCmpArithAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
 
     LoadInst *
     lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;

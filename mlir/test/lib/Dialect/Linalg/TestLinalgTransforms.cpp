@@ -109,6 +109,10 @@ struct TestLinalgTransforms
       llvm::cl::desc(
           "Test patterns to swap tensor.extract_slice(linalg.fill())"),
       llvm::cl::init(false)};
+  Option<bool> testEraseUnusedOperandsAndResults{
+      *this, "test-erase-unused-operands-and-results",
+      llvm::cl::desc("Test patterns to erase unused operands and results"),
+      llvm::cl::init(false)};
 };
 } // namespace
 
@@ -175,6 +179,12 @@ static void applySwapExtractSliceWithFillPattern(func::FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
+static void applyEraseUnusedOperandsAndResultsPatterns(func::FuncOp funcOp) {
+  RewritePatternSet patterns(funcOp.getContext());
+  populateEraseUnusedOperandsAndResultsPatterns(patterns);
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+}
+
 /// Apply transformations specified as patterns.
 void TestLinalgTransforms::runOnOperation() {
   if (testPatterns)
@@ -193,6 +203,8 @@ void TestLinalgTransforms::runOnOperation() {
     return applyBubbleUpExtractSliceOpPattern(getOperation());
   if (testSwapExtractSliceWithFill)
     return applySwapExtractSliceWithFillPattern(getOperation());
+  if (testEraseUnusedOperandsAndResults)
+    return applyEraseUnusedOperandsAndResultsPatterns(getOperation());
 }
 
 namespace mlir {

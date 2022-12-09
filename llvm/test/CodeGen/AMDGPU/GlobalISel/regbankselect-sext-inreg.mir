@@ -135,7 +135,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:vgpr(s32) = G_SEXT_INREG [[UV]], 1
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:vgpr(s32) = G_FREEZE [[UV]]
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:vgpr(s32) = G_SEXT_INREG [[FREEZE]], 1
     ; CHECK-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 31
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:vgpr(s32) = G_ASHR [[SEXT_INREG]], [[C]](s32)
     ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[SEXT_INREG]](s32), [[ASHR]](s32)
@@ -159,7 +160,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:vgpr(s32) = G_SEXT_INREG [[UV]], 31
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:vgpr(s32) = G_FREEZE [[UV]]
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:vgpr(s32) = G_SEXT_INREG [[FREEZE]], 31
     ; CHECK-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 31
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:vgpr(s32) = G_ASHR [[SEXT_INREG]], [[C]](s32)
     ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[SEXT_INREG]](s32), [[ASHR]](s32)
@@ -183,10 +185,10 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[UV]](s32)
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:vgpr(s32) = G_FREEZE [[UV]]
     ; CHECK-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 31
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:vgpr(s32) = G_ASHR [[COPY1]], [[C]](s32)
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY1]](s32), [[ASHR]](s32)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:vgpr(s32) = G_ASHR [[FREEZE]], [[C]](s32)
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[FREEZE]](s32), [[ASHR]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[MV]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_SEXT_INREG %0, 32

@@ -28,9 +28,9 @@ static bool hasFullyDynamicLayoutMap(MemRefType type) {
   SmallVector<int64_t, 4> strides;
   if (failed(getStridesAndOffset(type, strides, offset)))
     return false;
-  if (!llvm::all_of(strides, ShapedType::isDynamicStrideOrOffset))
+  if (!llvm::all_of(strides, ShapedType::isDynamic))
     return false;
-  if (!ShapedType::isDynamicStrideOrOffset(offset))
+  if (!ShapedType::isDynamic(offset))
     return false;
   return true;
 }

@@ -10,6 +10,7 @@
 #include "clang-include-cleaner/Record.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/StringRef.h"
@@ -47,6 +48,15 @@ cl::opt<std::string> HTMLReportPath{
 
 class HTMLReportAction : public clang::ASTFrontendAction {
   RecordedAST AST;
+  RecordedPP PP;
+  PragmaIncludes PI;
+
+  void ExecuteAction() override {
+    auto &P = getCompilerInstance().getPreprocessor();
+    P.addPPCallbacks(PP.record(P));
+    PI.record(getCompilerInstance());
+    ASTFrontendAction::ExecuteAction();
+  }
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef File) override {
@@ -62,7 +72,7 @@ class HTMLReportAction : public clang::ASTFrontendAction {
       exit(1);
     }
     writeHTMLReport(AST.Ctx->getSourceManager().getMainFileID(), AST.Roots,
-                    *AST.Ctx, OS);
+                    PP.MacroReferences, *AST.Ctx, &PI, OS);
   }
 };
 

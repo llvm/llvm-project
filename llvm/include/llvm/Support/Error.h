@@ -508,7 +508,7 @@ public:
   /// must be convertible to T.
   template <typename OtherT>
   Expected(OtherT &&Val,
-           std::enable_if_t<std::is_convertible<OtherT, T>::value> * = nullptr)
+           std::enable_if_t<std::is_convertible_v<OtherT, T>> * = nullptr)
       : HasError(false)
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
         // Expected is unchecked upon construction in Debug builds.
@@ -525,9 +525,8 @@ public:
   /// Move construct an Expected<T> value from an Expected<OtherT>, where OtherT
   /// must be convertible to T.
   template <class OtherT>
-  Expected(
-      Expected<OtherT> &&Other,
-      std::enable_if_t<std::is_convertible<OtherT, T>::value> * = nullptr) {
+  Expected(Expected<OtherT> &&Other,
+           std::enable_if_t<std::is_convertible_v<OtherT, T>> * = nullptr) {
     moveConstruct(std::move(Other));
   }
 
@@ -536,7 +535,7 @@ public:
   template <class OtherT>
   explicit Expected(
       Expected<OtherT> &&Other,
-      std::enable_if_t<!std::is_convertible<OtherT, T>::value> * = nullptr) {
+      std::enable_if_t<!std::is_convertible_v<OtherT, T>> * = nullptr) {
     moveConstruct(std::move(Other));
   }
 

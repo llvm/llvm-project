@@ -82,13 +82,12 @@ void MCXCOFFStreamer::emitXCOFFSymbolLinkageWithVisibility(
 }
 
 void MCXCOFFStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
-                                               MCSymbol *Trap, unsigned Lang,
-                                               unsigned Reason,
+                                               const MCSymbol *Trap,
+                                               unsigned Lang, unsigned Reason,
                                                unsigned FunctionSize,
                                                bool hasDebug) {
-  report_fatal_error(
-      "emitXCOFFExceptDirective not yet supported for integrated "
-      "assembler path.");
+  getAssembler().getWriter().addExceptionEntry(Symbol, Trap, Lang, Reason,
+                                               FunctionSize, hasDebug);
 }
 
 void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,

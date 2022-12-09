@@ -127,9 +127,9 @@ A<int> A<int>::instance = bar();
 // CHECK:   br i1 %guard.uninitialized, label %init.check, label %init.end
 
 // CHECK: init.check:
+// CHECK:   store i8 1, ptr @_ZGVN5test21AIvE8instanceE, align 8
 // CHECK:   call void @_ZN5test21AIvEC1Ev(ptr {{[^,]*}} @_ZN5test21AIvE8instanceE)
 // CHECK:   %1 = call i32 @atexit(ptr @__dtor__ZN5test21AIvE8instanceE)
-// CHECK:   store i8 1, ptr @_ZGVN5test21AIvE8instanceE, align 8
 // CHECK:   br label %init.end
 
 // CHECK: init.end:
@@ -190,10 +190,10 @@ A<int> A<int>::instance = bar();
 // CHECK:   br i1 %guard.uninitialized, label %init.check, label %init.end
 
 // CHECK: init.check:
+// CHECK:   store i8 1, ptr @_ZGVN5test12t1IiEE, align 8
 // CHECK32: call void @_ZN5test15Test1C1Ei(ptr {{[^,]*}} @_ZN5test12t1IiEE, i32 noundef 2)
 // CHECK64: call void @_ZN5test15Test1C1Ei(ptr {{[^,]*}} @_ZN5test12t1IiEE, i32 noundef signext 2)
 // CHECK:   %1 = call i32 @atexit(ptr @__dtor__ZN5test12t1IiEE)
-// CHECK:   store i8 1, ptr @_ZGVN5test12t1IiEE, align 8
 // CHECK:   br label %init.end
 
 // CHECK: init.end:

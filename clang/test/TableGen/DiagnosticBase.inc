@@ -67,10 +67,10 @@ class InGroup<DiagGroup G> { DiagGroup Group = G; }
 include "DiagnosticDocs.inc"
 
 // All diagnostics emitted by the compiler are an indirect subclass of this.
-class Diagnostic<string text, DiagClass DC, Severity defaultmapping> {
+class Diagnostic<string summary, DiagClass DC, Severity defaultmapping> {
   /// Component is specified by the file with a big let directive.
   string         Component = ?;
-  string         Text = text;
+  string         Summary = summary;
   DiagClass      Class = DC;
   SFINAEResponse SFINAE = SFINAE_Suppress;
   bit            AccessControl = 0;

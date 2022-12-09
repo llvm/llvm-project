@@ -8,6 +8,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   DropUnitDims.cpp
   ElementwiseOpFusion.cpp
   ElementwiseToLinalg.cpp
+  EraseUnusedOperandsAndResults.cpp
   FusePadOpWithLinalgProducer.cpp
   Fusion.cpp
   FusionOnTensors.cpp

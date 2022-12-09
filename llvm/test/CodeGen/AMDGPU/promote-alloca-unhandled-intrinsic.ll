@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -amdgpu-promote-alloca < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -passes=amdgpu-promote-alloca < %s | FileCheck %s
 
 ; This is just an arbitrary intrinisic that shouldn't ever need to be
 ; handled to ensure it doesn't crash.

@@ -2639,12 +2639,12 @@ bool X86TargetLowering::isSafeMemOpType(MVT VT) const {
 
 bool X86TargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned, Align Alignment, MachineMemOperand::Flags Flags,
-    bool *Fast) const {
+    unsigned *Fast) const {
   if (Fast) {
     switch (VT.getSizeInBits()) {
     default:
       // 8-byte and under are always assumed to be fast.
-      *Fast = true;
+      *Fast = 1;
       break;
     case 128:
       *Fast = !Subtarget.isUnalignedMem16Slow();
@@ -5568,7 +5568,12 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     case Intrinsic::x86_aor32:
     case Intrinsic::x86_aor64:
     case Intrinsic::x86_axor32:
-    case Intrinsic::x86_axor64: {
+    case Intrinsic::x86_axor64:
+    case Intrinsic::x86_atomic_add_cc:
+    case Intrinsic::x86_atomic_sub_cc:
+    case Intrinsic::x86_atomic_or_cc:
+    case Intrinsic::x86_atomic_and_cc:
+    case Intrinsic::x86_atomic_xor_cc: {
       Info.opc = ISD::INTRINSIC_W_CHAIN;
       Info.ptrVal = I.getArgOperand(0);
       unsigned Size = I.getArgOperand(1)->getType()->getScalarSizeInBits();
@@ -21149,7 +21154,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
     return DAG.getNode(ISD::SINT_TO_FP, dl, VT, Ext);
   }
 
-  if (VT == MVT::f128)
+  if (VT == MVT::f128 || !Subtarget.hasX87())
     return SDValue();
 
   SDValue ValueToStore = Src;
@@ -28184,6 +28189,44 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       return DAG.getMemIntrinsicNode(Opc, DL, Op->getVTList(),
                                      {Chain, Op1, Op2}, VT, MMO);
     }
+    case Intrinsic::x86_atomic_add_cc:
+    case Intrinsic::x86_atomic_sub_cc:
+    case Intrinsic::x86_atomic_or_cc:
+    case Intrinsic::x86_atomic_and_cc:
+    case Intrinsic::x86_atomic_xor_cc: {
+      SDLoc DL(Op);
+      SDValue Chain = Op.getOperand(0);
+      SDValue Op1 = Op.getOperand(2);
+      SDValue Op2 = Op.getOperand(3);
+      X86::CondCode CC = (X86::CondCode)Op.getConstantOperandVal(4);
+      MVT VT = Op2.getSimpleValueType();
+      unsigned Opc = 0;
+      switch (IntNo) {
+      default:
+        llvm_unreachable("Unknown Intrinsic");
+      case Intrinsic::x86_atomic_add_cc:
+        Opc = X86ISD::LADD;
+        break;
+      case Intrinsic::x86_atomic_sub_cc:
+        Opc = X86ISD::LSUB;
+        break;
+      case Intrinsic::x86_atomic_or_cc:
+        Opc = X86ISD::LOR;
+        break;
+      case Intrinsic::x86_atomic_and_cc:
+        Opc = X86ISD::LAND;
+        break;
+      case Intrinsic::x86_atomic_xor_cc:
+        Opc = X86ISD::LXOR;
+        break;
+      }
+      MachineMemOperand *MMO = cast<MemIntrinsicSDNode>(Op)->getMemOperand();
+      SDValue LockArith =
+          DAG.getMemIntrinsicNode(Opc, DL, DAG.getVTList(MVT::i32, MVT::Other),
+                                  {Chain, Op1, Op2}, VT, MMO);
+      Chain = LockArith.getValue(1);
+      return DAG.getMergeValues({getSETCC(CC, LockArith, DL, DAG), Chain}, DL);
+    }
     }
     return SDValue();
   }
@@ -31166,6 +31209,101 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   AI->eraseFromParent();
 }
 
+static bool shouldExpandCmpArithRMWInIR(AtomicRMWInst *AI) {
+  using namespace llvm::PatternMatch;
+  if (!AI->hasOneUse())
+    return false;
+
+  Value *Op = AI->getOperand(1);
+  ICmpInst::Predicate Pred;
+  Instruction *I = AI->user_back();
+  AtomicRMWInst::BinOp Opc = AI->getOperation();
+  if (Opc == AtomicRMWInst::Add) {
+    if (match(I, m_c_ICmp(Pred, m_Sub(m_ZeroInt(), m_Specific(Op)), m_Value())))
+      return Pred == CmpInst::ICMP_EQ;
+    if (match(I, m_OneUse(m_c_Add(m_Specific(Op), m_Value()))) &&
+        match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
+      return Pred == CmpInst::ICMP_SLT;
+    return false;
+  }
+  if (Opc == AtomicRMWInst::Sub) {
+    if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value())))
+      return Pred == CmpInst::ICMP_EQ;
+    if (match(I, m_OneUse(m_Sub(m_Value(), m_Specific(Op)))) &&
+        match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
+      return Pred == CmpInst::ICMP_SLT;
+    return false;
+  }
+  if (Opc == AtomicRMWInst::Or) {
+    if (match(I, m_OneUse(m_c_Or(m_Specific(Op), m_Value()))) &&
+        match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
+      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_SLT;
+  }
+  if (Opc == AtomicRMWInst::And) {
+    if (match(I, m_OneUse(m_c_And(m_Specific(Op), m_Value()))) &&
+        match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
+      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_SLT;
+  }
+  if (Opc == AtomicRMWInst::Xor) {
+    if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value())))
+      return Pred == CmpInst::ICMP_EQ;
+    if (match(I, m_OneUse(m_c_Xor(m_Specific(Op), m_Value()))) &&
+        match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
+      return Pred == CmpInst::ICMP_SLT;
+  }
+
+  return false;
+}
+
+void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
+    AtomicRMWInst *AI) const {
+  IRBuilder<> Builder(AI);
+  Instruction *TempI = nullptr;
+  LLVMContext &Ctx = AI->getContext();
+  ICmpInst *ICI = dyn_cast<ICmpInst>(AI->user_back());
+  if (!ICI) {
+    TempI = AI->user_back();
+    assert(TempI->hasOneUse() && "Must have one use");
+    ICI = cast<ICmpInst>(TempI->user_back());
+  }
+  ICmpInst::Predicate Pred = ICI->getPredicate();
+  assert((Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_SLT) &&
+         "Not supported Pred");
+  X86::CondCode CC = Pred == CmpInst::ICMP_EQ ? X86::COND_E : X86::COND_S;
+  Intrinsic::ID IID = Intrinsic::not_intrinsic;
+  switch (AI->getOperation()) {
+  default:
+    llvm_unreachable("Unknown atomic operation");
+  case AtomicRMWInst::Add:
+    IID = Intrinsic::x86_atomic_add_cc;
+    break;
+  case AtomicRMWInst::Sub:
+    IID = Intrinsic::x86_atomic_sub_cc;
+    break;
+  case AtomicRMWInst::Or:
+    IID = Intrinsic::x86_atomic_or_cc;
+    break;
+  case AtomicRMWInst::And:
+    IID = Intrinsic::x86_atomic_and_cc;
+    break;
+  case AtomicRMWInst::Xor:
+    IID = Intrinsic::x86_atomic_xor_cc;
+    break;
+  }
+  Function *CmpArith =
+      Intrinsic::getDeclaration(AI->getModule(), IID, AI->getType());
+  Value *Addr = Builder.CreatePointerCast(AI->getPointerOperand(),
+                                          Type::getInt8PtrTy(Ctx));
+  Value *Call = Builder.CreateCall(
+      CmpArith, {Addr, AI->getValOperand(), Builder.getInt32((unsigned)CC)});
+  Value *Result = Builder.CreateTrunc(Call, Type::getInt1Ty(Ctx));
+  ICI->replaceAllUsesWith(Result);
+  ICI->eraseFromParent();
+  if (TempI)
+    TempI->eraseFromParent();
+  AI->eraseFromParent();
+}
+
 TargetLowering::AtomicExpansionKind
 X86TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   unsigned NativeWidth = Subtarget.is64Bit() ? 64 : 32;
@@ -31183,13 +31321,18 @@ X86TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   default:
     llvm_unreachable("Unknown atomic operation");
   case AtomicRMWInst::Xchg:
+    return AtomicExpansionKind::None;
   case AtomicRMWInst::Add:
   case AtomicRMWInst::Sub:
-    // It's better to use xadd, xsub or xchg for these in all cases.
+    if (shouldExpandCmpArithRMWInIR(AI))
+      return AtomicExpansionKind::CmpArithIntrinsic;
+    // It's better to use xadd, xsub or xchg for these in other cases.
     return AtomicExpansionKind::None;
   case AtomicRMWInst::Or:
   case AtomicRMWInst::And:
   case AtomicRMWInst::Xor:
+    if (shouldExpandCmpArithRMWInIR(AI))
+      return AtomicExpansionKind::CmpArithIntrinsic;
     return shouldExpandLogicAtomicRMWInIR(AI);
   case AtomicRMWInst::Nand:
   case AtomicRMWInst::Max:
@@ -49409,7 +49552,7 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
   // into two 16-byte operations. Also split non-temporal aligned loads on
   // pre-AVX2 targets as 32-byte loads will lower to regular temporal loads.
   ISD::LoadExtType Ext = Ld->getExtensionType();
-  bool Fast;
+  unsigned Fast;
   if (RegVT.is256BitVector() && !DCI.isBeforeLegalizeOps() &&
       Ext == ISD::NON_EXTLOAD &&
       ((Ld->isNonTemporal() && !Subtarget.hasInt256() &&
@@ -49867,7 +50010,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
 
   // If we are saving a 32-byte vector and 32-byte stores are slow, such as on
   // Sandy Bridge, perform two 16-byte stores.
-  bool Fast;
+  unsigned Fast;
   if (VT.is256BitVector() && StVT == VT &&
       TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
                              *St->getMemOperand(), &Fast) &&
@@ -54590,10 +54733,11 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           IsConcatFree(VT, Ops, 1) && IsConcatFree(VT, Ops, 2)) {
         EVT SelVT = Ops[0].getOperand(0).getValueType();
         SelVT = SelVT.getDoubleNumVectorElementsVT(*DAG.getContext());
-        return DAG.getNode(Op0.getOpcode(), DL, VT,
-                           ConcatSubOperand(SelVT.getSimpleVT(), Ops, 0),
-                           ConcatSubOperand(VT, Ops, 1),
-                           ConcatSubOperand(VT, Ops, 2));
+        if (DAG.getTargetLoweringInfo().isTypeLegal(SelVT))
+          return DAG.getNode(Op0.getOpcode(), DL, VT,
+                             ConcatSubOperand(SelVT.getSimpleVT(), Ops, 0),
+                             ConcatSubOperand(VT, Ops, 1),
+                             ConcatSubOperand(VT, Ops, 2));
       }
       break;
     }
@@ -54602,7 +54746,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   // Fold subvector loads into one.
   // If needed, look through bitcasts to get to the load.
   if (auto *FirstLd = dyn_cast<LoadSDNode>(peekThroughBitcasts(Op0))) {
-    bool Fast;
+    unsigned Fast;
     const X86TargetLowering *TLI = Subtarget.getTargetLowering();
     if (TLI->allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
                                 *FirstLd->getMemOperand(), &Fast) &&

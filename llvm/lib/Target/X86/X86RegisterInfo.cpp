@@ -782,7 +782,7 @@ static bool isFuncletReturnInstr(MachineInstr &MI) {
   llvm_unreachable("impossible");
 }
 
-void
+bool
 X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                      int SPAdj, unsigned FIOperandNum,
                                      RegScavenger *RS) const {
@@ -819,7 +819,7 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (Opc == TargetOpcode::LOCAL_ESCAPE) {
     MachineOperand &FI = MI.getOperand(FIOperandNum);
     FI.ChangeToImmediate(FIOffset);
-    return;
+    return false;
   }
 
   // For LEA64_32r when BasePtr is 32-bits (X32) we can use full-size 64-bit
@@ -843,7 +843,7 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     assert(BasePtr == FramePtr && "Expected the FP as base register");
     int64_t Offset = MI.getOperand(FIOperandNum + 1).getImm() + FIOffset;
     MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
-    return;
+    return false;
   }
 
   if (MI.getOperand(FIOperandNum+3).isImm()) {
@@ -860,6 +860,7 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       (uint64_t)MI.getOperand(FIOperandNum+3).getOffset();
     MI.getOperand(FIOperandNum + 3).setOffset(Offset);
   }
+  return false;
 }
 
 unsigned X86RegisterInfo::findDeadCallerSavedReg(

@@ -1,12 +1,13 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx802  -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8,GFX8_9 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900  -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9_10,GFX8_9 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-back-off-barrier -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GFX9_10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900  -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9PLUS,GFX8_9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-back-off-barrier -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX9PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-back-off-barrier -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX9PLUS %s
 
 ; GCN-LABEL: barrier_vmcnt_global:
 ; GFX8:         flat_load_dword
-; GFX9_10:      global_load_dword
+; GFX9PLUS:     global_load_{{dword|b32}}
 ; GFX8:         s_waitcnt vmcnt(0){{$}}
-; GFX9_10:      s_waitcnt vmcnt(0){{$}}
+; GFX9PLUS:     s_waitcnt vmcnt(0){{$}}
 ; GCN-NEXT:     s_barrier
 define amdgpu_kernel void @barrier_vmcnt_global(i32 addrspace(1)* %arg) {
 bb:
@@ -27,10 +28,10 @@ bb:
 
 ; GCN-LABEL: barrier_vscnt_global:
 ; GFX8:       flat_store_dword
-; GFX9_10:    global_store_dword
+; GFX9PLUS:   global_store_{{dword|b32}}
 ; GFX8:       s_waitcnt vmcnt(0){{$}}
 ; GFX9:       s_waitcnt vmcnt(0){{$}}
-; GFX10:      s_waitcnt_vscnt null, 0x0
+; GFX10PLUS:  s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:   s_barrier
 define amdgpu_kernel void @barrier_vscnt_global(i32 addrspace(1)* %arg) {
 bb:
@@ -53,10 +54,10 @@ bb:
 
 ; GCN-LABEL: barrier_vmcnt_vscnt_global:
 ; GFX8:         flat_load_dword
-; GFX9_10:      global_load_dword
+; GFX9PLUS:     global_load_{{dword|b32}}
 ; GFX8:         s_waitcnt vmcnt(0){{$}}
-; GFX9_10:      s_waitcnt vmcnt(0){{$}}
-; GFX10:        s_waitcnt_vscnt null, 0x0
+; GFX9PLUS:     s_waitcnt vmcnt(0){{$}}
+; GFX10PLUS:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:     s_barrier
 define amdgpu_kernel void @barrier_vmcnt_vscnt_global(i32 addrspace(1)* %arg) {
 bb:
@@ -80,7 +81,7 @@ bb:
 }
 
 ; GCN-LABEL: barrier_vmcnt_flat:
-; GCN:      flat_load_dword
+; GCN:      flat_load_{{dword|b32}}
 ; GCN:      s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
 ; GCN-NEXT: s_barrier
 define amdgpu_kernel void @barrier_vmcnt_flat(i32* %arg) {
@@ -101,10 +102,10 @@ bb:
 }
 
 ; GCN-LABEL: barrier_vscnt_flat:
-; GCN:         flat_store_dword
+; GCN:         flat_store_{{dword|b32}}
 ; GFX8_9:      s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
-; GFX10:       s_waitcnt lgkmcnt(0){{$}}
-; GFX10:       s_waitcnt_vscnt null, 0x0
+; GFX10PLUS:   s_waitcnt lgkmcnt(0){{$}}
+; GFX10PLUS:   s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_barrier
 define amdgpu_kernel void @barrier_vscnt_flat(i32* %arg) {
 bb:
@@ -126,9 +127,9 @@ bb:
 }
 
 ; GCN-LABEL: barrier_vmcnt_vscnt_flat:
-; GCN:        flat_load_dword
+; GCN:        flat_load_{{dword|b32}}
 ; GCN:        s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
-; GFX10:      s_waitcnt_vscnt null, 0x0
+; GFX10PLUS:  s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:   s_barrier
 define amdgpu_kernel void @barrier_vmcnt_vscnt_flat(i32* %arg) {
 bb:
@@ -152,11 +153,11 @@ bb:
 }
 
 ; GCN-LABEL: barrier_vmcnt_vscnt_flat_workgroup:
-; GCN:        flat_load_dword
+; GCN:        flat_load_{{dword|b32}}
 ; GFX8_9:     s_waitcnt lgkmcnt(0){{$}}
 ; GFX8_9:     s_waitcnt vmcnt(0){{$}}
-; GFX10:      s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
-; GFX10:      s_waitcnt_vscnt null, 0x0
+; GFX10PLUS:  s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX10PLUS:  s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:   s_barrier
 define amdgpu_kernel void @barrier_vmcnt_vscnt_flat_workgroup(i32* %arg) {
 bb:
@@ -181,10 +182,10 @@ bb:
 
 ; GCN-LABEL: load_vmcnt_global:
 ; GFX8:     flat_load_dword
-; GFX9_10:  global_load_dword
+; GFX9PLUS: global_load_{{dword|b32}}
 ; GFX8:     s_waitcnt vmcnt(0){{$}}
-; GFX9_10:  s_waitcnt vmcnt(0){{$}}
-; GCN-NEXT: {{global|flat}}_store_dword
+; GFX9PLUS: s_waitcnt vmcnt(0){{$}}
+; GCN-NEXT: {{global|flat}}_store_{{dword|b32}}
 define amdgpu_kernel void @load_vmcnt_global(i32 addrspace(1)* %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -200,10 +201,10 @@ bb:
 }
 
 ; GCN-LABEL: load_vmcnt_flat:
-; GCN:      flat_load_dword
+; GCN:      flat_load_{{dword|b32}}
 ; GCN-NOT:  vscnt
 ; GCN:      s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
-; GCN-NEXT: {{global|flat}}_store_dword
+; GCN-NEXT: {{global|flat}}_store_{{dword|b32}}
 define amdgpu_kernel void @load_vmcnt_flat(i32* %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -219,9 +220,9 @@ bb:
 }
 
 ; GCN-LABEL: store_vscnt_private:
-; GCN:         buffer_store_dword
+; GCN:         {{buffer|scratch}}_store_{{dword|b32}}
 ; GFX8_9:      s_waitcnt vmcnt(0)
-; GFX10:       s_waitcnt_vscnt null, 0x0
+; GFX10PLUS:   s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64
 define void @store_vscnt_private(i32 addrspace(5)* %p) {
   store i32 0, i32 addrspace(5)* %p
@@ -230,9 +231,9 @@ define void @store_vscnt_private(i32 addrspace(5)* %p) {
 
 ; GCN-LABEL: store_vscnt_global:
 ; GFX8:        flat_store_dword
-; GFX9_10:     global_store_dword
+; GFX9PLUS:    global_store_{{dword|b32}}
 ; GFX8_9:      s_waitcnt vmcnt(0)
-; GFX10:       s_waitcnt_vscnt null, 0x0
+; GFX10PLUS:   s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64
 define void @store_vscnt_global(i32 addrspace(1)* %p) {
   store i32 0, i32 addrspace(1)* %p
@@ -240,10 +241,10 @@ define void @store_vscnt_global(i32 addrspace(1)* %p) {
 }
 
 ; GCN-LABEL: store_vscnt_flat:
-; GCN:         flat_store_dword
+; GCN:         flat_store_{{dword|b32}}
 ; GFX8_9:      s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
-; GFX10:       s_waitcnt lgkmcnt(0){{$}}
-; GFX10:       s_waitcnt_vscnt null, 0x0
+; GFX10PLUS:   s_waitcnt lgkmcnt(0){{$}}
+; GFX10PLUS:   s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64
 define void @store_vscnt_flat(i32* %p) {
   store i32 0, i32* %p
@@ -252,7 +253,7 @@ define void @store_vscnt_flat(i32* %p) {
 
 ; GCN-LABEL: function_prologue:
 ; GCN:        s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0){{$}}
-; GFX10:      s_waitcnt_vscnt null, 0x0
+; GFX10PLUS:  s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:   s_setpc_b64
 define void @function_prologue() {
   ret void

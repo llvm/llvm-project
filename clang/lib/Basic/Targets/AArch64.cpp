@@ -83,6 +83,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   // All AArch64 implementations support ARMv8 FP, which makes half a legal type.
   HasLegalHalfType = true;
   HasFloat16 = true;
+  HasStrictFP = true;
 
   if (Triple.isArch64Bit())
     LongWidth = LongAlign = PointerWidth = PointerAlign = 64;

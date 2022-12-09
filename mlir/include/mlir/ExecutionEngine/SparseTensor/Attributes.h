@@ -44,6 +44,16 @@
 #define MLIR_SPARSETENSOR_HAS_ATTRIBUTE(x) 0
 #endif
 
+// A wrapper around `__has_builtin`, which is defined by GCC and Clang
+// but is missing on some versions of MSVC.
+// GCC: <https://gcc.gnu.org/onlinedocs/cpp/_005f_005fhas_005fbuiltin.html>
+// Clang: <https://clang.llvm.org/docs/LanguageExtensions.html#has-builtin>
+#ifdef __has_builtin
+#define MLIR_SPARSETENSOR_HAS_BUILTIN(x) __has_builtin(x)
+#else
+#define MLIR_SPARSETENSOR_HAS_BUILTIN(x) 0
+#endif
+
 // An attribute for non-owning classes (like `PermutationRef`) to enable
 // lifetime warnings.
 #if MLIR_SPARSETENSOR_HAS_CPP_ATTRIBUTE(gsl::Pointer)

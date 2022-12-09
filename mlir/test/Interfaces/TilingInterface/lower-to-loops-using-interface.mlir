@@ -248,7 +248,7 @@ func.func @broadcast(%input: memref<8x32xf32>,
   linalg.broadcast
       ins(%input:memref<8x32xf32>)
       outs(%init:memref<8x16x32xf32>)
-      dimensions = [0, 2]
+      dimensions = [1]
   func.return
 }
 // CHECK-LABEL: func.func @broadcast(

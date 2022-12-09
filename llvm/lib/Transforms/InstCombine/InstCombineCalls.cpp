@@ -34,6 +34,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -223,6 +224,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
     S->setMetadata(LLVMContext::MD_mem_parallel_loop_access, LoopMemParallelMD);
   if (AccessGroupMD)
     S->setMetadata(LLVMContext::MD_access_group, AccessGroupMD);
+  S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
 
   if (auto *MT = dyn_cast<MemTransferInst>(MI)) {
     // non-atomics can be volatile
@@ -294,9 +296,15 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
     Dest = Builder.CreateBitCast(Dest, NewDstPtrTy);
 
     // Extract the fill value and store.
-    uint64_t Fill = FillC->getZExtValue()*0x0101010101010101ULL;
-    StoreInst *S = Builder.CreateStore(ConstantInt::get(ITy, Fill), Dest,
-                                       MI->isVolatile());
+    const uint64_t Fill = FillC->getZExtValue()*0x0101010101010101ULL;
+    Constant *FillVal = ConstantInt::get(ITy, Fill);
+    StoreInst *S = Builder.CreateStore(FillVal, Dest, MI->isVolatile());
+    S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
+    for (auto *DAI : at::getAssignmentMarkers(S)) {
+      if (any_of(DAI->location_ops(), [&](Value *V) { return V == FillC; }))
+        DAI->replaceVariableLocationOp(FillC, FillVal);
+    }
+
     S->setAlignment(Alignment);
     if (isa<AtomicMemSetInst>(MI))
       S->setOrdering(AtomicOrdering::Unordered);

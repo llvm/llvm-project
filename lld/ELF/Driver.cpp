@@ -1360,12 +1360,15 @@ static void readConfigs(opt::InputArgList &args) {
     parseClangOption(std::string("-") + arg->getValue(), arg->getSpelling());
 
   // GCC collect2 passes -plugin-opt=path/to/lto-wrapper with an absolute or
-  // relative path. Just ignore. If not ended with "lto-wrapper", consider it an
+  // relative path. Just ignore. If not ended with "lto-wrapper" (or
+  // "lto-wrapper.exe" for GCC cross-compiled for Windows), consider it an
   // unsupported LLVMgold.so option and error.
-  for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq))
-    if (!StringRef(arg->getValue()).endswith("lto-wrapper"))
+  for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq)) {
+    StringRef v(arg->getValue());
+    if (!v.endswith("lto-wrapper") && !v.endswith("lto-wrapper.exe"))
       error(arg->getSpelling() + ": unknown plugin option '" + arg->getValue() +
             "'");
+  }
 
   config->passPlugins = args::getStrings(args, OPT_load_pass_plugins);
 
@@ -1386,7 +1389,7 @@ static void readConfigs(opt::InputArgList &args) {
     parallel::strategy = hardware_concurrency(threads);
     config->thinLTOJobs = v;
   }
-  if (auto *arg = args.getLastArg(OPT_thinlto_jobs))
+  if (auto *arg = args.getLastArg(OPT_thinlto_jobs_eq))
     config->thinLTOJobs = arg->getValue();
   config->threadCount = parallel::strategy.compute_thread_count();
 
@@ -2120,7 +2123,7 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   if (!isa<Defined>(sym) || !sym->includeInDynsym())
     return;
 
-  StringRef partName = reinterpret_cast<const char *>(s->rawData.data());
+  StringRef partName = reinterpret_cast<const char *>(s->content().data());
   for (Partition &part : partitions) {
     if (part.name == partName) {
       sym->partition = part.getNumber();

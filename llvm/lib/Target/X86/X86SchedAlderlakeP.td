@@ -999,9 +999,7 @@ def : InstRW<[ADLPWriteResGroup68, ReadAfterVecXLd], (instrs VGF2P8MULBYrm)>;
 def ADLPWriteResGroup69 : SchedWriteRes<[ADLPPort00_01]> {
   let Latency = 5;
 }
-def : InstRW<[ADLPWriteResGroup69], (instregex "^(V?)GF2P8AFFINE((INV)?)QBrri$",
-                                               "^(V?)GF2P8MULBrr$",
-                                               "^VGF2P8AFFINE((INV)?)QBYrri$")>;
+def : InstRW<[ADLPWriteResGroup69], (instregex "^(V?)GF2P8MULBrr$")>;
 def : InstRW<[ADLPWriteResGroup69], (instrs VGF2P8MULBYrr)>;
 
 def ADLPWriteResGroup70 : SchedWriteRes<[ADLPPort02_03, ADLPPort05]> {

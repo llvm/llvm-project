@@ -717,7 +717,7 @@ func.func @scf_if_memory_space(%c: i1, %f: f32) -> (f32, f32)
 {
   %c0 = arith.constant 0 : index
   // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32, 1>
-  %0 = bufferization.alloc_tensor() {memory_space = 1 : ui64} : tensor<5xf32>
+  %0 = bufferization.alloc_tensor() {memory_space = 1 : i64} : tensor<5xf32>
   // CHECK: scf.if %{{.*}} -> (memref<5xf32, 1>) {
   %1 = scf.if %c -> tensor<5xf32> {
     // CHECK: %[[cloned:.*]] = bufferization.clone %[[alloc]]
@@ -747,7 +747,7 @@ func.func @scf_if_memory_space(%c: i1, %f: f32) -> (f32, f32)
 func.func @scf_execute_region_memory_space(%f: f32) -> f32 {
   %c0 = arith.constant 0 : index
   %0 = scf.execute_region -> tensor<5xf32> {
-    %1 = bufferization.alloc_tensor() {memory_space = 1 : ui64} : tensor<5xf32>
+    %1 = bufferization.alloc_tensor() {memory_space = 1 : i64} : tensor<5xf32>
     %2 = tensor.insert %f into %1[%c0] : tensor<5xf32>
     scf.yield %2 : tensor<5xf32>
   }
@@ -767,8 +767,8 @@ func.func @scf_for_swapping_yields_memory_space(
 {
   // CHECK: memref.alloc(%{{.*}}) {{.*}} : memref<?xf32, 1>
   // CHECK: memref.alloc(%{{.*}}) {{.*}} : memref<?xf32, 1>
-  %A = bufferization.alloc_tensor(%sz) {memory_space = 1 : ui64} : tensor<?xf32>
-  %B = bufferization.alloc_tensor(%sz) {memory_space = 1 : ui64} : tensor<?xf32>
+  %A = bufferization.alloc_tensor(%sz) {memory_space = 1 : i64} : tensor<?xf32>
+  %B = bufferization.alloc_tensor(%sz) {memory_space = 1 : i64} : tensor<?xf32>
 
   // CHECK: scf.for {{.*}} {
   %r0:2 = scf.for %i = %lb to %ub step %step iter_args(%tA = %A, %tB = %B)

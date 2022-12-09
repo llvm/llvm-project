@@ -86,7 +86,7 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
   assert(rankedMemrefType && "buffer layout not supported on unranked tensors");
   return MemRefType::get(
       rankedMemrefType.getShape(), rankedMemrefType.getElementType(),
-      layoutAttr.getValue(), rankedMemrefType.getMemorySpaceAsInt());
+      layoutAttr.getValue(), rankedMemrefType.getMemorySpace());
 }
 
 /// Return the FuncOp called by `callOp`.

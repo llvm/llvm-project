@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparse-tensor-rewrite="enable-runtime-library=false enable-convert=false" |\
+// RUN: mlir-opt %s -post-sparsification-rewrite="enable-runtime-library=false enable-convert=false" | \
 // RUN: FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{
@@ -17,6 +17,7 @@
 // CHECK:         %[[D1:.*]] = memref.load %[[DS]]{{\[}}%[[C1]]]
 // CHECK:         %[[T:.*]] = bufferization.alloc_tensor(%[[D0]], %[[D1]])
 // CHECK:         %[[N:.*]] = call @getSparseTensorReaderNNZ(%[[R]])
+// CHECK:         %[[S:.*]] = call @getSparseTensorReaderIsSymmetric(%[[R]])
 // CHECK:         %[[VB:.*]] = memref.alloca()
 // CHECK:         %[[T2:.*]] = scf.for %{{.*}} = %[[C0]] to %[[N]] step %[[C1]] iter_args(%[[A2:.*]] = %[[T]])
 // CHECK:           func.call @getSparseTensorReaderNextF32(%[[R]], %[[DS]], %[[VB]])
@@ -24,12 +25,19 @@
 // CHECK:           %[[E1:.*]] = memref.load %[[DS]]{{\[}}%[[C1]]]
 // CHECK:           %[[V:.*]] = memref.load %[[VB]][]
 // CHECK:           %[[T1:.*]] = sparse_tensor.insert %[[V]] into %[[A2]]{{\[}}%[[E0]], %[[E1]]]
-// CHECK:           scf.yield %[[T1]]
+// CHECK:           %[[NE:.*]] = arith.cmpi ne, %[[E0]], %[[E1]]
+// CHECK:           %[[COND:.*]] = arith.andi %[[S]], %[[NE]]
+// CHECK:           %[[T3:.*]] = scf.if %[[COND]]
+// CHECK:             %[[T4:.*]] = sparse_tensor.insert %[[V]] into %[[T1]]{{\[}}%[[E1]], %[[E0]]]
+// CHECK:             scf.yield %[[T4]]
+// CHECK:           else
+// CHECK:             scf.yield %[[T1]]
+// CHECK:           scf.yield %[[T3]]
 // CHECK:         }
 // CHECK:         call @delSparseTensorReader(%[[R]])
-// CHECK:         %[[T3:.*]] = sparse_tensor.load %[[T2]] hasInserts
-// CHECK:         %[[R:.*]] = sparse_tensor.convert %[[T3]]
-// CHECK:         bufferization.dealloc_tensor %[[T3]]
+// CHECK:         %[[T5:.*]] = sparse_tensor.load %[[T2]] hasInserts
+// CHECK:         %[[R:.*]] = sparse_tensor.convert %[[T5]]
+// CHECK:         bufferization.dealloc_tensor %[[T5]]
 // CHECK:         return %[[R]]
 func.func @sparse_new(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #CSR> {
   %0 = sparse_tensor.new %arg0 : !llvm.ptr<i8> to tensor<?x?xf32, #CSR>

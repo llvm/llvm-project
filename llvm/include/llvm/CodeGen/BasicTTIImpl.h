@@ -256,7 +256,7 @@ public:
   /// @{
   bool allowsMisalignedMemoryAccesses(LLVMContext &Context, unsigned BitWidth,
                                       unsigned AddressSpace, Align Alignment,
-                                      bool *Fast) const {
+                                      unsigned *Fast) const {
     EVT E = EVT::getIntegerVT(Context, BitWidth);
     return getTLI()->allowsMisalignedMemoryAccesses(
         E, AddressSpace, Alignment, MachineMemOperand::MONone, Fast);

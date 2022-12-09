@@ -1,8 +1,15 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{command}
+//
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = enable-runtime-library=false
+// RUN: %{command}
 
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
@@ -49,12 +56,14 @@ module {
   func.func @dump(%arg0: tensor<?xf32, #SparseVector>) {
     %c0 = arith.constant 0 : index
     %d0 = arith.constant -1.0 : f32
+    %n = sparse_tensor.number_of_entries %arg0 : tensor<?xf32, #SparseVector>
+    vector.print %n : index
     %values = sparse_tensor.values %arg0 : tensor<?xf32, #SparseVector> to memref<?xf32>
-    %0 = vector.transfer_read %values[%c0], %d0: memref<?xf32>, vector<4xf32>
-    vector.print %0 : vector<4xf32>
+    %0 = vector.transfer_read %values[%c0], %d0: memref<?xf32>, vector<3xf32>
+    vector.print %0 : vector<3xf32>
     %indices = sparse_tensor.indices %arg0 { dimension = 0 : index } : tensor<?xf32, #SparseVector> to memref<?xindex>
-    %1 = vector.transfer_read %indices[%c0], %c0: memref<?xindex>, vector<4xindex>
-    vector.print %1 : vector<4xindex>
+    %1 = vector.transfer_read %indices[%c0], %c0: memref<?xindex>, vector<3xindex>
+    vector.print %1 : vector<3xindex>
     return
   }
 
@@ -76,10 +85,12 @@ module {
     //
     // Verify the results.
     //
-    // CHECK: ( 5.13, 3, 5, -1 )
-    // CHECK-NEXT: ( 0, 20, 31, 0 )
-    // CHECK-NEXT: ( 2, 4, 6, -1 )
-    // CHECK-NEXT: ( 0, 20, 31, 0 )
+    // CHECK:      3
+    // CHECK-NEXT: ( 5.13, 3, 5 )
+    // CHECK-NEXT: ( 0, 20, 31 )
+    // CHECK-NEXT: 3
+    // CHECK-NEXT: ( 2, 4, 6 )
+    // CHECK-NEXT: ( 0, 20, 31 )
     //
     call @dump(%0) : (tensor<?xf32, #SparseVector>) -> ()
     call @dump(%1) : (tensor<?xf32, #SparseVector>) -> ()

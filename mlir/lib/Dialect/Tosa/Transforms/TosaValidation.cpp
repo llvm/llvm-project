@@ -41,20 +41,20 @@ namespace {
 
 struct TosaValidation : public tosa::impl::TosaValidationBase<TosaValidation> {
 public:
-  explicit TosaValidation() {}
+  explicit TosaValidation() = default;
 
 private:
   void runOnOperation() override;
 
-  llvm::Optional<TosaProfileEnum> profile_type;
+  llvm::Optional<TosaProfileEnum> profileType;
 };
 
 void TosaValidation::runOnOperation() {
-  profile_type = symbolizeEnum<TosaProfileEnum>(profileName);
+  profileType = symbolizeEnum<TosaProfileEnum>(profileName);
 
   getOperation().walk([&](Operation *op) {
     for (Value operand : op->getOperands()) {
-      if ((profile_type == TosaProfileEnum::BaseInference) &&
+      if ((profileType == TosaProfileEnum::BaseInference) &&
           getElementTypeOrSelf(operand).isa<FloatType>()) {
         return signalPassFailure();
       }

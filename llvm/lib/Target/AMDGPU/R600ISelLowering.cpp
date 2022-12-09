@@ -1521,9 +1521,9 @@ bool R600TargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
 
 bool R600TargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
-    bool *IsFast) const {
+    unsigned *IsFast) const {
   if (IsFast)
-    *IsFast = false;
+    *IsFast = 0;
 
   if (!VT.isSimple() || VT == MVT::Other)
     return false;
@@ -1533,7 +1533,7 @@ bool R600TargetLowering::allowsMisalignedMemoryAccesses(
 
   // TODO: This is a rough estimate.
   if (IsFast)
-    *IsFast = true;
+    *IsFast = 1;
 
   return VT.bitsGT(MVT::i32) && Alignment >= Align(4);
 }

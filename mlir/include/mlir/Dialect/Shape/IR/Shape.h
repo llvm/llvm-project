@@ -35,7 +35,7 @@ namespace shape {
 
 /// Alias type for extent tensors.
 RankedTensorType getExtentTensorType(MLIRContext *ctx,
-                                     int64_t rank = ShapedType::kDynamicSize);
+                                     int64_t rank = ShapedType::kDynamic);
 
 // Check if a type is an extent tensor, e.g., tensor<?xindex>.
 bool isExtentTensorType(Type);

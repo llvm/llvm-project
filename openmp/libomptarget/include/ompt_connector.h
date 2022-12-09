@@ -26,6 +26,8 @@
 #include "omp-tools.h"
 #include "omptarget.h"
 
+#define DEBUG_PREFIX "OMPT"
+
 #define LIBOMPTARGET_STRINGIFY(s) #s
 
 /// Type for the function to be invoked for connecting two libraries.
@@ -98,6 +100,8 @@ private:
   /// Name of connect routine provided by source library
   std::string LibIdent;
 };
+
+#undef DEBUG_PREFIX
 
 #endif // OMPT_SUPPORT
 

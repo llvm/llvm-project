@@ -69,7 +69,7 @@ llvm::Optional<std::string> tryParseProfile(StringRef Profile) {
   SmallVector<StringRef, 3> Parts;
   Profile.split(Parts, "_");
   if (Parts.size() != 3)
-    return NoneType();
+    return None;
 
   Triple::EnvironmentType Kind =
       StringSwitch<Triple::EnvironmentType>(Parts[0])
@@ -84,17 +84,17 @@ llvm::Optional<std::string> tryParseProfile(StringRef Profile) {
           .Case("as", Triple::EnvironmentType::Amplification)
           .Default(Triple::EnvironmentType::UnknownEnvironment);
   if (Kind == Triple::EnvironmentType::UnknownEnvironment)
-    return NoneType();
+    return None;
 
   unsigned long long Major = 0;
   if (llvm::getAsUnsignedInteger(Parts[1], 0, Major))
-    return NoneType();
+    return None;
 
   unsigned long long Minor = 0;
   if (Parts[2] == "x" && Kind == Triple::EnvironmentType::Library)
     Minor = OfflineLibMinor;
   else if (llvm::getAsUnsignedInteger(Parts[2], 0, Minor))
-    return NoneType();
+    return None;
 
   // dxil-unknown-shadermodel-hull
   llvm::Triple T;
@@ -105,7 +105,7 @@ llvm::Optional<std::string> tryParseProfile(StringRef Profile) {
   if (isLegalShaderModel(T))
     return T.getTriple();
   else
-    return NoneType();
+    return None;
 }
 
 bool isLegalValidatorVersion(StringRef ValVersionStr, const Driver &D) {

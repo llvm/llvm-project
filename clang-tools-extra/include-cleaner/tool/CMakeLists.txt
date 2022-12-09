@@ -5,6 +5,7 @@ add_clang_tool(clang-include-cleaner IncludeCleaner.cpp)
 clang_target_link_libraries(clang-include-cleaner PRIVATE
   clangBasic
   clangFrontend
+  clangLex
   clangSerialization
   clangTooling
   )

@@ -50,8 +50,8 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
          `getArrayAttrMaxRanks()`[0] (resp. [1], [2]).
       3. if an entry of `static_offsets` (resp. `static_sizes`,
          `static_strides`) is equal to a special sentinel value, namely
-         `ShapedType::kDynamicStrideOrOffset` (resp. `ShapedType::kDynamicSize`,
-         `ShapedType::kDynamicStrideOrOffset`), then the corresponding entry is
+         `ShapedType::kDynamic` (resp. `ShapedType::kDynamic`,
+         `ShapedType::kDynamic`), then the corresponding entry is
          a dynamic offset (resp. size, stride).
       4. a variadic `offset` (resp. `sizes`, `strides`) operand  must be present
          for each dynamic offset (resp. size, stride).
@@ -206,7 +206,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*defaultImplementation=*/[{
         ::llvm::APInt v = *(static_offsets()
           .template getAsValueRange<::mlir::IntegerAttr>().begin() + idx);
-        return ::mlir::ShapedType::isDynamicStrideOrOffset(v.getSExtValue());
+        return ::mlir::ShapedType::isDynamic(v.getSExtValue());
       }]
     >,
     InterfaceMethod<
@@ -234,7 +234,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*defaultImplementation=*/[{
         ::llvm::APInt v = *(static_strides()
           .template getAsValueRange<::mlir::IntegerAttr>().begin() + idx);
-        return ::mlir::ShapedType::isDynamicStrideOrOffset(v.getSExtValue());
+        return ::mlir::ShapedType::isDynamic(v.getSExtValue());
       }]
     >,
     InterfaceMethod<
@@ -296,7 +296,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
         assert($_op.isDynamicOffset(idx) && "expected dynamic offset");
         auto numDynamic = getNumDynamicEntriesUpToIdx(
           static_offsets().template cast<::mlir::ArrayAttr>(),
-          ::mlir::ShapedType::isDynamicStrideOrOffset,
+          ::mlir::ShapedType::isDynamic,
           idx);
         return $_op.getOffsetSizeAndStrideStartOperandIndex() + numDynamic;
       }]
@@ -331,7 +331,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
         assert($_op.isDynamicStride(idx) && "expected dynamic stride");
         auto numDynamic = getNumDynamicEntriesUpToIdx(
           static_strides().template cast<::mlir::ArrayAttr>(),
-          ::mlir::ShapedType::isDynamicStrideOrOffset,
+          ::mlir::ShapedType::isDynamic,
           idx);
         return $_op.getOffsetSizeAndStrideStartOperandIndex() +
           offsets().size() + sizes().size() + numDynamic;

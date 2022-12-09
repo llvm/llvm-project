@@ -2,6 +2,9 @@
 
 // RUN: %clangxx_memprof -O0 %s -o %t
 // RUN: %env_memprof_opts=print_text=true:log_path=stderr:atexit=1 %run %t 2>&1 | FileCheck %s
+// Stats should be dumped to stderr even if the profile log path set to a file.
+// RUN: rm -f %t.log.*
+// RUN: %env_memprof_opts=print_text=true:log_path=%t.log:atexit=1 %run %t 2>&1 | FileCheck %s
 // RUN: %env_memprof_opts=print_text=true:log_path=stderr:atexit=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOATEXIT
 
 // CHECK: MemProfiler exit stats:

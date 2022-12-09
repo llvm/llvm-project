@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=tonga -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-ALLOCA %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=tonga -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-PROMOTE %s
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-promote-alloca -sroa -instcombine < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-promote-alloca,sroa,instcombine < %s | FileCheck -check-prefix=OPT %s
 
 target datalayout = "A5"
 

@@ -6,7 +6,7 @@
 // RUN: mlir-opt %s --sparse-tensor-conversion="s2s-strategy=0" \
 // RUN:    --canonicalize --cse | FileCheck %s -check-prefixes=CHECK-AUTO,CHECK
 
-// RUN: mlir-opt %s --sparse-tensor-rewrite="enable-runtime-library=false enable-foreach=false" \
+// RUN: mlir-opt %s --post-sparsification-rewrite="enable-runtime-library=false enable-foreach=false" \
 // RUN: --canonicalize --cse | FileCheck %s --check-prefix=CHECK-RWT
 
 #SparseVector64 = #sparse_tensor.encoding<{

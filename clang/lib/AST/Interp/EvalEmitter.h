@@ -23,7 +23,6 @@
 #include "llvm/Support/Error.h"
 
 namespace clang {
-class FunctionDecl;
 namespace interp {
 class Context;
 class Function;

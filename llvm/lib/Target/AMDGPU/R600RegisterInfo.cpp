@@ -103,7 +103,7 @@ bool R600RegisterInfo::isPhysRegLiveAcrossClauses(Register Reg) const {
   }
 }
 
-void R600RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
+bool R600RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                            int SPAdj,
                                            unsigned FIOperandNum,
                                            RegScavenger *RS) const {

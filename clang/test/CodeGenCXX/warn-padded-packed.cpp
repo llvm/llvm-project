@@ -154,7 +154,7 @@ struct S28 {
   char c1;
   short s1;
   char c2;
-  S28_non_pod p1; // expected-warning {{not packing field 'p1' as it is non-POD}}
+  S28_non_pod p1; // expected-warning {{not packing field 'p1' as it is non-POD for the purposes of layout}}
 } __attribute__((packed));
 
 struct S29_non_pod_align_1 {

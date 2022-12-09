@@ -38,9 +38,6 @@ namespace llvm {
 namespace codeview {
 union DebugInfo;
 }
-namespace object {
-template <class ELFT> class ELFFile;
-}
 namespace symbolize {
 
 LLVMSymbolizer::LLVMSymbolizer() = default;

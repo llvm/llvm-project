@@ -249,11 +249,11 @@ void llvm::addStringMetadataToLoop(Loop *TheLoop, const char *StringMD,
 
 Optional<ElementCount>
 llvm::getOptionalElementCountLoopAttribute(const Loop *TheLoop) {
-  Optional<int> Width =
+  std::optional<int> Width =
       getOptionalIntLoopAttribute(TheLoop, "llvm.loop.vectorize.width");
 
   if (Width) {
-    Optional<int> IsScalable = getOptionalIntLoopAttribute(
+    std::optional<int> IsScalable = getOptionalIntLoopAttribute(
         TheLoop, "llvm.loop.vectorize.scalable.enable");
     return ElementCount::get(*Width, IsScalable.value_or(false));
   }
@@ -354,7 +354,7 @@ TransformationMode llvm::hasUnrollTransformation(const Loop *L) {
   if (getBooleanLoopAttribute(L, "llvm.loop.unroll.disable"))
     return TM_SuppressedByUser;
 
-  Optional<int> Count =
+  std::optional<int> Count =
       getOptionalIntLoopAttribute(L, "llvm.loop.unroll.count");
   if (Count)
     return Count.value() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
@@ -375,7 +375,7 @@ TransformationMode llvm::hasUnrollAndJamTransformation(const Loop *L) {
   if (getBooleanLoopAttribute(L, "llvm.loop.unroll_and_jam.disable"))
     return TM_SuppressedByUser;
 
-  Optional<int> Count =
+  std::optional<int> Count =
       getOptionalIntLoopAttribute(L, "llvm.loop.unroll_and_jam.count");
   if (Count)
     return Count.value() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
@@ -398,7 +398,7 @@ TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
 
   Optional<ElementCount> VectorizeWidth =
       getOptionalElementCountLoopAttribute(L);
-  Optional<int> InterleaveCount =
+  std::optional<int> InterleaveCount =
       getOptionalIntLoopAttribute(L, "llvm.loop.interleave.count");
 
   // 'Forcing' vector width and interleave count to one effectively disables

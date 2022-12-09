@@ -17,7 +17,6 @@
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -963,8 +962,8 @@ computeContiguousStrides(MemRefType memRefType) {
   auto sizes = memRefType.getShape();
   for (int index = 0, e = strides.size() - 1; index < e; ++index) {
     if (ShapedType::isDynamic(sizes[index + 1]) ||
-        ShapedType::isDynamicStrideOrOffset(strides[index]) ||
-        ShapedType::isDynamicStrideOrOffset(strides[index + 1]))
+        ShapedType::isDynamic(strides[index]) ||
+        ShapedType::isDynamic(strides[index + 1]))
       return None;
     if (strides[index] != strides[index + 1] * sizes[index + 1])
       return None;
@@ -1009,7 +1008,7 @@ public:
     if (!targetStrides)
       return failure();
     // Only support static strides for now, regardless of contiguity.
-    if (llvm::any_of(*targetStrides, ShapedType::isDynamicStrideOrOffset))
+    if (llvm::any_of(*targetStrides, ShapedType::isDynamic))
       return failure();
 
     auto int64Ty = IntegerType::get(rewriter.getContext(), 64);

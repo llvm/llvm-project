@@ -505,6 +505,63 @@ TEST(CompletionTest, Snippets) {
                      snippetSuffix("(${1:int i}, ${2:const float f})")));
 }
 
+TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableSnippets = true;
+
+  Annotations Code(R"cpp(
+      struct Foo {
+        static int staticMethod();
+        int method() const;
+        Foo() {
+          this->$keepSnippet^
+          $keepSnippet^
+          Foo::$keepSnippet^
+        }
+      };
+
+      struct Derived : Foo {
+        Derived() {
+          Foo::$keepSnippet^
+        }
+      };
+
+      struct OtherClass {
+        OtherClass() {
+          Foo f;
+          f.$keepSnippet^
+          &Foo::$noSnippet^
+        }
+      };
+
+      int main() {
+        Foo f;
+        f.$keepSnippet^
+        &Foo::$noSnippet^
+      }
+      )cpp");
+  auto TU = TestTU::withCode(Code.code());
+
+  for (const auto &P : Code.points("noSnippet")) {
+    auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("method"), snippetSuffix(""))));
+  }
+
+  for (const auto &P : Code.points("keepSnippet")) {
+    auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("method"), snippetSuffix("()"))));
+  }
+
+  // static method will always keep the snippet
+  for (const auto &P : Code.points()) {
+    auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("staticMethod"), snippetSuffix("()"))));
+  }
+}
+
 TEST(CompletionTest, NoSnippetsInUsings) {
   clangd::CodeCompleteOptions Opts;
   Opts.EnableSnippets = true;

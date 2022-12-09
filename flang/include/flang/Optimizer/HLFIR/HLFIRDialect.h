@@ -14,6 +14,7 @@
 #ifndef FORTRAN_OPTIMIZER_HLFIR_HLFIRDIALECT_H
 #define FORTRAN_OPTIMIZER_HLFIR_HLFIRDIALECT_H
 
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/Dialect.h"
 
 namespace hlfir {
@@ -28,5 +29,39 @@ bool isFortranVariableType(mlir::Type);
 
 #define GET_ATTRDEF_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIRAttributes.h.inc"
+
+namespace hlfir {
+/// Get the element type of a Fortran entity type.
+inline mlir::Type getFortranElementType(mlir::Type type) {
+  type = fir::unwrapSequenceType(
+      fir::unwrapPassByRefType(fir::unwrapRefType(type)));
+  if (auto exprType = type.dyn_cast<hlfir::ExprType>())
+    return exprType.getEleTy();
+  if (auto boxCharType = type.dyn_cast<fir::BoxCharType>())
+    return boxCharType.getEleTy();
+  return type;
+}
+
+/// If this is the type of a Fortran array entity, get the related
+/// fir.array type. Otherwise, returns the Fortran element typeof the entity.
+inline mlir::Type getFortranElementOrSequenceType(mlir::Type type) {
+  type = fir::unwrapPassByRefType(fir::unwrapRefType(type));
+  if (auto exprType = type.dyn_cast<hlfir::ExprType>()) {
+    if (exprType.isArray())
+      return fir::SequenceType::get(exprType.getShape(), exprType.getEleTy());
+    return exprType.getEleTy();
+  }
+  if (auto boxCharType = type.dyn_cast<fir::BoxCharType>())
+    return boxCharType.getEleTy();
+  return type;
+}
+
+/// Is this a fir.box or fir.class address type?
+inline bool isBoxAddressType(mlir::Type type) {
+  type = fir::dyn_cast_ptrEleTy(type);
+  return type && type.isa<fir::BaseBoxType>();
+}
+
+} // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_HLFIR_HLFIRDIALECT_H

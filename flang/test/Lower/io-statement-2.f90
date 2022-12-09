@@ -139,7 +139,7 @@ end
 subroutine impliedformat
   ! CHECK: BeginExternalListInput(%c-1
   ! CHECK: InputReal32
-  ! CHECK: EndIoStatement(%3) : (!fir.ref<i8>) -> i32
+  ! CHECK: EndIoStatement(%3) {{.*}}: (!fir.ref<i8>) -> i32
   read*, x
   ! CHECK: BeginExternalListOutput(%c-1
   ! CHECK: OutputReal32

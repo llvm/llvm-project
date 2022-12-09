@@ -885,8 +885,31 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     mapFunction(function.getName(), llvmFunc);
     addRuntimePreemptionSpecifier(function.getDsoLocal(), llvmFunc);
 
+    // Convert function attributes.
     if (function->getAttrOfType<UnitAttr>(LLVMDialect::getReadnoneAttrName()))
       llvmFunc->setDoesNotAccessMemory();
+
+    // Convert result attributes.
+    if (ArrayAttr allResultAttrs = function.getAllResultAttrs()) {
+      llvm::AttrBuilder retAttrs(llvmFunc->getContext());
+      DictionaryAttr resultAttrs = allResultAttrs[0].cast<DictionaryAttr>();
+      for (const NamedAttribute &attr : resultAttrs) {
+        StringAttr name = attr.getName();
+        if (name == LLVMDialect::getAlignAttrName()) {
+          auto alignAmount = attr.getValue().cast<IntegerAttr>();
+          retAttrs.addAlignmentAttr(llvm::Align(alignAmount.getInt()));
+        } else if (name == LLVMDialect::getNoAliasAttrName()) {
+          retAttrs.addAttribute(llvm::Attribute::NoAlias);
+        } else if (name == LLVMDialect::getNoUndefAttrName()) {
+          retAttrs.addAttribute(llvm::Attribute::NoUndef);
+        } else if (name == LLVMDialect::getSExtAttrName()) {
+          retAttrs.addAttribute(llvm::Attribute::SExt);
+        } else if (name == LLVMDialect::getZExtAttrName()) {
+          retAttrs.addAttribute(llvm::Attribute::ZExt);
+        }
+      }
+      llvmFunc->addRetAttrs(retAttrs);
+    }
 
     // Convert argument attributes.
     unsigned int argIdx = 0;

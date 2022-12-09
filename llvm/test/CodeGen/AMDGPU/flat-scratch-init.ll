@@ -121,16 +121,16 @@ define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 %in) {
 ; FLAT_SCR_OPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
 ; FLAT_SCR_OPT-NEXT:    s_mov_b32 s104, exec_lo
 ; FLAT_SCR_OPT-NEXT:    s_mov_b32 exec_lo, 3
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 s105, 0
-; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v72, s105
+; FLAT_SCR_OPT-NEXT:    s_mov_b32 s4, 0
+; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v72, s4
 ; FLAT_SCR_OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLAT_SCR_OPT-NEXT:    v_writelane_b32 v72, s2, 0
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 s105, 4
+; FLAT_SCR_OPT-NEXT:    s_mov_b32 s4, 4
 ; FLAT_SCR_OPT-NEXT:    v_writelane_b32 v72, s3, 1
-; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v72, s105 ; 4-byte Folded Spill
+; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v72, s4 ; 4-byte Folded Spill
 ; FLAT_SCR_OPT-NEXT:    s_waitcnt_depctr 0xffe3
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 s105, 0
-; FLAT_SCR_OPT-NEXT:    scratch_load_dword v72, off, s105
+; FLAT_SCR_OPT-NEXT:    s_mov_b32 s4, 0
+; FLAT_SCR_OPT-NEXT:    scratch_load_dword v72, off, s4
 ; FLAT_SCR_OPT-NEXT:    s_waitcnt vmcnt(0)
 ; FLAT_SCR_OPT-NEXT:    s_waitcnt_depctr 0xffe3
 ; FLAT_SCR_OPT-NEXT:    s_mov_b32 exec_lo, s104
@@ -255,16 +255,16 @@ define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 %in) {
 ; FLAT_SCR_ARCH-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
 ; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s104, exec_lo
 ; FLAT_SCR_ARCH-NEXT:    s_mov_b32 exec_lo, 3
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s105, 0
-; FLAT_SCR_ARCH-NEXT:    scratch_store_dword off, v72, s105
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s4, 0
+; FLAT_SCR_ARCH-NEXT:    scratch_store_dword off, v72, s4
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLAT_SCR_ARCH-NEXT:    v_writelane_b32 v72, s2, 0
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s105, 4
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s4, 4
 ; FLAT_SCR_ARCH-NEXT:    v_writelane_b32 v72, s3, 1
-; FLAT_SCR_ARCH-NEXT:    scratch_store_dword off, v72, s105 ; 4-byte Folded Spill
+; FLAT_SCR_ARCH-NEXT:    scratch_store_dword off, v72, s4 ; 4-byte Folded Spill
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt_depctr 0xffe3
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s105, 0
-; FLAT_SCR_ARCH-NEXT:    scratch_load_dword v72, off, s105
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s4, 0
+; FLAT_SCR_ARCH-NEXT:    scratch_load_dword v72, off, s4
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt vmcnt(0)
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt_depctr 0xffe3
 ; FLAT_SCR_ARCH-NEXT:    s_mov_b32 exec_lo, s104

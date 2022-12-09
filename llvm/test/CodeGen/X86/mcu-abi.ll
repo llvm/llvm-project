@@ -64,13 +64,14 @@ entry:
 define void @ret_large_struct(%struct.st12_t* noalias nocapture sret(%struct.st12_t) %agg.result, %struct.st12_t* byval(%struct.st12_t) nocapture readonly align 4 %r) #0 {
 ; CHECK-LABEL: ret_large_struct:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movl $48, %ecx
-; CHECK-NEXT:    calll memcpy
-; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movl $12, %ecx
+; CHECK-NEXT:    movl %eax, %edi
+; CHECK-NEXT:    rep;movsl (%esi), %es:(%edi)
 ; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
 entry:
   %0 = bitcast %struct.st12_t* %agg.result to i8*

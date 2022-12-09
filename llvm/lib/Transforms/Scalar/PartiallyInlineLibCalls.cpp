@@ -139,7 +139,7 @@ static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
       case LibFunc_sqrt:
         if (TTI->haveFastSqrt(Call->getType()) &&
             optimizeSQRT(Call, CalledFunc, *CurrBB, BB, TTI,
-                         DTU ? DTU.getPointer() : nullptr))
+                         DTU ? &*DTU : nullptr))
           break;
         continue;
       default:

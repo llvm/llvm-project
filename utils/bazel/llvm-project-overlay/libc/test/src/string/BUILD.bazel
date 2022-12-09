@@ -1,0 +1,174 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc string.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "strlen_test",
+    srcs = ["strlen_test.cpp"],
+    libc_function_deps = [
+        "//libc:strlen",
+    ],
+)
+
+libc_test(
+    name = "strcpy_test",
+    srcs = ["strcpy_test.cpp"],
+    libc_function_deps = [
+        "//libc:strcpy_sanitized",
+    ],
+)
+
+libc_test(
+    name = "strcmp_test",
+    srcs = ["strcmp_test.cpp"],
+    libc_function_deps = [
+        "//libc:strcmp",
+    ],
+)
+
+libc_test(
+    name = "memchr_test",
+    srcs = ["memchr_test.cpp"],
+    libc_function_deps = [
+        "//libc:memchr",
+    ],
+)
+
+libc_test(
+    name = "strchr_test",
+    srcs = ["strchr_test.cpp"],
+    libc_function_deps = [
+        "//libc:strchr",
+    ],
+)
+
+libc_test(
+    name = "strstr_test",
+    srcs = ["strstr_test.cpp"],
+    libc_function_deps = [
+        "//libc:strstr",
+    ],
+)
+
+libc_test(
+    name = "strnlen_test",
+    srcs = ["strnlen_test.cpp"],
+    libc_function_deps = [
+        "//libc:strnlen",
+    ],
+)
+
+libc_test(
+    name = "memrchr_test",
+    srcs = ["memrchr_test.cpp"],
+    libc_function_deps = [
+        "//libc:memrchr",
+    ],
+)
+
+libc_test(
+    name = "strrchr_test",
+    srcs = ["strrchr_test.cpp"],
+    libc_function_deps = [
+        "//libc:strrchr",
+    ],
+)
+
+libc_test(
+    name = "strcspn_test",
+    srcs = ["strcspn_test.cpp"],
+    libc_function_deps = [
+        "//libc:strcspn",
+    ],
+)
+
+libc_test(
+    name = "strspn_test",
+    srcs = ["strspn_test.cpp"],
+    libc_function_deps = [
+        "//libc:strspn",
+    ],
+)
+
+libc_test(
+    name = "strtok_test",
+    srcs = ["strtok_test.cpp"],
+    libc_function_deps = [
+        "//libc:strtok",
+    ],
+)
+
+cc_library(
+    name = "memory_check_utils",
+    hdrs = ["memory_utils/memory_check_utils.h"],
+    deps = [
+        "//libc:__support_cpp_span",
+        "//libc:string_memory_utils",
+    ],
+)
+
+libc_test(
+    name = "memcpy_test",
+    srcs = ["memcpy_test.cpp"],
+    libc_function_deps = [
+        "//libc:memcpy",
+    ],
+    deps = [":memory_check_utils"],
+)
+
+libc_test(
+    name = "memset_test",
+    srcs = ["memset_test.cpp"],
+    libc_function_deps = [
+        "//libc:memset",
+    ],
+    deps = [":memory_check_utils"],
+)
+
+libc_test(
+    name = "memmove_test",
+    srcs = ["memmove_test.cpp"],
+    libc_function_deps = [
+        "//libc:memcmp",
+        "//libc:memmove",
+    ],
+    deps = [
+        "//libc:__support_cpp_span",
+        "//libc/utils/UnitTest:memory_matcher",
+    ],
+)
+
+libc_test(
+    name = "memcmp_test",
+    srcs = ["memcmp_test.cpp"],
+    libc_function_deps = [
+        "//libc:memcmp",
+    ],
+    deps = [":memory_check_utils"],
+)
+
+libc_test(
+    name = "bcmp_test",
+    srcs = ["bcmp_test.cpp"],
+    libc_function_deps = [
+        "//libc:bcmp",
+    ],
+    deps = [":memory_check_utils"],
+)
+
+libc_test(
+    name = "bzero_test",
+    srcs = ["bzero_test.cpp"],
+    libc_function_deps = [
+        "//libc:bzero",
+    ],
+    deps = [":memory_check_utils"],
+)

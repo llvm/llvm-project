@@ -511,6 +511,7 @@ static StoreInst *combineStoreToNewValue(InstCombinerImpl &IC, StoreInst &SI,
     // here.
     switch (ID) {
     case LLVMContext::MD_dbg:
+    case LLVMContext::MD_DIAssignID:
     case LLVMContext::MD_tbaa:
     case LLVMContext::MD_prof:
     case LLVMContext::MD_fpmath:
@@ -1554,6 +1555,7 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
                     SI.getOrdering(), SI.getSyncScopeID());
   InsertNewInstBefore(NewSI, *BBI);
   NewSI->setDebugLoc(MergedLoc);
+  NewSI->mergeDIAssignID({&SI, OtherStore});
 
   // If the two stores had AA tags, merge them.
   AAMDNodes AATags = SI.getAAMetadata();

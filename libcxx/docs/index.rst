@@ -188,7 +188,7 @@ Build Bots and Test Coverage
 ============================
 
 * `Buildkite CI pipeline <https://buildkite.com/llvm-project/libcxx-ci>`_
-* `LLVM Buildbot Builders <http://lab.llvm.org:8011>`_
+* `LLVM Buildbot Builders <https://lab.llvm.org/buildbot>`_
 * :ref:`Adding New CI Jobs <AddingNewCIJobs>`
 
 

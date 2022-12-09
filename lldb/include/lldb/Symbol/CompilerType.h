@@ -15,10 +15,12 @@
 
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/Support/Casting.h"
 
 namespace lldb_private {
 
 class DataExtractor;
+class TypeSystem;
 
 /// Generic representation of a type in a programming language.
 ///
@@ -38,38 +40,87 @@ public:
   /// implementation.
   ///
   /// \see lldb_private::TypeSystemClang::GetType(clang::QualType)
-  CompilerType(TypeSystem *type_system, lldb::opaque_compiler_type_t type)
-      : m_type(type), m_type_system(type_system) {
+  CompilerType(lldb::TypeSystemWP type_system,
+               lldb::opaque_compiler_type_t type)
+    : m_type_system(type_system), m_type(type) {
+    assert(Verify() && "verification failed");
+  }
+
+  /// This is a minimal wrapper of a TypeSystem shared pointer as
+  /// returned by CompilerType which conventien dyn_cast support.
+  class TypeSystemSPWrapper {
+    lldb::TypeSystemSP m_typesystem_sp;
+
+  public:
+    TypeSystemSPWrapper() = default;
+    TypeSystemSPWrapper(lldb::TypeSystemSP typesystem_sp)
+        : m_typesystem_sp(typesystem_sp) {}
+
+    template <class TypeSystemType> bool isa_and_nonnull() {
+      if (auto *ts = m_typesystem_sp.get())
+        return llvm::isa<TypeSystemType>(ts);
+      return false;
+    }
+
+    /// Return a shared_ptr<TypeSystemType> if dyn_cast succeeds.
+    template <class TypeSystemType>
+    std::shared_ptr<TypeSystemType> dyn_cast_or_null() {
+      if (isa_and_nonnull<TypeSystemType>())
+        return std::shared_ptr<TypeSystemType>(
+            m_typesystem_sp, llvm::cast<TypeSystemType>(m_typesystem_sp.get()));
+      return nullptr;
+    }
+
+    explicit operator bool() const {
+      return static_cast<bool>(m_typesystem_sp);
+    }
+    bool operator==(const TypeSystemSPWrapper &other) const;
+    bool operator!=(const TypeSystemSPWrapper &other) const {
+      return !(*this == other);
+    }
+
+    /// Only to be used in a one-off situations like
+    ///    if (typesystem && typesystem->method())
+    /// Do not store this pointer!
+    TypeSystem *operator->() const;
+
+    lldb::TypeSystemSP GetSharedPointer() const { return m_typesystem_sp; }
+  };
+
+  CompilerType(TypeSystemSPWrapper type_system, lldb::opaque_compiler_type_t type)
+    : m_type_system(type_system.GetSharedPointer()), m_type(type) {
     assert(Verify() && "verification failed");
   }
 
   CompilerType(const CompilerType &rhs)
-      : m_type(rhs.m_type), m_type_system(rhs.m_type_system) {}
+      : m_type_system(rhs.m_type_system), m_type(rhs.m_type) {}
 
   CompilerType() = default;
 
   /// Operators.
   /// \{
   const CompilerType &operator=(const CompilerType &rhs) {
-    m_type = rhs.m_type;
     m_type_system = rhs.m_type_system;
+    m_type = rhs.m_type;
     return *this;
   }
 
   bool operator<(const CompilerType &rhs) const {
-    if (m_type_system == rhs.m_type_system)
+    auto lts = m_type_system.lock();
+    auto rts = rhs.m_type_system.lock();
+    if (lts.get() == rts.get())
       return m_type < rhs.m_type;
-    return m_type_system < rhs.m_type_system;
+    return lts.get() < rts.get();
   }
   /// \}
 
   /// Tests.
   /// \{
   explicit operator bool() const {
-    return m_type != nullptr && m_type_system != nullptr;
+    return m_type_system.lock() && m_type;
   }
 
-  bool IsValid() const { return m_type != nullptr && m_type_system != nullptr; }
+  bool IsValid() const { return (bool)*this; }
 
   bool IsArrayType(CompilerType *element_type = nullptr,
                    uint64_t *size = nullptr,
@@ -159,7 +210,10 @@ public:
 
   /// Accessors.
   /// \{
-  TypeSystem *GetTypeSystem() const { return m_type_system; }
+
+  /// Returns a shared pointer to the type system. The
+  /// TypeSystem::TypeSystemSPWrapper can be compared for equality.
+  TypeSystemSPWrapper GetTypeSystem() const;
 
   ConstString GetTypeName(bool BaseOnly = false) const;
 
@@ -174,7 +228,9 @@ public:
 
   lldb::TypeClass GetTypeClass() const;
 
-  void SetCompilerType(TypeSystem *type_system,
+  void SetCompilerType(lldb::TypeSystemWP type_system,
+                       lldb::opaque_compiler_type_t type);
+  void SetCompilerType(TypeSystemSPWrapper type_system,
                        lldb::opaque_compiler_type_t type);
 
   unsigned GetTypeQualifiers() const;
@@ -407,8 +463,8 @@ public:
                         size_t data_byte_size, Scalar &value,
                         ExecutionContextScope *exe_scope) const;
   void Clear() {
+    m_type_system = {};
     m_type = nullptr;
-    m_type_system = nullptr;
   }
 
 private:
@@ -419,8 +475,8 @@ private:
   bool Verify() const;
 #endif
 
+  lldb::TypeSystemWP m_type_system;
   lldb::opaque_compiler_type_t m_type = nullptr;
-  TypeSystem *m_type_system = nullptr;
 };
 
 bool operator==(const CompilerType &lhs, const CompilerType &rhs);

@@ -13,7 +13,7 @@ integer :: i
   do i=1, 9
     ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) : (!fir.ref<i8>, i32) -> i1
+    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD 
@@ -31,7 +31,7 @@ integer :: i, n, threshold
   do i = 1, n
     ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) : (!fir.ref<i8>, i32) -> i1
+    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD
@@ -48,7 +48,7 @@ integer :: i, n, threshold
   do i = 1, n
     ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) : (!fir.ref<i8>, i32) -> i1
+    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD
@@ -66,7 +66,7 @@ integer, parameter :: simdlen = 2;
   do i = 1, n
     ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) : (!fir.ref<i8>, i32) -> i1
+    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD
@@ -84,7 +84,7 @@ integer, parameter :: simdlen = 2;
   do i = 1, n
     ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) : (!fir.ref<i8>, i32) -> i1
+    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD
@@ -101,7 +101,7 @@ integer :: i, n, threshold
   do i = 1, n
     ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) : (!fir.ref<i8>, i32) -> i1
+    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD
@@ -119,7 +119,7 @@ integer, parameter :: safelen = 2;
   do i = 1, n
     ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) : (!fir.ref<i8>, i32) -> i1
+    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD
@@ -136,7 +136,7 @@ integer :: i, n, threshold
   do i = 1, n
     ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]] : !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]] : !fir.ref<i32>
-    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) : (!fir.ref<i8>, i32) -> i1
+    ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   !$OMP END SIMD

@@ -1086,7 +1086,7 @@ define amdgpu_kernel void @udiv_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %x
 ; CHECK-NEXT:    [[TMP29:%.*]] = icmp uge i32 [[TMP28]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = add i32 [[TMP26]], 1
 ; CHECK-NEXT:    [[TMP31:%.*]] = select i1 [[TMP29]], i32 [[TMP30]], i32 [[TMP26]]
-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i32> undef, i32 [[TMP31]], i64 0
+; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i32> poison, i32 [[TMP31]], i64 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i32> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP35:%.*]] = uitofp i32 [[TMP34]] to float
@@ -1412,7 +1412,7 @@ define amdgpu_kernel void @urem_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %x
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp uge i32 [[TMP26]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = sub i32 [[TMP26]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = select i1 [[TMP27]], i32 [[TMP28]], i32 [[TMP26]]
-; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> undef, i32 [[TMP29]], i64 0
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> poison, i32 [[TMP29]], i64 0
 ; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP33:%.*]] = uitofp i32 [[TMP32]] to float
@@ -1723,7 +1723,7 @@ define amdgpu_kernel void @sdiv_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %x
 ; CHECK-NEXT:    [[TMP38:%.*]] = select i1 [[TMP36]], i32 [[TMP37]], i32 [[TMP33]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = xor i32 [[TMP38]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = sub i32 [[TMP39]], [[TMP5]]
-; CHECK-NEXT:    [[TMP41:%.*]] = insertelement <4 x i32> undef, i32 [[TMP40]], i64 0
+; CHECK-NEXT:    [[TMP41:%.*]] = insertelement <4 x i32> poison, i32 [[TMP40]], i64 0
 ; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <4 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <4 x i32> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP44:%.*]] = ashr i32 [[TMP42]], 31
@@ -2156,7 +2156,7 @@ define amdgpu_kernel void @srem_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %x
 ; CHECK-NEXT:    [[TMP35:%.*]] = select i1 [[TMP33]], i32 [[TMP34]], i32 [[TMP32]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = xor i32 [[TMP35]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = sub i32 [[TMP36]], [[TMP3]]
-; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x i32> undef, i32 [[TMP37]], i64 0
+; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x i32> poison, i32 [[TMP37]], i64 0
 ; CHECK-NEXT:    [[TMP39:%.*]] = extractelement <4 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP40:%.*]] = extractelement <4 x i32> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP41:%.*]] = ashr i32 [[TMP39]], 31
@@ -2534,7 +2534,7 @@ define amdgpu_kernel void @udiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP12]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = and i32 [[TMP17]], 65535
 ; CHECK-NEXT:    [[TMP19:%.*]] = trunc i32 [[TMP18]] to i16
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i16> undef, i16 [[TMP19]], i64 0
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i16> poison, i16 [[TMP19]], i64 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i16> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i16> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = zext i16 [[TMP21]] to i32
@@ -2742,7 +2742,7 @@ define amdgpu_kernel void @urem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP19:%.*]] = sub i32 [[TMP3]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = and i32 [[TMP19]], 65535
 ; CHECK-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i16
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i16> undef, i16 [[TMP21]], i64 0
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i16> poison, i16 [[TMP21]], i64 0
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i16> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i16> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = zext i16 [[TMP23]] to i32
@@ -2974,7 +2974,7 @@ define amdgpu_kernel void @sdiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP21:%.*]] = shl i32 [[TMP20]], 16
 ; CHECK-NEXT:    [[TMP22:%.*]] = ashr i32 [[TMP21]], 16
 ; CHECK-NEXT:    [[TMP23:%.*]] = trunc i32 [[TMP22]] to i16
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i16> undef, i16 [[TMP23]], i64 0
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i16> poison, i16 [[TMP23]], i64 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i16> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i16> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP27:%.*]] = sext i16 [[TMP25]] to i32
@@ -3238,7 +3238,7 @@ define amdgpu_kernel void @srem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP23:%.*]] = shl i32 [[TMP22]], 16
 ; CHECK-NEXT:    [[TMP24:%.*]] = ashr i32 [[TMP23]], 16
 ; CHECK-NEXT:    [[TMP25:%.*]] = trunc i32 [[TMP24]] to i16
-; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i16> undef, i16 [[TMP25]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i16> poison, i16 [[TMP25]], i64 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i16> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i16> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP29:%.*]] = sext i16 [[TMP27]] to i32
@@ -3844,7 +3844,7 @@ define amdgpu_kernel void @udiv_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP12]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = and i32 [[TMP17]], 65535
 ; CHECK-NEXT:    [[TMP19:%.*]] = trunc i32 [[TMP18]] to i16
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <3 x i16> undef, i16 [[TMP19]], i64 0
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <3 x i16> poison, i16 [[TMP19]], i64 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <3 x i16> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <3 x i16> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = zext i16 [[TMP21]] to i32
@@ -4007,7 +4007,7 @@ define amdgpu_kernel void @urem_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; CHECK-NEXT:    [[TMP19:%.*]] = sub i32 [[TMP3]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = and i32 [[TMP19]], 65535
 ; CHECK-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i16
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <3 x i16> undef, i16 [[TMP21]], i64 0
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <3 x i16> poison, i16 [[TMP21]], i64 0
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <3 x i16> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <3 x i16> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = zext i16 [[TMP23]] to i32
@@ -4189,7 +4189,7 @@ define amdgpu_kernel void @sdiv_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; CHECK-NEXT:    [[TMP21:%.*]] = shl i32 [[TMP20]], 16
 ; CHECK-NEXT:    [[TMP22:%.*]] = ashr i32 [[TMP21]], 16
 ; CHECK-NEXT:    [[TMP23:%.*]] = trunc i32 [[TMP22]] to i16
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <3 x i16> undef, i16 [[TMP23]], i64 0
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <3 x i16> poison, i16 [[TMP23]], i64 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <3 x i16> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <3 x i16> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP27:%.*]] = sext i16 [[TMP25]] to i32
@@ -4394,7 +4394,7 @@ define amdgpu_kernel void @srem_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; CHECK-NEXT:    [[TMP23:%.*]] = shl i32 [[TMP22]], 16
 ; CHECK-NEXT:    [[TMP24:%.*]] = ashr i32 [[TMP23]], 16
 ; CHECK-NEXT:    [[TMP25:%.*]] = trunc i32 [[TMP24]] to i16
-; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <3 x i16> undef, i16 [[TMP25]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <3 x i16> poison, i16 [[TMP25]], i64 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <3 x i16> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <3 x i16> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP29:%.*]] = sext i16 [[TMP27]] to i32
@@ -4612,7 +4612,7 @@ define amdgpu_kernel void @udiv_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP12]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = and i32 [[TMP17]], 32767
 ; CHECK-NEXT:    [[TMP19:%.*]] = trunc i32 [[TMP18]] to i15
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <3 x i15> undef, i15 [[TMP19]], i64 0
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <3 x i15> poison, i15 [[TMP19]], i64 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <3 x i15> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <3 x i15> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = zext i15 [[TMP21]] to i32
@@ -4795,7 +4795,7 @@ define amdgpu_kernel void @urem_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; CHECK-NEXT:    [[TMP19:%.*]] = sub i32 [[TMP3]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = and i32 [[TMP19]], 32767
 ; CHECK-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i15
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <3 x i15> undef, i15 [[TMP21]], i64 0
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <3 x i15> poison, i15 [[TMP21]], i64 0
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <3 x i15> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <3 x i15> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = zext i15 [[TMP23]] to i32
@@ -5000,7 +5000,7 @@ define amdgpu_kernel void @sdiv_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; CHECK-NEXT:    [[TMP21:%.*]] = shl i32 [[TMP20]], 17
 ; CHECK-NEXT:    [[TMP22:%.*]] = ashr i32 [[TMP21]], 17
 ; CHECK-NEXT:    [[TMP23:%.*]] = trunc i32 [[TMP22]] to i15
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <3 x i15> undef, i15 [[TMP23]], i64 0
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <3 x i15> poison, i15 [[TMP23]], i64 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <3 x i15> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <3 x i15> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP27:%.*]] = sext i15 [[TMP25]] to i32
@@ -5223,7 +5223,7 @@ define amdgpu_kernel void @srem_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; CHECK-NEXT:    [[TMP23:%.*]] = shl i32 [[TMP22]], 17
 ; CHECK-NEXT:    [[TMP24:%.*]] = ashr i32 [[TMP23]], 17
 ; CHECK-NEXT:    [[TMP25:%.*]] = trunc i32 [[TMP24]] to i15
-; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <3 x i15> undef, i15 [[TMP25]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <3 x i15> poison, i15 [[TMP25]], i64 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <3 x i15> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <3 x i15> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP29:%.*]] = sext i15 [[TMP27]] to i32
@@ -5558,7 +5558,7 @@ define amdgpu_kernel void @udiv_v2i32_pow2k_denom(<2 x i32> addrspace(1)* %out, 
 ; CHECK-LABEL: @udiv_v2i32_pow2k_denom(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv i32 [[TMP1]], 4096
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> undef, i32 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = udiv i32 [[TMP4]], 4096
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP5]], i64 1
@@ -5600,7 +5600,7 @@ define amdgpu_kernel void @udiv_v2i32_mixed_pow2k_denom(<2 x i32> addrspace(1)* 
 ; CHECK-LABEL: @udiv_v2i32_mixed_pow2k_denom(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv i32 [[TMP1]], 4096
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> undef, i32 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = udiv i32 [[TMP4]], 4095
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP5]], i64 1
@@ -5680,7 +5680,7 @@ define amdgpu_kernel void @udiv_v2i32_pow2_shl_denom(<2 x i32> addrspace(1)* %ou
 ; CHECK-NEXT:    [[TMP29:%.*]] = icmp uge i32 [[TMP28]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = add i32 [[TMP26]], 1
 ; CHECK-NEXT:    [[TMP31:%.*]] = select i1 [[TMP29]], i32 [[TMP30]], i32 [[TMP26]]
-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <2 x i32> undef, i32 [[TMP31]], i64 0
+; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <2 x i32> poison, i32 [[TMP31]], i64 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <2 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <2 x i32> [[SHL_Y]], i64 1
 ; CHECK-NEXT:    [[TMP35:%.*]] = uitofp i32 [[TMP34]] to float
@@ -5952,7 +5952,7 @@ define amdgpu_kernel void @urem_v2i32_pow2k_denom(<2 x i32> addrspace(1)* %out, 
 ; CHECK-LABEL: @urem_v2i32_pow2k_denom(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = urem i32 [[TMP1]], 4096
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> undef, i32 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = urem i32 [[TMP4]], 4096
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP5]], i64 1
@@ -6022,7 +6022,7 @@ define amdgpu_kernel void @urem_v2i32_pow2_shl_denom(<2 x i32> addrspace(1)* %ou
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp uge i32 [[TMP26]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = sub i32 [[TMP26]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = select i1 [[TMP27]], i32 [[TMP28]], i32 [[TMP26]]
-; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <2 x i32> undef, i32 [[TMP29]], i64 0
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <2 x i32> poison, i32 [[TMP29]], i64 0
 ; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <2 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <2 x i32> [[SHL_Y]], i64 1
 ; CHECK-NEXT:    [[TMP33:%.*]] = uitofp i32 [[TMP32]] to float
@@ -6338,7 +6338,7 @@ define amdgpu_kernel void @sdiv_v2i32_pow2k_denom(<2 x i32> addrspace(1)* %out, 
 ; CHECK-LABEL: @sdiv_v2i32_pow2k_denom(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i32 [[TMP1]], 4096
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> undef, i32 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sdiv i32 [[TMP4]], 4096
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP5]], i64 1
@@ -6392,7 +6392,7 @@ define amdgpu_kernel void @ssdiv_v2i32_mixed_pow2k_denom(<2 x i32> addrspace(1)*
 ; CHECK-LABEL: @ssdiv_v2i32_mixed_pow2k_denom(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i32 [[TMP1]], 4096
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> undef, i32 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sdiv i32 [[TMP4]], 4095
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP5]], i64 1
@@ -6487,7 +6487,7 @@ define amdgpu_kernel void @sdiv_v2i32_pow2_shl_denom(<2 x i32> addrspace(1)* %ou
 ; CHECK-NEXT:    [[TMP38:%.*]] = select i1 [[TMP36]], i32 [[TMP37]], i32 [[TMP33]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = xor i32 [[TMP38]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = sub i32 [[TMP39]], [[TMP5]]
-; CHECK-NEXT:    [[TMP41:%.*]] = insertelement <2 x i32> undef, i32 [[TMP40]], i64 0
+; CHECK-NEXT:    [[TMP41:%.*]] = insertelement <2 x i32> poison, i32 [[TMP40]], i64 0
 ; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <2 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <2 x i32> [[SHL_Y]], i64 1
 ; CHECK-NEXT:    [[TMP44:%.*]] = ashr i32 [[TMP42]], 31
@@ -6859,7 +6859,7 @@ define amdgpu_kernel void @srem_v2i32_pow2k_denom(<2 x i32> addrspace(1)* %out, 
 ; CHECK-LABEL: @srem_v2i32_pow2k_denom(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = srem i32 [[TMP1]], 4096
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> undef, i32 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = srem i32 [[TMP4]], 4096
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP5]], i64 1
@@ -6953,7 +6953,7 @@ define amdgpu_kernel void @srem_v2i32_pow2_shl_denom(<2 x i32> addrspace(1)* %ou
 ; CHECK-NEXT:    [[TMP35:%.*]] = select i1 [[TMP33]], i32 [[TMP34]], i32 [[TMP32]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = xor i32 [[TMP35]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = sub i32 [[TMP36]], [[TMP3]]
-; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <2 x i32> undef, i32 [[TMP37]], i64 0
+; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <2 x i32> poison, i32 [[TMP37]], i64 0
 ; CHECK-NEXT:    [[TMP39:%.*]] = extractelement <2 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP40:%.*]] = extractelement <2 x i32> [[SHL_Y]], i64 1
 ; CHECK-NEXT:    [[TMP41:%.*]] = ashr i32 [[TMP39]], 31
@@ -7474,7 +7474,7 @@ define amdgpu_kernel void @udiv_v2i64_pow2k_denom(<2 x i64> addrspace(1)* %out, 
 ; CHECK-LABEL: @udiv_v2i64_pow2k_denom(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv i64 [[TMP1]], 4096
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> undef, i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = udiv i64 [[TMP4]], 4096
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[TMP5]], i64 1
@@ -7520,7 +7520,7 @@ define amdgpu_kernel void @udiv_v2i64_mixed_pow2k_denom(<2 x i64> addrspace(1)* 
 ; CHECK-LABEL: @udiv_v2i64_mixed_pow2k_denom(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv i64 [[TMP1]], 4096
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> undef, i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = udiv i64 [[TMP4]], 4095
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[TMP5]], i64 1
@@ -7768,7 +7768,7 @@ define amdgpu_kernel void @udiv_v2i64_pow2_shl_denom(<2 x i64> addrspace(1)* %ou
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[SHL_Y]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> undef, i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> poison, i64 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[SHL_Y]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = udiv i64 [[TMP5]], [[TMP6]]
@@ -8161,7 +8161,7 @@ define amdgpu_kernel void @urem_v2i64_pow2k_denom(<2 x i64> addrspace(1)* %out, 
 ; CHECK-LABEL: @urem_v2i64_pow2k_denom(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = urem i64 [[TMP1]], 4096
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> undef, i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = urem i64 [[TMP4]], 4096
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[TMP5]], i64 1
@@ -8208,7 +8208,7 @@ define amdgpu_kernel void @urem_v2i64_pow2_shl_denom(<2 x i64> addrspace(1)* %ou
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[SHL_Y]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = urem i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> undef, i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> poison, i64 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[SHL_Y]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = urem i64 [[TMP5]], [[TMP6]]
@@ -8869,7 +8869,7 @@ define amdgpu_kernel void @sdiv_v2i64_pow2k_denom(<2 x i64> addrspace(1)* %out, 
 ; CHECK-LABEL: @sdiv_v2i64_pow2k_denom(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i64 [[TMP1]], 4096
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> undef, i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sdiv i64 [[TMP4]], 4096
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[TMP5]], i64 1
@@ -8931,7 +8931,7 @@ define amdgpu_kernel void @ssdiv_v2i64_mixed_pow2k_denom(<2 x i64> addrspace(1)*
 ; CHECK-LABEL: @ssdiv_v2i64_mixed_pow2k_denom(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i64 [[TMP1]], 4096
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> undef, i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sdiv i64 [[TMP4]], 4095
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[TMP5]], i64 1
@@ -9208,7 +9208,7 @@ define amdgpu_kernel void @sdiv_v2i64_pow2_shl_denom(<2 x i64> addrspace(1)* %ou
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[SHL_Y]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = sdiv i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> undef, i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> poison, i64 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[SHL_Y]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = sdiv i64 [[TMP5]], [[TMP6]]
@@ -10368,7 +10368,7 @@ define amdgpu_kernel void @srem_v2i64_pow2k_denom(<2 x i64> addrspace(1)* %out, 
 ; CHECK-LABEL: @srem_v2i64_pow2k_denom(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = srem i64 [[TMP1]], 4096
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> undef, i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = srem i64 [[TMP4]], 4096
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[TMP5]], i64 1
@@ -10440,7 +10440,7 @@ define amdgpu_kernel void @srem_v2i64_pow2_shl_denom(<2 x i64> addrspace(1)* %ou
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[SHL_Y]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = srem i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> undef, i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> poison, i64 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[SHL_Y]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = srem i64 [[TMP5]], [[TMP6]]

@@ -9,7 +9,7 @@ subroutine expect_i32()
   real(4) :: returns_i32
   ! CHECK: %[[funcAddr:.*]] = fir.address_of(@_QPreturns_i32) : () -> i32
   ! CHECK: %[[funcCast:.*]] = fir.convert %[[funcAddr]] : (() -> i32) -> (() -> f32)
-  ! CHECK: fir.call %[[funcCast]]() : () -> f32
+  ! CHECK: fir.call %[[funcCast]]() {{.*}}: () -> f32
   print *, returns_i32()
 end subroutine
 integer(4) function returns_i32()

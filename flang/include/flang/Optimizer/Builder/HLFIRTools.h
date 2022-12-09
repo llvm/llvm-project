@@ -67,10 +67,7 @@ public:
       : mlir::Value(variable.getBase()) {}
   bool isValue() const { return isFortranValue(*this); }
   bool isVariable() const { return !isValue(); }
-  bool isMutableBox() const {
-    mlir::Type type = fir::dyn_cast_ptrEleTy(getType());
-    return type && type.isa<fir::BaseBoxType>();
-  }
+  bool isMutableBox() const { return hlfir::isBoxAddressType(getType()); }
   bool isArray() const {
     mlir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getType()));
     if (type.isa<fir::SequenceType>())
@@ -82,17 +79,17 @@ public:
   bool isScalar() const { return !isArray(); }
 
   mlir::Type getFortranElementType() const {
-    mlir::Type type = fir::unwrapSequenceType(
-        fir::unwrapPassByRefType(fir::unwrapRefType(getType())));
-    if (auto exprType = type.dyn_cast<hlfir::ExprType>())
-      return exprType.getEleTy();
-    return type;
+    return hlfir::getFortranElementType(getType());
   }
 
   bool hasLengthParameters() const {
     mlir::Type eleTy = getFortranElementType();
     return eleTy.isa<fir::CharacterType>() ||
            fir::isRecordWithTypeParameters(eleTy);
+  }
+
+  bool isCharacter() const {
+    return getFortranElementType().isa<fir::CharacterType>();
   }
 
   fir::FortranVariableOpInterface getIfVariableInterface() const {
@@ -142,9 +139,11 @@ translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
                          Entity entity);
 
 /// Function to translate FortranVariableOpInterface to fir::ExtendedValue.
-/// It does not generate any IR, and is a simple packaging operation.
+/// It may generates IR to unbox fir.boxchar, but has otherwise no side effects
+/// on the IR.
 fir::ExtendedValue
-translateToExtendedValue(fir::FortranVariableOpInterface fortranVariable);
+translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                         fir::FortranVariableOpInterface fortranVariable);
 
 /// Generate declaration for a fir::ExtendedValue in memory.
 EntityWithAttributes genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
@@ -157,6 +156,23 @@ EntityWithAttributes genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
 /// if it is not a scalar entity of numerical or logical type.
 Entity loadTrivialScalar(mlir::Location loc, fir::FirOpBuilder &builder,
                          Entity entity);
+
+/// Compute the lower and upper bounds of an entity.
+llvm::SmallVector<std::pair<mlir::Value, mlir::Value>>
+genBounds(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
+
+/// Read length parameters into result if this entity has any.
+void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
+                         Entity entity,
+                         llvm::SmallVectorImpl<mlir::Value> &result);
+
+/// Return the fir base, shape, and type parameters for a variable. Note that
+/// type parameters are only added if the entity is not a box and the type
+/// parameters is not a constant in the base type. This matches the arguments
+/// expected by fir.embox/fir.array_coor.
+std::pair<mlir::Value, mlir::Value> genVariableFirBaseShapeAndParams(
+    mlir::Location loc, fir::FirOpBuilder &builder, Entity entity,
+    llvm::SmallVectorImpl<mlir::Value> &typeParams);
 
 } // namespace hlfir
 

@@ -19,7 +19,6 @@ template("write_lit_config") {
       "CLANG_BINARY_DIR=" +
           rebase_path(get_label_info("//clang", "target_out_dir"), dir),
       "CLANG_SOURCE_DIR=" + rebase_path("//clang", dir),
-      "ENABLE_SHARED=0",
       "LLVM_BINARY_DIR=" +
           rebase_path(get_label_info("//llvm", "target_out_dir"), dir),
       "LLVM_LIBS_DIR=",  # needed only for shared builds
@@ -61,6 +60,7 @@ write_lit_config("lit_site_cfg") {
     "CMAKE_CXX_COMPILER=c++",
     "CMAKE_C_COMPILER=cc",
     "ENABLE_BACKTRACES=1",
+    "ENABLE_SHARED=0",
     "LLVM_ENABLE_ZSTD=0",
     "LLVM_EXTERNAL_LIT=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",

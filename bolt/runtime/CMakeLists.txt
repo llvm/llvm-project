@@ -28,7 +28,7 @@ set(BOLT_RT_FLAGS
   -fno-rtti
   -fno-stack-protector
   -mno-sse
-  -fPIE)
+  -fPIC)
 
 # Don't let the compiler think it can create calls to standard libs
 target_compile_options(bolt_rt_instr PRIVATE ${BOLT_RT_FLAGS})

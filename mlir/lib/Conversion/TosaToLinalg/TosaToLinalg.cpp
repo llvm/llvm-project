@@ -844,7 +844,7 @@ static bool findIntermediateShape(ArrayRef<int64_t> lhsShape,
                                   bool isDynamic) {
   if (isDynamic) {
     // TODO (natashaknk): Make dynamic intermediate shape not always be rank-1
-    intermediateShape = {ShapedType::kDynamicSize};
+    intermediateShape = {ShapedType::kDynamic};
     return true;
   }
 
@@ -1886,7 +1886,7 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
     SmallVector<int64_t, 2> genericShape;
     for (int i = 0; i < rank; i++) {
       int64_t dim = multiples[i];
-      genericShape.push_back(dim == -1 ? ShapedType::kDynamicSize : dim);
+      genericShape.push_back(dim == -1 ? ShapedType::kDynamic : dim);
       genericShape.push_back(inputShape[i]);
     }
 

@@ -61,3 +61,19 @@ entry:
   call void @llvm.memset.p0.i64(ptr %dst, i8 0, i64 1000, i1 false)
   ret void
 }
+
+;; Tail call with different codemodel.
+declare i32 @callee_tail(i32 %i)
+define i32 @caller_tail(i32 %i) nounwind {
+; SMALL-LABEL: caller_tail:
+; SMALL:       # %bb.0: # %entry
+; SMALL-NEXT:    b %plt(callee_tail)
+;
+; MEDIUM-LABEL: caller_tail:
+; MEDIUM:       # %bb.0: # %entry
+; MEDIUM-NEXT:    pcalau12i $a1, %pc_hi20(callee_tail)
+; MEDIUM-NEXT:    jirl $zero, $a1, %pc_lo12(callee_tail)
+entry:
+  %r = tail call i32 @callee_tail(i32 %i)
+  ret i32 %r
+}

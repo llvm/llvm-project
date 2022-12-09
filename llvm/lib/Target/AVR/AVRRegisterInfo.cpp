@@ -140,7 +140,7 @@ static void foldFrameOffset(MachineBasicBlock::iterator &II, int &Offset,
   MI.eraseFromParent();
 }
 
-void AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+bool AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                           int SPAdj, unsigned FIOperandNum,
                                           RegScavenger *RS) const {
   assert(SPAdj == 0 && "Unexpected SPAdj value");
@@ -214,7 +214,7 @@ void AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                             .addImm(Offset);
     New->getOperand(3).setIsDead();
 
-    return;
+    return false;
   }
 
   // If the offset is too big we have to adjust and restore the frame pointer
@@ -261,6 +261,7 @@ void AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MI.getOperand(FIOperandNum).ChangeToRegister(AVR::R29R28, false);
   assert(isUInt<6>(Offset) && "Offset is out of range");
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+  return false;
 }
 
 Register AVRRegisterInfo::getFrameRegister(const MachineFunction &MF) const {

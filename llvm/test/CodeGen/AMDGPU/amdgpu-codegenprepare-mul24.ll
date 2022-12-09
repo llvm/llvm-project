@@ -63,7 +63,7 @@ define <2 x i8> @mul_v1i16(<1 x i16> %arg) {
 ; SI-NEXT:    [[TMP1:%.*]] = zext i16 [[TMP0]] to i32
 ; SI-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.mul.u24(i32 [[TMP1]], i32 42)
 ; SI-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
-; SI-NEXT:    [[MUL:%.*]] = insertelement <1 x i16> undef, i16 [[TMP3]], i64 0
+; SI-NEXT:    [[MUL:%.*]] = insertelement <1 x i16> poison, i16 [[TMP3]], i64 0
 ; SI-NEXT:    [[CAST:%.*]] = bitcast <1 x i16> [[MUL]] to <2 x i8>
 ; SI-NEXT:    ret <2 x i8> [[CAST]]
 ;
@@ -92,7 +92,7 @@ define <1 x i8> @mul_v1i8(<1 x i8> %arg) {
 ; SI-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
 ; SI-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.mul.u24(i32 [[TMP1]], i32 42)
 ; SI-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
-; SI-NEXT:    [[MUL:%.*]] = insertelement <1 x i8> undef, i8 [[TMP3]], i64 0
+; SI-NEXT:    [[MUL:%.*]] = insertelement <1 x i8> poison, i8 [[TMP3]], i64 0
 ; SI-NEXT:    ret <1 x i8> [[MUL]]
 ;
 ; VI-LABEL: @mul_v1i8(
@@ -122,7 +122,7 @@ define <2 x i32> @smul24_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
 ; SI-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[RHS24]], i64 1
 ; SI-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mul.i24(i32 [[TMP1]], i32 [[TMP3]])
 ; SI-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mul.i24(i32 [[TMP2]], i32 [[TMP4]])
-; SI-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> undef, i32 [[TMP5]], i64 0
+; SI-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i64 0
 ; SI-NEXT:    [[MUL:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[TMP6]], i64 1
 ; SI-NEXT:    ret <2 x i32> [[MUL]]
 ;
@@ -137,7 +137,7 @@ define <2 x i32> @smul24_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
 ; VI-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[RHS24]], i64 1
 ; VI-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mul.i24(i32 [[TMP1]], i32 [[TMP3]])
 ; VI-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mul.i24(i32 [[TMP2]], i32 [[TMP4]])
-; VI-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> undef, i32 [[TMP5]], i64 0
+; VI-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i64 0
 ; VI-NEXT:    [[MUL:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[TMP6]], i64 1
 ; VI-NEXT:    ret <2 x i32> [[MUL]]
 ;
@@ -192,7 +192,7 @@ define <2 x i32> @umul24_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
 ; SI-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[RHS24]], i64 1
 ; SI-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mul.u24(i32 [[TMP1]], i32 [[TMP3]])
 ; SI-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mul.u24(i32 [[TMP2]], i32 [[TMP4]])
-; SI-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> undef, i32 [[TMP5]], i64 0
+; SI-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i64 0
 ; SI-NEXT:    [[MUL:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[TMP6]], i64 1
 ; SI-NEXT:    ret <2 x i32> [[MUL]]
 ;
@@ -205,7 +205,7 @@ define <2 x i32> @umul24_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
 ; VI-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[RHS24]], i64 1
 ; VI-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mul.u24(i32 [[TMP1]], i32 [[TMP3]])
 ; VI-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mul.u24(i32 [[TMP2]], i32 [[TMP4]])
-; VI-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> undef, i32 [[TMP5]], i64 0
+; VI-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i64 0
 ; VI-NEXT:    [[MUL:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[TMP6]], i64 1
 ; VI-NEXT:    ret <2 x i32> [[MUL]]
 ;
@@ -543,7 +543,7 @@ define <2 x i31> @umul24_v2i31(<2 x i31> %lhs, <2 x i31> %rhs) {
 ; SI-NEXT:    [[TMP10:%.*]] = zext i31 [[TMP4]] to i32
 ; SI-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.mul.u24(i32 [[TMP9]], i32 [[TMP10]])
 ; SI-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP11]] to i31
-; SI-NEXT:    [[TMP13:%.*]] = insertelement <2 x i31> undef, i31 [[TMP8]], i64 0
+; SI-NEXT:    [[TMP13:%.*]] = insertelement <2 x i31> poison, i31 [[TMP8]], i64 0
 ; SI-NEXT:    [[MUL:%.*]] = insertelement <2 x i31> [[TMP13]], i31 [[TMP12]], i64 1
 ; SI-NEXT:    ret <2 x i31> [[MUL]]
 ;
@@ -562,7 +562,7 @@ define <2 x i31> @umul24_v2i31(<2 x i31> %lhs, <2 x i31> %rhs) {
 ; VI-NEXT:    [[TMP10:%.*]] = zext i31 [[TMP4]] to i32
 ; VI-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.mul.u24(i32 [[TMP9]], i32 [[TMP10]])
 ; VI-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP11]] to i31
-; VI-NEXT:    [[TMP13:%.*]] = insertelement <2 x i31> undef, i31 [[TMP8]], i64 0
+; VI-NEXT:    [[TMP13:%.*]] = insertelement <2 x i31> poison, i31 [[TMP8]], i64 0
 ; VI-NEXT:    [[MUL:%.*]] = insertelement <2 x i31> [[TMP13]], i31 [[TMP12]], i64 1
 ; VI-NEXT:    ret <2 x i31> [[MUL]]
 ;
@@ -596,7 +596,7 @@ define <2 x i31> @smul24_v2i31(<2 x i31> %lhs, <2 x i31> %rhs) {
 ; SI-NEXT:    [[TMP10:%.*]] = sext i31 [[TMP4]] to i32
 ; SI-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.mul.i24(i32 [[TMP9]], i32 [[TMP10]])
 ; SI-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP11]] to i31
-; SI-NEXT:    [[TMP13:%.*]] = insertelement <2 x i31> undef, i31 [[TMP8]], i64 0
+; SI-NEXT:    [[TMP13:%.*]] = insertelement <2 x i31> poison, i31 [[TMP8]], i64 0
 ; SI-NEXT:    [[MUL:%.*]] = insertelement <2 x i31> [[TMP13]], i31 [[TMP12]], i64 1
 ; SI-NEXT:    ret <2 x i31> [[MUL]]
 ;
@@ -617,7 +617,7 @@ define <2 x i31> @smul24_v2i31(<2 x i31> %lhs, <2 x i31> %rhs) {
 ; VI-NEXT:    [[TMP10:%.*]] = sext i31 [[TMP4]] to i32
 ; VI-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.mul.i24(i32 [[TMP9]], i32 [[TMP10]])
 ; VI-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP11]] to i31
-; VI-NEXT:    [[TMP13:%.*]] = insertelement <2 x i31> undef, i31 [[TMP8]], i64 0
+; VI-NEXT:    [[TMP13:%.*]] = insertelement <2 x i31> poison, i31 [[TMP8]], i64 0
 ; VI-NEXT:    [[MUL:%.*]] = insertelement <2 x i31> [[TMP13]], i31 [[TMP12]], i64 1
 ; VI-NEXT:    ret <2 x i31> [[MUL]]
 ;
@@ -813,7 +813,7 @@ define <2 x i33> @smul24_v2i33(<2 x i33> %lhs, <2 x i33> %rhs) {
 ; SI-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP19]], 32
 ; SI-NEXT:    [[TMP21:%.*]] = or i64 [[TMP18]], [[TMP20]]
 ; SI-NEXT:    [[TMP22:%.*]] = trunc i64 [[TMP21]] to i33
-; SI-NEXT:    [[TMP23:%.*]] = insertelement <2 x i33> undef, i33 [[TMP13]], i64 0
+; SI-NEXT:    [[TMP23:%.*]] = insertelement <2 x i33> poison, i33 [[TMP13]], i64 0
 ; SI-NEXT:    [[MUL:%.*]] = insertelement <2 x i33> [[TMP23]], i33 [[TMP22]], i64 1
 ; SI-NEXT:    ret <2 x i33> [[MUL]]
 ;
@@ -844,7 +844,7 @@ define <2 x i33> @smul24_v2i33(<2 x i33> %lhs, <2 x i33> %rhs) {
 ; VI-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP19]], 32
 ; VI-NEXT:    [[TMP21:%.*]] = or i64 [[TMP18]], [[TMP20]]
 ; VI-NEXT:    [[TMP22:%.*]] = trunc i64 [[TMP21]] to i33
-; VI-NEXT:    [[TMP23:%.*]] = insertelement <2 x i33> undef, i33 [[TMP13]], i64 0
+; VI-NEXT:    [[TMP23:%.*]] = insertelement <2 x i33> poison, i33 [[TMP13]], i64 0
 ; VI-NEXT:    [[MUL:%.*]] = insertelement <2 x i33> [[TMP23]], i33 [[TMP22]], i64 1
 ; VI-NEXT:    ret <2 x i33> [[MUL]]
 ;

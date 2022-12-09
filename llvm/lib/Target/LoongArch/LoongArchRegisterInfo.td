@@ -98,6 +98,16 @@ def GPR : RegisterClass<"LoongArch", [GRLenVT], 32, (add
   let RegInfos = GRLenRI;
 }
 
+// GPR for indirect tail calls. We can't use callee-saved registers, as they are
+// restored to the saved value before the tail call, which would clobber a call
+// address.
+def GPRT : RegisterClass<"LoongArch", [GRLenVT], 32, (add
+    // a0...a7, t0...t8
+    (sequence "R%u", 4, 20)
+  )> {
+  let RegInfos = GRLenRI;
+}
+
 // Floating point registers
 
 let RegAltNameIndices = [RegAliasName] in {

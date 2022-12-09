@@ -109,7 +109,7 @@ NamedDecl *Sema::getAsTemplateNameDecl(NamedDecl *D,
     return D;
   }
 
-  if (CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(D)) {
+  if (const auto *Record = dyn_cast<CXXRecordDecl>(D)) {
     // C++ [temp.local]p1:
     //   Like normal (non-template) classes, class templates have an
     //   injected-class-name (Clause 9). The injected-class-name
@@ -126,8 +126,7 @@ NamedDecl *Sema::getAsTemplateNameDecl(NamedDecl *D,
       if (Record->getDescribedClassTemplate())
         return Record->getDescribedClassTemplate();
 
-      if (ClassTemplateSpecializationDecl *Spec
-            = dyn_cast<ClassTemplateSpecializationDecl>(Record))
+      if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(Record))
         return Spec->getSpecializedTemplate();
     }
 
@@ -1707,6 +1706,18 @@ class ConstraintRefersToContainingTemplateChecker
           Result = true;
   }
 
+  void CheckNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
+    assert(D->getDepth() <= TemplateDepth &&
+           "Nothing should reference a value below the actual template depth, "
+           "depth is likely wrong");
+    if (D->getDepth() != TemplateDepth)
+      Result = true;
+
+    // Necessary because the type of the NTTP might be what refers to the parent
+    // constriant.
+    TransformType(D->getType());
+  }
+
 public:
   using inherited = TreeTransform<ConstraintRefersToContainingTemplateChecker>;
 
@@ -1742,6 +1753,8 @@ public:
     // unreachable should catch future instances/cases.
     if (auto *TD = dyn_cast<TypedefNameDecl>(D))
       TransformType(TD->getUnderlyingType());
+    else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(D))
+      CheckNonTypeTemplateParmDecl(NTTPD);
     else if (auto *VD = dyn_cast<ValueDecl>(D))
       TransformType(VD->getType());
     else if (auto *TD = dyn_cast<TemplateDecl>(D))

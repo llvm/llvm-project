@@ -46,6 +46,33 @@ InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
                                     getST()->getFeatureBits());
 }
 
+// Look for patterns of shift followed by AND that can be turned into a pair of
+// shifts. We won't need to materialize an immediate for the AND so these can
+// be considered free.
+static bool canUseShiftPair(Instruction *Inst, const APInt &Imm) {
+  uint64_t Mask = Imm.getZExtValue();
+  auto *BO = dyn_cast<BinaryOperator>(Inst->getOperand(0));
+  if (!BO || !BO->hasOneUse())
+    return false;
+
+  if (BO->getOpcode() != Instruction::Shl)
+    return false;
+
+  if (!isa<ConstantInt>(BO->getOperand(1)))
+    return false;
+
+  unsigned ShAmt = cast<ConstantInt>(BO->getOperand(1))->getZExtValue();
+  // (and (shl x, c2), c1) will be matched to (srli (slli x, c2+c3), c3) if c1
+  // is a mask shifted by c2 bits with c3 leading zeros.
+  if (isShiftedMask_64(Mask)) {
+    unsigned Trailing = countTrailingZeros(Mask);
+    if (ShAmt == Trailing)
+      return true;
+  }
+
+  return false;
+}
+
 InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                                 const APInt &Imm, Type *Ty,
                                                 TTI::TargetCostKind CostKind,
@@ -74,6 +101,9 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
       return TTI::TCC_Free;
     // zext.w
     if (Imm == UINT64_C(0xffffffff) && ST->hasStdExtZba())
+      return TTI::TCC_Free;
+    if (Inst && Idx == 1 && Imm.getBitWidth() <= ST->getXLen() &&
+        canUseShiftPair(Inst, Imm))
       return TTI::TCC_Free;
     [[fallthrough]];
   case Instruction::Add:

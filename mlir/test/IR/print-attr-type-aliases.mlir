@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s | FileCheck %s
+// RUN: mlir-opt %s -split-input-file | FileCheck %s
 // Verify printer of type & attr aliases.
-// RUN: mlir-opt %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s -split-input-file | mlir-opt -split-input-file | FileCheck %s
 
 // CHECK-DAG: #test2Ealias = "alias_test:dot_in_name"
 "test.op"() {alias_test = "alias_test:dot_in_name"} : () -> ()
@@ -32,3 +32,10 @@
 // CHECK-DAG: #loc2 = loc("nested")
 // CHECK-DAG: #loc3 = loc(fused<#loc2>["test.mlir":10:8])
 "test.op"() {alias_test = loc(fused<loc("nested")>["test.mlir":10:8])} : () -> ()
+
+// -----
+
+// Check proper ordering of intermixed attribute/type aliases.
+// CHECK: !tuple = tuple<
+// CHECK: #loc1 = loc(fused<!tuple
+"test.op"() {alias_test = loc(fused<tuple<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>>["test.mlir":10:8])} : () -> ()

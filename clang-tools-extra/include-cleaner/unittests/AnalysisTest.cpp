@@ -28,6 +28,10 @@ namespace {
 using testing::Pair;
 using testing::UnorderedElementsAre;
 
+std::string guard(llvm::StringRef Code) {
+  return "#pragma once\n" + Code.str();
+}
+
 TEST(WalkUsed, Basic) {
   // FIXME: Have a fixture for setting up tests.
   llvm::Annotations Code(R"cpp(
@@ -40,14 +44,14 @@ TEST(WalkUsed, Basic) {
   }
   )cpp");
   TestInputs Inputs(Code.code());
-  Inputs.ExtraFiles["header.h"] = R"cpp(
+  Inputs.ExtraFiles["header.h"] = guard(R"cpp(
   void foo();
   namespace std { class vector {}; }
-  )cpp";
-  Inputs.ExtraFiles["private.h"] = R"cpp(
+  )cpp");
+  Inputs.ExtraFiles["private.h"] = guard(R"cpp(
     // IWYU pragma: private, include "path/public.h"
     class Private {};
-  )cpp";
+  )cpp");
 
   PragmaIncludes PI;
   Inputs.MakeAction = [&PI] {
@@ -72,13 +76,14 @@ TEST(WalkUsed, Basic) {
 
   auto &SM = AST.sourceManager();
   llvm::DenseMap<size_t, std::vector<Header>> OffsetToProviders;
-  walkUsed(TopLevelDecls, /*MacroRefs=*/{}, PI, SM,
+  walkUsed(TopLevelDecls, /*MacroRefs=*/{}, &PI, SM,
            [&](const SymbolReference &Ref, llvm::ArrayRef<Header> Providers) {
              auto [FID, Offset] = SM.getDecomposedLoc(Ref.RefLocation);
              EXPECT_EQ(FID, SM.getMainFileID());
              OffsetToProviders.try_emplace(Offset, Providers.vec());
            });
-  auto HeaderFile = Header(AST.fileManager().getFile("header.h").get());
+  auto &FM = AST.fileManager();
+  auto HeaderFile = Header(FM.getFile("header.h").get());
   auto MainFile = Header(SM.getFileEntryForID(SM.getMainFileID()));
   auto VectorSTL = Header(tooling::stdlib::Header::named("<vector>").value());
   EXPECT_THAT(
@@ -86,7 +91,8 @@ TEST(WalkUsed, Basic) {
       UnorderedElementsAre(
           Pair(Code.point("bar"), UnorderedElementsAre(MainFile)),
           Pair(Code.point("private"),
-               UnorderedElementsAre(Header("\"path/public.h\""))),
+               UnorderedElementsAre(Header("\"path/public.h\""),
+                                    Header(FM.getFile("private.h").get()))),
           Pair(Code.point("foo"), UnorderedElementsAre(HeaderFile)),
           Pair(Code.point("vector"), UnorderedElementsAre(VectorSTL)),
           Pair(Code.point("vconstructor"), UnorderedElementsAre(VectorSTL))));
@@ -113,11 +119,10 @@ TEST(WalkUsed, MacroRefs) {
   Symbol Answer =
       Macro{&Idents.get("ANSWER"), SM.getComposedLoc(HdrID, Hdr.point())};
   llvm::DenseMap<size_t, std::vector<Header>> OffsetToProviders;
-  PragmaIncludes PI;
   walkUsed(/*ASTRoots=*/{}, /*MacroRefs=*/
            {SymbolReference{SM.getComposedLoc(SM.getMainFileID(), Main.point()),
                             Answer, RefType::Explicit}},
-           PI, SM,
+           /*PI=*/nullptr, SM,
            [&](const SymbolReference &Ref, llvm::ArrayRef<Header> Providers) {
              auto [FID, Offset] = SM.getDecomposedLoc(Ref.RefLocation);
              EXPECT_EQ(FID, SM.getMainFileID());

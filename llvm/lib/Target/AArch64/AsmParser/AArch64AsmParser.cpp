@@ -2608,7 +2608,7 @@ static Optional<std::pair<int, int>> parseVectorKind(StringRef Suffix,
   }
 
   if (Res == std::make_pair(-1, -1))
-    return Optional<std::pair<int, int>>();
+    return None;
 
   return Optional<std::pair<int, int>>(Res);
 }

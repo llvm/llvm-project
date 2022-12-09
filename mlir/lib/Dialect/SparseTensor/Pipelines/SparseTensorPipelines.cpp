@@ -33,7 +33,7 @@ getBufferizationOptions(bool analysisOnly) {
   // should be disallowed.
   options.allowReturnAllocs = true;
   options.functionBoundaryTypeConversion = LayoutMapOption::IdentityLayoutMap;
-  options.unknownTypeConverterFn = [](Value value, unsigned memorySpace,
+  options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
                                       const BufferizationOptions &options) {
     return getMemRefTypeWithStaticIdentityLayout(
         value.getType().cast<TensorType>(), memorySpace);
@@ -57,8 +57,9 @@ void mlir::sparse_tensor::buildSparseCompiler(
           /*analysisOnly=*/options.testBufferizationAnalysisOnly)));
   if (options.testBufferizationAnalysisOnly)
     return;
-  pm.addPass(createSparseTensorRewritePass(options.enableRuntimeLibrary));
+  pm.addPass(createPreSparsificationRewritePass());
   pm.addPass(createSparsificationPass(options.sparsificationOptions()));
+  pm.addPass(createPostSparsificationRewritePass(options.enableRuntimeLibrary));
   if (options.enableRuntimeLibrary) {
     pm.addPass(createSparseTensorConversionPass(
         options.sparseTensorConversionOptions()));

@@ -11,13 +11,11 @@ define void @f(i64 %a0) align 2 {
 ; CHECK-NEXT:    cmp %o0, 0
 ; CHECK-NEXT:    be %xcc, .LBB0_2
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    ba .LBB0_1
-; CHECK-NEXT:    nop
-; CHECK-NEXT:  .LBB0_1: ! %cond.false
+; CHECK-NEXT:  ! %bb.1: ! %cond.false
 ; CHECK-NEXT:  .LBB0_2: ! %targetblock
 ; CHECK-NEXT:    mov %g0, %o0
 ; CHECK-NEXT:    cmp %o0, 0
-; CHECK-NEXT:    bne .LBB0_4
+; CHECK-NEXT:    bne %icc, .LBB0_4
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  ! %bb.3: ! %cond.false.i83
 ; CHECK-NEXT:  .LBB0_4: ! %exit.i85

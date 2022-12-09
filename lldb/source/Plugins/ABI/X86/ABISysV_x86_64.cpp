@@ -638,12 +638,12 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
     bool is_memory = true;
     std::vector<uint32_t> aggregate_field_offsets;
     std::vector<CompilerType> aggregate_compiler_types;
-    if (return_compiler_type.GetTypeSystem()->CanPassInRegisters(
-          return_compiler_type) &&
-      *bit_width <= 128 &&
-      FlattenAggregateType(thread, exe_ctx, return_compiler_type,
-                          0, aggregate_field_offsets,
-                          aggregate_compiler_types)) {
+    auto ts = return_compiler_type.GetTypeSystem();
+    if (ts && ts->CanPassInRegisters(return_compiler_type) &&
+        *bit_width <= 128 &&
+        FlattenAggregateType(thread, exe_ctx, return_compiler_type, 0,
+                             aggregate_field_offsets,
+                             aggregate_compiler_types)) {
       ByteOrder byte_order = target->GetArchitecture().GetByteOrder();
       WritableDataBufferSP data_sp(new DataBufferHeap(16, 0));
       DataExtractor return_ext(data_sp, byte_order,

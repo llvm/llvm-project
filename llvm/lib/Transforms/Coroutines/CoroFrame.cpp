@@ -1817,6 +1817,47 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
           AliasPtrTyped, [&](Use &U) { return DT.dominates(CB, U); });
     }
   }
+
+  // PromiseAlloca is not collected in FrameData.Allocas. So we don't handle
+  // the case that the PromiseAlloca may have writes before CoroBegin in the
+  // above codes. And it may be problematic in edge cases. See
+  // https://github.com/llvm/llvm-project/issues/57861 for an example.
+  if (Shape.ABI == coro::ABI::Switch && Shape.SwitchLowering.PromiseAlloca) {
+    AllocaInst *PA = Shape.SwitchLowering.PromiseAlloca;
+    // If there is memory accessing to promise alloca before CoroBegin;
+    bool HasAccessingPromiseBeforeCB = llvm::any_of(PA->uses(), [&](Use &U) {
+      auto *Inst = dyn_cast<Instruction>(U.getUser());
+      if (!Inst || DT.dominates(CB, Inst))
+        return false;
+
+      if (auto *CI = dyn_cast<CallInst>(Inst)) {
+        // It is fine if the call wouldn't write to the Promise.
+        // This is possible for @llvm.coro.id intrinsics, which
+        // would take the promise as the second argument as a
+        // marker.
+        if (CI->onlyReadsMemory() ||
+            CI->onlyReadsMemory(CI->getArgOperandNo(&U)))
+          return false;
+        return true;
+      }
+
+      return isa<StoreInst>(Inst) ||
+             // It may take too much time to track the uses.
+             // Be conservative about the case the use may escape.
+             isa<GetElementPtrInst>(Inst) ||
+             // There would always be a bitcast for the promise alloca
+             // before we enabled Opaque pointers. And now given
+             // opaque pointers are enabled by default. This should be
+             // fine.
+             isa<BitCastInst>(Inst);
+    });
+    if (HasAccessingPromiseBeforeCB) {
+      Builder.SetInsertPoint(Shape.getInsertPtAfterFramePtr());
+      auto *G = GetFramePointer(PA);
+      auto *Value = Builder.CreateLoad(PA->getAllocatedType(), PA);
+      Builder.CreateStore(Value, G);
+    }
+  }
 }
 
 // Moves the values in the PHIs in SuccBB that correspong to PredBB into a new

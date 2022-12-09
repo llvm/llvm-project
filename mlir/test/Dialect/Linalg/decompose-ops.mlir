@@ -1,5 +1,5 @@
 // RUN: mlir-opt -test-linalg-decompose-ops -cse -split-input-file %s | FileCheck %s
-// RUN: mlir-opt -test-linalg-decompose-ops -cse -canonicalize -split-input-file %s | FileCheck %s --check-prefix=CANONICALIZECHECK
+// RUN: mlir-opt -test-linalg-decompose-ops=remove-dead-args-and-results -cse -split-input-file %s | FileCheck %s --check-prefix=CANONICALIZECHECK
 
 func.func @simple_op(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?xf32>, %arg2 : tensor<?xf32>)
     -> (tensor<?x?xf32>, tensor<?x?xf32>) {

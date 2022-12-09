@@ -23,8 +23,10 @@ using namespace lldb_private::formatters;
 
 static CompilerType GetCompilerTypeForFormat(lldb::Format format,
                                              CompilerType element_type,
-                                             TypeSystem *type_system) {
+                                             TypeSystemSP type_system) {
   lldbassert(type_system && "type_system needs to be not NULL");
+  if (!type_system)
+    return {};
 
   switch (format) {
   case lldb::eFormatAddressInfo:
@@ -219,8 +221,9 @@ public:
     CompilerType parent_type(m_backend.GetCompilerType());
     CompilerType element_type;
     parent_type.IsVectorType(&element_type);
-    m_child_type = ::GetCompilerTypeForFormat(m_parent_format, element_type,
-                                              parent_type.GetTypeSystem());
+    m_child_type = ::GetCompilerTypeForFormat(
+        m_parent_format, element_type,
+        parent_type.GetTypeSystem().GetSharedPointer());
     m_num_children = ::CalculateNumChildren(parent_type, m_child_type);
     m_item_format = GetItemFormatForFormat(m_parent_format, m_child_type);
     return false;

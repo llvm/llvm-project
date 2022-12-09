@@ -354,6 +354,11 @@ public:
       return false;
     return Value == -1;
   }
+  bool issgp10Const() const {
+    if (!isReg())
+      return false;
+    return getReg() == Hexagon::SGP1_0;
+  }
   bool iss11_0Imm() const {
     return CheckImmRange(11 + 26, 0, true, true, true);
   }
@@ -399,6 +404,9 @@ public:
 
   void addn1ConstOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
+  }
+  void addsgp10ConstOperands(MCInst &Inst, unsigned N) const {
+    addRegOperands(Inst, N);
   }
 
   StringRef getToken() const {

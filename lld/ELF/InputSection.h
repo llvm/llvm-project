@@ -50,8 +50,6 @@ public:
 
   Kind kind() const { return (Kind)sectionKind; }
 
-  StringRef name;
-
   uint8_t sectionKind : 3;
 
   // The next two bit fields are only used by InputSectionBase, but we
@@ -62,17 +60,19 @@ public:
   // Set for sections that should not be folded by ICF.
   uint8_t keepUnique : 1;
 
+  uint8_t partition = 1;
+  uint32_t type;
+  StringRef name;
+
   // The 1-indexed partition that this section is assigned to by the garbage
   // collector, or 0 if this section is dead. Normally there is only one
   // partition, so this will either be 0 or 1.
-  uint8_t partition = 1;
   elf::Partition &getPartition() const;
 
   // These corresponds to the fields in Elf_Shdr.
-  uint32_t alignment;
   uint64_t flags;
+  uint32_t alignment;
   uint32_t entsize;
-  uint32_t type;
   uint32_t link;
   uint32_t info;
 
@@ -95,8 +95,8 @@ protected:
   constexpr SectionBase(Kind sectionKind, StringRef name, uint64_t flags,
                         uint32_t entsize, uint32_t alignment, uint32_t type,
                         uint32_t info, uint32_t link)
-      : name(name), sectionKind(sectionKind), bss(false), keepUnique(false),
-        alignment(alignment), flags(flags), entsize(entsize), type(type),
+      : sectionKind(sectionKind), bss(false), keepUnique(false), type(type),
+        name(name), flags(flags), alignment(alignment), entsize(entsize),
         link(link), info(info) {}
 };
 
@@ -139,6 +139,8 @@ public:
   // be reset to zero after uses.
   uint16_t bytesDropped = 0;
 
+  mutable bool compressed = false;
+
   // Whether the section needs to be padded with a NOP filler due to
   // deleteFallThruJmpInsn.
   bool nopFiller = false;
@@ -153,19 +155,23 @@ public:
     bytesDropped -= num;
   }
 
-  mutable ArrayRef<uint8_t> rawData;
+  mutable const uint8_t *content_;
+  uint64_t size;
 
   void trim() {
     if (bytesDropped) {
-      rawData = rawData.drop_back(bytesDropped);
+      size -= bytesDropped;
       bytesDropped = 0;
     }
   }
 
-  ArrayRef<uint8_t> data() const {
-    if (uncompressedSize >= 0)
+  ArrayRef<uint8_t> content() const {
+    return ArrayRef<uint8_t>(content_, size);
+  }
+  ArrayRef<uint8_t> contentMaybeDecompress() const {
+    if (compressed)
       decompress();
-    return rawData;
+    return content();
   }
 
   // The next member in the section group if this section is in a group. This is
@@ -204,6 +210,10 @@ public:
   // This vector contains such "cooked" relocations.
   SmallVector<Relocation, 0> relocations;
 
+  void addReloc(const Relocation &r) { relocations.push_back(r); }
+  MutableArrayRef<Relocation> relocs() { return relocations; }
+  ArrayRef<Relocation> relocs() const { return relocations; }
+
   union {
     // These are modifiers to jump instructions that are necessary when basic
     // block sections are enabled.  Basic block sections creates opportunities
@@ -214,6 +224,9 @@ public:
     // Auxiliary information for RISC-V linker relaxation. RISC-V does not use
     // jumpInstrMod.
     RISCVRelaxAux *relaxAux;
+
+    // The compressed content size when `compressed` is true.
+    size_t compressedSize;
   };
 
   // A function compiled with -fsplit-stack calling a function
@@ -226,21 +239,15 @@ public:
 
 
   template <typename T> llvm::ArrayRef<T> getDataAs() const {
-    size_t s = rawData.size();
+    size_t s = content().size();
     assert(s % sizeof(T) == 0);
-    return llvm::makeArrayRef<T>((const T *)rawData.data(), s / sizeof(T));
+    return llvm::makeArrayRef<T>((const T *)content().data(), s / sizeof(T));
   }
 
 protected:
   template <typename ELFT>
   void parseCompressedHeader();
   void decompress() const;
-
-  // This field stores the uncompressed size of the compressed data in rawData,
-  // or -1 if rawData is not compressed (either because the section wasn't
-  // compressed in the first place, or because we ended up uncompressing it).
-  // Since the feature is not used often, this is usually -1.
-  mutable int64_t uncompressedSize = -1;
 };
 
 // SectionPiece represents a piece of splittable section contents.
@@ -286,8 +293,8 @@ public:
   llvm::CachedHashStringRef getData(size_t i) const {
     size_t begin = pieces[i].inputOff;
     size_t end =
-        (pieces.size() - 1 == i) ? rawData.size() : pieces[i + 1].inputOff;
-    return {toStringRef(rawData.slice(begin, end - begin)), pieces[i].hash};
+        (pieces.size() - 1 == i) ? content().size() : pieces[i + 1].inputOff;
+    return {toStringRef(content().slice(begin, end - begin)), pieces[i].hash};
   }
 
   // Returns the SectionPiece at a given input section offset.
@@ -311,7 +318,7 @@ struct EhSectionPiece {
       : inputOff(off), sec(sec), size(size), firstRelocation(firstRelocation) {}
 
   ArrayRef<uint8_t> data() const {
-    return {sec->rawData.data() + this->inputOff, size};
+    return {sec->content().data() + this->inputOff, size};
   }
 
   size_t inputOff;
@@ -394,7 +401,7 @@ private:
   template <class ELFT> void copyShtGroup(uint8_t *buf);
 };
 
-static_assert(sizeof(InputSection) <= 160, "InputSection is too big");
+static_assert(sizeof(InputSection) <= 152, "InputSection is too big");
 
 class SyntheticSection : public InputSection {
 public:

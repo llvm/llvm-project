@@ -294,14 +294,12 @@ struct IfOpInterface
       return thenBufferType;
 
     // Memory space mismatch.
-    if (thenBufferType.getMemorySpaceAsInt() !=
-        elseBufferType.getMemorySpaceAsInt())
+    if (thenBufferType.getMemorySpace() != elseBufferType.getMemorySpace())
       return op->emitError("inconsistent memory space on then/else branches");
 
     // Layout maps are different: Promote to fully dynamic layout map.
     return getMemRefTypeWithFullyDynamicLayout(
-        opResult.getType().cast<TensorType>(),
-        thenBufferType.getMemorySpaceAsInt());
+        opResult.getType().cast<TensorType>(), thenBufferType.getMemorySpace());
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
@@ -445,13 +443,12 @@ static FailureOr<BaseMemRefType> computeLoopRegionIterArgBufferType(
   auto iterRanked = initArgBufferType->cast<MemRefType>();
   assert(llvm::equal(yieldedRanked.getShape(), iterRanked.getShape()) &&
          "expected same shape");
-  assert(yieldedRanked.getMemorySpaceAsInt() ==
-             iterRanked.getMemorySpaceAsInt() &&
+  assert(yieldedRanked.getMemorySpace() == iterRanked.getMemorySpace() &&
          "expected same memory space");
 #endif // NDEBUG
   return getMemRefTypeWithFullyDynamicLayout(
       iterArg.getType().cast<RankedTensorType>(),
-      yieldedRanked.getMemorySpaceAsInt());
+      yieldedRanked.getMemorySpace());
 }
 
 /// Return `true` if the given loop may have 0 iterations.

@@ -46,13 +46,13 @@ inline NumberPair<uint64_t> full_mul<uint64_t>(uint64_t a, uint64_t b) {
   NumberPair<uint64_t> lo_hi = split(pa.lo * pb.hi); // exact
   NumberPair<uint64_t> hi_lo = split(pa.hi * pb.lo); // exact
 
-  uint64_t carry_in = 0;
-  uint64_t carry_out = 0;
-  uint64_t carry_unused = 0;
-  prod.lo = add_with_carry(prod.lo, lo_hi.lo << 32, carry_in, carry_out);
-  prod.hi = add_with_carry(prod.hi, lo_hi.hi, carry_out, carry_unused);
-  prod.lo = add_with_carry(prod.lo, hi_lo.lo << 32, carry_in, carry_out);
-  prod.hi = add_with_carry(prod.hi, hi_lo.hi, carry_out, carry_unused);
+  auto r1 = add_with_carry(prod.lo, lo_hi.lo << 32, uint64_t(0));
+  prod.lo = r1.sum;
+  prod.hi = add_with_carry(prod.hi, lo_hi.hi, r1.carry).sum;
+
+  auto r2 = add_with_carry(prod.lo, hi_lo.lo << 32, uint64_t(0));
+  prod.lo = r2.sum;
+  prod.hi = add_with_carry(prod.hi, hi_lo.hi, r2.carry).sum;
 
   return prod;
 #endif // __SIZEOF_INT128__

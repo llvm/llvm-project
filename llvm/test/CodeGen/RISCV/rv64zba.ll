@@ -1716,3 +1716,69 @@ define i64 @srli_4_sh3add(i64* %0, i64 %1) {
   %5 = load i64, i64* %4, align 8
   ret i64 %5
 }
+
+define signext i16 @shl_2_sh1add(i16* %0, i32 signext %1) {
+; RV64I-LABEL: shl_2_sh1add:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a1, a1, 34
+; RV64I-NEXT:    srli a1, a1, 31
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    lh a0, 0(a0)
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: shl_2_sh1add:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a1, 2
+; RV64ZBA-NEXT:    sh1add.uw a0, a1, a0
+; RV64ZBA-NEXT:    lh a0, 0(a0)
+; RV64ZBA-NEXT:    ret
+  %3 = shl i32 %1, 2
+  %4 = zext i32 %3 to i64
+  %5 = getelementptr inbounds i16, i16* %0, i64 %4
+  %6 = load i16, i16* %5, align 2
+  ret i16 %6
+}
+
+define signext i32 @shl_16_sh2add(i32* %0, i32 signext %1) {
+; RV64I-LABEL: shl_16_sh2add:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a1, a1, 48
+; RV64I-NEXT:    srli a1, a1, 30
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: shl_16_sh2add:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a1, 16
+; RV64ZBA-NEXT:    sh2add.uw a0, a1, a0
+; RV64ZBA-NEXT:    lw a0, 0(a0)
+; RV64ZBA-NEXT:    ret
+  %3 = shl i32 %1, 16
+  %4 = zext i32 %3 to i64
+  %5 = getelementptr inbounds i32, i32* %0, i64 %4
+  %6 = load i32, i32* %5, align 4
+  ret i32 %6
+}
+
+define i64 @shl_31_sh3add(i64* %0, i32 signext %1) {
+; RV64I-LABEL: shl_31_sh3add:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a1, a1, 63
+; RV64I-NEXT:    srli a1, a1, 29
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ld a0, 0(a0)
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: shl_31_sh3add:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a1, 31
+; RV64ZBA-NEXT:    sh3add.uw a0, a1, a0
+; RV64ZBA-NEXT:    ld a0, 0(a0)
+; RV64ZBA-NEXT:    ret
+  %3 = shl i32 %1, 31
+  %4 = zext i32 %3 to i64
+  %5 = getelementptr inbounds i64, i64* %0, i64 %4
+  %6 = load i64, i64* %5, align 8
+  ret i64 %6
+}

@@ -33,7 +33,7 @@ subroutine test(number, value, length, status, errmsg)
 ! CHECK:  %[[length:.*]] = fir.convert %[[lengthOrAbsent]] : (!fir.box<i32>) -> !fir.box<none>
 ! CHECK:  %[[errmsg:.*]] = fir.convert %[[errmsgOrAbsent]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK:  %[[sourceFile:.*]] = fir.convert %[[sourceFileString]] : (!fir.ref<!fir.char<1,[[sourceFileLength]]>>) -> !fir.ref<i8>
-! CHECK:  %[[status:.*]] = fir.call @_FortranAGetCommandArgument(%[[number]], %[[value]], %[[length]], %[[errmsg]], %[[sourceFile]], %[[sourceLine]]) : (i32, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:  %[[status:.*]] = fir.call @_FortranAGetCommandArgument(%[[number]], %[[value]], %[[length]], %[[errmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (i32, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:  %[[statusI64:.*]] = fir.convert %[[statusParam]] : (!fir.ref<i32>) -> i64
 ! CHECK:  %[[zero:.*]] = arith.constant 0 : i64
 ! CHECK:  %[[statusIsNonNull:.*]] = arith.cmpi ne, %[[statusI64]], %[[zero]] : i64

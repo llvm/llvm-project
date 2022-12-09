@@ -97,7 +97,9 @@ void writeBitcode(ReducerWorkItem &M, raw_ostream &OutStream) {
 
 void TestRunner::writeOutput(StringRef Message) {
   std::error_code EC;
-  raw_fd_ostream Out(OutputFilename, EC);
+  raw_fd_ostream Out(OutputFilename, EC,
+                     EmitBitcode && !Program->isMIR() ? sys::fs::OF_None
+                                                      : sys::fs::OF_Text);
   if (EC) {
     errs() << "Error opening output file: " << EC.message() << "!\n";
     exit(1);

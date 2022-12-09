@@ -8,11 +8,14 @@ add_clang_library(clangIncludeCleaner
   Record.cpp
   Types.cpp
   WalkAST.cpp
+  )
 
-  LINK_LIBS
+clang_target_link_libraries(clangIncludeCleaner
+  PRIVATE
   clangAST
   clangBasic
   clangLex
+  clangToolingInclusions
   clangToolingInclusionsStdlib
   )
 

@@ -1175,8 +1175,8 @@ public:
 
   /// Returns the backedge value as a recipe. The backedge value is guaranteed
   /// to be a recipe.
-  VPRecipeBase *getBackedgeRecipe() {
-    return cast<VPRecipeBase>(getBackedgeValue()->getDef());
+  VPRecipeBase &getBackedgeRecipe() {
+    return *getBackedgeValue()->getDefiningRecipe();
   }
 };
 
@@ -1944,7 +1944,7 @@ public:
 
   /// Returns the scalar type of the induction.
   const Type *getScalarType() const {
-    return cast<VPCanonicalIVPHIRecipe>(getOperand(0)->getDef())
+    return cast<VPCanonicalIVPHIRecipe>(getOperand(0)->getDefiningRecipe())
         ->getScalarType();
   }
 };
@@ -3059,7 +3059,7 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
   // vectorization inside a vector region.
   if (VPV->isDefinedOutsideVectorRegions())
     return true;
-  VPDef *Def = VPV->getDef();
+  VPRecipeBase *Def = VPV->getDefiningRecipe();
   assert(Def && "Must have definition for value defined inside vector region");
   if (auto Rep = dyn_cast<VPReplicateRecipe>(Def))
     return Rep->isUniform();

@@ -240,8 +240,8 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
       bool isVariadicOperand = isVariadicOperandName(op, name);
       auto result =
           isVariadicOperand
-              ? formatv("processValues(llvmOperands.drop_front({0}))", idx)
-              : formatv("processValue(llvmOperands[{0}])", idx);
+              ? formatv("convertValues(llvmOperands.drop_front({0}))", idx)
+              : formatv("convertValue(llvmOperands[{0}])", idx);
       bs << result;
     } else if (isResultName(op, name)) {
       if (op.getNumResults() != 1)

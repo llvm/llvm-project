@@ -87,9 +87,6 @@ enum ActionKind {
   /// Generate pre-compiled module from a C++ module interface file.
   GenerateModuleInterface,
 
-  /// Generate pre-compiled module from a set of header files.
-  GenerateHeaderModule,
-
   /// Generate a C++20 header unit module from a header file.
   GenerateHeaderUnit,
 

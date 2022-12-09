@@ -70,6 +70,11 @@ public:
     return selectSHXADDOp(N, ShAmt, Val);
   }
 
+  bool selectSHXADD_UWOp(SDValue N, unsigned ShAmt, SDValue &Val);
+  template <unsigned ShAmt> bool selectSHXADD_UWOp(SDValue N, SDValue &Val) {
+    return selectSHXADD_UWOp(N, ShAmt, Val);
+  }
+
   bool hasAllNBitUsers(SDNode *Node, unsigned Bits) const;
   bool hasAllHUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 16); }
   bool hasAllWUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 32); }

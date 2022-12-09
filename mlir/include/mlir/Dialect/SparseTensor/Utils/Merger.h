@@ -156,8 +156,12 @@ public:
   Merger(unsigned t, unsigned l)
       : outTensor(t - 1), syntheticTensor(t), numTensors(t + 1), numLoops(l),
         hasSparseOut(false),
-        dimTypes(t + 1, std::vector<DimLevelType>(l, DimLevelType::Undef)),
-        loopIdxToDim(t + 1, std::vector<Optional<unsigned>>(l, llvm::None)) {}
+        dimTypes(numTensors,
+                 std::vector<DimLevelType>(numLoops, DimLevelType::Undef)),
+        loopIdxToDim(numTensors,
+                     std::vector<Optional<unsigned>>(numLoops, llvm::None)),
+        dimToLoopIdx(numTensors,
+                     std::vector<Optional<unsigned>>(numLoops, llvm::None)) {}
 
   /// Adds a tensor expression. Returns its index.
   unsigned addExp(Kind k, unsigned e0, unsigned e1 = -1u, Value v = Value(),
@@ -258,6 +262,11 @@ public:
     return getDimLevelType(tensor(b), index(b));
   }
 
+  Optional<unsigned> getLoopIdx(unsigned t, unsigned dim) const {
+    assert(t < numTensors && dim < numLoops);
+    return dimToLoopIdx[t][dim];
+  }
+
   /// Gets the dimension number of the the `t`th tensor on `i`th loop.
   Optional<unsigned> getDimNum(unsigned t, unsigned i) const {
     assert(t < numTensors && i < numLoops);
@@ -276,6 +285,8 @@ public:
     assert(isValidDLT(dlt));
     dimTypes[t][i] = dlt;
     loopIdxToDim[t][i] = dim;
+    assert(dim < numLoops);
+    dimToLoopIdx[t][dim] = i;
   }
 
   // Iterates the bits of a lattice, for each set bit, converts it into the
@@ -341,6 +352,8 @@ private:
   std::vector<std::vector<DimLevelType>> dimTypes;
   // Map that converts pair<tensor id, loop id> to the corresponding dimension.
   std::vector<std::vector<Optional<unsigned>>> loopIdxToDim;
+  // Map that converts pair<tensor id, dim> to the corresponding loop id.
+  std::vector<std::vector<Optional<unsigned>>> dimToLoopIdx;
   llvm::SmallVector<TensorExp> tensorExps;
   llvm::SmallVector<LatPoint> latPoints;
   llvm::SmallVector<SmallVector<unsigned>> latSets;

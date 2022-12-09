@@ -55,17 +55,17 @@ mlir::detail::verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op) {
            << op.getMixedSizes().size() << " vs " << op.getMixedStrides().size()
            << ") so the rank of the result type is well-formed.";
 
-  if (failed(verifyListOfOperandsOrIntegers(
-          op, "offset", maxRanks[0], op.static_offsets(), op.offsets(),
-          ShapedType::isDynamicStrideOrOffset)))
+  if (failed(verifyListOfOperandsOrIntegers(op, "offset", maxRanks[0],
+                                            op.static_offsets(), op.offsets(),
+                                            ShapedType::isDynamic)))
     return failure();
   if (failed(verifyListOfOperandsOrIntegers(op, "size", maxRanks[1],
                                             op.static_sizes(), op.sizes(),
                                             ShapedType::isDynamic)))
     return failure();
-  if (failed(verifyListOfOperandsOrIntegers(
-          op, "stride", maxRanks[2], op.static_strides(), op.strides(),
-          ShapedType::isDynamicStrideOrOffset)))
+  if (failed(verifyListOfOperandsOrIntegers(op, "stride", maxRanks[2],
+                                            op.static_strides(), op.strides(),
+                                            ShapedType::isDynamic)))
     return failure();
   return success();
 }
@@ -166,13 +166,12 @@ mlir::getMixedValues(ArrayAttr staticValues, ValueRange dynamicValues,
 SmallVector<OpFoldResult, 4>
 mlir::getMixedStridesOrOffsets(ArrayAttr staticValues,
                                ValueRange dynamicValues) {
-  return getMixedValues(staticValues, dynamicValues,
-                        ShapedType::kDynamicStrideOrOffset);
+  return getMixedValues(staticValues, dynamicValues, ShapedType::kDynamic);
 }
 
 SmallVector<OpFoldResult, 4> mlir::getMixedSizes(ArrayAttr staticValues,
                                                  ValueRange dynamicValues) {
-  return getMixedValues(staticValues, dynamicValues, ShapedType::kDynamicSize);
+  return getMixedValues(staticValues, dynamicValues, ShapedType::kDynamic);
 }
 
 std::pair<ArrayAttr, SmallVector<Value>>
@@ -194,12 +193,11 @@ mlir::decomposeMixedValues(Builder &b,
 
 std::pair<ArrayAttr, SmallVector<Value>> mlir::decomposeMixedStridesOrOffsets(
     OpBuilder &b, const SmallVectorImpl<OpFoldResult> &mixedValues) {
-  return decomposeMixedValues(b, mixedValues,
-                              ShapedType::kDynamicStrideOrOffset);
+  return decomposeMixedValues(b, mixedValues, ShapedType::kDynamic);
 }
 
 std::pair<ArrayAttr, SmallVector<Value>>
 mlir::decomposeMixedSizes(OpBuilder &b,
                           const SmallVectorImpl<OpFoldResult> &mixedValues) {
-  return decomposeMixedValues(b, mixedValues, ShapedType::kDynamicSize);
+  return decomposeMixedValues(b, mixedValues, ShapedType::kDynamic);
 }

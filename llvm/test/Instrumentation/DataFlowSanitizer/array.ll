@@ -257,7 +257,7 @@ define void @store_array17([17 x i1] %a, [17 x i1]* %p) {
   ; FAST: %[[#R+31]] = or i[[#SBITS]] %[[#R+29]], %[[#R+30]]
   ; FAST: %[[#R+32]] = extractvalue [17 x i[[#SBITS]]] %[[#R]], 16
   ; FAST: %[[#R+33]] = or i[[#SBITS]] %[[#R+31]], %[[#R+32]]
-  ; FAST: %[[#VREG:]]  = insertelement <8 x i[[#SBITS]]> undef, i[[#SBITS]] %[[#R+33]], i32 0
+  ; FAST: %[[#VREG:]]  = insertelement <8 x i[[#SBITS]]> poison, i[[#SBITS]] %[[#R+33]], i32 0
   ; FAST: %[[#VREG+1]] = insertelement <8 x i[[#SBITS]]> %[[#VREG]], i[[#SBITS]] %[[#R+33]], i32 1
   ; FAST: %[[#VREG+2]] = insertelement <8 x i[[#SBITS]]> %[[#VREG+1]], i[[#SBITS]] %[[#R+33]], i32 2
   ; FAST: %[[#VREG+3]] = insertelement <8 x i[[#SBITS]]> %[[#VREG+2]], i[[#SBITS]] %[[#R+33]], i32 3

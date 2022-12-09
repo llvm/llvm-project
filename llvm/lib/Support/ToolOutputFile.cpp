@@ -46,7 +46,7 @@ ToolOutputFile::ToolOutputFile(StringRef Filename, std::error_code &EC,
     return;
   }
   OSHolder.emplace(Filename, EC, Flags);
-  OS = OSHolder.getPointer();
+  OS = &*OSHolder;
   // If open fails, no cleanup is needed.
   if (EC)
     Installer.Keep = true;
@@ -55,5 +55,5 @@ ToolOutputFile::ToolOutputFile(StringRef Filename, std::error_code &EC,
 ToolOutputFile::ToolOutputFile(StringRef Filename, int FD)
     : Installer(Filename) {
   OSHolder.emplace(FD, true);
-  OS = OSHolder.getPointer();
+  OS = &*OSHolder;
 }

@@ -381,6 +381,7 @@ int main(int, char**)
     test("abcdefghijklmnopqrst", 0, static_cast<size_t>(-1), "abcdefghijklmnopqrst", 0);
     }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
     test(L"", 0, 0, L"", 0);
     test(L"", 0, 0, L"abcde", -5);
@@ -399,6 +400,7 @@ int main(int, char**)
     test(L"abcdefghijklmnopqrst", 0, 12, L"abcdefghij", 10);
     test(L"abcdefghijklmnopqrst", 0, static_cast<size_t>(-1), L"abcdefghijklmnopqrst", 0);
     }
+#endif
 
 #if TEST_STD_VER >= 11
     {

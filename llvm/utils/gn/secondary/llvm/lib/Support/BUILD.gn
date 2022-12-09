@@ -85,7 +85,6 @@ static_library("Support") {
     "FileOutputBuffer.cpp",
     "FileUtilities.cpp",
     "FoldingSet.cpp",
-    "Format.cpp",
     "FormatVariadic.cpp",
     "FormattedStream.cpp",
     "GlobPattern.cpp",

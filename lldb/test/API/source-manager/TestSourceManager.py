@@ -9,6 +9,9 @@ o test_modify_source_file_while_debugging:
   Test the caching mechanism of the source manager.
 """
 
+import os
+import stat
+
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -220,6 +223,11 @@ class SourceManagerTestCase(TestBase):
         new_content = original_content.replace('Hello world', 'Hello lldb', 1)
 
         # Modify the source code file.
+        # If the source was read only, the copy will also be read only.
+        # Run "chmod u+w" on it first so we can modify it.
+        statinfo = os.stat(self.file)
+        os.chmod(self.file, statinfo.st_mode | stat.S_IWUSR)
+
         with io.open(self.file, 'w', newline='\n') as f:
             time.sleep(1)
             f.write(new_content)

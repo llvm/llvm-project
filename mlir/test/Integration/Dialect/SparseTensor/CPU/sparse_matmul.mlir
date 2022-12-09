@@ -1,21 +1,23 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE: FileCheck %s
 //
-// Do the same run, but now with parallelization.
-//
-// RUN: mlir-opt %s --sparse-compiler="parallelization-strategy=any-storage-any-loop" | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// RUN: %{command}
 //
 // Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = enable-runtime-library=false
+// RUN: %{command}
 //
-// RUN: mlir-opt %s --sparse-compiler=enable-runtime-library=false | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// Do the same run, but now with parallelization strategy.
+// REDEFINE: %{option} = "enable-runtime-library=true parallelization-strategy=any-storage-any-loop"
+// RUN: %{command}
+//
+// Do the same run, but now with direct IR generation and parallelization strategy.
+// REDEFINE: %{option} = "enable-runtime-library=false parallelization-strategy=any-storage-any-loop"
+// RUN: %{command}
 
 #CSR = #sparse_tensor.encoding<{
   dimLevelType = [ "dense", "compressed" ],

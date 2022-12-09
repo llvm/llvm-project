@@ -20,10 +20,10 @@ end subroutine
 subroutine call_intrinsic_scalar()
   ! CHECK: %[[x:.*]] = fir.alloca f32
   real :: x
-  ! CHECK: fir.call @_QMoptPintrinsic_scalar(%[[x]]) : (!fir.ref<f32>) -> ()
+  ! CHECK: fir.call @_QMoptPintrinsic_scalar(%[[x]]) {{.*}}: (!fir.ref<f32>) -> ()
   call intrinsic_scalar(x)
   ! CHECK: %[[absent:.*]] = fir.absent !fir.ref<f32>
-  ! CHECK: fir.call @_QMoptPintrinsic_scalar(%[[absent]]) : (!fir.ref<f32>) -> ()
+  ! CHECK: fir.call @_QMoptPintrinsic_scalar(%[[absent]]) {{.*}}: (!fir.ref<f32>) -> ()
   call intrinsic_scalar()
 end subroutine
 
@@ -39,10 +39,10 @@ end subroutine
 subroutine call_intrinsic_f77_array()
   ! CHECK: %[[x:.*]] = fir.alloca !fir.array<100xf32>
   real :: x(100)
-  ! CHECK: fir.call @_QMoptPintrinsic_f77_array(%[[x]]) : (!fir.ref<!fir.array<100xf32>>) -> ()
+  ! CHECK: fir.call @_QMoptPintrinsic_f77_array(%[[x]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
   call intrinsic_f77_array(x)
   ! CHECK: %[[absent:.*]] = fir.absent !fir.ref<!fir.array<100xf32>>
-  ! CHECK: fir.call @_QMoptPintrinsic_f77_array(%[[absent]]) : (!fir.ref<!fir.array<100xf32>>) -> ()
+  ! CHECK: fir.call @_QMoptPintrinsic_f77_array(%[[absent]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
   call intrinsic_f77_array()
 end subroutine
 
@@ -61,10 +61,10 @@ subroutine call_character_scalar()
   character(10) :: x
   ! CHECK: %[[addrCast:.*]] = fir.convert %[[addr]]
   ! CHECK: %[[x:.*]] = fir.emboxchar %[[addrCast]], {{.*}}
-  ! CHECK: fir.call @_QMoptPcharacter_scalar(%[[x]]) : (!fir.boxchar<1>) -> ()
+  ! CHECK: fir.call @_QMoptPcharacter_scalar(%[[x]]) {{.*}}: (!fir.boxchar<1>) -> ()
   call character_scalar(x)
   ! CHECK: %[[absent:.*]] = fir.absent !fir.boxchar<1>
-  ! CHECK: fir.call @_QMoptPcharacter_scalar(%[[absent]]) : (!fir.boxchar<1>) -> ()
+  ! CHECK: fir.call @_QMoptPcharacter_scalar(%[[absent]]) {{.*}}: (!fir.boxchar<1>) -> ()
   call character_scalar()
 end subroutine
 
@@ -82,10 +82,10 @@ subroutine call_assumed_shape()
   real :: x(100)
   ! CHECK: %[[embox:.*]] = fir.embox %[[addr]]
   ! CHECK: %[[x:.*]] = fir.convert %[[embox]] : (!fir.box<!fir.array<100xf32>>) -> !fir.box<!fir.array<?xf32>>
-  ! CHECK: fir.call @_QMoptPassumed_shape(%[[x]]) : (!fir.box<!fir.array<?xf32>>) -> ()
+  ! CHECK: fir.call @_QMoptPassumed_shape(%[[x]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
   call assumed_shape(x)
   ! CHECK: %[[absent:.*]] = fir.absent !fir.box<!fir.array<?xf32>>
-  ! CHECK: fir.call @_QMoptPassumed_shape(%[[absent]]) : (!fir.box<!fir.array<?xf32>>) -> ()
+  ! CHECK: fir.call @_QMoptPassumed_shape(%[[absent]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
   call assumed_shape()
 end subroutine
 
@@ -101,10 +101,10 @@ end subroutine
 subroutine call_allocatable_array()
   ! CHECK: %[[x:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>>
   real, allocatable :: x(:)
-  ! CHECK: fir.call @_QMoptPallocatable_array(%[[x]]) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ()
+  ! CHECK: fir.call @_QMoptPallocatable_array(%[[x]]) {{.*}}: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ()
   call allocatable_array(x)
   ! CHECK: %[[absent:.*]] = fir.absent !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  ! CHECK: fir.call @_QMoptPallocatable_array(%[[absent]]) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ()
+  ! CHECK: fir.call @_QMoptPallocatable_array(%[[absent]]) {{.*}}: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ()
   call allocatable_array()
 end subroutine
 
@@ -120,7 +120,7 @@ subroutine allocatable_to_assumed_optional_array(x)
   ! CHECK: %[[absent:.*]] = fir.absent !fir.box<!fir.array<?xf32>>
   ! CHECK: %[[embox:.*]] = fir.embox %{{.*}}
   ! CHECK: %[[actual:.*]] = arith.select %[[isAlloc]], %[[embox]], %[[absent]] : !fir.box<!fir.array<?xf32>>
-  ! CHECK: fir.call @_QMoptPassumed_shape(%[[actual]]) : (!fir.box<!fir.array<?xf32>>) -> ()
+  ! CHECK: fir.call @_QMoptPassumed_shape(%[[actual]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
   call assumed_shape(x)
 end subroutine
 
@@ -150,7 +150,7 @@ subroutine null_as_optional
   ! CHECK: %[[temp:.*]] = fir.alloca !fir.llvm_ptr<none>
   ! CHECK: %[[null:.*]] = fir.zero_bits !fir.ref<none>
   ! CHECK: fir.store %{{.*}} to %[[temp]] : !fir.ref<!fir.llvm_ptr<none>>
-  ! CHECK: fir.call @_QMoptPassumed_shape(%{{.*}}) : (!fir.box<!fir.array<?xf32>>) -> ()
+  ! CHECK: fir.call @_QMoptPassumed_shape(%{{.*}}) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
  call assumed_shape(null())
 end subroutine null_as_optional
 

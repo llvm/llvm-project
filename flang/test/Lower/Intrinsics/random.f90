@@ -8,14 +8,14 @@ subroutine random_test_1
   ! CHECK-DAG: [[rr:%[0-9]+]] = fir.alloca {{.*}}random_test_1Err
   ! CHECK-DAG: [[aa:%[0-9]+]] = fir.alloca {{.*}}random_test_1Eaa
   real rr, aa(5)
-  ! CHECK: fir.call @_FortranARandomInit(%true{{.*}}, %false{{.*}}) : (i1, i1) -> none
+  ! CHECK: fir.call @_FortranARandomInit(%true{{.*}}, %false{{.*}}) {{.*}}: (i1, i1) -> none
   call random_init(.true., .false.)
   ! CHECK: [[box:%[0-9]+]] = fir.embox [[ss]]
   ! CHECK: [[argbox:%[0-9]+]] = fir.convert [[box]]
   ! CHECK: fir.call @_FortranARandomSeedSize([[argbox]]
   call random_seed(size=ss)
   print*, 'size: ', ss
-  ! CHECK: fir.call @_FortranARandomSeedDefaultPut() : () -> none
+  ! CHECK: fir.call @_FortranARandomSeedDefaultPut() {{.*}}: () -> none
   call random_seed()
   ! CHECK: [[box:%[0-9]+]] = fir.embox [[rr]]
   ! CHECK: [[argbox:%[0-9]+]] = fir.convert [[box]]

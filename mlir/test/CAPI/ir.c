@@ -467,7 +467,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
   mlirOpPrintingFlagsElideLargeElementsAttrs(flags, 2);
   mlirOpPrintingFlagsPrintGenericOpForm(flags);
-  mlirOpPrintingFlagsEnableDebugInfo(flags, /*prettyForm=*/0);
+  mlirOpPrintingFlagsEnableDebugInfo(flags, /*enable=*/1, /*prettyForm=*/0);
   mlirOpPrintingFlagsUseLocalScope(flags);
   fprintf(stderr, "Op print with all flags: ");
   mlirOperationPrintWithFlags(operation, flags, printToStderr, NULL);

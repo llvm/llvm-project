@@ -117,7 +117,7 @@ static void sizesForTensor(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
                            Location loc, ShapedType stp, Value tensor) {
   for (const auto &d : enumerate(stp.getShape())) {
     Value dim;
-    if (d.value() == ShapedType::kDynamicSize)
+    if (d.value() == ShapedType::kDynamic)
       dim = builder.create<tensor::DimOp>(loc, tensor, d.index());
     else
       dim = constantIndex(builder, loc, d.value());
@@ -165,9 +165,38 @@ static void getDynamicSizes(RankedTensorType tp,
                             const SmallVectorImpl<Value> &sizes,
                             SmallVectorImpl<Value> &dynSizes) {
   for (const auto &d : enumerate(tp.getShape())) {
-    if (d.value() == ShapedType::kDynamicSize)
+    if (d.value() == ShapedType::kDynamic)
       dynSizes.push_back(sizes[d.index()]);
   }
+}
+
+static LogicalResult genForeachOnSparseConstant(ForeachOp op,
+                                                RewriterBase &rewriter,
+                                                SparseElementsAttr attr) {
+  auto loc = op.getLoc();
+  SmallVector<Value> reduc = op.getInitArgs();
+
+  // Foreach on constant.
+  foreachInSparseConstant(
+      loc, rewriter, attr,
+      [&reduc, &rewriter, op](ArrayRef<Value> coords, Value v) mutable {
+        SmallVector<Value> args;
+        args.append(coords.begin(), coords.end());
+        args.push_back(v);
+        args.append(reduc);
+        // Clones the foreach op to get a copy of the loop body.
+        auto cloned = cast<ForeachOp>(rewriter.clone(*op.getOperation()));
+        assert(args.size() == cloned.getBody()->getNumArguments());
+        Operation *yield = cloned.getBody()->getTerminator();
+        rewriter.mergeBlockBefore(cloned.getBody(), op, args);
+        // clean up
+        rewriter.eraseOp(cloned);
+        reduc = yield->getOperands();
+        rewriter.eraseOp(yield);
+      });
+
+  rewriter.replaceOp(op, reduc);
+  return success();
 }
 
 //===---------------------------------------------------------------------===//
@@ -346,7 +375,7 @@ public:
       genReshapeDstShape(loc, rewriter, dstSizes, srcSizes, dstShape,
                          op.getReassociationIndices());
       for (auto &d : llvm::enumerate(dstShape)) {
-        if (d.value() == ShapedType::kDynamicSize)
+        if (d.value() == ShapedType::kDynamic)
           dstDynSizes.push_back(dstSizes[d.index()]);
       }
     }
@@ -436,7 +465,7 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
     if (!rtp.hasStaticShape()) {
       ArrayRef<int64_t> rShape = rtp.getShape();
       for (const auto &d : llvm::enumerate(rShape)) {
-        if (d.value() == ShapedType::kDynamicSize) {
+        if (d.value() == ShapedType::kDynamic) {
           Value v =
               createOrFoldDimOp(rewriter, loc, op.getOperand(0), d.index());
           rewriter.create<tensor::DimOp>(loc, op.getOperand(0), d.index());
@@ -676,7 +705,7 @@ private:
     // Sort the COO tensor so that its elements are ordered via increasing
     // indices for the storage ordering of the dst tensor.
     SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(srcTp);
-    auto dynShape = {ShapedType::kDynamicSize};
+    auto dynShape = {ShapedType::kDynamic};
     auto indTp =
         MemRefType::get(dynShape, getIndexOverheadType(rewriter, encSrc));
     uint64_t rank = dstTp.getRank();
@@ -752,36 +781,7 @@ public:
     // rule.
     if (auto constOp = input.getDefiningOp<arith::ConstantOp>()) {
       if (auto attr = constOp.getValue().dyn_cast<SparseElementsAttr>()) {
-        // Foreach on constant.
-        DenseElementsAttr indicesAttr = attr.getIndices();
-        DenseElementsAttr valuesAttr = attr.getValues();
-
-        SmallVector<Value> args;
-        for (int i = 0, e = valuesAttr.size(); i < e; i++) {
-          auto valAttr = valuesAttr.getValues<TypedAttr>()[i];
-          for (int j = 0; j < rank; j++) {
-            auto coordAttr = indicesAttr.getValues<IntegerAttr>()[i * rank + j];
-            auto coord = rewriter.create<arith::ConstantIndexOp>(
-                loc, coordAttr.getInt());
-            // Remaps coordinates.
-            args.push_back(coord);
-          }
-          // Remaps value.
-          auto val = rewriter.create<arith::ConstantOp>(loc, valAttr);
-          args.push_back(val);
-          // Remaps iteration args.
-          args.append(reduc);
-          auto cloned = cast<ForeachOp>(rewriter.clone(*op.getOperation()));
-          Operation *yield = cloned.getBody()->getTerminator();
-          rewriter.mergeBlockBefore(cloned.getBody(), op, args);
-          // clean up
-          args.clear();
-          rewriter.eraseOp(cloned);
-          reduc = yield->getOperands();
-          rewriter.eraseOp(yield);
-        }
-        rewriter.replaceOp(op, reduc);
-        return success();
+        return genForeachOnSparseConstant(op, rewriter, attr);
       }
     }
 
@@ -789,7 +789,9 @@ public:
     auto enc = getSparseTensorEncoding(rtp);
 
     // 1. Generates loop for the sparse input.
-    SparseTensorLoopEmitter loopEmitter(ValueRange{input});
+    SparseTensorLoopEmitter loopEmitter(
+        ValueRange{input},
+        StringAttr::get(getContext(), ForeachOp::getOperationName()));
     loopEmitter.initializeLoopEmit(rewriter, loc);
     for (int64_t i = 0; i < rank; i++) {
       // TODO: provide utility function for loop sequences that only contains
@@ -886,7 +888,7 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
           .getResult(0);
       ArrayRef<int64_t> dstShape = dstTp.getShape();
       for (auto &d : llvm::enumerate(dstShape)) {
-        if (d.value() == ShapedType::kDynamicSize) {
+        if (d.value() == ShapedType::kDynamic) {
           dynSizesArray.push_back(rewriter.create<memref::LoadOp>(
               loc, dimSizes, constantIndex(rewriter, loc, d.index())));
         }
@@ -909,6 +911,16 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
     Value nnz = createFuncCall(rewriter, loc, "getSparseTensorReaderNNZ",
                                {indexTp}, {reader}, EmitCInterface::Off)
                     .getResult(0);
+    Value symmetric;
+    // We assume only rank 2 tensors may have the isSymmetric flag set.
+    if (rank == 2) {
+      symmetric =
+          createFuncCall(rewriter, loc, "getSparseTensorReaderIsSymmetric",
+                         {rewriter.getI1Type()}, {reader}, EmitCInterface::Off)
+              .getResult(0);
+    } else {
+      symmetric = Value();
+    }
     Type eltTp = dstTp.getElementType();
     Value value = genAllocaScalar(rewriter, loc, eltTp);
     scf::ForOp forOp = rewriter.create<scf::ForOp>(loc, c0, nnz, c1,
@@ -918,17 +930,31 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
     SmallString<18> getNextFuncName{"getSparseTensorReaderNext",
                                     primaryTypeFunctionSuffix(eltTp)};
     Value indices = dimSizes; // Reuse the indices memref to store indices.
-    createFuncCall(rewriter, loc, getNextFuncName, {eltTp},
-                   {reader, indices, value}, EmitCInterface::On)
-        .getResult(0);
+    createFuncCall(rewriter, loc, getNextFuncName, {}, {reader, indices, value},
+                   EmitCInterface::On);
     SmallVector<Value> indicesArray;
     for (uint64_t i = 0; i < rank; i++) {
       indicesArray.push_back(rewriter.create<memref::LoadOp>(
           loc, indices, constantIndex(rewriter, loc, i)));
     }
     Value v = rewriter.create<memref::LoadOp>(loc, value);
-    auto t = rewriter.create<InsertOp>(loc, v, forOp.getRegionIterArg(0),
-                                       indicesArray);
+    Value t = rewriter.create<InsertOp>(loc, v, forOp.getRegionIterArg(0),
+                                        indicesArray);
+    if (symmetric) {
+      Value eq = rewriter.create<arith::CmpIOp>(
+          loc, arith::CmpIPredicate::ne, indicesArray[0], indicesArray[1]);
+      Value cond = rewriter.create<arith::AndIOp>(loc, symmetric, eq);
+      scf::IfOp ifOp =
+          rewriter.create<scf::IfOp>(loc, t.getType(), cond, /*else*/ true);
+      rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
+      rewriter.create<scf::YieldOp>(
+          loc, Value(rewriter.create<InsertOp>(
+                   loc, v, t, ValueRange{indicesArray[1], indicesArray[0]})));
+      rewriter.setInsertionPointToStart(&ifOp.getElseRegion().front());
+      rewriter.create<scf::YieldOp>(loc, t);
+      t = ifOp.getResult(0);
+      rewriter.setInsertionPointAfter(ifOp);
+    }
     rewriter.create<scf::YieldOp>(loc, ArrayRef<Value>(t));
     rewriter.setInsertionPointAfter(forOp);
     // Link SSA chain.
@@ -1019,11 +1045,17 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
 //===---------------------------------------------------------------------===//
 // Methods that add patterns described in this file to a pattern list.
 //===---------------------------------------------------------------------===//
-void mlir::populateSparseTensorRewriting(RewritePatternSet &patterns,
-                                         bool enableRT, bool enableForeach,
-                                         bool enableConvert) {
-  patterns.add<FoldInvariantYield, FuseSparseMultiplyOverAdd,
-               ReshapeRewriter<tensor::ExpandShapeOp>,
+
+void mlir::populatePreSparsificationRewriting(RewritePatternSet &patterns) {
+  patterns.add<FoldInvariantYield, FuseSparseMultiplyOverAdd>(
+      patterns.getContext());
+}
+
+void mlir::populatePostSparsificationRewriting(RewritePatternSet &patterns,
+                                               bool enableRT,
+                                               bool enableForeach,
+                                               bool enableConvert) {
+  patterns.add<ReshapeRewriter<tensor::ExpandShapeOp>,
                ReshapeRewriter<tensor::CollapseShapeOp>>(patterns.getContext());
   if (enableForeach)
     patterns.add<ForeachRewriter>(patterns.getContext());

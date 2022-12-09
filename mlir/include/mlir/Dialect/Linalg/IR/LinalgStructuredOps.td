@@ -463,19 +463,14 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
     SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "Static broadcast operator";
   let description = [{
-    Broadcast the input into the given shape by adding dimensions.
-
-    Each index in `dimensions` attribute maps input dimension into the
-    corresponding target dimension. The length of the `dimensions` list should
-    match the `input` rank and dimensions should be in sorted order. There is no
-    ambiguity at compile-time about shape information.
+    Broadcast the input into the given shape by adding `dimensions`.
 
     Example:
     ```
       %bcast = linalg.broadcast
           ins(%input:tensor<16xf32>)
           inits(%init:tensor<16x64xf32>)
-          dimensions = [0]
+          dimensions = [1]
     ```
   }];
 

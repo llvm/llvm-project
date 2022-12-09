@@ -60,6 +60,18 @@
  *
  * WG14 DR459: yes
  * atomic_load missing const qualifier
+ *
+ * WG14 DR475: yes
+ * Misleading Atomic library references to atomic types
+ *
+ * WG14 DR485: yes
+ * Problem with the specification of ATOMIC_VAR_INIT
+ *
+ * WG14 DR486: yes
+ * Inconsistent specification for arithmetic on atomic objects
+ *
+ * WG14 DR490: yes
+ * Unwritten Assumptions About if-then
  */
 
 /* WG14 DR412: yes
@@ -201,13 +213,112 @@ void dr463(void) {
   (void)(1 << ((__CHAR_BIT__ * sizeof(int)) - 1));
 }
 
-/* WG14 DR464: yes
- * Clarifying the Behavior of the #line Directive
- *
- * Note: the behavior described by this DR allows for two different
- * interpretations, but WG14 N2322 (adopted for C2x) adds a recommended
- * practice which is what we're testing our interpretation against.
+/* WG14 DR478: yes
+ * Valid uses of the main function
  */
-#line 10000
-_Static_assert(__LI\
-NE__ == 10000, "");
+int main(void) {
+  /* This DR clarifies that C explicitly allows you to call main() in a hosted
+   * environment; it is not special as it is in C++, so recursive calls are
+   * fine as well as nonrecursive direct calls.
+   */
+  main(); /* ok */
+}
+
+void dr478(void) {
+  int (*fp)(void) = main; /* ok */
+  main(); /* ok */
+}
+
+/* WG14 DR481: yes
+ * Controlling expression of _Generic primary expression
+ */
+void dr481(void) {
+  /* The controlling expression undergoes lvalue to rvalue conversion, and that
+   * performs array decay and strips qualifiers.
+   */
+  (void)_Generic("bla", char *: "blu");
+  (void)_Generic((int const){ 0 }, int: "blu");  /* c89only-warning {{compound literals are a C99-specific feature}} */
+  (void)_Generic(+(int const){ 0 }, int: "blu"); /* c89only-warning {{compound literals are a C99-specific feature}} */
+
+  (void)_Generic("bla", /* expected-error {{controlling expression type 'char *' not compatible with any generic association type}} */
+    char[4]: "blu");    /* expected-warning {{due to lvalue conversion of the controlling expression, association of type 'char[4]' will never be selected because it is of array type}} */
+
+  (void)_Generic((int const){ 0 }, /* expected-error {{controlling expression type 'int' not compatible with any generic association type}}
+                                      c89only-warning {{compound literals are a C99-specific feature}}
+                                    */
+    int const: "blu");             /* expected-warning {{due to lvalue conversion of the controlling expression, association of type 'const int' will never be selected because it is qualified}} */
+
+  (void)_Generic(+(int const){ 0 }, /* expected-error {{controlling expression type 'int' not compatible with any generic association type}}
+                                       c89only-warning {{compound literals are a C99-specific feature}}
+                                     */
+    int const: "blu");              /* expected-warning {{due to lvalue conversion of the controlling expression, association of type 'const int' will never be selected because it is qualified}} */
+}
+
+/* WG14 DR489: partial
+ * Integer Constant Expression
+ *
+ * The DR is about whether unevaluated operands have to follow the same
+ * restrictions as the rest of the expression in an ICE, and according to the
+ * committee, they do.
+ */
+void dr489(void) {
+  struct S {
+    int bit : 12 || 1.0f; /* expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}} */
+  };
+  enum E {
+    Val = 0 && 1.0f /* expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}} */
+  };
+
+  int i;
+
+  /* FIXME: mentioning the 'aligned' attribute is confusing, but also, should
+   * this be folded as an ICE as a GNU extension? GCC does not fold it.
+   */
+  _Alignas(0 ? i++ : 8) char c; /* expected-error {{'aligned' attribute requires integer constant}} */
+
+  /* FIXME: this should get the constant folding diagnostic as this is not a
+   * valid ICE because the floating-point constants are not the immediate
+   * operand of a cast. It should then also get a diagnostic about trying to
+   * declare a VLA with static storage duration and the C99 extension warning
+   * for VLAs in C89.
+   */
+  static int vla[sizeof(1.0f + 1.0f)];
+
+  int val[5] = { [1 ? 0 : i--] = 12  }; /* expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+                                           c89only-warning {{designated initializers are a C99 feature}}
+                                         */
+
+  /* FIXME: this should be the constant folding diagnostic as this is not a
+   * valid ICE because of the / operator.
+   */
+  _Static_assert(sizeof(0 / 0), "");
+
+  /* FIXME: this should also get the constant folding diagnostic as this is not
+   * a valid ICE because of the = operator.
+   */
+  (void)_Generic(i = 12, int : 0); /* expected-warning {{expression with side effects has no effect in an unevaluated context}} */
+
+  switch (i) {
+  case (int)0.0f: break;    /* okay, a valid ICE */
+
+  /* FIXME: this should be accepted in C2x and up without a diagnostic, as C23
+   * added compound literals to the allowed list of things in an ICE. The
+   * diagnostic is correct for C17 and earlier though.
+   */
+  case (int){ 2 }: break;   /* expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+                               c89only-warning {{compound literals are a C99-specific feature}}
+                             */
+  case 12 || main(): break; /* expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}} */
+  }
+}
+
+/* WG14 DR492: yes
+ * Named Child struct-union with no Member
+ */
+struct dr492_t {
+  union U11 {  /* expected-warning {{declaration does not declare anything}} */
+    int m11;
+    float m12;
+  };
+  int m13;
+} dr492;

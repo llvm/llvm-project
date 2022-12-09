@@ -39,7 +39,6 @@ class FileManager;
 class GlobalModuleIndex;
 class HeaderSearch;
 class InMemoryModuleCache;
-class ModuleMap;
 class PCHContainerReader;
 
 namespace serialization {

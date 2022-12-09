@@ -157,6 +157,28 @@ define <32 x i8> @PR22706(<32 x i1> %x) {
   ret <32 x i8> %tmp
 }
 
+; Don't concat select/blendv ops if the concatenated mask isn't legal.
+define void @PR59003(<2 x float> %0, <2 x float> %1, <8 x i1> %shuffle108) {
+; AVX-LABEL: PR59003:
+; AVX:       ## %bb.0: ## %entry
+; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:  LBB4_1: ## %for.body.i
+; AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; AVX-NEXT:    jmp LBB4_1
+entry:
+  br label %for.body.i
+
+for.body.i:                                       ; preds = %for.body.i, %entry
+  %2 = phi <8 x float> [ zeroinitializer, %entry ], [ %3, %for.body.i ]
+  %shuffle111 = shufflevector <2 x float> %0, <2 x float> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+  %shuffle112 = shufflevector <2 x float> %1, <2 x float> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+  %3 = select <8 x i1> %shuffle108, <8 x float> %shuffle111, <8 x float> %shuffle112
+  %4 = shufflevector <8 x float> zeroinitializer, <8 x float> %2, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+  %5 = select <8 x i1> zeroinitializer, <8 x float> zeroinitializer, <8 x float> %2
+  br label %for.body.i
+}
+
+
 ; Split a 256-bit select into two 128-bit selects when the operands are concatenated.
 
 define void @blendv_split(<8 x i32>* %p, <8 x i32> %cond, <8 x i32> %a, <8 x i32> %x, <8 x i32> %y, <8 x i32> %z, <8 x i32> %w) {

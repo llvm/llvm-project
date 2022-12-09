@@ -225,9 +225,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     Diag(ModuleLoc, diag::err_module_decl_in_module_map_module);
     return nullptr;
 
-  case LangOptions::CMK_HeaderModule:
   case LangOptions::CMK_HeaderUnit:
-    Diag(ModuleLoc, diag::err_module_decl_in_header_module);
+    Diag(ModuleLoc, diag::err_module_decl_in_header_unit);
     return nullptr;
   }
 

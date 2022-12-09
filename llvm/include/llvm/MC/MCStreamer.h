@@ -634,7 +634,8 @@ public:
   /// \param Symbol - The function containing the trap.
   /// \param Lang - The language code for the exception entry.
   /// \param Reason - The reason code for the exception entry.
-  virtual void emitXCOFFExceptDirective(const MCSymbol *Symbol, MCSymbol *Trap,
+  virtual void emitXCOFFExceptDirective(const MCSymbol *Symbol, 
+                                        const MCSymbol *Trap,
                                         unsigned Lang, unsigned Reason,
                                         unsigned FunctionSize, bool hasDebug);
 

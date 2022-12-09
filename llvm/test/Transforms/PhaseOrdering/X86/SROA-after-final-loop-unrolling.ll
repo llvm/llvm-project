@@ -13,38 +13,10 @@ target triple = "x86_64-pc-linux-gnu"
 define void @wibble(ptr %arg) personality ptr null {
 ; CHECK-LABEL: @wibble(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I1:%.*]] = alloca [[T1:%.*]], align 16
 ; CHECK-NEXT:    [[I10_3_I_PRE:%.*]] = load i8, ptr [[ARG:%.*]], align 1
-; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i8> poison, i8 [[I10_3_I_PRE]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [64 x i8], ptr [[ARG]], i64 0, i64 1
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP0]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[VECTOR_RECUR_INIT]], <4 x i8> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i8> [[TMP1]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i32>
-; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[I1]], align 16
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [16 x i32], ptr [[I1]], i64 0, i64 4
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [64 x i8], ptr [[ARG]], i64 0, i64 5
-; CHECK-NEXT:    [[WIDE_LOAD_1:%.*]] = load <4 x i8>, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD]], <4 x i8> [[WIDE_LOAD_1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i8> [[TMP6]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[TMP8:%.*]] = zext <4 x i8> [[TMP7]] to <4 x i32>
-; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[TMP4]], align 16
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [16 x i32], ptr [[I1]], i64 0, i64 8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr [64 x i8], ptr [[ARG]], i64 0, i64 9
-; CHECK-NEXT:    [[WIDE_LOAD_2:%.*]] = load <4 x i8>, ptr [[TMP10]], align 1
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD_1]], <4 x i8> [[WIDE_LOAD_2]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i8> [[TMP11]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[TMP13:%.*]] = zext <4 x i8> [[TMP12]] to <4 x i32>
-; CHECK-NEXT:    store <4 x i32> [[TMP13]], ptr [[TMP9]], align 16
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [16 x i32], ptr [[I1]], i64 0, i64 12
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr [64 x i8], ptr [[ARG]], i64 0, i64 13
-; CHECK-NEXT:    [[WIDE_LOAD_3:%.*]] = load <4 x i8>, ptr [[TMP15]], align 1
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD_2]], <4 x i8> [[WIDE_LOAD_3]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP17:%.*]] = or <4 x i8> [[TMP16]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[TMP18:%.*]] = zext <4 x i8> [[TMP17]] to <4 x i32>
-; CHECK-NEXT:    store <4 x i32> [[TMP18]], ptr [[TMP14]], align 16
-; CHECK-NEXT:    [[I3_I_I:%.*]] = load i32, ptr [[I1]], align 16
-; CHECK-NEXT:    [[I4_I_I:%.*]] = add i32 [[I3_I_I]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = or i8 [[I10_3_I_PRE]], 1
+; CHECK-NEXT:    [[I1_SROA_0_0_VEC_EXTRACT:%.*]] = zext i8 [[TMP0]] to i32
+; CHECK-NEXT:    [[I4_I_I:%.*]] = add nuw nsw i32 [[I1_SROA_0_0_VEC_EXTRACT]], 1
 ; CHECK-NEXT:    store i32 [[I4_I_I]], ptr [[ARG]], align 4
 ; CHECK-NEXT:    ret void
 ;

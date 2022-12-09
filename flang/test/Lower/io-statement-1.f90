@@ -90,56 +90,56 @@ subroutine inquire_test(ch, i, b)
 
   ! CHARACTER
   ! CHECK: %[[sugar:.*]] = fir.call {{.*}}BeginInquireUnit
-  ! CHECK: call {{.*}}InquireCharacter(%[[sugar]], %c{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64) -> i1
+  ! CHECK: call {{.*}}InquireCharacter(%[[sugar]], %c{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i8>, i64) -> i1
   ! CHECK: call {{.*}}EndIoStatement
   inquire(88, name=ch)
 
   ! INTEGER
   ! CHECK: %[[oatmeal:.*]] = fir.call {{.*}}BeginInquireUnit
-  ! CHECK: call @_FortranAioInquireInteger64(%[[oatmeal]], %c{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<i8>, i64, !fir.ref<i64>, i32) -> i1
+  ! CHECK: call @_FortranAioInquireInteger64(%[[oatmeal]], %c{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i64>, i32) -> i1
   ! CHECK: call {{.*}}EndIoStatement
   inquire(89, pos=i)
 
   ! LOGICAL
   ! CHECK: %[[snicker:.*]] = fir.call {{.*}}BeginInquireUnit
-  ! CHECK: call @_FortranAioInquireLogical(%[[snicker]], %c{{.*}}, %[[b:.*]]) : (!fir.ref<i8>, i64, !fir.ref<i1>) -> i1
+  ! CHECK: call @_FortranAioInquireLogical(%[[snicker]], %c{{.*}}, %[[b:.*]]) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i1>) -> i1
   ! CHECK: call {{.*}}EndIoStatement
   inquire(90, opened=b)
 
   ! PENDING with ID
   ! CHECK-DAG: %[[chip:.*]] = fir.call {{.*}}BeginInquireUnit
   ! CHECK-DAG: fir.call @_QPid_func
-  ! CHECK: call @_FortranAioInquirePendingId(%[[chip]], %{{.*}}, %{{.*}}) : (!fir.ref<i8>, i64, !fir.ref<i1>) -> i1
+  ! CHECK: call @_FortranAioInquirePendingId(%[[chip]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i1>) -> i1
   ! CHECK: call {{.*}}EndIoStatement
   inquire(91, id=id_func(), pending=b)
 end subroutine inquire_test
 
 ! CHECK-LABEL: @_QPboz
 subroutine boz
-  ! CHECK: fir.call @_FortranAioOutputInteger8(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i8) -> i1
-  ! CHECK: fir.call @_FortranAioOutputInteger16(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i16) -> i1
-  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i32) -> i1
-  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i64) -> i1
-  ! CHECK: fir.call @_FortranAioOutputInteger128(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i128) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger8(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i8) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger16(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i16) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i32) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger128(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i128) -> i1
   print '(*(Z3))', 96_1, 96_2, 96_4, 96_8, 96_16
 
-  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i32) -> i1
-  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i64) -> i1
-  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i64) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i32) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64) -> i1
   print '(I3,2Z44)', 40, 2**40_8, 2**40_8+1
 
-  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i32) -> i1
-  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i64) -> i1
-  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i64) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i32) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64) -> i1
   print '(I3,2I44)', 40, 1099511627776,  1099511627777
 
-  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i32) -> i1
-  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i64) -> i1
-  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i64) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i32) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64) -> i1
   print '(I3,2O44)', 40, 2**40_8, 2**40_8+1
 
-  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i32) -> i1
-  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i64) -> i1
-  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i64) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i32) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64) -> i1
   print '(I3,2B44)', 40, 2**40_8, 2**40_8+1
 end

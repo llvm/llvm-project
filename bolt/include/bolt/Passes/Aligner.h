@@ -16,6 +16,7 @@
 #define BOLT_PASSES_ALIGNER_H
 
 #include "bolt/Passes/BinaryPasses.h"
+#include "llvm/Support/RWMutex.h"
 
 namespace llvm {
 namespace bolt {
@@ -24,7 +25,7 @@ class AlignerPass : public BinaryFunctionPass {
 private:
   /// Stats for usage of max bytes for basic block alignment.
   std::vector<uint32_t> AlignHistogram;
-  std::shared_timed_mutex AlignHistogramMtx;
+  llvm::sys::RWMutex AlignHistogramMtx;
 
   /// Stats: execution count of blocks that were aligned.
   std::atomic<uint64_t> AlignedBlocksCount{0};

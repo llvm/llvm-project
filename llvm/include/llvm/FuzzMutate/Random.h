@@ -13,8 +13,8 @@
 #ifndef LLVM_FUZZMUTATE_RANDOM_H
 #define LLVM_FUZZMUTATE_RANDOM_H
 
-#include <random>
 #include "llvm/Support/raw_ostream.h"
+#include <random>
 namespace llvm {
 
 /// Return a uniformly distributed random value between \c Min and \c Max
@@ -46,7 +46,7 @@ public:
     return Selection;
   }
 
-  explicit operator bool() const { return !isEmpty();}
+  explicit operator bool() const { return !isEmpty(); }
   const T &operator*() const { return getSelection(); }
 
   /// Sample each item in \c Items with unit weight
@@ -91,6 +91,6 @@ ReservoirSampler<T, GenT> makeSampler(GenT &RandGen) {
   return ReservoirSampler<T, GenT>(RandGen);
 }
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif // LLVM_FUZZMUTATE_RANDOM_H

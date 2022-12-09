@@ -1,6 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX6 %s
-; RUN: llc -march=amdgcn -mcpu=fiji -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8-10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8-10 %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX6 %s
+; RUN: llc -march=amdgcn -mcpu=fiji -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8PLUS %s
 
 ; GCN-LABEL: name:            s_shl_i32
 ; GCN: S_LSHL_B32
@@ -12,7 +13,7 @@ define amdgpu_kernel void @s_shl_i32(i32 addrspace(1)* %out, i32 %lhs, i32 %rhs)
 
 ; GCN-LABEL: name:            v_shl_i32
 ; GFX6: V_LSHL_B32_e32
-; GFX8-10: V_LSHLREV_B32_e32
+; GFX8PLUS: V_LSHLREV_B32_e32
 define amdgpu_kernel void @v_shl_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %b_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
@@ -33,7 +34,7 @@ define amdgpu_kernel void @s_lshr_i32(i32 addrspace(1)* %out, i32 %lhs, i32 %rhs
 
 ; GCN-LABEL: name:            v_lshr_i32
 ; GFX6: V_LSHR_B32_e32
-; GFX8-10: V_LSHRREV_B32_e64
+; GFX8PLUS: V_LSHRREV_B32_e64
 define amdgpu_kernel void @v_lshr_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %b_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
@@ -54,7 +55,7 @@ define amdgpu_kernel void @s_ashr_i32(i32 addrspace(1)* %out, i32 %lhs, i32 %rhs
 
 ; GCN-LABEL: name:            v_ashr_i32
 ; GFX6: V_ASHR_I32_e32
-; GFX8-10: V_ASHRREV_I32_e64
+; GFX8PLUS: V_ASHRREV_I32_e64
 define amdgpu_kernel void @v_ashr_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %b_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 %tid

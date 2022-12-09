@@ -131,7 +131,7 @@ void SIAnnotateControlFlow::initialize(Module &M, const GCNSubtarget &ST) {
 
   BoolTrue = ConstantInt::getTrue(Context);
   BoolFalse = ConstantInt::getFalse(Context);
-  BoolUndef = UndefValue::get(Boolean);
+  BoolUndef = PoisonValue::get(Boolean);
   IntMaskZero = ConstantInt::get(IntMask, 0);
 
   If = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_if, { IntMask });

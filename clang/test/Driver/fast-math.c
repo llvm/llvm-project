@@ -91,6 +91,16 @@
 // CHECK-APPROX-FUNC: "-cc1"
 // CHECK-APPROX-FUNC: "-fapprox-func"
 //
+// RUN: %clang -### -fno-fast-math -fapprox-func -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH-APPROX-FUNC %s
+// CHECK-NO-FAST-MATH-APPROX-FUNC: "-cc1"
+// CHECK-NO-FAST-MATH-APPROX-FUNC: "-fapprox-func"
+//
+// RUN: %clang -### -fapprox-func -fno-fast-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-APPROX-FUNC-NO-FAST-MATH %s
+// CHECK-APPROX-FUNC-NO-FAST-MATH: "-cc1"
+// CHECK-APPROX-FUNC-NO-FAST-MATH-NOT: "-fapprox-func"
+//
 // RUN: %clang -### -fmath-errno -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MATH-ERRNO %s
 // CHECK-MATH-ERRNO: "-cc1"

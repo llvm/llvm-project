@@ -30,20 +30,6 @@ find_package(Threads REQUIRED)
 set(C_FLAGS "${OpenMP_C_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
 set(CXX_FLAGS "${OpenMP_CXX_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
 
-# TODO: Implement blockaddress in GlobalISel and remove this flag!
-if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
-  check_c_compiler_flag("-fno-experimental-isel" C_HAS_EXPERIMENTAL_ISEL_FLAG)
-  check_cxx_compiler_flag("-fno-experimental-isel" CXX_HAS_EXPERIMENTAL_ISEL_FLAG)
-  macro(add_experimental_isel_flag lang)
-    if (${lang}_HAS_EXPERIMENTAL_ISEL_FLAG)
-      set(${lang}_FLAGS "-fno-experimental-isel ${${lang}_FLAGS}")
-    endif()
-  endmacro(add_experimental_isel_flag)
-
-  add_experimental_isel_flag(C)
-  add_experimental_isel_flag(CXX)
-endif()
-
 check_c_compiler_flag("-fno-omit-frame-pointer" C_HAS_OMIT_FRAME_POINTER)
 check_cxx_compiler_flag("-fno-omit-frame-pointer" CXX_HAS_OMIT_FRAME_POINTER)
 

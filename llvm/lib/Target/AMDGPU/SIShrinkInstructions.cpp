@@ -637,9 +637,6 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   if (!TRI->isVGPR(*MRI, X))
     return nullptr;
 
-  if (MovT.hasRegisterImplicitUseOperand(AMDGPU::M0))
-    return nullptr;
-
   const unsigned SearchLimit = 16;
   unsigned Count = 0;
   bool KilledT = false;
@@ -654,8 +651,7 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
          MovY->getOpcode() != AMDGPU::COPY) ||
         !MovY->getOperand(1).isReg()        ||
         MovY->getOperand(1).getReg() != T   ||
-        MovY->getOperand(1).getSubReg() != Tsub ||
-        MovY->hasRegisterImplicitUseOperand(AMDGPU::M0))
+        MovY->getOperand(1).getSubReg() != Tsub)
       continue;
 
     Register Y = MovY->getOperand(0).getReg();
@@ -688,9 +684,6 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
         MovX = nullptr;
         break;
       }
-      // Implicit use of M0 is an indirect move.
-      if (I->hasRegisterImplicitUseOperand(AMDGPU::M0))
-        continue;
 
       if (Size > 1 && (I->getNumImplicitOperands() > (I->isCopy() ? 0U : 1U)))
         continue;

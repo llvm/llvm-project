@@ -350,7 +350,7 @@ static uint64_t scanCortexA53Errata843419(InputSection *isec, uint64_t &off,
   }
 
   uint64_t patchOff = 0;
-  const uint8_t *buf = isec->rawData.begin();
+  const uint8_t *buf = isec->content().begin();
   const ulittle32_t *instBuf = reinterpret_cast<const ulittle32_t *>(buf + off);
   uint32_t instr1 = *instBuf++;
   uint32_t instr2 = *instBuf++;
@@ -409,7 +409,7 @@ uint64_t Patch843419Section::getLDSTAddr() const {
 void Patch843419Section::writeTo(uint8_t *buf) {
   // Copy the instruction that we will be replacing with a branch in the
   // patchee Section.
-  write32le(buf, read32le(patchee->rawData.begin() + patcheeOffset));
+  write32le(buf, read32le(patchee->content().begin() + patcheeOffset));
 
   // Apply any relocation transferred from the original patchee section.
   target->relocateAlloc(*this, buf);
@@ -544,10 +544,10 @@ static void implementPatch(uint64_t adrpAddr, uint64_t patcheeOffset,
   // and replace the relocation with a R_AARCH_JUMP26 branch relocation.
   // Case 4: No relocation. We must create a new R_AARCH64_JUMP26 branch
   // relocation at the offset.
-  auto relIt = llvm::find_if(isec->relocations, [=](const Relocation &r) {
+  auto relIt = llvm::find_if(isec->relocs(), [=](const Relocation &r) {
     return r.offset == patcheeOffset;
   });
-  if (relIt != isec->relocations.end() &&
+  if (relIt != isec->relocs().end() &&
       (relIt->type == R_AARCH64_JUMP26 || relIt->expr == R_RELAX_TLS_IE_TO_LE))
     return;
 
@@ -561,12 +561,11 @@ static void implementPatch(uint64_t adrpAddr, uint64_t patcheeOffset,
     return Relocation{R_PC, R_AARCH64_JUMP26, offset, 0, patchSym};
   };
 
-  if (relIt != isec->relocations.end()) {
-    ps->relocations.push_back(
-        {relIt->expr, relIt->type, 0, relIt->addend, relIt->sym});
+  if (relIt != isec->relocs().end()) {
+    ps->addReloc({relIt->expr, relIt->type, 0, relIt->addend, relIt->sym});
     *relIt = makeRelToPatch(patcheeOffset, ps->patchSym);
   } else
-    isec->relocations.push_back(makeRelToPatch(patcheeOffset, ps->patchSym));
+    isec->addReloc(makeRelToPatch(patcheeOffset, ps->patchSym));
 }
 
 // Scan all the instructions in InputSectionDescription, for each instance of
@@ -591,8 +590,8 @@ AArch64Err843419Patcher::patchInputSectionDescription(
     while (codeSym != mapSyms.end()) {
       auto dataSym = std::next(codeSym);
       uint64_t off = (*codeSym)->value;
-      uint64_t limit =
-          (dataSym == mapSyms.end()) ? isec->rawData.size() : (*dataSym)->value;
+      uint64_t limit = (dataSym == mapSyms.end()) ? isec->content().size()
+                                                  : (*dataSym)->value;
 
       while (off < limit) {
         uint64_t startAddr = isec->getVA(off);

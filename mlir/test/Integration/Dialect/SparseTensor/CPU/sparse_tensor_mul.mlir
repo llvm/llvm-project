@@ -1,8 +1,15 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{command}
+//
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = enable-runtime-library=false
+// RUN: %{command}
 
 #ST = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed", "compressed"]}>
 
@@ -79,14 +86,17 @@ module {
 
     // Verify results
     //
-    // CHECK:      ( 2.4, 3.5, 2, 8, -1, -1, -1, -1 )
+    // CHECK:      4
+    // CHECK-NEXT: ( 2.4, 3.5, 2, 8 )
     // CHECK-NEXT: ( ( ( 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0 ), ( 2.4, 0, 3.5, 0, 0 ) ),
     // CHECK-SAME: ( ( 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0 ) ),
     // CHECK-SAME: ( ( 2, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0 ), ( 0, 0, 8, 0, 0 ) ) )
     //
+    %n = sparse_tensor.number_of_entries %0 : tensor<?x?x?xf64, #ST>
+    vector.print %n : index
     %m1 = sparse_tensor.values %0  : tensor<?x?x?xf64, #ST> to memref<?xf64>
-    %v1 = vector.transfer_read %m1[%c0], %default_val: memref<?xf64>, vector<8xf64>
-    vector.print %v1 : vector<8xf64>
+    %v1 = vector.transfer_read %m1[%c0], %default_val: memref<?xf64>, vector<4xf64>
+    vector.print %v1 : vector<4xf64>
 
     // Print %0 in dense form.
     %dt = sparse_tensor.convert %0 : tensor<?x?x?xf64, #ST> to tensor<?x?x?xf64>

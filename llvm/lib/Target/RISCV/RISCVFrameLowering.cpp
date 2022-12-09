@@ -373,7 +373,24 @@ void RISCVFrameLowering::adjustStackForRVV(MachineFunction &MF,
   assert(Amount != 0 && "Did not need to adjust stack pointer for RVV.");
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
-  Register SPReg = getSPReg(STI);
+  const Register SPReg = getSPReg(STI);
+
+  // Optimize compile time offset case
+  if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
+    // 1. Multiply the number of v-slots by the (constant) length of register
+    const int64_t VLENB = STI.getRealMinVLen() / 8;
+    assert(Amount % 8 == 0 &&
+           "Reserve the stack by the multiple of one vector size.");
+    const int64_t NumOfVReg = Amount / 8;
+    const int64_t Offset = NumOfVReg * VLENB;
+    if (!isInt<32>(Offset)) {
+      report_fatal_error(
+        "Frame size outside of the signed 32-bit range not supported");
+    }
+    adjustReg(MBB, MBBI, DL, SPReg, SPReg, Offset, Flag);
+    return;
+  }
+
   unsigned Opc = RISCV::ADD;
   if (Amount < 0) {
     Amount = -Amount;

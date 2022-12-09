@@ -345,3 +345,30 @@ body:             |
 
     BLR8 implicit $lr8, implicit $rm
 ...
+---
+name:            test_fail_dead_def_in_preheader
+# CHECK: test_fail_dead_def_in_preheader
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+
+    %0:g8rc = LI8 2048
+    %1:g8rc = LI8 1024
+    MTCTR8loop killed %0:g8rc, implicit-def dead $ctr8
+    MTCTR8 killed %1:g8rc, implicit-def dead $ctr8
+    ; CHECK-NOT: MTCTR8loop
+    ; CHECK-NOT: BDNZ8
+    ; CHECK: ADDI8
+    ; CHECK: CMPLDI
+    ; CHECK: BC
+
+  bb.1:
+
+    %2:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
+    BC killed %2:crbitrc, %bb.1
+    B %bb.2
+
+  bb.2:
+
+    BLR8 implicit $lr8, implicit $rm
+...

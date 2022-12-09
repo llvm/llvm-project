@@ -1,0 +1,33 @@
+# RUN: not --crash llc -o - -march=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name: g_unmerge_values
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK: Bad machine code: G_UNMERGE_VALUES destination types do not match
+    %0:_(s64) = IMPLICIT_DEF
+    %1:_(s32), %2:_(s16) = G_UNMERGE_VALUES %0
+
+    ; CHECK: Bad machine code: G_UNMERGE_VALUES source operand does not match vector destination operands
+    %3:_(<4 x s32>) = IMPLICIT_DEF
+    %4:_(<3 x s32>), %5:_(<3 x s32>) = G_UNMERGE_VALUES %3
+
+    ; CHECK: Bad machine code: G_UNMERGE_VALUES source operand does not match vector destination operands
+    %6:_(<2 x s16>), %7:_(<2 x s16>) = G_UNMERGE_VALUES %3
+
+    ; CHECK: Bad machine code: G_UNMERGE_VALUES vector source operand does not match scalar destination operands
+    %8:_(<2 x s32>) = IMPLICIT_DEF
+    %9:_(s32), %10:_(s32), %11:_(s32) = G_UNMERGE_VALUES %8
+
+    ; CHECK: Bad machine code: G_UNMERGE_VALUES vector source operand does not match scalar destination operands
+    %12:_(s16), %13:_(s16) = G_UNMERGE_VALUES %8
+
+    ; CHECK: Bad machine code: G_UNMERGE_VALUES scalar source operand does not match scalar destination operands
+    %14:_(s64) = IMPLICIT_DEF
+    %15:_(s16), %16:_(s16) = G_UNMERGE_VALUES %14
+
+    ; CHECK: Bad machine code: G_UNMERGE_VALUES scalar source operand does not match scalar destination operands
+    %17:_(s32), %18:_(s32), %19:_(s32) = G_UNMERGE_VALUES %14
+...

@@ -27,7 +27,6 @@ const char *Action::getClassName(ActionClass AC) {
     return "offload";
   case PreprocessJobClass: return "preprocessor";
   case PrecompileJobClass: return "precompiler";
-  case HeaderModulePrecompileJobClass: return "header-module-precompiler";
   case ExtractAPIJobClass:
     return "api-extractor";
   case AnalyzeJobClass: return "analyzer";
@@ -380,13 +379,6 @@ PrecompileJobAction::PrecompileJobAction(ActionClass Kind, Action *Input,
     : JobAction(Kind, Input, OutputType) {
   assert(isa<PrecompileJobAction>((Action*)this) && "invalid action kind");
 }
-
-void HeaderModulePrecompileJobAction::anchor() {}
-
-HeaderModulePrecompileJobAction::HeaderModulePrecompileJobAction(
-    Action *Input, types::ID OutputType, const char *ModuleName)
-    : PrecompileJobAction(HeaderModulePrecompileJobClass, Input, OutputType),
-      ModuleName(ModuleName) {}
 
 void ExtractAPIJobAction::anchor() {}
 

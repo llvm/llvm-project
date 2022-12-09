@@ -861,12 +861,12 @@ bool SystemZTargetLowering::isLegalAddImmediate(int64_t Imm) const {
 }
 
 bool SystemZTargetLowering::allowsMisalignedMemoryAccesses(
-    EVT VT, unsigned, Align, MachineMemOperand::Flags, bool *Fast) const {
+    EVT VT, unsigned, Align, MachineMemOperand::Flags, unsigned *Fast) const {
   // Unaligned accesses should never be slower than the expanded version.
   // We check specifically for aligned accesses in the few cases where
   // they are required.
   if (Fast)
-    *Fast = true;
+    *Fast = 1;
   return true;
 }
 

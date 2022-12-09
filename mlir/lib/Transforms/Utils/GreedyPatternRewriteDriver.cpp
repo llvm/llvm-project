@@ -51,6 +51,10 @@ public:
   /// If the specified operation is in the worklist, remove it.
   void removeFromWorklist(Operation *op);
 
+  /// Notifies the driver that the specified operation may have been modified
+  /// in-place.
+  void finalizeRootUpdate(Operation *op) override;
+
 protected:
   // Implement the hook for inserting operations, and make sure that newly
   // inserted ops are added to the worklist for processing.
@@ -321,6 +325,14 @@ void GreedyPatternRewriteDriver::removeFromWorklist(Operation *op) {
 void GreedyPatternRewriteDriver::notifyOperationInserted(Operation *op) {
   LLVM_DEBUG({
     logger.startLine() << "** Insert  : '" << op->getName() << "'(" << op
+                       << ")\n";
+  });
+  addToWorklist(op);
+}
+
+void GreedyPatternRewriteDriver::finalizeRootUpdate(Operation *op) {
+  LLVM_DEBUG({
+    logger.startLine() << "** Modified: '" << op->getName() << "'(" << op
                        << ")\n";
   });
   addToWorklist(op);

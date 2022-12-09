@@ -62,13 +62,4 @@ module;
 #include "foo.h"
 export module M;
 #define M_Module 43
-// FIXME: It is meaningless for named modules to emit macro definitions.
-// It wastes the time and spaces completely.
-// CHECK: Macro Definitions:
-// CHECK-DAG: M_Module
-// CHECK-DAG: REDEFINE
-// CHECK-DAG: FUNC_Macro
-// CHECK-DAG: TO_BE_UNDEF
-// CHECK-DAG: FOO
-// CHECK-DAG: CONSTANT
-// CHECK-NEXT: ===
+// CHECK-NOT: Macro Definitions:

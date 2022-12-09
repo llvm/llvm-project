@@ -171,7 +171,7 @@ func.func @alloc_tensor_with_copy(%t: tensor<5xf32>) -> tensor<5xf32> {
 // CHECK-LABEL: func @alloc_tensor_with_memory_space()
 func.func @alloc_tensor_with_memory_space() -> tensor<5xf32> {
   // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32, 1>
-  %0 = bufferization.alloc_tensor() {memory_space = 1 : ui64} : tensor<5xf32>
+  %0 = bufferization.alloc_tensor() {memory_space = 1 : i64} : tensor<5xf32>
   // CHECK: %[[r:.*]] = bufferization.to_tensor %[[alloc]]
   // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[r]]

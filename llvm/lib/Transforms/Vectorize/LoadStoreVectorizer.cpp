@@ -1320,7 +1320,7 @@ bool Vectorizer::accessIsMisaligned(unsigned SzInBytes, unsigned AddressSpace,
   if (Alignment.value() % SzInBytes == 0)
     return false;
 
-  bool Fast = false;
+  unsigned Fast = 0;
   bool Allows = TTI.allowsMisalignedMemoryAccesses(F.getParent()->getContext(),
                                                    SzInBytes * 8, AddressSpace,
                                                    Alignment, &Fast);

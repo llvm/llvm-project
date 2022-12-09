@@ -40,9 +40,9 @@ namespace PR42111 {
   // CHECK: load {{.*}} @_ZGVN7PR4211112_GLOBAL__N_11nILi0EEE
   // CHECK: icmp eq i8 {{.*}}, 0
   // CHECK: br i1
+  // CHECK: store i8 1, ptr @_ZGVN7PR4211112_GLOBAL__N_11nILi0EEE
   // CHECK: call noundef i32 @_ZN7PR421111fEv(
   // CHECK: [[N_ADDR:%.+]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @_ZN7PR4211112_GLOBAL__N_11nILi0EEE)
   // CHECK: store i32 {{.*}}, ptr [[N_ADDR]]
-  // CHECK: store i8 1, ptr @_ZGVN7PR4211112_GLOBAL__N_11nILi0EEE
   int g() { return n<> + n<>; }
 }

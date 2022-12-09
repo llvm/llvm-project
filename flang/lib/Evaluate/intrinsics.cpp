@@ -1462,6 +1462,37 @@ static bool CheckMaxMinArgument(std::optional<parser::CharBlock> keyword,
   return true;
 }
 
+static void CheckMaxMinA1A2Argument(const ActualArguments &arguments,
+    std::set<parser::CharBlock> &set, parser::ContextualMessages &messages) {
+  parser::CharBlock kwA1{"a1", 2};
+  parser::CharBlock kwA2{"a2", 2};
+  bool missingA1{set.find(kwA1) == set.end()};
+  bool missingA2{set.find(kwA2) == set.end()};
+
+  if (arguments.size() > 1) {
+    if (arguments.at(0)->keyword()) {
+      // If the keyword is specified in the first argument, the following
+      // arguments must have the keywords.
+      if (missingA1 && missingA2) {
+        messages.Say("missing mandatory '%s=' and '%s=' arguments"_err_en_US,
+            kwA1.ToString(), kwA2.ToString());
+      } else if (missingA1 && !missingA2) {
+        messages.Say(
+            "missing mandatory '%s=' argument"_err_en_US, kwA1.ToString());
+      } else if (!missingA1 && missingA2) {
+        messages.Say(
+            "missing mandatory '%s=' argument"_err_en_US, kwA2.ToString());
+      }
+    } else if (arguments.at(1)->keyword()) {
+      // No keyword is specified in the first argument.
+      if (missingA1 && missingA2) {
+        messages.Say(
+            "missing mandatory '%s=' argument"_err_en_US, kwA2.ToString());
+      }
+    }
+  }
+}
+
 static bool CheckAtomicKind(const ActualArgument &arg,
     const semantics::Scope *builtinsScope,
     parser::ContextualMessages &messages) {
@@ -1570,6 +1601,17 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     }
   }
 
+  if (isMaxMin) {
+    int nArgs{0};
+    // max() / max(x) is invalid
+    while ((arguments.size() + nArgs) < 2) {
+      actualForDummy.push_back(nullptr);
+      nArgs++;
+    }
+
+    CheckMaxMinA1A2Argument(arguments, maxMinKeywords, messages);
+  }
+
   std::size_t dummies{actualForDummy.size()};
 
   // Check types and kinds of the actual arguments against the intrinsic's
@@ -1590,7 +1632,23 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     const ActualArgument *arg{actualForDummy[j]};
     if (!arg) {
       if (d.optionality == Optionality::required) {
-        messages.Say("missing mandatory '%s=' argument"_err_en_US, d.keyword);
+        std::string kw{d.keyword};
+        if (isMaxMin && maxMinKeywords.size() == 1) {
+          // max(a1=x) or max(a2=x)
+          const auto kwA1{dummy[0].keyword};
+          const auto kwA2{dummy[1].keyword};
+          if (maxMinKeywords.begin()->ToString().compare(kwA1) == 0) {
+            messages.Say("missing mandatory 'a2=' argument"_err_en_US);
+          } else if (maxMinKeywords.begin()->ToString().compare(kwA2) == 0) {
+            messages.Say("missing mandatory 'a1=' argument"_err_en_US);
+          } else {
+            messages.Say(
+                "missing mandatory 'a1=' and 'a2=' arguments"_err_en_US);
+          }
+        } else {
+          messages.Say(
+              "missing mandatory '%s=' argument"_err_en_US, kw.c_str());
+        }
         return std::nullopt; // missing non-OPTIONAL argument
       } else {
         continue;

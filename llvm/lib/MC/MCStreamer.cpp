@@ -1192,8 +1192,8 @@ void MCStreamer::emitXCOFFRefDirective(StringRef Name) {
 }
 
 void MCStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
-                                          MCSymbol *Trap, unsigned Lang,
-                                          unsigned Reason,
+                                          const MCSymbol *Trap, 
+                                          unsigned Lang, unsigned Reason,
                                           unsigned FunctionSize,
                                           bool hasDebug) {
   report_fatal_error("emitXCOFFExceptDirective is only supported on "

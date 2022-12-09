@@ -2633,7 +2633,7 @@ Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
       if (Inst->getArgOperand(i)->getType() != ST->getElementType(i))
         return nullptr;
     }
-    Value *Res = UndefValue::get(ExpectedType);
+    Value *Res = PoisonValue::get(ExpectedType);
     IRBuilder<> Builder(Inst);
     for (unsigned i = 0, e = NumElts; i != e; ++i) {
       Value *L = Inst->getArgOperand(i);

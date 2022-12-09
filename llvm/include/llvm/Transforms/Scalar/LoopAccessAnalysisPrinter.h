@@ -13,8 +13,6 @@
 
 namespace llvm {
 
-class LPMUpdater;
-class Loop;
 class Function;
 class raw_ostream;
 

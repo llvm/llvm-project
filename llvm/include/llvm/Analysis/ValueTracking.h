@@ -769,10 +769,6 @@ SelectPatternFlavor getInverseMinMaxFlavor(SelectPatternFlavor SPF);
 
 Intrinsic::ID getInverseMinMaxIntrinsic(Intrinsic::ID MinMaxID);
 
-/// Return the canonical inverse comparison predicate for the specified
-/// minimum/maximum flavor.
-CmpInst::Predicate getInverseMinMaxPred(SelectPatternFlavor SPF);
-
 /// Return the minimum or maximum constant value for the specified integer
 /// min/max flavor and type.
 APInt getMinMaxLimit(SelectPatternFlavor SPF, unsigned BitWidth);

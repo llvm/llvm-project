@@ -115,7 +115,7 @@ SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
   // This method is recursive (to make it more readable). Adding an
   // assertion here to limit the recursion. (See
   // https://discourse.llvm.org/t/rfc-update-to-mlir-developer-policy-on-recursion/62235)
-  assert(loopNest.size() <= 6 &&
+  assert(loopNest.size() <= 10 &&
          "exceeded recursion limit when yielding value from loop nest");
 
   // To yield a value from a perfectly nested loop nest, the following

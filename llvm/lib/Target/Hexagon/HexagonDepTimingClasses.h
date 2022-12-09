@@ -8,7 +8,6 @@
 // Automatically generated file, do not edit!
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_LIB_TARGET_HEXAGON_HEXAGONDEPTIMINGCLASSES_H
 #define LLVM_LIB_TARGET_HEXAGON_HEXAGONDEPTIMINGCLASSES_H
 
@@ -53,9 +52,11 @@ inline bool is_TC1(unsigned SchedClass) {
   case Hexagon::Sched::tc_c57d9f39:
   case Hexagon::Sched::tc_d33e5eee:
   case Hexagon::Sched::tc_decdde8a:
+  case Hexagon::Sched::tc_e60def48:
   case Hexagon::Sched::tc_ed03645c:
   case Hexagon::Sched::tc_eeda4109:
   case Hexagon::Sched::tc_ef921005:
+  case Hexagon::Sched::tc_f97707c1:
   case Hexagon::Sched::tc_f999c66e:
     return true;
   default:
@@ -97,6 +98,7 @@ inline bool is_TC2(unsigned SchedClass) {
 
 inline bool is_TC2early(unsigned SchedClass) {
   switch (SchedClass) {
+  case Hexagon::Sched::tc_33e7e673:
   case Hexagon::Sched::tc_45f9d1be:
   case Hexagon::Sched::tc_a4ee89db:
     return true;
@@ -110,6 +112,7 @@ inline bool is_TC3x(unsigned SchedClass) {
   case Hexagon::Sched::tc_01e1be3b:
   case Hexagon::Sched::tc_1248597c:
   case Hexagon::Sched::tc_197dce51:
+  case Hexagon::Sched::tc_27106296:
   case Hexagon::Sched::tc_28e55c6f:
   case Hexagon::Sched::tc_2c3e17fc:
   case Hexagon::Sched::tc_38382228:
@@ -121,6 +124,7 @@ inline bool is_TC3x(unsigned SchedClass) {
   case Hexagon::Sched::tc_6ae3426b:
   case Hexagon::Sched::tc_6d861a95:
   case Hexagon::Sched::tc_788b1d09:
+  case Hexagon::Sched::tc_7dc63b5c:
   case Hexagon::Sched::tc_7f8ae742:
   case Hexagon::Sched::tc_9406230a:
   case Hexagon::Sched::tc_a154b476:

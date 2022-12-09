@@ -34,14 +34,14 @@ Error TraceIntelPTBundleLoader::ParseModule(Target &target,
   auto do_parse = [&]() -> Error {
     FileSpec system_file_spec(module.system_path);
 
-    FileSpec local_file_spec(module.file.hasValue() ? *module.file
-                                                    : module.system_path);
+    FileSpec local_file_spec(module.file.has_value() ? *module.file
+                                                     : module.system_path);
 
     ModuleSpec module_spec;
     module_spec.GetFileSpec() = local_file_spec;
     module_spec.GetPlatformFileSpec() = system_file_spec;
 
-    if (module.uuid.hasValue())
+    if (module.uuid.has_value())
       module_spec.GetUUID().SetFromStringRef(*module.uuid);
 
     Status error;

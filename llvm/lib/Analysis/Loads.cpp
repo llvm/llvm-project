@@ -359,7 +359,7 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
     // If we see a free or a call which may write to memory (i.e. which might do
     // a free) the pointer could be marked invalid.
     if (isa<CallInst>(BBI) && BBI->mayWriteToMemory() &&
-        !isa<DbgInfoIntrinsic>(BBI))
+        !isa<LifetimeIntrinsic>(BBI) && !isa<DbgInfoIntrinsic>(BBI))
       return false;
 
     Value *AccessedPtr;

@@ -24,7 +24,6 @@
 namespace llvm {
 
 class AssumptionCache;
-class BasicBlock;
 class DataLayout;
 class DominatorTree;
 class Function;

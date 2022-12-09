@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenTarget.h"
 #include "CodeGenSchedule.h"
+#include "CodeGenTarget.h"
 #include "PredicateExpander.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/STLExtras.h"

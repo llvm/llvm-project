@@ -17,8 +17,6 @@
 #ifndef MLIR_EXECUTIONENGINE_SPARSETENSOR_COO_H
 #define MLIR_EXECUTIONENGINE_SPARSETENSOR_COO_H
 
-#include "mlir/ExecutionEngine/SparseTensor/PermutationRef.h"
-
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>

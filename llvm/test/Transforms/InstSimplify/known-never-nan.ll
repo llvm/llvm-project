@@ -291,9 +291,7 @@ define i1 @nnan_binary_fneg() {
 define i1 @nnan_unary_fneg() {
 ; CHECK-LABEL: @nnan_unary_fneg(
 ; CHECK-NEXT:    [[NNAN:%.*]] = call nnan double @func()
-; CHECK-NEXT:    [[OP:%.*]] = fneg double [[NNAN]]
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], [[OP]]
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nnan = call nnan double @func()
   %op = fneg double %nnan

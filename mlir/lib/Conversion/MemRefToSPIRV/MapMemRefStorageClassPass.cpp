@@ -18,6 +18,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -56,7 +57,18 @@ using namespace mlir;
   MAP_FN(spirv::StorageClass::Output, 10)
 
 Optional<spirv::StorageClass>
-spirv::mapMemorySpaceToVulkanStorageClass(unsigned memorySpace) {
+spirv::mapMemorySpaceToVulkanStorageClass(Attribute memorySpaceAttr) {
+  // Handle null memory space attribute specially.
+  if (!memorySpaceAttr)
+    return spirv::StorageClass::StorageBuffer;
+
+  // Unknown dialect custom attributes are not supported by default.
+  // Downstream callers should plug in more specialized ones.
+  auto intAttr = memorySpaceAttr.dyn_cast<IntegerAttr>();
+  if (!intAttr)
+    return llvm::None;
+  unsigned memorySpace = intAttr.getInt();
+
 #define STORAGE_SPACE_MAP_FN(storage, space)                                   \
   case space:                                                                  \
     return storage;
@@ -99,7 +111,18 @@ spirv::mapVulkanStorageClassToMemorySpace(spirv::StorageClass storageClass) {
   MAP_FN(spirv::StorageClass::Image, 7)
 
 Optional<spirv::StorageClass>
-spirv::mapMemorySpaceToOpenCLStorageClass(unsigned memorySpace) {
+spirv::mapMemorySpaceToOpenCLStorageClass(Attribute memorySpaceAttr) {
+  // Handle null memory space attribute specially.
+  if (!memorySpaceAttr)
+    return spirv::StorageClass::CrossWorkgroup;
+
+  // Unknown dialect custom attributes are not supported by default.
+  // Downstream callers should plug in more specialized ones.
+  auto intAttr = memorySpaceAttr.dyn_cast<IntegerAttr>();
+  if (!intAttr)
+    return llvm::None;
+  unsigned memorySpace = intAttr.getInt();
+
 #define STORAGE_SPACE_MAP_FN(storage, space)                                   \
   case space:                                                                  \
     return storage;
@@ -143,17 +166,8 @@ spirv::MemorySpaceToStorageClassConverter::MemorySpaceToStorageClassConverter(
   addConversion([](Type type) { return type; });
 
   addConversion([this](BaseMemRefType memRefType) -> Optional<Type> {
-    // Expect IntegerAttr memory spaces. The attribute can be missing for the
-    // case of memory space == 0.
-    Attribute spaceAttr = memRefType.getMemorySpace();
-    if (spaceAttr && !spaceAttr.isa<IntegerAttr>()) {
-      LLVM_DEBUG(llvm::dbgs() << "cannot convert " << memRefType
-                              << " due to non-IntegerAttr memory space\n");
-      return llvm::None;
-    }
-
-    unsigned space = memRefType.getMemorySpaceAsInt();
-    auto storage = this->memorySpaceMap(space);
+    Optional<spirv::StorageClass> storage =
+        this->memorySpaceMap(memRefType.getMemorySpace());
     if (!storage) {
       LLVM_DEBUG(llvm::dbgs()
                  << "cannot convert " << memRefType

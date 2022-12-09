@@ -184,3 +184,56 @@ define double @test_reassoc_fadd_flags_2(double %a0, double %a1, double %a2, dou
   %t2 = fadd double %t1, %a3
   ret double %t2
 }
+
+define double @test_fmadd1(double %a0, double %a1, double %a2, double %a3) {
+; CHECK-LABEL: test_fmadd1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmadd.d ft0, fa0, fa1, fa2
+; CHECK-NEXT:    fmadd.d ft1, fa0, fa1, fa3
+; CHECK-NEXT:    fadd.d fa0, ft0, ft1
+; CHECK-NEXT:    ret
+  %t0 = fmul contract double %a0, %a1
+  %t1 = fadd contract double %t0, %a2
+  %t2 = fadd contract double %a3, %t0
+  %t3 = fadd double %t1, %t2
+  ret double %t3
+}
+
+define double @test_fmadd2(double %a0, double %a1, double %a2) {
+; CHECK-LABEL: test_fmadd2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmul.d ft0, fa0, fa1
+; CHECK-NEXT:    fmadd.d ft1, fa0, fa1, fa2
+; CHECK-NEXT:    fdiv.d fa0, ft1, ft0
+; CHECK-NEXT:    ret
+  %t0 = fmul contract double %a0, %a1
+  %t1 = fadd contract double %t0, %a2
+  %t2 = fdiv double %t1, %t0
+  ret double %t2
+}
+
+define double @test_fmsub(double %a0, double %a1, double %a2) {
+; CHECK-LABEL: test_fmsub:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmul.d ft0, fa0, fa1
+; CHECK-NEXT:    fmsub.d ft1, fa0, fa1, fa2
+; CHECK-NEXT:    fdiv.d fa0, ft1, ft0
+; CHECK-NEXT:    ret
+  %t0 = fmul contract double %a0, %a1
+  %t1 = fsub contract double %t0, %a2
+  %t2 = fdiv double %t1, %t0
+  ret double %t2
+}
+
+define double @test_fnmsub(double %a0, double %a1, double %a2) {
+; CHECK-LABEL: test_fnmsub:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmul.d ft0, fa0, fa1
+; CHECK-NEXT:    fnmsub.d ft1, fa0, fa1, fa2
+; CHECK-NEXT:    fdiv.d fa0, ft1, ft0
+; CHECK-NEXT:    ret
+  %t0 = fmul contract double %a0, %a1
+  %t1 = fsub contract double %a2, %t0
+  %t2 = fdiv double %t1, %t0
+  ret double %t2
+}

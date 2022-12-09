@@ -82,7 +82,7 @@ define amdgpu_kernel void @rcp_fdiv_fpmath(float addrspace(1)* %out, float %x) #
 ; CHECK: %[[NO_A0:[0-9]+]] = extractelement <2 x float> %a, i64 0
 ; CHECK: %[[NO_B0:[0-9]+]] = extractelement <2 x float> %b, i64 0
 ; CHECK: %[[NO_FDIV0:[0-9]+]] = fdiv float %[[NO_A0]], %[[NO_B0]]
-; CHECK: %[[NO_INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[NO_FDIV0]], i64 0
+; CHECK: %[[NO_INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[NO_FDIV0]], i64 0
 ; CHECK: %[[NO_A1:[0-9]+]] = extractelement <2 x float> %a, i64 1
 ; CHECK: %[[NO_B1:[0-9]+]] = extractelement <2 x float> %b, i64 1
 ; CHECK: %[[NO_FDIV1:[0-9]+]] = fdiv float %[[NO_A1]], %[[NO_B1]]
@@ -92,7 +92,7 @@ define amdgpu_kernel void @rcp_fdiv_fpmath(float addrspace(1)* %out, float %x) #
 ; CHECK: %[[HALF_A0:[0-9]+]] = extractelement <2 x float> %a, i64 0
 ; CHECK: %[[HALF_B0:[0-9]+]] = extractelement <2 x float> %b, i64 0
 ; CHECK: %[[HALF_FDIV0:[0-9]+]] = fdiv float %[[HALF_A0]], %[[HALF_B0]]
-; CHECK: %[[HALF_INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[HALF_FDIV0]], i64 0
+; CHECK: %[[HALF_INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[HALF_FDIV0]], i64 0
 ; CHECK: %[[HALF_A1:[0-9]+]] = extractelement <2 x float> %a, i64 1
 ; CHECK: %[[HALF_B1:[0-9]+]] = extractelement <2 x float> %b, i64 1
 ; CHECK: %[[HALF_FDIV1:[0-9]+]] = fdiv float %[[HALF_A1]], %[[HALF_B1]]
@@ -102,7 +102,7 @@ define amdgpu_kernel void @rcp_fdiv_fpmath(float addrspace(1)* %out, float %x) #
 ; CHECK: %[[ONE_A0:[0-9]+]] = extractelement <2 x float> %a, i64 0
 ; CHECK: %[[ONE_B0:[0-9]+]] = extractelement <2 x float> %b, i64 0
 ; CHECK: %[[ONE_FDIV0:[0-9]+]] = fdiv float %[[ONE_A0]], %[[ONE_B0]]
-; CHECK: %[[ONE_INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[ONE_FDIV0]], i64 0
+; CHECK: %[[ONE_INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[ONE_FDIV0]], i64 0
 ; CHECK: %[[ONE_A1:[0-9]+]] = extractelement <2 x float> %a, i64 1
 ; CHECK: %[[ONE_B1:[0-9]+]] = extractelement <2 x float> %b, i64 1
 ; CHECK: %[[ONE_FDIV1:[0-9]+]] = fdiv float %[[ONE_A1]], %[[ONE_B1]]
@@ -112,7 +112,7 @@ define amdgpu_kernel void @rcp_fdiv_fpmath(float addrspace(1)* %out, float %x) #
 ; CHECK: %[[A0:[0-9]+]] = extractelement <2 x float> %a, i64 0
 ; CHECK: %[[B0:[0-9]+]] = extractelement <2 x float> %b, i64 0
 ; CHECK: %[[FDIV0:[0-9]+]] = call float @llvm.amdgcn.fdiv.fast(float %[[A0]], float %[[B0]])
-; CHECK: %[[INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[FDIV0]], i64 0
+; CHECK: %[[INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[FDIV0]], i64 0
 ; CHECK: %[[A1:[0-9]+]] = extractelement <2 x float> %a, i64 1
 ; CHECK: %[[B1:[0-9]+]] = extractelement <2 x float> %b, i64 1
 ; CHECK: %[[FDIV1:[0-9]+]] = call float @llvm.amdgcn.fdiv.fast(float %[[A1]], float %[[B1]])
@@ -136,7 +136,7 @@ define amdgpu_kernel void @fdiv_fpmath_vector(<2 x float> addrspace(1)* %out, <2
 ; CHECK-LABEL: @rcp_fdiv_fpmath_vector(
 ; CHECK: %[[NO0:[0-9]+]] =  extractelement <2 x float> %x, i64 0
 ; CHECK: %[[NO_FDIV0:[0-9]+]] = fdiv float 1.000000e+00, %[[NO0]]
-; CHECK: %[[NO_INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[NO_FDIV0]], i64 0
+; CHECK: %[[NO_INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[NO_FDIV0]], i64 0
 ; CHECK: %[[NO1:[0-9]+]] = extractelement <2 x float> %x, i64 1
 ; CHECK: %[[NO_FDIV1:[0-9]+]] = fdiv float 1.000000e+00, %[[NO1]]
 ; CHECK: %no.md = insertelement <2 x float> %[[NO_INS0]], float %[[NO_FDIV1]], i64 1
@@ -144,7 +144,7 @@ define amdgpu_kernel void @fdiv_fpmath_vector(<2 x float> addrspace(1)* %out, <2
 
 ; CHECK: %[[HALF0:[0-9]+]] =  extractelement <2 x float> %x, i64 0
 ; CHECK: %[[HALF_FDIV0:[0-9]+]] = fdiv float 1.000000e+00, %[[HALF0]]
-; CHECK: %[[HALF_INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[HALF_FDIV0]], i64 0
+; CHECK: %[[HALF_INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[HALF_FDIV0]], i64 0
 ; CHECK: %[[HALF1:[0-9]+]] = extractelement <2 x float> %x, i64 1
 ; CHECK: %[[HALF_FDIV1:[0-9]+]] =  fdiv float 1.000000e+00, %[[HALF1]]
 ; CHECK: %md.half.ulp = insertelement <2 x float> %[[HALF_INS0]], float %[[HALF_FDIV1]], i64 1
@@ -152,7 +152,7 @@ define amdgpu_kernel void @fdiv_fpmath_vector(<2 x float> addrspace(1)* %out, <2
 
 ; CHECK: %[[AFN_NO0:[0-9]+]] =  extractelement <2 x float> %x, i64 0
 ; CHECK: %[[AFN_NO_FDIV0:[0-9]+]] = call afn float @llvm.amdgcn.rcp.f32(float %[[AFN_NO0]])
-; CHECK: %[[AFN_NO_INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[AFN_NO_FDIV0]], i64 0
+; CHECK: %[[AFN_NO_INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[AFN_NO_FDIV0]], i64 0
 ; CHECK: %[[AFN_NO1:[0-9]+]] = extractelement <2 x float> %x, i64 1
 ; CHECK: %[[AFN_NO_FDIV1:[0-9]+]] =  call afn float @llvm.amdgcn.rcp.f32(float %[[AFN_NO1]])
 ; CHECK: %afn.no.md = insertelement <2 x float> %[[AFN_NO_INS0]], float %[[AFN_NO_FDIV1]], i64 1
@@ -160,7 +160,7 @@ define amdgpu_kernel void @fdiv_fpmath_vector(<2 x float> addrspace(1)* %out, <2
 
 ; CHECK: %[[FAST_NO0:[0-9]+]] =  extractelement <2 x float> %x, i64 0
 ; CHECK: %[[FAST_NO_RCP0:[0-9]+]] = call fast float @llvm.amdgcn.rcp.f32(float %[[FAST_NO0]])
-; CHECK: %[[FAST_NO_INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[FAST_NO_RCP0]], i64 0
+; CHECK: %[[FAST_NO_INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[FAST_NO_RCP0]], i64 0
 ; CHECK: %[[FAST_NO1:[0-9]+]] = extractelement <2 x float> %x, i64 1
 ; CHECK: %[[FAST_NO_RCP1:[0-9]+]] =  call fast float @llvm.amdgcn.rcp.f32(float %[[FAST_NO1]])
 ; CHECK: %fast.no.md = insertelement <2 x float> %[[FAST_NO_INS0]], float %[[FAST_NO_RCP1]], i64 1
@@ -168,7 +168,7 @@ define amdgpu_kernel void @fdiv_fpmath_vector(<2 x float> addrspace(1)* %out, <2
 
 ; CHECK: %[[AFN_250:[0-9]+]] =  extractelement <2 x float> %x, i64 0
 ; CHECK: %[[AFN_25_RCP0:[0-9]+]] = call afn float @llvm.amdgcn.rcp.f32(float %[[AFN_250]])
-; CHECK: %[[AFN_25_INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[AFN_25_RCP0]], i64 0
+; CHECK: %[[AFN_25_INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[AFN_25_RCP0]], i64 0
 ; CHECK: %[[AFN_251:[0-9]+]] = extractelement <2 x float> %x, i64 1
 ; CHECK: %[[AFN_25_RCP1:[0-9]+]] =  call afn float @llvm.amdgcn.rcp.f32(float %[[AFN_251]])
 ; CHECK: %afn.25ulp = insertelement <2 x float> %[[AFN_25_INS0]], float %[[AFN_25_RCP1]], i64 1
@@ -176,7 +176,7 @@ define amdgpu_kernel void @fdiv_fpmath_vector(<2 x float> addrspace(1)* %out, <2
 
 ; CHECK: %[[FAST_250:[0-9]+]] =  extractelement <2 x float> %x, i64 0
 ; CHECK: %[[FAST_25_RCP0:[0-9]+]] = call fast float @llvm.amdgcn.rcp.f32(float %[[FAST_250]])
-; CHECK: %[[FAST_25_INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[FAST_25_RCP0]], i64 0
+; CHECK: %[[FAST_25_INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[FAST_25_RCP0]], i64 0
 ; CHECK: %[[FAST_251:[0-9]+]] = extractelement <2 x float> %x, i64 1
 ; CHECK: %[[FAST_25_RCP1:[0-9]+]] =  call fast float @llvm.amdgcn.rcp.f32(float %[[FAST_251]])
 ; CHECK: %fast.25ulp = insertelement <2 x float> %[[FAST_25_INS0]], float %[[FAST_25_RCP1]], i64 1
@@ -206,7 +206,7 @@ define amdgpu_kernel void @rcp_fdiv_fpmath_vector(<2 x float> addrspace(1)* %out
 ; CHECK-LABEL: @rcp_fdiv_fpmath_vector_nonsplat(
 ; CHECK: %[[NO0:[0-9]+]] =  extractelement <2 x float> %x, i64 0
 ; CHECK: %[[NO_FDIV0:[0-9]+]] = fdiv float 1.000000e+00, %[[NO0]]
-; CHECK: %[[NO_INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[NO_FDIV0]], i64 0
+; CHECK: %[[NO_INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[NO_FDIV0]], i64 0
 ; CHECK: %[[NO1:[0-9]+]] = extractelement <2 x float> %x, i64 1
 ; CHECK: %[[NO_FDIV1:[0-9]+]] = fdiv float 2.000000e+00, %[[NO1]]
 ; CHECK: %no.md = insertelement <2 x float> %[[NO_INS0]], float %[[NO_FDIV1]], i64 1
@@ -214,7 +214,7 @@ define amdgpu_kernel void @rcp_fdiv_fpmath_vector(<2 x float> addrspace(1)* %out
 
 ; CHECK: %[[AFN_NO0:[0-9]+]] =  extractelement <2 x float> %x, i64 0
 ; CHECK: %[[AFN_NO_FDIV0:[0-9]+]] = call afn float @llvm.amdgcn.rcp.f32(float %[[AFN_NO0]])
-; CHECK: %[[AFN_NO_INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[AFN_NO_FDIV0]], i64 0
+; CHECK: %[[AFN_NO_INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[AFN_NO_FDIV0]], i64 0
 ; CHECK: %[[AFN_NO1:[0-9]+]] = extractelement <2 x float> %x, i64 1
 ; CHECK: %[[AFN_NO_FDIV1:[0-9]+]] =  call afn float @llvm.amdgcn.rcp.f32(float %[[AFN_NO1]])
 ; CHECK: %[[AFN_NO_MUL1:[0-9]+]] = fmul afn float 2.000000e+00, %[[AFN_NO_FDIV1]]
@@ -223,7 +223,7 @@ define amdgpu_kernel void @rcp_fdiv_fpmath_vector(<2 x float> addrspace(1)* %out
 
 ; CHECK: %[[FAST_NO0:[0-9]+]] =  extractelement <2 x float> %x, i64 0
 ; CHECK: %[[FAST_NO_RCP0:[0-9]+]] = call fast float @llvm.amdgcn.rcp.f32(float %[[FAST_NO0]])
-; CHECK: %[[FAST_NO_INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[FAST_NO_RCP0]], i64 0
+; CHECK: %[[FAST_NO_INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[FAST_NO_RCP0]], i64 0
 ; CHECK: %[[FAST_NO1:[0-9]+]] = extractelement <2 x float> %x, i64 1
 ; CHECK: %[[FAST_NO_RCP1:[0-9]+]] =  call fast float @llvm.amdgcn.rcp.f32(float %[[FAST_NO1]])
 ; CHECK: %[[FAST_NO_MUL1:[0-9]+]] = fmul fast float 2.000000e+00, %[[FAST_NO_RCP1]]
@@ -232,7 +232,7 @@ define amdgpu_kernel void @rcp_fdiv_fpmath_vector(<2 x float> addrspace(1)* %out
 
 ; CHECK: %[[AFN_250:[0-9]+]] =  extractelement <2 x float> %x, i64 0
 ; CHECK: %[[AFN_25_RCP0:[0-9]+]] = call afn float @llvm.amdgcn.rcp.f32(float %[[AFN_250]])
-; CHECK: %[[AFN_25_INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[AFN_25_RCP0]], i64 0
+; CHECK: %[[AFN_25_INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[AFN_25_RCP0]], i64 0
 ; CHECK: %[[AFN_251:[0-9]+]] = extractelement <2 x float> %x, i64 1
 ; CHECK: %[[AFN_25_RCP1:[0-9]+]] =  call afn float @llvm.amdgcn.rcp.f32(float %[[AFN_251]])
 ; CHECK: %[[AFN_25_MUL1:[0-9]+]] = fmul afn float 2.000000e+00, %[[AFN_25_RCP1]]
@@ -241,7 +241,7 @@ define amdgpu_kernel void @rcp_fdiv_fpmath_vector(<2 x float> addrspace(1)* %out
 
 ; CHECK: %[[FAST_250:[0-9]+]] =  extractelement <2 x float> %x, i64 0
 ; CHECK: %[[FAST_25_RCP0:[0-9]+]] = call fast float @llvm.amdgcn.rcp.f32(float %[[FAST_250]])
-; CHECK: %[[FAST_25_INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[FAST_25_RCP0]], i64 0
+; CHECK: %[[FAST_25_INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[FAST_25_RCP0]], i64 0
 ; CHECK: %[[FAST_251:[0-9]+]] = extractelement <2 x float> %x, i64 1
 ; CHECK: %[[FAST_25_RCP1:[0-9]+]] =  call fast float @llvm.amdgcn.rcp.f32(float %[[FAST_251]])
 ; CHECK: %[[FAST_25_MUL1:[0-9]+]] = fmul fast float 2.000000e+00, %[[FAST_25_RCP1]]
@@ -271,7 +271,7 @@ define amdgpu_kernel void @rcp_fdiv_fpmath_vector_nonsplat(<2 x float> addrspace
 ; CHECK: %[[AFN_B0:[0-9]+]] = extractelement <2 x float> %y, i64 0
 ; CHECK: %[[AFN_RCP0:[0-9]+]] = call afn float @llvm.amdgcn.rcp.f32(float %[[AFN_B0]])
 ; CHECK: %[[AFN_MUL0:[0-9]+]] = fmul afn float %[[AFN_A0]], %[[AFN_RCP0]]
-; CHECK: %[[AFN_INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[AFN_MUL0]], i64 0
+; CHECK: %[[AFN_INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[AFN_MUL0]], i64 0
 ; CHECK: %[[AFN_A1:[0-9]+]] = extractelement <2 x float> %x.insert, i64 1
 ; CHECK: %[[AFN_B1:[0-9]+]] = extractelement <2 x float> %y, i64 1
 ; CHECK: %[[AFN_RCP1:[0-9]+]] = call afn float @llvm.amdgcn.rcp.f32(float %[[AFN_B1]])
@@ -283,7 +283,7 @@ define amdgpu_kernel void @rcp_fdiv_fpmath_vector_nonsplat(<2 x float> addrspace
 ; CHECK: %[[FAST_B0:[0-9]+]] = extractelement <2 x float> %y, i64 0
 ; CHECK: %[[FAST_RCP0:[0-9]+]] = call fast float @llvm.amdgcn.rcp.f32(float %[[FAST_B0]])
 ; CHECK: %[[FAST_MUL0:[0-9]+]] = fmul fast float %[[FAST_A0]], %[[FAST_RCP0]]
-; CHECK: %[[FAST_INS0:[0-9]+]] = insertelement <2 x float> undef, float %[[FAST_MUL0]], i64 0
+; CHECK: %[[FAST_INS0:[0-9]+]] = insertelement <2 x float> poison, float %[[FAST_MUL0]], i64 0
 ; CHECK: %[[FAST_A1:[0-9]+]] = extractelement <2 x float> %x.insert, i64 1
 ; CHECK: %[[FAST_B1:[0-9]+]] = extractelement <2 x float> %y, i64 1
 ; CHECK: %[[FAST_RCP1:[0-9]+]] = call fast float @llvm.amdgcn.rcp.f32(float %[[FAST_B1]])

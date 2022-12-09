@@ -17,6 +17,7 @@
 #include "mlir/Dialect/AMDGPU/AMDGPUDialect.h"
 #include "mlir/Dialect/AMX/AMXDialect.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/TransformOps/AffineTransformOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
@@ -119,6 +120,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
   memref::registerTransformDialectExtension(registry);
   scf::registerTransformDialectExtension(registry);
   gpu::registerTransformDialectExtension(registry);
+  affine::registerTransformDialectExtension(registry);
 
   // Register all external models.
   arith::registerBufferizableOpInterfaceExternalModels(registry);

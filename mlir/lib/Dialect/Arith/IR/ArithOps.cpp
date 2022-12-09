@@ -612,6 +612,23 @@ OpFoldResult arith::RemSIOp::fold(ArrayRef<Attribute> operands) {
 // AndIOp
 //===----------------------------------------------------------------------===//
 
+/// Fold `and(a, and(a, b))` to `and(a, b)`
+static Value foldAndIofAndI(arith::AndIOp op) {
+  for (bool reversePrev : {false, true}) {
+    auto prev = (reversePrev ? op.getRhs() : op.getLhs())
+                    .getDefiningOp<arith::AndIOp>();
+    if (!prev)
+      continue;
+
+    Value other = (reversePrev ? op.getLhs() : op.getRhs());
+    if (other != prev.getLhs() && other != prev.getRhs())
+      continue;
+
+    return prev.getResult();
+  }
+  return {};
+}
+
 OpFoldResult arith::AndIOp::fold(ArrayRef<Attribute> operands) {
   /// and(x, 0) -> 0
   if (matchPattern(getRhs(), m_Zero()))
@@ -630,6 +647,10 @@ OpFoldResult arith::AndIOp::fold(ArrayRef<Attribute> operands) {
                                           m_ConstantInt(&intValue))) &&
       intValue.isAllOnes())
     return IntegerAttr::get(getType(), 0);
+
+  /// and(a, and(a, b)) -> and(a, b)
+  if (Value result = foldAndIofAndI(*this))
+    return result;
 
   return constFoldBinaryOp<IntegerAttr>(
       operands, [](APInt a, const APInt &b) { return std::move(a) & b; });

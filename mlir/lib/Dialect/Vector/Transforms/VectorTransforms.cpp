@@ -157,7 +157,7 @@ static Optional<Value> createContractArithOp(Location loc, Value x, Value y,
   if (isInt) {
     if (kind == CombiningKind::MINF || kind == CombiningKind::MAXF)
       // Only valid for floating point types.
-      return Optional<Value>();
+      return None;
     mul = rewriter.create<arith::MulIOp>(loc, x, y);
   } else {
     // Float case.
@@ -166,7 +166,7 @@ static Optional<Value> createContractArithOp(Location loc, Value x, Value y,
         kind == CombiningKind::MAXSI || kind == CombiningKind::OR ||
         kind == CombiningKind::XOR)
       // Only valid for integer types.
-      return Optional<Value>();
+      return None;
     // Special case for fused multiply-add.
     if (acc && acc.getType().isa<VectorType>() && kind == CombiningKind::ADD) {
       return Optional<Value>(rewriter.create<vector::FMAOp>(loc, x, y, acc));

@@ -634,6 +634,26 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<FILERestrictedPtr>, ArgSpec<CharRestrictedPtr>, ArgSpec<IntType>, ArgSpec<SizeTType>]
           >,
           FunctionSpec<
+              "sscanf",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstCharRestrictedPtr>,
+               ArgSpec<ConstCharRestrictedPtr>,
+               ArgSpec<VarArgType>]
+          >,
+          FunctionSpec<
+              "scanf",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstCharRestrictedPtr>,
+               ArgSpec<VarArgType>]
+          >,
+          FunctionSpec<
+              "fscanf",
+              RetValSpec<IntType>,
+              [ArgSpec<FILERestrictedPtr>,
+               ArgSpec<ConstCharRestrictedPtr>,
+               ArgSpec<VarArgType>]
+          >,
+          FunctionSpec<
               "sprintf",
               RetValSpec<IntType>,
               [ArgSpec<CharRestrictedPtr>,

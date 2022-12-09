@@ -43,10 +43,10 @@ end
 
 ! CHECK-LABEL: func.func @_QMpolyPtest_nullify()
 ! CHECK: %[[C_DESC:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>> {bindc_name = "c", uniq_name = "_QMpolyFtest_nullifyEc"}
-! CHECK: %{{.*}} = fir.call @_FortranAPointerAllocate(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK: %{{.*}} = fir.call @_FortranAPointerAllocate(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK: %[[DECLARED_TYPE:.*]] = fir.address_of(@_QMpolyE.dt.p1) : !fir.ref<!fir.type<{{.*}}>>
 ! CHECK: %[[C_DESC_CAST:.*]] = fir.convert %[[C_DESC]] : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[TYPE_DESC_CAST:.*]] = fir.convert %[[DECLARED_TYPE]] : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<none>
 ! CHECK: %[[RANK:.*]] = arith.constant 0 : i32
 ! CHECK: %[[CORANK:.*]] = arith.constant 0 : i32
-! CHECK: %{{.*}} = fir.call @_FortranAPointerNullifyDerived(%[[C_DESC_CAST]], %[[TYPE_DESC_CAST]], %[[RANK]], %[[CORANK]]) : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
+! CHECK: %{{.*}} = fir.call @_FortranAPointerNullifyDerived(%[[C_DESC_CAST]], %[[TYPE_DESC_CAST]], %[[RANK]], %[[CORANK]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none

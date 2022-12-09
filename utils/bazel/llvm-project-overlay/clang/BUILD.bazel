@@ -1642,6 +1642,7 @@ cc_library(
         "//llvm:FrontendHLSL",
         "//llvm:FrontendOpenMP",
         "//llvm:IPO",
+        "//llvm:IRPrinter",
         "//llvm:IRReader",
         "//llvm:InstCombine",
         "//llvm:Instrumentation",

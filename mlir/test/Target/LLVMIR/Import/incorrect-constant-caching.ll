@@ -8,19 +8,20 @@
 ; only wrote minimum level of checks.
 
 %my_struct = type {i32, i8*}
-; CHECK: llvm.mlir.addressof @str0 : !llvm.ptr<array<5 x i8>>
-; CHECK: llvm.mlir.addressof @str1 : !llvm.ptr<array<5 x i8>>
-; CHECK: llvm.mlir.undef : !llvm.array<2 x struct<"my_struct", (i32, ptr<i8>)>>
-; CHECK: llvm.mlir.undef : !llvm.struct<"my_struct", (i32, ptr<i8>)>
 ; CHECK: llvm.mlir.constant(8 : i32) : i32
-; CHECK: llvm.insertvalue
+; CHECK: llvm.mlir.addressof @str0 : !llvm.ptr<array<5 x i8>>
+; CHECK: llvm.mlir.constant(0 : i32) : i32
 ; CHECK: llvm.getelementptr
-; CHECK: llvm.insertvalue
-; CHECK: llvm.insertvalue
 ; CHECK: llvm.mlir.undef : !llvm.struct<"my_struct", (i32, ptr<i8>)>
-; CHECK: llvm.mlir.constant(7 : i32) : i32
 ; CHECK: llvm.insertvalue
+; CHECK: llvm.insertvalue
+; CHECK: llvm.mlir.constant(7 : i32) : i32
+; CHECK: llvm.mlir.addressof @str1 : !llvm.ptr<array<5 x i8>>
 ; CHECK: llvm.getelementptr
+; CHECK: llvm.mlir.undef : !llvm.struct<"my_struct", (i32, ptr<i8>)>
+; CHECK: llvm.insertvalue
+; CHECK: llvm.insertvalue
+; CHECK: llvm.mlir.undef : !llvm.array<2 x struct<"my_struct", (i32, ptr<i8>)>>
 ; CHECK: llvm.insertvalue
 ; CHECK: llvm.insertvalue
 ; CHECK: llvm.return

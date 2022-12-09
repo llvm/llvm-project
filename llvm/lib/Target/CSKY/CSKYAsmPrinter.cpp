@@ -208,6 +208,9 @@ void CSKYAsmPrinter::emitMachineConstantPoolValue(
   } else if (CCPV->isJT()) {
     signed JTI = cast<CSKYConstantPoolJT>(CCPV)->getJTI();
     MCSym = GetJTISymbol(JTI);
+  } else if (CCPV->isConstPool()) {
+    const Constant *C = cast<CSKYConstantPoolConstant>(CCPV)->getConstantPool();
+    MCSym = GetCPISymbol(MCP->getConstantPoolIndex(C, Align(4)));
   } else {
     assert(CCPV->isExtSymbol() && "unrecognized constant pool value");
     StringRef Sym = cast<CSKYConstantPoolSymbol>(CCPV)->getSymbol();

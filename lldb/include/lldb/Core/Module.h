@@ -812,10 +812,12 @@ public:
 
   bool GetIsDynamicLinkEditor();
 
-  llvm::Expected<TypeSystem &>
+  llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language);
 
-  void ForEachTypeSystem(llvm::function_ref<bool(TypeSystem *)> callback);
+  /// Call \p callback for each \p TypeSystem in this \p Module.
+  /// Return true from callback to keep iterating, false to stop iterating.
+  void ForEachTypeSystem(llvm::function_ref<bool(lldb::TypeSystemSP)> callback);
 
   // Special error functions that can do printf style formatting that will
   // prepend the message with something appropriate for this module (like the

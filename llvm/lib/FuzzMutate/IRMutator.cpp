@@ -162,8 +162,8 @@ void InstDeleterIRStrategy::mutate(Function &F, RandomIRBuilder &IB) {
   auto RS = makeSampler<Instruction *>(IB.Rand);
   for (Instruction &Inst : instructions(F)) {
     // TODO: We can't handle these instructions.
-    if (Inst.isTerminator() || Inst.isEHPad() ||
-        Inst.isSwiftError() || isa<PHINode>(Inst))
+    if (Inst.isTerminator() || Inst.isEHPad() || Inst.isSwiftError() ||
+        isa<PHINode>(Inst))
       continue;
 
     RS.sample(&Inst, /*Weight=*/1);
@@ -218,8 +218,8 @@ void InstModificationIRStrategy::mutate(Instruction &Inst,
   case Instruction::Mul:
   case Instruction::Sub:
   case Instruction::Shl:
-    Modifications.push_back([&Inst]() { Inst.setHasNoSignedWrap(true); }),
-        Modifications.push_back([&Inst]() { Inst.setHasNoSignedWrap(false); });
+    Modifications.push_back([&Inst]() { Inst.setHasNoSignedWrap(true); });
+    Modifications.push_back([&Inst]() { Inst.setHasNoSignedWrap(false); });
     Modifications.push_back([&Inst]() { Inst.setHasNoUnsignedWrap(true); });
     Modifications.push_back([&Inst]() { Inst.setHasNoUnsignedWrap(false); });
 
@@ -242,6 +242,54 @@ void InstModificationIRStrategy::mutate(Instruction &Inst,
     Modifications.push_back([GEP]() { GEP->setIsInBounds(true); });
     Modifications.push_back([GEP]() { GEP->setIsInBounds(false); });
     break;
+  }
+
+  // Randomly switch operands of instructions
+  std::pair<int, int> NoneItem({-1, -1}), ShuffleItems(NoneItem);
+  switch (Inst.getOpcode()) {
+  case Instruction::SDiv:
+  case Instruction::UDiv:
+  case Instruction::SRem:
+  case Instruction::URem:
+  case Instruction::FDiv:
+  case Instruction::FRem: {
+    // Verify that the after shuffle the second operand is not
+    // constant 0.
+    Value *Operand = Inst.getOperand(0);
+    if (Constant *C = dyn_cast<Constant>(Operand)) {
+      if (!C->isZeroValue()) {
+        ShuffleItems = {0, 1};
+      }
+    }
+    break;
+  }
+  case Instruction::Select:
+    ShuffleItems = {1, 2};
+    break;
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+  case Instruction::ShuffleVector:
+    ShuffleItems = {0, 1};
+    break;
+  }
+  if (ShuffleItems != NoneItem) {
+    Modifications.push_back([&Inst, &ShuffleItems]() {
+      Value *Op0 = Inst.getOperand(ShuffleItems.first);
+      Inst.setOperand(ShuffleItems.first, Inst.getOperand(ShuffleItems.second));
+      Inst.setOperand(ShuffleItems.second, Op0);
+    });
   }
 
   auto RS = makeSampler(IB.Rand, Modifications);

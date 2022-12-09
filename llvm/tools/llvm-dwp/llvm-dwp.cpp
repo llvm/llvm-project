@@ -195,7 +195,7 @@ int main(int argc, char **argv) {
     OS = &OutFile.os();
   } else {
     BOS.emplace(OutFile.os());
-    OS = BOS.getPointer();
+    OS = &*BOS;
   }
 
   std::unique_ptr<MCStreamer> MS(TheTarget->createMCObjectStreamer(

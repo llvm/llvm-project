@@ -216,7 +216,7 @@ static inline SourcePred matchScalarOfFirstType() {
   return {Pred, Make};
 }
 
-} // end fuzzerop namespace
-} // end llvm namespace
+} // namespace fuzzerop
+} // namespace llvm
 
 #endif // LLVM_FUZZMUTATE_OPDESCRIPTOR_H

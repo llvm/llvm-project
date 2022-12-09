@@ -33,9 +33,7 @@ equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first
 template <class _InputIterator1, class _InputIterator2>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2) {
-  typedef typename iterator_traits<_InputIterator1>::value_type __v1;
-  typedef typename iterator_traits<_InputIterator2>::value_type __v2;
-  return _VSTD::equal(__first1, __last1, __first2, __equal_to<__v1, __v2>());
+  return std::equal(__first1, __last1, __first2, __equal_to());
 }
 
 #if _LIBCPP_STD_VER > 11
@@ -72,11 +70,14 @@ equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first
 template <class _InputIterator1, class _InputIterator2>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2) {
-  typedef typename iterator_traits<_InputIterator1>::value_type __v1;
-  typedef typename iterator_traits<_InputIterator2>::value_type __v2;
-  return _VSTD::__equal(__first1, __last1, __first2, __last2, __equal_to<__v1, __v2>(),
-                        typename iterator_traits<_InputIterator1>::iterator_category(),
-                        typename iterator_traits<_InputIterator2>::iterator_category());
+  return std::__equal(
+      __first1,
+      __last1,
+      __first2,
+      __last2,
+      __equal_to(),
+      typename iterator_traits<_InputIterator1>::iterator_category(),
+      typename iterator_traits<_InputIterator2>::iterator_category());
 }
 #endif
 

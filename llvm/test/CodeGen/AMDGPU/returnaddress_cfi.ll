@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O0 -verify-machineinstrs < %s | FileCheck %s
 
+; XFAIL: *
 
 ; Function Attrs: convergent mustprogress nounwind
 define hidden void @_ZL3barv_spill_RA_to_vgpr() #0 {
@@ -88,13 +89,12 @@ define hidden void @_ZL3barv_spill_RA_to_memory() #0 {
 ; CHECK-NEXT:    s_add_i32 s32, s32, 0x6400
 
 ; CHECK:    s_waitcnt vmcnt(0)
-; CHECK:    s_mov_b64 exec, s[16:17]
-; CHECK:    s_mov_b64 s[16:17], exec
-; CHECK:    s_mov_b64 exec, 3
+; CHECK:    s_mov_b64 exec, s[20:21]
+; CHECK:    s_mov_b64 s[18:19], exec
+; CHECK:    s_mov_b64 exec, 1
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:384
-; CHECK-NEXT:    v_writelane_b32 v0, s30, 0
-; CHECK-NEXT:    v_writelane_b32 v0, s31, 1
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:372 ; 4-byte Folded Spill
+; CHECK-NEXT:    v_writelane_b32 v0, s14, 0
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:236 ; 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 16, 23808
 ; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:384
 

@@ -4,7 +4,7 @@
 // RUN: | FileCheck --check-prefixes=COMMON,COMMONIR,UNCONSTRAINED %s
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
 // RUN:     -S -disable-O0-optnone \
-// RUN:  -ffp-exception-behavior=strict -fexperimental-strict-floating-point \
+// RUN:  -ffp-exception-behavior=strict \
 // RUN:  -flax-vector-conversions=none -emit-llvm -o - %s | opt -S -passes=mem2reg \
 // RUN: | FileCheck --check-prefixes=COMMON,COMMONIR,CONSTRAINED %s
 

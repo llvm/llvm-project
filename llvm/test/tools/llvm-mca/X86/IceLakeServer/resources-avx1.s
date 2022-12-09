@@ -1365,14 +1365,14 @@ vzeroupper
 # CHECK-NEXT:  2      7     0.50    *                   vpabsd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        vpabsw	%xmm0, %xmm2
 # CHECK-NEXT:  2      7     0.50    *                   vpabsw	(%rax), %xmm2
-# CHECK-NEXT:  1      1     1.00                        vpackssdw	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      7     1.00    *                   vpackssdw	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      1     1.00                        vpacksswb	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      7     1.00    *                   vpacksswb	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      1     1.00                        vpackusdw	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      7     1.00    *                   vpackusdw	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      1     1.00                        vpackuswb	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      7     1.00    *                   vpackuswb	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      3     1.00                        vpackssdw	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  2      10    1.00    *                   vpackssdw	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      3     1.00                        vpacksswb	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  2      10    1.00    *                   vpacksswb	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      3     1.00                        vpackusdw	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  2      10    1.00    *                   vpackusdw	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      3     1.00                        vpackuswb	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  2      10    1.00    *                   vpackuswb	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.33                        vpaddb	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  2      7     0.50    *                   vpaddb	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.33                        vpaddd	%xmm0, %xmm1, %xmm2

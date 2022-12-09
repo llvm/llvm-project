@@ -310,13 +310,13 @@ def : Pat<(store (i64 0), ADDRri:$dst), (STXri ADDRri:$dst, (i64 G0))>;
 // The icc flags correspond to the 32-bit result, and the xcc are for the
 // full 64-bit result.
 //
-// We reuse CMPICC SDNodes for compares, but use new BRXCC branch nodes for
+// We reuse CMPICC SDNodes for compares, but use new BPXCC branch nodes for
 // 64-bit compares. See LowerBR_CC.
 
 let Predicates = [Is64Bit] in {
 
 let Uses = [ICC], cc = 0b10 in
-  defm BPX : IPredBranch<"%xcc", [(SPbrxcc bb:$imm19, imm:$cond)]>;
+  defm BPX : IPredBranch<"%xcc", [(SPbpxcc bb:$imm19, imm:$cond)]>;
 
 // Conditional moves on %xcc.
 let Uses = [ICC], Constraints = "$f = $rd" in {

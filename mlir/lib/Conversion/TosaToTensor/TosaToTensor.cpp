@@ -38,7 +38,7 @@ public:
     for (const auto &i : llvm::enumerate(sliceOp.getSize())) {
       int64_t size = i.value().cast<IntegerAttr>().getInt();
       size_t index = i.index();
-      sizes.push_back(size == -1 ? ShapedType::kDynamicSize : size);
+      sizes.push_back(size == -1 ? ShapedType::kDynamic : size);
       if (!ShapedType::isDynamic(sizes.back()))
         continue;
 

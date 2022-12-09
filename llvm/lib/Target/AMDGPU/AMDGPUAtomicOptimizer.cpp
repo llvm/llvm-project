@@ -626,7 +626,7 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
   if (NeedResult) {
     // Create a PHI node to get our new atomic result into the exit block.
     PHINode *const PHI = B.CreatePHI(Ty, 2);
-    PHI->addIncoming(UndefValue::get(Ty), EntryBB);
+    PHI->addIncoming(PoisonValue::get(Ty), EntryBB);
     PHI->addIncoming(NewI, SingleLaneTerminator->getParent());
 
     // We need to broadcast the value who was the lowest active lane (the first
@@ -643,7 +643,7 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
       CallInst *const ReadFirstLaneHi =
           B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, ExtractHi);
       Value *const PartialInsert = B.CreateInsertElement(
-          UndefValue::get(VecTy), ReadFirstLaneLo, B.getInt32(0));
+          PoisonValue::get(VecTy), ReadFirstLaneLo, B.getInt32(0));
       Value *const Insert =
           B.CreateInsertElement(PartialInsert, ReadFirstLaneHi, B.getInt32(1));
       BroadcastI = B.CreateBitCast(Insert, Ty);
@@ -690,7 +690,7 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
       B.SetInsertPoint(PixelExitBB->getFirstNonPHI());
 
       PHINode *const PHI = B.CreatePHI(Ty, 2);
-      PHI->addIncoming(UndefValue::get(Ty), PixelEntryBB);
+      PHI->addIncoming(PoisonValue::get(Ty), PixelEntryBB);
       PHI->addIncoming(Result, I.getParent());
       I.replaceAllUsesWith(PHI);
     } else {

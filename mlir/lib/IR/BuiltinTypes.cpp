@@ -608,7 +608,7 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
   if (!BaseMemRefType::isValidElementType(elementType))
     return emitError() << "invalid memref element type";
 
-  // Negative sizes are not allowed except for `kDynamicSize`.
+  // Negative sizes are not allowed except for `kDynamic`.
   for (int64_t s : shape)
     if (s < 0 && !ShapedType::isDynamic(s))
       return emitError() << "invalid memref size";
@@ -705,7 +705,7 @@ static LogicalResult extractStrides(AffineExpr e,
 }
 
 /// A stride specification is a list of integer values that are either static
-/// or dynamic (encoded with ShapedType::kDynamicStrideOrOffset). Strides encode
+/// or dynamic (encoded with ShapedType::kDynamic). Strides encode
 /// the distance in the number of elements between successive entries along a
 /// particular dimension.
 ///
@@ -794,12 +794,12 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
   if (auto cst = offsetExpr.dyn_cast<AffineConstantExpr>())
     offset = cst.getValue();
   else
-    offset = ShapedType::kDynamicStrideOrOffset;
+    offset = ShapedType::kDynamic;
   for (auto e : strideExprs) {
     if (auto c = e.dyn_cast<AffineConstantExpr>())
       strides.push_back(c.getValue());
     else
-      strides.push_back(ShapedType::kDynamicStrideOrOffset);
+      strides.push_back(ShapedType::kDynamic);
   }
   return success();
 }

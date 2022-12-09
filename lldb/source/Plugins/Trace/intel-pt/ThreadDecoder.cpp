@@ -36,7 +36,7 @@ Expected<Optional<uint64_t>> ThreadDecoder::FindLowestTSC() {
 }
 
 Expected<DecodedThreadSP> ThreadDecoder::Decode() {
-  if (!m_decoded_thread.hasValue()) {
+  if (!m_decoded_thread.has_value()) {
     if (Expected<DecodedThreadSP> decoded_thread = DoDecode()) {
       m_decoded_thread = *decoded_thread;
     } else {

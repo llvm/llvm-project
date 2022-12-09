@@ -10,7 +10,7 @@ integer :: allocated_x
 !CHECK: omp.taskgroup  allocate(%{{.*}} : i32 -> %0 : !fir.ref<i32>)
 !$omp taskgroup allocate(omp_high_bw_mem_alloc: allocated_x)
 !$omp task
-!CHECK: fir.call @_QPwork() : () -> ()
+!CHECK: fir.call @_QPwork() {{.*}}: () -> ()
    call work()
 !CHECK: omp.terminator
 !$omp end task

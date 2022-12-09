@@ -46,7 +46,7 @@ end module
 ! CHECK:         %[[VAL_16:.*]] = fir.do_loop %[[VAL_17:.*]] = %[[VAL_14]] to %[[VAL_15]] step %[[VAL_13]] unordered iter_args(%[[VAL_18:.*]] = %[[VAL_3]]) -> (!fir.array<100x!fir.type<_QMdefined_assignmentsTt{i:i32}>>) {
 ! CHECK:           %[[VAL_19:.*]] = fir.array_access %[[VAL_12]], %[[VAL_17]] : (!fir.array<100x!fir.type<_QMdefined_assignmentsTt{i:i32}>>, index) -> !fir.ref<!fir.type<_QMdefined_assignmentsTt{i:i32}>>
 ! CHECK:           %[[VAL_20:.*]]:2 = fir.array_modify %[[VAL_18]], %[[VAL_17]] : (!fir.array<100x!fir.type<_QMdefined_assignmentsTt{i:i32}>>, index) -> (!fir.ref<!fir.type<_QMdefined_assignmentsTt{i:i32}>>, !fir.array<100x!fir.type<_QMdefined_assignmentsTt{i:i32}>>)
-! CHECK:           fir.call @_QPassign_t(%[[VAL_20]]#0, %[[VAL_19]]) : (!fir.ref<!fir.type<_QMdefined_assignmentsTt{i:i32}>>, !fir.ref<!fir.type<_QMdefined_assignmentsTt{i:i32}>>) -> ()
+! CHECK:           fir.call @_QPassign_t(%[[VAL_20]]#0, %[[VAL_19]]) {{.*}}: (!fir.ref<!fir.type<_QMdefined_assignmentsTt{i:i32}>>, !fir.ref<!fir.type<_QMdefined_assignmentsTt{i:i32}>>) -> ()
 ! CHECK:           fir.result %[[VAL_20]]#1 : !fir.array<100x!fir.type<_QMdefined_assignmentsTt{i:i32}>>
 ! CHECK:         }
 ! CHECK:         fir.array_merge_store %[[VAL_3]], %[[VAL_21:.*]] to %[[VAL_0]] : !fir.array<100x!fir.type<_QMdefined_assignmentsTt{i:i32}>>, !fir.array<100x!fir.type<_QMdefined_assignmentsTt{i:i32}>>, !fir.ref<!fir.array<100x!fir.type<_QMdefined_assignmentsTt{i:i32}>>>
@@ -78,7 +78,7 @@ end module
 ! CHECK:           %[[VAL_23:.*]]:2 = fir.array_modify %[[VAL_20]], %[[VAL_19]] : (!fir.array<100xf32>, index) -> (!fir.ref<f32>, !fir.array<100xf32>)
 ! CHECK:           %[[VAL_24:.*]] = fir.convert %[[VAL_22]] : (i1) -> !fir.logical<4>
 ! CHECK:           fir.store %[[VAL_24]] to %[[VAL_1]] : !fir.ref<!fir.logical<4>>
-! CHECK:           fir.call @_QPassign_logical_to_real(%[[VAL_23]]#0, %[[VAL_1]]) : (!fir.ref<f32>, !fir.ref<!fir.logical<4>>) -> ()
+! CHECK:           fir.call @_QPassign_logical_to_real(%[[VAL_23]]#0, %[[VAL_1]]) {{.*}}: (!fir.ref<f32>, !fir.ref<!fir.logical<4>>) -> ()
 ! CHECK:           fir.result %[[VAL_23]]#1 : !fir.array<100xf32>
 ! CHECK:         }
 ! CHECK:         fir.array_merge_store %[[VAL_4]], %[[VAL_25:.*]] to %[[VAL_0]] : !fir.array<100xf32>, !fir.array<100xf32>, !fir.ref<!fir.array<100xf32>>
@@ -101,7 +101,7 @@ end module
 ! CHECK:           %[[VAL_15:.*]] = fir.array_fetch %[[VAL_8]], %[[VAL_13]] : (!fir.array<100xf32>, index) -> f32
 ! CHECK:           %[[VAL_16:.*]]:2 = fir.array_modify %[[VAL_14]], %[[VAL_13]] : (!fir.array<100x!fir.logical<4>>, index) -> (!fir.ref<!fir.logical<4>>, !fir.array<100x!fir.logical<4>>)
 ! CHECK:           fir.store %[[VAL_15]] to %[[VAL_2]] : !fir.ref<f32>
-! CHECK:           fir.call @_QPassign_real_to_logical(%[[VAL_16]]#0, %[[VAL_2]]) : (!fir.ref<!fir.logical<4>>, !fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPassign_real_to_logical(%[[VAL_16]]#0, %[[VAL_2]]) {{.*}}: (!fir.ref<!fir.logical<4>>, !fir.ref<f32>) -> ()
 ! CHECK:           fir.result %[[VAL_16]]#1 : !fir.array<100x!fir.logical<4>>
 ! CHECK:         }
 ! CHECK:         fir.array_merge_store %[[VAL_6]], %[[VAL_17:.*]] to %[[VAL_0]] : !fir.array<100x!fir.logical<4>>, !fir.array<100x!fir.logical<4>>, !fir.ref<!fir.array<100x!fir.logical<4>>>
@@ -125,7 +125,7 @@ end module
 ! CHECK:           %[[VAL_16:.*]] = fir.box_elesize %[[VAL_1]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
 ! CHECK:           %[[VAL_17:.*]]:2 = fir.array_modify %[[VAL_14]], %[[VAL_13]] : (!fir.array<?xi32>, index) -> (!fir.ref<i32>, !fir.array<?xi32>)
 ! CHECK:           %[[VAL_18:.*]] = fir.emboxchar %[[VAL_15]], %[[VAL_16]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:           fir.call @_QPsfrom_char(%[[VAL_17]]#0, %[[VAL_18]]) : (!fir.ref<i32>, !fir.boxchar<1>) -> ()
+! CHECK:           fir.call @_QPsfrom_char(%[[VAL_17]]#0, %[[VAL_18]]) {{.*}}: (!fir.ref<i32>, !fir.boxchar<1>) -> ()
 ! CHECK:           fir.result %[[VAL_17]]#1 : !fir.array<?xi32>
 ! CHECK:         }
 ! CHECK:         fir.array_merge_store %[[VAL_4]], %[[VAL_19:.*]] to %[[VAL_0]] : !fir.array<?xi32>, !fir.array<?xi32>, !fir.box<!fir.array<?xi32>>
@@ -148,7 +148,7 @@ end module
 ! CHECK:           %[[VAL_15:.*]] = fir.box_elesize %[[VAL_1]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
 ! CHECK:           %[[VAL_16:.*]] = fir.emboxchar %[[VAL_14]]#0, %[[VAL_15]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 ! CHECK:           fir.store %[[VAL_13]] to %[[VAL_2]] : !fir.ref<i32>
-! CHECK:           fir.call @_QPsto_char(%[[VAL_16]], %[[VAL_2]]) : (!fir.boxchar<1>, !fir.ref<i32>) -> ()
+! CHECK:           fir.call @_QPsto_char(%[[VAL_16]], %[[VAL_2]]) {{.*}}: (!fir.boxchar<1>, !fir.ref<i32>) -> ()
 ! CHECK:           fir.result %[[VAL_14]]#1 : !fir.array<?x!fir.char<1,?>>
 ! CHECK:         }
 ! CHECK:         fir.array_merge_store %[[VAL_5]], %[[VAL_17:.*]] to %[[VAL_1]] : !fir.array<?x!fir.char<1,?>>, !fir.array<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
@@ -233,7 +233,7 @@ end subroutine
 ! CHECK:           %[[VAL_29:.*]] = arith.subi %[[VAL_28]], %[[VAL_25]] : index
 ! CHECK:           %[[VAL_30:.*]]:2 = fir.array_modify %[[VAL_17]], %[[VAL_29]] : (!fir.array<10x!fir.logical<4>>, index) -> (!fir.ref<!fir.logical<4>>, !fir.array<10x!fir.logical<4>>)
 ! CHECK:           fir.store %[[VAL_24]] to %[[VAL_2]] : !fir.ref<f32>
-! CHECK:           fir.call @_QPassign_real_to_logical(%[[VAL_30]]#0, %[[VAL_2]]) : (!fir.ref<!fir.logical<4>>, !fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPassign_real_to_logical(%[[VAL_30]]#0, %[[VAL_2]]) {{.*}}: (!fir.ref<!fir.logical<4>>, !fir.ref<f32>) -> ()
 ! CHECK:           fir.result %[[VAL_30]]#1 : !fir.array<10x!fir.logical<4>>
 ! CHECK:         }
 ! CHECK:         fir.array_merge_store %[[VAL_12]], %[[VAL_31:.*]] to %[[VAL_0]] : !fir.array<10x!fir.logical<4>>, !fir.array<10x!fir.logical<4>>, !fir.ref<!fir.array<10x!fir.logical<4>>>
@@ -271,7 +271,7 @@ end subroutine
 ! CHECK:           %[[VAL_29:.*]]:2 = fir.array_modify %[[VAL_14]], %[[VAL_28]] : (!fir.array<10xf32>, index) -> (!fir.ref<f32>, !fir.array<10xf32>)
 ! CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_23]] : (i1) -> !fir.logical<4>
 ! CHECK:           fir.store %[[VAL_30]] to %[[VAL_2]] : !fir.ref<!fir.logical<4>>
-! CHECK:           fir.call @_QPassign_logical_to_real(%[[VAL_29]]#0, %[[VAL_2]]) : (!fir.ref<f32>, !fir.ref<!fir.logical<4>>) -> ()
+! CHECK:           fir.call @_QPassign_logical_to_real(%[[VAL_29]]#0, %[[VAL_2]]) {{.*}}: (!fir.ref<f32>, !fir.ref<!fir.logical<4>>) -> ()
 ! CHECK:           fir.result %[[VAL_29]]#1 : !fir.array<10xf32>
 ! CHECK:         }
 ! CHECK:         fir.array_merge_store %[[VAL_11]], %[[VAL_31:.*]] to %[[VAL_1]] : !fir.array<10xf32>, !fir.array<10xf32>, !fir.ref<!fir.array<10xf32>>
@@ -317,7 +317,7 @@ end subroutine
 ! CHECK:             %[[VAL_40:.*]] = fir.array_fetch %[[VAL_27]], %[[VAL_32]] : (!fir.array<10xf32>, index) -> f32
 ! CHECK:             %[[VAL_41:.*]]:2 = fir.array_modify %[[VAL_33]], %[[VAL_32]] : (!fir.array<10x!fir.logical<4>>, index) -> (!fir.ref<!fir.logical<4>>, !fir.array<10x!fir.logical<4>>)
 ! CHECK:             fir.store %[[VAL_40]] to %[[VAL_3]] : !fir.ref<f32>
-! CHECK:             fir.call @_QPassign_real_to_logical(%[[VAL_41]]#0, %[[VAL_3]]) : (!fir.ref<!fir.logical<4>>, !fir.ref<f32>) -> ()
+! CHECK:             fir.call @_QPassign_real_to_logical(%[[VAL_41]]#0, %[[VAL_3]]) {{.*}}: (!fir.ref<!fir.logical<4>>, !fir.ref<f32>) -> ()
 ! CHECK:             fir.result %[[VAL_41]]#1 : !fir.array<10x!fir.logical<4>>
 ! CHECK:           } else {
 ! CHECK:             fir.result %[[VAL_33]] : !fir.array<10x!fir.logical<4>>
@@ -370,7 +370,7 @@ end subroutine
 ! CHECK:             %[[VAL_42:.*]]:2 = fir.array_modify %[[VAL_33]], %[[VAL_32]] : (!fir.array<10xf32>, index) -> (!fir.ref<f32>, !fir.array<10xf32>)
 ! CHECK:             %[[VAL_43:.*]] = fir.convert %[[VAL_41]] : (i1) -> !fir.logical<4>
 ! CHECK:             fir.store %[[VAL_43]] to %[[VAL_3]] : !fir.ref<!fir.logical<4>>
-! CHECK:             fir.call @_QPassign_logical_to_real(%[[VAL_42]]#0, %[[VAL_3]]) : (!fir.ref<f32>, !fir.ref<!fir.logical<4>>) -> ()
+! CHECK:             fir.call @_QPassign_logical_to_real(%[[VAL_42]]#0, %[[VAL_3]]) {{.*}}: (!fir.ref<f32>, !fir.ref<!fir.logical<4>>) -> ()
 ! CHECK:             fir.result %[[VAL_42]]#1 : !fir.array<10xf32>
 ! CHECK:           } else {
 ! CHECK:             fir.result %[[VAL_33]] : !fir.array<10xf32>
@@ -413,7 +413,7 @@ end subroutine
 ! CHECK:           %[[VAL_29:.*]] = arith.subi %[[VAL_28]], %[[VAL_25]] : index
 ! CHECK:           %[[VAL_30:.*]]:2 = fir.array_modify %[[VAL_17]], %[[VAL_29]] : (!fir.array<100x!fir.logical<4>>, index) -> (!fir.ref<!fir.logical<4>>, !fir.array<100x!fir.logical<4>>)
 ! CHECK:           fir.store %[[VAL_24]] to %[[VAL_2]] : !fir.ref<i32>
-! CHECK:           fir.call @_QPassign_integer_to_logical(%[[VAL_30]]#0, %[[VAL_2]]) : (!fir.ref<!fir.logical<4>>, !fir.ref<i32>) -> ()
+! CHECK:           fir.call @_QPassign_integer_to_logical(%[[VAL_30]]#0, %[[VAL_2]]) {{.*}}: (!fir.ref<!fir.logical<4>>, !fir.ref<i32>) -> ()
 ! CHECK:           fir.result %[[VAL_30]]#1 : !fir.array<100x!fir.logical<4>>
 ! CHECK:         }
 ! CHECK:         fir.array_merge_store %[[VAL_12]], %[[VAL_31:.*]] to %[[VAL_0]] : !fir.array<100x!fir.logical<4>>, !fir.array<100x!fir.logical<4>>, !fir.ref<!fir.array<100x!fir.logical<4>>>
@@ -435,7 +435,7 @@ end subroutine
 ! CHECK:         %[[VAL_12:.*]] = fir.do_loop %[[VAL_13:.*]] = %[[VAL_6]] to %[[VAL_8]] step %[[VAL_9]] unordered iter_args(%[[VAL_14:.*]] = %[[VAL_11]]) -> (!fir.array<10x!fir.logical<4>>) {
 ! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_13]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_15]] to %[[VAL_3]] : !fir.ref<i32>
-! CHECK:           %[[VAL_16:.*]] = fir.call @_QPreturns_alloc(%[[VAL_3]]) : (!fir.ref<i32>) -> !fir.box<!fir.heap<f32>>
+! CHECK:           %[[VAL_16:.*]] = fir.call @_QPreturns_alloc(%[[VAL_3]]) {{.*}}: (!fir.ref<i32>) -> !fir.box<!fir.heap<f32>>
 ! CHECK:           fir.save_result %[[VAL_16]] to %[[VAL_2]] : !fir.box<!fir.heap<f32>>, !fir.ref<!fir.box<!fir.heap<f32>>>
 ! CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<f32>>>
 ! CHECK:           %[[VAL_18:.*]] = fir.box_addr %[[VAL_17]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
@@ -446,7 +446,7 @@ end subroutine
 ! CHECK:           %[[VAL_23:.*]] = arith.subi %[[VAL_22]], %[[VAL_19]] : index
 ! CHECK:           %[[VAL_24:.*]]:2 = fir.array_modify %[[VAL_14]], %[[VAL_23]] : (!fir.array<10x!fir.logical<4>>, index) -> (!fir.ref<!fir.logical<4>>, !fir.array<10x!fir.logical<4>>)
 ! CHECK:           %[[VAL_25:.*]] = fir.convert %[[VAL_18]] : (!fir.heap<f32>) -> !fir.ref<f32>
-! CHECK:           fir.call @_QPassign_real_to_logical(%[[VAL_24]]#0, %[[VAL_25]]) : (!fir.ref<!fir.logical<4>>, !fir.ref<f32>) -> ()
+! CHECK:           fir.call @_QPassign_real_to_logical(%[[VAL_24]]#0, %[[VAL_25]]) {{.*}}: (!fir.ref<!fir.logical<4>>, !fir.ref<f32>) -> ()
 ! CHECK:           %[[VAL_26:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<f32>>>
 ! CHECK:           %[[VAL_27:.*]] = fir.box_addr %[[VAL_26]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
 ! CHECK:           %[[VAL_28:.*]] = fir.convert %[[VAL_27]] : (!fir.heap<f32>) -> i64
@@ -570,7 +570,7 @@ end subroutine
 ! CHECK:             %[[VAL_51:.*]] = arith.addi %[[VAL_49]], %[[VAL_50]] : index
 ! CHECK:             %[[VAL_52:.*]]:2 = fir.array_modify %[[VAL_44]], %[[VAL_21]], %[[VAL_51]] : (!fir.array<?x?x!fir.logical<4>>, index, index) -> (!fir.ref<!fir.logical<4>>, !fir.array<?x?x!fir.logical<4>>)
 ! CHECK:             fir.store %[[VAL_48]] to %[[VAL_2]] : !fir.ref<f32>
-! CHECK:             fir.call @_QPassign_real_to_logical(%[[VAL_52]]#0, %[[VAL_2]]) : (!fir.ref<!fir.logical<4>>, !fir.ref<f32>) -> ()
+! CHECK:             fir.call @_QPassign_real_to_logical(%[[VAL_52]]#0, %[[VAL_2]]) {{.*}}: (!fir.ref<!fir.logical<4>>, !fir.ref<f32>) -> ()
 ! CHECK:             fir.result %[[VAL_52]]#1 : !fir.array<?x?x!fir.logical<4>>
 ! CHECK:           }
 ! CHECK:           fir.result %[[VAL_53:.*]] : !fir.array<?x?x!fir.logical<4>>
@@ -616,7 +616,7 @@ end subroutine
 ! CHECK:           %[[VAL_28:.*]] = arith.subi %[[VAL_27]], %[[VAL_24]] : index
 ! CHECK:           %[[VAL_29:.*]]:2 = fir.array_modify %[[VAL_12]], %[[VAL_28]] : (!fir.array<?xi32>, index) -> (!fir.ref<i32>, !fir.array<?xi32>)
 ! CHECK:           %[[VAL_30:.*]] = fir.emboxchar %[[VAL_22]], %[[VAL_23]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:           fir.call @_QPsfrom_char(%[[VAL_29]]#0, %[[VAL_30]]) : (!fir.ref<i32>, !fir.boxchar<1>) -> ()
+! CHECK:           fir.call @_QPsfrom_char(%[[VAL_29]]#0, %[[VAL_30]]) {{.*}}: (!fir.ref<i32>, !fir.boxchar<1>) -> ()
 ! CHECK:           fir.result %[[VAL_29]]#1 : !fir.array<?xi32>
 ! CHECK:         }
 ! CHECK:         fir.array_merge_store %[[VAL_8]], %[[VAL_31:.*]] to %[[VAL_0]] : !fir.array<?xi32>, !fir.array<?xi32>, !fir.box<!fir.array<?xi32>>
@@ -652,7 +652,7 @@ end subroutine
 ! CHECK:           %[[VAL_27:.*]] = fir.box_elesize %[[VAL_1]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
 ! CHECK:           %[[VAL_28:.*]] = fir.emboxchar %[[VAL_26]]#0, %[[VAL_27]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 ! CHECK:           fir.store %[[VAL_20]] to %[[VAL_2]] : !fir.ref<i32>
-! CHECK:           fir.call @_QPsto_char(%[[VAL_28]], %[[VAL_2]]) : (!fir.boxchar<1>, !fir.ref<i32>) -> ()
+! CHECK:           fir.call @_QPsto_char(%[[VAL_28]], %[[VAL_2]]) {{.*}}: (!fir.boxchar<1>, !fir.ref<i32>) -> ()
 ! CHECK:           fir.result %[[VAL_26]]#1 : !fir.array<?x!fir.char<1,?>>
 ! CHECK:         }
 ! CHECK:         fir.array_merge_store %[[VAL_9]], %[[VAL_29:.*]] to %[[VAL_1]] : !fir.array<?x!fir.char<1,?>>, !fir.array<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
@@ -737,7 +737,7 @@ end subroutine
 ! CHECK:             %[[VAL_54:.*]] = arith.addi %[[VAL_52]], %[[VAL_53]] : index
 ! CHECK:             %[[VAL_55:.*]]:2 = fir.array_modify %[[VAL_43]], %[[VAL_20]], %[[VAL_54]] : (!fir.array<?x?xi32>, index, index) -> (!fir.ref<i32>, !fir.array<?x?xi32>)
 ! CHECK:             %[[VAL_56:.*]] = fir.emboxchar %[[VAL_50]], %[[VAL_51]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:             fir.call @_QPsfrom_char(%[[VAL_55]]#0, %[[VAL_56]]) : (!fir.ref<i32>, !fir.boxchar<1>) -> ()
+! CHECK:             fir.call @_QPsfrom_char(%[[VAL_55]]#0, %[[VAL_56]]) {{.*}}: (!fir.ref<i32>, !fir.boxchar<1>) -> ()
 ! CHECK:             fir.result %[[VAL_55]]#1 : !fir.array<?x?xi32>
 ! CHECK:           }
 ! CHECK:           fir.result %[[VAL_57:.*]] : !fir.array<?x?xi32>
@@ -799,7 +799,7 @@ end subroutine
 ! CHECK:             %[[VAL_53:.*]] = fir.box_elesize %[[VAL_1]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> index
 ! CHECK:             %[[VAL_54:.*]] = fir.emboxchar %[[VAL_52]]#0, %[[VAL_53]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 ! CHECK:             fir.store %[[VAL_48]] to %[[VAL_2]] : !fir.ref<i32>
-! CHECK:             fir.call @_QPsto_char(%[[VAL_54]], %[[VAL_2]]) : (!fir.boxchar<1>, !fir.ref<i32>) -> ()
+! CHECK:             fir.call @_QPsto_char(%[[VAL_54]], %[[VAL_2]]) {{.*}}: (!fir.boxchar<1>, !fir.ref<i32>) -> ()
 ! CHECK:             fir.result %[[VAL_52]]#1 : !fir.array<?x?x!fir.char<1,?>>
 ! CHECK:           }
 ! CHECK:           fir.result %[[VAL_55:.*]] : !fir.array<?x?x!fir.char<1,?>>

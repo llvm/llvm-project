@@ -1422,7 +1422,7 @@ void SIRegisterInfo::buildSpillLoadStore(
     // TODO: Clobbering SCC is not necessary for scratch instructions in the
     // entry.
     if (RS) {
-      SOffset = RS->scavengeRegister(&AMDGPU::SGPR_32RegClass, MI, 0, false);
+      SOffset = RS->scavengeRegisterBackwards(AMDGPU::SGPR_32RegClass, MI, false, 0, false);
 
       // Piggy back on the liveness scan we just did see if SCC is dead.
       CanClobberSCC = !RS->isRegUsed(AMDGPU::SCC);
@@ -1443,7 +1443,7 @@ void SIRegisterInfo::buildSpillLoadStore(
       UseVGPROffset = true;
 
       if (RS) {
-        TmpOffsetVGPR = RS->scavengeRegister(&AMDGPU::VGPR_32RegClass, MI, 0);
+        TmpOffsetVGPR = RS->scavengeRegisterBackwards(AMDGPU::VGPR_32RegClass, MI, false, 0);
       } else {
         assert(LiveRegs);
         for (MCRegister Reg : AMDGPU::VGPR_32RegClass) {
@@ -2073,7 +2073,7 @@ bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
   }
 }
 
-void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
+bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                         int SPAdj, unsigned FIOperandNum,
                                         RegScavenger *RS) const {
   MachineFunction *MF = MI->getParent()->getParent();
@@ -2119,8 +2119,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_S96_SAVE:
     case AMDGPU::SI_SPILL_S64_SAVE:
     case AMDGPU::SI_SPILL_S32_SAVE: {
-      spillSGPR(MI, Index, RS, nullptr, nullptr, false, NeedsCFI);
-      break;
+      return spillSGPR(MI, Index, RS);
     }
 
     // SGPR register restore
@@ -2134,8 +2133,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_S96_RESTORE:
     case AMDGPU::SI_SPILL_S64_RESTORE:
     case AMDGPU::SI_SPILL_S32_RESTORE: {
-      restoreSGPR(MI, Index, RS);
-      break;
+      return restoreSGPR(MI, Index, RS);
     }
 
     // VGPR register spill
@@ -2215,7 +2213,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           *MI->memoperands_begin(), RS, nullptr, NeedsCFI);
       MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(MI->getOpcode()));
       MI->eraseFromParent();
-      break;
+      return true;
     }
     case AMDGPU::SI_SPILL_V32_RESTORE:
     case AMDGPU::SI_SPILL_V64_RESTORE:
@@ -2260,7 +2258,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
           *MI->memoperands_begin(), RS);
       MI->eraseFromParent();
-      break;
+      return true;
     }
 
     default: {
@@ -2279,7 +2277,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             FIOp.ChangeToRegister(FrameReg, false);
 
           if (!Offset)
-            return;
+            return false;
 
           MachineOperand *OffsetOp =
             TII->getNamedOperand(*MI, AMDGPU::OpName::offset);
@@ -2288,7 +2286,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                      SIInstrFlags::FlatScratch)) {
             OffsetOp->setImm(NewOffset);
             if (FrameReg)
-              return;
+              return false;
             Offset = 0;
           }
 
@@ -2326,7 +2324,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 MI->tieOperands(NewVDst, NewVDstIn);
               }
               MI->setDesc(TII->get(NewOpc));
-              return;
+              return false;
             }
           }
         }
@@ -2334,7 +2332,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         if (!FrameReg) {
           FIOp.ChangeToImmediate(Offset);
           if (TII->isImmOperandLegal(*MI, FIOperandNum, FIOp))
-            return;
+            return false;
         }
 
         // We need to use register here. Check if we can use an SGPR or need
@@ -2344,7 +2342,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
         if (!Offset && FrameReg && UseSGPR) {
           FIOp.setReg(FrameReg);
-          return;
+          return false;
         }
 
         const TargetRegisterClass *RC = UseSGPR ? &AMDGPU::SReg_32_XM0RegClass
@@ -2362,7 +2360,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           else
             MIB.addImm(Offset);
 
-          return;
+          return false;
         }
 
         Register TmpSReg =
@@ -2398,7 +2396,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
               .addImm(-Offset);
         }
 
-        return;
+        return false;
       }
 
       bool IsMUBUF = TII->isMUBUF(*MI);
@@ -2407,7 +2405,8 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         // Convert to a swizzled stack address by scaling by the wave size.
         // In an entry function/kernel the offset is already swizzled.
         bool IsSALU = isSGPRClass(TII->getOpRegClass(*MI, FIOperandNum));
-        bool LiveSCC = RS->isRegUsed(AMDGPU::SCC);
+        bool LiveSCC =
+            RS->isRegUsed(AMDGPU::SCC) && !MI->definesRegister(AMDGPU::SCC);
         const TargetRegisterClass *RC = IsSALU && !LiveSCC
                                             ? &AMDGPU::SReg_32RegClass
                                             : &AMDGPU::VGPR_32RegClass;
@@ -2511,11 +2510,12 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         }
 
         // Don't introduce an extra copy if we're just materializing in a mov.
-        if (IsCopy)
+        if (IsCopy) {
           MI->eraseFromParent();
-        else
-          FIOp.ChangeToRegister(ResultReg, false, false, true);
-        return;
+          return true;
+        }
+        FIOp.ChangeToRegister(ResultReg, false, false, true);
+        return false;
       }
 
       if (IsMUBUF) {
@@ -2538,7 +2538,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         if (SIInstrInfo::isLegalMUBUFImmOffset(NewOffset) &&
             buildMUBUFOffsetLoadStore(ST, FrameInfo, MI, Index, NewOffset)) {
           MI->eraseFromParent();
-          return;
+          return true;
         }
       }
 
@@ -2554,6 +2554,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       }
     }
   }
+  return false;
 }
 
 StringRef SIRegisterInfo::getRegAsmName(MCRegister Reg) const {

@@ -69,7 +69,7 @@ add_gen_header(
 )
 
 add_gen_header(
-  assert_h
+  assert
   DEF_FILE assert.h.def
   GEN_HDR assert.h
   DEPENDS

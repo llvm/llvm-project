@@ -19,7 +19,7 @@
 LANGOPT(Name, Bits, Default)
 #endif
 
-ENUM_LANGOPT(FPContractMode, FPModeKind, 2, FPM_Off) ///< FP Contract Mode (off/fast)
+ENUM_LANGOPT(FPContractMode, FPModeKind, 2, FPM_Fast) ///< FP Contract Mode (off/fast)
 
 /// Permit floating point optimization without regard to infinities
 LANGOPT(NoHonorInfs, 1, false)

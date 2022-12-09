@@ -455,7 +455,7 @@ public:
                              Instruction *I = nullptr) const override;
   bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, Align Alignment,
                                       MachineMemOperand::Flags Flags,
-                                      bool *Fast) const override;
+                                      unsigned *Fast) const override;
   bool
   findOptimalMemOpLowering(std::vector<EVT> &MemOps, unsigned Limit,
                            const MemOp &Op, unsigned DstAS, unsigned SrcAS,

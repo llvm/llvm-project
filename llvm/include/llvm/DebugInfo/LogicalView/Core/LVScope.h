@@ -555,16 +555,16 @@ public:
   // Record line zero.
   void addLineZero(LVLine *Line);
 
-  const LVTagOffsetsMap getDebugTags() const { return DebugTags; }
-  const LVOffsetElementMap getWarningOffsets() const { return WarningOffsets; }
-  const LVOffsetLocationsMap getInvalidLocations() const {
+  const LVTagOffsetsMap &getDebugTags() const { return DebugTags; }
+  const LVOffsetElementMap &getWarningOffsets() const { return WarningOffsets; }
+  const LVOffsetLocationsMap &getInvalidLocations() const {
     return InvalidLocations;
   }
-  const LVOffsetSymbolMap getInvalidCoverages() const {
+  const LVOffsetSymbolMap &getInvalidCoverages() const {
     return InvalidCoverages;
   }
-  const LVOffsetLocationsMap getInvalidRanges() const { return InvalidRanges; }
-  const LVOffsetLinesMap getLinesZero() const { return LinesZero; }
+  const LVOffsetLocationsMap &getInvalidRanges() const { return InvalidRanges; }
+  const LVOffsetLinesMap &getLinesZero() const { return LinesZero; }
 
   // Process ranges, locations and calculate coverage.
   void processRangeLocationCoverage(

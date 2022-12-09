@@ -7,15 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__need_wint_t) || defined(__need_mbstate_t)
-
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
-
-#include_next <wchar.h>
-
-#elif !defined(_LIBCPP_WCHAR_H)
+#ifndef _LIBCPP_WCHAR_H
 #define _LIBCPP_WCHAR_H
 
 /*
@@ -120,7 +112,9 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 #define __CORRECT_ISO_CPP_WCHAR_H_PROTO
 #endif
 
-#include_next <wchar.h>
+#  if __has_include_next(<wchar.h>)
+#    include_next <wchar.h>
+#  endif
 
 // Determine whether we have const-correct overloads for wcschr and friends.
 #if defined(_WCHAR_H_CPLUSPLUS_98_CONFORMANCE_)

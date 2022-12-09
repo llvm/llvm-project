@@ -74,6 +74,6 @@ subroutine iand_test6(s1, s2)
 ! CHECK-DAG: %[[S2_VAL:.*]] = fir.load %[[S2]] : !fir.ref<i32>
   stop iand(s1,s2)
 ! CHECK-DAG: %[[ANDI:.*]] = arith.andi %[[S1_VAL]], %[[S2_VAL]] : i32
-! CHECK: fir.call @_FortranAStopStatement(%[[ANDI]], {{.*}}, {{.*}}) : (i32, i1, i1) -> none
+! CHECK: fir.call @_FortranAStopStatement(%[[ANDI]], {{.*}}, {{.*}}) {{.*}}: (i32, i1, i1) -> none
 ! CHECK-NEXT: fir.unreachable
 end subroutine iand_test6

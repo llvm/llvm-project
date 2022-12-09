@@ -4307,7 +4307,7 @@ private:
   llvm::SmallVector<mlir::Value> getShape(ArrayOperand array) {
     if (array.slice)
       return computeSliceShape(array.slice);
-    if (array.memref.getType().isa<fir::BoxType>())
+    if (array.memref.getType().isa<fir::BaseBoxType>())
       return fir::factory::readExtents(builder, getLoc(),
                                        fir::BoxValue{array.memref});
     return fir::factory::getExtents(array.shape);

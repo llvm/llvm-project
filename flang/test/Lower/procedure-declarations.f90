@@ -23,7 +23,7 @@ end subroutine
 subroutine call_foo(i)
   integer :: i(10)
   ! %[[argconvert:*]] = fir.convert %arg0 :
-  ! fir.call @_QPfoo(%[[argconvert]]) : (!fir.ref<!fir.array<2x5xi32>>) -> ()
+  ! fir.call @_QPfoo(%[[argconvert]]) {{.*}}: (!fir.ref<!fir.array<2x5xi32>>) -> ()
   call foo(i)
 end subroutine 
 ! CHECK-LABEL: func @_QPfoo(
@@ -39,7 +39,7 @@ end subroutine
 subroutine call_foo2(i)
   integer :: i(10)
   ! %[[argconvert:*]] = fir.convert %arg0 :
-  ! fir.call @_QPfoo2(%[[argconvert]]) : (!fir.ref<!fir.array<2x5xi32>>) -> ()
+  ! fir.call @_QPfoo2(%[[argconvert]]) {{.*}}: (!fir.ref<!fir.array<2x5xi32>>) -> ()
   call foo2(i)
 end subroutine 
 ! CHECK-LABEL: func @_QPpass_foo2() {
@@ -62,7 +62,7 @@ end subroutine
 subroutine call_foo3(i)
   integer :: i(10)
   ! %[[argconvert:*]] = fir.convert %arg0 :
-  ! fir.call @_QPfoo3(%[[argconvert]]) : (!fir.ref<!fir.array<2x5xi32>>) -> ()
+  ! fir.call @_QPfoo3(%[[argconvert]]) {{.*}}: (!fir.ref<!fir.array<2x5xi32>>) -> ()
   call foo3(i)
 end subroutine 
 ! CHECK-LABEL: func @_QPfoo3(
@@ -91,7 +91,7 @@ end subroutine
 subroutine call_foo4(i)
   integer :: i(10)
   ! %[[argconvert:*]] = fir.convert %arg0 :
-  ! fir.call @_QPfoo4(%[[argconvert]]) : (!fir.ref<!fir.array<2x5xi32>>) -> ()
+  ! fir.call @_QPfoo4(%[[argconvert]]) {{.*}}: (!fir.ref<!fir.array<2x5xi32>>) -> ()
   call foo4(i)
 end subroutine 
 ! CHECK-LABEL: func @_QPpass_foo4() {
@@ -121,7 +121,7 @@ end subroutine
 subroutine call_foo5(i)
   integer :: i(10)
   ! %[[argconvert:*]] = fir.convert %arg0 :
-  ! fir.call @_QPfoo5(%[[argconvert]]) : (!fir.ref<!fir.array<2x5xi32>>) -> ()
+  ! fir.call @_QPfoo5(%[[argconvert]]) {{.*}}: (!fir.ref<!fir.array<2x5xi32>>) -> ()
   call foo5(i)
 end subroutine 
 
@@ -158,7 +158,7 @@ function call_foo7(i)
   integer :: i(10)
   ! CHECK: %[[f:.*]] = fir.address_of(@_QPfoo7) : () -> ()
   ! CHECK: %[[funccast:.*]] = fir.convert %[[f]] : (() -> ()) -> ((!fir.ref<!fir.array<10xi32>>) -> f32)
-  ! CHECK: fir.call %[[funccast]](%arg0) : (!fir.ref<!fir.array<10xi32>>) -> f32
+  ! CHECK: fir.call %[[funccast]](%arg0) {{.*}}: (!fir.ref<!fir.array<10xi32>>) -> f32
   call_foo7 =  foo7(i)
 end function 
 

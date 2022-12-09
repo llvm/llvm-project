@@ -412,6 +412,56 @@ define void @atomic_cmpxchg(i32* %ptr1, i32 %val1, i32 %val2) {
 
 ; // -----
 
+; CHECK: llvm.func @fn(i32) -> f32
+declare float @fn(i32)
+
+; CHECK-LABEL: @call_fn
+; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
+define float @call_fn(i32 %arg1) {
+  ; CHECK:  llvm.call @fn(%[[ARG1]])
+  %1 = call float @fn(i32 %arg1)
+  ret float %1
+}
+
+; // -----
+
+; CHECK-LABEL: @call_fn_ptr
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define void @call_fn_ptr(void (i16) *%fn) {
+  ; CHECK:  %[[C0:[0-9]+]] = llvm.mlir.constant(0 : i16) : i16
+  ; CHECK:  llvm.call %[[PTR]](%[[C0]])
+  call void %fn(i16 0)
+  ret void
+}
+
+; // -----
+
+; CHECK-LABEL: @gep_static_idx
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define void @gep_static_idx(float* %ptr) {
+  ; CHECK: %[[IDX:.+]] = llvm.mlir.constant(7 : i32)
+  ; CHECK: llvm.getelementptr %[[PTR]][%[[IDX]]] : (!llvm.ptr<f32>, i32) -> !llvm.ptr<f32>
+  %1 = getelementptr float, float* %ptr, i32 7
+  ret void
+}
+
+; // -----
+
+%sub_struct = type { i32, i8 }
+%my_struct = type { %sub_struct, [4 x i32] }
+
+; CHECK-LABEL: @gep_dynamic_idx
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[IDX:[a-zA-Z0-9]+]]
+define void @gep_dynamic_idx(%my_struct* %ptr, i32 %idx) {
+  ; CHECK: %[[C0:.+]] = llvm.mlir.constant(0 : i32)
+  ; CHECK: llvm.getelementptr %[[PTR]][%[[C0]], 1, %[[IDX]]]
+  %1 = getelementptr %my_struct, %my_struct* %ptr, i32 0, i32 1, i32 %idx
+  ret void
+}
+
+; // -----
+
 ; CHECK-LABEL: @freeze
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
 define void @freeze(i32 %arg1) {

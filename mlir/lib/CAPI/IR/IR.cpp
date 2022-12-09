@@ -127,9 +127,9 @@ void mlirOpPrintingFlagsElideLargeElementsAttrs(MlirOpPrintingFlags flags,
   unwrap(flags)->elideLargeElementsAttrs(largeElementLimit);
 }
 
-void mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags,
+void mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags, bool enable,
                                         bool prettyForm) {
-  unwrap(flags)->enableDebugInfo(/*prettyForm=*/prettyForm);
+  unwrap(flags)->enableDebugInfo(enable, /*prettyForm=*/prettyForm);
 }
 
 void mlirOpPrintingFlagsPrintGenericOpForm(MlirOpPrintingFlags flags) {

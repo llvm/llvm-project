@@ -2441,7 +2441,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_466">466</a></td>
     <td>NAD</td>
     <td>Scope of a for loop control declaration</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="467">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_467">467</a></td>
@@ -2513,7 +2513,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_478">478</a></td>
     <td>NAD</td>
     <td>Valid uses of the main function</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="479">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_479">479</a></td>
@@ -2531,7 +2531,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_481">481</a></td>
     <td>C11</td>
     <td>Controlling expression of _Generic primary expression</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Clang 3.8</td>
   </tr>
   <tr id="482">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_482">482</a></td>
@@ -2543,7 +2543,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_483">483</a></td>
     <td>NAD</td>
     <td>__LINE__ and __FILE__ in macro replacement list</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="484">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_484">484</a></td>
@@ -2579,7 +2579,12 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_489">489</a></td>
     <td>NAD</td>
     <td>Integer Constant Expression</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="partial" align="center">
+      <details><summary>Partial</summary>
+      Clang inconsistently diagnoses folding a constan expression into an ICE
+      as an extension.
+      </details>
+    </td>
   </tr>
   <tr id="490">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_490">490</a></td>
@@ -2591,13 +2596,19 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_491">491</a></td>
     <td>C11</td>
     <td>Concern with Keywords that Match Reserved Identifiers</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="partial" align="center">
+      <details><summary>Partial</summary>
+      Clang issues a reserved identifier diagnostic when the identifier leads
+      with an underscore followed by a capital letter or double underscores,
+      even if the identifier is used for a macro definition.
+      </details>
+    </td>
   </tr>
   <tr id="492">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_492">492</a></td>
     <td>NAD</td>
     <td>Named Child struct-union with no Member</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Clang 3.6</td>
   </tr>
   <tr id="493">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_493">493</a></td>
@@ -2609,7 +2620,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_494">494</a></td>
     <td>C11</td>
     <td>Part 1: Alignment specifier expression evaluation</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr class="open" id="495">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_495">495</a></td>

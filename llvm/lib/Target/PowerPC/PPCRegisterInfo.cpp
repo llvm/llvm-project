@@ -1485,7 +1485,7 @@ static unsigned getOffsetONFromFION(const MachineInstr &MI,
   return OffsetOperandNo;
 }
 
-void
+bool
 PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                      int SPAdj, unsigned FIOperandNum,
                                      RegScavenger *RS) const {
@@ -1518,14 +1518,16 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   if ((OpC == PPC::DYNAREAOFFSET || OpC == PPC::DYNAREAOFFSET8)) {
     lowerDynamicAreaOffset(II);
-    return;
+    // lowerDynamicAreaOffset erases II
+    return true;
   }
 
   // Special case for dynamic alloca.
   if (FPSI && FrameIndex == FPSI &&
       (OpC == PPC::DYNALLOC || OpC == PPC::DYNALLOC8)) {
     lowerDynamicAlloc(II);
-    return;
+    // lowerDynamicAlloc erases II
+    return true;
   }
 
   if (FPSI && FrameIndex == FPSI &&
@@ -1534,37 +1536,38 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
        OpC == PPC::PREPARE_PROBED_ALLOCA_NEGSIZE_SAME_REG_64 ||
        OpC == PPC::PREPARE_PROBED_ALLOCA_NEGSIZE_SAME_REG_32)) {
     lowerPrepareProbedAlloca(II);
-    return;
+    // lowerPrepareProbedAlloca erases II
+    return true;
   }
 
   // Special case for pseudo-ops SPILL_CR and RESTORE_CR, etc.
   if (OpC == PPC::SPILL_CR) {
     lowerCRSpilling(II, FrameIndex);
-    return;
+    return true;
   } else if (OpC == PPC::RESTORE_CR) {
     lowerCRRestore(II, FrameIndex);
-    return;
+    return true;
   } else if (OpC == PPC::SPILL_CRBIT) {
     lowerCRBitSpilling(II, FrameIndex);
-    return;
+    return true;
   } else if (OpC == PPC::RESTORE_CRBIT) {
     lowerCRBitRestore(II, FrameIndex);
-    return;
+    return true;
   } else if (OpC == PPC::SPILL_ACC || OpC == PPC::SPILL_UACC) {
     lowerACCSpilling(II, FrameIndex);
-    return;
+    return true;
   } else if (OpC == PPC::RESTORE_ACC || OpC == PPC::RESTORE_UACC) {
     lowerACCRestore(II, FrameIndex);
-    return;
+    return true;
   } else if (OpC == PPC::STXVP && DisableAutoPairedVecSt) {
     lowerOctWordSpilling(II, FrameIndex);
-    return;
+    return true;
   } else if (OpC == PPC::SPILL_QUADWORD) {
     lowerQuadwordSpilling(II, FrameIndex);
-    return;
+    return true;
   } else if (OpC == PPC::RESTORE_QUADWORD) {
     lowerQuadwordRestore(II, FrameIndex);
-    return;
+    return true;
   }
 
   // Replace the FrameIndex with base register with GPR1 (SP) or GPR31 (FP).
@@ -1621,7 +1624,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                      OpC == TargetOpcode::STACKMAP ||
                      OpC == TargetOpcode::PATCHPOINT)) {
     MI.getOperand(OffsetOperandNo).ChangeToImmediate(Offset);
-    return;
+    return false;
   }
 
   // The offset doesn't fit into a single register, scavenge one to build the
@@ -1709,6 +1712,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     MI.getOperand(OperandBase + 1).ChangeToRegister(NewReg, false);
     MI.getOperand(OperandBase).ChangeToImmediate(0);
   }
+  return false;
 }
 
 Register PPCRegisterInfo::getFrameRegister(const MachineFunction &MF) const {

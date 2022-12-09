@@ -28,8 +28,8 @@ set(FLANG_CONFIG_INCLUDE_DIRS
   "${FLANG_BINARY_DIR}/include"
   )
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/FlangConfig.cmake.in
-  ${flang_cmake_builddir}/FlangConfig.cmake
+  ${CMAKE_CURRENT_SOURCE_DIR}/FlangConfigVersion.cmake.in
+  ${flang_cmake_builddir}/FlangConfigVersion.cmake
   @ONLY)
 set(FLANG_CONFIG_CMAKE_DIR)
 set(FLANG_CONFIG_LLVM_CMAKE_DIR)
@@ -46,6 +46,10 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/FlangConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/FlangConfig.cmake
   @ONLY)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/FlangConfigVersion.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/FlangConfigVersion.cmake
+  @ONLY)
 
 set(FLANG_CONFIG_CODE)
 set(FLANG_CONFIG_CMAKE_DIR)
@@ -56,6 +60,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/FlangConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/FlangConfigVersion.cmake
     DESTINATION ${FLANG_INSTALL_PACKAGE_DIR}
     COMPONENT flang-cmake-exports)
 

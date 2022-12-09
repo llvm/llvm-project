@@ -85,6 +85,35 @@ private:
 
 } // namespace
 
+/// Create FirOpBuilder with the provided \p op insertion point
+/// and \p kindMap additionally inheriting FastMathFlags from \p op.
+static fir::FirOpBuilder
+getSimplificationBuilder(mlir::Operation *op, const fir::KindMapping &kindMap) {
+  fir::FirOpBuilder builder{op, kindMap};
+  auto fmi = mlir::dyn_cast<mlir::arith::ArithFastMathInterface>(*op);
+  if (!fmi)
+    return builder;
+
+  // Regardless of what default FastMathFlags are used by FirOpBuilder,
+  // override them with FastMathFlags attached to the operation.
+  builder.setFastMathFlags(fmi.getFastMathFlagsAttr().getValue());
+  return builder;
+}
+
+/// Stringify FastMathFlags set for the given \p builder in a way
+/// that the string may be used for mangling a function name.
+/// If FastMathFlags are set to 'none', then the result is an empty
+/// string.
+static std::string getFastMathFlagsString(const fir::FirOpBuilder &builder) {
+  mlir::arith::FastMathFlags flags = builder.getFastMathFlags();
+  if (flags == mlir::arith::FastMathFlags::none)
+    return {};
+
+  std::string fmfString{mlir::arith::stringifyFastMathFlags(flags)};
+  std::replace(fmfString.begin(), fmfString.end(), ',', '_');
+  return fmfString;
+}
+
 /// Generate function type for the simplified version of RTNAME(Sum) and
 /// similar functions with a fir.box<none> type returning \p elementType.
 static mlir::FunctionType genNoneBoxType(fir::FirOpBuilder &builder,
@@ -511,7 +540,8 @@ void SimplifyIntrinsicsPass::simplifyReduction(fir::CallOp call,
   unsigned rank = getDimCount(args[0]);
   if (dimAndMaskAbsent && rank > 0) {
     mlir::Location loc = call.getLoc();
-    fir::FirOpBuilder builder(call, kindMap);
+    fir::FirOpBuilder builder{getSimplificationBuilder(call, kindMap)};
+    std::string fmfString{getFastMathFlagsString(builder)};
 
     // Support only floating point and integer results now.
     mlir::Type resultType = call.getResult(0).getType();
@@ -535,7 +565,10 @@ void SimplifyIntrinsicsPass::simplifyReduction(fir::CallOp call,
     // Mangle the function name with the rank value as "x<rank>".
     std::string funcName =
         (mlir::Twine{callee.getLeafReference().getValue(), "x"} +
-         mlir::Twine{rank})
+         mlir::Twine{rank} +
+         // We must mangle the generated function name with FastMathFlags
+         // value.
+         (fmfString.empty() ? mlir::Twine{} : mlir::Twine{"_", fmfString}))
             .str();
     mlir::func::FuncOp newFunc =
         getOrCreateFunction(builder, funcName, typeGenerator, bodyGenerator);
@@ -576,7 +609,10 @@ void SimplifyIntrinsicsPass::runOnOperation() {
           const mlir::Value &v1 = args[0];
           const mlir::Value &v2 = args[1];
           mlir::Location loc = call.getLoc();
-          fir::FirOpBuilder builder(op, kindMap);
+          fir::FirOpBuilder builder{getSimplificationBuilder(op, kindMap)};
+          // Stringize the builder's FastMathFlags flags for mangling
+          // the generated function name.
+          std::string fmfString{getFastMathFlagsString(builder)};
 
           mlir::Type type = call.getResult(0).getType();
           if (!type.isa<mlir::FloatType>() && !type.isa<mlir::IntegerType>())
@@ -611,9 +647,13 @@ void SimplifyIntrinsicsPass::runOnOperation() {
           // of the arguments.
           std::string typedFuncName(funcName);
           llvm::raw_string_ostream nameOS(typedFuncName);
-          nameOS << "_";
+          // We must mangle the generated function name with FastMathFlags
+          // value.
+          if (!fmfString.empty())
+            nameOS << '_' << fmfString;
+          nameOS << '_';
           arg1Type->print(nameOS);
-          nameOS << "_";
+          nameOS << '_';
           arg2Type->print(nameOS);
 
           mlir::func::FuncOp newFunc = getOrCreateFunction(

@@ -345,14 +345,14 @@ llvm::Optional<StringRef> GetMCUFamilyName(StringRef MCUName) {
   for (const auto &MCU : MCUInfo)
     if (MCU.Name == MCUName)
       return Optional<StringRef>(MCU.Family);
-  return Optional<StringRef>();
+  return None;
 }
 
 llvm::Optional<unsigned> GetMCUSectionAddressData(StringRef MCUName) {
   for (const auto &MCU : MCUInfo)
     if (MCU.Name == MCUName && MCU.DataAddr > 0)
       return Optional<unsigned>(MCU.DataAddr);
-  return Optional<unsigned>();
+  return None;
 }
 
 const StringRef PossibleAVRLibcLocations[] = {

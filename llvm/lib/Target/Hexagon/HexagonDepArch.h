@@ -5,9 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// Automatically generated file, do not edit!
-//===----------------------------------------------------------------------===//
-
 
 #ifndef LLVM_LIB_TARGET_HEXAGON_HEXAGONDEPARCH_H
 #define LLVM_LIB_TARGET_HEXAGON_HEXAGONDEPARCH_H
@@ -16,7 +13,21 @@
 
 namespace llvm {
 namespace Hexagon {
-enum class ArchEnum { NoArch, Generic, V5, V55, V60, V62, V65, V66, V67, V68, V69 };
+enum class ArchEnum {
+  NoArch,
+  Generic,
+  V5,
+  V55,
+  V60,
+  V62,
+  V65,
+  V66,
+  V67,
+  V68,
+  V69,
+  V71,
+  V73
+};
 
 inline Optional<Hexagon::ArchEnum> getCpu(StringRef CPU) {
   return StringSwitch<Optional<Hexagon::ArchEnum>>(CPU)
@@ -31,6 +42,9 @@ inline Optional<Hexagon::ArchEnum> getCpu(StringRef CPU) {
       .Case("hexagonv67t", Hexagon::ArchEnum::V67)
       .Case("hexagonv68", Hexagon::ArchEnum::V68)
       .Case("hexagonv69", Hexagon::ArchEnum::V69)
+      .Case("hexagonv71", Hexagon::ArchEnum::V71)
+      .Case("hexagonv71t", Hexagon::ArchEnum::V71)
+      .Case("hexagonv73", Hexagon::ArchEnum::V73)
       .Default(None);
 }
 } // namespace Hexagon

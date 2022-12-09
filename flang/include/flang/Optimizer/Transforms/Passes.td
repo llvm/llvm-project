@@ -140,9 +140,9 @@ def CharacterConversion : Pass<"character-conversion"> {
 def CFGConversion : Pass<"cfg-conversion", "::mlir::func::FuncOp"> {
   let summary = "Convert FIR structured control flow ops to CFG ops.";
   let description = [{
-    Transform the `fir.do_loop`, `fir.if`, and `fir.iterate_while` ops into
-    plain old test and branch operations. Removing the high-level control
-    structures can enable other optimizations.
+    Transform the `fir.do_loop`, `fir.if`, `fir.iterate_while` and
+    `fir.select_type` ops into plain old test and branch operations. Removing
+    the high-level control structures can enable other optimizations.
 
     This pass is required before code gen to the LLVM IR dialect.
   }];

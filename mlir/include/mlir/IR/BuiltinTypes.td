@@ -584,12 +584,6 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
     /// New `Attribute getMemorySpace()` method should be used instead.
     unsigned getMemorySpaceAsInt() const;
 
-    // TODO: merge these two special values in a single one used everywhere.
-    // Unfortunately, uses of `-1` have crept deep into the codebase now and are
-    // hard to track.
-    static int64_t getDynamicStrideOrOffset() {
-      return ShapedType::kDynamicStrideOrOffset;
-    }
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;

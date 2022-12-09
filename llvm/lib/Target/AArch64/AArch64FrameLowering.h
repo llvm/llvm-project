@@ -24,9 +24,6 @@ public:
       : TargetFrameLowering(StackGrowsDown, Align(16), 0, Align(16),
                             true /*StackRealignable*/) {}
 
-  void emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator MBBI) const;
-
   void resetCFIToInitialState(MachineBasicBlock &MBB) const override;
 
   MachineBasicBlock::iterator

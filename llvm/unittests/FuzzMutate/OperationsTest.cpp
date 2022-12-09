@@ -44,18 +44,18 @@ using namespace llvm;
 
 using testing::AllOf;
 using testing::AnyOf;
+using testing::Each;
 using testing::ElementsAre;
 using testing::Eq;
 using testing::Ge;
-using testing::Each;
-using testing::Truly;
 using testing::NotNull;
 using testing::PrintToString;
 using testing::SizeIs;
+using testing::Truly;
 
 namespace {
-std::unique_ptr<Module> parseAssembly(
-    const char *Assembly, LLVMContext &Context) {
+std::unique_ptr<Module> parseAssembly(const char *Assembly,
+                                      LLVMContext &Context) {
 
   SMDiagnostic Error;
   std::unique_ptr<Module> M = parseAssemblyString(Assembly, Error, Context);
@@ -88,8 +88,7 @@ TEST(OperationsTest, SourcePreds) {
   Constant *f16 = ConstantFP::getInfinity(Type::getHalfTy(Ctx));
   Constant *f32 = ConstantFP::get(Type::getFloatTy(Ctx), 0.0);
   Constant *f64 = ConstantFP::get(Type::getDoubleTy(Ctx), 123.45);
-  Constant *s =
-      ConstantStruct::get(StructType::create(Ctx, "OpaqueStruct"));
+  Constant *s = ConstantStruct::get(StructType::create(Ctx, "OpaqueStruct"));
   Constant *a =
       ConstantArray::get(ArrayType::get(i32->getType(), 2), {i32, i32});
   Constant *v8i8 = ConstantVector::getSplat(ElementCount::getFixed(8), i8);
@@ -166,8 +165,7 @@ TEST(OperationsTest, SourcePreds) {
   EXPECT_FALSE(First.matches({v4f16, f64}, f64));
 
   EXPECT_THAT(First.generate({i8}, {}), Each(TypesMatch(i8)));
-  EXPECT_THAT(First.generate({f16}, {i8->getType()}),
-              Each(TypesMatch(f16)));
+  EXPECT_THAT(First.generate({f16}, {i8->getType()}), Each(TypesMatch(f16)));
   EXPECT_THAT(First.generate({v8i8, i32}, {}), Each(TypesMatch(v8i8)));
 }
 
@@ -235,7 +233,7 @@ TEST(OperationsTest, SplitEHBlock) {
 
   fuzzerop::OpDescriptor Descr = fuzzerop::splitBlockDescriptor(1);
 
-  Descr.BuilderFunc({ConstantInt::getTrue(Ctx)},&*BB.getFirstInsertionPt());
+  Descr.BuilderFunc({ConstantInt::getTrue(Ctx)}, &*BB.getFirstInsertionPt());
   ASSERT_TRUE(!verifyModule(*M, &errs()));
 }
 
@@ -298,7 +296,6 @@ TEST(OperationsTest, GEP) {
                     RI);
   EXPECT_FALSE(verifyModule(M, &errs()));
 }
-
 
 TEST(OperationsTest, GEPPointerOperand) {
   // Check that we only pick sized pointers for the GEP instructions
@@ -401,4 +398,4 @@ TEST(OperationsTest, ExtractAndInsertValue) {
       ElementsAre(ConstantInt::get(Int32Ty, 1)));
 }
 
-}
+} // namespace

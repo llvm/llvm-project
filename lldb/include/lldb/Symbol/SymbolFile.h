@@ -310,7 +310,7 @@ public:
 
   virtual void PreloadSymbols();
 
-  virtual llvm::Expected<lldb_private::TypeSystem &>
+  virtual llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language) = 0;
 
   virtual CompilerDeclContext
@@ -465,7 +465,7 @@ public:
   uint32_t GetNumCompileUnits() override;
   lldb::CompUnitSP GetCompileUnitAtIndex(uint32_t idx) override;
 
-  llvm::Expected<lldb_private::TypeSystem &>
+  llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
   void Dump(Stream &s) override;

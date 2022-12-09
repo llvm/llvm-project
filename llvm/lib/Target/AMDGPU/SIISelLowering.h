@@ -291,14 +291,14 @@ public:
   bool allowsMisalignedMemoryAccessesImpl(
       unsigned Size, unsigned AddrSpace, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
-      bool *IsFast = nullptr) const;
+      unsigned *IsFast = nullptr) const;
 
   bool allowsMisalignedMemoryAccesses(
       LLT Ty, unsigned AddrSpace, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
-      bool *IsFast = nullptr) const override {
+      unsigned *IsFast = nullptr) const override {
     if (IsFast)
-      *IsFast = false;
+      *IsFast = 0;
     return allowsMisalignedMemoryAccessesImpl(Ty.getSizeInBits(), AddrSpace,
                                               Alignment, Flags, IsFast);
   }
@@ -306,7 +306,7 @@ public:
   bool allowsMisalignedMemoryAccesses(
       EVT VT, unsigned AS, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
-      bool *IsFast = nullptr) const override;
+      unsigned *IsFast = nullptr) const override;
 
   EVT getOptimalMemOpType(const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;

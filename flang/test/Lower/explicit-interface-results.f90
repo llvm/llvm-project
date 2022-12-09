@@ -94,7 +94,7 @@ contains
 subroutine cst_array()
   ! CHECK: %[[alloc:.*]] = fir.alloca !fir.array<20x30xf32> {{{.*}}bindc_name = ".result"}
   ! CHECK: %[[shape:.*]] = fir.shape %{{.*}}, {{.*}} : (index, index) -> !fir.shape<2>
-  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_cst_array() : () -> !fir.array<20x30xf32>
+  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_cst_array() {{.*}}: () -> !fir.array<20x30xf32>
   ! CHECK: fir.save_result %[[res]] to %[[alloc]](%[[shape]]) : !fir.array<20x30xf32>, !fir.ref<!fir.array<20x30xf32>>, !fir.shape<2>
   print *, return_cst_array()
 end subroutine
@@ -103,7 +103,7 @@ end subroutine
 subroutine cst_char_cst_array()
   ! CHECK: %[[alloc:.*]] = fir.alloca !fir.array<20x30x!fir.char<1,10>> {{{.*}}bindc_name = ".result"}
   ! CHECK: %[[shape:.*]] = fir.shape %{{.*}}, {{.*}} : (index, index) -> !fir.shape<2>
-  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_cst_char_cst_array() : () -> !fir.array<20x30x!fir.char<1,10>>
+  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_cst_char_cst_array() {{.*}}: () -> !fir.array<20x30x!fir.char<1,10>>
   ! CHECK: fir.save_result %[[res]] to %[[alloc]](%[[shape]]) typeparams %{{.*}} : !fir.array<20x30x!fir.char<1,10>>, !fir.ref<!fir.array<20x30x!fir.char<1,10>>>, !fir.shape<2>, index
   print *, return_cst_char_cst_array()
 end subroutine
@@ -111,7 +111,7 @@ end subroutine
 ! CHECK-LABEL: func @_QMcallerPalloc()
 subroutine alloc()
   ! CHECK: %[[alloc:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {{{.*}}bindc_name = ".result"}
-  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_alloc() : () -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_alloc() {{.*}}: () -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   ! CHECK: fir.save_result %[[res]] to %[[alloc]] : !fir.box<!fir.heap<!fir.array<?xf32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   print *, return_alloc()
   ! CHECK: _FortranAioOutputDescriptor
@@ -125,7 +125,7 @@ end subroutine
 ! CHECK-LABEL: func @_QMcallerPcst_char_alloc()
 subroutine cst_char_alloc()
   ! CHECK: %[[alloc:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>> {{{.*}}bindc_name = ".result"}
-  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_cst_char_alloc() : () -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>
+  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_cst_char_alloc() {{.*}}: () -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>
   ! CHECK: fir.save_result %[[res]] to %[[alloc]] : !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>
   print *, return_cst_char_alloc()
   ! CHECK: _FortranAioOutputDescriptor
@@ -139,7 +139,7 @@ end subroutine
 ! CHECK-LABEL: func @_QMcallerPdef_char_alloc()
 subroutine def_char_alloc()
   ! CHECK: %[[alloc:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> {{{.*}}bindc_name = ".result"}
-  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_def_char_alloc() : () -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
+  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_def_char_alloc() {{.*}}: () -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
   ! CHECK: fir.save_result %[[res]] to %[[alloc]] : !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
   print *, return_def_char_alloc()
   ! CHECK: _FortranAioOutputDescriptor
@@ -153,7 +153,7 @@ end subroutine
 ! CHECK-LABEL: func @_QMcallerPpointer_test()
 subroutine pointer_test()
   ! CHECK: %[[alloc:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {{{.*}}bindc_name = ".result"}
-  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_pointer() : () -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_pointer() {{.*}}: () -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
   ! CHECK: fir.save_result %[[res]] to %[[alloc]] : !fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   print *, return_pointer()
   ! CHECK-NOT: fir.freemem
@@ -162,7 +162,7 @@ end subroutine
 ! CHECK-LABEL: func @_QMcallerPcst_char_pointer()
 subroutine cst_char_pointer()
   ! CHECK: %[[alloc:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>> {{{.*}}bindc_name = ".result"}
-  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_cst_char_pointer() : () -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>
+  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_cst_char_pointer() {{.*}}: () -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>
   ! CHECK: fir.save_result %[[res]] to %[[alloc]] : !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>>
   print *, return_cst_char_pointer()
   ! CHECK-NOT: fir.freemem
@@ -171,7 +171,7 @@ end subroutine
 ! CHECK-LABEL: func @_QMcallerPdef_char_pointer()
 subroutine def_char_pointer()
   ! CHECK: %[[alloc:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>> {{{.*}}bindc_name = ".result"}
-  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_def_char_pointer() : () -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>
+  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_def_char_pointer() {{.*}}: () -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>
   ! CHECK: fir.save_result %[[res]] to %[[alloc]] : !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
   print *, return_def_char_pointer()
   ! CHECK-NOT: fir.freemem
@@ -197,7 +197,7 @@ subroutine dyn_array(m, n)
   ! CHECK-DAG: %[[nselect:.*]] = arith.select %[[ncmpi]], %[[ncast2]], %{{.*}} : index
   ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<?x?xf32>, %[[mselect]], %[[nselect]]
   ! CHECK: %[[shape:.*]] = fir.shape %[[mselect]], %[[nselect]] : (index, index) -> !fir.shape<2>
-  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_dyn_array(%[[m]], %[[n]]) : (!fir.ref<i32>, !fir.ref<i32>) -> !fir.array<?x?xf32>
+  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_dyn_array(%[[m]], %[[n]]) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> !fir.array<?x?xf32>
   ! CHECK: fir.save_result %[[res]] to %[[tmp]](%[[shape]]) : !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>
   print *, return_dyn_array(m, n)
 end subroutine
@@ -213,7 +213,7 @@ subroutine dyn_char_cst_array(l)
   ! CHECK: %[[select:.*]] = arith.select %[[cmpi]], %[[lcast2]], %{{.*}} : index
   ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<20x30x!fir.char<1,?>>(%[[select]] : index)
   ! CHECK: %[[shape:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
-  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_dyn_char_cst_array(%[[l]]) : (!fir.ref<i32>) -> !fir.array<20x30x!fir.char<1,?>>
+  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_dyn_char_cst_array(%[[l]]) {{.*}}: (!fir.ref<i32>) -> !fir.array<20x30x!fir.char<1,?>>
   ! CHECK: fir.save_result %[[res]] to %[[tmp]](%[[shape]]) typeparams %[[select]] : !fir.array<20x30x!fir.char<1,?>>, !fir.ref<!fir.array<20x30x!fir.char<1,?>>>, !fir.shape<2>, index
   print *, return_dyn_char_cst_array(l)
 end subroutine
@@ -238,7 +238,7 @@ subroutine cst_char_dyn_array(m, n)
   ! CHECK-DAG: %[[nselect:.*]] = arith.select %[[ncmpi]], %[[ncast2]], %{{.*}} : index
   ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<?x?x!fir.char<1,10>>, %[[mselect]], %[[nselect]]
   ! CHECK: %[[shape:.*]] = fir.shape %[[mselect]], %[[nselect]] : (index, index) -> !fir.shape<2>
-  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_cst_char_dyn_array(%[[m]], %[[n]]) : (!fir.ref<i32>, !fir.ref<i32>) -> !fir.array<?x?x!fir.char<1,10>>
+  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_cst_char_dyn_array(%[[m]], %[[n]]) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> !fir.array<?x?x!fir.char<1,10>>
   ! CHECK: fir.save_result %[[res]] to %[[tmp]](%[[shape]]) typeparams {{.*}} : !fir.array<?x?x!fir.char<1,10>>, !fir.ref<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>, index
   print *, return_cst_char_dyn_array(m, n)
 end subroutine
@@ -269,7 +269,7 @@ subroutine dyn_char_dyn_array(l, m, n)
   ! CHECK-DAG: %[[lselect:.*]] = arith.select %[[lcmpi]], %[[lcast2]], %{{.*}} : index
   ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<?x?x!fir.char<1,?>>(%[[lselect]] : index), %[[mselect]], %[[nselect]]
   ! CHECK: %[[shape:.*]] = fir.shape %[[mselect]], %[[nselect]] : (index, index) -> !fir.shape<2>
-  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_dyn_char_dyn_array(%[[l]], %[[m]], %[[n]]) : (!fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) -> !fir.array<?x?x!fir.char<1,?>>
+  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_dyn_char_dyn_array(%[[l]], %[[m]], %[[n]]) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) -> !fir.array<?x?x!fir.char<1,?>>
   ! CHECK: fir.save_result %[[res]] to %[[tmp]](%[[shape]]) typeparams {{.*}} : !fir.array<?x?x!fir.char<1,?>>, !fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, index
   integer :: l, m, n
   print *, return_dyn_char_dyn_array(l, m, n)
@@ -279,7 +279,7 @@ end subroutine
 subroutine dyn_char_alloc(l)
   integer :: l
   ! CHECK: %[[alloc:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> {{{.*}}bindc_name = ".result"}
-  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_dyn_char_alloc({{.*}}) : (!fir.ref<i32>) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
+  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_dyn_char_alloc({{.*}}) {{.*}}: (!fir.ref<i32>) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
   ! CHECK: fir.save_result %[[res]] to %[[alloc]] : !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
   print *, return_dyn_char_alloc(l)
   ! CHECK: _FortranAioOutputDescriptor
@@ -294,7 +294,7 @@ end subroutine
 subroutine dyn_char_pointer(l)
   integer :: l
   ! CHECK: %[[alloc:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>> {{{.*}}bindc_name = ".result"}
-  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_dyn_char_pointer({{.*}}) : (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>
+  ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_dyn_char_pointer({{.*}}) {{.*}}: (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>
   ! CHECK: fir.save_result %[[res]] to %[[alloc]] : !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
   print *, return_dyn_char_pointer(l)
   ! CHECK-NOT: fir.freemem
@@ -430,5 +430,5 @@ subroutine test_not_entirely_explicit_interface(n)
   ! CHECK: %[[cmpi:.*]] = arith.cmpi sgt, %[[len]], %{{.*}} : index
   ! CHECK: %[[select:.*]] = arith.select %[[cmpi]], %[[len]], %{{.*}} : index
   ! CHECK: %[[result:.*]] = fir.alloca !fir.char<1,?>(%[[select]] : index) {bindc_name = ".result"}
-  ! CHECK: fir.call @_QPreturn_dyn_char_2(%[[result]], %[[select]], %{{.*}}) : (!fir.ref<!fir.char<1,?>>, index, !fir.ref<i32>) -> !fir.boxchar<1>
+  ! CHECK: fir.call @_QPreturn_dyn_char_2(%[[result]], %[[select]], %{{.*}}) {{.*}}: (!fir.ref<!fir.char<1,?>>, index, !fir.ref<i32>) -> !fir.boxchar<1>
 end subroutine

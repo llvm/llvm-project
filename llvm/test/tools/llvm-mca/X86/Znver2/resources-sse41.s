@@ -167,7 +167,7 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  1      100   0.25    *                   dppd	$22, (%rax), %xmm2
 # CHECK-NEXT:  1      15    0.25                        dpps	$22, %xmm0, %xmm2
 # CHECK-NEXT:  2      19    0.33    *                   dpps	$22, (%rax), %xmm2
-# CHECK-NEXT:  1      2     2.00                        extractps	$1, %xmm0, %ecx
+# CHECK-NEXT:  2      2     2.00                        extractps	$1, %xmm0, %ecx
 # CHECK-NEXT:  2      5     2.00           *            extractps	$1, %xmm0, (%rax)
 # CHECK-NEXT:  1      1     0.50                        insertps	$1, %xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   insertps	$1, (%rax), %xmm2

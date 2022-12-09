@@ -1664,7 +1664,8 @@ Address CGOpenMPRuntime::getAddrOfDeclareTargetVar(const VarDecl *VD) {
   llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
   if (Res && (*Res == OMPDeclareTargetDeclAttr::MT_Link ||
-              (*Res == OMPDeclareTargetDeclAttr::MT_To &&
+              ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
+                *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
                HasRequiresUnifiedSharedMemory))) {
     SmallString<64> PtrName;
     {
@@ -1877,7 +1878,8 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
   Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
   if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_Link ||
-      (*Res == OMPDeclareTargetDeclAttr::MT_To &&
+      ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
+        *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
        HasRequiresUnifiedSharedMemory))
     return CGM.getLangOpts().OpenMPIsDevice;
   VD = VD->getDefinition(CGM.getContext());
@@ -7505,7 +7507,8 @@ private:
         if (llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
                 OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD)) {
           if ((*Res == OMPDeclareTargetDeclAttr::MT_Link) ||
-              (*Res == OMPDeclareTargetDeclAttr::MT_To &&
+              ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
+                *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
                CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory())) {
             RequiresReference = true;
             BP = CGF.CGM.getOpenMPRuntime().getAddrOfDeclareTargetVar(VD);
@@ -10438,7 +10441,8 @@ bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(
           cast<VarDecl>(GD.getDecl()));
   if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_Link ||
-      (*Res == OMPDeclareTargetDeclAttr::MT_To &&
+      ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
+        *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
        HasRequiresUnifiedSharedMemory)) {
     DeferredGlobalVariables.insert(cast<VarDecl>(GD.getDecl()));
     return true;
@@ -10475,7 +10479,8 @@ void CGOpenMPRuntime::registerTargetGlobalVariable(const VarDecl *VD,
   int64_t VarSize;
   llvm::GlobalValue::LinkageTypes Linkage;
 
-  if (*Res == OMPDeclareTargetDeclAttr::MT_To &&
+  if ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
+       *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
       !HasRequiresUnifiedSharedMemory) {
     Flags = llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo;
     VarName = CGM.getMangledName(VD);
@@ -10506,7 +10511,8 @@ void CGOpenMPRuntime::registerTargetGlobalVariable(const VarDecl *VD,
     }
   } else {
     assert(((*Res == OMPDeclareTargetDeclAttr::MT_Link) ||
-            (*Res == OMPDeclareTargetDeclAttr::MT_To &&
+            ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
+              *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
              HasRequiresUnifiedSharedMemory)) &&
            "Declare target attribute must link or to with unified memory.");
     if (*Res == OMPDeclareTargetDeclAttr::MT_Link)
@@ -10543,12 +10549,14 @@ void CGOpenMPRuntime::emitDeferredTargetDecls() const {
         OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
     if (!Res)
       continue;
-    if (*Res == OMPDeclareTargetDeclAttr::MT_To &&
+    if ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
+         *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
         !HasRequiresUnifiedSharedMemory) {
       CGM.EmitGlobal(VD);
     } else {
       assert((*Res == OMPDeclareTargetDeclAttr::MT_Link ||
-              (*Res == OMPDeclareTargetDeclAttr::MT_To &&
+              ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
+                *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
                HasRequiresUnifiedSharedMemory)) &&
              "Expected link clause or to clause with unified memory.");
       (void)CGM.getOpenMPRuntime().getAddrOfDeclareTargetVar(VD);

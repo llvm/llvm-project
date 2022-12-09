@@ -28,8 +28,8 @@ static constexpr int Seed = 5;
 
 namespace {
 
-std::unique_ptr<Module> parseAssembly(
-    const char *Assembly, LLVMContext &Context) {
+std::unique_ptr<Module> parseAssembly(const char *Assembly,
+                                      LLVMContext &Context) {
 
   SMDiagnostic Error;
   std::unique_ptr<Module> M = parseAssemblyString(Assembly, Error, Context);
@@ -87,19 +87,18 @@ TEST(RandomIRBuilderTest, InsertValueIndexes) {
   // Check that we will generate correct indexes for the insertvalue operation
 
   LLVMContext Ctx;
-  const char *Source =
-      "%T = type {i8, i32, i64}\n"
-      "define void @test() {\n"
-      "  %A = alloca %T\n"
-      "  %L = load %T, %T* %A"
-      "  ret void\n"
-      "}";
+  const char *Source = "%T = type {i8, i32, i64}\n"
+                       "define void @test() {\n"
+                       "  %A = alloca %T\n"
+                       "  %L = load %T, %T* %A"
+                       "  ret void\n"
+                       "}";
   auto M = parseAssembly(Source, Ctx);
 
   fuzzerop::OpDescriptor IVDescr = fuzzerop::insertValueDescriptor(1);
 
-  std::vector<Type *> Types =
-      {Type::getInt8Ty(Ctx), Type::getInt32Ty(Ctx), Type::getInt64Ty(Ctx)};
+  std::vector<Type *> Types = {Type::getInt8Ty(Ctx), Type::getInt32Ty(Ctx),
+                               Type::getInt64Ty(Ctx)};
   RandomIRBuilder IB(Seed, Types);
 
   // Get first basic block of the first function
@@ -115,15 +114,15 @@ TEST(RandomIRBuilderTest, InsertValueIndexes) {
 
   // Generate constants for each of the types and check that we pick correct
   // index for the given type
-  for (auto *T: Types) {
+  for (auto *T : Types) {
     // Loop to account for possible random decisions
     for (int i = 0; i < 10; ++i) {
       // Create value we want to insert. Only it's type matters.
       Srcs[1] = ConstantInt::get(T, 5);
 
       // Try to pick correct index
-      Value *Src = IB.findOrCreateSource(
-          BB, &*BB.begin(), Srcs, IVDescr.SourcePreds[2]);
+      Value *Src =
+          IB.findOrCreateSource(BB, &*BB.begin(), Srcs, IVDescr.SourcePreds[2]);
       ASSERT_TRUE(IVDescr.SourcePreds[2].matches(Srcs, Src));
     }
   }
@@ -167,18 +166,17 @@ TEST(RandomIRBuilderTest, InsertValueArray) {
   // Check that we can generate insertvalue for the vector operations
 
   LLVMContext Ctx;
-  const char *SourceCode =
-      "define void @test() {\n"
-      "  %A = alloca [8 x i32]\n"
-      "  %L = load [8 x i32], [8 x i32]* %A"
-      "  ret void\n"
-      "}";
+  const char *SourceCode = "define void @test() {\n"
+                           "  %A = alloca [8 x i32]\n"
+                           "  %L = load [8 x i32], [8 x i32]* %A"
+                           "  ret void\n"
+                           "}";
   auto M = parseAssembly(SourceCode, Ctx);
 
   fuzzerop::OpDescriptor Descr = fuzzerop::insertValueDescriptor(1);
 
-  std::vector<Type *> Types =
-      {Type::getInt8Ty(Ctx), Type::getInt32Ty(Ctx), Type::getInt64Ty(Ctx)};
+  std::vector<Type *> Types = {Type::getInt8Ty(Ctx), Type::getInt32Ty(Ctx),
+                               Type::getInt64Ty(Ctx)};
   RandomIRBuilder IB(Seed, Types);
 
   // Get first basic block of the first function
@@ -217,7 +215,6 @@ TEST(RandomIRBuilderTest, Invokes) {
       "  ret i32* undef\n"
       "}";
   auto M = parseAssembly(SourceCode, Ctx);
-
 
   std::vector<Type *> Types = {Type::getInt8Ty(Ctx)};
   RandomIRBuilder IB(Seed, Types);
@@ -295,4 +292,4 @@ TEST(RandomIRBuilderTest, SwiftError) {
   }
 }
 
-}
+} // namespace

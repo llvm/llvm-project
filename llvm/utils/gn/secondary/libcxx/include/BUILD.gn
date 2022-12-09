@@ -20,6 +20,7 @@ if (current_toolchain == default_toolchain) {
       "_LIBCPP_ABI_FORCE_MICROSOFT=",
       "_LIBCPP_EXTRA_SITE_DEFINES=",
       "_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY=",
+      "_LIBCPP_HAS_NO_FSTREAM=",
       "_LIBCPP_HAS_NO_THREADS=",
       "_LIBCPP_HAS_NO_MONOTONIC_CLOCK=",
       "_LIBCPP_HAS_MUSL_LIBC=",
@@ -64,6 +65,7 @@ if (current_toolchain == default_toolchain) {
       # An empty value here means the feature is supported.
       # Unsupported values should be set to `$no`.
       "requires_LIBCXX_ENABLE_FILESYSTEM=",
+      "requires_LIBCXX_ENABLE_FSTREAM=",
       "requires_LIBCXX_ENABLE_LOCALIZATION=",
       "requires_LIBCXX_ENABLE_THREADS=",
       "requires_LIBCXX_ENABLE_WIDE_CHARACTERS=",

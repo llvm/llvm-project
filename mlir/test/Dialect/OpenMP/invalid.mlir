@@ -283,6 +283,16 @@ func.func @omp_simdloop_aligned_the_same_var(%arg0 : index, %arg1 : index,
 
 // -----
 
+func.func @omp_simdloop_order_value(%lb : index, %ub : index, %step : index) {
+  // expected-error @below {{invalid clause value: 'default'}}
+  omp.simdloop order(default) for (%iv): index = (%lb) to (%ub) step (%step) {
+    omp.yield
+  }
+  return
+}
+
+// -----
+
 func.func @omp_simdloop_pretty_simdlen(%lb : index, %ub : index, %step : index) -> () {
   // expected-error @below {{op attribute 'simdlen' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
   omp.simdloop simdlen(0) for (%iv): index = (%lb) to (%ub) step (%step) {

@@ -97,7 +97,7 @@ private:
     /// The persistent decl.
     clang::NamedDecl *m_decl = nullptr;
     /// The TypeSystemClang for the ASTContext of m_decl.
-    TypeSystemClang *m_context = nullptr;
+    lldb::TypeSystemWP m_context;
   };
 
   typedef llvm::DenseMap<const char *, PersistentDecl> PersistentDeclMap;

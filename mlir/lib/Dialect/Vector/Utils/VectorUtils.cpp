@@ -77,7 +77,7 @@ SmallVector<int64_t, 4> mlir::computeElementOffsetsFromVectorSliceOffsets(
 Optional<SmallVector<int64_t, 4>> mlir::shapeRatio(ArrayRef<int64_t> superShape,
                                                    ArrayRef<int64_t> subShape) {
   if (superShape.size() < subShape.size()) {
-    return Optional<SmallVector<int64_t, 4>>();
+    return None;
   }
 
   // Starting from the end, compute the integer divisors.

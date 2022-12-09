@@ -52,7 +52,7 @@ contains
 ! CHECK:         cond_br %{{.*}}, ^bb2, ^bb3
 ! CHECK:       ^bb2:
 ! CHECK:         %[[VAL_19:.*]] = fir.load %[[VAL_3]] : !fir.ptr<f32>
-! CHECK:         %[[VAL_20:.*]] = arith.addf %[[VAL_19]], %[[VAL_8]] : f32
+! CHECK:         %[[VAL_20:.*]] = arith.addf %[[VAL_19]], %[[VAL_8]] {{.*}}: f32
 ! CHECK:         fir.store %[[VAL_20]] to %[[VAL_3]] : !fir.ptr<f32>
 ! CHECK:         br ^bb1
 ! CHECK:       ^bb3:
@@ -77,7 +77,7 @@ contains
 ! CHECK:         cond_br %{{.*}}, ^bb2, ^bb3
 ! CHECK:       ^bb2:
 ! CHECK:         %[[VAL_19:.*]] = fir.load %[[VAL_3]] : !fir.heap<f32>
-! CHECK:         %[[VAL_20:.*]] = arith.addf %[[VAL_19]], %[[VAL_8]] : f32
+! CHECK:         %[[VAL_20:.*]] = arith.addf %[[VAL_19]], %[[VAL_8]] {{.*}}: f32
 ! CHECK:         fir.store %[[VAL_20]] to %[[VAL_3]] : !fir.heap<f32>
 ! CHECK:         br ^bb1
 ! CHECK:       ^bb3:

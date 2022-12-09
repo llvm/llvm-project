@@ -24,7 +24,7 @@ program call_by_value_attr
   !CHECK: %[[CONST:.*]] = arith.constant 17
   !CHECK: fir.store %[[CONST]] to %[[VALUE]]
   !CHECK: %[[LOAD:.*]] = fir.load %[[VALUE]]
-  !CHECK: fir.call @_QPsubri(%[[LOAD]]) : {{.*}}
+  !CHECK: fir.call @_QPsubri(%[[LOAD]]) {{.*}}: {{.*}}
   a = (/ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 /)
   !CHECK: %[[SHAPE_1:.*]] = fir.shape %[[CONST_10_1]]
   !CHECK: %[[ARRAY_LOAD_1:.*]] = fir.array_load %[[ARRAY_A]](%[[SHAPE_1]]) : {{.*}}
@@ -66,7 +66,7 @@ program call_by_value_attr
   !CHECK: %[[SLICE:.*]] = fir.slice %[[CONV_5]], %[[CONV_15]], %[[CONV_1]] : (index, index, index) -> !fir.slice<1>
   !CHECK: %[[BOX:.*]] = fir.embox %[[ARRAY_B]](%[[SHAPE_7]]) [%[[SLICE]]] : (!fir.ref<!fir.array<15xi32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<11xi32>>
   !CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.array<11xi32>>) -> !fir.box<none>
-  !CHECK: %[[IS_CONTIGUOUS:.*]] = fir.call @_FortranAIsContiguous(%[[BOX_NONE]]) : (!fir.box<none>) -> i1
+  !CHECK: %[[IS_CONTIGUOUS:.*]] = fir.call @_FortranAIsContiguous(%[[BOX_NONE]]) {{.*}}: (!fir.box<none>) -> i1
   !CHECK: %[[ADDR:.*]] = fir.if %[[IS_CONTIGUOUS]] -> (!fir.heap<!fir.array<11xi32>>) {
   !CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.array<11xi32>>) -> !fir.heap<!fir.array<11xi32>>
   !CHECKL fir.result %[[BOXADDR]] : !fir.heap<!fir.array<11xi32>>
@@ -89,7 +89,7 @@ end program call_by_value_attr
 ! CHECK-SAME:                      %[[VAL_0:.*]]: i32 {fir.bindc_name = "val"}) {
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca i32
 ! CHECK:         fir.store %[[VAL_0]] to %[[VAL_1]] : !fir.ref<i32>
-! CHECK:         fir.call @_QPtest_numeric_scalar_value(%[[VAL_1]]) : (!fir.ref<i32>) -> ()
+! CHECK:         fir.call @_QPtest_numeric_scalar_value(%[[VAL_1]]) {{.*}}: (!fir.ref<i32>) -> ()
 ! CHECK:         return
 ! CHECK:       }
 
@@ -115,7 +115,7 @@ subroutine test_litteral_copies_1
   ! CHECK:         }
   ! CHECK:         fir.array_merge_store %{{.*}}, %{{.*}} to %[[VAL_5]] : !fir.array<100xi32>, !fir.array<100xi32>, !fir.heap<!fir.array<100xi32>>
   ! CHECK:         %[[VAL_17:.*]] = fir.convert %[[VAL_5]] : (!fir.heap<!fir.array<100xi32>>) -> !fir.ref<!fir.array<4xi32>>
-  ! CHECK:         fir.call @_QPtakes_array_value(%[[VAL_17]]) : (!fir.ref<!fir.array<4xi32>>) -> ()
+  ! CHECK:         fir.call @_QPtakes_array_value(%[[VAL_17]]) {{.*}}: (!fir.ref<!fir.array<4xi32>>) -> ()
   call takes_array_value(p)
   ! CHECK:         fir.freemem %[[VAL_5]] : !fir.heap<!fir.array<100xi32>>
 end subroutine
@@ -136,9 +136,9 @@ subroutine test_litteral_copies_2
   ! CHECK: %[[VAL_6:.*]] = arith.constant false
   ! CHECK: %[[VAL_7:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.char<1,71>>) -> !fir.ref<i8>
   ! CHECK: %[[VAL_8:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.char<1,71>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[VAL_7]], %[[VAL_8]], %[[VAL_5]], %[[VAL_6]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[VAL_7]], %[[VAL_8]], %[[VAL_5]], %[[VAL_6]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   ! CHECK: %[[VAL_9:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.char<1,71>>) -> !fir.ref<!fir.char<1,?>>
   ! CHECK: %[[VAL_10:.*]] = fir.emboxchar %[[VAL_9]], %[[VAL_1]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-  ! CHECK: fir.call @_QPtakes_char_value(%[[VAL_10]]) : (!fir.boxchar<1>) -> ()
+  ! CHECK: fir.call @_QPtakes_char_value(%[[VAL_10]]) {{.*}}: (!fir.boxchar<1>) -> ()
   call takes_char_value("a character string litteral that could be locally modfied by the callee")
 end subroutine

@@ -12,6 +12,7 @@
 using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
+using ::testing::Pair;
 using ::testing::ResultOf;
 using ::testing::UnorderedElementsAre;
 
@@ -105,6 +106,38 @@ TEST(AnnotationsTest, Nested) {
               ElementsAre(range(8, 9), range(7, 10), range(1, 10)));
 }
 
+TEST(AnnotationsTest, Payload) {
+  // // A single unnamed point or range with unspecified payload
+  EXPECT_THAT(llvm::Annotations("a$^b").pointWithPayload(), Pair(1u, ""));
+  EXPECT_THAT(llvm::Annotations("a$[[b]]cdef").rangeWithPayload(),
+              Pair(range(1, 2), ""));
+
+  // A single unnamed point or range with empty payload
+  EXPECT_THAT(llvm::Annotations("a$()^b").pointWithPayload(), Pair(1u, ""));
+  EXPECT_THAT(llvm::Annotations("a$()[[b]]cdef").rangeWithPayload(),
+              Pair(range(1, 2), ""));
+
+  // A single unnamed point or range with payload.
+  EXPECT_THAT(llvm::Annotations("a$(foo)^b").pointWithPayload(),
+              Pair(1u, "foo"));
+  EXPECT_THAT(llvm::Annotations("a$(foo)[[b]]cdef").rangeWithPayload(),
+              Pair(range(1, 2), "foo"));
+
+  // A single named point or range with payload
+  EXPECT_THAT(llvm::Annotations("a$name(foo)^b").pointWithPayload("name"),
+              Pair(1u, "foo"));
+  EXPECT_THAT(
+      llvm::Annotations("a$name(foo)[[b]]cdef").rangeWithPayload("name"),
+      Pair(range(1, 2), "foo"));
+
+  // Multiple named points with payload.
+  llvm::Annotations Annotated("a$p1(p1)^bcd$p2(p2)^123$p1^345");
+  EXPECT_THAT(Annotated.points(), IsEmpty());
+  EXPECT_THAT(Annotated.pointsWithPayload("p1"),
+              ElementsAre(Pair(1u, "p1"), Pair(7u, "")));
+  EXPECT_THAT(Annotated.pointWithPayload("p2"), Pair(4u, "p2"));
+}
+
 TEST(AnnotationsTest, Named) {
   // A single named point or range.
   EXPECT_EQ(llvm::Annotations("a$foo^b").point("foo"), 1u);
@@ -144,6 +177,8 @@ TEST(AnnotationsTest, Errors) {
   EXPECT_DEATH(llvm::Annotations("ff[[fdfd"), "unmatched \\[\\[");
   EXPECT_DEATH(llvm::Annotations("ff[[fdjsfjd]]xxx]]"), "unmatched \\]\\]");
   EXPECT_DEATH(llvm::Annotations("ff$fdsfd"), "unterminated \\$name");
+  EXPECT_DEATH(llvm::Annotations("ff$("), "unterminated payload");
+  EXPECT_DEATH(llvm::Annotations("ff$name("), "unterminated payload");
 #endif
 }
 } // namespace

@@ -27,7 +27,7 @@
 ! CHECK:           }
 ! CHECK:           fir.array_merge_store %[[VAL_9]], %[[VAL_20:.*]] to %[[VAL_7]] : !fir.array<10xi64>, !fir.array<10xi64>, !fir.ref<!fir.array<10xi64>>
 ! CHECK:           omp.barrier
-! CHECK:           fir.call @_QPsub1(%[[VAL_5]], %[[VAL_7]]) : (!fir.ref<i32>, !fir.ref<!fir.array<10xi64>>) -> ()
+! CHECK:           fir.call @_QPsub1(%[[VAL_5]], %[[VAL_7]]) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.array<10xi64>>) -> ()
 ! CHECK:           omp.terminator
 ! CHECK:         }
 ! CHECK:         return
@@ -60,7 +60,7 @@ end
 ! CHECK:           %[[VAL_11:.*]] = arith.constant false
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-! CHECK:           fir.call @llvm.memmove.p0.p0.i64(%[[VAL_12]], %[[VAL_13]], %[[VAL_10]], %[[VAL_11]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:           fir.call @llvm.memmove.p0.p0.i64(%[[VAL_12]], %[[VAL_13]], %[[VAL_10]], %[[VAL_11]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! CHECK:           %[[VAL_14:.*]] = omp.threadprivate %[[VAL_3]] : !fir.ref<!fir.array<10x!fir.char<1,5>>> -> !fir.ref<!fir.array<10x!fir.char<1,5>>>
 ! CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_16:.*]] = fir.array_load %[[VAL_14]](%[[VAL_15]]) : (!fir.ref<!fir.array<10x!fir.char<1,5>>>, !fir.shape<1>) -> !fir.array<10x!fir.char<1,5>>
@@ -79,7 +79,7 @@ end
 ! CHECK:             %[[VAL_31:.*]] = arith.constant false
 ! CHECK:             %[[VAL_32:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_33:.*]] = fir.convert %[[VAL_25]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-! CHECK:             fir.call @llvm.memmove.p0.p0.i64(%[[VAL_32]], %[[VAL_33]], %[[VAL_30]], %[[VAL_31]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:             fir.call @llvm.memmove.p0.p0.i64(%[[VAL_32]], %[[VAL_33]], %[[VAL_30]], %[[VAL_31]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! CHECK:             %[[VAL_34:.*]] = fir.array_amend %[[VAL_24]], %[[VAL_26]] : (!fir.array<10x!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>) -> !fir.array<10x!fir.char<1,5>>
 ! CHECK:             fir.result %[[VAL_34]] : !fir.array<10x!fir.char<1,5>>
 ! CHECK:           }
@@ -89,7 +89,7 @@ end
 ! CHECK:           %[[VAL_37:.*]] = fir.emboxchar %[[VAL_36]], %[[VAL_1]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 ! CHECK:           %[[VAL_38:.*]] = fir.convert %[[VAL_14]] : (!fir.ref<!fir.array<10x!fir.char<1,5>>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:           %[[VAL_39:.*]] = fir.emboxchar %[[VAL_38]], %[[VAL_4]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:           fir.call @_QPsub2(%[[VAL_37]], %[[VAL_39]]) : (!fir.boxchar<1>, !fir.boxchar<1>) -> ()
+! CHECK:           fir.call @_QPsub2(%[[VAL_37]], %[[VAL_39]]) {{.*}}: (!fir.boxchar<1>, !fir.boxchar<1>) -> ()
 ! CHECK:           omp.terminator
 ! CHECK:         }
 ! CHECK:         return
@@ -113,7 +113,7 @@ end
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>
 ! CHECK:           fir.store %[[VAL_3]] to %[[VAL_2]] : !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>
 ! CHECK:           omp.barrier
-! CHECK:           fir.call @_QPsub3(%[[VAL_2]]) : (!fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>) -> ()
+! CHECK:           fir.call @_QPsub3(%[[VAL_2]]) {{.*}}: (!fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>) -> ()
 ! CHECK:           omp.terminator
 ! CHECK:         }
 ! CHECK:         return
@@ -148,7 +148,7 @@ end
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 1 : i32
 ! CHECK:           omp.wsloop   for  (%[[VAL_9:.*]]) : i32 = (%[[VAL_6]]) to (%[[VAL_7]]) inclusive step (%[[VAL_8]]) {
 ! CHECK:             fir.store %[[VAL_9]] to %[[VAL_3]] : !fir.ref<i32>
-! CHECK:             fir.call @_QPsub4(%[[VAL_4]]) : (!fir.ref<i32>) -> ()
+! CHECK:             fir.call @_QPsub4(%[[VAL_4]]) {{.*}}: (!fir.ref<i32>) -> ()
 ! CHECK:             omp.yield
 ! CHECK:           }
 ! CHECK:           omp.terminator
@@ -178,11 +178,11 @@ end
 ! CHECK:           omp.barrier
 ! CHECK:           omp.sections   {
 ! CHECK:             omp.section {
-! CHECK:               fir.call @_QPsub5(%[[VAL_2]]) : (!fir.ref<i32>) -> ()
+! CHECK:               fir.call @_QPsub5(%[[VAL_2]]) {{.*}}: (!fir.ref<i32>) -> ()
 ! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.section {
-! CHECK:               fir.call @_QPsub6(%[[VAL_2]]) : (!fir.ref<i32>) -> ()
+! CHECK:               fir.call @_QPsub6(%[[VAL_2]]) {{.*}}: (!fir.ref<i32>) -> ()
 ! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator

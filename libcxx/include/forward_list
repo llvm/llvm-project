@@ -845,7 +845,7 @@ public:
     __remove_return_type remove(const value_type& __v);
     template <class _Predicate> __remove_return_type remove_if(_Predicate __pred);
     _LIBCPP_INLINE_VISIBILITY
-    __remove_return_type unique() {return unique(__equal_to<value_type>());}
+    __remove_return_type unique() { return unique(__equal_to()); }
     template <class _BinaryPredicate> __remove_return_type unique(_BinaryPredicate __binary_pred);
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY

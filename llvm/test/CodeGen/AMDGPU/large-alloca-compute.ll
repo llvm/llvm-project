@@ -1,9 +1,10 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire -show-mc-encoding < %s | FileCheck --check-prefixes=GCN,CI,ALL %s
 ; RUN: llc -march=amdgcn -mcpu=carrizo --show-mc-encoding < %s | FileCheck --check-prefixes=GCN,VI,ALL %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 --show-mc-encoding < %s | FileCheck --check-prefixes=GCN,GFX9,ALL %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 < %s -mattr=-flat-for-global | FileCheck --check-prefixes=GCNHSA,ALL %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
 ; RUN: llc -march=amdgcn -mcpu=carrizo -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=4 -mattr=-flat-for-global,-architected-flat-scratch,-user-sgpr-init16-bug < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
 
 ; FIXME: align on alloca seems to be ignored for private_segment_alignment
 
@@ -18,8 +19,8 @@
 ; VI-DAG: s_mov_b32 s{{[0-9]+}}, 0xe80000
 ; GFX9-DAG: s_mov_b32 s{{[0-9]+}}, 0xe00000
 
-; GCNHSA: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], 0 offen
-; GCNHSA: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], 0 offen
+; GCNHSA: buffer_store_{{dword|b32}} {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], 0 offen
+; GCNHSA: buffer_load_{{dword|b32}} {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], 0 offen
 
 ; GCNHSA: .amdhsa_kernel large_alloca_compute_shader
 ; GCNHSA:         .amdhsa_group_segment_fixed_size 0

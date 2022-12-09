@@ -1283,6 +1283,9 @@ private:
   /// Mark SCEVUnknown Phis currently being processed by getRangeRef.
   SmallPtrSet<const PHINode *, 6> PendingPhiRanges;
 
+  /// Mark SCEVUnknown Phis currently being processed by getRangeRefIter.
+  SmallPtrSet<const PHINode *, 6> PendingPhiRangesIter;
+
   // Mark SCEVUnknown Phis currently being processed by isImpliedViaMerge.
   SmallPtrSet<const PHINode *, 6> PendingMerges;
 
@@ -1459,6 +1462,10 @@ private:
     /// Get the symbolic max backedge taken count for the loop.
     const SCEV *getSymbolicMax(const Loop *L, ScalarEvolution *SE);
 
+    /// Get the symbolic max backedge taken count for the particular loop exit.
+    const SCEV *getSymbolicMax(const BasicBlock *ExitingBlock,
+                               ScalarEvolution *SE) const;
+
     /// Return true if the number of times this backedge is taken is either the
     /// value returned by getConstantMax or zero.
     bool isConstantMaxOrZero(ScalarEvolution *SE) const;
@@ -1560,7 +1567,12 @@ private:
   /// Determine the range for a particular SCEV.
   /// NOTE: This returns a reference to an entry in a cache. It must be
   /// copied if its needed for longer.
-  const ConstantRange &getRangeRef(const SCEV *S, RangeSignHint Hint);
+  const ConstantRange &getRangeRef(const SCEV *S, RangeSignHint Hint,
+                                   unsigned Depth = 0);
+
+  /// Determine the range for a particular SCEV, but evaluates ranges for
+  /// operands iteratively first.
+  const ConstantRange &getRangeRefIter(const SCEV *S, RangeSignHint Hint);
 
   /// Determines the range for the affine SCEVAddRecExpr {\p Start,+,\p Step}.
   /// Helper for \c getRange.

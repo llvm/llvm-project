@@ -10,6 +10,7 @@ set(LLVM_LINK_COMPONENTS
   FrontendHLSL
   FrontendOpenMP
   IPO
+  IRPrinter
   IRReader
   AggressiveInstCombine
   InstCombine

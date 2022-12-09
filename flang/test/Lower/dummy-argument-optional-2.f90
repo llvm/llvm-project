@@ -42,7 +42,7 @@ subroutine pass_pointer_scalar(i)
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:         %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK:         %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ptr<i32>) -> !fir.ref<i32>
-! CHECK:         fir.call @_QPtakes_opt_scalar(%[[VAL_3]]) : (!fir.ref<i32>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_scalar(%[[VAL_3]]) {{.*}}: (!fir.ref<i32>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMoptional_testsPpass_allocatable_scalar(
@@ -53,7 +53,7 @@ subroutine pass_allocatable_scalar(i)
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:         %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 ! CHECK:         %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.heap<i32>) -> !fir.ref<i32>
-! CHECK:         fir.call @_QPtakes_opt_scalar(%[[VAL_3]]) : (!fir.ref<i32>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_scalar(%[[VAL_3]]) {{.*}}: (!fir.ref<i32>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMoptional_testsPpass_pointer_scalar_char(
@@ -66,7 +66,7 @@ subroutine pass_pointer_scalar_char(c)
 ! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.ptr<!fir.char<1,?>>
 ! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ptr<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:         %[[VAL_5:.*]] = fir.emboxchar %[[VAL_4]], %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:         fir.call @_QPtakes_opt_scalar_char(%[[VAL_5]]) : (!fir.boxchar<1>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_scalar_char(%[[VAL_5]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMoptional_testsPpass_allocatable_scalar_char(
@@ -79,7 +79,7 @@ subroutine pass_allocatable_scalar_char(c)
 ! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
 ! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:         %[[VAL_5:.*]] = fir.emboxchar %[[VAL_4]], %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:         fir.call @_QPtakes_opt_scalar_char(%[[VAL_5]]) : (!fir.boxchar<1>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_scalar_char(%[[VAL_5]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! -----------------------------------------------------------------------------
@@ -102,7 +102,7 @@ subroutine pass_pointer_array(i)
 ! CHECK:         %[[box:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:         %[[VAL_7:.*]] = arith.constant 0 : index
 ! CHECK:         %[[box_none:.*]] = fir.convert %[[box]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.box<none>
-! CHECK:         %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) : (!fir.box<none>) -> i1
+! CHECK:         %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) {{.*}}: (!fir.box<none>) -> i1
 ! CHECK:         %[[VAL_9:.*]] = fir.if %[[VAL_5]] -> (!fir.heap<!fir.array<?xf32>>) {
 ! CHECK:           %[[addr:.*]] = fir.if %[[is_contiguous]] -> (!fir.heap<!fir.array<?xf32>>) {
 ! CHECK:             %[[box_addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
@@ -122,7 +122,7 @@ subroutine pass_pointer_array(i)
 ! CHECK:         %[[not_contiguous:.*]] = arith.cmpi eq, %[[is_contiguous]], %false : i1
 ! CHECK:         %[[and:.*]] = arith.andi %[[VAL_5]], %[[not_contiguous]] : i1
 ! CHECK:         %[[VAL_29:.*]] = fir.convert %[[VAL_9]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<100xf32>>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_29]]) : (!fir.ref<!fir.array<100xf32>>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_29]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
 ! CHECK:         fir.if %[[and]] {
 ! CHECK:           %[[VAL_40:.*]] = fir.do_loop {{.*}} {
 ! CHECK:           }
@@ -143,7 +143,7 @@ subroutine pass_pointer_array_char(c)
 ! CHECK:         %[[VAL_5:.*]] = arith.cmpi ne, %[[VAL_3]], %[[VAL_4]] : i64
 ! CHECK:         %[[VAL_6:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
 ! CHECK:         %[[box_none:.*]] = fir.convert %[[VAL_6]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>) -> !fir.box<none>
-! CHECK:         %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) : (!fir.box<none>) -> i1
+! CHECK:         %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) {{.*}}: (!fir.box<none>) -> i1
 ! CHECK:         %[[VAL_9:.*]] = fir.if %[[VAL_5]] -> (!fir.heap<!fir.array<?x!fir.char<1,?>>>) {
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_11:.*]]:3 = fir.box_dims %[[VAL_6]], %[[VAL_10]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>, index) -> (index, index, index)
@@ -162,7 +162,7 @@ subroutine pass_pointer_array_char(c)
 ! CHECK:         %[[and:.*]] = arith.andi %[[VAL_5]], %[[not_contiguous]] : i1
 ! CHECK:         %[[VAL_50:.*]] = fir.convert %[[VAL_9]] : (!fir.heap<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:         %[[VAL_52:.*]] = fir.emboxchar %[[VAL_50]], %[[VAL_47]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape_char(%[[VAL_52]]) : (!fir.boxchar<1>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape_char(%[[VAL_52]]) {{.*}}: (!fir.boxchar<1>) -> ()
 ! CHECK:         fir.if %[[and]] {
 ! CHECK:           %[[VAL_62:.*]] = fir.do_loop {{.*}} {
 ! CHECK:           }
@@ -180,14 +180,14 @@ end subroutine
 subroutine forward_pointer_array()
   call takes_opt_explicit_shape(returns_pointer())
 ! CHECK:         %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {bindc_name = ".result"}
-! CHECK:         %[[VAL_1:.*]] = fir.call @_QPreturns_pointer() : () -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+! CHECK:         %[[VAL_1:.*]] = fir.call @_QPreturns_pointer() {{.*}}: () -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
 ! CHECK:         fir.save_result %[[VAL_1]] to %[[VAL_0]] : !fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:         %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
 ! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ptr<!fir.array<?xf32>>) -> i64
 ! CHECK:         %[[VAL_5:.*]] = arith.constant 0 : i64
 ! CHECK:         %[[VAL_6:.*]] = arith.cmpi ne, %[[VAL_4]], %[[VAL_5]] : i64
-! CHECK:         %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%{{.*}}) : (!fir.box<none>) -> i1
+! CHECK:         %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%{{.*}}) {{.*}}: (!fir.box<none>) -> i1
 ! CHECK:         %[[VAL_7:.*]] = fir.if %[[VAL_6]] -> (!fir.heap<!fir.array<?xf32>>) {
 ! CHECK:           %[[VAL_10:.*]] = fir.allocmem !fir.array<?xf32>
 ! CHECK:           fir.do_loop {{.*}} {
@@ -200,7 +200,7 @@ subroutine forward_pointer_array()
 ! CHECK:         %[[not_contiguous:.*]] = arith.cmpi eq, %[[is_contiguous]], %false : i1
 ! CHECK:         %[[and:.*]] = arith.andi %[[VAL_6]], %[[not_contiguous]] : i1
 ! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_7]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<100xf32>>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_14]]) : (!fir.ref<!fir.array<100xf32>>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_14]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
 ! CHECK:         fir.if %[[and]] {
 ! CHECK:           fir.do_loop {{.*}} {
 ! CHECK:           }
@@ -226,7 +226,7 @@ subroutine pass_opt_assumed_shape(x)
 ! CHECK:         %[[VAL_4:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 ! CHECK:         %[[VAL_5:.*]] = fir.embox %[[VAL_2]](%[[VAL_4]]) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
 ! CHECK:         %[[VAL_6:.*]] = arith.select %[[VAL_1]], %[[VAL_0]], %[[VAL_5]] : !fir.box<!fir.array<?xf32>>
-! CHECK:         %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%{{.*}}) : (!fir.box<none>) -> i1
+! CHECK:         %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%{{.*}}) {{.*}}: (!fir.box<none>) -> i1
 ! CHECK:         %[[VAL_7:.*]] = fir.if %[[VAL_1]] -> (!fir.heap<!fir.array<?xf32>>) {
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_9:.*]]:3 = fir.box_dims %[[VAL_6]], %[[VAL_8]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
@@ -242,7 +242,7 @@ subroutine pass_opt_assumed_shape(x)
 ! CHECK:         %[[not_contiguous:.*]] = arith.cmpi eq, %[[is_contiguous]], %false : i1
 ! CHECK:         %[[and:.*]] = arith.andi %[[VAL_1]], %[[not_contiguous]] : i1
 ! CHECK:         %[[VAL_26:.*]] = fir.convert %[[VAL_27:.*]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<100xf32>>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_26]]) : (!fir.ref<!fir.array<100xf32>>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_26]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
 ! CHECK:         fir.if %[[and]] {
 ! CHECK:           %[[VAL_36:.*]] = fir.do_loop {{.*}} { 
 ! CHECK:           }
@@ -264,7 +264,7 @@ subroutine pass_opt_assumed_shape_char(c)
 ! CHECK:         %[[VAL_6:.*]] = fir.embox %[[VAL_2]](%[[VAL_4]]) typeparams %[[VAL_5]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:         %[[VAL_7:.*]] = arith.select %[[VAL_1]], %[[VAL_0]], %[[VAL_6]] : !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:         %[[box_none:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<none>
-! CHECK:         %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) : (!fir.box<none>) -> i1
+! CHECK:         %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) {{.*}}: (!fir.box<none>) -> i1
 ! CHECK:         %[[VAL_8:.*]] = fir.if %[[VAL_1]] -> (!fir.heap<!fir.array<?x!fir.char<1,?>>>) {
 ! CHECK:         %[[addr:.*]] = fir.if %[[is_contiguous]] -> (!fir.heap<!fir.array<?x!fir.char<1,?>>>) {
 ! CHECK:           %[[res:.*]] = fir.box_addr %[[VAL_7]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.heap<!fir.array<?x!fir.char<1,?>>>
@@ -285,7 +285,7 @@ subroutine pass_opt_assumed_shape_char(c)
 ! CHECK:         %[[and:.*]] = arith.andi %[[VAL_1]], %[[not_contiguous]] : i1
 ! CHECK:         %[[VAL_48:.*]] = fir.convert %[[VAL_49:.*]] : (!fir.heap<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:         %[[VAL_50:.*]] = fir.emboxchar %[[VAL_48]], %[[VAL_45]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape_char(%[[VAL_50]]) : (!fir.boxchar<1>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape_char(%[[VAL_50]]) {{.*}}: (!fir.boxchar<1>) -> ()
 ! CHECK:         fir.if %[[and]] {
 ! CHECK:           %[[VAL_59:.*]] = fir.do_loop {{.*}} {
 ! CHECK:           fir.array_merge_store %{{.*}}, %[[VAL_59]] to %[[VAL_7]] : !fir.array<?x!fir.char<1,?>>, !fir.array<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
@@ -312,7 +312,7 @@ subroutine pass_opt_contiguous_assumed_shape(x)
 ! CHECK:         %[[VAL_6:.*]] = arith.select %[[VAL_1]], %[[VAL_0]], %[[VAL_5]] : !fir.box<!fir.array<?xf32>>
 ! CHECK:         %[[VAL_7:.*]] = fir.box_addr %[[VAL_6]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 ! CHECK:         %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.array<?xf32>>) -> !fir.ref<!fir.array<100xf32>>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_8]]) : (!fir.ref<!fir.array<100xf32>>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_8]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMoptional_testsPpass_opt_contiguous_assumed_shape_char(
@@ -331,7 +331,7 @@ subroutine pass_opt_contiguous_assumed_shape_char(c)
 ! CHECK:         %[[VAL_9:.*]] = fir.box_elesize %[[VAL_7]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
 ! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:         %[[VAL_11:.*]] = fir.emboxchar %[[VAL_10]], %[[VAL_9]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape_char(%[[VAL_11]]) : (!fir.boxchar<1>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape_char(%[[VAL_11]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! -----------------------------------------------------------------------------
@@ -348,7 +348,7 @@ subroutine pass_allocatable_array(i)
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK:         %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
 ! CHECK:         %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<100xf32>>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_3]]) : (!fir.ref<!fir.array<100xf32>>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_3]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMoptional_testsPpass_allocatable_array_char(
@@ -361,7 +361,7 @@ subroutine pass_allocatable_array_char(c)
 ! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.heap<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:         %[[VAL_5:.*]] = fir.emboxchar %[[VAL_4]], %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape_char(%[[VAL_5]]) : (!fir.boxchar<1>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape_char(%[[VAL_5]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMoptional_testsPpass_contiguous_pointer_array(
@@ -372,7 +372,7 @@ subroutine pass_contiguous_pointer_array(i)
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:         %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
 ! CHECK:         %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ptr<!fir.array<?xf32>>) -> !fir.ref<!fir.array<100xf32>>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_3]]) : (!fir.ref<!fir.array<100xf32>>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_3]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMoptional_testsPpass_contiguous_pointer_array_char(
@@ -385,7 +385,7 @@ subroutine pass_contiguous_pointer_array_char(c)
 ! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>) -> !fir.ptr<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ptr<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:         %[[VAL_5:.*]] = fir.emboxchar %[[VAL_4]], %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape_char(%[[VAL_5]]) : (!fir.boxchar<1>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape_char(%[[VAL_5]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! -----------------------------------------------------------------------------
@@ -408,7 +408,7 @@ subroutine pass_opt_assumed_shape_to_intentin(x)
 ! CHECK:         %[[VAL_5:.*]] = fir.embox %[[VAL_2]](%[[VAL_4]]) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
 ! CHECK:         %[[VAL_6:.*]] = arith.select %[[VAL_1]], %[[VAL_0]], %[[VAL_5]] : !fir.box<!fir.array<?xf32>>
 ! CHECK:         %[[box_none:.*]] = fir.convert %[[VAL_6]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
-! CHECK:         %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) : (!fir.box<none>) -> i1
+! CHECK:         %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) {{.*}}: (!fir.box<none>) -> i1
 ! CHECK:         %[[VAL_7:.*]] = fir.if %[[VAL_1]] -> (!fir.heap<!fir.array<?xf32>>) {
 ! CHECK:           %[[VAL_10:.*]] = fir.allocmem !fir.array<?xf32>
 ! CHECK:           fir.do_loop {{.*}} {
@@ -421,7 +421,7 @@ subroutine pass_opt_assumed_shape_to_intentin(x)
 ! CHECK:         %[[not_contiguous:.*]] = arith.cmpi eq, %[[is_contiguous]], %false : i1
 ! CHECK:         %[[and:.*]] = arith.andi %[[VAL_1]], %[[not_contiguous]] : i1
 ! CHECK:         %[[VAL_24:.*]] = fir.convert %[[VAL_7]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<100xf32>>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape_intentin(%[[VAL_24]]) : (!fir.ref<!fir.array<100xf32>>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape_intentin(%[[VAL_24]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
 ! CHECK:         fir.if %[[and]] {
 ! CHECK-NOT:       fir.do_loop
 ! CHECK:           fir.freemem %[[VAL_7]] : !fir.heap<!fir.array<?xf32>>
@@ -440,7 +440,7 @@ subroutine pass_opt_assumed_shape_to_intentout(x)
 ! CHECK:         %[[VAL_5:.*]] = fir.embox %[[VAL_2]](%[[VAL_4]]) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
 ! CHECK:         %[[VAL_6:.*]] = arith.select %[[VAL_1]], %[[VAL_0]], %[[VAL_5]] : !fir.box<!fir.array<?xf32>>
 ! CHECK:         %[[box_none:.*]] = fir.convert %[[VAL_6]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
-! CHECK:         %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) : (!fir.box<none>) -> i1
+! CHECK:         %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) {{.*}}: (!fir.box<none>) -> i1
 ! CHECK:         %[[VAL_7:.*]] = fir.if %[[VAL_1]] -> (!fir.heap<!fir.array<?xf32>>) {
 ! CHECK:           %[[VAL_10:.*]] = fir.allocmem !fir.array<?xf32>
 ! CHECK-NOT:       fir.do_loop
@@ -452,7 +452,7 @@ subroutine pass_opt_assumed_shape_to_intentout(x)
 ! CHECK:         %[[not_contiguous:.*]] = arith.cmpi eq, %[[is_contiguous]], %false : i1
 ! CHECK:         %[[and:.*]] = arith.andi %[[VAL_1]], %[[not_contiguous]] : i1
 ! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_7]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<100xf32>>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape_intentout(%[[VAL_14]]) : (!fir.ref<!fir.array<100xf32>>) -> ()
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape_intentout(%[[VAL_14]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
 ! CHECK:         fir.if %[[and]] {
 ! CHECK:           fir.do_loop {{.*}} {
 ! CHECK:           }

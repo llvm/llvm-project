@@ -166,6 +166,10 @@ FullSourceLoc FullSourceLoc::getExpansionLoc() const {
   return FullSourceLoc(SrcMgr->getExpansionLoc(*this), *SrcMgr);
 }
 
+std::pair<FileID, unsigned> FullSourceLoc::getDecomposedExpansionLoc() const {
+  return SrcMgr->getDecomposedExpansionLoc(*this);
+}
+
 FullSourceLoc FullSourceLoc::getSpellingLoc() const {
   assert(isValid());
   return FullSourceLoc(SrcMgr->getSpellingLoc(*this), *SrcMgr);

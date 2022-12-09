@@ -218,7 +218,7 @@ struct OneShotBufferizePass
       // Configure type converter.
       LayoutMapOption unknownTypeConversionOption =
           parseLayoutMapOption(unknownTypeConversion);
-      opt.unknownTypeConverterFn = [=](Value value, unsigned memorySpace,
+      opt.unknownTypeConverterFn = [=](Value value, Attribute memorySpace,
                                        const BufferizationOptions &options) {
         auto tensorType = value.getType().cast<TensorType>();
         if (unknownTypeConversionOption == LayoutMapOption::IdentityLayoutMap)
@@ -507,7 +507,7 @@ BufferizationOptions bufferization::getPartialBufferizationOptions() {
   options.allowUnknownOps = true;
   options.createDeallocs = false;
   options.enforceAliasingInvariants = false;
-  options.unknownTypeConverterFn = [](Value value, unsigned memorySpace,
+  options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
                                       const BufferizationOptions &options) {
     return getMemRefTypeWithStaticIdentityLayout(
         value.getType().cast<TensorType>(), memorySpace);

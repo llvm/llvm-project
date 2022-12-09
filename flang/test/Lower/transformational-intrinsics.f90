@@ -24,14 +24,14 @@ subroutine in_io(x)
   ! CHECK: %[[res_desc:.]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.logical<1>>>>
   ! CHECK-DAG: %[[res_arg:.*]] = fir.convert %[[res_desc]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<1>>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK-DAG: %[[x_arg:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?x?x!fir.logical<1>>>) -> !fir.box<none>
-  ! CHECK: fir.call @_Fortran{{.*}}AllDim(%[[res_arg]], %[[x_arg]], {{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+  ! CHECK: fir.call @_Fortran{{.*}}AllDim(%[[res_arg]], %[[x_arg]], {{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
   ! CHECK: %[[res_desc_load:.*]] = fir.load %[[res_desc]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<1>>>>>
   ! CHECK-DAG: %[[dims:.*]]:3 = fir.box_dims %[[res_desc_load]], %c0{{.*}} : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<1>>>>, index) -> (index, index, index)
   ! CHECK-DAG: %[[res_addr:.*]] = fir.box_addr %[[res_desc_load]] : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<1>>>>) -> !fir.heap<!fir.array<?x!fir.logical<1>>>
   ! CHECK-DAG: %[[res_shape:.*]] = fir.shape_shift %[[dims]]#0, %[[dims]]#1 : (index, index) -> !fir.shapeshift<1>
   ! CHECK: %[[io_embox:.*]] = fir.embox %[[res_addr]](%[[res_shape]]) : (!fir.heap<!fir.array<?x!fir.logical<1>>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<?x!fir.logical<1>>>
   ! CHECK: %[[io_embox_cast:.*]] = fir.convert %[[io_embox]] : (!fir.box<!fir.array<?x!fir.logical<1>>>) -> !fir.box<none>
-  ! CHECK: fir.call @_Fortran{{.*}}ioOutputDescriptor({{.*}}, %[[io_embox_cast]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
+  ! CHECK: fir.call @_Fortran{{.*}}ioOutputDescriptor({{.*}}, %[[io_embox_cast]]) {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
   print *, all(x, 1)
   ! CHECK: fir.freemem %[[res_addr]] : !fir.heap<!fir.array<?x!fir.logical<1>>>
 end subroutine
@@ -44,13 +44,13 @@ subroutine in_call(x)
   ! CHECK: %[[res_desc:.]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.logical<1>>>>
   ! CHECK-DAG: %[[res_arg:.*]] = fir.convert %[[res_desc]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<1>>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK-DAG: %[[x_arg:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?x?x!fir.logical<1>>>) -> !fir.box<none>
-  ! CHECK: fir.call @_Fortran{{.*}}AllDim(%[[res_arg]], %[[x_arg]], {{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+  ! CHECK: fir.call @_Fortran{{.*}}AllDim(%[[res_arg]], %[[x_arg]], {{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
   ! CHECK: %[[res_desc_load:.*]] = fir.load %[[res_desc]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<1>>>>>
   ! CHECK-DAG: %[[dims:.*]]:3 = fir.box_dims %[[res_desc_load]], %c0{{.*}} : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<1>>>>, index) -> (index, index, index)
   ! CHECK-DAG: %[[res_addr:.*]] = fir.box_addr %[[res_desc_load]] : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<1>>>>) -> !fir.heap<!fir.array<?x!fir.logical<1>>>
   ! CHECK-DAG: %[[res_shape:.*]] = fir.shape_shift %[[dims]]#0, %[[dims]]#1 : (index, index) -> !fir.shapeshift<1>
   ! CHECK: %[[call_embox:.*]] = fir.embox %[[res_addr]](%[[res_shape]]) : (!fir.heap<!fir.array<?x!fir.logical<1>>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<?x!fir.logical<1>>>
-  ! CHECK: fir.call @_QPtakes_array_desc(%[[call_embox]]) : (!fir.box<!fir.array<?x!fir.logical<1>>>) -> ()
+  ! CHECK: fir.call @_QPtakes_array_desc(%[[call_embox]]) {{.*}}: (!fir.box<!fir.array<?x!fir.logical<1>>>) -> ()
   call takes_array_desc(all(x, 1))
   ! CHECK: fir.freemem %[[res_addr]] : !fir.heap<!fir.array<?x!fir.logical<1>>>
 end subroutine
@@ -64,7 +64,7 @@ subroutine in_implicit_call(x)
   ! CHECK: %[[res_desc_load:.*]] = fir.load %[[res_desc]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<1>>>>>
   ! CHECK: %[[res_addr:.*]] = fir.box_addr %[[res_desc_load]] : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<1>>>>) -> !fir.heap<!fir.array<?x!fir.logical<1>>>
   ! CHECK: %[[res_addr_cast:.*]] = fir.convert %[[res_addr]] : (!fir.heap<!fir.array<?x!fir.logical<1>>>) -> !fir.ref<!fir.array<?x!fir.logical<1>>>
-  ! CHECK: fir.call @_QPtakes_implicit_array(%[[res_addr_cast]]) : (!fir.ref<!fir.array<?x!fir.logical<1>>>) -> ()
+  ! CHECK: fir.call @_QPtakes_implicit_array(%[[res_addr_cast]]) {{.*}}: (!fir.ref<!fir.array<?x!fir.logical<1>>>) -> ()
   call takes_implicit_array(all(x, 1))
   ! CHECK: fir.freemem %[[res_addr]] : !fir.heap<!fir.array<?x!fir.logical<1>>>
 end subroutine
@@ -157,7 +157,7 @@ end subroutine
   ! CHECK:         %[[VAL_29:.*]] = fir.convert %[[VAL_19]] : (!fir.box<!fir.array<3x3xi32>>) -> !fir.box<none>
   ! CHECK:         %[[VAL_30:.*]] = fir.convert %[[VAL_25]] : (!fir.box<!fir.array<3xi32>>) -> !fir.box<none>
   ! CHECK:         %[[VAL_31:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,{{[0-9]+}}>>) -> !fir.ref<i8>
-  ! CHECK:         %[[VAL_32:.*]] = fir.call @_FortranACshift(%[[VAL_28]], %[[VAL_29]], %[[VAL_30]], %[[VAL_17]], %[[VAL_31]], %[[VAL_27]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+  ! CHECK:         %[[VAL_32:.*]] = fir.call @_FortranACshift(%[[VAL_28]], %[[VAL_29]], %[[VAL_30]], %[[VAL_17]], %[[VAL_31]], %[[VAL_27]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
   ! CHECK:         %[[VAL_33:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
   ! CHECK:         %[[VAL_34:.*]] = arith.constant 0 : index
   ! CHECK:         %[[VAL_35:.*]]:3 = fir.box_dims %[[VAL_33]], %[[VAL_34]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, index) -> (index, index, index)
@@ -198,7 +198,7 @@ end subroutine
   ! CHECK:         %[[VAL_68:.*]] = fir.convert %[[VAL_59]] : (!fir.box<!fir.array<6xi32>>) -> !fir.box<none>
   ! CHECK:         %[[VAL_69:.*]] = fir.convert %[[VAL_64]] : (i32) -> i64
   ! CHECK:         %[[VAL_70:.*]] = fir.convert %[[VAL_65]] : (!fir.ref<!fir.char<1,{{[0-9]+}}>>) -> !fir.ref<i8>
-  ! CHECK:         %[[VAL_71:.*]] = fir.call @_FortranACshiftVector(%[[VAL_67]], %[[VAL_68]], %[[VAL_69]], %[[VAL_70]], %[[VAL_66]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.ref<i8>, i32) -> none
+  ! CHECK:         %[[VAL_71:.*]] = fir.call @_FortranACshiftVector(%[[VAL_67]], %[[VAL_68]], %[[VAL_69]], %[[VAL_70]], %[[VAL_66]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.ref<i8>, i32) -> none
   ! CHECK:         %[[VAL_72:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   ! CHECK:         %[[VAL_73:.*]] = arith.constant 0 : index
   ! CHECK:         %[[VAL_74:.*]]:3 = fir.box_dims %[[VAL_72]], %[[VAL_73]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -260,7 +260,7 @@ subroutine unpack_test()
   ! CHECK-DAG: %[[a20:.*]] = fir.convert %[[a10]] : (!fir.box<!fir.array<3xi32>>) -> !fir.box<none>
   ! CHECK-DAG: %[[a21:.*]] = fir.convert %[[a12]] : (!fir.box<!fir.array<3x3x!fir.logical<4>>>) -> !fir.box<none>
   ! CHECK-DAG: %[[a22:.*]] = fir.convert %[[a14]] : (!fir.box<!fir.array<3x3xi32>>) -> !fir.box<none>
-  ! CHECK: fir.call @_FortranAUnpack(%[[a19]], %[[a20]], %[[a21]], %[[a22]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  ! CHECK: fir.call @_FortranAUnpack(%[[a19]], %[[a20]], %[[a21]], %[[a22]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
   ! CHECK-NEXT: %[[a22:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
   ! CHECK: %[[a25:.*]] = fir.box_addr %[[a22]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.heap<!fir.array<?x?xi32>>
   ! CHECK: fir.freemem %[[a25]] : !fir.heap<!fir.array<?x?xi32>>
@@ -279,7 +279,7 @@ subroutine unpack_test()
   ! CHECK: %[[a49:.*]] = fir.convert %[[a41]] : (!fir.box<!fir.array<3x3x!fir.logical<4>>>) -> !fir.box<none>
   ! CHECK: %[[a50:.*]] = fir.convert %[[a42]] : (!fir.box<i32>) -> !fir.box<none>
   result = unpack(vector, mask, 343)
-  ! CHECK: fir.call @_FortranAUnpack(%[[a47]], %[[a48]], %[[a49]], %[[a50]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  ! CHECK: fir.call @_FortranAUnpack(%[[a47]], %[[a48]], %[[a49]], %[[a50]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
   ! CHECK: %[[a53:.*]] = fir.load %[[a0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
   ! CHECK: %[[a56:.*]] = fir.box_addr %[[a53]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.heap<!fir.array<?x?xi32>>
   ! CHECK: fir.freemem %[[a56]] : !fir.heap<!fir.array<?x?xi32>>

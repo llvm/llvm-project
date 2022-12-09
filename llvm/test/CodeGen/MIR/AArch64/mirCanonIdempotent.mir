@@ -55,16 +55,16 @@ body: |
     STRDui %3, %stack.4, 0 :: (store (s64))
 
     %4:fpr64 = FMOVDi 20
-    %5:fpr64 = FADDDrr %2, killed %4
+    %5:fpr64 = FADDDrr %2, killed %4, implicit $fpcr
     STRDui %5, %stack.5, 0 :: (store (s64))
 
-    %6:gpr32 = FCVTZSUWDr %5
+    %6:gpr32 = FCVTZSUWDr %5, implicit $fpcr
     STRDroW %3, %0, killed %6, 1, 1
 
     %7:gpr64common = LDRXui %stack.1, 0 :: (dereferenceable load (s64))
     %8:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
 
-    %9:gpr32common = FCVTZSUWDr killed %8
+    %9:gpr32common = FCVTZSUWDr killed %8, implicit $fpcr
     %10:fpr64 = LDRDroW %7, %9, 1, 1
 
     %11:gpr32common = ADDWri %9, 1, 0
@@ -73,7 +73,7 @@ body: |
     %12:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
     %13:gpr64common = LDRXui %stack.1, 0 :: (dereferenceable load (s64))
 
-    %14:gpr32common = FCVTZSUWDr %12
+    %14:gpr32common = FCVTZSUWDr %12, implicit $fpcr
     %15:gpr32common = ADDWri killed %14, 30, 0
     STRDroW %12, killed %13, killed %15, 1, 1
 
@@ -85,28 +85,28 @@ body: |
     %43:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
     %44:gpr64 = LDRXui %stack.2, 0 :: (dereferenceable load (s64))
 
-    %45:gpr32 = FCVTZSUWDr %43
+    %45:gpr32 = FCVTZSUWDr %43, implicit $fpcr
     %47:gpr64common = SMADDLrrr killed %45, %46, killed %44
     %48:fpr64 = LDRDui %stack.6, 0 :: (dereferenceable load (s64))
 
-    %49:gpr32 = FCVTZSUWDr killed %48
+    %49:gpr32 = FCVTZSUWDr killed %48, implicit $fpcr
     STRDroW %43, killed %47, killed %49, 1, 1
 
     %21:gpr64 = LDRXui %stack.2, 0 :: (dereferenceable load (s64))
     %22:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
 
-    %23:gpr32 = FCVTZSUWDr killed %22
+    %23:gpr32 = FCVTZSUWDr killed %22, implicit $fpcr
     %24:gpr32 = MOVi32imm 408
     %25:gpr64common = SMADDLrrr %23, %24, killed %21
     %26:gpr64sp = ADDXrx killed %25, %23, 51
     %27:fpr64 = LDURDi %26, -8
-    %29:fpr64 = FADDDrr killed %27, %19
+    %29:fpr64 = FADDDrr killed %27, %19, implicit $fpcr
     STURDi killed %29, %26, -8
 
     %30:gpr64common = LDRXui %stack.1, 0 :: (dereferenceable load (s64))
     %31:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
 
-    %32:gpr32common = FCVTZSUWDr killed %31
+    %32:gpr32common = FCVTZSUWDr killed %31, implicit $fpcr
     %34:gpr64all = IMPLICIT_DEF
     %33:gpr64 = INSERT_SUBREG %34, %32, %subreg.sub_32
     %35:gpr64 = SBFMXri killed %33, 61, 31

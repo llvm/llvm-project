@@ -34,11 +34,11 @@ namespace {
 // and 4 byte SourceLocation.
 template <int> class MacroInfoSizeChecker {
 public:
-  constexpr static bool AsExpected = true;
+  [[maybe_unused]] constexpr static bool AsExpected = true;
 };
 template <> class MacroInfoSizeChecker<8> {
 public:
-  constexpr static bool AsExpected =
+  [[maybe_unused]] constexpr static bool AsExpected =
       sizeof(MacroInfo) == (32 + sizeof(SourceLocation) * 2);
 };
 

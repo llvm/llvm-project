@@ -64,3 +64,35 @@
 # CHECK-BE: subfus. 3, 1, 4, 5         # encoding: [0x7c,0x64,0x2c,0x91]
 # CHECK-LE: subfus. 3, 1, 4, 5         # encoding: [0x91,0x2c,0x64,0x7c]
             subfus. 3, 1, 4, 5
+
+# CHECK-BE: lxvrl 1, 1, 2                 # encoding: [0x7c,0x21,0x14,0x1a]
+# CHECK-LE: lxvrl 1, 1, 2                 # encoding: [0x1a,0x14,0x21,0x7c]
+            lxvrl 1, 1, 2
+
+# CHECK-BE: lxvrll 0, 3, 4                # encoding: [0x7c,0x03,0x24,0x5a]
+# CHECK-LE: lxvrll 0, 3, 4                # encoding: [0x5a,0x24,0x03,0x7c]
+            lxvrll 0, 3, 4
+
+# CHECK-BE: stxvrl 2, 0, 1                # encoding: [0x7c,0x40,0x0d,0x1a]
+# CHECK-LE: stxvrl 2, 0, 1                # encoding: [0x1a,0x0d,0x40,0x7c]
+            stxvrl 2, 0, 1
+
+# CHECK-BE: stxvrll 3, 1, 5               # encoding: [0x7c,0x61,0x2d,0x5a]
+# CHECK-LE: stxvrll 3, 1, 5               # encoding: [0x5a,0x2d,0x61,0x7c]
+            stxvrll 3, 1, 5
+
+# CHECK-BE: lxvprl 6, 1, 5                # encoding: [0x7c,0xc1,0x2c,0x9a]
+# CHECK-LE: lxvprl 6, 1, 5                # encoding: [0x9a,0x2c,0xc1,0x7c]
+            lxvprl 6, 1, 5
+
+# CHECK-BE: lxvprll 6, 2, 1               # encoding: [0x7c,0xc2,0x0c,0xda]
+# CHECK-LE: lxvprll 6, 2, 1               # encoding: [0xda,0x0c,0xc2,0x7c]
+            lxvprll 6, 2, 1
+
+# CHECK-BE: stxvprl 0, 1, 2               # encoding: [0x7c,0x01,0x15,0x9a]
+# CHECK-LE: stxvprl 0, 1, 2               # encoding: [0x9a,0x15,0x01,0x7c]
+            stxvprl 0, 1, 2
+
+# CHECK-BE: stxvprll 6, 0, 1              # encoding: [0x7c,0xc0,0x0d,0xda]
+# CHECK-LE: stxvprll 6, 0, 1              # encoding: [0xda,0x0d,0xc0,0x7c]
+            stxvprll 6, 0, 1

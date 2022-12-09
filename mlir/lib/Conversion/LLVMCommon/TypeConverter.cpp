@@ -386,10 +386,10 @@ bool LLVMTypeConverter::canConvertToBarePtr(BaseMemRefType type) {
     return false;
 
   for (int64_t stride : strides)
-    if (ShapedType::isDynamicStrideOrOffset(stride))
+    if (ShapedType::isDynamic(stride))
       return false;
 
-  return !ShapedType::isDynamicStrideOrOffset(offset);
+  return !ShapedType::isDynamic(offset);
 }
 
 /// Convert a memref type to a bare pointer to the memref element type.

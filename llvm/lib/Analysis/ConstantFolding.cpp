@@ -1626,6 +1626,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::trunc:
   case Intrinsic::nearbyint:
   case Intrinsic::rint:
+  case Intrinsic::canonicalize:
   // Constrained intrinsics can be folded if FP environment is known
   // to compiler.
   case Intrinsic::experimental_constrained_fma:
@@ -1941,6 +1942,39 @@ getEvaluationRoundingMode(const ConstrainedFPIntrinsic *CI) {
   return *ORM;
 }
 
+/// Try to constant fold llvm.canonicalize for the given caller and value.
+static Constant *constantFoldCanonicalize(const Type *Ty, const CallBase *CI,
+                                          const APFloat &Src) {
+  // Zero, positive and negative, is always OK to fold.
+  if (Src.isZero())
+    return ConstantFP::get(CI->getContext(), Src);
+
+  if (!Ty->isIEEELikeFPTy())
+    return nullptr;
+
+  // Zero is always canonical and the sign must be preserved.
+  //
+  // Denorms and nans may have special encodings, but it should be OK to fold a
+  // totally average number.
+  if (Src.isNormal() || Src.isInfinity())
+    return ConstantFP::get(CI->getContext(), Src);
+
+  if (Src.isDenormal()) {
+    DenormalMode DenormMode =
+        CI->getFunction()->getDenormalMode(Src.getSemantics());
+    if (DenormMode == DenormalMode::getIEEE())
+      return nullptr;
+
+    bool IsPositive = !Src.isNegative() ||
+                      DenormMode.Input == DenormalMode::PositiveZero ||
+                      DenormMode.Output == DenormalMode::PositiveZero;
+    return ConstantFP::get(CI->getContext(),
+                           APFloat::getZero(Src.getSemantics(), !IsPositive));
+  }
+
+  return nullptr;
+}
+
 static Constant *ConstantFoldScalarCall1(StringRef Name,
                                          Intrinsic::ID IntrinsicID,
                                          Type *Ty,
@@ -1957,6 +1991,13 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       return ConstantInt::getTrue(Ty->getContext());
     return nullptr;
   }
+
+  if (isa<PoisonValue>(Operands[0])) {
+    // TODO: All of these operations should probably propagate poison.
+    if (IntrinsicID == Intrinsic::canonicalize)
+      return PoisonValue::get(Ty);
+  }
+
   if (isa<UndefValue>(Operands[0])) {
     // cosine(arg) is between -1 and 1. cosine(invalid arg) is NaN.
     // ctpop() is between 0 and bitwidth, pick 0 for undef.
@@ -1964,7 +2005,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     if (IntrinsicID == Intrinsic::cos ||
         IntrinsicID == Intrinsic::ctpop ||
         IntrinsicID == Intrinsic::fptoui_sat ||
-        IntrinsicID == Intrinsic::fptosi_sat)
+        IntrinsicID == Intrinsic::fptosi_sat ||
+        IntrinsicID == Intrinsic::canonicalize)
       return Constant::getNullValue(Ty);
     if (IntrinsicID == Intrinsic::bswap ||
         IntrinsicID == Intrinsic::bitreverse ||
@@ -2031,6 +2073,9 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       U.convertToInteger(Int, APFloat::rmTowardZero, &IsExact);
       return ConstantInt::get(Ty, Int);
     }
+
+    if (IntrinsicID == Intrinsic::canonicalize)
+      return constantFoldCanonicalize(Ty, Call, U);
 
     if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
       return nullptr;

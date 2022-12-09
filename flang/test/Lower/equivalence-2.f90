@@ -75,12 +75,12 @@ subroutine eq_and_entry_foo
   call foo2(x, i)
   ! CHECK: %[[xCast:.*]] = fir.convert %[[x]] : (!fir.ptr<!fir.array<2xf32>>) -> !fir.ref<!fir.array<2xf32>>
   ! CHECK: %[[iCast:.*]] = fir.convert %[[i]] : (!fir.ptr<i32>) -> !fir.ref<i32>
-  ! CHECK: fir.call @_QPfoo1(%[[xCast]], %[[iCast]]) : (!fir.ref<!fir.array<2xf32>>, !fir.ref<i32>) -> ()
+  ! CHECK: fir.call @_QPfoo1(%[[xCast]], %[[iCast]]) {{.*}}: (!fir.ref<!fir.array<2xf32>>, !fir.ref<i32>) -> ()
   entry eq_and_entry_bar
   call foo2(x, i)
   ! CHECK: %[[xCast2:.*]] = fir.convert %[[x]] : (!fir.ptr<!fir.array<2xf32>>) -> !fir.ref<!fir.array<2xf32>>
   ! CHECK: %[[iCast2:.*]] = fir.convert %[[i]] : (!fir.ptr<i32>) -> !fir.ref<i32>
-  ! CHECK: fir.call @_QPfoo2(%[[xCast2]], %[[iCast2]]) : (!fir.ref<!fir.array<2xf32>>, !fir.ref<i32>) -> ()
+  ! CHECK: fir.call @_QPfoo2(%[[xCast2]], %[[iCast2]]) {{.*}}: (!fir.ref<!fir.array<2xf32>>, !fir.ref<i32>) -> ()
 end
 
 ! CHECK-LABEL: @_QPeq_and_entry_bar()
@@ -96,7 +96,7 @@ end
   ! CHECK-NOT: fir.call @_QPfoo1
   ! CHECK: %[[xCast:.*]] = fir.convert %[[x]] : (!fir.ptr<!fir.array<2xf32>>) -> !fir.ref<!fir.array<2xf32>>
   ! CHECK: %[[iCast:.*]] = fir.convert %[[i]] : (!fir.ptr<i32>) -> !fir.ref<i32>
-  ! CHECK: fir.call @_QPfoo2(%[[xCast]], %[[iCast]]) : (!fir.ref<!fir.array<2xf32>>, !fir.ref<i32>) -> ()
+  ! CHECK: fir.call @_QPfoo2(%[[xCast]], %[[iCast]]) {{.*}}: (!fir.ref<!fir.array<2xf32>>, !fir.ref<i32>) -> ()
 
 
 ! Check that cases where equivalenced local variables and common blocks will

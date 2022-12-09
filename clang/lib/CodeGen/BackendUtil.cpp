@@ -31,12 +31,12 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
-#include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
@@ -983,19 +983,24 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   if (!actionRequiresCodeGen(Action) && CodeGenOpts.VerifyModule)
     MPM.addPass(VerifierPass());
 
-  switch (Action) {
-  case Backend_EmitBC:
+  if (Action == Backend_EmitBC || Action == Backend_EmitLL) {
     if (CodeGenOpts.PrepareForThinLTO && !CodeGenOpts.DisableLLVMPasses) {
-      if (!CodeGenOpts.ThinLinkBitcodeFile.empty()) {
-        ThinLinkOS = openOutputFile(CodeGenOpts.ThinLinkBitcodeFile);
-        if (!ThinLinkOS)
-          return;
-      }
       if (!TheModule->getModuleFlag("EnableSplitLTOUnit"))
         TheModule->addModuleFlag(Module::Error, "EnableSplitLTOUnit",
                                  CodeGenOpts.EnableSplitLTOUnit);
-      MPM.addPass(ThinLTOBitcodeWriterPass(*OS, ThinLinkOS ? &ThinLinkOS->os()
-                                                           : nullptr));
+      if (Action == Backend_EmitBC) {
+        if (!CodeGenOpts.ThinLinkBitcodeFile.empty()) {
+          ThinLinkOS = openOutputFile(CodeGenOpts.ThinLinkBitcodeFile);
+          if (!ThinLinkOS)
+            return;
+        }
+        MPM.addPass(ThinLTOBitcodeWriterPass(*OS, ThinLinkOS ? &ThinLinkOS->os()
+                                                             : nullptr));
+      } else {
+        MPM.addPass(PrintModulePass(*OS, "", CodeGenOpts.EmitLLVMUseLists,
+                                    /*EmitLTOSummary=*/true));
+      }
+
     } else {
       // Emit a module summary by default for Regular LTO except for ld64
       // targets
@@ -1007,17 +1012,13 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
           TheModule->addModuleFlag(Module::Error, "EnableSplitLTOUnit",
                                    uint32_t(1));
       }
-      MPM.addPass(
-          BitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists, EmitLTOSummary));
+      if (Action == Backend_EmitBC)
+        MPM.addPass(BitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists,
+                                      EmitLTOSummary));
+      else
+        MPM.addPass(PrintModulePass(*OS, "", CodeGenOpts.EmitLLVMUseLists,
+                                    EmitLTOSummary));
     }
-    break;
-
-  case Backend_EmitLL:
-    MPM.addPass(PrintModulePass(*OS, "", CodeGenOpts.EmitLLVMUseLists));
-    break;
-
-  default:
-    break;
   }
 
   // Now that we have all of the passes ready, run them.

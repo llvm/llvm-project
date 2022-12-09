@@ -255,7 +255,7 @@ Optional<std::string> LineEditor::readLine() const {
 
   // Either of these may mean end-of-file.
   if (!Line || LineLen == 0)
-    return Optional<std::string>();
+    return None;
 
   // Strip any newlines off the end of the string.
   while (LineLen > 0 &&
@@ -301,7 +301,7 @@ Optional<std::string> LineEditor::readLine() const {
     char *Res = ::fgets(Buf, sizeof(Buf), Data->In);
     if (!Res) {
       if (Line.empty())
-        return Optional<std::string>();
+        return None;
       else
         return Line;
     }

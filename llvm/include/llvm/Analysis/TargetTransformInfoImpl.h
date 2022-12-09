@@ -366,7 +366,7 @@ public:
 
   bool allowsMisalignedMemoryAccesses(LLVMContext &Context, unsigned BitWidth,
                                       unsigned AddressSpace, Align Alignment,
-                                      bool *Fast) const {
+                                      unsigned *Fast) const {
     return false;
   }
 
@@ -459,7 +459,7 @@ public:
     case TargetTransformInfo::CacheLevel::L1D:
       [[fallthrough]];
     case TargetTransformInfo::CacheLevel::L2D:
-      return llvm::Optional<unsigned>();
+      return llvm::None;
     }
     llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
   }
@@ -470,7 +470,7 @@ public:
     case TargetTransformInfo::CacheLevel::L1D:
       [[fallthrough]];
     case TargetTransformInfo::CacheLevel::L2D:
-      return llvm::Optional<unsigned>();
+      return llvm::None;
     }
 
     llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");

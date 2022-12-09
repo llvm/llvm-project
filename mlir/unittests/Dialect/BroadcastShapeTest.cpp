@@ -47,7 +47,7 @@ TEST(BroadcastShapeTest, InterleavingOnes) {
 
 TEST(BroadcastShapeTest, InterleavingUnknowns) {
   SmallVector<int64_t, 4> result;
-  int64_t dyn = mlir::ShapedType::kDynamicSize;
+  int64_t dyn = mlir::ShapedType::kDynamic;
   ASSERT_TRUE(getBroadcastedShape({1, 2, dyn, dyn, dyn}, {dyn, dyn, dyn, 4, 1},
                                   result));
   EXPECT_THAT(result, ElementsAre(dyn, 2, dyn, 4, dyn));

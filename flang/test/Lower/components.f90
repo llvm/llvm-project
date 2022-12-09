@@ -81,7 +81,7 @@ end module components_test
 ! CHECK:       ^bb3:
 ! CHECK:         %[[VAL_15:.*]] = fir.embox %[[VAL_5]](%[[VAL_7]]) {{\[}}%[[VAL_8]]] : (!fir.ref<!fir.array<100x!fir.type<_QFsliced_baseTt{x:f32,y:i32}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<50xi32>>
 ! CHECK:         %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (!fir.box<!fir.array<50xi32>>) -> !fir.box<!fir.array<?xi32>>
-! CHECK:         fir.call @_QPtakes_int_array(%[[VAL_16]]) : (!fir.box<!fir.array<?xi32>>) -> ()
+! CHECK:         fir.call @_QPtakes_int_array(%[[VAL_16]]) {{.*}}: (!fir.box<!fir.array<?xi32>>) -> ()
 ! CHECK:         return
 ! CHECK:       }
 
@@ -144,7 +144,7 @@ subroutine lhs_char_section(a)
   ! CHECK: %[[VAL_15:.*]] = fir.convert %[[VAL_1]] : (index) -> i64
   ! CHECK: %[[VAL_16:.*]] = fir.convert %[[VAL_14]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
   ! CHECK: %[[VAL_17:.*]] = fir.convert %[[VAL_9]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[VAL_16]], %[[VAL_17]], %[[VAL_15]], %[[VAL_2]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[VAL_16]], %[[VAL_17]], %[[VAL_15]], %[[VAL_2]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   ! CHECK: %[[VAL_18:.*]] = arith.subi %[[VAL_11]], %[[VAL_5]] : index
   ! CHECK: br ^bb1(%[[VAL_13]], %[[VAL_18]] : index, index)
 
@@ -180,7 +180,7 @@ subroutine rhs_char_section(a, c)
   ! CHECK: %[[VAL_17:.*]] = fir.convert %[[VAL_3]] : (index) -> i64
   ! CHECK: %[[VAL_18:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
   ! CHECK: %[[VAL_19:.*]] = fir.convert %[[VAL_15]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[VAL_18]], %[[VAL_19]], %[[VAL_17]], %[[VAL_2]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[VAL_18]], %[[VAL_19]], %[[VAL_17]], %[[VAL_2]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   ! CHECK: %[[VAL_20:.*]] = arith.subi %[[VAL_12]], %[[VAL_5]] : index
   ! CHECK: br ^bb1(%[[VAL_14]], %[[VAL_20]] : index, index)
 
@@ -222,7 +222,7 @@ subroutine elemental_char_section(a, i)
   ! CHECK: %[[VAL_50:.*]] = fir.convert %[[VAL_36]] : (index) -> i64
   ! CHECK: %[[VAL_51:.*]] = fir.convert %[[VAL_42]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
   ! CHECK: %[[VAL_52:.*]] = fir.convert %[[VAL_34]] : (index) -> i64
-  ! CHECK: %[[VAL_53:.*]] = fir.call @_FortranAScan1(%[[VAL_49]], %[[VAL_50]], %[[VAL_51]], %[[VAL_52]], %[[VAL_35]]) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, i1) -> i64
+  ! CHECK: %[[VAL_53:.*]] = fir.call @_FortranAScan1(%[[VAL_49]], %[[VAL_50]], %[[VAL_51]], %[[VAL_52]], %[[VAL_35]]) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i8>, i64, i1) -> i64
   ! CHECK: %[[VAL_54:.*]] = fir.convert %[[VAL_53]] : (i64) -> i32
   ! CHECK: %[[VAL_55:.*]] = fir.array_coor %[[I]](%[[VAL_39]]) %[[VAL_46]] : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
   ! CHECK: fir.store %[[VAL_54]] to %[[VAL_55]] : !fir.ref<i32>
@@ -263,55 +263,55 @@ subroutine extended_type_components
   ! CHECK: %[[u3va:.*]] = fir.alloca !fir.array<5x!fir.type<_QFextended_type_componentsTu3{u1i:i32,u2i:i32,u2t3:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u2t4:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u3i:i32}>> {bindc_name = "u3va", uniq_name = "_QFextended_type_componentsEu3va"}
   type(u3) :: u3va(5)
 
-  ! CHECK: %[[VAL_10:.*]] = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+  ! CHECK: %[[VAL_10:.*]] = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   ! CHECK: %[[VAL_11:.*]] = fir.field_index u2t3, !fir.type<_QFextended_type_componentsTu3{u1i:i32,u2i:i32,u2t3:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u2t4:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u3i:i32}>
   ! CHECK: %[[VAL_12:.*]] = fir.field_index t1i, !fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>
   ! CHECK: %[[VAL_13:.*]] = fir.coordinate_of %[[u3v]], %[[VAL_11]], %[[VAL_12]] : (!fir.ref<!fir.type<_QFextended_type_componentsTu3{u1i:i32,u2i:i32,u2t3:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u2t4:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u3i:i32}>>, !fir.field, !fir.field) -> !fir.ref<i32>
   ! CHECK: %[[VAL_14:.*]] = fir.load %[[VAL_13]] : !fir.ref<i32>
-  ! CHECK: %[[VAL_15:.*]] = fir.call @_FortranAioOutputInteger32(%[[VAL_10]], %[[VAL_14]]) : (!fir.ref<i8>, i32) -> i1
+  ! CHECK: %[[VAL_15:.*]] = fir.call @_FortranAioOutputInteger32(%[[VAL_10]], %[[VAL_14]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
   print*, u3v%u2t3%t1i
 
-  ! CHECK: %[[VAL_20:.*]] = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+  ! CHECK: %[[VAL_20:.*]] = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   ! CHECK: %[[VAL_21:.*]] = fir.load %[[VAL_13]] : !fir.ref<i32>
-  ! CHECK: %[[VAL_22:.*]] = fir.call @_FortranAioOutputInteger32(%[[VAL_20]], %[[VAL_21]]) : (!fir.ref<i8>, i32) -> i1
+  ! CHECK: %[[VAL_22:.*]] = fir.call @_FortranAioOutputInteger32(%[[VAL_20]], %[[VAL_21]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
   print*, u3v%u2%u2t3%t2%t1%t1i ! different syntax for the previous value
 
-  ! CHECK: %[[VAL_30:.*]] = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+  ! CHECK: %[[VAL_30:.*]] = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   ! CHECK: %[[VAL_31:.*]] = fir.field_index u2t4, !fir.type<_QFextended_type_componentsTu3{u1i:i32,u2i:i32,u2t3:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u2t4:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u3i:i32}>
   ! CHECK: %[[VAL_32:.*]] = fir.coordinate_of %[[u3v]], %[[VAL_31]], %[[VAL_12]] : (!fir.ref<!fir.type<_QFextended_type_componentsTu3{u1i:i32,u2i:i32,u2t3:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u2t4:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u3i:i32}>>, !fir.field, !fir.field) -> !fir.ref<i32>
   ! CHECK: %[[VAL_33:.*]] = fir.load %[[VAL_32]] : !fir.ref<i32>
-  ! CHECK: %[[VAL_34:.*]] = fir.call @_FortranAioOutputInteger32(%[[VAL_30]], %[[VAL_33]]) : (!fir.ref<i8>, i32) -> i1
+  ! CHECK: %[[VAL_34:.*]] = fir.call @_FortranAioOutputInteger32(%[[VAL_30]], %[[VAL_33]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
   print*, u3v%u2t4%t1i
 
-  ! CHECK: %[[VAL_40:.*]] = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+  ! CHECK: %[[VAL_40:.*]] = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   ! CHECK: %[[VAL_41:.*]] = fir.field_index t2i, !fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>
   ! CHECK: %[[VAL_42:.*]] = fir.coordinate_of %[[u3v]], %[[VAL_31]], %[[VAL_41]] : (!fir.ref<!fir.type<_QFextended_type_componentsTu3{u1i:i32,u2i:i32,u2t3:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u2t4:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u3i:i32}>>, !fir.field, !fir.field) -> !fir.ref<i32>
   ! CHECK: %[[VAL_43:.*]] = fir.load %[[VAL_42]] : !fir.ref<i32>
-  ! CHECK: %[[VAL_44:.*]] = fir.call @_FortranAioOutputInteger32(%[[VAL_40]], %[[VAL_43]]) : (!fir.ref<i8>, i32) -> i1
+  ! CHECK: %[[VAL_44:.*]] = fir.call @_FortranAioOutputInteger32(%[[VAL_40]], %[[VAL_43]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
   print*, u3v%u2t4%t2i
 
-  ! CHECK: %[[VAL_50:.*]] = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+  ! CHECK: %[[VAL_50:.*]] = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   ! CHECK: %[[VAL_51:.*]] = fir.slice %c1{{.*}}, %c5{{.*}}, %c1{{.*}} path %{{.*}}, %{{.*}} : (index, index, index, !fir.field, !fir.field) -> !fir.slice<1>
   ! CHECK: %[[VAL_52:.*]] = fir.embox %[[u3va]](%{{.*}}) [%[[VAL_51]]] : (!fir.ref<!fir.array<5x!fir.type<_QFextended_type_componentsTu3{u1i:i32,u2i:i32,u2t3:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u2t4:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u3i:i32}>>>,
   ! CHECK: %[[VAL_53:.*]] = fir.convert %[[VAL_52]] : (!fir.box<!fir.array<5xi32>>) -> !fir.box<none>
-  ! CHECK: %[[VAL_54:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_50]], %[[VAL_53]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
+  ! CHECK: %[[VAL_54:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_50]], %[[VAL_53]]) {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
   print*, u3va%u2t3%t1i
 
-  ! CHECK: %[[VAL_60:.*]] = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-  ! CHECK: %[[VAL_61:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_60]], %[[VAL_53]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
+  ! CHECK: %[[VAL_60:.*]] = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+  ! CHECK: %[[VAL_61:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_60]], %[[VAL_53]]) {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
   print*, u3va%u2%u2t3%t2%t1%t1i ! different syntax for the previous value
 
-  ! CHECK: %[[VAL_70:.*]] = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+  ! CHECK: %[[VAL_70:.*]] = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   ! CHECK: %[[VAL_71:.*]] = fir.slice %c1{{.*}}, %c5{{.*}}, %c1{{.*}} path %{{.*}}, %{{.*}} : (index, index, index, !fir.field, !fir.field) -> !fir.slice<1>
   ! CHECK: %[[VAL_72:.*]] = fir.embox %[[u3va]](%{{.*}}) [%[[VAL_71]]] : (!fir.ref<!fir.array<5x!fir.type<_QFextended_type_componentsTu3{u1i:i32,u2i:i32,u2t3:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u2t4:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u3i:i32}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<5xi32>>
   ! CHECK: %[[VAL_73:.*]] = fir.convert %[[VAL_72]] : (!fir.box<!fir.array<5xi32>>) -> !fir.box<none>
-  ! CHECK: %[[VAL_74:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_70]], %[[VAL_73]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
+  ! CHECK: %[[VAL_74:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_70]], %[[VAL_73]]) {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
   print*, u3va%u2t4%t1i
 
-  ! CHECK: %[[VAL_80:.*]] = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+  ! CHECK: %[[VAL_80:.*]] = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   ! CHECK: %[[VAL_81:.*]] = fir.slice %c1{{.*}}, %c5{{.*}}, %c1{{.*}} path %{{.*}}, %{{.*}} : (index, index, index, !fir.field, !fir.field) -> !fir.slice<1>
   ! CHECK: %[[VAL_82:.*]] = fir.embox %[[u3va]](%{{.*}}) [%[[VAL_81]]] : (!fir.ref<!fir.array<5x!fir.type<_QFextended_type_componentsTu3{u1i:i32,u2i:i32,u2t3:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u2t4:!fir.type<_QFextended_type_componentsTt3{t1i:i32,t2i:i32,t3i:i32}>,u3i:i32}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<5xi32>>
   ! CHECK: %[[VAL_83:.*]] = fir.convert %[[VAL_82]] : (!fir.box<!fir.array<5xi32>>) -> !fir.box<none>
-  ! CHECK: %[[VAL_84:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_80]], %[[VAL_83]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
+  ! CHECK: %[[VAL_84:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_80]], %[[VAL_83]]) {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
   print*, u3va%u2t4%t2i
   end subroutine extended_type_components

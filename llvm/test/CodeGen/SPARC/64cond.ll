@@ -68,7 +68,7 @@ entry:
 
 ; CHECK: selecti64_fcc
 ; CHECK: mov %i3, %i0
-; CHECK: fcmps %f1, %f3
+; CHECK: fcmps %fcc0, %f1, %f3
 ; CHECK: movul %fcc0, %i2, %i0
 ; CHECK: restore
 define i64 @selecti64_fcc(float %x, float %y, i64 %a, i64 %b) {

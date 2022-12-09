@@ -1268,13 +1268,13 @@ def MemRef_ReinterpretCastOp
   let assemblyFormat = [{
     $source `to` `offset` `` `:`
     custom<DynamicIndexList>($offsets, $static_offsets,
-                               "ShapedType::kDynamicStrideOrOffset")
+                               "ShapedType::kDynamic")
     `` `,` `sizes` `` `:`
     custom<DynamicIndexList>($sizes, $static_sizes,
-                               "ShapedType::kDynamicSize")
+                               "ShapedType::kDynamic")
     `` `,` `strides` `` `:`
     custom<DynamicIndexList>($strides, $static_strides,
-                               "ShapedType::kDynamicStrideOrOffset")
+                               "ShapedType::kDynamic")
     attr-dict `:` type($source) `to` type($result)
   }];
 
@@ -1739,8 +1739,8 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     The representation based on offsets, sizes and strides support a
     partially-static specification via attributes specified through the
     `static_offsets`, `static_sizes` and `static_strides` arguments. A special
-    sentinel value ShapedType::kDynamicSize and
-    ShapedType::kDynamicStrideOrOffset encodes that the corresponding entry has
+    sentinel value ShapedType::kDynamic and
+    ShapedType::kDynamic encodes that the corresponding entry has
     a dynamic value.
 
     A subview operation may additionally reduce the rank of the resulting view
@@ -1866,11 +1866,11 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
   let assemblyFormat = [{
     $source ``
     custom<DynamicIndexList>($offsets, $static_offsets,
-                               "ShapedType::kDynamicStrideOrOffset")
+                               "ShapedType::kDynamic")
     custom<DynamicIndexList>($sizes, $static_sizes,
-                               "ShapedType::kDynamicSize")
+                               "ShapedType::kDynamic")
     custom<DynamicIndexList>($strides, $static_strides,
-                               "ShapedType::kDynamicStrideOrOffset")
+                               "ShapedType::kDynamic")
     attr-dict `:` type($source) `to` type($result)
   }];
 

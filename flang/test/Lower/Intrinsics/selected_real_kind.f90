@@ -12,7 +12,7 @@
 ! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<i8>) -> !fir.llvm_ptr<i8>
 ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<i8>) -> !fir.llvm_ptr<i8>
 ! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<i8>) -> !fir.llvm_ptr<i8>
-! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranASelectedRealKind(%{{.*}}, %{{.*}}, %[[VAL_10]], %[[VAL_6]], %[[VAL_11]], %[[VAL_7]], %[[VAL_12]], %[[VAL_8]]) : (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
+! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranASelectedRealKind(%{{.*}}, %{{.*}}, %[[VAL_10]], %[[VAL_6]], %[[VAL_11]], %[[VAL_7]], %[[VAL_12]], %[[VAL_8]]) {{.*}}: (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
 ! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (i32) -> i8
 ! CHECK:         fir.store %[[VAL_14]] to %[[VAL_3]] : !fir.ref<i8>
 ! CHECK:         return
@@ -34,7 +34,7 @@ end
 ! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<i16>) -> !fir.llvm_ptr<i8>
 ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<i16>) -> !fir.llvm_ptr<i8>
 ! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<i16>) -> !fir.llvm_ptr<i8>
-! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranASelectedRealKind(%{{.*}}, %{{.*}}, %[[VAL_10]], %[[VAL_6]], %[[VAL_11]], %[[VAL_7]], %[[VAL_12]], %[[VAL_8]]) : (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
+! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranASelectedRealKind(%{{.*}}, %{{.*}}, %[[VAL_10]], %[[VAL_6]], %[[VAL_11]], %[[VAL_7]], %[[VAL_12]], %[[VAL_8]]) {{.*}}: (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
 ! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (i32) -> i16
 ! CHECK:         fir.store %[[VAL_14]] to %[[VAL_3]] : !fir.ref<i16>
 ! CHECK:         return
@@ -56,7 +56,7 @@ end
 ! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
 ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
 ! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
-! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranASelectedRealKind(%{{.*}}, %{{.*}}, %[[VAL_10]], %[[VAL_6]], %[[VAL_11]], %[[VAL_7]], %[[VAL_12]], %[[VAL_8]]) : (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
+! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranASelectedRealKind(%{{.*}}, %{{.*}}, %[[VAL_10]], %[[VAL_6]], %[[VAL_11]], %[[VAL_7]], %[[VAL_12]], %[[VAL_8]]) {{.*}}: (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
 ! CHECK:         fir.store %[[VAL_13]] to %[[VAL_3]] : !fir.ref<i32>
 ! CHECK:         return
 ! CHECK:       }
@@ -77,7 +77,7 @@ end
 ! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<i64>) -> !fir.llvm_ptr<i8>
 ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<i64>) -> !fir.llvm_ptr<i8>
 ! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<i64>) -> !fir.llvm_ptr<i8>
-! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranASelectedRealKind(%{{.*}}, %{{.*}}, %[[VAL_10]], %[[VAL_6]], %[[VAL_11]], %[[VAL_7]], %[[VAL_12]], %[[VAL_8]]) : (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
+! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranASelectedRealKind(%{{.*}}, %{{.*}}, %[[VAL_10]], %[[VAL_6]], %[[VAL_11]], %[[VAL_7]], %[[VAL_12]], %[[VAL_8]]) {{.*}}: (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
 ! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (i32) -> i64
 ! CHECK:         fir.store %[[VAL_14]] to %[[VAL_3]] : !fir.ref<i64>
 ! CHECK:         return
@@ -99,7 +99,7 @@ end
 ! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<i128>) -> !fir.llvm_ptr<i8>
 ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<i128>) -> !fir.llvm_ptr<i8>
 ! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<i128>) -> !fir.llvm_ptr<i8>
-! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranASelectedRealKind(%{{.*}}, %{{.*}}, %[[VAL_10]], %[[VAL_6]], %[[VAL_11]], %[[VAL_7]], %[[VAL_12]], %[[VAL_8]]) : (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
+! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranASelectedRealKind(%{{.*}}, %{{.*}}, %[[VAL_10]], %[[VAL_6]], %[[VAL_11]], %[[VAL_7]], %[[VAL_12]], %[[VAL_8]]) {{.*}}: (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
 ! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (i32) -> i128
 ! CHECK:         fir.store %[[VAL_14]] to %[[VAL_3]] : !fir.ref<i128>
 ! CHECK:         return
@@ -121,7 +121,7 @@ end
 ! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i1>) -> !fir.llvm_ptr<i8>
 ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
 ! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
-! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranASelectedRealKind(%{{.*}}, %{{.*}}, %[[VAL_10]], %[[VAL_6]], %[[VAL_11]], %[[VAL_7]], %[[VAL_12]], %[[VAL_8]]) : (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
+! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranASelectedRealKind(%{{.*}}, %{{.*}}, %[[VAL_10]], %[[VAL_6]], %[[VAL_11]], %[[VAL_7]], %[[VAL_12]], %[[VAL_8]]) {{.*}}: (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
 ! CHECK:         fir.store %[[VAL_13]] to %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:         return
 ! CHECK:       }
@@ -142,7 +142,7 @@ end
 ! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
 ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i1>) -> !fir.llvm_ptr<i8>
 ! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
-! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranASelectedRealKind(%{{.*}}, %{{.*}}, %[[VAL_10]], %[[VAL_6]], %[[VAL_11]], %[[VAL_7]], %[[VAL_12]], %[[VAL_8]]) : (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
+! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranASelectedRealKind(%{{.*}}, %{{.*}}, %[[VAL_10]], %[[VAL_6]], %[[VAL_11]], %[[VAL_7]], %[[VAL_12]], %[[VAL_8]]) {{.*}}: (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
 ! CHECK:         fir.store %[[VAL_13]] to %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:         return
 ! CHECK:       }
@@ -163,7 +163,7 @@ end
 ! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
 ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
 ! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i1>) -> !fir.llvm_ptr<i8>
-! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranASelectedRealKind(%{{.*}}, %{{.*}}, %[[VAL_10]], %[[VAL_6]], %[[VAL_11]], %[[VAL_7]], %[[VAL_12]], %[[VAL_8]]) : (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
+! CHECK:         %[[VAL_13:.*]] = fir.call @_FortranASelectedRealKind(%{{.*}}, %{{.*}}, %[[VAL_10]], %[[VAL_6]], %[[VAL_11]], %[[VAL_7]], %[[VAL_12]], %[[VAL_8]]) {{.*}}: (!fir.ref<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32, !fir.llvm_ptr<i8>, i32) -> i32
 ! CHECK:         fir.store %[[VAL_13]] to %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:         return
 ! CHECK:       }

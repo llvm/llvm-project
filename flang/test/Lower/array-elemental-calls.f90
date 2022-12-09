@@ -25,7 +25,7 @@ subroutine test_elem_by_ref(i, j)
 
   ! CHECK: fir.do_loop
     ! CHECK: %[[j:.*]] = fir.array_coor %[[arg1]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
-    ! CHECK: fir.call @_QMscalar_in_elemPelem_by_ref(%[[j]], %[[tmp]]) : (!fir.ref<i32>, !fir.ref<f32>) -> i32
+    ! CHECK: fir.call @_QMscalar_in_elemPelem_by_ref(%[[j]], %[[tmp]]) {{.*}}: (!fir.ref<i32>, !fir.ref<f32>) -> i32
     ! CHECK: fir.result
   i = elem_by_ref(j, 42.)
 end
@@ -39,7 +39,7 @@ subroutine test_elem_by_valueref(i, j)
 
   ! CHECK: fir.do_loop
     ! CHECK: %[[j:.*]] = fir.array_fetch %[[jload]], %{{.*}} : (!fir.array<100xi32>, index) -> i32
-    ! CHECK: fir.call @_QMscalar_in_elemPelem_by_valueref(%[[j]], %[[cst]]) : (i32, f32) -> i32
+    ! CHECK: fir.call @_QMscalar_in_elemPelem_by_valueref(%[[j]], %[[cst]]) {{.*}}: (i32, f32) -> i32
     ! CHECK: fir.result
   i = elem_by_valueref(j, 42.)
 end
@@ -75,7 +75,7 @@ end subroutine
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_13:.*]] = arith.addi %[[VAL_10]], %[[VAL_12]] : index
 ! CHECK:           %[[VAL_14:.*]] = fir.array_coor %[[VAL_1]] %[[VAL_13]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-! CHECK:           %[[VAL_15:.*]] = fir.call @_QPpure_func(%[[VAL_14]]) : (!fir.ref<i32>) -> i32
+! CHECK:           %[[VAL_15:.*]] = fir.call @_QPpure_func(%[[VAL_14]]) {{.*}}: (!fir.ref<i32>) -> i32
 ! CHECK:           %[[VAL_16:.*]] = arith.addi %[[VAL_5]], %[[VAL_15]] : i32
 ! CHECK:           %[[VAL_17:.*]] = fir.array_update %[[VAL_11]], %[[VAL_16]], %[[VAL_10]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:           fir.result %[[VAL_17]] : !fir.array<?xi32>
@@ -92,7 +92,7 @@ end subroutine
 ! CHECK:           %[[VAL_29:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_30:.*]] = arith.addi %[[VAL_27]], %[[VAL_29]] : index
 ! CHECK:           %[[VAL_31:.*]] = fir.array_coor %[[VAL_1]] %[[VAL_30]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-! CHECK:           %[[VAL_32:.*]] = fir.call @_QPimpure_func(%[[VAL_31]]) : (!fir.ref<i32>) -> i32
+! CHECK:           %[[VAL_32:.*]] = fir.call @_QPimpure_func(%[[VAL_31]]) {{.*}}: (!fir.ref<i32>) -> i32
 ! CHECK:           %[[VAL_33:.*]] = arith.addi %[[VAL_22]], %[[VAL_32]] : i32
 ! CHECK:           %[[VAL_34:.*]] = fir.array_update %[[VAL_28]], %[[VAL_33]], %[[VAL_27]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:           fir.result %[[VAL_34]] : !fir.array<?xi32>

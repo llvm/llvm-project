@@ -58,7 +58,7 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
 
     // Reshape input to [N,IH,IW,IC] -> [N * IH * IW, IC].
     ArrayRef<int64_t> inputShape = inputType.getShape();
-    int64_t combined = ShapedType::kDynamicSize;
+    int64_t combined = ShapedType::kDynamic;
     if (numDynamic == 0)
       combined = inputShape[0] * inputShape[1] * inputShape[2];
     llvm::SmallVector<int64_t, 2> revisedInputShape{combined, inputShape[3]};

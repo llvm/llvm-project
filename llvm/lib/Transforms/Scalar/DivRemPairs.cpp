@@ -26,6 +26,7 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BypassSlowDivision.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -49,10 +50,10 @@ struct ExpandedMatch {
 ///   X - ((X ?/ Y) * Y)
 /// which is equivalent to:
 ///   X ?% Y
-static llvm::Optional<ExpandedMatch> matchExpandedRem(Instruction &I) {
+static std::optional<ExpandedMatch> matchExpandedRem(Instruction &I) {
   Value *Dividend, *XroundedDownToMultipleOfY;
   if (!match(&I, m_Sub(m_Value(Dividend), m_Value(XroundedDownToMultipleOfY))))
-    return llvm::None;
+    return std::nullopt;
 
   Value *Divisor;
   Instruction *Div;
@@ -62,7 +63,7 @@ static llvm::Optional<ExpandedMatch> matchExpandedRem(Instruction &I) {
           m_c_Mul(m_CombineAnd(m_IDiv(m_Specific(Dividend), m_Value(Divisor)),
                                m_Instruction(Div)),
                   m_Deferred(Divisor))))
-    return llvm::None;
+    return std::nullopt;
 
   ExpandedMatch M;
   M.Key.SignedOp = Div->getOpcode() == Instruction::SDiv;

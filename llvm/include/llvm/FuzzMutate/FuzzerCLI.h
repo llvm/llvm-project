@@ -48,8 +48,9 @@ using FuzzerInitFun = int (*)(int *argc, char ***argv);
 ///
 /// Useful for testing fuzz targets without linking to libFuzzer. Finds inputs
 /// in the argument list in a libFuzzer compatible way.
-int runFuzzerOnInputs(int ArgC, char *ArgV[], FuzzerTestFun TestOne,
-                      FuzzerInitFun Init = [](int *, char ***) { return 0; });
+int runFuzzerOnInputs(
+    int ArgC, char *ArgV[], FuzzerTestFun TestOne,
+    FuzzerInitFun Init = [](int *, char ***) { return 0; });
 
 } // namespace llvm
 

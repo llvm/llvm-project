@@ -429,7 +429,7 @@ inline bool TensorType::classof(Type type) {
 ///      symbols.
 ///
 /// A stride specification is a list of integer values that are either static
-/// or dynamic (encoded with ShapedType::kDynamicStrideOrOffset). Strides encode
+/// or dynamic (encoded with ShapedType::kDynamic). Strides encode
 /// the distance in the number of elements between successive entries along a
 /// particular dimension.
 LogicalResult getStridesAndOffset(MemRefType t,

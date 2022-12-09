@@ -72,7 +72,7 @@ private:
                              Instruction *I = nullptr) const override;
   bool allowsMisalignedMemoryAccesses(EVT, unsigned AddrSpace, Align Alignment,
                                       MachineMemOperand::Flags Flags,
-                                      bool *Fast) const override;
+                                      unsigned *Fast) const override;
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
   bool isVectorLoadExtDesirable(SDValue ExtVal) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;

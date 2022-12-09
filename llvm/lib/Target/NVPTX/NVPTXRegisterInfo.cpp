@@ -118,7 +118,7 @@ BitVector NVPTXRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-void NVPTXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+bool NVPTXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             int SPAdj, unsigned FIOperandNum,
                                             RegScavenger *RS) const {
   assert(SPAdj == 0 && "Unexpected");
@@ -133,6 +133,7 @@ void NVPTXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // Using I0 as the frame pointer
   MI.getOperand(FIOperandNum).ChangeToRegister(getFrameRegister(MF), false);
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+  return false;
 }
 
 Register NVPTXRegisterInfo::getFrameRegister(const MachineFunction &MF) const {

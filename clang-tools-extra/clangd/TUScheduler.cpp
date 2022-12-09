@@ -1653,10 +1653,9 @@ bool TUScheduler::update(PathRef File, ParseInputs Inputs,
   bool ContentChanged = false;
   if (!FD) {
     // Create a new worker to process the AST-related tasks.
-    ASTWorkerHandle Worker =
-        ASTWorker::create(File, CDB, *IdleASTs, *HeaderIncluders,
-                          WorkerThreads ? WorkerThreads.getPointer() : nullptr,
-                          Barrier, Opts, *Callbacks);
+    ASTWorkerHandle Worker = ASTWorker::create(
+        File, CDB, *IdleASTs, *HeaderIncluders,
+        WorkerThreads ? &*WorkerThreads : nullptr, Barrier, Opts, *Callbacks);
     FD = std::unique_ptr<FileData>(
         new FileData{Inputs.Contents, std::move(Worker)});
     ContentChanged = true;

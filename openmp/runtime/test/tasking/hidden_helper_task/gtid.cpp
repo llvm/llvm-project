@@ -1,6 +1,7 @@
 // RUN: %libomp-cxx-compile-and-run
 // RUN: %libomp-cxx-compile && env OMP_NUM_THREADS=1 %libomp-run
-// XFAIL: *
+// REQUIRES: hidden-helper
+
 /*
  * This test aims to check whether hidden helper thread has right gtid. We also
  * test if there is mixed dependences between regular tasks and hidden helper

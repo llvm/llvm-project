@@ -14,29 +14,35 @@ namespace clang::include_cleaner {
 
 llvm::SmallVector<Header> findHeaders(const SymbolLocation &Loc,
                                       const SourceManager &SM,
-                                      const PragmaIncludes &PI) {
+                                      const PragmaIncludes *PI) {
   llvm::SmallVector<Header> Results;
   switch (Loc.kind()) {
   case SymbolLocation::Physical: {
     // FIXME: Handle macro locations.
-    // FIXME: Handle non self-contained files.
     FileID FID = SM.getFileID(Loc.physical());
-    const auto *FE = SM.getFileEntryForID(FID);
-    if (!FE)
-      return {};
+    const FileEntry *FE = SM.getFileEntryForID(FID);
+    if (!PI) {
+      return FE ? llvm::SmallVector<Header>{Header(FE)}
+                : llvm::SmallVector<Header>();
+    }
+    while (FE) {
+      Results.push_back(Header(FE));
+      // FIXME: compute transitive exporter headers.
+      for (const auto *Export : PI->getExporters(FE, SM.getFileManager()))
+        Results.push_back(Header(Export));
 
-    // We treat the spelling header in the IWYU pragma as the final public
-    // header.
-    // FIXME: look for exporters if the public header is exported by another
-    // header.
-    llvm::StringRef VerbatimSpelling = PI.getPublic(FE);
-    if (!VerbatimSpelling.empty())
-      return {Header(VerbatimSpelling)};
+      llvm::StringRef VerbatimSpelling = PI->getPublic(FE);
+      if (!VerbatimSpelling.empty()) {
+        Results.push_back(VerbatimSpelling);
+        break;
+      }
+      if (PI->isSelfContained(FE) || FID == SM.getMainFileID())
+        break;
 
-    Results = {Header(FE)};
-    // FIXME: compute transitive exporter headers.
-    for (const auto *Export : PI.getExporters(FE, SM.getFileManager()))
-      Results.push_back(Export);
+      // Walkup the include stack for non self-contained headers.
+      FID = SM.getDecomposedIncludedLoc(FID).first;
+      FE = SM.getFileEntryForID(FID);
+    }
     return Results;
   }
   case SymbolLocation::Standard: {

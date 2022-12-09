@@ -143,10 +143,10 @@ static bool lowerConstantIntrinsics(Function &F, const TargetLibraryInfo &TLI,
       break;
     }
     HasDeadBlocks |= replaceConditionalBranchesOnConstant(
-        II, NewValue, DTU ? DTU.getPointer() : nullptr);
+        II, NewValue, DTU ? &*DTU : nullptr);
   }
   if (HasDeadBlocks)
-    removeUnreachableBlocks(F, DTU ? DTU.getPointer() : nullptr);
+    removeUnreachableBlocks(F, DTU ? &*DTU : nullptr);
   return !Worklist.empty();
 }
 

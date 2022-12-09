@@ -2673,7 +2673,10 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
     // In case of incomplete child compiler type, use the pointee type and try
     // to recreate a new ValueObjectChild using it.
     if (!m_deref_valobj) {
-      if (HasSyntheticValue()) {
+      // FIXME(#59012): C++ stdlib formatters break with incomplete types (e.g.
+      // `std::vector<int> &`). Remove ObjC restriction once that's resolved.
+      if (Language::LanguageIsObjC(GetPreferredDisplayLanguage()) &&
+          HasSyntheticValue()) {
         child_compiler_type = compiler_type.GetPointeeType();
 
         if (child_compiler_type) {

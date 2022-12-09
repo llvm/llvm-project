@@ -340,7 +340,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
     B.SetCurrentDebugLocation(RI->getDebugLoc());
 
     int RetIdx = 0;
-    Value *NewRetVal = UndefValue::get(NewRetTy);
+    Value *NewRetVal = PoisonValue::get(NewRetTy);
 
     Value *RetVal = RI->getReturnValue();
     if (RetVal)
@@ -362,7 +362,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
     if (OutArgIndexes.count(Arg.getArgNo())) {
       // It's easier to preserve the type of the argument list. We rely on
       // DeadArgumentElimination to take care of these.
-      StubCallArgs.push_back(UndefValue::get(Arg.getType()));
+      StubCallArgs.push_back(PoisonValue::get(Arg.getType()));
     } else {
       StubCallArgs.push_back(&Arg);
     }

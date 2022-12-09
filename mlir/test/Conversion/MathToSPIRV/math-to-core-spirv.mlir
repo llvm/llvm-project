@@ -41,3 +41,27 @@ func.func @copy_sign_vector(%value: vector<3xf16>, %sign: vector<3xf16>) -> vect
 //       CHECK:   %[[OR:.+]] = spirv.BitwiseOr %[[VAND]], %[[SAND]] : vector<3xi16>
 //       CHECK:   %[[RESULT:.+]] = spirv.Bitcast %[[OR]] : vector<3xi16> to vector<3xf16>
 //       CHECK:   return %[[RESULT]]
+
+// -----
+
+// 2-D vectors are not supported.
+func.func @copy_sign_2d_vector(%value: vector<3x3xf32>, %sign: vector<3x3xf32>) -> vector<3x3xf32> {
+  %0 = math.copysign %value, %sign : vector<3x3xf32>
+  return %0: vector<3x3xf32>
+}
+
+// CHECK-LABEL: func @copy_sign_2d_vector
+// CHECK-NEXT:    math.copysign {{%.+}}, {{%.+}} : vector<3x3xf32>
+// CHECK-NEXT:    return
+
+// -----
+
+// Tensors are not supported.
+func.func @copy_sign_tensor(%value: tensor<3x3xf32>, %sign: tensor<3x3xf32>) -> tensor<3x3xf32> {
+  %0 = math.copysign %value, %sign : tensor<3x3xf32>
+  return %0: tensor<3x3xf32>
+}
+
+// CHECK-LABEL: func @copy_sign_tensor
+// CHECK-NEXT:    math.copysign {{%.+}}, {{%.+}} : tensor<3x3xf32>
+// CHECK-NEXT:    return

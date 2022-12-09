@@ -36,6 +36,11 @@ bool linalg::detail::canOpOperandsBeDroppedImpl(
       continue;
     indexingMaps.push_back(linalgOp.getMatchingIndexingMap(&opOperand));
   }
+  if (indexingMaps.empty()) {
+    // If there are no indexing maps, the operand can only be dropped
+    // if the op has no loops.
+    return linalgOp.getNumLoops() == 0;
+  }
   return inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
 }
 

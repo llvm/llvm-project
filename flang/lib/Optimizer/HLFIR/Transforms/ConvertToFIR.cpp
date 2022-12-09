@@ -91,6 +91,94 @@ public:
   }
 };
 
+class DesignateOpConversion
+    : public mlir::OpRewritePattern<hlfir::DesignateOp> {
+public:
+  explicit DesignateOpConversion(mlir::MLIRContext *ctx)
+      : OpRewritePattern{ctx} {}
+
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::DesignateOp designate,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Location loc = designate.getLoc();
+    auto module = designate->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+
+    if (designate.getComponent() || designate.getComplexPart() ||
+        !designate.getSubstring().empty()) {
+      // build path.
+      TODO(loc, "hlfir::designate with complex part or substring or component");
+    }
+
+    hlfir::Entity baseEntity(designate.getMemref());
+    if (baseEntity.isMutableBox())
+      TODO(loc, "hlfir::designate load of pointer or allocatable");
+
+    mlir::Type designateResultType = designate.getResult().getType();
+    llvm::SmallVector<mlir::Value> firBaseTypeParameters;
+    auto [base, shape] = hlfir::genVariableFirBaseShapeAndParams(
+        loc, builder, baseEntity, firBaseTypeParameters);
+    if (designateResultType.isa<fir::BoxType>()) {
+      // Generate embox or rebox.
+      if (designate.getIndices().empty())
+        TODO(loc, "hlfir::designate whole part");
+      // Otherwise, this is an array section with triplets.
+      llvm::SmallVector<mlir::Value> triples;
+      auto undef = builder.create<fir::UndefOp>(loc, builder.getIndexType());
+      auto subscripts = designate.getIndices();
+      unsigned i = 0;
+      for (auto isTriplet : designate.getIsTriplet()) {
+        triples.push_back(subscripts[i++]);
+        if (isTriplet) {
+          triples.push_back(subscripts[i++]);
+          triples.push_back(subscripts[i++]);
+        } else {
+          triples.push_back(undef);
+          triples.push_back(undef);
+        }
+      }
+      mlir::Value slice = builder.create<fir::SliceOp>(
+          loc, triples, /*path=*/mlir::ValueRange{});
+      llvm::SmallVector<mlir::Type> resultType{designateResultType};
+      mlir::Value resultBox;
+      if (base.getType().isa<fir::BoxType>())
+        resultBox =
+            builder.create<fir::ReboxOp>(loc, resultType, base, shape, slice);
+      else
+        resultBox = builder.create<fir::EmboxOp>(loc, resultType, base, shape,
+                                                 slice, firBaseTypeParameters);
+      rewriter.replaceOp(designate, resultBox);
+      return mlir::success();
+    }
+
+    // Indexing a single element (use fir.array_coor of fir.coordinate_of).
+
+    if (designate.getIndices().empty()) {
+      // Scalar substring or complex part.
+      // generate fir.coordinate_of.
+      TODO(loc, "hlfir::designate to fir.coordinate_of");
+    }
+
+    // Generate fir.array_coor
+    mlir::Type resultType = designateResultType;
+    if (auto boxCharType = designateResultType.dyn_cast<fir::BoxCharType>())
+      resultType = fir::ReferenceType::get(boxCharType.getEleTy());
+    auto arrayCoor = builder.create<fir::ArrayCoorOp>(
+        loc, resultType, base, shape,
+        /*slice=*/mlir::Value{}, designate.getIndices(), firBaseTypeParameters);
+    if (designateResultType.isa<fir::BoxCharType>()) {
+      assert(designate.getTypeparams().size() == 1 &&
+             "must have character length");
+      auto emboxChar = builder.create<fir::EmboxCharOp>(
+          loc, designateResultType, arrayCoor, designate.getTypeparams()[0]);
+      rewriter.replaceOp(designate, emboxChar.getResult());
+    } else {
+      rewriter.replaceOp(designate, arrayCoor.getResult());
+    }
+    return mlir::success();
+  }
+};
+
 class ConvertHLFIRtoFIR
     : public hlfir::impl::ConvertHLFIRtoFIRBase<ConvertHLFIRtoFIR> {
 public:
@@ -98,7 +186,7 @@ public:
     auto func = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<DeclareOpConversion>(context);
+    patterns.insert<DeclareOpConversion, DesignateOpConversion>(context);
     mlir::ConversionTarget target(*context);
     target.addIllegalDialect<hlfir::hlfirDialect>();
     target.markUnknownOpDynamicallyLegal(

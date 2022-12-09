@@ -5,6 +5,7 @@ executable("opt") {
     "//llvm/lib/Bitcode/Writer",
     "//llvm/lib/CodeGen",
     "//llvm/lib/IR",
+    "//llvm/lib/IRPrinter",
     "//llvm/lib/MC",
     "//llvm/lib/Passes",
     "//llvm/lib/Support",

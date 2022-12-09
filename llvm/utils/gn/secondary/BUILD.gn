@@ -32,6 +32,11 @@ group("default") {
     deps += [ "//libunwind" ]
   }
 
+  # FIXME: Add this on linux/win after testing that it builds.
+  if (current_os == "mac") {
+    deps += [ "//bolt/test" ]
+  }
+
   testonly = true
 }
 
@@ -65,6 +70,11 @@ group("lld") {
 }
 group("llvm-ar") {
   deps = [ "//llvm/tools/llvm-ar:symlinks" ]
+}
+if (current_os == "mac") {
+  group("llvm-bolt") {
+    deps = [ "//bolt/tools/driver:symlinks" ]
+  }
 }
 group("llvm-dwp") {
   deps = [ "//llvm/tools/llvm-dwp:symlinks" ]

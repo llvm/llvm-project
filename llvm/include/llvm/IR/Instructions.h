@@ -44,7 +44,6 @@ namespace llvm {
 class APFloat;
 class APInt;
 class BasicBlock;
-class BlockAddress;
 class ConstantInt;
 class DataLayout;
 class StringRef;

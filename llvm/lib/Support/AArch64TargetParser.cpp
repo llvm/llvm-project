@@ -50,11 +50,10 @@ AArch64::ArchKind AArch64::getCPUArchKind(StringRef CPU) {
 }
 
 AArch64::ArchKind AArch64::getSubArchArchKind(StringRef SubArch) {
-  return StringSwitch<AArch64::ArchKind>(SubArch)
-#define AARCH64_ARCH(NAME, ID, SUB_ARCH, ARCH_BASE_EXT)                        \
-  .Case(SUB_ARCH, ArchKind::ID)
-#include "../../include/llvm/Support/AArch64TargetParser.def"
-  .Default(ArchKind::INVALID);
+  for (const auto &A : AArch64ARCHNames)
+    if (A.getSubArch() == SubArch)
+      return A.ID;
+  return ArchKind::INVALID;
 }
 
 bool AArch64::getExtensionFeatures(uint64_t Extensions,
@@ -86,13 +85,12 @@ bool AArch64::getArchFeatures(AArch64::ArchKind AK,
                               std::vector<StringRef> &Features) {
   if (AK == ArchKind::INVALID)
     return false;
-  Features.push_back(
-      AArch64ARCHNames[static_cast<unsigned>(AK)].getArchFeature());
+  Features.push_back(AArch64ARCHNames[static_cast<unsigned>(AK)].ArchFeature);
   return true;
 }
 
 StringRef AArch64::getArchName(AArch64::ArchKind AK) {
-  return AArch64ARCHNames[static_cast<unsigned>(AK)].getName();
+  return AArch64ARCHNames[static_cast<unsigned>(AK)].Name;
 }
 
 StringRef AArch64::getSubArch(AArch64::ArchKind AK) {
@@ -103,14 +101,14 @@ StringRef AArch64::getArchExtFeature(StringRef ArchExt) {
   if (ArchExt.startswith("no")) {
     StringRef ArchExtBase(ArchExt.substr(2));
     for (const auto &AE : AArch64ARCHExtNames) {
-      if (AE.NegFeature && ArchExtBase == AE.getName())
-        return StringRef(AE.NegFeature);
+      if (!AE.NegFeature.empty() && ArchExtBase == AE.Name)
+        return AE.NegFeature;
     }
   }
 
   for (const auto &AE : AArch64ARCHExtNames)
-    if (AE.Feature && ArchExt == AE.getName())
-      return StringRef(AE.Feature);
+    if (!AE.Feature.empty() && ArchExt == AE.Name)
+      return AE.Feature;
   return StringRef();
 }
 
@@ -130,11 +128,11 @@ AArch64::ArchKind AArch64::convertV9toV8(AArch64::ArchKind AK) {
 void AArch64::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
   for (const auto &Arch : AArch64CPUNames) {
     if (Arch.ArchID != ArchKind::INVALID)
-      Values.push_back(Arch.getName());
+      Values.push_back(Arch.Name);
   }
 
   for (const auto &Alias: AArch64CPUAliases)
-    Values.push_back(Alias.getAlias());
+    Values.push_back(Alias.Alias);
 }
 
 bool AArch64::isX18ReservedByDefault(const Triple &TT) {
@@ -150,7 +148,7 @@ AArch64::ArchKind AArch64::parseArch(StringRef Arch) {
 
   StringRef Syn = llvm::ARM::getArchSynonym(Arch);
   for (const auto &A : AArch64ARCHNames) {
-    if (A.getName().endswith(Syn))
+    if (A.Name.endswith(Syn))
       return A.ID;
   }
   return ArchKind::INVALID;
@@ -158,7 +156,7 @@ AArch64::ArchKind AArch64::parseArch(StringRef Arch) {
 
 AArch64::ArchExtKind AArch64::parseArchExt(StringRef ArchExt) {
   for (const auto &A : AArch64ARCHExtNames) {
-    if (ArchExt == A.getName())
+    if (ArchExt == A.Name)
       return static_cast<ArchExtKind>(A.ID);
   }
   return AArch64::AEK_INVALID;
@@ -167,14 +165,14 @@ AArch64::ArchExtKind AArch64::parseArchExt(StringRef ArchExt) {
 AArch64::ArchKind AArch64::parseCPUArch(StringRef CPU) {
   // Resolve aliases first.
   for (const auto &Alias : AArch64CPUAliases) {
-    if (CPU == Alias.getAlias()) {
-      CPU = Alias.getName();
+    if (CPU == Alias.Alias) {
+      CPU = Alias.Name;
       break;
     }
   }
   // Then find the CPU name.
   for (const auto &C : AArch64CPUNames)
-    if (CPU == C.getName())
+    if (CPU == C.Name)
       return C.ArchID;
 
   return ArchKind::INVALID;

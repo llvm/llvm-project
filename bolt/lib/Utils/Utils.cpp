@@ -69,7 +69,7 @@ std::string getUnescapedName(const StringRef &Name) {
 Optional<uint8_t> readDWARFExpressionTargetReg(StringRef ExprBytes) {
   uint8_t Opcode = ExprBytes[0];
   if (Opcode == dwarf::DW_CFA_def_cfa_expression)
-    return NoneType();
+    return None;
   assert((Opcode == dwarf::DW_CFA_expression ||
           Opcode == dwarf::DW_CFA_val_expression) &&
          "invalid DWARF expression CFI");

@@ -41,7 +41,7 @@ public:
     report_fatal_error("emitXCOFFRenameDirective is not implemented yet on "
                        "object generation path");
   }
-  void emitXCOFFExceptDirective(const MCSymbol *Symbol, MCSymbol *Trap,
+  void emitXCOFFExceptDirective(const MCSymbol *Symbol, const MCSymbol *Trap,
                                 unsigned Lang, unsigned Reason,
                                 unsigned FunctionSize, bool hasDebug) override;
 };

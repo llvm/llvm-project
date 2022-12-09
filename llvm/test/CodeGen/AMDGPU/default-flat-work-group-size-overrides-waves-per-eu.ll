@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-unknown -mcpu=tahiti -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-unknown-unknown -mcpu=tahiti -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck %s
 
 ; Both of these kernels have the same value for
 ; amdgpu-flat-work-group-size, except one explicitly sets it. This is

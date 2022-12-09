@@ -775,7 +775,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     return false;
 
   unsigned AS = LI1->getPointerAddressSpace();
-  bool Fast = false;
+  unsigned Fast = 0;
   Allowed = TTI.allowsMisalignedMemoryAccesses(I.getContext(), LOps.LoadSize,
                                                AS, LI1->getAlign(), &Fast);
   if (!Allowed || !Fast)

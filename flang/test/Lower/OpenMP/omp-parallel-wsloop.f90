@@ -14,7 +14,7 @@ subroutine simple_parallel_do
   do i=1, 9
   ! CHECK:    fir.store %[[I]] to %[[IV_ADDR:.*]] : !fir.ref<i32>
   ! CHECK:    %[[LOAD_IV:.*]] = fir.load %[[IV_ADDR]] : !fir.ref<i32>
-  ! CHECK:    fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) : (!fir.ref<i8>, i32) -> i1
+  ! CHECK:    fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   ! CHECK:       omp.yield
@@ -40,7 +40,7 @@ subroutine parallel_do_with_parallel_clauses(cond, nt)
   do i=1, 9
   ! CHECK:    fir.store %[[I]] to %[[IV_ADDR:.*]] : !fir.ref<i32>
   ! CHECK:    %[[LOAD_IV:.*]] = fir.load %[[IV_ADDR]] : !fir.ref<i32>
-  ! CHECK:    fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) : (!fir.ref<i8>, i32) -> i1
+  ! CHECK:    fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   ! CHECK:       omp.yield
@@ -63,7 +63,7 @@ subroutine parallel_do_with_clauses(nt)
   do i=1, 9
   ! CHECK:    fir.store %[[I]] to %[[IV_ADDR:.*]] : !fir.ref<i32>
   ! CHECK:    %[[LOAD_IV:.*]] = fir.load %[[IV_ADDR]] : !fir.ref<i32>
-  ! CHECK:    fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) : (!fir.ref<i8>, i32) -> i1
+  ! CHECK:    fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   ! CHECK:       omp.yield
@@ -95,12 +95,12 @@ subroutine parallel_do_with_privatisation_clauses(cond,nt)
   do i=1, 9
   ! CHECK:    fir.store %[[I]] to %[[IV_ADDR:.*]] : !fir.ref<i32>
   ! CHECK:    %[[LOAD_IV:.*]] = fir.load %[[IV_ADDR]] : !fir.ref<i32>
-  ! CHECK:      fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) : (!fir.ref<i8>, i32) -> i1
+  ! CHECK:      fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
   ! CHECK:      %[[PRIVATE_COND_VAL:.*]] = fir.load %[[PRIVATE_COND_REF]] : !fir.ref<!fir.logical<4>>
   ! CHECK:      %[[PRIVATE_COND_VAL_CVT:.*]] = fir.convert %[[PRIVATE_COND_VAL]] : (!fir.logical<4>) -> i1
-  ! CHECK:      fir.call @_FortranAioOutputLogical({{.*}}, %[[PRIVATE_COND_VAL_CVT]]) : (!fir.ref<i8>, i1) -> i1
+  ! CHECK:      fir.call @_FortranAioOutputLogical({{.*}}, %[[PRIVATE_COND_VAL_CVT]]) {{.*}}: (!fir.ref<i8>, i1) -> i1
   ! CHECK:      %[[PRIVATE_NT_VAL:.*]] = fir.load %[[PRIVATE_NT_REF]] : !fir.ref<i32>
-  ! CHECK:      fir.call @_FortranAioOutputInteger32({{.*}}, %[[PRIVATE_NT_VAL]]) : (!fir.ref<i8>, i32) -> i1
+  ! CHECK:      fir.call @_FortranAioOutputInteger32({{.*}}, %[[PRIVATE_NT_VAL]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i, cond, nt
   end do
   ! CHECK:      omp.yield
@@ -142,7 +142,7 @@ end subroutine parallel_private_do
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop   for  (%[[I:.*]]) : i32 = (%[[VAL_7]]) to (%[[VAL_8]]) inclusive step (%[[VAL_9]]) {
 ! CHECK:               fir.store %[[I]] to %[[I_PRIV]] : !fir.ref<i32>
-! CHECK:               fir.call @_QPfoo(%[[I_PRIV]], %[[COND_ADDR]], %[[NT_ADDR]]) : (!fir.ref<i32>, !fir.ref<!fir.logical<4>>, !fir.ref<i32>) -> ()
+! CHECK:               fir.call @_QPfoo(%[[I_PRIV]], %[[COND_ADDR]], %[[NT_ADDR]]) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.logical<4>>, !fir.ref<i32>) -> ()
 ! CHECK:               omp.yield
 ! CHECK:             }
 ! CHECK:             omp.terminator
@@ -184,7 +184,7 @@ end subroutine omp_parallel_multiple_firstprivate_do
 ! CHECK:             %[[VAL_10:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop   for  (%[[I:.*]]) : i32 = (%[[VAL_8]]) to (%[[VAL_9]]) inclusive step (%[[VAL_10]]) {
 ! CHECK:               fir.store %[[I]] to %[[I_PRIV_ADDR]] : !fir.ref<i32>
-! CHECK:               fir.call @_QPbar(%[[I_PRIV_ADDR]], %[[A_PRIV_ADDR]]) : (!fir.ref<i32>, !fir.ref<i32>) -> ()
+! CHECK:               fir.call @_QPbar(%[[I_PRIV_ADDR]], %[[A_PRIV_ADDR]]) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
 ! CHECK:               omp.yield
 ! CHECK:             }
 ! CHECK:             omp.terminator
@@ -226,7 +226,7 @@ end subroutine parallel_do_private
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop   for  (%[[I:.*]]) : i32 = (%[[VAL_7]]) to (%[[VAL_8]]) inclusive step (%[[VAL_9]]) {
 ! CHECK:               fir.store %[[I]] to %[[I_PRIV_ADDR]] : !fir.ref<i32>
-! CHECK:               fir.call @_QPfoo(%[[I_PRIV_ADDR]], %[[COND_ADDR]], %[[NT_ADDR]]) : (!fir.ref<i32>, !fir.ref<!fir.logical<4>>, !fir.ref<i32>) -> ()
+! CHECK:               fir.call @_QPfoo(%[[I_PRIV_ADDR]], %[[COND_ADDR]], %[[NT_ADDR]]) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.logical<4>>, !fir.ref<i32>) -> ()
 ! CHECK:               omp.yield
 ! CHECK:             }
 ! CHECK:             omp.terminator
@@ -268,7 +268,7 @@ end subroutine omp_parallel_do_multiple_firstprivate
 ! CHECK:             %[[VAL_10:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop   for  (%[[I:.*]]) : i32 = (%[[VAL_8]]) to (%[[VAL_9]]) inclusive step (%[[VAL_10]]) {
 ! CHECK:               fir.store %[[I]] to %[[I_PRIV_ADDR]] : !fir.ref<i32>
-! CHECK:               fir.call @_QPbar(%[[I_PRIV_ADDR]], %[[A_PRIV_ADDR]]) : (!fir.ref<i32>, !fir.ref<i32>) -> ()
+! CHECK:               fir.call @_QPbar(%[[I_PRIV_ADDR]], %[[A_PRIV_ADDR]]) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
 ! CHECK:               omp.yield
 ! CHECK:             }
 ! CHECK:             omp.terminator

@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
+// GH#58229 - rejects-valid
+__attribute__((__visibility__("default"))) [[nodiscard]] int f();
+[[nodiscard]] __attribute__((__visibility__("default"))) int f();
+
 class c {
   virtual void f1(const char* a, ...)
     __attribute__ (( __format__(__printf__,2,3) )) = 0;

@@ -1,9 +1,10 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN,GFX10 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: hazard_vcmpx_smov_exec_lo
-# GCN:      $sgpr0 = S_MOV_B32 $exec_lo
-# GCN-NEXT: S_WAITCNT_DEPCTR 65534
-# GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
+# GCN:        $sgpr0 = S_MOV_B32 $exec_lo
+# GFX10-NEXT: S_WAITCNT_DEPCTR 65534
+# GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec_lo
 body:            |
@@ -19,9 +20,9 @@ body:            |
 ...
 
 # GCN-LABEL: name: hazard_vcmpx_smov_exec
-# GCN:      $sgpr0_sgpr1 = S_MOV_B64 $exec
-# GCN-NEXT: S_WAITCNT_DEPCTR 65534
-# GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
+# GCN:        $sgpr0_sgpr1 = S_MOV_B64 $exec
+# GFX10-NEXT: S_WAITCNT_DEPCTR 65534
+# GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec
 body:            |
@@ -145,9 +146,10 @@ body:            |
 ...
 
 # GCN-LABEL: name: hazard_vcmpx_smov_exec_lo_depctr_effe
-# GCN:      $sgpr0 = S_MOV_B32 $exec_lo
-# GCN:      S_WAITCNT_DEPCTR 65534
-# GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
+# GCN:        $sgpr0 = S_MOV_B32 $exec_lo
+# GCN-NEXT:   S_WAITCNT_DEPCTR 61438
+# GFX10-NEXT: S_WAITCNT_DEPCTR 65534
+# GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec_lo_depctr_effe
 body:            |

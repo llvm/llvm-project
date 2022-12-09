@@ -413,7 +413,8 @@ static bool findLoopComponents(
   // increment variable.
   Increment =
       cast<BinaryOperator>(InductionPHI->getIncomingValueForBlock(Latch));
-  if (Increment->hasNUsesOrMore(3)) {
+  if ((Compare->getOperand(0) != Increment || !Increment->hasNUses(2)) &&
+      !Increment->hasNUses(1)) {
     LLVM_DEBUG(dbgs() << "Could not find valid increment\n");
     return false;
   }
@@ -924,7 +925,7 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   // this pass will simplify all loops that contain inner loops,
   // regardless of whether anything ends up being flattened.
   Changed |= Flatten(LN, &AR.DT, &AR.LI, &AR.SE, &AR.AC, &AR.TTI, &U,
-                     MSSAU ? MSSAU.getPointer() : nullptr);
+                     MSSAU ? &*MSSAU : nullptr);
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -989,8 +990,8 @@ bool LoopFlattenLegacyPass::runOnFunction(Function &F) {
   bool Changed = false;
   for (Loop *L : *LI) {
     auto LN = LoopNest::getLoopNest(*L, *SE);
-    Changed |= Flatten(*LN, DT, LI, SE, AC, TTI, nullptr,
-                       MSSAU ? MSSAU.getPointer() : nullptr);
+    Changed |=
+        Flatten(*LN, DT, LI, SE, AC, TTI, nullptr, MSSAU ? &*MSSAU : nullptr);
   }
   return Changed;
 }

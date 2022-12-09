@@ -90,8 +90,9 @@ static bool diagnoseSubMismatchMethodParameters(DiagnosticsEngine &Diags,
     DiagMethodType SecondMethodType = GetDiagMethodType(SecondMethod);
     return Diags.Report(SecondMethod->getLocation(),
                         diag::note_module_odr_violation_method_params)
-           << SecondModule << SecondMethod->getSourceRange() << DiffType
-           << SecondMethodType << SecondName;
+           << SecondModule.empty() << SecondModule
+           << SecondMethod->getSourceRange() << DiffType << SecondMethodType
+           << SecondName;
   };
 
   const unsigned FirstNumParameters = FirstMethod->param_size();
@@ -378,7 +379,7 @@ bool ODRDiagsEmitter::diagnoseSubMismatchProtocols(
                               this](SourceLocation Loc, SourceRange Range,
                                     ODRReferencedProtocolDifference DiffType) {
     return Diag(Loc, diag::note_module_odr_violation_referenced_protocols)
-           << SecondModule << Range << DiffType;
+           << SecondModule.empty() << SecondModule << Range << DiffType;
   };
   auto GetProtoListSourceRange = [](const ObjCProtocolList &PL) {
     if (PL.empty())
@@ -440,7 +441,8 @@ bool ODRDiagsEmitter::diagnoseSubMismatchObjCMethod(
                    this](ODRMethodDifference DiffType) {
     return Diag(SecondMethod->getLocation(),
                 diag::note_module_odr_violation_objc_method)
-           << SecondModule << SecondMethod->getSourceRange() << DiffType;
+           << SecondModule.empty() << SecondModule
+           << SecondMethod->getSourceRange() << DiffType;
   };
 
   if (computeODRHash(FirstMethod->getReturnType()) !=
@@ -497,6 +499,82 @@ bool ODRDiagsEmitter::diagnoseSubMismatchObjCMethod(
   return false;
 }
 
+bool ODRDiagsEmitter::diagnoseSubMismatchObjCProperty(
+    const NamedDecl *FirstObjCContainer, StringRef FirstModule,
+    StringRef SecondModule, const ObjCPropertyDecl *FirstProp,
+    const ObjCPropertyDecl *SecondProp) const {
+  enum ODRPropertyDifference {
+    Name,
+    Type,
+    ControlLevel, // optional/required
+    Attribute,
+  };
+
+  auto DiagError = [FirstObjCContainer, FirstModule, FirstProp,
+                    this](SourceLocation Loc, ODRPropertyDifference DiffType) {
+    return Diag(Loc, diag::err_module_odr_violation_objc_property)
+           << FirstObjCContainer << FirstModule.empty() << FirstModule
+           << FirstProp->getSourceRange() << DiffType;
+  };
+  auto DiagNote = [SecondModule, SecondProp,
+                   this](SourceLocation Loc, ODRPropertyDifference DiffType) {
+    return Diag(Loc, diag::note_module_odr_violation_objc_property)
+           << SecondModule.empty() << SecondModule
+           << SecondProp->getSourceRange() << DiffType;
+  };
+
+  IdentifierInfo *FirstII = FirstProp->getIdentifier();
+  IdentifierInfo *SecondII = SecondProp->getIdentifier();
+  if (FirstII->getName() != SecondII->getName()) {
+    DiagError(FirstProp->getLocation(), Name) << FirstII;
+    DiagNote(SecondProp->getLocation(), Name) << SecondII;
+    return true;
+  }
+  if (computeODRHash(FirstProp->getType()) !=
+      computeODRHash(SecondProp->getType())) {
+    DiagError(FirstProp->getLocation(), Type)
+        << FirstII << FirstProp->getType();
+    DiagNote(SecondProp->getLocation(), Type)
+        << SecondII << SecondProp->getType();
+    return true;
+  }
+  if (FirstProp->getPropertyImplementation() !=
+      SecondProp->getPropertyImplementation()) {
+    DiagError(FirstProp->getLocation(), ControlLevel)
+        << FirstProp->getPropertyImplementation();
+    DiagNote(SecondProp->getLocation(), ControlLevel)
+        << SecondProp->getPropertyImplementation();
+    return true;
+  }
+
+  // Go over the property attributes and stop at the first mismatch.
+  unsigned FirstAttrs = (unsigned)FirstProp->getPropertyAttributes();
+  unsigned SecondAttrs = (unsigned)SecondProp->getPropertyAttributes();
+  if (FirstAttrs != SecondAttrs) {
+    for (unsigned I = 0; I < NumObjCPropertyAttrsBits; ++I) {
+      unsigned CheckedAttr = (1 << I);
+      if ((FirstAttrs & CheckedAttr) == (SecondAttrs & CheckedAttr))
+        continue;
+
+      bool IsFirstWritten =
+          (unsigned)FirstProp->getPropertyAttributesAsWritten() & CheckedAttr;
+      bool IsSecondWritten =
+          (unsigned)SecondProp->getPropertyAttributesAsWritten() & CheckedAttr;
+      DiagError(IsFirstWritten ? FirstProp->getLParenLoc()
+                               : FirstProp->getLocation(),
+                Attribute)
+          << FirstII << (I + 1) << IsFirstWritten;
+      DiagNote(IsSecondWritten ? SecondProp->getLParenLoc()
+                               : SecondProp->getLocation(),
+               Attribute)
+          << SecondII << (I + 1);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 ODRDiagsEmitter::DiffResult
 ODRDiagsEmitter::FindTypeDiffs(DeclHashes &FirstHashes,
                                DeclHashes &SecondHashes) {
@@ -537,6 +615,8 @@ ODRDiagsEmitter::FindTypeDiffs(DeclHashes &FirstHashes,
       return FunctionTemplate;
     case Decl::ObjCMethod:
       return ObjCMethod;
+    case Decl::ObjCProperty:
+      return ObjCProperty;
     }
   };
 
@@ -613,7 +693,8 @@ void ODRDiagsEmitter::diagnoseSubMismatchDifferentDeclKinds(
   auto SecondDiagInfo =
       GetMismatchedDeclLoc(SecondRecord, DR.SecondDiffType, DR.SecondDecl);
   Diag(SecondDiagInfo.first, diag::note_module_odr_violation_mismatch_decl)
-      << SecondModule << SecondDiagInfo.second << DR.SecondDiffType;
+      << SecondModule.empty() << SecondModule << SecondDiagInfo.second
+      << DR.SecondDiffType;
 }
 
 bool ODRDiagsEmitter::diagnoseMismatch(
@@ -889,6 +970,7 @@ bool ODRDiagsEmitter::diagnoseMismatch(
   case PrivateSpecifer:
   case ProtectedSpecifer:
   case ObjCMethod:
+  case ObjCProperty:
     llvm_unreachable("Invalid diff type");
 
   case StaticAssert: {
@@ -1460,7 +1542,8 @@ bool ODRDiagsEmitter::diagnoseMismatch(
       << FirstDecl->getSourceRange();
   Diag(SecondDecl->getLocation(),
        diag::note_module_odr_violation_mismatch_decl_unknown)
-      << SecondModule << FirstDiffType << SecondDecl->getSourceRange();
+      << SecondModule.empty() << SecondModule << FirstDiffType
+      << SecondDecl->getSourceRange();
   return true;
 }
 
@@ -1814,6 +1897,14 @@ bool ODRDiagsEmitter::diagnoseMismatch(
       return true;
     break;
   }
+  case ObjCProperty: {
+    if (diagnoseSubMismatchObjCProperty(FirstProtocol, FirstModule,
+                                        SecondModule,
+                                        cast<ObjCPropertyDecl>(FirstDecl),
+                                        cast<ObjCPropertyDecl>(SecondDecl)))
+      return true;
+    break;
+  }
   }
 
   Diag(FirstDecl->getLocation(),
@@ -1822,6 +1913,7 @@ bool ODRDiagsEmitter::diagnoseMismatch(
       << FirstDecl->getSourceRange();
   Diag(SecondDecl->getLocation(),
        diag::note_module_odr_violation_mismatch_decl_unknown)
-      << SecondModule << FirstDiffType << SecondDecl->getSourceRange();
+      << SecondModule.empty() << SecondModule << FirstDiffType
+      << SecondDecl->getSourceRange();
   return true;
 }

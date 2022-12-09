@@ -98,7 +98,7 @@ END-SCRIPT
 #include <float.h>
 #include <format>
 #include <forward_list>
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION) && !defined(_LIBCPP_HAS_NO_FSTREAM)
 #   include <fstream>
 #endif
 #include <functional>

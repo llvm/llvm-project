@@ -77,7 +77,7 @@ end subroutine single_allocate
 ! CHECK:         omp.single   {
 ! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_1]] : !fir.ref<f64>
 ! CHECK:           fir.store %[[VAL_4]] to %[[VAL_3]] : !fir.ref<f64>
-! CHECK:           fir.call @_QPbar(%[[VAL_2]], %[[VAL_3]]) : (!fir.ref<f32>, !fir.ref<f64>) -> ()
+! CHECK:           fir.call @_QPbar(%[[VAL_2]], %[[VAL_3]]) {{.*}}: (!fir.ref<f32>, !fir.ref<f64>) -> ()
 ! CHECK:           omp.terminator
 ! CHECK:         }
 ! CHECK:         return
@@ -101,7 +101,7 @@ end subroutine
 ! CHECK:           omp.single   {
 ! CHECK:             %[[VAL_4:.*]] = fir.load %[[VAL_1]] : !fir.ref<f64>
 ! CHECK:             fir.store %[[VAL_4]] to %[[VAL_3]] : !fir.ref<f64>
-! CHECK:             fir.call @_QPbar(%[[VAL_2]], %[[VAL_3]]) : (!fir.ref<f32>, !fir.ref<f64>) -> ()
+! CHECK:             fir.call @_QPbar(%[[VAL_2]], %[[VAL_3]]) {{.*}}: (!fir.ref<f32>, !fir.ref<f64>) -> ()
 ! CHECK:             omp.terminator
 ! CHECK:           }
 ! CHECK:           omp.terminator

@@ -223,30 +223,10 @@ static void ForcefullyCompleteType(CompilerType type) {
   lldbassert(started && "Unable to start a class type definition.");
   TypeSystemClang::CompleteTagDeclarationDefinition(type);
   const clang::TagDecl *td = ClangUtil::GetAsTagDecl(type);
-  auto &ts = llvm::cast<TypeSystemClang>(*type.GetTypeSystem());
-  ts.GetMetadata(td)->SetIsForcefullyCompleted();
-}
-
-/// Complete a type from debug info, or mark it as forcefully completed if
-/// there is no definition of the type in the current Module. Call this function
-/// in contexts where the usual C++ rules require a type to be complete (base
-/// class, member, etc.).
-static void RequireCompleteType(CompilerType type) {
-  // Technically, enums can be incomplete too, but we don't handle those as they
-  // are emitted even under -flimit-debug-info.
-  if (!TypeSystemClang::IsCXXClassType(type))
-    return;
-
-  if (type.GetCompleteType())
-    return;
-
-  // No complete definition in this module.  Mark the class as complete to
-  // satisfy local ast invariants, but make a note of the fact that
-  // it is not _really_ complete so we can later search for a definition in a
-  // different module.
-  // Since we provide layout assistance, layouts of types containing this class
-  // will be correct even if we  are not able to find the definition elsewhere.
-  ForcefullyCompleteType(type);
+  auto ts_sp = type.GetTypeSystem();
+  auto ts = ts_sp.dyn_cast_or_null<TypeSystemClang>();
+  if (ts)
+    ts->GetMetadata(td)->SetIsForcefullyCompleted();
 }
 
 /// This function serves a similar purpose as RequireCompleteType above, but it
@@ -814,8 +794,9 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
 
   CompilerType enumerator_clang_type;
   CompilerType clang_type;
-  clang_type.SetCompilerType(
-      &m_ast, dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
+  clang_type =
+      CompilerType(m_ast.weak_from_this(),
+                   dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
   if (!clang_type) {
     if (attrs.type.IsValid()) {
       Type *enumerator_type =
@@ -1323,7 +1304,7 @@ DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
   if (byte_stride == 0 && bit_stride == 0)
     byte_stride = element_type->GetByteSize(nullptr).value_or(0);
   CompilerType array_element_type = element_type->GetForwardCompilerType();
-  RequireCompleteType(array_element_type);
+  TypeSystemClang::RequireCompleteType(array_element_type);
 
   uint64_t array_element_bit_stride = byte_stride * 8 + bit_stride;
   CompilerType clang_type;
@@ -1383,9 +1364,8 @@ void DWARFASTParserClang::ParseInheritance(
     const lldb::ModuleSP &module_sp,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     ClangASTImporter::LayoutInfo &layout_info) {
-
-  TypeSystemClang *ast =
-      llvm::dyn_cast_or_null<TypeSystemClang>(class_clang_type.GetTypeSystem());
+  auto ast =
+      class_clang_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
   if (ast == nullptr)
     return;
 
@@ -1792,8 +1772,9 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   assert(tag_decl_kind != -1);
   (void)tag_decl_kind;
   bool clang_type_was_created = false;
-  clang_type.SetCompilerType(
-      &m_ast, dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
+  clang_type =
+      CompilerType(m_ast.weak_from_this(),
+                   dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
   if (!clang_type) {
     clang::DeclContext *decl_ctx =
         GetClangDeclContextContainingDIE(die, nullptr);
@@ -2212,7 +2193,8 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
         clang::TypeSourceInfo *type_source_info =
             base_class->getTypeSourceInfo();
         if (type_source_info)
-          RequireCompleteType(m_ast.GetType(type_source_info->getType()));
+          TypeSystemClang::RequireCompleteType(
+              m_ast.GetType(type_source_info->getType()));
       }
 
       m_ast.TransferBaseClasses(clang_type.GetOpaqueQualType(),
@@ -2713,7 +2695,11 @@ llvm::Expected<llvm::APInt> DWARFASTParserClang::ExtractIntFromFormValue(
     const CompilerType &int_type, const DWARFFormValue &form_value) const {
   clang::QualType qt = ClangUtil::GetQualType(int_type);
   assert(qt->isIntegralOrEnumerationType());
-  TypeSystemClang &ts = *llvm::cast<TypeSystemClang>(int_type.GetTypeSystem());
+  auto ts_ptr = int_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  if (!ts_ptr)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "TypeSystem not clang");
+  TypeSystemClang &ts = *ts_ptr;
   clang::ASTContext &ast = ts.getASTContext();
 
   const unsigned type_bits = ast.getIntWidth(qt);
@@ -3018,7 +3004,7 @@ void DWARFASTParserClang::ParseSingleMember(
     }
   }
 
-  RequireCompleteType(member_clang_type);
+  TypeSystemClang::RequireCompleteType(member_clang_type);
 
   clang::FieldDecl *field_decl = TypeSystemClang::AddFieldToRecordType(
       class_clang_type, attrs.name, member_clang_type, attrs.accessibility,
@@ -3043,8 +3029,8 @@ bool DWARFASTParserClang::ParseChildMembers(
   FieldInfo last_field_info;
 
   ModuleSP module_sp = parent_die.GetDWARF()->GetObjectFile()->GetModule();
-  TypeSystemClang *ast =
-      llvm::dyn_cast_or_null<TypeSystemClang>(class_clang_type.GetTypeSystem());
+  auto ts = class_clang_type.GetTypeSystem();
+  auto ast = ts.dyn_cast_or_null<TypeSystemClang>();
   if (ast == nullptr)
     return false;
 

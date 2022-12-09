@@ -376,7 +376,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     Operation *op = $_builder.create<$_qualCppClassName>(
       $_location,
       resultTypes,
-      processValues(llvmOperands));
+      convertValues(llvmOperands));
     }] # !if(!gt(numResults, 0), "$res = op->getResult(0);", "(void)op;");
 }
 

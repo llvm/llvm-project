@@ -22,7 +22,7 @@ subroutine transpose_test(mat)
 ! CHECK:         }
 ! CHECK:         fir.array_merge_store %[[VAL_9]], %[[VAL_14]] to %[[VAL_7]] : !fir.array<3x2xf32>, !fir.array<3x2xf32>, !fir.heap<!fir.array<3x2xf32>>
 ! CHECK:         %[[VAL_24:.*]] = fir.convert %[[VAL_7]] : (!fir.heap<!fir.array<3x2xf32>>) -> !fir.ref<!fir.array<3x2xf32>>
-! CHECK:         fir.call @_QPbar_transpose_test(%[[VAL_24]]) : (!fir.ref<!fir.array<3x2xf32>>) -> ()
+! CHECK:         fir.call @_QPbar_transpose_test(%[[VAL_24]]) {{.*}}: (!fir.ref<!fir.array<3x2xf32>>) -> ()
 ! CHECK:         fir.freemem %[[VAL_7]] : !fir.heap<!fir.array<3x2xf32>>
 
 ! CHECK-NOT: @_FortranATranspose

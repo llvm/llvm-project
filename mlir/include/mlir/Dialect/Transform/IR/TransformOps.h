@@ -21,6 +21,10 @@ namespace mlir {
 namespace transform {
 enum class FailurePropagationMode : uint32_t;
 class FailurePropagationModeAttr;
+
+/// A builder function that populates the body of a SequenceOp.
+using SequenceBodyBuilderFn = ::llvm::function_ref<void(
+    ::mlir::OpBuilder &, ::mlir::Location, ::mlir::BlockArgument)>;
 } // namespace transform
 } // namespace mlir
 
