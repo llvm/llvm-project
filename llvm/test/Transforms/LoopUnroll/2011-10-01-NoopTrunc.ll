@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-threshold=150 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-unroll -unroll-threshold=150 | FileCheck %s
 ;
 ; Verify that trunc i64 to i32 is considered free by loop unrolling
 ; heuristics when i32 is a native type.

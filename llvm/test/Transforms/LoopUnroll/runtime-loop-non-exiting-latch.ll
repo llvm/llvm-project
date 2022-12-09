@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -S -loop-unroll -unroll-runtime=true -unroll-allow-remainder=true -unroll-count=4
+; RUN: opt < %s -S -passes=loop-unroll -unroll-runtime=true -unroll-allow-remainder=true -unroll-count=4
 
 ; Make sure that the runtime unroll does not break with a non-exiting latch.
 define i32 @test(i32* %a, i32* %b, i32* %c, i64 %n) {
