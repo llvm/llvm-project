@@ -1,0 +1,7 @@
+# REQUIRES: x86-registered-target
+## Check that update_mir_test_checks handles --print-fixed-stack properly.
+
+## Verify with --print-fixed-stack, the proper CHECK lines for fixedStack are
+## generated.
+# RUN: cp -f %S/Inputs/print-stack-first.mir %t.mir && %update_mir_test_checks %t.mir --print-fixed-stack
+# RUN: diff -u %S/Inputs/print-stack.mir.expected %t.mir
