@@ -1,4 +1,4 @@
-; RUN: opt < %s -memcpyopt -mldst-motion -newgvn -S | FileCheck %s
+; RUN: opt < %s -passes=memcpyopt,mldst-motion,newgvn -S | FileCheck %s
 
 declare void @check(i8)
 
