@@ -1369,7 +1369,7 @@ bool ScriptInterpreterPythonImpl::GenerateScriptAliasFunction(
   std::string auto_generated_function_name(GenerateUniqueName(
       "lldb_autogen_python_cmd_alias_func", num_created_functions));
 
-  sstr.Printf("def %s (debugger, args, result, internal_dict):",
+  sstr.Printf("def %s (debugger, args, exe_ctx, result, internal_dict):",
               auto_generated_function_name.c_str());
 
   if (!GenerateFunction(sstr.GetData(), user_input).Success())

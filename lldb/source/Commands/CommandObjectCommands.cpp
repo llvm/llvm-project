@@ -201,7 +201,7 @@ protected:
 static const char *g_python_command_instructions =
     "Enter your Python command(s). Type 'DONE' to end.\n"
     "You must define a Python function with this signature:\n"
-    "def my_command_impl(debugger, args, result, internal_dict):\n";
+    "def my_command_impl(debugger, args, exe_ctx, result, internal_dict):\n";
 
 class CommandObjectCommandsAlias : public CommandObjectRaw {
 protected:
