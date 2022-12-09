@@ -249,7 +249,7 @@ arith::AddUIExtendedOp::fold(ArrayRef<Attribute> operands,
     return success();
   }
 
-  // addui_overflow(constant_a, constant_b) -> constant_sum, constant_carry
+  // addui_extended(constant_a, constant_b) -> constant_sum, constant_carry
   // Let the `constFoldBinaryOp` utility attempt to fold the sum of both
   // operands. If that succeeds, calculate the overflow bit based on the sum
   // and the first (constant) operand, `lhs`. Note that we cannot simply call
