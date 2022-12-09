@@ -191,6 +191,19 @@ struct ConvertToSubgroupBallot : RewritePattern {
     return success();
   }
 };
+
+template <const char *TestOpName, typename SPIRVOp>
+struct ConvertToIntegerDotProd : RewritePattern {
+  ConvertToIntegerDotProd(MLIRContext *context)
+      : RewritePattern(TestOpName, 1, context, {SPIRVOp::getOperationName()}) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<SPIRVOp>(op, op->getResultTypes(),
+                                         op->getOperands(), op->getAttrs());
+    return success();
+  }
+};
 } // namespace
 
 void ConvertToTargetEnv::runOnOperation() {
@@ -207,10 +220,17 @@ void ConvertToTargetEnv::runOnOperation() {
 
   auto target = SPIRVConversionTarget::get(targetEnv);
 
+  static constexpr char sDotTestOpName[] = "test.convert_to_sdot_op";
+  static constexpr char suDotTestOpName[] = "test.convert_to_sudot_op";
+  static constexpr char uDotTestOpName[] = "test.convert_to_udot_op";
+
   RewritePatternSet patterns(context);
   patterns.add<ConvertToAtomCmpExchangeWeak, ConvertToBitReverse,
                ConvertToGroupNonUniformBallot, ConvertToModule,
-               ConvertToSubgroupBallot>(context);
+               ConvertToSubgroupBallot,
+               ConvertToIntegerDotProd<sDotTestOpName, spirv::SDotOp>,
+               ConvertToIntegerDotProd<suDotTestOpName, spirv::SUDotOp>,
+               ConvertToIntegerDotProd<uDotTestOpName, spirv::UDotOp>>(context);
 
   if (failed(applyPartialConversion(fn, *target, std::move(patterns))))
     return signalPassFailure();
