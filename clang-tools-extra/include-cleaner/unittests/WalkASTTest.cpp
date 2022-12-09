@@ -180,10 +180,22 @@ TEST(WalkAST, TemplateNames) {
 }
 
 TEST(WalkAST, MemberExprs) {
-  testWalk("struct S { void $explicit^foo(); };", "void foo() { S{}.^foo(); }");
+  testWalk("struct $explicit^S { void foo(); };", "void foo() { S{}.^foo(); }");
   testWalk(
-      "struct S { void foo(); }; struct X : S { using S::$explicit^foo; };",
+      "struct S { void foo(); }; struct $explicit^X : S { using S::foo; };",
       "void foo() { X{}.^foo(); }");
+  testWalk("struct Base { int a; }; struct $explicit^Derived : public Base {};",
+           "void fun(Derived d) { d.^a; }");
+  testWalk("struct Base { int a; }; struct $explicit^Derived : public Base {};",
+           "void fun(Derived* d) { d->^a; }");
+  testWalk("struct Base { int a; }; struct $explicit^Derived : public Base {};",
+           "void fun(Derived& d) { d.^a; }");
+  testWalk("struct Base { int a; }; struct $explicit^Derived : public Base {};",
+           "void fun() { Derived().^a; }");
+  testWalk("struct Base { int a; }; struct $explicit^Derived : public Base {};",
+           "Derived foo(); void fun() { foo().^a; }");
+  testWalk("struct Base { int a; }; struct $explicit^Derived : public Base {};",
+           "Derived& foo(); void fun() { foo().^a; }");
 }
 
 TEST(WalkAST, ConstructExprs) {
