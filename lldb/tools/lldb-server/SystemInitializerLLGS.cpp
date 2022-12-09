@@ -29,6 +29,11 @@ using HostObjectFile = ObjectFileELF;
 #include "Plugins/Instruction/ARM/EmulateInstructionARM.h"
 #endif
 
+#if defined(__loongarch__)
+#define LLDB_TARGET_LoongArch
+#include "Plugins/Instruction/LoongArch/EmulateInstructionLoongArch.h"
+#endif
+
 #if defined(__mips64__) || defined(mips64) || defined(__mips64) ||             \
     defined(__MIPS64__) || defined(_M_MIPS64)
 #define LLDB_TARGET_MIPS64
@@ -57,6 +62,9 @@ llvm::Error SystemInitializerLLGS::Initialize() {
 #if defined(LLDB_TARGET_ARM) || defined(LLDB_TARGET_ARM64)
   EmulateInstructionARM::Initialize();
 #endif
+#if defined(LLDB_TARGET_LoongArch)
+  EmulateInstructionLoongArch::Initialize();
+#endif
 #if defined(LLDB_TARGET_MIPS) || defined(LLDB_TARGET_MIPS64)
   EmulateInstructionMIPS::Initialize();
 #endif
@@ -75,6 +83,9 @@ void SystemInitializerLLGS::Terminate() {
 
 #if defined(LLDB_TARGET_ARM) || defined(LLDB_TARGET_ARM64)
   EmulateInstructionARM::Terminate();
+#endif
+#if defined(LLDB_TARGET_LoongArch)
+  EmulateInstructionLoongArch::Terminate();
 #endif
 #if defined(LLDB_TARGET_MIPS) || defined(LLDB_TARGET_MIPS64)
   EmulateInstructionMIPS::Terminate();
