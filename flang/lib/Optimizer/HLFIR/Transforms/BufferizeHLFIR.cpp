@@ -94,6 +94,44 @@ static mlir::Value getBufferizedExprMustFreeFlag(mlir::Value bufferizedExpr) {
   TODO(bufferizedExpr.getLoc(), "general extract storage case");
 }
 
+static std::pair<hlfir::Entity, mlir::Value>
+createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
+                   hlfir::Entity mold) {
+  if (mold.isArray())
+    TODO(loc, "create temps from array mold");
+  llvm::SmallVector<mlir::Value> lenParams;
+  hlfir::genLengthParameters(loc, builder, mold, lenParams);
+  llvm::StringRef tmpName{".tmp"};
+  mlir::Value alloca =
+      builder.createTemporary(loc, mold.getFortranElementType(), tmpName,
+                              /*shape*/ llvm::None, lenParams);
+  auto declareOp = builder.create<hlfir::DeclareOp>(
+      loc, alloca, tmpName, /*shapeOrShift*/ mlir::Value{}, lenParams,
+      fir::FortranVariableFlagsAttr{});
+  mlir::Value falseVal = builder.createBool(loc, false);
+  return {hlfir::Entity{declareOp.getBase()}, falseVal};
+}
+
+struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
+  using mlir::OpConversionPattern<hlfir::AsExprOp>::OpConversionPattern;
+  explicit AsExprOpConversion(mlir::MLIRContext *ctx)
+      : mlir::OpConversionPattern<hlfir::AsExprOp>{ctx} {}
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::AsExprOp asExpr, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = asExpr->getLoc();
+    auto module = asExpr->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+    hlfir::Entity source = hlfir::Entity{adaptor.getVar()};
+    auto [temp, cleanup] = createTempFromMold(loc, builder, source);
+    builder.create<hlfir::AssignOp>(loc, source, temp);
+    mlir::Value bufferizedExpr =
+        packageBufferizedExpr(loc, builder, temp, cleanup);
+    rewriter.replaceOp(asExpr, bufferizedExpr);
+    return mlir::success();
+  }
+};
+
 struct AssignOpConversion : public mlir::OpConversionPattern<hlfir::AssignOp> {
   using mlir::OpConversionPattern<hlfir::AssignOp>::OpConversionPattern;
   explicit AssignOpConversion(mlir::MLIRContext *ctx)
@@ -219,8 +257,9 @@ public:
     auto module = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<AssignOpConversion, AssociateOpConversion,
-                    ConcatOpConversion, EndAssociateOpConversion>(context);
+    patterns
+        .insert<AsExprOpConversion, AssignOpConversion, AssociateOpConversion,
+                ConcatOpConversion, EndAssociateOpConversion>(context);
     mlir::ConversionTarget target(*context);
     target.addIllegalOp<hlfir::AssociateOp, hlfir::EndAssociateOp>();
     target.markUnknownOpDynamicallyLegal([](mlir::Operation *op) {
