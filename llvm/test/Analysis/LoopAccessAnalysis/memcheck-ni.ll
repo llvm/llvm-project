@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax -loop-versioning -S < %s | FileCheck %s
+; RUN: opt -passes=loop-versioning -S < %s | FileCheck %s
 
 ; NB: addrspaces 10-13 are non-integral
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:10:11:12:13"
