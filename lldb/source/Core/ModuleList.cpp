@@ -1266,9 +1266,10 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
 void ModuleList::ForEach(
     std::function<bool(const ModuleSP &module_sp)> const &callback) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
-  for (const auto &module : m_modules) {
+  for (const auto &module_sp : m_modules) {
+    assert(module_sp != nullptr);
     // If the callback returns false, then stop iterating and break out
-    if (!callback(module))
+    if (!callback(module_sp))
       break;
   }
 }
@@ -1280,3 +1281,16 @@ void ModuleList::ClearModuleDependentCaches() {
     module->ClearModuleDependentCaches();
 }
 // END SWIFT
+
+bool ModuleList::AnyOf(
+    std::function<bool(lldb_private::Module &module_sp)> const &callback)
+    const {
+  std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+  for (const auto &module_sp : m_modules) {
+    assert(module_sp != nullptr);
+    if (callback(*module_sp))
+      return true;
+  }
+
+  return false;
+}
