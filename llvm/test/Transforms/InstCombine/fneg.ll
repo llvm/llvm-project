@@ -629,7 +629,7 @@ define float @select_fneg_true(float %x, float %y, i1 %b) {
 define <2 x float> @select_fneg_false(<2 x float> %x, <2 x float> %y, <2 x i1> %b) {
 ; CHECK-LABEL: @select_fneg_false(
 ; CHECK-NEXT:    [[X_NEG:%.*]] = fneg nnan nsz <2 x float> [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select nnan <2 x i1> [[B:%.*]], <2 x float> [[X_NEG]], <2 x float> [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select nnan ninf <2 x i1> [[B:%.*]], <2 x float> [[X_NEG]], <2 x float> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %ny = fneg nnan <2 x float> %y
@@ -772,7 +772,7 @@ define float @select_fneg_use1(float %x, float %y, i1 %b) {
 ; CHECK-NEXT:    [[NX:%.*]] = fneg ninf float [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[NX]])
 ; CHECK-NEXT:    [[Y_NEG:%.*]] = fneg float [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], float [[X]], float [[Y_NEG]]
+; CHECK-NEXT:    [[R:%.*]] = select fast i1 [[B:%.*]], float [[X]], float [[Y_NEG]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %nx = fneg ninf float %x
