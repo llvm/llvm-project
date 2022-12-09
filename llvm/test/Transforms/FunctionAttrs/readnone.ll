@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=function-attrs -S | FileCheck %s
-; RUN: opt < %s -passes=function-attrs -S | FileCheck %s
 
 ; CHECK: define void @bar(ptr nocapture readnone %0)
 define void @bar(ptr readonly %0) {

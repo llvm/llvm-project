@@ -1,5 +1,4 @@
 ; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
-; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
 
 ; Check that all zero branch weights do not cause a crash.
 define void @zero_branch_weights(i32 %tmp, i32 %tmp3) {

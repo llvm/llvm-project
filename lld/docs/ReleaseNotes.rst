@@ -39,6 +39,9 @@ ELF Improvements
 * ``--no-undefined-version`` is now the default; symbols named in version
   scripts that have no matching symbol in the output will be reported. Use
   ``--undefined-version`` to revert to the old behavior.
+* The output ``SHT_RISCV_ATTRIBUTES`` section now merges all input components
+  instead of picking the first input component.
+  (`D138550 <https://reviews.llvm.org/D138550>`_)
 
 Breaking changes
 ----------------
