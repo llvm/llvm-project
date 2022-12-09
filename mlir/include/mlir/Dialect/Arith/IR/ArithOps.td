@@ -265,6 +265,7 @@ def Arith_AddUIExtendedOp : Arith_Op<"addui_extended", [Pure, Commutative,
   ];
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 
   let extraClassDeclaration = [{
     ::llvm::Optional<::llvm::SmallVector<int64_t, 4>> getShapeForUnroll();
