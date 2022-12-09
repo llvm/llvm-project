@@ -14,6 +14,7 @@ static_library("IPO") {
     "//llvm/lib/Transforms/AggressiveInstCombine",
     "//llvm/lib/Transforms/InstCombine",
     "//llvm/lib/Transforms/Instrumentation",
+    "//llvm/lib/Transforms/Scalar",
     "//llvm/lib/Transforms/Utils",
     "//llvm/lib/Transforms/Vectorize",
   ]
