@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
