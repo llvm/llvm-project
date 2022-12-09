@@ -1284,11 +1284,11 @@ SelectionDAG::SelectionDAG(const TargetMachine &tm, CodeGenOpt::Level OL)
 }
 
 void SelectionDAG::init(MachineFunction &NewMF,
-                        OptimizationRemarkEmitter &NewORE,
-                        Pass *PassPtr, const TargetLibraryInfo *LibraryInfo,
-                        LegacyDivergenceAnalysis * Divergence,
-                        ProfileSummaryInfo *PSIin,
-                        BlockFrequencyInfo *BFIin) {
+                        OptimizationRemarkEmitter &NewORE, Pass *PassPtr,
+                        const TargetLibraryInfo *LibraryInfo,
+                        LegacyDivergenceAnalysis *Divergence,
+                        ProfileSummaryInfo *PSIin, BlockFrequencyInfo *BFIin,
+                        FunctionVarLocs const *VarLocs) {
   MF = &NewMF;
   SDAGISelPass = PassPtr;
   ORE = &NewORE;
@@ -1299,6 +1299,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
   DA = Divergence;
   PSI = PSIin;
   BFI = BFIin;
+  FnVarLocs = VarLocs;
 }
 
 SelectionDAG::~SelectionDAG() {

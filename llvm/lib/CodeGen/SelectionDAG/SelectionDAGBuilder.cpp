@@ -31,6 +31,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GCMetadata.h"
@@ -63,6 +64,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -1135,6 +1137,21 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
     HandlePHINodesInSuccessorBlocks(I.getParent());
   }
 
+  // Add SDDbgValue nodes for any var locs here. Do so before updating
+  // SDNodeOrder, as this mapping is {Inst -> Locs BEFORE Inst}.
+  if (FunctionVarLocs const *FnVarLocs = DAG.getFunctionVarLocs()) {
+    // Add SDDbgValue nodes for any var locs here. Do so before updating
+    // SDNodeOrder, as this mapping is {Inst -> Locs BEFORE Inst}.
+    for (auto It = FnVarLocs->locs_begin(&I), End = FnVarLocs->locs_end(&I);
+         It != End; ++It) {
+      auto *Var = FnVarLocs->getDILocalVariable(It->VariableID);
+      dropDanglingDebugInfo(Var, It->Expr);
+      if (!handleDebugValue(It->V, Var, It->Expr, It->DL, SDNodeOrder,
+                            /*IsVariadic=*/false))
+        addDanglingDebugInfo(It, SDNodeOrder);
+    }
+  }
+
   // Increase the SDNodeOrder if dealing with a non-debug instruction.
   if (!isa<DbgInfoIntrinsic>(I))
     ++SDNodeOrder;
@@ -1190,6 +1207,11 @@ void SelectionDAGBuilder::visit(unsigned Opcode, const User &I) {
   }
 }
 
+void SelectionDAGBuilder::addDanglingDebugInfo(const VarLocInfo *VarLoc,
+                                               unsigned Order) {
+  DanglingDebugInfoMap[VarLoc->V].emplace_back(VarLoc, Order);
+}
+
 void SelectionDAGBuilder::addDanglingDebugInfo(const DbgValueInst *DI,
                                                unsigned Order) {
   // We treat variadic dbg_values differently at this stage.
@@ -1220,10 +1242,11 @@ void SelectionDAGBuilder::addDanglingDebugInfo(const DbgValueInst *DI,
 void SelectionDAGBuilder::dropDanglingDebugInfo(const DILocalVariable *Variable,
                                                 const DIExpression *Expr) {
   auto isMatchingDbgValue = [&](DanglingDebugInfo &DDI) {
-    DIVariable *DanglingVariable = DDI.getVariable();
+    DIVariable *DanglingVariable = DDI.getVariable(DAG.getFunctionVarLocs());
     DIExpression *DanglingExpr = DDI.getExpression();
     if (DanglingVariable == Variable && Expr->fragmentsOverlap(DanglingExpr)) {
-      LLVM_DEBUG(dbgs() << "Dropping dangling debug info for " << DDI << "\n");
+      LLVM_DEBUG(dbgs() << "Dropping dangling debug info for " << printDDI(DDI)
+                        << "\n");
       return true;
     }
     return false;
@@ -1255,7 +1278,7 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
     DebugLoc DL = DDI.getDebugLoc();
     unsigned ValSDNodeOrder = Val.getNode()->getIROrder();
     unsigned DbgSDNodeOrder = DDI.getSDNodeOrder();
-    DILocalVariable *Variable = DDI.getVariable();
+    DILocalVariable *Variable = DDI.getVariable(DAG.getFunctionVarLocs());
     DIExpression *Expr = DDI.getExpression();
     assert(Variable->isValidLocationForIntrinsic(DL) &&
            "Expected inlined-at fields to agree");
@@ -1269,7 +1292,8 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
       // calling EmitFuncArgumentDbgValue here.
       if (!EmitFuncArgumentDbgValue(V, Variable, Expr, DL,
                                     FuncArgumentDbgValueKind::Value, Val)) {
-        LLVM_DEBUG(dbgs() << "Resolve dangling debug info for " << DDI << "\n");
+        LLVM_DEBUG(dbgs() << "Resolve dangling debug info for " << printDDI(DDI)
+                          << "\n");
         LLVM_DEBUG(dbgs() << "  By mapping to:\n    "; Val.dump());
         // Increase the SDNodeOrder for the DbgValue here to make sure it is
         // inserted after the definition of Val when emitting the instructions
@@ -1282,10 +1306,10 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
                           std::max(DbgSDNodeOrder, ValSDNodeOrder));
         DAG.AddDbgValue(SDV, false);
       } else
-        LLVM_DEBUG(dbgs() << "Resolved dangling debug info for " << DDI
-                          << "in EmitFuncArgumentDbgValue\n");
+        LLVM_DEBUG(dbgs() << "Resolved dangling debug info for "
+                          << printDDI(DDI) << " in EmitFuncArgumentDbgValue\n");
     } else {
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << DDI << "\n");
+      LLVM_DEBUG(dbgs() << "Dropping debug info for " << printDDI(DDI) << "\n");
       auto Undef = UndefValue::get(V->getType());
       auto SDV =
           DAG.getConstantDbgValue(Variable, Expr, Undef, DL, DbgSDNodeOrder);
@@ -1302,7 +1326,7 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(DanglingDebugInfo &DDI) {
   // a DIArgList.
   Value *V = DDI.getVariableLocationOp(0);
   Value *OrigV = V;
-  DILocalVariable *Var = DDI.getVariable();
+  DILocalVariable *Var = DDI.getVariable(DAG.getFunctionVarLocs());
   DIExpression *Expr = DDI.getExpression();
   DebugLoc DL = DDI.getDebugLoc();
   unsigned SDOrder = DDI.getSDNodeOrder();
@@ -1356,7 +1380,8 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(DanglingDebugInfo &DDI) {
   auto *Undef = UndefValue::get(OrigV->getType());
   auto *SDV = DAG.getConstantDbgValue(Var, Expr, Undef, DL, SDNodeOrder);
   DAG.AddDbgValue(SDV, false);
-  LLVM_DEBUG(dbgs() << "Dropping debug value info for:\n  " << DDI << "\n");
+  LLVM_DEBUG(dbgs() << "Dropping debug value info for:\n  " << printDDI(DDI)
+                    << "\n");
 }
 
 bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
@@ -6066,6 +6091,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::dbg_addr:
   case Intrinsic::dbg_declare: {
+    // Debug intrinsics are handled seperately in assignment tracking mode.
+    if (getEnableAssignmentTracking())
+      return;
     // Assume dbg.addr and dbg.declare can not currently use DIArgList, i.e.
     // they are non-variadic.
     const auto &DI = cast<DbgVariableIntrinsic>(I);
@@ -6165,7 +6193,16 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DAG.AddDbgLabel(SDV);
     return;
   }
+  case Intrinsic::dbg_assign: {
+    // Debug intrinsics are handled seperately in assignment tracking mode.
+    assert(getEnableAssignmentTracking() &&
+           "expected assignment tracking to be enabled");
+    return;
+  }
   case Intrinsic::dbg_value: {
+    // Debug intrinsics are handled seperately in assignment tracking mode.
+    if (getEnableAssignmentTracking())
+      return;
     const DbgValueInst &DI = cast<DbgValueInst>(I);
     assert(DI.getVariable() && "Missing variable");
 
