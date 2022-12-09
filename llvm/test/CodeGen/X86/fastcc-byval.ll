@@ -16,8 +16,7 @@ define fastcc i32 @bar() nounwind {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    movl $1, 8(%esp)
-; CHECK-NEXT:    movl 8(%esp), %eax
-; CHECK-NEXT:    movl %eax, (%esp)
+; CHECK-NEXT:    movl $1, (%esp)
 ; CHECK-NEXT:    calll _foo
 ; CHECK-NEXT:    movl 8(%esp), %eax
 ; CHECK-NEXT:    addl $12, %esp
