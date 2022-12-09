@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -function-attrs -reassociate -S | FileCheck %s
+; RUN: opt < %s -passes=inline,function-attrs,reassociate -S | FileCheck %s
 
 ; CHECK-LABEL: main
 ; CHECK-NEXT: ret void
