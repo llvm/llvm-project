@@ -567,12 +567,28 @@ LogicalResult ScopeOp::verify() { return success(); }
 //===----------------------------------------------------------------------===//
 
 mlir::LogicalResult YieldOp::verify() {
-  auto isDominatedByLoopOrSwitch = [](Operation *parentOp) {
+  auto canDominateYieldBreak = [&](Operation *parentOp) {
+    mlir::Region *lastAwaitRegion = nullptr;
     while (!llvm::isa<cir::FuncOp>(parentOp)) {
+      auto awaitOp = dyn_cast<cir::AwaitOp>(parentOp);
+      if (awaitOp) {
+        if (lastAwaitRegion && lastAwaitRegion == &awaitOp.getResume()) {
+          emitOpError()
+              << "break can only be used in 'ready' and 'suspend' regions";
+          return false;
+        }
+        return true;
+      }
+
       if (llvm::isa<cir::SwitchOp, cir::LoopOp>(parentOp))
         return true;
+
+      lastAwaitRegion = parentOp->getParentRegion();
       parentOp = parentOp->getParentOp();
     }
+
+    emitOpError()
+        << "shall be dominated by 'cir.loop', 'cir.switch' or 'cir.await'";
     return false;
   };
 
@@ -586,9 +602,8 @@ mlir::LogicalResult YieldOp::verify() {
   };
 
   if (isBreak()) {
-    if (!isDominatedByLoopOrSwitch(getOperation()->getParentOp()))
-      return emitOpError()
-             << "shall be dominated by 'cir.loop' or 'cir.switch'";
+    if (!canDominateYieldBreak(getOperation()->getParentOp()))
+      return mlir::failure();
     return mlir::success();
   }
 

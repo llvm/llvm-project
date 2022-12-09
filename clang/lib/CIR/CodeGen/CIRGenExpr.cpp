@@ -1554,12 +1554,10 @@ bool CIRGenFunction::LValueIsSuitableForInlineAtomic(LValue LV) {
   llvm_unreachable("NYI");
 }
 
-/// Emit an if on a boolean condition to the specified blocks.
-/// FIXME: Based on the condition, this might try to simplify the codegen of
-/// the conditional based on the branch. TrueCount should be the number of
-/// times we expect the condition to evaluate to true based on PGO data. We
-/// might decide to leave this as a separate pass (see EmitBranchOnBoolExpr
-/// for extra ideas).
+/// Emit an `if` on a boolean condition, filling `then` and `else` into
+/// appropriated regions.
+/// TODO(cir): PGO data
+/// TODO(cir): see EmitBranchOnBoolExpr for extra ideas).
 mlir::LogicalResult CIRGenFunction::buildIfOnBoolExpr(const Expr *cond,
                                                       mlir::Location loc,
                                                       const Stmt *thenS,
