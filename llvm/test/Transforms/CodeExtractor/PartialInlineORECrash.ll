@@ -1,4 +1,4 @@
-; RUN: opt < %s -partial-inliner -skip-partial-inlining-cost-analysis -inline-threshold=0 -disable-output
+; RUN: opt < %s -passes=partial-inliner -skip-partial-inlining-cost-analysis -inline-threshold=0 -disable-output
 
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
@@ -91,8 +91,8 @@ define void @_ZN23btDiscreteDynamicsWorld28internalSingleStepSimulationEf(%6*, f
           to label %12 unwind label %13
 
 ; <label>:12:
-  ret void  
- 
+  ret void
+
 ; <label>:13:
   %14 = landingpad { i8*, i32 }
           cleanup
