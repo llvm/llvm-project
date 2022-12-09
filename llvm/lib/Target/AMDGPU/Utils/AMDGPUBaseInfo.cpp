@@ -2093,6 +2093,29 @@ unsigned mc2PseudoReg(unsigned Reg) {
   MAP_REG2REG
 }
 
+bool isInlineValue(unsigned Reg) {
+  switch (Reg) {
+  case AMDGPU::SRC_SHARED_BASE_LO:
+  case AMDGPU::SRC_SHARED_BASE:
+  case AMDGPU::SRC_SHARED_LIMIT_LO:
+  case AMDGPU::SRC_SHARED_LIMIT:
+  case AMDGPU::SRC_PRIVATE_BASE_LO:
+  case AMDGPU::SRC_PRIVATE_BASE:
+  case AMDGPU::SRC_PRIVATE_LIMIT_LO:
+  case AMDGPU::SRC_PRIVATE_LIMIT:
+  case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
+    return true;
+  case AMDGPU::SRC_VCCZ:
+  case AMDGPU::SRC_EXECZ:
+  case AMDGPU::SRC_SCC:
+    return true;
+  case AMDGPU::SGPR_NULL:
+    return true;
+  default:
+    return false;
+  }
+}
+
 #undef CASE_CI_VI
 #undef CASE_VI_GFX9PLUS
 #undef CASE_GFXPRE11_GFX11PLUS
