@@ -24,9 +24,8 @@
 
 ;; | V3i point = {0, 0, 0};
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 0, metadata ![[point:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 0, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 0, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
-
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata <16 x i8> zeroinitializer, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 128), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
+; CHECK: call void @llvm.dbg.value(metadata <16 x i8> %point.sroa.3.16.vecblend, metadata ![[point:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 128)), !dbg
 ;; point.z = 5000;
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 5000, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
 
@@ -35,20 +34,15 @@
 ;;     local.other.x = global.other.x
 ;;     local.other.y = global.other.y
 ;;     local.other.z = global.other.z
-; CHECK-NEXT: %other.sroa.0.0.copyload = load i64, ptr @__const._Z3funv.other
-; CHECK-NEXT: %other.sroa.4.0.copyload = load i64, ptr getelementptr inbounds (i8, ptr @__const._Z3funv.other, i64 8)
-; CHECK-NEXT: %other.sroa.5.0.copyload = load i64, ptr getelementptr inbounds (i8, ptr @__const._Z3funv.other, i64 16)
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 %other.sroa.0.0.copyload, metadata ![[other:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 %other.sroa.4.0.copyload, metadata ![[other]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 %other.sroa.5.0.copyload, metadata ![[other]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
+; CHECK-NEXT: %other.sroa.0.0.copyload = load <24 x i8>, ptr @__const._Z3funv.other, align 8, !dbg
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata <24 x i8> %other.sroa.0.0.copyload, metadata ![[other:[0-9]+]], metadata !DIExpression(), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
 
 ;; | std::memcpy(&point.y, &other.x, sizeof(long) * 2);
 ;;   other is now 3 scalars:
 ;;     point.y = other.x
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 %other.sroa.0.0.copyload, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
-;;
 ;;     point.z = other.y
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 %other.sroa.4.0.copyload, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
+; CHECK-NEXT: %other.sroa.0.0.vec.extract = shufflevector
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata <16 x i8> %other.sroa.0.0.vec.extract, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 128), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
 
 ; CHECK: ![[point]] = !DILocalVariable(name: "point",
 ; CHECK: ![[other]] = !DILocalVariable(name: "other",
