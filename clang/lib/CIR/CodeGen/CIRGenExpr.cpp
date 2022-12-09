@@ -1311,8 +1311,8 @@ static Address createReferenceTemporary(CIRGenFunction &CGF,
         (Ty->isArrayType() || Ty->isRecordType()) &&
         CGF.CGM.isTypeConstant(Ty, true))
       assert(0 && "NYI");
-    return CGF.CreateMemTemp(Ty, CGF.getLoc(M->getSourceRange()), "ref.tmp",
-                             Alloca);
+    return CGF.CreateMemTemp(Ty, CGF.getLoc(M->getSourceRange()),
+                             CGF.getCounterRefTmpAsString(), Alloca);
   }
   case SD_Thread:
   case SD_Static:

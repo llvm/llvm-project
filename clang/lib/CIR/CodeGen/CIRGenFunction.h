@@ -465,10 +465,10 @@ public:
 
   bool isCoroutine() const { return CurCoro.Data != nullptr; }
 
-  /// CurGD - The GlobalDecl for the current function being compiled.
+  /// The GlobalDecl for the current function being compiled.
   clang::GlobalDecl CurGD;
 
-  /// ReturnValue - The temporary alloca to hold the return value. This is
+  /// The temporary alloca to hold the return value. This is
   /// invalid iff the function has no return value.
   Address ReturnValue = Address::invalid();
 
@@ -479,7 +479,7 @@ public:
   std::optional<mlir::Type> FnRetCIRTy;
   std::optional<mlir::Value> FnRetAlloca;
 
-  /// CXXThisDecl - When generating code for a C++ member function, this will
+  /// When generating code for a C++ member function, this will
   /// hold the implicit 'this' declaration.
   clang::ImplicitParamDecl *CXXABIThisDecl = nullptr;
   mlir::Operation *CXXABIThisValue = nullptr;
@@ -491,9 +491,9 @@ public:
   /// expression.
   Address CXXDefaultInitExprThis = Address::invalid();
 
-  // CurFuncDecl - Holds the Decl for the current outermost non-closure context
+  // Holds the Decl for the current outermost non-closure context
   const clang::Decl *CurFuncDecl = nullptr;
-  /// CurCodeDecl - This is the inner-most code context, which includes blocks.
+  /// This is the inner-most code context, which includes blocks.
   const clang::Decl *CurCodeDecl;
   const CIRGenFunctionInfo *CurFnInfo;
   clang::QualType FnRetTy;
@@ -546,11 +546,11 @@ public:
   bool ShouldEmitLifetimeMarkers;
 
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
-  /// LocalDeclMap - This keeps track of the CIR allocas or globals for local C
+  /// This keeps track of the CIR allocas or globals for local C
   /// delcs.
   DeclMapTy LocalDeclMap;
 
-  /// DidCallStackSave - Whether llvm.stacksave has been called. Used to avoid
+  /// Whether llvm.stacksave has been called. Used to avoid
   /// calling llvm.stacksave for multiple VLAs in the same scope.
   /// TODO: Translate to MLIR
   bool DidCallStackSave = false;
@@ -565,6 +565,12 @@ public:
   /// In C++, whether we are code generating a thunk. This controls whether we
   /// should emit cleanups.
   bool CurFuncIsThunk = false;
+
+  /// Hold counters for incrementally naming temporaries
+  unsigned CounterRefTmp = 0;
+  unsigned CounterAggTmp = 0;
+  std::string getCounterRefTmpAsString();
+  std::string getCounterAggTmpAsString();
 
   ///  Return the TypeEvaluationKind of QualType \c T.
   static TypeEvaluationKind getEvaluationKind(clang::QualType T);
