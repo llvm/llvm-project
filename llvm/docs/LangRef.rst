@@ -3590,6 +3590,11 @@ commonly used to reference objects in memory.
 Pointer types may have an optional address space attribute defining
 the numbered address space where the pointed-to object resides. For
 example, ``ptr addrspace(5)`` is a pointer to address space 5.
+In addition to integer constants, ``addrspace`` can also reference one of the
+address spaces defined in the :ref:`datalayout string<langref_datalayout>`.
+``addrspace("A")`` will use the alloca address space, ``addrspace("G")``
+the default globals address space and ``addrspace("P")`` the program address
+space.
 
 The default address space is number zero.
 
