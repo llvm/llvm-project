@@ -1,4 +1,4 @@
-; RUN: opt -gvn -S -o - %s | FileCheck %s
+; RUN: opt -passes=gvn -S -o - %s | FileCheck %s
 ; RUN: opt -passes=gvn -S -o - %s | FileCheck %s
 
 %struct.sk_buff = type opaque
