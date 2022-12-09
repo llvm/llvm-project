@@ -456,7 +456,6 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
     case Intrinsic::wasm_trunc_unsigned:
     case Intrinsic::ptrauth_auth:
     case Intrinsic::ptrauth_resign:
-    case Intrinsic::ptrauth_sign:
       return true;
     default:
       return false;
