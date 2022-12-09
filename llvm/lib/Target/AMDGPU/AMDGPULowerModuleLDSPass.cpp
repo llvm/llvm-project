@@ -186,54 +186,20 @@ bool isKernelLDS(const Function *F) {
 
 class AMDGPULowerModuleLDS : public ModulePass {
 
-  static void removeFromUsedList(Module &M, StringRef Name,
-                                 SmallPtrSetImpl<Constant *> &ToRemove) {
-    GlobalVariable *GV = M.getNamedGlobal(Name);
-    if (!GV || ToRemove.empty()) {
-      return;
-    }
-
-    SmallVector<Constant *, 16> Init;
-    auto *CA = cast<ConstantArray>(GV->getInitializer());
-    for (auto &Op : CA->operands()) {
-      // ModuleUtils::appendToUsed only inserts Constants
-      Constant *C = cast<Constant>(Op);
-      if (!ToRemove.contains(C->stripPointerCasts())) {
-        Init.push_back(C);
-      }
-    }
-
-    if (Init.size() == CA->getNumOperands()) {
-      return; // none to remove
-    }
-
-    GV->eraseFromParent();
-
-    for (Constant *C : ToRemove) {
-      C->removeDeadConstantUsers();
-    }
-
-    if (!Init.empty()) {
-      ArrayType *ATy =
-          ArrayType::get(Type::getInt8PtrTy(M.getContext()), Init.size());
-      GV =
-          new GlobalVariable(M, ATy, false, GlobalValue::AppendingLinkage,
-                                   ConstantArray::get(ATy, Init), Name);
-      GV->setSection("llvm.metadata");
-    }
-  }
-
-  static void removeFromUsedLists(Module &M,
-                                  const DenseSet<GlobalVariable *> &LocalVars) {
+  static void
+  removeLocalVarsFromUsedLists(Module &M,
+                               const DenseSet<GlobalVariable *> &LocalVars) {
     // The verifier rejects used lists containing an inttoptr of a constant
     // so remove the variables from these lists before replaceAllUsesWith
-
-    SmallPtrSet<Constant *, 32> LocalVarsSet;
+    SmallPtrSet<Constant *, 8> LocalVarsSet;
     for (GlobalVariable *LocalVar : LocalVars)
-      if (Constant *C = dyn_cast<Constant>(LocalVar->stripPointerCasts()))
-        LocalVarsSet.insert(C);
-    removeFromUsedList(M, "llvm.used", LocalVarsSet);
-    removeFromUsedList(M, "llvm.compiler.used", LocalVarsSet);
+      LocalVarsSet.insert(cast<Constant>(LocalVar->stripPointerCasts()));
+
+    removeFromUsedLists(
+        M, [&LocalVarsSet](Constant *C) { return LocalVarsSet.count(C); });
+
+    for (GlobalVariable *LocalVar : LocalVars)
+      LocalVar->removeDeadConstantUsers();
   }
 
   static void markUsedByKernel(IRBuilder<> &Builder, Function *Func,
@@ -804,7 +770,7 @@ public:
                                    Type::getInt8PtrTy(Ctx)))});
 
       // historic
-      removeFromUsedLists(M, ModuleScopeVariables);
+      removeLocalVarsFromUsedLists(M, ModuleScopeVariables);
 
       // Replace all uses of module scope variable from non-kernel functions
       replaceLDSVariablesWithStruct(
@@ -891,7 +857,7 @@ public:
           createLDSVariableReplacement(M, VarName, KernelUsedVariables);
 
       // remove preserves existing codegen
-      removeFromUsedLists(M, KernelUsedVariables);
+      removeLocalVarsFromUsedLists(M, KernelUsedVariables);
       KernelToReplacement[&Func] = Replacement;
 
       // Rewrite uses within kernel to the new struct
