@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64 -emit-llvm -o - %s | FileCheck %s '-D$MANGLE_AS=p0' '-D$CONST_AS=' --check-prefix=X86
-// RUN: %clang_cc1 -triple amdgcn -emit-llvm -o - %s | FileCheck %s '-D$MANGLE_AS=p4' '-D$CONST_AS= addrspace(4)' --check-prefix=AMDGPU
+// RUN: %clang_cc1 -triple x86_64 -emit-llvm -o - %s | FileCheck %s '-D$MANGLE_AS=p0' '-D$CONST_AS=' --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -triple amdgcn -emit-llvm -o - %s | FileCheck %s '-D$MANGLE_AS=p4' '-D$CONST_AS= addrspace(4)' --check-prefixes=CHECK,AMDGPU
 // END.
 
 // CHECK: private unnamed_addr[[$CONST_AS]] constant [8 x i8] c"v_ann_{{.}}\00", section "llvm.metadata"
