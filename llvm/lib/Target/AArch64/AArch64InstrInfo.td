@@ -125,7 +125,6 @@ def HasRAS           : Predicate<"Subtarget->hasRAS()">,
                                  AssemblerPredicateWithAll<(all_of FeatureRAS), "ras">;
 def HasRDM           : Predicate<"Subtarget->hasRDM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureRDM), "rdm">;
-def HasPerfMon       : Predicate<"Subtarget->hasPerfMon()">;
 def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFullFP16), "fullfp16">;
 def HasFP16FML       : Predicate<"Subtarget->hasFP16FML()">,
@@ -1526,9 +1525,8 @@ def HWASAN_CHECK_MEMACCESS_SHORTGRANULES : Pseudo<
   Sched<[]>;
 }
 
-// The cycle counter PMC register is PMCCNTR_EL0.
-let Predicates = [HasPerfMon] in
-def : Pat<(readcyclecounter), (MRS 0xdce8)>;
+// The virtual cycle counter register is CNTVCT_EL0.
+def : Pat<(readcyclecounter), (MRS 0xdf02)>;
 
 // FPCR register
 let Uses = [FPCR] in

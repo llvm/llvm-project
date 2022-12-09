@@ -833,10 +833,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::LOAD, MVT::v4f64, Custom);
   setOperationAction(ISD::LOAD, MVT::v4i64, Custom);
 
-  // Lower READCYCLECOUNTER using an mrs from PMCCNTR_EL0.
-  // This requires the Performance Monitors extension.
-  if (Subtarget->hasPerfMon())
-    setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
+  // Lower READCYCLECOUNTER using an mrs from CNTVCT_EL0.
+  setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
 
   if (getLibcallName(RTLIB::SINCOS_STRET_F32) != nullptr &&
       getLibcallName(RTLIB::SINCOS_STRET_F64) != nullptr) {
