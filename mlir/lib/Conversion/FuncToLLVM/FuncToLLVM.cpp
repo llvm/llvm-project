@@ -66,8 +66,8 @@ static void filterFuncAttributes(func::FuncOp func, bool filterArgAndResAttrs,
         attr.getName() == func.getFunctionTypeAttrName() ||
         attr.getName() == "func.varargs" ||
         (filterArgAndResAttrs &&
-         (attr.getName() == func.getArgAttrsAttrName() ||
-          attr.getName() == func.getResAttrsAttrName())))
+         (attr.getName() == FunctionOpInterface::getArgDictAttrName() ||
+          attr.getName() == FunctionOpInterface::getResultDictAttrName())))
       continue;
     result.push_back(attr);
   }
@@ -90,19 +90,18 @@ static auto wrapAsStructAttrs(OpBuilder &b, ArrayAttr attrs) {
 static void
 prependResAttrsToArgAttrs(OpBuilder &builder,
                           SmallVectorImpl<NamedAttribute> &attributes,
-                          func::FuncOp func) {
-  size_t numArguments = func.getNumArguments();
+                          size_t numArguments) {
   auto allAttrs = SmallVector<Attribute>(
       numArguments + 1, DictionaryAttr::get(builder.getContext()));
   NamedAttribute *argAttrs = nullptr;
   for (auto *it = attributes.begin(); it != attributes.end();) {
-    if (it->getName() == func.getArgAttrsAttrName()) {
+    if (it->getName() == FunctionOpInterface::getArgDictAttrName()) {
       auto arrayAttrs = it->getValue().cast<ArrayAttr>();
       assert(arrayAttrs.size() == numArguments &&
              "Number of arg attrs and args should match");
       std::copy(arrayAttrs.begin(), arrayAttrs.end(), allAttrs.begin() + 1);
       argAttrs = it;
-    } else if (it->getName() == func.getResAttrsAttrName()) {
+    } else if (it->getName() == FunctionOpInterface::getResultDictAttrName()) {
       auto arrayAttrs = it->getValue().cast<ArrayAttr>();
       assert(!arrayAttrs.empty() && "expected array to be non-empty");
       allAttrs[0] = (arrayAttrs.size() == 1)
@@ -114,8 +113,9 @@ prependResAttrsToArgAttrs(OpBuilder &builder,
     it++;
   }
 
-  auto newArgAttrs = builder.getNamedAttr(func.getArgAttrsAttrName(),
-                                          builder.getArrayAttr(allAttrs));
+  auto newArgAttrs =
+      builder.getNamedAttr(FunctionOpInterface::getArgDictAttrName(),
+                           builder.getArrayAttr(allAttrs));
   if (!argAttrs) {
     attributes.emplace_back(newArgAttrs);
     return;
@@ -141,7 +141,7 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
   auto [wrapperFuncType, resultIsNowArg] =
       typeConverter.convertFunctionTypeCWrapper(type);
   if (resultIsNowArg)
-    prependResAttrsToArgAttrs(rewriter, attributes, funcOp);
+    prependResAttrsToArgAttrs(rewriter, attributes, funcOp.getNumArguments());
   auto wrapperFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
       wrapperFuncType, LLVM::Linkage::External, /*dsoLocal*/ false,
@@ -205,7 +205,7 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   filterFuncAttributes(funcOp, /*filterArgAndResAttrs=*/false, attributes);
 
   if (resultIsNowArg)
-    prependResAttrsToArgAttrs(builder, attributes, funcOp);
+    prependResAttrsToArgAttrs(builder, attributes, funcOp.getNumArguments());
   // Create the auxiliary function.
   auto wrapperFunc = builder.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
@@ -309,8 +309,8 @@ protected:
               ? resAttrDicts
               : rewriter.getArrayAttr(
                     {wrapAsStructAttrs(rewriter, resAttrDicts)});
-      attributes.push_back(
-          rewriter.getNamedAttr(funcOp.getResAttrsAttrName(), newResAttrDicts));
+      attributes.push_back(rewriter.getNamedAttr(
+          FunctionOpInterface::getResultDictAttrName(), newResAttrDicts));
     }
     if (ArrayAttr argAttrDicts = funcOp.getAllArgAttrs()) {
       SmallVector<Attribute, 4> newArgAttrs(
@@ -353,8 +353,9 @@ protected:
           newArgAttrs[mapping->inputNo + j] =
               DictionaryAttr::get(rewriter.getContext(), convertedAttrs);
       }
-      attributes.push_back(rewriter.getNamedAttr(
-          funcOp.getArgAttrsAttrName(), rewriter.getArrayAttr(newArgAttrs)));
+      attributes.push_back(
+          rewriter.getNamedAttr(FunctionOpInterface::getArgDictAttrName(),
+                                rewriter.getArrayAttr(newArgAttrs)));
     }
     for (const auto &pair : llvm::enumerate(attributes)) {
       if (pair.value().getName() == "llvm.linkage") {
