@@ -4718,8 +4718,21 @@ private:
                   emptyRange, tdesc);
             });
           } else {
-            PushSemantics(ConstituentSemantics::BoxValue);
-            operands.emplace_back(genElementalArgument(*expr));
+            ExtValue exv = asScalarRef(*expr);
+            if (fir::getBase(exv).getType().isa<fir::BaseBoxType>()) {
+              operands.emplace_back(
+                  [=](IterSpace iters) -> ExtValue { return exv; });
+            } else {
+              mlir::Type baseTy =
+                  fir::dyn_cast_ptrOrBoxEleTy(fir::getBase(exv).getType());
+              operands.emplace_back([=](IterSpace iters) -> ExtValue {
+                mlir::Value empty;
+                mlir::ValueRange emptyRange;
+                return builder.create<fir::EmboxOp>(
+                    loc, fir::ClassType::get(baseTy), fir::getBase(exv), empty,
+                    empty, emptyRange);
+              });
+            }
           }
           break;
         }
