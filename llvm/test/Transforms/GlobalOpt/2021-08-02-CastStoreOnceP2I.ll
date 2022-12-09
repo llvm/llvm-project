@@ -1,5 +1,4 @@
 ; RUN: opt -passes=globalopt -S < %s | FileCheck %s
-; RUN: opt -passes=globalopt -S < %s | FileCheck %s
 
 ; This tests the assignemnt of non-pointer to global address
 ; (assert due to D106589).

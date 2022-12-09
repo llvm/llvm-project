@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=partial-inliner -S -skip-partial-inlining-cost-analysis | FileCheck %s
-; RUN: opt < %s -passes=partial-inliner -S -skip-partial-inlining-cost-analysis | FileCheck %s
 
 @stat = external global i32, align 4
 

@@ -1,5 +1,4 @@
 ; RUN: opt < %s -skip-partial-inlining-cost-analysis -passes=partial-inliner -S  | FileCheck %s
-; RUN: opt < %s -skip-partial-inlining-cost-analysis -passes=partial-inliner -S  | FileCheck %s
 
 define i32 @Func(i1 %cond, i32* align 4 %align.val) !prof !1 {
 ; CHECK: @Func({{.*}}) !prof [[REMAINCOUNT:![0-9]+]]

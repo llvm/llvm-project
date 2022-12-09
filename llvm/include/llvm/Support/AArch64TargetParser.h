@@ -82,6 +82,7 @@ enum ArchExtKind : uint64_t {
   AEK_THE =         1ULL << 50, // FEAT_THE
   AEK_D128 =        1ULL << 51, // FEAT_D128
   AEK_LSE128 =      1ULL << 52, // FEAT_LSE128
+  AEK_SPECRES2 =    1ULL << 53, // FEAT_SPECRES2
 };
 // clang-format on
 

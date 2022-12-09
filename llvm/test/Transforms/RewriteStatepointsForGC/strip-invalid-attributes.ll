@@ -1,5 +1,4 @@
 ; RUN: opt -S -passes=rewrite-statepoints-for-gc  < %s | FileCheck %s
-; RUN: opt -S -passes=rewrite-statepoints-for-gc  < %s | FileCheck %s
 
 
 ; Ensure we're stipping attributes from the function signatures which are invalid
