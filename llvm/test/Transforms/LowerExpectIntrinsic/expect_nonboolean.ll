@@ -1,4 +1,4 @@
-; RUN: opt -lower-expect  -S -o - < %s | FileCheck %s
+; RUN: opt -passes=lower-expect  -S -o - < %s | FileCheck %s
 ; RUN: opt -S -passes='function(lower-expect)' < %s | FileCheck %s
 
 define i32 @foo(i32 %arg) #0 {

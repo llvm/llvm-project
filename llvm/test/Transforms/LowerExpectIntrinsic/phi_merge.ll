@@ -1,18 +1,18 @@
-; RUN: opt -lower-expect  -S -o - < %s | FileCheck %s
+; RUN: opt -passes=lower-expect  -S -o - < %s | FileCheck %s
 ; RUN: opt -S -passes='function(lower-expect)' < %s | FileCheck %s
 
 ; The C case
-; if (__builtin_expect((x > goo() && y > hoo() && z > too()), 1)) 
+; if (__builtin_expect((x > goo() && y > hoo() && z > too()), 1))
 ; For the above case, all 3 branches should be annotated.
 ;
-; if (__builtin_expect((x > goo() && y > hoo() && z > too()), 0)) 
+; if (__builtin_expect((x > goo() && y > hoo() && z > too()), 0))
 ; For the above case, we don't have enough information, so
 ; only the last branch is annotated.
 
 define void @foo(i32 %arg, i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: void @foo
 bb:
-  %tmp8 = call i32  @goo() 
+  %tmp8 = call i32  @goo()
   %tmp9 = icmp sgt i32 %tmp8, %arg
   br i1 %tmp9, label %bb10, label %bb18
 ; CHECK: !prof [[WEIGHT:![0-9]+]]
@@ -54,7 +54,7 @@ bb30:                                             ; preds = %bb28, %bb26
 define void @foo2(i32 %arg, i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: void @foo2
 bb:
-  %tmp8 = call i32  @goo() 
+  %tmp8 = call i32  @goo()
   %tmp9 = icmp sgt i32 %tmp8, %arg
   br i1 %tmp9, label %bb10, label %bb18
 ; CHECK:  br i1 %tmp9
@@ -98,7 +98,7 @@ bb30:                                             ; preds = %bb28, %bb26
 define void @foo_i32(i32 %arg, i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: void @foo_i32
 bb:
-  %tmp8 = call i32  @goo() 
+  %tmp8 = call i32  @goo()
   %tmp9 = icmp sgt i32 %tmp8, %arg
   br i1 %tmp9, label %bb10, label %bb18
 ; CHECK: !prof [[WEIGHT]]
@@ -138,7 +138,7 @@ bb30:                                             ; preds = %bb28, %bb26
 define void @foo_i32_not_unlikely(i32 %arg, i32 %arg1, i32 %arg2, i32 %arg3)  {
 ; CHECK-LABEL: void @foo_i32_not_unlikely
 bb:
-  %tmp8 = call i32 @goo() 
+  %tmp8 = call i32 @goo()
   %tmp9 = icmp sgt i32 %tmp8, %arg
   br i1 %tmp9, label %bb10, label %bb18
 ; CHECK: br i1 %tmp9
@@ -179,7 +179,7 @@ bb30:                                             ; preds = %bb28, %bb26
 define void @foo_i32_xor(i32 %arg, i32 %arg1, i32 %arg2, i32 %arg3)  {
 ; CHECK-LABEL: void @foo_i32_xor
 bb:
-  %tmp8 = call i32  @goo() 
+  %tmp8 = call i32  @goo()
   %tmp9 = icmp sgt i32 %tmp8, %arg
   br i1 %tmp9, label %bb10, label %bb18
 ; CHECK: br i1 %tmp9,{{.*}}!prof [[WEIGHT]]
@@ -218,7 +218,7 @@ bb30:                                             ; preds = %bb28, %bb26
 define void @foo_i8_sext(i32 %arg, i32 %arg1, i8 %arg2, i32 %arg3)  {
 ; CHECK-LABEL: void @foo_i8_sext
 bb:
-  %tmp8 = call i32  @goo() 
+  %tmp8 = call i32  @goo()
   %tmp9 = icmp sgt i32 %tmp8, %arg
   br i1 %tmp9, label %bb10, label %bb18
 ; CHECK: br i1 %tmp9,{{.*}}!prof [[WEIGHT]]
@@ -257,7 +257,7 @@ bb30:                                             ; preds = %bb28, %bb26
 define void @foo_i8_sext_not_unlikely(i32 %arg, i32 %arg1, i8 %arg2, i32 %arg3)  {
 ; CHECK-LABEL: void @foo_i8_sext_not_unlikely
 bb:
-  %tmp8 = call i32  @goo() 
+  %tmp8 = call i32  @goo()
   %tmp9 = icmp sgt i32 %tmp8, %arg
   br i1 %tmp9, label %bb10, label %bb18
 ; CHECK: br i1 %tmp9
@@ -299,7 +299,7 @@ bb30:                                             ; preds = %bb28, %bb26
 define void @foo_i32_xor_not_unlikely(i32 %arg, i32 %arg1, i32 %arg2, i32 %arg3)  {
 ; CHECK-LABEL: void @foo_i32_xor_not_unlikely
 bb:
-  %tmp8 = call i32 @goo() 
+  %tmp8 = call i32 @goo()
   %tmp9 = icmp sgt i32 %tmp8, %arg
   br i1 %tmp9, label %bb10, label %bb18
 ; CHECK: br i1 %tmp9
@@ -347,7 +347,7 @@ declare i32 @too()
 declare i8 @too8()
 
 ; Function Attrs: nounwind readnone
-declare i64 @llvm.expect.i64(i64, i64) 
+declare i64 @llvm.expect.i64(i64, i64)
 
 !llvm.ident = !{!0}
 
