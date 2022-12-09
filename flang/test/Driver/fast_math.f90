@@ -57,7 +57,7 @@
 ! CHECK-CONTRACT-SAME: -ffp-contract=off
 
 ! Check that -ffast-math causes us to link to crtfastmath.o
-! UNSUPPORTED: system-windows
+! UNSUPPORTED: system-windows, powerpc
 ! RUN: %flang -ffast-math -### %s -o %t 2>&1 \
 ! RUN:     | FileCheck --check-prefix=CHECK-CRT %s
 ! CHECK-CRT: crtbeginS.o
