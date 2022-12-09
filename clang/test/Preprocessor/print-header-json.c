@@ -12,7 +12,7 @@
 #include "header0.h"
 #include "system2.h"
 
-// SUPPORTED: {"source":"{{[^,]*}}/print-header-json.c","includes":["{{[^,]*}}system0.h","{{[^,]*}}system3.h","{{[^,]*}}system2.h"]}
+// SUPPORTED: {"source":"{{[^,]*}}print-header-json.c","includes":["{{[^,]*}}system0.h","{{[^,]*}}system3.h","{{[^,]*}}system2.h"]}
 
 // UNSUPPORTED0: error: unsupported combination: -header-include-format=textual and -header-include-filtering=only-direct-system
 // UNSUPPORTED1: error: unsupported combination: -header-include-format=json and -header-include-filtering=none
