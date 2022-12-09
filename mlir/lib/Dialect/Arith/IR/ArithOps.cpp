@@ -295,6 +295,11 @@ arith::AddUIExtendedOp::fold(ArrayRef<Attribute> operands,
   return failure();
 }
 
+void arith::AddUIExtendedOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<AddUIExtendedToAddI>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // SubIOp
 //===----------------------------------------------------------------------===//

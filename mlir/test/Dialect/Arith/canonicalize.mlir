@@ -662,6 +662,24 @@ func.func @adduiExtendedZeroLhs(%arg0: i32) -> (i32, i1) {
   return %sum, %overflow : i32, i1
 }
 
+// CHECK-LABEL: @adduiExtendedUnusedOverflowScalar
+//  CHECK-SAME:   (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32) -> i32
+//  CHECK-NEXT:   %[[RES:.+]] = arith.addi %[[LHS]], %[[RHS]] : i32
+//  CHECK-NEXT:   return %[[RES]] : i32
+func.func @adduiExtendedUnusedOverflowScalar(%arg0: i32, %arg1: i32) -> i32 {
+  %sum, %overflow = arith.addui_extended %arg0, %arg1: i32, i1
+  return %sum : i32
+}
+
+// CHECK-LABEL: @adduiExtendedUnusedOverflowVector
+//  CHECK-SAME:   (%[[LHS:.+]]: vector<3xi32>, %[[RHS:.+]]: vector<3xi32>) -> vector<3xi32>
+//  CHECK-NEXT:   %[[RES:.+]] = arith.addi %[[LHS]], %[[RHS]] : vector<3xi32>
+//  CHECK-NEXT:   return %[[RES]] : vector<3xi32>
+func.func @adduiExtendedUnusedOverflowVector(%arg0: vector<3xi32>, %arg1: vector<3xi32>) -> vector<3xi32> {
+  %sum, %overflow = arith.addui_extended %arg0, %arg1: vector<3xi32>, vector<3xi1>
+  return %sum : vector<3xi32>
+}
+
 // CHECK-LABEL: @adduiExtendedConstants
 //  CHECK-DAG:    %[[false:.+]] = arith.constant false
 //  CHECK-DAG:    %[[c50:.+]] = arith.constant 50 : i32
