@@ -189,12 +189,13 @@ public:
   }
 
   void VisitDeclRefExpr(const DeclRefExpr *S) {
-    assert(S->getDecl() != nullptr);
-    auto *DeclLoc = Env.getStorageLocation(*S->getDecl(), SkipPast::None);
+    const ValueDecl *VD = S->getDecl();
+    assert(VD != nullptr);
+    auto *DeclLoc = Env.getStorageLocation(*VD, SkipPast::None);
     if (DeclLoc == nullptr)
       return;
 
-    if (S->getDecl()->getType()->isReferenceType()) {
+    if (VD->getType()->isReferenceType()) {
       Env.setStorageLocation(*S, *DeclLoc);
     } else {
       auto &Loc = Env.createStorageLocation(*S);
@@ -213,8 +214,15 @@ public:
     if (D.hasGlobalStorage())
       return;
 
-    auto &Loc = Env.createStorageLocation(D);
-    Env.setStorageLocation(D, Loc);
+    // The storage location for `D` could have been created earlier, before the
+    // variable's declaration statement (for example, in the case of
+    // BindingDecls).
+    auto *MaybeLoc = Env.getStorageLocation(D, SkipPast::None);
+    if (MaybeLoc == nullptr) {
+      MaybeLoc = &Env.createStorageLocation(D);
+      Env.setStorageLocation(D, *MaybeLoc);
+    }
+    auto &Loc = *MaybeLoc;
 
     const Expr *InitExpr = D.getInit();
     if (InitExpr == nullptr) {
@@ -258,24 +266,30 @@ public:
       // needs to be evaluated after initializing the values in the storage for
       // VarDecl, as the bindings refer to them.
       // FIXME: Add support for ArraySubscriptExpr.
-      // FIXME: Consider adding AST nodes that are used for structured bindings
-      // to the CFG.
+      // FIXME: Consider adding AST nodes used in BindingDecls to the CFG.
       for (const auto *B : Decomp->bindings()) {
-        auto *ME = dyn_cast_or_null<MemberExpr>(B->getBinding());
-        if (ME == nullptr)
-          continue;
+        if (auto *ME = dyn_cast_or_null<MemberExpr>(B->getBinding())) {
+          auto *DE = dyn_cast_or_null<DeclRefExpr>(ME->getBase());
+          if (DE == nullptr)
+            continue;
 
-        auto *DE = dyn_cast_or_null<DeclRefExpr>(ME->getBase());
-        if (DE == nullptr)
-          continue;
+          // ME and its base haven't been visited because they aren't included
+          // in the statements of the CFG basic block.
+          VisitDeclRefExpr(DE);
+          VisitMemberExpr(ME);
 
-        // ME and its base haven't been visited because they aren't included in
-        // the statements of the CFG basic block.
-        VisitDeclRefExpr(DE);
-        VisitMemberExpr(ME);
-
-        if (auto *Loc = Env.getStorageLocation(*ME, SkipPast::Reference))
-          Env.setStorageLocation(*B, *Loc);
+          if (auto *Loc = Env.getStorageLocation(*ME, SkipPast::Reference))
+            Env.setStorageLocation(*B, *Loc);
+        } else if (auto *VD = B->getHoldingVar()) {
+          // Holding vars are used to back the BindingDecls of tuple-like
+          // types. The holding var declarations appear *after* this statement,
+          // so we have to create a location or them here to share with `B`. We
+          // don't visit the binding, because we know it will be a DeclRefExpr
+          // to `VD`.
+          auto &VDLoc = Env.createStorageLocation(*VD);
+          Env.setStorageLocation(*VD, VDLoc);
+          Env.setStorageLocation(*B, VDLoc);
+        }
       }
     }
   }
