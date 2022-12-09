@@ -878,33 +878,41 @@ multiclass VNCLP_IV_V_X_I<string opcodestr, bits<6> funct6, Operand optype = sim
 
 multiclass VSLD_IV_X_I<string opcodestr, bits<6> funct6, Operand optype = simm5, string vw = "v"> {
   def X  : VALUVX<funct6, OPIVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVISlideX, ReadVISlideV, ReadVISlideX, ReadVMask]>;
+           Sched<[WriteVISlideX_UpperBound, ReadVISlideV_UpperBound,
+                  ReadVISlideX_UpperBound, ReadVMask]>;
   def I  : VALUVI<funct6, opcodestr # "." # vw # "i", optype>,
-           Sched<[WriteVISlideI, ReadVISlideV, ReadVMask]>;
+           Sched<[WriteVISlideI_UpperBound, ReadVISlideV_UpperBound,
+                  ReadVMask]>;
 }
 
 multiclass VSLD1_MV_X<string opcodestr, bits<6> funct6, string vw = "v"> {
   def X  : VALUVX<funct6, OPMVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVISlide1X, ReadVISlideV, ReadVISlideX, ReadVMask]>;
+           Sched<[WriteVISlide1X_UpperBound, ReadVISlideV_UpperBound,
+                  ReadVISlideX_UpperBound, ReadVMask]>;
 }
 
 multiclass VSLD1_FV_F<string opcodestr, bits<6> funct6, string vw = "v"> {
   def F : VALUVF<funct6, OPFVF, opcodestr # "." # vw # "f">,
-          Sched<[WriteVFSlide1F, ReadVFSlideV, ReadVFSlideF, ReadVMask]>;
+          Sched<[WriteVFSlide1F_UpperBound, ReadVFSlideV_UpperBound,
+                 ReadVFSlideF_UpperBound, ReadVMask]>;
 }
 
 multiclass VGTR_IV_V_X_I<string opcodestr, bits<6> funct6, Operand optype = simm5, string vw = "v"> {
   def V  : VALUVV<funct6, OPIVV, opcodestr # "." # vw # "v">,
-           Sched<[WriteVGatherV, ReadVGatherV, ReadVGatherV, ReadVMask]>;
+           Sched<[WriteVGatherV_UpperBound, ReadVGatherV_UpperBound,
+                  ReadVGatherV_UpperBound, ReadVMask]>;
   def X  : VALUVX<funct6, OPIVX, opcodestr # "." # vw # "x">,
-           Sched<[WriteVGatherX, ReadVGatherV, ReadVGatherX, ReadVMask]>;
+           Sched<[WriteVGatherX_UpperBound, ReadVGatherV_UpperBound,
+                  ReadVGatherX_UpperBound, ReadVMask]>;
   def I  : VALUVI<funct6, opcodestr # "." # vw # "i", optype>,
-           Sched<[WriteVGatherI, ReadVGatherV, ReadVMask]>;
+           Sched<[WriteVGatherI_UpperBound, ReadVGatherV_UpperBound,
+                  ReadVMask]>;
 }
 
 multiclass VCPR_MV_Mask<string opcodestr, bits<6> funct6, string vm = "v"> {
   def M  : VALUVVNoVm<funct6, OPMVV, opcodestr # "." # vm # "m">,
-           Sched<[WriteVCompressV, ReadVCompressV, ReadVCompressV]>;
+           Sched<[WriteVCompressV_UpperBound, ReadVCompressV_UpperBound,
+                  ReadVCompressV_UpperBound]>;
 }
 
 multiclass VWholeLoadN<bits<3> nf, string opcodestr, RegisterClass VRC> {
@@ -1559,11 +1567,12 @@ def VID_V : RVInstV<0b010100, 0b10001, OPMVV, (outs VR:$vd),
 let vm = 1, RVVConstraint = NoConstraint in {
 def VMV_X_S : RVInstV<0b010000, 0b00000, OPMVV, (outs GPR:$vd),
                       (ins VR:$vs2), "vmv.x.s", "$vd, $vs2">,
-              Sched<[WriteVIMovVX, ReadVIMovVX]>;
+              Sched<[WriteVIMovVX_UpperBound, ReadVIMovVX_UpperBound]>;
 let Constraints = "$vd = $vd_wb" in
 def VMV_S_X : RVInstV2<0b010000, 0b00000, OPMVX, (outs VR:$vd_wb),
                       (ins VR:$vd, GPR:$rs1), "vmv.s.x", "$vd, $rs1">,
-              Sched<[WriteVIMovXV, ReadVIMovXV, ReadVIMovXX]>;
+              Sched<[WriteVIMovXV_UpperBound, ReadVIMovXV_UpperBound,
+                     ReadVIMovXX_UpperBound]>;
 }
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
@@ -1577,11 +1586,12 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1,
 // Floating-Point Scalar Move Instructions
 def VFMV_F_S : RVInstV<0b010000, 0b00000, OPFVV, (outs FPR32:$vd),
                       (ins VR:$vs2), "vfmv.f.s", "$vd, $vs2">,
-               Sched<[WriteVFMovVF, ReadVFMovVF]>;
+               Sched<[WriteVFMovVF_UpperBound, ReadVFMovVF_UpperBound]>;
 let Constraints = "$vd = $vd_wb" in
 def VFMV_S_F : RVInstV2<0b010000, 0b00000, OPFVF, (outs VR:$vd_wb),
                        (ins VR:$vd, FPR32:$rs1), "vfmv.s.f", "$vd, $rs1">,
-               Sched<[WriteVFMovFV, ReadVFMovFV, ReadVFMovFX]>;
+               Sched<[WriteVFMovFV_UpperBound, ReadVFMovFV_UpperBound,
+                      ReadVFMovFX_UpperBound]>;
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1
 
@@ -1609,7 +1619,8 @@ let Predicates = [HasVInstructions] in {
 let Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather in {
 defm VRGATHER_V : VGTR_IV_V_X_I<"vrgather", 0b001100, uimm5>;
 def VRGATHEREI16_VV : VALUVV<0b001110, OPIVV, "vrgatherei16.vv">,
-                      Sched<[WriteVGatherV, ReadVGatherV, ReadVGatherV]>;
+                      Sched<[WriteVGatherV_UpperBound, ReadVGatherV_UpperBound,
+                             ReadVGatherV_UpperBound]>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather
 
 // Vector Compress Instruction
