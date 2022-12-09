@@ -15,8 +15,10 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/xxhash.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "moduleutils"
@@ -112,6 +114,19 @@ void llvm::appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values) {
   appendToUsedList(M, "llvm.compiler.used", Values);
 }
 
+static void setKCFIType(Module &M, Function &F, StringRef MangledType) {
+  if (!M.getModuleFlag("kcfi"))
+    return;
+  // Matches CodeGenModule::CreateKCFITypeId in Clang.
+  LLVMContext &Ctx = M.getContext();
+  MDBuilder MDB(Ctx);
+  F.setMetadata(
+      LLVMContext::MD_kcfi_type,
+      MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
+                           Type::getInt32Ty(Ctx),
+                           static_cast<uint32_t>(xxHash64(MangledType))))));
+}
+
 FunctionCallee
 llvm::declareSanitizerInitFunction(Module &M, StringRef InitName,
                                    ArrayRef<Type *> InitArgTypes) {
@@ -128,6 +143,7 @@ Function *llvm::createSanitizerCtor(Module &M, StringRef CtorName) {
       GlobalValue::InternalLinkage, M.getDataLayout().getProgramAddressSpace(),
       CtorName, &M);
   Ctor->addFnAttr(Attribute::NoUnwind);
+  setKCFIType(M, *Ctor, "_ZTSFvvE"); // void (*)(void)
   BasicBlock *CtorBB = BasicBlock::Create(M.getContext(), "", Ctor);
   ReturnInst::Create(M.getContext(), CtorBB);
   // Ensure Ctor cannot be discarded, even if in a comdat.
