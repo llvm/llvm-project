@@ -5,74 +5,74 @@
 ; The callee guarantees that the pointer argument is nonnull and dereferenceable.
 ; That information should transfer to the caller.
 
-define i32 @callee(i32* dereferenceable(32) %t1) {
+define i32 @callee(ptr dereferenceable(32) %t1) {
 ; CHECK-LABEL: define {{[^@]+}}@callee
-; CHECK-SAME: (i32* dereferenceable(32) [[T1:%.*]]) {
-; CHECK-NEXT:    [[T2:%.*]] = load i32, i32* [[T1]], align 4
+; CHECK-SAME: (ptr dereferenceable(32) [[T1:%.*]]) {
+; CHECK-NEXT:    [[T2:%.*]] = load i32, ptr [[T1]], align 4
 ; CHECK-NEXT:    ret i32 [[T2]]
 ;
-  %t2 = load i32, i32* %t1
+  %t2 = load i32, ptr %t1
   ret i32 %t2
 }
 
-define i32 @callee2(i32* dereferenceable(32) %t1, i32 noundef %t2) {
+define i32 @callee2(ptr dereferenceable(32) %t1, i32 noundef %t2) {
 ; CHECK-LABEL: define {{[^@]+}}@callee2
-; CHECK-SAME: (i32* dereferenceable(32) [[T1:%.*]], i32 noundef [[T2:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[T1]], align 4
+; CHECK-SAME: (ptr dereferenceable(32) [[T1:%.*]], i32 noundef [[T2:%.*]]) {
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[T1]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
-  %v = load i32, i32* %t1
+  %v = load i32, ptr %t1
   ret i32 %v
 }
 
 ; FIXME: All dereferenceability information is lost.
 ; The caller argument could be known nonnull and dereferenceable(32).
 
-define i32 @caller1(i32* %t1, i32 %t2) {
+define i32 @caller1(ptr %t1, i32 %t2) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@caller1
-; NO_ASSUME-SAME: (i32* [[T1:%.*]], i32 [[T2:%.*]]) {
-; NO_ASSUME-NEXT:    [[V_I:%.*]] = load i32, i32* [[T1]], align 4
+; NO_ASSUME-SAME: (ptr [[T1:%.*]], i32 [[T2:%.*]]) {
+; NO_ASSUME-NEXT:    [[V_I:%.*]] = load i32, ptr [[T1]], align 4
 ; NO_ASSUME-NEXT:    ret i32 [[V_I]]
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@caller1
-; USE_ASSUME-SAME: (i32* [[T1:%.*]], i32 [[T2:%.*]]) {
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[T1]], i64 32), "noundef"(i32 [[T2]]) ]
-; USE_ASSUME-NEXT:    [[V_I:%.*]] = load i32, i32* [[T1]], align 4
+; USE_ASSUME-SAME: (ptr [[T1:%.*]], i32 [[T2:%.*]]) {
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[T1]], i64 32), "noundef"(i32 [[T2]]) ]
+; USE_ASSUME-NEXT:    [[V_I:%.*]] = load i32, ptr [[T1]], align 4
 ; USE_ASSUME-NEXT:    ret i32 [[V_I]]
 ;
-  %v = tail call i32 @callee2(i32* dereferenceable(32) %t1, i32 noundef %t2)
+  %v = tail call i32 @callee2(ptr dereferenceable(32) %t1, i32 noundef %t2)
   ret i32 %v
 }
 
 ; The caller argument is nonnull, but that can be explicit.
 ; The dereferenceable amount could be increased.
 
-define i32 @caller2(i32* dereferenceable(31) %t1) {
+define i32 @caller2(ptr dereferenceable(31) %t1) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@caller2
-; NO_ASSUME-SAME: (i32* dereferenceable(31) [[T1:%.*]])
-; NO_ASSUME-NEXT:    [[T2_I:%.*]] = load i32, i32* [[T1]]
+; NO_ASSUME-SAME: (ptr dereferenceable(31) [[T1:%.*]])
+; NO_ASSUME-NEXT:    [[T2_I:%.*]] = load i32, ptr [[T1]]
 ; NO_ASSUME-NEXT:    ret i32 [[T2_I]]
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@caller2
-; USE_ASSUME-SAME: (i32* dereferenceable(31) [[T1:%.*]])
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[T1]], i64 32) ]
-; USE_ASSUME-NEXT:    [[T2_I:%.*]] = load i32, i32* [[T1]]
+; USE_ASSUME-SAME: (ptr dereferenceable(31) [[T1:%.*]])
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[T1]], i64 32) ]
+; USE_ASSUME-NEXT:    [[T2_I:%.*]] = load i32, ptr [[T1]]
 ; USE_ASSUME-NEXT:    ret i32 [[T2_I]]
 ;
-  %t2 = tail call i32 @callee(i32* dereferenceable(32) %t1)
+  %t2 = tail call i32 @callee(ptr dereferenceable(32) %t1)
   ret i32 %t2
 }
 
 ; The caller argument is nonnull, but that can be explicit.
 ; Make sure that we don't propagate a smaller dereferenceable amount.
 
-define i32 @caller3(i32* dereferenceable(33) %t1) {
+define i32 @caller3(ptr dereferenceable(33) %t1) {
 ; CHECK-LABEL: define {{[^@]+}}@caller3
-; CHECK-SAME: (i32* dereferenceable(33) [[T1:%.*]])
-; CHECK-NEXT:    [[T2_I:%.*]] = load i32, i32* [[T1]]
+; CHECK-SAME: (ptr dereferenceable(33) [[T1:%.*]])
+; CHECK-NEXT:    [[T2_I:%.*]] = load i32, ptr [[T1]]
 ; CHECK-NEXT:    ret i32 [[T2_I]]
 ;
-  %t2 = tail call i32 @callee(i32* dereferenceable(32) %t1)
+  %t2 = tail call i32 @callee(ptr dereferenceable(32) %t1)
   ret i32 %t2
 }
 
