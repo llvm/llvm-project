@@ -413,8 +413,7 @@ exit:
   ret void
 }
 
-; NO-PHI-VALUES: MayAlias: i8* %a, i8* %phi
-; PHI-VALUES: MustAlias: i8* %a, i8* %phi
+; CHECK: MustAlias: i8* %a, i8* %phi
 define void @phi_contains_self() {
 entry:
   %a = alloca i32
