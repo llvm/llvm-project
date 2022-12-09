@@ -216,6 +216,7 @@ void addPPC64SaveRestore();
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t expr);
 void riscvFinalizeRelax(int passes);
+void mergeRISCVAttributesSections();
 
 LLVM_LIBRARY_VISIBILITY extern const TargetInfo *target;
 TargetInfo *getTarget();
