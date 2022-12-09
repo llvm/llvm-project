@@ -599,9 +599,9 @@ static mlir::Value createIoRuntimeCallForItem(mlir::Location loc,
                                               const fir::ExtendedValue &item) {
   mlir::Type argType = inputFunc.getFunctionType().getInput(1);
   llvm::SmallVector<mlir::Value> inputFuncArgs = {cookie};
-  if (argType.isa<fir::BoxType>()) {
+  if (argType.isa<fir::BaseBoxType>()) {
     mlir::Value box = fir::getBase(item);
-    assert(box.getType().isa<fir::BoxType>() && "must be previously emboxed");
+    assert(box.getType().isa<fir::BaseBoxType>() && "must be previously emboxed");
     inputFuncArgs.push_back(builder.createConvert(loc, argType, box));
   } else {
     mlir::Value itemAddr = fir::getBase(item);
