@@ -112,6 +112,17 @@ def SubISubILHSRHSLHS :
         (Arith_SubIOp (Arith_ConstantOp (GetZeroAttr $y)), $y)>;
 
 //===----------------------------------------------------------------------===//
+// MulUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+// mului_extended(x, y) -> [muli(x, y), x], when the `high` result is unused.
+// Since the `high` result it not used, any replacement value will do.
+def MulUIExtendedToMulI :
+    Pattern<(Arith_MulUIExtendedOp:$res $x, $y),
+        [(Arith_MulIOp $x, $y), (replaceWithValue $x)],
+        [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
+
+//===----------------------------------------------------------------------===//
 // XOrIOp
 //===----------------------------------------------------------------------===//
 
