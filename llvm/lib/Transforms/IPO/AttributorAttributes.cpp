@@ -948,6 +948,17 @@ ChangeStatus AA::PointerInfo::State::addAccess(Attributor &A, int64_t Offset,
 }
 
 namespace {
+
+/// Helper struct, will support ranges eventually.
+///
+/// FIXME: Tracks a single Offset until we have proper support for a list of
+/// RangeTy objects.
+struct OffsetInfo {
+  int64_t Offset = AA::RangeTy::Unassigned;
+
+  bool operator==(const OffsetInfo &OI) const { return Offset == OI.Offset; }
+};
+
 struct AAPointerInfoImpl
     : public StateWrapper<AA::PointerInfo::State, AAPointerInfo> {
   using BaseTy = StateWrapper<AA::PointerInfo::State, AAPointerInfo>;
@@ -1145,16 +1156,45 @@ struct AAPointerInfoImpl
     return true;
   }
 
-  ChangeStatus translateAndAddState(Attributor &A, const AAPointerInfo &OtherAA,
-                                    int64_t Offset, CallBase &CB,
-                                    bool FromCallee = false) {
+  ChangeStatus translateAndAddStateFromCallee(Attributor &A,
+                                              const AAPointerInfo &OtherAA,
+                                              CallBase &CB) {
     using namespace AA::PointerInfo;
     if (!OtherAA.getState().isValidState() || !isValidState())
       return indicatePessimisticFixpoint();
 
     const auto &OtherAAImpl = static_cast<const AAPointerInfoImpl &>(OtherAA);
-    bool IsByval =
-        FromCallee && OtherAAImpl.getAssociatedArgument()->hasByValAttr();
+    bool IsByval = OtherAAImpl.getAssociatedArgument()->hasByValAttr();
+
+    // Combine the accesses bin by bin.
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    const auto &State = OtherAAImpl.getState();
+    for (const auto &It : State) {
+      for (auto Index : It.getSecond()) {
+        const auto &RAcc = State.getAccess(Index);
+        if (IsByval && !RAcc.isRead())
+          continue;
+        bool UsedAssumedInformation = false;
+        AccessKind AK = RAcc.getKind();
+        auto Content = A.translateArgumentToCallSiteContent(
+            RAcc.getContent(), CB, *this, UsedAssumedInformation);
+        AK = AccessKind(AK & (IsByval ? AccessKind::AK_R : AccessKind::AK_RW));
+        AK = AccessKind(AK | (RAcc.isMayAccess() ? AK_MAY : AK_MUST));
+        Changed =
+            Changed | addAccess(A, It.first.Offset, It.first.Size, CB, Content,
+                                AK, RAcc.getType(), RAcc.getRemoteInst());
+      }
+    }
+    return Changed;
+  }
+
+  ChangeStatus translateAndAddState(Attributor &A, const AAPointerInfo &OtherAA,
+                                    int64_t Offset, CallBase &CB) {
+    using namespace AA::PointerInfo;
+    if (!OtherAA.getState().isValidState() || !isValidState())
+      return indicatePessimisticFixpoint();
+
+    const auto &OtherAAImpl = static_cast<const AAPointerInfoImpl &>(OtherAA);
 
     // Combine the accesses bin by bin.
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
@@ -1167,20 +1207,10 @@ struct AAPointerInfoImpl
       }
       for (auto Index : It.getSecond()) {
         const auto &RAcc = State.getAccess(Index);
-        if (IsByval && !RAcc.isRead())
-          continue;
-        bool UsedAssumedInformation = false;
         AccessKind AK = RAcc.getKind();
-        std::optional<Value *> Content = RAcc.getContent();
-        if (FromCallee) {
-          Content = A.translateArgumentToCallSiteContent(
-              RAcc.getContent(), CB, *this, UsedAssumedInformation);
-          AK =
-              AccessKind(AK & (IsByval ? AccessKind::AK_R : AccessKind::AK_RW));
-          AK = AccessKind(AK | (RAcc.isMayAccess() ? AK_MAY : AK_MUST));
-        }
-        Changed = Changed | addAccess(A, Range.Offset, Range.Size, CB, Content,
-                                      AK, RAcc.getType(), RAcc.getRemoteInst());
+        Changed = Changed | addAccess(A, Range.Offset, Range.Size, CB,
+                                      RAcc.getContent(), AK, RAcc.getType(),
+                                      RAcc.getRemoteInst());
       }
     }
     return Changed;
@@ -1218,352 +1248,337 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       : AAPointerInfoImpl(IRP, A) {}
 
   /// Deal with an access and signal if it was handled successfully.
-  bool handleAccess(Attributor &A, Instruction &I, Value &Ptr,
+  bool handleAccess(Attributor &A, Instruction &I,
                     std::optional<Value *> Content, AccessKind Kind,
-                    int64_t Offset, ChangeStatus &Changed, Type *Ty,
-                    int64_t Size = AA::RangeTy::Unknown) {
+                    int64_t Offset, ChangeStatus &Changed, Type &Ty) {
     using namespace AA::PointerInfo;
-    // No need to find a size if one is given.
-    if (Size == AA::RangeTy::Unknown && Ty) {
-      const DataLayout &DL = A.getDataLayout();
-      TypeSize AccessSize = DL.getTypeStoreSize(Ty);
-      if (!AccessSize.isScalable())
-        Size = AccessSize.getFixedSize();
-    }
-    Changed = Changed | addAccess(A, Offset, Size, I, Content, Kind, Ty);
+    auto Size = AA::RangeTy::Unknown;
+    const DataLayout &DL = A.getDataLayout();
+    TypeSize AccessSize = DL.getTypeStoreSize(&Ty);
+    if (!AccessSize.isScalable())
+      Size = AccessSize.getFixedSize();
+    Changed = Changed | addAccess(A, Offset, Size, I, Content, Kind, &Ty);
     return true;
   };
 
-  /// Helper struct, will support ranges eventually.
-  ///
-  /// FIXME: Tracks a single Offset until we have proper support for a list of
-  /// RangeTy objects.
-  struct OffsetInfo {
-    int64_t Offset = AA::RangeTy::Unassigned;
-
-    bool operator==(const OffsetInfo &OI) const { return Offset == OI.Offset; }
-  };
-
   /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A) override {
-    using namespace AA::PointerInfo;
-    ChangeStatus Changed = ChangeStatus::UNCHANGED;
-    Value &AssociatedValue = getAssociatedValue();
-
-    const DataLayout &DL = A.getDataLayout();
-    DenseMap<Value *, OffsetInfo> OffsetInfoMap;
-    OffsetInfoMap[&AssociatedValue] = OffsetInfo{0};
-
-    auto HandlePassthroughUser = [&](Value *Usr, OffsetInfo PtrOI,
-                                     bool &Follow) {
-      assert(PtrOI.Offset != AA::RangeTy::Unassigned &&
-             "Cannot pass through if the input Ptr was not visited!");
-      OffsetInfo &UsrOI = OffsetInfoMap[Usr];
-      UsrOI = PtrOI;
-      Follow = true;
-      return true;
-    };
-
-    const auto *TLI = getAnchorScope()
-                          ? A.getInfoCache().getTargetLibraryInfoForFunction(
-                                *getAnchorScope())
-                          : nullptr;
-    auto UsePred = [&](const Use &U, bool &Follow) -> bool {
-      Value *CurPtr = U.get();
-      User *Usr = U.getUser();
-      LLVM_DEBUG(dbgs() << "[AAPointerInfo] Analyze " << *CurPtr << " in "
-                        << *Usr << "\n");
-      assert(OffsetInfoMap.count(CurPtr) &&
-             "The current pointer offset should have been seeded!");
-
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
-        if (CE->isCast())
-          return HandlePassthroughUser(Usr, OffsetInfoMap[CurPtr], Follow);
-        if (CE->isCompare())
-          return true;
-        if (!isa<GEPOperator>(CE)) {
-          LLVM_DEBUG(dbgs() << "[AAPointerInfo] Unhandled constant user " << *CE
-                            << "\n");
-          return false;
-        }
-      }
-      if (auto *GEP = dyn_cast<GEPOperator>(Usr)) {
-        // Note the order here, the Usr access might change the map, CurPtr is
-        // already in it though.
-        OffsetInfo &UsrOI = OffsetInfoMap[Usr];
-        OffsetInfo &PtrOI = OffsetInfoMap[CurPtr];
-        UsrOI = PtrOI;
-
-        // TODO: Use range information.
-        APInt GEPOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
-        if (PtrOI.Offset == AA::RangeTy::Unknown ||
-            !GEP->accumulateConstantOffset(DL, GEPOffset)) {
-          LLVM_DEBUG(dbgs() << "[AAPointerInfo] GEP offset not constant "
-                            << *GEP << "\n");
-          UsrOI.Offset = AA::RangeTy::Unknown;
-          Follow = true;
-          return true;
-        }
-
-        LLVM_DEBUG(dbgs() << "[AAPointerInfo] GEP offset is constant " << *GEP
-                          << "\n");
-        UsrOI.Offset = PtrOI.Offset + GEPOffset.getZExtValue();
-        Follow = true;
-        return true;
-      }
-      if (isa<PtrToIntInst>(Usr))
-        return false;
-      if (isa<CastInst>(Usr) || isa<SelectInst>(Usr) || isa<ReturnInst>(Usr))
-        return HandlePassthroughUser(Usr, OffsetInfoMap[CurPtr], Follow);
-
-      // For PHIs we need to take care of the recurrence explicitly as the value
-      // might change while we iterate through a loop. For now, we give up if
-      // the PHI is not invariant.
-      if (isa<PHINode>(Usr)) {
-        // Note the order here, the Usr access might change the map, CurPtr is
-        // already in it though.
-        bool IsFirstPHIUser = !OffsetInfoMap.count(Usr);
-        OffsetInfo &UsrOI = OffsetInfoMap[Usr];
-        OffsetInfo &PtrOI = OffsetInfoMap[CurPtr];
-
-        // Check if the PHI operand has already an unknown offset as we can't
-        // improve on that anymore.
-        if (PtrOI.Offset == AA::RangeTy::Unknown) {
-          LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand offset unknown "
-                            << *CurPtr << " in " << *Usr << "\n");
-          Follow = UsrOI.Offset != AA::RangeTy::Unknown;
-          UsrOI = PtrOI;
-          return true;
-        }
-
-        // Check if the PHI is invariant (so far).
-        if (UsrOI == PtrOI) {
-          assert(PtrOI.Offset != AA::RangeTy::Unassigned &&
-                 "Cannot assign if the current Ptr was not visited!");
-          LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI is invariant (so far)");
-          return true;
-        }
-
-        // Check if the PHI operand is not dependent on the PHI itself.
-        APInt Offset(
-            DL.getIndexSizeInBits(CurPtr->getType()->getPointerAddressSpace()),
-            0);
-        Value *CurPtrBase = CurPtr->stripAndAccumulateConstantOffsets(
-            DL, Offset, /* AllowNonInbounds */ true);
-        auto It = OffsetInfoMap.find(CurPtrBase);
-        if (It != OffsetInfoMap.end()) {
-          Offset += It->getSecond().Offset;
-          if (IsFirstPHIUser || Offset == UsrOI.Offset)
-            return HandlePassthroughUser(Usr, PtrOI, Follow);
-          LLVM_DEBUG(dbgs()
-                     << "[AAPointerInfo] PHI operand pointer offset mismatch "
-                     << *CurPtr << " in " << *Usr << "\n");
-        } else {
-          LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand is too complex "
-                            << *CurPtr << " in " << *Usr << "\n");
-        }
-
-        // TODO: Approximate in case we know the direction of the recurrence.
-        UsrOI = PtrOI;
-        UsrOI.Offset = AA::RangeTy::Unknown;
-        Follow = true;
-        return true;
-      }
-
-      if (auto *LoadI = dyn_cast<LoadInst>(Usr)) {
-        // If the access is to a pointer that may or may not be the associated
-        // value, e.g. due to a PHI, we cannot assume it will be read.
-        AccessKind AK = AccessKind::AK_R;
-        if (getUnderlyingObject(CurPtr) == &AssociatedValue)
-          AK = AccessKind(AK | AccessKind::AK_MUST);
-        else
-          AK = AccessKind(AK | AccessKind::AK_MAY);
-        if (!handleAccess(A, *LoadI, *CurPtr, /* Content */ nullptr, AK,
-                          OffsetInfoMap[CurPtr].Offset, Changed,
-                          LoadI->getType()))
-          return false;
-
-        auto IsAssumption = [](Instruction &I) {
-          if (auto *II = dyn_cast<IntrinsicInst>(&I))
-            return II->isAssumeLikeIntrinsic();
-          return false;
-        };
-
-        auto IsImpactedInRange = [&](Instruction *FromI, Instruction *ToI) {
-          // Check if the assumption and the load are executed together without
-          // memory modification.
-          do {
-            if (FromI->mayWriteToMemory() && !IsAssumption(*FromI))
-              return true;
-            FromI = FromI->getNextNonDebugInstruction();
-          } while (FromI && FromI != ToI);
-          return false;
-        };
-
-        BasicBlock *BB = LoadI->getParent();
-        auto IsValidAssume = [&](IntrinsicInst &IntrI) {
-          if (IntrI.getIntrinsicID() != Intrinsic::assume)
-            return false;
-          BasicBlock *IntrBB = IntrI.getParent();
-          if (IntrI.getParent() == BB) {
-            if (IsImpactedInRange(LoadI->getNextNonDebugInstruction(), &IntrI))
-              return false;
-          } else {
-            auto PredIt = pred_begin(IntrBB);
-            if ((*PredIt) != BB)
-              return false;
-            if (++PredIt != pred_end(IntrBB))
-              return false;
-            for (auto *SuccBB : successors(BB)) {
-              if (SuccBB == IntrBB)
-                continue;
-              if (isa<UnreachableInst>(SuccBB->getTerminator()))
-                continue;
-              return false;
-            }
-            if (IsImpactedInRange(LoadI->getNextNonDebugInstruction(),
-                                  BB->getTerminator()))
-              return false;
-            if (IsImpactedInRange(&IntrBB->front(), &IntrI))
-              return false;
-          }
-          return true;
-        };
-
-        std::pair<Value *, IntrinsicInst *> Assumption;
-        for (const Use &LoadU : LoadI->uses()) {
-          if (auto *CmpI = dyn_cast<CmpInst>(LoadU.getUser())) {
-            if (!CmpI->isEquality() || !CmpI->isTrueWhenEqual())
-              continue;
-            for (const Use &CmpU : CmpI->uses()) {
-              if (auto *IntrI = dyn_cast<IntrinsicInst>(CmpU.getUser())) {
-                if (!IsValidAssume(*IntrI))
-                  continue;
-                int Idx = CmpI->getOperandUse(0) == LoadU;
-                Assumption = {CmpI->getOperand(Idx), IntrI};
-                break;
-              }
-            }
-          }
-          if (Assumption.first)
-            break;
-        }
-
-        // Check if we found an assumption associated with this load.
-        if (!Assumption.first || !Assumption.second)
-          return true;
-
-        LLVM_DEBUG(dbgs() << "[AAPointerInfo] Assumption found "
-                          << *Assumption.second << ": " << *LoadI
-                          << " == " << *Assumption.first << "\n");
-
-        return handleAccess(A, *Assumption.second, *CurPtr, Assumption.first,
-                            AccessKind::AK_ASSUMPTION,
-                            OffsetInfoMap[CurPtr].Offset, Changed,
-                            LoadI->getType());
-      }
-
-      auto HandleStoreLike = [&](Instruction &I, Value *ValueOp, Type &ValueTy,
-                                 ArrayRef<Value *> OtherOps, AccessKind AK) {
-        for (auto *OtherOp : OtherOps) {
-          if (OtherOp == CurPtr) {
-            LLVM_DEBUG(
-                dbgs()
-                << "[AAPointerInfo] Escaping use in store like instruction "
-                << I << "\n");
-            return false;
-          }
-        }
-
-        // If the access is to a pointer that may or may not be the associated
-        // value, e.g. due to a PHI, we cannot assume it will be written.
-        if (getUnderlyingObject(CurPtr) == &AssociatedValue)
-          AK = AccessKind(AK | AccessKind::AK_MUST);
-        else
-          AK = AccessKind(AK | AccessKind::AK_MAY);
-        bool UsedAssumedInformation = false;
-        std::optional<Value *> Content = nullptr;
-        if (ValueOp)
-          Content = A.getAssumedSimplified(
-              *ValueOp, *this, UsedAssumedInformation, AA::Interprocedural);
-        return handleAccess(A, I, *CurPtr, Content, AK,
-                            OffsetInfoMap[CurPtr].Offset, Changed, &ValueTy);
-      };
-
-      if (auto *StoreI = dyn_cast<StoreInst>(Usr))
-        return HandleStoreLike(*StoreI, StoreI->getValueOperand(),
-                               *StoreI->getValueOperand()->getType(),
-                               {StoreI->getValueOperand()}, AccessKind::AK_W);
-      if (auto *RMWI = dyn_cast<AtomicRMWInst>(Usr))
-        return HandleStoreLike(*RMWI, nullptr,
-                               *RMWI->getValOperand()->getType(),
-                               {RMWI->getValOperand()}, AccessKind::AK_RW);
-      if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(Usr))
-        return HandleStoreLike(
-            *CXI, nullptr, *CXI->getNewValOperand()->getType(),
-            {CXI->getCompareOperand(), CXI->getNewValOperand()},
-            AccessKind::AK_RW);
-
-      if (auto *CB = dyn_cast<CallBase>(Usr)) {
-        if (CB->isLifetimeStartOrEnd())
-          return true;
-        if (getFreedOperand(CB, TLI) == U)
-          return true;
-        if (CB->isArgOperand(&U)) {
-          unsigned ArgNo = CB->getArgOperandNo(&U);
-          const auto &CSArgPI = A.getAAFor<AAPointerInfo>(
-              *this, IRPosition::callsite_argument(*CB, ArgNo),
-              DepClassTy::REQUIRED);
-          Changed = translateAndAddState(A, CSArgPI,
-                                         OffsetInfoMap[CurPtr].Offset, *CB) |
-                    Changed;
-          return isValidState();
-        }
-        LLVM_DEBUG(dbgs() << "[AAPointerInfo] Call user not handled " << *CB
-                          << "\n");
-        // TODO: Allow some call uses
-        return false;
-      }
-
-      LLVM_DEBUG(dbgs() << "[AAPointerInfo] User not handled " << *Usr << "\n");
-      return false;
-    };
-    auto EquivalentUseCB = [&](const Use &OldU, const Use &NewU) {
-      assert(OffsetInfoMap.count(OldU) && "Old use should be known already!");
-      if (OffsetInfoMap.count(NewU)) {
-        LLVM_DEBUG({
-          if (!(OffsetInfoMap[NewU] == OffsetInfoMap[OldU])) {
-            dbgs() << "[AAPointerInfo] Equivalent use callback failed: "
-                   << OffsetInfoMap[NewU].Offset << " vs "
-                   << OffsetInfoMap[OldU].Offset << "\n";
-          }
-        });
-        return OffsetInfoMap[NewU] == OffsetInfoMap[OldU];
-      }
-      OffsetInfoMap[NewU] = OffsetInfoMap[OldU];
-      return true;
-    };
-    if (!A.checkForAllUses(UsePred, *this, AssociatedValue,
-                           /* CheckBBLivenessOnly */ true, DepClassTy::OPTIONAL,
-                           /* IgnoreDroppableUses */ true, EquivalentUseCB)) {
-      LLVM_DEBUG(
-          dbgs() << "[AAPointerInfo] Check for all uses failed, abort!\n");
-      return indicatePessimisticFixpoint();
-    }
-
-    LLVM_DEBUG({
-      dbgs() << "Accesses by bin after update:\n";
-      dumpState(dbgs());
-    });
-
-    return Changed;
-  }
+  ChangeStatus updateImpl(Attributor &A) override;
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     AAPointerInfoImpl::trackPointerInfoStatistics(getIRPosition());
   }
 };
+
+ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
+  using namespace AA::PointerInfo;
+  ChangeStatus Changed = ChangeStatus::UNCHANGED;
+  Value &AssociatedValue = getAssociatedValue();
+
+  const DataLayout &DL = A.getDataLayout();
+  DenseMap<Value *, OffsetInfo> OffsetInfoMap;
+  OffsetInfoMap[&AssociatedValue] = OffsetInfo{0};
+
+  auto HandlePassthroughUser = [&](Value *Usr, const OffsetInfo &PtrOI,
+                                   bool &Follow) {
+    assert(PtrOI.Offset != AA::RangeTy::Unassigned &&
+           "Cannot pass through if the input Ptr was not visited!");
+    OffsetInfoMap[Usr] = PtrOI;
+    Follow = true;
+    return true;
+  };
+
+  const auto *TLI =
+      getAnchorScope()
+          ? A.getInfoCache().getTargetLibraryInfoForFunction(*getAnchorScope())
+          : nullptr;
+  auto UsePred = [&](const Use &U, bool &Follow) -> bool {
+    Value *CurPtr = U.get();
+    User *Usr = U.getUser();
+    LLVM_DEBUG(dbgs() << "[AAPointerInfo] Analyze " << *CurPtr << " in " << *Usr
+                      << "\n");
+    assert(OffsetInfoMap.count(CurPtr) &&
+           "The current pointer offset should have been seeded!");
+
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
+      if (CE->isCast())
+        return HandlePassthroughUser(Usr, OffsetInfoMap[CurPtr], Follow);
+      if (CE->isCompare())
+        return true;
+      if (!isa<GEPOperator>(CE)) {
+        LLVM_DEBUG(dbgs() << "[AAPointerInfo] Unhandled constant user " << *CE
+                          << "\n");
+        return false;
+      }
+    }
+    if (auto *GEP = dyn_cast<GEPOperator>(Usr)) {
+      // Note the order here, the Usr access might change the map, CurPtr is
+      // already in it though.
+      auto &UsrOI = OffsetInfoMap[Usr];
+      auto &PtrOI = OffsetInfoMap[CurPtr];
+      UsrOI = PtrOI;
+
+      // TODO: Use range information.
+      APInt GEPOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+      if (PtrOI.Offset == AA::RangeTy::Unknown ||
+          !GEP->accumulateConstantOffset(DL, GEPOffset)) {
+        LLVM_DEBUG(dbgs() << "[AAPointerInfo] GEP offset not constant " << *GEP
+                          << "\n");
+        UsrOI.Offset = AA::RangeTy::Unknown;
+        Follow = true;
+        return true;
+      }
+
+      LLVM_DEBUG(dbgs() << "[AAPointerInfo] GEP offset is constant " << *GEP
+                        << "\n");
+      UsrOI.Offset = PtrOI.Offset + GEPOffset.getZExtValue();
+      Follow = true;
+      return true;
+    }
+    if (isa<PtrToIntInst>(Usr))
+      return false;
+    if (isa<CastInst>(Usr) || isa<SelectInst>(Usr) || isa<ReturnInst>(Usr))
+      return HandlePassthroughUser(Usr, OffsetInfoMap[CurPtr], Follow);
+
+    // For PHIs we need to take care of the recurrence explicitly as the value
+    // might change while we iterate through a loop. For now, we give up if
+    // the PHI is not invariant.
+    if (isa<PHINode>(Usr)) {
+      // Note the order here, the Usr access might change the map, CurPtr is
+      // already in it though.
+      bool IsFirstPHIUser = !OffsetInfoMap.count(Usr);
+      auto &UsrOI = OffsetInfoMap[Usr];
+      auto &PtrOI = OffsetInfoMap[CurPtr];
+
+      // Check if the PHI operand has already an unknown offset as we can't
+      // improve on that anymore.
+      if (PtrOI.Offset == AA::RangeTy::Unknown) {
+        LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand offset unknown "
+                          << *CurPtr << " in " << *Usr << "\n");
+        Follow = UsrOI.Offset != AA::RangeTy::Unknown;
+        UsrOI = PtrOI;
+        return true;
+      }
+
+      // Check if the PHI is invariant (so far).
+      if (UsrOI == PtrOI) {
+        assert(PtrOI.Offset != AA::RangeTy::Unassigned &&
+               "Cannot assign if the current Ptr was not visited!");
+        LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI is invariant (so far)");
+        return true;
+      }
+
+      // Check if the PHI operand is not dependent on the PHI itself.
+      APInt Offset(
+          DL.getIndexSizeInBits(CurPtr->getType()->getPointerAddressSpace()),
+          0);
+      Value *CurPtrBase = CurPtr->stripAndAccumulateConstantOffsets(
+          DL, Offset, /* AllowNonInbounds */ true);
+      auto It = OffsetInfoMap.find(CurPtrBase);
+      if (It != OffsetInfoMap.end()) {
+        Offset += It->getSecond().Offset;
+        if (IsFirstPHIUser || Offset == UsrOI.Offset)
+          return HandlePassthroughUser(Usr, PtrOI, Follow);
+        LLVM_DEBUG(
+            dbgs() << "[AAPointerInfo] PHI operand pointer offset mismatch "
+                   << *CurPtr << " in " << *Usr << "\n");
+      } else {
+        LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand is too complex "
+                          << *CurPtr << " in " << *Usr << "\n");
+      }
+
+      // TODO: Approximate in case we know the direction of the recurrence.
+      UsrOI = PtrOI;
+      UsrOI.Offset = AA::RangeTy::Unknown;
+      Follow = true;
+      return true;
+    }
+
+    if (auto *LoadI = dyn_cast<LoadInst>(Usr)) {
+      // If the access is to a pointer that may or may not be the associated
+      // value, e.g. due to a PHI, we cannot assume it will be read.
+      AccessKind AK = AccessKind::AK_R;
+      if (getUnderlyingObject(CurPtr) == &AssociatedValue)
+        AK = AccessKind(AK | AccessKind::AK_MUST);
+      else
+        AK = AccessKind(AK | AccessKind::AK_MAY);
+      if (!handleAccess(A, *LoadI, /* Content */ nullptr, AK,
+                        OffsetInfoMap[CurPtr].Offset, Changed,
+                        *LoadI->getType()))
+        return false;
+
+      auto IsAssumption = [](Instruction &I) {
+        if (auto *II = dyn_cast<IntrinsicInst>(&I))
+          return II->isAssumeLikeIntrinsic();
+        return false;
+      };
+
+      auto IsImpactedInRange = [&](Instruction *FromI, Instruction *ToI) {
+        // Check if the assumption and the load are executed together without
+        // memory modification.
+        do {
+          if (FromI->mayWriteToMemory() && !IsAssumption(*FromI))
+            return true;
+          FromI = FromI->getNextNonDebugInstruction();
+        } while (FromI && FromI != ToI);
+        return false;
+      };
+
+      BasicBlock *BB = LoadI->getParent();
+      auto IsValidAssume = [&](IntrinsicInst &IntrI) {
+        if (IntrI.getIntrinsicID() != Intrinsic::assume)
+          return false;
+        BasicBlock *IntrBB = IntrI.getParent();
+        if (IntrI.getParent() == BB) {
+          if (IsImpactedInRange(LoadI->getNextNonDebugInstruction(), &IntrI))
+            return false;
+        } else {
+          auto PredIt = pred_begin(IntrBB);
+          if ((*PredIt) != BB)
+            return false;
+          if (++PredIt != pred_end(IntrBB))
+            return false;
+          for (auto *SuccBB : successors(BB)) {
+            if (SuccBB == IntrBB)
+              continue;
+            if (isa<UnreachableInst>(SuccBB->getTerminator()))
+              continue;
+            return false;
+          }
+          if (IsImpactedInRange(LoadI->getNextNonDebugInstruction(),
+                                BB->getTerminator()))
+            return false;
+          if (IsImpactedInRange(&IntrBB->front(), &IntrI))
+            return false;
+        }
+        return true;
+      };
+
+      std::pair<Value *, IntrinsicInst *> Assumption;
+      for (const Use &LoadU : LoadI->uses()) {
+        if (auto *CmpI = dyn_cast<CmpInst>(LoadU.getUser())) {
+          if (!CmpI->isEquality() || !CmpI->isTrueWhenEqual())
+            continue;
+          for (const Use &CmpU : CmpI->uses()) {
+            if (auto *IntrI = dyn_cast<IntrinsicInst>(CmpU.getUser())) {
+              if (!IsValidAssume(*IntrI))
+                continue;
+              int Idx = CmpI->getOperandUse(0) == LoadU;
+              Assumption = {CmpI->getOperand(Idx), IntrI};
+              break;
+            }
+          }
+        }
+        if (Assumption.first)
+          break;
+      }
+
+      // Check if we found an assumption associated with this load.
+      if (!Assumption.first || !Assumption.second)
+        return true;
+
+      LLVM_DEBUG(dbgs() << "[AAPointerInfo] Assumption found "
+                        << *Assumption.second << ": " << *LoadI
+                        << " == " << *Assumption.first << "\n");
+
+      return handleAccess(
+          A, *Assumption.second, Assumption.first, AccessKind::AK_ASSUMPTION,
+          OffsetInfoMap[CurPtr].Offset, Changed, *LoadI->getType());
+    }
+
+    auto HandleStoreLike = [&](Instruction &I, Value *ValueOp, Type &ValueTy,
+                               ArrayRef<Value *> OtherOps, AccessKind AK) {
+      for (auto *OtherOp : OtherOps) {
+        if (OtherOp == CurPtr) {
+          LLVM_DEBUG(
+              dbgs()
+              << "[AAPointerInfo] Escaping use in store like instruction " << I
+              << "\n");
+          return false;
+        }
+      }
+
+      // If the access is to a pointer that may or may not be the associated
+      // value, e.g. due to a PHI, we cannot assume it will be written.
+      if (getUnderlyingObject(CurPtr) == &AssociatedValue)
+        AK = AccessKind(AK | AccessKind::AK_MUST);
+      else
+        AK = AccessKind(AK | AccessKind::AK_MAY);
+      bool UsedAssumedInformation = false;
+      std::optional<Value *> Content = nullptr;
+      if (ValueOp)
+        Content = A.getAssumedSimplified(
+            *ValueOp, *this, UsedAssumedInformation, AA::Interprocedural);
+      return handleAccess(A, I, Content, AK, OffsetInfoMap[CurPtr].Offset,
+                          Changed, ValueTy);
+    };
+
+    if (auto *StoreI = dyn_cast<StoreInst>(Usr))
+      return HandleStoreLike(*StoreI, StoreI->getValueOperand(),
+                             *StoreI->getValueOperand()->getType(),
+                             {StoreI->getValueOperand()}, AccessKind::AK_W);
+    if (auto *RMWI = dyn_cast<AtomicRMWInst>(Usr))
+      return HandleStoreLike(*RMWI, nullptr, *RMWI->getValOperand()->getType(),
+                             {RMWI->getValOperand()}, AccessKind::AK_RW);
+    if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(Usr))
+      return HandleStoreLike(
+          *CXI, nullptr, *CXI->getNewValOperand()->getType(),
+          {CXI->getCompareOperand(), CXI->getNewValOperand()},
+          AccessKind::AK_RW);
+
+    if (auto *CB = dyn_cast<CallBase>(Usr)) {
+      if (CB->isLifetimeStartOrEnd())
+        return true;
+      if (getFreedOperand(CB, TLI) == U)
+        return true;
+      if (CB->isArgOperand(&U)) {
+        unsigned ArgNo = CB->getArgOperandNo(&U);
+        const auto &CSArgPI = A.getAAFor<AAPointerInfo>(
+            *this, IRPosition::callsite_argument(*CB, ArgNo),
+            DepClassTy::REQUIRED);
+        Changed = translateAndAddState(A, CSArgPI, OffsetInfoMap[CurPtr].Offset,
+                                       *CB) |
+                  Changed;
+        return isValidState();
+      }
+      LLVM_DEBUG(dbgs() << "[AAPointerInfo] Call user not handled " << *CB
+                        << "\n");
+      // TODO: Allow some call uses
+      return false;
+    }
+
+    LLVM_DEBUG(dbgs() << "[AAPointerInfo] User not handled " << *Usr << "\n");
+    return false;
+  };
+  auto EquivalentUseCB = [&](const Use &OldU, const Use &NewU) {
+    assert(OffsetInfoMap.count(OldU) && "Old use should be known already!");
+    if (OffsetInfoMap.count(NewU)) {
+      LLVM_DEBUG({
+        if (!(OffsetInfoMap[NewU] == OffsetInfoMap[OldU])) {
+          dbgs() << "[AAPointerInfo] Equivalent use callback failed: "
+                 << OffsetInfoMap[NewU].Offset << " vs "
+                 << OffsetInfoMap[OldU].Offset << "\n";
+        }
+      });
+      return OffsetInfoMap[NewU] == OffsetInfoMap[OldU];
+    }
+    OffsetInfoMap[NewU] = OffsetInfoMap[OldU];
+    return true;
+  };
+  if (!A.checkForAllUses(UsePred, *this, AssociatedValue,
+                         /* CheckBBLivenessOnly */ true, DepClassTy::OPTIONAL,
+                         /* IgnoreDroppableUses */ true, EquivalentUseCB)) {
+    LLVM_DEBUG(dbgs() << "[AAPointerInfo] Check for all uses failed, abort!\n");
+    return indicatePessimisticFixpoint();
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "Accesses by bin after update:\n";
+    dumpState(dbgs());
+  });
+
+  return Changed;
+}
 
 struct AAPointerInfoReturned final : AAPointerInfoImpl {
   AAPointerInfoReturned(const IRPosition &IRP, Attributor &A)
@@ -1612,21 +1627,18 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
       int64_t LengthVal = AA::RangeTy::Unknown;
       if (Length)
         LengthVal = Length->getSExtValue();
-      Value &Ptr = getAssociatedValue();
       unsigned ArgNo = getIRPosition().getCallSiteArgNo();
       ChangeStatus Changed = ChangeStatus::UNCHANGED;
-      if (ArgNo == 0) {
-        handleAccess(A, *MI, Ptr, nullptr, AccessKind::AK_MUST_WRITE, 0,
-                     Changed, nullptr, LengthVal);
-      } else if (ArgNo == 1) {
-        handleAccess(A, *MI, Ptr, nullptr, AccessKind::AK_MUST_READ, 0, Changed,
-                     nullptr, LengthVal);
-      } else {
+      if (ArgNo > 1) {
         LLVM_DEBUG(dbgs() << "[AAPointerInfo] Unhandled memory intrinsic "
                           << *MI << "\n");
         return indicatePessimisticFixpoint();
+      } else {
+        auto Kind =
+            ArgNo == 0 ? AccessKind::AK_MUST_WRITE : AccessKind::AK_MUST_READ;
+        Changed =
+            Changed | addAccess(A, 0, LengthVal, *MI, nullptr, Kind, nullptr);
       }
-
       LLVM_DEBUG({
         dbgs() << "Accesses by bin after update:\n";
         dumpState(dbgs());
@@ -1645,8 +1657,8 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
       auto &ArgAA =
           A.getAAFor<AAPointerInfo>(*this, ArgPos, DepClassTy::REQUIRED);
       if (ArgAA.getState().isValidState())
-        return translateAndAddState(A, ArgAA, 0, *cast<CallBase>(getCtxI()),
-                                    /* FromCallee */ true);
+        return translateAndAddStateFromCallee(A, ArgAA,
+                                              *cast<CallBase>(getCtxI()));
       if (!Arg->getParent()->isDeclaration())
         return indicatePessimisticFixpoint();
     }
@@ -1661,13 +1673,10 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
     if (AA::isAssumedReadNone(A, getIRPosition(), *this, IsKnown))
       return ChangeStatus::UNCHANGED;
     bool ReadOnly = AA::isAssumedReadOnly(A, getIRPosition(), *this, IsKnown);
-
-    ChangeStatus Changed = ChangeStatus::UNCHANGED;
-    handleAccess(A, *getCtxI(), getAssociatedValue(), nullptr,
-                 ReadOnly ? AccessKind::AK_MAY_READ
-                          : AccessKind::AK_MAY_READ_WRITE,
-                 AA::RangeTy::Unknown, Changed, nullptr, AA::RangeTy::Unknown);
-    return Changed;
+    auto Kind =
+        ReadOnly ? AccessKind::AK_MAY_READ : AccessKind::AK_MAY_READ_WRITE;
+    return addAccess(A, AA::RangeTy::Unknown, AA::RangeTy::Unknown, *getCtxI(),
+                     nullptr, Kind, nullptr);
   }
 
   /// See AbstractAttribute::trackStatistics()
