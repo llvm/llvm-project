@@ -18,7 +18,6 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Tooling/StandaloneExecution.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include <array>
@@ -117,13 +116,21 @@ struct CommentInfo {
 };
 
 struct Reference {
+  // This variant (that takes no qualified name parameter) uses the Name as the
+  // QualName (very useful in unit tests to reduce verbosity). This can't use an
+  // empty string to indicate the default because we need to accept the empty
+  // string as a valid input for the global namespace (it will have
+  // "GlobalNamespace" as the name, but an empty QualName).
   Reference(SymbolID USR = SymbolID(), StringRef Name = StringRef(),
-            InfoType IT = InfoType::IT_default, StringRef Path = StringRef())
-      : USR(USR), Name(Name), RefType(IT), Path(Path) {}
+            InfoType IT = InfoType::IT_default)
+      : USR(USR), Name(Name), QualName(Name), RefType(IT) {}
+  Reference(SymbolID USR, StringRef Name, InfoType IT, StringRef QualName,
+            StringRef Path = StringRef())
+      : USR(USR), Name(Name), QualName(QualName), RefType(IT), Path(Path) {}
 
   bool operator==(const Reference &Other) const {
-    return std::tie(USR, Name, RefType) ==
-           std::tie(Other.USR, Other.Name, Other.RefType);
+    return std::tie(USR, Name, QualName, RefType) ==
+           std::tie(Other.USR, Other.Name, QualName, Other.RefType);
   }
 
   bool mergeable(const Reference &Other);
@@ -136,7 +143,17 @@ struct Reference {
   llvm::SmallString<16> getFileBaseName() const;
 
   SymbolID USR = SymbolID(); // Unique identifier for referenced decl
-  SmallString<16> Name;      // Name of type (possibly unresolved).
+
+  // Name of type (possibly unresolved). Not including namespaces or template
+  // parameters (so for a std::vector<int> this would be "vector"). See also
+  // QualName.
+  SmallString<16> Name;
+
+  // Full qualified name of this type, including namespaces and template
+  // parameter (for example this could be "std::vector<int>"). Contrast to
+  // Name.
+  SmallString<16> QualName;
+
   InfoType RefType = InfoType::IT_default; // Indicates the type of this
                                            // Reference (namespace, record,
                                            // function, enum, default).
@@ -169,11 +186,44 @@ struct TypeInfo {
   // Convenience constructor for when there is no symbol ID or info type
   // (normally used for built-in types in tests).
   TypeInfo(StringRef Name, StringRef Path = StringRef())
-      : Type(SymbolID(), Name, InfoType::IT_default, Path) {}
+      : Type(SymbolID(), Name, InfoType::IT_default, Name, Path) {}
 
   bool operator==(const TypeInfo &Other) const { return Type == Other.Type; }
 
   Reference Type; // Referenced type in this info.
+};
+
+// Represents one template parameter.
+//
+// This is a very simple serialization of the text of the source code of the
+// template parameter. It is saved in a struct so there is a place to add the
+// name and default values in the future if needed.
+struct TemplateParamInfo {
+  TemplateParamInfo() = default;
+  explicit TemplateParamInfo(StringRef Contents) : Contents(Contents) {}
+
+  // The literal contents of the code for that specifies this template parameter
+  // for this declaration. Typical values will be "class T" and
+  // "typename T = int".
+  SmallString<16> Contents;
+};
+
+struct TemplateSpecializationInfo {
+  // Indicates the declaration that this specializes.
+  SymbolID SpecializationOf;
+
+  // Template parameters applying to the specialized record/function.
+  std::vector<TemplateParamInfo> Params;
+};
+
+// Records the template information for a struct or function that is a template
+// or an explicit template specialization.
+struct TemplateInfo {
+  // May be empty for non-partial specializations.
+  std::vector<TemplateParamInfo> Params;
+
+  // Set when this is a specialization of another record/function.
+  std::optional<TemplateSpecializationInfo> Specialization;
 };
 
 // Info for field types.
@@ -317,6 +367,13 @@ struct FunctionInfo : public SymbolInfo {
   // with value 0 to be used as the default.
   // (AS_public = 0, AS_protected = 1, AS_private = 2, AS_none = 3)
   AccessSpecifier Access = AccessSpecifier::AS_public;
+
+  // Full qualified name of this function, including namespaces and template
+  // specializations.
+  SmallString<16> FullName;
+
+  // When present, this function is a template or specialization.
+  std::optional<TemplateInfo> Template;
 };
 
 // TODO: Expand to allow for documenting templating, inheritance access,
@@ -331,6 +388,13 @@ struct RecordInfo : public SymbolInfo {
 
   // Type of this record (struct, class, union, interface).
   TagTypeKind TagType = TagTypeKind::TTK_Struct;
+
+  // Full qualified name of this record, including namespaces and template
+  // specializations.
+  SmallString<16> FullName;
+
+  // When present, this record is a template or specialization.
+  std::optional<TemplateInfo> Template;
 
   // Indicates if the record was declared using a typedef. Things like anonymous
   // structs in a typedef:
@@ -433,12 +497,12 @@ struct Index : public Reference {
   Index(StringRef Name, StringRef JumpToSection)
       : Reference(SymbolID(), Name), JumpToSection(JumpToSection) {}
   Index(SymbolID USR, StringRef Name, InfoType IT, StringRef Path)
-      : Reference(USR, Name, IT, Path) {}
+      : Reference(USR, Name, IT, Name, Path) {}
   // This is used to look for a USR in a vector of Indexes using std::find
   bool operator==(const SymbolID &Other) const { return USR == Other; }
   bool operator<(const Index &Other) const;
 
-  llvm::Optional<SmallString<16>> JumpToSection;
+  std::optional<SmallString<16>> JumpToSection;
   std::vector<Index> Children;
 
   void sort();
@@ -467,7 +531,7 @@ struct ClangDocContext {
                             // to definition locations will only be generated if
                             // the file is in this dir.
   // URL of repository that hosts code used for links to definition locations.
-  llvm::Optional<std::string> RepositoryUrl;
+  std::optional<std::string> RepositoryUrl;
   // Path of CSS stylesheets that will be copied to OutDirectory and used to
   // style all HTML files.
   std::vector<std::string> UserStylesheets;

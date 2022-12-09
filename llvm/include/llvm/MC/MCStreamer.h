@@ -685,8 +685,7 @@ public:
   /// \param Section - The zerofill section to create and or to put the symbol
   /// \param Symbol - The zerofill symbol to emit, if non-NULL.
   /// \param Size - The size of the zerofill symbol.
-  /// \param ByteAlignment - The alignment of the zerofill symbol if
-  /// non-zero. This must be a power of 2 on some targets.
+  /// \param ByteAlignment - The alignment of the zerofill symbol.
   virtual void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
                             uint64_t Size = 0, Align ByteAlignment = Align(1),
                             SMLoc Loc = SMLoc()) = 0;
@@ -696,8 +695,7 @@ public:
   /// \param Section - The thread local common section.
   /// \param Symbol - The thread local common symbol to emit.
   /// \param Size - The size of the symbol.
-  /// \param ByteAlignment - The alignment of the thread local common symbol
-  /// if non-zero.  This must be a power of 2 on some targets.
+  /// \param ByteAlignment - The alignment of the thread local common symbol.
   virtual void emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                               uint64_t Size, Align ByteAlignment = Align(1));
 

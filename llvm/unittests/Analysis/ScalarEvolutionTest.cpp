@@ -58,11 +58,11 @@ protected:
     Test(*F, *LI, SE);
   }
 
-  static Optional<APInt> computeConstantDifference(ScalarEvolution &SE,
-                                                   const SCEV *LHS,
-                                                   const SCEV *RHS) {
-    return SE.computeConstantDifference(LHS, RHS);
-  }
+static std::optional<APInt> computeConstantDifference(ScalarEvolution &SE,
+                                                      const SCEV *LHS,
+                                                      const SCEV *RHS) {
+  return SE.computeConstantDifference(LHS, RHS);
+}
 
   static bool matchURem(ScalarEvolution &SE, const SCEV *Expr, const SCEV *&LHS,
                         const SCEV *&RHS) {

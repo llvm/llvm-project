@@ -350,6 +350,8 @@ llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
     return decodeRecord(R, I->USR, Blob);
   case REFERENCE_NAME:
     return decodeRecord(R, I->Name, Blob);
+  case REFERENCE_QUAL_NAME:
+    return decodeRecord(R, I->QualName, Blob);
   case REFERENCE_TYPE:
     return decodeRecord(R, I->RefType, Blob);
   case REFERENCE_PATH:
@@ -360,6 +362,29 @@ llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for Reference");
   }
+}
+
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        TemplateInfo *I) {
+  // Currently there are no child records of TemplateInfo (only child blocks).
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid field for TemplateParamInfo");
+}
+
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        TemplateSpecializationInfo *I) {
+  if (ID == TEMPLATE_SPECIALIZATION_OF)
+    return decodeRecord(R, I->SpecializationOf, Blob);
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid field for TemplateParamInfo");
+}
+
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        TemplateParamInfo *I) {
+  if (ID == TEMPLATE_PARAM_CONTENTS)
+    return decodeRecord(R, I->Contents, Blob);
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid field for TemplateParamInfo");
 }
 
 template <typename T> llvm::Expected<CommentInfo *> getCommentInfo(T I) {
@@ -594,6 +619,45 @@ template <> void addChild(BaseRecordInfo *I, FunctionInfo &&R) {
   I->Children.Functions.emplace_back(std::move(R));
 }
 
+// TemplateParam children. These go into either a TemplateInfo (for template
+// parameters) or TemplateSpecializationInfo (for the specialization's
+// parameters).
+template <typename T> void addTemplateParam(T I, TemplateParamInfo &&P) {
+  llvm::errs() << "invalid container for template parameter";
+  exit(1);
+}
+template <> void addTemplateParam(TemplateInfo *I, TemplateParamInfo &&P) {
+  I->Params.emplace_back(std::move(P));
+}
+template <>
+void addTemplateParam(TemplateSpecializationInfo *I, TemplateParamInfo &&P) {
+  I->Params.emplace_back(std::move(P));
+}
+
+// Template info. These apply to either records or functions.
+template <typename T> void addTemplate(T I, TemplateInfo &&P) {
+  llvm::errs() << "invalid container for template info";
+  exit(1);
+}
+template <> void addTemplate(RecordInfo *I, TemplateInfo &&P) {
+  I->Template.emplace(std::move(P));
+}
+template <> void addTemplate(FunctionInfo *I, TemplateInfo &&P) {
+  I->Template.emplace(std::move(P));
+}
+
+// Template specializations go only into template records.
+template <typename T>
+void addTemplateSpecialization(T I, TemplateSpecializationInfo &&TSI) {
+  llvm::errs() << "invalid container for template specialization info";
+  exit(1);
+}
+template <>
+void addTemplateSpecialization(TemplateInfo *I,
+                               TemplateSpecializationInfo &&TSI) {
+  I->Specialization.emplace(std::move(TSI));
+}
+
 // Read records from bitcode into a given info.
 template <typename T>
 llvm::Error ClangDocBitcodeReader::readRecord(unsigned ID, T I) {
@@ -716,6 +780,27 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
     if (auto Err = readBlock(ID, &EV))
       return Err;
     addChild(I, std::move(EV));
+    return llvm::Error::success();
+  }
+  case BI_TEMPLATE_BLOCK_ID: {
+    TemplateInfo TI;
+    if (auto Err = readBlock(ID, &TI))
+      return Err;
+    addTemplate(I, std::move(TI));
+    return llvm::Error::success();
+  }
+  case BI_TEMPLATE_SPECIALIZATION_BLOCK_ID: {
+    TemplateSpecializationInfo TSI;
+    if (auto Err = readBlock(ID, &TSI))
+      return Err;
+    addTemplateSpecialization(I, std::move(TSI));
+    return llvm::Error::success();
+  }
+  case BI_TEMPLATE_PARAM_BLOCK_ID: {
+    TemplateParamInfo TPI;
+    if (auto Err = readBlock(ID, &TPI))
+      return Err;
+    addTemplateParam(I, std::move(TPI));
     return llvm::Error::success();
   }
   case BI_TYPEDEF_BLOCK_ID: {
