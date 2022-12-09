@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax -verify %s 2>&1 | FileCheck %s
+; RUN: opt -passes=verify %s 2>&1 | FileCheck %s
 ; CHECK: invalid type ref
 ; CHECK-NOT: invalid type ref
 

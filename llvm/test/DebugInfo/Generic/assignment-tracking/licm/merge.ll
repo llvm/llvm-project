@@ -1,4 +1,4 @@
-; RUN: opt -temporarily-allow-old-pass-syntax -licm %s -S -experimental-assignment-tracking | FileCheck %s
+; RUN: opt -passes=licm %s -S -experimental-assignment-tracking | FileCheck %s
 
 ;; Ensure that we correctly merge the DIAssignID's from the sunk stores, add it
 ;; to the new new store instruction, and update the dbg.assign intrinsics using
@@ -12,7 +12,7 @@
 ;;   ;
 ;; }
 ;; $ clang -O2 -Xclang -disable-llvm-passes -g -emit-llvm -S -o a.ll
-;; $ opt -temporarily-allow-old-pass-syntax -passes=declare-to-assign,sroa,instcombine,simplifycfg,loop-simplify,lcssa,loop-rotate a.ll
+;; $ opt -passes=declare-to-assign,sroa,instcombine,simplifycfg,loop-simplify,lcssa,loop-rotate a.ll
 
 ; CHECK-LABEL: for.inc:
 ;; Check that the stores have actually been removed from this block, otherwise
