@@ -157,14 +157,14 @@ define i32 @caller_args() #0 {
 ; V8:       ! %bb.0: ! %entry
 ; V8-NEXT:    save %sp, -104, %sp
 ; V8-NEXT:    mov 6, %i0
-; V8-NEXT:    mov %g0, %o0
 ; V8-NEXT:    mov 1, %o1
 ; V8-NEXT:    mov 2, %o2
 ; V8-NEXT:    mov 3, %o3
 ; V8-NEXT:    mov 4, %o4
 ; V8-NEXT:    mov 5, %o5
-; V8-NEXT:    call foo7
 ; V8-NEXT:    st %i0, [%sp+92]
+; V8-NEXT:    call foo7
+; V8-NEXT:    mov %g0, %o0
 ; V8-NEXT:    ret
 ; V8-NEXT:    restore %g0, %o0, %o0
 ;
@@ -172,14 +172,14 @@ define i32 @caller_args() #0 {
 ; V9:       ! %bb.0: ! %entry
 ; V9-NEXT:    save %sp, -192, %sp
 ; V9-NEXT:    mov 6, %i0
-; V9-NEXT:    mov 0, %o0
 ; V9-NEXT:    mov 1, %o1
 ; V9-NEXT:    mov 2, %o2
 ; V9-NEXT:    mov 3, %o3
 ; V9-NEXT:    mov 4, %o4
 ; V9-NEXT:    mov 5, %o5
-; V9-NEXT:    call foo7
 ; V9-NEXT:    stx %i0, [%sp+2223]
+; V9-NEXT:    call foo7
+; V9-NEXT:    mov %g0, %o0
 ; V9-NEXT:    ret
 ; V9-NEXT:    restore %g0, %o0, %o0
 entry:
