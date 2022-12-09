@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -loop-deletion -S | FileCheck %s
+; RUN: opt < %s -passes=indvars,loop-deletion -S | FileCheck %s
 
 define i32 @test(i32 %x_offs) nounwind readnone {
 ; CHECK-LABEL: @test(

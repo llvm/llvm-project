@@ -1,4 +1,4 @@
-; RUN: opt %s -indvars -verify -S -o - | FileCheck %s
+; RUN: opt %s -passes='loop(indvars),verify' -S -o - | FileCheck %s
 
 ; Hand-reduced from this example:
 ;
