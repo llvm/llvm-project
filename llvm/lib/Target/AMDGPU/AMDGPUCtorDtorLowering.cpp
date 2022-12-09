@@ -67,6 +67,8 @@ static bool createInitOrFiniKernel(Module &M, StringRef GlobalName,
   }
 
   appendToUsed(M, {InitOrFiniKernel});
+
+  GV->eraseFromParent();
   return true;
 }
 
