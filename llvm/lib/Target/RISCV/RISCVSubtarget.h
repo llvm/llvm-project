@@ -175,6 +175,7 @@ public:
   bool hasStdExtZvfh() const { return HasStdExtZvfh; }
   bool hasStdExtZfhmin() const { return HasStdExtZfhmin; }
   bool hasStdExtZfh() const { return HasStdExtZfh; }
+  bool hasStdExtZfhOrZfhmin() const { return HasStdExtZfh || HasStdExtZfhmin; }
   bool hasStdExtZfinx() const { return HasStdExtZfinx; }
   bool hasStdExtZdinx() const { return HasStdExtZdinx; }
   bool hasStdExtZhinxmin() const { return HasStdExtZhinxmin; }
