@@ -96,20 +96,11 @@ func.func private @invalid_symbol_type_attr() attributes { function_type = "x" }
 
 // -----
 
-// expected-error@+1 {{argument attribute array `arg_attrs` to have the same number of elements as the number of function arguments}}
+// expected-error@+1 {{argument attribute array to have the same number of elements as the number of function arguments}}
 func.func private @invalid_arg_attrs() attributes { arg_attrs = [{}] }
 
 // -----
 
-// expected-error@+1 {{expects argument attribute dictionary to be a DictionaryAttr, but got `10 : i64`}}
-func.func private @invalid_arg_attrs(i32) attributes { arg_attrs = [10] }
 
-// -----
-
-// expected-error@+1 {{result attribute array `res_attrs` to have the same number of elements as the number of function results}}
+// expected-error@+1 {{result attribute array to have the same number of elements as the number of function results}}
 func.func private @invalid_res_attrs() attributes { res_attrs = [{}] }
-
-// -----
-
-// expected-error@+1 {{expects result attribute dictionary to be a DictionaryAttr, but got `10 : i64`}}
-func.func private @invalid_res_attrs() -> i32 attributes { res_attrs = [10] }
