@@ -1,4 +1,4 @@
-; RUN: not opt -verify %s 2>&1 | FileCheck %s
+; RUN: not opt -passes=verify %s 2>&1 | FileCheck %s
 
 declare tailcc void @simple()
 
