@@ -99,7 +99,7 @@ public:
   /// the desired type.
   template <typename T> T castAs() const { return llvm::cast<T>(*this); }
 
-  /// Convert to the specified SVal type, returning None if this SVal is
+  /// Convert to the specified SVal type, returning std::nullopt if this SVal is
   /// not of the desired type.
   template <typename T> Optional<T> getAs() const {
     return llvm::dyn_cast<T>(*this);
