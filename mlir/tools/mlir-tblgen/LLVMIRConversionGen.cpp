@@ -220,9 +220,12 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
 
   // Progressively create the builder string by replacing $-variables. Keep only
   // the not-yet-traversed part of the builder pattern to avoid re-traversing
-  // the string multiple times.
-  std::string builder;
-  llvm::raw_string_ostream bs(builder);
+  // the string multiple times. Additionally, emit an argument string
+  // immediately before the builder string. This argument string converts all
+  // operands used by the builder to MLIR values and returns failure if one of
+  // the conversions fails.
+  std::string arguments, builder;
+  llvm::raw_string_ostream as(arguments), bs(builder);
   while (StringLoc loc = findNextVariable(builderStrRef)) {
     auto name = loc.in(builderStrRef).drop_front();
     // First, insert the non-matched part as is.
@@ -240,17 +243,25 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
       if (isAttributeName(op, name)) {
         bs << formatv("llvmOperands[{0}]", idx);
       } else {
-        bool isVariadicOperand = isVariadicOperandName(op, name);
-        auto result =
-            isVariadicOperand
-                ? formatv("convertValues(llvmOperands.drop_front({0}))", idx)
-                : formatv("convertValue(llvmOperands[{0}])", idx);
-        bs << result;
+        if (isVariadicOperandName(op, name)) {
+          as << formatv(
+              "FailureOr<SmallVector<Value>> _llvmir_gen_operand_{0} = "
+              "convertValues(llvmOperands.drop_front({1}));\n",
+              name, idx);
+        } else {
+          as << formatv("FailureOr<Value> _llvmir_gen_operand_{0} = "
+                        "convertValue(llvmOperands[{1}]);\n",
+                        name, idx);
+        }
+        as << formatv("if (failed(_llvmir_gen_operand_{0}))\n"
+                      "  return failure();\n",
+                      name);
+        bs << formatv("_llvmir_gen_operand_{0}.value()", name);
       }
     } else if (isResultName(op, name)) {
       if (op.getNumResults() != 1)
         return emitError(record, "expected op to have one result");
-      bs << formatv("mapValue(inst)");
+      bs << "mapValue(inst)";
     } else if (name == "_int_attr") {
       bs << "matchIntegerAttr";
     } else if (name == "_var_attr") {
@@ -273,8 +284,9 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
     builderStrRef = builderStrRef.substr(loc.pos + loc.length);
   }
 
-  // Output the check and the builder string.
+  // Output the check, the argument conversion, and the builder string.
   os << "if (" << conditionFn(record) << ") {\n";
+  os << as.str() << "\n";
   os << bs.str() << builderStrRef << "\n";
   os << "  return success();\n";
   os << "}\n";
