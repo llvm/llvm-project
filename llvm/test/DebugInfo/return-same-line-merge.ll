@@ -1,4 +1,4 @@
-; RUN: opt -simplifycfg -S < %s | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax -simplifycfg -S < %s | FileCheck %s
 ;
 ; Simplified from the following code:
 ; int foo() {

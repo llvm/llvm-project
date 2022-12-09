@@ -1,4 +1,4 @@
-; RUN: opt -loop-rotate %s -S | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax -loop-rotate %s -S | FileCheck %s
 ; REQUIRES: asserts
 
 ; Check that loop rotate keeps proper mapping between cloned instructions,

@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -S -debug-counter=partially-inline-libcalls-transform-skip=1,partially-inline-libcalls-transform-count=1 \
+; RUN: opt -temporarily-allow-old-pass-syntax -S -debug-counter=partially-inline-libcalls-transform-skip=1,partially-inline-libcalls-transform-count=1 \
 ; RUN:     -partially-inline-libcalls -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
 ;; Test that, with debug counters on, we will skip the first optimization opportunity, perform next 1,
 ;; and ignore all the others left.

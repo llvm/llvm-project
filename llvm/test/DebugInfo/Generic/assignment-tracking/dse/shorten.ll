@@ -1,4 +1,4 @@
-; RUN: opt %s -S -dse -o - -experimental-assignment-tracking | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax %s -S -dse -o - -experimental-assignment-tracking | FileCheck %s
 
 ;; $ cat test.cpp
 ;; void esc(int*);

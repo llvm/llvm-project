@@ -1,4 +1,4 @@
-; RUN: opt -loop-instsimplify -loop-simplifycfg -licm -simple-loop-unswitch -enable-nontrivial-unswitch %s -disable-output
+; RUN: opt -temporarily-allow-old-pass-syntax -loop-instsimplify -loop-simplifycfg -licm -simple-loop-unswitch -enable-nontrivial-unswitch %s -disable-output
 ; REQUIRES: asserts
 
 %0 = type { i24, i32, i32, i8 }

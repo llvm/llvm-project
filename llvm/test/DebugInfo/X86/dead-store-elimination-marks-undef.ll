@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=x86_64-- -S --dse %s  -o - | FileCheck %s
-; Ensure that we can mark a value as undefined when performing dead 
+; RUN: opt -temporarily-allow-old-pass-syntax -mtriple=x86_64-- -S --dse %s  -o - | FileCheck %s
+; Ensure that we can mark a value as undefined when performing dead
 ; store elimination.
 ; Bugzilla #45080
 

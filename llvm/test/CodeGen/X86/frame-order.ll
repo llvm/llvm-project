@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-linux-gnueabi -disable-debug-info-print < %s | FileCheck %s
-; RUN: opt -strip -S < %s | llc -mtriple=x86_64-linux-gnueabi -disable-debug-info-print | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax -strip -S < %s | llc -mtriple=x86_64-linux-gnueabi -disable-debug-info-print | FileCheck %s
 
 ; This test checks if the code is generated correctly with and without debug info.
 

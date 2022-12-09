@@ -1,4 +1,4 @@
-; RUN: opt -inline -S < %s | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax -inline -S < %s | FileCheck %s
 
 ; Created from source
 ;

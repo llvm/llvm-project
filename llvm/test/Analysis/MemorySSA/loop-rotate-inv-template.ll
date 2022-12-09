@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -loop-rotate -verify-memoryssa %s
+; RUN: opt -temporarily-allow-old-pass-syntax -disable-output -loop-rotate -verify-memoryssa %s
 ; REQUIRES: asserts
 
 ; Function Attrs: nounwind

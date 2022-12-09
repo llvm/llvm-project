@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -simplifycfg | FileCheck %s
+; RUN: opt -temporarily-allow-old-pass-syntax < %s -S -simplifycfg | FileCheck %s
 
 ; Note: This patch fixes the regression introduced by pr38762.
 ;

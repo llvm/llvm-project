@@ -1,7 +1,7 @@
-; RUN: opt -mtriple=amdgcn-- -inline -S -amdgpu-inline-max-bb=2 %s | FileCheck %s --check-prefix=NOINL
-; RUN: opt -mtriple=amdgcn-- -inline -S -amdgpu-inline-max-bb=3 %s | FileCheck %s --check-prefix=INL
-; RUN: opt -mtriple=amdgcn-- -passes=inline -S -amdgpu-inline-max-bb=2 %s | FileCheck %s --check-prefix=NOINL
-; RUN: opt -mtriple=amdgcn-- -passes=inline -S -amdgpu-inline-max-bb=3 %s | FileCheck %s --check-prefix=INL
+; RUN: opt -temporarily-allow-old-pass-syntax -mtriple=amdgcn-- -inline -S -amdgpu-inline-max-bb=2 %s | FileCheck %s --check-prefix=NOINL
+; RUN: opt -temporarily-allow-old-pass-syntax -mtriple=amdgcn-- -inline -S -amdgpu-inline-max-bb=3 %s | FileCheck %s --check-prefix=INL
+; RUN: opt -temporarily-allow-old-pass-syntax -mtriple=amdgcn-- -passes=inline -S -amdgpu-inline-max-bb=2 %s | FileCheck %s --check-prefix=NOINL
+; RUN: opt -temporarily-allow-old-pass-syntax -mtriple=amdgcn-- -passes=inline -S -amdgpu-inline-max-bb=3 %s | FileCheck %s --check-prefix=INL
 
 define i32 @callee(i32 %x) {
 entry:

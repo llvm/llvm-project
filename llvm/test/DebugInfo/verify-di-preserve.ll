@@ -1,8 +1,8 @@
-; RUN: opt %s -verify-debuginfo-preserve -instcombine -disable-output 2>&1 | FileCheck --check-prefix=VERIFY %s
+; RUN: opt -temporarily-allow-old-pass-syntax %s -verify-debuginfo-preserve -instcombine -disable-output 2>&1 | FileCheck --check-prefix=VERIFY %s
 
 ; VERIFY: CheckModuleDebugify (original debuginfo):
 
-; RUN: opt %s -verify-each-debuginfo-preserve -O2 -disable-output 2>&1 | FileCheck --check-prefix=VERIFY-EACH %s
+; RUN: opt -temporarily-allow-old-pass-syntax %s -verify-each-debuginfo-preserve -O2 -disable-output 2>&1 | FileCheck --check-prefix=VERIFY-EACH %s
 
 ; VERIFY-EACH: DeadArgumentEliminationPass
 ; VERIFY-EACH: GlobalDCEPass
