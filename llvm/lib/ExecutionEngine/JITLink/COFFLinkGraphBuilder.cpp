@@ -162,7 +162,7 @@ Error COFFLinkGraphBuilder::graphifySections() {
       B = &G->createZeroFillBlock(
           *GraphSec, getSectionSize(Obj, *Sec),
           orc::ExecutorAddr(getSectionAddress(Obj, *Sec)),
-          (*Sec)->getAlignment().value(), 0);
+          (*Sec)->getAlignment(), 0);
     else {
       ArrayRef<uint8_t> Data;
       if (auto Err = Obj.getSectionContents(*Sec, Data))
@@ -178,7 +178,7 @@ Error COFFLinkGraphBuilder::graphifySections() {
 
       B = &G->createContentBlock(
           *GraphSec, CharData, orc::ExecutorAddr(getSectionAddress(Obj, *Sec)),
-          (*Sec)->getAlignment().value(), 0);
+          (*Sec)->getAlignment(), 0);
     }
 
     setGraphBlock(SecIndex, B);

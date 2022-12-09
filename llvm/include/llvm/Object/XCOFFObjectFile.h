@@ -581,7 +581,7 @@ public:
   uint64_t getSectionSize(DataRefImpl Sec) const override;
   Expected<ArrayRef<uint8_t>>
   getSectionContents(DataRefImpl Sec) const override;
-  Align getSectionAlignment(DataRefImpl Sec) const override;
+  uint64_t getSectionAlignment(DataRefImpl Sec) const override;
   bool isSectionCompressed(DataRefImpl Sec) const override;
   bool isSectionText(DataRefImpl Sec) const override;
   bool isSectionData(DataRefImpl Sec) const override;

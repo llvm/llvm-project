@@ -294,7 +294,7 @@ protected:
   uint64_t getSectionSize(DataRefImpl Sec) const override;
   Expected<ArrayRef<uint8_t>>
   getSectionContents(DataRefImpl Sec) const override;
-  Align getSectionAlignment(DataRefImpl Sec) const override;
+  uint64_t getSectionAlignment(DataRefImpl Sec) const override;
   bool isSectionCompressed(DataRefImpl Sec) const override;
   bool isSectionText(DataRefImpl Sec) const override;
   bool isSectionData(DataRefImpl Sec) const override;
@@ -870,10 +870,8 @@ ELFObjectFile<ELFT>::getSectionContents(DataRefImpl Sec) const {
 }
 
 template <class ELFT>
-Align ELFObjectFile<ELFT>::getSectionAlignment(DataRefImpl Sec) const {
-  // The value 0 or 1 means that the section has no alignment constraints.
-  // https://man7.org/linux/man-pages/man5/elf.5.html
-  return MaybeAlign(getSection(Sec)->sh_addralign).valueOrOne();
+uint64_t ELFObjectFile<ELFT>::getSectionAlignment(DataRefImpl Sec) const {
+  return getSection(Sec)->sh_addralign;
 }
 
 template <class ELFT>

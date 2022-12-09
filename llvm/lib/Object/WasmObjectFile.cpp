@@ -1735,8 +1735,8 @@ WasmObjectFile::getSectionContents(DataRefImpl Sec) const {
   return S.Content;
 }
 
-Align WasmObjectFile::getSectionAlignment(DataRefImpl Sec) const {
-  return Align(1);
+uint64_t WasmObjectFile::getSectionAlignment(DataRefImpl Sec) const {
+  return 1;
 }
 
 bool WasmObjectFile::isSectionCompressed(DataRefImpl Sec) const {
