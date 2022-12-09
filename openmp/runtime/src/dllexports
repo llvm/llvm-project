@@ -345,7 +345,6 @@ kmpc_set_defaults                           224
         __kmpc_fork_teams                   241
         __kmpc_omp_task_with_deps           242
         __kmpc_omp_wait_deps                243
-        __kmpc_omp_taskwait_deps_51         292
         __kmpc_cancel                       244
         __kmpc_cancellationpoint            245
         __kmpc_cancel_barrier               246

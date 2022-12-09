@@ -198,7 +198,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP25:%.*]] = call i32 @__kmpc_omp_task_with_deps(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP15]], i32 1, ptr [[TMP18]], i32 0, ptr null)
 // CHECK1-NEXT:    br label [[OMP_IF_END7:%.*]]
 // CHECK1:       omp_if.else6:
-// CHECK1-NEXT:    call void @__kmpc_omp_taskwait_deps_51(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, ptr [[TMP18]], i32 0, ptr null, i32 0)
+// CHECK1-NEXT:    call void @__kmpc_omp_wait_deps(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, ptr [[TMP18]], i32 0, ptr null)
 // CHECK1-NEXT:    call void @__kmpc_omp_task_begin_if0(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP15]])
 // CHECK1-NEXT:    [[TMP26:%.*]] = call i32 @.omp_task_entry..9(i32 [[TMP0]], ptr [[TMP15]]) #[[ATTR3]]
 // CHECK1-NEXT:    call void @__kmpc_omp_task_complete_if0(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP15]])
@@ -404,7 +404,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP26:%.*]] = call i32 @__kmpc_omp_task_with_deps(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP15]], i32 1, ptr [[TMP18]], i32 0, ptr null)
 // CHECK1-NEXT:    br label [[OMP_IF_END7:%.*]]
 // CHECK1:       omp_if.else6:
-// CHECK1-NEXT:    call void @__kmpc_omp_taskwait_deps_51(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, ptr [[TMP18]], i32 0, ptr null, i32 0)
+// CHECK1-NEXT:    call void @__kmpc_omp_wait_deps(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, ptr [[TMP18]], i32 0, ptr null)
 // CHECK1-NEXT:    call void @__kmpc_omp_task_begin_if0(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP15]])
 // CHECK1-NEXT:    [[TMP27:%.*]] = call i32 @.omp_task_entry..17(i32 [[TMP0]], ptr [[TMP15]]) #[[ATTR3]]
 // CHECK1-NEXT:    call void @__kmpc_omp_task_complete_if0(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP15]])
@@ -429,7 +429,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP39:%.*]] = call i32 @__kmpc_omp_task_with_deps(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP28]], i32 1, ptr [[TMP31]], i32 0, ptr null)
 // CHECK1-NEXT:    br label [[OMP_IF_END14:%.*]]
 // CHECK1:       omp_if.else13:
-// CHECK1-NEXT:    call void @__kmpc_omp_taskwait_deps_51(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, ptr [[TMP31]], i32 0, ptr null, i32 0)
+// CHECK1-NEXT:    call void @__kmpc_omp_wait_deps(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, ptr [[TMP31]], i32 0, ptr null)
 // CHECK1-NEXT:    call void @__kmpc_omp_task_begin_if0(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP28]])
 // CHECK1-NEXT:    [[TMP40:%.*]] = call i32 @.omp_task_entry..19(i32 [[TMP0]], ptr [[TMP28]]) #[[ATTR3]]
 // CHECK1-NEXT:    call void @__kmpc_omp_task_complete_if0(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP28]])
@@ -454,7 +454,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP52:%.*]] = call i32 @__kmpc_omp_task_with_deps(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP41]], i32 1, ptr [[TMP44]], i32 0, ptr null)
 // CHECK1-NEXT:    br label [[OMP_IF_END21:%.*]]
 // CHECK1:       omp_if.else20:
-// CHECK1-NEXT:    call void @__kmpc_omp_taskwait_deps_51(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, ptr [[TMP44]], i32 0, ptr null, i32 0)
+// CHECK1-NEXT:    call void @__kmpc_omp_wait_deps(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, ptr [[TMP44]], i32 0, ptr null)
 // CHECK1-NEXT:    call void @__kmpc_omp_task_begin_if0(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP41]])
 // CHECK1-NEXT:    [[TMP53:%.*]] = call i32 @.omp_task_entry..21(i32 [[TMP0]], ptr [[TMP41]]) #[[ATTR3]]
 // CHECK1-NEXT:    call void @__kmpc_omp_task_complete_if0(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP41]])
