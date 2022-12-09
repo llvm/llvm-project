@@ -118,10 +118,6 @@ public:
   /// should be rerun.
   bool resolvedUndefsIn(Function &F);
 
-  void solveWhileResolvedUndefsIn(Module &M);
-
-  void solveWhileResolvedUndefsIn(SmallVectorImpl<Function *> &WorkList);
-
   bool isBlockExecutable(BasicBlock *BB) const;
 
   // isEdgeFeasible - Return true if the control flow edge from the 'From' basic

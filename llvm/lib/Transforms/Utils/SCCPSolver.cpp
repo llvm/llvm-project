@@ -704,26 +704,6 @@ public:
     for (auto &BB : *F)
       BBExecutable.erase(&BB);
   }
-
-  void solveWhileResolvedUndefsIn(Module &M) {
-    bool ResolvedUndefs = true;
-    while (ResolvedUndefs) {
-      solve();
-      ResolvedUndefs = false;
-      for (Function &F : M)
-        ResolvedUndefs |= resolvedUndefsIn(F);
-    }
-  }
-
-  void solveWhileResolvedUndefsIn(SmallVectorImpl<Function *> &WorkList) {
-    bool ResolvedUndefs = true;
-    while (ResolvedUndefs) {
-      solve();
-      ResolvedUndefs = false;
-      for (Function *F : WorkList)
-        ResolvedUndefs |= resolvedUndefsIn(*F);
-    }
-  }
 };
 
 } // namespace llvm
@@ -1791,9 +1771,6 @@ bool SCCPInstVisitor::resolvedUndefsIn(Function &F) {
     }
   }
 
-  LLVM_DEBUG(if (MadeChange) dbgs()
-             << "\nResolved undefs in " << F.getName() << '\n');
-
   return MadeChange;
 }
 
@@ -1855,15 +1832,6 @@ void SCCPSolver::solve() { Visitor->solve(); }
 
 bool SCCPSolver::resolvedUndefsIn(Function &F) {
   return Visitor->resolvedUndefsIn(F);
-}
-
-void SCCPSolver::solveWhileResolvedUndefsIn(Module &M) {
-  Visitor->solveWhileResolvedUndefsIn(M);
-}
-
-void
-SCCPSolver::solveWhileResolvedUndefsIn(SmallVectorImpl<Function *> &WorkList) {
-  Visitor->solveWhileResolvedUndefsIn(WorkList);
 }
 
 bool SCCPSolver::isBlockExecutable(BasicBlock *BB) const {
