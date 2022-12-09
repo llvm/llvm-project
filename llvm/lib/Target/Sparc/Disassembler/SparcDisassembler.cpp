@@ -306,6 +306,9 @@ static DecodeStatus DecodeSWAP(MCInst &Inst, unsigned insn, uint64_t Address,
                                const MCDisassembler *Decoder);
 static DecodeStatus DecodeTRAP(MCInst &Inst, unsigned insn, uint64_t Address,
                                const MCDisassembler *Decoder);
+static DecodeStatus DecodeFIXMEInstruction(MCInst &MI, unsigned insn,
+                                           uint64_t Address,
+                                           const MCDisassembler *Decoder);
 
 #include "SparcGenDisassemblerTables.inc"
 
@@ -589,6 +592,15 @@ static DecodeStatus DecodeReturn(MCInst &MI, unsigned insn, uint64_t Address,
       return status;
   }
   return MCDisassembler::Success;
+}
+
+// This instruction does not have a working decoder, and needs to be
+// fixed. This "fixme" function was introduced to keep the backend compiling,
+// while making changes to tablegen code.
+static DecodeStatus DecodeFIXMEInstruction(MCInst &Inst, unsigned Insn,
+                                           uint64_t Address,
+                                           const MCDisassembler *Decoder) {
+  return MCDisassembler::Fail;
 }
 
 static DecodeStatus DecodeSWAP(MCInst &MI, unsigned insn, uint64_t Address,
