@@ -708,7 +708,7 @@ inline uint8_t getUnitLengthFieldByteSize(DwarfFormat Format) {
 ///
 /// If the form has a fixed byte size, then an Optional with a value will be
 /// returned. If the form is always encoded using a variable length storage
-/// format (ULEB or SLEB numbers or blocks) then None will be returned.
+/// format (ULEB or SLEB numbers or blocks) then std::nullopt will be returned.
 ///
 /// \param Form DWARF form to get the fixed byte size for.
 /// \param Params DWARF parameters to help interpret forms.

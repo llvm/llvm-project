@@ -244,11 +244,11 @@ getOptionalElementCountLoopAttribute(const Loop *TheLoop);
 ///                    <prefix>; commonly used to remove metadata for the
 ///                    applied transformation.
 /// @param AlwaysNew If true, do not try to reuse OrigLoopID and never return
-///                  None.
+///                  std::nullopt.
 ///
 /// @return The loop ID for the after-transformation loop. The following values
 ///         can be returned:
-///         None         : No followup attribute was found; it is up to the
+///         std::nullopt : No followup attribute was found; it is up to the
 ///                        transformation to choose attributes that make sense.
 ///         @p OrigLoopID: The original identifier can be reused.
 ///         nullptr      : The new loop has no attributes.

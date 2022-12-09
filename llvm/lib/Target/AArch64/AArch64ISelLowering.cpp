@@ -4360,7 +4360,7 @@ static SDValue addRequiredExtensionForVectorMULL(SDValue N, SelectionDAG &DAG,
 }
 
 // Returns lane if Op extracts from a two-element vector and lane is constant
-// (i.e., extractelt(<2 x Ty> %v, ConstantLane)), and None otherwise.
+// (i.e., extractelt(<2 x Ty> %v, ConstantLane)), and std::nullopt otherwise.
 static std::optional<uint64_t>
 getConstantLaneNumOfExtractHalfOperand(SDValue &Op) {
   SDNode *OpNode = Op.getNode();

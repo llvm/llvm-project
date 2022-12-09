@@ -750,7 +750,7 @@ public:
   };
 
   /// Return the struct LoopBounds collected if all struct members are found,
-  /// else None.
+  /// else std::nullopt.
   Optional<LoopBounds> getBounds(ScalarEvolution &SE) const;
 
   /// Return the loop induction variable if found, else return nullptr.
