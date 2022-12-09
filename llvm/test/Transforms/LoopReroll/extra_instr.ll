@@ -1,4 +1,4 @@
-; RUN: opt -S  -passes=loop-reroll   %s | FileCheck %s
+; RUN: opt -S -passes=loop-reroll   %s | FileCheck %s
 target triple = "aarch64--linux-gnu"
 
 define void @rerollable1([2 x i32]* nocapture %a) {
