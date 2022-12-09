@@ -10689,11 +10689,11 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
              DAG.getTargetConstant(Pred, dl, MVT::i32)}),
         0);
   }
-  case Intrinsic::ppc_test_data_class_d:
-  case Intrinsic::ppc_test_data_class_f: {
-    unsigned CmprOpc = PPC::XSTSTDCDP;
-    if (IntrinsicID == Intrinsic::ppc_test_data_class_f)
-      CmprOpc = PPC::XSTSTDCSP;
+  case Intrinsic::ppc_test_data_class: {
+    EVT OpVT = Op.getOperand(1).getValueType();
+    unsigned CmprOpc = OpVT == MVT::f128 ? PPC::XSTSTDCQP
+                                         : (OpVT == MVT::f64 ? PPC::XSTSTDCDP
+                                                             : PPC::XSTSTDCSP);
     return SDValue(
         DAG.getMachineNode(
             PPC::SELECT_CC_I4, dl, MVT::i32,
