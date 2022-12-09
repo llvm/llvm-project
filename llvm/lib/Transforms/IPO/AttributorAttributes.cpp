@@ -1072,7 +1072,7 @@ struct AAPointerInfoImpl
     }
 
     auto AccessCB = [&](const Access &Acc, bool Exact) {
-      if ((!FindInterferingWrites || !Acc.isWrite()) &&
+      if ((!FindInterferingWrites || !Acc.isWriteOrAssumption()) &&
           (!FindInterferingReads || !Acc.isRead()))
         return true;
 
@@ -1105,7 +1105,7 @@ struct AAPointerInfoImpl
     // the worst case quadratic as we are looking for another write that will
     // hide the effect of this one.
     auto CanSkipAccess = [&](const Access &Acc, bool Exact) {
-      if ((!Acc.isWrite() ||
+      if ((!Acc.isWriteOrAssumption() ||
            !AA::isPotentiallyReachable(A, *Acc.getLocalInst(), I, QueryingAA,
                                        IsLiveInCalleeCB)) &&
           (!Acc.isRead() ||
@@ -1375,7 +1375,87 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
           AK = AccessKind(AK | AccessKind::AK_MUST);
         else
           AK = AccessKind(AK | AccessKind::AK_MAY);
-        return handleAccess(A, *LoadI, *CurPtr, /* Content */ nullptr, AK,
+        if (!handleAccess(A, *LoadI, *CurPtr, /* Content */ nullptr, AK,
+                          OffsetInfoMap[CurPtr].Offset, Changed,
+                          LoadI->getType()))
+          return false;
+
+        auto IsAssumption = [](Instruction &I) {
+          if (auto *II = dyn_cast<IntrinsicInst>(&I))
+            return II->isAssumeLikeIntrinsic();
+          return false;
+        };
+
+        auto IsImpactedInRange = [&](Instruction *FromI, Instruction *ToI) {
+          // Check if the assumption and the load are executed together without
+          // memory modification.
+          do {
+            if (FromI->mayWriteToMemory() && !IsAssumption(*FromI))
+              return true;
+            FromI = FromI->getNextNonDebugInstruction();
+          } while (FromI && FromI != ToI);
+          return false;
+        };
+
+        BasicBlock *BB = LoadI->getParent();
+        auto IsValidAssume = [&](IntrinsicInst &IntrI) {
+          if (IntrI.getIntrinsicID() != Intrinsic::assume)
+            return false;
+          BasicBlock *IntrBB = IntrI.getParent();
+          if (IntrI.getParent() == BB) {
+            if (IsImpactedInRange(LoadI->getNextNonDebugInstruction(), &IntrI))
+              return false;
+          } else {
+            auto PredIt = pred_begin(IntrBB);
+            if ((*PredIt) != BB)
+              return false;
+            if (++PredIt != pred_end(IntrBB))
+              return false;
+            for (auto *SuccBB : successors(BB)) {
+              if (SuccBB == IntrBB)
+                continue;
+              if (isa<UnreachableInst>(SuccBB->getTerminator()))
+                continue;
+              return false;
+            }
+            if (IsImpactedInRange(LoadI->getNextNonDebugInstruction(),
+                                  BB->getTerminator()))
+              return false;
+            if (IsImpactedInRange(&IntrBB->front(), &IntrI))
+              return false;
+          }
+          return true;
+        };
+
+        std::pair<Value *, IntrinsicInst *> Assumption;
+        for (const Use &LoadU : LoadI->uses()) {
+          if (auto *CmpI = dyn_cast<CmpInst>(LoadU.getUser())) {
+            if (!CmpI->isEquality() || !CmpI->isTrueWhenEqual())
+              continue;
+            for (const Use &CmpU : CmpI->uses()) {
+              if (auto *IntrI = dyn_cast<IntrinsicInst>(CmpU.getUser())) {
+                if (!IsValidAssume(*IntrI))
+                  continue;
+                int Idx = CmpI->getOperandUse(0) == LoadU;
+                Assumption = {CmpI->getOperand(Idx), IntrI};
+                break;
+              }
+            }
+          }
+          if (Assumption.first)
+            break;
+        }
+
+        // Check if we found an assumption associated with this load.
+        if (!Assumption.first || !Assumption.second)
+          return true;
+
+        LLVM_DEBUG(dbgs() << "[AAPointerInfo] Assumption found "
+                          << *Assumption.second << ": " << *LoadI
+                          << " == " << *Assumption.first << "\n");
+
+        return handleAccess(A, *Assumption.second, *CurPtr, Assumption.first,
+                            AccessKind::AK_ASSUMPTION,
                             OffsetInfoMap[CurPtr].Offset, Changed,
                             LoadI->getType());
       }
@@ -1446,6 +1526,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       return false;
     };
     auto EquivalentUseCB = [&](const Use &OldU, const Use &NewU) {
+      assert(OffsetInfoMap.count(OldU) && "Old use should be known already!");
       if (OffsetInfoMap.count(NewU)) {
         LLVM_DEBUG({
           if (!(OffsetInfoMap[NewU] == OffsetInfoMap[OldU])) {
