@@ -797,6 +797,13 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     }
   }
 
+#if !CLANGD_DECISION_FOREST
+  if (RankingModel == clangd::CodeCompleteOptions::DecisionForest) {
+    llvm::errs() << "Clangd was compiled without decision forest support.\n";
+    return 1;
+  }
+#endif
+
   // Setup tracing facilities if CLANGD_TRACE is set. In practice enabling a
   // trace flag in your editor's config is annoying, launching with
   // `CLANGD_TRACE=trace.json vim` is easier.
