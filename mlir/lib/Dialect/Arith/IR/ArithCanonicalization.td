@@ -50,6 +50,17 @@ def AddISubConstantLHS :
         (Arith_SubIOp (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)), $x)>;
 
 //===----------------------------------------------------------------------===//
+// AddUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+// addui_extended(x, y) -> [addi(x, y), x], when the `overflow` result has no
+// uses. Since the 'overflow' result is unused, any replacement value will do.
+def AddUIExtendedToAddI:
+    Pattern<(Arith_AddUIExtendedOp:$res $x, $y),
+             [(Arith_AddIOp $x, $y), (replaceWithValue $x)],
+             [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
+
+//===----------------------------------------------------------------------===//
 // SubIOp
 //===----------------------------------------------------------------------===//
 
