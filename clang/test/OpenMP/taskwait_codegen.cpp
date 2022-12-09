@@ -29,11 +29,11 @@ int main(int argc, char **argv) {
 
 // CHECK-LABEL: @main
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(ptr @{{.+}})
-// CHECK: call i32 @__kmpc_omp_taskwait_51(ptr @{{.+}}, i32 [[GTID]], i32 0)
+// CHECK: call i32 @__kmpc_omp_taskwait(ptr @{{.+}}, i32 [[GTID]])
 
 // CHECK-LABEL: tmain
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(ptr @{{.+}})
-// CHECK: call i32 @__kmpc_omp_taskwait_51(ptr @{{.+}}, i32 [[GTID]], i32 0)
+// CHECK: call i32 @__kmpc_omp_taskwait(ptr @{{.+}}, i32 [[GTID]])
 
 
 #endif
