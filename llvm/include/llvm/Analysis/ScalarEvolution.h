@@ -564,6 +564,8 @@ public:
   const SCEV *getPtrToIntExpr(const SCEV *Op, Type *Ty);
   const SCEV *getTruncateExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
   const SCEV *getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
+  const SCEV *getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
+                                    unsigned Depth = 0);
   const SCEV *getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
   const SCEV *getCastExpr(SCEVTypes Kind, const SCEV *Op, Type *Ty);
   const SCEV *getAnyExtendExpr(const SCEV *Op, Type *Ty);
@@ -1219,6 +1221,45 @@ public:
   /// to be infinite, it must also be undefined.
   bool loopIsFiniteByAssumption(const Loop *L);
 
+  class FoldID {
+    SmallVector<unsigned, 4> Bits;
+
+  public:
+    void addInteger(unsigned long I) { Bits.push_back(I); }
+    void addInteger(unsigned I) { Bits.push_back(I); }
+    void addInteger(int I) { Bits.push_back(I); }
+
+    void addInteger(unsigned long long I) {
+      addInteger(unsigned(I));
+      addInteger(unsigned(I >> 32));
+    }
+
+    void addPointer(const void *Ptr) {
+      // Note: this adds pointers to the hash using sizes and endianness that
+      // depend on the host. It doesn't matter, however, because hashing on
+      // pointer values is inherently unstable. Nothing should depend on the
+      // ordering of nodes in the folding set.
+      static_assert(sizeof(uintptr_t) <= sizeof(unsigned long long),
+                    "unexpected pointer size");
+      addInteger(reinterpret_cast<uintptr_t>(Ptr));
+    }
+
+    unsigned computeHash() const {
+      unsigned Hash = Bits.size();
+      for (unsigned I = 0; I != Bits.size(); ++I)
+        Hash = detail::combineHashValue(Hash, Bits[I]);
+      return Hash;
+    }
+    bool operator==(const FoldID &RHS) const {
+      if (Bits.size() != RHS.Bits.size())
+        return false;
+      for (unsigned I = 0; I != Bits.size(); ++I)
+        if (Bits[I] != RHS.Bits[I])
+          return false;
+      return true;
+    }
+  };
+
 private:
   /// A CallbackVH to arrange for ScalarEvolution to be notified whenever a
   /// Value is deleted.
@@ -1279,6 +1320,11 @@ private:
 
   /// This is a cache of the values we have analyzed so far.
   ValueExprMapType ValueExprMap;
+
+  /// This is a cache for expressions that got folded to a different existing
+  /// SCEV.
+  DenseMap<FoldID, const SCEV *> FoldCache;
+  DenseMap<const SCEV *, SmallVector<FoldID, 2>> FoldCacheUser;
 
   /// Mark predicate values currently being processed by isImpliedCond.
   SmallPtrSet<const Value *, 6> PendingLoopPredicates;
@@ -2305,6 +2351,28 @@ private:
 
   /// The backedge taken count.
   const SCEV *BackedgeCount = nullptr;
+};
+
+template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
+  static inline ScalarEvolution::FoldID getEmptyKey() {
+    ScalarEvolution::FoldID ID;
+    ID.addInteger(~0ULL);
+    return ID;
+  }
+  static inline ScalarEvolution::FoldID getTombstoneKey() {
+    ScalarEvolution::FoldID ID;
+    ID.addInteger(~0ULL - 1ULL);
+    return ID;
+  }
+
+  static unsigned getHashValue(const ScalarEvolution::FoldID &Val) {
+    return Val.computeHash();
+  }
+
+  static bool isEqual(const ScalarEvolution::FoldID &LHS,
+                      const ScalarEvolution::FoldID &RHS) {
+    return LHS == RHS;
+  }
 };
 
 } // end namespace llvm
