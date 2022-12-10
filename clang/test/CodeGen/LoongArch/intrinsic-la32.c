@@ -107,3 +107,157 @@ unsigned int csrxchg_w(unsigned int a, unsigned int b) {
   unsigned int d = __builtin_loongarch_csrxchg_w(a, b, 1);
   return 0;
 }
+
+// LA32-LABEL: @iocsrrd_b(
+// LA32-NEXT:  entry:
+// LA32-NEXT:    [[_1_ADDR_I:%.*]] = alloca i32, align 4
+// LA32-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// LA32-NEXT:    [[B:%.*]] = alloca i8, align 1
+// LA32-NEXT:    [[C:%.*]] = alloca i8, align 1
+// LA32-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
+// LA32-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// LA32-NEXT:    store i32 [[TMP0]], ptr [[_1_ADDR_I]], align 4
+// LA32-NEXT:    [[TMP1:%.*]] = load i32, ptr [[_1_ADDR_I]], align 4
+// LA32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.loongarch.iocsrrd.b(i32 [[TMP1]])
+// LA32-NEXT:    [[CONV_I:%.*]] = trunc i32 [[TMP2]] to i8
+// LA32-NEXT:    store i8 [[CONV_I]], ptr [[B]], align 1
+// LA32-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// LA32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.loongarch.iocsrrd.b(i32 [[TMP3]])
+// LA32-NEXT:    [[CONV:%.*]] = trunc i32 [[TMP4]] to i8
+// LA32-NEXT:    store i8 [[CONV]], ptr [[C]], align 1
+// LA32-NEXT:    ret i8 0
+//
+unsigned char iocsrrd_b(unsigned int a) {
+  unsigned char b = __iocsrrd_b(a);
+  unsigned char c = __builtin_loongarch_iocsrrd_b(a);
+  return 0;
+}
+
+// LA32-LABEL: @iocsrrd_h(
+// LA32-NEXT:  entry:
+// LA32-NEXT:    [[_1_ADDR_I:%.*]] = alloca i32, align 4
+// LA32-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// LA32-NEXT:    [[B:%.*]] = alloca i16, align 2
+// LA32-NEXT:    [[C:%.*]] = alloca i16, align 2
+// LA32-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
+// LA32-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// LA32-NEXT:    store i32 [[TMP0]], ptr [[_1_ADDR_I]], align 4
+// LA32-NEXT:    [[TMP1:%.*]] = load i32, ptr [[_1_ADDR_I]], align 4
+// LA32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.loongarch.iocsrrd.h(i32 [[TMP1]])
+// LA32-NEXT:    [[CONV_I:%.*]] = trunc i32 [[TMP2]] to i16
+// LA32-NEXT:    [[CONV1_I:%.*]] = trunc i16 [[CONV_I]] to i8
+// LA32-NEXT:    [[CONV:%.*]] = zext i8 [[CONV1_I]] to i16
+// LA32-NEXT:    store i16 [[CONV]], ptr [[B]], align 2
+// LA32-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// LA32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.loongarch.iocsrrd.h(i32 [[TMP3]])
+// LA32-NEXT:    [[CONV1:%.*]] = trunc i32 [[TMP4]] to i16
+// LA32-NEXT:    store i16 [[CONV1]], ptr [[C]], align 2
+// LA32-NEXT:    ret i16 0
+//
+unsigned short iocsrrd_h(unsigned int a) {
+  unsigned short b = __iocsrrd_h(a);
+  unsigned short c = __builtin_loongarch_iocsrrd_h(a);
+  return 0;
+}
+
+// LA32-LABEL: @iocsrrd_w(
+// LA32-NEXT:  entry:
+// LA32-NEXT:    [[_1_ADDR_I:%.*]] = alloca i32, align 4
+// LA32-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// LA32-NEXT:    [[B:%.*]] = alloca i32, align 4
+// LA32-NEXT:    [[C:%.*]] = alloca i32, align 4
+// LA32-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
+// LA32-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// LA32-NEXT:    store i32 [[TMP0]], ptr [[_1_ADDR_I]], align 4
+// LA32-NEXT:    [[TMP1:%.*]] = load i32, ptr [[_1_ADDR_I]], align 4
+// LA32-NEXT:    [[TMP2:%.*]] = call i32 @llvm.loongarch.iocsrrd.w(i32 [[TMP1]])
+// LA32-NEXT:    store i32 [[TMP2]], ptr [[B]], align 4
+// LA32-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// LA32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.loongarch.iocsrrd.w(i32 [[TMP3]])
+// LA32-NEXT:    store i32 [[TMP4]], ptr [[C]], align 4
+// LA32-NEXT:    ret i32 0
+//
+unsigned int iocsrrd_w(unsigned int a) {
+  unsigned int b = __iocsrrd_w(a);
+  unsigned int c = __builtin_loongarch_iocsrrd_w(a);
+  return 0;
+}
+
+// LA32-LABEL: @iocsrwr_b(
+// LA32-NEXT:  entry:
+// LA32-NEXT:    [[_1_ADDR_I:%.*]] = alloca i8, align 1
+// LA32-NEXT:    [[_2_ADDR_I:%.*]] = alloca i32, align 4
+// LA32-NEXT:    [[A_ADDR:%.*]] = alloca i8, align 1
+// LA32-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// LA32-NEXT:    store i8 [[A:%.*]], ptr [[A_ADDR]], align 1
+// LA32-NEXT:    store i32 [[B:%.*]], ptr [[B_ADDR]], align 4
+// LA32-NEXT:    [[TMP0:%.*]] = load i8, ptr [[A_ADDR]], align 1
+// LA32-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B_ADDR]], align 4
+// LA32-NEXT:    store i8 [[TMP0]], ptr [[_1_ADDR_I]], align 1
+// LA32-NEXT:    store i32 [[TMP1]], ptr [[_2_ADDR_I]], align 4
+// LA32-NEXT:    [[TMP2:%.*]] = load i8, ptr [[_1_ADDR_I]], align 1
+// LA32-NEXT:    [[CONV_I:%.*]] = zext i8 [[TMP2]] to i32
+// LA32-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_2_ADDR_I]], align 4
+// LA32-NEXT:    call void @llvm.loongarch.iocsrwr.b(i32 [[CONV_I]], i32 [[TMP3]])
+// LA32-NEXT:    [[TMP4:%.*]] = load i8, ptr [[A_ADDR]], align 1
+// LA32-NEXT:    [[CONV:%.*]] = zext i8 [[TMP4]] to i32
+// LA32-NEXT:    [[TMP5:%.*]] = load i32, ptr [[B_ADDR]], align 4
+// LA32-NEXT:    call void @llvm.loongarch.iocsrwr.b(i32 [[CONV]], i32 [[TMP5]])
+// LA32-NEXT:    ret void
+//
+void iocsrwr_b(unsigned char a, unsigned int b) {
+  __iocsrwr_b(a, b);
+  __builtin_loongarch_iocsrwr_b(a, b);
+}
+
+// LA32-LABEL: @iocsrwr_h(
+// LA32-NEXT:  entry:
+// LA32-NEXT:    [[_1_ADDR_I:%.*]] = alloca i16, align 2
+// LA32-NEXT:    [[_2_ADDR_I:%.*]] = alloca i32, align 4
+// LA32-NEXT:    [[A_ADDR:%.*]] = alloca i16, align 2
+// LA32-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// LA32-NEXT:    store i16 [[A:%.*]], ptr [[A_ADDR]], align 2
+// LA32-NEXT:    store i32 [[B:%.*]], ptr [[B_ADDR]], align 4
+// LA32-NEXT:    [[TMP0:%.*]] = load i16, ptr [[A_ADDR]], align 2
+// LA32-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B_ADDR]], align 4
+// LA32-NEXT:    store i16 [[TMP0]], ptr [[_1_ADDR_I]], align 2
+// LA32-NEXT:    store i32 [[TMP1]], ptr [[_2_ADDR_I]], align 4
+// LA32-NEXT:    [[TMP2:%.*]] = load i16, ptr [[_1_ADDR_I]], align 2
+// LA32-NEXT:    [[CONV_I:%.*]] = zext i16 [[TMP2]] to i32
+// LA32-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_2_ADDR_I]], align 4
+// LA32-NEXT:    call void @llvm.loongarch.iocsrwr.h(i32 [[CONV_I]], i32 [[TMP3]])
+// LA32-NEXT:    [[TMP4:%.*]] = load i16, ptr [[A_ADDR]], align 2
+// LA32-NEXT:    [[CONV:%.*]] = zext i16 [[TMP4]] to i32
+// LA32-NEXT:    [[TMP5:%.*]] = load i32, ptr [[B_ADDR]], align 4
+// LA32-NEXT:    call void @llvm.loongarch.iocsrwr.h(i32 [[CONV]], i32 [[TMP5]])
+// LA32-NEXT:    ret void
+//
+void iocsrwr_h(unsigned short a, unsigned int b) {
+  __iocsrwr_h(a, b);
+  __builtin_loongarch_iocsrwr_h(a, b);
+}
+
+// LA32-LABEL: @iocsrwr_w(
+// LA32-NEXT:  entry:
+// LA32-NEXT:    [[_1_ADDR_I:%.*]] = alloca i32, align 4
+// LA32-NEXT:    [[_2_ADDR_I:%.*]] = alloca i32, align 4
+// LA32-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// LA32-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// LA32-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
+// LA32-NEXT:    store i32 [[B:%.*]], ptr [[B_ADDR]], align 4
+// LA32-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// LA32-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B_ADDR]], align 4
+// LA32-NEXT:    store i32 [[TMP0]], ptr [[_1_ADDR_I]], align 4
+// LA32-NEXT:    store i32 [[TMP1]], ptr [[_2_ADDR_I]], align 4
+// LA32-NEXT:    [[TMP2:%.*]] = load i32, ptr [[_1_ADDR_I]], align 4
+// LA32-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_2_ADDR_I]], align 4
+// LA32-NEXT:    call void @llvm.loongarch.iocsrwr.w(i32 [[TMP2]], i32 [[TMP3]])
+// LA32-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// LA32-NEXT:    [[TMP5:%.*]] = load i32, ptr [[B_ADDR]], align 4
+// LA32-NEXT:    call void @llvm.loongarch.iocsrwr.w(i32 [[TMP4]], i32 [[TMP5]])
+// LA32-NEXT:    ret void
+//
+void iocsrwr_w(unsigned int a, unsigned int b) {
+  __iocsrwr_w(a, b);
+  __builtin_loongarch_iocsrwr_w(a, b);
+}
