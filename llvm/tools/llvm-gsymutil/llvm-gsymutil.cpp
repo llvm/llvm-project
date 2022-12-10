@@ -41,6 +41,7 @@
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/DebugInfo/GSYM/ObjectFileTransformer.h"
+#include <optional>
 
 using namespace llvm;
 using namespace gsym;
@@ -480,7 +481,7 @@ int main(int argc, char const *argv[]) {
 
     std::string InputLine;
     std::string CurrentGSYMPath;
-    llvm::Optional<Expected<GsymReader>> CurrentGsym;
+    std::optional<Expected<GsymReader>> CurrentGsym;
 
     while (std::getline(std::cin, InputLine)) {
       // Strip newline characters.
