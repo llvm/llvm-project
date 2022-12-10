@@ -8,9 +8,8 @@ declare void @use.i8(i8)
 
 define i8 @andcond(i1 %inner.cond, i1 %alt.cond, i8 %inner.sel.trueval, i8 %inner.sel.falseval, i8 %outer.sel.trueval) {
 ; CHECK-LABEL: @andcond(
-; CHECK-NEXT:    [[OUTER_COND:%.*]] = select i1 [[INNER_COND:%.*]], i1 [[ALT_COND:%.*]], i1 false
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[INNER_COND]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_FALSEVAL:%.*]]
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[OUTER_COND]], i8 [[OUTER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[ALT_COND:%.*]], i8 [[OUTER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_TRUEVAL:%.*]]
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[INNER_COND:%.*]], i8 [[INNER_SEL]], i8 [[INNER_SEL_FALSEVAL:%.*]]
 ; CHECK-NEXT:    ret i8 [[OUTER_SEL]]
 ;
   %outer.cond = select i1 %inner.cond, i1 %alt.cond, i1 false ; and %inner.cond, %alt.cond
@@ -20,9 +19,8 @@ define i8 @andcond(i1 %inner.cond, i1 %alt.cond, i8 %inner.sel.trueval, i8 %inne
 }
 define i8 @orcond(i1 %inner.cond, i1 %alt.cond, i8 %inner.sel.trueval, i8 %inner.sel.falseval, i8 %outer.sel.falseval) {
 ; CHECK-LABEL: @orcond(
-; CHECK-NEXT:    [[OUTER_COND:%.*]] = select i1 [[INNER_COND:%.*]], i1 true, i1 [[ALT_COND:%.*]]
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[INNER_COND]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_FALSEVAL:%.*]]
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[OUTER_COND]], i8 [[INNER_SEL]], i8 [[OUTER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[ALT_COND:%.*]], i8 [[INNER_SEL_FALSEVAL:%.*]], i8 [[OUTER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[INNER_COND:%.*]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL]]
 ; CHECK-NEXT:    ret i8 [[OUTER_SEL]]
 ;
   %outer.cond = select i1 %inner.cond, i1 true, i1 %alt.cond ; or %inner.cond, %alt.cond
@@ -37,8 +35,8 @@ define i8 @andcond.extrause0(i1 %inner.cond, i1 %alt.cond, i8 %inner.sel.trueval
 ; CHECK-LABEL: @andcond.extrause0(
 ; CHECK-NEXT:    [[OUTER_COND:%.*]] = select i1 [[INNER_COND:%.*]], i1 [[ALT_COND:%.*]], i1 false
 ; CHECK-NEXT:    call void @use.i1(i1 [[OUTER_COND]])
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[INNER_COND]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_FALSEVAL:%.*]]
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[OUTER_COND]], i8 [[OUTER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[ALT_COND]], i8 [[OUTER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_TRUEVAL:%.*]]
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[INNER_COND]], i8 [[INNER_SEL]], i8 [[INNER_SEL_FALSEVAL:%.*]]
 ; CHECK-NEXT:    ret i8 [[OUTER_SEL]]
 ;
   %outer.cond = select i1 %inner.cond, i1 %alt.cond, i1 false
@@ -51,8 +49,8 @@ define i8 @orcond.extrause0(i1 %inner.cond, i1 %alt.cond, i8 %inner.sel.trueval,
 ; CHECK-LABEL: @orcond.extrause0(
 ; CHECK-NEXT:    [[OUTER_COND:%.*]] = select i1 [[INNER_COND:%.*]], i1 true, i1 [[ALT_COND:%.*]]
 ; CHECK-NEXT:    call void @use.i1(i1 [[OUTER_COND]])
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[INNER_COND]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_FALSEVAL:%.*]]
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[OUTER_COND]], i8 [[INNER_SEL]], i8 [[OUTER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[ALT_COND]], i8 [[INNER_SEL_FALSEVAL:%.*]], i8 [[OUTER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[INNER_COND]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL]]
 ; CHECK-NEXT:    ret i8 [[OUTER_SEL]]
 ;
   %outer.cond = select i1 %inner.cond, i1 true, i1 %alt.cond
@@ -64,10 +62,10 @@ define i8 @orcond.extrause0(i1 %inner.cond, i1 %alt.cond, i8 %inner.sel.trueval,
 
 define i8 @andcond.extrause1(i1 %inner.cond, i1 %alt.cond, i8 %inner.sel.trueval, i8 %inner.sel.falseval, i8 %outer.sel.trueval) {
 ; CHECK-LABEL: @andcond.extrause1(
-; CHECK-NEXT:    [[OUTER_COND:%.*]] = select i1 [[INNER_COND:%.*]], i1 [[ALT_COND:%.*]], i1 false
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[INNER_COND]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_FALSEVAL:%.*]]
-; CHECK-NEXT:    call void @use.i8(i8 [[INNER_SEL]])
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[OUTER_COND]], i8 [[OUTER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[INNER_COND:%.*]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    call void @use.i8(i8 [[TMP1]])
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[ALT_COND:%.*]], i8 [[OUTER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_TRUEVAL]]
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[INNER_COND]], i8 [[INNER_SEL]], i8 [[INNER_SEL_FALSEVAL]]
 ; CHECK-NEXT:    ret i8 [[OUTER_SEL]]
 ;
   %outer.cond = select i1 %inner.cond, i1 %alt.cond, i1 false
@@ -78,10 +76,10 @@ define i8 @andcond.extrause1(i1 %inner.cond, i1 %alt.cond, i8 %inner.sel.trueval
 }
 define i8 @orcond.extrause1(i1 %inner.cond, i1 %alt.cond, i8 %inner.sel.trueval, i8 %inner.sel.falseval, i8 %outer.sel.falseval) {
 ; CHECK-LABEL: @orcond.extrause1(
-; CHECK-NEXT:    [[OUTER_COND:%.*]] = select i1 [[INNER_COND:%.*]], i1 true, i1 [[ALT_COND:%.*]]
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[INNER_COND]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_FALSEVAL:%.*]]
-; CHECK-NEXT:    call void @use.i8(i8 [[INNER_SEL]])
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[OUTER_COND]], i8 [[INNER_SEL]], i8 [[OUTER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[INNER_COND:%.*]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    call void @use.i8(i8 [[TMP1]])
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[ALT_COND:%.*]], i8 [[INNER_SEL_FALSEVAL]], i8 [[OUTER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[INNER_COND]], i8 [[INNER_SEL_TRUEVAL]], i8 [[INNER_SEL]]
 ; CHECK-NEXT:    ret i8 [[OUTER_SEL]]
 ;
   %outer.cond = select i1 %inner.cond, i1 true, i1 %alt.cond
@@ -248,10 +246,9 @@ define i1 @orcond.different.inner.cond.inverted.in.inner.sel(i1 %inner.cond.v0, 
 ; In %outer.sel, %outer.cond is inverted
 define i1 @andcond.001.inv.outer.cond(i1 %inner.cond, i1 %alt.cond, i1 %inner.sel.trueval, i1 %inner.sel.falseval, i1 %outer.sel.trueval) {
 ; CHECK-LABEL: @andcond.001.inv.outer.cond(
-; CHECK-NEXT:    [[OUTER_COND:%.*]] = select i1 [[INNER_COND:%.*]], i1 [[ALT_COND:%.*]], i1 false
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[INNER_COND]], i1 [[INNER_SEL_TRUEVAL:%.*]], i1 [[INNER_SEL_FALSEVAL:%.*]]
-; CHECK-NEXT:    [[NOT_OUTER_COND:%.*]] = xor i1 [[OUTER_COND]], true
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[NOT_OUTER_COND]], i1 [[INNER_SEL]], i1 false
+; CHECK-NEXT:    [[NOT_ALT_COND:%.*]] = xor i1 [[ALT_COND:%.*]], true
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[NOT_ALT_COND]], i1 [[INNER_SEL_TRUEVAL:%.*]], i1 false
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[INNER_COND:%.*]], i1 [[INNER_SEL]], i1 [[INNER_SEL_FALSEVAL:%.*]]
 ; CHECK-NEXT:    ret i1 [[OUTER_SEL]]
 ;
   %outer.cond = select i1 %inner.cond, i1 %alt.cond, i1 false ; and %inner.cond, %alt.cond
@@ -262,10 +259,9 @@ define i1 @andcond.001.inv.outer.cond(i1 %inner.cond, i1 %alt.cond, i1 %inner.se
 }
 define i1 @orcond.001.inv.outer.cond(i1 %inner.cond, i1 %alt.cond, i1 %inner.sel.trueval, i1 %inner.sel.falseval, i1 %outer.sel.falseval) {
 ; CHECK-LABEL: @orcond.001.inv.outer.cond(
-; CHECK-NEXT:    [[OUTER_COND:%.*]] = select i1 [[INNER_COND:%.*]], i1 true, i1 [[ALT_COND:%.*]]
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[INNER_COND]], i1 [[INNER_SEL_TRUEVAL:%.*]], i1 [[INNER_SEL_FALSEVAL:%.*]]
-; CHECK-NEXT:    [[NOT_OUTER_COND:%.*]] = xor i1 [[OUTER_COND]], true
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[NOT_OUTER_COND]], i1 true, i1 [[INNER_SEL]]
+; CHECK-NEXT:    [[NOT_ALT_COND:%.*]] = xor i1 [[ALT_COND:%.*]], true
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[NOT_ALT_COND]], i1 true, i1 [[INNER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[INNER_COND:%.*]], i1 [[INNER_SEL_TRUEVAL:%.*]], i1 [[INNER_SEL]]
 ; CHECK-NEXT:    ret i1 [[OUTER_SEL]]
 ;
   %outer.cond = select i1 %inner.cond, i1 true, i1 %alt.cond ; or %inner.cond, %alt.cond
@@ -278,10 +274,8 @@ define i1 @orcond.001.inv.outer.cond(i1 %inner.cond, i1 %alt.cond, i1 %inner.sel
 ; In %inner.sel, %inner.cond is inverted
 define i1 @andcond.010.inv.inner.cond.in.inner.sel(i1 %inner.cond, i1 %alt.cond, i1 %inner.sel.trueval, i1 %inner.sel.falseval, i1 %outer.sel.trueval) {
 ; CHECK-LABEL: @andcond.010.inv.inner.cond.in.inner.sel(
-; CHECK-NEXT:    [[OUTER_COND:%.*]] = select i1 [[INNER_COND:%.*]], i1 [[ALT_COND:%.*]], i1 false
-; CHECK-NEXT:    [[NOT_INNER_COND:%.*]] = xor i1 [[INNER_COND]], true
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[NOT_INNER_COND]], i1 [[INNER_SEL_FALSEVAL:%.*]], i1 false
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[OUTER_COND]], i1 [[OUTER_SEL_TRUEVAL:%.*]], i1 [[INNER_SEL]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[ALT_COND:%.*]], i1 [[OUTER_SEL_TRUEVAL:%.*]], i1 false
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[INNER_COND:%.*]], i1 [[INNER_SEL]], i1 [[INNER_SEL_FALSEVAL:%.*]]
 ; CHECK-NEXT:    ret i1 [[OUTER_SEL]]
 ;
   %outer.cond = select i1 %inner.cond, i1 %alt.cond, i1 false ; and %inner.cond, %alt.cond
@@ -292,10 +286,8 @@ define i1 @andcond.010.inv.inner.cond.in.inner.sel(i1 %inner.cond, i1 %alt.cond,
 }
 define i1 @orcond.010.inv.inner.cond.in.inner.sel(i1 %inner.cond, i1 %alt.cond, i1 %inner.sel.trueval, i1 %inner.sel.falseval, i1 %outer.sel.falseval) {
 ; CHECK-LABEL: @orcond.010.inv.inner.cond.in.inner.sel(
-; CHECK-NEXT:    [[OUTER_COND:%.*]] = select i1 [[INNER_COND:%.*]], i1 true, i1 [[ALT_COND:%.*]]
-; CHECK-NEXT:    [[NOT_INNER_COND:%.*]] = xor i1 [[INNER_COND]], true
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[NOT_INNER_COND]], i1 true, i1 [[INNER_SEL_TRUEVAL:%.*]]
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[OUTER_COND]], i1 [[INNER_SEL]], i1 [[OUTER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[ALT_COND:%.*]], i1 true, i1 [[OUTER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[INNER_COND:%.*]], i1 [[INNER_SEL_TRUEVAL:%.*]], i1 [[INNER_SEL]]
 ; CHECK-NEXT:    ret i1 [[OUTER_SEL]]
 ;
   %outer.cond = select i1 %inner.cond, i1 true, i1 %alt.cond ; or %inner.cond, %alt.cond
@@ -308,10 +300,8 @@ define i1 @orcond.010.inv.inner.cond.in.inner.sel(i1 %inner.cond, i1 %alt.cond, 
 ; In %outer.cond, %inner.cond is inverted
 define i8 @andcond.100.inv.inner.cond.in.outer.cond(i1 %inner.cond, i1 %alt.cond, i8 %inner.sel.trueval, i8 %inner.sel.falseval, i8 %outer.sel.trueval) {
 ; CHECK-LABEL: @andcond.100.inv.inner.cond.in.outer.cond(
-; CHECK-NEXT:    [[NOT_INNER_COND:%.*]] = xor i1 [[INNER_COND:%.*]], true
-; CHECK-NEXT:    [[OUTER_COND:%.*]] = select i1 [[NOT_INNER_COND]], i1 [[ALT_COND:%.*]], i1 false
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[INNER_COND]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_FALSEVAL:%.*]]
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[OUTER_COND]], i8 [[OUTER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[ALT_COND:%.*]], i8 [[OUTER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[INNER_COND:%.*]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL]]
 ; CHECK-NEXT:    ret i8 [[OUTER_SEL]]
 ;
   %not.inner.cond = xor i1 %inner.cond, -1
@@ -322,10 +312,8 @@ define i8 @andcond.100.inv.inner.cond.in.outer.cond(i1 %inner.cond, i1 %alt.cond
 }
 define i8 @orcond.100.inv.inner.cond.in.outer.cond(i1 %inner.cond, i1 %alt.cond, i8 %inner.sel.trueval, i8 %inner.sel.falseval, i8 %outer.sel.falseval) {
 ; CHECK-LABEL: @orcond.100.inv.inner.cond.in.outer.cond(
-; CHECK-NEXT:    [[NOT_INNER_COND:%.*]] = xor i1 [[INNER_COND:%.*]], true
-; CHECK-NEXT:    [[OUTER_COND:%.*]] = select i1 [[NOT_INNER_COND]], i1 true, i1 [[ALT_COND:%.*]]
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[INNER_COND]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[INNER_SEL_FALSEVAL:%.*]]
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[OUTER_COND]], i8 [[INNER_SEL]], i8 [[OUTER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[ALT_COND:%.*]], i8 [[INNER_SEL_TRUEVAL:%.*]], i8 [[OUTER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[INNER_COND:%.*]], i8 [[INNER_SEL]], i8 [[INNER_SEL_FALSEVAL:%.*]]
 ; CHECK-NEXT:    ret i8 [[OUTER_SEL]]
 ;
   %not.inner.cond = xor i1 %inner.cond, -1
@@ -339,12 +327,13 @@ define i8 @orcond.100.inv.inner.cond.in.outer.cond(i1 %inner.cond, i1 %alt.cond,
 ; In %inner.sel, %inner.cond is inverted
 define i1 @andcond.011.inv.outer.cond.inv.inner.cond.in.inner.sel(i1 %inner.cond, i1 %alt.cond, i1 %inner.sel.trueval, i1 %inner.sel.falseval, i1 %outer.sel.trueval) {
 ; CHECK-LABEL: @andcond.011.inv.outer.cond.inv.inner.cond.in.inner.sel(
-; CHECK-NEXT:    [[OUTER_COND:%.*]] = select i1 [[INNER_COND:%.*]], i1 [[ALT_COND:%.*]], i1 false
-; CHECK-NEXT:    [[NOT_INNER_COND:%.*]] = xor i1 [[INNER_COND]], true
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[NOT_INNER_COND]], i1 true, i1 [[INNER_SEL_FALSEVAL:%.*]]
-; CHECK-NEXT:    [[NOT_OUTER_COND:%.*]] = xor i1 [[OUTER_COND]], true
-; CHECK-NEXT:    call void @use.i1(i1 [[INNER_SEL]])
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[NOT_OUTER_COND]], i1 [[INNER_SEL]], i1 false
+; CHECK-NEXT:    [[NOT_INNER_COND:%.*]] = xor i1 [[INNER_COND:%.*]], true
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[NOT_INNER_COND]], i1 true, i1 [[INNER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    call void @use.i1(i1 [[TMP1]])
+; CHECK-NEXT:    [[NOT_ALT_COND:%.*]] = xor i1 [[ALT_COND:%.*]], true
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[NOT_ALT_COND]], i1 [[INNER_SEL_FALSEVAL]], i1 false
+; CHECK-NEXT:    [[NOT_INNER_COND1:%.*]] = xor i1 [[INNER_COND]], true
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[NOT_INNER_COND1]], i1 true, i1 [[INNER_SEL]]
 ; CHECK-NEXT:    ret i1 [[OUTER_SEL]]
 ;
   %outer.cond = select i1 %inner.cond, i1 %alt.cond, i1 false ; and %inner.cond, %alt.cond
@@ -357,12 +346,13 @@ define i1 @andcond.011.inv.outer.cond.inv.inner.cond.in.inner.sel(i1 %inner.cond
 }
 define i1 @orcond.011.inv.outer.cond.inv.inner.cond.in.inner.sel(i1 %inner.cond, i1 %alt.cond, i1 %inner.sel.trueval, i1 %inner.sel.falseval, i1 %outer.sel.falseval) {
 ; CHECK-LABEL: @orcond.011.inv.outer.cond.inv.inner.cond.in.inner.sel(
-; CHECK-NEXT:    [[OUTER_COND:%.*]] = select i1 [[INNER_COND:%.*]], i1 true, i1 [[ALT_COND:%.*]]
-; CHECK-NEXT:    [[NOT_INNER_COND:%.*]] = xor i1 [[INNER_COND]], true
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[NOT_INNER_COND]], i1 [[INNER_SEL_TRUEVAL:%.*]], i1 false
-; CHECK-NEXT:    call void @use.i1(i1 [[INNER_SEL]])
-; CHECK-NEXT:    [[NOT_OUTER_COND:%.*]] = xor i1 [[OUTER_COND]], true
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[NOT_OUTER_COND]], i1 true, i1 [[INNER_SEL]]
+; CHECK-NEXT:    [[NOT_INNER_COND:%.*]] = xor i1 [[INNER_COND:%.*]], true
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[NOT_INNER_COND]], i1 [[INNER_SEL_TRUEVAL:%.*]], i1 false
+; CHECK-NEXT:    call void @use.i1(i1 [[TMP1]])
+; CHECK-NEXT:    [[NOT_ALT_COND:%.*]] = xor i1 [[ALT_COND:%.*]], true
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[NOT_ALT_COND]], i1 true, i1 [[INNER_SEL_TRUEVAL]]
+; CHECK-NEXT:    [[NOT_INNER_COND1:%.*]] = xor i1 [[INNER_COND]], true
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[NOT_INNER_COND1]], i1 [[INNER_SEL]], i1 false
 ; CHECK-NEXT:    ret i1 [[OUTER_SEL]]
 ;
   %outer.cond = select i1 %inner.cond, i1 true, i1 %alt.cond ; or %inner.cond, %alt.cond
@@ -378,11 +368,11 @@ define i1 @orcond.011.inv.outer.cond.inv.inner.cond.in.inner.sel(i1 %inner.cond,
 ; In %outer.cond, %inner.cond is inverted
 define i1 @andcond.101.inv.outer.cond.inv.inner.cond.in.outer.cond(i1 %inner.cond, i1 %alt.cond, i1 %inner.sel.trueval, i1 %inner.sel.falseval, i1 %outer.sel.trueval) {
 ; CHECK-LABEL: @andcond.101.inv.outer.cond.inv.inner.cond.in.outer.cond(
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[INNER_COND:%.*]], i1 [[INNER_SEL_TRUEVAL:%.*]], i1 [[INNER_SEL_FALSEVAL:%.*]]
-; CHECK-NEXT:    call void @use.i1(i1 [[INNER_SEL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[INNER_COND:%.*]], i1 [[INNER_SEL_TRUEVAL:%.*]], i1 [[INNER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    call void @use.i1(i1 [[TMP1]])
 ; CHECK-NEXT:    [[ALT_COND_NOT:%.*]] = xor i1 [[ALT_COND:%.*]], true
-; CHECK-NEXT:    [[NOT_OUTER_COND:%.*]] = select i1 [[INNER_COND]], i1 true, i1 [[ALT_COND_NOT]]
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[NOT_OUTER_COND]], i1 [[INNER_SEL]], i1 false
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[ALT_COND_NOT]], i1 [[INNER_SEL_FALSEVAL]], i1 false
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[INNER_COND]], i1 [[INNER_SEL_TRUEVAL]], i1 [[INNER_SEL]]
 ; CHECK-NEXT:    ret i1 [[OUTER_SEL]]
 ;
   %not.inner.cond = xor i1 %inner.cond, -1
@@ -395,11 +385,11 @@ define i1 @andcond.101.inv.outer.cond.inv.inner.cond.in.outer.cond(i1 %inner.con
 }
 define i1 @orcond.101.inv.outer.cond.inv.inner.cond.in.outer.cond(i1 %inner.cond, i1 %alt.cond, i1 %inner.sel.trueval, i1 %inner.sel.falseval, i1 %outer.sel.falseval) {
 ; CHECK-LABEL: @orcond.101.inv.outer.cond.inv.inner.cond.in.outer.cond(
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[INNER_COND:%.*]], i1 [[INNER_SEL_TRUEVAL:%.*]], i1 [[INNER_SEL_FALSEVAL:%.*]]
-; CHECK-NEXT:    call void @use.i1(i1 [[INNER_SEL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[INNER_COND:%.*]], i1 [[INNER_SEL_TRUEVAL:%.*]], i1 [[INNER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    call void @use.i1(i1 [[TMP1]])
 ; CHECK-NEXT:    [[ALT_COND_NOT:%.*]] = xor i1 [[ALT_COND:%.*]], true
-; CHECK-NEXT:    [[NOT_OUTER_COND:%.*]] = select i1 [[INNER_COND]], i1 [[ALT_COND_NOT]], i1 false
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[NOT_OUTER_COND]], i1 true, i1 [[INNER_SEL]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[ALT_COND_NOT]], i1 true, i1 [[INNER_SEL_TRUEVAL]]
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[INNER_COND]], i1 [[INNER_SEL]], i1 [[INNER_SEL_FALSEVAL]]
 ; CHECK-NEXT:    ret i1 [[OUTER_SEL]]
 ;
   %not.inner.cond = xor i1 %inner.cond, -1
@@ -416,10 +406,8 @@ define i1 @orcond.101.inv.outer.cond.inv.inner.cond.in.outer.cond(i1 %inner.cond
 define i1 @andcond.110.inv.inner.cond.in.inner.sel.inv.inner.cond.in.outer.cond(i1 %inner.cond, i1 %alt.cond, i1 %inner.sel.trueval, i1 %inner.sel.falseval, i1 %outer.sel.trueval) {
 ; CHECK-LABEL: @andcond.110.inv.inner.cond.in.inner.sel.inv.inner.cond.in.outer.cond(
 ; CHECK-NEXT:    [[NOT_INNER_COND_0:%.*]] = xor i1 [[INNER_COND:%.*]], true
-; CHECK-NEXT:    [[OUTER_COND:%.*]] = select i1 [[NOT_INNER_COND_0]], i1 [[ALT_COND:%.*]], i1 false
-; CHECK-NEXT:    [[NOT_INNER_COND_1:%.*]] = xor i1 [[INNER_COND]], true
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[NOT_INNER_COND_1]], i1 [[INNER_SEL_FALSEVAL:%.*]], i1 false
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[OUTER_COND]], i1 [[OUTER_SEL_TRUEVAL:%.*]], i1 [[INNER_SEL]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[ALT_COND:%.*]], i1 [[OUTER_SEL_TRUEVAL:%.*]], i1 [[INNER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[NOT_INNER_COND_0]], i1 [[INNER_SEL]], i1 false
 ; CHECK-NEXT:    ret i1 [[OUTER_SEL]]
 ;
   %not.inner.cond.0 = xor i1 %inner.cond, -1
@@ -432,10 +420,8 @@ define i1 @andcond.110.inv.inner.cond.in.inner.sel.inv.inner.cond.in.outer.cond(
 define i1 @orcond.110.inv.inner.cond.in.inner.sel.inv.inner.cond.in.outer.cond(i1 %inner.cond, i1 %alt.cond, i1 %inner.sel.trueval, i1 %inner.sel.falseval, i1 %outer.sel.falseval) {
 ; CHECK-LABEL: @orcond.110.inv.inner.cond.in.inner.sel.inv.inner.cond.in.outer.cond(
 ; CHECK-NEXT:    [[NOT_INNER_COND_0:%.*]] = xor i1 [[INNER_COND:%.*]], true
-; CHECK-NEXT:    [[OUTER_COND:%.*]] = select i1 [[NOT_INNER_COND_0]], i1 true, i1 [[ALT_COND:%.*]]
-; CHECK-NEXT:    [[NOT_INNER_COND_1:%.*]] = xor i1 [[INNER_COND]], true
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[NOT_INNER_COND_1]], i1 true, i1 [[INNER_SEL_TRUEVAL:%.*]]
-; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[OUTER_COND]], i1 [[INNER_SEL]], i1 [[OUTER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select i1 [[ALT_COND:%.*]], i1 [[INNER_SEL_TRUEVAL:%.*]], i1 [[OUTER_SEL_FALSEVAL:%.*]]
+; CHECK-NEXT:    [[OUTER_SEL:%.*]] = select i1 [[NOT_INNER_COND_0]], i1 true, i1 [[INNER_SEL]]
 ; CHECK-NEXT:    ret i1 [[OUTER_SEL]]
 ;
   %not.inner.cond.0 = xor i1 %inner.cond, -1
