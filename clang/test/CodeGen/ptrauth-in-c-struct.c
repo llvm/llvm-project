@@ -123,7 +123,7 @@ void test_parameter_SA(SA a) {
 // CHECK: %[[V0:.*]] = load %[[STRUCT_SA]]*, %[[STRUCT_SA]]** %[[A_ADDR]], align 8
 // CHECK: %[[V1:.*]] = bitcast %[[STRUCT_SA]]* %[[AGG_TMP]] to i8**
 // CHECK: %[[V2:.*]] = bitcast %[[STRUCT_SA]]* %[[V0]] to i8**
-// CHECK: call void @__copy_constructor_8_8_t0w4_pa1_50_8(i8** %[[V1]], i8** %[[V2]]) #5
+// CHECK: call void @__copy_constructor_8_8_t0w4_pa1_50_8(i8** %[[V1]], i8** %[[V2]])
 // CHECK: call void @calleeSA(%[[STRUCT_SA]]* noundef %[[AGG_TMP]])
 // CHECK-NOT: call
 // CHECK: ret void
@@ -138,7 +138,7 @@ void test_argument_SA(SA *a) {
 // CHECK: %[[V0:.*]] = load %[[STRUCT_SA]]*, %[[STRUCT_SA]]** %[[A_ADDR]], align 8
 // CHECK: %[[V1:.*]] = bitcast %[[STRUCT_SA]]* %[[AGG_RESULT]] to i8**
 // CHECK: %[[V2:.*]] = bitcast %[[STRUCT_SA]]* %[[V0]] to i8**
-// CHECK: call void @__copy_constructor_8_8_t0w4_pa1_50_8(i8** %[[V1]], i8** %[[V2]]) #5
+// CHECK: call void @__copy_constructor_8_8_t0w4_pa1_50_8(i8** %[[V1]], i8** %[[V2]])
 // CHECK-NOT: call
 // CHECK: ret void
 
