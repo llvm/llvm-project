@@ -5805,8 +5805,10 @@ static bool hasNonZeroAVL(SDValue AVL) {
 
 /// Helper to lower a reduction sequence of the form:
 /// scalar = reduce_op vec, scalar_start
-static SDValue lowerReductionSeq(unsigned RVVOpcode, SDValue StartValue, SDValue Vec, SDValue Mask, SDValue VL,
-                                 SDLoc DL, SelectionDAG &DAG, const RISCVSubtarget &Subtarget) {
+static SDValue lowerReductionSeq(unsigned RVVOpcode, SDValue StartValue,
+                                 SDValue Vec, SDValue Mask, SDValue VL,
+                                 SDLoc DL, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
   const MVT VecVT = Vec.getSimpleValueType();
   const MVT VecEltVT = VecVT.getVectorElementType();
   const MVT M1VT = getLMUL1VT(VecVT);
@@ -5821,7 +5823,6 @@ static SDValue lowerReductionSeq(unsigned RVVOpcode, SDValue StartValue, SDValue
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VecEltVT, Reduction,
                      DAG.getConstant(0, DL, XLenVT));
 }
-
 
 SDValue RISCVTargetLowering::lowerVECREDUCE(SDValue Op,
                                             SelectionDAG &DAG) const {
