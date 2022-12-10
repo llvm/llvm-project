@@ -28,6 +28,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <chrono>
 #include <functional>
 #include <mutex>
 #include <string>
@@ -352,7 +353,8 @@ void Compilation::ExecuteJobs(const JobList &Jobs,
   const Command *Next = nullptr;
   while (!JS.IsDone(Next)) {
     if (!Next) {
-      std::this_thread::yield();
+      // sleep, rather than yield so we do not busy wait.
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
       continue;
     }
 
