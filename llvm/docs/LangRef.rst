@@ -22133,7 +22133,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Predicated bswap of two vectors of integers.
+Predicated bswap of a vector of integers.
 
 
 Arguments:
