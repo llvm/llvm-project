@@ -1,7 +1,7 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -x objective-c++
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter SomeClass -x objective-c++ | FileCheck %s
-// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter "(anonymous)" -x objective-c++ | FileCheck -check-prefix=CHECK-ANONYMOUS-ENUM %s
+// RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/CxxInterop -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -ast-dump -ast-dump-filter "unnamed enum" -x objective-c++ | FileCheck -check-prefix=CHECK-ANONYMOUS-ENUM %s
 
 #import <CXXInteropKit/CXXInteropKit.h>
 
@@ -18,6 +18,6 @@
 // CHECK-NEXT: EnumConstantDecl {{.+}} imported in CXXInteropKit SomeClassRed 'ColorEnum'
 // CHECK-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "red"
 
-// CHECK-ANONYMOUS-ENUM: Dumping (anonymous):
+// CHECK-ANONYMOUS-ENUM: Dumping (unnamed enum at {{.+}}/Frameworks/CXXInteropKit.framework/Headers/CXXInteropKit.h:19:9):
 // CHECK-ANONYMOUS-ENUM-NEXT: EnumDecl {{.+}} imported in CXXInteropKit <undeserialized declarations> 'NSSomeEnumOptions':'unsigned long'
 // CHECK-ANONYMOUS-ENUM-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "SomeEnum.Options"
