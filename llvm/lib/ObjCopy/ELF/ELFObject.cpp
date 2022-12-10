@@ -1362,7 +1362,7 @@ Expected<std::unique_ptr<Object>> IHexELFBuilder::build() {
 
 template <class ELFT>
 ELFBuilder<ELFT>::ELFBuilder(const ELFObjectFile<ELFT> &ElfObj, Object &Obj,
-                             Optional<StringRef> ExtractPartition)
+                             std::optional<StringRef> ExtractPartition)
     : ElfFile(ElfObj.getELFFile()), Obj(Obj),
       ExtractPartition(ExtractPartition) {
   Obj.IsMips64EL = ElfFile.isMips64EL();
