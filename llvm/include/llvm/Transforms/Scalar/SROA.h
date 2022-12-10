@@ -27,6 +27,7 @@ namespace llvm {
 
 class AllocaInst;
 class LoadInst;
+class StoreInst;
 class AssumptionCache;
 class DominatorTree;
 class DomTreeUpdater;
@@ -46,7 +47,7 @@ class Partition;
 class SROALegacyPass;
 
 class SelectHandSpeculativity {
-  unsigned char Storage = 0;
+  unsigned char Storage = 0; // None are speculatable by default.
   using TrueVal = Bitfield::Element<bool, 0, 1>;  // Low 0'th bit.
   using FalseVal = Bitfield::Element<bool, 1, 1>; // Low 1'th bit.
 public:
@@ -64,7 +65,10 @@ static_assert(sizeof(SelectHandSpeculativity) == sizeof(unsigned char));
 
 using PossiblySpeculatableLoad =
     PointerIntPair<LoadInst *, 2, sroa::SelectHandSpeculativity>;
-using PossiblySpeculatableLoads = SmallVector<PossiblySpeculatableLoad, 2>;
+using UnspeculatableStore = StoreInst *;
+using RewriteableMemOp =
+    std::variant<PossiblySpeculatableLoad, UnspeculatableStore>;
+using RewriteableMemOps = SmallVector<RewriteableMemOp, 2>;
 
 } // end namespace sroa
 
@@ -130,8 +134,7 @@ class SROAPass : public PassInfoMixin<SROAPass> {
 
   /// A worklist of select instructions to rewrite prior to promoting
   /// allocas.
-  SmallMapVector<SelectInst *, sroa::PossiblySpeculatableLoads, 8>
-      SelectsToRewrite;
+  SmallMapVector<SelectInst *, sroa::RewriteableMemOps, 8> SelectsToRewrite;
 
   /// Select instructions that use an alloca and are subsequently loaded can be
   /// rewritten to load both input pointers and then select between the result,
@@ -149,7 +152,7 @@ class SROAPass : public PassInfoMixin<SROAPass> {
   ///        or if we are allowed to perform CFG modifications.
   /// If found an intervening bitcast with a single use of the load,
   /// allow the promotion.
-  static std::optional<sroa::PossiblySpeculatableLoads>
+  static std::optional<sroa::RewriteableMemOps>
   isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG);
 
 public:
