@@ -28,6 +28,7 @@ public:
   void append(const char *Format, va_list Args);
   void append(const char *Format, ...) FORMAT(2, 3);
   void output() const { outputRaw(String.data()); }
+  void reserve(size_t Size) { String.reserve(Size + 1); }
 
 private:
   Vector<char> String;
