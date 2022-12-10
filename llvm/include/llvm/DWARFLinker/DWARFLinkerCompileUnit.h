@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include <optional>
 
 namespace llvm {
 
@@ -243,7 +244,7 @@ private:
   DWARFUnit &OrigUnit;
   unsigned ID;
   std::vector<DIEInfo> Info; ///< DIE info indexed by DIE index.
-  Optional<BasicDIEUnit> NewUnit;
+  std::optional<BasicDIEUnit> NewUnit;
   MCSymbol *LabelBegin = nullptr;
 
   uint64_t StartOffset;
