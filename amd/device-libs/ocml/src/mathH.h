@@ -53,6 +53,10 @@
 #define MANTLENGTH_HP16   11
 #define BASEDIGITS_HP16   5
 
+#define QNAN_F16 __builtin_nanf16("")
+#define PINF_F16 __builtin_inff16()
+#define NINF_F16 (-__builtin_inff16())
+
 #define UGEN(N) \
 half2 MATH_MANGLE2(N)(half2 x) \
 { \

@@ -53,3 +53,6 @@
 #define MANTLENGTH_DP64   53
 #define BASEDIGITS_DP64   15
 
+#define QNAN_F64 __builtin_nan("")
+#define PINF_F64 __builtin_inf()
+#define NINF_F64 (-__builtin_inf())

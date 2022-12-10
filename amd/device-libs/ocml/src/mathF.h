@@ -52,3 +52,6 @@
 #define MANTLENGTH_SP32   24
 #define BASEDIGITS_SP32   7
 
+#define QNAN_F32 __builtin_nanf("")
+#define PINF_F32 __builtin_inff()
+#define NINF_F32 (-__builtin_inff())
