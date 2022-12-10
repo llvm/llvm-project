@@ -12,6 +12,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include <optional>
 
 using namespace mlir;
 using namespace presburger;
@@ -212,7 +213,7 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
     SmallVector<unsigned, 8> ineqsToProcess;
     // The index of the last inequality that was processed at this level.
     // This is empty when we are coming to this level for the first time.
-    Optional<unsigned> lastIneqProcessed;
+    std::optional<unsigned> lastIneqProcessed;
   };
   SmallVector<Frame, 2> frames;
 
