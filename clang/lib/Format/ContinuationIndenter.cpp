@@ -21,6 +21,7 @@
 #include "clang/Format/Format.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "format-indenter"
 
@@ -149,7 +150,7 @@ static bool opensProtoMessageField(const FormatToken &LessTok,
 // Returns the delimiter of a raw string literal, or std::nullopt if TokenText
 // is not the text of a raw string literal. The delimiter could be the empty
 // string.  For example, the delimiter of R"deli(cont)deli" is deli.
-static llvm::Optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
+static std::optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
   if (TokenText.size() < 5 // The smallest raw string possible is 'R"()"'.
       || !TokenText.startswith("R\"") || !TokenText.endswith("\"")) {
     return std::nullopt;
