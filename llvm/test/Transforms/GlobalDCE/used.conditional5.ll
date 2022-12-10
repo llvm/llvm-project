@@ -1,4 +1,4 @@
-; RUN: opt -S -globaldce < %s | FileCheck %s
+; RUN: opt -S -passes=globaldce < %s | FileCheck %s
 
 @target = internal unnamed_addr constant i32 46
 @dep1 = internal unnamed_addr constant i32 732

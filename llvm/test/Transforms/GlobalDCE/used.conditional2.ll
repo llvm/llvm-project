@@ -1,4 +1,4 @@
-; RUN: opt -S -globaldce < %s | FileCheck %s
+; RUN: opt -S -passes=globaldce < %s | FileCheck %s
 
 ;
 ; (1) a dead global referenced in @llvm.used, but marked as conditionally used

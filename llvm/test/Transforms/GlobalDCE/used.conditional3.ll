@@ -1,4 +1,4 @@
-; RUN: opt -S -globaldce < %s | FileCheck %s
+; RUN: opt -S -passes=globaldce < %s | FileCheck %s
 
 ; Test that when performing llvm.used.conditional removals, we discover globals
 ; that might trigger other llvm.used.conditional liveness. See the following

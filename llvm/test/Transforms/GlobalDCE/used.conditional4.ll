@@ -1,4 +1,4 @@
-; RUN: opt -S -globaldce < %s | FileCheck %s
+; RUN: opt -S -passes=globaldce < %s | FileCheck %s
 
 ; Test !llvm.used.conditional with circular dependencies
 
