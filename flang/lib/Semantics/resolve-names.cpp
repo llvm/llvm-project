@@ -3856,7 +3856,7 @@ void SubprogramVisitor::CheckExtantProc(
   if (auto *prev{FindSymbol(name)}) {
     if (IsDummy(*prev)) {
     } else if (auto *entity{prev->detailsIf<EntityDetails>()};
-               IsPointer(*prev) && !entity->type()) {
+               IsPointer(*prev) && entity && !entity->type()) {
       // POINTER attribute set before interface
     } else if (inInterfaceBlock() && currScope() != prev->owner()) {
       // Procedures in an INTERFACE block do not resolve to symbols
@@ -4071,6 +4071,17 @@ void DeclarationVisitor::Post(const parser::PointerDecl &x) {
     symbol.ReplaceName(name.source);
     EndArraySpec();
   } else {
+    if (const auto *symbol{FindInScope(name)}) {
+      const auto *subp{symbol->detailsIf<SubprogramDetails>()};
+      if (!symbol->has<UseDetails>() && // error caught elsewhere
+          !symbol->has<ObjectEntityDetails>() &&
+          !symbol->has<ProcEntityDetails>() &&
+          !symbol->CanReplaceDetails(ObjectEntityDetails{}) &&
+          !symbol->CanReplaceDetails(ProcEntityDetails{}) &&
+          !(subp && subp->isInterface())) {
+        Say(name, "'%s' cannot have the POINTER attribute"_err_en_US);
+      }
+    }
     HandleAttributeStmt(Attr::POINTER, std::get<parser::Name>(x.t));
   }
 }

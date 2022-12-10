@@ -250,6 +250,8 @@ end
 * A type-bound procedure binding can be passed as an actual
   argument corresponding to a dummy procedure and can be used as
   the target of a procedure pointer assignment statement.
+* An explicit `INTERFACE` can declare the interface of a
+  procedure pointer even if it is not a dummy argument.
 
 ### Extensions supported when enabled by options
 
