@@ -93,10 +93,19 @@ exclude_patterns = ['_build']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'friendly'
 
-in_progress_title = "(In-Progress) " if tags.has("PreRelease") else ""
+# A list of ignored prefixes for module index sorting.
+#modindex_common_prefix = []
 
-rst_epilog = f"""
-.. |ReleaseNotesTitle| replace:: {in_progress_title} Release Notes
+#  TODO: Temporary workaround for configuration error to get man pages built
+
+# in_progress_title = "(In-Progress) " if tags.has("PreRelease") else ""
+
+# rst_epilog = f"""
+# .. |ReleaseNotesTitle| replace:: {in_progress_title} Release Notes
+# """
+
+rst_epilog = """
+.. |ReleaseNotesTitle| replace:: Release Notes
 """
 
 # -- Options for HTML output ---------------------------------------------------

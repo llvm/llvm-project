@@ -78,10 +78,17 @@ pygments_style = 'friendly'
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
 
-in_progress_title = "(In-Progress) " if tags.has("PreRelease") else ""
+# TODO: Temporary workaround for configuration error to get man pages built
+# Error: "There is a syntax error in your configuration file: invalid syntax (conf.py, line 91)"
 
-rst_epilog = f"""
-.. |ReleaseNotesTitle| replace:: {in_progress_title} Release Notes
+# in_progress_title = "(In-Progress) " if tags.has("PreRelease") else ""
+
+# rst_epilog = f"""
+# .. |ReleaseNotesTitle| replace:: {in_progress_title} Release Notes
+# """
+
+rst_epilog = """
+.. |ReleaseNotesTitle| replace:: Release Notes
 """
 
 # -- Options for HTML output ---------------------------------------------------
