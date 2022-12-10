@@ -34,6 +34,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iomanip>
+#include <optional>
 #include <sstream>
 
 namespace mlir {
@@ -436,8 +437,8 @@ public:
     //    operation insertion point (or return null pointer if no such
     //    insertion point exists: 'firstSrcDepPos' <= 'lastDstDepPos').
     SmallVector<Operation *, 2> depInsts;
-    Optional<unsigned> firstSrcDepPos;
-    Optional<unsigned> lastDstDepPos;
+    std::optional<unsigned> firstSrcDepPos;
+    std::optional<unsigned> lastDstDepPos;
     unsigned pos = 0;
     for (Block::iterator it = std::next(Block::iterator(srcNodeInst));
          it != Block::iterator(dstNodeInst); ++it) {
@@ -1125,10 +1126,10 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
   // loop nest at 'dstLoopDepth'.
   uint64_t minFusedLoopNestComputeCost = std::numeric_limits<uint64_t>::max();
   double maxStorageReduction = 0.0;
-  Optional<uint64_t> sliceMemEstimate;
+  std::optional<uint64_t> sliceMemEstimate;
 
   // The best loop depth at which to materialize the slice.
-  Optional<unsigned> bestDstLoopDepth;
+  std::optional<unsigned> bestDstLoopDepth;
 
   // Compute op instance count for the src loop nest without iteration slicing.
   uint64_t srcLoopNestCost = getComputeCost(srcLoopIVs[0], srcLoopNestStats);
@@ -1261,7 +1262,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
   auto dstMemSize = getMemoryFootprintBytes(dstForOp);
   auto srcMemSize = getMemoryFootprintBytes(srcLoopIVs[0]);
 
-  Optional<double> storageReduction;
+  std::optional<double> storageReduction;
 
   if (!dstMemSize || !srcMemSize) {
     LLVM_DEBUG(llvm::dbgs()
