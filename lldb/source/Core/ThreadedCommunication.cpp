@@ -17,7 +17,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 
-#include "llvm/ADT/None.h"
 #include "llvm/Support/Compiler.h"
 
 #include <algorithm>

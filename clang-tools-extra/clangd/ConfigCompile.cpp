@@ -33,7 +33,6 @@
 #include "support/Logger.h"
 #include "support/Path.h"
 #include "support/Trace.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"

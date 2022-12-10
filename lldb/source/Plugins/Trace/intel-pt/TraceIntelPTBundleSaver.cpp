@@ -18,7 +18,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/lldb-types.h"
-#include "llvm/ADT/None.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include <fstream>

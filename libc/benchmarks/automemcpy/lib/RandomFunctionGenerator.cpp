@@ -8,7 +8,6 @@
 
 #include "automemcpy/RandomFunctionGenerator.h"
 
-#include <llvm/ADT/None.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/raw_ostream.h>
 

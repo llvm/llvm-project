@@ -13,7 +13,6 @@
 #include "Feature.h"
 #include "TestFS.h"
 #include "clang/Basic/DiagnosticSema.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
