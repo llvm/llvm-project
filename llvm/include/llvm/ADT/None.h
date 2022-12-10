@@ -24,6 +24,7 @@ namespace llvm {
 /// and similar types without having to spell out the specialization's name.
 LLVM_DEPRECATED("Use std::nullopt_t instead", "std::nullopt_t")
 typedef std::nullopt_t NoneType;
+LLVM_DEPRECATED("Use std::nullopt instead.", "std::nullopt")
 inline constexpr std::nullopt_t None = std::nullopt;
 }
 
