@@ -200,8 +200,8 @@ public:
   virtual Error ReadHeader(MemoryBuffer &Input) = 0;
 
   /// Read the marker of the next bundled to be read in the file. The bundle
-  /// name is returned if there is one in the file, or `None` if there are no
-  /// more bundles to be read.
+  /// name is returned if there is one in the file, or `std::nullopt` if there
+  /// are no more bundles to be read.
   virtual Expected<std::optional<StringRef>>
   ReadBundleStart(MemoryBuffer &Input) = 0;
 
