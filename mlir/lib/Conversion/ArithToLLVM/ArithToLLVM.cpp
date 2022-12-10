@@ -15,6 +15,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
+#include <type_traits>
 
 namespace mlir {
 #define GEN_PASS_DEF_ARITHTOLLVMCONVERSIONPASS
@@ -142,14 +143,19 @@ struct AddUIExtendedOpLowering
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-struct MulUIExtendedOpLowering
-    : public ConvertOpToLLVMPattern<arith::MulUIExtendedOp> {
-  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+template <typename ArithMulOp, bool IsSigned>
+struct MulIExtendedOpLowering : public ConvertOpToLLVMPattern<ArithMulOp> {
+  using ConvertOpToLLVMPattern<ArithMulOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(arith::MulUIExtendedOp op, OpAdaptor adaptor,
+  matchAndRewrite(ArithMulOp op, typename ArithMulOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
+
+using MulSIExtendedOpLowering =
+    MulIExtendedOpLowering<arith::MulSIExtendedOp, true>;
+using MulUIExtendedOpLowering =
+    MulIExtendedOpLowering<arith::MulUIExtendedOp, false>;
 
 struct CmpIOpLowering : public ConvertOpToLLVMPattern<arith::CmpIOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
@@ -271,11 +277,12 @@ LogicalResult AddUIExtendedOpLowering::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
-// MulUIExtendedOpLowering
+// MulIExtendedOpLowering
 //===----------------------------------------------------------------------===//
 
-LogicalResult MulUIExtendedOpLowering::matchAndRewrite(
-    arith::MulUIExtendedOp op, OpAdaptor adaptor,
+template <typename ArithMulOp, bool IsSigned>
+LogicalResult MulIExtendedOpLowering<ArithMulOp, IsSigned>::matchAndRewrite(
+    ArithMulOp op, typename ArithMulOp::Adaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Type resultType = adaptor.getLhs().getType();
 
@@ -308,10 +315,9 @@ LogicalResult MulUIExtendedOpLowering::matchAndRewrite(
     assert(LLVM::isCompatibleType(wideType) &&
            "LLVM dialect should support all signless integer types");
 
-    Value lhsExt =
-        rewriter.create<LLVM::ZExtOp>(loc, wideType, adaptor.getLhs());
-    Value rhsExt =
-        rewriter.create<LLVM::ZExtOp>(loc, wideType, adaptor.getRhs());
+    using LLVMExtOp = std::conditional_t<IsSigned, LLVM::SExtOp, LLVM::ZExtOp>;
+    Value lhsExt = rewriter.create<LLVMExtOp>(loc, wideType, adaptor.getLhs());
+    Value rhsExt = rewriter.create<LLVMExtOp>(loc, wideType, adaptor.getRhs());
     Value mulExt = rewriter.create<LLVM::MulOp>(loc, wideType, lhsExt, rhsExt);
 
     // Split the 2*N-bit wide result into two N-bit values.
@@ -467,6 +473,7 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     MinUIOpLowering,
     MulFOpLowering,
     MulIOpLowering,
+    MulSIExtendedOpLowering,
     MulUIExtendedOpLowering,
     NegFOpLowering,
     OrIOpLowering,
