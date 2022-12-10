@@ -40,12 +40,6 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-bool runFunctionSpecialization(
-    Module &M, FunctionAnalysisManager *FAM, const DataLayout &DL,
-    std::function<TargetLibraryInfo &(Function &)> GetTLI,
-    std::function<TargetTransformInfo &(Function &)> GetTTI,
-    std::function<AssumptionCache &(Function &)> GetAC,
-    function_ref<AnalysisResultsForFn(Function &)> GetAnalysis);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_SCCP_H
