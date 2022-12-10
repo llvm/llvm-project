@@ -23,6 +23,7 @@
 #include "mlir/IR/IntegerSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Endian.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -290,7 +291,7 @@ ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
   llvm::SmallDenseSet<StringAttr> seenKeys;
   auto parseElt = [&]() -> ParseResult {
     // The name of an attribute can either be a bare identifier, or a string.
-    Optional<StringAttr> nameId;
+    std::optional<StringAttr> nameId;
     if (getToken().is(Token::string))
       nameId = builder.getStringAttr(getToken().getStringValue());
     else if (getToken().isAny(Token::bare_identifier, Token::inttype) ||
@@ -512,7 +513,7 @@ private:
   std::vector<std::pair<bool, Token>> storage;
 
   /// Storage used when parsing elements that were stored as hex values.
-  Optional<Token> hexStorage;
+  std::optional<Token> hexStorage;
 };
 } // namespace
 
