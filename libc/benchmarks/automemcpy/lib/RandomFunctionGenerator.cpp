@@ -156,7 +156,7 @@ RandomFunctionGenerator::RandomFunctionGenerator()
 }
 
 // Creates SizeSpan from Begin/End values.
-// Returns llvm::None if Begin==End.
+// Returns std::nullopt if Begin==End.
 static Optional<SizeSpan> AsSizeSpan(size_t Begin, size_t End) {
   if (Begin == End)
     return None;
