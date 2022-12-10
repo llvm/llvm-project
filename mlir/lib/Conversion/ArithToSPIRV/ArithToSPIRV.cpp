@@ -223,13 +223,13 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts arith.mului_extended to spirv.UMulExtended.
-class MulUIExtendedOpPattern final
-    : public OpConversionPattern<arith::MulUIExtendedOp> {
+/// Converts arith.mul*i_extended to spirv.*MulExtended.
+template <typename ArithMulOp, typename SPIRVMulOp>
+class MulIExtendedOpPattern final : public OpConversionPattern<ArithMulOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using OpConversionPattern<ArithMulOp>::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(arith::MulUIExtendedOp op, OpAdaptor adaptor,
+  matchAndRewrite(ArithMulOp op, typename ArithMulOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -955,15 +955,16 @@ LogicalResult AddUIExtendedOpPattern::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
-// MulUIExtendedOpPattern
+// MulIExtendedOpPattern
 //===----------------------------------------------------------------------===//
 
-LogicalResult MulUIExtendedOpPattern::matchAndRewrite(
-    arith::MulUIExtendedOp op, OpAdaptor adaptor,
+template <typename ArithMulOp, typename SPIRVMulOp>
+LogicalResult MulIExtendedOpPattern<ArithMulOp, SPIRVMulOp>::matchAndRewrite(
+    ArithMulOp op, typename ArithMulOp::Adaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Location loc = op->getLoc();
-  Value result = rewriter.create<spirv::UMulExtendedOp>(loc, adaptor.getLhs(),
-                                                        adaptor.getRhs());
+  Value result =
+      rewriter.create<SPIRVMulOp>(loc, adaptor.getLhs(), adaptor.getRhs());
 
   Value low = rewriter.create<spirv::CompositeExtractOp>(loc, result,
                                                          llvm::makeArrayRef(0));
@@ -1070,7 +1071,10 @@ void mlir::arith::populateArithToSPIRVPatterns(
     TypeCastingOpPattern<arith::BitcastOp, spirv::BitcastOp>,
     CmpIOpBooleanPattern, CmpIOpPattern,
     CmpFOpNanNonePattern, CmpFOpPattern,
-    AddUIExtendedOpPattern, MulUIExtendedOpPattern, SelectOpPattern,
+    AddUIExtendedOpPattern,
+    MulIExtendedOpPattern<arith::MulSIExtendedOp, spirv::SMulExtendedOp>,
+    MulIExtendedOpPattern<arith::MulUIExtendedOp, spirv::UMulExtendedOp>,
+    SelectOpPattern,
 
     MinMaxFOpPattern<arith::MaxFOp, spirv::GLFMaxOp>,
     MinMaxFOpPattern<arith::MinFOp, spirv::GLFMinOp>,
