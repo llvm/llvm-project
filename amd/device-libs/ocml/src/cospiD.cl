@@ -16,13 +16,13 @@ MATH_MANGLE(cospi)(double x)
     struct scret sc = MATH_PRIVATE(sincospired)(r.hi);
     sc.s = -sc.s;
 
-    int2 c = AS_INT2((r.i & 1) == 0 ? sc.c : sc.s);
-    c.hi ^= r.i > 1 ? (int)0x80000000 : 0;
+    double c = (r.i & 1) == 0 ? sc.c : sc.s;
+    c = r.i > 1 ? -c : c;
 
-    if (!FINITE_ONLY_OPT()) {
-        c = BUILTIN_ISFINITE_F64(ax) ? c : AS_INT2(QNANBITPATT_DP64);
+    if (!FINITE_ONLY_OPT() && !BUILTIN_ISFINITE_F64(ax)) {
+        c = QNAN_F64;
     }
 
-    return AS_DOUBLE(c);
+    return c;
 }
 

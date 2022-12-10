@@ -16,11 +16,11 @@ MATH_MANGLE(cospi)(float x)
     struct scret sc = MATH_PRIVATE(sincospired)(r.hi);
     sc.s = -sc.s;
 
-    float c =  (r.i & 1) != 0 ? sc.s : sc.c;
-    c = AS_FLOAT(AS_INT(c) ^ (r.i > 1 ? 0x80000000 : 0));
+    float c = (r.i & 1) != 0 ? sc.s : sc.c;
+    c = r.i > 1 ? -c : c;
 
-    if (!FINITE_ONLY_OPT()) {
-        c = BUILTIN_ISFINITE_F32(ax) ? c : QNAN_F32;
+    if (!FINITE_ONLY_OPT() && !BUILTIN_ISFINITE_F32(ax)) {
+        c = QNAN_F32;
     }
 
     return c;
