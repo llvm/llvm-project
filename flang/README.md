@@ -109,6 +109,12 @@ cmake \
 ninja
 ```
 
+By default flang tests that do not specify an explicit `--target` flag use
+LLVM's default target triple. For these tests, if there is a need to test on a
+different triple by overriding the default, the following needs to be added to
+the cmake command above:
+`-DLLVM_TARGET_TRIPLE_ENV="<some string>" -DFLANG_TEST_TARGET_TRIPLE="<your triple>"`.
+
 To run the flang tests on this build, execute the command in the "build"
 directory:
 ```bash

@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn-hoist -S | FileCheck %s
+; RUN: opt < %s -passes=gvn-hoist -S | FileCheck %s
 
 ; This test is meant to make sure that MemorySSAUpdater works correctly
 ; in non-trivial cases.

@@ -7,7 +7,7 @@ func.func @pad_tensor_with_memrefs(%arg0: memref<1x28x28x1xf32>) -> memref<2x31x
   %cst = arith.constant 0.000000e+00 : f32
   %0 = bufferization.to_tensor %arg0 : memref<1x28x28x1xf32>
   %1 = tensor.pad %0 low[1, 1, 1, 2] high[0, 2, 2, 0]  {
-  ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):  
+  ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):
     tensor.yield %cst : f32
   } : tensor<1x28x28x1xf32> to tensor<2x31x31x3xf32>
   %2 = bufferization.to_memref %1 : memref<2x31x31x3xf32>
@@ -26,7 +26,7 @@ func.func @pad_tensor_with_memrefs(%arg0: memref<1x28x28x1xf32>) -> memref<2x31x
 func.func @pad_tensor_no_memrefs(%arg0: tensor<1x28x28xf32>) -> tensor<2x32x32xf32> {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = tensor.pad %arg0 low[1, 2, 2] high[0, 2, 2]  {
-  ^bb0(%arg1: index, %arg2: index, %arg3: index):  
+  ^bb0(%arg1: index, %arg2: index, %arg3: index):
     tensor.yield %cst : f32
   } : tensor<1x28x28xf32> to tensor<2x32x32xf32>
   return %0 : tensor<2x32x32xf32>
@@ -44,7 +44,7 @@ func.func @pad_tensor_no_memrefs(%arg0: tensor<1x28x28xf32>) -> tensor<2x32x32xf
 func.func @pad_tensor_detailed(%arg0: tensor<1x28x28x1xf32>) -> tensor<1x32x32x1xf32> {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = tensor.pad %arg0 low[0, 2, 2, 0] high[0, 2, 2, 0]  {
-  ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):  
+  ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):
     tensor.yield %cst : f32
   } : tensor<1x28x28x1xf32> to tensor<1x32x32x1xf32>
   return %0 : tensor<1x32x32x1xf32>

@@ -4,7 +4,7 @@
 ; RUN: opt -atomic-expand -S -mtriple=powerpc64-unknown-unknown \
 ; RUN:   -mcpu=pwr7 %s | FileCheck --check-prefix=PWR7 %s
 
-define i1 @test_cmpxchg_seq_cst(i128* %addr, i128 %desire, i128 %new) {
+define i1 @test_cmpxchg_seq_cst(ptr %addr, i128 %desire, i128 %new) {
 ; CHECK-LABEL: @test_cmpxchg_seq_cst(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_LO:%.*]] = trunc i128 [[DESIRE:%.*]] to i64
@@ -13,9 +13,8 @@ define i1 @test_cmpxchg_seq_cst(i128* %addr, i128 %desire, i128 %new) {
 ; CHECK-NEXT:    [[NEW_LO:%.*]] = trunc i128 [[NEW:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i128 [[NEW]], 64
 ; CHECK-NEXT:    [[NEW_HI:%.*]] = trunc i128 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i128* [[ADDR:%.*]] to i8*
 ; CHECK-NEXT:    call void @llvm.ppc.sync()
-; CHECK-NEXT:    [[TMP3:%.*]] = call { i64, i64 } @llvm.ppc.cmpxchg.i128(i8* [[TMP2]], i64 [[CMP_LO]], i64 [[CMP_HI]], i64 [[NEW_LO]], i64 [[NEW_HI]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call { i64, i64 } @llvm.ppc.cmpxchg.i128(ptr [[ADDR:%.*]], i64 [[CMP_LO]], i64 [[CMP_HI]], i64 [[NEW_LO]], i64 [[NEW_HI]])
 ; CHECK-NEXT:    call void @llvm.ppc.lwsync()
 ; CHECK-NEXT:    [[LO:%.*]] = extractvalue { i64, i64 } [[TMP3]], 0
 ; CHECK-NEXT:    [[HI:%.*]] = extractvalue { i64, i64 } [[TMP3]], 1
@@ -31,26 +30,23 @@ define i1 @test_cmpxchg_seq_cst(i128* %addr, i128 %desire, i128 %new) {
 ;
 ; PWR7-LABEL: @test_cmpxchg_seq_cst(
 ; PWR7-NEXT:  entry:
-; PWR7-NEXT:    [[TMP0:%.*]] = bitcast i128* [[ADDR:%.*]] to i8*
 ; PWR7-NEXT:    [[TMP1:%.*]] = alloca i128, align 8
-; PWR7-NEXT:    [[TMP2:%.*]] = bitcast i128* [[TMP1]] to i8*
-; PWR7-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[TMP2]])
-; PWR7-NEXT:    store i128 [[DESIRE:%.*]], i128* [[TMP1]], align 8
+; PWR7-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr [[TMP1]])
+; PWR7-NEXT:    store i128 [[DESIRE:%.*]], ptr [[TMP1]], align 8
 ; PWR7-NEXT:    [[TMP3:%.*]] = alloca i128, align 8
-; PWR7-NEXT:    [[TMP4:%.*]] = bitcast i128* [[TMP3]] to i8*
-; PWR7-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[TMP4]])
-; PWR7-NEXT:    store i128 [[NEW:%.*]], i128* [[TMP3]], align 8
-; PWR7-NEXT:    [[TMP5:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 16, i8* [[TMP0]], i8* [[TMP2]], i8* [[TMP4]], i32 5, i32 5)
-; PWR7-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[TMP4]])
-; PWR7-NEXT:    [[TMP6:%.*]] = load i128, i128* [[TMP1]], align 8
-; PWR7-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[TMP2]])
+; PWR7-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr [[TMP3]])
+; PWR7-NEXT:    store i128 [[NEW:%.*]], ptr [[TMP3]], align 8
+; PWR7-NEXT:    [[TMP5:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 16, ptr [[ADDR:%.*]], ptr [[TMP1]], ptr [[TMP3]], i32 5, i32 5)
+; PWR7-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr [[TMP3]])
+; PWR7-NEXT:    [[TMP6:%.*]] = load i128, ptr [[TMP1]], align 8
+; PWR7-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr [[TMP1]])
 ; PWR7-NEXT:    [[TMP7:%.*]] = insertvalue { i128, i1 } poison, i128 [[TMP6]], 0
 ; PWR7-NEXT:    [[TMP8:%.*]] = insertvalue { i128, i1 } [[TMP7]], i1 [[TMP5]], 1
 ; PWR7-NEXT:    [[SUCC:%.*]] = extractvalue { i128, i1 } [[TMP8]], 1
 ; PWR7-NEXT:    ret i1 [[SUCC]]
 ;
 entry:
-  %pair = cmpxchg weak i128* %addr, i128 %desire, i128 %new seq_cst seq_cst
+  %pair = cmpxchg weak ptr %addr, i128 %desire, i128 %new seq_cst seq_cst
   %succ = extractvalue {i128, i1} %pair, 1
   ret i1 %succ
 }

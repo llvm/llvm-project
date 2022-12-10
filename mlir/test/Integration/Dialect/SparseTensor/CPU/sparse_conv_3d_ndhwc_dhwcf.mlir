@@ -71,10 +71,10 @@ func.func @entry() {
   %f10 = arith.constant 10.00000e+00 : f32
   %val = arith.constant 2.00000e+00 : f32
   %zero = arith.constant 0.00000e+00 : f32
-  
+
   %in3D_tmp = call @alloc_5d_filled_f32(%c1, %c8, %c8, %c8, %c1, %val) : (index, index, index, index, index, f32) -> (tensor<?x?x?x?x?xf32>)
   %in3D_ndhwc = tensor.insert %f10 into %in3D_tmp[%c0, %c0, %c0, %c3, %c0] : tensor<?x?x?x?x?xf32>
-  
+
   %filter3D_ndhwc = call @alloc_5d_filled_f32(%c3, %c3, %c3, %c1, %c1, %val) : (index, index, index, index, index, f32) -> (tensor<?x?x?x?x?xf32>)
   %out3D_ndhwc = call @alloc_5d_filled_f32(%c1, %c6, %c6, %c6, %c1, %zero) : (index, index, index, index, index, f32) -> (tensor<?x?x?x?x?xf32>)
 
@@ -87,7 +87,7 @@ func.func @entry() {
     : tensor<?x?x?x?x?xf32> to tensor<?x?x?x?x?xf32, #CDCDC>
   %filter3D_ndhwc_CDCDC = sparse_tensor.convert %filter3D_ndhwc
     : tensor<?x?x?x?x?xf32> to tensor<?x?x?x?x?xf32, #CDCDC>
-    
+
   //      CHECK:( ( ( ( ( 108 ), ( 124 ), ( 124 ), ( 124 ), ( 108 ), ( 108 ) ),
   // CHECK-SAME:      ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
   // CHECK-SAME:      ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
@@ -171,7 +171,7 @@ func.func @entry() {
   // CHECK-SAME:      ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
   // CHECK-SAME:      ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ) ) ) )
   %1 = sparse_tensor.convert %CCCCC_ret
-    : tensor<?x?x?x?x?xf32, #CCCCC> to tensor<?x?x?x?x?xf32>         
+    : tensor<?x?x?x?x?xf32, #CCCCC> to tensor<?x?x?x?x?xf32>
   %v1 = vector.transfer_read %1[%c0, %c0, %c0, %c0, %c0], %zero
       : tensor<?x?x?x?x?xf32>, vector<1x6x6x6x1xf32>
   vector.print %v1 : vector<1x6x6x6x1xf32>
@@ -221,12 +221,12 @@ func.func @entry() {
   %v2 = vector.transfer_read %dense_ret[%c0, %c0, %c0, %c0, %c0], %zero
       : tensor<?x?x?x?x?xf32>, vector<1x6x6x6x1xf32>
   vector.print %v2 : vector<1x6x6x6x1xf32>
-  
+
   // Free the resources
   bufferization.dealloc_tensor %in3D_ndhwc : tensor<?x?x?x?x?xf32>
   bufferization.dealloc_tensor %filter3D_ndhwc : tensor<?x?x?x?x?xf32>
   bufferization.dealloc_tensor %out3D_ndhwc : tensor<?x?x?x?x?xf32>
-  
+
   bufferization.dealloc_tensor %in3D_ndhwc_CDCDC : tensor<?x?x?x?x?xf32, #CDCDC>
   bufferization.dealloc_tensor %filter3D_ndhwc_CDCDC : tensor<?x?x?x?x?xf32, #CDCDC>
   bufferization.dealloc_tensor %in3D_ndhwc_CCCCC : tensor<?x?x?x?x?xf32, #CCCCC>

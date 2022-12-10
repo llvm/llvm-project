@@ -245,7 +245,7 @@ pdl.pattern : benefit(1) {
   %operand = pdl.operand
   %resultType = pdl.type
   %root = pdl.operation "baz.op"(%operand : !pdl.value) -> (%resultType : !pdl.type)
-  
+
   rewrite %root {
     // expected-error @below {{expected operand to have element type '!pdl.value', but got '!pdl.type'}}
     %range = pdl.range %operand, %resultType : !pdl.value, !pdl.type

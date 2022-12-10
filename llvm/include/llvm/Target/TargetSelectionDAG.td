@@ -161,6 +161,9 @@ def SDTFPRoundOp  : SDTypeProfile<1, 1, [   // fpround
 def SDTFPExtendOp  : SDTypeProfile<1, 1, [  // fpextend
   SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<1, 0>, SDTCisSameNumEltsAs<0, 1>
 ]>;
+def SDIsFPClassOp : SDTypeProfile<1, 2, [   // is_fpclass
+  SDTCisInt<0>, SDTCisFP<1>, SDTCisInt<2>, SDTCisSameNumEltsAs<0, 1>
+]>;
 def SDTIntToFPOp : SDTypeProfile<1, 1, [    // [su]int_to_fp
   SDTCisFP<0>, SDTCisInt<1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
@@ -516,6 +519,8 @@ def llrint     : SDNode<"ISD::LLRINT"     , SDTFPToIntOp>;
 def fpround    : SDNode<"ISD::FP_ROUND"   , SDTFPRoundOp>;
 def fpextend   : SDNode<"ISD::FP_EXTEND"  , SDTFPExtendOp>;
 def fcopysign  : SDNode<"ISD::FCOPYSIGN"  , SDTFPSignOp>;
+
+def is_fpclass : SDNode<"ISD::IS_FPCLASS" , SDIsFPClassOp>;
 
 def sint_to_fp : SDNode<"ISD::SINT_TO_FP" , SDTIntToFPOp>;
 def uint_to_fp : SDNode<"ISD::UINT_TO_FP" , SDTIntToFPOp>;

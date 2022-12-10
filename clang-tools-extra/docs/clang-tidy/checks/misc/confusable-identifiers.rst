@@ -12,4 +12,4 @@ Example:
 .. code-block:: text
 
     int fo; // Initial character is U+0066 (LATIN SMALL LETTER F).
-    int 𝐟o; // Initial character is U+1234 (SUPER COOL AWESOME UPPERCASE NOT LATIN F) not U+0066 (LATIN SMALL LETTER F).
+    int 𝐟o; // Initial character is U+1D41F (MATHEMATICAL BOLD SMALL F) not U+0066 (LATIN SMALL LETTER F).

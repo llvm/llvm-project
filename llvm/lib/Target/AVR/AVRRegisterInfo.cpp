@@ -236,7 +236,7 @@ bool AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     // a compare and branch, invalidating the contents of SREG set by the
     // compare instruction because of the add/sub pairs. Conservatively save and
     // restore SREG before and after each add/sub pair.
-    BuildMI(MBB, II, dl, TII.get(AVR::INRdA), AVR::R0)
+    BuildMI(MBB, II, dl, TII.get(AVR::INRdA), STI.getTmpRegister())
         .addImm(STI.getIORegSREG());
 
     MachineInstr *New = BuildMI(MBB, II, dl, TII.get(AddOpc), AVR::R29R28)
@@ -247,7 +247,7 @@ bool AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     // Restore SREG.
     BuildMI(MBB, std::next(II), dl, TII.get(AVR::OUTARr))
         .addImm(STI.getIORegSREG())
-        .addReg(AVR::R0, RegState::Kill);
+        .addReg(STI.getTmpRegister(), RegState::Kill);
 
     // No need to set SREG as dead here otherwise if the next instruction is a
     // cond branch it will be using a dead register.

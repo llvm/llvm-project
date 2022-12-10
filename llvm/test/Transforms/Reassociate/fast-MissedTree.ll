@@ -1,4 +1,4 @@
-; RUN: opt < %s -reassociate -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=reassociate,instcombine -S | FileCheck %s
 
 define float @test1(float %A, float %B) {
 ; CHECK-LABEL: @test1(

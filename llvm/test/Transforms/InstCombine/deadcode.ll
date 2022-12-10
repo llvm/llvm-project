@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes=instcombine -S | grep "ret i32 %A"
-; RUN: opt < %s -dce -S | not grep call.*llvm
+; RUN: opt < %s -passes=dce -S | not grep call.*llvm
 
 define i32 @test(i32 %A) {
 	%X = or i1 false, false		

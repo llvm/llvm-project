@@ -4874,9 +4874,16 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
           Loc, ArgTy, diag::err_incomplete_type_used_in_type_trait_expr);
     return true;
 
+  // LWG3823: T shall be an array type, a complete type, or cv void.
+  case UTT_IsAggregate:
+    if (ArgTy->isArrayType() || ArgTy->isVoidType())
+      return true;
+
+    return !S.RequireCompleteType(
+        Loc, ArgTy, diag::err_incomplete_type_used_in_type_trait_expr);
+
   // C++1z [meta.unary.prop]:
   //   remove_all_extents_t<T> shall be a complete type or cv void.
-  case UTT_IsAggregate:
   case UTT_IsTrivial:
   case UTT_IsTriviallyCopyable:
   case UTT_IsStandardLayout:

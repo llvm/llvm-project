@@ -588,7 +588,7 @@ module @patterns {
       %rootOperand = pdl_interp.get_operand 0 of %root
       %rootOperands = pdl_interp.get_operands of %root : !pdl.range<value>
       %operandRange = pdl_interp.create_range %rootOperand, %rootOperands : !pdl.value, !pdl.range<value>
-      
+
       %operandType = pdl_interp.get_value_type of %rootOperand : !pdl.type
       %operandTypes = pdl_interp.get_value_type of %rootOperands : !pdl.range<type>
       %typeRange = pdl_interp.create_range %operandType, %operandTypes : !pdl.type, !pdl.range<type>

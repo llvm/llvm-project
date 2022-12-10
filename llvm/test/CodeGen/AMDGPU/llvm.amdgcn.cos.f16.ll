@@ -8,11 +8,11 @@ declare half @llvm.amdgcn.cos.f16(half %a)
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @cos_f16(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %r.val = call half @llvm.amdgcn.cos.f16(half %a.val)
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }

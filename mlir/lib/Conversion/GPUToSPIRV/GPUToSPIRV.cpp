@@ -414,6 +414,10 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
     result = rewriter.create<spirv::GroupNonUniformShuffleXorOp>(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
     break;
+  case gpu::ShuffleMode::IDX:
+    result = rewriter.create<spirv::GroupNonUniformShuffleOp>(
+        loc, scope, adaptor.getValue(), adaptor.getOffset());
+    break;
   default:
     return rewriter.notifyMatchFailure(shuffleOp, "unimplemented shuffle mode");
   }

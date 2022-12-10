@@ -23,15 +23,15 @@ def DeviceMappingAttrInterface : AttrInterface<"DeviceMappingAttrInterface"> {
   let cppNamespace = "::mlir";
   let description = [{
     Attribute interface describing how to map a region to a processing unit.
-    
-    It is intended to be a generic mechanism for binding regions to execution 
-    units of an actual or virtual device. Each device first expresses its own 
-    mappings, and those mappings must implement this interface. These mappings 
-    can be used by the device-specific code generators and the desired regions 
+
+    It is intended to be a generic mechanism for binding regions to execution
+    units of an actual or virtual device. Each device first expresses its own
+    mappings, and those mappings must implement this interface. These mappings
+    can be used by the device-specific code generators and the desired regions
     can be connected to the given processing unit.
-    
-    Currently, `scf.foreach_thread` uses this interface to express the mapping 
-    of the loops it contains to the GPU's parallelism units such as threads and 
+
+    Currently, `scf.foreach_thread` uses this interface to express the mapping
+    of the loops it contains to the GPU's parallelism units such as threads and
     thread blocks.
   }];
 
@@ -44,8 +44,8 @@ def DeviceMappingAttrInterface : AttrInterface<"DeviceMappingAttrInterface"> {
   ];
 }
 
-def DeviceMappingArrayAttr : 
-  TypedArrayAttrBase<DeviceMappingAttrInterface, 
+def DeviceMappingArrayAttr :
+  TypedArrayAttrBase<DeviceMappingAttrInterface,
   "Device Mapping array attribute"> { }
 
 #endif // MLIR_DEVICEMAPPINGINTERFACE

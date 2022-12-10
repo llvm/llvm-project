@@ -49,7 +49,8 @@ public:
     return InitOrFiniKernel;
   }
 
-  bool createInitOrFiniKernel(Module &M, GlobalVariable *GV, bool IsCtor) {
+  bool createInitOrFiniKernel(Module &M, StringRef GlobalName, bool IsCtor) {
+    GlobalVariable *GV = M.getGlobalVariable(GlobalName);
     if (!GV || !GV->hasInitializer())
       return false;
     ConstantArray *GA = dyn_cast<ConstantArray>(GV->getInitializer());
@@ -85,11 +86,7 @@ ModulePass *llvm::createAMDGPUCtorDtorLoweringPass() {
 
 bool AMDGPUCtorDtorLowering::runOnModule(Module &M) {
   bool Modified = false;
-  Modified |=
-      createInitOrFiniKernel(M, M.getGlobalVariable("llvm.global_ctors"),
-                             /*IsCtor =*/true);
-  Modified |=
-      createInitOrFiniKernel(M, M.getGlobalVariable("llvm.global_dtors"),
-                             /*IsCtor =*/false);
+  Modified |= createInitOrFiniKernel(M, "llvm.global_ctors", /*IsCtor =*/true);
+  Modified |= createInitOrFiniKernel(M, "llvm.global_dtors", /*IsCtor =*/false);
   return Modified;
 }

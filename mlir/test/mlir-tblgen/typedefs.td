@@ -31,9 +31,9 @@ include "mlir/IR/OpBase.td"
 // DEF-NEXT: .Case(::test::IndexType::getMnemonic()
 // DEF-NEXT:   value = ::test::IndexType::parse(parser);
 // DEF-NEXT:   return ::mlir::success(!!value);
-// DEF: .Default([&](llvm::StringRef keyword, 
+// DEF: .Default([&](llvm::StringRef keyword,
 // DEF-NEXT:   *mnemonic = keyword;
-// DEF-NEXT:   return llvm::None; 
+// DEF-NEXT:   return llvm::None;
 
 def Test_Dialect: Dialect {
 // DECL-NOT: TestDialect

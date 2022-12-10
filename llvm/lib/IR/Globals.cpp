@@ -118,11 +118,6 @@ bool GlobalValue::canBenefitFromLocalAlias() const {
          !isa<GlobalIFunc>(this) && !isDeduplicateComdat(getComdat());
 }
 
-unsigned GlobalValue::getAddressSpace() const {
-  PointerType *PtrTy = getType();
-  return PtrTy->getAddressSpace();
-}
-
 void GlobalObject::setAlignment(MaybeAlign Align) {
   assert((!Align || *Align <= MaximumAlignment) &&
          "Alignment is greater than MaximumAlignment!");

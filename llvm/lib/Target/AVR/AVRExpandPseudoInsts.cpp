@@ -49,11 +49,6 @@ private:
   const AVRRegisterInfo *TRI;
   const TargetInstrInfo *TII;
 
-  /// The register to be used for temporary storage.
-  const Register SCRATCH_REGISTER = AVR::R0;
-  /// The register that will always contain zero.
-  const Register ZERO_REGISTER = AVR::R1;
-
   bool expandMBB(Block &MBB);
   bool expandMI(Block &MBB, BlockIt MBBI);
   template <unsigned OP> bool expand(Block &MBB, BlockIt MBBI);
@@ -438,6 +433,7 @@ bool AVRExpandPseudo::expand<AVR::NEGWRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
+  Register ZeroReg = MI.getOperand(2).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
   bool DstIsKill = MI.getOperand(1).isKill();
   bool ImpIsDead = MI.getOperand(2).isDead();
@@ -461,7 +457,7 @@ bool AVRExpandPseudo::expand<AVR::NEGWRd>(Block &MBB, BlockIt MBBI) {
       buildMI(MBB, MBBI, AVR::SBCRdRr)
           .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
           .addReg(DstHiReg, getKillRegState(DstIsKill))
-          .addReg(ZERO_REGISTER);
+          .addReg(ZeroReg);
   if (ImpIsDead)
     MISBCI->getOperand(3).setIsDead();
   // SREG is always implicitly killed
@@ -865,7 +861,7 @@ bool AVRExpandPseudo::expandAtomic(Block &MBB, BlockIt MBBI, Func f) {
 
   // Store the SREG.
   buildMI(MBB, MBBI, AVR::INRdA)
-      .addReg(SCRATCH_REGISTER, RegState::Define)
+      .addReg(STI.getTmpRegister(), RegState::Define)
       .addImm(STI.getIORegSREG());
 
   // Disable exceptions.
@@ -876,7 +872,7 @@ bool AVRExpandPseudo::expandAtomic(Block &MBB, BlockIt MBBI, Func f) {
   // Restore the status reg.
   buildMI(MBB, MBBI, AVR::OUTARr)
       .addImm(STI.getIORegSREG())
-      .addReg(SCRATCH_REGISTER);
+      .addReg(STI.getTmpRegister());
 
   MI.eraseFromParent();
   return true;
@@ -1279,6 +1275,7 @@ bool AVRExpandPseudo::expand<AVR::ROLBRd>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned OpShift, OpCarry;
   Register DstReg = MI.getOperand(0).getReg();
+  Register ZeroReg = MI.getOperand(2).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
   bool DstIsKill = MI.getOperand(1).isKill();
   OpShift = AVR::ADDRdRr;
@@ -1297,7 +1294,7 @@ bool AVRExpandPseudo::expand<AVR::ROLBRd>(Block &MBB, BlockIt MBBI) {
   auto MIB = buildMI(MBB, MBBI, OpCarry)
                  .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
                  .addReg(DstReg, getKillRegState(DstIsKill))
-                 .addReg(ZERO_REGISTER);
+                 .addReg(ZeroReg);
 
   MIB->getOperand(3).setIsDead(); // SREG is always dead
   MIB->getOperand(4).setIsKill(); // SREG is always implicitly killed
@@ -2311,7 +2308,7 @@ bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
   TRI->splitReg(SrcReg, SrcLoReg, SrcHiReg);
 
   buildMI(MBB, MBBI, AVR::INRdA)
-      .addReg(AVR::R0, RegState::Define)
+      .addReg(STI.getTmpRegister(), RegState::Define)
       .addImm(STI.getIORegSREG())
       .setMIFlags(Flags);
 
@@ -2324,7 +2321,7 @@ bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
 
   buildMI(MBB, MBBI, AVR::OUTARr)
       .addImm(STI.getIORegSREG())
-      .addReg(AVR::R0, RegState::Kill)
+      .addReg(STI.getTmpRegister(), RegState::Kill)
       .setMIFlags(Flags);
 
   buildMI(MBB, MBBI, AVR::OUTARr)

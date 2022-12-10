@@ -6,10 +6,10 @@ define i64 @main(i64 %x, i1 %flag) {
 ; CHECK:      entry:
 ; CHECK-NEXT:   br i1 %flag, label %plus, label %minus
 ; CHECK:      plus:
-; CHECK-NEXT:   [[TMP0:%.+]] = call i64 @compute.1(i64 %x, i64 (i64)* @plus)
+; CHECK-NEXT:   [[TMP0:%.+]] = call i64 @compute.1(i64 %x, ptr @plus)
 ; CHECK-NEXT:   br label %merge
 ; CHECK:      minus:
-; CHECK-NEXT:   [[TMP1:%.+]] = call i64 @compute.2(i64 %x, i64 (i64)* @minus)
+; CHECK-NEXT:   [[TMP1:%.+]] = call i64 @compute.2(i64 %x, ptr @minus)
 ; CHECK-NEXT:   br label %merge
 ; CHECK:      merge:
 ; CHECK-NEXT:   [[TMP2:%.+]] = phi i64 [ [[TMP0]], %plus ], [ [[TMP1]], %minus ]
@@ -20,11 +20,11 @@ entry:
   br i1 %flag, label %plus, label %minus
 
 plus:
-  %tmp0 = call i64 @compute(i64 %x, i64 (i64)* @plus)
+  %tmp0 = call i64 @compute(i64 %x, ptr @plus)
   br label %merge
 
 minus:
-  %tmp1 = call i64 @compute(i64 %x, i64 (i64)* @minus)
+  %tmp1 = call i64 @compute(i64 %x, ptr @minus)
   br label %merge
 
 merge:
@@ -34,19 +34,19 @@ merge:
 
 ; CHECK-NOT: define internal i64 @compute(
 ;
-; CHECK-LABEL: define internal i64 @compute.1(i64 %x, i64 (i64)* %binop) {
+; CHECK-LABEL: define internal i64 @compute.1(i64 %x, ptr %binop) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.+]] = call i64 @plus(i64 %x)
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ; CHECK-NEXT:  }
 ;
-; CHECK-LABEL: define internal i64 @compute.2(i64 %x, i64 (i64)* %binop) {
+; CHECK-LABEL: define internal i64 @compute.2(i64 %x, ptr %binop) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.+]] = call i64 @minus(i64 %x)
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ; CHECK-NEXT:  }
 ;
-define internal i64 @compute(i64 %x, i64 (i64)* %binop) {
+define internal i64 @compute(i64 %x, ptr %binop) {
 entry:
   %tmp0 = call i64 %binop(i64 %x)
   ret i64 %tmp0

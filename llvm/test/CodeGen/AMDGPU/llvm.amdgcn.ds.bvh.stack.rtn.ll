@@ -4,7 +4,7 @@
 
 declare { i32, i32 } @llvm.amdgcn.ds.bvh.stack.rtn(i32, i32, <4 x i32>, i32 immarg)
 
-define amdgpu_gs void @test_ds_bvh_stack(i32 %addr, i32 %data0, <4 x i32> %data1, i32 addrspace(1)* %out) {
+define amdgpu_gs void @test_ds_bvh_stack(i32 %addr, i32 %data0, <4 x i32> %data1, ptr addrspace(1) %out) {
 ; CHECK-LABEL: test_ds_bvh_stack:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ds_bvh_stack_rtn_b32 v1, v0, v1, v[2:5]
@@ -17,11 +17,11 @@ define amdgpu_gs void @test_ds_bvh_stack(i32 %addr, i32 %data0, <4 x i32> %data1
   %vdst = extractvalue { i32, i32 } %pair, 0
   %newaddr = extractvalue { i32, i32 } %pair, 1
   %res = add i32 %vdst, %newaddr
-  store i32 %res, i32 addrspace(1)* %out, align 4
+  store i32 %res, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_gs void @test_ds_bvh_stack_1(i32 %addr, i32 %data0, <4 x i32> %data1, i32 addrspace(1)* %out) {
+define amdgpu_gs void @test_ds_bvh_stack_1(i32 %addr, i32 %data0, <4 x i32> %data1, ptr addrspace(1) %out) {
 ; CHECK-LABEL: test_ds_bvh_stack_1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ds_bvh_stack_rtn_b32 v1, v0, v1, v[2:5] offset:1
@@ -34,6 +34,6 @@ define amdgpu_gs void @test_ds_bvh_stack_1(i32 %addr, i32 %data0, <4 x i32> %dat
   %vdst = extractvalue { i32, i32 } %pair, 0
   %newaddr = extractvalue { i32, i32 } %pair, 1
   %res = add i32 %vdst, %newaddr
-  store i32 %res, i32 addrspace(1)* %out, align 4
+  store i32 %res, ptr addrspace(1) %out, align 4
   ret void
 }

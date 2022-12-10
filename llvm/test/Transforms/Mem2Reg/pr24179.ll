@@ -24,10 +24,10 @@ define void @test1() {
   br label %loop
 
   loop:
-  %v = load i32, i32* %t
+  %v = load i32, ptr %t
   %c = call i1 @use(i32 %v)
   %n = call i32 @def(i32 7)
-  store i32 %n, i32* %t
+  store i32 %n, ptr %t
   br i1 %c, label %loop, label %exit
 
   exit:
@@ -51,7 +51,7 @@ define void @test2() {
   br label %loop
 
   loop:
-  %v = load i32, i32* %t
+  %v = load i32, ptr %t
   %c = call i1 @use(i32 %v)
   br i1 %c, label %loop, label %exit
 

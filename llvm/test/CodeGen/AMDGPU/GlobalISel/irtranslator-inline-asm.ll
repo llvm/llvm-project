@@ -197,7 +197,7 @@ entry:
   ret float %0
 }
 
-define i32 @test_memory_constraint(i32 addrspace(3)* %a) nounwind {
+define i32 @test_memory_constraint(ptr addrspace(3) %a) nounwind {
   ; CHECK-LABEL: name: test_memory_constraint
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -207,7 +207,7 @@ define i32 @test_memory_constraint(i32 addrspace(3)* %a) nounwind {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %1
   ; CHECK-NEXT:   $vgpr0 = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
-  %1 = tail call i32 asm "ds_read_b32 $0, $1", "=v,*m"(i32 addrspace(3)* elementtype(i32) %a)
+  %1 = tail call i32 asm "ds_read_b32 $0, $1", "=v,*m"(ptr addrspace(3) elementtype(i32) %a)
   ret i32 %1
 }
 
@@ -265,17 +265,17 @@ define void @test_many_matching_constraints(i32 %a, i32 %b, i32 %c) nounwind {
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY %3
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY %4
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY %5
-  ; CHECK-NEXT:   G_STORE [[COPY6]](s32), [[DEF]](p1) :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
-  ; CHECK-NEXT:   G_STORE [[COPY7]](s32), [[DEF]](p1) :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
-  ; CHECK-NEXT:   G_STORE [[COPY8]](s32), [[DEF]](p1) :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[COPY6]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[COPY7]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[COPY8]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %asm = call {i32, i32, i32} asm sideeffect "; ", "=v,=v,=v,0,2,1"(i32 %c, i32 %a, i32 %b)
   %asmresult0 = extractvalue  {i32, i32, i32} %asm, 0
-  store i32 %asmresult0, i32 addrspace(1)* undef
+  store i32 %asmresult0, ptr addrspace(1) undef
   %asmresult1 = extractvalue  {i32, i32, i32} %asm, 1
-  store i32 %asmresult1, i32 addrspace(1)* undef
+  store i32 %asmresult1, ptr addrspace(1) undef
   %asmresult2 = extractvalue  {i32, i32, i32} %asm, 2
-  store i32 %asmresult2, i32 addrspace(1)* undef
+  store i32 %asmresult2, ptr addrspace(1) undef
   ret void
 }
 

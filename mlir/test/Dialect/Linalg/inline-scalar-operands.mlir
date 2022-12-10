@@ -14,7 +14,7 @@ func.func @inline_zerod(%arg0: tensor<4xf32>, %scalar: tensor<f32>) -> tensor<4x
                          ins(%arg0, %scalar : tensor<4xf32>, tensor<f32>)
                          outs(%0 : tensor<4xf32>) {
     // CHECK: ^bb0(%{{.*}}: f32, %{{.*}}: f32)
-    ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):  
+    ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):
       // CHECK: tensor.extract %[[SCALAR]][]
       %2 = arith.divf %arg1, %arg2 : f32
       linalg.yield %2 : f32
@@ -39,7 +39,7 @@ func.func @inline_oned(%arg0: tensor<4xf32>, %scalar: tensor<1xf32>) -> tensor<4
                          ins(%arg0, %scalar : tensor<4xf32>, tensor<1xf32>)
                          outs(%0 : tensor<4xf32>) {
     // CHECK: ^bb0(%{{.*}}: f32, %{{.*}}: f32)
-    ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):  
+    ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):
       // CHECK: tensor.extract %[[SCALAR]][%[[ZERO]]]
       %2 = arith.divf %arg1, %arg2 : f32
       linalg.yield %2 : f32

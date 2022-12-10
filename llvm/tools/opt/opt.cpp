@@ -177,10 +177,6 @@ static cl::opt<unsigned> CodeGenOptLevel(
 static cl::opt<std::string>
 TargetTriple("mtriple", cl::desc("Override target triple for module"));
 
-cl::opt<bool> DisableLoopUnrolling(
-    "disable-loop-unrolling",
-    cl::desc("Disable loop unrolling in all relevant passes"), cl::init(false));
-
 static cl::opt<bool> EmitSummaryIndex("module-summary",
                                       cl::desc("Emit module summary index"),
                                       cl::init(false));
@@ -282,37 +278,6 @@ static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
 
-namespace llvm {
-cl::opt<PGOKind>
-    PGOKindFlag("pgo-kind", cl::init(NoPGO), cl::Hidden,
-                cl::desc("The kind of profile guided optimization"),
-                cl::values(clEnumValN(NoPGO, "nopgo", "Do not use PGO."),
-                           clEnumValN(InstrGen, "pgo-instr-gen-pipeline",
-                                      "Instrument the IR to generate profile."),
-                           clEnumValN(InstrUse, "pgo-instr-use-pipeline",
-                                      "Use instrumented profile to guide PGO."),
-                           clEnumValN(SampleUse, "pgo-sample-use-pipeline",
-                                      "Use sampled profile to guide PGO.")));
-cl::opt<std::string> ProfileFile("profile-file",
-                                 cl::desc("Path to the profile."), cl::Hidden);
-
-cl::opt<CSPGOKind> CSPGOKindFlag(
-    "cspgo-kind", cl::init(NoCSPGO), cl::Hidden,
-    cl::desc("The kind of context sensitive profile guided optimization"),
-    cl::values(
-        clEnumValN(NoCSPGO, "nocspgo", "Do not use CSPGO."),
-        clEnumValN(
-            CSInstrGen, "cspgo-instr-gen-pipeline",
-            "Instrument (context sensitive) the IR to generate profile."),
-        clEnumValN(
-            CSInstrUse, "cspgo-instr-use-pipeline",
-            "Use instrumented (context sensitive) profile to guide PGO.")));
-cl::opt<std::string> CSProfileGenFile(
-    "cs-profilegen-file",
-    cl::desc("Path to the instrumented context sensitive profile."),
-    cl::Hidden);
-} // namespace llvm
-
 static inline void addPass(legacy::PassManagerBase &PM, Pass *P) {
   // Add the pass to the pass manager...
   PM.add(P);
@@ -327,15 +292,7 @@ static inline void addPass(legacy::PassManagerBase &PM, Pass *P) {
 //
 
 static CodeGenOpt::Level GetCodeGenOptLevel() {
-  if (CodeGenOptLevel.getNumOccurrences())
-    return static_cast<CodeGenOpt::Level>(unsigned(CodeGenOptLevel));
-  if (OptLevelO1)
-    return CodeGenOpt::Less;
-  if (OptLevelO2)
-    return CodeGenOpt::Default;
-  if (OptLevelO3)
-    return CodeGenOpt::Aggressive;
-  return CodeGenOpt::None;
+  return static_cast<CodeGenOpt::Level>(unsigned(CodeGenOptLevel));
 }
 
 // Returns the TargetMachine instance or zero if no triple is provided.
@@ -766,7 +723,18 @@ int main(int argc, char **argv) {
     errs() << "Cannot use -O# with legacy PM.\n";
     return 1;
   }
-
+  if (EmitSummaryIndex) {
+    errs() << "Cannot use -module-summary with legacy PM.\n";
+    return 1;
+  }
+  if (EmitModuleHash) {
+    errs() << "Cannot use -module-hash with legacy PM.\n";
+    return 1;
+  }
+  if (OutputThinLTOBC) {
+    errs() << "Cannot use -thinlto-bc with legacy PM.\n";
+    return 1;
+  }
   // Create a PassManager to hold and optimize the collection of passes we are
   // about to build. If the -debugify-each option is set, wrap each pass with
   // the (-check)-debugify passes.
@@ -887,18 +855,10 @@ int main(int argc, char **argv) {
       BOS = std::make_unique<raw_svector_ostream>(Buffer);
       OS = BOS.get();
     }
-    if (OutputAssembly) {
-      if (EmitSummaryIndex)
-        report_fatal_error("Text output is incompatible with -module-summary");
-      if (EmitModuleHash)
-        report_fatal_error("Text output is incompatible with -module-hash");
+    if (OutputAssembly)
       Passes.add(createPrintModulePass(*OS, "", PreserveAssemblyUseListOrder));
-    } else if (OutputThinLTOBC)
-      report_fatal_error(
-          "Use the new pass manager for printing ThinLTO bitcode");
     else
-      Passes.add(createBitcodeWriterPass(*OS, PreserveBitcodeUseListOrder,
-                                         EmitSummaryIndex, EmitModuleHash));
+      Passes.add(createBitcodeWriterPass(*OS, PreserveBitcodeUseListOrder));
   }
 
   // Before executing passes, print the final values of the LLVM options.

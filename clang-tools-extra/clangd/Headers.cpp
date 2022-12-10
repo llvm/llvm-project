@@ -23,18 +23,6 @@
 namespace clang {
 namespace clangd {
 
-llvm::Optional<StringRef> parseIWYUPragma(const char *Text) {
-  // This gets called for every comment seen in the preamble, so it's quite hot.
-  constexpr llvm::StringLiteral IWYUPragma = "// IWYU pragma: ";
-  if (strncmp(Text, IWYUPragma.data(), IWYUPragma.size()))
-    return llvm::None;
-  Text += IWYUPragma.size();
-  const char *End = Text;
-  while (*End != 0 && *End != '\n')
-    ++End;
-  return StringRef(Text, End - Text);
-}
-
 class IncludeStructure::RecordHeaders : public PPCallbacks,
                                         public CommentHandler {
 public:
@@ -136,7 +124,8 @@ public:
   }
 
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
-    auto Pragma = parseIWYUPragma(SM.getCharacterData(Range.getBegin()));
+    auto Pragma =
+        tooling::parseIWYUPragma(SM.getCharacterData(Range.getBegin()));
     if (!Pragma)
       return false;
 

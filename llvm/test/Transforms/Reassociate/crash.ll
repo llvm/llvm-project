@@ -1,4 +1,4 @@
-; RUN: opt -reassociate -disable-output < %s
+; RUN: opt -passes=reassociate -disable-output < %s
 
 
 ; rdar://7507855

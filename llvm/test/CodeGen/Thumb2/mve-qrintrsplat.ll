@@ -968,7 +968,7 @@ define void @vmlaq(i32* %x, i32* %y, i32 %n) {
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
-; CHECK-NEXT:    vmla.u32 q1, q0, r3
+; CHECK-NEXT:    vmla.i32 q1, q0, r3
 ; CHECK-NEXT:    vstrw.32 q1, [r1], #16
 ; CHECK-NEXT:    letp lr, .LBB22_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
@@ -1014,7 +1014,7 @@ define void @vmlaqp(i32* %x, i32* %y, i32 %n) {
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
-; CHECK-NEXT:    vmla.u32 q1, q0, r3
+; CHECK-NEXT:    vmla.i32 q1, q0, r3
 ; CHECK-NEXT:    vstrw.32 q1, [r1], #16
 ; CHECK-NEXT:    letp lr, .LBB23_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
@@ -1059,7 +1059,7 @@ define void @vmlasq(i32* %x, i32* %y, i32 %n) {
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    vmlas.u32 q1, q0, r3
+; CHECK-NEXT:    vmlas.i32 q1, q0, r3
 ; CHECK-NEXT:    vstrw.32 q1, [r1], #16
 ; CHECK-NEXT:    letp lr, .LBB24_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
@@ -1105,7 +1105,7 @@ define void @vmlasqp(i32* %x, i32* %y, i32 %n) {
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
-; CHECK-NEXT:    vmlas.u32 q1, q0, r3
+; CHECK-NEXT:    vmlas.i32 q1, q0, r3
 ; CHECK-NEXT:    vstrw.32 q1, [r1], #16
 ; CHECK-NEXT:    letp lr, .LBB25_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup

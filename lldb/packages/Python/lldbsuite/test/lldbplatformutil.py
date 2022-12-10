@@ -98,21 +98,23 @@ def finalize_build_dictionary(dictionary):
     return dictionary
 
 
+def _get_platform_os(p):
+    # Use the triple to determine the platform if set.
+    triple = p.GetTriple()
+    if triple:
+        platform = triple.split('-')[2]
+        if platform.startswith('freebsd'):
+            platform = 'freebsd'
+        elif platform.startswith('netbsd'):
+            platform = 'netbsd'
+        return platform
+
+    return ''
+
+
 def getHostPlatform():
     """Returns the host platform running the test suite."""
-    # Attempts to return a platform name matching a target Triple platform.
-    if sys.platform.startswith('linux'):
-        return 'linux'
-    elif sys.platform.startswith('win32') or sys.platform.startswith('cygwin'):
-        return 'windows'
-    elif sys.platform.startswith('darwin'):
-        return 'macosx'
-    elif sys.platform.startswith('freebsd'):
-        return 'freebsd'
-    elif sys.platform.startswith('netbsd'):
-        return 'netbsd'
-    else:
-        return sys.platform
+    return _get_platform_os(lldb.SBPlatform("host"))
 
 
 def getDarwinOSTriples():
@@ -130,16 +132,7 @@ def getPlatform():
             platform = 'ios'
         return platform
 
-    platform = configuration.lldb_platform_name
-    if platform is None:
-        platform = "host"
-    if platform == "qemu-user":
-        platform = "host"
-    if platform == "host":
-        return getHostPlatform()
-    if platform.startswith("remote-"):
-        return platform[7:]
-    return platform
+    return _get_platform_os(lldb.selected_platform)
 
 
 def platformIsDarwin():

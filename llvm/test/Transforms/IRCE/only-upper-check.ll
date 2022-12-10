@@ -7,9 +7,9 @@
 ; CHECK-NEXT:  CheckUse:   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1 Operand: 0
 ; CHECK-NEXT: irce: in function incrementing: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 
-define void @incrementing(i32 *%arr, i32 *%a_len_ptr, i32 %n, i32 %offset) {
+define void @incrementing(ptr %arr, ptr %a_len_ptr, i32 %n, i32 %offset) {
  entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   %first.itr.check = icmp sgt i32 %n, 0
   br i1 %first.itr.check, label %loop, label %exit
 
@@ -21,8 +21,8 @@ define void @incrementing(i32 *%arr, i32 *%a_len_ptr, i32 %n, i32 %offset) {
   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
 
  in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %array.idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %array.idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, %n
   br i1 %next, label %loop, label %exit
 

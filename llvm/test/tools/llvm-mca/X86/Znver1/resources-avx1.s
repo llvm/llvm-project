@@ -1402,7 +1402,7 @@ vzeroupper
 # CHECK-NEXT:  1      1     1.00                        vpblendvb	%xmm3, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     1.00    *                   vpblendvb	%xmm3, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.33                        vpblendw	$11, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      8     0.50    *                   vpblendw	$11, (%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      8     0.50    *                   vpblendw	$11, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      100   0.25                        vpclmulqdq	$11, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      100   0.25    *                   vpclmulqdq	$11, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.33                        vpcmpeqb	%xmm0, %xmm1, %xmm2

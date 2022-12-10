@@ -14,10 +14,10 @@
 
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[VVAL]]
-define amdgpu_kernel void @local_size_x(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @local_size_x(ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.r600.read.local.size.x() #0
-  store i32 %0, i32 addrspace(1)* %out
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -29,10 +29,10 @@ entry:
 ; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x1c
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[VVAL]]
-define amdgpu_kernel void @local_size_y(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @local_size_y(ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.r600.read.local.size.y() #0
-  store i32 %0, i32 addrspace(1)* %out
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -44,10 +44,10 @@ entry:
 ; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x20
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[VVAL]]
-define amdgpu_kernel void @local_size_z(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @local_size_z(ptr addrspace(1) %out) {
 entry:
   %0 = call i32 @llvm.r600.read.local.size.z() #0
-  store i32 %0, i32 addrspace(1)* %out
+  store i32 %0, ptr addrspace(1) %out
   ret void
 }
 
@@ -57,12 +57,12 @@ entry:
 ; GCN: s_mul_i32 [[VAL:s[0-9]+]], s[[X]], s[[Y]]
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[VVAL]]
-define amdgpu_kernel void @local_size_xy(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @local_size_xy(ptr addrspace(1) %out) {
 entry:
   %x = call i32 @llvm.r600.read.local.size.x() #0
   %y = call i32 @llvm.r600.read.local.size.y() #0
   %val = mul i32 %x, %y
-  store i32 %val, i32 addrspace(1)* %out
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -76,12 +76,12 @@ entry:
 ; GCN: s_mul_i32 [[VAL:s[0-9]+]], [[X]], [[Z]]
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[VVAL]]
-define amdgpu_kernel void @local_size_xz(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @local_size_xz(ptr addrspace(1) %out) {
 entry:
   %x = call i32 @llvm.r600.read.local.size.x() #0
   %z = call i32 @llvm.r600.read.local.size.z() #0
   %val = mul i32 %x, %z
-  store i32 %val, i32 addrspace(1)* %out
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -94,12 +94,12 @@ entry:
 ; GCN: s_mul_i32 [[VAL:s[0-9]+]], s[[#LOAD + 0]], s[[#LOAD + 1]]
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[VVAL]]
-define amdgpu_kernel void @local_size_yz(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @local_size_yz(ptr addrspace(1) %out) {
 entry:
   %y = call i32 @llvm.r600.read.local.size.y() #0
   %z = call i32 @llvm.r600.read.local.size.z() #0
   %val = mul i32 %y, %z
-  store i32 %val, i32 addrspace(1)* %out
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -115,14 +115,14 @@ entry:
 ; GCN: s_add_i32 [[VAL:s[0-9]+]], [[M]], s[[Z]]
 ; GCN-DAG: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[VVAL]]
-define amdgpu_kernel void @local_size_xyz(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @local_size_xyz(ptr addrspace(1) %out) {
 entry:
   %x = call i32 @llvm.r600.read.local.size.x() #0
   %y = call i32 @llvm.r600.read.local.size.y() #0
   %z = call i32 @llvm.r600.read.local.size.z() #0
   %xy = mul i32 %x, %y
   %xyz = add i32 %xy, %z
-  store i32 %xyz, i32 addrspace(1)* %out
+  store i32 %xyz, ptr addrspace(1) %out
   ret void
 }
 
@@ -132,12 +132,12 @@ entry:
 ; GCN-NOT: 0xffff
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN-NEXT: buffer_store_dword [[VVAL]]
-define amdgpu_kernel void @local_size_x_known_bits(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @local_size_x_known_bits(ptr addrspace(1) %out) {
 entry:
   %size = call i32 @llvm.r600.read.local.size.x() #0
   %shl = shl i32 %size, 16
   %shr = lshr i32 %shl, 16
-  store i32 %shr, i32 addrspace(1)* %out
+  store i32 %shr, ptr addrspace(1) %out
   ret void
 }
 
@@ -147,12 +147,12 @@ entry:
 ; GCN-NOT: 0xffff
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN-NEXT: buffer_store_dword [[VVAL]]
-define amdgpu_kernel void @local_size_y_known_bits(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @local_size_y_known_bits(ptr addrspace(1) %out) {
 entry:
   %size = call i32 @llvm.r600.read.local.size.y() #0
   %shl = shl i32 %size, 16
   %shr = lshr i32 %shl, 16
-  store i32 %shr, i32 addrspace(1)* %out
+  store i32 %shr, ptr addrspace(1) %out
   ret void
 }
 
@@ -162,12 +162,12 @@ entry:
 ; GCN-NOT: 0xffff
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN-NEXT: buffer_store_dword [[VVAL]]
-define amdgpu_kernel void @local_size_z_known_bits(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @local_size_z_known_bits(ptr addrspace(1) %out) {
 entry:
   %size = call i32 @llvm.r600.read.local.size.z() #0
   %shl = shl i32 %size, 16
   %shr = lshr i32 %shl, 16
-  store i32 %shr, i32 addrspace(1)* %out
+  store i32 %shr, ptr addrspace(1) %out
   ret void
 }
 

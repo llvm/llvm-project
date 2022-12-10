@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11,GFX11-SDAG %s
 ; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11,GFX11-GISEL %s
 
-define amdgpu_kernel void @test_get_doorbell(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_get_doorbell(ptr addrspace(1) %out) {
 ; GFX11-SDAG-LABEL: test_get_doorbell:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -23,11 +23,11 @@ define amdgpu_kernel void @test_get_doorbell(i32 addrspace(1)* %out) {
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 128)
-  store i32 %ret, i32 addrspace(1)* %out
+  store i32 %ret, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_get_ddid(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_get_ddid(ptr addrspace(1) %out) {
 ; GFX11-SDAG-LABEL: test_get_ddid:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -48,11 +48,11 @@ define amdgpu_kernel void @test_get_ddid(i32 addrspace(1)* %out) {
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 129)
-  store i32 %ret, i32 addrspace(1)* %out
+  store i32 %ret, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_get_tma(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @test_get_tma(ptr addrspace(1) %out) {
 ; GFX11-LABEL: test_get_tma:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -64,11 +64,11 @@ define amdgpu_kernel void @test_get_tma(i64 addrspace(1)* %out) {
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ret = call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 130)
-  store i64 %ret, i64 addrspace(1)* %out
+  store i64 %ret, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_get_realtime(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @test_get_realtime(ptr addrspace(1) %out) {
 ; GFX11-LABEL: test_get_realtime:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -80,11 +80,11 @@ define amdgpu_kernel void @test_get_realtime(i64 addrspace(1)* %out) {
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ret = call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 131)
-  store i64 %ret, i64 addrspace(1)* %out
+  store i64 %ret, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_savewave(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_savewave(ptr addrspace(1) %out) {
 ; GFX11-SDAG-LABEL: test_savewave:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -105,11 +105,11 @@ define amdgpu_kernel void @test_savewave(i32 addrspace(1)* %out) {
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 132)
-  store i32 %ret, i32 addrspace(1)* %out
+  store i32 %ret, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_get_tba(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @test_get_tba(ptr addrspace(1) %out) {
 ; GFX11-LABEL: test_get_tba:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -121,11 +121,11 @@ define amdgpu_kernel void @test_get_tba(i64 addrspace(1)* %out) {
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ret = call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 133)
-  store i64 %ret, i64 addrspace(1)* %out
+  store i64 %ret, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_get_0_i32(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_get_0_i32(ptr addrspace(1) %out) {
 ; GFX11-SDAG-LABEL: test_get_0_i32:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -146,11 +146,11 @@ define amdgpu_kernel void @test_get_0_i32(i32 addrspace(1)* %out) {
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 0)
-  store i32 %ret, i32 addrspace(1)* %out
+  store i32 %ret, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_get_99999_i64(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @test_get_99999_i64(ptr addrspace(1) %out) {
 ; GFX11-LABEL: test_get_99999_i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -162,7 +162,7 @@ define amdgpu_kernel void @test_get_99999_i64(i64 addrspace(1)* %out) {
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ret = call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 99999)
-  store i64 %ret, i64 addrspace(1)* %out
+  store i64 %ret, ptr addrspace(1) %out
   ret void
 }
 

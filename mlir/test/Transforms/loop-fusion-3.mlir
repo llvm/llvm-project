@@ -1,7 +1,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-fusion -split-input-file | FileCheck %s
 // RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-fusion="fusion-maximal" -split-input-file | FileCheck %s --check-prefix=MAXIMAL
 
-// Part I of fusion tests in  mlir/test/Transforms/loop-fusion.mlir. 
+// Part I of fusion tests in  mlir/test/Transforms/loop-fusion.mlir.
 // Part II of fusion tests in mlir/test/Transforms/loop-fusion-2.mlir
 // Part IV of fusion tests in mlir/test/Transforms/loop-fusion-4.mlir
 

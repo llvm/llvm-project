@@ -1,7 +1,7 @@
 ; Check if we can evaluate a bitcasted call to a function which is constant folded.
 ; Evaluator folds call to fmodf, replacing it with constant value in case both operands
 ; are known at compile time.
-; RUN: opt -globalopt -instcombine %s -S -o - | FileCheck %s
+; RUN: opt -passes=globalopt,instcombine %s -S -o - | FileCheck %s
 
 ; CHECK:        @_q = dso_local local_unnamed_addr global %struct.Q { i32 1066527622 }
 ; CHECK:        define dso_local i32 @main

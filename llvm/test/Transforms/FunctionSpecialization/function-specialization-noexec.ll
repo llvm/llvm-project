@@ -16,11 +16,11 @@ entry:
   br i1 false, label %if.then, label %if.else
 
 if.then:
-  %call = call i32 @foo(i32 %x, i32* @A)
+  %call = call i32 @foo(i32 %x, ptr @A)
   br label %return
 
 if.else:
-  %call1 = call i32 @foo(i32 %y, i32* @B)
+  %call1 = call i32 @foo(i32 %y, ptr @B)
   br label %return
 
 return:
@@ -28,9 +28,9 @@ return:
   ret i32 %retval.0
 }
 
-define internal i32 @foo(i32 %x, i32* %b) {
+define internal i32 @foo(i32 %x, ptr %b) {
 entry:
-  %0 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %b, align 4
   %add = add nsw i32 %x, %0
   ret i32 %add
 }

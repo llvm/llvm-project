@@ -10,7 +10,7 @@ func.func @simple_op(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?xf32>, %arg2 : ten
   %init1 = tensor.empty(%d1, %d0) : tensor<?x?xf32>
   %init2 = tensor.empty(%d0, %d1) : tensor<?x?xf32>
   %result:2 = linalg.generic {
-    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0)>, 
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0)>,
                      affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d1, d0)>,
                      affine_map<(d0, d1) -> (d0, d1)>],
     iterator_types = ["parallel", "parallel"]}
@@ -119,7 +119,7 @@ func.func @simple_op_permuted_outputs(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x
   %init1 = tensor.empty(%d1, %d0) : tensor<?x?xf32>
   %init2 = tensor.empty(%d0, %d1) : tensor<?x?xf32>
   %result:3 = linalg.generic {
-    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0)>, 
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0)>,
                      affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d1, d0)>,
                      affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
     iterator_types = ["parallel", "parallel"]}

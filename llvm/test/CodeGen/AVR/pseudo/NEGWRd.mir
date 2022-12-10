@@ -21,6 +21,11 @@ body: |
     ; CHECK:      $r15 = NEGRd killed $r15, implicit-def dead $sreg
     ; CHECK-NEXT: $r14 = NEGRd $r14
     ; CHECK-NEXT: $r15 = SBCRdRr $r15, $r1, implicit-def $sreg, implicit killed $sreg
+    $r15r14 = NEGWRd $r15r14, $r1, implicit-def $sreg
 
-    $r15r14 = NEGWRd $r15r14, implicit-def $sreg, implicit $r1
+    ; avrtiny variant
+    ; CHECK:      $r15 = NEGRd killed $r15, implicit-def dead $sreg
+    ; CHECK-NEXT: $r14 = NEGRd $r14
+    ; CHECK-NEXT: $r15 = SBCRdRr $r15, $r17, implicit-def $sreg, implicit killed $sreg
+    $r15r14 = NEGWRd $r15r14, $r17, implicit-def $sreg
 ...

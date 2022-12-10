@@ -52,6 +52,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemRefDialect
+  MLIRMemRefTransforms
   MLIRLinalgDialect
   MLIRLinalgAnalysis
   MLIRLinalgUtils

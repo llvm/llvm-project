@@ -23,9 +23,9 @@ declare double @llvm.amdgcn.div.fmas.f64(double, double, double, i1) nounwind re
 ; GCN-DAG: v_mov_b32_e32 [[VA:v[0-9]+]], [[SA]]
 ; GCN: v_div_fmas_f32 [[RESULT:v[0-9]+]], [[VA]], [[VB]], [[VC]]
 ; GCN: buffer_store_dword [[RESULT]],
-define amdgpu_kernel void @test_div_fmas_f32(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c, [8 x i32], i1 %d) nounwind {
+define amdgpu_kernel void @test_div_fmas_f32(ptr addrspace(1) %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c, [8 x i32], i1 %d) nounwind {
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 %d) nounwind readnone
-  store float %result, float addrspace(1)* %out, align 4
+  store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -36,9 +36,9 @@ define amdgpu_kernel void @test_div_fmas_f32(float addrspace(1)* %out, [8 x i32]
 ; SI-DAG: v_mov_b32_e32 [[VB:v[0-9]+]], [[SB]]
 ; SI: v_div_fmas_f32 [[RESULT:v[0-9]+]], 1.0, [[VB]], [[VC]]
 ; SI: buffer_store_dword [[RESULT]],
-define amdgpu_kernel void @test_div_fmas_f32_inline_imm_0(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c, [8 x i32], i1 %d) nounwind {
+define amdgpu_kernel void @test_div_fmas_f32_inline_imm_0(ptr addrspace(1) %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c, [8 x i32], i1 %d) nounwind {
   %result = call float @llvm.amdgcn.div.fmas.f32(float 1.0, float %b, float %c, i1 %d) nounwind readnone
-  store float %result, float addrspace(1)* %out, align 4
+  store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -53,9 +53,9 @@ define amdgpu_kernel void @test_div_fmas_f32_inline_imm_0(float addrspace(1)* %o
 ; GCN-DAG: v_mov_b32_e32 [[VA:v[0-9]+]], [[SA]]
 ; GCN: v_div_fmas_f32 [[RESULT:v[0-9]+]], [[VA]], 1.0, [[VC]]
 ; GCN: buffer_store_dword [[RESULT]],
-define amdgpu_kernel void @test_div_fmas_f32_inline_imm_1(float addrspace(1)* %out, float %a, float %b, float %c, [8 x i32], i1 %d) nounwind {
+define amdgpu_kernel void @test_div_fmas_f32_inline_imm_1(ptr addrspace(1) %out, float %a, float %b, float %c, [8 x i32], i1 %d) nounwind {
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float 1.0, float %c, i1 %d) nounwind readnone
-  store float %result, float addrspace(1)* %out, align 4
+  store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -70,45 +70,45 @@ define amdgpu_kernel void @test_div_fmas_f32_inline_imm_1(float addrspace(1)* %o
 ; GCN-DAG: v_mov_b32_e32 [[VB:v[0-9]+]], [[SB]]
 ; GCN: v_div_fmas_f32 [[RESULT:v[0-9]+]], [[VA]], [[VB]], 1.0
 ; GCN: buffer_store_dword [[RESULT]],
-define amdgpu_kernel void @test_div_fmas_f32_inline_imm_2(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c, [8 x i32], i1 %d) nounwind {
+define amdgpu_kernel void @test_div_fmas_f32_inline_imm_2(ptr addrspace(1) %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c, [8 x i32], i1 %d) nounwind {
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float 1.0, i1 %d) nounwind readnone
-  store float %result, float addrspace(1)* %out, align 4
+  store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f64:
 ; GCN: v_div_fmas_f64
-define amdgpu_kernel void @test_div_fmas_f64(double addrspace(1)* %out, double %a, double %b, double %c, i1 %d) nounwind {
+define amdgpu_kernel void @test_div_fmas_f64(ptr addrspace(1) %out, double %a, double %b, double %c, i1 %d) nounwind {
   %result = call double @llvm.amdgcn.div.fmas.f64(double %a, double %b, double %c, i1 %d) nounwind readnone
-  store double %result, double addrspace(1)* %out, align 8
+  store double %result, ptr addrspace(1) %out, align 8
   ret void
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f32_cond_to_vcc:
 ; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 0{{$}}
 ; GCN: v_div_fmas_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
-define amdgpu_kernel void @test_div_fmas_f32_cond_to_vcc(float addrspace(1)* %out, float %a, float %b, float %c, i32 %i) nounwind {
+define amdgpu_kernel void @test_div_fmas_f32_cond_to_vcc(ptr addrspace(1) %out, float %a, float %b, float %c, i32 %i) nounwind {
   %cmp = icmp eq i32 %i, 0
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 %cmp) nounwind readnone
-  store float %result, float addrspace(1)* %out, align 4
+  store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f32_imm_false_cond_to_vcc:
 ; GCN: s_mov_b64 vcc, 0
 ; GCN: v_div_fmas_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
-define amdgpu_kernel void @test_div_fmas_f32_imm_false_cond_to_vcc(float addrspace(1)* %out, float %a, float %b, float %c) nounwind {
+define amdgpu_kernel void @test_div_fmas_f32_imm_false_cond_to_vcc(ptr addrspace(1) %out, float %a, float %b, float %c) nounwind {
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 false) nounwind readnone
-  store float %result, float addrspace(1)* %out, align 4
+  store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f32_imm_true_cond_to_vcc:
 ; GCN: s_mov_b64 vcc, -1
 ; GCN: v_div_fmas_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
-define amdgpu_kernel void @test_div_fmas_f32_imm_true_cond_to_vcc(float addrspace(1)* %out, float %a, float %b, float %c) nounwind {
+define amdgpu_kernel void @test_div_fmas_f32_imm_true_cond_to_vcc(ptr addrspace(1) %out, float %a, float %b, float %c) nounwind {
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 true) nounwind readnone
-  store float %result, float addrspace(1)* %out, align 4
+  store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -123,23 +123,23 @@ define amdgpu_kernel void @test_div_fmas_f32_imm_true_cond_to_vcc(float addrspac
 ; SI: s_and_b64 vcc, [[CMP0]], [[CMP1]]
 ; SI: v_div_fmas_f32 {{v[0-9]+}}, [[A]], [[B]], [[C]]
 ; SI: s_endpgm
-define amdgpu_kernel void @test_div_fmas_f32_logical_cond_to_vcc(float addrspace(1)* %out, float addrspace(1)* %in, i32 %d) nounwind {
+define amdgpu_kernel void @test_div_fmas_f32_logical_cond_to_vcc(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %d) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-  %gep.a = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.b = getelementptr float, float addrspace(1)* %gep.a, i32 1
-  %gep.c = getelementptr float, float addrspace(1)* %gep.a, i32 2
-  %gep.out = getelementptr float, float addrspace(1)* %out, i32 2
+  %gep.a = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.b = getelementptr float, ptr addrspace(1) %gep.a, i32 1
+  %gep.c = getelementptr float, ptr addrspace(1) %gep.a, i32 2
+  %gep.out = getelementptr float, ptr addrspace(1) %out, i32 2
 
-  %a = load volatile float, float addrspace(1)* %gep.a
-  %b = load volatile float, float addrspace(1)* %gep.b
-  %c = load volatile float, float addrspace(1)* %gep.c
+  %a = load volatile float, ptr addrspace(1) %gep.a
+  %b = load volatile float, ptr addrspace(1) %gep.b
+  %c = load volatile float, ptr addrspace(1) %gep.c
 
   %cmp0 = icmp eq i32 %tid, 0
   %cmp1 = icmp ne i32 %d, 0
   %and = and i1 %cmp0, %cmp1
 
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 %and) nounwind readnone
-  store float %result, float addrspace(1)* %gep.out, align 4
+  store float %result, ptr addrspace(1) %gep.out, align 4
   ret void
 }
 
@@ -162,29 +162,29 @@ define amdgpu_kernel void @test_div_fmas_f32_logical_cond_to_vcc(float addrspace
 ; SI:     buffer_store_dword
 ; SI:     s_endpgm
 
-define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(float addrspace(1)* %out, float addrspace(1)* %in, i32 addrspace(1)* %dummy) nounwind {
+define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(1) %dummy) nounwind {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-  %gep.out = getelementptr float, float addrspace(1)* %out, i32 2
-  %gep.a = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.b = getelementptr float, float addrspace(1)* %gep.a, i32 1
-  %gep.c = getelementptr float, float addrspace(1)* %gep.a, i32 2
+  %gep.out = getelementptr float, ptr addrspace(1) %out, i32 2
+  %gep.a = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.b = getelementptr float, ptr addrspace(1) %gep.a, i32 1
+  %gep.c = getelementptr float, ptr addrspace(1) %gep.a, i32 2
 
-  %a = load float, float addrspace(1)* %gep.a
-  %b = load float, float addrspace(1)* %gep.b
-  %c = load float, float addrspace(1)* %gep.c
+  %a = load float, ptr addrspace(1) %gep.a
+  %b = load float, ptr addrspace(1) %gep.b
+  %c = load float, ptr addrspace(1) %gep.c
 
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %bb, label %exit
 
 bb:
-  %val = load i32, i32 addrspace(1)* %dummy
+  %val = load i32, ptr addrspace(1) %dummy
   %cmp1 = icmp ne i32 %val, 0
   br label %exit
 
 exit:
   %cond = phi i1 [false, %entry], [%cmp1, %bb]
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 %cond) nounwind readnone
-  store float %result, float addrspace(1)* %gep.out, align 4
+  store float %result, ptr addrspace(1) %gep.out, align 4
   ret void
 }

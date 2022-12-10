@@ -13,7 +13,7 @@
 
 ; Show that IRCE can turn 'ne' condition to 'slt' in increasing IV when the IV
 ; can be negative at some point.
-define void @test_01(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_01(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK:      test_01
 ; CHECK:        main.exit.selector:
@@ -22,7 +22,7 @@ define void @test_01(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:     br i1 [[COND]]
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -32,8 +32,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ne i32 %idx.next, 100
   br i1 %next, label %loop, label %exit
 
@@ -46,7 +46,7 @@ exit:
 
 ; Show that IRCE can turn 'ne' condition to 'ult' in increasing IV when IV is
 ; non-negative.
-define void @test_01u(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_01u(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK:      test_01u
 ; CHECK:        main.exit.selector:
@@ -55,7 +55,7 @@ define void @test_01u(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:     br i1 [[COND]]
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -65,8 +65,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ne i32 %idx.next, 100
   br i1 %next, label %loop, label %exit
 
@@ -79,12 +79,12 @@ exit:
 
 ; Show that if n is not known to be greater than the starting value, IRCE
 ; doesn't apply.
-define void @test_02(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_02(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK: test_02(
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -94,8 +94,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ne i32 %idx.next, -100
   br i1 %next, label %loop, label %exit
 
@@ -107,7 +107,7 @@ exit:
 }
 
 ; Show that IRCE can turn 'eq' condition to 'sge' in increasing IV.
-define void @test_03(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_03(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK: test_03(
 ; CHECK:        main.exit.selector:
@@ -116,7 +116,7 @@ define void @test_03(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:     br i1 [[COND]]
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -126,8 +126,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp eq i32 %idx.next, 100
   br i1 %next, label %exit, label %loop
 
@@ -138,10 +138,10 @@ exit:
   ret void
 }
 
-define void @test_04(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_04(ptr %arr, ptr %a_len_ptr) #0 {
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -151,8 +151,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp eq i32 %idx.next, -100
   br i1 %next, label %exit, label %loop
 
@@ -164,7 +164,7 @@ exit:
 }
 
 ; Show that IRCE can turn 'ne' condition to 'sgt' in decreasing IV.
-define void @test_05(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_05(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK: test_05(
 ; CHECK:        preloop.exit.selector:
@@ -173,7 +173,7 @@ define void @test_05(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:     br i1 [[COND]]
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -183,8 +183,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ne i32 %idx.next, 0
   br i1 %next, label %loop, label %exit
 
@@ -197,12 +197,12 @@ exit:
 
 ; Show that IRCE cannot turn 'ne' condition to 'sgt' in decreasing IV if the end
 ; value is not proved to be less than the start value.
-define void @test_06(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_06(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK: test_06(
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -212,8 +212,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ne i32 %idx.next, 120
   br i1 %next, label %loop, label %exit
 
@@ -225,7 +225,7 @@ exit:
 }
 
 ; Show that IRCE can turn 'eq' condition to 'slt' in decreasing IV.
-define void @test_07(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_07(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK: test_07(
 ; CHECK:        preloop.exit.selector:
@@ -234,7 +234,7 @@ define void @test_07(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:     br i1 [[COND]]
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -244,8 +244,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp eq i32 %idx.next, 0
   br i1 %next, label %exit, label %loop
 
@@ -258,12 +258,12 @@ exit:
 
 ; Show that IRCE cannot turn 'eq' condition to 'slt' in decreasing IV if the end
 ; value is not proved to be less than the start value.
-define void @test_08(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_08(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK: test_08(
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -273,8 +273,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp eq i32 %idx.next, 120
   br i1 %next, label %exit, label %loop
 

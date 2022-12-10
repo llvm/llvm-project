@@ -179,7 +179,7 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        pblendvb	%xmm0, %xmm0, %xmm2
 # CHECK-NEXT:  1      8     1.00    *                   pblendvb	%xmm0, (%rax), %xmm2
 # CHECK-NEXT:  1      1     0.33                        pblendw	$11, %xmm0, %xmm2
-# CHECK-NEXT:  2      8     0.50    *                   pblendw	$11, (%rax), %xmm2
+# CHECK-NEXT:  1      8     0.50    *                   pblendw	$11, (%rax), %xmm2
 # CHECK-NEXT:  1      1     0.33                        pcmpeqq	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   pcmpeqq	(%rax), %xmm2
 # CHECK-NEXT:  1      2     2.00                        pextrb	$1, %xmm0, %ecx

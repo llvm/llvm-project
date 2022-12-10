@@ -20,7 +20,7 @@ define amdgpu_kernel void @test_wave64(i32 %arg0, [8 x i32], i64 %saved) {
 entry:
   %cond = icmp eq i32 %arg0, 0
   %break = call i64 @llvm.amdgcn.if.break.i64(i1 %cond, i64 %saved)
-  store volatile i64 %break, i64 addrspace(1)* undef
+  store volatile i64 %break, ptr addrspace(1) undef
   ret void
 }
 

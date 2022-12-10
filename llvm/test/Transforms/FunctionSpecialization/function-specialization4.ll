@@ -17,11 +17,11 @@ entry:
   br i1 %tobool, label %if.then, label %if.else
 
 if.then:
-  %call = call i32 @foo(i32 %x, i32* @A, i32* @C)
+  %call = call i32 @foo(i32 %x, ptr @A, ptr @C)
   br label %return
 
 if.else:
-  %call1 = call i32 @foo(i32 %y, i32* @B, i32* @D)
+  %call1 = call i32 @foo(i32 %y, ptr @B, ptr @D)
   br label %return
 
 return:
@@ -30,32 +30,32 @@ return:
 }
 
 ; CHECK-NOT: define internal i32 @foo(
-define internal i32 @foo(i32 %x, i32* %b, i32* %c) {
+define internal i32 @foo(i32 %x, ptr %b, ptr %c) {
 entry:
-  %0 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %b, align 4
   %add = add nsw i32 %x, %0
-  %1 = load i32, i32* %c, align 4
+  %1 = load i32, ptr %c, align 4
   %add1 = add nsw i32 %add, %1
   ret i32 %add1
 }
 
-; CONST1:     define internal i32 @foo.1(i32 %x, i32* %b, i32* %c)
-; CONST1-NOT: define internal i32 @foo.2(i32 %x, i32* %b, i32* %c)
+; CONST1:     define internal i32 @foo.1(i32 %x, ptr %b, ptr %c)
+; CONST1-NOT: define internal i32 @foo.2(i32 %x, ptr %b, ptr %c)
 
-; CHECK:        define internal i32 @foo.1(i32 %x, i32* %b, i32* %c) {
+; CHECK:        define internal i32 @foo.1(i32 %x, ptr %b, ptr %c) {
 ; CHECK-NEXT:   entry:
-; CHECK-NEXT:     %0 = load i32, i32* @A, align 4
+; CHECK-NEXT:     %0 = load i32, ptr @A, align 4
 ; CHECK-NEXT:     %add = add nsw i32 %x, %0
-; CHECK-NEXT:     %1 = load i32, i32* @C, align 4
+; CHECK-NEXT:     %1 = load i32, ptr @C, align 4
 ; CHECK-NEXT:     %add1 = add nsw i32 %add, %1
 ; CHECK-NEXT:     ret i32 %add1
 ; CHECK-NEXT:   }
 
-; CHECK: define internal i32 @foo.2(i32 %x, i32* %b, i32* %c) {
+; CHECK: define internal i32 @foo.2(i32 %x, ptr %b, ptr %c) {
 ; CHECK-NEXT:   entry:
-; CHECK-NEXT:     %0 = load i32, i32* @B, align 4
+; CHECK-NEXT:     %0 = load i32, ptr @B, align 4
 ; CHECK-NEXT:     %add = add nsw i32 %x, %0
-; CHECK-NEXT:     %1 = load i32, i32* @D, align 4
+; CHECK-NEXT:     %1 = load i32, ptr @D, align 4
 ; CHECK-NEXT:     %add1 = add nsw i32 %add, %1
 ; CHECK-NEXT:     ret i32 %add1
 ; CHECK-NEXT:   }

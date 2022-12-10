@@ -121,7 +121,7 @@ func.func @parallel_maybe_side_effects(%a: i32, %b: i32) {
   return
 }
 
-func.func private @foo() -> () 
+func.func private @foo() -> ()
 
 // CHECK: omp.parallel
 // CHECK: func.call @foo() : () -> ()

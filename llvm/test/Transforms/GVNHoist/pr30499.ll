@@ -1,4 +1,4 @@
-; RUN: opt -S -gvn-hoist < %s
+; RUN: opt -S -passes=gvn-hoist < %s
 
 define void @_Z3fn2v() #0 {
 entry:

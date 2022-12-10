@@ -9,31 +9,30 @@
 target datalayout = "E-m:e-i64:64-n32:64-S128"
 target triple = "sparcv9-unknown-unknown"
 
-define i8 @test_cmpxchg_i8(i8* %arg, i8 %old, i8 %new) {
+define i8 @test_cmpxchg_i8(ptr %arg, i8 %old, i8 %new) {
 ; CHECK-LABEL: @test_cmpxchg_i8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    fence seq_cst
-; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call i8* @llvm.ptrmask.p0i8.i64(i8* [[ARG:%.*]], i64 -4)
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i8* [[ARG]] to i64
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARG:%.*]], i64 -4)
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[PTRLSB]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i8* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[NEW:%.*]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 [[OLD:%.*]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[ALIGNEDADDR1]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], [[INV_MASK]]
 ; CHECK-NEXT:    br label [[PARTWORD_CMPXCHG_LOOP:%.*]]
 ; CHECK:       partword.cmpxchg.loop:
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi i32 [ [[TMP8]], [[ENTRY:%.*]] ], [ [[TMP15:%.*]], [[PARTWORD_CMPXCHG_FAILURE:%.*]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i32 [[TMP9]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = or i32 [[TMP9]], [[TMP6]]
-; CHECK-NEXT:    [[TMP12:%.*]] = cmpxchg i32* [[ALIGNEDADDR1]], i32 [[TMP11]], i32 [[TMP10]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[TMP11]], i32 [[TMP10]] monotonic monotonic, align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { i32, i1 } [[TMP12]], 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { i32, i1 } [[TMP12]], 1
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[PARTWORD_CMPXCHG_END:%.*]], label [[PARTWORD_CMPXCHG_FAILURE]]
@@ -51,36 +50,35 @@ define i8 @test_cmpxchg_i8(i8* %arg, i8 %old, i8 %new) {
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
 entry:
-  %ret_succ = cmpxchg i8* %arg, i8 %old, i8 %new seq_cst monotonic
+  %ret_succ = cmpxchg ptr %arg, i8 %old, i8 %new seq_cst monotonic
   %ret = extractvalue { i8, i1 } %ret_succ, 0
   ret i8 %ret
 }
 
-define i16 @test_cmpxchg_i16(i16* %arg, i16 %old, i16 %new) {
+define i16 @test_cmpxchg_i16(ptr %arg, i16 %old, i16 %new) {
 ; CHECK-LABEL: @test_cmpxchg_i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    fence seq_cst
-; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call i16* @llvm.ptrmask.p0i16.i64(i16* [[ARG:%.*]], i64 -4)
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i16* [[ARG]] to i64
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARG:%.*]], i64 -4)
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[PTRLSB]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[NEW:%.*]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i16 [[OLD:%.*]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[ALIGNEDADDR1]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], [[INV_MASK]]
 ; CHECK-NEXT:    br label [[PARTWORD_CMPXCHG_LOOP:%.*]]
 ; CHECK:       partword.cmpxchg.loop:
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi i32 [ [[TMP8]], [[ENTRY:%.*]] ], [ [[TMP15:%.*]], [[PARTWORD_CMPXCHG_FAILURE:%.*]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i32 [[TMP9]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = or i32 [[TMP9]], [[TMP6]]
-; CHECK-NEXT:    [[TMP12:%.*]] = cmpxchg i32* [[ALIGNEDADDR1]], i32 [[TMP11]], i32 [[TMP10]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[TMP11]], i32 [[TMP10]] monotonic monotonic, align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { i32, i1 } [[TMP12]], 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { i32, i1 } [[TMP12]], 1
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[PARTWORD_CMPXCHG_END:%.*]], label [[PARTWORD_CMPXCHG_FAILURE]]
@@ -98,27 +96,26 @@ define i16 @test_cmpxchg_i16(i16* %arg, i16 %old, i16 %new) {
 ; CHECK-NEXT:    ret i16 [[RET]]
 ;
 entry:
-  %ret_succ = cmpxchg i16* %arg, i16 %old, i16 %new seq_cst monotonic
+  %ret_succ = cmpxchg ptr %arg, i16 %old, i16 %new seq_cst monotonic
   %ret = extractvalue { i16, i1 } %ret_succ, 0
   ret i16 %ret
 }
 
-define i16 @test_add_i16(i16* %arg, i16 %val) {
+define i16 @test_add_i16(ptr %arg, i16 %val) {
 ; CHECK-LABEL: @test_add_i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    fence seq_cst
-; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call i16* @llvm.ptrmask.p0i16.i64(i16* [[ARG:%.*]], i64 -4)
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i16* [[ARG]] to i64
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARG:%.*]], i64 -4)
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[PTRLSB]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VAL:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ALIGNEDADDR1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -126,7 +123,7 @@ define i16 @test_add_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[NEW]], [[MASK]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = cmpxchg i32* [[ALIGNEDADDR1]], i32 [[LOADED]], i32 [[TMP7]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] monotonic monotonic, align 4
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP8]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -137,31 +134,30 @@ define i16 @test_add_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
 entry:
-  %ret = atomicrmw add i16* %arg, i16 %val seq_cst
+  %ret = atomicrmw add ptr %arg, i16 %val seq_cst
   ret i16 %ret
 }
 
-define i16 @test_xor_i16(i16* %arg, i16 %val) {
+define i16 @test_xor_i16(ptr %arg, i16 %val) {
 ; CHECK-LABEL: @test_xor_i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    fence seq_cst
-; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call i16* @llvm.ptrmask.p0i16.i64(i16* [[ARG:%.*]], i64 -4)
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i16* [[ARG]] to i64
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARG:%.*]], i64 -4)
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[PTRLSB]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VAL:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ALIGNEDADDR1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[NEW:%.*]] = xor i32 [[LOADED]], [[VALOPERAND_SHIFTED]]
-; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg i32* [[ALIGNEDADDR1]], i32 [[LOADED]], i32 [[NEW]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[NEW]] monotonic monotonic, align 4
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -172,31 +168,30 @@ define i16 @test_xor_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
 entry:
-  %ret = atomicrmw xor i16* %arg, i16 %val seq_cst
+  %ret = atomicrmw xor ptr %arg, i16 %val seq_cst
   ret i16 %ret
 }
 
-define i16 @test_or_i16(i16* %arg, i16 %val) {
+define i16 @test_or_i16(ptr %arg, i16 %val) {
 ; CHECK-LABEL: @test_or_i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    fence seq_cst
-; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call i16* @llvm.ptrmask.p0i16.i64(i16* [[ARG:%.*]], i64 -4)
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i16* [[ARG]] to i64
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARG:%.*]], i64 -4)
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[PTRLSB]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VAL:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ALIGNEDADDR1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[NEW:%.*]] = or i32 [[LOADED]], [[VALOPERAND_SHIFTED]]
-; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg i32* [[ALIGNEDADDR1]], i32 [[LOADED]], i32 [[NEW]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[NEW]] monotonic monotonic, align 4
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -207,32 +202,31 @@ define i16 @test_or_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
 entry:
-  %ret = atomicrmw or i16* %arg, i16 %val seq_cst
+  %ret = atomicrmw or ptr %arg, i16 %val seq_cst
   ret i16 %ret
 }
 
-define i16 @test_and_i16(i16* %arg, i16 %val) {
+define i16 @test_and_i16(ptr %arg, i16 %val) {
 ; CHECK-LABEL: @test_and_i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    fence seq_cst
-; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call i16* @llvm.ptrmask.p0i16.i64(i16* [[ARG:%.*]], i64 -4)
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i16* [[ARG]] to i64
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARG:%.*]], i64 -4)
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[PTRLSB]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VAL:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[INV_MASK]], [[VALOPERAND_SHIFTED]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ALIGNEDADDR1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[NEW:%.*]] = and i32 [[LOADED]], [[ANDOPERAND]]
-; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg i32* [[ALIGNEDADDR1]], i32 [[LOADED]], i32 [[NEW]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[NEW]] monotonic monotonic, align 4
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -243,24 +237,23 @@ define i16 @test_and_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
 entry:
-  %ret = atomicrmw and i16* %arg, i16 %val seq_cst
+  %ret = atomicrmw and ptr %arg, i16 %val seq_cst
   ret i16 %ret
 }
 
-define i16 @test_min_i16(i16* %arg, i16 %val) {
+define i16 @test_min_i16(ptr %arg, i16 %val) {
 ; CHECK-LABEL: @test_min_i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    fence seq_cst
-; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call i16* @llvm.ptrmask.p0i16.i64(i16* [[ARG:%.*]], i64 -4)
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i16* [[ARG]] to i64
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ARG:%.*]], i64 -4)
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[PTRLSB]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ALIGNEDADDR1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -272,7 +265,7 @@ define i16 @test_min_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:    [[SHIFTED2:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; CHECK-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg i32* [[ALIGNEDADDR1]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -283,23 +276,22 @@ define i16 @test_min_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:    ret i16 [[EXTRACTED4]]
 ;
 entry:
-  %ret = atomicrmw min i16* %arg, i16 %val seq_cst
+  %ret = atomicrmw min ptr %arg, i16 %val seq_cst
   ret i16 %ret
 }
 
-define half @test_atomicrmw_fadd_f16(half* %ptr, half %value) {
+define half @test_atomicrmw_fadd_f16(ptr %ptr, half %value) {
 ; CHECK-LABEL: @test_atomicrmw_fadd_f16(
 ; CHECK-NEXT:    fence seq_cst
-; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call half* @llvm.ptrmask.p0f16.i64(half* [[PTR:%.*]], i64 -4)
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint half* [[PTR]] to i64
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -4)
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[PTRLSB]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast half* [[ALIGNEDADDR]] to i32*
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ALIGNEDADDR1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -312,7 +304,7 @@ define half @test_atomicrmw_fadd_f16(half* %ptr, half %value) {
 ; CHECK-NEXT:    [[SHIFTED2:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; CHECK-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = cmpxchg i32* [[ALIGNEDADDR1]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -323,6 +315,6 @@ define half @test_atomicrmw_fadd_f16(half* %ptr, half %value) {
 ; CHECK-NEXT:    fence seq_cst
 ; CHECK-NEXT:    ret half [[TMP8]]
 ;
-  %res = atomicrmw fadd half* %ptr, half %value seq_cst
+  %res = atomicrmw fadd ptr %ptr, half %value seq_cst
   ret half %res
 }

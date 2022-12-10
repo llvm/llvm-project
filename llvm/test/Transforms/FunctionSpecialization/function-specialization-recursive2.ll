@@ -7,17 +7,17 @@
 
 @Global = internal constant i32 1, align 4
 
-define internal void @recursiveFunc(i32* nocapture readonly %arg) {
+define internal void @recursiveFunc(ptr nocapture readonly %arg) {
   %temp = alloca i32, align 4
-  %arg.load = load i32, i32* %arg, align 4
+  %arg.load = load i32, ptr %arg, align 4
   %arg.cmp = icmp slt i32 %arg.load, 4
   br i1 %arg.cmp, label %block6, label %ret.block
 
 block6:
   call void @print_val(i32 %arg.load)
   %arg.add = add nsw i32 %arg.load, 1
-  store volatile i32 %arg.add, i32* %temp, align 4
-  call void @recursiveFunc(i32* nonnull %temp)
+  store volatile i32 %arg.add, ptr %temp, align 4
+  call void @recursiveFunc(ptr nonnull %temp)
   br label %ret.block
 
 ret.block:
@@ -25,7 +25,7 @@ ret.block:
 }
 
 define i32 @main() {
-  call void @recursiveFunc(i32* nonnull @Global)
+  call void @recursiveFunc(ptr nonnull @Global)
   ret i32 0
 }
 

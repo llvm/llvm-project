@@ -12,8 +12,8 @@
 // convert strings to some numeric type.
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_SUPPORT_XLOCALE_STRTONUM_FALLBACK_H
-#define _LIBCPP_SUPPORT_XLOCALE_STRTONUM_FALLBACK_H
+#ifndef _LIBCPP___SUPPORT_XLOCALE_STRTONUM_FALLBACK_H
+#define _LIBCPP___SUPPORT_XLOCALE_STRTONUM_FALLBACK_H
 
 #include <__config>
 #include <stdlib.h>
@@ -72,4 +72,4 @@ wcstold_l(const wchar_t *__nptr, wchar_t **__endptr, locale_t) {
 }
 #endif
 
-#endif // _LIBCPP_SUPPORT_XLOCALE_STRTONUM_FALLBACK_H
+#endif // _LIBCPP___SUPPORT_XLOCALE_STRTONUM_FALLBACK_H

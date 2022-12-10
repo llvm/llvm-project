@@ -57,7 +57,7 @@ define amdgpu_ps <4 x float> @load_2darraymsaa(<8 x i32> inreg %rsrc, i32 %s, i3
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %slice, i32 %fragid) {
+define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %t, i32 %slice, i32 %fragid) {
   ; GFX6-LABEL: name: load_2darraymsaa_tfe
   ; GFX6: bb.1 (%ir-block.0):
   ; GFX6-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -118,7 +118,7 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, i32 ad
   %v = call { <4 x float>, i32 } @llvm.amdgcn.image.load.2darraymsaa.sl_v4f32i32s.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %fragid, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue { <4 x float>, i32 } %v, 0
   %v.err = extractvalue { <4 x float>, i32 } %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 

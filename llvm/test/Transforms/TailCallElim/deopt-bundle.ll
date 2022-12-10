@@ -57,13 +57,13 @@ exit:
 }
 
 ; CHECK-LABEL: @test_clang_arc_attachedcall(
-; CHECK: tail call i8* @getObj(
+; CHECK: tail call ptr @getObj(
 
-declare i8* @getObj()
+declare ptr @getObj()
 
-define i8* @test_clang_arc_attachedcall() {
-  %r = call i8* @getObj() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
-  ret i8* %r
+define ptr @test_clang_arc_attachedcall() {
+  %r = call ptr @getObj() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
+  ret ptr %r
 }
 
-declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
+declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)

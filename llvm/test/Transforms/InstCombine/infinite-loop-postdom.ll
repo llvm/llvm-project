@@ -1,4 +1,4 @@
-; RUN: opt < %s -disable-output -instcombine -verify-dom-info
+; RUN: opt < %s -disable-output -passes=instcombine -verify-dom-info
 ; RUN: opt < %s -passes='print<postdomtree>' 2>&1 | FileCheck --check-prefixes=CHECK-POSTDOM %s
 
 ; Demonstrate that Predicate Canonicalization (InstCombine) does not invalidate PostDomTree

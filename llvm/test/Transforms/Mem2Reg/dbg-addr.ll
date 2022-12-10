@@ -9,21 +9,21 @@ target triple = "x86_64-pc-windows-msvc19.0.24215"
 define i32 @if_else(i32 %cond, i32 %a, i32 %b) !dbg !8 {
 entry:
   %x = alloca i32, align 4
-  call void @llvm.dbg.addr(metadata i32* %x, metadata !16, metadata !DIExpression()), !dbg !26
-  store i32 %a, i32* %x, align 4, !dbg !26, !tbaa !17
+  call void @llvm.dbg.addr(metadata ptr %x, metadata !16, metadata !DIExpression()), !dbg !26
+  store i32 %a, ptr %x, align 4, !dbg !26, !tbaa !17
   %tobool = icmp ne i32 %cond, 0, !dbg !28
   br i1 %tobool, label %if.then, label %if.else, !dbg !30
 
 if.then:                                          ; preds = %entry
-  store i32 0, i32* %x, align 4, !dbg !31, !tbaa !17
+  store i32 0, ptr %x, align 4, !dbg !31, !tbaa !17
   br label %if.end, !dbg !33
 
 if.else:                                          ; preds = %entry
-  store i32 %b, i32* %x, align 4, !dbg !36, !tbaa !17
+  store i32 %b, ptr %x, align 4, !dbg !36, !tbaa !17
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  %rv = load i32, i32* %x, align 4, !dbg !37, !tbaa !17
+  %rv = load i32, ptr %x, align 4, !dbg !37, !tbaa !17
   ret i32 %rv, !dbg !39
 }
 

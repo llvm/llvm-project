@@ -5,8 +5,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: @f1
 define void @f1(i64 %x) nounwind {
   %1 = alloca i128, i64 %x
-  %2 = load i128, i128* %1, align 4
-  %3 = load i128, i128* %1, align 4
+  %2 = load i128, ptr %1, align 4
+  %3 = load i128, ptr %1, align 4
   ret void
 ; CHECK: call void @llvm.trap()
 ; CHECK: call void @llvm.trap()

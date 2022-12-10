@@ -214,7 +214,7 @@ define amdgpu_ps float @struct_buffer_load_format_i32__sgpr_rsrc__vgpr_vindex__v
   ret float %fval
 }
 
-define amdgpu_cs void @struct_buffer_load_format_v4i32_tfe(<4 x i32> inreg %rsrc, <4 x i32> addrspace(1)* %value, i32 addrspace(1)* %status) {
+define amdgpu_cs void @struct_buffer_load_format_v4i32_tfe(<4 x i32> inreg %rsrc, ptr addrspace(1) %value, ptr addrspace(1) %status) {
   ; CHECK-LABEL: name: struct_buffer_load_format_v4i32_tfe
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -245,15 +245,15 @@ define amdgpu_cs void @struct_buffer_load_format_v4i32_tfe(<4 x i32> inreg %rsrc
   %load = call { <4 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4i32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
 
   %v = extractvalue { <4 x i32>, i32 } %load, 0
-  store <4 x i32> %v, <4 x i32> addrspace(1)* %value
+  store <4 x i32> %v, ptr addrspace(1) %value
 
   %s = extractvalue { <4 x i32>, i32 } %load, 1
-  store i32 %s, i32 addrspace(1)* %status
+  store i32 %s, ptr addrspace(1) %status
 
   ret void
 }
 
-define amdgpu_cs void @struct_buffer_load_format_v3i32_tfe(<4 x i32> inreg %rsrc, <3 x i32> addrspace(1)* %value, i32 addrspace(1)* %status) {
+define amdgpu_cs void @struct_buffer_load_format_v3i32_tfe(<4 x i32> inreg %rsrc, ptr addrspace(1) %value, ptr addrspace(1) %status) {
   ; CHECK-LABEL: name: struct_buffer_load_format_v3i32_tfe
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -283,15 +283,15 @@ define amdgpu_cs void @struct_buffer_load_format_v3i32_tfe(<4 x i32> inreg %rsrc
   %load = call { <3 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v3i32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
 
   %v = extractvalue { <3 x i32>, i32 } %load, 0
-  store <3 x i32> %v, <3 x i32> addrspace(1)* %value
+  store <3 x i32> %v, ptr addrspace(1) %value
 
   %s = extractvalue { <3 x i32>, i32 } %load, 1
-  store i32 %s, i32 addrspace(1)* %status
+  store i32 %s, ptr addrspace(1) %status
 
   ret void
 }
 
-define amdgpu_cs void @struct_buffer_load_format_i32_tfe(<4 x i32> inreg %rsrc, i32 addrspace(1)* %value, i32 addrspace(1)* %status) {
+define amdgpu_cs void @struct_buffer_load_format_i32_tfe(<4 x i32> inreg %rsrc, ptr addrspace(1) %value, ptr addrspace(1) %status) {
   ; CHECK-LABEL: name: struct_buffer_load_format_i32_tfe
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -318,10 +318,10 @@ define amdgpu_cs void @struct_buffer_load_format_i32_tfe(<4 x i32> inreg %rsrc, 
   %load = call { i32, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_i32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
 
   %v = extractvalue { i32, i32 } %load, 0
-  store i32 %v, i32 addrspace(1)* %value
+  store i32 %v, ptr addrspace(1) %value
 
   %s = extractvalue { i32, i32 } %load, 1
-  store i32 %s, i32 addrspace(1)* %status
+  store i32 %s, ptr addrspace(1) %status
 
   ret void
 }

@@ -162,7 +162,7 @@ body:             |
   ; CHECK:   renamable $r0, renamable $q3 = MVE_VLDRWU32_post killed renamable $r0, 4, 0, $noreg, $noreg :: (load (s128) from %ir.input_1_cast, align 4)
   ; CHECK:   renamable $q2 = MVE_VADD_qr_i32 killed renamable $q2, renamable $r3, 0, $noreg, $noreg, undef renamable $q2
   ; CHECK:   renamable $q3 = MVE_VADD_qr_i32 killed renamable $q3, renamable $r2, 0, $noreg, $noreg, undef renamable $q3
-  ; CHECK:   renamable $q3 = MVE_VMLAS_qr_u32 killed renamable $q3, killed renamable $q2, renamable $r5, 0, $noreg, $noreg
+  ; CHECK:   renamable $q3 = MVE_VMLAS_qr_i32 killed renamable $q3, killed renamable $q2, renamable $r5, 0, $noreg, $noreg
   ; CHECK:   renamable $q2 = MVE_VMAXu32 killed renamable $q3, renamable $q1, 0, $noreg, $noreg, undef renamable $q2
   ; CHECK:   renamable $q3 = MVE_VMINu32 renamable $q2, renamable $q0, 0, $noreg, $noreg, undef renamable $q3
   ; CHECK:   renamable $r12 = MVE_VMLADAVas32 killed renamable $r12, killed renamable $q3, killed renamable $q2, 0, killed $noreg, $noreg
@@ -210,7 +210,7 @@ body:             |
     renamable $q2 = MVE_VADD_qr_i32 killed renamable $q2, renamable $r3, 0, $noreg, $noreg, undef renamable $q2
     renamable $q3 = MVE_VADD_qr_i32 killed renamable $q3, renamable $r2, 0, $noreg, $noreg, undef renamable $q3
     renamable $r4, dead $cpsr = tSUBi8 killed renamable $r4, 4, 14 /* CC::al */, $noreg
-    renamable $q3 = MVE_VMLAS_qr_u32 killed renamable $q3, killed renamable $q2, renamable $r5, 0, $noreg, $noreg
+    renamable $q3 = MVE_VMLAS_qr_i32 killed renamable $q3, killed renamable $q2, renamable $r5, 0, $noreg, $noreg
     MVE_VPST 2, implicit $vpr
     renamable $q2 = MVE_VMAXu32 killed renamable $q3, renamable $q1, 1, renamable $vpr, $noreg, undef renamable $q2
     renamable $q3 = MVE_VMINu32 renamable $q2, renamable $q0, 1, renamable $vpr, $noreg, undef renamable $q3

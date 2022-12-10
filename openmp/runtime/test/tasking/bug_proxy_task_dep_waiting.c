@@ -17,10 +17,17 @@
 */
 
 // Compiler-generated code (emulation)
+#ifdef _WIN64
+typedef long long kmp_intptr_t;
+#else
 typedef long kmp_intptr_t;
+#endif
 typedef int kmp_int32;
+typedef unsigned char kmp_uint8;
 
 typedef char bool;
+
+// These structs need to match the implementation within libomp, in kmp.h.
 
 typedef struct ident {
     kmp_int32 reserved_1;   /**<  might be used in Fortran; see above  */
@@ -40,10 +47,17 @@ typedef struct ident {
 typedef struct kmp_depend_info {
      kmp_intptr_t               base_addr;
      size_t                     len;
-     struct {
-         bool                   in:1;
-         bool                   out:1;
-     } flags;
+     union {
+        kmp_uint8 flag; // flag as an unsigned char
+        struct { // flag as a set of 8 bits
+            unsigned in : 1;
+            unsigned out : 1;
+            unsigned mtx : 1;
+            unsigned set : 1;
+            unsigned unused : 3;
+            unsigned all : 1;
+        } flags;
+    };
 } kmp_depend_info_t;
 
 struct kmp_task;
@@ -100,8 +114,8 @@ int main()
         my_sleep( 0.1 );
     }
 */
-    kmp_depend_info_t dep_info;
-    dep_info.base_addr = (long) &dep;
+    kmp_depend_info_t dep_info = { 0 };
+    dep_info.base_addr = (kmp_intptr_t) &dep;
     dep_info.len = sizeof(int);
     // out = inout per spec and runtime expects this
     dep_info.flags.in = 1;

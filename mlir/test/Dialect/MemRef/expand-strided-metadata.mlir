@@ -8,7 +8,7 @@ func.func @extract_strided_metadata_constants(%base: memref<5x4xf32, strided<[4,
   //   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
   //   CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
   //   CHECK-DAG: %[[C5:.*]] = arith.constant 5 : index
-  
+
   //       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]]
   %base_buffer, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %base :
     memref<5x4xf32, strided<[4,1], offset:2>>

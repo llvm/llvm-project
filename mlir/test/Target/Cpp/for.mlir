@@ -27,7 +27,7 @@ func.func @test_for_yield() {
 
   %s0 = arith.constant 0 : i32
   %p0 = arith.constant 1.0 : f32
-  
+
   %result:2 = scf.for %iter = %start to %stop step %step iter_args(%si = %s0, %pi = %p0) -> (i32, f32) {
     %sn = emitc.call "add"(%si, %iter) : (i32, index) -> i32
     %pn = emitc.call "mul"(%pi, %iter) : (f32, index) -> f32

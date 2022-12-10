@@ -7,8 +7,8 @@
 ; Global B is not constant. We do not specialise on addresses unless we
 ; enable that:
 
-; ON-ADDRESS: call i32 @foo.1(i32 %x, i32* @A)
-; ON-ADDRESS: call i32 @foo.2(i32 %y, i32* @B)
+; ON-ADDRESS: call i32 @foo.1(i32 %x, ptr @A)
+; ON-ADDRESS: call i32 @foo.2(i32 %y, ptr @B)
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
@@ -21,10 +21,10 @@ define dso_local i32 @bar(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo.1(i32 [[X]], i32* @A)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo.1(i32 [[X]], ptr @A)
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @foo(i32 [[Y:%.*]], i32* @B)
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @foo(i32 [[Y:%.*]], ptr @B)
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CALL]], [[IF_THEN]] ], [ [[CALL1]], [[IF_ELSE]] ]
@@ -35,11 +35,11 @@ entry:
   br i1 %tobool, label %if.then, label %if.else
 
 if.then:
-  %call = call i32 @foo(i32 %x, i32* @A)
+  %call = call i32 @foo(i32 %x, ptr @A)
   br label %return
 
 if.else:
-  %call1 = call i32 @foo(i32 %y, i32* @B)
+  %call1 = call i32 @foo(i32 %y, ptr @B)
   br label %return
 
 return:
@@ -47,22 +47,22 @@ return:
   ret i32 %retval.0
 }
 
-define internal i32 @foo(i32 %x, i32* %b) {
+define internal i32 @foo(i32 %x, ptr %b) {
 ; CHECK-LABEL: define internal i32 @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
-  %0 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %b, align 4
   %add = add nsw i32 %x, %0
   ret i32 %add
 }
 
-; CHECK-LABEL: define internal i32 @foo.1(i32 %x, i32* %b) {
+; CHECK-LABEL: define internal i32 @foo.1(i32 %x, ptr %b) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    %0 = load i32, i32* @A, align 4
+; CHECK-NEXT:    %0 = load i32, ptr @A, align 4
 ; CHECK-NEXT:    %add = add nsw i32 %x, %0
 ; CHECK-NEXT:    ret i32 %add
 ; CHECK-NEXT:  }

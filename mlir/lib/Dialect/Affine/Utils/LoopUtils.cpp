@@ -31,7 +31,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
-#define DEBUG_TYPE "LoopUtils"
+#define DEBUG_TYPE "loop-utils"
 
 using namespace mlir;
 using namespace presburger;
@@ -1768,16 +1768,16 @@ LogicalResult mlir::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
     // Maintain running product of loop upper bounds.
     prev = builder.create<AffineApplyOp>(
         loc,
-        AffineMap::get(/*numDims=*/1,
-                       /*numSymbols=*/1,
+        AffineMap::get(/*dimCount=*/1,
+                       /*symbolCount=*/1,
                        builder.getAffineDimExpr(0) *
                            builder.getAffineSymbolExpr(0)),
         operands);
   }
   // Set upper bound of the coalesced loop.
   AffineMap newUbMap = AffineMap::get(
-      /*numDims=*/0,
-      /*numSymbols=*/1, builder.getAffineSymbolExpr(0), builder.getContext());
+      /*dimCount=*/0,
+      /*symbolCount=*/1, builder.getAffineSymbolExpr(0), builder.getContext());
   outermost.setUpperBound(prev, newUbMap);
 
   builder.setInsertionPointToStart(outermost.getBody());
@@ -1799,7 +1799,7 @@ LogicalResult mlir::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
       previous = builder.create<AffineApplyOp>(
           loc,
           AffineMap::get(
-              /*numDims=*/1, /*numSymbols=*/1,
+              /*dimCount=*/1, /*symbolCount=*/1,
               builder.getAffineDimExpr(0).floorDiv(
                   builder.getAffineSymbolExpr(0))),
           operands);
@@ -1816,7 +1816,7 @@ LogicalResult mlir::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
       inductionVariable = builder.create<AffineApplyOp>(
           loc,
           AffineMap::get(
-              /*numDims=*/1, /*numSymbols=*/1,
+              /*dimCount=*/1, /*symbolCount=*/1,
               builder.getAffineDimExpr(0) % builder.getAffineSymbolExpr(0)),
           applyOperands);
     }
@@ -2756,8 +2756,8 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
     cst.setDimSymbolSeparation(cst.getNumDimAndSymbolVars() - 1);
     unsigned lbPos, ubPos;
     if (!cst.getConstantBoundOnDimSize(/*pos=*/0, /*lb=*/nullptr,
-                                       /*lbDivisor=*/nullptr, /*ub=*/nullptr,
-                                       &lbPos, &ubPos) ||
+                                       /*boundFloorDivisor=*/nullptr,
+                                       /*ub=*/nullptr, &lbPos, &ubPos) ||
         lbPos == ubPos) {
       LLVM_DEBUG(llvm::dbgs() << "[tile separation] Can't get constant diff / "
                                  "equalities not yet handled\n");

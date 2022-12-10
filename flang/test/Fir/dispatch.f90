@@ -32,6 +32,18 @@ module dispatch1
     procedure, pass(this) :: proc_pass => proc_pass_p2
   end type
 
+  type, abstract :: a1
+    integer a
+  contains
+    procedure :: a1_proc
+  end type
+
+  type, extends(a1) :: a2
+    integer b
+  contains
+    procedure :: a1_proc => a2_proc
+  end type
+
 contains
 
   subroutine display1_p1(this)
@@ -133,6 +145,19 @@ contains
   subroutine no_pass_array_pointer(a)
     class(p1), allocatable :: a(:)
     call a(1)%proc_nopass()
+  end subroutine
+
+  subroutine a1_proc(this)
+    class(a1) :: this
+  end subroutine
+
+  subroutine a2_proc(this)
+    class(a2) :: this
+  end subroutine
+
+  subroutine call_a1_proc(p)
+    class(a1), pointer :: p
+    call p%a1_proc()
   end subroutine
 
 end module
@@ -250,28 +275,36 @@ end
 ! CHECK-LABEL: _QMdispatch1Pno_pass_array
 ! CHECK-LABEL: _QMdispatch1Pno_pass_array_allocatable
 ! CHECK-LABEL: _QMdispatch1Pno_pass_array_pointer
+! CHECK-LABEL: _QMdispatch1Pcall_a1_proc
 
 ! Check the layout of the binding table. This is easier to do in FIR than in 
 ! LLVM IR.
 
-! BT-LABEL: fir.global linkonce_odr @_QMdispatch1E.v.p1 constant target : !fir.array<7x!fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>> {
-! BT: %{{.*}} = fir.address_of(@_QMdispatch1Paproc) : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ()
-! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pdisplay1_p1) : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ()
-! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pdisplay2_p1) : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ()
-! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pget_value_p1) : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> i32
-! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pproc_nopass_p1) : () -> ()
-! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pproc_pass_p1) : (!fir.ref<i32>, !fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ()
-! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pproc_p1) : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>, !fir.ref<f32>) -> ()
+! BT-LABEL: fir.dispatch_table @_QMdispatch1Tp1 {
+! BT: fir.dt_entry "aproc", @_QMdispatch1Paproc
+! BT: fir.dt_entry "display1", @_QMdispatch1Pdisplay1_p1
+! BT: fir.dt_entry "display2", @_QMdispatch1Pdisplay2_p1
+! BT: fir.dt_entry "get_value", @_QMdispatch1Pget_value_p1
+! BT: fir.dt_entry "proc_nopass", @_QMdispatch1Pproc_nopass_p1
+! BT: fir.dt_entry "proc_pass", @_QMdispatch1Pproc_pass_p1
+! BT: fir.dt_entry "proc_with_values", @_QMdispatch1Pproc_p1
 ! BT: }
 
-! BT-LABEL: fir.global linkonce_odr @_QMdispatch1E.v.p2 constant target : !fir.array<8x!fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>> {
-! BT: %{{.*}} = fir.address_of(@_QMdispatch1Paproc) : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ()
-! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pdisplay1_p2) : (!fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>) -> ()
-! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pdisplay2_p2) : (!fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>) -> ()
-! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pget_value_p2) : (!fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>) -> i32
-! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pproc_nopass_p2) : () -> ()
-! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pproc_pass_p2) : (!fir.ref<i32>, !fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>) -> ()
-! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pproc_p2) : (!fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>, !fir.ref<f32>) -> ()
-! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pdisplay3) : (!fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>) -> ()
+! BT-LABEL: fir.dispatch_table @_QMdispatch1Ta1 {
+! BT: fir.dt_entry "a1_proc", @_QMdispatch1Pa1_proc
 ! BT: }
 
+! BT-LABEL: fir.dispatch_table @_QMdispatch1Ta2 extends("_QMdispatch1Ta1") {
+! BT:  fir.dt_entry "a1_proc", @_QMdispatch1Pa2_proc
+! BT: }
+
+! BT-LABEL: fir.dispatch_table @_QMdispatch1Tp2 extends("_QMdispatch1Tp1") {
+! BT:  fir.dt_entry "aproc", @_QMdispatch1Paproc
+! BT:  fir.dt_entry "display1", @_QMdispatch1Pdisplay1_p2
+! BT:  fir.dt_entry "display2", @_QMdispatch1Pdisplay2_p2
+! BT:  fir.dt_entry "get_value", @_QMdispatch1Pget_value_p2
+! BT:  fir.dt_entry "proc_nopass", @_QMdispatch1Pproc_nopass_p2
+! BT:  fir.dt_entry "proc_pass", @_QMdispatch1Pproc_pass_p2
+! BT:  fir.dt_entry "proc_with_values", @_QMdispatch1Pproc_p2
+! BT:  fir.dt_entry "display3", @_QMdispatch1Pdisplay3
+! BT: }

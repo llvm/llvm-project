@@ -1069,6 +1069,12 @@ splitReductionByScaling(PatternRewriter &b, LinalgOp op,
                         const ControlSplitReductionFn &controlSplitReductionFn,
                         bool useAlloc = false);
 
+/// Collapses dimensions of linalg.generic operation. It also collapses inputs
+/// before the op and expands outputs after the op.
+FailureOr<SmallVector<Value>> collapseGenericOpIterationDims(
+    GenericOp genericOp, ArrayRef<ReassociationIndices> foldedIterationDims,
+    RewriterBase &rewriter);
+
 } // namespace linalg
 } // namespace mlir
 

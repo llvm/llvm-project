@@ -68,7 +68,7 @@ func.func @apply_scale_test_i32(%arg0 : i32, %arg1 : i32, %arg2 : i8) -> (i32) {
 
   // Combine hi-low into the final result.
   // CHECK-DAG: %[[HIL:.+]] = arith.shli %[[FHI]], %[[HISHL]]
-  // CHECK-DAG: %[[HIALIGN:.+]] = arith.shrsi %[[HIL:.+]], %[[HISHR]] 
+  // CHECK-DAG: %[[HIALIGN:.+]] = arith.shrsi %[[HIL:.+]], %[[HISHR]]
   // CHECK-DAG: %[[LOR:.+]] = arith.shrui %[[LADD]], %[[S32]]
   // CHECK-DAG: %[[LOWALIGN:.+]] = arith.select %[[OVER31]], %[[C0]], %[[LOR]]
   // CHECK-DAG: %[[RESULT:.+]] = arith.addi %[[LOWALIGN]], %[[HIALIGN]]

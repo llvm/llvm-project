@@ -314,12 +314,12 @@ define avr_intrcc void @interrupt_handler() {
 ; TINY-LABEL: interrupt_handler:
 ; TINY:       ; %bb.0:
 ; TINY-NEXT:    sei
-; TINY-NEXT:    push r0
-; TINY-NEXT:    in r0, 63
-; TINY-NEXT:    push r0
-; TINY-NEXT:    pop r0
-; TINY-NEXT:    out 63, r0
-; TINY-NEXT:    pop r0
+; TINY-NEXT:    push r16
+; TINY-NEXT:    in r16, 63
+; TINY-NEXT:    push r16
+; TINY-NEXT:    pop r16
+; TINY-NEXT:    out 63, r16
+; TINY-NEXT:    pop r16
 ; TINY-NEXT:    reti
   ret void
 }
@@ -337,12 +337,12 @@ define avr_signalcc void @signal_handler() {
 ;
 ; TINY-LABEL: signal_handler:
 ; TINY:       ; %bb.0:
-; TINY-NEXT:    push r0
-; TINY-NEXT:    in r0, 63
-; TINY-NEXT:    push r0
-; TINY-NEXT:    pop r0
-; TINY-NEXT:    out 63, r0
-; TINY-NEXT:    pop r0
+; TINY-NEXT:    push r16
+; TINY-NEXT:    in r16, 63
+; TINY-NEXT:    push r16
+; TINY-NEXT:    pop r16
+; TINY-NEXT:    out 63, r16
+; TINY-NEXT:    pop r16
 ; TINY-NEXT:    reti
   ret void
 }

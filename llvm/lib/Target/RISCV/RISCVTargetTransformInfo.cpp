@@ -1020,11 +1020,31 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
 
-  // TODO: Put a real cost model here, the plumbing change was landed without
-  // one to simplify review and fault isolation.
-
-  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CxtI);
+  switch (TLI->InstructionOpcodeToISD(Opcode)) {
+  case ISD::ADD:
+  case ISD::SUB:
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA:
+  case ISD::MUL:
+  case ISD::MULHS:
+  case ISD::MULHU:
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+  case ISD::FNEG: {
+    // TODO: Add the cost of materializing any constant vectors required since
+    // we otherwise treat constants as no-cost.
+    // TODO: We should be accounting for LMUL and scaling costs for LMUL > 1.
+    return LT.first * 1;
+  }
+  default:
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                         Args, CxtI);
+  }
 }
 
 void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,

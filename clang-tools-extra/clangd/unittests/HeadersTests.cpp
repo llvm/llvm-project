@@ -447,18 +447,6 @@ TEST_F(HeadersTest, HasIWYUPragmas) {
   EXPECT_FALSE(Includes.hasIWYUExport(getID("none.h", Includes)));
 }
 
-TEST(Headers, ParseIWYUPragma) {
-  EXPECT_THAT(parseIWYUPragma("// IWYU pragma: keep"), HasValue(Eq("keep")));
-  EXPECT_THAT(parseIWYUPragma("// IWYU pragma: keep\netc"),
-              HasValue(Eq("keep")));
-  EXPECT_EQ(parseIWYUPragma("/* IWYU pragma: keep"), llvm::None)
-      << "Only // comments supported!";
-  EXPECT_EQ(parseIWYUPragma("//  IWYU pragma: keep"), llvm::None)
-      << "Sensitive to whitespace";
-  EXPECT_EQ(parseIWYUPragma("// IWYU pragma:keep"), llvm::None)
-      << "Sensitive to whitespace";
-}
-
 } // namespace
 } // namespace clangd
 } // namespace clang

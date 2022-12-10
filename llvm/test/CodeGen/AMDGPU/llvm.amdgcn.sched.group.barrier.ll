@@ -26,7 +26,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(<32 x i32> addrspace(1)* noalias %in, <32 x i32> addrspace(1)* noalias %out) #0 {
+define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out) #0 {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_READ_VALU_WRITE:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -161,11 +161,11 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(<32
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000040) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #2
-  %gep1 = getelementptr <32 x i32>, <32 x i32> addrspace(1)* %in, i32 %tid
-  %load = load <32 x i32>, <32 x i32> addrspace(1)* %gep1
+  %gep1 = getelementptr <32 x i32>, ptr addrspace(1) %in, i32 %tid
+  %load = load <32 x i32>, ptr addrspace(1) %gep1
   %mul = mul <32 x i32> %load, %load
-  %gep2 = getelementptr <32 x i32>, <32 x i32> addrspace(1)* %out, i32 %tid
-  store <32 x i32> %mul, <32 x i32> addrspace(1)* %gep2
+  %gep2 = getelementptr <32 x i32>, ptr addrspace(1) %out, i32 %tid
+  store <32 x i32> %mul, ptr addrspace(1) %gep2
   ; 8 VMEM read
   call void @llvm.amdgcn.sched.group.barrier(i32 32, i32 8, i32 0)
   ; 30 VALU
@@ -175,7 +175,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_READ_VALU_WRITE(<32
   ret void
 }
 
-define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VALU(<32 x i32> addrspace(1)* noalias %in, <32 x i32> addrspace(1)* noalias %out) #0 {
+define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VALU(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out) #0 {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_alternating_READ_VALU:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -336,11 +336,11 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000040) size(8) SyncID(0)
 ; EXACTCUTOFF-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #2
-  %gep1 = getelementptr <32 x i32>, <32 x i32> addrspace(1)* %in, i32 %tid
-  %load = load <32 x i32>, <32 x i32> addrspace(1)* %gep1
+  %gep1 = getelementptr <32 x i32>, ptr addrspace(1) %in, i32 %tid
+  %load = load <32 x i32>, ptr addrspace(1) %gep1
   %mul = mul <32 x i32> %load, %load
-  %gep2 = getelementptr <32 x i32>, <32 x i32> addrspace(1)* %out, i32 %tid
-  store <32 x i32> %mul, <32 x i32> addrspace(1)* %gep2
+  %gep2 = getelementptr <32 x i32>, ptr addrspace(1) %out, i32 %tid
+  store <32 x i32> %mul, ptr addrspace(1) %gep2
   ; 1 VMEM read
   call void @llvm.amdgcn.sched.group.barrier(i32 32, i32 1, i32 0)
   ; 2 VALU
@@ -378,7 +378,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
   ret void
 }
 
-define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VALU_WRITE(<32 x i32> addrspace(1)* noalias %in, <32 x i32> addrspace(1)* noalias %out) #0 {
+define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VALU_WRITE(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out) #0 {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_alternating_READ_VALU_WRITE:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -555,11 +555,11 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
 ; EXACTCUTOFF-NEXT:    ; sched_group_barrier mask(0x00000040) size(1) SyncID(0)
 ; EXACTCUTOFF-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #2
-  %gep1 = getelementptr <32 x i32>, <32 x i32> addrspace(1)* %in, i32 %tid
-  %load = load <32 x i32>, <32 x i32> addrspace(1)* %gep1
+  %gep1 = getelementptr <32 x i32>, ptr addrspace(1) %in, i32 %tid
+  %load = load <32 x i32>, ptr addrspace(1) %gep1
   %mul = mul <32 x i32> %load, %load
-  %gep2 = getelementptr <32 x i32>, <32 x i32> addrspace(1)* %out, i32 %tid
-  store <32 x i32> %mul, <32 x i32> addrspace(1)* %gep2
+  %gep2 = getelementptr <32 x i32>, ptr addrspace(1) %out, i32 %tid
+  store <32 x i32> %mul, ptr addrspace(1) %gep2
   ; 1 VMEM read
   call void @llvm.amdgcn.sched.group.barrier(i32 32, i32 1, i32 0)
   ; 2 VALU
@@ -611,7 +611,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_alternating_READ_VA
   ret void
 }
 
-define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(<32 x float> addrspace(3)* noalias %in, <32 x float> addrspace(3)* noalias %out) #0 {
+define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_MFMA_cluster:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -825,31 +825,31 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(<32 x 
 ; EXACTCUTOFF-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %load.0.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %in, i32 %idx
-  %load.0 = load <32 x float>, <32 x float> addrspace(3)* %load.0.addr
-  %load.1.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %load.0.addr, i32 64
-  %load.1 = load <32 x float>, <32 x float> addrspace(3)* %load.1.addr
-  %load.2.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %load.1.addr, i32 128
-  %load.2 = load <32 x float>, <32 x float> addrspace(3)* %load.2.addr
-  %load.3.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %load.2.addr, i32 192
-  %load.3 = load <32 x float>, <32 x float> addrspace(3)* %load.3.addr
-  %load.4.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %load.3.addr, i32 256
-  %load.4 = load <32 x float>, <32 x float> addrspace(3)* %load.4.addr
+  %load.0.addr = getelementptr <32 x float>, ptr addrspace(3) %in, i32 %idx
+  %load.0 = load <32 x float>, ptr addrspace(3) %load.0.addr
+  %load.1.addr = getelementptr <32 x float>, ptr addrspace(3) %load.0.addr, i32 64
+  %load.1 = load <32 x float>, ptr addrspace(3) %load.1.addr
+  %load.2.addr = getelementptr <32 x float>, ptr addrspace(3) %load.1.addr, i32 128
+  %load.2 = load <32 x float>, ptr addrspace(3) %load.2.addr
+  %load.3.addr = getelementptr <32 x float>, ptr addrspace(3) %load.2.addr, i32 192
+  %load.3 = load <32 x float>, ptr addrspace(3) %load.3.addr
+  %load.4.addr = getelementptr <32 x float>, ptr addrspace(3) %load.3.addr, i32 256
+  %load.4 = load <32 x float>, ptr addrspace(3) %load.4.addr
   %mai.0 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %load.0, i32 0, i32 0, i32 0)
   %mai.1 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %load.1, i32 0, i32 0, i32 0)
   %mai.2 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %load.2, i32 0, i32 0, i32 0)
   %mai.3 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %load.3, i32 0, i32 0, i32 0)
   %mai.4 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %load.4, i32 0, i32 0, i32 0)
-  %store.0.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %out, i32 %idx
-  store <32 x float> %mai.0, <32 x float> addrspace(3)* %store.0.addr
-  %store.1.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %out, i32 64
-  store <32 x float> %mai.1, <32 x float> addrspace(3)* %store.1.addr
-  %store.2.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %out, i32 128
-  store <32 x float> %mai.2, <32 x float> addrspace(3)* %store.2.addr
-  %store.3.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %out, i32 192
-  store <32 x float> %mai.3, <32 x float> addrspace(3)* %store.3.addr
-  %store.4.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %out, i32 256
-  store <32 x float> %mai.4, <32 x float> addrspace(3)* %store.4.addr
+  %store.0.addr = getelementptr <32 x float>, ptr addrspace(3) %out, i32 %idx
+  store <32 x float> %mai.0, ptr addrspace(3) %store.0.addr
+  %store.1.addr = getelementptr <32 x float>, ptr addrspace(3) %out, i32 64
+  store <32 x float> %mai.1, ptr addrspace(3) %store.1.addr
+  %store.2.addr = getelementptr <32 x float>, ptr addrspace(3) %out, i32 128
+  store <32 x float> %mai.2, ptr addrspace(3) %store.2.addr
+  %store.3.addr = getelementptr <32 x float>, ptr addrspace(3) %out, i32 192
+  store <32 x float> %mai.3, ptr addrspace(3) %store.3.addr
+  %store.4.addr = getelementptr <32 x float>, ptr addrspace(3) %out, i32 256
+  store <32 x float> %mai.4, ptr addrspace(3) %store.4.addr
   ; 40 DS read
   call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 40, i32 0)
   ; 5 MFMA
@@ -859,7 +859,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(<32 x float> addrspace(3)* noalias %in, <32 x float> addrspace(3)* noalias %out) #0 {
+define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
 ; GCN-LABEL: test_sched_group_barrier_pipeline_MFMA_interleave:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -1127,31 +1127,31 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(<32
 ; EXACTCUTOFF-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %load.0.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %in, i32 %idx
-  %load.0 = load <32 x float>, <32 x float> addrspace(3)* %load.0.addr
-  %load.1.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %load.0.addr, i32 64
-  %load.1 = load <32 x float>, <32 x float> addrspace(3)* %load.1.addr
-  %load.2.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %load.1.addr, i32 128
-  %load.2 = load <32 x float>, <32 x float> addrspace(3)* %load.2.addr
-  %load.3.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %load.2.addr, i32 192
-  %load.3 = load <32 x float>, <32 x float> addrspace(3)* %load.3.addr
-  %load.4.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %load.3.addr, i32 256
-  %load.4 = load <32 x float>, <32 x float> addrspace(3)* %load.4.addr
+  %load.0.addr = getelementptr <32 x float>, ptr addrspace(3) %in, i32 %idx
+  %load.0 = load <32 x float>, ptr addrspace(3) %load.0.addr
+  %load.1.addr = getelementptr <32 x float>, ptr addrspace(3) %load.0.addr, i32 64
+  %load.1 = load <32 x float>, ptr addrspace(3) %load.1.addr
+  %load.2.addr = getelementptr <32 x float>, ptr addrspace(3) %load.1.addr, i32 128
+  %load.2 = load <32 x float>, ptr addrspace(3) %load.2.addr
+  %load.3.addr = getelementptr <32 x float>, ptr addrspace(3) %load.2.addr, i32 192
+  %load.3 = load <32 x float>, ptr addrspace(3) %load.3.addr
+  %load.4.addr = getelementptr <32 x float>, ptr addrspace(3) %load.3.addr, i32 256
+  %load.4 = load <32 x float>, ptr addrspace(3) %load.4.addr
   %mai.0 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %load.0, i32 0, i32 0, i32 0)
   %mai.1 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %load.1, i32 0, i32 0, i32 0)
   %mai.2 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %load.2, i32 0, i32 0, i32 0)
   %mai.3 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %load.3, i32 0, i32 0, i32 0)
   %mai.4 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %load.4, i32 0, i32 0, i32 0)
-  %store.0.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %out, i32 %idx
-  store <32 x float> %mai.0, <32 x float> addrspace(3)* %store.0.addr
-  %store.1.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %out, i32 64
-  store <32 x float> %mai.1, <32 x float> addrspace(3)* %store.1.addr
-  %store.2.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %out, i32 128
-  store <32 x float> %mai.2, <32 x float> addrspace(3)* %store.2.addr
-  %store.3.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %out, i32 192
-  store <32 x float> %mai.3, <32 x float> addrspace(3)* %store.3.addr
-  %store.4.addr = getelementptr <32 x float>, <32 x float> addrspace(3)* %out, i32 256
-  store <32 x float> %mai.4, <32 x float> addrspace(3)* %store.4.addr
+  %store.0.addr = getelementptr <32 x float>, ptr addrspace(3) %out, i32 %idx
+  store <32 x float> %mai.0, ptr addrspace(3) %store.0.addr
+  %store.1.addr = getelementptr <32 x float>, ptr addrspace(3) %out, i32 64
+  store <32 x float> %mai.1, ptr addrspace(3) %store.1.addr
+  %store.2.addr = getelementptr <32 x float>, ptr addrspace(3) %out, i32 128
+  store <32 x float> %mai.2, ptr addrspace(3) %store.2.addr
+  %store.3.addr = getelementptr <32 x float>, ptr addrspace(3) %out, i32 192
+  store <32 x float> %mai.3, ptr addrspace(3) %store.3.addr
+  %store.4.addr = getelementptr <32 x float>, ptr addrspace(3) %out, i32 256
+  store <32 x float> %mai.4, ptr addrspace(3) %store.4.addr
   ; 8 DS read
   call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 8, i32 0)
   ; 1 MFMA

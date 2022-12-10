@@ -1,12 +1,12 @@
-// RUN: mlir-opt --test-transform-dialect-interpreter --split-input-file  -canonicalize -cse --verify-diagnostics %s 
+// RUN: mlir-opt --test-transform-dialect-interpreter --split-input-file  -canonicalize -cse --verify-diagnostics %s
 
-func.func @map_nested_foreach_to_threads_not_gpu_launch() -> () {  
+func.func @map_nested_foreach_to_threads_not_gpu_launch() -> () {
   %1 = tensor.empty() : tensor<4xf32>
-  return 
+  return
 }
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["tensor.empty"]} in %arg0    
+  %funcop = transform.structured.match ops{["tensor.empty"]} in %arg0
   // expected-error @below {{Given target is not gpu.launch}}
   %1 = transform.gpu.map_nested_foreach_to_threads %funcop
 }
@@ -128,8 +128,8 @@ func.func @map_nested_foreach_to_threads_not_buffer(%x: tensor<32x32xf32>, %y: t
   {
     %t = linalg.matmul ins(%x, %y: tensor<32x32xf32>, tensor<32x32xf32>) outs(%z : tensor<32x32xf32>) -> tensor<32x32xf32>
     gpu.terminator
-  }  
-  return 
+  }
+  return
 }
 
 transform.sequence failures(propagate) {
@@ -137,21 +137,21 @@ transform.sequence failures(propagate) {
   %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg0
   %foreach, %tiled = transform.structured.tile_to_foreach_thread_op %matmul num_threads [10, 20, 30] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
-  // expected-error @below {{only bufferized scf.foreach_thread lowers to gpu.thread_id}}    
+  // expected-error @below {{only bufferized scf.foreach_thread lowers to gpu.thread_id}}
   transform.gpu.map_nested_foreach_to_threads %funcop { blockDim = [128, 4, 1] }
 }
 
 // -----
 
 
-func.func @map_foreach_to_blocks_not_gpu_launch() -> () {  
+func.func @map_foreach_to_blocks_not_gpu_launch() -> () {
   // expected-note @below {{when applied to this payload op}}
   %1 = tensor.empty() : tensor<4xf32>
-  return 
+  return
 }
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["tensor.empty"]} in %arg0    
+  %funcop = transform.structured.match ops{["tensor.empty"]} in %arg0
   // expected-error @below {{Given target is not gpu.launch}}
   %1 = transform.gpu.map_foreach_to_blocks %funcop
 }
@@ -187,9 +187,9 @@ func.func @map_foreach_to_blocks_not_unique(%x: memref<2 x 32 x f32>, %y: memref
 }
 
 transform.sequence failures(propagate) {
-^bb0(%arg0: !pdl.operation):  
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0    
-  // expected-error @below {{could not find a unique topLevel scf.foreach_thread}}  
+^bb0(%arg0: !pdl.operation):
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
+  // expected-error @below {{could not find a unique topLevel scf.foreach_thread}}
   %1 = transform.gpu.map_foreach_to_blocks %funcop
 }
 
@@ -215,14 +215,14 @@ func.func @map_foreach_to_blocks_large_loop(%x: memref<2 x 32 x f32>, %y: memref
       %6 = math.fma %alpha, %4, %5 : f32
       memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
   }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
-  
+
   return %y : memref<2 x 32 x f32>
 }
 
 transform.sequence failures(propagate) {
-^bb0(%arg0: !pdl.operation):  
-  %funcop = transform.structured.match ops{["func.func"]} in %arg0   
-  // expected-error @below {{could not find a unique topLevel scf.foreach_thread}}   
+^bb0(%arg0: !pdl.operation):
+  %funcop = transform.structured.match ops{["func.func"]} in %arg0
+  // expected-error @below {{could not find a unique topLevel scf.foreach_thread}}
   %1 = transform.gpu.map_foreach_to_blocks %funcop { generate_gpu_launch }
 }
 
@@ -241,8 +241,8 @@ func.func @map_foreach_to_blocks_large_loop(%x: memref<2 x 32 x f32>, %y: memref
 }
 
 transform.sequence failures(propagate) {
-^bb0(%arg0: !pdl.operation):  
-  %funcop = transform.structured.match ops{["func.func"]} in %arg0   
+^bb0(%arg0: !pdl.operation):
+  %funcop = transform.structured.match ops{["func.func"]} in %arg0
   // expected-error @below {{Trying to launch a GPU kernel with gridDim = (65535, 65535, 1) blockDim = (1, 1, 1). It is larger than the limits.}}
   %1 = transform.gpu.map_foreach_to_blocks %funcop { generate_gpu_launch }
 }

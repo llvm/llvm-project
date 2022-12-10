@@ -513,13 +513,13 @@ let Predicates = [HasSVEorSME] in {
   defm FNEG_ZPmZ : sve_int_un_pred_arit_1_fp<0b101, "fneg", AArch64fneg_mt>;
 
   // zext(cmpeq(x, splat(0))) -> cnot(x)
-  def : Pat<(nxv16i8 (vselect (nxv16i1 (AArch64setcc_z (nxv16i1 (SVEAllActive):$Pg), nxv16i8:$Op2, (SVEDup0), SETEQ)), (nxv16i8 (splat_vector (i32 1))), (nxv16i8 (splat_vector (i32 0))))),
+  def : Pat<(nxv16i8 (zext (nxv16i1 (AArch64setcc_z (nxv16i1 (SVEAllActive):$Pg), nxv16i8:$Op2, (SVEDup0), SETEQ)))),
             (CNOT_ZPmZ_B $Op2, $Pg, $Op2)>;
-  def : Pat<(nxv8i16 (vselect (nxv8i1 (AArch64setcc_z (nxv8i1 (SVEAllActive):$Pg), nxv8i16:$Op2, (SVEDup0), SETEQ)), (nxv8i16 (splat_vector (i32 1))), (nxv8i16 (splat_vector (i32 0))))),
+  def : Pat<(nxv8i16 (zext (nxv8i1 (AArch64setcc_z (nxv8i1 (SVEAllActive):$Pg), nxv8i16:$Op2, (SVEDup0), SETEQ)))),
             (CNOT_ZPmZ_H $Op2, $Pg, $Op2)>;
-  def : Pat<(nxv4i32 (vselect (nxv4i1 (AArch64setcc_z (nxv4i1 (SVEAllActive):$Pg), nxv4i32:$Op2, (SVEDup0), SETEQ)), (nxv4i32 (splat_vector (i32 1))), (nxv4i32 (splat_vector (i32 0))))),
+  def : Pat<(nxv4i32 (zext (nxv4i1 (AArch64setcc_z (nxv4i1 (SVEAllActive):$Pg), nxv4i32:$Op2, (SVEDup0), SETEQ)))),
             (CNOT_ZPmZ_S $Op2, $Pg, $Op2)>;
-  def : Pat<(nxv2i64 (vselect (nxv2i1 (AArch64setcc_z (nxv2i1 (SVEAllActive):$Pg), nxv2i64:$Op2, (SVEDup0), SETEQ)), (nxv2i64 (splat_vector (i64 1))), (nxv2i64 (splat_vector (i64 0))))),
+  def : Pat<(nxv2i64 (zext (nxv2i1 (AArch64setcc_z (nxv2i1 (SVEAllActive):$Pg), nxv2i64:$Op2, (SVEDup0), SETEQ)))),
             (CNOT_ZPmZ_D $Op2, $Pg, $Op2)>;
 
   defm SMAX_ZPmZ : sve_int_bin_pred_arit_1<0b000, "smax", "SMAX_ZPZZ", AArch64smax_m1, DestructiveBinaryComm>;
@@ -3131,6 +3131,29 @@ let Predicates = [HasSVEorSME] in {
   def : Pat<(vector_extract (nxv2f64 ZPR:$Zs), (i64 0)),
             (f64 (EXTRACT_SUBREG ZPR:$Zs, dsub))>;
   }
+
+  multiclass sve_predicated_add<SDNode extend, int value> {
+    def : Pat<(nxv16i8 (add ZPR:$op, (extend (nxv16i1 PPR:$pred)))),
+              (ADD_ZPmZ_B PPR:$pred, ZPR:$op, (DUP_ZI_B value, 0))>;
+    def : Pat<(nxv8i16 (add ZPR:$op, (extend (nxv8i1 PPR:$pred)))),
+              (ADD_ZPmZ_H PPR:$pred, ZPR:$op, (DUP_ZI_H value, 0))>;
+    def : Pat<(nxv4i32 (add ZPR:$op, (extend (nxv4i1 PPR:$pred)))),
+              (ADD_ZPmZ_S PPR:$pred, ZPR:$op, (DUP_ZI_S value, 0))>;
+    def : Pat<(nxv2i64 (add ZPR:$op, (extend (nxv2i1 PPR:$pred)))),
+              (ADD_ZPmZ_D PPR:$pred, ZPR:$op, (DUP_ZI_D value, 0))>;
+  }
+
+  defm : sve_predicated_add<zext, 1>;
+  defm : sve_predicated_add<sext, 255>;
+
+  def : Pat<(nxv16i8 (sub ZPR:$op, (sext (nxv16i1 PPR:$pred)))),
+            (SUB_ZPmZ_B PPR:$pred, ZPR:$op, (DUP_ZI_B 255, 0))>;
+  def : Pat<(nxv8i16 (sub ZPR:$op, (sext (nxv8i1 PPR:$pred)))),
+            (SUB_ZPmZ_H PPR:$pred, ZPR:$op, (DUP_ZI_H 255, 0))>;
+  def : Pat<(nxv4i32 (sub ZPR:$op, (sext (nxv4i1 PPR:$pred)))),
+            (SUB_ZPmZ_S PPR:$pred, ZPR:$op, (DUP_ZI_S 255, 0))>;
+  def : Pat<(nxv2i64 (sub ZPR:$op, (sext (nxv2i1 PPR:$pred)))),
+            (SUB_ZPmZ_D PPR:$pred, ZPR:$op, (DUP_ZI_D 255, 0))>;
 } // End HasSVEorSME
 
 let Predicates = [HasSVE, HasMatMulInt8] in {

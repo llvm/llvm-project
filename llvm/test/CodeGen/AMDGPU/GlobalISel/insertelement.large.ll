@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX11 %s
 
-define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, <64 x i32> addrspace(1)* %ptr.out) #0 {
+define amdgpu_kernel void @v_insert_v64i32_37(ptr addrspace(1) %ptr.in, ptr addrspace(1) %ptr.out) #0 {
 ; GCN-LABEL: v_insert_v64i32_37:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -152,11 +152,11 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.in = getelementptr <64 x i32>, <64 x i32> addrspace(1)* %ptr.in, i32 %id
-  %vec = load <64 x i32>, <64 x i32> addrspace(1)* %gep.in
+  %gep.in = getelementptr <64 x i32>, ptr addrspace(1) %ptr.in, i32 %id
+  %vec = load <64 x i32>, ptr addrspace(1) %gep.in
   %insert = insertelement <64 x i32> %vec, i32 999, i32 37
-  %gep.out = getelementptr <64 x i32>, <64 x i32> addrspace(1)* %ptr.out, i32 %id
-  store <64 x i32> %insert, <64 x i32> addrspace(1)* %gep.out
+  %gep.out = getelementptr <64 x i32>, ptr addrspace(1) %ptr.out, i32 %id
+  store <64 x i32> %insert, ptr addrspace(1) %gep.out
   ret void
 }
 

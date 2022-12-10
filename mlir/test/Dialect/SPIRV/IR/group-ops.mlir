@@ -41,7 +41,7 @@ func.func @group_broadcast_vector(%value: vector<4xf32>, %localid: vector<3xi32>
 // -----
 
 func.func @group_broadcast_negative_scope(%value: f32, %localid: vector<3xi32> ) -> f32 {
-  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}} 
+  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
   %0 = spirv.GroupBroadcast <Device> %value, %localid : f32, vector<3xi32>
   return %0: f32
 }

@@ -1,4 +1,4 @@
-; RUN: opt < %s -mem2reg -instcombine -S | grep "ret i32 1" | count 8
+; RUN: opt < %s -passes=mem2reg,instcombine -S | grep "ret i32 1" | count 8
 
 define i32 @test1() {
 entry:

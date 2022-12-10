@@ -9,6 +9,7 @@
 #include "CanonicalIncludes.h"
 #include "Headers.h"
 #include "clang/Basic/FileEntry.h"
+#include "clang/Tooling/Inclusions/HeaderAnalysis.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 #include "llvm/Support/Path.h"
@@ -710,7 +711,7 @@ collectIWYUHeaderMaps(CanonicalIncludes *Includes) {
     PragmaCommentHandler(CanonicalIncludes *Includes) : Includes(Includes) {}
 
     bool HandleComment(Preprocessor &PP, SourceRange Range) override {
-      auto Pragma = parseIWYUPragma(
+      auto Pragma = tooling::parseIWYUPragma(
           PP.getSourceManager().getCharacterData(Range.getBegin()));
       if (!Pragma || !Pragma->consume_front("private, include "))
         return false;

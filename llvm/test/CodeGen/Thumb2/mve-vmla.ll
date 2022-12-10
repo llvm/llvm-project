@@ -4,7 +4,7 @@
 define arm_aapcs_vfpcc <4 x i32> @vmlau32(<4 x i32> %A, <4 x i32> %B, i32 %X) nounwind {
 ; CHECK-LABEL: vmlau32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmla.u32 q0, q1, r0
+; CHECK-NEXT:    vmla.i32 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = insertelement <4 x i32> undef, i32 %X, i32 0
@@ -17,7 +17,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vmlau32b(<4 x i32> %A, <4 x i32> %B, i32 %X) nounwind {
 ; CHECK-LABEL: vmlau32b:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmla.u32 q0, q1, r0
+; CHECK-NEXT:    vmla.i32 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = insertelement <4 x i32> undef, i32 %X, i32 0
@@ -30,7 +30,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vmlau16(<8 x i16> %A, <8 x i16> %B, i16 %X) nounwind {
 ; CHECK-LABEL: vmlau16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmla.u16 q0, q1, r0
+; CHECK-NEXT:    vmla.i16 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = insertelement <8 x i16> undef, i16 %X, i32 0
@@ -43,7 +43,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vmlau16b(<8 x i16> %A, <8 x i16> %B, i16 %X) nounwind {
 ; CHECK-LABEL: vmlau16b:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmla.u16 q0, q1, r0
+; CHECK-NEXT:    vmla.i16 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = insertelement <8 x i16> undef, i16 %X, i32 0
@@ -56,7 +56,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vmlau8(<16 x i8> %A, <16 x i8> %B, i8 %X) nounwind {
 ; CHECK-LABEL: vmlau8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmla.u8 q0, q1, r0
+; CHECK-NEXT:    vmla.i8 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = insertelement <16 x i8> undef, i8 %X, i32 0
@@ -69,7 +69,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vmlau8b(<16 x i8> %A, <16 x i8> %B, i8 %X) nounwind {
 ; CHECK-LABEL: vmlau8b:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmla.u8 q0, q1, r0
+; CHECK-NEXT:    vmla.i8 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = insertelement <16 x i8> undef, i8 %X, i32 0
@@ -87,7 +87,7 @@ define void @vmla32_in_loop(i32* %s1, i32 %x, i32* %d, i32 %n) {
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    subs r3, #4
-; CHECK-NEXT:    vmla.u32 q1, q0, r1
+; CHECK-NEXT:    vmla.i32 q1, q0, r1
 ; CHECK-NEXT:    vstrb.8 q1, [r2], #16
 ; CHECK-NEXT:    bne .LBB6_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
@@ -125,7 +125,7 @@ define void @vmla16_in_loop(i16* %s1, i16 %x, i16* %d, i32 %n) {
 ; CHECK-NEXT:    vldrh.u16 q0, [r0], #16
 ; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    subs r3, #8
-; CHECK-NEXT:    vmla.u16 q1, q0, r1
+; CHECK-NEXT:    vmla.i16 q1, q0, r1
 ; CHECK-NEXT:    vstrb.8 q1, [r2], #16
 ; CHECK-NEXT:    bne .LBB7_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
@@ -163,7 +163,7 @@ define void @vmla8_in_loop(i8* %s1, i8 %x, i8* %d, i32 %n) {
 ; CHECK-NEXT:    vldrh.u16 q0, [r0], #16
 ; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    subs r3, #16
-; CHECK-NEXT:    vmla.u8 q1, q0, r1
+; CHECK-NEXT:    vmla.i8 q1, q0, r1
 ; CHECK-NEXT:    vstrb.8 q1, [r2], #16
 ; CHECK-NEXT:    bne .LBB8_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
@@ -197,7 +197,7 @@ for.cond.cleanup:
 define arm_aapcs_vfpcc <4 x i32> @vmlasu32(<4 x i32> %A, <4 x i32> %B, i32 %X) nounwind {
 ; CHECK-LABEL: vmlasu32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmlas.u32 q0, q1, r0
+; CHECK-NEXT:    vmlas.i32 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = insertelement <4 x i32> undef, i32 %X, i32 0
@@ -210,7 +210,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vmlasu32b(<4 x i32> %A, <4 x i32> %B, i32 %X) nounwind {
 ; CHECK-LABEL: vmlasu32b:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmlas.u32 q0, q1, r0
+; CHECK-NEXT:    vmlas.i32 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = insertelement <4 x i32> undef, i32 %X, i32 0
@@ -223,7 +223,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vmlasu16(<8 x i16> %A, <8 x i16> %B, i16 %X) nounwind {
 ; CHECK-LABEL: vmlasu16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmlas.u16 q0, q1, r0
+; CHECK-NEXT:    vmlas.i16 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = insertelement <8 x i16> undef, i16 %X, i32 0
@@ -236,7 +236,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vmlasu16b(<8 x i16> %A, <8 x i16> %B, i16 %X) nounwind {
 ; CHECK-LABEL: vmlasu16b:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmlas.u16 q0, q1, r0
+; CHECK-NEXT:    vmlas.i16 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = insertelement <8 x i16> undef, i16 %X, i32 0
@@ -249,7 +249,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vmlasu8(<16 x i8> %A, <16 x i8> %B, i8 %X) nounwind {
 ; CHECK-LABEL: vmlasu8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmlas.u8 q0, q1, r0
+; CHECK-NEXT:    vmlas.i8 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = insertelement <16 x i8> undef, i8 %X, i32 0
@@ -262,7 +262,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vmlasu8b(<16 x i8> %A, <16 x i8> %B, i8 %X) nounwind {
 ; CHECK-LABEL: vmlasu8b:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmlas.u8 q0, q1, r0
+; CHECK-NEXT:    vmlas.i8 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = insertelement <16 x i8> undef, i8 %X, i32 0
@@ -280,7 +280,7 @@ define void @vmlas32_in_loop(i32* %s1, i32 %x, i32* %d, i32 %n) {
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
 ; CHECK-NEXT:    subs r3, #4
-; CHECK-NEXT:    vmlas.u32 q1, q0, r1
+; CHECK-NEXT:    vmlas.i32 q1, q0, r1
 ; CHECK-NEXT:    vstrb.8 q1, [r2], #16
 ; CHECK-NEXT:    bne .LBB15_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
@@ -318,7 +318,7 @@ define void @vmlas16_in_loop(i16* %s1, i16 %x, i16* %d, i32 %n) {
 ; CHECK-NEXT:    vldrh.u16 q0, [r2]
 ; CHECK-NEXT:    vldrh.u16 q1, [r0], #16
 ; CHECK-NEXT:    subs r3, #8
-; CHECK-NEXT:    vmlas.u16 q1, q0, r1
+; CHECK-NEXT:    vmlas.i16 q1, q0, r1
 ; CHECK-NEXT:    vstrb.8 q1, [r2], #16
 ; CHECK-NEXT:    bne .LBB16_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
@@ -356,7 +356,7 @@ define void @vmlas8_in_loop(i8* %s1, i8 %x, i8* %d, i32 %n) {
 ; CHECK-NEXT:    vldrh.u16 q0, [r2]
 ; CHECK-NEXT:    vldrh.u16 q1, [r0], #16
 ; CHECK-NEXT:    subs r3, #16
-; CHECK-NEXT:    vmlas.u8 q1, q0, r1
+; CHECK-NEXT:    vmlas.i8 q1, q0, r1
 ; CHECK-NEXT:    vstrb.8 q1, [r2], #16
 ; CHECK-NEXT:    bne .LBB17_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup

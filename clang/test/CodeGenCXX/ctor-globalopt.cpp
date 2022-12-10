@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - %s -O2 | opt - -S -globalopt -o - | FileCheck %s --check-prefix=O1
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - %s -O2 | opt - -S -passes=globalopt -o - | FileCheck %s --check-prefix=O1
 // RUN: %clang_cc1 -triple %ms_abi_triple -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple %ms_abi_triple -emit-llvm -o - %s -O2 | opt - -S -globalopt -o - | FileCheck %s --check-prefix=O1
+// RUN: %clang_cc1 -triple %ms_abi_triple -emit-llvm -o - %s -O2 | opt - -S -passes=globalopt -o - | FileCheck %s --check-prefix=O1
 
 // Check that GlobalOpt can eliminate static constructors for simple implicit
 // constructors. This is a targeted integration test to make sure that LLVM's

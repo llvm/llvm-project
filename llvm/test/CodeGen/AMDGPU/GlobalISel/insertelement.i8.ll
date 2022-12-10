@@ -5,7 +5,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
 
-define amdgpu_ps void @insertelement_s_v2i8_s_s(<2 x i8> addrspace(4)* inreg %ptr, i8 inreg %val, i32 inreg %idx) {
+define amdgpu_ps void @insertelement_s_v2i8_s_s(ptr addrspace(4) inreg %ptr, i8 inreg %val, i32 inreg %idx) {
 ; GFX9-LABEL: insertelement_s_v2i8_s_s:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
@@ -107,13 +107,13 @@ define amdgpu_ps void @insertelement_s_v2i8_s_s(<2 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <2 x i8>, <2 x i8> addrspace(4)* %ptr
+  %vec = load <2 x i8>, ptr addrspace(4) %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
-  store <2 x i8> %insert, <2 x i8> addrspace(1)* null
+  store <2 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_v_v2i8_s_s(<2 x i8> addrspace(1)* %ptr, i8 inreg %val, i32 inreg %idx) {
+define amdgpu_ps void @insertelement_v_v2i8_s_s(ptr addrspace(1) %ptr, i8 inreg %val, i32 inreg %idx) {
 ; GFX9-LABEL: insertelement_v_v2i8_s_s:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_ushort v0, v[0:1], off
@@ -209,13 +209,13 @@ define amdgpu_ps void @insertelement_v_v2i8_s_s(<2 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <2 x i8>, <2 x i8> addrspace(1 )* %ptr
+  %vec = load <2 x i8>, ptr addrspace(1 ) %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
-  store <2 x i8> %insert, <2 x i8> addrspace(1)* null
+  store <2 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_s_v2i8_v_s(<2 x i8> addrspace(4)* inreg %ptr, i8 %val, i32 inreg %idx) {
+define amdgpu_ps void @insertelement_s_v2i8_v_s(ptr addrspace(4) inreg %ptr, i8 %val, i32 inreg %idx) {
 ; GFX9-LABEL: insertelement_s_v2i8_v_s:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
@@ -313,13 +313,13 @@ define amdgpu_ps void @insertelement_s_v2i8_v_s(<2 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <2 x i8>, <2 x i8> addrspace(4)* %ptr
+  %vec = load <2 x i8>, ptr addrspace(4) %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
-  store <2 x i8> %insert, <2 x i8> addrspace(1)* null
+  store <2 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_s_v2i8_s_v(<2 x i8> addrspace(4)* inreg %ptr, i8 inreg %val, i32 %idx) {
+define amdgpu_ps void @insertelement_s_v2i8_s_v(ptr addrspace(4) inreg %ptr, i8 inreg %val, i32 %idx) {
 ; GFX9-LABEL: insertelement_s_v2i8_s_v:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
@@ -421,13 +421,13 @@ define amdgpu_ps void @insertelement_s_v2i8_s_v(<2 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <2 x i8>, <2 x i8> addrspace(4)* %ptr
+  %vec = load <2 x i8>, ptr addrspace(4) %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
-  store <2 x i8> %insert, <2 x i8> addrspace(1)* null
+  store <2 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_s_v2i8_v_v(<2 x i8> addrspace(4)* inreg %ptr, i8 %val, i32 %idx) {
+define amdgpu_ps void @insertelement_s_v2i8_v_v(ptr addrspace(4) inreg %ptr, i8 %val, i32 %idx) {
 ; GFX9-LABEL: insertelement_s_v2i8_v_v:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
@@ -525,13 +525,13 @@ define amdgpu_ps void @insertelement_s_v2i8_v_v(<2 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <2 x i8>, <2 x i8> addrspace(4)* %ptr
+  %vec = load <2 x i8>, ptr addrspace(4) %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
-  store <2 x i8> %insert, <2 x i8> addrspace(1)* null
+  store <2 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_v_v2i8_s_v(<2 x i8> addrspace(1)* %ptr, i8 inreg %val, i32 %idx) {
+define amdgpu_ps void @insertelement_v_v2i8_s_v(ptr addrspace(1) %ptr, i8 inreg %val, i32 %idx) {
 ; GFX9-LABEL: insertelement_v_v2i8_s_v:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_ushort v0, v[0:1], off
@@ -627,13 +627,13 @@ define amdgpu_ps void @insertelement_v_v2i8_s_v(<2 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <2 x i8>, <2 x i8> addrspace(1)* %ptr
+  %vec = load <2 x i8>, ptr addrspace(1) %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
-  store <2 x i8> %insert, <2 x i8> addrspace(1)* null
+  store <2 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_v_v2i8_v_s(<2 x i8> addrspace(1)* %ptr, i8 %val, i32 inreg %idx) {
+define amdgpu_ps void @insertelement_v_v2i8_v_s(ptr addrspace(1) %ptr, i8 %val, i32 inreg %idx) {
 ; GFX9-LABEL: insertelement_v_v2i8_v_s:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_ushort v0, v[0:1], off
@@ -726,13 +726,13 @@ define amdgpu_ps void @insertelement_v_v2i8_v_s(<2 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <2 x i8>, <2 x i8> addrspace(1)* %ptr
+  %vec = load <2 x i8>, ptr addrspace(1) %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
-  store <2 x i8> %insert, <2 x i8> addrspace(1)* null
+  store <2 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_v_v2i8_v_v(<2 x i8> addrspace(1)* %ptr, i8 %val, i32 %idx) {
+define amdgpu_ps void @insertelement_v_v2i8_v_v(ptr addrspace(1) %ptr, i8 %val, i32 %idx) {
 ; GFX9-LABEL: insertelement_v_v2i8_v_v:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_ushort v0, v[0:1], off
@@ -825,70 +825,70 @@ define amdgpu_ps void @insertelement_v_v2i8_v_v(<2 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <2 x i8>, <2 x i8> addrspace(1)* %ptr
+  %vec = load <2 x i8>, ptr addrspace(1) %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
-  store <2 x i8> %insert, <2 x i8> addrspace(1)* null
+  store <2 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
 ; FIXME: 3 element load/store legalization
-; define amdgpu_ps void @insertelement_s_v3i8_s_s(<3 x i8> addrspace(4)* inreg %ptr, i8 inreg %val, i32 inreg %idx) {
-;   %vec = load <3 x i8>, <3 x i8> addrspace(4)* %ptr
+; define amdgpu_ps void @insertelement_s_v3i8_s_s(ptr addrspace(4) inreg %ptr, i8 inreg %val, i32 inreg %idx) {
+;   %vec = load <3 x i8>, ptr addrspace(4) %ptr
 ;   %insert = insertelement <3 x i8> %vec, i8 %val, i32 %idx
-;   store <3 x i8> %insert, <3 x i8> addrspace(1)* null
+;   store <3 x i8> %insert, ptr addrspace(1) null
 ;   ret void
 ; }
 
-; define amdgpu_ps void @insertelement_v_v3i8_s_s(<3 x i8> addrspace(1)* %ptr, i8 inreg %val, i32 inreg %idx) {
-;   %vec = load <3 x i8>, <3 x i8> addrspace(1 )* %ptr
+; define amdgpu_ps void @insertelement_v_v3i8_s_s(ptr addrspace(1) %ptr, i8 inreg %val, i32 inreg %idx) {
+;   %vec = load <3 x i8>, ptr addrspace(1 ) %ptr
 ;   %insert = insertelement <3 x i8> %vec, i8 %val, i32 %idx
-;   store <3 x i8> %insert, <3 x i8> addrspace(1)* null
+;   store <3 x i8> %insert, ptr addrspace(1) null
 ;   ret void
 ; }
 
-; define amdgpu_ps void @insertelement_s_v3i8_v_s(<3 x i8> addrspace(4)* inreg %ptr, i8 %val, i32 inreg %idx) {
-;   %vec = load <3 x i8>, <3 x i8> addrspace(4)* %ptr
+; define amdgpu_ps void @insertelement_s_v3i8_v_s(ptr addrspace(4) inreg %ptr, i8 %val, i32 inreg %idx) {
+;   %vec = load <3 x i8>, ptr addrspace(4) %ptr
 ;   %insert = insertelement <3 x i8> %vec, i8 %val, i32 %idx
-;   store <3 x i8> %insert, <3 x i8> addrspace(1)* null
+;   store <3 x i8> %insert, ptr addrspace(1) null
 ;   ret void
 ; }
 
-; define amdgpu_ps void @insertelement_s_v3i8_s_v(<3 x i8> addrspace(4)* inreg %ptr, i8 inreg %val, i32 %idx) {
-;   %vec = load <3 x i8>, <3 x i8> addrspace(4)* %ptr
+; define amdgpu_ps void @insertelement_s_v3i8_s_v(ptr addrspace(4) inreg %ptr, i8 inreg %val, i32 %idx) {
+;   %vec = load <3 x i8>, ptr addrspace(4) %ptr
 ;   %insert = insertelement <3 x i8> %vec, i8 %val, i32 %idx
-;   store <3 x i8> %insert, <3 x i8> addrspace(1)* null
+;   store <3 x i8> %insert, ptr addrspace(1) null
 ;   ret void
 ; }
 
-; define amdgpu_ps void @insertelement_s_v3i8_v_v(<3 x i8> addrspace(4)* inreg %ptr, i8 %val, i32 %idx) {
-;   %vec = load <3 x i8>, <3 x i8> addrspace(4)* %ptr
+; define amdgpu_ps void @insertelement_s_v3i8_v_v(ptr addrspace(4) inreg %ptr, i8 %val, i32 %idx) {
+;   %vec = load <3 x i8>, ptr addrspace(4) %ptr
 ;   %insert = insertelement <3 x i8> %vec, i8 %val, i32 %idx
-;   store <3 x i8> %insert, <3 x i8> addrspace(1)* null
+;   store <3 x i8> %insert, ptr addrspace(1) null
 ;   ret void
 ; }
 
-; define amdgpu_ps void @insertelement_v_v3i8_s_v(<3 x i8> addrspace(1)* %ptr, i8 inreg %val, i32 %idx) {
-;   %vec = load <3 x i8>, <3 x i8> addrspace(1)* %ptr
+; define amdgpu_ps void @insertelement_v_v3i8_s_v(ptr addrspace(1) %ptr, i8 inreg %val, i32 %idx) {
+;   %vec = load <3 x i8>, ptr addrspace(1) %ptr
 ;   %insert = insertelement <3 x i8> %vec, i8 %val, i32 %idx
-;   store <3 x i8> %insert, <3 x i8> addrspace(1)* null
+;   store <3 x i8> %insert, ptr addrspace(1) null
 ;   ret void
 ; }
 
-; define amdgpu_ps void @insertelement_v_v3i8_v_s(<3 x i8> addrspace(1)* %ptr, i8 %val, i32 inreg %idx) {
-;   %vec = load <3 x i8>, <3 x i8> addrspace(1)* %ptr
+; define amdgpu_ps void @insertelement_v_v3i8_v_s(ptr addrspace(1) %ptr, i8 %val, i32 inreg %idx) {
+;   %vec = load <3 x i8>, ptr addrspace(1) %ptr
 ;   %insert = insertelement <3 x i8> %vec, i8 %val, i32 %idx
-;   store <3 x i8> %insert, <3 x i8> addrspace(1)* null
+;   store <3 x i8> %insert, ptr addrspace(1) null
 ;   ret void
 ; }
 
-; define amdgpu_ps void @insertelement_v_v3i8_v_v(<3 x i8> addrspace(1)* %ptr, i8 %val, i32 %idx) {
-;   %vec = load <3 x i8>, <3 x i8> addrspace(1)* %ptr
+; define amdgpu_ps void @insertelement_v_v3i8_v_v(ptr addrspace(1) %ptr, i8 %val, i32 %idx) {
+;   %vec = load <3 x i8>, ptr addrspace(1) %ptr
 ;   %insert = insertelement <3 x i8> %vec, i8 %val, i32 %idx
-;   store <3 x i8> %insert, <3 x i8> addrspace(1)* null
+;   store <3 x i8> %insert, ptr addrspace(1) null
 ;   ret void
 ; }
 
-define amdgpu_ps void @insertelement_v_v4i8_s_s(<4 x i8> addrspace(1)* %ptr, i8 inreg %val, i32 inreg %idx) {
+define amdgpu_ps void @insertelement_v_v4i8_s_s(ptr addrspace(1) %ptr, i8 inreg %val, i32 inreg %idx) {
 ; GFX9-LABEL: insertelement_v_v4i8_s_s:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dword v2, v[0:1], off
@@ -974,13 +974,13 @@ define amdgpu_ps void @insertelement_v_v4i8_s_s(<4 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <4 x i8>, <4 x i8> addrspace(1 )* %ptr
+  %vec = load <4 x i8>, ptr addrspace(1 ) %ptr
   %insert = insertelement <4 x i8> %vec, i8 %val, i32 %idx
-  store <4 x i8> %insert, <4 x i8> addrspace(1)* null
+  store <4 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_s_v4i8_v_s(<4 x i8> addrspace(4)* inreg %ptr, i8 %val, i32 inreg %idx) {
+define amdgpu_ps void @insertelement_s_v4i8_v_s(ptr addrspace(4) inreg %ptr, i8 %val, i32 inreg %idx) {
 ; GFX9-LABEL: insertelement_s_v4i8_v_s:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dword s0, s[2:3], 0x0
@@ -1061,13 +1061,13 @@ define amdgpu_ps void @insertelement_s_v4i8_v_s(<4 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <4 x i8>, <4 x i8> addrspace(4)* %ptr
+  %vec = load <4 x i8>, ptr addrspace(4) %ptr
   %insert = insertelement <4 x i8> %vec, i8 %val, i32 %idx
-  store <4 x i8> %insert, <4 x i8> addrspace(1)* null
+  store <4 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_s_v4i8_s_v(<4 x i8> addrspace(4)* inreg %ptr, i8 inreg %val, i32 %idx) {
+define amdgpu_ps void @insertelement_s_v4i8_s_v(ptr addrspace(4) inreg %ptr, i8 inreg %val, i32 %idx) {
 ; GFX9-LABEL: insertelement_s_v4i8_s_v:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dword s0, s[2:3], 0x0
@@ -1155,13 +1155,13 @@ define amdgpu_ps void @insertelement_s_v4i8_s_v(<4 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <4 x i8>, <4 x i8> addrspace(4)* %ptr
+  %vec = load <4 x i8>, ptr addrspace(4) %ptr
   %insert = insertelement <4 x i8> %vec, i8 %val, i32 %idx
-  store <4 x i8> %insert, <4 x i8> addrspace(1)* null
+  store <4 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_s_v4i8_v_v(<4 x i8> addrspace(4)* inreg %ptr, i8 %val, i32 %idx) {
+define amdgpu_ps void @insertelement_s_v4i8_v_v(ptr addrspace(4) inreg %ptr, i8 %val, i32 %idx) {
 ; GFX9-LABEL: insertelement_s_v4i8_v_v:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dword s0, s[2:3], 0x0
@@ -1246,13 +1246,13 @@ define amdgpu_ps void @insertelement_s_v4i8_v_v(<4 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <4 x i8>, <4 x i8> addrspace(4)* %ptr
+  %vec = load <4 x i8>, ptr addrspace(4) %ptr
   %insert = insertelement <4 x i8> %vec, i8 %val, i32 %idx
-  store <4 x i8> %insert, <4 x i8> addrspace(1)* null
+  store <4 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_v_v4i8_s_v(<4 x i8> addrspace(1)* %ptr, i8 inreg %val, i32 %idx) {
+define amdgpu_ps void @insertelement_v_v4i8_s_v(ptr addrspace(1) %ptr, i8 inreg %val, i32 %idx) {
 ; GFX9-LABEL: insertelement_v_v4i8_s_v:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dword v3, v[0:1], off
@@ -1341,13 +1341,13 @@ define amdgpu_ps void @insertelement_v_v4i8_s_v(<4 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <4 x i8>, <4 x i8> addrspace(1)* %ptr
+  %vec = load <4 x i8>, ptr addrspace(1) %ptr
   %insert = insertelement <4 x i8> %vec, i8 %val, i32 %idx
-  store <4 x i8> %insert, <4 x i8> addrspace(1)* null
+  store <4 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_v_v4i8_v_s(<4 x i8> addrspace(1)* %ptr, i8 %val, i32 inreg %idx) {
+define amdgpu_ps void @insertelement_v_v4i8_v_s(ptr addrspace(1) %ptr, i8 %val, i32 inreg %idx) {
 ; GFX9-LABEL: insertelement_v_v4i8_v_s:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dword v3, v[0:1], off
@@ -1432,13 +1432,13 @@ define amdgpu_ps void @insertelement_v_v4i8_v_s(<4 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <4 x i8>, <4 x i8> addrspace(1)* %ptr
+  %vec = load <4 x i8>, ptr addrspace(1) %ptr
   %insert = insertelement <4 x i8> %vec, i8 %val, i32 %idx
-  store <4 x i8> %insert, <4 x i8> addrspace(1)* null
+  store <4 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_v_v4i8_v_v(<4 x i8> addrspace(1)* %ptr, i8 %val, i32 %idx) {
+define amdgpu_ps void @insertelement_v_v4i8_v_v(ptr addrspace(1) %ptr, i8 %val, i32 %idx) {
 ; GFX9-LABEL: insertelement_v_v4i8_v_v:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dword v4, v[0:1], off
@@ -1524,13 +1524,13 @@ define amdgpu_ps void @insertelement_v_v4i8_v_v(<4 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <4 x i8>, <4 x i8> addrspace(1)* %ptr
+  %vec = load <4 x i8>, ptr addrspace(1) %ptr
   %insert = insertelement <4 x i8> %vec, i8 %val, i32 %idx
-  store <4 x i8> %insert, <4 x i8> addrspace(1)* null
+  store <4 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_s_v8i8_s_s(<8 x i8> addrspace(4)* inreg %ptr, i8 inreg %val, i32 inreg %idx) {
+define amdgpu_ps void @insertelement_s_v8i8_s_s(ptr addrspace(4) inreg %ptr, i8 inreg %val, i32 inreg %idx) {
 ; GFX9-LABEL: insertelement_s_v8i8_s_s:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x0
@@ -1658,13 +1658,13 @@ define amdgpu_ps void @insertelement_s_v8i8_s_s(<8 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <8 x i8>, <8 x i8> addrspace(4)* %ptr
+  %vec = load <8 x i8>, ptr addrspace(4) %ptr
   %insert = insertelement <8 x i8> %vec, i8 %val, i32 %idx
-  store <8 x i8> %insert, <8 x i8> addrspace(1)* null
+  store <8 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_v_v8i8_s_s(<8 x i8> addrspace(1)* %ptr, i8 inreg %val, i32 inreg %idx) {
+define amdgpu_ps void @insertelement_v_v8i8_s_s(ptr addrspace(1) %ptr, i8 inreg %val, i32 inreg %idx) {
 ; GFX9-LABEL: insertelement_v_v8i8_s_s:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
@@ -1781,13 +1781,13 @@ define amdgpu_ps void @insertelement_v_v8i8_s_s(<8 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <8 x i8>, <8 x i8> addrspace(1 )* %ptr
+  %vec = load <8 x i8>, ptr addrspace(1 ) %ptr
   %insert = insertelement <8 x i8> %vec, i8 %val, i32 %idx
-  store <8 x i8> %insert, <8 x i8> addrspace(1)* null
+  store <8 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_s_v8i8_v_s(<8 x i8> addrspace(4)* inreg %ptr, i8 %val, i32 inreg %idx) {
+define amdgpu_ps void @insertelement_s_v8i8_v_s(ptr addrspace(4) inreg %ptr, i8 %val, i32 inreg %idx) {
 ; GFX9-LABEL: insertelement_s_v8i8_v_s:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x0
@@ -1913,13 +1913,13 @@ define amdgpu_ps void @insertelement_s_v8i8_v_s(<8 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <8 x i8>, <8 x i8> addrspace(4)* %ptr
+  %vec = load <8 x i8>, ptr addrspace(4) %ptr
   %insert = insertelement <8 x i8> %vec, i8 %val, i32 %idx
-  store <8 x i8> %insert, <8 x i8> addrspace(1)* null
+  store <8 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_s_v8i8_s_v(<8 x i8> addrspace(4)* inreg %ptr, i8 inreg %val, i32 %idx) {
+define amdgpu_ps void @insertelement_s_v8i8_s_v(ptr addrspace(4) inreg %ptr, i8 inreg %val, i32 %idx) {
 ; GFX9-LABEL: insertelement_s_v8i8_s_v:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x0
@@ -2054,13 +2054,13 @@ define amdgpu_ps void @insertelement_s_v8i8_s_v(<8 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <8 x i8>, <8 x i8> addrspace(4)* %ptr
+  %vec = load <8 x i8>, ptr addrspace(4) %ptr
   %insert = insertelement <8 x i8> %vec, i8 %val, i32 %idx
-  store <8 x i8> %insert, <8 x i8> addrspace(1)* null
+  store <8 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_s_v8i8_v_v(<8 x i8> addrspace(4)* inreg %ptr, i8 %val, i32 %idx) {
+define amdgpu_ps void @insertelement_s_v8i8_v_v(ptr addrspace(4) inreg %ptr, i8 %val, i32 %idx) {
 ; GFX9-LABEL: insertelement_s_v8i8_v_v:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x0
@@ -2193,13 +2193,13 @@ define amdgpu_ps void @insertelement_s_v8i8_v_v(<8 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <8 x i8>, <8 x i8> addrspace(4)* %ptr
+  %vec = load <8 x i8>, ptr addrspace(4) %ptr
   %insert = insertelement <8 x i8> %vec, i8 %val, i32 %idx
-  store <8 x i8> %insert, <8 x i8> addrspace(1)* null
+  store <8 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_v_v8i8_s_v(<8 x i8> addrspace(1)* %ptr, i8 inreg %val, i32 %idx) {
+define amdgpu_ps void @insertelement_v_v8i8_s_v(ptr addrspace(1) %ptr, i8 inreg %val, i32 %idx) {
 ; GFX9-LABEL: insertelement_v_v8i8_s_v:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
@@ -2319,13 +2319,13 @@ define amdgpu_ps void @insertelement_v_v8i8_s_v(<8 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <8 x i8>, <8 x i8> addrspace(1)* %ptr
+  %vec = load <8 x i8>, ptr addrspace(1) %ptr
   %insert = insertelement <8 x i8> %vec, i8 %val, i32 %idx
-  store <8 x i8> %insert, <8 x i8> addrspace(1)* null
+  store <8 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_v_v8i8_v_s(<8 x i8> addrspace(1)* %ptr, i8 %val, i32 inreg %idx) {
+define amdgpu_ps void @insertelement_v_v8i8_v_s(ptr addrspace(1) %ptr, i8 %val, i32 inreg %idx) {
 ; GFX9-LABEL: insertelement_v_v8i8_v_s:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
@@ -2440,13 +2440,13 @@ define amdgpu_ps void @insertelement_v_v8i8_v_s(<8 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <8 x i8>, <8 x i8> addrspace(1)* %ptr
+  %vec = load <8 x i8>, ptr addrspace(1) %ptr
   %insert = insertelement <8 x i8> %vec, i8 %val, i32 %idx
-  store <8 x i8> %insert, <8 x i8> addrspace(1)* null
+  store <8 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_v_v8i8_v_v(<8 x i8> addrspace(1)* %ptr, i8 %val, i32 %idx) {
+define amdgpu_ps void @insertelement_v_v8i8_v_v(ptr addrspace(1) %ptr, i8 %val, i32 %idx) {
 ; GFX9-LABEL: insertelement_v_v8i8_v_v:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
@@ -2564,13 +2564,13 @@ define amdgpu_ps void @insertelement_v_v8i8_v_v(<8 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <8 x i8>, <8 x i8> addrspace(1)* %ptr
+  %vec = load <8 x i8>, ptr addrspace(1) %ptr
   %insert = insertelement <8 x i8> %vec, i8 %val, i32 %idx
-  store <8 x i8> %insert, <8 x i8> addrspace(1)* null
+  store <8 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_s_v16i8_s_s(<16 x i8> addrspace(4)* inreg %ptr, i8 inreg %val, i32 inreg %idx) {
+define amdgpu_ps void @insertelement_s_v16i8_s_s(ptr addrspace(4) inreg %ptr, i8 inreg %val, i32 inreg %idx) {
 ; GFX9-LABEL: insertelement_s_v16i8_s_s:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x0
@@ -2747,13 +2747,13 @@ define amdgpu_ps void @insertelement_s_v16i8_s_s(<16 x i8> addrspace(4)* inreg %
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <16 x i8>, <16 x i8> addrspace(4)* %ptr
+  %vec = load <16 x i8>, ptr addrspace(4) %ptr
   %insert = insertelement <16 x i8> %vec, i8 %val, i32 %idx
-  store <16 x i8> %insert, <16 x i8> addrspace(1)* null
+  store <16 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_v_v16i8_s_s(<16 x i8> addrspace(1)* %ptr, i8 inreg %val, i32 inreg %idx) {
+define amdgpu_ps void @insertelement_v_v16i8_s_s(ptr addrspace(1) %ptr, i8 inreg %val, i32 inreg %idx) {
 ; GFX9-LABEL: insertelement_v_v16i8_s_s:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
@@ -2902,13 +2902,13 @@ define amdgpu_ps void @insertelement_v_v16i8_s_s(<16 x i8> addrspace(1)* %ptr, i
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <16 x i8>, <16 x i8> addrspace(1 )* %ptr
+  %vec = load <16 x i8>, ptr addrspace(1 ) %ptr
   %insert = insertelement <16 x i8> %vec, i8 %val, i32 %idx
-  store <16 x i8> %insert, <16 x i8> addrspace(1)* null
+  store <16 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_s_v16i8_v_s(<16 x i8> addrspace(4)* inreg %ptr, i8 %val, i32 inreg %idx) {
+define amdgpu_ps void @insertelement_s_v16i8_v_s(ptr addrspace(4) inreg %ptr, i8 %val, i32 inreg %idx) {
 ; GFX9-LABEL: insertelement_s_v16i8_v_s:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x0
@@ -3084,13 +3084,13 @@ define amdgpu_ps void @insertelement_s_v16i8_v_s(<16 x i8> addrspace(4)* inreg %
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <16 x i8>, <16 x i8> addrspace(4)* %ptr
+  %vec = load <16 x i8>, ptr addrspace(4) %ptr
   %insert = insertelement <16 x i8> %vec, i8 %val, i32 %idx
-  store <16 x i8> %insert, <16 x i8> addrspace(1)* null
+  store <16 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_s_v16i8_s_v(<16 x i8> addrspace(4)* inreg %ptr, i8 inreg %val, i32 %idx) {
+define amdgpu_ps void @insertelement_s_v16i8_s_v(ptr addrspace(4) inreg %ptr, i8 inreg %val, i32 %idx) {
 ; GFX9-LABEL: insertelement_s_v16i8_s_v:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[8:11], s[2:3], 0x0
@@ -3271,13 +3271,13 @@ define amdgpu_ps void @insertelement_s_v16i8_s_v(<16 x i8> addrspace(4)* inreg %
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <16 x i8>, <16 x i8> addrspace(4)* %ptr
+  %vec = load <16 x i8>, ptr addrspace(4) %ptr
   %insert = insertelement <16 x i8> %vec, i8 %val, i32 %idx
-  store <16 x i8> %insert, <16 x i8> addrspace(1)* null
+  store <16 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_s_v16i8_v_v(<16 x i8> addrspace(4)* inreg %ptr, i8 %val, i32 %idx) {
+define amdgpu_ps void @insertelement_s_v16i8_v_v(ptr addrspace(4) inreg %ptr, i8 %val, i32 %idx) {
 ; GFX9-LABEL: insertelement_s_v16i8_v_v:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
@@ -3458,13 +3458,13 @@ define amdgpu_ps void @insertelement_s_v16i8_v_v(<16 x i8> addrspace(4)* inreg %
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <16 x i8>, <16 x i8> addrspace(4)* %ptr
+  %vec = load <16 x i8>, ptr addrspace(4) %ptr
   %insert = insertelement <16 x i8> %vec, i8 %val, i32 %idx
-  store <16 x i8> %insert, <16 x i8> addrspace(1)* null
+  store <16 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_v_v16i8_s_v(<16 x i8> addrspace(1)* %ptr, i8 inreg %val, i32 %idx) {
+define amdgpu_ps void @insertelement_v_v16i8_s_v(ptr addrspace(1) %ptr, i8 inreg %val, i32 %idx) {
 ; GFX9-LABEL: insertelement_v_v16i8_s_v:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx4 v[3:6], v[0:1], off
@@ -3614,13 +3614,13 @@ define amdgpu_ps void @insertelement_v_v16i8_s_v(<16 x i8> addrspace(1)* %ptr, i
 ; GFX11-NEXT:    global_store_b128 v[7:8], v[0:3], off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <16 x i8>, <16 x i8> addrspace(1)* %ptr
+  %vec = load <16 x i8>, ptr addrspace(1) %ptr
   %insert = insertelement <16 x i8> %vec, i8 %val, i32 %idx
-  store <16 x i8> %insert, <16 x i8> addrspace(1)* null
+  store <16 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_v_v16i8_v_s(<16 x i8> addrspace(1)* %ptr, i8 %val, i32 inreg %idx) {
+define amdgpu_ps void @insertelement_v_v16i8_v_s(ptr addrspace(1) %ptr, i8 %val, i32 inreg %idx) {
 ; GFX9-LABEL: insertelement_v_v16i8_v_s:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx4 v[3:6], v[0:1], off
@@ -3766,13 +3766,13 @@ define amdgpu_ps void @insertelement_v_v16i8_v_s(<16 x i8> addrspace(1)* %ptr, i
 ; GFX11-NEXT:    global_store_b128 v[7:8], v[0:3], off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <16 x i8>, <16 x i8> addrspace(1)* %ptr
+  %vec = load <16 x i8>, ptr addrspace(1) %ptr
   %insert = insertelement <16 x i8> %vec, i8 %val, i32 %idx
-  store <16 x i8> %insert, <16 x i8> addrspace(1)* null
+  store <16 x i8> %insert, ptr addrspace(1) null
   ret void
 }
 
-define amdgpu_ps void @insertelement_v_v16i8_v_v(<16 x i8> addrspace(1)* %ptr, i8 %val, i32 %idx) {
+define amdgpu_ps void @insertelement_v_v16i8_v_v(ptr addrspace(1) %ptr, i8 %val, i32 %idx) {
 ; GFX9-LABEL: insertelement_v_v16i8_v_v:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
@@ -3919,8 +3919,8 @@ define amdgpu_ps void @insertelement_v_v16i8_v_v(<16 x i8> addrspace(1)* %ptr, i
 ; GFX11-NEXT:    global_store_b128 v[8:9], v[0:3], off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %vec = load <16 x i8>, <16 x i8> addrspace(1)* %ptr
+  %vec = load <16 x i8>, ptr addrspace(1) %ptr
   %insert = insertelement <16 x i8> %vec, i8 %val, i32 %idx
-  store <16 x i8> %insert, <16 x i8> addrspace(1)* null
+  store <16 x i8> %insert, ptr addrspace(1) null
   ret void
 }

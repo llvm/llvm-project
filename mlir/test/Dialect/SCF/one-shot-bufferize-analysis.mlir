@@ -628,7 +628,7 @@ func.func @same_enclosing_repetitive_region(%2: tensor<320xf32>,
       // CHECK: tensor.parallel_insert_slice {{.*}} {__inplace_operands_attr__ = ["true", "true", "none"]}
       tensor.parallel_insert_slice %8 into %arg1[%arg0] [1] [1] : tensor<1xf32> into tensor<320xf32>
     }
-  } 
+  }
   return %4 : tensor<320xf32>
 }
 

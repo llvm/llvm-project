@@ -11,12 +11,12 @@ main_body:
 
 ; GCN-LABEL: {{^}}load_1d_lwe:
 ; GCN: image_load v[0:4], v{{[0-9]+}}, s[0:7] dmask:0xf unorm lwe{{$}}
-define amdgpu_ps <4 x float> @load_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s) {
+define amdgpu_ps <4 x float> @load_1d_lwe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s) {
 main_body:
   %v = call {<4 x float>, i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 2, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
@@ -46,12 +46,12 @@ main_body:
 
 ; GCN-LABEL: {{^}}load_cube_lwe:
 ; GCN: image_load v[0:4], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm lwe da{{$}}
-define amdgpu_ps <4 x float> @load_cube_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %slice) {
+define amdgpu_ps <4 x float> @load_cube_lwe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %t, i32 %slice) {
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.cube.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %slice, <8 x i32> %rsrc, i32 2, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
@@ -73,12 +73,12 @@ main_body:
 
 ; GCN-LABEL: {{^}}load_2darray_lwe:
 ; GCN: image_load v[0:4], v[{{[0-9]+:[0-9]+}}], s[0:7] dmask:0xf unorm lwe da{{$}}
-define amdgpu_ps <4 x float> @load_2darray_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %slice) {
+define amdgpu_ps <4 x float> @load_2darray_lwe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %t, i32 %slice) {
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.2darray.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %slice, <8 x i32> %rsrc, i32 2, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
@@ -269,13 +269,13 @@ main_body:
 
 ; GCN-LABEL: image_load_mmo
 ; GCN: image_load v1, v[{{[0-9:]+}}], s[0:7] dmask:0x1 unorm
-define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, float addrspace(3)* %lds, <2 x i32> %c) #0 {
-  store float 0.000000e+00, float addrspace(3)* %lds
+define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, ptr addrspace(3) %lds, <2 x i32> %c) #0 {
+  store float 0.000000e+00, ptr addrspace(3) %lds
   %c0 = extractelement <2 x i32> %c, i32 0
   %c1 = extractelement <2 x i32> %c, i32 1
   %tex = call float @llvm.amdgcn.image.load.2d.f32.i32(i32 1, i32 %c0, i32 %c1, <8 x i32> %rsrc, i32 0, i32 0)
-  %tmp2 = getelementptr float, float addrspace(3)* %lds, i32 4
-  store float 0.000000e+00, float addrspace(3)* %tmp2
+  %tmp2 = getelementptr float, ptr addrspace(3) %lds, i32 4
+  store float 0.000000e+00, ptr addrspace(3) %tmp2
   ret float %tex
 }
 

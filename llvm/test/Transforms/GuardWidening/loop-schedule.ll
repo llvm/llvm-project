@@ -10,14 +10,14 @@
 
 declare void @llvm.experimental.guard(i1,...)
 
-define void @iter(i32 %a, i32 %b, i1* %c_p) {
+define void @iter(i32 %a, i32 %b, ptr %c_p) {
 ; CHECK-LABEL: @iter(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_0:%.*]] = icmp ult i32 [[A:%.*]], 10
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ult i32 [[B:%.*]], 10
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0]], [[COND_1]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
-; CHECK-NEXT:    [[CND:%.*]] = load i1, i1* [[C_P:%.*]], align 1
+; CHECK-NEXT:    [[CND:%.*]] = load i1, ptr [[C_P:%.*]], align 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    br i1 [[CND]], label [[LOOP]], label [[LEAVE_LOOPEXIT:%.*]]
@@ -35,7 +35,7 @@ entry:
 loop:                                             ; preds = %loop.preheader, %loop
   %cond_1 = icmp ult i32 %b, 10
   call void (i1, ...) @llvm.experimental.guard(i1 %cond_1) [ "deopt"() ]
-  %cnd = load i1, i1* %c_p
+  %cnd = load i1, ptr %c_p
   br i1 %cnd, label %loop, label %leave.loopexit
 
 leave.loopexit:                                   ; preds = %loop
@@ -45,14 +45,14 @@ leave:                                            ; preds = %leave.loopexit, %en
   ret void
 }
 
-define void @within_loop(i32 %a, i32 %b, i1* %c_p) {
+define void @within_loop(i32 %a, i32 %b, ptr %c_p) {
 ; CHECK-LABEL: @within_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_0:%.*]] = icmp ult i32 [[A:%.*]], 10
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ult i32 [[B:%.*]], 10
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0]], [[COND_1]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
-; CHECK-NEXT:    [[CND:%.*]] = load i1, i1* [[C_P:%.*]], align 1
+; CHECK-NEXT:    [[CND:%.*]] = load i1, ptr [[C_P:%.*]], align 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    br i1 [[CND]], label [[LOOP]], label [[LEAVE_LOOPEXIT:%.*]]
@@ -70,7 +70,7 @@ loop:                                             ; preds = %loop.preheader, %lo
   call void (i1, ...) @llvm.experimental.guard(i1 %cond_0) [ "deopt"() ]
   %cond_1 = icmp ult i32 %b, 10
   call void (i1, ...) @llvm.experimental.guard(i1 %cond_1) [ "deopt"() ]
-  %cnd = load i1, i1* %c_p
+  %cnd = load i1, ptr %c_p
   br i1 %cnd, label %loop, label %leave.loopexit
 
 leave.loopexit:                                   ; preds = %loop
