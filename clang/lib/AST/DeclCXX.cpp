@@ -37,7 +37,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"

@@ -18,7 +18,6 @@
 #define LLVM_CODEGEN_LIVERANGEEDIT_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
