@@ -230,95 +230,94 @@ public:
 //   }
 // };
 
-// class CIRBinOpLowering : public mlir::OpRewritePattern<mlir::cir::BinOp> {
-// public:
-//   using OpRewritePattern<mlir::cir::BinOp>::OpRewritePattern;
+class CIRBinOpLowering : public mlir::OpConversionPattern<mlir::cir::BinOp> {
+public:
+  using OpConversionPattern<mlir::cir::BinOp>::OpConversionPattern;
 
-//   mlir::LogicalResult
-//   matchAndRewrite(mlir::cir::BinOp op,
-//                   mlir::PatternRewriter &rewriter) const override {
-//     assert((op.getLhs().getType() == op.getRhs().getType()) &&
-//            "inconsistent operands' types not supported yet");
-//     mlir::Type type = op.getRhs().getType();
-//     assert((type.isa<mlir::IntegerType>() || type.isa<mlir::FloatType>()) &&
-//            "operand type not supported yet");
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::BinOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    assert((op.getLhs().getType() == op.getRhs().getType()) &&
+           "inconsistent operands' types not supported yet");
+    mlir::Type type = op.getRhs().getType();
+    assert((type.isa<mlir::IntegerType>() || type.isa<mlir::FloatType>()) &&
+           "operand type not supported yet");
 
-//     switch (op.getKind()) {
-//     case mlir::cir::BinOpKind::Add:
-//       if (type.isa<mlir::IntegerType>())
-//         rewriter.replaceOpWithNewOp<mlir::arith::AddIOp>(
-//             op, op.getType(), op.getLhs(), op.getRhs());
-//       else
-//         rewriter.replaceOpWithNewOp<mlir::arith::AddFOp>(
-//             op, op.getType(), op.getLhs(), op.getRhs());
-//       break;
-//     case mlir::cir::BinOpKind::Sub:
-//       if (type.isa<mlir::IntegerType>())
-//         rewriter.replaceOpWithNewOp<mlir::arith::SubIOp>(
-//             op, op.getType(), op.getLhs(), op.getRhs());
-//       else
-//         rewriter.replaceOpWithNewOp<mlir::arith::SubFOp>(
-//             op, op.getType(), op.getLhs(), op.getRhs());
-//       break;
-//     case mlir::cir::BinOpKind::Mul:
-//       if (type.isa<mlir::IntegerType>())
-//         rewriter.replaceOpWithNewOp<mlir::arith::MulIOp>(
-//             op, op.getType(), op.getLhs(), op.getRhs());
-//       else
-//         rewriter.replaceOpWithNewOp<mlir::arith::MulFOp>(
-//             op, op.getType(), op.getLhs(), op.getRhs());
-//       break;
-//     case mlir::cir::BinOpKind::Div:
-//       if (type.isa<mlir::IntegerType>()) {
-//         if (type.isSignlessInteger())
-//           rewriter.replaceOpWithNewOp<mlir::arith::DivSIOp>(
-//               op, op.getType(), op.getLhs(), op.getRhs());
-//         else
-//           llvm_unreachable("integer type not supported in CIR yet");
-//       } else
-//         rewriter.replaceOpWithNewOp<mlir::arith::DivFOp>(
-//             op, op.getType(), op.getLhs(), op.getRhs());
-//       break;
-//     case mlir::cir::BinOpKind::Rem:
-//       if (type.isa<mlir::IntegerType>()) {
-//         if (type.isSignlessInteger())
-//           rewriter.replaceOpWithNewOp<mlir::arith::RemSIOp>(
-//               op, op.getType(), op.getLhs(), op.getRhs());
-//         else
-//           llvm_unreachable("integer type not supported in CIR yet");
-//       } else
-//         rewriter.replaceOpWithNewOp<mlir::arith::RemFOp>(
-//             op, op.getType(), op.getLhs(), op.getRhs());
-//       break;
-//     case mlir::cir::BinOpKind::And:
-//       rewriter.replaceOpWithNewOp<mlir::arith::AndIOp>(
-//           op, op.getType(), op.getLhs(), op.getRhs());
-//       break;
-//     case mlir::cir::BinOpKind::Or:
-//       rewriter.replaceOpWithNewOp<mlir::arith::OrIOp>(op, op.getType(),
-//                                                       op.getLhs(),
-//                                                       op.getRhs());
-//       break;
-//     case mlir::cir::BinOpKind::Xor:
-//       rewriter.replaceOpWithNewOp<mlir::arith::XOrIOp>(
-//           op, op.getType(), op.getLhs(), op.getRhs());
-//       break;
-//     case mlir::cir::BinOpKind::Shl:
-//       rewriter.replaceOpWithNewOp<mlir::arith::ShLIOp>(
-//           op, op.getType(), op.getLhs(), op.getRhs());
-//       break;
-//     case mlir::cir::BinOpKind::Shr:
-//       if (type.isSignlessInteger())
-//         rewriter.replaceOpWithNewOp<mlir::arith::ShRSIOp>(
-//             op, op.getType(), op.getLhs(), op.getRhs());
-//       else
-//         llvm_unreachable("integer type not supported in CIR yet");
-//       break;
-//     }
+    switch (op.getKind()) {
+    case mlir::cir::BinOpKind::Add:
+      if (type.isa<mlir::IntegerType>())
+        rewriter.replaceOpWithNewOp<mlir::LLVM::AddOp>(
+            op, op.getType(), op.getLhs(), op.getRhs());
+      else
+        rewriter.replaceOpWithNewOp<mlir::LLVM::FAddOp>(
+            op, op.getType(), op.getLhs(), op.getRhs());
+      break;
+    case mlir::cir::BinOpKind::Sub:
+      if (type.isa<mlir::IntegerType>())
+        rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(
+            op, op.getType(), op.getLhs(), op.getRhs());
+      else
+        rewriter.replaceOpWithNewOp<mlir::LLVM::FSubOp>(
+            op, op.getType(), op.getLhs(), op.getRhs());
+      break;
+    case mlir::cir::BinOpKind::Mul:
+      if (type.isa<mlir::IntegerType>())
+        rewriter.replaceOpWithNewOp<mlir::LLVM::MulOp>(
+            op, op.getType(), op.getLhs(), op.getRhs());
+      else
+        rewriter.replaceOpWithNewOp<mlir::LLVM::FMulOp>(
+            op, op.getType(), op.getLhs(), op.getRhs());
+      break;
+    case mlir::cir::BinOpKind::Div:
+      if (type.isa<mlir::IntegerType>()) {
+        if (type.isSignlessInteger())
+          rewriter.replaceOpWithNewOp<mlir::LLVM::SDivOp>(
+              op, op.getType(), op.getLhs(), op.getRhs());
+        else
+          llvm_unreachable("integer type not supported in CIR yet");
+      } else
+        rewriter.replaceOpWithNewOp<mlir::LLVM::FDivOp>(
+            op, op.getType(), op.getLhs(), op.getRhs());
+      break;
+    case mlir::cir::BinOpKind::Rem:
+      if (type.isa<mlir::IntegerType>()) {
+        if (type.isSignlessInteger())
+          rewriter.replaceOpWithNewOp<mlir::LLVM::SRemOp>(
+              op, op.getType(), op.getLhs(), op.getRhs());
+        else
+          llvm_unreachable("integer type not supported in CIR yet");
+      } else
+        rewriter.replaceOpWithNewOp<mlir::LLVM::FRemOp>(
+            op, op.getType(), op.getLhs(), op.getRhs());
+      break;
+    case mlir::cir::BinOpKind::And:
+      rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(op, op.getType(),
+                                                     op.getLhs(), op.getRhs());
+      break;
+    case mlir::cir::BinOpKind::Or:
+      rewriter.replaceOpWithNewOp<mlir::LLVM::OrOp>(op, op.getType(),
+                                                    op.getLhs(), op.getRhs());
+      break;
+    case mlir::cir::BinOpKind::Xor:
+      rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(op, op.getType(),
+                                                     op.getLhs(), op.getRhs());
+      break;
+    case mlir::cir::BinOpKind::Shl:
+      rewriter.replaceOpWithNewOp<mlir::LLVM::ShlOp>(op, op.getType(),
+                                                     op.getLhs(), op.getRhs());
+      break;
+    case mlir::cir::BinOpKind::Shr:
+      if (type.isSignlessInteger())
+        rewriter.replaceOpWithNewOp<mlir::LLVM::AShrOp>(
+            op, op.getType(), op.getLhs(), op.getRhs());
+      else
+        llvm_unreachable("integer type not supported in CIR yet");
+      break;
+    }
 
-//     return mlir::LogicalResult::success();
-//   }
-// };
+    return mlir::LogicalResult::success();
+  }
+};
 
 class CIRCmpOpLowering : public mlir::OpConversionPattern<mlir::cir::CmpOp> {
 public:
@@ -479,13 +478,13 @@ public:
 
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
-  patterns.add</* CIRUnaryOpLowering, CIRBinOpLowering,
+  patterns.add</* CIRUnaryOpLowering,
                CIRBrOpLowering,
                CIRCallLowering, */
                CIRReturnLowering>(patterns.getContext());
-  patterns.add<CIRCmpOpLowering, CIRLoadLowering, CIRConstantLowering,
-               CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering>(
-      converter, patterns.getContext());
+  patterns.add<CIRCmpOpLowering, CIRBinOpLowering, CIRLoadLowering,
+               CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering,
+               CIRFuncLowering>(converter, patterns.getContext());
 }
 
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter) {
