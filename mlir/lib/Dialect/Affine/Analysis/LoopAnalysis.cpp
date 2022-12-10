@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include <numeric>
+#include <optional>
 #include <type_traits>
 
 using namespace mlir;
@@ -119,7 +120,7 @@ uint64_t mlir::getLargestDivisorOfTripCount(AffineForOp forOp) {
   // The largest divisor of the trip count is the GCD of the individual largest
   // divisors.
   assert(map.getNumResults() >= 1 && "expected one or more results");
-  Optional<uint64_t> gcd;
+  std::optional<uint64_t> gcd;
   for (auto resultExpr : map.getResults()) {
     uint64_t thisGcd;
     if (auto constExpr = resultExpr.dyn_cast<AffineConstantExpr>()) {
