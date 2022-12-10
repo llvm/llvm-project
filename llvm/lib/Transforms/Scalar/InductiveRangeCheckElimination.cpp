@@ -236,7 +236,7 @@ class InductiveRangeCheckElimination {
   LoopInfo &LI;
 
   using GetBFIFunc =
-      llvm::Optional<llvm::function_ref<llvm::BlockFrequencyInfo &()> >;
+      std::optional<llvm::function_ref<llvm::BlockFrequencyInfo &()>>;
   GetBFIFunc GetBFI;
 
   // Returns true if it is profitable to do a transform basing on estimation of
