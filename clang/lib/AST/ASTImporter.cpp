@@ -68,6 +68,7 @@
 #include <cassert>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -3981,7 +3982,7 @@ static FriendCountAndPosition getFriendCountAndPosition(
     const FriendDecl *FD,
     llvm::function_ref<T(const FriendDecl *)> GetCanTypeOrDecl) {
   unsigned int FriendCount = 0;
-  llvm::Optional<unsigned int> FriendPosition;
+  std::optional<unsigned int> FriendPosition;
   const auto *RD = cast<CXXRecordDecl>(FD->getLexicalDeclContext());
 
   T TypeOrDecl = GetCanTypeOrDecl(FD);
