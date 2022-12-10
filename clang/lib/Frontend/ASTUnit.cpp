@@ -99,6 +99,7 @@
 #include <cstdlib>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -734,7 +735,7 @@ void FilterAndStoreDiagnosticConsumer::HandleDiagnostic(
     }
 
     if (StandaloneDiags) {
-      llvm::Optional<StoredDiagnostic> StoredDiag;
+      std::optional<StoredDiagnostic> StoredDiag;
       if (!ResultDiag) {
         StoredDiag.emplace(Level, Info);
         ResultDiag = &*StoredDiag;
@@ -1378,7 +1379,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
   SmallVector<StoredDiagnostic, 4> NewPreambleDiags;
   ASTUnitPreambleCallbacks Callbacks;
   {
-    llvm::Optional<CaptureDroppedDiagnostics> Capture;
+    std::optional<CaptureDroppedDiagnostics> Capture;
     if (CaptureDiagnostics != CaptureDiagsKind::None)
       Capture.emplace(CaptureDiagnostics, *Diagnostics, &NewPreambleDiags,
                       &NewPreambleDiagsStandalone);
@@ -2243,7 +2244,7 @@ void ASTUnit::CodeComplete(
   Clang->setCodeCompletionConsumer(AugmentedConsumer);
 
   auto getUniqueID =
-      [&FileMgr](StringRef Filename) -> Optional<llvm::sys::fs::UniqueID> {
+      [&FileMgr](StringRef Filename) -> std::optional<llvm::sys::fs::UniqueID> {
     if (auto Status = FileMgr.getVirtualFileSystem().status(Filename))
       return Status->getUniqueID();
     return std::nullopt;
