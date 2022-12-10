@@ -5,6 +5,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
+#include <optional>
 
 #include "gtest/gtest.h"
 
@@ -23,9 +24,9 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
 
-  return std::unique_ptr<LLVMTargetMachine>(
-      static_cast<LLVMTargetMachine *>(TheTarget->createTargetMachine(
-          TT, CPU, FS, TargetOptions(), None, None, CodeGenOpt::Default)));
+  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), std::nullopt,
+                                     std::nullopt, CodeGenOpt::Default)));
 }
 
 std::unique_ptr<LoongArchInstrInfo> createInstrInfo(TargetMachine *TM) {
