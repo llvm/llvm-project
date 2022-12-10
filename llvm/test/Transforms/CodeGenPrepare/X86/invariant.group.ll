@@ -6,13 +6,13 @@
 define void @foo() {
 enter:
   ; CHECK-NOT: !invariant.group
-  ; CHECK-NOT: @llvm.launder.invariant.group.p0i8(
-  ; CHECK: %val = load i8, i8* @tmp, align 1{{$}}
-  %val = load i8, i8* @tmp, !invariant.group !0
-  %ptr = call i8* @llvm.launder.invariant.group.p0i8(i8* @tmp)
+  ; CHECK-NOT: @llvm.launder.invariant.group.p0(
+  ; CHECK: %val = load i8, ptr @tmp, align 1{{$}}
+  %val = load i8, ptr @tmp, !invariant.group !0
+  %ptr = call ptr @llvm.launder.invariant.group.p0(ptr @tmp)
   
-  ; CHECK: store i8 42, i8* @tmp, align 1{{$}}
-  store i8 42, i8* %ptr, !invariant.group !0
+  ; CHECK: store i8 42, ptr @tmp, align 1{{$}}
+  store i8 42, ptr %ptr, !invariant.group !0
   
   ret void
 }
@@ -22,19 +22,19 @@ enter:
 define void @foo2() {
 enter:
   ; CHECK-NOT: !invariant.group
-  ; CHECK-NOT: @llvm.strip.invariant.group.p0i8(
-  ; CHECK: %val = load i8, i8* @tmp, align 1{{$}}
-  %val = load i8, i8* @tmp, !invariant.group !0
-  %ptr = call i8* @llvm.strip.invariant.group.p0i8(i8* @tmp)
+  ; CHECK-NOT: @llvm.strip.invariant.group.p0(
+  ; CHECK: %val = load i8, ptr @tmp, align 1{{$}}
+  %val = load i8, ptr @tmp, !invariant.group !0
+  %ptr = call ptr @llvm.strip.invariant.group.p0(ptr @tmp)
 
-  ; CHECK: store i8 42, i8* @tmp, align 1{{$}}
-  store i8 42, i8* %ptr, !invariant.group !0
+  ; CHECK: store i8 42, ptr @tmp, align 1{{$}}
+  store i8 42, ptr %ptr, !invariant.group !0
 
   ret void
 }
 ; CHECK-LABEL: }
 
 
-declare i8* @llvm.launder.invariant.group.p0i8(i8*)
-declare i8* @llvm.strip.invariant.group.p0i8(i8*)
+declare ptr @llvm.launder.invariant.group.p0(ptr)
+declare ptr @llvm.strip.invariant.group.p0(ptr)
 !0 = !{}

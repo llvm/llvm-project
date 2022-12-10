@@ -70,23 +70,23 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
   // handlers before saving any other registers.
   if (AFI->isInterruptOrSignalHandler()) {
     BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHRr))
-        .addReg(AVR::R0, RegState::Kill)
+        .addReg(STI.getTmpRegister(), RegState::Kill)
         .setMIFlag(MachineInstr::FrameSetup);
 
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::INRdA), AVR::R0)
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::INRdA), STI.getTmpRegister())
         .addImm(STI.getIORegSREG())
         .setMIFlag(MachineInstr::FrameSetup);
     BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHRr))
-        .addReg(AVR::R0, RegState::Kill)
+        .addReg(STI.getTmpRegister(), RegState::Kill)
         .setMIFlag(MachineInstr::FrameSetup);
-    if (!MRI.reg_empty(AVR::R1)) {
+    if (!MRI.reg_empty(STI.getZeroRegister())) {
       BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHRr))
-          .addReg(AVR::R1, RegState::Kill)
+          .addReg(STI.getZeroRegister(), RegState::Kill)
           .setMIFlag(MachineInstr::FrameSetup);
       BuildMI(MBB, MBBI, DL, TII.get(AVR::EORRdRr))
-          .addReg(AVR::R1, RegState::Define)
-          .addReg(AVR::R1, RegState::Kill)
-          .addReg(AVR::R1, RegState::Kill)
+          .addReg(STI.getZeroRegister(), RegState::Define)
+          .addReg(STI.getZeroRegister(), RegState::Kill)
+          .addReg(STI.getZeroRegister(), RegState::Kill)
           .setMIFlag(MachineInstr::FrameSetup);
     }
   }
@@ -149,14 +149,14 @@ static void restoreStatusRegister(MachineFunction &MF, MachineBasicBlock &MBB) {
   // Emit special epilogue code to restore R1, R0 and SREG in interrupt/signal
   // handlers at the very end of the function, just before reti.
   if (AFI->isInterruptOrSignalHandler()) {
-    if (!MRI.reg_empty(AVR::R1)) {
-      BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), AVR::R1);
+    if (!MRI.reg_empty(STI.getZeroRegister())) {
+      BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), STI.getZeroRegister());
     }
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), AVR::R0);
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), STI.getTmpRegister());
     BuildMI(MBB, MBBI, DL, TII.get(AVR::OUTARr))
         .addImm(STI.getIORegSREG())
-        .addReg(AVR::R0, RegState::Kill);
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), AVR::R0);
+        .addReg(STI.getTmpRegister(), RegState::Kill);
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), STI.getTmpRegister());
   }
 }
 

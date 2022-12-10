@@ -8,9 +8,9 @@ target triple = "nvptx64-nvidia-cuda"
 ; numerator is a multiple of the denominator).
 ;
 ; CHECK-LABEL: @test
-define void @test(i64 %a, i64 %b, i64* %retptr) {
+define void @test(i64 %a, i64 %b, ptr %retptr) {
   ; CHECK: udiv i32
   %d = sdiv i64 %a, %b
-  store i64 %d, i64* %retptr
+  store i64 %d, ptr %retptr
   ret void
 }

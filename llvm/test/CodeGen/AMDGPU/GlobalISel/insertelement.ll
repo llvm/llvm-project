@@ -46,7 +46,7 @@ entry:
   ret <8 x i32> %insert
 }
 
-define amdgpu_ps <8 x i8 addrspace(3)*> @dyn_insertelement_v8p3i8_s_s_s(<8 x i8 addrspace(3)*> inreg %vec, i8 addrspace(3)* inreg %val, i32 inreg %idx) {
+define amdgpu_ps <8 x ptr addrspace(3)> @dyn_insertelement_v8p3i8_s_s_s(<8 x ptr addrspace(3)> inreg %vec, ptr addrspace(3) inreg %val, i32 inreg %idx) {
 ; GPRIDX-LABEL: dyn_insertelement_v8p3i8_s_s_s:
 ; GPRIDX:       ; %bb.0: ; %entry
 ; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 0
@@ -81,8 +81,8 @@ define amdgpu_ps <8 x i8 addrspace(3)*> @dyn_insertelement_v8p3i8_s_s_s(<8 x i8 
 ; GFX10PLUS-NEXT:    s_movreld_b32 s0, s10
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 entry:
-  %insert = insertelement <8 x i8 addrspace(3)*> %vec, i8 addrspace(3)* %val, i32 %idx
-  ret <8 x i8 addrspace(3)*> %insert
+  %insert = insertelement <8 x ptr addrspace(3)> %vec, ptr addrspace(3) %val, i32 %idx
+  ret <8 x ptr addrspace(3)> %insert
 }
 
 define <8 x float> @dyn_insertelement_v8f32_const_s_v_v(float %val, i32 %idx) {
@@ -624,7 +624,7 @@ entry:
   ret <8 x float> %insert
 }
 
-define amdgpu_ps <8 x float> @dyn_insertelement_v8p3i8_v_v_s(<8 x i8 addrspace(3)*> %vec, i8 addrspace(3)* %val, i32 inreg %idx) {
+define amdgpu_ps <8 x float> @dyn_insertelement_v8p3i8_v_v_s(<8 x ptr addrspace(3)> %vec, ptr addrspace(3) %val, i32 inreg %idx) {
 ; GPRIDX-LABEL: dyn_insertelement_v8p3i8_v_v_s:
 ; GPRIDX:       ; %bb.0: ; %entry
 ; GPRIDX-NEXT:    v_cmp_eq_u32_e64 vcc, s2, 0
@@ -651,8 +651,8 @@ define amdgpu_ps <8 x float> @dyn_insertelement_v8p3i8_v_v_s(<8 x i8 addrspace(3
 ; GFX10PLUS-NEXT:    v_movreld_b32_e32 v0, v8
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 entry:
-  %insert = insertelement <8 x i8 addrspace(3)*> %vec, i8 addrspace(3)* %val, i32 %idx
-  %cast.0 = ptrtoint <8 x i8 addrspace(3)*> %insert to <8 x i32>
+  %insert = insertelement <8 x ptr addrspace(3)> %vec, ptr addrspace(3) %val, i32 %idx
+  %cast.0 = ptrtoint <8 x ptr addrspace(3)> %insert to <8 x i32>
   %cast.1 = bitcast <8 x i32> %cast.0 to <8 x float>
   ret <8 x float> %cast.1
 }
@@ -752,7 +752,7 @@ entry:
   ret <8 x i64> %insert
 }
 
-define amdgpu_ps <8 x i8 addrspace(1)*> @dyn_insertelement_v8p1i8_s_s_s(<8 x i8 addrspace(1)*> inreg %vec, i8 addrspace(1)* inreg %val, i32 inreg %idx) {
+define amdgpu_ps <8 x ptr addrspace(1)> @dyn_insertelement_v8p1i8_s_s_s(<8 x ptr addrspace(1)> inreg %vec, ptr addrspace(1) inreg %val, i32 inreg %idx) {
 ; GPRIDX-LABEL: dyn_insertelement_v8p1i8_s_s_s:
 ; GPRIDX:       ; %bb.0: ; %entry
 ; GPRIDX-NEXT:    s_mov_b32 s0, s2
@@ -798,8 +798,8 @@ define amdgpu_ps <8 x i8 addrspace(1)*> @dyn_insertelement_v8p1i8_s_s_s(<8 x i8 
 ; GFX10PLUS-NEXT:    s_movreld_b64 s[0:1], s[18:19]
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 entry:
-  %insert = insertelement <8 x i8 addrspace(1)*> %vec, i8 addrspace(1)* %val, i32 %idx
-  ret <8 x i8 addrspace(1)*> %insert
+  %insert = insertelement <8 x ptr addrspace(1)> %vec, ptr addrspace(1) %val, i32 %idx
+  ret <8 x ptr addrspace(1)> %insert
 }
 
 define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
@@ -996,10 +996,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.1, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.2, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.3, <2 x double> addrspace(1)* undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
   ret void
 }
 
@@ -1208,10 +1208,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.1, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.2, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.3, <2 x double> addrspace(1)* undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
   ret void
 }
 
@@ -1357,10 +1357,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.1, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.2, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.3, <2 x double> addrspace(1)* undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
   ret void
 }
 
@@ -1418,10 +1418,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.1, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.2, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.3, <2 x double> addrspace(1)* undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
   ret void
 }
 
@@ -1624,10 +1624,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.1, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.2, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.3, <2 x double> addrspace(1)* undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
   ret void
 }
 
@@ -1748,10 +1748,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.1, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.2, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.3, <2 x double> addrspace(1)* undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
   ret void
 }
 
@@ -1809,10 +1809,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.1, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.2, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.3, <2 x double> addrspace(1)* undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
   ret void
 }
 
@@ -1930,10 +1930,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.1, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.2, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.3, <2 x double> addrspace(1)* undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
   ret void
 }
 
@@ -2538,10 +2538,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.1, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.2, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.3, <2 x double> addrspace(1)* undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
   ret void
 }
 
@@ -2664,10 +2664,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.1, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.2, <2 x double> addrspace(1)* undef
-  store volatile <2 x double> %vec.3, <2 x double> addrspace(1)* undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
   ret void
 }
 
@@ -4316,7 +4316,7 @@ entry:
   ret <7 x i32> %insert
 }
 
-define amdgpu_ps <7 x i8 addrspace(3)*> @dyn_insertelement_v7p3i8_s_s_s(<7 x i8 addrspace(3)*> inreg %vec, i8 addrspace(3)* inreg %val, i32 inreg %idx) {
+define amdgpu_ps <7 x ptr addrspace(3)> @dyn_insertelement_v7p3i8_s_s_s(<7 x ptr addrspace(3)> inreg %vec, ptr addrspace(3) inreg %val, i32 inreg %idx) {
 ; GPRIDX-LABEL: dyn_insertelement_v7p3i8_s_s_s:
 ; GPRIDX:       ; %bb.0: ; %entry
 ; GPRIDX-NEXT:    s_cmp_eq_u32 s10, 0
@@ -4353,8 +4353,8 @@ define amdgpu_ps <7 x i8 addrspace(3)*> @dyn_insertelement_v7p3i8_s_s_s(<7 x i8 
 ; GFX10PLUS-NEXT:    s_cselect_b32 s6, s9, s8
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 entry:
-  %insert = insertelement <7 x i8 addrspace(3)*> %vec, i8 addrspace(3)* %val, i32 %idx
-  ret <7 x i8 addrspace(3)*> %insert
+  %insert = insertelement <7 x ptr addrspace(3)> %vec, ptr addrspace(3) %val, i32 %idx
+  ret <7 x ptr addrspace(3)> %insert
 }
 
 define amdgpu_ps <7 x float> @dyn_insertelement_v7f32_s_v_s(<7 x float> inreg %vec, float %val, i32 inreg %idx) {

@@ -118,6 +118,18 @@ public:
   void mutate(Instruction &Inst, RandomIRBuilder &IB) override;
 };
 
+/// Strategy to randomly select a block and shuffle the operations without
+/// affecting data dependency.
+class ShuffleBlockStrategy : public IRMutationStrategy {
+public:
+  uint64_t getWeight(size_t CurrentSize, size_t MaxSize,
+                     uint64_t CurrentWeight) override {
+    return 2;
+  }
+
+  void mutate(BasicBlock &BB, RandomIRBuilder &IB) override;
+};
+
 /// Fuzzer friendly interface for the llvm bitcode parser.
 ///
 /// \param Data Bitcode we are going to parse

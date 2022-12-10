@@ -8,9 +8,9 @@ declare i32 @llvm.amdgcn.sffbh.i32(i32) #1
 ; GCN: s_flbit_i32 [[SRESULT:s[0-9]+]], [[VAL]]
 ; GCN: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[SRESULT]]
 ; GCN: buffer_store_dword [[VRESULT]],
-define amdgpu_kernel void @s_flbit(i32 addrspace(1)* noalias %out, i32 %val) #0 {
+define amdgpu_kernel void @s_flbit(ptr addrspace(1) noalias %out, i32 %val) #0 {
   %r = call i32 @llvm.amdgcn.sffbh.i32(i32 %val)
-  store i32 %r, i32 addrspace(1)* %out, align 4
+  store i32 %r, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -18,10 +18,10 @@ define amdgpu_kernel void @s_flbit(i32 addrspace(1)* noalias %out, i32 %val) #0 
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]],
 ; GCN: v_ffbh_i32_e32 [[RESULT:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[RESULT]],
-define amdgpu_kernel void @v_flbit(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) #0 {
-  %val = load i32, i32 addrspace(1)* %valptr, align 4
+define amdgpu_kernel void @v_flbit(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) #0 {
+  %val = load i32, ptr addrspace(1) %valptr, align 4
   %r = call i32 @llvm.amdgcn.sffbh.i32(i32 %val)
-  store i32 %r, i32 addrspace(1)* %out, align 4
+  store i32 %r, ptr addrspace(1) %out, align 4
   ret void
 }
 

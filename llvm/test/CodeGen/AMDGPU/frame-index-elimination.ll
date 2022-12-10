@@ -312,9 +312,10 @@ ret:
 
 ; GFX11-LABEL: tied_operand_test:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11:         scratch_load_d16_hi_b16 [[LDRESULT:v[0-9]+]], off, off offset:4
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    ds_store_b32 v{{[0-9]+}}, [[LDRESULT]] offset:8
+; GFX11-DAG:     scratch_load_u16 [[LDRESULT:v[0-9]+]], off, off offset:4
+; GFX11-DAG:     v_mov_b32_e32 [[C:v[0-9]+]], 0x7b
+; GFX11-DAG:     ds_store_b16 v{{[0-9]+}}, [[LDRESULT]]  offset:10
+; GFX11-DAG:     ds_store_b16 v{{[0-9]+}}, [[C]]  offset:8
 ; GFX11-NEXT:    s_endpgm
 define protected amdgpu_kernel void @tied_operand_test(i1 %c1, i1 %c2, i32 %val) {
 entry:

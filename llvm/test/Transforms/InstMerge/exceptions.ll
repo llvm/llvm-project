@@ -9,25 +9,25 @@ target triple = "x86_64-unknown-linux-gnu"
 @s = common global i32 0, align 4
 
 ; CHECK-LABEL: define void @test1(
-define void @test1(i1 %cmp, i32* noalias %p) {
+define void @test1(i1 %cmp, ptr noalias %p) {
 entry:
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
   call void @may_exit() nounwind
-  %arrayidx = getelementptr inbounds i32, i32* %p, i64 1
-  %0 = load i32, i32* %arrayidx, align 4
-  store i32 %0, i32* @r, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %p, i64 1
+  %0 = load i32, ptr %arrayidx, align 4
+  store i32 %0, ptr @r, align 4
   br label %if.end
 ; CHECK:       call void @may_exit()
-; CHECK-NEXT:  %[[gep:.*]] = getelementptr inbounds i32, i32* %p, i64 1
-; CHECK-NEXT:  %[[load:.*]] = load i32, i32* %[[gep]], align 4
-; CHECK-NEXT:  store i32 %[[load]], i32* @r, align 4
+; CHECK-NEXT:  %[[gep:.*]] = getelementptr inbounds i32, ptr %p, i64 1
+; CHECK-NEXT:  %[[load:.*]] = load i32, ptr %[[gep]], align 4
+; CHECK-NEXT:  store i32 %[[load]], ptr @r, align 4
 
 if.else:                                          ; preds = %entry
-  %arrayidx1 = getelementptr inbounds i32, i32* %p, i64 1
-  %1 = load i32, i32* %arrayidx1, align 4
-  store i32 %1, i32* @s, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %p, i64 1
+  %1 = load i32, ptr %arrayidx1, align 4
+  store i32 %1, ptr @s, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -35,22 +35,22 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 ; CHECK-LABEL: define void @test2(
-define void @test2(i1 %cmp, i32* noalias %p) {
+define void @test2(i1 %cmp, ptr noalias %p) {
 entry:
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %arrayidx = getelementptr inbounds i32, i32* %p, i64 1
-  store i32 1, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %p, i64 1
+  store i32 1, ptr %arrayidx, align 4
   call void @may_throw()
-; CHECK:       %[[gep:.*]] = getelementptr inbounds i32, i32* %p, i64 1
-; CHECK-NEXT:  store i32 1, i32* %[[gep]], align 4
+; CHECK:       %[[gep:.*]] = getelementptr inbounds i32, ptr %p, i64 1
+; CHECK-NEXT:  store i32 1, ptr %[[gep]], align 4
 ; CHECK-NEXT:  call void @may_throw()
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %arrayidx1 = getelementptr inbounds i32, i32* %p, i64 1
-  store i32 2, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %p, i64 1
+  store i32 2, ptr %arrayidx1, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then

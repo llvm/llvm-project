@@ -42,10 +42,10 @@ define internal void @foo_local_escaped() {
   ret void
 }
 
-declare void @ext(void ()*)
+declare void @ext(ptr)
 
 define void @bar() {
-  call void @ext(void ()* nonnull @foo_local_escaped)
+  call void @ext(ptr nonnull @foo_local_escaped)
   ret void
 }
 

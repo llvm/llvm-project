@@ -5,7 +5,7 @@
 declare i32 @llvm.amdgcn.permlane64(i32)
 declare i32 @llvm.amdgcn.workitem.id.x()
 
-define amdgpu_kernel void @test_s(i32 addrspace(1)* %out, i32 %src0) {
+define amdgpu_kernel void @test_s(ptr addrspace(1) %out, i32 %src0) {
 ; GFX11-LABEL: test_s:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
@@ -19,11 +19,11 @@ define amdgpu_kernel void @test_s(i32 addrspace(1)* %out, i32 %src0) {
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.permlane64(i32 %src0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_i(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @test_i(ptr addrspace(1) %out) {
 ; GFX11-LABEL: test_i:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -35,11 +35,11 @@ define amdgpu_kernel void @test_i(i32 addrspace(1)* %out) {
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.permlane64(i32 99)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_v(i32 addrspace(1)* %out, i32 %src0) #1 {
+define amdgpu_kernel void @test_v(ptr addrspace(1) %out, i32 %src0) #1 {
 ; GFX11-SDAG-LABEL: test_v:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -61,6 +61,6 @@ define amdgpu_kernel void @test_v(i32 addrspace(1)* %out, i32 %src0) #1 {
 ; GFX11-GISEL-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlane64(i32 %tidx)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }

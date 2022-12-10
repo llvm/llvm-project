@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -S | FileCheck %s
 
 %struct.A = type { i32 (...)** }
 @_ZTV1A = available_externally unnamed_addr constant [4 x i8*] [i8* null, i8* bitcast (i8** @_ZTI1A to i8*), i8* bitcast (i32 (%struct.A*)* @_ZN1A3fooEv to i8*), i8* bitcast (i32 (%struct.A*)* @_ZN1A3barEv to i8*)], align 8

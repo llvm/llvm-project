@@ -147,14 +147,18 @@ static void doAtomicBinOpExpansion(const LoongArchInstrInfo *TII,
   Register ScratchReg = MI.getOperand(1).getReg();
   Register AddrReg = MI.getOperand(2).getReg();
   Register IncrReg = MI.getOperand(3).getReg();
+  AtomicOrdering Ordering =
+      static_cast<AtomicOrdering>(MI.getOperand(4).getImm());
 
   // .loop:
-  //   dbar 0
+  //   if(Ordering != AtomicOrdering::Monotonic)
+  //     dbar 0
   //   ll.[w|d] dest, (addr)
   //   binop scratch, dest, val
   //   sc.[w|d] scratch, scratch, (addr)
   //   beqz scratch, loop
-  BuildMI(LoopMBB, DL, TII->get(LoongArch::DBAR)).addImm(0);
+  if (Ordering != AtomicOrdering::Monotonic)
+    BuildMI(LoopMBB, DL, TII->get(LoongArch::DBAR)).addImm(0);
   BuildMI(LoopMBB, DL,
           TII->get(Width == 32 ? LoongArch::LL_W : LoongArch::LL_D), DestReg)
       .addReg(AddrReg)
@@ -241,9 +245,12 @@ static void doMaskedAtomicBinOpExpansion(
   Register AddrReg = MI.getOperand(2).getReg();
   Register IncrReg = MI.getOperand(3).getReg();
   Register MaskReg = MI.getOperand(4).getReg();
+  AtomicOrdering Ordering =
+      static_cast<AtomicOrdering>(MI.getOperand(5).getImm());
 
   // .loop:
-  //   dbar 0
+  //   if(Ordering != AtomicOrdering::Monotonic)
+  //     dbar 0
   //   ll.w destreg, (alignedaddr)
   //   binop scratch, destreg, incr
   //   xor scratch, destreg, scratch
@@ -251,7 +258,8 @@ static void doMaskedAtomicBinOpExpansion(
   //   xor scratch, destreg, scratch
   //   sc.w scratch, scratch, (alignedaddr)
   //   beqz scratch, loop
-  BuildMI(LoopMBB, DL, TII->get(LoongArch::DBAR)).addImm(0);
+  if (Ordering != AtomicOrdering::Monotonic)
+    BuildMI(LoopMBB, DL, TII->get(LoongArch::DBAR)).addImm(0);
   BuildMI(LoopMBB, DL, TII->get(LoongArch::LL_W), DestReg)
       .addReg(AddrReg)
       .addImm(0);

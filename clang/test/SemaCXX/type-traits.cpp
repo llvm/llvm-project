@@ -533,12 +533,14 @@ void is_aggregate()
   constexpr bool TrueAfterCpp14 = __cplusplus > 201402L;
 
   __is_aggregate(AnIncompleteType); // expected-error {{incomplete type}}
-  __is_aggregate(AnIncompleteType[]); // expected-error {{incomplete type}}
-  __is_aggregate(AnIncompleteType[1]); // expected-error {{incomplete type}}
-  __is_aggregate(AnIncompleteTypeAr); // expected-error {{incomplete type}}
-  __is_aggregate(AnIncompleteTypeArNB); // expected-error {{incomplete type}}
-  __is_aggregate(AnIncompleteTypeArMB); // expected-error {{incomplete type}}
   __is_aggregate(IncompleteUnion); // expected-error {{incomplete type}}
+
+  // Valid since LWG3823
+  static_assert(__is_aggregate(AnIncompleteType[]), "");
+  static_assert(__is_aggregate(AnIncompleteType[1]), "");
+  static_assert(__is_aggregate(AnIncompleteTypeAr), "");
+  static_assert(__is_aggregate(AnIncompleteTypeArNB), "");
+  static_assert(__is_aggregate(AnIncompleteTypeArMB), "");
 
   static_assert(!__is_aggregate(NonPOD), "");
   static_assert(__is_aggregate(NonPODAr), "");

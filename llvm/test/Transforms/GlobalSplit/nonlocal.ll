@@ -1,4 +1,4 @@
-; RUN: opt -S -globalsplit %s | FileCheck %s
+; RUN: opt -S -passes=globalsplit %s | FileCheck %s
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"

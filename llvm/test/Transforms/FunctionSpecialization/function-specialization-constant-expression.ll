@@ -9,20 +9,20 @@
 %struct = type { i8, i16, i32, i64, i64}
 @Global = internal constant %struct {i8 0, i16 1, i32 2, i64 3, i64 4}
 
-define internal i64 @func2(i64 *%x) {
+define internal i64 @func2(ptr %x) {
 entry:
-  %val = ptrtoint i64* %x to i64
+  %val = ptrtoint ptr %x to i64
   ret i64 %val
 }
 
-define internal i64 @func(i64 *%x, i64 (i64*)* %binop) {
+define internal i64 @func(ptr %x, ptr %binop) {
 ; CHECK-LABEL: @func(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 [[BINOP:%.*]](i64* [[X:%.*]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 [[BINOP:%.*]](ptr [[X:%.*]])
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
-  %tmp0 = call i64 %binop(i64* %x)
+  %tmp0 = call i64 %binop(ptr %x)
   ret i64 %tmp0
 }
 
@@ -31,10 +31,10 @@ define internal i64 @zoo(i1 %flag) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[PLUS:%.*]], label [[MINUS:%.*]]
 ; CHECK:       plus:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @func2.2(i64* getelementptr inbounds ([[STRUCT:%.*]], %struct* @Global, i32 0, i32 3))
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @func2.2(ptr getelementptr inbounds ([[STRUCT:%.*]], ptr @Global, i32 0, i32 3))
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       minus:
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @func2.1(i64* getelementptr inbounds ([[STRUCT]], %struct* @Global, i32 0, i32 4))
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @func2.1(ptr getelementptr inbounds ([[STRUCT]], ptr @Global, i32 0, i32 4))
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ [[TMP0]], [[PLUS]] ], [ [[TMP1]], [[MINUS]] ]
@@ -44,13 +44,13 @@ entry:
   br i1 %flag, label %plus, label %minus
 
 plus:
-  %arg = getelementptr %struct, %struct* @Global, i32 0, i32 3
-  %tmp0 = call i64 @func2(i64* %arg)
+  %arg = getelementptr %struct, ptr @Global, i32 0, i32 3
+  %tmp0 = call i64 @func2(ptr %arg)
   br label %merge
 
 minus:
-  %arg2 = getelementptr %struct, %struct* @Global, i32 0, i32 4
-  %tmp1 = call i64 @func2(i64* %arg2)
+  %arg2 = getelementptr %struct, ptr @Global, i32 0, i32 4
+  %tmp1 = call i64 @func2(ptr %arg2)
   br label %merge
 
 merge:

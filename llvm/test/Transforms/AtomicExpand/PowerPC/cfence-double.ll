@@ -4,7 +4,7 @@
 ; RUN: opt -S -atomic-expand -mtriple=powerpc64-unknown-unknown \
 ; RUN:   -opaque-pointers < %s 2>&1 | FileCheck %s
 
-define double @foo(double* %dp) {
+define double @foo(ptr %dp) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load atomic i64, ptr [[DP:%.*]] monotonic, align 8
@@ -13,6 +13,6 @@ define double @foo(double* %dp) {
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
 entry:
-  %0 = load atomic double, double* %dp acquire, align 8
+  %0 = load atomic double, ptr %dp acquire, align 8
   ret double %0
 }

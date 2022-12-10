@@ -10,7 +10,7 @@ entry:
 ; CHECK:   call i1 @llvm.amdgcn.is.shared(ptr %[[GENERIC_ADDR]])
 ; CHECK:   call i1 @llvm.amdgcn.is.private(ptr %[[GENERIC_ADDR]])
 ; CHECK:   or
-; CHECK:   icmp ne i1
+; CHECK:   xor i1 %{{.*}}, true
 ; CHECK:   br i1 %{{.*}}, label %{{.*}}, label %{{.*}}
 ;
 ; CHECK:   %[[STORE_ADDR:[^ ]*]] = ptrtoint ptr %q to i64
@@ -46,7 +46,7 @@ entry:
 ; CHECK:   call i1 @llvm.amdgcn.is.shared(ptr %[[GENERIC_ADDR]])
 ; CHECK:   call i1 @llvm.amdgcn.is.private(ptr %[[GENERIC_ADDR]])
 ; CHECK:   or
-; CHECK:   icmp ne i1
+; CHECK:   xor i1 %{{.*}}, true
 ; CHECK:   br i1 %{{.*}}, label %{{.*}}, label %{{.*}}
 ;
 ; CHECK:   %[[STORE_ADDR:[^ ]*]] = ptrtoint ptr %q to i64

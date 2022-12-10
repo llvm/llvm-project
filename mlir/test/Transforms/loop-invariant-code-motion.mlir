@@ -60,7 +60,7 @@ func.func @single_loop_nothing_invariant() {
 
   // CHECK: memref.alloc() : memref<10xf32>
   // CHECK-NEXT: memref.alloc() : memref<10xf32>
-  // CHECK-NEXT: affine.for 
+  // CHECK-NEXT: affine.for
   // CHECK-NEXT: affine.load
   // CHECK-NEXT: affine.load
   // CHECK-NEXT: arith.addf
@@ -389,7 +389,7 @@ func.func private @make_val() -> (index)
 func.func @nested_uses_inside(%lb: index, %ub: index, %step: index) {
   %true = arith.constant true
 
-  // Check that ops that contain nested uses to values not defiend outside 
+  // Check that ops that contain nested uses to values not defiend outside
   // remain in the loop.
   // CHECK-NEXT: arith.constant
   // CHECK-NEXT: scf.for
@@ -877,25 +877,25 @@ func.func @speculate_ceildivsi_const(
 
 // -----
 
-func.func @speculate_static_pack_and_unpack(%source: tensor<128x256xf32>, 
+func.func @speculate_static_pack_and_unpack(%source: tensor<128x256xf32>,
   %dest: tensor<4x16x32x16xf32>, %lb: index, %ub: index, %step: index) {
 
   // CHECK: tensor.pack
-  // CHECK-NEXT: scf.for  
+  // CHECK-NEXT: scf.for
   scf.for %i = %lb to %ub step %step {
-    %packed = tensor.pack %source 
-      inner_dims_pos = [0, 1] 
+    %packed = tensor.pack %source
+      inner_dims_pos = [0, 1]
       inner_tiles = [32, 16] into %dest : tensor<128x256xf32> -> tensor<4x16x32x16xf32>
   }
-  
+
   // CHECK: tensor.unpack
-  // CHECK-NEXT: scf.for 
+  // CHECK-NEXT: scf.for
   scf.for %i = %lb to %ub step %step {
     %unpacked = tensor.unpack %dest
-      inner_dims_pos = [0, 1] 
+      inner_dims_pos = [0, 1]
       inner_tiles = [32, 16] into %source : tensor<4x16x32x16xf32> -> tensor<128x256xf32>
   }
-  return 
+  return
 }
 
 // -----
@@ -916,7 +916,7 @@ func.func @speculate_dynamic_pack_and_unpack(%source: tensor<?x?xf32>,
   // CHECK-NEXT: tensor.unpack
   scf.for %i = %lb to %ub step %step {
     %unpacked = tensor.unpack %dest
-      inner_dims_pos = [0, 1] 
+      inner_dims_pos = [0, 1]
       inner_tiles = [%tile_n, %tile_m] into %source : tensor<?x?x?x?xf32> -> tensor<?x?xf32>
   }
 

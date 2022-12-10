@@ -138,7 +138,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK1-SAME: (ptr [[TMP0:%.*]]) #[[ATTR4:[0-9]+]] comdat {
+// CHECK1-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR4:[0-9]+]] comdat {
 // CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR5:[0-9]+]]
 // CHECK1-NEXT:    call void @_ZSt9terminatev() #[[ATTR6]]
 // CHECK1-NEXT:    unreachable
@@ -378,7 +378,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK2-SAME: (ptr [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] comdat {
+// CHECK2-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] comdat {
 // CHECK2-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR6:[0-9]+]]
 // CHECK2-NEXT:    call void @_ZSt9terminatev() #[[ATTR7]]
 // CHECK2-NEXT:    unreachable

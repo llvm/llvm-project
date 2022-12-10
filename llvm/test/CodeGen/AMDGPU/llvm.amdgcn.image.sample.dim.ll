@@ -36,7 +36,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 addrspace(1)* inreg %out, float %s) {
+define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, ptr addrspace(1) inreg %out, float %s) {
 ; VERDE-LABEL: sample_1d_tfe:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    s_mov_b64 s[14:15], exec
@@ -122,11 +122,11 @@ main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
-define amdgpu_ps <2 x float> @sample_1d_tfe_adjust_writemask_1(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 addrspace(1)* inreg %out, float %s) {
+define amdgpu_ps <2 x float> @sample_1d_tfe_adjust_writemask_1(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, ptr addrspace(1) inreg %out, float %s) {
 ; VERDE-LABEL: sample_1d_tfe_adjust_writemask_1:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    s_mov_b64 s[12:13], exec
@@ -499,7 +499,7 @@ main_body:
   ret <4 x float> %res
 }
 
-define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 addrspace(1)* inreg %out, float %s) {
+define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, ptr addrspace(1) inreg %out, float %s) {
 ; VERDE-LABEL: sample_1d_lwe:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    s_mov_b64 s[14:15], exec
@@ -585,7 +585,7 @@ main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 2, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
@@ -1588,7 +1588,7 @@ main_body:
   ret float %v
 }
 
-define amdgpu_ps float @sample_c_d_o_2darray_V1_tfe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %slice, i32 addrspace(1)* inreg %out) {
+define amdgpu_ps float @sample_c_d_o_2darray_V1_tfe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %slice, ptr addrspace(1) inreg %out) {
 ; VERDE-LABEL: sample_c_d_o_2darray_V1_tfe:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    v_mov_b32_e32 v9, 0
@@ -1643,7 +1643,7 @@ main_body:
   %v = call {float,i32} @llvm.amdgcn.image.sample.c.d.o.2darray.f32i32.f32.f32(i32 4, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %slice, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)
   %v.vec = extractvalue {float, i32} %v, 0
   %v.err = extractvalue {float, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret float %v.vec
 }
 

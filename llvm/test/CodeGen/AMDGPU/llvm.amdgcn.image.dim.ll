@@ -41,7 +41,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @load_1d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s) {
+define amdgpu_ps <4 x float> @load_1d_tfe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s) {
 ; VERDE-LABEL: load_1d_tfe:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    v_mov_b32_e32 v5, v0
@@ -141,11 +141,11 @@ main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
-define amdgpu_ps <4 x float> @load_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s) {
+define amdgpu_ps <4 x float> @load_1d_lwe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s) {
 ; VERDE-LABEL: load_1d_lwe:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    v_mov_b32_e32 v5, v0
@@ -245,7 +245,7 @@ main_body:
   %v = call {<4 x float>, i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 2, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
@@ -284,7 +284,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @load_2d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t) {
+define amdgpu_ps <4 x float> @load_2d_tfe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %t) {
 ; VERDE-LABEL: load_2d_tfe:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    v_mov_b32_e32 v5, v0
@@ -389,7 +389,7 @@ main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.2d.v4f32i32.i32(i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
@@ -428,7 +428,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @load_3d_tfe_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %r) {
+define amdgpu_ps <4 x float> @load_3d_tfe_lwe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %t, i32 %r) {
 ; VERDE-LABEL: load_3d_tfe_lwe:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    v_mov_b32_e32 v5, v0
@@ -537,7 +537,7 @@ main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.3d.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %r, <8 x i32> %rsrc, i32 3, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
@@ -576,7 +576,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @load_cube_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %slice) {
+define amdgpu_ps <4 x float> @load_cube_lwe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %t, i32 %slice) {
 ; VERDE-LABEL: load_cube_lwe:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    v_mov_b32_e32 v5, v0
@@ -685,7 +685,7 @@ main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.cube.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %slice, <8 x i32> %rsrc, i32 2, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
@@ -724,7 +724,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @load_1darray_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %slice) {
+define amdgpu_ps <4 x float> @load_1darray_tfe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %slice) {
 ; VERDE-LABEL: load_1darray_tfe:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    v_mov_b32_e32 v5, v0
@@ -829,7 +829,7 @@ main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.1darray.v4f32i32.i32(i32 15, i32 %s, i32 %slice, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
@@ -868,7 +868,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @load_2darray_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %slice) {
+define amdgpu_ps <4 x float> @load_2darray_lwe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %t, i32 %slice) {
 ; VERDE-LABEL: load_2darray_lwe:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    v_mov_b32_e32 v5, v0
@@ -977,7 +977,7 @@ main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.2darray.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %slice, <8 x i32> %rsrc, i32 2, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
@@ -1016,7 +1016,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @load_2dmsaa_both(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %fragid) {
+define amdgpu_ps <4 x float> @load_2dmsaa_both(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %t, i32 %fragid) {
 ; VERDE-LABEL: load_2dmsaa_both:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    v_mov_b32_e32 v5, v0
@@ -1125,7 +1125,7 @@ main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.2dmsaa.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 3, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
@@ -1164,7 +1164,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %slice, i32 %fragid) {
+define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %t, i32 %slice, i32 %fragid) {
 ; VERDE-LABEL: load_2darraymsaa_tfe:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    v_mov_b32_e32 v5, v0
@@ -1278,7 +1278,7 @@ main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.2darraymsaa.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %fragid, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
@@ -1317,7 +1317,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @load_mip_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %mip) {
+define amdgpu_ps <4 x float> @load_mip_1d_lwe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %mip) {
 ; VERDE-LABEL: load_mip_1d_lwe:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    v_mov_b32_e32 v5, v0
@@ -1422,7 +1422,7 @@ main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.mip.1d.v4f32i32.i32(i32 15, i32 %s, i32 %mip, <8 x i32> %rsrc, i32 2, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
@@ -1461,7 +1461,7 @@ main_body:
   ret <4 x float> %v
 }
 
-define amdgpu_ps <4 x float> @load_mip_2d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %mip) {
+define amdgpu_ps <4 x float> @load_mip_2d_tfe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s, i32 %t, i32 %mip) {
 ; VERDE-LABEL: load_mip_2d_tfe:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    v_mov_b32_e32 v5, v0
@@ -1570,7 +1570,7 @@ main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.mip.2d.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %mip, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
@@ -1880,7 +1880,7 @@ main_body:
   ret float %vv
 }
 
-define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask3(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s) {
+define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask3(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s) {
 ; VERDE-LABEL: load_1d_tfe_V4_dmask3:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    v_mov_b32_e32 v4, v0
@@ -1972,11 +1972,11 @@ main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 7, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
-define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask2(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s) {
+define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask2(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s) {
 ; VERDE-LABEL: load_1d_tfe_V4_dmask2:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    v_mov_b32_e32 v3, v0
@@ -2061,11 +2061,11 @@ main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 6, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
-define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask1(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s) {
+define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask1(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s) {
 ; VERDE-LABEL: load_1d_tfe_V4_dmask1:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    v_mov_b32_e32 v2, v0
@@ -2142,11 +2142,11 @@ main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 8, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
   %v.err = extractvalue {<4 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <4 x float> %v.vec
 }
 
-define amdgpu_ps <2 x float> @load_1d_tfe_V2_dmask1(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s) {
+define amdgpu_ps <2 x float> @load_1d_tfe_V2_dmask1(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s) {
 ; VERDE-LABEL: load_1d_tfe_V2_dmask1:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    v_mov_b32_e32 v2, v0
@@ -2223,7 +2223,7 @@ main_body:
   %v = call {<2 x float>,i32} @llvm.amdgcn.image.load.1d.v2f32i32.i32(i32 8, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue {<2 x float>, i32} %v, 0
   %v.err = extractvalue {<2 x float>, i32} %v, 1
-  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  store i32 %v.err, ptr addrspace(1) %out, align 4
   ret <2 x float> %v.vec
 }
 
@@ -3779,7 +3779,7 @@ main_body:
   ret void
 }
 
-define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, float addrspace(3)* %lds, <2 x i32> %c) #0 {
+define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, ptr addrspace(3) %lds, <2 x i32> %c) #0 {
 ; VERDE-LABEL: image_load_mmo:
 ; VERDE:       ; %bb.0:
 ; VERDE-NEXT:    image_load v1, v[1:2], s[0:7] dmask:0x1 unorm
@@ -3843,12 +3843,12 @@ define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, float addrspace(3)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
-  store float 0.000000e+00, float addrspace(3)* %lds
+  store float 0.000000e+00, ptr addrspace(3) %lds
   %c0 = extractelement <2 x i32> %c, i32 0
   %c1 = extractelement <2 x i32> %c, i32 1
   %tex = call float @llvm.amdgcn.image.load.2d.f32.i32(i32 1, i32 %c0, i32 %c1, <8 x i32> %rsrc, i32 0, i32 0)
-  %tmp2 = getelementptr float, float addrspace(3)* %lds, i32 4
-  store float 0.000000e+00, float addrspace(3)* %tmp2
+  %tmp2 = getelementptr float, ptr addrspace(3) %lds, i32 4
+  store float 0.000000e+00, ptr addrspace(3) %tmp2
   ret float %tex
 }
 

@@ -1,4 +1,4 @@
-; RUN: opt -gvn -S < %s | FileCheck %s
+; RUN: opt -passes=gvn -S < %s | FileCheck %s
 
 ; Check that an unreachable predecessor to a PHI node doesn't cause a crash.
 ; PR21625.

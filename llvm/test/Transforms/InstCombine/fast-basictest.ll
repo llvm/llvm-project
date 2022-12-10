@@ -6,7 +6,7 @@
 ; - PhaseOrdering/fast-reassociate-gvn.ll
 ; - Reassociate/fast-basictest.ll
 ;
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 ; With reassociation, constant folding can eliminate the 12 and -12 constants.
 

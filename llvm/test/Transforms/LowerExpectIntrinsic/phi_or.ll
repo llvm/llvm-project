@@ -53,18 +53,18 @@ bb:
   %tmp4 = alloca i32, align 4
   %tmp5 = alloca i32, align 4
   %tmp6 = alloca i32, align 4
-  store i32 %arg, i32* %tmp, align 4
-  store i32 %arg1, i32* %tmp4, align 4
-  store i32 %arg2, i32* %tmp5, align 4
-  store i32 %arg3, i32* %tmp6, align 4
-  %tmp7 = load i32, i32* %tmp, align 4
+  store i32 %arg, ptr %tmp, align 4
+  store i32 %arg1, ptr %tmp4, align 4
+  store i32 %arg2, ptr %tmp5, align 4
+  store i32 %arg3, ptr %tmp6, align 4
+  %tmp7 = load i32, ptr %tmp, align 4
   %tmp8 = call i32  @goo()
   %tmp9 = icmp slt i32 %tmp7, %tmp8
   br i1 %tmp9, label %bb14, label %bb10
 ; CHECK: br i1 %tmp9{{.*}}!prof [[WEIGHT2:![0-9]+]]
 
 bb10:                                             ; preds = %bb
-  %tmp11 = load i32, i32* %tmp5, align 4
+  %tmp11 = load i32, ptr %tmp5, align 4
   %tmp12 = call i32 @hoo()
   %tmp13 = icmp sgt i32 %tmp11, %tmp12
   br label %bb14

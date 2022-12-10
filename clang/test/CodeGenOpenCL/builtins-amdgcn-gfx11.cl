@@ -37,3 +37,9 @@ void test_ds_bvh_stack_rtn(global uint2* out, uint addr, uint data, uint4 data1)
 void test_permlane64(global uint* out, uint a) {
   *out = __builtin_amdgcn_permlane64(a);
 }
+
+// CHECK-LABEL: @test_s_wait_event_export_ready
+// CHECK: call void @llvm.amdgcn.s.wait.event.export.ready
+void test_s_wait_event_export_ready() {
+  __builtin_amdgcn_s_wait_event_export_ready();
+}

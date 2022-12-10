@@ -12,7 +12,7 @@ declare void @bar(i64)
 
 define i32 @foo(i16 %kkk) !dbg !6 {
 entry:
-  %t4 = load i16, i16* @b, align 2, !dbg !8
+  %t4 = load i16, ptr @b, align 2, !dbg !8
   %conv4 = zext i16 %t4 to i32, !dbg !9
   %or = or i16 %kkk, %t4, !dbg !10
   %c = sext i16 %or to i64, !dbg !11

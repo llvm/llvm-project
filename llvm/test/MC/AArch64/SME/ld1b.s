@@ -305,3 +305,18 @@ ld1b    za0v.b[w13, 7], p2/z, [x12, x11]
 // CHECK-ENCODING: [0x87,0xa9,0x0b,0xe0]
 // CHECK-ERROR: instruction requires: sme
 // CHECK-UNKNOWN: e00ba987 <unknown>
+
+// --------------------------------------------------------------------------//
+// Test parsing in all-caps
+
+LD1B    {ZA0H.B[W12, 0]}, P0/Z, [X0, X0]
+// CHECK-INST: ld1b    {za0h.b[w12, 0]}, p0/z, [x0, x0]
+// CHECK-ENCODING: [0x00,0x00,0x00,0xe0]
+// CHECK-ERROR: instruction requires: sme
+// CHECK-UNKNOWN: e0000000 <unknown>
+
+LD1B    {ZA0V.B[W12, 0]}, P0/Z, [X0, X0]
+// CHECK-INST: ld1b    {za0v.b[w12, 0]}, p0/z, [x0, x0]
+// CHECK-ENCODING: [0x00,0x80,0x00,0xe0]
+// CHECK-ERROR: instruction requires: sme
+// CHECK-UNKNOWN: e0008000 <unknown>

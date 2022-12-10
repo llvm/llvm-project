@@ -1,4 +1,4 @@
-; RUN: opt -S -gvn-hoist < %s | FileCheck %s
+; RUN: opt -S -passes=gvn-hoist < %s | FileCheck %s
 
 ; Hoisted inlinable calls need to have accurate scope information, but we're
 ; allowed to erase the line information.

@@ -1,5 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
- 
+
 module {
   llvm.func @printf(!llvm.ptr<i8>, ...) -> i32
   llvm.mlir.global internal constant @str0("WG size of kernel = %d X %d\0A\00")

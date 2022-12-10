@@ -456,7 +456,7 @@ def PDL_RangeOp : PDL_Op<"range", [Pure, HasParent<"pdl::RewriteOp">]> {
 
     // Construct a range of types.
     %typeRange = pdl.range %inputType, %inputRange : !pdl.type, !pdl.range<type>
-    
+
     // Construct an empty range of types.
     %valueRange = pdl.range : !pdl.range<type>
     ```

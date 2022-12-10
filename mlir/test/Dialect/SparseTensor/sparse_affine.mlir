@@ -440,7 +440,7 @@ func.func @mul_affine_dense_dim_2d(%arga: tensor<34x16xf64, #CSR>,
 }
 
 // CHECK-LABEL:   func.func @mul_const_affine_dense_dim_2d(
-// CHECK-SAME:                                             %[[VAL_0:.*]]: tensor<34x16xf64, 
+// CHECK-SAME:                                             %[[VAL_0:.*]]: tensor<34x16xf64,
 // CHECK-SAME:                                             %[[VAL_1:.*]]: tensor<32x19xf64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:                                             %[[VAL_2:.*]]: tensor<32x16xf64>) -> tensor<32x16xf64> {
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 19 : index
@@ -471,8 +471,8 @@ func.func @mul_affine_dense_dim_2d(%arga: tensor<34x16xf64, #CSR>,
 // CHECK:               %[[VAL_28:.*]] = arith.mulf %[[VAL_27]], %[[VAL_21]] : f64
 // CHECK:               %[[VAL_29:.*]] = arith.addf %[[VAL_26]], %[[VAL_28]] : f64
 // CHECK:               memref.store %[[VAL_29]], %[[VAL_14]]{{\[}}%[[VAL_18]], %[[VAL_25]]] : memref<32x16xf64>
-// CHECK:             } 
-// CHECK:           } 
+// CHECK:             }
+// CHECK:           }
 // CHECK:           %[[VAL_30:.*]] = bufferization.to_tensor %[[VAL_14]] : memref<32x16xf64>
 // CHECK:           return %[[VAL_30]] : tensor<32x16xf64>
 // CHECK:         }

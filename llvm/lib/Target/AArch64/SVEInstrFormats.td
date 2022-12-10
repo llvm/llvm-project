@@ -4753,6 +4753,8 @@ multiclass sve_int_dup_imm_pred_zero_inst<
                                   (ins PPRAny:$Pg, cpyimm:$imm)>;
   def : InstAlias<"mov $Zd, $Pg/z, $imm",
                   (!cast<Instruction>(NAME) zprty:$Zd, PPRAny:$Pg, cpyimm:$imm), 1>;
+  def : Pat<(intty (zext (predty PPRAny:$Ps1))),
+            (!cast<Instruction>(NAME) PPRAny:$Ps1, 1, 0)>;
   def : Pat<(intty (sext (predty PPRAny:$Ps1))),
             (!cast<Instruction>(NAME) PPRAny:$Ps1, -1, 0)>;
   def : Pat<(intty (anyext (predty PPRAny:$Ps1))),
@@ -8297,21 +8299,6 @@ multiclass sve2_crypto_unary_op<bit opc, string asm, SDPatternOperator op> {
 // SVE BFloat16 Group
 //===----------------------------------------------------------------------===//
 
-class sve_bfloat_dot_base<bits<2> opc, string asm, string ops, dag iops>
-: I<(outs ZPR32:$Zda), iops, asm, ops, "", []>, Sched<[]> {
-  bits<5> Zda;
-  bits<5> Zn;
-  let Inst{31-21} = 0b01100100011;
-  let Inst{15-14} = opc;
-  let Inst{13-10} = 0b0000;
-  let Inst{9-5}   = Zn;
-  let Inst{4-0}   = Zda;
-
-  let Constraints = "$Zda = $_Zda";
-  let DestructiveInstType = DestructiveOther;
-  let ElementSize = ElementSizeH;
-}
-
 class sve_float_dot<bit bf, string asm>
 : I<(outs ZPR32:$Zda), (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR16:$Zm),
      asm, "\t$Zda, $Zn, $Zm", "", []>, Sched<[]> {
@@ -8396,16 +8383,26 @@ multiclass sve_bfloat_matmul_longvecl<bit BT, bit sub, string asm, SDPatternOper
 }
 
 class sve_bfloat_matmul_longvecl_idx<bit BT, bit sub, string asm>
-: sve_bfloat_dot_base<0b01, asm, "\t$Zda, $Zn, $Zm$iop",
-  (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR3b16:$Zm, VectorIndexH:$iop)> {
-  bits<3> iop;
+: I<(outs ZPR32:$Zda), (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR3b16:$Zm, VectorIndexH:$iop),
+    asm, "\t$Zda, $Zn, $Zm$iop", "", []>, Sched<[]> {
+  bits<5> Zda;
+  bits<5> Zn;
   bits<3> Zm;
-  let Inst{23}    = 0b1;
+  bits<3> iop;
+  let Inst{31-21} = 0b01100100111;
   let Inst{20-19} = iop{2-1};
   let Inst{18-16} = Zm;
+  let Inst{15-14} = 0b01;
   let Inst{13}    = sub;
+  let Inst{12}    = 0b0;
   let Inst{11}    = iop{0};
   let Inst{10}    = BT;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize = ElementSizeH;
 }
 
 multiclass sve_bfloat_matmul_longvecl_idx<bit BT, bit sub, string asm, SDPatternOperator op> {

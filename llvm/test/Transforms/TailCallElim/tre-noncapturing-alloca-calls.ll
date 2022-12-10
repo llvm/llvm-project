@@ -18,7 +18,7 @@
 @count = dso_local local_unnamed_addr global i32 0, align 4
 
 ; Function Attrs: nofree noinline norecurse nounwind uwtable
-declare void @_Z15globalIncrementPKi(i32* nocapture readonly %param) #0
+declare void @_Z15globalIncrementPKi(ptr nocapture readonly %param) #0
 
 ; Test that TRE could be done for recursive tail routine containing
 ; call to function receiving a pointer to local stack.
@@ -34,12 +34,11 @@ define dso_local void @_Z4testi(i32 %recurseCount) local_unnamed_addr #1 {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RECURSECOUNT_TR]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[TEMP]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull [[TMP0]])
-; CHECK-NEXT:    store i32 10, i32* [[TEMP]], align 4
-; CHECK-NEXT:    call void @_Z15globalIncrementPKi(i32* nonnull [[TEMP]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[TEMP]])
+; CHECK-NEXT:    store i32 10, ptr [[TEMP]], align 4
+; CHECK-NEXT:    call void @_Z15globalIncrementPKi(ptr nonnull [[TEMP]])
 ; CHECK-NEXT:    [[SUB]] = add nsw i32 [[RECURSECOUNT_TR]], -1
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[TMP0]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[TEMP]])
 ; CHECK-NEXT:    br label [[TAILRECURSE]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
@@ -50,13 +49,12 @@ entry:
   br i1 %cmp, label %return, label %if.end
 
 if.end:                                           ; preds = %entry
-  %0 = bitcast i32* %temp to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0) #6
-  store i32 10, i32* %temp, align 4
-  call void @_Z15globalIncrementPKi(i32* nonnull %temp)
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %temp) #6
+  store i32 10, ptr %temp, align 4
+  call void @_Z15globalIncrementPKi(ptr nonnull %temp)
   %sub = add nsw i32 %recurseCount, -1
   call void @_Z4testi(i32 %sub)
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0) #6
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %temp) #6
   br label %return
 
 return:                                           ; preds = %entry, %if.end
@@ -64,10 +62,10 @@ return:                                           ; preds = %entry, %if.end
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
 
 attributes #0 = { nofree noinline norecurse nounwind uwtable }
 attributes #1 = { nounwind uwtable }

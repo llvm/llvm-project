@@ -295,7 +295,7 @@ define amdgpu_ps double @s_div_fmas_f64(double inreg %a, double inreg %b, double
   ret double %result
 }
 
-define amdgpu_kernel void @test_div_fmas_f32(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c, [8 x i32], i1 %d) {
+define amdgpu_kernel void @test_div_fmas_f32(ptr addrspace(1) %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c, [8 x i32], i1 %d) {
 ; GFX7-LABEL: test_div_fmas_f32:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dword s2, s[0:1], 0xa
@@ -409,11 +409,11 @@ define amdgpu_kernel void @test_div_fmas_f32(float addrspace(1)* %out, [8 x i32]
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 %d)
-  store float %result, float addrspace(1)* %out, align 4
+  store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_fmas_f32_inline_imm_0(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c, [8 x i32], i1 %d) {
+define amdgpu_kernel void @test_div_fmas_f32_inline_imm_0(ptr addrspace(1) %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c, [8 x i32], i1 %d) {
 ; GFX7-LABEL: test_div_fmas_f32_inline_imm_0:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dword s2, s[0:1], 0x13
@@ -516,11 +516,11 @@ define amdgpu_kernel void @test_div_fmas_f32_inline_imm_0(float addrspace(1)* %o
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %result = call float @llvm.amdgcn.div.fmas.f32(float 1.0, float %b, float %c, i1 %d)
-  store float %result, float addrspace(1)* %out, align 4
+  store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_fmas_f32_inline_imm_1(float addrspace(1)* %out, float %a, float %b, float %c, [8 x i32], i1 %d) {
+define amdgpu_kernel void @test_div_fmas_f32_inline_imm_1(ptr addrspace(1) %out, float %a, float %b, float %c, [8 x i32], i1 %d) {
 ; GFX7-LABEL: test_div_fmas_f32_inline_imm_1:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dword s2, s[0:1], 0x2
@@ -623,11 +623,11 @@ define amdgpu_kernel void @test_div_fmas_f32_inline_imm_1(float addrspace(1)* %o
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float 1.0, float %c, i1 %d)
-  store float %result, float addrspace(1)* %out, align 4
+  store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_fmas_f32_inline_imm_2(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c, [8 x i32], i1 %d) {
+define amdgpu_kernel void @test_div_fmas_f32_inline_imm_2(ptr addrspace(1) %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c, [8 x i32], i1 %d) {
 ; GFX7-LABEL: test_div_fmas_f32_inline_imm_2:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dword s2, s[0:1], 0xa
@@ -730,11 +730,11 @@ define amdgpu_kernel void @test_div_fmas_f32_inline_imm_2(float addrspace(1)* %o
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float 1.0, i1 %d)
-  store float %result, float addrspace(1)* %out, align 4
+  store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_fmas_f64(double addrspace(1)* %out, double %a, double %b, double %c, i1 %d) {
+define amdgpu_kernel void @test_div_fmas_f64(ptr addrspace(1) %out, double %a, double %b, double %c, i1 %d) {
 ; GFX7-LABEL: test_div_fmas_f64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x0
@@ -843,11 +843,11 @@ define amdgpu_kernel void @test_div_fmas_f64(double addrspace(1)* %out, double %
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %result = call double @llvm.amdgcn.div.fmas.f64(double %a, double %b, double %c, i1 %d)
-  store double %result, double addrspace(1)* %out, align 8
+  store double %result, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @test_div_fmas_f32_cond_to_vcc(float addrspace(1)* %out, float %a, float %b, float %c, i32 %i) {
+define amdgpu_kernel void @test_div_fmas_f32_cond_to_vcc(ptr addrspace(1) %out, float %a, float %b, float %c, i32 %i) {
 ; GFX7-LABEL: test_div_fmas_f32_cond_to_vcc:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x2
@@ -956,11 +956,11 @@ define amdgpu_kernel void @test_div_fmas_f32_cond_to_vcc(float addrspace(1)* %ou
 ; GFX11_W64-NEXT:    s_endpgm
   %cmp = icmp eq i32 %i, 0
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 %cmp)
-  store float %result, float addrspace(1)* %out, align 4
+  store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_fmas_f32_imm_false_cond_to_vcc(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c) {
+define amdgpu_kernel void @test_div_fmas_f32_imm_false_cond_to_vcc(ptr addrspace(1) %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c) {
 ; GFX7-LABEL: test_div_fmas_f32_imm_false_cond_to_vcc:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dword s2, s[0:1], 0xa
@@ -1060,11 +1060,11 @@ define amdgpu_kernel void @test_div_fmas_f32_imm_false_cond_to_vcc(float addrspa
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 false)
-  store float %result, float addrspace(1)* %out, align 4
+  store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_fmas_f32_imm_true_cond_to_vcc(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c) {
+define amdgpu_kernel void @test_div_fmas_f32_imm_true_cond_to_vcc(ptr addrspace(1) %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c) {
 ; GFX7-LABEL: test_div_fmas_f32_imm_true_cond_to_vcc:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dword s2, s[0:1], 0xa
@@ -1164,11 +1164,11 @@ define amdgpu_kernel void @test_div_fmas_f32_imm_true_cond_to_vcc(float addrspac
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 true)
-  store float %result, float addrspace(1)* %out, align 4
+  store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_fmas_f32_logical_cond_to_vcc(float addrspace(1)* %out, float addrspace(1)* %in, [8 x i32], i32 %d) {
+define amdgpu_kernel void @test_div_fmas_f32_logical_cond_to_vcc(ptr addrspace(1) %out, ptr addrspace(1) %in, [8 x i32], i32 %d) {
 ; GFX7-LABEL: test_div_fmas_f32_logical_cond_to_vcc:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x0
@@ -1326,25 +1326,25 @@ define amdgpu_kernel void @test_div_fmas_f32_logical_cond_to_vcc(float addrspace
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.a = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.b = getelementptr float, float addrspace(1)* %gep.a, i32 1
-  %gep.c = getelementptr float, float addrspace(1)* %gep.a, i32 2
-  %gep.out = getelementptr float, float addrspace(1)* %out, i32 2
+  %gep.a = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.b = getelementptr float, ptr addrspace(1) %gep.a, i32 1
+  %gep.c = getelementptr float, ptr addrspace(1) %gep.a, i32 2
+  %gep.out = getelementptr float, ptr addrspace(1) %out, i32 2
 
-  %a = load volatile float, float addrspace(1)* %gep.a
-  %b = load volatile float, float addrspace(1)* %gep.b
-  %c = load volatile float, float addrspace(1)* %gep.c
+  %a = load volatile float, ptr addrspace(1) %gep.a
+  %b = load volatile float, ptr addrspace(1) %gep.b
+  %c = load volatile float, ptr addrspace(1) %gep.c
 
   %cmp0 = icmp eq i32 %tid, 0
   %cmp1 = icmp ne i32 %d, 0
   %and = and i1 %cmp0, %cmp1
 
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 %and)
-  store float %result, float addrspace(1)* %gep.out, align 4
+  store float %result, ptr addrspace(1) %gep.out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(float addrspace(1)* %out, [8 x i32], float addrspace(1)* %in, [8 x i32], i32 addrspace(1)* %dummy) {
+define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(ptr addrspace(1) %out, [8 x i32], ptr addrspace(1) %in, [8 x i32], ptr addrspace(1) %dummy) {
 ; GFX7-LABEL: test_div_fmas_f32_i1_phi_vcc:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xa
@@ -1536,27 +1536,27 @@ define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(float addrspace(1)* %out
 ; GFX11_W64-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.a = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.b = getelementptr float, float addrspace(1)* %gep.a, i32 1
-  %gep.c = getelementptr float, float addrspace(1)* %gep.a, i32 2
+  %gep.a = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.b = getelementptr float, ptr addrspace(1) %gep.a, i32 1
+  %gep.c = getelementptr float, ptr addrspace(1) %gep.a, i32 2
 
-  %a = load float, float addrspace(1)* %gep.a
-  %b = load float, float addrspace(1)* %gep.b
-  %c = load float, float addrspace(1)* %gep.c
+  %a = load float, ptr addrspace(1) %gep.a
+  %b = load float, ptr addrspace(1) %gep.b
+  %c = load float, ptr addrspace(1) %gep.c
 
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %bb, label %exit
 
 bb:
-  %val = load i32, i32 addrspace(1)* %dummy
+  %val = load i32, ptr addrspace(1) %dummy
   %cmp1 = icmp ne i32 %val, 0
   br label %exit
 
 exit:
   %cond = phi i1 [false, %entry], [%cmp1, %bb]
-  %gep.out = getelementptr float, float addrspace(1)* %out, i32 2
+  %gep.out = getelementptr float, ptr addrspace(1) %out, i32 2
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 %cond)
-  store float %result, float addrspace(1)* %gep.out, align 4
+  store float %result, ptr addrspace(1) %gep.out, align 4
   ret void
 }
 

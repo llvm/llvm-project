@@ -12,15 +12,15 @@ define internal void @indirect() {
 define internal void @direct() {
 ; CHECK-LABEL: define {{[^@]+}}@direct
 ; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[FPTR:%.*]] = alloca void ()*, align 8
-; CHECK-NEXT:    store void ()* @indirect, void ()** [[FPTR]], align 8
-; CHECK-NEXT:    [[FP:%.*]] = load void ()*, void ()** [[FPTR]], align 8
+; CHECK-NEXT:    [[FPTR:%.*]] = alloca void ()*, align 8, addrspace(5)
+; CHECK-NEXT:    store void ()* @indirect, void ()* addrspace(5)* [[FPTR]], align 8
+; CHECK-NEXT:    [[FP:%.*]] = load void ()*, void ()* addrspace(5)* [[FPTR]], align 8
 ; CHECK-NEXT:    call void [[FP]]()
 ; CHECK-NEXT:    ret void
 ;
-  %fptr = alloca void()*
-  store void()* @indirect, void()** %fptr
-  %fp = load void()*, void()** %fptr
+  %fptr = alloca void()*, addrspace(5)
+  store void()* @indirect, void()* addrspace(5)* %fptr
+  %fp = load void()*, void()* addrspace(5)* %fptr
   call void %fp()
   ret void
 }

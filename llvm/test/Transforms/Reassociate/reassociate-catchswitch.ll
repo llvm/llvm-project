@@ -1,7 +1,7 @@
 ; Catchswitch is interesting because reassociate previously tried to insert
 ; into the catchswitch block, which is impossible.
 ;
-; RUN: opt -reassociate -disable-output < %s
+; RUN: opt -passes=reassociate -disable-output < %s
 ;
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 source_filename = "catchswitch.cpp"

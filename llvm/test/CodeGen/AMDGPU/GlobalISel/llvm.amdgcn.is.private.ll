@@ -6,7 +6,7 @@
 
 ; TODO: Merge with DAG test
 
-define amdgpu_kernel void @is_private_vgpr(i8* addrspace(1)* %ptr.ptr) {
+define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; CI-LABEL: is_private_vgpr:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
@@ -70,15 +70,15 @@ define amdgpu_kernel void @is_private_vgpr(i8* addrspace(1)* %ptr.ptr) {
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr inbounds i8*, i8* addrspace(1)* %ptr.ptr, i32 %id
-  %ptr = load volatile i8*, i8* addrspace(1)* %gep
-  %val = call i1 @llvm.amdgcn.is.private(i8* %ptr)
+  %gep = getelementptr inbounds ptr, ptr addrspace(1) %ptr.ptr, i32 %id
+  %ptr = load volatile ptr, ptr addrspace(1) %gep
+  %val = call i1 @llvm.amdgcn.is.private(ptr %ptr)
   %ext = zext i1 %val to i32
-  store i32 %ext, i32 addrspace(1)* undef
+  store i32 %ext, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @is_private_sgpr(i8* %ptr) {
+define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ; CI-LABEL: is_private_sgpr:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
@@ -140,11 +140,11 @@ define amdgpu_kernel void @is_private_sgpr(i8* %ptr) {
 ; GFX11-NEXT:  .LBB1_2: ; %bb1
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %val = call i1 @llvm.amdgcn.is.private(i8* %ptr)
+  %val = call i1 @llvm.amdgcn.is.private(ptr %ptr)
   br i1 %val, label %bb0, label %bb1
 
 bb0:
-  store volatile i32 0, i32 addrspace(1)* undef
+  store volatile i32 0, ptr addrspace(1) undef
   br label %bb1
 
 bb1:
@@ -152,6 +152,6 @@ bb1:
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare i1 @llvm.amdgcn.is.private(i8* nocapture) #0
+declare i1 @llvm.amdgcn.is.private(ptr nocapture) #0
 
 attributes #0 = { nounwind readnone speculatable }

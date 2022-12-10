@@ -20,18 +20,18 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 ; CHECK-LABEL: {{^}}kernel1:
 define amdgpu_kernel void @kernel1(
-    i32 addrspace(1)* nocapture readonly %A,
-    i32 addrspace(1)* nocapture %B) !dbg !7  {
+    ptr addrspace(1) nocapture readonly %A,
+    ptr addrspace(1) nocapture %B) !dbg !7  {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 addrspace(1)* %A, metadata !13, metadata !19), !dbg !20
-  tail call void @llvm.dbg.value(metadata i32 addrspace(1)* %B, metadata !14, metadata !19), !dbg !21
-  %0 = load i32, i32 addrspace(1)* %A, align 4, !dbg !22, !tbaa !24
+  tail call void @llvm.dbg.value(metadata ptr addrspace(1) %A, metadata !13, metadata !19), !dbg !20
+  tail call void @llvm.dbg.value(metadata ptr addrspace(1) %B, metadata !14, metadata !19), !dbg !21
+  %0 = load i32, ptr addrspace(1) %A, align 4, !dbg !22, !tbaa !24
   %cmp = icmp eq i32 %0, 1, !dbg !28
   br i1 %cmp, label %if.then, label %if.end, !dbg !29
 
 if.then:                                          ; preds = %entry
-  store i32 12, i32 addrspace(1)* %B, align 4, !dbg !30, !tbaa !24
-  %.pr = load i32, i32 addrspace(1)* %A, align 4, !dbg !32, !tbaa !24
+  store i32 12, ptr addrspace(1) %B, align 4, !dbg !30, !tbaa !24
+  %.pr = load i32, ptr addrspace(1) %A, align 4, !dbg !32, !tbaa !24
   br label %if.end, !dbg !34
 
 if.end:                                           ; preds = %if.then, %entry
@@ -40,7 +40,7 @@ if.end:                                           ; preds = %if.then, %entry
   br i1 %cmp1, label %if.then2, label %if.end3, !dbg !36
 
 if.then2:                                         ; preds = %if.end
-  store i32 13, i32 addrspace(1)* %B, align 4, !dbg !37, !tbaa !24
+  store i32 13, ptr addrspace(1) %B, align 4, !dbg !37, !tbaa !24
   br label %if.end3, !dbg !39
 
 if.end3:                                          ; preds = %if.then2, %if.end

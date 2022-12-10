@@ -87,9 +87,8 @@ DiagnosedSilenceableFailure transform::LowerVectorsOp::apply(
         .setVectorTransferSplit(vectorTransferSplit);
 
     VectorTransferToSCFOptions vectorTransferToSCFOptions =
-        VectorTransferToSCFOptions()
-            .enableFullUnroll(getUnrollVectorTransfers())
-            .enableLowerPermutationMaps();
+        VectorTransferToSCFOptions().enableFullUnroll(
+            getUnrollVectorTransfers());
 
     int maxTransferRank = 1;
 

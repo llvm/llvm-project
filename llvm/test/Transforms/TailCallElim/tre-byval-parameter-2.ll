@@ -23,7 +23,7 @@
 @.str = private unnamed_addr constant [11 x i8] c"%lld %lld\0A\00", align 1
 
 ; Function Attrs: noinline nounwind uwtable
-define dso_local void @_Z7dostuff1AS_i(%struct.A* nocapture byval(%struct.A) align 8 %a, %struct.A* nocapture readonly byval(%struct.A) align 8 %b, i32 %i) local_unnamed_addr #0 {
+define dso_local void @_Z7dostuff1AS_i(ptr nocapture byval(%struct.A) align 8 %a, ptr nocapture readonly byval(%struct.A) align 8 %b, i32 %i) local_unnamed_addr #0 {
 ; CHECK-LABEL: @_Z7dostuff1AS_i(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG_TMP52:%.*]] = alloca [[STRUCT_A:%.*]], align 8
@@ -36,36 +36,24 @@ define dso_local void @_Z7dostuff1AS_i(%struct.A* nocapture byval(%struct.A) ali
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_TR]], 10
 ; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_A]], %struct.A* [[A:%.*]], i64 0, i32 0, i64 5
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_A]], ptr [[A:%.*]], i64 0, i32 0, i64 5
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[INC:%.*]] = add nsw i64 [[TMP0]], 1
-; CHECK-NEXT:    store i64 [[INC]], i64* [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [[STRUCT_A]], %struct.A* [[B:%.*]], i64 0, i32 0, i64 5
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i64 0, i64 0), i64 [[INC]], i64 [[TMP1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast %struct.A* [[AGG_TMP]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 80, i8* nonnull [[TMP2]])
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast %struct.A* [[B]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(80) [[TMP2]], i8* nonnull align 8 dereferenceable(80) [[TMP3]], i64 80, i1 false)
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast %struct.A* [[AGG_TMP5]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 80, i8* nonnull [[TMP4]])
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast %struct.A* [[A]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(80) [[TMP4]], i8* nonnull align 8 dereferenceable(80) [[TMP5]], i64 80, i1 false)
+; CHECK-NEXT:    store i64 [[INC]], ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [[STRUCT_A]], ptr [[B:%.*]], i64 0, i32 0, i64 5
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[ARRAYIDX4]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str, i64 [[INC]], i64 [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 80, ptr nonnull [[AGG_TMP]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(80) [[AGG_TMP]], ptr nonnull align 8 dereferenceable(80) [[B]], i64 80, i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 80, ptr nonnull [[AGG_TMP5]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(80) [[AGG_TMP5]], ptr nonnull align 8 dereferenceable(80) [[A]], i64 80, i1 false)
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[I_TR]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast %struct.A* [[AGG_TMP1]] to i8*
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast %struct.A* [[AGG_TMP]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP6]], i8* align 8 [[TMP7]], i64 80, i1 false)
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast %struct.A* [[AGG_TMP52]] to i8*
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast %struct.A* [[AGG_TMP5]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP8]], i8* align 8 [[TMP9]], i64 80, i1 false)
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast %struct.A* [[A]] to i8*
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast %struct.A* [[AGG_TMP1]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP10]], i8* align 8 [[TMP11]], i64 80, i1 false)
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast %struct.A* [[B]] to i8*
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast %struct.A* [[AGG_TMP52]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP12]], i8* align 8 [[TMP13]], i64 80, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 80, i8* nonnull [[TMP2]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 80, i8* nonnull [[TMP4]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP1]], ptr align 8 [[AGG_TMP]], i64 80, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP52]], ptr align 8 [[AGG_TMP5]], i64 80, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[AGG_TMP1]], i64 80, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[B]], ptr align 8 [[AGG_TMP52]], i64 80, i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 80, ptr nonnull [[AGG_TMP]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 80, ptr nonnull [[AGG_TMP5]])
 ; CHECK-NEXT:    br label [[TAILRECURSE]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
@@ -77,26 +65,22 @@ entry:
   br i1 %cmp, label %return, label %if.end
 
 if.end:                                           ; preds = %entry
-  %arrayidx = getelementptr inbounds %struct.A, %struct.A* %a, i64 0, i32 0, i64 5
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds %struct.A, ptr %a, i64 0, i32 0, i64 5
+  %0 = load i64, ptr %arrayidx, align 8
   %inc = add nsw i64 %0, 1
-  store i64 %inc, i64* %arrayidx, align 8
-  %arrayidx4 = getelementptr inbounds %struct.A, %struct.A* %b, i64 0, i32 0, i64 5
-  %1 = load i64, i64* %arrayidx4, align 8
-  %call = call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([11 x i8], [11 x i8]* @.str
-, i64 0, i64 0), i64 %inc, i64 %1)
-  %2 = bitcast %struct.A* %agg.tmp to i8*
-  call void @llvm.lifetime.start.p0i8(i64 80, i8* nonnull %2)
-  %3 = bitcast %struct.A* %b to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(80) %2, i8* nonnull align 8 dereferenceable(80) %3, i64 80, i1 false)
-  %4 = bitcast %struct.A* %agg.tmp5 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 80, i8* nonnull %4)
-  %5 = bitcast %struct.A* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(80) %4, i8* nonnull align 8 dereferenceable(80) %5, i64 80, i1 false)
+  store i64 %inc, ptr %arrayidx, align 8
+  %arrayidx4 = getelementptr inbounds %struct.A, ptr %b, i64 0, i32 0, i64 5
+  %1 = load i64, ptr %arrayidx4, align 8
+  %call = call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str
+, i64 %inc, i64 %1)
+  call void @llvm.lifetime.start.p0(i64 80, ptr nonnull %agg.tmp)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(80) %agg.tmp, ptr nonnull align 8 dereferenceable(80) %b, i64 80, i1 false)
+  call void @llvm.lifetime.start.p0(i64 80, ptr nonnull %agg.tmp5)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(80) %agg.tmp5, ptr nonnull align 8 dereferenceable(80) %a, i64 80, i1 false)
   %add = add nsw i32 %i, 1
-  call void @_Z7dostuff1AS_i(%struct.A* nonnull byval(%struct.A) align 8 %agg.tmp, %struct.A* nonnull byval(%struct.A) align 8 %agg.tmp5, i32 %add)
-  call void @llvm.lifetime.end.p0i8(i64 80, i8* nonnull %2)
-  call void @llvm.lifetime.end.p0i8(i64 80, i8* nonnull %4)
+  call void @_Z7dostuff1AS_i(ptr nonnull byval(%struct.A) align 8 %agg.tmp, ptr nonnull byval(%struct.A) align 8 %agg.tmp5, i32 %add)
+  call void @llvm.lifetime.end.p0(i64 80, ptr nonnull %agg.tmp)
+  call void @llvm.lifetime.end.p0(i64 80, ptr nonnull %agg.tmp5)
   br label %return
 
 return:                                           ; preds = %entry, %if.end
@@ -104,16 +88,16 @@ return:                                           ; preds = %entry, %if.end
 }
 
 ; Function Attrs: nofree nounwind
-declare dso_local noundef i32 @printf(i8* nocapture noundef readonly, ...) local_unnamed_addr #1
+declare dso_local noundef i32 @printf(ptr nocapture noundef readonly, ...) local_unnamed_addr #1
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg) #2
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
 
 ; Function Attrs: noinline norecurse nounwind optnone uwtable
 define dso_local i32 @main() local_unnamed_addr #3 {
@@ -121,21 +105,17 @@ define dso_local i32 @main() local_unnamed_addr #3 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_A:%.*]], align 8
 ; CHECK-NEXT:    [[AGG_TMP1:%.*]] = alloca [[STRUCT_A]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %struct.A* [[AGG_TMP]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP0]], i8* align 8 bitcast (%struct.A* @global to i8*), i64 80, i1 false)
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast %struct.A* [[AGG_TMP1]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP1]], i8* align 8 bitcast (%struct.A* @global to i8*), i64 80, i1 false)
-; CHECK-NEXT:    tail call void @_Z7dostuff1AS_i(%struct.A* byval(%struct.A) align 8 [[AGG_TMP]], %struct.A* byval(%struct.A) align 8 [[AGG_TMP1]], i32 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP]], ptr align 8 @global, i64 80, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP1]], ptr align 8 @global, i64 80, i1 false)
+; CHECK-NEXT:    tail call void @_Z7dostuff1AS_i(ptr byval(%struct.A) align 8 [[AGG_TMP]], ptr byval(%struct.A) align 8 [[AGG_TMP1]], i32 0)
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %agg.tmp = alloca %struct.A, align 8
   %agg.tmp1 = alloca %struct.A, align 8
-  %0 = bitcast %struct.A* %agg.tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %0, i8* align 8 bitcast (%struct.A* @global to i8*), i64 80, i1 false)
-  %1 = bitcast %struct.A* %agg.tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %1, i8* align 8 bitcast (%struct.A* @global to i8*), i64 80, i1 false)
-  call void @_Z7dostuff1AS_i(%struct.A* byval(%struct.A) align 8 %agg.tmp, %struct.A* byval(%struct.A) align 8 %agg.tmp1, i32 0)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %agg.tmp, ptr align 8 @global, i64 80, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %agg.tmp1, ptr align 8 @global, i64 80, i1 false)
+  call void @_Z7dostuff1AS_i(ptr byval(%struct.A) align 8 %agg.tmp, ptr byval(%struct.A) align 8 %agg.tmp1, i32 0)
   ret i32 0
 }
 

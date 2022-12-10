@@ -5,16 +5,16 @@
 
 ; TODO: enable doubles
 ; FUNC-LABEL: {{^}}bitcast_f64_to_v2i32:
-define amdgpu_kernel void @bitcast_f64_to_v2i32(<2 x i32> addrspace(1)* %out, double addrspace(1)* %in) {
-  %val = load double, double addrspace(1)* %in, align 8
+define amdgpu_kernel void @bitcast_f64_to_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+  %val = load double, ptr addrspace(1) %in, align 8
   %add = fadd double %val, 4.0
   %bc = bitcast double %add to <2 x i32>
-  store <2 x i32> %bc, <2 x i32> addrspace(1)* %out, align 8
+  store <2 x i32> %bc, ptr addrspace(1) %out, align 8
   ret void
 }
 
 ; FUNC-LABEL: {{^}}bitcast_v2i64_to_v2f64:
-define amdgpu_kernel void @bitcast_v2i64_to_v2f64(i32 %cond, <2 x double> addrspace(1)* %out, <2 x i64> %value) {
+define amdgpu_kernel void @bitcast_v2i64_to_v2f64(i32 %cond, ptr addrspace(1) %out, <2 x i64> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
   br i1 %cmp0, label %if, label %end
@@ -25,12 +25,12 @@ if:
 
 end:
   %phi = phi <2 x double> [zeroinitializer, %entry], [%cast, %if]
-  store <2 x double> %phi, <2 x double> addrspace(1)* %out
+  store <2 x double> %phi, ptr addrspace(1) %out
   ret void
 }
 
 ; FUNC-LABEL: {{^}}bitcast_v2f64_to_v2i64:
-define amdgpu_kernel void @bitcast_v2f64_to_v2i64(i32 %cond, <2 x i64> addrspace(1)* %out, <2 x double> %value) {
+define amdgpu_kernel void @bitcast_v2f64_to_v2i64(i32 %cond, ptr addrspace(1) %out, <2 x double> %value) {
 entry:
   %cmp0 = icmp eq i32 %cond, 0
   br i1 %cmp0, label %if, label %end
@@ -41,6 +41,6 @@ if:
 
 end:
   %phi = phi <2 x i64> [zeroinitializer, %entry], [%cast, %if]
-  store <2 x i64> %phi, <2 x i64> addrspace(1)* %out
+  store <2 x i64> %phi, ptr addrspace(1) %out
   ret void
 }

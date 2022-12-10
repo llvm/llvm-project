@@ -9,9 +9,8 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 define i16 @f() {
 entry:
   %packed1 = alloca %struct.s2_packed, align 8
-  %gep = getelementptr inbounds %struct.s2_packed, %struct.s2_packed* %packed1, i32 0, i32 4
-  %ptr = bitcast i16* %gep to i32*
-  %val = load i32, i32* %ptr, align 4
+  %gep = getelementptr inbounds %struct.s2_packed, ptr %packed1, i32 0, i32 4
+  %val = load i32, ptr %gep, align 4
   %valt = trunc i32 %val to i16
   ret i16 %valt
 }
@@ -21,9 +20,8 @@ entry:
 define i16 @f2() {
 entry:
   %packed1 = alloca %struct.s2_packed, align 8
-  %gep = getelementptr inbounds %struct.s2_packed, %struct.s2_packed* %packed1, i32 0, i32 4
-  %ptr = bitcast i16* %gep to i48*
-  %val = load i48, i48* %ptr, align 4
+  %gep = getelementptr inbounds %struct.s2_packed, ptr %packed1, i32 0, i32 4
+  %val = load i48, ptr %gep, align 4
   %valt = trunc i48 %val to i16
   ret i16 %valt
 }

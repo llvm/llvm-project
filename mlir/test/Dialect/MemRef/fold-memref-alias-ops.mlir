@@ -125,7 +125,7 @@ func.func @fold_subview_with_transfer_read(%arg0 : memref<12x32xf32>, %arg1 : in
 // -----
 
 func.func @fold_static_stride_subview_with_transfer_write_0d(
-    %arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index, 
+    %arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3 : index,
     %v : vector<f32>) {
   %f1 = arith.constant 1.0 : f32
   %0 = memref.subview %arg0[%arg1, %arg2][1, 1][2, %arg3] : memref<12x32xf32> to memref<f32, strided<[], offset: ?>>

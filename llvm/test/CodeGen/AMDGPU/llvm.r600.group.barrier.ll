@@ -2,18 +2,18 @@
 
 ; EG-LABEL: {{^}}test_group_barrier:
 ; EG: GROUP_BARRIER
-define amdgpu_kernel void @test_group_barrier(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test_group_barrier(ptr addrspace(1) %out) #0 {
 entry:
   %tmp = call i32 @llvm.r600.read.tidig.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 %tmp, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 %tmp, ptr addrspace(1) %tmp1
   call void @llvm.r600.group.barrier()
   %tmp2 = call i32 @llvm.r600.read.local.size.x()
   %tmp3 = sub i32 %tmp2, 1
   %tmp4 = sub i32 %tmp3, %tmp
-  %tmp5 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp4
-  %tmp6 = load i32, i32 addrspace(1)* %tmp5
-  store i32 %tmp6, i32 addrspace(1)* %tmp1
+  %tmp5 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp4
+  %tmp6 = load i32, ptr addrspace(1) %tmp5
+  store i32 %tmp6, ptr addrspace(1) %tmp1
   ret void
 }
 

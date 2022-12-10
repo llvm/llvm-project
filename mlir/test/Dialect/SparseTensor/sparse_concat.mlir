@@ -313,7 +313,7 @@ func.func @concat_mix_dense_perm_dim1(%arg0: tensor<4x2xf64>, %arg1: tensor<4x3x
 
 // CHECK-LABEL: func.func @concat_mix_dense_perm_dim1_dyn(
 // CHECK-SAME:      %[[TMP_arg0:.*]]: tensor<3x2xf64>,
-// CHECK-SAME:      %[[TMP_arg1:.*]]: !llvm.ptr<i8>) 
+// CHECK-SAME:      %[[TMP_arg1:.*]]: !llvm.ptr<i8>)
 // CHECK-DAG:       %[[TMP_c2:.*]] = arith.constant 2 : index
 // CHECK-DAG:       %[[TMP_c6_i32:.*]] = arith.constant 6 : i32
 // CHECK-DAG:       %[[TMP_c1_i32:.*]] = arith.constant 1 : i32

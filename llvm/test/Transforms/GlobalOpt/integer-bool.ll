@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -globalopt -instcombine | FileCheck %s
+; RUN: opt < %s -S -passes=globalopt,instcombine | FileCheck %s
 ;; check that global opt turns integers that only hold 0 or 1 into bools.
 
 @G = internal addrspace(1) global i32 0

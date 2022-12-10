@@ -18,7 +18,7 @@ func.func @const() -> () {
   // CHECK: %cst_f64
   %5 = spirv.Constant 0.5 : f64
 
-  // CHECK: %cst_vec_3xi32 
+  // CHECK: %cst_vec_3xi32
   %6 = spirv.Constant dense<[1, 2, 3]> : vector<3xi32>
 
   // CHECK: %cst
@@ -33,7 +33,7 @@ spirv.module Logical GLSL450 {
   spirv.GlobalVariable @global_var : !spirv.ptr<f32, Input>
 
   spirv.func @addressof() -> () "None" {
-    // CHECK: %global_var_addr = spirv.mlir.addressof 
+    // CHECK: %global_var_addr = spirv.mlir.addressof
     %0 = spirv.mlir.addressof @global_var : !spirv.ptr<f32, Input>
     spirv.Return
   }

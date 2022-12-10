@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -S | FileCheck %s
 ; PR1996
 
 %struct.anon = type { i32, i8, i8, i8, i8 }

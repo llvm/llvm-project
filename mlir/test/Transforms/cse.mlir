@@ -264,7 +264,7 @@ func.func @use_before_def() {
     "foo.yield"(%0) : (i32) -> ()
   }
   return
-} 
+}
 
 /// This test is checking that CSE is removing duplicated read op that follow
 /// other.

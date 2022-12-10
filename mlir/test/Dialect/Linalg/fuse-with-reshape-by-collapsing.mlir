@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -test-linalg-elementwise-fusion-patterns=fuse-with-reshape-by-collapsing -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -test-linalg-elementwise-fusion-patterns=fuse-with-reshape-by-collapsing-control -split-input-file | FileCheck %s --check-prefix=CONTROL
 
-// Static problem sizes. Checks all aspects of fusion by collapsing. Rest of the 
+// Static problem sizes. Checks all aspects of fusion by collapsing. Rest of the
 // tests only check a subset of conditions.
 #map0 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4, d5, d6, d7)>
 #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2)>

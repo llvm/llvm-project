@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines codegen utility operators for the TOSA dialect. 
-// These operators are not part of the formal TOSA specification and 
-// are intended to aid code generation from TOSA. 
+// This file defines codegen utility operators for the TOSA dialect.
+// These operators are not part of the formal TOSA specification and
+// are intended to aid code generation from TOSA.
 //
 //===----------------------------------------------------------------------===//
 

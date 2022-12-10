@@ -158,7 +158,7 @@ for dr in drs:
     # This refers to the old ("C++0x") concepts feature, which was not part
     # of any C++ International Standard or Technical Specification.
     continue
-  if dr.issue in (1432,2565):
+  if dr.issue in (2565, 2628):
     row_style = ' class="open"'
     avail, avail_style = availability(dr.issue)
   elif dr.status in ('open', 'concurrency', 'drafting', 'review', 'extension'):

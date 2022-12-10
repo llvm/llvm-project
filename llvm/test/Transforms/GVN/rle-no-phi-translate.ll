@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -S | FileCheck %s
 ; XFAIL: *
 ; FIXME: This should be promotable, but memdep/gvn don't track values
 ; path/edge sensitively enough.

@@ -38,8 +38,8 @@ define amdgpu_ps void @amdgpu_ps() {
 ; PAL-NEXT:    s_waitcnt vmcnt(0)
 ; PAL-NEXT:    s_endpgm
   %alloca = alloca i32, addrspace(5)
-  %cast = addrspacecast i32 addrspace(5)* %alloca to i32*
-  store volatile i32 0, i32* %cast
+  %cast = addrspacecast ptr addrspace(5) %alloca to ptr
+  store volatile i32 0, ptr %cast
   ret void
 }
 

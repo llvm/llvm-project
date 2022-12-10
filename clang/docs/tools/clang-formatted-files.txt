@@ -230,7 +230,6 @@ clang/include/clang/Sema/TemplateInstCallback.h
 clang/include/clang/Serialization/ASTBitCodes.h
 clang/include/clang/Serialization/InMemoryModuleCache.h
 clang/include/clang/Serialization/SerializationDiagnostic.h
-clang/include/clang/StaticAnalyzer/Checkers/LocalCheckers.h
 clang/include/clang/StaticAnalyzer/Core/CheckerRegistryData.h
 clang/include/clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h
 clang/include/clang/StaticAnalyzer/Core/PathSensitive/DynamicCastInfo.h

@@ -342,7 +342,7 @@ def DISubprogramFlags : I32BitEnumAttr<
       LLVM_DISPLocalToUnit,
       LLVM_DISPDefinition,
       LLVM_DISPOptimized,
-      LLVM_DISPPure, 
+      LLVM_DISPPure,
       LLVM_DISPElemental,
       LLVM_DISPRecursive,
       LLVM_DISPMainSubprogram,

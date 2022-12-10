@@ -83,7 +83,7 @@ func.func @llvm_nvvm_bar_warp_sync(%mask : i32) {
   // CHECK: nvvm.bar.warp.sync %{{.*}}
   nvvm.bar.warp.sync %mask : i32
   llvm.return
-}  
+}
 
 // CHECK-LABEL: @nvvm_mma_m8n8k4_row_col_f32_f32
 func.func @nvvm_mma_m8n8k4_row_col_f32_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,

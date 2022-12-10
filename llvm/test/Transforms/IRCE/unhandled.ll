@@ -6,10 +6,10 @@
 ; Demonstrates that we don't currently handle the general expression
 ; `A * I + B'.
 
-define void @general_affine_expressions(i32 *%arr, i32 *%a_len_ptr, i32 %n,
+define void @general_affine_expressions(ptr %arr, ptr %a_len_ptr, i32 %n,
                                         i32 %scale, i32 %offset) {
  entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   %first.itr.check = icmp sgt i32 %n, 0
   br i1 %first.itr.check, label %loop, label %exit
 
@@ -24,8 +24,8 @@ define void @general_affine_expressions(i32 *%arr, i32 *%a_len_ptr, i32 %n,
   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
 
  in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %array.idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %array.idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, %n
   br i1 %next, label %loop, label %exit
 
@@ -39,9 +39,9 @@ define void @general_affine_expressions(i32 *%arr, i32 *%a_len_ptr, i32 %n,
 ; Check that we do the right thing for a loop that could not be
 ; simplified due to an indirectbr.
 
-define void @multiple_latches(i32 *%arr, i32 *%a_len_ptr, i32 %n) {
+define void @multiple_latches(ptr %arr, ptr %a_len_ptr, i32 %n) {
  entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   %n.add.1 = add i32 %n, 1
   %first.itr.check = icmp sgt i32 %n, 0
   br i1 %first.itr.check, label %loop, label %exit
@@ -54,15 +54,15 @@ define void @multiple_latches(i32 *%arr, i32 *%a_len_ptr, i32 %n) {
   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
 
  in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, %n
   br i1 %next, label %loop, label %continue
 
  continue:
   %next2 = icmp slt i32 %idx.next, %n.add.1
-  %dest = select i1 %next2, i8* blockaddress(@multiple_latches, %loop), i8* blockaddress(@multiple_latches, %exit)
-  indirectbr i8* %dest, [ label %loop, label %exit]
+  %dest = select i1 %next2, ptr blockaddress(@multiple_latches, %loop), ptr blockaddress(@multiple_latches, %exit)
+  indirectbr ptr %dest, [ label %loop, label %exit]
 
  out.of.bounds:
   ret void
@@ -71,9 +71,9 @@ define void @multiple_latches(i32 *%arr, i32 *%a_len_ptr, i32 %n) {
   ret void
 }
 
-define void @already_cloned(i32 *%arr, i32 *%a_len_ptr, i32 %n) {
+define void @already_cloned(ptr %arr, ptr %a_len_ptr, i32 %n) {
  entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   %first.itr.check = icmp sgt i32 %n, 0
   br i1 %first.itr.check, label %loop, label %exit
 
@@ -84,8 +84,8 @@ define void @already_cloned(i32 *%arr, i32 *%a_len_ptr, i32 %n) {
   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
 
  in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, %n
   br i1 %next, label %loop, label %exit, !irce.loop.clone !{}
 

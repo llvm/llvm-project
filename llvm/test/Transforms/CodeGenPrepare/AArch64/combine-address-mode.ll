@@ -10,26 +10,26 @@ define dso_local i32 @f(i1 %a, i8 %b) local_unnamed_addr {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 [[A:%.*]], label [[BB2:%.*]], label [[BB10]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[I:%.*]] = phi i32* [ getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @_MergedGlobals, i32 0, i32 1), [[BB1:%.*]] ], [ [[I20:%.*]], [[BB18:%.*]] ]
-; CHECK-NEXT:    [[I3:%.*]] = phi i32* [ getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @_MergedGlobals, i32 0, i32 1), [[BB1]] ], [ [[I19:%.*]], [[BB18]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ getelementptr inbounds (<{ i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 1), [[BB1:%.*]] ], [ [[I20:%.*]], [[BB18:%.*]] ]
+; CHECK-NEXT:    [[I3:%.*]] = phi ptr [ getelementptr inbounds (<{ i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 1), [[BB1]] ], [ [[I19:%.*]], [[BB18]] ]
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       bb4:
 ; CHECK-NEXT:    br label [[BB10]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[I11:%.*]] = phi i32* [ getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @_MergedGlobals, i32 0, i32 0), [[BB:%.*]] ], [ [[I]], [[BB4:%.*]] ], [ getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @_MergedGlobals, i32 0, i32 1), [[BB1]] ]
-; CHECK-NEXT:    [[I12:%.*]] = phi i32* [ getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @_MergedGlobals, i32 0, i32 0), [[BB]] ], [ [[I3]], [[BB4]] ], [ getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @_MergedGlobals, i32 0, i32 1), [[BB1]] ]
+; CHECK-NEXT:    [[I11:%.*]] = phi ptr [ @_MergedGlobals, [[BB:%.*]] ], [ [[I]], [[BB4:%.*]] ], [ getelementptr inbounds (<{ i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 1), [[BB1]] ]
+; CHECK-NEXT:    [[I12:%.*]] = phi ptr [ @_MergedGlobals, [[BB]] ], [ [[I3]], [[BB4]] ], [ getelementptr inbounds (<{ i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 1), [[BB1]] ]
 ; CHECK-NEXT:    br label [[BB13:%.*]]
 ; CHECK:       bb13:
-; CHECK-NEXT:    [[I14:%.*]] = phi i32* [ [[I20]], [[BB18]] ], [ [[I11]], [[BB10]] ]
-; CHECK-NEXT:    [[I15:%.*]] = phi i32* [ [[I20]], [[BB18]] ], [ [[I12]], [[BB10]] ]
-; CHECK-NEXT:    [[I16:%.*]] = phi i32* [ [[I19]], [[BB18]] ], [ [[I12]], [[BB10]] ]
+; CHECK-NEXT:    [[I14:%.*]] = phi ptr [ [[I20]], [[BB18]] ], [ [[I11]], [[BB10]] ]
+; CHECK-NEXT:    [[I15:%.*]] = phi ptr [ [[I20]], [[BB18]] ], [ [[I12]], [[BB10]] ]
+; CHECK-NEXT:    [[I16:%.*]] = phi ptr [ [[I19]], [[BB18]] ], [ [[I12]], [[BB10]] ]
 ; CHECK-NEXT:    br i1 [[A]], label [[BB18]], label [[BB17:%.*]]
 ; CHECK:       bb17:
-; CHECK-NEXT:    store i32 5, i32* [[I15]], align 4
+; CHECK-NEXT:    store i32 5, ptr [[I15]], align 4
 ; CHECK-NEXT:    br label [[BB18]]
 ; CHECK:       bb18:
-; CHECK-NEXT:    [[I19]] = phi i32* [ [[I16]], [[BB17]] ], [ [[I14]], [[BB13]] ]
-; CHECK-NEXT:    [[I20]] = phi i32* [ [[I15]], [[BB17]] ], [ [[I14]], [[BB13]] ]
+; CHECK-NEXT:    [[I19]] = phi ptr [ [[I16]], [[BB17]] ], [ [[I14]], [[BB13]] ]
+; CHECK-NEXT:    [[I20]] = phi ptr [ [[I15]], [[BB17]] ], [ [[I14]], [[BB13]] ]
 ; CHECK-NEXT:    br i1 [[A]], label [[BB2]], label [[BB13]]
 ;
 bb:
@@ -39,8 +39,8 @@ bb1:                                              ; No predecessors!
   br i1 %a, label %bb2, label %bb9
 
 bb2:                                              ; preds = %bb21, %bb1
-  %i = phi i32* [ getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @_MergedGlobals, i32 0, i32 1), %bb1 ], [ %i20, %bb21 ]
-  %i3 = phi i32* [ getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @_MergedGlobals, i32 0, i32 1), %bb1 ], [ %i19, %bb21 ]
+  %i = phi ptr [ getelementptr inbounds (<{ i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 1), %bb1 ], [ %i20, %bb21 ]
+  %i3 = phi ptr [ getelementptr inbounds (<{ i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 1), %bb1 ], [ %i19, %bb21 ]
   ret i32 0
 
 bb4:                                              ; No predecessors!
@@ -48,31 +48,31 @@ bb4:                                              ; No predecessors!
   br label %bb6
 
 bb6:                                              ; preds = %bb9, %bb4
-  %i7 = phi i32* [ %i, %bb4 ], [ getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @_MergedGlobals, i32 0, i32 1), %bb9 ]
-  %i8 = phi i32* [ %i3, %bb4 ], [ getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @_MergedGlobals, i32 0, i32 1), %bb9 ]
+  %i7 = phi ptr [ %i, %bb4 ], [ getelementptr inbounds (<{ i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 1), %bb9 ]
+  %i8 = phi ptr [ %i3, %bb4 ], [ getelementptr inbounds (<{ i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 1), %bb9 ]
   br label %bb10
 
 bb9:                                              ; preds = %bb1
   br label %bb6
 
 bb10:                                             ; preds = %bb6, %bb
-  %i11 = phi i32* [ getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @_MergedGlobals, i32 0, i32 0), %bb ], [ %i7, %bb6 ]
-  %i12 = phi i32* [ getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @_MergedGlobals, i32 0, i32 0), %bb ], [ %i8, %bb6 ]
+  %i11 = phi ptr [ getelementptr inbounds (<{ i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 0), %bb ], [ %i7, %bb6 ]
+  %i12 = phi ptr [ getelementptr inbounds (<{ i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 0), %bb ], [ %i8, %bb6 ]
   br label %bb13
 
 bb13:                                             ; preds = %bb18, %bb10
-  %i14 = phi i32* [ %i20, %bb18 ], [ %i11, %bb10 ]
-  %i15 = phi i32* [ %i20, %bb18 ], [ %i12, %bb10 ]
-  %i16 = phi i32* [ %i19, %bb18 ], [ %i12, %bb10 ]
+  %i14 = phi ptr [ %i20, %bb18 ], [ %i11, %bb10 ]
+  %i15 = phi ptr [ %i20, %bb18 ], [ %i12, %bb10 ]
+  %i16 = phi ptr [ %i19, %bb18 ], [ %i12, %bb10 ]
   br i1 %a, label %bb18, label %bb17
 
 bb17:                                             ; preds = %bb13
-  store i32 5, i32* %i15, align 4
+  store i32 5, ptr %i15, align 4
   br label %bb18
 
 bb18:                                             ; preds = %bb17, %bb13
-  %i19 = phi i32* [ %i16, %bb17 ], [ %i14, %bb13 ]
-  %i20 = phi i32* [ %i15, %bb17 ], [ %i14, %bb13 ]
+  %i19 = phi ptr [ %i16, %bb17 ], [ %i14, %bb13 ]
+  %i20 = phi ptr [ %i15, %bb17 ], [ %i14, %bb13 ]
   br i1 %a, label %bb21, label %bb13
 
 bb21:                                             ; preds = %bb18

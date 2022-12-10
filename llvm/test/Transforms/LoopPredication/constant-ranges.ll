@@ -13,6 +13,7 @@ define i32 @test_ult(ptr noundef %p, i32 noundef %n, ptr noundef %arr, ptr nound
 ; CHECK-NEXT:    [[BOUND_CHECK:%.*]] = icmp ult i32 [[EL]], 128
 ; CHECK-NEXT:    br i1 [[BOUND_CHECK]], label [[DO_RANGE_CHECK:%.*]], label [[BOUND_CHECK_FAILED:%.*]]
 ; CHECK:       do_range_check:
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND_CHECK]])
 ; CHECK-NEXT:    [[RANGE_CHECK_ULT:%.*]] = icmp ult i32 [[EL]], [[LEN]]
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXPLICIT_GUARD_COND:%.*]] = and i1 [[RANGE_CHECK_ULT]], [[WC]]
@@ -43,6 +44,7 @@ loop:
   br i1 %bound_check, label %do_range_check, label %bound_check_failed
 
 do_range_check:
+  call void @llvm.assume(i1 %bound_check)
   %range_check.ult = icmp ult i32 %el, %len
   %wc = call i1 @llvm.experimental.widenable.condition()
   %explicit_guard_cond = and i1 %range_check.ult, %wc
@@ -78,6 +80,7 @@ define i32 @test_slt(ptr noundef %p, i32 noundef %n, ptr noundef %arr, ptr nound
 ; CHECK-NEXT:    [[BOUND_CHECK:%.*]] = icmp slt i32 [[EL]], 128
 ; CHECK-NEXT:    br i1 [[BOUND_CHECK]], label [[DO_RANGE_CHECK:%.*]], label [[BOUND_CHECK_FAILED:%.*]]
 ; CHECK:       do_range_check:
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND_CHECK]])
 ; CHECK-NEXT:    [[RANGE_CHECK_SLT:%.*]] = icmp slt i32 [[EL]], [[LEN]]
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXPLICIT_GUARD_COND:%.*]] = and i1 [[RANGE_CHECK_SLT]], [[WC]]
@@ -108,6 +111,7 @@ loop:
   br i1 %bound_check, label %do_range_check, label %bound_check_failed
 
 do_range_check:
+  call void @llvm.assume(i1 %bound_check)
   %range_check.slt = icmp slt i32 %el, %len
   %wc = call i1 @llvm.experimental.widenable.condition()
   %explicit_guard_cond = and i1 %range_check.slt, %wc
@@ -143,6 +147,7 @@ define i32 @test_ule(ptr noundef %p, i32 noundef %n, ptr noundef %arr, ptr nound
 ; CHECK-NEXT:    [[BOUND_CHECK:%.*]] = icmp ult i32 [[EL]], 128
 ; CHECK-NEXT:    br i1 [[BOUND_CHECK]], label [[DO_RANGE_CHECK:%.*]], label [[BOUND_CHECK_FAILED:%.*]]
 ; CHECK:       do_range_check:
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND_CHECK]])
 ; CHECK-NEXT:    [[RANGE_CHECK_ULE:%.*]] = icmp ule i32 [[EL]], [[LEN]]
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXPLICIT_GUARD_COND:%.*]] = and i1 [[RANGE_CHECK_ULE]], [[WC]]
@@ -173,6 +178,7 @@ loop:
   br i1 %bound_check, label %do_range_check, label %bound_check_failed
 
 do_range_check:
+  call void @llvm.assume(i1 %bound_check)
   %range_check.ule = icmp ule i32 %el, %len
   %wc = call i1 @llvm.experimental.widenable.condition()
   %explicit_guard_cond = and i1 %range_check.ule, %wc
@@ -208,6 +214,7 @@ define i32 @test_sle(ptr noundef %p, i32 noundef %n, ptr noundef %arr, ptr nound
 ; CHECK-NEXT:    [[BOUND_CHECK:%.*]] = icmp slt i32 [[EL]], 128
 ; CHECK-NEXT:    br i1 [[BOUND_CHECK]], label [[DO_RANGE_CHECK:%.*]], label [[BOUND_CHECK_FAILED:%.*]]
 ; CHECK:       do_range_check:
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND_CHECK]])
 ; CHECK-NEXT:    [[RANGE_CHECK_SLE:%.*]] = icmp sle i32 [[EL]], [[LEN]]
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXPLICIT_GUARD_COND:%.*]] = and i1 [[RANGE_CHECK_SLE]], [[WC]]
@@ -238,6 +245,7 @@ loop:
   br i1 %bound_check, label %do_range_check, label %bound_check_failed
 
 do_range_check:
+  call void @llvm.assume(i1 %bound_check)
   %range_check.sle = icmp sle i32 %el, %len
   %wc = call i1 @llvm.experimental.widenable.condition()
   %explicit_guard_cond = and i1 %range_check.sle, %wc
@@ -273,6 +281,7 @@ define i32 @test_ugt(ptr noundef %p, i32 noundef %n, ptr noundef %arr, ptr nound
 ; CHECK-NEXT:    [[BOUND_CHECK:%.*]] = icmp ult i32 [[EL]], 128
 ; CHECK-NEXT:    br i1 [[BOUND_CHECK]], label [[DO_RANGE_CHECK:%.*]], label [[BOUND_CHECK_FAILED:%.*]]
 ; CHECK:       do_range_check:
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND_CHECK]])
 ; CHECK-NEXT:    [[RANGE_CHECK_SLE:%.*]] = icmp ugt i32 [[LEN]], [[EL]]
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXPLICIT_GUARD_COND:%.*]] = and i1 [[RANGE_CHECK_SLE]], [[WC]]
@@ -303,6 +312,7 @@ loop:
   br i1 %bound_check, label %do_range_check, label %bound_check_failed
 
 do_range_check:
+  call void @llvm.assume(i1 %bound_check)
   %range_check.sle = icmp ugt i32 %len, %el
   %wc = call i1 @llvm.experimental.widenable.condition()
   %explicit_guard_cond = and i1 %range_check.sle, %wc
@@ -338,6 +348,7 @@ define i32 @test_uge(ptr noundef %p, i32 noundef %n, ptr noundef %arr, ptr nound
 ; CHECK-NEXT:    [[BOUND_CHECK:%.*]] = icmp ult i32 [[EL]], 128
 ; CHECK-NEXT:    br i1 [[BOUND_CHECK]], label [[DO_RANGE_CHECK:%.*]], label [[BOUND_CHECK_FAILED:%.*]]
 ; CHECK:       do_range_check:
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND_CHECK]])
 ; CHECK-NEXT:    [[RANGE_CHECK_SLE:%.*]] = icmp uge i32 [[LEN]], [[EL]]
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXPLICIT_GUARD_COND:%.*]] = and i1 [[RANGE_CHECK_SLE]], [[WC]]
@@ -368,6 +379,7 @@ loop:
   br i1 %bound_check, label %do_range_check, label %bound_check_failed
 
 do_range_check:
+  call void @llvm.assume(i1 %bound_check)
   %range_check.sle = icmp uge i32 %len, %el
   %wc = call i1 @llvm.experimental.widenable.condition()
   %explicit_guard_cond = and i1 %range_check.sle, %wc
@@ -403,6 +415,7 @@ define i32 @test_sgt(ptr noundef %p, i32 noundef %n, ptr noundef %arr, ptr nound
 ; CHECK-NEXT:    [[BOUND_CHECK:%.*]] = icmp slt i32 [[EL]], 128
 ; CHECK-NEXT:    br i1 [[BOUND_CHECK]], label [[DO_RANGE_CHECK:%.*]], label [[BOUND_CHECK_FAILED:%.*]]
 ; CHECK:       do_range_check:
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND_CHECK]])
 ; CHECK-NEXT:    [[RANGE_CHECK_SLE:%.*]] = icmp sgt i32 [[LEN]], [[EL]]
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXPLICIT_GUARD_COND:%.*]] = and i1 [[RANGE_CHECK_SLE]], [[WC]]
@@ -433,6 +446,7 @@ loop:
   br i1 %bound_check, label %do_range_check, label %bound_check_failed
 
 do_range_check:
+  call void @llvm.assume(i1 %bound_check)
   %range_check.sle = icmp sgt i32 %len, %el
   %wc = call i1 @llvm.experimental.widenable.condition()
   %explicit_guard_cond = and i1 %range_check.sle, %wc
@@ -468,6 +482,7 @@ define i32 @test_sge(ptr noundef %p, i32 noundef %n, ptr noundef %arr, ptr nound
 ; CHECK-NEXT:    [[BOUND_CHECK:%.*]] = icmp slt i32 [[EL]], 128
 ; CHECK-NEXT:    br i1 [[BOUND_CHECK]], label [[DO_RANGE_CHECK:%.*]], label [[BOUND_CHECK_FAILED:%.*]]
 ; CHECK:       do_range_check:
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND_CHECK]])
 ; CHECK-NEXT:    [[RANGE_CHECK_SLE:%.*]] = icmp sge i32 [[LEN]], [[EL]]
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[EXPLICIT_GUARD_COND:%.*]] = and i1 [[RANGE_CHECK_SLE]], [[WC]]
@@ -498,6 +513,7 @@ loop:
   br i1 %bound_check, label %do_range_check, label %bound_check_failed
 
 do_range_check:
+  call void @llvm.assume(i1 %bound_check)
   %range_check.sle = icmp sge i32 %len, %el
   %wc = call i1 @llvm.experimental.widenable.condition()
   %explicit_guard_cond = and i1 %range_check.sle, %wc
@@ -525,6 +541,8 @@ bound_check_failed:
 declare i1 @llvm.experimental.widenable.condition() #1
 
 declare i32 @llvm.experimental.deoptimize.i32(...)
+
+declare void @llvm.assume(i1)
 
 attributes #1 = { inaccessiblememonly nocallback nofree nosync nounwind speculatable willreturn }
 

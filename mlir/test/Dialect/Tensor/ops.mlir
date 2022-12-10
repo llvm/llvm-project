@@ -286,7 +286,7 @@ func.func @pad_to_static_size(%arg0: tensor<?x?xf32>, %ub0: index, %ub1: index,
 func.func @test_splat_op(%s : f32) {
   // CHECK: tensor.splat [[S]] : tensor<8xf32>
   %v = tensor.splat %s : tensor<8xf32>
-  
+
   // CHECK: tensor.splat [[S]] : tensor<4xf32>
   %u = "tensor.splat"(%s) : (f32) -> tensor<4xf32>
   return
@@ -308,11 +308,11 @@ func.func @gather_scatter(
     (tensor<4x5x6xf32>, tensor<1x3x2xindex>) -> tensor<1x3x4xf32>
 
   // CHECK: %{{.*}} = tensor.scatter %[[GATHER]] into %[[ARG0]][%[[ARG1]]] scatter_dims([1, 2]) unique : (tensor<1x3x4x1x1xf32>, tensor<4x5x6xf32>, tensor<1x3x2xindex>) -> tensor<4x5x6xf32>
-  %scattered = tensor.scatter %gathered into %dest[%indices] 
+  %scattered = tensor.scatter %gathered into %dest[%indices]
       scatter_dims([1, 2]) unique:
     (tensor<1x3x4x1x1xf32>, tensor<4x5x6xf32>, tensor<1x3x2xindex>) -> tensor<4x5x6xf32>
   // CHECK: %{{.*}} = tensor.scatter %[[GATHER0]] into %[[ARG0]][%[[ARG2]]] scatter_dims([1, 2]) unique : (tensor<1x3x4xf32>, tensor<4x5x6xf32>, tensor<1x3x2xi32>) -> tensor<4x5x6xf32>
-  %rank_reduced_scattered = tensor.scatter %rank_reduced_gathered into %dest[%indices_i32] 
+  %rank_reduced_scattered = tensor.scatter %rank_reduced_gathered into %dest[%indices_i32]
       scatter_dims([1, 2]) unique:
     (tensor<1x3x4xf32>, tensor<4x5x6xf32>, tensor<1x3x2xi32>) -> tensor<4x5x6xf32>
   return

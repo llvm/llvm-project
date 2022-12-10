@@ -61,6 +61,6 @@ func.func @multitile_sizes_dynamic(
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<?x?xf32>, tensor<?x?xf32>)
                      outs(%arg2: tensor<?x?xf32>)
     -> tensor<?x?xf32>
-  
+
   return %0 : tensor<?x?xf32>
 }

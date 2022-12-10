@@ -261,6 +261,7 @@ TARGET_BUILTIN(__builtin_amdgcn_image_bvh_intersect_ray_lh, "V4UiWUifV4fV4hV4hV4
 
 // TODO: This is a no-op in wave32. Should the builtin require wavefrontsize64?
 TARGET_BUILTIN(__builtin_amdgcn_permlane64, "UiUi", "nc", "gfx11-insts")
+TARGET_BUILTIN(__builtin_amdgcn_s_wait_event_export_ready, "v", "n", "gfx11-insts")
 
 //===----------------------------------------------------------------------===//
 // WMMA builtins.

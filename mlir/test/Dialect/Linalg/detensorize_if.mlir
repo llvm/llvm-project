@@ -19,7 +19,7 @@ func.func @main() -> (tensor<i32>) attributes {} {
   %4 = linalg.generic #attrs
     ins(%2, %1 : tensor<i32>, tensor<i32>)
     outs(%3 : tensor<i1>) {
-    ^bb0(%arg0: i32, %arg1: i32, %arg2: i1):  
+    ^bb0(%arg0: i32, %arg1: i32, %arg2: i1):
       %8 = arith.cmpi slt, %arg0, %arg1 : i32
       linalg.yield %8 : i1
   } -> tensor<i1>
@@ -31,7 +31,7 @@ func.func @main() -> (tensor<i32>) attributes {} {
   %8 = linalg.generic #attrs
     ins(%6, %6 : tensor<i32>, tensor<i32>)
     outs(%7 : tensor<i32>) {
-    ^bb0(%arg0: i32, %arg1: i32, %arg2: i32):  
+    ^bb0(%arg0: i32, %arg1: i32, %arg2: i32):
       %9 = arith.addi %arg0, %arg1 : i32
       linalg.yield %9 : i32
   } -> tensor<i32>
@@ -80,7 +80,7 @@ func.func @main() -> (tensor<i32>) attributes {} {
   %4 = linalg.generic #attrs
     ins(%2, %1 : tensor<i32>, tensor<i32>)
     outs(%3 : tensor<i1>) {
-    ^bb0(%arg0: i32, %arg1: i32, %arg2: i1):  
+    ^bb0(%arg0: i32, %arg1: i32, %arg2: i1):
       %8 = arith.cmpi slt, %arg0, %arg1 : i32
       linalg.yield %8 : i1
   } -> tensor<i1>
@@ -92,7 +92,7 @@ func.func @main() -> (tensor<i32>) attributes {} {
   %8 = linalg.generic #attrs
     ins(%6, %6 : tensor<i32>, tensor<i32>)
     outs(%7 : tensor<i32>) {
-    ^bb0(%arg0: i32, %arg1: i32, %arg2: i32):  
+    ^bb0(%arg0: i32, %arg1: i32, %arg2: i32):
       %9 = arith.addi %arg0, %arg1 : i32
       linalg.yield %9 : i32
   } -> tensor<i32>
@@ -143,7 +143,7 @@ func.func @main() -> (tensor<i32>) attributes {} {
   %4 = linalg.generic #attrs
     ins(%2, %1 : tensor<i32>, tensor<i32>)
     outs(%3 : tensor<i1>) {
-    ^bb0(%arg0: i32, %arg1: i32, %arg2: i1):  
+    ^bb0(%arg0: i32, %arg1: i32, %arg2: i1):
       %8 = arith.cmpi slt, %arg0, %arg1 : i32
       linalg.yield %8 : i1
   } -> tensor<i1>
@@ -160,7 +160,7 @@ func.func @main() -> (tensor<i32>) attributes {} {
   %8 = linalg.generic #attrs
     ins(%6, %12 : tensor<i32>, tensor<i32>)
     outs(%7 : tensor<i32>) {
-    ^bb0(%arg0: i32, %arg1: i32, %arg2: i32):  
+    ^bb0(%arg0: i32, %arg1: i32, %arg2: i32):
       %9 = arith.addi %arg0, %arg1 : i32
       linalg.yield %9 : i32
   } -> tensor<i32>

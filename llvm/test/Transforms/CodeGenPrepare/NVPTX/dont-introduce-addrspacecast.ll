@@ -8,16 +8,16 @@ target triple = "nvptx64-nvidia-cuda"
 ; which we can't sink into an addrspacecast
 
 ; CHECK-LABEL: @test
-define void @test(i8* %input_ptr) {
+define void @test(ptr %input_ptr) {
   ; CHECK-LABEL: l1:
   ; CHECK-NOT: addrspacecast
-  %intptr = ptrtoint i8* %input_ptr to i64
-  %ptr = inttoptr i64 %intptr to i32 addrspace(3)*
+  %intptr = ptrtoint ptr %input_ptr to i64
+  %ptr = inttoptr i64 %intptr to ptr addrspace(3)
 
   br label %l1
 l1:
 
-  store atomic i32 1, i32 addrspace(3)* %ptr unordered, align 4
+  store atomic i32 1, ptr addrspace(3) %ptr unordered, align 4
   ret void
 }
 
@@ -25,19 +25,18 @@ l1:
 ; we still should be able to look through multiple sequences of inttoptr/ptrtoint
 
 ; CHECK-LABEL: @test2
-define void @test2(i8* %input_ptr) {
+define void @test2(ptr %input_ptr) {
   ; CHECK-LABEL: l2:
-  ; CHECK: bitcast
   ; CHECK-NEXT: store
-  %intptr = ptrtoint i8* %input_ptr to i64
-  %ptr = inttoptr i64 %intptr to i32 addrspace(3)*
+  %intptr = ptrtoint ptr %input_ptr to i64
+  %ptr = inttoptr i64 %intptr to ptr addrspace(3)
 
-  %intptr2 = ptrtoint i32 addrspace(3)* %ptr to i64
-  %ptr2 = inttoptr i64 %intptr2 to i32*
+  %intptr2 = ptrtoint ptr addrspace(3) %ptr to i64
+  %ptr2 = inttoptr i64 %intptr2 to ptr
 
   br label %l2
 l2:
 
-  store atomic i32 1, i32* %ptr2 unordered, align 4
+  store atomic i32 1, ptr %ptr2 unordered, align 4
   ret void
 }

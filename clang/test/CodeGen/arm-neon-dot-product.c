@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple armv8-linux-gnueabihf -target-cpu cortex-a75 -target-feature +dotprod \
-// RUN: -disable-O0-optnone  -emit-llvm -o - %s | opt -S -instcombine | FileCheck %s
+// RUN: -disable-O0-optnone  -emit-llvm -o - %s | opt -S -passes=instcombine | FileCheck %s
 
 // REQUIRES: arm-registered-target
 

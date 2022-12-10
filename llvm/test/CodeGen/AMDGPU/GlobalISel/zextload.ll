@@ -5,7 +5,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 < %s | FileCheck --check-prefix=GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 < %s | FileCheck --check-prefix=GFX11 %s
 
-define i32 @zextload_global_i1_to_i32(i1 addrspace(1)* %ptr) {
+define i32 @zextload_global_i1_to_i32(ptr addrspace(1) %ptr) {
 ; GFX9-LABEL: zextload_global_i1_to_i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -50,12 +50,12 @@ define i32 @zextload_global_i1_to_i32(i1 addrspace(1)* %ptr) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load = load i1, i1 addrspace(1)* %ptr
+  %load = load i1, ptr addrspace(1) %ptr
   %ext = zext i1 %load to i32
   ret i32 %ext
 }
 
-define i32 @zextload_global_i8_to_i32(i8 addrspace(1)* %ptr) {
+define i32 @zextload_global_i8_to_i32(ptr addrspace(1) %ptr) {
 ; GFX9-LABEL: zextload_global_i8_to_i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -95,12 +95,12 @@ define i32 @zextload_global_i8_to_i32(i8 addrspace(1)* %ptr) {
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load = load i8, i8 addrspace(1)* %ptr
+  %load = load i8, ptr addrspace(1) %ptr
   %ext = zext i8 %load to i32
   ret i32 %ext
 }
 
-define i32 @zextload_global_i16_to_i32(i16 addrspace(1)* %ptr) {
+define i32 @zextload_global_i16_to_i32(ptr addrspace(1) %ptr) {
 ; GFX9-LABEL: zextload_global_i16_to_i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -140,12 +140,12 @@ define i32 @zextload_global_i16_to_i32(i16 addrspace(1)* %ptr) {
 ; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load = load i16, i16 addrspace(1)* %ptr
+  %load = load i16, ptr addrspace(1) %ptr
   %ext = zext i16 %load to i32
   ret i32 %ext
 }
 
-define i64 @zextload_global_i1_to_i64(i1 addrspace(1)* %ptr) {
+define i64 @zextload_global_i1_to_i64(ptr addrspace(1) %ptr) {
 ; GFX9-LABEL: zextload_global_i1_to_i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -194,12 +194,12 @@ define i64 @zextload_global_i1_to_i64(i1 addrspace(1)* %ptr) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load = load i1, i1 addrspace(1)* %ptr
+  %load = load i1, ptr addrspace(1) %ptr
   %ext = zext i1 %load to i64
   ret i64 %ext
 }
 
-define i64 @zextload_global_i8_to_i64(i8 addrspace(1)* %ptr) {
+define i64 @zextload_global_i8_to_i64(ptr addrspace(1) %ptr) {
 ; GFX9-LABEL: zextload_global_i8_to_i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -244,12 +244,12 @@ define i64 @zextload_global_i8_to_i64(i8 addrspace(1)* %ptr) {
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load = load i8, i8 addrspace(1)* %ptr
+  %load = load i8, ptr addrspace(1) %ptr
   %ext = zext i8 %load to i64
   ret i64 %ext
 }
 
-define i64 @zextload_global_i16_to_i64(i16 addrspace(1)* %ptr) {
+define i64 @zextload_global_i16_to_i64(ptr addrspace(1) %ptr) {
 ; GFX9-LABEL: zextload_global_i16_to_i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -294,12 +294,12 @@ define i64 @zextload_global_i16_to_i64(i16 addrspace(1)* %ptr) {
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load = load i16, i16 addrspace(1)* %ptr
+  %load = load i16, ptr addrspace(1) %ptr
   %ext = zext i16 %load to i64
   ret i64 %ext
 }
 
-define i64 @zextload_global_i32_to_i64(i32 addrspace(1)* %ptr) {
+define i64 @zextload_global_i32_to_i64(ptr addrspace(1) %ptr) {
 ; GFX9-LABEL: zextload_global_i32_to_i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -344,12 +344,12 @@ define i64 @zextload_global_i32_to_i64(i32 addrspace(1)* %ptr) {
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load = load i32, i32 addrspace(1)* %ptr
+  %load = load i32, ptr addrspace(1) %ptr
   %ext = zext i32 %load to i64
   ret i64 %ext
 }
 
-define i96 @zextload_global_i32_to_i96(i32 addrspace(1)* %ptr) {
+define i96 @zextload_global_i32_to_i96(ptr addrspace(1) %ptr) {
 ; GFX9-LABEL: zextload_global_i32_to_i96:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -398,12 +398,12 @@ define i96 @zextload_global_i32_to_i96(i32 addrspace(1)* %ptr) {
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load = load i32, i32 addrspace(1)* %ptr
+  %load = load i32, ptr addrspace(1) %ptr
   %ext = zext i32 %load to i96
   ret i96 %ext
 }
 
-define i128 @zextload_global_i32_to_i128(i32 addrspace(1)* %ptr) {
+define i128 @zextload_global_i32_to_i128(ptr addrspace(1) %ptr) {
 ; GFX9-LABEL: zextload_global_i32_to_i128:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -457,7 +457,7 @@ define i128 @zextload_global_i32_to_i128(i32 addrspace(1)* %ptr) {
 ; GFX11-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load = load i32, i32 addrspace(1)* %ptr
+  %load = load i32, ptr addrspace(1) %ptr
   %ext = zext i32 %load to i128
   ret i128 %ext
 }

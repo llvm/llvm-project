@@ -104,7 +104,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @test_vmlaq_n_s8(<16 x i8> %a, <16 x i8> %b, i8 signext %c) {
 ; CHECK-LABEL: test_vmlaq_n_s8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmla.u8 q0, q1, r0
+; CHECK-NEXT:    vmla.i8 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %.splatinsert = insertelement <16 x i8> undef, i8 %c, i32 0
@@ -117,7 +117,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @test_vmlaq_n_s16(<8 x i16> %a, <8 x i16> %b, i16 signext %c) {
 ; CHECK-LABEL: test_vmlaq_n_s16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmla.u16 q0, q1, r0
+; CHECK-NEXT:    vmla.i16 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %.splatinsert = insertelement <8 x i16> undef, i16 %c, i32 0
@@ -130,7 +130,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @test_vmlaq_n_s32(<4 x i32> %a, <4 x i32> %b, i32 %c) {
 ; CHECK-LABEL: test_vmlaq_n_s32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmla.u32 q0, q1, r0
+; CHECK-NEXT:    vmla.i32 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %.splatinsert = insertelement <4 x i32> undef, i32 %c, i32 0
@@ -143,7 +143,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @test_vmlaq_n_u8(<16 x i8> %a, <16 x i8> %b, i8 zeroext %c) {
 ; CHECK-LABEL: test_vmlaq_n_u8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmla.u8 q0, q1, r0
+; CHECK-NEXT:    vmla.i8 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %.splatinsert = insertelement <16 x i8> undef, i8 %c, i32 0
@@ -156,7 +156,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @test_vmlaq_n_u16(<8 x i16> %a, <8 x i16> %b, i16 zeroext %c) {
 ; CHECK-LABEL: test_vmlaq_n_u16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmla.u16 q0, q1, r0
+; CHECK-NEXT:    vmla.i16 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %.splatinsert = insertelement <8 x i16> undef, i16 %c, i32 0
@@ -169,7 +169,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @test_vmlaq_n_u32(<4 x i32> %a, <4 x i32> %b, i32 %c) {
 ; CHECK-LABEL: test_vmlaq_n_u32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmla.u32 q0, q1, r0
+; CHECK-NEXT:    vmla.i32 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %.splatinsert = insertelement <4 x i32> undef, i32 %c, i32 0
@@ -182,7 +182,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @test_vmlasq_n_s8(<16 x i8> %a, <16 x i8> %b, i8 signext %c) {
 ; CHECK-LABEL: test_vmlasq_n_s8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmlas.u8 q1, q0, r0
+; CHECK-NEXT:    vmlas.i8 q1, q0, r0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -196,7 +196,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @test_vmlasq_n_s16(<8 x i16> %a, <8 x i16> %b, i16 signext %c) {
 ; CHECK-LABEL: test_vmlasq_n_s16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmlas.u16 q1, q0, r0
+; CHECK-NEXT:    vmlas.i16 q1, q0, r0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -210,7 +210,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @test_vmlasq_n_s32(<4 x i32> %a, <4 x i32> %b, i32 %c) {
 ; CHECK-LABEL: test_vmlasq_n_s32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmlas.u32 q1, q0, r0
+; CHECK-NEXT:    vmlas.i32 q1, q0, r0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -224,7 +224,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @test_vmlasq_n_u8(<16 x i8> %a, <16 x i8> %b, i8 zeroext %c) {
 ; CHECK-LABEL: test_vmlasq_n_u8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmlas.u8 q1, q0, r0
+; CHECK-NEXT:    vmlas.i8 q1, q0, r0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -238,7 +238,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @test_vmlasq_n_u16(<8 x i16> %a, <8 x i16> %b, i16 zeroext %c) {
 ; CHECK-LABEL: test_vmlasq_n_u16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmlas.u16 q1, q0, r0
+; CHECK-NEXT:    vmlas.i16 q1, q0, r0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -252,7 +252,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @test_vmlasq_n_u32(<4 x i32> %a, <4 x i32> %b, i32 %c) {
 ; CHECK-LABEL: test_vmlasq_n_u32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmlas.u32 q1, q0, r0
+; CHECK-NEXT:    vmlas.i32 q1, q0, r0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -528,7 +528,7 @@ define arm_aapcs_vfpcc <16 x i8> @test_vmlaq_m_n_s8(<16 x i8> %a, <16 x i8> %b, 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmlat.u8 q0, q1, r0
+; CHECK-NEXT:    vmlat.i8 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i8 %c to i32
@@ -543,7 +543,7 @@ define arm_aapcs_vfpcc <8 x i16> @test_vmlaq_m_n_s16(<8 x i16> %a, <8 x i16> %b,
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmlat.u16 q0, q1, r0
+; CHECK-NEXT:    vmlat.i16 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %c to i32
@@ -558,7 +558,7 @@ define arm_aapcs_vfpcc <4 x i32> @test_vmlaq_m_n_s32(<4 x i32> %a, <4 x i32> %b,
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmlat.u32 q0, q1, r0
+; CHECK-NEXT:    vmlat.i32 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
@@ -572,7 +572,7 @@ define arm_aapcs_vfpcc <16 x i8> @test_vmlaq_m_n_u8(<16 x i8> %a, <16 x i8> %b, 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmlat.u8 q0, q1, r0
+; CHECK-NEXT:    vmlat.i8 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i8 %c to i32
@@ -587,7 +587,7 @@ define arm_aapcs_vfpcc <8 x i16> @test_vmlaq_m_n_u16(<8 x i16> %a, <8 x i16> %b,
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmlat.u16 q0, q1, r0
+; CHECK-NEXT:    vmlat.i16 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %c to i32
@@ -602,7 +602,7 @@ define arm_aapcs_vfpcc <4 x i32> @test_vmlaq_m_n_u32(<4 x i32> %a, <4 x i32> %b,
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmlat.u32 q0, q1, r0
+; CHECK-NEXT:    vmlat.i32 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
@@ -616,7 +616,7 @@ define arm_aapcs_vfpcc <16 x i8> @test_vmlasq_m_n_s8(<16 x i8> %a, <16 x i8> %b,
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmlast.u8 q0, q1, r0
+; CHECK-NEXT:    vmlast.i8 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i8 %c to i32
@@ -631,7 +631,7 @@ define arm_aapcs_vfpcc <8 x i16> @test_vmlasq_m_n_s16(<8 x i16> %a, <8 x i16> %b
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmlast.u16 q0, q1, r0
+; CHECK-NEXT:    vmlast.i16 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %c to i32
@@ -646,7 +646,7 @@ define arm_aapcs_vfpcc <4 x i32> @test_vmlasq_m_n_s32(<4 x i32> %a, <4 x i32> %b
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmlast.u32 q0, q1, r0
+; CHECK-NEXT:    vmlast.i32 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32
@@ -660,7 +660,7 @@ define arm_aapcs_vfpcc <16 x i8> @test_vmlasq_m_n_u8(<16 x i8> %a, <16 x i8> %b,
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmlast.u8 q0, q1, r0
+; CHECK-NEXT:    vmlast.i8 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i8 %c to i32
@@ -675,7 +675,7 @@ define arm_aapcs_vfpcc <8 x i16> @test_vmlasq_m_n_u16(<8 x i16> %a, <8 x i16> %b
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmlast.u16 q0, q1, r0
+; CHECK-NEXT:    vmlast.i16 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %c to i32
@@ -690,7 +690,7 @@ define arm_aapcs_vfpcc <4 x i32> @test_vmlasq_m_n_u32(<4 x i32> %a, <4 x i32> %b
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmlast.u32 q0, q1, r0
+; CHECK-NEXT:    vmlast.i32 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = zext i16 %p to i32

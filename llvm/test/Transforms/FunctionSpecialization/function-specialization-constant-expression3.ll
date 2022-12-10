@@ -4,21 +4,21 @@
 define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    tail call void @wombat.1(i8* undef, i64 undef, i64 undef, i32 (i8*, i8*)* bitcast (i32 ()* @quux to i32 (i8*, i8*)*))
-; CHECK-NEXT:    tail call void @wombat.2(i8* undef, i64 undef, i64 undef, i32 (i8*, i8*)* bitcast (i32 ()* @eggs to i32 (i8*, i8*)*))
+; CHECK-NEXT:    tail call void @wombat.1(ptr undef, i64 undef, i64 undef, ptr @quux)
+; CHECK-NEXT:    tail call void @wombat.2(ptr undef, i64 undef, i64 undef, ptr @eggs)
 ; CHECK-NEXT:    ret i32 undef
 ;
 bb:
-  tail call void @wombat(i8* undef, i64 undef, i64 undef, i32 (i8*, i8*)* bitcast (i32 ()* @quux to i32 (i8*, i8*)*))
-  tail call void @wombat(i8* undef, i64 undef, i64 undef, i32 (i8*, i8*)* bitcast (i32 ()* @eggs to i32 (i8*, i8*)*))
+  tail call void @wombat(ptr undef, i64 undef, i64 undef, ptr @quux)
+  tail call void @wombat(ptr undef, i64 undef, i64 undef, ptr @eggs)
   ret i32 undef
 }
 
 declare i32 @quux()
 declare i32 @eggs()
 
-define internal void @wombat(i8* %arg, i64 %arg1, i64 %arg2, i32 (i8*, i8*)* %arg3) {
+define internal void @wombat(ptr %arg, i64 %arg1, i64 %arg2, ptr %arg3) {
 bb4:
-  %tmp = tail call i32 %arg3(i8* undef, i8* undef)
+  %tmp = tail call i32 %arg3(ptr undef, ptr undef)
   ret void
 }

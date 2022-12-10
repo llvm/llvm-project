@@ -20,7 +20,7 @@ define amdgpu_gs void @test_sub_32(i32 %arg) {
   ret void
 }
 
-define amdgpu_gs void @test_sub_32_use(i32 %arg, i32 addrspace(1)* %out) {
+define amdgpu_gs void @test_sub_32_use(i32 %arg, ptr addrspace(1) %out) {
 ; CHECK-LABEL: test_sub_32_use:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -34,7 +34,7 @@ define amdgpu_gs void @test_sub_32_use(i32 %arg, i32 addrspace(1)* %out) {
 ; CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-NEXT:    s_endpgm
   %res = call i32 @llvm.amdgcn.ds.sub.gs.reg.rtn.i32(i32 %arg, i32 16)
-  store i32 %res, i32 addrspace(1)* %out, align 4
+  store i32 %res, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -53,7 +53,7 @@ define amdgpu_gs void @test_sub_64(i32 %arg) {
   ret void
 }
 
-define amdgpu_gs void @test_sub_64_use(i32 %arg, i64 addrspace(1)* %out) {
+define amdgpu_gs void @test_sub_64_use(i32 %arg, ptr addrspace(1) %out) {
 ; CHECK-LABEL: test_sub_64_use:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -67,7 +67,7 @@ define amdgpu_gs void @test_sub_64_use(i32 %arg, i64 addrspace(1)* %out) {
 ; CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-NEXT:    s_endpgm
   %res = call i64 @llvm.amdgcn.ds.sub.gs.reg.rtn.i64(i32 %arg, i32 32)
-  store i64 %res, i64 addrspace(1)* %out, align 4
+  store i64 %res, ptr addrspace(1) %out, align 4
   ret void
 }
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s -reassociate -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=reassociate,instcombine -S | FileCheck %s
 
 ; With sub reassociation, constant folding can eliminate the 12 and -12 constants.
 define i32 @test1(i32 %A, i32 %B) {

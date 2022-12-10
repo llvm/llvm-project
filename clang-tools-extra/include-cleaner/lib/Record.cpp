@@ -141,21 +141,6 @@ private:
 
 } // namespace
 
-// FIXME: this is a mirror of clang::clangd::parseIWYUPragma, move to libTooling
-// to share the code?
-static llvm::Optional<StringRef> parseIWYUPragma(const char *Text) {
-  assert(strncmp(Text, "//", 2) || strncmp(Text, "/*", 2));
-  constexpr llvm::StringLiteral IWYUPragma = " IWYU pragma: ";
-  Text += 2; // Skip the comment start, // or /*.
-  if (strncmp(Text, IWYUPragma.data(), IWYUPragma.size()))
-    return llvm::None;
-  Text += IWYUPragma.size();
-  const char *End = Text;
-  while (*End != 0 && *End != '\n')
-    ++End;
-  return StringRef(Text, End - Text);
-}
-
 class PragmaIncludes::RecordPragma : public PPCallbacks, public CommentHandler {
 public:
   RecordPragma(const CompilerInstance &CI, PragmaIncludes *Out)
@@ -229,7 +214,8 @@ public:
 
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
     auto &SM = PP.getSourceManager();
-    auto Pragma = parseIWYUPragma(SM.getCharacterData(Range.getBegin()));
+    auto Pragma =
+        tooling::parseIWYUPragma(SM.getCharacterData(Range.getBegin()));
     if (!Pragma)
       return false;
 

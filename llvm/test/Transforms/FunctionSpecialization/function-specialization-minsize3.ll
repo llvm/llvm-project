@@ -4,10 +4,10 @@
 ; specialisation for the call that does not have the attribute:
 ;
 ; CHECK: plus:
-; CHECK:   %tmp0 = call i64 @compute.1(i64 %x, i64 (i64)* @plus)
+; CHECK:   %tmp0 = call i64 @compute.1(i64 %x, ptr @plus)
 ; CHECK:   br label %merge
 ; CHECK: minus:
-; CHECK:   %tmp1 = call i64 @compute(i64 %x, i64 (i64)* @minus) #0
+; CHECK:   %tmp1 = call i64 @compute(i64 %x, ptr @minus) #0
 ; CHECK:   br label %merge
 ;
 define i64 @main(i64 %x, i1 %flag) {
@@ -15,11 +15,11 @@ entry:
   br i1 %flag, label %plus, label %minus
 
 plus:
-  %tmp0 = call i64 @compute(i64 %x, i64 (i64)* @plus)
+  %tmp0 = call i64 @compute(i64 %x, ptr @plus)
   br label %merge
 
 minus:
-  %tmp1 = call i64 @compute(i64 %x, i64 (i64)* @minus) #0
+  %tmp1 = call i64 @compute(i64 %x, ptr @minus) #0
   br label %merge
 
 merge:
@@ -27,7 +27,7 @@ merge:
   ret i64 %tmp2
 }
 
-define internal i64 @compute(i64 %x, i64 (i64)* %binop) {
+define internal i64 @compute(i64 %x, ptr %binop) {
 entry:
   %tmp0 = call i64 %binop(i64 %x)
   ret i64 %tmp0

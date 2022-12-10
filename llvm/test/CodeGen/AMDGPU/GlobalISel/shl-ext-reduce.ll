@@ -242,7 +242,7 @@ define i64 @v_shl_i64_sext_i32_overflow(i32 %x) {
   ret i64 %shl
 }
 
-define amdgpu_kernel void @mulu24_shl64(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @mulu24_shl64(ptr addrspace(1) nocapture %arg) {
 ; GFX7-LABEL: mulu24_shl64:
 ; GFX7:       ; %bb.0: ; %bb
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
@@ -319,12 +319,12 @@ bb:
   %tmp1 = and i32 %tmp, 6
   %mulconv = mul nuw nsw i32 %tmp1, 7
   %tmp2 = zext i32 %mulconv to i64
-  %tmp3 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %tmp2
-  store i32 0, i32 addrspace(1)* %tmp3, align 4
+  %tmp3 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp2
+  store i32 0, ptr addrspace(1) %tmp3, align 4
   ret void
 }
 
-define amdgpu_kernel void @muli24_shl64(i64 addrspace(1)* nocapture %arg, i32 addrspace(1)* nocapture readonly %arg1) {
+define amdgpu_kernel void @muli24_shl64(ptr addrspace(1) nocapture %arg, ptr addrspace(1) nocapture readonly %arg1) {
 ; GFX7-LABEL: muli24_shl64:
 ; GFX7:       ; %bb.0: ; %bb
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
@@ -417,14 +417,14 @@ define amdgpu_kernel void @muli24_shl64(i64 addrspace(1)* nocapture %arg, i32 ad
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp2 = sext i32 %tmp to i64
-  %tmp3 = getelementptr inbounds i32, i32 addrspace(1)* %arg1, i64 %tmp2
-  %tmp4 = load i32, i32 addrspace(1)* %tmp3, align 4
+  %tmp3 = getelementptr inbounds i32, ptr addrspace(1) %arg1, i64 %tmp2
+  %tmp4 = load i32, ptr addrspace(1) %tmp3, align 4
   %tmp5 = or i32 %tmp4, -8388608
   %tmp6 = mul nsw i32 %tmp5, -7
   %tmp7 = zext i32 %tmp6 to i64
   %tmp8 = shl nuw nsw i64 %tmp7, 3
-  %tmp9 = getelementptr inbounds i64, i64 addrspace(1)* %arg, i64 %tmp2
-  store i64 %tmp8, i64 addrspace(1)* %tmp9, align 8
+  %tmp9 = getelementptr inbounds i64, ptr addrspace(1) %arg, i64 %tmp2
+  store i64 %tmp8, ptr addrspace(1) %tmp9, align 8
   ret void
 }
 

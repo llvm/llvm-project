@@ -78,7 +78,7 @@ function(llvm_ExternalProject_Add name source_dir)
   endif()
 
   if(NOT ARG_TARGET_TRIPLE)
-    set(target_triple ${LLVM_DEFAULT_TARGET_TRIPLE})
+    set(target_triple ${LLVM_TARGET_TRIPLE})
   else()
     set(target_triple ${ARG_TARGET_TRIPLE})
   endif()

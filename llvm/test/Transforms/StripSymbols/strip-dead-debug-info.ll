@@ -25,7 +25,7 @@ entry:
 define i32 @foo(i32 %i) #2 !dbg !15 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 %i, metadata !18, metadata !19), !dbg !20
-  %.0 = load i32, i32* @xyz, align 4, !dbg !30
+  %.0 = load i32, ptr @xyz, align 4, !dbg !30
   ret i32 %.0, !dbg !21
 }
 
