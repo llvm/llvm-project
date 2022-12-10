@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include <optional>
 
 #define DEBUG_TYPE "mlir-bytecode-reader"
 
@@ -435,11 +436,11 @@ struct BytecodeDialect {
 
   /// The loaded dialect entry. This field is None if we haven't attempted to
   /// load, nullptr if we failed to load, otherwise the loaded dialect.
-  Optional<Dialect *> dialect;
+  std::optional<Dialect *> dialect;
 
   /// The bytecode interface of the dialect, or nullptr if the dialect does not
   /// implement the bytecode interface. This field should only be checked if the
-  /// `dialect` field is non-None.
+  /// `dialect` field is not std::nullopt.
   const BytecodeDialectInterface *interface = nullptr;
 
   /// The name of the dialect.
@@ -453,7 +454,7 @@ struct BytecodeOperationName {
 
   /// The loaded operation name, or std::nullopt if it hasn't been processed
   /// yet.
-  Optional<OperationName> opName;
+  std::optional<OperationName> opName;
 
   /// The dialect that owns this operation name.
   BytecodeDialect *dialect;
