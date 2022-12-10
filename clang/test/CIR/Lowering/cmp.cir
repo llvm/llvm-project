@@ -1,0 +1,20 @@
+// RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+
+module {
+  cir.func @foo() {
+    %0 = cir.alloca i32, cir.ptr <i32>, ["a"] {alignment = 4 : i64}
+    %1 = cir.alloca i32, cir.ptr <i32>, ["b"] {alignment = 4 : i64}
+    %2 = cir.alloca f32, cir.ptr <f32>, ["c"] {alignment = 4 : i64}
+    %3 = cir.alloca f32, cir.ptr <f32>, ["d"] {alignment = 4 : i64}
+    %4 = cir.alloca !cir.bool, cir.ptr <!cir.bool>, ["e"] {alignment = 1 : i64}
+    %5 = cir.load %0 : cir.ptr <i32>, i32
+    %6 = cir.load %1 : cir.ptr <i32>, i32
+    %7 = cir.cmp(gt, %5, %6) : i32, !cir.bool
+    cir.return
+  }
+}
+
+// MLIR: = llvm.icmp "ugt"
+
+// LLVM: icmp ugt i32
