@@ -18,6 +18,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace llvm;
@@ -252,7 +253,8 @@ bool InclusionRewriter::IsIfAtLocationTrue(SourceLocation Loc) const {
 }
 
 void InclusionRewriter::detectMainFileEOL() {
-  Optional<MemoryBufferRef> FromFile = *SM.getBufferOrNone(SM.getMainFileID());
+  std::optional<MemoryBufferRef> FromFile =
+      *SM.getBufferOrNone(SM.getMainFileID());
   assert(FromFile);
   if (!FromFile)
     return; // Should never happen, but whatever.
