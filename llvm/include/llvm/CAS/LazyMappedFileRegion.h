@@ -9,6 +9,7 @@
 #ifndef LLVM_CAS_LAZYMAPPEDFILEREGION_H
 #define LLVM_CAS_LAZYMAPPEDFILEREGION_H
 
+#include "llvm/ADT/None.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"

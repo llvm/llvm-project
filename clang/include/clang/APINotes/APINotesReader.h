@@ -99,7 +99,7 @@ public:
 
     /// Retrieve the selected index in the result set.
     std::optional<unsigned> getSelected() const {
-      if (Selected == Results.size()) return llvm::None;
+      if (Selected == Results.size()) return std::nullopt;
       return Selected;
     }
 

@@ -10,6 +10,7 @@
 #define LLVM_SUPPORT_VIRTUALOUTPUTBACKEND_H
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/None.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VirtualOutputConfig.h"
 #include "llvm/Support/VirtualOutputFile.h"

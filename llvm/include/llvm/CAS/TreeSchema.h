@@ -9,6 +9,7 @@
 #ifndef LLVM_CAS_TREESCHEMA_H
 #define LLVM_CAS_TREESCHEMA_H
 
+#include "llvm/ADT/None.h"
 #include "llvm/CAS/CASNodeSchema.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeEntry.h"

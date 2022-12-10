@@ -173,9 +173,10 @@ int main(int Argc, const char **Argv) {
   }
 
   std::string ErrMsg;
-  int Result = sys::ExecuteAndWait(RefArgs.front(), RefArgs, /*Env*/ None,
-                                   /*Redirects*/ {}, /*SecondsToWait*/ 0,
-                                   /*MemoryLimit*/ 0, &ErrMsg);
+  int Result =
+      sys::ExecuteAndWait(RefArgs.front(), RefArgs, /*Env*/ std::nullopt,
+                          /*Redirects*/ {}, /*SecondsToWait*/ 0,
+                          /*MemoryLimit*/ 0, &ErrMsg);
   if (!ErrMsg.empty()) {
     errs() << "error: failed executing command: " << ErrMsg << '\n';
   }

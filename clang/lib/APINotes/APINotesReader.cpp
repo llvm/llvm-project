@@ -657,14 +657,14 @@ public:
 std::optional<IdentifierID>
 APINotesReader::Implementation::getIdentifier(StringRef str) {
   if (!IdentifierTable)
-    return None;
+    return std::nullopt;
 
   if (str.empty())
     return IdentifierID(0);
 
   auto known = IdentifierTable->find(str);
   if (known == IdentifierTable->end())
-    return None;
+    return std::nullopt;
 
   return *known;
 }
@@ -672,7 +672,7 @@ APINotesReader::Implementation::getIdentifier(StringRef str) {
 std::optional<SelectorID>
 APINotesReader::Implementation::getSelector(ObjCSelectorRef selector) {
   if (!ObjCSelectorTable || !IdentifierTable)
-    return None;
+    return std::nullopt;
 
   // Translate the identifiers.
   StoredObjCSelector key;
@@ -681,13 +681,13 @@ APINotesReader::Implementation::getSelector(ObjCSelectorRef selector) {
     if (auto identID = getIdentifier(ident)) {
       key.Identifiers.push_back(*identID);
     } else {
-      return None;
+      return std::nullopt;
     }
   }
 
   auto known = ObjCSelectorTable->find(key);
   if (known == ObjCSelectorTable->end())
-    return None;
+    return std::nullopt;
 
   return *known;
 }
@@ -1816,15 +1816,15 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
 auto APINotesReader::lookupObjCClassID(StringRef name)
     -> std::optional<ContextID> {
   if (!Impl.ObjCContextIDTable)
-    return None;
+    return std::nullopt;
 
   std::optional<IdentifierID> classID = Impl.getIdentifier(name);
   if (!classID)
-    return None;
+    return std::nullopt;
 
   auto knownID = Impl.ObjCContextIDTable->find({*classID, '\0'});
   if (knownID == Impl.ObjCContextIDTable->end())
-    return None;
+    return std::nullopt;
 
   return ContextID(*knownID);
 }
@@ -1832,15 +1832,15 @@ auto APINotesReader::lookupObjCClassID(StringRef name)
 auto APINotesReader::lookupObjCClassInfo(StringRef name)
        -> VersionedInfo<ObjCContextInfo> {
   if (!Impl.ObjCContextInfoTable)
-    return None;
+    return std::nullopt;
 
   std::optional<ContextID> contextID = lookupObjCClassID(name);
   if (!contextID)
-    return None;
+    return std::nullopt;
 
   auto knownInfo = Impl.ObjCContextInfoTable->find(contextID->Value);
   if (knownInfo == Impl.ObjCContextInfoTable->end())
-    return None;
+    return std::nullopt;
 
   return { Impl.SwiftVersion, *knownInfo };
 }
@@ -1848,15 +1848,15 @@ auto APINotesReader::lookupObjCClassInfo(StringRef name)
 auto APINotesReader::lookupObjCProtocolID(StringRef name)
     -> std::optional<ContextID> {
   if (!Impl.ObjCContextIDTable)
-    return None;
+    return std::nullopt;
 
   std::optional<IdentifierID> classID = Impl.getIdentifier(name);
   if (!classID)
-    return None;
+    return std::nullopt;
 
   auto knownID = Impl.ObjCContextIDTable->find({*classID, '\1'});
   if (knownID == Impl.ObjCContextIDTable->end())
-    return None;
+    return std::nullopt;
 
   return ContextID(*knownID);
 }
@@ -1864,15 +1864,15 @@ auto APINotesReader::lookupObjCProtocolID(StringRef name)
 auto APINotesReader::lookupObjCProtocolInfo(StringRef name)
        -> VersionedInfo<ObjCContextInfo> {
    if (!Impl.ObjCContextInfoTable)
-     return None;
+    return std::nullopt;
 
    std::optional<ContextID> contextID = lookupObjCProtocolID(name);
    if (!contextID)
-     return None;
+    return std::nullopt;
 
    auto knownInfo = Impl.ObjCContextInfoTable->find(contextID->Value);
    if (knownInfo == Impl.ObjCContextInfoTable->end())
-     return None;
+    return std::nullopt;
    
    return { Impl.SwiftVersion, *knownInfo };
 }
@@ -1883,17 +1883,17 @@ auto APINotesReader::lookupObjCProperty(ContextID contextID,
                                         bool isInstance)
     -> VersionedInfo<ObjCPropertyInfo> {
   if (!Impl.ObjCPropertyTable)
-    return None;
+    return std::nullopt;
 
   std::optional<IdentifierID> propertyID = Impl.getIdentifier(name);
   if (!propertyID)
-    return None;
+    return std::nullopt;
 
   auto known = Impl.ObjCPropertyTable->find(std::make_tuple(contextID.Value,
                                                             *propertyID,
                                                             (char)isInstance));
   if (known == Impl.ObjCPropertyTable->end())
-    return None;
+    return std::nullopt;
 
   return { Impl.SwiftVersion, *known };
 }
@@ -1904,17 +1904,17 @@ auto APINotesReader::lookupObjCMethod(
                                       bool isInstanceMethod)
     -> VersionedInfo<ObjCMethodInfo> {
   if (!Impl.ObjCMethodTable)
-    return None;
+    return std::nullopt;
 
   std::optional<SelectorID> selectorID = Impl.getSelector(selector);
   if (!selectorID)
-    return None;
+    return std::nullopt;
 
   auto known = Impl.ObjCMethodTable->find(
       ObjCMethodTableInfo::internal_key_type{
           contextID.Value, *selectorID, isInstanceMethod});
   if (known == Impl.ObjCMethodTable->end())
-    return None;
+    return std::nullopt;
 
   return { Impl.SwiftVersion, *known };
 }
@@ -1923,15 +1923,15 @@ auto APINotesReader::lookupGlobalVariable(
                                           StringRef name)
     -> VersionedInfo<GlobalVariableInfo> {
   if (!Impl.GlobalVariableTable)
-    return None;
+    return std::nullopt;
 
   std::optional<IdentifierID> nameID = Impl.getIdentifier(name);
   if (!nameID)
-    return None;
+    return std::nullopt;
 
   auto known = Impl.GlobalVariableTable->find(*nameID);
   if (known == Impl.GlobalVariableTable->end())
-    return None;
+    return std::nullopt;
 
   return { Impl.SwiftVersion, *known };
 }
@@ -1939,15 +1939,15 @@ auto APINotesReader::lookupGlobalVariable(
 auto APINotesReader::lookupGlobalFunction(StringRef name)
     -> VersionedInfo<GlobalFunctionInfo> {
   if (!Impl.GlobalFunctionTable)
-    return None;
+    return std::nullopt;
 
   std::optional<IdentifierID> nameID = Impl.getIdentifier(name);
   if (!nameID)
-    return None;
+    return std::nullopt;
 
   auto known = Impl.GlobalFunctionTable->find(*nameID);
   if (known == Impl.GlobalFunctionTable->end())
-    return None;
+    return std::nullopt;
 
   return { Impl.SwiftVersion, *known };
 }
@@ -1955,30 +1955,30 @@ auto APINotesReader::lookupGlobalFunction(StringRef name)
 auto APINotesReader::lookupEnumConstant(StringRef name)
     -> VersionedInfo<EnumConstantInfo> {
   if (!Impl.EnumConstantTable)
-    return None;
+    return std::nullopt;
 
   std::optional<IdentifierID> nameID = Impl.getIdentifier(name);
   if (!nameID)
-    return None;
+    return std::nullopt;
 
   auto known = Impl.EnumConstantTable->find(*nameID);
   if (known == Impl.EnumConstantTable->end())
-    return None;
+    return std::nullopt;
 
   return { Impl.SwiftVersion, *known };
 }
 
 auto APINotesReader::lookupTag(StringRef name) -> VersionedInfo<TagInfo> {
   if (!Impl.TagTable)
-    return None;
+    return std::nullopt;
 
   std::optional<IdentifierID> nameID = Impl.getIdentifier(name);
   if (!nameID)
-    return None;
+    return std::nullopt;
 
   auto known = Impl.TagTable->find(*nameID);
   if (known == Impl.TagTable->end())
-    return None;
+    return std::nullopt;
 
   return { Impl.SwiftVersion, *known };
 }
@@ -1986,15 +1986,15 @@ auto APINotesReader::lookupTag(StringRef name) -> VersionedInfo<TagInfo> {
 auto APINotesReader::lookupTypedef(StringRef name)
     -> VersionedInfo<TypedefInfo> {
   if (!Impl.TypedefTable)
-    return None;
+    return std::nullopt;
 
   std::optional<IdentifierID> nameID = Impl.getIdentifier(name);
   if (!nameID)
-    return None;
+    return std::nullopt;
 
   auto known = Impl.TypedefTable->find(*nameID);
   if (known == Impl.TypedefTable->end())
-    return None;
+    return std::nullopt;
 
   return { Impl.SwiftVersion, *known };
 }
