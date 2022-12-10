@@ -108,6 +108,9 @@ STATISTIC(NumPromoted, "Number of allocas promoted to SSA values");
 STATISTIC(NumLoadsSpeculated, "Number of loads speculated to allow promotion");
 STATISTIC(NumLoadsPredicated,
           "Number of loads rewritten into predicated loads to allow promotion");
+STATISTIC(
+    NumStoresPredicated,
+    "Number of stores rewritten into predicated loads to allow promotion");
 STATISTIC(NumDeleted, "Number of instructions deleted");
 STATISTIC(NumVectorized, "Number of vectorized aggregates");
 
@@ -1353,17 +1356,25 @@ isSafeLoadOfSelectToSpeculate(LoadInst &LI, SelectInst &SI, bool PreserveCFG) {
   return Spec;
 }
 
-std::optional<sroa::PossiblySpeculatableLoads>
+std::optional<sroa::RewriteableMemOps>
 SROAPass::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
-  PossiblySpeculatableLoads Loads;
+  RewriteableMemOps Ops;
 
   for (User *U : SI.users()) {
-    LoadInst *LI;
-    BitCastInst *BC = dyn_cast<BitCastInst>(U);
-    if (BC && BC->hasOneUse())
-      LI = dyn_cast<LoadInst>(*BC->user_begin());
-    else
-      LI = dyn_cast<LoadInst>(U);
+    if (auto *BC = dyn_cast<BitCastInst>(U); BC && BC->hasOneUse())
+      U = *BC->user_begin();
+
+    if (auto *Store = dyn_cast<StoreInst>(U)) {
+      // Note that atomic stores can be transformed; atomic semantics do not
+      // have any meaning for a local alloca. Stores are not speculatable,
+      // however, so if we can't turn it into a predicated store, we are done.
+      if (Store->isVolatile() || PreserveCFG)
+        return {}; // Give up on this `select`.
+      Ops.emplace_back(Store);
+      continue;
+    }
+
+    auto *LI = dyn_cast<LoadInst>(U);
 
     // Note that atomic loads can be transformed;
     // atomic semantics do not have any meaning for a local alloca.
@@ -1371,13 +1382,12 @@ SROAPass::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
       return {}; // Give up on this `select`.
 
     PossiblySpeculatableLoad Load(LI);
-
     if (!LI->isSimple()) {
       // If the `load` is not simple, we can't speculatively execute it,
       // but we could handle this via a CFG modification. But can we?
       if (PreserveCFG)
         return {}; // Give up on this `select`.
-      Loads.emplace_back(Load);
+      Ops.emplace_back(Load);
       continue;
     }
 
@@ -1387,10 +1397,10 @@ SROAPass::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
       return {}; // Give up on this `select`.
 
     Load.setInt(Spec);
-    Loads.emplace_back(Load);
+    Ops.emplace_back(Load);
   }
 
-  return Loads;
+  return Ops;
 }
 
 static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
@@ -1430,18 +1440,20 @@ static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
   LI.replaceAllUsesWith(V);
 }
 
-static void rewriteLoadOfSelect(SelectInst &SI, LoadInst &LI,
-                                sroa::SelectHandSpeculativity Spec,
-                                DomTreeUpdater &DTU) {
-  LLVM_DEBUG(dbgs() << "    original load: " << SI << "\n");
-  BasicBlock *Head = LI.getParent();
+template <typename T>
+static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
+                                 sroa::SelectHandSpeculativity Spec,
+                                 DomTreeUpdater &DTU) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) && "Only for load and store!");
+  LLVM_DEBUG(dbgs() << "    original mem op: " << I << "\n");
+  BasicBlock *Head = I.getParent();
   Instruction *ThenTerm = nullptr;
   Instruction *ElseTerm = nullptr;
   if (Spec.areNoneSpeculatable())
-    SplitBlockAndInsertIfThenElse(SI.getCondition(), &LI, &ThenTerm, &ElseTerm,
+    SplitBlockAndInsertIfThenElse(SI.getCondition(), &I, &ThenTerm, &ElseTerm,
                                   SI.getMetadata(LLVMContext::MD_prof), &DTU);
   else {
-    SplitBlockAndInsertIfThen(SI.getCondition(), &LI, /*Unreachable=*/false,
+    SplitBlockAndInsertIfThen(SI.getCondition(), &I, /*Unreachable=*/false,
                               SI.getMetadata(LLVMContext::MD_prof), &DTU,
                               /*LI=*/nullptr, /*ThenBlock=*/nullptr);
     if (Spec.isSpeculatable(/*isTrueVal=*/true))
@@ -1449,46 +1461,75 @@ static void rewriteLoadOfSelect(SelectInst &SI, LoadInst &LI,
   }
   auto *HeadBI = cast<BranchInst>(Head->getTerminator());
   Spec = {}; // Do not use `Spec` beyond this point.
-  BasicBlock *Tail = LI.getParent();
+  BasicBlock *Tail = I.getParent();
   Tail->setName(Head->getName() + ".cont");
-  auto *PN = PHINode::Create(LI.getType(), 2, "", &LI);
+  PHINode *PN;
+  if (isa<LoadInst>(I))
+    PN = PHINode::Create(I.getType(), 2, "", &I);
   for (BasicBlock *SuccBB : successors(Head)) {
     bool IsThen = SuccBB == HeadBI->getSuccessor(0);
     int SuccIdx = IsThen ? 0 : 1;
-    auto *NewLoadBB = SuccBB == Tail ? Head : SuccBB;
-    if (NewLoadBB != Head) {
-      NewLoadBB->setName(Head->getName() + (IsThen ? ".then" : ".else"));
-      ++NumLoadsPredicated;
+    auto *NewMemOpBB = SuccBB == Tail ? Head : SuccBB;
+    if (NewMemOpBB != Head) {
+      NewMemOpBB->setName(Head->getName() + (IsThen ? ".then" : ".else"));
+      if (isa<LoadInst>(I))
+        ++NumLoadsPredicated;
+      else
+        ++NumStoresPredicated;
     } else
       ++NumLoadsSpeculated;
-    auto *CondLoad = cast<LoadInst>(LI.clone());
-    CondLoad->insertBefore(NewLoadBB->getTerminator());
-    CondLoad->setOperand(0, SI.getOperand(1 + SuccIdx));
-    CondLoad->setName(LI.getName() + (IsThen ? ".then" : ".else") + ".val");
-    PN->addIncoming(CondLoad, NewLoadBB);
+    auto &CondMemOp = cast<T>(*I.clone());
+    CondMemOp.insertBefore(NewMemOpBB->getTerminator());
+    CondMemOp.setOperand(I.getPointerOperandIndex(),
+                         SI.getOperand(1 + SuccIdx));
+    if (isa<LoadInst>(I)) {
+      CondMemOp.setName(I.getName() + (IsThen ? ".then" : ".else") + ".val");
+      PN->addIncoming(&CondMemOp, NewMemOpBB);
+    } else
+      LLVM_DEBUG(dbgs() << "                 to: " << CondMemOp << "\n");
   }
-  PN->takeName(&LI);
-  LLVM_DEBUG(dbgs() << "          to: " << *PN << "\n");
-  LI.replaceAllUsesWith(PN);
+  if (isa<LoadInst>(I)) {
+    PN->takeName(&I);
+    LLVM_DEBUG(dbgs() << "          to: " << *PN << "\n");
+    I.replaceAllUsesWith(PN);
+  }
 }
 
-static bool rewriteSelectInstLoads(SelectInst &SI,
-                                   const sroa::PossiblySpeculatableLoads &Loads,
-                                   IRBuilderTy &IRB, DomTreeUpdater *DTU) {
+static void rewriteMemOpOfSelect(SelectInst &SelInst, Instruction &I,
+                                 sroa::SelectHandSpeculativity Spec,
+                                 DomTreeUpdater &DTU) {
+  if (auto *LI = dyn_cast<LoadInst>(&I))
+    rewriteMemOpOfSelect(SelInst, *LI, Spec, DTU);
+  else if (auto *SI = dyn_cast<StoreInst>(&I))
+    rewriteMemOpOfSelect(SelInst, *SI, Spec, DTU);
+  else
+    llvm_unreachable_internal("Only for load and store.");
+}
+
+static bool rewriteSelectInstMemOps(SelectInst &SI,
+                                    const sroa::RewriteableMemOps &Ops,
+                                    IRBuilderTy &IRB, DomTreeUpdater *DTU) {
   bool CFGChanged = false;
   LLVM_DEBUG(dbgs() << "    original select: " << SI << "\n");
 
-  for (const PossiblySpeculatableLoad &Load : Loads) {
-    LoadInst *LI = Load.getPointer();
-    sroa::SelectHandSpeculativity Spec = Load.getInt();
+  for (const RewriteableMemOp &Op : Ops) {
+    sroa::SelectHandSpeculativity Spec;
+    Instruction *I;
+    if (auto *const *US = std::get_if<UnspeculatableStore>(&Op)) {
+      I = *US;
+    } else {
+      auto PSL = std::get<PossiblySpeculatableLoad>(Op);
+      I = PSL.getPointer();
+      Spec = PSL.getInt();
+    }
     if (Spec.areAllSpeculatable()) {
-      speculateSelectInstLoads(SI, *LI, IRB);
+      speculateSelectInstLoads(SI, cast<LoadInst>(*I), IRB);
     } else {
       assert(DTU && "Should not get here when not allowed to modify the CFG!");
-      rewriteLoadOfSelect(SI, *LI, Spec, *DTU);
+      rewriteMemOpOfSelect(SI, *I, Spec, *DTU);
       CFGChanged = true;
     }
-    LI->eraseFromParent();
+    I->eraseFromParent();
   }
 
   for (User *U : make_early_inc_range(SI.users()))
@@ -4490,20 +4531,20 @@ AllocaInst *SROAPass::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
       break;
     }
 
-  SmallVector<std::pair<SelectInst *, PossiblySpeculatableLoads>, 2>
+  SmallVector<std::pair<SelectInst *, RewriteableMemOps>, 2>
       NewSelectsToRewrite;
   NewSelectsToRewrite.reserve(SelectUsers.size());
   for (SelectInst *Sel : SelectUsers) {
-    std::optional<PossiblySpeculatableLoads> Loads =
+    std::optional<RewriteableMemOps> Ops =
         isSafeSelectToSpeculate(*Sel, PreserveCFG);
-    if (!Loads) {
+    if (!Ops) {
       Promotable = false;
       PHIUsers.clear();
       SelectUsers.clear();
       NewSelectsToRewrite.clear();
       break;
     }
-    NewSelectsToRewrite.emplace_back(std::make_pair(Sel, *Loads));
+    NewSelectsToRewrite.emplace_back(std::make_pair(Sel, *Ops));
   }
 
   if (Promotable) {
@@ -4809,7 +4850,7 @@ SROAPass::runOnAlloca(AllocaInst &AI) {
   while (!RemainingSelectsToRewrite.empty()) {
     const auto [K, V] = RemainingSelectsToRewrite.pop_back_val();
     CFGChanged |=
-        rewriteSelectInstLoads(*K, V, IRB, PreserveCFG ? nullptr : DTU);
+        rewriteSelectInstMemOps(*K, V, IRB, PreserveCFG ? nullptr : DTU);
   }
 
   return {Changed, CFGChanged};
