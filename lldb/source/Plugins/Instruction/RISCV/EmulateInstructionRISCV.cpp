@@ -560,9 +560,9 @@ static const InstrPattern PATTERNS[] = {
     {"FCVT_W_S", 0xFFF0007F, 0xC0000053, DecodeIType<FCVT_W_S>},
     {"FCVT_WU_S", 0xFFF0007F, 0xC0100053, DecodeIType<FCVT_WU_S>},
     {"FMV_X_W", 0xFFF0707F, 0xE0000053, DecodeIType<FMV_X_W>},
-    {"FEQ_S", 0xFE00707F, 0xA2002053, DecodeRType<FEQ_S>},
-    {"FLT_S", 0xFE00707F, 0xA2001053, DecodeRType<FLT_S>},
-    {"FLE_S", 0xFE00707F, 0xA2000053, DecodeRType<FLE_S>},
+    {"FEQ_S", 0xFE00707F, 0xA0002053, DecodeRType<FEQ_S>},
+    {"FLT_S", 0xFE00707F, 0xA0001053, DecodeRType<FLT_S>},
+    {"FLE_S", 0xFE00707F, 0xA0000053, DecodeRType<FLE_S>},
     {"FCLASS_S", 0xFFF0707F, 0xE0001053, DecodeIType<FCLASS_S>},
     {"FCVT_S_W", 0xFFF0007F, 0xD0000053, DecodeIType<FCVT_S_W>},
     {"FCVT_S_WU", 0xFFF0007F, 0xD0100053, DecodeIType<FCVT_S_WU>},
@@ -573,6 +573,42 @@ static const InstrPattern PATTERNS[] = {
     {"FCVT_LU_S", 0xFFF0007F, 0xC0300053, DecodeIType<FCVT_LU_S>},
     {"FCVT_S_L", 0xFFF0007F, 0xD0200053, DecodeIType<FCVT_S_L>},
     {"FCVT_S_LU", 0xFFF0007F, 0xD0300053, DecodeIType<FCVT_S_LU>},
+
+    // RV32D (Extension for Double-Precision Floating-Point) //
+    {"FLD", 0x707F, 0x3007, DecodeIType<FLD>},
+    {"FSD", 0x707F, 0x3027, DecodeSType<FSD>},
+    {"FMADD_D", 0x600007F, 0x2000043, DecodeR4Type<FMADD_D>},
+    {"FMSUB_D", 0x600007F, 0x2000047, DecodeR4Type<FMSUB_D>},
+    {"FNMSUB_D", 0x600007F, 0x200004B, DecodeR4Type<FNMSUB_D>},
+    {"FNMADD_D", 0x600007F, 0x200004F, DecodeR4Type<FNMADD_D>},
+    {"FADD_D", 0xFE00007F, 0x2000053, DecodeRType<FADD_D>},
+    {"FSUB_D", 0xFE00007F, 0xA000053, DecodeRType<FSUB_D>},
+    {"FMUL_D", 0xFE00007F, 0x12000053, DecodeRType<FMUL_D>},
+    {"FDIV_D", 0xFE00007F, 0x1A000053, DecodeRType<FDIV_D>},
+    {"FSQRT_D", 0xFFF0007F, 0x5A000053, DecodeIType<FSQRT_D>},
+    {"FSGNJ_D", 0xFE00707F, 0x22000053, DecodeRType<FSGNJ_D>},
+    {"FSGNJN_D", 0xFE00707F, 0x22001053, DecodeRType<FSGNJN_D>},
+    {"FSGNJX_D", 0xFE00707F, 0x22002053, DecodeRType<FSGNJX_D>},
+    {"FMIN_D", 0xFE00707F, 0x2A000053, DecodeRType<FMIN_D>},
+    {"FMAX_D", 0xFE00707F, 0x2A001053, DecodeRType<FMAX_D>},
+    {"FCVT_S_D", 0xFFF0007F, 0x40100053, DecodeIType<FCVT_S_D>},
+    {"FCVT_D_S", 0xFFF0007F, 0x42000053, DecodeIType<FCVT_D_S>},
+    {"FEQ_D", 0xFE00707F, 0xA2002053, DecodeRType<FEQ_D>},
+    {"FLT_D", 0xFE00707F, 0xA2001053, DecodeRType<FLT_D>},
+    {"FLE_D", 0xFE00707F, 0xA2000053, DecodeRType<FLE_D>},
+    {"FCLASS_D", 0xFFF0707F, 0xE2001053, DecodeIType<FCLASS_D>},
+    {"FCVT_W_D", 0xFFF0007F, 0xC2000053, DecodeIType<FCVT_W_D>},
+    {"FCVT_WU_D", 0xFFF0007F, 0xC2100053, DecodeIType<FCVT_WU_D>},
+    {"FCVT_D_W", 0xFFF0007F, 0xD2000053, DecodeIType<FCVT_D_W>},
+    {"FCVT_D_WU", 0xFFF0007F, 0xD2100053, DecodeIType<FCVT_D_WU>},
+
+    // RV64D (Extension for Double-Precision Floating-Point) //
+    {"FCVT_L_D", 0xFFF0007F, 0xC2200053, DecodeIType<FCVT_L_D>},
+    {"FCVT_LU_D", 0xFFF0007F, 0xC2300053, DecodeIType<FCVT_LU_D>},
+    {"FMV_X_D", 0xFFF0707F, 0xE2000053, DecodeIType<FMV_X_D>},
+    {"FCVT_D_L", 0xFFF0007F, 0xD2200053, DecodeIType<FCVT_D_L>},
+    {"FCVT_D_LU", 0xFFF0007F, 0xD2300053, DecodeIType<FCVT_D_LU>},
+    {"FMV_D_X", 0xFFF0707F, 0xF2000053, DecodeIType<FMV_D_X>},
 };
 
 Optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
@@ -1172,160 +1208,103 @@ public:
         m_emu, inst, 8, ZextD,
         [](uint64_t a, uint64_t b) { return std::max(a, b); });
   }
-  bool operator()(FLW inst) {
-    return transformOptional(
-               inst.rs1.Read(m_emu),
-               [&](auto &&rs1) {
-                 uint64_t addr = rs1 + uint64_t(inst.imm);
-                 uint64_t bits = m_emu.ReadMem<uint64_t>(addr).value();
-                 APFloat f(APFloat::IEEEsingle(), APInt(32, bits));
-                 return inst.rd.WriteAPFloat(m_emu, f);
-               })
-        .value_or(false);
-  }
-  bool operator()(FSW inst) {
-    return transformOptional(
-               zipOpt(inst.rs1.Read(m_emu), inst.rs2.ReadAPFloat(m_emu, false)),
-               [&](auto &&tup) {
-                 auto [rs1, rs2] = tup;
-                 uint64_t addr = rs1 + uint64_t(inst.imm);
-                 uint64_t bits = rs2.bitcastToAPInt().getZExtValue();
-                 return m_emu.WriteMem<uint64_t>(addr, bits);
-               })
-        .value_or(false);
-  }
-  bool operator()(FMADD_S inst) {
-    return transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                                    inst.rs2.ReadAPFloat(m_emu, false),
-                                    inst.rs3.ReadAPFloat(m_emu, false)),
-                             [&](auto &&tup) {
-                               auto [rs1, rs2, rs3] = tup;
-                               auto res = rs1.fusedMultiplyAdd(
-                                   rs2, rs3, m_emu.GetRoundingMode());
-                               inst.rd.WriteAPFloat(m_emu, rs1);
-                               return m_emu.SetAccruedExceptions(res);
+  template <typename T>
+  bool F_Load(T inst, const fltSemantics &(*semantics)(),
+              unsigned int numBits) {
+    return transformOptional(inst.rs1.Read(m_emu),
+                             [&](auto &&rs1) {
+                               uint64_t addr = rs1 + uint64_t(inst.imm);
+                               uint64_t bits =
+                                   m_emu.ReadMem<uint64_t>(addr).value();
+                               APFloat f(semantics(), APInt(numBits, bits));
+                               return inst.rd.WriteAPFloat(m_emu, f);
                              })
         .value_or(false);
   }
-  bool operator()(FMSUB_S inst) {
-    return transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                                    inst.rs2.ReadAPFloat(m_emu, false),
-                                    inst.rs3.ReadAPFloat(m_emu, false)),
-                             [&](auto &&tup) {
-                               auto [rs1, rs2, rs3] = tup;
-                               auto res = rs1.fusedMultiplyAdd(
-                                   rs2, -rs3, m_emu.GetRoundingMode());
-                               inst.rd.WriteAPFloat(m_emu, rs1);
-                               return m_emu.SetAccruedExceptions(res);
-                             })
-        .value_or(false);
-  }
-  bool operator()(FNMSUB_S inst) {
-    return transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                                    inst.rs2.ReadAPFloat(m_emu, false),
-                                    inst.rs3.ReadAPFloat(m_emu, false)),
-                             [&](auto &&tup) {
-                               auto [rs1, rs2, rs3] = tup;
-                               auto res = rs1.fusedMultiplyAdd(
-                                   -rs2, rs3, m_emu.GetRoundingMode());
-                               inst.rd.WriteAPFloat(m_emu, rs1);
-                               return m_emu.SetAccruedExceptions(res);
-                             })
-        .value_or(false);
-  }
-  bool operator()(FNMADD_S inst) {
-    return transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                                    inst.rs2.ReadAPFloat(m_emu, false),
-                                    inst.rs3.ReadAPFloat(m_emu, false)),
-                             [&](auto &&tup) {
-                               auto [rs1, rs2, rs3] = tup;
-                               auto res = rs1.fusedMultiplyAdd(
-                                   -rs2, -rs3, m_emu.GetRoundingMode());
-                               inst.rd.WriteAPFloat(m_emu, rs1);
-                               return m_emu.SetAccruedExceptions(res);
-                             })
-        .value_or(false);
-  }
-  bool operator()(FADD_S inst) {
-    return transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                                    inst.rs2.ReadAPFloat(m_emu, false)),
+  bool operator()(FLW inst) { return F_Load(inst, &APFloat::IEEEsingle, 32); }
+  template <typename T> bool F_Store(T inst, bool isDouble) {
+    return transformOptional(zipOpt(inst.rs1.Read(m_emu),
+                                    inst.rs2.ReadAPFloat(m_emu, isDouble)),
                              [&](auto &&tup) {
                                auto [rs1, rs2] = tup;
-                               auto res = rs1.add(rs2, m_emu.GetRoundingMode());
-                               inst.rd.WriteAPFloat(m_emu, rs1);
-                               return m_emu.SetAccruedExceptions(res);
+                               uint64_t addr = rs1 + uint64_t(inst.imm);
+                               uint64_t bits =
+                                   rs2.bitcastToAPInt().getZExtValue();
+                               return m_emu.WriteMem<uint64_t>(addr, bits);
                              })
         .value_or(false);
   }
-  bool operator()(FSUB_S inst) {
-    return transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                                    inst.rs2.ReadAPFloat(m_emu, false)),
+  bool operator()(FSW inst) { return F_Store(inst, false); }
+  std::tuple<bool, APFloat> FusedMultiplyAdd(APFloat rs1, APFloat rs2,
+                                             APFloat rs3) {
+    auto opStatus = rs1.fusedMultiplyAdd(rs2, rs3, m_emu.GetRoundingMode());
+    auto res = m_emu.SetAccruedExceptions(opStatus);
+    return {res, rs1};
+  }
+  template <typename T>
+  bool FMA(T inst, bool isDouble, float rs2_sign, float rs3_sign) {
+    return transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, isDouble),
+                                    inst.rs2.ReadAPFloat(m_emu, isDouble),
+                                    inst.rs3.ReadAPFloat(m_emu, isDouble)),
+                             [&](auto &&tup) {
+                               auto [rs1, rs2, rs3] = tup;
+                               rs2.copySign(APFloat(rs2_sign));
+                               rs3.copySign(APFloat(rs3_sign));
+                               auto [res, f] = FusedMultiplyAdd(rs1, rs2, rs3);
+                               return res && inst.rd.WriteAPFloat(m_emu, f);
+                             })
+        .value_or(false);
+  }
+  bool operator()(FMADD_S inst) { return FMA(inst, false, 1.0f, 1.0f); }
+  bool operator()(FMSUB_S inst) { return FMA(inst, false, 1.0f, -1.0f); }
+  bool operator()(FNMSUB_S inst) { return FMA(inst, false, -1.0f, 1.0f); }
+  bool operator()(FNMADD_S inst) { return FMA(inst, false, -1.0f, -1.0f); }
+  template <typename T>
+  bool F_Op(T inst, bool isDouble,
+            APFloat::opStatus (APFloat::*f)(const APFloat &RHS,
+                                            APFloat::roundingMode RM)) {
+    return transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, isDouble),
+                                    inst.rs2.ReadAPFloat(m_emu, isDouble)),
                              [&](auto &&tup) {
                                auto [rs1, rs2] = tup;
                                auto res =
-                                   rs1.subtract(rs2, m_emu.GetRoundingMode());
+                                   ((&rs1)->*f)(rs2, m_emu.GetRoundingMode());
                                inst.rd.WriteAPFloat(m_emu, rs1);
                                return m_emu.SetAccruedExceptions(res);
                              })
         .value_or(false);
   }
-  bool operator()(FMUL_S inst) {
-    return transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                                    inst.rs2.ReadAPFloat(m_emu, false)),
-                             [&](auto &&tup) {
-                               auto [rs1, rs2] = tup;
-                               auto res =
-                                   rs1.multiply(rs2, m_emu.GetRoundingMode());
-                               inst.rd.WriteAPFloat(m_emu, rs1);
-                               return m_emu.SetAccruedExceptions(res);
-                             })
-        .value_or(false);
-  }
-  bool operator()(FDIV_S inst) {
-    return transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                                    inst.rs2.ReadAPFloat(m_emu, false)),
-                             [&](auto &&tup) {
-                               auto [rs1, rs2] = tup;
-                               auto res =
-                                   rs1.divide(rs2, m_emu.GetRoundingMode());
-                               inst.rd.WriteAPFloat(m_emu, rs1);
-                               return m_emu.SetAccruedExceptions(res);
-                             })
-        .value_or(false);
-  }
+  bool operator()(FADD_S inst) { return F_Op(inst, false, &APFloat::add); }
+  bool operator()(FSUB_S inst) { return F_Op(inst, false, &APFloat::subtract); }
+  bool operator()(FMUL_S inst) { return F_Op(inst, false, &APFloat::multiply); }
+  bool operator()(FDIV_S inst) { return F_Op(inst, false, &APFloat::divide); }
   bool operator()(FSQRT_S inst) {
     // TODO: APFloat doesn't have a sqrt function.
     return false;
   }
-  bool operator()(FSGNJ_S inst) {
-    return transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                                    inst.rs2.ReadAPFloat(m_emu, false)),
+  template <typename T> bool F_SignInj(T inst, bool isDouble, bool isNegate) {
+    return transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, isDouble),
+                                    inst.rs2.ReadAPFloat(m_emu, isDouble)),
                              [&](auto &&tup) {
                                auto [rs1, rs2] = tup;
+                               if (isNegate)
+                                 rs2.changeSign();
                                rs1.copySign(rs2);
                                return inst.rd.WriteAPFloat(m_emu, rs1);
                              })
         .value_or(false);
   }
-  bool operator()(FSGNJN_S inst) {
-    return transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                                    inst.rs2.ReadAPFloat(m_emu, false)),
+  bool operator()(FSGNJ_S inst) { return F_SignInj(inst, false, false); }
+  bool operator()(FSGNJN_S inst) { return F_SignInj(inst, false, true); }
+  template <typename T> bool F_SignInjXor(T inst, bool isDouble) {
+    return transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, isDouble),
+                                    inst.rs2.ReadAPFloat(m_emu, isDouble)),
                              [&](auto &&tup) {
                                auto [rs1, rs2] = tup;
-                               rs1.copySign(-rs2);
-                               return inst.rd.WriteAPFloat(m_emu, rs1);
-                             })
-        .value_or(false);
-  }
-  bool operator()(FSGNJX_S inst) {
-    return transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                                    inst.rs2.ReadAPFloat(m_emu, false)),
-                             [&](auto &&tup) {
-                               auto [rs1, rs2] = tup;
-                               // spec: the sign bit is the XOR of the
-                               // sign bits of rs1 and rs2. if rs1 and rs2
-                               // have the same signs set rs1 to positive
-                               // else set rs1 to negative
+                               // spec: the sign bit is the XOR of the sign bits
+                               // of rs1 and rs2. if rs1 and rs2 have the same
+                               // signs set rs1 to positive else set rs1 to
+                               // negative
                                if (rs1.isNegative() == rs2.isNegative()) {
                                  rs1.clearSign();
                                } else {
@@ -1336,10 +1315,13 @@ public:
                              })
         .value_or(false);
   }
-  bool operator()(FMIN_S inst) {
+  bool operator()(FSGNJX_S inst) { return F_SignInjXor(inst, false); }
+  template <typename T>
+  bool F_MAX_MIN(T inst, bool isDouble,
+                 APFloat (*f)(const APFloat &A, const APFloat &B)) {
     return transformOptional(
-               zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                      inst.rs2.ReadAPFloat(m_emu, false)),
+               zipOpt(inst.rs1.ReadAPFloat(m_emu, isDouble),
+                      inst.rs2.ReadAPFloat(m_emu, isDouble)),
                [&](auto &&tup) {
                  auto [rs1, rs2] = tup;
                  // If both inputs are NaNs, the result is the canonical NaN.
@@ -1352,102 +1334,83 @@ public:
                    auto canonicalNaN = APFloat::getQNaN(rs1.getSemantics());
                    return inst.rd.WriteAPFloat(m_emu, canonicalNaN);
                  }
-                 return inst.rd.WriteAPFloat(m_emu, minnum(rs1, rs2));
+                 return inst.rd.WriteAPFloat(m_emu, f(rs1, rs2));
                })
         .value_or(false);
   }
-  bool operator()(FMAX_S inst) {
-    return transformOptional(
-               zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                      inst.rs2.ReadAPFloat(m_emu, false)),
-               [&](auto &&tup) {
-                 auto [rs1, rs2] = tup;
-                 if (rs1.isNaN() || rs2.isNaN())
-                   m_emu.SetAccruedExceptions(APFloat::opInvalidOp);
-                 if (rs1.isNaN() && rs2.isNaN()) {
-                   auto canonicalNaN = APFloat::getQNaN(rs1.getSemantics());
-                   return inst.rd.WriteAPFloat(m_emu, canonicalNaN);
-                 }
-                 return inst.rd.WriteAPFloat(m_emu, maxnum(rs1, rs2));
-               })
-        .value_or(false);
-  }
+  bool operator()(FMIN_S inst) { return F_MAX_MIN(inst, false, minnum); }
+  bool operator()(FMAX_S inst) { return F_MAX_MIN(inst, false, maxnum); }
   bool operator()(FCVT_W_S inst) {
-    return transformOptional(inst.rs1.ReadAPFloat(m_emu, false),
-                             [&](auto &&rs1) {
-                               int32_t res = rs1.convertToFloat();
-                               return inst.rd.Write(m_emu, uint64_t(res));
-                             })
-        .value_or(false);
+    return FCVT_i2f<FCVT_W_S, int32_t, float>(inst, false,
+                                              &APFloat::convertToFloat);
   }
   bool operator()(FCVT_WU_S inst) {
-    return transformOptional(inst.rs1.ReadAPFloat(m_emu, false),
-                             [&](auto &&rs1) {
-                               uint32_t res = rs1.convertToFloat();
-                               return inst.rd.Write(m_emu, uint64_t(res));
-                             })
-        .value_or(false);
+    return FCVT_i2f<FCVT_WU_S, uint32_t, float>(inst, false,
+                                                &APFloat::convertToFloat);
   }
-  bool operator()(FMV_X_W inst) {
-    return transformOptional(inst.rs1.ReadAPFloat(m_emu, false),
-                             [&](auto &&rs1) {
-                               if (rs1.isNaN())
-                                 return inst.rd.Write(m_emu, 0x7fc00000);
-                               auto bits = rs1.bitcastToAPInt();
-                               return inst.rd.Write(
-                                   m_emu,
-                                   NanBoxing(uint64_t(bits.getSExtValue())));
-                             })
-        .value_or(false);
-  }
-  bool operator()(FEQ_S inst) {
+  template <typename T> bool FMV_f2i(T inst, bool isDouble) {
     return transformOptional(
-               zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                      inst.rs2.ReadAPFloat(m_emu, false)),
-               [&](auto &&tup) {
-                 auto [rs1, rs2] = tup;
-                 if (rs1.isNaN() || rs2.isNaN()) {
-                   if (rs1.isSignaling() || rs2.isSignaling())
-                     m_emu.SetAccruedExceptions(APFloat::opInvalidOp);
-                   return inst.rd.Write(m_emu, 0);
+               inst.rs1.ReadAPFloat(m_emu, isDouble),
+               [&](auto &&rs1) {
+                 if (rs1.isNaN()) {
+                   if (isDouble)
+                     return inst.rd.Write(m_emu, 0x7ff8'0000'0000'0000);
+                   else
+                     return inst.rd.Write(m_emu, 0x7fc0'0000);
                  }
-                 return inst.rd.Write(m_emu,
-                                      rs1.compare(rs2) == APFloat::cmpEqual);
+                 auto bits = rs1.bitcastToAPInt().getZExtValue();
+                 if (isDouble)
+                   return inst.rd.Write(m_emu, bits);
+                 else
+                   return inst.rd.Write(m_emu, uint64_t(bits & 0xffff'ffff));
                })
         .value_or(false);
   }
-  bool operator()(FLT_S inst) {
+  bool operator()(FMV_X_W inst) { return FMV_f2i(inst, false); }
+  enum F_CMP {
+    FEQ,
+    FLT,
+    FLE,
+  };
+  template <typename T> bool F_Compare(T inst, bool isDouble, F_CMP cmp) {
     return transformOptional(
-               zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                      inst.rs2.ReadAPFloat(m_emu, false)),
+               zipOpt(inst.rs1.ReadAPFloat(m_emu, isDouble),
+                      inst.rs2.ReadAPFloat(m_emu, isDouble)),
                [&](auto &&tup) {
                  auto [rs1, rs2] = tup;
                  if (rs1.isNaN() || rs2.isNaN()) {
-                   m_emu.SetAccruedExceptions(APFloat::opInvalidOp);
-                   return inst.rd.Write(m_emu, 0);
+                   if (cmp == FEQ) {
+                     if (rs1.isSignaling() || rs2.isSignaling()) {
+                       auto res =
+                           m_emu.SetAccruedExceptions(APFloat::opInvalidOp);
+                       return res && inst.rd.Write(m_emu, 0);
+                     }
+                   }
+                   auto res = m_emu.SetAccruedExceptions(APFloat::opInvalidOp);
+                   return res && inst.rd.Write(m_emu, 0);
                  }
-                 return inst.rd.Write(m_emu,
-                                      rs1.compare(rs2) == APFloat::cmpLessThan);
+                 switch (cmp) {
+                 case FEQ:
+                   return inst.rd.Write(m_emu,
+                                        rs1.compare(rs2) == APFloat::cmpEqual);
+                 case FLT:
+                   return inst.rd.Write(m_emu, rs1.compare(rs2) ==
+                                                   APFloat::cmpLessThan);
+                 case FLE:
+                   return inst.rd.Write(m_emu, rs1.compare(rs2) !=
+                                                   APFloat::cmpGreaterThan);
+                 default:
+                   llvm_unreachable("Invalid F_CMP");
+                 }
                })
         .value_or(false);
   }
-  bool operator()(FLE_S inst) {
-    return transformOptional(
-               zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                      inst.rs2.ReadAPFloat(m_emu, false)),
-               [&](auto &&tup) {
-                 auto [rs1, rs2] = tup;
-                 if (rs1.isNaN() || rs2.isNaN()) {
-                   m_emu.SetAccruedExceptions(APFloat::opInvalidOp);
-                   return inst.rd.Write(m_emu, 0);
-                 }
-                 return inst.rd.Write(m_emu, rs1.compare(rs2) !=
-                                                 APFloat::cmpGreaterThan);
-               })
-        .value_or(false);
-  }
-  bool operator()(FCLASS_S inst) {
-    return transformOptional(inst.rs1.ReadAPFloat(m_emu, false),
+
+  bool operator()(FEQ_S inst) { return F_Compare(inst, false, FEQ); }
+  bool operator()(FLT_S inst) { return F_Compare(inst, false, FLT); }
+  bool operator()(FLE_S inst) { return F_Compare(inst, false, FLE); }
+  template <typename T> bool FCLASS(T inst, bool isDouble) {
+    return transformOptional(inst.rs1.ReadAPFloat(m_emu, isDouble),
                              [&](auto &&rs1) {
                                uint64_t result = 0;
                                if (rs1.isInfinity() && rs1.isNegative())
@@ -1480,62 +1443,133 @@ public:
                              })
         .value_or(false);
   }
-  bool operator()(FCVT_S_W inst) {
-    return transformOptional(inst.rs1.ReadI32(m_emu),
+  bool operator()(FCLASS_S inst) { return FCLASS(inst, false); }
+  template <typename T, typename E>
+  bool FCVT_f2i(T inst, Optional<E> (Rs::*f)(EmulateInstructionRISCV &emu),
+                const fltSemantics &semantics) {
+    return transformOptional(((&inst.rs1)->*f)(m_emu),
                              [&](auto &&rs1) {
-                               APFloat apf(APFloat::IEEEsingle(), rs1);
+                               APFloat apf(semantics, rs1);
                                return inst.rd.WriteAPFloat(m_emu, apf);
                              })
         .value_or(false);
   }
+  bool operator()(FCVT_S_W inst) {
+    return FCVT_f2i(inst, &Rs::ReadI32, APFloat::IEEEsingle());
+  }
   bool operator()(FCVT_S_WU inst) {
-    return transformOptional(inst.rs1.ReadU32(m_emu),
+    return FCVT_f2i(inst, &Rs::ReadU32, APFloat::IEEEsingle());
+  }
+  template <typename T, typename E>
+  bool FMV_i2f(T inst, unsigned int numBits, E (APInt::*f)() const) {
+    return transformOptional(inst.rs1.Read(m_emu),
                              [&](auto &&rs1) {
-                               APFloat apf(APFloat::IEEEsingle(), rs1);
+                               APInt apInt(numBits, rs1);
+                               if (numBits == 32) // a.k.a. float
+                                 apInt = APInt(numBits, NanUnBoxing(rs1));
+                               APFloat apf((&apInt->*f)());
                                return inst.rd.WriteAPFloat(m_emu, apf);
                              })
         .value_or(false);
   }
   bool operator()(FMV_W_X inst) {
-    return transformOptional(inst.rs1.Read(m_emu),
-                             [&](auto &&rs1) {
-                               APInt apInt(32, NanUnBoxing(rs1));
-                               APFloat apf(apInt.bitsToFloat());
-                               return inst.rd.WriteAPFloat(m_emu, apf);
-                             })
-        .value_or(false);
+    return FMV_i2f(inst, 32, &APInt::bitsToFloat);
   }
-  bool operator()(FCVT_L_S inst) {
-    return transformOptional(inst.rs1.ReadAPFloat(m_emu, false),
+  template <typename I, typename E, typename T>
+  bool FCVT_i2f(I inst, bool isDouble, T (APFloat::*f)() const) {
+    return transformOptional(inst.rs1.ReadAPFloat(m_emu, isDouble),
                              [&](auto &&rs1) {
-                               int64_t res = rs1.convertToFloat();
+                               E res = E((&rs1->*f)());
                                return inst.rd.Write(m_emu, uint64_t(res));
                              })
         .value_or(false);
   }
+  bool operator()(FCVT_L_S inst) {
+    return FCVT_i2f<FCVT_L_S, int64_t, float>(inst, false,
+                                              &APFloat::convertToFloat);
+  }
   bool operator()(FCVT_LU_S inst) {
-    return transformOptional(inst.rs1.ReadAPFloat(m_emu, false),
-                             [&](auto &&rs1) {
-                               uint64_t res = rs1.convertToFloat();
-                               return inst.rd.Write(m_emu, res);
-                             })
-        .value_or(false);
+    return FCVT_i2f<FCVT_LU_S, uint64_t, float>(inst, false,
+                                                &APFloat::convertToFloat);
   }
   bool operator()(FCVT_S_L inst) {
-    return transformOptional(inst.rs1.ReadI64(m_emu),
+    return FCVT_f2i(inst, &Rs::ReadI64, APFloat::IEEEsingle());
+  }
+  bool operator()(FCVT_S_LU inst) {
+    return FCVT_f2i(inst, &Rs::Read, APFloat::IEEEsingle());
+  }
+  bool operator()(FLD inst) { return F_Load(inst, &APFloat::IEEEdouble, 64); }
+  bool operator()(FSD inst) { return F_Store(inst, true); }
+  bool operator()(FMADD_D inst) { return FMA(inst, true, 1.0f, 1.0f); }
+  bool operator()(FMSUB_D inst) { return FMA(inst, true, 1.0f, -1.0f); }
+  bool operator()(FNMSUB_D inst) { return FMA(inst, true, -1.0f, 1.0f); }
+  bool operator()(FNMADD_D inst) { return FMA(inst, true, -1.0f, -1.0f); }
+  bool operator()(FADD_D inst) { return F_Op(inst, true, &APFloat::add); }
+  bool operator()(FSUB_D inst) { return F_Op(inst, true, &APFloat::subtract); }
+  bool operator()(FMUL_D inst) { return F_Op(inst, true, &APFloat::multiply); }
+  bool operator()(FDIV_D inst) { return F_Op(inst, true, &APFloat::divide); }
+  bool operator()(FSQRT_D inst) {
+    // TODO: APFloat doesn't have a sqrt function.
+    return false;
+  }
+  bool operator()(FSGNJ_D inst) { return F_SignInj(inst, true, false); }
+  bool operator()(FSGNJN_D inst) { return F_SignInj(inst, true, true); }
+  bool operator()(FSGNJX_D inst) { return F_SignInjXor(inst, true); }
+  bool operator()(FMIN_D inst) { return F_MAX_MIN(inst, true, minnum); }
+  bool operator()(FMAX_D inst) { return F_MAX_MIN(inst, true, maxnum); }
+  bool operator()(FCVT_S_D inst) {
+    return transformOptional(inst.rs1.ReadAPFloat(m_emu, true),
                              [&](auto &&rs1) {
-                               APFloat apf(APFloat::IEEEsingle(), rs1);
+                               double d = rs1.convertToDouble();
+                               APFloat apf((float(d)));
                                return inst.rd.WriteAPFloat(m_emu, apf);
                              })
         .value_or(false);
   }
-  bool operator()(FCVT_S_LU inst) {
-    return transformOptional(inst.rs1.Read(m_emu),
+  bool operator()(FCVT_D_S inst) {
+    return transformOptional(inst.rs1.ReadAPFloat(m_emu, false),
                              [&](auto &&rs1) {
-                               APFloat apf(APFloat::IEEEsingle(), rs1);
+                               float f = rs1.convertToFloat();
+                               APFloat apf((double(f)));
                                return inst.rd.WriteAPFloat(m_emu, apf);
                              })
         .value_or(false);
+  }
+  bool operator()(FEQ_D inst) { return F_Compare(inst, true, FEQ); }
+  bool operator()(FLT_D inst) { return F_Compare(inst, true, FLT); }
+  bool operator()(FLE_D inst) { return F_Compare(inst, true, FLE); }
+  bool operator()(FCLASS_D inst) { return FCLASS(inst, true); }
+  bool operator()(FCVT_W_D inst) {
+    return FCVT_i2f<FCVT_W_D, int32_t, double>(inst, true,
+                                               &APFloat::convertToDouble);
+  }
+  bool operator()(FCVT_WU_D inst) {
+    return FCVT_i2f<FCVT_WU_D, uint32_t, double>(inst, true,
+                                                 &APFloat::convertToDouble);
+  }
+  bool operator()(FCVT_D_W inst) {
+    return FCVT_f2i(inst, &Rs::ReadI32, APFloat::IEEEdouble());
+  }
+  bool operator()(FCVT_D_WU inst) {
+    return FCVT_f2i(inst, &Rs::ReadU32, APFloat::IEEEdouble());
+  }
+  bool operator()(FCVT_L_D inst) {
+    return FCVT_i2f<FCVT_L_D, int64_t, double>(inst, true,
+                                               &APFloat::convertToDouble);
+  }
+  bool operator()(FCVT_LU_D inst) {
+    return FCVT_i2f<FCVT_LU_D, uint64_t, double>(inst, true,
+                                                 &APFloat::convertToDouble);
+  }
+  bool operator()(FMV_X_D inst) { return FMV_f2i(inst, true); }
+  bool operator()(FCVT_D_L inst) {
+    return FCVT_f2i(inst, &Rs::ReadI64, APFloat::IEEEdouble());
+  }
+  bool operator()(FCVT_D_LU inst) {
+    return FCVT_f2i(inst, &Rs::Read, APFloat::IEEEdouble());
+  }
+  bool operator()(FMV_D_X inst) {
+    return FMV_i2f(inst, 64, &APInt::bitsToDouble);
   }
   bool operator()(INVALID inst) { return false; }
   bool operator()(RESERVED inst) { return false; }
