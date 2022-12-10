@@ -879,6 +879,7 @@ def TruePredicate : Predicate<"true">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
 def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
 
+def HasNOPL      : Predicate<"Subtarget->hasNOPL()">;
 def HasMMX       : Predicate<"Subtarget->hasMMX()">;
 def Has3DNow     : Predicate<"Subtarget->hasThreeDNow()">;
 def Has3DNowA    : Predicate<"Subtarget->hasThreeDNowA()">;
