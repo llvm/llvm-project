@@ -92,4 +92,14 @@ def int_loongarch_csrxchg_d : Intrinsic<[llvm_i64_ty],
                                         [llvm_i64_ty, llvm_i64_ty,
                                          llvm_i32_ty],
                                         [ImmArg<ArgIndex<2>>]>;
+
+def int_loongarch_iocsrrd_b : Intrinsic<[llvm_i32_ty], [llvm_i32_ty]>;
+def int_loongarch_iocsrrd_h : Intrinsic<[llvm_i32_ty], [llvm_i32_ty]>;
+def int_loongarch_iocsrrd_w : Intrinsic<[llvm_i32_ty], [llvm_i32_ty]>;
+def int_loongarch_iocsrrd_d : Intrinsic<[llvm_i64_ty], [llvm_i32_ty]>;
+
+def int_loongarch_iocsrwr_b : Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
+def int_loongarch_iocsrwr_h : Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
+def int_loongarch_iocsrwr_w : Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
+def int_loongarch_iocsrwr_d : Intrinsic<[], [llvm_i64_ty, llvm_i32_ty]>;
 } // TargetPrefix = "loongarch"

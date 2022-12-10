@@ -222,3 +222,97 @@ unsigned long int csrxchg_d(unsigned long int a, unsigned long int b) {
   unsigned long int d = __builtin_loongarch_csrxchg_d(a, b, 1);
   return 0;
 }
+
+// CHECK-LABEL: @iocsrrd_b(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.b(i32 [[A:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.b(i32 [[A]])
+// CHECK-NEXT:    ret i8 0
+//
+unsigned char iocsrrd_b(unsigned int a) {
+  unsigned char b = __iocsrrd_b(a);
+  unsigned char c = __builtin_loongarch_iocsrrd_b(a);
+  return 0;
+}
+
+// CHECK-LABEL: @iocsrrd_h(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.h(i32 [[A:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.h(i32 [[A]])
+// CHECK-NEXT:    ret i16 0
+//
+unsigned short iocsrrd_h(unsigned int a) {
+  unsigned short b = __iocsrrd_h(a);
+  unsigned short c = __builtin_loongarch_iocsrrd_h(a);
+  return 0;
+}
+
+// CHECK-LABEL: @iocsrrd_w(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.w(i32 [[A:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.iocsrrd.w(i32 [[A]])
+// CHECK-NEXT:    ret i32 0
+//
+unsigned int iocsrrd_w(unsigned int a) {
+  unsigned int b = __iocsrrd_w(a);
+  unsigned int c = __builtin_loongarch_iocsrrd_w(a);
+  return 0;
+}
+
+// CHECK-LABEL: @iocsrwr_b(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[CONV_I:%.*]] = zext i8 [[A:%.*]] to i32
+// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.b(i32 [[CONV_I]], i32 [[B:%.*]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.b(i32 [[CONV_I]], i32 [[B]])
+// CHECK-NEXT:    ret void
+//
+void iocsrwr_b(unsigned char a, unsigned int b) {
+  __iocsrwr_b(a, b);
+  __builtin_loongarch_iocsrwr_b(a, b);
+}
+
+// CHECK-LABEL: @iocsrwr_h(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[CONV_I:%.*]] = zext i16 [[A:%.*]] to i32
+// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.h(i32 [[CONV_I]], i32 [[B:%.*]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.h(i32 [[CONV_I]], i32 [[B]])
+// CHECK-NEXT:    ret void
+//
+void iocsrwr_h(unsigned short a, unsigned int b) {
+  __iocsrwr_h(a, b);
+  __builtin_loongarch_iocsrwr_h(a, b);
+}
+
+// CHECK-LABEL: @iocsrwr_w(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.w(i32 [[A:%.*]], i32 [[B:%.*]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.w(i32 [[A]], i32 [[B]])
+// CHECK-NEXT:    ret void
+//
+void iocsrwr_w(unsigned int a, unsigned int b) {
+  __iocsrwr_w(a, b);
+  __builtin_loongarch_iocsrwr_w(a, b);
+}
+
+// CHECK-LABEL: @iocsrrd_d(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.loongarch.iocsrrd.d(i32 [[A:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.loongarch.iocsrrd.d(i32 [[A]])
+// CHECK-NEXT:    ret i64 0
+//
+unsigned long int iocsrrd_d(unsigned int a) {
+  unsigned long int b = __iocsrrd_d(a);
+  unsigned long int c = __builtin_loongarch_iocsrrd_d(a);
+  return 0;
+}
+
+// CHECK-LABEL: @iocsrwr_d(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.d(i64 [[A:%.*]], i32 [[B:%.*]])
+// CHECK-NEXT:    tail call void @llvm.loongarch.iocsrwr.d(i64 [[A]], i32 [[B]])
+// CHECK-NEXT:    ret void
+//
+void iocsrwr_d(unsigned long int a, unsigned int b) {
+  __iocsrwr_d(a, b);
+  __builtin_loongarch_iocsrwr_d(a, b);
+}
