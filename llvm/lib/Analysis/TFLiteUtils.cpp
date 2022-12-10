@@ -31,6 +31,7 @@
 
 #include <cassert>
 #include <numeric>
+#include <optional>
 
 using namespace llvm;
 
@@ -209,7 +210,7 @@ bool TFModelEvaluatorImpl::checkReportAndInvalidate(const TfLiteTensor *Tensor,
 
 Optional<TFModelEvaluator::EvaluationResult> TFModelEvaluator::evaluate() {
   if (!isValid())
-    return None;
+    return std::nullopt;
   return EvaluationResult(Impl->evaluate());
 }
 
