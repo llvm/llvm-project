@@ -91,7 +91,7 @@ private:
   void skipDirective(StringRef Name, const char *&First, const char *const End);
 
   /// Lexes next token and if it is identifier returns its string, otherwise
-  /// it skips the current line and returns \p None.
+  /// it skips the current line and returns \p std::nullopt.
   ///
   /// In any case (whatever the token kind) \p First and the \p Lexer will
   /// advance beyond the token.

@@ -235,7 +235,7 @@ public:
   /// Returns the value of \p E, if it can be determined in a non-path-sensitive
   /// manner.
   ///
-  /// If \p E is not a constant or cannot be modeled, returns \c None.
+  /// If \p E is not a constant or cannot be modeled, returns \c std::nullopt.
   Optional<SVal> getConstantVal(const Expr *E);
 
   NonLoc makeCompoundVal(QualType type, llvm::ImmutableList<SVal> vals) {

@@ -372,7 +372,7 @@ static const Expr *findWeakLValue(const Expr *E) {
 ///
 /// If the runtime does support a required entrypoint, then this method will
 /// generate a call and return the resulting value.  Otherwise it will return
-/// None and the caller can generate a msgSend instead.
+/// std::nullopt and the caller can generate a msgSend instead.
 static Optional<llvm::Value *>
 tryGenerateSpecializedMessageSend(CodeGenFunction &CGF, QualType ResultType,
                                   llvm::Value *Receiver,

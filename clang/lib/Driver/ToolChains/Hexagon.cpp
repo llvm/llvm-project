@@ -124,7 +124,7 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
       [&](auto FlagOn, auto FlagOff,
           unsigned MinVerNum) -> std::optional<StringRef> {
     // Return an std::optional<StringRef>:
-    // - None indicates a verification failure, or that the flag was not
+    // - std::nullopt indicates a verification failure, or that the flag was not
     //   present in Args.
     // - Otherwise the returned value is that name of the feature to add
     //   to Features.

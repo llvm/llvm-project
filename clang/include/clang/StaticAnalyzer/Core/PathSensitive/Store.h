@@ -173,7 +173,7 @@ public:
   ///  - We don't know (base is a symbolic region and we don't have
   ///    enough info to determine if the cast will succeed at run time).
   /// The function returns an optional with SVal representing the derived class
-  /// in case of a successful cast and `None` otherwise.
+  /// in case of a successful cast and `std::nullopt` otherwise.
   Optional<SVal> evalBaseToDerived(SVal Base, QualType DerivedPtrType);
 
   const ElementRegion *GetElementZeroRegion(const SubRegion *R, QualType T);
