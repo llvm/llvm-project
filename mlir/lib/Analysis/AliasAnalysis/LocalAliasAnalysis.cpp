@@ -13,6 +13,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -330,7 +331,7 @@ AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
     return AliasResult::MayAlias;
 
   // Check the alias results against each of the underlying values.
-  Optional<AliasResult> result;
+  std::optional<AliasResult> result;
   for (Value lhsVal : lhsValues) {
     for (Value rhsVal : rhsValues) {
       AliasResult nextResult = aliasImpl(lhsVal, rhsVal);
