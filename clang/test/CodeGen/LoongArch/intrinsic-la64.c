@@ -6,36 +6,44 @@
 // CHECK-LABEL: @dbar(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.loongarch.dbar(i32 0)
+// CHECK-NEXT:    tail call void @llvm.loongarch.dbar(i32 0)
 // CHECK-NEXT:    ret void
 //
 void dbar() {
-  return __builtin_loongarch_dbar(0);
+  __dbar(0);
+  __builtin_loongarch_dbar(0);
 }
 
 // CHECK-LABEL: @ibar(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.loongarch.ibar(i32 0)
+// CHECK-NEXT:    tail call void @llvm.loongarch.ibar(i32 0)
 // CHECK-NEXT:    ret void
 //
 void ibar() {
-  return __builtin_loongarch_ibar(0);
+  __ibar(0);
+  __builtin_loongarch_ibar(0);
 }
 
 // CHECK-LABEL: @loongarch_break(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.loongarch.break(i32 1)
+// CHECK-NEXT:    tail call void @llvm.loongarch.break(i32 1)
 // CHECK-NEXT:    ret void
 //
 void loongarch_break() {
+  __break(1);
   __builtin_loongarch_break(1);
 }
 
 // CHECK-LABEL: @syscall(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.loongarch.syscall(i32 1)
+// CHECK-NEXT:    tail call void @llvm.loongarch.syscall(i32 1)
 // CHECK-NEXT:    ret void
 //
 void syscall() {
+  __syscall(1);
   __builtin_loongarch_syscall(1);
 }
 
@@ -77,74 +85,106 @@ unsigned int csrxchg_w(unsigned int a, unsigned int b) {
 
 // CHECK-LABEL: @crc_w_b_w(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crc.w.b.w(i32 [[A:%.*]], i32 [[B:%.*]])
-// CHECK-NEXT:    ret i32 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[A:%.*]], 24
+// CHECK-NEXT:    [[CONV_I:%.*]] = ashr exact i32 [[TMP0]], 24
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crc.w.b.w(i32 [[CONV_I]], i32 [[B:%.*]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.loongarch.crc.w.b.w(i32 [[A]], i32 [[B]])
+// CHECK-NEXT:    ret i32 0
 //
 int crc_w_b_w(int a, int b) {
-  return __builtin_loongarch_crc_w_b_w(a, b);
+  int c = __crc_w_b_w(a, b);
+  int d = __builtin_loongarch_crc_w_b_w(a, b);
+  return 0;
 }
 
 // CHECK-LABEL: @crc_w_h_w(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crc.w.h.w(i32 [[A:%.*]], i32 [[B:%.*]])
-// CHECK-NEXT:    ret i32 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[A:%.*]], 16
+// CHECK-NEXT:    [[CONV_I:%.*]] = ashr exact i32 [[TMP0]], 16
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crc.w.h.w(i32 [[CONV_I]], i32 [[B:%.*]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.loongarch.crc.w.h.w(i32 [[A]], i32 [[B]])
+// CHECK-NEXT:    ret i32 0
 //
 int crc_w_h_w(int a, int b) {
-  return __builtin_loongarch_crc_w_h_w(a, b);
+  int c = __crc_w_h_w(a, b);
+  int d = __builtin_loongarch_crc_w_h_w(a, b);
+  return 0;
 }
 
 // CHECK-LABEL: @crc_w_w_w(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crc.w.w.w(i32 [[A:%.*]], i32 [[B:%.*]])
-// CHECK-NEXT:    ret i32 [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crc.w.w.w(i32 [[A]], i32 [[B]])
+// CHECK-NEXT:    ret i32 0
 //
 int crc_w_w_w(int a, int b) {
-  return __builtin_loongarch_crc_w_w_w(a, b);
+  int c = __crc_w_w_w(a, b);
+  int d = __builtin_loongarch_crc_w_w_w(a, b);
+  return 0;
 }
 
 // CHECK-LABEL: @crc_w_d_w(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crc.w.d.w(i64 [[A:%.*]], i32 [[B:%.*]])
-// CHECK-NEXT:    ret i32 [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crc.w.d.w(i64 [[A]], i32 [[B]])
+// CHECK-NEXT:    ret i32 0
 //
 int crc_w_d_w(long int a, int b) {
-  return __builtin_loongarch_crc_w_d_w(a, b);
+  int c = __crc_w_d_w(a, b);
+  int d = __builtin_loongarch_crc_w_d_w(a, b);
+  return 0;
 }
 
 // CHECK-LABEL: @crcc_w_b_w(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crcc.w.b.w(i32 [[A:%.*]], i32 [[B:%.*]])
-// CHECK-NEXT:    ret i32 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[A:%.*]], 24
+// CHECK-NEXT:    [[CONV_I:%.*]] = ashr exact i32 [[TMP0]], 24
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crcc.w.b.w(i32 [[CONV_I]], i32 [[B:%.*]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.loongarch.crcc.w.b.w(i32 [[A]], i32 [[B]])
+// CHECK-NEXT:    ret i32 0
 //
 int crcc_w_b_w(int a, int b) {
-  return __builtin_loongarch_crcc_w_b_w(a, b);
+  int c = __crcc_w_b_w(a, b);
+  int d = __builtin_loongarch_crcc_w_b_w(a, b);
+  return 0;
 }
 
 // CHECK-LABEL: @crcc_w_h_w(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crcc.w.h.w(i32 [[A:%.*]], i32 [[B:%.*]])
-// CHECK-NEXT:    ret i32 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[A:%.*]], 16
+// CHECK-NEXT:    [[CONV_I:%.*]] = ashr exact i32 [[TMP0]], 16
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crcc.w.h.w(i32 [[CONV_I]], i32 [[B:%.*]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.loongarch.crcc.w.h.w(i32 [[A]], i32 [[B]])
+// CHECK-NEXT:    ret i32 0
 //
 int crcc_w_h_w(int a, int b) {
-  return __builtin_loongarch_crcc_w_h_w(a, b);
+  int c = __crcc_w_h_w(a, b);
+  int d = __builtin_loongarch_crcc_w_h_w(a, b);
+  return 0;
 }
 
 // CHECK-LABEL: @crcc_w_w_w(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crcc.w.w.w(i32 [[A:%.*]], i32 [[B:%.*]])
-// CHECK-NEXT:    ret i32 [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crcc.w.w.w(i32 [[A]], i32 [[B]])
+// CHECK-NEXT:    ret i32 0
 //
 int crcc_w_w_w(int a, int b) {
-  return __builtin_loongarch_crcc_w_w_w(a, b);
+  int c = __crcc_w_w_w(a, b);
+  int d = __builtin_loongarch_crcc_w_w_w(a, b);
+  return 0;
 }
 
 // CHECK-LABEL: @crcc_w_d_w(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.loongarch.crcc.w.d.w(i64 [[A:%.*]], i32 [[B:%.*]])
-// CHECK-NEXT:    ret i32 [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.crcc.w.d.w(i64 [[A]], i32 [[B]])
+// CHECK-NEXT:    ret i32 0
 //
 int crcc_w_d_w(long int a, int b) {
-  return __builtin_loongarch_crcc_w_d_w(a, b);
+  int c = __crcc_w_d_w(a, b);
+  int d = __builtin_loongarch_crcc_w_d_w(a, b);
+  return 0;
 }
 
 // CHECK-LABEL: @csrrd_d(
