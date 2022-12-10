@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Dialect/Async/Passes.h"
 
 #include "PassDetail.h"
@@ -416,7 +418,7 @@ namespace {
 class AsyncFuncOpLowering : public OpConversionPattern<async::FuncOp> {
 public:
   AsyncFuncOpLowering(MLIRContext *ctx, FuncCoroMapPtr coros)
-      : OpConversionPattern<async::FuncOp>(ctx), coros_(coros) {}
+      : OpConversionPattern<async::FuncOp>(ctx), coros_(std::move(coros)) {}
 
   LogicalResult
   matchAndRewrite(async::FuncOp op, OpAdaptor adaptor,
@@ -474,7 +476,7 @@ public:
 class AsyncReturnOpLowering : public OpConversionPattern<async::ReturnOp> {
 public:
   AsyncReturnOpLowering(MLIRContext *ctx, FuncCoroMapPtr coros)
-      : OpConversionPattern<async::ReturnOp>(ctx), coros_(coros) {}
+      : OpConversionPattern<async::ReturnOp>(ctx), coros_(std::move(coros)) {}
 
   LogicalResult
   matchAndRewrite(async::ReturnOp op, OpAdaptor adaptor,
@@ -525,7 +527,7 @@ class AwaitOpLoweringBase : public OpConversionPattern<AwaitType> {
 public:
   AwaitOpLoweringBase(MLIRContext *ctx, FuncCoroMapPtr coros,
                       bool should_lower_blocking_wait)
-      : OpConversionPattern<AwaitType>(ctx), coros_(coros),
+      : OpConversionPattern<AwaitType>(ctx), coros_(std::move(coros)),
         should_lower_blocking_wait_(should_lower_blocking_wait) {}
 
   LogicalResult
@@ -666,7 +668,7 @@ public:
 class YieldOpLowering : public OpConversionPattern<async::YieldOp> {
 public:
   YieldOpLowering(MLIRContext *ctx, FuncCoroMapPtr coros)
-      : OpConversionPattern<async::YieldOp>(ctx), coros_(coros) {}
+      : OpConversionPattern<async::YieldOp>(ctx), coros_(std::move(coros)) {}
 
   LogicalResult
   matchAndRewrite(async::YieldOp op, OpAdaptor adaptor,
@@ -711,7 +713,7 @@ private:
 class AssertOpLowering : public OpConversionPattern<cf::AssertOp> {
 public:
   AssertOpLowering(MLIRContext *ctx, FuncCoroMapPtr coros)
-      : OpConversionPattern<cf::AssertOp>(ctx), coros_(coros) {}
+      : OpConversionPattern<cf::AssertOp>(ctx), coros_(std::move(coros)) {}
 
   LogicalResult
   matchAndRewrite(cf::AssertOp op, OpAdaptor adaptor,
