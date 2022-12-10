@@ -7,36 +7,44 @@
 // LA32-LABEL: @dbar(
 // LA32-NEXT:  entry:
 // LA32-NEXT:    call void @llvm.loongarch.dbar(i32 0)
+// LA32-NEXT:    call void @llvm.loongarch.dbar(i32 0)
 // LA32-NEXT:    ret void
 //
 void dbar() {
-  return __builtin_loongarch_dbar(0);
+  __dbar(0);
+  __builtin_loongarch_dbar(0);
 }
 
 // LA32-LABEL: @ibar(
 // LA32-NEXT:  entry:
 // LA32-NEXT:    call void @llvm.loongarch.ibar(i32 0)
+// LA32-NEXT:    call void @llvm.loongarch.ibar(i32 0)
 // LA32-NEXT:    ret void
 //
 void ibar() {
-  return __builtin_loongarch_ibar(0);
+  __ibar(0);
+  __builtin_loongarch_ibar(0);
 }
 
 // LA32-LABEL: @loongarch_break(
 // LA32-NEXT:  entry:
 // LA32-NEXT:    call void @llvm.loongarch.break(i32 1)
+// LA32-NEXT:    call void @llvm.loongarch.break(i32 1)
 // LA32-NEXT:    ret void
 //
 void loongarch_break() {
+  __break(1);
   __builtin_loongarch_break(1);
 }
 
 // LA32-LABEL: @syscall(
 // LA32-NEXT:  entry:
 // LA32-NEXT:    call void @llvm.loongarch.syscall(i32 1)
+// LA32-NEXT:    call void @llvm.loongarch.syscall(i32 1)
 // LA32-NEXT:    ret void
 //
 void syscall() {
+  __syscall(1);
   __builtin_loongarch_syscall(1);
 }
 
