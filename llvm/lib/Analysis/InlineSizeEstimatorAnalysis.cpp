@@ -35,6 +35,7 @@ AnalysisKey InlineSizeEstimatorAnalysis::Key;
 #include "llvm/Support/CommandLine.h"
 #include <algorithm>
 #include <deque>
+#include <optional>
 
 cl::opt<std::string> TFIR2NativeModelPath(
     "ml-inliner-ir2native-model", cl::Hidden,
@@ -237,14 +238,14 @@ InlineSizeEstimatorAnalysis::Result
 InlineSizeEstimatorAnalysis::run(const Function &F,
                                  FunctionAnalysisManager &FAM) {
   if (!Evaluator)
-    return None;
+    return std::nullopt;
   auto Features = IRToNativeSizeLearning::getFunctionFeatures(
       const_cast<Function &>(F), FAM);
   int32_t *V = Evaluator->getInput<int32_t>(0);
   Features.fillTensor(V);
   auto ER = Evaluator->evaluate();
   if (!ER)
-    return None;
+    return std::nullopt;
   float Ret = *ER->getTensorValue<float>(0);
   if (Ret < 0.0)
     Ret = 0.0;

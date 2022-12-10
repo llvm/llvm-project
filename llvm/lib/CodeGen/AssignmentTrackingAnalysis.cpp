@@ -23,6 +23,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <assert.h>
 #include <cstdint>
+#include <optional>
 #include <sstream>
 #include <unordered_map>
 
@@ -194,7 +195,7 @@ void FunctionVarLocs::init(FunctionVarLocsBuilder &Builder) {
   // UniqueVectors IDs are one-based (which means the VarLocInfo VarID values
   // are one-based) so reserve an extra and insert a dummy.
   Variables.reserve(Builder.Variables.size() + 1);
-  Variables.push_back(DebugVariable(nullptr, None, nullptr));
+  Variables.push_back(DebugVariable(nullptr, std::nullopt, nullptr));
   Variables.append(Builder.Variables.begin(), Builder.Variables.end());
 }
 
@@ -244,17 +245,17 @@ static Optional<int64_t> getDerefOffsetInBytes(const DIExpression *DIExpr) {
     else if (Elements[2] == dwarf::DW_OP_minus)
       Offset = -Elements[1];
     else
-      return None;
+      return std::nullopt;
   }
 
   // If that's all there is it means there's no deref.
   if (NextElement >= NumElements)
-    return None;
+    return std::nullopt;
 
   // Check the next element is DW_OP_deref - otherwise this is too complex or
   // isn't a deref expression.
   if (Elements[NextElement] != dwarf::DW_OP_deref)
-    return None;
+    return std::nullopt;
 
   // Check the final operation is either the DW_OP_deref or is a fragment.
   if (NumElements == NextElement + 1)
@@ -264,7 +265,7 @@ static Optional<int64_t> getDerefOffsetInBytes(const DIExpression *DIExpr) {
     return Offset; // Ends with deref + fragment.
 
   // Don't bother trying to interpret anything more complex.
-  return None;
+  return std::nullopt;
 }
 
 /// A whole (unfragmented) source variable.
@@ -846,7 +847,7 @@ public:
         auto &Ctx = Fn.getContext();
 
         for (auto FragMemLoc : FragMemLocs) {
-          DIExpression *Expr = DIExpression::get(Ctx, None);
+          DIExpression *Expr = DIExpression::get(Ctx, std::nullopt);
           Expr = *DIExpression::createFragmentExpression(
               Expr, FragMemLoc.OffsetInBits, FragMemLoc.SizeInBits);
           Expr = DIExpression::prepend(Expr, DIExpression::DerefAfter,
@@ -1339,7 +1340,7 @@ void AssignmentTrackingLowering::processUntaggedInstruction(
     //
     // DIExpression: Add fragment and offset.
     DebugVariable V = FnVarLocs->getVariable(Var);
-    DIExpression *DIE = DIExpression::get(I.getContext(), None);
+    DIExpression *DIE = DIExpression::get(I.getContext(), std::nullopt);
     if (auto Frag = V.getFragment()) {
       auto R = DIExpression::createFragmentExpression(DIE, Frag->OffsetInBits,
                                                       Frag->SizeInBits);
@@ -2058,7 +2059,7 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
         // built appropriately rather than always using an empty DIExpression.
         // The assert below is a reminder.
         assert(Simple);
-        VarLoc.Expr = DIExpression::get(Fn.getContext(), None);
+        VarLoc.Expr = DIExpression::get(Fn.getContext(), std::nullopt);
         DebugVariable Var = FnVarLocs->getVariable(VarLoc.VariableID);
         FnVarLocs->addSingleLocVar(Var, VarLoc.Expr, VarLoc.DL, VarLoc.V);
         InsertedAnyIntrinsics = true;
