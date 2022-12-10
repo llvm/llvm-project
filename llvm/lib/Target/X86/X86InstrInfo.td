@@ -973,6 +973,7 @@ def HasPREFETCHI : Predicate<"Subtarget->hasPREFETCHI()">;
 def HasPrefetchW : Predicate<"Subtarget->hasPrefetchW()">;
 def HasPREFETCHWT1 : Predicate<"Subtarget->hasPREFETCHWT1()">;
 def HasLAHFSAHF  : Predicate<"Subtarget->hasLAHFSAHF()">;
+def HasLAHFSAHF64 : Predicate<"Subtarget->hasLAHFSAHF64()">;
 def HasMWAITX    : Predicate<"Subtarget->hasMWAITX()">;
 def HasCLZERO    : Predicate<"Subtarget->hasCLZERO()">;
 def HasCLDEMOTE  : Predicate<"Subtarget->hasCLDEMOTE()">;
