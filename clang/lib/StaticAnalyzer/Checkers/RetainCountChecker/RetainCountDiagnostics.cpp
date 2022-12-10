@@ -15,6 +15,7 @@
 #include "RetainCountChecker.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -166,10 +167,10 @@ static bool shouldGenerateNote(llvm::raw_string_ostream &os,
 /// Finds argument index of the out paramter in the call @c S
 /// corresponding to the symbol @c Sym.
 /// If none found, returns std::nullopt.
-static Optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
-                                             const LocationContext *LCtx,
-                                             SymbolRef &Sym,
-                                             Optional<CallEventRef<>> CE) {
+static std::optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
+                                                  const LocationContext *LCtx,
+                                                  SymbolRef &Sym,
+                                                  Optional<CallEventRef<>> CE) {
   if (!CE)
     return std::nullopt;
 
@@ -182,7 +183,7 @@ static Optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
   return std::nullopt;
 }
 
-static Optional<std::string> findMetaClassAlloc(const Expr *Callee) {
+static std::optional<std::string> findMetaClassAlloc(const Expr *Callee) {
   if (const auto *ME = dyn_cast<MemberExpr>(Callee)) {
     if (ME->getMemberDecl()->getNameAsString() != "alloc")
       return std::nullopt;
