@@ -95,6 +95,58 @@ extern __inline int
       (unsigned long int)(_1), (unsigned long int)(_2), (_3)))
 #endif
 
+extern __inline unsigned char
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __iocsrrd_b(unsigned int _1) {
+  return (unsigned char)__builtin_loongarch_iocsrrd_b((unsigned int)_1);
+}
+
+extern __inline unsigned char
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __iocsrrd_h(unsigned int _1) {
+  return (unsigned short)__builtin_loongarch_iocsrrd_h((unsigned int)_1);
+}
+
+extern __inline unsigned int
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __iocsrrd_w(unsigned int _1) {
+  return (unsigned int)__builtin_loongarch_iocsrrd_w((unsigned int)_1);
+}
+
+#if __loongarch_grlen == 64
+extern __inline unsigned long int
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __iocsrrd_d(unsigned int _1) {
+  return (unsigned long int)__builtin_loongarch_iocsrrd_d((unsigned int)_1);
+}
+#endif
+
+extern __inline void
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __iocsrwr_b(unsigned char _1, unsigned int _2) {
+  __builtin_loongarch_iocsrwr_b((unsigned char)_1, (unsigned int)_2);
+}
+
+extern __inline void
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __iocsrwr_h(unsigned short _1, unsigned int _2) {
+  __builtin_loongarch_iocsrwr_h((unsigned short)_1, (unsigned int)_2);
+}
+
+extern __inline void
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __iocsrwr_w(unsigned int _1, unsigned int _2) {
+  __builtin_loongarch_iocsrwr_w((unsigned int)_1, (unsigned int)_2);
+}
+
+#if __loongarch_grlen == 64
+extern __inline void
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    __iocsrwr_d(unsigned long int _1, unsigned int _2) {
+  __builtin_loongarch_iocsrwr_d((unsigned long int)_1, (unsigned int)_2);
+}
+#endif
+
 #ifdef __cplusplus
 }
 #endif
