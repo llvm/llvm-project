@@ -121,8 +121,8 @@ private:
   /// This method also checks if the given \p Record should be skipped during
   /// serialization.
   ///
-  /// \returns \c None if this \p Record should be skipped, or a JSON object
-  /// containing common symbol information of \p Record.
+  /// \returns \c std::nullopt if this \p Record should be skipped, or a JSON
+  /// object containing common symbol information of \p Record.
   template <typename RecordTy>
   Optional<Object> serializeAPIRecord(const RecordTy &Record) const;
 
