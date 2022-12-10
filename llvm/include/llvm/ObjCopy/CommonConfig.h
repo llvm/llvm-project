@@ -116,7 +116,7 @@ public:
          llvm::function_ref<Error(Error)> ErrorCallback);
 
   bool isPositiveMatch() const { return IsPositiveMatch; }
-  Optional<StringRef> getName() const {
+  std::optional<StringRef> getName() const {
     if (!R && !G)
       return Name;
     return std::nullopt;
@@ -139,7 +139,7 @@ public:
     if (!Matcher)
       return Matcher.takeError();
     if (Matcher->isPositiveMatch()) {
-      if (Optional<StringRef> MaybeName = Matcher->getName())
+      if (std::optional<StringRef> MaybeName = Matcher->getName())
         PosNames.insert(CachedHashStringRef(*MaybeName));
       else
         PosPatterns.push_back(std::move(*Matcher));
@@ -213,7 +213,7 @@ struct CommonConfig {
   StringRef AddGnuDebugLink;
   // Cached gnu_debuglink's target CRC
   uint32_t GnuDebugLinkCRC32;
-  Optional<StringRef> ExtractPartition;
+  std::optional<StringRef> ExtractPartition;
   StringRef SplitDWO;
   StringRef SymbolsPrefix;
   StringRef AllocSectionsPrefix;
