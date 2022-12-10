@@ -12,6 +12,7 @@
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include <optional>
 #include <set>
 
 namespace llvm {
@@ -159,7 +160,7 @@ RandomFunctionGenerator::RandomFunctionGenerator()
 // Returns std::nullopt if Begin==End.
 static Optional<SizeSpan> AsSizeSpan(size_t Begin, size_t End) {
   if (Begin == End)
-    return None;
+    return std::nullopt;
   SizeSpan SS;
   SS.Begin = Begin;
   SS.End = End;
@@ -175,7 +176,7 @@ static Optional<Region> As(size_t Begin, size_t End) {
     Output.Span = *Span;
     return Output;
   }
-  return None;
+  return std::nullopt;
 }
 
 // Returns a Loop struct or None if span is empty.
@@ -186,7 +187,7 @@ static Optional<Loop> AsLoop(size_t Begin, size_t End, size_t BlockSize) {
     Output.BlockSize = BlockSize;
     return Output;
   }
-  return None;
+  return std::nullopt;
 }
 
 // Returns an AlignedLoop struct or None if span is empty.
@@ -200,7 +201,7 @@ static Optional<AlignedLoop> AsAlignedLoop(size_t Begin, size_t End,
     Output.AlignTo = AlignTo;
     return Output;
   }
-  return None;
+  return std::nullopt;
 }
 
 Optional<FunctionDescriptor> RandomFunctionGenerator::next() {
