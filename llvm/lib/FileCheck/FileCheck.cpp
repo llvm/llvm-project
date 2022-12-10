@@ -22,7 +22,6 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <list>
-#include <optional>
 #include <set>
 #include <tuple>
 #include <utility>
@@ -696,7 +695,7 @@ Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
   Expr = Expr.ltrim(SpaceChars);
   assert(Expr.startswith("("));
 
-  auto OptFunc = StringSwitch<std::optional<binop_eval_t>>(FuncName)
+  auto OptFunc = StringSwitch<Optional<binop_eval_t>>(FuncName)
                      .Case("add", operator+)
                      .Case("div", operator/)
                      .Case("max", max)
