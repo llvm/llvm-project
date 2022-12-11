@@ -1644,7 +1644,7 @@ static bool isKnownDeallocObjCMethodName(const ObjCMethodCall &Call) {
          FirstSlot == "initWithCharactersNoCopy";
 }
 
-static Optional<bool> getFreeWhenDoneArg(const ObjCMethodCall &Call) {
+static std::optional<bool> getFreeWhenDoneArg(const ObjCMethodCall &Call) {
   Selector S = Call.getSelector();
 
   // FIXME: We should not rely on fully-constrained symbols being folded.
@@ -1663,7 +1663,7 @@ void MallocChecker::checkPostObjCMessage(const ObjCMethodCall &Call,
   if (!isKnownDeallocObjCMethodName(Call))
     return;
 
-  if (Optional<bool> FreeWhenDone = getFreeWhenDoneArg(Call))
+  if (std::optional<bool> FreeWhenDone = getFreeWhenDoneArg(Call))
     if (!*FreeWhenDone)
       return;
 
@@ -3141,7 +3141,7 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
     // about, we can't be sure that the object will use free() to deallocate the
     // memory, so we can't model it explicitly. The best we can do is use it to
     // decide whether the pointer escapes.
-    if (Optional<bool> FreeWhenDone = getFreeWhenDoneArg(*Msg))
+    if (std::optional<bool> FreeWhenDone = getFreeWhenDoneArg(*Msg))
       return *FreeWhenDone;
 
     // If the first selector piece ends with "NoCopy", and there is no
