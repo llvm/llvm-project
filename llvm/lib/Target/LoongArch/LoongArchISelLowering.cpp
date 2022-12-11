@@ -685,6 +685,7 @@ LoongArchTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
     IOCSRRD_CASE(iocsrrd_b, IOCSRRD_B);
     IOCSRRD_CASE(iocsrrd_h, IOCSRRD_H);
     IOCSRRD_CASE(iocsrrd_w, IOCSRRD_W);
+#undef IOCSRRD_CASE
   }
 }
 
@@ -1152,6 +1153,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
       IOCSRRD_CASE(iocsrrd_b, IOCSRRD_B);
       IOCSRRD_CASE(iocsrrd_h, IOCSRRD_H);
       IOCSRRD_CASE(iocsrrd_w, IOCSRRD_W);
+#undef IOCSRRD_CASE
     }
     break;
   }
