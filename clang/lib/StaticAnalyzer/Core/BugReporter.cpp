@@ -221,7 +221,7 @@ public:
   /// Find a non-invalidated report for a given equivalence class,  and returns
   /// a PathDiagnosticBuilder able to construct bug reports for different
   /// consumers. Returns std::nullopt if no valid report is found.
-  static Optional<PathDiagnosticBuilder>
+  static std::optional<PathDiagnosticBuilder>
   findValidReport(ArrayRef<PathSensitiveBugReport *> &bugReports,
                   PathSensitiveBugReporter &Reporter);
 
@@ -2821,7 +2821,7 @@ generateVisitorsDiagnostics(PathSensitiveBugReport *R,
   return Notes;
 }
 
-Optional<PathDiagnosticBuilder> PathDiagnosticBuilder::findValidReport(
+std::optional<PathDiagnosticBuilder> PathDiagnosticBuilder::findValidReport(
     ArrayRef<PathSensitiveBugReport *> &bugReports,
     PathSensitiveBugReporter &Reporter) {
 
@@ -2880,7 +2880,7 @@ PathSensitiveBugReporter::generatePathDiagnostics(
 
   auto Out = std::make_unique<DiagnosticForConsumerMapTy>();
 
-  Optional<PathDiagnosticBuilder> PDB =
+  std::optional<PathDiagnosticBuilder> PDB =
       PathDiagnosticBuilder::findValidReport(bugReports, *this);
 
   if (PDB) {
