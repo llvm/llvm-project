@@ -207,8 +207,8 @@ public:
 private:
   /// The minimum number of times the successor region will be invoked.
   unsigned lower;
-  /// The maximum number of times the successor region will be invoked or `None`
-  /// if an upper bound is not known.
+  /// The maximum number of times the successor region will be invoked or
+  /// `std::nullopt` if an upper bound is not known.
   Optional<unsigned> upper;
 };
 
