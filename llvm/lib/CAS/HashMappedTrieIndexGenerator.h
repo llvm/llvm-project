@@ -19,7 +19,7 @@ struct IndexGenerator {
   size_t NumRootBits;
   size_t NumSubtrieBits;
   ArrayRef<uint8_t> Bytes;
-  Optional<size_t> StartBit = None;
+  Optional<size_t> StartBit = std::nullopt;
 
   size_t getNumBits() const {
     assert(StartBit);

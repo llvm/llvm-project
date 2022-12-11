@@ -364,7 +364,7 @@ Expected<FileSystemCache::DirectoryEntry *>
 CachingOnDiskFileSystemImpl::makeSymlinkTo(DirectoryEntry &Parent,
                                            StringRef TreePath,
                                            StringRef Target) {
-  Expected<ObjectRef> Node = DB.storeFromString(None, Target);
+  Expected<ObjectRef> Node = DB.storeFromString(std::nullopt, Target);
   if (!Node)
     return Node.takeError();
   return &Cache->makeSymlink(Parent, TreePath, *Node, Target);
@@ -419,7 +419,7 @@ CachingOnDiskFileSystemImpl::makeEntry(
 ErrorOr<vfs::Status>
 CachingOnDiskFileSystemImpl::statusAndFileID(const Twine &Path,
                                              Optional<CASID> &FileID) {
-  FileID = None;
+  FileID = std::nullopt;
   SmallString<128> Storage;
   StringRef PathRef = Path.toStringRef(Storage);
 
@@ -539,7 +539,8 @@ CachingOnDiskFileSystemImpl::getDirectoryIterator(const Twine &Path) {
   }
 
   for (StringRef TreePath : TreePaths)
-    if (Error E = makeEntry(*Entry, TreePath, /*KnownStatus=*/None).takeError())
+    if (Error E = makeEntry(*Entry, TreePath, /*KnownStatus=*/std::nullopt)
+                      .takeError())
       return errorToErrorCode(std::move(E));
 
   return Cache->getCachedVFSDirIter(

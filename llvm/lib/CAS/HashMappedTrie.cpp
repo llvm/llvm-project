@@ -60,7 +60,7 @@ public:
        function_ref<TrieSubtrie *(std::unique_ptr<TrieSubtrie>)> Saver);
 
   void printHash(raw_ostream &OS, ArrayRef<uint8_t> Bytes) const;
-  void print(raw_ostream &OS) const { print(OS, None); }
+  void print(raw_ostream &OS) const { print(OS, std::nullopt); }
   void print(raw_ostream &OS, Optional<std::string> Prefix) const;
   void dump() const { print(dbgs()); }
 

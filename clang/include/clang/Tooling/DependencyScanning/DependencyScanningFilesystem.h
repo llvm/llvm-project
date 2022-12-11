@@ -337,7 +337,7 @@ private:
 
     TentativeEntry(llvm::vfs::Status Status,
                    std::unique_ptr<llvm::MemoryBuffer> Contents = nullptr,
-                   Optional<cas::ObjectRef> CASContents = None)
+                   Optional<cas::ObjectRef> CASContents = std::nullopt)
         : Status(std::move(Status)), Contents(std::move(Contents)),
           CASContents(std::move(CASContents)) {}
   };

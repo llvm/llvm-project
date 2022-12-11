@@ -71,7 +71,7 @@ BuiltinCAS::storeFromOpenFileImpl(sys::fs::file_t FD,
     SmallString<4 * 4096 * 2> Data;
     if (Error E = sys::fs::readNativeFileToEOF(FD, Data, MinMappedSize))
       return std::move(E);
-    return store(None, makeArrayRef(Data.data(), Data.size()));
+    return store(std::nullopt, makeArrayRef(Data.data(), Data.size()));
   };
 
   // Check whether we can trust the size from stat.
@@ -94,10 +94,10 @@ BuiltinCAS::storeFromOpenFileImpl(sys::fs::file_t FD,
   // so we need to check for an actual null character at the end.
   ArrayRef<char> Data(Map.data(), Map.size());
   HashType ComputedHash =
-      BuiltinObjectHasher<HasherT>::hashObject(*this, None, Data);
+      BuiltinObjectHasher<HasherT>::hashObject(*this, std::nullopt, Data);
   if (!isAligned(Align(PageSize), Data.size()) && Data.end()[0] == 0)
     return storeFromNullTerminatedRegion(ComputedHash, std::move(Map));
-  return storeImpl(ComputedHash, None, Data);
+  return storeImpl(ComputedHash, std::nullopt, Data);
 }
 
 Expected<ObjectRef> BuiltinCAS::store(ArrayRef<ObjectRef> Refs,

@@ -193,18 +193,18 @@ clang::tooling::initiateExtractRepeatedExpressionIntoVariableOperation(
   if (SelectionRange.isValid()) {
     auto SelectedStmt = Slice.getSelectedStmtSet();
     if (!SelectedStmt)
-      return None;
+      return std::nullopt;
     if (!SelectedStmt->containsSelectionRange)
-      return None;
+      return std::nullopt;
     if (!isRepeatableExpression(SelectedStmt->containsSelectionRange))
-      return None;
+      return std::nullopt;
     S = SelectedStmt->containsSelectionRange;
     ParentDecl =
         Slice.parentDeclForIndex(*SelectedStmt->containsSelectionRangeIndex);
   } else {
     auto SelectedStmt = Slice.nearestSelectedStmt(isRepeatableExpression);
     if (!SelectedStmt)
-      return None;
+      return std::nullopt;
     S = SelectedStmt->getStmt();
     ParentDecl = SelectedStmt->getParentDecl();
   }
@@ -214,12 +214,12 @@ clang::tooling::initiateExtractRepeatedExpressionIntoVariableOperation(
   QualType T = returnTypeOfCall(E);
   if (!T.getTypePtrOrNull() ||
       (!T->isAnyPointerType() && !T->isReferenceType()))
-    return None;
+    return std::nullopt;
 
   DuplicateExprFinder DupFinder(E, Context, Context.getPrintingPolicy());
   DupFinder.TraverseDecl(const_cast<Decl *>(ParentDecl));
   if (DupFinder.DuplicateExpressions.size() < 2)
-    return None;
+    return std::nullopt;
 
   RefactoringOperationResult Result;
   Result.Initiated = true;

@@ -211,14 +211,14 @@ void DatabaseFile::addTable(TableHandle Table) {
 Optional<TableHandle> DatabaseFile::findTable(StringRef Name) {
   int64_t RootTableOffset = H->RootTableOffset.load();
   if (!RootTableOffset)
-    return None;
+    return std::nullopt;
 
   TableHandle Root(getRegion(), RootTableOffset);
   if (Root.getName() == Name)
     return Root;
 
   // TODO: Once multiple tables are supported, need to walk to find them.
-  return None;
+  return std::nullopt;
 }
 
 Error DatabaseFile::validate(LazyMappedFileRegion &LMFR) {
@@ -351,7 +351,7 @@ public:
   void printHash(raw_ostream &OS, ArrayRef<uint8_t> Bytes) const;
   void print(raw_ostream &OS, HashMappedTrieHandle Trie,
              SmallVectorImpl<int64_t> &Records,
-             Optional<std::string> Prefix = None) const;
+             Optional<std::string> Prefix = std::nullopt) const;
 
   /// Return None on success, or the existing offset on failure.
   bool compare_exchange_strong(size_t I, SubtrieSlotValue &Expected,
@@ -1051,7 +1051,7 @@ Expected<OnDiskHashMappedTrie> OnDiskHashMappedTrie::create(
   size_t NumHashBytes = NumHashBits >> 3;
   if (Error E =
           checkParameter("hash size", HashMappedTrieHandle::MaxNumHashBits,
-                         NumHashBits, None, Path, TrieName)
+                         NumHashBits, std::nullopt, Path, TrieName)
               .takeError())
     return std::move(E);
   assert(NumHashBits == NumHashBytes << 3 &&

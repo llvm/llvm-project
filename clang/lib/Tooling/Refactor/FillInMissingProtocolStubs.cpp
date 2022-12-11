@@ -47,7 +47,7 @@ clang::tooling::initiateFillInMissingProtocolStubsOperation(
        Decl::ObjCCategory},
       ASTSlice::InnermostDeclOnly);
   if (!SelectedDecl)
-    return None;
+    return std::nullopt;
   const auto *Container = cast<ObjCContainerDecl>(SelectedDecl->getDecl());
 
   // If this in a class extension, initiate the operation on the @implementation
@@ -65,7 +65,7 @@ clang::tooling::initiateFillInMissingProtocolStubsOperation(
 
   FillInMissingProtocolStubs Impl;
   if (Impl.initiate(Context, Container))
-    return None;
+    return std::nullopt;
   if (!Impl.hasMissingRequiredMethodStubs())
     return RefactoringOperationResult("All of the @required methods are there");
 

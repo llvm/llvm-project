@@ -993,8 +993,8 @@ static bool produceIndexDataForModuleFile(serialization::ModuleFile &Mod,
   // index data. User modules normally will get rebuilt and their index data
   // re-emitted, and system modules are generally stable (and they can also can
   // get rebuilt along with their index data).
-  auto IsUptodateOpt =
-      ParentUnitWriter.isUnitUpToDateForOutputFile(Mod.FileName, None, Error);
+  auto IsUptodateOpt = ParentUnitWriter.isUnitUpToDateForOutputFile(
+      Mod.FileName, std::nullopt, Error);
   if (!IsUptodateOpt) {
     unsigned DiagID = Diag.getCustomDiagID(DiagnosticsEngine::Error,
                                            "failed file status check: %0");

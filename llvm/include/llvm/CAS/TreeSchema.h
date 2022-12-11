@@ -9,7 +9,6 @@
 #ifndef LLVM_CAS_TREESCHEMA_H
 #define LLVM_CAS_TREESCHEMA_H
 
-#include "llvm/ADT/None.h"
 #include "llvm/CAS/CASNodeSchema.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeEntry.h"
@@ -56,7 +55,7 @@ public:
   Expected<TreeProxy> load(ObjectRef Object) const;
   Expected<TreeProxy> load(ObjectProxy Object) const;
 
-  Expected<TreeProxy> create(ArrayRef<NamedTreeEntry> Entries = None);
+  Expected<TreeProxy> create(ArrayRef<NamedTreeEntry> Entries = std::nullopt);
 
 private:
   static constexpr StringLiteral SchemaName = "llvm::cas::schema::tree::v1";
@@ -92,7 +91,7 @@ public:
   Optional<NamedTreeEntry> lookup(StringRef Name) const {
     if (auto I = Schema->lookupTreeEntry(*this, Name))
       return get(*I);
-    return None;
+    return std::nullopt;
   }
 
   StringRef getName(size_t I) const;

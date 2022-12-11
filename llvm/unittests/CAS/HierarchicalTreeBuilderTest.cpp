@@ -36,7 +36,7 @@ TEST(HierarchicalTreeBuilderTest, Flat) {
   std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
 
   auto make = [&](StringRef Content) {
-    return *expectedToOptional(CAS->storeFromString(None, Content));
+    return *expectedToOptional(CAS->storeFromString(std::nullopt, Content));
   };
 
   HierarchicalTreeBuilder Builder;
@@ -71,7 +71,7 @@ TEST(HierarchicalTreeBuilderTest, Nested) {
   std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
 
   auto make = [&](StringRef Content) {
-    return *expectedToOptional(CAS->storeFromString(None, Content));
+    return *expectedToOptional(CAS->storeFromString(std::nullopt, Content));
   };
 
   HierarchicalTreeBuilder Builder;
@@ -115,7 +115,7 @@ TEST(HierarchicalTreeBuilderTest, MergeDirectories) {
   std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
 
   auto make = [&](StringRef Content) {
-    return *expectedToOptional(CAS->storeFromString(None, Content));
+    return *expectedToOptional(CAS->storeFromString(std::nullopt, Content));
   };
 
   auto createRoot = [&](StringRef Blob, StringRef Path,
@@ -175,7 +175,7 @@ TEST(HierarchicalTreeBuilderTest, MergeDirectoriesConflict) {
   std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
 
   auto make = [&](StringRef Content) {
-    return *expectedToOptional(CAS->storeFromString(None, Content));
+    return *expectedToOptional(CAS->storeFromString(std::nullopt, Content));
   };
 
   auto createRoot = [&](StringRef Blob, StringRef Path,

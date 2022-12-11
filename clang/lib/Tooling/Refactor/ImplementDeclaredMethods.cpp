@@ -43,7 +43,7 @@ public:
   initiate(const ClassType *Container, ArrayRef<const MethodType *> Methods,
            bool CreateOperation) {
     if (Methods.empty())
-      return None;
+      return std::nullopt;
 
     RefactoringOperationResult Result;
     Result.Initiated = true;
@@ -128,7 +128,7 @@ clang::tooling::initiateImplementDeclaredMethodsOperation(
            isa<ObjCCategoryDecl>(D);
   });
   if (!SelectedDecl)
-    return None;
+    return std::nullopt;
   // Look at the set of methods that intersect with the selection.
   if (const auto *CXXClass = dyn_cast<CXXRecordDecl>(SelectedDecl->getDecl())) {
     if (CXXClass->isDependentType())

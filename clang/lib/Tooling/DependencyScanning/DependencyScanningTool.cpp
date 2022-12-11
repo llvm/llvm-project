@@ -211,7 +211,7 @@ private:
   template <typename T> Optional<T> check(Expected<T> &&E) {
     if (!E) {
       ErrorToReport = E.takeError();
-      return None;
+      return std::nullopt;
     }
     return *E;
   }

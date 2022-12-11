@@ -71,7 +71,7 @@ Optional<GlobalPtrAuthInfo> GlobalPtrAuthInfo::analyze(const Value *V) {
     return *PAIOrErr;
   } else {
     consumeError(PAIOrErr.takeError());
-    return None;
+    return std::nullopt;
   }
 }
 

@@ -932,39 +932,39 @@ void Sema::ProcessAPINotes(Decl *D) {
         if (auto Found = Reader->lookupObjCProtocolID(Protocol->getName()))
           return *Found;
 
-        return None;
+        return std::nullopt;
       }
 
       if (auto Impl = dyn_cast<ObjCCategoryImplDecl>(ObjCContainer)) {
         if (auto Cat = Impl->getCategoryDecl())
           ObjCContainer = Cat;
         else
-          return None;
+          return std::nullopt;
       }
 
       if (auto Category = dyn_cast<ObjCCategoryDecl>(ObjCContainer)) {
         if (Category->getClassInterface())
           ObjCContainer = Category->getClassInterface();
         else
-          return None;
+          return std::nullopt;
       }
 
       if (auto Impl = dyn_cast<ObjCImplDecl>(ObjCContainer)) {
         if (Impl->getClassInterface())
           ObjCContainer = Impl->getClassInterface();
         else
-          return None;
+          return std::nullopt;
       }
 
       if (auto Class = dyn_cast<ObjCInterfaceDecl>(ObjCContainer)) {
         if (auto Found = Reader->lookupObjCClassID(Class->getName()))
           return *Found;
 
-        return None;
+        return std::nullopt;
 
       }
 
-      return None;
+      return std::nullopt;
     };
 
     // Objective-C methods.

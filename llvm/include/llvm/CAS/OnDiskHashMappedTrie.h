@@ -10,7 +10,6 @@
 #define LLVM_CAS_ONDISKHASHMAPPEDTRIE_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -165,11 +164,11 @@ public:
 
     Optional<HintT> getHint(const OnDiskHashMappedTrie &This) const {
       if (!IsHint)
-        return None;
+        return std::nullopt;
       HintT H(ValueOrHint);
       assert(H.P == &This && "Expected hint to be for This");
       if (H.P != &This)
-        return None;
+        return std::nullopt;
       return H;
     }
 
@@ -296,8 +295,8 @@ public:
   create(const Twine &Path, const Twine &TrieName, size_t NumHashBits,
          uint64_t DataSize, uint64_t MaxFileSize,
          Optional<uint64_t> NewFileInitialSize,
-         Optional<size_t> NewTableNumRootBits = None,
-         Optional<size_t> NewTableNumSubtrieBits = None);
+         Optional<size_t> NewTableNumRootBits = std::nullopt,
+         Optional<size_t> NewTableNumSubtrieBits = std::nullopt);
 
   OnDiskHashMappedTrie(OnDiskHashMappedTrie &&RHS);
   OnDiskHashMappedTrie &operator=(OnDiskHashMappedTrie &&RHS);

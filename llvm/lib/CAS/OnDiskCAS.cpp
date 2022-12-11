@@ -183,13 +183,13 @@ public:
     OffsetKind Kind = Ref.getOffsetKind();
     uint64_t ShiftedKind = (uint64_t)Kind << NumOffsetBits;
     if (ShiftedKind > UINT32_MAX)
-      return None;
+      return std::nullopt;
 
     uint64_t ShiftedOffset = Ref.getRawOffset();
     assert(isAligned(Align(8), ShiftedOffset));
     ShiftedOffset >>= 3;
     if (ShiftedOffset > (UINT32_MAX >> NumMetadataBits))
-      return None;
+      return std::nullopt;
 
     return InternalRef4B(ShiftedKind | ShiftedOffset);
   }
@@ -295,7 +295,7 @@ public:
     return makeArrayRef(B, Size);
   }
 
-  InternalRefArrayRef(std::nullopt_t = None) {}
+  InternalRefArrayRef(std::nullopt_t = std::nullopt) {}
 
   InternalRefArrayRef(ArrayRef<InternalRef> Refs)
       : Begin(Refs.begin()), Size(Refs.size()) {}
@@ -848,7 +848,7 @@ private:
   InternalRefArrayRef getRefs(ObjectHandle Node) const {
     if (Optional<DataRecordHandle> Record = getDataRecordForObject(Node))
       return Record->getRefs();
-    return None;
+    return std::nullopt;
   }
   size_t getNumRefs(ObjectHandle Node) const final {
     return getRefs(Node).size();
@@ -1406,11 +1406,11 @@ IndexProxy OnDiskCAS::getIndexProxyFromPointer(
 Optional<ObjectRef> OnDiskCAS::getReference(const CASID &ID) const {
   OnDiskHashMappedTrie::const_pointer P = getInternalIndexPointer(ID);
   if (!P)
-    return None;
+    return std::nullopt;
   IndexProxy I = getIndexProxyFromPointer(P);
   if (Optional<InternalRef> Ref = makeInternalRef(I.Offset, I.Ref.load()))
     return getExternalReference(*Ref);
-  return None;
+  return std::nullopt;
 }
 
 OnDiskHashMappedTrie::const_pointer
@@ -1431,13 +1431,13 @@ OnDiskCAS::getInternalIndexPointer(InternalRef Ref) const {
 Optional<IndexProxy> OnDiskCAS::getIndexProxyFromRef(InternalRef Ref) const {
   if (OnDiskHashMappedTrie::const_pointer P = getInternalIndexPointer(Ref))
     return getIndexProxyFromPointer(P);
-  return None;
+  return std::nullopt;
 }
 
 Optional<FileOffset> OnDiskCAS::getIndexOffset(InternalRef Ref) const {
   switch (Ref.getOffsetKind()) {
   case InternalRef::OffsetKind::String2B:
-    return None;
+    return std::nullopt;
 
   case InternalRef::OffsetKind::IndexRecord:
     return Ref.getFileOffset();
@@ -1498,7 +1498,7 @@ OnDiskCAS::makeInternalRef(FileOffset IndexOffset,
                            TrieRecord::Data Object) const {
   switch (Object.SK) {
   case TrieRecord::StorageKind::Unknown:
-    return None;
+    return std::nullopt;
 
   case TrieRecord::StorageKind::DataPool:
     return InternalRef::getFromOffset(InternalRef::OffsetKind::DataRecord,
@@ -1590,14 +1590,15 @@ OnDiskContent OnDiskCAS::getContentFromHandle(InternalHandle Handle) const {
     auto Handle =
         String2BHandle::get(DataPool.beginData(DirectRef.getFileOffset()));
     assert(Handle.getString().end()[0] == 0 && "Null termination");
-    return OnDiskContent{None, arrayRefFromStringRef<char>(Handle.getString())};
+    return OnDiskContent{std::nullopt,
+                         arrayRefFromStringRef<char>(Handle.getString())};
   }
 
   case InternalRef::OffsetKind::DataRecord: {
     auto Handle =
         DataRecordHandle::get(DataPool.beginData(DirectRef.getFileOffset()));
     assert(Handle.getData().end()[0] == 0 && "Null termination");
-    return OnDiskContent{Handle, None};
+    return OnDiskContent{Handle, std::nullopt};
   }
 
   case InternalRef::OffsetKind::IndexRecord:
@@ -1624,14 +1625,14 @@ OnDiskContent StandaloneDataInMemory::getContent() const {
   if (Leaf) {
     assert(Region->getBuffer().drop_back(Leaf0).end()[0] == 0 &&
            "Standalone node data missing null termination");
-    return OnDiskContent{None, arrayRefFromStringRef<char>(
+    return OnDiskContent{std::nullopt, arrayRefFromStringRef<char>(
                                    Region->getBuffer().drop_back(Leaf0))};
   }
 
   DataRecordHandle Record = DataRecordHandle::get(Region->getBuffer().data());
   assert(Record.getData().end()[0] == 0 &&
          "Standalone object record missing null termination for data");
-  return OnDiskContent{Record, None};
+  return OnDiskContent{Record, std::nullopt};
 }
 
 Expected<OnDiskCAS::MappedTempFile>

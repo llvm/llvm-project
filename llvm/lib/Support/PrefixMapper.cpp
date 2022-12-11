@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/PrefixMapper.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -16,7 +15,7 @@ using namespace llvm;
 Optional<MappedPrefix> MappedPrefix::getFromJoined(StringRef JoinedMapping) {
   auto Equals = JoinedMapping.find('=');
   if (Equals == StringRef::npos)
-    return None;
+    return std::nullopt;
   StringRef Old = JoinedMapping.substr(0, Equals);
   StringRef New = JoinedMapping.substr(Equals + 1);
   return MappedPrefix{Old, New};
@@ -37,7 +36,7 @@ transformJoinedImpl(ArrayRef<StringT> JoinedMappings,
     Mappings.resize(OriginalSize);
     return Joined;
   }
-  return None;
+  return std::nullopt;
 }
 
 static Error makeErrorForInvalidJoin(Optional<StringRef> Joined) {
@@ -114,7 +113,7 @@ Optional<StringRef> PrefixMapper::mapImpl(StringRef Path,
     llvm::sys::path::append(Storage, PathStyle, Suffix.drop_front());
     return StringRef(Storage.begin(), Storage.size());
   }
-  return None;
+  return std::nullopt;
 }
 
 void PrefixMapper::map(StringRef Path, SmallVectorImpl<char> &NewPath) {

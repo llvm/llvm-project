@@ -292,7 +292,7 @@ public:
   Optional<ObjectRef> getPCHRef() const {
     if (getNumReferences() > 2)
       return getReference(2);
-    return None;
+    return std::nullopt;
   }
 
   Expected<IncludeTree> getMainFileTree() {
@@ -316,7 +316,7 @@ public:
         return Node.takeError();
       return Node->getData();
     }
-    return None;
+    return std::nullopt;
   }
 
   static Expected<IncludeTreeRoot> create(ObjectStore &DB,

@@ -1053,7 +1053,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     // No harm in adding the runtime language to the declaration.
     unsigned RLang = CTy->getRuntimeLang();
     if (RLang)
-      addUInt(Buffer, dwarf::DW_AT_APPLE_runtime_class, None, RLang);
+      addUInt(Buffer, dwarf::DW_AT_APPLE_runtime_class, std::nullopt, RLang);
 
     // Add align info if available.
     if (uint32_t AlignInBytes = CTy->getAlignInBytes())

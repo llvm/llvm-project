@@ -88,22 +88,22 @@ public:
   handleIncludeDirective(Preprocessor &PP, SourceLocation IncludeLoc,
                          SourceLocation AfterDirectiveLoc) override {
     if (HasCASErrorOccurred)
-      return None;
+      return std::nullopt;
 
     IncludeStackInfo &IncludeInfo = IncludeStack.back();
     if (IncludeInfo.CurIncludeIndex >= IncludeInfo.Tree.getNumIncludes())
-      return None;
+      return std::nullopt;
 
     unsigned ExpectedOffset =
         IncludeInfo.Tree.getIncludeOffset(IncludeInfo.CurIncludeIndex);
     SourceLocation ExpectedLoc =
         IncludeInfo.FileStartLoc.getLocWithOffset(ExpectedOffset);
     if (ExpectedLoc != AfterDirectiveLoc)
-      return None;
+      return std::nullopt;
 
     auto reportError = [&](llvm::Error &&E) -> Optional<FileID> {
       this->reportError(PP, std::move(E));
-      return None;
+      return std::nullopt;
     };
 
     Expected<cas::IncludeTree> EnteredTree =

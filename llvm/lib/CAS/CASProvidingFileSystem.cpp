@@ -43,7 +43,7 @@ public:
                                             /*RequiresNullTerminator*/ false);
     if (!Buffer)
       return Buffer.getError();
-    auto Blob = DB->createProxy(None, (*Buffer)->getBuffer());
+    auto Blob = DB->createProxy(std::nullopt, (*Buffer)->getBuffer());
     if (!Blob)
       return errorToErrorCode(Blob.takeError());
     return Blob->getRef();

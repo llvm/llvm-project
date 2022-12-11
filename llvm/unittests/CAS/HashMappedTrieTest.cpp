@@ -270,8 +270,8 @@ public:
     friend class ThreadSafeHashMappedTrieSet;
   };
 
-  ThreadSafeHashMappedTrieSet(Optional<size_t> NumRootBits = None,
-                              Optional<size_t> NumSubtrieBits = None)
+  ThreadSafeHashMappedTrieSet(Optional<size_t> NumRootBits = std::nullopt,
+                              Optional<size_t> NumSubtrieBits = std::nullopt)
       : TrieType(NumRootBits, NumSubtrieBits) {}
 
   static HashType hash(const T &V) {

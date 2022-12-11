@@ -22,7 +22,8 @@ TEST_P(CASTest, ActionCacheHit) {
   std::unique_ptr<ActionCache> Cache = createActionCache();
 
   Optional<ObjectProxy> ID;
-  ASSERT_THAT_ERROR(CAS->createProxy(None, "1").moveInto(ID), Succeeded());
+  ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "1").moveInto(ID),
+                    Succeeded());
   Optional<CASID> ResultID;
   ASSERT_THAT_ERROR(Cache->put(*ID, *ID), Succeeded());
   ASSERT_THAT_ERROR(Cache->get(*ID).moveInto(ResultID), Succeeded());
@@ -37,8 +38,10 @@ TEST_P(CASTest, ActionCacheMiss) {
   std::unique_ptr<ActionCache> Cache = createActionCache();
 
   Optional<ObjectProxy> ID1, ID2;
-  ASSERT_THAT_ERROR(CAS->createProxy(None, "1").moveInto(ID1), Succeeded());
-  ASSERT_THAT_ERROR(CAS->createProxy(None, "2").moveInto(ID2), Succeeded());
+  ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "1").moveInto(ID1),
+                    Succeeded());
+  ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "2").moveInto(ID2),
+                    Succeeded());
   ASSERT_THAT_ERROR(Cache->put(*ID1, *ID2), Succeeded());
   // This is a cache miss for looking up a key doesn't exist.
   Optional<CASID> Result1;
@@ -60,8 +63,10 @@ TEST_P(CASTest, ActionCacheRewrite) {
   std::unique_ptr<ActionCache> Cache = createActionCache();
 
   Optional<ObjectProxy> ID1, ID2;
-  ASSERT_THAT_ERROR(CAS->createProxy(None, "1").moveInto(ID1), Succeeded());
-  ASSERT_THAT_ERROR(CAS->createProxy(None, "2").moveInto(ID2), Succeeded());
+  ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "1").moveInto(ID1),
+                    Succeeded());
+  ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "2").moveInto(ID2),
+                    Succeeded());
   ASSERT_THAT_ERROR(Cache->put(*ID1, *ID1), Succeeded());
   // Writing to the same key with different value is error.
   ASSERT_THAT_ERROR(Cache->put(*ID1, *ID2), Failed());
@@ -75,9 +80,12 @@ TEST(OnDiskActionCache, ActionCacheResultInvalid) {
   std::unique_ptr<ObjectStore> CAS2 = createInMemoryCAS();
 
   Optional<ObjectProxy> ID1, ID2, ID3;
-  ASSERT_THAT_ERROR(CAS1->createProxy(None, "1").moveInto(ID1), Succeeded());
-  ASSERT_THAT_ERROR(CAS1->createProxy(None, "2").moveInto(ID2), Succeeded());
-  ASSERT_THAT_ERROR(CAS2->createProxy(None, "1").moveInto(ID3), Succeeded());
+  ASSERT_THAT_ERROR(CAS1->createProxy(std::nullopt, "1").moveInto(ID1),
+                    Succeeded());
+  ASSERT_THAT_ERROR(CAS1->createProxy(std::nullopt, "2").moveInto(ID2),
+                    Succeeded());
+  ASSERT_THAT_ERROR(CAS2->createProxy(std::nullopt, "1").moveInto(ID3),
+                    Succeeded());
 
   std::unique_ptr<ActionCache> Cache1 =
       cantFail(createOnDiskActionCache(Temp.path()));

@@ -46,7 +46,7 @@ struct MockOutputBackend final : public OutputBackend {
 
   Expected<OutputFile>
   createAutoDiscardFile(const Twine &OutputPath,
-                        Optional<OutputConfig> Config = None) {
+                        Optional<OutputConfig> Config = std::nullopt) {
     return consumeDiscardOnDestroy(createFile(OutputPath, Config));
   }
 
@@ -94,7 +94,7 @@ TEST(VirtualOutputBackendTest, createFile) {
                     Succeeded());
   EXPECT_EQ(1, Data.FilesCreated);
   EXPECT_EQ(FilePath, F.getPath());
-  EXPECT_EQ(None, Data.LastConfig);
+  EXPECT_EQ(std::nullopt, Data.LastConfig);
 
   // Confirm OutputBackend has not installed a discard handler.
 #if GTEST_HAS_DEATH_TEST

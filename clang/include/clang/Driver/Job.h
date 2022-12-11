@@ -263,9 +263,10 @@ public:
 class CachingCC1Command : public CC1Command {
 public:
   CachingCC1Command(const Action &Source, const Tool &Creator,
-             ResponseFileSupport ResponseSupport, const char *Executable,
-             const llvm::opt::ArgStringList &Arguments,
-             ArrayRef<InputInfo> Inputs, ArrayRef<InputInfo> Outputs = None);
+                    ResponseFileSupport ResponseSupport, const char *Executable,
+                    const llvm::opt::ArgStringList &Arguments,
+                    ArrayRef<InputInfo> Inputs,
+                    ArrayRef<InputInfo> Outputs = std::nullopt);
 
   void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
              CrashReportInfo *CrashInfo = nullptr) const override;

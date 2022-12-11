@@ -237,7 +237,8 @@ int makeBlob(ObjectStore &CAS, StringRef DataPath) {
   std::unique_ptr<MemoryBuffer> Buffer =
       ExitOnErr(openBuffer(DataPath));
 
-  ObjectProxy Blob = ExitOnErr(CAS.createProxy(None, Buffer->getBuffer()));
+  ObjectProxy Blob =
+      ExitOnErr(CAS.createProxy(std::nullopt, Buffer->getBuffer()));
   llvm::outs() << Blob.getID() << "\n";
   return 0;
 }

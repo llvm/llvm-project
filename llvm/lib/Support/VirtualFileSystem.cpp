@@ -14,7 +14,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -116,7 +115,7 @@ bool Status::exists() const {
 File::~File() = default;
 
 llvm::ErrorOr<Optional<cas::ObjectRef>> File::getObjectRefForContent() {
-  return None;
+  return std::nullopt;
 }
 
 FileSystem::~FileSystem() = default;

@@ -302,7 +302,7 @@ struct OnDiskFile {
   Optional<StringRef> getCurrentContent() {
     auto OnDiskOrErr = MemoryBuffer::getFile(Path);
     if (!OnDiskOrErr)
-      return None;
+      return std::nullopt;
     LastBuffer = std::move(*OnDiskOrErr);
     return LastBuffer->getBuffer();
   }
@@ -314,7 +314,9 @@ struct OnDiskFile {
     return *CurrentContent == Data;
   }
 
-  bool equalsCurrentContent(std::nullopt_t) { return getCurrentContent() == None; }
+  bool equalsCurrentContent(std::nullopt_t) {
+    return getCurrentContent() == std::nullopt;
+  }
 };
 
 class OnDiskOutputBackendProvider : public OutputBackendProvider {
@@ -413,7 +415,7 @@ Optional<sys::fs::UniqueID> OnDiskFile::getCurrentUniqueID() {
   sys::fs::file_status Status;
   sys::fs::status(Path, Status, /*follow=*/false);
   if (!sys::fs::is_regular_file(Status))
-    return None;
+    return std::nullopt;
   return Status.getUniqueID();
 }
 
@@ -442,7 +444,7 @@ Optional<OnDiskFile> OnDiskFile::findTemp() const {
     // Found it.
     return OnDiskFile(D, TempPath.drop_front(D.path().size() + 1));
   }
-  return None;
+  return std::nullopt;
 }
 
 Error OnDiskOutputBackendProvider::lookupFileInfo(StringRef FilePath,
@@ -515,9 +517,9 @@ Error OnDiskOutputBackendProvider::checkCreated(StringRef FilePath,
   auto &Info = Files[FilePath];
   if (Info.F) {
     assert(OnDiskFile(*D, FilePath).Path == Info.F->Path);
-    Info.UID = None;
+    Info.UID = std::nullopt;
     Info.Temp.reset();
-    Info.TempUID = None;
+    Info.TempUID = std::nullopt;
   } else {
     Info.F.emplace(*D, FilePath);
   }

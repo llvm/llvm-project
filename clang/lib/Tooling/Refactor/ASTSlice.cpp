@@ -313,7 +313,7 @@ Optional<ASTSlice::SelectedStmt> ASTSlice::nearestSelectedStmt(
 
     return SelectedStmt(*this, S, Node.index());
   }
-  return None;
+  return std::nullopt;
 }
 
 Optional<ASTSlice::SelectedStmt>
@@ -333,10 +333,10 @@ Optional<ASTSlice::SelectedDecl> ASTSlice::innermostSelectedDecl(
     if (Options & ASTSlice::InnermostDeclOnly) {
       auto Result = getInnermostCompletelySelectedDecl();
       if (!Result)
-        return None;
+        return std::nullopt;
       if (Predicate(Result->getDecl()))
         return Result;
-      return None;
+      return std::nullopt;
     }
     // Traverse down through all of the selected node checking the predicate.
     // TODO: Cache the SelectionRangeOverlap kinds properly instead of relying
@@ -351,7 +351,7 @@ Optional<ASTSlice::SelectedDecl> ASTSlice::innermostSelectedDecl(
       if (Predicate(D))
         return SelectedDecl(D);
     }
-    return None;
+    return std::nullopt;
   }
   for (const auto &Node : llvm::enumerate(NodeTree)) {
     const Decl *D = Node.value().getDeclOrNull();
@@ -360,9 +360,9 @@ Optional<ASTSlice::SelectedDecl> ASTSlice::innermostSelectedDecl(
     if (Predicate(D))
       return SelectedDecl(D);
     if (Options & ASTSlice::InnermostDeclOnly)
-      return None;
+      return std::nullopt;
   }
-  return None;
+  return std::nullopt;
 }
 
 Optional<ASTSlice::SelectedDecl>
@@ -509,7 +509,7 @@ static bool isCaseSelected(const SwitchStmt *S, SourceRange SelectionRange,
 
 Optional<SelectedStmtSet> ASTSlice::computeSelectedStmtSet() {
   if (SelectionRange.isInvalid())
-    return None;
+    return std::nullopt;
   computeSelectionRangeOverlapKinds(NodeTree, SelectionRange,
                                     Context.getSourceManager());
 
@@ -588,7 +588,7 @@ Optional<SelectedStmtSet> ASTSlice::computeSelectedStmtSet() {
           !Context.getSourceManager().isBeforeInTranslationUnit(
               Result.containsSelectionRangeStart->getBeginLoc(),
               SelectionRange.getEnd()))
-        return None;
+        return std::nullopt;
 
       if (!Result.containsSelectionRangeEnd)
         Result.containsSelectionRangeEnd = findLastStatementBefore(

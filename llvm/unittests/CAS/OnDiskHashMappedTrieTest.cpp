@@ -37,7 +37,7 @@ TEST(OnDiskHashMappedTrieTest, Insertion) {
       return OnDiskHashMappedTrie::create(
           Temp.path((Twine(NumHashBytes) + "B").str()), "index",
           /*NumHashBits=*/NumHashBits, DataSize, /*MaxFileSize=*/MB,
-          /*NewInitialFileSize=*/None);
+          /*NewInitialFileSize=*/std::nullopt);
     };
 
     Optional<OnDiskHashMappedTrie> Trie1;

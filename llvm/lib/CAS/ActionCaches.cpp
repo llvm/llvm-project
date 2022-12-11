@@ -102,7 +102,7 @@ Expected<Optional<CASID>>
 InMemoryActionCache::getImpl(ArrayRef<uint8_t> Key) const {
   auto Result = Cache.find(Key);
   if (!Result)
-    return None;
+    return std::nullopt;
   return CASID::create(&getContext(), toStringRef(Result->Data.getValue()));
 }
 
@@ -174,7 +174,7 @@ OnDiskActionCache::getImpl(ArrayRef<uint8_t> Key) const {
   // Check the result cache.
   OnDiskHashMappedTrie::const_pointer ActionP = Cache.find(Key);
   if (!ActionP)
-    return None;
+    return std::nullopt;
 
   const DataT *Output = reinterpret_cast<const DataT *>(ActionP->Data.data());
   return CASID::create(&getContext(), toStringRef(Output->getValue()));

@@ -183,8 +183,9 @@ public:
     Optional<std::string> BlobData;
     std::vector<std::string> Refs;
   };
-  Expected<LoadResponse> loadSync(std::string CASID,
-                                  Optional<std::string> OutFilePath = None) {
+  Expected<LoadResponse>
+  loadSync(std::string CASID,
+           Optional<std::string> OutFilePath = std::nullopt) {
     return loadSyncImpl(std::move(CASID), std::move(OutFilePath));
   }
   Expected<std::string> saveDataSync(std::string BlobData) {
@@ -193,8 +194,8 @@ public:
   Expected<std::string> saveFileSync(std::string FilePath) {
     return saveFileSyncImpl(std::move(FilePath));
   }
-  Expected<GetResponse> getSync(std::string CASID,
-                                Optional<std::string> OutFilePath = None) {
+  Expected<GetResponse>
+  getSync(std::string CASID, Optional<std::string> OutFilePath = std::nullopt) {
     return getSyncImpl(std::move(CASID), std::move(OutFilePath));
   }
   Expected<std::string> putDataSync(std::string BlobData,
@@ -226,7 +227,7 @@ public:
     virtual ~LoadAsyncQueue() = default;
 
     void loadAsync(std::string CASID,
-                   Optional<std::string> OutFilePath = None,
+                   Optional<std::string> OutFilePath = std::nullopt,
                    std::shared_ptr<AsyncCallerContext> CallCtx = nullptr) {
       loadAsyncImpl(std::move(CASID), std::move(OutFilePath),
                     std::move(CallCtx));
@@ -296,7 +297,7 @@ public:
     virtual ~GetAsyncQueue() = default;
 
     void getAsync(std::string CASID,
-                  Optional<std::string> OutFilePath = None,
+                  Optional<std::string> OutFilePath = std::nullopt,
                   std::shared_ptr<AsyncCallerContext> CallCtx = nullptr) {
       getAsyncImpl(std::move(CASID), std::move(OutFilePath),
                    std::move(CallCtx));

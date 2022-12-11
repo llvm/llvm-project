@@ -65,7 +65,7 @@ public:
   /// Add a directory. Ensures the directory will exist even if there are no
   /// files pushed from within it.
   void pushDirectory(const Twine &Path) {
-    return pushImpl(None, TreeEntry::Tree, Path);
+    return pushImpl(std::nullopt, TreeEntry::Tree, Path);
   }
 
   /// Add a directory with specific contents. It is functionally equivalent to:

@@ -9,7 +9,6 @@
 #ifndef LLVM_CAS_LAZYMAPPEDFILEREGION_H
 #define LLVM_CAS_LAZYMAPPEDFILEREGION_H
 
-#include "llvm/ADT/None.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -110,13 +109,13 @@ private:
   void destroyImpl() {
     if (FD) {
       sys::fs::closeFile(*FD);
-      FD = None;
+      FD = std::nullopt;
     }
   }
   void moveImpl(LazyMappedFileRegion &RHS) {
     Path = std::move(RHS.Path);
     FD = std::move(RHS.FD);
-    RHS.FD = None;
+    RHS.FD = std::nullopt;
     Map = std::move(RHS.Map);
     CachedSize = RHS.CachedSize.load();
     RHS.CachedSize = 0;

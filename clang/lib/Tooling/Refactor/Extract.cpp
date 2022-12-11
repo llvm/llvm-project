@@ -182,16 +182,16 @@ Optional<CompoundStatementRange> getExtractedStatements(const CompoundStmt *CS,
                                                         const Stmt *Begin,
                                                         const Stmt *End) {
   if (CS->body_empty())
-    return None;
+    return std::nullopt;
   assert(Begin && End);
   CompoundStatementRange Result;
   Result.First = findSelectedStmt(CS->body(), Begin);
   if (Result.First == CS->body_end())
-    return None;
+    return std::nullopt;
   Result.Last = findSelectedStmt(
       CompoundStmt::body_const_range(Result.First, CS->body_end()), End);
   if (Result.Last == CS->body_end())
-    return None;
+    return std::nullopt;
   return Result;
 }
 
@@ -202,7 +202,7 @@ initiateAnyExtractOperation(ASTSlice &Slice, ASTContext &Context,
                             ExtractionKind Kind = ExtractionKind::Function) {
   auto SelectedStmtsOpt = Slice.getSelectedStmtSet();
   if (!SelectedStmtsOpt)
-    return None;
+    return std::nullopt;
   SelectedStmtSet Stmts = *SelectedStmtsOpt;
   // The selection range is contained entirely within this statement (without
   // taking leading/trailing comments and whitespace into account).
@@ -211,7 +211,7 @@ initiateAnyExtractOperation(ASTSlice &Slice, ASTContext &Context,
   // We only want to perform the extraction if the selection range is entirely
   // within a body of a function or method.
   if (!Selected)
-    return None;
+    return std::nullopt;
   const Decl *ParentDecl =
       Slice.parentDeclForIndex(*Stmts.containsSelectionRangeIndex);
 
@@ -232,7 +232,7 @@ initiateAnyExtractOperation(ASTSlice &Slice, ASTContext &Context,
       Slice.parentStmtForIndex(*Stmts.containsSelectionRangeIndex);
   if (Kind == ExtractionKind::Expression &&
       !isLexicalExpression(Selected, ParentStmt))
-    return None;
+    return std::nullopt;
 
   RefactoringOperationResult Result;
   Result.Initiated = true;

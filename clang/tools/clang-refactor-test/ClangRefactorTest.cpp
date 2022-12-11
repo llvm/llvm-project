@@ -793,13 +793,13 @@ struct ParsedSourceLineRange : ParsedSourceLocation {
     Result.Line = PSL.Line;
     Result.Column = PSL.Column;
     if (Result.FileName.empty())
-      return None;
+      return std::nullopt;
     if (RangeSplit.second == "end")
       Result.MaxColumn = lastColumnForFile(Result.FileName, Result.Line);
     else if (RangeSplit.second.getAsInteger(10, Result.MaxColumn))
-      return None;
+      return std::nullopt;
     if (Result.MaxColumn < Result.Column)
-      return None;
+      return std::nullopt;
     return Result;
   }
 };
@@ -815,11 +815,11 @@ struct OldParsedSourceRange {
     std::pair<StringRef, StringRef> RangeSplit = Str.rsplit('-');
     auto Begin = ParsedSourceLocation::FromString(RangeSplit.first);
     if (Begin.FileName.empty())
-      return None;
+      return std::nullopt;
     std::string EndString = Begin.FileName + ":" + RangeSplit.second.str();
     auto End = ParsedSourceLocation::FromString(EndString);
     if (End.FileName.empty())
-      return None;
+      return std::nullopt;
     return OldParsedSourceRange(Begin, End);
   }
 };
@@ -1007,13 +1007,13 @@ static Optional<std::pair<unsigned, unsigned>>
 findSelectionLocInSource(StringRef Buffer, StringRef Label) {
   size_t I = Buffer.find(Label);
   if (I == StringRef::npos)
-    return None;
+    return std::nullopt;
   I = I + Label.size();
   auto LocParts =
       Buffer.substr(I, Buffer.find_first_of("\n/", I) - I).trim().split(":");
   unsigned CurrentLine = Buffer.take_front(I).count('\n') + 1;
   if (LocParts.second.empty())
-    return None;
+    return std::nullopt;
   StringRef LineString = LocParts.first;
   unsigned Line, Column;
   enum ExprKind { Literal, Add, Sub };
@@ -1021,13 +1021,13 @@ findSelectionLocInSource(StringRef Buffer, StringRef Label) {
                       ? Add
                       : LineString.startswith("-") ? Sub : Literal;
   if (LineString.drop_front(Expr != Literal ? 1 : 0).getAsInteger(10, Line))
-    return None;
+    return std::nullopt;
   if (Expr == Add)
     Line += CurrentLine;
   else if (Expr == Sub)
     Line = CurrentLine - Line;
   if (LocParts.second.getAsInteger(10, Column))
-    return None;
+    return std::nullopt;
   return std::make_pair(Line, Column);
 }
 
@@ -1035,13 +1035,13 @@ static Optional<ParsedSourceLocation> selectionLocForFile(StringRef Filename,
                                                           StringRef Name) {
   auto Buf = llvm::MemoryBuffer::getFile(Filename);
   if (!Buf)
-    return None;
+    return std::nullopt;
 
   StringRef Buffer = (*Buf)->getBuffer();
   std::string Label = Name.str() + ":";
   auto Start = findSelectionLocInSource(Buffer, Label);
   if (!Start)
-    return None;
+    return std::nullopt;
   // Create the resulting source location.
   // FIXME: Parse can be avoided.
   std::string Str;
@@ -1054,7 +1054,7 @@ static Optional<OldParsedSourceRange> selectionRangeForFile(StringRef Filename,
                                                          StringRef Name) {
   auto Buf = llvm::MemoryBuffer::getFile(Filename);
   if (!Buf)
-    return None;
+    return std::nullopt;
 
   StringRef Buffer = (*Buf)->getBuffer();
   std::string BeginLabel = Name.str() + "-begin:";
@@ -1062,7 +1062,7 @@ static Optional<OldParsedSourceRange> selectionRangeForFile(StringRef Filename,
   auto Start = findSelectionLocInSource(Buffer, BeginLabel);
   auto End = findSelectionLocInSource(Buffer, EndLabel);
   if (!Start || !End)
-    return None;
+    return std::nullopt;
   // Create the resulting source range.
   // FIXME: Parse can be avoided.
   std::string Str;
@@ -1223,7 +1223,7 @@ int initiateAndPerformAction(CXTranslationUnit TU, ArrayRef<const char *> Args,
 #define REFACTORING_OPERATION_SUB_ACTION(Name, Parent, Spelling, Command)      \
   .Case(Command, CXRefactor_##Parent##_##Name)
 #include "clang/Tooling/Refactor/RefactoringActions.def"
-                              .Default(None);
+                              .Default(std::nullopt);
   if (!ActionTypeOrNone) {
     errs() << "error: invalid action '" << opts::initiateAndPerform::ActionName
            << "'\n";
@@ -1234,9 +1234,10 @@ int initiateAndPerformAction(CXTranslationUnit TU, ArrayRef<const char *> Args,
   Optional<bool> Initiated;
   Optional<std::string> InitiationFailureReason;
   Optional<std::string> LocationCandidateInformation;
-  auto InitiateAndPerform =
-      [&](const ParsedSourceLocation &Location, unsigned Column,
-          Optional<OldParsedSourceRange> SelectionRange = None) -> bool {
+  auto InitiateAndPerform = [&](const ParsedSourceLocation &Location,
+                                unsigned Column,
+                                Optional<OldParsedSourceRange> SelectionRange =
+                                    std::nullopt) -> bool {
     CXSourceLocation Loc =
         clang_getLocation(TU, clang_getFile(TU, Location.FileName.c_str()),
                           Location.Line, Column);

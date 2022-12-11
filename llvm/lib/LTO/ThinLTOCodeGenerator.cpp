@@ -468,7 +468,7 @@ public:
 
   Optional<std::unique_ptr<MemoryBuffer>> getMappedBuffer() final {
     if (getEntryPath().empty())
-      return None;
+      return std::nullopt;
 
     auto ReloadedBufferOrErr = tryLoadingBuffer();
     if (auto EC = ReloadedBufferOrErr.getError()) {
@@ -508,7 +508,7 @@ public:
     // the correct context.
     // TODO: We can have an alternative hashing function that doesn't
     // need to store the key into CAS to get the CacheKey.
-    auto CASKey = CAS.createProxy(None, *Key);
+    auto CASKey = CAS.createProxy(std::nullopt, *Key);
     if (!CASKey)
       report_fatal_error(CASKey.takeError());
 
@@ -546,7 +546,7 @@ public:
     if (!ID)
       return;
 
-    auto Proxy = CAS.createProxy(None, OutputBuffer.getBuffer());
+    auto Proxy = CAS.createProxy(std::nullopt, OutputBuffer.getBuffer());
     if (!Proxy)
       report_fatal_error(Proxy.takeError());
 
@@ -656,12 +656,12 @@ public:
 
   Optional<std::unique_ptr<MemoryBuffer>> getMappedBuffer() final {
     if (!ProducedOutput)
-      return None;
+      return std::nullopt;
 
     ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
         MemoryBuffer::getFile(OutputPath);
     if (!MBOrErr)
-      return None;
+      return std::nullopt;
 
     return std::move(*MBOrErr);
   }
@@ -810,11 +810,11 @@ Optional<std::string> ModuleCacheEntry::computeCacheKey(
     bool Freestanding, const TargetMachineBuilder &TMBuilder) {
   if (!Index.modulePaths().count(ModuleID))
     // The module does not have an entry, it can't have a hash at all
-    return None;
+    return std::nullopt;
 
   if (all_of(Index.getModuleHash(ModuleID), [](uint32_t V) { return V == 0; }))
     // No hash entry, no caching!
-    return None;
+    return std::nullopt;
 
   llvm::lto::Config Conf;
   Conf.OptLevel = OptLevel;

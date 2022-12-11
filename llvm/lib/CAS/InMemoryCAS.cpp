@@ -250,7 +250,7 @@ public:
   Optional<ObjectRef> getReference(const CASID &ID) const final {
     if (const InMemoryObject *Object = getInMemoryObject(ID))
       return toReference(*Object);
-    return None;
+    return std::nullopt;
   }
   ObjectRef getReference(ObjectHandle Handle) const final {
     return toReference(asInMemoryObject(Handle));
@@ -323,7 +323,7 @@ InMemoryCAS::storeFromNullTerminatedRegion(ArrayRef<uint8_t> ComputedHash,
     return Objects.Allocate(Size, alignof(InMemoryObject));
   };
   auto Generator = [&]() -> const InMemoryObject * {
-    return &InMemoryRefObject::create(Allocator, I, None, Data);
+    return &InMemoryRefObject::create(Allocator, I, std::nullopt, Data);
   };
   const InMemoryObject &Node =
       cast<InMemoryObject>(I.Data.loadOrGenerate(Generator));

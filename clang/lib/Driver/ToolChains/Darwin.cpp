@@ -531,7 +531,7 @@ public:
   Optional<ArrayRef<const char *>> getEnvironmentIfOverridden() const {
     if (Environment)
       return makeArrayRef(*Environment);
-    return None;
+    return std::nullopt;
   }
 
   /// Get the parts of the environment that have been overridden. Not a valid

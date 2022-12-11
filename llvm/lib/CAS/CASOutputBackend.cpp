@@ -57,7 +57,8 @@ CASOutputBackend::createFileImpl(StringRef ResolvedPath,
   return std::make_unique<CASOutputFile>(
       ResolvedPath, [&](StringRef Path, StringRef Bytes) -> Error {
         Optional<ObjectRef> BytesRef;
-        if (Error E = CAS.storeFromString(None, Bytes).moveInto(BytesRef))
+        if (Error E =
+                CAS.storeFromString(std::nullopt, Bytes).moveInto(BytesRef))
           return E;
         // FIXME: Should there be a lock taken before modifying Outputs?
         Outputs.push_back({std::string(Path), *BytesRef});

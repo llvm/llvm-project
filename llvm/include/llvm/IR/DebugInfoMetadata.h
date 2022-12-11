@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1073,26 +1072,26 @@ public:
   Optional<PtrAuthData> getPtrAuthData() const {
     return getTag() == dwarf::DW_TAG_LLVM_ptrauth_type
                ? Optional<PtrAuthData>(PtrAuthData(SubclassData32))
-               : None;
+               : std::nullopt;
   }
 
   /// \returns The PointerAuth key.
   Optional<unsigned> getPtrAuthKey() const {
     if (auto PtrAuthData = getPtrAuthData())
       return PtrAuthData->Payload.Data.Key;
-    else return None;
+    else return std::nullopt;
   }
   /// \returns The PointerAuth address discrimination bit.
   Optional<bool> isPtrAuthAddressDiscriminated() const {
     if (auto PtrAuthData = getPtrAuthData())
       return PtrAuthData->Payload.Data.IsAddressDiscriminated;
-    else return None;
+    else return std::nullopt;
   }
   /// \returns The PointerAuth extra discriminator.
   Optional<unsigned> getPtrAuthExtraDiscriminator() const {
     if (auto PtrAuthData = getPtrAuthData())
       return PtrAuthData->Payload.Data.ExtraDiscriminator;
-    else return None;
+    else return std::nullopt;
   }
 
   /// Get extra data associated with this derived type.

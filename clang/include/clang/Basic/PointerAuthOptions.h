@@ -82,7 +82,7 @@ public:
 
   PointerAuthSchema(SoftKey key, bool isAddressDiscriminated,
                     Discrimination otherDiscrimination,
-                    Optional<uint16_t> constantDiscriminator = None)
+                    Optional<uint16_t> constantDiscriminator = std::nullopt)
       : TheKind(Kind::Soft), IsAddressDiscriminated(isAddressDiscriminated),
         DiscriminationKind(otherDiscrimination), Key(unsigned(key)) {
     assert((getOtherDiscrimination() != Discrimination::Constant ||
@@ -94,7 +94,7 @@ public:
 
   PointerAuthSchema(ARM8_3Key key, bool isAddressDiscriminated,
                     Discrimination otherDiscrimination,
-                    Optional<uint16_t> constantDiscriminator = None)
+                    Optional<uint16_t> constantDiscriminator = std::nullopt)
       : TheKind(Kind::ARM8_3), IsAddressDiscriminated(isAddressDiscriminated),
         DiscriminationKind(otherDiscrimination), Key(unsigned(key)) {
     assert((getOtherDiscrimination() != Discrimination::Constant ||

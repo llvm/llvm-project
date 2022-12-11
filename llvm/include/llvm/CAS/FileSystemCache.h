@@ -11,7 +11,6 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CAS/CASReference.h"
@@ -125,7 +124,7 @@ public:
   ///
   /// Thread-safe; takes a lock on \p Parent's mutex.
   DirectoryEntry &makeDirectory(DirectoryEntry &Parent, StringRef TreePath,
-                                Optional<ObjectRef> Ref = None);
+                                Optional<ObjectRef> Ref = std::nullopt);
 
   /// Create a directory entry and a symlink.
   ///
@@ -201,7 +200,7 @@ public:
   FileSystemCache(FileSystemCache &&) = delete;
   FileSystemCache(const FileSystemCache &) = delete;
 
-  explicit FileSystemCache(Optional<ObjectRef> Root = None);
+  explicit FileSystemCache(Optional<ObjectRef> Root = std::nullopt);
 
 private:
   ThreadSafeAllocator<SpecificBumpPtrAllocator<File>> FileAlloc;

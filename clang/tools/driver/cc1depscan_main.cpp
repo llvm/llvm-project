@@ -347,13 +347,13 @@ makeDepscanDaemonKey(StringRef Mode, const DepscanSharing &Sharing) {
   // TODO: consider returning ThisPID (same as "daemon") once the daemon can
   // share a CAS instance without sharing filesystem caching. Or maybe delete
   // "auto" at that point and make "-fdepscan" default to "-fdepscan=daemon".
-  return None;
+  return std::nullopt;
 }
 
 static Optional<std::string>
 makeDepscanDaemonPath(StringRef Mode, const DepscanSharing &Sharing) {
   if (Mode == "inline")
-    return None;
+    return std::nullopt;
 
   if (Sharing.Path)
     return Sharing.Path->str();
@@ -361,7 +361,7 @@ makeDepscanDaemonPath(StringRef Mode, const DepscanSharing &Sharing) {
   if (auto Key = makeDepscanDaemonKey(Mode, Sharing))
     return cc1depscand::getBasePath(*Key);
 
-  return None;
+  return std::nullopt;
 }
 
 static Expected<llvm::cas::CASID> scanAndUpdateCC1Inline(

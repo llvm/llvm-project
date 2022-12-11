@@ -32,10 +32,12 @@ TEST(CASOutputBackendTest, createFiles) {
 
   Optional<ObjectProxy> Content1;
   Optional<ObjectProxy> Content2;
-  ASSERT_THAT_ERROR(CAS->createProxy(None, "content1").moveInto(Content1),
-                    Succeeded());
-  ASSERT_THAT_ERROR(CAS->createProxy(None, "content2").moveInto(Content2),
-                    Succeeded());
+  ASSERT_THAT_ERROR(
+      CAS->createProxy(std::nullopt, "content1").moveInto(Content1),
+      Succeeded());
+  ASSERT_THAT_ERROR(
+      CAS->createProxy(std::nullopt, "content2").moveInto(Content2),
+      Succeeded());
   std::string AbsolutePath1 = "/absolute/path/1";
   std::string AbsolutePath2 = "/absolute/path/2";
   std::string RelativePath = "relative/path/./2";

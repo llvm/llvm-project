@@ -10,7 +10,6 @@
 #define LLVM_CAS_HASHMAPPEDTRIE_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -94,8 +93,8 @@ protected:
 
   ThreadSafeHashMappedTrieBase(size_t ContentAllocSize,
                                size_t ContentAllocAlign, size_t ContentOffset,
-                               Optional<size_t> NumRootBits = None,
-                               Optional<size_t> NumSubtrieBits = None);
+                               Optional<size_t> NumRootBits = std::nullopt,
+                               Optional<size_t> NumSubtrieBits = std::nullopt);
 
   /// Destructor, which asserts if there's anything to do. Subclasses should
   /// call \a destroyImpl().
@@ -320,8 +319,8 @@ public:
     return ThreadSafeHashMappedTrieBase::find(Hash);
   }
 
-  ThreadSafeHashMappedTrie(Optional<size_t> NumRootBits = None,
-                           Optional<size_t> NumSubtrieBits = None)
+  ThreadSafeHashMappedTrie(Optional<size_t> NumRootBits = std::nullopt,
+                           Optional<size_t> NumSubtrieBits = std::nullopt)
       : ThreadSafeHashMappedTrieBase(getContentAllocSize<value_type>(),
                                      getContentAllocAlign<value_type>(),
                                      getContentOffset<value_type>(),

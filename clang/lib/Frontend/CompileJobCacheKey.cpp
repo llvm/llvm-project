@@ -41,15 +41,16 @@ createCompileJobCacheKeyForArgs(ObjectStore &CAS,
     Builder.push(RootRef, llvm::cas::TreeEntry::Tree, "filesystem");
   }
   Builder.push(
-      llvm::cantFail(CAS.storeFromString(None, CommandLine)),
+      llvm::cantFail(CAS.storeFromString(std::nullopt, CommandLine)),
       llvm::cas::TreeEntry::Regular, "command-line");
   Builder.push(
-      llvm::cantFail(CAS.storeFromString(None, "-cc1")),
+      llvm::cantFail(CAS.storeFromString(std::nullopt, "-cc1")),
       llvm::cas::TreeEntry::Regular, "computation");
 
   // FIXME: The version is maybe insufficient...
-  Builder.push(llvm::cantFail(CAS.storeFromString(None, getClangFullVersion())),
-               llvm::cas::TreeEntry::Regular, "version");
+  Builder.push(
+      llvm::cantFail(CAS.storeFromString(std::nullopt, getClangFullVersion())),
+      llvm::cas::TreeEntry::Regular, "version");
 
   return llvm::cantFail(Builder.create(CAS)).getID();
 }
@@ -96,12 +97,12 @@ createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
   if (!RootID) {
     llvm::consumeError(RootID.takeError());
     Diags.Report(diag::err_cas_cannot_parse_root_id) << RootIDString;
-    return None;
+    return std::nullopt;
   }
   Optional<llvm::cas::ObjectRef> RootRef = CAS.getReference(*RootID);
   if (!RootRef) {
     Diags.Report(diag::err_cas_missing_root_id) << RootIDString;
-    return None;
+    return std::nullopt;
   }
 
   return createCompileJobCacheKeyForArgs(CAS, Argv, *RootRef, IsIncludeTree);

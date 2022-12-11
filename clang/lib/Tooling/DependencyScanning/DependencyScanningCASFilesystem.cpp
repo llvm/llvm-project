@@ -72,7 +72,7 @@ storeDepDirectives(cas::ObjectStore &CAS,
     TokenIdx += Directive.Tokens.size();
   }
 
-  auto Blob = CAS.createProxy(None, Buffer);
+  auto Blob = CAS.createProxy(std::nullopt, Buffer);
   if (!Blob)
     return Blob.takeError();
   return Blob->getRef();
@@ -143,17 +143,20 @@ void DependencyScanningCASFilesystem::scanForDirectives(
   // Get a blob for the clang version string.
   if (!ClangFullVersionID)
     ClangFullVersionID =
-        reportAsFatalIfError(CAS.createProxy(None, getClangFullVersion()))
+        reportAsFatalIfError(
+            CAS.createProxy(std::nullopt, getClangFullVersion()))
             .getRef();
 
   // Get a blob for the dependency directives scan command.
   if (!DepDirectivesID)
     DepDirectivesID =
-        reportAsFatalIfError(CAS.createProxy(None, "directives")).getRef();
+        reportAsFatalIfError(CAS.createProxy(std::nullopt, "directives"))
+            .getRef();
 
   // Get an empty blob.
   if (!EmptyBlobID)
-    EmptyBlobID = reportAsFatalIfError(CAS.createProxy(None, "")).getRef();
+    EmptyBlobID =
+        reportAsFatalIfError(CAS.createProxy(std::nullopt, "")).getRef();
 
   // Construct a tree for the input.
   Optional<CASID> InputID;
@@ -365,5 +368,5 @@ DependencyScanningCASFilesystem::getDirectiveTokens(const Twine &Path) {
   LookupPathResult Result = lookupPath(Path);
   if (Result.Entry && !Result.Entry->DepDirectives.empty())
     return llvm::makeArrayRef(Result.Entry->DepDirectives);
-  return None;
+  return std::nullopt;
 }

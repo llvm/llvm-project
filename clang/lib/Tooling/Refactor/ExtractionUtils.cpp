@@ -32,7 +32,7 @@ Optional<StringRef> tooling::extract::nameForExtractedVariable(const Expr *E) {
     } else if (const auto *Prop = PRE->getExplicitProperty())
       return Prop->getName();
   }
-  return None;
+  return std::nullopt;
 }
 
 namespace {

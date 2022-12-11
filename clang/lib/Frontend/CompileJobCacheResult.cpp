@@ -42,7 +42,7 @@ CompileJobCacheResult::getOutput(OutputKind Kind) const {
     if (Kind == K)
       return Output{getOutputObject(I), Kind};
   }
-  return None;
+  return std::nullopt;
 }
 
 static void printOutputKind(llvm::raw_ostream &OS,

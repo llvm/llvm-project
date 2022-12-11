@@ -624,7 +624,7 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
                           .moveInto(Tree),
                       Succeeded());
     if (!Tree)
-      return None;
+      return std::nullopt;
     Optional<llvm::cas::TreeProxy> TreeNode;
     EXPECT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
                       Succeeded());
@@ -647,7 +647,7 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
     EXPECT_EQ(FS->excludeFromTracking(D1.path()), std::error_code());
     EXPECT_EQ(FS->excludeFromTracking(F21.path()), std::error_code());
     auto Tree = CreateTreeFromNewAccesses();
-    ASSERT_NE(Tree, None);
+    ASSERT_NE(Tree, std::nullopt);
     EXPECT_EQ(Tree->size(), 0u);
   }
 
@@ -658,7 +658,7 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
     EXPECT_EQ(FS->excludeFromTracking(F21.path()), std::error_code());
     AccessAllFiles();
     auto Tree = CreateTreeFromNewAccesses();
-    ASSERT_NE(Tree, None);
+    ASSERT_NE(Tree, std::nullopt);
     EXPECT_EQ(Tree->size(), 1u);
     EXPECT_FALSE(Tree->lookup("d1"));
     auto D2Node = Tree->lookup("d2");
@@ -676,7 +676,7 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
     EXPECT_EQ(FS->excludeFromTracking(D1.path()), std::error_code());
     EXPECT_EQ(FS->excludeFromTracking(F21.path()), std::error_code());
     auto Tree = CreateTreeFromNewAccesses();
-    ASSERT_NE(Tree, None);
+    ASSERT_NE(Tree, std::nullopt);
     EXPECT_EQ(Tree->size(), 1u);
     EXPECT_FALSE(Tree->lookup("d1"));
     auto D2Node = Tree->lookup("d2");
@@ -694,7 +694,7 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
     EXPECT_EQ(FS->excludeFromTracking(D1Sub.path()), std::error_code());
     EXPECT_EQ(FS->excludeFromTracking(D2.path()), std::error_code());
     auto Tree = CreateTreeFromNewAccesses();
-    ASSERT_NE(Tree, None);
+    ASSERT_NE(Tree, std::nullopt);
     EXPECT_EQ(Tree->size(), 1u);
     EXPECT_FALSE(Tree->lookup("d2"));
     auto D1Node = Tree->lookup("d1");

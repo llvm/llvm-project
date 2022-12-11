@@ -9,7 +9,6 @@
 #ifndef LLVM_CAS_OBJECTSTORE_H
 #define LLVM_CAS_OBJECTSTORE_H
 
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CAS/CASID.h"
@@ -232,7 +231,7 @@ public:
   /// Returns the \a CASID and the size of the file.
   Expected<ObjectRef>
   storeFromOpenFile(sys::fs::file_t FD,
-                    Optional<sys::fs::file_status> Status = None) {
+                    Optional<sys::fs::file_status> Status = std::nullopt) {
     return storeFromOpenFileImpl(FD, Status);
   }
 

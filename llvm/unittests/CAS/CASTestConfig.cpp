@@ -23,7 +23,7 @@ MockEnv::~MockEnv() {}
 TestingAndDir createInMemory(int I) {
   std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   std::unique_ptr<ActionCache> Cache = createInMemoryActionCache();
-  return TestingAndDir{std::move(CAS), std::move(Cache), nullptr, None};
+  return TestingAndDir{std::move(CAS), std::move(Cache), nullptr, std::nullopt};
 }
 
 INSTANTIATE_TEST_SUITE_P(InMemoryCAS, CASTest,

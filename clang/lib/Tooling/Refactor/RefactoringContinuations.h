@@ -349,7 +349,7 @@ public:
     ASTQuery->invalidateTUSpecificState();
     State =
         convertToPersistentImpl(std::index_sequence_for<QueryOrState...>());
-    Inputs = None;
+    Inputs = std::nullopt;
   }
 
   /// The state is converted to the AST representation in the given ASTContext

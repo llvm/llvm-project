@@ -100,7 +100,7 @@ static Optional<std::pair<const Expr *, const Expr *>>
 matchBinOp(const Expr *E, BinaryOperator::Opcode Kind) {
   const auto *BinOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
   if (!BinOp || BinOp->getOpcode() != Kind)
-    return None;
+    return std::nullopt;
   return std::pair<const Expr *, const Expr *>(
       BinOp->getLHS()->IgnoreParenImpCasts(), BinOp->getRHS()->IgnoreParens());
 }
@@ -154,16 +154,16 @@ RefactoringOperationResult clang::tooling::initiateIfSwitchConversionOperation(
   // FIXME: Add support for selections.
   const auto *If = cast_or_null<IfStmt>(Slice.nearestStmt(Stmt::IfStmtClass));
   if (!If)
-    return None;
+    return std::nullopt;
 
   // Don't allow if statements without any 'else' or 'else if'.
   if (!If->getElse())
-    return None;
+    return std::nullopt;
 
   // Don't allow ifs with variable declarations in conditions or C++17
   // initializer statements.
   if (checkIfsHaveConditionExpression(If))
-    return None;
+    return std::nullopt;
 
   // Find the ranges in which initiation can be performed and verify that the
   // ifs don't have any initialization expressions or condition variables.
@@ -191,7 +191,7 @@ RefactoringOperationResult clang::tooling::initiateIfSwitchConversionOperation(
   }
 
   if (!isLocationInAnyRange(Location, Ranges, SM))
-    return None;
+    return std::nullopt;
 
   // Verify that the bodies don't have any 'break'/'default'/'case' statements.
   ValidIfBodyVerifier BodyVerifier;

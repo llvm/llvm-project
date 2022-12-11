@@ -60,7 +60,7 @@ protected:
   }
   void SetUp() { NextCASIndex = 0; }
   void TearDown() {
-    NextCASIndex = llvm::None;
+    NextCASIndex = std::nullopt;
     Dirs.clear();
     Envs.clear();
   }

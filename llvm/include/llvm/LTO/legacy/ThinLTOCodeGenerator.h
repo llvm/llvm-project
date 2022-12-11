@@ -58,7 +58,7 @@ public:
   virtual Error writeObject(const MemoryBuffer &OutputBuffer,
                             StringRef OutputPath);
   virtual Optional<std::unique_ptr<MemoryBuffer>> getMappedBuffer() {
-    return None;
+    return std::nullopt;
   }
 
   virtual ~ModuleCacheEntry() {}

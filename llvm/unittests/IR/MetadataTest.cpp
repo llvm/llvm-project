@@ -1723,7 +1723,7 @@ TEST_F(DIDerivedTypeTest, get) {
 
   auto *N = DIDerivedType::get(
       Context, dwarf::DW_TAG_pointer_type, "something", File, 1, Scope,
-      BaseType, 2, 3, 4, DWARFAddressSpace, None, Flags5, ExtraData);
+      BaseType, 2, 3, 4, DWARFAddressSpace, std::nullopt, Flags5, ExtraData);
   auto *N1 = DIDerivedType::get(Context, dwarf::DW_TAG_LLVM_ptrauth_type, "",
                                 File, 1, Scope, N, 2, 3, 4, DWARFAddressSpace,
                                 PtrAuthData, Flags5, ExtraData);
@@ -1737,65 +1737,65 @@ TEST_F(DIDerivedTypeTest, get) {
   EXPECT_EQ(3u, N->getAlignInBits());
   EXPECT_EQ(4u, N->getOffsetInBits());
   EXPECT_EQ(DWARFAddressSpace, *N->getDWARFAddressSpace());
-  EXPECT_EQ(None, N->getPtrAuthData());
+  EXPECT_EQ(std::nullopt, N->getPtrAuthData());
   EXPECT_EQ(PtrAuthData, N1->getPtrAuthData());
   EXPECT_EQ(5u, N->getFlags());
   EXPECT_EQ(ExtraData, N->getExtraData());
   EXPECT_EQ(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  4, DWARFAddressSpace, None, Flags5,
+                                  4, DWARFAddressSpace, std::nullopt, Flags5,
                                   ExtraData));
 
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_reference_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  4, DWARFAddressSpace, None, Flags5,
+                                  4, DWARFAddressSpace, std::nullopt, Flags5,
                                   ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type, "else",
                                   File, 1, Scope, BaseType, 2, 3, 4,
-                                  DWARFAddressSpace, None, Flags5,
+                                  DWARFAddressSpace, std::nullopt, Flags5,
                                   ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", getFile(), 1, Scope, BaseType, 2,
-                                  3, 4, DWARFAddressSpace, None, Flags5,
+                                  3, 4, DWARFAddressSpace, std::nullopt, Flags5,
                                   ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 2, Scope, BaseType, 2, 3,
-                                  4, DWARFAddressSpace, None, Flags5,
+                                  4, DWARFAddressSpace, std::nullopt, Flags5,
                                   ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, getSubprogram(),
                                   BaseType, 2, 3, 4, DWARFAddressSpace,
-                                  None, Flags5, ExtraData));
+                                  std::nullopt, Flags5, ExtraData));
   EXPECT_NE(
       N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type, "something",
                             File, 1, Scope, getBasicType("basic2"), 2, 3, 4,
-                            DWARFAddressSpace, None, Flags5, ExtraData));
+                            DWARFAddressSpace, std::nullopt, Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 3, 3,
-                                  4, DWARFAddressSpace, None, Flags5,
+                                  4, DWARFAddressSpace, std::nullopt, Flags5,
                                   ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 2,
-                                  4, DWARFAddressSpace, None, Flags5,
+                                  4, DWARFAddressSpace, std::nullopt, Flags5,
                                   ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  5, DWARFAddressSpace, None, Flags5,
+                                  5, DWARFAddressSpace, std::nullopt, Flags5,
                                   ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  4, DWARFAddressSpace + 1, None, Flags5,
+                                  4, DWARFAddressSpace + 1, std::nullopt, Flags5,
                                   ExtraData));
   EXPECT_NE(N1, DIDerivedType::get(Context, dwarf::DW_TAG_LLVM_ptrauth_type,
                                    "", File, 1, Scope, N, 2, 3, 4,
-                                   DWARFAddressSpace, None, Flags5, ExtraData));
+                                   DWARFAddressSpace, std::nullopt, Flags5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  4, DWARFAddressSpace, None, Flags4,
+                                  4, DWARFAddressSpace, std::nullopt, Flags4,
                                   ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
                                   "something", File, 1, Scope, BaseType, 2, 3,
-                                  4, DWARFAddressSpace, None, Flags5,
+                                  4, DWARFAddressSpace, std::nullopt, Flags5,
                                   getTuple()));
 
   TempDIDerivedType Temp = N->clone();
@@ -1814,7 +1814,7 @@ TEST_F(DIDerivedTypeTest, getWithLargeValues) {
   auto *N = DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type, "something",
                                File, 1, Scope, BaseType, UINT64_MAX,
                                UINT32_MAX - 1, UINT64_MAX - 2, UINT32_MAX - 3,
-                               None, Flags, ExtraData);
+                               std::nullopt, Flags, ExtraData);
   EXPECT_EQ(UINT64_MAX, N->getSizeInBits());
   EXPECT_EQ(UINT32_MAX - 1, N->getAlignInBits());
   EXPECT_EQ(UINT64_MAX - 2, N->getOffsetInBits());
@@ -3883,7 +3883,7 @@ TEST_F(MDTupleAllocationTest, Tracking2) {
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG) && !defined(GTEST_HAS_SEH)
 typedef MetadataTest MDTupleAllocationDeathTest;
 TEST_F(MDTupleAllocationDeathTest, ResizeRejected) {
-  MDTuple *A = MDTuple::get(Context, None);
+  MDTuple *A = MDTuple::get(Context, std::nullopt);
   auto *Value1 = getConstantAsMetadata();
   EXPECT_DEATH(A->push_back(Value1),
                "Resizing is not supported for uniqued nodes");

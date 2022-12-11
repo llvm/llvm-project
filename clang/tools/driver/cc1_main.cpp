@@ -485,7 +485,7 @@ Optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
 
   // Nothing else to do if we're not caching.
   if (!CacheCompileJob)
-    return None;
+    return std::nullopt;
 
   CAS = Invocation.getCASOpts().getOrCreateObjectStore(Diags);
   if (!CAS)
@@ -527,7 +527,7 @@ Optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
         std::make_unique<ObjectStoreCachingOutputs>(Clang, CAS, Cache);
   }
 
-  return None;
+  return std::nullopt;
 }
 
 CachingOutputs::CachingOutputs(CompilerInstance &Clang) : Clang(Clang) {
@@ -632,7 +632,7 @@ Expected<bool> ObjectStoreCachingOutputs::tryReplayCachedResult(
 
 Optional<int> CompileJobCache::tryReplayCachedResult(CompilerInstance &Clang) {
   if (!CacheCompileJob)
-    return None;
+    return std::nullopt;
 
   DiagnosticsEngine &Diags = Clang.getDiagnostics();
 
@@ -658,7 +658,7 @@ Optional<int> CompileJobCache::tryReplayCachedResult(CompilerInstance &Clang) {
   if (CacheBackend->prepareOutputCollection())
     return 1;
 
-  return None;
+  return std::nullopt;
 }
 
 bool CachingOutputs::prepareOutputCollectionCommon(
@@ -841,7 +841,7 @@ Expected<cas::ObjectRef> ObjectStoreCachingOutputs::writeOutputs(
     // and will store it regardless so that the key is independent of the
     // presence of '--serialize-diagnostics'.
     Expected<llvm::cas::ObjectProxy> SerialDiags =
-        CAS->createProxy(None, SerialDiagsBuf);
+        CAS->createProxy(std::nullopt, SerialDiagsBuf);
     if (!SerialDiags)
       return SerialDiags.takeError();
     CachedResultBuilder.addOutput(OutputKind::SerializedDiagnostics,
@@ -858,7 +858,8 @@ Expected<cas::ObjectRef> ObjectStoreCachingOutputs::writeOutputs(
       return std::move(Err);
 
   // Hack around llvm::errs() not being captured by the output backend yet.
-  Expected<llvm::cas::ObjectRef> Errs = CAS->storeFromString(None, ResultDiags);
+  Expected<llvm::cas::ObjectRef> Errs =
+      CAS->storeFromString(std::nullopt, ResultDiags);
   if (!Errs)
     return Errs.takeError();
   CachedResultBuilder.addOutput(OutputKind::Stderr, *Errs);
@@ -888,7 +889,7 @@ Error ObjectStoreCachingOutputs::finishComputedResult(
   Optional<int> Status = replayCachedResult(*Result,
                                             /*JustComputedResult=*/true);
   (void)Status;
-  assert(Status == None);
+  assert(Status == std::nullopt);
   return Error::success();
 }
 
@@ -897,7 +898,7 @@ Optional<int>
 ObjectStoreCachingOutputs::replayCachedResult(llvm::cas::ObjectRef ResultID,
                                               bool JustComputedResult) {
   if (JustComputedResult)
-    return None;
+    return std::nullopt;
 
   if (!JustComputedResult) {
     // Disable the existing DiagnosticConsumer, we'll both print to stderr
@@ -971,7 +972,7 @@ ObjectStoreCachingOutputs::replayCachedResult(llvm::cas::ObjectRef ResultID,
     llvm::report_fatal_error(std::move(Err));
 
   if (JustComputedResult)
-    return None;
+    return std::nullopt;
   return 0;
 }
 
@@ -1040,7 +1041,7 @@ RemoteCachingOutputs::getOutputKindForName(StringRef Name) {
       .Case(SerializedDiagnosticsKindName, OutputKind::SerializedDiagnostics)
       .Case(StderrDiagnosticsKindName, OutputKind::Stderr)
       .Case(DependenciesOutputKindName, OutputKind::Dependencies)
-      .Default(None);
+      .Default(std::nullopt);
 }
 
 Expected<bool> RemoteCachingOutputs::replayCachedResult(
@@ -1093,7 +1094,7 @@ Expected<bool> RemoteCachingOutputs::replayCachedResult(
     StringRef Path = OutKind ? getPathForOutputKind(*OutKind) : OutputName;
 
     if (OutKind && *OutKind == OutputKind::Stderr) {
-      LoadQueue.loadAsync(CASID, /*OutFilePath*/ None,
+      LoadQueue.loadAsync(CASID, /*OutFilePath*/ std::nullopt,
                           makeCtx(OutputName, CASID, /*IsStderr*/ true));
       continue;
     }

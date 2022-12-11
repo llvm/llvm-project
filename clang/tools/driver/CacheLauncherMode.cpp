@@ -75,7 +75,7 @@ static int executeAsProcess(ArrayRef<const char *> Args,
     RefArgs.push_back(Arg);
   }
   std::string ErrMsg;
-  int Result = llvm::sys::ExecuteAndWait(RefArgs[0], RefArgs, /*Env*/ None,
+  int Result = llvm::sys::ExecuteAndWait(RefArgs[0], RefArgs, /*Env*/ std::nullopt,
                                          /*Redirects*/ {}, /*SecondsToWait*/ 0,
                                          /*MemoryLimit*/ 0, &ErrMsg);
   if (!ErrMsg.empty()) {
@@ -134,7 +134,7 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
     if (!shouldCacheInvocation(Args, DiagsPtr)) {
       if (Diags.hasErrorOccurred())
         return 1;
-      return None;
+      return std::nullopt;
     }
     if (const char *SessionId = ::getenv("LLVM_CACHE_BUILD_SESSION_ID")) {
       // `LLVM_CACHE_BUILD_SESSION_ID` enables sharing of a depscan daemon
@@ -204,7 +204,7 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
       if (Result != 0)
         return Result;
     }
-    return None;
+    return std::nullopt;
   }
 
   // FIXME: If it's invoking a different clang binary determine whether that

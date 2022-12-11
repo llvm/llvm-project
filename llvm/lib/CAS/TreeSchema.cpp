@@ -32,7 +32,7 @@ bool TreeSchema::isNode(const ObjectProxy &Node) const {
 }
 
 TreeSchema::TreeSchema(cas::ObjectStore &CAS) : TreeSchema::RTTIExtends(CAS) {
-  auto Kind = cantFail(CAS.createProxy(None, SchemaName));
+  auto Kind = cantFail(CAS.createProxy(std::nullopt, SchemaName));
   TreeKindRef.emplace(Kind.getRef());
 }
 
@@ -63,7 +63,7 @@ Error TreeSchema::walkFileTreeRecursively(
 
   while (!Stack.empty()) {
     if (Stack.back().getKind() != TreeEntry::Tree) {
-      if (Error E = Callback(Stack.pop_back_val(), None))
+      if (Error E = Callback(Stack.pop_back_val(), std::nullopt))
         return E;
       continue;
     }
@@ -105,7 +105,7 @@ Optional<size_t> TreeSchema::lookupTreeEntry(TreeProxy Tree,
                                              StringRef Name) const {
   size_t NumNames = Tree.size();
   if (!NumNames)
-    return None;
+    return std::nullopt;
 
   // Start with a binary search, if there are enough entries.
   //
@@ -134,7 +134,7 @@ Optional<size_t> TreeSchema::lookupTreeEntry(TreeProxy Tree,
     if (Name == Tree.getName(First))
       return First;
 
-  return None;
+  return std::nullopt;
 }
 
 Expected<TreeProxy> TreeSchema::load(ObjectRef Object) const {
