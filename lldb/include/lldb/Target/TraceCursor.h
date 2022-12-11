@@ -278,7 +278,8 @@ public:
   ///
   /// \return
   ///     A string representing some metadata associated with a
-  ///     \a eTraceEventSyncPoint event. \b None if no metadata is available.
+  ///     \a eTraceEventSyncPoint event. \b std::nullopt if no metadata is
+  ///     available.
   virtual llvm::Optional<std::string> GetSyncPointMetadata() const = 0;
   /// \}
 
