@@ -5400,7 +5400,9 @@ Parser::DeclGroupPtrTy Parser::ParseTopLevelStmtDecl() {
   // Parse a top-level-stmt.
   Parser::StmtVector Stmts;
   ParsedStmtContext SubStmtCtx = ParsedStmtContext();
+  Actions.PushFunctionScope();
   StmtResult R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
+  Actions.PopFunctionScopeInfo();
   if (!R.isUsable())
     return nullptr;
 
