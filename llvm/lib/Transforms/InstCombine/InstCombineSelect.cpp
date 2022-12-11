@@ -2540,6 +2540,7 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
                                              InstCombinerImpl &IC) {
   Value *CondVal = SI.getCondition();
 
+  bool ChangedFMF = false;
   for (bool Swap : {false, true}) {
     Value *TrueVal = SI.getTrueValue();
     Value *X = SI.getFalseValue();
@@ -2564,13 +2565,29 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
       }
     }
 
+    if (!match(TrueVal, m_FNeg(m_Specific(X))))
+      return nullptr;
+
+    // Forward-propagate nnan and ninf from the fneg to the select.
+    // If all inputs are not those values, then the select is not either.
+    // Note: nsz is defined differently, so it may not be correct to propagate.
+    FastMathFlags FMF = cast<FPMathOperator>(TrueVal)->getFastMathFlags();
+    if (FMF.noNaNs() && !SI.hasNoNaNs()) {
+      SI.setHasNoNaNs(true);
+      ChangedFMF = true;
+    }
+    if (FMF.noInfs() && !SI.hasNoInfs()) {
+      SI.setHasNoInfs(true);
+      ChangedFMF = true;
+    }
+
     // With nsz, when 'Swap' is false:
     // fold (X < +/-0.0) ? -X : X or (X <= +/-0.0) ? -X : X to fabs(X)
     // fold (X > +/-0.0) ? -X : X or (X >= +/-0.0) ? -X : X to -fabs(x)
     // when 'Swap' is true:
     // fold (X > +/-0.0) ? X : -X or (X >= +/-0.0) ? X : -X to fabs(X)
     // fold (X < +/-0.0) ? X : -X or (X <= +/-0.0) ? X : -X to -fabs(X)
-    if (!match(TrueVal, m_FNeg(m_Specific(X))) || !SI.hasNoSignedZeros())
+    if (!SI.hasNoSignedZeros())
       return nullptr;
 
     if (Swap)
@@ -2593,7 +2610,7 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
     }
   }
 
-  return nullptr;
+  return ChangedFMF ? &SI : nullptr;
 }
 
 // Match the following IR pattern:
