@@ -56,9 +56,9 @@ public:
   // Registration
   //===--------------------------------------------------------------------===//
 
-  /// A replacement mapping function, which returns either None (to signal the
-  /// element wasn't handled), or a pair of the replacement element and a
-  /// WalkResult.
+  /// A replacement mapping function, which returns either std::nullopt (to
+  /// signal the element wasn't handled), or a pair of the replacement element
+  /// and a WalkResult.
   template <typename T>
   using ReplaceFnResult = Optional<std::pair<T, WalkResult>>;
   template <typename T>
