@@ -79,7 +79,8 @@ public:
   void parseBuildID();
 
   /// The build-id is typically a stream of 20 bytes. Return these bytes in
-  /// printable hexadecimal form if they are available, or NoneType otherwise.
+  /// printable hexadecimal form if they are available, or std::nullopt
+  /// otherwise.
   Optional<std::string> getPrintableBuildID() const;
 
   /// If this instance uses a profile, return appropriate profile reader.

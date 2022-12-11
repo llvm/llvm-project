@@ -1063,7 +1063,7 @@ public:
   /// segments was mapped. \p FileOffset is the offset in the file of the
   /// mapping. Note that \p FileOffset should be page-aligned and could be
   /// different from the file offset of the segment which could be unaligned.
-  /// If no segment is found that matches \p FileOffset, return NoneType().
+  /// If no segment is found that matches \p FileOffset, return std::nullopt.
   Optional<uint64_t> getBaseAddressForMapping(uint64_t MMapAddress,
                                               uint64_t FileOffset) const;
 
