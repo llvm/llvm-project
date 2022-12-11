@@ -130,9 +130,9 @@ BuildThreadsSection(Process &process, FileSpec directory) {
 }
 
 /// \return
-///   an \a llvm::Error in case of failures, \a None if the trace is not written
-///   to disk because the trace is empty and the \p compact flag is present, or
-///   the FileSpec of the trace file on disk.
+///   an \a llvm::Error in case of failures, \a std::nullopt if the trace is not
+///   written to disk because the trace is empty and the \p compact flag is
+///   present, or the FileSpec of the trace file on disk.
 static Expected<Optional<FileSpec>>
 WriteContextSwitchTrace(TraceIntelPT &trace_ipt, lldb::cpu_id_t cpu_id,
                         const FileSpec &cpus_dir, bool compact) {
