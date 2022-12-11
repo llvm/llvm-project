@@ -505,7 +505,7 @@ static unsigned getDimCount(mlir::Value val) {
 
 /// Given the call operation's box argument \p val, discover
 /// the element type of the underlying array object.
-/// \returns the element type or llvm::None if the type cannot
+/// \returns the element type or std::nullopt if the type cannot
 /// be reliably found.
 /// We expect that the argument is a result of fir.convert
 /// with the destination type of !fir.box<none>.
