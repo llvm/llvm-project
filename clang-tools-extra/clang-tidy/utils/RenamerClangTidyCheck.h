@@ -123,13 +123,14 @@ public:
 
 protected:
   /// Overridden by derived classes, returns information about if and how a Decl
-  /// failed the check. A 'None' result means the Decl did not fail the check.
+  /// failed the check. A 'std::nullopt' result means the Decl did not fail the
+  /// check.
   virtual llvm::Optional<FailureInfo>
   getDeclFailureInfo(const NamedDecl *Decl, const SourceManager &SM) const = 0;
 
   /// Overridden by derived classes, returns information about if and how a
-  /// macro failed the check. A 'None' result means the macro did not fail the
-  /// check.
+  /// macro failed the check. A 'std::nullopt' result means the macro did not
+  /// fail the check.
   virtual llvm::Optional<FailureInfo>
   getMacroFailureInfo(const Token &MacroNameTok,
                       const SourceManager &SM) const = 0;
