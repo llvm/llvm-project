@@ -96,7 +96,7 @@ public:
 
   /// Use the map keys containing basic block addresses to infer fall-throughs
   /// taken in the path started at FirstLBR.To and ending at SecondLBR.From.
-  /// Return NoneType if trace is invalid or the list of fall-throughs
+  /// Return std::nullopt if trace is invalid or the list of fall-throughs
   /// otherwise.
   Optional<FallthroughListTy> getFallthroughsInTrace(uint64_t FuncAddress,
                                                      uint64_t From,
