@@ -263,11 +263,13 @@ public:
 typedef const RegionBindingsRef& RegionBindingsConstRef;
 
 Optional<SVal> RegionBindingsRef::getDirectBinding(const MemRegion *R) const {
-  return Optional<SVal>::create(lookup(R, BindingKey::Direct));
+  const SVal *V = lookup(R, BindingKey::Direct);
+  return V ? Optional<SVal>(*V) : std::nullopt;
 }
 
 Optional<SVal> RegionBindingsRef::getDefaultBinding(const MemRegion *R) const {
-  return Optional<SVal>::create(lookup(R, BindingKey::Default));
+  const SVal *V = lookup(R, BindingKey::Default);
+  return V ? Optional<SVal>(*V) : std::nullopt;
 }
 
 RegionBindingsRef RegionBindingsRef::addBinding(BindingKey K, SVal V) const {
