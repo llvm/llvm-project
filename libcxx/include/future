@@ -625,7 +625,9 @@ class _LIBCPP_AVAILABILITY_FUTURE _LIBCPP_HIDDEN __assoc_state
     : public __assoc_sub_state
 {
     typedef __assoc_sub_state base;
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
     typedef typename aligned_storage<sizeof(_Rp), alignment_of<_Rp>::value>::type _Up;
+_LIBCPP_SUPPRESS_DEPRECATED_POP
 protected:
     _Up __value_;
 
@@ -1702,7 +1704,9 @@ class _LIBCPP_AVAILABILITY_FUTURE __packaged_task_function<_Rp(_ArgTypes...)>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_NO_CFI
     __base* __get_buf() { return (__base*)&__buf_; }
 
+    _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     typename aligned_storage<3*sizeof(void*)>::type __buf_;
+    _LIBCPP_SUPPRESS_DEPRECATED_POP
     __base* __f_;
 
 public:
@@ -1835,7 +1839,9 @@ __packaged_task_function<_Rp(_ArgTypes...)>::swap(__packaged_task_function& __f)
 {
     if (__f_ == (__base*)&__buf_ && __f.__f_ == (__base*)&__f.__buf_)
     {
+        _LIBCPP_SUPPRESS_DEPRECATED_PUSH
         typename aligned_storage<sizeof(__buf_)>::type __tempbuf;
+        _LIBCPP_SUPPRESS_DEPRECATED_POP
         __base* __t = (__base*)&__tempbuf;
         __f_->__move_to(__t);
         __f_->destroy();
