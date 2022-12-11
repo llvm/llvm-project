@@ -482,7 +482,7 @@ static std::optional<sys::fs::UniqueID> getUniqueID(StringRef path) {
 }
 
 // Resolves a file path. This never returns the same path
-// (in that case, it returns None).
+// (in that case, it returns std::nullopt).
 std::optional<StringRef> LinkerDriver::findFile(StringRef filename) {
   StringRef path = doFindFile(filename);
 
@@ -525,7 +525,7 @@ StringRef LinkerDriver::doFindLib(StringRef filename) {
 
 // Resolves a library path. /nodefaultlib options are taken into
 // consideration. This never returns the same path (in that case,
-// it returns None).
+// it returns std::nullopt).
 std::optional<StringRef> LinkerDriver::findLib(StringRef filename) {
   if (config->noDefaultLibAll)
     return std::nullopt;
