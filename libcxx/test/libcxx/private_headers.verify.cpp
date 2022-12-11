@@ -530,6 +530,7 @@ END-SCRIPT
 #include <__random/weibull_distribution.h> // expected-error@*:* {{use of private header from outside its module: '__random/weibull_distribution.h'}}
 #include <__ranges/access.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/access.h'}}
 #include <__ranges/all.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/all.h'}}
+#include <__ranges/as_rvalue_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/as_rvalue_view.h'}}
 #include <__ranges/common_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/common_view.h'}}
 #include <__ranges/concepts.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/concepts.h'}}
 #include <__ranges/copyable_box.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/copyable_box.h'}}
