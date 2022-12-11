@@ -475,7 +475,7 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     return Error::success();
   }
 
-  if (Optional<StringRef> FileBuildID = BC.getFileBuildID()) {
+  if (std::optional<StringRef> FileBuildID = BC.getFileBuildID()) {
     outs() << "BOLT-INFO: binary build-id is:     " << *FileBuildID << "\n";
     processFileBuildID(*FileBuildID);
   } else {
@@ -2057,7 +2057,7 @@ std::error_code DataAggregator::parseMMapEvents() {
 
     // Set base address for shared objects.
     if (!BC->HasFixedLoadAddress) {
-      Optional<uint64_t> BaseAddress =
+      std::optional<uint64_t> BaseAddress =
           BC->getBaseAddressForMapping(MMapInfo.MMapAddress, MMapInfo.Offset);
       if (!BaseAddress) {
         errs() << "PERF2BOLT-WARNING: unable to find base address of the "
