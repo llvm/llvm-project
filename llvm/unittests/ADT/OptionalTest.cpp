@@ -10,6 +10,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/raw_ostream.h"
+#include "MoveOnly.h"
 #include "gtest/gtest-spi.h"
 #include "gtest/gtest.h"
 
@@ -291,36 +292,6 @@ TEST(OptionalTest, InPlaceConstructionAndEmplaceEquivalentTest) {
   }
   EXPECT_EQ(2u, MultiArgConstructor::Destructions);
 }
-
-struct MoveOnly {
-  static unsigned MoveConstructions;
-  static unsigned Destructions;
-  static unsigned MoveAssignments;
-  int val;
-  explicit MoveOnly(int val) : val(val) {
-  }
-  MoveOnly(MoveOnly&& other) {
-    val = other.val;
-    ++MoveConstructions;
-  }
-  MoveOnly &operator=(MoveOnly&& other) {
-    val = other.val;
-    ++MoveAssignments;
-    return *this;
-  }
-  ~MoveOnly() {
-    ++Destructions;
-  }
-  static void ResetCounts() {
-    MoveConstructions = 0;
-    Destructions = 0;
-    MoveAssignments = 0;
-  }
-};
-
-unsigned MoveOnly::MoveConstructions = 0;
-unsigned MoveOnly::Destructions = 0;
-unsigned MoveOnly::MoveAssignments = 0;
 
 static_assert(!std::is_trivially_copyable_v<Optional<MoveOnly>>,
               "not trivially copyable");
