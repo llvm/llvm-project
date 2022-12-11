@@ -1466,8 +1466,7 @@ define i1 @test_class_fabs_all(float %arg) {
 ; -> snan
 define i1 @test_class_fabs_snan(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_snan(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 1)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 1)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1478,8 +1477,7 @@ define i1 @test_class_fabs_snan(float %arg) {
 ; -> qnan
 define i1 @test_class_fabs_qnan(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_qnan(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 2)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 2)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1490,9 +1488,7 @@ define i1 @test_class_fabs_qnan(float %arg) {
 ; -> false
 define i1 @test_class_fabs_neginf(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_neginf(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 4)
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
   %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 4)
@@ -1502,9 +1498,7 @@ define i1 @test_class_fabs_neginf(float %arg) {
 ; -> false
 define i1 @test_class_fabs_negnormal(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_negnormal(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 8)
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
   %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 8)
@@ -1514,9 +1508,7 @@ define i1 @test_class_fabs_negnormal(float %arg) {
 ; -> false
 define i1 @test_class_fabs_negsubnormal(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_negsubnormal(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 16)
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
   %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 16)
@@ -1526,9 +1518,7 @@ define i1 @test_class_fabs_negsubnormal(float %arg) {
 ; -> false
 define i1 @test_class_fabs_negzero(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_negzero(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 32)
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
   %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 32)
@@ -1538,8 +1528,7 @@ define i1 @test_class_fabs_negzero(float %arg) {
 ; -> poszero
 define i1 @test_class_fabs_poszero(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_poszero(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 64)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 96)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1550,8 +1539,7 @@ define i1 @test_class_fabs_poszero(float %arg) {
 ; -> possubnormal
 define i1 @test_class_fabs_possubnormal(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_possubnormal(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 128)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 144)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1562,8 +1550,7 @@ define i1 @test_class_fabs_possubnormal(float %arg) {
 ; -> posnormal
 define i1 @test_class_fabs_posnormal(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_posnormal(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 256)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 264)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1574,8 +1561,7 @@ define i1 @test_class_fabs_posnormal(float %arg) {
 ; -> posinf
 define i1 @test_class_fabs_posinf(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_posinf(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 512)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 516)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1608,8 +1594,7 @@ define i1 @test_class_fabs_nnan(float %arg) {
 ; -> posnormal
 define i1 @test_class_fabs_normal(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_normal(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 264)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 264)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1620,8 +1605,7 @@ define i1 @test_class_fabs_normal(float %arg) {
 ; -> poszero
 define i1 @test_class_fabs_zero(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_zero(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 96)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 96)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1632,8 +1616,7 @@ define i1 @test_class_fabs_zero(float %arg) {
 ; -> possubnormal
 define i1 @test_class_fabs_subnormal(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_subnormal(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 144)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 144)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1644,8 +1627,7 @@ define i1 @test_class_fabs_subnormal(float %arg) {
 ; -> posnormal
 define i1 @test_class_fabs_normal_neginf(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_normal_neginf(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 268)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 264)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1656,8 +1638,7 @@ define i1 @test_class_fabs_normal_neginf(float %arg) {
 ; -> pnormal|pinf
 define i1 @test_class_fabs_normal_pinf(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_normal_pinf(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 776)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 780)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1668,8 +1649,7 @@ define i1 @test_class_fabs_normal_pinf(float %arg) {
 ; -> pnormal|pzero
 define i1 @test_class_fabs_neginf_posnormal_negsubnormal_poszero(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_neginf_posnormal_negsubnormal_poszero(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 340)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 360)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1680,8 +1660,7 @@ define i1 @test_class_fabs_neginf_posnormal_negsubnormal_poszero(float %arg) {
 ; -> pnormal|pzero|snan
 define i1 @test_class_fabs_neginf_posnormal_negsubnormal_poszero_snan(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_neginf_posnormal_negsubnormal_poszero_snan(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 341)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 361)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1692,8 +1671,7 @@ define i1 @test_class_fabs_neginf_posnormal_negsubnormal_poszero_snan(float %arg
 ; -> negnormal|pzero|qnan
 define i1 @test_class_fabs_neginf_posnormal_negsubnormal_poszero_qnan(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_neginf_posnormal_negsubnormal_poszero_qnan(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 342)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 362)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1704,8 +1682,7 @@ define i1 @test_class_fabs_neginf_posnormal_negsubnormal_poszero_qnan(float %arg
 ; -> pnormal|pzero|nan
 define i1 @test_class_fabs_neginf_posnormal_negsubnormal_poszero_nan(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_neginf_posnormal_negsubnormal_poszero_nan(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 343)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 363)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1716,8 +1693,7 @@ define i1 @test_class_fabs_neginf_posnormal_negsubnormal_poszero_nan(float %arg)
 ; -> ninf|pnormal|negsubnormal|pzero
 define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_posinf_negnormal_possubnormal_negzero(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 680)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 660)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1728,8 +1704,7 @@ define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero(float %arg) {
 ; -> pinf|psubnormal|snan
 define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero_snan(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_posinf_negnormal_possubnormal_negzero_snan(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 681)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 661)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1740,8 +1715,7 @@ define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero_snan(float %arg
 ; -> pinf|psubnormal|qnan
 define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero_qnan(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_posinf_negnormal_possubnormal_negzero_qnan(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 682)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 662)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1752,8 +1726,7 @@ define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero_qnan(float %arg
 ; -> pinf|psubnormal|nan
 define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero_nan(float %arg) {
 ; CHECK-LABEL: @test_class_fabs_posinf_negnormal_possubnormal_negzero_nan(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 683)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 663)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1765,8 +1738,7 @@ define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero_nan(float %arg)
 ; -> pinf|psubnormal|snan
 define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero_snan_strictfp(float %arg) strictfp {
 ; CHECK-LABEL: @test_class_fabs_posinf_negnormal_possubnormal_negzero_snan_strictfp(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 681) #[[ATTR2]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 661) #[[ATTR2]]
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1779,7 +1751,7 @@ define i1 @test_class_fabs_multiple_use_fabs(float %arg, ptr %ptr) {
 ; CHECK-LABEL: @test_class_fabs_multiple_use_fabs(
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
 ; CHECK-NEXT:    store float [[FABS]], ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 682)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG]], i32 662)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1790,8 +1762,7 @@ define i1 @test_class_fabs_multiple_use_fabs(float %arg, ptr %ptr) {
 
 define <2 x i1> @test_class_fabs_posinf_negnormal_possubnormal_negzero_nan_vector(<2 x float> %arg) {
 ; CHECK-LABEL: @test_class_fabs_posinf_negnormal_possubnormal_negzero_nan_vector(
-; CHECK-NEXT:    [[FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[FABS]], i32 683)
+; CHECK-NEXT:    [[CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[ARG:%.*]], i32 663)
 ; CHECK-NEXT:    ret <2 x i1> [[CLASS]]
 ;
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %arg)
@@ -1825,8 +1796,7 @@ define i1 @test_class_fneg_fabs_all(float %arg) {
 
 define i1 @test_class_fneg_fabs_snan(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_snan(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 1)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 1)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1837,8 +1807,7 @@ define i1 @test_class_fneg_fabs_snan(float %arg) {
 
 define i1 @test_class_fneg_fabs_qnan(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_qnan(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 2)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 2)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1849,8 +1818,7 @@ define i1 @test_class_fneg_fabs_qnan(float %arg) {
 
 define i1 @test_class_fneg_fabs_neginf(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_neginf(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 512)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 516)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1861,8 +1829,7 @@ define i1 @test_class_fneg_fabs_neginf(float %arg) {
 
 define i1 @test_class_fneg_fabs_negnormal(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_negnormal(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 256)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 264)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1873,8 +1840,7 @@ define i1 @test_class_fneg_fabs_negnormal(float %arg) {
 
 define i1 @test_class_fneg_fabs_negsubnormal(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_negsubnormal(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 128)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 144)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1885,8 +1851,7 @@ define i1 @test_class_fneg_fabs_negsubnormal(float %arg) {
 
 define i1 @test_class_fneg_fabs_negzero(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_negzero(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 64)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 96)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1897,9 +1862,7 @@ define i1 @test_class_fneg_fabs_negzero(float %arg) {
 
 define i1 @test_class_fneg_fabs_poszero(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_poszero(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 32)
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
   %fneg.fabs = fneg float %fabs
@@ -1909,9 +1872,7 @@ define i1 @test_class_fneg_fabs_poszero(float %arg) {
 
 define i1 @test_class_fneg_fabs_possubnormal(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_possubnormal(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 16)
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
   %fneg.fabs = fneg float %fabs
@@ -1921,9 +1882,7 @@ define i1 @test_class_fneg_fabs_possubnormal(float %arg) {
 
 define i1 @test_class_fneg_fabs_posnormal(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_posnormal(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 8)
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
   %fneg.fabs = fneg float %fabs
@@ -1933,9 +1892,7 @@ define i1 @test_class_fneg_fabs_posnormal(float %arg) {
 
 define i1 @test_class_fneg_fabs_posinf(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_posinf(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 4)
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
   %fneg.fabs = fneg float %fabs
@@ -1967,8 +1924,7 @@ define i1 @test_class_fneg_fabs_nnan(float %arg) {
 
 define i1 @test_class_fneg_fabs_normal(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_normal(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 264)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 264)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1979,8 +1935,7 @@ define i1 @test_class_fneg_fabs_normal(float %arg) {
 
 define i1 @test_class_fneg_fabs_zero(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_zero(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 96)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 96)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -1991,8 +1946,7 @@ define i1 @test_class_fneg_fabs_zero(float %arg) {
 
 define i1 @test_class_fneg_fabs_subnormal(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_subnormal(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 144)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 144)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -2003,8 +1957,7 @@ define i1 @test_class_fneg_fabs_subnormal(float %arg) {
 
 define i1 @test_class_fneg_fabs_normal_neginf(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_normal_neginf(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 776)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 780)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -2015,8 +1968,7 @@ define i1 @test_class_fneg_fabs_normal_neginf(float %arg) {
 
 define i1 @test_class_fneg_fabs_normal_pinf(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_normal_pinf(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 268)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 264)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -2027,8 +1979,7 @@ define i1 @test_class_fneg_fabs_normal_pinf(float %arg) {
 
 define i1 @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 680)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 660)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -2039,8 +1990,7 @@ define i1 @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero(float %arg
 
 define i1 @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero_snan(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero_snan(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 681)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 661)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -2051,8 +2001,7 @@ define i1 @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero_snan(float
 
 define i1 @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero_qnan(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero_qnan(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 682)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 662)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -2063,8 +2012,7 @@ define i1 @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero_qnan(float
 
 define i1 @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero_nan(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero_nan(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 683)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 663)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -2075,8 +2023,7 @@ define i1 @test_class_fneg_fabs_neginf_posnormal_negsubnormal_poszero_nan(float 
 
 define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 340)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 360)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -2087,8 +2034,7 @@ define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero(float %arg
 
 define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_snan(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_snan(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 341)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 361)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -2099,8 +2045,7 @@ define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_snan(float
 
 define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_qnan(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_qnan(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 342)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 362)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -2111,8 +2056,7 @@ define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_qnan(float
 
 define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_nan(float %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_nan(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 343)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 363)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -2124,8 +2068,7 @@ define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_nan(float 
 ; strictfp doesn't matter
 define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_snan_strictfp(float %arg) strictfp {
 ; CHECK-LABEL: @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_snan_strictfp(
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 341) #[[ATTR2]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 361) #[[ATTR2]]
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -2140,7 +2083,7 @@ define i1 @test_class_fneg_fabs_multiple_use_fabs(float %arg, ptr %ptr) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
 ; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
 ; CHECK-NEXT:    store float [[FNEG_FABS]], ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[FABS]], i32 342)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG]], i32 362)
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -2152,8 +2095,7 @@ define i1 @test_class_fneg_fabs_multiple_use_fabs(float %arg, ptr %ptr) {
 
 define <2 x i1> @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_nan_vector(<2 x float> %arg) {
 ; CHECK-LABEL: @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_nan_vector(
-; CHECK-NEXT:    [[FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[FABS]], i32 683)
+; CHECK-NEXT:    [[CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[ARG:%.*]], i32 663)
 ; CHECK-NEXT:    ret <2 x i1> [[CLASS]]
 ;
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %arg)
