@@ -206,7 +206,7 @@ private:
 
   /// Return a vector of offsets corresponding to a trace in a function
   /// (see recordTrace() above).
-  Optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
+  std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
   getFallthroughsInTrace(BinaryFunction &BF, const LBREntry &First,
                          const LBREntry &Second, uint64_t Count = 1) const;
 
