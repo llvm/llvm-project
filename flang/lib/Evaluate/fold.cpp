@@ -261,14 +261,21 @@ std::optional<Expr<SomeType>> FoldTransfer(
     }
   }
   if (sourceBytes && IsActuallyConstant(*source) && moldType && extents) {
-    InitialImage image{*sourceBytes};
-    InitialImage::Result imageResult{
-        image.Add(0, *sourceBytes, *source, context)};
-    CHECK(imageResult == InitialImage::Ok);
-    return image.AsConstant(context, *moldType, *extents, true /*pad with 0*/);
-  } else {
-    return std::nullopt;
+    std::size_t elements{
+        extents->empty() ? 1 : static_cast<std::size_t>((*extents)[0])};
+    std::size_t totalBytes{*sourceBytes * elements};
+    // Don't fold intentional overflow cases from sneaky tests
+    if (totalBytes < std::size_t{1000000} &&
+        (elements == 0 || totalBytes / elements == *sourceBytes)) {
+      InitialImage image{*sourceBytes};
+      InitialImage::Result imageResult{
+          image.Add(0, *sourceBytes, *source, context)};
+      CHECK(imageResult == InitialImage::Ok);
+      return image.AsConstant(
+          context, *moldType, *extents, true /*pad with 0*/);
+    }
   }
+  return std::nullopt;
 }
 
 template class ExpressionBase<SomeDerived>;
