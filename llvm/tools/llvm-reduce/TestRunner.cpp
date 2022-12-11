@@ -33,7 +33,7 @@ TestRunner::TestRunner(StringRef TestName,
 
 /// Runs the interestingness test, passes file to be tested as first argument
 /// and other specified test arguments after that.
-int TestRunner::run(StringRef Filename) {
+int TestRunner::run(StringRef Filename) const {
   std::vector<StringRef> ProgramArgs;
   ProgramArgs.push_back(TestName);
 

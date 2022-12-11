@@ -1,6 +1,12 @@
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -finclude-default-header -fdeclare-opencl-builtins -cl-std=CL1.2 -emit-llvm -o - -O0 | FileCheck %s
 
 // Pragmas are only accepted for backward compatibility.
+// The builtins are made available with the following defines.
+
+#define cl_arm_integer_dot_product_int8 1
+#define cl_arm_integer_dot_product_accumulate_int8 1
+#define cl_arm_integer_dot_product_accumulate_int16 1
+#define cl_arm_integer_dot_product_accumulate_saturate_int8 1
 
 #pragma OPENCL EXTENSION cl_arm_integer_dot_product_int8 : enable
 #pragma OPENCL EXTENSION cl_arm_integer_dot_product_int8 : disable

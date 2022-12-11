@@ -14,7 +14,7 @@ using enum E; // expected-error {{unknown type name E}}
 }
 }
 
-namespace dr2628 { // dr2628: yes
+namespace dr2628 { // dr2628: yes open
 
 template <bool A = false, bool B = false>
 struct foo {
@@ -29,7 +29,7 @@ void f() {
 
 }
 
-namespace dr2635 { // dr2635: yes
+namespace dr2635 { // dr2635: 16
 template<typename T>
 concept UnaryC = true;
 template<typename T, typename U>

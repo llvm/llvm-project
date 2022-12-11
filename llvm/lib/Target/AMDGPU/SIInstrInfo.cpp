@@ -1426,8 +1426,7 @@ static unsigned getSGPRSpillSaveOpcode(unsigned Size, bool NeedsCFI) {
     return NeedsCFI ? AMDGPU::SI_SPILL_S224_CFI_SAVE
                     : AMDGPU::SI_SPILL_S224_SAVE;
   case 32:
-    return NeedsCFI ? AMDGPU::SI_SPILL_S256_CFI_SAVE
-                    : AMDGPU::SI_SPILL_S256_SAVE;
+    return AMDGPU::SI_SPILL_S256_SAVE;
   case 64:
     return NeedsCFI ? AMDGPU::SI_SPILL_S512_CFI_SAVE
                     : AMDGPU::SI_SPILL_S512_SAVE;
@@ -1460,8 +1459,7 @@ static unsigned getVGPRSpillSaveOpcode(unsigned Size, bool NeedsCFI) {
     return NeedsCFI ? AMDGPU::SI_SPILL_V224_CFI_SAVE
                     : AMDGPU::SI_SPILL_V224_SAVE;
   case 32:
-    return NeedsCFI ? AMDGPU::SI_SPILL_V256_CFI_SAVE
-                    : AMDGPU::SI_SPILL_V256_SAVE;
+    return AMDGPU::SI_SPILL_V256_SAVE;
   case 64:
     return NeedsCFI ? AMDGPU::SI_SPILL_V512_CFI_SAVE
                     : AMDGPU::SI_SPILL_V512_SAVE;

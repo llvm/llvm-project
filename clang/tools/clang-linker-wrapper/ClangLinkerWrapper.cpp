@@ -1153,7 +1153,8 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
 
     DenseSet<OffloadKind> ActiveOffloadKinds;
     for (const auto &File : Input)
-      ActiveOffloadKinds.insert(File.getBinary()->getOffloadKind());
+      if (File.getBinary()->getOffloadKind() != OFK_None)
+        ActiveOffloadKinds.insert(File.getBinary()->getOffloadKind());
 
     // First link and remove all the input files containing bitcode.
     SmallVector<StringRef> InputFiles;

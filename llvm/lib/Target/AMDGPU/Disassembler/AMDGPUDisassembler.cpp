@@ -599,20 +599,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     Res = tryDecodeInst(DecoderTableWMMAGFX1164, MI, QW, Address);
   } while (false);
 
-  if (Res && (MI.getOpcode() == AMDGPU::V_MAC_F32_e64_vi ||
-              MI.getOpcode() == AMDGPU::V_MAC_F32_e64_gfx6_gfx7 ||
-              MI.getOpcode() == AMDGPU::V_MAC_F32_e64_gfx10 ||
-              MI.getOpcode() == AMDGPU::V_MAC_LEGACY_F32_e64_gfx6_gfx7 ||
-              MI.getOpcode() == AMDGPU::V_MAC_LEGACY_F32_e64_gfx10 ||
-              MI.getOpcode() == AMDGPU::V_MAC_F16_e64_vi ||
-              MI.getOpcode() == AMDGPU::V_FMAC_F64_e64_gfx90a ||
-              MI.getOpcode() == AMDGPU::V_FMAC_F32_e64_vi ||
-              MI.getOpcode() == AMDGPU::V_FMAC_F32_e64_gfx10 ||
-              MI.getOpcode() == AMDGPU::V_FMAC_F32_e64_gfx11 ||
-              MI.getOpcode() == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
-              MI.getOpcode() == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
-              MI.getOpcode() == AMDGPU::V_FMAC_F16_e64_gfx10 ||
-              MI.getOpcode() == AMDGPU::V_FMAC_F16_t16_e64_gfx11)) {
+  if (Res && AMDGPU::isMAC(MI.getOpcode())) {
     // Insert dummy unused src2_modifiers.
     insertNamedMCOperand(MI, MCOperand::createImm(0),
                          AMDGPU::OpName::src2_modifiers);

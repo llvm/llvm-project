@@ -889,14 +889,15 @@ static DIType *solveDIType(DIBuilder &Builder, Type *Ty,
     //  struct Node {
     //      Node* ptr;
     //  };
-    RetType = Builder.createPointerType(nullptr, Layout.getTypeSizeInBits(Ty),
-                                        Layout.getABITypeAlignment(Ty),
-                                        /*DWARFAddressSpace=*/None, Name);
+    RetType =
+        Builder.createPointerType(nullptr, Layout.getTypeSizeInBits(Ty),
+                                  Layout.getABITypeAlignment(Ty) * CHAR_BIT,
+                                  /*DWARFAddressSpace=*/None, Name);
   } else if (Ty->isStructTy()) {
     auto *DIStruct = Builder.createStructType(
         Scope, Name, Scope->getFile(), LineNum, Layout.getTypeSizeInBits(Ty),
-        Layout.getPrefTypeAlignment(Ty), llvm::DINode::FlagArtificial, nullptr,
-        llvm::DINodeArray());
+        Layout.getPrefTypeAlignment(Ty) * CHAR_BIT,
+        llvm::DINode::FlagArtificial, nullptr, llvm::DINodeArray());
 
     auto *StructTy = cast<StructType>(Ty);
     SmallVector<Metadata *, 16> Elements;

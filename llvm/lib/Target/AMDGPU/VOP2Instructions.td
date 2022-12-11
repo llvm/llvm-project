@@ -509,12 +509,22 @@ class VOP_DOT_ACC<ValueType vt0, ValueType vt1> : VOP_MAC<vt0, vt1> {
 def VOP_DOT_ACC_F32_V2F16 : VOP_DOT_ACC<f32, v2f16> {
   let Src0ModDPP = FPVRegInputMods;
   let Src1ModDPP = FPVRegInputMods;
+  let HasClamp = 1;
 }
 
 def VOP_DOT_ACC_I32_I32   : VOP_DOT_ACC<i32, i32> {
   let HasExtVOP3DPP = 0;
   let HasSrc0Mods = 1;
   let HasSrc1Mods = 1;
+  let HasClamp = 1;
+
+  let Src0Mod = Int32InputMods;
+  let Src1Mod = Int32InputMods;
+  let Ins64 = getIns64<Src0RC64, Src1RC64, getRegisterOperandForVT<Src2VT>.ret,
+                       3 /*NumSrcArgs*/, HasClamp, 1 /*HasModifiers*/,
+                       1 /*HasSrc2Mods*/, HasOMod,
+                       Src0Mod, Src1Mod, Src2Mod>.ret;
+  let Asm64 = "$vdst, $src0, $src1$clamp";
 }
 
 // Write out to vcc or arbitrary SGPR.
@@ -2281,7 +2291,7 @@ defm V_FMAMK_F32        : VOP2_Real_MADK_gfx940 <0x17>;
 defm V_FMAAK_F32        : VOP2_Real_MADK_gfx940 <0x18>;
 }
 
-multiclass VOP2_Real_DOT_ACC_gfx9<bits<6> op> : VOP2_Real_e32_vi<op> {
+multiclass VOP2_Real_DOT_ACC_gfx9<bits<6> op> : Base_VOP2_Real_e32e64_vi<op> {
   def _dpp_vi : VOP2_DPP<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp")>;
 }
 

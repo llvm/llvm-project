@@ -311,35 +311,68 @@ protected:
 };
 
 TEST_F(PragmaIncludeTest, IWYUKeep) {
-  Inputs.Code = R"cpp(// Line 1
-    #include "keep1.h" // IWYU pragma: keep
-    #include "keep2.h" /* IWYU pragma: keep */
+  llvm::Annotations MainFile(R"cpp(
+    $keep1^#include "keep1.h" // IWYU pragma: keep
+    $keep2^#include "keep2.h" /* IWYU pragma: keep */
 
-    #include "export1.h" // IWYU pragma: export // line 5
-    // IWYU pragma: begin_exports
-    #include "export2.h" // Line 7
-    #include "export3.h"
-    // IWYU pragma: end_exports
+    $export1^#include "export1.h" // IWYU pragma: export
+    $begin_exports^// IWYU pragma: begin_exports
+    $export2^#include "export2.h"
+    $export3^#include "export3.h"
+    $end_exports^// IWYU pragma: end_exports
 
-    #include "normal.h" // Line 11
-  )cpp";
-  createEmptyFiles({"keep1.h", "keep2.h", "export1.h", "export2.h", "export3.h",
+    $normal^#include "normal.h"
+
+    $begin_keep^// IWYU pragma: begin_keep 
+    $keep3^#include "keep3.h"
+    $end_keep^// IWYU pragma: end_keep
+
+    // IWYU pragma: begin_keep 
+    $keep4^#include "keep4.h"
+    // IWYU pragma: begin_keep
+    $keep5^#include "keep5.h"
+    // IWYU pragma: end_keep
+    $keep6^#include "keep6.h"
+    // IWYU pragma: end_keep
+  )cpp");
+
+  auto OffsetToLineNum = [&MainFile](size_t Offset) {
+    int Count = MainFile.code().substr(0, Offset).count('\n');
+    return Count + 1;
+  };
+
+  Inputs.Code = MainFile.code();
+  createEmptyFiles({"keep1.h", "keep2.h", "keep3.h", "keep4.h", "keep5.h",
+                    "keep6.h", "export1.h", "export2.h", "export3.h",
                     "normal.h"});
 
   TestAST Processed = build();
   EXPECT_FALSE(PI.shouldKeep(1));
+
   // Keep
-  EXPECT_TRUE(PI.shouldKeep(2));
-  EXPECT_TRUE(PI.shouldKeep(3));
+  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("keep1"))));
+  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("keep2"))));
+
+  EXPECT_FALSE(PI.shouldKeep(
+      OffsetToLineNum(MainFile.point("begin_keep")))); // no # directive
+  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("keep3"))));
+  EXPECT_FALSE(PI.shouldKeep(
+      OffsetToLineNum(MainFile.point("end_keep")))); // no # directive
+
+  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("keep4"))));
+  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("keep5"))));
+  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("keep6"))));
 
   // Exports
-  EXPECT_TRUE(PI.shouldKeep(5));
-  EXPECT_TRUE(PI.shouldKeep(7));
-  EXPECT_TRUE(PI.shouldKeep(8));
-  EXPECT_FALSE(PI.shouldKeep(6)); // no # directive
-  EXPECT_FALSE(PI.shouldKeep(9)); // no # directive
+  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("export1"))));
+  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("export2"))));
+  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("export3"))));
+  EXPECT_FALSE(PI.shouldKeep(
+      OffsetToLineNum(MainFile.point("begin_exports")))); // no # directive
+  EXPECT_FALSE(PI.shouldKeep(
+      OffsetToLineNum(MainFile.point("end_exports")))); // no # directive
 
-  EXPECT_FALSE(PI.shouldKeep(11));
+  EXPECT_FALSE(PI.shouldKeep(OffsetToLineNum(MainFile.point("normal"))));
 }
 
 TEST_F(PragmaIncludeTest, IWYUPrivate) {

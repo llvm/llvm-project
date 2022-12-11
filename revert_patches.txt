@@ -3,4 +3,5 @@ b1fdeeec1a5a Revert "[LLD] Enable --no-undefined-version by default."
 Revert "[X86] Support -march=sierraforest, grandridge,
 Revert "[clang] Only use major version in resource dir"
 Reverts: e1b88c8a [clang] Only use major version in resource dir
+Revert  595a08847 "[AMDGPU] Add support for new LLVM vector types"
 
