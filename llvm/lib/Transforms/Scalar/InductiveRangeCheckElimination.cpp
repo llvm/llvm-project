@@ -541,10 +541,10 @@ class LoopConstrainer {
 
   // Calculated subranges we restrict the iteration space of the main loop to.
   // See the implementation of `calculateSubRanges' for more details on how
-  // these fields are computed.  `LowLimit` is None if there is no restriction
-  // on low end of the restricted iteration space of the main loop.  `HighLimit`
-  // is None if there is no restriction on high end of the restricted iteration
-  // space of the main loop.
+  // these fields are computed.  `LowLimit` is std::nullopt if there is no
+  // restriction on low end of the restricted iteration space of the main loop.
+  // `HighLimit` is std::nullopt if there is no restriction on high end of the
+  // restricted iteration space of the main loop.
 
   struct SubRanges {
     std::optional<const SCEV *> LowLimit;

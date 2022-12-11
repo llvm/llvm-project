@@ -120,8 +120,8 @@ public:
   ///
   /// \returns True if synchronization scope \p A is larger than or equal to
   /// synchronization scope \p B, false if synchronization scope \p A is smaller
-  /// than synchronization scope \p B, or "None" if either synchronization scope
-  /// \p A or \p B is not supported by the AMDGPU target.
+  /// than synchronization scope \p B, or "std::nullopt" if either
+  /// synchronization scope \p A or \p B is not supported by the AMDGPU target.
   Optional<bool> isSyncScopeInclusion(SyncScope::ID A, SyncScope::ID B) const {
     const auto &AIO = getSyncScopeInclusionOrdering(A);
     const auto &BIO = getSyncScopeInclusionOrdering(B);
