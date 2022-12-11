@@ -831,7 +831,7 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
     return false;
   }
 
-  Optional<BoltAddressTranslation::FallthroughListTy> FTs =
+  std::optional<BoltAddressTranslation::FallthroughListTy> FTs =
       BAT ? BAT->getFallthroughsInTrace(FromFunc->getAddress(), First.To,
                                         Second.From)
           : getFallthroughsInTrace(*FromFunc, First, Second, Count);
@@ -943,7 +943,7 @@ bool DataAggregator::recordTrace(
   return true;
 }
 
-Optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
+std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
 DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
                                        const LBREntry &FirstLBR,
                                        const LBREntry &SecondLBR,
