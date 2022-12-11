@@ -1129,6 +1129,25 @@ public:
 /// phis for first order recurrences, pointer inductions and reductions. The
 /// start value is the first operand of the recipe and the incoming value from
 /// the backedge is the second operand.
+///
+/// Inductions are modeled using the following sub-classes:
+///  * VPCanonicalIVPHIRecipe: Canonical scalar induction of the vector loop,
+///    starting at a specified value (zero for the main vector loop, the resume
+///    value for the epilogue vector loop) and stepping by 1. The induction
+///    controls exiting of the vector loop by comparing against the vector trip
+///    count. Produces a single scalar PHI for the induction value per
+///    iteration.
+///  * VPWidenIntOrFpInductionRecipe: Generates vector values for integer and
+///    floating point inductions with arbitrary start and step values. Produces
+///    a vector PHI per-part.
+///  * VPDerivedIVRecipe: Converts the canonical IV value to the corresponding
+///    value of an IV with different start and step values. Produces a single
+///    scalar value per iteration
+///  * VPScalarIVStepsRecipe: Generates scalar values per-lane based on a
+///    canonical or derived induction.
+///  * VPWidenPointerInductionRecipe: Generate vector and scalar values for a
+///    pointer induction. Produces either a vector PHI per-part or scalar values
+///    per-lane based on the canonical induction.
 class VPHeaderPHIRecipe : public VPRecipeBase, public VPValue {
 protected:
   VPHeaderPHIRecipe(unsigned char VPVID, unsigned char VPDefID, PHINode *Phi,
