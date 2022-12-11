@@ -434,8 +434,9 @@ struct BytecodeDialect {
     return *dialect;
   }
 
-  /// The loaded dialect entry. This field is None if we haven't attempted to
-  /// load, nullptr if we failed to load, otherwise the loaded dialect.
+  /// The loaded dialect entry. This field is std::nullopt if we haven't
+  /// attempted to load, nullptr if we failed to load, otherwise the loaded
+  /// dialect.
   std::optional<Dialect *> dialect;
 
   /// The bytecode interface of the dialect, or nullptr if the dialect does not

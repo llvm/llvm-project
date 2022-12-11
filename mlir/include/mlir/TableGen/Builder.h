@@ -39,7 +39,7 @@ public:
     StringRef getCppType() const;
 
     /// Return an optional string containing the name of this parameter. If
-    /// None, no name was specified for this parameter by the user.
+    /// std::nullopt, no name was specified for this parameter by the user.
     std::optional<StringRef> getName() const { return name; }
 
     /// Return an optional string containing the default value to use for this
