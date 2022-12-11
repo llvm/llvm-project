@@ -154,7 +154,7 @@ public:
     ///
     /// Reads the option with the check-local name \p LocalName from the
     /// ``CheckOptions``. If the corresponding key is not present, return
-    /// ``None``.
+    /// ``std::nullopt``.
     llvm::Optional<StringRef> get(StringRef LocalName) const;
 
     /// Read a named option from the ``Context``.

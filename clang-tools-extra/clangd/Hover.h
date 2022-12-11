@@ -42,11 +42,11 @@ struct HoverInfo {
   /// - template <ParamType Name = DefaultType> class Foo {};
   struct Param {
     /// The printable parameter type, e.g. "int", or "typename" (in
-    /// TemplateParameters), might be None for macro parameters.
+    /// TemplateParameters), might be std::nullopt for macro parameters.
     llvm::Optional<PrintedType> Type;
-    /// None for unnamed parameters.
+    /// std::nullopt for unnamed parameters.
     llvm::Optional<std::string> Name;
-    /// None if no default is provided.
+    /// std::nullopt if no default is provided.
     llvm::Optional<std::string> Default;
   };
 
