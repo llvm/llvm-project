@@ -484,7 +484,7 @@ struct BasicAAResult::DecomposedGEP {
   // Scaled variable (non-constant) indices.
   SmallVector<VariableGEPIndex, 4> VarIndices;
   // Are all operations inbounds GEPs or non-indexing operations?
-  // (None iff expression doesn't involve any geps)
+  // (std::nullopt iff expression doesn't involve any geps)
   std::optional<bool> InBounds;
 
   void dump() const {
