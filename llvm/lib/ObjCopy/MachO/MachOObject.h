@@ -151,7 +151,7 @@ struct IndirectSymbolEntry {
   // The original value in an indirect symbol table. Higher bits encode extra
   // information (INDIRECT_SYMBOL_LOCAL and INDIRECT_SYMBOL_ABS).
   uint32_t OriginalIndex;
-  /// The Symbol referenced by this entry. It's None if the index is
+  /// The Symbol referenced by this entry. It's std::nullopt if the index is
   /// INDIRECT_SYMBOL_LOCAL or INDIRECT_SYMBOL_ABS.
   std::optional<SymbolEntry *> Symbol;
 
