@@ -290,6 +290,10 @@ HANDLE_TARGET_OPCODE(G_FRAME_INDEX)
 /// Generic reference to global value.
 HANDLE_TARGET_OPCODE(G_GLOBAL_VALUE)
 
+/// Generic instruction to materialize the address of an object in the constant
+/// pool.
+HANDLE_TARGET_OPCODE(G_CONSTANT_POOL)
+
 /// Generic instruction to extract blocks of bits from the register given
 /// (typically a sub-register COPY after instruction selection).
 HANDLE_TARGET_OPCODE(G_EXTRACT)
