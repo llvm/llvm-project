@@ -145,7 +145,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
     (index, index, index) -> ()
 
   // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) schedule(static)
-  // CHECK-SAMe: for (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}})
+  // CHECK-SAME: for (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}})
   "omp.wsloop" (%lb, %ub, %step, %data_var, %linear_var) ({
     ^bb0(%iv: index):
       omp.yield

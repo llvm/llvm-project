@@ -80,9 +80,9 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %13 = spirv.Ordered %arg0, %arg1 : f32
     // CHECK: spirv.Unordered
     %14 = spirv.Unordered %arg0, %arg1 : f32
-    // CHCK: spirv.IsNan
+    // CHECK: spirv.IsNan
     %15 = spirv.IsNan %arg0 : f32
-    // CHCK: spirv.IsInf
+    // CHECK: spirv.IsInf
     %16 = spirv.IsInf %arg1 : f32
     spirv.Return
   }

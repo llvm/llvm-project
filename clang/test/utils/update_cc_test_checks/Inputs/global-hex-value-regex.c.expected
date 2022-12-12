@@ -7,7 +7,7 @@
 // CHECK: @bar.hex = internal global i32 [[#0x20]], align 4
 // CHECK: @bar.dec = internal global i32 20, align 4
 //.
-// CHECK-LABEL: @foo(
+// CHECK-LABEL: define {{[^@]+}}@foo(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
@@ -15,7 +15,7 @@ void foo(void) {
   static int hex = 0x10;
   static int dec = 10;
 }
-// CHECK-LABEL: @bar(
+// CHECK-LABEL: define {{[^@]+}}@bar(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //

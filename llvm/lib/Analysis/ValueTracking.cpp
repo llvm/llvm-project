@@ -4107,7 +4107,7 @@ static Value *BuildSubAggregate(Value *From, ArrayRef<unsigned> idx_range,
   assert(InsertBefore && "Must have someplace to insert!");
   Type *IndexedType = ExtractValueInst::getIndexedType(From->getType(),
                                                              idx_range);
-  Value *To = UndefValue::get(IndexedType);
+  Value *To = PoisonValue::get(IndexedType);
   SmallVector<unsigned, 10> Idxs(idx_range.begin(), idx_range.end());
   unsigned IdxSkip = Idxs.size();
 

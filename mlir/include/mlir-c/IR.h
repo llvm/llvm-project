@@ -82,7 +82,7 @@ typedef struct MlirNamedAttribute MlirNamedAttribute;
 //===----------------------------------------------------------------------===//
 
 /// Creates an MLIR context and transfers its ownership to the caller.
-MLIR_CAPI_EXPORTED MlirContext mlirContextCreate();
+MLIR_CAPI_EXPORTED MlirContext mlirContextCreate(void);
 
 /// Checks if two contexts are equal.
 MLIR_CAPI_EXPORTED bool mlirContextEqual(MlirContext ctx1, MlirContext ctx2);
@@ -184,7 +184,8 @@ struct MlirDialectHandle {
 typedef struct MlirDialectHandle MlirDialectHandle;
 
 #define MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Name, Namespace)                \
-  MLIR_CAPI_EXPORTED MlirDialectHandle mlirGetDialectHandle__##Namespace##__()
+  MLIR_CAPI_EXPORTED MlirDialectHandle mlirGetDialectHandle__##Namespace##__(  \
+      void)
 
 /// Returns the namespace associated with the provided dialect handle.
 MLIR_CAPI_EXPORTED
@@ -208,7 +209,7 @@ MLIR_CAPI_EXPORTED MlirDialect mlirDialectHandleLoadDialect(MlirDialectHandle,
 //===----------------------------------------------------------------------===//
 
 /// Creates a dialect registry and transfers its ownership to the caller.
-MLIR_CAPI_EXPORTED MlirDialectRegistry mlirDialectRegistryCreate();
+MLIR_CAPI_EXPORTED MlirDialectRegistry mlirDialectRegistryCreate(void);
 
 /// Checks if the dialect registry is null.
 static inline bool mlirDialectRegistryIsNull(MlirDialectRegistry registry) {
@@ -363,7 +364,7 @@ mlirOperationStateEnableResultTypeInference(MlirOperationState *state);
 
 /// Creates new printing flags with defaults, intended for customization.
 /// Must be freed with a call to mlirOpPrintingFlagsDestroy().
-MLIR_CAPI_EXPORTED MlirOpPrintingFlags mlirOpPrintingFlagsCreate();
+MLIR_CAPI_EXPORTED MlirOpPrintingFlags mlirOpPrintingFlagsCreate(void);
 
 /// Destroys printing flags created with mlirOpPrintingFlagsCreate.
 MLIR_CAPI_EXPORTED void mlirOpPrintingFlagsDestroy(MlirOpPrintingFlags flags);
@@ -551,7 +552,7 @@ MLIR_CAPI_EXPORTED void mlirOperationMoveBefore(MlirOperation op,
 //===----------------------------------------------------------------------===//
 
 /// Creates a new empty region and transfers ownership to the caller.
-MLIR_CAPI_EXPORTED MlirRegion mlirRegionCreate();
+MLIR_CAPI_EXPORTED MlirRegion mlirRegionCreate(void);
 
 /// Takes a region owned by the caller and destroys it.
 MLIR_CAPI_EXPORTED void mlirRegionDestroy(MlirRegion region);
@@ -817,10 +818,11 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirIdentifierStr(MlirIdentifier ident);
 
 /// Returns the name of the attribute used to store symbol names compatible with
 /// symbol tables.
-MLIR_CAPI_EXPORTED MlirStringRef mlirSymbolTableGetSymbolAttributeName();
+MLIR_CAPI_EXPORTED MlirStringRef mlirSymbolTableGetSymbolAttributeName(void);
 
 /// Returns the name of the attribute used to store symbol visibility.
-MLIR_CAPI_EXPORTED MlirStringRef mlirSymbolTableGetVisibilityAttributeName();
+MLIR_CAPI_EXPORTED MlirStringRef
+mlirSymbolTableGetVisibilityAttributeName(void);
 
 /// Creates a symbol table for the given operation. If the operation does not
 /// have the SymbolTable trait, returns a null symbol table.

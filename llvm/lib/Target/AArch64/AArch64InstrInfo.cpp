@@ -4944,35 +4944,47 @@ bool AArch64InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   if (Invert)
     return false;
   switch (Inst.getOpcode()) {
-  case AArch64::FADDDrr:
+  // == Floating-point types ==
+  // -- Floating-point instructions --
   case AArch64::FADDSrr:
-  case AArch64::FADDv2f32:
-  case AArch64::FADDv2f64:
-  case AArch64::FADDv4f32:
-  case AArch64::FMULDrr:
+  case AArch64::FADDDrr:
   case AArch64::FMULSrr:
+  case AArch64::FMULDrr:
   case AArch64::FMULX32:
   case AArch64::FMULX64:
-  case AArch64::FMULXv2f32:
-  case AArch64::FMULXv2f64:
-  case AArch64::FMULXv4f32:
+  // -- Advanced SIMD instructions --
+  case AArch64::FADDv2f32:
+  case AArch64::FADDv4f32:
+  case AArch64::FADDv2f64:
   case AArch64::FMULv2f32:
-  case AArch64::FMULv2f64:
   case AArch64::FMULv4f32:
+  case AArch64::FMULv2f64:
+  case AArch64::FMULXv2f32:
+  case AArch64::FMULXv4f32:
+  case AArch64::FMULXv2f64:
     return Inst.getParent()->getParent()->getTarget().Options.UnsafeFPMath ||
            (Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
             Inst.getFlag(MachineInstr::MIFlag::FmNsz));
-  case AArch64::ADDXrr:
-  case AArch64::ANDXrr:
-  case AArch64::ORRXrr:
-  case AArch64::EORXrr:
-  case AArch64::EONXrr:
+
+  // == Integer types ==
+  // -- Base instructions --
+  // Opcodes MULWrr and MULXrr don't exist because
+  // `MUL <Wd>, <Wn>, <Wm>` and `MUL <Xd>, <Xn>, <Xm>` are aliases of
+  // `MADD <Wd>, <Wn>, <Wm>, WZR` and `MADD <Xd>, <Xn>, <Xm>, XZR` respectively.
+  // The machine-combiner does not support three-source-operands machine
+  // instruction. So we cannot reassociate MULs.
   case AArch64::ADDWrr:
+  case AArch64::ADDXrr:
   case AArch64::ANDWrr:
+  case AArch64::ANDXrr:
   case AArch64::ORRWrr:
+  case AArch64::ORRXrr:
   case AArch64::EORWrr:
+  case AArch64::EORXrr:
   case AArch64::EONWrr:
+  case AArch64::EONXrr:
     return true;
+
   default:
     return false;
   }

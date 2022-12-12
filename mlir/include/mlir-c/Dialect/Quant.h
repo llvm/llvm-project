@@ -26,7 +26,7 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(quant, quant);
 MLIR_CAPI_EXPORTED bool mlirTypeIsAQuantizedType(MlirType type);
 
 /// Returns the bit flag used to indicate signedness of a quantized type.
-MLIR_CAPI_EXPORTED unsigned mlirQuantizedTypeGetSignedFlag();
+MLIR_CAPI_EXPORTED unsigned mlirQuantizedTypeGetSignedFlag(void);
 
 /// Returns the minimum possible value stored by a quantized type.
 MLIR_CAPI_EXPORTED int64_t mlirQuantizedTypeGetDefaultMinimumForInteger(

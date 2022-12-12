@@ -402,7 +402,8 @@ static Constant *getSignedIntOrFpConstant(Type *Ty, int64_t C) {
 ///   2) Returns expected trip count according to profile data if any.
 ///   3) Returns upper bound estimate if it is known.
 ///   4) Returns std::nullopt if all of the above failed.
-static Optional<unsigned> getSmallBestKnownTC(ScalarEvolution &SE, Loop *L) {
+static std::optional<unsigned> getSmallBestKnownTC(ScalarEvolution &SE,
+                                                   Loop *L) {
   // Check if exact trip count is known.
   if (unsigned ExpectedTC = SE.getSmallConstantTripCount(L))
     return ExpectedTC;
@@ -410,7 +411,7 @@ static Optional<unsigned> getSmallBestKnownTC(ScalarEvolution &SE, Loop *L) {
   // Check if there is an expected trip count available from profile data.
   if (LoopVectorizeWithBlockFrequency)
     if (auto EstimatedTC = getLoopEstimatedTripCount(L))
-      return EstimatedTC;
+      return *EstimatedTC;
 
   // Check if upper bound estimate is known.
   if (unsigned ExpectedTC = SE.getSmallConstantMaxTripCount(L))
@@ -1636,7 +1637,7 @@ private:
 
   /// Return the cost of instructions in an inloop reduction pattern, if I is
   /// part of that pattern.
-  Optional<InstructionCost>
+  std::optional<InstructionCost>
   getReductionPatternCost(Instruction *I, ElementCount VF, Type *VectorTy,
                           TTI::TargetCostKind CostKind);
 
@@ -6556,7 +6557,8 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   return Cost;
 }
 
-Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
+std::optional<InstructionCost>
+LoopVectorizationCostModel::getReductionPatternCost(
     Instruction *I, ElementCount VF, Type *Ty, TTI::TargetCostKind CostKind) {
   using namespace llvm::PatternMatch;
   // Early exit for no inloop reductions
@@ -6725,7 +6727,7 @@ Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
     }
   }
 
-  return I == RetI ? Optional<InstructionCost>(BaseCost) : std::nullopt;
+  return I == RetI ? std::optional<InstructionCost>(BaseCost) : std::nullopt;
 }
 
 InstructionCost
@@ -7506,7 +7508,7 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
   return VectorizationFactor::Disabled();
 }
 
-Optional<VectorizationFactor>
+std::optional<VectorizationFactor>
 LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   assert(OrigLoop->isInnermost() && "Inner loop expected.");
   FixedScalableVFPair MaxFactors = CM.computeMaxVF(UserVF, UserIC);
@@ -7683,7 +7685,7 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
   // replace the vectorizer-specific hints below).
   MDNode *OrigLoopID = OrigLoop->getLoopID();
 
-  Optional<MDNode *> VectorizedLoopID =
+  std::optional<MDNode *> VectorizedLoopID =
       makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
                                       LLVMLoopVectorizeFollowupVectorized});
 
@@ -10322,7 +10324,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   unsigned UserIC = Hints.getInterleave();
 
   // Plan how to best vectorize, return the best VF and its cost.
-  Optional<VectorizationFactor> MaybeVF = LVP.plan(UserVF, UserIC);
+  std::optional<VectorizationFactor> MaybeVF = LVP.plan(UserVF, UserIC);
 
   VectorizationFactor VF = VectorizationFactor::Disabled();
   unsigned IC = 1;
@@ -10541,7 +10543,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       checkMixedPrecision(L, ORE);
   }
 
-  Optional<MDNode *> RemainderLoopID =
+  std::optional<MDNode *> RemainderLoopID =
       makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
                                       LLVMLoopVectorizeFollowupEpilogue});
   if (RemainderLoopID) {

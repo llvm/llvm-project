@@ -1616,7 +1616,7 @@ int printIntegerSet(MlirContext ctx) {
   return 0;
 }
 
-int registerOnlyStd() {
+int registerOnlyStd(void) {
   MlirContext ctx = mlirContextCreate();
   // The built-in dialect is always loaded.
   if (mlirContextGetNumLoadedDialects(ctx) != 1)
@@ -1670,7 +1670,7 @@ int registerOnlyStd() {
 }
 
 /// Tests backreference APIs
-static int testBackreferences() {
+static int testBackreferences(void) {
   fprintf(stderr, "@test_backreferences\n");
 
   MlirContext ctx = mlirContextCreate();
@@ -1708,7 +1708,7 @@ static int testBackreferences() {
 }
 
 /// Tests operand APIs.
-int testOperands() {
+int testOperands(void) {
   fprintf(stderr, "@testOperands\n");
   // CHECK-LABEL: @testOperands
 
@@ -1778,7 +1778,7 @@ int testOperands() {
 }
 
 /// Tests clone APIs.
-int testClone() {
+int testClone(void) {
   fprintf(stderr, "@testClone\n");
   // CHECK-LABEL: @testClone
 
@@ -2023,7 +2023,7 @@ int testSymbolTable(MlirContext ctx) {
   return 0;
 }
 
-int testDialectRegistry() {
+int testDialectRegistry(void) {
   fprintf(stderr, "@testDialectRegistry\n");
 
   MlirDialectRegistry registry = mlirDialectRegistryCreate();
@@ -2053,7 +2053,7 @@ int testDialectRegistry() {
   return 0;
 }
 
-void testDiagnostics() {
+void testDiagnostics(void) {
   MlirContext ctx = mlirContextCreate();
   MlirDiagnosticHandlerID id = mlirContextAttachDiagnosticHandler(
       ctx, errorHandler, (void *)42, deleteUserData);
@@ -2104,7 +2104,7 @@ void testDiagnostics() {
   mlirContextDestroy(ctx);
 }
 
-int main() {
+int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
   mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("func"));

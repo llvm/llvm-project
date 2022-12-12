@@ -798,6 +798,19 @@ private:
   /// model.
   Block *getParent() const { return block; }
 
+  /// Expose a few methods explicitly for the debugger to call for
+  /// visualization.
+#ifndef NDEBUG
+  LLVM_DUMP_METHOD operand_range debug_getOperands() { return getOperands(); }
+  LLVM_DUMP_METHOD result_range debug_getResults() { return getResults(); }
+  LLVM_DUMP_METHOD SuccessorRange debug_getSuccessors() {
+    return getSuccessors();
+  }
+  LLVM_DUMP_METHOD MutableArrayRef<Region> debug_getRegions() {
+    return getRegions();
+  }
+#endif
+
   /// The operation block that contains this operation.
   Block *block = nullptr;
 

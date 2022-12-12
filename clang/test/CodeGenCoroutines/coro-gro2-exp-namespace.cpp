@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
 
 #include "Inputs/coroutine-exp-namespace.h"
 
@@ -33,13 +33,13 @@ struct coro {
 };
 
 // Verify that the RVO is applied.
-// CHECK-LABEL: define{{.*}} void @_Z1fi(%struct.coro* noalias sret(%struct.coro) align 8 %agg.result, i32 noundef %0)
+// CHECK-LABEL: define{{.*}} void @_Z1fi(ptr noalias sret(%struct.coro) align 8 %agg.result, i32 noundef %0)
 coro f(int) {
-  // CHECK: %call = call noalias noundef nonnull i8* @_Znwm(
+  // CHECK: %call = call noalias noundef nonnull ptr @_Znwm(
   // CHECK-NEXT: br label %[[CoroInit:.*]]
 
   // CHECK: {{.*}}[[CoroInit]]:
-  // CHECK: call void @{{.*get_return_objectEv}}(%struct.coro* sret(%struct.coro) align 8 %agg.result
+  // CHECK: call void @{{.*get_return_objectEv}}(ptr sret(%struct.coro) align 8 %agg.result
   co_return;
 }
 
@@ -61,19 +61,19 @@ struct coro_two {
 };
 
 // Verify that the NRVO is applied to the Gro object.
-// CHECK-LABEL: define{{.*}} void @_Z1hi(%struct.coro_two* noalias sret(%struct.coro_two) align 8 %agg.result, i32 noundef %0)
+// CHECK-LABEL: define{{.*}} void @_Z1hi(ptr noalias sret(%struct.coro_two) align 8 %agg.result, i32 noundef %0)
 coro_two h(int) {
 
-  // CHECK: %call = call noalias noundef i8* @_ZnwmRKSt9nothrow_t
-  // CHECK-NEXT: %[[CheckNull:.*]] = icmp ne i8* %call, null
+  // CHECK: %call = call noalias noundef ptr @_ZnwmRKSt9nothrow_t
+  // CHECK-NEXT: %[[CheckNull:.*]] = icmp ne ptr %call, null
   // CHECK-NEXT: br i1 %[[CheckNull]], label %[[InitOnSuccess:.*]], label %[[InitOnFailure:.*]]
 
   // CHECK: {{.*}}[[InitOnFailure]]:
-  // CHECK-NEXT: call void @{{.*get_return_object_on_allocation_failureEv}}(%struct.coro_two* sret(%struct.coro_two) align 8 %agg.result
+  // CHECK-NEXT: call void @{{.*get_return_object_on_allocation_failureEv}}(ptr sret(%struct.coro_two) align 8 %agg.result
   // CHECK-NEXT: br label %[[RetLabel:.*]]
 
   // CHECK: {{.*}}[[InitOnSuccess]]:
-  // CHECK: call void @{{.*get_return_objectEv}}(%struct.coro_two* sret(%struct.coro_two) align 8 %agg.result
+  // CHECK: call void @{{.*get_return_objectEv}}(ptr sret(%struct.coro_two) align 8 %agg.result
 
   // CHECK: [[RetLabel]]:
   // CHECK-NEXT: ret void

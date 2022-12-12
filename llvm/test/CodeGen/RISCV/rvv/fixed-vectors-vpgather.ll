@@ -2405,7 +2405,6 @@ define <32 x double> @vpgather_baseidx_sext_v32i32_v32f64(double* %base, <32 x i
 ; RV64-NEXT:    vsext.vf2 v24, v8
 ; RV64-NEXT:    vsll.vi v16, v0, 3
 ; RV64-NEXT:    vsll.vi v8, v24, 3
-; RV64-NEXT:    addi a2, sp, 16
 ; RV64-NEXT:    vl1r.v v24, (a2) # Unknown-size Folded Reload
 ; RV64-NEXT:    addi a2, a1, -16
 ; RV64-NEXT:    sltu a3, a1, a2
@@ -2478,7 +2477,6 @@ define <32 x double> @vpgather_baseidx_zext_v32i32_v32f64(double* %base, <32 x i
 ; RV64-NEXT:    vzext.vf2 v24, v8
 ; RV64-NEXT:    vsll.vi v16, v0, 3
 ; RV64-NEXT:    vsll.vi v8, v24, 3
-; RV64-NEXT:    addi a2, sp, 16
 ; RV64-NEXT:    vl1r.v v24, (a2) # Unknown-size Folded Reload
 ; RV64-NEXT:    addi a2, a1, -16
 ; RV64-NEXT:    sltu a3, a1, a2

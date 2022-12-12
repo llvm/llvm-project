@@ -399,8 +399,6 @@ define arm_aapcs_vfpcc <8 x i16> @bitcast_i64_v8i16(i64 %a) {
 define arm_aapcs_vfpcc <8 x i16> @bitcast_i128_v8i16(i128 %a) {
 ; CHECK-LE-LABEL: bitcast_i128_v8i16:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    vmov.32 q0[0], r0
-; CHECK-LE-NEXT:    vmov.u16 r0, q0[0]
 ; CHECK-LE-NEXT:    vdup.16 q0, r0
 ; CHECK-LE-NEXT:    bx lr
 ;
@@ -549,8 +547,6 @@ define arm_aapcs_vfpcc <8 x i16> @bitcast_v2f64_v8i16(<2 x i64> %a) {
 define arm_aapcs_vfpcc <8 x i16> @other_max_case(i32 %blockSize) {
 ; CHECK-LE-LABEL: other_max_case:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    vmov.32 q0[0], r0
-; CHECK-LE-NEXT:    vmov.u16 r0, q0[0]
 ; CHECK-LE-NEXT:    vdup.16 q0, r0
 ; CHECK-LE-NEXT:    bx lr
 ;
