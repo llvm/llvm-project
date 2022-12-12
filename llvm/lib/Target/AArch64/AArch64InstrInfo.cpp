@@ -4951,19 +4951,28 @@ bool AArch64InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   switch (Inst.getOpcode()) {
   // == Floating-point types ==
   // -- Floating-point instructions --
+  case AArch64::FADDHrr:
   case AArch64::FADDSrr:
   case AArch64::FADDDrr:
+  case AArch64::FMULHrr:
   case AArch64::FMULSrr:
   case AArch64::FMULDrr:
+  case AArch64::FMULX16:
   case AArch64::FMULX32:
   case AArch64::FMULX64:
   // -- Advanced SIMD instructions --
+  case AArch64::FADDv4f16:
+  case AArch64::FADDv8f16:
   case AArch64::FADDv2f32:
   case AArch64::FADDv4f32:
   case AArch64::FADDv2f64:
+  case AArch64::FMULv4f16:
+  case AArch64::FMULv8f16:
   case AArch64::FMULv2f32:
   case AArch64::FMULv4f32:
   case AArch64::FMULv2f64:
+  case AArch64::FMULXv4f16:
+  case AArch64::FMULXv8f16:
   case AArch64::FMULXv2f32:
   case AArch64::FMULXv4f32:
   case AArch64::FMULXv2f64:
