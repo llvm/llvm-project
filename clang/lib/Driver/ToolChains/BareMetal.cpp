@@ -103,6 +103,7 @@ BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
   if (!SysRoot.empty()) {
     llvm::sys::path::append(SysRoot, "lib");
     getFilePaths().push_back(std::string(SysRoot));
+    getLibraryPaths().push_back(std::string(SysRoot));
   }
 }
 
