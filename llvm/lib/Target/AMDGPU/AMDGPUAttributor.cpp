@@ -759,7 +759,7 @@ public:
     DenseSet<const char *> Allowed(
         {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
          &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID, &AACallEdges::ID,
-         &AAPointerInfo::ID, &AAPotentialConstantValues::ID});
+         &AAPointerInfo::ID});
 
     AttributorConfig AC(CGUpdater);
     AC.Allowed = &Allowed;
