@@ -6095,7 +6095,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
 
   CodeGenFunction CGF(CGM, true);
   llvm::OpenMPIRBuilder::FunctionGenCallback &&GenerateOutlinedFunction =
-      [this, &CGF, &D, &CodeGen](StringRef EntryFnName) {
+      [&CGF, &D, &CodeGen](StringRef EntryFnName) {
         const CapturedStmt &CS = *D.getCapturedStmt(OMPD_target);
 
         CGOpenMPTargetRegionInfo CGInfo(CS, CodeGen, EntryFnName);
