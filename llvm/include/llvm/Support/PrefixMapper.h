@@ -23,8 +23,12 @@ class CachedDirectoryEntry;
 } // end namespace vfs
 
 struct MappedPrefix {
-  StringRef Old;
-  StringRef New;
+  std::string Old;
+  std::string New;
+
+  MappedPrefix() = default;
+  MappedPrefix(StringRef Old_, StringRef New_)
+      : Old(Old_.str()), New(New_.str()) {}
 
   MappedPrefix getInverse() const { return MappedPrefix{New, Old}; }
 

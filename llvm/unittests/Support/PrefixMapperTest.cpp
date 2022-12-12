@@ -17,7 +17,7 @@ using namespace llvm;
 
 namespace llvm {
 static inline void PrintTo(const MappedPrefix &P, std::ostream *OS) {
-  *OS << ::testing::PrintToString(P.Old.str() + "=" + P.New.str());
+  *OS << ::testing::PrintToString(P.Old + "=" + P.New);
 }
 } // end namespace llvm
 
@@ -328,7 +328,7 @@ TEST(PrefixMapperTest, mapInPlace) {
   std::string S;
   for (MappedPrefix M : Tests) {
     V = M.Old;
-    S = M.Old.str();
+    S = M.Old;
     ASSERT_THAT_ERROR(PM.mapInPlace(V), Succeeded());
     ASSERT_THAT_ERROR(PM.mapInPlace(S), Succeeded());
     EXPECT_EQ(M.New, V);
@@ -538,7 +538,7 @@ TEST(TreePathPrefixMapperTest, map) {
     EXPECT_THAT_ERROR(State.PM.map(Map.Old, FoundS), Succeeded());
     EXPECT_EQ(Map.New, FoundV);
     EXPECT_EQ(Map.New, FoundS);
-    EXPECT_EQ(Map.New, State.PM.mapOrNoneIfError(Map.Old, FoundV));
+    EXPECT_EQ(StringRef(Map.New), State.PM.mapOrNoneIfError(Map.Old, FoundV));
 
     FoundV = "";
     FoundS = "";
@@ -581,14 +581,14 @@ TEST(TreePathPrefixMapperTest, mapInPlace) {
   }
 
   for (MappedPrefix Map : State.Tests) {
-    FoundS = Map.Old.str();
+    FoundS = Map.Old;
     FoundV = Map.Old;
     EXPECT_THAT_ERROR(State.PM.mapInPlace(FoundS), Succeeded());
     EXPECT_THAT_ERROR(State.PM.mapInPlace(FoundV), Succeeded());
     EXPECT_EQ(Map.New, FoundS);
     EXPECT_EQ(Map.New, FoundV);
 
-    FoundS = Map.Old.str();
+    FoundS = Map.Old;
     FoundV = Map.Old;
     State.PM.mapInPlaceOrClear(FoundS);
     EXPECT_EQ(Map.New, FoundS);
