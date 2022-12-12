@@ -5237,8 +5237,25 @@ Value *llvm::simplifyFNegInst(Value *Op, FastMathFlags FMF,
   return ::simplifyFNegInst(Op, FMF, Q, RecursionLimit);
 }
 
+/// Try to propagate existing NaN values when possible. If not, replace the
+/// constant or elements in the constant with a canonical NaN.
 static Constant *propagateNaN(Constant *In) {
-  // If the input is a vector with undef elements, just return a default NaN.
+  if (auto *VecTy = dyn_cast<FixedVectorType>(In->getType())) {
+    unsigned NumElts = VecTy->getNumElements();
+    SmallVector<Constant *, 32> NewC(NumElts);
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *EltC = In->getAggregateElement(i);
+      // Poison and existing NaN elements propagate.
+      // Replace unknown or undef elements with canonical NaN.
+      if (EltC && (isa<PoisonValue>(EltC) || EltC->isNaN()))
+        NewC[i] = EltC;
+      else
+        NewC[i] = (ConstantFP::getNaN(VecTy->getElementType()));
+    }
+    return ConstantVector::get(NewC);
+  }
+
+  // It is not a fixed vector, but not a simple NaN either?
   if (!In->isNaN())
     return ConstantFP::getNaN(In->getType());
 
@@ -5273,7 +5290,13 @@ static Constant *simplifyFPOp(ArrayRef<Value *> Ops, FastMathFlags FMF,
       return PoisonValue::get(V->getType());
 
     if (isDefaultFPEnvironment(ExBehavior, Rounding)) {
-      if (IsUndef || IsNan)
+      // Undef does not propagate because undef means that all bits can take on
+      // any value. If this is undef * NaN for example, then the result values
+      // (at least the exponent bits) are limited. Assume the undef is a
+      // canonical NaN and propagate that.
+      if (IsUndef)
+        return ConstantFP::getNaN(V->getType());
+      if (IsNan)
         return propagateNaN(cast<Constant>(V));
     } else if (ExBehavior != fp::ebStrict) {
       if (IsNan)
