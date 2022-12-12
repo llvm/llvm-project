@@ -128,6 +128,7 @@ inline uint32_t getDebugLevel() {
   do {                                                                         \
     fprintf(stderr, GETNAME(TARGET_NAME) " error: ");                          \
     fprintf(stderr, __VA_ARGS__);                                              \
+    abort();                                                                   \
   } while (0)
 
 /// Print a generic information string used if LIBOMPTARGET_INFO=1
