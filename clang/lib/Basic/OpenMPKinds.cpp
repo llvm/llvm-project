@@ -120,8 +120,11 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_LASTPRIVATE_unknown);
   case OMPC_order:
-    return llvm::StringSwitch<OpenMPOrderClauseKind>(Str)
-#define OPENMP_ORDER_KIND(Name) .Case(#Name, OMPC_ORDER_##Name)
+    return llvm::StringSwitch<unsigned>(Str)
+#define OPENMP_ORDER_KIND(Name)                                                \
+  .Case(#Name, static_cast<unsigned>(OMPC_ORDER_##Name))
+#define OPENMP_ORDER_MODIFIER(Name)                                            \
+  .Case(#Name, static_cast<unsigned>(OMPC_ORDER_MODIFIER_##Name))
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_ORDER_unknown);
   case OMPC_update:
@@ -395,10 +398,14 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_order:
     switch (Type) {
     case OMPC_ORDER_unknown:
+    case OMPC_ORDER_MODIFIER_last:
       return "unknown";
 #define OPENMP_ORDER_KIND(Name)                                                \
-    case OMPC_ORDER_##Name:                                                    \
-      return #Name;
+  case OMPC_ORDER_##Name:                                                      \
+    return #Name;
+#define OPENMP_ORDER_MODIFIER(Name)                                            \
+  case OMPC_ORDER_MODIFIER_##Name:                                             \
+    return #Name;
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'order' clause type");
@@ -712,6 +719,14 @@ bool clang::isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind) {
 
 bool clang::isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind) {
   return DKind == OMPD_tile || DKind == OMPD_unroll;
+}
+
+bool clang::isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind) {
+  return DKind == OMPD_parallel_for || DKind == OMPD_parallel_for_simd ||
+         DKind == OMPD_parallel_master ||
+         DKind == OMPD_parallel_master_taskloop ||
+         DKind == OMPD_parallel_master_taskloop_simd ||
+         DKind == OMPD_parallel_sections;
 }
 
 void clang::getOpenMPCaptureRegions(
