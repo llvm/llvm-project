@@ -85,7 +85,7 @@ define <2 x half> @fdiv_nan_op1(<2 x half> %x) {
 
 define <2 x double> @fsub_nan_poison_op1(<2 x double> %x) {
 ; CHECK-LABEL: @fsub_nan_poison_op1(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> <double 0xFFFF00000000DEAD, double poison>
 ;
   %r = fsub <2 x double> %x, <double 0xFFFF00000000DEAD, double poison>
   ret <2 x double> %r
@@ -95,7 +95,7 @@ define <2 x double> @fsub_nan_poison_op1(<2 x double> %x) {
 
 define <2 x double> @frem_nan_undef_op0(<2 x double> %x) {
 ; CHECK-LABEL: @frem_nan_undef_op0(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> <double 0xFFFF00000000DEAD, double 0x7FF8000000000000>
 ;
   %r = frem <2 x double> <double 0xFFFF00000000DEAD, double undef>, %x
   ret <2 x double> %r
@@ -105,7 +105,7 @@ define <2 x double> @frem_nan_undef_op0(<2 x double> %x) {
 
 define <3 x double> @fadd_nan_poison_undef_op1(<3 x double> %x) {
 ; CHECK-LABEL: @fadd_nan_poison_undef_op1(
-; CHECK-NEXT:    ret <3 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <3 x double> <double 0xFFFF00000000DEAD, double poison, double 0x7FF8000000000000>
 ;
   %r = fadd <3 x double> %x, <double 0xFFFF00000000DEAD, double poison, double undef>
   ret <3 x double> %r
