@@ -11030,7 +11030,7 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
 
   // If this is a TRUNC followed by a masked store, fold this into a masked
   // truncating store.  We can do this even if this is already a masked
-  // truncstore or a compress store.
+  // truncstore.
   // TODO: Try combine to masked compress store if possiable.
   if ((Value.getOpcode() == ISD::TRUNCATE) && Value->hasOneUse() &&
       MST->isUnindexed() && !MST->isCompressingStore() &&
