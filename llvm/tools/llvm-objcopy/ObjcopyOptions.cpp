@@ -36,32 +36,27 @@ enum ObjcopyID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const OBJCOPY_##NAME[] = VALUE;
+namespace objcopy_opt {
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr std::initializer_list<StringLiteral> NAME = VALUE;
 #include "ObjcopyOpts.inc"
 #undef PREFIX
 
-static constexpr opt::OptTable::Info ObjcopyInfoTable[] = {
+static constexpr std::initializer_list<opt::OptTable::Info> ObjcopyInfoTable = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
-  {OBJCOPY_##PREFIX,                                                           \
-   NAME,                                                                       \
-   HELPTEXT,                                                                   \
-   METAVAR,                                                                    \
-   OBJCOPY_##ID,                                                               \
-   opt::Option::KIND##Class,                                                   \
-   PARAM,                                                                      \
-   FLAGS,                                                                      \
-   OBJCOPY_##GROUP,                                                            \
-   OBJCOPY_##ALIAS,                                                            \
-   ALIASARGS,                                                                  \
-   VALUES},
+  {PREFIX,          NAME,         HELPTEXT,                                    \
+   METAVAR,         OBJCOPY_##ID, opt::Option::KIND##Class,                    \
+   PARAM,           FLAGS,        OBJCOPY_##GROUP,                             \
+   OBJCOPY_##ALIAS, ALIASARGS,    VALUES},
 #include "ObjcopyOpts.inc"
 #undef OPTION
 };
+} // namespace objcopy_opt
 
 class ObjcopyOptTable : public opt::OptTable {
 public:
-  ObjcopyOptTable() : OptTable(ObjcopyInfoTable) {
+  ObjcopyOptTable() : OptTable(objcopy_opt::ObjcopyInfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -75,15 +70,18 @@ enum InstallNameToolID {
 #undef OPTION
 };
 
+namespace install_name_tool {
+
 #define PREFIX(NAME, VALUE)                                                    \
-  const char *const INSTALL_NAME_TOOL_##NAME[] = VALUE;
+  constexpr std::initializer_list<StringLiteral> NAME = VALUE;
 #include "InstallNameToolOpts.inc"
 #undef PREFIX
 
-static constexpr opt::OptTable::Info InstallNameToolInfoTable[] = {
+static constexpr std::initializer_list<opt::OptTable::Info>
+    InstallNameToolInfoTable = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
-  {INSTALL_NAME_TOOL_##PREFIX,                                                 \
+  {PREFIX,                                                                     \
    NAME,                                                                       \
    HELPTEXT,                                                                   \
    METAVAR,                                                                    \
@@ -98,10 +96,12 @@ static constexpr opt::OptTable::Info InstallNameToolInfoTable[] = {
 #include "InstallNameToolOpts.inc"
 #undef OPTION
 };
+} // namespace install_name_tool
 
 class InstallNameToolOptTable : public opt::OptTable {
 public:
-  InstallNameToolOptTable() : OptTable(InstallNameToolInfoTable) {}
+  InstallNameToolOptTable()
+      : OptTable(install_name_tool::InstallNameToolInfoTable) {}
 };
 
 enum BitcodeStripID {
@@ -113,14 +113,18 @@ enum BitcodeStripID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const BITCODE_STRIP_##NAME[] = VALUE;
+namespace bitcode_strip {
+
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr std::initializer_list<StringLiteral> NAME = VALUE;
 #include "BitcodeStripOpts.inc"
 #undef PREFIX
 
-static constexpr opt::OptTable::Info BitcodeStripInfoTable[] = {
+static constexpr std::initializer_list<opt::OptTable::Info>
+    BitcodeStripInfoTable = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
-  {BITCODE_STRIP_##PREFIX,                                                     \
+  {PREFIX,                                                                     \
    NAME,                                                                       \
    HELPTEXT,                                                                   \
    METAVAR,                                                                    \
@@ -135,10 +139,11 @@ static constexpr opt::OptTable::Info BitcodeStripInfoTable[] = {
 #include "BitcodeStripOpts.inc"
 #undef OPTION
 };
+} // namespace bitcode_strip
 
 class BitcodeStripOptTable : public opt::OptTable {
 public:
-  BitcodeStripOptTable() : OptTable(BitcodeStripInfoTable) {}
+  BitcodeStripOptTable() : OptTable(bitcode_strip::BitcodeStripInfoTable) {}
 };
 
 enum StripID {
@@ -150,24 +155,29 @@ enum StripID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const STRIP_##NAME[] = VALUE;
+namespace strip {
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr std::initializer_list<StringLiteral> NAME = VALUE;
 #include "StripOpts.inc"
 #undef PREFIX
 
-static constexpr opt::OptTable::Info StripInfoTable[] = {
+static constexpr std::initializer_list<opt::OptTable::Info> StripInfoTable = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
-  {STRIP_##PREFIX, NAME,       HELPTEXT,                                       \
-   METAVAR,        STRIP_##ID, opt::Option::KIND##Class,                       \
-   PARAM,          FLAGS,      STRIP_##GROUP,                                  \
-   STRIP_##ALIAS,  ALIASARGS,  VALUES},
+  {PREFIX,        NAME,       HELPTEXT,                                        \
+   METAVAR,       STRIP_##ID, opt::Option::KIND##Class,                        \
+   PARAM,         FLAGS,      STRIP_##GROUP,                                   \
+   STRIP_##ALIAS, ALIASARGS,  VALUES},
 #include "StripOpts.inc"
 #undef OPTION
 };
+} // namespace strip
 
 class StripOptTable : public opt::OptTable {
 public:
-  StripOptTable() : OptTable(StripInfoTable) { setGroupedShortOptions(true); }
+  StripOptTable() : OptTable(strip::StripInfoTable) {
+    setGroupedShortOptions(true);
+  }
 };
 
 } // namespace

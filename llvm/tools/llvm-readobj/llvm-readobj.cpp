@@ -61,11 +61,12 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr std::initializer_list<StringLiteral> NAME = VALUE;
 #include "Opts.inc"
 #undef PREFIX
 
-static constexpr opt::OptTable::Info InfoTable[] = {
+static constexpr std::initializer_list<opt::OptTable::Info> InfoTable = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {                                                                            \
