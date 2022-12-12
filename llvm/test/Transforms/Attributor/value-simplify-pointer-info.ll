@@ -542,13 +542,9 @@ define i32 @local_alloca_simplifiable_3() {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@local_alloca_simplifiable_3
 ; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 1, i32* [[A]], align 4
 ; CHECK-NEXT:    br label [[SPLIT:%.*]]
 ; CHECK:       split:
-; CHECK-NEXT:    store i32 2, i32* [[A]], align 4
-; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[A]], align 4
-; CHECK-NEXT:    ret i32 [[L]]
+; CHECK-NEXT:    ret i32 2
 ;
   %A = alloca i32, align 4
   store i32 1, i32* %A
