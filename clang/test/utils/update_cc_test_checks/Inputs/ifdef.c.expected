@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -DFOO | FileCheck -check-prefixes=CHECK,FOO %s
 
 #ifdef FOO
-// FOO-LABEL: @foo(
+// FOO-LABEL: define {{[^@]+}}@foo(
 // FOO-NEXT:  entry:
 // FOO-NEXT:    ret i32 1
 //
@@ -12,7 +12,7 @@ int foo() {
 }
 #endif
 
-// CHECK-LABEL: @bar(
+// CHECK-LABEL: define {{[^@]+}}@bar(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
