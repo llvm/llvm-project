@@ -148,7 +148,7 @@ function(add_lldb_library name)
 endfunction(add_lldb_library)
 
 # BEGIN Swift Mods
-function(add_properties_for_swift_modules target)
+function(add_properties_for_swift_modules target reldir)
   if (NOT BOOTSTRAPPING_MODE)
     if (SWIFT_SWIFT_PARSER)
       set(APSM_BOOTSTRAPPING_MODE "HOSTTOOLS")
@@ -182,6 +182,13 @@ function(add_properties_for_swift_modules target)
 
     set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "${SWIFT_RPATH}")
     set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "${SWIFT_RPATH}")
+
+    if (SWIFT_SWIFT_PARSER)
+      set_property(TARGET ${target}
+        APPEND PROPERTY BUILD_RPATH "@loader_path/${reldir}lib/swift/host")
+      set_property(TARGET ${target}
+        APPEND PROPERTY INSTALL_RPATH "@loader_path/${reldir}lib/swift/host")
+    endif()
   endif()
 endfunction()
 # END Swift Mods
