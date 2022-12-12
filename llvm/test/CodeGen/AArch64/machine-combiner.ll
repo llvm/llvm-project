@@ -532,6 +532,75 @@ define <2 x double> @reassociate_muls_v2f64(<2 x double> %x0, <2 x double> %x1, 
   ret <2 x double> %t2
 }
 
+; Verify that vector integer arithmetic operations are reassociated.
+
+define <2 x i32> @reassociate_muls_v2i32(<2 x i32> %x0, <2 x i32> %x1, <2 x i32> %x2, <2 x i32> %x3) {
+; CHECK-LABEL: reassociate_muls_v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mul v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    mul v1.2s, v3.2s, v2.2s
+; CHECK-NEXT:    mul v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    ret
+  %t0 = mul <2 x i32> %x0, %x1
+  %t1 = mul <2 x i32> %x2, %t0
+  %t2 = mul <2 x i32> %x3, %t1
+  ret <2 x i32> %t2
+}
+
+define <2 x i64> @reassociate_adds_v2i64(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, <2 x i64> %x3) {
+; CHECK-LABEL: reassociate_adds_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    add v1.2d, v3.2d, v2.2d
+; CHECK-NEXT:    add v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    ret
+  %t0 = add <2 x i64> %x0, %x1
+  %t1 = add <2 x i64> %x2, %t0
+  %t2 = add <2 x i64> %x3, %t1
+  ret <2 x i64> %t2
+}
+
+; Verify that vector bitwise operations are reassociated.
+
+define <16 x i8> @reassociate_ands_v16i8(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, <16 x i8> %x3) {
+; CHECK-LABEL: reassociate_ands_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %t0 = or <16 x i8> %x0, %x1
+  %t1 = and <16 x i8> %t0, %x2
+  %t2 = and <16 x i8> %t1, %x3
+  ret <16 x i8> %t2
+}
+
+define <4 x i16> @reassociate_ors_v4i16(<4 x i16> %x0, <4 x i16> %x1, <4 x i16> %x2, <4 x i16> %x3) {
+; CHECK-LABEL: reassociate_ors_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    orr v1.8b, v2.8b, v3.8b
+; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+  %t0 = xor <4 x i16> %x0, %x1
+  %t1 = or <4 x i16> %t0, %x2
+  %t2 = or <4 x i16> %t1, %x3
+  ret <4 x i16> %t2
+}
+
+define <4 x i32> @reassociate_xors_v4i32(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, <4 x i32> %x3) {
+; CHECK-LABEL: reassociate_xors_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    eor v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %t0 = and <4 x i32> %x0, %x1
+  %t1 = xor <4 x i32> %t0, %x2
+  %t2 = xor <4 x i32> %t1, %x3
+  ret <4 x i32> %t2
+}
+
 ; PR25016: https://llvm.org/bugs/show_bug.cgi?id=25016
 ; Verify that reassociation is not happening needlessly or wrongly.
 

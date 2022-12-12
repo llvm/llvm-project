@@ -4997,6 +4997,29 @@ bool AArch64InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   case AArch64::EORXrr:
   case AArch64::EONWrr:
   case AArch64::EONXrr:
+  // -- Advanced SIMD instructions --
+  // Opcodes MULv1i64 and MULv2i64 don't exist because there is no 64-bit MUL
+  // in the Advanced SIMD instruction set.
+  case AArch64::ADDv8i8:
+  case AArch64::ADDv16i8:
+  case AArch64::ADDv4i16:
+  case AArch64::ADDv8i16:
+  case AArch64::ADDv2i32:
+  case AArch64::ADDv4i32:
+  case AArch64::ADDv1i64:
+  case AArch64::ADDv2i64:
+  case AArch64::MULv8i8:
+  case AArch64::MULv16i8:
+  case AArch64::MULv4i16:
+  case AArch64::MULv8i16:
+  case AArch64::MULv2i32:
+  case AArch64::MULv4i32:
+  case AArch64::ANDv8i8:
+  case AArch64::ANDv16i8:
+  case AArch64::ORRv8i8:
+  case AArch64::ORRv16i8:
+  case AArch64::EORv8i8:
+  case AArch64::EORv16i8:
     return true;
 
   default:
