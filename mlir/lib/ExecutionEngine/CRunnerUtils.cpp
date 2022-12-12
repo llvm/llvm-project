@@ -26,6 +26,7 @@
 #include "malloc.h"
 #endif // _WIN32
 
+#include <algorithm>
 #include <cinttypes>
 #include <cstdio>
 #include <cstdlib>
@@ -33,6 +34,14 @@
 #include <string.h>
 
 #ifdef MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
+
+namespace {
+template <typename V>
+void stdSort(uint64_t n, V *p) {
+  std::sort(p, p + n);
+}
+
+} // namespace
 
 // Small runtime support "lib" for vector.print lowering.
 // By providing elementary printing methods only, this
@@ -164,5 +173,18 @@ extern "C" void rtdrand(void *g) {
   std::mt19937 *generator = static_cast<std::mt19937 *>(g);
   delete generator;
 }
+
+#define IMPL_STDSORT(VNAME, V)                                                 \
+  extern "C" void _mlir_ciface_stdSort##VNAME(uint64_t n,                      \
+                                              StridedMemRefType<V, 1> *vref) { \
+    assert(vref);                                                              \
+    assert(vref->strides[0] == 1);                                             \
+    V *values = vref->data + vref->offset;                                     \
+    stdSort(n, values);                                                        \
+  }
+IMPL_STDSORT(I64, int64_t)
+IMPL_STDSORT(F64, double)
+IMPL_STDSORT(F32, float)
+#undef IMPL_STDSORT
 
 #endif // MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
