@@ -763,6 +763,7 @@ static LogicalResult replaceDimOrSym(AffineMap *map,
                                      unsigned dimOrSymbolPosition,
                                      SmallVectorImpl<Value> &dims,
                                      SmallVectorImpl<Value> &syms) {
+  MLIRContext *ctx = map->getContext();
   bool isDimReplacement = (dimOrSymbolPosition < dims.size());
   unsigned pos = isDimReplacement ? dimOrSymbolPosition
                                   : dimOrSymbolPosition - dims.size();
@@ -781,20 +782,24 @@ static LogicalResult replaceDimOrSym(AffineMap *map,
   // Compute the map, dims and symbols coming from the AffineApplyOp.
   AffineMap composeMap = affineApply.getAffineMap();
   assert(composeMap.getNumResults() == 1 && "affine.apply with >1 results");
-  AffineExpr composeExpr =
+  SmallVector<Value> composeOperands(affineApply.getMapOperands().begin(),
+                                     affineApply.getMapOperands().end());
+  // Canonicalize the map to promote dims to symbols when possible. This is to
+  // avoid generating invalid maps.
+  canonicalizeMapAndOperands(&composeMap, &composeOperands);
+  AffineExpr replacementExpr =
       composeMap.shiftDims(dims.size()).shiftSymbols(syms.size()).getResult(0);
   ValueRange composeDims =
-      affineApply.getMapOperands().take_front(composeMap.getNumDims());
+      ArrayRef<Value>(composeOperands).take_front(composeMap.getNumDims());
   ValueRange composeSyms =
-      affineApply.getMapOperands().take_back(composeMap.getNumSymbols());
-
-  // Append the dims and symbols where relevant and perform the replacement.
-  MLIRContext *ctx = map->getContext();
+      ArrayRef<Value>(composeOperands).take_back(composeMap.getNumSymbols());
   AffineExpr toReplace = isDimReplacement ? getAffineDimExpr(pos, ctx)
                                           : getAffineSymbolExpr(pos, ctx);
+
+  // Append the dims and symbols where relevant and perform the replacement.
   dims.append(composeDims.begin(), composeDims.end());
   syms.append(composeSyms.begin(), composeSyms.end());
-  *map = map->replace(toReplace, composeExpr, dims.size(), syms.size());
+  *map = map->replace(toReplace, replacementExpr, dims.size(), syms.size());
 
   return success();
 }
