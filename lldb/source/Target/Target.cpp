@@ -2463,9 +2463,20 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
           if (auto *new_swift_scratch_ctx =
                   llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
                       type_system_or_err->get())) {
+            auto report_error = [&](std::string message) {
+              m_cant_make_scratch_type_system[language] = true;
+              m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
+              type_system_or_err = llvm::make_error<llvm::StringError>(
+                  message, llvm::inconvertibleErrorCode());
+            };
             auto *new_swift_ast_ctx =
                 new_swift_scratch_ctx->GetSwiftASTContext();
-            if (!new_swift_ast_ctx || new_swift_ast_ctx->HasFatalErrors()) {
+            if (!new_swift_ast_ctx)
+              report_error("Failed to construct SwiftASTContextForExpressions");
+            else if (new_swift_ast_ctx->HasFatalErrors()) {
+              DiagnosticManager diag_mgr;
+              new_swift_ast_ctx->PrintDiagnostics(diag_mgr);
+              std::string error_diagnostics = diag_mgr.GetString();
               if (StreamSP error_stream_sp =
                       GetDebugger().GetAsyncErrorStream()) {
                 error_stream_sp->PutCString(
@@ -2473,16 +2484,10 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                     "for this process after repeated "
                     "attempts.\n");
                 error_stream_sp->PutCString("Giving up.  Fatal errors:\n");
-                DiagnosticManager diag_mgr;
-                new_swift_ast_ctx->PrintDiagnostics(diag_mgr);
-                error_stream_sp->PutCString(diag_mgr.GetString().c_str());
+                error_stream_sp->PutCString(error_diagnostics.c_str());
                 error_stream_sp->Flush();
               }
-
-              m_cant_make_scratch_type_system[language] = true;
-              m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
-              type_system_or_err = llvm::make_error<llvm::StringError>(
-                  "DIAF", llvm::inconvertibleErrorCode());
+              report_error(error_diagnostics);
             }
           }
         }
