@@ -27,7 +27,7 @@
 
 ; DBG-NOT: Cluster ld/st
 
-define amdgpu_kernel void @cluster_load_cluster_store(i32* noalias %lb, i32* noalias %sb) {
+define amdgpu_kernel void @cluster_load_cluster_store(ptr noalias %lb, ptr noalias %sb) {
 ; GFX9-LABEL: cluster_load_cluster_store:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -116,23 +116,21 @@ define amdgpu_kernel void @cluster_load_cluster_store(i32* noalias %lb, i32* noa
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
-  %la0 = getelementptr inbounds i32, i32* %lb, i32 0
-  %ld0 = load i32, i32* %la0
-  %la1 = getelementptr inbounds i32, i32* %lb, i32 2
-  %ld1 = load i32, i32* %la1
-  %la2 = getelementptr inbounds i32, i32* %lb, i32 4
-  %ld2 = load i32, i32* %la2
-  %la3 = getelementptr inbounds i32, i32* %lb, i32 6
-  %ld3 = load i32, i32* %la3
+  %ld0 = load i32, ptr %lb
+  %la1 = getelementptr inbounds i32, ptr %lb, i32 2
+  %ld1 = load i32, ptr %la1
+  %la2 = getelementptr inbounds i32, ptr %lb, i32 4
+  %ld2 = load i32, ptr %la2
+  %la3 = getelementptr inbounds i32, ptr %lb, i32 6
+  %ld3 = load i32, ptr %la3
 
-  %sa0 = getelementptr inbounds i32, i32* %sb, i32 0
-  store i32 %ld0, i32* %sa0
-  %sa1 = getelementptr inbounds i32, i32* %sb, i32 2
-  store i32 %ld1, i32* %sa1
-  %sa2 = getelementptr inbounds i32, i32* %sb, i32 4
-  store i32 %ld2, i32* %sa2
-  %sa3 = getelementptr inbounds i32, i32* %sb, i32 6
-  store i32 %ld3, i32* %sa3
+  store i32 %ld0, ptr %sb
+  %sa1 = getelementptr inbounds i32, ptr %sb, i32 2
+  store i32 %ld1, ptr %sa1
+  %sa2 = getelementptr inbounds i32, ptr %sb, i32 4
+  store i32 %ld2, ptr %sa2
+  %sa3 = getelementptr inbounds i32, ptr %sb, i32 6
+  store i32 %ld3, ptr %sa3
 
   ret void
 }
@@ -155,7 +153,7 @@ bb:
 
 ; DBG-NOT: Cluster ld/st
 
-define amdgpu_kernel void @cluster_load_valu_cluster_store(i32* noalias %lb, i32* noalias %sb) {
+define amdgpu_kernel void @cluster_load_valu_cluster_store(ptr noalias %lb, ptr noalias %sb) {
 ; GFX9-LABEL: cluster_load_valu_cluster_store:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -248,24 +246,22 @@ define amdgpu_kernel void @cluster_load_valu_cluster_store(i32* noalias %lb, i32
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 bb:
-  %la0 = getelementptr inbounds i32, i32* %lb, i32 0
-  %ld0 = load i32, i32* %la0
-  %la1 = getelementptr inbounds i32, i32* %lb, i32 2
-  %ld1 = load i32, i32* %la1
-  %la2 = getelementptr inbounds i32, i32* %lb, i32 4
-  %ld2 = load i32, i32* %la2
-  %la3 = getelementptr inbounds i32, i32* %lb, i32 6
-  %ld3 = load i32, i32* %la3
+  %ld0 = load i32, ptr %lb
+  %la1 = getelementptr inbounds i32, ptr %lb, i32 2
+  %ld1 = load i32, ptr %la1
+  %la2 = getelementptr inbounds i32, ptr %lb, i32 4
+  %ld2 = load i32, ptr %la2
+  %la3 = getelementptr inbounds i32, ptr %lb, i32 6
+  %ld3 = load i32, ptr %la3
 
-  %sa0 = getelementptr inbounds i32, i32* %sb, i32 0
-  store i32 %ld0, i32* %sa0
-  %sa1 = getelementptr inbounds i32, i32* %sb, i32 2
+  store i32 %ld0, ptr %sb
+  %sa1 = getelementptr inbounds i32, ptr %sb, i32 2
   %add = add i32 %ld1, 1
-  store i32 %add, i32* %sa1
-  %sa2 = getelementptr inbounds i32, i32* %sb, i32 4
-  store i32 %ld2, i32* %sa2
-  %sa3 = getelementptr inbounds i32, i32* %sb, i32 6
-  store i32 %ld3, i32* %sa3
+  store i32 %add, ptr %sa1
+  %sa2 = getelementptr inbounds i32, ptr %sb, i32 4
+  store i32 %ld2, ptr %sa2
+  %sa3 = getelementptr inbounds i32, ptr %sb, i32 6
+  store i32 %ld3, ptr %sa3
 
   ret void
 }

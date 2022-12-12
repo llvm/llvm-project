@@ -263,34 +263,13 @@ void PPCCTRLoops::expandNormalLoops(MachineLoop *ML, MachineInstr *Start,
 
   // Add other inputs for the PHI node.
   if (ML->isLoopLatch(Exiting)) {
-    // Normally there must be only two predecessors for the loop header, one is
-    // the Preheader and the other one is loop latch Exiting. In hardware loop
+    // There must be only two predecessors for the loop header, one is the
+    // Preheader and the other one is loop latch Exiting. In hardware loop
     // insertion pass, the block containing DecreaseCTRloop must dominate all
     // loop latches. So there must be only one latch.
-    // But there are some optimizations after ISEL, like tail duplicator, may
-    // merge the two-predecessor loop header with its successor. If the
-    // successor happens to be a header of nest loop, then we will have a header
-    // which has more than 2 predecessors.
-    assert(llvm::is_contained(ML->getHeader()->predecessors(), Exiting) &&
-           "Loop latch is not loop header predecessor!");
-    assert(llvm::is_contained(ML->getHeader()->predecessors(), Preheader) &&
-           "Loop preheader is not loop header predecessor!");
-
+    assert(ML->getHeader()->pred_size() == 2 &&
+           "Loop header predecessor is not right!");
     PHIMIB.addReg(ADDIDef).addMBB(Exiting);
-
-    if (ML->getHeader()->pred_size() > 2) {
-      Register HeaderIncoming = MRI->createVirtualRegister(
-          Is64Bit ? &PPC::G8RC_and_G8RC_NOX0RegClass
-                  : &PPC::GPRC_and_GPRC_NOR0RegClass);
-      BuildMI(*ML->getHeader(), ML->getHeader()->getFirstNonPHI(), DebugLoc(),
-              TII->get(TargetOpcode::COPY), HeaderIncoming)
-          .addReg(PHIDef);
-
-      for (MachineBasicBlock *P : ML->getHeader()->predecessors()) {
-        if (P != Preheader && P != Exiting)
-          PHIMIB.addReg(HeaderIncoming).addMBB(P);
-      }
-    }
   } else {
     // If the block containing DecreaseCTRloop is not a loop latch, we can use
     // ADDIDef as the value for all other blocks for the PHI. In hardware loop

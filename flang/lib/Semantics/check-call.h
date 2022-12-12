@@ -30,8 +30,9 @@ class Scope;
 // Argument treatingExternalAsImplicit should be true when the called procedure
 // does not actually have an explicit interface at the call site, but
 // its characteristics are known because it is a subroutine or function
-// defined at the top level in the same source file.
-void CheckArguments(const evaluate::characteristics::Procedure &,
+// defined at the top level in the same source file.  Returns false if
+// messages were created, true if all is well.
+bool CheckArguments(const evaluate::characteristics::Procedure &,
     evaluate::ActualArguments &, evaluate::FoldingContext &, const Scope &,
     bool treatingExternalAsImplicit,
     const evaluate::SpecificIntrinsic *intrinsic);

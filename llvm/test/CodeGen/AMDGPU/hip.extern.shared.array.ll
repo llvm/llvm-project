@@ -12,19 +12,19 @@
 
 ; CHECK-LABEL: {{^}}dynamic_shared_array_0:
 ; CHECK: v_add_u32_e32 v{{[0-9]+}}, 0x800, v{{[0-9]+}}
-define amdgpu_kernel void @dynamic_shared_array_0(float addrspace(1)* %out) {
+define amdgpu_kernel void @dynamic_shared_array_0(ptr addrspace(1) %out) {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds0, i32 0, i32 %tid.x
-  %val0 = load float, float addrspace(3)* %arrayidx0, align 4
-  %arrayidx1 = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @dynamic_shared0, i32 0, i32 %tid.x
-  store float %val0, float addrspace(3)* %arrayidx1, align 4
+  %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds0, i32 0, i32 %tid.x
+  %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
+  %arrayidx1 = getelementptr inbounds [0 x float], ptr addrspace(3) @dynamic_shared0, i32 0, i32 %tid.x
+  store float %val0, ptr addrspace(3) %arrayidx1, align 4
   ret void
 }
 
 ; CHECK-LABEL: {{^}}dynamic_shared_array_1:
 ; CHECK: v_mov_b32_e32 [[DYNLDS:v[0-9]+]], 0xc00
 ; CHECK: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 2, [[DYNLDS]]
-define amdgpu_kernel void @dynamic_shared_array_1(float addrspace(1)* %out, i32 %cond) {
+define amdgpu_kernel void @dynamic_shared_array_1(ptr addrspace(1) %out, i32 %cond) {
 entry:
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %idx.0 = add nsw i32 %tid.x, 64
@@ -32,19 +32,19 @@ entry:
   br i1 %tmp, label %if, label %else
 
 if:                                               ; preds = %entry
-  %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds0, i32 0, i32 %idx.0
-  %val0 = load float, float addrspace(3)* %arrayidx0, align 4
+  %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds0, i32 0, i32 %idx.0
+  %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
   br label %endif
 
 else:                                             ; preds = %entry
-  %arrayidx1 = getelementptr inbounds [256 x float], [256 x float] addrspace(3)* @lds1, i32 0, i32 %idx.0
-  %val1 = load float, float addrspace(3)* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [256 x float], ptr addrspace(3) @lds1, i32 0, i32 %idx.0
+  %val1 = load float, ptr addrspace(3) %arrayidx1, align 4
   br label %endif
 
 endif:                                            ; preds = %else, %if
   %val = phi float [ %val0, %if ], [ %val1, %else ]
-  %arrayidx = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @dynamic_shared0, i32 0, i32 %tid.x
-  store float %val, float addrspace(3)* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [0 x float], ptr addrspace(3) @dynamic_shared0, i32 0, i32 %tid.x
+  store float %val, ptr addrspace(3) %arrayidx, align 4
   ret void
 }
 
@@ -54,10 +54,10 @@ endif:                                            ; preds = %else, %if
 define amdgpu_kernel void @dynamic_shared_array_2(i32 %idx) {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %vidx = add i32 %tid.x, %idx
-  %arrayidx0 = getelementptr inbounds [4096 x float], [4096 x float] addrspace(3)* @lds2, i32 0, i32 %vidx
-  %val0 = load float, float addrspace(3)* %arrayidx0, align 4
-  %arrayidx1 = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @dynamic_shared0, i32 0, i32 %tid.x
-  store float %val0, float addrspace(3)* %arrayidx1, align 4
+  %arrayidx0 = getelementptr inbounds [4096 x float], ptr addrspace(3) @lds2, i32 0, i32 %vidx
+  %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
+  %arrayidx1 = getelementptr inbounds [0 x float], ptr addrspace(3) @dynamic_shared0, i32 0, i32 %tid.x
+  store float %val0, ptr addrspace(3) %arrayidx1, align 4
   ret void
 }
 
@@ -69,11 +69,11 @@ define amdgpu_kernel void @dynamic_shared_array_2(i32 %idx) {
 define amdgpu_kernel void @dynamic_shared_array_3(i32 %idx) {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %vidx = add i32 %tid.x, %idx
-  %arrayidx0 = getelementptr inbounds [67 x i8], [67 x i8] addrspace(3)* @lds3, i32 0, i32 %vidx
-  %val0 = load i8, i8 addrspace(3)* %arrayidx0, align 4
+  %arrayidx0 = getelementptr inbounds [67 x i8], ptr addrspace(3) @lds3, i32 0, i32 %vidx
+  %val0 = load i8, ptr addrspace(3) %arrayidx0, align 4
   %val1 = uitofp i8 %val0 to float
-  %arrayidx1 = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @dynamic_shared0, i32 0, i32 %tid.x
-  store float %val1, float addrspace(3)* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [0 x float], ptr addrspace(3) @dynamic_shared0, i32 0, i32 %tid.x
+  store float %val1, ptr addrspace(3) %arrayidx1, align 4
   ret void
 }
 
@@ -86,14 +86,14 @@ define amdgpu_kernel void @dynamic_shared_array_3(i32 %idx) {
 define amdgpu_kernel void @dynamic_shared_array_4(i32 %idx) {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %vidx = add i32 %tid.x, %idx
-  %arrayidx0 = getelementptr inbounds [67 x i8], [67 x i8] addrspace(3)* @lds3, i32 0, i32 %vidx
-  %val0 = load i8, i8 addrspace(3)* %arrayidx0, align 4
+  %arrayidx0 = getelementptr inbounds [67 x i8], ptr addrspace(3) @lds3, i32 0, i32 %vidx
+  %val0 = load i8, ptr addrspace(3) %arrayidx0, align 4
   %val1 = uitofp i8 %val0 to float
   %val2 = uitofp i8 %val0 to double
-  %arrayidx1 = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @dynamic_shared0, i32 0, i32 %tid.x
-  store float %val1, float addrspace(3)* %arrayidx1, align 4
-  %arrayidx2 = getelementptr inbounds [0 x double], [0 x double] addrspace(3)* @dynamic_shared1, i32 0, i32 %tid.x
-  store double %val2, double addrspace(3)* %arrayidx2, align 4
+  %arrayidx1 = getelementptr inbounds [0 x float], ptr addrspace(3) @dynamic_shared0, i32 0, i32 %tid.x
+  store float %val1, ptr addrspace(3) %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds [0 x double], ptr addrspace(3) @dynamic_shared1, i32 0, i32 %tid.x
+  store double %val2, ptr addrspace(3) %arrayidx2, align 4
   ret void
 }
 
@@ -105,14 +105,14 @@ define amdgpu_kernel void @dynamic_shared_array_4(i32 %idx) {
 define amdgpu_kernel void @dynamic_shared_array_5(i32 %idx) {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %vidx = add i32 %tid.x, %idx
-  %arrayidx0 = getelementptr inbounds [67 x i8], [67 x i8] addrspace(3)* @lds3, i32 0, i32 %vidx
-  %val0 = load i8, i8 addrspace(3)* %arrayidx0, align 4
+  %arrayidx0 = getelementptr inbounds [67 x i8], ptr addrspace(3) @lds3, i32 0, i32 %vidx
+  %val0 = load i8, ptr addrspace(3) %arrayidx0, align 4
   %val1 = uitofp i8 %val0 to float
   %val2 = uitofp i8 %val0 to double
-  %arrayidx1 = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @dynamic_shared0, i32 0, i32 %tid.x
-  store float %val1, float addrspace(3)* %arrayidx1, align 4
-  %arrayidx2 = getelementptr inbounds [0 x double], [0 x double] addrspace(3)* @dynamic_shared2, i32 0, i32 %tid.x
-  store double %val2, double addrspace(3)* %arrayidx2, align 4
+  %arrayidx1 = getelementptr inbounds [0 x float], ptr addrspace(3) @dynamic_shared0, i32 0, i32 %tid.x
+  store float %val1, ptr addrspace(3) %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds [0 x double], ptr addrspace(3) @dynamic_shared2, i32 0, i32 %tid.x
+  store double %val2, ptr addrspace(3) %arrayidx2, align 4
   ret void
 }
 
@@ -124,24 +124,24 @@ define amdgpu_kernel void @dynamic_shared_array_5(i32 %idx) {
 define amdgpu_kernel void @dynamic_shared_array_6(i32 %idx) {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %vidx = add i32 %tid.x, %idx
-  %arrayidx0 = getelementptr inbounds [67 x i8], [67 x i8] addrspace(3)* @lds3, i32 0, i32 %vidx
-  %val0 = load i8, i8 addrspace(3)* %arrayidx0, align 4
+  %arrayidx0 = getelementptr inbounds [67 x i8], ptr addrspace(3) @lds3, i32 0, i32 %vidx
+  %val0 = load i8, ptr addrspace(3) %arrayidx0, align 4
   %val1 = uitofp i8 %val0 to float
   %val2 = uitofp i8 %val0 to double
-  %arrayidx1 = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @dynamic_shared0, i32 0, i32 %tid.x
-  store float %val1, float addrspace(3)* %arrayidx1, align 4
-  %arrayidx2 = getelementptr inbounds [0 x double], [0 x double] addrspace(3)* @dynamic_shared3, i32 0, i32 %tid.x
-  store double %val2, double addrspace(3)* %arrayidx2, align 4
+  %arrayidx1 = getelementptr inbounds [0 x float], ptr addrspace(3) @dynamic_shared0, i32 0, i32 %tid.x
+  store float %val1, ptr addrspace(3) %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds [0 x double], ptr addrspace(3) @dynamic_shared3, i32 0, i32 %tid.x
+  store double %val2, ptr addrspace(3) %arrayidx2, align 4
   ret void
 }
 
 ; CHECK-LABEL: dynamic_shared_array_with_call:
 ; CHECK-NOT: s_swappc_b64
-define amdgpu_kernel void @dynamic_shared_array_with_call(float addrspace(1)* nocapture readnone %out) local_unnamed_addr {
+define amdgpu_kernel void @dynamic_shared_array_with_call(ptr addrspace(1) nocapture readnone %out) local_unnamed_addr {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %1 = sext i32 %tid.x to i64
-  %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds0, i64 0, i64 %1
-  %val0 = load float, float addrspace(3)* %arrayidx0, align 4
+  %arrayidx0 = getelementptr inbounds [512 x float], ptr addrspace(3) @lds0, i64 0, i64 %1
+  %val0 = load float, ptr addrspace(3) %arrayidx0, align 4
   tail call void @store_value(float %val0)
   ret void
 }
@@ -151,8 +151,8 @@ define linkonce_odr hidden void @store_value(float %val1) local_unnamed_addr {
 entry:
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %0 = sext i32 %tid.x to i64
-  %arrayidx1 = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @dynamic_shared0, i64 0, i64 %0
-  store float %val1, float addrspace(3)* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds [0 x float], ptr addrspace(3) @dynamic_shared0, i64 0, i64 %0
+  store float %val1, ptr addrspace(3) %arrayidx1, align 4
   ret void
 }
 

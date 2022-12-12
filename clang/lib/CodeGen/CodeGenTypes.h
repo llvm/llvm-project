@@ -305,7 +305,7 @@ public:  // These are internal details of CGT that shouldn't be used externally.
   bool isRecordBeingLaidOut(const Type *Ty) const {
     return RecordsBeingLaidOut.count(Ty);
   }
-
+  unsigned getTargetAddressSpace(QualType T) const;
 };
 
 }  // end namespace CodeGen

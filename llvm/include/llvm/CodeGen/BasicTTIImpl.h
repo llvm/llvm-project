@@ -52,6 +52,7 @@
 #include <cassert>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -620,21 +621,20 @@ public:
     return BaseT::emitGetActiveLaneMask();
   }
 
-  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
+  std::optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
                                                IntrinsicInst &II) {
     return BaseT::instCombineIntrinsic(IC, II);
   }
 
-  Optional<Value *> simplifyDemandedUseBitsIntrinsic(InstCombiner &IC,
-                                                     IntrinsicInst &II,
-                                                     APInt DemandedMask,
-                                                     KnownBits &Known,
-                                                     bool &KnownBitsComputed) {
+  std::optional<Value *>
+  simplifyDemandedUseBitsIntrinsic(InstCombiner &IC, IntrinsicInst &II,
+                                   APInt DemandedMask, KnownBits &Known,
+                                   bool &KnownBitsComputed) {
     return BaseT::simplifyDemandedUseBitsIntrinsic(IC, II, DemandedMask, Known,
                                                    KnownBitsComputed);
   }
 
-  Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
+  std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
       InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
       APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
@@ -644,15 +644,15 @@ public:
         SimplifyAndSetOp);
   }
 
-  virtual Optional<unsigned>
+  virtual std::optional<unsigned>
   getCacheSize(TargetTransformInfo::CacheLevel Level) const {
-    return Optional<unsigned>(
-      getST()->getCacheSize(static_cast<unsigned>(Level)));
+    return std::optional<unsigned>(
+        getST()->getCacheSize(static_cast<unsigned>(Level)));
   }
 
-  virtual Optional<unsigned>
+  virtual std::optional<unsigned>
   getCacheAssociativity(TargetTransformInfo::CacheLevel Level) const {
-    Optional<unsigned> TargetResult =
+    std::optional<unsigned> TargetResult =
         getST()->getCacheAssociativity(static_cast<unsigned>(Level));
 
     if (TargetResult)
@@ -698,8 +698,8 @@ public:
     return TypeSize::getFixed(32);
   }
 
-  Optional<unsigned> getMaxVScale() const { return None; }
-  Optional<unsigned> getVScaleForTuning() const { return None; }
+  std::optional<unsigned> getMaxVScale() const { return std::nullopt; }
+  std::optional<unsigned> getVScaleForTuning() const { return std::nullopt; }
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
@@ -2282,7 +2282,7 @@ public:
   }
 
   InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                             Optional<FastMathFlags> FMF,
+                                             std::optional<FastMathFlags> FMF,
                                              TTI::TargetCostKind CostKind) {
     if (TTI::requiresOrderedReduction(FMF))
       return getOrderedReductionCost(Opcode, Ty, CostKind);
@@ -2356,7 +2356,7 @@ public:
 
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *Ty,
-                                           Optional<FastMathFlags> FMF,
+                                           std::optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind) {
     // Without any native support, this is equivalent to the cost of
     // vecreduce.opcode(ext(Ty A)).

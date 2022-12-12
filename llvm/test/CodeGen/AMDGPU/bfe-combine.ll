@@ -3,7 +3,7 @@
 ; RUN: llc -march=amdgcn -mcpu=fiji < %s | FileCheck %s --check-prefixes=VI-SDWA
 ; RUN: llc -march=amdgcn -mcpu=bonaire < %s | FileCheck %s --check-prefixes=CI
 
-define amdgpu_kernel void @bfe_combine8(i32 addrspace(1)* nocapture %arg, i32 %x) {
+define amdgpu_kernel void @bfe_combine8(ptr addrspace(1) nocapture %arg, i32 %x) {
 ; VI-LABEL: bfe_combine8:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[0:1], 0x2c
@@ -62,13 +62,13 @@ define amdgpu_kernel void @bfe_combine8(i32 addrspace(1)* nocapture %arg, i32 %x
   %idx = add i32 %x, %id
   %srl = lshr i32 %idx, 8
   %and = and i32 %srl, 255
-  %ptr = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %and
-  %val = load i32, i32 addrspace(1)* %ptr, align 4
-  store i32 %val, i32 addrspace(1)* %arg, align 4
+  %ptr = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %and
+  %val = load i32, ptr addrspace(1) %ptr, align 4
+  store i32 %val, ptr addrspace(1) %arg, align 4
   ret void
 }
 
-define amdgpu_kernel void @bfe_combine16(i32 addrspace(1)* nocapture %arg, i32 %x) {
+define amdgpu_kernel void @bfe_combine16(ptr addrspace(1) nocapture %arg, i32 %x) {
 ; VI-LABEL: bfe_combine16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[0:1], 0x2c
@@ -132,9 +132,9 @@ define amdgpu_kernel void @bfe_combine16(i32 addrspace(1)* nocapture %arg, i32 %
   %idx = add i32 %x, %id
   %srl = lshr i32 %idx, 1
   %and = and i32 %srl, 2147450880
-  %ptr = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %and
-  %val = load i32, i32 addrspace(1)* %ptr, align 4
-  store i32 %val, i32 addrspace(1)* %arg, align 4
+  %ptr = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %and
+  %val = load i32, ptr addrspace(1) %ptr, align 4
+  store i32 %val, ptr addrspace(1) %arg, align 4
   ret void
 }
 

@@ -8,7 +8,7 @@
 ; Test that add/sub with a constant is swapped to sub/add with negated
 ; constant to minimize code size.
 
-define amdgpu_kernel void @v_test_i32_x_sub_64(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_i32_x_sub_64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_i32_x_sub_64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -77,15 +77,15 @@ define amdgpu_kernel void @v_test_i32_x_sub_64(i32 addrspace(1)* %out, i32 addrs
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %tid.ext
-  %x = load i32, i32 addrspace(1)* %gep
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load i32, ptr addrspace(1) %gep
   %result = sub i32 %x, 64
-  store i32 %result, i32 addrspace(1)* %gep.out
+  store i32 %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_i32_x_sub_64_multi_use(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_i32_x_sub_64_multi_use(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_i32_x_sub_64_multi_use:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -184,18 +184,18 @@ define amdgpu_kernel void @v_test_i32_x_sub_64_multi_use(i32 addrspace(1)* %out,
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %tid.ext
-  %x = load volatile i32, i32 addrspace(1)* %gep
-  %y = load volatile i32, i32 addrspace(1)* %gep
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load volatile i32, ptr addrspace(1) %gep
+  %y = load volatile i32, ptr addrspace(1) %gep
   %result0 = sub i32 %x, 64
   %result1 = sub i32 %y, 64
-  store volatile i32 %result0, i32 addrspace(1)* %gep.out
-  store volatile i32 %result1, i32 addrspace(1)* %gep.out
+  store volatile i32 %result0, ptr addrspace(1) %gep.out
+  store volatile i32 %result1, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_i32_64_sub_x(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_i32_64_sub_x(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_i32_64_sub_x:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -264,15 +264,15 @@ define amdgpu_kernel void @v_test_i32_64_sub_x(i32 addrspace(1)* %out, i32 addrs
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %tid.ext
-  %x = load i32, i32 addrspace(1)* %gep
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load i32, ptr addrspace(1) %gep
   %result = sub i32 64, %x
-  store i32 %result, i32 addrspace(1)* %gep.out
+  store i32 %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_i32_x_sub_65(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_i32_x_sub_65(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_i32_x_sub_65:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -341,15 +341,15 @@ define amdgpu_kernel void @v_test_i32_x_sub_65(i32 addrspace(1)* %out, i32 addrs
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %tid.ext
-  %x = load i32, i32 addrspace(1)* %gep
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load i32, ptr addrspace(1) %gep
   %result = sub i32 %x, 65
-  store i32 %result, i32 addrspace(1)* %gep.out
+  store i32 %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_i32_65_sub_x(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_i32_65_sub_x(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_i32_65_sub_x:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -418,15 +418,15 @@ define amdgpu_kernel void @v_test_i32_65_sub_x(i32 addrspace(1)* %out, i32 addrs
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %tid.ext
-  %x = load i32, i32 addrspace(1)* %gep
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load i32, ptr addrspace(1) %gep
   %result = sub i32 65, %x
-  store i32 %result, i32 addrspace(1)* %gep.out
+  store i32 %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_i32_x_sub_neg16(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_i32_x_sub_neg16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_i32_x_sub_neg16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -495,15 +495,15 @@ define amdgpu_kernel void @v_test_i32_x_sub_neg16(i32 addrspace(1)* %out, i32 ad
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %tid.ext
-  %x = load i32, i32 addrspace(1)* %gep
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load i32, ptr addrspace(1) %gep
   %result = sub i32 %x, -16
-  store i32 %result, i32 addrspace(1)* %gep.out
+  store i32 %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_i32_neg16_sub_x(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_i32_neg16_sub_x(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_i32_neg16_sub_x:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -572,15 +572,15 @@ define amdgpu_kernel void @v_test_i32_neg16_sub_x(i32 addrspace(1)* %out, i32 ad
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %tid.ext
-  %x = load i32, i32 addrspace(1)* %gep
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load i32, ptr addrspace(1) %gep
   %result = sub i32 -16, %x
-  store i32 %result, i32 addrspace(1)* %gep.out
+  store i32 %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_i32_x_sub_neg17(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_i32_x_sub_neg17(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_i32_x_sub_neg17:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -649,15 +649,15 @@ define amdgpu_kernel void @v_test_i32_x_sub_neg17(i32 addrspace(1)* %out, i32 ad
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %tid.ext
-  %x = load i32, i32 addrspace(1)* %gep
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load i32, ptr addrspace(1) %gep
   %result = sub i32 %x, -17
-  store i32 %result, i32 addrspace(1)* %gep.out
+  store i32 %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_i32_neg17_sub_x(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_i32_neg17_sub_x(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_i32_neg17_sub_x:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -726,11 +726,11 @@ define amdgpu_kernel void @v_test_i32_neg17_sub_x(i32 addrspace(1)* %out, i32 ad
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %tid.ext
-  %x = load i32, i32 addrspace(1)* %gep
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load i32, ptr addrspace(1) %gep
   %result = sub i32 -17, %x
-  store i32 %result, i32 addrspace(1)* %gep.out
+  store i32 %result, ptr addrspace(1) %gep.out
   ret void
 }
 
@@ -789,7 +789,7 @@ define amdgpu_kernel void @s_test_i32_x_sub_64(i32 %x) #0 {
   ret void
 }
 
-define amdgpu_kernel void @v_test_i16_x_sub_64(i16 addrspace(1)* %out, i16 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_i16_x_sub_64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_i16_x_sub_64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -858,15 +858,15 @@ define amdgpu_kernel void @v_test_i16_x_sub_64(i16 addrspace(1)* %out, i16 addrs
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds i16, i16 addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds i16, i16 addrspace(1)* %out, i64 %tid.ext
-  %x = load i16, i16 addrspace(1)* %gep
+  %gep = getelementptr inbounds i16, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds i16, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load i16, ptr addrspace(1) %gep
   %result = sub i16 %x, 64
-  store i16 %result, i16 addrspace(1)* %gep.out
+  store i16 %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_i16_x_sub_64_zext_to_i32(i32 addrspace(1)* %out, i16 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_i16_x_sub_64_zext_to_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_i16_x_sub_64_zext_to_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -944,16 +944,16 @@ define amdgpu_kernel void @v_test_i16_x_sub_64_zext_to_i32(i32 addrspace(1)* %ou
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds i16, i16 addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %tid.ext
-  %x = load i16, i16 addrspace(1)* %gep
+  %gep = getelementptr inbounds i16, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load i16, ptr addrspace(1) %gep
   %result = sub i16 %x, 64
   %zext = zext i16 %result to i32
-  store i32 %zext, i32 addrspace(1)* %gep.out
+  store i32 %zext, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_i16_x_sub_64_multi_use(i16 addrspace(1)* %out, i16 addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_i16_x_sub_64_multi_use(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_i16_x_sub_64_multi_use:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1052,18 +1052,18 @@ define amdgpu_kernel void @v_test_i16_x_sub_64_multi_use(i16 addrspace(1)* %out,
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds i16, i16 addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds i16, i16 addrspace(1)* %out, i64 %tid.ext
-  %x = load volatile i16, i16 addrspace(1)* %gep
-  %y = load volatile i16, i16 addrspace(1)* %gep
+  %gep = getelementptr inbounds i16, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds i16, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load volatile i16, ptr addrspace(1) %gep
+  %y = load volatile i16, ptr addrspace(1) %gep
   %result0 = sub i16 %x, 64
   %result1 = sub i16 %y, 64
-  store volatile i16 %result0, i16 addrspace(1)* %gep.out
-  store volatile i16 %result1, i16 addrspace(1)* %gep.out
+  store volatile i16 %result0, ptr addrspace(1) %gep.out
+  store volatile i16 %result1, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_sub_64_64(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_sub_64_64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_sub_64_64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1138,15 +1138,15 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_64_64(<2 x i16> addrspace(1)* %out
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = sub <2 x i16> %x, <i16 64, i16 64>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_sub_7_64(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_sub_7_64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_sub_7_64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1222,15 +1222,15 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_7_64(<2 x i16> addrspace(1)* %out,
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = sub <2 x i16> %x, <i16 7, i16 64>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_sub_64_123(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_sub_64_123(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_sub_64_123:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1306,16 +1306,16 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_64_123(<2 x i16> addrspace(1)* %ou
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = sub <2 x i16> %x, <i16 64, i16 123>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
 ; Can fold 0 and inline immediate in other half.
-define amdgpu_kernel void @v_test_v2i16_x_sub_7_0(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_sub_7_0(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_sub_7_0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1388,16 +1388,16 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_7_0(<2 x i16> addrspace(1)* %out, 
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = sub <2 x i16> %x, <i16 7, i16 0>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
 ; Can fold 0 and inline immediate in other half.
-define amdgpu_kernel void @v_test_v2i16_x_sub_0_16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_sub_0_16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_sub_0_16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1468,15 +1468,15 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_0_16(<2 x i16> addrspace(1)* %out,
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = sub <2 x i16> %x, <i16 0, i16 16>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_sub_0_1_0(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_sub_0_1_0(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_sub_0_1_0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1548,15 +1548,15 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_0_1_0(<2 x i16> addrspace(1)* %out
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = sub <2 x i16> %x, <i16 0, i16 -15360>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_sub_0_neg1_0(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_sub_0_neg1_0(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_sub_0_neg1_0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1628,16 +1628,16 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_0_neg1_0(<2 x i16> addrspace(1)* %
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = sub <2 x i16> %x, <i16 0, i16 17408>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
 ; -32 isn't an inline immediate, but 32 is
-define amdgpu_kernel void @v_test_v2i16_x_add_neg32_neg32(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg32_neg32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_add_neg32_neg32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1712,15 +1712,15 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_neg32(<2 x i16> addrspace(1)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = add <2 x i16> %x, <i16 -32, i16 -32>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_0_neg32(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_0_neg32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_add_0_neg32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1791,15 +1791,15 @@ define amdgpu_kernel void @v_test_v2i16_x_add_0_neg32(<2 x i16> addrspace(1)* %o
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = add <2 x i16> %x, <i16 0, i16 -32>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_neg32_0(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg32_0(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_add_neg32_0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1872,16 +1872,16 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_0(<2 x i16> addrspace(1)* %o
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = add <2 x i16> %x, <i16 -32, i16 0>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
 ; 16 and -16 are both inline immediates
-define amdgpu_kernel void @v_test_v2i16_x_add_neg16_neg16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg16_neg16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_add_neg16_neg16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1956,15 +1956,15 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg16_neg16(<2 x i16> addrspace(1)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = add <2 x i16> %x, <i16 -16, i16 -16>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_0_neg16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_0_neg16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_add_0_neg16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2035,15 +2035,15 @@ define amdgpu_kernel void @v_test_v2i16_x_add_0_neg16(<2 x i16> addrspace(1)* %o
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = add <2 x i16> %x, <i16 0, i16 -16>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_neg16_0(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg16_0(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_add_neg16_0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2116,15 +2116,15 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg16_0(<2 x i16> addrspace(1)* %o
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = add <2 x i16> %x, <i16 -16, i16 0>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_neg_fpone(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg_fpone(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_add_neg_fpone:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2200,15 +2200,15 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_fpone(<2 x i16> addrspace(1)* 
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = add <2 x i16> %x, <i16 -15360, i16 -15360>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfpone(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfpone(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_add_neg_negfpone:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2284,15 +2284,15 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfpone(<2 x i16> addrspace(1
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = add <2 x i16> %x, <i16 17408, i16 17408>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_neg_fptwo(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg_fptwo(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_add_neg_fptwo:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2368,15 +2368,15 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_fptwo(<2 x i16> addrspace(1)* 
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = add <2 x i16> %x, <i16 16384, i16 16384>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfptwo(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfptwo(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_add_neg_negfptwo:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2452,15 +2452,15 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfptwo(<2 x i16> addrspace(1
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = add <2 x i16> %x, <i16 -16384, i16 -16384>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_undef_neg32(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_undef_neg32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_add_undef_neg32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2531,15 +2531,15 @@ define amdgpu_kernel void @v_test_v2i16_x_add_undef_neg32(<2 x i16> addrspace(1)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = add <2 x i16> %x, <i16 undef, i16 -32>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @v_test_v2i16_x_add_neg32_undef(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_test_v2i16_x_add_neg32_undef(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; SI-LABEL: v_test_v2i16_x_add_neg32_undef:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -2609,11 +2609,11 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_undef(<2 x i16> addrspace(1)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
-  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i64 %tid.ext
-  %x = load <2 x i16>, <2 x i16> addrspace(1)* %gep
+  %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
+  %gep.out = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load <2 x i16>, ptr addrspace(1) %gep
   %result = add <2 x i16> %x, <i16 -32, i16 undef>
-  store <2 x i16> %result, <2 x i16> addrspace(1)* %gep.out
+  store <2 x i16> %result, ptr addrspace(1) %gep.out
   ret void
 }
 

@@ -1,4 +1,4 @@
-// UNSUPPORTED: -zos, -aix
+// UNSUPPORTED: -zos, target={{.*}}-aix{{.*}}
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: %clang_cc1 -emit-llvm -o %t/test.bc -F%t/Frameworks %t/test.m \

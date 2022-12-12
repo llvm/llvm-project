@@ -287,15 +287,22 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   }
 
   if (!IsRVVSpill) {
-    // TODO: Consider always storing the low bits of the immediate in the
-    // offset so that large immediate is cheaper to materialize?
-    if (isInt<12>(Offset.getFixed())) {
-      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset.getFixed());
-      Offset = StackOffset::get(0, Offset.getScalable());
-    } else {
-      // Since we're going to materialize the full offset below, clear the
-      // portion encoded in the immediate.
+    if (MI.getOpcode() == RISCV::ADDI && !isInt<12>(Offset.getFixed())) {
+      // We chose to emit the canonical immediate sequence rather than folding
+      // the offset into the using add under the theory that doing so doesn't
+      // save dynamic instruction count and some target may fuse the canonical
+      // 32 bit immediate sequence.  We still need to clear the portion of the
+      // offset encoded in the immediate.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+    } else {
+      // We can encode an add with 12 bit signed immediate in the immediate
+      // operand of our user instruction.  As a result, the remaining
+      // offset can by construction, at worst, a LUI and a ADD.
+      int64_t Val = Offset.getFixed();
+      int64_t Lo12 = SignExtend64<12>(Val);
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo12);
+      Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo12,
+                                Offset.getScalable());
     }
   }
 

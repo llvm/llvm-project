@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -tensor-copy-insertion -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -tensor-copy-insertion="bufferize-function-boundaries allow-return-allocs" -split-input-file | FileCheck %s --check-prefix=CHECK-FUNC
+// RUN: mlir-opt %s -test-tensor-copy-insertion -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-tensor-copy-insertion="bufferize-function-boundaries allow-return-allocs" -split-input-file | FileCheck %s --check-prefix=CHECK-FUNC
 
 // CHECK-LABEL: func @extract_slice(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>

@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Host/macosx/HostInfoMacOSX.h"
+#include "Utility/UuidCompatibility.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
-#include "Utility/UuidCompatibility.h"
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
@@ -337,7 +337,14 @@ FileSpec HostInfoMacOSX::GetXcodeContentsDirectory() {
       }
     }
 
-    FileSpec fspec(HostInfo::GetXcodeSDKPath(XcodeSDK::GetAnyMacOS()));
+    auto sdk_path_or_err = HostInfo::GetXcodeSDKPath(XcodeSDK::GetAnyMacOS());
+    if (!sdk_path_or_err) {
+      Log *log = GetLog(LLDBLog::Host);
+      LLDB_LOGF(log, "Error while searching for Xcode SDK: %s",
+                toString(sdk_path_or_err.takeError()).c_str());
+      return;
+    }
+    FileSpec fspec(*sdk_path_or_err);
     if (fspec) {
       if (FileSystem::Instance().Exists(fspec)) {
         std::string xcode_contents_dir =
@@ -365,12 +372,18 @@ lldb_private::FileSpec HostInfoMacOSX::GetXcodeDeveloperDirectory() {
   return g_developer_directory;
 }
 
-static std::string GetXcodeSDK(XcodeSDK sdk) {
+llvm::Expected<std::string> GetXcodeSDK(XcodeSDK sdk) {
   XcodeSDK::Info info = sdk.Parse();
   std::string sdk_name = XcodeSDK::GetCanonicalName(info);
+  if (sdk_name.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Unrecognized SDK type: " + sdk.GetString());
+
+  Log *log = GetLog(LLDBLog::Host);
 
   auto xcrun = [](const std::string &sdk,
-                  llvm::StringRef developer_dir = "") -> std::string {
+                  llvm::StringRef developer_dir =
+                      "") -> llvm::Expected<std::string> {
     Args args;
     if (!developer_dir.empty()) {
       args.AppendArgument("/usr/bin/env");
@@ -391,13 +404,29 @@ static std::string GetXcodeSDK(XcodeSDK sdk) {
     int status = 0;
     int signo = 0;
     std::string output_str;
-    lldb_private::Status error =
-        Host::RunShellCommand(args, FileSpec(), &status, &signo, &output_str,
-                              std::chrono::seconds(15));
+    // The first time after Xcode was updated or freshly installed,
+    // xcrun can take surprisingly long to build up its database.
+    auto timeout = std::chrono::seconds(60);
+    bool run_in_shell = false;
+    lldb_private::Status error = Host::RunShellCommand(
+        args, FileSpec(), &status, &signo, &output_str, timeout, run_in_shell);
 
-    // Check that xcrun return something useful.
-    if (status != 0 || output_str.empty())
-      return {};
+    // Check that xcrun returned something useful.
+    if (error.Fail()) {
+      // Catastrophic error.
+      LLDB_LOG(log, "xcrun failed to execute: %s", error.AsCString());
+      return error.ToError();
+    }
+    if (status != 0) {
+      // xcrun didn't find a matching SDK. Not an error, we'll try
+      // different spellings.
+      LLDB_LOG(log, "xcrun returned exit code %d", status);
+      return "";
+    }
+    if (output_str.empty()) {
+      LLDB_LOG(log, "xcrun returned no results");
+      return "";
+    }
 
     // Convert to a StringRef so we can manipulate the string without modifying
     // the underlying data.
@@ -414,7 +443,8 @@ static std::string GetXcodeSDK(XcodeSDK sdk) {
     return output.str();
   };
 
-  auto find_sdk = [&xcrun](const std::string &sdk_name) -> std::string {
+  auto find_sdk =
+      [&xcrun](const std::string &sdk_name) -> llvm::Expected<std::string> {
     // Invoke xcrun with the developer dir specified in the environment.
     std::string developer_dir = GetEnvDeveloperDir();
     if (!developer_dir.empty()) {
@@ -430,8 +460,10 @@ static std::string GetXcodeSDK(XcodeSDK sdk) {
         llvm::StringRef shlib_developer_dir =
             llvm::sys::path::parent_path(contents_dir);
         if (!shlib_developer_dir.empty()) {
-          std::string sdk = xcrun(sdk_name, std::move(shlib_developer_dir));
-          if (!sdk.empty())
+          auto sdk = xcrun(sdk_name, std::move(shlib_developer_dir));
+          if (!sdk)
+            return sdk.takeError();
+          if (!sdk->empty())
             return sdk;
         }
       }
@@ -441,7 +473,10 @@ static std::string GetXcodeSDK(XcodeSDK sdk) {
     return xcrun(sdk_name);
   };
 
-  std::string path = find_sdk(sdk_name);
+  auto path_or_err = find_sdk(sdk_name);
+  if (!path_or_err)
+    return path_or_err.takeError();
+  std::string path = *path_or_err;
   while (path.empty()) {
     // Try an alternate spelling of the name ("macosx10.9internal").
     if (info.type == XcodeSDK::Type::MacOSX && !info.version.empty() &&
@@ -449,44 +484,68 @@ static std::string GetXcodeSDK(XcodeSDK sdk) {
       llvm::StringRef fixed(sdk_name);
       if (fixed.consume_back(".internal"))
         sdk_name = fixed.str() + "internal";
-      path = find_sdk(sdk_name);
+      path_or_err = find_sdk(sdk_name);
+      if (!path_or_err)
+        return path_or_err.takeError();
+      path = *path_or_err;
       if (!path.empty())
         break;
     }
-    Log *log = GetLog(LLDBLog::Host);
     LLDB_LOGF(log, "Couldn't find SDK %s on host", sdk_name.c_str());
 
     // Try without the version.
     if (!info.version.empty()) {
       info.version = {};
       sdk_name = XcodeSDK::GetCanonicalName(info);
-      path = find_sdk(sdk_name);
+      path_or_err = find_sdk(sdk_name);
+      if (!path_or_err)
+        return path_or_err.takeError();
+      path = *path_or_err;
       if (!path.empty())
         break;
     }
 
     LLDB_LOGF(log, "Couldn't find any matching SDK on host");
-    return {};
+    return "";
   }
 
   // Whatever is left in output should be a valid path.
-  if (!FileSystem::Instance().Exists(path))
-    return {};
+  if (!FileSystem::Instance().Exists(path)) {
+    LLDB_LOGF(log, "SDK returned by xcrun doesn't exist");
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "SDK returned by xcrun doesn't exist");
+  }
   return path;
 }
 
-llvm::StringRef HostInfoMacOSX::GetXcodeSDKPath(XcodeSDK sdk) {
-  static llvm::StringMap<std::string> g_sdk_path;
+llvm::Expected<llvm::StringRef> HostInfoMacOSX::GetXcodeSDKPath(XcodeSDK sdk) {
+  struct ErrorOrPath {
+    std::string str;
+    bool is_error;
+  };
+  static llvm::StringMap<ErrorOrPath> g_sdk_path;
   static std::mutex g_sdk_path_mutex;
 
   std::lock_guard<std::mutex> guard(g_sdk_path_mutex);
   LLDB_SCOPED_TIMER();
 
-  auto it = g_sdk_path.find(sdk.GetString());
-  if (it != g_sdk_path.end())
-    return it->second;
-  auto it_new = g_sdk_path.insert({sdk.GetString(), GetXcodeSDK(sdk)});
-  return it_new.first->second;
+  auto key = sdk.GetString();
+  auto it = g_sdk_path.find(key);
+  if (it != g_sdk_path.end()) {
+    if (it->second.is_error)
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     it->second.str);
+    else
+      return it->second.str;
+  }
+  auto path_or_err = GetXcodeSDK(sdk);
+  if (!path_or_err) {
+    std::string error = toString(path_or_err.takeError());
+    g_sdk_path.insert({key, {error, true}});
+    return llvm::createStringError(llvm::inconvertibleErrorCode(), error);
+  }
+  auto it_new = g_sdk_path.insert({key, {*path_or_err, false}});
+  return it_new.first->second.str;
 }
 
 namespace {

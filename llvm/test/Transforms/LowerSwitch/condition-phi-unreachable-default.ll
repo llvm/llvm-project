@@ -1,4 +1,4 @@
-; RUN: opt < %s -lowerswitch -S | FileCheck %s
+; RUN: opt < %s -passes=lowerswitch -S | FileCheck %s
 
 ; This test verifies -lowerswitch does not crash when an removing an
 ; unreachable default branch causes a PHI node used as the switch

@@ -86,6 +86,7 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -878,6 +879,27 @@ struct DSEState {
     CodeMetrics::collectEphemeralValues(&F, &AC, EphValues);
   }
 
+  LocationSize strengthenLocationSize(const Instruction *I,
+                                      LocationSize Size) const {
+    if (auto *CB = dyn_cast<CallBase>(I)) {
+      LibFunc F;
+      if (TLI.getLibFunc(*CB, F) && TLI.has(F) &&
+          (F == LibFunc_memset_chk || F == LibFunc_memcpy_chk)) {
+        // Use the precise location size specified by the 3rd argument
+        // for determining KillingI overwrites DeadLoc if it is a memset_chk
+        // instruction. memset_chk will write either the amount specified as 3rd
+        // argument or the function will immediately abort and exit the program.
+        // NOTE: AA may determine NoAlias if it can prove that the access size
+        // is larger than the allocation size due to that being UB. To avoid
+        // returning potentially invalid NoAlias results by AA, limit the use of
+        // the precise location size to isOverwrite.
+        if (const auto *Len = dyn_cast<ConstantInt>(CB->getArgOperand(2)))
+          return LocationSize::precise(Len->getZExtValue());
+      }
+    }
+    return Size;
+  }
+
   /// Return 'OW_Complete' if a store to the 'KillingLoc' location (by \p
   /// KillingI instruction) completely overwrites a store to the 'DeadLoc'
   /// location (by \p DeadI instruction).
@@ -897,6 +919,8 @@ struct DSEState {
     if (!isGuaranteedLoopIndependent(DeadI, KillingI, DeadLoc))
       return OW_Unknown;
 
+    LocationSize KillingLocSize =
+        strengthenLocationSize(KillingI, KillingLoc.Size);
     const Value *DeadPtr = DeadLoc.Ptr->stripPointerCasts();
     const Value *KillingPtr = KillingLoc.Ptr->stripPointerCasts();
     const Value *DeadUndObj = getUnderlyingObject(DeadPtr);
@@ -904,16 +928,16 @@ struct DSEState {
 
     // Check whether the killing store overwrites the whole object, in which
     // case the size/offset of the dead store does not matter.
-    if (DeadUndObj == KillingUndObj && KillingLoc.Size.isPrecise()) {
+    if (DeadUndObj == KillingUndObj && KillingLocSize.isPrecise()) {
       uint64_t KillingUndObjSize = getPointerSize(KillingUndObj, DL, TLI, &F);
       if (KillingUndObjSize != MemoryLocation::UnknownSize &&
-          KillingUndObjSize == KillingLoc.Size.getValue())
+          KillingUndObjSize == KillingLocSize.getValue())
         return OW_Complete;
     }
 
     // FIXME: Vet that this works for size upper-bounds. Seems unlikely that we'll
     // get imprecise values here, though (except for unknown sizes).
-    if (!KillingLoc.Size.isPrecise() || !DeadLoc.Size.isPrecise()) {
+    if (!KillingLocSize.isPrecise() || !DeadLoc.Size.isPrecise()) {
       // In case no constant size is known, try to an IR values for the number
       // of bytes written and check if they match.
       const auto *KillingMemI = dyn_cast<MemIntrinsic>(KillingI);
@@ -930,7 +954,7 @@ struct DSEState {
       return isMaskedStoreOverwrite(KillingI, DeadI, BatchAA);
     }
 
-    const uint64_t KillingSize = KillingLoc.Size.getValue();
+    const uint64_t KillingSize = KillingLocSize.getValue();
     const uint64_t DeadSize = DeadLoc.Size.getValue();
 
     // Query the alias information
@@ -1045,9 +1069,9 @@ struct DSEState {
     return !I.first->second;
   }
 
-  Optional<MemoryLocation> getLocForWrite(Instruction *I) const {
+  std::optional<MemoryLocation> getLocForWrite(Instruction *I) const {
     if (!I->mayWriteToMemory())
-      return None;
+      return std::nullopt;
 
     if (auto *CB = dyn_cast<CallBase>(I))
       return MemoryLocation::getForDest(CB, TLI);
@@ -1157,7 +1181,7 @@ struct DSEState {
   /// If \p I is a memory  terminator like llvm.lifetime.end or free, return a
   /// pair with the MemoryLocation terminated by \p I and a boolean flag
   /// indicating whether \p I is a free-like call.
-  Optional<std::pair<MemoryLocation, bool>>
+  std::optional<std::pair<MemoryLocation, bool>>
   getLocForTerminator(Instruction *I) const {
     uint64_t Len;
     Value *Ptr;
@@ -1170,7 +1194,7 @@ struct DSEState {
         return {std::make_pair(MemoryLocation::getAfter(FreedOp), true)};
     }
 
-    return None;
+    return std::nullopt;
   }
 
   /// Returns true if \p I is a memory terminator instruction like
@@ -1185,7 +1209,7 @@ struct DSEState {
   /// instruction \p AccessI.
   bool isMemTerminator(const MemoryLocation &Loc, Instruction *AccessI,
                        Instruction *MaybeTerm) {
-    Optional<std::pair<MemoryLocation, bool>> MaybeTermLoc =
+    std::optional<std::pair<MemoryLocation, bool>> MaybeTermLoc =
         getLocForTerminator(MaybeTerm);
 
     if (!MaybeTermLoc)
@@ -1296,7 +1320,7 @@ struct DSEState {
                        !KillingI->mayReadFromMemory();
 
     // Find the next clobbering Mod access for DefLoc, starting at StartAccess.
-    Optional<MemoryLocation> CurrentLoc;
+    std::optional<MemoryLocation> CurrentLoc;
     for (;; Current = cast<MemoryDef>(Current)->getDefiningAccess()) {
       LLVM_DEBUG({
         dbgs() << "   visiting " << *Current;
@@ -2024,12 +2048,13 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
       continue;
     Instruction *KillingI = KillingDef->getMemoryInst();
 
-    Optional<MemoryLocation> MaybeKillingLoc;
-    if (State.isMemTerminatorInst(KillingI))
-      MaybeKillingLoc = State.getLocForTerminator(KillingI).transform(
-          [](const std::pair<MemoryLocation, bool> &P) { return P.first; });
-    else
+    std::optional<MemoryLocation> MaybeKillingLoc;
+    if (State.isMemTerminatorInst(KillingI)) {
+      if (auto KillingLoc = State.getLocForTerminator(KillingI))
+        MaybeKillingLoc = KillingLoc->first;
+    } else {
       MaybeKillingLoc = State.getLocForWrite(KillingI);
+    }
 
     if (!MaybeKillingLoc) {
       LLVM_DEBUG(dbgs() << "Failed to find analyzable write location for "

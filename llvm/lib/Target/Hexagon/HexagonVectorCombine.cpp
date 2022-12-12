@@ -15,7 +15,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -1381,7 +1380,7 @@ auto HvxIdioms::processFxpMul(Instruction &In, const FxpOp &Op) const
       break;
   }
 
-  if (Results.back() == nullptr)
+  if (Results.empty() || Results.back() == nullptr)
     return nullptr;
 
   Value *Cat = HVC.concat(Builder, Results);
@@ -2391,7 +2390,8 @@ auto HexagonVectorCombine::isSafeToMoveBeforeInBB(const Instruction &In,
                                                   BasicBlock::const_iterator To,
                                                   const T &IgnoreInsts) const
     -> bool {
-  auto getLocOrNone = [this](const Instruction &I) -> Optional<MemoryLocation> {
+  auto getLocOrNone =
+      [this](const Instruction &I) -> std::optional<MemoryLocation> {
     if (const auto *II = dyn_cast<IntrinsicInst>(&I)) {
       switch (II->getIntrinsicID()) {
       case Intrinsic::masked_load:

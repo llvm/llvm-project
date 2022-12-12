@@ -41,6 +41,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
 #include <algorithm>
+#include <optional>
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
@@ -6219,7 +6220,7 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
       if (!Attr.isValid())
         return nullptr;
       unsigned VScaleMin = Attr.getVScaleRangeMin();
-      Optional<unsigned> VScaleMax = Attr.getVScaleRangeMax();
+      std::optional<unsigned> VScaleMax = Attr.getVScaleRangeMax();
       if (VScaleMax && VScaleMin == VScaleMax)
         return ConstantInt::get(F->getReturnType(), VScaleMin);
       return nullptr;

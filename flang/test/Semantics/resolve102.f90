@@ -30,6 +30,7 @@ subroutine iface
   !ERROR: Procedure 'p' is recursively defined.  Procedures in the cycle: 'p', 'sub', 'p2'
   procedure(sub) :: p
   interface
+    !ERROR: Procedure 'sub' is recursively defined.  Procedures in the cycle: 'p', 'sub', 'p2'
     subroutine sub(p2)
       import p
       procedure(p) :: p2

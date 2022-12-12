@@ -107,8 +107,6 @@ bool LoongArchAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
       return true;
   }
   return false;
-
-  return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, ExtraCode, OS);
 }
 
 bool LoongArchAsmPrinter::runOnMachineFunction(MachineFunction &MF) {

@@ -260,5 +260,286 @@ TEST_F(InstrOrderInvalidationTest, EraseNoInvalidation) {
   EXPECT_EQ(std::next(I1->getIterator()), I3->getIterator());
 }
 
+static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
+  SMDiagnostic Err;
+  std::unique_ptr<Module> Mod = parseAssemblyString(IR, Err, C);
+  if (!Mod)
+    Err.print(__FILE__, errs());
+  return Mod;
+}
+
+TEST(BasicBlockTest, SpliceFromBB) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @f(i32 %a) {
+     from:
+       %fromInstr1 = add i32 %a, %a
+       %fromInstr2 = sub i32 %a, %a
+       br label %to
+
+     to:
+       %toInstr1 = mul i32 %a, %a
+       %toInstr2 = sdiv i32 %a, %a
+       ret void
+    }
+)");
+  Function *F = &*M->begin();
+  auto BBIt = F->begin();
+  BasicBlock *FromBB = &*BBIt++;
+  BasicBlock *ToBB = &*BBIt++;
+
+  auto FromBBIt = FromBB->begin();
+  Instruction *FromI1 = &*FromBBIt++;
+  Instruction *FromI2 = &*FromBBIt++;
+  Instruction *FromBr = &*FromBBIt++;
+
+  auto ToBBIt = ToBB->begin();
+  Instruction *ToI1 = &*ToBBIt++;
+  Instruction *ToI2 = &*ToBBIt++;
+  Instruction *ToRet = &*ToBBIt++;
+  ToBB->splice(ToI1->getIterator(), FromBB);
+
+  EXPECT_TRUE(FromBB->empty());
+
+  auto It = ToBB->begin();
+  EXPECT_EQ(&*It++, FromI1);
+  EXPECT_EQ(&*It++, FromI2);
+  EXPECT_EQ(&*It++, FromBr);
+  EXPECT_EQ(&*It++, ToI1);
+  EXPECT_EQ(&*It++, ToI2);
+  EXPECT_EQ(&*It++, ToRet);
+}
+
+TEST(BasicBlockTest, SpliceOneInstr) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @f(i32 %a) {
+     from:
+       %fromInstr1 = add i32 %a, %a
+       %fromInstr2 = sub i32 %a, %a
+       br label %to
+
+     to:
+       %toInstr1 = mul i32 %a, %a
+       %toInstr2 = sdiv i32 %a, %a
+       ret void
+    }
+)");
+  Function *F = &*M->begin();
+  auto BBIt = F->begin();
+  BasicBlock *FromBB = &*BBIt++;
+  BasicBlock *ToBB = &*BBIt++;
+
+  auto FromBBIt = FromBB->begin();
+  Instruction *FromI1 = &*FromBBIt++;
+  Instruction *FromI2 = &*FromBBIt++;
+  Instruction *FromBr = &*FromBBIt++;
+
+  auto ToBBIt = ToBB->begin();
+  Instruction *ToI1 = &*ToBBIt++;
+  Instruction *ToI2 = &*ToBBIt++;
+  Instruction *ToRet = &*ToBBIt++;
+  ToBB->splice(ToI1->getIterator(), FromBB, FromI2->getIterator());
+
+  EXPECT_EQ(FromBB->size(), 2u);
+  EXPECT_EQ(ToBB->size(), 4u);
+
+  auto It = FromBB->begin();
+  EXPECT_EQ(&*It++, FromI1);
+  EXPECT_EQ(&*It++, FromBr);
+
+  It = ToBB->begin();
+  EXPECT_EQ(&*It++, FromI2);
+  EXPECT_EQ(&*It++, ToI1);
+  EXPECT_EQ(&*It++, ToI2);
+  EXPECT_EQ(&*It++, ToRet);
+}
+
+TEST(BasicBlockTest, SpliceOneInstrWhenFromIsSameAsTo) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @f(i32 %a) {
+     bb:
+       %instr1 = add i32 %a, %a
+       %instr2 = sub i32 %a, %a
+       ret void
+    }
+)");
+  Function *F = &*M->begin();
+  auto BBIt = F->begin();
+  BasicBlock *BB = &*BBIt++;
+
+  auto It = BB->begin();
+  Instruction *Instr1 = &*It++;
+  Instruction *Instr2 = &*It++;
+  Instruction *Ret = &*It++;
+
+  // According to ilist's splice() a single-element splice where dst == src
+  // should be a noop.
+  BB->splice(Instr1->getIterator(), BB, Instr1->getIterator());
+
+  It = BB->begin();
+  EXPECT_EQ(&*It++, Instr1);
+  EXPECT_EQ(&*It++, Instr2);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(BB->size(), 3u);
+}
+
+TEST(BasicBlockTest, SpliceLastInstr) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @f(i32 %a) {
+     from:
+       %fromInstr1 = add i32 %a, %a
+       %fromInstr2 = sub i32 %a, %a
+       br label %to
+
+     to:
+       %toInstr1 = mul i32 %a, %a
+       %toInstr2 = sdiv i32 %a, %a
+       ret void
+    }
+)");
+  Function *F = &*M->begin();
+  auto BBIt = F->begin();
+  BasicBlock *FromBB = &*BBIt++;
+  BasicBlock *ToBB = &*BBIt++;
+
+  auto FromBBIt = FromBB->begin();
+  Instruction *FromI1 = &*FromBBIt++;
+  Instruction *FromI2 = &*FromBBIt++;
+  Instruction *FromBr = &*FromBBIt++;
+
+  auto ToBBIt = ToBB->begin();
+  Instruction *ToI1 = &*ToBBIt++;
+  Instruction *ToI2 = &*ToBBIt++;
+  Instruction *ToRet = &*ToBBIt++;
+  ToBB->splice(ToI1->getIterator(), FromBB, FromI2->getIterator(),
+               FromBr->getIterator());
+
+  EXPECT_EQ(FromBB->size(), 2u);
+  auto It = FromBB->begin();
+  EXPECT_EQ(&*It++, FromI1);
+  EXPECT_EQ(&*It++, FromBr);
+
+  EXPECT_EQ(ToBB->size(), 4u);
+  It = ToBB->begin();
+  EXPECT_EQ(&*It++, FromI2);
+  EXPECT_EQ(&*It++, ToI1);
+  EXPECT_EQ(&*It++, ToI2);
+  EXPECT_EQ(&*It++, ToRet);
+}
+
+TEST(BasicBlockTest, SpliceInstrRange) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @f(i32 %a) {
+     from:
+       %fromInstr1 = add i32 %a, %a
+       %fromInstr2 = sub i32 %a, %a
+       br label %to
+
+     to:
+       %toInstr1 = mul i32 %a, %a
+       %toInstr2 = sdiv i32 %a, %a
+       ret void
+    }
+)");
+  Function *F = &*M->begin();
+  auto BBIt = F->begin();
+  BasicBlock *FromBB = &*BBIt++;
+  BasicBlock *ToBB = &*BBIt++;
+
+  auto FromBBIt = FromBB->begin();
+  Instruction *FromI1 = &*FromBBIt++;
+  Instruction *FromI2 = &*FromBBIt++;
+  Instruction *FromBr = &*FromBBIt++;
+
+  auto ToBBIt = ToBB->begin();
+  Instruction *ToI1 = &*ToBBIt++;
+  Instruction *ToI2 = &*ToBBIt++;
+  Instruction *ToRet = &*ToBBIt++;
+  ToBB->splice(ToI2->getIterator(), FromBB, FromBB->begin(), FromBB->end());
+
+  EXPECT_EQ(FromBB->size(), 0u);
+
+  EXPECT_EQ(ToBB->size(), 6u);
+  auto It = ToBB->begin();
+  EXPECT_EQ(&*It++, ToI1);
+  EXPECT_EQ(&*It++, FromI1);
+  EXPECT_EQ(&*It++, FromI2);
+  EXPECT_EQ(&*It++, FromBr);
+  EXPECT_EQ(&*It++, ToI2);
+  EXPECT_EQ(&*It++, ToRet);
+}
+
+#ifdef EXPENSIVE_CHECKS
+TEST(BasicBlockTest, SpliceEndBeforeBegin) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @f(i32 %a) {
+     from:
+       %fromInstr1 = add i32 %a, %a
+       %fromInstr2 = sub i32 %a, %a
+       br label %to
+
+     to:
+       %toInstr1 = mul i32 %a, %a
+       %toInstr2 = sdiv i32 %a, %a
+       ret void
+    }
+)");
+  Function *F = &*M->begin();
+  auto BBIt = F->begin();
+  BasicBlock *FromBB = &*BBIt++;
+  BasicBlock *ToBB = &*BBIt++;
+
+  auto FromBBIt = FromBB->begin();
+  Instruction *FromI1 = &*FromBBIt++;
+  Instruction *FromI2 = &*FromBBIt++;
+
+  auto ToBBIt = ToBB->begin();
+  Instruction *ToI2 = &*ToBBIt++;
+
+  EXPECT_DEATH(ToBB->splice(ToI2->getIterator(), FromBB, FromI2->getIterator(),
+                            FromI1->getIterator()),
+               "FromBeginIt not before FromEndIt!");
+}
+#endif //EXPENSIVE_CHECKS
+
+TEST(BasicBlockTest, EraseRange) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @f(i32 %a) {
+     bb0:
+       %instr1 = add i32 %a, %a
+       %instr2 = sub i32 %a, %a
+       ret void
+    }
+)");
+  Function *F = &*M->begin();
+
+  auto BB0It = F->begin();
+  BasicBlock *BB0 = &*BB0It;
+
+  auto It = BB0->begin();
+  Instruction *Instr1 = &*It++;
+  Instruction *Instr2 = &*It++;
+
+  EXPECT_EQ(BB0->size(), 3u);
+
+  // Erase no instruction
+  BB0->erase(Instr1->getIterator(), Instr1->getIterator());
+  EXPECT_EQ(BB0->size(), 3u);
+
+  // Erase %instr1
+  BB0->erase(Instr1->getIterator(), Instr2->getIterator());
+  EXPECT_EQ(BB0->size(), 2u);
+  EXPECT_EQ(&*BB0->begin(), Instr2);
+
+  // Erase all instructions
+  BB0->erase(BB0->begin(), BB0->end());
+  EXPECT_TRUE(BB0->empty());
+}
 } // End anonymous namespace.
 } // End llvm namespace.

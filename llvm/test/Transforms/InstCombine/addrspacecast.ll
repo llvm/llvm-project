@@ -4,145 +4,133 @@
 target datalayout = "e-p:64:64:64-p1:32:32:32-p2:16:16:16-n8:16:32:64"
 
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i1) nounwind
-declare void @llvm.memcpy.p0i8.p1i8.i32(i8*, i8 addrspace(1)*, i32, i1) nounwind
-declare void @llvm.memcpy.p0i8.p2i8.i32(i8*, i8 addrspace(2)*, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr, ptr, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p1.i32(ptr, ptr addrspace(1), i32, i1) nounwind
+declare void @llvm.memcpy.p0.p2.i32(ptr, ptr addrspace(2), i32, i1) nounwind
 
 
-define i32* @combine_redundant_addrspacecast(i32 addrspace(1)* %x) nounwind {
+define ptr @combine_redundant_addrspacecast(ptr addrspace(1) %x) nounwind {
 ; CHECK-LABEL: @combine_redundant_addrspacecast(
-; CHECK-NEXT:    [[Z:%.*]] = addrspacecast i32 addrspace(1)* [[X:%.*]] to i32*
-; CHECK-NEXT:    ret i32* [[Z]]
+; CHECK-NEXT:    [[Z:%.*]] = addrspacecast ptr addrspace(1) [[X:%.*]] to ptr
+; CHECK-NEXT:    ret ptr [[Z]]
 ;
-  %y = addrspacecast i32 addrspace(1)* %x to i32 addrspace(3)*
-  %z = addrspacecast i32 addrspace(3)* %y to i32*
-  ret i32* %z
+  %y = addrspacecast ptr addrspace(1) %x to ptr addrspace(3)
+  %z = addrspacecast ptr addrspace(3) %y to ptr
+  ret ptr %z
 }
 
-define <4 x i32*> @combine_redundant_addrspacecast_vector(<4 x i32 addrspace(1)*> %x) nounwind {
+define <4 x ptr> @combine_redundant_addrspacecast_vector(<4 x ptr addrspace(1)> %x) nounwind {
 ; CHECK-LABEL: @combine_redundant_addrspacecast_vector(
-; CHECK-NEXT:    [[Z:%.*]] = addrspacecast <4 x i32 addrspace(1)*> [[X:%.*]] to <4 x i32*>
-; CHECK-NEXT:    ret <4 x i32*> [[Z]]
+; CHECK-NEXT:    [[Z:%.*]] = addrspacecast <4 x ptr addrspace(1)> [[X:%.*]] to <4 x ptr>
+; CHECK-NEXT:    ret <4 x ptr> [[Z]]
 ;
-  %y = addrspacecast <4 x i32 addrspace(1)*> %x to <4 x i32 addrspace(3)*>
-  %z = addrspacecast <4 x i32 addrspace(3)*> %y to <4 x i32*>
-  ret <4 x i32*> %z
+  %y = addrspacecast <4 x ptr addrspace(1)> %x to <4 x ptr addrspace(3)>
+  %z = addrspacecast <4 x ptr addrspace(3)> %y to <4 x ptr>
+  ret <4 x ptr> %z
 }
 
-define float* @combine_redundant_addrspacecast_types(i32 addrspace(1)* %x) nounwind {
+define ptr @combine_redundant_addrspacecast_types(ptr addrspace(1) %x) nounwind {
 ; CHECK-LABEL: @combine_redundant_addrspacecast_types(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 addrspace(1)* [[X:%.*]] to float addrspace(1)*
-; CHECK-NEXT:    [[Z:%.*]] = addrspacecast float addrspace(1)* [[TMP1]] to float*
-; CHECK-NEXT:    ret float* [[Z]]
+; CHECK-NEXT:    [[Z:%.*]] = addrspacecast ptr addrspace(1) [[X:%.*]] to ptr
+; CHECK-NEXT:    ret ptr [[Z]]
 ;
-  %y = addrspacecast i32 addrspace(1)* %x to i32 addrspace(3)*
-  %z = addrspacecast i32 addrspace(3)* %y to float*
-  ret float* %z
+  %y = addrspacecast ptr addrspace(1) %x to ptr addrspace(3)
+  %z = addrspacecast ptr addrspace(3) %y to ptr
+  ret ptr %z
 }
 
-define <4 x float*> @combine_redundant_addrspacecast_types_vector(<4 x i32 addrspace(1)*> %x) nounwind {
+define <4 x ptr> @combine_redundant_addrspacecast_types_vector(<4 x ptr addrspace(1)> %x) nounwind {
 ; CHECK-LABEL: @combine_redundant_addrspacecast_types_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32 addrspace(1)*> [[X:%.*]] to <4 x float addrspace(1)*>
-; CHECK-NEXT:    [[Z:%.*]] = addrspacecast <4 x float addrspace(1)*> [[TMP1]] to <4 x float*>
-; CHECK-NEXT:    ret <4 x float*> [[Z]]
+; CHECK-NEXT:    [[Z:%.*]] = addrspacecast <4 x ptr addrspace(1)> [[X:%.*]] to <4 x ptr>
+; CHECK-NEXT:    ret <4 x ptr> [[Z]]
 ;
-  %y = addrspacecast <4 x i32 addrspace(1)*> %x to <4 x i32 addrspace(3)*>
-  %z = addrspacecast <4 x i32 addrspace(3)*> %y to <4 x float*>
-  ret <4 x float*> %z
+  %y = addrspacecast <4 x ptr addrspace(1)> %x to <4 x ptr addrspace(3)>
+  %z = addrspacecast <4 x ptr addrspace(3)> %y to <4 x ptr>
+  ret <4 x ptr> %z
 }
 
-define float addrspace(2)* @combine_addrspacecast_bitcast_1(i32 addrspace(1)* %x) nounwind {
+define ptr addrspace(2) @combine_addrspacecast_bitcast_1(ptr addrspace(1) %x) nounwind {
 ; CHECK-LABEL: @combine_addrspacecast_bitcast_1(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 addrspace(1)* [[X:%.*]] to float addrspace(1)*
-; CHECK-NEXT:    [[Z:%.*]] = addrspacecast float addrspace(1)* [[TMP1]] to float addrspace(2)*
-; CHECK-NEXT:    ret float addrspace(2)* [[Z]]
+; CHECK-NEXT:    [[Y:%.*]] = addrspacecast ptr addrspace(1) [[X:%.*]] to ptr addrspace(2)
+; CHECK-NEXT:    ret ptr addrspace(2) [[Y]]
 ;
-  %y = addrspacecast i32 addrspace(1)* %x to i32 addrspace(2)*
-  %z = bitcast i32 addrspace(2)* %y to float addrspace(2)*
-  ret float addrspace(2)* %z
+  %y = addrspacecast ptr addrspace(1) %x to ptr addrspace(2)
+  ret ptr addrspace(2) %y
 }
 
-define i32 addrspace(2)* @combine_addrspacecast_bitcast_2(i32 addrspace(1)* %x) nounwind {
+define ptr addrspace(2) @combine_addrspacecast_bitcast_2(ptr addrspace(1) %x) nounwind {
 ; CHECK-LABEL: @combine_addrspacecast_bitcast_2(
-; CHECK-NEXT:    [[Z:%.*]] = addrspacecast i32 addrspace(1)* [[X:%.*]] to i32 addrspace(2)*
-; CHECK-NEXT:    ret i32 addrspace(2)* [[Z]]
+; CHECK-NEXT:    [[Y:%.*]] = addrspacecast ptr addrspace(1) [[X:%.*]] to ptr addrspace(2)
+; CHECK-NEXT:    ret ptr addrspace(2) [[Y]]
 ;
-  %y = addrspacecast i32 addrspace(1)* %x to float addrspace(2)*
-  %z = bitcast float addrspace(2)* %y to i32 addrspace(2)*
-  ret i32 addrspace(2)* %z
+  %y = addrspacecast ptr addrspace(1) %x to ptr addrspace(2)
+  ret ptr addrspace(2) %y
 }
 
-define i32 addrspace(2)* @combine_bitcast_addrspacecast_1(i32 addrspace(1)* %x) nounwind {
+define ptr addrspace(2) @combine_bitcast_addrspacecast_1(ptr addrspace(1) %x) nounwind {
 ; CHECK-LABEL: @combine_bitcast_addrspacecast_1(
-; CHECK-NEXT:    [[Z:%.*]] = addrspacecast i32 addrspace(1)* [[X:%.*]] to i32 addrspace(2)*
-; CHECK-NEXT:    ret i32 addrspace(2)* [[Z]]
+; CHECK-NEXT:    [[Z:%.*]] = addrspacecast ptr addrspace(1) [[X:%.*]] to ptr addrspace(2)
+; CHECK-NEXT:    ret ptr addrspace(2) [[Z]]
 ;
-  %y = bitcast i32 addrspace(1)* %x to i8 addrspace(1)*
-  %z = addrspacecast i8 addrspace(1)* %y to i32 addrspace(2)*
-  ret i32 addrspace(2)* %z
+  %z = addrspacecast ptr addrspace(1) %x to ptr addrspace(2)
+  ret ptr addrspace(2) %z
 }
 
-define float addrspace(2)* @combine_bitcast_addrspacecast_2(i32 addrspace(1)* %x) nounwind {
+define ptr addrspace(2) @combine_bitcast_addrspacecast_2(ptr addrspace(1) %x) nounwind {
 ; CHECK-LABEL: @combine_bitcast_addrspacecast_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 addrspace(1)* [[X:%.*]] to float addrspace(1)*
-; CHECK-NEXT:    [[Z:%.*]] = addrspacecast float addrspace(1)* [[TMP1]] to float addrspace(2)*
-; CHECK-NEXT:    ret float addrspace(2)* [[Z]]
+; CHECK-NEXT:    [[Z:%.*]] = addrspacecast ptr addrspace(1) [[X:%.*]] to ptr addrspace(2)
+; CHECK-NEXT:    ret ptr addrspace(2) [[Z]]
 ;
-  %y = bitcast i32 addrspace(1)* %x to i8 addrspace(1)*
-  %z = addrspacecast i8 addrspace(1)* %y to float addrspace(2)*
-  ret float addrspace(2)* %z
+  %z = addrspacecast ptr addrspace(1) %x to ptr addrspace(2)
+  ret ptr addrspace(2) %z
 }
 
-define float addrspace(2)* @combine_addrspacecast_types(i32 addrspace(1)* %x) nounwind {
+define ptr addrspace(2) @combine_addrspacecast_types(ptr addrspace(1) %x) nounwind {
 ; CHECK-LABEL: @combine_addrspacecast_types(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 addrspace(1)* [[X:%.*]] to float addrspace(1)*
-; CHECK-NEXT:    [[Y:%.*]] = addrspacecast float addrspace(1)* [[TMP1]] to float addrspace(2)*
-; CHECK-NEXT:    ret float addrspace(2)* [[Y]]
+; CHECK-NEXT:    [[Y:%.*]] = addrspacecast ptr addrspace(1) [[X:%.*]] to ptr addrspace(2)
+; CHECK-NEXT:    ret ptr addrspace(2) [[Y]]
 ;
-  %y = addrspacecast i32 addrspace(1)* %x to float addrspace(2)*
-  ret float addrspace(2)* %y
+  %y = addrspacecast ptr addrspace(1) %x to ptr addrspace(2)
+  ret ptr addrspace(2) %y
 }
 
-define <4 x float addrspace(2)*> @combine_addrspacecast_types_vector(<4 x i32 addrspace(1)*> %x) nounwind {
+define <4 x ptr addrspace(2)> @combine_addrspacecast_types_vector(<4 x ptr addrspace(1)> %x) nounwind {
 ; CHECK-LABEL: @combine_addrspacecast_types_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32 addrspace(1)*> [[X:%.*]] to <4 x float addrspace(1)*>
-; CHECK-NEXT:    [[Y:%.*]] = addrspacecast <4 x float addrspace(1)*> [[TMP1]] to <4 x float addrspace(2)*>
-; CHECK-NEXT:    ret <4 x float addrspace(2)*> [[Y]]
+; CHECK-NEXT:    [[Y:%.*]] = addrspacecast <4 x ptr addrspace(1)> [[X:%.*]] to <4 x ptr addrspace(2)>
+; CHECK-NEXT:    ret <4 x ptr addrspace(2)> [[Y]]
 ;
-  %y = addrspacecast <4 x i32 addrspace(1)*> %x to <4 x float addrspace(2)*>
-  ret <4 x float addrspace(2)*> %y
+  %y = addrspacecast <4 x ptr addrspace(1)> %x to <4 x ptr addrspace(2)>
+  ret <4 x ptr addrspace(2)> %y
 }
 
-define <vscale x 4 x float addrspace(2)*> @combine_addrspacecast_types_scalevector(<vscale x 4 x i32 addrspace(1)*> %x) nounwind {
+define <vscale x 4 x ptr addrspace(2)> @combine_addrspacecast_types_scalevector(<vscale x 4 x ptr addrspace(1)> %x) nounwind {
 ; CHECK-LABEL: @combine_addrspacecast_types_scalevector(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i32 addrspace(1)*> [[X:%.*]] to <vscale x 4 x float addrspace(1)*>
-; CHECK-NEXT:    [[Y:%.*]] = addrspacecast <vscale x 4 x float addrspace(1)*> [[TMP1]] to <vscale x 4 x float addrspace(2)*>
-; CHECK-NEXT:    ret <vscale x 4 x float addrspace(2)*> [[Y]]
+; CHECK-NEXT:    [[Y:%.*]] = addrspacecast <vscale x 4 x ptr addrspace(1)> [[X:%.*]] to <vscale x 4 x ptr addrspace(2)>
+; CHECK-NEXT:    ret <vscale x 4 x ptr addrspace(2)> [[Y]]
 ;
-  %y = addrspacecast <vscale x 4 x i32 addrspace(1)*> %x to <vscale x 4 x float addrspace(2)*>
-  ret <vscale x 4 x float addrspace(2)*> %y
+  %y = addrspacecast <vscale x 4 x ptr addrspace(1)> %x to <vscale x 4 x ptr addrspace(2)>
+  ret <vscale x 4 x ptr addrspace(2)> %y
 }
 
 
-define i32 @canonicalize_addrspacecast([16 x i32] addrspace(1)* %arr) {
+define i32 @canonicalize_addrspacecast(ptr addrspace(1) %arr) {
 ; CHECK-LABEL: @canonicalize_addrspacecast(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [16 x i32], [16 x i32] addrspace(1)* [[ARR:%.*]], i32 0, i32 0
-; CHECK-NEXT:    [[P:%.*]] = addrspacecast i32 addrspace(1)* [[TMP1]] to i32*
-; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P]], align 4
+; CHECK-NEXT:    [[P:%.*]] = addrspacecast ptr addrspace(1) [[ARR:%.*]] to ptr
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
-  %p = addrspacecast [16 x i32] addrspace(1)* %arr to i32*
-  %v = load i32, i32* %p
+  %p = addrspacecast ptr addrspace(1) %arr to ptr
+  %v = load i32, ptr %p
   ret i32 %v
 }
 
 @const_array = addrspace(2) constant [60 x i8] [i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22,
-                                                i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22,
-                                                i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22,
-                                                i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22,
-                                                i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22 ]
+  i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22,
+  i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22,
+  i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22,
+  i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22, i8 2, i8 9, i8 4, i8 22 ]
 
-declare void @foo(i8*) nounwind
+declare void @foo(ptr) nounwind
 
 ; A copy from a constant addrspacecast'ed global
 define i32 @memcpy_addrspacecast() nounwind {
@@ -153,8 +141,8 @@ define i32 @memcpy_addrspacecast() nounwind {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[LOOP_BODY]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SUM_INC:%.*]], [[LOOP_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[I]] to i16
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, i8 addrspace(2)* getelementptr inbounds ([60 x i8], [60 x i8] addrspace(2)* @const_array, i16 0, i16 4), i16 [[TMP0]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8 addrspace(2)* [[PTR]], align 1
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr addrspace(2) getelementptr inbounds ([60 x i8], ptr addrspace(2) @const_array, i16 0, i16 4), i16 [[TMP0]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(2) [[PTR]], align 1
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[LOAD]] to i32
 ; CHECK-NEXT:    [[SUM_INC]] = add i32 [[SUM]], [[EXT]]
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
@@ -165,14 +153,14 @@ define i32 @memcpy_addrspacecast() nounwind {
 ;
 entry:
   %alloca = alloca i8, i32 48
-  call void @llvm.memcpy.p0i8.p1i8.i32(i8* align 4 %alloca, i8 addrspace(1)* align 4 addrspacecast (i8 addrspace(2)* getelementptr inbounds ([60 x i8], [60 x i8] addrspace(2)* @const_array, i16 0, i16 4) to i8 addrspace(1)*), i32 48, i1 false) nounwind
+  call void @llvm.memcpy.p0.p1.i32(ptr align 4 %alloca, ptr addrspace(1) align 4 addrspacecast (ptr addrspace(2) getelementptr inbounds ([60 x i8], ptr addrspace(2) @const_array, i16 0, i16 4) to ptr addrspace(1)), i32 48, i1 false) nounwind
   br label %loop.body
 
 loop.body:
   %i = phi i32 [ 0, %entry ], [ %i.inc, %loop.body ]
   %sum = phi i32 [ 0, %entry ], [ %sum.inc, %loop.body]
-  %ptr = getelementptr i8, i8* %alloca, i32 %i
-  %load = load i8, i8* %ptr
+  %ptr = getelementptr i8, ptr %alloca, i32 %i
+  %load = load i8, ptr %ptr
   %ext = zext i8 %load to i32
   %sum.inc = add i32 %sum, %ext
   %i.inc = add i32 %i, 1
@@ -185,48 +173,48 @@ end:
 
 define void @constant_fold_null() #0 {
 ; CHECK-LABEL: @constant_fold_null(
-; CHECK-NEXT:    store i32 7, i32 addrspace(4)* addrspacecast (i32 addrspace(3)* null to i32 addrspace(4)*), align 4
+; CHECK-NEXT:    store i32 7, ptr addrspace(4) addrspacecast (ptr addrspace(3) null to ptr addrspace(4)), align 4294967296
 ; CHECK-NEXT:    ret void
 ;
-  %cast = addrspacecast i32 addrspace(3)* null to i32 addrspace(4)*
-  store i32 7, i32 addrspace(4)* %cast
+  %cast = addrspacecast ptr addrspace(3) null to ptr addrspace(4)
+  store i32 7, ptr addrspace(4) %cast
   ret void
 }
 
-define i32 addrspace(4)* @constant_fold_undef() #0 {
+define ptr addrspace(4) @constant_fold_undef() #0 {
 ; CHECK-LABEL: @constant_fold_undef(
-; CHECK-NEXT:    ret i32 addrspace(4)* undef
+; CHECK-NEXT:    ret ptr addrspace(4) undef
 ;
-  %cast = addrspacecast i32 addrspace(3)* undef to i32 addrspace(4)*
-  ret i32 addrspace(4)* %cast
+  %cast = addrspacecast ptr addrspace(3) undef to ptr addrspace(4)
+  ret ptr addrspace(4) %cast
 }
 
-define <4 x i32 addrspace(4)*> @constant_fold_null_vector() #0 {
+define <4 x ptr addrspace(4)> @constant_fold_null_vector() #0 {
 ; CHECK-LABEL: @constant_fold_null_vector(
-; CHECK-NEXT:    ret <4 x i32 addrspace(4)*> addrspacecast (<4 x i32 addrspace(3)*> zeroinitializer to <4 x i32 addrspace(4)*>)
+; CHECK-NEXT:    ret <4 x ptr addrspace(4)> addrspacecast (<4 x ptr addrspace(3)> zeroinitializer to <4 x ptr addrspace(4)>)
 ;
-  %cast = addrspacecast <4 x i32 addrspace(3)*> zeroinitializer to <4 x i32 addrspace(4)*>
-  ret <4 x i32 addrspace(4)*> %cast
+  %cast = addrspacecast <4 x ptr addrspace(3)> zeroinitializer to <4 x ptr addrspace(4)>
+  ret <4 x ptr addrspace(4)> %cast
 }
 
 define void @constant_fold_inttoptr() #0 {
 ; CHECK-LABEL: @constant_fold_inttoptr(
-; CHECK-NEXT:    store i32 7, i32 addrspace(4)* addrspacecast (i32 addrspace(3)* inttoptr (i32 -1 to i32 addrspace(3)*) to i32 addrspace(4)*), align 4
+; CHECK-NEXT:    store i32 7, ptr addrspace(4) addrspacecast (ptr addrspace(3) inttoptr (i32 -1 to ptr addrspace(3)) to ptr addrspace(4)), align 4
 ; CHECK-NEXT:    ret void
 ;
-  %cast = addrspacecast i32 addrspace(3)* inttoptr (i32 -1 to i32 addrspace(3)*) to i32 addrspace(4)*
-  store i32 7, i32 addrspace(4)* %cast
+  %cast = addrspacecast ptr addrspace(3) inttoptr (i32 -1 to ptr addrspace(3)) to ptr addrspace(4)
+  store i32 7, ptr addrspace(4) %cast
   ret void
 }
 
 define void @constant_fold_gep_inttoptr() #0 {
 ; CHECK-LABEL: @constant_fold_gep_inttoptr(
-; CHECK-NEXT:    store i32 7, i32 addrspace(4)* addrspacecast (i32 addrspace(3)* inttoptr (i64 1274 to i32 addrspace(3)*) to i32 addrspace(4)*), align 4
+; CHECK-NEXT:    store i32 7, ptr addrspace(4) addrspacecast (ptr addrspace(3) inttoptr (i64 1274 to ptr addrspace(3)) to ptr addrspace(4)), align 4
 ; CHECK-NEXT:    ret void
 ;
-  %k = inttoptr i32 1234 to i32 addrspace(3)*
-  %gep = getelementptr i32, i32 addrspace(3)* %k, i32 10
-  %cast = addrspacecast i32 addrspace(3)* %gep to i32 addrspace(4)*
-  store i32 7, i32 addrspace(4)* %cast
+  %k = inttoptr i32 1234 to ptr addrspace(3)
+  %gep = getelementptr i32, ptr addrspace(3) %k, i32 10
+  %cast = addrspacecast ptr addrspace(3) %gep to ptr addrspace(4)
+  store i32 7, ptr addrspace(4) %cast
   ret void
 }

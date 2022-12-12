@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-rotate -verify-memoryssa -S | FileCheck %s
+; RUN: opt < %s -passes=loop-rotate -verify-memoryssa -S | FileCheck %s
 
 @a = external global i8, align 4
 @tmp = global i8* @a

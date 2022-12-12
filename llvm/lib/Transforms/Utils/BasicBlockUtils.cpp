@@ -267,8 +267,7 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     Start = PTI;
 
   // Move all definitions in the successor to the predecessor...
-  PredBB->getInstList().splice(PTI->getIterator(), BB->getInstList(),
-                               BB->begin(), STI->getIterator());
+  PredBB->splice(PTI->getIterator(), BB, BB->begin(), STI->getIterator());
 
   if (MSSAU)
     MSSAU->moveAllAfterMergeBlocks(BB, PredBB, Start);
@@ -288,7 +287,7 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     PredBB->back().eraseFromParent();
 
     // Move terminator instruction.
-    PredBB->getInstList().splice(PredBB->end(), BB->getInstList());
+    PredBB->splice(PredBB->end(), BB);
 
     // Terminator may be a memory accessing instruction too.
     if (MSSAU)

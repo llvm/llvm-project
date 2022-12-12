@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machine-dom-info < %s | not grep test_
 
-; XFAIL: aix
+; XFAIL: target={{.*}}-aix{{.*}}
 ; AIX system assembler default print error for undefined reference .
 ; so AIX chose to emit the available externally symbols into .s,
 ; so that users won't run into errors in situations like:

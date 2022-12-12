@@ -1,5 +1,5 @@
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -inferattrs -S | FileCheck --match-full-lines %s
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -inferattrs -S | FileCheck --match-full-lines %s
+; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=inferattrs -S | FileCheck --match-full-lines %s
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -passes=inferattrs -S | FileCheck --match-full-lines %s
 
 ; Check that we don't modify libc functions with invalid prototypes.
 

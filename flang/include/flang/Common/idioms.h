@@ -23,6 +23,7 @@
 #error g++ >= 7.2 is required
 #endif
 
+#include "enum-class.h"
 #include "visit.h"
 #include <array>
 #include <functional>
@@ -124,32 +125,6 @@ template <typename A> struct ListItemCount {
   constexpr ListItemCount(std::initializer_list<A> list) : value{list.size()} {}
   const std::size_t value;
 };
-
-#define ENUM_CLASS(NAME, ...) \
-  enum class NAME { __VA_ARGS__ }; \
-  [[maybe_unused]] static constexpr std::size_t NAME##_enumSize{[] { \
-    enum { __VA_ARGS__ }; \
-    return Fortran::common::ListItemCount{__VA_ARGS__}.value; \
-  }()}; \
-  struct NAME##_struct { \
-    NAME##_struct(const NAME##_struct &) = delete; \
-    NAME##_struct &operator=(const NAME##_struct &) = delete; \
-    static NAME##_struct &instance() { \
-      static NAME##_struct s; \
-      return s; \
-    } \
-    std::array<std::string, NAME##_enumSize> _enumNames; \
-\
-  private: \
-    NAME##_struct() { \
-      Fortran::common::BuildIndexToString( \
-          #__VA_ARGS__, _enumNames.data(), NAME##_enumSize); \
-    } \
-    ~NAME##_struct() {} \
-  }; \
-  [[maybe_unused]] static inline const std::string &EnumToString(NAME e) { \
-    return NAME##_struct::instance()._enumNames[static_cast<int>(e)]; \
-  }
 
 // Check that a pointer is non-null and dereference it
 #define DEREF(p) Fortran::common::Deref(p, __FILE__, __LINE__)

@@ -4,7 +4,7 @@
 ; Check by running globaldce, which will remove the constant if there are
 ; no references to it!
 ; 
-; RUN: opt < %s -globaldce -S | \
+; RUN: opt < %s -passes=globaldce -S | \
 ; RUN:   not grep constant
 ;
 ; RUN: verify-uselistorder %s

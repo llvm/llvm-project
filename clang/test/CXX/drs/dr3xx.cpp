@@ -905,7 +905,7 @@ private:
 protected:
   using A::bar; // #dr360-bar-using-decl
 public:
-  using A::baz; // #dr360-baz-using-decl
+  using A::baz;
 };
 
 int main() {

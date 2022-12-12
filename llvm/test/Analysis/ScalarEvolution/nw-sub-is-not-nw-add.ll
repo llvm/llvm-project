@@ -1,4 +1,4 @@
-; RUN: opt -S -indvars < %s | FileCheck %s
+; RUN: opt -S -passes=indvars < %s | FileCheck %s
 
 ; Check that SCEV does not assume sub nuw X Y == add nuw X, -Y
 define void @f(i32* %loc) {

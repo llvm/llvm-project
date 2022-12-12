@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-rotate -verify-dom-info -verify-loop-info -verify-memoryssa -disable-output
+; RUN: opt < %s -passes=loop-rotate -verify-dom-info -verify-loop-info -verify-memoryssa -disable-output
 ; ModuleID = 'PhiSelfReference-1.bc'
 
 define void @snrm2(i32 %incx) {

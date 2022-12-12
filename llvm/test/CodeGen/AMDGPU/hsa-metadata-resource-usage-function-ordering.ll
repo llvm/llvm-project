@@ -31,17 +31,17 @@
 ; GFX10:     .sgpr_spill_count: 0
 ; GFX10:     .vgpr_count:     4
 ; GFX10:     .vgpr_spill_count: 0
-define amdgpu_kernel void @test1(float* %x) {
-  %1 = load volatile float, float* %x
+define amdgpu_kernel void @test1(ptr %x) {
+  %1 = load volatile float, ptr %x
   %2 = call float @f(float %1)
-  store volatile float %2, float* %x
+  store volatile float %2, ptr %x
   ret void
 }
 
 define internal float @f(float %arg0) #0 {
   %stack = alloca float, i32 4, align 4, addrspace(5)
-  store volatile float 3.0, float addrspace(5)* %stack
-  %val = load volatile float, float addrspace(5)* %stack
+  store volatile float 3.0, ptr addrspace(5) %stack
+  %val = load volatile float, ptr addrspace(5) %stack
   %add = fadd float %arg0, %val
   ret float %add
 }
@@ -69,10 +69,10 @@ define internal float @f(float %arg0) #0 {
 ; GFX10:     .sgpr_spill_count: 0
 ; GFX10:     .vgpr_count:     4
 ; GFX10:     .vgpr_spill_count: 0
-define amdgpu_kernel void @test2(float* %x) {
-  %1 = load volatile float, float* %x
+define amdgpu_kernel void @test2(ptr %x) {
+  %1 = load volatile float, ptr %x
   %2 = call float @f(float %1)
-  store volatile float %2, float* %x
+  store volatile float %2, ptr %x
   ret void
 }
 

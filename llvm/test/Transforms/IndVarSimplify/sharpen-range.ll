@@ -1,4 +1,4 @@
-;; RUN: opt -S < %s -indvars | FileCheck %s
+;; RUN: opt -S < %s -passes=indvars | FileCheck %s
 ; RUN: opt -lcssa -loop-simplify -S < %s | opt -S -passes='require<targetir>,require<scalar-evolution>,require<domtree>,loop(indvars)'
 
 ;; Check if llvm can narrow !range metadata based on loop entry

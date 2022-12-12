@@ -301,4 +301,27 @@ module polymorphic_test
 ! CHECK: %[[UP:.*]] = fir.convert %[[BOX_COMPLEX]] : (!fir.class<!fir.complex<4>>) -> !fir.class<none>
 ! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[UP]]) {{.*}} : (!fir.class<none>) -> ()
 
+  subroutine assign_polymorphic_allocatable()
+    type(p1), target :: t(10,20)
+    class(p1), allocatable :: c(:,:)
+    c = t
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPassign_polymorphic_allocatable() {
+! CHECK: %[[C:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>> {bindc_name = "c", uniq_name = "_QMpolymorphic_testFassign_polymorphic_allocatableEc"}
+! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?x?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
+! CHECK: %[[C0:.*]] = arith.constant 0 : index
+! CHECK: %[[SHAPE_C:.*]] = fir.shape %[[C0]], %[[C0]] : (index, index) -> !fir.shape<2>
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE_C]]) : (!fir.heap<!fir.array<?x?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>, !fir.shape<2>) -> !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>
+! CHECK: fir.store %[[EMBOX]] to %[[C]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>>
+! CHECK: %[[C10:.*]] = arith.constant 10 : index
+! CHECK: %[[C20:.*]] = arith.constant 20 : index
+! CHECK: %[[T:.*]] = fir.alloca !fir.array<10x20x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {bindc_name = "t", fir.target, uniq_name = "_QMpolymorphic_testFassign_polymorphic_allocatableEt"}
+! CHECK: %[[SHAPE:.*]] = fir.shape %[[C10]], %[[C20]] : (index, index) -> !fir.shape<2>
+! CHECK: %[[BOXED_T:.*]] = fir.embox %[[T]](%[[SHAPE]]) : (!fir.ref<!fir.array<10x20x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>, !fir.shape<2>) -> !fir.box<!fir.array<10x20x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
+! CHECK: %[[CONV_C:.*]] = fir.convert %[[C]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[CONV_BOXED_T:.*]] = fir.convert %[[BOXED_T]] : (!fir.box<!fir.array<10x20x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAAssign(%[[CONV_C]], %[[CONV_BOXED_T]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK: return
+
 end module

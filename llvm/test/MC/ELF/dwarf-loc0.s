@@ -1,4 +1,4 @@
-# XFAIL: -aix
+# XFAIL: target={{.*}}-aix{{.*}}
 # UNSUPPORTED: -zos
 # REQUIRES: object-emission
 # RUN: llvm-mc -dwarf-version 5 --defsym FILE0=1 %s -filetype=obj -o - | llvm-dwarfdump -debug-line - | FileCheck %s

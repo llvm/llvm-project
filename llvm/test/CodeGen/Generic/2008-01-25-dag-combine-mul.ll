@@ -2,7 +2,7 @@
 ; rdar://5707064
 
 ; XCore default subtarget does not support 8-byte alignment on stack.
-; XFAIL: xcore
+; XFAIL: target=xcore{{.*}}
 
 define i32 @f(i16* %pc) {
 entry:

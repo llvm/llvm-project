@@ -246,7 +246,7 @@ void DataAggregator::launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
   }
   TempFiles.push_back(PPI.StderrPath.data());
 
-  Optional<StringRef> Redirects[] = {
+  std::optional<StringRef> Redirects[] = {
       llvm::None,                        // Stdin
       StringRef(PPI.StdoutPath.data()),  // Stdout
       StringRef(PPI.StderrPath.data())}; // Stderr

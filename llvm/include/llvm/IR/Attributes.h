@@ -18,7 +18,6 @@
 #include "llvm-c/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
@@ -28,6 +27,7 @@
 #include <bitset>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -135,9 +135,9 @@ public:
                                               uint64_t Bytes);
   static Attribute getWithDereferenceableOrNullBytes(LLVMContext &Context,
                                                      uint64_t Bytes);
-  static Attribute getWithAllocSizeArgs(LLVMContext &Context,
-                                        unsigned ElemSizeArg,
-                                        const Optional<unsigned> &NumElemsArg);
+  static Attribute getWithAllocSizeArgs(
+      LLVMContext &Context, unsigned ElemSizeArg,
+      const std::optional<unsigned> &NumElemsArg);
   static Attribute getWithVScaleRangeArgs(LLVMContext &Context,
                                           unsigned MinValue, unsigned MaxValue);
   static Attribute getWithByValType(LLVMContext &Context, Type *Ty);
@@ -230,14 +230,14 @@ public:
   uint64_t getDereferenceableOrNullBytes() const;
 
   /// Returns the argument numbers for the allocsize attribute.
-  std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
+  std::pair<unsigned, std::optional<unsigned>> getAllocSizeArgs() const;
 
   /// Returns the minimum value for the vscale_range attribute.
   unsigned getVScaleRangeMin() const;
 
   /// Returns the maximum value for the vscale_range attribute or None when
   /// unknown.
-  Optional<unsigned> getVScaleRangeMax() const;
+  std::optional<unsigned> getVScaleRangeMax() const;
 
   // Returns the unwind table kind.
   UWTableKind getUWTableKind() const;
@@ -375,9 +375,10 @@ public:
   Type *getPreallocatedType() const;
   Type *getInAllocaType() const;
   Type *getElementType() const;
-  Optional<std::pair<unsigned, Optional<unsigned>>> getAllocSizeArgs() const;
+  std::optional<std::pair<unsigned, std::optional<unsigned>>> getAllocSizeArgs()
+      const;
   unsigned getVScaleRangeMin() const;
-  Optional<unsigned> getVScaleRangeMax() const;
+  std::optional<unsigned> getVScaleRangeMax() const;
   UWTableKind getUWTableKind() const;
   AllocFnKind getAllocKind() const;
   MemoryEffects getMemoryEffects() const;
@@ -730,7 +731,7 @@ public:
   /// Returns a new list because attribute lists are immutable.
   [[nodiscard]] AttributeList
   addAllocSizeParamAttr(LLVMContext &C, unsigned ArgNo, unsigned ElemSizeArg,
-                        const Optional<unsigned> &NumElemsArg);
+                        const std::optional<unsigned> &NumElemsArg);
 
   //===--------------------------------------------------------------------===//
   // AttributeList Accessors
@@ -1106,7 +1107,7 @@ public:
 
   /// Return raw (possibly packed/encoded) value of integer attribute or None if
   /// not set.
-  Optional<uint64_t> getRawIntAttr(Attribute::AttrKind Kind) const;
+  std::optional<uint64_t> getRawIntAttr(Attribute::AttrKind Kind) const;
 
   /// Retrieve the alignment attribute, if it exists.
   MaybeAlign getAlignment() const {
@@ -1151,7 +1152,8 @@ public:
   Type *getInAllocaType() const { return getTypeAttr(Attribute::InAlloca); }
 
   /// Retrieve the allocsize args, or None if the attribute does not exist.
-  Optional<std::pair<unsigned, Optional<unsigned>>> getAllocSizeArgs() const;
+  std::optional<std::pair<unsigned, std::optional<unsigned>>> getAllocSizeArgs()
+      const;
 
   /// Add integer attribute with raw value (packed/encoded if necessary).
   AttrBuilder &addRawIntAttr(Attribute::AttrKind Kind, uint64_t Value);
@@ -1190,11 +1192,11 @@ public:
 
   /// This turns one (or two) ints into the form used internally in Attribute.
   AttrBuilder &addAllocSizeAttr(unsigned ElemSizeArg,
-                                const Optional<unsigned> &NumElemsArg);
+                                const std::optional<unsigned> &NumElemsArg);
 
   /// This turns two ints into the form used internally in Attribute.
   AttrBuilder &addVScaleRangeAttr(unsigned MinValue,
-                                  Optional<unsigned> MaxValue);
+                                  std::optional<unsigned> MaxValue);
 
   /// Add a type attribute with the given type.
   AttrBuilder &addTypeAttr(Attribute::AttrKind Kind, Type *Ty);

@@ -10,11 +10,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestCase(TestBase):
-    def setUp(self):
-        TestBase.setUp(self)
-        self.build()
-        lldbutil.run_to_name_breakpoint(self, "main")
-
     def _run_cmd(self, cmd: str) -> str:
         """Run the given lldb command and return its output."""
         result = lldb.SBCommandReturnObject()
@@ -51,18 +46,28 @@ class TestCase(TestBase):
 
     def test_variables(self):
         """Test dwim-print with variables."""
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "main")
         vars = ("argc", "argv")
         for var in vars:
             self._expect_cmd(var, "frame variable")
 
     def test_variable_paths(self):
         """Test dwim-print with variable path expressions."""
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "main")
         exprs = ("&argc", "*argv", "argv[0]")
         for expr in exprs:
             self._expect_cmd(expr, "expression --")
 
     def test_expressions(self):
         """Test dwim-print with expressions."""
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "main")
         exprs = ("argc + 1", "(void)argc", "(int)abs(argc)")
         for expr in exprs:
             self._expect_cmd(expr, "expression --")
+
+    def test_dummy_target_expressions(self):
+        """Test dwim-print's ability to evaluate expressions without a target."""
+        self._expect_cmd("1 + 2", "expression --")

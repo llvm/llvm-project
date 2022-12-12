@@ -1669,6 +1669,16 @@ class ArrayCount<int n> : AttrConstraint<
     CPred<"$_self.cast<::mlir::ArrayAttr>().size() == " #n>,
     "with exactly " # n # " elements">;
 
+class DenseArrayStrictlyPositive<DenseArrayAttrBase arrayType> : AttrConstraint<
+  CPred<"::llvm::all_of($_self.cast<" # arrayType #">().asArrayRef(), "
+                        "[&](auto v) { return v > 0; })">,
+  "whose value is positive">;
+
+class DenseArrayNonNegative<DenseArrayAttrBase arrayType> : AttrConstraint<
+  CPred<"::llvm::all_of($_self.cast<" # arrayType #">().asArrayRef(), "
+                        "[&](auto v) { return v >= 0; })">,
+  "whose value is non-negative">;
+
 class DenseArraySorted<DenseArrayAttrBase arrayType> : AttrConstraint<
     CPred<"llvm::is_sorted($_self.cast<" # arrayType # ">().asArrayRef())">,
     "should be in non-decreasing order">;

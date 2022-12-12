@@ -43,8 +43,8 @@ int TestRunner::run(StringRef Filename) const {
   ProgramArgs.push_back(Filename);
 
   std::string ErrMsg;
-  SmallVector<Optional<StringRef>, 3> Redirects;
-  Optional<StringRef> Empty = StringRef();
+  SmallVector<std::optional<StringRef>, 3> Redirects;
+  std::optional<StringRef> Empty = StringRef();
   if (!Verbose) {
     for (int i = 0; i < 3; ++i)
       Redirects.push_back(Empty);

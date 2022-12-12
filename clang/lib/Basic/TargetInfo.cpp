@@ -154,8 +154,6 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   MaxOpenCLWorkGroupSize = 1024;
 
   MaxBitIntWidth.reset();
-
-  ProgramAddrSpace = 0;
 }
 
 // Out of line virtual dtor for TargetInfo.

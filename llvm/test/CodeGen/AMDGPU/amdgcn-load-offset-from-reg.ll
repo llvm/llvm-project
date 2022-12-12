@@ -8,7 +8,7 @@
 ; from a register.
 ; GCN-LABEL: name: test_load_zext
 ; GCN: %[[OFFSET:[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @DescriptorBuffer
-; SDAG: %{{[0-9]+}}:sgpr_128 = S_LOAD_DWORDX4_SGPR killed %{{[0-9]+}}, killed %[[OFFSET]], 0 :: (invariant load (s128) from %ir.13, addrspace 4)
+; SDAG: %{{[0-9]+}}:sgpr_128 = S_LOAD_DWORDX4_SGPR killed %{{[0-9]+}}, killed %[[OFFSET]], 0 :: (invariant load (s128) from %ir.12, addrspace 4)
 ; GISEL: %{{[0-9]+}}:sgpr_128 = S_LOAD_DWORDX4_SGPR %{{[0-9]+}}, %[[OFFSET]], 0 :: (invariant load (<4 x s32>) from {{.*}}, addrspace 4)
 define amdgpu_cs void @test_load_zext(i32 inreg %0, i32 inreg %1, i32 inreg %resNode0, i32 inreg %resNode1, <3 x i32> inreg %2, i32 inreg %3, <3 x i32> %4) local_unnamed_addr #2 {
 .entry:
@@ -16,14 +16,13 @@ define amdgpu_cs void @test_load_zext(i32 inreg %0, i32 inreg %1, i32 inreg %res
   %6 = bitcast i64 %5 to <2 x i32>
   %7 = insertelement <2 x i32> %6, i32 %resNode0, i32 0
   %8 = bitcast <2 x i32> %7 to i64
-  %9 = inttoptr i64 %8 to [4294967295 x i8] addrspace(4)*
+  %9 = inttoptr i64 %8 to ptr addrspace(4)
   %10 = call i32 @llvm.amdgcn.reloc.constant(metadata !4)
   %11 = zext i32 %10 to i64
-  %12 = getelementptr [4294967295 x i8], [4294967295 x i8] addrspace(4)* %9, i64 0, i64 %11
-  %13 = bitcast i8 addrspace(4)* %12 to <4 x i32> addrspace(4)*, !amdgpu.uniform !5
-  %14 = load <4 x i32>, <4 x i32> addrspace(4)* %13, align 16, !invariant.load !5
-  %15 = call <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32> %14, i32 0, i32 0)
-  call void @llvm.amdgcn.raw.buffer.store.v4i32(<4 x i32> %15, <4 x i32> %14, i32 0, i32 0, i32 0)
+  %12 = getelementptr [4294967295 x i8], ptr addrspace(4) %9, i64 0, i64 %11
+  %13 = load <4 x i32>, ptr addrspace(4) %12, align 16, !invariant.load !5
+  %14 = call <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32> %13, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.buffer.store.v4i32(<4 x i32> %14, <4 x i32> %13, i32 0, i32 0, i32 0)
   ret void
 }
 
@@ -34,13 +33,13 @@ define amdgpu_cs void @test_load_zext(i32 inreg %0, i32 inreg %1, i32 inreg %res
 ; GCN-DAG: %[[OFFSET:.*]]:sreg_32 = S_LSHL_B32
 ; SDAG: S_LOAD_DWORD_SGPR killed %[[BASE]], killed %[[OFFSET]],
 ; GISEL: S_LOAD_DWORD_SGPR %[[BASE]], %[[OFFSET]],
-define amdgpu_ps void @test_complex_reg_offset(float addrspace(1)* %out) {
-  %i = load i32, i32 addrspace(4)* @1
+define amdgpu_ps void @test_complex_reg_offset(ptr addrspace(1) %out) {
+  %i = load i32, ptr addrspace(4) @1
   %i1 = and i32 %i, 3
   %i2 = zext i32 %i1 to i64
-  %i3 = getelementptr [4 x <2 x float>], [4 x <2 x float>] addrspace(4)* @0, i64 0, i64 %i2, i64 0
-  %i4 = load float, float addrspace(4)* %i3, align 4
-  store float %i4, float addrspace(1)* %out
+  %i3 = getelementptr [4 x <2 x float>], ptr addrspace(4) @0, i64 0, i64 %i2, i64 0
+  %i4 = load float, ptr addrspace(4) %i3, align 4
+  store float %i4, ptr addrspace(1) %out
   ret void
 }
 
@@ -55,14 +54,13 @@ define amdgpu_ps void @test_complex_reg_offset(float addrspace(1)* %out) {
 ; GISEL-DAG: %[[OFFSET:.*]]:sreg_32 = COPY $sgpr2
 ; GISEL-DAG: %[[BASE:.*]]:sreg_64 = REG_SEQUENCE %[[BASE0]], %subreg.sub0, %[[BASE1]], %subreg.sub1
 ; GISEL: S_LOAD_DWORD_SGPR_IMM %[[BASE]], %[[OFFSET]], 16,
-define amdgpu_ps void @test_sgpr_plus_imm_offset(i8 addrspace(4)* inreg %base, i32 inreg %offset,
-                                                 i32 addrspace(1)* inreg %out) {
-  %v1 = getelementptr i8, i8 addrspace(4)* %base, i64 16
+define amdgpu_ps void @test_sgpr_plus_imm_offset(ptr addrspace(4) inreg %base, i32 inreg %offset,
+                                                 ptr addrspace(1) inreg %out) {
+  %v1 = getelementptr i8, ptr addrspace(4) %base, i64 16
   %v2 = zext i32 %offset to i64
-  %v3 = getelementptr i8, i8 addrspace(4)* %v1, i64 %v2
-  %v4 = bitcast i8 addrspace(4)* %v3 to i32 addrspace(4)*
-  %v5 = load i32, i32 addrspace(4)* %v4, align 4
-  store i32 %v5, i32 addrspace(1)* %out, align 4
+  %v3 = getelementptr i8, ptr addrspace(4) %v1, i64 %v2
+  %v5 = load i32, ptr addrspace(4) %v3, align 4
+  store i32 %v5, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -77,14 +75,13 @@ define amdgpu_ps void @test_sgpr_plus_imm_offset(i8 addrspace(4)* inreg %base, i
 ; GISEL-DAG: %[[OFFSET:.*]]:sreg_32 = COPY $sgpr2
 ; GISEL-DAG: %[[BASE:.*]]:sreg_64 = REG_SEQUENCE %[[BASE0]], %subreg.sub0, %[[BASE1]], %subreg.sub1
 ; GISEL: S_LOAD_DWORDX2_SGPR_IMM %[[BASE]], %[[OFFSET]], 16,
-define amdgpu_ps void @test_sgpr_plus_imm_offset_x2(i8 addrspace(4)* inreg %base, i32 inreg %offset,
-                                                    <2 x i32> addrspace(1)* inreg %out) {
-  %v1 = getelementptr i8, i8 addrspace(4)* %base, i64 16
+define amdgpu_ps void @test_sgpr_plus_imm_offset_x2(ptr addrspace(4) inreg %base, i32 inreg %offset,
+                                                    ptr addrspace(1) inreg %out) {
+  %v1 = getelementptr i8, ptr addrspace(4) %base, i64 16
   %v2 = zext i32 %offset to i64
-  %v3 = getelementptr i8, i8 addrspace(4)* %v1, i64 %v2
-  %v4 = bitcast i8 addrspace(4)* %v3 to <2 x i32> addrspace(4)*
-  %v5 = load <2 x i32>, <2 x i32> addrspace(4)* %v4, align 4
-  store <2 x i32> %v5, <2 x i32> addrspace(1)* %out, align 4
+  %v3 = getelementptr i8, ptr addrspace(4) %v1, i64 %v2
+  %v5 = load <2 x i32>, ptr addrspace(4) %v3, align 4
+  store <2 x i32> %v5, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -103,10 +100,10 @@ define amdgpu_ps void @test_sgpr_plus_imm_offset_x2(i8 addrspace(4)* inreg %base
 ; GISEL-DAG: %[[OFFSET:.*]]:sreg_32 = COPY $sgpr4
 ; GISEL-DAG: %[[BASE:.*]]:sgpr_128 = REG_SEQUENCE %[[BASE0]], %subreg.sub0, %[[BASE1]], %subreg.sub1, %[[BASE2]], %subreg.sub2, %[[BASE3]], %subreg.sub3
 ; GISEL: S_BUFFER_LOAD_DWORD_SGPR_IMM %[[BASE]], %[[OFFSET]], 77,
-define amdgpu_cs void @test_buffer_load_sgpr_plus_imm_offset(<4 x i32> inreg %base, i32 inreg %i, i32 addrspace(1)* inreg %out) {
+define amdgpu_cs void @test_buffer_load_sgpr_plus_imm_offset(<4 x i32> inreg %base, i32 inreg %i, ptr addrspace(1) inreg %out) {
   %off = add nuw nsw i32 %i, 77
   %v = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %base, i32 %off, i32 0)
-  store i32 %v, i32 addrspace(1)* %out, align 4
+  store i32 %v, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -127,11 +124,11 @@ define amdgpu_cs void @test_buffer_load_sgpr_plus_imm_offset(<4 x i32> inreg %ba
 ; GISEL-DAG: %[[SHIFT:.*]]:sreg_32 = S_LSHL_B32 %[[INDEX]],
 ; GISEL-DAG: %[[BASE:.*]]:sgpr_128 = REG_SEQUENCE %[[BASE0]], %subreg.sub0, %[[BASE1]], %subreg.sub1, %[[BASE2]], %subreg.sub2, %[[BASE3]], %subreg.sub3
 ; GISEL: S_BUFFER_LOAD_DWORD_SGPR_IMM %[[BASE]], %[[SHIFT]], 5,
-define amdgpu_cs void @test_buffer_load_sgpr_or_imm_offset(<4 x i32> inreg %base, i32 inreg %i, i32 addrspace(1)* inreg %out) {
+define amdgpu_cs void @test_buffer_load_sgpr_or_imm_offset(<4 x i32> inreg %base, i32 inreg %i, ptr addrspace(1) inreg %out) {
   %shift = shl i32 %i, 7
   %off = or i32 %shift, 5
   %v = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %base, i32 %off, i32 0)
-  store i32 %v, i32 addrspace(1)* %out, align 4
+  store i32 %v, ptr addrspace(1) %out, align 4
   ret void
 }
 

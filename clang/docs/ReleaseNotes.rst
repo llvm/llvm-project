@@ -184,6 +184,9 @@ code bases.
 - To match GCC, ``__ppc64__`` is no longer defined on PowerPC64 targets. Use
   ``__powerpc64__`` instead.
 
+- ``-p`` is rejected for all targets which are not AIX or OpenBSD. ``-p`` led
+  to an ``-Wunused-command-line-argument`` warning in previous releases.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
@@ -839,8 +842,8 @@ libclang
 - Introduced the new function ``clang_CXXMethod_isMoveAssignmentOperator``,
   which identifies whether a method cursor is a move-assignment
   operator.
-- ``clang_Cursor_getNumTemplateArguments``, ``clang_Cursor_getTemplateArgumentKind``, 
-  ``clang_Cursor_getTemplateArgumentType``, ``clang_Cursor_getTemplateArgumentValue`` and 
+- ``clang_Cursor_getNumTemplateArguments``, ``clang_Cursor_getTemplateArgumentKind``,
+  ``clang_Cursor_getTemplateArgumentType``, ``clang_Cursor_getTemplateArgumentValue`` and
   ``clang_Cursor_getTemplateArgumentUnsignedValue`` now work on struct, class,
   and partial template specialization cursors in addition to function cursors.
 

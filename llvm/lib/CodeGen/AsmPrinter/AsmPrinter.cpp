@@ -2310,9 +2310,9 @@ bool AsmPrinter::doFinalization(Module &M) {
     // Emit address-significance attributes for all globals.
     OutStreamer->emitAddrsig();
     for (const GlobalValue &GV : M.global_values()) {
-      if (!GV.use_empty() && !GV.isTransitiveUsedByMetadataOnly() &&
-          !GV.isThreadLocal() && !GV.hasDLLImportStorageClass() &&
-          !GV.getName().startswith("llvm.") && !GV.hasAtLeastLocalUnnamedAddr())
+      if (!GV.use_empty() && !GV.isThreadLocal() &&
+          !GV.hasDLLImportStorageClass() && !GV.getName().startswith("llvm.") &&
+          !GV.hasAtLeastLocalUnnamedAddr())
         OutStreamer->emitAddrsigSym(getSymbol(&GV));
     }
   }

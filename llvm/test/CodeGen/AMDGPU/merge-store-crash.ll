@@ -13,15 +13,14 @@
 ; CHECK: tbuffer_store_format_xyzw v[0:3],
 define amdgpu_vs void @main(i32 inreg %arg) {
 main_body:
-  %tmp = load float, float addrspace(3)* undef, align 4
-  %tmp1 = load float, float addrspace(3)* undef, align 4
-  store float %tmp, float addrspace(3)* null, align 4
+  %tmp = load float, ptr addrspace(3) undef, align 4
+  %tmp1 = load float, ptr addrspace(3) undef, align 4
+  store float %tmp, ptr addrspace(3) null, align 4
   %tmp2 = bitcast float %tmp to i32
   %tmp3 = add nuw nsw i32 0, 1
   %tmp4 = zext i32 %tmp3 to i64
-  %tmp5 = getelementptr [8192 x i32], [8192 x i32] addrspace(3)* @tess_lds, i64 0, i64 %tmp4
-  %tmp6 = bitcast i32 addrspace(3)* %tmp5 to float addrspace(3)*
-  store float %tmp1, float addrspace(3)* %tmp6, align 4
+  %tmp5 = getelementptr [8192 x i32], ptr addrspace(3) @tess_lds, i64 0, i64 %tmp4
+  store float %tmp1, ptr addrspace(3) %tmp5, align 4
   %tmp7 = bitcast float %tmp1 to i32
   %tmp8 = insertelement <4 x i32> undef, i32 %tmp2, i32 0
   %tmp9 = insertelement <4 x i32> %tmp8, i32 %tmp7, i32 1

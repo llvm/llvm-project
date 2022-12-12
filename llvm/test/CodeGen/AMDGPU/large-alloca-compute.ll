@@ -59,11 +59,11 @@
 ; ALL: ; ScratchSize: 32772
 define amdgpu_kernel void @large_alloca_compute_shader(i32 %x, i32 %y) #0 {
   %large = alloca [8192 x i32], align 4, addrspace(5)
-  %gep = getelementptr [8192 x i32], [8192 x i32] addrspace(5)* %large, i32 0, i32 8191
-  store volatile i32 %x, i32 addrspace(5)* %gep
-  %gep1 = getelementptr [8192 x i32], [8192 x i32] addrspace(5)* %large, i32 0, i32 %y
-  %val = load volatile i32, i32 addrspace(5)* %gep1
-  store volatile i32 %val, i32 addrspace(1)* undef
+  %gep = getelementptr [8192 x i32], ptr addrspace(5) %large, i32 0, i32 8191
+  store volatile i32 %x, ptr addrspace(5) %gep
+  %gep1 = getelementptr [8192 x i32], ptr addrspace(5) %large, i32 0, i32 %y
+  %val = load volatile i32, ptr addrspace(5) %gep1
+  store volatile i32 %val, ptr addrspace(1) undef
   ret void
 }
 

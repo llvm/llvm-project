@@ -1,6 +1,6 @@
 // Unsupported on AIX because we don't support the requisite "__clangast"
 // section in XCOFF yet.
-// UNSUPPORTED: aix
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
 
 // RUN: rm -rf %t && mkdir %t
 // RUN: split-file %s %t

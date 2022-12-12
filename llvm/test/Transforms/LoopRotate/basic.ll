@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-rotate -verify-memoryssa < %s | FileCheck %s
+; RUN: opt -S -passes=loop-rotate -verify-memoryssa < %s | FileCheck %s
 ; RUN: opt -S -passes='require<targetir>,require<assumptions>,loop(loop-rotate)' < %s | FileCheck %s
 ; RUN: opt -S -passes='require<targetir>,require<assumptions>,loop-mssa(loop-rotate)' -verify-memoryssa  < %s | FileCheck %s
 

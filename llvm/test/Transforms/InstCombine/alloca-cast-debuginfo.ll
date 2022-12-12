@@ -9,7 +9,7 @@
 ; struct Foo {
 ;   int x, y;
 ; };
-; void escape(const void*);
+; void escape(const ptr);
 ; void f(struct Foo *p) {
 ;   struct Foo local;
 ;   *(__int64 *)&local = *(__int64 *)p;
@@ -23,35 +23,28 @@ target triple = "x86_64-pc-windows-msvc19.11.25508"
 
 %struct.Foo = type { i32, i32 }
 
-define void @f(%struct.Foo* %p) !dbg !11 {
+define void @f(ptr %p) !dbg !11 {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LOCAL:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata i64* [[LOCAL]], [[META22:metadata !.*]], metadata !DIExpression()), [[DBG23:!dbg !.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %struct.Foo* [[P:%.*]] to i64*, [[DBG24:!dbg !.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* [[TMP0]], align 8, [[DBG24]], [[TBAA25:!tbaa !.*]]
-; CHECK-NEXT:    store i64 [[TMP1]], i64* [[LOCAL]], align 8, [[DBG29:!dbg !.*]], [[TBAA25]]
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[LOCAL]] to i8*, [[DBG30:!dbg !.*]]
-; CHECK-NEXT:    call void @escape(i8* nonnull [[TMP2]]), [[DBG31:!dbg !.*]]
-; CHECK-NEXT:    ret void, [[DBG32:!dbg !.*]]
+; CHECK-NEXT:    [[LOCAL:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
+; CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr [[LOCAL]], metadata [[META22:![0-9]+]], metadata !DIExpression()), !dbg [[DBG23:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P:%.*]], align 8, !dbg [[DBG24:![0-9]+]], !tbaa [[TBAA25:![0-9]+]]
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[LOCAL]], align 8, !dbg [[DBG29:![0-9]+]], !tbaa [[TBAA25]]
+; CHECK-NEXT:    call void @escape(ptr nonnull [[LOCAL]]), !dbg [[DBG30:![0-9]+]]
+; CHECK-NEXT:    ret void, !dbg [[DBG31:![0-9]+]]
 ;
 entry:
   %local = alloca %struct.Foo, align 4
-  %0 = bitcast %struct.Foo* %local to i8*, !dbg !24
-  call void @llvm.dbg.declare(metadata %struct.Foo* %local, metadata !22, metadata !DIExpression()), !dbg !25
-  %1 = bitcast %struct.Foo* %p to i64*, !dbg !26
-  %2 = load i64, i64* %1, align 8, !dbg !26, !tbaa !27
-  %3 = bitcast %struct.Foo* %local to i64*, !dbg !31
-  store i64 %2, i64* %3, align 4, !dbg !32, !tbaa !27
-  %4 = bitcast %struct.Foo* %local to i8*, !dbg !33
-  call void @escape(i8* %4), !dbg !34
-  %5 = bitcast %struct.Foo* %local to i8*, !dbg !35
+  call void @llvm.dbg.declare(metadata ptr %local, metadata !22, metadata !DIExpression()), !dbg !25
+  %0 = load i64, ptr %p, align 8, !dbg !26, !tbaa !27
+  store i64 %0, ptr %local, align 4, !dbg !32, !tbaa !27
+  call void @escape(ptr %local), !dbg !34
   ret void, !dbg !35
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-declare void @escape(i8*)
+declare void @escape(ptr)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7, !8, !9}

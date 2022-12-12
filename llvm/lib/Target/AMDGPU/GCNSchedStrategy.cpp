@@ -933,6 +933,9 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
 }
 
 bool OccInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
+  if (PressureAfter == PressureBefore)
+    return false;
+
   if (GCNSchedStage::shouldRevertScheduling(WavesAfter))
     return true;
 
@@ -956,6 +959,9 @@ bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
 }
 
 bool ClusteredLowOccStage::shouldRevertScheduling(unsigned WavesAfter) {
+  if (PressureAfter == PressureBefore)
+    return false;
+
   if (GCNSchedStage::shouldRevertScheduling(WavesAfter))
     return true;
 

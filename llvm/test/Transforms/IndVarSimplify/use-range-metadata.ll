@@ -1,4 +1,4 @@
-;; RUN: opt -S < %s -indvars | FileCheck %s
+;; RUN: opt -S < %s -passes=indvars | FileCheck %s
 
 ;; Check if IndVarSimplify understands !range metadata.
 

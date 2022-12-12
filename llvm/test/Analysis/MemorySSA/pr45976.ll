@@ -1,4 +1,4 @@
-; RUN: opt -licm -S < %s | FileCheck %s
+; RUN: opt -passes=licm -S < %s | FileCheck %s
 ; REQUIRES: asserts
 
 @global1 = external global i64, align 8

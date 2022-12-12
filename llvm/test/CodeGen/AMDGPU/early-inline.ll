@@ -1,6 +1,6 @@
 ; RUN: opt -mtriple=amdgcn-- -O1 -S -inline-threshold=1 -amdgpu-early-inline-all %s | FileCheck %s
 
-@c_alias = dso_local alias i32 (i32), i32 (i32)* @callee
+@c_alias = dso_local alias i32 (i32), ptr @callee
 
 define dso_local i32 @callee(i32 %x) {
 entry:
@@ -19,7 +19,7 @@ entry:
 define amdgpu_kernel void @caller(i32 %x) {
 entry:
   %res = call i32 @callee(i32 %x)
-  store volatile i32 %res, i32 addrspace(1)* undef
+  store volatile i32 %res, ptr addrspace(1) undef
   ret void
 }
 
@@ -28,6 +28,6 @@ entry:
 define amdgpu_kernel void @alias_caller(i32 %x) {
 entry:
   %res = call i32 @c_alias(i32 %x)
-  store volatile i32 %res, i32 addrspace(1)* undef
+  store volatile i32 %res, ptr addrspace(1) undef
   ret void
 }

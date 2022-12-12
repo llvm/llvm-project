@@ -468,6 +468,23 @@ BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
   return New;
 }
 
+void BasicBlock::splice(BasicBlock::iterator ToIt, BasicBlock *FromBB,
+                        BasicBlock::iterator FromBeginIt,
+                        BasicBlock::iterator FromEndIt) {
+#ifdef EXPENSIVE_CHECKS
+  // Check that FromBeginIt is befor FromEndIt.
+  auto FromBBEnd = FromBB->end();
+  for (auto It = FromBeginIt; It != FromEndIt; ++It)
+    assert(It != FromBBEnd && "FromBeginIt not before FromEndIt!");
+#endif // EXPENSIVE_CHECKS
+  getInstList().splice(ToIt, FromBB->getInstList(), FromBeginIt, FromEndIt);
+}
+
+BasicBlock::iterator BasicBlock::erase(BasicBlock::iterator FromIt,
+                                       BasicBlock::iterator ToIt) {
+  return getInstList().erase(FromIt, ToIt);
+}
+
 void BasicBlock::replacePhiUsesWith(BasicBlock *Old, BasicBlock *New) {
   // N.B. This might not be a complete BasicBlock, so don't assume
   // that it ends with a non-phi instruction.

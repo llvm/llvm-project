@@ -39,15 +39,15 @@ out.else:
   ret i32 %x
 }
 
-define amdgpu_kernel void @uniform_opt_lshr_and_cmp(i1 addrspace(1)* %out, i32 %x) {
+define amdgpu_kernel void @uniform_opt_lshr_and_cmp(ptr addrspace(1) %out, i32 %x) {
   ; GCN-LABEL: name: uniform_opt_lshr_and_cmp
   ; GCN: bb.0.entry:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GCN-NEXT:   liveins: $sgpr0_sgpr1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
-  ; GCN-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset.cast, align 4, addrspace 4)
-  ; GCN-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 11, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset.cast, addrspace 4)
+  ; GCN-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
+  ; GCN-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 11, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX2_IMM]]
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2
   ; GCN-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[S_LOAD_DWORD_IMM]], killed [[S_MOV_B32_]], implicit-def dead $scc
@@ -89,10 +89,10 @@ entry:
 
 out.true:
   %2 = xor i1 %1, -1
-  store i1 %2, i1 addrspace(1)* %out
+  store i1 %2, ptr addrspace(1) %out
   ret void
 
 out.else:
-  store i1 %1, i1 addrspace(1)* %out
+  store i1 %1, ptr addrspace(1) %out
   ret void
 }

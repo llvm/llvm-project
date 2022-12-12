@@ -32,6 +32,7 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
@@ -2236,11 +2237,6 @@ private:
               int kind =
                   Fortran::evaluate::ToInt64(intrinsic->kind()).value_or(kind);
               llvm::SmallVector<Fortran::lower::LenParameterTy> params;
-              if (intrinsic->category() ==
-                      Fortran::common::TypeCategory::Character ||
-                  intrinsic->category() ==
-                      Fortran::common::TypeCategory::Derived)
-                TODO(loc, "typeSpec with length parameters");
               ty = genType(intrinsic->category(), kind, params);
             } else {
               const Fortran::semantics::DerivedTypeSpec *derived =
@@ -2304,12 +2300,24 @@ private:
             exactValue = builder->create<fir::BoxAddrOp>(
                 loc, fir::ReferenceType::get(attr.getType()),
                 fir::getBase(selector));
+            const Fortran::semantics::IntrinsicTypeSpec *intrinsic =
+                typeSpec->declTypeSpec->AsIntrinsic();
+            if (intrinsic->category() ==
+                Fortran::common::TypeCategory::Character) {
+              auto charTy = attr.getType().dyn_cast<fir::CharacterType>();
+              mlir::Value charLen =
+                  fir::factory::CharacterExprHelper(*builder, loc)
+                      .readLengthFromBox(fir::getBase(selector), charTy);
+              addAssocEntitySymbol(fir::CharBoxValue(exactValue, charLen));
+            } else {
+              addAssocEntitySymbol(exactValue);
+            }
           } else if (std::holds_alternative<Fortran::parser::DerivedTypeSpec>(
                          typeSpec->u)) {
             exactValue = builder->create<fir::ConvertOp>(
                 loc, fir::BoxType::get(attr.getType()), fir::getBase(selector));
+            addAssocEntitySymbol(exactValue);
           }
-          addAssocEntitySymbol(exactValue);
         } else if (std::holds_alternative<Fortran::parser::DerivedTypeSpec>(
                        guard.u)) {
           // CLASS IS
@@ -2626,8 +2634,13 @@ private:
               // Assignment to polymorphic allocatables may require changing the
               // variable dynamic type (See Fortran 2018 10.2.1.3 p3).
               if (lhsType->IsPolymorphic() &&
-                  Fortran::lower::isWholeAllocatable(assign.lhs))
-                TODO(loc, "assignment to polymorphic allocatable");
+                  Fortran::lower::isWholeAllocatable(assign.lhs)) {
+                mlir::Value lhs = genExprMutableBox(loc, assign.lhs).getAddr();
+                mlir::Value rhs =
+                    fir::getBase(genExprBox(loc, assign.rhs, stmtCtx));
+                fir::runtime::genAssign(*builder, loc, lhs, rhs);
+                return;
+              }
 
               // Note: No ad-hoc handling for pointers is required here. The
               // target will be assigned as per 2018 10.2.1.3 p2. genExprAddr

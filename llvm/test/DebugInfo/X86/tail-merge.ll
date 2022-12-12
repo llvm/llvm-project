@@ -1,6 +1,6 @@
 ; RUN: llc %s -mtriple=x86_64-unknown-unknown -use-unknown-locations=Enable -o - | FileCheck %s
 
-; Generated with "clang -gline-tables-only -c -emit-llvm -o - | opt -sroa -S"
+; Generated with "clang -gline-tables-only -c -emit-llvm -o - | opt -passes=sroa -S"
 ; from source:
 ;
 ; extern int foo(int);

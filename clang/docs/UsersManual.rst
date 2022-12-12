@@ -1437,6 +1437,8 @@ floating point semantic models: precise (the default), strict, and fast.
 
    * ``-fno-honor-nans``
 
+   * ``-fapprox-func``
+
    * ``-fno-math-errno``
 
    * ``-ffinite-math-only``
@@ -1449,6 +1451,8 @@ floating point semantic models: precise (the default), strict, and fast.
 
    * ``-fno-trapping-math``
 
+   * ``-fno-rounding-math``
+
    * ``-ffp-contract=fast``
 
    Note: ``-ffast-math`` causes ``crtfastmath.o`` to be linked with code. See
@@ -1457,7 +1461,7 @@ floating point semantic models: precise (the default), strict, and fast.
 .. option:: -fno-fast-math
 
    Disable fast-math mode.  This options disables unsafe floating-point
-   optimizations by preventing the compiler from making any tranformations that
+   optimizations by preventing the compiler from making any transformations that
    could affect the results.
 
    This option implies:
@@ -1466,7 +1470,7 @@ floating point semantic models: precise (the default), strict, and fast.
 
    * ``-fhonor-nans``
 
-   * ``-fmath-errno``
+   * ``-fno-approx-func``
 
    * ``-fno-finite-math-only``
 
@@ -1476,14 +1480,15 @@ floating point semantic models: precise (the default), strict, and fast.
 
    * ``-fsigned-zeros``
 
-   * ``-fno-trapping-math``
-
    * ``-ffp-contract=on``
 
-   * ``-fdenormal-fp-math=ieee``
+   Also, this option resets following options to their target-dependent defaults.
+
+   * ``-f[no-]math-errno``
+   * ``-fdenormal-fp-math=<value>``
 
    There is ambiguity about how ``-ffp-contract``, ``-ffast-math``,
-   and ``-fno-fast-math`` behave in combination. To keep the value of
+   and ``-fno-fast-math`` behave when combined. To keep the value of
    ``-ffp-contract`` consistent, we define this set of rules:
 
    * ``-ffast-math`` sets ``ffp-contract`` to ``fast``.
@@ -1516,7 +1521,8 @@ floating point semantic models: precise (the default), strict, and fast.
    * ``preserve-sign`` - the sign of a flushed-to-zero number is preserved in the sign of 0
    * ``positive-zero`` - denormals are flushed to positive zero
 
-   Defaults to ``ieee``.
+   The default value depends on the target. For most targets, defaults to
+   ``ieee``.
 
 .. option:: -f[no-]strict-float-cast-overflow
 
@@ -1525,6 +1531,7 @@ floating point semantic models: precise (the default), strict, and fast.
    By default, Clang will not guarantee any particular result in that case.
    With the 'no-strict' option, Clang will saturate towards the smallest and
    largest representable integer values instead. NaNs will be converted to zero.
+   Defaults to ``-fstrict-float-cast-overflow``.
 
 .. option:: -f[no-]math-errno
 
@@ -1572,10 +1579,18 @@ floating point semantic models: precise (the default), strict, and fast.
 
 .. option:: -f[no-]honor-infinities
 
+   Allow floating-point optimizations that assume arguments and results are
+   not +-Inf.
+   Defaults to ``-fhonor-infinities``.
+
    If both ``-fno-honor-infinities`` and ``-fno-honor-nans`` are used,
    has the same effect as specifying ``-ffinite-math-only``.
 
 .. option:: -f[no-]honor-nans
+
+   Allow floating-point optimizations that assume arguments and results are
+   not NaNs.
+   Defaults to ``-fhonor-nans``.
 
    If both ``-fno-honor-infinities`` and ``-fno-honor-nans`` are used,
    has the same effect as specifying ``-ffinite-math-only``.
@@ -1592,7 +1607,7 @@ floating point semantic models: precise (the default), strict, and fast.
 .. option:: -f[no-]signed-zeros
 
    Allow optimizations that ignore the sign of floating point zeros.
-   Defaults to ``-fno-signed-zeros``.
+   Defaults to ``-fsigned-zeros``.
 
 .. option:: -f[no-]associative-math
 
@@ -1608,23 +1623,47 @@ floating point semantic models: precise (the default), strict, and fast.
 
 .. option:: -f[no-]unsafe-math-optimizations
 
-   Allow unsafe floating-point optimizations. Also implies:
+   Allow unsafe floating-point optimizations.
+   ``-funsafe-math-optimizations`` also implies:
 
+   * ``-fapprox-func``
    * ``-fassociative-math``
    * ``-freciprocal-math``
-   * ``-fno-signed-zeroes``
-   * ``-fno-trapping-math``.
+   * ``-fno-signed-zeros``
+   * ``-fno-trapping-math``
+   * ``-ffp-contract=fast``
+
+   ``-fno-unsafe-math-optimizations`` implies:
+
+   * ``-fno-approx-func``
+   * ``-fno-associative-math``
+   * ``-fno-reciprocal-math``
+   * ``-fsigned-zeros``
+   * ``-ftrapping-math``
+   * ``-ffp-contract=on``
+   * ``-fdenormal-fp-math=ieee``
+
+   There is ambiguity about how ``-ffp-contract``,
+   ``-funsafe-math-optimizations``, and ``-fno-unsafe-math-optimizations``
+   behave when combined. Explanation in :option:`-fno-fast-math` also applies
+   to these options.
 
    Defaults to ``-fno-unsafe-math-optimizations``.
 
 .. option:: -f[no-]finite-math-only
 
    Allow floating-point optimizations that assume arguments and results are
-   not NaNs or +-Inf.  This defines the ``__FINITE_MATH_ONLY__`` preprocessor macro.
-   Also implies:
+   not NaNs or +-Inf. ``-ffinite-math-only`` defines the
+   ``__FINITE_MATH_ONLY__`` preprocessor macro.
+   ``-ffinite-math-only`` implies:
 
    * ``-fno-honor-infinities``
    * ``-fno-honor-nans``
+
+   ``-ffno-inite-math-only`` implies:
+
+   * ``-fhonor-infinities``
+   * ``-fhonor-nans``
 
    Defaults to ``-fno-finite-math-only``.
 
@@ -1685,7 +1724,7 @@ floating point semantic models: precise (the default), strict, and fast.
    * ``double`` The compiler uses ``double`` as the floating-point evaluation method for all float expressions of type that is narrower than ``double``.
    * ``extended`` The compiler uses ``long double`` as the floating-point evaluation method for all float expressions of type that is narrower than ``long double``.
 
-.. option:: -f[no-]protect-parens:
+.. option:: -f[no-]protect-parens
 
    This option pertains to floating-point types, complex types with
    floating-point components, and vectors of these types. Some arithmetic
@@ -1699,6 +1738,7 @@ floating point semantic models: precise (the default), strict, and fast.
    additions in any order regardless of the parentheses. When enabled, this
    option forces the optimizer to honor the order of operations with respect
    to parentheses in all circumstances.
+   Defaults to ``-fno-protect-parens``.
 
    Note that floating-point contraction (option `-ffp-contract=`) is disabled
    when `-fprotect-parens` is enabled.  Also note that in safe floating-point

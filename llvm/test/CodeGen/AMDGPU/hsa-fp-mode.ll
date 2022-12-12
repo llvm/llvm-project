@@ -4,9 +4,9 @@
 ; GCN: float_mode = 240
 ; GCN: enable_dx10_clamp = 1
 ; GCN: enable_ieee_mode = 1
-define amdgpu_kernel void @test_default_ci(float addrspace(1)* %out0, double addrspace(1)* %out1) #0 {
-  store float 0.0, float addrspace(1)* %out0
-  store double 0.0, double addrspace(1)* %out1
+define amdgpu_kernel void @test_default_ci(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #0 {
+  store float 0.0, ptr addrspace(1) %out0
+  store double 0.0, ptr addrspace(1) %out1
   ret void
 }
 
@@ -14,9 +14,9 @@ define amdgpu_kernel void @test_default_ci(float addrspace(1)* %out0, double add
 ; GCN: float_mode = 240
 ; GCN: enable_dx10_clamp = 1
 ; GCN: enable_ieee_mode = 1
-define amdgpu_kernel void @test_default_vi(float addrspace(1)* %out0, double addrspace(1)* %out1) #1 {
-  store float 0.0, float addrspace(1)* %out0
-  store double 0.0, double addrspace(1)* %out1
+define amdgpu_kernel void @test_default_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #1 {
+  store float 0.0, ptr addrspace(1) %out0
+  store double 0.0, ptr addrspace(1) %out1
   ret void
 }
 
@@ -24,9 +24,9 @@ define amdgpu_kernel void @test_default_vi(float addrspace(1)* %out0, double add
 ; GCN: float_mode = 192
 ; GCN: enable_dx10_clamp = 1
 ; GCN: enable_ieee_mode = 1
-define amdgpu_kernel void @test_f64_denormals(float addrspace(1)* %out0, double addrspace(1)* %out1) #2 {
-  store float 0.0, float addrspace(1)* %out0
-  store double 0.0, double addrspace(1)* %out1
+define amdgpu_kernel void @test_f64_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #2 {
+  store float 0.0, ptr addrspace(1) %out0
+  store double 0.0, ptr addrspace(1) %out1
   ret void
 }
 
@@ -34,9 +34,9 @@ define amdgpu_kernel void @test_f64_denormals(float addrspace(1)* %out0, double 
 ; GCN: float_mode = 48
 ; GCN: enable_dx10_clamp = 1
 ; GCN: enable_ieee_mode = 1
-define amdgpu_kernel void @test_f32_denormals(float addrspace(1)* %out0, double addrspace(1)* %out1) #3 {
-  store float 0.0, float addrspace(1)* %out0
-  store double 0.0, double addrspace(1)* %out1
+define amdgpu_kernel void @test_f32_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #3 {
+  store float 0.0, ptr addrspace(1) %out0
+  store double 0.0, ptr addrspace(1) %out1
   ret void
 }
 
@@ -44,9 +44,9 @@ define amdgpu_kernel void @test_f32_denormals(float addrspace(1)* %out0, double 
 ; GCN: float_mode = 240
 ; GCN: enable_dx10_clamp = 1
 ; GCN: enable_ieee_mode = 1
-define amdgpu_kernel void @test_f32_f64_denormals(float addrspace(1)* %out0, double addrspace(1)* %out1) #4 {
-  store float 0.0, float addrspace(1)* %out0
-  store double 0.0, double addrspace(1)* %out1
+define amdgpu_kernel void @test_f32_f64_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #4 {
+  store float 0.0, ptr addrspace(1) %out0
+  store double 0.0, ptr addrspace(1) %out1
   ret void
 }
 
@@ -54,9 +54,9 @@ define amdgpu_kernel void @test_f32_f64_denormals(float addrspace(1)* %out0, dou
 ; GCN: float_mode = 0
 ; GCN: enable_dx10_clamp = 1
 ; GCN: enable_ieee_mode = 1
-define amdgpu_kernel void @test_no_denormals(float addrspace(1)* %out0, double addrspace(1)* %out1) #5 {
-  store float 0.0, float addrspace(1)* %out0
-  store double 0.0, double addrspace(1)* %out1
+define amdgpu_kernel void @test_no_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #5 {
+  store float 0.0, ptr addrspace(1) %out0
+  store double 0.0, ptr addrspace(1) %out1
   ret void
 }
 
@@ -64,9 +64,9 @@ define amdgpu_kernel void @test_no_denormals(float addrspace(1)* %out0, double a
 ; GCN: float_mode = 240
 ; GCN: enable_dx10_clamp = 0
 ; GCN: enable_ieee_mode = 1
-define amdgpu_kernel void @test_no_dx10_clamp_vi(float addrspace(1)* %out0, double addrspace(1)* %out1) #6 {
-  store float 0.0, float addrspace(1)* %out0
-  store double 0.0, double addrspace(1)* %out1
+define amdgpu_kernel void @test_no_dx10_clamp_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #6 {
+  store float 0.0, ptr addrspace(1) %out0
+  store double 0.0, ptr addrspace(1) %out1
   ret void
 }
 
@@ -74,9 +74,9 @@ define amdgpu_kernel void @test_no_dx10_clamp_vi(float addrspace(1)* %out0, doub
 ; GCN: float_mode = 240
 ; GCN: enable_dx10_clamp = 1
 ; GCN: enable_ieee_mode = 0
-define amdgpu_kernel void @test_no_ieee_mode_vi(float addrspace(1)* %out0, double addrspace(1)* %out1) #7 {
-  store float 0.0, float addrspace(1)* %out0
-  store double 0.0, double addrspace(1)* %out1
+define amdgpu_kernel void @test_no_ieee_mode_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #7 {
+  store float 0.0, ptr addrspace(1) %out0
+  store double 0.0, ptr addrspace(1) %out1
   ret void
 }
 
@@ -84,9 +84,9 @@ define amdgpu_kernel void @test_no_ieee_mode_vi(float addrspace(1)* %out0, doubl
 ; GCN: float_mode = 240
 ; GCN: enable_dx10_clamp = 0
 ; GCN: enable_ieee_mode = 0
-define amdgpu_kernel void @test_no_ieee_mode_no_dx10_clamp_vi(float addrspace(1)* %out0, double addrspace(1)* %out1) #8 {
-  store float 0.0, float addrspace(1)* %out0
-  store double 0.0, double addrspace(1)* %out1
+define amdgpu_kernel void @test_no_ieee_mode_no_dx10_clamp_vi(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #8 {
+  store float 0.0, ptr addrspace(1) %out0
+  store double 0.0, ptr addrspace(1) %out1
   ret void
 }
 

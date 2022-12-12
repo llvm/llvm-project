@@ -15,16 +15,16 @@ declare void @llvm.amdgcn.ds.gws.sema.release.all(i32 %offset) #2
 ; GCN-LABEL: {{^}}taildup_barrier:
 ; GCN: s_barrier
 ; GCN-NOT: s_barrier
-define void @taildup_barrier(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i1 %cond) #0 {
+define void @taildup_barrier(ptr addrspace(1) %a, ptr addrspace(1) %b, i1 %cond) #0 {
 entry:
   br i1 %cond, label %bb1, label %bb2
 
 bb1:
-  store i32 0, i32 addrspace(1)* %a
+  store i32 0, ptr addrspace(1) %a
   br label %call
 
 bb2:
-  store i32 1, i32 addrspace(1)* %a
+  store i32 1, ptr addrspace(1) %a
   br label %call
 
 call:
@@ -38,16 +38,16 @@ ret:
 ; GCN-LABEL: {{^}}taildup_convergent_call:
 ; GCN: s_swappc_b64
 ; GCN-NOT: s_swappc_b64
-define void @taildup_convergent_call(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i1 %cond) #1 {
+define void @taildup_convergent_call(ptr addrspace(1) %a, ptr addrspace(1) %b, i1 %cond) #1 {
 entry:
   br i1 %cond, label %bb1, label %bb2
 
 bb1:
-  store i32 0, i32 addrspace(1)* %a
+  store i32 0, ptr addrspace(1) %a
   br label %call
 
 bb2:
-  store i32 1, i32 addrspace(1)* %a
+  store i32 1, ptr addrspace(1) %a
   br label %call
 
 call:
@@ -63,16 +63,16 @@ ret:
 ; GCN-LABEL: {{^}}taildup_nonconvergent_call:
 ; GCN: s_swappc_b64
 ; GCN-NOT: s_swappc_b64
-define void @taildup_nonconvergent_call(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i1 %cond) #1 {
+define void @taildup_nonconvergent_call(ptr addrspace(1) %a, ptr addrspace(1) %b, i1 %cond) #1 {
 entry:
   br i1 %cond, label %bb1, label %bb2
 
 bb1:
-  store i32 0, i32 addrspace(1)* %a
+  store i32 0, ptr addrspace(1) %a
   br label %call
 
 bb2:
-  store i32 1, i32 addrspace(1)* %a
+  store i32 1, ptr addrspace(1) %a
   br label %call
 
 call:
@@ -86,16 +86,16 @@ ret:
 ; GCN-LABEL: {{^}}taildup_convergent_tailcall:
 ; GCN: s_setpc_b64
 ; GCN-NOT: s_setpc_b64
-define void @taildup_convergent_tailcall(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i1 %cond) #1 {
+define void @taildup_convergent_tailcall(ptr addrspace(1) %a, ptr addrspace(1) %b, i1 %cond) #1 {
 entry:
   br i1 %cond, label %bb1, label %bb2
 
 bb1:
-  store i32 0, i32 addrspace(1)* %a
+  store i32 0, ptr addrspace(1) %a
   br label %call
 
 bb2:
-  store i32 1, i32 addrspace(1)* %a
+  store i32 1, ptr addrspace(1) %a
   br label %call
 
 call:
@@ -106,16 +106,16 @@ call:
 ; GCN-LABEL: {{^}}taildup_gws_init:
 ; GCN: ds_gws_init
 ; GCN-NOT: ds_gws_init
-define amdgpu_kernel void @taildup_gws_init(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i1 %cond, i32 %val, i32 %offset) #0 {
+define amdgpu_kernel void @taildup_gws_init(ptr addrspace(1) %a, ptr addrspace(1) %b, i1 %cond, i32 %val, i32 %offset) #0 {
 entry:
   br i1 %cond, label %bb1, label %bb2
 
 bb1:
-  store i32 0, i32 addrspace(1)* %a
+  store i32 0, ptr addrspace(1) %a
   br label %call
 
 bb2:
-  store i32 1, i32 addrspace(1)* %a
+  store i32 1, ptr addrspace(1) %a
   br label %call
 
 call:
@@ -129,16 +129,16 @@ ret:
 ; GCN-LABEL: {{^}}taildup_gws_barrier:
 ; GCN: ds_gws_barrier
 ; GCN-NOT: ds_gws_barrier
-define amdgpu_kernel void @taildup_gws_barrier(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i1 %cond, i32 %val, i32 %offset) #0 {
+define amdgpu_kernel void @taildup_gws_barrier(ptr addrspace(1) %a, ptr addrspace(1) %b, i1 %cond, i32 %val, i32 %offset) #0 {
 entry:
   br i1 %cond, label %bb1, label %bb2
 
 bb1:
-  store i32 0, i32 addrspace(1)* %a
+  store i32 0, ptr addrspace(1) %a
   br label %call
 
 bb2:
-  store i32 1, i32 addrspace(1)* %a
+  store i32 1, ptr addrspace(1) %a
   br label %call
 
 call:
@@ -152,16 +152,16 @@ ret:
 ; GCN-LABEL: {{^}}taildup_gws_sema_release_all:
 ; GCN: ds_gws_sema_release_all
 ; GCN-NOT: ds_gws
-define amdgpu_kernel void @taildup_gws_sema_release_all(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i1 %cond, i32 %offset) #0 {
+define amdgpu_kernel void @taildup_gws_sema_release_all(ptr addrspace(1) %a, ptr addrspace(1) %b, i1 %cond, i32 %offset) #0 {
 entry:
   br i1 %cond, label %bb1, label %bb2
 
 bb1:
-  store i32 0, i32 addrspace(1)* %a
+  store i32 0, ptr addrspace(1) %a
   br label %call
 
 bb2:
-  store i32 1, i32 addrspace(1)* %a
+  store i32 1, ptr addrspace(1) %a
   br label %call
 
 call:

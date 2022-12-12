@@ -945,6 +945,15 @@
 # CHECK-BE: xsmincqp 2, 2, 3                      # encoding: [0xfc,0x42,0x1d,0xc8]
 # CHECK-LE: xsmincqp 2, 2, 3                      # encoding: [0xc8,0x1d,0x42,0xfc]
             xsmincqp 2, 2, 3
+# CHECK-BE: xscmpeqqp 1, 2, 2                     # encoding: [0xfc,0x22,0x10,0x88]
+# CHECK-LE: xscmpeqqp 1, 2, 2                     # encoding: [0x88,0x10,0x22,0xfc]
+            xscmpeqqp 1, 2, 2
+# CHECK-BE: xscmpgeqp 1, 2, 3                     # encoding: [0xfc,0x22,0x19,0x88]
+# CHECK-LE: xscmpgeqp 1, 2, 3                     # encoding: [0x88,0x19,0x22,0xfc]
+            xscmpgeqp 1, 2, 3
+# CHECK-BE: xscmpgtqp 1, 2, 4                     # encoding: [0xfc,0x22,0x21,0xc8]
+# CHECK-LE: xscmpgtqp 1, 2, 4                     # encoding: [0xc8,0x21,0x22,0xfc]
+            xscmpgtqp 1, 2, 4
 # CHECK-BE: vstribr 2, 2                          # encoding: [0x10,0x41,0x10,0x0d]
 # CHECK-LE: vstribr 2, 2                          # encoding: [0x0d,0x10,0x41,0x10]
             vstribr 2, 2

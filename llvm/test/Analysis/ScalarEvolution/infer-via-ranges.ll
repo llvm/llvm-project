@@ -1,4 +1,4 @@
-; RUN: opt -indvars -S < %s | FileCheck %s
+; RUN: opt -passes=indvars -S < %s | FileCheck %s
 
 define void @infer_via_ranges(i32 *%arr, i32 %n) {
 ; CHECK-LABEL: @infer_via_ranges

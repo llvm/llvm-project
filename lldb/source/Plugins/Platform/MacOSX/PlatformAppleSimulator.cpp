@@ -12,6 +12,7 @@
 #include <dlfcn.h>
 #endif
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/HostInfo.h"
@@ -278,9 +279,19 @@ std::vector<ArchSpec> PlatformAppleSimulator::GetSupportedArchitectures(
 static llvm::StringRef GetXcodeSDKDir(std::string preferred,
                                       std::string secondary) {
   llvm::StringRef sdk;
-  sdk = HostInfo::GetXcodeSDKPath(XcodeSDK(std::move(preferred)));
+  auto get_sdk = [&](std::string sdk) -> llvm::StringRef {
+    auto sdk_path_or_err = HostInfo::GetXcodeSDKPath(XcodeSDK(std::move(sdk)));
+    if (!sdk_path_or_err) {
+      Debugger::ReportError("Error while searching for Xcode SDK: " +
+                            toString(sdk_path_or_err.takeError()));
+      return {};
+    }
+    return *sdk_path_or_err;
+  };
+
+  sdk = get_sdk(preferred);
   if (sdk.empty())
-    sdk = HostInfo::GetXcodeSDKPath(XcodeSDK(std::move(secondary)));
+    sdk = get_sdk(secondary);
   return sdk;
 }
 

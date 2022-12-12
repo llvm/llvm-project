@@ -15,6 +15,7 @@
 
 #include <cassert>
 #include <chrono>
+#include <cstdint>
 #include <cstdio> // for printf
 #include <string>
 #include <system_error>
@@ -34,7 +35,6 @@
 namespace utils {
 #ifdef _WIN32
     inline int mkdir(const char* path, int mode) { (void)mode; return ::_mkdir(path); }
-    inline int ftruncate(int fd, off_t length) { return ::_chsize(fd, length); }
     inline int symlink(const char* oldname, const char* newname, bool is_dir) {
         DWORD flags = is_dir ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0;
         if (CreateSymbolicLinkA(newname, oldname,
@@ -71,7 +71,6 @@ namespace utils {
     }
 #else
     using ::mkdir;
-    using ::ftruncate;
     inline int symlink(const char* oldname, const char* newname, bool is_dir) { (void)is_dir; return ::symlink(oldname, newname); }
     using ::link;
     using ::setenv;
@@ -98,6 +97,37 @@ namespace utils {
         return true;
     }
 #endif
+
+    // N.B. libc might define some of the foo[64] identifiers using macros from
+    // foo64 -> foo or vice versa.
+#if defined(_WIN32)
+    using off64_t = int64_t;
+#elif defined(__MVS__) || defined(__LP64__)
+    using off64_t = ::off_t;
+#else
+    using ::off64_t;
+#endif
+
+    inline FILE* fopen64(const char* pathname, const char* mode) {
+        // Bionic does not distinguish between fopen and fopen64, but fopen64
+        // wasn't added until API 24.
+#if defined(_WIN32) || defined(__MVS__) || defined(__LP64__) || defined(__BIONIC__)
+        return ::fopen(pathname, mode);
+#else
+        return ::fopen64(pathname, mode);
+#endif
+    }
+
+    inline int ftruncate64(int fd, off64_t length) {
+#if defined(_WIN32)
+        // _chsize_s sets errno on failure and also returns the error number.
+        return ::_chsize_s(fd, length) ? -1 : 0;
+#elif defined(__MVS__) || defined(__LP64__)
+        return ::ftruncate(fd, length);
+#else
+        return ::ftruncate64(fd, length);
+#endif
+    }
 
     inline std::string getcwd() {
         // Assume that path lengths are not greater than this.
@@ -185,22 +215,11 @@ struct scoped_test_env
     // off_t). On a 32-bit system this allows us to create a file larger than
     // 2GB.
     std::string create_file(fs::path filename_path, uintmax_t size = 0) {
-        std::string filename = filename_path.string();
-#if defined(__LP64__) || defined(_WIN32) || defined(__MVS__)
-        auto large_file_fopen = fopen;
-        auto large_file_ftruncate = utils::ftruncate;
-        using large_file_offset_t = off_t;
-#else
-        auto large_file_fopen = fopen64;
-        auto large_file_ftruncate = ftruncate64;
-        using large_file_offset_t = off64_t;
-#endif
-
-        filename = sanitize_path(std::move(filename));
+        std::string filename = sanitize_path(filename_path.string());
 
         if (size >
-            static_cast<typename std::make_unsigned<large_file_offset_t>::type>(
-                std::numeric_limits<large_file_offset_t>::max())) {
+            static_cast<typename std::make_unsigned<utils::off64_t>::type>(
+                std::numeric_limits<utils::off64_t>::max())) {
             fprintf(stderr, "create_file(%s, %ju) too large\n",
                     filename.c_str(), size);
             abort();
@@ -211,15 +230,15 @@ struct scoped_test_env
 #else
 #  define FOPEN_CLOEXEC_FLAG "e"
 #endif
-        FILE* file = large_file_fopen(filename.c_str(), "w" FOPEN_CLOEXEC_FLAG);
+        FILE* file = utils::fopen64(filename.c_str(), "w" FOPEN_CLOEXEC_FLAG);
         if (file == nullptr) {
             fprintf(stderr, "fopen %s failed: %s\n", filename.c_str(),
                     strerror(errno));
             abort();
         }
 
-        if (large_file_ftruncate(
-                fileno(file), static_cast<large_file_offset_t>(size)) == -1) {
+        if (utils::ftruncate64(
+                fileno(file), static_cast<utils::off64_t>(size)) == -1) {
             fprintf(stderr, "ftruncate %s %ju failed: %s\n", filename.c_str(),
                     size, strerror(errno));
             fclose(file);

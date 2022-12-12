@@ -166,7 +166,7 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
 
   // both ARMv7-M and R have to support thumb hardware div
   bool isV7 = false;
-  Optional<unsigned> Attr =
+  std::optional<unsigned> Attr =
       Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
   if (Attr)
     isV7 = Attr.value() == ARMBuildAttrs::v7;
@@ -303,7 +303,8 @@ SubtargetFeatures ELFObjectFileBase::getRISCVFeatures() const {
     return Features; // Keep "c" feature if there is one in PlatformFlags.
   }
 
-  Optional<StringRef> Attr = Attributes.getAttributeString(RISCVAttrs::ARCH);
+  std::optional<StringRef> Attr =
+      Attributes.getAttributeString(RISCVAttrs::ARCH);
   if (Attr) {
     // The Arch pattern is [rv32|rv64][i|e]version(_[m|a|f|d|c]version)*
     // Version string pattern is (major)p(minor). Major and minor are optional.
@@ -542,7 +543,7 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
   else
     Triple = "arm";
 
-  Optional<unsigned> Attr =
+  std::optional<unsigned> Attr =
       Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
   if (Attr) {
     switch (Attr.value()) {
@@ -574,7 +575,7 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
       Triple += "v6k";
       break;
     case ARMBuildAttrs::v7: {
-      Optional<unsigned> ArchProfileAttr =
+      std::optional<unsigned> ArchProfileAttr =
           Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch_profile);
       if (ArchProfileAttr &&
           ArchProfileAttr.value() == ARMBuildAttrs::MicroControllerProfile)

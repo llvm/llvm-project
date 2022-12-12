@@ -15,13 +15,13 @@ declare double @llvm.fabs.f64(double)
 ; GCN-DAG: v{{[0-9]}}
 ; All nan values are converted to 0xffffffff
 ; GCN: s_endpgm
-define amdgpu_kernel void @v_cnd_nan_nosgpr(float addrspace(1)* %out, i32 %c, float addrspace(1)* %fptr) #0 {
+define amdgpu_kernel void @v_cnd_nan_nosgpr(ptr addrspace(1) %out, i32 %c, ptr addrspace(1) %fptr) #0 {
   %idx = call i32 @llvm.amdgcn.workitem.id.x() #1
-  %f.gep = getelementptr float, float addrspace(1)* %fptr, i32 %idx
-  %f = load float, float addrspace(1)* %f.gep
+  %f.gep = getelementptr float, ptr addrspace(1) %fptr, i32 %idx
+  %f = load float, ptr addrspace(1) %f.gep
   %setcc = icmp ne i32 %c, 0
   %select = select i1 %setcc, float 0xFFFFFFFFE0000000, float %f
-  store float %select, float addrspace(1)* %out
+  store float %select, ptr addrspace(1) %out
   ret void
 }
 
@@ -41,10 +41,10 @@ define amdgpu_kernel void @v_cnd_nan_nosgpr(float addrspace(1)* %out, i32 %c, fl
 ; GCN-DAG: v{{[0-9]}}
 ; All nan values are converted to 0xffffffff
 ; GCN: s_endpgm
-define amdgpu_kernel void @v_cnd_nan(float addrspace(1)* %out, i32 %c, float %f) #0 {
+define amdgpu_kernel void @v_cnd_nan(ptr addrspace(1) %out, i32 %c, float %f) #0 {
   %setcc = icmp ne i32 %c, 0
   %select = select i1 %setcc, float 0xFFFFFFFFE0000000, float %f
-  store float %select, float addrspace(1)* %out
+  store float %select, ptr addrspace(1) %out
   ret void
 }
 
@@ -60,13 +60,13 @@ define amdgpu_kernel void @v_cnd_nan(float addrspace(1)* %out, i32 %c, float %f)
 ; SIVI-DAG:  v_mov_b32_e32 [[VZ:v[0-9]+]], s[[Z]]
 ; SIVI:      v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, [[VZ]], [[CC]]
 ; GFX10:     v_cndmask_b32_e64 v{{[0-9]+}}, 1.0, s[[Z]], [[CC]]
-define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprZ_f32(float addrspace(1)* %out, [8 x i32], float %x, float %z) #0 {
+define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprZ_f32(ptr addrspace(1) %out, [8 x i32], float %x, float %z) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
   %setcc = fcmp one float %x, 0.0
   %select = select i1 %setcc, float 1.0, float %z
-  store float %select, float addrspace(1)* %out.gep
+  store float %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -77,13 +77,13 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprZ_f32(float addrspace(1)*
 ; SIVI-DAG:  v_mov_b32_e32 [[VX:v[0-9]+]], [[X]]
 ; SIVI:      v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, [[VX]], [[CC]]
 ; GFX10:     v_cndmask_b32_e64 v{{[0-9]+}}, 1.0, [[X]], [[CC]]
-define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprX_f32(float addrspace(1)* %out, float %x) #0 {
+define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprX_f32(ptr addrspace(1) %out, float %x) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
   %setcc = fcmp one float %x, 0.0
   %select = select i1 %setcc, float 1.0, float %x
-  store float %select, float addrspace(1)* %out.gep
+  store float %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -94,13 +94,13 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprX_f32(float addrspace(1)*
 ; SIVI-DAG:  v_mov_b32_e32 [[VZ:v[0-9]+]], s[[Z]]
 ; SIVI:      v_cndmask_b32_e32 v{{[0-9]+}}, 0, [[VZ]], [[CC]]
 ; GFX10:     v_cndmask_b32_e64 v{{[0-9]+}}, 0, s[[Z]], [[CC]]
-define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprZ_f32(float addrspace(1)* %out, [8 x i32], float %x, float %z) #0 {
+define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprZ_f32(ptr addrspace(1) %out, [8 x i32], float %x, float %z) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
   %setcc = fcmp one float %x, 0.0
   %select = select i1 %setcc, float 0.0, float %z
-  store float %select, float addrspace(1)* %out.gep
+  store float %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -111,13 +111,13 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprZ_f32(float addrspace(1)*
 ; SIVI-DAG:  v_mov_b32_e32 [[VX:v[0-9]+]], [[X]]
 ; SIVI:      v_cndmask_b32_e32 v{{[0-9]+}}, 0, [[VX]], [[CC]]
 ; GFX10:     v_cndmask_b32_e64 v{{[0-9]+}}, 0, [[X]], [[CC]]
-define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprX_f32(float addrspace(1)* %out, float %x) #0 {
+define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprX_f32(ptr addrspace(1) %out, float %x) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
   %setcc = fcmp one float %x, 0.0
   %select = select i1 %setcc, float 0.0, float %x
-  store float %select, float addrspace(1)* %out.gep
+  store float %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -126,15 +126,15 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprX_f32(float addrspace(1)*
 ; GCN-DAG: {{buffer|flat|global}}_load_{{dword|b32}} [[Z:v[0-9]+]]
 ; GCN-DAG: v_cmp_nlg_f32_e64 [[COND:vcc|s\[[0-9]+:[0-9]+\]]], [[X]], 0
 ; GCN: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, 0, [[Z]], [[COND]]
-define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_vgprZ_f32(float addrspace(1)* %out, float %x, float addrspace(1)* %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_vgprZ_f32(ptr addrspace(1) %out, float %x, ptr addrspace(1) %z.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %z.gep = getelementptr inbounds float, float addrspace(1)* %z.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
-  %z = load float, float addrspace(1)* %z.gep
+  %z.gep = getelementptr inbounds float, ptr addrspace(1) %z.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
+  %z = load float, ptr addrspace(1) %z.gep
   %setcc = fcmp one float %x, 0.0
   %select = select i1 %setcc, float 0.0, float %z
-  store float %select, float addrspace(1)* %out.gep
+  store float %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -143,15 +143,15 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_vgprZ_f32(float addrspace(1)*
 ; GCN-DAG: s_load_{{dword|b32}} [[X:s[0-9]+]]
 ; GCN-DAG: v_cmp_nlg_f32_e64 [[COND:vcc|s\[[0-9]+:[0-9]+\]]], [[X]], 0
 ; GCN: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, 1.0, [[Z]], [[COND]]
-define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_vgprZ_f32(float addrspace(1)* %out, float %x, float addrspace(1)* %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_vgprZ_f32(ptr addrspace(1) %out, float %x, ptr addrspace(1) %z.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %z.gep = getelementptr inbounds float, float addrspace(1)* %z.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
-  %z = load float, float addrspace(1)* %z.gep
+  %z.gep = getelementptr inbounds float, ptr addrspace(1) %z.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
+  %z = load float, ptr addrspace(1) %z.gep
   %setcc = fcmp one float %x, 0.0
   %select = select i1 %setcc, float 1.0, float %z
-  store float %select, float addrspace(1)* %out.gep
+  store float %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -162,15 +162,15 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_vgprZ_f32(float addrspace(1)*
 ; SIVI-DAG: v_mov_b32_e32 [[VZ:v[0-9]+]], [[Z]]
 ; SIVI:     v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, [[VZ]], vcc
 ; GFX10:    v_cndmask_b32_e64 v{{[0-9]+}}, 1.0, [[Z]], vcc
-define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_sgprZ_f32(float addrspace(1)* %out, float addrspace(1)* %x.ptr, float %z) #0 {
+define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_sgprZ_f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, float %z) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %x.gep = getelementptr inbounds float, float addrspace(1)* %x.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
-  %x = load float, float addrspace(1)* %x.gep
+  %x.gep = getelementptr inbounds float, ptr addrspace(1) %x.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load float, ptr addrspace(1) %x.gep
   %setcc = fcmp olt float %x, 0.0
   %select = select i1 %setcc, float 1.0, float %z
-  store float %select, float addrspace(1)* %out.gep
+  store float %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -179,17 +179,17 @@ define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_sgprZ_f32(float addrspace(1)*
 ; GCN: {{buffer|flat|global}}_load_{{dword|b32}} [[Z:v[0-9]+]]
 ; GCN: v_cmp_le_f32_e32 vcc, 0, [[X]]
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, [[Z]], vcc
-define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_vgprZ_f32(float addrspace(1)* %out, float addrspace(1)* %x.ptr, float addrspace(1)* %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_vgprZ_f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %x.gep = getelementptr inbounds float, float addrspace(1)* %x.ptr, i64 %tid.ext
-  %z.gep = getelementptr inbounds float, float addrspace(1)* %z.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
-  %x = load volatile float, float addrspace(1)* %x.gep
-  %z = load volatile float, float addrspace(1)* %z.gep
+  %x.gep = getelementptr inbounds float, ptr addrspace(1) %x.ptr, i64 %tid.ext
+  %z.gep = getelementptr inbounds float, ptr addrspace(1) %z.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load volatile float, ptr addrspace(1) %x.gep
+  %z = load volatile float, ptr addrspace(1) %z.gep
   %setcc = fcmp ult float %x, 0.0
   %select = select i1 %setcc, float 1.0, float %z
-  store float %select, float addrspace(1)* %out.gep
+  store float %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -198,17 +198,17 @@ define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_vgprZ_f32(float addrspace(1)*
 ; GCN: {{buffer|flat|global}}_load_{{dword|b32}} [[Z:v[0-9]+]]
 ; GCN: v_cmp_lt_i32_e32 vcc, -1, [[X]]
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 2, [[Z]], vcc
-define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %x.ptr, i32 addrspace(1)* %z.ptr) #0 {
+define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %x.gep = getelementptr inbounds i32, i32 addrspace(1)* %x.ptr, i64 %tid.ext
-  %z.gep = getelementptr inbounds i32, i32 addrspace(1)* %z.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %tid.ext
-  %x = load volatile i32, i32 addrspace(1)* %x.gep
-  %z = load volatile i32, i32 addrspace(1)* %z.gep
+  %x.gep = getelementptr inbounds i32, ptr addrspace(1) %x.ptr, i64 %tid.ext
+  %z.gep = getelementptr inbounds i32, ptr addrspace(1) %z.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load volatile i32, ptr addrspace(1) %x.gep
+  %z = load volatile i32, ptr addrspace(1) %z.gep
   %setcc = icmp slt i32 %x, 0
   %select = select i1 %setcc, i32 2, i32 %z
-  store i32 %select, i32 addrspace(1)* %out.gep
+  store i32 %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -218,17 +218,17 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i32(i32 addrspace(1)* %
 ; GCN-DAG: v_cmp_lt_i64_e32 vcc, -1, v[[[X_LO]]:[[X_HI]]]
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v[[Z_HI]], vcc
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 2, v[[Z_LO]], vcc
-define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %x.ptr, i64 addrspace(1)* %z.ptr) #0 {
+define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %x.gep = getelementptr inbounds i64, i64 addrspace(1)* %x.ptr, i64 %tid.ext
-  %z.gep = getelementptr inbounds i64, i64 addrspace(1)* %z.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds i64, i64 addrspace(1)* %out, i64 %tid.ext
-  %x = load volatile i64, i64 addrspace(1)* %x.gep
-  %z = load volatile i64, i64 addrspace(1)* %z.gep
+  %x.gep = getelementptr inbounds i64, ptr addrspace(1) %x.ptr, i64 %tid.ext
+  %z.gep = getelementptr inbounds i64, ptr addrspace(1) %z.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds i64, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load volatile i64, ptr addrspace(1) %x.gep
+  %z = load volatile i64, ptr addrspace(1) %z.gep
   %setcc = icmp slt i64 %x, 0
   %select = select i1 %setcc, i64 2, i64 %z
-  store i64 %select, i64 addrspace(1)* %out.gep
+  store i64 %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -241,17 +241,17 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(i64 addrspace(1)* %
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}, vcc
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, -0.5, v{{[0-9]+}}, vcc
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}, vcc
-define amdgpu_kernel void @fcmp_vgprX_k0_select_vgprZ_k1_v4f32(<4 x float> addrspace(1)* %out, float addrspace(1)* %x.ptr, <4 x float> addrspace(1)* %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_vgprX_k0_select_vgprZ_k1_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %x.gep = getelementptr inbounds float, float addrspace(1)* %x.ptr, i64 %tid.ext
-  %z.gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %z.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %out, i64 %tid.ext
-  %x = load volatile float, float addrspace(1)* %x.gep
-  %z = load volatile <4 x float>, <4 x float> addrspace(1)* %z.gep
+  %x.gep = getelementptr inbounds float, ptr addrspace(1) %x.ptr, i64 %tid.ext
+  %z.gep = getelementptr inbounds <4 x float>, ptr addrspace(1) %z.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds <4 x float>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load volatile float, ptr addrspace(1) %x.gep
+  %z = load volatile <4 x float>, ptr addrspace(1) %z.gep
   %setcc = fcmp ugt float %x, 4.0
   %select = select i1 %setcc, <4 x float> %z, <4 x float> <float 1.0, float 2.0, float -0.5, float 4.0>
-  store <4 x float> %select, <4 x float> addrspace(1)* %out.gep
+  store <4 x float> %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -264,17 +264,17 @@ define amdgpu_kernel void @fcmp_vgprX_k0_select_vgprZ_k1_v4f32(<4 x float> addrs
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}, vcc
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, -0.5, v{{[0-9]+}}, vcc
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}, vcc
-define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_vgprZ_v4f32(<4 x float> addrspace(1)* %out, float addrspace(1)* %x.ptr, <4 x float> addrspace(1)* %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_vgprZ_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %x.gep = getelementptr inbounds float, float addrspace(1)* %x.ptr, i64 %tid.ext
-  %z.gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %z.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %out, i64 %tid.ext
-  %x = load volatile float, float addrspace(1)* %x.gep
-  %z = load volatile <4 x float>, <4 x float> addrspace(1)* %z.gep
+  %x.gep = getelementptr inbounds float, ptr addrspace(1) %x.ptr, i64 %tid.ext
+  %z.gep = getelementptr inbounds <4 x float>, ptr addrspace(1) %z.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds <4 x float>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load volatile float, ptr addrspace(1) %x.gep
+  %z = load volatile <4 x float>, ptr addrspace(1) %z.gep
   %setcc = fcmp ugt float %x, 4.0
   %select = select i1 %setcc, <4 x float> <float 1.0, float 2.0, float -0.5, float 4.0>, <4 x float> %z
-  store <4 x float> %select, <4 x float> addrspace(1)* %out.gep
+  store <4 x float> %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -290,17 +290,17 @@ define amdgpu_kernel void @fcmp_vgprX_k0_select_k1_vgprZ_v4f32(<4 x float> addrs
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}, vcc
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, -0.5, v{{[0-9]+}}, vcc
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}, vcc
-define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_v4f32(<4 x float> addrspace(1)* %out, float addrspace(1)* %x.ptr, <4 x float> addrspace(1)* %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %x.gep = getelementptr inbounds float, float addrspace(1)* %x.ptr, i64 %tid.ext
-  %z.gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %z.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %out, i64 %tid.ext
-  %x = load volatile float, float addrspace(1)* %x.gep
-  %z = load volatile <4 x float>, <4 x float> addrspace(1)* %z.gep
+  %x.gep = getelementptr inbounds float, ptr addrspace(1) %x.ptr, i64 %tid.ext
+  %z.gep = getelementptr inbounds <4 x float>, ptr addrspace(1) %z.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds <4 x float>, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load volatile float, ptr addrspace(1) %x.gep
+  %z = load volatile <4 x float>, ptr addrspace(1) %z.gep
   %setcc = fcmp ugt float 4.0, %x
   %select = select i1 %setcc, <4 x float> <float 1.0, float 2.0, float -0.5, float 4.0>, <4 x float> %z
-  store <4 x float> %select, <4 x float> addrspace(1)* %out.gep
+  store <4 x float> %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -313,17 +313,17 @@ define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_v4f32(<4 x float> addrs
 ; GCN-DAG: s_or_b64 s{{\[[0-9]+:[0-9]+\]}}, vcc, s{{\[[0-9]+:[0-9]+\]}}
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, s
 ; GCN: store_{{byte|b8}}
-define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i1(i1 addrspace(1)* %out, i32 addrspace(1)* %x.ptr, i1 addrspace(1)* %z.ptr) #0 {
+define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i1(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %x.gep = getelementptr inbounds i32, i32 addrspace(1)* %x.ptr, i64 %tid.ext
-  %z.gep = getelementptr inbounds i1, i1 addrspace(1)* %z.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds i1, i1 addrspace(1)* %out, i64 %tid.ext
-  %x = load volatile i32, i32 addrspace(1)* %x.gep
-  %z = load volatile i1, i1 addrspace(1)* %z.gep
+  %x.gep = getelementptr inbounds i32, ptr addrspace(1) %x.ptr, i64 %tid.ext
+  %z.gep = getelementptr inbounds i1, ptr addrspace(1) %z.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds i1, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load volatile i32, ptr addrspace(1) %x.gep
+  %z = load volatile i1, ptr addrspace(1) %z.gep
   %setcc = icmp slt i32 %x, 0
   %select = select i1 %setcc, i1 true, i1 %z
-  store i1 %select, i1 addrspace(1)* %out.gep
+  store i1 %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -337,17 +337,17 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i1(i1 addrspace(1)* %ou
 ; SIVI-DAG:  v_cndmask_b32_e32 v{{[0-9]+}}, [[K]], v{{[0-9]+}}, vcc
 ; GFX10-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 0x3ff00000, v{{[0-9]+}}, vcc
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}, vcc
-define amdgpu_kernel void @fcmp_vgprX_k0_selectf64_k1_vgprZ_f32(double addrspace(1)* %out, float addrspace(1)* %x.ptr, double addrspace(1)* %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_vgprX_k0_selectf64_k1_vgprZ_f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %x.gep = getelementptr inbounds float, float addrspace(1)* %x.ptr, i64 %tid.ext
-  %z.gep = getelementptr inbounds double, double addrspace(1)* %z.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds double, double addrspace(1)* %out, i64 %tid.ext
-  %x = load volatile float, float addrspace(1)* %x.gep
-  %z = load volatile double, double addrspace(1)* %z.gep
+  %x.gep = getelementptr inbounds float, ptr addrspace(1) %x.ptr, i64 %tid.ext
+  %z.gep = getelementptr inbounds double, ptr addrspace(1) %z.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds double, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load volatile float, ptr addrspace(1) %x.gep
+  %z = load volatile double, ptr addrspace(1) %z.gep
   %setcc = fcmp ult float %x, 0.0
   %select = select i1 %setcc, double 1.0, double %z
-  store double %select, double addrspace(1)* %out.gep
+  store double %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -359,17 +359,17 @@ define amdgpu_kernel void @fcmp_vgprX_k0_selectf64_k1_vgprZ_f32(double addrspace
 ; GCN: v_cmp_nlg_f32_e32 vcc, 0, [[X]]
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 3, v{{[0-9]+}}, vcc
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}, vcc
-define amdgpu_kernel void @fcmp_vgprX_k0_selecti64_k1_vgprZ_f32(i64 addrspace(1)* %out, float addrspace(1)* %x.ptr, i64 addrspace(1)* %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_vgprX_k0_selecti64_k1_vgprZ_f32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %x.gep = getelementptr inbounds float, float addrspace(1)* %x.ptr, i64 %tid.ext
-  %z.gep = getelementptr inbounds i64, i64 addrspace(1)* %z.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds i64, i64 addrspace(1)* %out, i64 %tid.ext
-  %x = load volatile float, float addrspace(1)* %x.gep
-  %z = load volatile i64, i64 addrspace(1)* %z.gep
+  %x.gep = getelementptr inbounds float, ptr addrspace(1) %x.ptr, i64 %tid.ext
+  %z.gep = getelementptr inbounds i64, ptr addrspace(1) %z.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds i64, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load volatile float, ptr addrspace(1) %x.gep
+  %z = load volatile i64, ptr addrspace(1) %z.gep
   %setcc = fcmp one float %x, 0.0
   %select = select i1 %setcc, i64 3, i64 %z
-  store i64 %select, i64 addrspace(1)* %out.gep
+  store i64 %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -380,17 +380,17 @@ define amdgpu_kernel void @fcmp_vgprX_k0_selecti64_k1_vgprZ_f32(i64 addrspace(1)
 
 ; GCN: v_cmp_gt_u32_e32 vcc, 2, [[X]]
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 4.0, [[Z]], vcc
-define amdgpu_kernel void @icmp_vgprX_k0_selectf32_k1_vgprZ_i32(float addrspace(1)* %out, i32 addrspace(1)* %x.ptr, float addrspace(1)* %z.ptr) #0 {
+define amdgpu_kernel void @icmp_vgprX_k0_selectf32_k1_vgprZ_i32(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %x.gep = getelementptr inbounds i32, i32 addrspace(1)* %x.ptr, i64 %tid.ext
-  %z.gep = getelementptr inbounds float, float addrspace(1)* %z.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
-  %x = load volatile i32, i32 addrspace(1)* %x.gep
-  %z = load volatile float, float addrspace(1)* %z.gep
+  %x.gep = getelementptr inbounds i32, ptr addrspace(1) %x.ptr, i64 %tid.ext
+  %z.gep = getelementptr inbounds float, ptr addrspace(1) %z.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load volatile i32, ptr addrspace(1) %x.gep
+  %z = load volatile float, ptr addrspace(1) %z.gep
   %setcc = icmp ugt i32 %x, 1
   %select = select i1 %setcc, float 4.0, float %z
-  store float %select, float addrspace(1)* %out.gep
+  store float %select, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -402,19 +402,19 @@ define amdgpu_kernel void @icmp_vgprX_k0_selectf32_k1_vgprZ_i32(float addrspace(
 ; GCN: v_cmp_nle_f32_e32 vcc, 4.0, [[X]]
 ; GCN-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, v{{[0-9]+}}, -1.0, vcc
 ; GCN-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, v{{[0-9]+}}, -2.0, vcc
-define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_f32_cond_use_x2(float addrspace(1)* %out, float addrspace(1)* %x.ptr, float addrspace(1)* %z.ptr) #0 {
+define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_f32_cond_use_x2(ptr addrspace(1) %out, ptr addrspace(1) %x.ptr, ptr addrspace(1) %z.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
-  %x.gep = getelementptr inbounds float, float addrspace(1)* %x.ptr, i64 %tid.ext
-  %z.gep = getelementptr inbounds float, float addrspace(1)* %z.ptr, i64 %tid.ext
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
-  %x = load volatile float, float addrspace(1)* %x.gep
-  %z = load volatile float, float addrspace(1)* %z.gep
+  %x.gep = getelementptr inbounds float, ptr addrspace(1) %x.ptr, i64 %tid.ext
+  %z.gep = getelementptr inbounds float, ptr addrspace(1) %z.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
+  %x = load volatile float, ptr addrspace(1) %x.gep
+  %z = load volatile float, ptr addrspace(1) %z.gep
   %setcc = fcmp ugt float 4.0, %x
   %select0 = select i1 %setcc, float -1.0, float %z
   %select1 = select i1 %setcc, float -2.0, float %z
-  store volatile float %select0, float addrspace(1)* %out.gep
-  store volatile float %select1, float addrspace(1)* %out.gep
+  store volatile float %select0, ptr addrspace(1) %out.gep
+  store volatile float %select1, ptr addrspace(1) %out.gep
   ret void
 }
 
@@ -422,44 +422,44 @@ define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_f32_cond_use_x2(float a
 
 ; GCN-LABEL: {{^}}v_cndmask_abs_neg_f16:
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}},
-define amdgpu_kernel void @v_cndmask_abs_neg_f16(half addrspace(1)* %out, i32 %c, half addrspace(1)* %fptr) #0 {
+define amdgpu_kernel void @v_cndmask_abs_neg_f16(ptr addrspace(1) %out, i32 %c, ptr addrspace(1) %fptr) #0 {
   %idx = call i32 @llvm.amdgcn.workitem.id.x() #1
-  %f.gep = getelementptr half, half addrspace(1)* %fptr, i32 %idx
-  %f = load half, half addrspace(1)* %f.gep
+  %f.gep = getelementptr half, ptr addrspace(1) %fptr, i32 %idx
+  %f = load half, ptr addrspace(1) %f.gep
   %f.abs = call half @llvm.fabs.f16(half %f)
   %f.neg = fneg half %f
   %setcc = icmp ne i32 %c, 0
   %select = select i1 %setcc, half %f.abs, half %f.neg
-  store half %select, half addrspace(1)* %out
+  store half %select, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_cndmask_abs_neg_f32:
 ; GCN-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, -v{{[0-9]+}}, |v{{[0-9]+}}|,
-define amdgpu_kernel void @v_cndmask_abs_neg_f32(float addrspace(1)* %out, i32 %c, float addrspace(1)* %fptr) #0 {
+define amdgpu_kernel void @v_cndmask_abs_neg_f32(ptr addrspace(1) %out, i32 %c, ptr addrspace(1) %fptr) #0 {
   %idx = call i32 @llvm.amdgcn.workitem.id.x() #1
-  %f.gep = getelementptr float, float addrspace(1)* %fptr, i32 %idx
-  %f = load float, float addrspace(1)* %f.gep
+  %f.gep = getelementptr float, ptr addrspace(1) %fptr, i32 %idx
+  %f = load float, ptr addrspace(1) %f.gep
   %f.abs = call float @llvm.fabs.f32(float %f)
   %f.neg = fneg float %f
   %setcc = icmp ne i32 %c, 0
   %select = select i1 %setcc, float %f.abs, float %f.neg
-  store float %select, float addrspace(1)* %out
+  store float %select, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_cndmask_abs_neg_f64:
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}},
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}},
-define amdgpu_kernel void @v_cndmask_abs_neg_f64(double addrspace(1)* %out, i32 %c, double addrspace(1)* %fptr) #0 {
+define amdgpu_kernel void @v_cndmask_abs_neg_f64(ptr addrspace(1) %out, i32 %c, ptr addrspace(1) %fptr) #0 {
   %idx = call i32 @llvm.amdgcn.workitem.id.x() #1
-  %f.gep = getelementptr double, double addrspace(1)* %fptr, i32 %idx
-  %f = load double, double addrspace(1)* %f.gep
+  %f.gep = getelementptr double, ptr addrspace(1) %fptr, i32 %idx
+  %f = load double, ptr addrspace(1) %f.gep
   %f.abs = call double @llvm.fabs.f64(double %f)
   %f.neg = fneg double %f
   %setcc = icmp ne i32 %c, 0
   %select = select i1 %setcc, double %f.abs, double %f.neg
-  store double %select, double addrspace(1)* %out
+  store double %select, ptr addrspace(1) %out
   ret void
 }
 

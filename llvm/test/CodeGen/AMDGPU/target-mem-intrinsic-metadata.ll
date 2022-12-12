@@ -6,13 +6,13 @@
 ; MIR-LABEL: name: ds_append_noalias
 ; MIR: DS_APPEND {{.*}} :: (load store (s32) on %{{.*}}, !noalias !{{[0-9]+}}, addrspace 3)
 define amdgpu_kernel void @ds_append_noalias() {
-  %lds = load i32 addrspace(3)*, i32 addrspace(3)* addrspace(1)* null
-  %val = call i32 @llvm.amdgcn.ds.append.p3i32(i32 addrspace(3)* %lds, i1 false), !noalias !0
-  store i32 %val, i32 addrspace(1)* null, align 4
+  %lds = load ptr addrspace(3), ptr addrspace(1) null
+  %val = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %lds, i1 false), !noalias !0
+  store i32 %val, ptr addrspace(1) null, align 4
   ret void
 }
 
-declare i32 @llvm.amdgcn.ds.append.p3i32(i32 addrspace(3)* nocapture, i1 immarg) #0
+declare i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) nocapture, i1 immarg) #0
 
 attributes #0 = { argmemonly convergent nounwind willreturn }
 

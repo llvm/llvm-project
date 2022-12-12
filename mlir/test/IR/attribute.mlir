@@ -672,6 +672,68 @@ func.func @testConfinedDenseArrayAttrDecreasingOrder() {
 
 // -----
 
+func.func @testConfinedStrictlyPositiveDenseArrayAttr() {
+  "test.confined_strictly_positive_attr"() {
+    i8attr = array<i8: 2, 3>,
+    i16attr = array<i16: 20, 30>,
+    i32attr = array<i32: 1>,
+    i64attr = array<i64: 1, 2, 3>,
+    f32attr = array<f32: 1.1, 2.1>,
+    f64attr = array<f64: 2.1, 3.1>,
+    emptyattr = array<i16>
+  } : () -> ()
+  func.return
+}
+
+// -----
+
+func.func @testConfinedStrictlyPositiveDenseArrayAttr() {
+  // expected-error@+1{{'test.confined_strictly_positive_attr' op attribute 'i64attr' failed to satisfy constraint: i64 dense array attribute whose value is positive}}
+  "test.confined_strictly_positive_attr"() {
+    i8attr = array<i8: 2, 3>,
+    i16attr = array<i16: 20, 30>,
+    i32attr = array<i32: 1>,
+    i64attr = array<i64: 0, 2, 3>,
+    f32attr = array<f32: 1.1, 2.1>,
+    f64attr = array<f64: 2.1, 3.1>,
+    emptyattr = array<i16>
+  } : () -> ()
+  func.return
+}
+
+// -----
+
+func.func @testConfinedNonNegativeDenseArrayAttr() {
+  "test.confined_non_negative_attr"() {
+    i8attr = array<i8: 0, 3>,
+    i16attr = array<i16: 0, 30>,
+    i32attr = array<i32: 1>,
+    i64attr = array<i64: 1, 0, 3>,
+    f32attr = array<f32: 0.0, 2.1>,
+    f64attr = array<f64: 0.0, 3.1>,
+    emptyattr = array<i16>
+  } : () -> ()
+  func.return
+}
+
+// -----
+
+func.func @testConfinedNonNegativeDenseArrayAttr() {
+  // expected-error@+1{{'test.confined_non_negative_attr' op attribute 'i64attr' failed to satisfy constraint: i64 dense array attribute whose value is non-negative}}
+  "test.confined_non_negative_attr"() {
+    i8attr = array<i8: 0, 3>,
+    i16attr = array<i16: 0, 30>,
+    i32attr = array<i32: 1>,
+    i64attr = array<i64: -1, 0, 3>,
+    f32attr = array<f32: 0.0, 2.1>,
+    f64attr = array<f64: 0.0, 3.1>,
+    emptyattr = array<i16>
+  } : () -> ()
+  func.return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // Test SymbolRefAttr
 //===----------------------------------------------------------------------===//

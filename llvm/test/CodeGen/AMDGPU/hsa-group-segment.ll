@@ -5,8 +5,8 @@
 
 define amdgpu_kernel void @test() {
 entry:
-  store i32 0, i32 addrspace(3)* @internal_group
-  store i32 0, i32 addrspace(3)* @external_group
+  store i32 0, ptr addrspace(3) @internal_group
+  store i32 0, ptr addrspace(3) @external_group
   ret void
 }
 

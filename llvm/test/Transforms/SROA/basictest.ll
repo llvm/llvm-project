@@ -1197,9 +1197,9 @@ define void @PR14105_as1(ptr addrspace(1) %ptr) {
 ;
 ; CHECK-LABEL: @PR14105_as1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = alloca { [16 x i8] }, align 8
+; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [16 x i8], align 8
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds { [16 x i8] }, ptr addrspace(1) [[PTR:%.*]], i64 -1
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i32(ptr addrspace(1) align 8 [[GEP]], ptr align 8 [[A]], i32 16, i1 true)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i32(ptr addrspace(1) align 8 [[GEP]], ptr align 8 [[A_SROA_0]], i32 16, i1 true)
 ; CHECK-NEXT:    ret void
 ;
 entry:

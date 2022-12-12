@@ -1,4 +1,4 @@
-; RUN: opt < %s -internalize -internalize-public-api-list main -S | FileCheck %s
+; RUN: opt < %s -passes=internalize -internalize-public-api-list main -S | FileCheck %s
 
 @A = global i32 0
 ; CHECK: @A = internal global i32 0

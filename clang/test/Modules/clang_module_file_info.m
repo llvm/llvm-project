@@ -1,4 +1,4 @@
-// UNSUPPORTED: -zos, -aix
+// UNSUPPORTED: -zos, target={{.*}}-aix{{.*}}
 @import DependsOnModule;
 
 // RUN: rm -rf %t %t-obj

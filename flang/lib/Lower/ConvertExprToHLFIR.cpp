@@ -20,6 +20,8 @@
 #include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
+#include "flang/Optimizer/Builder/Complex.h"
+#include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 
@@ -250,22 +252,18 @@ private:
 //===--------------------------------------------------------------------===//
 
 template <typename T>
-struct BinaryOp {
-  static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         hlfir::Entity lhs, hlfir::Entity rhs) {
-    TODO(loc, "binary op implementation in HLFIR");
-  }
-};
+struct BinaryOp {};
 
 #undef GENBIN
 #define GENBIN(GenBinEvOp, GenBinTyCat, GenBinFirOp)                           \
   template <int KIND>                                                          \
   struct BinaryOp<Fortran::evaluate::GenBinEvOp<Fortran::evaluate::Type<       \
       Fortran::common::TypeCategory::GenBinTyCat, KIND>>> {                    \
+    using Op = Fortran::evaluate::GenBinEvOp<Fortran::evaluate::Type<          \
+        Fortran::common::TypeCategory::GenBinTyCat, KIND>>;                    \
     static hlfir::EntityWithAttributes gen(mlir::Location loc,                 \
                                            fir::FirOpBuilder &builder,         \
-                                           hlfir::Entity lhs,                  \
+                                           const Op &, hlfir::Entity lhs,      \
                                            hlfir::Entity rhs) {                \
       return hlfir::EntityWithAttributes{                                      \
           builder.create<GenBinFirOp>(loc, lhs, rhs)};                         \
@@ -287,8 +285,9 @@ GENBIN(Divide, Complex, fir::DivcOp)
 
 template <Fortran::common::TypeCategory TC, int KIND>
 struct BinaryOp<Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>>> {
+  using Op = Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
+                                         fir::FirOpBuilder &builder, const Op &,
                                          hlfir::Entity lhs, hlfir::Entity rhs) {
     mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
                                                /*params=*/llvm::None);
@@ -300,13 +299,311 @@ struct BinaryOp<Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>>> {
 template <Fortran::common::TypeCategory TC, int KIND>
 struct BinaryOp<
     Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC, KIND>>> {
+  using Op =
+      Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC, KIND>>;
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
+                                         fir::FirOpBuilder &builder, const Op &,
                                          hlfir::Entity lhs, hlfir::Entity rhs) {
     mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
                                                /*params=*/llvm::None);
     return hlfir::EntityWithAttributes{
         Fortran::lower::genPow(builder, loc, ty, lhs, rhs)};
+  }
+};
+
+template <Fortran::common::TypeCategory TC, int KIND>
+struct BinaryOp<
+    Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC, KIND>>> {
+  using Op = Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    // evaluate::Extremum is only created by the front-end when building
+    // compiler generated expressions (like when folding LEN() or shape/bounds
+    // inquiries). MIN and MAX are represented as evaluate::ProcedureRef and are
+    // not going through here. So far the frontend does not generate character
+    // Extremum so there is no way to test it.
+    if constexpr (TC == Fortran::common::TypeCategory::Character) {
+      fir::emitFatalError(loc, "Fortran::evaluate::Extremum are unexpected");
+    }
+    llvm::SmallVector<mlir::Value, 2> args{lhs, rhs};
+    fir::ExtendedValue res = op.ordering == Fortran::evaluate::Ordering::Greater
+                                 ? Fortran::lower::genMax(builder, loc, args)
+                                 : Fortran::lower::genMin(builder, loc, args);
+    return hlfir::EntityWithAttributes{fir::getBase(res)};
+  }
+};
+
+/// Convert parser's INTEGER relational operators to MLIR.
+static mlir::arith::CmpIPredicate
+translateRelational(Fortran::common::RelationalOperator rop) {
+  switch (rop) {
+  case Fortran::common::RelationalOperator::LT:
+    return mlir::arith::CmpIPredicate::slt;
+  case Fortran::common::RelationalOperator::LE:
+    return mlir::arith::CmpIPredicate::sle;
+  case Fortran::common::RelationalOperator::EQ:
+    return mlir::arith::CmpIPredicate::eq;
+  case Fortran::common::RelationalOperator::NE:
+    return mlir::arith::CmpIPredicate::ne;
+  case Fortran::common::RelationalOperator::GT:
+    return mlir::arith::CmpIPredicate::sgt;
+  case Fortran::common::RelationalOperator::GE:
+    return mlir::arith::CmpIPredicate::sge;
+  }
+  llvm_unreachable("unhandled INTEGER relational operator");
+}
+
+/// Convert parser's REAL relational operators to MLIR.
+/// The choice of order (O prefix) vs unorder (U prefix) follows Fortran 2018
+/// requirements in the IEEE context (table 17.1 of F2018). This choice is
+/// also applied in other contexts because it is easier and in line with
+/// other Fortran compilers.
+/// FIXME: The signaling/quiet aspect of the table 17.1 requirement is not
+/// fully enforced. FIR and LLVM `fcmp` instructions do not give any guarantee
+/// whether the comparison will signal or not in case of quiet NaN argument.
+static mlir::arith::CmpFPredicate
+translateFloatRelational(Fortran::common::RelationalOperator rop) {
+  switch (rop) {
+  case Fortran::common::RelationalOperator::LT:
+    return mlir::arith::CmpFPredicate::OLT;
+  case Fortran::common::RelationalOperator::LE:
+    return mlir::arith::CmpFPredicate::OLE;
+  case Fortran::common::RelationalOperator::EQ:
+    return mlir::arith::CmpFPredicate::OEQ;
+  case Fortran::common::RelationalOperator::NE:
+    return mlir::arith::CmpFPredicate::UNE;
+  case Fortran::common::RelationalOperator::GT:
+    return mlir::arith::CmpFPredicate::OGT;
+  case Fortran::common::RelationalOperator::GE:
+    return mlir::arith::CmpFPredicate::OGE;
+  }
+  llvm_unreachable("unhandled REAL relational operator");
+}
+
+template <int KIND>
+struct BinaryOp<Fortran::evaluate::Relational<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, KIND>>> {
+  using Op = Fortran::evaluate::Relational<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    auto cmp = builder.create<mlir::arith::CmpIOp>(
+        loc, translateRelational(op.opr), lhs, rhs);
+    return hlfir::EntityWithAttributes{cmp};
+  }
+};
+
+template <int KIND>
+struct BinaryOp<Fortran::evaluate::Relational<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Real, KIND>>> {
+  using Op = Fortran::evaluate::Relational<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Real, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    auto cmp = builder.create<mlir::arith::CmpFOp>(
+        loc, translateFloatRelational(op.opr), lhs, rhs);
+    return hlfir::EntityWithAttributes{cmp};
+  }
+};
+
+template <int KIND>
+struct BinaryOp<Fortran::evaluate::Relational<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex, KIND>>> {
+  using Op = Fortran::evaluate::Relational<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    auto cmp = builder.create<fir::CmpcOp>(
+        loc, translateFloatRelational(op.opr), lhs, rhs);
+    return hlfir::EntityWithAttributes{cmp};
+  }
+};
+
+template <int KIND>
+struct BinaryOp<Fortran::evaluate::Relational<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, KIND>>> {
+  using Op = Fortran::evaluate::Relational<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    auto [lhsExv, lhsCleanUp] =
+        hlfir::translateToExtendedValue(loc, builder, lhs);
+    auto [rhsExv, rhsCleanUp] =
+        hlfir::translateToExtendedValue(loc, builder, rhs);
+    auto cmp = fir::runtime::genCharCompare(
+        builder, loc, translateRelational(op.opr), lhsExv, rhsExv);
+    if (lhsCleanUp)
+      lhsCleanUp.value()();
+    if (rhsCleanUp)
+      rhsCleanUp.value()();
+    return hlfir::EntityWithAttributes{cmp};
+  }
+};
+
+template <int KIND>
+struct BinaryOp<Fortran::evaluate::LogicalOperation<KIND>> {
+  using Op = Fortran::evaluate::LogicalOperation<KIND>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs,
+                                         hlfir::Entity rhs) {
+    mlir::Type i1Type = builder.getI1Type();
+    mlir::Value i1Lhs = builder.createConvert(loc, i1Type, lhs);
+    mlir::Value i1Rhs = builder.createConvert(loc, i1Type, rhs);
+    switch (op.logicalOperator) {
+    case Fortran::evaluate::LogicalOperator::And:
+      return hlfir::EntityWithAttributes{
+          builder.create<mlir::arith::AndIOp>(loc, i1Lhs, i1Rhs)};
+    case Fortran::evaluate::LogicalOperator::Or:
+      return hlfir::EntityWithAttributes{
+          builder.create<mlir::arith::OrIOp>(loc, i1Lhs, i1Rhs)};
+    case Fortran::evaluate::LogicalOperator::Eqv:
+      return hlfir::EntityWithAttributes{builder.create<mlir::arith::CmpIOp>(
+          loc, mlir::arith::CmpIPredicate::eq, i1Lhs, i1Rhs)};
+    case Fortran::evaluate::LogicalOperator::Neqv:
+      return hlfir::EntityWithAttributes{builder.create<mlir::arith::CmpIOp>(
+          loc, mlir::arith::CmpIPredicate::ne, i1Lhs, i1Rhs)};
+    case Fortran::evaluate::LogicalOperator::Not:
+      // lib/evaluate expression for .NOT. is Fortran::evaluate::Not<KIND>.
+      llvm_unreachable(".NOT. is not a binary operator");
+    }
+    llvm_unreachable("unhandled logical operation");
+  }
+};
+
+template <int KIND>
+struct BinaryOp<Fortran::evaluate::ComplexConstructor<KIND>> {
+  using Op = Fortran::evaluate::ComplexConstructor<KIND>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder, const Op &,
+                                         hlfir::Entity lhs, hlfir::Entity rhs) {
+    mlir::Value res =
+        fir::factory::Complex{builder, loc}.createComplex(KIND, lhs, rhs);
+    return hlfir::EntityWithAttributes{res};
+  }
+};
+
+template <int KIND>
+struct BinaryOp<Fortran::evaluate::SetLength<KIND>> {
+  using Op = Fortran::evaluate::SetLength<KIND>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &, const Op &,
+                                         hlfir::Entity, hlfir::Entity) {
+    TODO(loc, "SetLength lowering to HLFIR");
+  }
+};
+
+//===--------------------------------------------------------------------===//
+// Unary Operation implementation
+//===--------------------------------------------------------------------===//
+
+template <typename T>
+struct UnaryOp {};
+
+template <int KIND>
+struct UnaryOp<Fortran::evaluate::Not<KIND>> {
+  using Op = Fortran::evaluate::Not<KIND>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder, const Op &,
+                                         hlfir::Entity lhs) {
+    mlir::Value one = builder.createBool(loc, true);
+    mlir::Value val = builder.createConvert(loc, builder.getI1Type(), lhs);
+    return hlfir::EntityWithAttributes{
+        builder.create<mlir::arith::XOrIOp>(loc, val, one)};
+  }
+};
+
+template <int KIND>
+struct UnaryOp<Fortran::evaluate::Negate<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, KIND>>> {
+  using Op = Fortran::evaluate::Negate<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder, const Op &,
+                                         hlfir::Entity lhs) {
+    // Like LLVM, integer negation is the binary op "0 - value"
+    mlir::Type type = Fortran::lower::getFIRType(
+        builder.getContext(), Fortran::common::TypeCategory::Integer, KIND,
+        /*params=*/llvm::None);
+    mlir::Value zero = builder.createIntegerConstant(loc, type, 0);
+    return hlfir::EntityWithAttributes{
+        builder.create<mlir::arith::SubIOp>(loc, zero, lhs)};
+  }
+};
+
+template <int KIND>
+struct UnaryOp<Fortran::evaluate::Negate<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Real, KIND>>> {
+  using Op = Fortran::evaluate::Negate<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Real, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder, const Op &,
+                                         hlfir::Entity lhs) {
+    return hlfir::EntityWithAttributes{
+        builder.create<mlir::arith::NegFOp>(loc, lhs)};
+  }
+};
+
+template <int KIND>
+struct UnaryOp<Fortran::evaluate::Negate<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex, KIND>>> {
+  using Op = Fortran::evaluate::Negate<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder, const Op &,
+                                         hlfir::Entity lhs) {
+    return hlfir::EntityWithAttributes{builder.create<fir::NegcOp>(loc, lhs)};
+  }
+};
+
+template <int KIND>
+struct UnaryOp<Fortran::evaluate::ComplexComponent<KIND>> {
+  using Op = Fortran::evaluate::ComplexComponent<KIND>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         const Op &op, hlfir::Entity lhs) {
+    mlir::Value res = fir::factory::Complex{builder, loc}.extractComplexPart(
+        lhs, op.isImaginaryPart);
+    return hlfir::EntityWithAttributes{res};
+  }
+};
+
+template <typename T>
+struct UnaryOp<Fortran::evaluate::Parentheses<T>> {
+  using Op = Fortran::evaluate::Parentheses<T>;
+  static hlfir::EntityWithAttributes
+  gen(mlir::Location loc, fir::FirOpBuilder &, const Op &, hlfir::Entity) {
+    TODO(loc, "Parentheses lowering to HLFIR");
+  }
+};
+
+template <Fortran::common::TypeCategory TC1, int KIND,
+          Fortran::common::TypeCategory TC2>
+struct UnaryOp<
+    Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1, KIND>, TC2>> {
+  using Op =
+      Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1, KIND>, TC2>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder, const Op &,
+                                         hlfir::Entity lhs) {
+    if constexpr (TC1 == Fortran::common::TypeCategory::Character &&
+                  TC2 == TC1) {
+      TODO(loc, "character conversion in HLFIR");
+    }
+    mlir::Type type = Fortran::lower::getFIRType(builder.getContext(), TC1,
+                                                 KIND, /*params=*/llvm::None);
+    mlir::Value res = builder.convertWithSemantics(loc, type, lhs);
+    return hlfir::EntityWithAttributes{res};
   }
 };
 
@@ -388,18 +685,15 @@ private:
     TODO(getLoc(), "lowering ArrayCtor to HLFIR");
   }
 
-  template <Fortran::common::TypeCategory TC1, int KIND,
-            Fortran::common::TypeCategory TC2>
-  hlfir::EntityWithAttributes
-  gen(const Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1, KIND>, TC2>
-          &convert) {
-    TODO(getLoc(), "lowering convert to HLFIR");
-  }
-
   template <typename D, typename R, typename O>
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Operation<D, R, O> &op) {
-    TODO(getLoc(), "lowering unary op to HLFIR");
+    auto &builder = getBuilder();
+    mlir::Location loc = getLoc();
+    if (op.Rank() != 0)
+      TODO(loc, "elemental operations in HLFIR");
+    auto left = hlfir::loadTrivialScalar(loc, builder, gen(op.left()));
+    return UnaryOp<D>::gen(loc, builder, op.derived(), left);
   }
 
   template <typename D, typename R, typename LO, typename RO>
@@ -411,7 +705,7 @@ private:
       TODO(loc, "elemental operations in HLFIR");
     auto left = hlfir::loadTrivialScalar(loc, builder, gen(op.left()));
     auto right = hlfir::loadTrivialScalar(loc, builder, gen(op.right()));
-    return BinaryOp<D>::gen(loc, builder, left, right);
+    return BinaryOp<D>::gen(loc, builder, op.derived(), left, right);
   }
 
   template <int KIND>

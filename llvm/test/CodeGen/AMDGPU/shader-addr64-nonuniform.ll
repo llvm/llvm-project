@@ -15,8 +15,8 @@
 define amdgpu_ps float @nonuniform_uniform(i32 %arg18) {
 .entry:
   %tmp31 = sext i32 %arg18 to i64
-  %tmp32 = getelementptr [6 x <3 x float>], [6 x <3 x float>] addrspace(1)* @indexable, i64 0, i64 %tmp31
-  %tmp33 = load <3 x float>, <3 x float> addrspace(1)* %tmp32, align 16
+  %tmp32 = getelementptr [6 x <3 x float>], ptr addrspace(1) @indexable, i64 0, i64 %tmp31
+  %tmp33 = load <3 x float>, ptr addrspace(1) %tmp32, align 16
   %tmp34 = extractelement <3 x float> %tmp33, i32 0
   ret float %tmp34
 }
@@ -29,9 +29,9 @@ define amdgpu_ps float @nonuniform_uniform(i32 %arg18) {
 define amdgpu_ps float @uniform_nonuniform(i32 inreg %offset, i32 %arg18) {
 .entry:
   %tmp1 = zext i32 %arg18 to i64
-  %tmp2 = inttoptr i64 %tmp1 to [6 x <3 x float>] addrspace(1)*
-  %tmp32 = getelementptr [6 x <3 x float>], [6 x <3 x float>] addrspace(1)* %tmp2, i32 0, i32 %offset
-  %tmp33 = load <3 x float>, <3 x float> addrspace(1)* %tmp32, align 16
+  %tmp2 = inttoptr i64 %tmp1 to ptr addrspace(1)
+  %tmp32 = getelementptr [6 x <3 x float>], ptr addrspace(1) %tmp2, i32 0, i32 %offset
+  %tmp33 = load <3 x float>, ptr addrspace(1) %tmp32, align 16
   %tmp34 = extractelement <3 x float> %tmp33, i32 0
   ret float %tmp34
 }
@@ -44,9 +44,9 @@ define amdgpu_ps float @uniform_nonuniform(i32 inreg %offset, i32 %arg18) {
 define amdgpu_ps float @const_nonuniform(i32 %arg18) {
 .entry:
   %tmp1 = zext i32 %arg18 to i64
-  %tmp2 = inttoptr i64 %tmp1 to [6 x <3 x float>] addrspace(1)*
-  %tmp32 = getelementptr [6 x <3 x float>], [6 x <3 x float>] addrspace(1)* %tmp2, i32 0, i32 1
-  %tmp33 = load <3 x float>, <3 x float> addrspace(1)* %tmp32, align 16
+  %tmp2 = inttoptr i64 %tmp1 to ptr addrspace(1)
+  %tmp32 = getelementptr [6 x <3 x float>], ptr addrspace(1) %tmp2, i32 0, i32 1
+  %tmp33 = load <3 x float>, ptr addrspace(1) %tmp32, align 16
   %tmp34 = extractelement <3 x float> %tmp33, i32 0
   ret float %tmp34
 }
@@ -59,9 +59,9 @@ define amdgpu_ps float @const_nonuniform(i32 %arg18) {
 define amdgpu_ps float @nonuniform_nonuniform(i32 %offset, i32 %arg18) {
 .entry:
   %tmp1 = zext i32 %arg18 to i64
-  %tmp2 = inttoptr i64 %tmp1 to [6 x <3 x float>] addrspace(1)*
-  %tmp32 = getelementptr [6 x <3 x float>], [6 x <3 x float>] addrspace(1)* %tmp2, i32 0, i32 %offset
-  %tmp33 = load <3 x float>, <3 x float> addrspace(1)* %tmp32, align 16
+  %tmp2 = inttoptr i64 %tmp1 to ptr addrspace(1)
+  %tmp32 = getelementptr [6 x <3 x float>], ptr addrspace(1) %tmp2, i32 0, i32 %offset
+  %tmp33 = load <3 x float>, ptr addrspace(1) %tmp32, align 16
   %tmp34 = extractelement <3 x float> %tmp33, i32 0
   ret float %tmp34
 }
@@ -73,8 +73,8 @@ define amdgpu_ps float @nonuniform_nonuniform(i32 %offset, i32 %arg18) {
 define amdgpu_ps float @nonuniform_uniform_const(i32 %arg18) {
 .entry:
   %tmp31 = sext i32 %arg18 to i64
-  %tmp32 = getelementptr [6 x <3 x float>], [6 x <3 x float>] addrspace(1)* @indexable, i64 0, i64 %tmp31, i64 1
-  %tmp33 = load float, float addrspace(1)* %tmp32, align 4
+  %tmp32 = getelementptr [6 x <3 x float>], ptr addrspace(1) @indexable, i64 0, i64 %tmp31, i64 1
+  %tmp33 = load float, ptr addrspace(1) %tmp32, align 4
   ret float %tmp33
 }
 
@@ -85,9 +85,9 @@ define amdgpu_ps float @nonuniform_uniform_const(i32 %arg18) {
 define amdgpu_ps float @uniform_nonuniform_const(i32 inreg %offset, i32 %arg18) {
 .entry:
   %tmp1 = zext i32 %arg18 to i64
-  %tmp2 = inttoptr i64 %tmp1 to [6 x <3 x float>] addrspace(1)*
-  %tmp32 = getelementptr [6 x <3 x float>], [6 x <3 x float>] addrspace(1)* %tmp2, i32 0, i32 %offset, i32 1
-  %tmp33 = load float, float addrspace(1)* %tmp32, align 4
+  %tmp2 = inttoptr i64 %tmp1 to ptr addrspace(1)
+  %tmp32 = getelementptr [6 x <3 x float>], ptr addrspace(1) %tmp2, i32 0, i32 %offset, i32 1
+  %tmp33 = load float, ptr addrspace(1) %tmp32, align 4
   ret float %tmp33
 }
 
@@ -98,9 +98,9 @@ define amdgpu_ps float @uniform_nonuniform_const(i32 inreg %offset, i32 %arg18) 
 define amdgpu_ps float @nonuniform_nonuniform_const(i32 %offset, i32 %arg18) {
 .entry:
   %tmp1 = zext i32 %arg18 to i64
-  %tmp2 = inttoptr i64 %tmp1 to [6 x <3 x float>] addrspace(1)*
-  %tmp32 = getelementptr [6 x <3 x float>], [6 x <3 x float>] addrspace(1)* %tmp2, i32 0, i32 %offset, i32 1
-  %tmp33 = load float, float addrspace(1)* %tmp32, align 4
+  %tmp2 = inttoptr i64 %tmp1 to ptr addrspace(1)
+  %tmp32 = getelementptr [6 x <3 x float>], ptr addrspace(1) %tmp2, i32 0, i32 %offset, i32 1
+  %tmp33 = load float, ptr addrspace(1) %tmp32, align 4
   ret float %tmp33
 }
 

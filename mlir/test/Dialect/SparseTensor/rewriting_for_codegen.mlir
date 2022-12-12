@@ -12,7 +12,7 @@
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
 // CHECK:         %[[R:.*]] = call @createSparseTensorReader(%[[A]])
 // CHECK:         %[[DS:.*]] = memref.alloca(%[[C2]]) : memref<?xindex>
-// CHECK:         call @getSparseTensorReaderDimSizes(%[[R]], %[[DS]])
+// CHECK:         call @copySparseTensorReaderDimSizes(%[[R]], %[[DS]])
 // CHECK:         %[[D0:.*]] = memref.load %[[DS]]{{\[}}%[[C0]]]
 // CHECK:         %[[D1:.*]] = memref.load %[[DS]]{{\[}}%[[C1]]]
 // CHECK:         %[[T:.*]] = bufferization.alloc_tensor(%[[D0]], %[[D1]])
@@ -51,7 +51,7 @@ func.func @sparse_new_symmetry(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #CSR> {
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
 // CHECK:         %[[R:.*]] = call @createSparseTensorReader(%[[A]])
 // CHECK:         %[[DS:.*]] = memref.alloca(%[[C2]]) : memref<?xindex>
-// CHECK:         call @getSparseTensorReaderDimSizes(%[[R]], %[[DS]])
+// CHECK:         call @copySparseTensorReaderDimSizes(%[[R]], %[[DS]])
 // CHECK:         %[[D0:.*]] = memref.load %[[DS]]{{\[}}%[[C0]]]
 // CHECK:         %[[D1:.*]] = memref.load %[[DS]]{{\[}}%[[C1]]]
 // CHECK:         %[[T:.*]] = bufferization.alloc_tensor(%[[D0]], %[[D1]])

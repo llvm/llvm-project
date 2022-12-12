@@ -14,12 +14,12 @@
 #define LLVM_SUPPORT_PROGRAM_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include <chrono>
+#include <optional>
 #include <system_error>
 
 namespace llvm {
@@ -107,11 +107,12 @@ namespace sys {
       ArrayRef<StringRef> Args, ///< An array of strings that are passed to the
       ///< program.  The first element should be the name of the program.
       ///< The array should **not** be terminated by an empty StringRef.
-      Optional<ArrayRef<StringRef>> Env = None, ///< An optional vector of
+      std::optional<ArrayRef<StringRef>> Env =
+          std::nullopt, ///< An optional vector of
       ///< strings to use for the program's environment. If not provided, the
       ///< current program's environment will be used.  If specified, the
       ///< vector should **not** be terminated by an empty StringRef.
-      ArrayRef<Optional<StringRef>> Redirects = {}, ///<
+      ArrayRef<std::optional<StringRef>> Redirects = {}, ///<
       ///< An array of optional paths. Should have a size of zero or three.
       ///< If the array is empty, no redirections are performed.
       ///< Otherwise, the inferior process's stdin(0), stdout(1), and stderr(2)
@@ -133,7 +134,7 @@ namespace sys {
       ///< string is non-empty upon return an error occurred while invoking the
       ///< program.
       bool *ExecutionFailed = nullptr,
-      Optional<ProcessStatistics> *ProcStat = nullptr, ///< If non-zero,
+      std::optional<ProcessStatistics> *ProcStat = nullptr, ///< If non-zero,
       /// provides a pointer to a structure in which process execution
       /// statistics will be stored.
       BitVector *AffinityMask = nullptr ///< CPUs or processors the new
@@ -146,8 +147,8 @@ namespace sys {
   /// \see Wait until the process finished execution or win32 CloseHandle() API
   /// on ProcessInfo.ProcessHandle to avoid memory leaks.
   ProcessInfo ExecuteNoWait(StringRef Program, ArrayRef<StringRef> Args,
-                            Optional<ArrayRef<StringRef>> Env,
-                            ArrayRef<Optional<StringRef>> Redirects = {},
+                            std::optional<ArrayRef<StringRef>> Env,
+                            ArrayRef<std::optional<StringRef>> Redirects = {},
                             unsigned MemoryLimit = 0,
                             std::string *ErrMsg = nullptr,
                             bool *ExecutionFailed = nullptr,
@@ -216,7 +217,8 @@ namespace sys {
       ///< string instance in which error messages will be returned. If the
       ///< string is non-empty upon return an error occurred while invoking the
       ///< program.
-      Optional<ProcessStatistics> *ProcStat = nullptr ///< If non-zero, provides
+      std::optional<ProcessStatistics> *ProcStat =
+          nullptr ///< If non-zero, provides
       /// a pointer to a structure in which process execution statistics will be
       /// stored.
   );

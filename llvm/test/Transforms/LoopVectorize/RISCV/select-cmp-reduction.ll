@@ -255,6 +255,8 @@ define i32 @select_i32_from_icmp(i32* nocapture readonly %v, i32 %a, i32 %b, i64
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i32 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne <4 x i32> [[TMP5]], [[DOTSPLAT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP]])
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP7]], i32 [[B]], i32 [[A]]
 ;
 ; SCALABLE-LABEL: @select_i32_from_icmp
 ; SCALABLE:       vector.ph:

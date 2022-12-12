@@ -1096,6 +1096,7 @@ libc_function(
     hdrs = ["src/string/memcpy.h"],
     copts = ["-mllvm --tail-merge-threshold=0"],
     features = no_sanitize_features,
+    weak = True,
     deps = [
         ":__support_common",
         ":string_memory_utils",
@@ -1107,6 +1108,7 @@ libc_function(
     srcs = ["src/string/memset.cpp"],
     hdrs = ["src/string/memset.h"],
     features = no_sanitize_features,
+    weak = True,
     deps = [
         ":__support_common",
         ":string_memory_utils",
@@ -1118,6 +1120,7 @@ libc_function(
     srcs = ["src/string/memmove.cpp"],
     hdrs = ["src/string/memmove.h"],
     features = no_sanitize_features,
+    weak = True,
     deps = [
         ":__support_common",
         ":string_memory_utils",
@@ -1140,6 +1143,7 @@ libc_function(
     srcs = ["src/string/memcmp.cpp"],
     hdrs = ["src/string/memcmp.h"],
     features = no_sanitize_features,
+    weak = True,
     deps = [
         ":__support_common",
         ":__support_integer_operations",
@@ -1152,6 +1156,7 @@ libc_function(
     srcs = ["src/string/bcmp.cpp"],
     hdrs = ["src/string/bcmp.h"],
     features = no_sanitize_features,
+    weak = True,
     deps = [
         ":__support_common",
         ":string_memory_utils",
@@ -1163,6 +1168,7 @@ libc_function(
     srcs = ["src/string/bzero.cpp"],
     hdrs = ["src/string/bzero.h"],
     features = no_sanitize_features,
+    weak = True,
     deps = [
         ":__support_common",
         ":string_memory_utils",

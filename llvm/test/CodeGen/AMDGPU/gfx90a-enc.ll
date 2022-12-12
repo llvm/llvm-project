@@ -8,11 +8,11 @@
 define amdgpu_kernel void @test(<4 x i32> %x) #0 {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %r1 = tail call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %x, i32 %id, i32 0, i32 0, i32 0)
-  store volatile <4 x float> %r1, <4 x float>* undef
+  store volatile <4 x float> %r1, ptr undef
   %r2 = tail call <4 x half> @llvm.amdgcn.struct.buffer.load.format.v4f16(<4 x i32> %x, i32 %id, i32 0, i32 0, i32 0)
-  store volatile <4 x half> %r2, <4 x half>* undef
+  store volatile <4 x half> %r2, ptr undef
   %r3 = tail call <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32 1, i32 2, <4 x i32> %x, i32 0, i32 0, i32 0)
-  store <4 x i32> %r3, <4 x i32>* undef
+  store <4 x i32> %r3, ptr undef
   ret void
 }
 

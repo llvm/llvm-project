@@ -1,4 +1,4 @@
-; RUN: opt < %s -lowerswitch -S | FileCheck %s
+; RUN: opt < %s -passes=lowerswitch -S | FileCheck %s
 ; CHECK-NOT: icmp eq i32 %0, 1
 
 define i32 @foo(i32 %a) #0 {

@@ -1,4 +1,4 @@
-; RUN: opt -gvn-hoist -S < %s | FileCheck %s
+; RUN: opt -passes=gvn-hoist -S < %s | FileCheck %s
 ; REQUIRES: asserts
 %struct.job_pool.6.7 = type { i32 }
 

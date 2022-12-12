@@ -1,4 +1,3 @@
-; RUN: opt < %s -lowerswitch -S | FileCheck %s
 ; RUN: opt < %s -passes=lowerswitch -S | FileCheck %s
 
 ; We have switch on input.
