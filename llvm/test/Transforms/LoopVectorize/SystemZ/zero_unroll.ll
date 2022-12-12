@@ -1,5 +1,4 @@
 ; RUN: opt -S -passes=loop-vectorize -mtriple=s390x-linux-gnu -tiny-trip-count-interleave-threshold=4 -vectorizer-min-trip-count=8 < %s | FileCheck %s
-; RUN: opt -S -passes=loop-vectorize -mtriple=s390x-linux-gnu -tiny-trip-count-interleave-threshold=4 -vectorizer-min-trip-count=8 < %s | FileCheck %s
 
 define i32 @main(i32 %arg, i8** nocapture readnone %arg1) #0 {
 ;CHECK: vector.body:

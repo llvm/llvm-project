@@ -614,6 +614,20 @@ C2x Feature Support
     void func(nullptr_t);
     func(0);                  // Rejected in C, accepted in C++, Clang rejects
 
+- Implemented `WG14 N2975 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2975.pdf>`_,
+  Relax requirements for va_start. In C2x mode, functions can now be declared
+  fully variadic and the ``va_start`` macro no longer requires passing a second
+  argument (though it accepts a second argument for backwards compatibility).
+  If a second argument is passed, it is neither expanded nor evaluated in C2x
+  mode.
+
+  .. code-block:: c
+
+    void func(...) {  // Invalid in C17 and earlier, valid in C2x and later.
+      va_list list;
+      va_start(list); // Invalid in C17 and earlier, valid in C2x and later.
+      va_end(list);
+    }
 
 C++ Language Changes in Clang
 -----------------------------
@@ -628,11 +642,6 @@ C++ Language Changes in Clang
 - Implemented DR2358 allowing init captures in lambdas in default arguments.
 - implemented `DR2654 <https://wg21.link/cwg2654>`_ which undeprecates
   all compound assignements operations on volatile qualified variables.
-- Implemented DR2631. Invalid ``consteval`` calls in default arguments and default
-  member initializers are diagnosed when and if the default is used.
-  This Fixes `Issue 56379 <https://github.com/llvm/llvm-project/issues/56379>`_
-  and changes the value of ``std::source_location::current()``
-  used in default parameters calls compared to previous versions of Clang.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^

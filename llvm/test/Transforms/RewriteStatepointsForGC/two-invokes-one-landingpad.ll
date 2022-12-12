@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=rewrite-statepoints-for-gc -S | FileCheck %s
-; RUN: opt < %s -passes=rewrite-statepoints-for-gc -S | FileCheck %s
 
 declare void @some_call(i64 addrspace(1)*)
 

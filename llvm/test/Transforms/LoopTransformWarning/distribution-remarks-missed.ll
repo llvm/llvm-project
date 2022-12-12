@@ -1,9 +1,3 @@
-; Legacy pass manager
-; RUN: opt < %s -passes=transform-warning -disable-output -pass-remarks-missed=transform-warning -pass-remarks-analysis=transform-warning 2>&1 | FileCheck %s
-; RUN: opt < %s -passes=transform-warning -disable-output -pass-remarks-output=%t.yaml
-; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
-
-; New pass manager
 ; RUN: opt < %s -passes=transform-warning -disable-output -pass-remarks-missed=transform-warning -pass-remarks-analysis=transform-warning 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=transform-warning -disable-output -pass-remarks-output=%t.yaml
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s

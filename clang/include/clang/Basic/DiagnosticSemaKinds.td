@@ -2646,10 +2646,6 @@ def err_invalid_consteval_take_address : Error<
   " of an immediate invocation">;
 def err_invalid_consteval_call : Error<
   "call to consteval function %q0 is not a constant expression">;
-def note_invalid_consteval_initializer : Note<
-  "in the default initalizer of %0">;
-def note_invalid_consteval_initializer_here : Note<
-  "initialized here %0">;
 def err_invalid_consteval_decl_kind : Error<
   "%0 cannot be declared consteval">;
 def err_invalid_constexpr : Error<
@@ -9854,6 +9850,9 @@ def err_ms_va_start_used_in_sysv_function : Error<
 def warn_second_arg_of_va_start_not_last_named_param : Warning<
   "second argument to 'va_start' is not the last named parameter">,
   InGroup<Varargs>;
+def warn_c17_compat_ellipsis_only_parameter : Warning<
+  "'...' as the only parameter of a function is incompatible with C standards "
+  "before C2x">, DefaultIgnore, InGroup<CPre2xCompat>;
 def warn_va_start_type_is_undefined : Warning<
   "passing %select{an object that undergoes default argument promotion|"
   "an object of reference type|a parameter declared with the 'register' "

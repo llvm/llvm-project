@@ -1,5 +1,4 @@
 ; RUN: opt -passes=hotcoldsplit -hotcoldsplit-threshold=-1 -pass-remarks=hotcoldsplit -S < %s 2>&1 | FileCheck %s
-; RUN: opt -passes=hotcoldsplit -hotcoldsplit-threshold=-1 -pass-remarks=hotcoldsplit -S < %s 2>&1 | FileCheck %s
 
 ; Make sure this compiles. This test used to fail with an invalid phi node: the
 ; two predecessors were outlined and the SSA representation was invalid.

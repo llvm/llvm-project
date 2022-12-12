@@ -55,6 +55,9 @@ public:
   virtual void EnsureAllDIEsInDeclContextHaveBeenParsed(
       lldb_private::CompilerDeclContext decl_context) = 0;
 
+  virtual lldb_private::ConstString
+  GetDIEClassTemplateParams(const DWARFDIE &die) = 0;
+
   static llvm::Optional<lldb_private::SymbolFile::ArrayInfo>
   ParseChildArrayInfo(const DWARFDIE &parent_die,
                       const lldb_private::ExecutionContext *exe_ctx = nullptr);

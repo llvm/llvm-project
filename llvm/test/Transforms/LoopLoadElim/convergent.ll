@@ -1,5 +1,4 @@
 ; RUN: opt -passes=loop-load-elim -S < %s | FileCheck %s
-; RUN: opt -passes=loop-load-elim -S < %s | FileCheck %s
 
 ; Simple st->ld forwarding derived from a lexical forward dep, but
 ; can't introduce runtime checks with a convergent call.

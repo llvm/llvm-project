@@ -8,7 +8,7 @@
 // RUN: %{command}
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{option} = enable-runtime-library=false
+// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
 // RUN: %{command}
 
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>

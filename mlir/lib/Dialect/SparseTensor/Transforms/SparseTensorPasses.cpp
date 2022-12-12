@@ -216,9 +216,9 @@ struct SparseTensorCodegenPass
     // The following operations and dialects may be introduced by the
     // codegen rules, and are therefore marked as legal.
     target.addLegalOp<linalg::FillOp>();
-    target.addLegalDialect<arith::ArithDialect,
-                           bufferization::BufferizationDialect,
-                           memref::MemRefDialect, scf::SCFDialect>();
+    target.addLegalDialect<
+        arith::ArithDialect, bufferization::BufferizationDialect,
+        complex::ComplexDialect, memref::MemRefDialect, scf::SCFDialect>();
     target.addLegalOp<UnrealizedConversionCastOp>();
     // Populate with rules and apply rewriting rules.
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,

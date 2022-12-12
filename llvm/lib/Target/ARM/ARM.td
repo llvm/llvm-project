@@ -542,6 +542,11 @@ def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
                                                  "Don't place a BTI instruction "
                                                  "after a return-twice">;
 
+// Armv8.9-A/Armv9.4-A 2022 Architecture Extensions
+def FeatureCLRBHB : SubtargetFeature<"clrbhb", "HasCLRBHB", "true",
+                                     "Enable Clear BHB instruction">;
+
+
 def FeatureFixCortexA57AES1742098 : SubtargetFeature<"fix-cortex-a57-aes-1742098",
   "FixCortexA57AES1742098", "true",
   "Work around Cortex-A57 Erratum 1742098 / Cortex-A72 Erratum 1655431 (AES)">;
@@ -674,7 +679,7 @@ def HasV8_8aOps   : SubtargetFeature<"v8.8a", "HasV8_8aOps", "true",
 
 def HasV8_9aOps   : SubtargetFeature<"v8.9a", "HasV8_9aOps", "true",
                                    "Support ARM v8.9a instructions",
-                                   [HasV8_8aOps]>;
+                                   [HasV8_8aOps, FeatureCLRBHB]>;
 
 def HasV9_0aOps   : SubtargetFeature<"v9a", "HasV9_0aOps", "true",
                                    "Support ARM v9a instructions",

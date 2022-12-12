@@ -105,7 +105,7 @@ FunctionPass *createBitTrackingDCEPass();
 //
 // SROA - Replace aggregates or pieces of aggregates with scalar SSA values.
 //
-FunctionPass *createSROAPass();
+FunctionPass *createSROAPass(bool PreserveCFG = true);
 
 //===----------------------------------------------------------------------===//
 //

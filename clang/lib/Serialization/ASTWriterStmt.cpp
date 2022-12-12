@@ -1745,9 +1745,6 @@ void ASTStmtWriter::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   Record.AddDeclRef(E->getParam());
   Record.AddDeclRef(cast_or_null<Decl>(E->getUsedContext()));
   Record.AddSourceLocation(E->getUsedLocation());
-  Record.push_back(E->hasRewrittenInit());
-  if (E->hasRewrittenInit())
-    Record.AddStmt(E->getRewrittenExpr());
   Code = serialization::EXPR_CXX_DEFAULT_ARG;
 }
 
@@ -1756,9 +1753,6 @@ void ASTStmtWriter::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   Record.AddDeclRef(E->getField());
   Record.AddDeclRef(cast_or_null<Decl>(E->getUsedContext()));
   Record.AddSourceLocation(E->getExprLoc());
-  Record.push_back(E->hasRewrittenInit());
-  if (E->hasRewrittenInit())
-    Record.AddStmt(E->getRewrittenExpr());
   Code = serialization::EXPR_CXX_DEFAULT_INIT;
 }
 

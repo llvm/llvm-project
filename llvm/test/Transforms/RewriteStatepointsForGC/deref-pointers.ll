@@ -1,5 +1,4 @@
 ; RUN: opt -S -passes=rewrite-statepoints-for-gc < %s | FileCheck %s
-; RUN: opt -S -passes=rewrite-statepoints-for-gc < %s | FileCheck %s
 
 ; CHECK: declare i8 addrspace(1)* @some_function_ret_deref()
 ; CHECK: define i8 addrspace(1)* @test_deref_arg(i8 addrspace(1)* %a)

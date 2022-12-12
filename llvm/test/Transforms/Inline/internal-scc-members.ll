@@ -2,7 +2,6 @@
 ; processing the calls in that SCC.
 ;
 ; RUN: opt < %s -S -passes=inline | FileCheck %s
-; RUN: opt < %s -S -passes=inline | FileCheck %s
 ; RUN: opt < %s -S -passes=inliner-wrapper | FileCheck %s
 
 ; CHECK-LABEL: define internal void @test1_scc0()

@@ -1,5 +1,4 @@
 ; RUN: opt < %s -skip-partial-inlining-cost-analysis -passes=partial-inliner -S  | FileCheck %s
-; RUN: opt < %s -skip-partial-inlining-cost-analysis -passes=partial-inliner -S  | FileCheck %s
 
 declare dso_local void @bar()
 declare dso_local i32 @__CxxFrameHandler3(...)

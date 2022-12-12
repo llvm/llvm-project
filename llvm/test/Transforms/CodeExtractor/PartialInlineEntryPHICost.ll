@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=partial-inliner -S | FileCheck %s
-; RUN: opt < %s -passes=partial-inliner -S | FileCheck %s
 
 ; Check that we do not overcompute the outlined region cost, where the PHIs in
 ; the outlined region entry (BB4) are moved outside the region by CodeExtractor.

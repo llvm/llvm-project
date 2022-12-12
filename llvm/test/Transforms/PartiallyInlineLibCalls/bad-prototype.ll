@@ -1,5 +1,4 @@
 ; RUN: opt -S -passes=partially-inline-libcalls < %s | FileCheck %s
-; RUN: opt -S -passes=partially-inline-libcalls < %s | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

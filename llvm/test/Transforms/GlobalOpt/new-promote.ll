@@ -1,5 +1,4 @@
 ; RUN: opt -passes=globalopt -S < %s | FileCheck %s
-; RUN: opt -passes=globalopt -S < %s | FileCheck %s
 
 %s = type { i32 }
 @g = internal global %s* null, align 8

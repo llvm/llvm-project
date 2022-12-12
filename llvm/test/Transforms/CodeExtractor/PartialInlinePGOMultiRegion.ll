@@ -1,5 +1,4 @@
 ; RUN: opt -S -passes=partial-inliner -min-block-execution=1 -skip-partial-inlining-cost-analysis < %s | FileCheck %s
-; RUN: opt -S -passes=partial-inliner -min-block-execution=1 -skip-partial-inlining-cost-analysis < %s | FileCheck %s
 ; Require a dummy block (if.then.b) as successor to if.then due to PI requirement
 ; of region containing more than one BB.
 define signext i32 @bar(i32 signext %value, i32 signext %ub) #0 !prof !30 {

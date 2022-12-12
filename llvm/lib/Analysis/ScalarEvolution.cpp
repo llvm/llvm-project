@@ -65,7 +65,6 @@
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
@@ -2354,7 +2353,7 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
   return isKnownPredicateAt(Pred, LHS, getConstant(Limit), CtxI);
 }
 
-Optional<SCEV::NoWrapFlags>
+std::optional<SCEV::NoWrapFlags>
 ScalarEvolution::getStrengthenedNoWrapFlagsFromBinOp(
     const OverflowingBinaryOperator *OBO) {
   // It cannot be done any better.
@@ -3935,8 +3934,8 @@ namespace {
 
 class SCEVSequentialMinMaxDeduplicatingVisitor final
     : public SCEVVisitor<SCEVSequentialMinMaxDeduplicatingVisitor,
-                         Optional<const SCEV *>> {
-  using RetVal = Optional<const SCEV *>;
+                         std::optional<const SCEV *>> {
+  using RetVal = std::optional<const SCEV *>;
   using Base = SCEVVisitor<SCEVSequentialMinMaxDeduplicatingVisitor, RetVal>;
 
   ScalarEvolution &SE;
@@ -4872,7 +4871,7 @@ public:
       switch (I->getOpcode()) {
       case Instruction::Select: {
         SelectInst *SI = cast<SelectInst>(I);
-        Optional<const SCEV *> Res =
+        std::optional<const SCEV *> Res =
             compareWithBackedgeCondition(SI->getCondition());
         if (Res) {
           bool IsOne = cast<SCEVConstant>(Res.value())->getValue()->isOne();
@@ -4881,7 +4880,7 @@ public:
         break;
       }
       default: {
-        Optional<const SCEV *> Res = compareWithBackedgeCondition(I);
+        std::optional<const SCEV *> Res = compareWithBackedgeCondition(I);
         if (Res)
           Result = Res.value();
         break;
@@ -4897,7 +4896,7 @@ private:
       : SCEVRewriteVisitor(SE), L(L), BackedgeCond(BECond),
         IsPositiveBECond(IsPosBECond) {}
 
-  Optional<const SCEV *> compareWithBackedgeCondition(Value *IC);
+  std::optional<const SCEV *> compareWithBackedgeCondition(Value *IC);
 
   const Loop *L;
   /// Loop back condition.
@@ -4906,7 +4905,7 @@ private:
   bool IsPositiveBECond;
 };
 
-Optional<const SCEV *>
+std::optional<const SCEV *>
 SCEVBackedgeConditionFolder::compareWithBackedgeCondition(Value *IC) {
 
   // If value matches the backedge condition for loop latch,
@@ -5334,7 +5333,7 @@ static const Loop *isIntegerLoopHeaderPHI(const PHINode *PN, LoopInfo &LI) {
 //    which correspond to a phi->trunc->add->sext/zext->phi update chain.
 //
 // 3) Outline common code with createAddRecFromPHI to avoid duplication.
-Optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
+std::optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
 ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI) {
   SmallVector<const SCEVPredicate *, 3> Predicates;
 
@@ -5545,7 +5544,7 @@ ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI
   return PredRewrite;
 }
 
-Optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
+std::optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
 ScalarEvolution::createAddRecFromPHIWithCasts(const SCEVUnknown *SymbolicPHI) {
   auto *PN = cast<PHINode>(SymbolicPHI->getValue());
   const Loop *L = isIntegerLoopHeaderPHI(PN, LI);
@@ -5567,7 +5566,7 @@ ScalarEvolution::createAddRecFromPHIWithCasts(const SCEVUnknown *SymbolicPHI) {
     return Rewrite;
   }
 
-  Optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
+  std::optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
     Rewrite = createAddRecFromPHIWithCastsImpl(SymbolicPHI);
 
   // Record in the cache that the analysis failed
@@ -6122,7 +6121,7 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
   return getUnknown(I);
 }
 
-static Optional<const SCEV *>
+static std::optional<const SCEV *>
 createNodeForSelectViaUMinSeq(ScalarEvolution *SE, const SCEV *CondExpr,
                               const SCEV *TrueExpr, const SCEV *FalseExpr) {
   assert(CondExpr->getType()->isIntegerTy(1) &&
@@ -6155,10 +6154,9 @@ createNodeForSelectViaUMinSeq(ScalarEvolution *SE, const SCEV *CondExpr,
                                            /*Sequential=*/true));
 }
 
-static Optional<const SCEV *> createNodeForSelectViaUMinSeq(ScalarEvolution *SE,
-                                                            Value *Cond,
-                                                            Value *TrueVal,
-                                                            Value *FalseVal) {
+static std::optional<const SCEV *>
+createNodeForSelectViaUMinSeq(ScalarEvolution *SE, Value *Cond, Value *TrueVal,
+                              Value *FalseVal) {
   if (!isa<ConstantInt>(TrueVal) && !isa<ConstantInt>(FalseVal))
     return std::nullopt;
 
@@ -6179,7 +6177,7 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIViaUMinSeq(
   if (!V->getType()->isIntegerTy(1))
     return getUnknown(V);
 
-  if (Optional<const SCEV *> S =
+  if (std::optional<const SCEV *> S =
           createNodeForSelectViaUMinSeq(this, Cond, TrueVal, FalseVal))
     return *S;
 
@@ -6308,7 +6306,7 @@ uint32_t ScalarEvolution::GetMinTrailingZeros(const SCEV *S) {
 }
 
 /// Helper method to assign a range to V from metadata present in the IR.
-static Optional<ConstantRange> GetRangeFromMetadata(Value *V) {
+static std::optional<ConstantRange> GetRangeFromMetadata(Value *V) {
   if (Instruction *I = dyn_cast<Instruction>(V))
     if (MDNode *MD = I->getMetadata(LLVMContext::MD_range))
       return getConstantRangeFromMetadata(*MD);
@@ -6708,7 +6706,7 @@ const ConstantRange &ScalarEvolution::getRangeRef(
   if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(S)) {
 
     // Check if the IR explicitly contains !range metadata.
-    Optional<ConstantRange> MDRange = GetRangeFromMetadata(U->getValue());
+    std::optional<ConstantRange> MDRange = GetRangeFromMetadata(U->getValue());
     if (MDRange)
       ConservativeResult =
           ConservativeResult.intersectWith(MDRange.value(), RangeType);
@@ -8820,7 +8818,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCond(
                                         ControlsExit, AllowPredicates);
 }
 
-Optional<ScalarEvolution::ExitLimit>
+std::optional<ScalarEvolution::ExitLimit>
 ScalarEvolution::ExitLimitCache::find(const Loop *L, Value *ExitCond,
                                       bool ExitIfTrue, bool ControlsExit,
                                       bool AllowPredicates) {
@@ -8927,7 +8925,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
   return computeExitCountExhaustively(L, ExitCond, ExitIfTrue);
 }
 
-Optional<ScalarEvolution::ExitLimit>
+std::optional<ScalarEvolution::ExitLimit>
 ScalarEvolution::computeExitLimitFromCondFromBinOp(
     ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, bool ExitIfTrue,
     bool ControlsExit, bool AllowPredicates) {
@@ -10088,7 +10086,8 @@ GetQuadraticEquation(const SCEVAddRecExpr *AddRec) {
 /// (a) if X and Y both exist, return min(X, Y),
 /// (b) if neither X nor Y exist, return std::nullopt,
 /// (c) if exactly one of X and Y exists, return that value.
-static Optional<APInt> MinOptional(Optional<APInt> X, Optional<APInt> Y) {
+static std::optional<APInt> MinOptional(std::optional<APInt> X,
+                                        std::optional<APInt> Y) {
   if (X && Y) {
     unsigned W = std::max(X->getBitWidth(), Y->getBitWidth());
     APInt XW = X->sext(W);
@@ -10111,7 +10110,8 @@ static Optional<APInt> MinOptional(Optional<APInt> X, Optional<APInt> Y) {
 /// coefficients. The reason is that the coefficients of the quadratic
 /// equation are BW+1 bits wide (to avoid truncation when converting from
 /// the addrec to the equation).
-static Optional<APInt> TruncIfPossible(Optional<APInt> X, unsigned BitWidth) {
+static std::optional<APInt> TruncIfPossible(std::optional<APInt> X,
+                                            unsigned BitWidth) {
   if (!X)
     return std::nullopt;
   unsigned W = X->getBitWidth();
@@ -10134,7 +10134,7 @@ static Optional<APInt> TruncIfPossible(Optional<APInt> X, unsigned BitWidth) {
 /// (b) SolveQuadraticEquationWrap was unable to find a solution. For cases
 ///     like x^2 = 5, no integer solutions exist, in other cases an integer
 ///     solution may exist, but SolveQuadraticEquationWrap may fail to find it.
-static Optional<APInt>
+static std::optional<APInt>
 SolveQuadraticAddRecExact(const SCEVAddRecExpr *AddRec, ScalarEvolution &SE) {
   APInt A, B, C, M;
   unsigned BitWidth;
@@ -10144,7 +10144,8 @@ SolveQuadraticAddRecExact(const SCEVAddRecExpr *AddRec, ScalarEvolution &SE) {
 
   std::tie(A, B, C, M, BitWidth) = *T;
   LLVM_DEBUG(dbgs() << __func__ << ": solving for unsigned overflow\n");
-  Optional<APInt> X = APIntOps::SolveQuadraticEquationWrap(A, B, C, BitWidth+1);
+  std::optional<APInt> X =
+      APIntOps::SolveQuadraticEquationWrap(A, B, C, BitWidth + 1);
   if (!X)
     return std::nullopt;
 
@@ -10166,7 +10167,7 @@ SolveQuadraticAddRecExact(const SCEVAddRecExpr *AddRec, ScalarEvolution &SE) {
 /// (a) the addrec coefficients are not constant, or
 /// (b) SolveQuadraticEquationWrap was unable to find a solution for the
 ///     bounds of the range.
-static Optional<APInt>
+static std::optional<APInt>
 SolveQuadraticAddRecRange(const SCEVAddRecExpr *AddRec,
                           const ConstantRange &Range, ScalarEvolution &SE) {
   assert(AddRec->getOperand(0)->isZero() &&
@@ -10192,14 +10193,15 @@ SolveQuadraticAddRecRange(const SCEVAddRecExpr *AddRec,
   // cannot make any conclusions.
   // Return a pair: the optional solution and a flag indicating if the
   // solution was found.
-  auto SolveForBoundary = [&](APInt Bound) -> std::pair<Optional<APInt>,bool> {
+  auto SolveForBoundary =
+      [&](APInt Bound) -> std::pair<std::optional<APInt>, bool> {
     // Solve for signed overflow and unsigned overflow, pick the lower
     // solution.
     LLVM_DEBUG(dbgs() << "SolveQuadraticAddRecRange: checking boundary "
                       << Bound << " (before multiplying by " << M << ")\n");
     Bound *= M; // The quadratic equation multiplier.
 
-    Optional<APInt> SO;
+    std::optional<APInt> SO;
     if (BitWidth > 1) {
       LLVM_DEBUG(dbgs() << "SolveQuadraticAddRecRange: solving for "
                            "signed overflow\n");
@@ -10207,8 +10209,8 @@ SolveQuadraticAddRecRange(const SCEVAddRecExpr *AddRec,
     }
     LLVM_DEBUG(dbgs() << "SolveQuadraticAddRecRange: solving for "
                          "unsigned overflow\n");
-    Optional<APInt> UO = APIntOps::SolveQuadraticEquationWrap(A, B, -Bound,
-                                                              BitWidth+1);
+    std::optional<APInt> UO =
+        APIntOps::SolveQuadraticEquationWrap(A, B, -Bound, BitWidth + 1);
 
     auto LeavesRange = [&] (const APInt &X) {
       ConstantInt *C0 = ConstantInt::get(SE.getContext(), X);
@@ -10231,10 +10233,10 @@ SolveQuadraticAddRecRange(const SCEVAddRecExpr *AddRec,
 
     // Check the smaller value first to see if it leaves the range.
     // At this point, both SO and UO must have values.
-    Optional<APInt> Min = MinOptional(SO, UO);
+    std::optional<APInt> Min = MinOptional(SO, UO);
     if (LeavesRange(*Min))
       return { Min, true };
-    Optional<APInt> Max = Min == SO ? UO : SO;
+    std::optional<APInt> Max = Min == SO ? UO : SO;
     if (LeavesRange(*Max))
       return { Max, true };
 
@@ -10800,9 +10802,9 @@ bool ScalarEvolution::isKnownPredicate(ICmpInst::Predicate Pred,
   return isKnownViaNonRecursiveReasoning(Pred, LHS, RHS);
 }
 
-Optional<bool> ScalarEvolution::evaluatePredicate(ICmpInst::Predicate Pred,
-                                                  const SCEV *LHS,
-                                                  const SCEV *RHS) {
+std::optional<bool> ScalarEvolution::evaluatePredicate(ICmpInst::Predicate Pred,
+                                                       const SCEV *LHS,
+                                                       const SCEV *RHS) {
   if (isKnownPredicate(Pred, LHS, RHS))
     return true;
   else if (isKnownPredicate(ICmpInst::getInversePredicate(Pred), LHS, RHS))
@@ -10818,11 +10820,10 @@ bool ScalarEvolution::isKnownPredicateAt(ICmpInst::Predicate Pred,
          isBasicBlockEntryGuardedByCond(CtxI->getParent(), Pred, LHS, RHS);
 }
 
-Optional<bool> ScalarEvolution::evaluatePredicateAt(ICmpInst::Predicate Pred,
-                                                    const SCEV *LHS,
-                                                    const SCEV *RHS,
-                                                    const Instruction *CtxI) {
-  Optional<bool> KnownWithoutContext = evaluatePredicate(Pred, LHS, RHS);
+std::optional<bool>
+ScalarEvolution::evaluatePredicateAt(ICmpInst::Predicate Pred, const SCEV *LHS,
+                                     const SCEV *RHS, const Instruction *CtxI) {
+  std::optional<bool> KnownWithoutContext = evaluatePredicate(Pred, LHS, RHS);
   if (KnownWithoutContext)
     return KnownWithoutContext;
 
@@ -10843,7 +10844,7 @@ bool ScalarEvolution::isKnownOnEveryIteration(ICmpInst::Predicate Pred,
          isLoopBackedgeGuardedByCond(L, Pred, LHS->getPostIncExpr(*this), RHS);
 }
 
-Optional<ScalarEvolution::MonotonicPredicateType>
+std::optional<ScalarEvolution::MonotonicPredicateType>
 ScalarEvolution::getMonotonicPredicateType(const SCEVAddRecExpr *LHS,
                                            ICmpInst::Predicate Pred) {
   auto Result = getMonotonicPredicateTypeImpl(LHS, Pred);
@@ -10864,7 +10865,7 @@ ScalarEvolution::getMonotonicPredicateType(const SCEVAddRecExpr *LHS,
   return Result;
 }
 
-Optional<ScalarEvolution::MonotonicPredicateType>
+std::optional<ScalarEvolution::MonotonicPredicateType>
 ScalarEvolution::getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
                                                ICmpInst::Predicate Pred) {
   // A zero step value for LHS means the induction variable is essentially a
@@ -10908,7 +10909,7 @@ ScalarEvolution::getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
   }
 }
 
-Optional<ScalarEvolution::LoopInvariantPredicate>
+std::optional<ScalarEvolution::LoopInvariantPredicate>
 ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
                                            const SCEV *LHS, const SCEV *RHS,
                                            const Loop *L,
@@ -10994,7 +10995,7 @@ ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
   return std::nullopt;
 }
 
-Optional<ScalarEvolution::LoopInvariantPredicate>
+std::optional<ScalarEvolution::LoopInvariantPredicate>
 ScalarEvolution::getLoopInvariantExitCondDuringFirstIterations(
     ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS, const Loop *L,
     const Instruction *CtxI, const SCEV *MaxIter) {
@@ -11775,8 +11776,8 @@ bool ScalarEvolution::splitBinaryAdd(const SCEV *Expr,
   return true;
 }
 
-Optional<APInt> ScalarEvolution::computeConstantDifference(const SCEV *More,
-                                                           const SCEV *Less) {
+std::optional<APInt>
+ScalarEvolution::computeConstantDifference(const SCEV *More, const SCEV *Less) {
   // We avoid subtracting expressions here because this function is usually
   // fairly deep in the call stack (i.e. is called many times).
 
@@ -11933,8 +11934,8 @@ bool ScalarEvolution::isImpliedCondOperandsViaNoOverflow(
   // neither necessary nor sufficient to prove "(FoundLHS + C) s< (FoundRHS +
   // C)".
 
-  Optional<APInt> LDiff = computeConstantDifference(LHS, FoundLHS);
-  Optional<APInt> RDiff = computeConstantDifference(RHS, FoundRHS);
+  std::optional<APInt> LDiff = computeConstantDifference(LHS, FoundLHS);
+  std::optional<APInt> RDiff = computeConstantDifference(RHS, FoundRHS);
   if (!LDiff || !RDiff || *LDiff != *RDiff)
     return false;
 
@@ -12476,7 +12477,7 @@ bool ScalarEvolution::isImpliedCondOperandsViaRanges(ICmpInst::Predicate Pred,
     // reduce the compile time impact of this optimization.
     return false;
 
-  Optional<APInt> Addend = computeConstantDifference(LHS, FoundLHS);
+  std::optional<APInt> Addend = computeConstantDifference(LHS, FoundLHS);
   if (!Addend)
     return false;
 
@@ -14404,8 +14405,9 @@ private:
   const SCEV *convertToAddRecWithPreds(const SCEVUnknown *Expr) {
     if (!isa<PHINode>(Expr->getValue()))
       return Expr;
-    Optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
-    PredicatedRewrite = SE.createAddRecFromPHIWithCasts(Expr);
+    std::optional<
+        std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
+        PredicatedRewrite = SE.createAddRecFromPHIWithCasts(Expr);
     if (!PredicatedRewrite)
       return Expr;
     for (const auto *P : PredicatedRewrite->second){

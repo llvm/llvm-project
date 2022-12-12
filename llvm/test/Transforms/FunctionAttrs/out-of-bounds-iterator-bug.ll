@@ -1,5 +1,4 @@
 ; RUN: opt -passes=function-attrs -S < %s | FileCheck %s
-; RUN: opt -passes=function-attrs -S < %s | FileCheck %s
 
 ; This checks for a previously existing iterator wraparound bug in
 ; FunctionAttrs, and in the process covers corner cases with varargs.

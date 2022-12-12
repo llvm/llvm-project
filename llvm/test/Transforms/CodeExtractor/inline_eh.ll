@@ -1,5 +1,4 @@
 ; RUN: opt < %s -skip-partial-inlining-cost-analysis -passes=partial-inliner -S  | FileCheck %s
-; RUN: opt < %s -skip-partial-inlining-cost-analysis -passes=partial-inliner -S  | FileCheck %s
 
 declare void @bar()
 declare i32 @__gxx_personality_v0(...)

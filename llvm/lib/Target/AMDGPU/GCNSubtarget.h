@@ -601,6 +601,8 @@ public:
            (EnableFlatScratch && hasFlatScratchInsts());
   }
 
+  bool hasDSAddTid() const { return getGeneration() >= GFX9; }
+
   bool hasGlobalAddTidInsts() const {
     return GFX10_BEncoding;
   }
@@ -1111,8 +1113,6 @@ public:
   // GFX940 is a derivation to GFX90A. hasGFX940Insts() being true implies that
   // hasGFX90AInsts is also true.
   bool hasGFX940Insts() const { return GFX940Insts; }
-
-  bool hasDSAddTid() const { return getGeneration() >= GFX9; }
 
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 

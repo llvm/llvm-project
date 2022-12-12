@@ -1,5 +1,4 @@
 ; RUN: opt -S -passes=mergefunc < %s | FileCheck %s
-; RUN: opt -S -passes=mergefunc < %s | FileCheck %s
 
 ; These two functions are identical. The basic block labels are the same, and
 ; induce the same CFG. We are testing that block addresses within different

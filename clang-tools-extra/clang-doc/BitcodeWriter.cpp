@@ -121,7 +121,10 @@ static const llvm::IndexedMap<llvm::StringRef, BlockIdToIndexFunctor>
           {BI_BASE_RECORD_BLOCK_ID, "BaseRecordBlock"},
           {BI_FUNCTION_BLOCK_ID, "FunctionBlock"},
           {BI_COMMENT_BLOCK_ID, "CommentBlock"},
-          {BI_REFERENCE_BLOCK_ID, "ReferenceBlock"}};
+          {BI_REFERENCE_BLOCK_ID, "ReferenceBlock"},
+          {BI_TEMPLATE_BLOCK_ID, "TemplateBlock"},
+          {BI_TEMPLATE_SPECIALIZATION_BLOCK_ID, "TemplateSpecializationBlock"},
+          {BI_TEMPLATE_PARAM_BLOCK_ID, "TemplateParamBlock"}};
       assert(Inits.size() == BlockIdCount);
       for (const auto &Init : Inits)
         BlockIdNameMap[Init.first] = Init.second;
@@ -186,9 +189,12 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {FUNCTION_IS_METHOD, {"IsMethod", &BoolAbbrev}},
           {REFERENCE_USR, {"USR", &SymbolIDAbbrev}},
           {REFERENCE_NAME, {"Name", &StringAbbrev}},
+          {REFERENCE_QUAL_NAME, {"QualName", &StringAbbrev}},
           {REFERENCE_TYPE, {"RefType", &IntAbbrev}},
           {REFERENCE_PATH, {"Path", &StringAbbrev}},
           {REFERENCE_FIELD, {"Field", &IntAbbrev}},
+          {TEMPLATE_PARAM_CONTENTS, {"Contents", &StringAbbrev}},
+          {TEMPLATE_SPECIALIZATION_OF, {"SpecializationOf", &SymbolIDAbbrev}},
           {TYPEDEF_USR, {"USR", &SymbolIDAbbrev}},
           {TYPEDEF_NAME, {"Name", &StringAbbrev}},
           {TYPEDEF_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
@@ -244,8 +250,12 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
           FUNCTION_ACCESS, FUNCTION_IS_METHOD}},
         // Reference Block
         {BI_REFERENCE_BLOCK_ID,
-         {REFERENCE_USR, REFERENCE_NAME, REFERENCE_TYPE, REFERENCE_PATH,
-          REFERENCE_FIELD}}};
+         {REFERENCE_USR, REFERENCE_NAME, REFERENCE_QUAL_NAME, REFERENCE_TYPE,
+          REFERENCE_PATH, REFERENCE_FIELD}},
+        // Template Blocks.
+        {BI_TEMPLATE_BLOCK_ID, {}},
+        {BI_TEMPLATE_PARAM_BLOCK_ID, {TEMPLATE_PARAM_CONTENTS}},
+        {BI_TEMPLATE_SPECIALIZATION_BLOCK_ID, {TEMPLATE_SPECIALIZATION_OF}}};
 
 // AbbreviationMap
 
@@ -378,6 +388,8 @@ void ClangDocBitcodeWriter::emitRecord(unsigned Val, RecordId ID) {
   Stream.EmitRecordWithAbbrev(Abbrevs.get(ID), Record);
 }
 
+void ClangDocBitcodeWriter::emitRecord(const TemplateInfo &Templ) {}
+
 bool ClangDocBitcodeWriter::prepRecordData(RecordId ID, bool ShouldEmit) {
   assert(RecordIdNameMap[ID] && "Unknown RecordId.");
   if (!ShouldEmit)
@@ -416,6 +428,7 @@ void ClangDocBitcodeWriter::emitBlock(const Reference &R, FieldId Field) {
   StreamSubBlockGuard Block(Stream, BI_REFERENCE_BLOCK_ID);
   emitRecord(R.USR, REFERENCE_USR);
   emitRecord(R.Name, REFERENCE_NAME);
+  emitRecord(R.QualName, REFERENCE_QUAL_NAME);
   emitRecord((unsigned)R.RefType, REFERENCE_TYPE);
   emitRecord(R.Path, REFERENCE_PATH);
   emitRecord((unsigned)Field, REFERENCE_FIELD);
@@ -556,6 +569,8 @@ void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
     emitBlock(C);
   for (const auto &C : I.Children.Typedefs)
     emitBlock(C);
+  if (I.Template)
+    emitBlock(*I.Template);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const BaseRecordInfo &I) {
@@ -591,6 +606,28 @@ void ClangDocBitcodeWriter::emitBlock(const FunctionInfo &I) {
   emitBlock(I.ReturnType);
   for (const auto &N : I.Params)
     emitBlock(N);
+  if (I.Template)
+    emitBlock(*I.Template);
+}
+
+void ClangDocBitcodeWriter::emitBlock(const TemplateInfo &T) {
+  StreamSubBlockGuard Block(Stream, BI_TEMPLATE_BLOCK_ID);
+  for (const auto &P : T.Params)
+    emitBlock(P);
+  if (T.Specialization)
+    emitBlock(*T.Specialization);
+}
+
+void ClangDocBitcodeWriter::emitBlock(const TemplateSpecializationInfo &T) {
+  StreamSubBlockGuard Block(Stream, BI_TEMPLATE_SPECIALIZATION_BLOCK_ID);
+  emitRecord(T.SpecializationOf, TEMPLATE_SPECIALIZATION_OF);
+  for (const auto &P : T.Params)
+    emitBlock(P);
+}
+
+void ClangDocBitcodeWriter::emitBlock(const TemplateParamInfo &T) {
+  StreamSubBlockGuard Block(Stream, BI_TEMPLATE_PARAM_BLOCK_ID);
+  emitRecord(T.Contents, TEMPLATE_PARAM_CONTENTS);
 }
 
 bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {

@@ -1,5 +1,4 @@
 ; RUN: opt -S -passes=partial-inliner -skip-partial-inlining-cost-analysis < %s   | FileCheck %s
-; RUN: opt -S -passes=partial-inliner -skip-partial-inlining-cost-analysis < %s   | FileCheck %s
 
 %class.A = type { i32 }
 @cond = local_unnamed_addr global i32 0, align 4
