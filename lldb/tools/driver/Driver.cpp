@@ -59,7 +59,7 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE) constexpr llvm::StringLiteral NAME[] = VALUE;
 #include "Options.inc"
 #undef PREFIX
 

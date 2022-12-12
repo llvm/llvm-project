@@ -121,11 +121,12 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr std::initializer_list<StringLiteral> NAME = VALUE;
 #include "LinkerWrapperOpts.inc"
 #undef PREFIX
 
-static constexpr OptTable::Info InfoTable[] = {
+static constexpr std::initializer_list<OptTable::Info> InfoTable = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {PREFIX, NAME,  HELPTEXT,    METAVAR,     OPT_##ID,  Option::KIND##Class,    \
