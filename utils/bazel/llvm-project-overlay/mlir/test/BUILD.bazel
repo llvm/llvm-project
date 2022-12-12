@@ -599,6 +599,7 @@ cc_library(
         "//mlir:LinalgTransforms",
         "//mlir:MathToLLVM",
         "//mlir:MemRefToLLVM",
+        "//mlir:MemRefTransforms",
         "//mlir:Pass",
         "//mlir:ReconcileUnrealizedCasts",
         "//mlir:SCFToControlFlow",
