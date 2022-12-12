@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/Config/config.h"
-#if defined(LLVM_HAVE_TF_API)
+#if defined(LLVM_HAVE_TFLITE)
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/Utils/TrainingLogger.h"
@@ -425,4 +425,4 @@ void Logger::flushLogs(raw_ostream &OS,
     OS << OutStr;
   }
 }
-#endif // defined(LLVM_HAVE_TF_API)
+#endif // defined(LLVM_HAVE_TFLITE)

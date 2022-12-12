@@ -95,7 +95,7 @@ template <> Pass *llvm::callDefaultCtor<RegAllocEvictionAdvisorAnalysis>() {
     Ret = new DefaultEvictionAdvisorAnalysis(/*NotAsRequested*/ false);
     break;
   case RegAllocEvictionAdvisorAnalysis::AdvisorMode::Development:
-#if defined(LLVM_HAVE_TF_API)
+#if defined(LLVM_HAVE_TFLITE)
     Ret = createDevelopmentModeAdvisor();
 #endif
     break;
