@@ -42,7 +42,6 @@ struct DepscanPrefixMapping {
   /// Add path mappings from the current path in \p Invocation to the new path
   /// from \c DepscanPrefixMapping to the \p Mapper.
   llvm::Error configurePrefixMapper(const CompilerInvocation &Invocation,
-                                    llvm::StringSaver &Saver,
                                     llvm::PrefixMapper &Mapper) const;
 
   /// Apply the mappings from \p Mapper to \p Invocation.

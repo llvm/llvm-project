@@ -172,8 +172,7 @@ void DepscanPrefixMapping::remapInvocationPaths(CompilerInvocation &Invocation,
 }
 
 Error DepscanPrefixMapping::configurePrefixMapper(
-    const CompilerInvocation &Invocation, llvm::StringSaver &Saver,
-    llvm::PrefixMapper &Mapper) const {
+    const CompilerInvocation &Invocation, llvm::PrefixMapper &Mapper) const {
   auto isPathApplicableAsPrefix = [](StringRef Path) -> bool {
     if (Path.empty())
       return false;
@@ -190,7 +189,7 @@ Error DepscanPrefixMapping::configurePrefixMapper(
     StringRef SDK = HSOpts.Sysroot;
     if (isPathApplicableAsPrefix(SDK))
       // Need a new copy of the string since the invocation will be modified.
-      if (auto E = Mapper.add({Saver.save(SDK), *NewSDKPath}))
+      if (auto E = Mapper.add({SDK, *NewSDKPath}))
         return E;
   }
   if (NewToolchainPath) {
@@ -208,7 +207,7 @@ Error DepscanPrefixMapping::configurePrefixMapper(
     }
     if (isPathApplicableAsPrefix(Guess))
       // Need a new copy of the string since the invocation will be modified.
-      if (auto E = Mapper.add({Saver.save(Guess), *NewToolchainPath}))
+      if (auto E = Mapper.add({Guess, *NewToolchainPath}))
         return E;
   }
   if (!PrefixMap.empty()) {
@@ -244,7 +243,7 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver(Alloc);
   llvm::TreePathPrefixMapper Mapper(&FS);
-  if (Error E = PrefixMapping.configurePrefixMapper(Invocation, Saver, Mapper))
+  if (Error E = PrefixMapping.configurePrefixMapper(Invocation, Mapper))
     return std::move(E);
 
   auto ScanInvocation = std::make_shared<CompilerInvocation>(Invocation);
