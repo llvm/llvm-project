@@ -22,12 +22,12 @@
 
 // CHECK-LABEL: func.func @fold_yield_arg_zero() -> tensor<1024x1024xf64> {
 // CHECK:         %[[VAL_0:.*]] = arith.constant dense<0.000000e+00> : tensor<1024x1024xf64>
-// CHECK:         %[[VAL_1:.*]] = bufferization.alloc_tensor() copy(%[[VAL_0]]) {bufferization.escape = [false], memory_space = 0 : i64} : tensor<1024x1024xf64>
+// CHECK:         %[[VAL_1:.*]] = bufferization.alloc_tensor() copy(%[[VAL_0]]) {bufferization.escape = [false]} : tensor<1024x1024xf64>
 // CHECK:         return %[[VAL_1]] : tensor<1024x1024xf64>
 // CHECK:       }
 func.func @fold_yield_arg_zero() -> tensor<1024x1024xf64> {
   %cst = arith.constant 0.000000e+00 : f64
-  %0 = tensor.empty() : tensor<1024x1024xf64>
+  %0 = bufferization.alloc_tensor() : tensor<1024x1024xf64>
   %1 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> ()>,
                                         affine_map<(d0, d1) -> (d0, d1)>],
                                         iterator_types = ["parallel", "parallel"]}
@@ -41,12 +41,12 @@ func.func @fold_yield_arg_zero() -> tensor<1024x1024xf64> {
 
 // CHECK-LABEL: func.func @fold_yield_direct_zero() -> tensor<32xf64> {
 // CHECK:         %[[VAL_0:.*]] = arith.constant dense<0.000000e+00> : tensor<32xf64>
-// CHECK:         %[[VAL_1:.*]] = bufferization.alloc_tensor() copy(%[[VAL_0]]) {bufferization.escape = [false], memory_space = 0 : i64} : tensor<32xf64>
+// CHECK:         %[[VAL_1:.*]] = bufferization.alloc_tensor() copy(%[[VAL_0]]) {bufferization.escape = [false]} : tensor<32xf64>
 // CHECK:         return %[[VAL_1]] : tensor<32xf64>
 // CHECK:       }
 func.func @fold_yield_direct_zero() -> tensor<32xf64> {
   %cst = arith.constant 0.000000e+00 : f64
-  %0 = tensor.empty() : tensor<32xf64>
+  %0 = bufferization.alloc_tensor() : tensor<32xf64>
   %1 = linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>],
                                         iterator_types = ["parallel"]}
                                         outs(%0 : tensor<32xf64>) {
