@@ -1558,7 +1558,8 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
       const auto *PI = getPredicateInfoFor(&CB);
       assert(PI && "Missing predicate info for ssa.copy");
 
-      const Optional<PredicateConstraint> &Constraint = PI->getConstraint();
+      const std::optional<PredicateConstraint> &Constraint =
+          PI->getConstraint();
       if (!Constraint) {
         mergeInValue(ValueState[&CB], &CB, CopyOfVal);
         return;
