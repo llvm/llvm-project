@@ -62,4 +62,4 @@
 ! RUN:     | FileCheck --check-prefix=CHECK-CRT %s
 ! CHECK-CRT: {{crtbegin.?\.o}}
 ! CHECK-CRT-SAME: crtfastmath.o
-! CHECK-CRT-SAME: crtendS.o
+! CHECK-CRT-SAME: {{crtend.?\.o}}
