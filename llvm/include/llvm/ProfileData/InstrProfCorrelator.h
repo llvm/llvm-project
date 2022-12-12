@@ -42,7 +42,7 @@ public:
   virtual Error dumpYaml(raw_ostream &OS) = 0;
 
   /// Return the number of ProfileData elements.
-  llvm::Optional<size_t> getDataSize() const;
+  std::optional<size_t> getDataSize() const;
 
   /// Return a pointer to the names string that this class constructs.
   const char *getNamesPointer() const { return Names.c_str(); }
@@ -166,7 +166,7 @@ private:
   std::unique_ptr<DWARFContext> DICtx;
 
   /// Return the address of the object that the provided DIE symbolizes.
-  llvm::Optional<uint64_t> getLocation(const DWARFDie &Die) const;
+  std::optional<uint64_t> getLocation(const DWARFDie &Die) const;
 
   /// Returns true if the provided DIE symbolizes an instrumentation probe
   /// symbol.
