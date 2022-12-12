@@ -1,4 +1,4 @@
-// UNSUPPORTED: -zos, target={{.*}}-aix{{.*}}
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // Test for assertion failure due to objc_externally_retained on a function.
 
 // Without PCH
