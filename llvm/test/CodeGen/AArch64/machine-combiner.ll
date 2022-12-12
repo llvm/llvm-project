@@ -663,6 +663,88 @@ define <vscale x 2 x double> @reassociate_muls_nxv2f64(<vscale x 2 x double> %x0
   ret <vscale x 2 x double> %t2
 }
 
+; Verify that scalable vector integer arithmetic operations are reassociated.
+
+define <vscale x 16 x i8> @reassociate_muls_nxv16i8(<vscale x 16 x i8> %x0, <vscale x 16 x i8> %x1, <vscale x 16 x i8> %x2, <vscale x 16 x i8> %x3) {
+; CHECK-LABEL: reassociate_muls_nxv16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mul z0.b, z0.b, z1.b
+; CHECK-NEXT:    mul z1.b, z3.b, z2.b
+; CHECK-NEXT:    mul z0.b, z1.b, z0.b
+; CHECK-NEXT:    ret
+  %t0 = mul <vscale x 16 x i8> %x0, %x1
+  %t1 = mul <vscale x 16 x i8> %x2, %t0
+  %t2 = mul <vscale x 16 x i8> %x3, %t1
+  ret <vscale x 16 x i8> %t2
+}
+
+define <vscale x 8 x i16> @reassociate_adds_nxv8i16(<vscale x 8 x i16> %x0, <vscale x 8 x i16> %x1, <vscale x 8 x i16> %x2, <vscale x 8 x i16> %x3) {
+; CHECK-LABEL: reassociate_adds_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add z0.h, z0.h, z1.h
+; CHECK-NEXT:    add z1.h, z3.h, z2.h
+; CHECK-NEXT:    add z0.h, z1.h, z0.h
+; CHECK-NEXT:    ret
+  %t0 = add <vscale x 8 x i16> %x0, %x1
+  %t1 = add <vscale x 8 x i16> %x2, %t0
+  %t2 = add <vscale x 8 x i16> %x3, %t1
+  ret <vscale x 8 x i16> %t2
+}
+
+define <vscale x 4 x i32> @reassociate_muls_nxv4i32(<vscale x 4 x i32> %x0, <vscale x 4 x i32> %x1, <vscale x 4 x i32> %x2, <vscale x 4 x i32> %x3) {
+; CHECK-LABEL: reassociate_muls_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mul z0.s, z0.s, z1.s
+; CHECK-NEXT:    mul z1.s, z3.s, z2.s
+; CHECK-NEXT:    mul z0.s, z1.s, z0.s
+; CHECK-NEXT:    ret
+  %t0 = mul <vscale x 4 x i32> %x0, %x1
+  %t1 = mul <vscale x 4 x i32> %x2, %t0
+  %t2 = mul <vscale x 4 x i32> %x3, %t1
+  ret <vscale x 4 x i32> %t2
+}
+
+define <vscale x 2 x i64> @reassociate_adds_nxv2i64(<vscale x 2 x i64> %x0, <vscale x 2 x i64> %x1, <vscale x 2 x i64> %x2, <vscale x 2 x i64> %x3) {
+; CHECK-LABEL: reassociate_adds_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add z0.d, z0.d, z1.d
+; CHECK-NEXT:    add z1.d, z3.d, z2.d
+; CHECK-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+  %t0 = add <vscale x 2 x i64> %x0, %x1
+  %t1 = add <vscale x 2 x i64> %x2, %t0
+  %t2 = add <vscale x 2 x i64> %x3, %t1
+  ret <vscale x 2 x i64> %t2
+}
+
+; Verify that scalable vector bitwise operations are reassociated.
+
+define <vscale x 16 x i8> @reassociate_ands_nxv16i8(<vscale x 16 x i8> %x0, <vscale x 16 x i8> %x1, <vscale x 16 x i8> %x2, <vscale x 16 x i8> %x3) {
+; CHECK-LABEL: reassociate_ands_nxv16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    and z1.d, z2.d, z3.d
+; CHECK-NEXT:    and z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %t0 = or <vscale x 16 x i8> %x0, %x1
+  %t1 = and <vscale x 16 x i8> %t0, %x2
+  %t2 = and <vscale x 16 x i8> %t1, %x3
+  ret <vscale x 16 x i8> %t2
+}
+
+define <vscale x 8 x i16> @reassociate_ors_nxv8i16(<vscale x 8 x i16> %x0, <vscale x 8 x i16> %x1, <vscale x 8 x i16> %x2, <vscale x 8 x i16> %x3) {
+; CHECK-LABEL: reassociate_ors_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    orr z1.d, z2.d, z3.d
+; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %t0 = xor <vscale x 8 x i16> %x0, %x1
+  %t1 = or <vscale x 8 x i16> %t0, %x2
+  %t2 = or <vscale x 8 x i16> %t1, %x3
+  ret <vscale x 8 x i16> %t2
+}
+
 ; PR25016: https://llvm.org/bugs/show_bug.cgi?id=25016
 ; Verify that reassociation is not happening needlessly or wrongly.
 
