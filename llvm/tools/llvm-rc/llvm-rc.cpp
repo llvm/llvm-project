@@ -55,11 +55,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+namespace rc_opt {
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr std::initializer_list<StringLiteral> NAME = VALUE;
 #include "Opts.inc"
 #undef PREFIX
 
-static constexpr opt::OptTable::Info InfoTable[] = {
+static constexpr std::initializer_list<opt::OptTable::Info> InfoTable = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {                                                                            \
@@ -70,10 +72,11 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 #include "Opts.inc"
 #undef OPTION
 };
+} // namespace rc_opt
 
 class RcOptTable : public opt::OptTable {
 public:
-  RcOptTable() : OptTable(InfoTable, /* IgnoreCase = */ true) {}
+  RcOptTable() : OptTable(rc_opt::InfoTable, /* IgnoreCase = */ true) {}
 };
 
 enum Windres_ID {
@@ -85,25 +88,28 @@ enum Windres_ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const WINDRES_##NAME[] = VALUE;
+namespace windres_opt {
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr std::initializer_list<StringLiteral> NAME = VALUE;
 #include "WindresOpts.inc"
 #undef PREFIX
 
-static constexpr opt::OptTable::Info WindresInfoTable[] = {
+static constexpr std::initializer_list<opt::OptTable::Info> InfoTable = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
-  {                                                                            \
-      WINDRES_##PREFIX, NAME,         HELPTEXT,                                \
-      METAVAR,          WINDRES_##ID, opt::Option::KIND##Class,                \
-      PARAM,            FLAGS,        WINDRES_##GROUP,                         \
-      WINDRES_##ALIAS,  ALIASARGS,    VALUES},
+  {PREFIX,          NAME,         HELPTEXT,                                    \
+   METAVAR,         WINDRES_##ID, opt::Option::KIND##Class,                    \
+   PARAM,           FLAGS,        WINDRES_##GROUP,                             \
+   WINDRES_##ALIAS, ALIASARGS,    VALUES},
 #include "WindresOpts.inc"
 #undef OPTION
 };
+} // namespace windres_opt
 
 class WindresOptTable : public opt::OptTable {
 public:
-  WindresOptTable() : OptTable(WindresInfoTable, /* IgnoreCase = */ false) {}
+  WindresOptTable()
+      : OptTable(windres_opt::InfoTable, /* IgnoreCase = */ false) {}
 };
 
 static ExitOnError ExitOnErr;

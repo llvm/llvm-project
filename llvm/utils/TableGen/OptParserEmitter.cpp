@@ -251,8 +251,8 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     // Prefix values.
     OS << ", {";
     for (const auto &PrefixKey : Prefix.first)
-      OS << "\"" << PrefixKey << "\" COMMA ";
-    OS << "nullptr})\n";
+      OS << "llvm::StringLiteral(\"" << PrefixKey << "\") COMMA ";
+    OS << "})\n";
   }
   OS << "#undef COMMA\n";
   OS << "#endif // PREFIX\n\n";
@@ -265,7 +265,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     OS << "OPTION(";
 
     // The option prefix;
-    OS << "nullptr";
+    OS << "{}";
 
     // The option string.
     OS << ", \"" << R.getValueAsString("Name") << '"';
