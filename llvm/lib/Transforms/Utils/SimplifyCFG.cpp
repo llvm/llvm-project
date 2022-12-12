@@ -3139,7 +3139,7 @@ static ConstantInt *getKnownValueOnEdge(Value *V, BasicBlock *From,
 /// If we have a conditional branch on something for which we know the constant
 /// value in predecessors (e.g. a phi node in the current block), thread edges
 /// from the predecessor to their ultimate destination.
-static Optional<bool>
+static std::optional<bool>
 FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
                                             const DataLayout &DL,
                                             AssumptionCache *AC) {
@@ -3283,7 +3283,7 @@ static bool FoldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
                                                     DomTreeUpdater *DTU,
                                                     const DataLayout &DL,
                                                     AssumptionCache *AC) {
-  Optional<bool> Result;
+  std::optional<bool> Result;
   bool EverChanged = false;
   do {
     // Note that None means "we changed things, but recurse further."
