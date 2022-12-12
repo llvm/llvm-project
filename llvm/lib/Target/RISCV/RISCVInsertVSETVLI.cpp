@@ -134,7 +134,7 @@ struct DemandedFields {
   bool MaskPolicy = false;
 
   // Return true if any part of VTYPE was used
-  bool usedVTYPE() {
+  bool usedVTYPE() const {
     return SEW || LMUL || SEWLMULRatio || TailPolicy || MaskPolicy;
   }
 
