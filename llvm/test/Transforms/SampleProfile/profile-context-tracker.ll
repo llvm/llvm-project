@@ -145,7 +145,7 @@ entry:
 ; INLINE-HOT-DAG-SAME: [[LEAF_PROF]] = !{!"function_entry_count", i64 0}
 ; INLINE-HOT-DAG: [[FUNCB_PROF]] = !{!"function_entry_count", i64 13}
 
-; INLINE-NONE: [[MAIN_PROF]] = !{!"function_entry_count", i64 13}
+; INLINE-NONE: [[MAIN_PROF]] = !{!"function_entry_count", i64 14}
 ; INLINE-NONE: [[FUNCA_PROF]] = !{!"function_entry_count", i64 24}
 ; INLINE-NONE-DAG-SAME: [[LEAF_PROF]] = !{!"function_entry_count", i64 21}
 ; INLINE-NONE-DAG: [[FUNCB_PROF]] = !{!"function_entry_count", i64 32}
