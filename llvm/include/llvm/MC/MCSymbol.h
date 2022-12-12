@@ -370,14 +370,14 @@ public:
   /// \param Alignment - The alignment of the symbol.
   /// \param Target - Is the symbol a target-specific common-like symbol.
   /// \return True if symbol was already declared as a different type
-  bool declareCommon(uint64_t Size, unsigned Alignment, bool Target = false) {
+  bool declareCommon(uint64_t Size, Align Alignment, bool Target = false) {
     assert(isCommon() || getOffset() == 0);
     if(isCommon()) {
-      if (CommonSize != Size || getCommonAlignment() != Align(Alignment) ||
+      if (CommonSize != Size || getCommonAlignment() != Alignment ||
           isTargetCommon() != Target)
         return true;
     } else
-      setCommon(Size, Align(Alignment), Target);
+      setCommon(Size, Alignment, Target);
     return false;
   }
 

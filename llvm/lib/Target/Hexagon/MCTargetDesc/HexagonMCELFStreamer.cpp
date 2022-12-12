@@ -121,7 +121,7 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
 
     switchSection(P.first, P.second);
   } else {
-    if (ELFSymbol->declareCommon(Size, ByteAlignment))
+    if (ELFSymbol->declareCommon(Size, Align(ByteAlignment)))
       report_fatal_error("Symbol: " + Symbol->getName() +
                          " redeclared as different type");
     if ((AccessSize) && (Size <= GPSize)) {
