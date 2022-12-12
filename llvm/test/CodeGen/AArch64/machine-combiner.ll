@@ -601,6 +601,68 @@ define <4 x i32> @reassociate_xors_v4i32(<4 x i32> %x0, <4 x i32> %x1, <4 x i32>
   ret <4 x i32> %t2
 }
 
+; Verify that scalable vector FP arithmetic operations are reassociated.
+
+define <vscale x 8 x half> @reassociate_adds_nxv4f16(<vscale x 8 x half> %x0, <vscale x 8 x half> %x1, <vscale x 8 x half> %x2, <vscale x 8 x half> %x3) {
+; CHECK-STD-LABEL: reassociate_adds_nxv4f16:
+; CHECK-STD:       // %bb.0:
+; CHECK-STD-NEXT:    fadd z0.h, z0.h, z1.h
+; CHECK-STD-NEXT:    fadd z0.h, z2.h, z0.h
+; CHECK-STD-NEXT:    fadd z0.h, z3.h, z0.h
+; CHECK-STD-NEXT:    ret
+;
+; CHECK-UNSAFE-LABEL: reassociate_adds_nxv4f16:
+; CHECK-UNSAFE:       // %bb.0:
+; CHECK-UNSAFE-NEXT:    fadd z0.h, z0.h, z1.h
+; CHECK-UNSAFE-NEXT:    fadd z1.h, z3.h, z2.h
+; CHECK-UNSAFE-NEXT:    fadd z0.h, z1.h, z0.h
+; CHECK-UNSAFE-NEXT:    ret
+  %t0 = fadd reassoc <vscale x 8 x half> %x0, %x1
+  %t1 = fadd reassoc <vscale x 8 x half> %x2, %t0
+  %t2 = fadd reassoc <vscale x 8 x half> %x3, %t1
+  ret <vscale x 8 x half> %t2
+}
+
+define <vscale x 4 x float> @reassociate_adds_nxv4f32(<vscale x 4 x float> %x0, <vscale x 4 x float> %x1, <vscale x 4 x float> %x2, <vscale x 4 x float> %x3) {
+; CHECK-STD-LABEL: reassociate_adds_nxv4f32:
+; CHECK-STD:       // %bb.0:
+; CHECK-STD-NEXT:    fadd z0.s, z0.s, z1.s
+; CHECK-STD-NEXT:    fadd z0.s, z2.s, z0.s
+; CHECK-STD-NEXT:    fadd z0.s, z3.s, z0.s
+; CHECK-STD-NEXT:    ret
+;
+; CHECK-UNSAFE-LABEL: reassociate_adds_nxv4f32:
+; CHECK-UNSAFE:       // %bb.0:
+; CHECK-UNSAFE-NEXT:    fadd z0.s, z0.s, z1.s
+; CHECK-UNSAFE-NEXT:    fadd z1.s, z3.s, z2.s
+; CHECK-UNSAFE-NEXT:    fadd z0.s, z1.s, z0.s
+; CHECK-UNSAFE-NEXT:    ret
+  %t0 = fadd reassoc <vscale x 4 x float> %x0, %x1
+  %t1 = fadd reassoc <vscale x 4 x float> %x2, %t0
+  %t2 = fadd reassoc <vscale x 4 x float> %x3, %t1
+  ret <vscale x 4 x float> %t2
+}
+
+define <vscale x 2 x double> @reassociate_muls_nxv2f64(<vscale x 2 x double> %x0, <vscale x 2 x double> %x1, <vscale x 2 x double> %x2, <vscale x 2 x double> %x3) {
+; CHECK-STD-LABEL: reassociate_muls_nxv2f64:
+; CHECK-STD:       // %bb.0:
+; CHECK-STD-NEXT:    fmul z0.d, z0.d, z1.d
+; CHECK-STD-NEXT:    fmul z0.d, z2.d, z0.d
+; CHECK-STD-NEXT:    fmul z0.d, z3.d, z0.d
+; CHECK-STD-NEXT:    ret
+;
+; CHECK-UNSAFE-LABEL: reassociate_muls_nxv2f64:
+; CHECK-UNSAFE:       // %bb.0:
+; CHECK-UNSAFE-NEXT:    fmul z0.d, z0.d, z1.d
+; CHECK-UNSAFE-NEXT:    fmul z1.d, z3.d, z2.d
+; CHECK-UNSAFE-NEXT:    fmul z0.d, z1.d, z0.d
+; CHECK-UNSAFE-NEXT:    ret
+  %t0 = fmul reassoc <vscale x 2 x double> %x0, %x1
+  %t1 = fmul reassoc <vscale x 2 x double> %x2, %t0
+  %t2 = fmul reassoc <vscale x 2 x double> %x3, %t1
+  ret <vscale x 2 x double> %t2
+}
+
 ; PR25016: https://llvm.org/bugs/show_bug.cgi?id=25016
 ; Verify that reassociation is not happening needlessly or wrongly.
 
