@@ -13,6 +13,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK-LABEL: define {{.*}}@foo.cold.1
 ; CHECK: llvm.dbg.label(metadata [[LABEL:![0-9]+]]), !dbg [[LINE:![0-9]+]]
 ; CHECK: llvm.dbg.label(metadata [[LABEL_IN_INLINE_ME:![0-9]+]]), !dbg [[LINE2:![0-9]+]]
+; CHECK: llvm.dbg.label(metadata [[SCOPED_LABEL:![0-9]+]]), !dbg [[LINE]]
 
 ; CHECK: [[FILE:![0-9]+]] = !DIFile
 ; CHECK: [[INLINE_ME_SCOPE:![0-9]+]] = distinct !DISubprogram(name: "inline_me"
@@ -21,6 +22,8 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK: [[LABEL]] = !DILabel(scope: [[SCOPE]], name: "bye", file: [[FILE]], line: 28
 ; CHECK: [[LABEL_IN_INLINE_ME]] = !DILabel(scope: [[INLINE_ME_SCOPE]], name: "label_in_@inline_me", file: [[FILE]], line: 29
 ; CHECK: [[LINE2]] = !DILocation(line: 2, column: 2, scope: [[INLINE_ME_SCOPE]], inlinedAt: [[LINE]]
+; CHECK: [[SCOPED_LABEL]] = !DILabel(scope: [[SCOPE_IN_FOO:![0-9]+]], name: "scoped_label_in_foo", file: [[FILE]], line: 30
+; CHECK: [[SCOPE_IN_FOO]] = !DILexicalBlock(scope: [[SCOPE]], file: [[FILE]], line: 31, column: 31)
 
 define void @foo(i32 %arg1) !dbg !6 {
 entry:
@@ -33,6 +36,7 @@ if.then:                                          ; preds = %entry
 if.end:                                           ; preds = %entry
   call void @llvm.dbg.label(metadata !12), !dbg !11
   call void @llvm.dbg.label(metadata !14), !dbg !15
+  call void @llvm.dbg.label(metadata !16), !dbg !11
   call void @sink()
   ret void
 }
@@ -65,3 +69,5 @@ define void @inline_me() !dbg !13 {
 !13 = distinct !DISubprogram(name: "inline_me", linkageName: "inline_me", scope: null, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, retainedNodes: !8)
 !14 = !DILabel(scope: !13, name: "label_in_@inline_me", file: !1, line: 29)
 !15 = !DILocation(line: 2, column: 2, scope: !13, inlinedAt: !11)
+!16 = !DILabel(scope: !17, name: "scoped_label_in_foo", file: !1, line: 30)
+!17 = distinct !DILexicalBlock(scope: !6, file: !1, line: 31, column: 31)
