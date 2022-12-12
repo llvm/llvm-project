@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -2631,6 +2632,32 @@ static void getUnmergePieces(SmallVectorImpl<Register> &Pieces,
 }
 
 LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFConstant(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+
+  MachineFunction &MF = MIRBuilder.getMF();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+
+  unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
+  LLT AddrPtrTy = LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace));
+  Align Alignment = Align(DL.getABITypeAlign(
+      getFloatTypeForLLT(MF.getFunction().getContext(), MRI.getType(Dst))));
+
+  auto Addr = MIRBuilder.buildConstantPool(
+      AddrPtrTy, MF.getConstantPool()->getConstantPoolIndex(
+                     MI.getOperand(1).getFPImm(), Alignment));
+
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
+      MRI.getType(Dst), Alignment);
+
+  MIRBuilder.buildLoadInstr(TargetOpcode::G_LOAD, Dst, Addr, *MMO);
+  MI.eraseFromParent();
+
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerBitcast(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
@@ -3250,6 +3277,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   switch(MI.getOpcode()) {
   default:
     return UnableToLegalize;
+  case TargetOpcode::G_FCONSTANT:
+    return lowerFConstant(MI);
   case TargetOpcode::G_BITCAST:
     return lowerBitcast(MI);
   case TargetOpcode::G_SREM:
