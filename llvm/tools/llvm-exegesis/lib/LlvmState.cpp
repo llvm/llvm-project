@@ -78,7 +78,9 @@ Expected<LLVMState> LLVMState::Create(std::string TripleName,
 
 LLVMState::LLVMState(std::unique_ptr<const TargetMachine> TM,
                      const ExegesisTarget *ET, const StringRef CpuName)
-    : TheExegesisTarget(ET), TheTargetMachine(std::move(TM)) {
+    : TheExegesisTarget(ET), TheTargetMachine(std::move(TM)),
+      OpcodeNameToOpcodeIdxMapping(createOpcodeNameToOpcodeIdxMapping()),
+      RegNameToRegNoMapping(createRegNameToRegNoMapping()) {
   PfmCounters = &TheExegesisTarget->getPfmCounters(CpuName);
 
   BitVector ReservedRegs = getFunctionReservedRegs(getTargetMachine());
@@ -96,6 +98,28 @@ std::unique_ptr<LLVMTargetMachine> LLVMState::createTargetMachine() const {
           TheTargetMachine->getTargetCPU(),
           TheTargetMachine->getTargetFeatureString(), TheTargetMachine->Options,
           Reloc::Model::Static)));
+}
+
+std::unique_ptr<const StringMap<unsigned>>
+LLVMState::createOpcodeNameToOpcodeIdxMapping() const {
+  const MCInstrInfo &InstrInfo = getInstrInfo();
+  auto Map = std::make_unique<StringMap<unsigned>>(InstrInfo.getNumOpcodes());
+  for (unsigned I = 0, E = InstrInfo.getNumOpcodes(); I < E; ++I)
+    (*Map)[InstrInfo.getName(I)] = I;
+  assert(Map->size() == InstrInfo.getNumOpcodes() && "Size prediction failed");
+  return std::move(Map);
+}
+
+std::unique_ptr<const StringMap<unsigned>>
+LLVMState::createRegNameToRegNoMapping() const {
+  const MCRegisterInfo &RegInfo = getRegInfo();
+  auto Map = std::make_unique<StringMap<unsigned>>(RegInfo.getNumRegs());
+  // Special-case RegNo 0, which would otherwise be spelled as ''.
+  (*Map)[kNoRegister] = 0;
+  for (unsigned I = 1, E = RegInfo.getNumRegs(); I < E; ++I)
+    (*Map)[RegInfo.getName(I)] = I;
+  assert(Map->size() == RegInfo.getNumRegs() && "Size prediction failed");
+  return std::move(Map);
 }
 
 bool LLVMState::canAssemble(const MCInst &Inst) const {
