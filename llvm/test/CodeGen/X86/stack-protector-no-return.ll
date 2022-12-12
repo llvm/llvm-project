@@ -32,7 +32,7 @@ define void @_Z7catchesv() #0 personality i8* null {
 ; CHECK-NEXT:    movq %fs:40, %rax
 ; CHECK-NEXT:    cmpq (%rsp), %rax
 ; CHECK-NEXT:    jne .LBB0_6
-; CHECK-NEXT:  # %bb.5: # %SP_return2
+; CHECK-NEXT:  # %bb.5: # %SP_return3
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq

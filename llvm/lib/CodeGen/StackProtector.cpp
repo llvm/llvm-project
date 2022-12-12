@@ -46,6 +46,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <optional>
 #include <utility>
 
@@ -83,9 +84,8 @@ void StackProtector::getAnalysisUsage(AnalysisUsage &AU) const {
 bool StackProtector::runOnFunction(Function &Fn) {
   F = &Fn;
   M = F->getParent();
-  DominatorTreeWrapperPass *DTWP =
-      getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  DT = DTWP ? &DTWP->getDomTree() : nullptr;
+  if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
+    DTU.emplace(DTWP->getDomTree(), DomTreeUpdater::UpdateStrategy::Lazy);
   TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   Trip = TM->getTargetTriple();
   TLI = TM->getSubtargetImpl(Fn)->getTargetLowering();
@@ -109,7 +109,14 @@ bool StackProtector::runOnFunction(Function &Fn) {
   }
 
   ++NumFunProtected;
-  return InsertStackProtectors();
+  bool Changed = InsertStackProtectors();
+#ifdef EXPENSIVE_CHECKS
+  assert((!DTU ||
+          DTU->getDomTree().verify(DominatorTree::VerificationLevel::Full)) &&
+         "Failed to maintain validity of domtree!");
+#endif
+  DTU.reset();
+  return Changed;
 }
 
 /// \param [out] IsLarge is set to true if a protectable array is found and
@@ -442,7 +449,6 @@ bool StackProtector::InsertStackProtectors() {
       TLI->useStackGuardXorFP() ||
       (EnableSelectionDAGSP && !TM->Options.EnableFastISel);
   AllocaInst *AI = nullptr; // Place on stack that stores the stack guard.
-  bool RecalculateDT = false;
   BasicBlock *FailBB = nullptr;
 
   for (BasicBlock &BB : llvm::make_early_inc_range(*F)) {
@@ -532,8 +538,8 @@ bool StackProtector::InsertStackProtectors() {
       //     ...
       //     %1 = <stack guard>
       //     %2 = load StackGuardSlot
-      //     %3 = cmp i1 %1, %2
-      //     br i1 %3, label %SP_return, label %CallStackCheckFailBlk
+      //     %3 = icmp ne i1 %1, %2
+      //     br i1 %3, label %CallStackCheckFailBlk, label %SP_return
       //
       //   SP_return:
       //     ret ...
@@ -548,61 +554,32 @@ bool StackProtector::InsertStackProtectors() {
       if (!FailBB)
         FailBB = CreateFailBB();
 
-      // Split the basic block before the return instruction.
-      BasicBlock *NewBB =
-          BB.splitBasicBlock(CheckLoc->getIterator(), "SP_return");
-
-      // Remove default branch instruction to the new BB.
-      BB.getTerminator()->eraseFromParent();
-
-      // Move the newly created basic block to the point right after the old
-      // basic block so that it's in the "fall through" position.
-      NewBB->moveAfter(&BB);
-
-      // Generate the stack protector instructions in the old basic block.
-      IRBuilder<> B(&BB);
+      IRBuilder<> B(CheckLoc);
       Value *Guard = getStackGuard(TLI, M, B);
       LoadInst *LI2 = B.CreateLoad(B.getInt8PtrTy(), AI, true);
-      Value *Cmp = B.CreateICmpEQ(Guard, LI2);
+      auto *Cmp = cast<ICmpInst>(B.CreateICmpNE(Guard, LI2));
       auto SuccessProb =
           BranchProbabilityInfo::getBranchProbStackProtector(true);
       auto FailureProb =
           BranchProbabilityInfo::getBranchProbStackProtector(false);
       MDNode *Weights = MDBuilder(F->getContext())
-                            .createBranchWeights(SuccessProb.getNumerator(),
-                                                 FailureProb.getNumerator());
-      B.CreateCondBr(Cmp, NewBB, FailBB, Weights);
+                            .createBranchWeights(FailureProb.getNumerator(),
+                                                 SuccessProb.getNumerator());
 
-      // Update the dominator tree if we need to.
-      if (DT && DT->isReachableFromEntry(&BB))
-        RecalculateDT = true;
+      SplitBlockAndInsertIfThen(Cmp, CheckLoc,
+                                /*Unreachable=*/false, Weights,
+                                DTU ? &*DTU : nullptr,
+                                /*LI=*/nullptr, /*ThenBlock=*/FailBB);
+
+      auto *BI = cast<BranchInst>(Cmp->getParent()->getTerminator());
+      BasicBlock *NewBB = BI->getSuccessor(1);
+      NewBB->setName("SP_return");
+      NewBB->moveAfter(&BB);
+
+      Cmp->setPredicate(Cmp->getInversePredicate());
+      BI->swapSuccessors();
     }
   }
-
-  // TODO: Refine me, use faster way to update DT.
-  // Now we have spilt the BB, some like:
-  // ===================================
-  // BB:
-  //   RetOrNoReturnCall
-  // ==>
-  // BB:
-  //  CondBr
-  // NewBB:
-  //   RetOrNoReturnCall
-  // FailBB: (*)
-  //   HandleStackCheckFail
-  // ===================================
-  // The faster way should cover:
-  // For NewBB, it should success the old BB's dominatees.
-  // 1) return: it didn't have dominatee
-  // 2) no-return call: there may has dominatees.
-  //
-  // For FailBB, it may be created before, So
-  // 1) if it has 1 Predecessors, add it into DT.
-  // 2) if it has 2 Predecessors, it should has no dominator, remove it from DT.
-  // 3) if it has 3 or more Predecessors, DT has removed it, do nothing.
-  if (RecalculateDT)
-    DT->recalculate(*F);
 
   // Return if we didn't modify any basic blocks. i.e., there are no return
   // statements in the function.
