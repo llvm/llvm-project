@@ -516,6 +516,7 @@ struct IntrinsicLibrary {
   mlir::Value genIbits(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbset(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIchar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genFindloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeeeIsFinite(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <mlir::arith::CmpIPredicate pred>
   fir::ExtendedValue genIeeeTypeCompare(mlir::Type,
@@ -801,6 +802,15 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"status", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"exponent", &I::genExponent},
+    {"findloc",
+     &I::genFindloc,
+     {{{"array", asBox},
+       {"value", asAddr},
+       {"dim", asValue},
+       {"mask", asBox, handleDynamicOptional},
+       {"kind", asValue},
+       {"back", asValue, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"floor", &I::genFloor},
     {"fraction", &I::genFraction},
     {"get_command",
@@ -3179,6 +3189,98 @@ mlir::Value IntrinsicLibrary::genExponent(mlir::Type resultType,
       loc, resultType,
       fir::runtime::genExponent(builder, loc, resultType,
                                 fir::getBase(args[0])));
+}
+
+// FINDLOC
+fir::ExtendedValue
+IntrinsicLibrary::genFindloc(mlir::Type resultType,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 6);
+
+  llvm::StringRef errMsg = "unexpected result for Findloc";
+
+  // Handle required array argument
+  mlir::Value array = builder.createBox(loc, args[0]);
+  unsigned rank = fir::BoxValue(array).rank();
+  assert(rank >= 1);
+
+  // Handle required value argument
+  mlir::Value val = builder.createBox(loc, args[1]);
+
+  // Check if dim argument is present
+  bool absentDim = isStaticallyAbsent(args[2]);
+
+  // Handle optional mask argument
+  auto mask = isStaticallyAbsent(args[3])
+                  ? builder.create<fir::AbsentOp>(
+                        loc, fir::BoxType::get(builder.getI1Type()))
+                  : builder.createBox(loc, args[3]);
+
+  // Handle optional kind argument
+  auto kind = isStaticallyAbsent(args[4])
+                  ? builder.createIntegerConstant(
+                        loc, builder.getIndexType(),
+                        builder.getKindMap().defaultIntegerKind())
+                  : fir::getBase(args[4]);
+
+  // Handle optional back argument
+  auto back = isStaticallyAbsent(args[5]) ? builder.createBool(loc, false)
+                                          : fir::getBase(args[5]);
+
+  if (!absentDim && rank == 1) {
+    // If dim argument is present and the array is rank 1, then the result is
+    // a scalar (since the the result is rank-1 or 0).
+    // Therefore, we use a scalar result descriptor with FindlocDim().
+    // Create mutable fir.box to be passed to the runtime for the result.
+    fir::MutableBoxValue resultMutableBox =
+        fir::factory::createTempMutableBox(builder, loc, resultType);
+    mlir::Value resultIrBox =
+        fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+    mlir::Value dim = fir::getBase(args[2]);
+
+    fir::runtime::genFindlocDim(builder, loc, resultIrBox, array, val, dim,
+                                mask, kind, back);
+
+    // Handle cleanup of allocatable result descriptor and return
+    fir::ExtendedValue res =
+        fir::factory::genMutableBoxRead(builder, loc, resultMutableBox);
+    return res.match(
+        [&](const mlir::Value &addr) -> fir::ExtendedValue {
+          addCleanUpForTemp(loc, addr);
+          return builder.create<fir::LoadOp>(loc, resultType, addr);
+        },
+        [&](const auto &) -> fir::ExtendedValue {
+          fir::emitFatalError(loc, errMsg);
+        });
+  }
+
+  // The result will be an array. Create mutable fir.box to be passed to the
+  // runtime for the result.
+  mlir::Type resultArrayType =
+      builder.getVarLenSeqTy(resultType, absentDim ? 1 : rank - 1);
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultArrayType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  if (absentDim) {
+    fir::runtime::genFindloc(builder, loc, resultIrBox, array, val, mask, kind,
+                             back);
+  } else {
+    mlir::Value dim = fir::getBase(args[2]);
+    fir::runtime::genFindlocDim(builder, loc, resultIrBox, array, val, dim,
+                                mask, kind, back);
+  }
+
+  return fir::factory::genMutableBoxRead(builder, loc, resultMutableBox)
+      .match(
+          [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+            addCleanUpForTemp(loc, box.getAddr());
+            return box;
+          },
+          [&](const auto &) -> fir::ExtendedValue {
+            fir::emitFatalError(loc, errMsg);
+          });
 }
 
 // FLOOR

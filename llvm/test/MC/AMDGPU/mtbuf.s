@@ -94,46 +94,46 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:-1+dfmt+1 nfmt:nfmt ttmp1
 //===----------------------------------------------------------------------===//
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:-1 nfmt:1 s0
-// GCN-ERR: error: out of range dfmt
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range dfmt
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:16 nfmt:1 s0
-// GCN-ERR: error: out of range dfmt
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range dfmt
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 nfmt:-1 s0
-// GCN-ERR: error: out of range nfmt
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range nfmt
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 nfmt:8 s0
-// GCN-ERR: error: out of range nfmt
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range nfmt
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7]
-// GCN-ERR: error: too few operands for instruction
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: too few operands for instruction
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7],, dfmt:1 nfmt:1 s0
-// GCN-ERR: error: unknown token in expression
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1,, nfmt:1 s0
-// GCN-ERR: error: unknown token in expression
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 nfmt:1,, s0
-// GCN-ERR: error: unknown token in expression
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 dfmt:1 s0
-// GCN-ERR: error: invalid operand for instruction
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] nfmt:1 nfmt:1 s0
-// GCN-ERR: error: invalid operand for instruction
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 nfmt:1 dfmt:1 s0
-// GCN-ERR: error: invalid operand for instruction
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] nfmt:1 dfmt:1 nfmt:1 s0
-// GCN-ERR: error: invalid operand for instruction
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1: nfmt:1 s0
-// GCN-ERR: error: unknown token in expression
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 nfmt:1: s0
-// GCN-ERR: error: unknown token in expression
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 
 //===----------------------------------------------------------------------===//
 // Tests for symbolic MTBUF format
@@ -277,7 +277,7 @@ tbuffer_store_format_xyzw v[1:4], v[1:2], ttmp[4:7], s0, format:[BUF_DATA_FORMAT
 // Check addr64
 tbuffer_store_format_xyzw v[1:4], v[1:2], ttmp[4:7], s0, format:[BUF_DATA_FORMAT_32,BUF_NUM_FORMAT_FLOAT] addr64
 // SICI: tbuffer_store_format_xyzw v[1:4], v[1:2], ttmp[4:7], s0 format:[BUF_DATA_FORMAT_32,BUF_NUM_FORMAT_FLOAT] addr64 ; encoding: [0x00,0x80,0xa7,0xeb,0x01,0x01,0x1d,0x00]
-// VI-ERR: error: invalid operand for instruction
+// VI-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 //===----------------------------------------------------------------------===//
 // Tests for symbolic format errors handling
@@ -285,95 +285,95 @@ tbuffer_store_format_xyzw v[1:4], v[1:2], ttmp[4:7], s0, format:[BUF_DATA_FORMAT
 
 // Missing soffset
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], format:[BUF_DATA_FORMAT_32]
-// GCN-ERR: error: not a valid operand.
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
 // Invalid soffset
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s[255] format:[BUF_NUM_FORMAT_FLOAT]
-// GCN-ERR: error: register index is out of range
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: register index is out of range
 
 // Both legacy and symbolic formats are specified
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:1 s0 format:[BUF_NUM_FORMAT_FLOAT]
-// GCN-ERR: error: duplicate format
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: duplicate format
 
 // Missing format number
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format: offset:52
-// GCN-ERR: error: expected absolute expression
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected absolute expression
 
 // Invalid number
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:-1
-// GCN-ERR: error: out of range format
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range format
 
 // Invalid number
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:128
-// GCN-ERR: error: out of range format
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range format
 
 MAXVAL=127
 // Invalid expression
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:MAXVAL+1
-// GCN-ERR: error: out of range format
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range format
 
 // Empty list
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[]
-// GCN-ERR: error: expected a format string
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a format string
 
 // More than 2 format specifiers
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_DATA_FORMAT_32,BUF_NUM_FORMAT_FLOAT,BUF_DATA_FORMAT_8]
-// GCN-ERR: error: expected a closing square bracket
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket
 
 // More than 2 format specifiers
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_NUM_FORMAT_UINT,BUF_DATA_FORMAT_32,BUF_NUM_FORMAT_FLOAT]
-// GCN-ERR: error: expected a closing square bracket
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket
 
 // Missing brackets
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:BUF_NUM_FORMAT_UINT
-// GCN-ERR: error: expected absolute expression
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected absolute expression
 
 // Unpaired brackets
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_NUM_FORMAT_UINT
-// GCN-ERR: error: expected a closing square bracket
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket
 
 // Unpaired brackets
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:BUF_NUM_FORMAT_UINT]
-// GCN-ERR: error: expected absolute expression
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected absolute expression
 
 // Missing comma
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_NUM_FORMAT_UINT BUF_DATA_FORMAT_32]
-// GCN-ERR: error: expected a closing square bracket
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket
 
 // Duplicate dfmt
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_DATA_FORMAT_32,BUF_DATA_FORMAT_32]
-// GCN-ERR: error: duplicate data format
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: duplicate data format
 
 // Duplicate dfmt
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_DATA_FORMAT_32,BUF_DATA_FORMAT_8]
-// GCN-ERR: error: duplicate data format
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: duplicate data format
 
 // Duplicate nfmt
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_NUM_FORMAT_UINT,BUF_NUM_FORMAT_FLOAT]
-// GCN-ERR: error: duplicate numeric format
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: duplicate numeric format
 
 // Unknown format specifier
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_DATA_FORMAT]
-// GCN-ERR: error: unsupported format
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unsupported format
 
 // Valid but unsupported format specifier (SNORM_OGL is supported for SI/CI only)
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_NUM_FORMAT_SNORM_OGL]
 // SICI: tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_NUM_FORMAT_SNORM_OGL] ; encoding: [0x00,0x00,0x0f,0xeb,0x00,0x01,0x1d,0x00]
-// VI-ERR: error: unsupported format
+// VI-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: unsupported format
 
 // Valid but unsupported format specifier (RESERVED_6 is supported for VI/GFX9 only)
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_NUM_FORMAT_RESERVED_6]
-// SICI-ERR: error: unsupported format
+// SICI-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unsupported format
 // VI: tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_NUM_FORMAT_RESERVED_6] ; encoding: [0x00,0x80,0x0b,0xeb,0x00,0x01,0x1d,0x00]
 
 // Excessive commas
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7],, s0 format:[BUF_DATA_FORMAT_8]
-// GCN-ERR: error: unknown token in expression
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 
 // Excessive commas
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0,, format:[BUF_DATA_FORMAT_8]
-// GCN-ERR: error: not a valid operand.
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
 // Excessive commas
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_DATA_FORMAT_8],, offset:52
-// GCN-ERR: error: unknown token in expression
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression

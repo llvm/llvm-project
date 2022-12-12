@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -618,15 +616,24 @@ def warn_access_decl_deprecated : Warning<
 def err_access_decl : Error<
   "ISO C++11 does not allow access declarations; "
   "use using declarations instead">;
-def warn_deprecated_copy_operation : Warning<
+def warn_deprecated_copy : Warning<
   "definition of implicit copy %select{constructor|assignment operator}1 "
   "for %0 is deprecated because it has a user-declared copy "
   "%select{assignment operator|constructor}1">,
   InGroup<DeprecatedCopy>, DefaultIgnore;
-def warn_deprecated_copy_dtor_operation : Warning<
+def warn_deprecated_copy_with_dtor : Warning<
   "definition of implicit copy %select{constructor|assignment operator}1 "
   "for %0 is deprecated because it has a user-declared destructor">,
-  InGroup<DeprecatedCopyDtor>, DefaultIgnore;
+  InGroup<DeprecatedCopyWithDtor>, DefaultIgnore;
+def warn_deprecated_copy_with_user_provided_copy: Warning<
+  "definition of implicit copy %select{constructor|assignment operator}1 "
+  "for %0 is deprecated because it has a user-provided copy "
+  "%select{assignment operator|constructor}1">,
+  InGroup<DeprecatedCopyWithUserProvidedCopy>, DefaultIgnore;
+def warn_deprecated_copy_with_user_provided_dtor : Warning<
+  "definition of implicit copy %select{constructor|assignment operator}1 "
+  "for %0 is deprecated because it has a user-provided destructor">,
+  InGroup<DeprecatedCopyWithUserProvidedDtor>, DefaultIgnore;
 def warn_cxx17_compat_exception_spec_in_signature : Warning<
   "mangled name of %0 will change in C++17 due to non-throwing exception "
   "specification in function signature">, InGroup<CXX17CompatMangling>;
@@ -7620,9 +7627,6 @@ def warn_deprecated_increment_decrement_volatile : Warning<
 def warn_deprecated_simple_assign_volatile : Warning<
   "use of result of assignment to object of volatile-qualified type %0 "
   "is deprecated">, InGroup<DeprecatedVolatile>;
-def warn_deprecated_compound_assign_volatile : Warning<
-  "compound assignment to object of volatile-qualified type %0 is deprecated">,
-  InGroup<DeprecatedVolatile>;
 def warn_deprecated_volatile_return : Warning<
   "volatile-qualified return type %0 is deprecated">,
   InGroup<DeprecatedVolatile>;

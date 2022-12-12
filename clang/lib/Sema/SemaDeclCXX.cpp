@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -14531,12 +14529,20 @@ static void diagnoseDeprecatedCopyOperation(Sema &S, CXXMethodDecl *CopyOp) {
     assert(UserDeclaredOperation);
   }
 
-  if (UserDeclaredOperation && UserDeclaredOperation->isUserProvided()) {
-    S.Diag(UserDeclaredOperation->getLocation(),
-           isa<CXXDestructorDecl>(UserDeclaredOperation)
-               ? diag::warn_deprecated_copy_dtor_operation
-               : diag::warn_deprecated_copy_operation)
-        << RD << /*copy assignment*/ !isa<CXXConstructorDecl>(CopyOp);
+  if (UserDeclaredOperation) {
+    bool UDOIsUserProvided = UserDeclaredOperation->isUserProvided();
+    bool UDOIsDestructor = isa<CXXDestructorDecl>(UserDeclaredOperation);
+    bool IsCopyAssignment = !isa<CXXConstructorDecl>(CopyOp);
+    unsigned DiagID =
+        (UDOIsUserProvided && UDOIsDestructor)
+            ? diag::warn_deprecated_copy_with_user_provided_dtor
+        : (UDOIsUserProvided && !UDOIsDestructor)
+            ? diag::warn_deprecated_copy_with_user_provided_copy
+        : (!UDOIsUserProvided && UDOIsDestructor)
+            ? diag::warn_deprecated_copy_with_dtor
+            : diag::warn_deprecated_copy;
+    S.Diag(UserDeclaredOperation->getLocation(), DiagID)
+        << RD << IsCopyAssignment;
   }
 }
 

@@ -16,11 +16,11 @@ ds_add_u32 v2, v4 offset:16
 // VI:   ds_add_u32 v2, v4 offset:16 ; encoding: [0x10,0x00,0x00,0xd8,0x02,0x04,0x00,0x00]
 
 ds_add_src2_f32 v255 offset:65535
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // VI: ds_add_src2_f32 v255 offset:65535 ; encoding: [0xff,0xff,0x2a,0xd9,0xff,0x00,0x00,0x00]
 
 ds_add_src2_f32 v0 offset:4 gds
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // VI: ds_add_src2_f32 v0 offset:4 gds ; encoding: [0x04,0x00,0x2b,0xd9,0x00,0x00,0x00,0x00]
 
 //===----------------------------------------------------------------------===//
@@ -68,7 +68,7 @@ ds_add_u32 v2, v4
 // VI:   ds_add_u32 v2, v4 ; encoding: [0x00,0x00,0x00,0xd8,0x02,0x04,0x00,0x00]
 
 ds_add_f32 v2, v4
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // VI:   ds_add_f32 v2, v4 ; encoding: [0x00,0x00,0x2a,0xd8,0x02,0x04,0x00,0x00]
 
 ds_sub_u32 v2, v4
@@ -188,7 +188,7 @@ ds_add_rtn_u32 v8, v2, v4
 // VI:   ds_add_rtn_u32 v8, v2, v4 ; encoding: [0x00,0x00,0x40,0xd8,0x02,0x04,0x00,0x08]
 
 ds_add_rtn_f32 v8, v2, v4
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // VI:   ds_add_rtn_f32 v8, v2, v4 ; encoding: [0x00,0x00,0x6a,0xd8,0x02,0x04,0x00,0x08]
 
 ds_sub_rtn_u32 v8, v2, v4
@@ -497,17 +497,17 @@ ds_read2st64_b64 v[8:11], v2
 // VI:   ds_read2st64_b64 v[8:11], v2 ; encoding: [0x00,0x00,0xf0,0xd8,0x02,0x00,0x00,0x08]
 
 ds_read_b128 v[8:11], v2
-// NOSI: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // CI:   ds_read_b128 v[8:11], v2 ; encoding: [0x00,0x00,0xfc,0xdb,0x02,0x00,0x00,0x08]
 // VI:   ds_read_b128 v[8:11], v2 ; encoding: [0x00,0x00,0xfe,0xd9,0x02,0x00,0x00,0x08]
 
 ds_write_b128 v2, v[4:7]
-// NOSI: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // CI: ds_write_b128 v2, v[4:7] ; encoding: [0x00,0x00,0x7c,0xdb,0x02,0x04,0x00,0x00]
 // VI:   ds_write_b128 v2, v[4:7] ; encoding: [0x00,0x00,0xbe,0xd9,0x02,0x04,0x00,0x00]
 
 ds_nop
-// NOSI: error: instruction not supported on this GPU
+// NOSI: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // CI: ds_nop ; encoding: [0x00,0x00,0x50,0xd8,0x00,0x00,0x00,0x00]
 // VI: ds_nop ; encoding: [0x00,0x00,0x28,0xd8,0x00,0x00,0x00,0x00]
 

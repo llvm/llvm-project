@@ -89,30 +89,31 @@ struct T : private S {
 #if __cplusplus >= 201103L
 namespace DeprecatedCopy {
   struct Assign {
-    Assign &operator=(const Assign&); // expected-warning {{definition of implicit copy constructor for 'Assign' is deprecated because it has a user-declared copy assignment operator}}
+    Assign &operator=(const Assign&); // expected-warning {{definition of implicit copy constructor for 'Assign' is deprecated because it has a user-provided copy assignment operator}}
   };
   Assign a1, a2(a1); // expected-note {{implicit copy constructor for 'DeprecatedCopy::Assign' first required here}}
 
   struct Ctor {
     Ctor();
-    Ctor(const Ctor&); // expected-warning {{definition of implicit copy assignment operator for 'Ctor' is deprecated because it has a user-declared copy constructor}}
+    Ctor(const Ctor&); // expected-warning {{definition of implicit copy assignment operator for 'Ctor' is deprecated because it has a user-provided copy constructor}}
   };
   Ctor b1, b2;
   void f() { b1 = b2; } // expected-note {{implicit copy assignment operator for 'DeprecatedCopy::Ctor' first required here}}
 
   struct Dtor {
     ~Dtor();
-    // expected-warning@-1 {{definition of implicit copy constructor for 'Dtor' is deprecated because it has a user-declared destructor}}
-    // expected-warning@-2 {{definition of implicit copy assignment operator for 'Dtor' is deprecated because it has a user-declared destructor}}
+    // expected-warning@-1 {{definition of implicit copy constructor for 'Dtor' is deprecated because it has a user-provided destructor}}
+    // expected-warning@-2 {{definition of implicit copy assignment operator for 'Dtor' is deprecated because it has a user-provided destructor}}
   };
   Dtor c1, c2(c1); // expected-note {{implicit copy constructor for 'DeprecatedCopy::Dtor' first required here}}
   void g() { c1 = c2; } // expected-note {{implicit copy assignment operator for 'DeprecatedCopy::Dtor' first required here}}
 
   struct DefaultedDtor {
-    ~DefaultedDtor() = default;
-  };
-  DefaultedDtor d1, d2(d1);
-  void h() { d1 = d2; }
+    ~DefaultedDtor() = default; // expected-warning {{definition of implicit copy constructor for 'DefaultedDtor' is deprecated because it has a user-declared destructor}}
+  };                            // expected-warning@-1 {{definition of implicit copy assignment operator for 'DefaultedDtor' is deprecated because it has a user-declared destructor}}
+  DefaultedDtor d1;
+  DefaultedDtor d2(d1);         // expected-note {{in implicit copy constructor for 'DeprecatedCopy::DefaultedDtor' first required here}}
+  void h() { d1 = d2; }         // expected-note {{in implicit copy assignment operator for 'DeprecatedCopy::DefaultedDtor' first required here}}
 }
 #endif
 
@@ -185,10 +186,10 @@ namespace DeprecatedVolatile {
     --n; // cxx20-warning {{decrement of object of volatile-qualified type 'volatile int' is deprecated}}
     n++; // cxx20-warning {{increment of object of volatile-qualified type 'volatile int' is deprecated}}
     n--; // cxx20-warning {{decrement of object of volatile-qualified type 'volatile int' is deprecated}}
-    n += 5; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
-    n *= 3; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
-    n /= 2; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
-    n %= 42; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
+    n += 5; // undeprecated as a DR in C++23
+    n *= 3; // undeprecated as a DR in C++23
+    n /= 2; // undeprecated as a DR in C++23
+    n %= 42; // undeprecated as a DR in C++23
     n &= 2; // undeprecated as a DR in C++23
     n |= 2; // undeprecated as a DR in C++23
     n ^= 2; // undeprecated as a DR in C++23

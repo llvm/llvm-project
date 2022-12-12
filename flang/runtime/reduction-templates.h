@@ -57,7 +57,8 @@ inline void DoTotalReduction(const Descriptor &x, int dim,
       for (auto elements{x.Elements()}; elements--;
            x.IncrementSubscripts(xAt), mask->IncrementSubscripts(maskAt)) {
         if (IsLogicalElementTrue(*mask, maskAt)) {
-          accumulator.template AccumulateAt<TYPE>(xAt);
+          if (!accumulator.template AccumulateAt<TYPE>(xAt))
+            break;
         }
       }
       return;

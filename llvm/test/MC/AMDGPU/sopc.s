@@ -63,64 +63,64 @@ s_bitcmp1_b64 s[2:3], s4
 
 s_setvskip s3, s5
 // GCN: s_setvskip s3, s5 ; encoding: [0x03,0x05,0x10,0xbf]
-// GFX10-ERR: error: instruction not supported on this GPU
+// GFX10-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_cmp_eq_u64 s[0:1], s[2:3]
 // VI: s_cmp_eq_u64 s[0:1], s[2:3] ; encoding: [0x00,0x02,0x12,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_cmp_lg_u64 s[0:1], s[2:3]
 // VI: s_cmp_lg_u64 s[0:1], s[2:3] ; encoding: [0x00,0x02,0x13,0xbf]
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 gpr_idx = 1
 s_set_gpr_idx_on s0, gpr_idx
 // VI: s_set_gpr_idx_on s0, gpr_idx(SRC0) ; encoding: [0x00,0x01,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
-// GFX10-ERR: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 gpr_idx_mode = 10
 s_set_gpr_idx_on s0, gpr_idx_mode + 5
 // VI: s_set_gpr_idx_on s0, gpr_idx(SRC0,SRC1,SRC2,DST) ; encoding: [0x00,0x0f,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
-// GFX10-ERR: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_set_gpr_idx_on s0, 0
 // VI: s_set_gpr_idx_on s0, gpr_idx() ; encoding: [0x00,0x00,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
-// GFX10-ERR: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_set_gpr_idx_on s0, gpr_idx()
 // VI: s_set_gpr_idx_on s0, gpr_idx() ; encoding: [0x00,0x00,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
-// GFX10-ERR: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_set_gpr_idx_on s0, 1
 // VI: s_set_gpr_idx_on s0, gpr_idx(SRC0) ; encoding: [0x00,0x01,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
-// GFX10-ERR: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_set_gpr_idx_on s0, gpr_idx(SRC0)
 // VI: s_set_gpr_idx_on s0, gpr_idx(SRC0) ; encoding: [0x00,0x01,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
-// GFX10-ERR: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_set_gpr_idx_on s0, 3
 // VI: s_set_gpr_idx_on s0, gpr_idx(SRC0,SRC1) ; encoding: [0x00,0x03,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
-// GFX10-ERR: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_set_gpr_idx_on s0, gpr_idx(SRC1,SRC0)
 // VI: s_set_gpr_idx_on s0, gpr_idx(SRC0,SRC1) ; encoding: [0x00,0x03,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
-// GFX10-ERR: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_set_gpr_idx_on s0, 15
 // VI: s_set_gpr_idx_on s0, gpr_idx(SRC0,SRC1,SRC2,DST) ; encoding: [0x00,0x0f,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
-// GFX10-ERR: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_set_gpr_idx_on s0, gpr_idx(SRC0,DST,SRC2,SRC1)
 // VI: s_set_gpr_idx_on s0, gpr_idx(SRC0,SRC1,SRC2,DST) ; encoding: [0x00,0x0f,0x11,0xbf]
-// NOSICI: error: instruction not supported on this GPU
-// GFX10-ERR: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU

@@ -1,23 +1,28 @@
+// RUN: %clang_cc1 -std=c++11 %s -Wdeprecated -verify
+// RUN: %clang_cc1 -std=c++11 %s -Wdeprecated -verify -fms-compatibility
 // RUN: %clang_cc1 -std=c++11 %s -Wdeprecated-copy -verify
-// RUN: %clang_cc1 -std=c++11 %s -Wdeprecated-copy-dtor -DDEPRECATED_COPY_DTOR -verify
-// RUN: %clang_cc1 -std=c++11 %s -Wextra -verify
+// RUN: %clang_cc1 -std=c++11 %s -Wdeprecated-copy -verify -fms-compatibility
 
-#ifdef DEPRECATED_COPY_DTOR
 struct A {
-  int *ptr;
-  ~A() { delete ptr; } // expected-warning {{definition of implicit copy constructor for 'A' is deprecated because it has a user-declared destructor}}
+    A& operator=(const A&) = default; // expected-warning {{definition of implicit copy constructor for 'A' is deprecated because it has a user-declared copy assignment operator}}
 };
 
-void foo() {
-  A a{};
-  A b = a; // expected-note {{implicit copy constructor for 'A' first required here}}
-}
-#else
 struct B {
-  B &operator=(const B &); // expected-warning {{definition of implicit copy constructor for 'B' is deprecated because it has a user-declared copy assignment operator}}
+    B& operator=(const B&) = delete; // expected-warning {{definition of implicit copy constructor for 'B' is deprecated because it has a user-declared copy assignment operator}}
 };
 
-void bar() {
-  B b1, b2(b1); // expected-note {{implicit copy constructor for 'B' first required here}}
+void test() {
+  A a1;
+  A a2(a1); // expected-note {{implicit copy constructor for 'A' first required here}}
+
+  B b1;
+  B b2(b1); // expected-note {{implicit copy constructor for 'B' first required here}}
 }
-#endif
+
+// PR45634
+struct S {
+    int i;
+    S& operator=(const S&) = delete; // expected-warning {{definition of implicit copy constructor for 'S' is deprecated because it has a user-declared copy assignment operator}}
+};
+
+S test(const S &s) { return S(s); } // expected-note {{implicit copy constructor for 'S' first required here}}

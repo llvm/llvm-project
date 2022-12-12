@@ -305,7 +305,7 @@ Bug Fixes
   improperly, which was corrected to match the behaviour exhibited by GCC.
   `Issue 58229 <https://github.com/llvm/llvm-project/issues/58229>`_
 - The builtin type trait ``__is_aggregate`` now returns ``true`` for arrays of incomplete
-  types in accordance with the suggested fix for `LWG3823 https://cplusplus.github.io/LWG/issue3823`_
+  types in accordance with the suggested fix for `LWG3823 <https://cplusplus.github.io/LWG/issue3823>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -607,6 +607,8 @@ C++ Language Changes in Clang
   conforming GNU extensions. Projects incompatible with C++17 can add
   ``-std=gnu++14`` to their build settings to restore the previous behaviour.
 - Implemented DR2358 allowing init captures in lambdas in default arguments.
+- implemented `DR2654 <https://wg21.link/cwg2654>`_ which undeprecates
+  all compound assignements operations on volatile qualified variables.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
