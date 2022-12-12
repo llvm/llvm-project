@@ -1298,13 +1298,19 @@ static void replaceExitCond(BranchInst *BI, Value *NewCond,
     DeadInsts.emplace_back(OldCond);
 }
 
-static void foldExit(const Loop *L, BasicBlock *ExitingBB, bool IsTaken,
-                     SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+static Constant *createFoldedExitCond(const Loop *L, BasicBlock *ExitingBB,
+                                      bool IsTaken) {
   BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
   bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
   auto *OldCond = BI->getCondition();
-  auto *NewCond =
-      ConstantInt::get(OldCond->getType(), IsTaken ? ExitIfTrue : !ExitIfTrue);
+  return ConstantInt::get(OldCond->getType(),
+                          IsTaken ? ExitIfTrue : !ExitIfTrue);
+}
+
+static void foldExit(const Loop *L, BasicBlock *ExitingBB, bool IsTaken,
+                     SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  auto *NewCond = createFoldedExitCond(L, ExitingBB, IsTaken);
   replaceExitCond(BI, NewCond, DeadInsts);
 }
 
