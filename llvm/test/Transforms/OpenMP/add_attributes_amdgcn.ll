@@ -1,8 +1,5 @@
-; XFAIL: *
-; RUN: opt < %s -S -openmpopt        | FileCheck %s
-; RUN: opt < %s -S -passes=openmpopt | FileCheck %s
-; RUN: opt < %s -S -openmpopt        -openmp-ir-builder-optimistic-attributes | FileCheck %s --check-prefix=OPTIMISTIC
-; RUN: opt < %s -S -passes=openmpopt -openmp-ir-builder-optimistic-attributes | FileCheck %s --check-prefix=OPTIMISTIC
+; RUN: opt < %s -S -passes=openmp-opt-cgscc | FileCheck %s
+; RUN: opt < %s -S -passes=openmp-opt-cgscc -openmp-ir-builder-optimistic-attributes | FileCheck %s --check-prefix=OPTIMISTIC
 
 target triple = "amdgcn-amd-amdhsa"
 

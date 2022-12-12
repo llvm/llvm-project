@@ -135,7 +135,7 @@ class Reporter {
   const ASTContext &Ctx;
   const SourceManager &SM;
   HeaderSearch &HS;
-  const RecordedPP::RecordedIncludes &Includes;
+  const include_cleaner::Includes &Includes;
   const PragmaIncludes *PI;
   FileID MainFile;
   const FileEntry *MainFE;
@@ -220,7 +220,7 @@ class Reporter {
 
 public:
   Reporter(llvm::raw_ostream &OS, ASTContext &Ctx, HeaderSearch &HS,
-           const RecordedPP::RecordedIncludes &Includes,
+           const include_cleaner::Includes &Includes,
            const PragmaIncludes *PI, FileID MainFile)
       : OS(OS), Ctx(Ctx), SM(Ctx.getSourceManager()), HS(HS),
         Includes(Includes), PI(PI), MainFile(MainFile),
@@ -416,7 +416,7 @@ private:
 
     for (const auto *I : R.Includes) {
       OS << "<tr><th>Included</th><td>";
-      escapeString(I->Spelled);
+      escapeString(I->quote());
       OS << ", <a href='#line" << I->Line << "'>line " << I->Line << "</a>";
       OS << "</td></tr>";
     }
@@ -521,7 +521,7 @@ private:
 
 } // namespace
 
-void writeHTMLReport(FileID File, const RecordedPP::RecordedIncludes &Includes,
+void writeHTMLReport(FileID File, const include_cleaner::Includes &Includes,
                      llvm::ArrayRef<Decl *> Roots,
                      llvm::ArrayRef<SymbolReference> MacroRefs, ASTContext &Ctx,
                      HeaderSearch &HS, PragmaIncludes *PI,

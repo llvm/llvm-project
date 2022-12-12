@@ -1059,10 +1059,10 @@ void ItaniumRecordLayoutBuilder::LayoutNonVirtualBases(
   // primary base, add it in now.
   } else if (RD->isDynamicClass()) {
     assert(DataSize == 0 && "Vtable pointer must be at offset zero!");
-    CharUnits PtrWidth =
-      Context.toCharUnitsFromBits(Context.getTargetInfo().getPointerWidth(0));
-    CharUnits PtrAlign =
-      Context.toCharUnitsFromBits(Context.getTargetInfo().getPointerAlign(0));
+    CharUnits PtrWidth = Context.toCharUnitsFromBits(
+        Context.getTargetInfo().getPointerWidth(LangAS::Default));
+    CharUnits PtrAlign = Context.toCharUnitsFromBits(
+        Context.getTargetInfo().getPointerAlign(LangAS::Default));
     EnsureVTablePointerAlignment(PtrAlign);
     HasOwnVFPtr = true;
 
@@ -1911,12 +1911,6 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
 
   if (D->getType()->isIncompleteArrayType()) {
     setDeclInfo(true /* IsIncompleteArrayType */);
-  } else if (const ReferenceType *RT = D->getType()->getAs<ReferenceType>()) {
-    unsigned AS = Context.getTargetAddressSpace(RT->getPointeeType());
-    EffectiveFieldSize = FieldSize = Context.toCharUnitsFromBits(
-        Context.getTargetInfo().getPointerWidth(AS));
-    FieldAlign = Context.toCharUnitsFromBits(
-        Context.getTargetInfo().getPointerAlign(AS));
   } else {
     setDeclInfo(false /* IsIncompleteArrayType */);
 
@@ -2768,7 +2762,8 @@ void MicrosoftRecordLayoutBuilder::initializeLayout(const RecordDecl *RD) {
   // than the pointer size.
   if (const MaxFieldAlignmentAttr *MFAA = RD->getAttr<MaxFieldAlignmentAttr>()){
     unsigned PackedAlignment = MFAA->getAlignment();
-    if (PackedAlignment <= Context.getTargetInfo().getPointerWidth(0))
+    if (PackedAlignment <=
+        Context.getTargetInfo().getPointerWidth(LangAS::Default))
       MaxFieldAlignment = Context.toCharUnitsFromBits(PackedAlignment);
   }
   // Packed attribute forces max field alignment to be 1.
@@ -2793,10 +2788,10 @@ MicrosoftRecordLayoutBuilder::initializeCXXLayout(const CXXRecordDecl *RD) {
   SharedVBPtrBase = nullptr;
   // Calculate pointer size and alignment.  These are used for vfptr and vbprt
   // injection.
-  PointerInfo.Size =
-      Context.toCharUnitsFromBits(Context.getTargetInfo().getPointerWidth(0));
-  PointerInfo.Alignment =
-      Context.toCharUnitsFromBits(Context.getTargetInfo().getPointerAlign(0));
+  PointerInfo.Size = Context.toCharUnitsFromBits(
+      Context.getTargetInfo().getPointerWidth(LangAS::Default));
+  PointerInfo.Alignment = Context.toCharUnitsFromBits(
+      Context.getTargetInfo().getPointerAlign(LangAS::Default));
   // Respect pragma pack.
   if (!MaxFieldAlignment.isZero())
     PointerInfo.Alignment = std::min(PointerInfo.Alignment, MaxFieldAlignment);

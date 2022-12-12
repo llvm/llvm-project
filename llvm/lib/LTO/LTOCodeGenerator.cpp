@@ -118,7 +118,15 @@ cl::opt<std::string> AIXSystemAssemblerPath(
     "lto-aix-system-assembler",
     cl::desc("Path to a system assembler, picked up on AIX only"),
     cl::value_desc("path"));
-}
+
+cl::opt<bool>
+    LTORunCSIRInstr("cs-profile-generate",
+                    cl::desc("Perform context sensitive PGO instrumentation"));
+
+cl::opt<std::string>
+    LTOCSIRProfile("cs-profile-path",
+                   cl::desc("Context sensitive profile file path"));
+} // namespace llvm
 
 LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
     : Context(Context), MergedModule(new Module("ld-temp.o", Context)),
@@ -131,6 +139,9 @@ LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
   Config.PreCodeGenPassesHook = [](legacy::PassManager &PM) {
     PM.add(createObjCARCContractPass());
   };
+
+  Config.RunCSIRInstr = LTORunCSIRInstr;
+  Config.CSIRProfile = LTOCSIRProfile;
 }
 
 LTOCodeGenerator::~LTOCodeGenerator() = default;
@@ -261,13 +272,18 @@ bool LTOCodeGenerator::runAIXSystemAssembler(SmallString<128> &AssemblyFile) {
     }
   }
 
+  // Setup the LDR_CNTRL variable
+  std::string LDR_CNTRL_var = "LDR_CNTRL=MAXDATA32=0xA0000000@DSA";
+  if (Optional<std::string> V = sys::Process::GetEnv("LDR_CNTRL"))
+    LDR_CNTRL_var += ("@" + *V);
+
   // Prepare inputs for the assember.
   const auto &Triple = TargetMach->getTargetTriple();
   const char *Arch = Triple.isArch64Bit() ? "-a64" : "-a32";
   std::string ObjectFileName(AssemblyFile);
   ObjectFileName[ObjectFileName.size() - 1] = 'o';
   SmallVector<StringRef, 8> Args = {
-      "/bin/env",     "LDR_CNTRL=MAXDATA32=0x80000000@${LDR_CNTRL}",
+      "/bin/env",     LDR_CNTRL_var,
       AssemblerPath,  Arch,
       "-many",        "-o",
       ObjectFileName, AssemblyFile};

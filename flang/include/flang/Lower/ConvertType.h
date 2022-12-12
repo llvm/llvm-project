@@ -22,6 +22,7 @@
 #define FORTRAN_LOWER_CONVERT_TYPE_H
 
 #include "flang/Common/Fortran.h"
+#include "flang/Evaluate/type.h"
 #include "mlir/IR/BuiltinTypes.h"
 
 namespace mlir {
@@ -39,6 +40,8 @@ class Reference;
 namespace evaluate {
 template <typename>
 class Expr;
+template <typename>
+class FunctionRef;
 struct SomeType;
 } // namespace evaluate
 
@@ -82,6 +85,15 @@ mlir::Type translateVariableToFIRType(Fortran::lower::AbstractConverter &,
 
 /// Translate a REAL of KIND to the mlir::Type.
 mlir::Type convertReal(mlir::MLIRContext *ctxt, int KIND);
+
+template <typename T>
+class TypeBuilder {
+public:
+  static mlir::Type genType(Fortran::lower::AbstractConverter &,
+                            const Fortran::evaluate::FunctionRef<T> &);
+};
+using namespace evaluate;
+FOR_EACH_SPECIFIC_TYPE(extern template class TypeBuilder, )
 
 } // namespace lower
 } // namespace Fortran

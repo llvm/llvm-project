@@ -232,7 +232,12 @@ if(LLVM_INCLUDE_TESTS)
   # LLVM_RUNTIMES_LIT_DEPENDS is populated when lit tests are added between
   # umbrella_list_testsuite begin and end. The bootstrap runtimes builds
   # currently assumes this target exists.
-  add_custom_target(runtimes-test-depends ${LLVM_RUNTIMES_LIT_DEPENDS})
+  get_property(LLVM_RUNTIMES_LIT_DEPENDS GLOBAL PROPERTY LLVM_RUNTIMES_LIT_DEPENDS)
+  add_custom_target(runtimes-test-depends)
+  if(LLVM_RUNTIMES_LIT_DEPENDS)
+    # add_dependencies complains if called with no dependencies
+    add_dependencies(runtimes-test-depends ${LLVM_RUNTIMES_LIT_DEPENDS})
+  endif()
   # Add a global check rule now that all subdirectories have been traversed
   # and we know the total set of lit testsuites.
   umbrella_lit_testsuite_end(check-runtimes)
@@ -268,9 +273,6 @@ if(SUB_COMPONENTS)
 
     if(TARGET install-${component})
       list(APPEND SUB_INSTALL_TARGETS install-${component})
-    endif()
-    if(TARGET install-${component}-stripped)
-      list(APPEND SUB_INSTALL_TARGETS install-${component}-stripped)
     endif()
   endforeach()
 

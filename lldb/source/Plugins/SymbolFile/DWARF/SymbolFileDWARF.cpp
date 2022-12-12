@@ -2946,119 +2946,112 @@ bool SymbolFileDWARF::DIEDeclContextsMatch(const DWARFDIE &die1,
   return true;
 }
 
-TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
-    const DWARFDeclContext &dwarf_decl_ctx) {
+TypeSP
+SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
   TypeSP type_sp;
 
-  const uint32_t dwarf_decl_ctx_count = dwarf_decl_ctx.GetSize();
-  if (dwarf_decl_ctx_count > 0) {
-    const ConstString type_name(dwarf_decl_ctx[0].name);
-    const dw_tag_t tag = dwarf_decl_ctx[0].tag;
+  if (die.GetName()) {
+    const dw_tag_t tag = die.Tag();
 
-    if (type_name) {
-      Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
-      if (log) {
-        GetObjectFile()->GetModule()->LogMessage(
-            log,
-            "SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(tag=%"
-            "s, qualified-name='%s')",
-            DW_TAG_value_to_name(dwarf_decl_ctx[0].tag),
-            dwarf_decl_ctx.GetQualifiedName());
+    Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
+    if (log) {
+      GetObjectFile()->GetModule()->LogMessage(
+          log,
+          "SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(tag=%"
+          "s, name='%s')",
+          DW_TAG_value_to_name(tag), die.GetName());
+    }
+
+    // Get the type system that we are looking to find a type for. We will
+    // use this to ensure any matches we find are in a language that this
+    // type system supports
+    const LanguageType language = GetLanguage(*die.GetCU());
+    TypeSystemSP type_system = nullptr;
+    if (language != eLanguageTypeUnknown) {
+      auto type_system_or_err = GetTypeSystemForLanguage(language);
+      if (auto err = type_system_or_err.takeError()) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                       "Cannot get TypeSystem for language {}",
+                       Language::GetNameForLanguageType(language));
+      } else {
+        type_system = *type_system_or_err;
+      }
+    }
+
+    m_index->GetTypes(GetDWARFDeclContext(die), [&](DWARFDIE type_die) {
+      // Make sure type_die's language matches the type system we are
+      // looking for. We don't want to find a "Foo" type from Java if we
+      // are looking for a "Foo" type for C, C++, ObjC, or ObjC++.
+      if (type_system &&
+          !type_system->SupportsLanguage(GetLanguage(*type_die.GetCU())))
+        return true;
+      bool try_resolving_type = false;
+
+      // Don't try and resolve the DIE we are looking for with the DIE
+      // itself!
+      const dw_tag_t type_tag = type_die.Tag();
+      // Make sure the tags match
+      if (type_tag == tag) {
+        // The tags match, lets try resolving this type
+        try_resolving_type = true;
+      } else {
+        // The tags don't match, but we need to watch our for a forward
+        // declaration for a struct and ("struct foo") ends up being a
+        // class ("class foo { ... };") or vice versa.
+        switch (type_tag) {
+        case DW_TAG_class_type:
+          // We had a "class foo", see if we ended up with a "struct foo
+          // { ... };"
+          try_resolving_type = (tag == DW_TAG_structure_type);
+          break;
+        case DW_TAG_structure_type:
+          // We had a "struct foo", see if we ended up with a "class foo
+          // { ... };"
+          try_resolving_type = (tag == DW_TAG_class_type);
+          break;
+        default:
+          // Tags don't match, don't event try to resolve using this type
+          // whose name matches....
+          break;
+        }
       }
 
-      // Get the type system that we are looking to find a type for. We will
-      // use this to ensure any matches we find are in a language that this
-      // type system supports
-      const LanguageType language = dwarf_decl_ctx.GetLanguage();
-      TypeSystemSP type_system = nullptr;
-      if (language != eLanguageTypeUnknown) {
-        auto type_system_or_err = GetTypeSystemForLanguage(language);
-        if (auto err = type_system_or_err.takeError()) {
-          LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                         "Cannot get TypeSystem for language {}",
-                         Language::GetNameForLanguageType(language));
-        } else {
-          type_system = *type_system_or_err;
-        }
-      }
-
-      m_index->GetTypes(dwarf_decl_ctx, [&](DWARFDIE type_die) {
-        // Make sure type_die's language matches the type system we are
-        // looking for. We don't want to find a "Foo" type from Java if we
-        // are looking for a "Foo" type for C, C++, ObjC, or ObjC++.
-        if (type_system &&
-            !type_system->SupportsLanguage(GetLanguage(*type_die.GetCU())))
-          return true;
-        bool try_resolving_type = false;
-
-        // Don't try and resolve the DIE we are looking for with the DIE
-        // itself!
-        const dw_tag_t type_tag = type_die.Tag();
-        // Make sure the tags match
-        if (type_tag == tag) {
-          // The tags match, lets try resolving this type
-          try_resolving_type = true;
-        } else {
-          // The tags don't match, but we need to watch our for a forward
-          // declaration for a struct and ("struct foo") ends up being a
-          // class ("class foo { ... };") or vice versa.
-          switch (type_tag) {
-          case DW_TAG_class_type:
-            // We had a "class foo", see if we ended up with a "struct foo
-            // { ... };"
-            try_resolving_type = (tag == DW_TAG_structure_type);
-            break;
-          case DW_TAG_structure_type:
-            // We had a "struct foo", see if we ended up with a "class foo
-            // { ... };"
-            try_resolving_type = (tag == DW_TAG_class_type);
-            break;
-          default:
-            // Tags don't match, don't event try to resolve using this type
-            // whose name matches....
-            break;
-          }
-        }
-
-        if (!try_resolving_type) {
-          if (log) {
-            GetObjectFile()->GetModule()->LogMessage(
-                log,
-                "SymbolFileDWARF::"
-                "FindDefinitionTypeForDWARFDeclContext(tag=%s, "
-                "qualified-name='%s') ignoring die=0x%8.8x (%s)",
-                DW_TAG_value_to_name(dwarf_decl_ctx[0].tag),
-                dwarf_decl_ctx.GetQualifiedName(), type_die.GetOffset(),
-                type_die.GetName());
-          }
-          return true;
-        }
-
-        DWARFDeclContext type_dwarf_decl_ctx = GetDWARFDeclContext(type_die);
-
+      if (!try_resolving_type) {
         if (log) {
           GetObjectFile()->GetModule()->LogMessage(
               log,
               "SymbolFileDWARF::"
               "FindDefinitionTypeForDWARFDeclContext(tag=%s, "
-              "qualified-name='%s') trying die=0x%8.8x (%s)",
-              DW_TAG_value_to_name(dwarf_decl_ctx[0].tag),
-              dwarf_decl_ctx.GetQualifiedName(), type_die.GetOffset(),
-              type_dwarf_decl_ctx.GetQualifiedName());
+              "name='%s') ignoring die=0x%8.8x (%s)",
+              DW_TAG_value_to_name(tag), die.GetName(), type_die.GetOffset(),
+              type_die.GetName());
         }
+        return true;
+      }
 
-        // Make sure the decl contexts match all the way up
-        if (dwarf_decl_ctx != type_dwarf_decl_ctx)
-          return true;
+      DWARFDeclContext type_dwarf_decl_ctx = GetDWARFDeclContext(type_die);
 
-        Type *resolved_type = ResolveType(type_die, false);
-        if (!resolved_type || resolved_type == DIE_IS_BEING_PARSED)
-          return true;
+      if (log) {
+        GetObjectFile()->GetModule()->LogMessage(
+            log,
+            "SymbolFileDWARF::"
+            "FindDefinitionTypeForDWARFDeclContext(tag=%s, "
+            "name='%s') trying die=0x%8.8x (%s)",
+            DW_TAG_value_to_name(tag), die.GetName(), type_die.GetOffset(),
+            type_dwarf_decl_ctx.GetQualifiedName());
+      }
 
-        type_sp = resolved_type->shared_from_this();
-        return false;
-      });
-    }
+      // Make sure the decl contexts match all the way up
+      if (GetDWARFDeclContext(die) != type_dwarf_decl_ctx)
+        return true;
+
+      Type *resolved_type = ResolveType(type_die, false);
+      if (!resolved_type || resolved_type == DIE_IS_BEING_PARSED)
+        return true;
+
+      type_sp = resolved_type->shared_from_this();
+      return false;
+    });
   }
   return type_sp;
 }
@@ -4172,7 +4165,6 @@ DWARFDeclContext SymbolFileDWARF::GetDWARFDeclContext(const DWARFDIE &die) {
     return {};
   DWARFDeclContext dwarf_decl_ctx =
       die.GetDIE()->GetDWARFDeclContext(die.GetCU());
-  dwarf_decl_ctx.SetLanguage(GetLanguage(*die.GetCU()));
   return dwarf_decl_ctx;
 }
 

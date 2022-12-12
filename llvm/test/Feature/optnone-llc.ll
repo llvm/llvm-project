@@ -6,7 +6,7 @@
 ; RUN: llc -O1 -debug-only=isel -fast-isel=false %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOFAST
 
 ; REQUIRES: asserts, default_triple
-; UNSUPPORTED: nvptx
+; UNSUPPORTED: target=nvptx{{.*}}
 
 ; This test verifies that we don't run Machine Function optimizations
 ; on optnone functions, and that we can turn off FastISel.

@@ -8,9 +8,9 @@
 ; GCN: s_load_dword [[VAL:s[0-9]+]]
 ; GCN: s_xor_b32 [[NEG_VAL:s[0-9]+]], [[VAL]], 0x80000000
 ; GCN: v_mov_b32_e32 v{{[0-9]+}}, [[NEG_VAL]]
-define amdgpu_kernel void @s_fneg_f32(float addrspace(1)* %out, float %in) {
+define amdgpu_kernel void @s_fneg_f32(ptr addrspace(1) %out, float %in) {
   %fneg = fsub float -0.000000e+00, %in
-  store float %fneg, float addrspace(1)* %out
+  store float %fneg, ptr addrspace(1) %out
   ret void
 }
 
@@ -20,9 +20,9 @@ define amdgpu_kernel void @s_fneg_f32(float addrspace(1)* %out, float %in) {
 
 ; GCN: s_xor_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0x80000000
 ; GCN: s_xor_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0x80000000
-define amdgpu_kernel void @s_fneg_v2f32(<2 x float> addrspace(1)* nocapture %out, <2 x float> %in) {
+define amdgpu_kernel void @s_fneg_v2f32(ptr addrspace(1) nocapture %out, <2 x float> %in) {
   %fneg = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %in
-  store <2 x float> %fneg, <2 x float> addrspace(1)* %out
+  store <2 x float> %fneg, ptr addrspace(1) %out
   ret void
 }
 
@@ -36,9 +36,9 @@ define amdgpu_kernel void @s_fneg_v2f32(<2 x float> addrspace(1)* nocapture %out
 ; GCN: s_xor_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0x80000000
 ; GCN: s_xor_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0x80000000
 ; GCN: s_xor_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0x80000000
-define amdgpu_kernel void @s_fneg_v4f32(<4 x float> addrspace(1)* nocapture %out, <4 x float> %in) {
+define amdgpu_kernel void @s_fneg_v4f32(ptr addrspace(1) nocapture %out, <4 x float> %in) {
   %fneg = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %in
-  store <4 x float> %fneg, <4 x float> addrspace(1)* %out
+  store <4 x float> %fneg, ptr addrspace(1) %out
   ret void
 }
 
@@ -52,10 +52,10 @@ define amdgpu_kernel void @s_fneg_v4f32(<4 x float> addrspace(1)* nocapture %out
 
 ; R600-NOT: XOR
 ; R600: -KC0[2].Z
-define amdgpu_kernel void @fsub0_f32(float addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @fsub0_f32(ptr addrspace(1) %out, i32 %in) {
   %bc = bitcast i32 %in to float
   %fsub = fsub float 0.0, %bc
-  store float %fsub, float addrspace(1)* %out
+  store float %fsub, ptr addrspace(1) %out
   ret void
 }
 ; FUNC-LABEL: {{^}}fneg_free_f32:
@@ -68,10 +68,10 @@ define amdgpu_kernel void @fsub0_f32(float addrspace(1)* %out, i32 %in) {
 
 ; R600-NOT: XOR
 ; R600: -PV.W
-define amdgpu_kernel void @fneg_free_f32(float addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @fneg_free_f32(ptr addrspace(1) %out, i32 %in) {
   %bc = bitcast i32 %in to float
   %fsub = fsub float -0.0, %bc
-  store float %fsub, float addrspace(1)* %out
+  store float %fsub, ptr addrspace(1) %out
   ret void
 }
 
@@ -80,21 +80,21 @@ define amdgpu_kernel void @fneg_free_f32(float addrspace(1)* %out, i32 %in) {
 ; VI: s_load_dword [[NEG_VALUE:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x2c
 ; GCN-NOT: xor
 ; GCN: v_mul_f32_e64 v{{[0-9]+}}, -[[NEG_VALUE]], [[NEG_VALUE]]
-define amdgpu_kernel void @fneg_fold_f32(float addrspace(1)* %out, float %in) {
+define amdgpu_kernel void @fneg_fold_f32(ptr addrspace(1) %out, float %in) {
   %fsub = fsub float -0.0, %in
   %fmul = fmul float %fsub, %in
-  store float %fmul, float addrspace(1)* %out
+  store float %fmul, ptr addrspace(1) %out
   ret void
 }
 
 ; Make sure we turn some integer operations back into fabs
 ; FUNC-LABEL: {{^}}bitpreserve_fneg_f32:
 ; GCN: v_mul_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, -4.0
-define amdgpu_kernel void @bitpreserve_fneg_f32(float addrspace(1)* %out, float %in) {
+define amdgpu_kernel void @bitpreserve_fneg_f32(ptr addrspace(1) %out, float %in) {
   %in.bc = bitcast float %in to i32
   %int.abs = xor i32 %in.bc, 2147483648
   %bc = bitcast i32 %int.abs to float
   %fadd = fmul float %bc, 4.0
-  store float %fadd, float addrspace(1)* %out
+  store float %fadd, ptr addrspace(1) %out
   ret void
 }

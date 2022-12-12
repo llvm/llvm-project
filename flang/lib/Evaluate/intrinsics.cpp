@@ -917,7 +917,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 // TODO: Coarray intrinsic functions
 //  IMAGE_INDEX, COSHAPE
 // TODO: Non-standard intrinsic functions
-//  LSHIFT, RSHIFT, SHIFT,
+//  SHIFT,
 //  COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT,
 //  QCMPLX, QEXT, QFLOAT, QREAL, DNUM,
 //  INUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN,
@@ -934,7 +934,9 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 static const std::pair<const char *, const char *> genericAlias[]{
     {"and", "iand"},
     {"imag", "aimag"},
+    {"lshift", "shiftl"},
     {"or", "ior"},
+    {"rshift", "shifta"},
     {"xor", "ieor"},
     {"__builtin_ieee_selected_real_kind", "selected_real_kind"},
 };

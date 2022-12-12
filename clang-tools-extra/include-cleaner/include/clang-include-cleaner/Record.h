@@ -18,11 +18,9 @@
 #define CLANG_INCLUDE_CLEANER_RECORD_H
 
 #include "clang-include-cleaner/Types.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
@@ -133,33 +131,8 @@ struct RecordedPP {
   /// Describes where macros were used in the main file.
   std::vector<SymbolReference> MacroReferences;
 
-  /// A container for all includes present in the main file.
-  /// Supports efficiently hit-testing Headers against Includes.
-  /// FIXME: is there a more natural header for this class?
-  class RecordedIncludes {
-  public:
-    void add(const Include &);
-
-    /// All #includes seen, in the order they appear.
-    llvm::ArrayRef<Include> all() const { return All; }
-
-    /// Determine #includes that match a header (that provides a used symbol).
-    ///
-    /// Matching is based on the type of Header specified:
-    ///  - for a physical file like /path/to/foo.h, we check Resolved
-    ///  - for a logical file like <vector>, we check Spelled
-    llvm::SmallVector<const Include *> match(Header H) const;
-
-    /// Finds the include written on the specified line.
-    const Include *atLine(unsigned OneBasedIndex) const;
-
-  private:
-    std::vector<Include> All;
-    // Lookup structures for match(), values are index into All.
-    llvm::StringMap<llvm::SmallVector<unsigned>> BySpelling;
-    llvm::DenseMap<const FileEntry *, llvm::SmallVector<unsigned>> ByFile;
-    llvm::DenseMap<unsigned, unsigned> ByLine;
-  } Includes;
+  /// The include directives seen in the main file.
+  include_cleaner::Includes Includes;
 };
 
 } // namespace include_cleaner

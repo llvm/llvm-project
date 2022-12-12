@@ -1,4 +1,4 @@
-; RUN: opt %s -sroa -instcombine -inline -instcombine -sroa -verify -S -o - | FileCheck %s
+; RUN: opt %s -passes='cgscc(function(sroa,instcombine),inline),function(instcombine,sroa),verify' -S -o - | FileCheck %s
 ;
 ; This test checks that SROA pass processes debug info correctly if applied twice.
 ; Specifically, after SROA works first time, instcombine converts dbg.declare

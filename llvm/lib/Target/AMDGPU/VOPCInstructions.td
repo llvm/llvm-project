@@ -674,8 +674,8 @@ defm V_CMPX_GT_I16 : VOPCX_I16 <"v_cmpx_gt_i16">;
 defm V_CMPX_NE_I16 : VOPCX_I16 <"v_cmpx_ne_i16">;
 defm V_CMPX_GE_I16 : VOPCX_I16 <"v_cmpx_ge_i16">;
 defm V_CMPX_T_I16 : VOPCX_I16 <"v_cmpx_t_i16">;
-defm V_CMPX_F_U16 : VOPCX_I16 <"v_cmpx_f_u16">;
 
+defm V_CMPX_F_U16 : VOPCX_I16 <"v_cmpx_f_u16">;
 defm V_CMPX_LT_U16 : VOPCX_I16 <"v_cmpx_lt_u16", "v_cmpx_gt_u16">;
 defm V_CMPX_EQ_U16 : VOPCX_I16 <"v_cmpx_eq_u16">;
 defm V_CMPX_LE_U16 : VOPCX_I16 <"v_cmpx_le_u16", "v_cmpx_ge_u16">;

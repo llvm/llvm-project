@@ -181,7 +181,7 @@ public:
   virtual void printSymbolName(StringRef symbolRef);
 
   /// Print a handle to the given dialect resource.
-  void printResourceHandle(const AsmDialectResourceHandle &resource);
+  virtual void printResourceHandle(const AsmDialectResourceHandle &resource);
 
   /// Print an optional arrow followed by a type list.
   template <typename TypeRange>

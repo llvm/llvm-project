@@ -118,8 +118,8 @@ define i64 @callee_large_scalars(i256 %a, i256 %b) nounwind {
 ; RV64I-NEXT:    xor a4, a7, a4
 ; RV64I-NEXT:    or a4, a4, a5
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    xor a1, a3, a2
-; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    xor a2, a3, a2
+; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a4
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret

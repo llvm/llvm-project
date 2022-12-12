@@ -32,7 +32,7 @@ module attributes {gpu.container_module, spirv.target_env = #spirv.target_env<#s
   }
 
   gpu.module @foo {
-    gpu.func @bar(%arg0: memref<6xi32>) kernel attributes {spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<1> : vector<3xi32>>} {
+    gpu.func @bar(%arg0: memref<6xi32>) kernel attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [1, 1, 1]>} {
       gpu.return
     }
   }

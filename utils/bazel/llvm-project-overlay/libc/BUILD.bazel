@@ -1125,6 +1125,17 @@ libc_function(
 )
 
 libc_function(
+    name = "bcopy",
+    srcs = ["src/string/bcopy.cpp"],
+    hdrs = ["src/string/bcopy.h"],
+    features = no_sanitize_features,
+    deps = [
+        ":__support_common",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
     name = "memcmp",
     srcs = ["src/string/memcmp.cpp"],
     hdrs = ["src/string/memcmp.h"],

@@ -45,7 +45,7 @@ bool runIPSCCP(Module &M, const DataLayout &DL,
                function_ref<AnalysisResultsForFn(Function &)> getAnalysis);
 
 bool runFunctionSpecialization(
-    Module &M, const DataLayout &DL,
+    Module &M, FunctionAnalysisManager *FAM, const DataLayout &DL,
     std::function<TargetLibraryInfo &(Function &)> GetTLI,
     std::function<TargetTransformInfo &(Function &)> GetTTI,
     std::function<AssumptionCache &(Function &)> GetAC,

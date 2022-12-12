@@ -34,16 +34,16 @@ func.func @spv_entry_point() attributes {
 // -----
 
 func.func @spv_entry_point() attributes {
-  // expected-error @+2 {{failed to parse SPIRV_EntryPointABIAttr parameter 'local_size' which is to be a `DenseIntElementsAttr`}}
-  // expected-error @+1 {{invalid kind of attribute specified}}
-  spirv.entry_point_abi = #spirv.entry_point_abi<local_size = 64>
+  // expected-error @+2 {{failed to parse SPIRV_EntryPointABIAttr parameter 'workgroup_size' which is to be a `DenseI32ArrayAttr`}}
+  // expected-error @+1 {{expected '['}}
+  spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = 64>
 } { return }
 
 // -----
 
 func.func @spv_entry_point() attributes {
-  // CHECK: {spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[64, 1, 1]> : vector<3xi32>>}
-  spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[64, 1, 1]>: vector<3xi32>>
+  // CHECK: {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [64, 1, 1]>}
+  spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [64, 1, 1]>
 } { return }
 
 // -----
@@ -98,6 +98,26 @@ func.func @interface_var(
 func.func @interface_var(
   %arg0 : memref<4xf32> {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 1), Uniform>}
 ) { return }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.resource_limits
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @resource_limits_all_default()
+func.func @resource_limits_all_default() attributes {
+  // CHECK-SAME: #spirv.resource_limits<>
+  limits = #spirv.resource_limits<>
+} { return }
+
+// -----
+
+// CHECK-LABEL: func @resource_limits_min_max_subgroup_size()
+func.func @resource_limits_min_max_subgroup_size() attributes {
+  // CHECK-SAME: #spirv.resource_limits<min_subgroup_size = 32, max_subgroup_size = 64>
+  limits = #spirv.resource_limits<min_subgroup_size = 32, max_subgroup_size=64>
+} { return }
 
 // -----
 

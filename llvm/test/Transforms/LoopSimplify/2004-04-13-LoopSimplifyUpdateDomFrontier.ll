@@ -1,4 +1,4 @@
-; RUN: opt < %s -sroa -loop-simplify -licm -disable-output -verify-dom-info -verify-loop-info
+; RUN: opt < %s -passes='sroa,loop(loop-simplifycfg),loop-mssa(licm)' -disable-output -verify-dom-info -verify-loop-info
 
 define void @inflate() {
 entry:

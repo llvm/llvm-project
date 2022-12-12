@@ -36,15 +36,15 @@ declare <2 x half> @llvm.fmuladd.v2f16(<2 x half> %a, <2 x half> %b, <2 x half> 
 
 ; GCN: s_endpgm
 define amdgpu_kernel void @fmuladd_f16(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b,
-    half addrspace(1)* %c) {
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
-  %c.val = load half, half addrspace(1)* %c
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c) {
+  %a.val = load half, ptr addrspace(1) %a
+  %b.val = load half, ptr addrspace(1) %b
+  %c.val = load half, ptr addrspace(1) %c
   %r.val = call half @llvm.fmuladd.f16(half %a.val, half %b.val, half %c.val)
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -73,13 +73,13 @@ define amdgpu_kernel void @fmuladd_f16(
 
 ; GCN: s_endpgm
 define amdgpu_kernel void @fmuladd_f16_imm_a(
-    half addrspace(1)* %r,
-    half addrspace(1)* %b,
-    half addrspace(1)* %c) {
-  %b.val = load volatile half, half addrspace(1)* %b
-  %c.val = load volatile half, half addrspace(1)* %c
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c) {
+  %b.val = load volatile half, ptr addrspace(1) %b
+  %c.val = load volatile half, ptr addrspace(1) %c
   %r.val = call half @llvm.fmuladd.f16(half 3.0, half %b.val, half %c.val)
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -108,13 +108,13 @@ define amdgpu_kernel void @fmuladd_f16_imm_a(
 
 ; GCN: s_endpgm
 define amdgpu_kernel void @fmuladd_f16_imm_b(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %c) {
-  %a.val = load volatile half, half addrspace(1)* %a
-  %c.val = load volatile half, half addrspace(1)* %c
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %c) {
+  %a.val = load volatile half, ptr addrspace(1) %a
+  %c.val = load volatile half, ptr addrspace(1) %c
   %r.val = call half @llvm.fmuladd.f16(half %a.val, half 3.0, half %c.val)
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -176,14 +176,14 @@ define amdgpu_kernel void @fmuladd_f16_imm_b(
 
 ; GCN: buffer_store_{{dword|b32}} v[[R_V2_F16]]
 define amdgpu_kernel void @fmuladd_v2f16(
-    <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a,
-    <2 x half> addrspace(1)* %b,
-    <2 x half> addrspace(1)* %c) {
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
-  %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
-  %c.val = load <2 x half>, <2 x half> addrspace(1)* %c
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c) {
+  %a.val = load <2 x half>, ptr addrspace(1) %a
+  %b.val = load <2 x half>, ptr addrspace(1) %b
+  %c.val = load <2 x half>, ptr addrspace(1) %c
   %r.val = call <2 x half> @llvm.fmuladd.v2f16(<2 x half> %a.val, <2 x half> %b.val, <2 x half> %c.val)
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }

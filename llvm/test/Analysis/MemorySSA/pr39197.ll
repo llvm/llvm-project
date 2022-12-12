@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=s390x-linux-gnu -mcpu=z13 -verify-memoryssa -sroa -globalopt -function-attrs -simplifycfg -licm -simple-loop-unswitch %s -S | FileCheck %s
+; RUN: opt -mtriple=s390x-linux-gnu -mcpu=z13 -verify-memoryssa -passes='function(sroa),globalopt,function-attrs,function(simplifycfg,loop-mssa(licm),loop(simple-loop-unswitch))' %s -S | FileCheck %s
 ; REQUIRES: asserts
 
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"

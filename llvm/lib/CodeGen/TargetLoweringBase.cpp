@@ -726,6 +726,8 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
 
   MaxDivRemBitWidthSupported = llvm::IntegerType::MAX_INT_BITS;
 
+  MaxLargeFPConvertBitWidthSupported = llvm::IntegerType::MAX_INT_BITS;
+
   MinCmpXchgSizeInBits = 0;
   SupportsUnalignedAtomics = false;
 

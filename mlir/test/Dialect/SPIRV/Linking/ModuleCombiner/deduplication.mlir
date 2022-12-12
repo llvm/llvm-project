@@ -259,14 +259,14 @@ spirv.module Logical GLSL450 {
   spirv.func @kernel(
     %arg0: f32,
     %arg1: !spirv.ptr<!spirv.struct<(!spirv.array<12 x f32>)>, CrossWorkgroup>) "None"
-  attributes {spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[32, 1, 1]> : vector<3xi32>>} {
+  attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 1, 1]>} {
     spirv.Return
   }
 
   spirv.func @kernel_different_attr(
     %arg0: f32,
     %arg1: !spirv.ptr<!spirv.struct<(!spirv.array<12 x f32>)>, CrossWorkgroup>) "None"
-  attributes {spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[64, 1, 1]> : vector<3xi32>>} {
+  attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [64, 1, 1]>} {
     spirv.Return
   }
 }

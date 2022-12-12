@@ -12,6 +12,7 @@
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/RegionKindInterface.h"
 
 namespace mlir {
 class TilingInterface;

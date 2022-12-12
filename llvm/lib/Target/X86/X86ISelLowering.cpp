@@ -172,6 +172,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
 
+  setMaxLargeFPConvertBitWidthSupported(128);
+
   // Set up the register classes.
   addRegisterClass(MVT::i8, &X86::GR8RegClass);
   addRegisterClass(MVT::i16, &X86::GR16RegClass);
@@ -51752,12 +51754,16 @@ static SDValue combineFMinFMax(SDNode *N, SelectionDAG &DAG) {
 
 static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+#if 1 // FP16  54ebf1c4
   if (Subtarget.useSoftFloat())
+#else
+  if (Subtarget.useSoftFloat() || isSoftFP16(VT, Subtarget))
+#endif
     return SDValue();
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
-  EVT VT = N->getValueType(0);
   if (!((Subtarget.hasSSE1() && VT == MVT::f32) ||
         (Subtarget.hasSSE2() && VT == MVT::f64) ||
         (Subtarget.hasFP16() && VT == MVT::f16) ||

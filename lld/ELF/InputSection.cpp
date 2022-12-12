@@ -51,9 +51,9 @@ static ArrayRef<uint8_t> getSectionContents(ObjFile<ELFT> &file,
 InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
                                    uint32_t type, uint64_t entsize,
                                    uint32_t link, uint32_t info,
-                                   uint32_t alignment, ArrayRef<uint8_t> data,
+                                   uint32_t addralign, ArrayRef<uint8_t> data,
                                    StringRef name, Kind sectionKind)
-    : SectionBase(sectionKind, name, flags, entsize, alignment, type, info,
+    : SectionBase(sectionKind, name, flags, entsize, addralign, type, info,
                   link),
       file(file), content_(data.data()), size(data.size()) {
   // In order to reduce memory allocation, we assume that mergeable
@@ -64,10 +64,10 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
 
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraints.
-  uint32_t v = std::max<uint32_t>(alignment, 1);
+  uint32_t v = std::max<uint32_t>(addralign, 1);
   if (!isPowerOf2_64(v))
     fatal(toString(this) + ": sh_addralign is not a power of 2");
-  this->alignment = v;
+  this->addralign = v;
 
   // If SHF_COMPRESSED is set, parse the header. The legacy .zdebug format is no
   // longer supported.
@@ -231,7 +231,7 @@ template <typename ELFT> void InputSectionBase::parseCompressedHeader() {
   compressed = true;
   compressedSize = size;
   size = hdr->ch_size;
-  alignment = std::max<uint32_t>(hdr->ch_addralign, 1);
+  addralign = std::max<uint32_t>(hdr->ch_addralign, 1);
 }
 
 InputSection *InputSectionBase::getLinkOrderDep() const {
@@ -309,10 +309,10 @@ std::string InputSectionBase::getObjMsg(uint64_t off) {
 InputSection InputSection::discarded(nullptr, 0, 0, 0, ArrayRef<uint8_t>(), "");
 
 InputSection::InputSection(InputFile *f, uint64_t flags, uint32_t type,
-                           uint32_t alignment, ArrayRef<uint8_t> data,
+                           uint32_t addralign, ArrayRef<uint8_t> data,
                            StringRef name, Kind k)
     : InputSectionBase(f, flags, type,
-                       /*Entsize*/ 0, /*Link*/ 0, /*Info*/ 0, alignment, data,
+                       /*Entsize*/ 0, /*Link*/ 0, /*Info*/ 0, addralign, data,
                        name, k) {}
 
 template <class ELFT>
@@ -1124,7 +1124,7 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
 }
 
 void InputSection::replace(InputSection *other) {
-  alignment = std::max(alignment, other->alignment);
+  addralign = std::max(addralign, other->addralign);
 
   // When a section is replaced with another section that was allocated to
   // another partition, the replacement section (and its associated sections)

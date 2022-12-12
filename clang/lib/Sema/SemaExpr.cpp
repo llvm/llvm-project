@@ -16707,7 +16707,7 @@ ExprResult Sema::ActOnGNUNullExpr(SourceLocation TokenLoc) {
   // The type of __null will be int or long, depending on the size of
   // pointers on the target.
   QualType Ty;
-  unsigned pw = Context.getTargetInfo().getPointerWidth(0);
+  unsigned pw = Context.getTargetInfo().getPointerWidth(LangAS::Default);
   if (pw == Context.getTargetInfo().getIntWidth())
     Ty = Context.IntTy;
   else if (pw == Context.getTargetInfo().getLongWidth())

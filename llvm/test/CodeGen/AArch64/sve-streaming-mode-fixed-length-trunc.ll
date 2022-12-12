@@ -7,12 +7,14 @@ target triple = "aarch64-unknown-linux-gnu"
 ; truncate i16 -> i8
 ;
 
-define <16 x i8> @trunc_v16i16_v16i8(<16 x i16>* %in) vscale_range(2,0) #0 {
+define <16 x i8> @trunc_v16i16_v16i8(<16 x i16>* %in) #0 {
 ; CHECK-LABEL: trunc_v16i16_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl16
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    uzp1 z1.b, z1.b, z1.b
+; CHECK-NEXT:    splice z0.b, p0, z0.b, z1.b
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <16 x i16>, <16 x i16>* %in
@@ -24,106 +26,18 @@ define <16 x i8> @trunc_v16i16_v16i8(<16 x i16>* %in) vscale_range(2,0) #0 {
 define void @trunc_v32i16_v32i8(<32 x i16>* %in, <32 x i8>* %out) #0 {
 ; CHECK-LABEL: trunc_v32i16_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    ldp q1, q0, [x0, #32]
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z17.h, z1.h[6]
-; CHECK-NEXT:    mov z18.h, z1.h[5]
-; CHECK-NEXT:    mov z19.h, z1.h[4]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov z2.h, z0.h[7]
-; CHECK-NEXT:    mov z3.h, z0.h[6]
-; CHECK-NEXT:    mov z4.h, z0.h[5]
-; CHECK-NEXT:    ldp q22, q23, [x0]
-; CHECK-NEXT:    fmov w10, s2
-; CHECK-NEXT:    strb w8, [sp, #24]
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    strb w9, [sp, #16]
-; CHECK-NEXT:    fmov w9, s4
-; CHECK-NEXT:    mov z5.h, z0.h[4]
-; CHECK-NEXT:    mov z6.h, z0.h[3]
-; CHECK-NEXT:    mov z7.h, z0.h[2]
-; CHECK-NEXT:    strb w10, [sp, #31]
-; CHECK-NEXT:    fmov w10, s5
-; CHECK-NEXT:    strb w8, [sp, #30]
-; CHECK-NEXT:    fmov w8, s6
-; CHECK-NEXT:    strb w9, [sp, #29]
-; CHECK-NEXT:    fmov w9, s7
-; CHECK-NEXT:    mov z16.h, z0.h[1]
-; CHECK-NEXT:    mov z0.h, z1.h[7]
-; CHECK-NEXT:    strb w10, [sp, #28]
-; CHECK-NEXT:    fmov w10, s16
-; CHECK-NEXT:    strb w8, [sp, #27]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    strb w9, [sp, #26]
-; CHECK-NEXT:    fmov w9, s17
-; CHECK-NEXT:    mov z20.h, z1.h[3]
-; CHECK-NEXT:    strb w10, [sp, #25]
-; CHECK-NEXT:    fmov w10, s18
-; CHECK-NEXT:    strb w8, [sp, #23]
-; CHECK-NEXT:    fmov w8, s19
-; CHECK-NEXT:    strb w9, [sp, #22]
-; CHECK-NEXT:    fmov w9, s20
-; CHECK-NEXT:    mov z21.h, z1.h[2]
-; CHECK-NEXT:    mov z0.h, z1.h[1]
-; CHECK-NEXT:    strb w10, [sp, #21]
-; CHECK-NEXT:    fmov w10, s21
-; CHECK-NEXT:    strb w8, [sp, #20]
-; CHECK-NEXT:    strb w9, [sp, #19]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s23
-; CHECK-NEXT:    mov z0.h, z23.h[7]
-; CHECK-NEXT:    mov z1.h, z23.h[6]
-; CHECK-NEXT:    strb w10, [sp, #18]
-; CHECK-NEXT:    fmov w10, s22
-; CHECK-NEXT:    strb w8, [sp, #17]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    strb w9, [sp, #8]
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z2.h, z23.h[5]
-; CHECK-NEXT:    mov z3.h, z23.h[4]
-; CHECK-NEXT:    mov z4.h, z23.h[3]
-; CHECK-NEXT:    strb w10, [sp]
-; CHECK-NEXT:    fmov w10, s2
-; CHECK-NEXT:    strb w8, [sp, #15]
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    strb w9, [sp, #14]
-; CHECK-NEXT:    fmov w9, s4
-; CHECK-NEXT:    mov z5.h, z23.h[2]
-; CHECK-NEXT:    mov z6.h, z23.h[1]
-; CHECK-NEXT:    mov z7.h, z22.h[7]
-; CHECK-NEXT:    strb w10, [sp, #13]
-; CHECK-NEXT:    fmov w10, s5
-; CHECK-NEXT:    strb w8, [sp, #12]
-; CHECK-NEXT:    fmov w8, s6
-; CHECK-NEXT:    strb w9, [sp, #11]
-; CHECK-NEXT:    fmov w9, s7
-; CHECK-NEXT:    mov z16.h, z22.h[6]
-; CHECK-NEXT:    mov z17.h, z22.h[5]
-; CHECK-NEXT:    mov z18.h, z22.h[4]
-; CHECK-NEXT:    strb w10, [sp, #10]
-; CHECK-NEXT:    fmov w10, s16
-; CHECK-NEXT:    strb w8, [sp, #9]
-; CHECK-NEXT:    fmov w8, s17
-; CHECK-NEXT:    strb w9, [sp, #7]
-; CHECK-NEXT:    fmov w9, s18
-; CHECK-NEXT:    mov z19.h, z22.h[3]
-; CHECK-NEXT:    mov z20.h, z22.h[2]
-; CHECK-NEXT:    mov z21.h, z22.h[1]
-; CHECK-NEXT:    strb w10, [sp, #6]
-; CHECK-NEXT:    fmov w10, s19
-; CHECK-NEXT:    strb w8, [sp, #5]
-; CHECK-NEXT:    fmov w8, s20
-; CHECK-NEXT:    strb w9, [sp, #4]
-; CHECK-NEXT:    fmov w9, s21
-; CHECK-NEXT:    strb w10, [sp, #3]
-; CHECK-NEXT:    strb w8, [sp, #2]
-; CHECK-NEXT:    strb w9, [sp, #1]
-; CHECK-NEXT:    ldp q1, q0, [sp]
-; CHECK-NEXT:    add z1.b, z1.b, z1.b
+; CHECK-NEXT:    ldp q0, q1, [x0, #32]
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    ldp q3, q2, [x0]
+; CHECK-NEXT:    uzp1 z1.b, z1.b, z1.b
+; CHECK-NEXT:    splice z0.b, p0, z0.b, z1.b
 ; CHECK-NEXT:    add z0.b, z0.b, z0.b
+; CHECK-NEXT:    uzp1 z3.b, z3.b, z3.b
+; CHECK-NEXT:    uzp1 z2.b, z2.b, z2.b
+; CHECK-NEXT:    splice z3.b, p0, z3.b, z2.b
+; CHECK-NEXT:    add z1.b, z3.b, z3.b
 ; CHECK-NEXT:    stp q1, q0, [x1]
-; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %a = load <32 x i16>, <32 x i16>* %in
   %b = trunc <32 x i16> %a to <32 x i8>
@@ -133,15 +47,32 @@ define void @trunc_v32i16_v32i8(<32 x i16>* %in, <32 x i8>* %out) #0 {
 }
 
 ; NOTE: Extra 'add' is to prevent the truncate being combined with the store.
-define void @trunc_v64i16_v64i8(<64 x i16>* %in, <64 x i8>* %out) vscale_range(8,0) #0 {
+define void @trunc_v64i16_v64i8(<64 x i16>* %in, <64 x i8>* %out) #0 {
 ; CHECK-LABEL: trunc_v64i16_v64i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl64
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.b, vl64
+; CHECK-NEXT:    ldp q0, q1, [x0, #64]
+; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    ldp q2, q3, [x0, #96]
+; CHECK-NEXT:    uzp1 z1.b, z1.b, z1.b
+; CHECK-NEXT:    splice z0.b, p0, z0.b, z1.b
 ; CHECK-NEXT:    add z0.b, z0.b, z0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x1]
+; CHECK-NEXT:    uzp1 z2.b, z2.b, z2.b
+; CHECK-NEXT:    ldp q4, q5, [x0]
+; CHECK-NEXT:    uzp1 z3.b, z3.b, z3.b
+; CHECK-NEXT:    splice z2.b, p0, z2.b, z3.b
+; CHECK-NEXT:    uzp1 z4.b, z4.b, z4.b
+; CHECK-NEXT:    ldp q6, q7, [x0, #32]
+; CHECK-NEXT:    uzp1 z1.b, z5.b, z5.b
+; CHECK-NEXT:    splice z4.b, p0, z4.b, z1.b
+; CHECK-NEXT:    uzp1 z3.b, z6.b, z6.b
+; CHECK-NEXT:    uzp1 z1.b, z7.b, z7.b
+; CHECK-NEXT:    splice z3.b, p0, z3.b, z1.b
+; CHECK-NEXT:    add z1.b, z2.b, z2.b
+; CHECK-NEXT:    stp q0, q1, [x1, #32]
+; CHECK-NEXT:    add z0.b, z4.b, z4.b
+; CHECK-NEXT:    add z1.b, z3.b, z3.b
+; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
   %a = load <64 x i16>, <64 x i16>* %in
   %b = trunc <64 x i16> %a to <64 x i8>
@@ -151,15 +82,54 @@ define void @trunc_v64i16_v64i8(<64 x i16>* %in, <64 x i8>* %out) vscale_range(8
 }
 
 ; NOTE: Extra 'add' is to prevent the truncate being combined with the store.
-define void @trunc_v128i16_v128i8(<128 x i16>* %in, <128 x i8>* %out) vscale_range(16,0) #0 {
+define void @trunc_v128i16_v128i8(<128 x i16>* %in, <128 x i8>* %out) #0 {
 ; CHECK-LABEL: trunc_v128i16_v128i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl128
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.b, vl128
+; CHECK-NEXT:    ldp q0, q1, [x0, #192]
+; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    ldp q2, q3, [x0, #224]
+; CHECK-NEXT:    uzp1 z1.b, z1.b, z1.b
+; CHECK-NEXT:    splice z0.b, p0, z0.b, z1.b
 ; CHECK-NEXT:    add z0.b, z0.b, z0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x1]
+; CHECK-NEXT:    uzp1 z2.b, z2.b, z2.b
+; CHECK-NEXT:    ldp q6, q7, [x0, #128]
+; CHECK-NEXT:    uzp1 z3.b, z3.b, z3.b
+; CHECK-NEXT:    splice z2.b, p0, z2.b, z3.b
+; CHECK-NEXT:    add z2.b, z2.b, z2.b
+; CHECK-NEXT:    uzp1 z6.b, z6.b, z6.b
+; CHECK-NEXT:    ldp q1, q3, [x0, #160]
+; CHECK-NEXT:    uzp1 z7.b, z7.b, z7.b
+; CHECK-NEXT:    splice z6.b, p0, z6.b, z7.b
+; CHECK-NEXT:    uzp1 z1.b, z1.b, z1.b
+; CHECK-NEXT:    ldp q16, q17, [x0, #64]
+; CHECK-NEXT:    uzp1 z3.b, z3.b, z3.b
+; CHECK-NEXT:    splice z1.b, p0, z1.b, z3.b
+; CHECK-NEXT:    add z1.b, z1.b, z1.b
+; CHECK-NEXT:    uzp1 z16.b, z16.b, z16.b
+; CHECK-NEXT:    ldp q7, q18, [x0, #96]
+; CHECK-NEXT:    uzp1 z17.b, z17.b, z17.b
+; CHECK-NEXT:    splice z16.b, p0, z16.b, z17.b
+; CHECK-NEXT:    uzp1 z7.b, z7.b, z7.b
+; CHECK-NEXT:    ldp q4, q5, [x0, #32]
+; CHECK-NEXT:    uzp1 z3.b, z18.b, z18.b
+; CHECK-NEXT:    splice z7.b, p0, z7.b, z3.b
+; CHECK-NEXT:    uzp1 z4.b, z4.b, z4.b
+; CHECK-NEXT:    ldp q19, q20, [x0]
+; CHECK-NEXT:    uzp1 z3.b, z5.b, z5.b
+; CHECK-NEXT:    stp q0, q2, [x1, #96]
+; CHECK-NEXT:    add z0.b, z6.b, z6.b
+; CHECK-NEXT:    splice z4.b, p0, z4.b, z3.b
+; CHECK-NEXT:    stp q0, q1, [x1, #64]
+; CHECK-NEXT:    add z0.b, z16.b, z16.b
+; CHECK-NEXT:    uzp1 z18.b, z19.b, z19.b
+; CHECK-NEXT:    add z1.b, z7.b, z7.b
+; CHECK-NEXT:    stp q0, q1, [x1, #32]
+; CHECK-NEXT:    add z1.b, z4.b, z4.b
+; CHECK-NEXT:    uzp1 z17.b, z20.b, z20.b
+; CHECK-NEXT:    splice z18.b, p0, z18.b, z17.b
+; CHECK-NEXT:    add z0.b, z18.b, z18.b
+; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
   %a = load <128 x i16>, <128 x i16>* %in
   %b = trunc <128 x i16> %a to <128 x i8>
@@ -172,12 +142,14 @@ define void @trunc_v128i16_v128i8(<128 x i16>* %in, <128 x i8>* %out) vscale_ran
 ; truncate i32 -> i8
 ;
 
-define <8 x i8> @trunc_v8i32_v8i8(<8 x i32>* %in) vscale_range(2,0) #0 {
+define <8 x i8> @trunc_v8i32_v8i8(<8 x i32>* %in) #0 {
 ; CHECK-LABEL: trunc_v8i32_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -189,54 +161,20 @@ define <8 x i8> @trunc_v8i32_v8i8(<8 x i32>* %in) vscale_range(2,0) #0 {
 define <16 x i8> @trunc_v16i32_v16i8(<16 x i32>* %in) #0 {
 ; CHECK-LABEL: trunc_v16i32_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    ldp q1, q0, [x0, #32]
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z7.s, z1.s[2]
-; CHECK-NEXT:    mov z16.s, z1.s[1]
-; CHECK-NEXT:    ldp q2, q3, [x0]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov z4.s, z0.s[3]
-; CHECK-NEXT:    mov z5.s, z0.s[2]
-; CHECK-NEXT:    mov z6.s, z0.s[1]
-; CHECK-NEXT:    strb w9, [sp, #8]
-; CHECK-NEXT:    fmov w9, s4
-; CHECK-NEXT:    strb w8, [sp, #12]
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov z0.s, z1.s[3]
-; CHECK-NEXT:    mov z19.s, z2.s[2]
-; CHECK-NEXT:    fmov w10, s3
-; CHECK-NEXT:    strb w9, [sp, #15]
-; CHECK-NEXT:    strb w8, [sp]
-; CHECK-NEXT:    fmov w8, s6
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    mov z1.s, z3.s[3]
-; CHECK-NEXT:    strb w10, [sp, #4]
-; CHECK-NEXT:    fmov w10, s5
-; CHECK-NEXT:    strb w8, [sp, #13]
-; CHECK-NEXT:    fmov w8, s16
-; CHECK-NEXT:    mov z17.s, z3.s[2]
-; CHECK-NEXT:    mov z18.s, z3.s[1]
-; CHECK-NEXT:    strb w10, [sp, #14]
-; CHECK-NEXT:    fmov w10, s7
-; CHECK-NEXT:    strb w9, [sp, #11]
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    strb w8, [sp, #9]
-; CHECK-NEXT:    fmov w8, s18
-; CHECK-NEXT:    strb w10, [sp, #10]
-; CHECK-NEXT:    fmov w10, s17
-; CHECK-NEXT:    mov z3.s, z2.s[3]
-; CHECK-NEXT:    mov z20.s, z2.s[1]
-; CHECK-NEXT:    strb w9, [sp, #7]
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    strb w10, [sp, #6]
-; CHECK-NEXT:    fmov w10, s19
-; CHECK-NEXT:    strb w8, [sp, #5]
-; CHECK-NEXT:    fmov w8, s20
-; CHECK-NEXT:    strb w9, [sp, #3]
-; CHECK-NEXT:    strb w10, [sp, #2]
-; CHECK-NEXT:    strb w8, [sp, #1]
-; CHECK-NEXT:    ldr q0, [sp], #16
+; CHECK-NEXT:    ldp q0, q1, [x0, #32]
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ldp q3, q2, [x0]
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    uzp1 z1.b, z0.b, z0.b
+; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    splice z3.h, p0, z3.h, z2.h
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    uzp1 z0.b, z3.b, z3.b
+; CHECK-NEXT:    splice z0.b, p0, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <16 x i32>, <16 x i32>* %in
   %b = trunc <16 x i32> %a to <16 x i8>
@@ -244,16 +182,36 @@ define <16 x i8> @trunc_v16i32_v16i8(<16 x i32>* %in) #0 {
 }
 
 ; NOTE: Extra 'add' is to prevent the truncate being combined with the store.
-define void @trunc_v32i32_v32i8(<32 x i32>* %in, <32 x i8>* %out) vscale_range(8,0) #0 {
+define void @trunc_v32i32_v32i8(<32 x i32>* %in, <32 x i8>* %out) #0 {
 ; CHECK-LABEL: trunc_v32i32_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl32
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.b, vl32
+; CHECK-NEXT:    ldp q0, q1, [x0, #96]
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    ptrue p1.b, vl8
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ldp q2, q3, [x0, #64]
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    add z0.b, z0.b, z0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x1]
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    ldp q4, q5, [x0]
+; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
+; CHECK-NEXT:    splice z2.h, p0, z2.h, z3.h
+; CHECK-NEXT:    uzp1 z1.b, z2.b, z2.b
+; CHECK-NEXT:    splice z1.b, p1, z1.b, z0.b
+; CHECK-NEXT:    uzp1 z4.h, z4.h, z4.h
+; CHECK-NEXT:    ldp q6, q7, [x0, #32]
+; CHECK-NEXT:    uzp1 z3.h, z5.h, z5.h
+; CHECK-NEXT:    splice z4.h, p0, z4.h, z3.h
+; CHECK-NEXT:    uzp1 z2.h, z6.h, z6.h
+; CHECK-NEXT:    uzp1 z0.h, z7.h, z7.h
+; CHECK-NEXT:    splice z2.h, p0, z2.h, z0.h
+; CHECK-NEXT:    uzp1 z0.b, z2.b, z2.b
+; CHECK-NEXT:    uzp1 z2.b, z4.b, z4.b
+; CHECK-NEXT:    splice z2.b, p1, z2.b, z0.b
+; CHECK-NEXT:    add z0.b, z1.b, z1.b
+; CHECK-NEXT:    add z1.b, z2.b, z2.b
+; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %a = load <32 x i32>, <32 x i32>* %in
   %b = trunc <32 x i32> %a to <32 x i8>
@@ -263,16 +221,61 @@ define void @trunc_v32i32_v32i8(<32 x i32>* %in, <32 x i8>* %out) vscale_range(8
 }
 
 ; NOTE: Extra 'add' is to prevent the truncate being combined with the store.
-define void @trunc_v64i32_v64i8(<64 x i32>* %in, <64 x i8>* %out) vscale_range(16,0) #0 {
+define void @trunc_v64i32_v64i8(<64 x i32>* %in, <64 x i8>* %out) #0 {
 ; CHECK-LABEL: trunc_v64i32_v64i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl64
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.b, vl64
+; CHECK-NEXT:    ldp q0, q1, [x0, #128]
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    ptrue p1.b, vl8
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ldp q2, q3, [x0, #160]
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
+; CHECK-NEXT:    splice z2.h, p0, z2.h, z3.h
+; CHECK-NEXT:    uzp1 z2.b, z2.b, z2.b
+; CHECK-NEXT:    ldp q1, q17, [x0, #224]
+; CHECK-NEXT:    splice z0.b, p1, z0.b, z2.b
 ; CHECK-NEXT:    add z0.b, z0.b, z0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x1]
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    ldp q18, q2, [x0, #192]
+; CHECK-NEXT:    uzp1 z17.h, z17.h, z17.h
+; CHECK-NEXT:    splice z1.h, p0, z1.h, z17.h
+; CHECK-NEXT:    uzp1 z1.b, z1.b, z1.b
+; CHECK-NEXT:    uzp1 z18.h, z18.h, z18.h
+; CHECK-NEXT:    ldp q4, q5, [x0, #64]
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    splice z18.h, p0, z18.h, z2.h
+; CHECK-NEXT:    uzp1 z2.b, z18.b, z18.b
+; CHECK-NEXT:    splice z2.b, p1, z2.b, z1.b
+; CHECK-NEXT:    uzp1 z4.h, z4.h, z4.h
+; CHECK-NEXT:    ldp q6, q7, [x0, #96]
+; CHECK-NEXT:    uzp1 z5.h, z5.h, z5.h
+; CHECK-NEXT:    splice z4.h, p0, z4.h, z5.h
+; CHECK-NEXT:    uzp1 z4.b, z4.b, z4.b
+; CHECK-NEXT:    uzp1 z6.h, z6.h, z6.h
+; CHECK-NEXT:    ldp q3, q16, [x0]
+; CHECK-NEXT:    uzp1 z1.h, z7.h, z7.h
+; CHECK-NEXT:    splice z6.h, p0, z6.h, z1.h
+; CHECK-NEXT:    uzp1 z1.b, z6.b, z6.b
+; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
+; CHECK-NEXT:    splice z4.b, p1, z4.b, z1.b
+; CHECK-NEXT:    add z1.b, z2.b, z2.b
+; CHECK-NEXT:    ldp q19, q20, [x0, #32]
+; CHECK-NEXT:    uzp1 z16.h, z16.h, z16.h
+; CHECK-NEXT:    stp q0, q1, [x1, #32]
+; CHECK-NEXT:    splice z3.h, p0, z3.h, z16.h
+; CHECK-NEXT:    add z1.b, z4.b, z4.b
+; CHECK-NEXT:    uzp1 z3.b, z3.b, z3.b
+; CHECK-NEXT:    uzp1 z18.h, z19.h, z19.h
+; CHECK-NEXT:    uzp1 z17.h, z20.h, z20.h
+; CHECK-NEXT:    splice z18.h, p0, z18.h, z17.h
+; CHECK-NEXT:    uzp1 z16.b, z18.b, z18.b
+; CHECK-NEXT:    splice z3.b, p1, z3.b, z16.b
+; CHECK-NEXT:    add z0.b, z3.b, z3.b
+; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
   %a = load <64 x i32>, <64 x i32>* %in
   %b = trunc <64 x i32> %a to <64 x i8>
@@ -285,12 +288,14 @@ define void @trunc_v64i32_v64i8(<64 x i32>* %in, <64 x i8>* %out) vscale_range(1
 ; truncate i32 -> i16
 ;
 
-define <8 x i16> @trunc_v8i32_v8i16(<8 x i32>* %in) vscale_range(2,0) #0 {
+define <8 x i16> @trunc_v8i32_v8i16(<8 x i32>* %in) #0 {
 ; CHECK-LABEL: trunc_v8i32_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <8 x i32>, <8 x i32>* %in
@@ -302,58 +307,18 @@ define <8 x i16> @trunc_v8i32_v8i16(<8 x i32>* %in) vscale_range(2,0) #0 {
 define void @trunc_v16i32_v16i16(<16 x i32>* %in, <16 x i16>* %out) #0 {
 ; CHECK-LABEL: trunc_v16i32_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    ldp q1, q0, [x0, #32]
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z5.s, z1.s[2]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov z2.s, z0.s[3]
-; CHECK-NEXT:    mov z3.s, z0.s[2]
-; CHECK-NEXT:    fmov w10, s2
-; CHECK-NEXT:    ldp q6, q7, [x0]
-; CHECK-NEXT:    strh w8, [sp, #24]
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    mov z4.s, z0.s[1]
-; CHECK-NEXT:    mov z0.s, z1.s[3]
-; CHECK-NEXT:    strh w9, [sp, #16]
-; CHECK-NEXT:    fmov w9, s4
-; CHECK-NEXT:    strh w10, [sp, #30]
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    strh w8, [sp, #28]
-; CHECK-NEXT:    fmov w8, s5
-; CHECK-NEXT:    mov z0.s, z1.s[1]
-; CHECK-NEXT:    strh w9, [sp, #26]
-; CHECK-NEXT:    strh w10, [sp, #22]
-; CHECK-NEXT:    fmov w9, s7
-; CHECK-NEXT:    strh w8, [sp, #20]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w10, s6
-; CHECK-NEXT:    mov z0.s, z7.s[3]
-; CHECK-NEXT:    mov z1.s, z7.s[2]
-; CHECK-NEXT:    mov z2.s, z7.s[1]
-; CHECK-NEXT:    strh w8, [sp, #18]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    strh w9, [sp, #8]
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    strh w10, [sp]
-; CHECK-NEXT:    fmov w10, s2
-; CHECK-NEXT:    mov z3.s, z6.s[3]
-; CHECK-NEXT:    mov z4.s, z6.s[2]
-; CHECK-NEXT:    mov z5.s, z6.s[1]
-; CHECK-NEXT:    strh w8, [sp, #14]
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    strh w9, [sp, #12]
-; CHECK-NEXT:    fmov w9, s4
-; CHECK-NEXT:    strh w10, [sp, #10]
-; CHECK-NEXT:    fmov w10, s5
-; CHECK-NEXT:    strh w8, [sp, #6]
-; CHECK-NEXT:    strh w9, [sp, #4]
-; CHECK-NEXT:    strh w10, [sp, #2]
-; CHECK-NEXT:    ldp q1, q0, [sp]
-; CHECK-NEXT:    add z1.h, z1.h, z1.h
+; CHECK-NEXT:    ldp q0, q1, [x0, #32]
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ldp q3, q2, [x0]
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    add z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    splice z3.h, p0, z3.h, z2.h
+; CHECK-NEXT:    add z1.h, z3.h, z3.h
 ; CHECK-NEXT:    stp q1, q0, [x1]
-; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %a = load <16 x i32>, <16 x i32>* %in
   %b = trunc <16 x i32> %a to <16 x i16>
@@ -363,15 +328,32 @@ define void @trunc_v16i32_v16i16(<16 x i32>* %in, <16 x i16>* %out) #0 {
 }
 
 ; NOTE: Extra 'add' is to prevent the truncate being combined with the store.
-define void @trunc_v32i32_v32i16(<32 x i32>* %in, <32 x i16>* %out) vscale_range(8,0) #0 {
+define void @trunc_v32i32_v32i16(<32 x i32>* %in, <32 x i16>* %out) #0 {
 ; CHECK-LABEL: trunc_v32i32_v32i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl32
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.h, vl32
+; CHECK-NEXT:    ldp q0, q1, [x0, #64]
+; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ldp q2, q3, [x0, #96]
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    add z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    ldp q4, q5, [x0]
+; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
+; CHECK-NEXT:    splice z2.h, p0, z2.h, z3.h
+; CHECK-NEXT:    uzp1 z4.h, z4.h, z4.h
+; CHECK-NEXT:    ldp q6, q7, [x0, #32]
+; CHECK-NEXT:    uzp1 z1.h, z5.h, z5.h
+; CHECK-NEXT:    splice z4.h, p0, z4.h, z1.h
+; CHECK-NEXT:    uzp1 z3.h, z6.h, z6.h
+; CHECK-NEXT:    uzp1 z1.h, z7.h, z7.h
+; CHECK-NEXT:    splice z3.h, p0, z3.h, z1.h
+; CHECK-NEXT:    add z1.h, z2.h, z2.h
+; CHECK-NEXT:    stp q0, q1, [x1, #32]
+; CHECK-NEXT:    add z0.h, z4.h, z4.h
+; CHECK-NEXT:    add z1.h, z3.h, z3.h
+; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
   %a = load <32 x i32>, <32 x i32>* %in
   %b = trunc <32 x i32> %a to <32 x i16>
@@ -381,15 +363,54 @@ define void @trunc_v32i32_v32i16(<32 x i32>* %in, <32 x i16>* %out) vscale_range
 }
 
 ; NOTE: Extra 'add' is to prevent the truncate being combined with the store.
-define void @trunc_v64i32_v64i16(<64 x i32>* %in, <64 x i16>* %out) vscale_range(16,0) #0 {
+define void @trunc_v64i32_v64i16(<64 x i32>* %in, <64 x i16>* %out) #0 {
 ; CHECK-LABEL: trunc_v64i32_v64i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl64
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.h, vl64
+; CHECK-NEXT:    ldp q0, q1, [x0, #192]
+; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ldp q2, q3, [x0, #224]
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    add z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    ldp q6, q7, [x0, #128]
+; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
+; CHECK-NEXT:    splice z2.h, p0, z2.h, z3.h
+; CHECK-NEXT:    add z2.h, z2.h, z2.h
+; CHECK-NEXT:    uzp1 z6.h, z6.h, z6.h
+; CHECK-NEXT:    ldp q1, q3, [x0, #160]
+; CHECK-NEXT:    uzp1 z7.h, z7.h, z7.h
+; CHECK-NEXT:    splice z6.h, p0, z6.h, z7.h
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    ldp q16, q17, [x0, #64]
+; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
+; CHECK-NEXT:    splice z1.h, p0, z1.h, z3.h
+; CHECK-NEXT:    add z1.h, z1.h, z1.h
+; CHECK-NEXT:    uzp1 z16.h, z16.h, z16.h
+; CHECK-NEXT:    ldp q7, q18, [x0, #96]
+; CHECK-NEXT:    uzp1 z17.h, z17.h, z17.h
+; CHECK-NEXT:    splice z16.h, p0, z16.h, z17.h
+; CHECK-NEXT:    uzp1 z7.h, z7.h, z7.h
+; CHECK-NEXT:    ldp q4, q5, [x0, #32]
+; CHECK-NEXT:    uzp1 z3.h, z18.h, z18.h
+; CHECK-NEXT:    splice z7.h, p0, z7.h, z3.h
+; CHECK-NEXT:    uzp1 z4.h, z4.h, z4.h
+; CHECK-NEXT:    ldp q19, q20, [x0]
+; CHECK-NEXT:    uzp1 z3.h, z5.h, z5.h
+; CHECK-NEXT:    stp q0, q2, [x1, #96]
+; CHECK-NEXT:    add z0.h, z6.h, z6.h
+; CHECK-NEXT:    splice z4.h, p0, z4.h, z3.h
+; CHECK-NEXT:    stp q0, q1, [x1, #64]
+; CHECK-NEXT:    add z0.h, z16.h, z16.h
+; CHECK-NEXT:    uzp1 z18.h, z19.h, z19.h
+; CHECK-NEXT:    add z1.h, z7.h, z7.h
+; CHECK-NEXT:    stp q0, q1, [x1, #32]
+; CHECK-NEXT:    add z1.h, z4.h, z4.h
+; CHECK-NEXT:    uzp1 z17.h, z20.h, z20.h
+; CHECK-NEXT:    splice z18.h, p0, z18.h, z17.h
+; CHECK-NEXT:    add z0.h, z18.h, z18.h
+; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
   %a = load <64 x i32>, <64 x i32>* %in
   %b = trunc <64 x i32> %a to <64 x i16>
@@ -403,12 +424,14 @@ define void @trunc_v64i32_v64i16(<64 x i32>* %in, <64 x i16>* %out) vscale_range
 ;
 
 ; NOTE: v4i8 is not legal so result i8 elements are held within i16 containers.
-define <4 x i8> @trunc_v4i64_v4i8(<4 x i64>* %in) vscale_range(2,0) #0 {
+define <4 x i8> @trunc_v4i64_v4i8(<4 x i64>* %in) #0 {
 ; CHECK-LABEL: trunc_v4i64_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -420,45 +443,58 @@ define <4 x i8> @trunc_v4i64_v4i8(<4 x i64>* %in) vscale_range(2,0) #0 {
 define <8 x i8> @trunc_v8i64_v8i8(<8 x i64>* %in) #0 {
 ; CHECK-LABEL: trunc_v8i64_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    ldp q1, q0, [x0, #32]
-; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    ldp q0, q1, [x0, #32]
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    ldp q3, q2, [x0]
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    mov z4.d, z0.d[1]
-; CHECK-NEXT:    strb w9, [sp, #12]
-; CHECK-NEXT:    fmov x9, d4
-; CHECK-NEXT:    mov z0.d, z1.d[1]
-; CHECK-NEXT:    strb w8, [sp, #14]
-; CHECK-NEXT:    fmov x8, d3
-; CHECK-NEXT:    strb w9, [sp, #15]
-; CHECK-NEXT:    fmov x10, d2
-; CHECK-NEXT:    mov z1.d, z2.d[1]
-; CHECK-NEXT:    mov z2.d, z3.d[1]
-; CHECK-NEXT:    strb w8, [sp, #8]
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    fmov x9, d2
-; CHECK-NEXT:    strb w10, [sp, #10]
-; CHECK-NEXT:    fmov x10, d0
-; CHECK-NEXT:    strb w8, [sp, #11]
-; CHECK-NEXT:    strb w10, [sp, #13]
-; CHECK-NEXT:    strb w9, [sp, #9]
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
+; CHECK-NEXT:    splice z3.s, p0, z3.s, z2.s
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    uzp1 z1.h, z3.h, z3.h
+; CHECK-NEXT:    splice z1.h, p0, z1.h, z0.h
+; CHECK-NEXT:    uzp1 z0.b, z1.b, z1.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <8 x i64>, <8 x i64>* %in
   %b = trunc <8 x i64> %a to <8 x i8>
   ret <8 x i8> %b
 }
 
-define <16 x i8> @trunc_v16i64_v16i8(<16 x i64>* %in) vscale_range(8,0) #0 {
+define <16 x i8> @trunc_v16i64_v16i8(<16 x i64>* %in) #0 {
 ; CHECK-LABEL: trunc_v16i64_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl16
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ldp q0, q1, [x0, #96]
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    ptrue p1.h, vl4
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ldp q2, q3, [x0, #64]
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
+; CHECK-NEXT:    ldp q4, q5, [x0]
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
+; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
+; CHECK-NEXT:    uzp1 z1.h, z2.h, z2.h
+; CHECK-NEXT:    splice z1.h, p1, z1.h, z0.h
+; CHECK-NEXT:    uzp1 z4.s, z4.s, z4.s
+; CHECK-NEXT:    uzp1 z1.b, z1.b, z1.b
+; CHECK-NEXT:    ldp q6, q7, [x0, #32]
+; CHECK-NEXT:    uzp1 z3.s, z5.s, z5.s
+; CHECK-NEXT:    splice z4.s, p0, z4.s, z3.s
+; CHECK-NEXT:    uzp1 z2.s, z6.s, z6.s
+; CHECK-NEXT:    uzp1 z0.s, z7.s, z7.s
+; CHECK-NEXT:    splice z2.s, p0, z2.s, z0.s
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    uzp1 z0.h, z2.h, z2.h
+; CHECK-NEXT:    uzp1 z2.h, z4.h, z4.h
+; CHECK-NEXT:    splice z2.h, p1, z2.h, z0.h
+; CHECK-NEXT:    uzp1 z0.b, z2.b, z2.b
+; CHECK-NEXT:    splice z0.b, p0, z0.b, z1.b
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <16 x i64>, <16 x i64>* %in
@@ -467,17 +503,65 @@ define <16 x i8> @trunc_v16i64_v16i8(<16 x i64>* %in) vscale_range(8,0) #0 {
 }
 
 ; NOTE: Extra 'add' is to prevent the truncate being combined with the store.
-define void @trunc_v32i64_v32i8(<32 x i64>* %in, <32 x i8>* %out) vscale_range(16,0) #0 {
+define void @trunc_v32i64_v32i8(<32 x i64>* %in, <32 x i8>* %out) #0 {
 ; CHECK-LABEL: trunc_v32i64_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl32
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.b, vl32
+; CHECK-NEXT:    ldp q0, q1, [x0, #224]
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    ptrue p1.h, vl4
+; CHECK-NEXT:    ptrue p2.b, vl8
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ldp q2, q3, [x0, #192]
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    add z0.b, z0.b, z0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x1]
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
+; CHECK-NEXT:    ldp q1, q16, [x0, #160]
+; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    splice z2.h, p1, z2.h, z0.h
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    uzp1 z0.b, z2.b, z2.b
+; CHECK-NEXT:    ldp q3, q17, [x0, #128]
+; CHECK-NEXT:    uzp1 z16.s, z16.s, z16.s
+; CHECK-NEXT:    splice z1.s, p0, z1.s, z16.s
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
+; CHECK-NEXT:    uzp1 z17.s, z17.s, z17.s
+; CHECK-NEXT:    splice z3.s, p0, z3.s, z17.s
+; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
+; CHECK-NEXT:    splice z3.h, p1, z3.h, z1.h
+; CHECK-NEXT:    ldp q4, q5, [x0]
+; CHECK-NEXT:    uzp1 z1.b, z3.b, z3.b
+; CHECK-NEXT:    splice z1.b, p2, z1.b, z0.b
+; CHECK-NEXT:    uzp1 z4.s, z4.s, z4.s
+; CHECK-NEXT:    ldp q6, q7, [x0, #64]
+; CHECK-NEXT:    uzp1 z5.s, z5.s, z5.s
+; CHECK-NEXT:    splice z4.s, p0, z4.s, z5.s
+; CHECK-NEXT:    uzp1 z6.s, z6.s, z6.s
+; CHECK-NEXT:    ldp q18, q19, [x0, #96]
+; CHECK-NEXT:    uzp1 z7.s, z7.s, z7.s
+; CHECK-NEXT:    splice z6.s, p0, z6.s, z7.s
+; CHECK-NEXT:    uzp1 z6.h, z6.h, z6.h
+; CHECK-NEXT:    uzp1 z16.s, z18.s, z18.s
+; CHECK-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-NEXT:    uzp1 z0.s, z19.s, z19.s
+; CHECK-NEXT:    splice z16.s, p0, z16.s, z0.s
+; CHECK-NEXT:    uzp1 z0.h, z16.h, z16.h
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
+; CHECK-NEXT:    splice z6.h, p1, z6.h, z0.h
+; CHECK-NEXT:    uzp1 z0.b, z6.b, z6.b
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
+; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
+; CHECK-NEXT:    uzp1 z3.h, z4.h, z4.h
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    splice z3.h, p1, z3.h, z2.h
+; CHECK-NEXT:    uzp1 z2.b, z3.b, z3.b
+; CHECK-NEXT:    splice z2.b, p2, z2.b, z0.b
+; CHECK-NEXT:    add z0.b, z1.b, z1.b
+; CHECK-NEXT:    add z1.b, z2.b, z2.b
+; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %a = load <32 x i64>, <32 x i64>* %in
   %b = trunc <32 x i64> %a to <32 x i8>
@@ -490,12 +574,14 @@ define void @trunc_v32i64_v32i8(<32 x i64>* %in, <32 x i8>* %out) vscale_range(1
 ; truncate i64 -> i16
 ;
 
-define <4 x i16> @trunc_v4i64_v4i16(<4 x i64>* %in) vscale_range(2,0) #0 {
+define <4 x i16> @trunc_v4i64_v4i16(<4 x i64>* %in) #0 {
 ; CHECK-LABEL: trunc_v4i64_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -507,30 +593,20 @@ define <4 x i16> @trunc_v4i64_v4i16(<4 x i64>* %in) vscale_range(2,0) #0 {
 define <8 x i16> @trunc_v8i64_v8i16(<8 x i64>* %in) #0 {
 ; CHECK-LABEL: trunc_v8i64_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    ldp q1, q0, [x0, #32]
-; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    ldp q0, q1, [x0, #32]
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    ldp q3, q2, [x0]
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    mov z4.d, z0.d[1]
-; CHECK-NEXT:    strh w9, [sp, #8]
-; CHECK-NEXT:    fmov x9, d4
-; CHECK-NEXT:    mov z0.d, z1.d[1]
-; CHECK-NEXT:    strh w8, [sp, #12]
-; CHECK-NEXT:    fmov x8, d3
-; CHECK-NEXT:    strh w9, [sp, #14]
-; CHECK-NEXT:    fmov x10, d2
-; CHECK-NEXT:    mov z1.d, z2.d[1]
-; CHECK-NEXT:    mov z2.d, z3.d[1]
-; CHECK-NEXT:    strh w8, [sp]
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    fmov x9, d2
-; CHECK-NEXT:    strh w10, [sp, #4]
-; CHECK-NEXT:    fmov x10, d0
-; CHECK-NEXT:    strh w8, [sp, #6]
-; CHECK-NEXT:    strh w10, [sp, #10]
-; CHECK-NEXT:    strh w9, [sp, #2]
-; CHECK-NEXT:    ldr q0, [sp], #16
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z1.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
+; CHECK-NEXT:    splice z3.s, p0, z3.s, z2.s
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    uzp1 z0.h, z3.h, z3.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <8 x i64>, <8 x i64>* %in
   %b = trunc <8 x i64> %a to <8 x i16>
@@ -538,16 +614,36 @@ define <8 x i16> @trunc_v8i64_v8i16(<8 x i64>* %in) #0 {
 }
 
 ; NOTE: Extra 'add' is to prevent the truncate being combined with the store.
-define void @trunc_v16i64_v16i16(<16 x i64>* %in, <16 x i16>* %out) vscale_range(8,0) #0 {
+define void @trunc_v16i64_v16i16(<16 x i64>* %in, <16 x i16>* %out) #0 {
 ; CHECK-LABEL: trunc_v16i64_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl16
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    ldp q0, q1, [x0, #96]
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    ptrue p1.h, vl4
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ldp q2, q3, [x0, #64]
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    add z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
+; CHECK-NEXT:    ldp q4, q5, [x0]
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
+; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
+; CHECK-NEXT:    uzp1 z1.h, z2.h, z2.h
+; CHECK-NEXT:    splice z1.h, p1, z1.h, z0.h
+; CHECK-NEXT:    uzp1 z4.s, z4.s, z4.s
+; CHECK-NEXT:    ldp q6, q7, [x0, #32]
+; CHECK-NEXT:    uzp1 z3.s, z5.s, z5.s
+; CHECK-NEXT:    splice z4.s, p0, z4.s, z3.s
+; CHECK-NEXT:    uzp1 z2.s, z6.s, z6.s
+; CHECK-NEXT:    uzp1 z0.s, z7.s, z7.s
+; CHECK-NEXT:    splice z2.s, p0, z2.s, z0.s
+; CHECK-NEXT:    uzp1 z0.h, z2.h, z2.h
+; CHECK-NEXT:    uzp1 z2.h, z4.h, z4.h
+; CHECK-NEXT:    splice z2.h, p1, z2.h, z0.h
+; CHECK-NEXT:    add z0.h, z1.h, z1.h
+; CHECK-NEXT:    add z1.h, z2.h, z2.h
+; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %a = load <16 x i64>, <16 x i64>* %in
   %b = trunc <16 x i64> %a to <16 x i16>
@@ -557,16 +653,61 @@ define void @trunc_v16i64_v16i16(<16 x i64>* %in, <16 x i16>* %out) vscale_range
 }
 
 ; NOTE: Extra 'add' is to prevent the truncate being combined with the store.
-define void @trunc_v32i64_v32i16(<32 x i64>* %in, <32 x i16>* %out) vscale_range(16,0) #0 {
+define void @trunc_v32i64_v32i16(<32 x i64>* %in, <32 x i16>* %out) #0 {
 ; CHECK-LABEL: trunc_v32i64_v32i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl32
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.h, vl32
+; CHECK-NEXT:    ldp q0, q1, [x0, #128]
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    ptrue p1.h, vl4
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ldp q2, q3, [x0, #160]
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
+; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    ldp q1, q17, [x0, #224]
+; CHECK-NEXT:    splice z0.h, p1, z0.h, z2.h
 ; CHECK-NEXT:    add z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    ldp q18, q2, [x0, #192]
+; CHECK-NEXT:    uzp1 z17.s, z17.s, z17.s
+; CHECK-NEXT:    splice z1.s, p0, z1.s, z17.s
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    uzp1 z18.s, z18.s, z18.s
+; CHECK-NEXT:    ldp q4, q5, [x0, #64]
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
+; CHECK-NEXT:    splice z18.s, p0, z18.s, z2.s
+; CHECK-NEXT:    uzp1 z2.h, z18.h, z18.h
+; CHECK-NEXT:    splice z2.h, p1, z2.h, z1.h
+; CHECK-NEXT:    uzp1 z4.s, z4.s, z4.s
+; CHECK-NEXT:    ldp q6, q7, [x0, #96]
+; CHECK-NEXT:    uzp1 z5.s, z5.s, z5.s
+; CHECK-NEXT:    splice z4.s, p0, z4.s, z5.s
+; CHECK-NEXT:    uzp1 z4.h, z4.h, z4.h
+; CHECK-NEXT:    uzp1 z6.s, z6.s, z6.s
+; CHECK-NEXT:    ldp q3, q16, [x0]
+; CHECK-NEXT:    uzp1 z1.s, z7.s, z7.s
+; CHECK-NEXT:    splice z6.s, p0, z6.s, z1.s
+; CHECK-NEXT:    uzp1 z1.h, z6.h, z6.h
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
+; CHECK-NEXT:    splice z4.h, p1, z4.h, z1.h
+; CHECK-NEXT:    add z1.h, z2.h, z2.h
+; CHECK-NEXT:    ldp q19, q20, [x0, #32]
+; CHECK-NEXT:    uzp1 z16.s, z16.s, z16.s
+; CHECK-NEXT:    stp q0, q1, [x1, #32]
+; CHECK-NEXT:    splice z3.s, p0, z3.s, z16.s
+; CHECK-NEXT:    add z1.h, z4.h, z4.h
+; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
+; CHECK-NEXT:    uzp1 z18.s, z19.s, z19.s
+; CHECK-NEXT:    uzp1 z17.s, z20.s, z20.s
+; CHECK-NEXT:    splice z18.s, p0, z18.s, z17.s
+; CHECK-NEXT:    uzp1 z16.h, z18.h, z18.h
+; CHECK-NEXT:    splice z3.h, p1, z3.h, z16.h
+; CHECK-NEXT:    add z0.h, z3.h, z3.h
+; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
   %a = load <32 x i64>, <32 x i64>* %in
   %b = trunc <32 x i64> %a to <32 x i16>
@@ -579,12 +720,14 @@ define void @trunc_v32i64_v32i16(<32 x i64>* %in, <32 x i16>* %out) vscale_range
 ; truncate i64 -> i32
 ;
 
-define <4 x i32> @trunc_v4i64_v4i32(<4 x i64>* %in) vscale_range(2,0) #0 {
+define <4 x i32> @trunc_v4i64_v4i32(<4 x i64>* %in) #0 {
 ; CHECK-LABEL: trunc_v4i64_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <4 x i64>, <4 x i64>* %in
@@ -596,30 +739,18 @@ define <4 x i32> @trunc_v4i64_v4i32(<4 x i64>* %in) vscale_range(2,0) #0 {
 define void @trunc_v8i64_v8i32(<8 x i64>* %in, <8 x i32>* %out) #0 {
 ; CHECK-LABEL: trunc_v8i64_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    ldp q1, q0, [x0, #32]
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    ldp q2, q3, [x0]
-; CHECK-NEXT:    mov z4.d, z0.d[1]
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    mov z0.d, z1.d[1]
-; CHECK-NEXT:    fmov x10, d4
-; CHECK-NEXT:    fmov x12, d0
-; CHECK-NEXT:    mov z0.d, z2.d[1]
-; CHECK-NEXT:    stp w8, w10, [sp, #24]
-; CHECK-NEXT:    fmov x10, d0
-; CHECK-NEXT:    mov z1.d, z3.d[1]
-; CHECK-NEXT:    fmov x11, d3
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    stp w9, w12, [sp, #16]
-; CHECK-NEXT:    fmov x9, d2
-; CHECK-NEXT:    stp w11, w8, [sp, #8]
-; CHECK-NEXT:    stp w9, w10, [sp]
-; CHECK-NEXT:    ldp q1, q0, [sp]
-; CHECK-NEXT:    add z1.s, z1.s, z1.s
+; CHECK-NEXT:    ldp q0, q1, [x0, #32]
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ldp q3, q2, [x0]
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    add z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
+; CHECK-NEXT:    splice z3.s, p0, z3.s, z2.s
+; CHECK-NEXT:    add z1.s, z3.s, z3.s
 ; CHECK-NEXT:    stp q1, q0, [x1]
-; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %a = load <8 x i64>, <8 x i64>* %in
   %b = trunc <8 x i64> %a to <8 x i32>
@@ -629,15 +760,32 @@ define void @trunc_v8i64_v8i32(<8 x i64>* %in, <8 x i32>* %out) #0 {
 }
 
 ; NOTE: Extra 'add' is to prevent the truncate being combined with the store.
-define void @trunc_v16i64_v16i32(<16 x i64>* %in, <16 x i32>* %out) vscale_range(8,0) #0 {
+define void @trunc_v16i64_v16i32(<16 x i64>* %in, <16 x i32>* %out) #0 {
 ; CHECK-LABEL: trunc_v16i64_v16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl16
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.s, vl16
+; CHECK-NEXT:    ldp q0, q1, [x0, #64]
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ldp q2, q3, [x0, #96]
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    add z0.s, z0.s, z0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
+; CHECK-NEXT:    ldp q4, q5, [x0]
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
+; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
+; CHECK-NEXT:    uzp1 z4.s, z4.s, z4.s
+; CHECK-NEXT:    ldp q6, q7, [x0, #32]
+; CHECK-NEXT:    uzp1 z1.s, z5.s, z5.s
+; CHECK-NEXT:    splice z4.s, p0, z4.s, z1.s
+; CHECK-NEXT:    uzp1 z3.s, z6.s, z6.s
+; CHECK-NEXT:    uzp1 z1.s, z7.s, z7.s
+; CHECK-NEXT:    splice z3.s, p0, z3.s, z1.s
+; CHECK-NEXT:    add z1.s, z2.s, z2.s
+; CHECK-NEXT:    stp q0, q1, [x1, #32]
+; CHECK-NEXT:    add z0.s, z4.s, z4.s
+; CHECK-NEXT:    add z1.s, z3.s, z3.s
+; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
   %a = load <16 x i64>, <16 x i64>* %in
   %b = trunc <16 x i64> %a to <16 x i32>
@@ -647,15 +795,54 @@ define void @trunc_v16i64_v16i32(<16 x i64>* %in, <16 x i32>* %out) vscale_range
 }
 
 ; NOTE: Extra 'add' is to prevent the truncate being combined with the store.
-define void @trunc_v32i64_v32i32(<32 x i64>* %in, <32 x i32>* %out) vscale_range(16,0) #0 {
+define void @trunc_v32i64_v32i32(<32 x i64>* %in, <32 x i32>* %out) #0 {
 ; CHECK-LABEL: trunc_v32i64_v32i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl32
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.s, vl32
+; CHECK-NEXT:    ldp q0, q1, [x0, #192]
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ldp q2, q3, [x0, #224]
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    add z0.s, z0.s, z0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
+; CHECK-NEXT:    ldp q6, q7, [x0, #128]
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
+; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
+; CHECK-NEXT:    add z2.s, z2.s, z2.s
+; CHECK-NEXT:    uzp1 z6.s, z6.s, z6.s
+; CHECK-NEXT:    ldp q1, q3, [x0, #160]
+; CHECK-NEXT:    uzp1 z7.s, z7.s, z7.s
+; CHECK-NEXT:    splice z6.s, p0, z6.s, z7.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    ldp q16, q17, [x0, #64]
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
+; CHECK-NEXT:    splice z1.s, p0, z1.s, z3.s
+; CHECK-NEXT:    add z1.s, z1.s, z1.s
+; CHECK-NEXT:    uzp1 z16.s, z16.s, z16.s
+; CHECK-NEXT:    ldp q7, q18, [x0, #96]
+; CHECK-NEXT:    uzp1 z17.s, z17.s, z17.s
+; CHECK-NEXT:    splice z16.s, p0, z16.s, z17.s
+; CHECK-NEXT:    uzp1 z7.s, z7.s, z7.s
+; CHECK-NEXT:    ldp q4, q5, [x0, #32]
+; CHECK-NEXT:    uzp1 z3.s, z18.s, z18.s
+; CHECK-NEXT:    splice z7.s, p0, z7.s, z3.s
+; CHECK-NEXT:    uzp1 z4.s, z4.s, z4.s
+; CHECK-NEXT:    ldp q19, q20, [x0]
+; CHECK-NEXT:    uzp1 z3.s, z5.s, z5.s
+; CHECK-NEXT:    stp q0, q2, [x1, #96]
+; CHECK-NEXT:    add z0.s, z6.s, z6.s
+; CHECK-NEXT:    splice z4.s, p0, z4.s, z3.s
+; CHECK-NEXT:    stp q0, q1, [x1, #64]
+; CHECK-NEXT:    add z0.s, z16.s, z16.s
+; CHECK-NEXT:    uzp1 z18.s, z19.s, z19.s
+; CHECK-NEXT:    add z1.s, z7.s, z7.s
+; CHECK-NEXT:    stp q0, q1, [x1, #32]
+; CHECK-NEXT:    add z1.s, z4.s, z4.s
+; CHECK-NEXT:    uzp1 z17.s, z20.s, z20.s
+; CHECK-NEXT:    splice z18.s, p0, z18.s, z17.s
+; CHECK-NEXT:    add z0.s, z18.s, z18.s
+; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
   %a = load <32 x i64>, <32 x i64>* %in
   %b = trunc <32 x i64> %a to <32 x i32>

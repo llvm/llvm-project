@@ -665,9 +665,6 @@ defm : Zn2WriteResPair<WriteMULX64, [Zn2ALU1, Zn2Multiplier], 3, [1, 1], 1, 4, 0
 def Zn2WriteJCXZ : SchedWriteRes<[Zn2ALU03]>;
 def : InstRW<[Zn2WriteJCXZ], (instrs JCXZ, JECXZ, JRCXZ)>;
 
-// INTO
-def : InstRW<[WriteMicrocoded], (instrs INTO)>;
-
 // LOOP.
 def Zn2WriteLOOP : SchedWriteRes<[Zn2ALU03]>;
 def : InstRW<[Zn2WriteLOOP], (instrs LOOP)>;
@@ -764,9 +761,6 @@ def : InstRW<[Zn2WriteLEAVE], (instregex "LEAVE")>;
 
 // PAUSE.
 def : InstRW<[WriteMicrocoded], (instrs PAUSE)>;
-
-// RDRAND.
-def : InstRW<[WriteMicrocoded], (instregex "RDRAND(16|32|64)r")>;
 
 // XADD.
 def Zn2XADD : SchedWriteRes<[Zn2ALU]>;

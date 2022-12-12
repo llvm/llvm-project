@@ -13,7 +13,11 @@
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/CallInterface.h"
+#include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertConstant.h"
+#include "flang/Lower/ConvertType.h"
+#include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -241,6 +245,71 @@ private:
   mlir::Location loc;
 };
 
+//===--------------------------------------------------------------------===//
+// Binary Operation implementation
+//===--------------------------------------------------------------------===//
+
+template <typename T>
+struct BinaryOp {
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         hlfir::Entity lhs, hlfir::Entity rhs) {
+    TODO(loc, "binary op implementation in HLFIR");
+  }
+};
+
+#undef GENBIN
+#define GENBIN(GenBinEvOp, GenBinTyCat, GenBinFirOp)                           \
+  template <int KIND>                                                          \
+  struct BinaryOp<Fortran::evaluate::GenBinEvOp<Fortran::evaluate::Type<       \
+      Fortran::common::TypeCategory::GenBinTyCat, KIND>>> {                    \
+    static hlfir::EntityWithAttributes gen(mlir::Location loc,                 \
+                                           fir::FirOpBuilder &builder,         \
+                                           hlfir::Entity lhs,                  \
+                                           hlfir::Entity rhs) {                \
+      return hlfir::EntityWithAttributes{                                      \
+          builder.create<GenBinFirOp>(loc, lhs, rhs)};                         \
+    }                                                                          \
+  };
+
+GENBIN(Add, Integer, mlir::arith::AddIOp)
+GENBIN(Add, Real, mlir::arith::AddFOp)
+GENBIN(Add, Complex, fir::AddcOp)
+GENBIN(Subtract, Integer, mlir::arith::SubIOp)
+GENBIN(Subtract, Real, mlir::arith::SubFOp)
+GENBIN(Subtract, Complex, fir::SubcOp)
+GENBIN(Multiply, Integer, mlir::arith::MulIOp)
+GENBIN(Multiply, Real, mlir::arith::MulFOp)
+GENBIN(Multiply, Complex, fir::MulcOp)
+GENBIN(Divide, Integer, mlir::arith::DivSIOp)
+GENBIN(Divide, Real, mlir::arith::DivFOp)
+GENBIN(Divide, Complex, fir::DivcOp)
+
+template <Fortran::common::TypeCategory TC, int KIND>
+struct BinaryOp<Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>>> {
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         hlfir::Entity lhs, hlfir::Entity rhs) {
+    mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
+                                               /*params=*/llvm::None);
+    return hlfir::EntityWithAttributes{
+        Fortran::lower::genPow(builder, loc, ty, lhs, rhs)};
+  }
+};
+
+template <Fortran::common::TypeCategory TC, int KIND>
+struct BinaryOp<
+    Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC, KIND>>> {
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         hlfir::Entity lhs, hlfir::Entity rhs) {
+    mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
+                                               /*params=*/llvm::None);
+    return hlfir::EntityWithAttributes{
+        Fortran::lower::genPow(builder, loc, ty, lhs, rhs)};
+  }
+};
+
 /// Lower Expr to HLFIR.
 class HlfirBuilder {
 public:
@@ -281,7 +350,12 @@ private:
   template <typename T>
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::FunctionRef<T> &expr) {
-    TODO(getLoc(), "lowering funcRef to HLFIR");
+    mlir::Type resType =
+        Fortran::lower::TypeBuilder<T>::genType(getConverter(), expr);
+    return Fortran::lower::convertCallToHLFIR(getLoc(), getConverter(), expr,
+                                              resType, getSymMap(),
+                                              getStmtCtx())
+        .value();
   }
 
   template <typename T>
@@ -331,7 +405,13 @@ private:
   template <typename D, typename R, typename LO, typename RO>
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Operation<D, R, LO, RO> &op) {
-    TODO(getLoc(), "lowering binary op to HLFIR");
+    auto &builder = getBuilder();
+    mlir::Location loc = getLoc();
+    if (op.Rank() != 0)
+      TODO(loc, "elemental operations in HLFIR");
+    auto left = hlfir::loadTrivialScalar(loc, builder, gen(op.left()));
+    auto right = hlfir::loadTrivialScalar(loc, builder, gen(op.right()));
+    return BinaryOp<D>::gen(loc, builder, left, right);
   }
 
   template <int KIND>

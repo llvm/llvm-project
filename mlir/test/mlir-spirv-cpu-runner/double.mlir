@@ -11,7 +11,7 @@ module attributes {
 } {
   gpu.module @kernels {
     gpu.func @double(%arg0 : memref<6xi32>, %arg1 : memref<6xi32>)
-      kernel attributes { spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[1, 1, 1]>: vector<3xi32>>} {
+      kernel attributes { spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [1, 1, 1]>} {
       %factor = arith.constant 2 : i32
 
       %i0 = arith.constant 0 : index

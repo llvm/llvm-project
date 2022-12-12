@@ -4,7 +4,7 @@
 ; GCN-LABEL: {{^}}addMul2D:
 ; GFX1010: v_fmac_f16
 ; GFX1010: v_fmac_f16
-define hidden <4 x half> @addMul2D(<4 x i8>* nocapture readonly %arg, float addrspace(4)* nocapture readonly %arg1, <2 x i32> %arg2, i32 %arg3) local_unnamed_addr #0 {
+define hidden <4 x half> @addMul2D(ptr nocapture readonly %arg, ptr addrspace(4) nocapture readonly %arg1, <2 x i32> %arg2, i32 %arg3) local_unnamed_addr #0 {
 bb:
   %tmp = extractelement <2 x i32> %arg2, i64 1
   %tmp4 = icmp sgt i32 %tmp, 0
@@ -30,13 +30,13 @@ bb14:                                             ; preds = %bb14, %bb11
   %tmp16 = phi i32 [ 0, %bb11 ], [ %tmp30, %bb14 ]
   %tmp17 = add nsw i32 %tmp16, %tmp12
   %tmp18 = sext i32 %tmp17 to i64
-  %tmp19 = getelementptr inbounds <4 x i8>, <4 x i8>* %arg, i64 %tmp18
-  %tmp20 = load <4 x i8>, <4 x i8>* %tmp19, align 4
+  %tmp19 = getelementptr inbounds <4 x i8>, ptr %arg, i64 %tmp18
+  %tmp20 = load <4 x i8>, ptr %tmp19, align 4
   %tmp21 = tail call <4 x half> @_Z13convert_half4Dv4_h(<4 x i8> %tmp20)
   %tmp22 = add nsw i32 %tmp16, %tmp13
   %tmp23 = sext i32 %tmp22 to i64
-  %tmp24 = getelementptr inbounds float, float addrspace(4)* %arg1, i64 %tmp23
-  %tmp25 = load float, float addrspace(4)* %tmp24, align 4
+  %tmp24 = getelementptr inbounds float, ptr addrspace(4) %arg1, i64 %tmp23
+  %tmp25 = load float, ptr addrspace(4) %tmp24, align 4
   %tmp26 = fptrunc float %tmp25 to half
   %tmp27 = insertelement <4 x half> undef, half %tmp26, i32 0
   %tmp28 = shufflevector <4 x half> %tmp27, <4 x half> undef, <4 x i32> zeroinitializer

@@ -129,6 +129,11 @@ public:
   /// specified instruction.
   void insertAfter(Instruction *InsertPos);
 
+  /// Inserts an unlinked instruction into \p BB at position \p It and returns
+  /// the iterator of the inserted instruction.
+  SymbolTableList<Instruction>::iterator
+  insertAt(BasicBlock *BB, SymbolTableList<Instruction>::iterator It);
+
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right before MovePos.
   void moveBefore(Instruction *MovePos);

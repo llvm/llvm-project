@@ -41,6 +41,8 @@ defm int_loongarch_masked_atomicrmw_sub : MaskedAtomicRMWIntrinsics;
 defm int_loongarch_masked_atomicrmw_nand : MaskedAtomicRMWIntrinsics;
 defm int_loongarch_masked_atomicrmw_umax : MaskedAtomicRMWIntrinsics;
 defm int_loongarch_masked_atomicrmw_umin : MaskedAtomicRMWIntrinsics;
+defm int_loongarch_masked_atomicrmw_max : MaskedAtomicRMWFiveOpIntrinsics;
+defm int_loongarch_masked_atomicrmw_min : MaskedAtomicRMWFiveOpIntrinsics;
 
 // @llvm.loongarch.masked.cmpxchg.i64.<p>(
 //   ptr addr, grlen cmpval, grlen newval, grlen mask, grlenimm ordering)
@@ -54,6 +56,21 @@ def int_loongarch_dbar : Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 def int_loongarch_ibar : Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 def int_loongarch_syscall : Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 
+def int_loongarch_crc_w_b_w : Intrinsic<[llvm_i32_ty],
+                                        [llvm_i32_ty, llvm_i32_ty]>;
+def int_loongarch_crc_w_h_w : Intrinsic<[llvm_i32_ty],
+                                        [llvm_i32_ty, llvm_i32_ty]>;
+def int_loongarch_crc_w_w_w : Intrinsic<[llvm_i32_ty],
+                                        [llvm_i32_ty, llvm_i32_ty]>;
 def int_loongarch_crc_w_d_w : Intrinsic<[llvm_i32_ty],
                                         [llvm_i64_ty, llvm_i32_ty]>;
+
+def int_loongarch_crcc_w_b_w : Intrinsic<[llvm_i32_ty],
+                                         [llvm_i32_ty, llvm_i32_ty]>;
+def int_loongarch_crcc_w_h_w : Intrinsic<[llvm_i32_ty],
+                                         [llvm_i32_ty, llvm_i32_ty]>;
+def int_loongarch_crcc_w_w_w : Intrinsic<[llvm_i32_ty],
+                                         [llvm_i32_ty, llvm_i32_ty]>;
+def int_loongarch_crcc_w_d_w : Intrinsic<[llvm_i32_ty],
+                                         [llvm_i64_ty, llvm_i32_ty]>;
 } // TargetPrefix = "loongarch"

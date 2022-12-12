@@ -8,7 +8,7 @@
 ; generates a selection error.
 
 ; SDAG-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.image.sample.d.1d
-; GISEL-ERR: LLVM ERROR: unable to legalize instruction: %{{[0-9]+}}:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.1d), 15, %{{[0-9]+}}:_(s16), %{{[0-9]+}}:_(s16), %{{[0-9]+}}:_(s32), %{{[0-9]+}}:_(<8 x s32>), %{{[0-9]+}}:_(<4 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource") (in function: sample_d_1d)
+; GISEL-ERR: LLVM ERROR: unable to legalize instruction: %{{[0-9]+}}:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.1d), 15, %{{[0-9]+}}:_(s16), %{{[0-9]+}}:_(s16), %{{[0-9]+}}:_(s32), %{{[0-9]+}}:_(<8 x s32>), %{{[0-9]+}}:_(<4 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 7) (in function: sample_d_1d)
 
 define amdgpu_ps <4 x float> @sample_d_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, float %s) {
 main_body:

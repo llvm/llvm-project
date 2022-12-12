@@ -810,7 +810,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       // is acceptable because section merging is optional.
       if (auto *ms = dyn_cast<MergeInputSection>(s)) {
         s = makeThreadLocal<InputSection>(
-            ms->file, ms->flags, ms->type, ms->alignment,
+            ms->file, ms->flags, ms->type, ms->addralign,
             ms->contentMaybeDecompress(), ms->name);
         sections[info] = s;
       }

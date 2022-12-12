@@ -94,6 +94,7 @@ Using Clang Tools
    ClangOffloadBundler
    ClangOffloadWrapper
    ClangOffloadPackager
+   ClangRepl
 
 Design Documents
 ================
@@ -115,6 +116,5 @@ Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
 

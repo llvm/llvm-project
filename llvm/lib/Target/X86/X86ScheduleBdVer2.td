@@ -411,13 +411,6 @@ def PdWriteCMPXCHG16B : SchedWriteRes<[PdEX1]> {
 }
 def : InstRW<[PdWriteCMPXCHG16B], (instrs CMPXCHG16B)>;
 
-def PdWriteXADD : SchedWriteRes<[PdEX1]> {
-  let Latency = 1;
-  let ResourceCycles = [1];
-  let NumMicroOps = 2;
-}
-def : InstRW<[PdWriteXADD], (instrs XADD8rr, XADD16rr, XADD32rr, XADD64rr)>;
-
 def PdWriteXADDm : SchedWriteRes<[PdEX1]> {
   let Latency = 6;
   let ResourceCycles = [20];

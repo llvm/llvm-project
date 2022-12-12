@@ -305,17 +305,17 @@ entry:
 define i32 @cmovdiffcc(i1 %a, i1 %b, i32 %c, i32 %d, i32 %e, i32 %f) nounwind {
 ; RV32I-LABEL: cmovdiffcc:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    andi a6, a0, 1
-; RV32I-NEXT:    andi a0, a1, 1
-; RV32I-NEXT:    beqz a6, .LBB7_3
+; RV32I-NEXT:    andi a0, a0, 1
+; RV32I-NEXT:    andi a1, a1, 1
+; RV32I-NEXT:    beqz a0, .LBB7_3
 ; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    beqz a0, .LBB7_4
+; RV32I-NEXT:    beqz a1, .LBB7_4
 ; RV32I-NEXT:  .LBB7_2: # %entry
 ; RV32I-NEXT:    add a0, a2, a4
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB7_3: # %entry
 ; RV32I-NEXT:    mv a2, a3
-; RV32I-NEXT:    bnez a0, .LBB7_2
+; RV32I-NEXT:    bnez a1, .LBB7_2
 ; RV32I-NEXT:  .LBB7_4: # %entry
 ; RV32I-NEXT:    mv a4, a5
 ; RV32I-NEXT:    add a0, a2, a4
@@ -323,17 +323,17 @@ define i32 @cmovdiffcc(i1 %a, i1 %b, i32 %c, i32 %d, i32 %e, i32 %f) nounwind {
 ;
 ; RV64I-LABEL: cmovdiffcc:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    andi a6, a0, 1
-; RV64I-NEXT:    andi a0, a1, 1
-; RV64I-NEXT:    beqz a6, .LBB7_3
+; RV64I-NEXT:    andi a0, a0, 1
+; RV64I-NEXT:    andi a1, a1, 1
+; RV64I-NEXT:    beqz a0, .LBB7_3
 ; RV64I-NEXT:  # %bb.1: # %entry
-; RV64I-NEXT:    beqz a0, .LBB7_4
+; RV64I-NEXT:    beqz a1, .LBB7_4
 ; RV64I-NEXT:  .LBB7_2: # %entry
 ; RV64I-NEXT:    addw a0, a2, a4
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB7_3: # %entry
 ; RV64I-NEXT:    mv a2, a3
-; RV64I-NEXT:    bnez a0, .LBB7_2
+; RV64I-NEXT:    bnez a1, .LBB7_2
 ; RV64I-NEXT:  .LBB7_4: # %entry
 ; RV64I-NEXT:    mv a4, a5
 ; RV64I-NEXT:    addw a0, a2, a4

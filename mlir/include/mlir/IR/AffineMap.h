@@ -166,9 +166,10 @@ public:
   /// when the caller knows it is safe to do so.
   unsigned getDimPosition(unsigned idx) const;
 
-  /// Extracts the permuted position where given input index resides.
-  /// Fails when called on a non-permutation.
-  unsigned getPermutedPosition(unsigned input) const;
+  /// Extracts the first result position where `input` dimension resides.
+  /// Returns `llvm::None` if `input` is not a dimension expression or cannot be
+  /// found in results.
+  Optional<unsigned> getResultPosition(AffineExpr input) const;
 
   /// Return true if any affine expression involves AffineDimExpr `position`.
   bool isFunctionOfDim(unsigned position) const {

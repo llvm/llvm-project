@@ -44,15 +44,15 @@ define void @test64(ptr nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9BE-NEXT:    add 5, 3, 4
 ; P9BE-NEXT:    lxsdx 2, 3, 4
 ; P9BE-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; P9BE-NEXT:    xxlxor 0, 0, 0
+; P9BE-NEXT:    xxlxor 1, 1, 1
 ; P9BE-NEXT:    vspltisw 4, 8
 ; P9BE-NEXT:    lxsd 3, 4(5)
 ; P9BE-NEXT:    addi 3, 3, .LCPI0_0@toc@l
 ; P9BE-NEXT:    vadduwm 4, 4, 4
-; P9BE-NEXT:    lxv 1, 0(3)
+; P9BE-NEXT:    lxv 0, 0(3)
 ; P9BE-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
 ; P9BE-NEXT:    addi 3, 3, .LCPI0_1@toc@l
-; P9BE-NEXT:    xxperm 2, 0, 1
+; P9BE-NEXT:    xxperm 2, 1, 0
 ; P9BE-NEXT:    lxv 0, 0(3)
 ; P9BE-NEXT:    xxperm 3, 3, 0
 ; P9BE-NEXT:    vnegw 3, 3
@@ -285,10 +285,10 @@ define void @test16(ptr nocapture readonly %sums, i32 signext %delta, i32 signex
 ; P9BE-NEXT:    addis 3, 2, .LCPI2_1@toc@ha
 ; P9BE-NEXT:    addi 3, 3, .LCPI2_1@toc@l
 ; P9BE-NEXT:    xxperm 2, 0, 1
-; P9BE-NEXT:    lxv 1, 0(3)
+; P9BE-NEXT:    lxv 0, 0(3)
 ; P9BE-NEXT:    li 3, 0
-; P9BE-NEXT:    xxmrghw 0, 4, 2
-; P9BE-NEXT:    xxperm 3, 0, 1
+; P9BE-NEXT:    xxmrghw 2, 4, 2
+; P9BE-NEXT:    xxperm 3, 2, 0
 ; P9BE-NEXT:    xxspltw 2, 3, 1
 ; P9BE-NEXT:    vadduwm 2, 3, 2
 ; P9BE-NEXT:    vextuwlx 3, 3, 2
@@ -312,10 +312,10 @@ define void @test16(ptr nocapture readonly %sums, i32 signext %delta, i32 signex
 ; P9BE-AIX-NEXT:    lxsihzx 0, 3, 4
 ; P9BE-AIX-NEXT:    ld 3, L..C4(2) # %const.1
 ; P9BE-AIX-NEXT:    xxperm 2, 0, 1
-; P9BE-AIX-NEXT:    lxv 1, 0(3)
+; P9BE-AIX-NEXT:    lxv 0, 0(3)
 ; P9BE-AIX-NEXT:    li 3, 0
-; P9BE-AIX-NEXT:    xxmrghw 0, 4, 2
-; P9BE-AIX-NEXT:    xxperm 3, 0, 1
+; P9BE-AIX-NEXT:    xxmrghw 2, 4, 2
+; P9BE-AIX-NEXT:    xxperm 3, 2, 0
 ; P9BE-AIX-NEXT:    xxspltw 2, 3, 1
 ; P9BE-AIX-NEXT:    vadduwm 2, 3, 2
 ; P9BE-AIX-NEXT:    vextuwlx 3, 3, 2
@@ -395,13 +395,13 @@ define void @test8(ptr nocapture readonly %sums, i32 signext %delta, i32 signext
 ; P9LE-NEXT:    vmrghb 2, 3, 2
 ; P9LE-NEXT:    addi 3, 3, .LCPI3_0@toc@l
 ; P9LE-NEXT:    vmrglh 2, 2, 4
-; P9LE-NEXT:    lxv 1, 0(3)
+; P9LE-NEXT:    lxv 0, 0(3)
 ; P9LE-NEXT:    li 3, 0
 ; P9LE-NEXT:    vmrghb 3, 3, 5
 ; P9LE-NEXT:    xxmrglw 2, 2, 4
 ; P9LE-NEXT:    vmrglh 3, 3, 4
-; P9LE-NEXT:    xxmrglw 0, 4, 3
-; P9LE-NEXT:    xxperm 2, 0, 1
+; P9LE-NEXT:    xxmrglw 3, 4, 3
+; P9LE-NEXT:    xxperm 2, 3, 0
 ; P9LE-NEXT:    xxspltw 3, 2, 2
 ; P9LE-NEXT:    vadduwm 2, 2, 3
 ; P9LE-NEXT:    vextuwrx 3, 3, 2

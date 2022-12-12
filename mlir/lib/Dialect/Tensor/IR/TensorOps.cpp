@@ -3170,6 +3170,8 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
     return op->emitError("invalid inner_dims_pos vector");
   if (isInvalidPackingPosSpecification(outerDimPerm, unpackedRank))
     return op->emitError("invalid outer_dims_perm vector");
+  if (!outerDimPerm.empty() && outerDimPerm.size() != unpackedRank)
+    return op->emitError("outer_dims_perm must be a permutation or empty");
 
   // Tiling factors must be less than or equal to the input rank for pack (or
   // output rank for unpack), and must match the number of `inner_dims_pos`.
@@ -3415,6 +3417,20 @@ Speculation::Speculatability UnPackOp::getSpeculatability() {
     return Speculation::NotSpeculatable;
 
   return Speculation::Speculatable;
+}
+
+/// pack(unpack(x)) -> x
+LogicalResult UnPackOp::canonicalize(UnPackOp unpackOp,
+                                     PatternRewriter &rewriter) {
+  PackOp packOp = unpackOp.getSource().getDefiningOp<tensor::PackOp>();
+  if (!packOp || packOp.getDestType() != unpackOp.getSourceType())
+    return failure();
+  if (packOp.getInnerDimsPos() != unpackOp.getInnerDimsPos())
+    return failure();
+  if (packOp.getOuterDimsPerm() != unpackOp.getOuterDimsPerm())
+    return failure();
+  rewriter.replaceOp(unpackOp, packOp.getSource());
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

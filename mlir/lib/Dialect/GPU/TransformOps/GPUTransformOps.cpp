@@ -16,23 +16,12 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformUtils.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/Value.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 
 using namespace mlir;
 using namespace mlir::gpu;
 using namespace mlir::transform;
-
-namespace {
-/// A simple pattern rewriter that implements no special logic.
-class SimpleRewriter : public PatternRewriter {
-public:
-  SimpleRewriter(MLIRContext *context) : PatternRewriter(context) {}
-};
-} // namespace
 
 /// Check if given mapping attributes are one of the desired attributes
 static DiagnosedSilenceableFailure
@@ -135,7 +124,7 @@ createGpuLaunch(RewriterBase &rewriter, Location loc,
 
 /// Alter kernel configuration of the given kernel.
 static DiagnosedSilenceableFailure
-alterGpuLaunch(SimpleRewriter &rewriter, LaunchOp gpuLaunch,
+alterGpuLaunch(TrivialPatternRewriter &rewriter, LaunchOp gpuLaunch,
                TransformOpInterface transformOp,
                Optional<int64_t> gridDimX = llvm::None,
                Optional<int64_t> gridDimY = llvm::None,
@@ -305,7 +294,7 @@ transform::MapForeachToBlocks::applyToOne(Operation *target,
                                           SmallVectorImpl<Operation *> &results,
                                           transform::TransformState &state) {
   LaunchOp gpuLaunch = dyn_cast<LaunchOp>(target);
-  SimpleRewriter rewriter(getContext());
+  TrivialPatternRewriter rewriter(getContext());
   auto transformOp = cast<TransformOpInterface>(getOperation());
 
   if (!getGenerateGpuLaunch() && !gpuLaunch) {
@@ -555,7 +544,7 @@ DiagnosedSilenceableFailure transform::MapNestedForeachToThreads::applyToOne(
   }
 
   MLIRContext *ctx = getContext();
-  SimpleRewriter rewriter(ctx);
+  TrivialPatternRewriter rewriter(ctx);
   rewriter.setInsertionPoint(target);
 
   SmallVector<DeviceMappingAttrInterface> threadMappingAttributes = {

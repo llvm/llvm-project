@@ -6,6 +6,7 @@
 // https://bugs.llvm.org/show_bug.cgi?id=45397
 // UNSUPPORTED: linux
 
+#include <stdint.h>
 #include <stdio.h>
 #include <omp.h>
 #include "omp_testsuite.h"
@@ -20,13 +21,9 @@
 */
 
 // Compiler-generated code (emulation)
-#ifdef _WIN64
-typedef long long kmp_intptr_t;
-#else
-typedef long kmp_intptr_t;
-#endif
-typedef int kmp_int32;
-typedef unsigned char kmp_uint8;
+typedef intptr_t kmp_intptr_t;
+typedef int32_t kmp_int32;
+typedef uint8_t kmp_uint8;
 
 typedef char bool;
 

@@ -419,8 +419,6 @@ void Module::DumpSymbolContext(Stream *s) {
 
 size_t Module::GetNumCompileUnits() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  LLDB_SCOPED_TIMERF("Module::GetNumCompileUnits (module = %p)",
-                     static_cast<void *>(this));
   if (SymbolFile *symbols = GetSymbolFile())
     return symbols->GetNumCompileUnits();
   return 0;

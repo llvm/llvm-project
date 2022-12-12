@@ -67,7 +67,7 @@ def main():
     prefix_list = []
     for l in ti.run_lines:
       if '|' not in l:
-        common.warn('Skipping unparseable RUN line: ' + l)
+        common.warn('Skipping unparsable RUN line: ' + l)
         continue
 
       (tool_cmd, filecheck_cmd) = tuple([cmd.strip() for cmd in l.split('|', 1)])

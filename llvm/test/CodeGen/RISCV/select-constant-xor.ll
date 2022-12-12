@@ -5,10 +5,10 @@
 define i32 @xori64i32(i64 %a) {
 ; RV32-LABEL: xori64i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srai a0, a1, 31
-; RV32-NEXT:    lui a1, 524288
-; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    xor a0, a0, a1
+; RV32-NEXT:    srai a1, a1, 31
+; RV32-NEXT:    lui a0, 524288
+; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    xor a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: xori64i32:

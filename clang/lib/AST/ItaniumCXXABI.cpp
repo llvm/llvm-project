@@ -224,7 +224,7 @@ public:
   MemberPointerInfo
   getMemberPointerInfo(const MemberPointerType *MPT) const override {
     const TargetInfo &Target = Context.getTargetInfo();
-    TargetInfo::IntType PtrDiff = Target.getPtrDiffType(0);
+    TargetInfo::IntType PtrDiff = Target.getPtrDiffType(LangAS::Default);
     MemberPointerInfo MPI;
     MPI.Width = Target.getTypeWidth(PtrDiff);
     MPI.Align = Target.getTypeAlign(PtrDiff);
@@ -251,8 +251,8 @@ public:
       return false;
 
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
-    CharUnits PointerSize =
-      Context.toCharUnitsFromBits(Context.getTargetInfo().getPointerWidth(0));
+    CharUnits PointerSize = Context.toCharUnitsFromBits(
+        Context.getTargetInfo().getPointerWidth(LangAS::Default));
     return Layout.getNonVirtualSize() == PointerSize;
   }
 

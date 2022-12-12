@@ -439,8 +439,8 @@ define half @fsgnjn_s(half %a, half %b) nounwind {
 ; RV32I-NEXT:    lui a1, 1048568
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    slli s1, s1, 17
-; RV32I-NEXT:    srli a1, s1, 17
-; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    srli s1, s1, 17
+; RV32I-NEXT:    or a0, s1, a0
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -478,8 +478,8 @@ define half @fsgnjn_s(half %a, half %b) nounwind {
 ; RV64I-NEXT:    lui a1, 1048568
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    slli s1, s1, 49
-; RV64I-NEXT:    srli a1, s1, 49
-; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    srli s1, s1, 49
+; RV64I-NEXT:    or a0, s1, a0
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload

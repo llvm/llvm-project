@@ -195,6 +195,18 @@ let Predicates = [HasAMXFP16, In64BitMode] in {
                         "tdpfp16ps\t{$src3, $src2, $src1|$src1, $src2, $src3}",
                         []>, VEX_4V, T8XD;
     }
+
+    // Pseduo instruction for RA.
+    let isPseudo = true, Constraints = "$src4 = $dst" in {
+      def PTDPFP16PSV : PseudoI<(outs TILE: $dst), (ins GR16:$src1,
+                                 GR16:$src2, GR16:$src3, TILE:$src4,
+                                 TILE:$src5, TILE:$src6),
+                                 [(set TILE: $dst,
+                                  (int_x86_tdpfp16ps_internal GR16:$src1,
+                                   GR16:$src2, GR16:$src3, TILE:$src4,
+                                   TILE:$src5, TILE:$src6))]>;
+    }
+
     let  usesCustomInserter = 1 in {
       def PTDPFP16PS : PseudoI<(outs), (ins u8imm:$src1,
                                u8imm:$src2, u8imm:$src3),

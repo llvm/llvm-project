@@ -38,7 +38,7 @@ spirv.module Logical GLSL450 {
     {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 5), StorageBuffer>},
     %arg6: i32
     {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 6), StorageBuffer>}) "None"
-  attributes  {spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[32, 1, 1]> : vector<3xi32>>} {
+  attributes  {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 1, 1]>} {
     // CHECK: [[ADDRESSARG6:%.*]] = spirv.mlir.addressof [[VAR6]]
     // CHECK: [[CONST6:%.*]] = spirv.Constant 0 : i32
     // CHECK: [[ARG6PTR:%.*]] = spirv.AccessChain [[ADDRESSARG6]]{{\[}}[[CONST6]]

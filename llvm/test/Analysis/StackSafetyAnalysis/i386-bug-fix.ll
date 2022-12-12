@@ -1,6 +1,6 @@
-; REQUIRES: i386-pc-linux-gnu
+; REQUIRES: x86-registered-target
 
-; RUN: opt passes="print-stack-safety" -disable-output -mtriple=i386-pc-linux-gnu %s 2>&1 | FileCheck %s --check-prefixes=CHECK
+; RUN: opt -passes="print-stack-safety" -disable-output %s 2>&1 | FileCheck %s --check-prefixes=CHECK
 
 ; CHECK:      @main
 ; CHECK-NEXT:   args uses:

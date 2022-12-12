@@ -30,6 +30,23 @@ class LimitDebugInfoTestCase(TestBase):
         self._check_type(target, "InheritsFromOne")
         self._check_type(target, "InheritsFromTwo")
 
+        # Check that the statistics show that we had incomplete debug info.
+        stats = self.get_stats()
+        # Find the a.out module info in the stats and verify it has the
+        # "debugInfoHadIncompleteTypes" key value pair set to True
+        exe_module_found = False
+        for module in stats['modules']:
+            if module['path'].endswith('a.out'):
+                self.assertTrue(module['debugInfoHadIncompleteTypes'])
+                exe_module_found = True
+                break
+        self.assertTrue(exe_module_found)
+        # Verify that "totalModuleCountWithIncompleteTypes" at the top level
+        # is greater than zero which shows we had incomplete debug info in a
+        # module
+        self.assertGreater(stats['totalModuleCountWithIncompleteTypes'], 0)
+
+
     def _check_incomplete_frame_variable_output(self):
         # Check that the display of the "frame variable" output identifies the
         # incomplete types. Currently the expression parser will find the real

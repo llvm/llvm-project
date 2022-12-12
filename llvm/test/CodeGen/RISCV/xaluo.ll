@@ -1957,10 +1957,10 @@ define i64 @ssubo.select.i64(i64 %v1, i64 %v2) {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    sltu a4, a0, a2
 ; RV32-NEXT:    sub a5, a1, a3
-; RV32-NEXT:    sub a4, a5, a4
-; RV32-NEXT:    xor a4, a1, a4
-; RV32-NEXT:    xor a5, a1, a3
-; RV32-NEXT:    and a4, a5, a4
+; RV32-NEXT:    sub a5, a5, a4
+; RV32-NEXT:    xor a5, a1, a5
+; RV32-NEXT:    xor a4, a1, a3
+; RV32-NEXT:    and a4, a4, a5
 ; RV32-NEXT:    bltz a4, .LBB38_2
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    mv a0, a2
@@ -1983,10 +1983,10 @@ define i64 @ssubo.select.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    sltu a4, a0, a2
 ; RV32ZBA-NEXT:    sub a5, a1, a3
-; RV32ZBA-NEXT:    sub a4, a5, a4
-; RV32ZBA-NEXT:    xor a4, a1, a4
-; RV32ZBA-NEXT:    xor a5, a1, a3
-; RV32ZBA-NEXT:    and a4, a5, a4
+; RV32ZBA-NEXT:    sub a5, a5, a4
+; RV32ZBA-NEXT:    xor a5, a1, a5
+; RV32ZBA-NEXT:    xor a4, a1, a3
+; RV32ZBA-NEXT:    and a4, a4, a5
 ; RV32ZBA-NEXT:    bltz a4, .LBB38_2
 ; RV32ZBA-NEXT:  # %bb.1: # %entry
 ; RV32ZBA-NEXT:    mv a0, a2
@@ -2016,11 +2016,11 @@ define i1 @ssub.not.i64(i64 %v1, i64 %v2) {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    sltu a0, a0, a2
 ; RV32-NEXT:    sub a2, a1, a3
-; RV32-NEXT:    sub a0, a2, a0
-; RV32-NEXT:    xor a0, a1, a0
+; RV32-NEXT:    sub a2, a2, a0
+; RV32-NEXT:    xor a2, a1, a2
 ; RV32-NEXT:    xor a1, a1, a3
-; RV32-NEXT:    and a0, a1, a0
-; RV32-NEXT:    slti a0, a0, 0
+; RV32-NEXT:    and a1, a1, a2
+; RV32-NEXT:    slti a0, a1, 0
 ; RV32-NEXT:    xori a0, a0, 1
 ; RV32-NEXT:    ret
 ;
@@ -2037,11 +2037,11 @@ define i1 @ssub.not.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    sltu a0, a0, a2
 ; RV32ZBA-NEXT:    sub a2, a1, a3
-; RV32ZBA-NEXT:    sub a0, a2, a0
-; RV32ZBA-NEXT:    xor a0, a1, a0
+; RV32ZBA-NEXT:    sub a2, a2, a0
+; RV32ZBA-NEXT:    xor a2, a1, a2
 ; RV32ZBA-NEXT:    xor a1, a1, a3
-; RV32ZBA-NEXT:    and a0, a1, a0
-; RV32ZBA-NEXT:    slti a0, a0, 0
+; RV32ZBA-NEXT:    and a1, a1, a2
+; RV32ZBA-NEXT:    slti a0, a1, 0
 ; RV32ZBA-NEXT:    xori a0, a0, 1
 ; RV32ZBA-NEXT:    ret
 ;
@@ -2537,9 +2537,9 @@ define i1 @smulo.not.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    add a0, a5, a0
 ; RV32-NEXT:    add a0, a0, s0
-; RV32-NEXT:    srai a1, a4, 31
-; RV32-NEXT:    xor a0, a0, a1
-; RV32-NEXT:    xor a1, t6, a1
+; RV32-NEXT:    srai a4, a4, 31
+; RV32-NEXT:    xor a0, a0, a4
+; RV32-NEXT:    xor a1, t6, a4
 ; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    seqz a0, a0
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
@@ -2600,9 +2600,9 @@ define i1 @smulo.not.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:    add a0, a0, a1
 ; RV32ZBA-NEXT:    add a0, a5, a0
 ; RV32ZBA-NEXT:    add a0, a0, s0
-; RV32ZBA-NEXT:    srai a1, a4, 31
-; RV32ZBA-NEXT:    xor a0, a0, a1
-; RV32ZBA-NEXT:    xor a1, t6, a1
+; RV32ZBA-NEXT:    srai a4, a4, 31
+; RV32ZBA-NEXT:    xor a0, a0, a4
+; RV32ZBA-NEXT:    xor a1, t6, a4
 ; RV32ZBA-NEXT:    or a0, a1, a0
 ; RV32ZBA-NEXT:    seqz a0, a0
 ; RV32ZBA-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
@@ -3186,11 +3186,11 @@ define zeroext i1 @ssubo.br.i64(i64 %v1, i64 %v2) {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    sltu a0, a0, a2
 ; RV32-NEXT:    sub a2, a1, a3
-; RV32-NEXT:    sub a0, a2, a0
-; RV32-NEXT:    xor a0, a1, a0
+; RV32-NEXT:    sub a2, a2, a0
+; RV32-NEXT:    xor a2, a1, a2
 ; RV32-NEXT:    xor a1, a1, a3
-; RV32-NEXT:    and a0, a1, a0
-; RV32-NEXT:    bgez a0, .LBB57_2
+; RV32-NEXT:    and a1, a1, a2
+; RV32-NEXT:    bgez a1, .LBB57_2
 ; RV32-NEXT:  # %bb.1: # %overflow
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    ret
@@ -3215,11 +3215,11 @@ define zeroext i1 @ssubo.br.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    sltu a0, a0, a2
 ; RV32ZBA-NEXT:    sub a2, a1, a3
-; RV32ZBA-NEXT:    sub a0, a2, a0
-; RV32ZBA-NEXT:    xor a0, a1, a0
+; RV32ZBA-NEXT:    sub a2, a2, a0
+; RV32ZBA-NEXT:    xor a2, a1, a2
 ; RV32ZBA-NEXT:    xor a1, a1, a3
-; RV32ZBA-NEXT:    and a0, a1, a0
-; RV32ZBA-NEXT:    bgez a0, .LBB57_2
+; RV32ZBA-NEXT:    and a1, a1, a2
+; RV32ZBA-NEXT:    bgez a1, .LBB57_2
 ; RV32ZBA-NEXT:  # %bb.1: # %overflow
 ; RV32ZBA-NEXT:    li a0, 0
 ; RV32ZBA-NEXT:    ret
@@ -3493,9 +3493,9 @@ define zeroext i1 @smulo.br.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    add a0, a5, a0
 ; RV32-NEXT:    add a0, a0, s0
-; RV32-NEXT:    srai a1, a4, 31
-; RV32-NEXT:    xor a0, a0, a1
-; RV32-NEXT:    xor a1, t6, a1
+; RV32-NEXT:    srai a4, a4, 31
+; RV32-NEXT:    xor a0, a0, a4
+; RV32-NEXT:    xor a1, t6, a4
 ; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    beqz a0, .LBB61_2
 ; RV32-NEXT:  # %bb.1: # %overflow
@@ -3566,9 +3566,9 @@ define zeroext i1 @smulo.br.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:    add a0, a0, a1
 ; RV32ZBA-NEXT:    add a0, a5, a0
 ; RV32ZBA-NEXT:    add a0, a0, s0
-; RV32ZBA-NEXT:    srai a1, a4, 31
-; RV32ZBA-NEXT:    xor a0, a0, a1
-; RV32ZBA-NEXT:    xor a1, t6, a1
+; RV32ZBA-NEXT:    srai a4, a4, 31
+; RV32ZBA-NEXT:    xor a0, a0, a4
+; RV32ZBA-NEXT:    xor a1, t6, a4
 ; RV32ZBA-NEXT:    or a0, a1, a0
 ; RV32ZBA-NEXT:    beqz a0, .LBB61_2
 ; RV32ZBA-NEXT:  # %bb.1: # %overflow
@@ -3643,9 +3643,9 @@ define zeroext i1 @smulo2.br.i64(i64 %v1) {
 ; RV32-NEXT:    add a0, a0, a5
 ; RV32-NEXT:    add a0, a4, a0
 ; RV32-NEXT:    add a0, a0, t5
-; RV32-NEXT:    srai a1, a3, 31
-; RV32-NEXT:    xor a0, a0, a1
-; RV32-NEXT:    xor a1, t4, a1
+; RV32-NEXT:    srai a3, a3, 31
+; RV32-NEXT:    xor a0, a0, a3
+; RV32-NEXT:    xor a1, t4, a3
 ; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    beqz a0, .LBB62_2
 ; RV32-NEXT:  # %bb.1: # %overflow
@@ -3705,9 +3705,9 @@ define zeroext i1 @smulo2.br.i64(i64 %v1) {
 ; RV32ZBA-NEXT:    add a0, a0, a5
 ; RV32ZBA-NEXT:    add a0, a4, a0
 ; RV32ZBA-NEXT:    add a0, a0, t5
-; RV32ZBA-NEXT:    srai a1, a3, 31
-; RV32ZBA-NEXT:    xor a0, a0, a1
-; RV32ZBA-NEXT:    xor a1, t4, a1
+; RV32ZBA-NEXT:    srai a3, a3, 31
+; RV32ZBA-NEXT:    xor a0, a0, a3
+; RV32ZBA-NEXT:    xor a1, t4, a3
 ; RV32ZBA-NEXT:    or a0, a1, a0
 ; RV32ZBA-NEXT:    beqz a0, .LBB62_2
 ; RV32ZBA-NEXT:  # %bb.1: # %overflow

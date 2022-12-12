@@ -202,6 +202,11 @@ public:
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
 
+  bool hasReassociableSibling(const MachineInstr &Inst,
+                              bool &Commuted) const override;
+
+  bool isAssociativeAndCommutative(const MachineInstr &Inst) const override;
+
 protected:
   const RISCVSubtarget &STI;
 };

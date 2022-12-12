@@ -97,8 +97,8 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   }
 
   // Copy properties from host target.
-  PointerWidth = HostTarget->getPointerWidth(/* AddrSpace = */ 0);
-  PointerAlign = HostTarget->getPointerAlign(/* AddrSpace = */ 0);
+  PointerWidth = HostTarget->getPointerWidth(LangAS::Default);
+  PointerAlign = HostTarget->getPointerAlign(LangAS::Default);
   BoolWidth = HostTarget->getBoolWidth();
   BoolAlign = HostTarget->getBoolAlign();
   IntWidth = HostTarget->getIntWidth();
@@ -119,7 +119,7 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
       HostTarget->getDefaultAlignForAttributeAligned();
   SizeType = HostTarget->getSizeType();
   IntMaxType = HostTarget->getIntMaxType();
-  PtrDiffType = HostTarget->getPtrDiffType(/* AddrSpace = */ 0);
+  PtrDiffType = HostTarget->getPtrDiffType(LangAS::Default);
   IntPtrType = HostTarget->getIntPtrType();
   WCharType = HostTarget->getWCharType();
   WIntType = HostTarget->getWIntType();

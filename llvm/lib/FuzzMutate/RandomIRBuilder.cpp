@@ -72,6 +72,7 @@ Value *RandomIRBuilder::newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
 
 static bool isCompatibleReplacement(const Instruction *I, const Use &Operand,
                                     const Value *Replacement) {
+  unsigned int OperandNo = Operand.getOperandNo();
   if (Operand->getType() != Replacement->getType())
     return false;
   switch (I->getOpcode()) {
@@ -80,13 +81,21 @@ static bool isCompatibleReplacement(const Instruction *I, const Use &Operand,
   case Instruction::ExtractValue:
     // TODO: We could potentially validate these, but for now just leave indices
     // alone.
-    if (Operand.getOperandNo() >= 1)
+    if (OperandNo >= 1)
       return false;
     break;
   case Instruction::InsertValue:
   case Instruction::InsertElement:
   case Instruction::ShuffleVector:
-    if (Operand.getOperandNo() >= 2)
+    if (OperandNo >= 2)
+      return false;
+    break;
+  // For Br/Switch, we only try to modify the 1st Operand (condition).
+  // Modify other operands, like switch case may accidently change case from
+  // ConstantInt to a register, which is illegal.
+  case Instruction::Switch:
+  case Instruction::Br:
+    if (OperandNo >= 1)
       return false;
     break;
   default:
@@ -159,4 +168,9 @@ Value *RandomIRBuilder::findPointer(BasicBlock &BB,
   if (auto RS = makeSampler(Rand, make_filter_range(Insts, IsMatchingPtr)))
     return RS.getSelection();
   return nullptr;
+}
+
+Type *RandomIRBuilder::randomType() {
+  uint64_t TyIdx = uniform<uint64_t>(Rand, 0, KnownTypes.size() - 1);
+  return KnownTypes[TyIdx];
 }

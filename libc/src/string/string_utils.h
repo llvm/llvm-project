@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Standalone string utility functions. Utilities requiring memory allocations
+// should be placed in allocating_string_utils.h intead.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LIBC_SRC_STRING_STRING_UTILS_H
 #define LIBC_SRC_STRING_STRING_UTILS_H
@@ -14,27 +19,144 @@
 #include "src/string/memory_utils/bzero_implementations.h"
 #include "src/string/memory_utils/memcpy_implementations.h"
 #include <stddef.h> // For size_t
-#include <stdlib.h> // For malloc and free
 
 namespace __llvm_libc {
 namespace internal {
 
-// Returns the length of a string, denoted by the first occurrence
-// of a null terminator.
-static inline size_t string_length(const char *src) {
+template <typename Word> constexpr Word repeat_byte(Word byte) {
+  constexpr size_t BITS_IN_BYTE = 8;
+  constexpr size_t BYTE_MASK = 0xff;
+  Word result = 0;
+  byte = byte & BYTE_MASK;
+  for (size_t i = 0; i < sizeof(Word); ++i)
+    result = (result << BITS_IN_BYTE) | byte;
+  return result;
+}
+
+// The goal of this function is to take in a block of arbitrary size and return
+// if it has any bytes equal to zero without branching. This is done by
+// transforming the block such that zero bytes become non-zero and non-zero
+// bytes become zero.
+// The first transformation relies on the properties of carrying in arithmetic
+// subtraction. Specifically, if 0x01 is subtracted from a byte that is 0x00,
+// then the result for that byte must be equal to 0xff (or 0xfe if the next byte
+// needs a carry as well).
+// The next transformation is a simple mask. All zero bytes will have the high
+// bit set after the subtraction, so each byte is masked with 0x80. This narrows
+// the set of bytes that result in a non-zero value to only zero bytes and bytes
+// with the high bit and any other bit set.
+// The final transformation masks the result of the previous transformations
+// with the inverse of the original byte. This means that any byte that had the
+// high bit set will no longer have it set, narrowing the list of bytes which
+// result in non-zero values to just the zero byte.
+template <typename Word> constexpr bool has_zeroes(Word block) {
+  constexpr Word LOW_BITS = repeat_byte<Word>(0x01);
+  constexpr Word HIGH_BITS = repeat_byte<Word>(0x80);
+  Word subtracted = block - LOW_BITS;
+  Word inverted = ~block;
+  return (subtracted & inverted & HIGH_BITS) != 0;
+}
+
+template <typename Word>
+static inline size_t string_length_wide_read(const char *src) {
+  const char *char_ptr = src;
+  // Step 1: read 1 byte at a time to align to block size
+  for (; reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0;
+       ++char_ptr) {
+    if (*char_ptr == '\0')
+      return char_ptr - src;
+  }
+  // Step 2: read blocks
+  for (const Word *block_ptr = reinterpret_cast<const Word *>(char_ptr);
+       !has_zeroes<Word>(*block_ptr); ++block_ptr) {
+    char_ptr = reinterpret_cast<const char *>(block_ptr);
+  }
+  // Step 3: find the zero in the block
+  for (; *char_ptr != '\0'; ++char_ptr) {
+    ;
+  }
+  return char_ptr - src;
+}
+
+static inline size_t string_length_byte_read(const char *src) {
   size_t length;
   for (length = 0; *src; ++src, ++length)
     ;
   return length;
 }
 
-// Returns the first occurrence of 'ch' within the first 'n' characters of
-// 'src'. If 'ch' is not found, returns nullptr.
-static inline void *find_first_character(const unsigned char *src,
-                                         unsigned char ch, size_t n) {
+// Returns the length of a string, denoted by the first occurrence
+// of a null terminator.
+static inline size_t string_length(const char *src) {
+#ifdef LIBC_UNSAFE_STRING_WIDE_READ
+  // Unsigned int is the default size for most processors, and on x86-64 it
+  // performs better than larger sizes when the src pointer can't be assumed to
+  // be aligned to a word boundary, so it's the size we use for reading the
+  // string a block at a time.
+  return string_length_wide_read<unsigned int>(src);
+#else
+  return string_length_byte_read(src);
+#endif
+}
+
+template <typename Word>
+static inline void *find_first_character_wide_read(const unsigned char *src,
+                                                   unsigned char ch, size_t n) {
+  const unsigned char *char_ptr = src;
+  size_t cur = 0;
+
+  // Step 1: read 1 byte at a time to align to block size
+  for (; reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0 && cur < n;
+       ++char_ptr, ++cur) {
+    if (*char_ptr == ch)
+      return const_cast<unsigned char *>(char_ptr);
+  }
+
+  const Word ch_mask = repeat_byte<Word>(ch);
+
+  // Step 2: read blocks
+  for (const Word *block_ptr = reinterpret_cast<const Word *>(char_ptr);
+       !has_zeroes<Word>((*block_ptr) ^ ch_mask) && cur < n;
+       ++block_ptr, cur += sizeof(Word)) {
+    char_ptr = reinterpret_cast<const unsigned char *>(block_ptr);
+  }
+
+  // Step 3: find the match in the block
+  for (; *char_ptr != ch && cur < n; ++char_ptr, ++cur) {
+    ;
+  }
+
+  if (*char_ptr != ch || cur >= n)
+    return static_cast<void *>(nullptr);
+
+  return const_cast<unsigned char *>(char_ptr);
+}
+
+static inline void *find_first_character_byte_read(const unsigned char *src,
+                                                   unsigned char ch, size_t n) {
   for (; n && *src != ch; --n, ++src)
     ;
   return n ? const_cast<unsigned char *>(src) : nullptr;
+}
+
+// Returns the first occurrence of 'ch' within the first 'n' characters of
+// 'src'. If 'ch' is not found, returns nullptr.
+static inline void *find_first_character(const unsigned char *src,
+                                         unsigned char ch, size_t max_strlen) {
+#ifdef LIBC_UNSAFE_STRING_WIDE_READ
+  // If the maximum size of the string is small, the overhead of aligning to a
+  // word boundary and generating a bitmask of the appropriate size may be
+  // greater than the gains from reading larger chunks. Based on some testing,
+  // the crossover point between when it's faster to just read bytewise and read
+  // blocks is somewhere between 16 and 32, so 4 times the size of the block
+  // should be in that range.
+  // Unsigned int is used for the same reason as in strlen.
+  using BlockType = unsigned int;
+  if (max_strlen > (sizeof(BlockType) * 4)) {
+    return find_first_character_wide_read<BlockType>(src, ch, max_strlen);
+  }
+#endif
+  return find_first_character_byte_read(src, ch, max_strlen);
 }
 
 // Returns the maximum length span that contains only characters not found in
@@ -97,17 +219,6 @@ static inline size_t strlcpy(char *__restrict dst, const char *__restrict src,
   inline_memcpy(dst, src, n);
   inline_bzero(dst + n, size - n);
   return len;
-}
-
-inline char *strdup(const char *src) {
-  if (src == nullptr)
-    return nullptr;
-  size_t len = string_length(src) + 1;
-  char *newstr = reinterpret_cast<char *>(::malloc(len));
-  if (newstr == nullptr)
-    return nullptr;
-  inline_memcpy(newstr, src, len);
-  return newstr;
 }
 
 } // namespace internal

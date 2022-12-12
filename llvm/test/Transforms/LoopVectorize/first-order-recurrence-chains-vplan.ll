@@ -15,7 +15,7 @@ define void @test_chained_first_order_recurrences_1(i16* %ptr) {
 ; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi ir<22>, ir<%for.1.next>
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.2> = phi ir<33>, vp<%8>
-; CHECK-NEXT:     vp<%5>    = SCALAR-STEPS vp<%2>, ir<0>, ir<1>
+; CHECK-NEXT:     vp<%5>    = SCALAR-STEPS vp<%2>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep.ptr> = getelementptr ir<%ptr>, vp<%5>
 ; CHECK-NEXT:     WIDEN ir<%for.1.next> = load ir<%gep.ptr>
 ; CHECK-NEXT:     EMIT vp<%8> = first-order splice ir<%for.1> ir<%for.1.next>
@@ -65,7 +65,7 @@ define void @test_chained_first_order_recurrences_3(i16* %ptr) {
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi ir<22>, ir<%for.1.next>
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.2> = phi ir<33>, vp<%9>
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.3> = phi ir<33>, vp<%10>
-; CHECK-NEXT:     vp<%6>    = SCALAR-STEPS vp<%2>, ir<0>, ir<1>
+; CHECK-NEXT:     vp<%6>    = SCALAR-STEPS vp<%2>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep.ptr> = getelementptr ir<%ptr>, vp<%6>
 ; CHECK-NEXT:     WIDEN ir<%for.1.next> = load ir<%gep.ptr>
 ; CHECK-NEXT:     EMIT vp<%9> = first-order splice ir<%for.1> ir<%for.1.next>

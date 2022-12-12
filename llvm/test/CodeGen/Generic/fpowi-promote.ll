@@ -3,7 +3,7 @@
 ; PR1239
 
 ; Undefined external symbol "__powisf2"
-; XFAIL: nvptx
+; XFAIL: target=nvptx{{.*}}
 
 define float @test(float %tmp23302331, i32 %tmp23282329 ) {
 

@@ -1281,22 +1281,21 @@ LineOffsetMapping LineOffsetMapping::get(llvm::MemoryBufferRef Buffer,
   // Line #1 starts at char 0.
   LineOffsets.push_back(0);
 
-  const unsigned char *Buf = (const unsigned char *)Buffer.getBufferStart();
+  const unsigned char *Start = (const unsigned char *)Buffer.getBufferStart();
   const unsigned char *End = (const unsigned char *)Buffer.getBufferEnd();
-  const std::size_t BufLen = End - Buf;
+  const unsigned char *Buf = Start;
 
-  unsigned I = 0;
   uint64_t Word;
 
   // scan sizeof(Word) bytes at a time for new lines.
   // This is much faster than scanning each byte independently.
-  if (BufLen > sizeof(Word)) {
+  if ((unsigned long)(End - Start) > sizeof(Word)) {
     do {
-      Word = llvm::support::endian::read64(Buf + I, llvm::support::little);
+      Word = llvm::support::endian::read64(Buf, llvm::support::little);
       // no new line => jump over sizeof(Word) bytes.
       auto Mask = likelyhasbetween(Word, '\n', '\r');
       if (!Mask) {
-        I += sizeof(Word);
+        Buf += sizeof(Word);
         continue;
       }
 
@@ -1307,30 +1306,33 @@ LineOffsetMapping LineOffsetMapping::get(llvm::MemoryBufferRef Buffer,
       unsigned N =
           llvm::countTrailingZeros(Mask) - 7; // -7 because 0x80 is the marker
       Word >>= N;
-      I += N / 8 + 1;
+      Buf += N / 8 + 1;
       unsigned char Byte = Word;
-      if (Byte == '\n') {
-        LineOffsets.push_back(I);
-      } else if (Byte == '\r') {
+      switch (Byte) {
+      case 'r':
         // If this is \r\n, skip both characters.
-        if (Buf[I] == '\n')
-          ++I;
-        LineOffsets.push_back(I);
-      }
-    } while (I < BufLen - sizeof(Word) - 1);
+        if (*Buf == '\n') {
+          ++Buf;
+        }
+        LLVM_FALLTHROUGH;
+      case '\n':
+        LineOffsets.push_back(Buf - Start);
+      };
+    } while (Buf < End - sizeof(Word) - 1);
   }
 
   // Handle tail using a regular check.
-  while (I < BufLen) {
-    if (Buf[I] == '\n') {
-      LineOffsets.push_back(I + 1);
-    } else if (Buf[I] == '\r') {
+  while (Buf < End) {
+    if (*Buf == '\n') {
+      LineOffsets.push_back(Buf - Start + 1);
+    } else if (*Buf == '\r') {
       // If this is \r\n, skip both characters.
-      if (I + 1 < BufLen && Buf[I + 1] == '\n')
-        ++I;
-      LineOffsets.push_back(I + 1);
+      if (Buf + 1 < End && Buf[1] == '\n') {
+        ++Buf;
+      }
+      LineOffsets.push_back(Buf - Start + 1);
     }
-    ++I;
+    ++Buf;
   }
 
   return LineOffsetMapping(LineOffsets, Alloc);

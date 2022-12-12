@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -split-input-file -async-to-async-runtime                  \
-// RUN:   | FileCheck %s --dump-input=always
+// RUN: mlir-opt %s -split-input-file -async-func-to-async-runtime             \
+// RUN:   -async-to-async-runtime | FileCheck %s --dump-input=always
 
 // CHECK-LABEL: @execute_no_async_args
 func.func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {

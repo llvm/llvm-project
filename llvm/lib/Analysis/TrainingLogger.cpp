@@ -52,7 +52,7 @@ void serialize(const Message &SE, std::string *OutStr) {
 namespace llvm {
 
 class LoggerDataImpl {
-  const std::vector<LoggedFeatureSpec> LoggedFeatureSpecs;
+  const std::vector<TensorSpec> LoggedFeatureSpecs;
   const TensorSpec RewardSpec;
   const bool IncludeReward;
 
@@ -63,7 +63,7 @@ class LoggerDataImpl {
                         size_t NrRecords) const {
     bool Ret = true;
     for (const auto &TSpecs : LoggedFeatureSpecs) {
-      const auto &Name = TSpecs.getLoggingName();
+      const auto &Name = TSpecs.name();
       const auto &FL = SE.feature_lists().feature_list().at(Name).feature();
       if (NrRecords != static_cast<size_t>(FL.size())) {
         dbgs() << "[TF-UTILS]: " << Name << " has missing records. Expected "
@@ -89,12 +89,12 @@ class LoggerDataImpl {
     assert(FeatureLists.size() == LoggedFeatureSpecs.size());
     for (size_t I = 0; I < FeatureLists.size(); ++I) {
       const auto &LFS = LoggedFeatureSpecs[I];
-      (*FL)[LFS.getLoggingName()] = std::move(FeatureLists[I]);
+      (*FL)[LFS.name()] = std::move(FeatureLists[I]);
     }
   }
 
 public:
-  LoggerDataImpl(const std::vector<LoggedFeatureSpec> &LoggedSpecs,
+  LoggerDataImpl(const std::vector<TensorSpec> &LoggedSpecs,
                  const TensorSpec &RewardSpec, bool IncludeReward)
       : LoggedFeatureSpecs(LoggedSpecs), RewardSpec(RewardSpec),
         IncludeReward(IncludeReward), FeatureLists(LoggedFeatureSpecs.size()) {}
@@ -110,7 +110,7 @@ public:
   }
 
   char *addNewTensor(size_t FeatureID) {
-    const auto &Spec = LoggedFeatureSpecs[FeatureID].Spec;
+    const auto &Spec = LoggedFeatureSpecs[FeatureID];
     if (Spec.isElementType<float>()) {
       auto *RF = FeatureLists[FeatureID]
                      .add_feature()
@@ -146,7 +146,7 @@ public:
 };
 } // namespace llvm
 
-Logger::Logger(const std::vector<LoggedFeatureSpec> &FeatureSpecs,
+Logger::Logger(const std::vector<TensorSpec> &FeatureSpecs,
                const TensorSpec &RewardSpec, bool IncludeReward)
     : FeatureSpecs(FeatureSpecs), RewardSpec(RewardSpec),
       IncludeReward(IncludeReward),
@@ -180,22 +180,22 @@ LOG_FINAL_REWARD(Int64, int64_t)
 #undef LOG_FINAL_REWARD
 
 void Logger::logFloatValue(size_t FeatureID, const float *Value) {
-  assert(FeatureSpecs[FeatureID].Spec.isElementType<float>());
+  assert(FeatureSpecs[FeatureID].isElementType<float>());
   logSpecifiedTensorValue(FeatureID, reinterpret_cast<const char *>(Value));
 }
 
 void Logger::logInt64Value(size_t FeatureID, const int64_t *Value) {
-  assert(FeatureSpecs[FeatureID].Spec.isElementType<int64_t>());
+  assert(FeatureSpecs[FeatureID].isElementType<int64_t>());
   logSpecifiedTensorValue(FeatureID, reinterpret_cast<const char *>(Value));
 }
 
 void Logger::logInt32Value(size_t FeatureID, const int32_t *Value) {
-  assert(FeatureSpecs[FeatureID].Spec.isElementType<int32_t>());
+  assert(FeatureSpecs[FeatureID].isElementType<int32_t>());
   logSpecifiedTensorValue(FeatureID, reinterpret_cast<const char *>(Value));
 }
 
 void Logger::logSpecifiedTensorValue(size_t FeatureID, const char *RawData) {
-  const auto &Spec = FeatureSpecs[FeatureID].Spec;
+  const auto &Spec = FeatureSpecs[FeatureID];
   char *Buff = addEntryAndGetFloatOrInt64Buffer(FeatureID);
   if (Spec.isElementType<int32_t>())
     for (size_t I = 0; I < Spec.getElementCount(); ++I)

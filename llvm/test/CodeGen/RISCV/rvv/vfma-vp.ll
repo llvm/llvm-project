@@ -1328,8 +1328,8 @@ define <vscale x 16 x double> @vfma_vv_nxv16f64_unmasked(<vscale x 16 x double> 
 ; CHECK-NEXT:    addi a2, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a2) # Unknown-size Folded Spill
 ; CHECK-NEXT:    vl8re64.v v0, (a0)
-; CHECK-NEXT:    and a0, a5, a3
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    and a3, a5, a3
+; CHECK-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0

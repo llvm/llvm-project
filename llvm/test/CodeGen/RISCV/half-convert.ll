@@ -1217,8 +1217,8 @@ define i64 @fcvt_lu_h_sat(half %a) nounwind {
 ; RV32I-NEXT:    call __gesf2@plt
 ; RV32I-NEXT:    slti a0, a0, 0
 ; RV32I-NEXT:    addi a0, a0, -1
-; RV32I-NEXT:    and a0, a0, s2
-; RV32I-NEXT:    or a1, s1, a0
+; RV32I-NEXT:    and a1, a0, s2
+; RV32I-NEXT:    or a1, s1, a1
 ; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload

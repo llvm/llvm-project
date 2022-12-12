@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -sroa -S | FileCheck %s
+; RUN: opt < %s -passes='inline,sroa' -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline,function(sroa))' -S | FileCheck %s
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
@@ -24,24 +24,24 @@ define i32 @test1(i32 %W) {
 ; CHECK-NOT: @test2f(
 define internal %T* @test2f(i1 %cond, %T* %P) {
   br i1 %cond, label %T, label %F
-  
+
 T:
   %A = getelementptr %T, %T* %P, i32 0, i32 0
   store i32 42, i32* %A
   ret %T* %P
-  
+
 F:
   ret %T* %P
 }
 
 define i32 @test2(i1 %cond) {
   %A = alloca %T
-  
+
   %B = call %T* @test2f(i1 %cond, %T* %A)
   %C = getelementptr %T, %T* %B, i32 0, i32 0
   %D = load i32, i32* %C
   ret i32 %D
-  
+
 ; CHECK-LABEL: @test2(
 ; CHECK-NOT: = alloca
 ; CHECK: ret i32

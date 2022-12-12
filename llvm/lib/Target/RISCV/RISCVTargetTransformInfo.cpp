@@ -31,6 +31,27 @@ static cl::opt<unsigned> SLPMaxVF(
         "SLP vectorizer.  Defaults to 1 which disables SLP."),
     cl::init(1), cl::Hidden);
 
+InstructionCost RISCVTTIImpl::getLMULCost(MVT VT) {
+  // TODO: Here assume reciprocal throughput is 1 for LMUL_1, it is
+  // implementation-defined.
+  if (!VT.isVector())
+    return InstructionCost::getInvalid();
+  unsigned Cost;
+  if (VT.isScalableVector()) {
+    unsigned LMul;
+    bool Fractional;
+    std::tie(LMul, Fractional) =
+        RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(VT));
+    if (Fractional)
+      Cost = 1;
+    else
+      Cost = LMul;
+  } else {
+    Cost = VT.getSizeInBits() / ST->getRealMinVLen();
+  }
+  return std::max<unsigned>(Cost, 1);
+}
+
 InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
                                             TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy() &&
@@ -214,10 +235,9 @@ InstructionCost RISCVTTIImpl::getSpliceCost(VectorType *Tp, int Index) {
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
 
   unsigned Cost = 2; // vslidedown+vslideup.
-  // TODO: LMUL should increase cost.
   // TODO: Multiplying by LT.first implies this legalizes into multiple copies
   // of similar code, but I think we expand through memory.
-  return Cost * LT.first;
+  return Cost * LT.first * getLMULCost(LT.second);
 }
 
 InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
@@ -253,6 +273,44 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         return LT.first * 9;
       return LT.first * 6;
     }
+  }
+
+  if (isa<FixedVectorType>(Tp) && Kind == TargetTransformInfo::SK_Broadcast) {
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+    bool HasScalar = (Args.size() > 0) && (Operator::getOpcode(Args[0]) ==
+                                           Instruction::InsertElement);
+    if (LT.second.getScalarSizeInBits() == 1) {
+      if (HasScalar) {
+        // Example sequence:
+        //   andi a0, a0, 1
+        //   vsetivli zero, 2, e8, mf8, ta, ma (ignored)
+        //   vmv.v.x v8, a0
+        //   vmsne.vi v0, v8, 0
+        return LT.first * getLMULCost(LT.second) * 3;
+      }
+      // Example sequence:
+      //   vsetivli  zero, 2, e8, mf8, ta, mu (ignored)
+      //   vmv.v.i v8, 0
+      //   vmerge.vim      v8, v8, 1, v0
+      //   vmv.x.s a0, v8
+      //   andi    a0, a0, 1
+      //   vmv.v.x v8, a0
+      //   vmsne.vi  v0, v8, 0
+
+      return LT.first * getLMULCost(LT.second) * 6;
+    }
+
+    if (HasScalar) {
+      // Example sequence:
+      //   vmv.v.x v8, a0
+      return LT.first * getLMULCost(LT.second);
+    }
+
+    // Example sequence:
+    //   vrgather.vi     v9, v8, 0
+    // TODO: vrgather could be slower than vmv.v.x. It is
+    // implementation-dependent.
+    return LT.first * getLMULCost(LT.second);
   }
 
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
@@ -1020,6 +1078,31 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
 
+
+  auto getConstantMatCost =
+    [&](unsigned Operand, TTI::OperandValueInfo OpInfo) -> InstructionCost {
+    if (OpInfo.isUniform() && TLI->canSplatOperand(Opcode, Operand))
+      // Two sub-cases:
+      // * Has a 5 bit immediate operand which can be splatted.
+      // * Has a larger immediate which must be materialized in scalar register
+      // We return 0 for both as we currently ignore the cost of materializing
+      // scalar constants in GPRs.
+      return 0;
+
+    // Add a cost of address generation + the cost of the vector load. The
+    // address is expected to be a PC relative offset to a constant pool entry
+    // using auipc/addi.
+    return 2 + getMemoryOpCost(Instruction::Load, Ty, DL.getABITypeAlign(Ty),
+                               /*AddressSpace=*/0, CostKind);
+  };
+
+  // Add the cost of materializing any constant vectors required.
+  InstructionCost ConstantMatCost = 0;
+  if (Op1Info.isConstant())
+    ConstantMatCost += getConstantMatCost(0, Op1Info);
+  if (Op2Info.isConstant())
+    ConstantMatCost += getConstantMatCost(1, Op2Info);
+
   switch (TLI->InstructionOpcodeToISD(Opcode)) {
   case ISD::ADD:
   case ISD::SUB:
@@ -1036,13 +1119,11 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   case ISD::FSUB:
   case ISD::FMUL:
   case ISD::FNEG: {
-    // TODO: Add the cost of materializing any constant vectors required since
-    // we otherwise treat constants as no-cost.
-    // TODO: We should be accounting for LMUL and scaling costs for LMUL > 1.
-    return LT.first * 1;
+    return ConstantMatCost + getLMULCost(LT.second) * LT.first * 1;
   }
   default:
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+    return ConstantMatCost +
+           BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
   }
 }

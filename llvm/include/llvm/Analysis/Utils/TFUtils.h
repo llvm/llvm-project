@@ -77,10 +77,6 @@ public:
                    const std::vector<TensorSpec> &InputSpecs,
                    const std::vector<TensorSpec> &OutputSpecs,
                    const char *Tags = "serve");
-  TFModelEvaluator(StringRef SavedModelPath,
-                   const std::vector<TensorSpec> &InputSpecs,
-                   function_ref<TensorSpec(size_t)> GetOutputSpecs,
-                   size_t OutputSpecsSize, const char *Tags = "serve");
 
   ~TFModelEvaluator();
   TFModelEvaluator(const TFModelEvaluator &) = delete;

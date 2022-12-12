@@ -175,7 +175,7 @@ class RVInstIVI<bits<6> funct6, dag outs, dag ins, string opcodestr,
   let Inst{25} = vm;
   let Inst{24-20} = vs2;
   let Inst{19-15} = imm;
-  let Inst{14-12} = 0b011;
+  let Inst{14-12} = OPIVI.Value;
   let Inst{11-7} = vd;
   let Opcode = OPC_OP_V.Value;
 

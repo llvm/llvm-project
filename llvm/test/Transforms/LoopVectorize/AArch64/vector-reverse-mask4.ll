@@ -38,7 +38,8 @@ define void @vector_reverse_mask_v4i1(double* noalias %a, double* noalias %cond,
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* [[TMP3]] to <4 x double>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, <4 x double>* [[TMP4]], align 8
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x double> [[WIDE_LOAD]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, double* [[TMP2]], i64 -7
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, double* [[TMP2]], i64 -4
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, double* [[TMP5]], i64 -3
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast double* [[TMP6]] to <4 x double>*
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x double>, <4 x double>* [[TMP7]], align 8
 ; CHECK-NEXT:    [[REVERSE2:%.*]] = shufflevector <4 x double> [[WIDE_LOAD1]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -49,7 +50,8 @@ define void @vector_reverse_mask_v4i1(double* noalias %a, double* noalias %cond,
 ; CHECK-NEXT:    [[REVERSE3:%.*]] = shufflevector <4 x i1> [[TMP8]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast double* [[TMP11]] to <4 x double>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* [[TMP12]], i32 8, <4 x i1> [[REVERSE3]], <4 x double> poison)
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr double, double* [[TMP10]], i64 -7
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr double, double* [[TMP10]], i64 -4
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr double, double* [[TMP13]], i64 -3
 ; CHECK-NEXT:    [[REVERSE5:%.*]] = shufflevector <4 x i1> [[TMP9]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP15:%.*]] = bitcast double* [[TMP14]] to <4 x double>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD6:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* [[TMP15]], i32 8, <4 x i1> [[REVERSE5]], <4 x double> poison)

@@ -389,7 +389,8 @@ protected:
                              bool withKeyword = false);
   void printNamedAttribute(NamedAttribute attr);
   void printTrailingLocation(Location loc, bool allowAlias = true);
-  void printLocationInternal(LocationAttr loc, bool pretty = false);
+  void printLocationInternal(LocationAttr loc, bool pretty = false,
+                             bool isTopLevel = false);
 
   /// Print a dense elements attribute. If 'allowHex' is true, a hex string is
   /// used instead of individual elements when the elements attr is large.
@@ -495,14 +496,21 @@ public:
   /// Visit the given attribute to see if it has an alias. `canBeDeferred` is
   /// set to true if the originator of this attribute can resolve the alias
   /// after parsing has completed (e.g. in the case of operation locations).
-  /// Returns the maximum alias depth of the attribute.
-  size_t visit(Attribute attr, bool canBeDeferred = false) {
-    return visitImpl(attr, aliases, canBeDeferred);
+  /// `elideType` indicates if the type of the attribute should be skipped when
+  /// looking for nested aliases. Returns the maximum alias depth of the
+  /// attribute, and the alias index of this attribute.
+  std::pair<size_t, size_t> visit(Attribute attr, bool canBeDeferred = false,
+                                  bool elideType = false) {
+    return visitImpl(attr, aliases, canBeDeferred, elideType);
   }
 
-  /// Visit the given type to see if it has an alias. Returns the maximum alias
-  /// depth of the type.
-  size_t visit(Type type) { return visitImpl(type, aliases); }
+  /// Visit the given type to see if it has an alias. `canBeDeferred` is
+  /// set to true if the originator of this attribute can resolve the alias
+  /// after parsing has completed. Returns the maximum alias depth of the type,
+  /// and the alias index of this type.
+  std::pair<size_t, size_t> visit(Type type, bool canBeDeferred = false) {
+    return visitImpl(type, aliases, canBeDeferred);
+  }
 
 private:
   struct InProgressAliasInfo {
@@ -530,16 +538,23 @@ private:
     bool isType : 1;
     /// If this alias can be deferred or not.
     bool canBeDeferred : 1;
+    /// Indices for child aliases.
+    SmallVector<size_t> childIndices;
   };
 
   /// Visit the given attribute or type to see if it has an alias.
   /// `canBeDeferred` is set to true if the originator of this value can resolve
   /// the alias after parsing has completed (e.g. in the case of operation
-  /// locations). Returns the maximum alias depth of the value.
-  template <typename T>
-  size_t visitImpl(T value,
-                   llvm::MapVector<const void *, InProgressAliasInfo> &aliases,
-                   bool canBeDeferred = false);
+  /// locations). Returns the maximum alias depth of the value, and its alias
+  /// index.
+  template <typename T, typename... PrintArgs>
+  std::pair<size_t, size_t>
+  visitImpl(T value,
+            llvm::MapVector<const void *, InProgressAliasInfo> &aliases,
+            bool canBeDeferred, PrintArgs &&...printArgs);
+
+  /// Mark the given alias as non-deferrable.
+  void markAliasNonDeferrable(size_t aliasIndex);
 
   /// Try to generate an alias for the provided symbol. If an alias is
   /// generated, the provided alias mapping and reverse mapping are updated.
@@ -722,7 +737,7 @@ private:
 
   /// The following are hooks of `OpAsmPrinter` that are not necessary for
   /// determining potential aliases.
-  void printFloat(const APFloat &value) override {}
+  void printFloat(const APFloat &) override {}
   void printAffineMapOfSSAIds(AffineMapAttr, ValueRange) override {}
   void printAffineExprOfSSAIds(AffineExpr, ValueRange, ValueRange) override {}
   void printNewline() override {}
@@ -736,6 +751,7 @@ private:
     os << "%";
   }
   void printKeywordOrString(StringRef) override {}
+  void printResourceHandle(const AsmDialectResourceHandle &) override {}
   void printSymbolName(StringRef) override {}
   void printSuccessor(Block *) override {}
   void printSuccessorAndUseList(Block *, ValueRange) override {}
@@ -746,6 +762,149 @@ private:
 
   /// The initializer to use when identifying aliases.
   AliasInitializer &initializer;
+
+  /// A dummy output stream.
+  mutable llvm::raw_null_ostream os;
+};
+
+class DummyAliasDialectAsmPrinter : public DialectAsmPrinter {
+public:
+  explicit DummyAliasDialectAsmPrinter(AliasInitializer &initializer,
+                                       bool canBeDeferred,
+                                       SmallVectorImpl<size_t> &childIndices)
+      : initializer(initializer), canBeDeferred(canBeDeferred),
+        childIndices(childIndices) {}
+
+  /// Print the given attribute/type, visiting any nested aliases that would be
+  /// generated as part of printing. Returns the maximum alias depth found while
+  /// printing the given value.
+  template <typename T, typename... PrintArgs>
+  size_t printAndVisitNestedAliases(T value, PrintArgs &&...printArgs) {
+    printAndVisitNestedAliasesImpl(value, printArgs...);
+    return maxAliasDepth;
+  }
+
+private:
+  /// Print the given attribute/type, visiting any nested aliases that would be
+  /// generated as part of printing.
+  void printAndVisitNestedAliasesImpl(Attribute attr, bool elideType) {
+    if (!isa<BuiltinDialect>(attr.getDialect()))
+      return attr.getDialect().printAttribute(attr, *this);
+
+    // Process the builtin attributes.
+    if (attr.isa<AffineMapAttr, DenseArrayAttr, FloatAttr, IntegerAttr,
+                 IntegerSetAttr, UnitAttr>())
+      return;
+    if (auto dictAttr = dyn_cast<DictionaryAttr>(attr)) {
+      for (const NamedAttribute &nestedAttr : dictAttr.getValue()) {
+        printAttribute(nestedAttr.getName());
+        printAttribute(nestedAttr.getValue());
+      }
+    } else if (auto arrayAttr = dyn_cast<ArrayAttr>(attr)) {
+      for (Attribute nestedAttr : arrayAttr.getValue())
+        printAttribute(nestedAttr);
+    } else if (auto typeAttr = dyn_cast<TypeAttr>(attr)) {
+      printType(typeAttr.getValue());
+    } else if (auto locAttr = dyn_cast<OpaqueLoc>(attr)) {
+      printAttribute(locAttr.getFallbackLocation());
+    } else if (auto locAttr = dyn_cast<NameLoc>(attr)) {
+      if (!isa<UnknownLoc>(locAttr.getChildLoc()))
+        printAttribute(locAttr.getChildLoc());
+    } else if (auto locAttr = dyn_cast<CallSiteLoc>(attr)) {
+      printAttribute(locAttr.getCallee());
+      printAttribute(locAttr.getCaller());
+    } else if (auto locAttr = dyn_cast<FusedLoc>(attr)) {
+      if (Attribute metadata = locAttr.getMetadata())
+        printAttribute(metadata);
+      for (Location nestedLoc : locAttr.getLocations())
+        printAttribute(nestedLoc);
+    }
+
+    // Don't print the type if we must elide it, or if it is a None type.
+    if (!elideType) {
+      if (auto typedAttr = attr.dyn_cast<TypedAttr>()) {
+        Type attrType = typedAttr.getType();
+        if (!attrType.isa<NoneType>())
+          printType(attrType);
+      }
+    }
+  }
+  void printAndVisitNestedAliasesImpl(Type type) {
+    if (!isa<BuiltinDialect>(type.getDialect()))
+      return type.getDialect().printType(type, *this);
+
+    // Only visit the layout of memref if it isn't the identity.
+    if (auto memrefTy = type.dyn_cast<MemRefType>()) {
+      printType(memrefTy.getElementType());
+      MemRefLayoutAttrInterface layout = memrefTy.getLayout();
+      if (!layout.isa<AffineMapAttr>() || !layout.isIdentity())
+        printAttribute(memrefTy.getLayout());
+      if (memrefTy.getMemorySpace())
+        printAttribute(memrefTy.getMemorySpace());
+      return;
+    }
+
+    // For most builtin types, we can simply walk the sub elements.
+    if (auto subElementInterface = dyn_cast<SubElementTypeInterface>(type)) {
+      auto visitFn = [&](auto element) {
+        if (element)
+          (void)printAlias(element);
+      };
+      subElementInterface.walkImmediateSubElements(visitFn, visitFn);
+    }
+  }
+
+  /// Consider the given type to be printed for an alias.
+  void printType(Type type) override {
+    recordAliasResult(initializer.visit(type, canBeDeferred));
+  }
+
+  /// Consider the given attribute to be printed for an alias.
+  void printAttribute(Attribute attr) override {
+    recordAliasResult(initializer.visit(attr, canBeDeferred));
+  }
+  void printAttributeWithoutType(Attribute attr) override {
+    recordAliasResult(
+        initializer.visit(attr, canBeDeferred, /*elideType=*/true));
+  }
+  LogicalResult printAlias(Attribute attr) override {
+    printAttribute(attr);
+    return success();
+  }
+  LogicalResult printAlias(Type type) override {
+    printType(type);
+    return success();
+  }
+
+  /// Record the alias result of a child element.
+  void recordAliasResult(std::pair<size_t, size_t> aliasDepthAndIndex) {
+    childIndices.push_back(aliasDepthAndIndex.second);
+    if (aliasDepthAndIndex.first > maxAliasDepth)
+      maxAliasDepth = aliasDepthAndIndex.first;
+  }
+
+  /// Return a null stream as the output stream, this will ignore any data fed
+  /// to it.
+  raw_ostream &getStream() const override { return os; }
+
+  /// The following are hooks of `DialectAsmPrinter` that are not necessary for
+  /// determining potential aliases.
+  void printFloat(const APFloat &) override {}
+  void printKeywordOrString(StringRef) override {}
+  void printSymbolName(StringRef) override {}
+  void printResourceHandle(const AsmDialectResourceHandle &) override {}
+
+  /// The initializer to use when identifying aliases.
+  AliasInitializer &initializer;
+
+  /// If the aliases visited by this printer can be deferred.
+  bool canBeDeferred;
+
+  /// The indices of child aliases.
+  SmallVectorImpl<size_t> &childIndices;
+
+  /// The maximum alias depth found by the printer.
+  size_t maxAliasDepth = 0;
 
   /// A dummy output stream.
   mutable llvm::raw_null_ostream os;
@@ -836,48 +995,48 @@ void AliasInitializer::initialize(
   initializeAliases(aliases, attrTypeToAlias);
 }
 
-template <typename T>
-size_t AliasInitializer::visitImpl(
+template <typename T, typename... PrintArgs>
+std::pair<size_t, size_t> AliasInitializer::visitImpl(
     T value, llvm::MapVector<const void *, InProgressAliasInfo> &aliases,
-    bool canBeDeferred) {
+    bool canBeDeferred, PrintArgs &&...printArgs) {
   auto [it, inserted] =
       aliases.insert({value.getAsOpaquePointer(), InProgressAliasInfo()});
+  size_t aliasIndex = std::distance(aliases.begin(), it);
   if (!inserted) {
     // Make sure that the alias isn't deferred if we don't permit it.
     if (!canBeDeferred)
-      it->second.canBeDeferred = false;
-    return it->second.aliasDepth;
+      markAliasNonDeferrable(aliasIndex);
+    return {static_cast<size_t>(it->second.aliasDepth), aliasIndex};
   }
 
-  // Try to generate an alias for this attribute.
+  // Try to generate an alias for this value.
   generateAlias(value, it->second, canBeDeferred);
-  size_t aliasIndex = std::distance(aliases.begin(), it);
 
-  // Check for any sub elements.
-  using SubElementInterfaceT =
-      std::conditional_t<std::is_same_v<T, Type>, SubElementTypeInterface,
-                         SubElementAttrInterface>;
-  if (auto subElementInterface = dyn_cast<SubElementInterfaceT>(value)) {
-    size_t maxAliasDepth = 0;
-    auto visitSubElement = [&](auto element) {
-      if (!element)
-        return;
-      if (size_t depth = visit(element))
-        maxAliasDepth = std::max(maxAliasDepth, depth + 1);
-    };
-    subElementInterface.walkImmediateSubElements(visitSubElement,
-                                                 visitSubElement);
+  // Print the value, capturing any nested elements that require aliases.
+  SmallVector<size_t> childAliases;
+  DummyAliasDialectAsmPrinter printer(*this, canBeDeferred, childAliases);
+  size_t maxAliasDepth =
+      printer.printAndVisitNestedAliases(value, printArgs...);
 
-    // Make sure to recompute `it` in case the map was reallocated.
-    it = std::next(aliases.begin(), aliasIndex);
+  // Make sure to recompute `it` in case the map was reallocated.
+  it = std::next(aliases.begin(), aliasIndex);
 
-    // If we had sub elements, update to account for the depth.
-    if (maxAliasDepth)
-      it->second.aliasDepth = maxAliasDepth;
-  }
+  // If we had sub elements, update to account for the depth.
+  it->second.childIndices = std::move(childAliases);
+  if (maxAliasDepth)
+    it->second.aliasDepth = maxAliasDepth + 1;
 
   // Propagate the alias depth of the value.
-  return it->second.aliasDepth;
+  return {(size_t)it->second.aliasDepth, aliasIndex};
+}
+
+void AliasInitializer::markAliasNonDeferrable(size_t aliasIndex) {
+  auto it = std::next(aliases.begin(), aliasIndex);
+  it->second.canBeDeferred = false;
+
+  // Propagate the non-deferrable flag to any child aliases.
+  for (size_t childIndex : it->second.childIndices)
+    markAliasNonDeferrable(childIndex);
 }
 
 template <typename T>
@@ -1681,7 +1840,12 @@ void AsmPrinter::Impl::printTrailingLocation(Location loc, bool allowAlias) {
   printLocation(loc, /*allowAlias=*/allowAlias);
 }
 
-void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty) {
+void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
+                                             bool isTopLevel) {
+  // If this isn't a top-level location, check for an alias.
+  if (!isTopLevel && succeeded(state.getAliasState().getAlias(loc, os)))
+    return;
+
   TypeSwitch<LocationAttr>(loc)
       .Case<OpaqueLoc>([&](OpaqueLoc loc) {
         printLocationInternal(loc.getFallbackLocation(), pretty);
@@ -1802,11 +1966,11 @@ static void printFloatValue(const APFloat &apValue, raw_ostream &os) {
 
 void AsmPrinter::Impl::printLocation(LocationAttr loc, bool allowAlias) {
   if (printerFlags.shouldPrintDebugInfoPrettyForm())
-    return printLocationInternal(loc, /*pretty=*/true);
+    return printLocationInternal(loc, /*pretty=*/true, /*isTopLevel=*/true);
 
   os << "loc(";
   if (!allowAlias || failed(printAlias(loc)))
-    printLocationInternal(loc);
+    printLocationInternal(loc, /*pretty=*/false, /*isTopLevel=*/true);
   os << ')';
 }
 

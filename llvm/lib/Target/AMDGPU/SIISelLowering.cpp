@@ -962,17 +962,11 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     if (ME.doesNotAccessMemory())
       return false;
 
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    // TODO: Should images get their own address space?
+    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_FAT_POINTER;
 
-    const GCNTargetMachine &TM =
-        static_cast<const GCNTargetMachine &>(getTargetMachine());
-
-    if (RsrcIntr->IsImage) {
-      Info.ptrVal = MFI->getImagePSV(TM);
+    if (RsrcIntr->IsImage)
       Info.align.reset();
-    } else {
-      Info.ptrVal = MFI->getBufferPSV(TM);
-    }
 
     Info.flags |= MachineMemOperand::MODereferenceable;
     if (ME.onlyReadsMemory()) {
@@ -1057,14 +1051,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     return true;
   }
   case Intrinsic::amdgcn_buffer_atomic_fadd: {
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-
-    const GCNTargetMachine &TM =
-        static_cast<const GCNTargetMachine &>(getTargetMachine());
-
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getOperand(0)->getType());
-    Info.ptrVal = MFI->getBufferPSV(TM);
+    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_FAT_POINTER;
     Info.align.reset();
     Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
@@ -1099,14 +1088,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     return true;
   }
   case Intrinsic::amdgcn_image_bvh_intersect_ray: {
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType()); // XXX: what is correct VT?
 
-    const GCNTargetMachine &TM =
-        static_cast<const GCNTargetMachine &>(getTargetMachine());
-
-    Info.ptrVal = MFI->getImagePSV(TM);
+    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_FAT_POINTER;
     Info.align.reset();
     Info.flags |= MachineMemOperand::MOLoad |
                   MachineMemOperand::MODereferenceable;
@@ -4197,7 +4182,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
             .addImm(0);
       }
     } else {
-      BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMPK_LG_U32))
+      BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U32))
           .addReg(Src2.getReg())
           .addImm(0);
     }
@@ -5520,24 +5505,33 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
                                              SelectionDAG &DAG) const {
-  // FIXME: Use inline constants (src_{shared, private}_base) instead.
   if (Subtarget->hasApertureRegs()) {
-    unsigned Offset = AS == AMDGPUAS::LOCAL_ADDRESS ?
-        AMDGPU::Hwreg::OFFSET_SRC_SHARED_BASE :
-        AMDGPU::Hwreg::OFFSET_SRC_PRIVATE_BASE;
-    unsigned WidthM1 = AS == AMDGPUAS::LOCAL_ADDRESS ?
-        AMDGPU::Hwreg::WIDTH_M1_SRC_SHARED_BASE :
-        AMDGPU::Hwreg::WIDTH_M1_SRC_PRIVATE_BASE;
-    unsigned Encoding =
-        AMDGPU::Hwreg::ID_MEM_BASES << AMDGPU::Hwreg::ID_SHIFT_ |
-        Offset << AMDGPU::Hwreg::OFFSET_SHIFT_ |
-        WidthM1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_;
-
-    SDValue EncodingImm = DAG.getTargetConstant(Encoding, DL, MVT::i16);
-    SDValue ApertureReg = SDValue(
-        DAG.getMachineNode(AMDGPU::S_GETREG_B32, DL, MVT::i32, EncodingImm), 0);
-    SDValue ShiftAmount = DAG.getTargetConstant(WidthM1 + 1, DL, MVT::i32);
-    return DAG.getNode(ISD::SHL, DL, MVT::i32, ApertureReg, ShiftAmount);
+    const unsigned ApertureRegNo = (AS == AMDGPUAS::LOCAL_ADDRESS)
+                                       ? AMDGPU::SRC_SHARED_BASE
+                                       : AMDGPU::SRC_PRIVATE_BASE;
+    // Note: this feature (register) is broken. When used as a 32-bit operand,
+    // it returns a wrong value (all zeroes?). The real value is in the upper 32
+    // bits.
+    //
+    // To work around the issue, directly emit a 64 bit mov from this register
+    // then extract the high bits. Note that this shouldn't even result in a
+    // shift being emitted and simply become a pair of registers (e.g.):
+    //    s_mov_b64 s[6:7], src_shared_base
+    //    v_mov_b32_e32 v1, s7
+    //
+    // FIXME: It would be more natural to emit a CopyFromReg here, but then copy
+    // coalescing would kick in and it would think it's okay to use the "HI"
+    // subregister directly (instead of extracting the HI 32 bits) which is an
+    // artificial (unusable) register.
+    //  Register TableGen definitions would need an overhaul to get rid of the
+    //  artificial "HI" aperture registers and prevent this kind of issue from
+    //  happening.
+    SDNode *Mov = DAG.getMachineNode(AMDGPU::S_MOV_B64, DL, MVT::i64,
+                                     DAG.getRegister(ApertureRegNo, MVT::i64));
+    return DAG.getNode(
+        ISD::TRUNCATE, DL, MVT::i32,
+        DAG.getNode(ISD::SRL, DL, MVT::i64,
+                    {SDValue(Mov, 0), DAG.getConstant(32, DL, MVT::i64)}));
   }
 
   // For code object version 5, private_base and shared_base are passed through
@@ -9686,7 +9680,8 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
 
     SDValue X = LHS.getOperand(0);
     SDValue Y = RHS.getOperand(0);
-    if (Y.getOpcode() != ISD::FABS || Y.getOperand(0) != X)
+    if (Y.getOpcode() != ISD::FABS || Y.getOperand(0) != X ||
+        !isTypeLegal(X.getValueType()))
       return SDValue();
 
     if (LCC == ISD::SETO) {
@@ -11448,8 +11443,8 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
     }
   }
 
-  if (VT != MVT::f32 && VT != MVT::f64 && (Subtarget->has16BitInsts() &&
-                                           VT != MVT::f16))
+  if (VT != MVT::f32 && VT != MVT::f64 &&
+      (!Subtarget->has16BitInsts() || VT != MVT::f16))
     return SDValue();
 
   // Match isinf/isfinite pattern
@@ -12634,8 +12629,7 @@ Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   const Align CacheLineAlign = Align(64);
 
   // Pre-GFX10 target did not benefit from loop alignment
-  if (!ML || DisableLoopAlignment ||
-      (getSubtarget()->getGeneration() < AMDGPUSubtarget::GFX10) ||
+  if (!ML || DisableLoopAlignment || !getSubtarget()->hasInstPrefetch() ||
       getSubtarget()->hasInstFwdPrefetchBug())
     return PrefAlign;
 

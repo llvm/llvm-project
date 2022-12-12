@@ -2,7 +2,7 @@
 ; RUN: llc -O0 < %s
 
 ; NVPTX can't select sinf(float)/sin(double)
-; XFAIL: nvptx
+; XFAIL: target=nvptx{{.*}}
 
 ;; SQRT
 declare float @llvm.sqrt.f32(float)

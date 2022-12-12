@@ -486,20 +486,6 @@ def ConvertLinalgToStandard : Pass<"convert-linalg-to-std", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
-// LinalgToSPIRV
-//===----------------------------------------------------------------------===//
-
-def ConvertLinalgToSPIRV : Pass<"convert-linalg-to-spirv", "ModuleOp"> {
-  let summary = "Convert Linalg dialect to SPIR-V dialect";
-  let description = [{
-    This pass converts supported Linalg ops to SPIR-V ops. It's quite
-    experimental and are expected to migrate to other proper conversions.
-  }];
-  let constructor = "mlir::createLinalgToSPIRVPass()";
-  let dependentDialects = ["spirv::SPIRVDialect"];
-}
-
-//===----------------------------------------------------------------------===//
 // MathToLibm
 //===----------------------------------------------------------------------===//
 

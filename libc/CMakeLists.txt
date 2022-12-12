@@ -23,15 +23,12 @@ endif()
 # Path libc/scripts directory.
 set(LIBC_BUILD_SCRIPTS_DIR "${LIBC_SOURCE_DIR}/utils/build_scripts")
 
-set(LIBC_TARGET_OS ${CMAKE_SYSTEM_NAME})
-string(TOLOWER ${LIBC_TARGET_OS} LIBC_TARGET_OS)
-
-# Defines LIBC_TARGET_ARCHITECTURE and associated macros.
-include(LLVMLibCArchitectures)
-include(LLVMLibCCheckMPFR)
-
 # Flags to pass down to the compiler while building the libc functions.
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
+
+include(common_libc_tuners.cmake)
+
+list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
 
 # Check --print-resource-dir to find the compiler resource dir if this flag
 # is supported by the compiler.
@@ -57,6 +54,31 @@ endif()
 option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" OFF)
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
+
+# Set up the target architectures to build for the GPU
+set(ALL_GPU_ARCHITECTURES "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62;sm_70;sm_72;sm_75;sm_80;sm_86;gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906;gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030;gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036;gfx1100;gfx1101;gfx1102;gfx1103")
+set(LLVM_LIBC_GPU_ARCHITECTURES ${ALL_GPU_ARCHITECTURES} CACHE STRING "List of GPU architectures to support in LLVM libc")
+if (LLVM_LIBC_GPU_ARCHITECTURES STREQUAL "all")
+  set(LIBC_GPU_ARCHITECTURES ${ALL_GPU_ARCHITECTURES})
+else()
+  set(LIBC_GPU_ARCHITECTURES ${LLVM_LIBC_GPU_ARCHITECTURES})
+endif()
+
+set(LLVM_LIBC_TARGET_OS ${CMAKE_SYSTEM_NAME} CACHE STRING "Target operating system for LLVM libc")
+string(TOLOWER ${LLVM_LIBC_TARGET_OS} LIBC_TARGET_OS)
+
+# Defines LIBC_TARGET_ARCHITECTURE and associated macros.
+include(LLVMLibCArchitectures)
+include(LLVMLibCCheckMPFR)
+
+# Ensure the compiler is a valid clang when building the GPU target.
+if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND 
+  ${CMAKE_CXX_COMPILER_VERSION} VERSION_EQUAL "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}"))
+  message(FATAL_ERROR "Cannot build GPU library, CMake compiler '${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}' is not `Clang ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}`")
+endif()
+if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND NOT LLVM_LIBC_FULL_BUILD)
+  message(FATAL_ERROR "Cannot build GPU library, LLVM_LIBC_FULL_BUILD must be enabled")
+endif()
 
 if(LLVM_LIBC_CLANG_TIDY)
   set(LLVM_LIBC_ENABLE_LINTING ON)
@@ -156,7 +178,11 @@ if(LLVM_LIBC_FULL_BUILD)
   set(LIBC_COMPONENT libc)
   set(LIBC_INSTALL_DEPENDS "libc;install-libc-headers;libc-startup")
   set(LIBC_INSTALL_TARGET install-libc)
-  set(LIBC_ARCHIVE_NAME c)
+  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+    set(LIBC_ARCHIVE_NAME cgpu)
+  else()
+    set(LIBC_ARCHIVE_NAME c)
+  endif()
 else()
   set(LIBC_TARGET llvmlibc)
   set(LIBC_COMPONENT llvmlibc)
@@ -179,8 +205,9 @@ endif()
 # The lib and test directories are added at the very end as tests
 # and libraries potentially draw from the components present in all
 # of the other directories.
+# TODO: Add testing support for the libc GPU target.
 add_subdirectory(lib)
-if(LLVM_INCLUDE_TESTS)
+if(LLVM_INCLUDE_TESTS AND NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   add_subdirectory(test)
   add_subdirectory(fuzzing)
 endif()

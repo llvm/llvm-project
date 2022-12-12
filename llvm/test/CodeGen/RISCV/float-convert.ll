@@ -780,8 +780,8 @@ define i64 @fcvt_lu_s_sat(float %a) nounwind {
 ; RV32I-NEXT:    mv a1, s2
 ; RV32I-NEXT:    call __gtsf2@plt
 ; RV32I-NEXT:    sgtz a0, a0
-; RV32I-NEXT:    neg a0, a0
-; RV32I-NEXT:    or a1, a0, s1
+; RV32I-NEXT:    neg a1, a0
+; RV32I-NEXT:    or a1, a1, s1
 ; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload

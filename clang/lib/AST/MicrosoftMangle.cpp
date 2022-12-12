@@ -340,22 +340,22 @@ public:
   MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_)
       : Context(C), Out(Out_), Structor(nullptr), StructorType(-1),
         TemplateArgStringStorage(TemplateArgStringStorageAlloc),
-        PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(0) ==
-                         64) {}
+        PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(
+                             LangAS::Default) == 64) {}
 
   MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_,
                           const CXXConstructorDecl *D, CXXCtorType Type)
       : Context(C), Out(Out_), Structor(getStructor(D)), StructorType(Type),
         TemplateArgStringStorage(TemplateArgStringStorageAlloc),
-        PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(0) ==
-                         64) {}
+        PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(
+                             LangAS::Default) == 64) {}
 
   MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_,
                           const CXXDestructorDecl *D, CXXDtorType Type)
       : Context(C), Out(Out_), Structor(getStructor(D)), StructorType(Type),
         TemplateArgStringStorage(TemplateArgStringStorageAlloc),
-        PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(0) ==
-                         64) {}
+        PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(
+                             LangAS::Default) == 64) {}
 
   raw_ostream &getStream() const { return Out; }
 
@@ -776,7 +776,7 @@ void MicrosoftCXXNameMangler::mangleVirtualMemPtrThunk(
     const CXXMethodDecl *MD, const MethodVFTableLocation &ML) {
   // Get the vftable offset.
   CharUnits PointerWidth = getASTContext().toCharUnitsFromBits(
-      getASTContext().getTargetInfo().getPointerWidth(0));
+      getASTContext().getTargetInfo().getPointerWidth(LangAS::Default));
   uint64_t OffsetInVFTable = ML.Index * PointerWidth.getQuantity();
 
   Out << "?_9";

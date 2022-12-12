@@ -531,6 +531,7 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
       saw_function_with_body = true;
+      LLDB_LOGF(log, "Saw function with body: %s", f.getName().str().c_str());
     }
   }
 

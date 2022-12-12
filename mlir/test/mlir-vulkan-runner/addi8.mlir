@@ -8,7 +8,7 @@ module attributes {
 } {
   gpu.module @kernels {
     gpu.func @kernel_addi(%arg0 : memref<8xi8>, %arg1 : memref<8x8xi8>, %arg2 : memref<8x8x8xi32>)
-      kernel attributes { spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[1, 1, 1]>: vector<3xi32>>} {
+      kernel attributes { spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [1, 1, 1]>} {
       %x = gpu.block_id x
       %y = gpu.block_id y
       %z = gpu.block_id z

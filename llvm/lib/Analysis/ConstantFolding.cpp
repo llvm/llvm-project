@@ -1959,7 +1959,7 @@ static Constant *constantFoldCanonicalize(const Type *Ty, const CallBase *CI,
   if (Src.isNormal() || Src.isInfinity())
     return ConstantFP::get(CI->getContext(), Src);
 
-  if (Src.isDenormal()) {
+  if (Src.isDenormal() && CI->getParent() && CI->getFunction()) {
     DenormalMode DenormMode =
         CI->getFunction()->getDenormalMode(Src.getSemantics());
     if (DenormMode == DenormalMode::getIEEE())

@@ -36,9 +36,8 @@
   ; CHECK-NEXT:    slli sp, a0, 12
   ; CHECK-NEXT:    ld a0, 0(sp)
   ; CHECK-NEXT:    sd a1, 0(sp)
-  ; CHECK-NEXT:    lui a1, 1
-  ; CHECK-NEXT:    addiw a1, a1, -8
-  ; CHECK-NEXT:    add a1, sp, a1
+  ; CHECK-NEXT:    addi a1, sp, 2047
+  ; CHECK-NEXT:    addi a1, a1, 2041
   ; CHECK-NEXT:    sd a0, 0(a1)
   ; CHECK-NEXT:    ld a1, 0(sp)
   ; CHECK-NEXT:    call foo@plt

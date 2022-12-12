@@ -515,6 +515,20 @@ def FeatureRCPC3 : SubtargetFeature<"rcpc3", "HasRCPC3",
     "true", "Enable Armv8.9-A RCPC instructions for A64 and Advanced SIMD and floating-point instruction set (FEAT_LRCPC3)",
     [FeatureRCPC_IMMO]>;
 
+def FeatureTHE : SubtargetFeature<"the", "HasTHE",
+    "true", "Enable Armv8.9-A Translation Hardening Extension (FEAT_THE)">;
+
+def FeatureLSE128 : SubtargetFeature<"lse128", "HasLSE128",
+    "true", "Enable Armv9.4-A 128-bit Atomic Instructions (FEAT_LSE128)",
+    [FeatureLSE]>;
+
+// FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, and FEAT_SYSINSTR128 are mutually implicit.
+// Therefore group them all under a single feature flag, d128:
+def FeatureD128 : SubtargetFeature<"d128", "HasD128",
+    "true", "Enable Armv9.4-A 128-bit Page Table Descriptors, System Registers "
+    "and Instructions (FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, FEAT_SYSINSTR128)",
+    [FeatureLSE128]>;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //

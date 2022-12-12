@@ -15,7 +15,7 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION
-; CHECK-NEXT:     vp<%3>    = SCALAR-STEPS vp<%2>, ir<0>, ir<1>
+; CHECK-NEXT:     vp<%3>    = SCALAR-STEPS vp<%2>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr ir<%src>, vp<%3>
 ; CHECK-NEXT:     WIDEN ir<%l> = load ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%conv> = fpext ir<%l>
@@ -41,7 +41,7 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION
-; CHECK-NEXT:     vp<%3>    = SCALAR-STEPS vp<%2>, ir<0>, ir<1>
+; CHECK-NEXT:     vp<%3>    = SCALAR-STEPS vp<%2>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr ir<%src>, vp<%3>
 ; CHECK-NEXT:     WIDEN ir<%l> = load ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%conv> = fpext ir<%l>

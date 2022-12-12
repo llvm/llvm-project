@@ -66,7 +66,14 @@ enum NodeType : unsigned {
   SYSCALL,
 
   // CRC check operations
-  CRC_W_D_W
+  CRC_W_B_W,
+  CRC_W_H_W,
+  CRC_W_W_W,
+  CRC_W_D_W,
+  CRCC_W_B_W,
+  CRCC_W_H_W,
+  CRCC_W_W_W,
+  CRCC_W_D_W
 };
 } // end namespace LoongArchISD
 

@@ -855,7 +855,7 @@ static void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
   // relrDyn sections don't support odd offsets. Also, relrDyn sections
   // don't store the addend values, so we must write it to the relocated
   // address.
-  if (part.relrDyn && isec.alignment >= 2 && offsetInSec % 2 == 0) {
+  if (part.relrDyn && isec.addralign >= 2 && offsetInSec % 2 == 0) {
     isec.addReloc({expr, type, offsetInSec, addend, &sym});
     if (shard)
       part.relrDyn->relocsVec[parallel::getThreadIndex()].push_back(

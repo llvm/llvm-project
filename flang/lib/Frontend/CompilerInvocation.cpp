@@ -696,33 +696,27 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.setFPContractMode(fpContractMode);
   }
 
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_menable_no_infinities)) {
+  if (args.getLastArg(clang::driver::options::OPT_menable_no_infinities)) {
     opts.NoHonorInfs = true;
   }
 
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_menable_no_nans)) {
+  if (args.getLastArg(clang::driver::options::OPT_menable_no_nans)) {
     opts.NoHonorNaNs = true;
   }
 
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_fapprox_func)) {
+  if (args.getLastArg(clang::driver::options::OPT_fapprox_func)) {
     opts.ApproxFunc = true;
   }
 
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_fno_signed_zeros)) {
+  if (args.getLastArg(clang::driver::options::OPT_fno_signed_zeros)) {
     opts.NoSignedZeros = true;
   }
 
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_mreassociate)) {
+  if (args.getLastArg(clang::driver::options::OPT_mreassociate)) {
     opts.AssociativeMath = true;
   }
 
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_freciprocal_math)) {
+  if (args.getLastArg(clang::driver::options::OPT_freciprocal_math)) {
     opts.ReciprocalMath = true;
   }
 

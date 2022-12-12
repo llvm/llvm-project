@@ -210,6 +210,16 @@ static SmallString<0> ProcessChunkFromSerializedBitcode(
   return Result;
 }
 
+using SharedTaskQueue = std::deque<std::shared_future<SmallString<0>>>;
+
+static void waitAndDiscardResultsBarrier(SharedTaskQueue &TaskQueue) {
+  while (!TaskQueue.empty()) {
+    auto &Future = TaskQueue.front();
+    Future.wait();
+    TaskQueue.pop_front();
+  }
+}
+
 /// Runs the Delta Debugging algorithm, splits the code into chunks and
 /// reduces the amount of chunks that are considered interesting by the
 /// given test. The number of chunks is determined by a preliminary run of the
@@ -280,7 +290,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
       writeBitcode(Test.getProgram(), BCOS);
     }
 
-    std::deque<std::shared_future<SmallString<0>>> TaskQueue;
+    SharedTaskQueue TaskQueue;
     for (auto I = ChunksStillConsideredInteresting.rbegin(),
               E = ChunksStillConsideredInteresting.rend();
          I != E; ++I) {
@@ -350,6 +360,14 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
                       Test.getToolName());
           break;
         }
+
+        // If we broke out of the loop, we still need to wait for everything to
+        // avoid race access to the chunk set.
+        //
+        // TODO: Create a way to kill remaining items we're ignoring; they could
+        // take a long time.
+        waitAndDiscardResultsBarrier(TaskQueue);
+
         // Forward I to the last chunk processed in parallel.
         I += NumChunksProcessed - 1;
       } else {

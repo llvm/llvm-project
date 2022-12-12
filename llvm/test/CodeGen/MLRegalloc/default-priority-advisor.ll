@@ -8,7 +8,7 @@
 ; RUN: llc -O2 -regalloc-enable-priority-advisor=default < %s 2>&1 | FileCheck %s --check-prefix=DEFAULT
 
 ; regalloc-enable-priority-advisor is not enabled for NVPTX
-; UNSUPPORTED: nvptx
+; UNSUPPORTED: target=nvptx{{.*}}
 
 define void @f2(i64 %lhs, i64 %rhs, i64* %addr) {
   %sum = add i64 %lhs, %rhs

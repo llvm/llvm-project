@@ -19,6 +19,7 @@
 
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/CallInterface.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 
 namespace Fortran::lower {
 
@@ -37,6 +38,14 @@ fir::ExtendedValue genCallOpAndResult(
 /// procedure. Otherwise, return nullptr.
 mlir::Value argumentHostAssocs(Fortran::lower::AbstractConverter &converter,
                                mlir::Value arg);
+
+/// Lower a ProcedureRef to HLFIR. If this is a function call, return the
+/// lowered result value. Return nothing otherwise.
+llvm::Optional<hlfir::EntityWithAttributes> convertCallToHLFIR(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const evaluate::ProcedureRef &procRef,
+    llvm::Optional<mlir::Type> resultType, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx);
 
 } // namespace Fortran::lower
 #endif // FORTRAN_LOWER_CONVERTCALL_H

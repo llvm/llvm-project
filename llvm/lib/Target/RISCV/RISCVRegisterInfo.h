@@ -42,14 +42,10 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   // used during frame layout, and we may need to ensure that if we
   // split the offset internally that the DestReg is always aligned,
   // assuming that source reg was.
-  void adjustReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+  void adjustReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator II,
                  const DebugLoc &DL, Register DestReg, Register SrcReg,
-                 int64_t Val, MachineInstr::MIFlag Flag,
+                 StackOffset Offset, MachineInstr::MIFlag Flag,
                  MaybeAlign RequiredAlign) const;
-
-  // Update DestReg to have the value of SrcReg plus an Offset.
-  void adjustReg(MachineBasicBlock::iterator II, Register DestReg,
-                 Register SrcReg, StackOffset Offset) const;
 
   bool eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,

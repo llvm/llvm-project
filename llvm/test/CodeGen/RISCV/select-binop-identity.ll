@@ -226,8 +226,8 @@ define i64 @sub_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ; RV32I-NEXT:    beqz a0, .LBB9_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    sltu a0, a3, a1
-; RV32I-NEXT:    sub a2, a4, a2
-; RV32I-NEXT:    sub a4, a2, a0
+; RV32I-NEXT:    sub a4, a4, a2
+; RV32I-NEXT:    sub a4, a4, a0
 ; RV32I-NEXT:    sub a3, a3, a1
 ; RV32I-NEXT:  .LBB9_2:
 ; RV32I-NEXT:    mv a0, a3

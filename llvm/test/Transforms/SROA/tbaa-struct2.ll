@@ -34,12 +34,3 @@ define double @bar(ptr %wishart) {
 !6 = !{!"Simple C++ TBAA"}
 !7 = !{!8, !8, i64 0}
 !8 = !{!"int", !5, i64 0}
-
-; CHECK: !0 = !{i64 0, i64 8, !1, i64 8, i64 4, !5}
-; CHECK: !1 = !{!2, !2, i64 0}
-; CHECK: !2 = !{!"double", !{{[0-9]+}}, i64 0}
-
-; CHECK: !5 = !{!6, !6, i64 0}
-; CHECK: !6 = !{!"int", !{{[0-9]+}}, i64 0}
-; CHECK: !7 = !{i64 0, i64 4, !5}
-; CHECK: !8 = !{}

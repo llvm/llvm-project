@@ -720,6 +720,21 @@ def XSeqPairClassOperand :
     RegisterOperand<XSeqPairsClass, "printGPRSeqPairsClassOperand<64>"> {
   let ParserMatchClass = XSeqPairsAsmOperandClass;
 }
+// Reuse the parsing and register numbers from XSeqPairs, but encoding is different.
+def MrrsMssrPairClassOperand :
+    RegisterOperand<XSeqPairsClass, "printGPRSeqPairsClassOperand<64>"> {
+  let ParserMatchClass = XSeqPairsAsmOperandClass;
+}
+def SyspXzrPairOperandMatcherClass : AsmOperandClass {
+  let Name = "SyspXzrPair";
+  let RenderMethod = "addSyspXzrPairOperand";
+  let ParserMethod = "tryParseSyspXzrPair";
+}
+def SyspXzrPairOperand :
+    RegisterOperand<GPR64, "printSyspXzrPair"> { // needed to allow alias with XZR operand
+  let ParserMatchClass = SyspXzrPairOperandMatcherClass;
+}
+
 
 
 //===----- END: v8.1a atomic CASP register operands -----------------------===//

@@ -1727,6 +1727,61 @@ let Requires = [{ {AArch64::FeatureMPAM, AArch64::FeatureSME} }] in {
 def : RWSysReg<"MPAMSM_EL1",    0b11, 0b000, 0b1010, 0b0101, 0b011>;
 } // HasMPAM, HasSME
 
+// v8.9a/v9.4a Memory Attribute Index Enhancement (FEAT_AIE)
+//                            Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"AMAIR2_EL1",  0b11, 0b000, 0b1010, 0b0011, 0b001>;
+def : RWSysReg<"AMAIR2_EL12", 0b11, 0b101, 0b1010, 0b0011, 0b001>;
+def : RWSysReg<"AMAIR2_EL2",  0b11, 0b100, 0b1010, 0b0011, 0b001>;
+def : RWSysReg<"AMAIR2_EL3",  0b11, 0b110, 0b1010, 0b0011, 0b001>;
+def : RWSysReg<"MAIR2_EL1",   0b11, 0b000, 0b1010, 0b0010, 0b001>;
+def : RWSysReg<"MAIR2_EL12",  0b11, 0b101, 0b1010, 0b0010, 0b001>;
+def : RWSysReg<"MAIR2_EL2",   0b11, 0b100, 0b1010, 0b0001, 0b001>;
+def : RWSysReg<"MAIR2_EL3",   0b11, 0b110, 0b1010, 0b0001, 0b001>;
+
+// v8.9a/9.4a Stage 1 Permission Indirection Extension (FEAT_S1PIE)
+//                            Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"PIRE0_EL1",   0b11, 0b000, 0b1010, 0b0010, 0b010>;
+def : RWSysReg<"PIRE0_EL2",   0b11, 0b100, 0b1010, 0b0010, 0b010>;
+def : RWSysReg<"PIR_EL1",     0b11, 0b000, 0b1010, 0b0010, 0b011>;
+def : RWSysReg<"PIR_EL12",    0b11, 0b101, 0b1010, 0b0010, 0b011>;
+def : RWSysReg<"PIR_EL2",     0b11, 0b100, 0b1010, 0b0010, 0b011>;
+def : RWSysReg<"PIR_EL3",     0b11, 0b110, 0b1010, 0b0010, 0b011>;
+
+// v8.9a/v9.4a Stage 2 Permission Indirection Extension (FEAT_S2PIE)
+//                            Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"S2PIR_EL2",   0b11, 0b100, 0b1010, 0b0010, 0b101>;
+
+// v8.9a/v9.4a Stage 1 Permission Overlay Extension (FEAT_S1POE)
+//                            Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"POR_EL0",     0b11, 0b011, 0b1010, 0b0010, 0b100>;
+def : RWSysReg<"POR_EL1",     0b11, 0b000, 0b1010, 0b0010, 0b100>;
+def : RWSysReg<"POR_EL12",    0b11, 0b101, 0b1010, 0b0010, 0b100>;
+def : RWSysReg<"POR_EL2",     0b11, 0b100, 0b1010, 0b0010, 0b100>;
+def : RWSysReg<"POR_EL3",     0b11, 0b110, 0b1010, 0b0010, 0b100>;
+
+// v8.9a/v9.4a Stage 2 Permission Overlay Extension (FEAT_S2POE)
+//                            Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"S2POR_EL1",   0b11, 0b000, 0b1010, 0b0010, 0b101>;
+
+// v8.9a/v9.4a Extension to System Control Registers (FEAT_SCTLR2)
+//                            Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"SCTLR2_EL1",  0b11, 0b000, 0b0001, 0b0000, 0b011>;
+def : RWSysReg<"SCTLR2_EL12", 0b11, 0b101, 0b0001, 0b0000, 0b011>;
+def : RWSysReg<"SCTLR2_EL2",  0b11, 0b100, 0b0001, 0b0000, 0b011>;
+
+// v8.9a/v9.4a Extension to Translation Control Registers (FEAT_TCR2)
+//                            Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"TCR2_EL1",    0b11, 0b000, 0b0010, 0b0000, 0b011>;
+def : RWSysReg<"TCR2_EL12",   0b11, 0b101, 0b0010, 0b0000, 0b011>;
+def : RWSysReg<"TCR2_EL2",    0b11, 0b100, 0b0010, 0b0000, 0b011>;
+
+// v8.9a/9.4a Translation Hardening Extension (FEAT_THE)
+//                             Op0   Op1    CRn     CRm     Op2
+let Requires = [{ {AArch64::FeatureTHE} }] in {
+def : RWSysReg<"RCWMASK_EL1",  0b11, 0b000, 0b1101, 0b0000, 0b110>;
+def : RWSysReg<"RCWSMASK_EL1", 0b11, 0b000, 0b1101, 0b0000, 0b011>;
+}
+
 // v8.9a/9.4a new Debug feature (FEAT_DEBUGv8p9)
 //                            Op0   Op1    CRn     CRm     Op2
 def : RWSysReg<"MDSELR_EL1", 0b10, 0b000, 0b0000, 0b0100, 0b010>;

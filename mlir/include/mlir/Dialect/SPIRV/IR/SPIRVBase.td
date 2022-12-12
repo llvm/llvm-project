@@ -802,16 +802,26 @@ def SPIRV_C_FPGARegINTEL                                : I32EnumAttrCase<"FPGAR
 }
 def SPIRV_C_DotProductInputAll                          : I32EnumAttrCase<"DotProductInputAll", 6016> {
   list<Availability> availability = [
+    Extension<[SPV_KHR_integer_dot_product]>,
+    MinVersion<SPIRV_V_1_6>
+  ];
+}
+def SPIRV_C_DotProductInput4x8Bit                       : I32EnumAttrCase<"DotProductInput4x8Bit", 6017> {
+  list<I32EnumAttrCase> implies = [SPIRV_C_Int8];
+  list<Availability> availability = [
+    Extension<[SPV_KHR_integer_dot_product]>,
     MinVersion<SPIRV_V_1_6>
   ];
 }
 def SPIRV_C_DotProductInput4x8BitPacked                 : I32EnumAttrCase<"DotProductInput4x8BitPacked", 6018> {
   list<Availability> availability = [
+    Extension<[SPV_KHR_integer_dot_product]>,
     MinVersion<SPIRV_V_1_6>
   ];
 }
 def SPIRV_C_DotProduct                                  : I32EnumAttrCase<"DotProduct", 6019> {
   list<Availability> availability = [
+    Extension<[SPV_KHR_integer_dot_product]>,
     MinVersion<SPIRV_V_1_6>
   ];
 }
@@ -974,12 +984,6 @@ def SPIRV_C_FPFastMathModeINTEL                         : I32EnumAttrCase<"FPFas
   list<I32EnumAttrCase> implies = [SPIRV_C_Kernel];
   list<Availability> availability = [
     Extension<[SPV_INTEL_fp_fast_math_mode]>
-  ];
-}
-def SPIRV_C_DotProductInput4x8Bit                       : I32EnumAttrCase<"DotProductInput4x8Bit", 6017> {
-  list<I32EnumAttrCase> implies = [SPIRV_C_Int8];
-  list<Availability> availability = [
-    MinVersion<SPIRV_V_1_6>
   ];
 }
 def SPIRV_C_GroupNonUniformRotateKHR                    : I32EnumAttrCase<"GroupNonUniformRotateKHR", 6026> {

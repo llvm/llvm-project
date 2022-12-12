@@ -437,7 +437,7 @@ CXXABI::MemberPointerInfo MicrosoftCXXABI::getMemberPointerInfo(
   // The nominal struct is laid out with pointers followed by ints and aligned
   // to a pointer width if any are present and an int width otherwise.
   const TargetInfo &Target = Context.getTargetInfo();
-  unsigned PtrSize = Target.getPointerWidth(0);
+  unsigned PtrSize = Target.getPointerWidth(LangAS::Default);
   unsigned IntSize = Target.getIntWidth();
 
   unsigned Ptrs, Ints;
@@ -452,7 +452,7 @@ CXXABI::MemberPointerInfo MicrosoftCXXABI::getMemberPointerInfo(
   if (Ptrs + Ints > 1 && Target.getTriple().isArch32Bit())
     MPI.Align = 64;
   else if (Ptrs)
-    MPI.Align = Target.getPointerAlign(0);
+    MPI.Align = Target.getPointerAlign(LangAS::Default);
   else
     MPI.Align = Target.getIntAlign();
 

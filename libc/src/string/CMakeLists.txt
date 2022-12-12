@@ -11,6 +11,23 @@ add_header_library(
     .memory_utils.bzero_implementation
 )
 
+add_header_library(
+  allocating_string_utils
+  HDRS
+    allocating_string_utils.h
+  DEPENDS
+    libc.include.stdlib
+    .memory_utils.memcpy_implementation
+)
+
+add_entrypoint_object(
+  bcopy
+  SRCS
+    bcopy.cpp
+  HDRS
+    bcopy.h
+)
+
 add_entrypoint_object(
   memccpy
   SRCS
@@ -18,7 +35,6 @@ add_entrypoint_object(
   HDRS
     memccpy.h
 )
-
 
 add_entrypoint_object(
   mempcpy
@@ -186,6 +202,7 @@ add_entrypoint_object(
   HDRS
     strlen.h
   DEPENDS
+    .string_utils
     libc.include.string
 )
 

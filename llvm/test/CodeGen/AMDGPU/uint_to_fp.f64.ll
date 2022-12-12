@@ -4,7 +4,7 @@
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
-define amdgpu_kernel void @v_uint_to_fp_i64_to_f64(double addrspace(1)* %out, i64 addrspace(1)* %in) {
+define amdgpu_kernel void @v_uint_to_fp_i64_to_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: v_uint_to_fp_i64_to_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -43,14 +43,14 @@ define amdgpu_kernel void @v_uint_to_fp_i64_to_f64(double addrspace(1)* %out, i6
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-  %gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
-  %val = load i64, i64 addrspace(1)* %gep, align 8
+  %gep = getelementptr i64, ptr addrspace(1) %in, i32 %tid
+  %val = load i64, ptr addrspace(1) %gep, align 8
   %result = uitofp i64 %val to double
-  store double %result, double addrspace(1)* %out
+  store double %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_uint_to_fp_i64_to_f64(double addrspace(1)* %out, i64 %in) {
+define amdgpu_kernel void @s_uint_to_fp_i64_to_f64(ptr addrspace(1) %out, i64 %in) {
 ; SI-LABEL: s_uint_to_fp_i64_to_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -77,11 +77,11 @@ define amdgpu_kernel void @s_uint_to_fp_i64_to_f64(double addrspace(1)* %out, i6
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
   %cast = uitofp i64 %in to double
-  store double %cast, double addrspace(1)* %out, align 8
+  store double %cast, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @s_uint_to_fp_v2i64_to_v2f64(<2 x double> addrspace(1)* %out, <2 x i64> %in) {
+define amdgpu_kernel void @s_uint_to_fp_v2i64_to_v2f64(ptr addrspace(1) %out, <2 x i64> %in) {
 ; SI-LABEL: s_uint_to_fp_v2i64_to_v2f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
@@ -119,11 +119,11 @@ define amdgpu_kernel void @s_uint_to_fp_v2i64_to_v2f64(<2 x double> addrspace(1)
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm
   %cast = uitofp <2 x i64> %in to <2 x double>
-  store <2 x double> %cast, <2 x double> addrspace(1)* %out, align 16
+  store <2 x double> %cast, ptr addrspace(1) %out, align 16
   ret void
 }
 
-define amdgpu_kernel void @s_uint_to_fp_v4i64_to_v4f64(<4 x double> addrspace(1)* %out, <4 x i64> %in) {
+define amdgpu_kernel void @s_uint_to_fp_v4i64_to_v4f64(ptr addrspace(1) %out, <4 x i64> %in) {
 ; SI-LABEL: s_uint_to_fp_v4i64_to_v4f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x8
@@ -187,11 +187,11 @@ define amdgpu_kernel void @s_uint_to_fp_v4i64_to_v4f64(<4 x double> addrspace(1)
 ; VI-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; VI-NEXT:    s_endpgm
   %cast = uitofp <4 x i64> %in to <4 x double>
-  store <4 x double> %cast, <4 x double> addrspace(1)* %out, align 16
+  store <4 x double> %cast, ptr addrspace(1) %out, align 16
   ret void
 }
 
-define amdgpu_kernel void @s_uint_to_fp_i32_to_f64(double addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @s_uint_to_fp_i32_to_f64(ptr addrspace(1) %out, i32 %in) {
 ; SI-LABEL: s_uint_to_fp_i32_to_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -214,11 +214,11 @@ define amdgpu_kernel void @s_uint_to_fp_i32_to_f64(double addrspace(1)* %out, i3
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
   %cast = uitofp i32 %in to double
-  store double %cast, double addrspace(1)* %out, align 8
+  store double %cast, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @s_uint_to_fp_v2i32_to_v2f64(<2 x double> addrspace(1)* %out, <2 x i32> %in) {
+define amdgpu_kernel void @s_uint_to_fp_v2i32_to_v2f64(ptr addrspace(1) %out, <2 x i32> %in) {
 ; GCN-LABEL: s_uint_to_fp_v2i32_to_v2f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -230,11 +230,11 @@ define amdgpu_kernel void @s_uint_to_fp_v2i32_to_v2f64(<2 x double> addrspace(1)
 ; GCN-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GCN-NEXT:    s_endpgm
   %cast = uitofp <2 x i32> %in to <2 x double>
-  store <2 x double> %cast, <2 x double> addrspace(1)* %out, align 16
+  store <2 x double> %cast, ptr addrspace(1) %out, align 16
   ret void
 }
 
-define amdgpu_kernel void @s_uint_to_fp_v4i32_to_v4f64(<4 x double> addrspace(1)* %out, <4 x i32> %in) {
+define amdgpu_kernel void @s_uint_to_fp_v4i32_to_v4f64(ptr addrspace(1) %out, <4 x i32> %in) {
 ; SI-LABEL: s_uint_to_fp_v4i32_to_v4f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
@@ -275,13 +275,13 @@ define amdgpu_kernel void @s_uint_to_fp_v4i32_to_v4f64(<4 x double> addrspace(1)
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm
   %cast = uitofp <4 x i32> %in to <4 x double>
-  store <4 x double> %cast, <4 x double> addrspace(1)* %out, align 16
+  store <4 x double> %cast, ptr addrspace(1) %out, align 16
   ret void
 }
 
 ; We can't fold the SGPRs into v_cndmask_b32_e32, because it already
 ; uses an SGPR (implicit vcc).
-define amdgpu_kernel void @uint_to_fp_i1_to_f64(double addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @uint_to_fp_i1_to_f64(ptr addrspace(1) %out, i32 %in) {
 ; SI-LABEL: uint_to_fp_i1_to_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -311,11 +311,11 @@ define amdgpu_kernel void @uint_to_fp_i1_to_f64(double addrspace(1)* %out, i32 %
 ; VI-NEXT:    s_endpgm
   %cmp = icmp eq i32 %in, 0
   %fp = uitofp i1 %cmp to double
-  store double %fp, double addrspace(1)* %out, align 4
+  store double %fp, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @uint_to_fp_i1_to_f64_load(double addrspace(1)* %out, i1 %in) {
+define amdgpu_kernel void @uint_to_fp_i1_to_f64_load(ptr addrspace(1) %out, i1 %in) {
 ; SI-LABEL: uint_to_fp_i1_to_f64_load:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -344,11 +344,11 @@ define amdgpu_kernel void @uint_to_fp_i1_to_f64_load(double addrspace(1)* %out, 
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
   %fp = uitofp i1 %in to double
-  store double %fp, double addrspace(1)* %out, align 8
+  store double %fp, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @s_uint_to_fp_i8_to_f64(double addrspace(1)* %out, i8 %in) {
+define amdgpu_kernel void @s_uint_to_fp_i8_to_f64(ptr addrspace(1) %out, i8 %in) {
 ; SI-LABEL: s_uint_to_fp_i8_to_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -373,7 +373,7 @@ define amdgpu_kernel void @s_uint_to_fp_i8_to_f64(double addrspace(1)* %out, i8 
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
   %fp = uitofp i8 %in to double
-  store double %fp, double addrspace(1)* %out
+  store double %fp, ptr addrspace(1) %out
   ret void
 }
 
@@ -397,7 +397,7 @@ define double @v_uint_to_fp_i8_to_f64(i8 %in) {
   ret double %fp
 }
 
-define amdgpu_kernel void @s_select_uint_to_fp_i1_vals_f64(double addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @s_select_uint_to_fp_i1_vals_f64(ptr addrspace(1) %out, i32 %in) {
 ; SI-LABEL: s_select_uint_to_fp_i1_vals_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -427,11 +427,11 @@ define amdgpu_kernel void @s_select_uint_to_fp_i1_vals_f64(double addrspace(1)* 
 ; VI-NEXT:    s_endpgm
   %cmp = icmp eq i32 %in, 0
   %select = select i1 %cmp, double 1.0, double 0.0
-  store double %select, double addrspace(1)* %out, align 8
+  store double %select, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define void @v_select_uint_to_fp_i1_vals_f64(double addrspace(1)* %out, i32 %in) {
+define void @v_select_uint_to_fp_i1_vals_f64(ptr addrspace(1) %out, i32 %in) {
 ; GCN-LABEL: v_select_uint_to_fp_i1_vals_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -444,11 +444,11 @@ define void @v_select_uint_to_fp_i1_vals_f64(double addrspace(1)* %out, i32 %in)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %in, 0
   %select = select i1 %cmp, double 1.0, double 0.0
-  store double %select, double addrspace(1)* %out, align 8
+  store double %select, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @s_select_uint_to_fp_i1_vals_i64(i64 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @s_select_uint_to_fp_i1_vals_i64(ptr addrspace(1) %out, i32 %in) {
 ; SI-LABEL: s_select_uint_to_fp_i1_vals_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -478,11 +478,11 @@ define amdgpu_kernel void @s_select_uint_to_fp_i1_vals_i64(i64 addrspace(1)* %ou
 ; VI-NEXT:    s_endpgm
   %cmp = icmp eq i32 %in, 0
   %select = select i1 %cmp, i64 u0x3ff0000000000000, i64 0
-  store i64 %select, i64 addrspace(1)* %out, align 8
+  store i64 %select, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define void @v_select_uint_to_fp_i1_vals_i64(i64 addrspace(1)* %out, i32 %in) {
+define void @v_select_uint_to_fp_i1_vals_i64(ptr addrspace(1) %out, i32 %in) {
 ; GCN-LABEL: v_select_uint_to_fp_i1_vals_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -495,12 +495,12 @@ define void @v_select_uint_to_fp_i1_vals_i64(i64 addrspace(1)* %out, i32 %in) {
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %in, 0
   %select = select i1 %cmp, i64 u0x3ff0000000000000, i64 0
-  store i64 %select, i64 addrspace(1)* %out, align 8
+  store i64 %select, ptr addrspace(1) %out, align 8
   ret void
 }
 
 ; TODO: This should swap the selected order / invert the compare and do it.
-define amdgpu_kernel void @s_swap_select_uint_to_fp_i1_vals_f64(double addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @s_swap_select_uint_to_fp_i1_vals_f64(ptr addrspace(1) %out, i32 %in) {
 ; SI-LABEL: s_swap_select_uint_to_fp_i1_vals_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -530,11 +530,11 @@ define amdgpu_kernel void @s_swap_select_uint_to_fp_i1_vals_f64(double addrspace
 ; VI-NEXT:    s_endpgm
   %cmp = icmp eq i32 %in, 0
   %select = select i1 %cmp, double 0.0, double 1.0
-  store double %select, double addrspace(1)* %out, align 8
+  store double %select, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define void @v_swap_select_uint_to_fp_i1_vals_f64(double addrspace(1)* %out, i32 %in) {
+define void @v_swap_select_uint_to_fp_i1_vals_f64(ptr addrspace(1) %out, i32 %in) {
 ; GCN-LABEL: v_swap_select_uint_to_fp_i1_vals_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -547,6 +547,6 @@ define void @v_swap_select_uint_to_fp_i1_vals_f64(double addrspace(1)* %out, i32
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %in, 0
   %select = select i1 %cmp, double 0.0, double 1.0
-  store double %select, double addrspace(1)* %out, align 8
+  store double %select, ptr addrspace(1) %out, align 8
   ret void
 }

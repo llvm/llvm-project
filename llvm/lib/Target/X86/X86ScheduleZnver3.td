@@ -1347,17 +1347,10 @@ def Zn3WriteVPERM2F128rm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
 }
 def : InstRW<[Zn3WriteVPERM2F128rm], (instrs VPERM2F128rm)>;
 
-def Zn3WriteVPERMPSYrr : SchedWriteRes<[Zn3FPVShuf]> {
-  let Latency = 7;
-  let ResourceCycles = [1];
-  let NumMicroOps = 2;
-}
-def : InstRW<[Zn3WriteVPERMPSYrr], (instrs VPERMPSYrr)>;
-
 def Zn3WriteVPERMPSYrm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
-  let Latency = !add(Znver3Model.LoadLatency, Zn3WriteVPERMPSYrr.Latency);
+  let Latency = !add(Znver3Model.LoadLatency, 7);
   let ResourceCycles = [1, 1, 2];
-  let NumMicroOps = !add(Zn3WriteVPERMPSYrr.NumMicroOps, 1);
+  let NumMicroOps = 3;
 }
 def : InstRW<[Zn3WriteVPERMPSYrm], (instrs VPERMPSYrm)>;
 
@@ -1375,22 +1368,15 @@ def Zn3WriteVPERMPDYmi : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
 }
 def : InstRW<[Zn3WriteVPERMPDYmi], (instrs VPERMPDYmi)>;
 
-def Zn3WriteVPERMDYrr : SchedWriteRes<[Zn3FPVShuf]> {
-  let Latency = 5;
-  let ResourceCycles = [1];
+def Zn3WriteVPERMDYm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
+  let Latency = !add(Znver3Model.LoadLatency, 5);
+  let ResourceCycles = [1, 1, 2];
   let NumMicroOps = 2;
 }
-def : InstRW<[Zn3WriteVPERMDYrr], (instrs VPERMDYrr)>;
-
-def Zn3WriteVPERMYm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
-  let Latency = !add(Znver3Model.LoadLatency, Zn3WriteVPERMDYrr.Latency);
-  let ResourceCycles = [1, 1, 2];
-  let NumMicroOps = !add(Zn3WriteVPERMDYrr.NumMicroOps, 0);
-}
-def : InstRW<[Zn3WriteVPERMYm], (instrs VPERMQYmi, VPERMDYrm)>;
+def : InstRW<[Zn3WriteVPERMDYm], (instrs VPERMQYmi, VPERMDYrm)>;
 
 defm : Zn3WriteResYMMPair<WriteVPMOV256, [Zn3FPVShuf01], 4, [3], 2, /*LoadUOps=*/-1>; // 256-bit width packed vector width-changing move.
-defm : Zn3WriteResYMMPair<WriteVarShuffle256, [Zn3FPVShuf01], 1, [1], 2>; // 256-bit width vector variable shuffles.
+defm : Zn3WriteResYMMPair<WriteVarShuffle256, [Zn3FPVShuf], 5, [1], 2, /*LoadUOps=*/1>; // 256-bit width vector variable shuffles.
 defm : Zn3WriteResXMMPair<WriteVarVecShift, [Zn3FPVShift01], 1, [1], 1>; // Variable vector shifts.
 defm : Zn3WriteResYMMPair<WriteVarVecShiftY, [Zn3FPVShift01], 1, [1], 1>; // Variable vector shifts (YMM).
 defm : X86WriteResPairUnsupported<WriteVarVecShiftZ>; // Variable vector shifts (ZMM).

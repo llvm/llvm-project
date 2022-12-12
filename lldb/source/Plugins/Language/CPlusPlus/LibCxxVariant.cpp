@@ -9,6 +9,8 @@
 #include "LibCxxVariant.h"
 #include "LibCxx.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/Symbol/CompilerType.h"
+#include "lldb/Utility/LLDBAssert.h"
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -66,6 +68,19 @@ namespace {
 // 3) NPos, its value is variant_npos which means the variant has no value
 enum class LibcxxVariantIndexValidity { Valid, Invalid, NPos };
 
+uint64_t VariantNposValue(uint64_t index_byte_size) {
+  switch (index_byte_size) {
+  case 1:
+    return static_cast<uint8_t>(-1);
+  case 2:
+    return static_cast<uint16_t>(-1);
+  case 4:
+    return static_cast<uint32_t>(-1);
+  }
+  lldbassert(false && "Unknown index type size");
+  return static_cast<uint32_t>(-1); // Fallback to stable ABI type.
+}
+
 LibcxxVariantIndexValidity
 LibcxxVariantGetIndexValidity(ValueObjectSP &impl_sp) {
   ValueObjectSP index_sp(
@@ -74,9 +89,23 @@ LibcxxVariantGetIndexValidity(ValueObjectSP &impl_sp) {
   if (!index_sp)
     return LibcxxVariantIndexValidity::Invalid;
 
-  int64_t index_value = index_sp->GetValueAsSigned(0);
+  // In the stable ABI, the type of __index is just int.
+  // In the unstable ABI, where _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION is
+  // enabled, the type can either be unsigned char/short/int depending on
+  // how many variant types there are.
+  // We only need to do this here when comparing against npos, because npos is
+  // just `-1`, but that translates to different unsigned values depending on
+  // the byte size.
+  CompilerType index_type = index_sp->GetCompilerType();
 
-  if (index_value == -1)
+  llvm::Optional<uint64_t> index_type_bytes = index_type.GetByteSize(nullptr);
+  if (!index_type_bytes)
+    return LibcxxVariantIndexValidity::Invalid;
+
+  uint64_t npos_value = VariantNposValue(*index_type_bytes);
+  uint64_t index_value = index_sp->GetValueAsUnsigned(0);
+
+  if (index_value == npos_value)
     return LibcxxVariantIndexValidity::NPos;
 
   return LibcxxVariantIndexValidity::Valid;

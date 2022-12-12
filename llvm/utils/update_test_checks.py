@@ -84,7 +84,7 @@ def main():
     prefix_list = []
     for l in ti.run_lines:
       if '|' not in l:
-        common.warn('Skipping unparseable RUN line: ' + l)
+        common.warn('Skipping unparsable RUN line: ' + l)
         continue
 
       commands = [cmd.strip() for cmd in l.split('|')]

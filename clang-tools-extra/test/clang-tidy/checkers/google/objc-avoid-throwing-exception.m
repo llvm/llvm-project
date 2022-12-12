@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s google-objc-avoid-throwing-exception %t
+// RUN: %check_clang_tidy %s google-objc-avoid-throwing-exception %t -- -- -I %S/Inputs/
+
 @class NSString;
 
 @interface NSException
@@ -21,12 +22,29 @@
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: pass in NSError ** instead of throwing exception to indicate Objective-C errors [google-objc-avoid-throwing-exception]
 }
 
+#include "system-header-throw.h"
+
+#define THROW(e) @throw e
+
+#define RAISE [NSException raise:@"example" format:@"fmt"]
+
 - (void)f2 {
     [NSException raise:@"TestException" format:@"Test"];
     // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: pass in NSError ** instead of throwing exception to indicate Objective-C errors [google-objc-avoid-throwing-exception]
     [NSException raise:@"TestException" format:@"Test %@" arguments:@"bar"];
     // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: pass in NSError ** instead of throwing exception to indicate Objective-C errors [google-objc-avoid-throwing-exception]
     [NotException raise:@"NotException" format:@"Test"];
+
+    NSException *e;
+    SYS_THROW(e);
+
+    SYS_RAISE;
+
+    THROW(e);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: pass in NSError ** instead of throwing exception to indicate Objective-C errors [google-objc-avoid-throwing-exception]
+
+    RAISE;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: pass in NSError ** instead of throwing exception to indicate Objective-C errors [google-objc-avoid-throwing-exception]
 }
 @end
 

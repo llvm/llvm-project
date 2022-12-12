@@ -126,6 +126,8 @@ static inline void inline_memcpy(Ptr __restrict dst, CPtr __restrict src,
   return inline_memcpy_aarch64(dst, src, count);
 #elif defined(LLVM_LIBC_ARCH_ARM)
   return inline_memcpy_embedded_tiny(dst, src, count);
+#elif defined(LLVM_LIBC_ARCH_GPU)
+  return inline_memcpy_embedded_tiny(dst, src, count);
 #else
 #error "Unsupported platform"
 #endif

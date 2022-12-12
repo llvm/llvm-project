@@ -414,11 +414,11 @@ static Value *getStackGuard(const TargetLoweringBase *TLI, Module *M,
 ///
 /// Returns true if the platform/triple supports the stackprotectorcreate pseudo
 /// node.
-static bool CreatePrologue(Function *F, Module *M, ReturnInst *RI,
+static bool CreatePrologue(Function *F, Module *M, Instruction *CheckLoc,
                            const TargetLoweringBase *TLI, AllocaInst *&AI) {
   bool SupportsSelectionDAGSP = false;
   IRBuilder<> B(&F->getEntryBlock().front());
-  PointerType *PtrTy = Type::getInt8PtrTy(RI->getContext());
+  PointerType *PtrTy = Type::getInt8PtrTy(CheckLoc->getContext());
   AI = B.CreateAlloca(PtrTy, nullptr, "StackGuardSlot");
 
   Value *GuardSlot = getStackGuard(TLI, M, B, &SupportsSelectionDAGSP);
@@ -443,14 +443,27 @@ bool StackProtector::InsertStackProtectors() {
   AllocaInst *AI = nullptr; // Place on stack that stores the stack guard.
 
   for (BasicBlock &BB : llvm::make_early_inc_range(*F)) {
-    ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator());
-    if (!RI)
+    Instruction *CheckLoc = dyn_cast<ReturnInst>(BB.getTerminator());
+    if (!CheckLoc) {
+      for (auto &Inst : BB) {
+        auto *CB = dyn_cast<CallBase>(&Inst);
+        if (!CB)
+          continue;
+        if (!CB->doesNotReturn())
+          continue;
+        // Do stack check before non-return calls (e.g: __cxa_throw)
+        CheckLoc = CB;
+        break;
+      }
+    }
+
+    if (!CheckLoc)
       continue;
 
     // Generate prologue instrumentation if not already generated.
     if (!HasPrologue) {
       HasPrologue = true;
-      SupportsSelectionDAGSP &= CreatePrologue(F, M, RI, TLI, AI);
+      SupportsSelectionDAGSP &= CreatePrologue(F, M, CheckLoc, TLI, AI);
     }
 
     // SelectionDAG based code generation. Nothing else needs to be done here.
@@ -476,8 +489,7 @@ bool StackProtector::InsertStackProtectors() {
     // verifier guarantees that a tail call is either directly before the
     // return or with a single correct bitcast of the return value in between so
     // we don't need to worry about many situations here.
-    Instruction *CheckLoc = RI;
-    Instruction *Prev = RI->getPrevNonDebugInstruction();
+    Instruction *Prev = CheckLoc->getPrevNonDebugInstruction();
     if (Prev && isa<CallInst>(Prev) && cast<CallInst>(Prev)->isTailCall())
       CheckLoc = Prev;
     else if (Prev) {

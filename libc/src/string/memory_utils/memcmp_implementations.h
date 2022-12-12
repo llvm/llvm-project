@@ -138,6 +138,8 @@ static inline MemcmpReturnType inline_memcmp(CPtr p1, CPtr p2, size_t count) {
 #endif
 #elif defined(LLVM_LIBC_ARCH_ARM)
   return inline_memcmp_embedded_tiny(p1, p2, count);
+#elif defined(LLVM_LIBC_ARCH_GPU)
+  return inline_memcmp_embedded_tiny(p1, p2, count);
 #else
 #error "Unsupported platform"
 #endif

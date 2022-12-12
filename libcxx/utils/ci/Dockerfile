@@ -84,6 +84,9 @@ RUN ln -s /usr/bin/git-clang-format-14 /usr/bin/git-clang-format && [ -e $(readl
 RUN apt-get update && apt-get install -y clang-tidy-$(($LLVM_HEAD_VERSION - 1)) clang-tidy-$LLVM_HEAD_VERSION clang-tidy-14
 RUN ln -s /usr/bin/clang-tidy-14 /usr/bin/clang-tidy && [ -e $(readlink /usr/bin/clang-tidy) ]
 
+# Install llvm-dev to compile custom clang-tidy checks
+RUN apt-get update && apt-get install llvm-$(($LLVM_HEAD_VERSION - 1))-dev llvm-$(($LLVM_HEAD_VERSION - 2))-dev
+
 # Install clang-tools
 RUN apt-get update && apt-get install -y clang-tools-$(($LLVM_HEAD_VERSION - 1)) clang-tools-$LLVM_HEAD_VERSION
 

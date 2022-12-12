@@ -1,9 +1,6 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
 // RUN: %clang_cc1 -verify=ref %s
 
-// expected-no-diagnostics
-// ref-no-diagnostics
-
 constexpr void doNothing() {}
 constexpr int gimme5() {
   doNothing();
@@ -73,3 +70,17 @@ constexpr decltype(N) getNum() {
 static_assert(getNum<-2>() == -2, "");
 static_assert(getNum<10>() == 10, "");
 static_assert(getNum() == 5, "");
+
+constexpr int f(); // expected-note {{declared here}} \
+                   // ref-note {{declared here}}
+static_assert(f() == 5, ""); // expected-error {{not an integral constant expression}} \
+                             // expected-note {{undefined function 'f'}} \
+                             // ref-error {{not an integral constant expression}} \
+                             // ref-note {{undefined function 'f'}}
+constexpr int a() {
+  return f();
+}
+constexpr int f() {
+  return 5;
+}
+static_assert(a() == 5, "");

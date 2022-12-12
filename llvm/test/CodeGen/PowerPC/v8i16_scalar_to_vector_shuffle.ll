@@ -389,10 +389,10 @@ define void @test_v4i32_none(ptr nocapture readonly %ptr1, ptr nocapture readonl
 ; CHECK-LE-P9:       # %bb.0: # %entry
 ; CHECK-LE-P9-NEXT:    lfiwzx f0, 0, r3
 ; CHECK-LE-P9-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
-; CHECK-LE-P9-NEXT:    xxlxor vs1, vs1, vs1
+; CHECK-LE-P9-NEXT:    xxlxor vs2, vs2, vs2
 ; CHECK-LE-P9-NEXT:    addi r3, r3, .LCPI3_0@toc@l
-; CHECK-LE-P9-NEXT:    lxv vs2, 0(r3)
-; CHECK-LE-P9-NEXT:    xxperm vs0, vs1, vs2
+; CHECK-LE-P9-NEXT:    lxv vs1, 0(r3)
+; CHECK-LE-P9-NEXT:    xxperm vs0, vs2, vs1
 ; CHECK-LE-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-LE-P9-NEXT:    blr
 ;
@@ -411,10 +411,10 @@ define void @test_v4i32_none(ptr nocapture readonly %ptr1, ptr nocapture readonl
 ; CHECK-BE-P9:       # %bb.0: # %entry
 ; CHECK-BE-P9-NEXT:    lfiwzx f0, 0, r3
 ; CHECK-BE-P9-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
-; CHECK-BE-P9-NEXT:    xxlxor vs1, vs1, vs1
+; CHECK-BE-P9-NEXT:    xxlxor vs2, vs2, vs2
 ; CHECK-BE-P9-NEXT:    addi r3, r3, .LCPI3_0@toc@l
-; CHECK-BE-P9-NEXT:    lxv vs2, 0(r3)
-; CHECK-BE-P9-NEXT:    xxperm vs0, vs1, vs2
+; CHECK-BE-P9-NEXT:    lxv vs1, 0(r3)
+; CHECK-BE-P9-NEXT:    xxperm vs0, vs2, vs1
 ; CHECK-BE-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-P9-NEXT:    blr
 ;
@@ -470,14 +470,15 @@ define void @test_none_v2i64(ptr nocapture readonly %ptr1, ptr nocapture readonl
 ; CHECK-LE-P8-LABEL: test_none_v2i64:
 ; CHECK-LE-P8:       # %bb.0: # %entry
 ; CHECK-LE-P8-NEXT:    addis r5, r2, .LCPI4_0@toc@ha
+; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r4
 ; CHECK-LE-P8-NEXT:    lxsdx v2, 0, r3
-; CHECK-LE-P8-NEXT:    lxvd2x v3, 0, r4
 ; CHECK-LE-P8-NEXT:    addis r3, r2, .LCPI4_1@toc@ha
 ; CHECK-LE-P8-NEXT:    addi r5, r5, .LCPI4_0@toc@l
 ; CHECK-LE-P8-NEXT:    addi r3, r3, .LCPI4_1@toc@l
-; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r5
-; CHECK-LE-P8-NEXT:    xxswapd v4, vs0
+; CHECK-LE-P8-NEXT:    lxvd2x vs1, 0, r5
+; CHECK-LE-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-LE-P8-NEXT:    xxswapd v4, vs1
 ; CHECK-LE-P8-NEXT:    vperm v2, v2, v3, v4
 ; CHECK-LE-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-LE-P8-NEXT:    xxlxor v4, v4, v4
@@ -544,10 +545,10 @@ define void @test_none_v2i64(ptr nocapture readonly %ptr1, ptr nocapture readonl
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
 ; CHECK-AIX-64-P9-NEXT:    lxsd v2, 0(r3)
 ; CHECK-AIX-64-P9-NEXT:    ld r3, L..C5(r2) # %const.0
-; CHECK-AIX-64-P9-NEXT:    lxv vs1, 0(r4)
+; CHECK-AIX-64-P9-NEXT:    lxv vs0, 0(r4)
 ; CHECK-AIX-64-P9-NEXT:    xxlxor v3, v3, v3
-; CHECK-AIX-64-P9-NEXT:    lxv vs0, 0(r3)
-; CHECK-AIX-64-P9-NEXT:    xxperm v2, vs1, vs0
+; CHECK-AIX-64-P9-NEXT:    lxv vs1, 0(r3)
+; CHECK-AIX-64-P9-NEXT:    xxperm v2, vs0, vs1
 ; CHECK-AIX-64-P9-NEXT:    vmrghh v2, v3, v2
 ; CHECK-AIX-64-P9-NEXT:    stxv v2, 0(r3)
 ; CHECK-AIX-64-P9-NEXT:    blr
@@ -603,10 +604,10 @@ define void @test_v2i64_none(ptr nocapture readonly %ptr1) {
 ; CHECK-LE-P9:       # %bb.0: # %entry
 ; CHECK-LE-P9-NEXT:    lfd f0, 0(r3)
 ; CHECK-LE-P9-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
-; CHECK-LE-P9-NEXT:    xxlxor vs1, vs1, vs1
+; CHECK-LE-P9-NEXT:    xxlxor vs2, vs2, vs2
 ; CHECK-LE-P9-NEXT:    addi r3, r3, .LCPI5_0@toc@l
-; CHECK-LE-P9-NEXT:    lxv vs2, 0(r3)
-; CHECK-LE-P9-NEXT:    xxperm vs0, vs1, vs2
+; CHECK-LE-P9-NEXT:    lxv vs1, 0(r3)
+; CHECK-LE-P9-NEXT:    xxperm vs0, vs2, vs1
 ; CHECK-LE-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-LE-P9-NEXT:    blr
 ;
@@ -625,10 +626,10 @@ define void @test_v2i64_none(ptr nocapture readonly %ptr1) {
 ; CHECK-BE-P9:       # %bb.0: # %entry
 ; CHECK-BE-P9-NEXT:    lfd f0, 0(r3)
 ; CHECK-BE-P9-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
-; CHECK-BE-P9-NEXT:    xxlxor vs1, vs1, vs1
+; CHECK-BE-P9-NEXT:    xxlxor vs2, vs2, vs2
 ; CHECK-BE-P9-NEXT:    addi r3, r3, .LCPI5_0@toc@l
-; CHECK-BE-P9-NEXT:    lxv vs2, 0(r3)
-; CHECK-BE-P9-NEXT:    xxperm vs0, vs1, vs2
+; CHECK-BE-P9-NEXT:    lxv vs1, 0(r3)
+; CHECK-BE-P9-NEXT:    xxperm vs0, vs2, vs1
 ; CHECK-BE-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-P9-NEXT:    blr
 ;

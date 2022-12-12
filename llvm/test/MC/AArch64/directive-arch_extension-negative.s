@@ -1,5 +1,6 @@
 // RUN: not llvm-mc -triple aarch64 \
 // RUN: -mattr=+crc,+sm4,+sha3,+sha2,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64,+flagm,+hbc,+mops \
+// RUN: -mattr=+rcpc3,+lse128,+d128,+the \
 // RUN: -filetype asm -o - %s 2>&1 | FileCheck %s
 
 .arch_extension axp64
@@ -146,3 +147,24 @@ cpyfp [x0]!, [x1]!, x2!
 cpyfp [x0]!, [x1]!, x2!
 // CHECK: [[@LINE-1]]:1: error: instruction requires: mops
 // CHECK-NEXT: cpyfp [x0]!, [x1]!, x2!
+
+// This needs to come before `.arch_extension nothe` as it uses an instruction
+// that requires both the and d128
+sysp #0, c2, c0, #0, x0, x1
+rcwcasp   x0, x1, x6, x7, [x4]
+// CHECK-NOT: [[@LINE-2]]:1: error: instruction requires: d128
+// CHECK-NOT: [[@LINE-2]]:1: error: instruction requires: d128
+.arch_extension nod128
+sysp #0, c2, c0, #0, x0, x1
+rcwcasp   x0, x1, x6, x7, [x4]
+// CHECK: [[@LINE-2]]:1: error: instruction requires: d128
+// CHECK-NEXT: sysp #0, c2, c0, #0, x0, x1
+// CHECK: [[@LINE-3]]:1: error: instruction requires: d128
+// CHECK-NEXT: rcwcasp   x0, x1, x6, x7, [x4]
+
+rcwswp x0, x1, [x2]
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: the
+.arch_extension nothe
+rcwswp x0, x1, [x2]
+// CHECK: [[@LINE-1]]:1: error: instruction requires: the
+// CHECK-NEXT: rcwswp x0, x1, [x2]

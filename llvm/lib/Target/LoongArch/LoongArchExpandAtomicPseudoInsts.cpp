@@ -133,6 +133,12 @@ bool LoongArchExpandAtomicPseudo::expandMI(
     return expandAtomicCmpXchg(MBB, MBBI, false, 64, NextMBBI);
   case LoongArch::PseudoMaskedCmpXchg32:
     return expandAtomicCmpXchg(MBB, MBBI, true, 32, NextMBBI);
+  case LoongArch::PseudoMaskedAtomicLoadMax32:
+    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::Max, true, 32,
+                                NextMBBI);
+  case LoongArch::PseudoMaskedAtomicLoadMin32:
+    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::Min, true, 32,
+                                NextMBBI);
   }
   return false;
 }
@@ -341,6 +347,17 @@ bool LoongArchExpandAtomicPseudo::expandAtomicBinOp(
   return true;
 }
 
+static void insertSext(const LoongArchInstrInfo *TII, DebugLoc DL,
+                       MachineBasicBlock *MBB, Register ValReg,
+                       Register ShamtReg) {
+  BuildMI(MBB, DL, TII->get(LoongArch::SLL_W), ValReg)
+      .addReg(ValReg)
+      .addReg(ShamtReg);
+  BuildMI(MBB, DL, TII->get(LoongArch::SRA_W), ValReg)
+      .addReg(ValReg)
+      .addReg(ShamtReg);
+}
+
 bool LoongArchExpandAtomicPseudo::expandAtomicMinMaxOp(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     AtomicRMWInst::BinOp BinOp, bool IsMasked, int Width,
@@ -413,6 +430,22 @@ bool LoongArchExpandAtomicPseudo::expandAtomicMinMaxOp(
   // bgeu incr, scratch2, .looptail
   case AtomicRMWInst::UMin:
     BuildMI(LoopHeadMBB, DL, TII->get(LoongArch::BGEU))
+        .addReg(IncrReg)
+        .addReg(Scratch2Reg)
+        .addMBB(LoopTailMBB);
+    break;
+  case AtomicRMWInst::Max:
+    insertSext(TII, DL, LoopHeadMBB, Scratch2Reg, MI.getOperand(6).getReg());
+    // bge scratch2, incr, .looptail
+    BuildMI(LoopHeadMBB, DL, TII->get(LoongArch::BGE))
+        .addReg(Scratch2Reg)
+        .addReg(IncrReg)
+        .addMBB(LoopTailMBB);
+    break;
+  case AtomicRMWInst::Min:
+    insertSext(TII, DL, LoopHeadMBB, Scratch2Reg, MI.getOperand(6).getReg());
+    // bge incr, scratch2, .looptail
+    BuildMI(LoopHeadMBB, DL, TII->get(LoongArch::BGE))
         .addReg(IncrReg)
         .addReg(Scratch2Reg)
         .addMBB(LoopTailMBB);

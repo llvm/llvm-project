@@ -141,14 +141,14 @@ define amdgpu_kernel void @minnum_f16_ieee(
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) #0 {
 entry:
-  %a.val = load volatile half, half addrspace(1)* %a
-  %b.val = load volatile half, half addrspace(1)* %b
+  %a.val = load volatile half, ptr addrspace(1) %a
+  %b.val = load volatile half, ptr addrspace(1) %b
   %r.val = call half @llvm.minnum.f16(half %a.val, half %b.val)
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -278,12 +278,12 @@ define amdgpu_kernel void @minnum_f16_imm_a(
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-    half addrspace(1)* %r,
-    half addrspace(1)* %b) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %b) #0 {
 entry:
-  %b.val = load half, half addrspace(1)* %b
+  %b.val = load half, ptr addrspace(1) %b
   %r.val = call half @llvm.minnum.f16(half 3.0, half %b.val)
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -385,12 +385,12 @@ define amdgpu_kernel void @minnum_f16_imm_b(
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-    half addrspace(1)* %r,
-    half addrspace(1)* %a) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) #0 {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %r.val = call half @llvm.minnum.f16(half %a.val, half 4.0)
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -500,14 +500,14 @@ define amdgpu_kernel void @minnum_v2f16_ieee(
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-    <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a,
-    <2 x half> addrspace(1)* %b) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) #0 {
 entry:
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
-  %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
+  %a.val = load <2 x half>, ptr addrspace(1) %a
+  %b.val = load <2 x half>, ptr addrspace(1) %b
   %r.val = call <2 x half> @llvm.minnum.v2f16(<2 x half> %a.val, <2 x half> %b.val)
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -627,12 +627,12 @@ define amdgpu_kernel void @minnum_v2f16_imm_a(
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-    <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %b) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %b) #0 {
 entry:
-  %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
+  %b.val = load <2 x half>, ptr addrspace(1) %b
   %r.val = call <2 x half> @llvm.minnum.v2f16(<2 x half> <half 3.0, half 4.0>, <2 x half> %b.val)
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -717,12 +717,12 @@ define amdgpu_kernel void @minnum_v2f16_imm_b(
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-    <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) #0 {
 entry:
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
+  %a.val = load <2 x half>, ptr addrspace(1) %a
   %r.val = call <2 x half> @llvm.minnum.v2f16(<2 x half> %a.val, <2 x half> <half 4.0, half 3.0>)
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -857,14 +857,14 @@ define amdgpu_kernel void @minnum_v3f16(
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-    <3 x half> addrspace(1)* %r,
-    <3 x half> addrspace(1)* %a,
-    <3 x half> addrspace(1)* %b) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) #0 {
 entry:
-  %a.val = load <3 x half>, <3 x half> addrspace(1)* %a
-  %b.val = load <3 x half>, <3 x half> addrspace(1)* %b
+  %a.val = load <3 x half>, ptr addrspace(1) %a
+  %b.val = load <3 x half>, ptr addrspace(1) %b
   %r.val = call <3 x half> @llvm.minnum.v3f16(<3 x half> %a.val, <3 x half> %b.val)
-  store <3 x half> %r.val, <3 x half> addrspace(1)* %r
+  store <3 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -1010,14 +1010,14 @@ define amdgpu_kernel void @minnum_v4f16(
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-    <4 x half> addrspace(1)* %r,
-    <4 x half> addrspace(1)* %a,
-    <4 x half> addrspace(1)* %b) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) #0 {
 entry:
-  %a.val = load <4 x half>, <4 x half> addrspace(1)* %a
-  %b.val = load <4 x half>, <4 x half> addrspace(1)* %b
+  %a.val = load <4 x half>, ptr addrspace(1) %a
+  %b.val = load <4 x half>, ptr addrspace(1) %b
   %r.val = call <4 x half> @llvm.minnum.v4f16(<4 x half> %a.val, <4 x half> %b.val)
-  store <4 x half> %r.val, <4 x half> addrspace(1)* %r
+  store <4 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -1131,12 +1131,12 @@ define amdgpu_kernel void @fmin_v4f16_imm_a(
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-    <4 x half> addrspace(1)* %r,
-    <4 x half> addrspace(1)* %b) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %b) #0 {
 entry:
-  %b.val = load <4 x half>, <4 x half> addrspace(1)* %b
+  %b.val = load <4 x half>, ptr addrspace(1) %b
   %r.val = call <4 x half> @llvm.minnum.v4f16(<4 x half> <half 8.0, half 2.0, half 3.0, half 4.0>, <4 x half> %b.val)
-  store <4 x half> %r.val, <4 x half> addrspace(1)* %r
+  store <4 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 

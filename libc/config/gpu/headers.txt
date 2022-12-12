@@ -1,0 +1,4 @@
+set(TARGET_PUBLIC_HEADERS
+    libc.include.ctype
+    libc.include.string
+)

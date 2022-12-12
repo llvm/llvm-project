@@ -2504,8 +2504,8 @@ define i64 @rmw64_max_seq_cst(ptr %p) nounwind {
 ; RV32-NEXT:    j .LBB49_2
 ; RV32-NEXT:  .LBB49_1: # %atomicrmw.start
 ; RV32-NEXT:    # in Loop: Header=BB49_2 Depth=1
-; RV32-NEXT:    neg a0, a0
-; RV32-NEXT:    and a3, a0, a1
+; RV32-NEXT:    neg a3, a0
+; RV32-NEXT:    and a3, a3, a1
 ; RV32-NEXT:    sw a4, 0(sp)
 ; RV32-NEXT:    sw a1, 4(sp)
 ; RV32-NEXT:    mv a1, sp
@@ -2599,8 +2599,8 @@ define i64 @rmw64_min_seq_cst(ptr %p) nounwind {
 ; RV32-NEXT:    j .LBB50_2
 ; RV32-NEXT:  .LBB50_1: # %atomicrmw.start
 ; RV32-NEXT:    # in Loop: Header=BB50_2 Depth=1
-; RV32-NEXT:    neg a0, a0
-; RV32-NEXT:    and a3, a0, a1
+; RV32-NEXT:    neg a3, a0
+; RV32-NEXT:    and a3, a3, a1
 ; RV32-NEXT:    sw a4, 0(sp)
 ; RV32-NEXT:    sw a1, 4(sp)
 ; RV32-NEXT:    mv a1, sp
@@ -2696,8 +2696,8 @@ define i64 @rmw64_umax_seq_cst(ptr %p) nounwind {
 ; RV32-NEXT:    j .LBB51_2
 ; RV32-NEXT:  .LBB51_1: # %atomicrmw.start
 ; RV32-NEXT:    # in Loop: Header=BB51_2 Depth=1
-; RV32-NEXT:    neg a0, a0
-; RV32-NEXT:    and a3, a0, a1
+; RV32-NEXT:    neg a3, a0
+; RV32-NEXT:    and a3, a3, a1
 ; RV32-NEXT:    sw a4, 0(sp)
 ; RV32-NEXT:    sw a1, 4(sp)
 ; RV32-NEXT:    mv a1, sp
@@ -2791,8 +2791,8 @@ define i64 @rmw64_umin_seq_cst(ptr %p) nounwind {
 ; RV32-NEXT:    j .LBB52_2
 ; RV32-NEXT:  .LBB52_1: # %atomicrmw.start
 ; RV32-NEXT:    # in Loop: Header=BB52_2 Depth=1
-; RV32-NEXT:    neg a0, a0
-; RV32-NEXT:    and a3, a0, a1
+; RV32-NEXT:    neg a3, a0
+; RV32-NEXT:    and a3, a3, a1
 ; RV32-NEXT:    sw a4, 0(sp)
 ; RV32-NEXT:    sw a1, 4(sp)
 ; RV32-NEXT:    mv a1, sp

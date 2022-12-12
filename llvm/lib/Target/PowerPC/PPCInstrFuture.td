@@ -46,9 +46,9 @@ multiclass XOForm_RTAB5_L1r<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
 }
 
 let Predicates = [IsISAFuture] in {
-defm SUBFUS : XOForm_RTAB5_L1r<31, 72, (outs g8rc:$RT),
-                               (ins g8rc:$RA, g8rc:$RB, u1imm:$L),
-                               "subfus",  "$RT, $L, $RA, $RB", []>;
+  defm SUBFUS : XOForm_RTAB5_L1r<31, 72, (outs g8rc:$RT),
+                                 (ins g8rc:$RA, g8rc:$RB, u1imm:$L),
+                                 "subfus",  "$RT, $L, $RA, $RB", []>;
 }
 
 let Predicates = [HasVSX, IsISAFuture] in {
@@ -57,7 +57,7 @@ let Predicates = [HasVSX, IsISAFuture] in {
                               "lxvrl $XT, $src, $rB", IIC_LdStLoad, []>;
 
     def LXVRLL : XX1Form_memOp<31, 557, (outs vsrc:$XT), (ins memr:$src, g8rc:$rB),
-                           "lxvrll $XT, $src, $rB", IIC_LdStLoad, []>;
+                               "lxvrll $XT, $src, $rB", IIC_LdStLoad, []>;
 
     def LXVPRL : XForm_XTp5_XAB5<31, 589, (outs vsrprc:$XTp),
                                  (ins memr:$src, g8rc:$rB),

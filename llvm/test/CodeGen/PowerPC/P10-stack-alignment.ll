@@ -5,7 +5,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-BE
-; RUN: opt --passes=sroa,loop-vectorize,loop-unroll,instcombine -S \
+; RUN: opt --passes='sroa,loop-vectorize,loop-unroll,instcombine' -S \
 ; RUN: -vectorizer-maximize-bandwidth --mtriple=powerpc64le-- -mcpu=pwr10 < %s | \
 ; RUN: FileCheck %s --check-prefix=CHECK-OPT
 

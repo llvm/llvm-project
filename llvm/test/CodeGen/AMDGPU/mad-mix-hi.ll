@@ -521,7 +521,7 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt_multi
   %src2.ext = fpext half %src2 to float
   %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
   %cvt.result = fptrunc float %result to half
-  store volatile half %cvt.result, half addrspace(1)* undef
+  store volatile half %cvt.result, ptr addrspace(1) undef
   %max = call half @llvm.maxnum.f16(half %cvt.result, half 0.0)
   %clamp = call half @llvm.minnum.f16(half %max, half 1.0)
   %vec.result = insertelement <2 x half> undef, half %clamp, i32 1

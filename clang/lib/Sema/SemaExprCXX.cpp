@@ -1459,9 +1459,8 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
   QualType Ty = TInfo->getType();
   SourceLocation TyBeginLoc = TInfo->getTypeLoc().getBeginLoc();
 
-  assert((!ListInitialization ||
-          (Exprs.size() == 1 && isa<InitListExpr>(Exprs[0]))) &&
-         "List initialization must have initializer list as expression.");
+  assert((!ListInitialization || Exprs.size() == 1) &&
+         "List initialization must have exactly one expression.");
   SourceRange FullRange = SourceRange(TyBeginLoc, RParenOrBraceLoc);
 
   InitializedEntity Entity =
@@ -2661,7 +2660,9 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
   // tree? Or should the consumer just recalculate the value?
   // FIXME: Using a dummy value will interact poorly with attribute enable_if.
   IntegerLiteral Size(
-      Context, llvm::APInt::getZero(Context.getTargetInfo().getPointerWidth(0)),
+      Context,
+      llvm::APInt::getZero(
+          Context.getTargetInfo().getPointerWidth(LangAS::Default)),
       Context.getSizeType(), SourceLocation());
   AllocArgs.push_back(&Size);
 

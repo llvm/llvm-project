@@ -370,6 +370,12 @@
 // CHECK-NEXT:     ExceptionRecord:
 // CHECK-NEXT:     ExceptionData {
 // CHECK:            EpiloguePacked: Yes
+// CHECK:        RuntimeFunction {
+// CHECK-NEXT:     Function: nonpacked16
+// CHECK-NEXT:     ExceptionRecord:
+// CHECK-NEXT:     ExceptionData {
+// CHECK:            EpiloguePacked: Yes
+
 
     .text
 func1:
@@ -1114,4 +1120,40 @@ nonpacked15:
     .seh_pac_sign_lr
     .seh_endepilogue
     ret
+    .seh_endproc
+
+nonpacked16:
+    .seh_proc nonpacked16
+    // Make sure we correctly analyze .seh_save_any_reg_p
+    stp     x29, x30, [sp, #-176]!
+    .seh_save_fplr_x        176
+    stp     q6, q7, [sp, #16]
+    .seh_save_any_reg_p     q6, 16
+    stp     q8, q9, [sp, #48]
+    .seh_save_any_reg_p     q8, 48
+    stp     q10, q11, [sp, #80]
+    .seh_save_any_reg_p     q10, 80
+    stp     q12, q13, [sp, #112]
+    .seh_save_any_reg_p     q12, 112
+    stp     q14, q15, [sp, #144]
+    .seh_save_any_reg_p     q14, 144
+    mov     x29, sp
+    .seh_set_fp
+    .seh_endprologue
+    nop
+    .seh_startepilogue
+    ldp     q14, q15, [sp, #144]
+    .seh_save_any_reg_p     q14, 144
+    ldp     q12, q13, [sp, #112]
+    .seh_save_any_reg_p     q12, 112
+    ldp     q10, q11, [sp, #80]
+    .seh_save_any_reg_p     q10, 80
+    ldp     q8, q9, [sp, #48]
+    .seh_save_any_reg_p     q8, 48
+    ldp     q6, q7, [sp, #16]
+    .seh_save_any_reg_p     q6, 16
+    ldp     x29, x30, [sp], #176
+    .seh_save_fplr_x        176
+    .seh_endepilogue
+    br      x9
     .seh_endproc

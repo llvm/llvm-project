@@ -637,7 +637,7 @@ define protected amdgpu_kernel void @nested_waterfalls(%tex* addrspace(1)* %tex.
   ; SI-NEXT: bb.5:
   ; SI-NEXT:   successors: %bb.4(0x40000000), %bb.6(0x40000000)
   ; SI-NEXT: {{  $}}
-  ; SI-NEXT:   [[IMAGE_SAMPLE_V1_V2_gfx10_:%[0-9]+]]:vgpr_32 = IMAGE_SAMPLE_V1_V2_gfx10 undef %22:vreg_64, [[REG_SEQUENCE5]], killed [[REG_SEQUENCE8]], 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from custom "ImageResource")
+  ; SI-NEXT:   [[IMAGE_SAMPLE_V1_V2_gfx10_:%[0-9]+]]:vgpr_32 = IMAGE_SAMPLE_V1_V2_gfx10 undef %22:vreg_64, [[REG_SEQUENCE5]], killed [[REG_SEQUENCE8]], 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 7)
   ; SI-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, killed [[S_AND_SAVEEXEC_B32_1]], implicit-def dead $scc
   ; SI-NEXT:   SI_WATERFALL_LOOP %bb.4, implicit $exec
   ; SI-NEXT: {{  $}}

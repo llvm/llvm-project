@@ -71,7 +71,7 @@ public:
 
   // These corresponds to the fields in Elf_Shdr.
   uint64_t flags;
-  uint32_t alignment;
+  uint32_t addralign;
   uint32_t entsize;
   uint32_t link;
   uint32_t info;
@@ -93,10 +93,10 @@ public:
 
 protected:
   constexpr SectionBase(Kind sectionKind, StringRef name, uint64_t flags,
-                        uint32_t entsize, uint32_t alignment, uint32_t type,
+                        uint32_t entsize, uint32_t addralign, uint32_t type,
                         uint32_t info, uint32_t link)
       : sectionKind(sectionKind), bss(false), keepUnique(false), type(type),
-        name(name), flags(flags), alignment(alignment), entsize(entsize),
+        name(name), flags(flags), addralign(addralign), entsize(entsize),
         link(link), info(info) {}
 };
 
@@ -111,7 +111,7 @@ public:
 
   InputSectionBase(InputFile *file, uint64_t flags, uint32_t type,
                    uint64_t entsize, uint32_t link, uint32_t info,
-                   uint32_t alignment, ArrayRef<uint8_t> data, StringRef name,
+                   uint32_t addralign, ArrayRef<uint8_t> data, StringRef name,
                    Kind sectionKind);
 
   static bool classof(const SectionBase *s) { return s->kind() != Output; }
@@ -352,7 +352,7 @@ public:
 // .eh_frame. It also includes the synthetic sections themselves.
 class InputSection : public InputSectionBase {
 public:
-  InputSection(InputFile *f, uint64_t flags, uint32_t type, uint32_t alignment,
+  InputSection(InputFile *f, uint64_t flags, uint32_t type, uint32_t addralign,
                ArrayRef<uint8_t> data, StringRef name, Kind k = Regular);
   template <class ELFT>
   InputSection(ObjFile<ELFT> &f, const typename ELFT::Shdr &header,
@@ -405,9 +405,9 @@ static_assert(sizeof(InputSection) <= 152, "InputSection is too big");
 
 class SyntheticSection : public InputSection {
 public:
-  SyntheticSection(uint64_t flags, uint32_t type, uint32_t alignment,
+  SyntheticSection(uint64_t flags, uint32_t type, uint32_t addralign,
                    StringRef name)
-      : InputSection(nullptr, flags, type, alignment, {}, name,
+      : InputSection(nullptr, flags, type, addralign, {}, name,
                      InputSectionBase::Synthetic) {}
 
   virtual ~SyntheticSection() = default;

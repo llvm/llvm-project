@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -mlir-print-debuginfo -mlir-pretty-debuginfo | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -mlir-print-debuginfo -mlir-pretty-debuginfo -mlir-print-local-scope | FileCheck %s
 
 #set0 = affine_set<(d0) : (1 == 0)>
 

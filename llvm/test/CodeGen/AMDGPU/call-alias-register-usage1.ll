@@ -4,7 +4,7 @@
 ; through aliases. If GlobalOpt is never run, we do not see direct
 ; calls,
 
-@alias1 = hidden alias void (), void ()* @aliasee_vgpr32_sgpr76
+@alias1 = hidden alias void (), ptr @aliasee_vgpr32_sgpr76
 
 ; The parent kernel has a higher VGPR usage than the possible callees.
 

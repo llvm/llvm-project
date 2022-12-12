@@ -310,9 +310,21 @@ INTERCEPTOR(char *, stpcpy, char *dest, const char *src) {
   CopyShadowAndOrigin(dest, src, n + 1, &stack);
   return res;
 }
-#define MSAN_MAYBE_INTERCEPT_STPCPY INTERCEPT_FUNCTION(stpcpy)
+
+INTERCEPTOR(char *, stpncpy, char *dest, const char *src, SIZE_T n) {
+  ENSURE_MSAN_INITED();
+  GET_STORE_STACK_TRACE;
+  SIZE_T copy_size = Min(n, internal_strnlen(src, n) + 1);
+  char *res = REAL(stpncpy)(dest, src, n);
+  CopyShadowAndOrigin(dest, src, copy_size, &stack);
+  __msan_unpoison(dest + copy_size, n - copy_size);
+  return res;
+}
+#  define MSAN_MAYBE_INTERCEPT_STPCPY INTERCEPT_FUNCTION(stpcpy)
+#  define MSAN_MAYBE_INTERCEPT_STPNCPY INTERCEPT_FUNCTION(stpncpy)
 #else
 #define MSAN_MAYBE_INTERCEPT_STPCPY
+#  define MSAN_MAYBE_INTERCEPT_STPNCPY
 #endif
 
 INTERCEPTOR(char *, strdup, char *src) {
@@ -1686,6 +1698,7 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(wmemmove);
   INTERCEPT_FUNCTION(strcpy);
   MSAN_MAYBE_INTERCEPT_STPCPY;
+  MSAN_MAYBE_INTERCEPT_STPNCPY;
   INTERCEPT_FUNCTION(strdup);
   MSAN_MAYBE_INTERCEPT___STRDUP;
   INTERCEPT_FUNCTION(strncpy);

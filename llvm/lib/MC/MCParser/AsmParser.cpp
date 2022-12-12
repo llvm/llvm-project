@@ -539,6 +539,7 @@ private:
     DK_LTO_DISCARD,
     DK_LTO_SET_CONDITIONAL,
     DK_CFI_MTE_TAGGED_FRAME,
+    DK_MEMTAG,
     DK_END
   };
 
@@ -2298,6 +2299,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectivePseudoProbe();
     case DK_LTO_DISCARD:
       return parseDirectiveLTODiscard();
+    case DK_MEMTAG:
+      return parseDirectiveSymbolAttribute(MCSA_Memtag);
     }
 
     return Error(IDLoc, "unknown directive");
@@ -4984,8 +4987,9 @@ bool AsmParser::parseDirectiveSymbolAttribute(MCSymbolAttr Attr) {
 
     MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
-    // Assembler local symbols don't make any sense here. Complain loudly.
-    if (Sym->isTemporary())
+    // Assembler local symbols don't make any sense here, except for directives
+    // that the symbol should be tagged.
+    if (Sym->isTemporary() && Attr != MCSA_Memtag)
       return Error(Loc, "non-local symbol required");
 
     if (!getStreamer().emitSymbolAttribute(Sym, Attr))
@@ -5598,6 +5602,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".pseudoprobe"] = DK_PSEUDO_PROBE;
   DirectiveKindMap[".lto_discard"] = DK_LTO_DISCARD;
   DirectiveKindMap[".lto_set_conditional"] = DK_LTO_SET_CONDITIONAL;
+  DirectiveKindMap[".memtag"] = DK_MEMTAG;
 }
 
 MCAsmMacro *AsmParser::parseMacroLikeBody(SMLoc DirectiveLoc) {

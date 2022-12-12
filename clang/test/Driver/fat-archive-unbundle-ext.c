@@ -1,5 +1,5 @@
 // REQUIRES: x86-registered-target
-// UNSUPPORTED: windows, darwin, aix
+// UNSUPPORTED: target={{.*-windows.*}}, darwin, aix
 
 // Generate dummy fat object
 // RUN: %clang -O0 -target %itanium_abi_triple %s -c -o %t.host.o

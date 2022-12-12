@@ -962,6 +962,7 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   case X86::PTDPBUUDV:
   case X86::PTILEZEROV:
   case X86::PTDPBF16PSV:
+  case X86::PTDPFP16PSV:
     MachineOperand &MO1 = MI->getOperand(1);
     MachineOperand &MO2 = MI->getOperand(2);
     ShapeT Shape(&MO1, &MO2, MRI);

@@ -1199,28 +1199,26 @@ static bool isFMUL(unsigned Opc) {
   }
 }
 
-static bool isAssociativeAndCommutativeFPOpcode(unsigned Opc) {
-  return isFADD(Opc) || isFMUL(Opc);
+bool RISCVInstrInfo::hasReassociableSibling(const MachineInstr &Inst,
+                                            bool &Commuted) const {
+  if (!TargetInstrInfo::hasReassociableSibling(Inst, Commuted))
+    return false;
+
+  const MachineRegisterInfo &MRI = Inst.getMF()->getRegInfo();
+  unsigned OperandIdx = Commuted ? 2 : 1;
+  const MachineInstr &Sibling =
+      *MRI.getVRegDef(Inst.getOperand(OperandIdx).getReg());
+
+  return RISCV::hasEqualFRM(Inst, Sibling);
 }
 
-static bool canReassociate(MachineInstr &Root, MachineOperand &MO) {
-  if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
-    return false;
-  MachineRegisterInfo &MRI = Root.getMF()->getRegInfo();
-  MachineInstr *MI = MRI.getVRegDef(MO.getReg());
-  if (!MI || !MRI.hasOneNonDBGUse(MO.getReg()))
-    return false;
-
-  if (MI->getOpcode() != Root.getOpcode())
-    return false;
-
-  if (!Root.getFlag(MachineInstr::MIFlag::FmReassoc) ||
-      !Root.getFlag(MachineInstr::MIFlag::FmNsz) ||
-      !MI->getFlag(MachineInstr::MIFlag::FmReassoc) ||
-      !MI->getFlag(MachineInstr::MIFlag::FmNsz))
-    return false;
-
-  return RISCV::hasEqualFRM(Root, *MI);
+bool RISCVInstrInfo::isAssociativeAndCommutative(
+    const MachineInstr &Inst) const {
+  unsigned Opc = Inst.getOpcode();
+  if (isFADD(Opc) || isFMUL(Opc))
+    return Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
+           Inst.getFlag(MachineInstr::MIFlag::FmNsz);
+  return false;
 }
 
 static bool canCombineFPFusedMultiply(const MachineInstr &Root,
@@ -1251,23 +1249,6 @@ static bool canCombineFPFusedMultiply(const MachineInstr &Root,
 }
 
 static bool
-getFPReassocPatterns(MachineInstr &Root,
-                     SmallVectorImpl<MachineCombinerPattern> &Patterns) {
-  bool Added = false;
-  if (canReassociate(Root, Root.getOperand(1))) {
-    Patterns.push_back(MachineCombinerPattern::REASSOC_AX_BY);
-    Patterns.push_back(MachineCombinerPattern::REASSOC_XA_BY);
-    Added = true;
-  }
-  if (canReassociate(Root, Root.getOperand(2))) {
-    Patterns.push_back(MachineCombinerPattern::REASSOC_AX_YB);
-    Patterns.push_back(MachineCombinerPattern::REASSOC_XA_YB);
-    Added = true;
-  }
-  return Added;
-}
-
-static bool
 getFPFusedMultiplyPatterns(MachineInstr &Root,
                            SmallVectorImpl<MachineCombinerPattern> &Patterns,
                            bool DoRegPressureReduce) {
@@ -1294,10 +1275,7 @@ getFPFusedMultiplyPatterns(MachineInstr &Root,
 static bool getFPPatterns(MachineInstr &Root,
                           SmallVectorImpl<MachineCombinerPattern> &Patterns,
                           bool DoRegPressureReduce) {
-  bool Added = getFPFusedMultiplyPatterns(Root, Patterns, DoRegPressureReduce);
-  if (isAssociativeAndCommutativeFPOpcode(Root.getOpcode()))
-    Added |= getFPReassocPatterns(Root, Patterns);
-  return Added;
+  return getFPFusedMultiplyPatterns(Root, Patterns, DoRegPressureReduce);
 }
 
 bool RISCVInstrInfo::getMachineCombinerPatterns(

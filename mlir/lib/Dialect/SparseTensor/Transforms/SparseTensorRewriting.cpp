@@ -490,7 +490,10 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
     // %t = concatenate %s1, %s2, %s3 {dim = 1}
     // ==>
     // if (isSparseDst)
-    //   %tmp = bufferization.alloc_tensor : unordered COO
+    //   if (allDense)
+    //     %tmp = bufferization.alloc_tensor dstTp
+    //   else
+    //     %tmp = bufferization.alloc_tensor : unordered COO
     // else
     //   %tmp = memref.alloc : dense tensor
     // foreach in %s1 : insert d0, d1, %tmp
@@ -499,11 +502,18 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
     // %t = convert_to_dest_tensor(%tmp)
     SparseTensorEncodingAttr encDst = getSparseTensorEncoding(dstTp);
     Value dst; // Destination tensor for inserting source tensor values.
+    bool allDense = false;
     if (encDst) {
+      allDense = llvm::all_of(encDst.getDimLevelType(),
+                              [](DimLevelType dlt) { return isDenseDLT(dlt); });
       SmallVector<Value> dynSizes;
       getDynamicSizes(dstTp, sizes, dynSizes);
-      RankedTensorType cooTp = getUnorderedCOOFromType(dstTp);
-      dst = rewriter.create<AllocTensorOp>(loc, cooTp, dynSizes).getResult();
+      RankedTensorType tp = dstTp;
+      if (!allDense) {
+        tp = getUnorderedCOOFromType(dstTp);
+        encDst = getSparseTensorEncoding(tp);
+      }
+      dst = rewriter.create<AllocTensorOp>(loc, tp, dynSizes).getResult();
     } else {
       // TODO: Dense buffers should be allocated/deallocated via the callback
       // in BufferizationOptions.
@@ -523,13 +533,13 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
           loc, input, initArgs,
           [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
               ValueRange reduc) {
-            SmallVector<Value> indices;
+            SmallVector<Value> indices(rank, Value());
             for (int64_t i = 0; i < rank; i++) {
               Value idx = args[i];
               if (i == static_cast<int64_t>(conDim))
                 // Transform coordinates for the concatenating dim.
                 idx = builder.create<arith::AddIOp>(loc, idx, offset);
-              indices.push_back(idx);
+              indices[toStoredDim(encDst, i)] = idx;
             }
             if (encDst) {
               Value cond = genIsNonzero(rewriter, loc, v);
@@ -563,9 +573,12 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
 
     if (encDst) {
       dst = rewriter.create<LoadOp>(loc, dst, true);
-      Value converted = rewriter.create<ConvertOp>(loc, dstTp, dst).getResult();
-      rewriter.create<DeallocTensorOp>(loc, dst);
-      rewriter.replaceOp(op, converted);
+      if (!allDense) {
+        Value tmpCoo = dst;
+        dst = rewriter.create<ConvertOp>(loc, dstTp, tmpCoo).getResult();
+        rewriter.create<DeallocTensorOp>(loc, tmpCoo);
+      }
+      rewriter.replaceOp(op, dst);
     } else {
       rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, dstTp, dst);
     }

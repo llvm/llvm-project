@@ -342,6 +342,24 @@ SubtargetFeatures ELFObjectFileBase::getRISCVFeatures() const {
   return Features;
 }
 
+SubtargetFeatures ELFObjectFileBase::getLoongArchFeatures() const {
+  SubtargetFeatures Features;
+
+  switch (getPlatformFlags() & ELF::EF_LOONGARCH_ABI_MODIFIER_MASK) {
+  case ELF::EF_LOONGARCH_ABI_SOFT_FLOAT:
+    break;
+  case ELF::EF_LOONGARCH_ABI_DOUBLE_FLOAT:
+    Features.AddFeature("d");
+    // D implies F according to LoongArch ISA spec.
+    [[fallthrough]];
+  case ELF::EF_LOONGARCH_ABI_SINGLE_FLOAT:
+    Features.AddFeature("f");
+    break;
+  }
+
+  return Features;
+}
+
 SubtargetFeatures ELFObjectFileBase::getFeatures() const {
   switch (getEMachine()) {
   case ELF::EM_MIPS:
@@ -350,6 +368,8 @@ SubtargetFeatures ELFObjectFileBase::getFeatures() const {
     return getARMFeatures();
   case ELF::EM_RISCV:
     return getRISCVFeatures();
+  case ELF::EM_LOONGARCH:
+    return getLoongArchFeatures();
   default:
     return SubtargetFeatures();
   }

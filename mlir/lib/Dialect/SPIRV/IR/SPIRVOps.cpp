@@ -2672,6 +2672,9 @@ void spirv::GlobalVariableOp::print(OpAsmPrinter &printer) {
 }
 
 LogicalResult spirv::GlobalVariableOp::verify() {
+  if (!getType().isa<spirv::PointerType>())
+    return emitOpError("result must be of a !spv.ptr type");
+
   // SPIR-V spec: "Storage Class is the Storage Class of the memory holding the
   // object. It cannot be Generic. It must be the same as the Storage Class
   // operand of the Result Type."

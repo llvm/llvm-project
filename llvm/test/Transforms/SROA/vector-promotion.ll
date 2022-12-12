@@ -175,6 +175,8 @@ entry:
 }
 
 define i32 @test5(<4 x i32> %x, <4 x i32> %y, ptr %z) {
+; The same as the above, but with reversed source and destination for the
+; element memcpy, and a self copy.
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Z_TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[Z:%.*]], i64 0, i64 2
@@ -187,8 +189,6 @@ define i32 @test5(<4 x i32> %x, <4 x i32> %y, ptr %z) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[A_SROA_4_0_VEC_EXTRACT]], [[TMP4]]
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
-; The same as the above, but with reversed source and destination for the
-; element memcpy, and a self copy.
 entry:
   %a = alloca [2 x <4 x i32>]
 
@@ -216,6 +216,8 @@ declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounw
 declare void @llvm.memset.p0.i32(ptr nocapture, i8, i32, i1) nounwind
 
 define i64 @test6(<4 x i64> %x, <4 x i64> %y, i64 %n) {
+; The old scalarrepl pass would wrongly drop the store to the second alloca.
+; PR13254
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca { <4 x i64>, <4 x i64> }, align 32
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds { <4 x i64>, <4 x i64> }, ptr [[TMP]], i32 0, i32 0
@@ -226,8 +228,6 @@ define i64 @test6(<4 x i64> %x, <4 x i64> %y, i64 %n) {
 ; CHECK-NEXT:    [[RES:%.*]] = load i64, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
-; The old scalarrepl pass would wrongly drop the store to the second alloca.
-; PR13254
   %tmp = alloca { <4 x i64>, <4 x i64> }
   %p0 = getelementptr inbounds { <4 x i64>, <4 x i64> }, ptr %tmp, i32 0, i32 0
   store <4 x i64> %x, ptr %p0
@@ -363,6 +363,8 @@ entry:
 }
 
 define i32 @PR14212(<3 x i8> %val) {
+; This caused a crash when "splitting" the load of the i32 in order to promote
+; the store of <3 x i8> properly. Heavily reduced from an OpenCL test case.
 ; CHECK-LABEL: @PR14212(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <3 x i8> [[VAL:%.*]] to i24
@@ -375,8 +377,6 @@ define i32 @PR14212(<3 x i8> %val) {
 ; CHECK-NEXT:    [[RETVAL_0_INSERT_INSERT:%.*]] = or i32 [[RETVAL_0_INSERT_MASK]], [[RETVAL_0_INSERT_EXT]]
 ; CHECK-NEXT:    ret i32 [[RETVAL_0_INSERT_INSERT]]
 ;
-; This caused a crash when "splitting" the load of the i32 in order to promote
-; the store of <3 x i8> properly. Heavily reduced from an OpenCL test case.
 entry:
   %retval = alloca <3 x i8>, align 4
 
@@ -386,6 +386,9 @@ entry:
 }
 
 define <2 x i8> @PR14349.1(i32 %x) {
+; The first testcase for broken SROA rewriting of split integer loads and
+; stores due to smaller vector loads and stores. This particular test ensures
+; that we can rewrite a split store of an integer to a store of a vector.
 ; CHECK-LABEL: @PR14349.1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[X:%.*]] to i16
@@ -394,9 +397,6 @@ define <2 x i8> @PR14349.1(i32 %x) {
 ; CHECK-NEXT:    [[A_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[A_SROA_2_0_EXTRACT_SHIFT]] to i16
 ; CHECK-NEXT:    ret <2 x i8> [[TMP0]]
 ;
-; The first testcase for broken SROA rewriting of split integer loads and
-; stores due to smaller vector loads and stores. This particular test ensures
-; that we can rewrite a split store of an integer to a store of a vector.
 entry:
   %a = alloca i32
 
@@ -408,6 +408,9 @@ entry:
 }
 
 define i32 @PR14349.2(<2 x i8> %x) {
+; The first testcase for broken SROA rewriting of split integer loads and
+; stores due to smaller vector loads and stores. This particular test ensures
+; that we can rewrite a split load of an integer to a load of a vector.
 ; CHECK-LABEL: @PR14349.2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i8> [[X:%.*]] to i16
@@ -420,9 +423,6 @@ define i32 @PR14349.2(<2 x i8> %x) {
 ; CHECK-NEXT:    [[A_SROA_0_0_INSERT_INSERT:%.*]] = or i32 [[A_SROA_0_0_INSERT_MASK]], [[A_SROA_0_0_INSERT_EXT]]
 ; CHECK-NEXT:    ret i32 [[A_SROA_0_0_INSERT_INSERT]]
 ;
-; The first testcase for broken SROA rewriting of split integer loads and
-; stores due to smaller vector loads and stores. This particular test ensures
-; that we can rewrite a split load of an integer to a load of a vector.
 entry:
   %a = alloca i32
 
@@ -435,6 +435,7 @@ entry:
 
 define i32 @test7(<2 x i32> %x, <2 x i32> %y) {
 ; Test that we can promote to vectors when the alloca doesn't mention any vector types.
+;
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <2 x i32> [[X:%.*]], i32 1
@@ -466,6 +467,7 @@ entry:
 define i32 @test8(<2 x i32> %x) {
 ; Ensure that we can promote an alloca that doesn't mention a vector type based
 ; on a single store with a vector type.
+;
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x i32> [[X:%.*]], i32 0
@@ -489,6 +491,7 @@ entry:
 define <2 x i32> @test9(i32 %x, i32 %y) {
 ; Ensure that we can promote an alloca that doesn't mention a vector type based
 ; on a single load with a vector type.
+;
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i32> undef, i32 [[X:%.*]], i32 0
@@ -510,6 +513,7 @@ entry:
 define <2 x i32> @test10(<4 x i16> %x, i32 %y) {
 ; If there are multiple different vector types used, we should select the one
 ; with the widest elements.
+;
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[X:%.*]] to <2 x i32>
@@ -532,6 +536,7 @@ define <2 x float> @test11(<4 x i16> %x, i32 %y) {
 ; If there are multiple different element types for different vector types,
 ; pick the integer types. This isn't really important, but seems like the best
 ; heuristic for making a deterministic decision.
+;
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[X:%.*]] to <2 x i32>

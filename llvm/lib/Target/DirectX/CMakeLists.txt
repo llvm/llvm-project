@@ -27,16 +27,22 @@ add_llvm_target(DirectXCodeGen
   DXILResourceAnalysis.cpp
   DXILShaderFlags.cpp
   DXILTranslateMetadata.cpp
-  PointerTypeAnalysis.cpp
 
   LINK_COMPONENTS
+  Analysis
   AsmPrinter
   Core
+  CodeGen
   SelectionDAG
   Support
+  DirectXDesc
   DirectXInfo
+  DirectXPointerTypeAnalysis
   DXILBitWriter
   FrontendHLSL
+  MC
+  Target
+  TransformUtils
 
   ADD_TO_COMPONENT
   DirectX
@@ -44,4 +50,5 @@ add_llvm_target(DirectXCodeGen
 
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
+add_subdirectory(DirectXIRPasses)
 add_subdirectory(DXILWriter)

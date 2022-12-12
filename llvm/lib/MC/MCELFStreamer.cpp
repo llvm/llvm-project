@@ -287,6 +287,10 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
     Symbol->setVisibility(ELF::STV_PROTECTED);
     break;
 
+  case MCSA_Memtag:
+    Symbol->setMemtag(true);
+    break;
+
   case MCSA_Hidden:
     Symbol->setVisibility(ELF::STV_HIDDEN);
     break;

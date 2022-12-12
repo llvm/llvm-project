@@ -24,7 +24,7 @@ const char *mem_to_shadow(const char *p) {
 #elif defined(__s390x__)
   return (char *)(((uintptr_t)p & ~0xC00000000000ULL) + 0x080000000000ULL);
 #elif defined(__aarch64__)
-  return (char *)((uintptr_t)p ^ 0x6000000000ULL);
+  return (char *)((uintptr_t)p ^ 0xB00000000000ULL);
 #endif
 }
 

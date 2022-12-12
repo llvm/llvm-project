@@ -30,6 +30,7 @@
 
 namespace mlir {
 #define GEN_PASS_DEF_ASYNCTOASYNCRUNTIME
+#define GEN_PASS_DEF_ASYNCFUNCTOASYNCRUNTIME
 #include "mlir/Dialect/Async/Passes.h.inc"
 } // namespace mlir
 
@@ -46,6 +47,17 @@ class AsyncToAsyncRuntimePass
     : public impl::AsyncToAsyncRuntimeBase<AsyncToAsyncRuntimePass> {
 public:
   AsyncToAsyncRuntimePass() = default;
+  void runOnOperation() override;
+};
+
+} // namespace
+
+namespace {
+
+class AsyncFuncToAsyncRuntimePass
+    : public impl::AsyncFuncToAsyncRuntimeBase<AsyncFuncToAsyncRuntimePass> {
+public:
+  AsyncFuncToAsyncRuntimePass() = default;
   void runOnOperation() override;
 };
 
@@ -83,6 +95,9 @@ struct CoroMachinery {
   Block *suspend;   // coroutine suspension block
 };
 } // namespace
+
+using FuncCoroMapPtr =
+    std::shared_ptr<llvm::DenseMap<func::FuncOp, CoroMachinery>>;
 
 /// Utility to partially update the regular function CFG to the coroutine CFG
 /// compatible with LLVM coroutines switched-resume lowering using
@@ -399,9 +414,8 @@ namespace {
 
 class AsyncFuncOpLowering : public OpConversionPattern<async::FuncOp> {
 public:
-  AsyncFuncOpLowering(MLIRContext *ctx,
-                      llvm::DenseMap<func::FuncOp, CoroMachinery> &coros)
-      : OpConversionPattern<async::FuncOp>(ctx), coros(coros) {}
+  AsyncFuncOpLowering(MLIRContext *ctx, FuncCoroMapPtr coros)
+      : OpConversionPattern<async::FuncOp>(ctx), coros_(coros) {}
 
   LogicalResult
   matchAndRewrite(async::FuncOp op, OpAdaptor adaptor,
@@ -423,7 +437,7 @@ public:
                                 newFuncOp.end());
 
     CoroMachinery coro = setupCoroMachinery(newFuncOp);
-    coros[newFuncOp] = coro;
+    (*coros_)[newFuncOp] = coro;
     // no initial suspend, we should hot-start
 
     rewriter.eraseOp(op);
@@ -431,7 +445,7 @@ public:
   }
 
 private:
-  llvm::DenseMap<func::FuncOp, CoroMachinery> &coros;
+  FuncCoroMapPtr coros_;
 };
 
 //===----------------------------------------------------------------------===//
@@ -458,16 +472,15 @@ public:
 
 class AsyncReturnOpLowering : public OpConversionPattern<async::ReturnOp> {
 public:
-  AsyncReturnOpLowering(MLIRContext *ctx,
-                        llvm::DenseMap<func::FuncOp, CoroMachinery> &coros)
-      : OpConversionPattern<async::ReturnOp>(ctx), coros(coros) {}
+  AsyncReturnOpLowering(MLIRContext *ctx, FuncCoroMapPtr coros)
+      : OpConversionPattern<async::ReturnOp>(ctx), coros_(coros) {}
 
   LogicalResult
   matchAndRewrite(async::ReturnOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto func = op->template getParentOfType<func::FuncOp>();
-    auto funcCoro = coros.find(func);
-    if (funcCoro == coros.end())
+    auto funcCoro = coros_->find(func);
+    if (funcCoro == coros_->end())
       return rewriter.notifyMatchFailure(
           op, "operation is not inside the async coroutine function");
 
@@ -494,7 +507,7 @@ public:
   }
 
 private:
-  llvm::DenseMap<func::FuncOp, CoroMachinery> &coros;
+  FuncCoroMapPtr coros_;
 };
 } // namespace
 
@@ -509,9 +522,10 @@ class AwaitOpLoweringBase : public OpConversionPattern<AwaitType> {
   using AwaitAdaptor = typename AwaitType::Adaptor;
 
 public:
-  AwaitOpLoweringBase(MLIRContext *ctx,
-                      llvm::DenseMap<func::FuncOp, CoroMachinery> &coros)
-      : OpConversionPattern<AwaitType>(ctx), coros(coros) {}
+  AwaitOpLoweringBase(MLIRContext *ctx, FuncCoroMapPtr coros,
+                      bool should_lower_blocking_wait)
+      : OpConversionPattern<AwaitType>(ctx), coros_(coros),
+        should_lower_blocking_wait_(should_lower_blocking_wait) {}
 
   LogicalResult
   matchAndRewrite(AwaitType op, typename AwaitType::Adaptor adaptor,
@@ -521,15 +535,19 @@ public:
     if (!op.getOperand().getType().template isa<AwaitableType>())
       return rewriter.notifyMatchFailure(op, "unsupported awaitable type");
 
-    // Check if await operation is inside the outlined coroutine function.
+    // Check if await operation is inside the coroutine function.
     auto func = op->template getParentOfType<func::FuncOp>();
-    auto funcCoro = coros.find(func);
-    const bool isInCoroutine = funcCoro != coros.end();
+    auto funcCoro = coros_->find(func);
+    const bool isInCoroutine = funcCoro != coros_->end();
 
     Location loc = op->getLoc();
     Value operand = adaptor.getOperand();
 
     Type i1 = rewriter.getI1Type();
+
+    // Delay lowering to block wait in case await op is inside async.execute
+    if (!isInCoroutine && !should_lower_blocking_wait_)
+      return failure();
 
     // Inside regular functions we use the blocking wait operation to wait for
     // the async object (token, value or group) to become available.
@@ -602,7 +620,8 @@ public:
   }
 
 private:
-  llvm::DenseMap<func::FuncOp, CoroMachinery> &coros;
+  FuncCoroMapPtr coros_;
+  bool should_lower_blocking_wait_;
 };
 
 /// Lowering for `async.await` with a token operand.
@@ -645,17 +664,16 @@ public:
 
 class YieldOpLowering : public OpConversionPattern<async::YieldOp> {
 public:
-  YieldOpLowering(MLIRContext *ctx,
-                  const llvm::DenseMap<func::FuncOp, CoroMachinery> &coros)
-      : OpConversionPattern<async::YieldOp>(ctx), coros(coros) {}
+  YieldOpLowering(MLIRContext *ctx, FuncCoroMapPtr coros)
+      : OpConversionPattern<async::YieldOp>(ctx), coros_(coros) {}
 
   LogicalResult
   matchAndRewrite(async::YieldOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Check if yield operation is inside the async coroutine function.
     auto func = op->template getParentOfType<func::FuncOp>();
-    auto funcCoro = coros.find(func);
-    if (funcCoro == coros.end())
+    auto funcCoro = coros_->find(func);
+    if (funcCoro == coros_->end())
       return rewriter.notifyMatchFailure(
           op, "operation is not inside the async coroutine function");
 
@@ -682,7 +700,7 @@ public:
   }
 
 private:
-  const llvm::DenseMap<func::FuncOp, CoroMachinery> &coros;
+  FuncCoroMapPtr coros_;
 };
 
 //===----------------------------------------------------------------------===//
@@ -691,17 +709,16 @@ private:
 
 class AssertOpLowering : public OpConversionPattern<cf::AssertOp> {
 public:
-  AssertOpLowering(MLIRContext *ctx,
-                   llvm::DenseMap<func::FuncOp, CoroMachinery> &coros)
-      : OpConversionPattern<cf::AssertOp>(ctx), coros(coros) {}
+  AssertOpLowering(MLIRContext *ctx, FuncCoroMapPtr coros)
+      : OpConversionPattern<cf::AssertOp>(ctx), coros_(coros) {}
 
   LogicalResult
   matchAndRewrite(cf::AssertOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Check if assert operation is inside the async coroutine function.
     auto func = op->template getParentOfType<func::FuncOp>();
-    auto funcCoro = coros.find(func);
-    if (funcCoro == coros.end())
+    auto funcCoro = coros_->find(func);
+    if (funcCoro == coros_->end())
       return rewriter.notifyMatchFailure(
           op, "operation is not inside the async coroutine function");
 
@@ -721,7 +738,7 @@ public:
   }
 
 private:
-  llvm::DenseMap<func::FuncOp, CoroMachinery> &coros;
+  FuncCoroMapPtr coros_;
 };
 
 //===----------------------------------------------------------------------===//
@@ -730,22 +747,23 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
   SymbolTable symbolTable(module);
 
   // Functions with coroutine CFG setups, which are results of outlining
-  // `async.execute` body regions and converting async.func.
-  llvm::DenseMap<func::FuncOp, CoroMachinery> coros;
+  // `async.execute` body regions
+  FuncCoroMapPtr coros =
+      std::make_shared<llvm::DenseMap<func::FuncOp, CoroMachinery>>();
 
   module.walk([&](ExecuteOp execute) {
-    coros.insert(outlineExecuteOp(symbolTable, execute));
+    coros->insert(outlineExecuteOp(symbolTable, execute));
   });
 
   LLVM_DEBUG({
-    llvm::dbgs() << "Outlined " << coros.size()
+    llvm::dbgs() << "Outlined " << coros->size()
                  << " functions built from async.execute operations\n";
   });
 
   // Returns true if operation is inside the coroutine.
   auto isInCoroutine = [&](Operation *op) -> bool {
     auto parentFunc = op->getParentOfType<func::FuncOp>();
-    return coros.find(parentFunc) != coros.end();
+    return coros->find(parentFunc) != coros->end();
   };
 
   // Lower async operations to async.runtime operations.
@@ -762,22 +780,18 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
   // types for async.runtime operations.
   asyncPatterns.add<CreateGroupOpLowering, AddToGroupOpLowering>(ctx);
 
-  // Lower async.func to func.func with coroutine cfg.
-  asyncPatterns.add<AsyncCallOpLowering>(ctx);
-  asyncPatterns.add<AsyncFuncOpLowering, AsyncReturnOpLowering>(ctx, coros);
-
-  asyncPatterns.add<AwaitTokenOpLowering, AwaitValueOpLowering,
-                    AwaitAllOpLowering, YieldOpLowering>(ctx, coros);
+  asyncPatterns
+      .add<AwaitTokenOpLowering, AwaitValueOpLowering, AwaitAllOpLowering>(
+          ctx, coros, /*should_lower_blocking_wait=*/true);
 
   // Lower assertions to conditional branches into error blocks.
-  asyncPatterns.add<AssertOpLowering>(ctx, coros);
+  asyncPatterns.add<YieldOpLowering, AssertOpLowering>(ctx, coros);
 
   // All high level async operations must be lowered to the runtime operations.
   ConversionTarget runtimeTarget(*ctx);
   runtimeTarget.addLegalDialect<AsyncDialect, func::FuncDialect>();
   runtimeTarget.addIllegalOp<CreateGroupOp, AddToGroupOp>();
-  runtimeTarget.addIllegalOp<ExecuteOp, AwaitOp, AwaitAllOp, async::YieldOp,
-                             async::FuncOp, async::CallOp, async::ReturnOp>();
+  runtimeTarget.addIllegalOp<ExecuteOp, AwaitOp, AwaitAllOp, async::YieldOp>();
 
   // Decide if structured control flow has to be lowered to branch-based CFG.
   runtimeTarget.addDynamicallyLegalDialect<scf::SCFDialect>([&](Operation *op) {
@@ -795,8 +809,56 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
   runtimeTarget.addDynamicallyLegalOp<cf::AssertOp>(
       [&](cf::AssertOp op) -> bool {
         auto func = op->getParentOfType<func::FuncOp>();
-        return coros.find(func) == coros.end();
+        return coros->find(func) == coros->end();
       });
+
+  if (failed(applyPartialConversion(module, runtimeTarget,
+                                    std::move(asyncPatterns)))) {
+    signalPassFailure();
+    return;
+  }
+}
+
+//===----------------------------------------------------------------------===//
+void mlir::populateAsyncFuncToAsyncRuntimeConversionPatterns(
+    RewritePatternSet &patterns, ConversionTarget &target) {
+  // Functions with coroutine CFG setups, which are results of converting
+  // async.func.
+  FuncCoroMapPtr coros =
+      std::make_shared<llvm::DenseMap<func::FuncOp, CoroMachinery>>();
+  MLIRContext *ctx = patterns.getContext();
+  // Lower async.func to func.func with coroutine cfg.
+  patterns.add<AsyncCallOpLowering>(ctx);
+  patterns.add<AsyncFuncOpLowering, AsyncReturnOpLowering>(ctx, coros);
+
+  patterns.add<AwaitTokenOpLowering, AwaitValueOpLowering, AwaitAllOpLowering>(
+      ctx, coros, /*should_lower_blocking_wait=*/false);
+  patterns.add<YieldOpLowering, AssertOpLowering>(ctx, coros);
+
+  target.addDynamicallyLegalOp<AwaitOp, AwaitAllOp, YieldOp, cf::AssertOp>(
+      [coros](Operation *op) {
+        auto func = op->getParentOfType<func::FuncOp>();
+        return coros->find(func) == coros->end();
+      });
+}
+
+void AsyncFuncToAsyncRuntimePass::runOnOperation() {
+  ModuleOp module = getOperation();
+
+  // Lower async operations to async.runtime operations.
+  MLIRContext *ctx = module->getContext();
+  RewritePatternSet asyncPatterns(ctx);
+  ConversionTarget runtimeTarget(*ctx);
+
+  // Lower async.func to func.func with coroutine cfg.
+  populateAsyncFuncToAsyncRuntimeConversionPatterns(asyncPatterns,
+                                                    runtimeTarget);
+
+  runtimeTarget.addLegalDialect<AsyncDialect, func::FuncDialect>();
+  runtimeTarget.addIllegalOp<async::FuncOp, async::CallOp, async::ReturnOp>();
+
+  runtimeTarget.addLegalOp<arith::XOrIOp, arith::ConstantOp, func::ConstantOp,
+                           cf::BranchOp, cf::CondBranchOp>();
 
   if (failed(applyPartialConversion(module, runtimeTarget,
                                     std::move(asyncPatterns)))) {
@@ -807,4 +869,9 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
 
 std::unique_ptr<OperationPass<ModuleOp>> mlir::createAsyncToAsyncRuntimePass() {
   return std::make_unique<AsyncToAsyncRuntimePass>();
+}
+
+std::unique_ptr<OperationPass<ModuleOp>>
+mlir::createAsyncFuncToAsyncRuntimePass() {
+  return std::make_unique<AsyncFuncToAsyncRuntimePass>();
 }

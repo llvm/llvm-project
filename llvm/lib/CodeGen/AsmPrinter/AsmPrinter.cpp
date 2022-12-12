@@ -714,6 +714,16 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // GV's or GVSym's attributes will be used for the EmittedSym.
   emitVisibility(EmittedSym, GV->getVisibility(), !GV->isDeclaration());
 
+  if (GV->isTagged()) {
+    Triple T = TM.getTargetTriple();
+
+    if (T.getArch() != Triple::aarch64 || !T.isAndroid())
+      OutContext.reportError(SMLoc(),
+                             "Tagged symbols (-fsanitize=memtag-globals) are "
+                             "only supported on aarch64 + Android.");
+    OutStreamer->emitSymbolAttribute(EmittedSym, MAI->getMemtagAttr());
+  }
+
   if (!GV->hasInitializer())   // External globals require no extra code.
     return;
 

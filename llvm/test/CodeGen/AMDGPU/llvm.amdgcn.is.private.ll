@@ -4,9 +4,11 @@
 ; GCN-LABEL: {{^}}is_private_vgpr:
 ; GCN-DAG: {{flat|global}}_load_dwordx2 v{{\[[0-9]+}}:[[PTR_HI:[0-9]+]]]
 ; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x11
-; GFX9-DAG: s_getreg_b32 [[APERTURE:s[0-9]+]], hwreg(HW_REG_SH_MEM_BASES, 0, 16)
-; GFX9: s_lshl_b32 [[APERTURE]], [[APERTURE]], 16
-; GCN: v_cmp_eq_u32_e32 vcc, [[APERTURE]], v[[PTR_HI]]
+; CI: v_cmp_eq_u32_e32 vcc, [[APERTURE]], v[[PTR_HI]]
+
+; GFX9: s_mov_b64 s[{{[0-9]+}}:[[HI:[0-9]+]]], src_private_base
+; GFX9: v_cmp_eq_u32_e32 vcc, s[[HI]], v[[PTR_HI]]
+
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
 define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
   %id = call i32 @llvm.amdgcn.workitem.id.x()
@@ -23,13 +25,15 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 
 ; GCN-LABEL: {{^}}is_private_sgpr:
 ; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x11{{$}}
-; GFX9-DAG: s_getreg_b32 [[APERTURE:s[0-9]+]], hwreg(HW_REG_SH_MEM_BASES, 0, 16)
 
 ; CI-DAG: s_load_dword [[PTR_HI:s[0-9]+]], s[6:7], 0x1{{$}}
 ; GFX9-DAG: s_load_dword [[PTR_HI:s[0-9]+]], s[4:5], 0x4{{$}}
-; GFX9: s_lshl_b32 [[APERTURE]], [[APERTURE]], 16
 
-; GCN: s_cmp_eq_u32 [[PTR_HI]], [[APERTURE]]
+; CI: s_cmp_eq_u32 [[PTR_HI]], [[APERTURE]]
+
+; GFX9: s_mov_b64 s[{{[0-9]+}}:[[HI:[0-9]+]]], src_private_base
+; GFX9: s_cmp_eq_u32 [[PTR_HI]], s[[HI]]
+
 ; GCN: s_cbranch_vccnz
 define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
   %val = call i1 @llvm.amdgcn.is.private(ptr %ptr)

@@ -226,7 +226,7 @@ static void ForcefullyCompleteType(CompilerType type) {
   auto ts_sp = type.GetTypeSystem();
   auto ts = ts_sp.dyn_cast_or_null<TypeSystemClang>();
   if (ts)
-    ts->GetMetadata(td)->SetIsForcefullyCompleted();
+    ts->SetDeclIsForcefullyCompleted(td);
 }
 
 /// This function serves a similar purpose as RequireCompleteType above, but it
@@ -753,17 +753,14 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
     if (type_sp)
       return type_sp;
 
-    DWARFDeclContext die_decl_ctx = SymbolFileDWARF::GetDWARFDeclContext(die);
-
-    type_sp = dwarf->FindDefinitionTypeForDWARFDeclContext(die_decl_ctx);
+    type_sp = dwarf->FindDefinitionTypeForDWARFDeclContext(die);
 
     if (!type_sp) {
       SymbolFileDWARFDebugMap *debug_map_symfile = dwarf->GetDebugMapSymfile();
       if (debug_map_symfile) {
         // We weren't able to find a full declaration in this DWARF,
         // see if we have a declaration anywhere else...
-        type_sp = debug_map_symfile->FindDefinitionTypeForDWARFDeclContext(
-            die_decl_ctx);
+        type_sp = debug_map_symfile->FindDefinitionTypeForDWARFDeclContext(die);
       }
     }
 
@@ -1732,19 +1729,16 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     if (type_sp)
       return type_sp;
 
-    DWARFDeclContext die_decl_ctx = SymbolFileDWARF::GetDWARFDeclContext(die);
-
     // type_sp = FindDefinitionTypeForDIE (dwarf_cu, die,
     // type_name_const_str);
-    type_sp = dwarf->FindDefinitionTypeForDWARFDeclContext(die_decl_ctx);
+    type_sp = dwarf->FindDefinitionTypeForDWARFDeclContext(die);
 
     if (!type_sp) {
       SymbolFileDWARFDebugMap *debug_map_symfile = dwarf->GetDebugMapSymfile();
       if (debug_map_symfile) {
         // We weren't able to find a full declaration in this DWARF, see
         // if we have a declaration anywhere else...
-        type_sp = debug_map_symfile->FindDefinitionTypeForDWARFDeclContext(
-            die_decl_ctx);
+        type_sp = debug_map_symfile->FindDefinitionTypeForDWARFDeclContext(die);
       }
     }
 

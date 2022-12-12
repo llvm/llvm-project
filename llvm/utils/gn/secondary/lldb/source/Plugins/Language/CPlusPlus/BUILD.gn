@@ -33,6 +33,7 @@ static_library("CPlusPlus") {
     "LibCxxList.cpp",
     "LibCxxMap.cpp",
     "LibCxxQueue.cpp",
+    "LibCxxRangesRefView.cpp",
     "LibCxxSpan.cpp",
     "LibCxxTuple.cpp",
     "LibCxxUnorderedMap.cpp",

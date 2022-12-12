@@ -19,6 +19,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # string.h entrypoints
     libc.src.string.bcmp
+    libc.src.string.bcopy
     libc.src.string.bzero
     libc.src.string.memccpy
     libc.src.string.memchr

@@ -121,6 +121,7 @@ struct ModuleStats {
   bool debug_info_enabled = true;
   bool symtab_stripped = false;
   bool debug_info_had_variable_errors = false;
+  bool debug_info_had_incomplete_types = false;
 };
 
 struct ConstStringStats {

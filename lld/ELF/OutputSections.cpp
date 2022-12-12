@@ -60,7 +60,7 @@ uint32_t OutputSection::getPhdrFlags() const {
 template <class ELFT>
 void OutputSection::writeHeaderTo(typename ELFT::Shdr *shdr) {
   shdr->sh_entsize = entsize;
-  shdr->sh_addralign = alignment;
+  shdr->sh_addralign = addralign;
   shdr->sh_type = type;
   shdr->sh_offset = offset;
   shdr->sh_flags = flags;
@@ -157,7 +157,7 @@ void OutputSection::commitSection(InputSection *isec) {
   if (nonAlloc)
     flags &= ~(uint64_t)SHF_ALLOC;
 
-  alignment = std::max(alignment, isec->alignment);
+  addralign = std::max(addralign, isec->addralign);
 
   // If this section contains a table of fixed-size entries, sh_entsize
   // holds the element size. If it contains elements of different size we
@@ -169,10 +169,10 @@ void OutputSection::commitSection(InputSection *isec) {
 static MergeSyntheticSection *createMergeSynthetic(StringRef name,
                                                    uint32_t type,
                                                    uint64_t flags,
-                                                   uint32_t alignment) {
+                                                   uint32_t addralign) {
   if ((flags & SHF_STRINGS) && config->optimize >= 2)
-    return make<MergeTailSection>(name, type, flags, alignment);
-  return make<MergeNoTailSection>(name, type, flags, alignment);
+    return make<MergeTailSection>(name, type, flags, addralign);
+  return make<MergeNoTailSection>(name, type, flags, addralign);
 }
 
 // This function scans over the InputSectionBase list sectionBases to create
@@ -213,11 +213,11 @@ void OutputSection::finalizeInputSections() {
         //
         // SHF_STRINGS section with different alignments should not be merged.
         return sec->flags == ms->flags && sec->entsize == ms->entsize &&
-               (sec->alignment == ms->alignment || !(sec->flags & SHF_STRINGS));
+               (sec->addralign == ms->addralign || !(sec->flags & SHF_STRINGS));
       });
       if (i == mergeSections.end()) {
         MergeSyntheticSection *syn =
-            createMergeSynthetic(name, ms->type, ms->flags, ms->alignment);
+            createMergeSynthetic(name, ms->type, ms->flags, ms->addralign);
         mergeSections.push_back(syn);
         i = std::prev(mergeSections.end());
         syn->entsize = ms->entsize;
@@ -452,7 +452,7 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
   if (compressed.shards) {
     auto *chdr = reinterpret_cast<typename ELFT::Chdr *>(buf);
     chdr->ch_size = compressed.uncompressedSize;
-    chdr->ch_addralign = alignment;
+    chdr->ch_addralign = addralign;
     buf += sizeof(*chdr);
     if (config->compressDebugSections == DebugCompressionType::Zstd) {
       chdr->ch_type = ELFCOMPRESS_ZSTD;

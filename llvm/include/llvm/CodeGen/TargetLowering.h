@@ -1052,6 +1052,10 @@ public:
     // value representing memory location
     PointerUnion<const Value *, const PseudoSourceValue *> ptrVal;
 
+    // Fallback address space for use if ptrVal is nullptr. None means unknown
+    // address space.
+    Optional<unsigned> fallbackAddressSpace;
+
     int          offset = 0;       // offset off of ptrVal
     uint64_t     size = 0;         // the size of the memory location
                                    // (taken from memVT if zero)
@@ -1957,6 +1961,12 @@ public:
     return MaxDivRemBitWidthSupported;
   }
 
+  /// Returns the size in bits of the maximum larget fp convert the backend
+  /// supports. Larger operations will be expanded by ExpandLargeFPConvert.
+  unsigned getMaxLargeFPConvertBitWidthSupported() const {
+    return MaxLargeFPConvertBitWidthSupported;
+  }
+
   /// Returns the size of the smallest cmpxchg or ll/sc instruction
   /// the backend supports.  Any smaller operations are widened in
   /// AtomicExpandPass.
@@ -2534,6 +2544,12 @@ protected:
   /// Larger operations will be expanded by ExpandLargeDivRem.
   void setMaxDivRemBitWidthSupported(unsigned SizeInBits) {
     MaxDivRemBitWidthSupported = SizeInBits;
+  }
+
+  /// Set the size in bits of the maximum fp convert the backend supports.
+  /// Larger operations will be expanded by ExpandLargeFPConvert.
+  void setMaxLargeFPConvertBitWidthSupported(unsigned SizeInBits) {
+    MaxLargeFPConvertBitWidthSupported = SizeInBits;
   }
 
   /// Sets the minimum cmpxchg or ll/sc size supported by the backend.
@@ -3254,6 +3270,10 @@ private:
   /// Size in bits of the maximum div/rem size the backend supports.
   /// Larger operations will be expanded by ExpandLargeDivRem.
   unsigned MaxDivRemBitWidthSupported;
+
+  /// Size in bits of the maximum larget fp convert size the backend
+  /// supports. Larger operations will be expanded by ExpandLargeFPConvert.
+  unsigned MaxLargeFPConvertBitWidthSupported;
 
   /// Size in bits of the minimum cmpxchg or ll/sc operation the
   /// backend supports.

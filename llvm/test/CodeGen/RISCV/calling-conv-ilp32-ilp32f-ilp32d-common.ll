@@ -202,8 +202,8 @@ define i32 @callee_large_scalars(i128 %a, fp128 %b) nounwind {
 ; RV32I-FPELIM-NEXT:    xor a4, a7, a4
 ; RV32I-FPELIM-NEXT:    or a4, a4, a5
 ; RV32I-FPELIM-NEXT:    xor a0, a0, a1
-; RV32I-FPELIM-NEXT:    xor a1, a3, a2
-; RV32I-FPELIM-NEXT:    or a0, a1, a0
+; RV32I-FPELIM-NEXT:    xor a2, a3, a2
+; RV32I-FPELIM-NEXT:    or a0, a2, a0
 ; RV32I-FPELIM-NEXT:    or a0, a0, a4
 ; RV32I-FPELIM-NEXT:    seqz a0, a0
 ; RV32I-FPELIM-NEXT:    ret
@@ -226,8 +226,8 @@ define i32 @callee_large_scalars(i128 %a, fp128 %b) nounwind {
 ; RV32I-WITHFP-NEXT:    xor a4, a7, a4
 ; RV32I-WITHFP-NEXT:    or a4, a4, a5
 ; RV32I-WITHFP-NEXT:    xor a0, a0, a1
-; RV32I-WITHFP-NEXT:    xor a1, a3, a2
-; RV32I-WITHFP-NEXT:    or a0, a1, a0
+; RV32I-WITHFP-NEXT:    xor a2, a3, a2
+; RV32I-WITHFP-NEXT:    or a0, a2, a0
 ; RV32I-WITHFP-NEXT:    or a0, a0, a4
 ; RV32I-WITHFP-NEXT:    seqz a0, a0
 ; RV32I-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload

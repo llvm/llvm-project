@@ -121,9 +121,9 @@ define i32 @f4() shadowcallstack {
 ; RV64-NEXT:    call bar@plt
 ; RV64-NEXT:    mv s3, a0
 ; RV64-NEXT:    call bar@plt
-; RV64-NEXT:    addw a1, s0, s1
+; RV64-NEXT:    addw s0, s0, s1
 ; RV64-NEXT:    addw a0, s3, a0
-; RV64-NEXT:    addw a0, a1, a0
+; RV64-NEXT:    addw a0, s0, a0
 ; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload

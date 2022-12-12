@@ -67,3 +67,9 @@
 //
 // STRICT:       "-bplugin_opt:-strict-dwarf=true"
 // NOSTRICT-NOT: "-bplugin_opt:-strict-dwarf=true"
+//
+// Test cspgo options
+// RUN: %clang --target=powerpc-ibm-aix -### %s -flto -fuse-ld=ld \
+// RUN:   -fcs-profile-generate 2>&1 | FileCheck -check-prefix=CSPGO %s
+//
+// CSPGO: "-bplugin_opt:-cs-profile-generate" "-bplugin_opt:-cs-profile-path=default_%m.profraw"

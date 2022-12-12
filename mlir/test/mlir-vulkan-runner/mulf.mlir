@@ -8,7 +8,7 @@ module attributes {
 } {
   gpu.module @kernels {
     gpu.func @kernel_mul(%arg0 : memref<4x4xf32>, %arg1 : memref<4x4xf32>, %arg2 : memref<4x4xf32>)
-      kernel attributes { spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[1, 1, 1]>: vector<3xi32>>} {
+      kernel attributes { spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [1, 1, 1]>} {
       %x = gpu.block_id x
       %y = gpu.block_id y
       %1 = memref.load %arg0[%x, %y] : memref<4x4xf32>

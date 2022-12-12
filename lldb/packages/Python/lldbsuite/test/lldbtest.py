@@ -37,6 +37,7 @@ from functools import wraps
 import gc
 import glob
 import io
+import json
 import os.path
 import re
 import shutil
@@ -1642,6 +1643,19 @@ class Base(unittest2.TestCase):
         err = platform.Run(shell_command)
         return (err, shell_command.GetStatus(), shell_command.GetOutput())
 
+    def get_stats(self, options=None):
+        """
+            Get the output of the "statistics dump" with optional extra options
+            and return the JSON as a python dictionary.
+        """
+        return_obj = lldb.SBCommandReturnObject()
+        command = "statistics dump "
+        if options is not None:
+            command += options
+        self.ci.HandleCommand(command, return_obj, False)
+        metrics_json = return_obj.GetOutput()
+        return json.loads(metrics_json)
+
 # Metaclass for TestBase to change the list of test metods when a new TestCase is loaded.
 # We change the test methods to create a new test method for each test for each debug info we are
 # testing. The name of the new test method will be '<original-name>_<debug-info>' and with adding
@@ -2483,7 +2497,7 @@ FileCheck output:
             error = obj.GetError()
             self.fail(self._formatMessage(msg,
                 "'{}' is not success".format(error)))
-            
+
     """Assert two states are equal"""
     def assertState(self, first, second, msg=None):
         if first != second:

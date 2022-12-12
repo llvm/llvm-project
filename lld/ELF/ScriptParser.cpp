@@ -1408,7 +1408,7 @@ Expr ScriptParser::readPrimary() {
     OutputSection *osec = &script->getOrCreateOutputSection(name)->osec;
     return [=] {
       checkIfExists(*osec, location);
-      return osec->alignment;
+      return osec->addralign;
     };
   }
   if (tok == "ASSERT")

@@ -3,7 +3,7 @@
 // RUN: echo "" > %t/compile_flags.txt
 // RUN: cp "%s" "%t/test.cpp"
 // RUN: clang-doc --doxygen --executor=standalone -p %t %t/test.cpp -output=%t/docs
-// RUN: cat %t/docs/GlobalNamespace/index.yaml | FileCheck %s --check-prefix=CHECK
+// RUN: cat %t/docs/index.yaml | FileCheck %s --check-prefix=CHECK
 // RUN: rm -rf %t
 
 void function(int x);

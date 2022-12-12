@@ -1,4 +1,4 @@
-# UNSUPPORTED: windows
+# UNSUPPORTED: target={{.*-windows.*}}
 # RUN: not llvm-mc -triple=riscv32 -riscv-no-aliases < %s -o /dev/null 2>&1 | FileCheck %s
 # RUN: not llvm-mc -triple=riscv32 < %s -o /dev/null 2>&1 | FileCheck %s
 
