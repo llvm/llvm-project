@@ -9,8 +9,12 @@
 // CHECK-NEXT:    [[LOW1:%.+]]   = vector.extract [[ARG1]][0] : vector<2xi512>
 // CHECK-NEXT:    [[HIGH1:%.+]]  = vector.extract [[ARG1]][1] : vector<2xi512>
 //
-// Check that the mask for the low 256-bits was generated correctly. The exact expected value is 2^256 - 1.
-// CHECK-NEXT:    {{.+}}         = arith.constant 115792089237316195423570985008687907853269984665640564039457584007913129639935 : i512
+// CHECK-DAG:     arith.mului_extended
+// CHECK-DAG:     arith.muli
+// CHECK-DAG:     arith.muli
+// CHECK-NEXT:    arith.addi
+// CHECK-NEXT:    arith.addi
+//
 // CHECK:         return {{%.+}} : vector<2xi512>
 func.func @muli_scalar(%a : i1024, %b : i1024) -> i1024 {
     %m = arith.muli %a, %b : i1024
