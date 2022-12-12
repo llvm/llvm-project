@@ -340,16 +340,14 @@ public:
   /// Mark this symbol as being 'common'.
   ///
   /// \param Size - The size of the symbol.
-  /// \param Align - The alignment of the symbol.
+  /// \param Alignment - The alignment of the symbol.
   /// \param Target - Is the symbol a target-specific common-like symbol.
-  void setCommon(uint64_t Size, unsigned Align, bool Target = false) {
+  void setCommon(uint64_t Size, Align Alignment, bool Target = false) {
     assert(getOffset() == 0);
     CommonSize = Size;
     SymbolContents = Target ? SymContentsTargetCommon : SymContentsCommon;
 
-    assert((!Align || isPowerOf2_32(Align)) &&
-           "Alignment must be a power of 2");
-    unsigned Log2Align = Log2_32(Align) + 1;
+    unsigned Log2Align = encode(Alignment);
     assert(Log2Align < (1U << NumCommonAlignmentBits) &&
            "Out of range alignment");
     CommonAlignLog2 = Log2Align;
@@ -364,17 +362,17 @@ public:
   /// Declare this symbol as being 'common'.
   ///
   /// \param Size - The size of the symbol.
-  /// \param Align - The alignment of the symbol.
+  /// \param Alignment - The alignment of the symbol.
   /// \param Target - Is the symbol a target-specific common-like symbol.
   /// \return True if symbol was already declared as a different type
-  bool declareCommon(uint64_t Size, unsigned Align, bool Target = false) {
+  bool declareCommon(uint64_t Size, unsigned Alignment, bool Target = false) {
     assert(isCommon() || getOffset() == 0);
     if(isCommon()) {
-      if (CommonSize != Size || getCommonAlignment() != Align ||
+      if (CommonSize != Size || getCommonAlignment() != Alignment ||
           isTargetCommon() != Target)
         return true;
     } else
-      setCommon(Size, Align, Target);
+      setCommon(Size, Align(Alignment), Target);
     return false;
   }
 

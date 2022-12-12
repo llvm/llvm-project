@@ -437,7 +437,7 @@ void MCMachOStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
 
   getAssembler().registerSymbol(*Symbol);
   Symbol->setExternal(true);
-  Symbol->setCommon(Size, ByteAlignment.value());
+  Symbol->setCommon(Size, ByteAlignment);
 }
 
 void MCMachOStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
