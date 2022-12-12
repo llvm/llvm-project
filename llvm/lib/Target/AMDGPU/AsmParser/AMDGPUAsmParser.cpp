@@ -5492,10 +5492,10 @@ bool AMDGPUAsmParser::ParseDirectiveHSAMetadata() {
   const char *AssemblerDirectiveEnd;
   std::tie(AssemblerDirectiveBegin, AssemblerDirectiveEnd) =
       isHsaAbiVersion3AndAbove(&getSTI())
-          ? std::make_tuple(HSAMD::V3::AssemblerDirectiveBegin,
-                            HSAMD::V3::AssemblerDirectiveEnd)
-          : std::make_tuple(HSAMD::AssemblerDirectiveBegin,
-                            HSAMD::AssemblerDirectiveEnd);
+          ? std::tuple(HSAMD::V3::AssemblerDirectiveBegin,
+                       HSAMD::V3::AssemblerDirectiveEnd)
+          : std::tuple(HSAMD::AssemblerDirectiveBegin,
+                       HSAMD::AssemblerDirectiveEnd);
 
   if (getSTI().getTargetTriple().getOS() != Triple::AMDHSA) {
     return Error(getLoc(),

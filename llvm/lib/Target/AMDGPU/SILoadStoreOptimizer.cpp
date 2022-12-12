@@ -1819,7 +1819,7 @@ SILoadStoreOptimizer::getSubRegIdxs(const CombineInfo &CI,
     Idx1 = Idxs[CI.Width][Paired.Width - 1];
   }
 
-  return std::make_pair(Idx0, Idx1);
+  return std::pair(Idx0, Idx1);
 }
 
 const TargetRegisterClass *
@@ -2166,7 +2166,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
         MAddrNext.Base.HiSubReg != MAddr.Base.HiSubReg)
       continue;
 
-    InstsWCommonBase.push_back(std::make_pair(&MINext, MAddrNext.Offset));
+    InstsWCommonBase.push_back(std::pair(&MINext, MAddrNext.Offset));
 
     int64_t Dist = MAddr.Offset - MAddrNext.Offset;
     TargetLoweringBase::AddrMode AM;
@@ -2316,7 +2316,7 @@ SILoadStoreOptimizer::collectMergeableInsts(
     ++I;
   }
 
-  return std::make_pair(BlockI, Modified);
+  return std::pair(BlockI, Modified);
 }
 
 // Scan through looking for adjacent LDS operations with constant offsets from

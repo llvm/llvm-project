@@ -96,8 +96,8 @@ static LegalizeMutation oneMoreElement(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
     const LLT EltTy = Ty.getElementType();
-    return std::make_pair(TypeIdx,
-                          LLT::fixed_vector(Ty.getNumElements() + 1, EltTy));
+    return std::pair(TypeIdx,
+                     LLT::fixed_vector(Ty.getNumElements() + 1, EltTy));
   };
 }
 
@@ -108,9 +108,8 @@ static LegalizeMutation fewerEltsToSize64Vector(unsigned TypeIdx) {
     unsigned Size = Ty.getSizeInBits();
     unsigned Pieces = (Size + 63) / 64;
     unsigned NewNumElts = (Ty.getNumElements() + 1) / Pieces;
-    return std::make_pair(
-        TypeIdx,
-        LLT::scalarOrVector(ElementCount::getFixed(NewNumElts), EltTy));
+    return std::pair(TypeIdx, LLT::scalarOrVector(
+                                  ElementCount::getFixed(NewNumElts), EltTy));
   };
 }
 
@@ -128,7 +127,7 @@ static LegalizeMutation moreEltsToNext32Bit(unsigned TypeIdx) {
     assert(EltSize < 32);
 
     const int NewNumElts = (32 * NextMul32 + EltSize - 1) / EltSize;
-    return std::make_pair(TypeIdx, LLT::fixed_vector(NewNumElts, EltTy));
+    return std::pair(TypeIdx, LLT::fixed_vector(NewNumElts, EltTy));
   };
 }
 
@@ -147,7 +146,7 @@ static LLT getBitcastRegisterType(const LLT Ty) {
 static LegalizeMutation bitcastToRegisterType(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
-    return std::make_pair(TypeIdx, getBitcastRegisterType(Ty));
+    return std::pair(TypeIdx, getBitcastRegisterType(Ty));
   };
 }
 
@@ -156,7 +155,7 @@ static LegalizeMutation bitcastToVectorElement32(unsigned TypeIdx) {
     const LLT Ty = Query.Types[TypeIdx];
     unsigned Size = Ty.getSizeInBits();
     assert(Size % 32 == 0);
-    return std::make_pair(
+    return std::pair(
         TypeIdx, LLT::scalarOrVector(ElementCount::getFixed(Size / 32), 32));
   };
 }
@@ -1069,36 +1068,35 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   getActionDefinitionsBuilder(G_INTTOPTR)
-    // List the common cases
-    .legalForCartesianProduct(AddrSpaces64, {S64})
-    .legalForCartesianProduct(AddrSpaces32, {S32})
-    .scalarize(0)
-    // Accept any address space as long as the size matches
-    .legalIf(sameSize(0, 1))
-    .widenScalarIf(smallerThan(1, 0),
-      [](const LegalityQuery &Query) {
-        return std::make_pair(1, LLT::scalar(Query.Types[0].getSizeInBits()));
-      })
-    .narrowScalarIf(largerThan(1, 0),
-      [](const LegalityQuery &Query) {
-        return std::make_pair(1, LLT::scalar(Query.Types[0].getSizeInBits()));
+      // List the common cases
+      .legalForCartesianProduct(AddrSpaces64, {S64})
+      .legalForCartesianProduct(AddrSpaces32, {S32})
+      .scalarize(0)
+      // Accept any address space as long as the size matches
+      .legalIf(sameSize(0, 1))
+      .widenScalarIf(smallerThan(1, 0),
+                     [](const LegalityQuery &Query) {
+                       return std::pair(
+                           1, LLT::scalar(Query.Types[0].getSizeInBits()));
+                     })
+      .narrowScalarIf(largerThan(1, 0), [](const LegalityQuery &Query) {
+        return std::pair(1, LLT::scalar(Query.Types[0].getSizeInBits()));
       });
 
   getActionDefinitionsBuilder(G_PTRTOINT)
-    // List the common cases
-    .legalForCartesianProduct(AddrSpaces64, {S64})
-    .legalForCartesianProduct(AddrSpaces32, {S32})
-    .scalarize(0)
-    // Accept any address space as long as the size matches
-    .legalIf(sameSize(0, 1))
-    .widenScalarIf(smallerThan(0, 1),
-      [](const LegalityQuery &Query) {
-        return std::make_pair(0, LLT::scalar(Query.Types[1].getSizeInBits()));
-      })
-    .narrowScalarIf(
-      largerThan(0, 1),
-      [](const LegalityQuery &Query) {
-        return std::make_pair(0, LLT::scalar(Query.Types[1].getSizeInBits()));
+      // List the common cases
+      .legalForCartesianProduct(AddrSpaces64, {S64})
+      .legalForCartesianProduct(AddrSpaces32, {S32})
+      .scalarize(0)
+      // Accept any address space as long as the size matches
+      .legalIf(sameSize(0, 1))
+      .widenScalarIf(smallerThan(0, 1),
+                     [](const LegalityQuery &Query) {
+                       return std::pair(
+                           0, LLT::scalar(Query.Types[1].getSizeInBits()));
+                     })
+      .narrowScalarIf(largerThan(0, 1), [](const LegalityQuery &Query) {
+        return std::pair(0, LLT::scalar(Query.Types[1].getSizeInBits()));
       });
 
   getActionDefinitionsBuilder(G_ADDRSPACE_CAST)
@@ -1223,16 +1221,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
               // Split extloads.
               if (DstSize > MemSize)
-                return std::make_pair(0, LLT::scalar(MemSize));
+                return std::pair(0, LLT::scalar(MemSize));
 
               unsigned MaxSize = maxSizeForAddrSpace(ST,
                                                      PtrTy.getAddressSpace(),
                                                      Op == G_LOAD);
               if (MemSize > MaxSize)
-                return std::make_pair(0, LLT::scalar(MaxSize));
+                return std::pair(0, LLT::scalar(MaxSize));
 
               uint64_t Align = Query.MMODescrs[0].AlignInBits;
-              return std::make_pair(0, LLT::scalar(Align));
+              return std::pair(0, LLT::scalar(Align));
             })
         .fewerElementsIf(
             [=](const LegalityQuery &Query) -> bool {
@@ -1259,7 +1257,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                 unsigned EltSize = EltTy.getSizeInBits();
 
                 if (MaxSize % EltSize == 0) {
-                  return std::make_pair(
+                  return std::pair(
                       0, LLT::scalarOrVector(
                              ElementCount::getFixed(MaxSize / EltSize), EltTy));
                 }
@@ -1270,15 +1268,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                 // The scalars will need to be re-legalized.
                 if (NumPieces == 1 || NumPieces >= NumElts ||
                     NumElts % NumPieces != 0)
-                  return std::make_pair(0, EltTy);
+                  return std::pair(0, EltTy);
 
-                return std::make_pair(
-                    0, LLT::fixed_vector(NumElts / NumPieces, EltTy));
+                return std::pair(0,
+                                 LLT::fixed_vector(NumElts / NumPieces, EltTy));
               }
 
               // FIXME: We could probably handle weird extending loads better.
               if (DstTy.getSizeInBits() > MemSize)
-                return std::make_pair(0, EltTy);
+                return std::pair(0, EltTy);
 
               unsigned EltSize = EltTy.getSizeInBits();
               unsigned DstSize = DstTy.getSizeInBits();
@@ -1287,13 +1285,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                 // to the widest type. TODO: Account for alignment. As-is it
                 // should be OK, since the new parts will be further legalized.
                 unsigned FloorSize = PowerOf2Floor(DstSize);
-                return std::make_pair(
+                return std::pair(
                     0, LLT::scalarOrVector(
                            ElementCount::getFixed(FloorSize / EltSize), EltTy));
               }
 
               // May need relegalization for the scalars.
-              return std::make_pair(0, EltTy);
+              return std::pair(0, EltTy);
             })
     .minScalar(0, S32)
     .narrowScalarIf(isWideScalarExtLoadTruncStore(0), changeTo(0, S32))
@@ -1472,7 +1470,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           const unsigned VecSize = VecTy.getSizeInBits();
 
           const unsigned TargetEltSize = DstEltSize % 64 == 0 ? 64 : 32;
-          return std::make_pair(
+          return std::pair(
               VecTypeIdx,
               LLT::fixed_vector(VecSize / TargetEltSize, TargetEltSize));
         })
@@ -1638,7 +1636,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           if (RoundedTo < NewSizeInBits)
             NewSizeInBits = RoundedTo;
         }
-        return std::make_pair(BigTyIdx, LLT::scalar(NewSizeInBits));
+        return std::pair(BigTyIdx, LLT::scalar(NewSizeInBits));
       })
       // Any vectors left are the wrong size. Scalarize them.
       .scalarize(0)
@@ -4274,7 +4272,7 @@ AMDGPULegalizerInfo::splitBufferOffsets(MachineIRBuilder &B,
   if (!BaseReg)
     BaseReg = B.buildConstant(S32, 0).getReg(0);
 
-  return std::make_pair(BaseReg, ImmOffset);
+  return std::pair(BaseReg, ImmOffset);
 }
 
 /// Update \p MMO based on the offset inputs to a raw/struct buffer intrinsic.

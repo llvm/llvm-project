@@ -232,7 +232,7 @@ void SIFormMemoryClauses::collectRegUses(const MachineInstr &MI,
     auto Loc = Map.find(Reg);
     unsigned State = getMopState(MO);
     if (Loc == Map.end()) {
-      Map[Reg] = std::make_pair(State, Mask);
+      Map[Reg] = std::pair(State, Mask);
     } else {
       Loc->second.first |= State;
       Loc->second.second |= Mask;
