@@ -31,33 +31,26 @@ AST_MATCHER(Decl, isInAnonymousNamespace) {
 }
 } // namespace
 
-template <typename T>
-void UseAnonymousNamespaceCheck::processMatch(const T *MatchedDecl) {
-  StringRef Type = llvm::isa<VarDecl>(MatchedDecl) ? "variable" : "function";
-  diag(MatchedDecl->getLocation(),
-       "%0 %1 declared 'static', move to anonymous namespace instead")
-      << Type << MatchedDecl;
-}
-
 void UseAnonymousNamespaceCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       functionDecl(isStatic(),
                    unless(anyOf(isInAnonymousNamespace(), isMemberFunction())))
-          .bind("func"),
+          .bind("x"),
       this);
   Finder->addMatcher(
       varDecl(isStatic(), unless(anyOf(isInAnonymousNamespace(),
                                        isStaticLocal(), isStaticDataMember())))
-          .bind("var"),
+          .bind("x"),
       this);
 }
 
 void UseAnonymousNamespaceCheck::check(const MatchFinder::MatchResult &Result) {
-  if (const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("func"))
-    processMatch(MatchedDecl);
-
-  if (const auto *MatchedDecl = Result.Nodes.getNodeAs<VarDecl>("var"))
-    processMatch(MatchedDecl);
+  if (const auto *MatchedDecl = Result.Nodes.getNodeAs<NamedDecl>("x")) {
+    StringRef Type = llvm::isa<VarDecl>(MatchedDecl) ? "variable" : "function";
+    diag(MatchedDecl->getLocation(),
+         "%0 %1 declared 'static', move to anonymous namespace instead")
+        << Type << MatchedDecl;
+  }
 }
 
 } // namespace misc
