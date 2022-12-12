@@ -999,7 +999,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
 
     newFunction->addFnAttr(Attr);
   }
-  newFunction->getBasicBlockList().push_back(newRootNode);
+  newFunction->insertBasicBlockAt(newFunction->end(), newRootNode);
 
   // Create scalar and aggregate iterators to name all of the arguments we
   // inserted.
@@ -1435,21 +1435,17 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
 }
 
 void CodeExtractor::moveCodeToFunction(Function *newFunction) {
-  Function *oldFunc = (*Blocks.begin())->getParent();
-  Function::BasicBlockListType &oldBlocks = oldFunc->getBasicBlockList();
-  Function::BasicBlockListType &newBlocks = newFunction->getBasicBlockList();
-
   auto newFuncIt = newFunction->front().getIterator();
   for (BasicBlock *Block : Blocks) {
     // Delete the basic block from the old function, and the list of blocks
-    oldBlocks.remove(Block);
+    Block->removeFromParent();
 
     // Insert this basic block into the new function
     // Insert the original blocks after the entry block created
     // for the new function. The entry block may be followed
     // by a set of exit blocks at this point, but these exit
     // blocks better be placed at the end of the new function.
-    newFuncIt = newBlocks.insertAfter(newFuncIt, Block);
+    newFuncIt = newFunction->insertBasicBlockAt(std::next(newFuncIt), Block);
   }
 }
 
