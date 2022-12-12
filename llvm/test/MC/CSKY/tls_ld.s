@@ -11,13 +11,13 @@
 	lrw16 r3, xxx@TLSLDO32
 	str32.w r4, (r0, r3 << 0)
 
-# CHECK:            0:      	lrw16	r0, 0x18 <$d.0>
+# CHECK:            0:      	lrw16	r0, 0x18
 # CHECK-NEXT:       2:      	grs32	r2, 0x0
 # CHECK-NEXT:       6:      	addu16	r0, r0, r2
-# CHECK-NEXT:       8:      	lrw16	r3, 0x1c <$d.0+0x4>
+# CHECK-NEXT:       8:      	lrw16	r3, 0x1c
 # CHECK-NEXT:       a:      	ldr32.w	r3, (r28, r3 << 0)
 # CHECK-NEXT:       e:      	jsr16	r3
-# CHECK-NEXT:       10:      	lrw16	r3, 0x20 <$d.0+0x8>
+# CHECK-NEXT:       10:      	lrw16	r3, 0x20
 # CHECK-NEXT:       12:      	str32.w	r4, (r0, r3 << 0)
 # CHECK-NEXT:       16:      	bkpt
 
