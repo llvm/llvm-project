@@ -51,7 +51,7 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF)
 unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
                                                   const GlobalVariable &GV,
                                                   Align Trailing) {
-  auto Entry = LocalMemoryObjects.insert(std::make_pair(&GV, 0));
+  auto Entry = LocalMemoryObjects.insert(std::pair(&GV, 0));
   if (!Entry.second)
     return Entry.first->second;
 

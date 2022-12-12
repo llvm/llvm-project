@@ -1473,7 +1473,7 @@ AMDGPUTargetLowering::split64BitValue(SDValue Op, SelectionDAG &DAG) const {
   SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Vec, Zero);
   SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Vec, One);
 
-  return std::make_pair(Lo, Hi);
+  return std::pair(Lo, Hi);
 }
 
 SDValue AMDGPUTargetLowering::getLoHalf64(SDValue Op, SelectionDAG &DAG) const {
@@ -1505,7 +1505,7 @@ AMDGPUTargetLowering::getSplitDestVTs(const EVT &VT, SelectionDAG &DAG) const {
   HiVT = NumElts - LoNumElts == 1
              ? EltVT
              : EVT::getVectorVT(*DAG.getContext(), EltVT, NumElts - LoNumElts);
-  return std::make_pair(LoVT, HiVT);
+  return std::pair(LoVT, HiVT);
 }
 
 // Split a vector value into two parts of types LoVT and HiVT. HiVT could be
@@ -1523,7 +1523,7 @@ AMDGPUTargetLowering::splitVector(const SDValue &N, const SDLoc &DL,
   SDValue Hi = DAG.getNode(
       HiVT.isVector() ? ISD::EXTRACT_SUBVECTOR : ISD::EXTRACT_VECTOR_ELT, DL,
       HiVT, N, DAG.getVectorIdxConstant(LoVT.getVectorNumElements(), DL));
-  return std::make_pair(Lo, Hi);
+  return std::pair(Lo, Hi);
 }
 
 SDValue AMDGPUTargetLowering::SplitVectorLoad(const SDValue Op,
