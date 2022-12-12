@@ -1,5 +1,3 @@
-; TODO: Determine why this does not work on Power PC.
-; REQUIRES: x86_64-linux
 ; RUN: llc %s -o - -stop-after=finalize-isel \
 ; RUN:    -experimental-assignment-tracking  \
 ; RUN: | FileCheck %s --implicit-check-not=DBG
@@ -66,6 +64,7 @@
 ;;   __attribute__((nodebug)) a ah(y(0).d(n), 0);
 ;;   ag - ah;
 ;; }
+target triple = "x86_64-unknown-linux-gnu"
 
 define void @_Z1kv({ <2 x float>, <2 x float> } %call, <2 x float> %0, float %n.sroa.6.8.vec.extract) !dbg !7 {
 entry:
