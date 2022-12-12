@@ -289,7 +289,7 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
                                      inconvertibleErrorCode());
     Uncommon().CommonSize =
         GV->getParent()->getDataLayout().getTypeAllocSize(GV->getValueType());
-    Uncommon().CommonAlign = GVar->getAlignment();
+    Uncommon().CommonAlign = GVar->getAlign() ? GVar->getAlign()->value() : 0;
   }
 
   const GlobalObject *GO = GV->getAliaseeObject();
