@@ -37,7 +37,7 @@ function(add_lldb_unittest test_name)
 
   # BEGIN Swift Mods
   if(SWIFT_SWIFT_PARSER)
-    add_properties_for_swift_modules(${test_name})
+    add_properties_for_swift_modules(${test_name} "../")
   endif()
 # END Swift Mods
 endfunction()

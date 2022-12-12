@@ -71,6 +71,6 @@ target_link_libraries(lldb-server PRIVATE ${LLDB_SYSTEM_LIBS})
 
 # BEGIN Swift Mods
 if(SWIFT_SWIFT_PARSER)
-  add_properties_for_swift_modules(lldb-server)
+  add_properties_for_swift_modules(lldb-server "../")
 endif()
 # END Swift Mods

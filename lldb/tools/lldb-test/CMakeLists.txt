@@ -24,7 +24,7 @@ add_lldb_tool(lldb-test
   )
 
 # BEGIN Swift Mods
-add_properties_for_swift_modules(lldb-test)
+add_properties_for_swift_modules(lldb-test "../")
 # END Swift Mods
 
 if(Python3_RPATH)
