@@ -5,7 +5,7 @@ declare i1 @cond()
 
 ; Range check here can be turned into invariant check.
 define i32 @test_simple_case(i32 %start, i32 %len) {
-; CHECK-LABEL: @test_simple_case(
+; CHECK-LABEL: define {{[^@]+}}@test_simple_case(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -61,7 +61,7 @@ failed_2:
 ;       to replace it with invariant despite this fact.
 ;       https://alive2.llvm.org/ce/z/G4iW8c
 define i32 @test_litter_conditions(i32 %start, i32 %len) {
-; CHECK-LABEL: @test_litter_conditions(
+; CHECK-LABEL: define {{[^@]+}}@test_litter_conditions(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -122,7 +122,7 @@ failed_2:
 
 ; TODO: Same as test_litter_conditions, but swapped exit block branches.
 define i32 @test_litter_conditions_inverse(i32 %start, i32 %len) {
-; CHECK-LABEL: @test_litter_conditions_inverse(
+; CHECK-LABEL: define {{[^@]+}}@test_litter_conditions_inverse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -182,7 +182,7 @@ failed_2:
 }
 
 define i32 @test_litter_conditions_01(i32 %start, i32 %len) {
-; CHECK-LABEL: @test_litter_conditions_01(
+; CHECK-LABEL: define {{[^@]+}}@test_litter_conditions_01(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -239,7 +239,7 @@ failed_2:
 
 ; TODO: Same as test_litter_conditions_01, but swapped exit block branches.
 define i32 @test_litter_conditions_01_inverse(i32 %start, i32 %len) {
-; CHECK-LABEL: @test_litter_conditions_01_inverse(
+; CHECK-LABEL: define {{[^@]+}}@test_litter_conditions_01_inverse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -296,7 +296,7 @@ failed_2:
 
 ; TODO: Simplified version 2 of test_litter_conditions.
 define i32 @test_litter_conditions_02(i32 %start, i32 %len) {
-; CHECK-LABEL: @test_litter_conditions_02(
+; CHECK-LABEL: define {{[^@]+}}@test_litter_conditions_02(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -353,7 +353,7 @@ failed_2:
 
 ; TODO: Same as test_litter_conditions_02, but swapped exit block branches.
 define i32 @test_litter_conditions_02_inverse(i32 %start, i32 %len) {
-; CHECK-LABEL: @test_litter_conditions_02_inverse(
+; CHECK-LABEL: define {{[^@]+}}@test_litter_conditions_02_inverse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -412,7 +412,7 @@ failed_2:
 ;       header block. Make sure we infer fact from the right context.
 ;       https://alive2.llvm.org/ce/z/JiD-Pw
 define i32 @test_litter_conditions_bad_context(i32 %start, i32 %len) {
-; CHECK-LABEL: @test_litter_conditions_bad_context(
+; CHECK-LABEL: define {{[^@]+}}@test_litter_conditions_bad_context(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -473,7 +473,7 @@ failed_2:
 
 ; TODO: Same as @test_litter_conditions_bad_context, but swapped exit block branches.
 define i32 @test_litter_conditions_bad_context_inverse(i32 %start, i32 %len) {
-; CHECK-LABEL: @test_litter_conditions_bad_context_inverse(
+; CHECK-LABEL: define {{[^@]+}}@test_litter_conditions_bad_context_inverse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -537,7 +537,7 @@ failed_2:
 ;       should not prevent turning the range check into invariant.
 ;       https://alive2.llvm.org/ce/z/G-2ERB
 define i32 @test_and_conditions(i32 %start, i32 %len) {
-; CHECK-LABEL: @test_and_conditions(
+; CHECK-LABEL: define {{[^@]+}}@test_and_conditions(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -582,7 +582,7 @@ failed:
 
 ; TODO: Same as test_and_conditions, but swapped exit block branches.
 define i32 @test_and_conditions_inverse(i32 %start, i32 %len) {
-; CHECK-LABEL: @test_and_conditions_inverse(
+; CHECK-LABEL: define {{[^@]+}}@test_and_conditions_inverse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
