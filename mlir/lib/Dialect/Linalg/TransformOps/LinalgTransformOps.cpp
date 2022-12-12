@@ -1181,7 +1181,7 @@ transform::SplitReductionOp::applyToOne(linalg::LinalgOp target,
 }
 
 //===----------------------------------------------------------------------===//
-// SplitReductionOp
+// TileReductionUsingScfOp
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure transform::TileReductionUsingScfOp::applyToOne(
@@ -1201,6 +1201,7 @@ DiagnosedSilenceableFailure transform::TileReductionUsingScfOp::applyToOne(
 
   if (failed(result))
     return DiagnosedSilenceableFailure(reportUnknownTransformError(target));
+  results.push_back(result->loops.front());
   results.push_back(result->initialOp);
   results.push_back(result->parallelTiledOp);
   results.push_back(result->mergeOp);
@@ -1230,6 +1231,7 @@ transform::TileReductionUsingForeachThreadOp::applyToOne(
     diag << "could not tile reduction in target.";
     return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
   }
+  results.push_back(result->loops);
   results.push_back(result->initialOp);
   results.push_back(result->parallelTiledOp);
   results.push_back(result->mergeOp);
