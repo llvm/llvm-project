@@ -194,6 +194,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                    MVT::v2f64})
       setOperationAction(ISD::VECTOR_SHUFFLE, T, Custom);
 
+    // Support splatting
+    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
+		   MVT::v2f64})
+      setOperationAction(ISD::SPLAT_VECTOR, T, Legal);
+
     // Custom lowering since wasm shifts must have a scalar shift amount
     for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL})
       for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64})
@@ -2161,18 +2166,8 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       return IsConstant(Lane);
     };
   } else {
-    // Use a splat, but possibly a load_splat
-    LoadSDNode *SplattedLoad;
-    if ((SplattedLoad = dyn_cast<LoadSDNode>(SplatValue)) &&
-        SplattedLoad->getMemoryVT() == VecT.getVectorElementType()) {
-      Result = DAG.getMemIntrinsicNode(
-          WebAssemblyISD::LOAD_SPLAT, DL, DAG.getVTList(VecT),
-          {SplattedLoad->getChain(), SplattedLoad->getBasePtr(),
-           SplattedLoad->getOffset()},
-          SplattedLoad->getMemoryVT(), SplattedLoad->getMemOperand());
-    } else {
-      Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
-    }
+    // Use a splat (which might be selected as a load splat)
+    Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
     IsLaneConstructed = [&SplatValue](size_t _, const SDValue &Lane) {
       return Lane == SplatValue;
     };
