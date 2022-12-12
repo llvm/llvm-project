@@ -41,9 +41,9 @@ class DebugContainerModeling
                                                  CheckerContext &) const;
 
   CallDescriptionMap<FnCheck> Callbacks = {
-      {{"clang_analyzer_container_begin", 1},
+      {{{"clang_analyzer_container_begin"}, 1},
        &DebugContainerModeling::analyzerContainerBegin},
-      {{"clang_analyzer_container_end", 1},
+      {{{"clang_analyzer_container_end"}, 1},
        &DebugContainerModeling::analyzerContainerEnd},
   };
 
