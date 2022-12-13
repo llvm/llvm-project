@@ -5,12 +5,12 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx8_soffset_ac5750:
+.. _amdgpu_synid_gfx8_soffset_b5af46:
 
 soffset
 =======
 
-An unsigned byte offset added to the base address to get memory address.
+An unsigned byte offset, which is added to the base address to get the memory address.
 
 *Size:* 1 dword.
 

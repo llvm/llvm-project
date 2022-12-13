@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx8_type_deviation:
+.. _amdgpu_synid_gfx8_vdst_d71f1c:
 
-Type Deviation
-==============
+vdst
+====
 
-The *type* of this operand differs from the *type* :ref:`implied by the opcode<amdgpu_syn_instruction_mnemo>`. This tag specifies the actual operand *type*.
+Instruction output: data read from a memory buffer.
+
+*Size:* 2 dwords.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`
