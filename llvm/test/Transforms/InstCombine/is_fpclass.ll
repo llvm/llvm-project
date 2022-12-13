@@ -110,7 +110,7 @@ define i1 @test_class_is_p0_n0_f32(float %x) {
 ; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96)
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
-  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 96)
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 96) ; fcZero
   ret i1 %val
 }
 
@@ -120,6 +120,51 @@ define i1 @test_class_is_p0_n0_f32_strict(float %x) {
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.is.fpclass.f32(float %x, i32 96) strictfp
+  ret i1 %val
+}
+
+define i1 @test_class_is_p0_n0_f32_daz(float %x) "denormal-fp-math"="ieee,preserve-sign" {
+; CHECK-LABEL: @test_class_is_p0_n0_f32_daz(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96)
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 96) ; fcZero
+  ret i1 %val
+}
+
+define i1 @test_class_is_p0_n0_f32_dapz(float %x) "denormal-fp-math"="ieee,positive-zero" {
+; CHECK-LABEL: @test_class_is_p0_n0_f32_dapz(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96)
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 96) ; fcZero
+  ret i1 %val
+}
+
+define i1 @test_class_is_p0_n0_psub_nsub_f32(float %x) {
+; CHECK-LABEL: @test_class_is_p0_n0_psub_nsub_f32(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 240)
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 240) ; fcZero | fcSubnormal
+  ret i1 %val
+}
+
+define i1 @test_class_is_p0_n0_psub_nsub_f32_daz(float %x) "denormal-fp-math"="ieee,preserve-sign" {
+; CHECK-LABEL: @test_class_is_p0_n0_psub_nsub_f32_daz(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 240)
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 240) ; fcZero | fcSubnormal
+  ret i1 %val
+}
+
+define i1 @test_class_is_p0_n0_psub_nsub_f32_dapz(float %x) "denormal-fp-math"="ieee,positive-zero" {
+; CHECK-LABEL: @test_class_is_p0_n0_psub_nsub_f32_dapz(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 240)
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 240) ; fcZero | fcSubnormal
   ret i1 %val
 }
 
