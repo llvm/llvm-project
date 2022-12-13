@@ -2584,8 +2584,9 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *C, Value *B,
 
 // (icmp eq X, 0) | (icmp ult Other, X) -> (icmp ule Other, X-1)
 // (icmp ne X, 0) & (icmp uge Other, X) -> (icmp ugt Other, X-1)
-Value *foldAndOrOfICmpEqZeroAndICmp(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
-                                    IRBuilderBase &Builder) {
+static Value *foldAndOrOfICmpEqZeroAndICmp(ICmpInst *LHS, ICmpInst *RHS,
+                                           bool IsAnd, bool IsLogical,
+                                           IRBuilderBase &Builder) {
   ICmpInst::Predicate LPred =
       IsAnd ? LHS->getInversePredicate() : LHS->getPredicate();
   ICmpInst::Predicate RPred =
@@ -2604,6 +2605,8 @@ Value *foldAndOrOfICmpEqZeroAndICmp(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
   else
     return nullptr;
 
+  if (IsLogical)
+    Other = Builder.CreateFreeze(Other);
   return Builder.CreateICmp(
       IsAnd ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE,
       Builder.CreateAdd(LHS0, Constant::getAllOnesValue(LHS0->getType())),
@@ -2652,14 +2655,14 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   if (Value *V = foldLogOpOfMaskedICmps(LHS, RHS, IsAnd, IsLogical, Builder))
     return V;
 
-  // TODO: One of these directions is fine with logical and/or, the other could
-  // be supported by inserting freeze.
-  if (!IsLogical) {
-    if (Value *V = foldAndOrOfICmpEqZeroAndICmp(LHS, RHS, IsAnd, Builder))
-      return V;
-    if (Value *V = foldAndOrOfICmpEqZeroAndICmp(RHS, LHS, IsAnd, Builder))
-      return V;
-  }
+  if (Value *V =
+          foldAndOrOfICmpEqZeroAndICmp(LHS, RHS, IsAnd, IsLogical, Builder))
+    return V;
+  // We can treat logical like bitwise here, because both operands are used on
+  // the LHS, and as such poison from both will propagate.
+  if (Value *V = foldAndOrOfICmpEqZeroAndICmp(RHS, LHS, IsAnd,
+                                              /*IsLogical*/ false, Builder))
+    return V;
 
   // TODO: Verify whether this is safe for logical and/or.
   if (!IsLogical) {
