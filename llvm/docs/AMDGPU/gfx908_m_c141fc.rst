@@ -5,9 +5,9 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx908_m_254bcb:
+.. _amdgpu_synid_gfx908_m_c141fc:
 
 m
 =
 
-This operand may be used with integer operand modifier :ref:`sext<amdgpu_synid_sext>`.
+This operand may be used with floating-point operand modifiers :ref:`abs<amdgpu_synid_abs>` and :ref:`neg<amdgpu_synid_neg>`.

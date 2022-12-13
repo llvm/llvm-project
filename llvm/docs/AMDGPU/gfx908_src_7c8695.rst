@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx908_m_f5d306:
+.. _amdgpu_synid_gfx908_src_7c8695:
 
-m
-=
+src
+===
 
-This operand may be used with floating point operand modifiers :ref:`abs<amdgpu_synid_abs>` and :ref:`neg<amdgpu_synid_neg>`.
+Instruction input.
+
+*Size:* 1 dword.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`lds_direct<amdgpu_synid_lds_direct>`, :ref:`iconst<amdgpu_synid_iconst>`, :ref:`fconst<amdgpu_synid_fconst>`
