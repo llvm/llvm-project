@@ -272,7 +272,7 @@ not_a_texture<int> not_a_texture<int>::ref; // dev-note {{host variable declared
 
 __device__ void test_not_a_texture() {
   not_a_texture<int> inst;
-  inst.c(); // dev-note {{in instantiation of member function 'not_a_texture<int, 1, 1>::c' requested here}}
+  inst.c(); // dev-note {{in instantiation of member function 'not_a_texture<int>::c' requested here}}
 }
 
 // Test static variable in host function used by device function.

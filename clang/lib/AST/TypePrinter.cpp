@@ -2029,6 +2029,16 @@ static bool isSubstitutedTemplateArgument(ASTContext &Ctx, TemplateArgument Arg,
     }
   }
 
+  if (Arg.getKind() == TemplateArgument::Integral &&
+      Pattern.getKind() == TemplateArgument::Expression) {
+    Expr const *expr = Pattern.getAsExpr();
+
+    if (!expr->isValueDependent() && expr->isIntegerConstantExpr(Ctx)) {
+      return llvm::APSInt::isSameValue(expr->EvaluateKnownConstInt(Ctx),
+                                       Arg.getAsIntegral());
+    }
+  }
+
   if (Arg.getKind() != Pattern.getKind())
     return false;
 
