@@ -39,7 +39,6 @@
 
 ; RUN: opt -disable-output -debug-pass-manager -passes=print %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MODULE-PRINT
-; CHECK-MODULE-PRINT: Running pass: VerifierPass
 ; CHECK-MODULE-PRINT: Running pass: PrintModulePass
 ; CHECK-MODULE-PRINT: ModuleID
 ; CHECK-MODULE-PRINT: define void @foo(i1 %x, ptr %p1, ptr %p2)
@@ -54,7 +53,6 @@
 
 ; RUN: opt -disable-output -debug-pass-manager -passes='function(print)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-FUNCTION-PRINT
-; CHECK-FUNCTION-PRINT: Running pass: VerifierPass
 ; CHECK-FUNCTION-PRINT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
 ; CHECK-FUNCTION-PRINT: Running pass: PrintFunctionPass
 ; CHECK-FUNCTION-PRINT-NOT: ModuleID
@@ -92,7 +90,6 @@
 ; CHECK-NO-VERIFY: Running pass: NoOpModulePass
 ; CHECK-NO-VERIFY-NOT: VerifierPass
 ; CHECK-NO-VERIFY: Running pass: NoOpFunctionPass
-; CHECK-NO-VERIFY-NOT: VerifierPass
 ; CHECK-NO-VERIFY-NOT: VerifierPass
 
 ; RUN: opt -disable-output -debug-pass-manager \

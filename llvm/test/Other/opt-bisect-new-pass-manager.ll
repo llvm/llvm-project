@@ -21,19 +21,15 @@
 ; RUN: opt -disable-output -debug-pass-manager \
 ; RUN:     -passes=inferattrs -opt-bisect-limit=-1 %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-REQUIRED-PASS
-; CHECK-REQUIRED-PASS-NOT: BISECT: {{.*}} VerifierPass
-; CHECK-REQUIRED-PASS: Running pass: VerifierPass
 ; CHECK-REQUIRED-PASS: BISECT: running pass (1) InferFunctionAttrsPass on [module]
-; CHECK-REQUIRED-PASS-NOT: BISECT: {{.*}} VerifierPass
+; CHECK-REQUIRED-PASS-NOT: BISECT: {{.*}}VerifierPass
 ; CHECK-REQUIRED-PASS: Running pass: VerifierPass
 
 ; RUN: opt -disable-output -debug-pass-manager \
 ; RUN:     -passes=inferattrs -opt-bisect-limit=0 %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-LIMIT-REQUIRED-PASS
-; CHECK-LIMIT-REQUIRED-PASS-NOT: BISECT: {{.*}} VerifierPass
-; CHECK-LIMIT-REQUIRED-PASS: Running pass: VerifierPass
 ; CHECK-LIMIT-REQUIRED-PASS: BISECT: NOT running pass (1) InferFunctionAttrsPass on [module]
-; CHECK-LIMIT-REQUIRED-PASS-NOT: BISECT: {{.*}} VerifierPass
+; CHECK-LIMIT-REQUIRED-PASS-NOT: BISECT: {{.*}}VerifierPass
 ; CHECK-LIMIT-REQUIRED-PASS: Running pass: VerifierPass
 
 ; RUN: opt -disable-output -disable-verify \
