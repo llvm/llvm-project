@@ -46,11 +46,11 @@ using namespace llvm;
 /// This typically parses the main source file, runs zero or more optimization
 /// passes, then prints the output.
 ///
-static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
-                                    bool verifyPasses, SourceMgr &sourceMgr,
-                                    MLIRContext *context,
-                                    PassPipelineFn passManagerSetupFn,
-                                    bool emitBytecode, bool implicitModule) {
+static LogicalResult
+performActions(raw_ostream &os, bool verifyDiagnostics, bool verifyPasses,
+               const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+               MLIRContext *context, PassPipelineFn passManagerSetupFn,
+               bool emitBytecode, bool implicitModule) {
   DefaultTimingManager tm;
   applyDefaultTimingManagerCLOptions(tm);
   TimingScope timing = tm.getRootScope();
@@ -115,8 +115,8 @@ processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
               PassPipelineFn passManagerSetupFn, DialectRegistry &registry,
               llvm::ThreadPool *threadPool) {
   // Tell sourceMgr about this buffer, which is what the parser will pick up.
-  SourceMgr sourceMgr;
-  sourceMgr.AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
+  auto sourceMgr = std::make_shared<SourceMgr>();
+  sourceMgr->AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
 
   // Create a context just for the current buffer. Disable threading on creation
   // since we'll inject the thread-pool separately.
@@ -135,13 +135,13 @@ processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
   // If we are in verify diagnostics mode then we have a lot of work to do,
   // otherwise just perform the actions without worrying about it.
   if (!verifyDiagnostics) {
-    SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &context);
+    SourceMgrDiagnosticHandler sourceMgrHandler(*sourceMgr, &context);
     return performActions(os, verifyDiagnostics, verifyPasses, sourceMgr,
                           &context, passManagerSetupFn, emitBytecode,
                           implicitModule);
   }
 
-  SourceMgrDiagnosticVerifierHandler sourceMgrHandler(sourceMgr, &context);
+  SourceMgrDiagnosticVerifierHandler sourceMgrHandler(*sourceMgr, &context);
 
   // Do any processing requested by command line flags.  We don't care whether
   // these actions succeed or fail, we only care what diagnostics they produce

@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/SourceMgr.h"
 #include <optional>
 
 #define DEBUG_TYPE "mlir-bytecode-reader"
@@ -492,11 +493,12 @@ namespace {
 class ResourceSectionReader {
 public:
   /// Initialize the resource section reader with the given section data.
-  LogicalResult initialize(Location fileLoc, const ParserConfig &config,
-                           MutableArrayRef<BytecodeDialect> dialects,
-                           StringSectionReader &stringReader,
-                           ArrayRef<uint8_t> sectionData,
-                           ArrayRef<uint8_t> offsetSectionData);
+  LogicalResult
+  initialize(Location fileLoc, const ParserConfig &config,
+             MutableArrayRef<BytecodeDialect> dialects,
+             StringSectionReader &stringReader, ArrayRef<uint8_t> sectionData,
+             ArrayRef<uint8_t> offsetSectionData,
+             const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef);
 
   /// Parse a dialect resource handle from the resource section.
   LogicalResult parseResourceHandle(EncodingReader &reader,
@@ -512,8 +514,10 @@ private:
 class ParsedResourceEntry : public AsmParsedResourceEntry {
 public:
   ParsedResourceEntry(StringRef key, AsmResourceEntryKind kind,
-                      EncodingReader &reader, StringSectionReader &stringReader)
-      : key(key), kind(kind), reader(reader), stringReader(stringReader) {}
+                      EncodingReader &reader, StringSectionReader &stringReader,
+                      const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef)
+      : key(key), kind(kind), reader(reader), stringReader(stringReader),
+        bufferOwnerRef(bufferOwnerRef) {}
   ~ParsedResourceEntry() override = default;
 
   StringRef getKey() const final { return key; }
@@ -554,11 +558,22 @@ public:
     if (failed(reader.parseBlobAndAlignment(data, alignment)))
       return failure();
 
+    // If we have an extendable reference to the buffer owner, we don't need to
+    // allocate a new buffer for the data, and can use the data directly.
+    if (bufferOwnerRef) {
+      ArrayRef<char> charData(reinterpret_cast<const char *>(data.data()),
+                              data.size());
+
+      // Allocate an unmanager buffer which captures a reference to the owner.
+      // For now we just mark this as immutable, but in the future we should
+      // explore marking this as mutable when desired.
+      return UnmanagedAsmResourceBlob::allocateWithAlign(
+          charData, alignment,
+          [bufferOwnerRef = bufferOwnerRef](void *, size_t, size_t) {});
+    }
+
     // Allocate memory for the blob using the provided allocator and copy the
     // data into it.
-    // FIXME: If the current holder of the bytecode can ensure its lifetime
-    // (e.g. when mmap'd), we should not copy the data. We should use the data
-    // from the bytecode directly.
     AsmResourceBlob blob = allocator(data.size(), alignment);
     assert(llvm::isAddrAligned(llvm::Align(alignment), blob.getData().data()) &&
            blob.isMutable() &&
@@ -572,6 +587,7 @@ private:
   AsmResourceEntryKind kind;
   EncodingReader &reader;
   StringSectionReader &stringReader;
+  const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef;
 };
 } // namespace
 
@@ -580,6 +596,7 @@ static LogicalResult
 parseResourceGroup(Location fileLoc, bool allowEmpty,
                    EncodingReader &offsetReader, EncodingReader &resourceReader,
                    StringSectionReader &stringReader, T *handler,
+                   const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef,
                    function_ref<LogicalResult(StringRef)> processKeyFn = {}) {
   uint64_t numResources;
   if (failed(offsetReader.parseVarInt(numResources)))
@@ -611,7 +628,8 @@ parseResourceGroup(Location fileLoc, bool allowEmpty,
 
     // Otherwise, parse the resource value.
     EncodingReader entryReader(data, fileLoc);
-    ParsedResourceEntry entry(key, kind, entryReader, stringReader);
+    ParsedResourceEntry entry(key, kind, entryReader, stringReader,
+                              bufferOwnerRef);
     if (failed(handler->parseResource(entry)))
       return failure();
     if (!entryReader.empty()) {
@@ -622,12 +640,12 @@ parseResourceGroup(Location fileLoc, bool allowEmpty,
   return success();
 }
 
-LogicalResult
-ResourceSectionReader::initialize(Location fileLoc, const ParserConfig &config,
-                                  MutableArrayRef<BytecodeDialect> dialects,
-                                  StringSectionReader &stringReader,
-                                  ArrayRef<uint8_t> sectionData,
-                                  ArrayRef<uint8_t> offsetSectionData) {
+LogicalResult ResourceSectionReader::initialize(
+    Location fileLoc, const ParserConfig &config,
+    MutableArrayRef<BytecodeDialect> dialects,
+    StringSectionReader &stringReader, ArrayRef<uint8_t> sectionData,
+    ArrayRef<uint8_t> offsetSectionData,
+    const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef) {
   EncodingReader resourceReader(sectionData, fileLoc);
   EncodingReader offsetReader(offsetSectionData, fileLoc);
 
@@ -641,7 +659,7 @@ ResourceSectionReader::initialize(Location fileLoc, const ParserConfig &config,
   auto parseGroup = [&](auto *handler, bool allowEmpty = false,
                         function_ref<LogicalResult(StringRef)> keyFn = {}) {
     return parseResourceGroup(fileLoc, allowEmpty, offsetReader, resourceReader,
-                              stringReader, handler, keyFn);
+                              stringReader, handler, bufferOwnerRef, keyFn);
   };
 
   // Read the external resources from the bytecode.
@@ -1058,14 +1076,16 @@ namespace {
 /// This class is used to read a bytecode buffer and translate it into MLIR.
 class BytecodeReader {
 public:
-  BytecodeReader(Location fileLoc, const ParserConfig &config)
+  BytecodeReader(Location fileLoc, const ParserConfig &config,
+                 const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef)
       : config(config), fileLoc(fileLoc),
         attrTypeReader(stringReader, resourceReader, fileLoc),
         // Use the builtin unrealized conversion cast operation to represent
         // forward references to values that aren't yet defined.
         forwardRefOpState(UnknownLoc::get(config.getContext()),
                           "builtin.unrealized_conversion_cast", ValueRange(),
-                          NoneType::get(config.getContext())) {}
+                          NoneType::get(config.getContext())),
+        bufferOwnerRef(bufferOwnerRef) {}
 
   /// Read the bytecode defined within `buffer` into the given block.
   LogicalResult read(llvm::MemoryBufferRef buffer, Block *block);
@@ -1222,6 +1242,10 @@ private:
   Block openForwardRefOps;
   /// An operation state used when instantiating forward references.
   OperationState forwardRefOpState;
+
+  /// The optional owning source manager, which when present may be used to
+  /// extend the lifetime of the input buffer.
+  const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef;
 };
 } // namespace
 
@@ -1383,7 +1407,8 @@ LogicalResult BytecodeReader::parseResourceSection(
 
   // Initialize the resource reader with the resource sections.
   return resourceReader.initialize(fileLoc, config, dialects, stringReader,
-                                   *resourceData, *resourceOffsetData);
+                                   *resourceData, *resourceOffsetData,
+                                   bufferOwnerRef);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1719,8 +1744,13 @@ bool mlir::isBytecode(llvm::MemoryBufferRef buffer) {
   return buffer.getBuffer().startswith("ML\xefR");
 }
 
-LogicalResult mlir::readBytecodeFile(llvm::MemoryBufferRef buffer, Block *block,
-                                     const ParserConfig &config) {
+/// Read the bytecode from the provided memory buffer reference.
+/// `bufferOwnerRef` if provided is the owning source manager for the buffer,
+/// and may be used to extend the lifetime of the buffer.
+static LogicalResult
+readBytecodeFileImpl(llvm::MemoryBufferRef buffer, Block *block,
+                     const ParserConfig &config,
+                     const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef) {
   Location sourceFileLoc =
       FileLineColLoc::get(config.getContext(), buffer.getBufferIdentifier(),
                           /*line=*/0, /*column=*/0);
@@ -1729,6 +1759,18 @@ LogicalResult mlir::readBytecodeFile(llvm::MemoryBufferRef buffer, Block *block,
                      "input buffer is not an MLIR bytecode file");
   }
 
-  BytecodeReader reader(sourceFileLoc, config);
+  BytecodeReader reader(sourceFileLoc, config, bufferOwnerRef);
   return reader.read(buffer, block);
+}
+
+LogicalResult mlir::readBytecodeFile(llvm::MemoryBufferRef buffer, Block *block,
+                                     const ParserConfig &config) {
+  return readBytecodeFileImpl(buffer, block, config, /*bufferOwnerRef=*/{});
+}
+LogicalResult
+mlir::readBytecodeFile(const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+                       Block *block, const ParserConfig &config) {
+  return readBytecodeFileImpl(
+      *sourceMgr->getMemoryBuffer(sourceMgr->getMainFileID()), block, config,
+      sourceMgr);
 }
