@@ -613,6 +613,19 @@ bool GDBRemoteCommunicationClient::GetSharedCacheInfoSupported() {
   return m_supports_jGetSharedCacheInfo;
 }
 
+bool GDBRemoteCommunicationClient::GetDynamicLoaderProcessStateSupported() {
+  if (m_supports_jGetDyldProcessState == eLazyBoolCalculate) {
+    StringExtractorGDBRemote response;
+    m_supports_jGetDyldProcessState = eLazyBoolNo;
+    if (SendPacketAndWaitForResponse("jGetDyldProcessState", response) ==
+        PacketResult::Success) {
+      if (!response.IsUnsupportedResponse())
+        m_supports_jGetDyldProcessState = eLazyBoolYes;
+    }
+  }
+  return m_supports_jGetDyldProcessState;
+}
+
 bool GDBRemoteCommunicationClient::GetMemoryTaggingSupported() {
   if (m_supports_memory_tagging == eLazyBoolCalculate) {
     GetRemoteQSupported();

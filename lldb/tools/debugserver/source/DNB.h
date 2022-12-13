@@ -157,6 +157,7 @@ nub_size_t DNBProcessGetAvailableProfileData(nub_process_t pid, char *buf,
 nub_size_t DNBProcessGetStopCount(nub_process_t pid) DNB_EXPORT;
 uint32_t DNBProcessGetCPUType(nub_process_t pid) DNB_EXPORT;
 size_t DNBGetAllInfos(std::vector<struct kinfo_proc> &proc_infos);
+JSONGenerator::ObjectSP DNBGetDyldProcessState(nub_process_t pid);
 
 // Process executable and arguments
 const char *DNBProcessGetExecutablePath(nub_process_t pid);
