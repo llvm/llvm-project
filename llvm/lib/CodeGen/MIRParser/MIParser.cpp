@@ -376,10 +376,11 @@ struct ParsedMachineOperand {
   MachineOperand Operand;
   StringRef::iterator Begin;
   StringRef::iterator End;
-  Optional<unsigned> TiedDefIdx;
+  std::optional<unsigned> TiedDefIdx;
 
   ParsedMachineOperand(const MachineOperand &Operand, StringRef::iterator Begin,
-                       StringRef::iterator End, Optional<unsigned> &TiedDefIdx)
+                       StringRef::iterator End,
+                       std::optional<unsigned> &TiedDefIdx)
       : Operand(Operand), Begin(Begin), End(End), TiedDefIdx(TiedDefIdx) {
     if (TiedDefIdx)
       assert(Operand.isReg() && Operand.isUse() &&
@@ -448,7 +449,8 @@ public:
   bool parseSubRegisterIndex(unsigned &SubReg);
   bool parseRegisterTiedDefIndex(unsigned &TiedDefIdx);
   bool parseRegisterOperand(MachineOperand &Dest,
-                            Optional<unsigned> &TiedDefIdx, bool IsDef = false);
+                            std::optional<unsigned> &TiedDefIdx,
+                            bool IsDef = false);
   bool parseImmediateOperand(MachineOperand &Dest);
   bool parseIRConstant(StringRef::iterator Loc, StringRef StringValue,
                        const Constant *&C);
@@ -488,17 +490,17 @@ public:
   bool parseLiveoutRegisterMaskOperand(MachineOperand &Dest);
   bool parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
                            MachineOperand &Dest,
-                           Optional<unsigned> &TiedDefIdx);
+                           std::optional<unsigned> &TiedDefIdx);
   bool parseMachineOperandAndTargetFlags(const unsigned OpCode,
                                          const unsigned OpIdx,
                                          MachineOperand &Dest,
-                                         Optional<unsigned> &TiedDefIdx);
+                                         std::optional<unsigned> &TiedDefIdx);
   bool parseOffset(int64_t &Offset);
   bool parseIRBlockAddressTaken(BasicBlock *&BB);
   bool parseAlignment(uint64_t &Alignment);
   bool parseAddrspace(unsigned &Addrspace);
-  bool parseSectionID(Optional<MBBSectionID> &SID);
-  bool parseBBID(Optional<unsigned> &BBID);
+  bool parseSectionID(std::optional<MBBSectionID> &SID);
+  bool parseBBID(std::optional<unsigned> &BBID);
   bool parseOperandsOffset(MachineOperand &Op);
   bool parseIRValue(const Value *&V);
   bool parseMemoryOperandFlag(MachineMemOperand::Flags &Flags);
@@ -641,7 +643,7 @@ bool MIParser::consumeIfPresent(MIToken::TokenKind TokenKind) {
 }
 
 // Parse Machine Basic Block Section ID.
-bool MIParser::parseSectionID(Optional<MBBSectionID> &SID) {
+bool MIParser::parseSectionID(std::optional<MBBSectionID> &SID) {
   assert(Token.is(MIToken::kw_bbsections));
   lex();
   if (Token.is(MIToken::IntegerLiteral)) {
@@ -663,7 +665,7 @@ bool MIParser::parseSectionID(Optional<MBBSectionID> &SID) {
 }
 
 // Parse Machine Basic Block ID.
-bool MIParser::parseBBID(Optional<unsigned> &BBID) {
+bool MIParser::parseBBID(std::optional<unsigned> &BBID) {
   assert(Token.is(MIToken::kw_bb_id));
   lex();
   unsigned Value = 0;
@@ -688,9 +690,9 @@ bool MIParser::parseBasicBlockDefinition(
   bool IsLandingPad = false;
   bool IsInlineAsmBrIndirectTarget = false;
   bool IsEHFuncletEntry = false;
-  Optional<MBBSectionID> SectionID;
+  std::optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
-  Optional<unsigned> BBID;
+  std::optional<unsigned> BBID;
   BasicBlock *BB = nullptr;
   if (consumeIfPresent(MIToken::lparen)) {
     do {
@@ -1021,7 +1023,7 @@ bool MIParser::parse(MachineInstr *&MI) {
   SmallVector<ParsedMachineOperand, 8> Operands;
   while (Token.isRegister() || Token.isRegisterFlag()) {
     auto Loc = Token.location();
-    Optional<unsigned> TiedDefIdx;
+    std::optional<unsigned> TiedDefIdx;
     if (parseRegisterOperand(MO, TiedDefIdx, /*IsDef=*/true))
       return true;
     Operands.push_back(
@@ -1047,7 +1049,7 @@ bool MIParser::parse(MachineInstr *&MI) {
          Token.isNot(MIToken::kw_debug_instr_number) &&
          Token.isNot(MIToken::coloncolon) && Token.isNot(MIToken::lbrace)) {
     auto Loc = Token.location();
-    Optional<unsigned> TiedDefIdx;
+    std::optional<unsigned> TiedDefIdx;
     if (parseMachineOperandAndTargetFlags(OpCode, Operands.size(), MO, TiedDefIdx))
       return true;
     Operands.push_back(
@@ -1706,7 +1708,7 @@ bool MIParser::assignRegisterTies(MachineInstr &MI,
 }
 
 bool MIParser::parseRegisterOperand(MachineOperand &Dest,
-                                    Optional<unsigned> &TiedDefIdx,
+                                    std::optional<unsigned> &TiedDefIdx,
                                     bool IsDef) {
   unsigned Flags = IsDef ? RegState::Define : 0;
   while (Token.isRegisterFlag()) {
@@ -2812,7 +2814,7 @@ bool MIParser::parseLiveoutRegisterMaskOperand(MachineOperand &Dest) {
 
 bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
                                    MachineOperand &Dest,
-                                   Optional<unsigned> &TiedDefIdx) {
+                                   std::optional<unsigned> &TiedDefIdx) {
   switch (Token.kind()) {
   case MIToken::kw_implicit:
   case MIToken::kw_implicit_define:
@@ -2917,7 +2919,7 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
 
 bool MIParser::parseMachineOperandAndTargetFlags(
     const unsigned OpCode, const unsigned OpIdx, MachineOperand &Dest,
-    Optional<unsigned> &TiedDefIdx) {
+    std::optional<unsigned> &TiedDefIdx) {
   unsigned TF = 0;
   bool HasTargetFlags = false;
   if (Token.is(MIToken::kw_target_flags)) {

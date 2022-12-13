@@ -2340,7 +2340,7 @@ bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
   // FIXME: Artifact combiner probably should have replaced the truncated
   // constant before this, so we shouldn't need
   // getIConstantVRegValWithLookThrough.
-  Optional<ValueAndVReg> MaybeIdxVal =
+  std::optional<ValueAndVReg> MaybeIdxVal =
       getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
   if (!MaybeIdxVal) // Dynamic case will be selected to register indexing.
     return true;
@@ -2374,7 +2374,7 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
   // FIXME: Artifact combiner probably should have replaced the truncated
   // constant before this, so we shouldn't need
   // getIConstantVRegValWithLookThrough.
-  Optional<ValueAndVReg> MaybeIdxVal =
+  std::optional<ValueAndVReg> MaybeIdxVal =
       getIConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
   if (!MaybeIdxVal) // Dynamic case will be selected to register indexing.
     return true;
@@ -4188,7 +4188,7 @@ bool AMDGPULegalizerInfo::getLDSKernelId(Register DstReg,
                                          MachineRegisterInfo &MRI,
                                          MachineIRBuilder &B) const {
   Function &F = B.getMF().getFunction();
-  Optional<uint32_t> KnownSize =
+  std::optional<uint32_t> KnownSize =
       AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
   if (KnownSize.has_value())
     B.buildConstant(DstReg, KnownSize.value());
@@ -4282,11 +4282,11 @@ void AMDGPULegalizerInfo::updateBufferMMO(MachineMemOperand *MMO,
                                           Register VOffset, Register SOffset,
                                           unsigned ImmOffset, Register VIndex,
                                           MachineRegisterInfo &MRI) const {
-  Optional<ValueAndVReg> MaybeVOffsetVal =
+  std::optional<ValueAndVReg> MaybeVOffsetVal =
       getIConstantVRegValWithLookThrough(VOffset, MRI);
-  Optional<ValueAndVReg> MaybeSOffsetVal =
+  std::optional<ValueAndVReg> MaybeSOffsetVal =
       getIConstantVRegValWithLookThrough(SOffset, MRI);
-  Optional<ValueAndVReg> MaybeVIndexVal =
+  std::optional<ValueAndVReg> MaybeVIndexVal =
       getIConstantVRegValWithLookThrough(VIndex, MRI);
   // If the combined VOffset + SOffset + ImmOffset + strided VIndex is constant,
   // update the MMO with that offset. The stride is unknown so we can only do
@@ -5288,7 +5288,7 @@ bool AMDGPULegalizerInfo::legalizeTrapIntrinsic(MachineInstr &MI,
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return legalizeTrapEndpgm(MI, MRI, B);
 
-  if (Optional<uint8_t> HsaAbiVer = AMDGPU::getHsaAbiVersion(&ST)) {
+  if (std::optional<uint8_t> HsaAbiVer = AMDGPU::getHsaAbiVersion(&ST)) {
     switch (*HsaAbiVer) {
     case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:

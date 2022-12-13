@@ -1339,7 +1339,7 @@ void CodeViewDebug::calculateRanges(
     assert(DVInst->isDebugValue() && "Invalid History entry");
     // FIXME: Find a way to represent constant variables, since they are
     // relatively common.
-    Optional<DbgVariableLocation> Location =
+    std::optional<DbgVariableLocation> Location =
         DbgVariableLocation::extractFromMachineInstruction(*DVInst);
     if (!Location)
     {

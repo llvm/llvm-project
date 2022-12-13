@@ -1702,7 +1702,7 @@ SDValue SITargetLowering::getLDSKernelId(SelectionDAG &DAG,
                                          const SDLoc &SL) const {
 
   Function &F = DAG.getMachineFunction().getFunction();
-  Optional<uint32_t> KnownSize =
+  std::optional<uint32_t> KnownSize =
       AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
   if (KnownSize.has_value())
     return DAG.getConstant(KnownSize.value(), SL, MVT::i32);
@@ -2856,7 +2856,8 @@ void SITargetLowering::passSpecialInputs(
       // input for kernels, and is computed from the kernarg segment pointer.
       InputReg = getImplicitArgPtr(DAG, DL);
     } else if (InputID == AMDGPUFunctionArgInfo::LDS_KERNEL_ID) {
-      Optional<uint32_t> Id = AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
+      std::optional<uint32_t> Id =
+          AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
       if (Id.has_value()) {
         InputReg = DAG.getConstant(Id.value(), DL, ArgVT);
       } else {
@@ -5421,7 +5422,7 @@ SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
       Subtarget->getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return lowerTrapEndpgm(Op, DAG);
 
-  if (Optional<uint8_t> HsaAbiVer = AMDGPU::getHsaAbiVersion(Subtarget)) {
+  if (std::optional<uint8_t> HsaAbiVer = AMDGPU::getHsaAbiVersion(Subtarget)) {
     switch (*HsaAbiVer) {
     case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
@@ -10240,7 +10241,7 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
   if (Opcode == AMDGPU::G_FCANONICALIZE)
     return true;
 
-  Optional<FPValueAndVReg> FCR;
+  std::optional<FPValueAndVReg> FCR;
   // Constant splat (can be padded with undef) or scalar constant.
   if (mi_match(Reg, MRI, MIPatternMatch::m_GFCstOrSplat(FCR))) {
     if (FCR->Value.isSignaling())

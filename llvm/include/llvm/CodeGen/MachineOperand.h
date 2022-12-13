@@ -299,7 +299,7 @@ public:
   /// information from it's parent.
   /// \param IntrinsicInfo - same as \p TRI.
   void print(raw_ostream &os, ModuleSlotTracker &MST, LLT TypeToPrint,
-             Optional<unsigned> OpIdx, bool PrintDef, bool IsStandalone,
+             std::optional<unsigned> OpIdx, bool PrintDef, bool IsStandalone,
              bool ShouldPrintRegisterTies, unsigned TiedOperandIdx,
              const TargetRegisterInfo *TRI,
              const TargetIntrinsicInfo *IntrinsicInfo) const;
