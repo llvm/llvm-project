@@ -15,7 +15,7 @@
 ; CHECK-NOT: [openmp-opt] Basic block @kernel if.else is executed by a single thread.
 ; CHECK-NOT: [openmp-opt] Basic block @kernel if.end is executed by a single thread.
 define void @kernel() {
-  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i8 1, i1 false, i1 false)
+  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i8 1, i1 false)
   %cmp = icmp eq i32 %call, -1
   br i1 %cmp, label %if.then, label %if.else
 if.then:
@@ -23,7 +23,7 @@ if.then:
 if.else:
   br label %if.end
 if.end:
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i8 1, i1 true)
+  call void @__kmpc_target_deinit(%struct.ident_t* null, i8 1)
   ret void
 }
 
@@ -106,9 +106,9 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 
 declare void @__kmpc_kernel_prepare_parallel(i8*)
 
-declare i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1)
+declare i32 @__kmpc_target_init(%struct.ident_t*, i8, i1)
 
-declare void @__kmpc_target_deinit(%struct.ident_t*, i8, i1)
+declare void @__kmpc_target_deinit(%struct.ident_t*, i8)
 
 attributes #0 = { cold noinline }
 
