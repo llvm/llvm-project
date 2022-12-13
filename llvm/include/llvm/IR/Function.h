@@ -678,6 +678,12 @@ public:
   /// Requires that this has no function body.
   void stealArgumentListFrom(Function &Src);
 
+  /// Insert \p BB in the basic block list at \p Position. \Returns an iterator
+  /// to the newly inserted BB.
+  Function::iterator insertBasicBlockAt(Function::iterator Position, BasicBlock *BB) {
+    return BasicBlocks.insert(Position, BB);
+  }
+
   /// Get the underlying elements of the Function... the basic block list is
   /// empty for external functions.
   ///

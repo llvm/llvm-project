@@ -62,9 +62,9 @@ void BasicBlock::insertInto(Function *NewParent, BasicBlock *InsertBefore) {
   assert(!Parent && "Already has a parent");
 
   if (InsertBefore)
-    NewParent->getBasicBlockList().insert(InsertBefore->getIterator(), this);
+    NewParent->insertBasicBlockAt(InsertBefore->getIterator(), this);
   else
-    NewParent->getBasicBlockList().push_back(this);
+    NewParent->insertBasicBlockAt(NewParent->end(), this);
 }
 
 BasicBlock::~BasicBlock() {
