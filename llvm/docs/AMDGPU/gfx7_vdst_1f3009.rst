@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx7_imm16_a04fb3:
+.. _amdgpu_synid_gfx7_vdst_1f3009:
 
-imm16
-=====
+vdst
+====
 
-An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range 0..65535.
+Image data to be loaded by an *image_gather4* instruction.
+
+*Size:* 4 data elements by default. Each data element occupies 1 dword. :ref:`tfe<amdgpu_synid_tfe>` adds one more dword if specified.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`
