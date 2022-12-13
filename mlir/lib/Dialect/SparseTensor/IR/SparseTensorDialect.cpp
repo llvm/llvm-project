@@ -294,7 +294,7 @@ bool mlir::sparse_tensor::isUniqueCOOType(RankedTensorType tp) {
   return isUniqueDim(tp, tp.getRank() - 1);
 }
 
-uint64_t mlir::sparse_tensor::toOrigDim(const SparseTensorEncodingAttr &enc,
+uint64_t mlir::sparse_tensor::toOrigDim(SparseTensorEncodingAttr enc,
                                         uint64_t d) {
   if (enc) {
     auto order = enc.getDimOrdering();
@@ -306,7 +306,7 @@ uint64_t mlir::sparse_tensor::toOrigDim(const SparseTensorEncodingAttr &enc,
   return d;
 }
 
-uint64_t mlir::sparse_tensor::toStoredDim(const SparseTensorEncodingAttr &enc,
+uint64_t mlir::sparse_tensor::toStoredDim(SparseTensorEncodingAttr enc,
                                           uint64_t d) {
   if (enc) {
     auto order = enc.getDimOrdering();
