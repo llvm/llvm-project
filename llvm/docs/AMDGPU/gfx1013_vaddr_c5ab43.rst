@@ -5,7 +5,7 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx1013_vaddr_49d53a:
+.. _amdgpu_synid_gfx1013_vaddr_c5ab43:
 
 vaddr
 =====
@@ -14,16 +14,17 @@ Image address which includes from one to four dimensional coordinates and other 
 
 This operand may be specified using either :ref:`standard VGPR syntax<amdgpu_synid_v>` or special :ref:`NSA VGPR syntax<amdgpu_synid_nsa>`.
 
-*Size:* 8-12 dwords. Actual size depends on :ref:`a16<amdgpu_synid_a16>`.
+*Size:* 8-12 dwords. Actual size depends on opcode and :ref:`a16<amdgpu_synid_a16>`.
 
-* If specified using :ref:`NSA VGPR syntax<amdgpu_synid_nsa>`, the size is 8-12 dwords.
-* If specified using :ref:`standard VGPR syntax<amdgpu_synid_v>`, the size is 8 dwords. Opcodes which require more than 8 dwords for address size must specify 16 dwords due to a limited range of supported register sequences.
+
 
   Examples:
 
   .. parsed-literal::
 
-    image_bvh_intersect_ray v[4:7], v[9:24], s[4:7]
-    image_bvh_intersect_ray v[39:42], [v5, v4, v2, v1, v7, v3, v0, v6], s[12:15] a16
+    image_bvh_intersect_ray   v[4:7], v[9:16], s[4:7]
+    image_bvh64_intersect_ray v[5:8], v[1:12], s[8:11]
+    image_bvh_intersect_ray   v[39:42], [v5, v4, v2, v1, v7, v3, v0, v6], s[12:15] a16
+    image_bvh64_intersect_ray v[39:42], [v50, v46, v23, v17, v16, v15, v21, v20, v19, v37, v40, v42], s[12:15]
 
 *Operands:* :ref:`v<amdgpu_synid_v>`
