@@ -11,15 +11,6 @@
 ;   ret i1 %val
 ; }
 
-define i1 @test_class_over_max_mask_f32(float %x) {
-; CHECK-LABEL: @test_class_over_max_mask_f32(
-; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 1025)
-; CHECK-NEXT:    ret i1 [[VAL]]
-;
-  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 1025)
-  ret i1 %val
-}
-
 define i1 @test_class_no_mask_f32(float %x) {
 ; CHECK-LABEL: @test_class_no_mask_f32(
 ; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 0)
