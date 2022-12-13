@@ -1,4 +1,4 @@
-; RUN: not opt -S -verify < %s 2>&1 | FileCheck %s
+; RUN: not opt -S -passes=verify < %s 2>&1 | FileCheck %s
 
 ; CHECK: invalid llvm.ptrauth global: global doesn't have an initializer
 @no_init = external global { i8*, i32, i64, i64 }, section "llvm.ptrauth"
