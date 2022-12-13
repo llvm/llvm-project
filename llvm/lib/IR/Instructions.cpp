@@ -824,7 +824,7 @@ static Instruction *createMalloc(Instruction *InsertBefore,
     MCall = CallInst::Create(MallocFunc, AllocSize, OpB, "malloccall");
     Result = MCall;
     if (Result->getType() != AllocPtrType) {
-      InsertAtEnd->getInstList().push_back(MCall);
+      MCall->insertAt(InsertAtEnd, InsertAtEnd->end());
       // Create a cast instruction to convert to the right type...
       Result = new BitCastInst(MCall, AllocPtrType, Name);
     }
@@ -2815,7 +2815,7 @@ UnaryOperator *UnaryOperator::Create(UnaryOps Op, Value *S,
                                      const Twine &Name,
                                      BasicBlock *InsertAtEnd) {
   UnaryOperator *Res = Create(Op, S, Name);
-  InsertAtEnd->getInstList().push_back(Res);
+  Res->insertAt(InsertAtEnd, InsertAtEnd->end());
   return Res;
 }
 
@@ -2946,7 +2946,7 @@ BinaryOperator *BinaryOperator::Create(BinaryOps Op, Value *S1, Value *S2,
                                        const Twine &Name,
                                        BasicBlock *InsertAtEnd) {
   BinaryOperator *Res = Create(Op, S1, S2, Name);
-  InsertAtEnd->getInstList().push_back(Res);
+  Res->insertAt(InsertAtEnd, InsertAtEnd->end());
   return Res;
 }
 
