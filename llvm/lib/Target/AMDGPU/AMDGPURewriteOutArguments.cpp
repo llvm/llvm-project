@@ -332,7 +332,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
 
   // Move the body of the function into the new rewritten function, and replace
   // this function with a stub.
-  NewFunc->getBasicBlockList().splice(NewFunc->begin(), F.getBasicBlockList());
+  NewFunc->splice(NewFunc->begin(), &F);
 
   for (std::pair<ReturnInst *, ReplacementVec> &Replacement : Replacements) {
     ReturnInst *RI = Replacement.first;
