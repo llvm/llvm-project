@@ -464,22 +464,22 @@ public:
   }
 };
 
-// class CIRBrOpLowering : public mlir::OpRewritePattern<mlir::cir::BrOp> {
-// public:
-//   using OpRewritePattern<mlir::cir::BrOp>::OpRewritePattern;
+class CIRBrOpLowering : public mlir::OpRewritePattern<mlir::cir::BrOp> {
+public:
+  using OpRewritePattern<mlir::cir::BrOp>::OpRewritePattern;
 
-//   mlir::LogicalResult
-//   matchAndRewrite(mlir::cir::BrOp op,
-//                   mlir::PatternRewriter &rewriter) const override {
-//     rewriter.replaceOpWithNewOp<mlir::cf::BranchOp>(op, op.getDest());
-//     return mlir::LogicalResult::success();
-//   }
-// };
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::BrOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(op, op.getDestOperands(),
+                                                  op.getDest());
+    return mlir::LogicalResult::success();
+  }
+};
 
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
-  patterns.add</* CIRUnaryOpLowering,
-               CIRBrOpLowering,
+  patterns.add<CIRBrOpLowering, /* CIRUnaryOpLowering,
                CIRCallLowering, */
                CIRReturnLowering>(patterns.getContext());
   patterns.add<CIRCmpOpLowering, CIRBinOpLowering, CIRLoadLowering,
