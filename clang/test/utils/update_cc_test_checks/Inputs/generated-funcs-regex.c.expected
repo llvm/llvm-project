@@ -12,7 +12,7 @@ void foo(int a)
     __test_offloading_42_abcdef_bar_l123();
     int somevar_abc123_;
 }
-// CHECK-LABEL: define {{[^@]+}}@foo(
+// CHECK-LABEL: @foo(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
@@ -27,7 +27,7 @@ void foo(int a)
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[a-z0-9]+_[a-z0-9]+_foo_l[0-9]+}}(
+// CHECK-LABEL: @{{__omp_offloading_[a-z0-9]+_[a-z0-9]+_foo_l[0-9]+}}(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    store i64 [[A:%.*]], i64* [[A_ADDR]], align 8

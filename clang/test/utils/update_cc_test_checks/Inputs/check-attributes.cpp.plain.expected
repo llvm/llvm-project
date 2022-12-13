@@ -11,7 +11,7 @@ struct ST {
   struct RT Z;
 };
 
-// CHECK-LABEL: define {{[^@]+}}@_Z3fooP2ST(
+// CHECK-LABEL: @_Z3fooP2ST(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[S_ADDR:%.*]] = alloca %struct.ST*, align 8
 // CHECK-NEXT:    store %struct.ST* [[S:%.*]], %struct.ST** [[S_ADDR]], align 8
