@@ -17,10 +17,12 @@
 #include "llvm/FuzzMutate/Random.h"
 #include "llvm/FuzzMutate/RandomIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/FMF.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -217,6 +219,7 @@ void InstModificationIRStrategy::mutate(Instruction &Inst,
   switch (Inst.getOpcode()) {
   default:
     break;
+  // Add nsw, nuw flag
   case Instruction::Add:
   case Instruction::Mul:
   case Instruction::Sub:
@@ -225,26 +228,60 @@ void InstModificationIRStrategy::mutate(Instruction &Inst,
     Modifications.push_back([&Inst]() { Inst.setHasNoSignedWrap(false); });
     Modifications.push_back([&Inst]() { Inst.setHasNoUnsignedWrap(true); });
     Modifications.push_back([&Inst]() { Inst.setHasNoUnsignedWrap(false); });
-
     break;
   case Instruction::ICmp:
     CI = cast<ICmpInst>(&Inst);
-    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_EQ); });
-    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_NE); });
-    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_UGT); });
-    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_UGE); });
-    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_ULT); });
-    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_ULE); });
-    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_SGT); });
-    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_SGE); });
-    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_SLT); });
-    Modifications.push_back([CI]() { CI->setPredicate(CmpInst::ICMP_SLE); });
+    for (unsigned p = CmpInst::FIRST_ICMP_PREDICATE;
+         p <= CmpInst::LAST_ICMP_PREDICATE; p++) {
+      Modifications.push_back(
+          [CI, p]() { CI->setPredicate(static_cast<CmpInst::Predicate>(p)); });
+    }
     break;
+  // Add inbound flag.
   case Instruction::GetElementPtr:
     GEP = cast<GetElementPtrInst>(&Inst);
     Modifications.push_back([GEP]() { GEP->setIsInBounds(true); });
     Modifications.push_back([GEP]() { GEP->setIsInBounds(false); });
     break;
+  // Add exact flag.
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::LShr:
+  case Instruction::AShr:
+    Modifications.push_back([&Inst] { Inst.setIsExact(!Inst.isExact()); });
+    break;
+
+  case Instruction::FCmp:
+    CI = cast<ICmpInst>(&Inst);
+    for (unsigned p = CmpInst::FIRST_FCMP_PREDICATE;
+         p <= CmpInst::LAST_FCMP_PREDICATE; p++) {
+      Modifications.push_back(
+          [CI, p]() { CI->setPredicate(static_cast<CmpInst::Predicate>(p)); });
+    }
+    break;
+  }
+
+  // Add fast math flag if possible.
+  if (isa<FPMathOperator>(&Inst)) {
+    // Try setting everything unless they are already on.
+    Modifications.push_back(
+        [&Inst] { Inst.setFast(!Inst.getFastMathFlags().all()); });
+    // Try unsetting everything unless they are already off.
+    Modifications.push_back(
+        [&Inst] { Inst.setFast(!Inst.getFastMathFlags().none()); });
+    // Individual setting by flipping the bit
+    Modifications.push_back(
+        [&Inst] { Inst.setHasAllowReassoc(!Inst.hasAllowReassoc()); });
+    Modifications.push_back([&Inst] { Inst.setHasNoNaNs(!Inst.hasNoNaNs()); });
+    Modifications.push_back([&Inst] { Inst.setHasNoInfs(!Inst.hasNoInfs()); });
+    Modifications.push_back(
+        [&Inst] { Inst.setHasNoSignedZeros(!Inst.hasNoSignedZeros()); });
+    Modifications.push_back(
+        [&Inst] { Inst.setHasAllowReciprocal(!Inst.hasAllowReciprocal()); });
+    Modifications.push_back(
+        [&Inst] { Inst.setHasAllowContract(!Inst.hasAllowContract()); });
+    Modifications.push_back(
+        [&Inst] { Inst.setHasApproxFunc(!Inst.hasApproxFunc()); });
   }
 
   // Randomly switch operands of instructions
