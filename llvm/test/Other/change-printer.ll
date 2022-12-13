@@ -109,7 +109,6 @@ entry:
 
 ; CHECK-SIMPLE: *** IR Dump At Start ***
 ; CHECK-SIMPLE-NEXT: ; ModuleID = {{.+}}
-; CHECK-SIMPLE: *** IR Dump After VerifierPass on [module] omitted because no change ***
 ; CHECK-SIMPLE: *** IR Dump After InstSimplifyPass on g ***
 ; CHECK-SIMPLE-NEXT: define i32 @g()
 ; CHECK-SIMPLE: *** IR Pass PassManager{{.*}} on g ignored ***
@@ -189,7 +188,6 @@ entry:
 
 ; CHECK-SIMPLE-BEFORE: *** IR Dump At Start ***
 ; CHECK-SIMPLE-BEFORE-NEXT: ; ModuleID = {{.+}}
-; CHECK-SIMPLE-BEFORE: *** IR Dump After VerifierPass on [module] omitted because no change ***
 ; CHECK-SIMPLE-BEFORE: *** IR Dump Before InstSimplifyPass on g ***
 ; CHECK-SIMPLE-BEFORE-NEXT: define i32 @g()
 ; CHECK-SIMPLE-BEFORE: *** IR Dump After InstSimplifyPass on g ***

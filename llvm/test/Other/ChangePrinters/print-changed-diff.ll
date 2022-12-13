@@ -140,7 +140,6 @@ entry:
 
 ; CHECK-DIFF-SIMPLE: *** IR Dump At Start ***
 ; CHECK-DIFF-SIMPLE: ModuleID = {{.+}}
-; CHECK-DIFF-SIMPLE: *** IR Dump After VerifierPass on [module] omitted because no change ***
 ; CHECK-DIFF-SIMPLE: *** IR Dump After InstSimplifyPass on g ***
 ; CHECK-DIFF-SIMPLE-NOT: ModuleID = {{.+}}
 ; CHECK-DIFF-SIMPLE-NOT: *** IR{{.*}}
@@ -353,7 +352,6 @@ entry:
 
 ; CHECK-CDIFF-SIMPLE: *** IR Dump At Start ***
 ; CHECK-CDIFF-SIMPLE: ModuleID = {{.+}}
-; CHECK-CDIFF-SIMPLE: *** IR Dump After VerifierPass on [module] omitted because no change ***
 ; CHECK-CDIFF-SIMPLE: *** IR Dump After InstSimplifyPass on g ***
 ; CHECK-CDIFF-SIMPLE-NOT: ModuleID = {{.+}}
 ; CHECK-CDIFF-SIMPLE-NOT: *** IR{{.*}}
