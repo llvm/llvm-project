@@ -5550,7 +5550,7 @@ InstructionCost X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // We support 64-bit ANDs with immediates with 32-bits of leading zeroes
     // by using a 32-bit operation with implicit zero extension. Detect such
     // immediates here as the normal path expects bit 31 to be sign extended.
-    if (Idx == 1 && Imm.getBitWidth() == 64 && isUInt<32>(Imm.getZExtValue()))
+    if (Idx == 1 && Imm.getBitWidth() == 64 && Imm.isIntN(32))
       return TTI::TCC_Free;
     ImmIdx = 1;
     break;
@@ -5626,16 +5626,16 @@ InstructionCost X86TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   case Intrinsic::usub_with_overflow:
   case Intrinsic::smul_with_overflow:
   case Intrinsic::umul_with_overflow:
-    if ((Idx == 1) && Imm.getBitWidth() <= 64 && isInt<32>(Imm.getSExtValue()))
+    if ((Idx == 1) && Imm.getBitWidth() <= 64 && Imm.isSignedIntN(32))
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_stackmap:
-    if ((Idx < 2) || (Imm.getBitWidth() <= 64 && isInt<64>(Imm.getSExtValue())))
+    if ((Idx < 2) || (Imm.getBitWidth() <= 64 && Imm.isSignedIntN(64)))
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_patchpoint_void:
   case Intrinsic::experimental_patchpoint_i64:
-    if ((Idx < 4) || (Imm.getBitWidth() <= 64 && isInt<64>(Imm.getSExtValue())))
+    if ((Idx < 4) || (Imm.getBitWidth() <= 64 && Imm.isSignedIntN(64)))
       return TTI::TCC_Free;
     break;
   }
