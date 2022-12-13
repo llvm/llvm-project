@@ -403,6 +403,11 @@ public:
                                       mlir::FunctionType Ty,
                                       const clang::FunctionDecl *FD);
 
+  /// Emit type info if type of an expression is a variably modified
+  /// type. Also emit proper debug info for cast types.
+  void buildExplicitCastExprType(const ExplicitCastExpr *E,
+                                 CIRGenFunction *CGF = nullptr);
+
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> MangledDeclNames;

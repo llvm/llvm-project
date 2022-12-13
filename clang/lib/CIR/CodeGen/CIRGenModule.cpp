@@ -1947,3 +1947,12 @@ void CIRGenModule::applyReplacements() {
     }
   }
 }
+
+void CIRGenModule::buildExplicitCastExprType(const ExplicitCastExpr *E,
+                                             CIRGenFunction *CGF) {
+  // Bind VLAs in the cast type.
+  if (CGF && E->getType()->isVariablyModifiedType())
+    llvm_unreachable("NYI");
+
+  assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
+}

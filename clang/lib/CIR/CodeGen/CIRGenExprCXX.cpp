@@ -258,7 +258,22 @@ void CIRGenFunction::buildCXXConstructExpr(const CXXConstructExpr *E,
   assert(!Dest.isIgnored() && "Must have a destination!");
   const auto *CD = E->getConstructor();
 
-  assert(!E->requiresZeroInitialization() && "zero initialization NYI");
+  // If we require zero initialization before (or instead of) calling the
+  // constructor, as can be the case with a non-user-provided default
+  // constructor, emit the zero initialization now, unless destination is
+  // already zeroed.
+  if (E->requiresZeroInitialization() && !Dest.isZeroed()) {
+    switch (E->getConstructionKind()) {
+    case CXXConstructionKind::Delegating:
+    case CXXConstructionKind::Complete:
+      buildNullInitialization(Dest.getAddress(), E->getType());
+      break;
+    case CXXConstructionKind::VirtualBase:
+    case CXXConstructionKind::NonVirtualBase:
+      llvm_unreachable("NYI");
+      break;
+    }
+  }
 
   // If this is a call to a trivial default constructor:
   // In LLVM: do nothing.

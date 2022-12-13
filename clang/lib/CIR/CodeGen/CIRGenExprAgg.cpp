@@ -111,7 +111,7 @@ public:
     llvm_unreachable("NYI");
   }
   void VisitChooseExpr(const ChooseExpr *E) { llvm_unreachable("NYI"); }
-  void VisitInitListExpr(InitListExpr *E) { llvm_unreachable("NYI"); }
+  void VisitInitListExpr(InitListExpr *E);
   void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
                               llvm::Value *outerBegin = nullptr) {
     llvm_unreachable("NYI");
@@ -209,7 +209,7 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
 
 void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   if (const auto *ECE = dyn_cast<ExplicitCastExpr>(E))
-    assert(0 && "NYI");
+    CGF.CGM.buildExplicitCastExprType(ECE, &CGF);
   switch (E->getCastKind()) {
 
   case CK_NoOp:
@@ -336,6 +336,28 @@ void AggExprEmitter::withReturnValueSlot(
     // eagerly.
     llvm_unreachable("NYI");
   }
+}
+
+void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
+  // If the initializer list is empty ({}), and there are
+  // no explicitly initialized elements.
+  if (E->getNumInits() == 0)
+    return;
+
+  // TODO(cir): use something like CGF.ErrorUnsupported
+  if (E->hadArrayRangeDesignator())
+    llvm_unreachable("GNU array range designator extension");
+
+  if (E->isTransparent())
+    return Visit(E->getInit(0));
+
+  // Handle initialization of an array.
+  if (E->getType()->isArrayType()) {
+    llvm_unreachable("NYI");
+  }
+
+  assert(E->getType()->isRecordType() && "Only support structs/unions here!");
+  llvm_unreachable("NYI");
 }
 
 //===----------------------------------------------------------------------===//

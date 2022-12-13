@@ -658,6 +658,7 @@ public:
   RValue buildCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *E,
                                         const CXXMethodDecl *MD,
                                         ReturnValueSlot ReturnValue);
+  void buildNullInitialization(Address DestPtr, QualType Ty);
 
   mlir::Value buildCXXNewExpr(const CXXNewExpr *E);
 
