@@ -98,6 +98,74 @@ func.func @mismatch_values_types(%arg0: tensor<?xf64, #SparseVector>) -> memref<
 
 // -----
 
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
+
+func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> i64 {
+  // expected-error@+1 {{redundant dimension argument for querying value memory size}}
+  %0 = sparse_tensor.storage_specifier.get %arg0 val_mem_sz at 0
+       : !sparse_tensor.storage_specifier<#SparseVector> to i64
+  return %0 : i64
+}
+
+// -----
+
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
+
+func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> i64 {
+  // expected-error@+1 {{missing dimension argument}}
+  %0 = sparse_tensor.storage_specifier.get %arg0 idx_mem_sz
+       : !sparse_tensor.storage_specifier<#SparseVector> to i64
+  return %0 : i64
+}
+
+// -----
+
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
+
+func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>) -> i64 {
+  // expected-error@+1 {{requested dimension out of bound}}
+  %0 = sparse_tensor.storage_specifier.get %arg0 dim_sz at 1
+       : !sparse_tensor.storage_specifier<#SparseVector> to i64
+  return %0 : i64
+}
+
+// -----
+
+#COO = #sparse_tensor.encoding<{dimLevelType = ["compressed-nu", "singleton"]}>
+
+func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#COO>) -> i64 {
+  // expected-error@+1 {{requested pointer memory size on a singleton level}}
+  %0 = sparse_tensor.storage_specifier.get %arg0 ptr_mem_sz at 1
+       : !sparse_tensor.storage_specifier<#COO> to i64
+  return %0 : i64
+}
+
+// -----
+
+#COO = #sparse_tensor.encoding<{dimLevelType = ["compressed-nu", "singleton"]}>
+
+func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#COO>) -> i64 {
+  // expected-error@+1 {{type mismatch between requested }}
+  %0 = sparse_tensor.storage_specifier.get %arg0 ptr_mem_sz at 0
+       : !sparse_tensor.storage_specifier<#COO> to i32
+  return %0 : i32
+}
+
+// -----
+
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
+
+func.func @sparse_set_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>,
+                         %arg1: i32)
+          -> !sparse_tensor.storage_specifier<#SparseVector> {
+  // expected-error@+1 {{type mismatch between requested }}
+  %0 = sparse_tensor.storage_specifier.set %arg0 dim_sz at 0 with %arg1
+       : i32, !sparse_tensor.storage_specifier<#SparseVector>
+  return %0 : !sparse_tensor.storage_specifier<#SparseVector>
+}
+
+// -----
+
 func.func @sparse_unannotated_load(%arg0: tensor<16x32xf64>) -> tensor<16x32xf64> {
   // expected-error@+1 {{'sparse_tensor.load' op operand #0 must be sparse tensor of any type values, but got 'tensor<16x32xf64>'}}
   %0 = sparse_tensor.load %arg0 : tensor<16x32xf64>
