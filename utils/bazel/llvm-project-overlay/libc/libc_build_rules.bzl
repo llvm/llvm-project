@@ -19,6 +19,7 @@ def _libc_library(name, copts = None, **kwargs):
       **kwargs: All other attributes relevant for the cc_library rule.
     """
     copts = copts or []
+
     # We want all libc sources to be compiled with "hidden" visibility.
     # The public symbols will be given "default" visibility explicitly.
     # See src/__support/common.h for more information.
@@ -35,8 +36,14 @@ def _libc_library(name, copts = None, **kwargs):
 # libc_support_library.
 libc_support_library = _libc_library
 
-def libc_function(name, srcs, weak = False, deps = None, copts = None,
-                  local_defines = None, **kwargs):
+def libc_function(
+        name,
+        srcs,
+        weak = False,
+        deps = None,
+        copts = None,
+        local_defines = None,
+        **kwargs):
     """Add target for a libc function.
 
     The libc function is eventually available as a cc_library target by name
@@ -81,7 +88,7 @@ def libc_function(name, srcs, weak = False, deps = None, copts = None,
     if weak:
         func_attrs.append("__attribute__((weak))")
     local_defines = local_defines or ["LLVM_LIBC_PUBLIC_PACKAGING"]
-    local_defines.append("LLVM_LIBC_FUNCTION_ATTR='%s'" % ' '.join(func_attrs))
+    local_defines.append("LLVM_LIBC_FUNCTION_ATTR='%s'" % " ".join(func_attrs))
     _libc_library(
         name = name,
         srcs = srcs,

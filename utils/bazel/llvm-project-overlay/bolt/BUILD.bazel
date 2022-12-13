@@ -19,12 +19,12 @@ cc_binary(
         ":Profile",
         ":Rewrite",
         ":Utils",
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsDisassemblers",
         "//llvm:MC",
         "//llvm:Object",
         "//llvm:Support",
-        "//llvm:AllTargetsAsmParsers",
-        "//llvm:AllTargetsDisassemblers",
-    ]
+    ],
 )
 
 cc_binary(
@@ -35,7 +35,7 @@ cc_binary(
     deps = [
         ":Profile",
         "//llvm:Support",
-    ]
+    ],
 )
 
 cc_binary(
@@ -48,9 +48,9 @@ cc_binary(
         ":Profile",
         ":Rewrite",
         ":RuntimeLibs",
-        ":Utils",
-        ":TargetX86",
         ":TargetAArch64",
+        ":TargetX86",
+        ":Utils",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:AllTargetsDisassemblers",
@@ -108,10 +108,10 @@ cc_library(
     srcs = glob([
         "lib/RuntimeLibs/*.cpp",
     ]),
+    includes = ["include"],
     textual_hdrs = glob([
         "include/bolt/RuntimeLibs/*.h",
     ]) + ["include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc"],
-    includes = ["include"],
     deps = [
         ":Core",
         ":Passes",
@@ -196,8 +196,6 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Core",
-        "//llvm:X86CommonTableGen",
-        "//llvm:X86UtilsAndDesc",
         "//llvm:Analysis",
         "//llvm:BinaryFormat",
         "//llvm:CodeGen",
@@ -210,6 +208,8 @@ cc_library(
         "//llvm:MCParser",
         "//llvm:Object",
         "//llvm:Support",
+        "//llvm:X86CommonTableGen",
+        "//llvm:X86UtilsAndDesc",
     ],
 )
 
