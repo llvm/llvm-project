@@ -287,10 +287,12 @@ The following typed pointer functionality has already been removed:
 * The ``CLANG_ENABLE_OPAQUE_POINTERS`` cmake flag is no longer supported.
 * C APIs that do not support opaque pointers (like ``LLVMBuildLoad``) are no
   longer supported.
+* Typed pointer bitcode is implicitly upgraded to use opaque pointers, unless
+  ``-opaque-pointers=0`` is passed.
 
 The following typed pointer functionality is still to be removed:
 
 * The ``-no-opaque-pointers`` cc1 flag, ``-opaque-pointers=0`` opt flag and
   ``-plugin-opt=no-opaque-pointers`` lto flag.
-* Auto-detection of typed pointers in bitcode and textual IR.
+* Auto-detection of typed pointers in textual IR.
 * Support for typed pointers in LLVM libraries.
