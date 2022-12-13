@@ -303,10 +303,10 @@ class FrameTypeBuilder;
 using SpillInfo = SmallMapVector<Value *, SmallVector<Instruction *, 2>, 8>;
 struct AllocaInfo {
   AllocaInst *Alloca;
-  DenseMap<Instruction *, llvm::Optional<APInt>> Aliases;
+  DenseMap<Instruction *, std::optional<APInt>> Aliases;
   bool MayWriteBeforeCoroBegin;
   AllocaInfo(AllocaInst *Alloca,
-             DenseMap<Instruction *, llvm::Optional<APInt>> Aliases,
+             DenseMap<Instruction *, std::optional<APInt>> Aliases,
              bool MayWriteBeforeCoroBegin)
       : Alloca(Alloca), Aliases(std::move(Aliases)),
         MayWriteBeforeCoroBegin(MayWriteBeforeCoroBegin) {}
@@ -438,14 +438,14 @@ private:
   Align StructAlign;
   bool IsFinished = false;
 
-  Optional<Align> MaxFrameAlignment;
+  std::optional<Align> MaxFrameAlignment;
 
   SmallVector<Field, 8> Fields;
   DenseMap<Value*, unsigned> FieldIndexByKey;
 
 public:
   FrameTypeBuilder(LLVMContext &Context, const DataLayout &DL,
-                   Optional<Align> MaxFrameAlignment)
+                   std::optional<Align> MaxFrameAlignment)
       : DL(DL), Context(Context), MaxFrameAlignment(MaxFrameAlignment) {}
 
   /// Add a field to this structure for the storage of an `alloca`
@@ -1133,7 +1133,7 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   }();
 
   // We will use this value to cap the alignment of spilled values.
-  Optional<Align> MaxFrameAlignment;
+  std::optional<Align> MaxFrameAlignment;
   if (Shape.ABI == coro::ABI::Async)
     MaxFrameAlignment = Shape.AsyncLowering.getContextAlignment();
   FrameTypeBuilder B(C, DL, MaxFrameAlignment);
@@ -1180,7 +1180,7 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
     // We assume that the promise alloca won't be modified before
     // CoroBegin and no alias will be create before CoroBegin.
     FrameData.Allocas.emplace_back(
-        PromiseAlloca, DenseMap<Instruction *, llvm::Optional<APInt>>{}, false);
+        PromiseAlloca, DenseMap<Instruction *, std::optional<APInt>>{}, false);
   // Create an entry for every spilled value.
   for (auto &S : FrameData.Spills) {
     Type *FieldType = S.first->getType();
@@ -1405,7 +1405,7 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
 
   bool getMayWriteBeforeCoroBegin() const { return MayWriteBeforeCoroBegin; }
 
-  DenseMap<Instruction *, llvm::Optional<APInt>> getAliasesCopy() const {
+  DenseMap<Instruction *, std::optional<APInt>> getAliasesCopy() const {
     assert(getShouldLiveOnFrame() && "This method should only be called if the "
                                      "alloca needs to live on the frame.");
     for (const auto &P : AliasOffetMap)
@@ -1422,7 +1422,7 @@ private:
   // All alias to the original AllocaInst, created before CoroBegin and used
   // after CoroBegin. Each entry contains the instruction and the offset in the
   // original Alloca. They need to be recreated after CoroBegin off the frame.
-  DenseMap<Instruction *, llvm::Optional<APInt>> AliasOffetMap{};
+  DenseMap<Instruction *, std::optional<APInt>> AliasOffetMap{};
   SmallPtrSet<Instruction *, 4> Users{};
   SmallPtrSet<IntrinsicInst *, 2> LifetimeStarts{};
   bool MayWriteBeforeCoroBegin{false};
