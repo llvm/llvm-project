@@ -1,5 +1,4 @@
-; RUN: opt < %s -aa-pipeline=basic-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,NO-PHI-VALUES
-; RUN: opt < %s -aa-pipeline=basic-aa -passes='require<phi-values>,aa-eval' -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,PHI-VALUES
+; RUN: opt < %s -aa-pipeline=basic-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: Function: simple: 5 pointers, 0 call sites
 ; CHECK:         NoAlias:      float* %src1, float* %src2
@@ -243,11 +242,11 @@ exit:
   ret ptr %result
 }
 
+; FIXME: %a and %p.inner do not alias.
 ; CHECK-LABEL: Function: nested_loop
 ; CHECK: NoAlias:  i8* %a, i8* %p.base
 ; CHECK: NoAlias:  i8* %a, i8* %p.outer
-; NO-PHI-VALUES: MayAlias: i8* %a, i8* %p.inner
-; PHI-VALUES: NoAlias: i8* %a, i8* %p.inner
+; CHECK: MayAlias: i8* %a, i8* %p.inner
 ; CHECK: NoAlias:  i8* %a, i8* %p.inner.next
 ; CHECK: NoAlias:  i8* %a, i8* %p.outer.next
 define void @nested_loop(i1 %c, i1 %c2, ptr noalias %p.base) {
@@ -318,8 +317,7 @@ exit:
 ; CHECK: NoAlias:	i8* %a, i8* %p.base
 ; CHECK: NoAlias:	i8* %a, i8* %p.outer
 ; CHECK: NoAlias:	i8* %a, i8* %p.outer.next
-; NO-PHI-VALUES: NoAlias:	i8* %a, i8* %p.inner
-; PHI-VALUES: MayAlias:	i8* %a, i8* %p.inner
+; CHECK: NoAlias:	i8* %a, i8* %p.inner
 ; CHECK: NoAlias:	i8* %a, i8* %p.inner.next
 define void @nested_loop3(i1 %c, i1 %c2, ptr noalias %p.base) {
 entry:
@@ -385,8 +383,7 @@ exit:
 ; CHECK: NoAlias:	i8* %a, i8* %p.base
 ; CHECK: NoAlias:	i8* %a, i8* %p1
 ; CHECK: NoAlias:	i8* %a, i8* %p1.next
-; NO-PHI-VALUES: NoAlias:	i8* %a, i8* %p2
-; PHI-VALUES: MayAlias:	i8* %a, i8* %p2
+; CHECK: NoAlias:	i8* %a, i8* %p2
 ; CHECK: NoAlias:	i8* %a, i8* %p2.next
 define void @sibling_loop2(i1 %c, i1 %c2, ptr noalias %p.base) {
 entry:
