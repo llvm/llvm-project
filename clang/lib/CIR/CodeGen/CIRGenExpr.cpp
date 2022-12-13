@@ -579,8 +579,8 @@ RValue CIRGenFunction::buildAnyExpr(const Expr *E, AggValueSlot aggSlot,
     assert(0 && "not implemented");
   case TEK_Aggregate: {
     if (!ignoreResult && aggSlot.isIgnored())
-      aggSlot =
-          CreateAggTemp(E->getType(), getLoc(E->getSourceRange()), "agg-temp");
+      aggSlot = CreateAggTemp(E->getType(), getLoc(E->getSourceRange()),
+                              getCounterAggTmpAsString());
     buildAggExpr(E, aggSlot);
     return aggSlot.asRValue();
   }

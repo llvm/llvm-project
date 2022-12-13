@@ -1074,6 +1074,18 @@ std::string CIRGenFunction::getCounterRefTmpAsString() {
   return getVersionedTmpName("ref.tmp", CounterRefTmp++);
 }
 
+void CIRGenFunction::buildNullInitialization(Address DestPtr, QualType Ty) {
+  // Ignore empty classes in C++.
+  if (getLangOpts().CPlusPlus) {
+    if (const RecordType *RT = Ty->getAs<RecordType>()) {
+      if (cast<CXXRecordDecl>(RT->getDecl())->isEmpty())
+        return;
+    }
+  }
+
+  llvm_unreachable("NYI");
+}
+
 CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &CGF,
                                                          const clang::Expr *E)
     : CGF(CGF) {
