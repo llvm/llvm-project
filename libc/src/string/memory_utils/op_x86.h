@@ -99,17 +99,24 @@ template <size_t Size, size_t BlockSize, auto BlockBcmp> struct BcmpImpl {
 
 namespace sse2 {
 static inline BcmpReturnType bcmp16(CPtr p1, CPtr p2) {
+#if defined(__SSE2__)
   using T = char __attribute__((__vector_size__(16)));
   // A mask indicating which bytes differ after loading 16 bytes from p1 and p2.
   const int mask =
       _mm_movemask_epi8(cpp::bit_cast<__m128i>(load<T>(p1) != load<T>(p2)));
   return static_cast<uint32_t>(mask);
+#else
+  (void)p1;
+  (void)p2;
+  return BcmpReturnType::ZERO();
+#endif // defined(__SSE2__)
 }
 template <size_t Size> using Bcmp = BcmpImpl<Size, 16, bcmp16>;
 } // namespace sse2
 
 namespace avx2 {
 static inline BcmpReturnType bcmp32(CPtr p1, CPtr p2) {
+#if defined(__AVX2__)
   using T = char __attribute__((__vector_size__(32)));
   // A mask indicating which bytes differ after loading 32 bytes from p1 and p2.
   const int mask =
@@ -117,17 +124,29 @@ static inline BcmpReturnType bcmp32(CPtr p1, CPtr p2) {
   // _mm256_movemask_epi8 returns an int but it is to be interpreted as a 32-bit
   // mask.
   return static_cast<uint32_t>(mask);
+#else
+  (void)p1;
+  (void)p2;
+  return BcmpReturnType::ZERO();
+#endif // defined(__AVX2__)
 }
 template <size_t Size> using Bcmp = BcmpImpl<Size, 32, bcmp32>;
 } // namespace avx2
 
 namespace avx512bw {
 static inline BcmpReturnType bcmp64(CPtr p1, CPtr p2) {
+#if defined(__AVX512BW__)
   using T = char __attribute__((__vector_size__(64)));
   // A mask indicating which bytes differ after loading 64 bytes from p1 and p2.
-  const uint64_t mask = _mm512_cmpneq_epi8_mask(load<T>(p1), load<T>(p2));
+  const uint64_t mask = _mm512_cmpneq_epi8_mask(
+      cpp::bit_cast<__m512i>(load<T>(p1)), cpp::bit_cast<__m512i>(load<T>(p2)));
   const bool mask_is_set = mask != 0;
   return static_cast<uint32_t>(mask_is_set);
+#else
+  (void)p1;
+  (void)p2;
+  return BcmpReturnType::ZERO();
+#endif // defined(__AVX512BW__)
 }
 template <size_t Size> using Bcmp = BcmpImpl<Size, 64, bcmp64>;
 } // namespace avx512bw
@@ -192,35 +211,55 @@ struct MemcmpImpl {
 
 namespace sse2 {
 static inline MemcmpReturnType memcmp16(CPtr p1, CPtr p2) {
+#if defined(__SSE2__)
   using T = char __attribute__((__vector_size__(16)));
   // A mask indicating which bytes differ after loading 16 bytes from p1 and p2.
   if (int mask =
           _mm_movemask_epi8(cpp::bit_cast<__m128i>(load<T>(p1) != load<T>(p2))))
     return char_diff_no_zero(p1, p2, mask);
   return MemcmpReturnType::ZERO();
+#else
+  (void)p1;
+  (void)p2;
+  return MemcmpReturnType::ZERO();
+#endif // defined(__SSE2__)
 }
 template <size_t Size> using Memcmp = MemcmpImpl<Size, 16, memcmp16, bcmp16>;
 } // namespace sse2
 
 namespace avx2 {
 static inline MemcmpReturnType memcmp32(CPtr p1, CPtr p2) {
+#if defined(__AVX2__)
   using T = char __attribute__((__vector_size__(32)));
   // A mask indicating which bytes differ after loading 32 bytes from p1 and p2.
   if (int mask = _mm256_movemask_epi8(
           cpp::bit_cast<__m256i>(load<T>(p1) != load<T>(p2))))
     return char_diff_no_zero(p1, p2, mask);
   return MemcmpReturnType::ZERO();
+#else
+  (void)p1;
+  (void)p2;
+  return MemcmpReturnType::ZERO();
+#endif // defined(__AVX2__)
 }
 template <size_t Size> using Memcmp = MemcmpImpl<Size, 32, memcmp32, bcmp32>;
 } // namespace avx2
 
 namespace avx512bw {
 static inline MemcmpReturnType memcmp64(CPtr p1, CPtr p2) {
+#if defined(__AVX512BW__)
   using T = char __attribute__((__vector_size__(64)));
   // A mask indicating which bytes differ after loading 64 bytes from p1 and p2.
-  if (uint64_t mask = _mm512_cmpneq_epi8_mask(load<T>(p1), load<T>(p2)))
+  if (uint64_t mask =
+          _mm512_cmpneq_epi8_mask(cpp::bit_cast<__m512i>(load<T>(p1)),
+                                  cpp::bit_cast<__m512i>(load<T>(p2))))
     return char_diff_no_zero(p1, p2, mask);
   return MemcmpReturnType::ZERO();
+#else
+  (void)p1;
+  (void)p2;
+  return MemcmpReturnType::ZERO();
+#endif // defined(__AVX512BW__)
 }
 template <size_t Size> using Memcmp = MemcmpImpl<Size, 64, memcmp64, bcmp64>;
 } // namespace avx512bw
