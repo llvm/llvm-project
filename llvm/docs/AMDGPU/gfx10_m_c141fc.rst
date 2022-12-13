@@ -5,9 +5,9 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx10_type_deviation:
+.. _amdgpu_synid_gfx10_m_c141fc:
 
-Type Deviation
-==============
+m
+=
 
-The *type* of this operand differs from the *type* :ref:`implied by the opcode<amdgpu_syn_instruction_mnemo>`. This tag specifies the actual operand *type*.
+This operand may be used with floating-point operand modifiers :ref:`abs<amdgpu_synid_abs>` and :ref:`neg<amdgpu_synid_neg>`.

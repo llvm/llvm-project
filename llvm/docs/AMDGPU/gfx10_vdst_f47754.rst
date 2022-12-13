@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx10_type_deviation:
+.. _amdgpu_synid_gfx10_vdst_f47754:
 
-Type Deviation
-==============
+vdst
+====
 
-The *type* of this operand differs from the *type* :ref:`implied by the opcode<amdgpu_syn_instruction_mnemo>`. This tag specifies the actual operand *type*.
+Instruction output: data read from a memory buffer.
+
+*Size:* 4 dwords by default. :ref:`tfe<amdgpu_synid_tfe>` adds 1 dword if specified.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`

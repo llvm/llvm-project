@@ -5,13 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx10_srsrc_e73d16:
+.. _amdgpu_synid_gfx10_vdst_d7c57e:
 
-srsrc
-=====
+vdst
+====
 
-Buffer resource constant which defines the address and characteristics of the buffer in memory.
+Instruction output: data read from a memory buffer.
 
-*Size:* 4 dwords.
+*Size:* 2 dwords by default. :ref:`tfe<amdgpu_synid_tfe>` adds 1 dword if specified.
 
-*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`ttmp<amdgpu_synid_ttmp>`
+*Operands:* :ref:`v<amdgpu_synid_v>`
