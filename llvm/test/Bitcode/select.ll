@@ -14,5 +14,5 @@ define <2 x float> @f() {
 }
 
 ; CHECK: define <2 x float> @f() {
-; CHECK:   ret <2 x float> select (i1 ptrtoint (<2 x float> ()* @f to i1), <2 x float> <float 1.000000e+00, float 0.000000e+00>, <2 x float> zeroinitializer)
+; CHECK:   ret <2 x float> select (i1 ptrtoint (ptr @f to i1), <2 x float> <float 1.000000e+00, float 0.000000e+00>, <2 x float> zeroinitializer)
 ; CHECK: }

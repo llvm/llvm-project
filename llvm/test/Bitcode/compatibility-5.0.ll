@@ -37,7 +37,7 @@ $comdat.samesize = comdat samesize
 @const.float = constant double 0.0
 ; CHECK: @const.float = constant double 0.0
 @const.null = constant i8* null
-; CHECK: @const.null = constant i8* null
+; CHECK: @const.null = constant ptr null
 %const.struct.type = type { i32, i8 }
 %const.struct.type.packed = type <{ i32, i8 }>
 @const.struct = constant %const.struct.type { i32 -1, i8 undef }
@@ -188,13 +188,13 @@ $comdat2 = comdat any
 @g.used3 = global i8 0
 declare void @g.f1()
 @llvm.used = appending global [1 x i32*] [i32* @g.used1], section "llvm.metadata"
-; CHECK: @llvm.used = appending global [1 x i32*] [i32* @g.used1], section "llvm.metadata"
+; CHECK: @llvm.used = appending global [1 x ptr] [ptr @g.used1], section "llvm.metadata"
 @llvm.compiler.used = appending global [1 x i32*] [i32* @g.used2], section "llvm.metadata"
-; CHECK: @llvm.compiler.used = appending global [1 x i32*] [i32* @g.used2], section "llvm.metadata"
+; CHECK: @llvm.compiler.used = appending global [1 x ptr] [ptr @g.used2], section "llvm.metadata"
 @llvm.global_ctors = appending global [1 x %pri.func.data] [%pri.func.data { i32 0, void ()* @g.f1, i8* @g.used3 }], section "llvm.metadata"
-; CHECK: @llvm.global_ctors = appending global [1 x %pri.func.data] [%pri.func.data { i32 0, void ()* @g.f1, i8* @g.used3 }], section "llvm.metadata"
+; CHECK: @llvm.global_ctors = appending global [1 x %pri.func.data] [%pri.func.data { i32 0, ptr @g.f1, ptr @g.used3 }], section "llvm.metadata"
 @llvm.global_dtors = appending global [1 x %pri.func.data] [%pri.func.data { i32 0, void ()* @g.f1, i8* @g.used3 }], section "llvm.metadata"
-; CHECK: @llvm.global_dtors = appending global [1 x %pri.func.data] [%pri.func.data { i32 0, void ()* @g.f1, i8* @g.used3 }], section "llvm.metadata"
+; CHECK: @llvm.global_dtors = appending global [1 x %pri.func.data] [%pri.func.data { i32 0, ptr @g.f1, ptr @g.used3 }], section "llvm.metadata"
 
 ;; Aliases
 ; Format: @<Name> = [Linkage] [Visibility] [DLLStorageClass] [ThreadLocal]
@@ -202,73 +202,73 @@ declare void @g.f1()
 
 ; Aliases -- Linkage
 @a.private = private alias i32, i32* @g.private
-; CHECK: @a.private = private alias i32, i32* @g.private
+; CHECK: @a.private = private alias i32, ptr @g.private
 @a.internal = internal alias i32, i32* @g.internal
-; CHECK: @a.internal = internal alias i32, i32* @g.internal
+; CHECK: @a.internal = internal alias i32, ptr @g.internal
 @a.linkonce = linkonce alias i32, i32* @g.linkonce
-; CHECK: @a.linkonce = linkonce alias i32, i32* @g.linkonce
+; CHECK: @a.linkonce = linkonce alias i32, ptr @g.linkonce
 @a.weak = weak alias i32, i32* @g.weak
-; CHECK: @a.weak = weak alias i32, i32* @g.weak
+; CHECK: @a.weak = weak alias i32, ptr @g.weak
 @a.linkonce_odr = linkonce_odr alias i32, i32* @g.linkonce_odr
-; CHECK: @a.linkonce_odr = linkonce_odr alias i32, i32* @g.linkonce_odr
+; CHECK: @a.linkonce_odr = linkonce_odr alias i32, ptr @g.linkonce_odr
 @a.weak_odr = weak_odr alias i32, i32* @g.weak_odr
-; CHECK: @a.weak_odr = weak_odr alias i32, i32* @g.weak_odr
+; CHECK: @a.weak_odr = weak_odr alias i32, ptr @g.weak_odr
 @a.external = external alias i32, i32* @g1
-; CHECK: @a.external = alias i32, i32* @g1
+; CHECK: @a.external = alias i32, ptr @g1
 
 ; Aliases -- Visibility
 @a.default = default alias i32, i32* @g.default
-; CHECK: @a.default = alias i32, i32* @g.default
+; CHECK: @a.default = alias i32, ptr @g.default
 @a.hidden = hidden alias i32, i32* @g.hidden
-; CHECK: @a.hidden = hidden alias i32, i32* @g.hidden
+; CHECK: @a.hidden = hidden alias i32, ptr @g.hidden
 @a.protected = protected alias i32, i32* @g.protected
-; CHECK: @a.protected = protected alias i32, i32* @g.protected
+; CHECK: @a.protected = protected alias i32, ptr @g.protected
 
 ; Aliases -- DLLStorageClass
 @a.dlldefault = default alias i32, i32* @g.dlldefault
-; CHECK: @a.dlldefault = alias i32, i32* @g.dlldefault
+; CHECK: @a.dlldefault = alias i32, ptr @g.dlldefault
 @a.dllimport = dllimport alias i32, i32* @g1
-; CHECK: @a.dllimport = dllimport alias i32, i32* @g1
+; CHECK: @a.dllimport = dllimport alias i32, ptr @g1
 @a.dllexport = dllexport alias i32, i32* @g.dllexport
-; CHECK: @a.dllexport = dllexport alias i32, i32* @g.dllexport
+; CHECK: @a.dllexport = dllexport alias i32, ptr @g.dllexport
 
 ; Aliases -- ThreadLocal
 @a.notthreadlocal = alias i32, i32* @g.notthreadlocal
-; CHECK: @a.notthreadlocal = alias i32, i32* @g.notthreadlocal
+; CHECK: @a.notthreadlocal = alias i32, ptr @g.notthreadlocal
 @a.generaldynamic = thread_local alias i32, i32* @g.generaldynamic
-; CHECK: @a.generaldynamic = thread_local alias i32, i32* @g.generaldynamic
+; CHECK: @a.generaldynamic = thread_local alias i32, ptr @g.generaldynamic
 @a.localdynamic = thread_local(localdynamic) alias i32, i32* @g.localdynamic
-; CHECK: @a.localdynamic = thread_local(localdynamic) alias i32, i32* @g.localdynamic
+; CHECK: @a.localdynamic = thread_local(localdynamic) alias i32, ptr @g.localdynamic
 @a.initialexec = thread_local(initialexec) alias i32, i32* @g.initialexec
-; CHECK: @a.initialexec = thread_local(initialexec) alias i32, i32* @g.initialexec
+; CHECK: @a.initialexec = thread_local(initialexec) alias i32, ptr @g.initialexec
 @a.localexec = thread_local(localexec) alias i32, i32* @g.localexec
-; CHECK: @a.localexec = thread_local(localexec) alias i32, i32* @g.localexec
+; CHECK: @a.localexec = thread_local(localexec) alias i32, ptr @g.localexec
 
 ; Aliases -- unnamed_addr and local_unnamed_addr
 @a.unnamed_addr = unnamed_addr alias i32, i32* @g.unnamed_addr
-; CHECK: @a.unnamed_addr = unnamed_addr alias i32, i32* @g.unnamed_addr
+; CHECK: @a.unnamed_addr = unnamed_addr alias i32, ptr @g.unnamed_addr
 @a.local_unnamed_addr = local_unnamed_addr alias i32, i32* @g.local_unnamed_addr
-; CHECK: @a.local_unnamed_addr = local_unnamed_addr alias i32, i32* @g.local_unnamed_addr
+; CHECK: @a.local_unnamed_addr = local_unnamed_addr alias i32, ptr @g.local_unnamed_addr
 
 ;; IFunc
 ; Format @<Name> = [Linkage] [Visibility] ifunc <IFuncTy>,
-;                  <ResolverTy>* @<Resolver>
+;                  ptr @<Resolver>
 
 ; IFunc -- Linkage
 @ifunc.external = external ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.external = ifunc void (), bitcast (i8* ()* @ifunc_resolver to void ()* ()*)
+; CHECK: @ifunc.external = ifunc void (), ptr @ifunc_resolver
 @ifunc.private = private ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.private = private ifunc void (), bitcast (i8* ()* @ifunc_resolver to void ()* ()*)
+; CHECK: @ifunc.private = private ifunc void (), ptr @ifunc_resolver
 @ifunc.internal = internal ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.internal = internal ifunc void (), bitcast (i8* ()* @ifunc_resolver to void ()* ()*)
+; CHECK: @ifunc.internal = internal ifunc void (), ptr @ifunc_resolver
 
 ; IFunc -- Visibility
 @ifunc.default = default ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.default = ifunc void (), bitcast (i8* ()* @ifunc_resolver to void ()* ()*)
+; CHECK: @ifunc.default = ifunc void (), ptr @ifunc_resolver
 @ifunc.hidden = hidden ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.hidden = hidden ifunc void (), bitcast (i8* ()* @ifunc_resolver to void ()* ()*)
+; CHECK: @ifunc.hidden = hidden ifunc void (), ptr @ifunc_resolver
 @ifunc.protected = protected ifunc void (), i8* ()* @ifunc_resolver
-; CHECK: @ifunc.protected = protected ifunc void (), bitcast (i8* ()* @ifunc_resolver to void ()* ()*)
+; CHECK: @ifunc.protected = protected ifunc void (), ptr @ifunc_resolver
 
 define i8* @ifunc_resolver() {
 entry:
@@ -482,23 +482,23 @@ declare zeroext i64 @f.zeroext()
 declare signext i64 @f.signext()
 ; CHECK: declare signext i64 @f.signext()
 declare inreg i32* @f.inreg()
-; CHECK: declare inreg i32* @f.inreg()
+; CHECK: declare inreg ptr @f.inreg()
 declare noalias i32* @f.noalias()
-; CHECK: declare noalias i32* @f.noalias()
+; CHECK: declare noalias ptr @f.noalias()
 declare nonnull i32* @f.nonnull()
-; CHECK: declare nonnull i32* @f.nonnull()
+; CHECK: declare nonnull ptr @f.nonnull()
 declare dereferenceable(4) i32* @f.dereferenceable4()
-; CHECK: declare dereferenceable(4) i32* @f.dereferenceable4()
+; CHECK: declare dereferenceable(4) ptr @f.dereferenceable4()
 declare dereferenceable(8) i32* @f.dereferenceable8()
-; CHECK: declare dereferenceable(8) i32* @f.dereferenceable8()
+; CHECK: declare dereferenceable(8) ptr @f.dereferenceable8()
 declare dereferenceable(16) i32* @f.dereferenceable16()
-; CHECK: declare dereferenceable(16) i32* @f.dereferenceable16()
+; CHECK: declare dereferenceable(16) ptr @f.dereferenceable16()
 declare dereferenceable_or_null(4) i32* @f.dereferenceable4_or_null()
-; CHECK: declare dereferenceable_or_null(4) i32* @f.dereferenceable4_or_null()
+; CHECK: declare dereferenceable_or_null(4) ptr @f.dereferenceable4_or_null()
 declare dereferenceable_or_null(8) i32* @f.dereferenceable8_or_null()
-; CHECK: declare dereferenceable_or_null(8) i32* @f.dereferenceable8_or_null()
+; CHECK: declare dereferenceable_or_null(8) ptr @f.dereferenceable8_or_null()
 declare dereferenceable_or_null(16) i32* @f.dereferenceable16_or_null()
-; CHECK: declare dereferenceable_or_null(16) i32* @f.dereferenceable16_or_null()
+; CHECK: declare dereferenceable_or_null(16) ptr @f.dereferenceable16_or_null()
 
 ; Functions -- Parameter attributes
 declare void @f.param.zeroext(i8 zeroext)
@@ -508,25 +508,25 @@ declare void @f.param.signext(i8 signext)
 declare void @f.param.inreg(i8 inreg)
 ; CHECK: declare void @f.param.inreg(i8 inreg)
 declare void @f.param.byval({ i8, i8 }* byval({ i8, i8 }))
-; CHECK: declare void @f.param.byval({ i8, i8 }* byval({ i8, i8 }))
+; CHECK: declare void @f.param.byval(ptr byval({ i8, i8 }))
 declare void @f.param.inalloca(i8* inalloca)
-; CHECK: declare void @f.param.inalloca(i8* inalloca(i8))
+; CHECK: declare void @f.param.inalloca(ptr inalloca(i8))
 declare void @f.param.sret(i8* sret(i8))
-; CHECK: declare void @f.param.sret(i8* sret(i8))
+; CHECK: declare void @f.param.sret(ptr sret(i8))
 declare void @f.param.noalias(i8* noalias)
-; CHECK: declare void @f.param.noalias(i8* noalias)
+; CHECK: declare void @f.param.noalias(ptr noalias)
 declare void @f.param.nocapture(i8* nocapture)
-; CHECK: declare void @f.param.nocapture(i8* nocapture)
+; CHECK: declare void @f.param.nocapture(ptr nocapture)
 declare void @f.param.nest(i8* nest)
-; CHECK: declare void @f.param.nest(i8* nest)
+; CHECK: declare void @f.param.nest(ptr nest)
 declare i8* @f.param.returned(i8* returned)
-; CHECK: declare i8* @f.param.returned(i8* returned)
+; CHECK: declare ptr @f.param.returned(ptr returned)
 declare void @f.param.nonnull(i8* nonnull)
-; CHECK: declare void @f.param.nonnull(i8* nonnull)
+; CHECK: declare void @f.param.nonnull(ptr nonnull)
 declare void @f.param.dereferenceable(i8* dereferenceable(4))
-; CHECK: declare void @f.param.dereferenceable(i8* dereferenceable(4))
+; CHECK: declare void @f.param.dereferenceable(ptr dereferenceable(4))
 declare void @f.param.dereferenceable_or_null(i8* dereferenceable_or_null(4))
-; CHECK: declare void @f.param.dereferenceable_or_null(i8* dereferenceable_or_null(4))
+; CHECK: declare void @f.param.dereferenceable_or_null(ptr dereferenceable_or_null(4))
 
 ; Functions -- unnamed_addr and local_unnamed_addr
 declare void @f.unnamed_addr() unnamed_addr
@@ -678,7 +678,7 @@ normal:
 declare i32 @f.personality_handler()
 ; CHECK: declare i32 @f.personality_handler()
 define void @f.personality() personality i32 ()* @f.personality_handler {
-; CHECK: define void @f.personality() personality i32 ()* @f.personality_handler
+; CHECK: define void @f.personality() personality ptr @f.personality_handler
   invoke void @llvm.donothing() to label %normal unwind label %exception
 exception:
   %cleanup = landingpad i32 cleanup
@@ -690,43 +690,43 @@ normal:
 ;; Atomic Memory Ordering Constraints
 define void @atomics(i32* %word) {
   %cmpxchg.0 = cmpxchg i32* %word, i32 0, i32 4 monotonic monotonic
-  ; CHECK: %cmpxchg.0 = cmpxchg i32* %word, i32 0, i32 4 monotonic monotonic
+  ; CHECK: %cmpxchg.0 = cmpxchg ptr %word, i32 0, i32 4 monotonic monotonic
   %cmpxchg.1 = cmpxchg i32* %word, i32 0, i32 5 acq_rel monotonic
-  ; CHECK: %cmpxchg.1 = cmpxchg i32* %word, i32 0, i32 5 acq_rel monotonic
+  ; CHECK: %cmpxchg.1 = cmpxchg ptr %word, i32 0, i32 5 acq_rel monotonic
   %cmpxchg.2 = cmpxchg i32* %word, i32 0, i32 6 acquire monotonic
-  ; CHECK: %cmpxchg.2 = cmpxchg i32* %word, i32 0, i32 6 acquire monotonic
+  ; CHECK: %cmpxchg.2 = cmpxchg ptr %word, i32 0, i32 6 acquire monotonic
   %cmpxchg.3 = cmpxchg i32* %word, i32 0, i32 7 release monotonic
-  ; CHECK: %cmpxchg.3 = cmpxchg i32* %word, i32 0, i32 7 release monotonic
+  ; CHECK: %cmpxchg.3 = cmpxchg ptr %word, i32 0, i32 7 release monotonic
   %cmpxchg.4 = cmpxchg i32* %word, i32 0, i32 8 seq_cst monotonic
-  ; CHECK: %cmpxchg.4 = cmpxchg i32* %word, i32 0, i32 8 seq_cst monotonic
+  ; CHECK: %cmpxchg.4 = cmpxchg ptr %word, i32 0, i32 8 seq_cst monotonic
   %cmpxchg.5 = cmpxchg weak i32* %word, i32 0, i32 9 seq_cst monotonic
-  ; CHECK: %cmpxchg.5 = cmpxchg weak i32* %word, i32 0, i32 9 seq_cst monotonic
+  ; CHECK: %cmpxchg.5 = cmpxchg weak ptr %word, i32 0, i32 9 seq_cst monotonic
   %cmpxchg.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic
-  ; CHECK: %cmpxchg.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic
+  ; CHECK: %cmpxchg.6 = cmpxchg volatile ptr %word, i32 0, i32 10 seq_cst monotonic
   %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
-  ; CHECK: %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
+  ; CHECK: %cmpxchg.7 = cmpxchg weak volatile ptr %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
   %atomicrmw.xchg = atomicrmw xchg i32* %word, i32 12 monotonic
-  ; CHECK: %atomicrmw.xchg = atomicrmw xchg i32* %word, i32 12 monotonic
+  ; CHECK: %atomicrmw.xchg = atomicrmw xchg ptr %word, i32 12 monotonic
   %atomicrmw.add = atomicrmw add i32* %word, i32 13 monotonic
-  ; CHECK: %atomicrmw.add = atomicrmw add i32* %word, i32 13 monotonic
+  ; CHECK: %atomicrmw.add = atomicrmw add ptr %word, i32 13 monotonic
   %atomicrmw.sub = atomicrmw sub i32* %word, i32 14 monotonic
-  ; CHECK: %atomicrmw.sub = atomicrmw sub i32* %word, i32 14 monotonic
+  ; CHECK: %atomicrmw.sub = atomicrmw sub ptr %word, i32 14 monotonic
   %atomicrmw.and = atomicrmw and i32* %word, i32 15 monotonic
-  ; CHECK: %atomicrmw.and = atomicrmw and i32* %word, i32 15 monotonic
+  ; CHECK: %atomicrmw.and = atomicrmw and ptr %word, i32 15 monotonic
   %atomicrmw.nand = atomicrmw nand i32* %word, i32 16 monotonic
-  ; CHECK: %atomicrmw.nand = atomicrmw nand i32* %word, i32 16 monotonic
+  ; CHECK: %atomicrmw.nand = atomicrmw nand ptr %word, i32 16 monotonic
   %atomicrmw.or = atomicrmw or i32* %word, i32 17 monotonic
-  ; CHECK: %atomicrmw.or = atomicrmw or i32* %word, i32 17 monotonic
+  ; CHECK: %atomicrmw.or = atomicrmw or ptr %word, i32 17 monotonic
   %atomicrmw.xor = atomicrmw xor i32* %word, i32 18 monotonic
-  ; CHECK: %atomicrmw.xor = atomicrmw xor i32* %word, i32 18 monotonic
+  ; CHECK: %atomicrmw.xor = atomicrmw xor ptr %word, i32 18 monotonic
   %atomicrmw.max = atomicrmw max i32* %word, i32 19 monotonic
-  ; CHECK: %atomicrmw.max = atomicrmw max i32* %word, i32 19 monotonic
+  ; CHECK: %atomicrmw.max = atomicrmw max ptr %word, i32 19 monotonic
   %atomicrmw.min = atomicrmw volatile min i32* %word, i32 20 monotonic
-  ; CHECK: %atomicrmw.min = atomicrmw volatile min i32* %word, i32 20 monotonic
+  ; CHECK: %atomicrmw.min = atomicrmw volatile min ptr %word, i32 20 monotonic
   %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic
-  ; CHECK: %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic
+  ; CHECK: %atomicrmw.umax = atomicrmw umax ptr %word, i32 21 syncscope("singlethread") monotonic
   %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic
-  ; CHECK: %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic
+  ; CHECK: %atomicrmw.umin = atomicrmw volatile umin ptr %word, i32 22 syncscope("singlethread") monotonic
   fence acquire
   ; CHECK: fence acquire
   fence release
@@ -737,18 +737,18 @@ define void @atomics(i32* %word) {
   ; CHECK: fence syncscope("singlethread") seq_cst
 
   %ld.1 = load atomic i32, i32* %word monotonic, align 4
-  ; CHECK: %ld.1 = load atomic i32, i32* %word monotonic, align 4
+  ; CHECK: %ld.1 = load atomic i32, ptr %word monotonic, align 4
   %ld.2 = load atomic volatile i32, i32* %word acquire, align 8
-  ; CHECK: %ld.2 = load atomic volatile i32, i32* %word acquire, align 8
+  ; CHECK: %ld.2 = load atomic volatile i32, ptr %word acquire, align 8
   %ld.3 = load atomic volatile i32, i32* %word syncscope("singlethread") seq_cst, align 16
-  ; CHECK: %ld.3 = load atomic volatile i32, i32* %word syncscope("singlethread") seq_cst, align 16
+  ; CHECK: %ld.3 = load atomic volatile i32, ptr %word syncscope("singlethread") seq_cst, align 16
 
   store atomic i32 23, i32* %word monotonic, align 4
-  ; CHECK: store atomic i32 23, i32* %word monotonic, align 4
+  ; CHECK: store atomic i32 23, ptr %word monotonic, align 4
   store atomic volatile i32 24, i32* %word monotonic, align 4
-  ; CHECK: store atomic volatile i32 24, i32* %word monotonic, align 4
+  ; CHECK: store atomic volatile i32 24, ptr %word monotonic, align 4
   store atomic volatile i32 25, i32* %word syncscope("singlethread") monotonic, align 4
-  ; CHECK: store atomic volatile i32 25, i32* %word syncscope("singlethread") monotonic, align 4
+  ; CHECK: store atomic volatile i32 25, ptr %word syncscope("singlethread") monotonic, align 4
   ret void
 }
 
@@ -795,17 +795,17 @@ define void @fastMathFlagsForCalls(float %f, double %d1, <4 x double> %d2) {
 %opaquety = type opaque
 define void @typesystem() {
   %p0 = bitcast i8* null to i32 (i32)*
-  ; CHECK: %p0 = bitcast i8* null to i32 (i32)*
+  ; CHECK: %p0 = bitcast ptr null to ptr
   %p1 = bitcast i8* null to void (i8*)*
-  ; CHECK: %p1 = bitcast i8* null to void (i8*)*
+  ; CHECK: %p1 = bitcast ptr null to ptr
   %p2 = bitcast i8* null to i32 (i8*, ...)*
-  ; CHECK: %p2 = bitcast i8* null to i32 (i8*, ...)*
+  ; CHECK: %p2 = bitcast ptr null to ptr
   %p3 = bitcast i8* null to { i32, i8 } (i8*, ...)*
-  ; CHECK: %p3 = bitcast i8* null to { i32, i8 } (i8*, ...)*
+  ; CHECK: %p3 = bitcast ptr null to ptr
   %p4 = bitcast i8* null to <{ i32, i8 }> (i8*, ...)*
-  ; CHECK: %p4 = bitcast i8* null to <{ i32, i8 }> (i8*, ...)*
+  ; CHECK: %p4 = bitcast ptr null to ptr
   %p5 = bitcast i8* null to <{ i32, i8 }> (<{ i8*, i64 }>*, ...)*
-  ; CHECK: %p5 = bitcast i8* null to <{ i32, i8 }> (<{ i8*, i64 }>*, ...)*
+  ; CHECK: %p5 = bitcast ptr null to ptr
 
   %t0 = alloca i1942652
   ; CHECK: %t0 = alloca i1942652
@@ -824,7 +824,7 @@ define void @typesystem() {
   %t7 = alloca x86_mmx
   ; CHECK: %t7 = alloca x86_mmx
   %t8 = alloca %opaquety*
-  ; CHECK: %t8 = alloca %opaquety*
+  ; CHECK: %t8 = alloca ptr
 
   ret void
 }
@@ -873,9 +873,9 @@ defaultdest.1:
 defaultdest.2:
 
   indirectbr i8* blockaddress(@instructions.terminators, %defaultdest.2), [label %defaultdest.2]
-  ; CHECK: indirectbr i8* blockaddress(@instructions.terminators, %defaultdest.2), [label %defaultdest.2]
+  ; CHECK: indirectbr ptr blockaddress(@instructions.terminators, %defaultdest.2), [label %defaultdest.2]
   indirectbr i8* blockaddress(@instructions.terminators, %defaultdest.2), [label %defaultdest.2, label %defaultdest.2]
-  ; CHECK: indirectbr i8* blockaddress(@instructions.terminators, %defaultdest.2), [label %defaultdest.2, label %defaultdest.2]
+  ; CHECK: indirectbr ptr blockaddress(@instructions.terminators, %defaultdest.2), [label %defaultdest.2, label %defaultdest.2]
 
   invoke fastcc void @f.fastcc()
   ; CHECK: invoke fastcc void @f.fastcc()
@@ -915,7 +915,7 @@ catchswitch2:
 catchpad2:
   catchpad within %cs2 [i32* %arg1]
   br label %normal
-  ; CHECK: catchpad within %cs2 [i32* %arg1]
+  ; CHECK: catchpad within %cs2 [ptr %arg1]
   ; CHECK-NEXT: br label %normal
 
 catchswitch3:
@@ -924,7 +924,7 @@ catchswitch3:
 catchpad3:
   catchpad within %cs3 [i32* %arg1, i32* %arg2]
   br label %normal
-  ; CHECK: catchpad within %cs3 [i32* %arg1, i32* %arg2]
+  ; CHECK: catchpad within %cs3 [ptr %arg1, ptr %arg2]
   ; CHECK-NEXT: br label %normal
 
 cleanuppad1:
@@ -1104,17 +1104,17 @@ define void @instructions.aggregateops({ i8, i32 } %up, <{ i8, i32 }> %p,
   %n.ptr = alloca { i8, { i32 } }
 
   getelementptr { i8, i32 }, { i8, i32 }* %up.ptr, i8 0
-  ; CHECK: getelementptr { i8, i32 }, { i8, i32 }* %up.ptr, i8 0
+  ; CHECK: getelementptr { i8, i32 }, ptr %up.ptr, i8 0
   getelementptr <{ i8, i32 }>, <{ i8, i32 }>* %p.ptr, i8 1
-  ; CHECK: getelementptr <{ i8, i32 }>, <{ i8, i32 }>* %p.ptr, i8 1
+  ; CHECK: getelementptr <{ i8, i32 }>, ptr %p.ptr, i8 1
   getelementptr [3 x i8], [3 x i8]* %arr.ptr, i8 2
-  ; CHECK: getelementptr [3 x i8], [3 x i8]* %arr.ptr, i8 2
+  ; CHECK: getelementptr [3 x i8], ptr %arr.ptr, i8 2
   getelementptr { i8, { i32 } }, { i8, { i32 } }* %n.ptr, i32 0, i32 1
-  ; CHECK: getelementptr { i8, { i32 } }, { i8, { i32 } }* %n.ptr, i32 0, i32 1
+  ; CHECK: getelementptr { i8, { i32 } }, ptr %n.ptr, i32 0, i32 1
   getelementptr inbounds { i8, { i32 } }, { i8, { i32 } }* %n.ptr, i32 1, i32 0
-  ; CHECK: getelementptr inbounds { i8, { i32 } }, { i8, { i32 } }* %n.ptr, i32 1, i32 0
+  ; CHECK: getelementptr inbounds { i8, { i32 } }, ptr %n.ptr, i32 1, i32 0
   getelementptr i8, <2 x i8*> %pvec, <2 x i64> %offsets
-  ; CHECK: getelementptr i8, <2 x i8*> %pvec, <2 x i64> %offsets
+  ; CHECK: getelementptr i8, <2 x ptr> %pvec, <2 x i64> %offsets
 
   ret void
 }
@@ -1130,14 +1130,14 @@ define void @instructions.memops(i32** %base) {
   ; CHECK: alloca inalloca i32, i8 4, align 4
 
   load i32*, i32** %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !7, !dereferenceable !9, !dereferenceable_or_null !9
-  ; CHECK: load i32*, i32** %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !7, !dereferenceable !9, !dereferenceable_or_null !9
+  ; CHECK: load ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !7, !dereferenceable !9, !dereferenceable_or_null !9
   load volatile i32*, i32** %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !7, !dereferenceable !9, !dereferenceable_or_null !9
-  ; CHECK: load volatile i32*, i32** %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !7, !dereferenceable !9, !dereferenceable_or_null !9
+  ; CHECK: load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !7, !dereferenceable !9, !dereferenceable_or_null !9
 
   store i32* null, i32** %base, align 4, !nontemporal !8
-  ; CHECK: store i32* null, i32** %base, align 4, !nontemporal !8
+  ; CHECK: store ptr null, ptr %base, align 4, !nontemporal !8
   store volatile i32* null, i32** %base, align 4, !nontemporal !8
-  ; CHECK: store volatile i32* null, i32** %base, align 4, !nontemporal !8
+  ; CHECK: store volatile ptr null, ptr %base, align 4, !nontemporal !8
 
   ret void
 }
@@ -1163,13 +1163,13 @@ define void @instructions.conversions() {
   sitofp i32 -1 to float
   ; CHECK: sitofp i32 -1 to float
   ptrtoint i8* null to i64
-  ; CHECK: ptrtoint i8* null to i64
+  ; CHECK: ptrtoint ptr null to i64
   inttoptr i64 0 to i8*
-  ; CHECK: inttoptr i64 0 to i8*
+  ; CHECK: inttoptr i64 0 to ptr
   bitcast i32 0 to i32
   ; CHECK: bitcast i32 0 to i32
   addrspacecast i32* null to i32 addrspace(1)*
-  ; CHECK: addrspacecast i32* null to i32 addrspace(1)*
+  ; CHECK: addrspacecast ptr null to ptr addrspace(1)
 
   ret void
 }
@@ -1256,16 +1256,16 @@ exit:
   ; CHECK: call void @f.strictfp() #9
 
   call fastcc noalias i32* @f.noalias() noinline
-  ; CHECK: call fastcc noalias i32* @f.noalias() #12
+  ; CHECK: call fastcc noalias ptr @f.noalias() #12
   tail call ghccc nonnull i32* @f.nonnull() minsize
-  ; CHECK: tail call ghccc nonnull i32* @f.nonnull() #7
+  ; CHECK: tail call ghccc nonnull ptr @f.nonnull() #7
 
   ret void
 }
 
 define void @instructions.call_musttail(i8* inalloca %val) {
   musttail call void @f.param.inalloca(i8* inalloca %val)
-  ; CHECK: musttail call void @f.param.inalloca(i8* inalloca(i8) %val)
+  ; CHECK: musttail call void @f.param.inalloca(ptr inalloca(i8) %val)
 
   ret void
 }
@@ -1296,7 +1296,7 @@ catch2:
              cleanup
              ; CHECK: cleanup
              catch i32* null
-             ; CHECK: catch i32* null
+             ; CHECK: catch ptr null
   br label %proceed
 
 catch3:
@@ -1305,9 +1305,9 @@ catch3:
              cleanup
              ; CHECK: cleanup
              catch i32* null
-             ; CHECK: catch i32* null
+             ; CHECK: catch ptr null
              catch i32* null
-             ; CHECK: catch i32* null
+             ; CHECK: catch ptr null
   br label %proceed
 
 catch4:
@@ -1332,16 +1332,16 @@ define void @instructions.va_arg(i8* %v, ...) {
   %ap2 = bitcast i8** %ap to i8*
 
   call void @llvm.va_start(i8* %ap2)
-  ; CHECK: call void @llvm.va_start(i8* %ap2)
+  ; CHECK: call void @llvm.va_start(ptr %ap2)
 
   va_arg i8* %ap2, i32
-  ; CHECK: va_arg i8* %ap2, i32
+  ; CHECK: va_arg ptr %ap2, i32
 
   call void @llvm.va_copy(i8* %v, i8* %ap2)
-  ; CHECK: call void @llvm.va_copy(i8* %v, i8* %ap2)
+  ; CHECK: call void @llvm.va_copy(ptr %v, ptr %ap2)
 
   call void @llvm.va_end(i8* %ap2)
-  ; CHECK: call void @llvm.va_end(i8* %ap2)
+  ; CHECK: call void @llvm.va_end(ptr %ap2)
 
   ret void
 }
@@ -1353,14 +1353,14 @@ declare void @llvm.gcwrite(i8*, i8*, i8**)
 define void @intrinsics.gc() gc "shadow-stack" {
   %ptrloc = alloca i8*
   call void @llvm.gcroot(i8** %ptrloc, i8* null)
-  ; CHECK: call void @llvm.gcroot(i8** %ptrloc, i8* null)
+  ; CHECK: call void @llvm.gcroot(ptr %ptrloc, ptr null)
 
   call i8* @llvm.gcread(i8* null, i8** %ptrloc)
-  ; CHECK: call i8* @llvm.gcread(i8* null, i8** %ptrloc)
+  ; CHECK: call ptr @llvm.gcread(ptr null, ptr %ptrloc)
 
   %ref = alloca i8
   call void @llvm.gcwrite(i8* %ref, i8* null, i8** %ptrloc)
-  ; CHECK: call void @llvm.gcwrite(i8* %ref, i8* null, i8** %ptrloc)
+  ; CHECK: call void @llvm.gcwrite(ptr %ref, ptr null, ptr %ptrloc)
 
   ret void
 }
@@ -1383,9 +1383,9 @@ declare void @llvm.instrprof_increment(i8*, i64, i32, i32)
 !10 = !{!"rax"}
 define void @intrinsics.codegen() {
   call i8* @llvm.returnaddress(i32 1)
-  ; CHECK: call i8* @llvm.returnaddress(i32 1)
+  ; CHECK: call ptr @llvm.returnaddress(i32 1)
   call i8* @llvm.frameaddress(i32 1)
-  ; CHECK: call i8* @llvm.frameaddress.p0i8(i32 1)
+  ; CHECK: call ptr @llvm.frameaddress.p0(i32 1)
 
   call i32 @llvm.read_register.i32(metadata !10)
   ; CHECK: call i32 @llvm.read_register.i32(metadata !10)
@@ -1397,12 +1397,12 @@ define void @intrinsics.codegen() {
   ; CHECK: call void @llvm.write_register.i64(metadata !10, i64 0)
 
   %stack = call i8* @llvm.stacksave()
-  ; CHECK: %stack = call i8* @llvm.stacksave()
+  ; CHECK: %stack = call ptr @llvm.stacksave()
   call void @llvm.stackrestore(i8* %stack)
-  ; CHECK: call void @llvm.stackrestore(i8* %stack)
+  ; CHECK: call void @llvm.stackrestore(ptr %stack)
 
   call void @llvm.prefetch(i8* %stack, i32 0, i32 3, i32 0)
-  ; CHECK: call void @llvm.prefetch.p0i8(i8* %stack, i32 0, i32 3, i32 0)
+  ; CHECK: call void @llvm.prefetch.p0(ptr %stack, i32 0, i32 3, i32 0)
 
   call void @llvm.pcmarker(i32 1)
   ; CHECK: call void @llvm.pcmarker(i32 1)
@@ -1411,10 +1411,10 @@ define void @intrinsics.codegen() {
   ; CHECK: call i64 @llvm.readcyclecounter()
 
   call void @llvm.clear_cache(i8* null, i8* null)
-  ; CHECK: call void @llvm.clear_cache(i8* null, i8* null)
+  ; CHECK: call void @llvm.clear_cache(ptr null, ptr null)
 
   call void @llvm.instrprof_increment(i8* null, i64 0, i32 0, i32 0)
-  ; CHECK: call void @llvm.instrprof_increment(i8* null, i64 0, i32 0, i32 0)
+  ; CHECK: call void @llvm.instrprof_increment(ptr null, i64 0, i32 0, i32 0)
 
   ret void
 }
@@ -1424,7 +1424,7 @@ declare i8* @llvm.localrecover(i8* %func, i8* %fp, i32 %idx)
 define void @intrinsics.localescape() {
   %static.alloca = alloca i32
   call void (...) @llvm.localescape(i32* %static.alloca)
-  ; CHECK: call void (...) @llvm.localescape(i32* %static.alloca)
+  ; CHECK: call void (...) @llvm.localescape(ptr %static.alloca)
 
   call void @intrinsics.localrecover()
 
@@ -1434,7 +1434,7 @@ define void @intrinsics.localrecover() {
   %func = bitcast void ()* @intrinsics.localescape to i8*
   %fp = call i8* @llvm.frameaddress(i32 1)
   call i8* @llvm.localrecover(i8* %func, i8* %fp, i32 0)
-  ; CHECK: call i8* @llvm.localrecover(i8* %func, i8* %fp, i32 0)
+  ; CHECK: call ptr @llvm.localrecover(ptr %func, ptr %fp, i32 0)
 
   ret void
 }
@@ -1626,7 +1626,7 @@ declare void @f.speculatable() speculatable
 ;; Constant Expressions
 
 define i8** @constexpr() {
-  ; CHECK: ret i8** getelementptr inbounds ({ [4 x i8*], [4 x i8*] }, { [4 x i8*], [4 x i8*] }* null, i32 0, inrange i32 1, i32 2)
+  ; CHECK: ret ptr getelementptr inbounds ({ [4 x ptr], [4 x ptr] }, ptr null, i32 0, inrange i32 1, i32 2)
   ret i8** getelementptr inbounds ({ [4 x i8*], [4 x i8*] }, { [4 x i8*], [4 x i8*] }* null, i32 0, inrange i32 1, i32 2)
 }
 
