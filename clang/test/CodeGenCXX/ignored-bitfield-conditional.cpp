@@ -7,7 +7,7 @@ struct S {
 };
 
 void use(bool cond, struct S s1, struct S s2, int val1, int val2) {
-  // CHECK: define {{.*}}use{{.*}}(
+  // CHECK-LABEL: define {{.*}}use{{.*}}(
   // CHECK: %[[S1:.+]] = alloca %struct.S
   // CHECK: %[[S2:.+]] = alloca %struct.S
   // CHECK: %[[COND:.+]] = alloca i8
@@ -86,7 +86,7 @@ void use(bool cond, struct S s1, struct S s2, int val1, int val2) {
 
 
 void use2(bool cond1, bool cond2, struct S s1, int val1, int val2, int val3) {
-  // CHECK: define {{.*}}use2{{.*}}(
+  // CHECK-LABEL: define {{.*}}use2{{.*}}(
   // CHECK: %[[S1:.+]] = alloca %struct.S
   // CHECK: %[[COND1:.+]] = alloca i8
   // CHECK: %[[COND2:.+]] = alloca i8
@@ -141,7 +141,11 @@ void use2(bool cond1, bool cond2, struct S s1, int val1, int val2, int val3) {
   // CHECK: store i16 %[[BF_SET]], ptr %[[S1]]
   // CHECK: br label %[[END:.+]]
 
-  // CHECK[[END]]:
+  // CHECK: [[END]]:
   // CHECK-NOT: phi
   // Nothing left to do here.
 }
+
+// Catch the end of the IR. This prevents the CHECK-NOT above from matching a
+// spurious "phi" in file paths printed in the output.
+// CHECK-LABEL: attributes
