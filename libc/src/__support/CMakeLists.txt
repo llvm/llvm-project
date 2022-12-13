@@ -31,6 +31,14 @@ add_header_library(
 )
 
 add_header_library(
+  error_or
+  HDRS
+    error_or.h
+  DEPENDS
+    libc.src.__support.CPP.expected
+)
+
+add_header_library(
   ctype_utils
   HDRS
     ctype_utils.h
