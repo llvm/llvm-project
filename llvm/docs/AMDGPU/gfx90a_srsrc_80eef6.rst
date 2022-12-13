@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx90a_m_f5d306:
+.. _amdgpu_synid_gfx90a_srsrc_80eef6:
 
-m
-=
+srsrc
+=====
 
-This operand may be used with floating point operand modifiers :ref:`abs<amdgpu_synid_abs>` and :ref:`neg<amdgpu_synid_neg>`.
+Buffer resource constant, which defines the address and characteristics of the buffer in memory.
+
+*Size:* 4 dwords.
+
+*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`ttmp<amdgpu_synid_ttmp>`
