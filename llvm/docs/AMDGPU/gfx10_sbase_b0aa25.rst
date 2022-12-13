@@ -5,12 +5,12 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx10_sbase_010ce0:
+.. _amdgpu_synid_gfx10_sbase_b0aa25:
 
 sbase
 =====
 
-A 128-bit buffer resource constant for scalar memory operations which provides a base address, a size and a stride.
+A 128-bit buffer resource constant for scalar memory operations which provides a base address, a size, and a stride.
 
 *Size:* 4 dwords.
 
