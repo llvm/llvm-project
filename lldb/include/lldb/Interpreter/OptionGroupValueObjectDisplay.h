@@ -18,7 +18,7 @@ namespace lldb_private {
 
 class OptionGroupValueObjectDisplay : public OptionGroup {
 public:
-  OptionGroupValueObjectDisplay() : bind_generic_types(true) {}
+  OptionGroupValueObjectDisplay() = default;
 
   ~OptionGroupValueObjectDisplay() override = default;
 
@@ -33,7 +33,8 @@ public:
     return show_types || no_summary_depth != 0 || show_location ||
            flat_output || use_objc || max_depth != UINT32_MAX ||
            ptr_depth != 0 || !use_synth || be_raw || ignore_cap ||
-           run_validator || !bind_generic_types;
+           run_validator ||
+           bind_generic_types != lldb::eBindAuto;
   }
 
   DumpValueObjectOptions GetAsDumpOptions(
@@ -44,13 +45,14 @@ public:
 
   bool show_types : 1, show_location : 1, flat_output : 1, use_objc : 1,
       use_synth : 1, be_raw : 1, ignore_cap : 1, run_validator : 1,
-      max_depth_is_default : 1, bind_generic_types : 1;
+      max_depth_is_default : 1;
 
   uint32_t no_summary_depth;
   uint32_t max_depth;
   uint32_t ptr_depth;
   uint32_t elem_count;
   lldb::DynamicValueType use_dynamic;
+  lldb::BindGenericTypes bind_generic_types;
 };
 
 } // namespace lldb_private

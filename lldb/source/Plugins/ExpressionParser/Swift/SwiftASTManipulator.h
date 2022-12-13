@@ -104,7 +104,7 @@ public:
   };
 
   SwiftASTManipulatorBase(swift::SourceFile &source_file, bool repl,
-                          bool bind_generic_types)
+                          lldb::BindGenericTypes bind_generic_types)
       : m_source_file(source_file), m_variables(), m_repl(repl),
         m_bind_generic_types(bind_generic_types) {
     DoInitialization();
@@ -128,7 +128,7 @@ protected:
 
   bool m_repl = false;
 
-  bool m_bind_generic_types = true;
+  lldb::BindGenericTypes m_bind_generic_types = lldb::eBindAuto;
 
   /// The function containing the expression's code.
   swift::FuncDecl *m_function_decl = nullptr;
@@ -153,7 +153,7 @@ protected:
 class SwiftASTManipulator : public SwiftASTManipulatorBase {
 public:
   SwiftASTManipulator(swift::SourceFile &source_file, bool repl,
-                      bool bind_generic_types);
+                      lldb::BindGenericTypes bind_generic_types);
 
   static void WrapExpression(Stream &wrapped_stream, const char *text,
                              bool needs_object_ptr,

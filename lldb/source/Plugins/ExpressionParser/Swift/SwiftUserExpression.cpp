@@ -270,6 +270,48 @@ GetPersistentState(Target *target, ExecutionContext &exe_ctx) {
   return target->GetSwiftPersistentExpressionState(*exe_scope);
 }
 
+SwiftExpressionParser::ParseResult
+SwiftUserExpression::GetTextAndSetExpressionParser(
+    DiagnosticManager &diagnostic_manager,
+    std::unique_ptr<SwiftExpressionSourceCode> &source_code,
+    ExecutionContext &exe_ctx, ExecutionContextScope *exe_scope) {
+  using ParseResult = SwiftExpressionParser::ParseResult;
+  Log *log = GetLog(LLDBLog::Expressions);
+  uint32_t first_body_line = 0;
+
+  if (!source_code->GetText(m_transformed_text, m_options.GetLanguage(),
+                            m_needs_object_ptr,
+                            m_in_static_method,
+                            m_is_class,
+                            m_is_weak_self,  m_options, exe_ctx,
+                            first_body_line)) {
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                  "couldn't construct expression body");
+    return ParseResult::unrecoverable_error;
+  }
+
+  if (log)
+    log->Printf("Parsing the following code:\n%s", m_transformed_text.c_str());
+
+  //
+  // Parse the expression.
+  //
+
+  if (m_options.GetREPLEnabled())
+    m_materializer_up.reset(new SwiftREPLMaterializer());
+  else
+    m_materializer_up.reset(new Materializer());
+
+  auto *swift_parser =
+      new SwiftExpressionParser(exe_scope, *m_swift_ast_ctx, *this, m_options);
+  SwiftExpressionParser::ParseResult parse_result =
+      swift_parser->Parse(diagnostic_manager, first_body_line,
+                          first_body_line + source_code->GetNumBodyLines());
+  m_parser.reset(swift_parser);
+
+  return parse_result;
+}
+
 bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                 ExecutionContext &exe_ctx,
                                 lldb_private::ExecutionPolicy execution_policy,
@@ -296,7 +338,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     return false;
   }
 
-  auto exe_scope = exe_ctx.GetBestExecutionContextScope();
+  auto *exe_scope = exe_ctx.GetBestExecutionContextScope();
   if (!exe_scope) {
     LLDB_LOG(log, "no execution context scope");
     return false;
@@ -367,73 +409,51 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   m_options.SetLanguage(lang_type);
   m_options.SetGenerateDebugInfo(generate_debug_info);
+
+  using ParseResult = SwiftExpressionParser::ParseResult;
   
-  uint32_t first_body_line = 0;
+  while (true) {
+    SwiftExpressionParser::ParseResult parse_result =
+        GetTextAndSetExpressionParser(diagnostic_manager, source_code, exe_ctx, exe_scope);
 
-  // I have to pass some value for add_locals.  I'm passing "false" because
-  // even though we do add the locals, we don't do it in GetText.
-  if (!source_code->GetText(m_transformed_text, lang_type,
-                            m_needs_object_ptr,
-                            m_in_static_method,
-                            m_is_class,
-                            m_is_weak_self,  m_options, exe_ctx,
-                            first_body_line)) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                  "couldn't construct expression body");
-    return false;
-  }
+    if (parse_result == ParseResult::success)
+      break;
 
-  if (log)
-    log->Printf("Parsing the following code:\n%s", m_transformed_text.c_str());
-
-  //
-  // Parse the expression.
-  //
-
-  if (m_options.GetREPLEnabled())
-    m_materializer_up.reset(new SwiftREPLMaterializer());
-  else
-    m_materializer_up.reset(new Materializer());
-
-  class OnExit {
-  public:
-    typedef std::function<void(void)> Callback;
-
-    OnExit(Callback const &callback) : m_callback(callback) {}
-
-    ~OnExit() { m_callback(); }
-
-  private:
-    Callback m_callback;
-  };
-
-  auto *swift_parser =
-      new SwiftExpressionParser(exe_scope, *m_swift_ast_ctx, *this, m_options);
-  unsigned error_code = swift_parser->Parse(
-      diagnostic_manager, first_body_line,
-      first_body_line + source_code->GetNumBodyLines());
-  m_parser.reset(swift_parser);
-
-  if (error_code == 2) {
-    m_fixed_text = m_expr_text;
-    return false;
-  } else if (error_code) {
-    // If fixits are enabled, calculate the fixed expression string.
-    if (m_options.GetAutoApplyFixIts() && diagnostic_manager.HasFixIts()) {
-      if (m_parser->RewriteExpression(diagnostic_manager)) {
-        size_t fixed_start;
-        size_t fixed_end;
-        const std::string &fixed_expression =
-            diagnostic_manager.GetFixedExpression();
-        if (SwiftExpressionSourceCode::GetOriginalBodyBounds(
-                fixed_expression, fixed_start, fixed_end))
-          m_fixed_text =
-              fixed_expression.substr(fixed_start, fixed_end - fixed_start);
+    switch (parse_result) {
+    case ParseResult::retry_no_bind_generic_params:
+      // Retry running the expression without binding the generic types if
+      // BindGenericTypes was in the auto setting, give up otherwise.
+      if (m_options.GetBindGenericTypes() != lldb::eBindAuto) 
+        return false;
+      diagnostic_manager.Clear();
+      diagnostic_manager.PutString(eDiagnosticSeverityRemark, "asdfasdf");
+      // Retry without binding generic parameters, this is the only
+      // case that will loop.
+      m_options.SetBindGenericTypes(lldb::eDontBind);
+      break;
+    
+    case ParseResult::retry_fresh_context:
+      m_fixed_text = m_expr_text;
+      return false;
+    case ParseResult::unrecoverable_error:
+      // If fixits are enabled, calculate the fixed expression string.
+      if (m_options.GetAutoApplyFixIts() && diagnostic_manager.HasFixIts()) {
+        if (m_parser->RewriteExpression(diagnostic_manager)) {
+          size_t fixed_start;
+          size_t fixed_end;
+          const std::string &fixed_expression =
+              diagnostic_manager.GetFixedExpression();
+          if (SwiftExpressionSourceCode::GetOriginalBodyBounds(
+                  fixed_expression, fixed_start, fixed_end))
+            m_fixed_text =
+                fixed_expression.substr(fixed_start, fixed_end - fixed_start);
+        }
       }
+      return false;
+    case ParseResult::success:
+      llvm_unreachable("Success case is checked separately before switch!");
     }
-    return false;
   }
-
 
   // Prepare the output of the parser for execution, evaluating it
   // statically if possible.

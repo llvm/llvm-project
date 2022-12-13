@@ -4226,6 +4226,30 @@ OptionEnumValues lldb_private::GetDynamicValueTypes() {
   return OptionEnumValues(g_dynamic_value_types);
 }
 
+static constexpr OptionEnumValueElement g_bind_generic_types[] = {
+    {
+        eBindAuto,
+        "auto",
+        "Attempt to run the expression with bound generic parameters first, "
+        "fallback to unbound generic parameters if binding the type parameters "
+        "fails",
+    },
+    {
+        eBind,
+        "true",
+        "Bind the generic type parameters.",
+    },
+    {
+        eDontBind,
+        "false",
+        "Don't bind the generic type parameters.",
+    },
+};
+
+OptionEnumValues lldb_private::GetBindGenericTypesOptions() {
+  return OptionEnumValues(g_bind_generic_types);
+}
+
 static constexpr OptionEnumValueElement g_inline_breakpoint_enums[] = {
     {
         eInlineBreakpointsNever,
