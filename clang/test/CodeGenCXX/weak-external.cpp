@@ -90,9 +90,9 @@ namespace constant_eval {
     [[gnu::weak]] void f();
   };
   // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
-  // CHECK:     store i8 zext (i1 icmp ne (i64 ptrtoint (ptr @_ZN13constant_eval1X1fEv to i64), i64 0) to i8), ptr @_ZN13constant_eval6has_f1E,
+  // CHECK:     store i8 zext (i1 icmp ne (i{{32|64}} ptrtoint (ptr @_ZN13constant_eval1X1fEv to i{{32|64}}), i{{32|64}} 0) to i8), ptr @_ZN13constant_eval6has_f1E,
   bool has_f1 = &X::f;
   // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
-  // CHECK:     store i8 zext (i1 icmp ne (i64 ptrtoint (ptr @_ZN13constant_eval1X1fEv to i64), i64 0) to i8), ptr @_ZN13constant_eval6has_f2E,
+  // CHECK:     store i8 zext (i1 icmp ne (i{{32|64}} ptrtoint (ptr @_ZN13constant_eval1X1fEv to i{{32|64}}), i{{32|64}} 0) to i8), ptr @_ZN13constant_eval6has_f2E,
   bool has_f2 = &X::f != nullptr;
 }
