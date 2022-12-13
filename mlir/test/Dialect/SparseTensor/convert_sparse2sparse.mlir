@@ -104,10 +104,6 @@ func.func @sparse_convert_1d_ss(%arg0: tensor<?xf32, #SparseVector64>) -> tensor
 //  CHECK-RWT-SAME: %[[A:.*]]: tensor<?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ], pointerBitWidth = 64, indexBitWidth = 64 }>>)
 //  CHECK-RWT-DAG:  %[[C0:.*]] = arith.constant 0 : index
 //      CHECK-RWT:  %[[D:.*]] = tensor.dim %[[A]], %[[C0]]
-//      CHECK-RWT:  %[[I0:.*]] = sparse_tensor.indices %[[A]] {dimension = 0 : index}
-//      CHECK-RWT:  %[[NNZ:.*]] = sparse_tensor.number_of_entries %[[A]]
-//      CHECK-RWT:  %[[V:.*]] = sparse_tensor.values %[[A]]
-//      CHECK-RWT:  sparse_tensor.sort %[[NNZ]], %[[I0]] jointly %[[V]]
 //      CHECK-RWT:  %[[DST:.*]] = bufferization.alloc_tensor(%[[D]])
 //      CHECK-RWT:  %[[RET:.*]] = sparse_tensor.foreach in %[[A]] init(%[[DST]])
 //      CHECK-RWT:  ^bb0(%[[FI2:.*]]: index, %[[FV2:.*]]: f32, %[[T:.*]]: tensor<?xf32,
@@ -177,12 +173,6 @@ func.func @sparse_convert_singleton(%arg0: tensor<?xf32, #SparseSingleton64>) ->
 //       CHECK-RWT: %[[D0:.*]] = tensor.dim %[[COO]], %[[C0]]
 //       CHECK-RWT: %[[D1:.*]] = tensor.dim %[[COO]], %[[C1]]
 //       CHECK-RWT: %[[D2:.*]] = tensor.dim %[[COO]], %[[C2]]
-//       CHECK-RWT: %[[I0:.*]] = sparse_tensor.indices %[[COO]] {dimension = 0 : index}
-//       CHECK-RWT: %[[I1:.*]] = sparse_tensor.indices %[[COO]] {dimension = 1 : index}
-//       CHECK-RWT: %[[I2:.*]] = sparse_tensor.indices %[[COO]] {dimension = 2 : index}
-//       CHECK-RWT: %[[NNZ:.*]] = sparse_tensor.number_of_entries %[[COO]]
-//       CHECK-RWT: %[[V:.*]] = sparse_tensor.values %[[COO]]
-//       CHECK-RWT: sparse_tensor.sort %[[NNZ]], %[[I2]], %[[I0]], %[[I1]] jointly %[[V]]
 //       CHECK-RWT: %[[T1:.*]] = bufferization.alloc_tensor(%[[D0]], %[[D1]], %[[D2]])
 //       CHECK-RWT: %[[T2:.*]] = sparse_tensor.foreach in %[[COO]] init(%[[T1]])
 //       CHECK-RWT: ^bb0(%[[LI0:.*]]: index, %[[LI1:.*]]: index, %[[LI2:.*]]: index, %[[LV:.*]]: f32, %[[LT1:.*]]: tensor<?x?x?xf32,

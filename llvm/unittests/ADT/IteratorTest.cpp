@@ -12,6 +12,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -478,7 +479,7 @@ TEST(ZipIteratorTest, ZipLongestBasic) {
 
   {
     // Check left range longer than right.
-    const vector<tuple<Optional<unsigned>, Optional<StringRef>>> expected{
+    const vector<tuple<optional<unsigned>, optional<StringRef>>> expected{
         make_tuple(3, StringRef("2")), make_tuple(1, StringRef("7")),
         make_tuple(4, StringRef("1")), make_tuple(1, StringRef("8")),
         make_tuple(5, std::nullopt),   make_tuple(9, std::nullopt)};
@@ -492,7 +493,7 @@ TEST(ZipIteratorTest, ZipLongestBasic) {
 
   {
     // Check right range longer than left.
-    const vector<tuple<Optional<StringRef>, Optional<unsigned>>> expected{
+    const vector<tuple<optional<StringRef>, optional<unsigned>>> expected{
         make_tuple(StringRef("2"), 3), make_tuple(StringRef("7"), 1),
         make_tuple(StringRef("1"), 4), make_tuple(StringRef("8"), 1),
         make_tuple(std::nullopt, 5),   make_tuple(std::nullopt, 9)};

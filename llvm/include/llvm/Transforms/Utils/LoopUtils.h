@@ -226,7 +226,7 @@ SmallVector<Instruction *, 8> findDefsUsedOutsideOfLoop(Loop *L);
 /// "llvm.loop.vectorize.scalable.enable") for a loop and use it to construct a
 /// ElementCount. If the metadata "llvm.loop.vectorize.width" cannot be found
 /// then std::nullopt is returned.
-Optional<ElementCount>
+std::optional<ElementCount>
 getOptionalElementCountLoopAttribute(const Loop *TheLoop);
 
 /// Create a new loop identifier for a loop created from a loop transformation.
@@ -244,16 +244,16 @@ getOptionalElementCountLoopAttribute(const Loop *TheLoop);
 ///                    <prefix>; commonly used to remove metadata for the
 ///                    applied transformation.
 /// @param AlwaysNew If true, do not try to reuse OrigLoopID and never return
-///                  None.
+///                  std::nullopt.
 ///
 /// @return The loop ID for the after-transformation loop. The following values
 ///         can be returned:
-///         None         : No followup attribute was found; it is up to the
+///         std::nullopt : No followup attribute was found; it is up to the
 ///                        transformation to choose attributes that make sense.
 ///         @p OrigLoopID: The original identifier can be reused.
 ///         nullptr      : The new loop has no attributes.
 ///         MDNode*      : A new unique loop identifier.
-Optional<MDNode *>
+std::optional<MDNode *>
 makeFollowupLoopID(MDNode *OrigLoopID, ArrayRef<StringRef> FollowupAttrs,
                    const char *InheritOptionsAttrsPrefix = "",
                    bool AlwaysNew = false);
@@ -311,7 +311,7 @@ void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
 /// initialized with weight of loop's latch leading to the exit.
 /// Returns 0 when the count is estimated to be 0, or std::nullopt when a
 /// meaningful estimate can not be made.
-Optional<unsigned>
+std::optional<unsigned>
 getLoopEstimatedTripCount(Loop *L,
                           unsigned *EstimatedLoopInvocationWeight = nullptr);
 
@@ -541,10 +541,10 @@ struct IVConditionInfo {
 /// If the branch condition of the header is partially invariant, return a pair
 /// containing the instructions to duplicate and a boolean Constant to update
 /// the condition in the loops created for the true or false successors.
-Optional<IVConditionInfo> hasPartialIVCondition(const Loop &L,
-                                                unsigned MSSAThreshold,
-                                                const MemorySSA &MSSA,
-                                                AAResults &AA);
+std::optional<IVConditionInfo> hasPartialIVCondition(const Loop &L,
+                                                     unsigned MSSAThreshold,
+                                                     const MemorySSA &MSSA,
+                                                     AAResults &AA);
 
 } // end namespace llvm
 

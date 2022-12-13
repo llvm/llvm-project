@@ -11,14 +11,3 @@ define half @bf16() nounwind {
 ; CHECK-NEXT:    ret
   ret half 0xH0000
 }
-
-define i64 @perfmon() nounwind {
-; CHECK-LABEL: perfmon:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x0, xzr
-; CHECK-NEXT:    ret
-  %tmp0 = call i64 @llvm.readcyclecounter()
-  ret i64 %tmp0
-}
-
-declare i64 @llvm.readcyclecounter()

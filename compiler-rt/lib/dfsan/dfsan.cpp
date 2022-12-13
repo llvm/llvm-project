@@ -718,6 +718,67 @@ dfsan_get_labels_in_signal_conditional() {
   return __dfsan::labels_in_signal_conditional;
 }
 
+namespace __dfsan {
+
+typedef void (*dfsan_reaches_function_callback_t)(dfsan_label label,
+                                                  dfsan_origin origin,
+                                                  const char *file,
+                                                  unsigned int line,
+                                                  const char *function);
+static dfsan_reaches_function_callback_t reaches_function_callback = nullptr;
+static dfsan_label labels_in_signal_reaches_function = 0;
+
+static void ReachesFunctionCallback(dfsan_label label, dfsan_origin origin,
+                                    const char *file, unsigned int line,
+                                    const char *function) {
+  if (label == 0) {
+    return;
+  }
+  if (reaches_function_callback == nullptr) {
+    return;
+  }
+
+  // This initial ReachesFunctionCallback handler needs to be in here in dfsan
+  // runtime (rather than being an entirely user implemented hook) so that it
+  // has access to dfsan thread information.
+  DFsanThread *t = GetCurrentThread();
+  // A callback operation which does useful work (like record the flow) will
+  // likely be too long executed in a signal handler.
+  if (t && t->InSignalHandler()) {
+    // Record set of labels used in signal handler for completeness.
+    labels_in_signal_reaches_function |= label;
+    return;
+  }
+
+  reaches_function_callback(label, origin, file, line, function);
+}
+
+}  // namespace __dfsan
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__dfsan_reaches_function_callback_origin(dfsan_label label, dfsan_origin origin,
+                                         const char *file, unsigned int line,
+                                         const char *function) {
+  __dfsan::ReachesFunctionCallback(label, origin, file, line, function);
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__dfsan_reaches_function_callback(dfsan_label label, const char *file,
+                                  unsigned int line, const char *function) {
+  __dfsan::ReachesFunctionCallback(label, 0, file, line, function);
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+dfsan_set_reaches_function_callback(
+    __dfsan::dfsan_reaches_function_callback_t callback) {
+  __dfsan::reaches_function_callback = callback;
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_label
+dfsan_get_labels_in_signal_reaches_function() {
+  return __dfsan::labels_in_signal_reaches_function;
+}
+
 class Decorator : public __sanitizer::SanitizerCommonDecorator {
  public:
   Decorator() : SanitizerCommonDecorator() {}
@@ -1031,6 +1092,7 @@ extern "C" void dfsan_flush() {
     }
   }
   __dfsan::labels_in_signal_conditional = 0;
+  __dfsan::labels_in_signal_reaches_function = 0;
 }
 
 // TODO: CheckMemoryLayoutSanity is based on msan.

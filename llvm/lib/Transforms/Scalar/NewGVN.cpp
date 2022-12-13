@@ -1563,7 +1563,7 @@ NewGVN::performSymbolicPredicateInfoEvaluation(IntrinsicInst *I) const {
 
   LLVM_DEBUG(dbgs() << "Found predicate info from instruction !\n");
 
-  const Optional<PredicateConstraint> &Constraint = PI->getConstraint();
+  const std::optional<PredicateConstraint> &Constraint = PI->getConstraint();
   if (!Constraint)
     return ExprResult::none();
 

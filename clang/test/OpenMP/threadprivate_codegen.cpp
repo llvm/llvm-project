@@ -1123,7 +1123,7 @@ int foobar() {
 // CHECK1:       eh.resume:
 // CHECK1-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // CHECK1-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// CHECK1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // CHECK1-NEXT:    [[LPAD_VAL28:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // CHECK1-NEXT:    resume { ptr, i32 } [[LPAD_VAL28]]
 //
@@ -1331,7 +1331,7 @@ int foobar() {
 // CHECK1:       eh.resume:
 // CHECK1-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // CHECK1-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// CHECK1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // CHECK1-NEXT:    [[LPAD_VAL22:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // CHECK1-NEXT:    resume { ptr, i32 } [[LPAD_VAL22]]
 //
@@ -1446,7 +1446,7 @@ int foobar() {
 // CHECK1:       eh.resume:
 // CHECK1-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // CHECK1-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// CHECK1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // CHECK1-NEXT:    [[LPAD_VAL15:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // CHECK1-NEXT:    resume { ptr, i32 } [[LPAD_VAL15]]
 //
@@ -1854,7 +1854,7 @@ int foobar() {
 // CHECK2:       eh.resume:
 // CHECK2-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // CHECK2-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// CHECK2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // CHECK2-NEXT:    [[LPAD_VAL22:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // CHECK2-NEXT:    resume { ptr, i32 } [[LPAD_VAL22]]
 //
@@ -1975,7 +1975,7 @@ int foobar() {
 // CHECK2:       eh.resume:
 // CHECK2-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // CHECK2-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// CHECK2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // CHECK2-NEXT:    [[LPAD_VAL28:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // CHECK2-NEXT:    resume { ptr, i32 } [[LPAD_VAL28]]
 //
@@ -2100,7 +2100,7 @@ int foobar() {
 // CHECK2:       eh.resume:
 // CHECK2-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // CHECK2-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// CHECK2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // CHECK2-NEXT:    [[LPAD_VAL15:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // CHECK2-NEXT:    resume { ptr, i32 } [[LPAD_VAL15]]
 //
@@ -2529,7 +2529,7 @@ int foobar() {
 // SIMD1:       eh.resume:
 // SIMD1-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // SIMD1-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// SIMD1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// SIMD1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // SIMD1-NEXT:    [[LPAD_VAL22:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // SIMD1-NEXT:    resume { ptr, i32 } [[LPAD_VAL22]]
 //
@@ -2623,7 +2623,7 @@ int foobar() {
 // SIMD1:       eh.resume:
 // SIMD1-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // SIMD1-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// SIMD1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// SIMD1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // SIMD1-NEXT:    [[LPAD_VAL8:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // SIMD1-NEXT:    resume { ptr, i32 } [[LPAD_VAL8]]
 //
@@ -2993,7 +2993,7 @@ int foobar() {
 // SIMD2:       eh.resume:
 // SIMD2-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8, !dbg [[DBG154]]
 // SIMD2-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG154]]
-// SIMD2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0, !dbg [[DBG154]]
+// SIMD2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0, !dbg [[DBG154]]
 // SIMD2-NEXT:    [[LPAD_VAL22:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1, !dbg [[DBG154]]
 // SIMD2-NEXT:    resume { ptr, i32 } [[LPAD_VAL22]], !dbg [[DBG154]]
 //
@@ -3089,7 +3089,7 @@ int foobar() {
 // SIMD2:       eh.resume:
 // SIMD2-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8, !dbg [[DBG174]]
 // SIMD2-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG174]]
-// SIMD2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0, !dbg [[DBG174]]
+// SIMD2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0, !dbg [[DBG174]]
 // SIMD2-NEXT:    [[LPAD_VAL8:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1, !dbg [[DBG174]]
 // SIMD2-NEXT:    resume { ptr, i32 } [[LPAD_VAL8]], !dbg [[DBG174]]
 //
@@ -3522,7 +3522,7 @@ int foobar() {
 // CHECK-TLS1:       eh.resume:
 // CHECK-TLS1-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // CHECK-TLS1-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK-TLS1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// CHECK-TLS1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // CHECK-TLS1-NEXT:    [[LPAD_VAL22:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // CHECK-TLS1-NEXT:    resume { ptr, i32 } [[LPAD_VAL22]]
 //
@@ -4249,7 +4249,7 @@ int foobar() {
 // CHECK-TLS2:       eh.resume:
 // CHECK-TLS2-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // CHECK-TLS2-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK-TLS2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// CHECK-TLS2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // CHECK-TLS2-NEXT:    [[LPAD_VAL22:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // CHECK-TLS2-NEXT:    resume { ptr, i32 } [[LPAD_VAL22]]
 //
@@ -4592,7 +4592,7 @@ int foobar() {
 // CHECK-TLS3:       eh.resume:
 // CHECK-TLS3-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8, !dbg [[DBG185]]
 // CHECK-TLS3-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG185]]
-// CHECK-TLS3-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0, !dbg [[DBG185]]
+// CHECK-TLS3-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0, !dbg [[DBG185]]
 // CHECK-TLS3-NEXT:    [[LPAD_VAL22:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1, !dbg [[DBG185]]
 // CHECK-TLS3-NEXT:    resume { ptr, i32 } [[LPAD_VAL22]], !dbg [[DBG185]]
 //
@@ -5351,7 +5351,7 @@ int foobar() {
 // CHECK-TLS4:       eh.resume:
 // CHECK-TLS4-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8, !dbg [[DBG257]]
 // CHECK-TLS4-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG257]]
-// CHECK-TLS4-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0, !dbg [[DBG257]]
+// CHECK-TLS4-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0, !dbg [[DBG257]]
 // CHECK-TLS4-NEXT:    [[LPAD_VAL22:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1, !dbg [[DBG257]]
 // CHECK-TLS4-NEXT:    resume { ptr, i32 } [[LPAD_VAL22]], !dbg [[DBG257]]
 //
@@ -5642,7 +5642,7 @@ int foobar() {
 // SIMD3:       eh.resume:
 // SIMD3-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // SIMD3-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// SIMD3-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// SIMD3-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // SIMD3-NEXT:    [[LPAD_VAL22:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // SIMD3-NEXT:    resume { ptr, i32 } [[LPAD_VAL22]]
 //
@@ -5736,7 +5736,7 @@ int foobar() {
 // SIMD3:       eh.resume:
 // SIMD3-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // SIMD3-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// SIMD3-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// SIMD3-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // SIMD3-NEXT:    [[LPAD_VAL8:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // SIMD3-NEXT:    resume { ptr, i32 } [[LPAD_VAL8]]
 //
@@ -6106,7 +6106,7 @@ int foobar() {
 // SIMD4:       eh.resume:
 // SIMD4-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8, !dbg [[DBG154]]
 // SIMD4-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG154]]
-// SIMD4-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0, !dbg [[DBG154]]
+// SIMD4-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0, !dbg [[DBG154]]
 // SIMD4-NEXT:    [[LPAD_VAL22:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1, !dbg [[DBG154]]
 // SIMD4-NEXT:    resume { ptr, i32 } [[LPAD_VAL22]], !dbg [[DBG154]]
 //
@@ -6202,7 +6202,7 @@ int foobar() {
 // SIMD4:       eh.resume:
 // SIMD4-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8, !dbg [[DBG174]]
 // SIMD4-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG174]]
-// SIMD4-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0, !dbg [[DBG174]]
+// SIMD4-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0, !dbg [[DBG174]]
 // SIMD4-NEXT:    [[LPAD_VAL8:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1, !dbg [[DBG174]]
 // SIMD4-NEXT:    resume { ptr, i32 } [[LPAD_VAL8]], !dbg [[DBG174]]
 //
@@ -6593,7 +6593,7 @@ int foobar() {
 // DEBUG1:       eh.resume:
 // DEBUG1-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8, !dbg [[DBG146]]
 // DEBUG1-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG146]]
-// DEBUG1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0, !dbg [[DBG146]]
+// DEBUG1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0, !dbg [[DBG146]]
 // DEBUG1-NEXT:    [[LPAD_VAL28:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1, !dbg [[DBG146]]
 // DEBUG1-NEXT:    resume { ptr, i32 } [[LPAD_VAL28]], !dbg [[DBG146]]
 //
@@ -6811,7 +6811,7 @@ int foobar() {
 // DEBUG1:       eh.resume:
 // DEBUG1-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8, !dbg [[DBG217]]
 // DEBUG1-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG217]]
-// DEBUG1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0, !dbg [[DBG217]]
+// DEBUG1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0, !dbg [[DBG217]]
 // DEBUG1-NEXT:    [[LPAD_VAL22:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1, !dbg [[DBG217]]
 // DEBUG1-NEXT:    resume { ptr, i32 } [[LPAD_VAL22]], !dbg [[DBG217]]
 //
@@ -6928,7 +6928,7 @@ int foobar() {
 // DEBUG1:       eh.resume:
 // DEBUG1-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8, !dbg [[DBG236]]
 // DEBUG1-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG236]]
-// DEBUG1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0, !dbg [[DBG236]]
+// DEBUG1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0, !dbg [[DBG236]]
 // DEBUG1-NEXT:    [[LPAD_VAL15:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1, !dbg [[DBG236]]
 // DEBUG1-NEXT:    resume { ptr, i32 } [[LPAD_VAL15]], !dbg [[DBG236]]
 //
@@ -7357,7 +7357,7 @@ int foobar() {
 // DEBUG2:       eh.resume:
 // DEBUG2-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8, !dbg [[DBG167]]
 // DEBUG2-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG167]]
-// DEBUG2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0, !dbg [[DBG167]]
+// DEBUG2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0, !dbg [[DBG167]]
 // DEBUG2-NEXT:    [[LPAD_VAL22:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1, !dbg [[DBG167]]
 // DEBUG2-NEXT:    resume { ptr, i32 } [[LPAD_VAL22]], !dbg [[DBG167]]
 //
@@ -7463,7 +7463,7 @@ int foobar() {
 // DEBUG2:       eh.resume:
 // DEBUG2-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8, !dbg [[DBG182]]
 // DEBUG2-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG182]]
-// DEBUG2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0, !dbg [[DBG182]]
+// DEBUG2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0, !dbg [[DBG182]]
 // DEBUG2-NEXT:    [[LPAD_VAL28:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1, !dbg [[DBG182]]
 // DEBUG2-NEXT:    resume { ptr, i32 } [[LPAD_VAL28]], !dbg [[DBG182]]
 //
@@ -7599,7 +7599,7 @@ int foobar() {
 // DEBUG2:       eh.resume:
 // DEBUG2-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8, !dbg [[DBG202]]
 // DEBUG2-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG202]]
-// DEBUG2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0, !dbg [[DBG202]]
+// DEBUG2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0, !dbg [[DBG202]]
 // DEBUG2-NEXT:    [[LPAD_VAL15:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1, !dbg [[DBG202]]
 // DEBUG2-NEXT:    resume { ptr, i32 } [[LPAD_VAL15]], !dbg [[DBG202]]
 //

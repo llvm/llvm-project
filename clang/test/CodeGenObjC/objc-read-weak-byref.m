@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fblocks -fobjc-gc -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.5 -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -fblocks -fobjc-gc -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.5 -emit-llvm %s -o - | \
 // RUN: FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -fblocks -fobjc-gc -triple i386-apple-darwin -fobjc-runtime=macosx-fragile-10.5 -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -fblocks -fobjc-gc -triple i386-apple-darwin -fobjc-runtime=macosx-fragile-10.5 -emit-llvm %s -o - | \
 // RUN: FileCheck %s
 
 @interface NSObject 
@@ -18,5 +18,5 @@ int main(void) {
     return 0;
 }
 
-// CHECK: call i8* @objc_read_weak
-// CHECK: call i8* @objc_read_weak
+// CHECK: call ptr @objc_read_weak
+// CHECK: call ptr @objc_read_weak

@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -mtriple=nvptx-nvidia-cuda -nvvm-reflect | FileCheck %s
+; RUN: opt < %s -S -mtriple=nvptx-nvidia-cuda -passes=nvvm-reflect | FileCheck %s
 ; RUN: opt < %s -S -mtriple=nvptx-nvidia-cuda -passes=nvvm-reflect | FileCheck %s
 
 declare i32 @__nvvm_reflect(i8*)

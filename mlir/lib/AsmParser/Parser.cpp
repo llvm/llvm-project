@@ -28,6 +28,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/SourceMgr.h"
 #include <algorithm>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -501,7 +502,7 @@ public:
 
   /// Return the location of the value identified by its name and number if it
   /// has been already reference.
-  Optional<SMLoc> getReferenceLoc(StringRef name, unsigned number) {
+  std::optional<SMLoc> getReferenceLoc(StringRef name, unsigned number) {
     auto &values = isolatedNameScopes.back().values;
     if (!values.count(name) || number >= values[name].size())
       return {};

@@ -28,6 +28,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include <optional>
 
 namespace hlfir {
 #define GEN_PASS_DEF_BUFFERIZEHLFIR
@@ -104,7 +105,7 @@ createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
   llvm::StringRef tmpName{".tmp"};
   mlir::Value alloca =
       builder.createTemporary(loc, mold.getFortranElementType(), tmpName,
-                              /*shape*/ llvm::None, lenParams);
+                              /*shape*/ std::nullopt, lenParams);
   auto declareOp = builder.create<hlfir::DeclareOp>(
       loc, alloca, tmpName, /*shapeOrShift*/ mlir::Value{}, lenParams,
       fir::FortranVariableFlagsAttr{});

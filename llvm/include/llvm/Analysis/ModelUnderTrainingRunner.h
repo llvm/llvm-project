@@ -15,7 +15,7 @@
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/Config/llvm-config.h"
 
-#ifdef LLVM_HAVE_TF_API
+#ifdef LLVM_HAVE_TFLITE
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/Utils/TFUtils.h"
 #include "llvm/IR/LLVMContext.h"
@@ -73,5 +73,5 @@ private:
 };
 
 } // namespace llvm
-#endif // define(LLVM_HAVE_TF_API)
+#endif // define(LLVM_HAVE_TFLITE)
 #endif // LLVM_ANALYSIS_MODELUNDERTRAININGRUNNER_H

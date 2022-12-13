@@ -772,7 +772,7 @@ private:
   llvm::Optional<uint32_t>
   tryReadNumericUCN(const char *&StartPtr, const char *SlashLoc, Token *Result);
   llvm::Optional<uint32_t> tryReadNamedUCN(const char *&StartPtr,
-                                           Token *Result);
+                                           const char *SlashLoc, Token *Result);
 
   /// Read a universal character name.
   ///

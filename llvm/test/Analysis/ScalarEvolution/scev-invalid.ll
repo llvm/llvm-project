@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -indvars -loop-unroll | FileCheck %s
+; RUN: opt < %s -S -passes='loop(indvars),loop-unroll' | FileCheck %s
 ;
 ; PR15570: SEGV: SCEV back-edge info invalid after dead code removal.
 ;

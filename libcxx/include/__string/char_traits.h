@@ -210,25 +210,22 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char>
     static inline _LIBCPP_CONSTEXPR bool lt(char_type __c1, char_type __c2) _NOEXCEPT
         {return (unsigned char)__c1 < (unsigned char)__c2;}
 
-    static _LIBCPP_CONSTEXPR_SINCE_CXX17
-    int compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT;
+  static _LIBCPP_CONSTEXPR_SINCE_CXX17 int compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
+    if (__n == 0)
+      return 0;
+    return std::__constexpr_memcmp(__s1, __s2, __n);
+  }
 
-    static inline size_t _LIBCPP_CONSTEXPR_SINCE_CXX17 length(const char_type* __s)  _NOEXCEPT {
-      // GCC currently does not support __builtin_strlen during constant evaluation.
-      // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=70816
-#ifdef _LIBCPP_COMPILER_GCC
-      if (__libcpp_is_constant_evaluated()) {
-        size_t __i = 0;
-        for (; __s[__i] != char_type('\0'); ++__i)
-            ;
-        return __i;
-      }
-#endif
-      return __builtin_strlen(__s);
-    }
+  static inline size_t _LIBCPP_CONSTEXPR_SINCE_CXX17 length(const char_type* __s)  _NOEXCEPT {
+    return std::__constexpr_strlen(__s);
+  }
 
-    static _LIBCPP_CONSTEXPR_SINCE_CXX17
-    const char_type* find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT;
+  static _LIBCPP_CONSTEXPR_SINCE_CXX17
+  const char_type* find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT {
+    if (__n == 0)
+        return nullptr;
+    return std::__constexpr_char_memchr(__s, static_cast<int>(__a), __n);
+  }
 
     static inline _LIBCPP_CONSTEXPR_SINCE_CXX20
     char_type* move(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
@@ -261,49 +258,6 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char>
         {return int_type(EOF);}
 };
 
-inline _LIBCPP_CONSTEXPR_SINCE_CXX17
-int
-char_traits<char>::compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT
-{
-    if (__n == 0)
-        return 0;
-#if __has_feature(cxx_constexpr_string_builtins)
-    return __builtin_memcmp(__s1, __s2, __n);
-#elif _LIBCPP_STD_VER <= 14
-    return _VSTD::memcmp(__s1, __s2, __n);
-#else
-    for (; __n; --__n, ++__s1, ++__s2)
-    {
-        if (lt(*__s1, *__s2))
-            return -1;
-        if (lt(*__s2, *__s1))
-            return 1;
-    }
-    return 0;
-#endif
-}
-
-inline _LIBCPP_CONSTEXPR_SINCE_CXX17
-const char*
-char_traits<char>::find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT
-{
-    if (__n == 0)
-        return nullptr;
-#if __has_feature(cxx_constexpr_string_builtins)
-    return __builtin_char_memchr(__s, to_int_type(__a), __n);
-#elif _LIBCPP_STD_VER <= 14
-    return (const char_type*) _VSTD::memchr(__s, to_int_type(__a), __n);
-#else
-    for (; __n; --__n)
-    {
-        if (eq(*__s, __a))
-            return __s;
-        ++__s;
-    }
-    return nullptr;
-#endif
-}
-
 // char_traits<wchar_t>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -326,12 +280,22 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t>
     static inline _LIBCPP_CONSTEXPR bool lt(char_type __c1, char_type __c2) _NOEXCEPT
         {return __c1 < __c2;}
 
-    static _LIBCPP_CONSTEXPR_SINCE_CXX17
-    int compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT;
-    static _LIBCPP_CONSTEXPR_SINCE_CXX17
-    size_t length(const char_type* __s) _NOEXCEPT;
-    static _LIBCPP_CONSTEXPR_SINCE_CXX17
-    const char_type* find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT;
+  static _LIBCPP_CONSTEXPR_SINCE_CXX17 int compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
+    if (__n == 0)
+        return 0;
+    return std::__constexpr_wmemcmp(__s1, __s2, __n);
+  }
+
+  static _LIBCPP_CONSTEXPR_SINCE_CXX17 size_t length(const char_type* __s) _NOEXCEPT {
+    return std::__constexpr_wcslen(__s);
+  }
+
+  static _LIBCPP_CONSTEXPR_SINCE_CXX17
+  const char_type* find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT {
+    if (__n == 0)
+        return nullptr;
+    return std::__constexpr_wmemchr(__s, __a, __n);
+  }
 
     static inline _LIBCPP_CONSTEXPR_SINCE_CXX20
     char_type* move(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
@@ -363,65 +327,6 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t>
     static inline _LIBCPP_CONSTEXPR int_type eof() _NOEXCEPT
         {return int_type(WEOF);}
 };
-
-inline _LIBCPP_CONSTEXPR_SINCE_CXX17
-int
-char_traits<wchar_t>::compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT
-{
-    if (__n == 0)
-        return 0;
-#if __has_feature(cxx_constexpr_string_builtins)
-    return __builtin_wmemcmp(__s1, __s2, __n);
-#elif _LIBCPP_STD_VER <= 14
-    return _VSTD::wmemcmp(__s1, __s2, __n);
-#else
-    for (; __n; --__n, ++__s1, ++__s2)
-    {
-        if (lt(*__s1, *__s2))
-            return -1;
-        if (lt(*__s2, *__s1))
-            return 1;
-    }
-    return 0;
-#endif
-}
-
-inline _LIBCPP_CONSTEXPR_SINCE_CXX17
-size_t
-char_traits<wchar_t>::length(const char_type* __s) _NOEXCEPT
-{
-#if __has_feature(cxx_constexpr_string_builtins)
-    return __builtin_wcslen(__s);
-#elif _LIBCPP_STD_VER <= 14
-    return _VSTD::wcslen(__s);
-#else
-    size_t __len = 0;
-    for (; !eq(*__s, char_type(0)); ++__s)
-        ++__len;
-    return __len;
-#endif
-}
-
-inline _LIBCPP_CONSTEXPR_SINCE_CXX17
-const wchar_t*
-char_traits<wchar_t>::find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT
-{
-    if (__n == 0)
-        return nullptr;
-#if __has_feature(cxx_constexpr_string_builtins)
-    return __builtin_wmemchr(__s, __a, __n);
-#elif _LIBCPP_STD_VER <= 14
-    return _VSTD::wmemchr(__s, __a, __n);
-#else
-    for (; __n; --__n)
-    {
-        if (eq(*__s, __a))
-            return __s;
-        ++__s;
-    }
-    return nullptr;
-#endif
-}
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
@@ -445,8 +350,10 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
     static inline constexpr bool lt(char_type __c1, char_type __c2) noexcept
         {return __c1 < __c2;}
 
-    static constexpr
-    int              compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT;
+  static _LIBCPP_HIDE_FROM_ABI constexpr int
+  compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
+      return std::__constexpr_memcmp(__s1, __s2, __n);
+  }
 
     static constexpr
     size_t           length(const char_type* __s) _NOEXCEPT;
@@ -494,24 +401,6 @@ char_traits<char8_t>::length(const char_type* __s) _NOEXCEPT
     for (; !eq(*__s, char_type(0)); ++__s)
         ++__len;
     return __len;
-}
-
-inline constexpr
-int
-char_traits<char8_t>::compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT
-{
-#if __has_feature(cxx_constexpr_string_builtins)
-    return __builtin_memcmp(__s1, __s2, __n);
-#else
-    for (; __n; --__n, ++__s1, ++__s2)
-    {
-        if (lt(*__s1, *__s2))
-            return -1;
-        if (lt(*__s2, *__s1))
-            return 1;
-    }
-    return 0;
-#endif
 }
 
 // TODO use '__builtin_char_memchr' if it ever supports char8_t ??

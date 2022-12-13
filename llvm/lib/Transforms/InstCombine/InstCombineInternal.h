@@ -388,7 +388,7 @@ public:
     assert(New && !New->getParent() &&
            "New instruction already inserted into a basic block!");
     BasicBlock *BB = Old.getParent();
-    BB->getInstList().insert(Old.getIterator(), New); // Insert inst
+    New->insertAt(BB, Old.getIterator()); // Insert inst
     Worklist.add(New);
     return New;
   }
@@ -801,7 +801,7 @@ class Negator final {
 
   /// Recurse depth-first and attempt to sink the negation.
   /// FIXME: use worklist?
-  [[nodiscard]] Optional<Result> run(Value *Root);
+  [[nodiscard]] std::optional<Result> run(Value *Root);
 
   Negator(const Negator &) = delete;
   Negator(Negator &&) = delete;

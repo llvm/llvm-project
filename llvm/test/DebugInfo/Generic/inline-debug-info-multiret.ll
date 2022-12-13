@@ -1,4 +1,4 @@
-; RUN: opt -inline -S < %s | FileCheck %s
+; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
 ;
 ; A hand-edited version of inline-debug-info.ll to test inlining of a
 ; function with multiple returns.

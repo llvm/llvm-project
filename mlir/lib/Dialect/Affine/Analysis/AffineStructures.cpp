@@ -26,6 +26,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 #define DEBUG_TYPE "affine-structures"
 
@@ -1105,7 +1106,7 @@ void FlatAffineValueConstraints::getSliceBounds(
   // Set the lower and upper bound maps for all the variables that were
   // computed as affine expressions of the rest as the "detected expr" and
   // "detected expr + 1" respectively; set the undetected ones to null.
-  Optional<FlatAffineValueConstraints> tmpClone;
+  std::optional<FlatAffineValueConstraints> tmpClone;
   for (unsigned pos = 0; pos < num; pos++) {
     unsigned numMapDims = getNumDimVars() - num;
     unsigned numMapSymbols = getNumSymbolVars();

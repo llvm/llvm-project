@@ -43,7 +43,6 @@
   ; CHECK-NEXT:    call foo@plt
   ; CHECK-NEXT:    lui a0, 2
   ; CHECK-NEXT:    sub sp, s0, a0
-  ; CHECK-NEXT:    lui a0, 2
   ; CHECK-NEXT:    addiw a0, a0, -2032
   ; CHECK-NEXT:    add sp, sp, a0
   ; CHECK-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload

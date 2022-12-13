@@ -33,4 +33,5 @@ add_llvm_component_library(LLVMFuzzMutate
   Scalar
   Support
   Target
+  TransformUtils
   )

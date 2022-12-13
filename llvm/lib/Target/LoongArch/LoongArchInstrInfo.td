@@ -46,6 +46,8 @@ def SDT_LoongArchCsrxchg : SDTypeProfile<1, 3, [SDTCisInt<0>,
                                                 SDTCisSameAs<0, 1>,
                                                 SDTCisSameAs<0, 2>,
                                                 SDTCisVT<3, GRLenVT>]>;
+def SDT_LoongArchIocsrwr : SDTypeProfile<0, 2, [SDTCisInt<0>,
+                                                SDTCisSameAs<0, 1>]>;
 
 // TODO: Add LoongArch specific DAG Nodes
 // Target-independent nodes, but with target-specific formats.
@@ -109,6 +111,26 @@ def loongarch_csrwr : SDNode<"LoongArchISD::CSRWR", SDT_LoongArchCsrwr,
 def loongarch_csrxchg : SDNode<"LoongArchISD::CSRXCHG",
                                 SDT_LoongArchCsrxchg,
                                 [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrrd_b : SDNode<"LoongArchISD::IOCSRRD_B", SDTUnaryOp,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrrd_h : SDNode<"LoongArchISD::IOCSRRD_H", SDTUnaryOp,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrrd_w : SDNode<"LoongArchISD::IOCSRRD_W", SDTUnaryOp,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrrd_d : SDNode<"LoongArchISD::IOCSRRD_D", SDTUnaryOp,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrwr_b : SDNode<"LoongArchISD::IOCSRWR_B",
+                                  SDT_LoongArchIocsrwr,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrwr_h : SDNode<"LoongArchISD::IOCSRWR_H",
+                                  SDT_LoongArchIocsrwr,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrwr_w : SDNode<"LoongArchISD::IOCSRWR_W",
+                                  SDT_LoongArchIocsrwr,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrwr_d : SDNode<"LoongArchISD::IOCSRWR_D",
+                                  SDT_LoongArchIocsrwr,
+                                  [SDNPHasChain, SDNPSideEffect]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -127,6 +149,20 @@ class SImmAsmOperand<int width, string suffix = "">
 
 class UImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"U", width, suffix> {
+}
+
+// A parse method for "$r*" or "$r*, 0", where the 0 is be silently ignored.
+// Only used for "AM*" instructions, in order to be compatible with GAS.
+def AtomicMemAsmOperand : AsmOperandClass {
+  let Name = "AtomicMemAsmOperand";
+  let RenderMethod = "addRegOperands";
+  let PredicateMethod = "isGPR";
+  let ParserMethod = "parseAtomicMemOp";
+}
+
+def GPRMemAtomic : RegisterOperand<GPR> {
+  let ParserMatchClass = AtomicMemAsmOperand;
+  let PrintMethod = "printAtomicMemOp";
 }
 
 // A parameterized register class alternative to i32imm/i64imm from Target.td.
@@ -412,7 +448,8 @@ class STORE_2RI14<bits<8> op, string opstr>
 
 let mayLoad = 1, mayStore = 1, Constraints = "@earlyclobber $rd" in
 class AM_3R<bits<17> op, string opstr>
-    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPR:$rj), opstr, "$rd, $rk, $rj">;
+    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPRMemAtomic:$rj), opstr,
+            "$rd, $rk, $rj">;
 
 let mayLoad = 1 in
 class LLBase<bits<8> op, string opstr>
@@ -1290,17 +1327,17 @@ defm : AtomicStPat<atomic_store_16, ST_H, GPR, GRLenVT>;
 defm : AtomicStPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i32>,
                    Requires<[IsLA32]>;
 
-def PseudoAtomicStoreW : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
-                                 PseudoInstExpansion<(AMSWAP_DB_W R0,
-                                                      GPR:$rk, GPR:$rj)>;
+def PseudoAtomicStoreW
+  : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
+           PseudoInstExpansion<(AMSWAP_DB_W R0, GPR:$rk, GPRMemAtomic:$rj)>;
 
 def : Pat<(atomic_store_release_seqcst_32 GPR:$rj, GPR:$rk),
           (PseudoAtomicStoreW GPR:$rj, GPR:$rk)>;
 
 let Predicates = [IsLA64] in {
-def PseudoAtomicStoreD : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
-                                 PseudoInstExpansion<(AMSWAP_DB_D R0,
-                                                      GPR:$rk, GPR:$rj)>;
+def PseudoAtomicStoreD
+  : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
+           PseudoInstExpansion<(AMSWAP_DB_D R0, GPR:$rk, GPRMemAtomic:$rj)>;
 
 def : Pat<(atomic_store_release_seqcst_64 GPR:$rj, GPR:$rk),
           (PseudoAtomicStoreD GPR:$rj, GPR:$rk)>;
@@ -1654,3 +1691,16 @@ def : Pat<(loongarch_csrwr GPR:$rd, uimm14:$imm14),
           (CSRWR GPR:$rd, uimm14:$imm14)>;
 def : Pat<(loongarch_csrxchg GPR:$rd, GPR:$rj, uimm14:$imm14),
           (CSRXCHG GPR:$rd, GPR:$rj, uimm14:$imm14)>;
+
+def : Pat<(loongarch_iocsrrd_b GPR:$rj), (IOCSRRD_B GPR:$rj)>;
+def : Pat<(loongarch_iocsrrd_h GPR:$rj), (IOCSRRD_H GPR:$rj)>;
+def : Pat<(loongarch_iocsrrd_w GPR:$rj), (IOCSRRD_W GPR:$rj)>;
+
+def : Pat<(loongarch_iocsrwr_b GPR:$rd, GPR:$rj), (IOCSRWR_B GPR:$rd, GPR:$rj)>;
+def : Pat<(loongarch_iocsrwr_h GPR:$rd, GPR:$rj), (IOCSRWR_H GPR:$rd, GPR:$rj)>;
+def : Pat<(loongarch_iocsrwr_w GPR:$rd, GPR:$rj), (IOCSRWR_W GPR:$rd, GPR:$rj)>;
+
+let Predicates = [IsLA64] in {
+def : Pat<(loongarch_iocsrrd_d GPR:$rj), (IOCSRRD_D GPR:$rj)>;
+def : Pat<(loongarch_iocsrwr_d GPR:$rd, GPR:$rj), (IOCSRWR_D GPR:$rd, GPR:$rj)>;
+} // Predicates = [IsLA64]

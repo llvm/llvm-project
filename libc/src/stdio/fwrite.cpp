@@ -9,6 +9,7 @@
 #include "src/stdio/fwrite.h"
 #include "src/__support/File/file.h"
 
+#include <errno.h>
 #include <stdio.h>
 
 namespace __llvm_libc {
@@ -18,9 +19,12 @@ LLVM_LIBC_FUNCTION(size_t, fwrite,
                     ::FILE *stream)) {
   if (size == 0 || nmemb == 0)
     return 0;
-  return reinterpret_cast<__llvm_libc::File *>(stream)->write(buffer,
-                                                              size * nmemb) /
-         size;
+  auto result = reinterpret_cast<__llvm_libc::File *>(stream)->write(
+      buffer, size * nmemb);
+  if (result.has_error())
+    errno = result.error;
+
+  return result.value / size;
 }
 
 } // namespace __llvm_libc

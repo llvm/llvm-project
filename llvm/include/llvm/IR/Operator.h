@@ -15,7 +15,6 @@
 #define LLVM_IR_OPERATOR_H
 
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/None.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Instruction.h"

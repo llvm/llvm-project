@@ -5850,7 +5850,7 @@ static Instruction *foldICmpUsingBoolRange(ICmpInst &I,
   return nullptr;
 }
 
-llvm::Optional<std::pair<CmpInst::Predicate, Constant *>>
+std::optional<std::pair<CmpInst::Predicate, Constant *>>
 InstCombiner::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
                                                        Constant *C) {
   assert(ICmpInst::isRelational(Pred) && ICmpInst::isIntPredicate(Pred) &&

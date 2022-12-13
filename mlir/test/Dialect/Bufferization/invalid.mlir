@@ -78,3 +78,20 @@ func.func @sparse_alloc_call() {
   call @foo(%0) : (tensor<20x40xf32, #DCSR>) -> ()
   return
 }
+
+// -----
+
+// expected-error @+1{{invalid value for 'bufferization.access'}}
+func.func private @invalid_buffer_access_type(tensor<*xf32> {bufferization.access = "foo"})
+
+// -----
+
+// expected-error @+1{{'bufferization.writable' is invalid on external functions}}
+func.func private @invalid_writable_attribute(tensor<*xf32> {bufferization.writable = false})
+
+// -----
+
+func.func @invalid_writable_on_op() {
+  // expected-error @+1{{attribute '"bufferization.writable"' not supported as an op attribute by the bufferization dialect}}
+  arith.constant {bufferization.writable = true} 0  : index
+}

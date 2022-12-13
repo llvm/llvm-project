@@ -1,4 +1,4 @@
-; RUN: opt %s -verify-debuginfo-preserve -instcombine -disable-output 2>&1 | FileCheck --check-prefix=VERIFY %s
+; RUN: opt %s -verify-debuginfo-preserve -passes=instcombine -disable-output 2>&1 | FileCheck --check-prefix=VERIFY %s
 
 ; VERIFY: CheckModuleDebugify (original debuginfo):
 

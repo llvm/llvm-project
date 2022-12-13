@@ -58,7 +58,7 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
     Instruction *NewInst = I.clone();
     if (I.hasName())
       NewInst->setName(I.getName() + NameSuffix);
-    NewBB->getInstList().push_back(NewInst);
+    NewInst->insertAt(NewBB, NewBB->end());
     VMap[&I] = NewInst; // Add instruction map to value.
 
     if (isa<CallInst>(I) && !I.isDebugOrPseudoInst()) {
@@ -521,7 +521,7 @@ void PruningFunctionCloner::CloneBlock(
     if (II->hasName())
       NewInst->setName(II->getName() + NameSuffix);
     VMap[&*II] = NewInst; // Add instruction map to value.
-    NewBB->getInstList().push_back(NewInst);
+    NewInst->insertAt(NewBB, NewBB->end());
     if (isa<CallInst>(II) && !II->isDebugOrPseudoInst()) {
       hasCalls = true;
       hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_memprof);
@@ -583,7 +583,7 @@ void PruningFunctionCloner::CloneBlock(
     Instruction *NewInst = OldTI->clone();
     if (OldTI->hasName())
       NewInst->setName(OldTI->getName() + NameSuffix);
-    NewBB->getInstList().push_back(NewInst);
+    NewInst->insertAt(NewBB, NewBB->end());
     VMap[OldTI] = NewInst; // Add instruction map to value.
 
     if (CodeInfo) {
@@ -670,7 +670,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
       continue; // Dead block.
 
     // Add the new block to the new function.
-    NewFunc->getBasicBlockList().push_back(NewBB);
+    NewFunc->insertBasicBlockAt(NewFunc->end(), NewBB);
 
     // Handle PHI nodes specially, as we have to remove references to dead
     // blocks.

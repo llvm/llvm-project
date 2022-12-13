@@ -377,6 +377,11 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
 
     Expr *InputExpr = Exprs[i];
 
+    if (InputExpr->getType()->isMemberPointerType())
+      return StmtError(Diag(InputExpr->getBeginLoc(),
+                            diag::err_asm_pmf_through_constraint_not_permitted)
+                       << InputExpr->getSourceRange());
+
     // Referring to parameters is not allowed in naked functions.
     if (CheckNakedParmReference(InputExpr, *this))
       return StmtError();

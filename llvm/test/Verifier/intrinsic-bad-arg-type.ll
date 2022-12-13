@@ -1,4 +1,4 @@
-; RUN: not opt -S -verify 2>&1 < %s | FileCheck %s
+; RUN: not opt -S -passes=verify 2>&1 < %s | FileCheck %s
 
 ; CHECK: Intrinsic has incorrect argument type!
 ; CHECK-NEXT: <vscale x 4 x i32> (<vscale x 4 x i32>*, i32, <4 x i1>, <vscale x 4 x i32>)* @llvm.masked.load.nxv4i32.p0nxv4i32

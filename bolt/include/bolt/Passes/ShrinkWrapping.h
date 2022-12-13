@@ -27,8 +27,8 @@ class CalleeSavedAnalysis {
   DataflowInfoManager &Info;
   MCPlusBuilder::AllocatorIdTy AllocatorId;
 
-  Optional<unsigned> SaveTagIndex;
-  Optional<unsigned> RestoreTagIndex;
+  std::optional<unsigned> SaveTagIndex;
+  std::optional<unsigned> RestoreTagIndex;
 
   /// Compute all stores of callee-saved regs. Those are the ones that stores a
   /// register whose definition is not local.
@@ -140,9 +140,9 @@ class StackLayoutModifier {
 
   bool IsInitialized{false};
 
-  Optional<unsigned> TodoTagIndex;
-  Optional<unsigned> SlotTagIndex;
-  Optional<unsigned> OffsetCFIRegTagIndex;
+  std::optional<unsigned> TodoTagIndex;
+  std::optional<unsigned> SlotTagIndex;
+  std::optional<unsigned> OffsetCFIRegTagIndex;
 
 public:
   // Keep a worklist of operations to perform on the function to perform
@@ -315,7 +315,7 @@ class ShrinkWrapping {
   static std::atomic<std::uint64_t> InstrDynamicCount;
   static std::atomic<std::uint64_t> StoreDynamicCount;
 
-  Optional<unsigned> AnnotationIndex;
+  std::optional<unsigned> AnnotationIndex;
 
   /// Allow our custom worklist-sensitive analysis
   /// PredictiveStackPointerTracking to access WorklistItem

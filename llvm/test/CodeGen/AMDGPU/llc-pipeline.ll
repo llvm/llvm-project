@@ -1072,7 +1072,6 @@
 ; GCN-O3-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
 ; GCN-O3-NEXT:      Scalar Evolution Analysis
 ; GCN-O3-NEXT:      Straight line strength reduction
-; GCN-O3-NEXT:      Phi Values Analysis
 ; GCN-O3-NEXT:      Function Alias Analysis Results
 ; GCN-O3-NEXT:      Memory Dependence Analysis
 ; GCN-O3-NEXT:      Optimization Remark Emitter
@@ -1111,7 +1110,6 @@
 ; GCN-O3-NEXT:      Expand reduction intrinsics
 ; GCN-O3-NEXT:      Natural Loop Information
 ; GCN-O3-NEXT:      TLS Variable Hoist
-; GCN-O3-NEXT:      Phi Values Analysis
 ; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:      Function Alias Analysis Results
 ; GCN-O3-NEXT:      Memory Dependence Analysis

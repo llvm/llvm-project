@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
+#include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <string>
 #include <vector>
@@ -57,33 +58,10 @@ private:
       LGI.SymbolFlags[ES.intern(Sym->getName())] = Flags;
     }
 
-    if ((G.getTargetTriple().isOSBinFormatMachO() && hasMachOInitSection(G)) ||
-        (G.getTargetTriple().isOSBinFormatELF() && hasELFInitSection(G)))
+    if (hasInitializerSection(G))
       LGI.InitSymbol = makeInitSymbol(ES, G);
 
     return LGI;
-  }
-
-  static bool hasMachOInitSection(LinkGraph &G) {
-    for (auto &Sec : G.sections())
-      if (Sec.getName() == "__DATA,__objc_selrefs" ||
-          Sec.getName() == "__DATA,__objc_classlist" ||
-          Sec.getName() == "__TEXT,__swift5_protos" ||
-          Sec.getName() == "__TEXT,__swift5_proto" ||
-          Sec.getName() == "__TEXT,__swift5_types" ||
-          Sec.getName() == "__DATA,__mod_init_func")
-        return true;
-    return false;
-  }
-
-  static bool hasELFInitSection(LinkGraph &G) {
-    for (auto &Sec : G.sections()) {
-      auto SecName = Sec.getName();
-      if (SecName.consume_front(".init_array") &&
-          (SecName.empty() || SecName[0] == '.'))
-        return true;
-    }
-    return false;
   }
 
   static SymbolStringPtr makeInitSymbol(ExecutionSession &ES, LinkGraph &G) {

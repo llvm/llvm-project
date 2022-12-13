@@ -237,11 +237,11 @@ It is possible to control whether opaque pointers are used (if you want to
 override the default) using ``LLVMContext::setOpaquePointers`` or
 ``LLVMContextSetOpaquePointers()``.
 
-Transition State
-================
+Temporarily disabling opaque pointers
+=====================================
 
-As of April 2022 both LLVM and Clang have complete support for opaque pointers,
-and opaque pointers are enabled by default in LLVM and Clang.
+In LLVM 15, opaque pointers are enabled by default, but it it still possible to
+use typed pointers using a number of opt-in flags.
 
 For users of the clang driver interface, it is possible to temporarily restore
 the old default using the ``-DCLANG_ENABLE_OPAQUE_POINTERS=OFF`` cmake option,
@@ -260,16 +260,37 @@ For users of LLVM as a library, opaque pointers can be disabled by calling
 For users of LLVM tools like opt, opaque pointers can be disabled by passing
 ``-opaque-pointers=0``.
 
-The next steps for the opaque pointer migration are:
-
-* Migrate Clang/LLVM tests to use opaque pointers.
-* Remove support for typed pointers after the LLVM 15 branch has been created.
-
 Version Support
 ===============
 
 **LLVM 14:** Supports all necessary APIs for migrating to opaque pointers and deprecates/removes incompatible APIs. However, using opaque pointers in the optimization pipeline is **not** fully supported. This release can be used to make out-of-tree code compatible with opaque pointers, but opaque pointers should **not** be enabled in production.
 
-**LLVM 15:** Opaque pointers are enabled by default. Typed pointers are still available, but only supported on a best-effort basis and may be untested.
+**LLVM 15:** Opaque pointers are enabled by default. Typed pointers are still
+supported.
 
 **LLVM 16:** Only opaque pointers will be supported. Typed pointers will not be supported.
+
+Transition State
+================
+
+As of December 2022 (LLVM 16):
+
+Typed pointers are currently still supported on a best-effort basis. Patches to
+fix typed pointer support are accepted, but must not include test coverage.
+
+Tests are in the process of being converted to opaque pointers. All new tests
+must use opaque pointers. Typed pointer support will be removed as soon as test
+migration finishes.
+
+The following typed pointer functionality has already been removed:
+
+* The ``CLANG_ENABLE_OPAQUE_POINTERS`` cmake flag is no longer supported.
+* C APIs that do not support opaque pointers (like ``LLVMBuildLoad``) are no
+  longer supported.
+
+The following typed pointer functionality is still to be removed:
+
+* The ``-no-opaque-pointers`` cc1 flag, ``-opaque-pointers=0`` opt flag and
+  ``-plugin-opt=no-opaque-pointers`` lto flag.
+* Auto-detection of typed pointers in bitcode and textual IR.
+* Support for typed pointers in LLVM libraries.

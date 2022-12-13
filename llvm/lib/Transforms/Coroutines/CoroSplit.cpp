@@ -516,13 +516,6 @@ static Function *createCloneDeclaration(Function &OrigF, coro::Shape &Shape,
   Function *NewF =
       Function::Create(FnTy, GlobalValue::LinkageTypes::InternalLinkage,
                        OrigF.getName() + Suffix);
-  if (Shape.ABI != coro::ABI::Async)
-    NewF->addParamAttr(0, Attribute::NonNull);
-
-  // For the async lowering ABI we can't guarantee that the context argument is
-  // not access via a different pointer not based on the argument.
-  if (Shape.ABI != coro::ABI::Async)
-    NewF->addParamAttr(0, Attribute::NoAlias);
 
   M->getFunctionList().insert(InsertBefore, NewF);
 
@@ -849,11 +842,15 @@ Value *CoroCloner::deriveNewFramePointer() {
 }
 
 static void addFramePointerAttrs(AttributeList &Attrs, LLVMContext &Context,
-                                 unsigned ParamIndex,
-                                 uint64_t Size, Align Alignment) {
+                                 unsigned ParamIndex, uint64_t Size,
+                                 Align Alignment, bool NoAlias) {
   AttrBuilder ParamAttrs(Context);
   ParamAttrs.addAttribute(Attribute::NonNull);
-  ParamAttrs.addAttribute(Attribute::NoAlias);
+  ParamAttrs.addAttribute(Attribute::NoUndef);
+
+  if (NoAlias)
+    ParamAttrs.addAttribute(Attribute::NoAlias);
+
   ParamAttrs.addAlignmentAttr(Alignment);
   ParamAttrs.addDereferenceableAttr(Size);
   Attrs = Attrs.addParamAttributes(Context, ParamIndex, ParamAttrs);
@@ -959,8 +956,8 @@ void CoroCloner::create() {
     NewAttrs = NewAttrs.addFnAttributes(
         Context, AttrBuilder(Context, OrigAttrs.getFnAttrs()));
 
-    addFramePointerAttrs(NewAttrs, Context, 0,
-                         Shape.FrameSize, Shape.FrameAlign);
+    addFramePointerAttrs(NewAttrs, Context, 0, Shape.FrameSize,
+                         Shape.FrameAlign, /*NoAlias=*/false);
     break;
   case coro::ABI::Async: {
     auto *ActiveAsyncSuspend = cast<CoroSuspendAsyncInst>(ActiveSuspend);
@@ -989,9 +986,12 @@ void CoroCloner::create() {
     // full-stop.
     NewAttrs = Shape.RetconLowering.ResumePrototype->getAttributes();
 
+    /// FIXME: Is it really good to add the NoAlias attribute?
     addFramePointerAttrs(NewAttrs, Context, 0,
                          Shape.getRetconCoroId()->getStorageSize(),
-                         Shape.getRetconCoroId()->getStorageAlignment());
+                         Shape.getRetconCoroId()->getStorageAlignment(),
+                         /*NoAlias=*/true);
+
     break;
   }
 

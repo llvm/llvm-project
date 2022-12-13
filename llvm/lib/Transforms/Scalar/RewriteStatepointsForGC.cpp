@@ -17,7 +17,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -318,7 +317,7 @@ static void findLiveSetAtInst(Instruction *inst, GCPtrLivenessData &Data,
                               StatepointLiveSetTy &out);
 
 // TODO: Once we can get to the GCStrategy, this becomes
-// Optional<bool> isGCManagedPointer(const Type *Ty) const override {
+// std::optional<bool> isGCManagedPointer(const Type *Ty) const override {
 
 static bool isGCPointerType(Type *T) {
   if (auto *PT = dyn_cast<PointerType>(T))

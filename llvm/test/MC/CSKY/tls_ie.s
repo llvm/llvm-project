@@ -10,7 +10,7 @@
 	str32.w r0, (r2, r3 << 0)
 
 
-# CHECK:            0:      	lrw16	r3, 0x14 <$d.0>
+# CHECK:            0:      	lrw16	r3, 0x14
 # CHECK-NEXT:       2:      	grs32	r2, 0x0
 # CHECK-NEXT:       6:      	addu16	r3, r3, r2
 # CHECK-NEXT:       8:      	ld16.w	r3, (r3, 0x0)

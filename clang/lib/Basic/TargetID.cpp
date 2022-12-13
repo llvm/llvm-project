@@ -12,6 +12,7 @@
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
+#include <optional>
 
 namespace clang {
 
@@ -62,7 +63,7 @@ llvm::StringRef getProcessorFromTargetID(const llvm::Triple &T,
 // A target ID is a processor name followed by a list of target features
 // delimited by colon. Each target feature is a string post-fixed by a plus
 // or minus sign, e.g. gfx908:sramecc+:xnack-.
-static llvm::Optional<llvm::StringRef>
+static std::optional<llvm::StringRef>
 parseTargetIDWithFormatCheckingOnly(llvm::StringRef TargetID,
                                     llvm::StringMap<bool> *FeatureMap) {
   llvm::StringRef Processor;

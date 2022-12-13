@@ -141,8 +141,10 @@ add_libc_unittest(
   SRCS
     strdup_test.cpp
   DEPENDS
+    libc.include.errno
     libc.include.stdlib
     libc.src.string.strdup
+    libc.src.errno.errno
 )
 
 add_libc_unittest(
