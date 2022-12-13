@@ -521,12 +521,12 @@ public:
     else
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
 
-    if (Error E = Consumer.initialize(ScanInstance))
+    if (Error E = Consumer.initialize(ScanInstance, OriginalInvocation))
       return reportError(std::move(E));
 
     const bool Result = ScanInstance.ExecuteAction(*Action);
 
-    if (Error E = Consumer.finalize(ScanInstance))
+    if (Error E = Consumer.finalize(ScanInstance, OriginalInvocation))
       return reportError(std::move(E));
 
     if (CacheFS) {
