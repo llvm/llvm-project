@@ -122,6 +122,22 @@ def MulSIExtendedToMulI :
         [(Arith_MulIOp $x, $y), (replaceWithValue $x)],
         [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
 
+
+def IsScalarOrSplatOne :
+    Constraint<And<[
+      CPred<"succeeded(getIntOrSplatIntValue($0))">,
+      CPred<"getIntOrSplatIntValue($0).value() == 1">]>>;
+
+// mulsi_extended(x, 1) -> [x, extsi(cmpi slt, x, 0)]
+def MulSIExtendedRHSOne :
+    Pattern<(Arith_MulSIExtendedOp $x, (ConstantLikeMatcher AnyAttr:$c1)),
+            [(replaceWithValue $x),
+             (Arith_ExtSIOp(Arith_CmpIOp
+                              (NativeCodeCall<"arith::CmpIPredicate::slt">),
+                              $x,
+                              (Arith_ConstantOp (GetZeroAttr $x))))],
+            [(IsScalarOrSplatOne $c1)]>;
+
 //===----------------------------------------------------------------------===//
 // MulUIExtendedOp
 //===----------------------------------------------------------------------===//
@@ -250,6 +266,54 @@ def OrOfExtSI :
     Pat<(Arith_OrIOp (Arith_ExtSIOp $x), (Arith_ExtSIOp $y)),
         (Arith_ExtSIOp (Arith_OrIOp $x, $y)),
         [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+
+//===----------------------------------------------------------------------===//
+// TruncIOp
+//===----------------------------------------------------------------------===//
+
+def ValuesWithSameType :
+    Constraint<
+      CPred<"llvm::all_equal({$0.getType(), $1.getType(), $2.getType()})">>;
+
+def ValueWiderThan :
+    Constraint<And<[
+      CPred<"getScalarOrElementWidth($0) > getScalarOrElementWidth($1)">,
+      CPred<"getScalarOrElementWidth($1) > 0">]>>;
+
+def TruncationMatchesShiftAmount :
+    Constraint<And<[
+      CPred<"succeeded(getIntOrSplatIntValue($2))">,
+      CPred<"(getScalarOrElementWidth($0) - getScalarOrElementWidth($1)) == "
+              "getIntOrSplatIntValue($2).value()">]>>;
+
+// trunci(shrsi(x, c)) -> trunci(shrui(x, c))
+def TruncIShrSIToTrunciShrUI :
+    Pat<(Arith_TruncIOp:$tr
+          (Arith_ShRSIOp $x, (ConstantLikeMatcher AnyAttr:$c0))),
+        (Arith_TruncIOp (Arith_ShRUIOp $x, (Arith_ConstantOp $c0))),
+        [(TruncationMatchesShiftAmount $x, $tr, $c0)]>;
+
+// trunci(shrui(mul(sext(x), sext(y)), c)) -> mulsi_extended(x, y)
+def TruncIShrUIMulIToMulSIExtended :
+    Pat<(Arith_TruncIOp:$tr (Arith_ShRUIOp
+                              (Arith_MulIOp:$mul
+                                (Arith_ExtSIOp $x), (Arith_ExtSIOp $y)),
+                              (ConstantLikeMatcher AnyAttr:$c0))),
+        (Arith_MulSIExtendedOp:$res__1 $x, $y),
+      [(ValuesWithSameType $tr, $x, $y),
+       (ValueWiderThan $mul, $x),
+       (TruncationMatchesShiftAmount $mul, $x, $c0)]>;
+
+// trunci(shrui(mul(zext(x), zext(y)), c)) -> mului_extended(x, y)
+def TruncIShrUIMulIToMulUIExtended :
+    Pat<(Arith_TruncIOp:$tr (Arith_ShRUIOp
+                              (Arith_MulIOp:$mul
+                                (Arith_ExtUIOp $x), (Arith_ExtUIOp $y)),
+                              (ConstantLikeMatcher AnyAttr:$c0))),
+        (Arith_MulUIExtendedOp:$res__1 $x, $y),
+      [(ValuesWithSameType $tr, $x, $y),
+       (ValueWiderThan $mul, $x),
+       (TruncationMatchesShiftAmount $mul, $x, $c0)]>;
 
 //===----------------------------------------------------------------------===//
 // MulFOp
