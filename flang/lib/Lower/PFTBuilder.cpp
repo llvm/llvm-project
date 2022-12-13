@@ -1785,7 +1785,7 @@ lower::pft::getScopeVariableList(const semantics::Scope &scope,
   auto iter = map.find(&scope);
   if (iter == map.end()) {
     SymbolDependenceAnalysis sda(scope);
-    map.emplace(&scope, std::move(sda.getVariableList()));
+    map.emplace(&scope, sda.getVariableList());
     iter = map.find(&scope);
   }
   return iter->second;
