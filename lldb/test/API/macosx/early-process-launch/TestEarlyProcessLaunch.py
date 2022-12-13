@@ -13,6 +13,9 @@ class TestEarlyProcessLaunch(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessDarwin
+    @skipIfOutOfTreeDebugserver  # 2022-12-13 FIXME: skipping system debugserver 
+                                 # until this feature is included in the system
+                                 # debugserver.
     @add_test_categories(['pyapi'])
     def test_early_process_launch(self):
         """Test that we don't read objc class tables early in proc startup"""
