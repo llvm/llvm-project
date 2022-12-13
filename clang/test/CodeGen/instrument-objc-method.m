@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -S -triple x86_64-apple-darwin10 -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-functions | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -S -triple x86_64-apple-darwin10 -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-function-entry-bare | FileCheck -check-prefix=BARE %s
+// RUN: %clang_cc1 -S -triple x86_64-apple-darwin10 -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-functions | FileCheck %s
+// RUN: %clang_cc1 -S -triple x86_64-apple-darwin10 -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-function-entry-bare | FileCheck -check-prefix=BARE %s
 
 @interface ObjCClass
 @end
@@ -28,7 +28,7 @@
 - (void)dealloc __attribute__((no_instrument_function)) {
 }
 
-// CHECK: declare void @__cyg_profile_func_enter(i8*, i8*)
-// CHECK: declare void @__cyg_profile_func_exit(i8*, i8*)
+// CHECK: declare void @__cyg_profile_func_enter(ptr, ptr)
+// CHECK: declare void @__cyg_profile_func_exit(ptr, ptr)
 // BARE: declare void @__cyg_profile_func_enter_bare
 @end

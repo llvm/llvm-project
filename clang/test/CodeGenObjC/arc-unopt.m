@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -o - %s | FileCheck %s
 
 // A test to ensure that we generate fused calls at -O0.
 
@@ -7,34 +7,32 @@ Test0 *test0(void) {
   extern Test0 *test0_helper;
   return test0_helper;
 
-  // CHECK:      [[LD:%.*]] = load [[TEST0:%.*]]*, [[TEST0:%.*]]** @test0_helper
-  // CHECK-NEXT: [[T0:%.*]] = bitcast [[TEST0]]* [[LD]] to i8*
-  // CHECK-NEXT: [[T1:%.*]] = tail call i8* @llvm.objc.retainAutoreleaseReturnValue(i8* [[T0]])
-  // CHECK-NEXT: [[T2:%.*]] = bitcast i8* [[T1]] to [[TEST0]]*
-  // CHECK-NEXT: ret [[TEST0]]* [[T2]]
+  // CHECK:      [[LD:%.*]] = load ptr, ptr @test0_helper
+  // CHECK-NEXT: [[T1:%.*]] = tail call ptr @llvm.objc.retainAutoreleaseReturnValue(ptr [[LD]])
+  // CHECK-NEXT: ret ptr [[T1]]
 }
 
 id test1(void) {
   extern id test1_helper;
   return test1_helper;
 
-  // CHECK:      [[LD:%.*]] = load i8*, i8** @test1_helper
-  // CHECK-NEXT: [[T0:%.*]] = tail call i8* @llvm.objc.retainAutoreleaseReturnValue(i8* [[LD]])
-  // CHECK-NEXT: ret i8* [[T0]]
+  // CHECK:      [[LD:%.*]] = load ptr, ptr @test1_helper
+  // CHECK-NEXT: [[T0:%.*]] = tail call ptr @llvm.objc.retainAutoreleaseReturnValue(ptr [[LD]])
+  // CHECK-NEXT: ret ptr [[T0]]
 }
 
 void test2(void) {
-  // CHECK:      [[X:%.*]] = alloca i8*
-  // CHECK-NEXT: store i8* null, i8** [[X]]
-  // CHECK-NEXT: call void @llvm.objc.destroyWeak(i8** [[X]])
+  // CHECK:      [[X:%.*]] = alloca ptr
+  // CHECK-NEXT: store ptr null, ptr [[X]]
+  // CHECK-NEXT: call void @llvm.objc.destroyWeak(ptr [[X]])
   // CHECK-NEXT: ret void
   __weak id x;
 }
 
 id test3(void) {
   extern id test3_helper(void);
-  // CHECK:      [[T0:%.*]] = call i8* @test3_helper()
-  // CHECK-NEXT: ret i8* [[T0]]
+  // CHECK:      [[T0:%.*]] = call ptr @test3_helper()
+  // CHECK-NEXT: ret ptr [[T0]]
   return test3_helper();
 }
 
@@ -42,9 +40,8 @@ id test3(void) {
 @interface Test4_sub : Test4 { id y; } @end
 Test4 *test4(void) {
   extern Test4_sub *test4_helper(void);
-  // CHECK:      [[T0:%.*]] = call [[TEST4S:%.*]]* @test4_helper()
-  // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST4S]]* [[T0]] to [[TEST4:%.*]]*
-  // CHECK-NEXT: ret [[TEST4]]* [[T1]]
+  // CHECK:      [[T0:%.*]] = call ptr @test4_helper()
+  // CHECK-NEXT: ret ptr [[T0]]
   return test4_helper();
 }
 
@@ -56,14 +53,12 @@ void test5(void) {
     y = 0;
 
 // CHECK-LABEL:    define{{.*}} void @test5()
-// CHECK:      [[X:%.*]] = alloca [[TEST5:%.*]]*,
-// CHECK-NEXT: [[Y:%.*]] = alloca [[TEST5:%.*]]*,
-// CHECK-NEXT: store [[TEST5]]* null, [[TEST5]]** [[X]],
-// CHECK-NEXT: store [[TEST5]]* null, [[TEST5]]** [[Y]],
-// CHECK-NEXT: [[T0:%.*]] = load [[TEST5]]*, [[TEST5]]** [[Y]],
-// CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST5]]** [[X]] to i8**
-// CHECK-NEXT: [[T2:%.*]] = bitcast [[TEST5]]* [[T0]] to i8*
-// CHECK-NEXT: call void @llvm.objc.storeStrong(i8** [[T1]], i8* [[T2]])
-// CHECK-NEXT: [[T3:%.*]] = icmp ne [[TEST5]]* [[T0]], null
+// CHECK:      [[X:%.*]] = alloca ptr,
+// CHECK-NEXT: [[Y:%.*]] = alloca ptr,
+// CHECK-NEXT: store ptr null, ptr [[X]],
+// CHECK-NEXT: store ptr null, ptr [[Y]],
+// CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[Y]],
+// CHECK-NEXT: call void @llvm.objc.storeStrong(ptr [[X]], ptr [[T0]])
+// CHECK-NEXT: [[T3:%.*]] = icmp ne ptr [[T0]], null
 // CHECK-NEXT: br i1 [[T3]],
 }
