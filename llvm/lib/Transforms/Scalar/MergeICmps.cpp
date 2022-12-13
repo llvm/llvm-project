@@ -300,9 +300,9 @@ bool BCECmpBlock::doesOtherWork() const {
 
 // Visit the given comparison. If this is a comparison between two valid
 // BCE atoms, returns the comparison.
-Optional<BCECmp> visitICmp(const ICmpInst *const CmpI,
-                           const ICmpInst::Predicate ExpectedPredicate,
-                           BaseIdentifier &BaseId) {
+std::optional<BCECmp> visitICmp(const ICmpInst *const CmpI,
+                                const ICmpInst::Predicate ExpectedPredicate,
+                                BaseIdentifier &BaseId) {
   // The comparison can only be used once:
   //  - For intermediate blocks, as a branch condition.
   //  - For the final block, as an incoming value for the Phi.
@@ -330,9 +330,10 @@ Optional<BCECmp> visitICmp(const ICmpInst *const CmpI,
 
 // Visit the given comparison block. If this is a comparison between two valid
 // BCE atoms, returns the comparison.
-Optional<BCECmpBlock> visitCmpBlock(Value *const Val, BasicBlock *const Block,
-                                    const BasicBlock *const PhiBlock,
-                                    BaseIdentifier &BaseId) {
+std::optional<BCECmpBlock> visitCmpBlock(Value *const Val,
+                                         BasicBlock *const Block,
+                                         const BasicBlock *const PhiBlock,
+                                         BaseIdentifier &BaseId) {
   if (Block->empty())
     return std::nullopt;
   auto *const BranchI = dyn_cast<BranchInst>(Block->getTerminator());
@@ -368,7 +369,7 @@ Optional<BCECmpBlock> visitCmpBlock(Value *const Val, BasicBlock *const Block,
     return std::nullopt;
   LLVM_DEBUG(dbgs() << "icmp\n");
 
-  Optional<BCECmp> Result = visitICmp(CmpI, ExpectedPredicate, BaseId);
+  std::optional<BCECmp> Result = visitICmp(CmpI, ExpectedPredicate, BaseId);
   if (!Result)
     return std::nullopt;
 
@@ -476,7 +477,7 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
   BaseIdentifier BaseId;
   for (BasicBlock *const Block : Blocks) {
     assert(Block && "invalid block");
-    Optional<BCECmpBlock> Comparison = visitCmpBlock(
+    std::optional<BCECmpBlock> Comparison = visitCmpBlock(
         Phi.getIncomingValueForBlock(Block), Block, Phi.getParent(), BaseId);
     if (!Comparison) {
       LLVM_DEBUG(dbgs() << "chain with invalid BCECmpBlock, no merge.\n");

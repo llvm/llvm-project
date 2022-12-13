@@ -122,9 +122,10 @@ namespace {
 struct NonTrivialUnswitchCandidate {
   Instruction *TI = nullptr;
   TinyPtrVector<Value *> Invariants;
-  Optional<InstructionCost> Cost;
-  NonTrivialUnswitchCandidate(Instruction *TI, ArrayRef<Value *> Invariants,
-                              Optional<InstructionCost> Cost = std::nullopt)
+  std::optional<InstructionCost> Cost;
+  NonTrivialUnswitchCandidate(
+      Instruction *TI, ArrayRef<Value *> Invariants,
+      std::optional<InstructionCost> Cost = std::nullopt)
       : TI(TI), Invariants(Invariants), Cost(Cost){};
 };
 } // end anonymous namespace.
