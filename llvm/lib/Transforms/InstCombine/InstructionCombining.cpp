@@ -370,14 +370,14 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1,
 // inttoptr ( ptrtoint (x) ) --> x
 Value *InstCombinerImpl::simplifyIntToPtrRoundTripCast(Value *Val) {
   auto *IntToPtr = dyn_cast<IntToPtrInst>(Val);
-  if (IntToPtr && DL.getPointerTypeSizeInBits(IntToPtr->getDestTy()) ==
+  if (IntToPtr && DL.getTypeSizeInBits(IntToPtr->getDestTy()) ==
                       DL.getTypeSizeInBits(IntToPtr->getSrcTy())) {
     auto *PtrToInt = dyn_cast<PtrToIntInst>(IntToPtr->getOperand(0));
     Type *CastTy = IntToPtr->getDestTy();
     if (PtrToInt &&
         CastTy->getPointerAddressSpace() ==
             PtrToInt->getSrcTy()->getPointerAddressSpace() &&
-        DL.getPointerTypeSizeInBits(PtrToInt->getSrcTy()) ==
+        DL.getTypeSizeInBits(PtrToInt->getSrcTy()) ==
             DL.getTypeSizeInBits(PtrToInt->getDestTy())) {
       return CastInst::CreateBitOrPointerCast(PtrToInt->getOperand(0), CastTy,
                                               "", PtrToInt);
