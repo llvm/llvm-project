@@ -128,7 +128,7 @@ static void resolveTopLevelMetadata(llvm::Function *Fn,
 
   // Find all llvm.dbg.declare intrinsics and resolve the DILocalVariable nodes
   // they are referencing.
-  for (auto &BB : Fn->getBasicBlockList()) {
+  for (auto &BB : *Fn) {
     for (auto &I : BB) {
       if (auto *DII = dyn_cast<llvm::DbgVariableIntrinsic>(&I)) {
         auto *DILocal = DII->getVariable();
