@@ -36,7 +36,7 @@ backedge:                                         ; preds = %stuck
 loop:                                             ; preds = %backedge, %entry
   %iv = phi i32 [ %start, %entry ], [ %iv.next, %backedge ]
   %iv.zext = zext i32 %iv to i64
-  %gep = getelementptr inbounds i64, i64* undef, i64 %iv.zext
+  %gep = getelementptr inbounds i64, ptr undef, i64 %iv.zext
   %iv.next = add i32 %iv, -1
   %loop.exit.cond = icmp slt i32 %iv.next, 11
   br i1 %loop.exit.cond, label %exit, label %stuck

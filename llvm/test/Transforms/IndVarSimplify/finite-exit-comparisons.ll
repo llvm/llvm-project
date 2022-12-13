@@ -220,7 +220,7 @@ define void @slt_neg_well_defined_infinite(i16 %n) mustprogress {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    store volatile i8 [[IV]], i8* @G, align 1
+; CHECK-NEXT:    store volatile i8 [[IV]], ptr @G, align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[IV_NEXT]] to i16
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[ZEXT]], [[N:%.*]]
@@ -233,7 +233,7 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %iv = phi i8 [ %iv.next, %for.body ], [ 0, %entry ]
-  store volatile i8 %iv, i8* @G
+  store volatile i8 %iv, ptr @G
   %iv.next = add i8 %iv, 1
   %zext = zext i8 %iv.next to i16
   %cmp = icmp slt i16 %zext, %n
