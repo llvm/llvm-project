@@ -4230,9 +4230,13 @@ SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
   SDLoc DL(N);
   EVT Ty = getPointerTy(DAG.getDataLayout());
 
-  if (isPositionIndependent()) {
+  // When HWASAN is used and tagging of global variables is enabled
+  // they should be accessed via the GOT, since the tagged address of a global
+  // is incompatible with existing code models. This also applies to non-pic
+  // mode.
+  if (isPositionIndependent() || Subtarget.allowTaggedGlobals()) {
     SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
-    if (IsLocal)
+    if (IsLocal && !Subtarget.allowTaggedGlobals())
       // Use PC-relative addressing to access the symbol. This generates the
       // pattern (PseudoLLA sym), which expands to (addi (auipc %pcrel_hi(sym))
       // %pcrel_lo(auipc)).
