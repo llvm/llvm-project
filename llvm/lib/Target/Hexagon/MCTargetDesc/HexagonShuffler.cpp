@@ -28,6 +28,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -316,7 +317,7 @@ void HexagonShuffler::permitNonSlot() {
 }
 
 bool HexagonShuffler::ValidResourceUsage(HexagonPacketSummary const &Summary) {
-  Optional<HexagonPacket> ShuffledPacket = tryAuction(Summary);
+  std::optional<HexagonPacket> ShuffledPacket = tryAuction(Summary);
 
   if (!ShuffledPacket) {
     reportResourceError(Summary, "slot error");
@@ -623,7 +624,7 @@ bool HexagonShuffler::check(const bool RequireShuffle) {
   return !CheckFailure;
 }
 
-llvm::Optional<HexagonShuffler::HexagonPacket>
+std::optional<HexagonShuffler::HexagonPacket>
 HexagonShuffler::tryAuction(HexagonPacketSummary const &Summary) {
   HexagonPacket PacketResult = Packet;
   HexagonUnitAuction AuctionCore(Summary.ReservedSlotMask);
@@ -642,7 +643,7 @@ HexagonShuffler::tryAuction(HexagonPacketSummary const &Summary) {
              << llvm::format_hex(ISJ.Core.getUnits(), 4, true) << "\n";
   );
 
-  Optional<HexagonPacket> Res;
+  std::optional<HexagonPacket> Res;
   if (ValidSlots)
     Res = PacketResult;
 

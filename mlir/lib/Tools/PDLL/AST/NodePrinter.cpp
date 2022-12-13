@@ -62,7 +62,7 @@ private:
     if (range.empty())
       return;
     elementIndentStack.reserve(elementIndentStack.size() + 1);
-    llvm::SaveAndRestore<bool> lastElement(elementIndentStack.back(), true);
+    llvm::SaveAndRestore lastElement(elementIndentStack.back(), true);
 
     printIndent();
     os << label << "`\n";

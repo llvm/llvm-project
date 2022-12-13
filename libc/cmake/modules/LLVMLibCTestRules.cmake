@@ -16,6 +16,11 @@ function(get_object_files_for_test result skipped_entrypoints_list)
   set(object_files "")
   set(skipped_list "")
   foreach(dep IN LISTS ARGN)
+    if (NOT TARGET ${dep})
+      # Skip any tests whose dependencies have not been defined.
+      list(APPEND skipped_list ${dep})
+      continue()
+    endif()
     get_target_property(dep_type ${dep} "TARGET_TYPE")
     if(NOT dep_type)
       # Target for which TARGET_TYPE property is not set do not

@@ -302,16 +302,11 @@ public:
   // Returns the builders of this operation.
   ArrayRef<Builder> getBuilders() const { return builders; }
 
-  // Returns the preferred getter name for the accessor.
-  std::string getGetterName(StringRef name) const {
-    return getGetterNames(name).front();
-  }
+  // Returns the getter name for the accessor of `name`.
+  std::string getGetterName(StringRef name) const;
 
-  // Returns the getter names for the accessor.
-  SmallVector<std::string, 2> getGetterNames(StringRef name) const;
-
-  // Returns the setter names for the accessor.
-  SmallVector<std::string, 2> getSetterNames(StringRef name) const;
+  // Returns the setter name for the accessor of `name`.
+  std::string getSetterName(StringRef name) const;
 
 private:
   // Populates the vectors containing operands, attributes, results and traits.

@@ -14,11 +14,11 @@ target datalayout = "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-f64:32:64-f8
 target triple = "i386-pc-linux-gnu"
 
 ; Function Attrs: mustprogress norecurse sanitize_address uwtable
-define dso_local i32 @main(i32 %argc, i8** %argv)  {
+define dso_local i32 @main(i32 %argc, ptr %argv)  {
 entry:
   %0 = alloca i32, align 4
   %1 = alloca i8, i64 32, align 32
-  %2 = ptrtoint i8* %1 to i32
-  store i32 %2, i32* %0, align 4
+  %2 = ptrtoint ptr %1 to i32
+  store i32 %2, ptr %0, align 4
   ret i32 0
 }

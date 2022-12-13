@@ -1690,8 +1690,8 @@ ConversionPattern::matchAndRewrite(Operation *op,
   auto &rewriterImpl = dialectRewriter.getImpl();
 
   // Track the current conversion pattern type converter in the rewriter.
-  llvm::SaveAndRestore<TypeConverter *> currentConverterGuard(
-      rewriterImpl.currentTypeConverter, getTypeConverter());
+  llvm::SaveAndRestore currentConverterGuard(rewriterImpl.currentTypeConverter,
+                                             getTypeConverter());
 
   // Remap the operands of the operation.
   SmallVector<Value, 4> operands;

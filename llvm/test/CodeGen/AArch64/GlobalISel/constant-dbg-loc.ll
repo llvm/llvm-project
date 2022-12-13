@@ -30,13 +30,13 @@ define i32 @main() #0 !dbg !14 {
   ; CHECK:   RET_ReallyLR implicit $w0, debug-location !24
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  %0 = load i32, i32* @var1, align 4, !dbg !17
+  store i32 0, ptr %retval, align 4
+  %0 = load i32, ptr @var1, align 4, !dbg !17
   %cmp = icmp eq i32 %0, 1, !dbg !19
   br i1 %cmp, label %if.then, label %if.end, !dbg !20
 
 if.then:
-  store i32 2, i32* @var2, align 4, !dbg !21
+  store i32 2, ptr @var2, align 4, !dbg !21
   br label %if.end, !dbg !23
 
 if.end:

@@ -51,6 +51,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -122,6 +123,8 @@ hash_code hash_value(const std::tuple<Ts...> &arg);
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg);
 
+/// Compute a hash_code for a standard string.
+template <typename T> hash_code hash_value(const std::optional<T> &arg);
 
 /// Override the execution seed with a fixed value.
 ///
@@ -660,6 +663,10 @@ template <typename... Ts> hash_code hash_value(const std::tuple<Ts...> &arg) {
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg) {
   return hash_combine_range(arg.begin(), arg.end());
+}
+
+template <typename T> hash_code hash_value(const std::optional<T> &arg) {
+  return arg ? hash_combine(true, *arg) : hash_value(false);
 }
 
 template <> struct DenseMapInfo<hash_code, void> {

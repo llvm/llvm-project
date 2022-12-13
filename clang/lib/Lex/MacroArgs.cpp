@@ -169,7 +169,7 @@ const std::vector<Token> &MacroArgs::getPreExpArgument(unsigned Arg,
   std::vector<Token> &Result = PreExpArgTokens[Arg];
   if (!Result.empty()) return Result;
 
-  SaveAndRestore<bool> PreExpandingMacroArgs(PP.InMacroArgPreExpansion, true);
+  SaveAndRestore PreExpandingMacroArgs(PP.InMacroArgPreExpansion, true);
 
   const Token *AT = getUnexpArgument(Arg);
   unsigned NumToks = getArgLength(AT)+1;  // Include the EOF.

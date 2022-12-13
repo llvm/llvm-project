@@ -10,7 +10,7 @@ equivalent `mlir::Op` C++ template specialization at compiler build time.
 This manual explains in detail all the available mechanisms for defining
 operations in such a table-driven manner. It aims to be a specification instead
 of a tutorial. Please refer to
-[Quickstart tutorial to adding MLIR graph rewrite](Tutorials/QuickstartRewrites.md)
+[Quickstart tutorial to adding MLIR graph rewrite](../Tutorials/QuickstartRewrites.md)
 for the latter.
 
 In addition to detailing each mechanism, this manual also tries to capture best
@@ -358,7 +358,7 @@ currently only be specified as the last successor in the successor list.
 Traits are operation properties that affect syntax or semantics. MLIR C++ models
 various traits in the `mlir::OpTrait` namespace.
 
-Both operation traits, [interfaces](Interfaces.md/#utilizing-the-ods-framework),
+Both operation traits, [interfaces](../Interfaces.md/#utilizing-the-ods-framework),
 and constraints involving multiple operands/attributes/results are provided as
 the third template parameter to the `Op` class. They should be deriving from
 the `OpTrait` class. See [Constraints](#constraints) for more information.
@@ -657,7 +657,7 @@ The available directives are as follows:
 *   `functional-type` ( inputs , outputs )
 
     -   Formats the `inputs` and `outputs` arguments as a
-        [function type](Dialects/Builtin.md/#functiontype).
+        [function type](../Dialects/Builtin.md/#functiontype).
     -   The constraints on `inputs` and `outputs` are the same as the `input` of
         the `type` directive.
 
@@ -900,7 +900,7 @@ def ReturnOp : ... {
 
 ##### Unit Attributes
 
-In MLIR, the [`unit` Attribute](Dialects/Builtin.md/#unitattr) is special in that it
+In MLIR, the [`unit` Attribute](../Dialects/Builtin.md/#unitattr) is special in that it
 only has one possible value, i.e. it derives meaning from its existence. When a
 unit attribute is used to anchor an optional group and is not the first element
 of the group, the presence of the unit attribute can be directly correlated with
@@ -1619,7 +1619,7 @@ requirements that were desirable:
 *   The op's traits (e.g., commutative) are modelled along with the op in the
     registry.
 *   The op's operand/return type constraints are modelled along with the op in
-    the registry (see [Shape inference](ShapeInference.md) discussion below),
+    the registry (see [Shape inference](../ShapeInference.md) discussion below),
     this allows (e.g.) optimized concise syntax in textual dumps.
 *   Behavior of the op is documented along with the op with a summary and a
     description. The description is written in markdown and extracted for
@@ -1648,6 +1648,6 @@ requirements that were desirable:
 [OpBase]: https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/IR/OpBase.td
 [OpDefinitionsGen]: https://github.com/llvm/llvm-project/blob/main/mlir/tools/mlir-tblgen/OpDefinitionsGen.cpp
 [EnumsGen]: https://github.com/llvm/llvm-project/blob/main/mlir/tools/mlir-tblgen/EnumsGen.cpp
-[StringAttr]: Dialects/Builtin.md/#stringattr
-[IntegerAttr]: Dialects/Builtin.md/#integertype
+[StringAttr]: ../Dialects/Builtin.md/#stringattr
+[IntegerAttr]: ../Dialects/Builtin.md/#integertype
 [AttrClasses]: https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/IR/Attributes.h

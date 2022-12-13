@@ -4,7 +4,7 @@
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--"
 
-define i32 @cse_gep([4 x i32]* %ptr, i32 %idx) {
+define i32 @cse_gep(ptr %ptr, i32 %idx) {
   ; O0-LABEL: name: cse_gep
   ; O0: bb.1 (%ir-block.0):
   ; O0-NEXT:   liveins: $w1, $x0
@@ -44,10 +44,10 @@ define i32 @cse_gep([4 x i32]* %ptr, i32 %idx) {
   ; O3-NEXT:   $w0 = COPY [[ADD]](s32)
   ; O3-NEXT:   RET_ReallyLR implicit $w0
   %sidx = sext i32 %idx to i64
-  %gep1 = getelementptr inbounds [4 x i32], [4 x i32]* %ptr, i64 %sidx, i64 0
-  %v1 = load i32, i32* %gep1
-  %gep2 = getelementptr inbounds [4 x i32], [4 x i32]* %ptr, i64 %sidx, i64 1
-  %v2 = load i32, i32* %gep2
+  %gep1 = getelementptr inbounds [4 x i32], ptr %ptr, i64 %sidx, i64 0
+  %v1 = load i32, ptr %gep1
+  %gep2 = getelementptr inbounds [4 x i32], ptr %ptr, i64 %sidx, i64 1
+  %v2 = load i32, ptr %gep2
   %res = add i32 %v1, %v2
   ret i32 %res
 }

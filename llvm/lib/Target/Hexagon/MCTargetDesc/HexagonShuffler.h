@@ -24,6 +24,7 @@
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -148,12 +149,12 @@ class HexagonShuffler {
     // Number of duplex insns
     unsigned duplex;
     unsigned pSlot3Cnt;
-    Optional<HexagonInstr *> PrefSlot3Inst;
+    std::optional<HexagonInstr *> PrefSlot3Inst;
     unsigned memops;
     unsigned ReservedSlotMask;
     SmallVector<HexagonInstr *, HEXAGON_PRESHUFFLE_PACKET_SIZE> branchInsts;
-    Optional<SMLoc> Slot1AOKLoc;
-    Optional<SMLoc> NoSlot1StoreLoc;
+    std::optional<SMLoc> Slot1AOKLoc;
+    std::optional<SMLoc> NoSlot1StoreLoc;
   };
   // Insn handles in a bundle.
   HexagonPacket Packet;
@@ -179,7 +180,7 @@ protected:
                            const bool DoShuffle);
   void permitNonSlot();
 
-  Optional<HexagonPacket> tryAuction(HexagonPacketSummary const &Summary);
+  std::optional<HexagonPacket> tryAuction(HexagonPacketSummary const &Summary);
 
   HexagonPacketSummary GetPacketSummary();
   bool ValidPacketMemoryOps(HexagonPacketSummary const &Summary) const;

@@ -1293,7 +1293,7 @@ FailureOr<T *> Parser::parseUserConstraintOrRewriteDecl(
     StringRef anonymousNamePrefix, bool isInline) {
   SMRange loc = curToken.getLoc();
   consumeToken();
-  llvm::SaveAndRestore<ParserContext> saveCtx(parserContext, declContext);
+  llvm::SaveAndRestore saveCtx(parserContext, declContext);
 
   // Parse the name of the decl.
   const ast::Name *name = nullptr;
@@ -1466,8 +1466,7 @@ FailureOr<ast::CompoundStmt *> Parser::parsePatternLambdaBody() {
 FailureOr<ast::Decl *> Parser::parsePatternDecl() {
   SMRange loc = curToken.getLoc();
   consumeToken(Token::kw_Pattern);
-  llvm::SaveAndRestore<ParserContext> saveCtx(parserContext,
-                                              ParserContext::PatternMatch);
+  llvm::SaveAndRestore saveCtx(parserContext, ParserContext::PatternMatch);
 
   // Check for an optional identifier for the pattern name.
   const ast::Name *name = nullptr;
@@ -2377,8 +2376,7 @@ FailureOr<ast::ReplaceStmt *> Parser::parseReplaceStmt() {
     return failure();
 
   // The replacement portion of this statement is within a rewrite context.
-  llvm::SaveAndRestore<ParserContext> saveCtx(parserContext,
-                                              ParserContext::Rewrite);
+  llvm::SaveAndRestore saveCtx(parserContext, ParserContext::Rewrite);
 
   // Parse the replacement values.
   SmallVector<ast::Expr *> replValues;
@@ -2445,8 +2443,7 @@ FailureOr<ast::RewriteStmt *> Parser::parseRewriteStmt() {
     return emitError("expected `{` to start rewrite body");
 
   // The rewrite body of this statement is within a rewrite context.
-  llvm::SaveAndRestore<ParserContext> saveCtx(parserContext,
-                                              ParserContext::Rewrite);
+  llvm::SaveAndRestore saveCtx(parserContext, ParserContext::Rewrite);
 
   FailureOr<ast::CompoundStmt *> rewriteBody = parseCompoundStmt();
   if (failed(rewriteBody))

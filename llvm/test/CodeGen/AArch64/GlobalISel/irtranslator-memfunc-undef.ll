@@ -7,8 +7,7 @@ define void @memset() {
   ; CHECK-NEXT:   RET_ReallyLR
 entry:
   %buf = alloca [512 x i8], align 1
-  %ptr = getelementptr inbounds [512 x i8], [512 x i8]* %buf, i32 0, i32 0
-  call void @llvm.memset.p0i8.i32(i8* %ptr, i8 undef, i32 512, i1 false)
+  call void @llvm.memset.p0.i32(ptr %buf, i8 undef, i32 512, i1 false)
   ret void
 }
 
@@ -19,8 +18,7 @@ define void @memcpy() {
   ; CHECK-NEXT:   RET_ReallyLR
 entry:
   %buf = alloca [512 x i8], align 1
-  %ptr = getelementptr inbounds [512 x i8], [512 x i8]* %buf, i32 0, i32 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %ptr, i8* undef, i32 512, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %buf, ptr undef, i32 512, i1 false)
   ret void
 }
 
@@ -31,11 +29,10 @@ define void @memmove() {
   ; CHECK-NEXT: RET_ReallyLR
 entry:
   %buf = alloca [512 x i8], align 1
-  %ptr = getelementptr inbounds [512 x i8], [512 x i8]* %buf, i32 0, i32 0
-  call void @llvm.memmove.p0i8.p0i8.i32(i8* %ptr, i8* undef, i32 512, i1 false)
+  call void @llvm.memmove.p0.p0.i32(ptr %buf, ptr undef, i32 512, i1 false)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1) nounwind
-declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memset.p0.i32(ptr nocapture, i8, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i1) nounwind
+declare void @llvm.memmove.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind

@@ -925,10 +925,6 @@ bool DWARFExpression::Evaluate(
         stack.back().SetValueType(Value::ValueType::LoadAddress);
       } else {
         stack.back().SetValueType(Value::ValueType::FileAddress);
-        // Convert the file address to a load address, so subsequent
-        // DWARF operators can operate on it.
-        if (target)
-          stack.back().ConvertToLoadAddress(module_sp.get(), target);
       }
       break;
 

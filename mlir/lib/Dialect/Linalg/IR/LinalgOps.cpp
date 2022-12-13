@@ -22,6 +22,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExprVisitor.h"
@@ -1392,7 +1393,7 @@ void TransposeOp::print(OpAsmPrinter &p) {
 LogicalResult TransposeOp::verify() {
   ArrayRef<int64_t> permutationRef = getPermutation();
 
-  if (!isPermutation(permutationRef))
+  if (!isPermutationVector(permutationRef))
     return emitOpError("permutation is not valid");
 
   auto inputType = getInput().getType();
@@ -1681,19 +1682,6 @@ SmallVector<AffineExpr, 4> mlir::linalg::concat(ArrayRef<AffineExpr> a,
   auto rangeB = llvm::make_range(b.begin(), b.end());
   auto concatRanges = llvm::concat<const AffineExpr>(rangeA, rangeB);
   return llvm::to_vector<4>(concatRanges);
-}
-
-bool mlir::linalg::isPermutation(ArrayRef<int64_t> permutation) {
-  // Count the number of appearances for all indices.
-  SmallVector<int64_t> indexCounts(permutation.size(), 0);
-  for (auto index : permutation) {
-    // Exit if the index is out-of-range.
-    if (index < 0 || index >= static_cast<int64_t>(permutation.size()))
-      return false;
-    ++indexCounts[index];
-  }
-  // Return true if all indices appear once.
-  return count(indexCounts, 1) == static_cast<int64_t>(permutation.size());
 }
 
 static void appendMangledType(llvm::raw_string_ostream &ss, Type t) {

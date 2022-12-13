@@ -8,7 +8,7 @@ demonstration purposes).
 
 See [MLIR specification](../LangRef.md) for more information about MLIR, the
 structure of the IR, operations, etc. See
-[Table-driven Operation Definition](../OpDefinitions.md) and
+[Table-driven Operation Definition](../DefiningDialects/Operations.md) and
 [Declarative Rewrite Rule](../DeclarativeRewrites.md) for the detailed explanation
 of all available mechanisms for defining operations and rewrites in a
 table-driven manner.

@@ -63,14 +63,14 @@ public:
     // Avoid traversing the semantic expressions. They should be handled by
     // looking through the appropriate opaque expressions in order to build
     // a meaningful selection tree.
-    llvm::SaveAndRestore<bool> LookThrough(LookThroughOpaqueValueExprs, true);
+    llvm::SaveAndRestore LookThrough(LookThroughOpaqueValueExprs, true);
     return TraverseStmt(E->getSyntacticForm());
   }
 
   bool TraverseOpaqueValueExpr(OpaqueValueExpr *E) {
     if (!LookThroughOpaqueValueExprs)
       return true;
-    llvm::SaveAndRestore<bool> LookThrough(LookThroughOpaqueValueExprs, false);
+    llvm::SaveAndRestore LookThrough(LookThroughOpaqueValueExprs, false);
     return TraverseStmt(E->getSourceExpr());
   }
 

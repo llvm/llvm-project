@@ -16,7 +16,7 @@ define void @tail_call() {
 
 ; We should get a TCRETURNri here.
 ; FIXME: We don't need the COPY.
-define void @indirect_tail_call(void()* %func) {
+define void @indirect_tail_call(ptr %func) {
   ; DARWIN-LABEL: name: indirect_tail_call
   ; DARWIN: bb.1 (%ir-block.0):
   ; DARWIN-NEXT:   liveins: $x0
@@ -313,7 +313,7 @@ define void @test_bad_call_conv() {
 }
 
 ; Shouldn't tail call when the caller has byval arguments.
-define void @test_byval(i8* byval(i8) %ptr) {
+define void @test_byval(ptr byval(i8) %ptr) {
   ; DARWIN-LABEL: name: test_byval
   ; DARWIN: bb.1 (%ir-block.0):
   ; DARWIN-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -335,7 +335,7 @@ define void @test_byval(i8* byval(i8) %ptr) {
 }
 
 ; Shouldn't tail call when the caller has inreg arguments.
-define void @test_inreg(i8* inreg %ptr) {
+define void @test_inreg(ptr inreg %ptr) {
   ; DARWIN-LABEL: name: test_inreg
   ; DARWIN: bb.1 (%ir-block.0):
   ; DARWIN-NEXT:   liveins: $x0
@@ -386,8 +386,8 @@ entry:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 define void @test_lifetime() local_unnamed_addr {
   ; DARWIN-LABEL: name: test_lifetime
   ; DARWIN: bb.1.entry:
@@ -401,18 +401,18 @@ define void @test_lifetime() local_unnamed_addr {
   ; WINDOWS-NEXT:   TCRETURNdi @nonvoid_ret, 0, csr_aarch64_aapcs, implicit $sp
 entry:
   %t = alloca i8, align 1
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* %t)
+  call void @llvm.lifetime.start.p0(i64 1, ptr %t)
   %x = tail call i32 @nonvoid_ret()
   %y = icmp ne i32 %x, 0
-  tail call void @llvm.lifetime.end.p0i8(i64 1, i8* %t)
+  tail call void @llvm.lifetime.end.p0(i64 1, ptr %t)
   ret void
 }
 
 ; We can tail call when the callee swiftself is the same as the caller one.
 ; It would be nice to move this to swiftself.ll, but it's important to verify
 ; that we get the COPY that makes this safe in the first place.
-declare i8* @pluto()
-define hidden swiftcc i64 @swiftself_indirect_tail(i64* swiftself %arg) {
+declare ptr @pluto()
+define hidden swiftcc i64 @swiftself_indirect_tail(ptr swiftself %arg) {
   ; DARWIN-LABEL: name: swiftself_indirect_tail
   ; DARWIN: bb.1 (%ir-block.0):
   ; DARWIN-NEXT:   liveins: $x20
@@ -435,15 +435,14 @@ define hidden swiftcc i64 @swiftself_indirect_tail(i64* swiftself %arg) {
   ; WINDOWS-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; WINDOWS-NEXT:   $x20 = COPY [[COPY]](p0)
   ; WINDOWS-NEXT:   TCRETURNri [[COPY1]](p0), 0, csr_aarch64_aapcs, implicit $sp, implicit $x20
-  %tmp = call i8* @pluto()
-  %tmp1 = bitcast i8* %tmp to i64 (i64*)*
-  %tmp2 = tail call swiftcc i64 %tmp1(i64* swiftself %arg)
+  %tmp = call ptr @pluto()
+  %tmp2 = tail call swiftcc i64 %tmp(ptr swiftself %arg)
   ret i64 %tmp2
 }
 
 ; Verify that we can tail call musttail callees.
-declare void @must_callee(i8*)
-define void @foo(i32*) {
+declare void @must_callee(ptr)
+define void @foo(ptr) {
   ; DARWIN-LABEL: name: foo
   ; DARWIN: bb.1 (%ir-block.1):
   ; DARWIN-NEXT:   liveins: $x0
@@ -460,7 +459,7 @@ define void @foo(i32*) {
   ; WINDOWS-NEXT:   [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
   ; WINDOWS-NEXT:   $x0 = COPY [[C]](p0)
   ; WINDOWS-NEXT:   TCRETURNdi @must_callee, 0, csr_aarch64_aapcs, implicit $sp, implicit $x0
-  musttail call void @must_callee(i8* null)
+  musttail call void @must_callee(ptr null)
   ret void
 }
 

@@ -288,6 +288,11 @@ template bool test<__llvm_libc::cpp::UInt<256>>(
     __llvm_libc::cpp::UInt<256> RHS, const char *LHSStr, const char *RHSStr,
     const char *File, unsigned long Line);
 
+template bool test<__llvm_libc::cpp::UInt<320>>(
+    RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::UInt<320> LHS,
+    __llvm_libc::cpp::UInt<320> RHS, const char *LHSStr, const char *RHSStr,
+    const char *File, unsigned long Line);
+
 template bool test<__llvm_libc::cpp::string_view>(
     RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::string_view LHS,
     __llvm_libc::cpp::string_view RHS, const char *LHSStr, const char *RHSStr,

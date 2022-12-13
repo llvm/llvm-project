@@ -5,7 +5,7 @@ target triple = "arm64-apple-ios9.0.0"
 
 ; Check we don't fall back due to hitting a DBG_VALUE with a deleted vreg.
 
-%0 = type { %1, %3, %5, %8, i8, i32, i8, i64, [4096 x %9], i64, i64, [4096 x %11], i64, i64, %13, %21, i8*, %35, i64, [504 x i8] }
+%0 = type { %1, %3, %5, %8, i8, i32, i8, i64, [4096 x %9], i64, i64, [4096 x %11], i64, i64, %13, %21, ptr, %35, i64, [504 x i8] }
 %1 = type { [32 x %2] }
 %2 = type { i32, i32 }
 %3 = type { [32 x %4] }
@@ -14,14 +14,14 @@ target triple = "arm64-apple-ios9.0.0"
 %6 = type { %7, %7 }
 %7 = type { i8, [64 x i8] }
 %8 = type { [1024 x %7], %7 }
-%9 = type { %10*, i64 }
-%10 = type { i8*, i8*, i8, i8 }
-%11 = type { %12*, %12* }
+%9 = type { ptr, i64 }
+%10 = type { ptr, ptr, i8, i8 }
+%11 = type { ptr, ptr }
 %12 = type { i64, i64 }
 %13 = type { %14 }
-%14 = type { %15*, %17, %19 }
-%15 = type { %16* }
-%16 = type <{ %15, %16*, %15*, i8, [7 x i8] }>
+%14 = type { ptr, %17, %19 }
+%15 = type { ptr }
+%16 = type <{ %15, ptr, ptr, i8, [7 x i8] }>
 %17 = type { %18 }
 %18 = type { %15 }
 %19 = type { %20 }
@@ -30,8 +30,8 @@ target triple = "arm64-apple-ios9.0.0"
 %22 = type <{ %23, %30, %32, %33, [4 x i8] }>
 %23 = type { %24 }
 %24 = type { %25, %27 }
-%25 = type { %26** }
-%26 = type { %26* }
+%25 = type { ptr }
+%26 = type { ptr }
 %27 = type { %28 }
 %28 = type { %29 }
 %29 = type { %20 }
@@ -44,7 +44,7 @@ target triple = "arm64-apple-ios9.0.0"
 
 @global = external hidden global %0, align 512
 
-define void @baz(i8* %arg) !dbg !6 {
+define void @baz(ptr %arg) !dbg !6 {
 ; CHECK-LABEL: baz:
 ; CHECK:       .Lfunc_begin0:
 ; CHECK-NEXT:    .file 1 "/" "tmp.ll"
@@ -63,12 +63,12 @@ define void @baz(i8* %arg) !dbg !6 {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .Ltmp0:
 bb:
-  %tmp = ptrtoint i8* %arg to i64, !dbg !14
+  %tmp = ptrtoint ptr %arg to i64, !dbg !14
   %tmp1 = shl i64 %tmp, 1, !dbg !15
   %tmp2 = and i64 %tmp1, 1022, !dbg !16
   call void @llvm.dbg.value(metadata i64 %tmp2, metadata !12, metadata !DIExpression()), !dbg !16
-  %tmp3 = getelementptr inbounds %0, %0* @global, i64 0, i32 17, i32 0, i64 %tmp2, !dbg !17
-  store i64 0, i64* %tmp3, align 16, !dbg !18
+  %tmp3 = getelementptr inbounds %0, ptr @global, i64 0, i32 17, i32 0, i64 %tmp2, !dbg !17
+  store i64 0, ptr %tmp3, align 16, !dbg !18
   ret void, !dbg !19
 }
 

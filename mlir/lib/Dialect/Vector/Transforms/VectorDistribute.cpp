@@ -183,7 +183,7 @@ static WarpExecuteOnLane0Op moveRegionToNewWarpOpAndReplaceReturns(
       cast<vector::YieldOp>(newOpBody.getBlocks().begin()->getTerminator());
 
   rewriter.updateRootInPlace(
-      yield, [&]() { yield.operandsMutable().assign(newYieldedValues); });
+      yield, [&]() { yield.getOperandsMutable().assign(newYieldedValues); });
   return newWarpOp;
 }
 
@@ -349,7 +349,7 @@ struct WarpOpToScfIfPattern : public OpRewritePattern<WarpExecuteOnLane0Op> {
     SmallVector<Value> replacements;
     auto yieldOp = cast<vector::YieldOp>(ifOp.thenBlock()->getTerminator());
     Location yieldLoc = yieldOp.getLoc();
-    for (const auto &it : llvm::enumerate(yieldOp.operands())) {
+    for (const auto &it : llvm::enumerate(yieldOp.getOperands())) {
       Value sequentialVal = it.value();
       Value distributedVal = warpOp->getResult(it.index());
       DistributedLoadStoreHelper helper(sequentialVal, distributedVal,
@@ -379,7 +379,7 @@ struct WarpOpToScfIfPattern : public OpRewritePattern<WarpExecuteOnLane0Op> {
     }
 
     // Step 6. Insert sync after all the stores and before all the loads.
-    if (!yieldOp.operands().empty()) {
+    if (!yieldOp.getOperands().empty()) {
       rewriter.setInsertionPointAfter(ifOp);
       options.warpSyncronizationFn(loc, rewriter, warpOp);
     }

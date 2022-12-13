@@ -75,6 +75,12 @@ void applyPermutationToVector(SmallVector<T, N> &inVec,
   inVec = auxVec;
 }
 
+/// Helper method to apply to inverse a permutation.
+SmallVector<int64_t> invertPermutationVector(ArrayRef<int64_t> permutation);
+
+/// Method to check if an interchange vector is a permutation.
+bool isPermutationVector(ArrayRef<int64_t> interchange);
+
 /// Helper that returns a subset of `arrayAttr` as a vector of int64_t.
 SmallVector<int64_t> getI64SubArray(ArrayAttr arrayAttr, unsigned dropFront = 0,
                                     unsigned dropBack = 0);

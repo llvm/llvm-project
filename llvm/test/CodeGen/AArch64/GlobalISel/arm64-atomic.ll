@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -mcpu=apple-a13 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-LSE-O1
 ; RUN: llc < %s -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -mcpu=apple-a13 -O0 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-LSE-O0
 
-define i32 @val_compare_and_swap(i32* %p, i32 %cmp, i32 %new) #0 {
+define i32 @val_compare_and_swap(ptr %p, i32 %cmp, i32 %new) #0 {
 ; CHECK-NOLSE-O1-LABEL: val_compare_and_swap:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB0_1: ; %cmpxchg.start
@@ -49,12 +49,12 @@ define i32 @val_compare_and_swap(i32* %p, i32 %cmp, i32 %new) #0 {
 ; CHECK-LSE-O0-NEXT:    mov x0, x1
 ; CHECK-LSE-O0-NEXT:    casa w0, w2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-  %pair = cmpxchg i32* %p, i32 %cmp, i32 %new acquire acquire
+  %pair = cmpxchg ptr %p, i32 %cmp, i32 %new acquire acquire
   %val = extractvalue { i32, i1 } %pair, 0
   ret i32 %val
 }
 
-define i32 @val_compare_and_swap_from_load(i32* %p, i32 %cmp, i32* %pnew) #0 {
+define i32 @val_compare_and_swap_from_load(ptr %p, i32 %cmp, ptr %pnew) #0 {
 ; CHECK-NOLSE-O1-LABEL: val_compare_and_swap_from_load:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    ldr w9, [x2]
@@ -103,13 +103,13 @@ define i32 @val_compare_and_swap_from_load(i32* %p, i32 %cmp, i32* %pnew) #0 {
 ; CHECK-LSE-O0-NEXT:    ldr w8, [x2]
 ; CHECK-LSE-O0-NEXT:    casa w0, w8, [x9]
 ; CHECK-LSE-O0-NEXT:    ret
-  %new = load i32, i32* %pnew
-  %pair = cmpxchg i32* %p, i32 %cmp, i32 %new acquire acquire
+  %new = load i32, ptr %pnew
+  %pair = cmpxchg ptr %p, i32 %cmp, i32 %new acquire acquire
   %val = extractvalue { i32, i1 } %pair, 0
   ret i32 %val
 }
 
-define i32 @val_compare_and_swap_rel(i32* %p, i32 %cmp, i32 %new) #0 {
+define i32 @val_compare_and_swap_rel(ptr %p, i32 %cmp, i32 %new) #0 {
 ; CHECK-NOLSE-O1-LABEL: val_compare_and_swap_rel:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB2_1: ; %cmpxchg.start
@@ -154,12 +154,12 @@ define i32 @val_compare_and_swap_rel(i32* %p, i32 %cmp, i32 %new) #0 {
 ; CHECK-LSE-O0-NEXT:    mov x0, x1
 ; CHECK-LSE-O0-NEXT:    casal w0, w2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-  %pair = cmpxchg i32* %p, i32 %cmp, i32 %new acq_rel monotonic
+  %pair = cmpxchg ptr %p, i32 %cmp, i32 %new acq_rel monotonic
   %val = extractvalue { i32, i1 } %pair, 0
   ret i32 %val
 }
 
-define i64 @val_compare_and_swap_64(i64* %p, i64 %cmp, i64 %new) #0 {
+define i64 @val_compare_and_swap_64(ptr %p, i64 %cmp, i64 %new) #0 {
 ; CHECK-NOLSE-O1-LABEL: val_compare_and_swap_64:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB3_1: ; %cmpxchg.start
@@ -204,12 +204,12 @@ define i64 @val_compare_and_swap_64(i64* %p, i64 %cmp, i64 %new) #0 {
 ; CHECK-LSE-O0-NEXT:    mov x0, x1
 ; CHECK-LSE-O0-NEXT:    cas x0, x2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-  %pair = cmpxchg i64* %p, i64 %cmp, i64 %new monotonic monotonic
+  %pair = cmpxchg ptr %p, i64 %cmp, i64 %new monotonic monotonic
   %val = extractvalue { i64, i1 } %pair, 0
   ret i64 %val
 }
 
-define i64 @val_compare_and_swap_64_monotonic_seqcst(i64* %p, i64 %cmp, i64 %new) #0 {
+define i64 @val_compare_and_swap_64_monotonic_seqcst(ptr %p, i64 %cmp, i64 %new) #0 {
 ; CHECK-NOLSE-O1-LABEL: val_compare_and_swap_64_monotonic_seqcst:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB4_1: ; %cmpxchg.start
@@ -254,12 +254,12 @@ define i64 @val_compare_and_swap_64_monotonic_seqcst(i64* %p, i64 %cmp, i64 %new
 ; CHECK-LSE-O0-NEXT:    mov x0, x1
 ; CHECK-LSE-O0-NEXT:    casal x0, x2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-  %pair = cmpxchg i64* %p, i64 %cmp, i64 %new monotonic seq_cst
+  %pair = cmpxchg ptr %p, i64 %cmp, i64 %new monotonic seq_cst
   %val = extractvalue { i64, i1 } %pair, 0
   ret i64 %val
 }
 
-define i64 @val_compare_and_swap_64_release_acquire(i64* %p, i64 %cmp, i64 %new) #0 {
+define i64 @val_compare_and_swap_64_release_acquire(ptr %p, i64 %cmp, i64 %new) #0 {
 ; CHECK-NOLSE-O1-LABEL: val_compare_and_swap_64_release_acquire:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB5_1: ; %cmpxchg.start
@@ -304,12 +304,12 @@ define i64 @val_compare_and_swap_64_release_acquire(i64* %p, i64 %cmp, i64 %new)
 ; CHECK-LSE-O0-NEXT:    mov x0, x1
 ; CHECK-LSE-O0-NEXT:    casal x0, x2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-  %pair = cmpxchg i64* %p, i64 %cmp, i64 %new release acquire
+  %pair = cmpxchg ptr %p, i64 %cmp, i64 %new release acquire
   %val = extractvalue { i64, i1 } %pair, 0
   ret i64 %val
 }
 
-define i32 @fetch_and_nand(i32* %p) #0 {
+define i32 @fetch_and_nand(ptr %p) #0 {
 ; CHECK-NOLSE-O1-LABEL: fetch_and_nand:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB6_1: ; %atomicrmw.start
@@ -398,11 +398,11 @@ define i32 @fetch_and_nand(i32* %p) #0 {
 ; CHECK-LSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
 ; CHECK-LSE-O0-NEXT:    add sp, sp, #32
 ; CHECK-LSE-O0-NEXT:    ret
-  %val = atomicrmw nand i32* %p, i32 7 release
+  %val = atomicrmw nand ptr %p, i32 7 release
   ret i32 %val
 }
 
-define i64 @fetch_and_nand_64(i64* %p) #0 {
+define i64 @fetch_and_nand_64(ptr %p) #0 {
 ; CHECK-NOLSE-O1-LABEL: fetch_and_nand_64:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB7_1: ; %atomicrmw.start
@@ -491,11 +491,11 @@ define i64 @fetch_and_nand_64(i64* %p) #0 {
 ; CHECK-LSE-O0-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
 ; CHECK-LSE-O0-NEXT:    add sp, sp, #32
 ; CHECK-LSE-O0-NEXT:    ret
-  %val = atomicrmw nand i64* %p, i64 7 acq_rel
+  %val = atomicrmw nand ptr %p, i64 7 acq_rel
   ret i64 %val
 }
 
-define i32 @fetch_and_or(i32* %p) #0 {
+define i32 @fetch_and_or(ptr %p) #0 {
 ; CHECK-NOLSE-O1-LABEL: fetch_and_or:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    mov w9, #5
@@ -557,11 +557,11 @@ define i32 @fetch_and_or(i32* %p) #0 {
 ; CHECK-LSE-O0-NEXT:    mov w8, #5
 ; CHECK-LSE-O0-NEXT:    ldsetal w8, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %val = atomicrmw or i32* %p, i32 5 seq_cst
+  %val = atomicrmw or ptr %p, i32 5 seq_cst
   ret i32 %val
 }
 
-define i64 @fetch_and_or_64(i64* %p) #0 {
+define i64 @fetch_and_or_64(ptr %p) #0 {
 ; CHECK-NOLSE-O1-LABEL: fetch_and_or_64:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB9_1: ; %atomicrmw.start
@@ -622,7 +622,7 @@ define i64 @fetch_and_or_64(i64* %p) #0 {
 ; CHECK-LSE-O0-NEXT:    ; kill: def $x8 killed $w8
 ; CHECK-LSE-O0-NEXT:    ldset x8, x0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %val = atomicrmw or i64* %p, i64 7 monotonic
+  %val = atomicrmw or ptr %p, i64 7 monotonic
   ret i64 %val
 }
 
@@ -683,7 +683,7 @@ define void @seq_cst_fence() #0 {
    ret void
 }
 
-define i32 @atomic_load(i32* %p) #0 {
+define i32 @atomic_load(ptr %p) #0 {
 ; CHECK-NOLSE-LABEL: atomic_load:
 ; CHECK-NOLSE:       ; %bb.0:
 ; CHECK-NOLSE-NEXT:    ldar w0, [x0]
@@ -698,11 +698,11 @@ define i32 @atomic_load(i32* %p) #0 {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldar w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-   %r = load atomic i32, i32* %p seq_cst, align 4
+   %r = load atomic i32, ptr %p seq_cst, align 4
    ret i32 %r
 }
 
-define i8 @atomic_load_relaxed_8(i8* %p, i32 %off32) #0 {
+define i8 @atomic_load_relaxed_8(ptr %p, i32 %off32) #0 {
 ; CHECK-NOLSE-O1-LABEL: atomic_load_relaxed_8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
@@ -754,25 +754,25 @@ define i8 @atomic_load_relaxed_8(i8* %p, i32 %off32) #0 {
 ; CHECK-LSE-O0-NEXT:    ldrb w9, [x9]
 ; CHECK-LSE-O0-NEXT:    add w0, w8, w9, uxtb
 ; CHECK-LSE-O0-NEXT:    ret
-  %ptr_unsigned = getelementptr i8, i8* %p, i32 4095
-  %val_unsigned = load atomic i8, i8* %ptr_unsigned monotonic, align 1
+  %ptr_unsigned = getelementptr i8, ptr %p, i32 4095
+  %val_unsigned = load atomic i8, ptr %ptr_unsigned monotonic, align 1
 
-  %ptr_regoff = getelementptr i8, i8* %p, i32 %off32
-  %val_regoff = load atomic i8, i8* %ptr_regoff unordered, align 1
+  %ptr_regoff = getelementptr i8, ptr %p, i32 %off32
+  %val_regoff = load atomic i8, ptr %ptr_regoff unordered, align 1
   %tot1 = add i8 %val_unsigned, %val_regoff
 
-  %ptr_unscaled = getelementptr i8, i8* %p, i32 -256
-  %val_unscaled = load atomic i8, i8* %ptr_unscaled monotonic, align 1
+  %ptr_unscaled = getelementptr i8, ptr %p, i32 -256
+  %val_unscaled = load atomic i8, ptr %ptr_unscaled monotonic, align 1
   %tot2 = add i8 %tot1, %val_unscaled
 
-  %ptr_random = getelementptr i8, i8* %p, i32 1191936 ; 0x123000 (i.e. ADD imm)
-  %val_random = load atomic i8, i8* %ptr_random unordered, align 1
+  %ptr_random = getelementptr i8, ptr %p, i32 1191936 ; 0x123000 (i.e. ADD imm)
+  %val_random = load atomic i8, ptr %ptr_random unordered, align 1
   %tot3 = add i8 %tot2, %val_random
 
   ret i8 %tot3
 }
 
-define i16 @atomic_load_relaxed_16(i16* %p, i32 %off32) #0 {
+define i16 @atomic_load_relaxed_16(ptr %p, i32 %off32) #0 {
 ; CHECK-NOLSE-O1-LABEL: atomic_load_relaxed_16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
@@ -824,25 +824,25 @@ define i16 @atomic_load_relaxed_16(i16* %p, i32 %off32) #0 {
 ; CHECK-LSE-O0-NEXT:    ldrh w9, [x9]
 ; CHECK-LSE-O0-NEXT:    add w0, w8, w9, uxth
 ; CHECK-LSE-O0-NEXT:    ret
-  %ptr_unsigned = getelementptr i16, i16* %p, i32 4095
-  %val_unsigned = load atomic i16, i16* %ptr_unsigned monotonic, align 2
+  %ptr_unsigned = getelementptr i16, ptr %p, i32 4095
+  %val_unsigned = load atomic i16, ptr %ptr_unsigned monotonic, align 2
 
-  %ptr_regoff = getelementptr i16, i16* %p, i32 %off32
-  %val_regoff = load atomic i16, i16* %ptr_regoff unordered, align 2
+  %ptr_regoff = getelementptr i16, ptr %p, i32 %off32
+  %val_regoff = load atomic i16, ptr %ptr_regoff unordered, align 2
   %tot1 = add i16 %val_unsigned, %val_regoff
 
-  %ptr_unscaled = getelementptr i16, i16* %p, i32 -128
-  %val_unscaled = load atomic i16, i16* %ptr_unscaled monotonic, align 2
+  %ptr_unscaled = getelementptr i16, ptr %p, i32 -128
+  %val_unscaled = load atomic i16, ptr %ptr_unscaled monotonic, align 2
   %tot2 = add i16 %tot1, %val_unscaled
 
-  %ptr_random = getelementptr i16, i16* %p, i32 595968 ; 0x123000/2 (i.e. ADD imm)
-  %val_random = load atomic i16, i16* %ptr_random unordered, align 2
+  %ptr_random = getelementptr i16, ptr %p, i32 595968 ; 0x123000/2 (i.e. ADD imm)
+  %val_random = load atomic i16, ptr %ptr_random unordered, align 2
   %tot3 = add i16 %tot2, %val_random
 
   ret i16 %tot3
 }
 
-define i32 @atomic_load_relaxed_32(i32* %p, i32 %off32) #0 {
+define i32 @atomic_load_relaxed_32(ptr %p, i32 %off32) #0 {
 ; CHECK-NOLSE-O1-LABEL: atomic_load_relaxed_32:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
@@ -890,25 +890,25 @@ define i32 @atomic_load_relaxed_32(i32* %p, i32 %off32) #0 {
 ; CHECK-LSE-O0-NEXT:    ldr w9, [x9]
 ; CHECK-LSE-O0-NEXT:    add w0, w8, w9
 ; CHECK-LSE-O0-NEXT:    ret
-  %ptr_unsigned = getelementptr i32, i32* %p, i32 4095
-  %val_unsigned = load atomic i32, i32* %ptr_unsigned monotonic, align 4
+  %ptr_unsigned = getelementptr i32, ptr %p, i32 4095
+  %val_unsigned = load atomic i32, ptr %ptr_unsigned monotonic, align 4
 
-  %ptr_regoff = getelementptr i32, i32* %p, i32 %off32
-  %val_regoff = load atomic i32, i32* %ptr_regoff unordered, align 4
+  %ptr_regoff = getelementptr i32, ptr %p, i32 %off32
+  %val_regoff = load atomic i32, ptr %ptr_regoff unordered, align 4
   %tot1 = add i32 %val_unsigned, %val_regoff
 
-  %ptr_unscaled = getelementptr i32, i32* %p, i32 -64
-  %val_unscaled = load atomic i32, i32* %ptr_unscaled monotonic, align 4
+  %ptr_unscaled = getelementptr i32, ptr %p, i32 -64
+  %val_unscaled = load atomic i32, ptr %ptr_unscaled monotonic, align 4
   %tot2 = add i32 %tot1, %val_unscaled
 
-  %ptr_random = getelementptr i32, i32* %p, i32 297984 ; 0x123000/4 (i.e. ADD imm)
-  %val_random = load atomic i32, i32* %ptr_random unordered, align 4
+  %ptr_random = getelementptr i32, ptr %p, i32 297984 ; 0x123000/4 (i.e. ADD imm)
+  %val_random = load atomic i32, ptr %ptr_random unordered, align 4
   %tot3 = add i32 %tot2, %val_random
 
   ret i32 %tot3
 }
 
-define i64 @atomic_load_relaxed_64(i64* %p, i32 %off32) #0 {
+define i64 @atomic_load_relaxed_64(ptr %p, i32 %off32) #0 {
 ; CHECK-NOLSE-O1-LABEL: atomic_load_relaxed_64:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
@@ -956,26 +956,26 @@ define i64 @atomic_load_relaxed_64(i64* %p, i32 %off32) #0 {
 ; CHECK-LSE-O0-NEXT:    ldr x9, [x9]
 ; CHECK-LSE-O0-NEXT:    add x0, x8, x9
 ; CHECK-LSE-O0-NEXT:    ret
-  %ptr_unsigned = getelementptr i64, i64* %p, i32 4095
-  %val_unsigned = load atomic i64, i64* %ptr_unsigned monotonic, align 8
+  %ptr_unsigned = getelementptr i64, ptr %p, i32 4095
+  %val_unsigned = load atomic i64, ptr %ptr_unsigned monotonic, align 8
 
-  %ptr_regoff = getelementptr i64, i64* %p, i32 %off32
-  %val_regoff = load atomic i64, i64* %ptr_regoff unordered, align 8
+  %ptr_regoff = getelementptr i64, ptr %p, i32 %off32
+  %val_regoff = load atomic i64, ptr %ptr_regoff unordered, align 8
   %tot1 = add i64 %val_unsigned, %val_regoff
 
-  %ptr_unscaled = getelementptr i64, i64* %p, i32 -32
-  %val_unscaled = load atomic i64, i64* %ptr_unscaled monotonic, align 8
+  %ptr_unscaled = getelementptr i64, ptr %p, i32 -32
+  %val_unscaled = load atomic i64, ptr %ptr_unscaled monotonic, align 8
   %tot2 = add i64 %tot1, %val_unscaled
 
-  %ptr_random = getelementptr i64, i64* %p, i32 148992 ; 0x123000/8 (i.e. ADD imm)
-  %val_random = load atomic i64, i64* %ptr_random unordered, align 8
+  %ptr_random = getelementptr i64, ptr %p, i32 148992 ; 0x123000/8 (i.e. ADD imm)
+  %val_random = load atomic i64, ptr %ptr_random unordered, align 8
   %tot3 = add i64 %tot2, %val_random
 
   ret i64 %tot3
 }
 
 
-define void @atomc_store(i32* %p) #0 {
+define void @atomc_store(ptr %p) #0 {
 ; CHECK-NOLSE-LABEL: atomc_store:
 ; CHECK-NOLSE:       ; %bb.0:
 ; CHECK-NOLSE-NEXT:    mov w8, #4
@@ -993,11 +993,11 @@ define void @atomc_store(i32* %p) #0 {
 ; CHECK-LSE-O0-NEXT:    mov w8, #4
 ; CHECK-LSE-O0-NEXT:    stlr w8, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-   store atomic i32 4, i32* %p seq_cst, align 4
+   store atomic i32 4, ptr %p seq_cst, align 4
    ret void
 }
 
-define void @atomic_store_relaxed_8(i8* %p, i32 %off32, i8 %val) #0 {
+define void @atomic_store_relaxed_8(ptr %p, i32 %off32, i8 %val) #0 {
 ; CHECK-NOLSE-O1-LABEL: atomic_store_relaxed_8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
@@ -1033,22 +1033,22 @@ define void @atomic_store_relaxed_8(i8* %p, i32 %off32, i8 %val) #0 {
 ; CHECK-LSE-O0-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O0-NEXT:    strb w2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-  %ptr_unsigned = getelementptr i8, i8* %p, i32 4095
-  store atomic i8 %val, i8* %ptr_unsigned monotonic, align 1
+  %ptr_unsigned = getelementptr i8, ptr %p, i32 4095
+  store atomic i8 %val, ptr %ptr_unsigned monotonic, align 1
 
-  %ptr_regoff = getelementptr i8, i8* %p, i32 %off32
-  store atomic i8 %val, i8* %ptr_regoff unordered, align 1
+  %ptr_regoff = getelementptr i8, ptr %p, i32 %off32
+  store atomic i8 %val, ptr %ptr_regoff unordered, align 1
 
-  %ptr_unscaled = getelementptr i8, i8* %p, i32 -256
-  store atomic i8 %val, i8* %ptr_unscaled monotonic, align 1
+  %ptr_unscaled = getelementptr i8, ptr %p, i32 -256
+  store atomic i8 %val, ptr %ptr_unscaled monotonic, align 1
 
-  %ptr_random = getelementptr i8, i8* %p, i32 1191936 ; 0x123000 (i.e. ADD imm)
-  store atomic i8 %val, i8* %ptr_random unordered, align 1
+  %ptr_random = getelementptr i8, ptr %p, i32 1191936 ; 0x123000 (i.e. ADD imm)
+  store atomic i8 %val, ptr %ptr_random unordered, align 1
 
   ret void
 }
 
-define void @atomic_store_relaxed_16(i16* %p, i32 %off32, i16 %val) #0 {
+define void @atomic_store_relaxed_16(ptr %p, i32 %off32, i16 %val) #0 {
 ; CHECK-NOLSE-O1-LABEL: atomic_store_relaxed_16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
@@ -1084,22 +1084,22 @@ define void @atomic_store_relaxed_16(i16* %p, i32 %off32, i16 %val) #0 {
 ; CHECK-LSE-O0-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O0-NEXT:    strh w2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-  %ptr_unsigned = getelementptr i16, i16* %p, i32 4095
-  store atomic i16 %val, i16* %ptr_unsigned monotonic, align 2
+  %ptr_unsigned = getelementptr i16, ptr %p, i32 4095
+  store atomic i16 %val, ptr %ptr_unsigned monotonic, align 2
 
-  %ptr_regoff = getelementptr i16, i16* %p, i32 %off32
-  store atomic i16 %val, i16* %ptr_regoff unordered, align 2
+  %ptr_regoff = getelementptr i16, ptr %p, i32 %off32
+  store atomic i16 %val, ptr %ptr_regoff unordered, align 2
 
-  %ptr_unscaled = getelementptr i16, i16* %p, i32 -128
-  store atomic i16 %val, i16* %ptr_unscaled monotonic, align 2
+  %ptr_unscaled = getelementptr i16, ptr %p, i32 -128
+  store atomic i16 %val, ptr %ptr_unscaled monotonic, align 2
 
-  %ptr_random = getelementptr i16, i16* %p, i32 595968 ; 0x123000/2 (i.e. ADD imm)
-  store atomic i16 %val, i16* %ptr_random unordered, align 2
+  %ptr_random = getelementptr i16, ptr %p, i32 595968 ; 0x123000/2 (i.e. ADD imm)
+  store atomic i16 %val, ptr %ptr_random unordered, align 2
 
   ret void
 }
 
-define void @atomic_store_relaxed_32(i32* %p, i32 %off32, i32 %val) #0 {
+define void @atomic_store_relaxed_32(ptr %p, i32 %off32, i32 %val) #0 {
 ; CHECK-NOLSE-O1-LABEL: atomic_store_relaxed_32:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
@@ -1135,22 +1135,22 @@ define void @atomic_store_relaxed_32(i32* %p, i32 %off32, i32 %val) #0 {
 ; CHECK-LSE-O0-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O0-NEXT:    str w2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-  %ptr_unsigned = getelementptr i32, i32* %p, i32 4095
-  store atomic i32 %val, i32* %ptr_unsigned monotonic, align 4
+  %ptr_unsigned = getelementptr i32, ptr %p, i32 4095
+  store atomic i32 %val, ptr %ptr_unsigned monotonic, align 4
 
-  %ptr_regoff = getelementptr i32, i32* %p, i32 %off32
-  store atomic i32 %val, i32* %ptr_regoff unordered, align 4
+  %ptr_regoff = getelementptr i32, ptr %p, i32 %off32
+  store atomic i32 %val, ptr %ptr_regoff unordered, align 4
 
-  %ptr_unscaled = getelementptr i32, i32* %p, i32 -64
-  store atomic i32 %val, i32* %ptr_unscaled monotonic, align 4
+  %ptr_unscaled = getelementptr i32, ptr %p, i32 -64
+  store atomic i32 %val, ptr %ptr_unscaled monotonic, align 4
 
-  %ptr_random = getelementptr i32, i32* %p, i32 297984 ; 0x123000/4 (i.e. ADD imm)
-  store atomic i32 %val, i32* %ptr_random unordered, align 4
+  %ptr_random = getelementptr i32, ptr %p, i32 297984 ; 0x123000/4 (i.e. ADD imm)
+  store atomic i32 %val, ptr %ptr_random unordered, align 4
 
   ret void
 }
 
-define void @atomic_store_relaxed_64(i64* %p, i32 %off32, i64 %val) #0 {
+define void @atomic_store_relaxed_64(ptr %p, i32 %off32, i64 %val) #0 {
 ; CHECK-NOLSE-O1-LABEL: atomic_store_relaxed_64:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
@@ -1186,22 +1186,22 @@ define void @atomic_store_relaxed_64(i64* %p, i32 %off32, i64 %val) #0 {
 ; CHECK-LSE-O0-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O0-NEXT:    str x2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-  %ptr_unsigned = getelementptr i64, i64* %p, i32 4095
-  store atomic i64 %val, i64* %ptr_unsigned monotonic, align 8
+  %ptr_unsigned = getelementptr i64, ptr %p, i32 4095
+  store atomic i64 %val, ptr %ptr_unsigned monotonic, align 8
 
-  %ptr_regoff = getelementptr i64, i64* %p, i32 %off32
-  store atomic i64 %val, i64* %ptr_regoff unordered, align 8
+  %ptr_regoff = getelementptr i64, ptr %p, i32 %off32
+  store atomic i64 %val, ptr %ptr_regoff unordered, align 8
 
-  %ptr_unscaled = getelementptr i64, i64* %p, i32 -32
-  store atomic i64 %val, i64* %ptr_unscaled monotonic, align 8
+  %ptr_unscaled = getelementptr i64, ptr %p, i32 -32
+  store atomic i64 %val, ptr %ptr_unscaled monotonic, align 8
 
-  %ptr_random = getelementptr i64, i64* %p, i32 148992 ; 0x123000/8 (i.e. ADD imm)
-  store atomic i64 %val, i64* %ptr_random unordered, align 8
+  %ptr_random = getelementptr i64, ptr %p, i32 148992 ; 0x123000/8 (i.e. ADD imm)
+  store atomic i64 %val, ptr %ptr_random unordered, align 8
 
   ret void
 }
 
-define i32 @load_zext(i8* %p8, i16* %p16) {
+define i32 @load_zext(ptr %p8, ptr %p16) {
 ; CHECK-NOLSE-O1-LABEL: load_zext:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    ldarb w8, [x0]
@@ -1229,17 +1229,17 @@ define i32 @load_zext(i8* %p8, i16* %p16) {
 ; CHECK-LSE-O0-NEXT:    ldrh w8, [x1]
 ; CHECK-LSE-O0-NEXT:    add w0, w8, w9, uxtb
 ; CHECK-LSE-O0-NEXT:    ret
-  %val1.8 = load atomic i8, i8* %p8 acquire, align 1
+  %val1.8 = load atomic i8, ptr %p8 acquire, align 1
   %val1 = zext i8 %val1.8 to i32
 
-  %val2.16 = load atomic i16, i16* %p16 unordered, align 2
+  %val2.16 = load atomic i16, ptr %p16 unordered, align 2
   %val2 = zext i16 %val2.16 to i32
 
   %res = add i32 %val1, %val2
   ret i32 %res
 }
 
-define { i32, i64 } @load_acq(i32* %p32, i64* %p64) {
+define { i32, i64 } @load_acq(ptr %p32, ptr %p64) {
 ; CHECK-NOLSE-LABEL: load_acq:
 ; CHECK-NOLSE:       ; %bb.0:
 ; CHECK-NOLSE-NEXT:    ldar w0, [x0]
@@ -1257,16 +1257,16 @@ define { i32, i64 } @load_acq(i32* %p32, i64* %p64) {
 ; CHECK-LSE-O0-NEXT:    ldar w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ldapr x1, [x1]
 ; CHECK-LSE-O0-NEXT:    ret
-  %val32 = load atomic i32, i32* %p32 seq_cst, align 4
+  %val32 = load atomic i32, ptr %p32 seq_cst, align 4
   %tmp = insertvalue { i32, i64 } undef, i32 %val32, 0
 
-  %val64 = load atomic i64, i64* %p64 acquire, align 8
+  %val64 = load atomic i64, ptr %p64 acquire, align 8
   %res = insertvalue { i32, i64 } %tmp, i64 %val64, 1
 
   ret { i32, i64 } %res
 }
 
-define i32 @load_sext(i8* %p8, i16* %p16) {
+define i32 @load_sext(ptr %p8, ptr %p16) {
 ; CHECK-NOLSE-O1-LABEL: load_sext:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    ldarb w8, [x0]
@@ -1298,17 +1298,17 @@ define i32 @load_sext(i8* %p8, i16* %p16) {
 ; CHECK-LSE-O0-NEXT:    sxth w8, w8
 ; CHECK-LSE-O0-NEXT:    add w0, w8, w9, sxtb
 ; CHECK-LSE-O0-NEXT:    ret
-  %val1.8 = load atomic i8, i8* %p8 acquire, align 1
+  %val1.8 = load atomic i8, ptr %p8 acquire, align 1
   %val1 = sext i8 %val1.8 to i32
 
-  %val2.16 = load atomic i16, i16* %p16 unordered, align 2
+  %val2.16 = load atomic i16, ptr %p16 unordered, align 2
   %val2 = sext i16 %val2.16 to i32
 
   %res = add i32 %val1, %val2
   ret i32 %res
 }
 
-define void @store_trunc(i32 %val, i8* %p8, i16* %p16) {
+define void @store_trunc(i32 %val, ptr %p8, ptr %p16) {
 ; CHECK-NOLSE-LABEL: store_trunc:
 ; CHECK-NOLSE:       ; %bb.0:
 ; CHECK-NOLSE-NEXT:    stlrb w0, [x1]
@@ -1327,15 +1327,15 @@ define void @store_trunc(i32 %val, i8* %p8, i16* %p16) {
 ; CHECK-LSE-O0-NEXT:    strh w0, [x2]
 ; CHECK-LSE-O0-NEXT:    ret
   %val8 = trunc i32 %val to i8
-  store atomic i8 %val8, i8* %p8 seq_cst, align 1
+  store atomic i8 %val8, ptr %p8 seq_cst, align 1
 
   %val16 = trunc i32 %val to i16
-  store atomic i16 %val16, i16* %p16 monotonic, align 2
+  store atomic i16 %val16, ptr %p16 monotonic, align 2
 
   ret void
 }
 
-define i8 @atomicrmw_add_i8(i8* %ptr, i8 %rhs) {
+define i8 @atomicrmw_add_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_add_i8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB27_1: ; %atomicrmw.start
@@ -1397,11 +1397,11 @@ define i8 @atomicrmw_add_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldaddalb w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw add i8* %ptr, i8 %rhs seq_cst
+  %res = atomicrmw add ptr %ptr, i8 %rhs seq_cst
   ret i8 %res
 }
 
-define i8 @atomicrmw_xchg_i8(i8* %ptr, i8 %rhs) {
+define i8 @atomicrmw_xchg_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_xchg_i8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w1 killed $w1 def $x1
@@ -1462,11 +1462,11 @@ define i8 @atomicrmw_xchg_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    swpb w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw xchg i8* %ptr, i8 %rhs monotonic
+  %res = atomicrmw xchg ptr %ptr, i8 %rhs monotonic
   ret i8 %res
 }
 
-define i8 @atomicrmw_sub_i8(i8* %ptr, i8 %rhs) {
+define i8 @atomicrmw_sub_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_sub_i8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB29_1: ; %atomicrmw.start
@@ -1530,11 +1530,11 @@ define i8 @atomicrmw_sub_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0-NEXT:    neg w8, w1
 ; CHECK-LSE-O0-NEXT:    ldaddab w8, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw sub i8* %ptr, i8 %rhs acquire
+  %res = atomicrmw sub ptr %ptr, i8 %rhs acquire
   ret i8 %res
 }
 
-define i8 @atomicrmw_and_i8(i8* %ptr, i8 %rhs) {
+define i8 @atomicrmw_and_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_and_i8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB30_1: ; %atomicrmw.start
@@ -1598,11 +1598,11 @@ define i8 @atomicrmw_and_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0-NEXT:    mvn w8, w1
 ; CHECK-LSE-O0-NEXT:    ldclrlb w8, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw and i8* %ptr, i8 %rhs release
+  %res = atomicrmw and ptr %ptr, i8 %rhs release
   ret i8 %res
 }
 
-define i8 @atomicrmw_or_i8(i8* %ptr, i8 %rhs) {
+define i8 @atomicrmw_or_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_or_i8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB31_1: ; %atomicrmw.start
@@ -1664,11 +1664,11 @@ define i8 @atomicrmw_or_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldsetalb w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw or i8* %ptr, i8 %rhs seq_cst
+  %res = atomicrmw or ptr %ptr, i8 %rhs seq_cst
   ret i8 %res
 }
 
-define i8 @atomicrmw_xor_i8(i8* %ptr, i8 %rhs) {
+define i8 @atomicrmw_xor_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_xor_i8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB32_1: ; %atomicrmw.start
@@ -1730,11 +1730,11 @@ define i8 @atomicrmw_xor_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldeorb w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw xor i8* %ptr, i8 %rhs monotonic
+  %res = atomicrmw xor ptr %ptr, i8 %rhs monotonic
   ret i8 %res
 }
 
-define i8 @atomicrmw_min_i8(i8* %ptr, i8 %rhs) {
+define i8 @atomicrmw_min_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_min_i8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB33_1: ; %atomicrmw.start
@@ -1803,11 +1803,11 @@ define i8 @atomicrmw_min_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldsminab w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw min i8* %ptr, i8 %rhs acquire
+  %res = atomicrmw min ptr %ptr, i8 %rhs acquire
   ret i8 %res
 }
 
-define i8 @atomicrmw_max_i8(i8* %ptr, i8 %rhs) {
+define i8 @atomicrmw_max_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_max_i8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB34_1: ; %atomicrmw.start
@@ -1876,11 +1876,11 @@ define i8 @atomicrmw_max_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldsmaxlb w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw max i8* %ptr, i8 %rhs release
+  %res = atomicrmw max ptr %ptr, i8 %rhs release
   ret i8 %res
 }
 
-define i8 @atomicrmw_umin_i8(i8* %ptr, i8 %rhs) {
+define i8 @atomicrmw_umin_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_umin_i8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    and w9, w1, #0xff
@@ -1950,11 +1950,11 @@ define i8 @atomicrmw_umin_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    lduminalb w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw umin i8* %ptr, i8 %rhs seq_cst
+  %res = atomicrmw umin ptr %ptr, i8 %rhs seq_cst
   ret i8 %res
 }
 
-define i8 @atomicrmw_umax_i8(i8* %ptr, i8 %rhs) {
+define i8 @atomicrmw_umax_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_umax_i8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    and w9, w1, #0xff
@@ -2024,11 +2024,11 @@ define i8 @atomicrmw_umax_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldumaxb w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw umax i8* %ptr, i8 %rhs monotonic
+  %res = atomicrmw umax ptr %ptr, i8 %rhs monotonic
   ret i8 %res
 }
 
-define i16 @atomicrmw_add_i16(i16* %ptr, i16 %rhs) {
+define i16 @atomicrmw_add_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_add_i16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB37_1: ; %atomicrmw.start
@@ -2090,11 +2090,11 @@ define i16 @atomicrmw_add_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldaddalh w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw add i16* %ptr, i16 %rhs seq_cst
+  %res = atomicrmw add ptr %ptr, i16 %rhs seq_cst
   ret i16 %res
 }
 
-define i16 @atomicrmw_xchg_i16(i16* %ptr, i16 %rhs) {
+define i16 @atomicrmw_xchg_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_xchg_i16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w1 killed $w1 def $x1
@@ -2155,11 +2155,11 @@ define i16 @atomicrmw_xchg_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    swph w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw xchg i16* %ptr, i16 %rhs monotonic
+  %res = atomicrmw xchg ptr %ptr, i16 %rhs monotonic
   ret i16 %res
 }
 
-define i16 @atomicrmw_sub_i16(i16* %ptr, i16 %rhs) {
+define i16 @atomicrmw_sub_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_sub_i16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB39_1: ; %atomicrmw.start
@@ -2223,11 +2223,11 @@ define i16 @atomicrmw_sub_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0-NEXT:    neg w8, w1
 ; CHECK-LSE-O0-NEXT:    ldaddah w8, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw sub i16* %ptr, i16 %rhs acquire
+  %res = atomicrmw sub ptr %ptr, i16 %rhs acquire
   ret i16 %res
 }
 
-define i16 @atomicrmw_and_i16(i16* %ptr, i16 %rhs) {
+define i16 @atomicrmw_and_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_and_i16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB40_1: ; %atomicrmw.start
@@ -2291,11 +2291,11 @@ define i16 @atomicrmw_and_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0-NEXT:    mvn w8, w1
 ; CHECK-LSE-O0-NEXT:    ldclrlh w8, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw and i16* %ptr, i16 %rhs release
+  %res = atomicrmw and ptr %ptr, i16 %rhs release
   ret i16 %res
 }
 
-define i16 @atomicrmw_or_i16(i16* %ptr, i16 %rhs) {
+define i16 @atomicrmw_or_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_or_i16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB41_1: ; %atomicrmw.start
@@ -2357,11 +2357,11 @@ define i16 @atomicrmw_or_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldsetalh w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw or i16* %ptr, i16 %rhs seq_cst
+  %res = atomicrmw or ptr %ptr, i16 %rhs seq_cst
   ret i16 %res
 }
 
-define i16 @atomicrmw_xor_i16(i16* %ptr, i16 %rhs) {
+define i16 @atomicrmw_xor_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_xor_i16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB42_1: ; %atomicrmw.start
@@ -2423,11 +2423,11 @@ define i16 @atomicrmw_xor_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldeorh w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw xor i16* %ptr, i16 %rhs monotonic
+  %res = atomicrmw xor ptr %ptr, i16 %rhs monotonic
   ret i16 %res
 }
 
-define i16 @atomicrmw_min_i16(i16* %ptr, i16 %rhs) {
+define i16 @atomicrmw_min_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_min_i16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB43_1: ; %atomicrmw.start
@@ -2496,11 +2496,11 @@ define i16 @atomicrmw_min_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldsminah w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw min i16* %ptr, i16 %rhs acquire
+  %res = atomicrmw min ptr %ptr, i16 %rhs acquire
   ret i16 %res
 }
 
-define i16 @atomicrmw_max_i16(i16* %ptr, i16 %rhs) {
+define i16 @atomicrmw_max_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_max_i16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB44_1: ; %atomicrmw.start
@@ -2569,11 +2569,11 @@ define i16 @atomicrmw_max_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldsmaxlh w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw max i16* %ptr, i16 %rhs release
+  %res = atomicrmw max ptr %ptr, i16 %rhs release
   ret i16 %res
 }
 
-define i16 @atomicrmw_umin_i16(i16* %ptr, i16 %rhs) {
+define i16 @atomicrmw_umin_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_umin_i16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    and w9, w1, #0xffff
@@ -2643,11 +2643,11 @@ define i16 @atomicrmw_umin_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    lduminalh w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw umin i16* %ptr, i16 %rhs seq_cst
+  %res = atomicrmw umin ptr %ptr, i16 %rhs seq_cst
   ret i16 %res
 }
 
-define i16 @atomicrmw_umax_i16(i16* %ptr, i16 %rhs) {
+define i16 @atomicrmw_umax_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_umax_i16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    and w9, w1, #0xffff
@@ -2717,11 +2717,11 @@ define i16 @atomicrmw_umax_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldumaxh w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = atomicrmw umax i16* %ptr, i16 %rhs monotonic
+  %res = atomicrmw umax ptr %ptr, i16 %rhs monotonic
   ret i16 %res
 }
 
-define { i8, i1 } @cmpxchg_i8(i8* %ptr, i8 %desired, i8 %new) {
+define { i8, i1 } @cmpxchg_i8(ptr %ptr, i8 %desired, i8 %new) {
 ; CHECK-NOLSE-O1-LABEL: cmpxchg_i8:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    mov x8, x0
@@ -2783,11 +2783,11 @@ define { i8, i1 } @cmpxchg_i8(i8* %ptr, i8 %desired, i8 %new) {
 ; CHECK-LSE-O0-NEXT:    cset w8, eq
 ; CHECK-LSE-O0-NEXT:    and w1, w8, #0x1
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = cmpxchg i8* %ptr, i8 %desired, i8 %new monotonic monotonic
+  %res = cmpxchg ptr %ptr, i8 %desired, i8 %new monotonic monotonic
   ret { i8, i1 } %res
 }
 
-define { i16, i1 } @cmpxchg_i16(i16* %ptr, i16 %desired, i16 %new) {
+define { i16, i1 } @cmpxchg_i16(ptr %ptr, i16 %desired, i16 %new) {
 ; CHECK-NOLSE-O1-LABEL: cmpxchg_i16:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    mov x8, x0
@@ -2849,11 +2849,11 @@ define { i16, i1 } @cmpxchg_i16(i16* %ptr, i16 %desired, i16 %new) {
 ; CHECK-LSE-O0-NEXT:    cset w8, eq
 ; CHECK-LSE-O0-NEXT:    and w1, w8, #0x1
 ; CHECK-LSE-O0-NEXT:    ret
-  %res = cmpxchg i16* %ptr, i16 %desired, i16 %new monotonic monotonic
+  %res = cmpxchg ptr %ptr, i16 %desired, i16 %new monotonic monotonic
   ret { i16, i1 } %res
 }
 
-define internal double @bitcast_to_double(i64* %ptr) {
+define internal double @bitcast_to_double(ptr %ptr) {
 ; CHECK-NOLSE-LABEL: bitcast_to_double:
 ; CHECK-NOLSE:       ; %bb.0:
 ; CHECK-NOLSE-NEXT:    ldar x8, [x0]
@@ -2871,12 +2871,12 @@ define internal double @bitcast_to_double(i64* %ptr) {
 ; CHECK-LSE-O0-NEXT:    ldar x8, [x0]
 ; CHECK-LSE-O0-NEXT:    fmov d0, x8
 ; CHECK-LSE-O0-NEXT:    ret
-  %load = load atomic i64, i64* %ptr seq_cst, align 8
+  %load = load atomic i64, ptr %ptr seq_cst, align 8
   %bitcast = bitcast i64 %load to double
   ret double %bitcast
 }
 
-define internal float @bitcast_to_float(i32* %ptr) {
+define internal float @bitcast_to_float(ptr %ptr) {
 ; CHECK-NOLSE-LABEL: bitcast_to_float:
 ; CHECK-NOLSE:       ; %bb.0:
 ; CHECK-NOLSE-NEXT:    ldar w8, [x0]
@@ -2894,12 +2894,12 @@ define internal float @bitcast_to_float(i32* %ptr) {
 ; CHECK-LSE-O0-NEXT:    ldar w8, [x0]
 ; CHECK-LSE-O0-NEXT:    fmov s0, w8
 ; CHECK-LSE-O0-NEXT:    ret
-  %load = load atomic i32, i32* %ptr seq_cst, align 8
+  %load = load atomic i32, ptr %ptr seq_cst, align 8
   %bitcast = bitcast i32 %load to float
   ret float %bitcast
 }
 
-define internal half @bitcast_to_half(i16* %ptr) {
+define internal half @bitcast_to_half(ptr %ptr) {
 ; CHECK-NOLSE-LABEL: bitcast_to_half:
 ; CHECK-NOLSE:       ; %bb.0:
 ; CHECK-NOLSE-NEXT:    ldarh w8, [x0]
@@ -2920,12 +2920,12 @@ define internal half @bitcast_to_half(i16* %ptr) {
 ; CHECK-LSE-O0-NEXT:    fmov s0, w8
 ; CHECK-LSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
 ; CHECK-LSE-O0-NEXT:    ret
-  %load = load atomic i16, i16* %ptr seq_cst, align 8
+  %load = load atomic i16, ptr %ptr seq_cst, align 8
   %bitcast = bitcast i16 %load to half
   ret half %bitcast
 }
 
-define internal i64* @inttoptr(i64* %ptr) {
+define internal ptr @inttoptr(ptr %ptr) {
 ; CHECK-NOLSE-LABEL: inttoptr:
 ; CHECK-NOLSE:       ; %bb.0:
 ; CHECK-NOLSE-NEXT:    ldar x0, [x0]
@@ -2940,12 +2940,12 @@ define internal i64* @inttoptr(i64* %ptr) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldar x0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %load = load atomic i64, i64* %ptr seq_cst, align 8
-  %bitcast = inttoptr i64 %load to i64*
-  ret i64* %bitcast
+  %load = load atomic i64, ptr %ptr seq_cst, align 8
+  %bitcast = inttoptr i64 %load to ptr
+  ret ptr %bitcast
 }
 
-define internal i64* @load_ptr(i64** %ptr) {
+define internal ptr @load_ptr(ptr %ptr) {
 ; CHECK-NOLSE-LABEL: load_ptr:
 ; CHECK-NOLSE:       ; %bb.0:
 ; CHECK-NOLSE-NEXT:    ldar x0, [x0]
@@ -2960,8 +2960,8 @@ define internal i64* @load_ptr(i64** %ptr) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldar x0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-  %load = load atomic i64*, i64** %ptr seq_cst, align 8
-  ret i64* %load
+  %load = load atomic ptr, ptr %ptr seq_cst, align 8
+  ret ptr %load
 }
 
 attributes #0 = { nounwind }
