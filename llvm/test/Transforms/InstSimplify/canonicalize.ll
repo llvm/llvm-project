@@ -238,7 +238,7 @@ define float @canonicalize_neg_denorm_preserve_sign_output_positive_zero_input()
 
 define float @canonicalize_neg_denorm_positive_zero_output_preserve_sign_input() "denormal-fp-math"="positive-zero,preserve-sign" {
 ; CHECK-LABEL: @canonicalize_neg_denorm_positive_zero_output_preserve_sign_input(
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    ret float -0.000000e+00
 ;
   %ret = call float @llvm.canonicalize.f32(float bitcast (i32 -2139095041 to float))
   ret float %ret
