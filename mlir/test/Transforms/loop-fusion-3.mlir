@@ -1076,4 +1076,52 @@ func.func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref
 // CHECK:         affine.for
 // CHECK-NOT:     affine.for
 
+// CHECK-LABEL: func @alias_escaping_memref
+func.func @alias_escaping_memref(%a : memref<2x5xf32>) {
+  %cst = arith.constant 0.000000e+00 : f32
+  %alias = memref.reinterpret_cast %a to offset: [0], sizes: [10], strides: [1] : memref<2x5xf32> to memref<10xf32>
+  affine.for %i0 = 0 to 10 {
+    affine.store %cst, %alias[%i0] : memref<10xf32>
+  }
+
+  affine.for %i1 = 0 to 10 {
+    %0 = affine.load %alias[%i1] : memref<10xf32>
+  }
+  // Fusion happens, but memref isn't privatized since %alias is an alias of a
+  // function argument.
+  // CHECK:       memref.reinterpret_cast
+  // CHECK-NEXT:  affine.for
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:  }
+  // CHECK-NOT:   affine.for
+
+  return
+}
+
+// CHECK-LABEL: func @unknown_memref_def_op
+func.func @unknown_memref_def_op() {
+  %cst = arith.constant 0.000000e+00 : f32
+  %may_alias = call @bar() : () -> memref<10xf32>
+  affine.for %i0 = 0 to 10 {
+    affine.store %cst, %may_alias[%i0] : memref<10xf32>
+  }
+
+  affine.for %i1 = 0 to 10 {
+    %0 = affine.load %may_alias[%i1] : memref<10xf32>
+  }
+  // Fusion happens, but memref isn't privatized since %may_alias's origin is
+  // unknown.
+  // CHECK:       call
+  // CHECK-NEXT:  affine.for
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:  }
+  // CHECK-NOT:   affine.for
+
+  return
+}
+func.func private @bar() -> memref<10xf32>
+
+
 // Add further tests in mlir/test/Transforms/loop-fusion-4.mlir
