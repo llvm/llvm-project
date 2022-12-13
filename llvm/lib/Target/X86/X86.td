@@ -976,8 +976,7 @@ def ProcessorFeatures {
                                                   FeatureCRC32,
                                                   FeaturePOPCNT,
                                                   FeaturePCLMUL,
-                                                  FeaturePRFCHW,
-                                                  FeatureRDRAND];
+                                                  FeaturePRFCHW];
   list<SubtargetFeature> SLMTuning = [TuningUseSLMArithCosts,
                                       TuningSlowTwoMemOps,
                                       TuningSlowLEA,
@@ -994,6 +993,7 @@ def ProcessorFeatures {
   // Goldmont
   list<SubtargetFeature> GLMAdditionalFeatures = [FeatureAES,
                                                   FeatureSHA,
+                                                  FeatureRDRAND,
                                                   FeatureRDSEED,
                                                   FeatureXSAVE,
                                                   FeatureXSAVEOPT,
