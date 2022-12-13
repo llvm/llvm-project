@@ -226,7 +226,7 @@ void testCalibratedType(MlirContext ctx) {
   fprintf(stderr, "\n\n");
 }
 
-int main() {
+int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirDialectHandleRegisterDialect(mlirGetDialectHandle__quant__(), ctx);
   testTypeHierarchy(ctx);
