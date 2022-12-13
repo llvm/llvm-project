@@ -58,22 +58,37 @@ static const int srcSigBits = 10;
 typedef float dst_t;
 typedef uint32_t dst_rep_t;
 #define DST_REP_C UINT32_C
+static const int dstBits = 32;
 static const int dstSigBits = 23;
+static const int dstIntBits = 0;
 
 #elif defined DST_DOUBLE
 typedef double dst_t;
 typedef uint64_t dst_rep_t;
 #define DST_REP_C UINT64_C
+static const int dstBits = 64;
 static const int dstSigBits = 52;
+static const int dstIntBits = 0;
+
+#elif defined DST_FP80
+typedef long double dst_t;
+typedef __uint128_t dst_rep_t;
+#define DST_REP_C (__uint128_t)
+static const int dstBits = 80;
+static const int dstSigBits = 64;
+static const int dstIntBits = 1;
+
 
 #elif defined DST_QUAD
 typedef long double dst_t;
 typedef __uint128_t dst_rep_t;
 #define DST_REP_C (__uint128_t)
+static const int dstBits = 128;
 static const int dstSigBits = 112;
+static const int dstIntBits = 0;
 
 #else
-#error Destination should be single, double, or quad precision!
+#error Destination should be single, double, fp80, or quad precision!
 #endif // end destination precision
 
 // End of specialization parameters.  Two helper routines for conversion to and

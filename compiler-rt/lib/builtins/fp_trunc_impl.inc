@@ -1,3 +1,4 @@
+int printf(const char *, ...);
 //= lib/fp_trunc_impl.inc - high precision -> low precision conversion *-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -38,10 +39,28 @@
 
 #include "fp_trunc.h"
 
+// x86_fp80 has an explicit integer bit at the top of the significand.
+// This allowed more weird denormals, infinities and NaNs in 8087 & 80287;
+// but from 387 onwards those are treated as invalid and we can just
+// ignore the issue by converting to a canonical "usual-format" IEEE-857.
+
+static src_rep_t removeExplicitIntBit(src_rep_t in) {
+  if (!srcIntBits)
+    return in;
+
+  const src_rep_t srcMinNormal = SRC_REP_C(1) << srcSigBits;
+  const src_rep_t srcSignificandMask = srcMinNormal - 1;
+
+  src_rep_t inSig = in & srcSignificandMask;
+  in &= ~srcSignificandMask;
+  in |= (inSig << 1) & srcSignificandMask;
+
+  return in;
+}
+
 static __inline dst_t __truncXfYf2__(src_t a) {
   // Various constants whose values follow from the type parameters.
   // Any reasonable optimizer will fold and propagate all of these.
-  const int srcBits = sizeof(src_t) * CHAR_BIT;
   const int srcExpBits = srcBits - srcSigBits - 1;
   const int srcInfExp = (1 << srcExpBits) - 1;
   const int srcExpBias = srcInfExp >> 1;
@@ -71,7 +90,7 @@ static __inline dst_t __truncXfYf2__(src_t a) {
 
   // Break a into a sign and representation of the absolute value.
   const src_rep_t aRep = srcToRep(a);
-  const src_rep_t aAbs = aRep & srcAbsMask;
+  src_rep_t aAbs = aRep & srcAbsMask;
   const src_rep_t sign = aRep & srcSignMask;
   dst_rep_t absResult;
 
@@ -79,6 +98,7 @@ static __inline dst_t __truncXfYf2__(src_t a) {
     // The exponent of a is within the range of normal numbers in the
     // destination format.  We can convert by simply right-shifting with
     // rounding and adjusting the exponent.
+    aAbs = removeExplicitIntBit(aAbs);
     absResult = aAbs >> (srcSigBits - dstSigBits);
     absResult -= (dst_rep_t)(srcExpBias - dstExpBias) << dstSigBits;
 
@@ -104,10 +124,11 @@ static __inline dst_t __truncXfYf2__(src_t a) {
     // a underflows on conversion to the destination type or is an exact
     // zero.  The result may be a denormal or zero.  Extract the exponent
     // to get the shift amount for the denormalization.
+    aAbs = removeExplicitIntBit(aAbs);
     const int aExp = aAbs >> srcSigBits;
     const int shift = srcExpBias - dstExpBias - aExp + 1;
 
-    const src_rep_t significand = (aRep & srcSignificandMask) | srcMinNormal;
+    const src_rep_t significand = (aAbs & srcSignificandMask) | srcMinNormal;
 
     // Right shift by the denormalization amount with sticky.
     if (shift > srcSigBits) {

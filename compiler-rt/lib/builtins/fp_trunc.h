@@ -19,22 +19,36 @@
 typedef float src_t;
 typedef uint32_t src_rep_t;
 #define SRC_REP_C UINT32_C
+static const int srcBits = 32;
 static const int srcSigBits = 23;
+static const int srcIntBits = 0;
 
 #elif defined SRC_DOUBLE
 typedef double src_t;
 typedef uint64_t src_rep_t;
 #define SRC_REP_C UINT64_C
+static const int srcBits = 64;
 static const int srcSigBits = 52;
+static const int srcIntBits = 0;
+
+#elif defined SRC_FLT80
+typedef long double src_t;
+typedef __uint128_t src_rep_t;
+#define SRC_REP_C (__uint128_t)
+static const int srcBits = 80;
+static const int srcSigBits = 64;
+static const int srcIntBits = 1;
 
 #elif defined SRC_QUAD
 typedef long double src_t;
 typedef __uint128_t src_rep_t;
 #define SRC_REP_C (__uint128_t)
+static const int srcBits = 128;
 static const int srcSigBits = 112;
+static const int srcIntBits = 0;
 
 #else
-#error Source should be double precision or quad precision!
+#error Source should be double precision, fp80 precision, or quad precision!
 #endif // end source precision
 
 #if defined DST_DOUBLE
@@ -77,7 +91,13 @@ static __inline src_rep_t srcToRep(src_t x) {
     src_t f;
     src_rep_t i;
   } rep = {.f = x};
-  return rep.i;
+  src_rep_t res = rep.i;
+
+  // Zero out the padding bits from the union if needed.
+  if (sizeof(src_rep_t) > sizeof(src_t))
+    res &= (((src_rep_t)1 << sizeof(src_t)*CHAR_BIT) - 1);
+
+  return res;
 }
 
 static __inline dst_t dstFromRep(dst_rep_t x) {
