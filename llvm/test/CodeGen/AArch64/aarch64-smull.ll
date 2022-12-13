@@ -753,6 +753,26 @@ define i16 @smullWithInconsistentExtensions(<8 x i8> %x, <8 x i8> %y) {
   ret i16 %r
 }
 
+define <8 x i16> @smull_extended_vector_operand(<8 x i16> %v) {
+; CHECK-LABEL: smull_extended_vector_operand:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v1.4s, #139, lsl #8
+; CHECK-NEXT:    sshll v2.4s, v0.4h, #0
+; CHECK-NEXT:    sshll2 v0.4s, v0.8h, #0
+; CHECK-NEXT:    mul v2.4s, v2.4s, v1.4s
+; CHECK-NEXT:    mul v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    shrn v0.4h, v2.4s, #1
+; CHECK-NEXT:    shrn2 v0.8h, v1.4s, #1
+; CHECK-NEXT:    ret
+entry:
+%0 = sext <8 x i16> %v to <8 x i32>
+%1 = mul <8 x i32> %0, <i32 35584, i32 35584, i32 35584, i32 35584, i32 35584, i32 35584, i32 35584, i32 35584>
+%2 = lshr <8 x i32> %1, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+%3 = trunc <8 x i32> %2 to <8 x i16>
+ret <8 x i16> %3
+
+}
+
 define void @distribute(<8 x i16>* %dst, <16 x i8>* %src, i32 %mul) nounwind {
 ; CHECK-LABEL: distribute:
 ; CHECK:       // %bb.0: // %entry
