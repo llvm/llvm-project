@@ -2800,6 +2800,52 @@ static SDValue lowerScalarSplat(SDValue Passthru, SDValue Scalar, SDValue VL,
   return splatSplitI64WithVL(DL, VT, Passthru, Scalar, VL, DAG);
 }
 
+static MVT getLMUL1VT(MVT VT) {
+  assert(VT.getVectorElementType().getSizeInBits() <= 64 &&
+         "Unexpected vector MVT");
+  return MVT::getScalableVectorVT(
+      VT.getVectorElementType(),
+      RISCV::RVVBitsPerBlock / VT.getVectorElementType().getSizeInBits());
+}
+
+// This function lowers an insert of a scalar operand Scalar into lane
+// 0 of the vector regardless of the value of VL.  The contents of the
+// remaining lanes of the result vector are unspecified.  VL is assumed
+// to be non-zero.
+static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL,
+                                 MVT VT, SDLoc DL, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
+  SDValue Passthru = DAG.getUNDEF(VT);
+  if (VT.isFloatingPoint())
+    // TODO: Use vmv.v.i for appropriate constants
+    return DAG.getNode(RISCVISD::VFMV_S_F_VL, DL, VT, Passthru, Scalar, VL);
+
+  // Avoid the tricky legalization cases by falling back to using the
+  // splat code which already handles it gracefully.
+  const MVT XLenVT = Subtarget.getXLenVT();
+  if (!Scalar.getValueType().bitsLE(XLenVT))
+    return lowerScalarSplat(DAG.getUNDEF(VT), Scalar,
+                            DAG.getConstant(1, DL, XLenVT),
+                            VT, DL, DAG, Subtarget);
+
+  // If the operand is a constant, sign extend to increase our chances
+  // of being able to use a .vi instruction. ANY_EXTEND would become a
+  // a zero extend and the simm5 check in isel would fail.
+  // FIXME: Should we ignore the upper bits in isel instead?
+  unsigned ExtOpc =
+    isa<ConstantSDNode>(Scalar) ? ISD::SIGN_EXTEND : ISD::ANY_EXTEND;
+  Scalar = DAG.getNode(ExtOpc, DL, XLenVT, Scalar);
+  // We use a vmv.v.i if possible.  We limit this to LMUL1.  LMUL2 or
+  // higher would involve overly constraining the register allocator for
+  // no purpose.
+  if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Scalar)) {
+    if (!isNullConstant(Scalar) && isInt<5>(Const->getSExtValue()) &&
+        VT.bitsLE(getLMUL1VT(VT)))
+      return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Passthru, Scalar, VL);
+  }
+  return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT, Passthru, Scalar, VL);
+}
+
 static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, bool &SwapSources,
                                 const RISCVSubtarget &Subtarget) {
   // We need to be able to widen elements to the next larger integer type.
@@ -5095,8 +5141,7 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
         return Vec;
       return convertFromScalableVector(VecVT, Vec, DAG, Subtarget);
     }
-    ValInVec =
-        DAG.getNode(Opc, DL, ContainerVT, DAG.getUNDEF(ContainerVT), Val, VL);
+    ValInVec = lowerScalarInsert(Val, VL, ContainerVT, DL, DAG, Subtarget);
   } else {
     // On RV32, i64-element vectors must be specially handled to place the
     // value at element 0, by using two vslide1down instructions in sequence on
@@ -5684,14 +5729,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   }
 
   return SDValue();
-}
-
-static MVT getLMUL1VT(MVT VT) {
-  assert(VT.getVectorElementType().getSizeInBits() <= 64 &&
-         "Unexpected vector MVT");
-  return MVT::getScalableVectorVT(
-      VT.getVectorElementType(),
-      RISCV::RVVBitsPerBlock / VT.getVectorElementType().getSizeInBits());
 }
 
 static unsigned getRVVReductionOp(unsigned ISDOpcode) {

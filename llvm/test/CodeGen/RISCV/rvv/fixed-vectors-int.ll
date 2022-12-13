@@ -943,32 +943,32 @@ define void @mulhu_v8i16(<8 x i16>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    li a1, 1
-; CHECK-NEXT:    vmv.s.x v9, a1
-; CHECK-NEXT:    li a1, 33
-; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    vmv.v.i v10, 3
-; CHECK-NEXT:    vmerge.vim v10, v10, 2, v0
-; CHECK-NEXT:    vsetivli zero, 7, e16, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v10, v9, 6
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v11, 0
+; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    lui a1, 1048568
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, tu, ma
-; CHECK-NEXT:    vmv.v.i v12, 0
-; CHECK-NEXT:    vmv.s.x v12, a1
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmv.s.x v10, a1
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v11, 1
 ; CHECK-NEXT:    vsetivli zero, 7, e16, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v11, v9, 6
+; CHECK-NEXT:    vslideup.vi v9, v11, 6
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    lui a1, %hi(.LCPI53_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI53_0)
-; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsrl.vv v11, v8, v11
-; CHECK-NEXT:    vmulhu.vv v9, v11, v9
+; CHECK-NEXT:    vle16.v v12, (a1)
+; CHECK-NEXT:    vsrl.vv v9, v8, v9
+; CHECK-NEXT:    vmulhu.vv v9, v9, v12
 ; CHECK-NEXT:    vsub.vv v8, v8, v9
-; CHECK-NEXT:    vmulhu.vv v8, v8, v12
+; CHECK-NEXT:    vmulhu.vv v8, v8, v10
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    vsrl.vv v8, v8, v10
+; CHECK-NEXT:    li a1, 33
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vmv.v.i v9, 3
+; CHECK-NEXT:    vmerge.vim v9, v9, 2, v0
+; CHECK-NEXT:    vsetivli zero, 7, e16, m1, tu, ma
+; CHECK-NEXT:    vslideup.vi v9, v11, 6
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vsrl.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, <8 x i16>* %x
@@ -995,8 +995,7 @@ define void @mulhu_v4i32(<4 x i32>* %x) {
 ; CHECK-NEXT:    vsub.vv v8, v8, v9
 ; CHECK-NEXT:    vmulhu.vv v8, v8, v10
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    li a1, 1
-; CHECK-NEXT:    vmv.s.x v9, a1
+; CHECK-NEXT:    vmv.v.i v9, 1
 ; CHECK-NEXT:    vmv.v.i v10, 2
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vi v10, v9, 3
@@ -1205,9 +1204,8 @@ define void @mulhs_v2i64(<2 x i64>* %x) {
 ; RV32-NEXT:    vrsub.vi v10, v10, 0
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vmadd.vv v10, v8, v9
-; RV32-NEXT:    li a1, 1
-; RV32-NEXT:    vmv.s.x v8, a1
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.v.i v8, 1
 ; RV32-NEXT:    vmv.v.i v9, 0
 ; RV32-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV32-NEXT:    vslideup.vi v9, v8, 2
@@ -4605,8 +4603,7 @@ define void @mulhu_v8i32(<8 x i32>* %x) {
 ; LMULMAX1-RV32-NEXT:    vsub.vv v9, v9, v12
 ; LMULMAX1-RV32-NEXT:    vmulhu.vv v9, v9, v11
 ; LMULMAX1-RV32-NEXT:    vadd.vv v9, v9, v12
-; LMULMAX1-RV32-NEXT:    li a2, 1
-; LMULMAX1-RV32-NEXT:    vmv.s.x v12, a2
+; LMULMAX1-RV32-NEXT:    vmv.v.i v12, 1
 ; LMULMAX1-RV32-NEXT:    vmv.v.i v13, 2
 ; LMULMAX1-RV32-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; LMULMAX1-RV32-NEXT:    vslideup.vi v13, v12, 3
