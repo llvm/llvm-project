@@ -2348,7 +2348,11 @@ define <vscale x 1 x i32> @add_to_or_scalable(<vscale x 1 x i32> %in) {
 
 define i5 @zext_zext_not(i3 %x) {
 ; CHECK-LABEL: @zext_zext_not(
-; CHECK-NEXT:    ret i5 7
+; CHECK-NEXT:    [[ZX:%.*]] = zext i3 [[X:%.*]] to i5
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i3 [[X]], -1
+; CHECK-NEXT:    [[ZNOTX:%.*]] = zext i3 [[NOTX]] to i5
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i5 [[ZX]], [[ZNOTX]]
+; CHECK-NEXT:    ret i5 [[R]]
 ;
   %zx = zext i3 %x to i5
   %notx = xor i3 %x, -1
@@ -2359,7 +2363,11 @@ define i5 @zext_zext_not(i3 %x) {
 
 define <2 x i5> @zext_zext_not_commute(<2 x i3> %x) {
 ; CHECK-LABEL: @zext_zext_not_commute(
-; CHECK-NEXT:    ret <2 x i5> <i5 7, i5 7>
+; CHECK-NEXT:    [[ZX:%.*]] = zext <2 x i3> [[X:%.*]] to <2 x i5>
+; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i3> [[X]], <i3 -1, i3 poison>
+; CHECK-NEXT:    [[ZNOTX:%.*]] = zext <2 x i3> [[NOTX]] to <2 x i5>
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <2 x i5> [[ZNOTX]], [[ZX]]
+; CHECK-NEXT:    ret <2 x i5> [[R]]
 ;
   %zx = zext <2 x i3> %x to <2 x i5>
   %notx = xor <2 x i3> %x, <i3 -1, i3 poison>
@@ -2370,7 +2378,11 @@ define <2 x i5> @zext_zext_not_commute(<2 x i3> %x) {
 
 define i9 @sext_sext_not(i3 %x) {
 ; CHECK-LABEL: @sext_sext_not(
-; CHECK-NEXT:    ret i9 -1
+; CHECK-NEXT:    [[SX:%.*]] = sext i3 [[X:%.*]] to i9
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i3 [[X]], -1
+; CHECK-NEXT:    [[SNOTX:%.*]] = sext i3 [[NOTX]] to i9
+; CHECK-NEXT:    [[R:%.*]] = add nsw i9 [[SX]], [[SNOTX]]
+; CHECK-NEXT:    ret i9 [[R]]
 ;
   %sx = sext i3 %x to i9
   %notx = xor i3 %x, -1
@@ -2383,7 +2395,10 @@ define i8 @sext_sext_not_commute(i3 %x) {
 ; CHECK-LABEL: @sext_sext_not_commute(
 ; CHECK-NEXT:    [[SX:%.*]] = sext i3 [[X:%.*]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[SX]])
-; CHECK-NEXT:    ret i8 -1
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i3 [[X]], -1
+; CHECK-NEXT:    [[SNOTX:%.*]] = sext i3 [[NOTX]] to i8
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[SNOTX]], [[SX]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = sext i3 %x to i8
   call void @use(i8 %sx)
@@ -2398,7 +2413,7 @@ define i5 @zext_sext_not(i4 %x) {
 ; CHECK-NEXT:    [[ZX:%.*]] = zext i4 [[X:%.*]] to i5
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X]], -1
 ; CHECK-NEXT:    [[SNOTX:%.*]] = sext i4 [[NOTX]] to i5
-; CHECK-NEXT:    [[R:%.*]] = or i5 [[ZX]], [[SNOTX]]
+; CHECK-NEXT:    [[R:%.*]] = add i5 [[ZX]], [[SNOTX]]
 ; CHECK-NEXT:    ret i5 [[R]]
 ;
   %zx = zext i4 %x to i5
@@ -2415,7 +2430,7 @@ define i8 @zext_sext_not_commute(i4 %x) {
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X]], -1
 ; CHECK-NEXT:    [[SNOTX:%.*]] = sext i4 [[NOTX]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[SNOTX]])
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[SNOTX]], [[ZX]]
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[SNOTX]], [[ZX]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %zx = zext i4 %x to i8
@@ -2432,7 +2447,7 @@ define i9 @sext_zext_not(i4 %x) {
 ; CHECK-NEXT:    [[SX:%.*]] = sext i4 [[X:%.*]] to i9
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X]], -1
 ; CHECK-NEXT:    [[ZNOTX:%.*]] = zext i4 [[NOTX]] to i9
-; CHECK-NEXT:    [[R:%.*]] = or i9 [[SX]], [[ZNOTX]]
+; CHECK-NEXT:    [[R:%.*]] = add nsw i9 [[SX]], [[ZNOTX]]
 ; CHECK-NEXT:    ret i9 [[R]]
 ;
   %sx = sext i4 %x to i9
@@ -2447,7 +2462,7 @@ define i9 @sext_zext_not_commute(i4 %x) {
 ; CHECK-NEXT:    [[SX:%.*]] = sext i4 [[X:%.*]] to i9
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X]], -1
 ; CHECK-NEXT:    [[ZNOTX:%.*]] = zext i4 [[NOTX]] to i9
-; CHECK-NEXT:    [[R:%.*]] = or i9 [[ZNOTX]], [[SX]]
+; CHECK-NEXT:    [[R:%.*]] = add nsw i9 [[ZNOTX]], [[SX]]
 ; CHECK-NEXT:    ret i9 [[R]]
 ;
   %sx = sext i4 %x to i9
