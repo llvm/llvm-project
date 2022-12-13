@@ -20,46 +20,45 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
+static std::string getPPCGenericTargetCPU(const llvm::Triple &T) {
+  // LLVM may default to generating code for the native CPU,
+  // but, like gcc, we default to a more generic option for
+  // each architecture. (except on AIX)
+  if (T.isOSAIX())
+    return "pwr7";
+  else if (T.getArch() == llvm::Triple::ppc64le)
+    return "ppc64le";
+  else if (T.getArch() == llvm::Triple::ppc64)
+    return "ppc64";
+  else
+    return "ppc";
+}
+
 /// getPPCTargetCPU - Get the (LLVM) name of the PowerPC cpu we are targeting.
-std::string ppc::getPPCTargetCPU(const ArgList &Args) {
+std::string ppc::getPPCTargetCPU(const ArgList &Args, const llvm::Triple &T) {
   if (Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ)) {
     StringRef CPUName = A->getValue();
+
+    if (CPUName == "generic")
+      return getPPCGenericTargetCPU(T);
 
     if (CPUName == "native") {
       std::string CPU = std::string(llvm::sys::getHostCPUName());
       if (!CPU.empty() && CPU != "generic")
         return CPU;
       else
-        return "";
+        return getPPCGenericTargetCPU(T);
     }
 
     return llvm::StringSwitch<const char *>(CPUName)
         .Case("common", "generic")
-        .Case("440", "440")
         .Case("440fp", "440")
-        .Case("450", "450")
-        .Case("601", "601")
-        .Case("602", "602")
-        .Case("603", "603")
-        .Case("603e", "603e")
-        .Case("603ev", "603ev")
-        .Case("604", "604")
-        .Case("604e", "604e")
-        .Case("620", "620")
         .Case("630", "pwr3")
         .Case("G3", "g3")
-        .Case("7400", "7400")
         .Case("G4", "g4")
-        .Case("7450", "7450")
         .Case("G4+", "g4+")
-        .Case("750", "750")
         .Case("8548", "e500")
-        .Case("970", "970")
         .Case("G5", "g5")
-        .Case("a2", "a2")
-        .Case("e500", "e500")
-        .Case("e500mc", "e500mc")
-        .Case("e5500", "e5500")
         .Case("power3", "pwr3")
         .Case("power4", "pwr4")
         .Case("power5", "pwr5")
@@ -71,23 +70,13 @@ std::string ppc::getPPCTargetCPU(const ArgList &Args) {
         .Case("power9", "pwr9")
         .Case("power10", "pwr10")
         .Case("future", "future")
-        .Case("pwr3", "pwr3")
-        .Case("pwr4", "pwr4")
-        .Case("pwr5", "pwr5")
-        .Case("pwr5x", "pwr5x")
-        .Case("pwr6", "pwr6")
-        .Case("pwr6x", "pwr6x")
-        .Case("pwr7", "pwr7")
-        .Case("pwr8", "pwr8")
-        .Case("pwr9", "pwr9")
-        .Case("pwr10", "pwr10")
         .Case("powerpc", "ppc")
         .Case("powerpc64", "ppc64")
         .Case("powerpc64le", "ppc64le")
-        .Default("");
+        .Default(CPUName.data());
   }
 
-  return "";
+  return getPPCGenericTargetCPU(T);
 }
 
 const char *ppc::getPPCAsmModeForCPU(StringRef Name) {
