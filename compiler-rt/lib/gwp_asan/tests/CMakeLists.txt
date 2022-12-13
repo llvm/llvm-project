@@ -6,7 +6,6 @@ set(GWP_ASAN_UNITTEST_CFLAGS
   ${SANITIZER_TEST_CXX_CFLAGS}
   -std=c++17
   -I${COMPILER_RT_SOURCE_DIR}/lib/
-  -O2
   -g
   -fno-omit-frame-pointer)
 
