@@ -1092,6 +1092,7 @@ libc_support_library(
     ],
     deps = [
         ":__support_common",
+        ":__support_compiler_features",
         ":__support_cpp_array",
         ":__support_cpp_bit",
         ":__support_cpp_cstddef",
