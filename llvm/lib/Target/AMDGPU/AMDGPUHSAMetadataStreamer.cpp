@@ -500,16 +500,16 @@ void MetadataStreamerMsgPackV3::verify(StringRef HSAMetadataString) const {
   }
 }
 
-Optional<StringRef>
+std::optional<StringRef>
 MetadataStreamerMsgPackV3::getAccessQualifier(StringRef AccQual) const {
-  return StringSwitch<Optional<StringRef>>(AccQual)
+  return StringSwitch<std::optional<StringRef>>(AccQual)
       .Case("read_only", StringRef("read_only"))
       .Case("write_only", StringRef("write_only"))
       .Case("read_write", StringRef("read_write"))
       .Default(std::nullopt);
 }
 
-Optional<StringRef> MetadataStreamerMsgPackV3::getAddressSpaceQualifier(
+std::optional<StringRef> MetadataStreamerMsgPackV3::getAddressSpaceQualifier(
     unsigned AddressSpace) const {
   switch (AddressSpace) {
   case AMDGPUAS::PRIVATE_ADDRESS:

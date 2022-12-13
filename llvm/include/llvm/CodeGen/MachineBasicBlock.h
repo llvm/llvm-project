@@ -171,7 +171,7 @@ private:
 
   /// Fixed unique ID assigned to this basic block upon creation. Used with
   /// basic block sections and basic block labels.
-  Optional<unsigned> BBID;
+  std::optional<unsigned> BBID;
 
   /// With basic block sections, this stores the Section ID of the basic block.
   MBBSectionID SectionID{0};
@@ -624,7 +624,7 @@ public:
 
   void setIsEndSection(bool V = true) { IsEndSection = V; }
 
-  Optional<unsigned> getBBID() const { return BBID; }
+  std::optional<unsigned> getBBID() const { return BBID; }
 
   /// Returns the BBID of the block when BBAddrMapVersion >= 2, otherwise
   /// returns `MachineBasicBlock::Number`.
