@@ -42,14 +42,14 @@
 ; CHECK-MODULE-PRINT: Running pass: VerifierPass
 ; CHECK-MODULE-PRINT: Running pass: PrintModulePass
 ; CHECK-MODULE-PRINT: ModuleID
-; CHECK-MODULE-PRINT: define void @foo(i1 %x, i8* %p1, i8* %p2)
+; CHECK-MODULE-PRINT: define void @foo(i1 %x, ptr %p1, ptr %p2)
 ; CHECK-MODULE-PRINT: Running pass: VerifierPass
 
 ; RUN: opt -disable-output -debug-pass-manager -disable-verify -verify-cfg-preserved=1 -passes='print,verify' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MODULE-VERIFY
 ; CHECK-MODULE-VERIFY: Running pass: PrintModulePass
 ; CHECK-MODULE-VERIFY: ModuleID
-; CHECK-MODULE-VERIFY: define void @foo(i1 %x, i8* %p1, i8* %p2)
+; CHECK-MODULE-VERIFY: define void @foo(i1 %x, ptr %p1, ptr %p2)
 ; CHECK-MODULE-VERIFY: Running pass: VerifierPass
 
 ; RUN: opt -disable-output -debug-pass-manager -passes='function(print)' %s 2>&1 \
@@ -58,24 +58,24 @@
 ; CHECK-FUNCTION-PRINT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
 ; CHECK-FUNCTION-PRINT: Running pass: PrintFunctionPass
 ; CHECK-FUNCTION-PRINT-NOT: ModuleID
-; CHECK-FUNCTION-PRINT: define void @foo(i1 %x, i8* %p1, i8* %p2)
+; CHECK-FUNCTION-PRINT: define void @foo(i1 %x, ptr %p1, ptr %p2)
 ; CHECK-FUNCTION-PRINT: Running pass: VerifierPass
 
 ; RUN: opt -disable-output -debug-pass-manager -disable-verify -verify-cfg-preserved=1 -passes='function(print,verify)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-FUNCTION-VERIFY
 ; CHECK-FUNCTION-VERIFY: Running pass: PrintFunctionPass
 ; CHECK-FUNCTION-VERIFY-NOT: ModuleID
-; CHECK-FUNCTION-VERIFY: define void @foo(i1 %x, i8* %p1, i8* %p2)
+; CHECK-FUNCTION-VERIFY: define void @foo(i1 %x, ptr %p1, ptr %p2)
 ; CHECK-FUNCTION-VERIFY: Running pass: VerifierPass
 
 ; RUN: opt -S -o - -passes='no-op-module,no-op-module' %s \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-NOOP
-; CHECK-NOOP: define void @foo(i1 %x, i8* %p1, i8* %p2) {
+; CHECK-NOOP: define void @foo(i1 %x, ptr %p1, ptr %p2) {
 ; CHECK-NOOP: entry:
-; CHECK-NOOP:   store i8 42, i8* %p1
+; CHECK-NOOP:   store i8 42, ptr %p1
 ; CHECK-NOOP:   br i1 %x, label %loop, label %exit
 ; CHECK-NOOP: loop:
-; CHECK-NOOP:   %tmp1 = load i8, i8* %p2
+; CHECK-NOOP:   %tmp1 = load i8, ptr %p2
 ; CHECK-NOOP:   br label %loop
 ; CHECK-NOOP: exit:
 ; CHECK-NOOP:   ret void
@@ -360,13 +360,13 @@
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: NoOpLoopPass
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: NoOpLoopPass
 
-define void @foo(i1 %x, i8* %p1, i8* %p2) {
+define void @foo(i1 %x, ptr %p1, ptr %p2) {
 entry:
-  store i8 42, i8* %p1
+  store i8 42, ptr %p1
   br i1 %x, label %loop, label %exit
 
 loop:
-  %tmp1 = load i8, i8* %p2
+  %tmp1 = load i8, ptr %p2
   br label %loop
 
 exit:
