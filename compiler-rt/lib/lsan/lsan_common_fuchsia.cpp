@@ -146,7 +146,7 @@ void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
         // just for the allocator cache, and to call ForEachExtraStackRange,
         // which ASan needs.
         if (flags()->use_stacks) {
-          GetThreadRegistryLocked()->RunCallbackForEachThreadLocked(
+          RunCallbackForEachThreadLocked(
               [](ThreadContextBase *tctx, void *arg) {
                 ForEachExtraStackRange(tctx->os_id, ForEachExtraStackRangeCb,
                                        arg);
