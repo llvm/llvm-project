@@ -635,21 +635,30 @@ ComplexDeinterleavingGraph::identifyAdd(Instruction *Real, Instruction *Imag) {
 
   // Determine rotation
   ComplexDeinterleavingRotation Rotation;
-  if (Real->getOpcode() == Instruction::FSub &&
-      Imag->getOpcode() == Instruction::FAdd)
+  if ((Real->getOpcode() == Instruction::FSub &&
+       Imag->getOpcode() == Instruction::FAdd) ||
+      (Real->getOpcode() == Instruction::Sub &&
+       Imag->getOpcode() == Instruction::Add))
     Rotation = ComplexDeinterleavingRotation::Rotation_90;
-  else if (Real->getOpcode() == Instruction::FAdd &&
-           Imag->getOpcode() == Instruction::FSub)
+  else if ((Real->getOpcode() == Instruction::FAdd &&
+            Imag->getOpcode() == Instruction::FSub) ||
+           (Real->getOpcode() == Instruction::Add &&
+            Imag->getOpcode() == Instruction::Sub))
     Rotation = ComplexDeinterleavingRotation::Rotation_270;
   else {
     LLVM_DEBUG(dbgs() << " - Unhandled case, rotation is not assigned.\n");
     return nullptr;
   }
 
-  auto *AR = cast<Instruction>(Real->getOperand(0));
-  auto *BI = cast<Instruction>(Real->getOperand(1));
-  auto *AI = cast<Instruction>(Imag->getOperand(0));
-  auto *BR = cast<Instruction>(Imag->getOperand(1));
+  auto *AR = dyn_cast<Instruction>(Real->getOperand(0));
+  auto *BI = dyn_cast<Instruction>(Real->getOperand(1));
+  auto *AI = dyn_cast<Instruction>(Imag->getOperand(0));
+  auto *BR = dyn_cast<Instruction>(Imag->getOperand(1));
+
+  if (!AR || !AI || !BR || !BI) {
+    LLVM_DEBUG(dbgs() << " - Not all operands are instructions.\n");
+    return nullptr;
+  }
 
   NodePtr ResA = identifyNode(AR, AI);
   if (!ResA) {
@@ -673,8 +682,11 @@ ComplexDeinterleavingGraph::identifyAdd(Instruction *Real, Instruction *Imag) {
 static bool isInstructionPairAdd(Instruction *A, Instruction *B) {
   unsigned OpcA = A->getOpcode();
   unsigned OpcB = B->getOpcode();
+
   return (OpcA == Instruction::FSub && OpcB == Instruction::FAdd) ||
-         (OpcA == Instruction::FAdd && OpcB == Instruction::FSub);
+         (OpcA == Instruction::FAdd && OpcB == Instruction::FSub) ||
+         (OpcA == Instruction::Sub && OpcB == Instruction::Add) ||
+         (OpcA == Instruction::Add && OpcB == Instruction::Sub);
 }
 
 static bool isInstructionPairMul(Instruction *A, Instruction *B) {
