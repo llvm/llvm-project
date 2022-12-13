@@ -148,7 +148,10 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::FP_TO_UINT_SAT:
                          Res = PromoteIntRes_FP_TO_XINT_SAT(N); break;
 
-  case ISD::FP_TO_FP16:  Res = PromoteIntRes_FP_TO_FP16(N); break;
+  case ISD::FP_TO_BF16:
+  case ISD::FP_TO_FP16:
+    Res = PromoteIntRes_FP_TO_FP16_BF16(N);
+    break;
 
   case ISD::FLT_ROUNDS_: Res = PromoteIntRes_FLT_ROUNDS(N); break;
 
@@ -720,7 +723,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_XINT_SAT(SDNode *N) {
                      N->getOperand(1));
 }
 
-SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_FP16(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_FP16_BF16(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDLoc dl(N);
 
@@ -1667,6 +1670,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
                                                   OpNo); break;
   case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:     Res = PromoteIntOp_TRUNCATE(N); break;
+  case ISD::BF16_TO_FP:
   case ISD::FP16_TO_FP:
   case ISD::VP_UINT_TO_FP:
   case ISD::UINT_TO_FP:   Res = PromoteIntOp_UINT_TO_FP(N); break;
