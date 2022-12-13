@@ -15,7 +15,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local i32 @intel_pmu_enable_bts() local_unnamed_addr !dbg !16 {
 entry:
   %0 = extractvalue { i32, i64 } zeroinitializer, 1
-  %1 = load i32, i32* @intel_pmu_enable_bts_config, align 4
+  %1 = load i32, ptr @intel_pmu_enable_bts_config, align 4
   call void @llvm.dbg.value(metadata !DIArgList(i64 %0, i32 %1), metadata !20, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_or, DW_OP_stack_value)), !dbg !23
   ret i32 %1
 }

@@ -15,28 +15,28 @@
 
 ; CHECK: if.end:
 ; CHECK-NEXT: %.sink = phi i32 [ 2, %if.else ], [ 1, %if.then ], !dbg ![[dbg:[0-9]+]]
-; CHECK-NEXT: %0 = getelementptr inbounds i32, i32* %a, i64 1, !dbg ![[dbg:[0-9]+]]
-; CHECK-NEXT: store i32 %.sink, i32* %0, align 4, !dbg ![[dbg:[0-9]+]]
+; CHECK-NEXT: %0 = getelementptr inbounds i32, ptr %a, i64 1, !dbg ![[dbg:[0-9]+]]
+; CHECK-NEXT: store i32 %.sink, ptr %0, align 4, !dbg ![[dbg:[0-9]+]]
 
 ; CHECK-DAG: ![[dbg]] = !DILocation(line: 0, scope: ![[scp:[0-9]+]]
 ; CHECK-DAG: ![[scp]] = distinct !DILexicalBlock(scope: ![[fun:[0-9]+]]
 ; CHECK-DAG: ![[fun]] = distinct !DISubprogram(name: "fun",
 
-define void @_Z3funPii(i32* nocapture noundef writeonly %a, i32 noundef %cond) !dbg !7 {
+define void @_Z3funPii(ptr nocapture noundef writeonly %a, i32 noundef %cond) !dbg !7 {
 entry:
-  call void @llvm.dbg.value(metadata i32* %a, metadata !13, metadata !DIExpression()), !dbg !15
+  call void @llvm.dbg.value(metadata ptr %a, metadata !13, metadata !DIExpression()), !dbg !15
   call void @llvm.dbg.value(metadata i32 %cond, metadata !14, metadata !DIExpression()), !dbg !15
   %tobool.not = icmp eq i32 %cond, 0, !dbg !16
   br i1 %tobool.not, label %if.else, label %if.then, !dbg !18
 
 if.then:                                          ; preds = %entry
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 1, !dbg !19
-  store i32 1, i32* %arrayidx, align 4, !dbg !20
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 1, !dbg !19
+  store i32 1, ptr %arrayidx, align 4, !dbg !20
   br label %if.end, !dbg !19
 
 if.else:                                          ; preds = %entry
-  %arrayidx1 = getelementptr inbounds i32, i32* %a, i64 1, !dbg !25
-  store i32 2, i32* %arrayidx1, align 4, !dbg !26
+  %arrayidx1 = getelementptr inbounds i32, ptr %a, i64 1, !dbg !25
+  store i32 2, ptr %arrayidx1, align 4, !dbg !26
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then

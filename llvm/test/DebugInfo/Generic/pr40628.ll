@@ -23,12 +23,12 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define dso_local i32 @foo(i32*) !dbg !7 {
-  %2 = load i32, i32* %0, align 4, !dbg !23
+define dso_local i32 @foo(ptr) !dbg !7 {
+  %2 = load i32, ptr %0, align 4, !dbg !23
   call void @llvm.dbg.value(metadata i32 %2, metadata !16, metadata !DIExpression()), !dbg !23
-  %3 = load i32, i32* %0, align 4, !dbg !23
+  %3 = load i32, ptr %0, align 4, !dbg !23
   call void @llvm.dbg.value(metadata i32 %3, metadata !17, metadata !DIExpression()), !dbg !23
-  store i32 0, i32* %0, align 4, !dbg !23
+  store i32 0, ptr %0, align 4, !dbg !23
   ret i32 %3, !dbg !23
 }
 

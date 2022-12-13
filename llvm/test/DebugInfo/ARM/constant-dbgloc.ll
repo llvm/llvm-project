@@ -16,7 +16,7 @@ target triple = "armv7--linux-gnueabihf"
 define i32 @main() !dbg !4 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
+  store i32 0, ptr %retval
   ret i32 -1, !dbg !11
 }
 
