@@ -1183,13 +1183,6 @@ struct AAPointerInfoImpl
     if (!State::forallInterferingAccesses(I, AccessCB, Range))
       return false;
 
-    if (HasBeenWrittenTo) {
-      const Function *ScopePtr = &Scope;
-      IsLiveInCalleeCB = [ScopePtr](const Function &Fn) {
-        return ScopePtr != &Fn;
-      };
-    }
-
     // Helper to determine if we can skip a specific write access. This is in
     // the worst case quadratic as we are looking for another write that will
     // hide the effect of this one.
