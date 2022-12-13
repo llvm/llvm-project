@@ -384,10 +384,10 @@ for.end:                                          ; preds = %if.end, %entry
   ret void
 }
 
-define void @test7(i64 %start, i64* %inc_ptr) {
+define void @test7(i64 %start, ptr %inc_ptr) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], align 8, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[INC:%.*]] = load i64, ptr [[INC_PTR:%.*]], align 8, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[OK:%.*]] = icmp sge i64 [[INC]], 0
 ; CHECK-NEXT:    br i1 [[OK]], label [[LOOP_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       loop.preheader:
@@ -401,7 +401,7 @@ define void @test7(i64 %start, i64* %inc_ptr) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %inc = load i64, i64* %inc_ptr, !range !0
+  %inc = load i64, ptr %inc_ptr, !range !0
   %ok = icmp sge i64 %inc, 0
   br i1 %ok, label %loop, label %for.end
 
@@ -415,10 +415,10 @@ for.end:                                          ; preds = %if.end, %entry
   ret void
 }
 
-define void @test7.next(i64 %start, i64* %inc_ptr) {
+define void @test7.next(i64 %start, ptr %inc_ptr) {
 ; CHECK-LABEL: @test7.next(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], align 8, !range [[RNG0]]
+; CHECK-NEXT:    [[INC:%.*]] = load i64, ptr [[INC_PTR:%.*]], align 8, !range [[RNG0]]
 ; CHECK-NEXT:    [[OK:%.*]] = icmp sge i64 [[INC]], 0
 ; CHECK-NEXT:    br i1 [[OK]], label [[LOOP_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       loop.preheader:
@@ -433,7 +433,7 @@ define void @test7.next(i64 %start, i64* %inc_ptr) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %inc = load i64, i64* %inc_ptr, !range !0
+  %inc = load i64, ptr %inc_ptr, !range !0
   %ok = icmp sge i64 %inc, 0
   br i1 %ok, label %loop, label %for.end
 
@@ -622,10 +622,10 @@ for.end:                                          ; preds = %if.end, %entry
   ret void
 }
 
-define void @test8(i64 %start, i64* %inc_ptr) {
+define void @test8(i64 %start, ptr %inc_ptr) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], align 8, !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[INC:%.*]] = load i64, ptr [[INC_PTR:%.*]], align 8, !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    [[OK:%.*]] = icmp sge i64 [[INC]], 0
 ; CHECK-NEXT:    br i1 [[OK]], label [[LOOP_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       loop.preheader:
@@ -641,7 +641,7 @@ define void @test8(i64 %start, i64* %inc_ptr) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %inc = load i64, i64* %inc_ptr, !range !1
+  %inc = load i64, ptr %inc_ptr, !range !1
   %ok = icmp sge i64 %inc, 0
   br i1 %ok, label %loop, label %for.end
 
@@ -739,10 +739,10 @@ exit:
 
 ; check that we can figure out that iv.next > 1 from the facts that iv >= 0 and
 ; iv.start != 0.
-define void @test11(i64* %inc_ptr) {
+define void @test11(ptr %inc_ptr) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], align 8, !range [[RNG0]]
+; CHECK-NEXT:    [[INC:%.*]] = load i64, ptr [[INC_PTR:%.*]], align 8, !range [[RNG0]]
 ; CHECK-NEXT:    [[NE_COND:%.*]] = icmp ne i64 [[INC]], 0
 ; CHECK-NEXT:    br i1 [[NE_COND]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
@@ -764,7 +764,7 @@ define void @test11(i64* %inc_ptr) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %inc = load i64, i64* %inc_ptr, !range !0
+  %inc = load i64, ptr %inc_ptr, !range !0
   %ne.cond = icmp ne i64 %inc, 0
   br i1 %ne.cond, label %loop, label %exit
 
@@ -790,10 +790,10 @@ exit:
 
 ; check that we can prove that a recurrency is greater than another recurrency
 ; in the same loop, with the same step, and with smaller starting value.
-define void @test12(i64* %inc_ptr) {
+define void @test12(ptr %inc_ptr) {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], align 8, !range [[RNG0]]
+; CHECK-NEXT:    [[INC:%.*]] = load i64, ptr [[INC_PTR:%.*]], align 8, !range [[RNG0]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[INC]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -810,7 +810,7 @@ define void @test12(i64* %inc_ptr) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %inc = load i64, i64* %inc_ptr, !range !0
+  %inc = load i64, ptr %inc_ptr, !range !0
   %inc.minus.1 = sub i64 %inc, 1
   br label %loop
 
