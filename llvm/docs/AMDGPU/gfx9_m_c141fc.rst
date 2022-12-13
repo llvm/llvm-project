@@ -5,17 +5,9 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_vdata_890652:
+.. _amdgpu_synid_gfx9_m_c141fc:
 
-vdata
-=====
+m
+=
 
-Input data for an atomic instruction.
-
-Optionally may serve as an output data:
-
-* If :ref:`glc<amdgpu_synid_glc>` is specified, gets the memory value before the operation.
-
-*Size:* 4 dwords.
-
-*Operands:* :ref:`v<amdgpu_synid_v>`
+This operand may be used with floating-point operand modifiers :ref:`abs<amdgpu_synid_abs>` and :ref:`neg<amdgpu_synid_neg>`.

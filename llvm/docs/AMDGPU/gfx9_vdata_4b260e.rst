@@ -5,17 +5,17 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_vdata_0aba12:
+.. _amdgpu_synid_gfx9_vdata_4b260e:
 
 vdata
 =====
 
 Input data for an atomic instruction.
 
-Optionally may serve as an output data:
+Optionally, this operand may be used to store output data:
 
 * If :ref:`glc<amdgpu_synid_glc>` is specified, gets the memory value before the operation.
 
-*Size:* 1 dword.
+*Size:* 2 dwords.
 
 *Operands:* :ref:`v<amdgpu_synid_v>`

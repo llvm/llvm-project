@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_type_deviation:
+.. _amdgpu_synid_gfx9_srsrc_80eef6:
 
-Type Deviation
-==============
+srsrc
+=====
 
-The *type* of this operand differs from the *type* :ref:`implied by the opcode<amdgpu_syn_instruction_mnemo>`. This tag specifies the actual operand *type*.
+Buffer resource constant, which defines the address and characteristics of the buffer in memory.
+
+*Size:* 4 dwords.
+
+*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`ttmp<amdgpu_synid_ttmp>`

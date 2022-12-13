@@ -5,14 +5,14 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_vsrc_533a4e:
+.. _amdgpu_synid_gfx9_vsrc_ba3116:
 
 vsrc
 ====
 
 Data to copy to export buffers. This is an optional operand. Must be specified as :ref:`off<amdgpu_synid_off>` if not used.
 
-:ref:`compr<amdgpu_synid_compr>` modifier indicates use of compressed (16-bit) data. This limits number of source operands from 4 to 2:
+The :ref:`compr<amdgpu_synid_compr>` modifier indicates the use of compressed (16-bit) data, thus decreasing the number of source operands from 4 to 2:
 
 * src0 and src1 must specify the first register (or :ref:`off<amdgpu_synid_off>`).
 * src2 and src3 must specify the second register (or :ref:`off<amdgpu_synid_off>`).
