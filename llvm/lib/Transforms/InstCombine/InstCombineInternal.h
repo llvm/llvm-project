@@ -103,7 +103,8 @@ public:
   Instruction *visitUDiv(BinaryOperator &I);
   Instruction *visitSDiv(BinaryOperator &I);
   Instruction *visitFDiv(BinaryOperator &I);
-  Value *simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1, bool Inverted);
+  Value *simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1, bool Inverted,
+                            bool IsLogical);
   Instruction *visitAnd(BinaryOperator &I);
   Instruction *visitOr(BinaryOperator &I);
   bool sinkNotIntoOtherHandOfAndOrOr(BinaryOperator &I);

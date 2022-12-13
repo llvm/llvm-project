@@ -662,7 +662,7 @@ static Value *foldLogOpOfMaskedICmps(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
 /// If \p Inverted is true then the check is for the inverted range, e.g.
 /// (icmp slt x, 0) | (icmp sgt x, n) --> icmp ugt x, n
 Value *InstCombinerImpl::simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1,
-                                            bool Inverted) {
+                                            bool Inverted, bool IsLogical) {
   // Check the lower range comparison, e.g. x >= 0
   // InstCombine already ensured that if there is a constant it's on the RHS.
   ConstantInt *RangeStart = dyn_cast<ConstantInt>(Cmp0->getOperand(1));
@@ -709,6 +709,8 @@ Value *InstCombinerImpl::simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1,
   if (Inverted)
     NewPred = ICmpInst::getInversePredicate(NewPred);
 
+  if (IsLogical)
+    RangeEnd = Builder.CreateFreeze(RangeEnd);
   return Builder.CreateICmp(NewPred, Input, RangeEnd);
 }
 
@@ -2672,19 +2674,18 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   if (Value *V = foldIsPowerOf2OrZero(RHS, LHS, IsAnd, Builder))
     return V;
 
-  // TODO: One of these directions is fine with logical and/or, the other could
-  // be supported by inserting freeze.
-  if (!IsLogical) {
-    // E.g. (icmp slt x, 0) | (icmp sgt x, n) --> icmp ugt x, n
-    // E.g. (icmp sge x, 0) & (icmp slt x, n) --> icmp ult x, n
-    if (Value *V = simplifyRangeCheck(LHS, RHS, /*Inverted=*/!IsAnd))
-      return V;
+  // E.g. (icmp slt x, 0) | (icmp sgt x, n) --> icmp ugt x, n
+  // E.g. (icmp sge x, 0) & (icmp slt x, n) --> icmp ult x, n
+  if (Value *V = simplifyRangeCheck(LHS, RHS, /*Inverted=*/!IsAnd, IsLogical))
+    return V;
 
-    // E.g. (icmp sgt x, n) | (icmp slt x, 0) --> icmp ugt x, n
-    // E.g. (icmp slt x, n) & (icmp sge x, 0) --> icmp ult x, n
-    if (Value *V = simplifyRangeCheck(RHS, LHS, /*Inverted=*/!IsAnd))
-      return V;
-  }
+  // E.g. (icmp sgt x, n) | (icmp slt x, 0) --> icmp ugt x, n
+  // E.g. (icmp slt x, n) & (icmp sge x, 0) --> icmp ult x, n
+  // We can treat logical like bitwise here, because poison from both x and n
+  // propagates in the original pattern.
+  if (Value *V = simplifyRangeCheck(RHS, LHS, /*Inverted=*/!IsAnd,
+                                    /*IsLogical*/ false))
+    return V;
 
   // TODO: Add conjugated or fold, check whether it is safe for logical and/or.
   if (IsAnd && !IsLogical)
