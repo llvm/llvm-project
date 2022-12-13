@@ -2,7 +2,7 @@
 // Example input for update_cc_test_checks
 // RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
-// CHECK-LABEL: define {{[^@]+}}@test(
+// CHECK-LABEL: @test(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
@@ -19,7 +19,7 @@ long test(long a, int b) {
 }
 
 // A function with a mangled name
-// CHECK-LABEL: define {{[^@]+}}@_Z4testlii(
+// CHECK-LABEL: @_Z4testlii(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
