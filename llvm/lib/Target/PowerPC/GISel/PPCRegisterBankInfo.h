@@ -69,6 +69,23 @@ public:
 
   InstructionMappings
   getInstrAlternativeMappings(const MachineInstr &MI) const override;
+
+private:
+  /// Maximum recursion depth for hasFPConstraints.
+  const unsigned MaxFPRSearchDepth = 2;
+
+  /// \returns true if \p MI only uses and defines FPRs.
+  bool hasFPConstraints(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                        const TargetRegisterInfo &TRI,
+                        unsigned Depth = 0) const;
+
+  /// \returns true if \p MI only uses FPRs.
+  bool onlyUsesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                  const TargetRegisterInfo &TRI, unsigned Depth = 0) const;
+
+  /// \returns true if \p MI only defines FPRs.
+  bool onlyDefinesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                     const TargetRegisterInfo &TRI, unsigned Depth = 0) const;
 };
 } // namespace llvm
 
