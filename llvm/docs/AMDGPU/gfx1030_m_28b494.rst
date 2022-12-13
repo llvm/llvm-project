@@ -5,13 +5,9 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx1030_vdst_f8490d:
+.. _amdgpu_synid_gfx1030_m_28b494:
 
-vdst
-====
+m
+=
 
-Image data to load by an image instruction.
-
-*Size:* 4 dwords.
-
-*Operands:* :ref:`v<amdgpu_synid_v>`
+This operand may be used with an integer operand modifier :ref:`sext<amdgpu_synid_sext>`.

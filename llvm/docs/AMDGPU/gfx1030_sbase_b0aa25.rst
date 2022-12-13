@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx1030_type_deviation:
+.. _amdgpu_synid_gfx1030_sbase_b0aa25:
 
-Type Deviation
-==============
+sbase
+=====
 
-The *type* of this operand differs from the *type* :ref:`implied by the opcode<amdgpu_syn_instruction_mnemo>`. This tag specifies the actual operand *type*.
+A 128-bit buffer resource constant for scalar memory operations which provides a base address, a size, and a stride.
+
+*Size:* 4 dwords.
+
+*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`ttmp<amdgpu_synid_ttmp>`
