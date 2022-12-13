@@ -56,7 +56,7 @@ BOTH-EMPTY:
  BOTH-NEXT:// CHECK: @bar.i = internal global i32 0, align 4
  BOTH-NEXT:// CHECK: @bar.j = internal global i32 0, align 4
  BOTH-NEXT://.
- BOTH-NEXT:// CHECK-LABEL: define {{.+}}@foo(
+ BOTH-NEXT:// CHECK-LABEL: @foo(
  BOTH-NEXT:// CHECK-NEXT:  entry:
  BOTH-NEXT:// CHECK-NEXT:    ret void
  BOTH-NEXT://
@@ -64,7 +64,7 @@ BOTH-EMPTY:
   NRM-NEXT:  static int i, j;
   NRM-NEXT:}
   IGF-NEXT://
- BOTH-NEXT:// CHECK-LABEL: define {{.+}}@bar(
+ BOTH-NEXT:// CHECK-LABEL: @bar(
  BOTH-NEXT:// CHECK-NEXT:  entry:
  BOTH-NEXT:// CHECK-NEXT:    ret void
  BOTH-NEXT://
