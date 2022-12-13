@@ -38,11 +38,11 @@ source_filename = "distring.f90"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-%"QNCA_a0$i8*$rank0$" = type { i8*, i64, i64, i64, i64, i64 }
+%"QNCA_a0$ptr$rank0$" = type { ptr, i64, i64, i64, i64, i64 }
 
 @0 = internal unnamed_addr constant [7 x i8] c"Goodbye"
 @1 = internal unnamed_addr constant [5 x i8] c"Hello"
-@"assumedlength_$DEFERRED" = internal global %"QNCA_a0$i8*$rank0$" zeroinitializer, !dbg !0
+@"assumedlength_$DEFERRED" = internal global %"QNCA_a0$ptr$rank0$" zeroinitializer, !dbg !0
 @2 = internal unnamed_addr constant i32 2
 
 ; Function Attrs: noinline nounwind uwtable
@@ -50,11 +50,11 @@ define void @MAIN__() #0 !dbg !2 {
 alloca_0:
   %"var$1" = alloca [8 x i64], align 8
   %"var$2" = alloca i64, align 8
-  %strlit = load [7 x i8], [7 x i8]* @0, align 1
-  %strlit1 = load [5 x i8], [5 x i8]* @1, align 1
-  %func_result = call i32 @for_set_reentrancy(i32* @2), !dbg !12
-  %val_fetch = load i64, i64* getelementptr inbounds (%"QNCA_a0$i8*$rank0$", %"QNCA_a0$i8*$rank0$"* @"assumedlength_$DEFERRED", i32 0, i32 1), align 1, !dbg !13
-  %val_fetch4 = load i64, i64* getelementptr inbounds (%"QNCA_a0$i8*$rank0$", %"QNCA_a0$i8*$rank0$"* @"assumedlength_$DEFERRED", i32 0, i32 3), align 1, !dbg !13
+  %strlit = load [7 x i8], ptr @0, align 1
+  %strlit1 = load [5 x i8], ptr @1, align 1
+  %func_result = call i32 @for_set_reentrancy(ptr @2), !dbg !12
+  %val_fetch = load i64, ptr getelementptr inbounds (%"QNCA_a0$ptr$rank0$", ptr @"assumedlength_$DEFERRED", i32 0, i32 1), align 1, !dbg !13
+  %val_fetch4 = load i64, ptr getelementptr inbounds (%"QNCA_a0$ptr$rank0$", ptr @"assumedlength_$DEFERRED", i32 0, i32 3), align 1, !dbg !13
   %and = and i64 %val_fetch4, 256, !dbg !13
   %lshr = lshr i64 %and, 8, !dbg !13
   %shl = shl i64 %lshr, 8, !dbg !13
@@ -64,15 +64,15 @@ alloca_0:
   %and7 = and i64 %or, -1030792151041, !dbg !13
   %shl8 = shl i64 %lshr6, 36, !dbg !13
   %or9 = or i64 %and7, %shl8, !dbg !13
-  store i64 %or9, i64* getelementptr inbounds (%"QNCA_a0$i8*$rank0$", %"QNCA_a0$i8*$rank0$"* @"assumedlength_$DEFERRED", i32 0, i32 3), align 1, !dbg !13
-  store i64 10, i64* getelementptr inbounds (%"QNCA_a0$i8*$rank0$", %"QNCA_a0$i8*$rank0$"* @"assumedlength_$DEFERRED", i32 0, i32 1), align 1, !dbg !13
-  store i64 0, i64* getelementptr inbounds (%"QNCA_a0$i8*$rank0$", %"QNCA_a0$i8*$rank0$"* @"assumedlength_$DEFERRED", i32 0, i32 4), align 1, !dbg !13
-  store i64 0, i64* getelementptr inbounds (%"QNCA_a0$i8*$rank0$", %"QNCA_a0$i8*$rank0$"* @"assumedlength_$DEFERRED", i32 0, i32 2), align 1, !dbg !13
-  %val_fetch10 = load i64, i64* getelementptr inbounds (%"QNCA_a0$i8*$rank0$", %"QNCA_a0$i8*$rank0$"* @"assumedlength_$DEFERRED", i32 0, i32 3), align 1, !dbg !13
-  %val_fetch11 = load i64, i64* getelementptr inbounds (%"QNCA_a0$i8*$rank0$", %"QNCA_a0$i8*$rank0$"* @"assumedlength_$DEFERRED", i32 0, i32 3), align 1, !dbg !13
+  store i64 %or9, ptr getelementptr inbounds (%"QNCA_a0$ptr$rank0$", ptr @"assumedlength_$DEFERRED", i32 0, i32 3), align 1, !dbg !13
+  store i64 10, ptr getelementptr inbounds (%"QNCA_a0$ptr$rank0$", ptr @"assumedlength_$DEFERRED", i32 0, i32 1), align 1, !dbg !13
+  store i64 0, ptr getelementptr inbounds (%"QNCA_a0$ptr$rank0$", ptr @"assumedlength_$DEFERRED", i32 0, i32 4), align 1, !dbg !13
+  store i64 0, ptr getelementptr inbounds (%"QNCA_a0$ptr$rank0$", ptr @"assumedlength_$DEFERRED", i32 0, i32 2), align 1, !dbg !13
+  %val_fetch10 = load i64, ptr getelementptr inbounds (%"QNCA_a0$ptr$rank0$", ptr @"assumedlength_$DEFERRED", i32 0, i32 3), align 1, !dbg !13
+  %val_fetch11 = load i64, ptr getelementptr inbounds (%"QNCA_a0$ptr$rank0$", ptr @"assumedlength_$DEFERRED", i32 0, i32 3), align 1, !dbg !13
   %and12 = and i64 %val_fetch11, -68451041281, !dbg !13
   %or13 = or i64 %and12, 1073741824, !dbg !13
-  store i64 %or13, i64* getelementptr inbounds (%"QNCA_a0$i8*$rank0$", %"QNCA_a0$i8*$rank0$"* @"assumedlength_$DEFERRED", i32 0, i32 3), align 1, !dbg !13
+  store i64 %or13, ptr getelementptr inbounds (%"QNCA_a0$ptr$rank0$", ptr @"assumedlength_$DEFERRED", i32 0, i32 3), align 1, !dbg !13
   %and14 = and i64 %val_fetch10, 1, !dbg !13
   %shl15 = shl i64 %and14, 1, !dbg !13
   %int_zext = trunc i64 %shl15 to i32, !dbg !13
@@ -98,46 +98,43 @@ alloca_0:
   %or35 = or i32 %and32, %int_zext34, !dbg !13
   %and36 = and i32 %or35, -2031617, !dbg !13
   %or37 = or i32 %and36, 262144, !dbg !13
-  %func_result3 = call i32 @for_alloc_allocatable(i64 10, i8** getelementptr inbounds (%"QNCA_a0$i8*$rank0$", %"QNCA_a0$i8*$rank0$"* @"assumedlength_$DEFERRED", i32 0, i32 0), i32 %or37), !dbg !13
-  call void @assumedlength_IP_sub_(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @1, i32 0, i32 0), i64 5), !dbg !14
-  call void @assumedlength_IP_sub_(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @0, i32 0, i32 0), i64 7), !dbg !15
+  %func_result3 = call i32 @for_alloc_allocatable(i64 10, ptr @"assumedlength_$DEFERRED", i32 %or37), !dbg !13
+  call void @assumedlength_IP_sub_(ptr @1, i64 5), !dbg !14
+  call void @assumedlength_IP_sub_(ptr @0, i64 7), !dbg !15
   ret void, !dbg !16
 }
 
 ; Function Attrs: noinline nounwind uwtable
-define void @assumedlength_IP_sub_(i8* noalias nocapture readonly %STRING, i64 %"STRING.len$val") #0 !dbg !17 {
+define void @assumedlength_IP_sub_(ptr noalias nocapture readonly %STRING, i64 %"STRING.len$val") #0 !dbg !17 {
 alloca_1:
   %"var$3" = alloca [8 x i64], align 8
   %STRING.len = alloca i64, align 8, !dbg !23
   %"var$4" = alloca i32, align 4, !dbg !23
   %"(&)val$" = alloca [4 x i8], align 1, !dbg !23
-  %argblock = alloca { i64, i8* }, align 8, !dbg !23
-  call void @llvm.dbg.declare(metadata i64* %STRING.len, metadata !19, metadata !DIExpression()), !dbg !23
-  call void @llvm.dbg.declare(metadata i8* %STRING, metadata !21, metadata !DIExpression()), !dbg !24
-  store i64 %"STRING.len$val", i64* %STRING.len, align 8
-  %strlit = load [7 x i8], [7 x i8]* @0, align 1, !dbg !25
-  %strlit1 = load [5 x i8], [5 x i8]* @1, align 1, !dbg !25
-  %STRING.len_fetch = load i64, i64* %STRING.len, align 1, !dbg !26
-  store [4 x i8] c"8\04\01\00", [4 x i8]* %"(&)val$", align 1, !dbg !26
-  %BLKFIELD_ = getelementptr inbounds { i64, i8* }, { i64, i8* }* %argblock, i32 0, i32 0, !dbg !26
-  store i64 %STRING.len_fetch, i64* %BLKFIELD_, align 1, !dbg !26
-  %BLKFIELD_3 = getelementptr inbounds { i64, i8* }, { i64, i8* }* %argblock, i32 0, i32 1, !dbg !26
-  store i8* %STRING, i8** %BLKFIELD_3, align 1, !dbg !26
-  %"(i8*)var$3$" = bitcast [8 x i64]* %"var$3" to i8*, !dbg !26
-  %"(i8*)(&)val$$" = bitcast [4 x i8]* %"(&)val$" to i8*, !dbg !26
-  %"(i8*)argblock$" = bitcast { i64, i8* }* %argblock to i8*, !dbg !26
-  %func_result = call i32 (i8*, i32, i64, i8*, i8*, ...) @for_write_seq_lis(i8* %"(i8*)var$3$", i32 -1, i64 1239157112576, i8* %"(i8*)(&)val$$", i8* %"(i8*)argblock$"), !dbg !26
+  %argblock = alloca { i64, ptr }, align 8, !dbg !23
+  call void @llvm.dbg.declare(metadata ptr %STRING.len, metadata !19, metadata !DIExpression()), !dbg !23
+  call void @llvm.dbg.declare(metadata ptr %STRING, metadata !21, metadata !DIExpression()), !dbg !24
+  store i64 %"STRING.len$val", ptr %STRING.len, align 8
+  %strlit = load [7 x i8], ptr @0, align 1, !dbg !25
+  %strlit1 = load [5 x i8], ptr @1, align 1, !dbg !25
+  %STRING.len_fetch = load i64, ptr %STRING.len, align 1, !dbg !26
+  store [4 x i8] c"8\04\01\00", ptr %"(&)val$", align 1, !dbg !26
+  %BLKFIELD_ = getelementptr inbounds { i64, ptr }, ptr %argblock, i32 0, i32 0, !dbg !26
+  store i64 %STRING.len_fetch, ptr %BLKFIELD_, align 1, !dbg !26
+  %BLKFIELD_3 = getelementptr inbounds { i64, ptr }, ptr %argblock, i32 0, i32 1, !dbg !26
+  store ptr %STRING, ptr %BLKFIELD_3, align 1, !dbg !26
+  %func_result = call i32 (ptr, i32, i64, ptr, ptr, ...) @for_write_seq_lis(ptr %"var$3", i32 -1, i64 1239157112576, ptr %"(&)val$", ptr %argblock), !dbg !26
   ret void, !dbg !27
 }
 
-declare i32 @for_set_reentrancy(i32*)
+declare i32 @for_set_reentrancy(ptr)
 
-declare i32 @for_alloc_allocatable(i64, i8**, i32)
+declare i32 @for_alloc_allocatable(i64, ptr, i32)
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-declare i32 @for_write_seq_lis(i8*, i32, i64, i8*, i8*, ...)
+declare i32 @for_write_seq_lis(ptr, i32, i64, ptr, ptr, ...)
 
 attributes #0 = { noinline nounwind uwtable "intel-lang"="fortran" "min-legal-vector-width"="0" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" }
 attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }

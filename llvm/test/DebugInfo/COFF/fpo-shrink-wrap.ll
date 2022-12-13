@@ -97,7 +97,7 @@ entry:
   %c.addr = alloca i32, align 4
   tail call void @llvm.dbg.value(metadata i32 %d, metadata !13, metadata !DIExpression()), !dbg !19
   tail call void @llvm.dbg.value(metadata i32 %c, metadata !14, metadata !DIExpression()), !dbg !20
-  store i32 %c, i32* %c.addr, align 4, !tbaa !21
+  store i32 %c, ptr %c.addr, align 4, !tbaa !21
   tail call void @llvm.dbg.value(metadata i32 %b, metadata !15, metadata !DIExpression()), !dbg !25
   tail call void @llvm.dbg.value(metadata i32 %a, metadata !16, metadata !DIExpression()), !dbg !26
   %cmp = icmp slt i32 %a, %b, !dbg !27
@@ -110,8 +110,8 @@ for.cond:                                         ; preds = %for.cond.preheader,
   %i.0 = phi i32 [ %inc, %for.cond ], [ %c, %for.cond.preheader ]
   call void @llvm.dbg.value(metadata i32 %i.0, metadata !17, metadata !DIExpression()), !dbg !32
   %cmp1 = icmp slt i32 %i.0, %d, !dbg !30
-  call void @llvm.dbg.value(metadata i32* %c.addr, metadata !14, metadata !DIExpression()), !dbg !20
-  %call = call i32 @doSomething(i32* nonnull %c.addr) #3, !dbg !33
+  call void @llvm.dbg.value(metadata ptr %c.addr, metadata !14, metadata !DIExpression()), !dbg !20
+  %call = call i32 @doSomething(ptr nonnull %c.addr) #3, !dbg !33
   %inc = add nsw i32 %i.0, 1, !dbg !34
   call void @llvm.dbg.value(metadata i32 %inc, metadata !17, metadata !DIExpression()), !dbg !32
   br i1 %cmp1, label %for.cond, label %return, !dbg !35, !llvm.loop !36
@@ -121,7 +121,7 @@ return:                                           ; preds = %for.cond, %entry
   ret i32 %retval.0, !dbg !38
 }
 
-declare i32 @doSomething(i32*) local_unnamed_addr #1
+declare i32 @doSomething(ptr) local_unnamed_addr #1
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2

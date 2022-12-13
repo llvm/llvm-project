@@ -53,8 +53,8 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @_Z2f3v() #0 !dbg !8 {
 entry:
   %.addr.i = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %.addr.i, metadata !11, metadata !16), !dbg !17
-  store i32 0, i32* %.addr.i, align 4
+  call void @llvm.dbg.declare(metadata ptr %.addr.i, metadata !11, metadata !16), !dbg !17
+  store i32 0, ptr %.addr.i, align 4
   call void @_Z2f1v(), !dbg !19
   ret void, !dbg !20
 }

@@ -75,11 +75,11 @@ target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.12.25835"
 
 %struct.D = type { %struct.B.base, %struct.C.base, i32, [4 x i8], %struct.A }
-%struct.B.base = type { i32 (...)**, i32*, i32 }
-%struct.C.base = type { i32 (...)**, i32*, i32 }
+%struct.B.base = type { ptr, ptr, i32 }
+%struct.C.base = type { ptr, ptr, i32 }
 %struct.A = type { i32 }
-%struct.B = type { i32 (...)**, i32*, i32, [4 x i8], %struct.A }
-%struct.C = type { i32 (...)**, i32*, i32, [4 x i8], %struct.A }
+%struct.B = type { ptr, ptr, i32, [4 x i8], %struct.A }
+%struct.C = type { ptr, ptr, i32, [4 x i8], %struct.A }
 
 $"?get@B@@UEAAHXZ" = comdat any
 
@@ -93,30 +93,30 @@ $"??_7D@@6BB@@@" = comdat any
 
 $"??_7D@@6BC@@@" = comdat any
 
-@"?d@@3UD@@A" = dso_local local_unnamed_addr global %struct.D { %struct.B.base { i32 (...)** bitcast ({ [2 x i8*] }* @"??_7D@@6BB@@@" to i32 (...)**), i32* getelementptr inbounds ([2 x i32], [2 x i32]* @"??_8D@@7BB@@@", i32 0, i32 0), i32 0 }, %struct.C.base { i32 (...)** bitcast ({ [1 x i8*] }* @"??_7D@@6BC@@@" to i32 (...)**), i32* getelementptr inbounds ([2 x i32], [2 x i32]* @"??_8D@@7BC@@@", i32 0, i32 0), i32 0 }, i32 0, [4 x i8] zeroinitializer, %struct.A zeroinitializer }, align 8, !dbg !0
+@"?d@@3UD@@A" = dso_local local_unnamed_addr global %struct.D { %struct.B.base { ptr @"??_7D@@6BB@@@", ptr @"??_8D@@7BB@@@", i32 0 }, %struct.C.base { ptr @"??_7D@@6BC@@@", ptr @"??_8D@@7BC@@@", i32 0 }, i32 0, [4 x i8] zeroinitializer, %struct.A zeroinitializer }, align 8, !dbg !0
 @"??_8D@@7BB@@@" = linkonce_odr unnamed_addr constant [2 x i32] [i32 -8, i32 48], comdat
 @"??_8D@@7BC@@@" = linkonce_odr unnamed_addr constant [2 x i32] [i32 -8, i32 24], comdat
-@"??_7D@@6BB@@@" = linkonce_odr unnamed_addr constant { [2 x i8*] } { [2 x i8*] [i8* bitcast (i32 (%struct.B*)* @"?get@B@@UEAAHXZ" to i8*), i8* bitcast (void (%struct.D*)* @"?f@D@@UEAAXXZ" to i8*)] }, comdat
-@"??_7D@@6BC@@@" = linkonce_odr unnamed_addr constant { [1 x i8*] } { [1 x i8*] [i8* bitcast (i32 (%struct.C*)* @"?get@C@@UEAAHXZ" to i8*)] }, comdat
-@llvm.global_ctors = appending global [0 x { i32, void ()*, i8* }] zeroinitializer
+@"??_7D@@6BB@@@" = linkonce_odr unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"?get@B@@UEAAHXZ", ptr @"?f@D@@UEAAXXZ"] }, comdat
+@"??_7D@@6BC@@@" = linkonce_odr unnamed_addr constant { [1 x ptr] } { [1 x ptr] [ptr @"?get@C@@UEAAHXZ"] }, comdat
+@llvm.global_ctors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
 
 ; Function Attrs: nounwind uwtable
-define linkonce_odr dso_local i32 @"?get@B@@UEAAHXZ"(%struct.B* %this) unnamed_addr #0 comdat align 2 !dbg !46 {
+define linkonce_odr dso_local i32 @"?get@B@@UEAAHXZ"(ptr %this) unnamed_addr #0 comdat align 2 !dbg !46 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.B* %this, metadata !48, metadata !DIExpression()), !dbg !50
-  %b = getelementptr inbounds %struct.B, %struct.B* %this, i64 0, i32 2, !dbg !51
-  %0 = load i32, i32* %b, align 8, !dbg !51, !tbaa !52
+  call void @llvm.dbg.value(metadata ptr %this, metadata !48, metadata !DIExpression()), !dbg !50
+  %b = getelementptr inbounds %struct.B, ptr %this, i64 0, i32 2, !dbg !51
+  %0 = load i32, ptr %b, align 8, !dbg !51, !tbaa !52
   ret i32 %0, !dbg !51
 }
 
-declare dso_local void @"?f@D@@UEAAXXZ"(%struct.D*) unnamed_addr #1
+declare dso_local void @"?f@D@@UEAAXXZ"(ptr) unnamed_addr #1
 
 ; Function Attrs: nounwind uwtable
-define linkonce_odr dso_local i32 @"?get@C@@UEAAHXZ"(%struct.C* %this) unnamed_addr #0 comdat align 2 !dbg !57 {
+define linkonce_odr dso_local i32 @"?get@C@@UEAAHXZ"(ptr %this) unnamed_addr #0 comdat align 2 !dbg !57 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.C* %this, metadata !59, metadata !DIExpression()), !dbg !61
-  %c = getelementptr inbounds %struct.C, %struct.C* %this, i64 0, i32 2, !dbg !62
-  %0 = load i32, i32* %c, align 8, !dbg !62, !tbaa !63
+  call void @llvm.dbg.value(metadata ptr %this, metadata !59, metadata !DIExpression()), !dbg !61
+  %c = getelementptr inbounds %struct.C, ptr %this, i64 0, i32 2, !dbg !62
+  %0 = load i32, ptr %c, align 8, !dbg !62, !tbaa !63
   ret i32 %0, !dbg !62
 }
 

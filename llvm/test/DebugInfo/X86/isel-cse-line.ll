@@ -41,21 +41,21 @@ define i32 @main() !dbg !16 {
   %3 = alloca i64, align 8
   %4 = alloca double, align 8
   %5 = alloca double, align 8
-  store i32 0, i32* %1, align 4
-  call void @llvm.dbg.declare(metadata i64* %2, metadata !20, metadata !21), !dbg !22
-  %6 = load i64, i64* @glb_start, align 8, !dbg !23
-  store i64 %6, i64* %2, align 8, !dbg !22
-  call void @llvm.dbg.declare(metadata i64* %3, metadata !24, metadata !21), !dbg !25
-  %7 = load i64, i64* @glb_end, align 8, !dbg !26
-  store i64 %7, i64* %3, align 8, !dbg !25
-  call void @llvm.dbg.declare(metadata double* %4, metadata !27, metadata !21), !dbg !28
-  %8 = load i64, i64* %2, align 8, !dbg !29
+  store i32 0, ptr %1, align 4
+  call void @llvm.dbg.declare(metadata ptr %2, metadata !20, metadata !21), !dbg !22
+  %6 = load i64, ptr @glb_start, align 8, !dbg !23
+  store i64 %6, ptr %2, align 8, !dbg !22
+  call void @llvm.dbg.declare(metadata ptr %3, metadata !24, metadata !21), !dbg !25
+  %7 = load i64, ptr @glb_end, align 8, !dbg !26
+  store i64 %7, ptr %3, align 8, !dbg !25
+  call void @llvm.dbg.declare(metadata ptr %4, metadata !27, metadata !21), !dbg !28
+  %8 = load i64, ptr %2, align 8, !dbg !29
   %9 = uitofp i64 %8 to double, !dbg !29
-  store double %9, double* %4, align 8, !dbg !28
-  call void @llvm.dbg.declare(metadata double* %5, metadata !30, metadata !21), !dbg !31
-  %10 = load i64, i64* %3, align 8, !dbg !32
+  store double %9, ptr %4, align 8, !dbg !28
+  call void @llvm.dbg.declare(metadata ptr %5, metadata !30, metadata !21), !dbg !31
+  %10 = load i64, ptr %3, align 8, !dbg !32
   %11 = uitofp i64 %10 to double, !dbg !32
-  store double %11, double* %5, align 8, !dbg !31
+  store double %11, ptr %5, align 8, !dbg !31
   ret i32 0, !dbg !33
 }
 
