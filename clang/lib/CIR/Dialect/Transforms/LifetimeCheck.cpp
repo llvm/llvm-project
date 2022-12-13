@@ -803,13 +803,6 @@ void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
   default:
     llvm_unreachable("NYI");
   }
-
-  // If other styles of initialization gets added, required to add support
-  // here.
-  auto varDecl = allocaOp.getAst();
-  assert(!varDecl ||
-         (!allocaOp.getInit() || !varDecl->getAstDecl()->isDirectInit()) &&
-             "not implemented");
 }
 
 void LifetimeCheckPass::checkStore(StoreOp storeOp) {
