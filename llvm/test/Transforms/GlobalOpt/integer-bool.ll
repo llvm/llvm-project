@@ -7,20 +7,20 @@
 ; CHECK: global i1 false
 
 define void @set1() {
-  store i32 0, i32 addrspace(1)* @G
+  store i32 0, ptr addrspace(1) @G
 ; CHECK: store i1 false
   ret void
 }
 
 define void @set2() {
-  store i32 1, i32 addrspace(1)* @G
+  store i32 1, ptr addrspace(1) @G
 ; CHECK: store i1 true
   ret void
 }
 
 define i1 @get() {
 ; CHECK-LABEL: @get(
-  %A = load i32, i32 addrspace(1) * @G
+  %A = load i32, ptr addrspace(1) @G
   %C = icmp slt i32 %A, 2
   ret i1 %C
 ; CHECK: ret i1 true

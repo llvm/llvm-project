@@ -7,8 +7,8 @@ define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    ret void
 ;
-  store i32 1, i32* bitcast ([8 x i8]* @g to i32*)
-  store i32 2, i32* getelementptr (i32, i32* bitcast ([8 x i8]* @g to i32*), i64 1)
+  store i32 1, ptr @g
+  store i32 2, ptr getelementptr (i32, ptr @g, i64 1)
   ret void
 }
 
@@ -16,7 +16,7 @@ define i32 @load1() {
 ; CHECK-LABEL: @load1(
 ; CHECK-NEXT:    ret i32 1
 ;
-  %v = load i32, i32* bitcast ([8 x i8]* @g to i32*)
+  %v = load i32, ptr @g
   ret i32 %v
 }
 
@@ -24,6 +24,6 @@ define i32 @load2() {
 ; CHECK-LABEL: @load2(
 ; CHECK-NEXT:    ret i32 2
 ;
-  %v = load i32, i32* getelementptr (i32, i32* bitcast ([8 x i8]* @g to i32*), i64 1)
+  %v = load i32, ptr getelementptr (i32, ptr @g, i64 1)
   ret i32 %v
 }

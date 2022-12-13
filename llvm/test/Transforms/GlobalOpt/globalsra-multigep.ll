@@ -9,8 +9,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i16 @test(i64 %a1) {
 entry:
-  %g1 = getelementptr inbounds <{ [8 x i16], [8 x i16] }>, <{ [8 x i16], [8 x i16] }>* @g_data, i64 0, i32 0
-  %arrayidx.i = getelementptr inbounds [8 x i16], [8 x i16]* %g1, i64 0, i64 %a1
-  %r = load i16, i16* %arrayidx.i, align 2
+  %g1 = getelementptr inbounds <{ [8 x i16], [8 x i16] }>, ptr @g_data, i64 0, i32 0
+  %arrayidx.i = getelementptr inbounds [8 x i16], ptr %g1, i64 0, i64 %a1
+  %r = load i16, ptr %arrayidx.i, align 2
   ret i16 %r
 }
