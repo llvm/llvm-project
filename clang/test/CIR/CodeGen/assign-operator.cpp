@@ -68,10 +68,10 @@ int main() {
 
 // CHECK: cir.func @main() -> i32 {
 // CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64}
-// CHECK:     %1 = cir.alloca !ty_22struct2EStringView22, cir.ptr <!ty_22struct2EStringView22>, ["sv"] {alignment = 8 : i64}
+// CHECK:     %1 = cir.alloca !ty_22struct2EStringView22, cir.ptr <!ty_22struct2EStringView22>, ["sv", init] {alignment = 8 : i64}
 // CHECK:     cir.call @_ZN10StringViewC2Ev(%1) : (!cir.ptr<!ty_22struct2EStringView22>) -> ()
 // CHECK:     cir.scope {
-// CHECK:       %3 = cir.alloca !ty_22struct2EString22, cir.ptr <!ty_22struct2EString22>, ["s"] {alignment = 8 : i64}
+// CHECK:       %3 = cir.alloca !ty_22struct2EString22, cir.ptr <!ty_22struct2EString22>, ["s", init] {alignment = 8 : i64}
 // CHECK:       %4 = cir.alloca !ty_22struct2EStringView22, cir.ptr <!ty_22struct2EStringView22>, ["ref.tmp0"] {alignment = 8 : i64}
 // CHECK:       %5 = cir.get_global @".str" : cir.ptr <!cir.array<i8 x 3>>
 // CHECK:       %6 = cir.cast(array_to_ptrdecay, %5 : !cir.ptr<!cir.array<i8 x 3>>), !cir.ptr<i8>

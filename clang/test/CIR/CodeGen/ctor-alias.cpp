@@ -19,7 +19,7 @@ void t() {
 // CHECK-NOT: cir.fun @_ZN11DummyStringC1EPKc
 
 //      CHECK:   cir.func @_Z1tv
-// CHECK-NEXT:     %0 = cir.alloca !ty_22struct2EDummyString22, cir.ptr <!ty_22struct2EDummyString22>, ["s4"] {alignment = 1 : i64}
+// CHECK-NEXT:     %0 = cir.alloca !ty_22struct2EDummyString22, cir.ptr <!ty_22struct2EDummyString22>, ["s4", init] {alignment = 1 : i64}
 // CHECK-NEXT:     %1 = cir.get_global @".str" : cir.ptr <!cir.array<i8 x 5>>
 // CHECK-NEXT:     %2 = cir.cast(array_to_ptrdecay, %1 : !cir.ptr<!cir.array<i8 x 5>>), !cir.ptr<i8>
 // CHECK-NEXT:     cir.call @_ZN11DummyStringC2EPKc(%0, %2) : (!cir.ptr<!ty_22struct2EDummyString22>, !cir.ptr<i8>) -> ()

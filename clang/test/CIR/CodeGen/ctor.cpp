@@ -27,6 +27,6 @@ void baz() {
 // CHECK-NEXT:     cir.return
 
 // CHECK:   cir.func @_Z3bazv()
-// CHECK-NEXT:     %0 = cir.alloca !ty_22struct2EStruk22, cir.ptr <!ty_22struct2EStruk22>, ["s"] {alignment = 4 : i64}
+// CHECK-NEXT:     %0 = cir.alloca !ty_22struct2EStruk22, cir.ptr <!ty_22struct2EStruk22>, ["s", init] {alignment = 4 : i64}
 // CHECK-NEXT:     cir.call @_ZN5StrukC1Ev(%0) : (!cir.ptr<!ty_22struct2EStruk22>) -> ()
 // CHECK-NEXT:     cir.return

@@ -168,7 +168,17 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
   if (!constant) {
     initializeWhatIsTechnicallyUninitialized(Loc);
     LValue lv = LValue::makeAddr(Loc, type, AlignmentSource::Decl);
-    return buildExprAsInit(Init, &D, lv);
+    buildExprAsInit(Init, &D, lv);
+    // In case lv has uses it means we indeed initialized something
+    // out of it while trying to build the expression, mark it as such.
+    auto addr = lv.getAddress().getPointer();
+    assert(addr && "Should have an address");
+    auto allocaOp = dyn_cast_or_null<mlir::cir::AllocaOp>(addr.getDefiningOp());
+    assert(allocaOp && "Address should come straight out of the alloca");
+
+    if (!allocaOp.use_empty())
+      allocaOp.setInitAttr(mlir::UnitAttr::get(builder.getContext()));
+    return;
   }
 
   if (!emission.IsConstantAggregate) {
