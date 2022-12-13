@@ -5858,16 +5858,16 @@ static SDValue lowerReductionSeq(unsigned RVVOpcode, SDValue StartValue,
   // The reduction needs an LMUL1 input; do the splat at either LMUL1
   // or the original VT if fractional.
   auto InnerVT = VecVT.bitsLE(M1VT) ? VecVT : M1VT;
-  SDValue InitialSplat =
-      lowerScalarSplat(SDValue(), StartValue, DAG.getConstant(1, DL, XLenVT),
-                       InnerVT, DL, DAG, Subtarget);
+  SDValue InitialValue =
+    lowerScalarInsert(StartValue, DAG.getConstant(1, DL, XLenVT),
+                      InnerVT, DL, DAG, Subtarget);
   if (M1VT != InnerVT)
-    InitialSplat = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, M1VT,
+    InitialValue = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, M1VT,
                                DAG.getUNDEF(M1VT),
-                               InitialSplat, DAG.getConstant(0, DL, XLenVT));
-  SDValue PassThru = hasNonZeroAVL(VL) ? DAG.getUNDEF(M1VT) : InitialSplat;
+                               InitialValue, DAG.getConstant(0, DL, XLenVT));
+  SDValue PassThru = hasNonZeroAVL(VL) ? DAG.getUNDEF(M1VT) : InitialValue;
   SDValue Reduction = DAG.getNode(RVVOpcode, DL, M1VT, PassThru, Vec,
-                                  InitialSplat, Mask, VL);
+                                  InitialValue, Mask, VL);
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VecEltVT, Reduction,
                      DAG.getConstant(0, DL, XLenVT));
 }
