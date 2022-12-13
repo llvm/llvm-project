@@ -5,17 +5,22 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx8_vdata_c61803:
+.. _amdgpu_synid_gfx8_vdata_84fab6:
 
 vdata
 =====
 
 Input data for an atomic instruction.
 
-Optionally may serve as an output data:
+Optionally, this operand may be used to store output data:
 
 * If :ref:`glc<amdgpu_synid_glc>` is specified, gets the memory value before the operation.
 
-*Size:* 1 dword by default. :ref:`tfe<amdgpu_synid_tfe>` adds 1 dword if specified.
+*Size:* depends on :ref:`dmask<amdgpu_synid_dmask>`:
+
+* :ref:`dmask<amdgpu_synid_dmask>` may specify 2 data elements for 32-bit-per-pixel surfaces or 4 data elements for 64-bit-per-pixel surfaces. Each data element occupies 1 dword.
+
+
+  Note: the surface data format is indicated in the image resource constant, but not in the instruction.
 
 *Operands:* :ref:`v<amdgpu_synid_v>`

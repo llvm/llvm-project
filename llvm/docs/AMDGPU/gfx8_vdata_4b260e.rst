@@ -5,13 +5,17 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx8_vdst_d85497:
+.. _amdgpu_synid_gfx8_vdata_4b260e:
 
-vdst
-====
+vdata
+=====
 
-Instruction output: data read from a memory buffer and converted to a 16-bit format.
+Input data for an atomic instruction.
 
-*Size:* 1 dword by default. :ref:`tfe<amdgpu_synid_tfe>` adds 1 dword if specified.
+Optionally, this operand may be used to store output data:
+
+* If :ref:`glc<amdgpu_synid_glc>` is specified, gets the memory value before the operation.
+
+*Size:* 2 dwords.
 
 *Operands:* :ref:`v<amdgpu_synid_v>`
