@@ -2,10 +2,14 @@ func randInt(_ i: Int) async -> Int {
   return Int.random(in: 1...i)
 }
 
-func inner() async {
+func inner<T>(_ t: T) async {
+  // d is dynamically allocated by swift_task_alloc() because its size
+  // is unknown.
+  let d = t
   let a = await randInt(30)
   let b = await randInt(a + 11) // break one
-  use(a, b) // break two
+  use(a, b)
+  use(d) // break two
 }
 
 func use<T>(_ t: T...) {}
@@ -15,6 +19,6 @@ func use<T>(_ t: T...) {}
     // This call to `inner` is a indirection required to make this test work.
     // If its contents were inlined into `main` (as it was originally written),
     // the test would fail.
-    await inner()
+    await inner(23)
   }
 }
