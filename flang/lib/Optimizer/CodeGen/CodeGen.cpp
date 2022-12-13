@@ -1554,9 +1554,8 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
                        mlir::Value typeDesc = {}) const {
     auto loc = box.getLoc();
     auto boxTy = box.getType().template dyn_cast<fir::BaseBoxType>();
-    bool isUnlimitedPolymorphic = fir::isUnlimitedPolymorphicType(boxTy);
-    bool useInputType =
-        isUnlimitedPolymorphic && !fir::isUnlimitedPolymorphicType(inputType);
+    bool useInputType = fir::isPolymorphicType(boxTy) &&
+                        !fir::isUnlimitedPolymorphicType(inputType);
     llvm::SmallVector<mlir::Value> typeparams = lenParams;
     if constexpr (!std::is_same_v<BOX, fir::EmboxOp>) {
       if (!box.getSubstr().empty() && fir::hasDynamicSize(boxTy.getEleTy()))
@@ -1564,8 +1563,9 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     }
 
     // Write each of the fields with the appropriate values.
-    // When emboxing an element to a unlimited polymorphic descriptor, use the
-    // input type since the destination descriptor type as no type information.
+    // When emboxing an element to a polymorphic descriptor, use the
+    // input type since the destination descriptor type has not the exact
+    // information.
     auto [eleSize, cfiTy] = getSizeAndTypeCode(
         loc, rewriter, useInputType ? inputType : boxTy.getEleTy(), typeparams);
     auto mod = box->template getParentOfType<mlir::ModuleOp>();
@@ -1589,10 +1589,10 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     auto [eleSize, cfiTy] =
         getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy(), typeparams);
 
-    // Reboxing an unlimited polymorphic entities. eleSize and type code need to
-    // be retrived from the initial box.
-    if (fir::isUnlimitedPolymorphicType(boxTy) &&
-        fir::isUnlimitedPolymorphicType(box.getBox().getType())) {
+    // Reboxing a polymorphic entities. eleSize and type code need to
+    // be retrived from the initial box and propagated to the new box.
+    if (fir::isPolymorphicType(boxTy) &&
+        fir::isPolymorphicType(box.getBox().getType())) {
       mlir::Type idxTy = this->lowerTy().indexType();
       eleSize = this->loadElementSizeFromBox(loc, idxTy, loweredBox, rewriter);
       cfiTy = this->getValueFromBox(loc, loweredBox, cfiTy.getType(), rewriter,
