@@ -1970,9 +1970,10 @@ static Constant *constantFoldCanonicalize(const Type *Ty, const CallBase *CI,
     if (DenormMode == DenormalMode::getIEEE())
       return nullptr;
 
-    bool IsPositive = !Src.isNegative() ||
-                      DenormMode.Input == DenormalMode::PositiveZero ||
-                      DenormMode.Output == DenormalMode::PositiveZero;
+    bool IsPositive =
+        (!Src.isNegative() || DenormMode.Input == DenormalMode::PositiveZero ||
+         (DenormMode.Output == DenormalMode::PositiveZero &&
+          DenormMode.Input == DenormalMode::IEEE));
     return ConstantFP::get(CI->getContext(),
                            APFloat::getZero(Src.getSemantics(), !IsPositive));
   }
