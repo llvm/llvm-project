@@ -10,7 +10,7 @@ define void @store() {
 ; CHECK-LABEL: @store(
 ; CHECK-NEXT:    ret void
 ;
-  store i32 42, i32* bitcast ([4 x i8]* @g to i32*)
+  store i32 42, ptr @g
   ret void
 }
 
@@ -18,7 +18,7 @@ define i32 @load1() {
 ; CHECK-LABEL: @load1(
 ; CHECK-NEXT:    ret i32 42
 ;
-  %v = load i32, i32* bitcast ([4 x i8]* @g to i32*)
+  %v = load i32, ptr @g
   ret i32 %v
 }
 
@@ -26,15 +26,15 @@ define i16 @load2() {
 ; CHECK-LABEL: @load2(
 ; CHECK-NEXT:    ret i16 42
 ;
-  %v = load i16, i16* bitcast ([4 x i8]* @g to i16*)
+  %v = load i16, ptr @g
   ret i16 %v
 }
 
 define [4 x i8] @load3() {
 ; CHECK-LABEL: @load3(
-; CHECK-NEXT:    [[V:%.*]] = load [4 x i8], [4 x i8]* bitcast (i32* @g to [4 x i8]*), align 1
+; CHECK-NEXT:    [[V:%.*]] = load [4 x i8], ptr @g, align 1
 ; CHECK-NEXT:    ret [4 x i8] [[V]]
 ;
-  %v = load [4 x i8], [4 x i8]* @g
+  %v = load [4 x i8], ptr @g
   ret [4 x i8] %v
 }

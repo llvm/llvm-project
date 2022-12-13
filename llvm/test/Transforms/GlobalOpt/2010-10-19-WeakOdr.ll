@@ -6,10 +6,10 @@
 
 @SomeVar = weak_odr global i32 0
 
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [ { i32, void ()*, i8* } { i32 65535, void ()* @CTOR, i8* null } ]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [ { i32, ptr, ptr } { i32 65535, ptr @CTOR, ptr null } ]
 
 define internal void @CTOR() {
-  store i32 23, i32* @SomeVar
+  store i32 23, ptr @SomeVar
   ret void
 }
 
