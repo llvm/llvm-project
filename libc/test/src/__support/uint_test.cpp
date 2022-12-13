@@ -1,4 +1,4 @@
-//===-- Unittests for the 128 bit integer class ---------------------------===//
+//===-- Unittests for the UInt integer class ------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,15 +17,18 @@
 using LL_UInt128 = __llvm_libc::cpp::UInt<128>;
 using LL_UInt192 = __llvm_libc::cpp::UInt<192>;
 using LL_UInt256 = __llvm_libc::cpp::UInt<256>;
+using LL_UInt320 = __llvm_libc::cpp::UInt<320>;
+using LL_UInt512 = __llvm_libc::cpp::UInt<512>;
+using LL_UInt1024 = __llvm_libc::cpp::UInt<1024>;
 
-TEST(LlvmLibcUInt128ClassTest, BasicInit) {
+TEST(LlvmLibcUIntClassTest, BasicInit) {
   LL_UInt128 empty;
   LL_UInt128 half_val(12345);
   LL_UInt128 full_val({12345, 67890});
   ASSERT_TRUE(half_val != full_val);
 }
 
-TEST(LlvmLibcUInt128ClassTest, AdditionTests) {
+TEST(LlvmLibcUIntClassTest, AdditionTests) {
   LL_UInt128 val1(12345);
   LL_UInt128 val2(54321);
   LL_UInt128 result1(66666);
@@ -65,7 +68,7 @@ TEST(LlvmLibcUInt128ClassTest, AdditionTests) {
   EXPECT_EQ(val9 + val10, val10 + val9);
 }
 
-TEST(LlvmLibcUInt128ClassTest, SubtractionTests) {
+TEST(LlvmLibcUIntClassTest, SubtractionTests) {
   LL_UInt128 val1(12345);
   LL_UInt128 val2(54321);
   LL_UInt128 result1({0xffffffffffff5c08, 0xffffffffffffffff});
@@ -94,7 +97,7 @@ TEST(LlvmLibcUInt128ClassTest, SubtractionTests) {
   EXPECT_EQ(val6, val5 + result6);
 }
 
-TEST(LlvmLibcUInt128ClassTest, MultiplicationTests) {
+TEST(LlvmLibcUIntClassTest, MultiplicationTests) {
   LL_UInt128 val1({5, 0});
   LL_UInt128 val2({10, 0});
   LL_UInt128 result1({50, 0});
@@ -154,7 +157,7 @@ TEST(LlvmLibcUInt128ClassTest, MultiplicationTests) {
   EXPECT_EQ((val13 * val14), (val14 * val13));
 }
 
-TEST(LlvmLibcUInt128ClassTest, DivisionTests) {
+TEST(LlvmLibcUIntClassTest, DivisionTests) {
   LL_UInt128 val1({10, 0});
   LL_UInt128 val2({5, 0});
   LL_UInt128 result1({2, 0});
@@ -201,7 +204,7 @@ TEST(LlvmLibcUInt128ClassTest, DivisionTests) {
   EXPECT_FALSE(val13.div(val14).has_value());
 }
 
-TEST(LlvmLibcUInt128ClassTest, ModuloTests) {
+TEST(LlvmLibcUIntClassTest, ModuloTests) {
   LL_UInt128 val1({10, 0});
   LL_UInt128 val2({5, 0});
   LL_UInt128 result1({0, 0});
@@ -248,7 +251,7 @@ TEST(LlvmLibcUInt128ClassTest, ModuloTests) {
   EXPECT_EQ((val17 % val18), result9);
 }
 
-TEST(LlvmLibcUInt128ClassTest, PowerTests) {
+TEST(LlvmLibcUIntClassTest, PowerTests) {
   LL_UInt128 val1({10, 0});
   val1.pow_n(30);
   LL_UInt128 result1({5076944270305263616, 54210108624}); // (10 ^ 30)
@@ -299,7 +302,7 @@ TEST(LlvmLibcUInt128ClassTest, PowerTests) {
   }
 }
 
-TEST(LlvmLibcUInt128ClassTest, ShiftLeftTests) {
+TEST(LlvmLibcUIntClassTest, ShiftLeftTests) {
   LL_UInt128 val1(0x0123456789abcdef);
   LL_UInt128 result1(0x123456789abcdef0);
   EXPECT_EQ((val1 << 4), result1);
@@ -325,7 +328,7 @@ TEST(LlvmLibcUInt128ClassTest, ShiftLeftTests) {
   EXPECT_EQ((val2 << 256), result6);
 }
 
-TEST(LlvmLibcUInt128ClassTest, ShiftRightTests) {
+TEST(LlvmLibcUIntClassTest, ShiftRightTests) {
   LL_UInt128 val1(0x0123456789abcdef);
   LL_UInt128 result1(0x00123456789abcde);
   EXPECT_EQ((val1 >> 4), result1);
@@ -351,7 +354,7 @@ TEST(LlvmLibcUInt128ClassTest, ShiftRightTests) {
   EXPECT_EQ((val2 >> 256), result6);
 }
 
-TEST(LlvmLibcUInt128ClassTest, AndTests) {
+TEST(LlvmLibcUIntClassTest, AndTests) {
   LL_UInt128 base({0xffff00000000ffff, 0xffffffff00000000});
   LL_UInt128 val128({0xf0f0f0f00f0f0f0f, 0xff00ff0000ff00ff});
   uint64_t val64 = 0xf0f0f0f00f0f0f0f;
@@ -364,7 +367,7 @@ TEST(LlvmLibcUInt128ClassTest, AndTests) {
   EXPECT_EQ((base & val32), result32);
 }
 
-TEST(LlvmLibcUInt128ClassTest, OrTests) {
+TEST(LlvmLibcUIntClassTest, OrTests) {
   LL_UInt128 base({0xffff00000000ffff, 0xffffffff00000000});
   LL_UInt128 val128({0xf0f0f0f00f0f0f0f, 0xff00ff0000ff00ff});
   uint64_t val64 = 0xf0f0f0f00f0f0f0f;
@@ -377,7 +380,7 @@ TEST(LlvmLibcUInt128ClassTest, OrTests) {
   EXPECT_EQ((base | val32), result32);
 }
 
-TEST(LlvmLibcUInt128ClassTest, CompoundAssignments) {
+TEST(LlvmLibcUIntClassTest, CompoundAssignments) {
   LL_UInt128 x({0xffff00000000ffff, 0xffffffff00000000});
   LL_UInt128 b({0xf0f0f0f00f0f0f0f, 0xff00ff0000ff00ff});
 
@@ -419,7 +422,7 @@ TEST(LlvmLibcUInt128ClassTest, CompoundAssignments) {
   EXPECT_EQ(a, mul_result);
 }
 
-TEST(LlvmLibcUInt128ClassTest, UnaryPredecrement) {
+TEST(LlvmLibcUIntClassTest, UnaryPredecrement) {
   LL_UInt128 a = LL_UInt128({0x1111111111111111, 0x1111111111111111});
   ++a;
   EXPECT_EQ(a, LL_UInt128({0x1111111111111112, 0x1111111111111111}));
@@ -433,7 +436,7 @@ TEST(LlvmLibcUInt128ClassTest, UnaryPredecrement) {
   EXPECT_EQ(a, LL_UInt128({0x0, 0x0}));
 }
 
-TEST(LlvmLibcUInt128ClassTest, EqualsTests) {
+TEST(LlvmLibcUIntClassTest, EqualsTests) {
   LL_UInt128 a1({0xffffffff00000000, 0xffff00000000ffff});
   LL_UInt128 a2({0xffffffff00000000, 0xffff00000000ffff});
   LL_UInt128 b({0xff00ff0000ff00ff, 0xf0f0f0f00f0f0f0f});
@@ -449,7 +452,7 @@ TEST(LlvmLibcUInt128ClassTest, EqualsTests) {
   ASSERT_TRUE(a_lower != a_upper);
 }
 
-TEST(LlvmLibcUInt128ClassTest, ComparisonTests) {
+TEST(LlvmLibcUIntClassTest, ComparisonTests) {
   LL_UInt128 a({0xffffffff00000000, 0xffff00000000ffff});
   LL_UInt128 b({0xff00ff0000ff00ff, 0xf0f0f0f00f0f0f0f});
   EXPECT_GT(a, b);
@@ -466,4 +469,44 @@ TEST(LlvmLibcUInt128ClassTest, ComparisonTests) {
 
   EXPECT_LE(a, a);
   EXPECT_GE(a, a);
+}
+
+TEST(LlvmLibcUIntClassTest, FullMulTests) {
+  LL_UInt128 a({0xffffffffffffffffULL, 0xffffffffffffffffULL});
+  LL_UInt128 b({0xfedcba9876543210ULL, 0xfefdfcfbfaf9f8f7ULL});
+  LL_UInt256 r({0x0123456789abcdf0ULL, 0x0102030405060708ULL,
+                0xfedcba987654320fULL, 0xfefdfcfbfaf9f8f7ULL});
+  LL_UInt128 r_hi({0xfedcba987654320eULL, 0xfefdfcfbfaf9f8f7ULL});
+
+  EXPECT_EQ(a.ful_mul(b), r);
+  EXPECT_EQ(a.quick_mul_hi(b), r_hi);
+
+  LL_UInt192 c(
+      {0x7766554433221101ULL, 0xffeeddccbbaa9988ULL, 0x1f2f3f4f5f6f7f8fULL});
+  LL_UInt320 rr({0x8899aabbccddeeffULL, 0x0011223344556677ULL,
+                 0x583715f4d3b29171ULL, 0xffeeddccbbaa9988ULL,
+                 0x1f2f3f4f5f6f7f8fULL});
+
+  EXPECT_EQ(a.ful_mul(c), rr);
+  EXPECT_EQ(a.ful_mul(c), c.ful_mul(a));
+}
+
+#define TEST_QUICK_MUL_HI(Bits, Error)                                         \
+  do {                                                                         \
+    LL_UInt##Bits a = ~LL_UInt##Bits(0);                                       \
+    LL_UInt##Bits hi = a.quick_mul_hi(a);                                      \
+    LL_UInt##Bits trunc = static_cast<LL_UInt##Bits>(a.ful_mul(a) >> Bits);    \
+    uint64_t overflow = trunc.sub(hi);                                         \
+    EXPECT_EQ(overflow, uint64_t(0));                                          \
+    EXPECT_LE(uint64_t(trunc), uint64_t(Error));                               \
+  } while (0)
+
+TEST(LlvmLibcUIntClassTest, QuickMulHiTests) {
+  // TODO(lntue): Investigate / Analyze the error bounds for other rounding
+  // modes.  It the error bounds seems to be able to reach to WordCount instead
+  // of WordCount - 1 in the CI environment.
+  TEST_QUICK_MUL_HI(128, 2);
+  TEST_QUICK_MUL_HI(192, 3);
+  TEST_QUICK_MUL_HI(256, 4);
+  TEST_QUICK_MUL_HI(512, 8);
 }

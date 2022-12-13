@@ -648,6 +648,7 @@ void *_mlir_ciface_newSparseTensorFromReader(
   ASSERT_USIZE_EQ(lvlTypesRef, lvlRank);
   ASSERT_USIZE_EQ(lvl2dimRef, lvlRank);
   ASSERT_USIZE_EQ(dim2lvlRef, dimRank);
+  (void)dimRank;
   const index_type *lvlSizes = MEMREF_GET_PAYLOAD(lvlSizesRef);
   const DimLevelType *lvlTypes = MEMREF_GET_PAYLOAD(lvlTypesRef);
   const index_type *lvl2dim = MEMREF_GET_PAYLOAD(lvl2dimRef);

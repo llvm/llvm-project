@@ -1514,31 +1514,4 @@ bool HasDefinedIo(GenericKind::DefinedIo which, const DerivedTypeSpec &derived,
   return false;
 }
 
-const Symbol *FindUnsafeIoDirectComponent(GenericKind::DefinedIo which,
-    const DerivedTypeSpec &derived, const Scope *scope) {
-  if (HasDefinedIo(which, derived, scope)) {
-    return nullptr;
-  }
-  if (const Scope * dtScope{derived.scope()}) {
-    for (const auto &pair : *dtScope) {
-      const Symbol &symbol{*pair.second};
-      if (IsAllocatableOrPointer(symbol)) {
-        return &symbol;
-      }
-      if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
-        if (const DeclTypeSpec * type{details->type()}) {
-          if (type->category() == DeclTypeSpec::Category::TypeDerived) {
-            if (const Symbol *
-                bad{FindUnsafeIoDirectComponent(
-                    which, type->derivedTypeSpec(), scope)}) {
-              return bad;
-            }
-          }
-        }
-      }
-    }
-  }
-  return nullptr;
-}
-
 } // namespace Fortran::semantics

@@ -3,7 +3,7 @@
 @X = common global i32 0
 
 ; CHECK-LABEL: PHI Values for function: simple
-define void @simple(i32* %ptr) {
+define void @simple(ptr %ptr) {
 entry:
   br i1 undef, label %if, label %else
 
@@ -21,7 +21,7 @@ end:
 ; CHECK: PHI %phi2 has values:
 ; CHECK-DAG: @X
 ; CHECK-DAG: %ptr
-  %phi2 = phi i32* [ @X, %if ], [ %ptr, %else ]
+  %phi2 = phi ptr [ @X, %if ], [ %ptr, %else ]
   ret void
 }
 

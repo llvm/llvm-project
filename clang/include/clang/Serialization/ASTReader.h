@@ -164,11 +164,29 @@ public:
 
   /// Receives the header search options.
   ///
+  /// \param HSOpts The read header search options. The following fields are
+  ///               missing and are reported in ReadHeaderSearchPaths():
+  ///               UserEntries, SystemHeaderPrefixes, VFSOverlayFiles.
+  ///
   /// \returns true to indicate the header search options are invalid, or false
   /// otherwise.
   virtual bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                        StringRef SpecificModuleCachePath,
                                        bool Complain) {
+    return false;
+  }
+
+  /// Receives the header search paths.
+  ///
+  /// \param HSOpts The read header search paths. Only the following fields are
+  ///               initialized: UserEntries, SystemHeaderPrefixes,
+  ///               VFSOverlayFiles. The rest is reported in
+  ///               ReadHeaderSearchOptions().
+  ///
+  /// \returns true to indicate the header search paths are invalid, or false
+  /// otherwise.
+  virtual bool ReadHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
+                                     bool Complain) {
     return false;
   }
 
@@ -1359,6 +1377,8 @@ private:
                                      ASTReaderListener &Listener);
   static bool ParseHeaderSearchOptions(const RecordData &Record, bool Complain,
                                        ASTReaderListener &Listener);
+  static bool ParseHeaderSearchPaths(const RecordData &Record, bool Complain,
+                                     ASTReaderListener &Listener);
   static bool ParsePreprocessorOptions(const RecordData &Record, bool Complain,
                                        ASTReaderListener &Listener,
                                        std::string &SuggestedPredefines);

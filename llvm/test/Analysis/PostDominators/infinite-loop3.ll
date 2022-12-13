@@ -4,7 +4,7 @@
 
 define void @fn1() {
 entry:
-  store i32 5, i32* @a, align 4
+  store i32 5, ptr @a, align 4
   %call = call i32 (...) @foo()
   %tobool = icmp ne i32 %call, 0
   br i1 %tobool, label %if.then, label %if.end
@@ -13,12 +13,12 @@ if.then:                                          ; preds = %entry, %loop
   br label %loop
 
 loop:                                             ; preds = %loop, %if.then
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   call void @bar(i32 %0)
   br i1 true, label %loop, label %if.then
 
 if.end:                                           ; preds = %entry
-  store i32 6, i32* @a, align 4
+  store i32 6, ptr @a, align 4
   ret void
 }
 

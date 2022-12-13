@@ -115,10 +115,10 @@ module third {}
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.c"
 // CHECK-NEXT:         }
-// CHECK-NEXT:       ]
-// CHECK-NEXT:     }
-// CHECK-NEXT:   ]
-// CHECK-NEXT: }
+// CHECK:            ]
+// CHECK:          }
+// CHECK:        ]
+// CHECK:      }
 
 // RUN: %deps-to-rsp %t/result.json --module-name=third > %t/third.cc1.rsp
 // RUN: %deps-to-rsp %t/result.json --module-name=second > %t/second.cc1.rsp

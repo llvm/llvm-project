@@ -1174,6 +1174,35 @@ ASTFileSignature ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
   Stream.EmitRecord(DIAGNOSTIC_OPTIONS, Record);
   Record.clear();
 
+  // Header search paths.
+  Record.clear();
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
+
+  // Include entries.
+  Record.push_back(HSOpts.UserEntries.size());
+  for (unsigned I = 0, N = HSOpts.UserEntries.size(); I != N; ++I) {
+    const HeaderSearchOptions::Entry &Entry = HSOpts.UserEntries[I];
+    AddString(Entry.Path, Record);
+    Record.push_back(static_cast<unsigned>(Entry.Group));
+    Record.push_back(Entry.IsFramework);
+    Record.push_back(Entry.IgnoreSysRoot);
+  }
+
+  // System header prefixes.
+  Record.push_back(HSOpts.SystemHeaderPrefixes.size());
+  for (unsigned I = 0, N = HSOpts.SystemHeaderPrefixes.size(); I != N; ++I) {
+    AddString(HSOpts.SystemHeaderPrefixes[I].Prefix, Record);
+    Record.push_back(HSOpts.SystemHeaderPrefixes[I].IsSystemHeader);
+  }
+
+  // VFS overlay files.
+  Record.push_back(HSOpts.VFSOverlayFiles.size());
+  for (StringRef VFSOverlayFile : HSOpts.VFSOverlayFiles)
+    AddString(VFSOverlayFile, Record);
+
+  Stream.EmitRecord(HEADER_SEARCH_PATHS, Record);
+
   // Write out the diagnostic/pragma mappings.
   WritePragmaDiagnosticMappings(Diags, /* isModule = */ WritingModule);
 
@@ -1399,27 +1428,10 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
   // Header search options.
   Record.clear();
-  const HeaderSearchOptions &HSOpts
-    = PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
+
   AddString(HSOpts.Sysroot, Record);
-
-  // Include entries.
-  Record.push_back(HSOpts.UserEntries.size());
-  for (unsigned I = 0, N = HSOpts.UserEntries.size(); I != N; ++I) {
-    const HeaderSearchOptions::Entry &Entry = HSOpts.UserEntries[I];
-    AddString(Entry.Path, Record);
-    Record.push_back(static_cast<unsigned>(Entry.Group));
-    Record.push_back(Entry.IsFramework);
-    Record.push_back(Entry.IgnoreSysRoot);
-  }
-
-  // System header prefixes.
-  Record.push_back(HSOpts.SystemHeaderPrefixes.size());
-  for (unsigned I = 0, N = HSOpts.SystemHeaderPrefixes.size(); I != N; ++I) {
-    AddString(HSOpts.SystemHeaderPrefixes[I].Prefix, Record);
-    Record.push_back(HSOpts.SystemHeaderPrefixes[I].IsSystemHeader);
-  }
-
   AddString(HSOpts.ResourceDir, Record);
   AddString(HSOpts.ModuleCachePath, Record);
   AddString(HSOpts.ModuleUserBuildPath, Record);
@@ -1613,7 +1625,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
           Entry.IsTransient,
           Entry.IsTopLevelModuleMap};
 
-      EmitRecordWithPath(IFAbbrevCode, Record, Entry.File.getName());
+      EmitRecordWithPath(IFAbbrevCode, Record, Entry.File.getNameAsRequested());
     }
 
     // Emit content hash for this file.

@@ -151,7 +151,7 @@ computeTransposedType(RankedTensorType rankedTensorType,
                       ArrayRef<int64_t> transposeVector) {
   if (transposeVector.empty())
     return rankedTensorType;
-  if (!isPermutation(transposeVector) ||
+  if (!isPermutationVector(transposeVector) ||
       transposeVector.size() != static_cast<size_t>(rankedTensorType.getRank()))
     return failure();
 

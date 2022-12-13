@@ -698,9 +698,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ComplexPart &x) {
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ComplexLiteralConstant &z) {
-  return AsMaybeExpr(
-      ConstructComplex(GetContextualMessages(), Analyze(std::get<0>(z.t)),
-          Analyze(std::get<1>(z.t)), GetDefaultKind(TypeCategory::Real)));
+  return AnalyzeComplex(Analyze(std::get<0>(z.t)), Analyze(std::get<1>(z.t)),
+      "complex literal constant");
 }
 
 // CHARACTER literal processing.
@@ -839,7 +838,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::NamedConstant &n) {
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::NullInit &n) {
-  if (MaybeExpr value{Analyze(n.v)}) {
+  auto restorer{AllowNullPointer()};
+  if (MaybeExpr value{Analyze(n.v.value())}) {
     // Subtle: when the NullInit is a DataStmtConstant, it might
     // be a misparse of a structure constructor without parameters
     // or components (e.g., T()).  Checking the result to ensure
@@ -1711,6 +1711,9 @@ MaybeExpr ExpressionAnalyzer::Analyze(
   bool checkConflicts{true}; // until we hit one
   auto &messages{GetContextualMessages()};
 
+  // NULL() can be a valid component
+  auto restorer{AllowNullPointer()};
+
   for (const auto &component :
       std::get<std::list<parser::ComponentSpec>>(structure.t)) {
     const parser::Expr &expr{
@@ -1843,8 +1846,41 @@ MaybeExpr ExpressionAnalyzer::Analyze(
           semantics::CheckStructConstructorPointerComponent(
               GetFoldingContext(), *symbol, *value, innermost); // C7104, C7105
           result.Add(*symbol, Fold(std::move(*value)));
-        } else if (MaybeExpr converted{
-                       ConvertToType(*symbol, std::move(*value))}) {
+          continue;
+        }
+        if (IsNullPointer(*value)) {
+          if (IsAllocatable(*symbol)) {
+            if (IsBareNullPointer(&*value)) {
+              // NULL() with no arguments allowed by 7.5.10 para 6 for
+              // ALLOCATABLE.
+              result.Add(*symbol, Expr<SomeType>{NullPointer{}});
+              continue;
+            }
+            if (IsNullObjectPointer(*value)) {
+              AttachDeclaration(
+                  Say(expr.source,
+                      "NULL() with arguments is not standard conforming as the value for allocatable component '%s'"_port_en_US,
+                      symbol->name()),
+                  *symbol);
+              // proceed to check type & shape
+            } else {
+              AttachDeclaration(
+                  Say(expr.source,
+                      "A NULL procedure pointer may not be used as the value for component '%s'"_err_en_US,
+                      symbol->name()),
+                  *symbol);
+              continue;
+            }
+          } else {
+            AttachDeclaration(
+                Say(expr.source,
+                    "A NULL pointer may not be used as the value for component '%s'"_err_en_US,
+                    symbol->name()),
+                *symbol);
+            continue;
+          }
+        }
+        if (MaybeExpr converted{ConvertToType(*symbol, std::move(*value))}) {
           if (auto componentShape{GetShape(GetFoldingContext(), *symbol)}) {
             if (auto valueShape{GetShape(GetFoldingContext(), *converted)}) {
               if (GetRank(*componentShape) == 0 && GetRank(*valueShape) > 0) {
@@ -1882,9 +1918,6 @@ MaybeExpr ExpressionAnalyzer::Analyze(
                     symbol->name()),
                 *symbol);
           }
-        } else if (IsAllocatable(*symbol) && IsBareNullPointer(&*value)) {
-          // NULL() with no arguments allowed by 7.5.10 para 6 for ALLOCATABLE.
-          result.Add(*symbol, Expr<SomeType>{NullPointer{}});
         } else if (auto symType{DynamicType::From(symbol)}) {
           if (IsAllocatable(*symbol) && symType->IsUnlimitedPolymorphic() &&
               valueType) {
@@ -2600,6 +2633,18 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
       if (!procRef) {
         analyzer.CheckForNullPointer(
             "in a non-pointer intrinsic assignment statement");
+        const Expr<SomeType> &lhs{analyzer.GetExpr(0)};
+        if (auto dyType{lhs.GetType()};
+            dyType && dyType->IsPolymorphic()) { // 10.2.1.2p1(1)
+          const Symbol *lastWhole0{UnwrapWholeSymbolOrComponentDataRef(lhs)};
+          const Symbol *lastWhole{
+              lastWhole0 ? &lastWhole0->GetUltimate() : nullptr};
+          if (!lastWhole || !IsAllocatable(*lastWhole)) {
+            Say("Left-hand side of assignment may not be polymorphic unless assignment is to an entire allocatable"_err_en_US);
+          } else if (evaluate::IsCoarray(*lastWhole)) {
+            Say("Left-hand side of assignment may not be polymorphic if it is a coarray"_err_en_US);
+          }
+        }
       }
       assignment.emplace(analyzer.MoveExpr(0), analyzer.MoveExpr(1));
       if (procRef) {
@@ -2616,7 +2661,11 @@ const Assignment *ExpressionAnalyzer::Analyze(
     const parser::PointerAssignmentStmt &x) {
   if (!x.typedAssignment) {
     MaybeExpr lhs{Analyze(std::get<parser::DataRef>(x.t))};
-    MaybeExpr rhs{Analyze(std::get<parser::Expr>(x.t))};
+    MaybeExpr rhs;
+    {
+      auto restorer{AllowNullPointer()};
+      rhs = Analyze(std::get<parser::Expr>(x.t));
+    }
     if (!lhs || !rhs) {
       x.typedAssignment.Reset(
           new GenericAssignmentWrapper{}, GenericAssignmentWrapper::Deleter);
@@ -2861,22 +2910,9 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Subtract &x) {
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(
-    const parser::Expr::ComplexConstructor &x) {
-  auto re{Analyze(std::get<0>(x.t).value())};
-  auto im{Analyze(std::get<1>(x.t).value())};
-  if (re && re->Rank() > 0) {
-    context().Say(std::get<0>(x.t).value().source,
-        "Real part of complex constructor must be scalar"_err_en_US);
-  }
-  if (im && im->Rank() > 0) {
-    context().Say(std::get<1>(x.t).value().source,
-        "Imaginary part of complex constructor must be scalar"_err_en_US);
-  }
-  if (re && im) {
-    ConformabilityCheck(GetContextualMessages(), *re, *im);
-  }
-  return AsMaybeExpr(ConstructComplex(GetContextualMessages(), std::move(re),
-      std::move(im), GetDefaultKind(TypeCategory::Real)));
+    const parser::Expr::ComplexConstructor &z) {
+  return AnalyzeComplex(Analyze(std::get<0>(z.t).value()),
+      Analyze(std::get<1>(z.t).value()), "complex constructor");
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Concat &x) {
@@ -3098,9 +3134,6 @@ static void FixMisparsedFunctionReference(
 template <typename PARSED>
 MaybeExpr ExpressionAnalyzer::ExprOrVariable(
     const PARSED &x, parser::CharBlock source) {
-  if (useSavedTypedExprs_ && x.typedExpr) {
-    return x.typedExpr->v;
-  }
   auto restorer{GetContextualMessages().SetLocation(source)};
   if constexpr (std::is_same_v<PARSED, parser::Expr> ||
       std::is_same_v<PARSED, parser::Variable>) {
@@ -3152,10 +3185,21 @@ MaybeExpr ExpressionAnalyzer::ExprOrVariable(
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr &expr) {
-  return ExprOrVariable(expr, expr.source);
+  if (useSavedTypedExprs_ && expr.typedExpr) {
+    return expr.typedExpr->v;
+  }
+  MaybeExpr result{ExprOrVariable(expr, expr.source)};
+  if (!isNullPointerOk_ && result && IsNullPointer(*result)) {
+    Say(expr.source,
+        "NULL() may not be used as an expression in this context"_err_en_US);
+  }
+  return result;
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Variable &variable) {
+  if (useSavedTypedExprs_ && variable.typedExpr) {
+    return variable.typedExpr->v;
+  }
   return ExprOrVariable(variable, variable.GetSource());
 }
 
@@ -3391,6 +3435,21 @@ MaybeExpr ExpressionAnalyzer::MakeFunctionRef(
   }
 }
 
+MaybeExpr ExpressionAnalyzer::AnalyzeComplex(
+    MaybeExpr &&re, MaybeExpr &&im, const char *what) {
+  if (re && re->Rank() > 0) {
+    Say("Real part of %s is not scalar"_port_en_US, what);
+  }
+  if (im && im->Rank() > 0) {
+    Say("Imaginary part of %s is not scalar"_port_en_US, what);
+  }
+  if (re && im) {
+    ConformabilityCheck(GetContextualMessages(), *re, *im);
+  }
+  return AsMaybeExpr(ConstructComplex(GetContextualMessages(), std::move(re),
+      std::move(im), GetDefaultKind(TypeCategory::Real)));
+}
+
 void ArgumentAnalyzer::Analyze(const parser::Variable &x) {
   source_.ExtendToCover(x.GetSource());
   if (MaybeExpr expr{context_.Analyze(x)}) {
@@ -3424,8 +3483,6 @@ void ArgumentAnalyzer::Analyze(const parser::Variable &x) {
 
 void ArgumentAnalyzer::Analyze(
     const parser::ActualArgSpec &arg, bool isSubroutine) {
-  // TODO: Actual arguments that are procedures and procedure pointers need to
-  // be detected and represented (they're not expressions).
   // TODO: C1534: Don't allow a "restricted" specific intrinsic to be passed.
   std::optional<ActualArgument> actual;
   common::visit(common::visitors{
@@ -3795,6 +3852,7 @@ MaybeExpr ArgumentAnalyzer::AnalyzeExprOrWholeAssumedSizeArray(
       return context_.Analyze(expr);
     }
   }
+  auto restorer{context_.AllowNullPointer()};
   return context_.Analyze(expr);
 }
 

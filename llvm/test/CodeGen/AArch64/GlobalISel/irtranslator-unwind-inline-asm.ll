@@ -13,13 +13,12 @@ entry:
   unreachable
 }
 
-define dso_local void @test() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define dso_local void @test() personality ptr @__gxx_personality_v0 {
   ; CHECK-LABEL: name: test
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @.str.2
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY [[GV]](p0)
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   INLINEASM &"bl trap", 1 /* sideeffect attdialect */
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
@@ -33,15 +32,15 @@ define dso_local void @test() personality i8* bitcast (i32 (...)* @__gxx_persona
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x1
-  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY2]](p0)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY1]](p0)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
+  ; CHECK-NEXT:   $x0 = COPY [[GV]](p0)
   ; CHECK-NEXT:   BL @printf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   $x0 = COPY [[COPY1]](p0)
+  ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   BL @_Unwind_Resume, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
 entry:
@@ -55,14 +54,14 @@ invoke.cont:
 
 lpad:
 
-  %0 = landingpad { i8*, i32 }
+  %0 = landingpad { ptr, i32 }
           cleanup
-  call void (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.2, i64 0, i64 0))
-  resume { i8*, i32 } %0
+  call void (ptr, ...) @printf(ptr @.str.2)
+  resume { ptr, i32 } %0
 
 }
 
-define void @test2() #0 personality i32 (...)* @__gcc_personality_v0 {
+define void @test2() #0 personality ptr @__gcc_personality_v0 {
   ; CHECK-LABEL: name: test2
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
@@ -87,15 +86,15 @@ define void @test2() #0 personality i32 (...)* @__gcc_personality_v0 {
   ; CHECK-NEXT:   $x0 = COPY [[COPY1]](p0)
   ; CHECK-NEXT:   BL @_Unwind_Resume, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  invoke void asm sideeffect "", "r"(i64* undef) to label %a unwind label %b
+  invoke void asm sideeffect "", "r"(ptr undef) to label %a unwind label %b
 a:
   ret void
 b:
-  %landing_pad = landingpad { i8*, i32 } cleanup
-  resume { i8*, i32 } %landing_pad
+  %landing_pad = landingpad { ptr, i32 } cleanup
+  resume { ptr, i32 } %landing_pad
 }
 
 declare i32 @__gcc_personality_v0(...)
 declare dso_local i32 @__gxx_personality_v0(...)
 
-declare dso_local void @printf(i8*, ...)
+declare dso_local void @printf(ptr, ...)

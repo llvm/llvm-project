@@ -1091,7 +1091,7 @@ struct PadOpVectorizationWithTransferWritePattern
       auto minOp1 = v1.getDefiningOp<AffineMinOp>();
       auto minOp2 = v2.getDefiningOp<AffineMinOp>();
       if (minOp1 && minOp2 && minOp1.getAffineMap() == minOp2.getAffineMap() &&
-          minOp1.operands() == minOp2.operands())
+          minOp1.getOperands() == minOp2.getOperands())
         continue;
 
       // Add additional cases as needed.

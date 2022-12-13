@@ -12,8 +12,8 @@
 ; CHECK-NEXT: - { id: 0, name: stack_slot, type: default, offset: 0, size: 4, alignment: 4
 define void @foo() {
   %stack_slot = alloca i19
-  call void @bar(i19* %stack_slot)
+  call void @bar(ptr %stack_slot)
   ret void
 }
 
-declare void @bar(i19* %a)
+declare void @bar(ptr %a)

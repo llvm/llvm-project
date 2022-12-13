@@ -168,10 +168,12 @@ public:
     return messages_.Say(std::move(msg));
   }
   template <typename... A>
-  void SayWithDecl(const Symbol &symbol, const parser::CharBlock &at,
-      parser::MessageFixedText &&msg, A &&...args) {
+  parser::Message &SayWithDecl(const Symbol &symbol,
+      const parser::CharBlock &at, parser::MessageFixedText &&msg,
+      A &&...args) {
     auto &message{Say(at, std::move(msg), args...)};
     evaluate::AttachDeclaration(&message, symbol);
+    return message;
   }
 
   const Scope &FindScope(parser::CharBlock) const;

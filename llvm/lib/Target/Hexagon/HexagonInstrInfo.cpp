@@ -57,6 +57,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <utility>
 

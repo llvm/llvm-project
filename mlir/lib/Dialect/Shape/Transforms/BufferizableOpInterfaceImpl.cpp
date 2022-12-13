@@ -67,7 +67,7 @@ struct AssumingOpInterface
         assumingOp.getDoRegion().front().getTerminator());
 
     // Create new op and move over region.
-    TypeRange newResultTypes(yieldOp.operands());
+    TypeRange newResultTypes(yieldOp.getOperands());
     auto newOp = rewriter.create<shape::AssumingOp>(
         op->getLoc(), newResultTypes, assumingOp.getWitness());
     newOp.getDoRegion().takeBody(assumingOp.getRegion());
@@ -130,7 +130,7 @@ struct AssumingYieldOpInterface
                           const BufferizationOptions &options) const {
     auto yieldOp = cast<shape::AssumingYieldOp>(op);
     SmallVector<Value> newResults;
-    for (Value value : yieldOp.operands()) {
+    for (Value value : yieldOp.getOperands()) {
       if (value.getType().isa<TensorType>()) {
         FailureOr<Value> buffer = getBuffer(rewriter, value, options);
         if (failed(buffer))

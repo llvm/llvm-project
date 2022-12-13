@@ -13,14 +13,14 @@
 ; CHECK: G_STORE [[LO]](s64), [[GEP2]](p0) :: (store (s64) into stack, align 1)
 ; CHECK: [[GEP3:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[CST]](s64)
 ; CHECK: G_STORE [[HI]](s64), [[GEP3]](p0) :: (store (s64) into stack + 8, align 1)
-define void @test_split_struct([2 x i64]* %ptr) {
-  %struct = load [2 x i64], [2 x i64]* %ptr
-  call void @take_split_struct([2 x i64]* null, i64 1, i64 2, i64 3,
+define void @test_split_struct(ptr %ptr) {
+  %struct = load [2 x i64], ptr %ptr
+  call void @take_split_struct(ptr null, i64 1, i64 2, i64 3,
                                i64 4, i64 5, i64 6,
                                [2 x i64] %struct)
   ret void
 }
 
-declare void @take_split_struct([2 x i64]* %ptr, i64, i64, i64,
+declare void @take_split_struct(ptr %ptr, i64, i64, i64,
                                i64, i64, i64,
                                [2 x i64] %in) ;

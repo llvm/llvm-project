@@ -54,7 +54,7 @@ LogicalResult YieldOp::verify() {
 
 MutableOperandRange
 YieldOp::getMutableSuccessorOperands(Optional<unsigned> index) {
-  return operandsMutable();
+  return getOperandsMutable();
 }
 
 //===----------------------------------------------------------------------===//

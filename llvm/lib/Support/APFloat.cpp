@@ -3900,8 +3900,7 @@ void IEEEFloat::makeSmallestNormalized(bool Negative) {
   zeroSignificand();
   sign = Negative;
   exponent = semantics->minExponent;
-  significandParts()[partCountForBits(semantics->precision) - 1] |=
-      (((integerPart)1) << ((semantics->precision - 1) % integerPartWidth));
+  APInt::tcSetBit(significandParts(), semantics->precision - 1);
 }
 
 IEEEFloat::IEEEFloat(const fltSemantics &Sem, const APInt &API) {

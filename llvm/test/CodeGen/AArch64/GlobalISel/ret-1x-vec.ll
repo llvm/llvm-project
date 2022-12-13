@@ -14,22 +14,22 @@ define <1 x float> @ret_v1f32(<1 x float> %v) {
   ret <1 x float> %v
 }
 
-define <1 x i8*> @ret_v1p0(<1 x i8*> %v) {
+define <1 x ptr> @ret_v1p0(<1 x ptr> %v) {
   ; CHECK-LABEL: name: ret_v1p0
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $d0
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $d0
   ; CHECK:   $d0 = COPY [[COPY]](p0)
   ; CHECK:   RET_ReallyLR implicit $d0
-  ret <1 x i8*> %v
+  ret <1 x ptr> %v
 }
 
-define <1 x i8 addrspace(1)*> @ret_v1p1(<1 x i8 addrspace(1)*> %v) {
+define <1 x ptr addrspace(1)> @ret_v1p1(<1 x ptr addrspace(1)> %v) {
   ; CHECK-LABEL: name: ret_v1p1
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $d0
   ; CHECK:   [[COPY:%[0-9]+]]:_(p1) = COPY $d0
   ; CHECK:   $d0 = COPY [[COPY]](p1)
   ; CHECK:   RET_ReallyLR implicit $d0
-  ret <1 x i8 addrspace(1)*> %v
+  ret <1 x ptr addrspace(1)> %v
 }

@@ -5187,7 +5187,7 @@ public:
     auto isNotDefByConstant = [](Value operand) {
       return !isa_and_nonnull<arith::ConstantIndexOp>(operand.getDefiningOp());
     };
-    if (llvm::any_of(createMaskOp.operands(), isNotDefByConstant))
+    if (llvm::any_of(createMaskOp.getOperands(), isNotDefByConstant))
       return failure();
 
     // CreateMaskOp for scalable vectors can be folded only if all dimensions
@@ -5206,7 +5206,7 @@ public:
     SmallVector<int64_t, 4> maskDimSizes;
     maskDimSizes.reserve(createMaskOp->getNumOperands());
     for (auto [operand, maxDimSize] : llvm::zip_equal(
-             createMaskOp.operands(), createMaskOp.getType().getShape())) {
+             createMaskOp.getOperands(), createMaskOp.getType().getShape())) {
       Operation *defOp = operand.getDefiningOp();
       int64_t dimSize = cast<arith::ConstantIndexOp>(defOp).value();
       dimSize = std::min(dimSize, maxDimSize);

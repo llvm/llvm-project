@@ -5,10 +5,10 @@
 
 ; CHECK: Checking DILocation from   %retval = alloca i32, align 4 was copied to G_FRAME_INDEX
 ; CHECK: Checking DILocation from   %rv = alloca i32, align 4 was copied to G_FRAME_INDEX
-; CHECK: Checking DILocation from   store i32 0, i32* %retval, align 4 was copied to G_CONSTANT
-; CHECK: Checking DILocation from   store i32 0, i32* %retval, align 4 was copied to G_STORE
-; CHECK: Checking DILocation from   store i32 0, i32* %rv, align 4, !dbg !12 was copied to G_STORE debug-location !12; t.cpp:2:5
-; CHECK: Checking DILocation from   %0 = load i32, i32* %rv, align 4, !dbg !13 was copied to G_LOAD debug-location !13; t.cpp:3:8
+; CHECK: Checking DILocation from   store i32 0, ptr %retval, align 4 was copied to G_CONSTANT
+; CHECK: Checking DILocation from   store i32 0, ptr %retval, align 4 was copied to G_STORE
+; CHECK: Checking DILocation from   store i32 0, ptr %rv, align 4, !dbg !12 was copied to G_STORE debug-location !12; t.cpp:2:5
+; CHECK: Checking DILocation from   %0 = load i32, ptr %rv, align 4, !dbg !13 was copied to G_LOAD debug-location !13; t.cpp:3:8
 ; CHECK: Checking DILocation from   ret i32 %0, !dbg !14 was copied to COPY debug-location !14; t.cpp:3:1
 ; CHECK: Checking DILocation from   ret i32 %0, !dbg !14 was copied to RET_ReallyLR implicit $w0, debug-location !14; t.cpp:3:1
 
@@ -21,10 +21,10 @@ define dso_local i32 @main() !dbg !7 {
 entry:
   %retval = alloca i32, align 4
   %rv = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  call void @llvm.dbg.declare(metadata i32* %rv, metadata !11, metadata !DIExpression()), !dbg !12
-  store i32 0, i32* %rv, align 4, !dbg !12
-  %0 = load i32, i32* %rv, align 4, !dbg !13
+  store i32 0, ptr %retval, align 4
+  call void @llvm.dbg.declare(metadata ptr %rv, metadata !11, metadata !DIExpression()), !dbg !12
+  store i32 0, ptr %rv, align 4, !dbg !12
+  %0 = load i32, ptr %rv, align 4, !dbg !13
   ret i32 %0, !dbg !14
 }
 

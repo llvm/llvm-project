@@ -1,21 +1,21 @@
 # Defining Dialect Attributes and Types
 
 This document describes how to define dialect
-[attributes](LangRef.md/#attributes) and [types](LangRef.md/#type-system).
+[attributes](../LangRef.md/#attributes) and [types](../LangRef.md/#type-system).
 
 [TOC]
 
 ## LangRef Refresher
 
 Before diving into how to define these constructs, below is a quick refresher
-from the [MLIR LangRef](LangRef.md).
+from the [MLIR LangRef](../LangRef.md).
 
 ### Attributes
 
 Attributes are the mechanism for specifying constant data on operations in
 places where a variable is never allowed - e.g. the comparison predicate of a
-[`arith.cmpi` operation](Dialects/ArithOps.md#arithcmpi-mlirarithcmpiop), or
-the underlying value of a [`arith.constant` operation](Dialects/ArithOps.md#arithconstant-mlirarithconstantop).
+[`arith.cmpi` operation](../Dialects/ArithOps.md#arithcmpi-mlirarithcmpiop), or
+the underlying value of a [`arith.constant` operation](../Dialects/ArithOps.md#arithconstant-mlirarithconstantop).
 Each operation has an attribute dictionary, which associates a set of attribute
 names to attribute values.
 
@@ -24,7 +24,7 @@ names to attribute values.
 Every SSA value, such as operation results or block arguments, in MLIR has a type
 defined by the type system. MLIR has an open type system with no fixed list of types,
 and there are no restrictions on the abstractions they represent. For example, take
-the following [Arithmetic AddI operation](Dialects/ArithOps.md#arithaddi-mlirarithaddiop):
+the following [Arithmetic AddI operation](../Dialects/ArithOps.md#arithaddi-mlirarithaddiop):
 
 ```mlir
   %result = arith.addi %lhs, %rhs : i64
@@ -32,7 +32,7 @@ the following [Arithmetic AddI operation](Dialects/ArithOps.md#arithaddi-mlirari
 
 It takes two input SSA values (`%lhs` and `%rhs`), and returns a single SSA
 value (`%result`). The inputs and outputs of this operation are of type `i64`,
-which is an instance of the [Builtin IntegerType](Dialects/Builtin.md#integertype).
+which is an instance of the [Builtin IntegerType](../Dialects/Builtin.md#integertype).
 
 ## Attributes and Types
 
@@ -66,7 +66,7 @@ of the classes correspond to unqiue Attribute or Type classes.
 Below show cases an example Attribute and Type definition. We generally recommend
 defining Attribute and Type classes in different `.td` files to better encapsulate
 the different constructs, and define a proper layering between them. This
-recommendation extends to all of the MLIR constructs, including [Interfaces](Interfaces.md),
+recommendation extends to all of the MLIR constructs, including [Interfaces](../Interfaces.md),
 Operations, etc.
 
 ```tablegen
@@ -281,7 +281,7 @@ MLIR includes several specialized classes for common situations:
 Similarly to operations, Attribute and Type classes may attach `Traits` that
 provide additional mixin methods and other data. `Trait`s may be attached via
 the trailing template argument, i.e. the `traits` list parameter in the example
-above. See the main [`Trait`](Traits.md) documentation for more information
+above. See the main [`Trait`](../Traits.md) documentation for more information
 on defining and using traits.
 
 ### Interfaces
@@ -289,7 +289,7 @@ on defining and using traits.
 Attribute and Type classes may attach `Interfaces` to provide an virtual
 interface into the Attribute or Type. `Interfaces` are added in the same way as
 [Traits](#Traits), by using the `traits` list template parameter of the
-`AttrDef` or `TypeDef`. See the main [`Interface`](Interfaces.md)
+`AttrDef` or `TypeDef`. See the main [`Interface`](../Interfaces.md)
 documentation for more information on defining and using interfaces.
 
 ### Builders

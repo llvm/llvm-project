@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=aarch64-apple-ios -stop-after=instruction-select -global-isel -verify-machineinstrs %s -o - | FileCheck %s
 
-define void @test_varargs_sentinel(i8* %list, i64, i64, i64, i64, i64, i64, i64,
+define void @test_varargs_sentinel(ptr %list, i64, i64, i64, i64, i64, i64, i64,
                                    i32, ...) {
 ; CHECK-LABEL: name: test_varargs_sentinel
 ; CHECK: fixedStack:
@@ -9,8 +9,8 @@ define void @test_varargs_sentinel(i8* %list, i64, i64, i64, i64, i64, i64, i64,
 ; CHECK:   [[LIST:%[0-9]+]]:gpr64sp = COPY $x0
 ; CHECK:   [[VARARGS_AREA:%[0-9]+]]:gpr64common = ADDXri %fixed-stack.[[VARARGS_SLOT]], 0, 0
 ; CHECK:   STRXui [[VARARGS_AREA]], [[LIST]], 0 :: (store (s64) into %ir.list, align 1)
-  call void @llvm.va_start(i8* %list)
+  call void @llvm.va_start(ptr %list)
   ret void
 }
 
-declare void @llvm.va_start(i8*)
+declare void @llvm.va_start(ptr)

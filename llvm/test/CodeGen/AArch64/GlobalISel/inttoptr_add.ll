@@ -10,6 +10,6 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    str w9, [x8]
 ; CHECK-NEXT:    ret
 entry:
-  store i32 1, i32* bitcast (i8* getelementptr inbounds (i8, i8* inttoptr (i32 -3076096 to i8*), i64 36) to i32*), align 4
+  store i32 1, ptr getelementptr inbounds (i8, ptr inttoptr (i32 -3076096 to ptr), i64 36), align 4
   ret void
 }
