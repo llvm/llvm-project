@@ -12565,8 +12565,7 @@ static SDValue lowerShuffleAsVTRUNC(const SDLoc &DL, MVT VT, SDValue V1,
       // As we're using both sources then we need to concat them together
       // and truncate from the double-sized src.
       MVT ConcatVT = MVT::getVectorVT(VT.getScalarType(), NumElts * 2);
-      SDValue Src = Src =
-          DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, V1, V2);
+      SDValue Src = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, V1, V2);
 
       // Move the offset'd elements into place for the truncation.
       if (Offset) {
