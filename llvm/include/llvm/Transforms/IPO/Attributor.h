@@ -5041,6 +5041,11 @@ struct AAPointerInfo : public AbstractAttribute {
       assert(RemoteI == R.RemoteI && "Expected same instruction!");
       assert(LocalI == R.LocalI && "Expected same instruction!");
       Kind = AccessKind(Kind | R.Kind);
+      // If we combine a may and a must access we clear the must bit.
+      if (Kind & AK_MUST && Kind & AK_MAY) {
+        Kind = AccessKind(Kind | AK_MAY);
+        Kind = AccessKind(Kind & ~AK_MUST);
+      }
       auto Before = Range;
       Range &= R.Range;
       if (Before.isUnassigned() || Before == Range) {
