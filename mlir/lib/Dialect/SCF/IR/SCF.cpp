@@ -3477,9 +3477,12 @@ LogicalResult scf::IndexSwitchOp::verify() {
   for (int64_t value : getCases())
     if (!valueSet.insert(value).second)
       return emitOpError("has duplicate case value: ") << value;
-
   auto verifyRegion = [&](Region &region, const Twine &name) -> LogicalResult {
-    auto yield = cast<YieldOp>(region.front().getTerminator());
+    auto yield = dyn_cast<YieldOp>(region.front().back());
+    if (!yield)
+      return emitOpError("expected region to end with scf.yield, but got ")
+             << region.front().back().getName();
+
     if (yield.getNumOperands() != getNumResults()) {
       return (emitOpError("expected each region to return ")
               << getNumResults() << " values, but " << name << " returns "
