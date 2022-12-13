@@ -2892,6 +2892,10 @@ void mlir::python::populateIRCore(py::module &m) {
              return self.get().ptr == other.get().ptr;
            })
       .def("__eq__", [](PyBlock &self, py::object &other) { return false; })
+      .def("__hash__",
+           [](PyBlock &self) {
+             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+           })
       .def(
           "__str__",
           [](PyBlock &self) {
