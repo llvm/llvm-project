@@ -18,6 +18,7 @@
 #include "lib/Error.h"
 #include "lib/LlvmState.h"
 #include "lib/PerfHelper.h"
+#include "lib/ProgressMeter.h"
 #include "lib/SnippetFile.h"
 #include "lib/SnippetRepetitor.h"
 #include "lib/Target.h"
@@ -113,6 +114,11 @@ static cl::opt<exegesis::InstructionBenchmark::RepetitionModeE> RepetitionMode(
         clEnumValN(exegesis::InstructionBenchmark::AggregateMin, "min",
                    "All of the above and take the minimum of measurements")),
     cl::init(exegesis::InstructionBenchmark::Duplicate));
+
+static cl::opt<bool> BenchmarkMeasurementsPrintProgress(
+    "measurements-print-progress",
+    cl::desc("Produce progress indicator when performing measurements"),
+    cl::cat(BenchmarkOptions), cl::init(false));
 
 static cl::opt<bool> BenchmarkSkipMeasurements(
     "skip-measurements",
@@ -395,7 +401,11 @@ void benchmarkMain() {
   if (BenchmarkFile.empty())
     BenchmarkFile = "-";
 
+  std::optional<ProgressMeter<>> Meter;
+  if (BenchmarkMeasurementsPrintProgress)
+    Meter.emplace(Configurations.size());
   for (const BenchmarkCode &Conf : Configurations) {
+    ProgressMeter<>::ProgressMeterStep MeterStep(Meter ? &*Meter : nullptr);
     InstructionBenchmark Result = ExitOnErr(Runner->runConfiguration(
         Conf, NumRepetitions, LoopBodySize, Repetitors, DumpObjectToDisk));
     ExitOnFileError(BenchmarkFile, Result.writeYaml(State, BenchmarkFile));
