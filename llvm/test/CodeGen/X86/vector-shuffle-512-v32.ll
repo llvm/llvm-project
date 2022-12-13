@@ -465,28 +465,14 @@ define <32 x i16> @shuffle_v32i16_32_zz_33_zz_34_zz_35_zz_36_zz_37_zz_38_zz_39_z
 define <8 x i16> @pr32967(<32 x i16> %v) {
 ; KNL-LABEL: pr32967:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; KNL-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; KNL-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; KNL-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[0,1,1,3,4,5,6,7]
-; KNL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; KNL-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[0,1,1,3,4,5,6,7]
-; KNL-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; KNL-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; KNL-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[1,3,2,3,4,5,6,7]
-; KNL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; KNL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,3,2,3,4,5,6,7]
-; KNL-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; KNL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; KNL-NEXT:    vpsrld $16, %zmm0, %zmm0
+; KNL-NEXT:    vpmovqw %zmm0, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: pr32967:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,5,9,13,17,21,25,29]
-; SKX-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; SKX-NEXT:    vpermt2w %ymm2, %ymm1, %ymm0
-; SKX-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
+; SKX-NEXT:    vpsrld $16, %zmm0, %zmm0
+; SKX-NEXT:    vpmovqw %zmm0, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
  %shuffle = shufflevector <32 x i16> %v, <32 x i16> undef, <8 x i32> <i32 1,i32 5,i32 9,i32 13,i32 17,i32 21,i32 25,i32 29>
