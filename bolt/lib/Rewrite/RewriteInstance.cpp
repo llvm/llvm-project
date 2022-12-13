@@ -30,7 +30,6 @@
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
@@ -679,7 +678,7 @@ void RewriteInstance::parseBuildID() {
   BuildID = Buf.slice(Offset, Offset + DescSz);
 }
 
-Optional<std::string> RewriteInstance::getPrintableBuildID() const {
+std::optional<std::string> RewriteInstance::getPrintableBuildID() const {
   if (BuildID.empty())
     return std::nullopt;
 
@@ -1683,7 +1682,7 @@ Error RewriteInstance::readSpecialSections() {
 
   // Parse build-id
   parseBuildID();
-  if (Optional<std::string> FileBuildID = getPrintableBuildID())
+  if (std::optional<std::string> FileBuildID = getPrintableBuildID())
     BC->setFileBuildID(*FileBuildID);
 
   parseSDTNotes();
