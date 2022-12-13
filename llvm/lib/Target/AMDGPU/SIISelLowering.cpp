@@ -475,6 +475,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::FSIN, ISD::FCOS, ISD::FDIV}, MVT::f32, Custom);
   setOperationAction(ISD::FDIV, MVT::f64, Custom);
 
+  setOperationAction(ISD::BF16_TO_FP, {MVT::i16, MVT::f32, MVT::f64}, Expand);
+  setOperationAction(ISD::FP_TO_BF16, {MVT::i16, MVT::f32, MVT::f64}, Expand);
+
   if (Subtarget->has16BitInsts()) {
     setOperationAction({ISD::Constant, ISD::SMIN, ISD::SMAX, ISD::UMIN,
                         ISD::UMAX, ISD::UADDSAT, ISD::USUBSAT},
@@ -846,8 +849,11 @@ MVT SITargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
     EVT ScalarVT = VT.getScalarType();
     unsigned Size = ScalarVT.getSizeInBits();
     if (Size == 16) {
-      if (Subtarget->has16BitInsts())
-        return VT.isInteger() ? MVT::v2i16 : MVT::v2f16;
+      if (Subtarget->has16BitInsts()) {
+        if (VT.isInteger())
+          return MVT::v2i16;
+        return (ScalarVT == MVT::bf16 ? MVT::i32 : MVT::v2f16);
+      }
       return VT.isInteger() ? MVT::i32 : MVT::f32;
     }
 
@@ -900,8 +906,13 @@ unsigned SITargetLowering::getVectorTypeBreakdownForCallingConv(
     // support, but unless we can properly handle 3-vectors, it will be still be
     // inconsistent.
     if (Size == 16 && Subtarget->has16BitInsts()) {
-      RegisterVT = VT.isInteger() ? MVT::v2i16 : MVT::v2f16;
-      IntermediateVT = RegisterVT;
+      if (ScalarVT == MVT::bf16) {
+        RegisterVT = MVT::i32;
+        IntermediateVT = MVT::v2bf16;
+      } else {
+        RegisterVT = VT.isInteger() ? MVT::v2i16 : MVT::v2f16;
+        IntermediateVT = RegisterVT;
+      }
       NumIntermediates = (NumElts + 1) / 2;
       return NumIntermediates;
     }
