@@ -1903,7 +1903,7 @@ convertToGuardPredicates(SmallVectorImpl<BasicBlock *> &GuardBlocks,
                          SmallVectorImpl<WeakVH> &DeletionCandidates,
                          const BBSetVector &Incoming,
                          const BBSetVector &Outgoing, const StringRef Prefix,
-                         Optional<unsigned> MaxControlFlowBooleans) {
+                         std::optional<unsigned> MaxControlFlowBooleans) {
   BBPredicates GuardPredicates;
   auto F = Incoming.front()->getParent();
 
@@ -1928,7 +1928,7 @@ convertToGuardPredicates(SmallVectorImpl<BasicBlock *> &GuardBlocks,
 BasicBlock *llvm::CreateControlFlowHub(
     DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
     const BBSetVector &Incoming, const BBSetVector &Outgoing,
-    const StringRef Prefix, Optional<unsigned> MaxControlFlowBooleans) {
+    const StringRef Prefix, std::optional<unsigned> MaxControlFlowBooleans) {
   if (Outgoing.size() < 2)
     return Outgoing.front();
 

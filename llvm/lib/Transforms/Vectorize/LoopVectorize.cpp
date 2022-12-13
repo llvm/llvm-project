@@ -410,7 +410,7 @@ static Optional<unsigned> getSmallBestKnownTC(ScalarEvolution &SE, Loop *L) {
   // Check if there is an expected trip count available from profile data.
   if (LoopVectorizeWithBlockFrequency)
     if (auto EstimatedTC = getLoopEstimatedTripCount(L))
-      return EstimatedTC;
+      return *EstimatedTC;
 
   // Check if upper bound estimate is known.
   if (unsigned ExpectedTC = SE.getSmallConstantMaxTripCount(L))
@@ -7683,7 +7683,7 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
   // replace the vectorizer-specific hints below).
   MDNode *OrigLoopID = OrigLoop->getLoopID();
 
-  Optional<MDNode *> VectorizedLoopID =
+  std::optional<MDNode *> VectorizedLoopID =
       makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
                                       LLVMLoopVectorizeFollowupVectorized});
 
@@ -10541,7 +10541,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       checkMixedPrecision(L, ORE);
   }
 
-  Optional<MDNode *> RemainderLoopID =
+  std::optional<MDNode *> RemainderLoopID =
       makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
                                       LLVMLoopVectorizeFollowupEpilogue});
   if (RemainderLoopID) {
