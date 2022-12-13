@@ -4,19 +4,19 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@_ZL3g_i = internal global i32* null, align 8
+@_ZL3g_i = internal global ptr null, align 8
 @.str = private unnamed_addr constant [2 x i8] c"0\00", align 1
 @.str.1 = private unnamed_addr constant [2 x i8] c"1\00", align 1
 
 define dso_local i32 @main() {
 ; CHECK-LABEL: define {{[^@]+}}@main() local_unnamed_addr {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    store i32* null, i32** @_ZL3g_i, align 8
+; CHECK-NEXT:    store ptr null, ptr @_ZL3g_i, align 8
 ; CHECK-NEXT:    call fastcc void @_ZL13PutsSomethingv()
 ; CHECK-NEXT:    ret i32 0
 ;
 bb:
-  store i32* null, i32** @_ZL3g_i, align 8
+  store ptr null, ptr @_ZL3g_i, align 8
   call void @_ZL13PutsSomethingv()
   ret i32 0
 }
@@ -24,35 +24,33 @@ bb:
 define internal void @_ZL13PutsSomethingv() {
 ; CHECK-LABEL: define {{[^@]+}}@_ZL13PutsSomethingv() unnamed_addr {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = load i32*, i32** @_ZL3g_i, align 8
-; CHECK-NEXT:    [[I1:%.*]] = icmp eq i32* [[I]], null
+; CHECK-NEXT:    [[I:%.*]] = load ptr, ptr @_ZL3g_i, align 8
+; CHECK-NEXT:    [[I1:%.*]] = icmp eq ptr [[I]], null
 ; CHECK-NEXT:    br i1 [[I1]], label [[BB2:%.*]], label [[BB6:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[I3:%.*]] = call noalias i8* @malloc(i64 4)
-; CHECK-NEXT:    [[I4:%.*]] = bitcast i8* [[I3]] to i32*
-; CHECK-NEXT:    store i32* [[I4]], i32** @_ZL3g_i, align 8
-; CHECK-NEXT:    [[I5:%.*]] = call i32 @puts(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i64 0, i64 0))
+; CHECK-NEXT:    [[I3:%.*]] = call noalias ptr @malloc(i64 4)
+; CHECK-NEXT:    store ptr [[I3]], ptr @_ZL3g_i, align 8
+; CHECK-NEXT:    [[I5:%.*]] = call i32 @puts(ptr @.str)
 ; CHECK-NEXT:    br label [[BB8:%.*]]
 ; CHECK:       bb6:
-; CHECK-NEXT:    [[I7:%.*]] = call i32 @puts(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0))
+; CHECK-NEXT:    [[I7:%.*]] = call i32 @puts(ptr @.str.1)
 ; CHECK-NEXT:    br label [[BB8]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %i = load i32*, i32** @_ZL3g_i, align 8
-  %i1 = icmp eq i32* %i, null
+  %i = load ptr, ptr @_ZL3g_i, align 8
+  %i1 = icmp eq ptr %i, null
   br i1 %i1, label %bb2, label %bb6
 
 bb2:                                              ; preds = %bb
-  %i3 = call noalias i8* @malloc(i64 4)
-  %i4 = bitcast i8* %i3 to i32*
-  store i32* %i4, i32** @_ZL3g_i, align 8
-  %i5 = call i32 @puts(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i64 0, i64 0))
+  %i3 = call noalias ptr @malloc(i64 4)
+  store ptr %i3, ptr @_ZL3g_i, align 8
+  %i5 = call i32 @puts(ptr @.str)
   br label %bb8
 
 bb6:                                              ; preds = %bb
-  %i7 = call i32 @puts(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0))
+  %i7 = call i32 @puts(ptr @.str.1)
   br label %bb8
 
 bb8:                                              ; preds = %bb6, %bb2
@@ -60,6 +58,6 @@ bb8:                                              ; preds = %bb6, %bb2
 }
 
 ; Function Attrs: allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite)
-declare dso_local noalias i8* @malloc(i64) #0
+declare dso_local noalias ptr @malloc(i64) #0
 
-declare dso_local i32 @puts(i8* nocapture readonly)
+declare dso_local i32 @puts(ptr nocapture readonly)
