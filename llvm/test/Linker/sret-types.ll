@@ -3,23 +3,23 @@
 %a = type { i64 }
 %struct = type { i32, i8 }
 
-; CHECK-LABEL: define void @f(%a* sret(%a) %0)
-define void @f(%a* sret(%a)) {
+; CHECK-LABEL: define void @f(ptr sret(%a) %0)
+define void @f(ptr sret(%a)) {
   ret void
 }
 
 ; CHECK-LABEL: define void @bar(
-; CHECK: call void @foo(%struct* sret(%struct) %ptr)
+; CHECK: call void @foo(ptr sret(%struct) %ptr)
 define void @bar() {
   %ptr = alloca %struct
-  call void @foo(%struct* sret(%struct) %ptr)
+  call void @foo(ptr sret(%struct) %ptr)
   ret void
 }
 
-; CHECK-LABEL: define void @g(%a* sret(%a) %0)
+; CHECK-LABEL: define void @g(ptr sret(%a) %0)
 
-; CHECK-LABEL: define void @foo(%struct* sret(%struct) %a)
-; CHECK-NEXT:   call void @baz(%struct* sret(%struct) %a)
-declare void @foo(%struct* sret(%struct) %a)
+; CHECK-LABEL: define void @foo(ptr sret(%struct) %a)
+; CHECK-NEXT:   call void @baz(ptr sret(%struct) %a)
+declare void @foo(ptr sret(%struct) %a)
 
-; CHECK: declare void @baz(%struct* sret(%struct))
+; CHECK: declare void @baz(ptr sret(%struct))

@@ -1,10 +1,10 @@
 %struct.Class = type { i8 }
 
-define weak_odr i32 @_ZN5ClassIiE3fooEv(%struct.Class* %this) align 2 !dbg !4 {
+define weak_odr i32 @_ZN5ClassIiE3fooEv(ptr %this) align 2 !dbg !4 {
 entry:
-  %this.addr = alloca %struct.Class*, align 8
-  store %struct.Class* %this, %struct.Class** %this.addr, align 8
-  %this1 = load %struct.Class*, %struct.Class** %this.addr
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  %this1 = load ptr, ptr %this.addr
   ret i32 0, !dbg !12
 }
 

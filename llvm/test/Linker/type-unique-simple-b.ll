@@ -9,9 +9,9 @@ define void @_Z1gi(i32 %a) #0 !dbg !10 {
 entry:
   %a.addr = alloca i32, align 4
   %t = alloca %struct.Base, align 4
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !18, metadata !DIExpression()), !dbg !19
-  call void @llvm.dbg.declare(metadata %struct.Base* %t, metadata !20, metadata !DIExpression()), !dbg !21
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !18, metadata !DIExpression()), !dbg !19
+  call void @llvm.dbg.declare(metadata ptr %t, metadata !20, metadata !DIExpression()), !dbg !21
   ret void, !dbg !22
 }
 
@@ -22,7 +22,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 define i32 @main() #2 !dbg !14 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
+  store i32 0, ptr %retval
   call void @_Z1fi(i32 0), !dbg !23
   call void @_Z1gi(i32 1), !dbg !24
   ret i32 0, !dbg !25

@@ -7,11 +7,11 @@
 
 %T = type opaque
 
-declare %T* @create()
+declare ptr @create()
 
 define void @test() {
-	%X = call %T* @create( )		; <%T*> [#uses=1]
-	%v = icmp eq %T* %X, null		; <i1> [#uses=0]
+	%X = call ptr @create( )		; <ptr> [#uses=1]
+	%v = icmp eq ptr %X, null		; <i1> [#uses=0]
 	ret void
 }
 
