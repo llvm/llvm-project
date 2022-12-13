@@ -37,8 +37,7 @@ getOffsetsSizesAndStrides(ArrayRef<Range> ranges) {
 /// come from an AttrSizedOperandSegments trait.
 void dispatchIndexOpFoldResult(OpFoldResult ofr,
                                SmallVectorImpl<Value> &dynamicVec,
-                               SmallVectorImpl<int64_t> &staticVec,
-                               int64_t sentinel) {
+                               SmallVectorImpl<int64_t> &staticVec) {
   auto v = ofr.dyn_cast<Value>();
   if (!v) {
     APInt apInt = ofr.get<Attribute>().cast<IntegerAttr>().getValue();
@@ -46,15 +45,14 @@ void dispatchIndexOpFoldResult(OpFoldResult ofr,
     return;
   }
   dynamicVec.push_back(v);
-  staticVec.push_back(sentinel);
+  staticVec.push_back(ShapedType::kDynamic);
 }
 
 void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
                                 SmallVectorImpl<Value> &dynamicVec,
-                                SmallVectorImpl<int64_t> &staticVec,
-                                int64_t sentinel) {
+                                SmallVectorImpl<int64_t> &staticVec) {
   for (OpFoldResult ofr : ofrs)
-    dispatchIndexOpFoldResult(ofr, dynamicVec, staticVec, sentinel);
+    dispatchIndexOpFoldResult(ofr, dynamicVec, staticVec);
 }
 
 /// Extract int64_t values from the assumed ArrayAttr of IntegerAttr.
