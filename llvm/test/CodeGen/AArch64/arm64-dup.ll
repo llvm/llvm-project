@@ -508,8 +508,7 @@ define <4 x i32> @dup_const24(<2 x i32> %A, <2 x i32> %B, <4 x i32> %C) nounwind
 define <8 x i16> @bitcast_i64_v8i16(i64 %a) {
 ; CHECK-LABEL: bitcast_i64_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    dup.8h v0, v0[0]
+; CHECK-NEXT:    dup.8h v0, w0
 ; CHECK-NEXT:    ret
   %b = bitcast i64 %a to <4 x i16>
   %r = shufflevector <4 x i16> %b, <4 x i16> poison, <8 x i32> zeroinitializer

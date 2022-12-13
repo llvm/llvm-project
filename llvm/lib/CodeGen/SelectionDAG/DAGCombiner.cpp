@@ -23021,6 +23021,23 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
         if (auto *Idx = dyn_cast<ConstantSDNode>(N0.getOperand(2)))
           if (Idx->getAPIntValue() == SplatIndex)
             return DAG.getSplatBuildVector(VT, SDLoc(N), N0.getOperand(1));
+
+      // Look through a bitcast if LE and splatting lane 0, through to a
+      // scalar_to_vector or a build_vector.
+      if (N0.getOpcode() == ISD::BITCAST && N0.getOperand(0).hasOneUse() &&
+          SplatIndex == 0 && DAG.getDataLayout().isLittleEndian() &&
+          (N0.getOperand(0).getOpcode() == ISD::SCALAR_TO_VECTOR ||
+           N0.getOperand(0).getOpcode() == ISD::BUILD_VECTOR)) {
+        EVT N00VT = N0.getOperand(0).getValueType();
+        if (VT.getScalarSizeInBits() <= N00VT.getScalarSizeInBits() &&
+            VT.isInteger() && N00VT.isInteger()) {
+          EVT InVT =
+              TLI.getTypeToTransformTo(*DAG.getContext(), VT.getScalarType());
+          SDValue Op = DAG.getZExtOrTrunc(N0.getOperand(0).getOperand(0),
+                                          SDLoc(N), InVT);
+          return DAG.getSplatBuildVector(VT, SDLoc(N), Op);
+        }
+      }
     }
 
     // If this is a bit convert that changes the element type of the vector but
