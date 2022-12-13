@@ -1314,7 +1314,8 @@ private:
                 [&Diagnostics,
                  Diagnoser = UncheckedOptionalAccessDiagnoser(Options)](
                     ASTContext &Ctx, const CFGElement &Elt,
-                    const TypeErasedDataflowAnalysisState &State) mutable {
+                    const TransferStateForDiagnostics<NoopLattice>
+                        &State) mutable {
                   auto EltDiagnostics =
                       Diagnoser.diagnose(Ctx, &Elt, State.Env);
                   llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
