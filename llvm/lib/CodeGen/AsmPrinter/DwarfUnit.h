@@ -350,6 +350,10 @@ private:
 
   virtual bool isDwoUnit() const = 0;
   const MCSymbol *getCrossSectionRelativeBaseAddress() const override;
+
+  /// Returns 'true' if the current DwarfVersion is compatible
+  /// with the specified \p Version.
+  bool isCompatibleWithVersion(uint16_t Version) const;
 };
 
 class DwarfTypeUnit final : public DwarfUnit {
