@@ -357,9 +357,8 @@ define i1 @test_class_is_nan_other_nnan_src(float %x) {
 
 define i1 @test_class_not_is_nan(float %x) {
 ; CHECK-LABEL: define {{[^@]+}}@test_class_not_is_nan(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 3)
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CLASS]], true
-; CHECK-NEXT:    ret i1 [[NOT]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 1020)
+; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %x, i32 3)
   %not = xor i1 %class, true
@@ -381,9 +380,8 @@ define i1 @test_class_not_is_nan_multi_use(float %x, ptr %ptr) {
 
 define i1 @test_class_not_is_inf_nan(float %x) {
 ; CHECK-LABEL: define {{[^@]+}}@test_class_not_is_inf_nan(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 519)
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CLASS]], true
-; CHECK-NEXT:    ret i1 [[NOT]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 504)
+; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %x, i32 519)
   %not = xor i1 %class, true
@@ -392,9 +390,8 @@ define i1 @test_class_not_is_inf_nan(float %x) {
 
 define i1 @test_class_not_is_normal(float %x) {
 ; CHECK-LABEL: define {{[^@]+}}@test_class_not_is_normal(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 264)
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CLASS]], true
-; CHECK-NEXT:    ret i1 [[NOT]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 759)
+; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %x, i32 264)
   %not = xor i1 %class, true
@@ -413,9 +410,8 @@ define i1 @test_class_xor_false(float %x) {
 
 define <2 x i1> @test_class_not_vector(<2 x float> %x) {
 ; CHECK-LABEL: define {{[^@]+}}@test_class_not_vector(
-; CHECK-NEXT:    [[CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[X:%.*]], i32 33)
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[CLASS]], <i1 true, i1 true>
-; CHECK-NEXT:    ret <2 x i1> [[NOT]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[X:%.*]], i32 990)
+; CHECK-NEXT:    ret <2 x i1> [[CLASS]]
 ;
   %class = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %x, i32 33)
   %not = xor <2 x i1> %class, <i1 true, i1 true>
