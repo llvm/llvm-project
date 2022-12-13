@@ -1453,7 +1453,7 @@ void RewriteInstance::adjustFunctionBoundaries() {
       NextFunction = &std::next(BFI)->second;
 
     // Check if it's a fragment of a function.
-    Optional<StringRef> FragName =
+    std::optional<StringRef> FragName =
         Function.hasRestoredNameRegex(".*\\.cold(\\.[0-9]+)?");
     if (FragName) {
       static bool PrintedWarning = false;
@@ -2768,7 +2768,7 @@ void RewriteInstance::selectFunctionsToProcess() {
           return true;
 
       // Non-regex check (-funcs-no-regex and -funcs-file-no-regex).
-      Optional<StringRef> Match =
+      std::optional<StringRef> Match =
           Function.forEachName([&ForceFunctionsNR](StringRef Name) {
             return ForceFunctionsNR.count(Name.str());
           });

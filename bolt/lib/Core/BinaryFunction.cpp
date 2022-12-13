@@ -242,24 +242,21 @@ std::string BinaryFunction::buildColdCodeSectionName(StringRef Name,
 
 uint64_t BinaryFunction::Count = 0;
 
-Optional<StringRef> BinaryFunction::hasNameRegex(const StringRef Name) const {
+std::optional<StringRef>
+BinaryFunction::hasNameRegex(const StringRef Name) const {
   const std::string RegexName = (Twine("^") + StringRef(Name) + "$").str();
   Regex MatchName(RegexName);
-  Optional<StringRef> Match = forEachName(
+  return forEachName(
       [&MatchName](StringRef Name) { return MatchName.match(Name); });
-
-  return Match;
 }
 
-Optional<StringRef>
+std::optional<StringRef>
 BinaryFunction::hasRestoredNameRegex(const StringRef Name) const {
   const std::string RegexName = (Twine("^") + StringRef(Name) + "$").str();
   Regex MatchName(RegexName);
-  Optional<StringRef> Match = forEachName([&MatchName](StringRef Name) {
+  return forEachName([&MatchName](StringRef Name) {
     return MatchName.match(NameResolver::restore(Name));
   });
-
-  return Match;
 }
 
 std::string BinaryFunction::getDemangledName() const {
