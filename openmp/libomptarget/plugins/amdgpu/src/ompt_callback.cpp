@@ -17,8 +17,6 @@
 #include <atomic>
 #include <mutex>
 #include <vector>
-
-#include <dlfcn.h>
 #include <string.h>
 
 //****************************************************************************
@@ -111,10 +109,14 @@ OMPT_API_ROUTINE ompt_set_result_t ompt_set_trace_ompt(ompt_device_t *device,
     ompt_device_callbacks.set_trace_ompt(device, enable, etype);
     // libomptarget specific
     if (!ompt_set_trace_ompt_fn) {
-      void *vptr = dlsym(NULL, "libomptarget_ompt_set_trace_ompt");
-      assert(vptr && "OMPT set trace ompt entry point not found");
-      ompt_set_trace_ompt_fn =
-          reinterpret_cast<libomptarget_ompt_set_trace_ompt_t>(vptr);
+      auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
+      if (libomptarget_dyn_lib != nullptr && libomptarget_dyn_lib->isValid()) {
+        void *vptr = libomptarget_dyn_lib->getAddressOfSymbol(
+            "libomptarget_ompt_set_trace_ompt");
+        assert(vptr && "OMPT set trace ompt entry point not found");
+        ompt_set_trace_ompt_fn =
+            reinterpret_cast<libomptarget_ompt_set_trace_ompt_t>(vptr);
+      }
     }
   }
   return ompt_set_trace_ompt_fn(device, enable, etype);
@@ -147,10 +149,14 @@ ompt_start_trace(ompt_device_t *device, ompt_callback_buffer_request_t request,
 
     // libomptarget specific
     if (!ompt_start_trace_fn) {
-      void *vptr = dlsym(NULL, "libomptarget_ompt_start_trace");
-      assert(vptr && "OMPT start trace entry point not found");
-      ompt_start_trace_fn =
-          reinterpret_cast<libomptarget_ompt_start_trace_t>(vptr);
+      auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
+      if (libomptarget_dyn_lib != nullptr && libomptarget_dyn_lib->isValid()) {
+        void *vptr = libomptarget_dyn_lib->getAddressOfSymbol(
+            "libomptarget_ompt_start_trace");
+        assert(vptr && "OMPT start trace entry point not found");
+        ompt_start_trace_fn =
+            reinterpret_cast<libomptarget_ompt_start_trace_t>(vptr);
+      }
     }
   }
   return ompt_start_trace_fn(request, complete);
@@ -165,10 +171,14 @@ OMPT_API_ROUTINE int ompt_flush_trace(ompt_device_t *device) {
     // Protect the function pointer
     std::unique_lock<std::mutex> lck(flush_trace_mutex);
     if (!ompt_flush_trace_fn) {
-      void *vptr = dlsym(NULL, "libomptarget_ompt_flush_trace");
-      assert(vptr && "OMPT flush trace entry point not found");
-      ompt_flush_trace_fn =
-          reinterpret_cast<libomptarget_ompt_flush_trace_t>(vptr);
+      auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
+      if (libomptarget_dyn_lib != nullptr && libomptarget_dyn_lib->isValid()) {
+        void *vptr = libomptarget_dyn_lib->getAddressOfSymbol(
+            "libomptarget_ompt_flush_trace");
+        assert(vptr && "OMPT flush trace entry point not found");
+        ompt_flush_trace_fn =
+            reinterpret_cast<libomptarget_ompt_flush_trace_t>(vptr);
+      }
     }
   }
   return ompt_flush_trace_fn(device);
@@ -192,10 +202,14 @@ OMPT_API_ROUTINE int ompt_stop_trace(ompt_device_t *device) {
     ompt_enable_queue_profiling(false /* enable */);
 
     if (!ompt_stop_trace_fn) {
-      void *vptr = dlsym(NULL, "libomptarget_ompt_stop_trace");
-      assert(vptr && "OMPT stop trace entry point not found");
-      ompt_stop_trace_fn =
-          reinterpret_cast<libomptarget_ompt_stop_trace_t>(vptr);
+      auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
+      if (libomptarget_dyn_lib != nullptr && libomptarget_dyn_lib->isValid()) {
+        void *vptr = libomptarget_dyn_lib->getAddressOfSymbol(
+            "libomptarget_ompt_stop_trace");
+        assert(vptr && "OMPT stop trace entry point not found");
+        ompt_stop_trace_fn =
+            reinterpret_cast<libomptarget_ompt_stop_trace_t>(vptr);
+      }
     }
   }
   return ompt_stop_trace_fn(device);
@@ -227,10 +241,14 @@ ompt_advance_buffer_cursor(ompt_device_t *device, ompt_buffer_t *buffer,
   {
     std::unique_lock<std::mutex> lck(advance_buffer_cursor_mutex);
     if (!ompt_advance_buffer_cursor_fn) {
-      void *vptr = dlsym(NULL, "libomptarget_ompt_advance_buffer_cursor");
-      assert(vptr && "OMPT advance buffer cursor entry point not found");
-      ompt_advance_buffer_cursor_fn =
-          reinterpret_cast<libomptarget_ompt_advance_buffer_cursor_t>(vptr);
+      auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
+      if (libomptarget_dyn_lib != nullptr && libomptarget_dyn_lib->isValid()) {
+        void *vptr = libomptarget_dyn_lib->getAddressOfSymbol(
+            "libomptarget_ompt_advance_buffer_cursor");
+        assert(vptr && "OMPT advance buffer cursor entry point not found");
+        ompt_advance_buffer_cursor_fn =
+            reinterpret_cast<libomptarget_ompt_advance_buffer_cursor_t>(vptr);
+      }
     }
   }
   return ompt_advance_buffer_cursor_fn(device, buffer, size, current, next);
@@ -241,10 +259,14 @@ ompt_get_record_type(ompt_buffer_t *buffer, ompt_buffer_cursor_t current) {
   {
     std::unique_lock<std::mutex> lck(get_record_type_mutex);
     if (!ompt_get_record_type_fn) {
-      void *vptr = dlsym(NULL, "libomptarget_ompt_get_record_type");
-      assert(vptr && "OMPT get record type entry point not found");
-      ompt_get_record_type_fn =
-          reinterpret_cast<libomptarget_ompt_get_record_type_t>(vptr);
+      auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
+      if (libomptarget_dyn_lib != nullptr && libomptarget_dyn_lib->isValid()) {
+        void *vptr = libomptarget_dyn_lib->getAddressOfSymbol(
+            "libomptarget_ompt_get_record_type");
+        assert(vptr && "OMPT get record type entry point not found");
+        ompt_get_record_type_fn =
+            reinterpret_cast<libomptarget_ompt_get_record_type_t>(vptr);
+      }
     }
   }
   return ompt_get_record_type_fn(buffer, current);
@@ -331,11 +353,10 @@ __attribute__((constructor)) static void ompt_init(void) {
   ompt_result.initialize = ompt_device_init;
   ompt_result.finalize = ompt_device_fini;
   ompt_result.tool_data.value = 0;
-  ;
 
   ompt_device_callbacks.init();
-
   libomptarget_connector.connect(&ompt_result);
+
   DP("OMPT: Exiting ompt_init\n");
 }
 #endif

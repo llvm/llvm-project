@@ -24,7 +24,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <dlfcn.h>
 #include <functional>
 #include <list>
 #include <memory>
@@ -1391,8 +1390,13 @@ static void ensureTimestampFn() {
   std::unique_lock<std::mutex> timestamp_fn_lck(ompt_set_timestamp_mtx);
   if (ompt_set_timestamp_fn)
     return;
-  void *vptr = dlsym(NULL, "libomptarget_ompt_set_timestamp");
-  assert(vptr && "OMPT set timestamp entry point not found");
+  auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
+  if (libomptarget_dyn_lib == nullptr || !libomptarget_dyn_lib->isValid())
+    return;
+  void *vptr = libomptarget_dyn_lib->getAddressOfSymbol(
+      "libomptarget_ompt_set_timestamp");
+  if (!vptr)
+    return;
   ompt_set_timestamp_fn =
       reinterpret_cast<libomptarget_ompt_set_timestamp_t>(vptr);
 }
@@ -1411,8 +1415,10 @@ static void recordCopyTimingInNs(hsa_signal_t signal) {
   ensureTimestampFn();
   // No need to hold a lock
   // Factor in the frequency
-  ompt_set_timestamp_fn(time_rec.start * DeviceInfo().TicksToTime,
-                        time_rec.end * DeviceInfo().TicksToTime);
+  if (ompt_set_timestamp_fn) {
+    ompt_set_timestamp_fn(time_rec.start * DeviceInfo().TicksToTime,
+                          time_rec.end * DeviceInfo().TicksToTime);
+  }
 }
 
 /// Get the HSA system timestamps for the input agent and signal associated
@@ -1430,8 +1436,10 @@ static void recordKernelTimingInNs(hsa_signal_t signal, hsa_agent_t agent) {
   ensureTimestampFn();
   // No need to hold a lock
   // Factor in the frequency
-  ompt_set_timestamp_fn(time_rec.start * DeviceInfo().TicksToTime,
-                        time_rec.end * DeviceInfo().TicksToTime);
+  if (ompt_set_timestamp_fn) {
+    ompt_set_timestamp_fn(time_rec.start * DeviceInfo().TicksToTime,
+                          time_rec.end * DeviceInfo().TicksToTime);
+  }
 }
 
 /// Get the current HSA system timestamp
@@ -1456,7 +1464,8 @@ private:
   void setTimestamp() {
     uint64_t EndTime = getSystemTimestampInNs();
     ensureTimestampFn();
-    ompt_set_timestamp_fn(StartTime, EndTime);
+    if (ompt_set_timestamp_fn)
+      ompt_set_timestamp_fn(StartTime, EndTime);
   }
 };
 
@@ -2142,10 +2151,15 @@ void getLaunchVals(uint16_t &ThreadsPerGroup, int &NumGroups, int WarpSize,
     {
       std::unique_lock<std::mutex> granted_teams_fn_lck(granted_teams_mtx);
       if (!ompt_set_granted_teams_fn) {
-        void *vptr = dlsym(NULL, "libomptarget_ompt_set_granted_teams");
-        assert(vptr && "OMPT set granted teams entry point not found");
-        ompt_set_granted_teams_fn =
-            reinterpret_cast<libomptarget_ompt_set_granted_teams_t>(vptr);
+        auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
+        if (libomptarget_dyn_lib != nullptr &&
+            libomptarget_dyn_lib->isValid()) {
+          void *vptr = libomptarget_dyn_lib->getAddressOfSymbol(
+              "libomptarget_ompt_set_granted_teams");
+          assert(vptr && "OMPT set granted teams entry point not found");
+          ompt_set_granted_teams_fn =
+              reinterpret_cast<libomptarget_ompt_set_granted_teams_t>(vptr);
+        }
       }
     }
     // No need to hold a lock
@@ -3137,6 +3151,7 @@ int32_t __tgt_rtl_init_device(int DeviceId) {
   OMPT_IF_ENABLED(
       std::string ompt_gpu_type("AMD "); ompt_gpu_type += GetInfoName;
       const char *type = ompt_gpu_type.c_str();
+      ompt_device_callbacks.compute_parent_dyn_lib("libomptarget.so");
       ompt_device_callbacks.ompt_callback_device_initialize(DeviceId, type););
 
   return OFFLOAD_SUCCESS;

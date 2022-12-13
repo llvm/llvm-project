@@ -13,7 +13,6 @@
 #include <assert.h>
 #include <atomic>
 #include <cstring>
-#include <dlfcn.h>
 #include <mutex>
 
 //****************************************************************************
@@ -569,8 +568,8 @@ __attribute__((constructor(102))) static void ompt_init(void) {
   ompt_result.tool_data.value = 0;
 
   ompt_device_callbacks.init();
-
   libomp_connector.connect(&ompt_result);
+
   DP("OMPT: Exit ompt_init\n");
 }
 #endif

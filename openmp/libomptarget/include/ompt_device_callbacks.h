@@ -15,6 +15,8 @@
 #ifndef _OMPT_DEVICE_CALLBACKS_H
 #define _OMPT_DEVICE_CALLBACKS_H
 
+#include "llvm/Support/DynamicLibrary.h"
+
 //****************************************************************************
 // local includes
 //****************************************************************************
@@ -239,6 +241,7 @@ public:
     enabled = false;
     tracing_enabled = false;
     tracing_type_enabled = 0;
+    parent_dyn_lib = nullptr;
 
 #define init_name(name, type, code) name##_fn = 0;
     FOREACH_OMPT_TARGET_CALLBACK(init_name)
@@ -316,6 +319,18 @@ public:
     }
   }
 
+  void compute_parent_dyn_lib(const char *lib_name) {
+    if (parent_dyn_lib)
+      return;
+    std::string err_msg;
+    parent_dyn_lib = std::make_shared<llvm::sys::DynamicLibrary>(
+        llvm::sys::DynamicLibrary::getPermanentLibrary(lib_name, &err_msg));
+  }
+
+  std::shared_ptr<llvm::sys::DynamicLibrary> get_parent_dyn_lib() {
+    return parent_dyn_lib;
+  }
+
   void prepare_devices(int number_of_devices) { resize(number_of_devices); };
 
   void register_callbacks(ompt_function_lookup_t lookup) {
@@ -352,6 +367,7 @@ private:
   bool enabled;
   std::atomic<bool> tracing_enabled;
   std::atomic<uint64_t> tracing_type_enabled;
+  std::shared_ptr<llvm::sys::DynamicLibrary> parent_dyn_lib;
 
 #define declare_name(name, type, code) name##_t name##_fn;
   FOREACH_OMPT_TARGET_CALLBACK(declare_name)

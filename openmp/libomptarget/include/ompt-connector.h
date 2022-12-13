@@ -18,8 +18,9 @@
 //****************************************************************************
 // global includes
 //****************************************************************************
+#include "llvm/Support/DynamicLibrary.h"
 
-#include <dlfcn.h>
+#include <memory>
 #include <string>
 
 //****************************************************************************
@@ -57,38 +58,52 @@ typedef void (*library_ompt_connect_t)(ompt_start_tool_result_t *result);
 
 class library_ompt_connector_t {
 public:
+  library_ompt_connector_t(const char *ident) {
+    lib_ident.append(ident);
+    is_initialized = false;
+  }
+  library_ompt_connector_t() = delete;
+
   void connect(ompt_start_tool_result_t *ompt_result) {
     initialize();
-    if (library_ompt_connect) {
-      library_ompt_connect(ompt_result);
-    }
-  };
-
-  library_ompt_connector_t(const char *library_name) {
-    library_connect_routine.append(library_name);
-    library_connect_routine.append("_ompt_connect");
-    is_initialized = false;
-  };
-  library_ompt_connector_t() = delete;
+    if (!library_ompt_connect)
+      return;
+    library_ompt_connect(ompt_result);
+  }
 
 private:
   void initialize() {
-    if (is_initialized == false) {
-      DP("OMPT: library_ompt_connect = %s\n", library_connect_routine.c_str());
-      void *vptr = dlsym(NULL, library_connect_routine.c_str());
-      // If dlsym fails, library_ompt_connect will be null. connect() checks
-      // for this condition
+    if (is_initialized)
+      return;
+
+    std::string err_msg;
+    std::string lib_name = lib_ident;
+    lib_name += ".so";
+
+    DP("OMPT: Trying to load library %s\n", lib_name.c_str());
+    auto dyn_lib_handle = std::make_shared<llvm::sys::DynamicLibrary>(
+        llvm::sys::DynamicLibrary::getPermanentLibrary(lib_name.c_str(),
+                                                       &err_msg));
+    if (!dyn_lib_handle->isValid()) {
+      // The upper layer will bail out if the handle is null.
+      library_ompt_connect = nullptr;
+    } else {
+      auto lib_conn_rtn = lib_ident + "_ompt_connect";
+      DP("OMPT: Trying to get address of connection routine %s\n",
+         lib_conn_rtn.c_str());
       library_ompt_connect = reinterpret_cast<library_ompt_connect_t>(
-          reinterpret_cast<long>(vptr));
-      DP("OMPT: library_ompt_connect = %p\n", library_ompt_connect);
-      is_initialized = true;
+          dyn_lib_handle->getAddressOfSymbol(lib_conn_rtn.c_str()));
     }
-  };
+    DP("OMPT: Library connection handle = %p\n", library_ompt_connect);
+    is_initialized = true;
+  }
 
 private:
+  /// Ensure initialization occurs only once
   bool is_initialized;
+  /// Handle of connect routine provided by source library
   library_ompt_connect_t library_ompt_connect;
-  std::string library_connect_routine;
+  std::string lib_ident;
 };
 
 #endif
