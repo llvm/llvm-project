@@ -693,6 +693,28 @@ public:
     return BasicBlocks.insert(Position, BB);
   }
 
+  /// Transfer all blocks from \p FromF to this function at \p ToIt.
+  void splice(Function::iterator ToIt, Function *FromF) {
+    splice(ToIt, FromF, FromF->begin(), FromF->end());
+  }
+
+  /// Transfer one BasicBlock from \p FromF at \p FromIt to this function
+  /// at \p ToIt.
+  void splice(Function::iterator ToIt, Function *FromF,
+              Function::iterator FromIt) {
+    auto FromItNext = std::next(FromIt);
+    // Single-element splice is a noop if destination == source.
+    if (ToIt == FromIt || ToIt == FromItNext)
+      return;
+    splice(ToIt, FromF, FromIt, FromItNext);
+  }
+
+  /// Transfer a range of basic blocks that belong to \p FromF from \p
+  /// FromBeginIt to \p FromEndIt, to this function at \p ToIt.
+  void splice(Function::iterator ToIt, Function *FromF,
+              Function::iterator FromBeginIt,
+              Function::iterator FromEndIt);
+
   /// Get the underlying elements of the Function... the basic block list is
   /// empty for external functions.
   ///
