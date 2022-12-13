@@ -1479,6 +1479,13 @@ __kmp_fork_in_teams(ident_t *loc, int gtid, kmp_team_t *parent_team,
   parent_team->t.t_level++;
   parent_team->t.t_def_allocator = master_th->th.th_def_allocator; // save
 
+  // If the threads allocated to the team are less than the thread limit, update
+  // the thread limit here. th_teams_size.nth is specific to this team nested
+  // in a teams construct, the team is fully created, and we're about to do
+  // the actual fork. Best to do this here so that the subsequent uses below
+  // and in the join have the correct value.
+  master_th->th.th_teams_size.nth = parent_team->t.t_nproc;
+
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled) {
     ompt_lw_taskteam_t lw_taskteam;
