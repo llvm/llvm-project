@@ -116,9 +116,9 @@ define float @uitofp(i32 %arg) {
 
 define float @freeze_fma(float %arg0, float noundef %arg1, float noundef %arg2) {
 ; CHECK-LABEL: @freeze_fma(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.fma.f32(float [[ARG0:%.*]], float noundef [[ARG1:%.*]], float noundef [[ARG2:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.fma.f32(float [[ARG0_FR]], float noundef [[ARG1:%.*]], float noundef [[ARG2:%.*]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.fma.f32(float %arg0, float noundef %arg1, float noundef %arg2)
   %freeze = freeze float %op
@@ -127,9 +127,9 @@ define float @freeze_fma(float %arg0, float noundef %arg1, float noundef %arg2) 
 
 define float @freeze_fmuladd(float %arg0, float noundef %arg1, float noundef %arg2) {
 ; CHECK-LABEL: @freeze_fmuladd(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.fmuladd.f32(float [[ARG0:%.*]], float noundef [[ARG1:%.*]], float noundef [[ARG2:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.fmuladd.f32(float [[ARG0_FR]], float noundef [[ARG1:%.*]], float noundef [[ARG2:%.*]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.fmuladd.f32(float %arg0, float noundef %arg1, float noundef %arg2)
   %freeze = freeze float %op
@@ -138,9 +138,9 @@ define float @freeze_fmuladd(float %arg0, float noundef %arg1, float noundef %ar
 
 define float @freeze_sqrt(float %arg) {
 ; CHECK-LABEL: @freeze_sqrt(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.sqrt.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.sqrt.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.sqrt.f32(float %arg)
   %freeze = freeze float %op
@@ -160,9 +160,9 @@ define float @freeze_powi(float %arg0, i32 %arg1) {
 
 define float @freeze_sin(float %arg) {
 ; CHECK-LABEL: @freeze_sin(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.sin.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.sin.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.sin.f32(float %arg)
   %freeze = freeze float %op
@@ -171,9 +171,9 @@ define float @freeze_sin(float %arg) {
 
 define float @freeze_cos(float %arg) {
 ; CHECK-LABEL: @freeze_cos(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.cos.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.cos.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.cos.f32(float %arg)
   %freeze = freeze float %op
@@ -182,9 +182,9 @@ define float @freeze_cos(float %arg) {
 
 define float @freeze_pow(float %arg0, float noundef %arg1) {
 ; CHECK-LABEL: @freeze_pow(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.pow.f32(float [[ARG0:%.*]], float noundef [[ARG1:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.pow.f32(float [[ARG0_FR]], float noundef [[ARG1:%.*]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.pow.f32(float %arg0, float noundef %arg1)
   %freeze = freeze float %op
@@ -193,9 +193,9 @@ define float @freeze_pow(float %arg0, float noundef %arg1) {
 
 define float @freeze_log(float %arg) {
 ; CHECK-LABEL: @freeze_log(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.log.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.log.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.log.f32(float %arg)
   %freeze = freeze float %op
@@ -204,9 +204,9 @@ define float @freeze_log(float %arg) {
 
 define float @freeze_log10(float %arg) {
 ; CHECK-LABEL: @freeze_log10(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.log10.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.log10.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.log10.f32(float %arg)
   %freeze = freeze float %op
@@ -215,9 +215,9 @@ define float @freeze_log10(float %arg) {
 
 define float @freeze_log2(float %arg) {
 ; CHECK-LABEL: @freeze_log2(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.log2.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.log2.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.log2.f32(float %arg)
   %freeze = freeze float %op
@@ -226,9 +226,9 @@ define float @freeze_log2(float %arg) {
 
 define float @freeze_exp(float %arg) {
 ; CHECK-LABEL: @freeze_exp(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.exp.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.exp.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.exp.f32(float %arg)
   %freeze = freeze float %op
@@ -237,9 +237,9 @@ define float @freeze_exp(float %arg) {
 
 define float @freeze_exp2(float %arg) {
 ; CHECK-LABEL: @freeze_exp2(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.exp2.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.exp2.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.exp2.f32(float %arg)
   %freeze = freeze float %op
@@ -248,9 +248,9 @@ define float @freeze_exp2(float %arg) {
 
 define float @freeze_fabs(float %arg) {
 ; CHECK-LABEL: @freeze_fabs(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.fabs.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.fabs.f32(float %arg)
   %freeze = freeze float %op
@@ -259,9 +259,9 @@ define float @freeze_fabs(float %arg) {
 
 define float @freeze_copysign(float %arg0, float noundef %arg1) {
 ; CHECK-LABEL: @freeze_copysign(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.copysign.f32(float [[ARG0:%.*]], float noundef [[ARG1:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.copysign.f32(float [[ARG0_FR]], float noundef [[ARG1:%.*]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.copysign.f32(float %arg0, float noundef %arg1)
   %freeze = freeze float %op
@@ -270,9 +270,9 @@ define float @freeze_copysign(float %arg0, float noundef %arg1) {
 
 define float @freeze_floor(float %arg) {
 ; CHECK-LABEL: @freeze_floor(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.floor.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.floor.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.floor.f32(float %arg)
   %freeze = freeze float %op
@@ -281,9 +281,9 @@ define float @freeze_floor(float %arg) {
 
 define float @freeze_ceil(float %arg) {
 ; CHECK-LABEL: @freeze_ceil(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.ceil.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.ceil.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.ceil.f32(float %arg)
   %freeze = freeze float %op
@@ -292,9 +292,9 @@ define float @freeze_ceil(float %arg) {
 
 define float @freeze_trunc(float %arg) {
 ; CHECK-LABEL: @freeze_trunc(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.trunc.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.trunc.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.trunc.f32(float %arg)
   %freeze = freeze float %op
@@ -303,9 +303,9 @@ define float @freeze_trunc(float %arg) {
 
 define float @freeze_rint(float %arg) {
 ; CHECK-LABEL: @freeze_rint(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.rint.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.rint.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.rint.f32(float %arg)
   %freeze = freeze float %op
@@ -314,9 +314,9 @@ define float @freeze_rint(float %arg) {
 
 define float @freeze_nearbyint(float %arg) {
 ; CHECK-LABEL: @freeze_nearbyint(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.nearbyint.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.nearbyint.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.nearbyint.f32(float %arg)
   %freeze = freeze float %op
@@ -325,9 +325,9 @@ define float @freeze_nearbyint(float %arg) {
 
 define float @freeze_round(float %arg) {
 ; CHECK-LABEL: @freeze_round(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.round.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.round.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.round.f32(float %arg)
   %freeze = freeze float %op
@@ -336,9 +336,9 @@ define float @freeze_round(float %arg) {
 
 define float @freeze_roundeven(float %arg) {
 ; CHECK-LABEL: @freeze_roundeven(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.roundeven.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.roundeven.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.roundeven.f32(float %arg)
   %freeze = freeze float %op
@@ -347,9 +347,9 @@ define float @freeze_roundeven(float %arg) {
 
 define float @freeze_canonicalize(float %arg) {
 ; CHECK-LABEL: @freeze_canonicalize(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.canonicalize.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.canonicalize.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.canonicalize.f32(float %arg)
   %freeze = freeze float %op
@@ -358,9 +358,9 @@ define float @freeze_canonicalize(float %arg) {
 
 define float @freeze_arithmetic_fence(float %arg) {
 ; CHECK-LABEL: @freeze_arithmetic_fence(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.arithmetic.fence.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.arithmetic.fence.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.arithmetic.fence.f32(float %arg)
   %freeze = freeze float %op
@@ -369,9 +369,9 @@ define float @freeze_arithmetic_fence(float %arg) {
 
 define i32 @freeze_lround(float %arg) {
 ; CHECK-LABEL: @freeze_lround(
-; CHECK-NEXT:    [[OP:%.*]] = call i32 @llvm.lround.i32.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 [[OP]]
-; CHECK-NEXT:    ret i32 [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call i32 @llvm.lround.i32.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret i32 [[OP]]
 ;
   %op = call i32 @llvm.lround.i32.f32(float %arg)
   %freeze = freeze i32 %op
@@ -380,9 +380,9 @@ define i32 @freeze_lround(float %arg) {
 
 define i32 @freeze_llround(float %arg) {
 ; CHECK-LABEL: @freeze_llround(
-; CHECK-NEXT:    [[OP:%.*]] = call i32 @llvm.llround.i32.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 [[OP]]
-; CHECK-NEXT:    ret i32 [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call i32 @llvm.llround.i32.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret i32 [[OP]]
 ;
   %op = call i32 @llvm.llround.i32.f32(float %arg)
   %freeze = freeze i32 %op
@@ -391,9 +391,9 @@ define i32 @freeze_llround(float %arg) {
 
 define i32 @freeze_lrint(float %arg) {
 ; CHECK-LABEL: @freeze_lrint(
-; CHECK-NEXT:    [[OP:%.*]] = call i32 @llvm.lrint.i32.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 [[OP]]
-; CHECK-NEXT:    ret i32 [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call i32 @llvm.lrint.i32.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret i32 [[OP]]
 ;
   %op = call i32 @llvm.lrint.i32.f32(float %arg)
   %freeze = freeze i32 %op
@@ -402,9 +402,9 @@ define i32 @freeze_lrint(float %arg) {
 
 define i32 @freeze_llrint(float %arg) {
 ; CHECK-LABEL: @freeze_llrint(
-; CHECK-NEXT:    [[OP:%.*]] = call i32 @llvm.llrint.i32.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 [[OP]]
-; CHECK-NEXT:    ret i32 [[FREEZE]]
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call i32 @llvm.llrint.i32.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret i32 [[OP]]
 ;
   %op = call i32 @llvm.llrint.i32.f32(float %arg)
   %freeze = freeze i32 %op
@@ -453,9 +453,9 @@ define i32 @freeze_noundef_llrint(float %arg) {
 
 define float @freeze_minnum(float %arg0, float noundef %arg1) {
 ; CHECK-LABEL: @freeze_minnum(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.minnum.f32(float [[ARG0:%.*]], float noundef [[ARG1:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.minnum.f32(float [[ARG0_FR]], float noundef [[ARG1:%.*]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.minnum.f32(float %arg0, float noundef %arg1)
   %freeze = freeze float %op
@@ -464,9 +464,9 @@ define float @freeze_minnum(float %arg0, float noundef %arg1) {
 
 define float @freeze_maxnum(float %arg0, float noundef %arg1) {
 ; CHECK-LABEL: @freeze_maxnum(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.maxnum.f32(float [[ARG0:%.*]], float noundef [[ARG1:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.maxnum.f32(float [[ARG0_FR]], float noundef [[ARG1:%.*]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.maxnum.f32(float %arg0, float noundef %arg1)
   %freeze = freeze float %op
@@ -475,9 +475,9 @@ define float @freeze_maxnum(float %arg0, float noundef %arg1) {
 
 define float @freeze_minimum(float %arg0, float noundef %arg1) {
 ; CHECK-LABEL: @freeze_minimum(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.minimum.f32(float [[ARG0:%.*]], float noundef [[ARG1:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.minimum.f32(float [[ARG0_FR]], float noundef [[ARG1:%.*]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.minimum.f32(float %arg0, float noundef %arg1)
   %freeze = freeze float %op
@@ -486,9 +486,9 @@ define float @freeze_minimum(float %arg0, float noundef %arg1) {
 
 define float @freeze_maximum(float %arg0, float noundef %arg1) {
 ; CHECK-LABEL: @freeze_maximum(
-; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.maximum.f32(float [[ARG0:%.*]], float noundef [[ARG1:%.*]])
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[OP]]
-; CHECK-NEXT:    ret float [[FREEZE]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.maximum.f32(float [[ARG0_FR]], float noundef [[ARG1:%.*]])
+; CHECK-NEXT:    ret float [[OP]]
 ;
   %op = call float @llvm.maximum.f32(float %arg0, float noundef %arg1)
   %freeze = freeze float %op
@@ -497,9 +497,9 @@ define float @freeze_maximum(float %arg0, float noundef %arg1) {
 
 define i1 @freeze_isfpclass(float %arg0) {
 ; CHECK-LABEL: @freeze_isfpclass(
-; CHECK-NEXT:    [[OP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG0:%.*]], i32 27)
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i1 [[OP]]
-; CHECK-NEXT:    ret i1 [[FREEZE]]
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG0_FR]], i32 27)
+; CHECK-NEXT:    ret i1 [[OP]]
 ;
   %op = call i1 @llvm.is.fpclass.f32(float %arg0, i32 27)
   %freeze = freeze i1 %op
