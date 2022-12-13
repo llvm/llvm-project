@@ -270,6 +270,12 @@ bool llvm::haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
       match(LHS, m_c_Xor(m_c_And(m_Specific(RHS), m_Value(Y)), m_Deferred(Y))))
     return true;
 
+  // Peek through extends:
+  // (ext Y) op ext(~Y)
+  if (match(LHS, m_ZExtOrSExt(m_Value(Y))) &&
+      match(RHS, m_ZExtOrSExt(m_Not(m_Specific(Y)))))
+    return true;
+
   // Look for: (A & B) op ~(A | B)
   {
     Value *A, *B;
