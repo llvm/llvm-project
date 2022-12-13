@@ -29,7 +29,6 @@ set(ASAN_UNITTEST_COMMON_CFLAGS
   -I${COMPILER_RT_SOURCE_DIR}/lib/asan
   -I${COMPILER_RT_SOURCE_DIR}/lib/sanitizer_common/tests
   -fno-rtti
-  -O2
   -Wno-format
   -Werror=sign-compare)
 append_list_if(COMPILER_RT_HAS_WVARIADIC_MACROS_FLAG -Wno-variadic-macros ASAN_UNITTEST_COMMON_CFLAGS)
@@ -40,16 +39,6 @@ set(ASAN_UNITTEST_COMMON_LINK_FLAGS
   ${COMPILER_RT_UNITTEST_LINK_FLAGS}
   ${COMPILER_RT_UNWINDER_LINK_LIBS}
   ${SANITIZER_TEST_CXX_LIBRARIES})
-
-# -gline-tables-only must be enough for ASan, so use it if possible.
-if(COMPILER_RT_TEST_COMPILER_ID MATCHES "Clang")
-  list(APPEND ASAN_UNITTEST_COMMON_CFLAGS -gline-tables-only)
-else()
-  list(APPEND ASAN_UNITTEST_COMMON_CFLAGS -g)
-endif()
-if(MSVC)
-  list(APPEND ASAN_UNITTEST_COMMON_CFLAGS -gcodeview)
-endif()
 list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS -g)
 
 # Use -D instead of definitions to please custom compile command.
