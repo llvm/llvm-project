@@ -58,7 +58,7 @@
 
 ! Check that -ffast-math causes us to link to crtfastmath.o
 ! UNSUPPORTED: system-windows
-! UNSUPPORTED: target={{p(ower)?pc.*}}
+! UNSUPPORTED: powerpc-registered-target
 ! RUN: %flang -ffast-math -### %s -o %t 2>&1 \
 ! RUN:     | FileCheck --check-prefix=CHECK-CRT %s
 ! CHECK-CRT: {{crtbegin.?\.o}}
