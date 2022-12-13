@@ -5,17 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx940_vdata_5eef12:
+.. _amdgpu_synid_gfx940_sbase_b0aa25:
 
-vdata
+sbase
 =====
 
-Input data for an atomic instruction.
-
-Optionally may serve as an output data:
-
-* If :ref:`sc0<amdgpu_synid_sc0>` is specified, gets the memory value before the operation.
+A 128-bit buffer resource constant for scalar memory operations which provides a base address, a size, and a stride.
 
 *Size:* 4 dwords.
 
-*Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`a<amdgpu_synid_a>`
+*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`ttmp<amdgpu_synid_ttmp>`
