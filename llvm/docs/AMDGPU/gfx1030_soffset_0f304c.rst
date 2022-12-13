@@ -5,12 +5,12 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx1030_soffset_d01a5c:
+.. _amdgpu_synid_gfx1030_soffset_0f304c:
 
 soffset
 =======
 
-An unsigned offset from the base address. My be specified as either a register or a 20-bit immediate.
+An unsigned offset from the base address. May be specified as either a register or a 20-bit immediate.
 
 Note that an *immediate* offset may be specified using either :ref:`uimm20<amdgpu_synid_uimm20>` operand or :ref:`offset20u<amdgpu_synid_smem_offset20u>` modifier, but not both.
 
