@@ -15,7 +15,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -3040,7 +3039,7 @@ bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
   if (!Call.getType()->isPointerTy())
     return Changed;
 
-  Optional<APInt> Size = getAllocSize(&Call, TLI);
+  std::optional<APInt> Size = getAllocSize(&Call, TLI);
   if (Size && *Size != 0) {
     // TODO: We really should just emit deref_or_null here and then
     // let the generic inference code combine that with nonnull.

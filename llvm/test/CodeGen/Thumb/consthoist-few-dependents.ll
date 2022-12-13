@@ -1,7 +1,7 @@
-; RUN: opt -consthoist -S %s -o - | FileCheck %s --check-prefix=OPT
-; RUN: opt -consthoist -S -consthoist-min-num-to-rebase=1 %s -o - | FileCheck %s --check-prefix=OPT --check-prefix=OPT-1
-; RUN: opt -consthoist -S -consthoist-min-num-to-rebase=2 %s -o - | FileCheck %s --check-prefix=OPT --check-prefix=OPT-2
-; RUN: opt -consthoist -S -consthoist-min-num-to-rebase=3 %s -o - | FileCheck %s --check-prefix=OPT --check-prefix=OPT-3
+; RUN: opt -passes=consthoist -S %s -o - | FileCheck %s --check-prefix=OPT
+; RUN: opt -passes=consthoist -S -consthoist-min-num-to-rebase=1 %s -o - | FileCheck %s --check-prefix=OPT --check-prefix=OPT-1
+; RUN: opt -passes=consthoist -S -consthoist-min-num-to-rebase=2 %s -o - | FileCheck %s --check-prefix=OPT --check-prefix=OPT-2
+; RUN: opt -passes=consthoist -S -consthoist-min-num-to-rebase=3 %s -o - | FileCheck %s --check-prefix=OPT --check-prefix=OPT-3
 
 ; RUN: llc -consthoist-min-num-to-rebase=2 %s -o - | FileCheck %s --check-prefix=LLC
 

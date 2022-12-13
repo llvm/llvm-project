@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fobjc-gc -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fobjc-gc -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck %s
 
 struct A { 
   A();
@@ -41,13 +41,13 @@ void f(D d) {
   D d2(d);
 }
 
-// CHECK-LABEL: define linkonce_odr void @_ZN1DC1ERS_(%struct.D* {{[^,]*}} %this, %struct.D* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
+// CHECK-LABEL: define linkonce_odr void @_ZN1DC1ERS_(ptr {{[^,]*}} %this, ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
 // CHECK: call void @_ZN1AC1Ev
 // CHECK: call void @_ZN1CC2ERS_1A
 // CHECK: call void @_ZN1AD1Ev
 // CHECK: call void @_ZN1AC2ERS_
 // CHECK: call void @_ZN1BC2ERS_
-// CHECK: {{call void @llvm.memcpy.p0i8.p0i8.i64.*i64 24}}
+// CHECK: {{call void @llvm.memcpy.p0.p0.i64.*i64 24}}
 // CHECK: call void @_ZN1BC1ERS_
 // CHECK: br label
 // CHECK: call void @_ZN1AC1Ev
@@ -58,7 +58,7 @@ void f(D d) {
 // CHECK: {{icmp eq.*, 2}}
 // CHECK: br i1
 // CHECK: {{call.*@objc_memmove_collectable}}
-// CHECK: {{call void @llvm.memcpy.p0i8.p0i8.i64.*i64 12}}
+// CHECK: {{call void @llvm.memcpy.p0.p0.i64.*i64 12}}
 // CHECK: ret void
 
 

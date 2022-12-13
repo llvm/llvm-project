@@ -29,9 +29,9 @@ struct PSBBlock {
   /// Size in bytes of this block
   uint64_t size;
   /// The first ip for this PSB block.
-  /// This is \a None if tracing was disabled when the PSB block was emitted.
-  /// This means that eventually there's be an enablement event that will come
-  /// with an ip.
+  /// This is \a std::nullopt if tracing was disabled when the PSB block was
+  /// emitted.  This means that eventually there's be an enablement event that
+  /// will come with an ip.
   llvm::Optional<lldb::addr_t> starting_ip;
 };
 

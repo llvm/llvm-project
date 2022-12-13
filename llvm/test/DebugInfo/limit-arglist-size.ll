@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine %s -o - | FileCheck %s
+; RUN: opt -S -passes=instcombine %s -o - | FileCheck %s
 
 ; For performance reasons, we currently limit the number of values that can be
 ; referenced by a dbg.value to 16. This test checks that we do not exceed this

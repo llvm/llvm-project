@@ -68,7 +68,7 @@ Deprecations and Removals
 
   - C++20: ``chrono``
   - C++2b: ``algorithm``, ``array``, ``atomic``, ``bit``, ``chrono``,
-    ``climits``, ``cmath``, ``compare``, ``concepts``, ``cstdarg`, ``cstddef``,
+    ``climits``, ``cmath``, ``compare``, ``concepts``, ``cstdarg``, ``cstddef``,
     ``cstdint``, ``cstdlib``, ``cstring``, ``ctime``, ``exception``,
     ``functional``, ``initializer_list``, ``iosfwd``, ``iterator``, ``limits``,
     ``memory``, ``new``, ``numeric``, ``optional``, ``ratio``, ``stdexcept``,

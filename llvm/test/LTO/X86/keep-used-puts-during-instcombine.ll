@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine <%s | FileCheck %s
+; RUN: opt -S -passes=instcombine <%s | FileCheck %s
 ; rdar://problem/16165191
 ; llvm.compiler.used functions should not be renamed
 

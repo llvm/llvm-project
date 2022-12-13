@@ -134,8 +134,8 @@ public:
   /// Return if this operation is registered.
   bool isRegistered() const { return impl->isRegistered(); }
 
-  /// If this operation is registered, returns the registered information, None
-  /// otherwise.
+  /// If this operation is registered, returns the registered information,
+  /// std::nullopt otherwise.
   Optional<RegisteredOperationName> getRegisteredInfo() const;
 
   /// Returns true if the operation was registered with a particular trait, e.g.

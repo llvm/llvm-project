@@ -42,8 +42,8 @@ std::string getEscapedName(const StringRef &Name);
 std::string getUnescapedName(const StringRef &Name);
 
 // Determines which register a given DWARF expression is being assigned to.
-// If the expression is defining the CFA, return NoneType.
-Optional<uint8_t> readDWARFExpressionTargetReg(StringRef ExprBytes);
+// If the expression is defining the CFA, return std::nullopt.
+std::optional<uint8_t> readDWARFExpressionTargetReg(StringRef ExprBytes);
 
 } // namespace bolt
 

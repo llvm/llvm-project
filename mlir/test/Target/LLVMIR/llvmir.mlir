@@ -1501,6 +1501,16 @@ llvm.func @callFreezeOp(%x : i32) {
   llvm.return
 }
 
+// CHECK-LABEL: @freezeUsed
+llvm.func @freezeUsed(%x : i32) -> i64 {
+  // CHECK: %[[frozen:.*]] = freeze i32
+  %frozen = llvm.freeze %x : i32
+  // CHECK: %[[ext:.*]] = sext i32 %[[frozen]] to i64
+  %ext = llvm.sext %frozen : i32 to i64
+  // CHECK: ret i64 %[[ext]]
+  llvm.return %ext : i64
+}
+
 // CHECK-LABEL: @boolConstArg
 llvm.func @boolConstArg() -> i1 {
   // CHECK: ret i1 false
@@ -2022,3 +2032,7 @@ llvm.func @vararg_function(%arg0: i32, ...) {
 // CHECK: declare void @readnone_function() #[[ATTR:[0-9]+]]
 // CHECK: attributes #[[ATTR]] = { memory(none) }
 llvm.func @readnone_function() attributes {llvm.readnone}
+
+// -----
+// CHECK: declare void @readonly_function([[PTR:.+]] readonly)
+llvm.func @readonly_function(%arg0: !llvm.ptr<f32> {llvm.readonly})

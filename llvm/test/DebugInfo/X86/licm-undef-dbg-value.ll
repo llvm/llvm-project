@@ -1,4 +1,4 @@
-; RUN: opt -licm %s -S | FileCheck %s
+; RUN: opt -passes=licm %s -S | FileCheck %s
 
 ; CHECK: for.body:
 ; CHECK-NEXT: llvm.dbg.value(metadata i8 undef
@@ -7,7 +7,7 @@
 ; when licm sinks the instruction.
 
 ; clang reduce.cpp -g -O2 -Xclang -disable-llvm-passes -emit-llvm -o reduce.ll
-; opt -simplifycfg -sroa -loop-rotate -o - -S reduce.ll
+; opt -passes=simplifycfg -sroa -passes=loop-rotate -o - -S reduce.ll
 ; cat reduce.cpp
 ; extern char a;
 ; extern char b;

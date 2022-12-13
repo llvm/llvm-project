@@ -826,7 +826,6 @@ define void @relax_jal_spill_32_adjust_spill_slot() {
 ; CHECK-RV32-NEXT:    #NO_APP
 ; CHECK-RV32-NEXT:    lui a0, 2
 ; CHECK-RV32-NEXT:    sub sp, s0, a0
-; CHECK-RV32-NEXT:    lui a0, 2
 ; CHECK-RV32-NEXT:    addi a0, a0, -2032
 ; CHECK-RV32-NEXT:    add sp, sp, a0
 ; CHECK-RV32-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
@@ -1076,7 +1075,6 @@ define void @relax_jal_spill_32_adjust_spill_slot() {
 ; CHECK-RV64-NEXT:    #NO_APP
 ; CHECK-RV64-NEXT:    lui a0, 2
 ; CHECK-RV64-NEXT:    sub sp, s0, a0
-; CHECK-RV64-NEXT:    lui a0, 2
 ; CHECK-RV64-NEXT:    addiw a0, a0, -2032
 ; CHECK-RV64-NEXT:    add sp, sp, a0
 ; CHECK-RV64-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
@@ -2323,7 +2321,6 @@ define void @relax_jal_spill_64_adjust_spill_slot() {
 ; CHECK-RV32-NEXT:    #NO_APP
 ; CHECK-RV32-NEXT:    lui a0, 2
 ; CHECK-RV32-NEXT:    sub sp, s0, a0
-; CHECK-RV32-NEXT:    lui a0, 2
 ; CHECK-RV32-NEXT:    addi a0, a0, -2032
 ; CHECK-RV32-NEXT:    add sp, sp, a0
 ; CHECK-RV32-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
@@ -2561,7 +2558,6 @@ define void @relax_jal_spill_64_adjust_spill_slot() {
 ; CHECK-RV64-NEXT:    #NO_APP
 ; CHECK-RV64-NEXT:    lui a0, 2
 ; CHECK-RV64-NEXT:    sub sp, s0, a0
-; CHECK-RV64-NEXT:    lui a0, 2
 ; CHECK-RV64-NEXT:    addiw a0, a0, -2032
 ; CHECK-RV64-NEXT:    add sp, sp, a0
 ; CHECK-RV64-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload

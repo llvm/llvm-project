@@ -16,8 +16,9 @@ add_header_library(
   HDRS
     allocating_string_utils.h
   DEPENDS
-    libc.include.stdlib
     .memory_utils.memcpy_implementation
+    libc.include.stdlib
+    libc.src.__support.CPP.optional
 )
 
 add_entrypoint_object(
@@ -150,7 +151,9 @@ add_entrypoint_object(
   DEPENDS
     .memory_utils.memcpy_implementation
     .string_utils
+    libc.include.errno
     libc.include.stdlib
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(

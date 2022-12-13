@@ -1,4 +1,4 @@
-; RUN: opt -S -licm %s | FileCheck %s
+; RUN: opt -S -passes=licm %s | FileCheck %s
 ;
 ; LICM should null out debug locations when it hoists intrinsics that won't lower to function calls out of a loop.
 ; CHECK: define float @foo

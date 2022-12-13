@@ -64,7 +64,6 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
@@ -1608,6 +1607,30 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
          "This is not a conversion to a SCEVable type!");
   assert(!Op->getType()->isPointerTy() && "Can't extend pointer!");
   Ty = getEffectiveSCEVType(Ty);
+
+  FoldID ID;
+  ID.addInteger(scZeroExtend);
+  ID.addPointer(Op);
+  ID.addPointer(Ty);
+  auto Iter = FoldCache.find(ID);
+  if (Iter != FoldCache.end())
+    return Iter->second;
+
+  const SCEV *S = getZeroExtendExprImpl(Op, Ty, Depth);
+  if (!isa<SCEVZeroExtendExpr>(S)) {
+    FoldCache.insert({ID, S});
+    auto R = FoldCacheUser.insert({S, {}});
+    R.first->second.push_back(ID);
+  }
+  return S;
+}
+
+const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
+                                                   unsigned Depth) {
+  assert(getTypeSizeInBits(Op->getType()) < getTypeSizeInBits(Ty) &&
+         "This is not an extending conversion!");
+  assert(isSCEVable(Ty) && "This is not a conversion to a SCEVable type!");
+  assert(!Op->getType()->isPointerTy() && "Can't extend pointer!");
 
   // Fold if the operand is constant.
   if (const SCEVConstant *SC = dyn_cast<SCEVConstant>(Op))
@@ -8368,6 +8391,8 @@ void ScalarEvolution::forgetAllLoops() {
   HasRecMap.clear();
   MinTrailingZerosCache.clear();
   PredicatedSCEVRewrites.clear();
+  FoldCache.clear();
+  FoldCacheUser.clear();
 }
 
 void ScalarEvolution::forgetLoop(const Loop *L) {
@@ -13872,6 +13897,12 @@ void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
       forgetBackedgeTakenCounts(Pair.getPointer(), Pair.getInt());
     BECountUsers.erase(BEUsersIt);
   }
+
+  auto FoldUser = FoldCacheUser.find(S);
+  if (FoldUser != FoldCacheUser.end())
+    for (auto &KV : FoldUser->second)
+      FoldCache.erase(KV);
+  FoldCacheUser.erase(S);
 }
 
 void
@@ -14174,6 +14205,35 @@ void ScalarEvolution::verify() const {
       if (CachedDisposition != RecomputedDisposition) {
         dbgs() << "Cached disposition of " << *S << " for block %"
                << BB->getName() << " is incorrect! \n";
+        std::abort();
+      }
+    }
+  }
+
+  // Verify FoldCache/FoldCacheUser caches.
+  for (auto [FoldID, Expr] : FoldCache) {
+    auto I = FoldCacheUser.find(Expr);
+    if (I == FoldCacheUser.end()) {
+      dbgs() << "Missing entry in FoldCacheUser for cached expression " << *Expr
+             << "!\n";
+      std::abort();
+    }
+    if (!is_contained(I->second, FoldID)) {
+      dbgs() << "Missing FoldID in cached users of " << *Expr << "!\n";
+      std::abort();
+    }
+  }
+  for (auto [Expr, IDs] : FoldCacheUser) {
+    for (auto &FoldID : IDs) {
+      auto I = FoldCache.find(FoldID);
+      if (I == FoldCache.end()) {
+        dbgs() << "Missing entry in FoldCache for expression " << *Expr
+               << "!\n";
+        std::abort();
+      }
+      if (I->second != Expr) {
+        dbgs() << "Entry in FoldCache doesn't match FoldCacheUser: "
+               << *I->second << " != " << *Expr << "!\n";
         std::abort();
       }
     }

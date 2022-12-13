@@ -5010,6 +5010,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "an array");
     break;
   }
+  case Intrinsic::is_fpclass: {
+    const ConstantInt *TestMask = cast<ConstantInt>(Call.getOperand(1));
+    Check((TestMask->getZExtValue() & ~fcAllFlags) == 0,
+          "unsupported bits for llvm.is.fpclass test mask");
+    break;
+  }
   case Intrinsic::fptrunc_round: {
     // Check the rounding mode
     Metadata *MD = nullptr;

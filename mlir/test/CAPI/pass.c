@@ -29,7 +29,7 @@ static void registerAllUpstreamDialects(MlirContext ctx) {
   mlirDialectRegistryDestroy(registry);
 }
 
-void testRunPassOnModule() {
+void testRunPassOnModule(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
 
@@ -67,7 +67,7 @@ void testRunPassOnModule() {
   mlirContextDestroy(ctx);
 }
 
-void testRunPassOnNestedModule() {
+void testRunPassOnNestedModule(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
 
@@ -138,7 +138,7 @@ static void dontPrint(MlirStringRef str, void *userData) {
   (void)userData;
 }
 
-void testPrintPassPipeline() {
+void testPrintPassPipeline(void) {
   MlirContext ctx = mlirContextCreate();
   MlirPassManager pm = mlirPassManagerCreateOnOperation(
       ctx, mlirStringRefCreateFromCString("any"));
@@ -175,7 +175,7 @@ void testPrintPassPipeline() {
   mlirContextDestroy(ctx);
 }
 
-void testParsePassPipeline() {
+void testParsePassPipeline(void) {
   MlirContext ctx = mlirContextCreate();
   MlirPassManager pm = mlirPassManagerCreate(ctx);
   // Try parse a pipeline.
@@ -233,7 +233,7 @@ void testParsePassPipeline() {
   mlirContextDestroy(ctx);
 }
 
-void testParseErrorCapture() {
+void testParseErrorCapture(void) {
   // CHECK-LABEL: testParseErrorCapture:
   fprintf(stderr, "\nTEST: testParseErrorCapture:\n");
 
@@ -335,7 +335,7 @@ MlirExternalPassCallbacks makeTestExternalPassCallbacks(
                                      testCloneExternalPass, runPass};
 }
 
-void testExternalPass() {
+void testExternalPass(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
 
@@ -591,7 +591,7 @@ void testExternalPass() {
   mlirContextDestroy(ctx);
 }
 
-int main() {
+int main(void) {
   testRunPassOnModule();
   testRunPassOnNestedModule();
   testPrintPassPipeline();

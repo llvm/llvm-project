@@ -172,7 +172,7 @@ public:
   /// If it is an interesting memory access, populate information
   /// about the access and return a InterestingMemoryAccess struct.
   /// Otherwise return std::nullopt.
-  Optional<InterestingMemoryAccess>
+  std::optional<InterestingMemoryAccess>
   isInterestingMemoryAccess(Instruction *I) const;
 
   void instrumentMop(Instruction *I, const DataLayout &DL,
@@ -267,7 +267,7 @@ void MemProfiler::instrumentMemIntrinsic(MemIntrinsic *MI) {
   MI->eraseFromParent();
 }
 
-Optional<InterestingMemoryAccess>
+std::optional<InterestingMemoryAccess>
 MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
   // Do not instrument the load fetching the dynamic shadow address.
   if (DynamicShadowOffset == I)
@@ -585,7 +585,7 @@ bool MemProfiler::instrumentFunction(Function &F) {
   for (auto *Inst : ToInstrument) {
     if (ClDebugMin < 0 || ClDebugMax < 0 ||
         (NumInstrumented >= ClDebugMin && NumInstrumented <= ClDebugMax)) {
-      Optional<InterestingMemoryAccess> Access =
+      std::optional<InterestingMemoryAccess> Access =
           isInterestingMemoryAccess(Inst);
       if (Access)
         instrumentMop(Inst, F.getParent()->getDataLayout(), *Access);

@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
 ;
 ; This file is based on coro-debug-frame-variable.ll.
-; CHECK:  define internal fastcc void @f.resume(%f.Frame* noalias nonnull align 16 dereferenceable(80) %FramePtr) !dbg ![[RESUME_FN_DBG_NUM:[0-9]+]]
+; CHECK:  define internal fastcc void @f.resume(%f.Frame* noundef nonnull align 16 dereferenceable(80) %FramePtr) !dbg ![[RESUME_FN_DBG_NUM:[0-9]+]]
 ; CHECK:       await.ready:
 ; CHECK:         call void @llvm.dbg.value(metadata i32 undef, metadata ![[IVAR_RESUME:[0-9]+]], metadata !DIExpression(
 ; CHECK:         call void @llvm.dbg.value(metadata i32 undef, metadata ![[JVAR_RESUME:[0-9]+]], metadata !DIExpression(

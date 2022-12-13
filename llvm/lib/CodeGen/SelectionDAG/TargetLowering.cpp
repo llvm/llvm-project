@@ -8630,6 +8630,68 @@ SDValue TargetLowering::expandBITREVERSE(SDNode *N, SelectionDAG &DAG) const {
   return Tmp;
 }
 
+SDValue TargetLowering::expandVPBITREVERSE(SDNode *N, SelectionDAG &DAG) const {
+  assert(N->getOpcode() == ISD::VP_BITREVERSE);
+
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+  SDValue Op = N->getOperand(0);
+  SDValue Mask = N->getOperand(1);
+  SDValue EVL = N->getOperand(2);
+  EVT SHVT = getShiftAmountTy(VT, DAG.getDataLayout());
+  unsigned Sz = VT.getScalarSizeInBits();
+
+  SDValue Tmp, Tmp2, Tmp3;
+
+  // If we can, perform BSWAP first and then the mask+swap the i4, then i2
+  // and finally the i1 pairs.
+  // TODO: We can easily support i4/i2 legal types if any target ever does.
+  if (Sz >= 8 && isPowerOf2_32(Sz)) {
+    // Create the masks - repeating the pattern every byte.
+    APInt Mask4 = APInt::getSplat(Sz, APInt(8, 0x0F));
+    APInt Mask2 = APInt::getSplat(Sz, APInt(8, 0x33));
+    APInt Mask1 = APInt::getSplat(Sz, APInt(8, 0x55));
+
+    // BSWAP if the type is wider than a single byte.
+    Tmp = (Sz > 8 ? DAG.getNode(ISD::VP_BSWAP, dl, VT, Op, Mask, EVL) : Op);
+
+    // swap i4: ((V >> 4) & 0x0F) | ((V & 0x0F) << 4)
+    Tmp2 = DAG.getNode(ISD::VP_LSHR, dl, VT, Tmp, DAG.getConstant(4, dl, SHVT),
+                       Mask, EVL);
+    Tmp2 = DAG.getNode(ISD::VP_AND, dl, VT, Tmp2,
+                       DAG.getConstant(Mask4, dl, VT), Mask, EVL);
+    Tmp3 = DAG.getNode(ISD::VP_AND, dl, VT, Tmp, DAG.getConstant(Mask4, dl, VT),
+                       Mask, EVL);
+    Tmp3 = DAG.getNode(ISD::VP_SHL, dl, VT, Tmp3, DAG.getConstant(4, dl, SHVT),
+                       Mask, EVL);
+    Tmp = DAG.getNode(ISD::VP_OR, dl, VT, Tmp2, Tmp3, Mask, EVL);
+
+    // swap i2: ((V >> 2) & 0x33) | ((V & 0x33) << 2)
+    Tmp2 = DAG.getNode(ISD::VP_LSHR, dl, VT, Tmp, DAG.getConstant(2, dl, SHVT),
+                       Mask, EVL);
+    Tmp2 = DAG.getNode(ISD::VP_AND, dl, VT, Tmp2,
+                       DAG.getConstant(Mask2, dl, VT), Mask, EVL);
+    Tmp3 = DAG.getNode(ISD::VP_AND, dl, VT, Tmp, DAG.getConstant(Mask2, dl, VT),
+                       Mask, EVL);
+    Tmp3 = DAG.getNode(ISD::VP_SHL, dl, VT, Tmp3, DAG.getConstant(2, dl, SHVT),
+                       Mask, EVL);
+    Tmp = DAG.getNode(ISD::VP_OR, dl, VT, Tmp2, Tmp3, Mask, EVL);
+
+    // swap i1: ((V >> 1) & 0x55) | ((V & 0x55) << 1)
+    Tmp2 = DAG.getNode(ISD::VP_LSHR, dl, VT, Tmp, DAG.getConstant(1, dl, SHVT),
+                       Mask, EVL);
+    Tmp2 = DAG.getNode(ISD::VP_AND, dl, VT, Tmp2,
+                       DAG.getConstant(Mask1, dl, VT), Mask, EVL);
+    Tmp3 = DAG.getNode(ISD::VP_AND, dl, VT, Tmp, DAG.getConstant(Mask1, dl, VT),
+                       Mask, EVL);
+    Tmp3 = DAG.getNode(ISD::VP_SHL, dl, VT, Tmp3, DAG.getConstant(1, dl, SHVT),
+                       Mask, EVL);
+    Tmp = DAG.getNode(ISD::VP_OR, dl, VT, Tmp2, Tmp3, Mask, EVL);
+    return Tmp;
+  }
+  return SDValue();
+}
+
 std::pair<SDValue, SDValue>
 TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
                                     SelectionDAG &DAG) const {

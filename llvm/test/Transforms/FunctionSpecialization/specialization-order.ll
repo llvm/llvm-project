@@ -1,4 +1,4 @@
-; RUN: opt -S --passes=function-specialization,deadargelim -force-function-specialization < %s | FileCheck %s
+; RUN: opt -S --passes=ipsccp,deadargelim -specialize-functions -force-function-specialization < %s | FileCheck %s
 define dso_local i32 @add(i32 %x, i32 %y) {
 entry:
   %add = add nsw i32 %y, %x

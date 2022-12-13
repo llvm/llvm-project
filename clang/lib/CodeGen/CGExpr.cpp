@@ -1750,10 +1750,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
   if (EmitScalarRangeCheck(Load, Ty, Loc)) {
     // In order to prevent the optimizer from throwing away the check, don't
     // attach range metadata to the load.
-    // TODO: Enable range metadata for AMDGCN after issue
-    // https://github.com/llvm/llvm-project/issues/58176 is fixed.
-  } else if (CGM.getCodeGenOpts().OptimizationLevel > 0 &&
-             !CGM.getTriple().isAMDGCN())
+  } else if (CGM.getCodeGenOpts().OptimizationLevel > 0)
     if (llvm::MDNode *RangeInfo = getRangeForLoadFromType(Ty))
       Load->setMetadata(llvm::LLVMContext::MD_range, RangeInfo);
 

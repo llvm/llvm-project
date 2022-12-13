@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -fobjc-gc -emit-llvm -o - %s | FileCheck -check-prefix CHECK-C %s
-// RUN: %clang_cc1 -no-opaque-pointers -x objective-c++ -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -fobjc-gc -emit-llvm -o - %s | FileCheck -check-prefix CHECK-CP %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -fobjc-gc -emit-llvm -o - %s | FileCheck -check-prefix CHECK-C %s
+// RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -fobjc-gc -emit-llvm -o - %s | FileCheck -check-prefix CHECK-CP %s
 
 static int count;
 
@@ -52,11 +52,11 @@ void foo(Derived* src, Derived* dest) {
 }
 #endif
 
-// CHECK-C: call i8* @objc_memmove_collectable
-// CHECK-C: call i8* @objc_memmove_collectable
-// CHECK-C: call i8* @objc_memmove_collectable
+// CHECK-C: call ptr @objc_memmove_collectable
+// CHECK-C: call ptr @objc_memmove_collectable
+// CHECK-C: call ptr @objc_memmove_collectable
 
-// CHECK-CP: call i8* @objc_memmove_collectable
-// CHECK-CP: call i8* @objc_memmove_collectable
-// CHECK-CP: call i8* @objc_memmove_collectable
-// CHECK-CP: call i8* @objc_memmove_collectable
+// CHECK-CP: call ptr @objc_memmove_collectable
+// CHECK-CP: call ptr @objc_memmove_collectable
+// CHECK-CP: call ptr @objc_memmove_collectable
+// CHECK-CP: call ptr @objc_memmove_collectable

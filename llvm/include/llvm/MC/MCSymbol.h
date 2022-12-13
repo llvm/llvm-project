@@ -113,11 +113,16 @@ protected:
   /// extension and achieve better bitpacking with MSVC.
   unsigned SymbolContents : 3;
 
-  /// The alignment of the symbol, if it is 'common', or -1.
+  /// The alignment of the symbol if it is 'common'.
   ///
-  /// The alignment is stored as log2(align) + 1.  This allows all values from
-  /// 0 to 2^31 to be stored which is every power of 2 representable by an
-  /// unsigned.
+  /// Internally, this is stored as log2(align) + 1.
+  /// We reserve 5 bits to encode this value which allows the following values
+  /// 0b00000 -> unset
+  /// 0b00001 -> 1ULL <<  0 = 1
+  /// 0b00010 -> 1ULL <<  1 = 2
+  /// 0b00011 -> 1ULL <<  2 = 4
+  /// ...
+  /// 0b11111 -> 1ULL << 30 = 1 GiB
   enum : unsigned { NumCommonAlignmentBits = 5 };
   unsigned CommonAlignLog2 : NumCommonAlignmentBits;
 
@@ -340,41 +345,39 @@ public:
   /// Mark this symbol as being 'common'.
   ///
   /// \param Size - The size of the symbol.
-  /// \param Align - The alignment of the symbol.
+  /// \param Alignment - The alignment of the symbol.
   /// \param Target - Is the symbol a target-specific common-like symbol.
-  void setCommon(uint64_t Size, unsigned Align, bool Target = false) {
+  void setCommon(uint64_t Size, Align Alignment, bool Target = false) {
     assert(getOffset() == 0);
     CommonSize = Size;
     SymbolContents = Target ? SymContentsTargetCommon : SymContentsCommon;
 
-    assert((!Align || isPowerOf2_32(Align)) &&
-           "Alignment must be a power of 2");
-    unsigned Log2Align = Log2_32(Align) + 1;
+    unsigned Log2Align = encode(Alignment);
     assert(Log2Align < (1U << NumCommonAlignmentBits) &&
            "Out of range alignment");
     CommonAlignLog2 = Log2Align;
   }
 
   ///  Return the alignment of a 'common' symbol.
-  unsigned getCommonAlignment() const {
+  MaybeAlign getCommonAlignment() const {
     assert(isCommon() && "Not a 'common' symbol!");
-    return CommonAlignLog2 ? (1U << (CommonAlignLog2 - 1)) : 0;
+    return decodeMaybeAlign(CommonAlignLog2);
   }
 
   /// Declare this symbol as being 'common'.
   ///
   /// \param Size - The size of the symbol.
-  /// \param Align - The alignment of the symbol.
+  /// \param Alignment - The alignment of the symbol.
   /// \param Target - Is the symbol a target-specific common-like symbol.
   /// \return True if symbol was already declared as a different type
-  bool declareCommon(uint64_t Size, unsigned Align, bool Target = false) {
+  bool declareCommon(uint64_t Size, Align Alignment, bool Target = false) {
     assert(isCommon() || getOffset() == 0);
     if(isCommon()) {
-      if (CommonSize != Size || getCommonAlignment() != Align ||
+      if (CommonSize != Size || getCommonAlignment() != Alignment ||
           isTargetCommon() != Target)
         return true;
     } else
-      setCommon(Size, Align, Target);
+      setCommon(Size, Alignment, Target);
     return false;
   }
 

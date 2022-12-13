@@ -71,7 +71,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
@@ -94,6 +93,7 @@
 #include <cstdlib>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -6493,8 +6493,8 @@ static bool hasSameOverloadableAttrs(const FunctionDecl *A,
   auto BEnableIfAttrs = B->specific_attrs<EnableIfAttr>();
 
   for (auto Pair : zip_longest(AEnableIfAttrs, BEnableIfAttrs)) {
-    Optional<EnableIfAttr *> Cand1A = std::get<0>(Pair);
-    Optional<EnableIfAttr *> Cand2A = std::get<1>(Pair);
+    std::optional<EnableIfAttr *> Cand1A = std::get<0>(Pair);
+    std::optional<EnableIfAttr *> Cand2A = std::get<1>(Pair);
 
     // Return false if the number of enable_if attributes is different.
     if (!Cand1A || !Cand2A)

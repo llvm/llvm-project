@@ -248,7 +248,7 @@ uint64_t BoltAddressTranslation::translate(uint64_t FuncAddress,
   return Offset - KeyVal->first + Val;
 }
 
-Optional<BoltAddressTranslation::FallthroughListTy>
+std::optional<BoltAddressTranslation::FallthroughListTy>
 BoltAddressTranslation::getFallthroughsInTrace(uint64_t FuncAddress,
                                                uint64_t From,
                                                uint64_t To) const {

@@ -15,6 +15,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -206,7 +207,7 @@ TEST(raw_ostreamTest, FormatDecimal) {
 
 static std::string
 formatted_bytes_str(ArrayRef<uint8_t> Bytes,
-                    llvm::Optional<uint64_t> Offset = std::nullopt,
+                    std::optional<uint64_t> Offset = std::nullopt,
                     uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4) {
   std::string S;
   raw_string_ostream Str(S);
@@ -216,7 +217,7 @@ formatted_bytes_str(ArrayRef<uint8_t> Bytes,
 }
 
 static std::string format_bytes_with_ascii_str(
-    ArrayRef<uint8_t> Bytes, Optional<uint64_t> Offset = std::nullopt,
+    ArrayRef<uint8_t> Bytes, std::optional<uint64_t> Offset = std::nullopt,
     uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4) {
   std::string S;
   raw_string_ostream Str(S);

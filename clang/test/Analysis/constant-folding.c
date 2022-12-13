@@ -281,3 +281,152 @@ void testRemainderRules(unsigned int a, unsigned int b, int c, int d) {
     clang_analyzer_eval((b % a) < x + 10); // expected-warning{{TRUE}}
   }
 }
+
+void testDisequalityRules(unsigned int u1, unsigned int u2, unsigned int u3,
+                          int s1, int s2, int s3, unsigned char uch,
+                          signed char sch, short ssh, unsigned short ush) {
+
+  // Checks for overflowing values
+  if (u1 > INT_MAX && u1 <= UINT_MAX / 2 + 4 && u1 != UINT_MAX / 2 + 2 &&
+      u1 != UINT_MAX / 2 + 3 && s1 >= INT_MIN + 1 && s1 <= INT_MIN + 2) {
+    // u1: [INT_MAX+1, INT_MAX+1]U[INT_MAX+4, INT_MAX+4],
+    // s1: [INT_MIN+1, INT_MIN+2]
+    clang_analyzer_eval(u1 != s1); // expected-warning{{TRUE}}
+  }
+
+  if (u1 >= INT_MIN && u1 <= INT_MIN + 2 &&
+      s1 > INT_MIN + 2 && s1 < INT_MIN + 4) {
+    // u1: [INT_MAX+1, INT_MAX+1]U[INT_MAX+4, INT_MAX+4],
+    // s1: [INT_MIN+3, INT_MIN+3]
+    clang_analyzer_eval(u1 != s1); // expected-warning{{TRUE}}
+  }
+
+  if (s1 < 0 && s1 > -4 && u1 > UINT_MAX - 4 && u1 < UINT_MAX - 1) {
+    // s1: [-3, -1], u1: [UINT_MAX - 3, UINT_MAX - 2]
+    clang_analyzer_eval(u1 != s1); // expected-warning{{UNKNOWN}}
+  }
+
+  if (s1 < 1 && s1 > -6 && s1 != -4 && s1 != -3 &&
+      u1 > UINT_MAX - 4 && u1 < UINT_MAX - 1) {
+    // s1: [-5, -5]U[-2, 0], u1: [UINT_MAX - 3, UINT_MAX - 2]
+    clang_analyzer_eval(u1 != s1); // expected-warning{{TRUE}}
+  }
+
+  if (s1 < 1 && s1 > -7 && s1 != -4 && s1 != -3 &&
+      u1 > UINT_MAX - 4 && u1 < UINT_MAX - 1) {
+    // s1: [-6, -5]U[-2, 0], u1: [UINT_MAX - 3, UINT_MAX - 2]
+    clang_analyzer_eval(u1 != s1); // expected-warning{{TRUE}}
+  }
+
+  if (s1 > 4 && u1 < 4) {
+    // s1: [4, INT_MAX], u1: [0, 3]
+    clang_analyzer_eval(s1 != u1); // expected-warning{{TRUE}}
+  }
+
+  // Check when RHS is in between two Ranges in LHS
+  if (((u1 >= 1 && u1 <= 2) || (u1 >= 8 && u1 <= 9)) &&
+      u2 >= 5 && u2 <= 6) {
+    // u1: [1, 2]U[8, 9], u2: [5, 6]
+    clang_analyzer_eval(u1 != u2); // expected-warning{{TRUE}}
+  }
+
+  // Checks for concrete value with same type
+  if (u1 > 1 && u1 < 3 && u2 > 1 && u2 < 3) {
+    // u1: [2, 2], u2: [2, 2]
+    clang_analyzer_eval(u1 != u2); // expected-warning{{FALSE}}
+  }
+
+  // Check for concrete value with different types
+  if (u1 > 4 && u1 < 6 && s1 > 4 && s1 < 6) {
+    // u1: [5, 5], s1: [5, 5]
+    clang_analyzer_eval(u1 != s1); // expected-warning{{FALSE}}
+  }
+
+  // Checks when ranges are not overlapping
+  if (u1 <= 10 && u2 >= 20) {
+    // u1: [0,10], u2: [20,UINT_MAX]
+    clang_analyzer_eval(u1 != u2); // expected-warning{{TRUE}}
+  }
+
+  if (s1 <= INT_MIN + 10 && s2 >= INT_MAX - 10) {
+    // s1: [INT_MIN,INT_MIN + 10], s2: [INT_MAX - 10,INT_MAX]
+    clang_analyzer_eval(s1 != s2); // expected-warning{{TRUE}}
+  }
+
+  // Checks when ranges are completely overlapping and have more than one point
+  if (u1 >= 20 && u1 <= 50 && u2 >= 20 && u2 <= 50) {
+    // u1: [20,50], u2: [20,50]
+    clang_analyzer_eval(u1 != u2); // expected-warning{{UNKNOWN}}
+  }
+
+  if (s1 >= -20 && s1 <= 20 && s2 >= -20 && s2 <= 20) {
+    // s1: [-20,20], s2: [-20,20]
+    clang_analyzer_eval(s1 != s2); // expected-warning{{UNKNOWN}}
+  }
+
+  // Checks when ranges are partially overlapping
+  if (u1 >= 100 && u1 <= 200 && u2 >= 150 && u2 <= 300) {
+    // u1: [100,200], u2: [150,300]
+    clang_analyzer_eval(u1 != u2); // expected-warning{{UNKNOWN}}
+  }
+
+  if (s1 >= -80 && s1 <= -50 && s2 >= -100 && s2 <= -75) {
+    // s1: [-80,-50], s2: [-100,-75]
+    clang_analyzer_eval(s1 != s2); // expected-warning{{UNKNOWN}}
+  }
+
+  // Checks for ranges which are subset of one-another
+  if (u1 >= 500 && u1 <= 1000 && u2 >= 750 && u2 <= 1000) {
+    // u1: [500,1000], u2: [750,1000]
+    clang_analyzer_eval(u1 != u2); // expected-warning{{UNKNOWN}}
+  }
+
+  if (s1 >= -1000 && s1 <= -500 && s2 >= -750 && s2 <= -500) {
+    // s1: [-1000,-500], s2: [-750, -500]
+    clang_analyzer_eval(s1 != s2); // expected-warning{{UNKNOWN}}
+  }
+
+  // Checks for comparison between different types
+  // Using different variables as previous constraints may interfere in the
+  // reasoning.
+  if (u3 <= 255 && s3 < 0) {
+    // u3: [0, 255], s3: [INT_MIN, -1]
+    clang_analyzer_eval(u3 != s3); // expected-warning{{TRUE}}
+  }
+
+  // Checks for char-uchar types
+  if (uch >= 1 && sch <= 1) {
+    // uch: [1, UCHAR_MAX], sch: [SCHAR_MIN, 1]
+    clang_analyzer_eval(uch != sch); // expected-warning{{UNKNOWN}}
+  }
+
+  // FIXME: Casting smaller signed types to unsigned one may leave us with
+  // overlapping values, falsely indicating UNKNOWN, where it is possible to
+  // assert TRUE.
+  if (uch > 1 && sch < 1) {
+    // uch: [2, UCHAR_MAX], sch: [SCHAR_MIN, 0]
+    clang_analyzer_eval(uch != sch); // expected-warning{{UNKNOWN}}
+  }
+
+  if (uch <= 1 && uch >= 1 && sch <= 1 && sch >= 1) {
+    // uch: [1, 1], sch: [1, 1]
+    clang_analyzer_eval(uch != sch); // expected-warning{{FALSE}}
+  }
+
+  // Checks for short-ushort types
+  if (ush >= 1 && ssh <= 1) {
+    // ush: [1, USHRT_MAX], ssh: [SHRT_MIN, 1]
+    clang_analyzer_eval(ush != ssh); // expected-warning{{UNKNOWN}}
+  }
+
+  // FIXME: Casting leave us with overlapping values. Should be TRUE.
+  if (ush > 1 && ssh < 1) {
+    // ush: [2, USHRT_MAX], ssh: [SHRT_MIN, 0]
+    clang_analyzer_eval(ush != ssh); // expected-warning{{UNKNOWN}}
+  }
+
+  if (ush <= 1 && ush >= 1 && ssh <= 1 && ssh >= 1) {
+    // ush: [1, 1], ssh: [1, 1]
+    clang_analyzer_eval(ush != ssh); // expected-warning{{FALSE}}
+  }
+}

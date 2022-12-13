@@ -57,7 +57,7 @@ public:
   ///
   /// \return
   ///     The name of the function that is called the most from this block or
-  ///     None if no function is called from this block.
+  ///     std::nullopt if no function is called from this block.
   llvm::Optional<llvm::StringRef> GetMostFrequentlyCalledFunction() const;
 
   /// Get the load address of the first instruction in the block.
@@ -233,8 +233,8 @@ private:
   // most instructions don't contain useful metadata
 
   // This map contains the load address of all the call instructions.
-  // load address maps to the name of the function it calls (None if function
-  // name can't be determined)
+  // load address maps to the name of the function it calls (std::nullopt if
+  // function name can't be determined)
   std::unordered_map<lldb::addr_t, llvm::Optional<ConstString>> m_call_isns;
 };
 

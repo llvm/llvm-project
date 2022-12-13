@@ -12,7 +12,8 @@ entry:
 ; CHECK-NEXT:    %0:vr256x = COPY $ymm0
 ; CHECK-NEXT:    %2:vr128x = VPSLLWZ128ri %1, 15
 ; CHECK-NEXT:    %3:vk16wm = VPMOVW2MZ128rr killed %2
-; CHECK-NEXT:    VPMOVDWZ256mrk $noreg, 1, $noreg, 0, $noreg, killed %3, %0 :: (store unknown-size into `i16* null`, align 16)
+; CHECK-NEXT:    %4:vr128x = VPMOVDWZ256rr %0
+; CHECK-NEXT:    VPCOMPRESSWZ128mrk $noreg, 1, $noreg, 0, $noreg, killed %3, killed %4 :: (store unknown-size into `i16* null`, align 16)
 ; CHECK-NEXT:    RET 0
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: write)

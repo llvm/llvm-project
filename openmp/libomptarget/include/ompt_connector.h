@@ -22,12 +22,12 @@
 #include <memory>
 #include <string>
 
-#include "Debug.h"
 #include "omp-tools.h"
+
+#include "Debug.h"
 #include "omptarget.h"
 
 #define DEBUG_PREFIX "OMPT"
-
 #define LIBOMPTARGET_STRINGIFY(s) #s
 
 /// Type for the function to be invoked for connecting two libraries.

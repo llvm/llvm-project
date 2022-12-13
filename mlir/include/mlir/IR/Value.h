@@ -71,6 +71,14 @@ public:
 protected:
   ValueImpl(Type type, Kind kind) : typeAndKind(type, kind) {}
 
+  /// Expose a few methods explicitly for the debugger to call for
+  /// visualization.
+#ifndef NDEBUG
+  LLVM_DUMP_METHOD Type debug_getType() const { return getType(); }
+  LLVM_DUMP_METHOD Kind debug_getKind() const { return getKind(); }
+
+#endif
+
   /// The type of this result and the kind.
   llvm::PointerIntPair<Type, 3, Kind> typeAndKind;
 };

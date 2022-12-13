@@ -1,11 +1,11 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -flax-vector-conversions=none -no-opaque-pointers -target-feature +vsx \
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +vsx \
 // RUN:   -target-cpu pwr10 -triple powerpc64-unknown-unknown -emit-llvm %s \
 // RUN:   -o - | FileCheck %s -check-prefixes=CHECK-BE,CHECK
-// RUN: %clang_cc1 -flax-vector-conversions=none -no-opaque-pointers -target-feature +vsx \
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +vsx \
 // RUN:   -target-cpu pwr10 -triple powerpc64le-unknown-unknown -emit-llvm %s \
 // RUN:   -o - | FileCheck %s -check-prefixes=CHECK-LE,CHECK
-// RUN: %clang_cc1 -flax-vector-conversions=none -no-opaque-pointers -target-feature +vsx \
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +vsx \
 // RUN:   -target-cpu pwr10 -triple powerpc64-ibm-aix-xcoff -emit-llvm %s \
 // RUN:   -o - | FileCheck %s -check-prefixes=CHECK-BE,CHECK
 
@@ -1020,9 +1020,9 @@ vector double test_vec_blend_d(void) {
 
 // CHECK-BE-LABEL: @test_vec_replace_elt_si(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* @vsia, align 16
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @vsia, align 16
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-BE-NEXT:    [[TMP2:%.*]] = load i32, i32* @sia, align 4
+// CHECK-BE-NEXT:    [[TMP2:%.*]] = load i32, ptr @sia, align 4
 // CHECK-BE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-BE-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ppc.altivec.vinsw(<4 x i32> [[TMP3]], i32 [[TMP2]], i32 0)
 // CHECK-BE-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP4]] to <16 x i8>
@@ -1031,9 +1031,9 @@ vector double test_vec_blend_d(void) {
 //
 // CHECK-LE-LABEL: @test_vec_replace_elt_si(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* @vsia, align 16
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @vsia, align 16
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-LE-NEXT:    [[TMP2:%.*]] = load i32, i32* @sia, align 4
+// CHECK-LE-NEXT:    [[TMP2:%.*]] = load i32, ptr @sia, align 4
 // CHECK-LE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-LE-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ppc.altivec.vinsw(<4 x i32> [[TMP3]], i32 [[TMP2]], i32 12)
 // CHECK-LE-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP4]] to <16 x i8>
@@ -1046,9 +1046,9 @@ vector signed int test_vec_replace_elt_si(void) {
 
 // CHECK-BE-LABEL: @test_vec_replace_elt_ui(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* @vuia, align 16
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @vuia, align 16
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-BE-NEXT:    [[TMP2:%.*]] = load i32, i32* @uia, align 4
+// CHECK-BE-NEXT:    [[TMP2:%.*]] = load i32, ptr @uia, align 4
 // CHECK-BE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-BE-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ppc.altivec.vinsw(<4 x i32> [[TMP3]], i32 [[TMP2]], i32 4)
 // CHECK-BE-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP4]] to <16 x i8>
@@ -1057,9 +1057,9 @@ vector signed int test_vec_replace_elt_si(void) {
 //
 // CHECK-LE-LABEL: @test_vec_replace_elt_ui(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* @vuia, align 16
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @vuia, align 16
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-LE-NEXT:    [[TMP2:%.*]] = load i32, i32* @uia, align 4
+// CHECK-LE-NEXT:    [[TMP2:%.*]] = load i32, ptr @uia, align 4
 // CHECK-LE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-LE-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ppc.altivec.vinsw(<4 x i32> [[TMP3]], i32 [[TMP2]], i32 8)
 // CHECK-LE-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP4]] to <16 x i8>
@@ -1072,9 +1072,9 @@ vector unsigned int test_vec_replace_elt_ui(void) {
 
 // CHECK-BE-LABEL: @test_vec_replace_elt_f(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* @vfa, align 16
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr @vfa, align 16
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[TMP0]] to <16 x i8>
-// CHECK-BE-NEXT:    [[TMP2:%.*]] = load float, float* @fa, align 4
+// CHECK-BE-NEXT:    [[TMP2:%.*]] = load float, ptr @fa, align 4
 // CHECK-BE-NEXT:    [[CONV:%.*]] = fptoui float [[TMP2]] to i32
 // CHECK-BE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-BE-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ppc.altivec.vinsw(<4 x i32> [[TMP3]], i32 [[CONV]], i32 8)
@@ -1084,9 +1084,9 @@ vector unsigned int test_vec_replace_elt_ui(void) {
 //
 // CHECK-LE-LABEL: @test_vec_replace_elt_f(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* @vfa, align 16
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr @vfa, align 16
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[TMP0]] to <16 x i8>
-// CHECK-LE-NEXT:    [[TMP2:%.*]] = load float, float* @fa, align 4
+// CHECK-LE-NEXT:    [[TMP2:%.*]] = load float, ptr @fa, align 4
 // CHECK-LE-NEXT:    [[CONV:%.*]] = fptoui float [[TMP2]] to i32
 // CHECK-LE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-LE-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ppc.altivec.vinsw(<4 x i32> [[TMP3]], i32 [[CONV]], i32 4)
@@ -1100,9 +1100,9 @@ vector float test_vec_replace_elt_f(void) {
 
 // CHECK-BE-LABEL: @test_vec_replace_elt_sll(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* @vslla, align 16
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @vslla, align 16
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// CHECK-BE-NEXT:    [[TMP2:%.*]] = load i64, i64* @llb, align 8
+// CHECK-BE-NEXT:    [[TMP2:%.*]] = load i64, ptr @llb, align 8
 // CHECK-BE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
 // CHECK-BE-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.ppc.altivec.vinsd(<2 x i64> [[TMP3]], i64 [[TMP2]], i32 0)
 // CHECK-BE-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP4]] to <16 x i8>
@@ -1111,9 +1111,9 @@ vector float test_vec_replace_elt_f(void) {
 //
 // CHECK-LE-LABEL: @test_vec_replace_elt_sll(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* @vslla, align 16
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @vslla, align 16
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// CHECK-LE-NEXT:    [[TMP2:%.*]] = load i64, i64* @llb, align 8
+// CHECK-LE-NEXT:    [[TMP2:%.*]] = load i64, ptr @llb, align 8
 // CHECK-LE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
 // CHECK-LE-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.ppc.altivec.vinsd(<2 x i64> [[TMP3]], i64 [[TMP2]], i32 8)
 // CHECK-LE-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP4]] to <16 x i8>
@@ -1126,9 +1126,9 @@ vector signed long long test_vec_replace_elt_sll(void) {
 
 // CHECK-BE-LABEL: @test_vec_replace_elt_ull(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* @vulla, align 16
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @vulla, align 16
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// CHECK-BE-NEXT:    [[TMP2:%.*]] = load i64, i64* @ulla, align 8
+// CHECK-BE-NEXT:    [[TMP2:%.*]] = load i64, ptr @ulla, align 8
 // CHECK-BE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
 // CHECK-BE-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.ppc.altivec.vinsd(<2 x i64> [[TMP3]], i64 [[TMP2]], i32 0)
 // CHECK-BE-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP4]] to <16 x i8>
@@ -1137,9 +1137,9 @@ vector signed long long test_vec_replace_elt_sll(void) {
 //
 // CHECK-LE-LABEL: @test_vec_replace_elt_ull(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* @vulla, align 16
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @vulla, align 16
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// CHECK-LE-NEXT:    [[TMP2:%.*]] = load i64, i64* @ulla, align 8
+// CHECK-LE-NEXT:    [[TMP2:%.*]] = load i64, ptr @ulla, align 8
 // CHECK-LE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
 // CHECK-LE-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.ppc.altivec.vinsd(<2 x i64> [[TMP3]], i64 [[TMP2]], i32 8)
 // CHECK-LE-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP4]] to <16 x i8>
@@ -1152,9 +1152,9 @@ vector unsigned long long test_vec_replace_elt_ull(void) {
 
 // CHECK-BE-LABEL: @test_vec_replace_elt_d(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <2 x double>, <2 x double>* @vda, align 16
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr @vda, align 16
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = bitcast <2 x double> [[TMP0]] to <16 x i8>
-// CHECK-BE-NEXT:    [[TMP2:%.*]] = load double, double* @da, align 8
+// CHECK-BE-NEXT:    [[TMP2:%.*]] = load double, ptr @da, align 8
 // CHECK-BE-NEXT:    [[CONV:%.*]] = fptoui double [[TMP2]] to i64
 // CHECK-BE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
 // CHECK-BE-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.ppc.altivec.vinsd(<2 x i64> [[TMP3]], i64 [[CONV]], i32 8)
@@ -1164,9 +1164,9 @@ vector unsigned long long test_vec_replace_elt_ull(void) {
 //
 // CHECK-LE-LABEL: @test_vec_replace_elt_d(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <2 x double>, <2 x double>* @vda, align 16
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr @vda, align 16
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <2 x double> [[TMP0]] to <16 x i8>
-// CHECK-LE-NEXT:    [[TMP2:%.*]] = load double, double* @da, align 8
+// CHECK-LE-NEXT:    [[TMP2:%.*]] = load double, ptr @da, align 8
 // CHECK-LE-NEXT:    [[CONV:%.*]] = fptoui double [[TMP2]] to i64
 // CHECK-LE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
 // CHECK-LE-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.ppc.altivec.vinsd(<2 x i64> [[TMP3]], i64 [[CONV]], i32 0)
@@ -1180,9 +1180,9 @@ vector double test_vec_replace_elt_d(void) {
 
 // CHECK-BE-LABEL: @test_vec_replace_unaligned_si(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* @vsia, align 16
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @vsia, align 16
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-BE-NEXT:    [[TMP2:%.*]] = load i32, i32* @sia, align 4
+// CHECK-BE-NEXT:    [[TMP2:%.*]] = load i32, ptr @sia, align 4
 // CHECK-BE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-BE-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ppc.altivec.vinsw(<4 x i32> [[TMP3]], i32 [[TMP2]], i32 6)
 // CHECK-BE-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP4]] to <16 x i8>
@@ -1190,9 +1190,9 @@ vector double test_vec_replace_elt_d(void) {
 //
 // CHECK-LE-LABEL: @test_vec_replace_unaligned_si(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* @vsia, align 16
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @vsia, align 16
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-LE-NEXT:    [[TMP2:%.*]] = load i32, i32* @sia, align 4
+// CHECK-LE-NEXT:    [[TMP2:%.*]] = load i32, ptr @sia, align 4
 // CHECK-LE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-LE-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ppc.altivec.vinsw(<4 x i32> [[TMP3]], i32 [[TMP2]], i32 6)
 // CHECK-LE-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP4]] to <16 x i8>
@@ -1204,9 +1204,9 @@ vector unsigned char test_vec_replace_unaligned_si(void) {
 
 // CHECK-BE-LABEL: @test_vec_replace_unaligned_ui(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* @vuia, align 16
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @vuia, align 16
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-BE-NEXT:    [[TMP2:%.*]] = load i32, i32* @uia, align 4
+// CHECK-BE-NEXT:    [[TMP2:%.*]] = load i32, ptr @uia, align 4
 // CHECK-BE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-BE-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ppc.altivec.vinsw(<4 x i32> [[TMP3]], i32 [[TMP2]], i32 8)
 // CHECK-BE-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP4]] to <16 x i8>
@@ -1214,9 +1214,9 @@ vector unsigned char test_vec_replace_unaligned_si(void) {
 //
 // CHECK-LE-LABEL: @test_vec_replace_unaligned_ui(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* @vuia, align 16
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @vuia, align 16
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-LE-NEXT:    [[TMP2:%.*]] = load i32, i32* @uia, align 4
+// CHECK-LE-NEXT:    [[TMP2:%.*]] = load i32, ptr @uia, align 4
 // CHECK-LE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-LE-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ppc.altivec.vinsw(<4 x i32> [[TMP3]], i32 [[TMP2]], i32 8)
 // CHECK-LE-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP4]] to <16 x i8>
@@ -1228,9 +1228,9 @@ vector unsigned char test_vec_replace_unaligned_ui(void) {
 
 // CHECK-BE-LABEL: @test_vec_replace_unaligned_f(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* @vfa, align 16
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr @vfa, align 16
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[TMP0]] to <16 x i8>
-// CHECK-BE-NEXT:    [[TMP2:%.*]] = load float, float* @fa, align 4
+// CHECK-BE-NEXT:    [[TMP2:%.*]] = load float, ptr @fa, align 4
 // CHECK-BE-NEXT:    [[CONV:%.*]] = fptoui float [[TMP2]] to i32
 // CHECK-BE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-BE-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ppc.altivec.vinsw(<4 x i32> [[TMP3]], i32 [[CONV]], i32 12)
@@ -1239,9 +1239,9 @@ vector unsigned char test_vec_replace_unaligned_ui(void) {
 //
 // CHECK-LE-LABEL: @test_vec_replace_unaligned_f(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* @vfa, align 16
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr @vfa, align 16
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[TMP0]] to <16 x i8>
-// CHECK-LE-NEXT:    [[TMP2:%.*]] = load float, float* @fa, align 4
+// CHECK-LE-NEXT:    [[TMP2:%.*]] = load float, ptr @fa, align 4
 // CHECK-LE-NEXT:    [[CONV:%.*]] = fptoui float [[TMP2]] to i32
 // CHECK-LE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-LE-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ppc.altivec.vinsw(<4 x i32> [[TMP3]], i32 [[CONV]], i32 12)
@@ -1254,9 +1254,9 @@ vector unsigned char test_vec_replace_unaligned_f(void) {
 
 // CHECK-BE-LABEL: @test_vec_replace_unaligned_sll(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* @vslla, align 16
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @vslla, align 16
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// CHECK-BE-NEXT:    [[TMP2:%.*]] = load i64, i64* @llb, align 8
+// CHECK-BE-NEXT:    [[TMP2:%.*]] = load i64, ptr @llb, align 8
 // CHECK-BE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
 // CHECK-BE-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.ppc.altivec.vinsd(<2 x i64> [[TMP3]], i64 [[TMP2]], i32 6)
 // CHECK-BE-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP4]] to <16 x i8>
@@ -1264,9 +1264,9 @@ vector unsigned char test_vec_replace_unaligned_f(void) {
 //
 // CHECK-LE-LABEL: @test_vec_replace_unaligned_sll(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* @vslla, align 16
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @vslla, align 16
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// CHECK-LE-NEXT:    [[TMP2:%.*]] = load i64, i64* @llb, align 8
+// CHECK-LE-NEXT:    [[TMP2:%.*]] = load i64, ptr @llb, align 8
 // CHECK-LE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
 // CHECK-LE-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.ppc.altivec.vinsd(<2 x i64> [[TMP3]], i64 [[TMP2]], i32 6)
 // CHECK-LE-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP4]] to <16 x i8>
@@ -1278,9 +1278,9 @@ vector unsigned char test_vec_replace_unaligned_sll(void) {
 
 // CHECK-BE-LABEL: @test_vec_replace_unaligned_ull(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* @vulla, align 16
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @vulla, align 16
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// CHECK-BE-NEXT:    [[TMP2:%.*]] = load i64, i64* @ulla, align 8
+// CHECK-BE-NEXT:    [[TMP2:%.*]] = load i64, ptr @ulla, align 8
 // CHECK-BE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
 // CHECK-BE-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.ppc.altivec.vinsd(<2 x i64> [[TMP3]], i64 [[TMP2]], i32 7)
 // CHECK-BE-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP4]] to <16 x i8>
@@ -1288,9 +1288,9 @@ vector unsigned char test_vec_replace_unaligned_sll(void) {
 //
 // CHECK-LE-LABEL: @test_vec_replace_unaligned_ull(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* @vulla, align 16
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @vulla, align 16
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// CHECK-LE-NEXT:    [[TMP2:%.*]] = load i64, i64* @ulla, align 8
+// CHECK-LE-NEXT:    [[TMP2:%.*]] = load i64, ptr @ulla, align 8
 // CHECK-LE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
 // CHECK-LE-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.ppc.altivec.vinsd(<2 x i64> [[TMP3]], i64 [[TMP2]], i32 7)
 // CHECK-LE-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP4]] to <16 x i8>
@@ -1302,9 +1302,9 @@ vector unsigned char test_vec_replace_unaligned_ull(void) {
 
 // CHECK-BE-LABEL: @test_vec_replace_unaligned_d(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <2 x double>, <2 x double>* @vda, align 16
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr @vda, align 16
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = bitcast <2 x double> [[TMP0]] to <16 x i8>
-// CHECK-BE-NEXT:    [[TMP2:%.*]] = load double, double* @da, align 8
+// CHECK-BE-NEXT:    [[TMP2:%.*]] = load double, ptr @da, align 8
 // CHECK-BE-NEXT:    [[CONV:%.*]] = fptoui double [[TMP2]] to i64
 // CHECK-BE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
 // CHECK-BE-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.ppc.altivec.vinsd(<2 x i64> [[TMP3]], i64 [[CONV]], i32 8)
@@ -1313,9 +1313,9 @@ vector unsigned char test_vec_replace_unaligned_ull(void) {
 //
 // CHECK-LE-LABEL: @test_vec_replace_unaligned_d(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <2 x double>, <2 x double>* @vda, align 16
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr @vda, align 16
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <2 x double> [[TMP0]] to <16 x i8>
-// CHECK-LE-NEXT:    [[TMP2:%.*]] = load double, double* @da, align 8
+// CHECK-LE-NEXT:    [[TMP2:%.*]] = load double, ptr @da, align 8
 // CHECK-LE-NEXT:    [[CONV:%.*]] = fptoui double [[TMP2]] to i64
 // CHECK-LE-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
 // CHECK-LE-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.ppc.altivec.vinsd(<2 x i64> [[TMP3]], i64 [[CONV]], i32 8)
@@ -1626,49 +1626,49 @@ vector signed int test_vec_vec_splati_ins_range(void) {
 
 void test_vec_xst_trunc_sc(vector signed __int128 __a, signed long long __b,
                            signed char *__c) {
-  // CHECK: store i8 %{{.+}}, i8* %{{.+}}, align 1
+  // CHECK: store i8 %{{.+}}, ptr %{{.+}}, align 1
   vec_xst_trunc(__a, __b, __c);
 }
 
 void test_vec_xst_trunc_uc(vector unsigned __int128 __a, signed long long __b,
                            unsigned char *__c) {
-  // CHECK: store i8 %{{.+}}, i8* %{{.+}}, align 1
+  // CHECK: store i8 %{{.+}}, ptr %{{.+}}, align 1
   vec_xst_trunc(__a, __b, __c);
 }
 
 void test_vec_xst_trunc_ss(vector signed __int128 __a, signed long long __b,
                            signed short *__c) {
-  // CHECK: store i16 %{{.+}}, i16* %{{.+}}, align 2
+  // CHECK: store i16 %{{.+}}, ptr %{{.+}}, align 2
   vec_xst_trunc(__a, __b, __c);
 }
 
 void test_vec_xst_trunc_us(vector unsigned __int128 __a, signed long long __b,
                            unsigned short *__c) {
-  // CHECK: store i16 %{{.+}}, i16* %{{.+}}, align 2
+  // CHECK: store i16 %{{.+}}, ptr %{{.+}}, align 2
   vec_xst_trunc(__a, __b, __c);
 }
 
 void test_vec_xst_trunc_si(vector signed __int128 __a, signed long long __b,
                            signed int *__c) {
-  // CHECK: store i32 %{{.+}}, i32* %{{.+}}, align 4
+  // CHECK: store i32 %{{.+}}, ptr %{{.+}}, align 4
   vec_xst_trunc(__a, __b, __c);
 }
 
 void test_vec_xst_trunc_ui(vector unsigned __int128 __a, signed long long __b,
                            unsigned int *__c) {
-  // CHECK: store i32 %{{.+}}, i32* %{{.+}}, align 4
+  // CHECK: store i32 %{{.+}}, ptr %{{.+}}, align 4
   vec_xst_trunc(__a, __b, __c);
 }
 
 void test_vec_xst_trunc_sll(vector signed __int128 __a, signed long long __b,
                             signed long long *__c) {
-  // CHECK: store i64 %{{.+}}, i64* %{{.+}}, align 8
+  // CHECK: store i64 %{{.+}}, ptr %{{.+}}, align 8
   vec_xst_trunc(__a, __b, __c);
 }
 
 void test_vec_xst_trunc_ull(vector unsigned __int128 __a, signed long long __b,
                             unsigned long long *__c) {
-  // CHECK: store i64 %{{.+}}, i64* %{{.+}}, align 8
+  // CHECK: store i64 %{{.+}}, ptr %{{.+}}, align 8
   vec_xst_trunc(__a, __b, __c);
 }
 

@@ -43,26 +43,17 @@ static ALIGNED(16) u8 tail_magic[kShadowAlignment - 1];
 
 bool HwasanChunkView::IsAllocated() const {
   return metadata_ && metadata_->alloc_context_id &&
-         metadata_->get_requested_size();
-}
-
-// Aligns the 'addr' right to the granule boundary.
-static uptr AlignRight(uptr addr, uptr requested_size) {
-  uptr tail_size = requested_size % kShadowAlignment;
-  if (!tail_size) return addr;
-  return addr + kShadowAlignment - tail_size;
+         metadata_->GetRequestedSize();
 }
 
 uptr HwasanChunkView::Beg() const {
-  if (metadata_ && metadata_->right_aligned)
-    return AlignRight(block_, metadata_->get_requested_size());
   return block_;
 }
 uptr HwasanChunkView::End() const {
   return Beg() + UsedSize();
 }
 uptr HwasanChunkView::UsedSize() const {
-  return metadata_->get_requested_size();
+  return metadata_->GetRequestedSize();
 }
 u32 HwasanChunkView::GetAllocStackId() const {
   return metadata_->alloc_context_id;
@@ -157,9 +148,8 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
   }
   Metadata *meta =
       reinterpret_cast<Metadata *>(allocator.GetMetaData(allocated));
-  meta->set_requested_size(orig_size);
+  meta->SetRequestedSize(orig_size);
   meta->alloc_context_id = StackDepotPut(*stack);
-  meta->right_aligned = false;
   if (zeroise) {
     internal_memset(allocated, 0, size);
   } else if (flags()->max_malloc_fill_size > 0) {
@@ -244,7 +234,7 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
     ReportInvalidFree(stack, reinterpret_cast<uptr>(tagged_ptr));
     return;
   }
-  uptr orig_size = meta->get_requested_size();
+  uptr orig_size = meta->GetRequestedSize();
   u32 free_context_id = StackDepotPut(*stack);
   u32 alloc_context_id = meta->alloc_context_id;
 
@@ -265,7 +255,7 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
                             orig_size, tail_magic);
   }
 
-  meta->set_requested_size(0);
+  meta->SetRequestedSize(0);
   meta->alloc_context_id = 0;
   // This memory will not be reused by anyone else, so we are free to keep it
   // poisoned.
@@ -322,7 +312,7 @@ static void *HwasanReallocate(StackTrace *stack, void *tagged_ptr_old,
         reinterpret_cast<Metadata *>(allocator.GetMetaData(untagged_ptr_old));
     internal_memcpy(
         UntagPtr(tagged_ptr_new), untagged_ptr_old,
-        Min(new_size, static_cast<uptr>(meta->get_requested_size())));
+        Min(new_size, static_cast<uptr>(meta->GetRequestedSize())));
     HwasanDeallocate(stack, tagged_ptr_old);
   }
   return tagged_ptr_new;
@@ -353,14 +343,8 @@ static uptr AllocationSize(const void *tagged_ptr) {
   if (!untagged_ptr) return 0;
   const void *beg = allocator.GetBlockBegin(untagged_ptr);
   Metadata *b = (Metadata *)allocator.GetMetaData(untagged_ptr);
-  if (b->right_aligned) {
-    if (beg != reinterpret_cast<void *>(RoundDownTo(
-                   reinterpret_cast<uptr>(untagged_ptr), kShadowAlignment)))
-      return 0;
-  } else {
-    if (beg != untagged_ptr) return 0;
-  }
-  return b->get_requested_size();
+  if (beg != untagged_ptr) return 0;
+  return b->GetRequestedSize();
 }
 
 void *hwasan_malloc(uptr size, StackTrace *stack) {

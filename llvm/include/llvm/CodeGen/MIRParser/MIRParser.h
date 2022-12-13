@@ -17,7 +17,6 @@
 #ifndef LLVM_CODEGEN_MIRPARSER_MIRPARSER_H
 #define LLVM_CODEGEN_MIRPARSER_MIRPARSER_H
 
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>

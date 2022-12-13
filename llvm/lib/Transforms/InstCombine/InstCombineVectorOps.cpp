@@ -875,7 +875,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
 
   // Try to find a value of each element of an aggregate.
   // FIXME: deal with more complex, not one-dimensional, aggregate types
-  SmallVector<Optional<Instruction *>, 2> AggElts(NumAggElts, NotFound);
+  SmallVector<std::optional<Instruction *>, 2> AggElts(NumAggElts, NotFound);
 
   // Do we know values for each element of the aggregate?
   auto KnowAllElts = [&AggElts]() {
@@ -908,7 +908,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     // Now, we may have already previously recorded the value for this element
     // of an aggregate. If we did, that means the CurrIVI will later be
     // overwritten with the already-recorded value. But if not, let's record it!
-    Optional<Instruction *> &Elt = AggElts[Indices.front()];
+    std::optional<Instruction *> &Elt = AggElts[Indices.front()];
     Elt = Elt.value_or(InsertedValue);
 
     // FIXME: should we handle chain-terminating undef base operand?
@@ -938,7 +938,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     /// or different elements had different source aggregates.
     FoundMismatch
   };
-  auto Describe = [](Optional<Value *> SourceAggregate) {
+  auto Describe = [](std::optional<Value *> SourceAggregate) {
     if (SourceAggregate == NotFound)
       return AggregateDescription::NotFound;
     if (*SourceAggregate == FoundMismatch)
@@ -952,8 +952,8 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // If found, return the source aggregate from which the extraction was.
   // If \p PredBB is provided, does PHI translation of an \p Elt first.
   auto FindSourceAggregate =
-      [&](Instruction *Elt, unsigned EltIdx, Optional<BasicBlock *> UseBB,
-          Optional<BasicBlock *> PredBB) -> Optional<Value *> {
+      [&](Instruction *Elt, unsigned EltIdx, std::optional<BasicBlock *> UseBB,
+          std::optional<BasicBlock *> PredBB) -> std::optional<Value *> {
     // For now(?), only deal with, at most, a single level of PHI indirection.
     if (UseBB && PredBB)
       Elt = dyn_cast<Instruction>(Elt->DoPHITranslation(*UseBB, *PredBB));
@@ -980,9 +980,9 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // see if we can find appropriate source aggregate for each of the elements,
   // and see it's the same aggregate for each element. If so, return it.
   auto FindCommonSourceAggregate =
-      [&](Optional<BasicBlock *> UseBB,
-          Optional<BasicBlock *> PredBB) -> Optional<Value *> {
-    Optional<Value *> SourceAggregate;
+      [&](std::optional<BasicBlock *> UseBB,
+          std::optional<BasicBlock *> PredBB) -> std::optional<Value *> {
+    std::optional<Value *> SourceAggregate;
 
     for (auto I : enumerate(AggElts)) {
       assert(Describe(SourceAggregate) != AggregateDescription::FoundMismatch &&
@@ -994,7 +994,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
       // For this element, is there a plausible source aggregate?
       // FIXME: we could special-case undef element, IFF we know that in the
       //        source aggregate said element isn't poison.
-      Optional<Value *> SourceAggregateForElement =
+      std::optional<Value *> SourceAggregateForElement =
           FindSourceAggregate(*I.value(), I.index(), UseBB, PredBB);
 
       // Okay, what have we found? Does that correlate with previous findings?
@@ -1028,7 +1028,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     return *SourceAggregate;
   };
 
-  Optional<Value *> SourceAggregate;
+  std::optional<Value *> SourceAggregate;
 
   // Can we find the source aggregate without looking at predecessors?
   SourceAggregate = FindCommonSourceAggregate(/*UseBB=*/std::nullopt,
@@ -1049,7 +1049,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // they all should be defined in the same basic block.
   BasicBlock *UseBB = nullptr;
 
-  for (const Optional<Instruction *> &I : AggElts) {
+  for (const std::optional<Instruction *> &I : AggElts) {
     BasicBlock *BB = (*I)->getParent();
     // If it's the first instruction we've encountered, record the basic block.
     if (!UseBB) {
@@ -1515,6 +1515,57 @@ static Instruction *narrowInsElt(InsertElementInst &InsElt,
   return CastInst::Create(CastOpcode, NewInsElt, InsElt.getType());
 }
 
+/// If we are inserting 2 halves of a value into adjacent elements of a vector,
+/// try to convert to a single insert with appropriate bitcasts.
+static Instruction *foldTruncInsEltPair(InsertElementInst &InsElt,
+                                        bool IsBigEndian,
+                                        InstCombiner::BuilderTy &Builder) {
+  Value *VecOp    = InsElt.getOperand(0);
+  Value *ScalarOp = InsElt.getOperand(1);
+  Value *IndexOp  = InsElt.getOperand(2);
+
+  // inselt (inselt BaseVec, (trunc X), Index0), (trunc (lshr X, BW/2)), Index1
+  // TODO: The insertion order could be reversed.
+  // TODO: Detect smaller fractions of the scalar.
+  // TODO: One-use checks are conservative.
+  auto *VTy = dyn_cast<FixedVectorType>(InsElt.getType());
+  Value *X, *BaseVec;
+  uint64_t ShAmt, Index0, Index1;
+  if (!VTy || (VTy->getNumElements() & 1) ||
+      !match(VecOp, m_OneUse(m_InsertElt(m_Value(BaseVec), m_Trunc(m_Value(X)),
+                                         m_ConstantInt(Index0)))) ||
+      !match(ScalarOp, m_OneUse(m_Trunc(m_LShr(m_Specific(X),
+                                               m_ConstantInt(ShAmt))))) ||
+      !match(IndexOp, m_ConstantInt(Index1)))
+    return nullptr;
+
+  Type *SrcTy = X->getType();
+  unsigned ScalarWidth = SrcTy->getScalarSizeInBits();
+  unsigned VecEltWidth = VTy->getScalarSizeInBits();
+  if (ScalarWidth != VecEltWidth * 2 || ShAmt != VecEltWidth)
+    return nullptr;
+
+  // The low half must be inserted at element +1 for big-endian.
+  // The high half must be inserted at element +1 for little-endian
+  if (IsBigEndian ? Index0 != Index1 + 1 : Index0 + 1 != Index1)
+    return nullptr;
+
+  // The high half must be inserted at an even element for big-endian.
+  // The low half must be inserted at an even element for little-endian.
+  if (IsBigEndian ? Index1 & 1 : Index0 & 1)
+    return nullptr;
+
+  // Bitcast the base vector to a vector type with the source element type.
+  Type *CastTy = FixedVectorType::get(SrcTy, VTy->getNumElements() / 2);
+  Value *CastBaseVec = Builder.CreateBitCast(BaseVec, CastTy);
+
+  // Scale the insert index for a vector with half as many elements.
+  // bitcast (inselt (bitcast BaseVec), X, NewIndex)
+  uint64_t NewIndex = IsBigEndian ? Index1 / 2 : Index0 / 2;
+  Value *NewInsert = Builder.CreateInsertElement(CastBaseVec, X, NewIndex);
+  return new BitCastInst(NewInsert, VTy);
+}
+
 Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
   Value *VecOp    = IE.getOperand(0);
   Value *ScalarOp = IE.getOperand(1);
@@ -1623,6 +1674,9 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
     return IdentityShuf;
 
   if (Instruction *Ext = narrowInsElt(IE, Builder))
+    return Ext;
+
+  if (Instruction *Ext = foldTruncInsEltPair(IE, DL.isBigEndian(), Builder))
     return Ext;
 
   return nullptr;

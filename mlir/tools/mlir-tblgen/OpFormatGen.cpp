@@ -2434,7 +2434,7 @@ static bool isOptionallyParsed(FormatElement *el) {
 /// element that satisfies `isInvalid`, skipping any optionally-parsed elements.
 /// If an optional group is encountered, this function recurses into the 'then'
 /// and 'else' elements to check if they are invalid. Returns `success` if the
-/// range is known to be valid or `None` if scanning reached the end.
+/// range is known to be valid or `std::nullopt` if scanning reached the end.
 ///
 /// Since the guard element of an optional group is required, this function
 /// accepts an optional element pointer to mark it as required.

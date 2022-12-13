@@ -747,9 +747,7 @@ DWARFASTParserClang::GetDIEClassTemplateParams(const DWARFDIE &die) {
 
   clang::DeclContext *decl_ctx = GetClangDeclContextContainingDIE(die, nullptr);
   TypeSystemClang::TemplateParameterInfos template_param_infos;
-  if (ParseTemplateParameterInfos(die, template_param_infos) &&
-      (!template_param_infos.args.empty() ||
-       template_param_infos.packed_args)) {
+  if (ParseTemplateParameterInfos(die, template_param_infos)) {
     // Most of the parameters here don't matter, but we make sure the base name
     // is empty so when we print the name we only get the template parameters.
     clang::ClassTemplateDecl *class_template_decl =
@@ -1787,9 +1785,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
 
     TypeSystemClang::TemplateParameterInfos template_param_infos;
-    if (ParseTemplateParameterInfos(die, template_param_infos) &&
-        (!template_param_infos.args.empty() ||
-         template_param_infos.packed_args)) {
+    if (ParseTemplateParameterInfos(die, template_param_infos)) {
       clang::ClassTemplateDecl *class_template_decl =
           m_ast.ParseClassTemplateDecl(
               decl_ctx, GetOwningClangModule(die), attrs.accessibility,
@@ -2123,7 +2119,10 @@ bool DWARFASTParserClang::ParseTemplateParameterInfos(
       break;
     }
   }
-  return template_param_infos.args.size() == template_param_infos.names.size();
+  return template_param_infos.args.size() ==
+             template_param_infos.names.size() &&
+         (!template_param_infos.args.empty() ||
+          template_param_infos.packed_args);
 }
 
 bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,

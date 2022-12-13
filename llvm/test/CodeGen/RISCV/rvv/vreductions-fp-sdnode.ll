@@ -9,7 +9,7 @@ declare half @llvm.vector.reduce.fadd.nxv1f16(half, <vscale x 1 x half>)
 define half @vreduce_fadd_nxv1f16(<vscale x 1 x half> %v, half %s) {
 ; CHECK-LABEL: vreduce_fadd_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfredusum.vs v8, v8, v9
@@ -22,7 +22,7 @@ define half @vreduce_fadd_nxv1f16(<vscale x 1 x half> %v, half %s) {
 define half @vreduce_ord_fadd_nxv1f16(<vscale x 1 x half> %v, half %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfredosum.vs v8, v8, v9
@@ -37,7 +37,7 @@ declare half @llvm.vector.reduce.fadd.nxv2f16(half, <vscale x 2 x half>)
 define half @vreduce_fadd_nxv2f16(<vscale x 2 x half> %v, half %s) {
 ; CHECK-LABEL: vreduce_fadd_nxv2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfredusum.vs v8, v8, v9
@@ -50,7 +50,7 @@ define half @vreduce_fadd_nxv2f16(<vscale x 2 x half> %v, half %s) {
 define half @vreduce_ord_fadd_nxv2f16(<vscale x 2 x half> %v, half %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_nxv2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfredosum.vs v8, v8, v9
@@ -93,7 +93,7 @@ declare float @llvm.vector.reduce.fadd.nxv1f32(float, <vscale x 1 x float>)
 define float @vreduce_fadd_nxv1f32(<vscale x 1 x float> %v, float %s) {
 ; CHECK-LABEL: vreduce_fadd_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfredusum.vs v8, v8, v9
@@ -106,7 +106,7 @@ define float @vreduce_fadd_nxv1f32(<vscale x 1 x float> %v, float %s) {
 define float @vreduce_ord_fadd_nxv1f32(<vscale x 1 x float> %v, float %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfredosum.vs v8, v8, v9
@@ -119,7 +119,7 @@ define float @vreduce_ord_fadd_nxv1f32(<vscale x 1 x float> %v, float %s) {
 define float @vreduce_fwadd_nxv1f32(<vscale x 1 x half> %v, float %s) {
 ; CHECK-LABEL: vreduce_fwadd_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwredusum.vs v8, v8, v9
@@ -134,7 +134,7 @@ define float @vreduce_fwadd_nxv1f32(<vscale x 1 x half> %v, float %s) {
 define float @vreduce_ord_fwadd_nxv1f32(<vscale x 1 x half> %v, float %s) {
 ; CHECK-LABEL: vreduce_ord_fwadd_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwredosum.vs v8, v8, v9
@@ -443,7 +443,7 @@ define half @vreduce_fmin_nxv1f16(<vscale x 1 x half> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI30_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI30_0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlse16.v v9, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v9
@@ -458,7 +458,7 @@ define half @vreduce_fmin_nxv1f16_nonans(<vscale x 1 x half> %v) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI31_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI31_0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlse16.v v9, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v9
@@ -473,7 +473,7 @@ define half @vreduce_fmin_nxv1f16_nonans_noinfs(<vscale x 1 x half> %v) #1 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI32_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI32_0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlse16.v v9, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v9
@@ -490,7 +490,7 @@ define half @vreduce_fmin_nxv2f16(<vscale x 2 x half> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI33_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI33_0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlse16.v v9, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v9
@@ -543,7 +543,7 @@ define float @vreduce_fmin_nxv1f32(<vscale x 1 x float> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI36_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI36_0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlse32.v v9, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v9
@@ -558,7 +558,7 @@ define float @vreduce_fmin_nxv1f32_nonans(<vscale x 1 x float> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI37_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI37_0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlse32.v v9, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v9
@@ -573,7 +573,7 @@ define float @vreduce_fmin_nxv1f32_nonans_noinfs(<vscale x 1 x float> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI38_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI38_0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlse32.v v9, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v9
@@ -743,7 +743,7 @@ define half @vreduce_fmax_nxv1f16(<vscale x 1 x half> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI48_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI48_0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlse16.v v9, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v9
@@ -758,7 +758,7 @@ define half @vreduce_fmax_nxv1f16_nonans(<vscale x 1 x half> %v) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI49_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI49_0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlse16.v v9, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v9
@@ -773,7 +773,7 @@ define half @vreduce_fmax_nxv1f16_nonans_noinfs(<vscale x 1 x half> %v) #1 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI50_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI50_0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlse16.v v9, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v9
@@ -790,7 +790,7 @@ define half @vreduce_fmax_nxv2f16(<vscale x 2 x half> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI51_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI51_0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlse16.v v9, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v9
@@ -843,7 +843,7 @@ define float @vreduce_fmax_nxv1f32(<vscale x 1 x float> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI54_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI54_0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlse32.v v9, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v9
@@ -858,7 +858,7 @@ define float @vreduce_fmax_nxv1f32_nonans(<vscale x 1 x float> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI55_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI55_0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlse32.v v9, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v9
@@ -873,7 +873,7 @@ define float @vreduce_fmax_nxv1f32_nonans_noinfs(<vscale x 1 x float> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI56_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI56_0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlse32.v v9, (a0), zero
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v9
@@ -1039,7 +1039,7 @@ define double @vreduce_fmax_nxv16f64(<vscale x 16 x double> %v) {
 define float @vreduce_nsz_fadd_nxv1f32(<vscale x 1 x float> %v, float %s) {
 ; CHECK-LABEL: vreduce_nsz_fadd_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfredusum.vs v8, v8, v9

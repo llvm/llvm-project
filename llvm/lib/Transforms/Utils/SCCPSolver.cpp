@@ -16,11 +16,13 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueLattice.h"
+#include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <utility>
 #include <vector>
@@ -39,7 +41,7 @@ static ValueLatticeElement::MergeOptions getMaxWidenStepsOpts() {
       MaxNumRangeExtensions);
 }
 
-namespace {
+namespace llvm {
 
 // Helper to check if \p LV is either a constant or a constant
 // range with a single element. This should cover exactly the same cases as the
@@ -58,9 +60,247 @@ bool isOverdefined(const ValueLatticeElement &LV) {
   return !LV.isUnknownOrUndef() && !isConstant(LV);
 }
 
-} // namespace
+static bool canRemoveInstruction(Instruction *I) {
+  if (wouldInstructionBeTriviallyDead(I))
+    return true;
 
-namespace llvm {
+  // Some instructions can be handled but are rejected above. Catch
+  // those cases by falling through to here.
+  // TODO: Mark globals as being constant earlier, so
+  // TODO: wouldInstructionBeTriviallyDead() knows that atomic loads
+  // TODO: are safe to remove.
+  return isa<LoadInst>(I);
+}
+
+bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
+  Constant *Const = nullptr;
+  if (V->getType()->isStructTy()) {
+    std::vector<ValueLatticeElement> IVs = Solver.getStructLatticeValueFor(V);
+    if (llvm::any_of(IVs, isOverdefined))
+      return false;
+    std::vector<Constant *> ConstVals;
+    auto *ST = cast<StructType>(V->getType());
+    for (unsigned i = 0, e = ST->getNumElements(); i != e; ++i) {
+      ValueLatticeElement V = IVs[i];
+      ConstVals.push_back(isConstant(V)
+                              ? Solver.getConstant(V)
+                              : UndefValue::get(ST->getElementType(i)));
+    }
+    Const = ConstantStruct::get(ST, ConstVals);
+  } else {
+    const ValueLatticeElement &IV = Solver.getLatticeValueFor(V);
+    if (isOverdefined(IV))
+      return false;
+
+    Const =
+        isConstant(IV) ? Solver.getConstant(IV) : UndefValue::get(V->getType());
+  }
+  assert(Const && "Constant is nullptr here!");
+
+  // Replacing `musttail` instructions with constant breaks `musttail` invariant
+  // unless the call itself can be removed.
+  // Calls with "clang.arc.attachedcall" implicitly use the return value and
+  // those uses cannot be updated with a constant.
+  CallBase *CB = dyn_cast<CallBase>(V);
+  if (CB && ((CB->isMustTailCall() &&
+              !canRemoveInstruction(CB)) ||
+             CB->getOperandBundle(LLVMContext::OB_clang_arc_attachedcall))) {
+    Function *F = CB->getCalledFunction();
+
+    // Don't zap returns of the callee
+    if (F)
+      Solver.addToMustPreserveReturnsInFunctions(F);
+
+    LLVM_DEBUG(dbgs() << "  Can\'t treat the result of call " << *CB
+                      << " as a constant\n");
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "  Constant: " << *Const << " = " << *V << '\n');
+
+  // Replaces all of the uses of a variable with uses of the constant.
+  V->replaceAllUsesWith(Const);
+  return true;
+}
+
+/// Try to replace signed instructions with their unsigned equivalent.
+static bool replaceSignedInst(SCCPSolver &Solver,
+                              SmallPtrSetImpl<Value *> &InsertedValues,
+                              Instruction &Inst) {
+  // Determine if a signed value is known to be >= 0.
+  auto isNonNegative = [&Solver](Value *V) {
+    // If this value was constant-folded, it may not have a solver entry.
+    // Handle integers. Otherwise, return false.
+    if (auto *C = dyn_cast<Constant>(V)) {
+      auto *CInt = dyn_cast<ConstantInt>(C);
+      return CInt && !CInt->isNegative();
+    }
+    const ValueLatticeElement &IV = Solver.getLatticeValueFor(V);
+    return IV.isConstantRange(/*UndefAllowed=*/false) &&
+           IV.getConstantRange().isAllNonNegative();
+  };
+
+  Instruction *NewInst = nullptr;
+  switch (Inst.getOpcode()) {
+  // Note: We do not fold sitofp -> uitofp here because that could be more
+  // expensive in codegen and may not be reversible in the backend.
+  case Instruction::SExt: {
+    // If the source value is not negative, this is a zext.
+    Value *Op0 = Inst.getOperand(0);
+    if (InsertedValues.count(Op0) || !isNonNegative(Op0))
+      return false;
+    NewInst = new ZExtInst(Op0, Inst.getType(), "", &Inst);
+    break;
+  }
+  case Instruction::AShr: {
+    // If the shifted value is not negative, this is a logical shift right.
+    Value *Op0 = Inst.getOperand(0);
+    if (InsertedValues.count(Op0) || !isNonNegative(Op0))
+      return false;
+    NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", &Inst);
+    break;
+  }
+  case Instruction::SDiv:
+  case Instruction::SRem: {
+    // If both operands are not negative, this is the same as udiv/urem.
+    Value *Op0 = Inst.getOperand(0), *Op1 = Inst.getOperand(1);
+    if (InsertedValues.count(Op0) || InsertedValues.count(Op1) ||
+        !isNonNegative(Op0) || !isNonNegative(Op1))
+      return false;
+    auto NewOpcode = Inst.getOpcode() == Instruction::SDiv ? Instruction::UDiv
+                                                           : Instruction::URem;
+    NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", &Inst);
+    break;
+  }
+  default:
+    return false;
+  }
+
+  // Wire up the new instruction and update state.
+  assert(NewInst && "Expected replacement instruction");
+  NewInst->takeName(&Inst);
+  InsertedValues.insert(NewInst);
+  Inst.replaceAllUsesWith(NewInst);
+  Solver.removeLatticeValueFor(&Inst);
+  Inst.eraseFromParent();
+  return true;
+}
+
+bool simplifyInstsInBlock(SCCPSolver &Solver, BasicBlock &BB,
+                          SmallPtrSetImpl<Value *> &InsertedValues,
+                          Statistic &InstRemovedStat,
+                          Statistic &InstReplacedStat) {
+  bool MadeChanges = false;
+  for (Instruction &Inst : make_early_inc_range(BB)) {
+    if (Inst.getType()->isVoidTy())
+      continue;
+    if (tryToReplaceWithConstant(Solver, &Inst)) {
+      if (canRemoveInstruction(&Inst))
+        Inst.eraseFromParent();
+
+      MadeChanges = true;
+      ++InstRemovedStat;
+    } else if (replaceSignedInst(Solver, InsertedValues, Inst)) {
+      MadeChanges = true;
+      ++InstReplacedStat;
+    }
+  }
+  return MadeChanges;
+}
+
+bool removeNonFeasibleEdges(const SCCPSolver &Solver, BasicBlock *BB,
+                            DomTreeUpdater &DTU,
+                            BasicBlock *&NewUnreachableBB) {
+  SmallPtrSet<BasicBlock *, 8> FeasibleSuccessors;
+  bool HasNonFeasibleEdges = false;
+  for (BasicBlock *Succ : successors(BB)) {
+    if (Solver.isEdgeFeasible(BB, Succ))
+      FeasibleSuccessors.insert(Succ);
+    else
+      HasNonFeasibleEdges = true;
+  }
+
+  // All edges feasible, nothing to do.
+  if (!HasNonFeasibleEdges)
+    return false;
+
+  // SCCP can only determine non-feasible edges for br, switch and indirectbr.
+  Instruction *TI = BB->getTerminator();
+  assert((isa<BranchInst>(TI) || isa<SwitchInst>(TI) ||
+          isa<IndirectBrInst>(TI)) &&
+         "Terminator must be a br, switch or indirectbr");
+
+  if (FeasibleSuccessors.size() == 0) {
+    // Branch on undef/poison, replace with unreachable.
+    SmallPtrSet<BasicBlock *, 8> SeenSuccs;
+    SmallVector<DominatorTree::UpdateType, 8> Updates;
+    for (BasicBlock *Succ : successors(BB)) {
+      Succ->removePredecessor(BB);
+      if (SeenSuccs.insert(Succ).second)
+        Updates.push_back({DominatorTree::Delete, BB, Succ});
+    }
+    TI->eraseFromParent();
+    new UnreachableInst(BB->getContext(), BB);
+    DTU.applyUpdatesPermissive(Updates);
+  } else if (FeasibleSuccessors.size() == 1) {
+    // Replace with an unconditional branch to the only feasible successor.
+    BasicBlock *OnlyFeasibleSuccessor = *FeasibleSuccessors.begin();
+    SmallVector<DominatorTree::UpdateType, 8> Updates;
+    bool HaveSeenOnlyFeasibleSuccessor = false;
+    for (BasicBlock *Succ : successors(BB)) {
+      if (Succ == OnlyFeasibleSuccessor && !HaveSeenOnlyFeasibleSuccessor) {
+        // Don't remove the edge to the only feasible successor the first time
+        // we see it. We still do need to remove any multi-edges to it though.
+        HaveSeenOnlyFeasibleSuccessor = true;
+        continue;
+      }
+
+      Succ->removePredecessor(BB);
+      Updates.push_back({DominatorTree::Delete, BB, Succ});
+    }
+
+    BranchInst::Create(OnlyFeasibleSuccessor, BB);
+    TI->eraseFromParent();
+    DTU.applyUpdatesPermissive(Updates);
+  } else if (FeasibleSuccessors.size() > 1) {
+    SwitchInstProfUpdateWrapper SI(*cast<SwitchInst>(TI));
+    SmallVector<DominatorTree::UpdateType, 8> Updates;
+
+    // If the default destination is unfeasible it will never be taken. Replace
+    // it with a new block with a single Unreachable instruction.
+    BasicBlock *DefaultDest = SI->getDefaultDest();
+    if (!FeasibleSuccessors.contains(DefaultDest)) {
+      if (!NewUnreachableBB) {
+        NewUnreachableBB =
+            BasicBlock::Create(DefaultDest->getContext(), "default.unreachable",
+                               DefaultDest->getParent(), DefaultDest);
+        new UnreachableInst(DefaultDest->getContext(), NewUnreachableBB);
+      }
+
+      SI->setDefaultDest(NewUnreachableBB);
+      Updates.push_back({DominatorTree::Delete, BB, DefaultDest});
+      Updates.push_back({DominatorTree::Insert, BB, NewUnreachableBB});
+    }
+
+    for (auto CI = SI->case_begin(); CI != SI->case_end();) {
+      if (FeasibleSuccessors.contains(CI->getCaseSuccessor())) {
+        ++CI;
+        continue;
+      }
+
+      BasicBlock *Succ = CI->getCaseSuccessor();
+      Succ->removePredecessor(BB);
+      Updates.push_back({DominatorTree::Delete, BB, Succ});
+      SI.removeCase(CI);
+      // Don't increment CI, as we removed a case.
+    }
+
+    DTU.applyUpdatesPermissive(Updates);
+  } else {
+    llvm_unreachable("Must have at least one feasible successor");
+  }
+  return true;
+}
 
 /// Helper class for SCCPSolver. This implements the instruction visitor and
 /// holds all the state.
@@ -463,6 +703,26 @@ public:
   void markFunctionUnreachable(Function *F) {
     for (auto &BB : *F)
       BBExecutable.erase(&BB);
+  }
+
+  void solveWhileResolvedUndefsIn(Module &M) {
+    bool ResolvedUndefs = true;
+    while (ResolvedUndefs) {
+      solve();
+      ResolvedUndefs = false;
+      for (Function &F : M)
+        ResolvedUndefs |= resolvedUndefsIn(F);
+    }
+  }
+
+  void solveWhileResolvedUndefsIn(SmallVectorImpl<Function *> &WorkList) {
+    bool ResolvedUndefs = true;
+    while (ResolvedUndefs) {
+      solve();
+      ResolvedUndefs = false;
+      for (Function *F : WorkList)
+        ResolvedUndefs |= resolvedUndefsIn(*F);
+    }
   }
 };
 
@@ -1298,7 +1558,8 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
       const auto *PI = getPredicateInfoFor(&CB);
       assert(PI && "Missing predicate info for ssa.copy");
 
-      const Optional<PredicateConstraint> &Constraint = PI->getConstraint();
+      const std::optional<PredicateConstraint> &Constraint =
+          PI->getConstraint();
       if (!Constraint) {
         mergeInValue(ValueState[&CB], &CB, CopyOfVal);
         return;
@@ -1531,6 +1792,9 @@ bool SCCPInstVisitor::resolvedUndefsIn(Function &F) {
     }
   }
 
+  LLVM_DEBUG(if (MadeChange) dbgs()
+             << "\nResolved undefs in " << F.getName() << '\n');
+
   return MadeChange;
 }
 
@@ -1592,6 +1856,15 @@ void SCCPSolver::solve() { Visitor->solve(); }
 
 bool SCCPSolver::resolvedUndefsIn(Function &F) {
   return Visitor->resolvedUndefsIn(F);
+}
+
+void SCCPSolver::solveWhileResolvedUndefsIn(Module &M) {
+  Visitor->solveWhileResolvedUndefsIn(M);
+}
+
+void
+SCCPSolver::solveWhileResolvedUndefsIn(SmallVectorImpl<Function *> &WorkList) {
+  Visitor->solveWhileResolvedUndefsIn(WorkList);
 }
 
 bool SCCPSolver::isBlockExecutable(BasicBlock *BB) const {

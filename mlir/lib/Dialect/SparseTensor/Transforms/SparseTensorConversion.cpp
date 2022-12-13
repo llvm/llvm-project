@@ -84,7 +84,7 @@ static Value genDimSizeCall(OpBuilder &builder, Location loc, Value tensor,
 /// Looks up a level-size by returning a statically-computed constant
 /// (when possible), or by calling `genLvlSizeCall` (when dynamic).
 static Value createOrFoldLvlCall(OpBuilder &builder, Location loc,
-                                 SparseTensorEncodingAttr &enc, ShapedType stp,
+                                 SparseTensorEncodingAttr enc, ShapedType stp,
                                  Value tensor, unsigned lvl) {
   // Only sparse tensors have "levels" to query.
   assert(enc);
@@ -111,7 +111,7 @@ static Value createOrFoldLvlCall(OpBuilder &builder, Location loc,
 /// of sparse tensors) or `linalg::createOrFoldDimOp` (for dynamic sizes
 /// of dense tensors).
 static Value createOrFoldDimCall(OpBuilder &builder, Location loc,
-                                 SparseTensorEncodingAttr &enc, ShapedType stp,
+                                 SparseTensorEncodingAttr enc, ShapedType stp,
                                  Value tensor, unsigned dim) {
   auto s = stp.getShape()[dim];
   if (s != ShapedType::kDynamic)
@@ -123,7 +123,7 @@ static Value createOrFoldDimCall(OpBuilder &builder, Location loc,
 
 /// Populates the array with the dimension-sizes of the given tensor.
 static void fillDimSizes(OpBuilder &builder, Location loc,
-                         SparseTensorEncodingAttr &enc, ShapedType stp,
+                         SparseTensorEncodingAttr enc, ShapedType stp,
                          Value tensor, SmallVectorImpl<Value> &out) {
   unsigned dimRank = stp.getRank();
   out.reserve(dimRank);
@@ -133,7 +133,7 @@ static void fillDimSizes(OpBuilder &builder, Location loc,
 
 /// Returns an array with the dimension-sizes of the given tensor.
 static SmallVector<Value> getDimSizes(OpBuilder &builder, Location loc,
-                                      SparseTensorEncodingAttr &enc,
+                                      SparseTensorEncodingAttr enc,
                                       ShapedType stp, Value tensor) {
   SmallVector<Value> out;
   fillDimSizes(builder, loc, enc, stp, tensor, out);

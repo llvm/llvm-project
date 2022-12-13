@@ -757,8 +757,7 @@ public:
                                const BreakpointName::Permissions &permissions);
   void ApplyNameToBreakpoints(BreakpointName &bp_name);
 
-  // This takes ownership of the name obj passed in.
-  void AddBreakpointName(BreakpointName *bp_name);
+  void AddBreakpointName(std::unique_ptr<BreakpointName> bp_name);
 
   void GetBreakpointNames(std::vector<std::string> &names);
 
@@ -1512,7 +1511,8 @@ protected:
   SectionLoadHistory m_section_load_history;
   BreakpointList m_breakpoint_list;
   BreakpointList m_internal_breakpoint_list;
-  using BreakpointNameList = std::map<ConstString, BreakpointName *>;
+  using BreakpointNameList =
+      std::map<ConstString, std::unique_ptr<BreakpointName>>;
   BreakpointNameList m_breakpoint_names;
 
   lldb::BreakpointSP m_last_created_breakpoint;

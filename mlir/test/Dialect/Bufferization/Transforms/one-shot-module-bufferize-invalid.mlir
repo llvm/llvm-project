@@ -158,7 +158,7 @@ func.func @scf_while_non_equiv_yield(%arg0: tensor<5xi1>,
 
 // -----
 
-func.func private @fun_with_side_effects(%A: tensor<?xf32> {bufferization.writable = true})
+func.func private @fun_with_side_effects(%A: tensor<?xf32>)
 
 func.func @foo(%A: tensor<?xf32> {bufferization.writable = true}) -> (tensor<?xf32>) {
   call @fun_with_side_effects(%A) : (tensor<?xf32>) -> ()

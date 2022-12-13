@@ -4,28 +4,28 @@
 ; RUN: sed -e s/.T2:// %s | not llvm-as -disable-output 2>&1 | FileCheck --check-prefix=CHECK2 %s
 ; RUN: sed -e s/.T3:// %s | not llvm-as -disable-output 2>&1 | FileCheck --check-prefix=CHECK3 %s
 ; RUN: sed -e s/.T4:// %s | not llvm-as -disable-output 2>&1 | FileCheck --check-prefix=CHECK4 %s
-; RUN: sed -e s/.T5:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK5 %s
-; RUN: sed -e s/.T6:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK6 %s
-; RUN: sed -e s/.T7:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK7 %s
-; RUN: sed -e s/.T8:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK8 %s
-; RUN: sed -e s/.T9:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK9 %s
-; RUN: sed -e s/.T10:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK10 %s
-; RUN: sed -e s/.T11:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK11 %s
-; RUN: sed -e s/.T12:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK12 %s
-; RUN: sed -e s/.T13:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK13 %s
-; RUN: sed -e s/.T14:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK14 %s
-; RUN: sed -e s/.T15:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK15 %s
-; RUN: sed -e s/.T16:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK16 %s
-; RUN: sed -e s/.T17:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK17 %s
-; RUN: sed -e s/.T18:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK18 %s
-; RUN: sed -e s/.T19:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK19 %s
-; RUN: sed -e s/.T20:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK20 %s
-; RUN: sed -e s/.T21:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK21 %s
-; RUN: sed -e s/.T22:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK22 %s
-; RUN: sed -e s/.T23:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK23 %s
-; RUN: sed -e s/.T24:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK24 %s
-; RUN: sed -e s/.T25:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK25 %s
-; RUN: sed -e s/.T26:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK26 %s
+; RUN: sed -e s/.T5:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK5 %s
+; RUN: sed -e s/.T6:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK6 %s
+; RUN: sed -e s/.T7:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK7 %s
+; RUN: sed -e s/.T8:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK8 %s
+; RUN: sed -e s/.T9:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK9 %s
+; RUN: sed -e s/.T10:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK10 %s
+; RUN: sed -e s/.T11:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK11 %s
+; RUN: sed -e s/.T12:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK12 %s
+; RUN: sed -e s/.T13:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK13 %s
+; RUN: sed -e s/.T14:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK14 %s
+; RUN: sed -e s/.T15:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK15 %s
+; RUN: sed -e s/.T16:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK16 %s
+; RUN: sed -e s/.T17:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK17 %s
+; RUN: sed -e s/.T18:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK18 %s
+; RUN: sed -e s/.T19:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK19 %s
+; RUN: sed -e s/.T20:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK20 %s
+; RUN: sed -e s/.T21:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK21 %s
+; RUN: sed -e s/.T22:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK22 %s
+; RUN: sed -e s/.T23:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK23 %s
+; RUN: sed -e s/.T24:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK24 %s
+; RUN: sed -e s/.T25:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK25 %s
+; RUN: sed -e s/.T26:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK26 %s
 
 declare void @g()
 

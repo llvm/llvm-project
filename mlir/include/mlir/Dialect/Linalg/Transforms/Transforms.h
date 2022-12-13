@@ -88,6 +88,10 @@ void populateDataLayoutPropagationPatterns(RewritePatternSet &patterns);
 /// This is effectively DCE for a linalg op.
 void populateEraseUnusedOperandsAndResultsPatterns(RewritePatternSet &patterns);
 
+/// Patterns to promote inputs to outputs and remove unused inputs of
+/// `linalg.generic` ops.
+void populateEraseUnnecessaryInputsPatterns(RewritePatternSet &patterns);
+
 /// Function type to control generic op dimension collapsing. It is expected
 /// to return an array of `ReassociationIndices` representing dimensions that
 /// should be merged.
@@ -340,8 +344,15 @@ promoteSubviewAsNewBuffer(OpBuilder &b, Location loc, memref::SubViewOp subView,
 FailureOr<LinalgOp> promoteSubViews(OpBuilder &b, LinalgOp op,
                                     const LinalgPromotionOptions &options);
 
-/// Emit a suitable vector form for a Linalg op with fully static shape.
-LogicalResult vectorize(RewriterBase &builder, LinalgOp linalgOp);
+/// Emit a suitable vector form for a Linalg op. If provided, `inputVectorSizes`
+/// are used to vectorize this operation. `inputVectorSizes` must match the rank
+/// of the iteration space of the operation and the sizes must be smaller or
+/// equal than their counterpart interation space sizes, if static.
+/// `inputVectorShapes` also allows the vectorization of operations with dynamic
+/// shapes.
+LogicalResult vectorize(RewriterBase &rewriter, LinalgOp linalgOp,
+                        ArrayRef<int64_t> inputVectorSizes = {},
+                        bool vectorizeNDExtract = false);
 
 /// Emit a suitable vector form for a Copy op with fully static shape.
 LogicalResult vectorizeCopy(RewriterBase &builder, memref::CopyOp copyOp);
@@ -367,7 +378,10 @@ LogicalResult promoteSubviewsPrecondition(Operation *op,
                                           LinalgPromotionOptions options);
 
 /// Return success if the operation can be vectorized.
-LogicalResult vectorizeLinalgOpPrecondition(LinalgOp linalgOp);
+LogicalResult
+vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
+                              ArrayRef<int64_t> inputVectorSizes = {},
+                              bool vectorizeNDExtract = false);
 
 //===----------------------------------------------------------------------===//
 // Transformations exposed as rewrite patterns.
@@ -861,6 +875,9 @@ protected:
 void populatePadOpVectorizationPatterns(RewritePatternSet &patterns,
                                         PatternBenefit baseBenefit = 1);
 
+void populateExtractOpVectorizationPatterns(RewritePatternSet &patterns,
+                                            PatternBenefit baseBenefit = 1);
+
 /// Match and rewrite for the pattern:
 /// ```
 ///    %alloc = ...
@@ -926,7 +943,7 @@ struct ExtractSliceOfPadTensorSwapPattern
   /// A function to control pattern application and rewrite logic.
   ///
   /// The function will be given the slice op and should return:
-  /// -  None: to fail the match and not apply the pattern;
+  /// -  std::nullopt: to fail the match and not apply the pattern;
   /// -  true: to apply the pattern with zero slice guard;
   /// - false: to apply the pattern without zero slice guard.
   ///

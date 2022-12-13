@@ -237,7 +237,7 @@ static APInt calculateUnsignedOverflow(const APInt &sum, const APInt &operand) {
 LogicalResult
 arith::AddUIExtendedOp::fold(ArrayRef<Attribute> operands,
                              SmallVectorImpl<OpFoldResult> &results) {
-  auto overflowTy = getOverflow().getType();
+  Type overflowTy = getOverflow().getType();
   // addui_extended(x, 0) -> x, false
   if (matchPattern(getRhs(), m_Zero())) {
     auto overflowZero = APInt::getZero(1);
@@ -295,6 +295,11 @@ arith::AddUIExtendedOp::fold(ArrayRef<Attribute> operands,
   return failure();
 }
 
+void arith::AddUIExtendedOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<AddUIExtendedToAddI>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // SubIOp
 //===----------------------------------------------------------------------===//
@@ -343,6 +348,107 @@ OpFoldResult arith::MulIOp::fold(ArrayRef<Attribute> operands) {
   // default folder
   return constFoldBinaryOp<IntegerAttr>(
       operands, [](const APInt &a, const APInt &b) { return a * b; });
+}
+
+//===----------------------------------------------------------------------===//
+// MulSIExtendedOp
+//===----------------------------------------------------------------------===//
+
+Optional<SmallVector<int64_t, 4>> arith::MulSIExtendedOp::getShapeForUnroll() {
+  if (auto vt = getType(0).dyn_cast<VectorType>())
+    return llvm::to_vector<4>(vt.getShape());
+  return std::nullopt;
+}
+
+LogicalResult
+arith::MulSIExtendedOp::fold(ArrayRef<Attribute> operands,
+                             SmallVectorImpl<OpFoldResult> &results) {
+  // mulsi_extended(x, 0) -> 0, 0
+  if (matchPattern(getRhs(), m_Zero())) {
+    Attribute zero = operands[1];
+    results.push_back(zero);
+    results.push_back(zero);
+    return success();
+  }
+
+  // mulsi_extended(cst_a, cst_b) -> cst_low, cst_high
+  if (Attribute lowAttr = constFoldBinaryOp<IntegerAttr>(
+          operands, [](const APInt &a, const APInt &b) { return a * b; })) {
+    // Invoke the constant fold helper again to calculate the 'high' result.
+    Attribute highAttr = constFoldBinaryOp<IntegerAttr>(
+        operands, [](const APInt &a, const APInt &b) {
+          unsigned bitWidth = a.getBitWidth();
+          APInt fullProduct = a.sext(bitWidth * 2) * b.sext(bitWidth * 2);
+          return fullProduct.extractBits(bitWidth, bitWidth);
+        });
+    assert(highAttr && "Unexpected constant-folding failure");
+
+    results.push_back(lowAttr);
+    results.push_back(highAttr);
+    return success();
+  }
+
+  return failure();
+}
+
+void arith::MulSIExtendedOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<MulSIExtendedToMulI>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// MulUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+Optional<SmallVector<int64_t, 4>> arith::MulUIExtendedOp::getShapeForUnroll() {
+  if (auto vt = getType(0).dyn_cast<VectorType>())
+    return llvm::to_vector<4>(vt.getShape());
+  return std::nullopt;
+}
+
+LogicalResult
+arith::MulUIExtendedOp::fold(ArrayRef<Attribute> operands,
+                             SmallVectorImpl<OpFoldResult> &results) {
+  // mului_extended(x, 0) -> 0, 0
+  if (matchPattern(getRhs(), m_Zero())) {
+    Attribute zero = operands[1];
+    results.push_back(zero);
+    results.push_back(zero);
+    return success();
+  }
+
+  // mului_extended(x, 1) -> x, 0
+  if (matchPattern(getRhs(), m_One())) {
+    Builder builder(getContext());
+    Attribute zero = builder.getZeroAttr(getLhs().getType());
+    results.push_back(getLhs());
+    results.push_back(zero);
+    return success();
+  }
+
+  // mului_extended(cst_a, cst_b) -> cst_low, cst_high
+  if (Attribute lowAttr = constFoldBinaryOp<IntegerAttr>(
+          operands, [](const APInt &a, const APInt &b) { return a * b; })) {
+    // Invoke the constant fold helper again to calculate the 'high' result.
+    Attribute highAttr = constFoldBinaryOp<IntegerAttr>(
+        operands, [](const APInt &a, const APInt &b) {
+          unsigned bitWidth = a.getBitWidth();
+          APInt fullProduct = a.zext(bitWidth * 2) * b.zext(bitWidth * 2);
+          return fullProduct.extractBits(bitWidth, bitWidth);
+        });
+    assert(highAttr && "Unexpected constant-folding failure");
+
+    results.push_back(lowAttr);
+    results.push_back(highAttr);
+    return success();
+  }
+
+  return failure();
+}
+
+void arith::MulUIExtendedOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<MulUIExtendedToMulI>(context);
 }
 
 //===----------------------------------------------------------------------===//
