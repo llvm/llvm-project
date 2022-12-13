@@ -19,6 +19,7 @@ namespace llvm {
 class MallocAllocator;
 class StringRef;
 template <typename ValueTy, typename AllocatorTy> class StringMap;
+class raw_ostream;
 
 namespace sys {
 
@@ -53,6 +54,10 @@ namespace sys {
   ///
   /// \return - True on success.
   bool getHostCPUFeatures(StringMap<bool, MallocAllocator> &Features);
+
+  /// This is a function compatible with cl::AddExtraVersionPrinter, which adds
+  /// info about the current target triple and detected CPU.
+  void printDefaultTargetAndDetectedCPU(raw_ostream &OS);
 
   namespace detail {
   /// Helper functions to extract HostCPUName from /proc/cpuinfo on linux.
