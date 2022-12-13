@@ -1227,7 +1227,8 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
   Used.VL = true;
   Used.demandVTYPE();
   SmallVector<MachineInstr*> ToDelete;
-  for (MachineInstr &MI : iterator_range(MBB.rbegin(), MBB.rend())) {
+  for (MachineInstr &MI : iterator_range<MachineBasicBlock::reverse_iterator>(
+           MBB.rbegin(), MBB.rend())) {
 
     if (!isVectorConfigInstr(MI)) {
       doUnion(Used, getDemanded(MI));
