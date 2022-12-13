@@ -1064,6 +1064,11 @@ private:
       }
     }
 
+    // PHIs in FC1's header only have FC0 blocks as predecessors. PHIs
+    // cannot be hoisted and should be sunk to the exit of the fused loop.
+    if (isa<PHINode>(I))
+      return false;
+
     // If this isn't a memory inst, hoisting is safe
     if (!I.mayReadOrWriteMemory())
       return true;
