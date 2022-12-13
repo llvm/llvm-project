@@ -262,6 +262,8 @@ bool MetadataVerifier::verifyKernel(msgpack::DocNode &Node) {
   if (!verifyScalarEntry(KernelMap, ".uses_dynamic_stack", false,
                          msgpack::Type::Boolean))
     return false;
+  if (!verifyIntegerEntry(KernelMap, ".workgroup_processor_mode", false))
+    return false;
   if (!verifyIntegerEntry(KernelMap, ".kernarg_segment_align", true))
     return false;
   if (!verifyIntegerEntry(KernelMap, ".wavefront_size", true))
