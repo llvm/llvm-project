@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx8_type_deviation:
+.. _amdgpu_synid_gfx8_soffset_32c2a9:
 
-Type Deviation
-==============
+soffset
+=======
 
-The *type* of this operand differs from the *type* :ref:`implied by the opcode<amdgpu_syn_instruction_mnemo>`. This tag specifies the actual operand *type*.
+An unsigned byte offset, which is added to the base address to get the memory address.
+
+*Size:* 1 dword.
+
+*Operands:* :ref:`m0<amdgpu_synid_m0>`, :ref:`uimm20<amdgpu_synid_uimm20>`

@@ -5,13 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx8_vdst_5d50a1:
+.. _amdgpu_synid_gfx8_srsrc_80eef6:
 
-vdst
-====
+srsrc
+=====
 
-Instruction output: data read from a memory buffer.
+Buffer resource constant, which defines the address and characteristics of the buffer in memory.
 
-*Size:* 1 dword by default. :ref:`tfe<amdgpu_synid_tfe>` adds 1 dword if specified.
+*Size:* 4 dwords.
 
-*Operands:* :ref:`v<amdgpu_synid_v>`
+*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`ttmp<amdgpu_synid_ttmp>`

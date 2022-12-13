@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx8_imm16_73139a:
+.. _amdgpu_synid_gfx8_vdst_81a6ed:
 
-imm16
-=====
+vdst
+====
 
-An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range -32768..65535.
+Instruction output: data read from a memory buffer.
+
+*Size:* 3 dwords.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`
