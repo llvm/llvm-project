@@ -32,7 +32,7 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 
-#if defined(LLVM_HAVE_TF_API)
+#if defined(LLVM_HAVE_TFLITE)
 #include "llvm/Analysis/ModelUnderTrainingRunner.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"
 #include "llvm/Analysis/Utils/TrainingLogger.h"
@@ -41,7 +41,7 @@
 using namespace llvm;
 
 // Options that only make sense in development mode
-#ifdef LLVM_HAVE_TF_API
+#ifdef LLVM_HAVE_TFLITE
 #include "RegAllocScore.h"
 #include "llvm/Analysis/Utils/TFUtils.h"
 
@@ -53,7 +53,7 @@ static cl::opt<std::string> ModelUnderTraining(
     "regalloc-priority-model", cl::Hidden,
     cl::desc("The model being trained for register allocation priority"));
 
-#endif // #ifdef LLVM_HAVE_TF_API
+#endif // #ifdef LLVM_HAVE_TFLITE
 
 namespace llvm {
 
@@ -139,7 +139,7 @@ private:
 // ===================================
 //
 // Features we log
-#ifdef LLVM_HAVE_TF_API
+#ifdef LLVM_HAVE_TFLITE
 
 static const TensorSpec Output =
     TensorSpec::createSpec<float>(DecisionName, {1});
@@ -257,7 +257,7 @@ private:
   std::unique_ptr<MLModelRunner> Runner;
   StringMap<std::unique_ptr<Logger>> LogMap;
 };
-#endif //#ifdef LLVM_HAVE_TF_API
+#endif //#ifdef LLVM_HAVE_TFLITE
 
 } // namespace llvm
 
@@ -289,7 +289,7 @@ unsigned MLPriorityAdvisor::getPriority(const LiveInterval &LI) const {
   return static_cast<unsigned>(getPriorityImpl(LI));
 }
 
-#ifdef LLVM_HAVE_TF_API
+#ifdef LLVM_HAVE_TFLITE
 RegAllocPriorityAdvisorAnalysis *llvm::createDevelopmentModePriorityAdvisor() {
   return new DevelopmentModePriorityAdvisorAnalysis();
 }
@@ -328,4 +328,4 @@ DevelopmentModePriorityAdvisor::getPriority(const LiveInterval &LI) const {
   return static_cast<unsigned>(Prio);
 }
 
-#endif // #ifdef LLVM_HAVE_TF_API
+#endif // #ifdef LLVM_HAVE_TFLITE

@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/Analysis/InlineSizeEstimatorAnalysis.h"
 
-#ifdef LLVM_HAVE_TF_API
+#ifdef LLVM_HAVE_TFLITE
 #include "llvm/Analysis/Utils/TFUtils.h"
 #endif
 #include "llvm/IR/Function.h"
@@ -23,7 +23,7 @@ using namespace llvm;
 
 AnalysisKey InlineSizeEstimatorAnalysis::Key;
 
-#ifdef LLVM_HAVE_TF_API
+#ifdef LLVM_HAVE_TFLITE
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"

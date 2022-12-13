@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/Config/config.h"
-#if defined(LLVM_HAVE_TF_API)
+#if defined(LLVM_HAVE_TFLITE)
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -432,4 +432,4 @@ std::unique_ptr<InlineAdvisor> llvm::getDevelopmentModeAdvisor(
   return std::make_unique<DevelopmentModeMLInlineAdvisor>(
       M, MAM, std::move(Runner), GetDefaultAdvice, std::move(Logger));
 }
-#endif // defined(LLVM_HAVE_TF_API)
+#endif // defined(LLVM_HAVE_TFLITE)
