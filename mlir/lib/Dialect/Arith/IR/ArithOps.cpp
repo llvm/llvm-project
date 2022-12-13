@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cassert>
+#include <cstdint>
 #include <utility>
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -72,6 +73,29 @@ arith::CmpIPredicate arith::invertPredicate(arith::CmpIPredicate pred) {
 static arith::CmpIPredicateAttr invertPredicate(arith::CmpIPredicateAttr pred) {
   return arith::CmpIPredicateAttr::get(pred.getContext(),
                                        invertPredicate(pred.getValue()));
+}
+
+static int64_t getScalarOrElementWidth(Type type) {
+  Type elemTy = getElementTypeOrSelf(type);
+  if (elemTy.isIntOrFloat())
+    return elemTy.getIntOrFloatBitWidth();
+
+  return -1;
+}
+
+static int64_t getScalarOrElementWidth(Value value) {
+  return getScalarOrElementWidth(value.getType());
+}
+
+static FailureOr<APInt> getIntOrSplatIntValue(Attribute attr) {
+  if (auto intAttr = attr.dyn_cast<IntegerAttr>())
+    return intAttr.getValue();
+
+  if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>())
+    if (splatAttr.getElementType().isa<IntegerType>())
+      return splatAttr.getSplatValue<APInt>();
+
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//
@@ -393,7 +417,7 @@ arith::MulSIExtendedOp::fold(ArrayRef<Attribute> operands,
 
 void arith::MulSIExtendedOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<MulSIExtendedToMulI>(context);
+  patterns.add<MulSIExtendedToMulI, MulSIExtendedRHSOne>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1247,6 +1271,12 @@ OpFoldResult arith::TruncIOp::fold(ArrayRef<Attribute> operands) {
 
 bool arith::TruncIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkWidthChangeCast<std::less, IntegerType>(inputs, outputs);
+}
+
+void arith::TruncIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                  MLIRContext *context) {
+  patterns.add<TruncIShrSIToTrunciShrUI, TruncIShrUIMulIToMulSIExtended,
+               TruncIShrUIMulIToMulUIExtended>(context);
 }
 
 LogicalResult arith::TruncIOp::verify() {
