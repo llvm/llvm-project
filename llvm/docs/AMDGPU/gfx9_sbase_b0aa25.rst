@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_imm16_73139a:
+.. _amdgpu_synid_gfx9_sbase_b0aa25:
 
-imm16
+sbase
 =====
 
-An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range -32768..65535.
+A 128-bit buffer resource constant for scalar memory operations which provides a base address, a size, and a stride.
+
+*Size:* 4 dwords.
+
+*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`ttmp<amdgpu_synid_ttmp>`
