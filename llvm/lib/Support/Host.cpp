@@ -1855,3 +1855,13 @@ std::string sys::getProcessTriple() {
 
   return PT.str();
 }
+
+void sys::printDefaultTargetAndDetectedCPU(raw_ostream &OS) {
+#if LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
+  std::string CPU = std::string(sys::getHostCPUName());
+  if (CPU == "generic")
+    CPU = "(unknown)";
+  OS << "  Default target: " << sys::getDefaultTargetTriple() << '\n'
+     << "  Host CPU: " << CPU << '\n';
+#endif
+}

@@ -322,6 +322,9 @@ int main(int argc, char **argv) {
   InitializeAllAsmParsers();
   InitializeAllTargetMCAs();
 
+  // Register the Target and CPU printer for --version.
+  cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
+
   // Enable printing of available targets when flag --version is specified.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 

@@ -469,6 +469,9 @@ int main(int argc, char **argv) {
     PluginList.emplace_back(Plugin.get());
   });
 
+  // Register the Target and CPU printer for --version.
+  cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
+
   cl::ParseCommandLineOptions(argc, argv,
     "llvm .bc -> .bc modular optimizer and analysis printer\n");
 
