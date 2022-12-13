@@ -5,11 +5,11 @@
 // RUN:   -fcas-fs @%t/casid -fcache-compile-job \
 // RUN:   -Wimplicit-function-declaration \
 // RUN:   -Wno-error=implicit-function-declaration \
-// RUN:   -Rcompile-job-cache-hit -emit-obj -o %t/output.o \
+// RUN:   -Rcompile-job-cache -emit-obj -o %t/output.o \
 // RUN:   -serialize-diagnostic-file %t/diags %s 2>&1 \
 // RUN:   | FileCheck %s --allow-empty --check-prefix=CACHE-MISS
 
-// RUN: c-index-test -read-diagnostics %t/diags 2>&1 | FileCheck %s --check-prefix=SERIALIZED-MISS
+// RUN: c-index-test -read-diagnostics %t/diags 2>&1 | FileCheck %s --check-prefix=SERIALIZED-MISS --check-prefix=SERIALIZED-COMMON
 
 // RUN: ls %t/output.o && rm %t/output.o
 
@@ -17,24 +17,22 @@
 // RUN:   -fcas-fs @%t/casid -fcache-compile-job \
 // RUN:   -Wimplicit-function-declaration \
 // RUN:   -Wno-error=implicit-function-declaration \
-// RUN:   -Rcompile-job-cache-hit -emit-obj -o %t/output.o \
+// RUN:   -Rcompile-job-cache -emit-obj -o %t/output.o \
 // RUN:   -serialize-diagnostic-file %t/diags %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CACHE-HIT
 
-// RUN: c-index-test -read-diagnostics %t/diags 2>&1 | FileCheck %s --check-prefix=SERIALIZED-HIT
+// RUN: c-index-test -read-diagnostics %t/diags 2>&1 | FileCheck %s --check-prefix=SERIALIZED-HIT --check-prefix=SERIALIZED-COMMON
 
 // CACHE-HIT: remark: compile job cache hit
 // CACHE-HIT: warning: some warning
 
+// CACHE-MISS: remark: compile job cache miss
 // CACHE-MISS: warning: some warning
-// CACHE-MISS-NOT: remark: compile job cache hit
 
-// FIXME: serialized diagnostics should include the "compile job cache" remark but without storing
-// it in a diagnostics file that we put in the CAS.
-// SERIALIZED-HIT: warning: some warning
-// SERIALIZED-HIT: Number of diagnostics: 1
-// SERIALIZED-MISS: warning: some warning
-// SERIALIZED-MISS: Number of diagnostics: 1
+// SERIALIZED-HIT: warning: compile job cache hit
+// SERIALIZED-MISS: warning: compile job cache miss
+// SERIALIZED-COMMON: warning: some warning
+// SERIALIZED-COMMON: Number of diagnostics: 2
 
 // Make sure warnings are merged with driver ones.
 // Using normal compilation as baseline.

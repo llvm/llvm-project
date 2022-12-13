@@ -86,8 +86,11 @@
 // RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t2.o -Rcompile-job-cache \
 // RUN:   2>&1 | FileCheck %s --check-prefix=CACHE-HIT
 
-// RUN: diff %t/t1.dia %t/t2.dia
-// RUN: diff %t/t.dia %t/t1.dia
+// RUN: c-index-test -read-diagnostics %t/t1.dia 2>&1 | FileCheck %s --check-prefix=SERIAL_DIAG-HIT --check-prefix=SERIAL_DIAG-COMMON
+// RUN: c-index-test -read-diagnostics %t/t2.dia 2>&1 | FileCheck %s --check-prefix=SERIAL_DIAG-MISS --check-prefix=SERIAL_DIAG-COMMON
+// SERIAL_DIAG-MISS: warning: compile job cache miss
+// SERIAL_DIAG-HIT: warning: compile job cache hit
+// SERIAL_DIAG-COMMON: warning: some warning
 
 #warning some warning
 void test() {}

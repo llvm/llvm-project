@@ -490,6 +490,11 @@ public:
   /// Socket path for remote caching service.
   std::string CompilationCachingServicePath;
 
+  /// When caching is enabled, represents remappings for all the file paths that
+  /// the compilation may access. This is useful for canonicalizing the
+  /// compilation for caching purposes.
+  std::vector<std::string> PathPrefixMappings;
+
   /// Args to pass to the plugins
   std::map<std::string, std::vector<std::string>> PluginArgs;
 

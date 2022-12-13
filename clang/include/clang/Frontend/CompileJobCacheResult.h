@@ -25,7 +25,6 @@ public:
     MainOutput, ///< Main output file, e.g. object file, pcm file, etc.
     SerializedDiagnostics,
     Dependencies,
-    Stderr, ///< Contents of stderr.
   };
 
   /// Returns all \c OutputKind values.
