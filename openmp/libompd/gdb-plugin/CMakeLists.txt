@@ -71,7 +71,11 @@ add_custom_target(ompd_gdb_plugin ALL
                   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/python-module/ompd/__init__.py
                   COMMENT "Building the OMPD GDB plugin")
 
-add_library (ompdModule MODULE ompdModule.c ompdAPITests.c)
+add_library (ompdModule MODULE ompdModule.c ompdAPITests.c DLSymService.cpp)
+
+## Include LLVM headers for DynamicLibrary support
+target_include_directories(ompdModule PRIVATE ${LLVM_INCLUDE_DIRS})
+
 include_directories (
         ${LIBOMP_INCLUDE_DIR}
         ${LIBOMP_SRC_DIR}
