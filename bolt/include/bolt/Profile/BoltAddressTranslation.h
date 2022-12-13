@@ -9,11 +9,11 @@
 #ifndef BOLT_PROFILE_BOLTADDRESSTRANSLATION_H
 #define BOLT_PROFILE_BOLTADDRESSTRANSLATION_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <system_error>
 
 namespace llvm {
@@ -98,9 +98,9 @@ public:
   /// taken in the path started at FirstLBR.To and ending at SecondLBR.From.
   /// Return std::nullopt if trace is invalid or the list of fall-throughs
   /// otherwise.
-  Optional<FallthroughListTy> getFallthroughsInTrace(uint64_t FuncAddress,
-                                                     uint64_t From,
-                                                     uint64_t To) const;
+  std::optional<FallthroughListTy> getFallthroughsInTrace(uint64_t FuncAddress,
+                                                          uint64_t From,
+                                                          uint64_t To) const;
 
   /// If available, fetch the address of the hot part linked to the cold part
   /// at \p Address. Return 0 otherwise.
