@@ -5,12 +5,12 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx1013_vdst_f8490d:
+.. _amdgpu_synid_gfx1013_vdst_9041ac:
 
 vdst
 ====
 
-Image data to load by an image instruction.
+Image data to be loaded by an image instruction.
 
 *Size:* 4 dwords.
 
