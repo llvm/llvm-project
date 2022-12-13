@@ -137,7 +137,7 @@ define { i64, i64 } @ret_i64_pair(i32 %a0, i32 %a1, i64* %p, i64* %q) {
 ; SPARC-NEXT:    .cfi_register %o7, %i7
 ; SPARC-NEXT:    mov %g0, %i4
 ; SPARC-NEXT:    ldd [%i2], %i0
-; SPARC-NEXT:    mov %i4, %i5
+; SPARC-NEXT:    mov %g0, %i5
 ; SPARC-NEXT:    std %i4, [%i2]
 ; SPARC-NEXT:    ldd [%i3], %i2
 ; SPARC-NEXT:    restore
