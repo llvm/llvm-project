@@ -321,6 +321,9 @@ Bug Fixes
   `Issue 59100 <https://github.com/llvm/llvm-project/issues/59100>`_
 - Fix issue using __attribute__((format)) on non-variadic functions that expect
   more than one formatted argument.
+- Fix bug where constant evaluation treated a pointer to member that points to
+  a weak member as never being null. Such comparisons are now treated as
+  non-constant.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
