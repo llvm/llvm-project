@@ -591,9 +591,6 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
              (ModuleScopes.back().ModuleInterface ||
               (getLangOpts().CPlusPlusModules &&
                ModuleScopes.back().Module->isGlobalModule()))) {
-    assert((!ModuleScopes.back().Module->isGlobalModule() ||
-            Mod->Kind == Module::ModuleKind::ModuleHeaderUnit) &&
-           "should only be importing a header unit into the GMF");
     // Re-export the module if the imported module is exported.
     // Note that we don't need to add re-exported module to Imports field
     // since `Exports` implies the module is imported already.
