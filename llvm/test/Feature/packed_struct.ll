@@ -16,9 +16,9 @@
 
 define i32 @main() 
 {
-        %tmp = load i32, i32*  getelementptr (%struct.anon, %struct.anon* @foos, i32 0, i32 1)            ; <i32> [#uses=1]
-        %tmp3 = load i32, i32* getelementptr (%struct.anon, %struct.anon* @foos, i32 0, i32 2)            ; <i32> [#uses=1]
-        %tmp6 = load i32, i32* getelementptr (%struct.anon, %struct.anon* @foos, i32 0, i32 3)            ; <i32> [#uses=1]
+        %tmp = load i32, ptr  getelementptr (%struct.anon, ptr @foos, i32 0, i32 1)            ; <i32> [#uses=1]
+        %tmp3 = load i32, ptr getelementptr (%struct.anon, ptr @foos, i32 0, i32 2)            ; <i32> [#uses=1]
+        %tmp6 = load i32, ptr getelementptr (%struct.anon, ptr @foos, i32 0, i32 3)            ; <i32> [#uses=1]
         %tmp4 = add i32 %tmp3, %tmp             ; <i32> [#uses=1]
         %tmp7 = add i32 %tmp4, %tmp6            ; <i32> [#uses=1]
         ret i32 %tmp7
@@ -26,8 +26,8 @@ define i32 @main()
 
 define i32 @bar() {
 entry:
-        %tmp = load i32, i32* getelementptr([2 x <{ i32, i8 }>], [2 x <{ i32, i8 }>]* @bara, i32 0, i32 0, i32 0 )            ; <i32> [#uses=1]
-        %tmp4 = load i32, i32* getelementptr ([2 x <{ i32, i8 }>], [2 x <{ i32, i8 }>]* @bara, i32 0, i32 1, i32 0)           ; <i32> [#uses=1]
+        %tmp = load i32, ptr getelementptr([2 x <{ i32, i8 }>], ptr @bara, i32 0, i32 0, i32 0 )            ; <i32> [#uses=1]
+        %tmp4 = load i32, ptr getelementptr ([2 x <{ i32, i8 }>], ptr @bara, i32 0, i32 1, i32 0)           ; <i32> [#uses=1]
         %tmp5 = add i32 %tmp4, %tmp             ; <i32> [#uses=1]
         ret i32 %tmp5
 }
