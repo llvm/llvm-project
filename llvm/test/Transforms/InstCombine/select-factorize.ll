@@ -5,8 +5,8 @@ declare void @use(i1)
 
 define i1 @logic_and_logic_or_1(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_and_logic_or_1(
-; CHECK-NEXT:    [[BC:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[BC]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 false
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = select i1 %c, i1 %a, i1 false
@@ -17,8 +17,8 @@ define i1 @logic_and_logic_or_1(i1 %c, i1 %a, i1 %b) {
 
 define i1 @logic_and_logic_or_2(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_and_logic_or_2(
-; CHECK-NEXT:    [[BC:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[BC]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 false
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = select i1 %a, i1 %c, i1 false
@@ -29,9 +29,8 @@ define i1 @logic_and_logic_or_2(i1 %c, i1 %a, i1 %b) {
 
 define i1 @logic_and_logic_or_3(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_and_logic_or_3(
-; CHECK-NEXT:    [[AC:%.*]] = select i1 [[A:%.*]], i1 [[C:%.*]], i1 false
-; CHECK-NEXT:    [[BC:%.*]] = select i1 [[B:%.*]], i1 [[C]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[AC]], i1 true, i1 [[BC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[TMP1]], i1 [[C:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = select i1 %a, i1 %c, i1 false
@@ -42,9 +41,8 @@ define i1 @logic_and_logic_or_3(i1 %c, i1 %a, i1 %b) {
 
 define i1 @logic_and_logic_or_4(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_and_logic_or_4(
-; CHECK-NEXT:    [[AC:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 false
-; CHECK-NEXT:    [[BC:%.*]] = select i1 [[B:%.*]], i1 [[C]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[AC]], i1 true, i1 [[BC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 false
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = select i1 %c, i1 %a, i1 false
@@ -55,8 +53,8 @@ define i1 @logic_and_logic_or_4(i1 %c, i1 %a, i1 %b) {
 
 define i1 @logic_and_logic_or_5(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_and_logic_or_5(
-; CHECK-NEXT:    [[AC:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[A:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[AC]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[A:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 false
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = select i1 %c, i1 %a, i1 false
@@ -67,9 +65,8 @@ define i1 @logic_and_logic_or_5(i1 %c, i1 %a, i1 %b) {
 
 define i1 @logic_and_logic_or_6(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_and_logic_or_6(
-; CHECK-NEXT:    [[AC:%.*]] = select i1 [[A:%.*]], i1 [[C:%.*]], i1 false
-; CHECK-NEXT:    [[BC:%.*]] = select i1 [[C]], i1 [[B:%.*]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[BC]], i1 true, i1 [[AC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[A:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 false
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = select i1 %a, i1 %c, i1 false
@@ -80,9 +77,8 @@ define i1 @logic_and_logic_or_6(i1 %c, i1 %a, i1 %b) {
 
 define i1 @logic_and_logic_or_7(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_and_logic_or_7(
-; CHECK-NEXT:    [[AC:%.*]] = select i1 [[A:%.*]], i1 [[C:%.*]], i1 false
-; CHECK-NEXT:    [[BC:%.*]] = select i1 [[B:%.*]], i1 [[C]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[BC]], i1 true, i1 [[AC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[A:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[TMP1]], i1 [[C:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = select i1 %a, i1 %c, i1 false
@@ -93,8 +89,8 @@ define i1 @logic_and_logic_or_7(i1 %c, i1 %a, i1 %b) {
 
 define i1 @logic_and_logic_or_8(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_and_logic_or_8(
-; CHECK-NEXT:    [[AC:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[A:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[AC]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[A:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 false
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = select i1 %c, i1 %a, i1 false
@@ -105,8 +101,8 @@ define i1 @logic_and_logic_or_8(i1 %c, i1 %a, i1 %b) {
 
 define <3 x i1> @logic_and_logic_or_vector(<3 x i1> %c, <3 x i1> %a, <3 x i1> %b) {
 ; CHECK-LABEL: @logic_and_logic_or_vector(
-; CHECK-NEXT:    [[BC:%.*]] = select <3 x i1> [[A:%.*]], <3 x i1> <i1 true, i1 true, i1 true>, <3 x i1> [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = select <3 x i1> [[C:%.*]], <3 x i1> [[BC]], <3 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = select <3 x i1> [[A:%.*]], <3 x i1> <i1 true, i1 true, i1 true>, <3 x i1> [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select <3 x i1> [[C:%.*]], <3 x i1> [[TMP1]], <3 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[OR]]
 ;
   %ac = select <3 x i1> %c, <3 x i1> %a, <3 x i1> <i1 false, i1 false, i1 false>
@@ -117,8 +113,8 @@ define <3 x i1> @logic_and_logic_or_vector(<3 x i1> %c, <3 x i1> %a, <3 x i1> %b
 
 define <3 x i1> @logic_and_logic_or_vector_poison1(<3 x i1> %c, <3 x i1> %a, <3 x i1> %b) {
 ; CHECK-LABEL: @logic_and_logic_or_vector_poison1(
-; CHECK-NEXT:    [[BC:%.*]] = select <3 x i1> [[A:%.*]], <3 x i1> <i1 true, i1 true, i1 poison>, <3 x i1> [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = select <3 x i1> [[C:%.*]], <3 x i1> [[BC]], <3 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = select <3 x i1> [[A:%.*]], <3 x i1> <i1 true, i1 true, i1 true>, <3 x i1> [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select <3 x i1> [[C:%.*]], <3 x i1> [[TMP1]], <3 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[OR]]
 ;
   %ac = select <3 x i1> %c, <3 x i1> %a, <3 x i1> <i1 false, i1 false, i1 false>
@@ -151,6 +147,8 @@ define <3 x i1> @logic_and_logic_or_vector_poison3(<3 x i1> %c, <3 x i1> %a, <3 
   %or = select <3 x i1> %ac, <3 x i1> <i1 true, i1 true, i1 true>, <3 x i1> %bc
   ret <3 x i1> %or
 }
+
+; negative test: not one use for both op
 
 define i1 @logic_and_logic_or_not_one_use(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_and_logic_or_not_one_use(
@@ -343,8 +341,8 @@ define i1 @and_and_logic_or_not_one_use(i1 %c, i1 %a, i1 %b) {
 
 define i1 @logic_or_logic_and_1(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_or_logic_and_1(
-; CHECK-NEXT:    [[BC:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[BC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = select i1 %c, i1 true, i1 %a
@@ -355,8 +353,8 @@ define i1 @logic_or_logic_and_1(i1 %c, i1 %a, i1 %b) {
 
 define i1 @logic_or_logic_and_2(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_or_logic_and_2(
-; CHECK-NEXT:    [[BC:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[BC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = select i1 %a, i1 true, i1 %c
@@ -367,9 +365,8 @@ define i1 @logic_or_logic_and_2(i1 %c, i1 %a, i1 %b) {
 
 define i1 @logic_or_logic_and_3(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_or_logic_and_3(
-; CHECK-NEXT:    [[AC:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[C:%.*]]
-; CHECK-NEXT:    [[BC:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[C]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[AC]], i1 [[BC]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[TMP1]], i1 true, i1 [[C:%.*]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = select i1 %a, i1 true, i1 %c
@@ -380,9 +377,8 @@ define i1 @logic_or_logic_and_3(i1 %c, i1 %a, i1 %b) {
 
 define i1 @logic_or_logic_and_4(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_or_logic_and_4(
-; CHECK-NEXT:    [[AC:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[A:%.*]]
-; CHECK-NEXT:    [[BC:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[C]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[AC]], i1 [[BC]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = select i1 %c, i1 true, i1 %a
@@ -393,8 +389,8 @@ define i1 @logic_or_logic_and_4(i1 %c, i1 %a, i1 %b) {
 
 define i1 @logic_or_logic_and_5(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_or_logic_and_5(
-; CHECK-NEXT:    [[AC:%.*]] = select i1 [[B:%.*]], i1 [[A:%.*]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[AC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i1 [[A:%.*]], i1 false
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = select i1 %c, i1 true, i1 %a
@@ -405,9 +401,8 @@ define i1 @logic_or_logic_and_5(i1 %c, i1 %a, i1 %b) {
 
 define i1 @logic_or_logic_and_6(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_or_logic_and_6(
-; CHECK-NEXT:    [[AC:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[C:%.*]]
-; CHECK-NEXT:    [[BC:%.*]] = select i1 [[C]], i1 true, i1 [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[BC]], i1 [[AC]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i1 [[A:%.*]], i1 false
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = select i1 %a, i1 true, i1 %c
@@ -418,9 +413,8 @@ define i1 @logic_or_logic_and_6(i1 %c, i1 %a, i1 %b) {
 
 define i1 @logic_or_logic_and_7(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_or_logic_and_7(
-; CHECK-NEXT:    [[AC:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[C:%.*]]
-; CHECK-NEXT:    [[BC:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[C]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[BC]], i1 [[AC]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i1 [[A:%.*]], i1 false
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[TMP1]], i1 true, i1 [[C:%.*]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = select i1 %a, i1 true, i1 %c
@@ -431,8 +425,8 @@ define i1 @logic_or_logic_and_7(i1 %c, i1 %a, i1 %b) {
 
 define i1 @logic_or_logic_and_8(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_or_logic_and_8(
-; CHECK-NEXT:    [[AC:%.*]] = select i1 [[B:%.*]], i1 [[A:%.*]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[AC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i1 [[A:%.*]], i1 false
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %ac = select i1 %c, i1 true, i1 %a
@@ -443,8 +437,8 @@ define i1 @logic_or_logic_and_8(i1 %c, i1 %a, i1 %b) {
 
 define <3 x i1> @logic_or_logic_and_vector(<3 x i1> %c, <3 x i1> %a, <3 x i1> %b) {
 ; CHECK-LABEL: @logic_or_logic_and_vector(
-; CHECK-NEXT:    [[BC:%.*]] = select <3 x i1> [[A:%.*]], <3 x i1> [[B:%.*]], <3 x i1> zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = select <3 x i1> [[C:%.*]], <3 x i1> <i1 true, i1 true, i1 true>, <3 x i1> [[BC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select <3 x i1> [[A:%.*]], <3 x i1> [[B:%.*]], <3 x i1> zeroinitializer
+; CHECK-NEXT:    [[OR:%.*]] = select <3 x i1> [[C:%.*]], <3 x i1> <i1 true, i1 true, i1 true>, <3 x i1> [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i1> [[OR]]
 ;
   %ac = select <3 x i1> %c, <3 x i1> <i1 true, i1 true, i1 true>, <3 x i1> %a
@@ -480,8 +474,8 @@ define <3 x i1> @logic_or_logic_and_vector_poison2(<3 x i1> %c, <3 x i1> %a, <3 
 
 define <3 x i1> @logic_or_logic_and_vector_poison3(<3 x i1> %c, <3 x i1> %a, <3 x i1> %b) {
 ; CHECK-LABEL: @logic_or_logic_and_vector_poison3(
-; CHECK-NEXT:    [[BC:%.*]] = select <3 x i1> [[A:%.*]], <3 x i1> [[B:%.*]], <3 x i1> <i1 false, i1 false, i1 poison>
-; CHECK-NEXT:    [[OR:%.*]] = select <3 x i1> [[C:%.*]], <3 x i1> <i1 true, i1 true, i1 true>, <3 x i1> [[BC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select <3 x i1> [[A:%.*]], <3 x i1> [[B:%.*]], <3 x i1> zeroinitializer
+; CHECK-NEXT:    [[OR:%.*]] = select <3 x i1> [[C:%.*]], <3 x i1> <i1 true, i1 true, i1 true>, <3 x i1> [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i1> [[OR]]
 ;
   %ac = select <3 x i1> %c, <3 x i1> <i1 true, i1 true, i1 true>, <3 x i1> %a
@@ -489,6 +483,8 @@ define <3 x i1> @logic_or_logic_and_vector_poison3(<3 x i1> %c, <3 x i1> %a, <3 
   %or = select <3 x i1> %ac, <3 x i1> %bc, <3 x i1> <i1 false, i1 false, i1 poison>
   ret <3 x i1> %or
 }
+
+; negative test: not one use for both op
 
 define i1 @logic_or_logic_and_not_one_use(i1 %c, i1 %a, i1 %b) {
 ; CHECK-LABEL: @logic_or_logic_and_not_one_use(
