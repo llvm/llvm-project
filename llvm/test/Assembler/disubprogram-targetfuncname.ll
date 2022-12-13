@@ -10,9 +10,9 @@ source_filename = "main.f"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define internal void @sub1_.t0p(float* %arg0) #0 !dbg !23 {
+define internal void @sub1_.t0p(ptr %arg0) #0 !dbg !23 {
 wrap_start11:
-  call void (...) @sub1_(float* %arg0), !dbg !25
+  call void (...) @sub1_(ptr %arg0), !dbg !25
   ret void, !dbg !25
 }
 

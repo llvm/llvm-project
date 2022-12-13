@@ -9,7 +9,7 @@ define void @f() {
     br label %def
 
   use:
-    %x = atomicrmw add i32* undef, i32 %y monotonic
+    %x = atomicrmw add ptr undef, i32 %y monotonic
     ret void
 
   def:
