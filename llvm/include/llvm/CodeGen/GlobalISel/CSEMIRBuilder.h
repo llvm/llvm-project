@@ -91,9 +91,9 @@ public:
   // Pull in base class constructors.
   using MachineIRBuilder::MachineIRBuilder;
   // Unhide buildInstr
-  MachineInstrBuilder buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
-                                 ArrayRef<SrcOp> SrcOps,
-                                 Optional<unsigned> Flag = None) override;
+  MachineInstrBuilder
+  buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps, ArrayRef<SrcOp> SrcOps,
+             Optional<unsigned> Flag = std::nullopt) override;
   // Bring in the other overload from the base class.
   using MachineIRBuilder::buildConstant;
 

@@ -999,7 +999,7 @@ SMDiagnostic MIRParserImpl::diagFromMIStringDiag(const SMDiagnostic &Error,
                            (HasQuote ? 1 : 0));
 
   // TODO: Translate any source ranges as well.
-  return SM.GetMessage(Loc, Error.getKind(), Error.getMessage(), None,
+  return SM.GetMessage(Loc, Error.getKind(), Error.getMessage(), std::nullopt,
                        Error.getFixIts());
 }
 

@@ -35,7 +35,7 @@ bool Operator::hasPoisonGeneratingFlags() const {
   case Instruction::GetElementPtr: {
     auto *GEP = cast<GEPOperator>(this);
     // Note: inrange exists on constexpr only
-    return GEP->isInBounds() || GEP->getInRangeIndex() != None;
+    return GEP->isInBounds() || GEP->getInRangeIndex() != std::nullopt;
   }
   default:
     if (const auto *FP = dyn_cast<FPMathOperator>(this))

@@ -30,7 +30,7 @@ Optional<RoundingMode> convertStrToRoundingMode(StringRef RoundingArg) {
       .Case("round.downward", RoundingMode::TowardNegative)
       .Case("round.upward", RoundingMode::TowardPositive)
       .Case("round.towardzero", RoundingMode::TowardZero)
-      .Default(None);
+      .Default(std::nullopt);
 }
 
 Optional<StringRef> convertRoundingModeToStr(RoundingMode UseRounding) {
@@ -66,7 +66,7 @@ convertStrToExceptionBehavior(StringRef ExceptionArg) {
       .Case("fpexcept.ignore", fp::ebIgnore)
       .Case("fpexcept.maytrap", fp::ebMayTrap)
       .Case("fpexcept.strict", fp::ebStrict)
-      .Default(None);
+      .Default(std::nullopt);
 }
 
 Optional<StringRef>

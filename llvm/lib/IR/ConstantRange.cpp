@@ -705,7 +705,7 @@ ConstantRange::exactIntersectWith(const ConstantRange &CR) const {
   ConstantRange Result = intersectWith(CR);
   if (Result == inverse().unionWith(CR.inverse()).inverse())
     return Result;
-  return None;
+  return std::nullopt;
 }
 
 Optional<ConstantRange>
@@ -714,7 +714,7 @@ ConstantRange::exactUnionWith(const ConstantRange &CR) const {
   ConstantRange Result = unionWith(CR);
   if (Result == inverse().intersectWith(CR.inverse()).inverse())
     return Result;
-  return None;
+  return std::nullopt;
 }
 
 ConstantRange ConstantRange::castOp(Instruction::CastOps CastOp,

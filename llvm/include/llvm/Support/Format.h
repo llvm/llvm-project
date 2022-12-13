@@ -236,7 +236,8 @@ public:
 };
 
 inline FormattedBytes
-format_bytes(ArrayRef<uint8_t> Bytes, Optional<uint64_t> FirstByteOffset = None,
+format_bytes(ArrayRef<uint8_t> Bytes,
+             Optional<uint64_t> FirstByteOffset = std::nullopt,
              uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4,
              uint32_t IndentLevel = 0, bool Upper = false) {
   return FormattedBytes(Bytes, IndentLevel, FirstByteOffset, NumPerLine,
@@ -245,7 +246,7 @@ format_bytes(ArrayRef<uint8_t> Bytes, Optional<uint64_t> FirstByteOffset = None,
 
 inline FormattedBytes
 format_bytes_with_ascii(ArrayRef<uint8_t> Bytes,
-                        Optional<uint64_t> FirstByteOffset = None,
+                        Optional<uint64_t> FirstByteOffset = std::nullopt,
                         uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4,
                         uint32_t IndentLevel = 0, bool Upper = false) {
   return FormattedBytes(Bytes, IndentLevel, FirstByteOffset, NumPerLine,

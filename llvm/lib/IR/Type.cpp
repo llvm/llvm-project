@@ -385,7 +385,7 @@ FunctionType *FunctionType::get(Type *ReturnType,
 }
 
 FunctionType *FunctionType::get(Type *Result, bool isVarArg) {
-  return get(Result, None, isVarArg);
+  return get(Result, std::nullopt, isVarArg);
 }
 
 bool FunctionType::isValidReturnType(Type *RetTy) {
@@ -518,7 +518,7 @@ StructType *StructType::create(LLVMContext &Context, StringRef Name) {
 }
 
 StructType *StructType::get(LLVMContext &Context, bool isPacked) {
-  return get(Context, None, isPacked);
+  return get(Context, std::nullopt, isPacked);
 }
 
 StructType *StructType::create(LLVMContext &Context, ArrayRef<Type*> Elements,

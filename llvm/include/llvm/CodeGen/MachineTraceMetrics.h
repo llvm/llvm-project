@@ -284,9 +284,9 @@ public:
     /// classes are included. For the caller to account for extra machine
     /// instructions, it must first resolve each instruction's scheduling class.
     unsigned getResourceLength(
-        ArrayRef<const MachineBasicBlock *> Extrablocks = None,
-        ArrayRef<const MCSchedClassDesc *> ExtraInstrs = None,
-        ArrayRef<const MCSchedClassDesc *> RemoveInstrs = None) const;
+        ArrayRef<const MachineBasicBlock *> Extrablocks = std::nullopt,
+        ArrayRef<const MCSchedClassDesc *> ExtraInstrs = std::nullopt,
+        ArrayRef<const MCSchedClassDesc *> RemoveInstrs = std::nullopt) const;
 
     /// Return the length of the (data dependency) critical path through the
     /// trace.

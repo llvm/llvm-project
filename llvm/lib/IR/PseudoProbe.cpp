@@ -42,7 +42,7 @@ Optional<PseudoProbe> extractProbeFromDiscriminator(const Instruction &Inst) {
       return Probe;
     }
   }
-  return None;
+  return std::nullopt;
 }
 
 Optional<PseudoProbe> extractProbe(const Instruction &Inst) {
@@ -59,7 +59,7 @@ Optional<PseudoProbe> extractProbe(const Instruction &Inst) {
   if (isa<CallBase>(&Inst) && !isa<IntrinsicInst>(&Inst))
     return extractProbeFromDiscriminator(Inst);
 
-  return None;
+  return std::nullopt;
 }
 
 void setProbeDistributionFactor(Instruction &Inst, float Factor) {

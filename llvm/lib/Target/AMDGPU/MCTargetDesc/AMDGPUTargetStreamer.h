@@ -105,13 +105,13 @@ public:
     return TargetID;
   }
   void initializeTargetID(const MCSubtargetInfo &STI) {
-    assert(TargetID == None && "TargetID can only be initialized once");
+    assert(TargetID == std::nullopt && "TargetID can only be initialized once");
     TargetID.emplace(STI);
   }
   void initializeTargetID(const MCSubtargetInfo &STI, StringRef FeatureString) {
     initializeTargetID(STI);
 
-    assert(getTargetID() != None && "TargetID is None");
+    assert(getTargetID() != std::nullopt && "TargetID is None");
     getTargetID()->setTargetIDFromFeaturesString(FeatureString);
   }
 };

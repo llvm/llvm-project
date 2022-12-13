@@ -1705,7 +1705,7 @@ public:
   getTypeIdCompatibleVtableSummary(StringRef TypeId) const {
     auto I = TypeIdCompatibleVtableMap.find(TypeId);
     if (I == TypeIdCompatibleVtableMap.end())
-      return None;
+      return std::nullopt;
     return I->second;
   }
 

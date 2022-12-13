@@ -234,7 +234,7 @@ MachineBlockFrequencyInfo::getBlockFreq(const MachineBasicBlock *MBB) const {
 Optional<uint64_t> MachineBlockFrequencyInfo::getBlockProfileCount(
     const MachineBasicBlock *MBB) const {
   if (!MBFI)
-    return None;
+    return std::nullopt;
 
   const Function &F = MBFI->getFunction()->getFunction();
   return MBFI->getBlockProfileCount(F, MBB);
@@ -243,7 +243,7 @@ Optional<uint64_t> MachineBlockFrequencyInfo::getBlockProfileCount(
 Optional<uint64_t>
 MachineBlockFrequencyInfo::getProfileCountFromFreq(uint64_t Freq) const {
   if (!MBFI)
-    return None;
+    return std::nullopt;
 
   const Function &F = MBFI->getFunction()->getFunction();
   return MBFI->getProfileCountFromFreq(F, Freq);

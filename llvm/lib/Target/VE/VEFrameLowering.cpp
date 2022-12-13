@@ -357,8 +357,8 @@ void VEFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Emit stack adjust instructions
   MaybeAlign RuntimeAlign =
-      NeedsStackRealignment ? MaybeAlign(MFI.getMaxAlign()) : None;
-  assert((RuntimeAlign == None || !FuncInfo->isLeafProc()) &&
+      NeedsStackRealignment ? MaybeAlign(MFI.getMaxAlign()) : std::nullopt;
+  assert((RuntimeAlign == std::nullopt || !FuncInfo->isLeafProc()) &&
          "SP has to be saved in order to align variable sized stack object!");
   emitSPAdjustment(MF, MBB, MBBI, -(int64_t)NumBytes, RuntimeAlign);
 
@@ -408,7 +408,7 @@ void VEFrameLowering::emitEpilogue(MachineFunction &MF,
         .addImm(0);
   } else {
     // Emit stack adjust instructions.
-    emitSPAdjustment(MF, MBB, MBBI, NumBytes, None);
+    emitSPAdjustment(MF, MBB, MBBI, NumBytes, std::nullopt);
   }
 
   // Emit Epilogue instructions to restore multiple registers.

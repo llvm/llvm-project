@@ -79,17 +79,17 @@ Optional<InstantiatedValue> instantiateInterfaceValue(InterfaceValue IValue,
   auto *V = (Index == 0) ? &Call : Call.getArgOperand(Index - 1);
   if (V->getType()->isPointerTy())
     return InstantiatedValue{V, IValue.DerefLevel};
-  return None;
+  return std::nullopt;
 }
 
 Optional<InstantiatedRelation>
 instantiateExternalRelation(ExternalRelation ERelation, CallBase &Call) {
   auto From = instantiateInterfaceValue(ERelation.From, Call);
   if (!From)
-    return None;
+    return std::nullopt;
   auto To = instantiateInterfaceValue(ERelation.To, Call);
   if (!To)
-    return None;
+    return std::nullopt;
   return InstantiatedRelation{*From, *To, ERelation.Offset};
 }
 
@@ -97,7 +97,7 @@ Optional<InstantiatedAttr> instantiateExternalAttribute(ExternalAttribute EAttr,
                                                         CallBase &Call) {
   auto Value = instantiateInterfaceValue(EAttr.IValue, Call);
   if (!Value)
-    return None;
+    return std::nullopt;
   return InstantiatedAttr{*Value, EAttr.Attr};
 }
 }
