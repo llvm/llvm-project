@@ -129,7 +129,8 @@ void GlobalObject::setAlignment(MaybeAlign Align) {
   unsigned AlignmentData = encode(Align);
   unsigned OldData = getGlobalValueSubClassData();
   setGlobalValueSubClassData((OldData & ~AlignmentMask) | AlignmentData);
-  assert(getAlign() == Align && "Alignment representation error!");
+  assert(MaybeAlign(getAlignment()) == Align &&
+         "Alignment representation error!");
 }
 
 void GlobalObject::copyAttributesFrom(const GlobalObject *Src) {
