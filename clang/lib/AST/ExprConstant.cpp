@@ -16059,9 +16059,13 @@ bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
     if ((*I)->isValueDependent() ||
         !EvaluateCallArg(PVD, *I, Call, Info) ||
         Info.EvalStatus.HasSideEffects) {
-      // If evaluation fails, throw away the argument entirely.
-      if (APValue *Slot = Info.getParamSlot(Call, PVD))
-        *Slot = APValue();
+      // If evaluation fails, throw away the argument entirely unless I is
+      // value-dependent. In those cases, the condition above will short-circuit
+      // before calling `EvaluateCallArg` and no param slot is created.
+      if (!(*I)->isValueDependent()) {
+        if (APValue *Slot = Info.getParamSlot(Call, PVD))
+          *Slot = APValue();
+      }
     }
 
     // Ignore any side-effects from a failed evaluation. This is safe because
