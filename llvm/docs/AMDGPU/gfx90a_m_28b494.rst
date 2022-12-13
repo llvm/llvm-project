@@ -5,13 +5,9 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx90a_srsrc_e73d16:
+.. _amdgpu_synid_gfx90a_m_28b494:
 
-srsrc
-=====
+m
+=
 
-Buffer resource constant which defines the address and characteristics of the buffer in memory.
-
-*Size:* 4 dwords.
-
-*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`ttmp<amdgpu_synid_ttmp>`
+This operand may be used with an integer operand modifier :ref:`sext<amdgpu_synid_sext>`.
