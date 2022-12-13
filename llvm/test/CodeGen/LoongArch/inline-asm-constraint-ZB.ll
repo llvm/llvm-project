@@ -47,3 +47,16 @@ define void @ZB_variable_offset(ptr %p, i32 signext %idx) nounwind {
   call void asm "amswap.w $$r12, $$r13, $0", "*^ZB"(ptr elementtype(i32) %1)
   ret void
 }
+
+define void @ZB_Input_Output(ptr %p) nounwind {
+; ASM-LABEL: ZB_Input_Output:
+; ASM:       # %bb.0:
+; ASM-NEXT:    #APP
+; ASM-NEXT:    amadd_db.d $zero, $t1, $a0
+; ASM-NEXT:    #NO_APP
+; ASM-NEXT:    ret
+;; Make sure machine instr with this "ZB" constraint is printed correctly.
+; MACHINE-INSTR: INLINEASM{{.*}}[mem:ZB], %0:gpr, 0
+  call void asm "amadd_db.d $$zero, $$r13, $0", "=*^ZB,*^ZB,~{memory}"(ptr elementtype(i64) %p, ptr elementtype(i64) %p)
+  ret void
+}
