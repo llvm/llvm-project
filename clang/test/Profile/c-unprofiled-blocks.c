@@ -2,7 +2,7 @@
 // runs) shouldn't have any branch weight metadata added.
 
 // RUN: llvm-profdata merge %S/Inputs/c-unprofiled-blocks.proftext -o %t.profdata
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.9 -main-file-name c-unprofiled-blocks.c %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata | FileCheck -check-prefix=PGOUSE %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-unprofiled-blocks.c %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata | FileCheck -check-prefix=PGOUSE %s
 
 // PGOUSE-LABEL: @never_called(i32 noundef %i)
 int never_called(int i) {
@@ -62,7 +62,7 @@ int dead_code(int i) {
   return 2;
 }
 
-// PGOUSE-LABEL: @main(i32 noundef %argc, i8** noundef %argv)
+// PGOUSE-LABEL: @main(i32 noundef %argc, ptr noundef %argv)
 int main(int argc, const char *argv[]) {
   dead_code(0);
   return 0;
