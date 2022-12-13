@@ -186,7 +186,8 @@ public:
   Expected<cas::IncludeTreeRoot> getIncludeTree();
 
 private:
-  Error initialize(CompilerInstance &CI) override;
+  Error initialize(CompilerInstance &ScanInstance,
+                   CompilerInvocation &NewInvocation) override;
 
   void enteredInclude(Preprocessor &PP, FileID FID) override;
 
@@ -199,7 +200,8 @@ private:
     return PrefixMapping;
   }
 
-  Error finalize(CompilerInstance &CI) override;
+  Error finalize(CompilerInstance &ScanInstance,
+                 CompilerInvocation &NewInvocation) override;
 
   Expected<cas::ObjectRef> getObjectForFile(Preprocessor &PP, FileID FID);
   Expected<cas::ObjectRef>
@@ -246,16 +248,17 @@ private:
 };
 } // namespace
 
-Error IncludeTreePPConsumer::initialize(CompilerInstance &CI) {
+Error IncludeTreePPConsumer::initialize(CompilerInstance &ScanInstance,
+                                        CompilerInvocation &NewInvocation) {
   if (Error E =
-          PrefixMapping.configurePrefixMapper(CI.getInvocation(), PrefixMapper))
+          PrefixMapping.configurePrefixMapper(NewInvocation, PrefixMapper))
     return E;
 
   auto ensurePathRemapping = [&]() {
     if (PrefixMapper.empty())
       return;
 
-    PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
+    PreprocessorOptions &PPOpts = ScanInstance.getPreprocessorOpts();
     if (PPOpts.Includes.empty() && PPOpts.ImplicitPCHInclude.empty())
       return;
 
@@ -266,9 +269,10 @@ Error IncludeTreePPConsumer::initialize(CompilerInstance &CI) {
     ReverseMapper.addInverseRange(PrefixMapper.getMappings());
     ReverseMapper.sort();
     std::unique_ptr<llvm::vfs::FileSystem> FS =
-        llvm::vfs::createPrefixMappingFileSystem(std::move(ReverseMapper),
-                                                 &CI.getVirtualFileSystem());
-    CI.getFileManager().setVirtualFileSystem(std::move(FS));
+        llvm::vfs::createPrefixMappingFileSystem(
+            std::move(ReverseMapper), &ScanInstance.getVirtualFileSystem());
+
+    ScanInstance.getFileManager().setVirtualFileSystem(std::move(FS));
 
     // These are written in the predefines buffer, so we need to remap them.
     for (std::string &Include : PPOpts.Includes)
@@ -330,8 +334,9 @@ void IncludeTreePPConsumer::handleHasIncludeCheck(Preprocessor &PP,
   IncludeStack.back().HasIncludeChecks.push_back(Result);
 }
 
-Error IncludeTreePPConsumer::finalize(CompilerInstance &CI) {
-  FileManager &FM = CI.getFileManager();
+Error IncludeTreePPConsumer::finalize(CompilerInstance &ScanInstance,
+                                      CompilerInvocation &NewInvocation) {
+  FileManager &FM = ScanInstance.getFileManager();
 
   auto addFile = [&](StringRef FilePath,
                      bool IgnoreFileError = false) -> Error {
@@ -345,7 +350,7 @@ Error IncludeTreePPConsumer::finalize(CompilerInstance &CI) {
     return addToFileList(FM, *FE).moveInto(Ref);
   };
 
-  for (StringRef FilePath : CI.getLangOpts().NoSanitizeFiles) {
+  for (StringRef FilePath : NewInvocation.getLangOpts()->NoSanitizeFiles) {
     if (Error E = addFile(FilePath))
       return E;
   }
@@ -353,17 +358,17 @@ Error IncludeTreePPConsumer::finalize(CompilerInstance &CI) {
   // FIXME: Do not have the logic here to determine which path should be set
   // but ideally only the path needed for the compilation is set and we already
   // checked the file needed exists. Just try load and ignore errors.
-  if (Error E = addFile(CI.getCodeGenOpts().ProfileInstrumentUsePath,
+  if (Error E = addFile(NewInvocation.getCodeGenOpts().ProfileInstrumentUsePath,
                         /*IgnoreFileError=*/true))
     return E;
-  if (Error E = addFile(CI.getCodeGenOpts().SampleProfileFile,
+  if (Error E = addFile(NewInvocation.getCodeGenOpts().SampleProfileFile,
                         /*IgnoreFileError=*/true))
     return E;
-  if (Error E = addFile(CI.getCodeGenOpts().ProfileRemappingFile,
+  if (Error E = addFile(NewInvocation.getCodeGenOpts().ProfileRemappingFile,
                         /*IgnoreFileError=*/true))
     return E;
 
-  StringRef Sysroot = CI.getHeaderSearchOpts().Sysroot;
+  StringRef Sysroot = NewInvocation.getHeaderSearchOpts().Sysroot;
   if (!Sysroot.empty()) {
     // Include 'SDKSettings.json', if it exists, to accomodate availability
     // checks during the compilation.
@@ -373,7 +378,7 @@ Error IncludeTreePPConsumer::finalize(CompilerInstance &CI) {
       return E;
   }
 
-  PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
+  PreprocessorOptions &PPOpts = NewInvocation.getPreprocessorOpts();
   if (PPOpts.ImplicitPCHInclude.empty())
     return Error::success(); // no need for additional work.
 
@@ -381,7 +386,8 @@ Error IncludeTreePPConsumer::finalize(CompilerInstance &CI) {
   // the PCH that we need to include in the file list, in case they are
   // referenced while replaying the include-tree.
   SmallVector<const FileEntry *, 32> NotSeenIncludes;
-  for (const FileEntry *FE : CI.getPreprocessor().getIncludedFiles()) {
+  for (const FileEntry *FE :
+       ScanInstance.getPreprocessor().getIncludedFiles()) {
     if (FE->getUID() >= SeenIncludeFiles.size() ||
         !SeenIncludeFiles[FE->getUID()])
       NotSeenIncludes.push_back(FE);

@@ -44,11 +44,13 @@ class DependencyConsumer {
 public:
   virtual ~DependencyConsumer() {}
 
-  virtual llvm::Error initialize(CompilerInstance &CI) {
+  virtual llvm::Error initialize(CompilerInstance &ScanInstance,
+                                 CompilerInvocation &NewInvocation) {
     return llvm::Error::success();
   }
 
-  virtual llvm::Error finalize(CompilerInstance &CI) {
+  virtual llvm::Error finalize(CompilerInstance &ScanInstance,
+                               CompilerInvocation &NewInvocation) {
     return llvm::Error::success();
   }
 
