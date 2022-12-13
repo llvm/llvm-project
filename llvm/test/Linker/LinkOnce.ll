@@ -5,4 +5,4 @@
 ; RUN: llvm-as < %s > %t.1.bc
 ; RUN: llvm-link %t.1.bc %t.2.bc -S
 
-@X = linkonce global i32 7		; <i32*> [#uses=0]
+@X = linkonce global i32 7		; <ptr> [#uses=0]

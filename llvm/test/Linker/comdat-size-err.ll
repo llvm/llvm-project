@@ -15,10 +15,10 @@ define void @c1() comdat($c1) {
 $c1 = comdat largest
 
 @some_name = unnamed_addr constant i32 42, comdat($c1)
-@c1 = alias i8, inttoptr (i32 1 to i8*)
+@c1 = alias i8, inttoptr (i32 1 to ptr)
 
 ;--- no-base-object-aux.ll
 $c1 = comdat largest
 
 @some_name = private unnamed_addr constant i32 42, comdat($c1)
-@c1 = alias i32, i32* @some_name
+@c1 = alias i32, ptr @some_name
