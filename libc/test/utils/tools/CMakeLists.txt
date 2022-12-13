@@ -33,4 +33,10 @@ function(add_libc_tool_unittest target_name)
   target_link_libraries(${target_name} PRIVATE LLVMSupport)
 endfunction()
 
+# Build the gtest library needed for unittests if we do not have it already.
+if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest AND NOT TARGET llvm_gtest)
+  include_directories(${LLVM_LIBC_INCLUDE_DIRS})
+  add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest third-party/unittest)
+endif()
+
 add_subdirectory(WrapperGen)
