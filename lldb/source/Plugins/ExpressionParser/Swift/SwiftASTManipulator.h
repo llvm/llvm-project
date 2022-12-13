@@ -155,15 +155,6 @@ public:
   SwiftASTManipulator(swift::SourceFile &source_file, bool repl,
                       lldb::BindGenericTypes bind_generic_types);
 
-  static void WrapExpression(Stream &wrapped_stream, const char *text,
-                             bool needs_object_ptr,
-                             bool static_method,
-                             bool is_class,
-                             bool weak_self,
-                             const EvaluateExpressionOptions &options,
-                             llvm::StringRef os_version,
-                             uint32_t &first_body_line);
-
   void FindSpecialNames(llvm::SmallVectorImpl<swift::Identifier> &names,
                         llvm::StringRef prefix);
 
@@ -203,12 +194,6 @@ public:
   static const char *GetArgumentName() { return "$__lldb_arg"; }
   static const char *GetResultName() { return "$__lldb_result"; }
   static const char *GetErrorName() { return "$__lldb_error_result"; }
-  static const char *GetUserCodeStartMarker() {
-    return "/*__LLDB_USER_START__*/\n";
-  }
-  static const char *GetUserCodeEndMarker() {
-    return "\n/*__LLDB_USER_END__*/";
-  }
 
   static bool
   SaveExpressionTextToTempFile(llvm::StringRef text,
