@@ -59,7 +59,6 @@ static Optional<llvm::cas::CASID>
 createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
                              CompilerInvocation CI) {
   FrontendOptions &FrontendOpts = CI.getFrontendOpts();
-  DiagnosticOptions &DiagOpts = CI.getDiagnosticOpts();
   DependencyOutputOptions &DepOpts = CI.getDependencyOutputOpts();
 
   // Keep the key independent of the paths of these outputs.
@@ -67,9 +66,6 @@ createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
     FrontendOpts.OutputFile = "-";
   if (!DepOpts.OutputFile.empty())
     DepOpts.OutputFile = "-";
-  // We always generate the serialized diagnostics so the key is independent of
-  // the presence of '--serialize-diagnostics'.
-  DiagOpts.DiagnosticSerializationFile.clear();
   // Dependency options that do not affect the list of files are canonicalized.
   if (!DepOpts.Targets.empty())
     DepOpts.Targets = {"-"};
@@ -77,6 +73,41 @@ createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
   // These are added in when the dependency file is generated, but they don't
   // affect the actual compilation.
   DepOpts.ExtraDeps.clear();
+
+  // Canonicalize diagnostic options.
+
+  DiagnosticOptions &DiagOpts = CI.getDiagnosticOpts();
+  // These options affect diagnostic rendering but not the cached diagnostics.
+  DiagOpts.ShowLine = false;
+  DiagOpts.ShowColumn = false;
+  DiagOpts.ShowLocation = false;
+  DiagOpts.ShowLevel = false;
+  DiagOpts.AbsolutePath = false;
+  DiagOpts.ShowCarets = false;
+  DiagOpts.ShowFixits = false;
+  DiagOpts.ShowSourceRanges = false;
+  DiagOpts.ShowParseableFixits = false;
+  DiagOpts.ShowPresumedLoc = false;
+  DiagOpts.ShowOptionNames = false;
+  DiagOpts.ShowNoteIncludeStack = false;
+  DiagOpts.ShowCategories = false;
+  DiagOpts.ShowColors = false;
+  DiagOpts.UseANSIEscapeCodes = false;
+  DiagOpts.VerifyDiagnostics = false;
+  DiagOpts.setVerifyIgnoreUnexpected(DiagnosticLevelMask::None);
+  DiagOpts.ErrorLimit = 0;
+  DiagOpts.MacroBacktraceLimit = 0;
+  DiagOpts.SnippetLineLimit = 0;
+  DiagOpts.TabStop = 0;
+  DiagOpts.MessageLength = 0;
+  DiagOpts.DiagnosticLogFile.clear();
+  DiagOpts.DiagnosticSerializationFile.clear();
+  DiagOpts.VerifyPrefixes.clear();
+
+  llvm::erase_if(DiagOpts.Remarks, [](StringRef Remark) -> bool {
+    // These are intended for caching introspection, they are not cached.
+    return Remark.startswith("compile-job-cache");
+  });
 
   // Generate a new command-line in case Invocation has been canonicalized.
   llvm::BumpPtrAllocator Alloc;
@@ -124,6 +155,8 @@ canonicalizeForCaching(llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
       FrontendOpts.DisableCachedCompileJobReplay;
   FrontendOpts.DisableCachedCompileJobReplay = false;
   FrontendOpts.IncludeTimestamps = false;
+  Opts.PathPrefixMappings = std::move(FrontendOpts.PathPrefixMappings);
+  FrontendOpts.PathPrefixMappings.clear();
 
   // Hide the CAS configuration, canonicalizing it to keep the path to the
   // CAS from leaking to the compile job, where it might affecting its

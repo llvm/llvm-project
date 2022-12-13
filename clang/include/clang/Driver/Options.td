@@ -6609,9 +6609,10 @@ def fdepscan_include_tree : Flag<["-"], "fdepscan-include-tree">,
 //
 // FIXME: Add DepscanOption flag.
 def fdepscan_prefix_map_EQ : Joined<["-"], "fdepscan-prefix-map=">,
-    Group<f_Group>, MetaVarName<"<old>=<new>">,
+    Group<f_Group>, Flags<[CC1Option]>, MetaVarName<"<old>=<new>">,
     HelpText<"With -fdepscan, seamlessly filter the CAS filesystem to"
-             " apply the given prefix, updating the command-line to match.">;
+             " apply the given prefix, updating the command-line to match.">,
+    MarshallingInfoStringVector<FrontendOpts<"PathPrefixMappings">>;
 def fdepscan_prefix_map_sdk_EQ :
     Joined<["-"], "fdepscan-prefix-map-sdk=">,
     Group<f_Group>, MetaVarName<"<new>">,

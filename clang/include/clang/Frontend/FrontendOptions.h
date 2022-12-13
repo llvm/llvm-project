@@ -487,6 +487,11 @@ public:
   /// Socket path for remote caching service.
   std::string CompilationCachingServicePath;
 
+  /// When caching is enabled, represents remappings for all the file paths that
+  /// the compilation may access. This is useful for canonicalizing the
+  /// compilation for caching purposes.
+  std::vector<std::string> PathPrefixMappings;
+
   // Currently this is only used as part of the `-extract-api` action.
   /// The file providing a list of APIs to ignore when extracting documentation
   std::string ExtractAPIIgnoresFile;
