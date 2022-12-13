@@ -563,11 +563,6 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       }
       hasAttributes = true;
     }
-    if (getBBID().has_value()) {
-      os << (hasAttributes ? ", " : " (");
-      os << "bb_id " << *getBBID();
-      hasAttributes = true;
-    }
   }
 
   if (hasAttributes)
@@ -1654,11 +1649,6 @@ bool MachineBasicBlock::sizeWithoutDebugLargerThan(unsigned Limit) const {
       return true;
   }
   return false;
-}
-
-unsigned MachineBasicBlock::getBBIDOrNumber() const {
-  uint8_t BBAddrMapVersion = getParent()->getContext().getBBAddrMapVersion();
-  return BBAddrMapVersion < 2 ? getNumber() : *getBBID();
 }
 
 const MBBSectionID MBBSectionID::ColdSectionID(MBBSectionID::SectionType::Cold);
