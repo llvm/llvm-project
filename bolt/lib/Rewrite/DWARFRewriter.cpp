@@ -256,7 +256,7 @@ void DWARFRewriter::updateDebugInfo() {
   auto processUnitDIE = [&](size_t CUIndex, DWARFUnit *Unit) {
     // Check if the unit is a skeleton and we need special updates for it and
     // its matching split/DWO CU.
-    Optional<DWARFUnit *> SplitCU;
+    std::optional<DWARFUnit *> SplitCU;
     Optional<uint64_t> RangesBase;
     std::optional<uint64_t> DWOId = Unit->getDWOId();
     StrOffstsWriter->initialize(Unit->getStringOffsetSection(),
@@ -1419,7 +1419,7 @@ void DWARFRewriter::writeDWP(
       continue;
 
     // Skipping CUs that we failed to load.
-    Optional<DWARFUnit *> DWOCU = BC.getDWOCU(*DWOId);
+    std::optional<DWARFUnit *> DWOCU = BC.getDWOCU(*DWOId);
     if (!DWOCU)
       continue;
 
@@ -1588,7 +1588,7 @@ void DWARFRewriter::writeDWOFiles(
       continue;
 
     // Skipping CUs that we failed to load.
-    Optional<DWARFUnit *> DWOCU = BC.getDWOCU(*DWOId);
+    std::optional<DWARFUnit *> DWOCU = BC.getDWOCU(*DWOId);
     if (!DWOCU)
       continue;
 
