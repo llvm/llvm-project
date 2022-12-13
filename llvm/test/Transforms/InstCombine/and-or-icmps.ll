@@ -741,6 +741,19 @@ define <2 x i1> @substitute_constant_and_eq_ne_vec(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i1> %r
 }
 
+define <2 x i1> @substitute_constant_and_eq_ne_vec_logical(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @substitute_constant_and_eq_ne_vec_logical(
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 42, i8 97>
+; CHECK-NEXT:    [[C2:%.*]] = icmp ne <2 x i8> [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C1]], <2 x i1> [[C2]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %c1 = icmp eq <2 x i8> %x, <i8 42, i8 97>
+  %c2 = icmp ne <2 x i8> %x, %y
+  %r = select <2 x i1> %c1, <2 x i1> %c2, <2 x i1> zeroinitializer
+  ret <2 x i1> %r
+}
+
 define i1 @substitute_constant_and_eq_sgt_use(i8 %x, i8 %y) {
 ; CHECK-LABEL: @substitute_constant_and_eq_sgt_use(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X:%.*]], 42
@@ -953,6 +966,19 @@ define <2 x i1> @substitute_constant_or_ne_slt_swap_vec(<2 x i8> %x, <2 x i8> %y
   %c1 = icmp ne <2 x i8> %x, <i8 42, i8 undef>
   %c2 = icmp slt <2 x i8> %y, %x
   %r = or <2 x i1> %c1, %c2
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @substitute_constant_or_ne_slt_swap_vec_logical(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @substitute_constant_or_ne_slt_swap_vec_logical(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 42, i8 undef>
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt <2 x i8> [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C1]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[C2]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %c1 = icmp ne <2 x i8> %x, <i8 42, i8 undef>
+  %c2 = icmp slt <2 x i8> %y, %x
+  %r = select <2 x i1> %c1, <2 x i1> <i1 true, i1 true>, <2 x i1> %c2
   ret <2 x i1> %r
 }
 
