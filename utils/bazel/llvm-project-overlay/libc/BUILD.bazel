@@ -68,7 +68,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_sanitizer",
     hdrs = ["src/__support/sanitizer.h"],
-    deps = [":__support_compiler_features"],
+    deps = [
+        ":__support_compiler_features",
+        ":libc_root",
+    ],
 )
 
 libc_support_library(
@@ -200,6 +203,7 @@ libc_support_library(
     hdrs = ["src/__support/UInt.h"],
     deps = [
         "__support_builtin_wrappers",
+        "__support_compiler_features",
         "__support_cpp_array",
         "__support_cpp_limits",
         "__support_cpp_optional",
@@ -269,6 +273,7 @@ libc_support_library(
     hdrs = ["src/__support/builtin_wrappers.h"],
     deps = [
         ":__support_common",
+        ":__support_compiler_features",
         ":__support_cpp_type_traits",
         ":__support_named_pair",
         ":libc_root",
