@@ -1093,7 +1093,7 @@ Value *InstCombinerImpl::foldEqOfParts(ICmpInst *Cmp0, ICmpInst *Cmp1,
 /// common operand with the constant. Callers are expected to call this with
 /// Cmp0/Cmp1 switched to handle logic op commutativity.
 static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
-                                          bool IsAnd,
+                                          bool IsAnd, bool IsLogical,
                                           InstCombiner::BuilderTy &Builder,
                                           const SimplifyQuery &Q) {
   // Match an equality compare with a non-poison constant as Cmp0.
@@ -1129,6 +1129,9 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
       return nullptr;
     SubstituteCmp = Builder.CreateICmp(Pred1, Y, C);
   }
+  if (IsLogical)
+    return IsAnd ? Builder.CreateLogicalAnd(Cmp0, SubstituteCmp)
+                 : Builder.CreateLogicalOr(Cmp0, SubstituteCmp);
   return Builder.CreateBinOp(IsAnd ? Instruction::And : Instruction::Or, Cmp0,
                              SubstituteCmp);
 }
@@ -2664,13 +2667,14 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
                                               /*IsLogical*/ false, Builder))
     return V;
 
-  // TODO: Verify whether this is safe for logical and/or.
-  if (!IsLogical) {
-    if (Value *V = foldAndOrOfICmpsWithConstEq(LHS, RHS, IsAnd, Builder, Q))
-      return V;
-    if (Value *V = foldAndOrOfICmpsWithConstEq(RHS, LHS, IsAnd, Builder, Q))
-      return V;
-  }
+  if (Value *V =
+          foldAndOrOfICmpsWithConstEq(LHS, RHS, IsAnd, IsLogical, Builder, Q))
+    return V;
+  // We can convert this case to bitwise and, because both operands are used
+  // on the LHS, and as such poison from both will propagate.
+  if (Value *V = foldAndOrOfICmpsWithConstEq(RHS, LHS, IsAnd,
+                                             /*IsLogical*/ false, Builder, Q))
+    return V;
 
   if (Value *V = foldIsPowerOf2OrZero(LHS, RHS, IsAnd, Builder))
     return V;
