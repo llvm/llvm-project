@@ -74,31 +74,6 @@ static arith::CmpIPredicateAttr invertPredicate(arith::CmpIPredicateAttr pred) {
                                        invertPredicate(pred.getValue()));
 }
 
-static int64_t getScalarOrElementWidth(Type type) {
-  if (type.isIntOrFloat())
-    return type.getIntOrFloatBitWidth();
-
-  if (auto shapeTy = type.dyn_cast<ShapedType>())
-    return shapeTy.getElementTypeBitWidth();
-
-  return -1;
-}
-
-static int64_t getScalarOrElementWidth(Value value) {
-  return getScalarOrElementWidth(value.getType());
-}
-
-static int64_t getIntOrSplatIntValue(Attribute attr) {
-  if (auto intAttr = attr.dyn_cast<IntegerAttr>())
-    return intAttr.getInt();
-
-  if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>())
-    if (splatAttr.getElementType().isa<IntegerType>())
-      return splatAttr.getSplatValue<APInt>().getLimitedValue();
-
-  return -1;
-}
-
 //===----------------------------------------------------------------------===//
 // TableGen'd canonicalization patterns
 //===----------------------------------------------------------------------===//
@@ -418,7 +393,7 @@ arith::MulSIExtendedOp::fold(ArrayRef<Attribute> operands,
 
 void arith::MulSIExtendedOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<MulSIExtendedToMulI, MulSIExtendedRHSOne>(context);
+  patterns.add<MulSIExtendedToMulI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1272,12 +1247,6 @@ OpFoldResult arith::TruncIOp::fold(ArrayRef<Attribute> operands) {
 
 bool arith::TruncIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkWidthChangeCast<std::less, IntegerType>(inputs, outputs);
-}
-
-void arith::TruncIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
-                                                  MLIRContext *context) {
-  patterns.add<TruncIShrSIToTrunciShrUI, TruncIShrUIMulIToMulSIExtended,
-               TruncIShrUIMulIToMulUIExtended>(context);
 }
 
 LogicalResult arith::TruncIOp::verify() {
