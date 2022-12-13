@@ -7,8 +7,6 @@ set(SCUDO_CFLAGS)
 list(APPEND SCUDO_CFLAGS
   -Werror=conversion
   -Wall
-  -Wextra
-  -pedantic
   -g
   -nostdinc++)
 
