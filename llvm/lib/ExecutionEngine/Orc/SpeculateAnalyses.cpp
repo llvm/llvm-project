@@ -136,7 +136,7 @@ SequenceBBQuery::BlockListTy
 SequenceBBQuery::rearrangeBB(const Function &F, const BlockListTy &BBList) {
   BlockListTy RearrangedBBSet;
 
-  for (auto &Block : F.getBasicBlockList())
+  for (auto &Block : F)
     if (llvm::is_contained(BBList, &Block))
       RearrangedBBSet.push_back(&Block);
 
