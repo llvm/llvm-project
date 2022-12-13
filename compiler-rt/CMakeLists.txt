@@ -436,9 +436,12 @@ if (NOT MSVC)
 
   # Build with optimization, unless we're in debug mode.
   if(COMPILER_RT_DEBUG)
-    list(APPEND SANITIZER_COMMON_CFLAGS -O1)
+    list(APPEND SANITIZER_COMMON_CFLAGS -O0)
+    string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " -O0")
   else()
     list(APPEND SANITIZER_COMMON_CFLAGS -O3)
+    # FIXME: Omit for now, causes testsuite failures.
+    #string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " -O3")
   endif()
 endif()
 
@@ -473,6 +476,7 @@ if(MSVC)
     string(REGEX REPLACE "(^| )/Z[i7I]($| )" " /Z7 "
            "${var_to_update}" "${${var_to_update}}")
   endforeach()
+  list(APPEND COMPILER_RT_UNITTEST_CFLAGS -gcodeview)
 elseif(APPLE)
   # On Apple platforms use full debug info (i.e. not `-gline-tables-only`)
   # for all build types so that the runtime can be debugged.
@@ -482,8 +486,13 @@ elseif(APPLE)
   list(APPEND SANITIZER_COMMON_CFLAGS -g)
 elseif(COMPILER_RT_HAS_GLINE_TABLES_ONLY_FLAG AND NOT COMPILER_RT_DEBUG)
   list(APPEND SANITIZER_COMMON_CFLAGS -gline-tables-only)
+  # -gline-tables-only must be enough for these tests, so use it if possible.
+  string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " -gline-tables-only")
+  list(APPEND COMPILER_RT_UNITTEST_CFLAGS -gline-tables-only)
 elseif(COMPILER_RT_HAS_G_FLAG)
   list(APPEND SANITIZER_COMMON_CFLAGS -g)
+  string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " -g")
+  list(APPEND COMPILER_RT_UNITTEST_CFLAGS -g)
 endif()
 
 if(LLVM_ENABLE_MODULES)

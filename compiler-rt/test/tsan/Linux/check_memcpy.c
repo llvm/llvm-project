@@ -7,6 +7,8 @@
 // tsan.
 // REQUIRES: shared_unwind
 
+// XFAIL: !compiler-rt-optimized
+
 // RUN: %clang_tsan -O1 %s -o %t
 // RUN: llvm-objdump -d -l %t | FileCheck %s
 

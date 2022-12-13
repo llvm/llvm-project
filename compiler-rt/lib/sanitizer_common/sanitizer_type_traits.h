@@ -98,6 +98,11 @@ struct integral_constant {
   constexpr value_type operator()() const { return value; }
 };
 
+#if !__cpp_inline_variables
+template <typename T, T v>
+constexpr T integral_constant<T, v>::value;
+#endif
+
 #ifndef __has_builtin
 #  define __has_builtin(x) 0
 #endif
