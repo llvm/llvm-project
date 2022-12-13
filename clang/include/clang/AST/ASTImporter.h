@@ -577,7 +577,7 @@ class TypeSourceInfo;
     /// Determine the index of a field in its parent record.
     /// F should be a field (or indirect field) declaration.
     /// \returns The index of the field in its parent context (starting from 0).
-    /// On error `None` is returned (parent context is non-record).
+    /// On error `std::nullopt` is returned (parent context is non-record).
     static llvm::Optional<unsigned> getFieldIndex(Decl *F);
   };
 

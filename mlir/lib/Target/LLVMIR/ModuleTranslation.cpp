@@ -924,6 +924,13 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
               "llvm.noalias attribute attached to LLVM non-pointer argument");
         llvmArg.addAttr(llvm::Attribute::AttrKind::NoAlias);
       }
+      if (auto attr = function.getArgAttrOfType<UnitAttr>(
+              argIdx, LLVMDialect::getReadonlyAttrName())) {
+        if (!mlirArgTy.isa<LLVM::LLVMPointerType>())
+          return function.emitError(
+              "llvm.readonly attribute attached to LLVM non-pointer argument");
+        llvmArg.addAttr(llvm::Attribute::AttrKind::ReadOnly);
+      }
 
       if (auto attr = function.getArgAttrOfType<IntegerAttr>(
               argIdx, LLVMDialect::getAlignAttrName())) {

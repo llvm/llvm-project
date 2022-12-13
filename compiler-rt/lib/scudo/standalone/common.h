@@ -132,6 +132,8 @@ u32 getNumberOfCPUs();
 
 const char *getEnv(const char *Name);
 
+u64 GetRSS();
+
 u64 getMonotonicTime();
 
 u32 getThreadID();

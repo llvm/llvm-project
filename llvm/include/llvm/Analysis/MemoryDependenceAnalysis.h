@@ -32,7 +32,6 @@ class AssumptionCache;
 class BatchAAResults;
 class DominatorTree;
 class PHITransAddr;
-class PhiValues;
 
 /// A memory dependence query can return one of three different answers.
 class MemDepResult {
@@ -348,7 +347,6 @@ private:
   AssumptionCache &AC;
   const TargetLibraryInfo &TLI;
   DominatorTree &DT;
-  PhiValues &PV;
   PredIteratorCache PredCache;
 
   unsigned DefaultBlockScanLimit;
@@ -360,8 +358,8 @@ private:
 public:
   MemoryDependenceResults(AAResults &AA, AssumptionCache &AC,
                           const TargetLibraryInfo &TLI, DominatorTree &DT,
-                          PhiValues &PV, unsigned DefaultBlockScanLimit)
-      : AA(AA), AC(AC), TLI(TLI), DT(DT), PV(PV),
+                          unsigned DefaultBlockScanLimit)
+      : AA(AA), AC(AC), TLI(TLI), DT(DT),
         DefaultBlockScanLimit(DefaultBlockScanLimit) {}
 
   /// Handle invalidation in the new PM.

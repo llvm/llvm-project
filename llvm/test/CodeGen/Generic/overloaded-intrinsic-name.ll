@@ -1,4 +1,4 @@
-; RUN: opt -verify -S < %s | FileCheck %s
+; RUN: opt -passes=verify -S < %s | FileCheck %s
 
 ; Tests the name mangling performed by the codepath following
 ; getMangledTypeStr(). Only tests that code with the various manglings

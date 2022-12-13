@@ -667,7 +667,8 @@ def TileReductionUsingScfOp : Op<Transform_Dialect, "structured.tile_reduction_u
 
     #### Return modes
 
-    This 3 returned handles point to:
+    This 4 returned handles point to:
+      - the parent for op,
       - the fill op used to initialize the neutral element,
       - the parallel tiled op and
       - the result-combining op.
@@ -722,7 +723,8 @@ def TileReductionUsingScfOp : Op<Transform_Dialect, "structured.tile_reduction_u
 
   let arguments = (ins PDL_Operation:$target,
                    DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes);
-  let results = (outs PDL_Operation:$fill_op,
+  let results = (outs PDL_Operation:$for_op,
+                      PDL_Operation:$fill_op,
                       PDL_Operation:$split_linalg_op,
                       PDL_Operation:$combining_linalg_op);
 
@@ -756,7 +758,8 @@ def TileReductionUsingForeachThreadOp :
 
     #### Return modes
 
-    This 3 returned handles point to:
+    This 4 returned handles point to:
+      - the parent foreach_thread op,
       - the fill op used to initialize the neutral element,
       - the parallel tiled op and
       - the result-combining op.
@@ -796,7 +799,7 @@ def TileReductionUsingForeachThreadOp :
         scf.foreach_thread.perform_concurrently {
           tensor.parallel_insert_slice %7 into %arg3[0, %arg2] [%dim, 1] [1, 1] : tensor<?xf32> into tensor<?x5xf32>
         }
-      } {thread_dim_mapping = []}
+      } {mapping = []}
       %3 = linalg.generic {indexing_maps = [#map3, #map4], iterator_types = ["parallel", "reduction"]} ins(%2 : tensor<?x5xf32>) outs(%arg1 : tensor<?xf32>) {
       ^bb0(%in: f32, %out: f32):
         %4 = arith.addf %in, %out : f32
@@ -807,8 +810,10 @@ def TileReductionUsingForeachThreadOp :
 
   let arguments = (ins PDL_Operation:$target,
                    DefaultValuedAttr<I64ArrayAttr, "{}">:$num_threads,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes);
-  let results = (outs PDL_Operation:$fill_op,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes,
+                   OptionalAttr<DeviceMappingArrayAttr>:$mapping);
+  let results = (outs PDL_Operation:$foreach_thread_op,
+                      PDL_Operation:$fill_op,
                       PDL_Operation:$split_linalg_op,
                       PDL_Operation:$combining_linalg_op);
 
@@ -1090,6 +1095,7 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
 
   let arguments = (ins PDL_Operation:$target,
                    UnitAttr:$vectorize_padding,
+                   UnitAttr:$vectorize_nd_extract,
                    UnitAttr:$disable_multi_reduction_to_contract_patterns,
                    UnitAttr:$disable_transfer_permutation_map_lowering_patterns);
   let results = (outs PDL_Operation:$transformed);
@@ -1097,13 +1103,56 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
   let assemblyFormat = "$target attr-dict";
 
   let builders = [
-    OpBuilder<(ins "Value":$target, CArg<"bool", "false">:$vectorizePadding)>
+    OpBuilder<(ins "Value":$target,
+               CArg<"bool", "false">:$vectorizePadding,
+               CArg<"bool", "false">:$vectorizeNDExtract)>,
   ];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation *target,
         ::llvm::SmallVectorImpl<::mlir::Operation *> &results,
         ::mlir::transform::TransformState &state);
+  }];
+}
+
+def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     TransformOpInterface]> {
+  let description = [{
+    Vectorize the target ops, which must be Linalg ops, with masked vectors
+    of the specified size.
+
+    The vector sizes can be either static or dynamic (SSA values). In case of
+    SSA values, the handle must be mapped to exactly one payload op with
+    exactly one index-typed result.
+
+    #### Return modes:
+
+    This operation produces a definite failure if the dynamic vector sizes (SSA
+    values) do not satify the constraints mentioned above. It produces a
+    silenceable failure if at least one target op is not a Linalg op or fails to
+    vectorize.
+  }];
+
+  let arguments = (ins PDL_Operation:$target,
+                       Variadic<PDL_Operation>:$vector_sizes,
+                       DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:
+                          $static_vector_sizes);
+  let results = (outs);
+  let assemblyFormat = [{
+      $target
+      `vector_sizes` custom<DynamicIndexList>($vector_sizes,
+                                              $static_vector_sizes)
+      attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    // TODO: applyToOne.
+    ::mlir::DiagnosedSilenceableFailure apply(
+        ::mlir::transform::TransformResults &transformResults,
+        ::mlir::transform::TransformState &state);
+
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedVectorSizes();
   }];
 }
 

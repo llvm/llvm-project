@@ -11,38 +11,36 @@ define void @_ZNK1q1rEv() local_unnamed_addr #0 align 2 {
 ; CHECK-LABEL: _ZNK1q1rEv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    stdu 1, -64(1)
-; CHECK-NEXT:    std 0, 80(1)
-; CHECK-NEXT:    lwz 30, 0(3)
-; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
-; CHECK-NEXT:    ld 29, .LC0@toc@l(3)
+; CHECK-NEXT:    stdu 1, -48(1)
+; CHECK-NEXT:    std 0, 64(1)
+; CHECK-NEXT:    addis 4, 2, .LC0@toc@ha
+; CHECK-NEXT:    lwz 3, 0(3)
+; CHECK-NEXT:    ld 4, .LC0@toc@l(4)
+; CHECK-NEXT:    addi 3, 3, -1
+; CHECK-NEXT:    .p2align 5
+; CHECK-NEXT:  .LBB0_1: # %monotonic.i
+; CHECK-NEXT:    #
+; CHECK-NEXT:    lwz 5, 0(4)
+; CHECK-NEXT:    cmpwi 1, 3, 0
+; CHECK-NEXT:    addi 3, 3, -1
+; CHECK-NEXT:    andi. 5, 5, 255
+; CHECK-NEXT:    crorc 20, 6, 2
+; CHECK-NEXT:    bc 4, 20, .LBB0_1
+; CHECK-NEXT:  # %bb.2: # %if.end
+; CHECK-NEXT:    crnot 20, 2
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    li 4, 8
+; CHECK-NEXT:    isel 30, 4, 3, 20
 ; CHECK-NEXT:    addis 3, 2, aj@got@tlsgd@ha
 ; CHECK-NEXT:    addi 3, 3, aj@got@tlsgd@l
 ; CHECK-NEXT:    bl __tls_get_addr(aj@tlsgd)
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi 4, 3, 8
-; CHECK-NEXT:    .p2align 5
-; CHECK-NEXT:  .LBB0_1: # %monotonic.i
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lwz 5, 0(29)
-; CHECK-NEXT:    andi. 5, 5, 255
-; CHECK-NEXT:    bne 0, .LBB0_4
-; CHECK-NEXT:  # %bb.2: # %for.cond.i
-; CHECK-NEXT:    #
-; CHECK-NEXT:    addi 30, 30, -1
-; CHECK-NEXT:    cmplwi 30, 0
-; CHECK-NEXT:    bne 0, .LBB0_1
-; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:  .LBB0_4: # %if.end
-; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    std 3, 0(4)
-; CHECK-NEXT:    addi 1, 1, 64
+; CHECK-NEXT:    li 4, 1
+; CHECK-NEXT:    stdx 4, 3, 30
+; CHECK-NEXT:    addi 1, 1, 48
 ; CHECK-NEXT:    ld 0, 16(1)
 ; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 entry:

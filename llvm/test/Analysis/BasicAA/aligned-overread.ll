@@ -9,11 +9,11 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 define i32 @main() nounwind uwtable ssp {
 entry:
-  %tmp = load i8, i8* getelementptr inbounds ({ i8, i8, i8, i8, i8 }, { i8, i8, i8, i8, i8 }* @a, i64 0, i32 4), align 4
+  %tmp = load i8, ptr getelementptr inbounds ({ i8, i8, i8, i8, i8 }, ptr @a, i64 0, i32 4), align 4
   %tmp1 = or i8 %tmp, -128
-  store i8 %tmp1, i8* getelementptr inbounds ({ i8, i8, i8, i8, i8 }, { i8, i8, i8, i8, i8 }* @a, i64 0, i32 4), align 4
-  %tmp2 = load i64, i64* bitcast ({ i8, i8, i8, i8, i8 }* @a to i64*), align 8
-  store i8 11, i8* getelementptr inbounds ({ i8, i8, i8, i8, i8 }, { i8, i8, i8, i8, i8 }* @a, i64 0, i32 4), align 4
+  store i8 %tmp1, ptr getelementptr inbounds ({ i8, i8, i8, i8, i8 }, ptr @a, i64 0, i32 4), align 4
+  %tmp2 = load i64, ptr @a, align 8
+  store i8 11, ptr getelementptr inbounds ({ i8, i8, i8, i8, i8 }, ptr @a, i64 0, i32 4), align 4
   %tmp3 = trunc i64 %tmp2 to i32
   ret i32 %tmp3
 

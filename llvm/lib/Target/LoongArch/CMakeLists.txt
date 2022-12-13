@@ -38,7 +38,6 @@ add_llvm_target(LoongArchCodeGen
   SelectionDAG
   Support
   Target
-  GlobalISel
 
   ADD_TO_COMPONENT
   LoongArch

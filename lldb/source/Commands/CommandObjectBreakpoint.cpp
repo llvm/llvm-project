@@ -110,24 +110,24 @@ public:
     } break;
     case 't': {
       lldb::tid_t thread_id = LLDB_INVALID_THREAD_ID;
-      if (option_arg[0] != '\0') {
-        if (option_arg == "current") {
-          if (!execution_context) {
-            error.SetErrorStringWithFormat("No context to determine current "
-                                           "thread");
+      if (option_arg == "current") {
+        if (!execution_context) {
+          error.SetErrorStringWithFormat("No context to determine current "
+                                         "thread");
+        } else {
+          ThreadSP ctx_thread_sp = execution_context->GetThreadSP();
+          if (!ctx_thread_sp || !ctx_thread_sp->IsValid()) {
+            error.SetErrorStringWithFormat("No currently selected thread");
           } else {
-            ThreadSP ctx_thread_sp = execution_context->GetThreadSP();
-            if (!ctx_thread_sp || !ctx_thread_sp->IsValid()) {
-              error.SetErrorStringWithFormat("No currently selected thread");
-            } else {
-              thread_id = ctx_thread_sp->GetID();
-            }
+            thread_id = ctx_thread_sp->GetID();
           }
-        } else if (option_arg.getAsInteger(0, thread_id))
-          error.SetErrorStringWithFormat("invalid thread id string '%s'",
-                                         option_arg.str().c_str());
+        }
+      } else if (option_arg.getAsInteger(0, thread_id)) {
+        error.SetErrorStringWithFormat("invalid thread id string '%s'",
+                                       option_arg.str().c_str());
       }
-      m_bp_opts.SetThreadID(thread_id);
+      if (thread_id != LLDB_INVALID_THREAD_ID)
+        m_bp_opts.SetThreadID(thread_id);
     } break;
     case 'T':
       m_bp_opts.GetThreadSpec()->SetName(option_arg.str().c_str());
@@ -137,12 +137,12 @@ public:
       break;
     case 'x': {
       uint32_t thread_index = UINT32_MAX;
-      if (option_arg[0] != '\n') {
-        if (option_arg.getAsInteger(0, thread_index))
-          error.SetErrorStringWithFormat("invalid thread index string '%s'",
-                                         option_arg.str().c_str());
+      if (option_arg.getAsInteger(0, thread_index)) {
+        error.SetErrorStringWithFormat("invalid thread index string '%s'",
+                                       option_arg.str().c_str());
+      } else {
+        m_bp_opts.GetThreadSpec()->SetIndex(thread_index);
       }
-      m_bp_opts.GetThreadSpec()->SetIndex(thread_index);
     } break;
     default:
       llvm_unreachable("Unimplemented option");

@@ -1,4 +1,4 @@
-; RUN: not opt -verify < %s 2>&1 | FileCheck %s
+; RUN: not opt -passes=verify < %s 2>&1 | FileCheck %s
 
 define void @test_kcfi_bundle(i64 %arg0, i32 %arg1, void()* %arg2) {
 ; CHECK: Multiple kcfi operand bundles

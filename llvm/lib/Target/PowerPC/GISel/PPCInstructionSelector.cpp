@@ -15,8 +15,11 @@
 #include "PPCRegisterBankInfo.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/Support/Debug.h"
@@ -47,6 +50,9 @@ private:
   bool selectFPToInt(MachineInstr &I, MachineBasicBlock &MBB,
                   MachineRegisterInfo &MRI) const;
   bool selectIntToFP(MachineInstr &I, MachineBasicBlock &MBB,
+                  MachineRegisterInfo &MRI) const;
+
+  bool selectZExt(MachineInstr &I, MachineBasicBlock &MBB,
                   MachineRegisterInfo &MRI) const;
 
   const PPCSubtarget &STI;
@@ -86,6 +92,8 @@ static const TargetRegisterClass *getRegClass(LLT Ty, const RegisterBank *RB) {
   if (RB->getID() == PPC::GPRRegBankID) {
     if (Ty.getSizeInBits() == 64)
       return &PPC::G8RCRegClass;
+    if (Ty.getSizeInBits() == 32)
+      return &PPC::GPRCRegClass;
   }
   if (RB->getID() == PPC::FPRRegBankID) {
     if (Ty.getSizeInBits() == 32)
@@ -119,6 +127,36 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   }
 
   return true;
+}
+
+static unsigned selectLoadStoreOp(unsigned GenericOpc, unsigned RegBankID,
+                                  unsigned OpSize) {
+  const bool IsStore = GenericOpc == TargetOpcode::G_STORE;
+  switch (RegBankID) {
+  case PPC::GPRRegBankID:
+    switch (OpSize) {
+    case 32:
+      return IsStore ? PPC::STW : PPC::LWZ;
+    case 64:
+      return IsStore ? PPC::STD : PPC::LD;
+    default:
+      llvm_unreachable("Unexpected size!");
+    }
+    break;
+  case PPC::FPRRegBankID:
+    switch (OpSize) {
+    case 32:
+      return IsStore ? PPC::STFS : PPC::LFS;
+    case 64:
+      return IsStore ? PPC::STFD : PPC::LFD;
+    default:
+      llvm_unreachable("Unexpected size!");
+    }
+    break;
+  default:
+    llvm_unreachable("Unexpected register bank!");
+  }
+  return GenericOpc;
 }
 
 bool PPCInstructionSelector::selectIntToFP(MachineInstr &I,
@@ -178,6 +216,40 @@ bool PPCInstructionSelector::selectFPToInt(MachineInstr &I,
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
 
+bool PPCInstructionSelector::selectZExt(MachineInstr &I, MachineBasicBlock &MBB,
+                                        MachineRegisterInfo &MRI) const {
+  const Register DstReg = I.getOperand(0).getReg();
+  const LLT DstTy = MRI.getType(DstReg);
+  const RegisterBank *DstRegBank = RBI.getRegBank(DstReg, MRI, TRI);
+
+  const Register SrcReg = I.getOperand(1).getReg();
+
+  assert(DstTy.getSizeInBits() == 64 && "Unexpected dest size!");
+  assert(MRI.getType(SrcReg).getSizeInBits() == 32 && "Unexpected src size!");
+
+  Register ImpDefReg =
+      MRI.createVirtualRegister(getRegClass(DstTy, DstRegBank));
+  BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::IMPLICIT_DEF),
+          ImpDefReg);
+
+  Register NewDefReg =
+      MRI.createVirtualRegister(getRegClass(DstTy, DstRegBank));
+  BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::INSERT_SUBREG),
+          NewDefReg)
+      .addReg(ImpDefReg)
+      .addReg(SrcReg)
+      .addImm(PPC::sub_32);
+
+  MachineInstr *MI =
+      BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), DstReg)
+          .addReg(NewDefReg)
+          .addImm(0)
+          .addImm(32);
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
 bool PPCInstructionSelector::select(MachineInstr &I) {
   auto &MBB = *I.getParent();
   auto &MF = *MBB.getParent();
@@ -198,12 +270,52 @@ bool PPCInstructionSelector::select(MachineInstr &I) {
   switch (Opcode) {
   default:
     return false;
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_STORE: {
+    GLoadStore &LdSt = cast<GLoadStore>(I);
+    LLT PtrTy = MRI.getType(LdSt.getPointerReg());
+
+    if (PtrTy != LLT::pointer(0, 64)) {
+      LLVM_DEBUG(dbgs() << "Load/Store pointer has type: " << PtrTy
+                        << ", expected: " << LLT::pointer(0, 64) << '\n');
+      return false;
+    }
+
+    auto SelectLoadStoreAddressingMode = [&]() -> MachineInstr * {
+      const unsigned NewOpc = selectLoadStoreOp(
+          I.getOpcode(), RBI.getRegBank(LdSt.getReg(0), MRI, TRI)->getID(),
+          LdSt.getMemSizeInBits());
+
+      if (NewOpc == I.getOpcode())
+        return nullptr;
+
+      // For now, simply use DForm with load/store addr as base and 0 as imm.
+      // FIXME: optimize load/store with some specific address patterns.
+      I.setDesc(TII.get(NewOpc));
+      Register AddrReg = I.getOperand(1).getReg();
+      bool IsKill = I.getOperand(1).isKill();
+      I.getOperand(1).ChangeToImmediate(0);
+      I.addOperand(*I.getParent()->getParent(),
+                   MachineOperand::CreateReg(AddrReg, /* isDef */ false,
+                                             /* isImp */ false, IsKill));
+      return &I;
+    };
+
+    MachineInstr *LoadStore = SelectLoadStoreAddressingMode();
+    if (!LoadStore)
+      return false;
+
+    return constrainSelectedInstRegOperands(*LoadStore, TII, TRI, RBI);
+  }
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_UITOFP:
     return selectIntToFP(I, MBB, MRI);
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
     return selectFPToInt(I, MBB, MRI);
+  // G_SEXT will be selected in tb-gen pattern.
+  case TargetOpcode::G_ZEXT:
+    return selectZExt(I, MBB, MRI);
   }
   return false;
 }

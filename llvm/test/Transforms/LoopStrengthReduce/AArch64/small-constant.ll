@@ -20,20 +20,21 @@ define float @test1(float* nocapture readonly %arr, i64 %start, float %threshold
 ; CHECK-NEXT:    cbz x1, .LBB0_4
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    add x8, x0, #28
+; CHECK-NEXT:    fmov s2, #-7.00000000
 ; CHECK-NEXT:  .LBB0_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr s1, [x8, x1, lsl #2]
+; CHECK-NEXT:    adds x1, x1, #1
+; CHECK-NEXT:    cset w9, hs
 ; CHECK-NEXT:    fcmp s1, s0
-; CHECK-NEXT:    b.gt .LBB0_5
-; CHECK-NEXT:  // %bb.3: // %for.cond
-; CHECK-NEXT:    // in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    add x1, x1, #1
-; CHECK-NEXT:    cbnz x1, .LBB0_2
+; CHECK-NEXT:    fcsel s1, s1, s2, gt
+; CHECK-NEXT:    ccmp w9, #0, #0, le
+; CHECK-NEXT:    b.eq .LBB0_2
+; CHECK-NEXT:  // %bb.3: // %cleanup2
+; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    fmov s0, #-7.00000000
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_5: // %cleanup2
-; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    ret
 entry:
   %cmp11 = icmp eq i64 %start, 0
@@ -65,22 +66,23 @@ define float @test2(float* nocapture readonly %arr, i64 %start, float %threshold
 ; CHECK-NEXT:    cbz x1, .LBB1_4
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    add x8, x0, #28
+; CHECK-NEXT:    fmov s2, #-7.00000000
 ; CHECK-NEXT:  .LBB1_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    scvtf s2, x1
-; CHECK-NEXT:    ldr s1, [x8, x1, lsl #2]
-; CHECK-NEXT:    fadd s2, s2, s0
-; CHECK-NEXT:    fcmp s1, s2
-; CHECK-NEXT:    b.gt .LBB1_5
-; CHECK-NEXT:  // %bb.3: // %for.cond
-; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    add x1, x1, #1
-; CHECK-NEXT:    cbnz x1, .LBB1_2
+; CHECK-NEXT:    scvtf s1, x1
+; CHECK-NEXT:    ldr s3, [x8, x1, lsl #2]
+; CHECK-NEXT:    adds x1, x1, #1
+; CHECK-NEXT:    cset w9, hs
+; CHECK-NEXT:    fadd s1, s1, s0
+; CHECK-NEXT:    fcmp s3, s1
+; CHECK-NEXT:    fcsel s1, s3, s2, gt
+; CHECK-NEXT:    ccmp w9, #0, #0, le
+; CHECK-NEXT:    b.eq .LBB1_2
+; CHECK-NEXT:  // %bb.3: // %cleanup4
+; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_4:
 ; CHECK-NEXT:    fmov s0, #-7.00000000
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_5: // %cleanup4
-; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    ret
 entry:
   %cmp14 = icmp eq i64 %start, 0

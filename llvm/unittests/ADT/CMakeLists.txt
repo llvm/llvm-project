@@ -48,6 +48,7 @@ add_llvm_unittest(ADTTests
   IteratorTest.cpp
   MappedIteratorTest.cpp
   MapVectorTest.cpp
+  MoveOnly.cpp
   OptionalTest.cpp
   PackedVectorTest.cpp
   PointerEmbeddedIntTest.cpp

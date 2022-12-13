@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.9 -main-file-name c-captured.c %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOGEN -check-prefix=PGOALL %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-captured.c %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOGEN -check-prefix=PGOALL %s
 
 // RUN: llvm-profdata merge %S/Inputs/c-captured.proftext -o %t.profdata
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.9 -main-file-name c-captured.c %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE -check-prefix=PGOALL %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-captured.c %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE -check-prefix=PGOALL %s
 
 // PGOGEN: @[[DCC:__profc_debug_captured]] = private global [3 x i64] zeroinitializer
 // PGOGEN: @[[CSC:__profc_c_captured.c___captured_stmt]] = private global [2 x i64] zeroinitializer
 // PGOGEN: @[[C1C:__profc_c_captured.c___captured_stmt.1]] = private global [3 x i64] zeroinitializer
 
 // PGOALL-LABEL: define{{.*}} void @debug_captured()
-// PGOGEN: store {{.*}} @[[DCC]], i32 0, i32 0
+// PGOGEN: store {{.*}} @[[DCC]]
 void debug_captured(void) {
   int x = 10;
 
@@ -20,7 +20,7 @@ void debug_captured(void) {
 // PGOALL: ret
 
 // PGOALL-LABEL: define internal void @__captured_stmt(
-// PGOGEN: store {{.*}} @[[CSC]], i32 0, i32 0
+// PGOGEN: store {{.*}} @[[CSC]]
 #pragma clang __debug captured
   {
     // PGOGEN: store {{.*}} @[[CSC]], i32 0, i32 1
@@ -32,7 +32,7 @@ void debug_captured(void) {
   if (x) {} // This is DC1. Checked above.
 
 // PGOALL-LABEL: define internal void @__captured_stmt.1(
-// PGOGEN: store {{.*}} @[[C1C]], i32 0, i32 0
+// PGOGEN: store {{.*}} @[[C1C]]
 #pragma clang __debug captured
   {
     // PGOGEN: store {{.*}} @[[C1C]], i32 0, i32 1

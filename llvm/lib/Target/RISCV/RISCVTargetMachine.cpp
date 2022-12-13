@@ -286,10 +286,6 @@ void RISCVPassConfig::addPreRegAlloc() {
 void RISCVPassConfig::addPostRegAlloc() {
   if (TM->getOptLevel() != CodeGenOpt::None && EnableRedundantCopyElimination)
     addPass(createRISCVRedundantCopyEliminationPass());
-
-  // Temporarily disabled until post-RA pseudo expansion problem is fixed,
-  // see D123394 and D139169.
-  disablePass(&MachineLateInstrsCleanupID);
 }
 
 yaml::MachineFunctionInfo *

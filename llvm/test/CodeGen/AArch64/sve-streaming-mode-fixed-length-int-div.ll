@@ -36,14 +36,19 @@ define <8 x i8> @sdiv_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    sunpklo z1.h, z1.b
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
-; CHECK-NEXT:    sunpkhi z2.s, z1.h
-; CHECK-NEXT:    sunpkhi z3.s, z0.h
+; CHECK-NEXT:    sunpklo z2.s, z1.h
+; CHECK-NEXT:    sunpklo z3.s, z0.h
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    splice z2.h, p0, z2.h, z0.h
+; CHECK-NEXT:    uzp1 z0.b, z2.b, z2.b
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sdiv <8 x i8> %op1, %op2
@@ -55,26 +60,43 @@ define <16 x i8> @sdiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    sunpkhi z2.h, z1.b
-; CHECK-NEXT:    sunpkhi z3.h, z0.b
+; CHECK-NEXT:    mov z2.d, z1.d
+; CHECK-NEXT:    mov z3.d, z0.d
+; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
+; CHECK-NEXT:    sunpklo z2.h, z2.b
+; CHECK-NEXT:    sunpklo z3.h, z3.b
+; CHECK-NEXT:    sunpklo z4.s, z2.h
+; CHECK-NEXT:    sunpklo z5.s, z3.h
+; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    sunpklo z1.h, z1.b
-; CHECK-NEXT:    sunpkhi z4.s, z2.h
-; CHECK-NEXT:    sunpkhi z5.s, z3.h
+; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    sunpklo z2.s, z2.h
 ; CHECK-NEXT:    sunpklo z3.s, z3.h
-; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    sdivr z4.s, p0/m, z4.s, z5.s
+; CHECK-NEXT:    sunpklo z5.s, z1.h
 ; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
-; CHECK-NEXT:    sunpkhi z3.s, z1.h
-; CHECK-NEXT:    sunpkhi z5.s, z0.h
+; CHECK-NEXT:    sunpklo z3.s, z0.h
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    sdivr z3.s, p0/m, z3.s, z5.s
+; CHECK-NEXT:    ptrue p1.h, vl4
+; CHECK-NEXT:    uzp1 z4.h, z4.h, z4.h
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z1.h, z2.h, z4.h
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z3.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    splice z4.h, p1, z4.h, z2.h
+; CHECK-NEXT:    movprfx z2, z3
+; CHECK-NEXT:    sdiv z2.s, p0/m, z2.s, z5.s
+; CHECK-NEXT:    uzp1 z1.h, z2.h, z2.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z2.b, z4.b, z4.b
+; CHECK-NEXT:    splice z1.h, p1, z1.h, z0.h
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    uzp1 z0.b, z1.b, z1.b
+; CHECK-NEXT:    splice z0.b, p0, z0.b, z2.b
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sdiv <16 x i8> %op1, %op2
@@ -84,48 +106,76 @@ define <16 x i8> @sdiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 define void @sdiv_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-LABEL: sdiv_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q3, q0, [x1]
+; CHECK-NEXT:    ldp q0, q2, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ldp q2, q1, [x0]
-; CHECK-NEXT:    sunpkhi z4.h, z0.b
-; CHECK-NEXT:    sunpklo z0.h, z0.b
-; CHECK-NEXT:    sunpkhi z6.s, z4.h
-; CHECK-NEXT:    sunpklo z4.s, z4.h
-; CHECK-NEXT:    sunpkhi z16.s, z0.h
-; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    sunpkhi z5.h, z1.b
-; CHECK-NEXT:    sunpklo z1.h, z1.b
-; CHECK-NEXT:    sunpkhi z7.s, z5.h
+; CHECK-NEXT:    ptrue p1.h, vl4
+; CHECK-NEXT:    ptrue p2.b, vl8
+; CHECK-NEXT:    ldp q1, q3, [x1]
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    sunpklo z2.h, z2.b
+; CHECK-NEXT:    ext z5.b, z5.b, z5.b, #8
+; CHECK-NEXT:    sunpklo z5.h, z5.b
+; CHECK-NEXT:    sunpklo z7.s, z5.h
+; CHECK-NEXT:    ext z5.b, z5.b, z5.b, #8
 ; CHECK-NEXT:    sunpklo z5.s, z5.h
+; CHECK-NEXT:    mov z4.d, z3.d
+; CHECK-NEXT:    sunpklo z3.h, z3.b
+; CHECK-NEXT:    ext z4.b, z4.b, z4.b, #8
+; CHECK-NEXT:    sunpklo z4.h, z4.b
+; CHECK-NEXT:    sunpklo z6.s, z4.h
+; CHECK-NEXT:    ext z4.b, z4.b, z4.b, #8
+; CHECK-NEXT:    sunpklo z4.s, z4.h
 ; CHECK-NEXT:    sdivr z6.s, p0/m, z6.s, z7.s
 ; CHECK-NEXT:    sdivr z4.s, p0/m, z4.s, z5.s
-; CHECK-NEXT:    sunpkhi z5.s, z1.h
-; CHECK-NEXT:    sunpklo z1.s, z1.h
-; CHECK-NEXT:    uzp1 z4.h, z4.h, z6.h
-; CHECK-NEXT:    sdivr z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    sunpkhi z1.h, z3.b
-; CHECK-NEXT:    sunpkhi z6.h, z2.b
-; CHECK-NEXT:    sdiv z5.s, p0/m, z5.s, z16.s
-; CHECK-NEXT:    sunpkhi z7.s, z1.h
-; CHECK-NEXT:    sunpkhi z16.s, z6.h
-; CHECK-NEXT:    sunpklo z1.s, z1.h
-; CHECK-NEXT:    sunpklo z6.s, z6.h
-; CHECK-NEXT:    sunpklo z3.h, z3.b
-; CHECK-NEXT:    sunpklo z2.h, z2.b
-; CHECK-NEXT:    sdivr z7.s, p0/m, z7.s, z16.s
-; CHECK-NEXT:    sdivr z1.s, p0/m, z1.s, z6.s
-; CHECK-NEXT:    sunpkhi z6.s, z3.h
-; CHECK-NEXT:    sunpkhi z16.s, z2.h
+; CHECK-NEXT:    sunpklo z7.s, z3.h
+; CHECK-NEXT:    sunpklo z5.s, z2.h
+; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
+; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
+; CHECK-NEXT:    uzp1 z6.h, z6.h, z6.h
+; CHECK-NEXT:    uzp1 z4.h, z4.h, z4.h
 ; CHECK-NEXT:    sunpklo z3.s, z3.h
+; CHECK-NEXT:    splice z6.h, p1, z6.h, z4.h
 ; CHECK-NEXT:    sunpklo z2.s, z2.h
-; CHECK-NEXT:    sdivr z6.s, p0/m, z6.s, z16.s
+; CHECK-NEXT:    uzp1 z4.b, z6.b, z6.b
+; CHECK-NEXT:    sdiv z5.s, p0/m, z5.s, z7.s
 ; CHECK-NEXT:    sdiv z2.s, p0/m, z2.s, z3.s
-; CHECK-NEXT:    uzp1 z1.h, z1.h, z7.h
-; CHECK-NEXT:    uzp1 z2.h, z2.h, z6.h
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z5.h
-; CHECK-NEXT:    uzp1 z1.b, z2.b, z1.b
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z4.b
-; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    sunpklo z3.h, z1.b
+; CHECK-NEXT:    sunpklo z6.h, z0.b
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    uzp1 z5.h, z5.h, z5.h
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    sunpklo z1.h, z1.b
+; CHECK-NEXT:    sunpklo z0.h, z0.b
+; CHECK-NEXT:    splice z5.h, p1, z5.h, z2.h
+; CHECK-NEXT:    sunpklo z2.s, z1.h
+; CHECK-NEXT:    sunpklo z7.s, z0.h
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    sunpklo z1.s, z1.h
+; CHECK-NEXT:    sunpklo z0.s, z0.h
+; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z7.s
+; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z1.h, z2.h, z2.h
+; CHECK-NEXT:    sunpklo z2.s, z3.h
+; CHECK-NEXT:    sunpklo z7.s, z6.h
+; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
+; CHECK-NEXT:    ext z6.b, z6.b, z6.b, #8
+; CHECK-NEXT:    sunpklo z3.s, z3.h
+; CHECK-NEXT:    sunpklo z6.s, z6.h
+; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z7.s
+; CHECK-NEXT:    sdivr z3.s, p0/m, z3.s, z6.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
+; CHECK-NEXT:    splice z1.h, p1, z1.h, z0.h
+; CHECK-NEXT:    splice z2.h, p1, z2.h, z3.h
+; CHECK-NEXT:    uzp1 z0.b, z1.b, z1.b
+; CHECK-NEXT:    uzp1 z1.b, z2.b, z2.b
+; CHECK-NEXT:    uzp1 z2.b, z5.b, z5.b
+; CHECK-NEXT:    splice z1.b, p2, z1.b, z0.b
+; CHECK-NEXT:    splice z2.b, p2, z2.b, z4.b
+; CHECK-NEXT:    stp q1, q2, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i8>, <32 x i8>* %a
   %op2 = load <32 x i8>, <32 x i8>* %b
@@ -172,14 +222,21 @@ define <8 x i16> @sdiv_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    mov z2.d, z1.d
+; CHECK-NEXT:    mov z3.d, z0.d
+; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #8
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    sunpkhi z2.s, z1.h
-; CHECK-NEXT:    sunpkhi z3.s, z0.h
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
+; CHECK-NEXT:    sunpklo z2.s, z2.h
+; CHECK-NEXT:    sunpklo z3.s, z3.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
+; CHECK-NEXT:    uzp1 z1.h, z2.h, z2.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sdiv <8 x i16> %op1, %op2
@@ -189,24 +246,34 @@ define <8 x i16> @sdiv_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
 define void @sdiv_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-LABEL: sdiv_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x1]
+; CHECK-NEXT:    ldp q3, q0, [x1]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    sunpkhi z6.s, z0.h
+; CHECK-NEXT:    ptrue p1.h, vl4
+; CHECK-NEXT:    sunpklo z6.s, z3.h
+; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    sunpklo z4.s, z0.h
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    ldp q3, q2, [x0]
-; CHECK-NEXT:    sunpkhi z4.s, z1.h
+; CHECK-NEXT:    sunpklo z7.s, z1.h
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
-; CHECK-NEXT:    sunpkhi z5.s, z2.h
+; CHECK-NEXT:    sunpklo z5.s, z2.h
+; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
 ; CHECK-NEXT:    sunpklo z2.s, z2.h
 ; CHECK-NEXT:    sdivr z4.s, p0/m, z4.s, z5.s
-; CHECK-NEXT:    sunpkhi z5.s, z3.h
-; CHECK-NEXT:    sunpklo z3.s, z3.h
-; CHECK-NEXT:    sdiv z5.s, p0/m, z5.s, z6.s
-; CHECK-NEXT:    sdivr z0.s, p0/m, z0.s, z3.s
-; CHECK-NEXT:    sdivr z1.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z5.h
-; CHECK-NEXT:    uzp1 z1.h, z1.h, z4.h
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    sdivr z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    sunpklo z2.s, z3.h
+; CHECK-NEXT:    sdiv z1.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    movprfx z2, z7
+; CHECK-NEXT:    sdiv z2.s, p0/m, z2.s, z6.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    uzp1 z3.h, z4.h, z4.h
+; CHECK-NEXT:    splice z2.h, p1, z2.h, z1.h
+; CHECK-NEXT:    splice z3.h, p1, z3.h, z0.h
+; CHECK-NEXT:    stp q2, q3, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, <16 x i16>* %a
   %op2 = load <16 x i16>, <16 x i16>* %b
@@ -331,14 +398,19 @@ define <8 x i8> @udiv_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    uunpklo z1.h, z1.b
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
+; CHECK-NEXT:    uunpklo z2.s, z1.h
+; CHECK-NEXT:    uunpklo z3.s, z0.h
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    splice z2.h, p0, z2.h, z0.h
+; CHECK-NEXT:    uzp1 z0.b, z2.b, z2.b
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = udiv <8 x i8> %op1, %op2
@@ -350,26 +422,43 @@ define <16 x i8> @udiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    uunpkhi z2.h, z1.b
-; CHECK-NEXT:    uunpkhi z3.h, z0.b
+; CHECK-NEXT:    mov z2.d, z1.d
+; CHECK-NEXT:    mov z3.d, z0.d
+; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
+; CHECK-NEXT:    uunpklo z2.h, z2.b
+; CHECK-NEXT:    uunpklo z3.h, z3.b
+; CHECK-NEXT:    uunpklo z4.s, z2.h
+; CHECK-NEXT:    uunpklo z5.s, z3.h
+; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    uunpklo z1.h, z1.b
-; CHECK-NEXT:    uunpkhi z4.s, z2.h
-; CHECK-NEXT:    uunpkhi z5.s, z3.h
+; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
-; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    udivr z4.s, p0/m, z4.s, z5.s
+; CHECK-NEXT:    uunpklo z5.s, z1.h
 ; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
-; CHECK-NEXT:    uunpkhi z3.s, z1.h
-; CHECK-NEXT:    uunpkhi z5.s, z0.h
+; CHECK-NEXT:    uunpklo z3.s, z0.h
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    udivr z3.s, p0/m, z3.s, z5.s
+; CHECK-NEXT:    ptrue p1.h, vl4
+; CHECK-NEXT:    uzp1 z4.h, z4.h, z4.h
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; CHECK-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z1.h, z2.h, z4.h
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z3.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    splice z4.h, p1, z4.h, z2.h
+; CHECK-NEXT:    movprfx z2, z3
+; CHECK-NEXT:    udiv z2.s, p0/m, z2.s, z5.s
+; CHECK-NEXT:    uzp1 z1.h, z2.h, z2.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z2.b, z4.b, z4.b
+; CHECK-NEXT:    splice z1.h, p1, z1.h, z0.h
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    uzp1 z0.b, z1.b, z1.b
+; CHECK-NEXT:    splice z0.b, p0, z0.b, z2.b
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = udiv <16 x i8> %op1, %op2
@@ -379,48 +468,76 @@ define <16 x i8> @udiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 define void @udiv_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-LABEL: udiv_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q3, q0, [x1]
+; CHECK-NEXT:    ldp q0, q2, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ldp q2, q1, [x0]
-; CHECK-NEXT:    uunpkhi z4.h, z0.b
-; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpkhi z6.s, z4.h
-; CHECK-NEXT:    uunpklo z4.s, z4.h
-; CHECK-NEXT:    uunpkhi z16.s, z0.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpkhi z5.h, z1.b
-; CHECK-NEXT:    uunpklo z1.h, z1.b
-; CHECK-NEXT:    uunpkhi z7.s, z5.h
+; CHECK-NEXT:    ptrue p1.h, vl4
+; CHECK-NEXT:    ptrue p2.b, vl8
+; CHECK-NEXT:    ldp q1, q3, [x1]
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    uunpklo z2.h, z2.b
+; CHECK-NEXT:    ext z5.b, z5.b, z5.b, #8
+; CHECK-NEXT:    uunpklo z5.h, z5.b
+; CHECK-NEXT:    uunpklo z7.s, z5.h
+; CHECK-NEXT:    ext z5.b, z5.b, z5.b, #8
 ; CHECK-NEXT:    uunpklo z5.s, z5.h
+; CHECK-NEXT:    mov z4.d, z3.d
+; CHECK-NEXT:    uunpklo z3.h, z3.b
+; CHECK-NEXT:    ext z4.b, z4.b, z4.b, #8
+; CHECK-NEXT:    uunpklo z4.h, z4.b
+; CHECK-NEXT:    uunpklo z6.s, z4.h
+; CHECK-NEXT:    ext z4.b, z4.b, z4.b, #8
+; CHECK-NEXT:    uunpklo z4.s, z4.h
 ; CHECK-NEXT:    udivr z6.s, p0/m, z6.s, z7.s
 ; CHECK-NEXT:    udivr z4.s, p0/m, z4.s, z5.s
-; CHECK-NEXT:    uunpkhi z5.s, z1.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uzp1 z4.h, z4.h, z6.h
-; CHECK-NEXT:    udivr z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    uunpkhi z1.h, z3.b
-; CHECK-NEXT:    uunpkhi z6.h, z2.b
-; CHECK-NEXT:    udiv z5.s, p0/m, z5.s, z16.s
-; CHECK-NEXT:    uunpkhi z7.s, z1.h
-; CHECK-NEXT:    uunpkhi z16.s, z6.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z6.s, z6.h
-; CHECK-NEXT:    uunpklo z3.h, z3.b
-; CHECK-NEXT:    uunpklo z2.h, z2.b
-; CHECK-NEXT:    udivr z7.s, p0/m, z7.s, z16.s
-; CHECK-NEXT:    udivr z1.s, p0/m, z1.s, z6.s
-; CHECK-NEXT:    uunpkhi z6.s, z3.h
-; CHECK-NEXT:    uunpkhi z16.s, z2.h
+; CHECK-NEXT:    uunpklo z7.s, z3.h
+; CHECK-NEXT:    uunpklo z5.s, z2.h
+; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
+; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
+; CHECK-NEXT:    uzp1 z6.h, z6.h, z6.h
+; CHECK-NEXT:    uzp1 z4.h, z4.h, z4.h
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
+; CHECK-NEXT:    splice z6.h, p1, z6.h, z4.h
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
-; CHECK-NEXT:    udivr z6.s, p0/m, z6.s, z16.s
+; CHECK-NEXT:    uzp1 z4.b, z6.b, z6.b
+; CHECK-NEXT:    udiv z5.s, p0/m, z5.s, z7.s
 ; CHECK-NEXT:    udiv z2.s, p0/m, z2.s, z3.s
-; CHECK-NEXT:    uzp1 z1.h, z1.h, z7.h
-; CHECK-NEXT:    uzp1 z2.h, z2.h, z6.h
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z5.h
-; CHECK-NEXT:    uzp1 z1.b, z2.b, z1.b
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z4.b
-; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    uunpklo z3.h, z1.b
+; CHECK-NEXT:    uunpklo z6.h, z0.b
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    uzp1 z5.h, z5.h, z5.h
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    uunpklo z1.h, z1.b
+; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    splice z5.h, p1, z5.h, z2.h
+; CHECK-NEXT:    uunpklo z2.s, z1.h
+; CHECK-NEXT:    uunpklo z7.s, z0.h
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z7.s
+; CHECK-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z1.h, z2.h, z2.h
+; CHECK-NEXT:    uunpklo z2.s, z3.h
+; CHECK-NEXT:    uunpklo z7.s, z6.h
+; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
+; CHECK-NEXT:    ext z6.b, z6.b, z6.b, #8
+; CHECK-NEXT:    uunpklo z3.s, z3.h
+; CHECK-NEXT:    uunpklo z6.s, z6.h
+; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z7.s
+; CHECK-NEXT:    udivr z3.s, p0/m, z3.s, z6.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
+; CHECK-NEXT:    splice z1.h, p1, z1.h, z0.h
+; CHECK-NEXT:    splice z2.h, p1, z2.h, z3.h
+; CHECK-NEXT:    uzp1 z0.b, z1.b, z1.b
+; CHECK-NEXT:    uzp1 z1.b, z2.b, z2.b
+; CHECK-NEXT:    uzp1 z2.b, z5.b, z5.b
+; CHECK-NEXT:    splice z1.b, p2, z1.b, z0.b
+; CHECK-NEXT:    splice z2.b, p2, z2.b, z4.b
+; CHECK-NEXT:    stp q1, q2, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i8>, <32 x i8>* %a
   %op2 = load <32 x i8>, <32 x i8>* %b
@@ -465,14 +582,21 @@ define <8 x i16> @udiv_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    mov z2.d, z1.d
+; CHECK-NEXT:    mov z3.d, z0.d
+; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #8
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    uunpklo z2.s, z2.h
+; CHECK-NEXT:    uunpklo z3.s, z3.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    udiv z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
+; CHECK-NEXT:    uzp1 z1.h, z2.h, z2.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = udiv <8 x i16> %op1, %op2
@@ -482,24 +606,34 @@ define <8 x i16> @udiv_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
 define void @udiv_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-LABEL: udiv_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x1]
+; CHECK-NEXT:    ldp q3, q0, [x1]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    uunpkhi z6.s, z0.h
+; CHECK-NEXT:    ptrue p1.h, vl4
+; CHECK-NEXT:    uunpklo z6.s, z3.h
+; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    uunpklo z4.s, z0.h
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    ldp q3, q2, [x0]
-; CHECK-NEXT:    uunpkhi z4.s, z1.h
+; CHECK-NEXT:    uunpklo z7.s, z1.h
+; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpkhi z5.s, z2.h
+; CHECK-NEXT:    uunpklo z5.s, z2.h
+; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-NEXT:    udivr z4.s, p0/m, z4.s, z5.s
-; CHECK-NEXT:    uunpkhi z5.s, z3.h
-; CHECK-NEXT:    uunpklo z3.s, z3.h
-; CHECK-NEXT:    udiv z5.s, p0/m, z5.s, z6.s
-; CHECK-NEXT:    udivr z0.s, p0/m, z0.s, z3.s
-; CHECK-NEXT:    udivr z1.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z5.h
-; CHECK-NEXT:    uzp1 z1.h, z1.h, z4.h
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    udivr z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    uunpklo z2.s, z3.h
+; CHECK-NEXT:    udiv z1.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    movprfx z2, z7
+; CHECK-NEXT:    udiv z2.s, p0/m, z2.s, z6.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-NEXT:    uzp1 z3.h, z4.h, z4.h
+; CHECK-NEXT:    splice z2.h, p1, z2.h, z1.h
+; CHECK-NEXT:    splice z3.h, p1, z3.h, z0.h
+; CHECK-NEXT:    stp q2, q3, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, <16 x i16>* %a
   %op2 = load <16 x i16>, <16 x i16>* %b

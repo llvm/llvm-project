@@ -1,4 +1,4 @@
-; RUN: opt -S %s -verify -experimental-assignment-tracking 2>&1 \
+; RUN: opt -S %s -passes=verify -experimental-assignment-tracking 2>&1 \
 ; RUN: | FileCheck %s
 
 ;; NOTE: Expect opt to return zero because the badly formed debug info

@@ -584,6 +584,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
     .Case("filter", tgtok::XFilter)
     .Case("listconcat", tgtok::XListConcat)
     .Case("listsplat", tgtok::XListSplat)
+    .Case("listremove", tgtok::XListRemove)
     .Case("strconcat", tgtok::XStrConcat)
     .Case("interleave", tgtok::XInterleave)
     .Case("substr", tgtok::XSubstr)

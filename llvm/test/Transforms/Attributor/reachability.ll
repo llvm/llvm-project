@@ -28,6 +28,19 @@ entry:
   ret void
 }
 
+define void @non_recursive_asm_no_sideffect() {
+; CHECK: Function Attrs: norecurse
+; CHECK-LABEL: define {{[^@]+}}@non_recursive_asm_no_sideffect
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void asm "foobar
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void asm "foobar;", ""()
+  ret void
+}
+
 define void @recursive_asm() {
 ; CHECK-LABEL: define {{[^@]+}}@recursive_asm() {
 ; CHECK-NEXT:  entry:

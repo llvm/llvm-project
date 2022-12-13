@@ -124,7 +124,7 @@ void test(int n) {
   //  CHECK: [[eh_resume]]
   //  CHECK-NEXT: [[exn:%.+]] = load ptr, ptr [[exn_slot]]
   //  CHECK-NEXT: [[sel:%.+]] = load i32, ptr [[ehselector_slot]]
-  //  CHECK-NEXT: [[lpad_val:%.+]] = insertvalue { ptr, i32 } undef, ptr [[exn]], 0
+  //  CHECK-NEXT: [[lpad_val:%.+]] = insertvalue { ptr, i32 } poison, ptr [[exn]], 0
   //  CHECK-NEXT: [[lpad_val9:%.+]] = insertvalue { ptr, i32 } [[lpad_val]], i32 [[sel]], 1
   //  CHECK-NEXT: resume { ptr, i32 } [[lpad_val9]]
 }

@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_CODEVIEWRECORDIO_H
 #define LLVM_DEBUGINFO_CODEVIEW_CODEVIEWRECORDIO_H
 
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"

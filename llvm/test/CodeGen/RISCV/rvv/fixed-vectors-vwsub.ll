@@ -333,7 +333,6 @@ define <32 x i64> @vwsub_v32i64(<32 x i32>* %x, <32 x i32>* %y) nounwind {
 ; CHECK-NEXT:    vslidedown.vi v0, v24, 16
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vwsub.vv v8, v16, v24
-; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vwsub.vv v16, v24, v0
 ; CHECK-NEXT:    csrr a0, vlenb

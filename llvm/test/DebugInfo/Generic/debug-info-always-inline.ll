@@ -1,4 +1,4 @@
-; RUN: opt < %s -always-inline -S | FileCheck %s
+; RUN: opt < %s -passes=always-inline -S | FileCheck %s
 ;
 ; Generated from the following C++ source with:
 ; clang -cc1 -disable-llvm-optzns -emit-llvm -g -stack-protector 2 test.cpp
@@ -11,9 +11,9 @@
 ;    int sum = 4;
 ;    return sum;
 ; }
-; 
+;
 ; extern void bar();
-; 
+;
 ; int main()
 ; {
 ;   bar();
@@ -23,8 +23,8 @@
 ; /* END SOURCE */
 
 ; The patch that includes this test case, is addressing the following issue:
-; 
-; When functions are inlined, instructions without debug information 
+;
+; When functions are inlined, instructions without debug information
 ; are attributed with the call site's DebugLoc. After inlining, inlined static
 ; allocas are moved to the caller's entry block, adjacent to the caller's original
 ; static alloca instructions. By retaining the call site's DebugLoc, these instructions
@@ -33,7 +33,7 @@
 ;
 ; In the offending case stack protection inserts an instruction at the caller's
 ; entry block, which inadvertently picks up the inlined call's DebugLoc, because
-; the entry block's first instruction is the recently moved inlined alloca instruction. 
+; the entry block's first instruction is the recently moved inlined alloca instruction.
 ;
 ; The stack protection instruction then becomes part of the function prologue, with the
 ; result that the line number that is associated with the stack protection instruction
@@ -47,9 +47,9 @@
 
 
 ; The selected solution is to not attribute static allocas with the call site's
-; DebugLoc. 
+; DebugLoc.
 
-; At some point in the future, it may be desirable to describe the inlining 
+; At some point in the future, it may be desirable to describe the inlining
 ; in the alloca instructions, but then the code that handles prologues must
 ; be able to handle this correctly, including the late insertion of instructions
 ; into it.

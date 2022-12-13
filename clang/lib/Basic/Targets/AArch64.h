@@ -27,36 +27,36 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
 
   enum FPUModeEnum { FPUMode, NeonMode = (1 << 0), SveMode = (1 << 1) };
 
-  unsigned FPU;
-  bool HasCRC;
-  bool HasAES;
-  bool HasSHA2;
-  bool HasSHA3;
-  bool HasSM4;
-  bool HasUnaligned;
-  bool HasFullFP16;
-  bool HasDotProd;
-  bool HasFP16FML;
-  bool HasMTE;
-  bool HasTME;
-  bool HasPAuth;
-  bool HasLS64;
-  bool HasRandGen;
-  bool HasMatMul;
-  bool HasSVE2;
-  bool HasSVE2AES;
-  bool HasSVE2SHA3;
-  bool HasSVE2SM4;
-  bool HasSVE2BitPerm;
-  bool HasMatmulFP64;
-  bool HasMatmulFP32;
-  bool HasLSE;
-  bool HasFlagM;
-  bool HasMOPS;
-  bool HasD128;
-  bool HasRCPC;
+  unsigned FPU = FPUMode;
+  bool HasCRC = false;
+  bool HasAES = false;
+  bool HasSHA2 = false;
+  bool HasSHA3 = false;
+  bool HasSM4 = false;
+  bool HasUnaligned = true;
+  bool HasFullFP16 = false;
+  bool HasDotProd = false;
+  bool HasFP16FML = false;
+  bool HasMTE = false;
+  bool HasTME = false;
+  bool HasPAuth = false;
+  bool HasLS64 = false;
+  bool HasRandGen = false;
+  bool HasMatMul = false;
+  bool HasSVE2 = false;
+  bool HasSVE2AES = false;
+  bool HasSVE2SHA3 = false;
+  bool HasSVE2SM4 = false;
+  bool HasSVE2BitPerm = false;
+  bool HasMatmulFP64 = false;
+  bool HasMatmulFP32 = false;
+  bool HasLSE = false;
+  bool HasFlagM = false;
+  bool HasMOPS = false;
+  bool HasD128 = false;
+  bool HasRCPC = false;
 
-  llvm::AArch64::ArchKind ArchKind;
+  llvm::AArch64::ArchKind ArchKind = llvm::AArch64::ArchKind::INVALID;
 
   static const Builtin::Info BuiltinInfo[];
 

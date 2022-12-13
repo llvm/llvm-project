@@ -48,6 +48,27 @@ static bool isSparseTensor(OpOperand *op) {
   return false;
 }
 
+static bool isAllDimOrdered(RankedTensorType rtp) {
+  if (auto enc = getSparseTensorEncoding(rtp))
+    return llvm::all_of(enc.getDimLevelType(), isOrderedDLT);
+
+  return true;
+}
+
+static bool hasSameDimOrdering(RankedTensorType rtp1, RankedTensorType rtp2) {
+  assert(rtp1.getRank() == rtp2.getRank());
+  AffineMap idMap =
+      AffineMap::getMultiDimIdentityMap(rtp1.getRank(), rtp1.getContext());
+
+  auto enc1 = getSparseTensorEncoding(rtp1);
+  auto enc2 = getSparseTensorEncoding(rtp2);
+
+  auto order1 = (enc1 && enc1.getDimOrdering()) ? enc1.getDimOrdering() : idMap;
+  auto order2 = (enc2 && enc2.getDimOrdering()) ? enc2.getDimOrdering() : idMap;
+
+  return order1 == order2;
+}
+
 // Helper method to find zero/uninitialized allocation.
 static bool isAlloc(OpOperand *op, bool isZero) {
   Value val = op->get();
@@ -732,7 +753,13 @@ private:
     SmallVector<Value> srcSizes;
     sizesForTensor(rewriter, srcSizes, loc, srcTp, src);
     Value tmpCoo = Value();
-    if (!isUniqueCOOType(srcTp)) {
+    // We need a tmp COO buffer if and only if
+    // 1. the src tensor is not a COO and
+    // 2. the src tensor is not ordered in the same way as the target
+    // tensor (e.g., src tensor is not ordered or src tensor haves a different
+    // dimOrdering).
+    if (!isUniqueCOOType(srcTp) &&
+        !(isAllDimOrdered(srcTp) && hasSameDimOrdering(srcTp, dstTp))) {
       // Construct a COO tensor from the src tensor.
       // TODO: there may be cases for which more efficiently without
       // going through an intermediate COO, such as cases that only change
@@ -754,32 +781,36 @@ private:
       src = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
     }
 
-    // Sort the COO tensor so that its elements are ordered via increasing
-    // indices for the storage ordering of the dst tensor.
-    SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(srcTp);
-    auto dynShape = {ShapedType::kDynamic};
-    auto indTp =
-        MemRefType::get(dynShape, getIndexOverheadType(rewriter, encSrc));
-    uint64_t rank = dstTp.getRank();
-    // Gather the indices-arrays in the dst tensor storage order.
-    SmallVector<Value> xs(rank, Value());
-    for (uint64_t i = 0; i < rank; i++) {
-      uint64_t orgDim = toOrigDim(encSrc, i);
-      xs[toStoredDim(encDst, orgDim)] = rewriter.create<ToIndicesOp>(
-          loc, indTp, src, rewriter.getIndexAttr(i));
+    // Only need to sort if the srcTp is not already sorted (we faithfully take
+    // the guarantee from the sparse tensor encoding).
+    if (!isAllDimOrdered(srcTp)) {
+      // Sort the COO tensor so that its elements are ordered via increasing
+      // indices for the storage ordering of the dst tensor.
+      SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(srcTp);
+      auto dynShape = {ShapedType::kDynamic};
+      auto indTp =
+          MemRefType::get(dynShape, getIndexOverheadType(rewriter, encSrc));
+      uint64_t rank = dstTp.getRank();
+      // Gather the indices-arrays in the dst tensor storage order.
+      SmallVector<Value> xs(rank, Value());
+      for (uint64_t i = 0; i < rank; i++) {
+        uint64_t orgDim = toOrigDim(encSrc, i);
+        xs[toStoredDim(encDst, orgDim)] = rewriter.create<ToIndicesOp>(
+            loc, indTp, src, rewriter.getIndexAttr(i));
+      }
+
+      // Retrieve NNZ.
+      Value nnz = rewriter.create<NumberOfEntriesOp>(loc, src);
+      nnz = rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(),
+                                                nnz);
+
+      // Retrieve the values-array.
+      auto valTp = MemRefType::get(dynShape, srcTp.getElementType());
+      Value y = rewriter.create<ToValuesOp>(loc, valTp, src);
+
+      // Sort the COO tensor.
+      rewriter.create<SortOp>(loc, nnz, xs, ValueRange{y});
     }
-
-    // Retrieve NNZ.
-    Value nnz = rewriter.create<NumberOfEntriesOp>(loc, src);
-    nnz =
-        rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(), nnz);
-
-    // Retrieve the values-array.
-    auto valTp = MemRefType::get(dynShape, srcTp.getElementType());
-    Value y = rewriter.create<ToValuesOp>(loc, valTp, src);
-
-    // Sort the COO tensor.
-    rewriter.create<SortOp>(loc, nnz, xs, ValueRange{y});
 
     // For each element in the COO tensor, insert the element to the dst tensor.
     SmallVector<Value> dynDstSizes;

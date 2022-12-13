@@ -97,8 +97,8 @@ static unsigned bigEndianByteAt(const unsigned ByteWidth, const unsigned I) {
 /// \param MemOffset2Idx maps memory offsets to address offsets.
 /// \param LowestIdx is the lowest index in \p MemOffset2Idx.
 ///
-/// \returns true if the map corresponds to a big endian byte pattern, false
-/// if it corresponds to a little endian byte pattern, and None otherwise.
+/// \returns true if the map corresponds to a big endian byte pattern, false if
+/// it corresponds to a little endian byte pattern, and std::nullopt otherwise.
 ///
 /// E.g. given a 32-bit type x, and x[AddrOffset], the in-memory byte patterns
 /// are as follows:
@@ -2266,44 +2266,109 @@ void CombinerHelper::applyCombineTruncOfExt(
   MI.eraseFromParent();
 }
 
-bool CombinerHelper::matchCombineTruncOfShl(
-    MachineInstr &MI, std::pair<Register, Register> &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_TRUNC && "Expected a G_TRUNC");
-  Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(1).getReg();
-  LLT DstTy = MRI.getType(DstReg);
-  Register ShiftSrc;
-  Register ShiftAmt;
+static LLT getMidVTForTruncRightShiftCombine(LLT ShiftTy, LLT TruncTy) {
+  const unsigned ShiftSize = ShiftTy.getScalarSizeInBits();
+  const unsigned TruncSize = TruncTy.getScalarSizeInBits();
 
-  if (MRI.hasOneNonDBGUse(SrcReg) &&
-      mi_match(SrcReg, MRI, m_GShl(m_Reg(ShiftSrc), m_Reg(ShiftAmt))) &&
-      isLegalOrBeforeLegalizer(
-          {TargetOpcode::G_SHL,
-           {DstTy, getTargetLowering().getPreferredShiftAmountTy(DstTy)}})) {
-    KnownBits Known = KB->getKnownBits(ShiftAmt);
-    unsigned Size = DstTy.getSizeInBits();
-    if (Known.countMaxActiveBits() <= Log2_32(Size)) {
-      MatchInfo = std::make_pair(ShiftSrc, ShiftAmt);
-      return true;
-    }
-  }
-  return false;
+  // ShiftTy > 32 > TruncTy -> 32
+  if (ShiftSize > 32 && TruncSize < 32)
+    return ShiftTy.changeElementSize(32);
+
+  // TODO: We could also reduce to 16 bits, but that's more target-dependent.
+  //  Some targets like it, some don't, some only like it under certain
+  //  conditions/processor versions, etc.
+  //  A TL hook might be needed for this.
+
+  // Don't combine
+  return ShiftTy;
 }
 
-void CombinerHelper::applyCombineTruncOfShl(
-    MachineInstr &MI, std::pair<Register, Register> &MatchInfo) {
+bool CombinerHelper::matchCombineTruncOfShift(
+    MachineInstr &MI, std::pair<MachineInstr *, LLT> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_TRUNC && "Expected a G_TRUNC");
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
-  LLT DstTy = MRI.getType(DstReg);
-  MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
 
-  Register ShiftSrc = MatchInfo.first;
-  Register ShiftAmt = MatchInfo.second;
+  if (!MRI.hasOneNonDBGUse(SrcReg))
+    return false;
+
+  LLT SrcTy = MRI.getType(SrcReg);
+  LLT DstTy = MRI.getType(DstReg);
+
+  MachineInstr *SrcMI = getDefIgnoringCopies(SrcReg, MRI);
+  const auto &TL = getTargetLowering();
+
+  LLT NewShiftTy;
+  switch (SrcMI->getOpcode()) {
+  default:
+    return false;
+  case TargetOpcode::G_SHL: {
+    NewShiftTy = DstTy;
+
+    // Make sure new shift amount is legal.
+    KnownBits Known = KB->getKnownBits(SrcMI->getOperand(2).getReg());
+    if (Known.getMaxValue().uge(NewShiftTy.getScalarSizeInBits()))
+      return false;
+    break;
+  }
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_ASHR: {
+    // For right shifts, we conservatively do not do the transform if the TRUNC
+    // has any STORE users. The reason is that if we change the type of the
+    // shift, we may break the truncstore combine.
+    //
+    // TODO: Fix truncstore combine to handle (trunc(lshr (trunc x), k)).
+    for (auto &User : MRI.use_instructions(DstReg))
+      if (User.getOpcode() == TargetOpcode::G_STORE)
+        return false;
+
+    NewShiftTy = getMidVTForTruncRightShiftCombine(SrcTy, DstTy);
+    if (NewShiftTy == SrcTy)
+      return false;
+
+    // Make sure we won't lose information by truncating the high bits.
+    KnownBits Known = KB->getKnownBits(SrcMI->getOperand(2).getReg());
+    if (Known.getMaxValue().ugt(NewShiftTy.getScalarSizeInBits() -
+                                DstTy.getScalarSizeInBits()))
+      return false;
+    break;
+  }
+  }
+
+  if (!isLegalOrBeforeLegalizer(
+          {SrcMI->getOpcode(),
+           {NewShiftTy, TL.getPreferredShiftAmountTy(NewShiftTy)}}))
+    return false;
+
+  MatchInfo = std::make_pair(SrcMI, NewShiftTy);
+  return true;
+}
+
+void CombinerHelper::applyCombineTruncOfShift(
+    MachineInstr &MI, std::pair<MachineInstr *, LLT> &MatchInfo) {
   Builder.setInstrAndDebugLoc(MI);
-  auto TruncShiftSrc = Builder.buildTrunc(DstTy, ShiftSrc);
-  Builder.buildShl(DstReg, TruncShiftSrc, ShiftAmt, SrcMI->getFlags());
-  MI.eraseFromParent();
+
+  MachineInstr *ShiftMI = MatchInfo.first;
+  LLT NewShiftTy = MatchInfo.second;
+
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+
+  Register ShiftAmt = ShiftMI->getOperand(2).getReg();
+  Register ShiftSrc = ShiftMI->getOperand(1).getReg();
+  ShiftSrc = Builder.buildTrunc(NewShiftTy, ShiftSrc).getReg(0);
+
+  Register NewShift =
+      Builder
+          .buildInstr(ShiftMI->getOpcode(), {NewShiftTy}, {ShiftSrc, ShiftAmt})
+          .getReg(0);
+
+  if (NewShiftTy == DstTy)
+    replaceRegWith(MRI, Dst, NewShift);
+  else
+    Builder.buildTrunc(Dst, NewShift);
+
+  eraseInst(MI);
 }
 
 bool CombinerHelper::matchAnyExplicitUseIsUndef(MachineInstr &MI) {

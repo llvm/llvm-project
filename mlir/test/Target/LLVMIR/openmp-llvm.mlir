@@ -151,33 +151,19 @@ llvm.func @test_omp_parallel_num_threads_3() -> () {
 // CHECK: define void @test_omp_parallel_if_1(i32 %[[IF_VAR_1:.*]])
 llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 
-// Check that the allocas are emitted by the OpenMPIRBuilder at the top of the
-// function, before the condition. Allocas are only emitted by the builder when
-// the `if` clause is present. We match specific SSA value names since LLVM
-// actually produces those names.
-// CHECK: %tid.addr{{.*}} = alloca i32
-// CHECK: %zero.addr{{.*}} = alloca i32
-
-// CHECK: %[[IF_COND_VAR_1:.*]] = icmp slt i32 %[[IF_VAR_1]], 0
   %0 = llvm.mlir.constant(0 : index) : i32
   %1 = llvm.icmp "slt" %arg0, %0 : i32
+// CHECK: %[[IF_COND_VAR_1:.*]] = icmp slt i32 %[[IF_VAR_1]], 0
+
 
 // CHECK: %[[GTN_IF_1:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[SI_VAR_IF_1:.*]])
-// CHECK: br i1 %[[IF_COND_VAR_1]], label %[[IF_COND_TRUE_BLOCK_1:.*]], label %[[IF_COND_FALSE_BLOCK_1:.*]]
-// CHECK: [[IF_COND_TRUE_BLOCK_1]]:
 // CHECK: br label %[[OUTLINED_CALL_IF_BLOCK_1:.*]]
 // CHECK: [[OUTLINED_CALL_IF_BLOCK_1]]:
-// CHECK: call void {{.*}} @__kmpc_fork_call(ptr @[[SI_VAR_IF_1]], {{.*}} @[[OMP_OUTLINED_FN_IF_1:.*]])
+// CHECK: %[[I32_IF_COND_VAR_1:.*]] = sext i1 %[[IF_COND_VAR_1]] to i32
+// CHECK: call void @__kmpc_fork_call_if(ptr @[[SI_VAR_IF_1]], i32 0, ptr @[[OMP_OUTLINED_FN_IF_1:.*]], i32 %[[I32_IF_COND_VAR_1]], ptr null)
 // CHECK: br label %[[OUTLINED_EXIT_IF_1:.*]]
 // CHECK: [[OUTLINED_EXIT_IF_1]]:
-// CHECK: br label %[[OUTLINED_EXIT_IF_2:.*]]
-// CHECK: [[OUTLINED_EXIT_IF_2]]:
 // CHECK: br label %[[RETURN_BLOCK_IF_1:.*]]
-// CHECK: [[IF_COND_FALSE_BLOCK_1]]:
-// CHECK: call void @__kmpc_serialized_parallel(ptr @[[SI_VAR_IF_1]], i32 %[[GTN_IF_1]])
-// CHECK: call void @[[OMP_OUTLINED_FN_IF_1]]
-// CHECK: call void @__kmpc_end_serialized_parallel(ptr @[[SI_VAR_IF_1]], i32 %[[GTN_IF_1]])
-// CHECK: br label %[[RETURN_BLOCK_IF_1]]
   omp.parallel if(%1 : i1) {
     omp.barrier
     omp.terminator
@@ -190,58 +176,6 @@ llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 
 // CHECK: define internal void @[[OMP_OUTLINED_FN_IF_1]]
   // CHECK: call void @__kmpc_barrier
-
-// -----
-
-// CHECK-LABEL: @test_nested_alloca_ip
-llvm.func @test_nested_alloca_ip(%arg0: i32) -> () {
-
-  // Check that the allocas are emitted by the OpenMPIRBuilder at the top of
-  // the function, before the condition. Allocas are only emitted by the
-  // builder when the `if` clause is present. We match specific SSA value names
-  // since LLVM actually produces those names and ensure they come before the
-  // "icmp" that is the first operation we emit.
-  // CHECK: %tid.addr{{.*}} = alloca i32
-  // CHECK: %zero.addr{{.*}} = alloca i32
-  // CHECK: icmp slt i32 %{{.*}}, 0
-  %0 = llvm.mlir.constant(0 : index) : i32
-  %1 = llvm.icmp "slt" %arg0, %0 : i32
-
-  omp.parallel if(%1 : i1) {
-    // The "parallel" operation will be outlined, check the the function is
-    // produced. Inside that function, further allocas should be placed before
-    // another "icmp".
-    // CHECK: define
-    // CHECK: %tid.addr{{.*}} = alloca i32
-    // CHECK: %zero.addr{{.*}} = alloca i32
-    // CHECK: icmp slt i32 %{{.*}}, 1
-    %2 = llvm.mlir.constant(1 : index) : i32
-    %3 = llvm.icmp "slt" %arg0, %2 : i32
-
-    omp.parallel if(%3 : i1) {
-      // One more nesting level.
-      // CHECK: define
-      // CHECK: %tid.addr{{.*}} = alloca i32
-      // CHECK: %zero.addr{{.*}} = alloca i32
-      // CHECK: icmp slt i32 %{{.*}}, 2
-
-      %4 = llvm.mlir.constant(2 : index) : i32
-      %5 = llvm.icmp "slt" %arg0, %4 : i32
-
-      omp.parallel if(%5 : i1) {
-        omp.barrier
-        omp.terminator
-      }
-
-      omp.barrier
-      omp.terminator
-    }
-    omp.barrier
-    omp.terminator
-  }
-
-  llvm.return
-}
 
 // -----
 

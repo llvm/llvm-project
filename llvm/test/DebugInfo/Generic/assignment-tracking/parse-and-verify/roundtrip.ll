@@ -1,5 +1,5 @@
-; RUN: opt %s -verify -experimental-assignment-tracking   \
-; RUN: | opt -verify -S -experimental-assignment-tracking \
+; RUN: opt %s -passes=verify -experimental-assignment-tracking   \
+; RUN: | opt -passes=verify -S -experimental-assignment-tracking \
 ; RUN: | FileCheck %s
 
 ;; Roundtrip test (text -> bitcode -> text) for DIAssignID metadata and

@@ -4100,7 +4100,8 @@ struct AAPrivatizablePtr
   bool isKnownPrivatizablePtr() const { return getKnown(); }
 
   /// Return the type we can choose for a private copy of the underlying
-  /// value. None means it is not clear yet, nullptr means there is none.
+  /// value. std::nullopt means it is not clear yet, nullptr means there is
+  /// none.
   virtual std::optional<Type *> getPrivatizableType() const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
@@ -5040,6 +5041,11 @@ struct AAPointerInfo : public AbstractAttribute {
       assert(RemoteI == R.RemoteI && "Expected same instruction!");
       assert(LocalI == R.LocalI && "Expected same instruction!");
       Kind = AccessKind(Kind | R.Kind);
+      // If we combine a may and a must access we clear the must bit.
+      if (Kind & AK_MUST && Kind & AK_MAY) {
+        Kind = AccessKind(Kind | AK_MAY);
+        Kind = AccessKind(Kind & ~AK_MUST);
+      }
       auto Before = Range;
       Range &= R.Range;
       if (Before.isUnassigned() || Before == Range) {

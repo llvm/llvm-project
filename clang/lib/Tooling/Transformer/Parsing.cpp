@@ -14,7 +14,6 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/Tooling/Transformer/SourceCode.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"

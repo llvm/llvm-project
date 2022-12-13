@@ -15,6 +15,8 @@
 #define LLVM_TRANSFORMS_UTILS_SCCPSOLVER_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Transforms/Utils/PredicateInfo.h"
 #include <vector>
@@ -116,6 +118,10 @@ public:
   /// should be rerun.
   bool resolvedUndefsIn(Function &F);
 
+  void solveWhileResolvedUndefsIn(Module &M);
+
+  void solveWhileResolvedUndefsIn(SmallVectorImpl<Function *> &WorkList);
+
   bool isBlockExecutable(BasicBlock *BB) const;
 
   // isEdgeFeasible - Return true if the control flow edge from the 'From' basic
@@ -173,6 +179,24 @@ public:
   void visitCall(CallInst &I);
 };
 
+//===----------------------------------------------------------------------===//
+//
+/// Helper functions used by the SCCP and IPSCCP passes.
+//
+bool isConstant(const ValueLatticeElement &LV);
+
+bool isOverdefined(const ValueLatticeElement &LV);
+
+bool simplifyInstsInBlock(SCCPSolver &Solver, BasicBlock &BB,
+                          SmallPtrSetImpl<Value *> &InsertedValues,
+                          Statistic &InstRemovedStat,
+                          Statistic &InstReplacedStat);
+
+bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V);
+
+bool removeNonFeasibleEdges(const llvm::SCCPSolver &Solver, BasicBlock *BB,
+                            DomTreeUpdater &DTU,
+                            BasicBlock *&NewUnreachableBB);
 } // namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_SCCPSOLVER_H

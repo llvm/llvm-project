@@ -151,8 +151,9 @@ public:
   ///                   must hold the number of bytes that were decoded before
   ///                   failing. The target must print nothing. This can be
   ///                   done by buffering the output if needed.
-  ///                 - None if the target doesn't want to handle the symbol
-  ///                   separately. Value of Size is ignored in this case.
+  ///                 - std::nullopt if the target doesn't want to handle the
+  ///                   symbol separately. Value of Size is ignored in this
+  ///                   case.
   virtual std::optional<DecodeStatus>
   onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
                 uint64_t Address, raw_ostream &CStream) const;

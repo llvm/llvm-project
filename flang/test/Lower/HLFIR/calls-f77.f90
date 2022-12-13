@@ -164,7 +164,7 @@ end subroutine
 ! CHECK:  %[[VAL_11:.*]] = arith.select %[[VAL_10]], %[[VAL_8]], %[[VAL_9]] : index
 ! CHECK:  %[[VAL_13:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_11]] : index) {bindc_name = ".result"}
 ! CHECK:  %[[VAL_14:.*]] = fir.call @_QPc2foo(%[[VAL_13]], %[[VAL_11]]) fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:  %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]] typeparams %[[VAL_11]] {uniq_name = "tmp.funcresult"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:  %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]] typeparams %[[VAL_11]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 
 ! -----------------------------------------------------------------------------
 !     Test calls with alternate returns

@@ -7,11 +7,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Function.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 using namespace llvm;
 
 namespace {
+
+static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
+  SMDiagnostic Err;
+  std::unique_ptr<Module> Mod = parseAssemblyString(IR, Err, C);
+  if (!Mod)
+    Err.print("InstructionsTests", errs());
+  return Mod;
+}
+
+static BasicBlock *getBBWithName(Function *F, StringRef Name) {
+  auto It = find_if(
+      *F, [&Name](const BasicBlock &BB) { return BB.getName() == Name; });
+  assert(It != F->end() && "Not found!");
+  return &*It;
+}
 
 TEST(FunctionTest, hasLazyArguments) {
   LLVMContext C;
@@ -160,6 +177,66 @@ TEST(FunctionTest, GetPointerAlignment) {
   EXPECT_EQ(Align(4), Func->getPointerAlignment(DataLayout("Fn16")));
   EXPECT_EQ(Align(4), Func->getPointerAlignment(DataLayout("Fi32")));
   EXPECT_EQ(Align(4), Func->getPointerAlignment(DataLayout("Fn32")));
+}
+
+TEST(FunctionTest, InsertBasicBlockAt) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+define void @foo(i32 %a, i32 %b) {
+foo_bb0:
+  ret void
+}
+
+define void @bar() {
+bar_bb0:
+  br label %bar_bb1
+bar_bb1:
+  br label %bar_bb2
+bar_bb2:
+  ret void
+}
+)");
+  Function *FooF = M->getFunction("foo");
+  BasicBlock *FooBB0 = getBBWithName(FooF, "foo_bb0");
+
+  Function *BarF = M->getFunction("bar");
+  BasicBlock *BarBB0 = getBBWithName(BarF, "bar_bb0");
+  BasicBlock *BarBB1 = getBBWithName(BarF, "bar_bb1");
+  BasicBlock *BarBB2 = getBBWithName(BarF, "bar_bb2");
+
+  // Insert foo_bb0 into bar() at the very top.
+  FooBB0->removeFromParent();
+  auto It = BarF->insertBasicBlockAt(BarF->begin(), FooBB0);
+  EXPECT_EQ(BarBB0->getPrevNode(), FooBB0);
+  EXPECT_EQ(It, FooBB0->getIterator());
+
+  // Insert foo_bb0 into bar() at the very end.
+  FooBB0->removeFromParent();
+  It = BarF->insertBasicBlockAt(BarF->end(), FooBB0);
+  EXPECT_EQ(FooBB0->getPrevNode(), BarBB2);
+  EXPECT_EQ(FooBB0->getNextNode(), nullptr);
+  EXPECT_EQ(It, FooBB0->getIterator());
+
+  // Insert foo_bb0 into bar() just before bar_bb0.
+  FooBB0->removeFromParent();
+  It = BarF->insertBasicBlockAt(BarBB0->getIterator(), FooBB0);
+  EXPECT_EQ(FooBB0->getPrevNode(), nullptr);
+  EXPECT_EQ(FooBB0->getNextNode(), BarBB0);
+  EXPECT_EQ(It, FooBB0->getIterator());
+
+  // Insert foo_bb0 into bar() just before bar_bb1.
+  FooBB0->removeFromParent();
+  It = BarF->insertBasicBlockAt(BarBB1->getIterator(), FooBB0);
+  EXPECT_EQ(FooBB0->getPrevNode(), BarBB0);
+  EXPECT_EQ(FooBB0->getNextNode(), BarBB1);
+  EXPECT_EQ(It, FooBB0->getIterator());
+
+  // Insert foo_bb0 into bar() just before bar_bb2.
+  FooBB0->removeFromParent();
+  It = BarF->insertBasicBlockAt(BarBB2->getIterator(), FooBB0);
+  EXPECT_EQ(FooBB0->getPrevNode(), BarBB1);
+  EXPECT_EQ(FooBB0->getNextNode(), BarBB2);
+  EXPECT_EQ(It, FooBB0->getIterator());
 }
 
 } // end namespace

@@ -192,4 +192,34 @@ define dso_local void @bar_nossp(i64 %0) {
   ret void
 }
 
+; Check stack protect for noreturn call
+define dso_local i32 @foo_no_return(i32 %0) #1 {
+; CHECK-LABEL: @foo_no_return
+entry:
+  %cmp = icmp sgt i32 %0, 4
+  br i1 %cmp, label %if.then, label %if.end
+
+; CHECK:      if.then:                                          ; preds = %entry
+; CHECK-NEXT:   %StackGuard1 = load volatile i8*, i8* addrspace(257)* inttoptr (i32 40 to i8* addrspace(257)*), align 8
+; CHECK-NEXT:   %1 = load volatile i8*, i8** %StackGuardSlot, align 8
+; CHECK-NEXT:   %2 = icmp eq i8* %StackGuard1, %1
+; CHECK-NEXT:   br i1 %2, label %SP_return, label %CallStackCheckFailBlk
+; CHECK:      SP_return:                                        ; preds = %if.then
+; CHECK-NEXT:   %call = call i32 @foo_no_return(i32 1)
+; CHECK-NEXT:   br label %return
+; CHECK:      if.end:                                           ; preds = %entry
+; CHECK-NEXT:   br label %return
+
+if.then:                                          ; preds = %entry
+  %call = call i32 @foo_no_return(i32 1)
+  br label %return
+
+if.end:                                           ; preds = %entry
+  br label %return
+
+return:                                           ; preds = %if.end, %if.then
+  ret i32 0
+}
+
 attributes #0 = { sspstrong }
+attributes #1 = { noreturn sspreq}

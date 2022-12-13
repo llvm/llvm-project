@@ -8841,6 +8841,9 @@ def warn_redefine_extname_not_applied : Warning<
 
 // inline asm.
 let CategoryName = "Inline Assembly Issue" in {
+  def err_asm_pmf_through_constraint_not_permitted
+    : Error<"cannot pass a pointer-to-member through register-constrained "
+            "inline assembly parameter">;
   def err_asm_invalid_lvalue_in_output : Error<"invalid lvalue in asm output">;
   def err_asm_invalid_output_constraint : Error<
     "invalid output constraint '%0' in asm">;
@@ -10440,6 +10443,10 @@ def err_omp_reduction_incomplete_type : Error<
   "a reduction list item with incomplete type %0">;
 def err_omp_unexpected_clause_value : Error<
   "expected %0 in OpenMP clause '%1'">;
+def err_omp_unexpected_call_to_omp_runtime_api
+    : Error<"calls to OpenMP runtime API are not allowed within a region that "
+            "corresponds to a construct with an order clause that specifies "
+            "concurrent">;
 def err_omp_expected_var_name_member_expr : Error<
   "expected variable name%select{| or data member of current class}0">;
 def err_omp_expected_var_name_member_expr_with_type : Error<
@@ -10634,6 +10641,9 @@ def err_omp_prohibited_region_simd : Error<
   "OpenMP constructs may not be nested inside a simd region%select{| except for ordered simd, simd, scan, or atomic directive}0">;
 def err_omp_prohibited_region_atomic : Error<
   "OpenMP constructs may not be nested inside an atomic region">;
+def err_omp_prohibited_region_order
+    : Error<"construct '%0' not allowed in a region associated with a "
+            "directive with 'order' clause">;
 def err_omp_prohibited_region_critical_same_name : Error<
   "cannot nest 'critical' regions having the same name %0">;
 def note_omp_previous_critical_region : Note<
@@ -11735,4 +11745,9 @@ def err_cast_from_randomized_struct : Error<
 // LoongArch-specific Diagnostics
 def err_loongarch_builtin_requires_la64 : Error<
   "this builtin requires target: loongarch64">;
+
+// Unsafe buffer usage diagnostics.
+def warn_unsafe_buffer_usage : Warning<
+  "unchecked operation on raw buffer in expression">,
+  InGroup<DiagGroup<"unsafe-buffer-usage">>, DefaultIgnore;
 } // end of sema component.

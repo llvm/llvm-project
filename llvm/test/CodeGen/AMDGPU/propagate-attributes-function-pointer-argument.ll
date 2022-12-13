@@ -8,7 +8,7 @@
 ; `call void @g(ptr @g.1)`
 ; which is invalid IR.
 
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -amdgpu-propagate-attributes-late %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-propagate-attributes-late %s | FileCheck %s
 
 ; CHECK-LABEL: define amdgpu_kernel void @thiswasabug() #0
 ; CHECK-NOT: call void @g(ptr @g.1)
