@@ -321,7 +321,7 @@ void DwarfStreamer::emitSwiftReflectionSection(
 /// sized addresses describing the ranges.
 void DwarfStreamer::emitRangesEntries(
     int64_t UnitPcOffset, uint64_t OrigLowPc,
-    Optional<std::pair<AddressRange, int64_t>> FuncRange,
+    std::optional<std::pair<AddressRange, int64_t>> FuncRange,
     const std::vector<DWARFDebugRangeList::RangeListEntry> &Entries,
     unsigned AddressSize) {
   MS->switchSection(MC->getObjectFileInfo()->getDwarfRangesSection());
