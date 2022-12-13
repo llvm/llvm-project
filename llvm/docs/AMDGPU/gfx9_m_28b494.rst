@@ -5,9 +5,9 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx9_type_deviation:
+.. _amdgpu_synid_gfx9_m_28b494:
 
-Type Deviation
-==============
+m
+=
 
-The *type* of this operand differs from the *type* :ref:`implied by the opcode<amdgpu_syn_instruction_mnemo>`. This tag specifies the actual operand *type*.
+This operand may be used with an integer operand modifier :ref:`sext<amdgpu_synid_sext>`.
