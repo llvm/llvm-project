@@ -13513,6 +13513,14 @@ bool RISCVTargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
   return OptSize && !VT.isVector();
 }
 
+bool RISCVTargetLowering::preferScalarizeSplat(unsigned Opc) const {
+  // Scalarize zero_ext and sign_ext might stop match to widening instruction in
+  // some situation.
+  if (Opc == ISD::ZERO_EXTEND || Opc == ISD::SIGN_EXTEND)
+    return false;
+  return true;
+}
+
 #define GET_REGISTER_MATCHER
 #include "RISCVGenAsmMatcher.inc"
 

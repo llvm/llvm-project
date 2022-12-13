@@ -440,6 +440,7 @@ namespace {
     SDValue visitOR(SDNode *N);
     SDValue visitORLike(SDValue N0, SDValue N1, SDNode *N);
     SDValue visitXOR(SDNode *N);
+    SDValue SimplifyVCastOp(SDNode *N, const SDLoc &DL);
     SDValue SimplifyVBinOp(SDNode *N, const SDLoc &DL);
     SDValue visitSHL(SDNode *N);
     SDValue visitSRA(SDNode *N);
@@ -12337,6 +12338,10 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
+  if (VT.isVector())
+    if (SDValue FoldedVOp = SimplifyVCastOp(N, DL))
+      return FoldedVOp;
+
   // sext(undef) = 0 because the top bit will all be the same.
   if (N0.isUndef())
     return DAG.getConstant(0, DL, VT);
@@ -12585,6 +12590,10 @@ static SDValue widenCtPop(SDNode *Extend, SelectionDAG &DAG) {
 SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+
+  if (VT.isVector())
+    if (SDValue FoldedVOp = SimplifyVCastOp(N, SDLoc(N)))
+      return FoldedVOp;
 
   // zext(undef) = 0
   if (N0.isUndef())
@@ -16230,6 +16239,10 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
 SDValue DAGCombiner::visitFP_EXTEND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+
+  if (VT.isVector())
+    if (SDValue FoldedVOp = SimplifyVCastOp(N, SDLoc(N)))
+      return FoldedVOp;
 
   // If this is fp_round(fpextend), don't fold it, allow ourselves to be folded.
   if (N->hasOneUse() &&
@@ -24048,6 +24061,39 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
 
   // bo (splat X, Index), (splat Y, Index) --> splat (bo X, Y), Index
   return DAG.getSplat(VT, DL, ScalarBO);
+}
+
+/// Visit a vector cast operation, like FP_EXTEND.
+SDValue DAGCombiner::SimplifyVCastOp(SDNode *N, const SDLoc &DL) {
+  EVT VT = N->getValueType(0);
+  assert(VT.isVector() && "SimplifyVCastOp only works on vectors!");
+  EVT EltVT = VT.getVectorElementType();
+  unsigned Opcode = N->getOpcode();
+
+  SDValue N0 = N->getOperand(0);
+  EVT SrcVT = N0->getValueType(0);
+  EVT SrcEltVT = SrcVT.getVectorElementType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // TODO: promote operation might be also good here?
+  int Index0;
+  SDValue Src0 = DAG.getSplatSourceVector(N0, Index0);
+  if (Src0 &&
+      (N0.getOpcode() == ISD::SPLAT_VECTOR ||
+       TLI.isExtractVecEltCheap(VT, Index0)) &&
+      TLI.isOperationLegalOrCustom(Opcode, EltVT) &&
+      TLI.preferScalarizeSplat(Opcode)) {
+    SDValue IndexC = DAG.getVectorIdxConstant(Index0, DL);
+    SDValue Elt =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, SrcEltVT, Src0, IndexC);
+    SDValue ScalarBO = DAG.getNode(Opcode, DL, EltVT, Elt, N->getFlags());
+    if (VT.isScalableVector())
+      return DAG.getSplatVector(VT, DL, ScalarBO);
+    SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(), ScalarBO);
+    return DAG.getBuildVector(VT, DL, Ops);
+  }
+
+  return SDValue();
 }
 
 /// Visit a binary vector operation, like ADD.
