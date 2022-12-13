@@ -932,7 +932,7 @@ bool SelectOptimize::computeLoopCosts(
         // PredictedPathCost = TrueOpCost * TrueProb + FalseOpCost * FalseProb
         // MispredictCost = max(MispredictPenalty, CondCost) * MispredictRate
         if (SIset.contains(&I)) {
-          auto SI = dyn_cast<SelectInst>(&I);
+          auto SI = cast<SelectInst>(&I);
 
           Scaled64 TrueOpCost = Scaled64::getZero(),
                    FalseOpCost = Scaled64::getZero();
