@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx1030_m_f5d306:
+.. _amdgpu_synid_gfx1030_vdst_a49b76:
 
-m
-=
+vdst
+====
 
-This operand may be used with floating point operand modifiers :ref:`abs<amdgpu_synid_abs>` and :ref:`neg<amdgpu_synid_neg>`.
+Instruction output: data read from a memory buffer.
+
+*Size:* 3 dwords by default. :ref:`tfe<amdgpu_synid_tfe>` adds 1 dword if specified.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`

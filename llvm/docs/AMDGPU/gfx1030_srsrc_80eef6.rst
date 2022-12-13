@@ -5,12 +5,12 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx1030_srsrc_e73d16:
+.. _amdgpu_synid_gfx1030_srsrc_80eef6:
 
 srsrc
 =====
 
-Buffer resource constant which defines the address and characteristics of the buffer in memory.
+Buffer resource constant, which defines the address and characteristics of the buffer in memory.
 
 *Size:* 4 dwords.
 

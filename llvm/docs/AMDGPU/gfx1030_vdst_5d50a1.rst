@@ -5,15 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx1030_vdst_322561:
+.. _amdgpu_synid_gfx1030_vdst_5d50a1:
 
 vdst
 ====
 
 Instruction output: data read from a memory buffer.
 
-This is an optional operand. It must be used if and only if :ref:`lds<amdgpu_synid_lds>` is omitted.
-
-*Size:* 1 dword.
+*Size:* 1 dword by default. :ref:`tfe<amdgpu_synid_tfe>` adds 1 dword if specified.
 
 *Operands:* :ref:`v<amdgpu_synid_v>`

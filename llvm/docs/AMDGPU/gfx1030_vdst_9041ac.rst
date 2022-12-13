@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx1030_imm16_a04fb3:
+.. _amdgpu_synid_gfx1030_vdst_9041ac:
 
-imm16
-=====
+vdst
+====
 
-An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range 0..65535.
+Image data to be loaded by an image instruction.
+
+*Size:* 4 dwords.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`
