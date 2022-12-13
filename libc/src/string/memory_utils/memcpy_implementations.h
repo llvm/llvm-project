@@ -24,7 +24,7 @@ namespace __llvm_libc {
 [[maybe_unused]] static inline void
 inline_memcpy_embedded_tiny(Ptr __restrict dst, CPtr __restrict src,
                             size_t count) {
-#pragma nounroll
+  LLVM_LIBC_LOOP_NOUNROLL
   for (size_t offset = 0; offset < count; ++offset)
     builtin::Memcpy<1>::block(dst + offset, src + offset);
 }
