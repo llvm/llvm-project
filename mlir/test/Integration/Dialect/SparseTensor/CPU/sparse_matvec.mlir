@@ -19,6 +19,10 @@
 // Do the same run, but now with direct IR generation and parallelization strategy.
 // REDEFINE: %{option} = "enable-runtime-library=false parallelization-strategy=any-storage-any-loop"
 // RUN: %{command}
+//
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: %{command}
 
 !Filename = !llvm.ptr<i8>
 
