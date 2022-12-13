@@ -1,9 +1,9 @@
 %foo = type { [8 x i8] }
 %bar = type { [9 x i8] }
 
-@zed = alias void (%foo*), bitcast (void (%bar*)* @xyz to void (%foo*)*)
+@zed = alias void (%bar), ptr @xyz
 
-define void @xyz(%bar* %this) {
+define void @xyz(%foo %this) {
 entry:
   ret void
 }
