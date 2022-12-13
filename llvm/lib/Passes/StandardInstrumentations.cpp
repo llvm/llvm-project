@@ -346,6 +346,13 @@ template <typename T> ChangeReporter<T>::~ChangeReporter() {
 template <typename T>
 void ChangeReporter<T>::saveIRBeforePass(Any IR, StringRef PassID,
                                          StringRef PassName) {
+  // Is this the initial IR?
+  if (InitialIR) {
+    InitialIR = false;
+    if (VerboseMode)
+      handleInitialIR(IR);
+  }
+
   // Always need to place something on the stack because invalidated passes
   // are not given the IR so it cannot be determined whether the pass was for
   // something that was filtered out.
@@ -353,12 +360,6 @@ void ChangeReporter<T>::saveIRBeforePass(Any IR, StringRef PassID,
 
   if (!isInteresting(IR, PassID, PassName))
     return;
-  // Is this the initial IR?
-  if (InitialIR) {
-    InitialIR = false;
-    if (VerboseMode)
-      handleInitialIR(IR);
-  }
 
   // Save the IR representation on the stack.
   T &Data = BeforeStack.back();
