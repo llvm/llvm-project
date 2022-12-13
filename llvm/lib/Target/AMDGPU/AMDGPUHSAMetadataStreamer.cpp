@@ -877,6 +877,9 @@ msgpack::MapDocNode MetadataStreamerMsgPackV3::getHSAKernelProps(
   if (AMDGPU::getAmdhsaCodeObjectVersion() >= 5)
     Kern[".uses_dynamic_stack"] =
         Kern.getDocument()->getNode(ProgramInfo.DynamicCallStack);
+  if (AMDGPU::getAmdhsaCodeObjectVersion() >= 5 && STM.supportsWGP())
+    Kern[".workgroup_processor_mode"] =
+        Kern.getDocument()->getNode(ProgramInfo.WgpMode);
 
   // FIXME: The metadata treats the minimum as 16?
   Kern[".kernarg_segment_align"] =
