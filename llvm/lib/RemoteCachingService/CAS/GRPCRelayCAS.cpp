@@ -391,7 +391,7 @@ GRPCRelayCAS::storeFromOpenFileImpl(sys::fs::file_t FD,
   auto &I = indexHash(arrayRefFromStringRef(*Response));
   // TODO: we can avoid the copy by implementing InMemoryRef object like
   // InMemoryCAS.
-  return toReference(storeObjectImpl(I, None, Data));
+  return toReference(storeObjectImpl(I, std::nullopt, Data));
 }
 
 GRPCActionCache::GRPCActionCache(StringRef Path, Error &Err)
@@ -411,7 +411,7 @@ GRPCActionCache::getImpl(ArrayRef<uint8_t> ResolvedKey) const {
   if (!Response)
     return Response.takeError();
   if (!*Response)
-    return None;
+    return std::nullopt;
 
   auto Result = (*Response)->find("CASID");
   if (Result == (*Response)->end())

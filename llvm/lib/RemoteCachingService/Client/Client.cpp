@@ -44,7 +44,7 @@ createGetValueResponse(const GetValueResponse &Resp) {
     return createStringError(inconvertibleErrorCode(),
                              Resp.error().description());
   if (!Resp.has_value())
-    return None;
+    return std::nullopt;
 
   KeyValueDBClient::ValueTy Ret;
   const Value &V = Resp.value();
