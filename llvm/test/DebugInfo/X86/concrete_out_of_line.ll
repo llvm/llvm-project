@@ -63,18 +63,18 @@ source_filename = "test/DebugInfo/X86/concrete_out_of_line.ll"
 
 define i32 @_ZN17nsAutoRefCnt7ReleaseEv() !dbg !19 {
 entry:
-  store i32 1, i32* null, align 4, !dbg !32
-  tail call void @_Z8moz_freePv(i8* null) #0, !dbg !40
+  store i32 1, ptr null, align 4, !dbg !32
+  tail call void @_Z8moz_freePv(ptr null) #0, !dbg !40
   ret i32 0
 }
 
 define void @_ZN17nsAutoRefCntD1Ev() !dbg !46 {
 entry:
-  tail call void @_Z8moz_freePv(i8* null) #0, !dbg !49
+  tail call void @_Z8moz_freePv(ptr null) #0, !dbg !49
   ret void
 }
 
-declare void @_Z8moz_freePv(i8*)
+declare void @_Z8moz_freePv(ptr)
 
 attributes #0 = { nounwind }
 

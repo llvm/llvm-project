@@ -90,21 +90,21 @@ $_Z3varIiE = comdat any
 @glbl = dso_local global i32 0, align 4, !dbg !0
 @n = dso_local global %"struct.y_impl<int>::nested" zeroinitializer, align 1, !dbg !10
 @_Z3varIiE = linkonce_odr dso_local global i32 0, comdat, align 4, !dbg !18
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_test.cpp, i8* null }]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_test.cpp, ptr null }]
 
 ; Function Attrs: noinline uwtable
 define internal void @__cxx_global_var_init() #0 section ".text.startup" !dbg !28 {
 entry:
   %call = call i32 @_Z4funcILi3EXadL_Z4glblEE6y_implLDn0EL1e255EJLi1ELi2EEEiv(), !dbg !31
-  store i32 %call, i32* @glbl, align 4, !dbg !32
+  store i32 %call, ptr @glbl, align 4, !dbg !32
   ret void, !dbg !31
 }
 
 ; Function Attrs: mustprogress noinline nounwind optnone uwtable
 define linkonce_odr dso_local i32 @_Z4funcILi3EXadL_Z4glblEE6y_implLDn0EL1e255EJLi1ELi2EEEiv() #1 comdat !dbg !33 {
 entry:
-  store i32 5, i32* @_Z3varIiE, align 4, !dbg !48
-  %0 = load i32, i32* @_Z3varIiE, align 4, !dbg !49
+  store i32 5, ptr @_Z3varIiE, align 4, !dbg !48
+  %0 = load i32, ptr @_Z3varIiE, align 4, !dbg !49
   ret i32 %0, !dbg !50
 }
 
@@ -160,7 +160,7 @@ attributes #1 = { mustprogress noinline nounwind optnone uwtable "frame-pointer"
 !35 = !{!17}
 !36 = !{!37, !38, !40, !41, !43, !44}
 !37 = !DITemplateValueParameter(name: "x", type: !17, value: i32 3)
-!38 = !DITemplateValueParameter(type: !39, value: i32* @glbl)
+!38 = !DITemplateValueParameter(type: !39, value: ptr @glbl)
 !39 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !17, size: 64)
 !40 = !DITemplateValueParameter(tag: DW_TAG_GNU_template_template_param, name: "y", value: !"y_impl")
 !41 = !DITemplateValueParameter(name: "n", type: !42, value: i8 0)

@@ -21,11 +21,9 @@ target triple = "x86_64-apple-macosx10.10.0"
 define float @foo(float %s.coerce) #0 !dbg !4 {
 entry:
   %s = alloca %struct.S, align 4
-  %coerce.dive = getelementptr %struct.S, %struct.S* %s, i32 0, i32 0
-  store float %s.coerce, float* %coerce.dive, align 1
-  call void @llvm.dbg.declare(metadata %struct.S* %s, metadata !16, metadata !17), !dbg !18
-  %f = getelementptr inbounds %struct.S, %struct.S* %s, i32 0, i32 0, !dbg !19
-  %0 = load float, float* %f, align 4, !dbg !19
+  store float %s.coerce, ptr %s, align 1
+  call void @llvm.dbg.declare(metadata ptr %s, metadata !16, metadata !17), !dbg !18
+  %0 = load float, ptr %s, align 4, !dbg !19
   ret float %0, !dbg !19
 }
 
