@@ -134,14 +134,13 @@ iplist<BasicBlock>::iterator BasicBlock::eraseFromParent() {
 }
 
 void BasicBlock::moveBefore(BasicBlock *MovePos) {
-  MovePos->getParent()->getBasicBlockList().splice(
-      MovePos->getIterator(), getParent()->getBasicBlockList(), getIterator());
+  MovePos->getParent()->splice(MovePos->getIterator(), getParent(),
+                               getIterator());
 }
 
 void BasicBlock::moveAfter(BasicBlock *MovePos) {
-  MovePos->getParent()->getBasicBlockList().splice(
-      ++MovePos->getIterator(), getParent()->getBasicBlockList(),
-      getIterator());
+  MovePos->getParent()->splice(++MovePos->getIterator(), getParent(),
+                               getIterator());
 }
 
 const Module *BasicBlock::getModule() const {
