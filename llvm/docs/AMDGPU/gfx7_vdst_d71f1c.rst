@@ -5,13 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx7_vdst_0c25a6:
+.. _amdgpu_synid_gfx7_vdst_d71f1c:
 
 vdst
 ====
 
-Image data to load by an *image_gather4* instruction.
+Instruction output: data read from a memory buffer.
 
-*Size:* 4 data elements by default. Each data element occupies 1 dword. :ref:`tfe<amdgpu_synid_tfe>` adds one more dword if specified.
+*Size:* 2 dwords.
 
 *Operands:* :ref:`v<amdgpu_synid_v>`

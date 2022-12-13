@@ -5,12 +5,12 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx7_sbase_010ce0:
+.. _amdgpu_synid_gfx7_srsrc_80eef6:
 
-sbase
+srsrc
 =====
 
-A 128-bit buffer resource constant for scalar memory operations which provides a base address, a size and a stride.
+Buffer resource constant, which defines the address and characteristics of the buffer in memory.
 
 *Size:* 4 dwords.
 

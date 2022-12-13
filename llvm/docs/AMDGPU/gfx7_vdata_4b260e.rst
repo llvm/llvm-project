@@ -5,13 +5,17 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx7_srsrc_e73d16:
+.. _amdgpu_synid_gfx7_vdata_4b260e:
 
-srsrc
+vdata
 =====
 
-Buffer resource constant which defines the address and characteristics of the buffer in memory.
+Input data for an atomic instruction.
 
-*Size:* 4 dwords.
+Optionally, this operand may be used to store output data:
 
-*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`ttmp<amdgpu_synid_ttmp>`
+* If :ref:`glc<amdgpu_synid_glc>` is specified, gets the memory value before the operation.
+
+*Size:* 2 dwords.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`

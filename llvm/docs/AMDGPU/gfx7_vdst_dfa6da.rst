@@ -5,12 +5,12 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx7_vdst_3d7dcf:
+.. _amdgpu_synid_gfx7_vdst_dfa6da:
 
 vdst
 ====
 
-Image data to load by an image instruction.
+Image data to be loaded by an image instruction.
 
 *Size:* depends on :ref:`dmask<amdgpu_synid_dmask>` and :ref:`tfe<amdgpu_synid_tfe>`:
 
