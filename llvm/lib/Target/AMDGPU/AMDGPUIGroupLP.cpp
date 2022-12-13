@@ -93,7 +93,7 @@ private:
   SchedGroupMask SGMask;
 
   // Maximum number of SUnits that can be added to this group.
-  Optional<unsigned> MaxSize;
+  std::optional<unsigned> MaxSize;
 
   // SchedGroups will only synchronize with other SchedGroups that have the same
   // SyncID.
@@ -175,13 +175,13 @@ public:
 
   SchedGroupMask getMask() { return SGMask; }
 
-  SchedGroup(SchedGroupMask SGMask, Optional<unsigned> MaxSize,
+  SchedGroup(SchedGroupMask SGMask, std::optional<unsigned> MaxSize,
              ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
       : SGMask(SGMask), MaxSize(MaxSize), DAG(DAG), TII(TII) {
     SGID = NumSchedGroups++;
   }
 
-  SchedGroup(SchedGroupMask SGMask, Optional<unsigned> MaxSize, int SyncID,
+  SchedGroup(SchedGroupMask SGMask, std::optional<unsigned> MaxSize, int SyncID,
              ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
       : SGMask(SGMask), MaxSize(MaxSize), SyncID(SyncID), DAG(DAG), TII(TII) {
     SGID = NumSchedGroups++;

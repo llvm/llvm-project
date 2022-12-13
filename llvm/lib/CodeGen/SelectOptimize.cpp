@@ -200,7 +200,7 @@ private:
   SmallPtrSet<const Instruction *, 2> getSIset(const SelectGroups &SIGroups);
 
   // Returns the latency cost of a given instruction.
-  Optional<uint64_t> computeInstCost(const Instruction *I);
+  std::optional<uint64_t> computeInstCost(const Instruction *I);
 
   // Returns the misprediction cost of a given select when converted to branch.
   Scaled64 getMispredictionCost(const SelectInst *SI, const Scaled64 CondCost);
@@ -977,11 +977,11 @@ SelectOptimize::getSIset(const SelectGroups &SIGroups) {
   return SIset;
 }
 
-Optional<uint64_t> SelectOptimize::computeInstCost(const Instruction *I) {
+std::optional<uint64_t> SelectOptimize::computeInstCost(const Instruction *I) {
   InstructionCost ICost =
       TTI->getInstructionCost(I, TargetTransformInfo::TCK_Latency);
   if (auto OC = ICost.getValue())
-    return Optional<uint64_t>(*OC);
+    return std::optional<uint64_t>(*OC);
   return std::nullopt;
 }
 

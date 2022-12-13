@@ -108,7 +108,7 @@ static unsigned bigEndianByteAt(const unsigned ByteWidth, const unsigned I) {
 /// 1            1                2
 /// 2            2                1
 /// 3            3                0
-static Optional<bool>
+static std::optional<bool>
 isBigEndian(const SmallDenseMap<int64_t, int64_t, 8> &MemOffset2Idx,
             int64_t LowestIdx) {
   // Need at least two byte positions to decide on endianness.
@@ -1285,9 +1285,9 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
          LegalizerHelper::LegalizeResult::Legalized;
 }
 
-static Optional<APFloat> constantFoldFpUnary(unsigned Opcode, LLT DstTy,
-                                             const Register Op,
-                                             const MachineRegisterInfo &MRI) {
+static std::optional<APFloat>
+constantFoldFpUnary(unsigned Opcode, LLT DstTy, const Register Op,
+                    const MachineRegisterInfo &MRI) {
   const ConstantFP *MaybeCst = getConstantFPVRegVal(Op, MRI);
   if (!MaybeCst)
     return std::nullopt;
@@ -1327,8 +1327,8 @@ static Optional<APFloat> constantFoldFpUnary(unsigned Opcode, LLT DstTy,
   return V;
 }
 
-bool CombinerHelper::matchCombineConstantFoldFpUnary(MachineInstr &MI,
-                                                     Optional<APFloat> &Cst) {
+bool CombinerHelper::matchCombineConstantFoldFpUnary(
+    MachineInstr &MI, std::optional<APFloat> &Cst) {
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(DstReg);
@@ -1336,8 +1336,8 @@ bool CombinerHelper::matchCombineConstantFoldFpUnary(MachineInstr &MI,
   return Cst.has_value();
 }
 
-void CombinerHelper::applyCombineConstantFoldFpUnary(MachineInstr &MI,
-                                                     Optional<APFloat> &Cst) {
+void CombinerHelper::applyCombineConstantFoldFpUnary(
+    MachineInstr &MI, std::optional<APFloat> &Cst) {
   assert(Cst && "Optional is unexpectedly empty!");
   Builder.setInstrAndDebugLoc(MI);
   MachineFunction &MF = Builder.getMF();
@@ -3269,7 +3269,7 @@ bool CombinerHelper::applyFoldBinOpIntoSelect(MachineInstr &MI,
   return true;
 }
 
-Optional<SmallVector<Register, 8>>
+std::optional<SmallVector<Register, 8>>
 CombinerHelper::findCandidatesForLoadOrCombine(const MachineInstr *Root) const {
   assert(Root->getOpcode() == TargetOpcode::G_OR && "Expected G_OR only!");
   // We want to detect if Root is part of a tree which represents a bunch
@@ -3367,7 +3367,7 @@ matchLoadAndBytePosition(Register Reg, unsigned MemSizeInBits,
   return std::make_pair(Load, Shift / MemSizeInBits);
 }
 
-Optional<std::tuple<GZExtLoad *, int64_t, GZExtLoad *>>
+std::optional<std::tuple<GZExtLoad *, int64_t, GZExtLoad *>>
 CombinerHelper::findLoadOffsetsForLoadOrCombine(
     SmallDenseMap<int64_t, int64_t, 8> &MemOffset2Idx,
     const SmallVector<Register, 8> &RegsToVisit, const unsigned MemSizeInBits) {
@@ -3559,7 +3559,7 @@ bool CombinerHelper::matchLoadOrCombine(
   // pattern. If it does, then we can represent it using a load + possibly a
   // BSWAP.
   bool IsBigEndianTarget = MF.getDataLayout().isBigEndian();
-  Optional<bool> IsBigEndian = isBigEndian(MemOffset2Idx, LowestIdx);
+  std::optional<bool> IsBigEndian = isBigEndian(MemOffset2Idx, LowestIdx);
   if (!IsBigEndian)
     return false;
   bool NeedsBSwap = IsBigEndianTarget != *IsBigEndian;
@@ -4612,7 +4612,7 @@ bool CombinerHelper::matchReassocConstantInnerLHS(GPtrAdd &MI,
   // G_PTR_ADD (G_PTR_ADD X, C), Y) -> (G_PTR_ADD (G_PTR_ADD(X, Y), C)
   // if and only if (G_PTR_ADD X, C) has one use.
   Register LHSBase;
-  Optional<ValueAndVReg> LHSCstOff;
+  std::optional<ValueAndVReg> LHSCstOff;
   if (!mi_match(MI.getBaseReg(), MRI,
                 m_OneNonDBGUse(m_GPtrAdd(m_Reg(LHSBase), m_GCst(LHSCstOff)))))
     return false;
@@ -5983,7 +5983,7 @@ bool CombinerHelper::matchBuildVectorIdentityFold(MachineInstr &MI,
     return MRI.getType(MatchInfo) == DstVecTy;
   }
 
-  Optional<ValueAndVReg> ShiftAmount;
+  std::optional<ValueAndVReg> ShiftAmount;
   const auto LoPattern = m_GBitcast(m_Reg(Lo));
   const auto HiPattern = m_GLShr(m_GBitcast(m_Reg(Hi)), m_GCst(ShiftAmount));
   if (mi_match(
@@ -6014,7 +6014,7 @@ bool CombinerHelper::matchTruncLshrBuildVectorFold(MachineInstr &MI,
                                                    Register &MatchInfo) {
   // Replace (G_TRUNC (G_LSHR (G_BITCAST (G_BUILD_VECTOR x, y)), K)) with
   //    y if K == size of vector element type
-  Optional<ValueAndVReg> ShiftAmt;
+  std::optional<ValueAndVReg> ShiftAmt;
   if (!mi_match(MI.getOperand(1).getReg(), MRI,
                 m_GLShr(m_GBitcast(m_GBuildVector(m_Reg(), m_Reg(MatchInfo))),
                         m_GCst(ShiftAmt))))

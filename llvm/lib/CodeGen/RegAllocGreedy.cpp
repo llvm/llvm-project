@@ -523,7 +523,7 @@ bool RegAllocEvictionAdvisor::isUnusedCalleeSavedReg(MCRegister PhysReg) const {
   return !Matrix->isPhysRegUsed(PhysReg);
 }
 
-Optional<unsigned>
+std::optional<unsigned>
 RegAllocEvictionAdvisor::getOrderLimit(const LiveInterval &VirtReg,
                                        const AllocationOrder &Order,
                                        unsigned CostPerUseLimit) const {
