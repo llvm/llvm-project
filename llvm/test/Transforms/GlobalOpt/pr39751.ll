@@ -11,10 +11,10 @@
 define void @f1() {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x i16], [2 x i16]* @a, i32 0, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x i16], ptr @a, i32 0, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %gep = getelementptr inbounds [2 x i16], [2 x i16]* @a, i32 0, <2 x i32> <i32 0, i32 1>
+  %gep = getelementptr inbounds [2 x i16], ptr @a, i32 0, <2 x i32> <i32 0, i32 1>
   ret void
 }

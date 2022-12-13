@@ -3,27 +3,25 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@_ZL1x = internal global [200 x i8]* null, align 8, !dbg !0
+@_ZL1x = internal global ptr null, align 8, !dbg !0
 
-define i32 @main(i32 %argc, i8** %argv) norecurse !dbg !18 {
+define i32 @main(i32 %argc, ptr %argv) norecurse !dbg !18 {
 ; CHECK: define i32 @main
 ; Make sure we localized the global.
-; CHECK: alloca [200 x i8]*
+; CHECK: alloca ptr
 ; Make sure the metadata is sane. Currently, we just drop the metadata,
 ; so it points to nothing.
 ; CHECK: call void @llvm.dbg.value(metadata !2,
 ; CHECK: !2 = !{}
 entry:
   call void @llvm.dbg.value(metadata i32 %argc, metadata !22, metadata !23), !dbg !24
-  call void @llvm.dbg.value(metadata i8** %argv, metadata !25, metadata !23), !dbg !26
-  %arrayidx = getelementptr inbounds i8*, i8** %argv, i64 0, !dbg !27
-  %0 = load i8*, i8** %arrayidx, align 8, !dbg !27
-  %1 = bitcast i8* %0 to [200 x i8]*, !dbg !28
-  store [200 x i8]* %1, [200 x i8]** @_ZL1x, align 8, !dbg !29
-  call void @llvm.dbg.value(metadata i8** bitcast ([200 x i8]** @_ZL1x to i8**), metadata !30, metadata !23), !dbg !31
-  %2 = load i8*, i8** bitcast ([200 x i8]** @_ZL1x to i8**), align 8, !dbg !32
-  %3 = load i8, i8* %2, align 1, !dbg !33
-  %conv = sext i8 %3 to i32, !dbg !33
+  call void @llvm.dbg.value(metadata ptr %argv, metadata !25, metadata !23), !dbg !26
+  %0 = load ptr, ptr %argv, align 8, !dbg !27
+  store ptr %0, ptr @_ZL1x, align 8, !dbg !29
+  call void @llvm.dbg.value(metadata ptr @_ZL1x, metadata !30, metadata !23), !dbg !31
+  %1 = load ptr, ptr @_ZL1x, align 8, !dbg !32
+  %2 = load i8, ptr %1, align 1, !dbg !33
+  %conv = sext i8 %2 to i32, !dbg !33
   ret i32 %conv, !dbg !34
 }
 
