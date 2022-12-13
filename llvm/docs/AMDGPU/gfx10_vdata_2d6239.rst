@@ -5,17 +5,17 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx10_sdata_c6aec1:
+.. _amdgpu_synid_gfx10_vdata_2d6239:
 
-sdata
+vdata
 =====
 
 Input data for an atomic instruction.
 
-Optionally may serve as an output data:
+Optionally, this operand may be used to store output data:
 
 * If :ref:`glc<amdgpu_synid_glc>` is specified, gets the memory value before the operation.
 
 *Size:* 4 dwords.
 
-*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`ttmp<amdgpu_synid_ttmp>`
+*Operands:* :ref:`v<amdgpu_synid_v>`

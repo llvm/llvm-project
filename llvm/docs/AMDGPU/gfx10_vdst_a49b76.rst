@@ -5,9 +5,13 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid_gfx10_imm16_73139a:
+.. _amdgpu_synid_gfx10_vdst_a49b76:
 
-imm16
-=====
+vdst
+====
 
-An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range -32768..65535.
+Instruction output: data read from a memory buffer.
+
+*Size:* 3 dwords by default. :ref:`tfe<amdgpu_synid_tfe>` adds 1 dword if specified.
+
+*Operands:* :ref:`v<amdgpu_synid_v>`
