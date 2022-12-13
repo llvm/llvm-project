@@ -205,7 +205,7 @@ PerfJITEventListener::PerfJITEventListener()
 
   Dumpstream = std::make_unique<raw_fd_ostream>(DumpFd, true);
 
-  LLVMPerfJitHeader Header = {0};
+  LLVMPerfJitHeader Header = {0, 0, 0, 0, 0, 0, 0, 0};
   if (!FillMachine(Header))
     return;
 

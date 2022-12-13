@@ -49,8 +49,8 @@ llvm::Optional<SVal> getErrnoValue(ProgramStateRef State);
 ErrnoCheckState getErrnoState(ProgramStateRef State);
 
 /// Returns the location that points to the \c MemoryRegion where the 'errno'
-/// value is stored. Returns \c None if 'errno' was not found. Otherwise it
-/// always returns a valid memory region in the system global memory space.
+/// value is stored. Returns \c std::nullopt if 'errno' was not found. Otherwise
+/// it always returns a valid memory region in the system global memory space.
 llvm::Optional<Loc> getErrnoLoc(ProgramStateRef State);
 
 /// Set value of 'errno' to any SVal, if possible.

@@ -1,4 +1,4 @@
-; RUN: opt  -instcombine %s -S | FileCheck %s
+; RUN: opt  -passes=instcombine %s -S | FileCheck %s
 ;
 ; Generate me from:
 ; clang -cc1 -triple thumbv7-apple-ios7.0.0 -S -target-abi apcs-gnu -gdwarf-2 -Os test.c -o test.ll -emit-llvm

@@ -271,6 +271,15 @@ public:
     return ldx >= numNativeLoops;
   }
 
+  /// Returns true if the expression contains the `t` as an operand.
+  bool expContainsTensor(unsigned e, unsigned t) const;
+
+  /// Returns true if the expression contains a negation on output tensor.
+  /// I.e., `- outTensor` or `exp - outputTensor`
+  /// NOTE: this is an trivial tests in that it does not handle recursive
+  /// negation, i.e., it returns true when the expression is `-(-tensor)`.
+  bool hasNegateOnOut(unsigned e) const;
+
   /// Returns true if given tensor iterates *only* in the given tensor
   /// expression. For the output tensor, this defines a "simply dynamic"
   /// operation [Bik96]. For instance: a(i) *= 2.0 or a(i) += a(i) for
@@ -348,9 +357,9 @@ public:
   void dumpBits(const BitVector &bits) const;
 #endif
 
-  /// Builds the iteration lattices in a bottom-up traversal given the remaining
-  /// tensor (sub)expression and the next loop index in the iteration graph.
-  /// Returns index of the root expression.
+  /// Builds the iteration lattices in a bottom-up traversal given the
+  /// remaining tensor (sub)expression and the next loop index in the
+  /// iteration graph. Returns index of the root expression.
   unsigned buildLattices(unsigned e, unsigned i);
 
   /// Builds a tensor expression from the given Linalg operation.
@@ -380,7 +389,8 @@ private:
   // Map that converts pair<tensor id, loop id> to the corresponding dimension
   // level type.
   std::vector<std::vector<DimLevelType>> dimTypes;
-  // Map that converts pair<tensor id, loop id> to the corresponding dimension.
+  // Map that converts pair<tensor id, loop id> to the corresponding
+  // dimension.
   std::vector<std::vector<Optional<unsigned>>> loopIdxToDim;
   // Map that converts pair<tensor id, dim> to the corresponding loop id.
   std::vector<std::vector<Optional<unsigned>>> dimToLoopIdx;

@@ -1,6 +1,6 @@
 ; RUN: opt -S -O1 < %s -o %t1.ll
 ; RUN: opt -S < %t1.ll -o %t2.ll
-; RUN: opt -S -simplifycfg < %t1.ll -o %t3.ll
+; RUN: opt -S -passes=simplifycfg < %t1.ll -o %t3.ll
 ;; Show that there's no difference after running another simplify CFG
 ; RUN: diff %t2.ll %t3.ll
 

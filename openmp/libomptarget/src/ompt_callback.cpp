@@ -18,13 +18,17 @@
 #include <cstring>
 
 #include "omp-tools.h"
+
 #include "ompt_connector.h"
+#include "ompt_device_callbacks.h"
 #include "private.h"
 
 #define fnptr_to_ptr(x) ((void *)(uint64_t)x)
 
 /// Used to indicate whether OMPT was enabled for this library
 bool ompt_enabled = false;
+/// Object maintaining all the callbacks for this library
+OmptDeviceCallbacksTy OmptDeviceCallbacks;
 
 /// This is the function called by the higher layer (libomp) responsible
 /// for initializing OMPT in this library. This is passed to libomp
@@ -37,7 +41,11 @@ static int ompt_libomptarget_initialize(ompt_function_lookup_t lookup,
                                         ompt_data_t *tool_data) {
   DP("enter ompt_libomptarget_initialize!\n");
   ompt_enabled = true;
-  // TODO use the parameters to populate callbacks in libomptarget
+  // The lookup parameter is provided by libomp which already has the
+  // tool callbacks registered at this point. The registration call
+  // below causes the same callback functions to be registered in
+  // libomptarget as well
+  OmptDeviceCallbacks.registerCallbacks(lookup);
   DP("exit ompt_libomptarget_initialize!\n");
   return 0;
 }
@@ -67,6 +75,9 @@ __attribute__((constructor(102))) static void ompt_init(void) {
   OmptResult.initialize = ompt_libomptarget_initialize;
   OmptResult.finalize = ompt_libomptarget_finalize;
   OmptResult.tool_data.value = 0;
+
+  // Initialize the device callbacks first
+  OmptDeviceCallbacks.init();
 
   // Now call connect that causes the above init/fini functions to be called
   LibompConnector.connect(&OmptResult);

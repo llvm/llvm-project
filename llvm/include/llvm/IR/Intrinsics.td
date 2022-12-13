@@ -1564,6 +1564,10 @@ let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
                              [ LLVMMatchType<0>,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
+  def int_vp_bitreverse : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_fshl : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                              [ LLVMMatchType<0>,
                                LLVMMatchType<0>,
@@ -2099,9 +2103,9 @@ def int_vector_extract : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
 // Sign an unauthenticated pointer using the specified key and discriminator,
 // passed in that order.
 // Returns the first argument, with some known bits replaced with a signature.
-def int_ptrauth_sign : Intrinsic<[llvm_i64_ty],
-                                 [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty],
-                                 [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+def int_ptrauth_sign :
+  DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty],
+                        [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 // Authenticate a signed pointer, using the specified key and discriminator.
 // Returns the first argument, with the signature bits removed.
@@ -2127,15 +2131,14 @@ def int_ptrauth_resign : Intrinsic<[llvm_i64_ty],
 // The second argument specifies the key.
 // This behaves like @llvm.ptrauth.auth, but doesn't require the signature to
 // be valid.
-def int_ptrauth_strip : Intrinsic<[llvm_i64_ty],
-                                  [llvm_i64_ty, llvm_i32_ty],
-                                  [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+def int_ptrauth_strip :
+  DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i32_ty],
+                        [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 // Blend a small integer discriminator with an address discriminator, producing
 // a new discriminator value.
-def int_ptrauth_blend : Intrinsic<[llvm_i64_ty],
-                                  [llvm_i64_ty, llvm_i64_ty],
-                                  [IntrNoMem]>;
+def int_ptrauth_blend :
+  DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
 
 // Compute the signature of a value, using a given discriminator.
 // This differs from @llvm.ptrauth.sign in that it doesn't embed the computed
@@ -2143,9 +2146,8 @@ def int_ptrauth_blend : Intrinsic<[llvm_i64_ty],
 // That allows it to be used to sign non-pointer data: in that sense, it is
 // generic.  There is no generic @llvm.ptrauth.auth: instead, the signature
 // can be computed using @llvm.ptrauth.sign_generic, and compared with icmp.
-def int_ptrauth_sign_generic : Intrinsic<[llvm_i64_ty],
-                                         [llvm_i64_ty, llvm_i64_ty],
-                                         [IntrNoMem]>;
+def int_ptrauth_sign_generic :
+  DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
 
 //===----------------------------------------------------------------------===//
 

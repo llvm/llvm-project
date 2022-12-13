@@ -9,12 +9,25 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_FILE_H
 #define LLVM_LIBC_SRC_SUPPORT_OSUTIL_FILE_H
 
+#include "src/__support/error_or.h"
 #include "src/__support/threads/mutex.h"
 
 #include <stddef.h>
 #include <stdint.h>
 
 namespace __llvm_libc {
+
+struct FileIOResult {
+  size_t value;
+  int error;
+
+  constexpr FileIOResult(size_t val) : value(val), error(0) {}
+  constexpr FileIOResult(size_t val, int error) : value(val), error(error) {}
+
+  constexpr bool has_error() { return error != 0; }
+
+  constexpr operator size_t() { return value; }
+};
 
 // This a generic base class to encapsulate a platform independent file data
 // structure. Platform specific specializations should create a subclass as
@@ -26,11 +39,11 @@ public:
   using LockFunc = void(File *);
   using UnlockFunc = void(File *);
 
-  using WriteFunc = size_t(File *, const void *, size_t);
-  using ReadFunc = size_t(File *, void *, size_t);
+  using WriteFunc = FileIOResult(File *, const void *, size_t);
+  using ReadFunc = FileIOResult(File *, void *, size_t);
   // The SeekFunc is expected to return the current offset of the external
   // file position indicator.
-  using SeekFunc = long(File *, long, int);
+  using SeekFunc = ErrorOr<long>(File *, long, int);
   using CloseFunc = int(File *);
   using FlushFunc = int(File *);
 
@@ -174,26 +187,26 @@ public:
   }
 
   // Buffered write of |len| bytes from |data| without the file lock.
-  size_t write_unlocked(const void *data, size_t len);
+  FileIOResult write_unlocked(const void *data, size_t len);
 
   // Buffered write of |len| bytes from |data| under the file lock.
-  size_t write(const void *data, size_t len) {
+  FileIOResult write(const void *data, size_t len) {
     FileLock l(this);
     return write_unlocked(data, len);
   }
 
   // Buffered read of |len| bytes into |data| without the file lock.
-  size_t read_unlocked(void *data, size_t len);
+  FileIOResult read_unlocked(void *data, size_t len);
 
   // Buffered read of |len| bytes into |data| under the file lock.
-  size_t read(void *data, size_t len) {
+  FileIOResult read(void *data, size_t len) {
     FileLock l(this);
     return read_unlocked(data, len);
   }
 
-  int seek(long offset, int whence);
+  ErrorOr<int> seek(long offset, int whence);
 
-  long tell();
+  ErrorOr<long> tell();
 
   // If buffer has data written to it, flush it out. Does nothing if the
   // buffer is currently being used as a read buffer.
@@ -256,9 +269,9 @@ public:
   static ModeFlags mode_flags(const char *mode);
 
 private:
-  size_t write_unlocked_lbf(const uint8_t *data, size_t len);
-  size_t write_unlocked_fbf(const uint8_t *data, size_t len);
-  size_t write_unlocked_nbf(const uint8_t *data, size_t len);
+  FileIOResult write_unlocked_lbf(const uint8_t *data, size_t len);
+  FileIOResult write_unlocked_fbf(const uint8_t *data, size_t len);
+  FileIOResult write_unlocked_nbf(const uint8_t *data, size_t len);
 
   constexpr void adjust_buf() {
     if (read_allowed() && (buf == nullptr || bufsize == 0)) {
@@ -285,7 +298,7 @@ private:
 
 // The implementaiton of this function is provided by the platfrom_file
 // library.
-File *openfile(const char *path, const char *mode);
+ErrorOr<File *> openfile(const char *path, const char *mode);
 
 // The platform_file library should implement it if it relevant for that
 // platform.

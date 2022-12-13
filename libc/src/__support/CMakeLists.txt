@@ -31,9 +31,23 @@ add_header_library(
 )
 
 add_header_library(
+  error_or
+  HDRS
+    error_or.h
+  DEPENDS
+    libc.src.__support.CPP.expected
+)
+
+add_header_library(
   ctype_utils
   HDRS
     ctype_utils.h
+)
+
+add_header_library(
+  str_to_num_result
+  HDRS
+    str_to_num_result.h
 )
 
 add_header_library(
@@ -42,6 +56,7 @@ add_header_library(
     str_to_integer.h
   DEPENDS
     .ctype_utils
+    .str_to_num_result
     libc.include.errno
     libc.src.errno.errno
     libc.src.__support.CPP.limits

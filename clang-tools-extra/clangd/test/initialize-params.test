@@ -70,6 +70,7 @@
 # CHECK-NEXT:            "usedAsMutableReference",
 # CHECK-NEXT:            "usedAsMutablePointer",
 # CHECK-NEXT:            "constructorOrDestructor",
+# CHECK-NEXT:            "userDefined",
 # CHECK-NEXT:            "functionScope",
 # CHECK-NEXT:            "classScope",
 # CHECK-NEXT:            "fileScope",

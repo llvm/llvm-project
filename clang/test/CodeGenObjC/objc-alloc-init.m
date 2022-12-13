@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -fobjc-exceptions -fexceptions -fobjc-runtime=macosx-10.14.4 -emit-llvm -O0 -o - | FileCheck %s --check-prefix=OPTIMIZED --check-prefix=EITHER
-// RUN: %clang_cc1 -no-opaque-pointers %s -fobjc-exceptions -fexceptions -fobjc-runtime=macosx-10.14.3 -emit-llvm -O0 -o - | FileCheck %s --check-prefix=NOT_OPTIMIZED --check-prefix=EITHER
-// RUN: %clang_cc1 -no-opaque-pointers %s -fobjc-exceptions -fexceptions -fobjc-runtime=ios-12.2 -emit-llvm -O0 -o - | FileCheck %s --check-prefix=OPTIMIZED --check-prefix=EITHER
-// RUN: %clang_cc1 -no-opaque-pointers %s -fobjc-exceptions -fexceptions -fobjc-runtime=ios-12.1 -emit-llvm -O0 -o - | FileCheck %s --check-prefix=NOT_OPTIMIZED --check-prefix=EITHER
+// RUN: %clang_cc1 %s -fobjc-exceptions -fexceptions -fobjc-runtime=macosx-10.14.4 -emit-llvm -O0 -o - | FileCheck %s --check-prefix=OPTIMIZED --check-prefix=EITHER
+// RUN: %clang_cc1 %s -fobjc-exceptions -fexceptions -fobjc-runtime=macosx-10.14.3 -emit-llvm -O0 -o - | FileCheck %s --check-prefix=NOT_OPTIMIZED --check-prefix=EITHER
+// RUN: %clang_cc1 %s -fobjc-exceptions -fexceptions -fobjc-runtime=ios-12.2 -emit-llvm -O0 -o - | FileCheck %s --check-prefix=OPTIMIZED --check-prefix=EITHER
+// RUN: %clang_cc1 %s -fobjc-exceptions -fexceptions -fobjc-runtime=ios-12.1 -emit-llvm -O0 -o - | FileCheck %s --check-prefix=NOT_OPTIMIZED --check-prefix=EITHER
 
 @interface X
 +(X *)alloc;
@@ -10,15 +10,15 @@
 
 void f(void) {
   [[X alloc] init];
-  // OPTIMIZED: call i8* @objc_alloc_init(
-  // NOT_OPTIMIZED: call i8* @objc_alloc(
+  // OPTIMIZED: call ptr @objc_alloc_init(
+  // NOT_OPTIMIZED: call ptr @objc_alloc(
 
   @try {
     [[X alloc] init];
   } @catch (X *x) {
   }
-  // OPTIMIZED: invoke i8* @objc_alloc_init(
-  // NOT_OPTIMIZED: invoke i8* @objc_alloc(
+  // OPTIMIZED: invoke ptr @objc_alloc_init(
+  // NOT_OPTIMIZED: invoke ptr @objc_alloc(
 }
 
 @interface Y : X
@@ -33,16 +33,16 @@ void f(void) {
 }
 +(void)meth {
   [[self alloc] init];
-  // OPTIMIZED: call i8* @objc_alloc_init(
-  // NOT_OPTIMIZED: call i8* @objc_alloc(
+  // OPTIMIZED: call ptr @objc_alloc_init(
+  // NOT_OPTIMIZED: call ptr @objc_alloc(
 }
 + (void)meth2 {
   [[[self class] alloc] init];
-  // OPTIMIZED: call i8* @objc_alloc_init(
-  // NOT_OPTIMIZED: call i8* @objc_alloc(
+  // OPTIMIZED: call ptr @objc_alloc_init(
+  // NOT_OPTIMIZED: call ptr @objc_alloc(
 }
 -(void)instanceMeth {
-  // EITHER-NOT: call i8* @objc_alloc
+  // EITHER-NOT: call ptr @objc_alloc
   // EITHER: call {{.*}} @objc_msgSend
   // EITHER: call {{.*}} @objc_msgSend
   [[(id)self alloc] init];

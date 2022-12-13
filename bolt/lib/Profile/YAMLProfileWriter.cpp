@@ -154,7 +154,7 @@ std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
   // Fill out the header info.
   BP.Header.Version = 1;
   BP.Header.FileName = std::string(BC.getFilename());
-  Optional<StringRef> BuildID = BC.getFileBuildID();
+  std::optional<StringRef> BuildID = BC.getFileBuildID();
   BP.Header.Id = BuildID ? std::string(*BuildID) : "<unknown>";
   BP.Header.Origin = std::string(RI.getProfileReader()->getReaderName());
 

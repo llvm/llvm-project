@@ -14,10 +14,9 @@ for.cond2:                                        ; preds = %for.body5, %for.con
   br i1 false, label %for.body5, label %for.cond
 
 for.body5:                                        ; preds = %for.cond2
-  %arrayidx = getelementptr inbounds [2 x i64], [2 x i64]* undef, i32 0, i64 0
-  %tmp7 = load i64, i64* %arrayidx, align 8
-  %arrayidx9 = getelementptr inbounds [2 x i64], [2 x i64]* undef, i32 0, i64 undef
-  %tmp10 = load i64, i64* %arrayidx9, align 8
+  %tmp7 = load i64, ptr undef, align 8
+  %arrayidx9 = getelementptr inbounds [2 x i64], ptr undef, i32 0, i64 undef
+  %tmp10 = load i64, ptr %arrayidx9, align 8
   br label %for.cond2
 
 for.end22:                                        ; preds = %for.cond

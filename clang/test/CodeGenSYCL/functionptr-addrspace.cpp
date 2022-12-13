@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fsycl-is-device -emit-llvm -triple spir64 -verify -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -triple spir64 -verify -emit-llvm %s -o - | FileCheck %s
 
 // expected-no-diagnostics
 
@@ -7,7 +7,7 @@ __attribute__((sycl_kernel)) void kernel_single_task(const Func &kernelFunc) {
   kernelFunc();
 }
 
-// CHECK: define dso_local spir_func{{.*}}invoke_function{{.*}}(i32 ()* noundef %fptr, i32 addrspace(4)* noundef %ptr)
+// CHECK: define dso_local spir_func{{.*}}invoke_function{{.*}}(ptr noundef %fptr, ptr addrspace(4) noundef %ptr)
 void invoke_function(int (*fptr)(), int *ptr) {}
 
 int f() { return 0; }

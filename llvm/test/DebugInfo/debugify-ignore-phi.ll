@@ -1,4 +1,4 @@
-; RUN: opt -check-debugify < %s -S 2>&1 | FileCheck %s
+; RUN: opt -passes=check-debugify < %s -S 2>&1 | FileCheck %s
 
 define void @test_phi(i1 %cond) !dbg !6 {
   br i1 %cond, label %1, label %2, !dbg !11

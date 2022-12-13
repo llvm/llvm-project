@@ -22,7 +22,7 @@ TEST(DataAggregatorTest, buildID) {
   opts::ReadPreAggregated = true;
 
   DataAggregator DA("<pseudo input>");
-  Optional<StringRef> FileName;
+  std::optional<StringRef> FileName;
 
   DA.setParsingBuffer("");
   ASSERT_FALSE(DA.hasAllBuildIDs());

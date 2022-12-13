@@ -1,15 +1,15 @@
-; RUN: opt < %s -inline -pass-remarks='inline' -S 2>&1 | FileCheck %s
-; RUN: opt < %s -inline -pass-remarks='inl.*' -S 2>&1 | FileCheck %s
-; RUN: opt < %s -inline -pass-remarks='vector' -pass-remarks='inl' -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline)' -pass-remarks='inline' -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline)' -pass-remarks='inl.*' -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline)' -pass-remarks='vector' -pass-remarks='inl' -S 2>&1 | FileCheck %s
 
 ; These two should not yield an inline remark for the same reason.
 ; In the first command, we only ask for vectorizer remarks, in the
 ; second one we ask for the inliner, but we then ask for the vectorizer
 ; (thus overriding the first flag).
-; RUN: opt < %s -inline -pass-remarks='vector' -S 2>&1 | FileCheck --check-prefix=REMARKS %s
-; RUN: opt < %s -inline -pass-remarks='inl' -pass-remarks='vector' -S 2>&1 | FileCheck --check-prefix=REMARKS %s
+; RUN: opt < %s -passes='cgscc(inline)' -pass-remarks='vector' -S 2>&1 | FileCheck --check-prefix=REMARKS %s
+; RUN: opt < %s -passes='cgscc(inline)' -pass-remarks='inl' -pass-remarks='vector' -S 2>&1 | FileCheck --check-prefix=REMARKS %s
 
-; RUN: opt < %s -inline -S 2>&1 | FileCheck --check-prefix=REMARKS %s
+; RUN: opt < %s -passes='cgscc(inline)' -S 2>&1 | FileCheck --check-prefix=REMARKS %s
 ; RUN: not opt < %s -pass-remarks='(' 2>&1 | FileCheck --check-prefix=BAD-REGEXP %s
 
 define i32 @foo(i32 %x, i32 %y) #0 {

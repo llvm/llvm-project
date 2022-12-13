@@ -937,9 +937,9 @@ defm : Zn3WriteResXMMPair<WriteFRsqrt, [Zn3FPFDiv], 3, [1], 1>;  // Floating poi
 defm : Zn3WriteResXMMPair<WriteFRsqrtX, [Zn3FPFDiv], 3, [1], 1>; // Floating point reciprocal square root estimate (XMM).
 defm : Zn3WriteResYMMPair<WriteFRsqrtY, [Zn3FPFDiv], 3, [1], 1>; // Floating point reciprocal square root estimate (YMM).
 defm : X86WriteResPairUnsupported<WriteFRsqrtZ>; // Floating point reciprocal square root estimate (ZMM).
-defm : Zn3WriteResXMMPair<WriteFMA, [Zn3FPFMul01], 4, [2], 1>;  // Fused Multiply Add.
-defm : Zn3WriteResXMMPair<WriteFMAX, [Zn3FPFMul01], 4, [2], 1>; // Fused Multiply Add (XMM).
-defm : Zn3WriteResYMMPair<WriteFMAY, [Zn3FPFMul01], 4, [2], 1>; // Fused Multiply Add (YMM).
+defm : Zn3WriteResXMMPair<WriteFMA, [Zn3FPFMul01], 4, [1], 1>;  // Fused Multiply Add.
+defm : Zn3WriteResXMMPair<WriteFMAX, [Zn3FPFMul01], 4, [1], 1>; // Fused Multiply Add (XMM).
+defm : Zn3WriteResYMMPair<WriteFMAY, [Zn3FPFMul01], 4, [1], 1>; // Fused Multiply Add (YMM).
 defm : X86WriteResPairUnsupported<WriteFMAZ>; // Fused Multiply Add (ZMM).
 defm : Zn3WriteResXMMPair<WriteDPPD, [Zn3FPFMul01], 9, [6], 3, /*LoadUOps=*/2>; // Floating point double dot product.
 defm : Zn3WriteResXMMPair<WriteDPPS, [Zn3FPFMul01], 15, [8], 8, /*LoadUOps=*/2>; // Floating point single dot product.

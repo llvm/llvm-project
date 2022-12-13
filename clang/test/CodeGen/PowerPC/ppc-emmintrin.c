@@ -1,16 +1,16 @@
 // REQUIRES: powerpc-registered-target
 
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:  -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-BE
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-LE
 
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P10
 
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-BE
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P10
 
 // CHECK-BE-DAG: @_mm_movemask_pd.__perm_mask = internal constant <4 x i32> <i32 -2139062144, i32 -2139062144, i32 -2139062144, i32 -2139078656>, align 16
@@ -113,7 +113,7 @@ test_bs() {
 // CHECK: %[[CMP:[0-9a-zA-Z_.]+]] = icmp slt i32 %{{[0-9a-zA-Z_.]+}}, 16
 // CHECK: br i1 %[[CMP]]
 // CHECK: call <16 x i8> @vec_sld(unsigned char vector[16], unsigned char vector[16], unsigned int)(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, <16 x i8> noundef zeroinitializer, i32 noundef zeroext %{{[0-9a-zA-Z_.]+}})
-// CHECK: store <16 x i8> zeroinitializer, <16 x i8>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <16 x i8> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_bsrli_si128
 // CHECK: %[[CMP:[0-9a-zA-Z_.]+]] = icmp slt i32 %{{[0-9a-zA-Z_.]+}}, 16
@@ -125,12 +125,12 @@ test_bs() {
 // CHECK-LE: %[[TRUNC:[0-9a-zA-Z_.]+]] = trunc i32 %[[MUL]] to i8
 // CHECK-LE: call <16 x i8> @vec_splats(unsigned char)(i8 noundef zeroext %[[TRUNC]])
 // CHECK-LE: call <16 x i8> @vec_sro(unsigned char vector[16], unsigned char vector[16])
-// CHECK-LE: store <16 x i8> zeroinitializer, <16 x i8>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK-LE: store <16 x i8> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-BE: %[[MUL:[0-9a-zA-Z_.]+]] = mul nsw i32 %{{[0-9a-zA-Z_.]+}}, 8
 // CHECK-BE: %[[TRUNC:[0-9a-zA-Z_.]+]] = trunc i32 %[[MUL]] to i8
 // CHECK-BE: call <16 x i8> @vec_splats(unsigned char)(i8 noundef zeroext %[[TRUNC]])
 // CHECK-BE: call <16 x i8> @vec_slo(unsigned char vector[16], unsigned char vector[16])
-// CHECK-BE: store <16 x i8> zeroinitializer, <16 x i8>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK-BE: store <16 x i8> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 
 void __attribute__((noinline))
 test_cast() {
@@ -145,22 +145,16 @@ test_cast() {
 // CHECK-LABEL: @test_cast
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_castpd_ps
-// CHECK: bitcast <2 x double> %{{[0-9a-zA-Z_.]+}} to <4 x float>
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_castpd_si128
-// CHECK: bitcast <2 x double> %{{[0-9a-zA-Z_.]+}} to <2 x i64>
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_castps_pd
-// CHECK: bitcast <4 x float> %{{[0-9a-zA-Z_.]+}} to <2 x double>
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_castps_si128
-// CHECK: bitcast <4 x float> %{{[0-9a-zA-Z_.]+}} to <2 x i64>
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_castsi128_pd
-// CHECK: bitcast <2 x i64> %{{[0-9a-zA-Z_.]+}} to <2 x double>
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_castsi128_ps
-// CHECK: bitcast <2 x i64> %{{[0-9a-zA-Z_.]+}} to <4 x float>
 
 void __attribute__((noinline))
 test_cmp() {
@@ -390,7 +384,7 @@ test_control() {
 // CHECK-LABEL: @test_control
 
 // CHECK-LABEL: define available_externally void @_mm_clflush
-// CHECK: call void asm sideeffect "dcbf 0,$0", "b,~{memory}"(i8* %{{[0-9a-zA-Z_.]+}})
+// CHECK: call void asm sideeffect "dcbf 0,$0", "b,~{memory}"(ptr %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally void @_mm_lfence()
 // CHECK: fence release
@@ -446,7 +440,7 @@ test_converts() {
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_cvtpd_epi32
 // CHECK: call <2 x double> @vec_rint(double vector[2])
-// CHECK: store <4 x i32> zeroinitializer, <4 x i32>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <4 x i32> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: call <4 x i32> asm "xvcvdpsxws ${0:x},${1:x}", "=^wa,^wa"(<2 x double> %{{[0-9a-zA-Z_.]+}})
 // CHECK-LE: call <4 x i32> @vec_mergeo(int vector[4], int vector[4])
 // CHECK-BE: call <4 x i32> @vec_mergee(int vector[4], int vector[4])
@@ -457,7 +451,7 @@ test_converts() {
 // CHECK: extractelement <2 x i64> %{{[0-9a-zA-Z_.]+}}, i32 0
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_cvtpd_ps
-// CHECK: store <4 x i32> zeroinitializer, <4 x i32>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <4 x i32> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: call <4 x i32> asm "xvcvdpsp ${0:x},${1:x}", "=^wa,^wa"(<2 x double> %{{[0-9a-zA-Z_.]+}})
 // CHECK-LE: call <4 x i32> @vec_mergeo(int vector[4], int vector[4])
 // CHECK-BE: call <4 x i32> @vec_mergee(int vector[4], int vector[4])
@@ -614,50 +608,50 @@ test_load() {
 // CHECK-LABEL: @test_load
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_load_pd
-// CHECK: call <16 x i8> @vec_ld(long, unsigned char vector[16] const*)(i64 noundef 0, <16 x i8>* noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call <16 x i8> @vec_ld(long, unsigned char vector[16] const*)(i64 noundef 0, ptr noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_load_pd1
-// CHECK: call <2 x double> @_mm_load1_pd(double* noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call <2 x double> @_mm_load1_pd(ptr noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_load_sd
 // CHECK: call <2 x double> @_mm_set_sd(double noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_load_si128
-// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load <2 x i64>*, <2 x i64>** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: load <2 x i64>, <2 x i64>* %[[ADDR]], align 16
+// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: load <2 x i64>, ptr %[[ADDR]], align 16
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_load1_pd
-// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = load double, double* %[[ADDR]]
+// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = load double, ptr %[[ADDR]]
 // CHECK: call <2 x double> @vec_splats(double)(double noundef %[[VAL]])
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_loadh_pd
-// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = load double, double* %{{[0-9a-zA-Z_.]+}}
-// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = load <2 x double>, <2 x double>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = load double, ptr %{{[0-9a-zA-Z_.]+}}
+// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = load <2 x double>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: insertelement <2 x double> %[[VEC]], double %[[VAL]], i32 1
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_loadl_epi64
 // CHECK: call <2 x i64> @_mm_set_epi64(i64 noundef 0, i64 noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_loadl_pd
-// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: %[[ADDR2:[0-9a-zA-Z_.]+]] = load double, double* %[[ADDR]]
-// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = load <2 x double>, <2 x double>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: %[[ADDR2:[0-9a-zA-Z_.]+]] = load double, ptr %[[ADDR]]
+// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = load <2 x double>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: insertelement <2 x double> %[[VEC]], double %[[ADDR2]], i32 0
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_loadr_pd
-// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: call <2 x double> @_mm_load_pd(double* noundef %[[ADDR]])
+// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: call <2 x double> @_mm_load_pd(ptr noundef %[[ADDR]])
 // CHECK: shufflevector <2 x i64> %{{[0-9a-zA-Z_.]+}}, <2 x i64> %{{[0-9a-zA-Z_.]+}}, <2 x i32> <i32 1, i32 2>
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_loadu_pd
-// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: call <2 x double> @vec_vsx_ld(int, double const*)(i32 noundef signext 0, double* noundef %[[ADDR]])
+// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: call <2 x double> @vec_vsx_ld(int, double const*)(i32 noundef signext 0, ptr noundef %[[ADDR]])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_loadu_si128
-// CHECK: load <2 x i64>*, <2 x i64>** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: call <4 x i32> @vec_vsx_ld(int, int const*)(i32 noundef signext 0, i32* noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: call <4 x i32> @vec_vsx_ld(int, int const*)(i32 noundef signext 0, ptr noundef %{{[0-9a-zA-Z_.]+}})
 
 void __attribute__((noinline))
 test_logical() {
@@ -792,10 +786,10 @@ test_move() {
 // CHECK: call <2 x i64> @_mm_set_epi64(i64 noundef 0, i64 noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally void @_mm_maskmoveu_si128
-// CHECK: call <2 x i64> @_mm_loadu_si128(<2 x i64>* noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call <2 x i64> @_mm_loadu_si128(ptr noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <16 x i8> @vec_cmpgt(unsigned char vector[16], unsigned char vector[16])
 // CHECK: call <16 x i8> @vec_sel(unsigned char vector[16], unsigned char vector[16], unsigned char vector[16])
-// CHECK: call void @_mm_storeu_si128(<2 x i64>* noundef %{{[0-9a-zA-Z_.]+}}, <2 x i64> noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call void @_mm_storeu_si128(ptr noundef %{{[0-9a-zA-Z_.]+}}, <2 x i64> noundef %{{[0-9a-zA-Z_.]+}})
 
 void __attribute__((noinline))
 test_mul() {
@@ -828,15 +822,15 @@ test_mul() {
 // CHECK: mul i64 %[[EXT1]], %[[EXT2]]
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_mulhi_epi16
-// CHECK-LE: store <16 x i8> <i8 2, i8 3, i8 18, i8 19, i8 6, i8 7, i8 22, i8 23, i8 10, i8 11, i8 26, i8 27, i8 14, i8 15, i8 30, i8 31>, <16 x i8>* %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK-BE: store <16 x i8> <i8 0, i8 1, i8 16, i8 17, i8 4, i8 5, i8 20, i8 21, i8 8, i8 9, i8 24, i8 25, i8 12, i8 13, i8 28, i8 29>, <16 x i8>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK-LE: store <16 x i8> <i8 2, i8 3, i8 18, i8 19, i8 6, i8 7, i8 22, i8 23, i8 10, i8 11, i8 26, i8 27, i8 14, i8 15, i8 30, i8 31>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK-BE: store <16 x i8> <i8 0, i8 1, i8 16, i8 17, i8 4, i8 5, i8 20, i8 21, i8 8, i8 9, i8 24, i8 25, i8 12, i8 13, i8 28, i8 29>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: call <4 x i32> @vec_vmulesh(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, <8 x i16> noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <4 x i32> @vec_vmulosh(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, <8 x i16> noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <4 x i32> @vec_perm(int vector[4], int vector[4], unsigned char vector[16])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_mulhi_epu16
-// CHECK-LE: store <16 x i8> <i8 2, i8 3, i8 18, i8 19, i8 6, i8 7, i8 22, i8 23, i8 10, i8 11, i8 26, i8 27, i8 14, i8 15, i8 30, i8 31>, <16 x i8>* %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK-BE: store <16 x i8> <i8 0, i8 1, i8 16, i8 17, i8 4, i8 5, i8 20, i8 21, i8 8, i8 9, i8 24, i8 25, i8 12, i8 13, i8 28, i8 29>, <16 x i8>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK-LE: store <16 x i8> <i8 2, i8 3, i8 18, i8 19, i8 6, i8 7, i8 22, i8 23, i8 10, i8 11, i8 26, i8 27, i8 14, i8 15, i8 30, i8 31>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK-BE: store <16 x i8> <i8 0, i8 1, i8 16, i8 17, i8 4, i8 5, i8 20, i8 21, i8 8, i8 9, i8 24, i8 25, i8 12, i8 13, i8 28, i8 29>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: call <4 x i32> @vec_vmuleuh(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, <8 x i16> noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <4 x i32> @vec_vmulouh(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, <8 x i16> noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK: call <4 x i32> @vec_perm(unsigned int vector[4], unsigned int vector[4], unsigned char vector[16])
@@ -906,12 +900,12 @@ test_set() {
 // CHECK-LABEL: @test_set
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_set_epi16
-// CHECK-COUNT-8: store i16 {{[0-9a-zA-Z_%.]+}}, i16* {{[0-9a-zA-Z_%.]+}}, align 2
+// CHECK-COUNT-8: store i16 {{[0-9a-zA-Z_%.]+}}, ptr {{[0-9a-zA-Z_%.]+}}, align 2
 // CHECK: insertelement <8 x i16> undef, i16 {{[0-9a-zA-Z_%.]+}}, i32 0
 // CHECK-COUNT-7: insertelement <8 x i16> {{[0-9a-zA-Z_%.]+}}, i16 {{[0-9a-zA-Z_%.]+}}, i32 {{[1-7]}}
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_set_epi32
-// CHECK-COUNT-4: store i32 {{[0-9a-zA-Z_%.]+}}, i32* {{[0-9a-zA-Z_%.]+}}, align 4
+// CHECK-COUNT-4: store i32 {{[0-9a-zA-Z_%.]+}}, ptr {{[0-9a-zA-Z_%.]+}}, align 4
 // CHECK: insertelement <4 x i32> undef, i32 {{[0-9a-zA-Z_%.]+}}, i32 0
 // CHECK-COUNT-3: insertelement <4 x i32> {{[0-9a-zA-Z_%.]+}}, i32 {{[0-9a-zA-Z_%.]+}}, i32 {{[1-3]}}
 
@@ -923,7 +917,7 @@ test_set() {
 // CHECK: insertelement <2 x i64> %[[VEC]], i64 %{{[0-9a-zA-Z_.]+}}, i32 1
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_set_epi8
-// CHECK-COUNT-16: store i8 {{[0-9a-zA-Z_%.]+}}, i8* {{[0-9a-zA-Z_%.]+}}, align 1
+// CHECK-COUNT-16: store i8 {{[0-9a-zA-Z_%.]+}}, ptr {{[0-9a-zA-Z_%.]+}}, align 1
 // CHECK: insertelement <16 x i8> undef, i8 {{[0-9a-zA-Z_%.]+}}, i32 {{[0-9]+}}
 // CHECK-COUNT-15: {{[0-9a-zA-Z_%.]+}} = insertelement <16 x i8> {{[0-9a-zA-Z_%.]+}}, i8 {{[0-9a-zA-Z_%.]+}}, i32 {{[0-9]+}}
 
@@ -939,25 +933,25 @@ test_set() {
 // CHECK: insertelement <2 x double> %[[VEC]], double 0.000000e+00, i32 1
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_set1_epi16
-// CHECK-COUNT-8: load i16, i16* %{{[0-9a-zA-Z_.]+}}, align 2
+// CHECK-COUNT-8: load i16, ptr %{{[0-9a-zA-Z_.]+}}, align 2
 // CHECK: call <2 x i64> @_mm_set_epi16
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_set1_epi32
-// CHECK-COUNT-4: load i32, i32* %{{[0-9a-zA-Z_.]+}}, align 4
+// CHECK-COUNT-4: load i32, ptr %{{[0-9a-zA-Z_.]+}}, align 4
 // CHECK: call <2 x i64> @_mm_set_epi32
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_set1_epi64
-// CHECK: %[[VAL1:[0-9a-zA-Z_.]+]] = load i64, i64* %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: %[[VAL2:[0-9a-zA-Z_.]+]] = load i64, i64* %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: %[[VAL1:[0-9a-zA-Z_.]+]] = load i64, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: %[[VAL2:[0-9a-zA-Z_.]+]] = load i64, ptr %{{[0-9a-zA-Z_.]+}}, align 8
 // CHECK: call <2 x i64> @_mm_set_epi64(i64 noundef %[[VAL1]], i64 noundef %[[VAL2]])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_set1_epi64x
-// CHECK: %[[VAL1:[0-9a-zA-Z_.]+]] = load i64, i64* %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: %[[VAL2:[0-9a-zA-Z_.]+]] = load i64, i64* %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: %[[VAL1:[0-9a-zA-Z_.]+]] = load i64, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: %[[VAL2:[0-9a-zA-Z_.]+]] = load i64, ptr %{{[0-9a-zA-Z_.]+}}, align 8
 // CHECK: call <2 x i64> @_mm_set_epi64x(i64 noundef %[[VAL1]], i64 noundef %[[VAL2]])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_set1_epi8
-// CHECK-COUNT-16: load i8, i8* %{{[0-9a-zA-Z_.]+}}, align 1
+// CHECK-COUNT-16: load i8, ptr %{{[0-9a-zA-Z_.]+}}, align 1
 // CHECK: call <2 x i64> @_mm_set_epi8
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_set1_pd
@@ -965,20 +959,20 @@ test_set() {
 // CHECK: insertelement <2 x double> %[[VEC]], double %{{[0-9a-zA-Z_.]+}}, i32 1
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_setr_epi16
-// CHECK-COUNT-8: load i16, i16* {{[0-9a-zA-Z_%.]+}}, align 2
+// CHECK-COUNT-8: load i16, ptr {{[0-9a-zA-Z_%.]+}}, align 2
 // CHECK: call <2 x i64> @_mm_set_epi16
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_setr_epi32
-// CHECK-COUNT-4: load i32, i32* {{[0-9a-zA-Z_%.]+}}, align 4
+// CHECK-COUNT-4: load i32, ptr {{[0-9a-zA-Z_%.]+}}, align 4
 // CHECK: call <2 x i64> @_mm_set_epi32
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_setr_epi64
-// CHECK: %[[VAL1:[0-9a-zA-Z_.]+]] = load i64, i64* %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: %[[VAL2:[0-9a-zA-Z_.]+]] = load i64, i64* %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: %[[VAL1:[0-9a-zA-Z_.]+]] = load i64, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: %[[VAL2:[0-9a-zA-Z_.]+]] = load i64, ptr %{{[0-9a-zA-Z_.]+}}, align 8
 // CHECK: call <2 x i64> @_mm_set_epi64(i64 noundef %[[VAL1]], i64 noundef %[[VAL2]])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_setr_epi8
-// CHECK-COUNT-16: load i8, i8* {{[0-9a-zA-Z_%.]+}}, align 1
+// CHECK-COUNT-16: load i8, ptr {{[0-9a-zA-Z_%.]+}}, align 1
 // CHECK: call <2 x i64> @_mm_set_epi8
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_setr_pd
@@ -989,7 +983,7 @@ test_set() {
 // CHECK: call <4 x i32> @vec_splats(int)(i32 noundef signext 0)
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_setzero_si128()
-// CHECK: store <4 x i32> zeroinitializer, <4 x i32>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <4 x i32> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 
 void __attribute__((noinline))
 test_shuffle() {
@@ -1013,14 +1007,14 @@ test_shuffle() {
 // CHECK: %[[SHR:[0-9a-zA-Z_.]+]] = ashr i32 %{{[0-9a-zA-Z_.]+}}, 6
 // CHECK: %[[AND4:[0-9a-zA-Z_.]+]] = and i32 %[[SHR]], 3
 // CHECK: sext i32 %[[AND4]] to i64
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 0
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 1
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: %[[ADD:[0-9a-zA-Z_.]+]] = add i32 %{{[0-9a-zA-Z_.]+}}, 269488144
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %[[ADD]], i32 2
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: add i32 %{{[0-9a-zA-Z_.]+}}, 269488144
 // CHECK: call <4 x i32> @vec_perm(int vector[4], int vector[4], unsigned char vector[16])
 
@@ -1049,9 +1043,9 @@ test_shuffle() {
 // CHECK: %[[SHR3:[0-9a-zA-Z_.]+]] = ashr i32 %{{[0-9a-zA-Z_.]+}}, 6
 // CHECK: %[[AND4:[0-9a-zA-Z_.]+]] = and i32 %[[SHR3]], 3
 // CHECK: sext i32 %[[AND4]] to i64
-// CHECK-LE: store <2 x i64> <i64 1663540288323457296, i64 0>, <2 x i64>* %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK-BE: store <2 x i64> <i64 1157726452361532951, i64 0>, <2 x i64>* %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK-COUNT-4: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shufflehi_epi16.__permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
+// CHECK-LE: store <2 x i64> <i64 1663540288323457296, i64 0>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK-BE: store <2 x i64> <i64 1157726452361532951, i64 0>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK-COUNT-4: getelementptr inbounds [4 x i16], ptr @_mm_shufflehi_epi16.__permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
 // CHECK: call <2 x i64> @vec_perm(unsigned long long vector[2], unsigned long long vector[2], unsigned char vector[16])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_shufflelo_epi16
@@ -1066,9 +1060,9 @@ test_shuffle() {
 // CHECK: %[[SHR3:[0-9a-zA-Z_.]+]] = ashr i32 {{[0-9a-zA-Z_%.]+}}, 6
 // CHECK: %[[AND4:[0-9a-zA-Z_.]+]] = and i32 %[[SHR3]], 3
 // CHECK: sext i32 %[[AND4]] to i64
-// CHECK-LE: store <2 x i64> <i64 0, i64 2242261671028070680>, <2 x i64>* %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK-BE: store <2 x i64> <i64 0, i64 1736447835066146335>, <2 x i64>* %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK-COUNT-4: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shufflelo_epi16.__permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
+// CHECK-LE: store <2 x i64> <i64 0, i64 2242261671028070680>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK-BE: store <2 x i64> <i64 0, i64 1736447835066146335>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK-COUNT-4: getelementptr inbounds [4 x i16], ptr @_mm_shufflelo_epi16.__permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
 // CHECK: call <2 x i64> @vec_perm(unsigned long long vector[2], unsigned long long vector[2], unsigned char vector[16])
 
 void __attribute__((noinline))
@@ -1085,7 +1079,7 @@ test_sll() {
 // CHECK-LABEL: @test_sll
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_sll_epi16
-// CHECK: store <8 x i16> <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>, <8 x i16>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <8 x i16> <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-LE: call <8 x i16> @vec_splat(unsigned short vector[8], unsigned int)
 // CHECK-BE: call <8 x i16> @vec_splat(unsigned short vector[8], unsigned int)
 // CHECK: call <8 x i16> @vec_cmple(unsigned short vector[8], unsigned short vector[8])(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, <8 x i16> noundef <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>)
@@ -1106,7 +1100,7 @@ test_sll() {
 // CHECK: call <2 x i64> @vec_sel(unsigned long long vector[2], unsigned long long vector[2], bool vector[2])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_slli_epi16
-// CHECK: store <8 x i16> zeroinitializer, <8 x i16>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <8 x i16> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: %[[CMP:[0-9a-zA-Z_.]+]] = icmp sge i32 %{{[0-9a-zA-Z_.]+}}, 0
 // CHECK: br i1 %[[CMP]]
 // CHECK: %[[CMP2:[0-9a-zA-Z_.]+]] = icmp slt i32 %{{[0-9a-zA-Z_.]+}}, 16
@@ -1119,7 +1113,7 @@ test_sll() {
 // CHECK: call <8 x i16> @vec_sl(short vector[8], unsigned short vector[8])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_slli_epi32
-// CHECK: store <4 x i32> zeroinitializer, <4 x i32>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <4 x i32> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: %[[CMP:[0-9a-zA-Z_.]+]] = icmp sge i32 %{{[0-9a-zA-Z_.]+}}, 0
 // CHECK: br i1 %[[CMP]]
 // CHECK: %[[CMP2:[0-9a-zA-Z_.]+]] = icmp slt i32 %{{[0-9a-zA-Z_.]+}}, 32
@@ -1133,7 +1127,7 @@ test_sll() {
 // CHECK: call <4 x i32> @vec_sl(int vector[4], unsigned int vector[4])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_slli_epi64
-// CHECK: store <2 x i64> zeroinitializer, <2 x i64>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <2 x i64> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: %[[CMP:[0-9a-zA-Z_.]+]] = icmp sge i32 %{{[0-9a-zA-Z_.]+}}, 0
 // CHECK: br i1 %[[CMP]]
 // CHECK: %[[CMP2:[0-9a-zA-Z_.]+]] = icmp slt i32 %{{[0-9a-zA-Z_.]+}}, 64
@@ -1147,11 +1141,11 @@ test_sll() {
 // CHECK: call <2 x i64> @vec_sl(long long vector[2], unsigned long long vector[2])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_slli_si128
-// CHECK: store <16 x i8> zeroinitializer, <16 x i8>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <16 x i8> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-BE: %[[SUB:[0-9a-zA-Z_.]+]] = sub nsw i32 16, %{{[0-9a-zA-Z_.]+}}
 // CHECK-BE: call <16 x i8> @vec_sld(unsigned char vector[16], unsigned char vector[16], unsigned int)(<16 x i8> noundef zeroinitializer, <16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext %[[SUB]])
 // CHECK-LE: call <16 x i8> @vec_sld(unsigned char vector[16], unsigned char vector[16], unsigned int)(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, <16 x i8> noundef zeroinitializer, i32 noundef zeroext %{{[0-9a-zA-Z_.]+}})
-// CHECK: store <16 x i8> zeroinitializer, <16 x i8>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <16 x i8> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 
 void __attribute__((noinline))
 test_sqrt() {
@@ -1180,21 +1174,21 @@ test_sra() {
 // CHECK-LABEL: @test_sra
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_sra_epi16
-// CHECK: store <8 x i16> <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>, <8 x i16>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <8 x i16> <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-LE: call <8 x i16> @vec_splat(unsigned short vector[8], unsigned int)(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 0)
 // CHECK-BE: call <8 x i16> @vec_splat(unsigned short vector[8], unsigned int)(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 3)
 // CHECK: call <8 x i16> @vec_min(unsigned short vector[8], unsigned short vector[8])(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, <8 x i16> noundef <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>)
 // CHECK: call <8 x i16> @vec_sra(short vector[8], unsigned short vector[8])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_sra_epi32
-// CHECK: store <4 x i32> <i32 31, i32 31, i32 31, i32 31>, <4 x i32>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <4 x i32> <i32 31, i32 31, i32 31, i32 31>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-LE: call <4 x i32> @vec_splat(unsigned int vector[4], unsigned int)(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 0)
 // CHECK-BE: call <4 x i32> @vec_splat(unsigned int vector[4], unsigned int)(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 1)
 // CHECK: call <4 x i32> @vec_min(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef <i32 31, i32 31, i32 31, i32 31>)
 // CHECK: call <4 x i32> @vec_sra(int vector[4], unsigned int vector[4])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_srai_epi16
-// CHECK: store <8 x i16> <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>, <8 x i16>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <8 x i16> <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: %[[CMP:[0-9a-zA-Z_.]+]] = icmp slt i32 %{{[0-9a-zA-Z_.]+}}, 16
 // CHECK: br i1 %[[CMP]]
 // CHECK: call i1 @llvm.is.constant
@@ -1205,7 +1199,7 @@ test_sra() {
 // CHECK: call <8 x i16> @vec_sra(short vector[8], unsigned short vector[8])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_srai_epi32
-// CHECK: store <4 x i32> <i32 31, i32 31, i32 31, i32 31>, <4 x i32>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <4 x i32> <i32 31, i32 31, i32 31, i32 31>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: %[[CMP:[0-9a-zA-Z_.]+]] = icmp slt i32 %{{[0-9a-zA-Z_.]+}}, 32
 // CHECK: br i1 %[[CMP]]
 // CHECK: call i1 @llvm.is.constant
@@ -1231,7 +1225,7 @@ test_srl() {
 // CHECK-LABEL: @test_srl
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_srl_epi16
-// CHECK: store <8 x i16> <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>, <8 x i16>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <8 x i16> <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-LE: call <8 x i16> @vec_splat(unsigned short vector[8], unsigned int)(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 0)
 // CHECK-BE: call <8 x i16> @vec_splat(unsigned short vector[8], unsigned int)(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 3)
 // CHECK: call <8 x i16> @vec_cmple(unsigned short vector[8], unsigned short vector[8])(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, <8 x i16> noundef <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>)
@@ -1252,7 +1246,7 @@ test_srl() {
 // CHECK: call <2 x i64> @vec_sel(unsigned long long vector[2], unsigned long long vector[2], bool vector[2])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_srli_epi16
-// CHECK: store <8 x i16> zeroinitializer, <8 x i16>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <8 x i16> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: %[[CMP:[0-9a-zA-Z_.]+]] = icmp slt i32 %{{[0-9a-zA-Z_.]+}}, 16
 // CHECK: br i1 %[[CMP]]
 // CHECK: call i1 @llvm.is.constant
@@ -1263,7 +1257,7 @@ test_srl() {
 // CHECK: call <8 x i16> @vec_sr(short vector[8], unsigned short vector[8])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_srli_epi32
-// CHECK: store <4 x i32> zeroinitializer, <4 x i32>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <4 x i32> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: %[[CMP:[0-9a-zA-Z_.]+]] = icmp slt i32 %{{[0-9a-zA-Z_.]+}}, 32
 // CHECK: br i1 %[[CMP]]
 // CHECK: call i1 @llvm.is.constant
@@ -1276,7 +1270,7 @@ test_srl() {
 // CHECK: call <4 x i32> @vec_sr(int vector[4], unsigned int vector[4])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_srli_epi64
-// CHECK: store <2 x i64> zeroinitializer, <2 x i64>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <2 x i64> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: %[[CMP:[0-9a-zA-Z_.]+]] = icmp slt i32 %{{[0-9a-zA-Z_.]+}}, 64
 // CHECK: br i1 %[[CMP]]
 // CHECK: call i1 @llvm.is.constant
@@ -1310,56 +1304,52 @@ test_store() {
 // CHECK-LABEL: @test_store
 
 // CHECK-LABEL: define available_externally void @_mm_store_pd
-// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: %[[CAST:[0-9a-zA-Z_.]+]] = bitcast double* %[[ADDR]] to <16 x i8>*
-// CHECK: call void @vec_st(unsigned char vector[16], long, unsigned char vector[16]*)(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, i64 noundef 0, <16 x i8>* noundef %[[CAST]])
+// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: call void @vec_st(unsigned char vector[16], long, unsigned char vector[16]*)(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, i64 noundef 0, ptr noundef %[[ADDR]])
 
 // CHECK-LABEL: define available_externally void @_mm_store_pd1
-// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: %[[ADDR2:[0-9a-zA-Z_.]+]] = load <2 x double>, <2 x double>* %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK: call void @_mm_store1_pd(double* noundef %[[ADDR]], <2 x double> noundef %[[ADDR2]])
+// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: %[[ADDR2:[0-9a-zA-Z_.]+]] = load <2 x double>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: call void @_mm_store1_pd(ptr noundef %[[ADDR]], <2 x double> noundef %[[ADDR2]])
 
 // CHECK-LABEL: define available_externally void @_mm_store_sd
-// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: store double %{{[0-9a-zA-Z_.]+}}, double* %[[ADDR]]
+// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: store double %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR]]
 
 // CHECK-LABEL: define available_externally void @_mm_store_si128
-// CHECK: %[[LOAD:[0-9a-zA-Z_.]+]] = load <2 x i64>*, <2 x i64>** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: %[[CAST:[0-9a-zA-Z_.]+]] = bitcast <2 x i64>* %[[LOAD]] to <16 x i8>*
-// CHECK: call void @vec_st(unsigned char vector[16], long, unsigned char vector[16]*)(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, i64 noundef 0, <16 x i8>* noundef %[[CAST]])
+// CHECK: %[[LOAD:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: call void @vec_st(unsigned char vector[16], long, unsigned char vector[16]*)(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, i64 noundef 0, ptr noundef %[[LOAD]])
 
 // CHECK-LABEL: define available_externally void @_mm_store1_pd
-// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = load <2 x double>, <2 x double>* %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = load <2 x double>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: %[[CALL:[0-9a-zA-Z_.]+]] = call <2 x double> @vec_splat(double vector[2], unsigned int)(<2 x double> noundef %[[VAL]], i32 noundef zeroext 0)
-// CHECK: call void @_mm_store_pd(double* noundef %[[ADDR]], <2 x double> noundef %[[CALL]])
+// CHECK: call void @_mm_store_pd(ptr noundef %[[ADDR]], <2 x double> noundef %[[CALL]])
 
 // CHECK-LABEL: define available_externally void @_mm_storeh_pd
-// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: store double %{{[0-9a-zA-Z_.]+}}, double* %[[ADDR]]
+// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: store double %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR]]
 
 // CHECK-LABEL: define available_externally void @_mm_storel_epi64
-// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load <2 x i64>*, <2 x i64>** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: %[[CAST:[0-9a-zA-Z_.]+]] = bitcast <2 x i64>* %[[ADDR]] to i64*
-// CHECK: store i64 %{{[0-9a-zA-Z_.]+}}, i64* %[[CAST]], align 8
+// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: store i64 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR]], align 8
 
 // CHECK-LABEL: define available_externally void @_mm_storel_pd
-// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = load <2 x double>, <2 x double>* %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK: call void @_mm_store_sd(double* noundef %[[ADDR]], <2 x double> noundef %[[VAL]])
+// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = load <2 x double>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: call void @_mm_store_sd(ptr noundef %[[ADDR]], <2 x double> noundef %[[VAL]])
 
 // CHECK-LABEL: define available_externally void @_mm_storer_pd
 // CHECK: shufflevector <2 x i64> %{{[0-9a-zA-Z_.]+}}, <2 x i64> %{{[0-9a-zA-Z_.]+}}, <2 x i32> <i32 1, i32 2>
-// CHECK: call void @_mm_store_pd(double* noundef %{{[0-9a-zA-Z_.]+}}, <2 x double> noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK: call void @_mm_store_pd(ptr noundef %{{[0-9a-zA-Z_.]+}}, <2 x double> noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally void @_mm_storeu_pd
-// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load double*, double** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: %[[CAST:[0-9a-zA-Z_.]+]] = bitcast double* %[[ADDR]] to <2 x double>*
-// CHECK: store <2 x double> %{{[0-9a-zA-Z_.]+}}, <2 x double>* %[[CAST]], align 1
+// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: store <2 x double> %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR]], align 1
 
 // CHECK-LABEL: define available_externally void @_mm_storeu_si128
-// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load <2 x i64>*, <2 x i64>** %{{[0-9a-zA-Z_.]+}}, align 8
-// CHECK: store <2 x i64> %{{[0-9a-zA-Z_.]+}}, <2 x i64>* %[[ADDR]], align 1
+// CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: store <2 x i64> %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR]], align 1
 
 void __attribute__((noinline))
 test_stream() {
@@ -1372,16 +1362,16 @@ test_stream() {
 // CHECK-LABEL: @test_stream
 
 // CHECK-LABEL: define available_externally void @_mm_stream_pd
-// CHECK: call void asm sideeffect "dcbtstt 0,$0", "b,~{memory}"(double* %{{[0-9a-zA-Z_.]+}})
+// CHECK: call void asm sideeffect "dcbtstt 0,$0", "b,~{memory}"(ptr %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally void @_mm_stream_si128
-// CHECK: call void asm sideeffect "dcbtstt 0,$0", "b,~{memory}"(<2 x i64>* %{{[0-9a-zA-Z_.]+}})
+// CHECK: call void asm sideeffect "dcbtstt 0,$0", "b,~{memory}"(ptr %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally void @_mm_stream_si32
-// CHECK: call void asm sideeffect "dcbtstt 0,$0", "b,~{memory}"(i32* %{{[0-9a-zA-Z_.]+}})
+// CHECK: call void asm sideeffect "dcbtstt 0,$0", "b,~{memory}"(ptr %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally void @_mm_stream_si64
-// CHECK: call void asm sideeffect "\09dcbtstt\090,$0", "b,~{memory}"(i64* %{{[0-9a-zA-Z_.]+}})
+// CHECK: call void asm sideeffect "\09dcbtstt\090,$0", "b,~{memory}"(ptr %{{[0-9a-zA-Z_.]+}})
 
 void __attribute__((noinline))
 test_sub() {
@@ -1472,14 +1462,14 @@ test_undefined() {
 // CHECK-LABEL: @test_undefined
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_undefined_pd()
-// CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = load <2 x double>, <2 x double>* %[[ADDR:[0-9a-zA-Z_.]+]], align 16
-// CHECK: store <2 x double> %[[VAL]], <2 x double>* %[[ADDR]], align 16
-// CHECK: load <2 x double>, <2 x double>* %[[ADDR]], align 16
+// CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = load <2 x double>, ptr %[[ADDR:[0-9a-zA-Z_.]+]], align 16
+// CHECK: store <2 x double> %[[VAL]], ptr %[[ADDR]], align 16
+// CHECK: load <2 x double>, ptr %[[ADDR]], align 16
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_undefined_si128()
-// CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = load <2 x i64>, <2 x i64>* %[[ADDR:[0-9a-zA-Z_.]+]], align 16
-// CHECK: store <2 x i64> %[[VAL]], <2 x i64>* %[[ADDR]], align 16
-// CHECK: load <2 x i64>, <2 x i64>* %[[ADDR]], align 16
+// CHECK: %[[VAL:[0-9a-zA-Z_.]+]] = load <2 x i64>, ptr %[[ADDR:[0-9a-zA-Z_.]+]], align 16
+// CHECK: store <2 x i64> %[[VAL]], ptr %[[ADDR]], align 16
+// CHECK: load <2 x i64>, ptr %[[ADDR]], align 16
 
 void __attribute__((noinline))
 test_unpack() {

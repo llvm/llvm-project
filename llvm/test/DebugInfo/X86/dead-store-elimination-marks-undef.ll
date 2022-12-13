@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=x86_64-- -S --dse %s  -o - | FileCheck %s
-; Ensure that we can mark a value as undefined when performing dead 
+; RUN: opt -mtriple=x86_64-- -S -passes=dse %s  -o - | FileCheck %s
+; Ensure that we can mark a value as undefined when performing dead
 ; store elimination.
 ; Bugzilla #45080
 

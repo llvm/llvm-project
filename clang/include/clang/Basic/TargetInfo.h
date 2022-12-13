@@ -1436,7 +1436,7 @@ public:
   }
 
   // Get the cache line size of a given cpu. This method switches over
-  // the given cpu and returns "None" if the CPU is not found.
+  // the given cpu and returns "std::nullopt" if the CPU is not found.
   virtual Optional<unsigned> getCPUCacheLineSize() const {
     return std::nullopt;
   }

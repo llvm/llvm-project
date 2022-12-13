@@ -1,4 +1,4 @@
-int otherfn()
-{
-    return 4; // other marker
+int otherfn() {
+  int x = 4; // other marker
+  return x;
 }

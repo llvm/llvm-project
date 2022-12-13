@@ -340,3 +340,27 @@
 // CHECK-RV32IMAFC-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV32IMAFC-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}rv32imafc{{[/\\]+}}ilp32f{{[/\\]+}}lib"
 // CHECK-RV32IMAFC-SAME: "-L[[RESOURCE_DIR:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}baremetal{{[/\\]+}}rv32imafc{{[/\\]+}}ilp32f"
+
+// Check that compiler-rt library without the arch filename suffix will
+// be used if present.
+// RUN: rm -rf %T/baremetal_clang_rt_noarch
+// RUN: mkdir -p %T/baremetal_clang_rt_noarch/lib
+// RUN: touch %T/baremetal_clang_rt_noarch/lib/libclang_rt.builtins.a
+// RUN: %clang %s -### 2>&1 \
+// RUN:     --target=armv6m-none-eabi \
+// RUN:     --sysroot=%T/baremetal_clang_rt_noarch \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-NOARCH %s
+// CHECK-CLANGRT-NOARCH: "-lclang_rt.builtins"
+// CHECK-CLANGRT-NOARCH-NOT: "-lclang_rt.builtins-armv6m"
+
+// Check that compiler-rt library with the arch filename suffix will be
+// used if present.
+// RUN: rm -rf %T/baremetal_clang_rt_arch
+// RUN: mkdir -p %T/baremetal_clang_rt_arch/lib
+// RUN: touch %T/baremetal_clang_rt_arch/lib/libclang_rt.builtins-armv6m.a
+// RUN: %clang %s -### 2>&1 \
+// RUN:     --target=armv6m-none-eabi \
+// RUN:     --sysroot=%T/baremetal_clang_rt_arch \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-ARCH %s
+// CHECK-CLANGRT-ARCH: "-lclang_rt.builtins-armv6m"
+// CHECK-CLANGRT-ARCH-NOT: "-lclang_rt.builtins"

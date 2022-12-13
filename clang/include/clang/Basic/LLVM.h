@@ -69,7 +69,6 @@ namespace clang {
   // ADT's.
   using llvm::ArrayRef;
   using llvm::MutableArrayRef;
-  using llvm::None;
   using llvm::Optional;
   using llvm::OwningArrayRef;
   using llvm::SaveAndRestore;

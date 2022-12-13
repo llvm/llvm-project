@@ -3,7 +3,7 @@
 // DEFINE: TENSOR0="%mlir_src_dir/test/Integration/data/mttkrp_b.tns" \
 // DEFINE: mlir-cpu-runner \
 // DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
 // DEFINE: FileCheck %s
 //
 // RUN: %{command}
@@ -35,6 +35,8 @@
 // from file, and runs the resulting code with the JIT compiler.
 //
 module {
+  func.func private @printMemrefF64(%ptr : tensor<*xf64>)
+
   //
   // Computes Matricized Tensor Times Khatri-Rao Product (MTTKRP) kernel. See
   // http://tensor-compiler.org/docs/data_analytics/index.html.
@@ -112,12 +114,11 @@ module {
 
     // Print the result for verification.
     //
-    // CHECK: ( ( 16075, 21930, 28505, 35800, 43815 ),
-    // CHECK:   ( 10000, 14225, 19180, 24865, 31280 ) )
+    // CHECK:      {{\[}}[16075,   21930,   28505,   35800,   43815],
+    // CHECK-NEXT: [10000,   14225,   19180,   24865,   31280]]
     //
-    %v = vector.transfer_read %0[%cst0, %cst0], %f0
-          : tensor<?x?xf64>, vector<2x5xf64>
-    vector.print %v : vector<2x5xf64>
+    %u = tensor.cast %0: tensor<?x?xf64> to tensor<*xf64>
+    call @printMemrefF64(%u) : (tensor<*xf64>) -> ()
 
     // Release the resources.
     bufferization.dealloc_tensor %b : tensor<?x?x?xf64, #SparseTensor>

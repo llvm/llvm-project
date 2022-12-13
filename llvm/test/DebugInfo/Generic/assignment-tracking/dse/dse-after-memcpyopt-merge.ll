@@ -1,4 +1,4 @@
-; RUN: opt %s -S -dse -o - -experimental-assignment-tracking | FileCheck %s
+; RUN: opt %s -S -passes=dse -o - -experimental-assignment-tracking | FileCheck %s
 
 ;; Observed in the wild, but test is created by running memcpyopt on
 ;; assignment-tracking/memcpyopt/merge-stores.ll then manually inserting

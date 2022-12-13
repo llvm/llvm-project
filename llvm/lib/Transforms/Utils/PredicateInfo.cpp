@@ -783,7 +783,7 @@ PredicateInfo::~PredicateInfo() {
   }
 }
 
-Optional<PredicateConstraint> PredicateBase::getConstraint() const {
+std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
   switch (Type) {
   case PT_Assume:
   case PT_Branch: {

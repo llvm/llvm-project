@@ -348,3 +348,10 @@ llvm.func @stepvector_intr_wrong_type() -> vector<7xf32> {
   %0 = llvm.intr.experimental.stepvector : vector<7xf32>
   llvm.return %0 : vector<7xf32>
 }
+
+// -----
+
+// expected-error @below{{llvm.readonly attribute attached to LLVM non-pointer argument}}
+llvm.func @wrong_readonly_attribute(%vec : f32 {llvm.readonly}) {
+  llvm.return
+}

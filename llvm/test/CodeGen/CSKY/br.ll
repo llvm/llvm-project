@@ -2409,10 +2409,7 @@ define i64 @brR0_i64_sge(i64 %x) {
 ; GENERIC-NEXT:    bt16 .LBB50_2
 ; GENERIC-NEXT:  # %bb.1: # %label1
 ; GENERIC-NEXT:    movi16 a0, 1
-; GENERIC-NEXT:    br32 .LBB50_3
 ; GENERIC-NEXT:  .LBB50_2: # %label2
-; GENERIC-NEXT:    movi16 a0, 0
-; GENERIC-NEXT:  .LBB50_3: # %label1
 ; GENERIC-NEXT:    movi16 a1, 0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
@@ -5868,9 +5865,7 @@ define i1 @brRI_i1_uge(i1 %x) {
 ; CHECK-NEXT:    bt32 .LBB126_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    rts16
 ; CHECK-NEXT:  .LBB126_2: # %label2
-; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: brRI_i1_uge:
@@ -5883,10 +5878,7 @@ define i1 @brRI_i1_uge(i1 %x) {
 ; GENERIC-NEXT:    bt16 .LBB126_2
 ; GENERIC-NEXT:  # %bb.1: # %label1
 ; GENERIC-NEXT:    movi16 a0, 1
-; GENERIC-NEXT:    addi16 sp, sp, 4
-; GENERIC-NEXT:    rts16
 ; GENERIC-NEXT:  .LBB126_2: # %label2
-; GENERIC-NEXT:    movi16 a0, 0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 ; CHECK-UGTXT:    icmpu32 a0, a1, a0
@@ -5951,7 +5943,6 @@ define i1 @brRI_i1_ult(i1 %x) {
 ; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    bt32 .LBB128_2
 ; CHECK-NEXT:  # %bb.1: # %label1
-; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
 ; CHECK-NEXT:  .LBB128_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
@@ -5966,7 +5957,6 @@ define i1 @brRI_i1_ult(i1 %x) {
 ; GENERIC-NEXT:    btsti16 a0, 0
 ; GENERIC-NEXT:    bt16 .LBB128_2
 ; GENERIC-NEXT:  # %bb.1: # %label1
-; GENERIC-NEXT:    movi16 a0, 1
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 ; GENERIC-NEXT:  .LBB128_2: # %label2
@@ -6163,7 +6153,6 @@ define i1 @brRI_i1_sgt(i1 %x) {
 ; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    bt32 .LBB133_2
 ; CHECK-NEXT:  # %bb.1: # %label1
-; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
 ; CHECK-NEXT:  .LBB133_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
@@ -6178,7 +6167,6 @@ define i1 @brRI_i1_sgt(i1 %x) {
 ; GENERIC-NEXT:    btsti16 a0, 0
 ; GENERIC-NEXT:    bt16 .LBB133_2
 ; GENERIC-NEXT:  # %bb.1: # %label1
-; GENERIC-NEXT:    movi16 a0, 1
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 ; GENERIC-NEXT:  .LBB133_2: # %label2
@@ -6203,7 +6191,6 @@ define i1 @brR0_i1_sgt(i1 %x) {
 ; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    bt32 .LBB134_2
 ; CHECK-NEXT:  # %bb.1: # %label1
-; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
 ; CHECK-NEXT:  .LBB134_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
@@ -6218,7 +6205,6 @@ define i1 @brR0_i1_sgt(i1 %x) {
 ; GENERIC-NEXT:    btsti16 a0, 0
 ; GENERIC-NEXT:    bt16 .LBB134_2
 ; GENERIC-NEXT:  # %bb.1: # %label1
-; GENERIC-NEXT:    movi16 a0, 1
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 ; GENERIC-NEXT:  .LBB134_2: # %label2
@@ -6541,9 +6527,7 @@ define i1 @brRI_i1_sle(i1 %x) {
 ; CHECK-NEXT:    bt32 .LBB142_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    rts16
 ; CHECK-NEXT:  .LBB142_2: # %label2
-; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: brRI_i1_sle:
@@ -6556,10 +6540,7 @@ define i1 @brRI_i1_sle(i1 %x) {
 ; GENERIC-NEXT:    bt16 .LBB142_2
 ; GENERIC-NEXT:  # %bb.1: # %label1
 ; GENERIC-NEXT:    movi16 a0, 1
-; GENERIC-NEXT:    addi16 sp, sp, 4
-; GENERIC-NEXT:    rts16
 ; GENERIC-NEXT:  .LBB142_2: # %label2
-; GENERIC-NEXT:    movi16 a0, 0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 ; CHECK-UGTXT:    icmpu32 a0, a1, a0
@@ -6581,9 +6562,7 @@ define i1 @brR0_i1_sle(i1 %x) {
 ; CHECK-NEXT:    bt32 .LBB143_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    rts16
 ; CHECK-NEXT:  .LBB143_2: # %label2
-; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: brR0_i1_sle:
@@ -6596,10 +6575,7 @@ define i1 @brR0_i1_sle(i1 %x) {
 ; GENERIC-NEXT:    bt16 .LBB143_2
 ; GENERIC-NEXT:  # %bb.1: # %label1
 ; GENERIC-NEXT:    movi16 a0, 1
-; GENERIC-NEXT:    addi16 sp, sp, 4
-; GENERIC-NEXT:    rts16
 ; GENERIC-NEXT:  .LBB143_2: # %label2
-; GENERIC-NEXT:    movi16 a0, 0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
 ; GENERIC-NEXT:    rts16
 ; CHECK-UGTXT:    icmpu32 a0, a1, a0

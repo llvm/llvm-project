@@ -55,7 +55,7 @@ public:
 
   /// Appends new source to the source list.
   ///
-  ///\param[in] source - An ExternalSemaSource.
+  ///\param[in] Source - An ExternalSemaSource.
   ///
   void AddSource(ExternalSemaSource *Source);
 

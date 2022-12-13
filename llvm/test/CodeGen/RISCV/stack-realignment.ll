@@ -547,7 +547,6 @@ define void @caller4096() {
 ; RV32I-NEXT:    call callee@plt
 ; RV32I-NEXT:    lui a0, 2
 ; RV32I-NEXT:    sub sp, s0, a0
-; RV32I-NEXT:    lui a0, 2
 ; RV32I-NEXT:    addi a0, a0, -2032
 ; RV32I-NEXT:    add sp, sp, a0
 ; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
@@ -575,7 +574,6 @@ define void @caller4096() {
 ; RV64I-NEXT:    call callee@plt
 ; RV64I-NEXT:    lui a0, 2
 ; RV64I-NEXT:    sub sp, s0, a0
-; RV64I-NEXT:    lui a0, 2
 ; RV64I-NEXT:    addiw a0, a0, -2032
 ; RV64I-NEXT:    add sp, sp, a0
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
