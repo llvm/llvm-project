@@ -286,18 +286,24 @@ private:
 
   struct DescriptorMapUpdateResult {
     bool m_update_ran;
+    bool m_retry_update;
     uint32_t m_num_found;
 
-    DescriptorMapUpdateResult(bool ran, uint32_t found) {
+    DescriptorMapUpdateResult(bool ran, bool retry, uint32_t found) {
       m_update_ran = ran;
+
+      m_retry_update = retry;
+
       m_num_found = found;
     }
 
-    static DescriptorMapUpdateResult Fail() { return {false, 0}; }
+    static DescriptorMapUpdateResult Fail() { return {false, false, 0}; }
 
     static DescriptorMapUpdateResult Success(uint32_t found) {
-      return {true, found};
+      return {true, false, found};
     }
+
+    static DescriptorMapUpdateResult Retry() { return {false, true, 0}; }
   };
 
   /// Abstraction to read the Objective-C class info.
@@ -395,6 +401,7 @@ private:
                                uint32_t num_class_infos);
 
   enum class SharedCacheWarningReason {
+    eExpressionUnableToRun,
     eExpressionExecutionFailure,
     eNotEnoughClassesRead
   };
