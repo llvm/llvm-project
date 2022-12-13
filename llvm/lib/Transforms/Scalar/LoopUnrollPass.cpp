@@ -344,7 +344,7 @@ struct PragmaInfo {
 /// \returns Optional value, holding the RolledDynamicCost and UnrolledCost. If
 /// the analysis failed (no benefits expected from the unrolling, or the loop is
 /// too big to analyze), the returned value is std::nullopt.
-static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
+static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
     const Loop *L, unsigned TripCount, DominatorTree &DT, ScalarEvolution &SE,
     const SmallPtrSetImpl<const Value *> &EphValues,
     const TargetTransformInfo &TTI, unsigned MaxUnrolledLoopSize,
@@ -819,7 +819,7 @@ static std::optional<unsigned> shouldFullUnroll(
   // The loop isn't that small, but we still can fully unroll it if that
   // helps to remove a significant number of instructions.
   // To check that, run additional analysis on the loop.
-  if (Optional<EstimatedUnrollCost> Cost = analyzeLoopUnrollCost(
+  if (std::optional<EstimatedUnrollCost> Cost = analyzeLoopUnrollCost(
           L, FullUnrollTripCount, DT, SE, EphValues, TTI,
           UP.Threshold * UP.MaxPercentThresholdBoost / 100,
           UP.MaxIterationsCountToAnalyze)) {

@@ -191,7 +191,7 @@ struct VectorLayout {
 
 template <typename T>
 T getWithDefaultOverride(const cl::opt<T> &ClOption,
-                         const llvm::Optional<T> &DefaultOverride) {
+                         const std::optional<T> &DefaultOverride) {
   return ClOption.getNumOccurrences() ? ClOption
                                       : DefaultOverride.value_or(ClOption);
 }
@@ -235,8 +235,8 @@ private:
   void replaceUses(Instruction *Op, Value *CV);
   bool canTransferMetadata(unsigned Kind);
   void transferMetadataAndIRFlags(Instruction *Op, const ValueVector &CV);
-  Optional<VectorLayout> getVectorLayout(Type *Ty, Align Alignment,
-                                         const DataLayout &DL);
+  std::optional<VectorLayout> getVectorLayout(Type *Ty, Align Alignment,
+                                              const DataLayout &DL);
   bool finish();
 
   template<typename T> bool splitUnary(Instruction &, const T &);
@@ -486,7 +486,7 @@ void ScalarizerVisitor::transferMetadataAndIRFlags(Instruction *Op,
 // Try to fill in Layout from Ty, returning true on success.  Alignment is
 // the alignment of the vector, or std::nullopt if the ABI default should be
 // used.
-Optional<VectorLayout>
+std::optional<VectorLayout>
 ScalarizerVisitor::getVectorLayout(Type *Ty, Align Alignment,
                                    const DataLayout &DL) {
   VectorLayout Layout;
@@ -920,7 +920,7 @@ bool ScalarizerVisitor::visitLoadInst(LoadInst &LI) {
   if (!LI.isSimple())
     return false;
 
-  Optional<VectorLayout> Layout = getVectorLayout(
+  std::optional<VectorLayout> Layout = getVectorLayout(
       LI.getType(), LI.getAlign(), LI.getModule()->getDataLayout());
   if (!Layout)
     return false;
@@ -946,7 +946,7 @@ bool ScalarizerVisitor::visitStoreInst(StoreInst &SI) {
     return false;
 
   Value *FullValue = SI.getValueOperand();
-  Optional<VectorLayout> Layout = getVectorLayout(
+  std::optional<VectorLayout> Layout = getVectorLayout(
       FullValue->getType(), SI.getAlign(), SI.getModule()->getDataLayout());
   if (!Layout)
     return false;
