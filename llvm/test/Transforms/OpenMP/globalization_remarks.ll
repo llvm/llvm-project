@@ -13,13 +13,13 @@ target triple = "nvptx64"
 
 define void @foo() {
 entry:
-  %c = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 false, i1 true, i1 true)
+  %c = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 false, i1 true)
   %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !10
   %x_on_stack = bitcast i8* %0 to i32*
   %1 = bitcast i32* %x_on_stack to i8*
   call void @share(i8* %1), !dbg !10
   call void @__kmpc_free_shared(i8* %0)
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false, i1 true)
+  call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false)
   ret void
 }
 
@@ -33,9 +33,9 @@ declare i8* @__kmpc_alloc_shared(i64)
 
 declare void @__kmpc_free_shared(i8* nocapture)
 
-declare i32 @__kmpc_target_init(%struct.ident_t*, i1, i1, i1);
+declare i32 @__kmpc_target_init(%struct.ident_t*, i1, i1);
 
-declare void @__kmpc_target_deinit(%struct.ident_t*, i1, i1)
+declare void @__kmpc_target_deinit(%struct.ident_t*, i1)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}
