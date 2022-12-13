@@ -86,7 +86,7 @@ void spmd(void) {
 #pragma omp begin declare target device_type(nohost)
 __attribute__((weak)) 
 extern "C" int __kmpc_target_init(void *Ident, char Mode,
-                       bool UseGenericStateMachine, bool) { // all-remark {{Could not internalize function. Some optimizations may not be possible. [OMP140]}}
+                       bool UseGenericStateMachine) { // all-remark {{Could not internalize function. Some optimizations may not be possible. [OMP140]}}
   return 0;
 }
 #pragma omp end declare target
