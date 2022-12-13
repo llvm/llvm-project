@@ -108,15 +108,12 @@ define void @load_i64_stride3_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-FAST-NEXT:    vzeroupper
 ; AVX512BW-FAST-NEXT:    retq
   %wide.vec = load <6 x i64>, ptr %in.vec, align 64
-
   %strided.vec0 = shufflevector <6 x i64> %wide.vec, <6 x i64> poison, <2 x i32> <i32 0, i32 3>
   %strided.vec1 = shufflevector <6 x i64> %wide.vec, <6 x i64> poison, <2 x i32> <i32 1, i32 4>
   %strided.vec2 = shufflevector <6 x i64> %wide.vec, <6 x i64> poison, <2 x i32> <i32 2, i32 5>
-
   store <2 x i64> %strided.vec0, ptr %out.vec0, align 64
   store <2 x i64> %strided.vec1, ptr %out.vec1, align 64
   store <2 x i64> %strided.vec2, ptr %out.vec2, align 64
-
   ret void
 }
 
@@ -203,15 +200,12 @@ define void @load_i64_stride3_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %wide.vec = load <12 x i64>, ptr %in.vec, align 64
-
   %strided.vec0 = shufflevector <12 x i64> %wide.vec, <12 x i64> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
   %strided.vec1 = shufflevector <12 x i64> %wide.vec, <12 x i64> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
   %strided.vec2 = shufflevector <12 x i64> %wide.vec, <12 x i64> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
-
   store <4 x i64> %strided.vec0, ptr %out.vec0, align 64
   store <4 x i64> %strided.vec1, ptr %out.vec1, align 64
   store <4 x i64> %strided.vec2, ptr %out.vec2, align 64
-
   ret void
 }
 
@@ -357,15 +351,12 @@ define void @load_i64_stride3_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %wide.vec = load <24 x i64>, ptr %in.vec, align 64
-
   %strided.vec0 = shufflevector <24 x i64> %wide.vec, <24 x i64> poison, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
   %strided.vec1 = shufflevector <24 x i64> %wide.vec, <24 x i64> poison, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22>
   %strided.vec2 = shufflevector <24 x i64> %wide.vec, <24 x i64> poison, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>
-
   store <8 x i64> %strided.vec0, ptr %out.vec0, align 64
   store <8 x i64> %strided.vec1, ptr %out.vec1, align 64
   store <8 x i64> %strided.vec2, ptr %out.vec2, align 64
-
   ret void
 }
 
@@ -649,15 +640,12 @@ define void @load_i64_stride3_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %wide.vec = load <48 x i64>, ptr %in.vec, align 64
-
   %strided.vec0 = shufflevector <48 x i64> %wide.vec, <48 x i64> poison, <16 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21, i32 24, i32 27, i32 30, i32 33, i32 36, i32 39, i32 42, i32 45>
   %strided.vec1 = shufflevector <48 x i64> %wide.vec, <48 x i64> poison, <16 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22, i32 25, i32 28, i32 31, i32 34, i32 37, i32 40, i32 43, i32 46>
   %strided.vec2 = shufflevector <48 x i64> %wide.vec, <48 x i64> poison, <16 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23, i32 26, i32 29, i32 32, i32 35, i32 38, i32 41, i32 44, i32 47>
-
   store <16 x i64> %strided.vec0, ptr %out.vec0, align 64
   store <16 x i64> %strided.vec1, ptr %out.vec1, align 64
   store <16 x i64> %strided.vec2, ptr %out.vec2, align 64
-
   ret void
 }
 
@@ -1281,15 +1269,12 @@ define void @load_i64_stride3_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %wide.vec = load <96 x i64>, ptr %in.vec, align 64
-
   %strided.vec0 = shufflevector <96 x i64> %wide.vec, <96 x i64> poison, <32 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21, i32 24, i32 27, i32 30, i32 33, i32 36, i32 39, i32 42, i32 45, i32 48, i32 51, i32 54, i32 57, i32 60, i32 63, i32 66, i32 69, i32 72, i32 75, i32 78, i32 81, i32 84, i32 87, i32 90, i32 93>
   %strided.vec1 = shufflevector <96 x i64> %wide.vec, <96 x i64> poison, <32 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22, i32 25, i32 28, i32 31, i32 34, i32 37, i32 40, i32 43, i32 46, i32 49, i32 52, i32 55, i32 58, i32 61, i32 64, i32 67, i32 70, i32 73, i32 76, i32 79, i32 82, i32 85, i32 88, i32 91, i32 94>
   %strided.vec2 = shufflevector <96 x i64> %wide.vec, <96 x i64> poison, <32 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23, i32 26, i32 29, i32 32, i32 35, i32 38, i32 41, i32 44, i32 47, i32 50, i32 53, i32 56, i32 59, i32 62, i32 65, i32 68, i32 71, i32 74, i32 77, i32 80, i32 83, i32 86, i32 89, i32 92, i32 95>
-
   store <32 x i64> %strided.vec0, ptr %out.vec0, align 64
   store <32 x i64> %strided.vec1, ptr %out.vec1, align 64
   store <32 x i64> %strided.vec2, ptr %out.vec2, align 64
-
   ret void
 }
 
@@ -2652,15 +2637,12 @@ define void @load_i64_stride3_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %wide.vec = load <192 x i64>, ptr %in.vec, align 64
-
   %strided.vec0 = shufflevector <192 x i64> %wide.vec, <192 x i64> poison, <64 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21, i32 24, i32 27, i32 30, i32 33, i32 36, i32 39, i32 42, i32 45, i32 48, i32 51, i32 54, i32 57, i32 60, i32 63, i32 66, i32 69, i32 72, i32 75, i32 78, i32 81, i32 84, i32 87, i32 90, i32 93, i32 96, i32 99, i32 102, i32 105, i32 108, i32 111, i32 114, i32 117, i32 120, i32 123, i32 126, i32 129, i32 132, i32 135, i32 138, i32 141, i32 144, i32 147, i32 150, i32 153, i32 156, i32 159, i32 162, i32 165, i32 168, i32 171, i32 174, i32 177, i32 180, i32 183, i32 186, i32 189>
   %strided.vec1 = shufflevector <192 x i64> %wide.vec, <192 x i64> poison, <64 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22, i32 25, i32 28, i32 31, i32 34, i32 37, i32 40, i32 43, i32 46, i32 49, i32 52, i32 55, i32 58, i32 61, i32 64, i32 67, i32 70, i32 73, i32 76, i32 79, i32 82, i32 85, i32 88, i32 91, i32 94, i32 97, i32 100, i32 103, i32 106, i32 109, i32 112, i32 115, i32 118, i32 121, i32 124, i32 127, i32 130, i32 133, i32 136, i32 139, i32 142, i32 145, i32 148, i32 151, i32 154, i32 157, i32 160, i32 163, i32 166, i32 169, i32 172, i32 175, i32 178, i32 181, i32 184, i32 187, i32 190>
   %strided.vec2 = shufflevector <192 x i64> %wide.vec, <192 x i64> poison, <64 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23, i32 26, i32 29, i32 32, i32 35, i32 38, i32 41, i32 44, i32 47, i32 50, i32 53, i32 56, i32 59, i32 62, i32 65, i32 68, i32 71, i32 74, i32 77, i32 80, i32 83, i32 86, i32 89, i32 92, i32 95, i32 98, i32 101, i32 104, i32 107, i32 110, i32 113, i32 116, i32 119, i32 122, i32 125, i32 128, i32 131, i32 134, i32 137, i32 140, i32 143, i32 146, i32 149, i32 152, i32 155, i32 158, i32 161, i32 164, i32 167, i32 170, i32 173, i32 176, i32 179, i32 182, i32 185, i32 188, i32 191>
-
   store <64 x i64> %strided.vec0, ptr %out.vec0, align 64
   store <64 x i64> %strided.vec1, ptr %out.vec1, align 64
   store <64 x i64> %strided.vec2, ptr %out.vec2, align 64
-
   ret void
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
