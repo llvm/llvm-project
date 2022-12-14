@@ -153,7 +153,7 @@ enum VmemType {
 };
 
 // Maps values of InstCounterType to the instruction that waits on that
-// counter. Only used if GCNSubtarget::hasExtendedCounterWaitCounts()
+// counter. Only used if GCNSubtarget::hasExtendedWaitCounts()
 // returns true.
 static const unsigned instrsForExtendedCounterTypes[NUM_INST_CNTS] = {
     AMDGPU::S_WAIT_LOADCNT,  AMDGPU::S_WAIT_DSCNT,     AMDGPU::S_WAIT_EXPCNT,
@@ -1344,45 +1344,31 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
 
   // Look for an opportunity to convert existing S_WAIT_LOADCNT,
   // S_WAIT_STORECNT and S_WAIT_DSCNT into new S_WAIT_LOADCNT_DSCNT
-  // or S_WAIT_STORECNT_DSCNT.
+  // or S_WAIT_STORECNT_DSCNT. This is achieved by selectively removing
+  // instructions so that createNewWaitcnt() will create new combined
+  // instructions to replace them.
 
   if (Wait.DsCnt != ~0u) {
+    // This is a vector of addresses in WaitInstrs pointing to instructions
+    // that should be removed if they are present.
     SmallVector<MachineInstr **, 2> WaitsToErase;
 
-    if (WaitInstrs[DS_CNT]) {
-      // There is an existing S_WAIT_DSCNT that is needed. If we know we
-      // will also need to insert a new wait for either LOADCnt or
-      // STORECnt, then remove the existing S_WAIT_DSCNT so that a new
-      // combined wait instruction can be inserted later by createNewWaitcnt().
-      //
-      // A complicating factor is that it must be assumed that the code
-      // coming into this pass might only be using single counter wait
-      // instructions. If so, this pass should try to optimise these
-      // into combined waits. So, if we also have either an S_WAIT_LOADCNT
-      // or an S_WAIT_STORECNT that we know we need to keep, delete
-      // it (don't delete both if we have them).
+    // If it's known that both DScnt and either LOADcnt or STOREcnt (but not
+    // both) need to be waited for, ensure that there are no existing
+    // individual wait count instructions for these.
 
-      if (Wait.LoadCnt != ~0u) {
-        if (WaitInstrs[LOAD_CNT])
-          WaitsToErase.push_back(&WaitInstrs[LOAD_CNT]);
-        WaitsToErase.push_back(&WaitInstrs[DS_CNT]);
-      } else if (Wait.StoreCnt != ~0u) {
-        if (WaitInstrs[STORE_CNT])
-          WaitsToErase.push_back(&WaitInstrs[STORE_CNT]);
-        WaitsToErase.push_back(&WaitInstrs[DS_CNT]);
-      }
-    } else if (WaitInstrs[LOAD_CNT] && Wait.LoadCnt != ~0u) {
-      // There is no existing S_WAIT_DSCNT and we know we'll need to
-      // add one, but there is an existing S_WAIT_LOADCNT that will
-      // be needed. If that is deleted, then a combined instruction
-      // can be generated later.
+    if (Wait.LoadCnt != ~0u) {
       WaitsToErase.push_back(&WaitInstrs[LOAD_CNT]);
-    } else if (WaitInstrs[STORE_CNT] && Wait.StoreCnt != ~0u) {
-      // Similarly with respect to S_WAIT_STORECNT.
+      WaitsToErase.push_back(&WaitInstrs[DS_CNT]);
+    } else if (Wait.StoreCnt != ~0u) {
       WaitsToErase.push_back(&WaitInstrs[STORE_CNT]);
+      WaitsToErase.push_back(&WaitInstrs[DS_CNT]);
     }
 
     for (MachineInstr **WI : WaitsToErase) {
+      if (!*WI)
+        continue;
+
       (*WI)->eraseFromParent();
       *WI = nullptr;
       Modified = true;
@@ -1716,8 +1702,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
               ScoreBrackets.determineWait(EXP_CNT, RegNo, Wait);
             }
             ScoreBrackets.determineWait(DS_CNT, RegNo, Wait);
-          } else
+          } else {
             ScoreBrackets.determineWait(SmemAccessCounter, RegNo, Wait);
+          }
         }
       }
     }
