@@ -1177,12 +1177,11 @@ define <2 x i64> @mgather_v2i16_zextload_v2i64(<2 x i16*> %ptrs, <2 x i1> %m, <2
 ; RV64ZVE32F-NEXT:    vsetvli zero, zero, e16, mf2, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; RV64ZVE32F-NEXT:  .LBB18_4: # %else2
-; RV64ZVE32F-NEXT:    vsetivli zero, 0, e16, mf2, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; RV64ZVE32F-NEXT:    vmv.x.s a0, v8
 ; RV64ZVE32F-NEXT:    lui a1, 16
 ; RV64ZVE32F-NEXT:    addiw a1, a1, -1
 ; RV64ZVE32F-NEXT:    and a0, a0, a1
-; RV64ZVE32F-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64ZVE32F-NEXT:    vmv.x.s a2, v8
 ; RV64ZVE32F-NEXT:    and a1, a2, a1
@@ -3600,12 +3599,11 @@ define <8 x i32> @mgather_baseidx_v8i32(i32* %base, <8 x i32> %idxs, <8 x i1> %m
 ; RV64ZVE32F-NEXT:    andi a2, a1, 16
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB41_7
 ; RV64ZVE32F-NEXT:  .LBB41_14: # %cond.load10
-; RV64ZVE32F-NEXT:    vsetivli zero, 0, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
 ; RV64ZVE32F-NEXT:    vmv.x.s a2, v12
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
 ; RV64ZVE32F-NEXT:    vmv.s.x v8, a2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 4
@@ -9538,12 +9536,11 @@ define <8 x float> @mgather_baseidx_v8f32(float* %base, <8 x i32> %idxs, <8 x i1
 ; RV64ZVE32F-NEXT:    andi a2, a1, 16
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB80_7
 ; RV64ZVE32F-NEXT:  .LBB80_14: # %cond.load10
-; RV64ZVE32F-NEXT:    vsetivli zero, 0, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
 ; RV64ZVE32F-NEXT:    vmv.x.s a2, v12
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw ft0, 0(a2)
-; RV64ZVE32F-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
 ; RV64ZVE32F-NEXT:    vfmv.s.f v8, ft0
 ; RV64ZVE32F-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 4
