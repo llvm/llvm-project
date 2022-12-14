@@ -178,4 +178,16 @@ add_header_library(
     ROUND_OPT
 )
 
+add_header_library(
+  dyadic_float
+  HDRS
+    dyadic_float.h
+  DEPENDS
+    .float_properties
+    .fp_bits
+    .multiply_add
+    libc.src.__support.common
+    libc.src.__support.uint
+)
+
 add_subdirectory(generic)
