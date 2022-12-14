@@ -23,15 +23,8 @@
 // There must be some difference in thread initialization
 // between normal execution and unit tests.
 #  define TRACE_TEST(SUITE, NAME) TEST(SUITE, DISABLED_##NAME)
-#  define TRACE_TEST_OPTIMIZED(SUITE, NAME) TEST(SUITE, DISABLED_##NAME)
 #else
 #  define TRACE_TEST(SUITE, NAME) TEST(SUITE, NAME)
-// Some tests deadlock in debug builds.
-#  if !SANITIZER_DEBUG
-#    define TRACE_TEST_OPTIMIZED(SUITE, NAME) TEST(SUITE, NAME)
-#  else
-#    define TRACE_TEST_OPTIMIZED(SUITE, NAME) TEST(SUITE, DISABLED_##NAME)
-#  endif
 #endif
 
 namespace __tsan {
@@ -74,7 +67,7 @@ struct ThreadArray {
   operator ThreadState *() { return threads[0]; }
 };
 
-TRACE_TEST_OPTIMIZED(Trace, RestoreAccess) {
+TRACE_TEST(Trace, RestoreAccess) {
   // A basic test with some function entry/exit events,
   // some mutex lock/unlock events and some other distracting
   // memory events.
@@ -119,7 +112,7 @@ TRACE_TEST_OPTIMIZED(Trace, RestoreAccess) {
   CHECK_EQ(tag, kExternalTagNone);
 }
 
-TRACE_TEST_OPTIMIZED(Trace, MemoryAccessSize) {
+TRACE_TEST(Trace, MemoryAccessSize) {
   // Test tracing and matching of accesses of different sizes.
   struct Params {
     uptr access_size, offset, size;
@@ -174,7 +167,7 @@ TRACE_TEST_OPTIMIZED(Trace, MemoryAccessSize) {
   }
 }
 
-TRACE_TEST_OPTIMIZED(Trace, RestoreMutexLock) {
+TRACE_TEST(Trace, RestoreMutexLock) {
   // Check of restoration of a mutex lock event.
   ThreadArray<1> thr;
   TraceFunc(thr, 0x1000);
@@ -204,7 +197,7 @@ TRACE_TEST_OPTIMIZED(Trace, RestoreMutexLock) {
   CHECK_EQ(mset.Get(1).write, false);
 }
 
-TRACE_TEST_OPTIMIZED(Trace, MultiPart) {
+TRACE_TEST(Trace, MultiPart) {
   // Check replay of a trace with multiple parts.
   ThreadArray<1> thr;
   FuncEntry(thr, 0x1000);
