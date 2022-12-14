@@ -3,6 +3,6 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @v = common global i16 0, align 4
 
-define i16 *@bar() {
- ret i16 *@v
+define ptr @bar() {
+ ret ptr @v
 }
