@@ -2816,14 +2816,26 @@ static MVT getLMUL1VT(MVT VT) {
 static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL,
                                  MVT VT, SDLoc DL, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
+  const MVT XLenVT = Subtarget.getXLenVT();
+
   SDValue Passthru = DAG.getUNDEF(VT);
-  if (VT.isFloatingPoint())
+  if (VT.isFloatingPoint()) {
     // TODO: Use vmv.v.i for appropriate constants
-    return DAG.getNode(RISCVISD::VFMV_S_F_VL, DL, VT, Passthru, Scalar, VL);
+    // Use M1 or smaller to avoid over constraining register allocation
+    const MVT M1VT = getLMUL1VT(VT);
+    auto InnerVT = VT.bitsLE(M1VT) ? VT : M1VT;
+    SDValue Result = DAG.getNode(RISCVISD::VFMV_S_F_VL, DL, InnerVT,
+                                 DAG.getUNDEF(InnerVT), Scalar, VL);
+    if (VT != InnerVT)
+      Result = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
+                           DAG.getUNDEF(VT),
+                           Result, DAG.getConstant(0, DL, XLenVT));
+    return Result;
+  }
+
 
   // Avoid the tricky legalization cases by falling back to using the
   // splat code which already handles it gracefully.
-  const MVT XLenVT = Subtarget.getXLenVT();
   if (!Scalar.getValueType().bitsLE(XLenVT))
     return lowerScalarSplat(DAG.getUNDEF(VT), Scalar,
                             DAG.getConstant(1, DL, XLenVT),
@@ -2844,7 +2856,17 @@ static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL,
         VT.bitsLE(getLMUL1VT(VT)))
       return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Passthru, Scalar, VL);
   }
-  return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT, Passthru, Scalar, VL);
+  // Use M1 or smaller to avoid over constraining register allocation
+  const MVT M1VT = getLMUL1VT(VT);
+  auto InnerVT = VT.bitsLE(M1VT) ? VT : M1VT;
+  SDValue Result = DAG.getNode(RISCVISD::VMV_S_X_VL, DL, InnerVT,
+                               DAG.getUNDEF(InnerVT), Scalar, VL);
+  if (VT != InnerVT)
+    Result = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
+                         DAG.getUNDEF(VT),
+                         Result, DAG.getConstant(0, DL, XLenVT));
+  return Result;
+
 }
 
 static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, bool &SwapSources,
