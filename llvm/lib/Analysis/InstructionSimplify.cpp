@@ -752,7 +752,7 @@ static Value *simplifyByDomEq(unsigned Opcode, Value *Op0, Value *Op1,
   if (MaxRecurse != RecursionLimit)
     return nullptr;
 
-  Optional<bool> Imp =
+  std::optional<bool> Imp =
       isImpliedByDomCondition(CmpInst::ICMP_EQ, Op0, Op1, Q.CxtI, Q.DL);
   if (Imp && *Imp) {
     Type *Ty = Op0->getType();
@@ -2217,7 +2217,7 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     return Constant::getNullValue(Op0->getType());
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
-    if (Optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL)) {
+    if (std::optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL)) {
       // If Op0 is true implies Op1 is true, then Op0 is a subset of Op1.
       if (*Implied == true)
         return Op0;
@@ -2225,7 +2225,7 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       if (*Implied == false)
         return ConstantInt::getFalse(Op0->getType());
     }
-    if (Optional<bool> Implied = isImpliedCondition(Op1, Op0, Q.DL)) {
+    if (std::optional<bool> Implied = isImpliedCondition(Op1, Op0, Q.DL)) {
       // If Op1 is true implies Op0 is true, then Op1 is a subset of Op0.
       if (Implied.value())
         return Op1;
@@ -2479,7 +2479,8 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       return V;
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
-    if (Optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL, false)) {
+    if (std::optional<bool> Implied =
+            isImpliedCondition(Op0, Op1, Q.DL, false)) {
       // If Op0 is false implies Op1 is false, then Op1 is a subset of Op0.
       if (*Implied == false)
         return Op0;
@@ -2487,7 +2488,8 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       if (*Implied == true)
         return ConstantInt::getTrue(Op0->getType());
     }
-    if (Optional<bool> Implied = isImpliedCondition(Op1, Op0, Q.DL, false)) {
+    if (std::optional<bool> Implied =
+            isImpliedCondition(Op1, Op0, Q.DL, false)) {
       // If Op1 is false implies Op0 is false, then Op0 is a subset of Op1.
       if (*Implied == false)
         return Op1;
@@ -3616,8 +3618,8 @@ static Value *simplifyICmpWithDominatingAssume(CmpInst::Predicate Predicate,
         continue;
 
       CallInst *Assume = cast<CallInst>(AssumeVH);
-      if (Optional<bool> Imp = isImpliedCondition(Assume->getArgOperand(0),
-                                                  Predicate, LHS, RHS, Q.DL))
+      if (std::optional<bool> Imp = isImpliedCondition(
+              Assume->getArgOperand(0), Predicate, LHS, RHS, Q.DL))
         if (isValidAssumeForContext(Assume, Q.CxtI, Q.DT))
           return ConstantInt::get(getCompareTy(LHS), *Imp);
     }
@@ -4647,7 +4649,7 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   if (Value *V = foldSelectWithBinaryOp(Cond, TrueVal, FalseVal))
     return V;
 
-  Optional<bool> Imp = isImpliedByDomCondition(Cond, Q.CxtI, Q.DL);
+  std::optional<bool> Imp = isImpliedByDomCondition(Cond, Q.CxtI, Q.DL);
   if (Imp)
     return *Imp ? TrueVal : FalseVal;
 
@@ -6049,10 +6051,10 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     if (isICmpTrue(Pred, Op1, Op0, Q.getWithoutUndef(), RecursionLimit))
       return Op1;
 
-    if (Optional<bool> Imp =
+    if (std::optional<bool> Imp =
             isImpliedByDomCondition(Pred, Op0, Op1, Q.CxtI, Q.DL))
       return *Imp ? Op0 : Op1;
-    if (Optional<bool> Imp =
+    if (std::optional<bool> Imp =
             isImpliedByDomCondition(Pred, Op1, Op0, Q.CxtI, Q.DL))
       return *Imp ? Op1 : Op0;
 

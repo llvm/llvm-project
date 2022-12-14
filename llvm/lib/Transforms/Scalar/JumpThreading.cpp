@@ -1274,7 +1274,7 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
       return false;
 
     bool CondIsTrue = PBI->getSuccessor(0) == CurrentBB;
-    Optional<bool> Implication =
+    std::optional<bool> Implication =
         isImpliedCondition(PBI->getCondition(), Cond, DL, CondIsTrue);
 
     // If the branch condition of BB (which is Cond) and CurrentPred are

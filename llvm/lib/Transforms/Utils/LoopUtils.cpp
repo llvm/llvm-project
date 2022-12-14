@@ -390,7 +390,7 @@ TransformationMode llvm::hasUnrollAndJamTransformation(const Loop *L) {
 }
 
 TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
-  Optional<bool> Enable =
+  std::optional<bool> Enable =
       getOptionalBoolLoopAttribute(L, "llvm.loop.vectorize.enable");
 
   if (Enable == false)
