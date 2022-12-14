@@ -73,7 +73,7 @@ struct LinkOptions {
   std::map<std::string, std::string> ObjectPrefixMap;
 
   /// The Resources directory in the .dSYM bundle.
-  Optional<std::string> ResourceDir;
+  std::optional<std::string> ResourceDir;
 
   /// Symbol map translator.
   SymbolMapTranslator Translator;
