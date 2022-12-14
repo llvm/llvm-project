@@ -8,7 +8,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; When scalarizing stores we need to preserve the original order.
 ; Make sure that we are extracting in the correct order (0101, and not 0011).
 
-define i32 @foo(i32* nocapture %A) {
+define i32 @foo(ptr nocapture %A) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -21,17 +21,17 @@ define i32 @foo(i32* nocapture %A) {
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = shl <2 x i64> [[VEC_IND]], <i64 2, i64 2>
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[STEP_ADD]], <i64 8, i64 8>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP8]]
-; CHECK-NEXT:    store i32 4, i32* [[TMP3]], align 4
-; CHECK-NEXT:    store i32 4, i32* [[TMP5]], align 4
-; CHECK-NEXT:    store i32 4, i32* [[TMP7]], align 4
-; CHECK-NEXT:    store i32 4, i32* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP8]]
+; CHECK-NEXT:    store i32 4, ptr [[TMP3]], align 4
+; CHECK-NEXT:    store i32 4, ptr [[TMP5]], align 4
+; CHECK-NEXT:    store i32 4, ptr [[TMP7]], align 4
+; CHECK-NEXT:    store i32 4, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 4, i64 4>
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
@@ -51,8 +51,8 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = shl nsw i64 %indvars.iv, 2
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %0
-  store i32 4, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %0
+  store i32 4, ptr %arrayidx, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, 10000

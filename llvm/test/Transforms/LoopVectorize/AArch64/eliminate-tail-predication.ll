@@ -14,14 +14,14 @@ target triple = "aarch64"
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 
-define void @f1(i32* %A) #0 {
+define void @f1(ptr %A) #0 {
 entry:
   br label %for.body
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %iv
-  store i32 1, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %iv
+  store i32 1, ptr %arrayidx, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp ne i64 %iv.next, 1024
   br i1 %exitcond, label %for.body, label %exit

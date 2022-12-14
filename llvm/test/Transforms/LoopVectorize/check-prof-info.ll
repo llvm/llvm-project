@@ -28,14 +28,14 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds [1024 x i32], [1024 x i32]* @b, i64 0, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4, !tbaa !2
+  %arrayidx = getelementptr inbounds [1024 x i32], ptr @b, i64 0, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4, !tbaa !2
   %1 = trunc i64 %indvars.iv to i32
   %mul = mul nsw i32 %0, %1
-  %arrayidx2 = getelementptr inbounds [1024 x i32], [1024 x i32]* @a, i64 0, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx2, align 4, !tbaa !2
+  %arrayidx2 = getelementptr inbounds [1024 x i32], ptr @a, i64 0, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx2, align 4, !tbaa !2
   %add = add nsw i32 %2, %mul
-  store i32 %add, i32* %arrayidx2, align 4, !tbaa !2
+  store i32 %add, ptr %arrayidx2, align 4, !tbaa !2
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !prof !6
@@ -62,14 +62,14 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds [1024 x i32], [1024 x i32]* @b, i64 0, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4, !tbaa !2
+  %arrayidx = getelementptr inbounds [1024 x i32], ptr @b, i64 0, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4, !tbaa !2
   %1 = trunc i64 %indvars.iv to i32
   %mul = mul nsw i32 %0, %1
-  %arrayidx2 = getelementptr inbounds [1024 x i32], [1024 x i32]* @a, i64 0, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx2, align 4, !tbaa !2
+  %arrayidx2 = getelementptr inbounds [1024 x i32], ptr @a, i64 0, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx2, align 4, !tbaa !2
   %add = add nsw i32 %2, %mul
-  store i32 %add, i32* %arrayidx2, align 4, !tbaa !2
+  store i32 %add, ptr %arrayidx2, align 4, !tbaa !2
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1027
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !prof !7
