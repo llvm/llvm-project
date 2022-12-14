@@ -529,7 +529,7 @@ define <16 x i1> @interleaved_load_vf16_i8_stride4(ptr %ptr) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; AVX512-NEXT:    vpmovdb %zmm0, %xmm1
-; AVX512-NEXT:    vpsrlw $8, %zmm0, %zmm2
+; AVX512-NEXT:    vpsrld $8, %zmm0, %zmm2
 ; AVX512-NEXT:    vpmovdb %zmm2, %xmm2
 ; AVX512-NEXT:    vpsrld $16, %zmm0, %zmm3
 ; AVX512-NEXT:    vpmovdb %zmm3, %xmm3
