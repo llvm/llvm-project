@@ -1863,8 +1863,7 @@ private:
     if (!UV || UV->size() + (ReplVal != nullptr) < 2)
       return false;
 
-F.dump();
-    (
+    LLVM_DEBUG(
         dbgs() << TAG << "Deduplicate " << UV->size() << " uses of " << RFI.Name
                << (ReplVal ? " with an existing value\n" : "\n") << "\n");
 
