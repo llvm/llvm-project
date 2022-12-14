@@ -351,6 +351,11 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
   if (E->isTransparent())
     return Visit(E->getInit(0));
 
+  AggValueSlot Dest = EnsureSlot(E->getType());
+
+  [[maybe_unused]] LValue DestLV =
+      CGF.makeAddrLValue(Dest.getAddress(), E->getType());
+
   // Handle initialization of an array.
   if (E->getType()->isArrayType()) {
     llvm_unreachable("NYI");
