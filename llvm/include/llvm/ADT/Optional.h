@@ -258,10 +258,6 @@ public:
     Storage.emplace(std::forward<ArgTypes>(Args)...);
   }
 
-  static constexpr Optional create(const T *y) {
-    return y ? Optional(*y) : Optional();
-  }
-
   Optional &operator=(const T &y) {
     Storage = y;
     return *this;
