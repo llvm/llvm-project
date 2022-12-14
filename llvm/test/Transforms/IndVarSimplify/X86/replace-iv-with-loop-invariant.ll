@@ -6,120 +6,120 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @G = external global i32
 
-define void @test0(i64* %arg) {
+define void @test0(ptr %arg) {
 ; CHECK-LABEL: @test0(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP:%.*]] = phi i64* [ [[ARG:%.*]], [[BB:%.*]] ], [ [[TMP7:%.*]], [[BB2]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32* @wobble(i64* nonnull [[TMP]], i32* null)
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* null, align 8
-; CHECK-NEXT:    [[TMP7]] = load i64*, i64** undef, align 8
+; CHECK-NEXT:    [[TMP:%.*]] = phi ptr [ [[ARG:%.*]], [[BB:%.*]] ], [ [[TMP7:%.*]], [[BB2]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @wobble(ptr nonnull [[TMP]], ptr null)
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr null, align 8
+; CHECK-NEXT:    [[TMP7]] = load ptr, ptr undef, align 8
 ; CHECK-NEXT:    br label [[BB2]]
 ;
 bb:
   br label %bb2
 
 bb2:
-  %tmp = phi i64* [%arg, %bb ], [ %tmp7, %bb2 ]
-  %tmp4 = call i32* @wobble(i64* nonnull %tmp, i32* null)
-  %tmp5 = load i32, i32* %tmp4, align 8
-  %tmp7 = load i64*, i64** undef, align 8
+  %tmp = phi ptr [%arg, %bb ], [ %tmp7, %bb2 ]
+  %tmp4 = call ptr @wobble(ptr nonnull %tmp, ptr null)
+  %tmp5 = load i32, ptr %tmp4, align 8
+  %tmp7 = load ptr, ptr undef, align 8
   br label %bb2
 }
 
-define void @test1(i64* %arg) {
+define void @test1(ptr %arg) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP:%.*]] = phi i64* [ [[ARG:%.*]], [[BB:%.*]] ], [ [[TMP7:%.*]], [[BB2]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32* @wobble(i64* nonnull [[TMP]], i32* inttoptr (i64 4 to i32*))
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* inttoptr (i64 4 to i32*), align 4
-; CHECK-NEXT:    [[TMP7]] = load i64*, i64** undef, align 8
+; CHECK-NEXT:    [[TMP:%.*]] = phi ptr [ [[ARG:%.*]], [[BB:%.*]] ], [ [[TMP7:%.*]], [[BB2]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @wobble(ptr nonnull [[TMP]], ptr inttoptr (i64 4 to ptr))
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr inttoptr (i64 4 to ptr), align 4
+; CHECK-NEXT:    [[TMP7]] = load ptr, ptr undef, align 8
 ; CHECK-NEXT:    br label [[BB2]]
 ;
 bb:
   br label %bb2
 
 bb2:
-  %tmp = phi i64* [%arg, %bb ], [ %tmp7, %bb2 ]
-  %tmp4 = call i32* @wobble(i64* nonnull %tmp, i32* inttoptr (i64 4 to i32*))
-  %tmp5 = load i32, i32* %tmp4
-  %tmp7 = load i64*, i64** undef, align 8
+  %tmp = phi ptr [%arg, %bb ], [ %tmp7, %bb2 ]
+  %tmp4 = call ptr @wobble(ptr nonnull %tmp, ptr inttoptr (i64 4 to ptr))
+  %tmp5 = load i32, ptr %tmp4
+  %tmp7 = load ptr, ptr undef, align 8
   br label %bb2
 }
 
-define void @test2(i64* %arg) {
+define void @test2(ptr %arg) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP:%.*]] = phi i64* [ [[ARG:%.*]], [[BB:%.*]] ], [ [[TMP7:%.*]], [[BB2]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32* @wobble(i64* nonnull [[TMP]], i32* @G)
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* @G, align 4
-; CHECK-NEXT:    [[TMP7]] = load i64*, i64** undef, align 8
+; CHECK-NEXT:    [[TMP:%.*]] = phi ptr [ [[ARG:%.*]], [[BB:%.*]] ], [ [[TMP7:%.*]], [[BB2]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @wobble(ptr nonnull [[TMP]], ptr @G)
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr @G, align 4
+; CHECK-NEXT:    [[TMP7]] = load ptr, ptr undef, align 8
 ; CHECK-NEXT:    br label [[BB2]]
 ;
 bb:
   br label %bb2
 
 bb2:
-  %tmp = phi i64* [%arg, %bb ], [ %tmp7, %bb2 ]
-  %tmp4 = call i32* @wobble(i64* nonnull %tmp, i32* @G)
-  %tmp5 = load i32, i32* %tmp4
-  %tmp7 = load i64*, i64** undef, align 8
+  %tmp = phi ptr [%arg, %bb ], [ %tmp7, %bb2 ]
+  %tmp4 = call ptr @wobble(ptr nonnull %tmp, ptr @G)
+  %tmp5 = load i32, ptr %tmp4
+  %tmp7 = load ptr, ptr undef, align 8
   br label %bb2
 }
 
-define void @test3(i64* %arg, i32* %loop.invariant) {
+define void @test3(ptr %arg, ptr %loop.invariant) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP:%.*]] = phi i64* [ [[ARG:%.*]], [[BB:%.*]] ], [ [[TMP7:%.*]], [[BB2]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32* @wobble(i64* nonnull [[TMP]], i32* [[LOOP_INVARIANT:%.*]])
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[LOOP_INVARIANT]], align 4
-; CHECK-NEXT:    [[TMP7]] = load i64*, i64** undef, align 8
+; CHECK-NEXT:    [[TMP:%.*]] = phi ptr [ [[ARG:%.*]], [[BB:%.*]] ], [ [[TMP7:%.*]], [[BB2]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @wobble(ptr nonnull [[TMP]], ptr [[LOOP_INVARIANT:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[LOOP_INVARIANT]], align 4
+; CHECK-NEXT:    [[TMP7]] = load ptr, ptr undef, align 8
 ; CHECK-NEXT:    br label [[BB2]]
 ;
 bb:
   br label %bb2
 
 bb2:
-  %tmp = phi i64* [%arg, %bb ], [ %tmp7, %bb2 ]
-  %tmp4 = call i32* @wobble(i64* nonnull %tmp, i32* %loop.invariant)
-  %tmp5 = load i32, i32* %tmp4
-  %tmp7 = load i64*, i64** undef, align 8
+  %tmp = phi ptr [%arg, %bb ], [ %tmp7, %bb2 ]
+  %tmp4 = call ptr @wobble(ptr nonnull %tmp, ptr %loop.invariant)
+  %tmp5 = load i32, ptr %tmp4
+  %tmp7 = load ptr, ptr undef, align 8
   br label %bb2
 }
 
-define void @test4(i64* %arg, i32* %loop.invariant, i64 %N) {
+define void @test4(ptr %arg, ptr %loop.invariant, i64 %N) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N:%.*]], 6
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[LOOP_INVARIANT:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N:%.*]], 8
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[LOOP_INVARIANT:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP:%.*]] = phi i64* [ [[ARG:%.*]], [[BB:%.*]] ], [ [[TMP7:%.*]], [[BB2]] ]
+; CHECK-NEXT:    [[TMP:%.*]] = phi ptr [ [[ARG:%.*]], [[BB:%.*]] ], [ [[TMP7:%.*]], [[BB2]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[N]], 64
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i32, i32* [[LOOP_INVARIANT]], i64 [[MUL]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32* @wobble(i64* nonnull [[TMP]], i32* [[PTR]])
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[SCEVGEP]], align 4
-; CHECK-NEXT:    [[TMP7]] = load i64*, i64** undef, align 8
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i32, ptr [[LOOP_INVARIANT]], i64 [[MUL]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @wobble(ptr nonnull [[TMP]], ptr [[PTR]])
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[UGLYGEP]], align 4
+; CHECK-NEXT:    [[TMP7]] = load ptr, ptr undef, align 8
 ; CHECK-NEXT:    br label [[BB2]]
 ;
 bb:
   br label %bb2
 
 bb2:
-  %tmp = phi i64* [%arg, %bb ], [ %tmp7, %bb2 ]
+  %tmp = phi ptr [%arg, %bb ], [ %tmp7, %bb2 ]
   %mul = mul nsw i64 %N, 64
-  %ptr = getelementptr inbounds i32, i32* %loop.invariant, i64 %mul
-  %tmp4 = call i32* @wobble(i64* nonnull %tmp, i32* %ptr)
-  %tmp5 = load i32, i32* %tmp4
-  %tmp7 = load i64*, i64** undef, align 8
+  %ptr = getelementptr inbounds i32, ptr %loop.invariant, i64 %mul
+  %tmp4 = call ptr @wobble(ptr nonnull %tmp, ptr %ptr)
+  %tmp5 = load i32, ptr %tmp4
+  %tmp7 = load ptr, ptr undef, align 8
   br label %bb2
 }
 
-declare i32* @wobble(i64*, i32* returned)
+declare ptr @wobble(ptr, ptr returned)
