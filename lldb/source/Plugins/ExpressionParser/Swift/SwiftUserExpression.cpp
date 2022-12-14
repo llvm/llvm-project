@@ -10,17 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "swift/AST/ASTContext.h"
-#include "swift/Demangling/Demangler.h"
 #include <stdio.h>
 #if HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
 
-#include "SwiftASTManipulator.h""
+#include "SwiftASTManipulator.h"
 #include "SwiftExpressionParser.h"
 #include "SwiftExpressionSourceCode.h"
 #include "SwiftREPLMaterializer.h"
+#include "SwiftASTManipulator.h"
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/Core/Module.h"
@@ -40,6 +39,10 @@
 
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"
+#include "swift/AST/ASTContext.h"
+#include "swift/Demangling/Demangler.h"
+#include "swift/AST/GenericEnvironment.h"
+
 
 #include <cstdlib>
 #include <map>
@@ -451,6 +454,92 @@ GetPersistentState(Target *target, ExecutionContext &exe_ctx) {
   return target->GetSwiftPersistentExpressionState(*exe_scope);
 }
 
+/// Check if we can evaluate the expression as generic.
+/// Currently, evaluating expression as a generic has several limitations:
+/// - Only self will be evaluated with unbound generics.
+/// - The Self type can only have one generic parameter. 
+/// - The Self type has to be the outermost type with unbound generics.
+static bool CanEvaluateExpressionWithoutBindingGenericParams(
+    const llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo>
+        &variables,
+    Block *block, StackFrame &stack_frame) {
+  // First, find the compiler type of self with the generic parameters not
+  // bound.
+  auto self_var = SwiftExpressionParser::FindSelfVariable(block);
+  if (!self_var)
+    return false;
+
+  lldb::ValueObjectSP self_valobj =
+      stack_frame.GetValueObjectForFrameVariable(self_var,
+                                                     lldb::eNoDynamicValues);
+  if (!self_valobj)
+    return false;
+
+  auto self_type = self_valobj->GetCompilerType();
+  if (!self_type)
+    return false;
+
+  auto *ts = self_type.GetTypeSystem()
+                 .dyn_cast_or_null<TypeSystemSwift>()
+                 ->GetSwiftASTContext();
+
+  if (!ts)
+    return false;
+
+  auto swift_type = ts->GetSwiftType(self_type);
+  if (!swift_type)
+    return false;
+
+  auto *decl = swift_type->getAnyGeneric();
+  if (!decl)
+    return false;
+
+
+  auto *env = decl->getGenericEnvironment();
+  if (!env)
+    return false;
+  auto params = env->getGenericParams();
+
+  // If there aren't any generic parameters we can't evaluate the expression as
+  // generic.
+  if (params.empty())
+    return false;
+
+  auto *first_param = params[0];
+  // Currently we only support evaluating self as generic if the generic
+  // parameter is the first one.
+  if (first_param->getDepth() != 0 || first_param->getIndex() != 0)
+    return false;
+
+  bool contains_0_0 = false;
+  bool contains_other_0_depth_params = false;
+  for (auto *pair : params) {
+    if (pair->getDepth() == 0) {
+      if (pair->getIndex() == 0)
+        contains_0_0 = true;
+      else
+        contains_other_0_depth_params = true;
+    }
+  }
+
+  // We only allow generic evaluation when the Self type contains the outermost
+  // generic parameter.
+  if (!contains_0_0)
+    return false;
+
+  // We only allow the Self type to have one generic parameter.
+  if (contains_other_0_depth_params)
+    return false;
+
+  // Now, check that we do have the metadata pointer as a local variable.
+  for (auto &variable : variables) {
+    if (variable.GetName().str() == "$τ_0_0")
+      return true;
+  }
+  // Couldn't find the metadata pointer, so can't evaluate as generic.
+  return false;
+}
+
 SwiftExpressionParser::ParseResult
 SwiftUserExpression::GetTextAndSetExpressionParser(
     DiagnosticManager &diagnostic_manager,
@@ -458,7 +547,6 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
     ExecutionContext &exe_ctx, ExecutionContextScope *exe_scope) {
   using ParseResult = SwiftExpressionParser::ParseResult;
   Log *log = GetLog(LLDBLog::Expressions);
-  uint32_t first_body_line = 0;
 
   lldb::TargetSP target_sp;
   SymbolContext sc;
@@ -468,9 +556,10 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
     stack_frame = exe_scope->CalculateStackFrame();
 
     if (stack_frame) {
-       sc = stack_frame->GetSymbolContext(lldb::eSymbolContextEverything);
+      sc = stack_frame->GetSymbolContext(lldb::eSymbolContextEverything);
     }
   }
+
   llvm::SmallVector<SwiftASTManipulator::VariableInfo> local_variables;
 
   if (!RegisterAllVariables(sc, stack_frame, *m_swift_ast_ctx, local_variables,
@@ -483,6 +572,16 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
     return ParseResult::retry_no_bind_generic_params;
   }
 
+  if (m_options.GetBindGenericTypes() == lldb::eDontBind &&
+      !CanEvaluateExpressionWithoutBindingGenericParams(
+          local_variables, sc.block, *stack_frame.get())) {
+    diagnostic_manager.PutString(
+        eDiagnosticSeverityError,
+        "Could not evaluate the expression without binding generic types.");
+    return ParseResult::unrecoverable_error;
+  }
+  
+  uint32_t first_body_line = 0;
   if (!source_code->GetText(m_transformed_text, m_options.GetLanguage(),
                             m_needs_object_ptr, m_in_static_method, m_is_class,
                             m_is_weak_self, m_options, exe_ctx,
