@@ -461,6 +461,7 @@ static bool tryDiagnoseOverloadedCast(Sema &S, CastType CT,
 
   case InitializationSequence::FK_ConstructorOverloadFailed:
   case InitializationSequence::FK_UserConversionOverloadFailed:
+  case InitializationSequence::FK_ParenthesizedListInitFailed:
     break;
   }
 

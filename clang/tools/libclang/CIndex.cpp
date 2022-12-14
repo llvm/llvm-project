@@ -2139,6 +2139,7 @@ public:
   void VisitLambdaExpr(const LambdaExpr *E);
   void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E);
   void VisitRequiresExpr(const RequiresExpr *E);
+  void VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D);
   void VisitOMPLoopBasedDirective(const OMPLoopBasedDirective *D);
   void VisitOMPLoopDirective(const OMPLoopDirective *D);
@@ -3005,6 +3006,9 @@ void EnqueueVisitor::VisitRequiresExpr(const RequiresExpr *E) {
   WL.push_back(RequiresExprVisit(E, Parent));
   for (ParmVarDecl *VD : E->getLocalParameters())
     AddDecl(VD);
+}
+void EnqueueVisitor::VisitCXXParenListInitExpr(const CXXParenListInitExpr *E) {
+  EnqueueChildren(E);
 }
 void EnqueueVisitor::VisitPseudoObjectExpr(const PseudoObjectExpr *E) {
   // Treat the expression like its syntactic form.
@@ -5587,6 +5591,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("ConceptSpecializationExpr");
   case CXCursor_RequiresExpr:
     return cxstring::createRef("RequiresExpr");
+  case CXCursor_CXXParenListInitExpr:
+    return cxstring::createRef("CXXParenListInitExpr");
   case CXCursor_UnexposedStmt:
     return cxstring::createRef("UnexposedStmt");
   case CXCursor_DeclStmt:

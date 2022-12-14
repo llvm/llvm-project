@@ -61,8 +61,7 @@
 
 // --- C++20 features ---
 
-#if check(aggregate_paren_init, 0, 0, 0, 0, 0, 0)
-// FIXME: 201902 in C++20
+#if check(aggregate_paren_init, 0, 0, 0, 0, 201902, 201902)
 #error "wrong value for __cpp_aggregate_paren_init"
 #endif
 
