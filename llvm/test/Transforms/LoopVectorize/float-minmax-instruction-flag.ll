@@ -4,16 +4,16 @@
 ; The function finds the smallest value from a float vector.
 ; Check if vectorization is enabled by instruction flag `fcmp nnan`.
 
-define float @minloop(float* nocapture readonly %arg) {
+define float @minloop(ptr nocapture readonly %arg) {
 ; CHECK-LABEL: @minloop(
 ; CHECK-NEXT:  top:
-; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]], align 4
+; CHECK-NEXT:    [[T:%.*]] = load float, ptr [[ARG:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[T1:%.*]] = phi i64 [ [[T7:%.*]], [[LOOP]] ], [ 1, [[TOP:%.*]] ]
 ; CHECK-NEXT:    [[T2:%.*]] = phi float [ [[T6:%.*]], [[LOOP]] ], [ [[T]], [[TOP]] ]
-; CHECK-NEXT:    [[T3:%.*]] = getelementptr float, float* [[ARG]], i64 [[T1]]
-; CHECK-NEXT:    [[T4:%.*]] = load float, float* [[T3]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = getelementptr float, ptr [[ARG]], i64 [[T1]]
+; CHECK-NEXT:    [[T4:%.*]] = load float, ptr [[T3]], align 4
 ; CHECK-NEXT:    [[T5:%.*]] = fcmp nnan olt float [[T2]], [[T4]]
 ; CHECK-NEXT:    [[T6]] = select i1 [[T5]], float [[T2]], float [[T4]]
 ; CHECK-NEXT:    [[T7]] = add i64 [[T1]], 1
@@ -24,14 +24,14 @@ define float @minloop(float* nocapture readonly %arg) {
 ; CHECK-NEXT:    ret float [[T6_LCSSA]]
 ;
 top:
-  %t = load float, float* %arg
+  %t = load float, ptr %arg
   br label %loop
 
 loop:                                             ; preds = %loop, %top
   %t1 = phi i64 [ %t7, %loop ], [ 1, %top ]
   %t2 = phi float [ %t6, %loop ], [ %t, %top ]
-  %t3 = getelementptr float, float* %arg, i64 %t1
-  %t4 = load float, float* %t3, align 4
+  %t3 = getelementptr float, ptr %arg, i64 %t1
+  %t4 = load float, ptr %t3, align 4
   %t5 = fcmp nnan olt float %t2, %t4
   %t6 = select i1 %t5, float %t2, float %t4
   %t7 = add i64 %t1, 1
@@ -44,10 +44,10 @@ out:                                              ; preds = %loop
 
 ; Check if vectorization is still enabled by function attribute.
 
-define float @minloopattr(float* nocapture readonly %arg) #0 {
+define float @minloopattr(ptr nocapture readonly %arg) #0 {
 ; CHECK-LABEL: @minloopattr(
 ; CHECK-NEXT:  top:
-; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]], align 4
+; CHECK-NEXT:    [[T:%.*]] = load float, ptr [[ARG:%.*]], align 4
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[MINMAX_IDENT_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[T]], i32 0
@@ -55,49 +55,48 @@ define float @minloopattr(float* nocapture readonly %arg) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ [[MINMAX_IDENT_SPLAT]], [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ [[MINMAX_IDENT_SPLAT]], [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, float* [[ARG]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, float* [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[TMP2]] to <4 x float>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fcmp olt <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP4]], <4 x float> [[VEC_PHI]], <4 x float> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[ARG]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fcmp olt <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP3]], <4 x float> [[VEC_PHI]], <4 x float> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 65536
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 65536
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP4]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 65536, 65536
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[OUT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 65537, [[MIDDLE_BLOCK]] ], [ 1, [[TOP:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[T]], [[TOP]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[T]], [[TOP]] ], [ [[TMP6]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[T1:%.*]] = phi i64 [ [[T7:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[T2:%.*]] = phi float [ [[T6:%.*]], [[LOOP]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[T3:%.*]] = getelementptr float, float* [[ARG]], i64 [[T1]]
-; CHECK-NEXT:    [[T4:%.*]] = load float, float* [[T3]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = getelementptr float, ptr [[ARG]], i64 [[T1]]
+; CHECK-NEXT:    [[T4:%.*]] = load float, ptr [[T3]], align 4
 ; CHECK-NEXT:    [[T5:%.*]] = fcmp olt float [[T2]], [[T4]]
 ; CHECK-NEXT:    [[T6]] = select i1 [[T5]], float [[T2]], float [[T4]]
 ; CHECK-NEXT:    [[T7]] = add i64 [[T1]], 1
 ; CHECK-NEXT:    [[T8:%.*]] = icmp eq i64 [[T7]], 65537
-; CHECK-NEXT:    br i1 [[T8]], label [[OUT]], label [[LOOP]], [[LOOP2:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[T8]], label [[OUT]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       out:
-; CHECK-NEXT:    [[T6_LCSSA:%.*]] = phi float [ [[T6]], [[LOOP]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[T6_LCSSA:%.*]] = phi float [ [[T6]], [[LOOP]] ], [ [[TMP6]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret float [[T6_LCSSA]]
 ;
 top:
-  %t = load float, float* %arg
+  %t = load float, ptr %arg
   br label %loop
 
 loop:                                             ; preds = %loop, %top
   %t1 = phi i64 [ %t7, %loop ], [ 1, %top ]
   %t2 = phi float [ %t6, %loop ], [ %t, %top ]
-  %t3 = getelementptr float, float* %arg, i64 %t1
-  %t4 = load float, float* %t3, align 4
+  %t3 = getelementptr float, ptr %arg, i64 %t1
+  %t4 = load float, ptr %t3, align 4
   %t5 = fcmp olt float %t2, %t4
   %t6 = select i1 %t5, float %t2, float %t4
   %t7 = add i64 %t1, 1
@@ -110,16 +109,16 @@ out:                                              ; preds = %loop
 
 ; Check if vectorization is prevented without the flag or attribute.
 
-define float @minloopnovec(float* nocapture readonly %arg) {
+define float @minloopnovec(ptr nocapture readonly %arg) {
 ; CHECK-LABEL: @minloopnovec(
 ; CHECK-NEXT:  top:
-; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]], align 4
+; CHECK-NEXT:    [[T:%.*]] = load float, ptr [[ARG:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[T1:%.*]] = phi i64 [ [[T7:%.*]], [[LOOP]] ], [ 1, [[TOP:%.*]] ]
 ; CHECK-NEXT:    [[T2:%.*]] = phi float [ [[T6:%.*]], [[LOOP]] ], [ [[T]], [[TOP]] ]
-; CHECK-NEXT:    [[T3:%.*]] = getelementptr float, float* [[ARG]], i64 [[T1]]
-; CHECK-NEXT:    [[T4:%.*]] = load float, float* [[T3]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = getelementptr float, ptr [[ARG]], i64 [[T1]]
+; CHECK-NEXT:    [[T4:%.*]] = load float, ptr [[T3]], align 4
 ; CHECK-NEXT:    [[T5:%.*]] = fcmp olt float [[T2]], [[T4]]
 ; CHECK-NEXT:    [[T6]] = select i1 [[T5]], float [[T2]], float [[T4]]
 ; CHECK-NEXT:    [[T7]] = add i64 [[T1]], 1
@@ -130,14 +129,14 @@ define float @minloopnovec(float* nocapture readonly %arg) {
 ; CHECK-NEXT:    ret float [[T6_LCSSA]]
 ;
 top:
-  %t = load float, float* %arg
+  %t = load float, ptr %arg
   br label %loop
 
 loop:                                             ; preds = %loop, %top
   %t1 = phi i64 [ %t7, %loop ], [ 1, %top ]
   %t2 = phi float [ %t6, %loop ], [ %t, %top ]
-  %t3 = getelementptr float, float* %arg, i64 %t1
-  %t4 = load float, float* %t3, align 4
+  %t3 = getelementptr float, ptr %arg, i64 %t1
+  %t4 = load float, ptr %t3, align 4
   %t5 = fcmp olt float %t2, %t4
   %t6 = select i1 %t5, float %t2, float %t4
   %t7 = add i64 %t1, 1
@@ -150,16 +149,16 @@ out:                                              ; preds = %loop
 
 ; This test is checking that we don't vectorize when only one of the required attributes is set.
 ; Note that this test should not vectorize even after switching to IR-level FMF.
-define float @minloopmissingnsz(float* nocapture readonly %arg) #1 {
+define float @minloopmissingnsz(ptr nocapture readonly %arg) #1 {
 ; CHECK-LABEL: @minloopmissingnsz(
 ; CHECK-NEXT:  top:
-; CHECK-NEXT:    [[T:%.*]] = load float, float* [[ARG:%.*]], align 4
+; CHECK-NEXT:    [[T:%.*]] = load float, ptr [[ARG:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[T1:%.*]] = phi i64 [ [[T7:%.*]], [[LOOP]] ], [ 1, [[TOP:%.*]] ]
 ; CHECK-NEXT:    [[T2:%.*]] = phi float [ [[T6:%.*]], [[LOOP]] ], [ [[T]], [[TOP]] ]
-; CHECK-NEXT:    [[T3:%.*]] = getelementptr float, float* [[ARG]], i64 [[T1]]
-; CHECK-NEXT:    [[T4:%.*]] = load float, float* [[T3]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = getelementptr float, ptr [[ARG]], i64 [[T1]]
+; CHECK-NEXT:    [[T4:%.*]] = load float, ptr [[T3]], align 4
 ; CHECK-NEXT:    [[T5:%.*]] = fcmp olt float [[T2]], [[T4]]
 ; CHECK-NEXT:    [[T6]] = select i1 [[T5]], float [[T2]], float [[T4]]
 ; CHECK-NEXT:    [[T7]] = add i64 [[T1]], 1
@@ -170,14 +169,14 @@ define float @minloopmissingnsz(float* nocapture readonly %arg) #1 {
 ; CHECK-NEXT:    ret float [[T6_LCSSA]]
 ;
 top:
-  %t = load float, float* %arg
+  %t = load float, ptr %arg
   br label %loop
 
 loop:                                             ; preds = %loop, %top
   %t1 = phi i64 [ %t7, %loop ], [ 1, %top ]
   %t2 = phi float [ %t6, %loop ], [ %t, %top ]
-  %t3 = getelementptr float, float* %arg, i64 %t1
-  %t4 = load float, float* %t3, align 4
+  %t3 = getelementptr float, ptr %arg, i64 %t1
+  %t4 = load float, ptr %t3, align 4
   %t5 = fcmp olt float %t2, %t4
   %t6 = select i1 %t5, float %t2, float %t4
   %t7 = add i64 %t1, 1
