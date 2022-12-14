@@ -1,26 +1,19 @@
 //===----------------------------------------------------------------------===//
-//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-// XFAIL: c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// <functional>
+// clang-cl and cl currently don't support [[no_unique_address]]
+// XFAIL: msvc
 
-#include <functional>
-#include <type_traits>
+// test [[no_unique_address]] is applied to the union
 
-#include "test_macros.h"
+#include <expected>
 
-struct S : public std::function<void()> { using function::function; };
+struct Empty {};
 
-int main(int, char**) {
-   S f1( [](){} );
-   S f2(std::allocator_arg, std::allocator<int>{}, f1);
-
-  return 0;
-}
+static_assert(sizeof(std::expected<void, Empty>) == sizeof(bool));
