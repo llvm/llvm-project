@@ -29,6 +29,7 @@
 #include "clang/ExtractAPI/DeclarationFragments.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/FrontendOptions.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 using namespace extractapi;
@@ -167,11 +168,16 @@ bool ExtractAPIVisitor::VisitEnumDecl(const EnumDecl *Decl) {
   if (!LocationChecker(Decl->getLocation()))
     return true;
 
+  SmallString<128> QualifiedNameBuffer;
   // Collect symbol information.
-  std::string NameString = Decl->getQualifiedNameAsString();
-  StringRef Name(NameString);
+  StringRef Name = Decl->getName();
   if (Name.empty())
     Name = getTypedefName(Decl);
+  if (Name.empty()) {
+    llvm::raw_svector_ostream OS(QualifiedNameBuffer);
+    Decl->printQualifiedName(OS);
+    Name = QualifiedNameBuffer.str();
+  }
 
   StringRef USR = API.recordUSR(Decl);
   PresumedLoc Loc =
