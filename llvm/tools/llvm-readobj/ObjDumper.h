@@ -155,10 +155,12 @@ public:
                      llvm::codeview::GlobalTypeTableBuilder &GlobalCVTypes,
                      bool GHash) {}
 
-  // Only implement for XCOFF
+  // Only implemented for XCOFF.
+  virtual void printStringTable() {}
   virtual void printAuxiliaryHeader() {}
   virtual void printExceptionSection() {}
-  virtual void printLoaderSection(bool PrintHeader, bool PrintSymbolTable) {}
+  virtual void printLoaderSection(bool PrintHeader, bool PrintSymbols,
+                                  bool PrintRelocations) {}
 
   // Only implemented for MachO.
   virtual void printMachODataInCode() { }
@@ -167,9 +169,6 @@ public:
   virtual void printMachOSegment() { }
   virtual void printMachOIndirectSymbols() { }
   virtual void printMachOLinkerOptions() { }
-
-  // Currently only implemented for XCOFF.
-  virtual void printStringTable() { }
 
   virtual void printStackMap() const = 0;
 
