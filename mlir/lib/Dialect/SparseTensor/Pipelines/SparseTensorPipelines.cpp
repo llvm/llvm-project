@@ -82,6 +82,7 @@ void mlir::sparse_tensor::buildSparseCompiler(
   // Repeat convert-vector-to-llvm.
   pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
   pm.addPass(createConvertComplexToLLVMPass());
+  pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
   pm.addPass(createConvertFuncToLLVMPass());
   pm.addPass(createReconcileUnrealizedCastsPass());
 }
