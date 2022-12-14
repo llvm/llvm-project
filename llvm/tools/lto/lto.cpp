@@ -106,6 +106,7 @@ static void lto_initialize() {
 
     static LLVMContext Context;
     LTOContext = &Context;
+    LTOContext->setOpaquePointers(true);
     LTOContext->setDiagnosticHandler(
         std::make_unique<LTOToolDiagnosticHandler>(), true);
     initialized = true;
@@ -133,7 +134,10 @@ struct LibLTOCodeGenerator : LTOCodeGenerator {
   // Module must be destructed before its context gets destructed.
   ~LibLTOCodeGenerator() { resetMergedModule(); }
 
-  void init() { setDiagnosticHandler(handleLibLTODiagnostic, nullptr); }
+  void init() {
+    OwnedContext->setOpaquePointers(true);
+    setDiagnosticHandler(handleLibLTODiagnostic, nullptr);
+  }
 
   std::unique_ptr<MemoryBuffer> NativeObjectFile;
   std::unique_ptr<LLVMContext> OwnedContext;
@@ -271,6 +275,7 @@ lto_module_t lto_module_create_in_local_context(const void *mem, size_t length,
 
   // Create a local context. Ownership will be transferred to LTOModule.
   std::unique_ptr<LLVMContext> Context = std::make_unique<LLVMContext>();
+  Context->setOpaquePointers(true);
   Context->setDiagnosticHandler(std::make_unique<LTOToolDiagnosticHandler>(),
                                 true);
 
