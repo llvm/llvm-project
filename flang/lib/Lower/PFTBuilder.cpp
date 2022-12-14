@@ -64,7 +64,9 @@ struct UnwrapStmt<parser::UnlabeledStatement<A>> {
   std::optional<parser::Label> label;
 };
 
+#ifndef NDEBUG
 void dumpScope(const semantics::Scope *scope, int depth = -1);
+#endif
 
 /// The instantiation of a parse tree visitor (Pre and Post) is extremely
 /// expensive in terms of compile and link time.  So one goal here is to
@@ -1037,6 +1039,7 @@ private:
   lower::pft::Evaluation *lastLexicalEvaluation{};
 };
 
+#ifndef NDEBUG
 /// Dump all program scopes and symbols with addresses to disambiguate names.
 /// This is static, unchanging front end information, so dump it only once.
 void dumpScope(const semantics::Scope *scope, int depth) {
@@ -1075,6 +1078,7 @@ void dumpScope(const semantics::Scope *scope, int depth) {
       LLVM_DEBUG(llvm::dbgs() << w + "  " << &*sym << "   " << *sym << "\n");
   }
 }
+#endif // NDEBUG
 
 class PFTDumper {
 public:
