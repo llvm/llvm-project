@@ -122,7 +122,7 @@ void DWARFDebugAbbrev::parse() const {
       break;
     AbbrDeclSets.insert(I, std::make_pair(CUAbbrOffset, std::move(AbbrDecls)));
   }
-  Data = None;
+  Data = std::nullopt;
 }
 
 void DWARFDebugAbbrev::dump(raw_ostream &OS) const {

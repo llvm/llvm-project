@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
   SMDiagnostic Err;
   auto SetDataLayout = [](StringRef) -> Optional<std::string> {
     if (ClDataLayout.empty())
-      return None;
+      return std::nullopt;
     return ClDataLayout;
   };
   ParsedModuleAndIndex ModuleAndIndex;

@@ -403,7 +403,7 @@ Optional<PreservedAnalyses> LoopPassManager::runSinglePass(
   // Check the PassInstrumentation's BeforePass callbacks before running the
   // pass, skip its execution completely if asked to (callback returns false).
   if (!PI.runBeforePass<Loop>(*Pass, L))
-    return None;
+    return std::nullopt;
 
   PreservedAnalyses PA = Pass->run(IR, AM, AR, U);
 

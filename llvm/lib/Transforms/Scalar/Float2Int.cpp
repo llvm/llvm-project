@@ -243,7 +243,7 @@ Optional<ConstantRange> Float2IntPass::calcRange(Instruction *I) {
       auto OpIt = SeenInsts.find(OI);
       assert(OpIt != SeenInsts.end() && "def not seen before use!");
       if (OpIt->second == unknownRange())
-        return None; // Wait until operand range has been calculated.
+        return std::nullopt; // Wait until operand range has been calculated.
       OpRanges.push_back(OpIt->second);
     } else if (ConstantFP *CF = dyn_cast<ConstantFP>(O)) {
       // Work out if the floating point number can be losslessly represented

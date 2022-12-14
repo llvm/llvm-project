@@ -310,19 +310,19 @@ Optional<BCECmp> visitICmp(const ICmpInst *const CmpI,
   // other comparisons as we would create an orphan use of the value.
   if (!CmpI->hasOneUse()) {
     LLVM_DEBUG(dbgs() << "cmp has several uses\n");
-    return None;
+    return std::nullopt;
   }
   if (CmpI->getPredicate() != ExpectedPredicate)
-    return None;
+    return std::nullopt;
   LLVM_DEBUG(dbgs() << "cmp "
                     << (ExpectedPredicate == ICmpInst::ICMP_EQ ? "eq" : "ne")
                     << "\n");
   auto Lhs = visitICmpLoadOperand(CmpI->getOperand(0), BaseId);
   if (!Lhs.BaseId)
-    return None;
+    return std::nullopt;
   auto Rhs = visitICmpLoadOperand(CmpI->getOperand(1), BaseId);
   if (!Rhs.BaseId)
-    return None;
+    return std::nullopt;
   const auto &DL = CmpI->getModule()->getDataLayout();
   return BCECmp(std::move(Lhs), std::move(Rhs),
                 DL.getTypeSizeInBits(CmpI->getOperand(0)->getType()), CmpI);
@@ -333,9 +333,11 @@ Optional<BCECmp> visitICmp(const ICmpInst *const CmpI,
 Optional<BCECmpBlock> visitCmpBlock(Value *const Val, BasicBlock *const Block,
                                     const BasicBlock *const PhiBlock,
                                     BaseIdentifier &BaseId) {
-  if (Block->empty()) return None;
+  if (Block->empty())
+    return std::nullopt;
   auto *const BranchI = dyn_cast<BranchInst>(Block->getTerminator());
-  if (!BranchI) return None;
+  if (!BranchI)
+    return std::nullopt;
   LLVM_DEBUG(dbgs() << "branch\n");
   Value *Cond;
   ICmpInst::Predicate ExpectedPredicate;
@@ -351,7 +353,8 @@ Optional<BCECmpBlock> visitCmpBlock(Value *const Val, BasicBlock *const Block,
     // chained).
     const auto *const Const = cast<ConstantInt>(Val);
     LLVM_DEBUG(dbgs() << "const\n");
-    if (!Const->isZero()) return None;
+    if (!Const->isZero())
+      return std::nullopt;
     LLVM_DEBUG(dbgs() << "false\n");
     assert(BranchI->getNumSuccessors() == 2 && "expecting a cond branch");
     BasicBlock *const FalseBlock = BranchI->getSuccessor(1);
@@ -361,12 +364,13 @@ Optional<BCECmpBlock> visitCmpBlock(Value *const Val, BasicBlock *const Block,
   }
 
   auto *CmpI = dyn_cast<ICmpInst>(Cond);
-  if (!CmpI) return None;
+  if (!CmpI)
+    return std::nullopt;
   LLVM_DEBUG(dbgs() << "icmp\n");
 
   Optional<BCECmp> Result = visitICmp(CmpI, ExpectedPredicate, BaseId);
   if (!Result)
-    return None;
+    return std::nullopt;
 
   BCECmpBlock::InstructionSet BlockInsts(
       {Result->Lhs.LoadI, Result->Rhs.LoadI, Result->CmpI, BranchI});

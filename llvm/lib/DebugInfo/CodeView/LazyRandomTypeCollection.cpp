@@ -100,11 +100,11 @@ CVType LazyRandomTypeCollection::getType(TypeIndex Index) {
 
 Optional<CVType> LazyRandomTypeCollection::tryGetType(TypeIndex Index) {
   if (Index.isSimple())
-    return None;
+    return std::nullopt;
 
   if (auto EC = ensureTypeExists(Index)) {
     consumeError(std::move(EC));
-    return None;
+    return std::nullopt;
   }
 
   assert(contains(Index));
@@ -206,7 +206,7 @@ Optional<TypeIndex> LazyRandomTypeCollection::getFirst() {
   TypeIndex TI = TypeIndex::fromArrayIndex(0);
   if (auto EC = ensureTypeExists(TI)) {
     consumeError(std::move(EC));
-    return None;
+    return std::nullopt;
   }
   return TI;
 }
@@ -217,7 +217,7 @@ Optional<TypeIndex> LazyRandomTypeCollection::getNext(TypeIndex Prev) {
   // record exists, and if anything goes wrong, we must be at the end.
   if (auto EC = ensureTypeExists(Prev + 1)) {
     consumeError(std::move(EC));
-    return None;
+    return std::nullopt;
   }
 
   return Prev + 1;

@@ -1079,7 +1079,7 @@ Attributor::getAssumedConstant(const IRPosition &IRP,
   for (auto &CB : SimplificationCallbacks.lookup(IRP)) {
     Optional<Value *> SimplifiedV = CB(IRP, &AA, UsedAssumedInformation);
     if (!SimplifiedV)
-      return llvm::None;
+      return std::nullopt;
     if (isa_and_nonnull<Constant>(*SimplifiedV))
       return cast<Constant>(*SimplifiedV);
     return nullptr;
@@ -1091,7 +1091,7 @@ Attributor::getAssumedConstant(const IRPosition &IRP,
                                  AA::ValueScope::Interprocedural,
                                  UsedAssumedInformation)) {
     if (Values.empty())
-      return llvm::None;
+      return std::nullopt;
     if (auto *C = dyn_cast_or_null<Constant>(
             AAPotentialValues::getSingleValue(*this, AA, IRP, Values)))
       return C;
@@ -1113,7 +1113,7 @@ Optional<Value *> Attributor::getAssumedSimplified(const IRPosition &IRP,
   if (!getAssumedSimplifiedValues(IRP, AA, Values, S, UsedAssumedInformation))
     return &IRP.getAssociatedValue();
   if (Values.empty())
-    return llvm::None;
+    return std::nullopt;
   if (AA)
     if (Value *V = AAPotentialValues::getSingleValue(*this, *AA, IRP, Values))
       return V;

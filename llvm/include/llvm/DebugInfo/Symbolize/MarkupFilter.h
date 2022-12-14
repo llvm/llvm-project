@@ -33,7 +33,7 @@ class LLVMSymbolizer;
 class MarkupFilter {
 public:
   MarkupFilter(raw_ostream &OS, LLVMSymbolizer &Symbolizer,
-               Optional<bool> ColorsEnabled = llvm::None);
+               Optional<bool> ColorsEnabled = std::nullopt);
 
   /// Filters a line containing symbolizer markup and writes the human-readable
   /// results to the output stream.

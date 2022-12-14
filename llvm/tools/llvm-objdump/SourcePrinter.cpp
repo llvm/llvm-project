@@ -31,7 +31,7 @@ unsigned getInstStartColumn(const MCSubtargetInfo &STI) {
 }
 
 bool LiveVariable::liveAtAddress(object::SectionedAddress Addr) {
-  if (LocExpr.Range == None)
+  if (LocExpr.Range == std::nullopt)
     return false;
   return LocExpr.Range->SectionIndex == Addr.SectionIndex &&
          LocExpr.Range->LowPC <= Addr.Address &&

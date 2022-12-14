@@ -23,7 +23,7 @@ TypeTableCollection::TypeTableCollection(ArrayRef<ArrayRef<uint8_t>> Records)
 
 Optional<TypeIndex> TypeTableCollection::getFirst() {
   if (empty())
-    return None;
+    return std::nullopt;
   return TypeIndex::fromArrayIndex(0);
 }
 
@@ -31,7 +31,7 @@ Optional<TypeIndex> TypeTableCollection::getNext(TypeIndex Prev) {
   assert(contains(Prev));
   ++Prev;
   if (Prev.toArrayIndex() == size())
-    return None;
+    return std::nullopt;
   return Prev;
 }
 

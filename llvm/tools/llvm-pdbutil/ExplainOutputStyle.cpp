@@ -131,7 +131,7 @@ Optional<uint32_t> ExplainOutputStyle::getPdbBlockStreamIndex() const {
       continue;
     return Entry.index();
   }
-  return None;
+  return std::nullopt;
 }
 
 bool ExplainOutputStyle::explainPdbBlockStatus() {

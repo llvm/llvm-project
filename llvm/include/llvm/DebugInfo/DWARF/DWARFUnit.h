@@ -530,7 +530,7 @@ public:
         });
     if (It != DieArray.end() && It->getOffset() == Offset)
       return It - DieArray.begin();
-    return None;
+    return std::nullopt;
   }
 
   uint32_t getLineTableOffset() const {

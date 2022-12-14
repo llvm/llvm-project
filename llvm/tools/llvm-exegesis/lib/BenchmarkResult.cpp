@@ -102,7 +102,7 @@ struct YamlContext {
     if (Iter != RegNameToRegNo.end())
       return Iter->second;
     ErrorStream << "No register with name '" << RegName << "'\n";
-    return None;
+    return std::nullopt;
   }
 
 private:

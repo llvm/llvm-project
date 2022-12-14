@@ -35,7 +35,7 @@ void DWARFTypePrinter::appendArrayType(const DWARFDie &D) {
         if ((DefaultLB =
                  LanguageLowerBound(static_cast<dwarf::SourceLanguage>(*LC))))
           if (LB && *LB == *DefaultLB)
-            LB = None;
+            LB = std::nullopt;
     if (!LB && !Count && !UB)
       OS << "[]";
     else if (!LB && (Count || UB) && DefaultLB)

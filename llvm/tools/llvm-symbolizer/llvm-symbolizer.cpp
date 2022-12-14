@@ -260,7 +260,7 @@ static void symbolizeInput(const opt::InputArgList &Args,
   uint64_t Offset = 0;
   if (!parseCommand(Args.getLastArgValue(OPT_obj_EQ), IsAddr2Line,
                     StringRef(InputString), Cmd, ModuleName, BuildID, Offset)) {
-    Printer.printInvalidCommand({ModuleName, None}, InputString);
+    Printer.printInvalidCommand({ModuleName, std::nullopt}, InputString);
     return;
   }
   bool ShouldInline = Args.hasFlag(OPT_inlines, OPT_no_inlines, !IsAddr2Line);
@@ -348,8 +348,8 @@ static Optional<bool> parseColorArg(const opt::InputArgList &Args) {
     return StringSwitch<Optional<bool>>(A->getValue())
         .Case("always", true)
         .Case("never", false)
-        .Case("auto", None);
-  return None;
+        .Case("auto", std::nullopt);
+  return std::nullopt;
 }
 
 static object::BuildID parseBuildIDArg(const opt::InputArgList &Args, int ID) {

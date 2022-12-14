@@ -1044,7 +1044,7 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
   // index and order them by size. BiggestSuperRC should always be first.
   CodeGenRegisterClass *BiggestSuperRegRC = getSubClassWithSubReg(SubIdx);
   if (!BiggestSuperRegRC)
-    return None;
+    return std::nullopt;
   BitVector SuperRegRCsBV = BiggestSuperRegRC->getSubClasses();
   std::vector<CodeGenRegisterClass *> SuperRegRCs;
   for (auto &RC : RegClasses)
@@ -1107,7 +1107,7 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
       return std::make_pair(ChosenSuperRegClass, SubRegRC);
   }
 
-  return None;
+  return std::nullopt;
 }
 
 void CodeGenRegisterClass::getSuperRegClasses(const CodeGenSubRegIndex *SubIdx,

@@ -50,15 +50,15 @@ UnwindLocation UnwindLocation::createUndefined() { return {Undefined}; }
 UnwindLocation UnwindLocation::createSame() { return {Same}; }
 
 UnwindLocation UnwindLocation::createIsConstant(int32_t Value) {
-  return {Constant, InvalidRegisterNumber, Value, None, false};
+  return {Constant, InvalidRegisterNumber, Value, std::nullopt, false};
 }
 
 UnwindLocation UnwindLocation::createIsCFAPlusOffset(int32_t Offset) {
-  return {CFAPlusOffset, InvalidRegisterNumber, Offset, None, false};
+  return {CFAPlusOffset, InvalidRegisterNumber, Offset, std::nullopt, false};
 }
 
 UnwindLocation UnwindLocation::createAtCFAPlusOffset(int32_t Offset) {
-  return {CFAPlusOffset, InvalidRegisterNumber, Offset, None, true};
+  return {CFAPlusOffset, InvalidRegisterNumber, Offset, std::nullopt, true};
 }
 
 UnwindLocation
@@ -1052,7 +1052,7 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
     if (Length == 0) {
       auto Cie = std::make_unique<CIE>(
           IsDWARF64, StartOffset, 0, 0, SmallString<8>(), 0, 0, 0, 0, 0,
-          SmallString<8>(), 0, 0, None, None, Arch);
+          SmallString<8>(), 0, 0, std::nullopt, std::nullopt, Arch);
       CIEs[StartOffset] = Cie.get();
       Entries.push_back(std::move(Cie));
       break;

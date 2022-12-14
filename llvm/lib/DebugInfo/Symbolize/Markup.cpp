@@ -54,7 +54,7 @@ Optional<MarkupNode> MarkupParser::nextNode() {
   // The buffer is empty, so parse the next bit of the line.
 
   if (Line.empty())
-    return None;
+    return std::nullopt;
 
   if (!InProgressMultiline.empty()) {
     if (Optional<StringRef> MultilineEnd = parseMultiLineEnd(Line)) {
@@ -70,7 +70,7 @@ Optional<MarkupNode> MarkupParser::nextNode() {
     // The whole line is part of the multi-line element.
     llvm::append_range(InProgressMultiline, Line);
     Line = Line.drop_front(Line.size());
-    return None;
+    return std::nullopt;
   }
 
   // Find the first valid markup element, if any.
@@ -116,10 +116,10 @@ Optional<MarkupNode> MarkupParser::parseElement(StringRef Line) {
     // Find next element using begin and end markers.
     size_t BeginPos = Line.find("{{{");
     if (BeginPos == StringRef::npos)
-      return None;
+      return std::nullopt;
     size_t EndPos = Line.find("}}}", BeginPos + 3);
     if (EndPos == StringRef::npos)
-      return None;
+      return std::nullopt;
     EndPos += 3;
     MarkupNode Element;
     Element.Text = Line.slice(BeginPos, EndPos);
@@ -173,22 +173,22 @@ Optional<StringRef> MarkupParser::parseMultiLineBegin(StringRef Line) {
   // A multi-line begin marker must be the last one on the line.
   size_t BeginPos = Line.rfind("{{{");
   if (BeginPos == StringRef::npos)
-    return None;
+    return std::nullopt;
   size_t BeginTagPos = BeginPos + 3;
 
   // If there are any end markers afterwards, the begin marker cannot belong to
   // a multi-line element.
   size_t EndPos = Line.find("}}}", BeginTagPos);
   if (EndPos != StringRef::npos)
-    return None;
+    return std::nullopt;
 
   // Check whether the tag is registered multi-line.
   size_t EndTagPos = Line.find(':', BeginTagPos);
   if (EndTagPos == StringRef::npos)
-    return None;
+    return std::nullopt;
   StringRef Tag = Line.slice(BeginTagPos, EndTagPos);
   if (!MultilineTags.contains(Tag))
-    return None;
+    return std::nullopt;
   return Line.substr(BeginPos);
 }
 
@@ -197,7 +197,7 @@ Optional<StringRef> MarkupParser::parseMultiLineBegin(StringRef Line) {
 Optional<StringRef> MarkupParser::parseMultiLineEnd(StringRef Line) {
   size_t EndPos = Line.find("}}}");
   if (EndPos == StringRef::npos)
-    return None;
+    return std::nullopt;
   return Line.take_front(EndPos + 3);
 }
 

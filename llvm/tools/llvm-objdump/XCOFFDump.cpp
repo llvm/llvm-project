@@ -49,11 +49,11 @@ objdump::getXCOFFSymbolCsectSMC(const XCOFFObjectFile &Obj,
   const XCOFFSymbolRef SymRef = Obj.toSymbolRef(Sym.getRawDataRefImpl());
 
   if (!SymRef.isCsectSymbol())
-    return None;
+    return std::nullopt;
 
   auto CsectAuxEntOrErr = SymRef.getXCOFFCsectAuxRef();
   if (!CsectAuxEntOrErr)
-    return None;
+    return std::nullopt;
 
   return CsectAuxEntOrErr.get().getStorageMappingClass();
 }
@@ -63,11 +63,11 @@ objdump::getXCOFFSymbolContainingSymbolRef(const XCOFFObjectFile &Obj,
                                            const SymbolRef &Sym) {
   const XCOFFSymbolRef SymRef = Obj.toSymbolRef(Sym.getRawDataRefImpl());
   if (!SymRef.isCsectSymbol())
-    return None;
+    return std::nullopt;
 
   Expected<XCOFFCsectAuxRef> CsectAuxEntOrErr = SymRef.getXCOFFCsectAuxRef();
   if (!CsectAuxEntOrErr || !CsectAuxEntOrErr.get().isLabel())
-    return None;
+    return std::nullopt;
   uint32_t Idx =
       static_cast<uint32_t>(CsectAuxEntOrErr.get().getSectionOrLength());
   DataRefImpl DRI;
