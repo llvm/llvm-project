@@ -778,8 +778,10 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsMIPS || IsArmArch ||
       IsPowerPC64 || IsHexagon || IsLoongArch64)
     Res |= SanitizerKind::Scudo;
-  if (IsX86_64 || IsAArch64) {
+  if (IsX86_64 || IsAArch64 || IsRISCV64) {
     Res |= SanitizerKind::HWAddress;
+  }
+  if (IsX86_64 || IsAArch64) {
     Res |= SanitizerKind::KernelHWAddress;
   }
   return Res;
