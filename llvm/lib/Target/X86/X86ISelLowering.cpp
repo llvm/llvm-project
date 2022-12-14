@@ -55531,8 +55531,11 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
         if (Ld->getExtensionType() == Ext &&
             Ld->getMemoryVT().getScalarSizeInBits() <= 32)
           return Op;
-      if (IsZeroExt && DAG.MaskedValueIsZero(Op, APInt::getHighBitsSet(64, 32)))
-        return Op;
+      if (IsZeroExt) {
+        KnownBits Known = DAG.computeKnownBits(Op);
+        if (!Known.isConstant() && Known.countMinLeadingZeros() >= 32)
+          return Op;
+      }
       return SDValue();
     };
 
