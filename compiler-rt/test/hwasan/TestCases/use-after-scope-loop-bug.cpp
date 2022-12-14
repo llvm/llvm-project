@@ -3,7 +3,7 @@
 // RUN: %clangxx_hwasan -mllvm -hwasan-use-after-scope -O1 %s -o %t && \
 // RUN:     not %run %t 2>&1 | FileCheck %s
 
-// REQUIRES: aarch64-target-arch
+// REQUIRES: aarch64-target-arch || riscv64-target-arch
 // REQUIRES: stable-runtime
 
 volatile int *p;

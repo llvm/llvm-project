@@ -10,7 +10,8 @@
 // REQUIRES: stable-runtime
 
 // Stack short granules are currently not implemented on x86.
-// XFAIL: x86_64
+// RISC-V target doesn't support oldrt
+// XFAIL: x86_64, riscv64
 
 #include <stdlib.h>
 #include <sanitizer/hwasan_interface.h>
