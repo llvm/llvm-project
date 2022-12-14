@@ -83,10 +83,9 @@ TEST(MachineInstructionDoubleWidthResult, IsCorrect) {
   }
 
   TargetOptions Options;
-  auto TM = std::unique_ptr<LLVMTargetMachine>(
-    static_cast<LLVMTargetMachine*>(
-      T->createTargetMachine(TT, "generic", "", Options, None, None,
-                             CodeGenOpt::Default)));
+  auto TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      T->createTargetMachine(TT, "generic", "", Options, std::nullopt,
+                             std::nullopt, CodeGenOpt::Default)));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
@@ -240,10 +239,9 @@ TEST(MachineInstructionHorizontalReduction, IsCorrect) {
   }
 
   TargetOptions Options;
-  auto TM = std::unique_ptr<LLVMTargetMachine>(
-    static_cast<LLVMTargetMachine*>(
-      T->createTargetMachine(TT, "generic", "", Options, None, None,
-                             CodeGenOpt::Default)));
+  auto TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      T->createTargetMachine(TT, "generic", "", Options, std::nullopt,
+                             std::nullopt, CodeGenOpt::Default)));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
@@ -340,10 +338,9 @@ TEST(MachineInstructionRetainsPreviousHalfElement, IsCorrect) {
   }
 
   TargetOptions Options;
-  auto TM = std::unique_ptr<LLVMTargetMachine>(
-    static_cast<LLVMTargetMachine*>(
-      T->createTargetMachine(TT, "generic", "", Options, None, None,
-                             CodeGenOpt::Default)));
+  auto TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      T->createTargetMachine(TT, "generic", "", Options, std::nullopt,
+                             std::nullopt, CodeGenOpt::Default)));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
@@ -1047,10 +1044,9 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
   }
 
   TargetOptions Options;
-  auto TM = std::unique_ptr<LLVMTargetMachine>(
-    static_cast<LLVMTargetMachine*>(
-      T->createTargetMachine(TT, "generic", "", Options, None, None,
-                             CodeGenOpt::Default)));
+  auto TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      T->createTargetMachine(TT, "generic", "", Options, std::nullopt,
+                             std::nullopt, CodeGenOpt::Default)));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
@@ -1189,9 +1185,9 @@ TEST(MachineInstr, HasSideEffects) {
   }
 
   TargetOptions Options;
-  auto TM = std::unique_ptr<LLVMTargetMachine>(
-      static_cast<LLVMTargetMachine *>(T->createTargetMachine(
-          TT, "generic", "", Options, None, None, CodeGenOpt::Default)));
+  auto TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      T->createTargetMachine(TT, "generic", "", Options, std::nullopt,
+                             std::nullopt, CodeGenOpt::Default)));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
@@ -2069,10 +2065,9 @@ TEST(MachineInstr, MVEVecSize) {
   }
 
   TargetOptions Options;
-  auto TM = std::unique_ptr<LLVMTargetMachine>(
-    static_cast<LLVMTargetMachine*>(
-      T->createTargetMachine(TT, "generic", "", Options, None, None,
-                             CodeGenOpt::Default)));
+  auto TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      T->createTargetMachine(TT, "generic", "", Options, std::nullopt,
+                             std::nullopt, CodeGenOpt::Default)));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);

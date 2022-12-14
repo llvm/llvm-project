@@ -251,7 +251,7 @@ private:
                                                 Type *Ty);
 
   void SetNoSanitizeMetadata(Instruction *I) {
-    I->setMetadata(LLVMContext::MD_nosanitize, MDNode::get(*C, None));
+    I->setMetadata(LLVMContext::MD_nosanitize, MDNode::get(*C, std::nullopt));
   }
 
   std::string getSectionName(const std::string &Section) const;

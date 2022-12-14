@@ -209,7 +209,7 @@ Optional<StringRef> LoadCommand::getSegmentName() const {
   case MachO::LC_SEGMENT_64:
     return extractSegmentName(MLC.segment_command_64_data.segname);
   default:
-    return None;
+    return std::nullopt;
   }
 }
 
@@ -221,6 +221,6 @@ Optional<uint64_t> LoadCommand::getSegmentVMAddr() const {
   case MachO::LC_SEGMENT_64:
     return MLC.segment_command_64_data.vmaddr;
   default:
-    return None;
+    return std::nullopt;
   }
 }

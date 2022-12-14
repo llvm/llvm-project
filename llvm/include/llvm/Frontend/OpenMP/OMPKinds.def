@@ -1000,7 +1000,7 @@ __OMP_RTL_ATTRS(omp_get_default_device, AttributeSet(), AttributeSet(), ParamAtt
 __OMP_RTL_ATTRS(__kmpc_alloc_shared, AttributeSet(
   EnumAttr(NoUnwind),
   EnumAttr(NoSync),
-  AllocSizeAttr(0, None)), ReturnPtrAttrs, ParamAttrs())
+  AllocSizeAttr(0, std::nullopt)), ReturnPtrAttrs, ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_free_shared, DeviceAllocAttrs, AttributeSet(),
                 ParamAttrs(AttributeSet(EnumAttr(NoCapture), EnumAttr(AllocatedPointer))))
 

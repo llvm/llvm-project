@@ -29,7 +29,7 @@ class GIMatchTreeVariableBinding {
 
 public:
   GIMatchTreeVariableBinding(StringRef Name, unsigned InstrID,
-                             Optional<unsigned> OpIdx = None)
+                             Optional<unsigned> OpIdx = std::nullopt)
       : Name(Name), InstrID(InstrID), OpIdx(OpIdx) {}
 
   bool isInstr() const { return !OpIdx; }

@@ -817,8 +817,8 @@ static Error readCoverageMappingData(
   // In Version4, function records are not affixed to coverage headers. Read
   // the records from their dedicated section.
   if (Version >= CovMapVersion::Version4)
-    return Reader->readFunctionRecords(FuncRecBuf, FuncRecBufEnd, None, nullptr,
-                                       nullptr);
+    return Reader->readFunctionRecords(FuncRecBuf, FuncRecBufEnd, std::nullopt,
+                                       nullptr, nullptr);
   return Error::success();
 }
 

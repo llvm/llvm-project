@@ -271,31 +271,31 @@ Optional<InterestingMemoryAccess>
 MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
   // Do not instrument the load fetching the dynamic shadow address.
   if (DynamicShadowOffset == I)
-    return None;
+    return std::nullopt;
 
   InterestingMemoryAccess Access;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
     if (!ClInstrumentReads)
-      return None;
+      return std::nullopt;
     Access.IsWrite = false;
     Access.AccessTy = LI->getType();
     Access.Addr = LI->getPointerOperand();
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
     if (!ClInstrumentWrites)
-      return None;
+      return std::nullopt;
     Access.IsWrite = true;
     Access.AccessTy = SI->getValueOperand()->getType();
     Access.Addr = SI->getPointerOperand();
   } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I)) {
     if (!ClInstrumentAtomics)
-      return None;
+      return std::nullopt;
     Access.IsWrite = true;
     Access.AccessTy = RMW->getValOperand()->getType();
     Access.Addr = RMW->getPointerOperand();
   } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(I)) {
     if (!ClInstrumentAtomics)
-      return None;
+      return std::nullopt;
     Access.IsWrite = true;
     Access.AccessTy = XCHG->getCompareOperand()->getType();
     Access.Addr = XCHG->getPointerOperand();
@@ -306,14 +306,14 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
       unsigned OpOffset = 0;
       if (F->getIntrinsicID() == Intrinsic::masked_store) {
         if (!ClInstrumentWrites)
-          return None;
+          return std::nullopt;
         // Masked store has an initial operand for the value.
         OpOffset = 1;
         Access.AccessTy = CI->getArgOperand(0)->getType();
         Access.IsWrite = true;
       } else {
         if (!ClInstrumentReads)
-          return None;
+          return std::nullopt;
         Access.AccessTy = CI->getType();
         Access.IsWrite = false;
       }
@@ -325,20 +325,20 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
   }
 
   if (!Access.Addr)
-    return None;
+    return std::nullopt;
 
   // Do not instrument accesses from different address spaces; we cannot deal
   // with them.
   Type *PtrTy = cast<PointerType>(Access.Addr->getType()->getScalarType());
   if (PtrTy->getPointerAddressSpace() != 0)
-    return None;
+    return std::nullopt;
 
   // Ignore swifterror addresses.
   // swifterror memory addresses are mem2reg promoted by instruction
   // selection. As such they cannot have regular uses like an instrumentation
   // function and it makes no sense to track them as memory.
   if (Access.Addr->isSwiftError())
-    return None;
+    return std::nullopt;
 
   // Peel off GEPs and BitCasts.
   auto *Addr = Access.Addr->stripInBoundsOffsets();
@@ -351,12 +351,12 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
       auto OF = Triple(I->getModule()->getTargetTriple()).getObjectFormat();
       if (SectionName.endswith(
               getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false)))
-        return None;
+        return std::nullopt;
     }
 
     // Do not instrument accesses to LLVM internal variables.
     if (GV->getName().startswith("__llvm"))
-      return None;
+      return std::nullopt;
   }
 
   const DataLayout &DL = I->getModule()->getDataLayout();

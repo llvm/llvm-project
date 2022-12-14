@@ -125,7 +125,7 @@ struct SymbolEntry {
   }
 
   Optional<uint32_t> section() const {
-    return n_sect == MachO::NO_SECT ? None : Optional<uint32_t>(n_sect);
+    return n_sect == MachO::NO_SECT ? std::nullopt : Optional<uint32_t>(n_sect);
   }
 };
 

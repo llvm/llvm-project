@@ -869,7 +869,7 @@ static Optional<SectionRef> getWasmCodeSection(const WasmObjectFile &Obj) {
     if (Section.Type == wasm::WASM_SEC_CODE)
       return SecI;
   }
-  return None;
+  return std::nullopt;
 }
 
 static void
@@ -1101,7 +1101,7 @@ static SymbolInfoTy createDummySymbolInfo(const ObjectFile &Obj,
                                           const uint64_t Addr, StringRef &Name,
                                           uint8_t Type) {
   if (Obj.isXCOFF() && SymbolDescription)
-    return SymbolInfoTy(Addr, Name, None, None, false);
+    return SymbolInfoTy(Addr, Name, std::nullopt, std::nullopt, false);
   else
     return SymbolInfoTy(Addr, Name, Type);
 }
@@ -1276,14 +1276,14 @@ static Optional<OwningBinary<Binary>>
 fetchBinaryByBuildID(const ObjectFile &Obj) {
   Optional<object::BuildIDRef> BuildID = getBuildID(&Obj);
   if (!BuildID)
-    return None;
+    return std::nullopt;
   Optional<std::string> Path = BIDFetcher->fetch(*BuildID);
   if (!Path)
-    return None;
+    return std::nullopt;
   Expected<OwningBinary<Binary>> DebugBinary = createBinary(*Path);
   if (!DebugBinary) {
     reportWarning(toString(DebugBinary.takeError()), *Path);
-    return None;
+    return std::nullopt;
   }
   return std::move(*DebugBinary);
 }
@@ -1423,13 +1423,12 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
   LLVM_DEBUG(LVP.dump());
 
   std::unordered_map<uint64_t, BBAddrMap> AddrToBBAddrMap;
-  auto ReadBBAddrMap = [&](Optional<unsigned> SectionIndex = None) {
+  auto ReadBBAddrMap = [&](Optional<unsigned> SectionIndex = std::nullopt) {
     AddrToBBAddrMap.clear();
     if (const auto *Elf = dyn_cast<ELFObjectFileBase>(&Obj)) {
       auto BBAddrMapsOrErr = Elf->readBBAddrMap(SectionIndex);
       if (!BBAddrMapsOrErr)
-          reportWarning(toString(BBAddrMapsOrErr.takeError()),
-                        Obj.getFileName());
+        reportWarning(toString(BBAddrMapsOrErr.takeError()), Obj.getFileName());
       for (auto &FunctionBBAddrMap : *BBAddrMapsOrErr)
         AddrToBBAddrMap.emplace(FunctionBBAddrMap.Addr,
                                 std::move(FunctionBBAddrMap));

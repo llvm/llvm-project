@@ -29,6 +29,6 @@ std::optional<unsigned> ELFAttrs::attrTypeFromString(StringRef tag,
         return item.tagName.drop_front(hasTagPrefix ? 0 : 4) == tag;
       });
   if (tagNameIt == tagNameMap.end())
-    return None;
+    return std::nullopt;
   return tagNameIt->attr;
 }

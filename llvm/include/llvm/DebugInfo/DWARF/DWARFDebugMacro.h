@@ -116,7 +116,7 @@ public:
   }
 
   Error parseMacinfo(DWARFDataExtractor MacroData) {
-    return parseImpl(None, None, MacroData, /*IsMacro=*/false);
+    return parseImpl(std::nullopt, std::nullopt, MacroData, /*IsMacro=*/false);
   }
 
   /// Return whether the section has any entries.

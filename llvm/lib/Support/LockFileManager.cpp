@@ -60,7 +60,7 @@ LockFileManager::readLockFile(StringRef LockFileName) {
       MemoryBuffer::getFile(LockFileName);
   if (!MBOrErr) {
     sys::fs::remove(LockFileName);
-    return None;
+    return std::nullopt;
   }
   MemoryBuffer &MB = *MBOrErr.get();
 
@@ -77,7 +77,7 @@ LockFileManager::readLockFile(StringRef LockFileName) {
 
   // Delete the lock file. It's invalid anyway.
   sys::fs::remove(LockFileName);
-  return None;
+  return std::nullopt;
 }
 
 static std::error_code getHostID(SmallVectorImpl<char> &HostID) {

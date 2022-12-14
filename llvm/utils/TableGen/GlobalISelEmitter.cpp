@@ -210,7 +210,7 @@ static Optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
   if (VT.isInteger() || VT.isFloatingPoint())
     return LLTCodeGen(LLT::scalar(VT.getSizeInBits()));
 
-  return None;
+  return std::nullopt;
 }
 
 static std::string explainPredicates(const TreePatternNode *N) {
@@ -518,7 +518,8 @@ class MatchTable {
 public:
   static MatchTableRecord LineBreak;
   static MatchTableRecord Comment(StringRef Comment) {
-    return MatchTableRecord(None, Comment, 0, MatchTableRecord::MTRF_Comment);
+    return MatchTableRecord(std::nullopt, Comment, 0,
+                            MatchTableRecord::MTRF_Comment);
   }
   static MatchTableRecord Opcode(StringRef Opcode, int IndentAdjust = 0) {
     unsigned ExtraFlags = 0;
@@ -527,29 +528,29 @@ public:
     if (IndentAdjust < 0)
       ExtraFlags |= MatchTableRecord::MTRF_Outdent;
 
-    return MatchTableRecord(None, Opcode, 1,
+    return MatchTableRecord(std::nullopt, Opcode, 1,
                             MatchTableRecord::MTRF_CommaFollows | ExtraFlags);
   }
   static MatchTableRecord NamedValue(StringRef NamedValue) {
-    return MatchTableRecord(None, NamedValue, 1,
+    return MatchTableRecord(std::nullopt, NamedValue, 1,
                             MatchTableRecord::MTRF_CommaFollows);
   }
   static MatchTableRecord NamedValue(StringRef NamedValue, int64_t RawValue) {
-    return MatchTableRecord(None, NamedValue, 1,
+    return MatchTableRecord(std::nullopt, NamedValue, 1,
                             MatchTableRecord::MTRF_CommaFollows, RawValue);
   }
   static MatchTableRecord NamedValue(StringRef Namespace,
                                      StringRef NamedValue) {
-    return MatchTableRecord(None, (Namespace + "::" + NamedValue).str(), 1,
-                            MatchTableRecord::MTRF_CommaFollows);
+    return MatchTableRecord(std::nullopt, (Namespace + "::" + NamedValue).str(),
+                            1, MatchTableRecord::MTRF_CommaFollows);
   }
   static MatchTableRecord NamedValue(StringRef Namespace, StringRef NamedValue,
                                      int64_t RawValue) {
-    return MatchTableRecord(None, (Namespace + "::" + NamedValue).str(), 1,
-                            MatchTableRecord::MTRF_CommaFollows, RawValue);
+    return MatchTableRecord(std::nullopt, (Namespace + "::" + NamedValue).str(),
+                            1, MatchTableRecord::MTRF_CommaFollows, RawValue);
   }
   static MatchTableRecord IntValue(int64_t IntValue) {
-    return MatchTableRecord(None, llvm::to_string(IntValue), 1,
+    return MatchTableRecord(std::nullopt, llvm::to_string(IntValue), 1,
                             MatchTableRecord::MTRF_CommaFollows);
   }
   static MatchTableRecord Label(unsigned LabelID) {
@@ -625,7 +626,7 @@ public:
 };
 
 MatchTableRecord MatchTable::LineBreak = {
-    None, "" /* Emit String */, 0 /* Elements */,
+    std::nullopt, "" /* Emit String */, 0 /* Elements */,
     MatchTableRecord::MTRF_LineBreakFollows};
 
 void MatchTableRecord::emit(raw_ostream &OS, bool LineBreakIsNextAfterThis,
@@ -969,7 +970,7 @@ public:
   getComplexSubOperand(StringRef SymbolicName) const {
     const auto &I = ComplexSubOperands.find(SymbolicName);
     if (I == ComplexSubOperands.end())
-      return None;
+      return std::nullopt;
     return I->second;
   }
 
@@ -1644,7 +1645,7 @@ public:
   template <class Kind, class... Args>
   Optional<Kind *> addPredicate(Args &&... args) {
     if (isSameAsAnotherOperand())
-      return None;
+      return std::nullopt;
     Predicates.emplace_back(std::make_unique<Kind>(
         getInsnVarID(), getOpIdx(), std::forward<Args>(args)...));
     return static_cast<Kind *>(Predicates.back().get());
@@ -2959,7 +2960,7 @@ private:
 public:
   RenderComplexPatternOperand(unsigned InsnID, const Record &TheDef,
                               StringRef SymbolicName, unsigned RendererID,
-                              Optional<unsigned> SubOperand = None)
+                              Optional<unsigned> SubOperand = std::nullopt)
       : OperandRenderer(OR_ComplexPattern), InsnID(InsnID), TheDef(TheDef),
         SymbolicName(SymbolicName), RendererID(RendererID),
         SubOperand(SubOperand) {}
@@ -3827,7 +3828,7 @@ Optional<unsigned> GlobalISelEmitter::getMemSizeBitsFromPredicate(const TreePred
       MVTToLLT(getValueType(Predicate.getMemoryVT()));
 
   if (!MemTyOrNone)
-    return None;
+    return std::nullopt;
 
   // Align so unusual types like i1 don't get rounded down.
   return llvm::alignTo(
@@ -5034,17 +5035,17 @@ GlobalISelEmitter::getRegClassFromLeaf(TreePatternNode *Leaf) {
   assert(Leaf->isLeaf() && "Expected leaf?");
   Record *RCRec = getInitValueAsRegClass(Leaf->getLeafValue());
   if (!RCRec)
-    return None;
+    return std::nullopt;
   CodeGenRegisterClass *RC = CGRegs.getRegClass(RCRec);
   if (!RC)
-    return None;
+    return std::nullopt;
   return RC;
 }
 
 Optional<const CodeGenRegisterClass *>
 GlobalISelEmitter::inferRegClassFromPattern(TreePatternNode *N) {
   if (!N)
-    return None;
+    return std::nullopt;
 
   if (N->isLeaf())
     return getRegClassFromLeaf(N);
@@ -5054,18 +5055,18 @@ GlobalISelEmitter::inferRegClassFromPattern(TreePatternNode *N) {
 
   // Only handle things that produce a single type.
   if (N->getNumTypes() != 1)
-    return None;
+    return std::nullopt;
   Record *OpRec = N->getOperator();
 
   // We only want instructions.
   if (!OpRec->isSubClassOf("Instruction"))
-    return None;
+    return std::nullopt;
 
   // Don't want to try and infer things when there could potentially be more
   // than one candidate register class.
   auto &Inst = Target.getInstruction(OpRec);
   if (Inst.Operands.NumDefs > 1)
-    return None;
+    return std::nullopt;
 
   // Handle any special-case instructions which we can safely infer register
   // classes from.
@@ -5076,7 +5077,7 @@ GlobalISelEmitter::inferRegClassFromPattern(TreePatternNode *N) {
     // has the desired register class as the first child.
     TreePatternNode *RCChild = N->getChild(IsRegSequence ? 0 : 1);
     if (!RCChild->isLeaf())
-      return None;
+      return std::nullopt;
     return getRegClassFromLeaf(RCChild);
   }
   if (InstName == "INSERT_SUBREG") {
@@ -5106,7 +5107,7 @@ GlobalISelEmitter::inferRegClassFromPattern(TreePatternNode *N) {
     return &RC;
   }
 
-  return None;
+  return std::nullopt;
 }
 
 Optional<const CodeGenRegisterClass *>
@@ -5115,12 +5116,12 @@ GlobalISelEmitter::inferSuperRegisterClass(const TypeSetByHwMode &Ty,
   assert(SubRegIdxNode && "Expected subregister index node!");
   // We need a ValueTypeByHwMode for getSuperRegForSubReg.
   if (!Ty.isValueTypeByHwMode(false))
-    return None;
+    return std::nullopt;
   if (!SubRegIdxNode->isLeaf())
-    return None;
+    return std::nullopt;
   DefInit *SubRegInit = dyn_cast<DefInit>(SubRegIdxNode->getLeafValue());
   if (!SubRegInit)
-    return None;
+    return std::nullopt;
   CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(SubRegInit->getDef());
 
   // Use the information we found above to find a minimal register class which
@@ -5129,7 +5130,7 @@ GlobalISelEmitter::inferSuperRegisterClass(const TypeSetByHwMode &Ty,
       Target.getSuperRegForSubReg(Ty.getValueTypeByHwMode(), CGRegs, SubIdx,
                                   /* MustBeAllocatable */ true);
   if (!RC)
-    return None;
+    return std::nullopt;
   return *RC;
 }
 
@@ -5152,11 +5153,11 @@ GlobalISelEmitter::inferSuperRegisterClassForNode(
 Optional<CodeGenSubRegIndex *>
 GlobalISelEmitter::inferSubRegIndexForNode(TreePatternNode *SubRegIdxNode) {
   if (!SubRegIdxNode->isLeaf())
-    return None;
+    return std::nullopt;
 
   DefInit *SubRegInit = dyn_cast<DefInit>(SubRegIdxNode->getLeafValue());
   if (!SubRegInit)
-    return None;
+    return std::nullopt;
   return CGRegs.getSubRegIdx(SubRegInit->getDef());
 }
 
@@ -5681,11 +5682,11 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
     auto RuleCoverageBufOrErr = MemoryBuffer::getFile(UseCoverageFile);
     if (!RuleCoverageBufOrErr) {
       PrintWarning(SMLoc(), "Missing rule coverage data");
-      RuleCoverage = None;
+      RuleCoverage = std::nullopt;
     } else {
       if (!RuleCoverage->parse(*RuleCoverageBufOrErr.get(), Target.getName())) {
         PrintWarning(SMLoc(), "Ignoring invalid or missing rule coverage data");
-        RuleCoverage = None;
+        RuleCoverage = std::nullopt;
       }
     }
   }

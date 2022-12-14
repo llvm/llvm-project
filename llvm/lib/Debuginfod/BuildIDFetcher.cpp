@@ -27,5 +27,5 @@ DebuginfodFetcher::fetch(ArrayRef<uint8_t> BuildID) const {
   if (PathOrErr)
     return *PathOrErr;
   consumeError(PathOrErr.takeError());
-  return None;
+  return std::nullopt;
 }

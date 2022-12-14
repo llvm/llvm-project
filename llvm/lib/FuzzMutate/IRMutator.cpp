@@ -106,7 +106,7 @@ InjectorIRStrategy::chooseOperation(Value *Src, RandomIRBuilder &IB) {
   };
   auto RS = makeSampler(IB.Rand, make_filter_range(Operations, OpMatchesPred));
   if (RS.isEmpty())
-    return None;
+    return std::nullopt;
   return *RS;
 }
 

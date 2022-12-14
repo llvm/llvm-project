@@ -301,7 +301,7 @@ static ArrayRef<Use> GetDeoptBundleOperands(const CallBase *Call) {
   if (!DeoptBundle) {
     assert(AllowStatepointWithNoDeoptInfo &&
            "Found non-leaf call without deopt info!");
-    return None;
+    return std::nullopt;
   }
 
   return DeoptBundle->Inputs;

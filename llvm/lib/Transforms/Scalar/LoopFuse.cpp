@@ -645,7 +645,7 @@ private:
   void collectFusionCandidates(const LoopVector &LV) {
     for (Loop *L : LV) {
       TTI::PeelingPreferences PP =
-          gatherPeelingPreferences(L, SE, TTI, None, None);
+          gatherPeelingPreferences(L, SE, TTI, std::nullopt, std::nullopt);
       FusionCandidate CurrCand(L, DT, &PDT, ORE, PP);
       if (!CurrCand.isEligibleForFusion(SE))
         continue;
@@ -708,14 +708,14 @@ private:
     if (isa<SCEVCouldNotCompute>(TripCount0)) {
       UncomputableTripCount++;
       LLVM_DEBUG(dbgs() << "Trip count of first loop could not be computed!");
-      return {false, None};
+      return {false, std::nullopt};
     }
 
     const SCEV *TripCount1 = SE.getBackedgeTakenCount(FC1.L);
     if (isa<SCEVCouldNotCompute>(TripCount1)) {
       UncomputableTripCount++;
       LLVM_DEBUG(dbgs() << "Trip count of second loop could not be computed!");
-      return {false, None};
+      return {false, std::nullopt};
     }
 
     LLVM_DEBUG(dbgs() << "\tTrip counts: " << *TripCount0 << " & "
@@ -740,7 +740,7 @@ private:
       LLVM_DEBUG(dbgs() << "Loop(s) do not have a single exit point or do not "
                            "have a constant number of iterations. Peeling "
                            "is not benefical\n");
-      return {false, None};
+      return {false, std::nullopt};
     }
 
     Optional<unsigned> Difference;

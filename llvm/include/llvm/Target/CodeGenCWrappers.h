@@ -29,7 +29,7 @@ inline Optional<CodeModel::Model> unwrap(LLVMCodeModel Model, bool &JIT) {
     JIT = true;
     [[fallthrough]];
   case LLVMCodeModelDefault:
-    return None;
+    return std::nullopt;
   case LLVMCodeModelTiny:
     return CodeModel::Tiny;
   case LLVMCodeModelSmall:

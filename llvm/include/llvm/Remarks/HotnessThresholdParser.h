@@ -30,7 +30,7 @@ namespace remarks {
 // be filled later during PSI.
 inline Expected<Optional<uint64_t>> parseHotnessThresholdOption(StringRef Arg) {
   if (Arg == "auto")
-    return None;
+    return std::nullopt;
 
   int64_t Val;
   if (Arg.getAsInteger(10, Val))

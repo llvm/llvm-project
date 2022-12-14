@@ -703,7 +703,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     if (CompletelyUnroll) {
       if (PreserveOnlyFirst) {
         if (i == 0)
-          return None;
+          return std::nullopt;
         return j == 0;
       }
       // Complete (but possibly inexact) unrolling
@@ -711,7 +711,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         return true;
       if (Info.TripCount && j != Info.TripCount)
         return false;
-      return None;
+      return std::nullopt;
     }
 
     if (ULO.Runtime) {
@@ -719,7 +719,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       // exits may be stale.
       if (IsLatch && j != 0)
         return false;
-      return None;
+      return std::nullopt;
     }
 
     if (j != Info.BreakoutTrip &&
@@ -728,7 +728,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       // unconditional branch for some iterations.
       return false;
     }
-    return None;
+    return std::nullopt;
   };
 
   // Fold branches for iterations where we know that they will exit or not

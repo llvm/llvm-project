@@ -177,7 +177,7 @@ Optional<std::string> Process::GetEnv(StringRef Name) {
   std::string NameStr = Name.str();
   const char *Val = ::getenv(NameStr.c_str());
   if (!Val)
-    return None;
+    return std::nullopt;
   return std::string(Val);
 }
 

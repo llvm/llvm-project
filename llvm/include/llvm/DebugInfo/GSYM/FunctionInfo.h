@@ -175,8 +175,8 @@ struct FunctionInfo {
   void clear() {
     Range = {0, 0};
     Name = 0;
-    OptLineTable = None;
-    Inline = None;
+    OptLineTable = std::nullopt;
+    Inline = std::nullopt;
   }
 };
 

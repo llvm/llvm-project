@@ -191,12 +191,12 @@ getImageBaseAddress(const object::ELFFile<ELFT> &ELFFile) {
   auto PhdrRangeOrErr = ELFFile.program_headers();
   if (!PhdrRangeOrErr) {
     consumeError(PhdrRangeOrErr.takeError());
-    return llvm::None;
+    return std::nullopt;
   }
   for (const typename ELFT::Phdr &Phdr : *PhdrRangeOrErr)
     if (Phdr.p_type == ELF::PT_LOAD)
       return (uint64_t)Phdr.p_vaddr;
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Determine the virtual address that is considered the base address of mach-o
@@ -222,7 +222,7 @@ getImageBaseAddress(const object::MachOObjectFile *MachO) {
         return SLC.vmaddr;
     }
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Determine the virtual address that is considered the base address of an
@@ -248,7 +248,7 @@ static llvm::Optional<uint64_t> getImageBaseAddress(object::ObjectFile &Obj) {
     return getImageBaseAddress(ELFObj->getELFFile());
   else if (const auto *ELFObj = dyn_cast<object::ELF64BEObjectFile>(&Obj))
     return getImageBaseAddress(ELFObj->getELFFile());
-  return llvm::None;
+  return std::nullopt;
 }
 
 static llvm::Error handleObjectFile(ObjectFile &Obj,

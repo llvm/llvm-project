@@ -67,15 +67,16 @@ static void check(remarks::SerializerMode Mode, const remarks::Remark &R,
 
 static void check(const remarks::Remark &R, StringRef ExpectedR,
                   StringRef ExpectedMeta,
-                  Optional<remarks::StringTable> StrTab = None) {
+                  Optional<remarks::StringTable> StrTab = std::nullopt) {
   return check(remarks::SerializerMode::Separate, R, ExpectedR, ExpectedMeta,
                std::move(StrTab));
 }
 
-static void checkStandalone(const remarks::Remark &R, StringRef ExpectedR,
-                            Optional<remarks::StringTable> StrTab = None) {
+static void
+checkStandalone(const remarks::Remark &R, StringRef ExpectedR,
+                Optional<remarks::StringTable> StrTab = std::nullopt) {
   return check(remarks::SerializerMode::Standalone, R, ExpectedR,
-               /*ExpectedMeta=*/None, std::move(StrTab));
+               /*ExpectedMeta=*/std::nullopt, std::move(StrTab));
 }
 
 TEST(BitstreamRemarkSerializer, SeparateRemarkFileNoOptionals) {

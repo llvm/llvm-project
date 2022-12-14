@@ -81,7 +81,8 @@ TEST(ConvertUTFTest, OddLengthInput) {
 
 TEST(ConvertUTFTest, Empty) {
   std::string Result;
-  bool Success = convertUTF16ToUTF8String(llvm::ArrayRef<char>(None), Result);
+  bool Success =
+      convertUTF16ToUTF8String(llvm::ArrayRef<char>(std::nullopt), Result);
   EXPECT_TRUE(Success);
   EXPECT_TRUE(Result.empty());
 }
@@ -96,7 +97,7 @@ TEST(ConvertUTFTest, HasUTF16BOM) {
   HasBOM = hasUTF16ByteOrderMark(makeArrayRef("\xfe\xff\x00asdf", 6));
   EXPECT_TRUE(HasBOM);
 
-  HasBOM = hasUTF16ByteOrderMark(None);
+  HasBOM = hasUTF16ByteOrderMark(std::nullopt);
   EXPECT_FALSE(HasBOM);
   HasBOM = hasUTF16ByteOrderMark(makeArrayRef("\xfe", 1));
   EXPECT_FALSE(HasBOM);

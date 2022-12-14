@@ -84,12 +84,12 @@ Optional<unsigned> MCRegisterInfo::getLLVMRegNum(unsigned RegNum,
   unsigned Size = isEH ? EHDwarf2LRegsSize : Dwarf2LRegsSize;
 
   if (!M)
-    return None;
+    return std::nullopt;
   DwarfLLVMRegPair Key = { RegNum, 0 };
   const DwarfLLVMRegPair *I = std::lower_bound(M, M+Size, Key);
   if (I != M + Size && I->FromReg == RegNum)
     return I->ToReg;
-  return None;
+  return std::nullopt;
 }
 
 int MCRegisterInfo::getDwarfRegNumFromDwarfEHRegNum(unsigned RegNum) const {

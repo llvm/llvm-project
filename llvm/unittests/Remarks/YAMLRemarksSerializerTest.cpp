@@ -25,7 +25,7 @@ using namespace llvm;
 static void check(remarks::Format SerializerFormat,
                   remarks::SerializerMode Mode, ArrayRef<remarks::Remark> Rs,
                   StringRef ExpectedR, Optional<StringRef> ExpectedMeta,
-                  Optional<remarks::StringTable> StrTab = None) {
+                  Optional<remarks::StringTable> StrTab = std::nullopt) {
   std::string Buf;
   raw_string_ostream OS(Buf);
   Expected<std::unique_ptr<remarks::RemarkSerializer>> MaybeS = [&] {
@@ -53,18 +53,19 @@ static void check(remarks::Format SerializerFormat,
 
 static void check(remarks::Format SerializerFormat, const remarks::Remark &R,
                   StringRef ExpectedR, StringRef ExpectedMeta,
-                  Optional<remarks::StringTable> StrTab = None) {
+                  Optional<remarks::StringTable> StrTab = std::nullopt) {
   return check(SerializerFormat, remarks::SerializerMode::Separate,
                makeArrayRef(&R, &R + 1), ExpectedR, ExpectedMeta,
                std::move(StrTab));
 }
 
-static void checkStandalone(remarks::Format SerializerFormat,
-                            const remarks::Remark &R, StringRef ExpectedR,
-                            Optional<remarks::StringTable> StrTab = None) {
+static void
+checkStandalone(remarks::Format SerializerFormat, const remarks::Remark &R,
+                StringRef ExpectedR,
+                Optional<remarks::StringTable> StrTab = std::nullopt) {
   return check(SerializerFormat, remarks::SerializerMode::Standalone,
                makeArrayRef(&R, &R + 1), ExpectedR,
-               /*ExpectedMeta=*/None, std::move(StrTab));
+               /*ExpectedMeta=*/std::nullopt, std::move(StrTab));
 }
 
 TEST(YAMLRemarks, SerializerRemark) {
@@ -325,5 +326,5 @@ TEST(YAMLRemarks, SerializerRemarkParsedStrTabStandaloneMultipleRemarks) {
                   "    DebugLoc:        { File: 6, Line: 6, Column: 7 }\n"
                   "...\n",
                   561),
-        /*ExpectedMeta=*/None, std::move(PreFilledStrTab));
+        /*ExpectedMeta=*/std::nullopt, std::move(PreFilledStrTab));
 }

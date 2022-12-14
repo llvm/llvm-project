@@ -248,7 +248,7 @@ public:
   /// from a real key to an internal key.
   template <typename Key, typename TraitsT>
   bool set_as(const Key &K, ValueT V, TraitsT &Traits) {
-    return set_as_internal(K, std::move(V), Traits, None);
+    return set_as_internal(K, std::move(V), Traits, std::nullopt);
   }
 
   template <typename Key, typename TraitsT>
