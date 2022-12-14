@@ -358,7 +358,7 @@ Operation *tensor::bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
   // The shape of the result can be obtained from the sizes passed in.
   SmallVector<Value> dynDims;
   SmallVector<int64_t> shape;
-  dispatchIndexOpFoldResults(sizes, dynDims, shape, ShapedType::kDynamic);
+  dispatchIndexOpFoldResults(sizes, dynDims, shape);
   RankedTensorType resultType =
       RankedTensorType::get(shape, padOp.getResultType().getElementType());
 

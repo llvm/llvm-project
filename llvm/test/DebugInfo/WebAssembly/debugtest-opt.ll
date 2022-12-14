@@ -19,15 +19,14 @@
 source_filename = "debugtest-opt.c"
 target triple = "wasm32"
 
-@globl = hidden local_unnamed_addr global i32* null, align 4, !dbg !0
+@globl = hidden local_unnamed_addr global ptr null, align 4, !dbg !0
 
 ; Function Attrs: nounwind writeonly
 define hidden void @baz(i32 %arg) local_unnamed_addr #0 !dbg !12 {
 entry:
   %locl = alloca i32, align 4
   call void @llvm.dbg.value(metadata i32 %arg, metadata !16, metadata !DIExpression()), !dbg !18
-  %0 = bitcast i32* %locl to i8*, !dbg !19
-  store i32* %locl, i32** @globl, align 4, !dbg !20, !tbaa !21
+  store ptr %locl, ptr @globl, align 4, !dbg !20, !tbaa !21
   ret void, !dbg !25
 }
 

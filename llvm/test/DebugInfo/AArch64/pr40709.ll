@@ -8,15 +8,15 @@
 %struct.mystruct = type { double, double, double, double, double }
 
 @.str = private unnamed_addr constant [5 x i8] c"%llu\00", align 1
-define dso_local void @foo(%struct.mystruct* %ms) !dbg !9 {
+define dso_local void @foo(ptr %ms) !dbg !9 {
 entry:
-  call void @llvm.dbg.declare(metadata %struct.mystruct* %ms, metadata !21, metadata !DIExpression()), !dbg !22
-  %0 = ptrtoint %struct.mystruct* %ms to i64, !dbg !23
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), i64 %0), !dbg !24
+  call void @llvm.dbg.declare(metadata ptr %ms, metadata !21, metadata !DIExpression()), !dbg !22
+  %0 = ptrtoint ptr %ms to i64, !dbg !23
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i64 %0), !dbg !24
   ret void, !dbg !25
 }
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
-declare dso_local i32 @printf(i8*, ...)
+declare dso_local i32 @printf(ptr, ...)
 
 
 !llvm.dbg.cu = !{!0}

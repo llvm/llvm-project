@@ -7076,7 +7076,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       APFloat Fabs = TruncC;
       Fabs.clearSign();
       if (!Lossy &&
-          (!(Fabs < APFloat::getSmallestNormalized(FPSem)) || Fabs.isZero())) {
+          (Fabs.isZero() || !(Fabs < APFloat::getSmallestNormalized(FPSem)))) {
         Constant *NewC = ConstantFP::get(X->getType(), TruncC);
         return new FCmpInst(Pred, X, NewC, "", &I);
       }

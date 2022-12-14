@@ -128,7 +128,6 @@ struct MIToken {
     kw_pcsections,
     kw_cfi_type,
     kw_bbsections,
-    kw_bb_id,
     kw_unknown_size,
     kw_unknown_address,
     kw_ir_block_address_taken,

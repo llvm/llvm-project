@@ -1686,16 +1686,16 @@ public:
   bool allDefsAreDead() const;
 
   /// Return a valid size if the instruction is a spill instruction.
-  Optional<unsigned> getSpillSize(const TargetInstrInfo *TII) const;
+  std::optional<unsigned> getSpillSize(const TargetInstrInfo *TII) const;
 
   /// Return a valid size if the instruction is a folded spill instruction.
-  Optional<unsigned> getFoldedSpillSize(const TargetInstrInfo *TII) const;
+  std::optional<unsigned> getFoldedSpillSize(const TargetInstrInfo *TII) const;
 
   /// Return a valid size if the instruction is a restore instruction.
-  Optional<unsigned> getRestoreSize(const TargetInstrInfo *TII) const;
+  std::optional<unsigned> getRestoreSize(const TargetInstrInfo *TII) const;
 
   /// Return a valid size if the instruction is a folded restore instruction.
-  Optional<unsigned>
+  std::optional<unsigned>
   getFoldedRestoreSize(const TargetInstrInfo *TII) const;
 
   /// Copy implicit register operands from specified

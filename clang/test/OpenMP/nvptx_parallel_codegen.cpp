@@ -81,7 +81,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
 // CHECK1-NEXT:    [[CAPTURED_VARS_ADDRS2:%.*]] = alloca [0 x ptr], align 8
 // CHECK1-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1:[0-9]+]], i8 1, i1 true, i1 true)
+// CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1:[0-9]+]], i8 1, i1 true)
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK1:       user_code.entry:
@@ -89,10 +89,10 @@ int bar(int n){
 // CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
 // CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 0, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 // CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr @__omp_outlined__2_wrapper, ptr [[CAPTURED_VARS_ADDRS2]], i64 0)
-// CHECK1-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP5]], 1
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], 1
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[A_ADDR]], align 4
-// CHECK1-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1, i1 true)
+// CHECK1-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1)
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
 // CHECK1-NEXT:    ret void
@@ -192,7 +192,7 @@ int bar(int n){
 // CHECK1-NEXT:    store i64 [[AA]], ptr [[AA_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 1, i1 true, i1 true)
+// CHECK1-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 1, i1 true)
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK1:       user_code.entry:
@@ -201,19 +201,19 @@ int bar(int n){
 // CHECK1-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP3]], 1000
 // CHECK1-NEXT:    [[TMP4:%.*]] = zext i1 [[CMP]] to i32
 // CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 [[TMP4]], i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-// CHECK1-NEXT:    [[TMP6:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP6]], 1
+// CHECK1-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP5]], 1
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[A_ADDR]], align 4
-// CHECK1-NEXT:    [[TMP7:%.*]] = load i16, ptr [[AA_ADDR]], align 2
-// CHECK1-NEXT:    [[CONV3:%.*]] = sext i16 [[TMP7]] to i32
-// CHECK1-NEXT:    [[ADD4:%.*]] = add nsw i32 [[CONV3]], 1
-// CHECK1-NEXT:    [[CONV5:%.*]] = trunc i32 [[ADD4]] to i16
-// CHECK1-NEXT:    store i16 [[CONV5]], ptr [[AA_ADDR]], align 2
+// CHECK1-NEXT:    [[TMP6:%.*]] = load i16, ptr [[AA_ADDR]], align 2
+// CHECK1-NEXT:    [[CONV:%.*]] = sext i16 [[TMP6]] to i32
+// CHECK1-NEXT:    [[ADD1:%.*]] = add nsw i32 [[CONV]], 1
+// CHECK1-NEXT:    [[CONV2:%.*]] = trunc i32 [[ADD1]] to i16
+// CHECK1-NEXT:    store i16 [[CONV2]], ptr [[AA_ADDR]], align 2
 // CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], ptr [[TMP0]], i64 0, i64 2
-// CHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-// CHECK1-NEXT:    [[ADD6:%.*]] = add nsw i32 [[TMP8]], 1
-// CHECK1-NEXT:    store i32 [[ADD6]], ptr [[ARRAYIDX]], align 4
-// CHECK1-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1, i1 true)
+// CHECK1-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// CHECK1-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP7]], 1
+// CHECK1-NEXT:    store i32 [[ADD3]], ptr [[ARRAYIDX]], align 4
+// CHECK1-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1)
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
 // CHECK1-NEXT:    ret void
@@ -255,7 +255,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 8
 // CHECK1-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 1, i1 true, i1 true)
+// CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 1, i1 true)
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK1:       user_code.entry:
@@ -266,11 +266,11 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
 // CHECK1-NEXT:    store ptr [[A1]], ptr [[TMP3]], align 8
 // CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__4, ptr @__omp_outlined__4_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 1)
-// CHECK1-NEXT:    [[TMP6:%.*]] = load i32, ptr [[A1]], align 4
-// CHECK1-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP6]], 1
+// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A1]], align 4
+// CHECK1-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // CHECK1-NEXT:    store i32 [[INC]], ptr [[A1]], align 4
 // CHECK1-NEXT:    call void @__kmpc_free_shared(ptr [[A1]], i64 4)
-// CHECK1-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1, i1 true)
+// CHECK1-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1)
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
 // CHECK1-NEXT:    ret void
@@ -331,8 +331,8 @@ int bar(int n){
 // CHECK1-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS]])
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[GLOBAL_ARGS]], align 8
 // CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP2]], i64 0
-// CHECK1-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP3]], align 8
-// CHECK1-NEXT:    call void @__omp_outlined__4(ptr [[DOTADDR1]], ptr [[DOTZERO_ADDR]], ptr [[TMP5]]) #[[ATTR3]]
+// CHECK1-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 8
+// CHECK1-NEXT:    call void @__omp_outlined__4(ptr [[DOTADDR1]], ptr [[DOTZERO_ADDR]], ptr [[TMP4]]) #[[ATTR3]]
 // CHECK1-NEXT:    ret void
 //
 //
@@ -344,7 +344,7 @@ int bar(int n){
 // CHECK2-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 4
 // CHECK2-NEXT:    [[CAPTURED_VARS_ADDRS2:%.*]] = alloca [0 x ptr], align 4
 // CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1:[0-9]+]], i8 1, i1 true, i1 true)
+// CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1:[0-9]+]], i8 1, i1 true)
 // CHECK2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK2:       user_code.entry:
@@ -352,10 +352,10 @@ int bar(int n){
 // CHECK2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr [[CAPTURED_VARS_ADDRS]], i32 0)
 // CHECK2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 0, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr [[CAPTURED_VARS_ADDRS1]], i32 0)
 // CHECK2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr @__omp_outlined__2_wrapper, ptr [[CAPTURED_VARS_ADDRS2]], i32 0)
-// CHECK2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP5]], 1
+// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], 1
 // CHECK2-NEXT:    store i32 [[ADD]], ptr [[A_ADDR]], align 4
-// CHECK2-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1, i1 true)
+// CHECK2-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
 // CHECK2-NEXT:    ret void
@@ -455,7 +455,7 @@ int bar(int n){
 // CHECK2-NEXT:    store i32 [[AA]], ptr [[AA_ADDR]], align 4
 // CHECK2-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 1, i1 true, i1 true)
+// CHECK2-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 1, i1 true)
 // CHECK2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK2:       user_code.entry:
@@ -464,19 +464,19 @@ int bar(int n){
 // CHECK2-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP3]], 1000
 // CHECK2-NEXT:    [[TMP4:%.*]] = zext i1 [[CMP]] to i32
 // CHECK2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 [[TMP4]], i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i32 0)
-// CHECK2-NEXT:    [[TMP6:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP6]], 1
+// CHECK2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP5]], 1
 // CHECK2-NEXT:    store i32 [[ADD]], ptr [[A_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP7:%.*]] = load i16, ptr [[AA_ADDR]], align 2
-// CHECK2-NEXT:    [[CONV1:%.*]] = sext i16 [[TMP7]] to i32
-// CHECK2-NEXT:    [[ADD2:%.*]] = add nsw i32 [[CONV1]], 1
-// CHECK2-NEXT:    [[CONV3:%.*]] = trunc i32 [[ADD2]] to i16
-// CHECK2-NEXT:    store i16 [[CONV3]], ptr [[AA_ADDR]], align 2
+// CHECK2-NEXT:    [[TMP6:%.*]] = load i16, ptr [[AA_ADDR]], align 2
+// CHECK2-NEXT:    [[CONV:%.*]] = sext i16 [[TMP6]] to i32
+// CHECK2-NEXT:    [[ADD1:%.*]] = add nsw i32 [[CONV]], 1
+// CHECK2-NEXT:    [[CONV2:%.*]] = trunc i32 [[ADD1]] to i16
+// CHECK2-NEXT:    store i16 [[CONV2]], ptr [[AA_ADDR]], align 2
 // CHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], ptr [[TMP0]], i32 0, i32 2
-// CHECK2-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-// CHECK2-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP8]], 1
-// CHECK2-NEXT:    store i32 [[ADD4]], ptr [[ARRAYIDX]], align 4
-// CHECK2-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1, i1 true)
+// CHECK2-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// CHECK2-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP7]], 1
+// CHECK2-NEXT:    store i32 [[ADD3]], ptr [[ARRAYIDX]], align 4
+// CHECK2-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
 // CHECK2-NEXT:    ret void
@@ -518,7 +518,7 @@ int bar(int n){
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 4
 // CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 1, i1 true, i1 true)
+// CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 1, i1 true)
 // CHECK2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK2:       user_code.entry:
@@ -529,11 +529,11 @@ int bar(int n){
 // CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK2-NEXT:    store ptr [[A1]], ptr [[TMP3]], align 4
 // CHECK2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__4, ptr @__omp_outlined__4_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i32 1)
-// CHECK2-NEXT:    [[TMP6:%.*]] = load i32, ptr [[A1]], align 4
-// CHECK2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP6]], 1
+// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A1]], align 4
+// CHECK2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // CHECK2-NEXT:    store i32 [[INC]], ptr [[A1]], align 4
 // CHECK2-NEXT:    call void @__kmpc_free_shared(ptr [[A1]], i32 4)
-// CHECK2-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1, i1 true)
+// CHECK2-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
 // CHECK2-NEXT:    ret void
@@ -594,7 +594,7 @@ int bar(int n){
 // CHECK2-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS]])
 // CHECK2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[GLOBAL_ARGS]], align 4
 // CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP2]], i32 0
-// CHECK2-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP3]], align 4
-// CHECK2-NEXT:    call void @__omp_outlined__4(ptr [[DOTADDR1]], ptr [[DOTZERO_ADDR]], ptr [[TMP5]]) #[[ATTR2]]
+// CHECK2-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 4
+// CHECK2-NEXT:    call void @__omp_outlined__4(ptr [[DOTADDR1]], ptr [[DOTZERO_ADDR]], ptr [[TMP4]]) #[[ATTR2]]
 // CHECK2-NEXT:    ret void
 //

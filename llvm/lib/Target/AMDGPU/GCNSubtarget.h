@@ -298,6 +298,8 @@ public:
   /// the original value.
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
 
+  bool supportsWGP() const { return getGeneration() >= GFX10; }
+
   bool hasIntClamp() const {
     return HasIntClamp;
   }

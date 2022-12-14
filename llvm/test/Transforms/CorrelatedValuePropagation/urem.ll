@@ -152,6 +152,26 @@ exit:
   ret void
 }
 
+declare void @llvm.assume(i1)
+
+define i16 @test7(i16 %x, i16 %y) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:    [[ABOVE_RANGE:%.*]] = icmp uge i16 [[Y:%.*]], 13
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ABOVE_RANGE]])
+; CHECK-NEXT:    [[BELOW_RANGE:%.*]] = icmp ult i16 [[X:%.*]], 13
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BELOW_RANGE]])
+; CHECK-NEXT:    ret i16 [[X]]
+;
+  %above_range = icmp uge i16 %y, 13
+  call void @llvm.assume(i1 %above_range)
+
+  %below_range = icmp ult i16 %x, 13
+  call void @llvm.assume(i1 %below_range)
+
+  %r = urem i16 %x, %y
+  ret i16 %r
+}
+
 define void @non_power_of_2(i24 %n) {
 ; CHECK-LABEL: @non_power_of_2(
 ; CHECK-NEXT:    [[DIV:%.*]] = urem i24 [[N:%.*]], 42

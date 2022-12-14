@@ -10,7 +10,7 @@
 srsrc
 =====
 
-Buffer resource constant which defines the address and characteristics of the buffer in memory.
+Buffer resource constant, which defines the address and characteristics of the buffer in memory.
 
 *Size:* 4 dwords.
 

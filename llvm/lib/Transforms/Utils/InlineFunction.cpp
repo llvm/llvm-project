@@ -2758,7 +2758,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     OrigBB->splice(CB.getIterator(), &*FirstNewBlock, FirstNewBlock->begin(),
                    FirstNewBlock->end());
     // Remove the cloned basic block.
-    Caller->getBasicBlockList().pop_back();
+    Caller->back().eraseFromParent();
 
     // If the call site was an invoke instruction, add a branch to the normal
     // destination.
@@ -2932,7 +2932,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   Br->eraseFromParent();
 
   // Now we can remove the CalleeEntry block, which is now empty.
-  Caller->getBasicBlockList().erase(CalleeEntry);
+  CalleeEntry->eraseFromParent();
 
   // If we inserted a phi node, check to see if it has a single value (e.g. all
   // the entries are the same or undef).  If so, remove the PHI so it doesn't

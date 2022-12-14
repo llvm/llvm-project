@@ -326,7 +326,7 @@ $"?DataStatic@Data@foo@@2HA" = comdat any
 
 @"?first@@3HA" = dso_local global i32 0, align 4, !dbg !0
 @"?comdat@?$A@X@@2HB" = linkonce_odr dso_local constant i32 3, comdat, align 4, !dbg !17
-@"?middle@@3PEBHEB" = dso_local thread_local global i32* @"?comdat@?$A@X@@2HB", align 8, !dbg !24
+@"?middle@@3PEBHEB" = dso_local thread_local global ptr @"?comdat@?$A@X@@2HB", align 8, !dbg !24
 @"?globalTLS@foo@@3HA" = dso_local thread_local global i32 4, align 4, !dbg !27
 @"?justGlobal@foo@@3HA" = dso_local global i32 6, align 4, !dbg !29
 @"?last@@3HA" = dso_local global i32 0, align 4, !dbg !31
@@ -340,37 +340,35 @@ define dso_local i32 @"?bar@@YAHXZ"() #0 !dbg !54 {
 entry:
   %D = alloca %"struct.foo::Data", align 4
   %L = alloca %struct.Local, align 4
-  call void @llvm.dbg.declare(metadata %"struct.foo::Data"* %D, metadata !57, metadata !DIExpression()), !dbg !58
-  %call = call %"struct.foo::Data"* @"??0Data@foo@@QEAA@XZ"(%"struct.foo::Data"* %D) #2, !dbg !58
-  call void @llvm.dbg.declare(metadata %struct.Local* %L, metadata !59, metadata !DIExpression()), !dbg !64
-  %call1 = call %struct.Local* @"??0Local@?1??bar@@YAHXZ@QEAA@XZ"(%struct.Local* %L) #2, !dbg !64
-  %0 = load i32, i32* @"?globalStatic@foo@@3HA", align 4, !dbg !65
-  %1 = load i32, i32* @"?globalTLS@foo@@3HA", align 4, !dbg !65
+  call void @llvm.dbg.declare(metadata ptr %D, metadata !57, metadata !DIExpression()), !dbg !58
+  %call = call ptr @"??0Data@foo@@QEAA@XZ"(ptr %D) #2, !dbg !58
+  call void @llvm.dbg.declare(metadata ptr %L, metadata !59, metadata !DIExpression()), !dbg !64
+  %call1 = call ptr @"??0Local@?1??bar@@YAHXZ@QEAA@XZ"(ptr %L) #2, !dbg !64
+  %0 = load i32, ptr @"?globalStatic@foo@@3HA", align 4, !dbg !65
+  %1 = load i32, ptr @"?globalTLS@foo@@3HA", align 4, !dbg !65
   %add = add nsw i32 %0, %1, !dbg !65
-  %2 = load i32, i32* @"?staticTLS@foo@@3HA", align 4, !dbg !65
+  %2 = load i32, ptr @"?staticTLS@foo@@3HA", align 4, !dbg !65
   %add2 = add nsw i32 %add, %2, !dbg !65
-  %3 = load i32, i32* @"?justGlobal@foo@@3HA", align 4, !dbg !65
+  %3 = load i32, ptr @"?justGlobal@foo@@3HA", align 4, !dbg !65
   %add3 = add nsw i32 %add2, %3, !dbg !65
-  %4 = load i32, i32* @"?globalStatic@foo@@3HA", align 4, !dbg !65
+  %4 = load i32, ptr @"?globalStatic@foo@@3HA", align 4, !dbg !65
   %add4 = add nsw i32 %add3, %4, !dbg !65
   %add5 = add nsw i32 %add4, 8, !dbg !65
   %add6 = add nsw i32 %add5, 9, !dbg !65
-  %5 = load i32, i32* @"?DataStaticTLS@Data@foo@@2HA", align 4, !dbg !65
+  %5 = load i32, ptr @"?DataStaticTLS@Data@foo@@2HA", align 4, !dbg !65
   %add7 = add nsw i32 %add6, %5, !dbg !65
-  %DataGlobal = getelementptr inbounds %"struct.foo::Data", %"struct.foo::Data"* %D, i32 0, i32 0, !dbg !65
-  %6 = load i32, i32* %DataGlobal, align 4, !dbg !65
+  %6 = load i32, ptr %D, align 4, !dbg !65
   %add8 = add nsw i32 %add7, %6, !dbg !65
-  %7 = load i32, i32* @"?DataStatic@Data@foo@@2HA", align 4, !dbg !65
+  %7 = load i32, ptr @"?DataStatic@Data@foo@@2HA", align 4, !dbg !65
   %add9 = add nsw i32 %add8, %7, !dbg !65
   %add10 = add nsw i32 %add9, 14, !dbg !65
-  %DataConstVal = getelementptr inbounds %"struct.foo::Data", %"struct.foo::Data"* %D, i32 0, i32 1, !dbg !65
-  %8 = load i32, i32* %DataConstVal, align 4, !dbg !65
+  %DataConstVal = getelementptr inbounds %"struct.foo::Data", ptr %D, i32 0, i32 1, !dbg !65
+  %8 = load i32, ptr %DataConstVal, align 4, !dbg !65
   %add11 = add nsw i32 %add10, %8, !dbg !65
-  %LocalGlobal = getelementptr inbounds %struct.Local, %struct.Local* %L, i32 0, i32 0, !dbg !65
-  %9 = load i32, i32* %LocalGlobal, align 4, !dbg !65
+  %9 = load i32, ptr %L, align 4, !dbg !65
   %add12 = add nsw i32 %add11, %9, !dbg !65
-  %LocalConstVal = getelementptr inbounds %struct.Local, %struct.Local* %L, i32 0, i32 1, !dbg !65
-  %10 = load i32, i32* %LocalConstVal, align 4, !dbg !65
+  %LocalConstVal = getelementptr inbounds %struct.Local, ptr %L, i32 0, i32 1, !dbg !65
+  %10 = load i32, ptr %LocalConstVal, align 4, !dbg !65
   %add13 = add nsw i32 %add12, %10, !dbg !65
   ret i32 %add13, !dbg !65
 }
@@ -379,31 +377,29 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define linkonce_odr dso_local %"struct.foo::Data"* @"??0Data@foo@@QEAA@XZ"(%"struct.foo::Data"* returned %this) unnamed_addr #0 comdat align 2 !dbg !66 {
+define linkonce_odr dso_local ptr @"??0Data@foo@@QEAA@XZ"(ptr returned %this) unnamed_addr #0 comdat align 2 !dbg !66 {
 entry:
-  %this.addr = alloca %"struct.foo::Data"*, align 8
-  store %"struct.foo::Data"* %this, %"struct.foo::Data"** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %"struct.foo::Data"** %this.addr, metadata !71, metadata !DIExpression()), !dbg !73
-  %this1 = load %"struct.foo::Data"*, %"struct.foo::Data"** %this.addr, align 8
-  %DataGlobal = getelementptr inbounds %"struct.foo::Data", %"struct.foo::Data"* %this1, i32 0, i32 0, !dbg !74
-  store i32 12, i32* %DataGlobal, align 4, !dbg !74
-  %DataConstVal = getelementptr inbounds %"struct.foo::Data", %"struct.foo::Data"* %this1, i32 0, i32 1, !dbg !74
-  store i32 15, i32* %DataConstVal, align 4, !dbg !74
-  ret %"struct.foo::Data"* %this1, !dbg !74
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !71, metadata !DIExpression()), !dbg !73
+  %this1 = load ptr, ptr %this.addr, align 8
+  store i32 12, ptr %this1, align 4, !dbg !74
+  %DataConstVal = getelementptr inbounds %"struct.foo::Data", ptr %this1, i32 0, i32 1, !dbg !74
+  store i32 15, ptr %DataConstVal, align 4, !dbg !74
+  ret ptr %this1, !dbg !74
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define internal %struct.Local* @"??0Local@?1??bar@@YAHXZ@QEAA@XZ"(%struct.Local* returned %this) unnamed_addr #0 align 2 !dbg !75 {
+define internal ptr @"??0Local@?1??bar@@YAHXZ@QEAA@XZ"(ptr returned %this) unnamed_addr #0 align 2 !dbg !75 {
 entry:
-  %this.addr = alloca %struct.Local*, align 8
-  store %struct.Local* %this, %struct.Local** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.Local** %this.addr, metadata !80, metadata !DIExpression()), !dbg !82
-  %this1 = load %struct.Local*, %struct.Local** %this.addr, align 8
-  %LocalGlobal = getelementptr inbounds %struct.Local, %struct.Local* %this1, i32 0, i32 0, !dbg !83
-  store i32 12, i32* %LocalGlobal, align 4, !dbg !83
-  %LocalConstVal = getelementptr inbounds %struct.Local, %struct.Local* %this1, i32 0, i32 1, !dbg !83
-  store i32 15, i32* %LocalConstVal, align 4, !dbg !83
-  ret %struct.Local* %this1, !dbg !83
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !80, metadata !DIExpression()), !dbg !82
+  %this1 = load ptr, ptr %this.addr, align 8
+  store i32 12, ptr %this1, align 4, !dbg !83
+  %LocalConstVal = getelementptr inbounds %struct.Local, ptr %this1, i32 0, i32 1, !dbg !83
+  store i32 15, ptr %LocalConstVal, align 4, !dbg !83
+  ret ptr %this1, !dbg !83
 }
 
 attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

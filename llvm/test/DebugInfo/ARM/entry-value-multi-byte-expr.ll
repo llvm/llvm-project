@@ -50,7 +50,7 @@ entry:
   call void @llvm.dbg.value(metadata double %a, metadata !17, metadata !DIExpression()), !dbg !19
   call void @llvm.dbg.value(metadata double %b, metadata !18, metadata !DIExpression()), !dbg !19
   %add = fadd double %a, %b, !dbg !20
-  store double %add, double* @global, align 8, !dbg !20
+  store double %add, ptr @global, align 8, !dbg !20
   tail call arm_aapcs_vfpcc void @clobber(), !dbg !21
   ret i32 1, !dbg !22
 }

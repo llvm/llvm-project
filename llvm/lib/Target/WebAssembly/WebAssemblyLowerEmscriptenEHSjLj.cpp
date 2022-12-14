@@ -1630,7 +1630,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForEmscriptenSjLj(
 
       // Create switch instruction
       IRB.SetInsertPoint(EndBB);
-      IRB.SetCurrentDebugLocation(EndBB->getInstList().back().getDebugLoc());
+      IRB.SetCurrentDebugLocation(EndBB->back().getDebugLoc());
       SwitchInst *SI = IRB.CreateSwitch(Label, Tail, SetjmpRetPHIs.size());
       // -1 means no longjmp happened, continue normally (will hit the default
       // switch case). 0 means a longjmp that is not ours to handle, needs a

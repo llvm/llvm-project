@@ -188,7 +188,7 @@ TEST(SourceCodeBuildersTest, isKnownPointerLikeTypeNormalTypeFalse) {
 }
 
 static void testBuilder(
-    llvm::Optional<std::string> (*Builder)(const Expr &, const ASTContext &),
+    std::optional<std::string> (*Builder)(const Expr &, const ASTContext &),
     StringRef Snippet, StringRef Expected) {
   auto StmtMatch = matchStmt(Snippet, expr().bind("expr"));
   ASSERT_TRUE(StmtMatch);

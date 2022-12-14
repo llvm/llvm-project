@@ -1,15 +1,12 @@
 ; RUN: opt < %s -passes=globalopt -S | llvm-as | llvm-dis | FileCheck %s
 
 ; The %struct.S type would not get emitted after @s was removed, resulting in
-; llvm-as failing to parse the dbg.value intrinsic using that type. The
-; FileCheck checks are just added to verify that the desired transformation is
-; done.
+; llvm-as failing to parse the dbg.value intrinsic using that type. However,
+; with opaque pointers this is no longer necessary.
 
 ; CHECK-NOT: @s
-; CHECK: %struct.S = type { i32 }
-; CHECK-NOT: @s
 
-; CHECK: call void @llvm.dbg.value(metadata !DIArgList([1 x %struct.S]* undef
+; CHECK: call void @llvm.dbg.value(metadata !DIArgList(ptr undef
 
 %struct.S = type { i32 }
 
@@ -18,9 +15,9 @@
 
 define dso_local void @fn() !dbg !20 {
 entry:
-  %0 = load i32, i32* @idx, align 4, !dbg !26
+  %0 = load i32, ptr @idx, align 4, !dbg !26
   %idxprom = sext i32 %0 to i64, !dbg !26
-  call void @llvm.dbg.value(metadata !DIArgList([1 x %struct.S]* @s, i64 %idxprom), metadata !24, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 4, DW_OP_mul, DW_OP_plus, DW_OP_stack_value)), !dbg !26
+  call void @llvm.dbg.value(metadata !DIArgList(ptr @s, i64 %idxprom), metadata !24, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 4, DW_OP_mul, DW_OP_plus, DW_OP_stack_value)), !dbg !26
   ret void, !dbg !26
 }
 

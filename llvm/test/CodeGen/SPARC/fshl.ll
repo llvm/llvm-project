@@ -31,7 +31,7 @@ define i32 @PR47303() {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0: ! %bb
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:    mov 0, %o0
+; CHECK-NEXT:    mov %g0, %o0
 bb:
   %i = call <4 x i64> @llvm.fshl.v4i64(<4 x i64> undef, <4 x i64> undef, <4 x i64> <i64 57, i64 27, i64 12, i64 33>)
   %i1 = add <4 x i64> %i, zeroinitializer

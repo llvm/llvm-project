@@ -98,7 +98,7 @@ define i1 @test_class_isnan_f32(float %x) {
 
 define i1 @test_class_isnan_f32_strict(float %x) {
 ; CHECK-LABEL: @test_class_isnan_f32_strict(
-; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 3) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 3) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.is.fpclass.f32(float %x, i32 3) strictfp
@@ -110,16 +110,106 @@ define i1 @test_class_is_p0_n0_f32(float %x) {
 ; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96)
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
-  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 96)
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 96) ; fcZero
+  ret i1 %val
+}
+
+define i1 @test_class_is_not_p0_n0_f32(float %x) {
+; CHECK-LABEL: @test_class_is_not_p0_n0_f32(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 927)
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 927) ; ~fcZero & fcAllFlags
+  ret i1 %val
+}
+
+define i1 @test_class_is_not_p0_n0_f32_strict(float %x) {
+; CHECK-LABEL: @test_class_is_not_p0_n0_f32_strict(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 927) #[[ATTR3]]
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 927) strictfp ; ~fcZero & fcAllFlags
+  ret i1 %val
+}
+
+define i1 @test_class_is_not_p0_n0_f32_daz(float %x) "denormal-fp-math"="ieee,preserve-sign" {
+; CHECK-LABEL: @test_class_is_not_p0_n0_f32_daz(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 927)
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 927) ; ~fcZero & fcAllFlags
+  ret i1 %val
+}
+
+define i1 @test_class_is_not_p0_n0_psub_nsub_f32_daz(float %x) "denormal-fp-math"="ieee,preserve-sign" {
+; CHECK-LABEL: @test_class_is_not_p0_n0_psub_nsub_f32_daz(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 783)
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 783) ; ~(fcZero|fcSubnormal) & fcAllFlags
+  ret i1 %val
+}
+
+define i1 @test_class_is_not_p0_n0_psub_nsub_f32_dapz(float %x) "denormal-fp-math"="ieee,positive-zero" {
+; CHECK-LABEL: @test_class_is_not_p0_n0_psub_nsub_f32_dapz(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 783)
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 783) ; ~(fcZero|fcSubnormal) & fcAllFlags
   ret i1 %val
 }
 
 define i1 @test_class_is_p0_n0_f32_strict(float %x) {
 ; CHECK-LABEL: @test_class_is_p0_n0_f32_strict(
-; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96) #[[ATTR1]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96) #[[ATTR3]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.is.fpclass.f32(float %x, i32 96) strictfp
+  ret i1 %val
+}
+
+define i1 @test_class_is_p0_n0_f32_daz(float %x) "denormal-fp-math"="ieee,preserve-sign" {
+; CHECK-LABEL: @test_class_is_p0_n0_f32_daz(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96)
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 96) ; fcZero
+  ret i1 %val
+}
+
+define i1 @test_class_is_p0_n0_f32_dapz(float %x) "denormal-fp-math"="ieee,positive-zero" {
+; CHECK-LABEL: @test_class_is_p0_n0_f32_dapz(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96)
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 96) ; fcZero
+  ret i1 %val
+}
+
+define i1 @test_class_is_p0_n0_psub_nsub_f32(float %x) {
+; CHECK-LABEL: @test_class_is_p0_n0_psub_nsub_f32(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 240)
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 240) ; fcZero | fcSubnormal
+  ret i1 %val
+}
+
+define i1 @test_class_is_p0_n0_psub_nsub_f32_daz(float %x) "denormal-fp-math"="ieee,preserve-sign" {
+; CHECK-LABEL: @test_class_is_p0_n0_psub_nsub_f32_daz(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 240)
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 240) ; fcZero | fcSubnormal
+  ret i1 %val
+}
+
+define i1 @test_class_is_p0_n0_psub_nsub_f32_dapz(float %x) "denormal-fp-math"="ieee,positive-zero" {
+; CHECK-LABEL: @test_class_is_p0_n0_psub_nsub_f32_dapz(
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 240)
+; CHECK-NEXT:    ret i1 [[VAL]]
+;
+  %val = call i1 @llvm.is.fpclass.f32(float %x, i32 240) ; fcZero | fcSubnormal
   ret i1 %val
 }
 
@@ -351,15 +441,107 @@ define i1 @test_class_is_nan_other_nnan_src(float %x) {
   ret i1 %class
 }
 
+; Fold test of is not nan
+define i1 @test_class_is_not_nan_nnan_src(float %x) {
+; CHECK-LABEL: @test_class_is_not_nan_nnan_src(
+; CHECK-NEXT:    [[NNAN:%.*]] = fadd nnan float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NNAN]], i32 1020)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %nnan = fadd nnan float %x, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %nnan, i32 1020) ; ~fcNan & fcAllFlags
+  ret i1 %class
+}
+
+define i1 @test_class_is_not_nan_nnan_src_strict(float %x) {
+; CHECK-LABEL: @test_class_is_not_nan_nnan_src_strict(
+; CHECK-NEXT:    [[NNAN:%.*]] = fadd nnan float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NNAN]], i32 1020) #[[ATTR3]]
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %nnan = fadd nnan float %x, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %nnan, i32 1020) strictfp ; ~fcNan & fcAllFlags
+  ret i1 %class
+}
+
+; --------------------------------------------------------------------
+; llvm.is.fpclass with ninf sources
+; --------------------------------------------------------------------
+
+define i1 @test_class_is_ninf_pinf_ninf_src(float %x) {
+; CHECK-LABEL: @test_class_is_ninf_pinf_ninf_src(
+; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 516)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %ninf = fadd ninf float %x, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %ninf, i32 516)
+  ret i1 %class
+}
+
+define i1 @test_class_is_ninf_ninf_src(float %x) {
+; CHECK-LABEL: @test_class_is_ninf_ninf_src(
+; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 4)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %ninf = fadd ninf float %x, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %ninf, i32 4)
+  ret i1 %class
+}
+
+define i1 @test_class_is_pinf_ninf_src(float %x) {
+; CHECK-LABEL: @test_class_is_pinf_ninf_src(
+; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 512)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %ninf = fadd ninf float %x, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %ninf, i32 512)
+  ret i1 %class
+}
+
+define i1 @test_class_is_ninf_pinf_pnormal_ninf_src(float %x) {
+; CHECK-LABEL: @test_class_is_ninf_pinf_pnormal_ninf_src(
+; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 772)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %ninf = fadd ninf float %x, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %ninf, i32 772)
+  ret i1 %class
+}
+
+define i1 @test_class_is_not_inf_ninf_src(float %x) {
+; CHECK-LABEL: @test_class_is_not_inf_ninf_src(
+; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 507)
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %ninf = fadd ninf float %x, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %ninf, i32 507) ; ~fcInf & fcAllFlags
+  ret i1 %class
+}
+
+define i1 @test_class_is_not_inf_ninf_src_strict(float %x) {
+; CHECK-LABEL: @test_class_is_not_inf_ninf_src_strict(
+; CHECK-NEXT:    [[NINF:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NINF]], i32 507) #[[ATTR3]]
+; CHECK-NEXT:    ret i1 [[CLASS]]
+;
+  %ninf = fadd ninf float %x, 1.0
+  %class = call i1 @llvm.is.fpclass.f32(float %ninf, i32 507) strictfp ; ~fcInf & fcAllFlags
+  ret i1 %class
+}
+
 ; --------------------------------------------------------------------
 ; Negation of llvm.is.fpclass
 ; --------------------------------------------------------------------
 
 define i1 @test_class_not_is_nan(float %x) {
 ; CHECK-LABEL: @test_class_not_is_nan(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 3)
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CLASS]], true
-; CHECK-NEXT:    ret i1 [[NOT]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 1020)
+; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %x, i32 3)
   %not = xor i1 %class, true
@@ -381,9 +563,8 @@ define i1 @test_class_not_is_nan_multi_use(float %x, ptr %ptr) {
 
 define i1 @test_class_not_is_inf_nan(float %x) {
 ; CHECK-LABEL: @test_class_not_is_inf_nan(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 519)
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CLASS]], true
-; CHECK-NEXT:    ret i1 [[NOT]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 504)
+; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %x, i32 519)
   %not = xor i1 %class, true
@@ -392,9 +573,8 @@ define i1 @test_class_not_is_inf_nan(float %x) {
 
 define i1 @test_class_not_is_normal(float %x) {
 ; CHECK-LABEL: @test_class_not_is_normal(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 264)
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CLASS]], true
-; CHECK-NEXT:    ret i1 [[NOT]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 759)
+; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %x, i32 264)
   %not = xor i1 %class, true
@@ -413,9 +593,8 @@ define i1 @test_class_xor_false(float %x) {
 
 define <2 x i1> @test_class_not_vector(<2 x float> %x) {
 ; CHECK-LABEL: @test_class_not_vector(
-; CHECK-NEXT:    [[CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[X:%.*]], i32 33)
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[CLASS]], <i1 true, i1 true>
-; CHECK-NEXT:    ret <2 x i1> [[NOT]]
+; CHECK-NEXT:    [[CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[X:%.*]], i32 990)
+; CHECK-NEXT:    ret <2 x i1> [[CLASS]]
 ;
   %class = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %x, i32 33)
   %not = xor <2 x i1> %class, <i1 true, i1 true>
@@ -452,12 +631,8 @@ define i1 @test_fold_or_class_f32_0(float %a) {
 
 define i1 @test_fold_or3_class_f32_0(float %a) {
 ; CHECK-LABEL: @test_fold_or3_class_f32_0(
-; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 1)
-; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 2)
-; CHECK-NEXT:    [[CLASS2:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 4)
-; CHECK-NEXT:    [[OR_0:%.*]] = or i1 [[CLASS0]], [[CLASS1]]
-; CHECK-NEXT:    [[OR_1:%.*]] = or i1 [[OR_0]], [[CLASS2]]
-; CHECK-NEXT:    ret i1 [[OR_1]]
+; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 7)
+; CHECK-NEXT:    ret i1 [[CLASS0]]
 ;
   %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 1)
   %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 2)
@@ -469,26 +644,7 @@ define i1 @test_fold_or3_class_f32_0(float %a) {
 
 define i1 @test_fold_or_all_tests_class_f32_0(float %a) {
 ; CHECK-LABEL: @test_fold_or_all_tests_class_f32_0(
-; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 1)
-; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 2)
-; CHECK-NEXT:    [[CLASS2:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 4)
-; CHECK-NEXT:    [[CLASS3:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 8)
-; CHECK-NEXT:    [[CLASS4:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 16)
-; CHECK-NEXT:    [[CLASS5:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 32)
-; CHECK-NEXT:    [[CLASS6:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 64)
-; CHECK-NEXT:    [[CLASS7:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 128)
-; CHECK-NEXT:    [[CLASS8:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 256)
-; CHECK-NEXT:    [[CLASS9:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 512)
-; CHECK-NEXT:    [[OR_0:%.*]] = or i1 [[CLASS0]], [[CLASS1]]
-; CHECK-NEXT:    [[OR_1:%.*]] = or i1 [[OR_0]], [[CLASS2]]
-; CHECK-NEXT:    [[OR_2:%.*]] = or i1 [[OR_1]], [[CLASS3]]
-; CHECK-NEXT:    [[OR_3:%.*]] = or i1 [[OR_2]], [[CLASS4]]
-; CHECK-NEXT:    [[OR_4:%.*]] = or i1 [[OR_3]], [[CLASS5]]
-; CHECK-NEXT:    [[OR_5:%.*]] = or i1 [[OR_4]], [[CLASS6]]
-; CHECK-NEXT:    [[OR_6:%.*]] = or i1 [[OR_5]], [[CLASS7]]
-; CHECK-NEXT:    [[OR_7:%.*]] = or i1 [[OR_6]], [[CLASS8]]
-; CHECK-NEXT:    [[OR_8:%.*]] = or i1 [[OR_7]], [[CLASS9]]
-; CHECK-NEXT:    ret i1 [[OR_8]]
+; CHECK-NEXT:    ret i1 true
 ;
   %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 1)
   %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 2)
@@ -514,10 +670,8 @@ define i1 @test_fold_or_all_tests_class_f32_0(float %a) {
 
 define i1 @test_fold_or_class_f32_1(float %a) {
 ; CHECK-LABEL: @test_fold_or_class_f32_1(
-; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 4)
-; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 8)
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CLASS0]], [[CLASS1]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 12)
+; CHECK-NEXT:    ret i1 [[CLASS0]]
 ;
   %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 4)
   %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 8)
@@ -558,9 +712,7 @@ define i1 @test_no_fold_or_class_f32_multi_use1(float %a, ptr %ptr) {
 define i1 @test_fold_or_class_f32_2(float %a) {
 ; CHECK-LABEL: @test_fold_or_class_f32_2(
 ; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 7)
-; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 7)
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CLASS0]], [[CLASS1]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    ret i1 [[CLASS0]]
 ;
   %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 7)
   %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 7)
@@ -583,15 +735,323 @@ define i1 @test_no_fold_or_class_f32_0(float %a, float %b) {
 
 define <2 x i1> @test_fold_or_class_v2f32(<2 x float> %a) {
 ; CHECK-LABEL: @test_fold_or_class_v2f32(
-; CHECK-NEXT:    [[CLASS0:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[A:%.*]], i32 4)
-; CHECK-NEXT:    [[CLASS1:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[A]], i32 8)
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[CLASS0]], [[CLASS1]]
-; CHECK-NEXT:    ret <2 x i1> [[OR]]
+; CHECK-NEXT:    [[CLASS0:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[A:%.*]], i32 12)
+; CHECK-NEXT:    ret <2 x i1> [[CLASS0]]
 ;
   %class0 = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %a, i32 4)
   %class1 = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %a, i32 8)
   %or = or <2 x i1> %class0, %class1
   ret <2 x i1> %or
+}
+
+; --------------------------------------------------------------------
+; and llvm.is.fpclass, llvm.is.fpclass
+; --------------------------------------------------------------------
+
+define i1 @test_fold_and_class_f32_0(float %a) {
+; CHECK-LABEL: @test_fold_and_class_f32_0(
+; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 1)
+; CHECK-NEXT:    [[CLASS1:%.*]] = fcmp uno float [[A]], 0.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CLASS0]], [[CLASS1]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 1)
+  %class1 = fcmp uno float %a, 0.000000e+00
+  %and = and i1 %class0, %class1
+  ret i1 %and
+}
+
+define i1 @test_fold_and3_class_f32_0(float %a) {
+; CHECK-LABEL: @test_fold_and3_class_f32_0(
+; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 2)
+; CHECK-NEXT:    ret i1 [[CLASS0]]
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 3)
+  %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 2)
+  %class2 = call i1 @llvm.is.fpclass.f32(float %a, i32 7)
+  %and.0 = and i1 %class0, %class1
+  %and.1 = and i1 %and.0, %class2
+  ret i1 %and.1
+}
+
+define i1 @test_fold_and_all_tests_class_f32_0(float %a) {
+; CHECK-LABEL: @test_fold_and_all_tests_class_f32_0(
+; CHECK-NEXT:    ret i1 false
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 1)
+  %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 2)
+  %class2 = call i1 @llvm.is.fpclass.f32(float %a, i32 4)
+  %class3 = call i1 @llvm.is.fpclass.f32(float %a, i32 8)
+  %class4 = call i1 @llvm.is.fpclass.f32(float %a, i32 16)
+  %class5 = call i1 @llvm.is.fpclass.f32(float %a, i32 32)
+  %class6 = call i1 @llvm.is.fpclass.f32(float %a, i32 64)
+  %class7 = call i1 @llvm.is.fpclass.f32(float %a, i32 128)
+  %class8 = call i1 @llvm.is.fpclass.f32(float %a, i32 256)
+  %class9 = call i1 @llvm.is.fpclass.f32(float %a, i32 512)
+  %and.0 = and i1 %class0, %class1
+  %and.1 = and i1 %and.0, %class2
+  %and.2 = and i1 %and.1, %class3
+  %and.3 = and i1 %and.2, %class4
+  %and.4 = and i1 %and.3, %class5
+  %and.5 = and i1 %and.4, %class6
+  %and.6 = and i1 %and.5, %class7
+  %and.7 = and i1 %and.6, %class8
+  %and.8 = and i1 %and.7, %class9
+  ret i1 %and.8
+}
+
+define i1 @test_fold_and_not_all_tests_class_f32_0(float %a) {
+; CHECK-LABEL: @test_fold_and_not_all_tests_class_f32_0(
+; CHECK-NEXT:    ret i1 false
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 1022)
+  %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 1021)
+  %class2 = call i1 @llvm.is.fpclass.f32(float %a, i32 1019)
+  %class3 = call i1 @llvm.is.fpclass.f32(float %a, i32 1015)
+  %class4 = call i1 @llvm.is.fpclass.f32(float %a, i32 1007)
+  %class5 = call i1 @llvm.is.fpclass.f32(float %a, i32 991)
+  %class6 = call i1 @llvm.is.fpclass.f32(float %a, i32 959)
+  %class7 = call i1 @llvm.is.fpclass.f32(float %a, i32 895)
+  %class8 = call i1 @llvm.is.fpclass.f32(float %a, i32 767)
+  %class9 = call i1 @llvm.is.fpclass.f32(float %a, i32 511)
+  %and.0 = and i1 %class0, %class1
+  %and.1 = and i1 %and.0, %class2
+  %and.2 = and i1 %and.1, %class3
+  %and.3 = and i1 %and.2, %class4
+  %and.4 = and i1 %and.3, %class5
+  %and.5 = and i1 %and.4, %class6
+  %and.6 = and i1 %and.5, %class7
+  %and.7 = and i1 %and.6, %class8
+  %and.8 = and i1 %and.7, %class9
+  ret i1 %and.8
+}
+
+define i1 @test_fold_and_class_f32_1(float %a) {
+; CHECK-LABEL: @test_fold_and_class_f32_1(
+; CHECK-NEXT:    ret i1 false
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 48)
+  %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 11)
+  %and = and i1 %class0, %class1
+  ret i1 %and
+}
+
+define i1 @test_no_fold_and_class_f32_multi_use0(float %a, ptr %ptr) {
+; CHECK-LABEL: @test_no_fold_and_class_f32_multi_use0(
+; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 15)
+; CHECK-NEXT:    store i1 [[CLASS0]], ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 8)
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CLASS0]], [[CLASS1]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 15)
+  store i1 %class0, ptr %ptr
+  %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 8)
+  %and = and i1 %class0, %class1
+  ret i1 %and
+}
+
+define i1 @test_no_fold_and_class_f32_multi_use1(float %a, ptr %ptr) {
+; CHECK-LABEL: @test_no_fold_and_class_f32_multi_use1(
+; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 15)
+; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 8)
+; CHECK-NEXT:    store i1 [[CLASS1]], ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CLASS0]], [[CLASS1]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 15)
+  %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 8)
+  store i1 %class1, ptr %ptr
+  %and = and i1 %class0, %class1
+  ret i1 %and
+}
+
+define i1 @test_fold_and_class_f32_2(float %a) {
+; CHECK-LABEL: @test_fold_and_class_f32_2(
+; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 7)
+; CHECK-NEXT:    ret i1 [[CLASS0]]
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 7)
+  %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 7)
+  %and = and i1 %class0, %class1
+  ret i1 %and
+}
+
+define i1 @test_fold_and_class_f32_3(float %a) {
+; CHECK-LABEL: @test_fold_and_class_f32_3(
+; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 1)
+; CHECK-NEXT:    ret i1 [[CLASS0]]
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 37)
+  %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 393)
+  %and = and i1 %class0, %class1
+  ret i1 %and
+}
+
+define i1 @test_fold_and_class_f32_4(float %a) {
+; CHECK-LABEL: @test_fold_and_class_f32_4(
+; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 1)
+; CHECK-NEXT:    ret i1 [[CLASS0]]
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 393)
+  %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 37)
+  %and = and i1 %class0, %class1
+  ret i1 %and
+}
+
+define i1 @test_no_fold_and_class_f32_0(float %a, float %b) {
+; CHECK-LABEL: @test_no_fold_and_class_f32_0(
+; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 7)
+; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[B:%.*]], i32 15)
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CLASS0]], [[CLASS1]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 7)
+  %class1 = call i1 @llvm.is.fpclass.f32(float %b, i32 15)
+  %and = and i1 %class0, %class1
+  ret i1 %and
+}
+
+define <2 x i1> @test_fold_and_class_v2f32(<2 x float> %a) {
+; CHECK-LABEL: @test_fold_and_class_v2f32(
+; CHECK-NEXT:    [[CLASS0:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[A:%.*]], i32 7)
+; CHECK-NEXT:    ret <2 x i1> [[CLASS0]]
+;
+  %class0 = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %a, i32 7)
+  %class1 = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %a, i32 15)
+  %and = and <2 x i1> %class0, %class1
+  ret <2 x i1> %and
+}
+
+; --------------------------------------------------------------------
+; xor llvm.is.fpclass, llvm.is.fpclass
+; --------------------------------------------------------------------
+
+define i1 @test_fold_xor_class_f32_0(float %a) {
+; CHECK-LABEL: @test_fold_xor_class_f32_0(
+; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 1)
+; CHECK-NEXT:    [[CLASS1:%.*]] = fcmp uno float [[A]], 0.000000e+00
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[CLASS0]], [[CLASS1]]
+; CHECK-NEXT:    ret i1 [[XOR]]
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 1)
+  %class1 = fcmp uno float %a, 0.000000e+00
+  %xor = xor i1 %class0, %class1
+  ret i1 %xor
+}
+
+define i1 @test_fold_xor3_class_f32_0(float %a) {
+; CHECK-LABEL: @test_fold_xor3_class_f32_0(
+; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 7)
+; CHECK-NEXT:    ret i1 [[CLASS0]]
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 1)
+  %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 2)
+  %class2 = call i1 @llvm.is.fpclass.f32(float %a, i32 4)
+  %xor.0 = xor i1 %class0, %class1
+  %xor.1 = xor i1 %xor.0, %class2
+  ret i1 %xor.1
+}
+
+define i1 @test_fold_xor_all_tests_class_f32_0(float %a) {
+; CHECK-LABEL: @test_fold_xor_all_tests_class_f32_0(
+; CHECK-NEXT:    ret i1 true
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 1)
+  %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 2)
+  %class2 = call i1 @llvm.is.fpclass.f32(float %a, i32 4)
+  %class3 = call i1 @llvm.is.fpclass.f32(float %a, i32 8)
+  %class4 = call i1 @llvm.is.fpclass.f32(float %a, i32 16)
+  %class5 = call i1 @llvm.is.fpclass.f32(float %a, i32 32)
+  %class6 = call i1 @llvm.is.fpclass.f32(float %a, i32 64)
+  %class7 = call i1 @llvm.is.fpclass.f32(float %a, i32 128)
+  %class8 = call i1 @llvm.is.fpclass.f32(float %a, i32 256)
+  %class9 = call i1 @llvm.is.fpclass.f32(float %a, i32 512)
+  %xor.0 = xor i1 %class0, %class1
+  %xor.1 = xor i1 %xor.0, %class2
+  %xor.2 = xor i1 %xor.1, %class3
+  %xor.3 = xor i1 %xor.2, %class4
+  %xor.4 = xor i1 %xor.3, %class5
+  %xor.5 = xor i1 %xor.4, %class6
+  %xor.6 = xor i1 %xor.5, %class7
+  %xor.7 = xor i1 %xor.6, %class8
+  %xor.8 = xor i1 %xor.7, %class9
+  ret i1 %xor.8
+}
+
+define i1 @test_fold_xor_class_f32_1(float %a) {
+; CHECK-LABEL: @test_fold_xor_class_f32_1(
+; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 12)
+; CHECK-NEXT:    ret i1 [[CLASS0]]
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 4)
+  %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 8)
+  %xor = xor i1 %class0, %class1
+  ret i1 %xor
+}
+
+define i1 @test_no_fold_xor_class_f32_multi_use0(float %a, ptr %ptr) {
+; CHECK-LABEL: @test_no_fold_xor_class_f32_multi_use0(
+; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 4)
+; CHECK-NEXT:    store i1 [[CLASS0]], ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 8)
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[CLASS0]], [[CLASS1]]
+; CHECK-NEXT:    ret i1 [[XOR]]
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 4)
+  store i1 %class0, ptr %ptr
+  %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 8)
+  %xor = xor i1 %class0, %class1
+  ret i1 %xor
+}
+
+define i1 @test_no_fold_xor_class_f32_multi_use1(float %a, ptr %ptr) {
+; CHECK-LABEL: @test_no_fold_xor_class_f32_multi_use1(
+; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 4)
+; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 8)
+; CHECK-NEXT:    store i1 [[CLASS1]], ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[CLASS0]], [[CLASS1]]
+; CHECK-NEXT:    ret i1 [[XOR]]
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 4)
+  %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 8)
+  store i1 %class1, ptr %ptr
+  %xor = xor i1 %class0, %class1
+  ret i1 %xor
+}
+
+define i1 @test_fold_xor_class_f32_2(float %a) {
+; CHECK-LABEL: @test_fold_xor_class_f32_2(
+; CHECK-NEXT:    ret i1 false
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 7)
+  %class1 = call i1 @llvm.is.fpclass.f32(float %a, i32 7)
+  %xor = xor i1 %class0, %class1
+  ret i1 %xor
+}
+
+define i1 @test_no_fold_xor_class_f32_0(float %a, float %b) {
+; CHECK-LABEL: @test_no_fold_xor_class_f32_0(
+; CHECK-NEXT:    [[CLASS0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A:%.*]], i32 4)
+; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[B:%.*]], i32 8)
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[CLASS0]], [[CLASS1]]
+; CHECK-NEXT:    ret i1 [[XOR]]
+;
+  %class0 = call i1 @llvm.is.fpclass.f32(float %a, i32 4)
+  %class1 = call i1 @llvm.is.fpclass.f32(float %b, i32 8)
+  %xor = xor i1 %class0, %class1
+  ret i1 %xor
+}
+
+define <2 x i1> @test_fold_xor_class_v2f32(<2 x float> %a) {
+; CHECK-LABEL: @test_fold_xor_class_v2f32(
+; CHECK-NEXT:    [[CLASS0:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[A:%.*]], i32 9)
+; CHECK-NEXT:    ret <2 x i1> [[CLASS0]]
+;
+  %class0 = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %a, i32 4)
+  %class1 = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %a, i32 13)
+  %xor = xor <2 x i1> %class0, %class1
+  ret <2 x i1> %xor
 }
 
 declare i1 @llvm.is.fpclass.f32(float, i32 immarg)

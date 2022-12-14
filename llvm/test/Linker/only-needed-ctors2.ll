@@ -13,11 +13,11 @@ define internal void @ctor1() {
   ret void
 }
 
-@llvm.global_ctors = appending global[1 x{i32, void() *, i8 * }] [
-    {i32, void() *, i8 * } { i32 4, void() *@ctor1, i8 *null}]
+@llvm.global_ctors = appending global[1 x{i32, ptr, ptr }] [
+    {i32, ptr, ptr } { i32 4, ptr @ctor1, ptr null}]
 
 
-; CHECK:           @llvm.global_ctors = appending global [3 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 4, void ()* @ctor1, i8* null }, { i32, void ()*, i8* } { i32 2, void ()* @ctor1.2, i8* null }, { i32, void ()*, i8* } { i32 7, void ()* @ctor2, i8* null }]
+; CHECK:           @llvm.global_ctors = appending global [3 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 4, ptr @ctor1, ptr null }, { i32, ptr, ptr } { i32 2, ptr @ctor1.2, ptr null }, { i32, ptr, ptr } { i32 7, ptr @ctor2, ptr null }]
 ; CHECK:           define internal void @ctor1()
 ; CHECK:           define void @foo()
 ; CHECK:           define internal void @ctor1.{{[0-9]+}}()

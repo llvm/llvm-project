@@ -24,7 +24,7 @@ bb4.preheader.bb4.preheader.split_crit_edge:      ; preds = %bb4.preheader
   br label %bb4.preheader.split
 
 bb4.preheader.bb18.loopexit.split_crit_edge:      ; preds = %bb4.preheader
-  store i32 0, i32* @a, align 4
+  store i32 0, ptr @a, align 4
   br label %bb18.loopexit.split
 
 bb4.preheader.split:                              ; preds = %bb4.preheader.bb4.preheader.split_crit_edge
@@ -53,7 +53,7 @@ bb18.loopexit.split:                              ; preds = %bb4.preheader.bb18.
 
 bb18.loopexit1:                                   ; preds = %bb16
   %tmp14.lcssa5.lcssa = phi i32 [ %tmp14.lcssa5, %bb16 ]
-  store i32 %tmp14.lcssa5.lcssa, i32* @a, align 4
+  store i32 %tmp14.lcssa5.lcssa, ptr @a, align 4
   br label %bb18
 
 bb18:                                             ; preds = %bb18.loopexit1, %bb18.loopexit.split

@@ -20,8 +20,8 @@ define <2 x i32> @bitcast() {
 ; CHECK-LABEL: test_call
 ; CHECK: sethi 1049856, %o0
 ; CHECK: mov %g0, %o1
-; CHECK-LE: mov %g0, %o0
 ; CHECK-LE: sethi 1049856, %o1
+; CHECK-LE: mov %g0, %o0
 declare void @a(double)
 define void @test_call() {
   call void @a(double 5.0)
@@ -37,9 +37,9 @@ define void @test_call() {
 ; CHECK: sethi 1048576, %o0
 ; CHECK: mov %g0, %o1
 ; CHECK: mov %o0, %o2
-; CHECK: mov %o1, %o3
-; CHECK-LE: mov %g0, %o0
+; CHECK: mov %g0, %o3
 ; CHECK-LE: sethi 1048576, %o1
+; CHECK-LE: mov %g0, %o0
 declare double @llvm.pow.f64(double, double)
 define double @test_intrins_call() {
   %1 = call double @llvm.pow.f64(double 2.0, double 2.0)

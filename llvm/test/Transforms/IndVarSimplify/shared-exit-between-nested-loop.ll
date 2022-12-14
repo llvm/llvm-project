@@ -20,8 +20,8 @@ if.then:                                          ; preds = %for.cond4
 ; CHECK-NEXT:     br i1 false, label %cleanup, label %for.inc
   %add = add nuw nsw i32 %storemerge2531, 2
   %idxprom8 = zext i32 %add to i64
-  %arrayidx10 = getelementptr inbounds <{ <{ [2 x i32], [2 x i32], [8 x [2 x i32]] }>, [10 x [2 x i32]] }>, <{ <{ [2 x i32], [2 x i32], [8 x [2 x i32]] }>, [10 x [2 x i32]] }>* @__const.e.f, i64 0, i32 1, i64 %idxprom8, i64 0
-  %0 = load i32, i32* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds <{ <{ [2 x i32], [2 x i32], [8 x [2 x i32]] }>, [10 x [2 x i32]] }>, ptr @__const.e.f, i64 0, i32 1, i64 %idxprom8, i64 0
+  %0 = load i32, ptr %arrayidx10, align 4
   %tobool11 = icmp eq i32 %0, 0
   br i1 %tobool11, label %cleanup, label %for.inc
 

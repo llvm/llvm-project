@@ -195,7 +195,6 @@ class ValueToRegClass<ValueType T> {
 } 
 
 
-
 //===----------------------------------------------------------------------===//
 // Some Common Instruction Class Templates
 //===----------------------------------------------------------------------===//
@@ -1729,7 +1728,7 @@ def IMOV16ri : NVPTXInst<(outs Int16Regs:$dst), (ins i16imm:$src),
 def IMOV32ri : NVPTXInst<(outs Int32Regs:$dst), (ins i32imm:$src),
                          "mov.u32 \t$dst, $src;",
                          [(set Int32Regs:$dst, imm:$src)]>;
-def IMOV64i : NVPTXInst<(outs Int64Regs:$dst), (ins i64imm:$src),
+def IMOV64ri : NVPTXInst<(outs Int64Regs:$dst), (ins i64imm:$src),
                         "mov.u64 \t$dst, $src;",
                         [(set Int64Regs:$dst, imm:$src)]>;
 
@@ -1741,6 +1740,7 @@ def FMOV64ri : NVPTXInst<(outs Float64Regs:$dst), (ins f64imm:$src),
                          [(set Float64Regs:$dst, fpimm:$src)]>;
 
 def : Pat<(i32 (Wrapper texternalsym:$dst)), (IMOV32ri texternalsym:$dst)>;
+def : Pat<(i64 (Wrapper texternalsym:$dst)), (IMOV64ri texternalsym:$dst)>;
 
 //---- Copy Frame Index ----
 def LEA_ADDRi :   NVPTXInst<(outs Int32Regs:$dst), (ins MEMri:$addr),

@@ -120,6 +120,7 @@ void registerTestTilingInterface();
 void registerTestTopologicalSortAnalysisPass();
 void registerTestTransformDialectEraseSchedulePass();
 void registerTestTransformDialectInterpreterPass();
+void registerTestWrittenToPass();
 void registerTestVectorLowerings();
 void registerTestNvgpuLowerings();
 } // namespace test
@@ -227,6 +228,7 @@ void registerTestPasses() {
   mlir::test::registerTestTransformDialectInterpreterPass();
   mlir::test::registerTestVectorLowerings();
   mlir::test::registerTestNvgpuLowerings();
+  mlir::test::registerTestWrittenToPass();
 }
 #endif
 

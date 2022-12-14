@@ -12538,31 +12538,49 @@ static SDValue lowerShuffleAsVTRUNC(const SDLoc &DL, MVT VT, SDValue V1,
     if (SrcEltBits < 32 && !Subtarget.hasBWI())
       continue;
 
-    // Match shuffle <0,Scale,2*Scale,..,undef_or_zero,undef_or_zero,...>
+    // Match shuffle <Ofs,Ofs+Scale,Ofs+2*Scale,..,undef_or_zero,undef_or_zero>
     // Bail if the V2 elements are undef.
     unsigned NumHalfSrcElts = NumElts / Scale;
     unsigned NumSrcElts = 2 * NumHalfSrcElts;
-    if (!isSequentialOrUndefInRange(Mask, 0, NumSrcElts, 0, Scale) ||
-        isUndefInRange(Mask, NumHalfSrcElts, NumHalfSrcElts))
-      continue;
+    for (unsigned Offset = 0; Offset != Scale; ++Offset) {
+      if (!isSequentialOrUndefInRange(Mask, 0, NumSrcElts, Offset, Scale) ||
+          isUndefInRange(Mask, NumHalfSrcElts, NumHalfSrcElts))
+        continue;
 
-    // The elements beyond the truncation must be undef/zero.
-    unsigned UpperElts = NumElts - NumSrcElts;
-    if (UpperElts > 0 &&
-        !Zeroable.extractBits(UpperElts, NumSrcElts).isAllOnes())
-      continue;
-    bool UndefUppers =
-        UpperElts > 0 && isUndefInRange(Mask, NumSrcElts, UpperElts);
+      // The elements beyond the truncation must be undef/zero.
+      unsigned UpperElts = NumElts - NumSrcElts;
+      if (UpperElts > 0 &&
+          !Zeroable.extractBits(UpperElts, NumSrcElts).isAllOnes())
+        continue;
+      bool UndefUppers =
+          UpperElts > 0 && isUndefInRange(Mask, NumSrcElts, UpperElts);
 
-    // As we're using both sources then we need to concat them together
-    // and truncate from the double-sized src.
-    MVT ConcatVT = MVT::getVectorVT(VT.getScalarType(), NumElts * 2);
-    SDValue Src = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, V1, V2);
+      // For offset truncations, ensure that the concat is cheap.
+      // TODO: Relax this?
+      if (Offset && (V1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+                     V2.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+                     V1.getOperand(0) != V2.getOperand(0)))
+        continue;
 
-    MVT SrcSVT = MVT::getIntegerVT(SrcEltBits);
-    MVT SrcVT = MVT::getVectorVT(SrcSVT, NumSrcElts);
-    Src = DAG.getBitcast(SrcVT, Src);
-    return getAVX512TruncNode(DL, VT, Src, Subtarget, DAG, !UndefUppers);
+      // As we're using both sources then we need to concat them together
+      // and truncate from the double-sized src.
+      MVT ConcatVT = MVT::getVectorVT(VT.getScalarType(), NumElts * 2);
+      SDValue Src = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, V1, V2);
+
+      // Move the offset'd elements into place for the truncation.
+      if (Offset) {
+        SmallVector<int, 32> OffsetMask(NumElts * 2, -1);
+        for (unsigned I = 0, E = NumElts * 2; I < E; I += Scale)
+          OffsetMask[I] = I + Offset;
+        Src = DAG.getVectorShuffle(ConcatVT, DL, Src, DAG.getUNDEF(ConcatVT),
+                                   OffsetMask);
+      }
+
+      MVT SrcSVT = MVT::getIntegerVT(SrcEltBits);
+      MVT SrcVT = MVT::getVectorVT(SrcSVT, NumSrcElts);
+      Src = DAG.getBitcast(SrcVT, Src);
+      return getAVX512TruncNode(DL, VT, Src, Subtarget, DAG, !UndefUppers);
+    }
   }
 
   return SDValue();

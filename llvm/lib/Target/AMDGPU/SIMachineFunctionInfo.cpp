@@ -340,7 +340,7 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
         return false;
       }
 
-      Optional<int> SpillFI;
+      std::optional<int> SpillFI;
       // We need to preserve inactive lanes, so always save, even caller-save
       // registers.
       if (!isEntryFunction()) {

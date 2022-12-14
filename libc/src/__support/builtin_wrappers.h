@@ -12,6 +12,7 @@
 
 #include "named_pair.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/compiler_features.h"
 
 namespace __llvm_libc {
 
@@ -80,7 +81,7 @@ add_with_carry(T a, T b, T carry_in) {
   return {sum, carry_out};
 }
 
-#if __has_builtin(__builtin_addc)
+#if LLVM_LIBC_HAS_BUILTIN(__builtin_addc)
 // https://clang.llvm.org/docs/LanguageExtensions.html#multiprecision-arithmetic-builtins
 
 template <>
@@ -128,7 +129,7 @@ add_with_carry<unsigned long long>(unsigned long long a, unsigned long long b,
   return result;
 }
 
-#endif // __has_builtin(__builtin_addc)
+#endif // LLVM_LIBC_HAS_BUILTIN(__builtin_addc)
 
 // Subtract with borrow
 DEFINE_NAMED_PAIR_TEMPLATE(DiffBorrow, diff, borrow);
@@ -143,7 +144,7 @@ sub_with_borrow(T a, T b, T borrow_in) {
   return {diff, borrow_out};
 }
 
-#if __has_builtin(__builtin_subc)
+#if LLVM_LIBC_HAS_BUILTIN(__builtin_subc)
 // https://clang.llvm.org/docs/LanguageExtensions.html#multiprecision-arithmetic-builtins
 
 template <>
@@ -191,7 +192,7 @@ sub_with_borrow<unsigned long long>(unsigned long long a, unsigned long long b,
   return result;
 }
 
-#endif // __has_builtin(__builtin_subc)
+#endif // LLVM_LIBC_HAS_BUILTIN(__builtin_subc)
 
 } // namespace __llvm_libc
 

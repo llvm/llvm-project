@@ -3,9 +3,9 @@
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-windows-msvc"
 
-define dllexport void ()* @f() !dbg !6 {
+define dllexport ptr @f() !dbg !6 {
 entry:
-  ret void ()* null, !dbg !28
+  ret ptr null, !dbg !28
 }
 
 !llvm.dbg.cu = !{!0}

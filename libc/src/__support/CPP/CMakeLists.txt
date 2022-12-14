@@ -8,6 +8,8 @@ add_header_library(
   bit
   HDRS
     bit.h
+  DEPENDS
+    libc.src.__support.compiler_features
 )
 
 add_header_library(

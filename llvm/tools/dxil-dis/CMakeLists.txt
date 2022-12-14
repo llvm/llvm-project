@@ -17,7 +17,7 @@ endif ()
 
 if (DXIL_DIS)
   add_custom_target(dxil-dis
-    COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${DXIL_DIS}" "${LLVM_RUNTIME_OUTPUT_INTDIR}/dxil-dis")
+    COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${DXIL_DIS}" "${LLVM_RUNTIME_OUTPUT_INTDIR}/dxil-dis${CMAKE_EXECUTABLE_SUFFIX}")
   return()
 endif ()
 

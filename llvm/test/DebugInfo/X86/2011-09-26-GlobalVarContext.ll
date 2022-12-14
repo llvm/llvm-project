@@ -10,10 +10,10 @@ source_filename = "test/DebugInfo/X86/2011-09-26-GlobalVarContext.ll"
 ; Function Attrs: nounwind
 define i32 @f() #0 !dbg !8 {
   %LOC = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %LOC, metadata !11, metadata !13), !dbg !14
-  %1 = load i32, i32* @GLB, align 4, !dbg !15
-  store i32 %1, i32* %LOC, align 4, !dbg !15
-  %2 = load i32, i32* @GLB, align 4, !dbg !16
+  call void @llvm.dbg.declare(metadata ptr %LOC, metadata !11, metadata !13), !dbg !14
+  %1 = load i32, ptr @GLB, align 4, !dbg !15
+  store i32 %1, ptr %LOC, align 4, !dbg !15
+  %2 = load i32, ptr @GLB, align 4, !dbg !16
   ret i32 %2, !dbg !16
 }
 

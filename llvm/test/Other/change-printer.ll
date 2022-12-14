@@ -109,7 +109,6 @@ entry:
 
 ; CHECK-SIMPLE: *** IR Dump At Start ***
 ; CHECK-SIMPLE-NEXT: ; ModuleID = {{.+}}
-; CHECK-SIMPLE: *** IR Dump After VerifierPass on [module] omitted because no change ***
 ; CHECK-SIMPLE: *** IR Dump After InstSimplifyPass on g ***
 ; CHECK-SIMPLE-NEXT: define i32 @g()
 ; CHECK-SIMPLE: *** IR Pass PassManager{{.*}} on g ignored ***
@@ -147,9 +146,9 @@ entry:
 ; CHECK-FILTER-MULT-FUNC: *** IR Dump After InstSimplifyPass on f ***
 ; CHECK-FILTER-MULT-FUNC-NEXT: define i32 @f()
 
-; CHECK-FILTER-PASSES: *** IR Dump After InstSimplifyPass on g filtered out ***
 ; CHECK-FILTER-PASSES: *** IR Dump At Start ***
 ; CHECK-FILTER-PASSES-NEXT: ; ModuleID = {{.+}}
+; CHECK-FILTER-PASSES: *** IR Dump After InstSimplifyPass on g filtered out ***
 ; CHECK-FILTER-PASSES: *** IR Dump After NoOpFunctionPass on g omitted because no change ***
 ; CHECK-FILTER-PASSES: *** IR Dump After InstSimplifyPass on f filtered out ***
 ; CHECK-FILTER-PASSES: *** IR Dump After NoOpFunctionPass on f omitted because no change ***
@@ -163,18 +162,18 @@ entry:
 ; CHECK-FILTER-MULT-PASSES-NEXT: define i32 @f()
 ; CHECK-FILTER-MULT-PASSES: *** IR Dump After NoOpFunctionPass on f omitted because no change ***
 
-; CHECK-FILTER-FUNC-PASSES: *** IR Dump After InstSimplifyPass on g filtered out ***
-; CHECK-FILTER-FUNC-PASSES: *** IR Dump After NoOpFunctionPass on g filtered out ***
 ; CHECK-FILTER-FUNC-PASSES: *** IR Dump At Start ***
 ; CHECK-FILTER-FUNC-PASSES-NEXT: ; ModuleID = {{.+}}
+; CHECK-FILTER-FUNC-PASSES: *** IR Dump After InstSimplifyPass on g filtered out ***
+; CHECK-FILTER-FUNC-PASSES: *** IR Dump After NoOpFunctionPass on g filtered out ***
 ; CHECK-FILTER-FUNC-PASSES: *** IR Dump After InstSimplifyPass on f ***
 ; CHECK-FILTER-FUNC-PASSES-NEXT: define i32 @f()
 ; CHECK-FILTER-FUNC-PASSES: *** IR Dump After NoOpFunctionPass on f omitted because no change ***
 
-; CHECK-FILTER-FUNC-PASSES-MOD-SCOPE: *** IR Dump After InstSimplifyPass on g filtered out ***
-; CHECK-FILTER-FUNC-PASSES-MOD-SCOPE: *** IR Dump After NoOpFunctionPass on g filtered out ***
 ; CHECK-FILTER-FUNC-PASSES-MOD-SCOPE: *** IR Dump At Start ***
 ; CHECK-FILTER-FUNC-PASSES-MOD-SCOPE-NEXT: ; ModuleID = {{.+}}
+; CHECK-FILTER-FUNC-PASSES-MOD-SCOPE: *** IR Dump After InstSimplifyPass on g filtered out ***
+; CHECK-FILTER-FUNC-PASSES-MOD-SCOPE: *** IR Dump After NoOpFunctionPass on g filtered out ***
 ; CHECK-FILTER-FUNC-PASSES-MOD-SCOPE: *** IR Dump After InstSimplifyPass on f ***
 ; CHECK-FILTER-FUNC-PASSES-MOD-SCOPE-NEXT: ModuleID = {{.+}}
 ; CHECK-FILTER-FUNC-PASSES-MOD-SCOPE: *** IR Dump After NoOpFunctionPass on f omitted because no change ***
@@ -189,7 +188,6 @@ entry:
 
 ; CHECK-SIMPLE-BEFORE: *** IR Dump At Start ***
 ; CHECK-SIMPLE-BEFORE-NEXT: ; ModuleID = {{.+}}
-; CHECK-SIMPLE-BEFORE: *** IR Dump After VerifierPass on [module] omitted because no change ***
 ; CHECK-SIMPLE-BEFORE: *** IR Dump Before InstSimplifyPass on g ***
 ; CHECK-SIMPLE-BEFORE-NEXT: define i32 @g()
 ; CHECK-SIMPLE-BEFORE: *** IR Dump After InstSimplifyPass on g ***

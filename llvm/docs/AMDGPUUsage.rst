@@ -3571,12 +3571,14 @@ Code object V5 metadata is the same as
   .. table:: AMDHSA Code Object V5 Kernel Metadata Map Additions
      :name: amdgpu-amdhsa-code-object-kernel-metadata-map-table-v5
 
-     ===================== ============= ========== =======================================
-     String Key            Value Type     Required? Description
-     ===================== ============= ========== =======================================
-     ".uses_dynamic_stack" boolean                  Indicates if the generated machine code
-                                                    is using a dynamically sized stack.
-     ===================== ============= ========== =======================================
+     ============================= ============= ========== =======================================
+     String Key                    Value Type     Required? Description
+     ============================= ============= ========== =======================================
+     ".uses_dynamic_stack"         boolean                  Indicates if the generated machine code
+                                                            is using a dynamically sized stack.
+     ".workgroup_processor_mode"   boolean                  (GFX10+) Controls ENABLE_WGP_MODE in
+                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+     ============================= ============= ========== =======================================
 
 ..
 
