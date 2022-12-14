@@ -202,8 +202,9 @@ define <8 x i64> @vrgather_shuffle_vv_v8i64(<8 x i64> %x, <8 x i64> %y) {
 ; RV64-LABEL: vrgather_shuffle_vv_v8i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a0, 5
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV64-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.s.x v16, a0
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vmv.v.i v20, 2
 ; RV64-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
 ; RV64-NEXT:    vslideup.vi v20, v16, 7
