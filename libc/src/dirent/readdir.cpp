@@ -12,12 +12,18 @@
 #include "src/__support/common.h"
 
 #include <dirent.h>
+#include <errno.h>
 
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(struct ::dirent *, readdir, (::DIR * dir)) {
   auto *d = reinterpret_cast<__llvm_libc::Dir *>(dir);
-  return d->read();
+  auto dirent_val = d->read();
+  if (!dirent_val) {
+    errno = dirent_val.error();
+    return nullptr;
+  }
+  return dirent_val;
 }
 
 } // namespace __llvm_libc
