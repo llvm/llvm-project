@@ -49,7 +49,7 @@ struct PackInfo {
 static PackInfo getPackingInfoFromConsumer(
     AffineMap indexingMap, ArrayRef<OpFoldResult> innerTileSizes,
     ArrayRef<int64_t> innerDimsPos, ArrayRef<int64_t> outerDimsPerm,
-    Optional<Value> paddingValue = llvm::None) {
+    Optional<Value> paddingValue = std::nullopt) {
   LLVM_DEBUG(
       { llvm::dbgs() << "--- Construct PackInfo From A Consumer ---\n"; });
   PackInfo packInfo;
