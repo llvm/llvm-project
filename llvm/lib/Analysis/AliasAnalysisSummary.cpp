@@ -73,8 +73,8 @@ AliasAttrs getExternallyVisibleAttrs(AliasAttrs Attr) {
   return Attr & AliasAttrs(ExternalAttrMask);
 }
 
-Optional<InstantiatedValue> instantiateInterfaceValue(InterfaceValue IValue,
-                                                      CallBase &Call) {
+std::optional<InstantiatedValue>
+instantiateInterfaceValue(InterfaceValue IValue, CallBase &Call) {
   auto Index = IValue.Index;
   auto *V = (Index == 0) ? &Call : Call.getArgOperand(Index - 1);
   if (V->getType()->isPointerTy())
@@ -82,7 +82,7 @@ Optional<InstantiatedValue> instantiateInterfaceValue(InterfaceValue IValue,
   return std::nullopt;
 }
 
-Optional<InstantiatedRelation>
+std::optional<InstantiatedRelation>
 instantiateExternalRelation(ExternalRelation ERelation, CallBase &Call) {
   auto From = instantiateInterfaceValue(ERelation.From, Call);
   if (!From)
@@ -93,8 +93,8 @@ instantiateExternalRelation(ExternalRelation ERelation, CallBase &Call) {
   return InstantiatedRelation{*From, *To, ERelation.Offset};
 }
 
-Optional<InstantiatedAttr> instantiateExternalAttribute(ExternalAttribute EAttr,
-                                                        CallBase &Call) {
+std::optional<InstantiatedAttr>
+instantiateExternalAttribute(ExternalAttribute EAttr, CallBase &Call) {
   auto Value = instantiateInterfaceValue(EAttr.IValue, Call);
   if (!Value)
     return std::nullopt;

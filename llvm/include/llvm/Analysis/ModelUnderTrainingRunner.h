@@ -42,7 +42,7 @@ public:
     return lastEvaluationResult()->getUntypedTensorValue(ExtraOutputIndex + 1);
   }
 
-  const Optional<TFModelEvaluator::EvaluationResult> &
+  const std::optional<TFModelEvaluator::EvaluationResult> &
   lastEvaluationResult() const {
     return LastEvaluationResult;
   }
@@ -68,7 +68,7 @@ private:
   std::unique_ptr<TFModelEvaluator> Evaluator;
   const std::vector<TensorSpec> OutputSpecs;
   const std::vector<TensorSpec> ExtraOutputsForLogging;
-  Optional<TFModelEvaluator::EvaluationResult> LastEvaluationResult;
+  std::optional<TFModelEvaluator::EvaluationResult> LastEvaluationResult;
   void *evaluateUntyped() override;
 };
 

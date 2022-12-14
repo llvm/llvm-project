@@ -1543,7 +1543,8 @@ void VFABI::getVectorVariantNames(
   for (const auto &S : SetVector<StringRef>(ListAttr.begin(), ListAttr.end())) {
 #ifndef NDEBUG
     LLVM_DEBUG(dbgs() << "VFABI: adding mapping '" << S << "'\n");
-    Optional<VFInfo> Info = VFABI::tryDemangleForVFABI(S, *(CI.getModule()));
+    std::optional<VFInfo> Info =
+        VFABI::tryDemangleForVFABI(S, *(CI.getModule()));
     assert(Info && "Invalid name for a VFABI variant.");
     assert(CI.getModule()->getFunction(Info.value().VectorName) &&
            "Vector function is missing.");
