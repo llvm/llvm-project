@@ -447,6 +447,55 @@ private:
   MlirBlock block;
 };
 
+class PyOpOperand {
+public:
+  PyOpOperand(MlirOpOperand opOperand) : opOperand(opOperand) {}
+
+  py::object getOwner() {
+    MlirOperation owner = mlirOpOperandGetOwner(opOperand);
+    PyMlirContextRef context =
+        PyMlirContext::forContext(mlirOperationGetContext(owner));
+    return PyOperation::forOperation(context, owner)->createOpView();
+  }
+
+  size_t getOperandNumber() { return mlirOpOperandGetOperandNumber(opOperand); }
+
+  static void bind(py::module &m) {
+    py::class_<PyOpOperand>(m, "OpOperand", py::module_local())
+        .def_property_readonly("owner", &PyOpOperand::getOwner)
+        .def_property_readonly("operand_number",
+                               &PyOpOperand::getOperandNumber);
+  }
+
+private:
+  MlirOpOperand opOperand;
+};
+
+class PyOpOperandIterator {
+public:
+  PyOpOperandIterator(MlirOpOperand opOperand) : opOperand(opOperand) {}
+
+  PyOpOperandIterator &dunderIter() { return *this; }
+
+  PyOpOperand dunderNext() {
+    if (mlirOpOperandIsNull(opOperand))
+      throw py::stop_iteration();
+
+    PyOpOperand returnOpOperand(opOperand);
+    opOperand = mlirOpOperandGetNextUse(opOperand);
+    return returnOpOperand;
+  }
+
+  static void bind(py::module &m) {
+    py::class_<PyOpOperandIterator>(m, "OpOperandIterator", py::module_local())
+        .def("__iter__", &PyOpOperandIterator::dunderIter)
+        .def("__next__", &PyOpOperandIterator::dunderNext);
+  }
+
+private:
+  MlirOpOperand opOperand;
+};
+
 } // namespace
 
 //------------------------------------------------------------------------------
@@ -3156,6 +3205,11 @@ void mlir::python::populateIRCore(py::module &m) {
             assert(false && "Value must be a block argument or an op result");
             return py::none();
           })
+      .def_property_readonly("uses",
+                             [](PyValue &self) {
+                               return PyOpOperandIterator(
+                                   mlirValueGetFirstUse(self.get()));
+                             })
       .def("__eq__",
            [](PyValue &self, PyValue &other) {
              return self.get().ptr == other.get().ptr;
@@ -3182,6 +3236,7 @@ void mlir::python::populateIRCore(py::module &m) {
       });
   PyBlockArgument::bind(m);
   PyOpResult::bind(m);
+  PyOpOperand::bind(m);
 
   //----------------------------------------------------------------------------
   // Mapping of SymbolTable.
@@ -3220,6 +3275,7 @@ void mlir::python::populateIRCore(py::module &m) {
   PyOperationIterator::bind(m);
   PyOperationList::bind(m);
   PyOpAttributeMap::bind(m);
+  PyOpOperandIterator::bind(m);
   PyOpOperandList::bind(m);
   PyOpResultList::bind(m);
   PyRegionIterator::bind(m);
