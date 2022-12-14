@@ -2359,8 +2359,6 @@ Error BitcodeReader::parseTypeTableBody() {
       if (!ResultTy ||
           !PointerType::isValidElementType(ResultTy))
         return error("Invalid type");
-      if (LLVM_UNLIKELY(!Context.hasSetOpaquePointersValue()))
-        Context.setOpaquePointers(false);
       ContainedIDs.push_back(Record[0]);
       ResultTy = PointerType::get(ResultTy, AddressSpace);
       break;
@@ -2368,9 +2366,7 @@ Error BitcodeReader::parseTypeTableBody() {
     case bitc::TYPE_CODE_OPAQUE_POINTER: { // OPAQUE_POINTER: [addrspace]
       if (Record.size() != 1)
         return error("Invalid opaque pointer record");
-      if (LLVM_UNLIKELY(!Context.hasSetOpaquePointersValue())) {
-        Context.setOpaquePointers(true);
-      } else if (Context.supportsTypedPointers())
+      if (Context.supportsTypedPointers())
         return error(
             "Opaque pointers are only supported in -opaque-pointers mode");
       unsigned AddressSpace = Record[0];

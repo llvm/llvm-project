@@ -7,7 +7,7 @@
 define void @memcpyintrinsic(i8* %dest, i8* %src, i32 %len) {
 entry:
 
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %dest, i8* align 1 %src, i32 %len, i1 true)
+; CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %dest, ptr align 1 %src, i32 %len, i1 true)
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 %len, i1 true)
   
   ret void
