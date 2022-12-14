@@ -22,6 +22,7 @@ namespace cir {
 
 /// This class organizes various target-specific codegeneration issues, like
 /// target-specific attributes, builtins and so on.
+/// Equivalent to LLVM's TargetCodeGenInfo.
 class TargetCIRGenInfo {
   std::unique_ptr<ABIInfo> Info = nullptr;
 

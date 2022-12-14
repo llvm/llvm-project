@@ -158,14 +158,14 @@ public:
 
   const CIRGenRecordLayout &getCIRGenRecordLayout(const clang::RecordDecl *RD);
 
-  /// convertTypeForMem - Convert type T into an mlir::Type. This differs from
+  /// Convert type T into an mlir::Type. This differs from
   /// convertType in that it is used to convert to the memory representation
   /// for a type. For example, the scalar representation for _Bool is i1, but
   /// the memory representation is usually i8 or i32, depending on the target.
   // TODO: convert this comment to account for MLIR's equivalence
   mlir::Type convertTypeForMem(clang::QualType, bool forBitField = false);
 
-  /// GetFunctionType - Get the LLVM function type for \arg Info.
+  /// Get the CIR function type for \arg Info.
   mlir::FunctionType GetFunctionType(const CIRGenFunctionInfo &Info);
 
   mlir::FunctionType GetFunctionType(clang::GlobalDecl GD);
