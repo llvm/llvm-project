@@ -125,20 +125,6 @@ template <typename AnalysisT> struct AnalysisInputs {
     PostVisitCFG = std::move(Arg);
     return std::move(*this);
   }
-
-  AnalysisInputs<AnalysisT> &&
-  withPostVisitCFG(std::function<void(ASTContext &, const CFGElement &,
-                                      const TypeErasedDataflowAnalysisState &)>
-                       Arg) && {
-    PostVisitCFG =
-        [Arg = std::move(Arg)](ASTContext &Context, const CFGElement &Element,
-            const TransferStateForDiagnostics<typename AnalysisT::Lattice>
-                &State) {
-          Arg(Context, Element,
-              TypeErasedDataflowAnalysisState({State.Lattice}, State.Env));
-        };
-    return std::move(*this);
-  }
   AnalysisInputs<AnalysisT> &&withASTBuildArgs(ArrayRef<std::string> Arg) && {
     ASTBuildArgs = std::move(Arg);
     return std::move(*this);
