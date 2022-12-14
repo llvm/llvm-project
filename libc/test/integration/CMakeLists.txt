@@ -15,6 +15,6 @@ set_target_properties(libc_integration_test_dummy
       ARCHIVE_OUTPUT_NAME dummy
       ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-add_subdirectory(loader)
+add_subdirectory(startup)
 add_subdirectory(scudo)
 add_subdirectory(src)

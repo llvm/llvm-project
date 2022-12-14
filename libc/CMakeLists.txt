@@ -197,9 +197,9 @@ add_subdirectory(src)
 add_subdirectory(utils)
 
 if(LLVM_LIBC_FULL_BUILD)
-  # The loader can potentially depend on the library components so add it
-  # after the library implementation directories.
-  add_subdirectory(loader)
+  # The startup system can potentially depend on the library components so add
+  # it after the library implementation directories.
+  add_subdirectory(startup)
 endif()
 
 # The lib and test directories are added at the very end as tests
