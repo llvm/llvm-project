@@ -57,7 +57,7 @@ private:
   getStubOrGOTAddrFor(StringRef StubContainerName, StringRef Symbol,
                       bool IsInsideLoad, bool IsStubAddr) const;
 
-  Optional<uint64_t> getSectionLoadAddress(void *LocalAddr) const;
+  std::optional<uint64_t> getSectionLoadAddress(void *LocalAddr) const;
 
   IsSymbolValidFunction IsSymbolValid;
   GetSymbolInfoFunction GetSymbolInfo;

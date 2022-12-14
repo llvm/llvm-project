@@ -44,7 +44,7 @@ public:
          JITDylib &PlatformJD, const char *OrcRuntimePath,
          LoadDynamicLibrary LoadDynLibrary, bool StaticVCRuntime = false,
          const char *VCRuntimePath = nullptr,
-         Optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
+         std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   ExecutionSession &getExecutionSession() const { return ES; }
   ObjectLinkingLayer &getObjectLinkingLayer() const { return ObjLinkingLayer; }
