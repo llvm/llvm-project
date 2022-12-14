@@ -94,7 +94,22 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
       codeGenOpts(CGO),
       theModule{mlir::ModuleOp::create(builder.getUnknownLoc())}, Diags(Diags),
       target(astCtx.getTargetInfo()), ABI(createCXXABI(*this)),
-      genTypes{*this} {}
+      genTypes{*this} {
+  mlir::cir::sob::SignedOverflowBehavior sob;
+  switch (langOpts.getSignedOverflowBehavior()) {
+  case clang::LangOptions::SignedOverflowBehaviorTy::SOB_Defined:
+    sob = sob::SignedOverflowBehavior::defined;
+    break;
+  case clang::LangOptions::SignedOverflowBehaviorTy::SOB_Undefined:
+    sob = sob::SignedOverflowBehavior::undefined;
+    break;
+  case clang::LangOptions::SignedOverflowBehaviorTy::SOB_Trapping:
+    sob = sob::SignedOverflowBehavior::trapping;
+    break;
+  }
+  theModule->setAttr("cir.sob",
+                     mlir::cir::SignedOverflowBehaviorAttr::get(&context, sob));
+}
 
 CIRGenModule::~CIRGenModule() {}
 

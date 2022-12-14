@@ -14,7 +14,7 @@ module {
 // LLVM-NEXT:   ret void,
 // LLVM-NEXT: }
 
-//      MLIR: module  {
+//      MLIR: module {
 // MLIR-NEXT:   llvm.func @foo() {
 // MLIR-NEXT:     llvm.return
 // MLIR-NEXT:   }

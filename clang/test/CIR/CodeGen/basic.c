@@ -9,7 +9,7 @@ int foo(int i) {
   return i;
 }
 
-// CHECK: module  {
+//      CHECK: module attributes {cir.sob = #cir.signed_overflow_behavior<undefined>} {
 // CHECK-NEXT: cir.func @foo(%arg0: i32 loc({{.*}})) -> i32 {
 // CHECK-NEXT: %0 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
 // CHECK-NEXT: %1 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64}

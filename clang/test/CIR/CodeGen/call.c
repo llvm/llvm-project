@@ -15,7 +15,7 @@ void d(void) {
   b(0, 1);
 }
 
-// CHECK: module  {
+// CHECK: module {{.*}} {
 // CHECK:   cir.func @a() {
 // CHECK:     cir.return
 // CHECK:   }
@@ -53,7 +53,7 @@ void d(void) {
 // CHECK:     cir.return
 // CHECK:   }
 //
-// CXX: module  {
+// CXX: module {{.*}} {
 // CXX-NEXT:   cir.func @_Z1av() {
 // CXX-NEXT:     cir.return
 // CXX-NEXT:   }
