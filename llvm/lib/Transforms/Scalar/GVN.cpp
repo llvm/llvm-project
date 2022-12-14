@@ -1890,11 +1890,10 @@ static bool impliesEquivalanceIfFalse(CmpInst* Cmp) {
 
 
 static bool hasUsersIn(Value *V, BasicBlock *BB) {
-  for (User *U : V->users())
-    if (isa<Instruction>(U) &&
-        cast<Instruction>(U)->getParent() == BB)
-      return true;
-  return false;
+  return llvm::any_of(V->users(), [BB](User *U) {
+    auto *I = dyn_cast<Instruction>(U);
+    return I && I->getParent() == BB;
+  });
 }
 
 bool GVNPass::processAssumeIntrinsic(AssumeInst *IntrinsicI) {
