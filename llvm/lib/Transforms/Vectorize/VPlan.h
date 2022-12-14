@@ -2671,6 +2671,8 @@ public:
 
   bool hasVF(ElementCount VF) { return VFs.count(VF); }
 
+  bool hasScalarVFOnly() const { return VFs.size() == 1 && VFs[0].isScalar(); }
+
   const std::string &getName() const { return Name; }
 
   void setName(const Twine &newName) { Name = newName.str(); }
