@@ -195,36 +195,8 @@ struct XCOFFSectionHeader64 : XCOFFSectionHeader<XCOFFSectionHeader64> {
   char Padding[4];
 };
 
-struct LoaderSectionHeader32 {
-  support::ubig32_t Version;
-  support::ubig32_t NumberOfSymTabEnt;
-  support::ubig32_t NumberOfRelTabEnt;
-  support::ubig32_t LengthOfImpidStrTbl;
-  support::ubig32_t NumberOfImpid;
-  support::big32_t OffsetToImpid;
-  support::ubig32_t LengthOfStrTbl;
-  support::big32_t OffsetToStrTbl;
-
-  uint64_t getOffsetToSymTbl() const {
-    return NumberOfSymTabEnt == 0 ? 0 : sizeof(LoaderSectionHeader32);
-  }
-};
-
-struct LoaderSectionHeader64 {
-  support::ubig32_t Version;
-  support::ubig32_t NumberOfSymTabEnt;
-  support::ubig32_t NumberOfRelTabEnt;
-  support::ubig32_t LengthOfImpidStrTbl;
-  support::ubig32_t NumberOfImpid;
-  support::ubig32_t LengthOfStrTbl;
-  support::big64_t OffsetToImpid;
-  support::big64_t OffsetToStrTbl;
-  support::big64_t OffsetToSymTbl;
-  support::big64_t OffsetToRelEnt;
-
-  uint64_t getOffsetToSymTbl() const { return OffsetToSymTbl; }
-};
-
+struct LoaderSectionHeader32;
+struct LoaderSectionHeader64;
 struct LoaderSectionSymbolEntry32 {
   struct NameOffsetInStrTbl {
     support::big32_t IsNameInStrTbl; // Zero indicates name in string table.
@@ -254,6 +226,59 @@ struct LoaderSectionSymbolEntry64 {
 
   Expected<StringRef>
   getSymbolName(const LoaderSectionHeader64 *LoaderSecHeader) const;
+};
+
+struct LoaderSectionRelocationEntry32 {
+  support::ubig32_t VirtualAddr;
+  support::big32_t SymbolIndex;
+  support::ubig16_t Type;
+  support::big16_t SectionNum;
+};
+
+struct LoaderSectionRelocationEntry64 {
+  support::ubig64_t VirtualAddr;
+  support::ubig16_t Type;
+  support::big16_t SectionNum;
+  support::big32_t SymbolIndex;
+};
+
+struct LoaderSectionHeader32 {
+  support::ubig32_t Version;
+  support::ubig32_t NumberOfSymTabEnt;
+  support::ubig32_t NumberOfRelTabEnt;
+  support::ubig32_t LengthOfImpidStrTbl;
+  support::ubig32_t NumberOfImpid;
+  support::big32_t OffsetToImpid;
+  support::ubig32_t LengthOfStrTbl;
+  support::big32_t OffsetToStrTbl;
+
+  uint64_t getOffsetToSymTbl() const {
+    return NumberOfSymTabEnt == 0 ? 0 : sizeof(LoaderSectionHeader32);
+  }
+
+  uint64_t getOffsetToRelEnt() const {
+    // Relocation table is after Symbol table.
+    return NumberOfRelTabEnt == 0
+               ? 0
+               : sizeof(LoaderSectionHeader32) +
+                     sizeof(LoaderSectionSymbolEntry32) * NumberOfSymTabEnt;
+  }
+};
+
+struct LoaderSectionHeader64 {
+  support::ubig32_t Version;
+  support::ubig32_t NumberOfSymTabEnt;
+  support::ubig32_t NumberOfRelTabEnt;
+  support::ubig32_t LengthOfImpidStrTbl;
+  support::ubig32_t NumberOfImpid;
+  support::ubig32_t LengthOfStrTbl;
+  support::big64_t OffsetToImpid;
+  support::big64_t OffsetToStrTbl;
+  support::big64_t OffsetToSymTbl;
+  support::big64_t OffsetToRelEnt;
+
+  uint64_t getOffsetToSymTbl() const { return OffsetToSymTbl; }
+  uint64_t getOffsetToRelEnt() const { return OffsetToRelEnt; }
 };
 
 template <typename AddressType> struct ExceptionSectionEntry {
@@ -468,20 +493,6 @@ struct XCOFFSectAuxEntForDWARF64 {
 };
 
 template <typename AddressType> struct XCOFFRelocation {
-  // Masks for packing/unpacking the r_rsize field of relocations.
-
-  // The msb is used to indicate if the bits being relocated are signed or
-  // unsigned.
-  static constexpr uint8_t XR_SIGN_INDICATOR_MASK = 0x80;
-
-  // The 2nd msb is used to indicate that the binder has replaced/modified the
-  // original instruction.
-  static constexpr uint8_t XR_FIXUP_INDICATOR_MASK = 0x40;
-
-  // The remaining bits specify the bit length of the relocatable reference
-  // minus one.
-  static constexpr uint8_t XR_BIASED_LENGTH_MASK = 0x3f;
-
 public:
   AddressType VirtualAddress;
   support::ubig32_t SymbolIndex;
