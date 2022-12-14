@@ -12556,11 +12556,23 @@ static SDValue lowerShuffleAsVTRUNC(const SDLoc &DL, MVT VT, SDValue V1,
           UpperElts > 0 && isUndefInRange(Mask, NumSrcElts, UpperElts);
 
       // For offset truncations, ensure that the concat is cheap.
-      // TODO: Relax this?
-      if (Offset && (V1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-                     V2.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-                     V1.getOperand(0) != V2.getOperand(0)))
-        continue;
+      if (Offset) {
+        auto IsCheapConcat = [&](SDValue Lo, SDValue Hi) {
+          if (Lo.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+              Hi.getOpcode() == ISD::EXTRACT_SUBVECTOR)
+            return Lo.getOperand(0) == Hi.getOperand(0);
+          if (ISD::isNormalLoad(Lo.getNode()) &&
+              ISD::isNormalLoad(Hi.getNode())) {
+            auto *LDLo = cast<LoadSDNode>(Lo);
+            auto *LDHi = cast<LoadSDNode>(Hi);
+            return DAG.areNonVolatileConsecutiveLoads(
+                LDHi, LDLo, Lo.getValueType().getStoreSize(), 1);
+          }
+          return false;
+        };
+        if (!IsCheapConcat(V1, V2))
+          continue;
+      }
 
       // As we're using both sources then we need to concat them together
       // and truncate from the double-sized src.

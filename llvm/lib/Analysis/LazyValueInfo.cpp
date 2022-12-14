@@ -1358,7 +1358,8 @@ static std::optional<ValueLatticeElement> getEdgeValueLocal(Value *Val,
               Value *Op = Usr->getOperand(i);
               ValueLatticeElement OpLatticeVal =
                   getValueFromCondition(Op, Condition, isTrueDest);
-              if (Optional<APInt> OpConst = OpLatticeVal.asConstantInteger()) {
+              if (std::optional<APInt> OpConst =
+                      OpLatticeVal.asConstantInteger()) {
                 Result = constantFoldUser(Usr, Op, *OpConst, DL);
                 break;
               }

@@ -25,7 +25,7 @@ TEST(TensorSpecTest, JSONParsing) {
         })");
   EXPECT_TRUE(!!Value);
   LLVMContext Ctx;
-  Optional<TensorSpec> Spec = getTensorSpecFromJSON(Ctx, *Value);
+  std::optional<TensorSpec> Spec = getTensorSpecFromJSON(Ctx, *Value);
   EXPECT_TRUE(Spec);
   EXPECT_EQ(*Spec, TensorSpec::createSpec<int32_t>("tensor_name", {1, 4}, 2));
 }

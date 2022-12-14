@@ -115,7 +115,7 @@ private:
     jitlink::Linkage Linkage;
     orc::ExecutorAddrDiff Size;
   };
-  std::vector<Optional<ComdatExportRequest>> PendingComdatExports;
+  std::vector<std::optional<ComdatExportRequest>> PendingComdatExports;
 
   // This represents a pending request to create a weak external symbol with a
   // name.

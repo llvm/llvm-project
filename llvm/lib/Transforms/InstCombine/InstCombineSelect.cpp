@@ -2502,7 +2502,7 @@ Instruction *InstCombinerImpl::foldAndOrOfSelectUsingImpliedCond(Value *Op,
   assert(Op->getType()->isIntOrIntVectorTy(1) &&
          "Op must be either i1 or vector of i1.");
 
-  Optional<bool> Res = isImpliedCondition(Op, CondVal, DL, IsAnd);
+  std::optional<bool> Res = isImpliedCondition(Op, CondVal, DL, IsAnd);
   if (!Res)
     return nullptr;
 
@@ -2932,13 +2932,13 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   //   if c implies that b is false.
   if (match(CondVal, m_LogicalOr(m_Value(A), m_Value(B))) &&
       match(FalseVal, m_Zero())) {
-    Optional<bool> Res = isImpliedCondition(TrueVal, B, DL);
+    std::optional<bool> Res = isImpliedCondition(TrueVal, B, DL);
     if (Res && *Res == false)
       return replaceOperand(SI, 0, A);
   }
   if (match(TrueVal, m_LogicalOr(m_Value(A), m_Value(B))) &&
       match(FalseVal, m_Zero())) {
-    Optional<bool> Res = isImpliedCondition(CondVal, B, DL);
+    std::optional<bool> Res = isImpliedCondition(CondVal, B, DL);
     if (Res && *Res == false)
       return replaceOperand(SI, 1, A);
   }
@@ -2947,13 +2947,13 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   //   if c = false implies that b = true
   if (match(TrueVal, m_One()) &&
       match(FalseVal, m_LogicalAnd(m_Value(A), m_Value(B)))) {
-    Optional<bool> Res = isImpliedCondition(CondVal, B, DL, false);
+    std::optional<bool> Res = isImpliedCondition(CondVal, B, DL, false);
     if (Res && *Res == true)
       return replaceOperand(SI, 2, A);
   }
   if (match(CondVal, m_LogicalAnd(m_Value(A), m_Value(B))) &&
       match(TrueVal, m_One())) {
-    Optional<bool> Res = isImpliedCondition(FalseVal, B, DL, false);
+    std::optional<bool> Res = isImpliedCondition(FalseVal, B, DL, false);
     if (Res && *Res == true)
       return replaceOperand(SI, 0, A);
   }

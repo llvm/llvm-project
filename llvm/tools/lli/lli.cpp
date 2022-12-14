@@ -846,7 +846,7 @@ int runOrcJIT(const char *ProgName) {
   // Get TargetTriple and DataLayout from the main module if they're explicitly
   // set.
   std::optional<Triple> TT;
-  Optional<DataLayout> DL;
+  std::optional<DataLayout> DL;
   MainModule.withModuleDo([&](Module &M) {
       if (!M.getTargetTriple().empty())
         TT = Triple(M.getTargetTriple());
