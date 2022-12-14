@@ -43,6 +43,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -582,7 +583,8 @@ void HWAddressSanitizer::initializeModule() {
   UseShortGranules =
       ClUseShortGranules.getNumOccurrences() ? ClUseShortGranules : NewRuntime;
   OutlinedChecks =
-      TargetTriple.isAArch64() && TargetTriple.isOSBinFormatELF() &&
+      (TargetTriple.isAArch64() || TargetTriple.isRISCV64()) &&
+      TargetTriple.isOSBinFormatELF() &&
       (ClInlineAllChecks.getNumOccurrences() ? !ClInlineAllChecks : !Recover);
 
   if (ClMatchAllTag.getNumOccurrences()) {
@@ -795,7 +797,8 @@ static size_t TypeSizeToSizeIndex(uint32_t TypeSize) {
 }
 
 void HWAddressSanitizer::untagPointerOperand(Instruction *I, Value *Addr) {
-  if (TargetTriple.isAArch64() || TargetTriple.getArch() == Triple::x86_64)
+  if (TargetTriple.isAArch64() || TargetTriple.getArch() == Triple::x86_64 ||
+      TargetTriple.isRISCV64())
     return;
 
   IRBuilder<> IRB(I);
@@ -911,6 +914,15 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
         FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
         "brk #" + itostr(0x900 + (AccessInfo & HWASanAccessInfo::RuntimeMask)),
         "{x0}",
+        /*hasSideEffects=*/true);
+    break;
+  case Triple::riscv64:
+    // The signal handler will find the data address in x10.
+    Asm = InlineAsm::get(
+        FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
+        "ebreak\naddiw x0, x11, " +
+            itostr(0x40 + (AccessInfo & HWASanAccessInfo::RuntimeMask)),
+        "{x10}",
         /*hasSideEffects=*/true);
     break;
   default:
