@@ -956,7 +956,7 @@ const clang::CXXMethodDecl *getMethod(ModuleOp mod, StringRef name) {
   auto *global = mlir::SymbolTable::lookupSymbolIn(mod, name);
   assert(global && "expected to find symbol");
   auto method = dyn_cast<FuncOp>(global);
-  if (!method)
+  if (!method || method.getBuiltin())
     return nullptr;
   return dyn_cast<clang::CXXMethodDecl>(method.getAstAttr().getAstDecl());
 }
