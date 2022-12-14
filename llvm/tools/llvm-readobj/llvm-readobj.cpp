@@ -164,6 +164,7 @@ static bool COFFTLSDirectory;
 static bool XCOFFAuxiliaryHeader;
 static bool XCOFFLoaderSectionHeader;
 static bool XCOFFLoaderSectionSymbol;
+static bool XCOFFLoaderSectionRelocation;
 static bool XCOFFExceptionSection;
 
 OutputStyleTy Output = OutputStyleTy::LLVM;
@@ -307,6 +308,8 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::XCOFFAuxiliaryHeader = Args.hasArg(OPT_auxiliary_header);
   opts::XCOFFLoaderSectionHeader = Args.hasArg(OPT_loader_section_header);
   opts::XCOFFLoaderSectionSymbol = Args.hasArg(OPT_loader_section_symbols);
+  opts::XCOFFLoaderSectionRelocation =
+      Args.hasArg(OPT_loader_section_relocations);
   opts::XCOFFExceptionSection = Args.hasArg(OPT_exception_section);
 
   opts::InputFilenames = Args.getAllArgValues(OPT_INPUT);
@@ -512,9 +515,11 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
   }
 
   if (Obj.isXCOFF()) {
-    if (opts::XCOFFLoaderSectionHeader || opts::XCOFFLoaderSectionSymbol)
+    if (opts::XCOFFLoaderSectionHeader || opts::XCOFFLoaderSectionSymbol ||
+        opts::XCOFFLoaderSectionRelocation)
       Dumper->printLoaderSection(opts::XCOFFLoaderSectionHeader,
-                                 opts::XCOFFLoaderSectionSymbol);
+                                 opts::XCOFFLoaderSectionSymbol,
+                                 opts::XCOFFLoaderSectionRelocation);
 
     if (opts::XCOFFExceptionSection)
       Dumper->printExceptionSection();
