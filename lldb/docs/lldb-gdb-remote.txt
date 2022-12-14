@@ -2136,3 +2136,21 @@ Example packet:
     { "port": 5432 },
     { "socket_name": "foo" }
 ]
+
+//----------------------------------------------------------------------
+// "jGetDyldProcessState"
+//
+// BRIEF
+//  This packet fetches the process launch state, as reported by libdyld on
+//  Darwin systems, most importantly to indicate when the system libraries 
+//  have initialized sufficiently to safely call utility functions.
+//
+//
+//  LLDB SENDS: jGetDyldProcessState
+//  STUB REPLIES: {"process_state_value":48,"process_state string":"dyld_process_state_libSystem_initialized"}
+//
+// PRIORITY TO IMPLEMENT
+//  Low. This packet is needed to prevent lldb's utility functions for
+//  scanning the Objective-C class list from running very early in 
+//  process startup.
+//----------------------------------------------------------------------
