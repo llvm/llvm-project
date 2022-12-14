@@ -1025,6 +1025,7 @@ struct OffsetInfo {
   void merge(const OffsetInfo &R) { Offsets.append(R.Offsets); }
 };
 
+#ifndef NDEBUG
 static raw_ostream &operator<<(raw_ostream &OS, const OffsetInfo &OI) {
   ListSeparator LS;
   OS << "[";
@@ -1034,6 +1035,7 @@ static raw_ostream &operator<<(raw_ostream &OS, const OffsetInfo &OI) {
   OS << "]";
   return OS;
 }
+#endif // NDEBUG
 
 struct AAPointerInfoImpl
     : public StateWrapper<AA::PointerInfo::State, AAPointerInfo> {
