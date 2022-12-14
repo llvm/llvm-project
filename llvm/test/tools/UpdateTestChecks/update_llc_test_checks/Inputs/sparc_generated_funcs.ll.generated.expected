@@ -72,8 +72,7 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    .cfi_window_save
 ; CHECK-NEXT:    .cfi_register %o7, %i7
 ; CHECK-NEXT:    st %g0, [%fp+-4]
-; CHECK-NEXT:    mov %g0, %i0
-; CHECK-NEXT:    cmp %i0, 0
+; CHECK-NEXT:    cmp %g0, 0
 ; CHECK-NEXT:    st %g0, [%fp+-8]
 ; CHECK-NEXT:    be .LBB0_1
 ; CHECK-NEXT:    mov 1, %i0
@@ -133,7 +132,6 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    st %i1, [%fp+-8]
 ; CHECK-NEXT:    st %i2, [%fp+-12]
 ; CHECK-NEXT:    st %i3, [%fp+-16]
-; CHECK-NEXT:    mov %g0, %i0
 ; CHECK-NEXT:    st %i4, [%fp+-20]
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    restore
+; CHECK-NEXT:    restore %g0, %g0, %o0
