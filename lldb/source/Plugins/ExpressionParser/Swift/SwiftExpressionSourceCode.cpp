@@ -26,12 +26,96 @@ static const char *GetUserCodeStartMarker() {
 }
 static const char *GetUserCodeEndMarker() { return "\n/*__LLDB_USER_END__*/"; }
 
-static void WrapExpression(lldb_private::Stream &wrapped_stream,
-                           const char *orig_text, bool needs_object_ptr,
-                           bool static_method, bool is_class, bool weak_self,
-                           const EvaluateExpressionOptions &options,
-                           llvm::StringRef os_version,
-                           uint32_t &first_body_line) {
+
+struct CallsAndArgs {
+  std::string lldb_user_expr;
+  std::string lldb_trampoline;
+  std::string lldb_sink;
+  std::string lldb_call;
+};
+
+/// Constructs the signatures for the expression evaluation functions based on
+/// the metadata variables in scope.
+/// For every outermost metadata pointer in scope ($τ_0_0, $τ_0_1, etc), we want
+/// to generate:
+///
+/// - A $__lldb_user_expr signature that takes in that many metadata pointers:
+///
+/// func $__lldb_user_expr<T0, T1, ..., Tn>
+///     (_ $__lldb_arg: UnsafeMutablePointer<(T0, T1, ..., Tn)>)
+///
+/// - A $__lldb_trampoline signature like the above, but that also takes in a
+/// pointer to self:
+///
+/// func $__lldb_trampoline<T0, T1, ..., Tn>
+///      (_ $__lldb_arg: UnsafeMutablePointer<(T0, T1, ..., Tn)>,
+///       _ $__lldb_injected_self: inout $__lldb_context)
+///
+/// - A $__lldb_sink signature that matches the number of parameters of the
+/// trampoline:
+///
+/// func $__lldb_sink(_ $__lldb_arg : UnsafeMutablePointer<Any>,
+///                   _: $__lldb_builtin_ptr_t, // the self variable
+///                   _: $__lldb_builtin_ptr_t, // T0
+///                   _: $__lldb_builtin_ptr_t, // T1
+///                   ...,
+///                   _: $__lldb_builtin_ptr_t) // Tn
+///
+/// - And a matching call to the sink function:
+///
+/// lldb_sink($__lldb_arg, $__lldb_injected_self, $τ_0_0, $τ_0_1, ..., $τ_0_n)
+static CallsAndArgs MakeGenericSignaturesAndCalls(
+    llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables) {
+  llvm::SmallVector<SwiftASTManipulator::VariableInfo> metadata_variables;
+  for (auto &var : local_variables)
+    if (var.IsOutermostMetadataPointer())
+      metadata_variables.push_back(var);
+
+  std::string generic_param_list;
+  llvm::raw_string_ostream generic_param_list_stream(generic_param_list);
+  for (size_t i = 0; i < metadata_variables.size(); ++i)
+    generic_param_list_stream << "T" << i << ",";
+
+  if (!generic_param_list.empty())
+    generic_param_list.pop_back();
+
+  std::string user_expr; 
+  llvm::raw_string_ostream user_expr_stream(user_expr);
+  user_expr_stream << "func $__lldb_user_expr<" << generic_param_list
+                   << ">(_ $__lldb_arg: UnsafeMutablePointer<("
+                   << generic_param_list << ")>)";
+
+
+  std::string trampoline;
+  llvm::raw_string_ostream trampoline_stream(trampoline);
+  trampoline_stream << "func $__lldb_trampoline<" << generic_param_list
+                    << ">(_ $__lldb_arg: UnsafeMutablePointer<("
+                    << generic_param_list
+                    << ")>, _ $__lldb_injected_self: inout $__lldb_context)";
+
+  std::string sink;
+  std::string call;
+  llvm::raw_string_ostream sink_stream(sink);
+  llvm::raw_string_ostream call_stream(call);
+  sink_stream << "func $__lldb_sink(_ $__lldb_arg : "
+                 "UnsafeMutablePointer<Any>, _: $__lldb_builtin_ptr_t";
+  call_stream << "$__lldb_sink($__lldb_arg, $__lldb_injected_self";
+  for (auto &var : metadata_variables) {
+    sink_stream << ", _: $__lldb_builtin_ptr_t";
+    call_stream << ", " << var.GetName().str();
+  }
+  sink_stream << ")";
+  call_stream << ")";
+
+  return {user_expr, trampoline, sink, call};
+}
+
+void WrapExpression(
+    lldb_private::Stream &wrapped_stream, const char *orig_text,
+    bool needs_object_ptr, bool static_method, bool is_class, bool weak_self,
+    const EvaluateExpressionOptions &options, llvm::StringRef os_version,
+    uint32_t &first_body_line,
+    llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables) {
   first_body_line = 0; // set to invalid
   // TODO make the extension private so we're not polluting the class
   static unsigned int counter = 0;
@@ -142,7 +226,8 @@ do {
 }
 )",
                            GetUserCodeStartMarker(), text,
-                           GetUserCodeEndMarker(), SwiftASTManipulator::GetErrorName());
+                           GetUserCodeEndMarker(),
+                           SwiftASTManipulator::GetErrorName());
 
   if (needs_object_ptr || static_method) {
     const char *func_decorator = "";
@@ -201,20 +286,20 @@ do {
       // FIXME: the current approach names the generic parameter "T", use the
       // user's name for the generic parameter, so they can refer to it in
       // their expression.
+      auto c = MakeGenericSignaturesAndCalls(local_variables);
       wrapped_stream.Printf(
           R"(
 extension %s$__lldb_context {
   @LLDBDebuggerFunction %s
-  %s func $__lldb_user_expr_%u<T>(_ $__lldb_arg: UnsafeMutablePointer<(T)>) {
+  %s %s {
     %s
   }
 }
 
 @LLDBDebuggerFunction %s
-func $__lldb_trampoline<T>(_ $__lldb_arg: UnsafeMutablePointer<(T)>,
-                             _ $__lldb_injected_self: inout $__lldb_context) {
+%s {
   do {
-    $__lldb_injected_self.$__lldb_user_expr_%u(
+    $__lldb_injected_self.$__lldb_user_expr(
       $__lldb_arg
     )
   }
@@ -222,20 +307,20 @@ func $__lldb_trampoline<T>(_ $__lldb_arg: UnsafeMutablePointer<(T)>,
 
 
 @LLDBDebuggerFunction %s
-func $__lldb_sink(_ $__lldb_arg : UnsafeMutablePointer<Any>,
-                       _: $__lldb_builtin_ptr_t,
-                       _: $__lldb_builtin_ptr_t) {
+%s {
 }
 
 
 @LLDBDebuggerFunction %s
 func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
-  $__lldb_sink($__lldb_arg, $__lldb_injected_self, $τ_0_0)
+%s
 }
 )",
           optional_extension, availability.c_str(), func_decorator,
-          current_counter, wrapped_expr_text.GetData(), availability.c_str(),
-          current_counter, availability.c_str(), availability.c_str());
+          c.lldb_user_expr.c_str(), wrapped_expr_text.GetData(),
+          availability.c_str(), c.lldb_trampoline.c_str(),
+          availability.c_str(), c.lldb_sink.c_str(), availability.c_str(),
+          c.lldb_call.c_str());
 
     } else {
       wrapped_stream.Printf(R"(
@@ -270,6 +355,7 @@ func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
     first_body_line = 4;
   }
 }
+
 /// Format the OS name the way that Swift availability attributes do.
 static llvm::StringRef getAvailabilityName(const llvm::Triple &triple) {
     swift::LangOptions lang_options;
@@ -285,16 +371,11 @@ uint32_t SwiftExpressionSourceCode::GetNumBodyLines() {
 }
 
 bool SwiftExpressionSourceCode::GetText(
-               std::string &text, 
-               lldb::LanguageType wrapping_language,
-               bool needs_object_ptr,
-               bool static_method,
-               bool is_class,
-               bool weak_self,
-               const EvaluateExpressionOptions &options,
-               ExecutionContext &exe_ctx,
-               uint32_t &first_body_line) const
-  {
+    std::string &text, lldb::LanguageType wrapping_language,
+    bool needs_object_ptr, bool static_method, bool is_class, bool weak_self,
+    const EvaluateExpressionOptions &options, ExecutionContext &exe_ctx,
+    uint32_t &first_body_line,
+    llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables) const {
   Target *target = exe_ctx.GetTargetPtr();
 
 
@@ -364,7 +445,7 @@ bool SwiftExpressionSourceCode::GetText(
     std::string full_body = m_prefix + m_body;
     WrapExpression(wrap_stream, full_body.c_str(), needs_object_ptr,
                    static_method, is_class, weak_self, localOptions,
-                   os_vers.str(), first_body_line);
+                   os_vers.str(), first_body_line, local_variables);
 
     text = wrap_stream.GetString().str();
   } else {

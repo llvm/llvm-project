@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "swift/AST/ASTContext.h"
+#include "swift/AST/GenericEnvironment.h"
+#include "swift/Demangling/Demangler.h"
 #include <stdio.h>
 #if HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -269,7 +272,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 }
 
 /// Create a \c VariableInfo record for \c variable if there isn't
- /// already shadowing inner declaration in \c processed_variables.
+/// already shadowing inner declaration in \c processed_variables.
 static bool AddVariableInfo(
     lldb::VariableSP variable_sp, lldb::StackFrameSP &stack_frame_sp,
     SwiftASTContextForExpressions &ast_context, SwiftLanguageRuntime *runtime,
@@ -378,73 +381,73 @@ static bool AddVariableInfo(
   return true;
 }
 
- /// Create a \c VariableInfo record for each visible variable.
- static bool RegisterAllVariables(
-     SymbolContext &sc, lldb::StackFrameSP &stack_frame_sp,
-     SwiftASTContextForExpressions &ast_context,
-     llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables,
-     lldb::DynamicValueType use_dynamic,
-     lldb::BindGenericTypes bind_generic_types) {
-   LLDB_SCOPED_TIMER();
-   if (!sc.block && !sc.function)
-     return true;
+/// Create a \c VariableInfo record for each visible variable.
+static bool RegisterAllVariables(
+    SymbolContext &sc, lldb::StackFrameSP &stack_frame_sp,
+    SwiftASTContextForExpressions &ast_context,
+    llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables,
+    lldb::DynamicValueType use_dynamic,
+    lldb::BindGenericTypes bind_generic_types) {
+  LLDB_SCOPED_TIMER();
+  if (!sc.block && !sc.function)
+    return true;
 
-   Block *block = sc.block;
-   Block *top_block = block->GetContainingInlinedBlock();
+  Block *block = sc.block;
+  Block *top_block = block->GetContainingInlinedBlock();
 
-   if (!top_block)
-     top_block = &sc.function->GetBlock(true);
+  if (!top_block)
+    top_block = &sc.function->GetBlock(true);
 
-   SwiftLanguageRuntime *language_runtime = nullptr;
+  SwiftLanguageRuntime *language_runtime = nullptr;
 
-   if (stack_frame_sp)
-     language_runtime =
-         SwiftLanguageRuntime::Get(stack_frame_sp->GetThread()->GetProcess());
+  if (stack_frame_sp)
+    language_runtime =
+        SwiftLanguageRuntime::Get(stack_frame_sp->GetThread()->GetProcess());
 
-   // The module scoped variables are stored at the CompUnit level, so
-   // after we go through the current context, then we have to take one
-   // more pass through the variables in the CompUnit.
-   VariableList variables;
+  // The module scoped variables are stored at the CompUnit level, so
+  // after we go through the current context, then we have to take one
+  // more pass through the variables in the CompUnit.
+  VariableList variables;
 
-   // Proceed from the innermost scope outwards, adding all variables
-   // not already shadowed by an inner declaration.
-   llvm::SmallDenseSet<const char *, 8> processed_names;
-   bool done = false;
-   do {
-     // Iterate over all parent contexts *including* the top_block.
-     if (block == top_block)
-       done = true;
-     bool can_create = true;
-     bool get_parent_variables = false;
-     bool stop_if_block_is_inlined_function = true;
+  // Proceed from the innermost scope outwards, adding all variables
+  // not already shadowed by an inner declaration.
+  llvm::SmallDenseSet<const char *, 8> processed_names;
+  bool done = false;
+  do {
+    // Iterate over all parent contexts *including* the top_block.
+    if (block == top_block)
+      done = true;
+    bool can_create = true;
+    bool get_parent_variables = false;
+    bool stop_if_block_is_inlined_function = true;
 
-     block->AppendVariables(
-         can_create, get_parent_variables, stop_if_block_is_inlined_function,
-         [](Variable *) { return true; }, &variables);
+    block->AppendVariables(
+        can_create, get_parent_variables, stop_if_block_is_inlined_function,
+        [](Variable *) { return true; }, &variables);
 
-     if (!done)
-       block = block->GetParent();
-   } while (block && !done);
+    if (!done)
+      block = block->GetParent();
+  } while (block && !done);
 
-   // Also add local copies of globals. This is in many cases redundant
-   // work because the globals would also be found in the expression
-   // context's Swift module, but it allows a limited form of
-   // expression evaluation to work even if the Swift module failed to
-   // load, as long as the module isn't necessary to resolve the type
-   // or aother symbols in the expression.
-   if (sc.comp_unit) {
-     lldb::VariableListSP globals_sp = sc.comp_unit->GetVariableList(true);
-     if (globals_sp)
-       variables.AddVariables(globals_sp.get());
-   }
+  // Also add local copies of globals. This is in many cases redundant
+  // work because the globals would also be found in the expression
+  // context's Swift module, but it allows a limited form of
+  // expression evaluation to work even if the Swift module failed to
+  // load, as long as the module isn't necessary to resolve the type
+  // or aother symbols in the expression.
+  if (sc.comp_unit) {
+    lldb::VariableListSP globals_sp = sc.comp_unit->GetVariableList(true);
+    if (globals_sp)
+      variables.AddVariables(globals_sp.get());
+  }
 
-   for (size_t vi = 0, ve = variables.GetSize(); vi != ve; ++vi)
-     if (!AddVariableInfo({variables.GetVariableAtIndex(vi)}, stack_frame_sp,
-                          ast_context, language_runtime, processed_names,
-                          local_variables, use_dynamic, bind_generic_types))
-       return false;
-   return true;
- }
+  for (size_t vi = 0, ve = variables.GetSize(); vi != ve; ++vi)
+    if (!AddVariableInfo({variables.GetVariableAtIndex(vi)}, stack_frame_sp,
+                         ast_context, language_runtime, processed_names,
+                         local_variables, use_dynamic, bind_generic_types))
+      return false;
+  return true;
+}
 
 static SwiftPersistentExpressionState *
 GetPersistentState(Target *target, ExecutionContext &exe_ctx) {
@@ -498,46 +501,46 @@ static bool CanEvaluateExpressionWithoutBindingGenericParams(
   auto *env = decl->getGenericEnvironment();
   if (!env)
     return false;
-  auto params = env->getGenericParams();
+  auto generic_params = env->getGenericParams();
 
   // If there aren't any generic parameters we can't evaluate the expression as
   // generic.
-  if (params.empty())
+  if (generic_params.empty())
     return false;
 
-  auto *first_param = params[0];
+  auto *first_param = generic_params[0];
   // Currently we only support evaluating self as generic if the generic
   // parameter is the first one.
   if (first_param->getDepth() != 0 || first_param->getIndex() != 0)
     return false;
 
-  bool contains_0_0 = false;
-  bool contains_other_0_depth_params = false;
-  for (auto *pair : params) {
-    if (pair->getDepth() == 0) {
-      if (pair->getIndex() == 0)
-        contains_0_0 = true;
-      else
-        contains_other_0_depth_params = true;
+  llvm::SmallVector<SwiftASTManipulator::VariableInfo>
+      outermost_metadata_vars;
+  for (auto &variable : variables)
+    if (variable.IsOutermostMetadataPointer())
+      outermost_metadata_vars.push_back(variable);
+
+  // Check that all metadata belong to the outermost type, and check that we do
+  // have the metadata pointer available.
+  for (auto *generic_param : generic_params) {
+    if (generic_param->getDepth() != 0)
+      return false;
+
+    std::string var_name;
+    llvm::raw_string_ostream s(var_name);
+    s << "$τ_0_" << generic_param->getIndex();
+    auto found = false;
+    for (auto &metadata_var : outermost_metadata_vars) {
+      if (metadata_var.GetName().str() == var_name) {
+        found = true;
+        break;
+      }
     }
+    if (!found)
+      return false;
   }
 
-  // We only allow generic evaluation when the Self type contains the outermost
-  // generic parameter.
-  if (!contains_0_0)
-    return false;
-
-  // We only allow the Self type to have one generic parameter.
-  if (contains_other_0_depth_params)
-    return false;
-
-  // Now, check that we do have the metadata pointer as a local variable.
-  for (auto &variable : variables) {
-    if (variable.GetName().str() == "$τ_0_0")
-      return true;
-  }
-  // Couldn't find the metadata pointer, so can't evaluate as generic.
-  return false;
+  return true;
 }
 
 SwiftExpressionParser::ParseResult
@@ -580,12 +583,12 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
         "Could not evaluate the expression without binding generic types.");
     return ParseResult::unrecoverable_error;
   }
-  
+
   uint32_t first_body_line = 0;
   if (!source_code->GetText(m_transformed_text, m_options.GetLanguage(),
                             m_needs_object_ptr, m_in_static_method, m_is_class,
-                            m_is_weak_self, m_options, exe_ctx,
-                            first_body_line)) {
+                            m_is_weak_self, m_options, exe_ctx, first_body_line,
+                            local_variables)) {
     diagnostic_manager.PutString(eDiagnosticSeverityError,
                                  "couldn't construct expression body");
     return ParseResult::unrecoverable_error;
