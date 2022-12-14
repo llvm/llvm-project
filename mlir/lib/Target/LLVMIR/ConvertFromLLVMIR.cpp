@@ -688,7 +688,7 @@ Importer::getConstantsToConvert(llvm::Constant *constant) {
   while (!workList.empty()) {
     llvm::Constant *current = workList.pop_back_val();
     // Skip constants that have been converted before and store all other ones.
-    if (valueMapping.count(constant))
+    if (valueMapping.count(current))
       continue;
     orderedList.push_back(current);
     // Add the current constant's dependencies to the work list. Only add
