@@ -102,12 +102,12 @@ private:
   CompileOnDemandLayer &Parent;
 };
 
-Optional<CompileOnDemandLayer::GlobalValueSet>
+std::optional<CompileOnDemandLayer::GlobalValueSet>
 CompileOnDemandLayer::compileRequested(GlobalValueSet Requested) {
   return std::move(Requested);
 }
 
-Optional<CompileOnDemandLayer::GlobalValueSet>
+std::optional<CompileOnDemandLayer::GlobalValueSet>
 CompileOnDemandLayer::compileWholeModule(GlobalValueSet Requested) {
   return std::nullopt;
 }

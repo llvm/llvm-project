@@ -44,7 +44,7 @@ public:
 private:
   // FIX ME: find a right way to distinguish the pre-compile Symbols, and update
   // the callsite
-  Optional<AliaseeDetails> getImplFor(const SymbolStringPtr &StubSymbol) {
+  std::optional<AliaseeDetails> getImplFor(const SymbolStringPtr &StubSymbol) {
     std::lock_guard<std::mutex> Lockit(ConcurrentAccess);
     auto Position = Maps.find(StubSymbol);
     if (Position != Maps.end())
@@ -171,7 +171,8 @@ private:
 
 class IRSpeculationLayer : public IRLayer {
 public:
-  using IRlikiesStrRef = Optional<DenseMap<StringRef, DenseSet<StringRef>>>;
+  using IRlikiesStrRef =
+      std::optional<DenseMap<StringRef, DenseSet<StringRef>>>;
   using ResultEval = std::function<IRlikiesStrRef(Function &)>;
   using TargetAndLikelies = DenseMap<SymbolStringPtr, SymbolNameSet>;
 
