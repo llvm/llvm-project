@@ -1085,7 +1085,6 @@ LogicalResult Importer::convertOperation(OpBuilder &odsBuilder,
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::GetElementPtr) {
-    // FIXME: Support inbounds GEPs.
     auto *gepInst = cast<llvm::GetElementPtrInst>(inst);
     Type sourceElementType = convertType(gepInst->getSourceElementType());
     FailureOr<Value> basePtr = convertValue(gepInst->getOperand(0));
@@ -1105,8 +1104,9 @@ LogicalResult Importer::convertOperation(OpBuilder &odsBuilder,
     }
 
     Type type = convertType(inst->getType());
-    Value res = builder.create<GEPOp>(loc, type, sourceElementType,
-                                      basePtr.value(), indices);
+    Value res =
+        builder.create<GEPOp>(loc, type, sourceElementType, basePtr.value(),
+                              indices, gepInst->isInBounds());
     mapValue(inst, res);
     return success();
   }
@@ -1116,7 +1116,6 @@ LogicalResult Importer::convertOperation(OpBuilder &odsBuilder,
 
 LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
   // FIXME: Support uses of SubtargetData.
-  // FIXME: Add support for inbounds GEPs.
   // FIXME: Add support for fast-math flags and call / operand attributes.
   // FIXME: Add support for the indirectbr, cleanupret, catchret, catchswitch,
   // callbr, vaarg, landingpad, catchpad, cleanuppad instructions.
