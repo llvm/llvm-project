@@ -482,7 +482,7 @@ CompilerType SwiftExpressionParser::ResolveVariable(
   return var_type;
 }
 
-static lldb::VariableSP FindSelfVariable(Block *block) {
+lldb::VariableSP SwiftExpressionParser::FindSelfVariable(Block *block) {
   if (!block)
     return {};
 
@@ -529,7 +529,7 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   LLDB_SCOPED_TIMER();
 
   // First emit the typealias for "$__lldb_context".
-  lldb::VariableSP self_var_sp = FindSelfVariable(block);
+  lldb::VariableSP self_var_sp = SwiftExpressionParser::FindSelfVariable(block);
 
   if (!self_var_sp)
     return;
@@ -1067,91 +1067,6 @@ struct ParsedExpression {
 
 } // namespace
 
-/// Check if we can evaluate the expression as generic.
-/// Currently, evaluating expression as a generic has several limitations:
-/// - Only self will be evaluated with unbound generics.
-/// - The Self type can only have one generic parameter. 
-/// - The Self type has to be the outermost type with unbound generics.
-static bool CanEvaluateExpressionAsGeneric(
-    llvm::ArrayRef<SwiftASTManipulator::VariableInfo> variables, Block *block,
-    StackFrame &stack_frame) {
-  // First, find the compiler type of self with the generic parameters not
-  // bound.
-  auto self_var = FindSelfVariable(block);
-  if (!self_var)
-    return false;
-
-  lldb::ValueObjectSP self_valobj =
-      stack_frame.GetValueObjectForFrameVariable(self_var,
-                                                     lldb::eNoDynamicValues);
-  if (!self_valobj)
-    return false;
-
-  auto self_type = self_valobj->GetCompilerType();
-  if (!self_type)
-    return false;
-
-  auto *ts = self_type.GetTypeSystem()
-                 .dyn_cast_or_null<TypeSystemSwift>()
-                 ->GetSwiftASTContext();
-
-  if (!ts)
-    return false;
-
-  auto swift_type = ts->GetSwiftType(self_type);
-  if (!swift_type)
-    return false;
-
-  auto *decl = swift_type->getAnyGeneric();
-  if (!decl)
-    return false;
-
-
-  auto *env = decl->getGenericEnvironment();
-  if (!env)
-    return false;
-  auto params = env->getGenericParams();
-
-  // If there aren't any generic parameters we can't evaluate the expression as
-  // generic.
-  if (params.empty())
-    return false;
-
-  auto *first_param = params[0];
-  // Currently we only support evaluating self as generic if the generic
-  // parameter is the first one.
-  if (first_param->getDepth() != 0 || first_param->getIndex() != 0)
-    return false;
-
-  bool contains_0_0 = false;
-  bool contains_other_0_depth_params = false;
-  for (auto *pair : params) {
-    if (pair->getDepth() == 0) {
-      if (pair->getIndex() == 0)
-        contains_0_0 = true;
-      else
-        contains_other_0_depth_params = true;
-    }
-  }
-
-  // We only allow generic evaluation when the Self type contains the outermost
-  // generic parameter.
-  if (!contains_0_0)
-    return false;
-
-  // We only allow the Self type to have one generic parameter.
-  if (contains_other_0_depth_params)
-    return false;
-
-  // Now, check that we do have the metadata pointer as a local variable.
-  for (auto &variable : variables) {
-    if (variable.GetName().str() == "$τ_0_0")
-      return true;
-  }
-  // Couldn't find the metadata pointer, so can't evaluate as generic.
-  return false;
-}
-
 /// Attempt to parse an expression and import all the Swift modules
 /// the expression and its context depend on.
 static llvm::Expected<ParsedExpression> ParseAndImport(
@@ -1362,13 +1277,6 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
 
     ResolveSpecialNames(sc, exe_scope, swift_ast_context, special_names,
                         local_variables);
-
-    if (options.GetBindGenericTypes() == lldb::eDontBind &&
-        !CanEvaluateExpressionAsGeneric(local_variables, sc.block,
-                                        *stack_frame_sp.get()))
-      return make_error<StringError>(
-          inconvertibleErrorCode(),
-          "Could not evaluate the expression without binding generic types.");
 
     if (!code_manipulator->AddExternalVariables(local_variables))
       return make_error<StringError>(inconvertibleErrorCode(),

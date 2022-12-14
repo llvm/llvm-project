@@ -149,6 +149,8 @@ public:
       SwiftLanguageRuntime *runtime, lldb::DynamicValueType use_dynamic,
       lldb::BindGenericTypes bind_generic_types);
 
+  static lldb::VariableSP FindSelfVariable(Block *block);
+
   //------------------------------------------------------------------
   /// Information about each variable provided to the expression, so
   /// that we can generate proper accesses in the SIL.
