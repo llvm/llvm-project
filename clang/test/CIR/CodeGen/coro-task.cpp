@@ -99,6 +99,26 @@ co_invoke_fn co_invoke;
 
 }} // namespace folly::coro
 
+// CHECK: ![[VoidTask:ty_.*]] = !cir.struct<"struct.folly::coro::Task", i8>
+// CHECK: ![[VoidPromisse:ty_.*]] = !cir.struct<"struct.folly::coro::Task<void>::promise_type", i8>
+
 // CHECK: module {{.*}} {
 // CHECK-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !cir.struct<"struct.folly::coro::co_invoke_fn", i8
-// CHECK-NEXT: }
+
+using VoidTask = folly::coro::Task<void>;
+
+VoidTask silly_task() {
+  co_await std::suspend_always();
+}
+
+// CHECK: cir.func @_Z10silly_taskv() -> ![[VoidTask]] {
+
+// Allocate promise and call get_return_object() to retrieve the task.
+// Note there's no ctor call for the promisse given its a direct aggregate.
+
+// CHECK: %[[#VoidTaskAddr:]] = cir.alloca ![[VoidTask]], {{.*}}, ["__retval"]
+// CHECK: %[[#VoidPromisseAddr:]] = cir.alloca ![[VoidPromisse]], {{.*}}, ["__promise"]
+// CHECK: %2 = cir.call @_ZN5folly4coro4TaskIvE12promise_type17get_return_objectEv(%[[#VoidPromisseAddr]]) : {{.*}} -> ![[VoidTask]]
+// CHECK: cir.store %2, %[[#VoidTaskAddr]] : ![[VoidTask]]
+
+// CHECK: }
