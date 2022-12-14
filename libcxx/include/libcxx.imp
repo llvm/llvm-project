@@ -24,6 +24,7 @@
   { include: [ "@<__concepts/.*>", "private", "<concepts>", "public" ] },
   { include: [ "@<__coroutine/.*>", "private", "<coroutine>", "public" ] },
   { include: [ "@<__debug_utils/.*>", "private", "<debug_utils>", "public" ] },
+  { include: [ "@<__expected/.*>", "private", "<expected>", "public" ] },
   { include: [ "@<__filesystem/.*>", "private", "<filesystem>", "public" ] },
   { include: [ "@<__format/.*>", "private", "<format>", "public" ] },
   { include: [ "@<__functional/.*>", "private", "<functional>", "public" ] },
