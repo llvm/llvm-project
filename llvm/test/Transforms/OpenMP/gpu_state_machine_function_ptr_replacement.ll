@@ -48,7 +48,7 @@ entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
   store i32 0, i32* %.zero.addr, align 4
-  %0 = call i32 @__kmpc_target_init(%struct.ident_t* @1, i8 1, i1 true, i1 true)
+  %0 = call i32 @__kmpc_target_init(%struct.ident_t* @1, i8 1, i1 true)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
@@ -56,14 +56,14 @@ user_code.entry:                                  ; preds = %entry
   %1 = call i32 @__kmpc_global_thread_num(%struct.ident_t* @1)
   store i32 %1, i32* %.threadid_temp., align 4
   call void @__omp_outlined__(i32* %.threadid_temp., i32* %.zero.addr)
-  call void @__kmpc_target_deinit(%struct.ident_t* @1, i8 1, i1 true)
+  call void @__kmpc_target_deinit(%struct.ident_t* @1, i8 1)
   ret void
 
 worker.exit:                                      ; preds = %entry
   ret void
 }
 
-define weak i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1) {
+define weak i32 @__kmpc_target_init(%struct.ident_t*, i8, i1) {
   ret i32 0
 }
 
@@ -149,7 +149,7 @@ entry:
 
 declare i32 @__kmpc_global_thread_num(%struct.ident_t*)
 
-declare void @__kmpc_target_deinit(%struct.ident_t*, i8, i1)
+declare void @__kmpc_target_deinit(%struct.ident_t*, i8)
 
 define internal void @__omp_outlined__3(i32* noalias %.global_tid., i32* noalias %.bound_tid.) {
 entry:

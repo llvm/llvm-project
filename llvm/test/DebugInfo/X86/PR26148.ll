@@ -38,15 +38,15 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 define void @fn1(i16 signext %p1) !dbg !16 {
 entry:
   tail call void @llvm.dbg.value(metadata i16 %p1, metadata !20, metadata !23), !dbg !24
-  tail call void @llvm.dbg.declare(metadata %struct.S0* undef, metadata !21, metadata !23), !dbg !25
-  tail call void @llvm.dbg.declare(metadata %struct.S0* undef, metadata !22, metadata !23), !dbg !26
+  tail call void @llvm.dbg.declare(metadata ptr undef, metadata !21, metadata !23), !dbg !25
+  tail call void @llvm.dbg.declare(metadata ptr undef, metadata !22, metadata !23), !dbg !26
   tail call void @llvm.dbg.value(metadata i32 3, metadata !22, metadata !27), !dbg !26
   tail call void @llvm.dbg.value(metadata i32 0, metadata !22, metadata !28), !dbg !26
   tail call void @llvm.dbg.value(metadata i16 %p1, metadata !21, metadata !29), !dbg !25
   tail call void @llvm.dbg.value(metadata i32 3, metadata !21, metadata !27), !dbg !25
   tail call void @llvm.dbg.value(metadata i32 0, metadata !21, metadata !28), !dbg !25
-  store i32 3, i32* bitcast (%struct.S0* @a to i32*), align 4, !dbg !30
-  store i32 0, i32* getelementptr inbounds (%struct.S0, %struct.S0* @a, i64 0, i32 1), align 4, !dbg !30
+  store i32 3, ptr @a, align 4, !dbg !30
+  store i32 0, ptr getelementptr inbounds (%struct.S0, ptr @a, i64 0, i32 1), align 4, !dbg !30
   ret void, !dbg !31
 }
 

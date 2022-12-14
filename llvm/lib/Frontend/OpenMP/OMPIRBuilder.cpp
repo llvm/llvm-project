@@ -3854,8 +3854,7 @@ CallInst *OpenMPIRBuilder::createCachedThreadPrivate(
 }
 
 OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
-                                  bool RequiresFullRuntime) {
+OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -3867,14 +3866,12 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
       IsSPMD ? OMP_TGT_EXEC_MODE_SPMD : OMP_TGT_EXEC_MODE_GENERIC);
   ConstantInt *UseGenericStateMachine =
       ConstantInt::getBool(Int32->getContext(), !IsSPMD);
-  ConstantInt *RequiresFullRuntimeVal =
-      ConstantInt::getBool(Int32->getContext(), RequiresFullRuntime);
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(
       omp::RuntimeFunction::OMPRTL___kmpc_target_init);
 
   CallInst *ThreadKind = Builder.CreateCall(
-      Fn, {Ident, IsSPMDVal, UseGenericStateMachine, RequiresFullRuntimeVal});
+      Fn, {Ident, IsSPMDVal, UseGenericStateMachine});
 
   Value *ExecUserCode = Builder.CreateICmpEQ(
       ThreadKind, ConstantInt::get(ThreadKind->getType(), -1),
@@ -3908,8 +3905,7 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
 }
 
 void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc,
-                                         bool IsSPMD,
-                                         bool RequiresFullRuntime) {
+                                         bool IsSPMD) {
   if (!updateToLocation(Loc))
     return;
 
@@ -3919,13 +3915,11 @@ void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc,
   ConstantInt *IsSPMDVal = ConstantInt::getSigned(
       IntegerType::getInt8Ty(Int8->getContext()),
       IsSPMD ? OMP_TGT_EXEC_MODE_SPMD : OMP_TGT_EXEC_MODE_GENERIC);
-  ConstantInt *RequiresFullRuntimeVal =
-      ConstantInt::getBool(Int32->getContext(), RequiresFullRuntime);
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(
       omp::RuntimeFunction::OMPRTL___kmpc_target_deinit);
 
-  Builder.CreateCall(Fn, {Ident, IsSPMDVal, RequiresFullRuntimeVal});
+  Builder.CreateCall(Fn, {Ident, IsSPMDVal});
 }
 
 void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(

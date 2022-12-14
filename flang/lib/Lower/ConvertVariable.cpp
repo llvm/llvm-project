@@ -191,7 +191,8 @@ fir::ExtendedValue Fortran::lower::genExtAddrInInitializer(
 /// create initial-data-target fir.box in a global initializer region.
 mlir::Value Fortran::lower::genInitialDataTarget(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-    mlir::Type boxType, const Fortran::lower::SomeExpr &initialTarget) {
+    mlir::Type boxType, const Fortran::lower::SomeExpr &initialTarget,
+    bool couldBeInEquivalence) {
   Fortran::lower::SymMap globalOpSymMap;
   Fortran::lower::AggregateStoreMap storeMap;
   Fortran::lower::StatementContext stmtCtx;
@@ -207,8 +208,19 @@ mlir::Value Fortran::lower::genInitialDataTarget(
     // context.
     if (hasDerivedTypeWithLengthParameters(sym))
       TODO(loc, "initial-data-target with derived type length parameters");
-
     auto var = Fortran::lower::pft::Variable(sym, /*global=*/true);
+    if (couldBeInEquivalence) {
+      auto dependentVariableList =
+          Fortran::lower::pft::getDependentVariableList(sym);
+      for (Fortran::lower::pft::Variable var : dependentVariableList) {
+        if (!var.isAggregateStore())
+          break;
+        instantiateVariable(converter, var, globalOpSymMap, storeMap);
+      }
+      var = dependentVariableList.back();
+      assert(var.getSymbol().name() == sym->name() &&
+             "missing symbol in dependence list");
+    }
     Fortran::lower::instantiateVariable(converter, var, globalOpSymMap,
                                         storeMap);
   }
@@ -538,7 +550,7 @@ getLinkageAttribute(fir::FirOpBuilder &builder,
   // with `linkonce_odr` LLVM linkage.
   if (var.hasSymbol() && isRuntimeTypeInfoData(var.getSymbol()))
     return builder.createLinkOnceODRLinkage();
-  if (var.isModuleVariable())
+  if (var.isModuleOrSubmoduleVariable())
     return {}; // external linkage
   // Otherwise, the variable is owned by a procedure and must not be visible in
   // other compilation units.
@@ -558,7 +570,7 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   mlir::Location loc = genLocation(converter, sym);
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   mlir::StringAttr linkage = getLinkageAttribute(builder, var);
-  if (var.isModuleVariable()) {
+  if (var.isModuleOrSubmoduleVariable()) {
     // A module global was or will be defined when lowering the module. Emit
     // only a declaration if the global does not exist at that point.
     global = declareGlobal(converter, var, globalName, linkage);
@@ -713,7 +725,7 @@ static mlir::Value
 getAggregateStore(Fortran::lower::AggregateStoreMap &storeMap,
                   const Fortran::lower::pft::Variable &alias) {
   Fortran::lower::AggregateStoreKey key = {alias.getOwningScope(),
-                                           alias.getAlias()};
+                                           alias.getAliasOffset()};
   auto iter = storeMap.find(key);
   assert(iter != storeMap.end());
   return iter->second;
@@ -819,7 +831,7 @@ instantiateAggregateStore(Fortran::lower::AbstractConverter &converter,
     fir::GlobalOp global;
     auto &aggregate = var.getAggregateStore();
     mlir::StringAttr linkage = getLinkageAttribute(builder, var);
-    if (var.isModuleVariable()) {
+    if (var.isModuleOrSubmoduleVariable()) {
       // A module global was or will be defined when lowering the module. Emit
       // only a declaration if the global does not exist at that point.
       global = declareGlobalAggregateStore(converter, loc, aggregate, aggName,
@@ -871,18 +883,17 @@ static void instantiateAlias(Fortran::lower::AbstractConverter &converter,
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   const mlir::Location loc = genLocation(converter, sym);
   mlir::IndexType idxTy = builder.getIndexType();
-  std::size_t aliasOffset = var.getAlias();
-  mlir::Value store = getAggregateStore(storeMap, var);
   mlir::IntegerType i8Ty = builder.getIntegerType(8);
   mlir::Type i8Ptr = builder.getRefType(i8Ty);
-  mlir::Value offset = builder.createIntegerConstant(
-      loc, idxTy, sym.GetUltimate().offset() - aliasOffset);
-  auto ptr = builder.create<fir::CoordinateOp>(loc, i8Ptr, store,
-                                               mlir::ValueRange{offset});
-  mlir::Value preAlloc =
-      castAliasToPointer(builder, loc, converter.genType(sym), ptr);
+  mlir::Type symType = converter.genType(sym);
+  std::size_t off = sym.GetUltimate().offset() - var.getAliasOffset();
+  mlir::Value storeAddr = getAggregateStore(storeMap, var);
+  mlir::Value offset = builder.createIntegerConstant(loc, idxTy, off);
+  mlir::Value bytePtr = builder.create<fir::CoordinateOp>(
+      loc, i8Ptr, storeAddr, mlir::ValueRange{offset});
+  mlir::Value typedPtr = castAliasToPointer(builder, loc, symType, bytePtr);
   Fortran::lower::StatementContext stmtCtx;
-  mapSymbolAttributes(converter, var, symMap, stmtCtx, preAlloc);
+  mapSymbolAttributes(converter, var, symMap, stmtCtx, typedPtr);
   // Default initialization is possible for equivalence members: see
   // F2018 19.5.3.4. Note that if several equivalenced entities have
   // default initialization, they must have the same type, and the standard
@@ -1814,19 +1825,19 @@ void Fortran::lower::instantiateVariable(AbstractConverter &converter,
     if (!IsDummy(sym) && !IsFunctionResult(sym) && symMap.lookupSymbol(sym))
       return;
   }
-  if (var.isAggregateStore()) {
+  LLVM_DEBUG(llvm::dbgs() << "instantiateVariable: "; var.dump());
+  if (var.isAggregateStore())
     instantiateAggregateStore(converter, var, storeMap);
-  } else if (const Fortran::semantics::Symbol *common =
-                 Fortran::semantics::FindCommonBlockContaining(
-                     var.getSymbol().GetUltimate())) {
+  else if (const Fortran::semantics::Symbol *common =
+               Fortran::semantics::FindCommonBlockContaining(
+                   var.getSymbol().GetUltimate()))
     instantiateCommon(converter, *common, var, symMap);
-  } else if (var.isAlias()) {
+  else if (var.isAlias())
     instantiateAlias(converter, var, symMap, storeMap);
-  } else if (var.isGlobal()) {
+  else if (var.isGlobal())
     instantiateGlobal(converter, var, symMap);
-  } else {
+  else
     instantiateLocal(converter, var, symMap);
-  }
 }
 
 void Fortran::lower::mapCallInterfaceSymbols(
@@ -1835,45 +1846,47 @@ void Fortran::lower::mapCallInterfaceSymbols(
   Fortran::lower::AggregateStoreMap storeMap;
   const Fortran::semantics::Symbol &result = caller.getResultSymbol();
   for (Fortran::lower::pft::Variable var :
-       Fortran::lower::pft::buildFuncResultDependencyList(result)) {
+       Fortran::lower::pft::getDependentVariableList(result)) {
     if (var.isAggregateStore()) {
       instantiateVariable(converter, var, symMap, storeMap);
-    } else {
-      const Fortran::semantics::Symbol &sym = var.getSymbol();
-      const auto *hostDetails =
-          sym.detailsIf<Fortran::semantics::HostAssocDetails>();
-      if (hostDetails && !var.isModuleVariable()) {
-        // The callee is an internal procedure `A` whose result properties
-        // depend on host variables. The caller may be the host, or another
-        // internal procedure `B` contained in the same host.  In the first
-        // case, the host symbol is obviously mapped, in the second case, it
-        // must also be mapped because
-        // HostAssociations::internalProcedureBindings that was called when
-        // lowering `B` will have mapped all host symbols of captured variables
-        // to the tuple argument containing the composite of all host associated
-        // variables, whether or not the host symbol is actually referred to in
-        // `B`. Hence it is possible to simply lookup the variable associated to
-        // the host symbol without having to go back to the tuple argument.
-        Fortran::lower::SymbolBox hostValue =
-            symMap.lookupSymbol(hostDetails->symbol());
-        assert(hostValue && "callee host symbol must be mapped on caller side");
-        symMap.addSymbol(sym, hostValue.toExtendedValue());
-        // The SymbolBox associated to the host symbols is complete, skip
-        // instantiateVariable that would try to allocate a new storage.
-        continue;
-      }
-      if (Fortran::semantics::IsDummy(sym) && sym.owner() == result.owner()) {
-        // Get the argument for the dummy argument symbols of the current call.
-        symMap.addSymbol(sym, caller.getArgumentValue(sym));
-        // All the properties of the dummy variable may not come from the actual
-        // argument, let instantiateVariable handle this.
-      }
-      // If this is neither a host associated or dummy symbol, it must be a
-      // module or common block variable to satisfy specification expression
-      // requirements in 10.1.11, instantiateVariable will get its address and
-      // properties.
-      instantiateVariable(converter, var, symMap, storeMap);
+      continue;
     }
+    const Fortran::semantics::Symbol &sym = var.getSymbol();
+    if (&sym == &result)
+      continue;
+    const auto *hostDetails =
+        sym.detailsIf<Fortran::semantics::HostAssocDetails>();
+    if (hostDetails && !var.isModuleOrSubmoduleVariable()) {
+      // The callee is an internal procedure `A` whose result properties
+      // depend on host variables. The caller may be the host, or another
+      // internal procedure `B` contained in the same host.  In the first
+      // case, the host symbol is obviously mapped, in the second case, it
+      // must also be mapped because
+      // HostAssociations::internalProcedureBindings that was called when
+      // lowering `B` will have mapped all host symbols of captured variables
+      // to the tuple argument containing the composite of all host associated
+      // variables, whether or not the host symbol is actually referred to in
+      // `B`. Hence it is possible to simply lookup the variable associated to
+      // the host symbol without having to go back to the tuple argument.
+      Fortran::lower::SymbolBox hostValue =
+          symMap.lookupSymbol(hostDetails->symbol());
+      assert(hostValue && "callee host symbol must be mapped on caller side");
+      symMap.addSymbol(sym, hostValue.toExtendedValue());
+      // The SymbolBox associated to the host symbols is complete, skip
+      // instantiateVariable that would try to allocate a new storage.
+      continue;
+    }
+    if (Fortran::semantics::IsDummy(sym) && sym.owner() == result.owner()) {
+      // Get the argument for the dummy argument symbols of the current call.
+      symMap.addSymbol(sym, caller.getArgumentValue(sym));
+      // All the properties of the dummy variable may not come from the actual
+      // argument, let instantiateVariable handle this.
+    }
+    // If this is neither a host associated or dummy symbol, it must be a
+    // module or common block variable to satisfy specification expression
+    // requirements in 10.1.11, instantiateVariable will get its address and
+    // properties.
+    instantiateVariable(converter, var, symMap, storeMap);
   }
 }
 

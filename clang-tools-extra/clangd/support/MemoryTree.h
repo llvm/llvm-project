@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_MEMORYTREE_H_
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_MEMORYTREE_H_
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_MEMORYTREE_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_MEMORYTREE_H
 
 #include "Trace.h"
 #include "llvm/ADT/DenseMap.h"

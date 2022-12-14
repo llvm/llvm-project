@@ -6,8 +6,8 @@ target triple = "i386-pc-windows-msvc19.0.24215"
 
 @str_const = internal unnamed_addr constant [4 x i8] c"str\00", align 1
 
-declare i32 @puts(i8*)
-declare void @use_i32(i32*)
+declare i32 @puts(ptr)
+declare void @use_i32(ptr)
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 ; We had a line info quality issue where the LEA for the string constant had no
@@ -22,7 +22,7 @@ if.then:                                          ; preds = %entry
   br label %return, !dbg !18
 
 if.end:                                           ; preds = %entry
-  %call = call i32 @puts(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @str_const, i32 0, i32 0)), !dbg !19
+  %call = call i32 @puts(ptr @str_const), !dbg !19
   br label %return, !dbg !20
 
 return:                                           ; preds = %if.end, %if.then
@@ -49,7 +49,7 @@ if.then:                                          ; preds = %entry
 
 if.end:                                           ; preds = %entry
   call void asm sideeffect "nop", ""()
-  %call = call i32 @puts(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @str_const, i32 0, i32 0)), !dbg !24
+  %call = call i32 @puts(ptr @str_const), !dbg !24
   br label %return, !dbg !25
 
 return:                                           ; preds = %if.end, %if.then
@@ -71,15 +71,15 @@ return:                                           ; preds = %if.end, %if.then
 define void @lea_dbg_value(i1 %cond) !dbg !30 {
 entry:
   %value = alloca i32
-  store i32 42, i32* %value
+  store i32 42, ptr %value
   br i1 %cond, label %if.then, label %if.end, !dbg !31
 
 if.then:                                          ; preds = %entry
   br label %return, !dbg !32
 
 if.end:                                           ; preds = %entry
-  call void @llvm.dbg.value(metadata i32* %value, metadata !35, metadata !13), !dbg !34
-  call void @use_i32(i32* %value), !dbg !33
+  call void @llvm.dbg.value(metadata ptr %value, metadata !35, metadata !13), !dbg !34
+  call void @use_i32(ptr %value), !dbg !33
   br label %return, !dbg !34
 
 return:                                           ; preds = %if.end, %if.then

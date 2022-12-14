@@ -93,7 +93,7 @@ static bool SpelledInMacroDefinition(SourceLocation Loc,
   return false;
 }
 
-llvm::Optional<CharSourceRange> clang::tooling::getRangeForEdit(
+std::optional<CharSourceRange> clang::tooling::getRangeForEdit(
     const CharSourceRange &EditRange, const SourceManager &SM,
     const LangOptions &LangOpts, bool IncludeMacroExpansion) {
   CharSourceRange Range;

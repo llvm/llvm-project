@@ -141,7 +141,7 @@ source_filename = "t.cpp"
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.0.23918"
 
-%struct.A = type { %struct.B* }
+%struct.A = type { ptr }
 %struct.B = type { %struct.A }
 
 ; Function Attrs: nounwind uwtable
@@ -149,8 +149,8 @@ define void @"\01?f@@YAXXZ"() #0 !dbg !7 {
 entry:
   %a = alloca %struct.A, align 8
   %b = alloca %struct.B, align 8
-  call void @llvm.dbg.declare(metadata %struct.A* %a, metadata !10, metadata !18), !dbg !19
-  call void @llvm.dbg.declare(metadata %struct.B* %b, metadata !20, metadata !18), !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !10, metadata !18), !dbg !19
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !20, metadata !18), !dbg !21
   ret void, !dbg !22
 }
 

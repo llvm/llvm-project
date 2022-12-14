@@ -27,8 +27,8 @@ Annotations::Annotations(llvm::StringRef Text) {
   auto Require = [Text](bool Assertion, const char *Msg) {
     require(Assertion, Msg, Text);
   };
-  llvm::Optional<llvm::StringRef> Name;
-  llvm::Optional<llvm::StringRef> Payload;
+  std::optional<llvm::StringRef> Name;
+  std::optional<llvm::StringRef> Payload;
   llvm::SmallVector<Annotation, 8> OpenRanges;
 
   Code.reserve(Text.size());

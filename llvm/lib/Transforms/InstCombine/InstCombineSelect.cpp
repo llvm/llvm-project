@@ -2773,6 +2773,10 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       TrueVal->getType() != CondVal->getType())
     return nullptr;
 
+  auto *One = ConstantInt::getTrue(SelType);
+  auto *Zero = ConstantInt::getFalse(SelType);
+  Value *A, *B, *C, *D;
+
   // Folding select to and/or i1 isn't poison safe in general. impliesPoison
   // checks whether folding it does not convert a well-defined value into
   // poison.
@@ -2787,7 +2791,30 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
         if (Value *V = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ false,
                                         /*IsSelectLogical*/ true))
           return replaceInstUsesWith(SI, V);
+
+    // (A && B) || (C && B) --> (A || C) && B
+    if (match(CondVal, m_LogicalAnd(m_Value(A), m_Value(B))) &&
+        match(FalseVal, m_LogicalAnd(m_Value(C), m_Value(D))) &&
+        (CondVal->hasOneUse() || FalseVal->hasOneUse())) {
+      bool CondLogicAnd = isa<SelectInst>(CondVal);
+      bool FalseLogicAnd = isa<SelectInst>(FalseVal);
+      if (CondLogicAnd && FalseLogicAnd) {
+        // (A ? B : 0) ? 1 : (A ? D : 0) --> A ? (B ? 1 : D) : 0
+        if (A == C)
+          return SelectInst::Create(A, Builder.CreateSelect(B, One, D), Zero);
+        // (A ? B : 0) ? 1 : (C ? A : 0) --> A ? (B ? 1 : C) : 0
+        if (A == D)
+          return SelectInst::Create(A, Builder.CreateSelect(B, One, C), Zero);
+        // (A ? B : 0) ? 1 : (B ? D : 0) --> B ? (A ? 1 : D) : 0
+        if (B == C)
+          return SelectInst::Create(B, Builder.CreateSelect(A, One, D), Zero);
+        // (A ? B : 0) ? 1 : (C ? B : 0) --> (A ? 1 : C) ? B : 0
+        if (B == D)
+          return SelectInst::Create(Builder.CreateSelect(A, One, C), B, Zero);
+      }
+    }
   }
+
   if (match(FalseVal, m_Zero())) {
     if (impliesPoison(TrueVal, CondVal)) {
       // Change: A = select B, C, false --> A = and B, C
@@ -2799,10 +2826,29 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
         if (Value *V = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ true,
                                         /*IsSelectLogical*/ true))
           return replaceInstUsesWith(SI, V);
-  }
 
-  auto *One = ConstantInt::getTrue(SelType);
-  auto *Zero = ConstantInt::getFalse(SelType);
+    // (A || B) && (C || B) --> (A && C) || B
+    if (match(CondVal, m_LogicalOr(m_Value(A), m_Value(B))) &&
+        match(TrueVal, m_LogicalOr(m_Value(C), m_Value(D))) &&
+        (CondVal->hasOneUse() || TrueVal->hasOneUse())) {
+      bool CondLogicOr = isa<SelectInst>(CondVal);
+      bool TrueLogicOr = isa<SelectInst>(TrueVal);
+      if (CondLogicOr && TrueLogicOr) {
+        // (A ? 1 : B) ? (A ? 1 : D) : 0 --> A ? 1 : (B ? D : 0)
+        if (A == C)
+          return SelectInst::Create(A, One, Builder.CreateSelect(B, D, Zero));
+        // (A ? 1 : B) ? (C ? 1 : A) : 0 --> A ? 1 : (B ? C : 0)
+        if (A == D)
+          return SelectInst::Create(A, One, Builder.CreateSelect(B, C, Zero));
+        // (A ? 1 : B) ? (B ? 1 : D) : 0 --> B ? 1 : (A ? D : 0)
+        if (B == C)
+          return SelectInst::Create(B, One, Builder.CreateSelect(A, D, Zero));
+        // (A ? 1 : B) ? (C ? 1 : B) : 0 --> (A ? C : 0) ? 1 : B
+        if (B == D)
+          return SelectInst::Create(Builder.CreateSelect(A, C, Zero), One, B);
+      }
+    }
+  }
 
   // We match the "full" 0 or 1 constant here to avoid a potential infinite
   // loop with vectors that may have undefined/poison elements.
@@ -2816,8 +2862,6 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
     return SelectInst::Create(NotCond, One, TrueVal);
   }
-
-  Value *A, *B;
 
   // DeMorgan in select form: !a && !b --> !(a || b)
   // select !a, !b, false --> not (select a, true, b)
@@ -2847,7 +2891,6 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
                                 m_c_LogicalOr(m_Deferred(A), m_Deferred(B)))))
     return BinaryOperator::CreateXor(A, B);
 
-  Value *C;
   // select (~a | c), a, b -> and a, (or c, freeze(b))
   if (match(CondVal, m_c_Or(m_Not(m_Specific(TrueVal)), m_Value(C))) &&
       CondVal->hasOneUse()) {

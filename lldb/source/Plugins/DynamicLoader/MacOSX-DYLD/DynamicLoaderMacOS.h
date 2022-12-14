@@ -79,6 +79,8 @@ protected:
 
   void DoClear() override;
 
+  bool IsFullyInitialized() override;
+
   static bool
   NotifyBreakpointHit(void *baton,
                       lldb_private::StoppointCallbackContext *context,
@@ -106,6 +108,7 @@ protected:
                                             // exec's when talking to
                                             // debugservers that don't support
                                             // the "reason:exec" annotation.
+  bool m_libsystem_fully_initalized;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERMACOS_H

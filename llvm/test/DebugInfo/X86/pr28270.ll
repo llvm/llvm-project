@@ -14,43 +14,40 @@ entry:
   %agg.tmp.i.i = alloca %class.A, align 1
   %text.i = alloca %class.A, align 1
   %v = alloca %class.B, align 1
-  %0 = getelementptr inbounds %class.B, %class.B* %v, i64 0, i32 0, !dbg !40
-  call void @llvm.lifetime.start(i64 1, i8* %0) #4, !dbg !40
-  %1 = getelementptr inbounds %class.A, %class.A* %text.i, i64 0, i32 0, !dbg !41
-  %2 = getelementptr inbounds %class.A, %class.A* %agg.tmp.i.i, i64 0, i32 0, !dbg !59
+  call void @llvm.lifetime.start(i64 1, ptr %v) #4, !dbg !40
   br label %for.cond, !dbg !65
 
 for.cond:                                         ; preds = %for.cond, %entry
-  call void @llvm.dbg.value(metadata %class.B* %v, metadata !29, metadata !66), !dbg !67
-  %call = call double @_ZN1BixEj(%class.B* nonnull %v, i32 undef), !dbg !68
+  call void @llvm.dbg.value(metadata ptr %v, metadata !29, metadata !66), !dbg !67
+  %call = call double @_ZN1BixEj(ptr nonnull %v, i32 undef), !dbg !68
   call void @llvm.dbg.value(metadata double %call, metadata !49, metadata !69), !dbg !70
-  call void @llvm.dbg.value(metadata i32* null, metadata !52, metadata !69), !dbg !71
-  call void @llvm.dbg.value(metadata %class.A* undef, metadata !54, metadata !69), !dbg !72
-  call void @llvm.lifetime.start(i64 1, i8* %1) #4, !dbg !41
+  call void @llvm.dbg.value(metadata ptr null, metadata !52, metadata !69), !dbg !71
+  call void @llvm.dbg.value(metadata ptr undef, metadata !54, metadata !69), !dbg !72
+  call void @llvm.lifetime.start(i64 1, ptr %text.i) #4, !dbg !41
   %tobool.i = fcmp une double %call, 0.000000e+00, !dbg !73
-  %cond.i = select i1 %tobool.i, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.1, i64 0, i64 0), !dbg !73
-  call void @llvm.dbg.value(metadata %class.A* %text.i, metadata !55, metadata !66), !dbg !74
-  call void @llvm.lifetime.start(i64 1, i8* %2), !dbg !59
-  call void @llvm.dbg.value(metadata %class.A* %text.i, metadata !62, metadata !69), !dbg !59
-  call void @llvm.dbg.value(metadata i8* %cond.i, metadata !63, metadata !69), !dbg !75
-  call void @_ZN1AC1EPKc(%class.A* nonnull %agg.tmp.i.i, i8* %cond.i), !dbg !76
-  call void @_ZN1A5m_fn1ES_(%class.A* nonnull %text.i), !dbg !77
-  call void @llvm.lifetime.end(i64 1, i8* %2), !dbg !79
-  call void @llvm.lifetime.end(i64 1, i8* %1) #4, !dbg !80
+  %cond.i = select i1 %tobool.i, ptr @.str, ptr @.str.1, !dbg !73
+  call void @llvm.dbg.value(metadata ptr %text.i, metadata !55, metadata !66), !dbg !74
+  call void @llvm.lifetime.start(i64 1, ptr %agg.tmp.i.i), !dbg !59
+  call void @llvm.dbg.value(metadata ptr %text.i, metadata !62, metadata !69), !dbg !59
+  call void @llvm.dbg.value(metadata ptr %cond.i, metadata !63, metadata !69), !dbg !75
+  call void @_ZN1AC1EPKc(ptr nonnull %agg.tmp.i.i, ptr %cond.i), !dbg !76
+  call void @_ZN1A5m_fn1ES_(ptr nonnull %text.i), !dbg !77
+  call void @llvm.lifetime.end(i64 1, ptr %agg.tmp.i.i), !dbg !79
+  call void @llvm.lifetime.end(i64 1, ptr %text.i) #4, !dbg !80
   br label %for.cond, !dbg !81, !llvm.loop !82
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start(i64, ptr nocapture) #1
 
-declare double @_ZN1BixEj(%class.B*, i32) local_unnamed_addr #2
+declare double @_ZN1BixEj(ptr, i32) local_unnamed_addr #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end(i64, ptr nocapture) #1
 
-declare void @_ZN1A5m_fn1ES_(%class.A*) local_unnamed_addr #2
+declare void @_ZN1A5m_fn1ES_(ptr) local_unnamed_addr #2
 
-declare void @_ZN1AC1EPKc(%class.A*, i8*) unnamed_addr #2
+declare void @_ZN1AC1EPKc(ptr, ptr) unnamed_addr #2
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3

@@ -4,8 +4,8 @@
 ; Checks that we can link global variable with appending linkage with the
 ; existing external declaration.
 
-; CHECK-DAG: @var = appending global [1 x i8*] undef
-; CHECK-DAG: @use = global [1 x i8*] [i8* bitcast ([1 x i8*]* @var to i8*)]
+; CHECK-DAG: @var = appending global [1 x ptr] undef
+; CHECK-DAG: @use = global [1 x ptr] [ptr @var]
 
-@var = external global i8*
-@use = global [1 x i8*] [i8* bitcast (i8** @var to i8*)]
+@var = external global ptr
+@use = global [1 x ptr] [ptr @var]

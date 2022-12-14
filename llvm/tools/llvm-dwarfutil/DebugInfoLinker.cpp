@@ -167,7 +167,7 @@ protected:
   // of executable sections.
   bool isInsideExecutableSectionsAddressRange(uint64_t LowPC,
                                               Optional<uint64_t> HighPC) {
-    Optional<AddressRange> Range =
+    std::optional<AddressRange> Range =
         TextAddressRanges.getRangeThatContains(LowPC);
 
     if (HighPC)

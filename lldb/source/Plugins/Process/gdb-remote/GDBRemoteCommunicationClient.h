@@ -429,6 +429,8 @@ public:
 
   bool GetSharedCacheInfoSupported();
 
+  bool GetDynamicLoaderProcessStateSupported();
+
   bool GetMemoryTaggingSupported();
 
   bool UsesNativeSignals();
@@ -553,6 +555,7 @@ protected:
   LazyBool m_supports_jThreadExtendedInfo = eLazyBoolCalculate;
   LazyBool m_supports_jLoadedDynamicLibrariesInfos = eLazyBoolCalculate;
   LazyBool m_supports_jGetSharedCacheInfo = eLazyBoolCalculate;
+  LazyBool m_supports_jGetDyldProcessState = eLazyBoolCalculate;
   LazyBool m_supports_QPassSignals = eLazyBoolCalculate;
   LazyBool m_supports_error_string_reply = eLazyBoolCalculate;
   LazyBool m_supports_multiprocess = eLazyBoolCalculate;

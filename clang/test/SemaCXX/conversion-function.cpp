@@ -472,3 +472,16 @@ struct S {
   operator const int() const;
 };
 }
+
+#if __cplusplus >= 201103L
+namespace dependent_conversion_function_id_lookup {
+  template<typename T> struct A {
+    operator T();
+  };
+  template<typename T> struct B : A<T> {
+    template<typename U> using Lookup = decltype(&B::operator U);
+  };
+  using Result = B<int>::Lookup<int>;
+  using Result = int (A<int>::*)();
+}
+#endif

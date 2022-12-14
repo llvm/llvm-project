@@ -37,32 +37,32 @@ target triple = "x86_64-pc-windows-msvc"
 
 %struct.GetFwdDecl = type { i8 }
 %struct.UseCompleteType = type { [1 x %struct.UnicodeString] }
-%struct.UnicodeString = type { i32 (...)** }
+%struct.UnicodeString = type { ptr }
 
 $"\01??_DUseCompleteType@@QEAA@XZ" = comdat any
 
 @"\01?force_fwd_decl@@3UGetFwdDecl@@A" = global %struct.GetFwdDecl zeroinitializer, align 1, !dbg !0
 @"\01?require_complete@@3UUseCompleteType@@A" = global %struct.UseCompleteType zeroinitializer, align 8, !dbg !6
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_t.cpp, i8* null }]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_t.cpp, ptr null }]
 
 ; Function Attrs: nounwind
 define internal void @"\01??__Erequire_complete@@YAXXZ"() #0 !dbg !27 {
 entry:
-  %call = call %struct.UseCompleteType* @"\01??0UseCompleteType@@QEAA@XZ"(%struct.UseCompleteType* @"\01?require_complete@@3UUseCompleteType@@A"), !dbg !30
-  %0 = call i32 @atexit(void ()* @"\01??__Frequire_complete@@YAXXZ") #2, !dbg !30
+  %call = call ptr @"\01??0UseCompleteType@@QEAA@XZ"(ptr @"\01?require_complete@@3UUseCompleteType@@A"), !dbg !30
+  %0 = call i32 @atexit(ptr @"\01??__Frequire_complete@@YAXXZ") #2, !dbg !30
   ret void, !dbg !30
 }
 
-declare %struct.UseCompleteType* @"\01??0UseCompleteType@@QEAA@XZ"(%struct.UseCompleteType* returned) unnamed_addr #1
+declare ptr @"\01??0UseCompleteType@@QEAA@XZ"(ptr returned) unnamed_addr #1
 
 ; Function Attrs: nounwind
-define linkonce_odr void @"\01??_DUseCompleteType@@QEAA@XZ"(%struct.UseCompleteType* %this) unnamed_addr #0 comdat align 2 !dbg !31 {
+define linkonce_odr void @"\01??_DUseCompleteType@@QEAA@XZ"(ptr %this) unnamed_addr #0 comdat align 2 !dbg !31 {
 entry:
-  %this.addr = alloca %struct.UseCompleteType*, align 8
-  store %struct.UseCompleteType* %this, %struct.UseCompleteType** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.UseCompleteType** %this.addr, metadata !32, metadata !34), !dbg !35
-  %this1 = load %struct.UseCompleteType*, %struct.UseCompleteType** %this.addr, align 8
-  call void @"\01??1UseCompleteType@@QEAA@XZ"(%struct.UseCompleteType* %this1), !dbg !36
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !32, metadata !34), !dbg !35
+  %this1 = load ptr, ptr %this.addr, align 8
+  call void @"\01??1UseCompleteType@@QEAA@XZ"(ptr %this1), !dbg !36
   ret void, !dbg !36
 }
 
@@ -70,17 +70,17 @@ entry:
 
 define internal void @"\01??__Frequire_complete@@YAXXZ"() #0 !dbg !37 {
 entry:
-  call void @"\01??_DUseCompleteType@@QEAA@XZ"(%struct.UseCompleteType* @"\01?require_complete@@3UUseCompleteType@@A"), !dbg !38
+  call void @"\01??_DUseCompleteType@@QEAA@XZ"(ptr @"\01?require_complete@@3UUseCompleteType@@A"), !dbg !38
   ret void, !dbg !39
 }
 
 ; Function Attrs: nounwind
-declare i32 @atexit(void ()*) #2
+declare i32 @atexit(ptr) #2
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #3
 
-declare void @"\01??1UseCompleteType@@QEAA@XZ"(%struct.UseCompleteType*) unnamed_addr #1
+declare void @"\01??1UseCompleteType@@QEAA@XZ"(ptr) unnamed_addr #1
 
 ; Function Attrs: nounwind
 define internal void @_GLOBAL__sub_I_t.cpp() #0 !dbg !41 {

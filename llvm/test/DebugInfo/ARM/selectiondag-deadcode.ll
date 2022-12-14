@@ -1,7 +1,7 @@
 ; RUN: llc -filetype=asm < %s | FileCheck %s
 target triple = "thumbv7-apple-ios7.0.0"
 %class.Matrix3.0.6.10 = type { [9 x float] }
-define arm_aapcscc void @_Z9GetMatrixv(%class.Matrix3.0.6.10* noalias nocapture sret(%class.Matrix3.0.6.10) %agg.result) #0 !dbg !39 {
+define arm_aapcscc void @_Z9GetMatrixv(ptr noalias nocapture sret(%class.Matrix3.0.6.10) %agg.result) #0 !dbg !39 {
   %fmul = fmul float undef, undef
   %fadd = fadd float %fmul, %fmul
   %fadd2 = fadd float %fadd, %fmul
@@ -17,8 +17,8 @@ _ZN7Vector39NormalizeEv.exit:                     ; preds = %1, %0
   ; and SelectionDAGISel crashes.  It should definitely not
   ; crash. Drop the dbg_value instead.
   ; CHECK-NOT: "matrix"
-  tail call void @llvm.dbg.declare(metadata %class.Matrix3.0.6.10* %agg.result, metadata !45, metadata !DIExpression())
-  %2 = getelementptr inbounds %class.Matrix3.0.6.10, %class.Matrix3.0.6.10* %agg.result, i32 0, i32 0, i32 8
+  tail call void @llvm.dbg.declare(metadata ptr %agg.result, metadata !45, metadata !DIExpression())
+  %2 = getelementptr inbounds %class.Matrix3.0.6.10, ptr %agg.result, i32 0, i32 0, i32 8
   ret void
 }
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1

@@ -8,7 +8,7 @@
 ; CHECK: [[LABEL:^[a-zA-Z0-9_.]+]]:
 ; CHECK-NOT: br {{.*}} [[LABEL]]
 
-define i32 @_Z3fooPKcjj(i8* nocapture readnone %s, i32 %len, i32 %c) #0 {
+define i32 @_Z3fooPKcjj(ptr nocapture readnone %s, i32 %len, i32 %c) #0 {
 entry:
   br label %while.cond
 

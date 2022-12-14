@@ -23,27 +23,26 @@ source_filename = "test/DebugInfo/X86/cu-ranges-odr.ll"
 %class.A = type { i32 }
 
 @a = global %class.A zeroinitializer, align 4, !dbg !0
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_a, i8* null }]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__I_a, ptr null }]
 
 define internal void @__cxx_global_var_init() section ".text.startup" !dbg !18 {
 entry:
-  call void @_ZN1AC2Ei(%class.A* @a, i32 0), !dbg !21
+  call void @_ZN1AC2Ei(ptr @a, i32 0), !dbg !21
   ret void, !dbg !21
 }
 
 ; Function Attrs: nounwind uwtable
-define linkonce_odr void @_ZN1AC2Ei(%class.A* %this, i32 %i) unnamed_addr #0 align 2 !dbg !22 {
+define linkonce_odr void @_ZN1AC2Ei(ptr %this, i32 %i) unnamed_addr #0 align 2 !dbg !22 {
 entry:
-  %this.addr = alloca %class.A*, align 8
+  %this.addr = alloca ptr, align 8
   %i.addr = alloca i32, align 4
-  store %class.A* %this, %class.A** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !23, metadata !25), !dbg !26
-  store i32 %i, i32* %i.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %i.addr, metadata !27, metadata !25), !dbg !28
-  %this1 = load %class.A*, %class.A** %this.addr
-  %a = getelementptr inbounds %class.A, %class.A* %this1, i32 0, i32 0, !dbg !28
-  %0 = load i32, i32* %i.addr, align 4, !dbg !28
-  store i32 %0, i32* %a, align 4, !dbg !28
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !23, metadata !25), !dbg !26
+  store i32 %i, ptr %i.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %i.addr, metadata !27, metadata !25), !dbg !28
+  %this1 = load ptr, ptr %this.addr
+  %0 = load i32, ptr %i.addr, align 4, !dbg !28
+  store i32 %0, ptr %this1, align 4, !dbg !28
   ret void, !dbg !28
 }
 

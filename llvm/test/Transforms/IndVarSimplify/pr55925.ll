@@ -8,7 +8,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 declare i32 @foo(i32)
 
-define void @test(i8* %p) personality i8* undef {
+define void @test(ptr %p) personality ptr undef {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -24,7 +24,7 @@ define void @test(i8* %p) personality i8* undef {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @foo(i32 [[TMP0]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[LP:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    ret void
 ;
@@ -38,18 +38,18 @@ loop:
 
 loop.latch:
   %ext = zext i32 %iv to i64
-  %tmp5 = getelementptr inbounds i8, i8* %p, i64 %ext
+  %tmp5 = getelementptr inbounds i8, ptr %p, i64 %ext
   %iv.next = add nuw i32 %iv, 1
   call i32 @foo(i32 %res)
   br label %loop
 
 exit:
-  %lp = landingpad { i8*, i32 }
+  %lp = landingpad { ptr, i32 }
   cleanup
   ret void
 }
 
-define void @test_critedge(i1 %c, i8* %p) personality i8* undef {
+define void @test_critedge(i1 %c, ptr %p) personality ptr undef {
 ; CHECK-LABEL: @test_critedge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -70,7 +70,7 @@ define void @test_critedge(i1 %c, i8* %p) personality i8* undef {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @foo(i32 [[PHI]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[LP:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    ret void
 ;
@@ -91,13 +91,13 @@ loop.other:
 loop.latch:
   %phi = phi i32 [ %res, %loop.invoke ], [ 0, %loop.other ]
   %ext = zext i32 %iv to i64
-  %tmp5 = getelementptr inbounds i8, i8* %p, i64 %ext
+  %tmp5 = getelementptr inbounds i8, ptr %p, i64 %ext
   %iv.next = add nuw i32 %iv, 1
   call i32 @foo(i32 %phi)
   br label %loop
 
 exit:
-  %lp = landingpad { i8*, i32 }
+  %lp = landingpad { ptr, i32 }
   cleanup
   ret void
 }

@@ -40,7 +40,6 @@ define fastcc void @rec(ptr %0, i64 %1) {
 ; CHECK-NEXT:    store i32 0, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    call fastcc void @rec(ptr [[TMP0]], i64 0)
 ; CHECK-NEXT:    ret void
-;
   %3 = getelementptr i32, ptr %0, i64 %1
   store i32 0, ptr %3, align 4
   call fastcc void @rec(ptr %0, i64 0)

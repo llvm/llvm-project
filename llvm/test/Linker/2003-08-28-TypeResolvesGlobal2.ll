@@ -4,15 +4,15 @@
 
 %M = type opaque
 
-define void @foo(i32* %V) {
+define void @foo(ptr %V) {
 	ret void
 }
 
-declare void @foo.upgrd.1(%M*)
+declare void @foo.upgrd.1(ptr)
 
 define void @other() {
-	call void @foo.upgrd.1( %M* null )
-	call void @foo( i32* null )
+	call void @foo.upgrd.1( ptr null )
+	call void @foo( ptr null )
 	ret void
 }
 

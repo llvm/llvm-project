@@ -4,7 +4,7 @@
 
 ; CHECK: invalid getelementptr indices
 
-define <vscale x 2 x i32*> @test7(<vscale x 2 x {i32, i32}*> %a) {
-  %w = getelementptr {i32, i32}, <vscale x 2 x {i32, i32}*> %a, <vscale x 2 x i32> zeroinitializer, <vscale x 2 x i32> zeroinitializer
-  ret <vscale x 2 x i32*> %w
+define <vscale x 2 x ptr> @test7(<vscale x 2 x ptr> %a) {
+  %w = getelementptr {i32, i32}, <vscale x 2 x ptr> %a, <vscale x 2 x i32> zeroinitializer, <vscale x 2 x i32> zeroinitializer
+  ret <vscale x 2 x ptr> %w
 }

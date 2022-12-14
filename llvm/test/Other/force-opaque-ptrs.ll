@@ -5,32 +5,32 @@
 ; RUN: opt --opaque-pointers < %s -S | FileCheck %s
 ; RUN: verify-uselistorder --opaque-pointers < %s
 
-%ty = type i32*
+%ty = type ptr
 
 ; CHECK: @g = external global i16
 @g = external global i16
 
 ; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr null, ptr null }]
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* null, i8* null }]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr null, ptr null }]
 
 ; CHECK: @ga = alias i18, ptr @g2
 @g2 = global i18 0
-@ga = alias i18, i18* @g2
+@ga = alias i18, ptr @g2
 
 ; CHECK: @ga2 = alias i19, ptr @g2
-@ga2 = alias i19, i19* bitcast (i18* @g2 to i19*)
+@ga2 = alias i19, ptr @g2
 
 ; CHECK: @gi = ifunc i20 (), ptr @resolver
-@gi = ifunc i20 (), i20 ()* ()* bitcast (i32* ()* @resolver to i20 ()* ()*)
+@gi = ifunc i20 (), ptr @resolver
 
 
-define i32* @resolver() {
-  %load = load i32, i32* @g.fwd
-  %ptr = inttoptr i32 %load to i32*
-  ret i32* %ptr
+define ptr @resolver() {
+  %load = load i32, ptr @g.fwd
+  %ptr = inttoptr i32 %load to ptr
+  ret ptr %ptr
 }
 
-define void @f(i32* %p) {
+define void @f(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@f
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i17, align 4
@@ -40,14 +40,14 @@ define void @f(i32* %p) {
 ;
   %a = alloca i17
   call void @fn.fwd(i32 0)
-  store i32 0, i32* @g.fwd
+  store i32 0, ptr @g.fwd
   ret void
 }
 
 @g.fwd = global i32 0
 declare void @fn.fwd(i32)
 
-define void @f2(i32** %p) {
+define void @f2(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@f2
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    unreachable
@@ -55,7 +55,7 @@ define void @f2(i32** %p) {
   unreachable
 }
 
-define void @f3(i32 addrspace(1)* addrspace(2)* %p) {
+define void @f3(ptr addrspace(2) %p) {
 ; CHECK-LABEL: define {{[^@]+}}@f3
 ; CHECK-SAME: (ptr addrspace(2) [[P:%.*]]) {
 ; CHECK-NEXT:    unreachable
@@ -63,7 +63,7 @@ define void @f3(i32 addrspace(1)* addrspace(2)* %p) {
   unreachable
 }
 
-define void @f4(%ty* %p) {
+define void @f4(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@f4
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    unreachable
@@ -79,20 +79,20 @@ define void @remangle_intrinsic() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.masked.expandload.v2i64(ptr null, <2 x i1> zeroinitializer, <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    ret void
 ;
-  %a = alloca i8*
-  call i8* @llvm.stacksave()
-  call void @llvm.stackprotector(i8* null, i8** %a)
-  call <2 x i64> @llvm.masked.expandload.v2i64(i64* null, <2 x i1> zeroinitializer, <2 x i64> zeroinitializer)
+  %a = alloca ptr
+  call ptr @llvm.stacksave()
+  call void @llvm.stackprotector(ptr null, ptr %a)
+  call <2 x i64> @llvm.masked.expandload.v2i64(ptr null, <2 x i1> zeroinitializer, <2 x i64> zeroinitializer)
   ret void
 }
 
-define i32* @constexpr_gep() {
+define ptr @constexpr_gep() {
 ; CHECK-LABEL: define {{[^@]+}}@constexpr_gep() {
 ; CHECK-NEXT:    ret ptr getelementptr (i32, ptr getelementptr (i8, ptr null, i64 4), i64 1)
 ;
-  ret i32* getelementptr(i32, i32* bitcast (i8* getelementptr (i8, i8* null, i64 4) to i32*), i64 1)
+  ret ptr getelementptr(i32, ptr getelementptr (i8, ptr null, i64 4), i64 1)
 }
 
-declare i8* @llvm.stacksave()
-declare void @llvm.stackprotector(i8*, i8**)
-declare <2 x i64> @llvm.masked.expandload.v2i64(i64*, <2 x i1>, <2 x i64>)
+declare ptr @llvm.stacksave()
+declare void @llvm.stackprotector(ptr, ptr)
+declare <2 x i64> @llvm.masked.expandload.v2i64(ptr, <2 x i1>, <2 x i64>)
