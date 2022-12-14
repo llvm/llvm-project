@@ -363,7 +363,7 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
                        toString(std::move(ContentErr));
 
   ObjDumper *Dumper;
-  Optional<SymbolComparator> SymComp;
+  std::optional<SymbolComparator> SymComp;
   Expected<std::unique_ptr<ObjDumper>> DumperOrErr = createDumper(Obj, Writer);
   if (!DumperOrErr)
     reportError(DumperOrErr.takeError(), FileStr);
