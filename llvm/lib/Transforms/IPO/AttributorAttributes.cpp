@@ -1076,25 +1076,23 @@ struct AAPointerInfoImpl
         QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL);
     const auto *ExecDomainAA = A.lookupAAFor<AAExecutionDomain>(
         IRPosition::function(Scope), &QueryingAA, DepClassTy::OPTIONAL);
-    const bool NoSync = NoSyncAA.isAssumedNoSync();
+    bool AllInSameNoSyncFn = NoSyncAA.isAssumedNoSync();
 
     // Helper to determine if we need to consider threading, which we cannot
     // right now. However, if the function is (assumed) nosync or the thread
     // executing all instructions is the main thread only we can ignore
     // threading.
     auto CanIgnoreThreading = [&](const Instruction &I) -> bool {
-      if (NoSync)
-        return true;
       if (ExecDomainAA && ExecDomainAA->isExecutedByInitialThreadOnly(I))
         return true;
       return false;
     };
 
     // Helper to determine if the access is executed by the same thread as the
-    // load, for now it is sufficient to avoid any potential threading effects
-    // as we cannot deal with them anyway.
-    auto IsSameThreadAsLoad = [&](const Access &Acc) -> bool {
-      return CanIgnoreThreading(*Acc.getLocalInst());
+    // given instruction, for now it is sufficient to avoid any potential
+    // threading effects as we cannot deal with them anyway.
+    auto IsSameThreadAsInst = [&](const Access &Acc) -> bool {
+      return AllInSameNoSyncFn || CanIgnoreThreading(*Acc.getLocalInst());
     };
 
     // TODO: Use inter-procedural reachability and dominance.
@@ -1180,10 +1178,14 @@ struct AAPointerInfoImpl
       if (FindInterferingWrites && Dominates)
         HasBeenWrittenTo = true;
 
+      // Track if all interesting accesses are in the same `nosync` function as
+      // the given instruction.
+      AllInSameNoSyncFn &= Acc.getRemoteInst()->getFunction() == &Scope;
+
       // For now we only filter accesses based on CFG reasoning which does not
       // work yet if we have threading effects, or the access is complicated.
       if (CanUseCFGResoning && Dominates && UseDominanceReasoning &&
-          IsSameThreadAsLoad(Acc))
+          IsSameThreadAsInst(Acc))
         DominatingWrites.insert(&Acc);
 
       InterferingAccesses.push_back({&Acc, Exact});
@@ -1196,6 +1198,8 @@ struct AAPointerInfoImpl
     // the worst case quadratic as we are looking for another write that will
     // hide the effect of this one.
     auto CanSkipAccess = [&](const Access &Acc, bool Exact) {
+      if (!IsSameThreadAsInst(Acc))
+        return false;
       if ((!Acc.isWriteOrAssumption() ||
            !AA::isPotentiallyReachable(A, *Acc.getRemoteInst(), I, QueryingAA,
                                        &ExclusionSet, IsLiveInCalleeCB)) &&
@@ -1205,8 +1209,6 @@ struct AAPointerInfoImpl
         return true;
 
       if (!DT || !UseDominanceReasoning)
-        return false;
-      if (!IsSameThreadAsLoad(Acc))
         return false;
       if (!DominatingWrites.count(&Acc))
         return false;
@@ -1227,7 +1229,8 @@ struct AAPointerInfoImpl
     // succeeded for all or not.
     unsigned NumInterferingAccesses = InterferingAccesses.size();
     for (auto &It : InterferingAccesses) {
-      if (!CanUseCFGResoning || NumInterferingAccesses > MaxInterferingAccesses ||
+      if (!AllInSameNoSyncFn ||
+          NumInterferingAccesses > MaxInterferingAccesses ||
           !CanSkipAccess(*It.first, It.second)) {
         if (!UserCB(*It.first, It.second))
           return false;
