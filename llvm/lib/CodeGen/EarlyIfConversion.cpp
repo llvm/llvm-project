@@ -321,9 +321,15 @@ bool SSAIfConv::canPredicateInstrs(MachineBasicBlock *MBB) {
       return false;
     }
 
-    // Check that instruction is predicable and that it is not already
-    // predicated.
-    if (!TII->isPredicable(*I) || TII->isPredicated(*I)) {
+    // Check that instruction is predicable
+    if (!TII->isPredicable(*I)) {
+      LLVM_DEBUG(dbgs() << "Isn't predicable: " << *I);
+      return false;
+    }
+
+    // Check that instruction is not already predicated.
+    if (TII->isPredicated(*I) && !TII->canPredicatePredicatedInstr(*I)) {
+      LLVM_DEBUG(dbgs() << "Is already predicated: " << *I);
       return false;
     }
 
