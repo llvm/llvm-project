@@ -15,7 +15,7 @@ target triple = "armv7a--none-eabi"
 @g3 = external global i32, align 4
 @g4 = external thread_local global i32, align 4
 
-define i32* @test3(i32 %n) {
+define ptr @test3(i32 %n) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[N:%.*]], label [[SW_DEFAULT:%.*]] [
@@ -30,8 +30,8 @@ define i32* @test3(i32 %n) {
 ; CHECK:       sw.default:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32* [ @g4, [[SW_DEFAULT]] ], [ getelementptr inbounds (i32, i32* inttoptr (i32 mul (i32 ptrtoint (i32* @g3 to i32), i32 2) to i32*), i32 1), [[SW_BB2]] ], [ @g2, [[SW_BB1]] ], [ @g1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32* [[RETVAL_0]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ @g4, [[SW_DEFAULT]] ], [ getelementptr inbounds (i32, ptr inttoptr (i32 mul (i32 ptrtoint (ptr @g3 to i32), i32 2) to ptr), i32 1), [[SW_BB2]] ], [ @g2, [[SW_BB1]] ], [ @g1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret ptr [[RETVAL_0]]
 ;
 entry:
   switch i32 %n, label %sw.default [
@@ -53,6 +53,6 @@ sw.default:
   br label %return
 
 return:
-  %retval.0 = phi i32* [ @g4, %sw.default ], [ getelementptr inbounds (i32, i32* inttoptr (i32 mul (i32 ptrtoint (i32* @g3 to i32), i32 2) to i32*), i32 1), %sw.bb2 ], [ @g2, %sw.bb1 ], [ @g1, %sw.bb ]
-  ret i32* %retval.0
+  %retval.0 = phi ptr [ @g4, %sw.default ], [ getelementptr inbounds (i32, ptr inttoptr (i32 mul (i32 ptrtoint (ptr @g3 to i32), i32 2) to ptr), i32 1), %sw.bb2 ], [ @g2, %sw.bb1 ], [ @g1, %sw.bb ]
+  ret ptr %retval.0
 }
