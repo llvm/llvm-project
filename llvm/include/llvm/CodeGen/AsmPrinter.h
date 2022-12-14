@@ -329,6 +329,12 @@ public:
   /// definition in the same module.
   MCSymbol *getSymbolPreferLocal(const GlobalValue &GV) const;
 
+  /// Maps call instructions to the label emitted just after the call. The label
+  /// is later used to calculate the correct offset of the call instruction
+  /// without interference from caller-saved registers which are sometimes
+  /// emitted inbetween call and stackmap.
+  MCSymbol *YkLastCallLabel = nullptr;
+
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
   //===------------------------------------------------------------------===//

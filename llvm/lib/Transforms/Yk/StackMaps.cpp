@@ -51,11 +51,22 @@ public:
         continue;
       LivenessAnalysis LA(&F);
       for (BasicBlock &BB : F)
-        for (Instruction &I : BB)
-          if ((isa<CallInst>(I)) ||
-              ((isa<BranchInst>(I)) && (cast<BranchInst>(I).isConditional())) ||
-              isa<SwitchInst>(I))
+        for (Instruction &I : BB) {
+          if (isa<CallInst>(I)) {
+            CallInst &CI = cast<CallInst>(I);
+            if (CI.isInlineAsm())
+              continue;
+            if (CI.isIndirectCall())
+              continue;
+            if (CI.getCalledFunction()->isIntrinsic())
+              continue;
             SMCalls.insert({&I, LA.getLiveVarsBefore(&I)});
+          } else if ((isa<BranchInst>(I) &&
+                      cast<BranchInst>(I).isConditional()) ||
+                     isa<SwitchInst>(I)) {
+            SMCalls.insert({&I, LA.getLiveVarsBefore(&I)});
+          }
+        }
     }
 
     Function *SMFunc = Intrinsic::getDeclaration(&M, SMFuncID);
