@@ -12,7 +12,7 @@
 ; We can reverse this for and/or/xor. Allowing us to pull the binop into
 ; the basic block we create when we expand select.
 
-define signext i32 @and_select_all_ones_i32(i1 zeroext %c, i32 signext %x, i32 %y) {
+define signext i32 @and_select_all_ones_i32(i1 zeroext %c, i32 signext %x, i32 signext %y) {
 ; RV32I-LABEL: and_select_all_ones_i32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a0, a0, -1
@@ -25,7 +25,6 @@ define signext i32 @and_select_all_ones_i32(i1 zeroext %c, i32 signext %x, i32 %
 ; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; SFB64-LABEL: and_select_all_ones_i32:
@@ -35,7 +34,7 @@ define signext i32 @and_select_all_ones_i32(i1 zeroext %c, i32 signext %x, i32 %
 ; SFB64-NEXT:  # %bb.1:
 ; SFB64-NEXT:    mv a1, a2
 ; SFB64-NEXT:  .LBB0_2:
-; SFB64-NEXT:    sext.w a0, a1
+; SFB64-NEXT:    mv a0, a1
 ; SFB64-NEXT:    ret
   %a = select i1 %c, i32 %x, i32 -1
   %b = and i32 %a, %y
