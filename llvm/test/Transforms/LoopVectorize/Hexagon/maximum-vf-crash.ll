@@ -16,7 +16,7 @@ entry:
 loop:
   %g.016 = phi i32 [ 0, %entry ], [ %g.1.lcssa, %loop ]
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-  %0 = load i8, i8* undef, align 1
+  %0 = load i8, ptr undef, align 1
   %g.1.lcssa = add i32 %g.016, undef
   %iv.next = add nsw i32 %iv, 1
   %exitcond = icmp eq i32 %iv.next, 0

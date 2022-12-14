@@ -136,17 +136,17 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind optsize ssp uwtable
-define void @_Z4testPii(i32* nocapture %A, i32 %Length) #0 !dbg !4 {
+define void @_Z4testPii(ptr nocapture %A, i32 %Length) #0 !dbg !4 {
 entry:
   %cmp10 = icmp sgt i32 %Length, 0, !dbg !12
   br i1 %cmp10, label %for.body, label %for.end, !dbg !12, !llvm.loop !14
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv, !dbg !16
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !16
   %0 = trunc i64 %indvars.iv to i32, !dbg !16
-  %ld = load i32, i32* %arrayidx, align 4
-  store i32 %0, i32* %arrayidx, align 4, !dbg !16, !tbaa !18
+  %ld = load i32, ptr %arrayidx, align 4
+  store i32 %0, ptr %arrayidx, align 4, !dbg !16, !tbaa !18
   %cmp3 = icmp sle i32 %ld, %Length, !dbg !22
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !12
   %1 = trunc i64 %indvars.iv.next to i32
@@ -163,16 +163,16 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK: ret
 
 ; Function Attrs: nounwind optsize ssp uwtable
-define void @_Z13test_disabledPii(i32* nocapture %A, i32 %Length) #0 !dbg !7 {
+define void @_Z13test_disabledPii(ptr nocapture %A, i32 %Length) #0 !dbg !7 {
 entry:
   %cmp4 = icmp sgt i32 %Length, 0, !dbg !25
   br i1 %cmp4, label %for.body, label %for.end, !dbg !25, !llvm.loop !27
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv, !dbg !30
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !30
   %0 = trunc i64 %indvars.iv to i32, !dbg !30
-  store i32 %0, i32* %arrayidx, align 4, !dbg !30, !tbaa !18
+  store i32 %0, ptr %arrayidx, align 4, !dbg !30, !tbaa !18
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !25
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !25
   %exitcond = icmp eq i32 %lftr.wideiv, %Length, !dbg !25
@@ -187,7 +187,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK: ret
 
 ; Function Attrs: nounwind optsize ssp uwtable
-define void @_Z17test_array_boundsPiS_i(i32* nocapture %A, i32* nocapture readonly %B, i32 %Length) #0 !dbg !8 {
+define void @_Z17test_array_boundsPiS_i(ptr nocapture %A, ptr nocapture readonly %B, i32 %Length) #0 !dbg !8 {
 entry:
   %cmp9 = icmp sgt i32 %Length, 0, !dbg !32
   br i1 %cmp9, label %for.body.preheader, label %for.end, !dbg !32, !llvm.loop !34
@@ -197,13 +197,13 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %B, i64 %indvars.iv, !dbg !35
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !35, !tbaa !18
+  %arrayidx = getelementptr inbounds i32, ptr %B, i64 %indvars.iv, !dbg !35
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !35, !tbaa !18
   %idxprom1 = sext i32 %0 to i64, !dbg !35
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i64 %idxprom1, !dbg !35
-  %1 = load i32, i32* %arrayidx2, align 4, !dbg !35, !tbaa !18
-  %arrayidx4 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv, !dbg !35
-  store i32 %1, i32* %arrayidx4, align 4, !dbg !35, !tbaa !18
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %idxprom1, !dbg !35
+  %1 = load i32, ptr %arrayidx2, align 4, !dbg !35, !tbaa !18
+  %arrayidx4 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !35
+  store i32 %1, ptr %arrayidx4, align 4, !dbg !35, !tbaa !18
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !32
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !32
   %exitcond = icmp eq i32 %lftr.wideiv, %Length, !dbg !32
@@ -221,21 +221,21 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK: ret
 
 ; Function Attrs: nounwind uwtable
-define i32 @test_multiple_failures(i32* nocapture readonly %A) #0 !dbg !46 {
+define i32 @test_multiple_failures(ptr nocapture readonly %A) #0 !dbg !46 {
 entry:
   br label %for.body, !dbg !38
 
 for.body:                                         ; preds = %entry, %for.inc
   %i.09 = phi i32 [ 0, %entry ], [ %add, %for.inc ]
   %k.09 = phi i32 [ 0, %entry ], [ %k.1, %for.inc ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %i.09, !dbg !40
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !40
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.09, !dbg !40
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !40
   %tobool = icmp eq i32 %0, 0, !dbg !40
   br i1 %tobool, label %for.inc, label %if.then, !dbg !40
 
 if.then:                                          ; preds = %for.body
   %call = tail call i32 (...) @foo(), !dbg !41
-  %.pre = load i32, i32* %arrayidx, align 4
+  %.pre = load i32, ptr %arrayidx, align 4
   br label %for.inc, !dbg !42
 
 for.inc:                                          ; preds = %for.body, %if.then
