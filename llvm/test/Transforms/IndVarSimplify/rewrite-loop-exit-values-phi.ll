@@ -33,7 +33,7 @@ inner:                                            ; preds = %inner, %header
   %j = phi i64 [ %j.next, %inner ], [ %n, %header ]
   %i.next = add nsw i64 %i, 1
   %j.next = add nsw i64 %j, 1
-  store i64 undef, i64* @ptr
+  store i64 undef, ptr @ptr
   %cond1 = icmp slt i64 %j, %idx
   br i1 %cond1, label %inner, label %inner_exit
 
