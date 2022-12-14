@@ -434,12 +434,9 @@ TEST(FunctionTest, SpliceEndBeforeBegin) {
   Function *FromF = M->getFunction("from");
   BasicBlock *FromBB1 = getBBWithName(FromF, "from_bb1");
   BasicBlock *FromBB2 = getBBWithName(FromF, "from_bb2");
-  BasicBlock *FromBB3 = getBBWithName(FromF, "from_bb3");
 
   Function *ToF = M->getFunction("to");
-  BasicBlock *ToBB1 = getBBWithName(ToF, "to_bb1");
   BasicBlock *ToBB2 = getBBWithName(ToF, "to_bb2");
-  BasicBlock *ToBB3 = getBBWithName(ToF, "to_bb3");
 
   EXPECT_DEATH(ToF->splice(ToBB2->getIterator(), FromF, FromBB2->getIterator(),
                            FromBB1->getIterator()),
