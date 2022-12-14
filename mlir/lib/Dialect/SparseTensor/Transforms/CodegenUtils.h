@@ -136,6 +136,11 @@ Value genAlloca(OpBuilder &builder, Location loc, unsigned sz, Type tp);
 /// of the given type, and returns the `memref<$tp>`.
 Value genAllocaScalar(OpBuilder &builder, Location loc, Type tp);
 
+/// Generates a temporary buffer, initializes it with the given contents,
+/// and returns it as type `memref<? x $tp>` (rather than specifying the
+/// size of the buffer).
+Value allocaBuffer(OpBuilder &builder, Location loc, ValueRange values);
+
 /// Generates code to allocate a buffer of the given type, and zero
 /// initialize it.  If the buffer type has any dynamic sizes, then the
 /// `sizes` parameter should be as filled by sizesFromPtr(); that way
