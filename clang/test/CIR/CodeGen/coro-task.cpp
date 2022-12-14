@@ -105,11 +105,15 @@ co_invoke_fn co_invoke;
 // CHECK: module {{.*}} {
 // CHECK-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !cir.struct<"struct.folly::coro::co_invoke_fn", i8
 
+// CHECK: cir.func builtin @__builtin_coro_id(i32, !cir.ptr<i8>, !cir.ptr<i8>, !cir.ptr<i8>) -> i32 attributes {builtin, sym_visibility = "private"}
+
 using VoidTask = folly::coro::Task<void>;
 
 VoidTask silly_task() {
   co_await std::suspend_always();
 }
+
+// CHECK: cir.func builtin @__builtin_coro_frame() -> !cir.ptr<i8> attributes {builtin, sym_visibility = "private"}
 
 // CHECK: cir.func @_Z10silly_taskv() -> ![[VoidTask]] {
 
@@ -118,7 +122,12 @@ VoidTask silly_task() {
 
 // CHECK: %[[#VoidTaskAddr:]] = cir.alloca ![[VoidTask]], {{.*}}, ["__retval"]
 // CHECK: %[[#VoidPromisseAddr:]] = cir.alloca ![[VoidPromisse]], {{.*}}, ["__promise"]
-// CHECK: %2 = cir.call @_ZN5folly4coro4TaskIvE12promise_type17get_return_objectEv(%[[#VoidPromisseAddr]]) : {{.*}} -> ![[VoidTask]]
-// CHECK: cir.store %2, %[[#VoidTaskAddr]] : ![[VoidTask]]
+
+// CHECK: %[[#NullPtr:]] = cir.cst(#cir.null : !cir.ptr<i8>) : !cir.ptr<i8>
+// CHECK: %[[#Align:]] = cir.cst(16 : i32) : i32
+// CHECK: %[[#CoroId:]] = cir.call @__builtin_coro_id(%[[#Align]], %[[#NullPtr]], %[[#NullPtr]], %[[#NullPtr]])
+
+// CHECK: %[[#RetObj:]] = cir.call @_ZN5folly4coro4TaskIvE12promise_type17get_return_objectEv(%[[#VoidPromisseAddr]]) : {{.*}} -> ![[VoidTask]]
+// CHECK: cir.store %[[#RetObj]], %[[#VoidTaskAddr]] : ![[VoidTask]]
 
 // CHECK: }

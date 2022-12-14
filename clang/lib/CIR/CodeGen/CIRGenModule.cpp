@@ -1522,7 +1522,9 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
       builder.setInsertionPoint(curCGF->CurFn.getOperation());
 
     f = builder.create<mlir::cir::FuncOp>(loc, name, Ty);
-    f.setAstAttr(mlir::cir::ASTFunctionDeclAttr::get(builder.getContext(), FD));
+    if (FD)
+      f.setAstAttr(
+          mlir::cir::ASTFunctionDeclAttr::get(builder.getContext(), FD));
 
     assert(f.isDeclaration() && "expected empty body");
 
