@@ -5,5 +5,6 @@ add_llvm_component_library(LLVMGRPCRelayCAS
   RemoteCacheKVProto
   RemoteCacheCASProto
   RemoteCacheClient
+  Support
   CAS
 )

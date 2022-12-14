@@ -20,4 +20,8 @@ endif()
 
 add_llvm_component_library(LLVMRemoteCachingService
   RemoteCachingService.cpp
+
+  LINK_COMPONENTS
+  Support
+  CAS
 )
