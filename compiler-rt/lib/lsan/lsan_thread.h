@@ -45,6 +45,8 @@ class ThreadContext;
 void InitializeThreadRegistry();
 void InitializeMainThread();
 
+ThreadRegistry *GetLsanThreadRegistryLocked();
+
 u32 ThreadCreate(u32 tid, bool detached, void *arg = nullptr);
 void ThreadFinish();
 

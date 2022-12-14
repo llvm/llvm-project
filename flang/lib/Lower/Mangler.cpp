@@ -55,21 +55,6 @@ hostName(const Fortran::semantics::Symbol &symbol) {
   return {};
 }
 
-static const Fortran::semantics::Symbol *
-findInterfaceIfSeperateMP(const Fortran::semantics::Symbol &symbol) {
-  const Fortran::semantics::Scope &scope = symbol.owner();
-  if (symbol.attrs().test(Fortran::semantics::Attr::MODULE) &&
-      scope.IsSubmodule()) {
-    // FIXME symbol from MpSubprogramStmt do not seem to have
-    // Attr::MODULE set.
-    const Fortran::semantics::Symbol *iface =
-        scope.parent().FindSymbol(symbol.name());
-    assert(iface && "Separate module procedure must be declared");
-    return iface;
-  }
-  return nullptr;
-}
-
 // Mangle the name of `symbol` to make it unique within FIR's symbol table using
 // the FIR name mangler, `mangler`
 std::string
@@ -100,18 +85,19 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
           [&](const Fortran::semantics::MainProgramDetails &) {
             return fir::NameUniquer::doProgramEntry().str();
           },
-          [&](const Fortran::semantics::SubprogramDetails &) {
+          [&](const Fortran::semantics::SubprogramDetails &subpDetails) {
             // Mangle external procedure without any scope prefix.
             if (!keepExternalInScope &&
                 Fortran::semantics::IsExternal(ultimateSymbol))
               return fir::NameUniquer::doProcedure(std::nullopt, std::nullopt,
                                                    symbolName);
-            // Separate module subprograms must be mangled according to the
-            // scope where they were declared (the symbol we have is the
-            // definition).
+            // A separate module procedure must be mangled according to its
+            // declaration scope, not its definition scope.
             const Fortran::semantics::Symbol *interface = &ultimateSymbol;
-            if (const auto *mpIface = findInterfaceIfSeperateMP(ultimateSymbol))
-              interface = mpIface;
+            if (interface->attrs().test(Fortran::semantics::Attr::MODULE) &&
+                interface->owner().IsSubmodule() && !subpDetails.isInterface())
+              interface = subpDetails.moduleInterface();
+            assert(interface && "Separate module procedure must be declared");
             llvm::SmallVector<llvm::StringRef> modNames =
                 moduleNames(*interface);
             return fir::NameUniquer::doProcedure(modNames, hostName(*interface),
@@ -289,4 +275,10 @@ std::string fir::mangleIntrinsicProcedure(llvm::StringRef intrinsic,
   for (decltype(e) i = 0; i < e; ++i)
     name.append(".").append(typeToString(funTy.getInput(i)));
   return name;
+}
+
+std::string Fortran::lower::mangle::globalNamelistDescriptorName(
+    const Fortran::semantics::Symbol &sym) {
+  std::string name = mangleName(sym);
+  return IsAllocatableOrPointer(sym) ? name : name + ".desc"s;
 }

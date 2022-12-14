@@ -365,9 +365,42 @@ static bool isSignExtendedW(Register SrcReg, MachineRegisterInfo &MRI,
           continue;
       }
 
-      // TODO: Handle returns from calls?
+      Register CopySrcReg = MI->getOperand(1).getReg();
+      if (CopySrcReg == RISCV::X10) {
+        // For a method return value, we check the ZExt/SExt flags in attribute.
+        // We assume the following code sequence for method call.
+        // PseudoCALL @bar, ...
+        // ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
+        // %0:gpr = COPY $x10
+        //
+        // We use the PseudoCall to look up the IR function being called to find
+        // its return attributes.
+        const MachineBasicBlock *MBB = MI->getParent();
+        auto II = MI->getIterator();
+        if (II == MBB->instr_begin() ||
+            (--II)->getOpcode() != RISCV::ADJCALLSTACKUP)
+          return false;
 
-      if (!AddRegDefToWorkList(MI->getOperand(1).getReg()))
+        const MachineInstr &CallMI = *(--II);
+        if (!CallMI.isCall() || !CallMI.getOperand(0).isGlobal())
+          return false;
+
+        auto *CalleeFn =
+            dyn_cast_if_present<Function>(CallMI.getOperand(0).getGlobal());
+        if (!CalleeFn)
+          return false;
+
+        auto *IntTy = dyn_cast<IntegerType>(CalleeFn->getReturnType());
+        if (!IntTy)
+          return false;
+
+        const AttributeSet &Attrs = CalleeFn->getAttributes().getRetAttrs();
+        unsigned BitWidth = IntTy->getBitWidth();
+        return (BitWidth <= 32 && Attrs.hasAttribute(Attribute::SExt)) ||
+               (BitWidth < 32 && Attrs.hasAttribute(Attribute::ZExt));
+      }
+
+      if (!AddRegDefToWorkList(CopySrcReg))
         return false;
 
       break;

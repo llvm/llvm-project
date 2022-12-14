@@ -1,15 +1,17 @@
 /* c-index-test.c */
 
-#include "clang/Config/config.h"
-#include "clang-c/Index.h"
-#include "clang-c/CXCompilationDatabase.h"
 #include "clang-c/BuildSystem.h"
+#include "clang-c/CXCompilationDatabase.h"
+#include "clang-c/CXErrorCode.h"
+#include "clang-c/CXString.h"
 #include "clang-c/Documentation.h"
-#include <ctype.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include "clang-c/Index.h"
+#include "clang/Config/config.h"
 #include <assert.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef CLANG_HAVE_LIBXML
 #include <libxml/parser.h>
@@ -1837,6 +1839,18 @@ static enum CXChildVisitResult PrintManglings(CXCursor cursor, CXCursor p,
     clang_disposeStringSet(Manglings);
     printf("\n");
   }
+  return CXChildVisit_Recurse;
+}
+
+static enum CXChildVisitResult
+PrintSingleSymbolSGFs(CXCursor cursor, CXCursor parent, CXClientData data) {
+  CXString SGFData = clang_getSymbolGraphForCursor(cursor);
+  const char *SGF = clang_getCString(SGFData);
+  if (SGF)
+    printf("%s\n", SGF);
+
+  clang_disposeString(SGFData);
+
   return CXChildVisit_Recurse;
 }
 
@@ -4791,6 +4805,64 @@ static int perform_print_build_session_timestamp(void) {
   return 0;
 }
 
+static int perform_test_single_symbol_sgf(const char *input, int argc,
+                                          const char *argv[]) {
+  CXIndex Idx;
+  CXTranslationUnit TU;
+  CXAPISet API;
+  struct CXUnsavedFile *unsaved_files = 0;
+  int num_unsaved_files = 0;
+  enum CXErrorCode Err;
+  int result = 0;
+  const char *InvocationPath;
+  CXString SGF;
+  const char *usr;
+
+  usr = input + strlen("-single-symbol-sgf-for=");
+
+  Idx = clang_createIndex(/* excludeDeclsFromPCH */ 1,
+                          /* displayDiagnostics=*/0);
+  InvocationPath = getenv("CINDEXTEST_INVOCATION_EMISSION_PATH");
+  if (InvocationPath)
+    clang_CXIndex_setInvocationEmissionPathOption(Idx, InvocationPath);
+
+  if (parse_remapped_files(argc, argv, 0, &unsaved_files, &num_unsaved_files)) {
+    result = -1;
+    goto dispose_index;
+  }
+
+  Err = clang_parseTranslationUnit2(
+      Idx, 0, argv + num_unsaved_files, argc - num_unsaved_files, unsaved_files,
+      num_unsaved_files, getDefaultParsingOptions(), &TU);
+  if (Err != CXError_Success) {
+    fprintf(stderr, "Unable to load translation unit!\n");
+    describeLibclangFailure(Err);
+    result = 1;
+    goto free_remapped_files;
+  }
+
+  Err = clang_createAPISet(TU, &API);
+  if (Err != CXError_Success) {
+    fprintf(stderr,
+            "Unable to create API Set for API information extraction!\n");
+    result = 2;
+    goto dispose_tu;
+  }
+
+  SGF = clang_getSymbolGraphForUSR(usr, API);
+  printf("%s", clang_getCString(SGF));
+
+  clang_disposeString(SGF);
+  clang_disposeAPISet(API);
+dispose_tu:
+  clang_disposeTranslationUnit(TU);
+free_remapped_files:
+  free_remapped_files(unsaved_files, num_unsaved_files);
+dispose_index:
+  clang_disposeIndex(Idx);
+  return result;
+}
+
 /******************************************************************************/
 /* Command line processing.                                                   */
 /******************************************************************************/
@@ -4848,6 +4920,9 @@ static void print_usage(void) {
     "       c-index-test -test-print-type-declaration {<args>}*\n"
     "       c-index-test -print-usr [<CursorKind> {<args>}]*\n"
     "       c-index-test -print-usr-file <file>\n");
+  fprintf(stderr,
+          "       c-index-test -single-symbol-sgfs <symbol filter> {<args>*}\n"
+          "       c-index-test -single-symbol-sgf-for=<usr> {<args>}*\n");
   fprintf(stderr,
     "       c-index-test -write-pch <file> <compiler arguments>\n"
     "       c-index-test -compilation-db [lookup <filename>] database\n");
@@ -4980,6 +5055,11 @@ int cindextest_main(int argc, const char **argv) {
     return perform_test_compilation_db(argv[argc-1], argc - 3, argv + 2);
   else if (argc == 2 && strcmp(argv[1], "-print-build-session-timestamp") == 0)
     return perform_print_build_session_timestamp();
+  else if (argc > 3 && strcmp(argv[1], "-single-symbol-sgfs") == 0)
+    return perform_test_load_source(argc - 3, argv + 3, argv[2],
+                                    PrintSingleSymbolSGFs, NULL);
+  else if (argc > 2 && strstr(argv[1], "-single-symbol-sgf-for=") == argv[1])
+    return perform_test_single_symbol_sgf(argv[1], argc - 2, argv + 2);
 
   print_usage();
   return 1;

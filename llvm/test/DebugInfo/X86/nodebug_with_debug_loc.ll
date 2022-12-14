@@ -14,7 +14,7 @@
 
 ; Generated from:
 ; $ clang-tot -cc1 -triple i386 -emit-obj -g -O3 repro.cpp
-; void sink(const void *);
+; void sink(const ptr);
 ; int source();
 ; void f3(int);
 ; 
@@ -40,33 +40,30 @@
 ;   }
 ; }
 
-%struct.string = type { i32* }
+%struct.string = type { ptr }
 
-@str = external constant %struct.string*
+@str = external constant ptr
 @b = external global i8
 
 ; Function Attrs: nounwind
 define void @_Z2f1v() #0 {
 entry:
   %str2.i = alloca %struct.string, align 4
-  %0 = bitcast %struct.string* %str2.i to i8*, !dbg !26
-  %1 = load %struct.string*, %struct.string** @str, align 4
-  %mem = getelementptr inbounds %struct.string, %struct.string* %1, i32 0, i32 0
+  %0 = load ptr, ptr @str, align 4
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %iter.02 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  call void @llvm.lifetime.start(i64 4, i8* %0), !dbg !26
-  call void @llvm.dbg.value(metadata %struct.string* %str2.i, metadata !16, metadata !DIExpression(DW_OP_deref)) #3, !dbg !26
-  call void @llvm.dbg.value(metadata %struct.string* %str2.i, metadata !27, metadata !DIExpression(DW_OP_deref)) #3, !dbg !29
-  call void @_Z4sinkPKv(i8* undef) #3, !dbg !29
-  call void @_Z4sinkPKv(i8* %0) #3, !dbg !30
-  call void @llvm.lifetime.end(i64 4, i8* %0), !dbg !31
-  %2 = load i32*, i32** %mem, align 4, !tbaa !32
-  %3 = bitcast i32* %2 to i8*
-  call void @_Z4sinkPKv(i8* %3) #3
-  %4 = load i8, i8* @b, align 1, !tbaa !37, !range !39
-  %tobool = icmp ne i8 %4, 0
+  call void @llvm.lifetime.start(i64 4, ptr %str2.i), !dbg !26
+  call void @llvm.dbg.value(metadata ptr %str2.i, metadata !16, metadata !DIExpression(DW_OP_deref)) #3, !dbg !26
+  call void @llvm.dbg.value(metadata ptr %str2.i, metadata !27, metadata !DIExpression(DW_OP_deref)) #3, !dbg !29
+  call void @_Z4sinkPKv(ptr undef) #3, !dbg !29
+  call void @_Z4sinkPKv(ptr %str2.i) #3, !dbg !30
+  call void @llvm.lifetime.end(i64 4, ptr %str2.i), !dbg !31
+  %1 = load ptr, ptr %0, align 4, !tbaa !32
+  call void @_Z4sinkPKv(ptr %1) #3
+  %2 = load i8, ptr @b, align 1, !tbaa !37, !range !39
+  %tobool = icmp ne i8 %2, 0
   %inc = add nsw i32 %iter.02, 1
   %cmp = icmp eq i32 %inc, 2
   %or.cond = or i1 %tobool, %cmp
@@ -76,16 +73,16 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-declare void @_Z4sinkPKv(i8*) #1
+declare void @_Z4sinkPKv(ptr) #1
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #3
+declare void @llvm.lifetime.start(i64, ptr nocapture) #3
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #3
+declare void @llvm.lifetime.end(i64, ptr nocapture) #3
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

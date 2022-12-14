@@ -1220,34 +1220,38 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
 }
 
 void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
-  MachineInstr *PrevMI = nullptr;
+  MachineInstr *NextMI = nullptr;
+  // We can have arbitrary code in successors, so VL and VTYPE
+  // must be considered demanded.
   DemandedFields Used;
+  Used.VL = true;
+  Used.demandVTYPE();
   SmallVector<MachineInstr*> ToDelete;
-  for (MachineInstr &MI : MBB) {
-    // Note: Must be *before* vsetvli handling to account for config cases
-    // which only change some subfields.
-    doUnion(Used, getDemanded(MI));
+  for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
 
-    if (!isVectorConfigInstr(MI))
+    if (!isVectorConfigInstr(MI)) {
+      doUnion(Used, getDemanded(MI));
       continue;
-
-    if (PrevMI) {
-      if (!Used.VL && !Used.usedVTYPE()) {
-        ToDelete.push_back(PrevMI);
-        // fallthrough
-      } else if (canMutatePriorConfig(*PrevMI, MI, Used)) {
-        PrevMI->getOperand(2).setImm(MI.getOperand(2).getImm());
-        ToDelete.push_back(&MI);
-        // Leave PrevMI unchanged
-        continue;
-      }
     }
-    PrevMI = &MI;
-    Used = getDemanded(MI);
+
     Register VRegDef = MI.getOperand(0).getReg();
     if (VRegDef != RISCV::X0 &&
         !(VRegDef.isVirtual() && MRI->use_nodbg_empty(VRegDef)))
       Used.VL = true;
+
+    if (NextMI) {
+      if (!Used.VL && !Used.usedVTYPE()) {
+        ToDelete.push_back(&MI);
+        // Leave NextMI unchanged
+        continue;
+      } else if (canMutatePriorConfig(MI, *NextMI, Used)) {
+        MI.getOperand(2).setImm(NextMI->getOperand(2).getImm());
+        ToDelete.push_back(NextMI);
+        // fallthrough
+      }
+    }
+    NextMI = &MI;
+    Used = getDemanded(MI);
   }
 
   for (auto *MI : ToDelete)

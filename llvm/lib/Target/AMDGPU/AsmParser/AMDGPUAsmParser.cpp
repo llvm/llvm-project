@@ -1308,10 +1308,10 @@ private:
   /// \param SGPRBlocks [out] Result SGPR block count.
   bool calculateGPRBlocks(const FeatureBitset &Features, bool VCCUsed,
                           bool FlatScrUsed, bool XNACKUsed,
-                          Optional<bool> EnableWavefrontSize32, unsigned NextFreeVGPR,
-                          SMRange VGPRRange, unsigned NextFreeSGPR,
-                          SMRange SGPRRange, unsigned &VGPRBlocks,
-                          unsigned &SGPRBlocks);
+                          std::optional<bool> EnableWavefrontSize32,
+                          unsigned NextFreeVGPR, SMRange VGPRRange,
+                          unsigned NextFreeSGPR, SMRange SGPRRange,
+                          unsigned &VGPRBlocks, unsigned &SGPRBlocks);
   bool ParseDirectiveAMDGCNTarget();
   bool ParseDirectiveAMDHSAKernel();
   bool ParseDirectiveMajorMinor(uint32_t &Major, uint32_t &Minor);
@@ -1359,7 +1359,7 @@ private:
 
   bool isRegister();
   bool isRegister(const AsmToken &Token, const AsmToken &NextToken) const;
-  Optional<StringRef> getGprCountSymbolName(RegisterKind RegKind);
+  std::optional<StringRef> getGprCountSymbolName(RegisterKind RegKind);
   void initializeGprCountSymbol(RegisterKind RegKind);
   bool updateGprCountSymbols(RegisterKind RegKind, unsigned DwordRegIndex,
                              unsigned RegWidth);
@@ -1709,7 +1709,7 @@ private:
                               const SMLoc &IDLoc);
   bool validateExeczVcczOperands(const OperandVector &Operands);
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
-  Optional<StringRef> validateLdsDirect(const MCInst &Inst);
+  std::optional<StringRef> validateLdsDirect(const MCInst &Inst);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
@@ -2900,7 +2900,7 @@ bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind &RegKind, unsigned &Reg,
   return false;
 }
 
-Optional<StringRef>
+std::optional<StringRef>
 AMDGPUAsmParser::getGprCountSymbolName(RegisterKind RegKind) {
   switch (RegKind) {
   case IS_VGPR:
@@ -4181,7 +4181,8 @@ static bool IsRevOpcode(const unsigned Opcode)
   }
 }
 
-Optional<StringRef> AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
+std::optional<StringRef>
+AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
 
   using namespace SIInstrFlags;
   const unsigned Opcode = Inst.getOpcode();
@@ -5092,9 +5093,9 @@ bool AMDGPUAsmParser::OutOfRangeError(SMRange Range) {
 
 bool AMDGPUAsmParser::calculateGPRBlocks(
     const FeatureBitset &Features, bool VCCUsed, bool FlatScrUsed,
-    bool XNACKUsed, Optional<bool> EnableWavefrontSize32, unsigned NextFreeVGPR,
-    SMRange VGPRRange, unsigned NextFreeSGPR, SMRange SGPRRange,
-    unsigned &VGPRBlocks, unsigned &SGPRBlocks) {
+    bool XNACKUsed, std::optional<bool> EnableWavefrontSize32,
+    unsigned NextFreeVGPR, SMRange VGPRRange, unsigned NextFreeSGPR,
+    SMRange SGPRRange, unsigned &VGPRBlocks, unsigned &SGPRBlocks) {
   // TODO(scott.linder): These calculations are duplicated from
   // AMDGPUAsmPrinter::getSIProgramInfo and could be unified.
   IsaVersion Version = getIsaVersion(getSTI().getCPU());
@@ -5162,7 +5163,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   std::optional<unsigned> ExplicitUserSGPRCount;
   bool ReserveVCC = true;
   bool ReserveFlatScr = true;
-  Optional<bool> EnableWavefrontSize32;
+  std::optional<bool> EnableWavefrontSize32;
 
   while (true) {
     while (trySkipToken(AsmToken::EndOfStatement));

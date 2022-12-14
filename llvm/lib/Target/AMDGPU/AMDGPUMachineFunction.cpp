@@ -196,7 +196,7 @@ void AMDGPUMachineFunction::allocateKnownAddressLDSGlobal(const Function &F) {
   }
 }
 
-Optional<uint32_t>
+std::optional<uint32_t>
 AMDGPUMachineFunction::getLDSKernelIdMetadata(const Function &F) {
   auto MD = F.getMetadata("llvm.amdgcn.lds.kernel.id");
   if (MD && MD->getNumOperands() == 1) {

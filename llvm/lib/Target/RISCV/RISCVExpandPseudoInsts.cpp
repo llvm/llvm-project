@@ -333,8 +333,12 @@ bool RISCVPreRAExpandPseudo::expandLoadAddress(
     MachineBasicBlock::iterator &NextMBBI) {
   MachineFunction *MF = MBB.getParent();
 
-  assert(MF->getTarget().isPositionIndependent());
   const auto &STI = MF->getSubtarget<RISCVSubtarget>();
+  // When HWASAN is used and tagging of global variables is enabled
+  // they should be accessed via the GOT, since the tagged address of a global
+  // is incompatible with existing code models. This also applies to non-pic
+  // mode.
+  assert(MF->getTarget().isPositionIndependent() || STI.allowTaggedGlobals());
   unsigned SecondOpcode = STI.is64Bit() ? RISCV::LD : RISCV::LW;
   return expandAuipcInstPair(MBB, MBBI, NextMBBI, RISCVII::MO_GOT_HI,
                              SecondOpcode);

@@ -7,7 +7,7 @@
 ; Function Attrs: nounwind readnone
 define arm_aapcscc void @f([2 x i64] %c.coerce) #0 !dbg !4 {
 entry:
-  tail call void @llvm.dbg.declare(metadata { double, double }* undef, metadata !14, metadata !15), !dbg !16
+  tail call void @llvm.dbg.declare(metadata ptr undef, metadata !14, metadata !15), !dbg !16
   ; The target has no native double type.
   ; SROA split the complex value into two i64 values.
   ; CHECK: DW_TAG_formal_parameter

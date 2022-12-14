@@ -8,20 +8,20 @@
 ; CHECK: define void @func2() {
 ; CHECK-NOT: uselistorder
 ; CHECK: }
-; CHECK: uselistorder i32* @g, { 3, 2, 1, 0 }
+; CHECK: uselistorder ptr @g, { 3, 2, 1, 0 }
 
 @g = external global i32
 
 define void @func1() {
-  load i32, i32* @g
-  load i32, i32* @g
+  load i32, ptr @g
+  load i32, ptr @g
   ret void
 }
 
 define void @func2() {
-  load i32, i32* @g
-  load i32, i32* @g
+  load i32, ptr @g
+  load i32, ptr @g
   ret void
 }
 
-uselistorder i32* @g, { 3, 2, 1, 0 }
+uselistorder ptr @g, { 3, 2, 1, 0 }

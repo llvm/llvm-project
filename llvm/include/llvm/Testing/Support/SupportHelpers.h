@@ -64,18 +64,24 @@ public:
       : ValueMatcher(ValueMatcher) {}
 
   template <class T>
-  operator ::testing::Matcher<const llvm::Optional<T> &>() const {
+  operator ::testing::Matcher<const std::optional<T> &>() const {
     return ::testing::MakeMatcher(
         new Impl<T>(::testing::SafeMatcherCast<T>(ValueMatcher)));
   }
 
   template <class T>
-  class Impl : public ::testing::MatcherInterface<const llvm::Optional<T> &> {
+  operator ::testing::Matcher<const Optional<T> &>() const {
+    return ::testing::MakeMatcher(
+        new Impl<T, Optional<T>>(::testing::SafeMatcherCast<T>(ValueMatcher)));
+  }
+
+  template <class T, class O = std::optional<T>>
+  class Impl : public ::testing::MatcherInterface<const O &> {
   public:
     explicit Impl(const ::testing::Matcher<T> &ValueMatcher)
         : ValueMatcher(ValueMatcher) {}
 
-    bool MatchAndExplain(const llvm::Optional<T> &Input,
+    bool MatchAndExplain(const O &Input,
                          testing::MatchResultListener *L) const override {
       return Input && ValueMatcher.MatchAndExplain(*Input, L);
     }
@@ -98,7 +104,7 @@ private:
 };
 } // namespace detail
 
-/// Matches an llvm::Optional<T> with a value that conforms to an inner matcher.
+/// Matches an std::optional<T> with a value that conforms to an inner matcher.
 /// To match std::nullopt you could use Eq(std::nullopt).
 template <class InnerMatcher>
 detail::ValueIsMatcher<InnerMatcher> ValueIs(const InnerMatcher &ValueMatcher) {

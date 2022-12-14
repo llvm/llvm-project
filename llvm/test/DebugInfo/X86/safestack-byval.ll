@@ -18,25 +18,23 @@
 
 %struct.S = type { [100 x i32] }
 
-@__safestack_unsafe_stack_ptr = external thread_local(initialexec) global i8*
+@__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 
 ; Function Attrs: norecurse nounwind readonly safestack uwtable
-define i32 @_Z1f1Sm(%struct.S* byval(%struct.S) nocapture readonly align 8 %zzz, i64 %len) #0 !dbg !12 {
+define i32 @_Z1f1Sm(ptr byval(%struct.S) nocapture readonly align 8 %zzz, i64 %len) #0 !dbg !12 {
 entry:
-  %unsafe_stack_ptr = load i8*, i8** @__safestack_unsafe_stack_ptr, !dbg !22
-  %unsafe_stack_static_top = getelementptr i8, i8* %unsafe_stack_ptr, i32 -400, !dbg !22
-  store i8* %unsafe_stack_static_top, i8** @__safestack_unsafe_stack_ptr, !dbg !22
+  %unsafe_stack_ptr = load ptr, ptr @__safestack_unsafe_stack_ptr, !dbg !22
+  %unsafe_stack_static_top = getelementptr i8, ptr %unsafe_stack_ptr, i32 -400, !dbg !22
+  store ptr %unsafe_stack_static_top, ptr @__safestack_unsafe_stack_ptr, !dbg !22
 ; !17 describes "zzz"
-  call void @llvm.dbg.declare(metadata i8* %unsafe_stack_ptr, metadata !17, metadata !23), !dbg !22
-  %0 = getelementptr i8, i8* %unsafe_stack_ptr, i32 -400, !dbg !22
-  %zzz.unsafe-byval = bitcast i8* %0 to %struct.S*, !dbg !22
-  %1 = bitcast %struct.S* %zzz to i8*, !dbg !24
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %0, i8* align 8 %1, i64 400, i1 false), !dbg !24
+  call void @llvm.dbg.declare(metadata ptr %unsafe_stack_ptr, metadata !17, metadata !23), !dbg !22
+  %0 = getelementptr i8, ptr %unsafe_stack_ptr, i32 -400, !dbg !22
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %0, ptr align 8 %zzz, i64 400, i1 false), !dbg !24
   tail call void @llvm.dbg.value(metadata i64 %len, metadata !18, metadata !25), !dbg !24
-  %arrayidx = getelementptr inbounds %struct.S, %struct.S* %zzz.unsafe-byval, i64 0, i32 0, i64 %len, !dbg !26
-  %2 = load i32, i32* %arrayidx, align 4, !dbg !26, !tbaa !27
-  store i8* %unsafe_stack_ptr, i8** @__safestack_unsafe_stack_ptr, !dbg !31
-  ret i32 %2, !dbg !31
+  %arrayidx = getelementptr inbounds %struct.S, ptr %0, i64 0, i32 0, i64 %len, !dbg !26
+  %1 = load i32, ptr %arrayidx, align 4, !dbg !26, !tbaa !27
+  store ptr %unsafe_stack_ptr, ptr @__safestack_unsafe_stack_ptr, !dbg !31
+  ret i32 %1, !dbg !31
 }
 
 ; Function Attrs: nounwind readnone
@@ -46,7 +44,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #2
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) #2
 
 attributes #0 = { norecurse nounwind readonly safestack uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

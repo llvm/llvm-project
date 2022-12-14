@@ -8,7 +8,7 @@
 define i32 @main() #0 {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @c, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @c, align 4
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[FOR_BODY_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       for.body.preheader:
@@ -24,7 +24,7 @@ define i32 @main() #0 {
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
 entry:
-  %0 = load i32, i32* @c, align 4
+  %0 = load i32, ptr @c, align 4
   %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %for.body, label %exit
 

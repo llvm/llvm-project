@@ -139,7 +139,7 @@ public:
     return Result;
   }
 
-  llvm::Optional<clang::TraversalKind> TraversalKind() const override {
+  std::optional<clang::TraversalKind> TraversalKind() const override {
     return InnerMatcher->TraversalKind();
   }
 
@@ -175,7 +175,7 @@ public:
     return this->InnerMatcher->dynMatches(DynNode, Finder, Builder);
   }
 
-  llvm::Optional<clang::TraversalKind> TraversalKind() const override {
+  std::optional<clang::TraversalKind> TraversalKind() const override {
     return TK;
   }
 

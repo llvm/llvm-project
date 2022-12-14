@@ -22,3 +22,10 @@ An export target:
     prim               Copy primitive (connectivity) data.
     null               Copy nothing.
     ================== ===================================
+
+Examples:
+
+.. parsed-literal::
+
+  exp pos3 v1, v2, v3, v4
+  exp mrt0 v1, v2, v3, v4

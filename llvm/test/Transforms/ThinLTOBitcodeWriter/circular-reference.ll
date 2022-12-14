@@ -4,6 +4,6 @@
 
 ; M0: @g = external constant
 ; M1: @g = constant
-@g = constant i8* bitcast (i8** @g to i8*), !type !0
+@g = constant ptr @g, !type !0
 
 !0 = !{i32 0, !"typeid"}

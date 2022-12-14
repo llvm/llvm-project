@@ -599,6 +599,14 @@ size_t DNBGetAllInfos(std::vector<struct kinfo_proc> &proc_infos) {
   return proc_infos.size();
 }
 
+JSONGenerator::ObjectSP DNBGetDyldProcessState(nub_process_t pid) {
+  MachProcessSP procSP;
+  if (GetProcessSP(pid, procSP)) {
+    return procSP->GetDyldProcessState();
+  }
+  return {};
+}
+
 static size_t
 GetAllInfosMatchingName(const char *full_process_name,
                         std::vector<struct kinfo_proc> &matching_proc_infos) {

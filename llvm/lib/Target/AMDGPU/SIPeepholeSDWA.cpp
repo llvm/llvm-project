@@ -53,7 +53,7 @@ private:
   MapVector<MachineInstr *, SDWAOperandsVector> PotentialMatches;
   SmallVector<MachineInstr *, 8> ConvertedInstructions;
 
-  Optional<int64_t> foldToImm(const MachineOperand &Op) const;
+  std::optional<int64_t> foldToImm(const MachineOperand &Op) const;
 
 public:
   static char ID;
@@ -490,7 +490,8 @@ bool SDWADstPreserveOperand::convertToSDWA(MachineInstr &MI,
   return SDWADstOperand::convertToSDWA(MI, TII);
 }
 
-Optional<int64_t> SIPeepholeSDWA::foldToImm(const MachineOperand &Op) const {
+std::optional<int64_t>
+SIPeepholeSDWA::foldToImm(const MachineOperand &Op) const {
   if (Op.isImm()) {
     return Op.getImm();
   }

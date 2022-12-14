@@ -34,12 +34,12 @@ target triple = "x86_64-apple-macosx10.9.0"
 %struct.A = type { i8 }
 
 ; Function Attrs: nounwind ssp uwtable
-define void @_ZN1AD2Ev(%struct.A* %this) unnamed_addr #0 align 2 !dbg !17 {
+define void @_ZN1AD2Ev(ptr %this) unnamed_addr #0 align 2 !dbg !17 {
 entry:
-  %this.addr = alloca %struct.A*, align 8
-  store %struct.A* %this, %struct.A** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.A** %this.addr, metadata !26, metadata !DIExpression()), !dbg !28
-  %this1 = load %struct.A*, %struct.A** %this.addr
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !26, metadata !DIExpression()), !dbg !28
+  %this1 = load ptr, ptr %this.addr
   ret void, !dbg !29
 }
 
@@ -47,13 +47,13 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind ssp uwtable
-define void @_ZN1AD1Ev(%struct.A* %this) unnamed_addr #0 align 2 !dbg !18 {
+define void @_ZN1AD1Ev(ptr %this) unnamed_addr #0 align 2 !dbg !18 {
 entry:
-  %this.addr = alloca %struct.A*, align 8
-  store %struct.A* %this, %struct.A** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.A** %this.addr, metadata !30, metadata !DIExpression()), !dbg !31
-  %this1 = load %struct.A*, %struct.A** %this.addr
-  call void @_ZN1AD2Ev(%struct.A* %this1), !dbg !32
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !30, metadata !DIExpression()), !dbg !31
+  %this1 = load ptr, ptr %this.addr
+  call void @_ZN1AD2Ev(ptr %this1), !dbg !32
   ret void, !dbg !33
 }
 
@@ -61,13 +61,13 @@ entry:
 define void @_Z3foov() #2 !dbg !19 {
 entry:
   %a = alloca %struct.A, align 1
-  call void @llvm.dbg.declare(metadata %struct.A* %a, metadata !34, metadata !DIExpression()), !dbg !35
-  call void @_ZN1AC1Ei(%struct.A* %a, i32 1), !dbg !35
-  call void @_ZN1AD1Ev(%struct.A* %a), !dbg !36
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !34, metadata !DIExpression()), !dbg !35
+  call void @_ZN1AC1Ei(ptr %a, i32 1), !dbg !35
+  call void @_ZN1AD1Ev(ptr %a), !dbg !36
   ret void, !dbg !36
 }
 
-declare void @_ZN1AC1Ei(%struct.A*, i32)
+declare void @_ZN1AC1Ei(ptr, i32)
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #1 = { nounwind readnone }

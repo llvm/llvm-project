@@ -1,4 +1,4 @@
-//===-- TestMatchers.h ------------------------------------------*- C++ -*-===//
+//===-- FPMatchers.h --------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "utils/UnitTest/Test.h"
+#include "utils/testutils/RoundingModeUtils.h"
 
 #include <errno.h>
 #include <math.h>
@@ -130,6 +131,19 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
       ASSERT_EQ(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT), expected);    \
     }                                                                          \
+  } while (0)
+
+#define EXPECT_FP_EQ_ALL_ROUNDING(expected, actual)                            \
+  do {                                                                         \
+    using namespace __llvm_libc::testutils;                                    \
+    ForceRoundingMode __r1(RoundingMode::Nearest);                             \
+    EXPECT_FP_EQ((expected), (actual));                                        \
+    ForceRoundingMode __r2(RoundingMode::Upward);                              \
+    EXPECT_FP_EQ((expected), (actual));                                        \
+    ForceRoundingMode __r3(RoundingMode::Downward);                            \
+    EXPECT_FP_EQ((expected), (actual));                                        \
+    ForceRoundingMode __r4(RoundingMode::TowardZero);                          \
+    EXPECT_FP_EQ((expected), (actual));                                        \
   } while (0)
 
 #endif // LLVM_LIBC_UTILS_UNITTEST_FPMATCHER_H

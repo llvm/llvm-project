@@ -21,14 +21,14 @@ $c1 = comdat any
 @v4 = global i32 1, comdat($c1)
 
 ; Aliases
-; CHECK: @a1 = hidden alias i32, i32* @v1
-@a1 = alias i32, i32* @v1
+; CHECK: @a1 = hidden alias i32, ptr @v1
+@a1 = alias i32, ptr @v1
 
-; CHECK: @a2 = protected alias i32, i32* @v2
-@a2 = alias i32, i32* @v2
+; CHECK: @a2 = protected alias i32, ptr @v2
+@a2 = alias i32, ptr @v2
 
-; CHECK: @a3 = hidden alias i32, i32* @v3
-@a3 = protected alias i32, i32* @v3
+; CHECK: @a3 = hidden alias i32, ptr @v3
+@a3 = protected alias i32, ptr @v3
 
 
 ; Functions

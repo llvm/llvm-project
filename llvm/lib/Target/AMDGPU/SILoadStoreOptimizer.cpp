@@ -263,7 +263,7 @@ private:
                            int32_t NewOffset) const;
   Register computeBase(MachineInstr &MI, const MemAddress &Addr) const;
   MachineOperand createRegOrImm(int32_t Val, MachineInstr &MI) const;
-  Optional<int32_t> extractConstOffset(const MachineOperand &Op) const;
+  std::optional<int32_t> extractConstOffset(const MachineOperand &Op) const;
   void processBaseWithConstOffset(const MachineOperand &Base, MemAddress &Addr) const;
   /// Promotes constant offset to the immediate by adjusting the base. It
   /// tries to use a base from the nearby instructions that allows it to have
@@ -1983,7 +1983,7 @@ void SILoadStoreOptimizer::updateBaseAndOffset(MachineInstr &MI,
   TII->getNamedOperand(MI, AMDGPU::OpName::offset)->setImm(NewOffset);
 }
 
-Optional<int32_t>
+std::optional<int32_t>
 SILoadStoreOptimizer::extractConstOffset(const MachineOperand &Op) const {
   if (Op.isImm())
     return Op.getImm();

@@ -63,17 +63,18 @@ inline OneNonDBGUse_match<SubPat> m_OneNonDBGUse(const SubPat &SP) {
 }
 
 template <typename ConstT>
-inline Optional<ConstT> matchConstant(Register, const MachineRegisterInfo &);
+inline std::optional<ConstT> matchConstant(Register,
+                                           const MachineRegisterInfo &);
 
 template <>
-inline Optional<APInt> matchConstant(Register Reg,
-                                     const MachineRegisterInfo &MRI) {
+inline std::optional<APInt> matchConstant(Register Reg,
+                                          const MachineRegisterInfo &MRI) {
   return getIConstantVRegVal(Reg, MRI);
 }
 
 template <>
-inline Optional<int64_t> matchConstant(Register Reg,
-                                       const MachineRegisterInfo &MRI) {
+inline std::optional<int64_t> matchConstant(Register Reg,
+                                            const MachineRegisterInfo &MRI) {
   return getIConstantVRegSExtVal(Reg, MRI);
 }
 
@@ -97,18 +98,18 @@ inline ConstantMatch<int64_t> m_ICst(int64_t &Cst) {
 }
 
 template <typename ConstT>
-inline Optional<ConstT> matchConstantSplat(Register,
-                                           const MachineRegisterInfo &);
+inline std::optional<ConstT> matchConstantSplat(Register,
+                                                const MachineRegisterInfo &);
 
 template <>
-inline Optional<APInt> matchConstantSplat(Register Reg,
-                                          const MachineRegisterInfo &MRI) {
+inline std::optional<APInt> matchConstantSplat(Register Reg,
+                                               const MachineRegisterInfo &MRI) {
   return getIConstantSplatVal(Reg, MRI);
 }
 
 template <>
-inline Optional<int64_t> matchConstantSplat(Register Reg,
-                                            const MachineRegisterInfo &MRI) {
+inline std::optional<int64_t>
+matchConstantSplat(Register Reg, const MachineRegisterInfo &MRI) {
   return getIConstantSplatSExtVal(Reg, MRI);
 }
 
@@ -139,34 +140,35 @@ inline ICstOrSplatMatch<int64_t> m_ICstOrSplat(int64_t &Cst) {
 }
 
 struct GCstAndRegMatch {
-  Optional<ValueAndVReg> &ValReg;
-  GCstAndRegMatch(Optional<ValueAndVReg> &ValReg) : ValReg(ValReg) {}
+  std::optional<ValueAndVReg> &ValReg;
+  GCstAndRegMatch(std::optional<ValueAndVReg> &ValReg) : ValReg(ValReg) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     ValReg = getIConstantVRegValWithLookThrough(Reg, MRI);
     return ValReg ? true : false;
   }
 };
 
-inline GCstAndRegMatch m_GCst(Optional<ValueAndVReg> &ValReg) {
+inline GCstAndRegMatch m_GCst(std::optional<ValueAndVReg> &ValReg) {
   return GCstAndRegMatch(ValReg);
 }
 
 struct GFCstAndRegMatch {
-  Optional<FPValueAndVReg> &FPValReg;
-  GFCstAndRegMatch(Optional<FPValueAndVReg> &FPValReg) : FPValReg(FPValReg) {}
+  std::optional<FPValueAndVReg> &FPValReg;
+  GFCstAndRegMatch(std::optional<FPValueAndVReg> &FPValReg)
+      : FPValReg(FPValReg) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     FPValReg = getFConstantVRegValWithLookThrough(Reg, MRI);
     return FPValReg ? true : false;
   }
 };
 
-inline GFCstAndRegMatch m_GFCst(Optional<FPValueAndVReg> &FPValReg) {
+inline GFCstAndRegMatch m_GFCst(std::optional<FPValueAndVReg> &FPValReg) {
   return GFCstAndRegMatch(FPValReg);
 }
 
 struct GFCstOrSplatGFCstMatch {
-  Optional<FPValueAndVReg> &FPValReg;
-  GFCstOrSplatGFCstMatch(Optional<FPValueAndVReg> &FPValReg)
+  std::optional<FPValueAndVReg> &FPValReg;
+  GFCstOrSplatGFCstMatch(std::optional<FPValueAndVReg> &FPValReg)
       : FPValReg(FPValReg) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     return (FPValReg = getFConstantSplat(Reg, MRI)) ||
@@ -175,7 +177,7 @@ struct GFCstOrSplatGFCstMatch {
 };
 
 inline GFCstOrSplatGFCstMatch
-m_GFCstOrSplat(Optional<FPValueAndVReg> &FPValReg) {
+m_GFCstOrSplat(std::optional<FPValueAndVReg> &FPValReg) {
   return GFCstOrSplatGFCstMatch(FPValReg);
 }
 

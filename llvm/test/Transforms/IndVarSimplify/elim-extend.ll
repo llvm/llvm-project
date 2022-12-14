@@ -5,7 +5,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; IV with constant start, preinc and postinc sign extends, with and without NSW.
 ; IV rewrite only removes one sext. WidenIVs removes all three.
-define void @postincConstIV(i8* %base, i32 %limit) nounwind {
+define void @postincConstIV(ptr %base, i32 %limit) nounwind {
 ; CHECK-LABEL: @postincConstIV(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LIMIT:%.*]], i32 0)
@@ -14,13 +14,13 @@ define void @postincConstIV(i8* %base, i32 %limit) nounwind {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[PREADR:%.*]] = getelementptr i8, i8* [[BASE:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 0, i8* [[PREADR]], align 1
+; CHECK-NEXT:    [[PREADR:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i8 0, ptr [[PREADR]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[POSTADR:%.*]] = getelementptr i8, i8* [[BASE]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store i8 0, i8* [[POSTADR]], align 1
-; CHECK-NEXT:    [[POSTADRNSW:%.*]] = getelementptr inbounds i8, i8* [[BASE]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store i8 0, i8* [[POSTADRNSW]], align 1
+; CHECK-NEXT:    [[POSTADR:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    store i8 0, ptr [[POSTADR]], align 1
+; CHECK-NEXT:    [[POSTADRNSW:%.*]] = getelementptr inbounds i8, ptr [[BASE]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    store i8 0, ptr [[POSTADRNSW]], align 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -34,16 +34,16 @@ loop:
   %iv = phi i32 [ %postiv, %loop ], [ 0, %entry ]
   %ivnsw = phi i32 [ %postivnsw, %loop ], [ 0, %entry ]
   %preofs = sext i32 %iv to i64
-  %preadr = getelementptr i8, i8* %base, i64 %preofs
-  store i8 0, i8* %preadr
+  %preadr = getelementptr i8, ptr %base, i64 %preofs
+  store i8 0, ptr %preadr
   %postiv = add i32 %iv, 1
   %postofs = sext i32 %postiv to i64
-  %postadr = getelementptr i8, i8* %base, i64 %postofs
-  store i8 0, i8* %postadr
+  %postadr = getelementptr i8, ptr %base, i64 %postofs
+  store i8 0, ptr %postadr
   %postivnsw = add nsw i32 %ivnsw, 1
   %postofsnsw = sext i32 %postivnsw to i64
-  %postadrnsw = getelementptr inbounds i8, i8* %base, i64 %postofsnsw
-  store i8 0, i8* %postadrnsw
+  %postadrnsw = getelementptr inbounds i8, ptr %base, i64 %postofsnsw
+  store i8 0, ptr %postadrnsw
   %cond = icmp sgt i32 %limit, %iv
   br i1 %cond, label %loop, label %exit
 exit:
@@ -55,7 +55,7 @@ return:
 ; IV with nonconstant start, preinc and postinc sign extends,
 ; with and without NSW.
 ; As with postincConstIV, WidenIVs removes all three sexts.
-define void @postincVarIV(i8* %base, i32 %init, i32 %limit) nounwind {
+define void @postincVarIV(ptr %base, i32 %init, i32 %limit) nounwind {
 ; CHECK-LABEL: @postincVarIV(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp sgt i32 [[LIMIT:%.*]], [[INIT:%.*]]
@@ -66,13 +66,13 @@ define void @postincVarIV(i8* %base, i32 %init, i32 %limit) nounwind {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[PREADR:%.*]] = getelementptr i8, i8* [[BASE:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 0, i8* [[PREADR]], align 1
+; CHECK-NEXT:    [[PREADR:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i8 0, ptr [[PREADR]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[POSTADR:%.*]] = getelementptr i8, i8* [[BASE]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store i8 0, i8* [[POSTADR]], align 1
-; CHECK-NEXT:    [[POSTADRNSW:%.*]] = getelementptr i8, i8* [[BASE]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store i8 0, i8* [[POSTADRNSW]], align 1
+; CHECK-NEXT:    [[POSTADR:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    store i8 0, ptr [[POSTADR]], align 1
+; CHECK-NEXT:    [[POSTADRNSW:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    store i8 0, ptr [[POSTADRNSW]], align 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -87,16 +87,16 @@ loop:
   %iv = phi i32 [ %postiv, %loop ], [ %init, %entry ]
   %ivnsw = phi i32 [ %postivnsw, %loop ], [ %init, %entry ]
   %preofs = sext i32 %iv to i64
-  %preadr = getelementptr i8, i8* %base, i64 %preofs
-  store i8 0, i8* %preadr
+  %preadr = getelementptr i8, ptr %base, i64 %preofs
+  store i8 0, ptr %preadr
   %postiv = add i32 %iv, 1
   %postofs = sext i32 %postiv to i64
-  %postadr = getelementptr i8, i8* %base, i64 %postofs
-  store i8 0, i8* %postadr
+  %postadr = getelementptr i8, ptr %base, i64 %postofs
+  store i8 0, ptr %postadr
   %postivnsw = add nsw i32 %ivnsw, 1
   %postofsnsw = sext i32 %postivnsw to i64
-  %postadrnsw = getelementptr i8, i8* %base, i64 %postofsnsw
-  store i8 0, i8* %postadrnsw
+  %postadrnsw = getelementptr i8, ptr %base, i64 %postofsnsw
+  store i8 0, ptr %postadrnsw
   %cond = icmp sgt i32 %limit, %postiv
   br i1 %cond, label %loop, label %exit
 exit:
@@ -110,7 +110,7 @@ return:
 ; %innercount is currently blocked by lcssa, so is not widened.
 ; %inneriv can be widened only after proving it has no signed-overflow
 ;   based on the loop test.
-define void @nestedIV(i8* %address, i32 %limit) nounwind {
+define void @nestedIV(ptr %address, i32 %limit) nounwind {
 ; CHECK-LABEL: @nestedIV(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LIMITDEC:%.*]] = add i32 [[LIMIT:%.*]], -1
@@ -121,8 +121,8 @@ define void @nestedIV(i8* %address, i32 %limit) nounwind {
 ; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT2:%.*]], [[OUTERMERGE:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[INNERCOUNT:%.*]] = phi i32 [ [[INNERCOUNT_MERGE:%.*]], [[OUTERMERGE]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[INDVARS_IV1]], -1
-; CHECK-NEXT:    [[ADR1:%.*]] = getelementptr i8, i8* [[ADDRESS:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    store i8 0, i8* [[ADR1]], align 1
+; CHECK-NEXT:    [[ADR1:%.*]] = getelementptr i8, ptr [[ADDRESS:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    store i8 0, ptr [[ADR1]], align 1
 ; CHECK-NEXT:    br label [[INNERPREHEADER:%.*]]
 ; CHECK:       innerpreheader:
 ; CHECK-NEXT:    [[INNERPRECMP:%.*]] = icmp sgt i32 [[LIMITDEC]], [[INNERCOUNT]]
@@ -134,10 +134,10 @@ define void @nestedIV(i8* %address, i32 %limit) nounwind {
 ; CHECK:       innerloop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP1]], [[INNERLOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[INNERLOOP]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[ADR2:%.*]] = getelementptr i8, i8* [[ADDRESS]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 0, i8* [[ADR2]], align 1
-; CHECK-NEXT:    [[ADR3:%.*]] = getelementptr i8, i8* [[ADDRESS]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store i8 0, i8* [[ADR3]], align 1
+; CHECK-NEXT:    [[ADR2:%.*]] = getelementptr i8, ptr [[ADDRESS]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i8 0, ptr [[ADR2]], align 1
+; CHECK-NEXT:    [[ADR3:%.*]] = getelementptr i8, ptr [[ADDRESS]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    store i8 0, ptr [[ADR3]], align 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNERLOOP]], label [[INNEREXIT:%.*]]
 ; CHECK:       innerexit:
@@ -146,11 +146,11 @@ define void @nestedIV(i8* %address, i32 %limit) nounwind {
 ; CHECK-NEXT:    br label [[OUTERMERGE]]
 ; CHECK:       outermerge:
 ; CHECK-NEXT:    [[INNERCOUNT_MERGE]] = phi i32 [ [[TMP2]], [[INNEREXIT]] ], [ [[INNERCOUNT]], [[INNERPREHEADER]] ]
-; CHECK-NEXT:    [[ADR4:%.*]] = getelementptr i8, i8* [[ADDRESS]], i64 [[INDVARS_IV1]]
-; CHECK-NEXT:    store i8 0, i8* [[ADR4]], align 1
+; CHECK-NEXT:    [[ADR4:%.*]] = getelementptr i8, ptr [[ADDRESS]], i64 [[INDVARS_IV1]]
+; CHECK-NEXT:    store i8 0, ptr [[ADR4]], align 1
 ; CHECK-NEXT:    [[OFS5:%.*]] = sext i32 [[INNERCOUNT_MERGE]] to i64
-; CHECK-NEXT:    [[ADR5:%.*]] = getelementptr i8, i8* [[ADDRESS]], i64 [[OFS5]]
-; CHECK-NEXT:    store i8 0, i8* [[ADR5]], align 1
+; CHECK-NEXT:    [[ADR5:%.*]] = getelementptr i8, ptr [[ADDRESS]], i64 [[OFS5]]
+; CHECK-NEXT:    store i8 0, ptr [[ADR5]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT2]] = add nuw nsw i64 [[INDVARS_IV1]], 1
 ; CHECK-NEXT:    [[EXITCOND5:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT2]], [[WIDE_TRIP_COUNT4]]
 ; CHECK-NEXT:    br i1 [[EXITCOND5]], label [[OUTERLOOP]], label [[RETURN:%.*]]
@@ -169,8 +169,8 @@ outerloop:
 
   %outercountdec = add i32 %outercount, -1
   %ofs1 = sext i32 %outercountdec to i64
-  %adr1 = getelementptr i8, i8* %address, i64 %ofs1
-  store i8 0, i8* %adr1
+  %adr1 = getelementptr i8, ptr %address, i64 %ofs1
+  store i8 0, ptr %adr1
 
   br label %innerpreheader
 
@@ -188,12 +188,12 @@ innerloop:
   %innerpostiv = add i32 %inneriv, 1
 
   %ofs2 = sext i32 %inneriv to i64
-  %adr2 = getelementptr i8, i8* %address, i64 %ofs2
-  store i8 0, i8* %adr2
+  %adr2 = getelementptr i8, ptr %address, i64 %ofs2
+  store i8 0, ptr %adr2
 
   %ofs3 = sext i32 %innerpostiv to i64
-  %adr3 = getelementptr i8, i8* %address, i64 %ofs3
-  store i8 0, i8* %adr3
+  %adr3 = getelementptr i8, ptr %address, i64 %ofs3
+  store i8 0, ptr %adr3
 
   %innercmp = icmp sgt i32 %limitdec, %innerpostiv
   br i1 %innercmp, label %innerloop, label %innerexit
@@ -208,12 +208,12 @@ outermerge:
   %innercount.merge = phi i32 [ %innercount.lcssa, %innerexit ], [ %innercount, %innerpreheader ]
 
   %ofs4 = sext i32 %outercount to i64
-  %adr4 = getelementptr i8, i8* %address, i64 %ofs4
-  store i8 0, i8* %adr4
+  %adr4 = getelementptr i8, ptr %address, i64 %ofs4
+  store i8 0, ptr %adr4
 
   %ofs5 = sext i32 %innercount.merge to i64
-  %adr5 = getelementptr i8, i8* %address, i64 %ofs5
-  store i8 0, i8* %adr5
+  %adr5 = getelementptr i8, ptr %address, i64 %ofs5
+  store i8 0, ptr %adr5
 
   %outerpostcount = add i32 %outercount, 1
   %tmp47 = icmp slt i32 %outerpostcount, %limit

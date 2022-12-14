@@ -14,6 +14,7 @@ static_library("ExtractAPI") {
     "AvailabilityInfo.cpp",
     "DeclarationFragments.cpp",
     "ExtractAPIConsumer.cpp",
+    "ExtractAPIVisitor.cpp",
     "Serialization/SerializerBase.cpp",
     "Serialization/SymbolGraphSerializer.cpp",
     "TypedefUnderlyingTypeResolver.cpp",

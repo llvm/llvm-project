@@ -17,6 +17,28 @@ define i1 @func(ptr %X, ptr %Y) {
   ret i1 %cmp
 }
 
+define <2 x i1> @func_vec(<2 x ptr> %X, <2 x ptr> %Y) {
+; CHECK-LABEL: @func_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x ptr> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %i = ptrtoint <2 x ptr> %X to <2 x i64>
+  %p = inttoptr <2 x i64> %i to <2 x ptr>
+  %cmp = icmp eq <2 x ptr> %p, %Y
+  ret <2 x i1> %cmp
+}
+
+define <vscale x 2 x i1> @func_svec(<vscale x 2 x ptr> %X, <vscale x 2 x ptr> %Y) {
+; CHECK-LABEL: @func_svec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <vscale x 2 x ptr> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <vscale x 2 x i1> [[CMP]]
+;
+  %i = ptrtoint <vscale x 2 x ptr> %X to <vscale x 2 x i64>
+  %p = inttoptr <vscale x 2 x i64> %i to <vscale x 2 x ptr>
+  %cmp = icmp eq <vscale x 2 x ptr> %p, %Y
+  ret <vscale x 2 x i1> %cmp
+}
+
 define i1 @func_pointer_different_types(ptr %X, ptr %Y) {
 ; CHECK-LABEL: @func_pointer_different_types(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X:%.*]], [[Y:%.*]]

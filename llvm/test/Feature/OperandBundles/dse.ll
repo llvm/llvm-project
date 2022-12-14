@@ -1,31 +1,31 @@
 ; RUN: opt -S -passes=dse < %s | FileCheck %s
 
 declare void @f()
-declare noalias i8* @malloc(i32) nounwind
+declare noalias ptr @malloc(i32) nounwind
 
 define void @test_0() {
 ; CHECK-LABEL: @test_0(
-  %m = call i8* @malloc(i32 24)
-  tail call void @f() [ "unknown"(i8* %m) ]
-; CHECK: store i8 -19, i8* %m
-  store i8 -19, i8* %m
+  %m = call ptr @malloc(i32 24)
+  tail call void @f() [ "unknown"(ptr %m) ]
+; CHECK: store i8 -19, ptr %m
+  store i8 -19, ptr %m
   ret void
 }
 
-define i8* @test_1() {
+define ptr @test_1() {
 ; CHECK-LABEL: @test_1(
-  %m = call i8* @malloc(i32 24)
-  tail call void @f() [ "unknown"(i8* %m) ]
-  store i8 -19, i8* %m
+  %m = call ptr @malloc(i32 24)
+  tail call void @f() [ "unknown"(ptr %m) ]
+  store i8 -19, ptr %m
   tail call void @f()
-  store i8 101, i8* %m
+  store i8 101, ptr %m
 
-; CHECK: tail call void @f() [ "unknown"(i8* %m) ]
-; CHECK: store i8 -19, i8* %m
+; CHECK: tail call void @f() [ "unknown"(ptr %m) ]
+; CHECK: store i8 -19, ptr %m
 ; CHECK: tail call void @f()
-; CHECK: store i8 101, i8* %m
+; CHECK: store i8 101, ptr %m
 
-  ret i8* %m
+  ret ptr %m
 }
 
 define void @test_2() {
@@ -33,26 +33,26 @@ define void @test_2() {
 ; legal to elide the final store that location.
 
 ; CHECK-LABEL: @test_2(
-  %m = call i8* @malloc(i32 24)
-  tail call void @f() [ "deopt"(i8* %m) ]
-  store i8 -19, i8* %m
+  %m = call ptr @malloc(i32 24)
+  tail call void @f() [ "deopt"(ptr %m) ]
+  store i8 -19, ptr %m
   ret void
 
-; CHECK:  tail call void @f() [ "deopt"(i8* %m) ]
+; CHECK:  tail call void @f() [ "deopt"(ptr %m) ]
 ; CHECK-NEXT:  ret void
 }
 
-define i8* @test_3() {
+define ptr @test_3() {
 ; Since the deopt operand bundle does not escape %m (see caveat below), @f
 ; cannot observe the stores to %m
 
 ; CHECK-LABEL: @test_3(
-  %m = call i8* @malloc(i32 24)
-  tail call void @f() [ "deopt"(i8* %m) ]
-  store i8 -19, i8* %m
+  %m = call ptr @malloc(i32 24)
+  tail call void @f() [ "deopt"(ptr %m) ]
+  store i8 -19, ptr %m
   tail call void @f()
-  store i8 101, i8* %m
-  ret i8* %m
+  store i8 101, ptr %m
+  ret ptr %m
 }
 
 

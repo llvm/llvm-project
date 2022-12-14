@@ -14,8 +14,7 @@ define void @store() {
 ; CHECK-LABEL: @store(
 ; CHECK-NEXT:    ret void
 ;
-  %addr = getelementptr inbounds %s, %s* bitcast (i32* @g to %s*), i64 0, i32 0
-  store i32 1, i32* %addr, align 4
+  store i32 1, ptr @g, align 4
   ret void
 }
 
@@ -25,6 +24,6 @@ define i32 @load() {
 ; CHECK-NEXT:    ret i32 1
 ;
   call fastcc void @store()
-  %v = load i32, i32* @g
+  %v = load i32, ptr @g
   ret i32 %v
 }

@@ -15,10 +15,10 @@
 
 #include "DwarfDebug.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -143,15 +143,15 @@ public:
 
   /// Add an unsigned integer attribute data and value.
   void addUInt(DIEValueList &Die, dwarf::Attribute Attribute,
-               Optional<dwarf::Form> Form, uint64_t Integer);
+               std::optional<dwarf::Form> Form, uint64_t Integer);
 
   void addUInt(DIEValueList &Block, dwarf::Form Form, uint64_t Integer);
 
   /// Add an signed integer attribute data and value.
   void addSInt(DIEValueList &Die, dwarf::Attribute Attribute,
-               Optional<dwarf::Form> Form, int64_t Integer);
+               std::optional<dwarf::Form> Form, int64_t Integer);
 
-  void addSInt(DIELoc &Die, Optional<dwarf::Form> Form, int64_t Integer);
+  void addSInt(DIELoc &Die, std::optional<dwarf::Form> Form, int64_t Integer);
 
   /// Add a string attribute data and value.
   ///
