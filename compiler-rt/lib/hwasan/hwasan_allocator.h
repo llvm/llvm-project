@@ -95,6 +95,8 @@ class HwasanChunkView {
   uptr ActualSize() const;     // Size allocated by the allocator.
   u32 GetAllocStackId() const;
   bool FromSmallHeap() const;
+  bool AddrIsInside(uptr addr) const;
+
  private:
   friend class __lsan::LsanMetadata;
   uptr block_;

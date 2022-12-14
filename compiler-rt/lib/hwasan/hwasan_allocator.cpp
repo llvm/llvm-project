@@ -71,6 +71,10 @@ bool HwasanChunkView::FromSmallHeap() const {
   return allocator.FromPrimary(reinterpret_cast<void *>(block_));
 }
 
+bool HwasanChunkView::AddrIsInside(uptr addr) const {
+  return (addr >= Beg()) && (addr < Beg() + UsedSize());
+}
+
 inline void Metadata::SetAllocated(u32 stack, u64 size) {
   Thread *t = GetCurrentThread();
   u64 context = t ? t->unique_id() : kMainTid;
@@ -482,6 +486,36 @@ void hwasan_free(void *ptr, StackTrace *stack) {
 // --- Implementation of LSan-specific functions --- {{{1
 namespace __lsan {
 
+void LockAllocator() {
+  __hwasan::HwasanAllocatorLock();
+}
+
+void UnlockAllocator() {
+  __hwasan::HwasanAllocatorUnlock();
+}
+
+void GetAllocatorGlobalRange(uptr *begin, uptr *end) {
+  *begin = (uptr)&__hwasan::allocator;
+  *end = *begin + sizeof(__hwasan::allocator);
+}
+
+uptr PointsIntoChunk(void *p) {
+  uptr addr = reinterpret_cast<uptr>(p);
+  __hwasan::HwasanChunkView view = __hwasan::FindHeapChunkByAddress(addr);
+  if (!view.IsAllocated()) 
+    return 0;
+  uptr chunk = view.Beg();
+  if (view.AddrIsInside(addr))
+    return chunk;
+  if (IsSpecialCaseOfOperatorNew0(chunk, view.UsedSize(), addr))
+    return chunk;
+  return 0;
+}
+
+uptr GetUserBegin(uptr chunk) {
+  return __hwasan::FindHeapChunkByAddress(chunk).Beg();
+}
+
 LsanMetadata::LsanMetadata(uptr chunk) {
   metadata_ = chunk ? reinterpret_cast<__hwasan::Metadata *>(
                           chunk - __hwasan::kChunkHeaderSize)
@@ -513,6 +547,10 @@ uptr LsanMetadata::requested_size() const {
 u32 LsanMetadata::stack_trace_id() const {
   __hwasan::Metadata *m = reinterpret_cast<__hwasan::Metadata *>(metadata_);
   return m->GetAllocStackId();
+}
+
+void ForEachChunk(ForEachChunkCallback callback, void *arg) {
+  __hwasan::allocator.ForEachChunk(callback, arg);
 }
 
 }  // namespace __lsan
