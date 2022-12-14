@@ -12579,18 +12579,17 @@ static SDValue lowerShuffleAsVTRUNC(const SDLoc &DL, MVT VT, SDValue V1,
       MVT ConcatVT = MVT::getVectorVT(VT.getScalarType(), NumElts * 2);
       SDValue Src = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, V1, V2);
 
-      // Move the offset'd elements into place for the truncation.
-      if (Offset) {
-        SmallVector<int, 32> OffsetMask(NumElts * 2, -1);
-        for (unsigned I = 0, E = NumElts * 2; I < E; I += Scale)
-          OffsetMask[I] = I + Offset;
-        Src = DAG.getVectorShuffle(ConcatVT, DL, Src, DAG.getUNDEF(ConcatVT),
-                                   OffsetMask);
-      }
-
       MVT SrcSVT = MVT::getIntegerVT(SrcEltBits);
       MVT SrcVT = MVT::getVectorVT(SrcSVT, NumSrcElts);
       Src = DAG.getBitcast(SrcVT, Src);
+
+      // Shift the offset'd elements into place for the truncation.
+      // TODO: Use getTargetVShiftByConstNode.
+      if (Offset)
+        Src = DAG.getNode(
+            X86ISD::VSRLI, DL, SrcVT, Src,
+            DAG.getTargetConstant(Offset * EltSizeInBits, DL, MVT::i8));
+
       return getAVX512TruncNode(DL, VT, Src, Subtarget, DAG, !UndefUppers);
     }
   }
