@@ -176,7 +176,10 @@ void LoongArchInstrInfo::movImm(MachineBasicBlock &MBB,
 }
 
 unsigned LoongArchInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
-  if (MI.getOpcode() == TargetOpcode::INLINEASM) {
+  unsigned Opcode = MI.getOpcode();
+
+  if (Opcode == TargetOpcode::INLINEASM ||
+      Opcode == TargetOpcode::INLINEASM_BR) {
     const MachineFunction *MF = MI.getParent()->getParent();
     const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
     return getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);

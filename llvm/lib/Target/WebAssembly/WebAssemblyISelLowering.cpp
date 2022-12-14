@@ -1452,7 +1452,7 @@ static bool IsWebAssemblyGlobal(SDValue Op) {
 static Optional<unsigned> IsWebAssemblyLocal(SDValue Op, SelectionDAG &DAG) {
   const FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Op);
   if (!FI)
-    return None;
+    return std::nullopt;
 
   auto &MF = DAG.getMachineFunction();
   return WebAssemblyFrameLowering::getLocalForStackObject(MF, FI->getIndex());

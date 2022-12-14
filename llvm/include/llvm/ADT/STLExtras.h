@@ -924,7 +924,7 @@ template <typename Iter>
 auto deref_or_none(const Iter &I, const Iter &End) -> llvm::Optional<
     std::remove_const_t<std::remove_reference_t<decltype(*I)>>> {
   if (I == End)
-    return None;
+    return std::nullopt;
   return *I;
 }
 

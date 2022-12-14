@@ -200,7 +200,7 @@ public:
   /// classified to have temporal reuse.
   CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI, ScalarEvolution &SE,
             TargetTransformInfo &TTI, AAResults &AA, DependenceInfo &DI,
-            Optional<unsigned> TRT = None);
+            Optional<unsigned> TRT = std::nullopt);
 
   /// Create a CacheCost for the loop nest rooted by \p Root.
   /// The optional parameter \p TRT can be used to specify the max. distance
@@ -208,7 +208,7 @@ public:
   /// classified to have temporal reuse.
   static std::unique_ptr<CacheCost>
   getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR, DependenceInfo &DI,
-               Optional<unsigned> TRT = None);
+               Optional<unsigned> TRT = std::nullopt);
 
   /// Return the estimated cost of loop \p L if the given loop is part of the
   /// loop nest associated with this object. Return -1 otherwise.

@@ -1110,10 +1110,11 @@ public:
   /// cases, like in broadcast loads.
   /// NOTE: For subvector extractions Tp represents the source type.
   InstructionCost
-  getShuffleCost(ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask = None,
+  getShuffleCost(ShuffleKind Kind, VectorType *Tp,
+                 ArrayRef<int> Mask = std::nullopt,
                  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
                  int Index = 0, VectorType *SubTp = nullptr,
-                 ArrayRef<const Value *> Args = None) const;
+                 ArrayRef<const Value *> Args = std::nullopt) const;
 
   /// Represents a hint about the context in which a cast is used.
   ///

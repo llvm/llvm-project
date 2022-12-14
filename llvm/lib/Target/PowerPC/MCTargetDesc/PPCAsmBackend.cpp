@@ -268,7 +268,7 @@ Optional<MCFixupKind> ELFPPCAsmBackend::getFixupKind(StringRef Name) const {
     if (Type != -1u)
       return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
   }
-  return None;
+  return std::nullopt;
 }
 
 MCAsmBackend *llvm::createPPCAsmBackend(const Target &T,

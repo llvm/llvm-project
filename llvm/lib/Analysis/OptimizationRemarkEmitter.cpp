@@ -62,7 +62,7 @@ bool OptimizationRemarkEmitter::invalidate(
 
 Optional<uint64_t> OptimizationRemarkEmitter::computeHotness(const Value *V) {
   if (!BFI)
-    return None;
+    return std::nullopt;
 
   return BFI->getBlockProfileCount(cast<BasicBlock>(V));
 }

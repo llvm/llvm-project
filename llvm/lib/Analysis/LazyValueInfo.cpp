@@ -215,14 +215,14 @@ namespace {
                                                      BasicBlock *BB) const {
       const BlockCacheEntry *Entry = getBlockEntry(BB);
       if (!Entry)
-        return None;
+        return std::nullopt;
 
       if (Entry->OverDefined.count(V))
         return ValueLatticeElement::getOverdefined();
 
       auto LatticeIt = Entry->LatticeElements.find_as(V);
       if (LatticeIt == Entry->LatticeElements.end())
-        return None;
+        return std::nullopt;
 
       return LatticeIt->second;
     }
@@ -551,7 +551,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::getBlockValue(
     return ValueLatticeElement::getOverdefined();
 
   // Yet to be resolved.
-  return None;
+  return std::nullopt;
 }
 
 static ValueLatticeElement getFromRangeMetadata(Instruction *BBI) {
@@ -694,7 +694,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueNonLocal(
     Optional<ValueLatticeElement> EdgeResult = getEdgeValue(Val, Pred, BB);
     if (!EdgeResult)
       // Explore that input, then return here
-      return None;
+      return std::nullopt;
 
     Result.mergeIn(*EdgeResult);
 
@@ -730,7 +730,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValuePHINode(
         getEdgeValue(PhiVal, PhiBB, BB, PN);
     if (!EdgeResult)
       // Explore that input, then return here
-      return None;
+      return std::nullopt;
 
     Result.mergeIn(*EdgeResult);
 
@@ -809,13 +809,13 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueSelect(
   Optional<ValueLatticeElement> OptTrueVal =
       getBlockValue(SI->getTrueValue(), BB, SI);
   if (!OptTrueVal)
-    return None;
+    return std::nullopt;
   ValueLatticeElement &TrueVal = *OptTrueVal;
 
   Optional<ValueLatticeElement> OptFalseVal =
       getBlockValue(SI->getFalseValue(), BB, SI);
   if (!OptFalseVal)
-    return None;
+    return std::nullopt;
   ValueLatticeElement &FalseVal = *OptFalseVal;
 
   if (TrueVal.isConstantRange() || FalseVal.isConstantRange()) {
@@ -889,7 +889,7 @@ Optional<ConstantRange> LazyValueInfoImpl::getRangeFor(Value *V,
                                                        BasicBlock *BB) {
   Optional<ValueLatticeElement> OptVal = getBlockValue(V, BB, CxtI);
   if (!OptVal)
-    return None;
+    return std::nullopt;
   return getConstantRangeOrFull(*OptVal, V->getType(), DL);
 }
 
@@ -922,7 +922,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueCast(
   Optional<ConstantRange> LHSRes = getRangeFor(CI->getOperand(0), CI, BB);
   if (!LHSRes)
     // More work to do before applying this transfer rule.
-    return None;
+    return std::nullopt;
   const ConstantRange &LHSRange = LHSRes.value();
 
   const unsigned ResultBitWidth = CI->getType()->getIntegerBitWidth();
@@ -946,7 +946,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueBinaryOpImpl(
   Optional<ConstantRange> RHSRes = getRangeFor(I->getOperand(1), I, BB);
   if (!LHSRes || !RHSRes)
     // More work to do before applying this transfer rule.
-    return None;
+    return std::nullopt;
 
   const ConstantRange &LHSRange = LHSRes.value();
   const ConstantRange &RHSRange = RHSRes.value();
@@ -998,7 +998,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueIntrinsic(
   for (Value *Op : II->args()) {
     Optional<ConstantRange> Range = getRangeFor(Op, II, BB);
     if (!Range)
-      return None;
+      return std::nullopt;
     OpRanges.push_back(*Range);
   }
 
@@ -1210,7 +1210,7 @@ getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
       Worklist.push_back(L);
     if (RV == Visited.end())
       Worklist.push_back(R);
-    return None;
+    return std::nullopt;
   }
 
   return intersect(LV->second, RV->second);
@@ -1372,7 +1372,7 @@ static std::optional<ValueLatticeElement> getEdgeValueLocal(Value *Val,
   if (SwitchInst *SI = dyn_cast<SwitchInst>(BBFrom->getTerminator())) {
     Value *Condition = SI->getCondition();
     if (!isa<IntegerType>(Val->getType()))
-      return None;
+      return std::nullopt;
     bool ValUsesConditionAndMayBeFoldable = false;
     if (Condition != Val) {
       // Check if Val has Condition as an operand.
@@ -1380,7 +1380,7 @@ static std::optional<ValueLatticeElement> getEdgeValueLocal(Value *Val,
         ValUsesConditionAndMayBeFoldable = isOperationFoldable(Usr) &&
             usesOperand(Usr, Condition);
       if (!ValUsesConditionAndMayBeFoldable)
-        return None;
+        return std::nullopt;
     }
     assert((Condition == Val || ValUsesConditionAndMayBeFoldable) &&
            "Condition != Val nor Val doesn't use Condition");
@@ -1398,7 +1398,7 @@ static std::optional<ValueLatticeElement> getEdgeValueLocal(Value *Val,
         ValueLatticeElement EdgeLatticeVal =
             constantFoldUser(Usr, Condition, CaseValue, DL);
         if (EdgeLatticeVal.isOverdefined())
-          return None;
+          return std::nullopt;
         EdgeVal = EdgeLatticeVal.getConstantRange();
       }
       if (DefaultCase) {
@@ -1415,7 +1415,7 @@ static std::optional<ValueLatticeElement> getEdgeValueLocal(Value *Val,
     }
     return ValueLatticeElement::getRange(std::move(EdgesVals));
   }
-  return None;
+  return std::nullopt;
 }
 
 /// Compute the value of Val on the edge BBFrom -> BBTo or the value at
@@ -1436,7 +1436,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::getEdgeValue(
   Optional<ValueLatticeElement> OptInBlock =
       getBlockValue(Val, BBFrom, BBFrom->getTerminator());
   if (!OptInBlock)
-    return None;
+    return std::nullopt;
   ValueLatticeElement &InBlock = *OptInBlock;
 
   // We can use the context instruction (generically the ultimate instruction

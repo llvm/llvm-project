@@ -774,11 +774,11 @@ Attribute AttributeSet::getAttribute(StringRef Kind) const {
 }
 
 MaybeAlign AttributeSet::getAlignment() const {
-  return SetNode ? SetNode->getAlignment() : None;
+  return SetNode ? SetNode->getAlignment() : std::nullopt;
 }
 
 MaybeAlign AttributeSet::getStackAlignment() const {
-  return SetNode ? SetNode->getStackAlignment() : None;
+  return SetNode ? SetNode->getStackAlignment() : std::nullopt;
 }
 
 uint64_t AttributeSet::getDereferenceableBytes() const {
@@ -960,13 +960,13 @@ Attribute AttributeSetNode::getAttribute(StringRef Kind) const {
 MaybeAlign AttributeSetNode::getAlignment() const {
   if (auto A = findEnumAttribute(Attribute::Alignment))
     return A->getAlignment();
-  return None;
+  return std::nullopt;
 }
 
 MaybeAlign AttributeSetNode::getStackAlignment() const {
   if (auto A = findEnumAttribute(Attribute::StackAlignment))
     return A->getStackAlignment();
-  return None;
+  return std::nullopt;
 }
 
 Type *AttributeSetNode::getAttributeType(Attribute::AttrKind Kind) const {

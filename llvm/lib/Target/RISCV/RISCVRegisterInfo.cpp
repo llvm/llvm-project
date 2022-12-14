@@ -313,7 +313,7 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     else
       DestReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     adjustReg(*II->getParent(), II, DL, DestReg, FrameReg, Offset,
-              MachineInstr::NoFlags, None);
+              MachineInstr::NoFlags, std::nullopt);
     MI.getOperand(FIOperandNum).ChangeToRegister(DestReg, /*IsDef*/false,
                                                  /*IsImp*/false,
                                                  /*IsKill*/true);

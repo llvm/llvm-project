@@ -78,7 +78,7 @@ AArch64CompressJumpTables::computeBlockSize(MachineBasicBlock &MBB) {
     // computing a size and bail out.
     if (MI.getOpcode() == AArch64::INLINEASM ||
         MI.getOpcode() == AArch64::INLINEASM_BR)
-      return None;
+      return std::nullopt;
     Size += TII->getInstSizeInBytes(MI);
   }
   return Size;

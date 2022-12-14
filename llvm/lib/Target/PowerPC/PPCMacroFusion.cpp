@@ -58,7 +58,7 @@ public:
   bool isSupported() const { return Supported; }
   std::optional<unsigned> depOpIdx() const {
     if (DepOpIdx < 0)
-      return None;
+      return std::nullopt;
     return DepOpIdx;
   }
 

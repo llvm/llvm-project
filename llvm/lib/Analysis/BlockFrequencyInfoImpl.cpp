@@ -599,7 +599,7 @@ BlockFrequencyInfoImplBase::getProfileCountFromFreq(const Function &F,
                                                     bool AllowSynthetic) const {
   auto EntryCount = F.getEntryCount(AllowSynthetic);
   if (!EntryCount)
-    return None;
+    return std::nullopt;
   // Use 128 bit APInt to do the arithmetic to avoid overflow.
   APInt BlockCount(128, EntryCount->getCount());
   APInt BlockFreq(128, Freq);

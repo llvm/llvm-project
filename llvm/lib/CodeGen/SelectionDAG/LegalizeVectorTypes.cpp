@@ -6647,7 +6647,7 @@ static Optional<EVT> findMemType(SelectionDAG &DAG, const TargetLowering &TLI,
   // Using element-wise loads and stores for widening operations is not
   // supported for scalable vectors
   if (Scalable)
-    return None;
+    return std::nullopt;
 
   return RetVT;
 }

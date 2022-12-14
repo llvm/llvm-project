@@ -300,8 +300,8 @@ void SystemZTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
       }
       if (isa<StoreInst>(&I)) {
         Type *MemAccessTy = I.getOperand(0)->getType();
-        NumStores += getMemoryOpCost(Instruction::Store, MemAccessTy, None, 0,
-                                     TTI::TCK_RecipThroughput);
+        NumStores += getMemoryOpCost(Instruction::Store, MemAccessTy,
+                                     std::nullopt, 0, TTI::TCK_RecipThroughput);
       }
     }
 

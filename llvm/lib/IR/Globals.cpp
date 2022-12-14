@@ -373,11 +373,11 @@ bool GlobalValue::isAbsoluteSymbolRef() const {
 Optional<ConstantRange> GlobalValue::getAbsoluteSymbolRange() const {
   auto *GO = dyn_cast<GlobalObject>(this);
   if (!GO)
-    return None;
+    return std::nullopt;
 
   MDNode *MD = GO->getMetadata(LLVMContext::MD_absolute_symbol);
   if (!MD)
-    return None;
+    return std::nullopt;
 
   return getConstantRangeFromMetadata(*MD);
 }

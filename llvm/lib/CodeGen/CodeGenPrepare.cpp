@@ -1438,16 +1438,16 @@ static std::optional<std::pair<Instruction *, Constant *>>
 getIVIncrement(const PHINode *PN, const LoopInfo *LI) {
   const Loop *L = LI->getLoopFor(PN->getParent());
   if (!L || L->getHeader() != PN->getParent() || !L->getLoopLatch())
-    return None;
+    return std::nullopt;
   auto *IVInc =
       dyn_cast<Instruction>(PN->getIncomingValueForBlock(L->getLoopLatch()));
   if (!IVInc || LI->getLoopFor(IVInc->getParent()) != L)
-    return None;
+    return std::nullopt;
   Instruction *LHS = nullptr;
   Constant *Step = nullptr;
   if (matchIncrement(IVInc, LHS, Step) && LHS == PN)
     return std::make_pair(IVInc, Step);
-  return None;
+  return std::nullopt;
 }
 
 static bool isIVIncrement(const Value *V, const LoopInfo *LI) {
@@ -4020,10 +4020,10 @@ bool AddressingModeMatcher::matchScaledValue(Value *ScaleReg, int64_t Scale,
       [this](const Value *V) -> std::optional<std::pair<Instruction *, APInt>> {
     auto *PN = dyn_cast<PHINode>(V);
     if (!PN)
-      return None;
+      return std::nullopt;
     auto IVInc = getIVIncrement(PN, &LI);
     if (!IVInc)
-      return None;
+      return std::nullopt;
     // TODO: The result of the intrinsics above is two-compliment. However when
     // IV inc is expressed as add or sub, iv.next is potentially a poison value.
     // If it has nuw or nsw flags, we need to make sure that these flags are
@@ -4032,10 +4032,10 @@ bool AddressingModeMatcher::matchScaledValue(Value *ScaleReg, int64_t Scale,
     // potentially complex analysis needed to prove this, we reject such cases.
     if (auto *OIVInc = dyn_cast<OverflowingBinaryOperator>(IVInc->first))
       if (OIVInc->hasNoSignedWrap() || OIVInc->hasNoUnsignedWrap())
-        return None;
+        return std::nullopt;
     if (auto *ConstantStep = dyn_cast<ConstantInt>(IVInc->second))
       return std::make_pair(IVInc->first, ConstantStep->getValue());
-    return None;
+    return std::nullopt;
   };
 
   // Try to account for the following special case:

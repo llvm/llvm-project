@@ -441,7 +441,7 @@ private:
   static ArrayRef<int> getShuffleMaskIfValid(const ConstantExpr *CE) {
     if (CE->getOpcode() == Instruction::ShuffleVector)
       return CE->getShuffleMask();
-    return None;
+    return std::nullopt;
   }
 
   static Type *getSourceElementTypeIfValid(const ConstantExpr *CE) {
@@ -454,7 +454,7 @@ public:
   ConstantExprKeyType(unsigned Opcode, ArrayRef<Constant *> Ops,
                       unsigned short SubclassData = 0,
                       unsigned short SubclassOptionalData = 0,
-                      ArrayRef<int> ShuffleMask = None,
+                      ArrayRef<int> ShuffleMask = std::nullopt,
                       Type *ExplicitTy = nullptr)
       : Opcode(Opcode), SubclassOptionalData(SubclassOptionalData),
         SubclassData(SubclassData), Ops(Ops), ShuffleMask(ShuffleMask),

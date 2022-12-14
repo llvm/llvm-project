@@ -985,7 +985,7 @@ void UserValue::extendDef(
     Start = Start.getNextSlot();
     if (I.value() != DbgValue || I.stop() != Start) {
       // Clear `Kills`, as we have a new def available.
-      Kills = None;
+      Kills = std::nullopt;
       return;
     }
     // This is a one-slot placeholder. Just skip it.
@@ -996,7 +996,7 @@ void UserValue::extendDef(
   if (I.valid() && I.start() < Stop) {
     Stop = I.start();
     // Clear `Kills`, as we have a new def available.
-    Kills = None;
+    Kills = std::nullopt;
   }
 
   if (Start < Stop) {

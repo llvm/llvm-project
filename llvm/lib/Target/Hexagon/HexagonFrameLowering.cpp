@@ -1018,7 +1018,7 @@ findCFILocation(MachineBasicBlock &B) {
       if (HasAllocFrame)
         return HasCall ? It : std::next(It);
     }
-    return None;
+    return std::nullopt;
 }
 
 void HexagonFrameLowering::insertCFIInstructions(MachineFunction &MF) const {

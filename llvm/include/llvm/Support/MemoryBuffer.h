@@ -97,7 +97,7 @@ public:
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
   getFile(const Twine &Filename, bool IsText = false,
           bool RequiresNullTerminator = true, bool IsVolatile = false,
-          Optional<Align> Alignment = None);
+          Optional<Align> Alignment = std::nullopt);
 
   /// Read all of the specified file into a MemoryBuffer as a stream
   /// (i.e. until EOF reached). This is useful for special files that
@@ -111,7 +111,7 @@ public:
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
   getOpenFileSlice(sys::fs::file_t FD, const Twine &Filename, uint64_t MapSize,
                    int64_t Offset, bool IsVolatile = false,
-                   Optional<Align> Alignment = None);
+                   Optional<Align> Alignment = std::nullopt);
 
   /// Given an already-open file descriptor, read the file and return a
   /// MemoryBuffer.
@@ -125,7 +125,7 @@ public:
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
   getOpenFile(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
               bool RequiresNullTerminator = true, bool IsVolatile = false,
-              Optional<Align> Alignment = None);
+              Optional<Align> Alignment = std::nullopt);
 
   /// Open the specified memory range as a MemoryBuffer. Note that InputData
   /// must be null terminated if RequiresNullTerminator is true.
@@ -149,12 +149,13 @@ public:
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
   getFileOrSTDIN(const Twine &Filename, bool IsText = false,
                  bool RequiresNullTerminator = true,
-                 Optional<Align> Alignment = None);
+                 Optional<Align> Alignment = std::nullopt);
 
   /// Map a subrange of the specified file as a MemoryBuffer.
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
   getFileSlice(const Twine &Filename, uint64_t MapSize, uint64_t Offset,
-               bool IsVolatile = false, Optional<Align> Alignment = None);
+               bool IsVolatile = false,
+               Optional<Align> Alignment = std::nullopt);
 
   //===--------------------------------------------------------------------===//
   // Provided for performance analysis.
@@ -200,12 +201,13 @@ public:
 
   static ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
   getFile(const Twine &Filename, bool IsVolatile = false,
-          Optional<Align> Alignment = None);
+          Optional<Align> Alignment = std::nullopt);
 
   /// Map a subrange of the specified file as a WritableMemoryBuffer.
   static ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
   getFileSlice(const Twine &Filename, uint64_t MapSize, uint64_t Offset,
-               bool IsVolatile = false, Optional<Align> Alignment = None);
+               bool IsVolatile = false,
+               Optional<Align> Alignment = std::nullopt);
 
   /// Allocate a new MemoryBuffer of the specified size that is not initialized.
   /// Note that the caller should initialize the memory allocated by this
@@ -215,7 +217,7 @@ public:
   /// least the specified alignment.
   static std::unique_ptr<WritableMemoryBuffer>
   getNewUninitMemBuffer(size_t Size, const Twine &BufferName = "",
-                        Optional<Align> Alignment = None);
+                        Optional<Align> Alignment = std::nullopt);
 
   /// Allocate a new zero-initialized MemoryBuffer of the specified size. Note
   /// that the caller need not initialize the memory allocated by this method.

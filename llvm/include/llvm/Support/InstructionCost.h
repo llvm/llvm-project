@@ -88,7 +88,7 @@ public:
   std::optional<CostType> getValue() const {
     if (isValid())
       return Value;
-    return None;
+    return std::nullopt;
   }
 
   /// For all of the arithmetic operators provided here any invalid state is

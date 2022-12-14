@@ -270,7 +270,7 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
     if (!canSafelyConvertTo16Bit(*Coord, HasSampler)) {
       if (OperandIndex < ImageDimIntr->CoordStart ||
           ImageDimIntr->GradientStart == ImageDimIntr->CoordStart) {
-        return None;
+        return std::nullopt;
       }
       // All gradients can be converted, so convert only them
       OnlyDerivatives = true;

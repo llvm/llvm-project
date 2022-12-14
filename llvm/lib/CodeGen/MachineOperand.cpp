@@ -749,7 +749,7 @@ void MachineOperand::print(raw_ostream &OS, LLT TypeToPrint,
                            const TargetIntrinsicInfo *IntrinsicInfo) const {
   tryToGetTargetInfo(*this, TRI, IntrinsicInfo);
   ModuleSlotTracker DummyMST(nullptr);
-  print(OS, DummyMST, TypeToPrint, None, /*PrintDef=*/false,
+  print(OS, DummyMST, TypeToPrint, std::nullopt, /*PrintDef=*/false,
         /*IsStandalone=*/true,
         /*ShouldPrintRegisterTies=*/true,
         /*TiedOperandIdx=*/0, TRI, IntrinsicInfo);

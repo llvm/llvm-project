@@ -205,7 +205,7 @@ Optional<unsigned> DILocation::encodeDiscriminator(unsigned BD, unsigned DF,
   decodeDiscriminator(Ret, TBD, TDF, TCI);
   if (TBD == BD && TDF == DF && TCI == CI)
     return Ret;
-  return None;
+  return std::nullopt;
 }
 
 void DILocation::decodeDiscriminator(unsigned D, unsigned &BD, unsigned &DF,
@@ -612,7 +612,7 @@ Optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
   case dwarf::DW_ATE_unsigned_char:
     return Signedness::Unsigned;
   default:
-    return None;
+    return std::nullopt;
   }
 }
 
@@ -826,7 +826,7 @@ Optional<DIFile::ChecksumKind> DIFile::getChecksumKind(StringRef CSKindStr) {
       .Case("CSK_MD5", DIFile::CSK_MD5)
       .Case("CSK_SHA1", DIFile::CSK_SHA1)
       .Case("CSK_SHA256", DIFile::CSK_SHA256)
-      .Default(None);
+      .Default(std::nullopt);
 }
 
 DIFile *DIFile::getImpl(LLVMContext &Context, MDString *Filename,
@@ -898,7 +898,7 @@ DICompileUnit::getEmissionKind(StringRef Str) {
       .Case("FullDebug", FullDebug)
       .Case("LineTablesOnly", LineTablesOnly)
       .Case("DebugDirectivesOnly", DebugDirectivesOnly)
-      .Default(None);
+      .Default(std::nullopt);
 }
 
 Optional<DICompileUnit::DebugNameTableKind>
@@ -907,7 +907,7 @@ DICompileUnit::getNameTableKind(StringRef Str) {
       .Case("Default", DebugNameTableKind::Default)
       .Case("GNU", DebugNameTableKind::GNU)
       .Case("None", DebugNameTableKind::None)
-      .Default(None);
+      .Default(std::nullopt);
 }
 
 const char *DICompileUnit::emissionKindString(DebugEmissionKind EK) {
@@ -1237,7 +1237,7 @@ Optional<uint64_t> DIVariable::getSizeInBits() const {
   }
 
   // Fail gracefully.
-  return None;
+  return std::nullopt;
 }
 
 DILabel::DILabel(LLVMContext &C, StorageType Storage, unsigned Line,
@@ -1429,7 +1429,7 @@ DIExpression::getFragmentInfo(expr_op_iterator Start, expr_op_iterator End) {
       DIExpression::FragmentInfo Info = {I->getArg(1), I->getArg(0)};
       return Info;
     }
-  return None;
+  return std::nullopt;
 }
 
 void DIExpression::appendOffset(SmallVectorImpl<uint64_t> &Ops,
@@ -1611,7 +1611,7 @@ DIExpression *DIExpression::append(const DIExpression *Expr,
       NewOps.append(Ops.begin(), Ops.end());
 
       // Ensure that the new opcodes are only appended once.
-      Ops = None;
+      Ops = std::nullopt;
     }
     Op.appendToVector(NewOps);
   }
@@ -1693,7 +1693,7 @@ Optional<DIExpression *> DIExpression::createFragmentExpression(
       case dwarf::DW_OP_stack_value:
         // Bail if this expression computes a value that cannot be split.
         if (!CanSplitValue)
-          return None;
+          return std::nullopt;
         break;
       case dwarf::DW_OP_LLVM_fragment: {
         // Make the new offset point into the existing fragment.
@@ -1779,7 +1779,7 @@ DIExpression::isConstant() const {
        getNumElements() != 6) ||
       (getElement(0) != dwarf::DW_OP_consts &&
        getElement(0) != dwarf::DW_OP_constu))
-    return None;
+    return std::nullopt;
 
   if (getNumElements() == 2 && getElement(0) == dwarf::DW_OP_consts)
     return SignedOrUnsignedConstant::SignedConstant;
@@ -1787,7 +1787,7 @@ DIExpression::isConstant() const {
   if ((getNumElements() == 3 && getElement(2) != dwarf::DW_OP_stack_value) ||
       (getNumElements() == 6 && (getElement(2) != dwarf::DW_OP_stack_value ||
                                  getElement(3) != dwarf::DW_OP_LLVM_fragment)))
-    return None;
+    return std::nullopt;
   return getElement(0) == dwarf::DW_OP_constu
              ? SignedOrUnsignedConstant::UnsignedConstant
              : SignedOrUnsignedConstant::SignedConstant;

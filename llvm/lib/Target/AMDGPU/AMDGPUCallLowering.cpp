@@ -518,7 +518,7 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
     if (AllocSize == 0)
       continue;
 
-    MaybeAlign ParamAlign = IsByRef ? Arg.getParamAlign() : None;
+    MaybeAlign ParamAlign = IsByRef ? Arg.getParamAlign() : std::nullopt;
     Align ABIAlign = DL.getValueOrABITypeAlignment(ParamAlign, ArgTy);
 
     uint64_t ArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + BaseOffset;

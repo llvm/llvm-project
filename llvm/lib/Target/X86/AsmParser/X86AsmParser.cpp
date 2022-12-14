@@ -1078,7 +1078,7 @@ private:
     void setTypeInfo(AsmTypeInfo Type) { CurType = Type; }
   };
 
-  bool Error(SMLoc L, const Twine &Msg, SMRange Range = None,
+  bool Error(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt,
              bool MatchingInlineAsm = false) {
     MCAsmParser &Parser = getParser();
     if (MatchingInlineAsm) {
@@ -4137,7 +4137,7 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               bool MatchingInlineAsm) {
   assert(!Operands.empty() && "Unexpect empty operand list!");
   assert((*Operands[0]).isToken() && "Leading operand should always be a mnemonic!");
-  SMRange EmptyRange = None;
+  SMRange EmptyRange = std::nullopt;
 
   // First, handle aliases that expand to multiple instructions.
   MatchFPUWaitAlias(IDLoc, static_cast<X86Operand &>(*Operands[0]), Operands,
@@ -4396,7 +4396,7 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   assert(!Operands.empty() && "Unexpect empty operand list!");
   assert((*Operands[0]).isToken() && "Leading operand should always be a mnemonic!");
   StringRef Mnemonic = (static_cast<X86Operand &>(*Operands[0])).getToken();
-  SMRange EmptyRange = None;
+  SMRange EmptyRange = std::nullopt;
   StringRef Base = (static_cast<X86Operand &>(*Operands[0])).getToken();
   unsigned Prefixes = getPrefixes(Operands);
 

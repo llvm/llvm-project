@@ -255,7 +255,7 @@ Optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
   // - Any other instruction may benefit from being pinned to offset 0.
   LLVM_DEBUG(dbgs() << "AArch64StackTaggingPreRA::findFirstSlotCandidate\n");
   if (!ClFirstSlot)
-    return None;
+    return std::nullopt;
 
   DenseMap<SlotWithTag, int> RetagScore;
   SlotWithTag MaxScoreST{-1, -1};
@@ -305,7 +305,7 @@ Optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
   }
 
   if (MaxScoreST.FI < 0)
-    return None;
+    return std::nullopt;
 
   // If FI's tag is already 0, we are done.
   if (MaxScoreST.Tag == 0)

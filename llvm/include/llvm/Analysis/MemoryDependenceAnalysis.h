@@ -475,7 +475,7 @@ public:
     const auto Off = ClobberOffsets.find(DepInst);
     if (Off != ClobberOffsets.end())
       return Off->getSecond();
-    return None;
+    return std::nullopt;
   }
 
 private:

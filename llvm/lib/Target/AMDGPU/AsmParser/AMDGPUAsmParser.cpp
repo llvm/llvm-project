@@ -2864,7 +2864,7 @@ AMDGPUAsmParser::getGprCountSymbolName(RegisterKind RegKind) {
   case IS_SGPR:
     return StringRef(".amdgcn.next_free_sgpr");
   default:
-    return None;
+    return std::nullopt;
   }
 }
 
@@ -4068,7 +4068,7 @@ Optional<StringRef> AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
   // with 9-bit operands only. Ignore encodings which do not accept these.
   const auto Enc = VOP1 | VOP2 | VOP3 | VOPC | VOP3P | SIInstrFlags::SDWA;
   if ((Desc.TSFlags & Enc) == 0)
-    return None;
+    return std::nullopt;
 
   for (auto SrcName : {OpName::src0, OpName::src1, OpName::src2}) {
     auto SrcIdx = getNamedOperandIdx(Opcode, SrcName);
@@ -4088,7 +4088,7 @@ Optional<StringRef> AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
     }
   }
 
-  return None;
+  return std::nullopt;
 }
 
 SMLoc AMDGPUAsmParser::getFlatOffsetLoc(const OperandVector &Operands) const {

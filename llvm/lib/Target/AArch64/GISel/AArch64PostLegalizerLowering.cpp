@@ -117,7 +117,7 @@ static std::optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
   // Look for the first non-undef element.
   auto FirstRealElt = find_if(M, [](int Elt) { return Elt >= 0; });
   if (FirstRealElt == M.end())
-    return None;
+    return std::nullopt;
 
   // Use APInt to handle overflow when calculating expected element.
   unsigned MaskBits = APInt(32, NumElts * 2).logBase2();
@@ -128,7 +128,7 @@ static std::optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
   if (any_of(
           make_range(std::next(FirstRealElt), M.end()),
           [&ExpectedElt](int Elt) { return Elt != ExpectedElt++ && Elt >= 0; }))
-    return None;
+    return std::nullopt;
 
   // The index of an EXT is the first element if it is not UNDEF.
   // Watch out for the beginning UNDEFs. The EXT index should be the expected
@@ -197,7 +197,7 @@ static bool isZipMask(ArrayRef<int> M, unsigned NumElts,
 static std::optional<std::pair<bool, int>> isINSMask(ArrayRef<int> M,
                                                      int NumInputElements) {
   if (M.size() != static_cast<size_t>(NumInputElements))
-    return None;
+    return std::nullopt;
   int NumLHSMatch = 0, NumRHSMatch = 0;
   int LastLHSMismatch = -1, LastRHSMismatch = -1;
   for (int Idx = 0; Idx < NumInputElements; ++Idx) {
@@ -214,7 +214,7 @@ static std::optional<std::pair<bool, int>> isINSMask(ArrayRef<int> M,
     return std::make_pair(true, LastLHSMismatch);
   if (NumRHSMatch == NumNeededToMatch)
     return std::make_pair(false, LastRHSMismatch);
-  return None;
+  return std::nullopt;
 }
 
 /// \return true if a G_SHUFFLE_VECTOR instruction \p MI can be replaced with a
@@ -563,7 +563,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
                         const MachineRegisterInfo &MRI) {
   const auto &Ty = MRI.getType(RHS);
   if (Ty.isVector())
-    return None;
+    return std::nullopt;
   unsigned Size = Ty.getSizeInBits();
   assert((Size == 32 || Size == 64) && "Expected 32 or 64 bit compare only?");
 
@@ -571,16 +571,16 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
   // immediate, then there is nothing to change.
   auto ValAndVReg = getIConstantVRegValWithLookThrough(RHS, MRI);
   if (!ValAndVReg)
-    return None;
+    return std::nullopt;
   uint64_t C = ValAndVReg->Value.getZExtValue();
   if (isLegalArithImmed(C))
-    return None;
+    return std::nullopt;
 
   // We have a non-arithmetic immediate. Check if adjusting the immediate and
   // adjusting the predicate will result in a legal arithmetic immediate.
   switch (P) {
   default:
-    return None;
+    return std::nullopt;
   case CmpInst::ICMP_SLT:
   case CmpInst::ICMP_SGE:
     // Check for
@@ -591,7 +591,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // When c is not the smallest possible negative number.
     if ((Size == 64 && static_cast<int64_t>(C) == INT64_MIN) ||
         (Size == 32 && static_cast<int32_t>(C) == INT32_MIN))
-      return None;
+      return std::nullopt;
     P = (P == CmpInst::ICMP_SLT) ? CmpInst::ICMP_SLE : CmpInst::ICMP_SGT;
     C -= 1;
     break;
@@ -604,7 +604,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     //
     // When c is not zero.
     if (C == 0)
-      return None;
+      return std::nullopt;
     P = (P == CmpInst::ICMP_ULT) ? CmpInst::ICMP_ULE : CmpInst::ICMP_UGT;
     C -= 1;
     break;
@@ -618,7 +618,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // When c is not the largest possible signed integer.
     if ((Size == 32 && static_cast<int32_t>(C) == INT32_MAX) ||
         (Size == 64 && static_cast<int64_t>(C) == INT64_MAX))
-      return None;
+      return std::nullopt;
     P = (P == CmpInst::ICMP_SLE) ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE;
     C += 1;
     break;
@@ -632,7 +632,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // When c is not the largest possible unsigned integer.
     if ((Size == 32 && static_cast<uint32_t>(C) == UINT32_MAX) ||
         (Size == 64 && C == UINT64_MAX))
-      return None;
+      return std::nullopt;
     P = (P == CmpInst::ICMP_ULE) ? CmpInst::ICMP_ULT : CmpInst::ICMP_UGE;
     C += 1;
     break;
@@ -643,7 +643,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
   if (Size == 32)
     C = static_cast<uint32_t>(C);
   if (!isLegalArithImmed(C))
-    return None;
+    return std::nullopt;
   return {{C, P}};
 }
 

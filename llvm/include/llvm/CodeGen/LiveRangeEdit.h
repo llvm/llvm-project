@@ -241,7 +241,7 @@ public:
   /// allocator.  These registers should not be split into new intervals
   /// as currently those new intervals are not guaranteed to spill.
   void eliminateDeadDefs(SmallVectorImpl<MachineInstr *> &Dead,
-                         ArrayRef<Register> RegsBeingSpilled = None);
+                         ArrayRef<Register> RegsBeingSpilled = std::nullopt);
 
   /// calculateRegClassAndHint - Recompute register class and hint for each new
   /// register.
