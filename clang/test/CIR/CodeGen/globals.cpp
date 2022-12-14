@@ -23,7 +23,7 @@ void use_global_string() {
   unsigned char c = s2[0];
 }
 
-// CHECK: module  {
+// CHECK: module {{.*}} {
 // CHECK-NEXT: cir.global external @a = 3 : i32
 // CHECK-NEXT: cir.global external @c = 2 : i64
 // CHECK-NEXT: cir.global external @y = 3.400000e+00 : f32

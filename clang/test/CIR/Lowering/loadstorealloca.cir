@@ -11,7 +11,7 @@ module {
   }
 }
 
-//      MLIR: module  {
+//      MLIR: module {
 // MLIR-NEXT:   func @foo() -> i32 {
 // MLIR-NEXT:     %0 = llvm.mlir.constant(1 : index) : i64
 // MLIR-NEXT:     %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr

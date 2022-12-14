@@ -13,7 +13,7 @@ int s0(int a, int b) {
 
 // CHECK: #loc2 = loc(fused["{{.*}}sourcelocation.cpp":4:8, "{{.*}}sourcelocation.cpp":4:12])
 // CHECK: #loc3 = loc(fused["{{.*}}sourcelocation.cpp":4:15, "{{.*}}sourcelocation.cpp":4:19])
-// CHECK: module  {
+// CHECK: module {{.*}} {
 // CHECK:   cir.func @_Z2s0ii(%arg0: i32 loc(fused["{{.*}}sourcelocation.cpp":4:8, "{{.*}}sourcelocation.cpp":4:12]), %arg1: i32 loc(fused["{{.*}}sourcelocation.cpp":4:15, "{{.*}}sourcelocation.cpp":4:19])) -> i32 {
 // CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64} loc(#loc2)
 // CHECK:     %1 = cir.alloca i32, cir.ptr <i32>, ["b", init] {alignment = 4 : i64} loc(#loc3)

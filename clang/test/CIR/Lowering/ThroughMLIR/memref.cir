@@ -11,7 +11,7 @@ module {
   }
 }
 
-//      MLIR: module  {
+//      MLIR: module {
 // MLIR-NEXT:   func @foo() -> i32 {
 // MLIR-NEXT:     [[alloca:%[a-z0-9]+]] = memref.alloca() {alignment = 4 : i64} : memref<i32>
 // MLIR-NEXT:     %c1_i32 = arith.constant 1 : i32
