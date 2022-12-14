@@ -2,18 +2,18 @@
 ; RUN: opt < %s -passes=simplifycfg -hoist-common-insts=true -S | FileCheck %s
 ; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -hoist-common-insts=true -S | FileCheck %s
 
-define void @foo(i1 %C, i32* %P) {
+define void @foo(i1 %C, ptr %P) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  common.ret:
-; CHECK-NEXT:    store i32 7, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 7, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   br i1 %C, label %T, label %F
 T:              ; preds = %0
-  store i32 7, i32* %P
+  store i32 7, ptr %P
   ret void
 F:              ; preds = %0
-  store i32 7, i32* %P
+  store i32 7, ptr %P
   ret void
 }
 
