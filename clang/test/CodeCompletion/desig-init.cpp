@@ -29,13 +29,17 @@ void foo() {
   // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:25:11 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC2 %s
   // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:26:13 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC2 %s
   // CHECK-CC2: COMPLETION: t : [#int#]t
+  auto zr = [](const Base &B) {};
+  zr({.t = 1});
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:33:8 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-REF %s
+  // CHECK-REF: COMPLETION: t : [#int#]t
 
   Foo G1{.b = {.t = 0}};
   Foo G2{.b{.t = 0}};
   Foo G3{b: {.t = 0}};
-  // RUN: %clang_cc1 -code-completion-at=%s:33:17 -fsyntax-only -code-completion-patterns %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-NESTED-2 %s
-  // RUN: %clang_cc1 -code-completion-at=%s:34:14 -fsyntax-only -code-completion-patterns %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-NESTED-2 %s
-  // RUN: %clang_cc1 -code-completion-at=%s:35:15 -fsyntax-only -code-completion-patterns %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-NESTED-2 %s
+  // RUN: %clang_cc1 -code-completion-at=%s:37:17 -fsyntax-only -code-completion-patterns %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-NESTED-2 %s
+  // RUN: %clang_cc1 -code-completion-at=%s:38:14 -fsyntax-only -code-completion-patterns %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-NESTED-2 %s
+  // RUN: %clang_cc1 -code-completion-at=%s:39:15 -fsyntax-only -code-completion-patterns %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-NESTED-2 %s
   // CHECK-NESTED-2: COMPLETION: t : [#int#]t
 }
 
@@ -49,10 +53,10 @@ struct Test<int> {
 };
 void bar() {
   Test<char> T{.x = 2};
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:51:17 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC3 %s
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:55:17 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC3 %s
   // CHECK-CC3: COMPLETION: x : [#T#]x
   Test<int> X{.x = 2};
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:54:16 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC4 %s
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:58:16 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC4 %s
   // CHECK-CC4: COMPLETION: x : [#int#]x
   // CHECK-CC4-NEXT: COMPLETION: y : [#char#]y
 }
@@ -60,7 +64,7 @@ void bar() {
 template <typename T>
 void aux() {
   Test<T> X{.x = T(2)};
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:62:14 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC3 %s
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:66:14 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC3 %s
 }
 
 namespace signature_regression {
@@ -71,7 +75,7 @@ namespace signature_regression {
   int rightFunction();
   int dummy = wrongFunction({1});
   int x = rightFunction();
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:73:25 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-SIGNATURE-REGRESSION %s
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:77:25 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-SIGNATURE-REGRESSION %s
   // CHECK-SIGNATURE-REGRESSION-NOT: OVERLOAD: [#int#]wrongFunction
   // CHECK-SIGNATURE-REGRESSION:     OVERLOAD: [#int#]rightFunction
   // CHECK-SIGNATURE-REGRESSION-NOT: OVERLOAD: [#int#]wrongFunction
@@ -82,6 +86,6 @@ struct WithAnon {
   struct { int inner; };
 };
 auto TestWithAnon = WithAnon { .inner = 2 };
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:84:33 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC5 %s
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:88:33 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC5 %s
   // CHECK-CC5: COMPLETION: inner : [#int#]inner
   // CHECK-CC5: COMPLETION: outer : [#int#]outer
