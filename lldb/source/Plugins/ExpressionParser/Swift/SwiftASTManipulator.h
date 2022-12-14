@@ -91,6 +91,9 @@ public:
     swift::VarDecl::Introducer GetVarIntroducer() const;
     bool GetIsCaptureList() const;
     bool IsMetadataPointer() const { return m_name.str().startswith("$τ"); }
+    bool IsOutermostMetadataPointer() const {
+      return m_name.str().startswith("$τ_0_");
+    }
     bool IsSelf() const {
       return !m_name.str().compare("$__lldb_injected_self");
     }
