@@ -10186,7 +10186,7 @@ public:
       ArrayRef<ParsedType> SuperTypeArgs, SourceRange SuperTypeArgsRange,
       Decl *const *ProtoRefs, unsigned NumProtoRefs,
       const SourceLocation *ProtoLocs, SourceLocation EndProtoLoc,
-      const ParsedAttributesView &AttrList);
+      const ParsedAttributesView &AttrList, SkipBodyInfo *SkipBody);
 
   void ActOnSuperClassOfClassInterface(Scope *S,
                                        SourceLocation AtInterfaceLoc,

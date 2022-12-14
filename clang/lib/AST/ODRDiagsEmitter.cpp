@@ -164,7 +164,7 @@ bool ODRDiagsEmitter::diagnoseSubMismatchField(
                    this](ODRFieldDifference DiffType) {
     return Diag(SecondField->getLocation(),
                 diag::note_module_odr_violation_field)
-           << SecondModule << SecondField->getSourceRange() << DiffType;
+           << SecondModule.empty() << SecondModule << SecondField->getSourceRange() << DiffType;
   };
 
   IdentifierInfo *FirstII = FirstField->getIdentifier();
@@ -175,9 +175,6 @@ bool ODRDiagsEmitter::diagnoseSubMismatchField(
     return true;
   }
 
-  assert(Context.hasSameType(FirstField->getType(), SecondField->getType()));
-  (void)Context;
-
   QualType FirstType = FirstField->getType();
   QualType SecondType = SecondField->getType();
   if (computeODRHash(FirstType) != computeODRHash(SecondType)) {
@@ -185,6 +182,9 @@ bool ODRDiagsEmitter::diagnoseSubMismatchField(
     DiagNote(FieldTypeName) << SecondII << SecondType;
     return true;
   }
+
+  assert(Context.hasSameType(FirstField->getType(), SecondField->getType()));
+  (void)Context;
 
   const bool IsFirstBitField = FirstField->isBitField();
   const bool IsSecondBitField = SecondField->isBitField();
@@ -1941,7 +1941,7 @@ bool ODRDiagsEmitter::diagnoseMismatch(
   auto DiagNote = [&SecondModule, this](SourceLocation Loc, SourceRange Range,
                                         ODRInterfaceDifference DiffType) {
     return Diag(Loc, diag::note_module_odr_violation_objc_interface)
-           << SecondModule << Range << DiffType;
+           << SecondModule.empty() << SecondModule << Range << DiffType;
   };
 
   const struct ObjCInterfaceDecl::DefinitionData *FirstDD = &FirstID->data();
@@ -2007,8 +2007,10 @@ bool ODRDiagsEmitter::diagnoseMismatch(
 
   DeclHashes FirstHashes;
   DeclHashes SecondHashes;
-  PopulateHashes(FirstHashes, FirstID, FirstID);
-  PopulateHashes(SecondHashes, SecondID, FirstID);
+  // Use definition as DeclContext because definitions are merged when
+  // DeclContexts are merged and separate when DeclContexts are separate.
+  PopulateHashes(FirstHashes, FirstID, FirstID->getDefinition());
+  PopulateHashes(SecondHashes, SecondID, SecondID->getDefinition());
 
   DiffResult DR = FindTypeDiffs(FirstHashes, SecondHashes);
   ODRMismatchDecl FirstDiffType = DR.FirstDiffType;

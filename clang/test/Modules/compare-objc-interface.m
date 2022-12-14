@@ -19,6 +19,11 @@
 // RUN: %clang_cc1 -I%t/include -verify %t/test.m -fblocks -fobjc-arc \
 // RUN:            -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/modules.cache
 
+// Run the same test with second.h being modular
+// RUN: cat %t/include/second.modulemap >> %t/include/module.modulemap
+// RUN: %clang_cc1 -I%t/include -verify %t/test.m -fblocks -fobjc-arc -DTEST_MODULAR=1 \
+// RUN:            -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/modules.cache
+
 // Test that we don't accept different class definitions with the same name
 // from multiple modules but detect mismatches and provide actionable
 // diagnostic.
@@ -42,6 +47,8 @@ module First {
     export *
   }
 }
+
+//--- include/second.modulemap
 module Second {
   header "second.h"
   export *
@@ -87,13 +94,13 @@ CompareForwardDeclaration2 *compareForwardDeclaration2;
 CompareMatchingSuperclass *compareMatchingSuperclass;
 CompareSuperclassPresence1 *compareSuperclassPresence1;
 // expected-error@first.h:* {{'CompareSuperclassPresence1' has different definitions in different modules; first difference is definition in module 'First.Hidden' found super class with type 'NSObject'}}
-// expected-note@second.h:* {{but in 'Second' found no super class}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found no super class}}
 CompareSuperclassPresence2 *compareSuperclassPresence2;
 // expected-error@first.h:* {{'CompareSuperclassPresence2' has different definitions in different modules; first difference is definition in module 'First.Hidden' found no super class}}
-// expected-note@second.h:* {{but in 'Second' found super class with type 'NSObject'}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found super class with type 'NSObject'}}
 CompareDifferentSuperclass *compareDifferentSuperclass;
 // expected-error@first.h:* {{'CompareDifferentSuperclass' has different definitions in different modules; first difference is definition in module 'First.Hidden' found super class with type 'NSObject'}}
-// expected-note@second.h:* {{but in 'Second' found super class with type 'DifferentSuperclass'}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found super class with type 'DifferentSuperclass'}}
 #endif
 
 #if defined(FIRST)
@@ -122,17 +129,17 @@ CompareMatchingConformingForwardProtocols *compareMatchingConformingForwardProto
 
 CompareProtocolPresence1 *compareProtocolPresence1;
 // expected-error@first.h:* {{'CompareProtocolPresence1' has different definitions in different modules; first difference is definition in module 'First.Hidden' found 1 referenced protocol}}
-// expected-note@second.h:* {{but in 'Second' found 0 referenced protocols}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found 0 referenced protocols}}
 CompareProtocolPresence2 *compareProtocolPresence2;
 // expected-error@first.h:* {{'CompareProtocolPresence2' has different definitions in different modules; first difference is definition in module 'First.Hidden' found 0 referenced protocols}}
-// expected-note@second.h:* {{but in 'Second' found 1 referenced protocol}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found 1 referenced protocol}}
 
 CompareDifferentProtocols *compareDifferentProtocols;
 // expected-error@first.h:* {{'CompareDifferentProtocols' has different definitions in different modules; first difference is definition in module 'First.Hidden' found 1st referenced protocol with name 'CommonProtocol'}}
-// expected-note@second.h:* {{but in 'Second' found 1st referenced protocol with different name 'ExtraProtocol'}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found 1st referenced protocol with different name 'ExtraProtocol'}}
 CompareProtocolOrder *compareProtocolOrder;
 // expected-error@first.h:* {{'CompareProtocolOrder' has different definitions in different modules; first difference is definition in module 'First.Hidden' found 1st referenced protocol with name 'CommonProtocol'}}
-// expected-note@second.h:* {{but in 'Second' found 1st referenced protocol with different name 'ExtraProtocol'}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found 1st referenced protocol with different name 'ExtraProtocol'}}
 #endif
 
 #if defined(FIRST)
@@ -186,28 +193,43 @@ CompareProtocolOrder *compareProtocolOrder;
 CompareMatchingIVars *compareMatchingIVars;
 
 CompareIVarPresence1 *compareIVarPresence1;
+#ifdef TEST_MODULAR
 // expected-error@second.h:* {{'CompareIVarPresence1::ivarPresence1' from module 'Second' is not present in definition of 'CompareIVarPresence1' in module 'First.Hidden'}}
 // expected-note@first.h:* {{definition has no member 'ivarPresence1'}}
+#else
+// expected-error@first.h:* {{'CompareIVarPresence1' has different definitions in different modules; first difference is definition in module 'First.Hidden' found end of class}}
+// expected-note@second.h:* {{but in definition here found instance variable}}
+#endif
 CompareIVarPresence2 *compareIVarPresence2;
 // expected-error@first.h:* {{'CompareIVarPresence2' has different definitions in different modules; first difference is definition in module 'First.Hidden' found instance variable}}
-// expected-note@second.h:* {{but in 'Second' found end of class}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found end of class}}
 
 CompareIVarName *compareIVarName;
+#ifdef TEST_MODULAR
 // expected-error@second.h:* {{'CompareIVarName::differentIvarName' from module 'Second' is not present in definition of 'CompareIVarName' in module 'First.Hidden'}}
 // expected-note@first.h:* {{definition has no member 'differentIvarName'}}
+#else
+// expected-error@first.h:* {{'CompareIVarName' has different definitions in different modules; first difference is definition in module 'First.Hidden' found field 'ivarName'}}
+// expected-note@second.h:* {{but in definition here found field 'differentIvarName'}}
+#endif
 CompareIVarType *compareIVarType;
+#ifdef TEST_MODULAR
 // expected-error@second.h:* {{'CompareIVarType::ivarType' from module 'Second' is not present in definition of 'CompareIVarType' in module 'First.Hidden'}}
 // expected-note@first.h:* {{declaration of 'ivarType' does not match}}
+#else
+// expected-error@first.h:* {{'CompareIVarType' has different definitions in different modules; first difference is definition in module 'First.Hidden' found field 'ivarType' with type 'int'}}
+// expected-note@second.h:* {{but in definition here found field 'ivarType' with type 'float'}}
+#endif
 CompareIVarOrder *compareIVarOrder;
 // expected-error@first.h:* {{'CompareIVarOrder' has different definitions in different modules; first difference is definition in module 'First.Hidden' found field 'ivarNameInt'}}
-// expected-note@second.h:* {{but in 'Second' found field 'ivarNameFloat'}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found field 'ivarNameFloat'}}
 
 CompareIVarVisibilityExplicit *compareIVarVisibilityExplicit;
 // expected-error@first.h:* {{'CompareIVarVisibilityExplicit' has different definitions in different modules; first difference is definition in module 'First.Hidden' found instance variable 'ivarVisibility' access control is @public}}
-// expected-note@second.h:* {{but in 'Second' found instance variable 'ivarVisibility' access control is @private}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found instance variable 'ivarVisibility' access control is @private}}
 CompareIVarVisibilityDefault *compareIVarVisibilityDefault;
 // expected-error@first.h:* {{'CompareIVarVisibilityDefault' has different definitions in different modules; first difference is definition in module 'First.Hidden' found instance variable 'ivarVisibilityDefault' access control is @protected}}
-// expected-note@second.h:* {{but in 'Second' found instance variable 'ivarVisibilityDefault' access control is @public}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found instance variable 'ivarVisibilityDefault' access control is @public}}
 #endif
 
 #if defined(FIRST)
@@ -288,34 +310,34 @@ CompareIVarVisibilityDefault *compareIVarVisibilityDefault;
 CompareMatchingMethods *compareMatchingMethods;
 CompareMethodPresence1 *compareMethodPresence1;
 // expected-error@first.h:* {{'CompareMethodPresence1' has different definitions in different modules; first difference is definition in module 'First.Hidden' found method}}
-// expected-note@second.h:* {{but in 'Second' found end of class}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found end of class}}
 CompareMethodPresence2 *compareMethodPresence2;
 // expected-error@first.h:* {{'CompareMethodPresence2' has different definitions in different modules; first difference is definition in module 'First.Hidden' found end of class}}
-// expected-note@second.h:* {{but in 'Second' found method}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found method}}
 CompareMethodName *compareMethodName;
 // expected-error@first.h:* {{'CompareMethodName' has different definitions in different modules; first difference is definition in module 'First.Hidden' found method 'methodNameA'}}
-// expected-note@second.h:* {{but in 'Second' found different method 'methodNameB'}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found different method 'methodNameB'}}
 
 CompareMethodArgCount *compareMethodArgCount;
 // expected-error@first.h:* {{'CompareMethodArgCount' has different definitions in different modules; first difference is definition in module 'First.Hidden' found method 'methodArgCount::' that has 2 parameters}}
-// expected-note@second.h:* {{but in 'Second' found method 'methodArgCount:' that has 1 parameter}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found method 'methodArgCount:' that has 1 parameter}}
 CompareMethodArgName *compareMethodArgName;
 // expected-error@first.h:* {{'CompareMethodArgName' has different definitions in different modules; first difference is definition in module 'First.Hidden' found method 'methodArgName:' with 1st parameter named 'argNameA'}}
-// expected-note@second.h:* {{but in 'Second' found method 'methodArgName:' with 1st parameter named 'argNameB'}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found method 'methodArgName:' with 1st parameter named 'argNameB'}}
 CompareMethodArgType *compareMethodArgType;
 // expected-error@first.h:* {{'CompareMethodArgType' has different definitions in different modules; first difference is definition in module 'First.Hidden' found method 'methodArgType:' with 1st parameter of type 'int'}}
-// expected-note@second.h:* {{but in 'Second' found method 'methodArgType:' with 1st parameter of type 'float'}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found method 'methodArgType:' with 1st parameter of type 'float'}}
 
 CompareMethodReturnType *compareMethodReturnType;
 // expected-error@first.h:* {{'CompareMethodReturnType' has different definitions in different modules; first difference is definition in module 'First.Hidden' found method 'methodReturnType' with return type 'int'}}
-// expected-note@second.h:* {{but in 'Second' found method 'methodReturnType' with different return type 'float'}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found method 'methodReturnType' with different return type 'float'}}
 
 CompareMethodOrder *compareMethodOrder;
 // expected-error@first.h:* {{'CompareMethodOrder' has different definitions in different modules; first difference is definition in module 'First.Hidden' found method 'methodOrderFirst'}}
-// expected-note@second.h:* {{but in 'Second' found different method 'methodOrderSecond'}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found different method 'methodOrderSecond'}}
 CompareMethodClassInstance *compareMethodClassInstance;
 // expected-error@first.h:* {{'CompareMethodClassInstance' has different definitions in different modules; first difference is definition in module 'First.Hidden' found class method 'methodClassInstance'}}
-// expected-note@second.h:* {{but in 'Second' found method 'methodClassInstance' as instance method}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found method 'methodClassInstance' as instance method}}
 #endif
 
 #if defined(FIRST)
@@ -396,29 +418,29 @@ CompareMethodClassInstance *compareMethodClassInstance;
 CompareMatchingProperties *compareMatchingProperties;
 ComparePropertyPresence1 *comparePropertyPresence1;
 // expected-error@first.h:* {{'ComparePropertyPresence1' has different definitions in different modules; first difference is definition in module 'First.Hidden' found property}}
-// expected-note@second.h:* {{but in 'Second' found end of class}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found end of class}}
 ComparePropertyPresence2 *comparePropertyPresence2;
 // expected-error@first.h:* {{'ComparePropertyPresence2' has different definitions in different modules; first difference is definition in module 'First.Hidden' found end of class}}
-// expected-note@second.h:* {{but in 'Second' found property}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found property}}
 
 ComparePropertyName *comparePropertyName;
 // expected-error@first.h:* {{'ComparePropertyName' has different definitions in different modules; first difference is definition in module 'First.Hidden' found property 'propNameA'}}
-// expected-note@second.h:* {{but in 'Second' found property 'propNameB'}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found property 'propNameB'}}
 ComparePropertyType *comparePropertyType;
 // expected-error@first.h:* {{'ComparePropertyType' has different definitions in different modules; first difference is definition in module 'First.Hidden' found property 'propType' with type 'int'}}
-// expected-note@second.h:* {{but in 'Second' found property 'propType' with type 'float'}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found property 'propType' with type 'float'}}
 ComparePropertyOrder *comparePropertyOrder;
 // expected-error@first.h:* {{'ComparePropertyOrder' has different definitions in different modules; first difference is definition in module 'First.Hidden' found property 'propOrderX'}}
-// expected-note@second.h:* {{but in 'Second' found property 'propOrderY'}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found property 'propOrderY'}}
 
 CompareMatchingPropertyAttributes *compareMatchingPropertyAttributes;
 ComparePropertyAttributes *comparePropertyAttributes;
 // expected-error@first.h:* {{'ComparePropertyAttributes' has different definitions in different modules; first difference is definition in module 'First.Hidden' found property 'propAttributes' with 'readonly' attribute}}
-// expected-note@second.h:* {{but in 'Second' found property 'propAttributes' with different 'readonly' attribute}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found property 'propAttributes' with different 'readonly' attribute}}
 CompareFirstImplAttribute *compareFirstImplAttribute;
 // expected-error@first.h:* {{'CompareFirstImplAttribute' has different definitions in different modules; first difference is definition in module 'First.Hidden' found property 'firstImplAttribute' with default 'readonly' attribute}}
-// expected-note@second.h:* {{but in 'Second' found property 'firstImplAttribute' with different 'readonly' attribute}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found property 'firstImplAttribute' with different 'readonly' attribute}}
 CompareLastImplAttribute *compareLastImplAttribute;
 // expected-error@first.h:* {{'CompareLastImplAttribute' has different definitions in different modules; first difference is definition in module 'First.Hidden' found property 'lastImplAttribute' with 'direct' attribute}}
-// expected-note@second.h:* {{but in 'Second' found property 'lastImplAttribute' with different 'direct' attribute}}
+// expected-note-re@second.h:* {{but in {{'Second'|definition here}} found property 'lastImplAttribute' with different 'direct' attribute}}
 #endif
