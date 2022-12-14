@@ -711,17 +711,28 @@ gatherProducerConsumerMemrefs(unsigned srcId, unsigned dstId,
 }
 
 /// A memref escapes the function if either:
-///   1. it is a function argument, or
-///   2. it is used by a non-affine op (e.g., std load/store, std
-///   call, etc.)
-/// FIXME: Support alias creating ops like memref view ops.
+///   1. it (or its alias) is a block argument, or
+///   2. created by an op not known to guarantee alias freedom,
+///   3. it (or its alias) is used by a non-affine op (e.g., call op, memref
+///      load/store ops, alias creating ops, unknown ops, etc.); such ops
+///      do not deference the memref in an affine way.
 static bool isEscapingMemref(Value memref) {
-  // Check if 'memref' escapes because it's a block argument.
-  if (memref.isa<BlockArgument>())
+  Operation *defOp = memref.getDefiningOp();
+  // Check if 'memref' is a block argument.
+  if (!defOp)
     return true;
 
-  // Check if 'memref' escapes through a non-affine op (e.g., std load/store,
-  // call op, etc.). This already covers aliases created from this.
+  // Check if this is defined to be an alias of another memref.
+  if (auto viewOp = dyn_cast<mlir::ViewLikeOpInterface>(defOp))
+    if (isEscapingMemref(viewOp.getViewSource()))
+      return true;
+
+  // Any op besides allocating ops wouldn't guarantee alias freedom
+  if (!hasSingleEffect<mlir::MemoryEffects::Allocate>(defOp, memref))
+    return true;
+
+  // Check if 'memref' is used by a non-deferencing op (including unknown ones)
+  // (e.g., call ops, alias creating ops, etc.).
   for (Operation *user : memref.getUsers())
     if (!isa<AffineMapAccessInterface>(*user))
       return true;
@@ -729,7 +740,7 @@ static bool isEscapingMemref(Value memref) {
 }
 
 /// Returns in 'escapingMemRefs' the memrefs from affine store ops in node 'id'
-/// that escape the function.
+/// that escape the function or are accessed by non-affine ops.
 void gatherEscapingMemrefs(unsigned id, MemRefDependenceGraph *mdg,
                            DenseSet<Value> &escapingMemRefs) {
   auto *node = mdg->getNode(id);
