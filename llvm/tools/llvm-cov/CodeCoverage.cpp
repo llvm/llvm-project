@@ -85,7 +85,7 @@ private:
   bool isEquivalentFile(StringRef FilePath1, StringRef FilePath2);
 
   /// Retrieve a file status with a cache.
-  Optional<sys::fs::file_status> getFileStatus(StringRef FilePath);
+  std::optional<sys::fs::file_status> getFileStatus(StringRef FilePath);
 
   /// Return a memory buffer for the given source file.
   ErrorOr<const MemoryBuffer &> getSourceFile(StringRef SourceFile);
@@ -161,7 +161,7 @@ private:
   std::optional<std::pair<std::string, std::string>> PathRemapping;
 
   /// File status cache used when finding the same file.
-  StringMap<Optional<sys::fs::file_status>> FileStatusCache;
+  StringMap<std::optional<sys::fs::file_status>> FileStatusCache;
 
   /// The architecture the coverage mapping data targets.
   std::vector<StringRef> CoverageArches;
@@ -249,7 +249,7 @@ void CodeCoverageTool::collectPaths(const std::string &Path) {
   }
 }
 
-Optional<sys::fs::file_status>
+std::optional<sys::fs::file_status>
 CodeCoverageTool::getFileStatus(StringRef FilePath) {
   auto It = FileStatusCache.try_emplace(FilePath);
   auto &CachedStatus = It.first->getValue();

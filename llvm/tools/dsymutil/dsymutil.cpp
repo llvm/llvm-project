@@ -485,12 +485,13 @@ static bool verifyOutput(StringRef OutputFile, StringRef Arch, bool Verbose) {
 
 namespace {
 struct OutputLocation {
-  OutputLocation(std::string DWARFFile, Optional<std::string> ResourceDir = {})
+  OutputLocation(std::string DWARFFile,
+                 std::optional<std::string> ResourceDir = {})
       : DWARFFile(DWARFFile), ResourceDir(ResourceDir) {}
   /// This method is a workaround for older compilers.
-  Optional<std::string> getResourceDir() const { return ResourceDir; }
+  std::optional<std::string> getResourceDir() const { return ResourceDir; }
   std::string DWARFFile;
-  Optional<std::string> ResourceDir;
+  std::optional<std::string> ResourceDir;
 };
 } // namespace
 

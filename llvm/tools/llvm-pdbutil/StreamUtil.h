@@ -52,7 +52,7 @@ private:
   StreamPurpose Purpose;
   uint32_t StreamIndex;
   std::string Name;
-  Optional<uint32_t> ModuleIndex;
+  std::optional<uint32_t> ModuleIndex;
 };
 
 void discoverStreamPurposes(PDBFile &File,
