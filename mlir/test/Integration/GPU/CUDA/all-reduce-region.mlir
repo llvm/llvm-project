@@ -20,7 +20,7 @@ func.func @main() {
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %one, %grid_y = %one, %grid_z = %one)
              threads(%tx, %ty, %tz) in (%block_x = %sx, %block_y = %one, %block_z = %one) {
     %val = arith.index_cast %tx : index to i32
-    %xor = gpu.all_reduce %val {
+    %xor = gpu.all_reduce %val uniform {
     ^bb(%lhs : i32, %rhs : i32):
       %xor = arith.xori %lhs, %rhs : i32
       "gpu.yield"(%xor) : (i32) -> ()
