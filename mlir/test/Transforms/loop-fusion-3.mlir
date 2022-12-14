@@ -1,5 +1,5 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-fusion -split-input-file | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-fusion="fusion-maximal" -split-input-file | FileCheck %s --check-prefix=MAXIMAL
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion))' -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{fusion-maximal}))' -split-input-file | FileCheck %s --check-prefix=MAXIMAL
 
 // Part I of fusion tests in  mlir/test/Transforms/loop-fusion.mlir.
 // Part II of fusion tests in mlir/test/Transforms/loop-fusion-2.mlir
@@ -532,8 +532,8 @@ func.func @should_fuse_defining_node_has_no_dependence_from_source_node(
     %2 = arith.divf %0, %1 : f32
   }
 
-	// Loops '%i0' and '%i1' should be fused even though there is a defining
-  // node between the loops. It is because the node has no dependence from '%i0'.
+  // Loops '%i0' and '%i1' should be fused even though there is a defining node
+  // between the loops. It is because the node has no dependence from '%i0'.
   // CHECK:       affine.load %{{.*}}[] : memref<f32>
   // CHECK-NEXT:  affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:    affine.load %{{.*}}[] : memref<f32>
@@ -561,8 +561,8 @@ func.func @should_not_fuse_defining_node_has_dependence_from_source_loop(
     %2 = arith.divf %0, %1 : f32
   }
 
-	// Loops '%i0' and '%i1' should not be fused because the defining node
-  // of '%0' used in '%i1' has dependence from loop '%i0'.
+  // Loops '%i0' and '%i1' should not be fused because the defining node of '%0'
+  // used in '%i1' has dependence from loop '%i0'.
   // CHECK:       affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[] : memref<f32>
   // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
