@@ -176,6 +176,9 @@ endif()
 # This can be used to detect whether we're in the runtimes build.
 set(LLVM_RUNTIMES_BUILD ON)
 
+include(SetTargetTriple)
+set_llvm_target_triple()
+
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)
 
