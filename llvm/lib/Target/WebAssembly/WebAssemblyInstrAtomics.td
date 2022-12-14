@@ -226,25 +226,9 @@ multiclass AtomicLoad<WebAssemblyRegClass rc, string name, int atomic_op> {
 defm ATOMIC_LOAD_I32 : AtomicLoad<I32, "i32.atomic.load", 0x10>;
 defm ATOMIC_LOAD_I64 : AtomicLoad<I64, "i64.atomic.load", 0x11>;
 
-// Select loads with no constant offset.
-defm : LoadPatNoOffset<i32, atomic_load_32, "ATOMIC_LOAD_I32">;
-defm : LoadPatNoOffset<i64, atomic_load_64, "ATOMIC_LOAD_I64">;
-
-// Select loads with a constant offset.
-
-// Pattern with address + immediate offset
-defm : LoadPatImmOff<i32, atomic_load_32, regPlusImm, "ATOMIC_LOAD_I32">;
-defm : LoadPatImmOff<i64, atomic_load_64, regPlusImm, "ATOMIC_LOAD_I64">;
-defm : LoadPatImmOff<i32, atomic_load_32, or_is_add, "ATOMIC_LOAD_I32">;
-defm : LoadPatImmOff<i64, atomic_load_64, or_is_add, "ATOMIC_LOAD_I64">;
-
-// Select loads with just a constant offset.
-defm : LoadPatOffsetOnly<i32, atomic_load_32, "ATOMIC_LOAD_I32">;
-defm : LoadPatOffsetOnly<i64, atomic_load_64, "ATOMIC_LOAD_I64">;
-
-defm : LoadPatGlobalAddrOffOnly<i32, atomic_load_32, "ATOMIC_LOAD_I32">;
-defm : LoadPatGlobalAddrOffOnly<i64, atomic_load_64, "ATOMIC_LOAD_I64">;
-
+// Select loads
+defm : LoadPat<i32, atomic_load_32, "ATOMIC_LOAD_I32">;
+defm : LoadPat<i64, atomic_load_64, "ATOMIC_LOAD_I64">;
 
 // Extending loads. Note that there are only zero-extending atomic loads, no
 // sign-extending loads.
@@ -283,53 +267,17 @@ def sext_aload_8_64 :
 def sext_aload_16_64 :
   PatFrag<(ops node:$addr), (anyext (i32 (atomic_load_16 node:$addr)))>;
 
-// Select zero-extending loads with no constant offset.
-defm : LoadPatNoOffset<i64, zext_aload_8_64, "ATOMIC_LOAD8_U_I64">;
-defm : LoadPatNoOffset<i64, zext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
-defm : LoadPatNoOffset<i64, zext_aload_32_64, "ATOMIC_LOAD32_U_I64">;
+// Select zero-extending loads
+defm : LoadPat<i64, zext_aload_8_64, "ATOMIC_LOAD8_U_I64">;
+defm : LoadPat<i64, zext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
+defm : LoadPat<i64, zext_aload_32_64, "ATOMIC_LOAD32_U_I64">;
 
-// Select sign-extending loads with no constant offset
-defm : LoadPatNoOffset<i32, atomic_load_8, "ATOMIC_LOAD8_U_I32">;
-defm : LoadPatNoOffset<i32, atomic_load_16, "ATOMIC_LOAD16_U_I32">;
-defm : LoadPatNoOffset<i64, sext_aload_8_64, "ATOMIC_LOAD8_U_I64">;
-defm : LoadPatNoOffset<i64, sext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
+// Select sign-extending loads
+defm : LoadPat<i32, atomic_load_8, "ATOMIC_LOAD8_U_I32">;
+defm : LoadPat<i32, atomic_load_16, "ATOMIC_LOAD16_U_I32">;
+defm : LoadPat<i64, sext_aload_8_64, "ATOMIC_LOAD8_U_I64">;
+defm : LoadPat<i64, sext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
 // 32->64 sext load gets selected as i32.atomic.load, i64.extend_i32_s
-
-// Zero-extending loads with constant offset
-defm : LoadPatImmOff<i64, zext_aload_8_64, regPlusImm, "ATOMIC_LOAD8_U_I64">;
-defm : LoadPatImmOff<i64, zext_aload_16_64, regPlusImm, "ATOMIC_LOAD16_U_I64">;
-defm : LoadPatImmOff<i64, zext_aload_32_64, regPlusImm, "ATOMIC_LOAD32_U_I64">;
-defm : LoadPatImmOff<i64, zext_aload_8_64, or_is_add, "ATOMIC_LOAD8_U_I64">;
-defm : LoadPatImmOff<i64, zext_aload_16_64, or_is_add, "ATOMIC_LOAD16_U_I64">;
-defm : LoadPatImmOff<i64, zext_aload_32_64, or_is_add, "ATOMIC_LOAD32_U_I64">;
-
-// Sign-extending loads with constant offset
-defm : LoadPatImmOff<i32, atomic_load_8, regPlusImm, "ATOMIC_LOAD8_U_I32">;
-defm : LoadPatImmOff<i32, atomic_load_16, regPlusImm, "ATOMIC_LOAD16_U_I32">;
-defm : LoadPatImmOff<i32, atomic_load_8, or_is_add, "ATOMIC_LOAD8_U_I32">;
-defm : LoadPatImmOff<i32, atomic_load_16, or_is_add, "ATOMIC_LOAD16_U_I32">;
-defm : LoadPatImmOff<i64, sext_aload_8_64, regPlusImm, "ATOMIC_LOAD8_U_I64">;
-defm : LoadPatImmOff<i64, sext_aload_16_64, regPlusImm, "ATOMIC_LOAD16_U_I64">;
-defm : LoadPatImmOff<i64, sext_aload_8_64, or_is_add, "ATOMIC_LOAD8_U_I64">;
-defm : LoadPatImmOff<i64, sext_aload_16_64, or_is_add, "ATOMIC_LOAD16_U_I64">;
-// No 32->64 patterns, just use i32.atomic.load and i64.extend_s/i64
-
-// Extending loads with just a constant offset
-defm : LoadPatOffsetOnly<i64, zext_aload_8_64, "ATOMIC_LOAD8_U_I64">;
-defm : LoadPatOffsetOnly<i64, zext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
-defm : LoadPatOffsetOnly<i64, zext_aload_32_64, "ATOMIC_LOAD32_U_I64">;
-defm : LoadPatOffsetOnly<i32, atomic_load_8, "ATOMIC_LOAD8_U_I32">;
-defm : LoadPatOffsetOnly<i32, atomic_load_16, "ATOMIC_LOAD16_U_I32">;
-defm : LoadPatOffsetOnly<i64, sext_aload_8_64, "ATOMIC_LOAD8_U_I64">;
-defm : LoadPatOffsetOnly<i64, sext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
-
-defm : LoadPatGlobalAddrOffOnly<i64, zext_aload_8_64, "ATOMIC_LOAD8_U_I64">;
-defm : LoadPatGlobalAddrOffOnly<i64, zext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
-defm : LoadPatGlobalAddrOffOnly<i64, zext_aload_32_64, "ATOMIC_LOAD32_U_I64">;
-defm : LoadPatGlobalAddrOffOnly<i32, atomic_load_8, "ATOMIC_LOAD8_U_I32">;
-defm : LoadPatGlobalAddrOffOnly<i32, atomic_load_16, "ATOMIC_LOAD16_U_I32">;
-defm : LoadPatGlobalAddrOffOnly<i64, sext_aload_8_64, "ATOMIC_LOAD8_U_I64">;
-defm : LoadPatGlobalAddrOffOnly<i64, sext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
 
 
 //===----------------------------------------------------------------------===//

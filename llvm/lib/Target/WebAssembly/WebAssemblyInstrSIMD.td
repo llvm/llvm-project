@@ -167,11 +167,7 @@ defm LOAD_V128_A64 :
 
 // Def load patterns from WebAssemblyInstrMemory.td for vector types
 foreach vec = AllVecs in {
-defm : LoadPatNoOffset<vec.vt, load, "LOAD_V128">;
-defm : LoadPatImmOff<vec.vt, load, regPlusImm, "LOAD_V128">;
-defm : LoadPatImmOff<vec.vt, load, or_is_add, "LOAD_V128">;
-defm : LoadPatOffsetOnly<vec.vt, load, "LOAD_V128">;
-defm : LoadPatGlobalAddrOffOnly<vec.vt, load, "LOAD_V128">;
+defm : LoadPat<vec.vt, load, "LOAD_V128">;
 }
 
 // v128.loadX_splat
@@ -206,11 +202,7 @@ def load_splat : PatFrag<(ops node:$addr), (wasm_load_splat node:$addr)>;
 
 foreach vec = AllVecs in {
 defvar inst = "LOAD"#vec.lane_bits#"_SPLAT";
-defm : LoadPatNoOffset<vec.vt, load_splat, inst>;
-defm : LoadPatImmOff<vec.vt, load_splat, regPlusImm, inst>;
-defm : LoadPatImmOff<vec.vt, load_splat, or_is_add, inst>;
-defm : LoadPatOffsetOnly<vec.vt, load_splat, inst>;
-defm : LoadPatGlobalAddrOffOnly<vec.vt, load_splat, inst>;
+defm : LoadPat<vec.vt, load_splat, inst>;
 }
 
 // Load and extend
@@ -255,11 +247,7 @@ foreach exts = [["sextloadvi", "_S"],
                 ["extloadvi", "_U"]] in {
 defvar loadpat = !cast<PatFrag>(exts[0]#vec.split.lane_bits);
 defvar inst = "LOAD_EXTEND"#exts[1]#"_"#vec;
-defm : LoadPatNoOffset<vec.vt, loadpat, inst>;
-defm : LoadPatImmOff<vec.vt, loadpat, regPlusImm, inst>;
-defm : LoadPatImmOff<vec.vt, loadpat, or_is_add, inst>;
-defm : LoadPatOffsetOnly<vec.vt, loadpat, inst>;
-defm : LoadPatGlobalAddrOffOnly<vec.vt, loadpat, inst>;
+defm : LoadPat<vec.vt, loadpat, inst>;
 }
 
 // Load lane into zero vector
@@ -289,11 +277,7 @@ defm "" : SIMDLoadZero<I64x2, 0x5d>;
 foreach vec = [I32x4, I64x2] in {
   defvar inst = "LOAD_ZERO_"#vec;
   defvar pat = PatFrag<(ops node:$addr), (scalar_to_vector (vec.lane_vt (load $addr)))>;
-  defm : LoadPatNoOffset<vec.vt, pat, inst>;
-  defm : LoadPatImmOff<vec.vt, pat, regPlusImm, inst>;
-  defm : LoadPatImmOff<vec.vt, pat, or_is_add, inst>;
-  defm : LoadPatOffsetOnly<vec.vt, pat, inst>;
-  defm : LoadPatGlobalAddrOffOnly<vec.vt, pat, inst>;
+  defm : LoadPat<vec.vt, pat, inst>;
 }
 
 // TODO: f32x4 and f64x2 as well
@@ -301,11 +285,7 @@ foreach vec = [I32x4, I64x2] in {
   defvar inst = "LOAD_ZERO_"#vec;
   defvar pat = PatFrag<(ops node:$ptr),
     (vector_insert (vec.splat (vec.lane_vt 0)), (vec.lane_vt (load $ptr)), 0)>;
-  defm : LoadPatNoOffset<vec.vt, pat, inst>;
-  defm : LoadPatImmOff<vec.vt, pat, regPlusImm, inst>;
-  defm : LoadPatImmOff<vec.vt, pat, or_is_add, inst>;
-  defm : LoadPatOffsetOnly<vec.vt, pat, inst>;
-  defm : LoadPatGlobalAddrOffOnly<vec.vt, pat, inst>;
+  defm : LoadPat<vec.vt, pat, inst>;
 }
 
 // Load lane
