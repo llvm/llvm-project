@@ -624,6 +624,17 @@ void ObjCInterfaceDecl::startDefinition() {
   }
 }
 
+void ObjCInterfaceDecl::startDuplicateDefinitionForComparison() {
+  Data.setPointer(nullptr);
+  allocateDefinitionData();
+  // Don't propagate data to other redeclarations.
+}
+
+void ObjCInterfaceDecl::mergeDuplicateDefinitionWithCommon(
+    const ObjCInterfaceDecl *Definition) {
+  Data = Definition->Data;
+}
+
 ObjCIvarDecl *ObjCInterfaceDecl::lookupInstanceVariable(IdentifierInfo *ID,
                                               ObjCInterfaceDecl *&clsDeclared) {
   // FIXME: Should make sure no callers ever do this.

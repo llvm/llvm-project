@@ -1542,6 +1542,13 @@ public:
   /// a forward declaration (\@class) to a definition (\@interface).
   void startDefinition();
 
+  /// Starts the definition without sharing it with other redeclarations.
+  /// Such definition shouldn't be used for anything but only to compare if
+  /// a duplicate is compatible with previous definition or if it is
+  /// a distinct duplicate.
+  void startDuplicateDefinitionForComparison();
+  void mergeDuplicateDefinitionWithCommon(const ObjCInterfaceDecl *Definition);
+
   /// Retrieve the superclass type.
   const ObjCObjectType *getSuperClassType() const {
     if (TypeSourceInfo *TInfo = getSuperClassTInfo())

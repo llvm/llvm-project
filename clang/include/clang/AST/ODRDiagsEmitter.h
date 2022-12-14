@@ -58,6 +58,15 @@ public:
       const ObjCInterfaceDecl *FirstID, const ObjCInterfaceDecl *SecondID,
       const struct ObjCInterfaceDecl::DefinitionData *SecondDD) const;
 
+  /// Diagnose ODR mismatch between ObjCInterfaceDecl with different
+  /// definitions.
+  bool diagnoseMismatch(const ObjCInterfaceDecl *FirstID,
+                        const ObjCInterfaceDecl *SecondID) const {
+    assert(FirstID->data().Definition != SecondID->data().Definition &&
+           "Don't diagnose differences when definitions are merged already");
+    return diagnoseMismatch(FirstID, SecondID, &SecondID->data());
+  }
+
   /// Diagnose ODR mismatch between 2 ObjCProtocolDecl.
   ///
   /// Returns true if found a mismatch and diagnosed it.

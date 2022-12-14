@@ -624,12 +624,12 @@ def err_module_odr_violation_objc_interface : Error <
     "%select{|@private|@protected|@public|@package}5"
   "}3">;
 def note_module_odr_violation_objc_interface : Note <
-  "but in '%0' found "
+  "but in %select{'%1'|definition here}0 found "
   "%select{"
-  "%select{no super class|super class with type %3}2|"
-  "instance variable '%2' access control is "
-    "%select{|@private|@protected|@public|@package}3"
-  "}1">;
+  "%select{no super class|super class with type %4}3|"
+  "instance variable '%3' access control is "
+    "%select{|@private|@protected|@public|@package}4"
+  "}2">;
 
 def err_module_odr_violation_template_parameter : Error <
   "%q0 has different definitions in different modules; first difference is "
@@ -778,16 +778,17 @@ def err_module_odr_violation_field : Error<
   "field %4 with %select{no|an}5 initalizer|"
   "field %4 with an initializer"
   "}3">;
-def note_module_odr_violation_field : Note<"but in '%0' found "
+def note_module_odr_violation_field : Note<
+  "but in %select{'%1'|definition here}0 found "
   "%select{"
-  "field %2|"
-  "field %2 with type %3|"
-  "%select{non-|}3bitfield %2|"
-  "bitfield %2 with different width expression|"
-  "%select{non-|}3mutable field %2|"
-  "field %2 with %select{no|an}3 initializer|"
-  "field %2 with a different initializer"
-  "}1">;
+  "field %3|"
+  "field %3 with type %4|"
+  "%select{non-|}4bitfield %3|"
+  "bitfield %3 with different width expression|"
+  "%select{non-|}4mutable field %3|"
+  "field %3 with %select{no|an}4 initializer|"
+  "field %3 with a different initializer"
+  "}2">;
 
 def err_module_odr_violation_typedef : Error<
   "%q0 has different definitions in different modules; first difference is "
