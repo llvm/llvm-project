@@ -3882,16 +3882,11 @@ Important Public Members of the ``Function``
 
 * | ``Function::iterator`` - Typedef for basic block list iterator
   | ``Function::const_iterator`` - Typedef for const_iterator.
-  | ``begin()``, ``end()``, ``size()``, ``empty()``
+  | ``begin()``, ``end()``, ``size()``, ``empty()``, ``insert()``,
+    ``splice()``, ``erase()``
 
   These are forwarding methods that make it easy to access the contents of a
   ``Function`` object's BasicBlock_ list.
-
-* ``Function::BasicBlockListType &getBasicBlockList()``
-
-  Returns the list of BasicBlock_\ s.  This is necessary to use when you need to
-  update the list or perform a complex action that doesn't have a forwarding
-  method.
 
 * | ``Function::arg_iterator`` - Typedef for the argument list iterator
   | ``Function::const_arg_iterator`` - Typedef for const_iterator.
