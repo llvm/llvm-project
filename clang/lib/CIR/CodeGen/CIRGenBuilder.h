@@ -81,6 +81,24 @@ public:
   }
 
   //
+  // Type helpers
+  // ------------
+  //
+
+  // Fetch the type representing a pointer to an 8-bit integer value.
+  mlir::cir::PointerType getInt8PtrTy(unsigned AddrSpace = 0) {
+    return mlir::cir::PointerType::get(getContext(),
+                                       mlir::IntegerType::get(getContext(), 8));
+  }
+
+  /// Get a constant 32-bit value.
+  mlir::cir::ConstantOp getInt32(uint32_t C, mlir::Location loc) {
+    auto int32Ty = mlir::IntegerType::get(getContext(), 32);
+    return create<mlir::cir::ConstantOp>(loc, int32Ty,
+                                         mlir::IntegerAttr::get(int32Ty, C));
+  }
+
+  //
   // Operation creation helpers
   // --------------------------
   //
