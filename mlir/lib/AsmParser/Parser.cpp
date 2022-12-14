@@ -1871,7 +1871,7 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
     if (iface && !iface->getDefaultDialect().empty())
       defaultDialect = iface->getDefaultDialect();
   } else {
-    Optional<Dialect::ParseOpHook> dialectHook;
+    std::optional<Dialect::ParseOpHook> dialectHook;
     Dialect *dialect = opNameInfo->getDialect();
     if (!dialect) {
       InFlightDiagnostic diag =

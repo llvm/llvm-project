@@ -202,7 +202,7 @@ def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
       "llvm::StringRef":$component, "mlir::Value":$component_shape,
       "llvm::ArrayRef<std::variant<mlir::Value, std::tuple<mlir::Value, mlir::Value, mlir::Value>>>":$subscripts,
       CArg<"mlir::ValueRange", "{}">:$substring,
-      CArg<"llvm::Optional<bool>", "{}">:$complex_part,
+      CArg<"std::optional<bool>", "{}">:$complex_part,
       CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>,
 

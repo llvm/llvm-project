@@ -46,7 +46,7 @@ PDLByteCodePattern PDLByteCodePattern::create(pdl_interp::RecordMatchOp matchOp,
         llvm::to_vector<8>(generatedOpsAttr.getAsValueRange<StringAttr>());
 
   // Check to see if this is pattern matches a specific operation type.
-  if (Optional<StringRef> rootKind = matchOp.getRootKind())
+  if (std::optional<StringRef> rootKind = matchOp.getRootKind())
     return PDLByteCodePattern(rewriterAddr, configSet, *rootKind, benefit, ctx,
                               generatedOps);
   return PDLByteCodePattern(rewriterAddr, configSet, MatchAnyOpTypeTag(),
@@ -940,7 +940,7 @@ void Generator::generate(pdl_interp::GetOperandOp op, ByteCodeWriter &writer) {
 }
 void Generator::generate(pdl_interp::GetOperandsOp op, ByteCodeWriter &writer) {
   Value result = op.getValue();
-  Optional<uint32_t> index = op.getIndex();
+  std::optional<uint32_t> index = op.getIndex();
   writer.append(OpCode::GetOperands,
                 index.value_or(std::numeric_limits<uint32_t>::max()),
                 op.getInputOp());
@@ -960,7 +960,7 @@ void Generator::generate(pdl_interp::GetResultOp op, ByteCodeWriter &writer) {
 }
 void Generator::generate(pdl_interp::GetResultsOp op, ByteCodeWriter &writer) {
   Value result = op.getValue();
-  Optional<uint32_t> index = op.getIndex();
+  std::optional<uint32_t> index = op.getIndex();
   writer.append(OpCode::GetResults,
                 index.value_or(std::numeric_limits<uint32_t>::max()),
                 op.getInputOp());

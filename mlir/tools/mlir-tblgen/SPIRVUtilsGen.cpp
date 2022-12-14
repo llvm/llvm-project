@@ -346,7 +346,7 @@ static void emitAvailabilityQueryForIntEnum(const Record &enumDef,
   for (const auto &classCasePair : classCaseMap) {
     Availability avail = classCasePair.getValue().front().second;
 
-    os << formatv("llvm::Optional<{0}> {1}({2} value) {{\n",
+    os << formatv("std::optional<{0}> {1}({2} value) {{\n",
                   avail.getMergeInstanceType(), avail.getQueryFnName(),
                   enumName);
 
@@ -388,7 +388,7 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
   for (const auto &classCasePair : classCaseMap) {
     Availability avail = classCasePair.getValue().front().second;
 
-    os << formatv("llvm::Optional<{0}> {1}({2} value) {{\n",
+    os << formatv("std::optional<{0}> {1}({2} value) {{\n",
                   avail.getMergeInstanceType(), avail.getQueryFnName(),
                   enumName);
 
@@ -433,7 +433,7 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
       StringRef className = avail.getClass();
       if (handledClasses.count(className))
         continue;
-      os << formatv("llvm::Optional<{0}> {1}({2} value);\n",
+      os << formatv("std::optional<{0}> {1}({2} value);\n",
                     avail.getMergeInstanceType(), avail.getQueryFnName(),
                     enumName);
       handledClasses.insert(className);

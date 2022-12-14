@@ -222,7 +222,7 @@ struct OperandPosition
 struct OperandGroupPosition
     : public PredicateBase<
           OperandGroupPosition, Position,
-          std::tuple<OperationPosition *, Optional<unsigned>, bool>,
+          std::tuple<OperationPosition *, std::optional<unsigned>, bool>,
           Predicates::OperandGroupPos> {
   explicit OperandGroupPosition(const KeyTy &key);
 
@@ -233,7 +233,9 @@ struct OperandGroupPosition
 
   /// Returns the group number of this position. If std::nullopt, this group
   /// refers to all operands.
-  Optional<unsigned> getOperandGroupNumber() const { return std::get<1>(key); }
+  std::optional<unsigned> getOperandGroupNumber() const {
+    return std::get<1>(key);
+  }
 
   /// Returns if the operand group has unknown size. If false, the operand group
   /// has at max one element.
@@ -298,7 +300,7 @@ struct ResultPosition
 struct ResultGroupPosition
     : public PredicateBase<
           ResultGroupPosition, Position,
-          std::tuple<OperationPosition *, Optional<unsigned>, bool>,
+          std::tuple<OperationPosition *, std::optional<unsigned>, bool>,
           Predicates::ResultGroupPos> {
   explicit ResultGroupPosition(const KeyTy &key) : Base(key) {
     parent = std::get<0>(key);
@@ -311,7 +313,9 @@ struct ResultGroupPosition
 
   /// Returns the group number of this position. If std::nullopt, this group
   /// refers to all results.
-  Optional<unsigned> getResultGroupNumber() const { return std::get<1>(key); }
+  std::optional<unsigned> getResultGroupNumber() const {
+    return std::get<1>(key);
+  }
 
   /// Returns if the result group has unknown size. If false, the result group
   /// has at max one element.
@@ -595,7 +599,7 @@ public:
   }
 
   /// Returns a position for a group of operands of the given operation.
-  Position *getOperandGroup(OperationPosition *p, Optional<unsigned> group,
+  Position *getOperandGroup(OperationPosition *p, std::optional<unsigned> group,
                             bool isVariadic) {
     return OperandGroupPosition::get(uniquer, p, group, isVariadic);
   }
@@ -609,7 +613,7 @@ public:
   }
 
   /// Returns a position for a group of results of the given operation.
-  Position *getResultGroup(OperationPosition *p, Optional<unsigned> group,
+  Position *getResultGroup(OperationPosition *p, std::optional<unsigned> group,
                            bool isVariadic) {
     return ResultGroupPosition::get(uniquer, p, group, isVariadic);
   }

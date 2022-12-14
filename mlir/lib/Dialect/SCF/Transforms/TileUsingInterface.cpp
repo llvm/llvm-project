@@ -66,13 +66,13 @@ fillInterchangeVector(ArrayRef<int64_t> interchangeVector,
 
 // Check if `stride` evenly divides the trip count `size - offset`.
 static bool tileDividesIterationDomain(Range loopRange) {
-  Optional<int64_t> offsetAsInt = getConstantIntValue(loopRange.offset);
+  std::optional<int64_t> offsetAsInt = getConstantIntValue(loopRange.offset);
   if (!offsetAsInt)
     return false;
-  Optional<int64_t> sizeAsInt = getConstantIntValue(loopRange.size);
+  std::optional<int64_t> sizeAsInt = getConstantIntValue(loopRange.size);
   if (!sizeAsInt)
     return false;
-  Optional<int64_t> strideAsInt = getConstantIntValue(loopRange.stride);
+  std::optional<int64_t> strideAsInt = getConstantIntValue(loopRange.stride);
   if (!strideAsInt)
     return false;
   return ((sizeAsInt.value() - offsetAsInt.value()) % strideAsInt.value() == 0);
@@ -83,7 +83,7 @@ static bool tileDividesIterationDomain(Range loopRange) {
 static OpFoldResult getBoundedTileSize(OpBuilder &b, Location loc,
                                        Range loopRange, Value iv,
                                        Value tileSize) {
-  Optional<int64_t> ts = getConstantIntValue(tileSize);
+  std::optional<int64_t> ts = getConstantIntValue(tileSize);
   if (ts && ts.value() == 1)
     return getAsOpFoldResult(tileSize);
 
@@ -484,10 +484,10 @@ mlir::scf::tileReductionUsingScf(PatternRewriter &b,
 /// `iter_args` of the outer most that is encountered. Traversing the iter_args
 /// indicates that this is a destination operand of the consumer. If there was
 /// no loop traversal needed, the second value of the returned tuple is empty.
-static std::tuple<OpResult, Optional<OpOperand *>>
+static std::tuple<OpResult, std::optional<OpOperand *>>
 getUntiledProducerFromSliceSource(OpOperand *source,
                                   ArrayRef<scf::ForOp> loops) {
-  Optional<OpOperand *> destinationIterArg;
+  std::optional<OpOperand *> destinationIterArg;
   auto loopIt = loops.rbegin();
   while (auto iterArg = source->get().dyn_cast<BlockArgument>()) {
     scf::ForOp loop = *loopIt;
@@ -633,7 +633,7 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
     // TODO: This can be modeled better if the `DestinationStyleOpInterface`.
     // Update to use that when it does become available.
     scf::ForOp outerMostLoop = tileAndFuseResult.loops.front();
-    Optional<unsigned> iterArgNumber;
+    std::optional<unsigned> iterArgNumber;
     if (destinationIterArg) {
       iterArgNumber = outerMostLoop.getIterArgNumberForOpOperand(
           *destinationIterArg.value());
