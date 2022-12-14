@@ -19,7 +19,7 @@ MinidumpFile::getRawStream(minidump::StreamType Type) const {
   auto It = StreamMap.find(Type);
   if (It != StreamMap.end())
     return getRawStream(Streams[It->second]);
-  return None;
+  return std::nullopt;
 }
 
 Expected<std::string> MinidumpFile::getString(size_t Offset) const {

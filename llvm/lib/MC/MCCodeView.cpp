@@ -318,9 +318,9 @@ std::pair<size_t, size_t> CodeViewContext::getLineExtent(unsigned FuncId) {
 
 ArrayRef<MCCVLoc> CodeViewContext::getLinesForExtent(size_t L, size_t R) {
   if (R <= L)
-    return None;
+    return std::nullopt;
   if (L >= MCCVLines.size())
-    return None;
+    return std::nullopt;
   return makeArrayRef(&MCCVLines[L], R - L);
 }
 

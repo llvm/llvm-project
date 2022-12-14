@@ -34,9 +34,9 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
   assert(TheTarget);
 
-  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine*>(
-      TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), None, None,
-                                     CodeGenOpt::Default)));
+  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), std::nullopt,
+                                     std::nullopt, CodeGenOpt::Default)));
 }
 
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,

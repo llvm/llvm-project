@@ -105,7 +105,7 @@ static inline SourcePred anyType() {
   auto Pred = [](ArrayRef<Value *>, const Value *V) {
     return !V->getType()->isVoidTy();
   };
-  auto Make = None;
+  auto Make = std::nullopt;
   return {Pred, Make};
 }
 
@@ -113,7 +113,7 @@ static inline SourcePred anyIntType() {
   auto Pred = [](ArrayRef<Value *>, const Value *V) {
     return V->getType()->isIntegerTy();
   };
-  auto Make = None;
+  auto Make = std::nullopt;
   return {Pred, Make};
 }
 
@@ -121,7 +121,7 @@ static inline SourcePred anyFloatType() {
   auto Pred = [](ArrayRef<Value *>, const Value *V) {
     return V->getType()->isFloatingPointTy();
   };
-  auto Make = None;
+  auto Make = std::nullopt;
   return {Pred, Make};
 }
 
@@ -175,7 +175,7 @@ static inline SourcePred anyAggregateType() {
   };
   // TODO: For now we only find aggregates in BaseTypes. It might be better to
   // manufacture them out of the base types in some cases.
-  auto Find = None;
+  auto Find = std::nullopt;
   return {Pred, Find};
 }
 
@@ -186,7 +186,7 @@ static inline SourcePred anyVectorType() {
   // TODO: For now we only find vectors in BaseTypes. It might be better to
   // manufacture vectors out of the base types, but it's tricky to be sure
   // that's actually a reasonable type.
-  auto Make = None;
+  auto Make = std::nullopt;
   return {Pred, Make};
 }
 

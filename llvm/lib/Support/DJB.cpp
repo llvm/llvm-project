@@ -65,7 +65,7 @@ static Optional<uint32_t> fastCaseFoldingDjbHash(StringRef Buffer, uint32_t H) {
   }
   if (AllASCII)
     return H;
-  return None;
+  return std::nullopt;
 }
 
 uint32_t llvm::caseFoldingDjbHash(StringRef Buffer, uint32_t H) {

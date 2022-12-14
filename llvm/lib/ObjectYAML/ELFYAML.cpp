@@ -1202,7 +1202,7 @@ struct NormalizedOther {
 
   Optional<uint8_t> denormalize(IO &) {
     if (!Other)
-      return None;
+      return std::nullopt;
     uint8_t Ret = 0;
     for (StOtherPiece &Val : *Other)
       Ret |= toValue(Val);

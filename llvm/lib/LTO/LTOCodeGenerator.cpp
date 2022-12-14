@@ -134,7 +134,7 @@ LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
   Context.setDiscardValueNames(LTODiscardValueNames);
   Context.enableDebugTypeODRUniquing();
 
-  Config.CodeModel = None;
+  Config.CodeModel = std::nullopt;
   Config.StatsFile = LTOStatsFile;
   Config.PreCodeGenPassesHook = [](legacy::PassManager &PM) {
     PM.add(createObjCARCContractPass());
@@ -446,7 +446,7 @@ std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
   assert(MArch && "MArch is not set!");
   return std::unique_ptr<TargetMachine>(MArch->createTargetMachine(
       TripleStr, Config.CPU, FeatureStr, Config.Options, Config.RelocModel,
-      None, Config.CGOptLevel));
+      std::nullopt, Config.CGOptLevel));
 }
 
 // If a linkonce global is present in the MustPreserveSymbols, we need to make

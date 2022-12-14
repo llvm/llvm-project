@@ -434,7 +434,7 @@ DebuginfodCollection::getBinaryPath(BuildIDRef ID) {
     std::string Path = Loc->getValue();
     return Path;
   }
-  return None;
+  return std::nullopt;
 }
 
 Expected<Optional<std::string>>
@@ -446,7 +446,7 @@ DebuginfodCollection::getDebugBinaryPath(BuildIDRef ID) {
     std::string Path = Loc->getValue();
     return Path;
   }
-  return None;
+  return std::nullopt;
 }
 
 Expected<std::string> DebuginfodCollection::findBinaryPath(BuildIDRef ID) {

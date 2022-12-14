@@ -51,11 +51,11 @@ class RemarkStreamer final {
 
 public:
   RemarkStreamer(std::unique_ptr<remarks::RemarkSerializer> RemarkSerializer,
-                 Optional<StringRef> Filename = None);
+                 Optional<StringRef> Filename = std::nullopt);
 
   /// Return the filename that the remark diagnostics are emitted to.
   Optional<StringRef> getFilename() const {
-    return Filename ? Optional<StringRef>(*Filename) : None;
+    return Filename ? Optional<StringRef>(*Filename) : std::nullopt;
   }
   /// Return stream that the remark diagnostics are emitted to.
   raw_ostream &getStream() { return RemarkSerializer->OS; }

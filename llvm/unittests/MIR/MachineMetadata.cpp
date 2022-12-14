@@ -72,8 +72,9 @@ protected:
     if (!T)
       return nullptr;
     TargetOptions Options;
-    return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
-        T->createTargetMachine(TT, CPU, FS, Options, None, None)));
+    return std::unique_ptr<LLVMTargetMachine>(
+        static_cast<LLVMTargetMachine *>(T->createTargetMachine(
+            TT, CPU, FS, Options, std::nullopt, std::nullopt)));
   }
 
   std::unique_ptr<Module> parseMIR(const TargetMachine &TM, StringRef MIRCode,

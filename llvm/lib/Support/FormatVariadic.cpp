@@ -20,7 +20,7 @@ static std::optional<AlignStyle> translateLocChar(char C) {
   case '+':
     return AlignStyle::Right;
   default:
-    return None;
+    return std::nullopt;
   }
   LLVM_BUILTIN_UNREACHABLE;
 }

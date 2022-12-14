@@ -368,7 +368,7 @@ unsigned llvm::dwarf::LanguageVendor(dwarf::SourceLanguage Lang) {
 Optional<unsigned> llvm::dwarf::LanguageLowerBound(dwarf::SourceLanguage Lang) {
   switch (Lang) {
   default:
-    return None;
+    return std::nullopt;
 #define HANDLE_DW_LANG(ID, NAME, LOWER_BOUND, VERSION, VENDOR)                 \
   case DW_LANG_##NAME:                                                         \
     return LOWER_BOUND;
@@ -697,7 +697,7 @@ Optional<uint8_t> llvm::dwarf::getFixedFormByteSize(dwarf::Form Form,
   case DW_FORM_addr:
     if (Params)
       return Params.AddrSize;
-    return None;
+    return std::nullopt;
 
   case DW_FORM_block:          // ULEB128 length L followed by L bytes.
   case DW_FORM_block1:         // 1 byte length L followed by L bytes.
@@ -715,12 +715,12 @@ Optional<uint8_t> llvm::dwarf::getFixedFormByteSize(dwarf::Form Form,
   case DW_FORM_rnglistx:       // ULEB128.
   case DW_FORM_GNU_addr_index: // ULEB128.
   case DW_FORM_GNU_str_index:  // ULEB128.
-    return None;
+    return std::nullopt;
 
   case DW_FORM_ref_addr:
     if (Params)
       return Params.getRefAddrByteSize();
-    return None;
+    return std::nullopt;
 
   case DW_FORM_flag:
   case DW_FORM_data1:
@@ -753,7 +753,7 @@ Optional<uint8_t> llvm::dwarf::getFixedFormByteSize(dwarf::Form Form,
   case DW_FORM_strp_sup:
     if (Params)
       return Params.getDwarfOffsetByteSize();
-    return None;
+    return std::nullopt;
 
   case DW_FORM_data8:
   case DW_FORM_ref8:
@@ -775,7 +775,7 @@ Optional<uint8_t> llvm::dwarf::getFixedFormByteSize(dwarf::Form Form,
   default:
     break;
   }
-  return None;
+  return std::nullopt;
 }
 
 bool llvm::dwarf::isValidFormForVersion(Form F, unsigned Version,

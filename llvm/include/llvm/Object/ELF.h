@@ -120,7 +120,7 @@ template <class T> struct DataRegion {
   }
 
   const T *First;
-  Optional<uint64_t> Size = None;
+  Optional<uint64_t> Size = std::nullopt;
   const uint8_t *BufEnd = nullptr;
 };
 

@@ -501,7 +501,7 @@ BitstreamRemarkParser::processRemark(BitstreamRemarkParserHelper &Helper) {
   std::unique_ptr<Remark> Result = std::make_unique<Remark>();
   Remark &R = *Result;
 
-  if (StrTab == None)
+  if (StrTab == std::nullopt)
     return createStringError(
         std::make_error_code(std::errc::invalid_argument),
         "Error while parsing BLOCK_REMARK: missing string table.");

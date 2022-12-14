@@ -639,7 +639,8 @@ Optional<unsigned> MCContext::getELFUniqueIDForEntsize(StringRef SectionName,
                                                        unsigned EntrySize) {
   auto I = ELFEntrySizeMap.find(
       MCContext::ELFEntrySizeKey{SectionName, Flags, EntrySize});
-  return (I != ELFEntrySizeMap.end()) ? Optional<unsigned>(I->second) : None;
+  return (I != ELFEntrySizeMap.end()) ? Optional<unsigned>(I->second)
+                                      : std::nullopt;
 }
 
 MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
@@ -960,7 +961,7 @@ void MCContext::setGenDwarfRootFile(StringRef InputFileName, StringRef Buffer) {
       FileName = FileName.drop_front();
   assert(!FileName.empty());
   setMCLineTableRootFile(
-      /*CUID=*/0, getCompilationDir(), FileName, Cksum, None);
+      /*CUID=*/0, getCompilationDir(), FileName, Cksum, std::nullopt);
 }
 
 /// getDwarfFile - takes a file name and number to place in the dwarf file and

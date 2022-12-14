@@ -96,7 +96,7 @@ bool DwarfStreamer::init(Triple TheTriple,
 
   // Finally create the AsmPrinter we'll use to emit the DIEs.
   TM.reset(TheTarget->createTargetMachine(TripleName, "", "", TargetOptions(),
-                                          None));
+                                          std::nullopt));
   if (!TM)
     return error("no target machine for target " + TripleName, Context), false;
 

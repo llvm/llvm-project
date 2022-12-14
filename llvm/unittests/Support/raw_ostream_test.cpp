@@ -204,10 +204,10 @@ TEST(raw_ostreamTest, FormatDecimal) {
                           printToString(format_decimal(INT64_MIN, 21), 21));
 }
 
-static std::string formatted_bytes_str(ArrayRef<uint8_t> Bytes,
-                                       llvm::Optional<uint64_t> Offset = None,
-                                       uint32_t NumPerLine = 16,
-                                       uint8_t ByteGroupSize = 4) {
+static std::string
+formatted_bytes_str(ArrayRef<uint8_t> Bytes,
+                    llvm::Optional<uint64_t> Offset = std::nullopt,
+                    uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4) {
   std::string S;
   raw_string_ostream Str(S);
   Str << format_bytes(Bytes, Offset, NumPerLine, ByteGroupSize);
@@ -215,10 +215,9 @@ static std::string formatted_bytes_str(ArrayRef<uint8_t> Bytes,
   return S;
 }
 
-static std::string format_bytes_with_ascii_str(ArrayRef<uint8_t> Bytes,
-                                               Optional<uint64_t> Offset = None,
-                                               uint32_t NumPerLine = 16,
-                                               uint8_t ByteGroupSize = 4) {
+static std::string format_bytes_with_ascii_str(
+    ArrayRef<uint8_t> Bytes, Optional<uint64_t> Offset = std::nullopt,
+    uint32_t NumPerLine = 16, uint8_t ByteGroupSize = 4) {
   std::string S;
   raw_string_ostream Str(S);
   Str << format_bytes_with_ascii(Bytes, Offset, NumPerLine, ByteGroupSize);
@@ -249,47 +248,48 @@ TEST(raw_ostreamTest, FormattedHexBytes) {
             formatted_bytes_str(B.take_front(17)));
   // Test raw bytes with 1 bytes per line wrapping.
   EXPECT_EQ("61\n62\n63\n64\n65\n66",
-            formatted_bytes_str(B.take_front(6), None, 1));
+            formatted_bytes_str(B.take_front(6), std::nullopt, 1));
   // Test raw bytes with 7 bytes per line wrapping.
   EXPECT_EQ("61626364 656667\n68696a6b 6c6d6e\n6f7071",
-            formatted_bytes_str(B.take_front(17), None, 7));
+            formatted_bytes_str(B.take_front(17), std::nullopt, 7));
   // Test raw bytes with 8 bytes per line wrapping.
   EXPECT_EQ("61626364 65666768\n696a6b6c 6d6e6f70\n71",
-            formatted_bytes_str(B.take_front(17), None, 8));
+            formatted_bytes_str(B.take_front(17), std::nullopt, 8));
   //----------------------------------------------------------------------
   // Test hex byte output with the 1 byte groups
   //----------------------------------------------------------------------
   EXPECT_EQ("61 62 63 64 65",
-            formatted_bytes_str(B.take_front(5), None, 16, 1));
+            formatted_bytes_str(B.take_front(5), std::nullopt, 16, 1));
   // Test that 16 bytes get written to a line correctly.
   EXPECT_EQ("61 62 63 64 65 66 67 68 69 6a 6b 6c 6d 6e 6f 70",
-            formatted_bytes_str(B.take_front(16), None, 16, 1));
+            formatted_bytes_str(B.take_front(16), std::nullopt, 16, 1));
   // Test raw bytes with default 16 bytes per line wrapping.
   EXPECT_EQ("61 62 63 64 65 66 67 68 69 6a 6b 6c 6d 6e 6f 70\n71",
-            formatted_bytes_str(B.take_front(17), None, 16, 1));
+            formatted_bytes_str(B.take_front(17), std::nullopt, 16, 1));
   // Test raw bytes with 7 bytes per line wrapping.
   EXPECT_EQ("61 62 63 64 65 66 67\n68 69 6a 6b 6c 6d 6e\n6f 70 71",
-            formatted_bytes_str(B.take_front(17), None, 7, 1));
+            formatted_bytes_str(B.take_front(17), std::nullopt, 7, 1));
   // Test raw bytes with 8 bytes per line wrapping.
   EXPECT_EQ("61 62 63 64 65 66 67 68\n69 6a 6b 6c 6d 6e 6f 70\n71",
-            formatted_bytes_str(B.take_front(17), None, 8, 1));
+            formatted_bytes_str(B.take_front(17), std::nullopt, 8, 1));
 
   //----------------------------------------------------------------------
   // Test hex byte output with the 2 byte groups
   //----------------------------------------------------------------------
-  EXPECT_EQ("6162 6364 65", formatted_bytes_str(B.take_front(5), None, 16, 2));
+  EXPECT_EQ("6162 6364 65",
+            formatted_bytes_str(B.take_front(5), std::nullopt, 16, 2));
   // Test that 16 bytes get written to a line correctly.
   EXPECT_EQ("6162 6364 6566 6768 696a 6b6c 6d6e 6f70",
-            formatted_bytes_str(B.take_front(16), None, 16, 2));
+            formatted_bytes_str(B.take_front(16), std::nullopt, 16, 2));
   // Test raw bytes with default 16 bytes per line wrapping.
   EXPECT_EQ("6162 6364 6566 6768 696a 6b6c 6d6e 6f70\n71",
-            formatted_bytes_str(B.take_front(17), None, 16, 2));
+            formatted_bytes_str(B.take_front(17), std::nullopt, 16, 2));
   // Test raw bytes with 7 bytes per line wrapping.
   EXPECT_EQ("6162 6364 6566 67\n6869 6a6b 6c6d 6e\n6f70 71",
-            formatted_bytes_str(B.take_front(17), None, 7, 2));
+            formatted_bytes_str(B.take_front(17), std::nullopt, 7, 2));
   // Test raw bytes with 8 bytes per line wrapping.
   EXPECT_EQ("6162 6364 6566 6768\n696a 6b6c 6d6e 6f70\n71",
-            formatted_bytes_str(B.take_front(17), None, 8, 2));
+            formatted_bytes_str(B.take_front(17), std::nullopt, 8, 2));
 
   //----------------------------------------------------------------------
   // Test hex bytes with offset with the default 4 byte groups.
@@ -305,9 +305,9 @@ TEST(raw_ostreamTest, FormattedHexBytes) {
             format_bytes_with_ascii_str(B.take_front(16)));
   EXPECT_EQ("61626364 65666768  |abcdefgh|\n"
             "696a6b6c 6d6e6f70  |ijklmnop|",
-            format_bytes_with_ascii_str(B.take_front(16), None, 8));
+            format_bytes_with_ascii_str(B.take_front(16), std::nullopt, 8));
   EXPECT_EQ("61626364 65666768  |abcdefgh|\n696a6b6c           |ijkl|",
-            format_bytes_with_ascii_str(B.take_front(12), None, 8));
+            format_bytes_with_ascii_str(B.take_front(12), std::nullopt, 8));
   std::vector<uint8_t> Unprintable = {'a', '\x1e', 'b', '\x1f'};
   // Make sure the ASCII is still lined up correctly when fewer bytes than 16
   // bytes per line are available. The ASCII should still be aligned as if 16
