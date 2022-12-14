@@ -443,4 +443,47 @@ TEST(FunctionTest, SpliceEndBeforeBegin) {
                "FromBeginIt not before FromEndIt!");
 }
 #endif //EXPENSIVE_CHECKS
+
+TEST(FunctionTest, EraseBBs) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @foo() {
+     bb1:
+       br label %bb2
+     bb2:
+       br label %bb3
+     bb3:
+       br label %bb4
+     bb4:
+       br label %bb5
+     bb5:
+       ret void
+    }
+)");
+
+  Function *F = M->getFunction("foo");
+  BasicBlock *BB1 = getBBWithName(F, "bb1");
+  BasicBlock *BB2 = getBBWithName(F, "bb2");
+  BasicBlock *BB3 = getBBWithName(F, "bb3");
+  BasicBlock *BB4 = getBBWithName(F, "bb4");
+  BasicBlock *BB5 = getBBWithName(F, "bb5");
+  EXPECT_EQ(F->size(), 5u);
+
+  // Erase BB2.
+  BB1->getTerminator()->eraseFromParent();
+  auto It = F->erase(BB2->getIterator(), std::next(BB2->getIterator()));
+  EXPECT_EQ(F->size(), 4u);
+  // Check that the iterator returned matches the node after the erased one.
+  EXPECT_EQ(It, BB3->getIterator());
+
+  It = F->begin();
+  EXPECT_EQ(&*It++, BB1);
+  EXPECT_EQ(&*It++, BB3);
+  EXPECT_EQ(&*It++, BB4);
+  EXPECT_EQ(&*It++, BB5);
+
+  // Erase all BBs.
+  It = F->erase(F->begin(), F->end());
+  EXPECT_EQ(F->size(), 0u);
+}
 } // end namespace

@@ -380,6 +380,11 @@ void Function::splice(Function::iterator ToIt, Function *FromF,
   BasicBlocks.splice(ToIt, FromF->BasicBlocks, FromBeginIt, FromEndIt);
 }
 
+Function::iterator Function::erase(Function::iterator FromIt,
+                                   Function::iterator ToIt) {
+  return BasicBlocks.erase(FromIt, ToIt);
+}
+
 //===----------------------------------------------------------------------===//
 // Function Implementation
 //===----------------------------------------------------------------------===//
