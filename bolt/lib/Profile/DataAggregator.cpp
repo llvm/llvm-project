@@ -199,10 +199,10 @@ void DataAggregator::abort() {
   std::string Error;
 
   // Kill subprocesses in case they are not finished
-  sys::Wait(TaskEventsPPI.PI, 1, false, &Error);
-  sys::Wait(MMapEventsPPI.PI, 1, false, &Error);
-  sys::Wait(MainEventsPPI.PI, 1, false, &Error);
-  sys::Wait(MemEventsPPI.PI, 1, false, &Error);
+  sys::Wait(TaskEventsPPI.PI, 1, &Error);
+  sys::Wait(MMapEventsPPI.PI, 1, &Error);
+  sys::Wait(MainEventsPPI.PI, 1, &Error);
+  sys::Wait(MemEventsPPI.PI, 1, &Error);
 
   deleteTempFiles();
 
