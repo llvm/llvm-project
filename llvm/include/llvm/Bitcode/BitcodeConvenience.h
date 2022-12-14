@@ -33,10 +33,9 @@
 #include "llvm/Bitstream/BitCodes.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
-typedef std::nullopt_t NoneType;
-
 namespace detail {
 /// Convenience base for all kinds of bitcode abbreviation fields.
 ///
