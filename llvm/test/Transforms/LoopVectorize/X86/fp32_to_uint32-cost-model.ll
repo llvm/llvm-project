@@ -20,11 +20,11 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds [10000 x float], [10000 x float]* @float_array, i64 0, i64 %indvars.iv
-  %1 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [10000 x float], ptr @float_array, i64 0, i64 %indvars.iv
+  %1 = load float, ptr %arrayidx, align 4
   %conv = fptoui float %1 to i32
-  %arrayidx2 = getelementptr inbounds [10000 x i32], [10000 x i32]* @unsigned_array, i64 0, i64 %indvars.iv
-  store i32 %conv, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds [10000 x i32], ptr @unsigned_array, i64 0, i64 %indvars.iv
+  store i32 %conv, ptr %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %N

@@ -8,15 +8,15 @@ target triple = "x86_64-apple-macosx10.8.0"
 ; CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %neg = fneg float %{{.*}}
 ; CHECK: Found an estimated cost of 1 for VF 2 For instruction:   %neg = fneg float %{{.*}}
 ; CHECK: Found an estimated cost of 1 for VF 4 For instruction:   %neg = fneg float %{{.*}}
-define void @fneg_cost(float* %a, i64 %n) {
+define void @fneg_cost(ptr %a, i64 %n) {
 entry:
   br label %for.body
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds float, float* %a, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
   %neg = fneg float %0
-  store float %neg, float* %arrayidx, align 4
+  store float %neg, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %cmp = icmp eq i64 %indvars.iv.next, %n
   br i1 %cmp, label %for.end, label %for.body

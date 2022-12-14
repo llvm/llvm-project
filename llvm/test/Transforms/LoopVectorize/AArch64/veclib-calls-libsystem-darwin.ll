@@ -4,7 +4,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "arm64-apple-darwin"
 
 declare float @expf(float) nounwind readnone
-define void @expf_v4f32(i64 %n, float* noalias %y, float* noalias %x) {
+define void @expf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @expf_v4f32(
 ; CHECK: call <4 x float> @_simd_exp_f4(
 ; CHECK: ret void
@@ -14,11 +14,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds float, float* %y, i64 %iv
-  %lv = load float, float* %gep.y, align 4
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
   %call = tail call float @expf(float %lv)
-  %gep.x = getelementptr inbounds float, float* %x, i64 %iv
-  store float %call, float* %gep.x, align 4
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -28,7 +28,7 @@ for.end:
 }
 
 declare double @exp(double) nounwind readnone
-define void @exp_v2f64(i64 %n, double* noalias %y, double * noalias %x) {
+define void @exp_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @exp_v2f64(
 ; CHECK: call <2 x double> @_simd_exp_d2(
 ; CHECK: ret void
@@ -38,11 +38,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds double, double* %y, i64 %iv
-  %lv = load double, double* %gep.y, align 4
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
   %call = tail call double @exp(double %lv)
-  %gep.x = getelementptr inbounds double, double* %x, i64 %iv
-  store double %call, double* %gep.x, align 4
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -52,7 +52,7 @@ for.end:
 }
 
 declare float @acosf(float) nounwind readnone
-define void @acos_v4f32(i64 %n, float* noalias %y, float* noalias %x) {
+define void @acos_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @acos_v4f32(
 ; CHECK: call <4 x float> @_simd_acos_f4(
 ; CHECK: ret void
@@ -62,11 +62,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds float, float* %y, i64 %iv
-  %lv = load float, float* %gep.y, align 4
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
   %call = tail call float @acosf(float %lv)
-  %gep.x = getelementptr inbounds float, float* %x, i64 %iv
-  store float %call, float* %gep.x, align 4
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -76,7 +76,7 @@ for.end:
 }
 
 declare double @acos(double) nounwind readnone
-define void @acos_v2f64(i64 %n, double* noalias %y, double * noalias %x) {
+define void @acos_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @acos_v2f64(
 ; CHECK: call <2 x double> @_simd_acos_d2(
 ; CHECK: ret void
@@ -86,11 +86,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds double, double* %y, i64 %iv
-  %lv = load double, double* %gep.y, align 4
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
   %call = tail call double @acos(double %lv)
-  %gep.x = getelementptr inbounds double, double* %x, i64 %iv
-  store double %call, double* %gep.x, align 4
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -100,7 +100,7 @@ for.end:
 }
 
 declare float @asinf(float) nounwind readnone
-define void @asinf_v4f32(i64 %n, float* noalias %y, float* noalias %x) {
+define void @asinf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @asinf_v4f32(
 ; CHECK: call <4 x float> @_simd_asin_f4(
 ; CHECK: ret void
@@ -110,11 +110,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds float, float* %y, i64 %iv
-  %lv = load float, float* %gep.y, align 4
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
   %call = tail call float @asinf(float %lv)
-  %gep.x = getelementptr inbounds float, float* %x, i64 %iv
-  store float %call, float* %gep.x, align 4
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -124,7 +124,7 @@ for.end:
 }
 
 declare double @asin(double) nounwind readnone
-define void @asin_v2f64(i64 %n, double* noalias %y, double * noalias %x) {
+define void @asin_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @asin_v2f64(
 ; CHECK: call <2 x double> @_simd_asin_d2(
 ; CHECK: ret void
@@ -134,11 +134,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds double, double* %y, i64 %iv
-  %lv = load double, double* %gep.y, align 4
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
   %call = tail call double @asin(double %lv)
-  %gep.x = getelementptr inbounds double, double* %x, i64 %iv
-  store double %call, double* %gep.x, align 4
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -148,7 +148,7 @@ for.end:
 }
 
  declare float @atanf(float) nounwind readnone
-define void @atanf_v4f32(i64 %n, float* noalias %y, float* noalias %x) {
+define void @atanf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @atanf_v4f32(
 ; CHECK: call <4 x float> @_simd_atan_f4(
 ; CHECK: ret void
@@ -158,11 +158,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds float, float* %y, i64 %iv
-  %lv = load float, float* %gep.y, align 4
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
   %call = tail call float @atanf(float %lv)
-  %gep.x = getelementptr inbounds float, float* %x, i64 %iv
-  store float %call, float* %gep.x, align 4
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -172,7 +172,7 @@ for.end:
 }
 
 declare double @atan(double) nounwind readnone
-define void @atan_v2f64(i64 %n, double* noalias %y, double * noalias %x) {
+define void @atan_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @atan_v2f64(
 ; CHECK: call <2 x double> @_simd_atan_d2(
 ; CHECK: ret void
@@ -182,11 +182,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds double, double* %y, i64 %iv
-  %lv = load double, double* %gep.y, align 4
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
   %call = tail call double @atan(double %lv)
-  %gep.x = getelementptr inbounds double, double* %x, i64 %iv
-  store double %call, double* %gep.x, align 4
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -196,7 +196,7 @@ for.end:
 }
 
 declare float @atan2f(float) nounwind readnone
-define void @atan2f_v4f32(i64 %n, float* noalias %y, float* noalias %x) {
+define void @atan2f_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @atan2f_v4f32(
 ; CHECK: call <4 x float> @_simd_atan2_f4(
 ; CHECK: ret void
@@ -206,11 +206,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds float, float* %y, i64 %iv
-  %lv = load float, float* %gep.y, align 4
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
   %call = tail call float @atan2f(float %lv)
-  %gep.x = getelementptr inbounds float, float* %x, i64 %iv
-  store float %call, float* %gep.x, align 4
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -220,7 +220,7 @@ for.end:
 }
 
 declare double @atan2(double) nounwind readnone
-define void @atan2_v2f64(i64 %n, double* noalias %y, double * noalias %x) {
+define void @atan2_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @atan2_v2f64(
 ; CHECK: call <2 x double> @_simd_atan2_d2(
 ; CHECK: ret void
@@ -230,11 +230,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds double, double* %y, i64 %iv
-  %lv = load double, double* %gep.y, align 4
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
   %call = tail call double @atan2(double %lv)
-  %gep.x = getelementptr inbounds double, double* %x, i64 %iv
-  store double %call, double* %gep.x, align 4
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -244,7 +244,7 @@ for.end:
 }
 
 declare float @cosf(float) nounwind readnone
-define void @cosf_v4f32(i64 %n, float* noalias %y, float* noalias %x) {
+define void @cosf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @cosf_v4f32(
 ; CHECK: call <4 x float> @_simd_cos_f4(
 ; CHECK: ret void
@@ -254,11 +254,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds float, float* %y, i64 %iv
-  %lv = load float, float* %gep.y, align 4
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
   %call = tail call float @cosf(float %lv)
-  %gep.x = getelementptr inbounds float, float* %x, i64 %iv
-  store float %call, float* %gep.x, align 4
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -268,7 +268,7 @@ for.end:
 }
 
 declare double @cos(double) nounwind readnone
-define void @cos_v2f64(i64 %n, double* noalias %y, double * noalias %x) {
+define void @cos_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @cos_v2f64(
 ; CHECK: call <2 x double> @_simd_cos_d2(
 ; CHECK: ret void
@@ -278,11 +278,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds double, double* %y, i64 %iv
-  %lv = load double, double* %gep.y, align 4
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
   %call = tail call double @cos(double %lv)
-  %gep.x = getelementptr inbounds double, double* %x, i64 %iv
-  store double %call, double* %gep.x, align 4
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -292,7 +292,7 @@ for.end:
 }
 
 declare float @cbrtf(float) nounwind readnone
-define void @cbrtf_v4f32(i64 %n, float* noalias %y, float* noalias %x) {
+define void @cbrtf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @cbrtf_v4f32(
 ; CHECK: call <4 x float> @_simd_cbrt_f4(
 ; CHECK: ret void
@@ -302,11 +302,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds float, float* %y, i64 %iv
-  %lv = load float, float* %gep.y, align 4
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
   %call = tail call float @cbrtf(float %lv)
-  %gep.x = getelementptr inbounds float, float* %x, i64 %iv
-  store float %call, float* %gep.x, align 4
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -316,7 +316,7 @@ for.end:
 }
 
 declare double @cbrt(double) nounwind readnone
-define void @cbrt_v2f64(i64 %n, double* noalias %y, double * noalias %x) {
+define void @cbrt_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @cbrt_v2f64(
 ; CHECK: call <2 x double> @_simd_cbrt_d2(
 ; CHECK: ret void
@@ -326,11 +326,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds double, double* %y, i64 %iv
-  %lv = load double, double* %gep.y, align 4
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
   %call = tail call double @cbrt(double %lv)
-  %gep.x = getelementptr inbounds double, double* %x, i64 %iv
-  store double %call, double* %gep.x, align 4
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -340,7 +340,7 @@ for.end:
 }
 
 declare float @erff(float) nounwind readnone
-define void @erff_v4f32(i64 %n, float* noalias %y, float* noalias %x) {
+define void @erff_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @erff_v4f32(
 ; CHECK: call <4 x float> @_simd_erf_f4(
 ; CHECK: ret void
@@ -350,11 +350,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds float, float* %y, i64 %iv
-  %lv = load float, float* %gep.y, align 4
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
   %call = tail call float @erff(float %lv)
-  %gep.x = getelementptr inbounds float, float* %x, i64 %iv
-  store float %call, float* %gep.x, align 4
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -364,7 +364,7 @@ for.end:
 }
 
 declare double @erf(double) nounwind readnone
-define void @erf_v2f64(i64 %n, double* noalias %y, double * noalias %x) {
+define void @erf_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @erf_v2f64(
 ; CHECK: call <2 x double> @_simd_erf_d2(
 ; CHECK: ret void
@@ -374,11 +374,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds double, double* %y, i64 %iv
-  %lv = load double, double* %gep.y, align 4
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
   %call = tail call double @erf(double %lv)
-  %gep.x = getelementptr inbounds double, double* %x, i64 %iv
-  store double %call, double* %gep.x, align 4
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -388,7 +388,7 @@ for.end:
 }
 
 declare float @powf(float) nounwind readnone
-define void @powf_v4f32(i64 %n, float* noalias %y, float* noalias %x) {
+define void @powf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @powf_v4f32(
 ; CHECK: call <4 x float> @_simd_pow_f4(
 ; CHECK: ret void
@@ -398,11 +398,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds float, float* %y, i64 %iv
-  %lv = load float, float* %gep.y, align 4
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
   %call = tail call float @powf(float %lv)
-  %gep.x = getelementptr inbounds float, float* %x, i64 %iv
-  store float %call, float* %gep.x, align 4
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -412,7 +412,7 @@ for.end:
 }
 
 declare double @pow(double) nounwind readnone
-define void @pow_v2f64(i64 %n, double* noalias %y, double * noalias %x) {
+define void @pow_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @pow_v2f64(
 ; CHECK: call <2 x double> @_simd_pow_d2(
 ; CHECK: ret void
@@ -422,11 +422,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds double, double* %y, i64 %iv
-  %lv = load double, double* %gep.y, align 4
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
   %call = tail call double @pow(double %lv)
-  %gep.x = getelementptr inbounds double, double* %x, i64 %iv
-  store double %call, double* %gep.x, align 4
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -436,7 +436,7 @@ for.end:
 }
 
 declare float @sinhf(float) nounwind readnone
-define void @sinhf_v4f32(i64 %n, float* noalias %y, float* noalias %x) {
+define void @sinhf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @sinhf_v4f32(
 ; CHECK: call <4 x float> @_simd_sinh_f4(
 ; CHECK: ret void
@@ -446,11 +446,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds float, float* %y, i64 %iv
-  %lv = load float, float* %gep.y, align 4
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
   %call = tail call float @sinhf(float %lv)
-  %gep.x = getelementptr inbounds float, float* %x, i64 %iv
-  store float %call, float* %gep.x, align 4
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -460,7 +460,7 @@ for.end:
 }
 
 declare double @sinh(double) nounwind readnone
-define void @sinh_v2f64(i64 %n, double* noalias %y, double * noalias %x) {
+define void @sinh_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @sinh_v2f64(
 ; CHECK: call <2 x double> @_simd_sinh_d2(
 ; CHECK: ret void
@@ -470,11 +470,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds double, double* %y, i64 %iv
-  %lv = load double, double* %gep.y, align 4
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
   %call = tail call double @sinh(double %lv)
-  %gep.x = getelementptr inbounds double, double* %x, i64 %iv
-  store double %call, double* %gep.x, align 4
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -484,7 +484,7 @@ for.end:
 }
 
 declare float @coshf(float) nounwind readnone
-define void @coshf_v4f32(i64 %n, float* noalias %y, float* noalias %x) {
+define void @coshf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @coshf_v4f32(
 ; CHECK: call <4 x float> @_simd_cosh_f4(
 ; CHECK: ret void
@@ -494,11 +494,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds float, float* %y, i64 %iv
-  %lv = load float, float* %gep.y, align 4
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
   %call = tail call float @coshf(float %lv)
-  %gep.x = getelementptr inbounds float, float* %x, i64 %iv
-  store float %call, float* %gep.x, align 4
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -508,7 +508,7 @@ for.end:
 }
 
 declare double @cosh(double) nounwind readnone
-define void @cosh_v2f64(i64 %n, double* noalias %y, double * noalias %x) {
+define void @cosh_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @cosh_v2f64(
 ; CHECK: call <2 x double> @_simd_cosh_d2(
 ; CHECK: ret void
@@ -518,11 +518,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds double, double* %y, i64 %iv
-  %lv = load double, double* %gep.y, align 4
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
   %call = tail call double @cosh(double %lv)
-  %gep.x = getelementptr inbounds double, double* %x, i64 %iv
-  store double %call, double* %gep.x, align 4
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -532,7 +532,7 @@ for.end:
 }
 
 declare float @tanhf(float) nounwind readnone
-define void @tanhf_v4f32(i64 %n, float* noalias %y, float* noalias %x) {
+define void @tanhf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @tanhf_v4f32(
 ; CHECK: call <4 x float> @_simd_tanh_f4(
 ; CHECK: ret void
@@ -542,11 +542,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds float, float* %y, i64 %iv
-  %lv = load float, float* %gep.y, align 4
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
   %call = tail call float @tanhf(float %lv)
-  %gep.x = getelementptr inbounds float, float* %x, i64 %iv
-  store float %call, float* %gep.x, align 4
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -556,7 +556,7 @@ for.end:
 }
 
 declare double @tanh(double) nounwind readnone
-define void @tanh_v2f64(i64 %n, double* noalias %y, double * noalias %x) {
+define void @tanh_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @tanh_v2f64(
 ; CHECK: call <2 x double> @_simd_tanh_d2(
 ; CHECK: ret void
@@ -566,11 +566,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds double, double* %y, i64 %iv
-  %lv = load double, double* %gep.y, align 4
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
   %call = tail call double @tanh(double %lv)
-  %gep.x = getelementptr inbounds double, double* %x, i64 %iv
-  store double %call, double* %gep.x, align 4
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -580,7 +580,7 @@ for.end:
 }
 
 declare float @asinhf(float) nounwind readnone
-define void @asinhf_v4f32(i64 %n, float* noalias %y, float* noalias %x) {
+define void @asinhf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @asinhf_v4f32(
 ; CHECK: call <4 x float> @_simd_asinh_f4(
 ; CHECK: ret void
@@ -590,11 +590,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds float, float* %y, i64 %iv
-  %lv = load float, float* %gep.y, align 4
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
   %call = tail call float @asinhf(float %lv)
-  %gep.x = getelementptr inbounds float, float* %x, i64 %iv
-  store float %call, float* %gep.x, align 4
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -604,7 +604,7 @@ for.end:
 }
 
 declare double @asinh(double) nounwind readnone
-define void @asinh_v2f64(i64 %n, double* noalias %y, double * noalias %x) {
+define void @asinh_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @asinh_v2f64(
 ; CHECK: call <2 x double> @_simd_asinh_d2(
 ; CHECK: ret void
@@ -614,11 +614,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds double, double* %y, i64 %iv
-  %lv = load double, double* %gep.y, align 4
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
   %call = tail call double @asinh(double %lv)
-  %gep.x = getelementptr inbounds double, double* %x, i64 %iv
-  store double %call, double* %gep.x, align 4
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -628,7 +628,7 @@ for.end:
 }
 
 declare float @acoshf(float) nounwind readnone
-define void @acoshf_v4f32(i64 %n, float* noalias %y, float* noalias %x) {
+define void @acoshf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @acoshf_v4f32(
 ; CHECK: call <4 x float> @_simd_acosh_f4(
 ; CHECK: ret void
@@ -638,11 +638,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds float, float* %y, i64 %iv
-  %lv = load float, float* %gep.y, align 4
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
   %call = tail call float @acoshf(float %lv)
-  %gep.x = getelementptr inbounds float, float* %x, i64 %iv
-  store float %call, float* %gep.x, align 4
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -652,7 +652,7 @@ for.end:
 }
 
 declare double @acosh(double) nounwind readnone
-define void @acosh_v2f64(i64 %n, double* noalias %y, double * noalias %x) {
+define void @acosh_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @acosh_v2f64(
 ; CHECK: call <2 x double> @_simd_acosh_d2(
 ; CHECK: ret void
@@ -662,11 +662,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds double, double* %y, i64 %iv
-  %lv = load double, double* %gep.y, align 4
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
   %call = tail call double @acosh(double %lv)
-  %gep.x = getelementptr inbounds double, double* %x, i64 %iv
-  store double %call, double* %gep.x, align 4
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -676,7 +676,7 @@ for.end:
 }
 
 declare float @atanhf(float) nounwind readnone
-define void @atanhf_v4f32(i64 %n, float* noalias %y, float* noalias %x) {
+define void @atanhf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @atanhf_v4f32(
 ; CHECK: call <4 x float> @_simd_atanh_f4(
 ; CHECK: ret void
@@ -686,11 +686,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds float, float* %y, i64 %iv
-  %lv = load float, float* %gep.y, align 4
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
   %call = tail call float @atanhf(float %lv)
-  %gep.x = getelementptr inbounds float, float* %x, i64 %iv
-  store float %call, float* %gep.x, align 4
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -700,7 +700,7 @@ for.end:
 }
 
 declare double @atanh(double) nounwind readnone
-define void @atanh_v2f64(i64 %n, double* noalias %y, double * noalias %x) {
+define void @atanh_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @atanh_v2f64(
 ; CHECK: call <2 x double> @_simd_atanh_d2(
 ; CHECK: ret void
@@ -710,11 +710,11 @@ entry:
 
 for.body:
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %gep.y = getelementptr inbounds double, double* %y, i64 %iv
-  %lv = load double, double* %gep.y, align 4
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
   %call = tail call double @atanh(double %lv)
-  %gep.x = getelementptr inbounds double, double* %x, i64 %iv
-  store double %call, double* %gep.x, align 4
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body

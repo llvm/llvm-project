@@ -14,25 +14,25 @@
 ;  6     a[i] += b[i];
 ;  7 }
 
-@a = local_unnamed_addr global i32* null, align 8
-@b = local_unnamed_addr global i32* null, align 8
+@a = local_unnamed_addr global ptr null, align 8
+@b = local_unnamed_addr global ptr null, align 8
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 define void @_Z3foov() local_unnamed_addr #0 !dbg !6 {
-  %1 = load i32*, i32** @b, align 8, !dbg !8, !tbaa !9
-  %2 = load i32*, i32** @a, align 8, !dbg !13, !tbaa !9
+  %1 = load ptr, ptr @b, align 8, !dbg !8, !tbaa !9
+  %2 = load ptr, ptr @a, align 8, !dbg !13, !tbaa !9
   br label %3, !dbg !14
 
 ; <label>:3:                                      ; preds = %3, %0
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %3 ]
-  %4 = getelementptr inbounds i32, i32* %1, i64 %indvars.iv, !dbg !8
-  %5 = load i32, i32* %4, align 4, !dbg !8, !tbaa !15
-  %6 = getelementptr inbounds i32, i32* %2, i64 %indvars.iv, !dbg !13
-  %7 = load i32, i32* %6, align 4, !dbg !17, !tbaa !15
+  %4 = getelementptr inbounds i32, ptr %1, i64 %indvars.iv, !dbg !8
+  %5 = load i32, ptr %4, align 4, !dbg !8, !tbaa !15
+  %6 = getelementptr inbounds i32, ptr %2, i64 %indvars.iv, !dbg !13
+  %7 = load i32, ptr %6, align 4, !dbg !17, !tbaa !15
   %8 = add nsw i32 %7, %5, !dbg !17
 ;DBG_VALUE: call void @llvm.dbg.declare{{.*}}!dbg ![[DBG:[0-9]*]]
   call void @llvm.dbg.declare(metadata i32 %8, metadata !22, metadata !DIExpression()), !dbg !17
-  store i32 %8, i32* %6, align 4, !dbg !17, !tbaa !15
+  store i32 %8, ptr %6, align 4, !dbg !17, !tbaa !15
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !18
   %exitcond = icmp eq i64 %indvars.iv.next, 4096, !dbg !19
   br i1 %exitcond, label %9, label %3, !dbg !14, !llvm.loop !20
