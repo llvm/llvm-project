@@ -580,12 +580,12 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
   if (VI != valueNumbering.end())
     return VI->second;
 
-  if (!isa<Instruction>(V)) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I) {
     valueNumbering[V] = nextValueNumber;
     return nextValueNumber++;
   }
 
-  Instruction* I = cast<Instruction>(V);
   Expression exp;
   switch (I->getOpcode()) {
     case Instruction::Call:
