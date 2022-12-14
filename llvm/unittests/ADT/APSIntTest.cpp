@@ -62,6 +62,13 @@ TEST(APSIntTest, getUnsigned) {
   EXPECT_EQ(UINT64_C(0) - 7, APSInt::getUnsigned(-7).getZExtValue());
 }
 
+TEST(APSIntTest, isRepresentableByInt64) {
+  ASSERT_TRUE(APSInt(APInt(3, 7), true).isRepresentableByInt64());
+  ASSERT_TRUE(APSInt(APInt(128, 7), true).isRepresentableByInt64());
+  ASSERT_TRUE(APSInt(APInt(128, 7), false).isRepresentableByInt64());
+  ASSERT_TRUE(APSInt(APInt(64, -1), false).isRepresentableByInt64());
+  ASSERT_FALSE(APSInt(APInt(64, (uint64_t)-1), true).isRepresentableByInt64());
+}
 TEST(APSIntTest, getExtValue) {
   EXPECT_TRUE(APSInt(APInt(3, 7), true).isUnsigned());
   EXPECT_TRUE(APSInt(APInt(3, 7), false).isSigned());
@@ -75,6 +82,16 @@ TEST(APSIntTest, getExtValue) {
   EXPECT_EQ(7, APSInt(APInt(4, 7), false).getExtValue());
   EXPECT_EQ(9, APSInt(APInt(4, -7), true).getExtValue());
   EXPECT_EQ(-7, APSInt(APInt(4, -7), false).getExtValue());
+}
+TEST(APSIntTest, tryExtValue) {
+  ASSERT_EQ(-7, APSInt(APInt(64, -7), false).tryExtValue().value_or(42));
+  ASSERT_EQ(42, APSInt(APInt(128, -7), false).tryExtValue().value_or(42));
+  ASSERT_EQ(-1,
+            APSInt(APInt::getAllOnes(128), false).tryExtValue().value_or(42));
+  ASSERT_EQ(42, APSInt(APInt(64, -7), true).tryExtValue().value_or(42));
+  ASSERT_EQ(1, APSInt(APInt(128, 1), true).tryExtValue().value_or(42));
+  ASSERT_EQ(42,
+            APSInt(APInt::getAllOnes(128), true).tryExtValue().value_or(42));
 }
 
 TEST(APSIntTest, compareValues) {
