@@ -18,6 +18,7 @@ set(INTERCEPTION_TEST_CFLAGS_COMMON
   -I${COMPILER_RT_SOURCE_DIR}/lib
   -I${COMPILER_RT_SOURCE_DIR}/lib/interception
   -fno-rtti
+  -O2
   -Werror=sign-compare)
 
 set(INTERCEPTION_TEST_LINK_FLAGS_COMMON
@@ -25,7 +26,14 @@ set(INTERCEPTION_TEST_LINK_FLAGS_COMMON
   ${COMPILER_RT_UNWINDER_LINK_LIBS}
   ${SANITIZER_TEST_CXX_LIBRARIES})
 
+# -gline-tables-only must be enough for these tests, so use it if possible.
+if(COMPILER_RT_TEST_COMPILER_ID MATCHES "Clang")
+  list(APPEND INTERCEPTION_TEST_CFLAGS_COMMON -gline-tables-only)
+else()
+  list(APPEND INTERCEPTION_TEST_CFLAGS_COMMON -g)
+endif()
 if(MSVC)
+  list(APPEND INTERCEPTION_TEST_CFLAGS_COMMON -gcodeview)
   list(APPEND INTERCEPTION_TEST_LINK_FLAGS_COMMON
     -Wl,-largeaddressaware
     -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames
