@@ -5512,11 +5512,16 @@ private:
 // We accept some lossiness (like dropping parameters).
 // We only try to handle common expressions on the LHS of MemberExpr.
 QualType getApproximateType(const Expr *E) {
+  if (E->getType().isNull())
+    return QualType();
+  E = E->IgnoreParenImpCasts();
   QualType Unresolved = E->getType();
-  if (Unresolved.isNull() ||
-      !Unresolved->isSpecificBuiltinType(BuiltinType::Dependent))
-    return Unresolved;
-  E = E->IgnoreParens();
+  // We only resolve DependentTy, or undeduced autos (including auto* etc).
+  if (!Unresolved->isSpecificBuiltinType(BuiltinType::Dependent)) {
+    AutoType *Auto = Unresolved->getContainedAutoType();
+    if (!Auto || !Auto->isUndeducedAutoType())
+      return Unresolved;
+  }
   // A call: approximate-resolve callee to a function type, get its return type
   if (const CallExpr *CE = llvm::dyn_cast<CallExpr>(E)) {
     QualType Callee = getApproximateType(CE->getCallee());
@@ -5577,6 +5582,13 @@ QualType getApproximateType(const Expr *E) {
                })) {
         return llvm::cast<ValueDecl>(Member)->getType().getNonReferenceType();
       }
+    }
+  }
+  // A reference to an `auto` variable: approximate-resolve its initializer.
+  if (const auto *DRE = llvm::dyn_cast<DeclRefExpr>(E)) {
+    if (const auto *VD = llvm::dyn_cast<VarDecl>(DRE->getDecl())) {
+      if (VD->hasInit())
+        return getApproximateType(VD->getInit());
     }
   }
   return Unresolved;
