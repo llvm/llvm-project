@@ -20,8 +20,6 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT:   CLONE ir<%tmp2> = getelementptr ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:   CLONE ir<%tmp3> = load ir<%tmp2>
 ; CHECK-NEXT:   CLONE store ir<0>, ir<%tmp2>
-; CHECK-NEXT:   CLONE ir<%tmp4> = zext ir<%tmp3>
-; CHECK-NEXT:   CLONE ir<%tmp5> = trunc ir<%tmp4>
 ; CHECK-NEXT: Successor(s): if.then
 
 ; CHECK:      if.then:
@@ -33,6 +31,8 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 
 ; CHECK:      pred.store.if:
+; CHECK-NEXT:   CLONE ir<%tmp4> = zext ir<%tmp3>
+; CHECK-NEXT:   CLONE ir<%tmp5> = trunc ir<%tmp4>
 ; CHECK-NEXT:   CLONE store ir<%tmp5>, ir<%tmp2>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 
