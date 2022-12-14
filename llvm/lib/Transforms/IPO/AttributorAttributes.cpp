@@ -50,6 +50,8 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
@@ -2223,6 +2225,20 @@ struct AAReturnedValuesCallSite final : AAReturnedValuesImpl {
 } // namespace
 
 /// ------------------------ NoSync Function Attribute -------------------------
+
+bool AANoSync::isAlignedBarrier(const CallBase &CB) {
+  switch (CB.getIntrinsicID()) {
+  case Intrinsic::nvvm_barrier0:
+  case Intrinsic::nvvm_barrier0_and:
+  case Intrinsic::nvvm_barrier0_or:
+  case Intrinsic::nvvm_barrier0_popc:
+    return true;
+  // TODO: Check for amdgcn_s_barrier executed in a uniform/aligned way.
+  default:
+    break;
+  }
+  return hasAssumption(CB, KnownAssumptionString("ompx_aligned_barrier"));
+}
 
 bool AANoSync::isNonRelaxedAtomic(const Instruction *I) {
   if (!I->isAtomic())

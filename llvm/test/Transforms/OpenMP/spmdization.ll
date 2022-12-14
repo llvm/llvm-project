@@ -2450,9 +2450,6 @@ attributes #11 = { convergent }
 ; AMDGPU: [[META27:![0-9]+]] = !{!"any pointer", !20, i64 0}
 ; AMDGPU: [[LOOP28]] = distinct !{!28, !23, !24}
 ; AMDGPU: [[LOOP29]] = distinct !{!29, !23, !24}
-; AMDGPU: [[META30:![0-9]+]] = !{!31, !27, i64 0}
-; AMDGPU: [[META31:![0-9]+]] = !{!"kmp_task_t_with_privates", !32, i64 0}
-; AMDGPU: [[META32:![0-9]+]] = !{!"kmp_task_t", !27, i64 0, !27, i64 8, !19, i64 16, !20, i64 24, !20, i64 32}
 ;.
 ; NVPTX: [[META0:![0-9]+]] = !{i32 0, i32 64770, i32 541341486, !"do_not_spmdize_task", i32 74, i32 5}
 ; NVPTX: [[META1:![0-9]+]] = !{i32 0, i32 64770, i32 541341486, !"sequential_loop_to_stack_var", i32 20, i32 1}
@@ -2484,9 +2481,6 @@ attributes #11 = { convergent }
 ; NVPTX: [[META27:![0-9]+]] = !{!"any pointer", !20, i64 0}
 ; NVPTX: [[LOOP28]] = distinct !{!28, !23, !24}
 ; NVPTX: [[LOOP29]] = distinct !{!29, !23, !24}
-; NVPTX: [[META30:![0-9]+]] = !{!31, !27, i64 0}
-; NVPTX: [[META31:![0-9]+]] = !{!"kmp_task_t_with_privates", !32, i64 0}
-; NVPTX: [[META32:![0-9]+]] = !{!"kmp_task_t", !27, i64 0, !27, i64 8, !19, i64 16, !20, i64 24, !20, i64 32}
 ;.
 ; AMDGPU-DISABLED: [[META0:![0-9]+]] = !{i32 0, i32 64770, i32 541341486, !"do_not_spmdize_task", i32 74, i32 5}
 ; AMDGPU-DISABLED: [[META1:![0-9]+]] = !{i32 0, i32 64770, i32 541341486, !"sequential_loop_to_stack_var", i32 20, i32 1}
@@ -2518,9 +2512,6 @@ attributes #11 = { convergent }
 ; AMDGPU-DISABLED: [[META27:![0-9]+]] = !{!"any pointer", !20, i64 0}
 ; AMDGPU-DISABLED: [[LOOP28]] = distinct !{!28, !23, !24}
 ; AMDGPU-DISABLED: [[LOOP29]] = distinct !{!29, !23, !24}
-; AMDGPU-DISABLED: [[META30:![0-9]+]] = !{!31, !27, i64 0}
-; AMDGPU-DISABLED: [[META31:![0-9]+]] = !{!"kmp_task_t_with_privates", !32, i64 0}
-; AMDGPU-DISABLED: [[META32:![0-9]+]] = !{!"kmp_task_t", !27, i64 0, !27, i64 8, !19, i64 16, !20, i64 24, !20, i64 32}
 ;.
 ; NVPTX-DISABLED: [[META0:![0-9]+]] = !{i32 0, i32 64770, i32 541341486, !"do_not_spmdize_task", i32 74, i32 5}
 ; NVPTX-DISABLED: [[META1:![0-9]+]] = !{i32 0, i32 64770, i32 541341486, !"sequential_loop_to_stack_var", i32 20, i32 1}
@@ -2552,7 +2543,4 @@ attributes #11 = { convergent }
 ; NVPTX-DISABLED: [[META27:![0-9]+]] = !{!"any pointer", !20, i64 0}
 ; NVPTX-DISABLED: [[LOOP28]] = distinct !{!28, !23, !24}
 ; NVPTX-DISABLED: [[LOOP29]] = distinct !{!29, !23, !24}
-; NVPTX-DISABLED: [[META30:![0-9]+]] = !{!31, !27, i64 0}
-; NVPTX-DISABLED: [[META31:![0-9]+]] = !{!"kmp_task_t_with_privates", !32, i64 0}
-; NVPTX-DISABLED: [[META32:![0-9]+]] = !{!"kmp_task_t", !27, i64 0, !27, i64 8, !19, i64 16, !20, i64 24, !20, i64 32}
 ;.
