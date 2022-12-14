@@ -463,28 +463,31 @@ void DWARFRewriter::updateUnitDebugInfo(
               ? BC.getBinaryFunctionContainingAddress(
                     RangesOrError->front().LowPC)
               : nullptr;
-      DebugAddressRangesVector OutputRanges;
       bool ErrorState = false;
+      std::optional<uint64_t> NewLowPC;
       if (Function) {
-        OutputRanges = Function->translateInputToOutputRanges(*RangesOrError);
+        DebugAddressRangesVector OutputRanges =
+            Function->translateInputToOutputRanges(*RangesOrError);
         LLVM_DEBUG(if (OutputRanges.empty() != RangesOrError->empty()) {
           dbgs() << "BOLT-DEBUG: problem with DIE at 0x"
                  << Twine::utohexstr(DIE.getOffset()) << " in CU at 0x"
                  << Twine::utohexstr(Unit.getOffset()) << '\n';
         });
-
+        if (!OutputRanges.empty())
+          NewLowPC = OutputRanges.front().LowPC;
         RangesSectionOffset = RangesSectionWriter.addRanges(
             std::move(OutputRanges), CachedRanges);
       } else if (!RangesOrError) {
         ErrorState = true;
         consumeError(RangesOrError.takeError());
       }
+
       uint64_t LowPCToUse = 0;
       if (!ErrorState && RangesOrError.get().size() == 1 &&
           RangesOrError.get().begin()->LowPC ==
               RangesOrError.get().begin()->HighPC) {
-        if (!OutputRanges.empty())
-          LowPCToUse = OutputRanges.front().LowPC;
+        if (NewLowPC)
+          LowPCToUse = NewLowPC.value();
         else
           LowPCToUse = RangesOrError.get().begin()->LowPC;
       }
