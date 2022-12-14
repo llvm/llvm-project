@@ -3862,12 +3862,9 @@ static unsigned inverseMinMax(unsigned Opc) {
   }
 }
 
-SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
-                                                 DAGCombinerInfo &DCI) const {
-  SelectionDAG &DAG = DCI.DAG;
-  SDValue N0 = N->getOperand(0);
-  EVT VT = N->getValueType(0);
-
+/// \return true if it's profitable to try to push an fneg into its source
+/// instruction.
+bool AMDGPUTargetLowering::shouldFoldFNegIntoSrc(SDNode *N, SDValue N0) {
   unsigned Opc = N0.getOpcode();
 
   // If the input has multiple uses and we can either fold the negate down, or
@@ -3878,12 +3875,26 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     // This may be able to fold into the source, but at a code size cost. Don't
     // fold if the fold into the user is free.
     if (allUsesHaveSourceMods(N, 0))
-      return SDValue();
+      return false;
   } else {
     if (fnegFoldsIntoOp(Opc) &&
         (allUsesHaveSourceMods(N) || !allUsesHaveSourceMods(N0.getNode())))
-      return SDValue();
+      return false;
   }
+
+  return true;
+}
+
+SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
+                                                 DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  unsigned Opc = N0.getOpcode();
+
+  if (!shouldFoldFNegIntoSrc(N, N0))
+    return SDValue();
 
   SDLoc SL(N);
   switch (Opc) {
