@@ -1142,6 +1142,10 @@ struct InformationCache {
     // the destructor manually.
     for (auto &It : FuncInfoMap)
       It.getSecond()->~FunctionInfo();
+    // Same is true for the instruction exclusions sets.
+    using AA::InstExclusionSetTy;
+    for (auto *BES : BESets)
+      BES->~InstExclusionSetTy();
   }
 
   /// Apply \p CB to all uses of \p F. If \p LookThroughConstantExprUses is
@@ -1338,7 +1342,7 @@ private:
   SetVector<const Instruction *> AssumeOnlyValues;
 
   /// Cache for block sets to allow reuse.
-  DenseSet<const AA::InstExclusionSetTy *> BESets;
+  DenseSet<AA::InstExclusionSetTy *> BESets;
 
   /// Getters for analysis.
   AnalysisGetter &AG;
