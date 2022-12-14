@@ -143,8 +143,8 @@ private:
 class DefaultInlineAdvice : public InlineAdvice {
 public:
   DefaultInlineAdvice(InlineAdvisor *Advisor, CallBase &CB,
-                      Optional<InlineCost> OIC, OptimizationRemarkEmitter &ORE,
-                      bool EmitRemarks = true)
+                      std::optional<InlineCost> OIC,
+                      OptimizationRemarkEmitter &ORE, bool EmitRemarks = true)
       : InlineAdvice(Advisor, CB, ORE, OIC.has_value()), OriginalCB(&CB),
         OIC(OIC), EmitRemarks(EmitRemarks) {}
 
@@ -155,7 +155,7 @@ private:
 
 private:
   CallBase *const OriginalCB;
-  Optional<InlineCost> OIC;
+  std::optional<InlineCost> OIC;
   bool EmitRemarks;
 };
 
@@ -200,14 +200,14 @@ public:
 
 protected:
   InlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
-                Optional<InlineContext> IC = std::nullopt);
+                std::optional<InlineContext> IC = std::nullopt);
   virtual std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) = 0;
   virtual std::unique_ptr<InlineAdvice> getMandatoryAdvice(CallBase &CB,
                                                            bool Advice);
 
   Module &M;
   FunctionAnalysisManager &FAM;
-  const Optional<InlineContext> IC;
+  const std::optional<InlineContext> IC;
   const std::string AnnotatedInlinePassName;
   std::unique_ptr<ImportedFunctionsInliningStatistics> ImportedFunctionsStats;
 
@@ -295,7 +295,7 @@ getDevelopmentModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
 /// CallSite. If we return the cost, we will emit an optimisation remark later
 /// using that cost, so we won't do so from this function. Return std::nullopt
 /// if inlining should not be attempted.
-Optional<InlineCost>
+std::optional<InlineCost>
 shouldInline(CallBase &CB, function_ref<InlineCost(CallBase &CB)> GetInlineCost,
              OptimizationRemarkEmitter &ORE, bool EnableDeferral = true);
 

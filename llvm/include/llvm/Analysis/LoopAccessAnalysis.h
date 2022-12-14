@@ -730,7 +730,7 @@ const SCEV *replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 /// to \p PtrToStride and therefore add further predicates to \p PSE.
 /// The \p Assume parameter indicates if we are allowed to make additional
 /// run-time assumptions.
-Optional<int64_t>
+std::optional<int64_t>
 getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
              const Loop *Lp,
              const ValueToValueMap &StridesMap = ValueToValueMap(),
@@ -741,10 +741,11 @@ getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
 /// is a simple API that does not depend on the analysis pass.
 /// \param StrictCheck Ensure that the calculated distance matches the
 /// type-based one after all the bitcasts removal in the provided pointers.
-Optional<int> getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB,
-                              Value *PtrB, const DataLayout &DL,
-                              ScalarEvolution &SE, bool StrictCheck = false,
-                              bool CheckType = true);
+std::optional<int> getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB,
+                                   Value *PtrB, const DataLayout &DL,
+                                   ScalarEvolution &SE,
+                                   bool StrictCheck = false,
+                                   bool CheckType = true);
 
 /// Attempt to sort the pointers in \p VL and return the sorted indices
 /// in \p SortedIndices, if reordering is required.

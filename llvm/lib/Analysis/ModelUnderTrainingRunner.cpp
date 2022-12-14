@@ -26,7 +26,7 @@ struct LoggedFeatureSpec {
   std::optional<std::string> LoggingName;
 };
 
-Optional<std::vector<LoggedFeatureSpec>>
+std::optional<std::vector<LoggedFeatureSpec>>
 loadOutputSpecs(LLVMContext &Ctx, StringRef ExpectedDecisionName,
                 StringRef ModelPath, StringRef SpecFileOverride) {
   SmallVector<char, 128> OutputSpecsPath;

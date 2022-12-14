@@ -56,7 +56,7 @@ protected:
     }
   };
 
-  llvm::Optional<TestAnalyses> Analyses;
+  std::optional<TestAnalyses> Analyses;
 
   TestAnalyses &setupAnalyses() {
     assert(F);
