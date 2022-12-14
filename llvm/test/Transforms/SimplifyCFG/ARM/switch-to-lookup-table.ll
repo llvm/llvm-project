@@ -12,12 +12,12 @@
 ; RUN: opt -S -passes='simplifycfg<switch-to-lookup>' -mtriple=arm -relocation-model=ropi-rwpi < %s | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
 
 ; CHECK:       @{{.*}} = private unnamed_addr constant [3 x i32] [i32 1234, i32 5678, i32 15532]
-; ENABLE:      @{{.*}} = private unnamed_addr constant [3 x i32*] [i32* @c1, i32* @c2, i32* @c3]
-; DISABLE-NOT: @{{.*}} = private unnamed_addr constant [3 x i32*] [i32* @c1, i32* @c2, i32* @c3]
-; ENABLE:      @{{.*}} = private unnamed_addr constant [3 x i32*] [i32* @g1, i32* @g2, i32* @g3]
-; DISABLE-NOT: @{{.*}} = private unnamed_addr constant [3 x i32*] [i32* @g1, i32* @g2, i32* @g3]
-; ENABLE:      @{{.*}} = private unnamed_addr constant [3 x i32 (i32, i32)*] [i32 (i32, i32)* @f1, i32 (i32, i32)* @f2, i32 (i32, i32)* @f3]
-; DISABLE-NOT: @{{.*}} = private unnamed_addr constant [3 x i32 (i32, i32)*] [i32 (i32, i32)* @f1, i32 (i32, i32)* @f2, i32 (i32, i32)* @f3]
+; ENABLE:      @{{.*}} = private unnamed_addr constant [3 x ptr] [ptr @c1, ptr @c2, ptr @c3]
+; DISABLE-NOT: @{{.*}} = private unnamed_addr constant [3 x ptr] [ptr @c1, ptr @c2, ptr @c3]
+; ENABLE:      @{{.*}} = private unnamed_addr constant [3 x ptr] [ptr @g1, ptr @g2, ptr @g3]
+; DISABLE-NOT: @{{.*}} = private unnamed_addr constant [3 x ptr] [ptr @g1, ptr @g2, ptr @g3]
+; ENABLE:      @{{.*}} = private unnamed_addr constant [3 x ptr] [ptr @f1, ptr @f2, ptr @f3]
+; DISABLE-NOT: @{{.*}} = private unnamed_addr constant [3 x ptr] [ptr @f1, ptr @f2, ptr @f3]
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv7a--none-eabi"
@@ -53,7 +53,7 @@ return:
 @c4 = external constant i32, align 4
 
 
-define i32* @test2(i32 %n) {
+define ptr @test2(i32 %n) {
 entry:
   switch i32 %n, label %sw.default [
   i32 0, label %sw.bb
@@ -74,8 +74,8 @@ sw.default:
   br label %return
 
 return:
-  %retval.0 = phi i32* [ @c4, %sw.default ], [ @c3, %sw.bb2 ], [ @c2, %sw.bb1 ], [ @c1, %sw.bb ]
-  ret i32* %retval.0
+  %retval.0 = phi ptr [ @c4, %sw.default ], [ @c3, %sw.bb2 ], [ @c2, %sw.bb1 ], [ @c1, %sw.bb ]
+  ret ptr %retval.0
 }
 
 @g1 = external global i32, align 4
@@ -83,7 +83,7 @@ return:
 @g3 = external global i32, align 4
 @g4 = external global i32, align 4
 
-define i32* @test3(i32 %n) {
+define ptr @test3(i32 %n) {
 entry:
   switch i32 %n, label %sw.default [
   i32 0, label %sw.bb
@@ -104,8 +104,8 @@ sw.default:
   br label %return
 
 return:
-  %retval.0 = phi i32* [ @g4, %sw.default ], [ @g3, %sw.bb2 ], [ @g2, %sw.bb1 ], [ @g1, %sw.bb ]
-  ret i32* %retval.0
+  %retval.0 = phi ptr [ @g4, %sw.default ], [ @g3, %sw.bb2 ], [ @g2, %sw.bb1 ], [ @g1, %sw.bb ]
+  ret ptr %retval.0
 }
 
 declare i32 @f1(i32, i32)
@@ -129,11 +129,11 @@ cond.false3:
 
 cond.false6:
   %cmp7 = icmp eq i32 %a, 4
-  %cond = select i1 %cmp7, i32 (i32, i32)* @f4, i32 (i32, i32)* @f5
+  %cond = select i1 %cmp7, ptr @f4, ptr @f5
   br label %cond.end11
 
 cond.end11:
-  %cond12 = phi i32 (i32, i32)* [ @f1, %entry ], [ @f2, %cond.false ], [ %cond, %cond.false6 ], [ @f3, %cond.false3 ]
+  %cond12 = phi ptr [ @f1, %entry ], [ @f2, %cond.false ], [ %cond, %cond.false6 ], [ @f3, %cond.false3 ]
   %call = call i32 %cond12(i32 %b, i32 %c) #2
   ret i32 %call
 }

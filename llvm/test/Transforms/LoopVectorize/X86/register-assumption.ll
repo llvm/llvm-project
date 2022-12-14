@@ -8,7 +8,7 @@ entry:
   br label %loop_exit.dim.11.critedge
 
 loop_exit.dim.11.critedge:                        ; preds = %loop_body.dim.0
-  %ptrint = ptrtoint float* %alloca to i64
+  %ptrint = ptrtoint ptr %alloca to i64
   %maskedptr = and i64 %ptrint, 4
   %maskcond = icmp eq i64 %maskedptr, 0
   br label %loop_header.dim.017.preheader

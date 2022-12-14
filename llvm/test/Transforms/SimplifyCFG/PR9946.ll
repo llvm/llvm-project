@@ -4,7 +4,7 @@
 
 define i32 @f() {
 entry:
-  br i1 icmp eq (i64 and (i64 ptrtoint (i32* @foo to i64), i64 15), i64 0), label %if.end, label %if.then
+  br i1 icmp eq (i64 and (i64 ptrtoint (ptr @foo to i64), i64 15), i64 0), label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
   br label %return

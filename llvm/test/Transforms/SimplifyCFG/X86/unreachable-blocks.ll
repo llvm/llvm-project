@@ -10,12 +10,12 @@ entry:
 
 while_block:                                      ; preds = %and_if_cont2, %and_if_cont
   %newlen = sub i32 %newlen, 1
-  %newptr = getelementptr i8, i8* %newptr, i64 1
+  %newptr = getelementptr i8, ptr %newptr, i64 1
   %test = icmp sgt i32 %newlen, 0
   br i1 %test, label %and_if1, label %and_if_cont2
 
 and_if1:                                          ; preds = %while_block
-  %char = load i8, i8* %newptr
+  %char = load i8, ptr %newptr
   %test2 = icmp ule i8 %char, 32
   br label %and_if_cont2
 

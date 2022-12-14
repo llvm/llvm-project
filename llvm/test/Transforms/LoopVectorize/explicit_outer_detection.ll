@@ -11,7 +11,7 @@
 ; #pragma clang loop vectorize(enable)
 ;   for (i = 0; i < N; i++) {
 ;     for (j = 0; j < M; j++) {
-;       a[i*M+j] = b[i*M+j] * b[i*M+j];
+;       a[i*M+j] = bptr b[i*M+j];
 ;     }
 ;   }
 ; }
@@ -27,7 +27,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @vector_width(i32* nocapture %a, i32* nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
+define void @vector_width(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
 entry:
   %cmp32 = icmp sgt i32 %N, 0
   br i1 %cmp32, label %outer.ph, label %for.end15
@@ -50,11 +50,11 @@ inner.ph:                                   ; preds = %outer.body
 inner.body:                                 ; preds = %inner.body, %inner.ph
   %indvars.iv = phi i64 [ 0, %inner.ph ], [ %indvars.iv.next, %inner.body ]
   %2 = add nsw i64 %indvars.iv, %1
-  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %2
-  %3 = load i32, i32* %arrayidx, align 4, !tbaa !2
+  %arrayidx = getelementptr inbounds i32, ptr %b, i64 %2
+  %3 = load i32, ptr %arrayidx, align 4, !tbaa !2
   %mul8 = mul nsw i32 %3, %3
-  %arrayidx12 = getelementptr inbounds i32, i32* %a, i64 %2
-  store i32 %mul8, i32* %arrayidx12, align 4, !tbaa !2
+  %arrayidx12 = getelementptr inbounds i32, ptr %a, i64 %2
+  store i32 %mul8, ptr %arrayidx12, align 4, !tbaa !2
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %outer.inc, label %inner.body
@@ -75,7 +75,7 @@ for.end15:                                        ; preds = %outer.inc, %entry
 ; CHECK: LV: We can vectorize this outer loop!
 ; CHECK: LV: Using VF 1 to build VPlans.
 
-define void @case2(i32* nocapture %a, i32* nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
+define void @case2(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
 entry:
   %cmp32 = icmp sgt i32 %N, 0
   br i1 %cmp32, label %outer.ph, label %for.end15
@@ -98,11 +98,11 @@ inner.ph:                                  ; preds = %outer.body
 inner.body:                                        ; preds = %inner.body, %inner.ph
   %indvars.iv = phi i64 [ 0, %inner.ph ], [ %indvars.iv.next, %inner.body ]
   %2 = add nsw i64 %indvars.iv, %1
-  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %2
-  %3 = load i32, i32* %arrayidx, align 4, !tbaa !2
+  %arrayidx = getelementptr inbounds i32, ptr %b, i64 %2
+  %3 = load i32, ptr %arrayidx, align 4, !tbaa !2
   %mul8 = mul nsw i32 %3, %3
-  %arrayidx12 = getelementptr inbounds i32, i32* %a, i64 %2
-  store i32 %mul8, i32* %arrayidx12, align 4, !tbaa !2
+  %arrayidx12 = getelementptr inbounds i32, ptr %a, i64 %2
+  store i32 %mul8, ptr %arrayidx12, align 4, !tbaa !2
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %outer.inc, label %inner.body
@@ -125,7 +125,7 @@ for.end15:                                        ; preds = %outer.inc, %entry
 ; CHECK: LV: Loop hints: force=?
 ; CHECK: LV: Found a loop: inner.body
 
-define void @case3(i32* nocapture %a, i32* nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
+define void @case3(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
 entry:
   %cmp32 = icmp sgt i32 %N, 0
   br i1 %cmp32, label %outer.ph, label %for.end15
@@ -148,11 +148,11 @@ inner.ph:                                         ; preds = %outer.body
 inner.body:                                       ; preds = %inner.body, %inner.ph
   %indvars.iv = phi i64 [ 0, %inner.ph ], [ %indvars.iv.next, %inner.body ]
   %2 = add nsw i64 %indvars.iv, %1
-  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %2
-  %3 = load i32, i32* %arrayidx, align 4, !tbaa !2
+  %arrayidx = getelementptr inbounds i32, ptr %b, i64 %2
+  %3 = load i32, ptr %arrayidx, align 4, !tbaa !2
   %mul8 = mul nsw i32 %3, %3
-  %arrayidx12 = getelementptr inbounds i32, i32* %a, i64 %2
-  store i32 %mul8, i32* %arrayidx12, align 4, !tbaa !2
+  %arrayidx12 = getelementptr inbounds i32, ptr %a, i64 %2
+  store i32 %mul8, ptr %arrayidx12, align 4, !tbaa !2
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %outer.inc, label %inner.body
@@ -175,7 +175,7 @@ for.end15:                                        ; preds = %outer.inc, %entry
 ; CHECK: LV: Loop hints: force=?
 ; CHECK: LV: Found a loop: inner.body
 
-define void @case4(i32* nocapture %a, i32* nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
+define void @case4(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
 entry:
   %cmp32 = icmp sgt i32 %N, 0
   br i1 %cmp32, label %outer.ph, label %for.end15
@@ -198,11 +198,11 @@ inner.ph:                                  ; preds = %outer.body
 inner.body:                                        ; preds = %inner.body, %inner.ph
   %indvars.iv = phi i64 [ 0, %inner.ph ], [ %indvars.iv.next, %inner.body ]
   %2 = add nsw i64 %indvars.iv, %1
-  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %2
-  %3 = load i32, i32* %arrayidx, align 4, !tbaa !2
+  %arrayidx = getelementptr inbounds i32, ptr %b, i64 %2
+  %3 = load i32, ptr %arrayidx, align 4, !tbaa !2
   %mul8 = mul nsw i32 %3, %3
-  %arrayidx12 = getelementptr inbounds i32, i32* %a, i64 %2
-  store i32 %mul8, i32* %arrayidx12, align 4, !tbaa !2
+  %arrayidx12 = getelementptr inbounds i32, ptr %a, i64 %2
+  store i32 %mul8, ptr %arrayidx12, align 4, !tbaa !2
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %outer.inc, label %inner.body

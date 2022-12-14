@@ -5,7 +5,7 @@
 ; RUN: opt %s -passes='simplifycfg<bonus-inst-threshold=2>' -S | FileCheck %s --check-prefix=AGGRESSIVE
 ; RUN: opt %s -passes='simplifycfg<bonus-inst-threshold=4>' -S | FileCheck %s --check-prefix=WAYAGGRESSIVE
 
-define i32 @foo(i32 %a, i32 %b, i32 %c, i32 %d, i32* %input) {
+define i32 @foo(i32 %a, i32 %b, i32 %c, i32 %d, ptr %input) {
 ; NORMAL-LABEL: @foo(
 ; AGGRESSIVE-LABEL: @foo(
 entry:
@@ -23,7 +23,7 @@ lor.lhs.false:
 ; AGGRESSIVE-NOT: br i1
 
 cond.false:
-  %0 = load i32, i32* %input, align 4
+  %0 = load i32, ptr %input, align 4
   br label %cond.end
 
 cond.end:
@@ -35,7 +35,7 @@ declare void @distinct_a();
 declare void @distinct_b();
 
 ;; Like foo, but have to duplicate into multiple predecessors
-define i32 @bar(i32 %a, i32 %b, i32 %c, i32 %d, i32* %input) {
+define i32 @bar(i32 %a, i32 %b, i32 %c, i32 %d, ptr %input) {
 ; NORMAL-LABEL: @bar(
 ; AGGRESSIVE-LABEL: @bar(
 entry:
@@ -74,7 +74,7 @@ lor.lhs.false:
 ; WAYAGGRESSIVE-NOT: br i1
 
 cond.false:
-  %0 = load i32, i32* %input, align 4
+  %0 = load i32, ptr %input, align 4
   br label %cond.end
 
 cond.end:

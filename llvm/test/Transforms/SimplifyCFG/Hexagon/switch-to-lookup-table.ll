@@ -13,8 +13,8 @@ define i32 @foo(i32 %x) #0 section ".tcm_text" {
 ; ENABLE-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X:%.*]], 6
 ; ENABLE-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; ENABLE:       switch.lookup:
-; ENABLE-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [6 x i32], [6 x i32]* @switch.table.foo, i32 0, i32 [[X]]
-; ENABLE-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
+; ENABLE-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [6 x i32], ptr @switch.table.foo, i32 0, i32 [[X]]
+; ENABLE-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; ENABLE-NEXT:    br label [[RETURN]]
 ; ENABLE:       return:
 ; ENABLE-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 19, [[ENTRY:%.*]] ]
@@ -49,8 +49,8 @@ define i32 @foo(i32 %x) #0 section ".tcm_text" {
 entry:
   %retval = alloca i32, align 4
   %x.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  %0 = load i32, i32* %x.addr, align 4
+  store i32 %x, ptr %x.addr, align 4
+  %0 = load i32, ptr %x.addr, align 4
   switch i32 %0, label %sw.default [
   i32 0, label %sw.bb
   i32 1, label %sw.bb1
@@ -61,35 +61,35 @@ entry:
   ]
 
 sw.bb:                                            ; preds = %entry
-  store i32 9, i32* %retval, align 4
+  store i32 9, ptr %retval, align 4
   br label %return
 
 sw.bb1:                                           ; preds = %entry
-  store i32 20, i32* %retval, align 4
+  store i32 20, ptr %retval, align 4
   br label %return
 
 sw.bb2:                                           ; preds = %entry
-  store i32 14, i32* %retval, align 4
+  store i32 14, ptr %retval, align 4
   br label %return
 
 sw.bb3:                                           ; preds = %entry
-  store i32 22, i32* %retval, align 4
+  store i32 22, ptr %retval, align 4
   br label %return
 
 sw.bb4:                                           ; preds = %entry
-  store i32 12, i32* %retval, align 4
+  store i32 12, ptr %retval, align 4
   br label %return
 
 sw.bb5:                                           ; preds = %entry
-  store i32 5, i32* %retval, align 4
+  store i32 5, ptr %retval, align 4
   br label %return
 
 sw.default:                                       ; preds = %entry
-  store i32 19, i32* %retval, align 4
+  store i32 19, ptr %retval, align 4
   br label %return
 
 return:                                           ; preds = %sw.default, %sw.bb5, %sw.bb4, %sw.bb3, %sw.bb2, %sw.bb1, %sw.bb
-  %1 = load i32, i32* %retval, align 4
+  %1 = load i32, ptr %retval, align 4
   ret i32 %1
 }
 

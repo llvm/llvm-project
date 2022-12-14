@@ -11,7 +11,7 @@ define void @f(i1 %c) {
 ; CHECK-NEXT:  entr:
 ; CHECK-NEXT:    br i1 %c, label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
-; CHECK-NEXT:    [[PAT:%.*]] = getelementptr [16 x i8], [16 x i8]* @glob
+; CHECK-NEXT:    [[PAT:%.*]] = getelementptr [16 x i8], ptr @glob
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -20,7 +20,7 @@ entr:
   br i1 %c, label %next, label %exit
 
 next:
-  %pat = getelementptr [16 x i8], [16 x i8]* @glob
+  %pat = getelementptr [16 x i8], ptr @glob
   br label %exit
 
 exit:

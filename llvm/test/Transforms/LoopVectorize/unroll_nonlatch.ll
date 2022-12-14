@@ -8,7 +8,7 @@
 ; loop, we must exit to the epilogue on iteration with %indvars.iv = 1022 to
 ; avoid an out of bounds access.
 
-define void @test(double* %data) {
+define void @test(ptr %data) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -22,14 +22,14 @@ define void @test(double* %data) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[INDUCTION1]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, double* [[DATA:%.*]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, double* [[DATA]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load double, double* [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = load double, double* [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[DATA:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load double, ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load double, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = fneg double [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fneg double [[TMP7]]
-; CHECK-NEXT:    store double [[TMP8]], double* [[TMP4]], align 8
-; CHECK-NEXT:    store double [[TMP9]], double* [[TMP5]], align 8
+; CHECK-NEXT:    store double [[TMP8]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    store double [[TMP9]], ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1022
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -46,10 +46,10 @@ define void @test(double* %data) {
 ; CHECK:       for.latch:
 ; CHECK-NEXT:    [[T15:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[T16:%.*]] = or i64 [[T15]], 1
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, double* [[DATA]], i64 [[T16]]
-; CHECK-NEXT:    [[T17:%.*]] = load double, double* [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[T16]]
+; CHECK-NEXT:    [[T17:%.*]] = load double, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg double [[T17]]
-; CHECK-NEXT:    store double [[FNEG]], double* [[ARRAYIDX]], align 8
+; CHECK-NEXT:    store double [[FNEG]], ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    br label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -66,10 +66,10 @@ for.body:
 for.latch:
   %t15 = shl nuw nsw i64 %indvars.iv, 1
   %t16 = or i64 %t15, 1
-  %arrayidx = getelementptr inbounds double, double* %data, i64 %t16
-  %t17 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %data, i64 %t16
+  %t17 = load double, ptr %arrayidx, align 8
   %fneg = fneg double %t17
-  store double %fneg, double* %arrayidx, align 8
+  store double %fneg, ptr %arrayidx, align 8
   br label %for.body
 
 for.end:

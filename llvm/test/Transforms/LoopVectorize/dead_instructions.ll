@@ -13,8 +13,8 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; CHECK:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK:       %[[I0:.+]] = add i64 %index, 0
 ; CHECK:       %[[I2:.+]] = add i64 %index, 2
-; CHECK:       getelementptr inbounds i64, i64* %a, i64 %[[I0]]
-; CHECK:       getelementptr inbounds i64, i64* %a, i64 %[[I2]]
+; CHECK:       getelementptr inbounds i64, ptr %a, i64 %[[I0]]
+; CHECK:       getelementptr inbounds i64, ptr %a, i64 %[[I2]]
 ; CHECK-NOT:   add nuw nsw i64 %[[I0]], 1
 ; CHECK-NOT:   add nuw nsw i64 %[[I2]], 1
 ; CHECK-NOT:   icmp slt i64 {{.*}}, %n
@@ -22,15 +22,15 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; CHECK:       %[[CMP:.+]] = icmp eq i64 %index.next, %n.vec
 ; CHECK:       br i1 %[[CMP]], label %middle.block, label %vector.body
 ;
-define i64 @dead_instructions_01(i64 *%a, i64 %n) {
+define i64 @dead_instructions_01(ptr %a, i64 %n) {
 entry:
   br label %for.body
 
 for.body:
   %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
   %r = phi i64 [ %tmp2, %for.body ], [ 0, %entry ]
-  %tmp0 = getelementptr inbounds i64, i64* %a, i64 %i
-  %tmp1 = load i64, i64* %tmp0, align 8
+  %tmp0 = getelementptr inbounds i64, ptr %a, i64 %i
+  %tmp1 = load i64, ptr %tmp0, align 8
   %tmp2 = add i64 %tmp1, %r
   %i.next = add nuw nsw i64 %i, 1
   %cond = icmp slt i64 %i.next, %n
@@ -51,7 +51,7 @@ for.end:
 ;
 ; CHECK:     vector.body:
 ;
-define void @pr47390(i32 *%a) {
+define void @pr47390(ptr %a) {
 entry:
   br label %loop
 
@@ -64,8 +64,8 @@ loop:
   %secondary = phi i32 [ 1, %entry ], [ %secondary_add, %loop ]
   %primary_add = add i32 %primary, 1
   %secondary_add = add i32 %secondary, 1
-  %gep = getelementptr inbounds i32, i32* %a, i32 %secondary
-  %load = load i32, i32* %gep, align 8
+  %gep = getelementptr inbounds i32, ptr %a, i32 %secondary
+  %load = load i32, ptr %gep, align 8
   %cmp = icmp eq i32 %secondary, 5
   br i1 %cmp, label %exit, label %loop
 }
