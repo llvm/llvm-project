@@ -2278,7 +2278,7 @@ SIInstrInfo::expandMovDPP64(MachineInstr &MI) const {
       AMDGPU::isLegal64BitDPPControl(
         getNamedOperand(MI, AMDGPU::OpName::dpp_ctrl)->getImm())) {
     MI.setDesc(get(AMDGPU::V_MOV_B64_dpp));
-    return std::make_pair(&MI, nullptr);
+    return std::pair(&MI, nullptr);
   }
 
   MachineBasicBlock &MBB = *MI.getParent();
@@ -2331,7 +2331,7 @@ SIInstrInfo::expandMovDPP64(MachineInstr &MI) const {
       .addImm(AMDGPU::sub1);
 
   MI.eraseFromParent();
-  return std::make_pair(Split[0], Split[1]);
+  return std::pair(Split[0], Split[1]);
 }
 
 bool SIInstrInfo::swapSourceModifiers(MachineInstr &MI,
@@ -5815,7 +5815,7 @@ extractRsrcPtr(const SIInstrInfo &TII, MachineInstr &MI, MachineOperand &Rsrc) {
       .addReg(SRsrcFormatHi)
       .addImm(AMDGPU::sub3);
 
-  return std::make_tuple(RsrcPtr, NewSRsrc);
+  return std::tuple(RsrcPtr, NewSRsrc);
 }
 
 MachineBasicBlock *
@@ -6591,10 +6591,10 @@ SIInstrInfo::moveScalarAddSub(SetVectorType &Worklist, MachineInstr &Inst,
     MachineBasicBlock *NewBB = legalizeOperands(Inst, MDT);
 
     addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
-    return std::make_pair(true, NewBB);
+    return std::pair(true, NewBB);
   }
 
-  return std::make_pair(false, nullptr);
+  return std::pair(false, nullptr);
 }
 
 void SIInstrInfo::lowerSelect(SetVectorType &Worklist, MachineInstr &Inst,
@@ -7775,7 +7775,7 @@ SIInstrInfo::CreateTargetMIHazardRecognizer(const InstrItineraryData *II,
 
 std::pair<unsigned, unsigned>
 SIInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
-  return std::make_pair(TF & MO_MASK, TF & ~MO_MASK);
+  return std::pair(TF & MO_MASK, TF & ~MO_MASK);
 }
 
 ArrayRef<std::pair<unsigned, const char *>>

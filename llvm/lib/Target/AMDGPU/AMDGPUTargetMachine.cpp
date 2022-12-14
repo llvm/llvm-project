@@ -761,13 +761,13 @@ AMDGPUTargetMachine::getPredicatedAddrSpace(const Value *V) const {
   if (auto *II = dyn_cast<IntrinsicInst>(V)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::amdgcn_is_shared:
-      return std::make_pair(II->getArgOperand(0), AMDGPUAS::LOCAL_ADDRESS);
+      return std::pair(II->getArgOperand(0), AMDGPUAS::LOCAL_ADDRESS);
     case Intrinsic::amdgcn_is_private:
-      return std::make_pair(II->getArgOperand(0), AMDGPUAS::PRIVATE_ADDRESS);
+      return std::pair(II->getArgOperand(0), AMDGPUAS::PRIVATE_ADDRESS);
     default:
       break;
     }
-    return std::make_pair(nullptr, -1);
+    return std::pair(nullptr, -1);
   }
   // Check the global pointer predication based on
   // (!is_share(p) && !is_private(p)). Note that logic 'and' is commutative and
@@ -778,9 +778,9 @@ AMDGPUTargetMachine::getPredicatedAddrSpace(const Value *V) const {
           m_c_And(m_Not(m_Intrinsic<Intrinsic::amdgcn_is_shared>(m_Value(Ptr))),
                   m_Not(m_Intrinsic<Intrinsic::amdgcn_is_private>(
                       m_Deferred(Ptr))))))
-    return std::make_pair(Ptr, AMDGPUAS::GLOBAL_ADDRESS);
+    return std::pair(Ptr, AMDGPUAS::GLOBAL_ADDRESS);
 
-  return std::make_pair(nullptr, -1);
+  return std::pair(nullptr, -1);
 }
 
 unsigned

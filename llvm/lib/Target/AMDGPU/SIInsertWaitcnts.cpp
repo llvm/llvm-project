@@ -1621,7 +1621,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
         // there cannot be a vector store to the same memory location.
         if (!Memop->isInvariant()) {
           const Value *Ptr = Memop->getValue();
-          SLoadAddresses.insert(std::make_pair(Ptr, Inst.getParent()));
+          SLoadAddresses.insert(std::pair(Ptr, Inst.getParent()));
         }
       }
       if (ST->hasReadVCCZBug()) {

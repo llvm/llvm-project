@@ -712,7 +712,7 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
         if (!Op2Def)
           return CheckRetType(std::nullopt);
 
-        return CheckRetType(std::make_pair(Op1Def, Op2Def));
+        return CheckRetType(std::pair(Op1Def, Op2Def));
       };
 
     MachineOperand *OrSDWA = TII->getNamedOperand(MI, AMDGPU::OpName::src0);

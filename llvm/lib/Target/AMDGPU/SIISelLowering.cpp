@@ -3240,7 +3240,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
 
     if (VA.isRegLoc()) {
-      RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
+      RegsToPass.push_back(std::pair(VA.getLocReg(), Arg));
     } else {
       assert(VA.isMemLoc());
 
@@ -3551,7 +3551,7 @@ splitBlockForLoop(MachineInstr &MI, MachineBasicBlock &MBB, bool InstInLoop) {
 
   MBB.addSuccessor(LoopBB);
 
-  return std::make_pair(LoopBB, RemainderBB);
+  return std::pair(LoopBB, RemainderBB);
 }
 
 /// Insert \p MI into a BUNDLE with an S_WAITCNT 0 immediately following it.
@@ -3769,9 +3769,9 @@ computeIndirectRegAndOffset(const SIRegisterInfo &TRI,
   // Skip out of bounds offsets, or else we would end up using an undefined
   // register.
   if (Offset >= NumElts || Offset < 0)
-    return std::make_pair(AMDGPU::sub0, Offset);
+    return std::pair(AMDGPU::sub0, Offset);
 
-  return std::make_pair(SIRegisterInfo::getSubRegFromChannel(Offset), 0);
+  return std::pair(SIRegisterInfo::getSubRegFromChannel(Offset), 0);
 }
 
 static void setM0ToIndexFromSGPR(const SIInstrInfo *TII,
@@ -4668,8 +4668,8 @@ SDValue SITargetLowering::splitTernaryVectorOp(SDValue Op,
   SDValue Lo0, Hi0;
   SDValue Op0 = Op.getOperand(0);
   std::tie(Lo0, Hi0) = Op0.getValueType().isVector()
-                         ? DAG.SplitVectorOperand(Op.getNode(), 0)
-                         : std::make_pair(Op0, Op0);
+                           ? DAG.SplitVectorOperand(Op.getNode(), 0)
+                           : std::pair(Op0, Op0);
   SDValue Lo1, Hi1;
   std::tie(Lo1, Hi1) = DAG.SplitVectorOperand(Op.getNode(), 1);
   SDValue Lo2, Hi2;
@@ -12262,7 +12262,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       default:
         RC = SIRegisterInfo::getSGPRClassForBitWidth(BitWidth);
         if (!RC)
-          return std::make_pair(0U, nullptr);
+          return std::pair(0U, nullptr);
         break;
       }
       break;
@@ -12274,7 +12274,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       default:
         RC = TRI->getVGPRClassForBitWidth(BitWidth);
         if (!RC)
-          return std::make_pair(0U, nullptr);
+          return std::pair(0U, nullptr);
         break;
       }
       break;
@@ -12288,7 +12288,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       default:
         RC = TRI->getAGPRClassForBitWidth(BitWidth);
         if (!RC)
-          return std::make_pair(0U, nullptr);
+          return std::pair(0U, nullptr);
         break;
       }
       break;
@@ -12297,7 +12297,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
     // even if they are not reported as legal
     if (RC && (isTypeLegal(VT) || VT.SimpleTy == MVT::i128 ||
                VT.SimpleTy == MVT::i16 || VT.SimpleTy == MVT::f16))
-      return std::make_pair(0U, RC);
+      return std::pair(0U, RC);
   }
 
   if (Constraint.startswith("{") && Constraint.endswith("}")) {
@@ -12329,13 +12329,13 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
             RC = TRI->getAGPRClassForBitWidth(Width);
           if (RC) {
             Reg = TRI->getMatchingSuperReg(Reg, AMDGPU::sub0, RC);
-            return std::make_pair(Reg, RC);
+            return std::pair(Reg, RC);
           }
         }
       } else {
         bool Failed = RegName.getAsInteger(10, Idx);
         if (!Failed && Idx < RC->getNumRegs())
-          return std::make_pair(RC->getRegister(Idx), RC);
+          return std::pair(RC->getRegister(Idx), RC);
       }
     }
   }
