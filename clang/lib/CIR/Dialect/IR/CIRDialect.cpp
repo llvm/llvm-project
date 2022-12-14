@@ -69,7 +69,7 @@ void cir::CIRDialect::initialize() {
 // Parses one of the keywords provided in the list `keywords` and returns the
 // position of the parsed keyword in the list. If none of the keywords from the
 // list is parsed, returns -1.
-static int parseOptionalKeywordAlternative(OpAsmParser &parser,
+static int parseOptionalKeywordAlternative(AsmParser &parser,
                                            ArrayRef<StringRef> keywords) {
   for (auto en : llvm::enumerate(keywords)) {
     if (succeeded(parser.parseOptionalKeyword(en.value())))
@@ -86,8 +86,16 @@ template <typename Ty> struct EnumTraits {};
     static StringRef stringify(Ty value) { return stringify##Ty(value); }      \
     static unsigned getMaxEnumVal() { return getMaxEnumValFor##Ty(); }         \
   }
+#define REGISTER_ENUM_TYPE_WITH_NS(NS, Ty)                                     \
+  template <> struct EnumTraits<NS::Ty> {                                      \
+    static StringRef stringify(NS::Ty value) {                                 \
+      return NS::stringify##Ty(value);                                         \
+    }                                                                          \
+    static unsigned getMaxEnumVal() { return NS::getMaxEnumValFor##Ty(); }     \
+  }
 
 REGISTER_ENUM_TYPE(GlobalLinkageKind);
+REGISTER_ENUM_TYPE_WITH_NS(sob, SignedOverflowBehavior);
 } // namespace
 
 /// Parse an enum from the keyword, or default to the provided default value.
@@ -95,9 +103,7 @@ REGISTER_ENUM_TYPE(GlobalLinkageKind);
 /// second template argument.
 /// TODO: teach other places in this file to use this function.
 template <typename EnumTy, typename RetTy = EnumTy>
-static RetTy parseOptionalCIRKeyword(OpAsmParser &parser,
-                                     OperationState &result,
-                                     EnumTy defaultValue) {
+static RetTy parseOptionalCIRKeyword(AsmParser &parser, EnumTy defaultValue) {
   SmallVector<StringRef, 10> names;
   for (unsigned i = 0, e = EnumTraits<EnumTy>::getMaxEnumVal(); i <= e; ++i)
     names.push_back(EnumTraits<EnumTy>::stringify(static_cast<EnumTy>(i)));
@@ -567,30 +573,31 @@ LogicalResult ScopeOp::verify() { return success(); }
 //===----------------------------------------------------------------------===//
 
 mlir::LogicalResult YieldOp::verify() {
-  auto canDominateYieldBreak = [&](Operation *parentOp) {
-    mlir::Region *lastAwaitRegion = nullptr;
-    while (!llvm::isa<cir::FuncOp>(parentOp)) {
-      auto awaitOp = dyn_cast<cir::AwaitOp>(parentOp);
-      if (awaitOp) {
-        if (lastAwaitRegion && lastAwaitRegion == &awaitOp.getResume()) {
-          emitOpError()
-              << "break can only be used in 'ready' and 'suspend' regions";
-          return false;
+  auto canDominateYieldBreak =
+      [&](Operation *parentOp) {
+        mlir::Region *lastAwaitRegion = nullptr;
+        while (!llvm::isa<cir::FuncOp>(parentOp)) {
+          auto awaitOp = dyn_cast<cir::AwaitOp>(parentOp);
+          if (awaitOp) {
+            if (lastAwaitRegion && lastAwaitRegion == &awaitOp.getResume()) {
+              emitOpError()
+                  << "break can only be used in 'ready' and 'suspend' regions";
+              return false;
+            }
+            return true;
+          }
+
+          if (llvm::isa<cir::SwitchOp, cir::LoopOp>(parentOp))
+            return true;
+
+          lastAwaitRegion = parentOp->getParentRegion();
+          parentOp = parentOp->getParentOp();
         }
-        return true;
-      }
 
-      if (llvm::isa<cir::SwitchOp, cir::LoopOp>(parentOp))
-        return true;
-
-      lastAwaitRegion = parentOp->getParentRegion();
-      parentOp = parentOp->getParentOp();
-    }
-
-    emitOpError()
-        << "shall be dominated by 'cir.loop', 'cir.switch' or 'cir.await'";
-    return false;
-  };
+        emitOpError()
+            << "shall be dominated by 'cir.loop', 'cir.switch' or 'cir.await'";
+        return false;
+      };
 
   auto isDominatedByLoop = [](Operation *parentOp) {
     while (!llvm::isa<cir::FuncOp>(parentOp)) {
@@ -1150,12 +1157,11 @@ void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
 
 ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   // Default to external linkage if no keyword is provided.
-  state.addAttribute(
-      getLinkageAttrNameString(),
-      GlobalLinkageKindAttr::get(
-          parser.getContext(),
-          parseOptionalCIRKeyword<GlobalLinkageKind>(
-              parser, state, GlobalLinkageKind::ExternalLinkage)));
+  state.addAttribute(getLinkageAttrNameString(),
+                     GlobalLinkageKindAttr::get(
+                         parser.getContext(),
+                         parseOptionalCIRKeyword<GlobalLinkageKind>(
+                             parser, GlobalLinkageKind::ExternalLinkage)));
 
   StringAttr nameAttr;
   SmallVector<OpAsmParser::Argument, 8> arguments;
@@ -1548,6 +1554,34 @@ void CstArrayAttr::print(::mlir::AsmPrinter &printer) const {
     printer << ' ' << ":";
     printer << ' ';
     printer.printStrippedAttrOrType(getType());
+  }
+  printer << ">";
+}
+
+::mlir::Attribute SignedOverflowBehaviorAttr::parse(::mlir::AsmParser &parser,
+                                                    ::mlir::Type type) {
+  if (parser.parseLess())
+    return {};
+  auto behavior = parseOptionalCIRKeyword(
+      parser, mlir::cir::sob::SignedOverflowBehavior::undefined);
+  if (parser.parseGreater())
+    return {};
+
+  return SignedOverflowBehaviorAttr::get(parser.getContext(), behavior);
+}
+
+void SignedOverflowBehaviorAttr::print(::mlir::AsmPrinter &printer) const {
+  printer << "<";
+  switch (getBehavior()) {
+  case sob::SignedOverflowBehavior::undefined:
+    printer << "undefined";
+    break;
+  case sob::SignedOverflowBehavior::defined:
+    printer << "defined";
+    break;
+  case sob::SignedOverflowBehavior::trapping:
+    printer << "trapping";
+    break;
   }
   printer << ">";
 }

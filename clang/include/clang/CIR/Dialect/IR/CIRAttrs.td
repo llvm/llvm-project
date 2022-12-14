@@ -14,6 +14,7 @@
 #define MLIR_CIR_DIALECT_CIR_ATTRS
 
 include "mlir/IR/BuiltinAttributeInterfaces.td"
+include "mlir/IR/EnumAttr.td"
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 
 //===----------------------------------------------------------------------===//
@@ -90,6 +91,14 @@ def CstArrayAttr : CIR_Attr<"CstArray", "cst_array", [TypedAttrInterface]> {
   // Enable verifier.
   let genVerifyDecl = 1;
 }
+
+def SignedOverflowBehaviorAttr : AttrDef<CIR_Dialect, "SignedOverflowBehavior"> {
+    let mnemonic = "signed_overflow_behavior";
+    let parameters = (ins
+      "sob::SignedOverflowBehavior":$behavior
+    );
+    let hasCustomAssemblyFormat = 1;
+  }
 
 //===----------------------------------------------------------------------===//
 // AST Wrappers
