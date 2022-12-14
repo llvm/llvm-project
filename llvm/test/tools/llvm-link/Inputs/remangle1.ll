@@ -6,5 +6,5 @@ target triple = "x86_64-unknown-linux-gnu"
 %fum = type { %aac, i8, [7 x i8] }
 %aac = type { [8 x i8] }
 
-declare void @bar01(%aaa*)
-declare void @bar02(%fum*)
+declare void @bar01(%aaa)
+declare void @bar02(%fum)
