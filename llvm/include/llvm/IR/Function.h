@@ -715,6 +715,10 @@ public:
               Function::iterator FromBeginIt,
               Function::iterator FromEndIt);
 
+  /// Erases a range of BasicBlocks from \p FromIt to (not including) \p ToIt.
+  /// \Returns \p ToIt.
+  Function::iterator erase(Function::iterator FromIt, Function::iterator ToIt);
+
   /// Get the underlying elements of the Function... the basic block list is
   /// empty for external functions.
   ///
