@@ -150,6 +150,8 @@ protected:
         << "(<8 x i16>, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.bswap.v8i16"
         << "(<8 x i16>, <8 x i1>, i32) ";
+    Str << " declare <8 x i16> @llvm.vp.ctpop.v8i16"
+        << "(<8 x i16>, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.fshl.v8i16"
         << "(<8 x i16>, <8 x i16>, <8 x i16>, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.fshr.v8i16"

@@ -963,6 +963,7 @@ namespace slpvectorizer {
 class BoUpSLP {
   struct TreeEntry;
   struct ScheduleData;
+  class ShuffleInstructionBuilder;
 
 public:
   using ValueList = SmallVector<Value *, 8>;
@@ -8114,67 +8115,240 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL) {
   return Vec;
 }
 
-namespace {
-/// Merges shuffle masks and emits final shuffle instruction, if required.
-class ShuffleInstructionBuilder {
-  IRBuilderBase &Builder;
-  const unsigned VF = 0;
+/// Merges shuffle masks and emits final shuffle instruction, if required. It
+/// supports shuffling of 2 input vectors. It implements lazy shuffles emission,
+/// when the actual shuffle instruction is generated only if this is actually
+/// required. Otherwise, the shuffle instruction emission is delayed till the
+/// end of the process, to reduce the number of emitted instructions and further
+/// analysis/transformations.
+/// The class also will look through the previously emitted shuffle instructions
+/// and properly mark indices in mask as undef.
+/// For example, given the code
+/// \code
+/// %s1 = shufflevector <2 x ty> %0, poison, <1, 0>
+/// %s2 = shufflevector <2 x ty> %1, poison, <1, 0>
+/// \endcode
+/// and if need to emit shuffle of %s1 and %s2 with mask <1, 0, 3, 2>, it will
+/// look through %s1 and %s2 and emit
+/// \code
+/// %res = shufflevector <2 x ty> %0, %1, <0, 1, 2, 3>
+/// \endcode
+/// instead.
+/// If 2 operands are of different size, the smallest one will be resized and
+/// the mask recalculated properly.
+/// For example, given the code
+/// \code
+/// %s1 = shufflevector <2 x ty> %0, poison, <1, 0, 1, 0>
+/// %s2 = shufflevector <2 x ty> %1, poison, <1, 0, 1, 0>
+/// \endcode
+/// and if need to emit shuffle of %s1 and %s2 with mask <1, 0, 5, 4>, it will
+/// look through %s1 and %s2 and emit
+/// \code
+/// %res = shufflevector <2 x ty> %0, %1, <0, 1, 2, 3>
+/// \endcode
+/// instead.
+class BoUpSLP::ShuffleInstructionBuilder {
   bool IsFinalized = false;
-  SmallVector<int, 4> Mask;
-  /// Holds all of the instructions that we gathered.
-  SetVector<Instruction *> &GatherShuffleSeq;
-  /// A list of blocks that we are going to CSE.
-  SetVector<BasicBlock *> &CSEBlocks;
+  /// Combined mask for all applied operands and masks. It is built during
+  /// analysis and actual emission of shuffle vector instructions.
+  SmallVector<int> CommonMask;
+  /// List of operands for the shuffle vector instruction. It hold at max 2
+  /// operands, if the 3rd is going to be added, the first 2 are combined into
+  /// shuffle with \p CommonMask mask, the first operand sets to be the
+  /// resulting shuffle and the second operand sets to be the newly added
+  /// operand. The \p CombinedMask is transformed in the proper way after that.
+  SmallVector<Value *, 2> InVectors;
+  IRBuilderBase &Builder;
+  BoUpSLP &R;
+
+  class ShuffleIRBuilder {
+    IRBuilderBase &Builder;
+    /// Holds all of the instructions that we gathered.
+    SetVector<Instruction *> &GatherShuffleExtractSeq;
+    /// A list of blocks that we are going to CSE.
+    SetVector<BasicBlock *> &CSEBlocks;
+
+  public:
+    ShuffleIRBuilder(IRBuilderBase &Builder,
+                     SetVector<Instruction *> &GatherShuffleExtractSeq,
+                     SetVector<BasicBlock *> &CSEBlocks)
+        : Builder(Builder), GatherShuffleExtractSeq(GatherShuffleExtractSeq),
+          CSEBlocks(CSEBlocks) {}
+    ~ShuffleIRBuilder() = default;
+    /// Creates shufflevector for the 2 operands with the given mask.
+    Value *createShuffleVector(Value *V1, Value *V2, ArrayRef<int> Mask) {
+      Value *Vec = Builder.CreateShuffleVector(V1, V2, Mask);
+      if (auto *I = dyn_cast<Instruction>(Vec)) {
+        GatherShuffleExtractSeq.insert(I);
+        CSEBlocks.insert(I->getParent());
+      }
+      return Vec;
+    }
+    /// Creates permutation of the single vector operand with the given mask, if
+    /// it is not identity mask.
+    Value *createShuffleVector(Value *V1, ArrayRef<int> Mask) {
+      if (Mask.empty())
+        return V1;
+      unsigned VF = Mask.size();
+      unsigned LocalVF = cast<FixedVectorType>(V1->getType())->getNumElements();
+      if (VF == LocalVF && ShuffleVectorInst::isIdentityMask(Mask))
+        return V1;
+      Value *Vec = Builder.CreateShuffleVector(V1, Mask);
+      if (auto *I = dyn_cast<Instruction>(Vec)) {
+        GatherShuffleExtractSeq.insert(I);
+        CSEBlocks.insert(I->getParent());
+      }
+      return Vec;
+    }
+  };
+
+  /// Smart shuffle instruction emission, walks through shuffles trees and
+  /// tries to find the best matching vector for the actual shuffle
+  /// instruction.
+  Value *createShuffle(Value *V1, Value *V2, ArrayRef<int> Mask) {
+    assert(V1 && "Expected at least one vector value.");
+    ShuffleIRBuilder ShuffleBuilder(Builder, R.GatherShuffleExtractSeq,
+                                    R.CSEBlocks);
+    if (V2)
+      return ShuffleBuilder.createShuffleVector(V1, V2, Mask);
+    return ShuffleBuilder.createShuffleVector(V1, Mask);
+  }
+
+  /// Transforms mask \p CommonMask per given \p Mask to make proper set after
+  /// shuffle emission.
+  static void transformMaskAfterShuffle(MutableArrayRef<int> CommonMask,
+                                        ArrayRef<int> Mask) {
+    for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
+      if (Mask[Idx] != UndefMaskElem)
+        CommonMask[Idx] = Idx;
+  }
 
 public:
-  ShuffleInstructionBuilder(IRBuilderBase &Builder, unsigned VF,
-                            SetVector<Instruction *> &GatherShuffleSeq,
-                            SetVector<BasicBlock *> &CSEBlocks)
-      : Builder(Builder), VF(VF), GatherShuffleSeq(GatherShuffleSeq),
-        CSEBlocks(CSEBlocks) {}
+  ShuffleInstructionBuilder(IRBuilderBase &Builder, BoUpSLP &R)
+      : Builder(Builder), R(R) {}
 
-  /// Adds a mask, inverting it before applying.
-  void addInversedMask(ArrayRef<unsigned> SubMask) {
-    if (SubMask.empty())
+  /// Adds 2 input vectors and the mask for their shuffling.
+  void add(Value *V1, Value *V2, ArrayRef<int> Mask) {
+    assert(V1 && V2 && !Mask.empty() && "Expected non-empty input vectors.");
+    if (InVectors.empty()) {
+      InVectors.push_back(V1);
+      InVectors.push_back(V2);
+      CommonMask.assign(Mask.begin(), Mask.end());
       return;
-    SmallVector<int, 4> NewMask;
-    inversePermutation(SubMask, NewMask);
-    addMask(NewMask);
-  }
-
-  /// Functions adds masks, merging them into  single one.
-  void addMask(ArrayRef<unsigned> SubMask) {
-    SmallVector<int, 4> NewMask(SubMask);
-    addMask(NewMask);
-  }
-
-  void addMask(ArrayRef<int> SubMask) { ::addMask(Mask, SubMask); }
-
-  Value *finalize(Value *V) {
-    IsFinalized = true;
-    unsigned ValueVF = cast<FixedVectorType>(V->getType())->getNumElements();
-    if (VF == ValueVF && Mask.empty())
-      return V;
-    SmallVector<int, 4> NormalizedMask(VF, UndefMaskElem);
-    std::iota(NormalizedMask.begin(), NormalizedMask.end(), 0);
-    addMask(NormalizedMask);
-
-    if (VF == ValueVF && ShuffleVectorInst::isIdentityMask(Mask))
-      return V;
-    Value *Vec = Builder.CreateShuffleVector(V, Mask, "shuffle");
-    if (auto *I = dyn_cast<Instruction>(Vec)) {
-      GatherShuffleSeq.insert(I);
-      CSEBlocks.insert(I->getParent());
     }
-    return Vec;
+    Value *Vec = InVectors.front();
+    if (InVectors.size() == 2) {
+      Vec = createShuffle(Vec, InVectors.back(), CommonMask);
+      transformMaskAfterShuffle(CommonMask, Mask);
+    } else if (cast<FixedVectorType>(Vec->getType())->getNumElements() !=
+               Mask.size()) {
+      Vec = createShuffle(Vec, nullptr, CommonMask);
+      transformMaskAfterShuffle(CommonMask, Mask);
+    }
+    V1 = createShuffle(V1, V2, Mask);
+    for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
+      if (Mask[Idx] != UndefMaskElem)
+        CommonMask[Idx] = Idx + Sz;
+    InVectors.front() = Vec;
+    if (InVectors.size() == 2)
+      InVectors.back() = V1;
+    else
+      InVectors.push_back(V1);
+  }
+  /// Adds another one input vector and the mask for the shuffling.
+  void add(Value *V1, ArrayRef<int> Mask) {
+    if (InVectors.empty()) {
+      if (!isa<FixedVectorType>(V1->getType())) {
+        V1 = createShuffle(V1, nullptr, CommonMask);
+        CommonMask.assign(Mask.size(), UndefMaskElem);
+        transformMaskAfterShuffle(CommonMask, Mask);
+      }
+      InVectors.push_back(V1);
+      CommonMask.assign(Mask.begin(), Mask.end());
+      return;
+    }
+    const auto *It = find(InVectors, V1);
+    if (It == InVectors.end()) {
+      if (InVectors.size() == 2 ||
+          InVectors.front()->getType() != V1->getType() ||
+          !isa<FixedVectorType>(V1->getType())) {
+        Value *V = InVectors.front();
+        if (InVectors.size() == 2) {
+          V = createShuffle(InVectors.front(), InVectors.back(), CommonMask);
+          transformMaskAfterShuffle(CommonMask, CommonMask);
+        } else if (cast<FixedVectorType>(V->getType())->getNumElements() !=
+                   CommonMask.size()) {
+          V = createShuffle(InVectors.front(), nullptr, CommonMask);
+          transformMaskAfterShuffle(CommonMask, CommonMask);
+        }
+        for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
+          if (CommonMask[Idx] == UndefMaskElem && Mask[Idx] != UndefMaskElem)
+            CommonMask[Idx] =
+                V->getType() != V1->getType()
+                    ? Idx + Sz
+                    : Mask[Idx] + cast<FixedVectorType>(V1->getType())
+                                      ->getNumElements();
+        if (V->getType() != V1->getType())
+          V1 = createShuffle(V1, nullptr, Mask);
+        InVectors.front() = V;
+        if (InVectors.size() == 2)
+          InVectors.back() = V1;
+        else
+          InVectors.push_back(V1);
+        return;
+      }
+      // Check if second vector is required if the used elements are already
+      // used from the first one.
+      for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
+        if (Mask[Idx] != UndefMaskElem && CommonMask[Idx] == UndefMaskElem) {
+          InVectors.push_back(V1);
+          break;
+        }
+    }
+    int VF = CommonMask.size();
+    if (auto *FTy = dyn_cast<FixedVectorType>(V1->getType()))
+      VF = FTy->getNumElements();
+    for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
+      if (Mask[Idx] != UndefMaskElem && CommonMask[Idx] == UndefMaskElem)
+        CommonMask[Idx] = Mask[Idx] + (It == InVectors.begin() ? 0 : VF);
+  }
+  /// Adds another one input vector and the mask for the shuffling.
+  void addOrdered(Value *V1, ArrayRef<unsigned> Order) {
+    SmallVector<int> NewMask;
+    inversePermutation(Order, NewMask);
+    add(V1, NewMask);
+  }
+  /// Finalize emission of the shuffles.
+  Value *
+  finalize(ArrayRef<int> ExtMask = std::nullopt) {
+    IsFinalized = true;
+    if (!ExtMask.empty()) {
+      if (CommonMask.empty()) {
+        CommonMask.assign(ExtMask.begin(), ExtMask.end());
+      } else {
+        SmallVector<int> NewMask(ExtMask.size(), UndefMaskElem);
+        for (int I = 0, Sz = ExtMask.size(); I < Sz; ++I) {
+          if (ExtMask[I] == UndefMaskElem)
+            continue;
+          NewMask[I] = CommonMask[ExtMask[I]];
+        }
+        CommonMask.swap(NewMask);
+      }
+    }
+    if (CommonMask.empty()) {
+      assert(InVectors.size() == 1 && "Expected only one vector with no mask");
+      return InVectors.front();
+    }
+    if (InVectors.size() == 2)
+      return createShuffle(InVectors.front(), InVectors.back(), CommonMask);
+    return createShuffle(InVectors.front(), nullptr, CommonMask);
   }
 
   ~ShuffleInstructionBuilder() {
-    assert((IsFinalized || Mask.empty()) &&
+    assert((IsFinalized || CommonMask.empty()) &&
            "Shuffle construction must be finalized.");
   }
 };
-} // namespace
 
 Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx) {
   ArrayRef<Value *> VL = E->getOperand(NodeIdx);
@@ -8275,8 +8449,7 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
   assert(E->State == TreeEntry::NeedToGather && "Expected gather node.");
   unsigned VF = E->getVectorFactor();
 
-  ShuffleInstructionBuilder ShuffleBuilder(Builder, VF, GatherShuffleExtractSeq,
-                                           CSEBlocks);
+  ShuffleInstructionBuilder ShuffleBuilder(Builder, *this);
   SmallVector<Value *> Gathered(
       VF, PoisonValue::get(E->Scalars.front()->getType()));
   bool NeedFreeze = false;
@@ -8286,11 +8459,11 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
   inversePermutation(E->ReorderIndices, ReorderMask);
   if (!ReorderMask.empty())
     reorderScalars(VL, ReorderMask);
+  SmallVector<int> ReuseMask(VF, UndefMaskElem);
   if (!allConstant(VL)) {
     // For splats with can emit broadcasts instead of gathers, so try to find
     // such sequences.
     bool IsSplat = isSplat(VL) && (VL.size() > 2 || VL.front() == VL.back());
-    SmallVector<int> ReuseMask(VF, UndefMaskElem);
     SmallVector<int> UndefPos;
     DenseMap<Value *, unsigned> UniquePositions;
     // Gather unique non-const values and all constant values.
@@ -8356,14 +8529,14 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
         NeedFreeze = true;
       }
     }
-    ShuffleBuilder.addMask(ReuseMask);
   } else {
+    ReuseMask.clear();
     copy(VL, Gathered.begin());
   }
   // Gather unique scalars and all constants.
   Value *Vec = gather(Gathered);
-  ShuffleBuilder.addMask(E->ReuseShuffleIndices);
-  Vec = ShuffleBuilder.finalize(Vec);
+  ShuffleBuilder.add(Vec, ReuseMask);
+  Vec = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
   if (NeedFreeze)
     Vec = Builder.CreateFreeze(Vec);
   return Vec;
@@ -8377,10 +8550,20 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     return E->VectorizedValue;
   }
 
-  bool NeedToShuffleReuses = !E->ReuseShuffleIndices.empty();
-  unsigned VF = E->getVectorFactor();
-  ShuffleInstructionBuilder ShuffleBuilder(Builder, VF, GatherShuffleExtractSeq,
-                                           CSEBlocks);
+  auto FinalShuffle = [&](Value *V, const TreeEntry *E) {
+    ShuffleInstructionBuilder ShuffleBuilder(Builder, *this);
+    if (E->State != TreeEntry::NeedToGather &&
+        E->getOpcode() == Instruction::Store) {
+      ArrayRef<int> Mask =
+          makeArrayRef(reinterpret_cast<const int *>(E->ReorderIndices.begin()),
+                       E->ReorderIndices.size());
+      ShuffleBuilder.add(V, Mask);
+    } else {
+      ShuffleBuilder.addOrdered(V, E->ReorderIndices);
+    }
+    return ShuffleBuilder.finalize(E->ReuseShuffleIndices);
+  };
+
   if (E->State == TreeEntry::NeedToGather) {
     if (E->Idx > 0) {
       // We are in the middle of a vectorizable chain. We need to gather the
@@ -8408,10 +8591,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     } else {
       Vec = gather(E->Scalars);
     }
-    if (NeedToShuffleReuses) {
-      ShuffleBuilder.addMask(E->ReuseShuffleIndices);
-      Vec = ShuffleBuilder.finalize(Vec);
-    }
+    Vec = FinalShuffle(Vec, E);
     E->VectorizedValue = Vec;
     return Vec;
   }
@@ -8444,9 +8624,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Builder.SetInsertPoint(&*PH->getParent()->getFirstInsertionPt());
       Builder.SetCurrentDebugLocation(PH->getDebugLoc());
 
-      ShuffleBuilder.addInversedMask(E->ReorderIndices);
-      ShuffleBuilder.addMask(E->ReuseShuffleIndices);
-      V = ShuffleBuilder.finalize(V);
+      V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
 
@@ -8483,9 +8661,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     case Instruction::ExtractElement: {
       Value *V = E->getSingleOperand(0);
       setInsertPointAfterBundle(E);
-      ShuffleBuilder.addInversedMask(E->ReorderIndices);
-      ShuffleBuilder.addMask(E->ReuseShuffleIndices);
-      V = ShuffleBuilder.finalize(V);
+      V = FinalShuffle(V, E);
       E->VectorizedValue = V;
       return V;
     }
@@ -8496,9 +8672,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *Ptr = Builder.CreateBitCast(LI->getOperand(0), PtrTy);
       LoadInst *V = Builder.CreateAlignedLoad(VecTy, Ptr, LI->getAlign());
       Value *NewV = propagateMetadata(V, E->Scalars);
-      ShuffleBuilder.addInversedMask(E->ReorderIndices);
-      ShuffleBuilder.addMask(E->ReuseShuffleIndices);
-      NewV = ShuffleBuilder.finalize(NewV);
+      NewV = FinalShuffle(NewV, E);
       E->VectorizedValue = NewV;
       return NewV;
     }
@@ -8621,9 +8795,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
       auto *CI = cast<CastInst>(VL0);
       Value *V = Builder.CreateCast(CI->getOpcode(), InVec, VecTy);
-      ShuffleBuilder.addInversedMask(E->ReorderIndices);
-      ShuffleBuilder.addMask(E->ReuseShuffleIndices);
-      V = ShuffleBuilder.finalize(V);
+      V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -8647,9 +8819,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
       Value *V = Builder.CreateCmp(P0, L, R);
       propagateIRFlags(V, E->Scalars, VL0);
-      ShuffleBuilder.addInversedMask(E->ReorderIndices);
-      ShuffleBuilder.addMask(E->ReuseShuffleIndices);
-      V = ShuffleBuilder.finalize(V);
+      V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -8675,9 +8845,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
 
       Value *V = Builder.CreateSelect(Cond, True, False);
-      ShuffleBuilder.addInversedMask(E->ReorderIndices);
-      ShuffleBuilder.addMask(E->ReuseShuffleIndices);
-      V = ShuffleBuilder.finalize(V);
+      V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -8699,9 +8867,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (auto *I = dyn_cast<Instruction>(V))
         V = propagateMetadata(I, E->Scalars);
 
-      ShuffleBuilder.addInversedMask(E->ReorderIndices);
-      ShuffleBuilder.addMask(E->ReuseShuffleIndices);
-      V = ShuffleBuilder.finalize(V);
+      V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -8746,9 +8912,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (auto *I = dyn_cast<Instruction>(V))
         V = propagateMetadata(I, E->Scalars);
 
-      ShuffleBuilder.addInversedMask(E->ReorderIndices);
-      ShuffleBuilder.addMask(E->ReuseShuffleIndices);
-      V = ShuffleBuilder.finalize(V);
+      V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -8793,9 +8957,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
       Value *V = propagateMetadata(NewLI, E->Scalars);
 
-      ShuffleBuilder.addInversedMask(E->ReorderIndices);
-      ShuffleBuilder.addMask(E->ReuseShuffleIndices);
-      V = ShuffleBuilder.finalize(V);
+      V = FinalShuffle(V, E);
       E->VectorizedValue = V;
       ++NumVectorInstructions;
       return V;
@@ -8807,8 +8969,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       setInsertPointAfterBundle(E);
 
       Value *VecValue = vectorizeOperand(E, 0);
-      ShuffleBuilder.addMask(E->ReorderIndices);
-      VecValue = ShuffleBuilder.finalize(VecValue);
+      VecValue = FinalShuffle(VecValue, E);
 
       Value *ScalarPtr = SI->getPointerOperand();
       Value *VecPtr = Builder.CreateBitCast(
@@ -8863,9 +9024,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         V = propagateMetadata(I, GEPs);
       }
 
-      ShuffleBuilder.addInversedMask(E->ReorderIndices);
-      ShuffleBuilder.addMask(E->ReuseShuffleIndices);
-      V = ShuffleBuilder.finalize(V);
+      V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -8942,9 +9101,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
 
       propagateIRFlags(V, E->Scalars, VL0);
-      ShuffleBuilder.addInversedMask(E->ReorderIndices);
-      ShuffleBuilder.addMask(E->ReuseShuffleIndices);
-      V = ShuffleBuilder.finalize(V);
+      V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -9026,7 +9183,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         GatherShuffleExtractSeq.insert(I);
         CSEBlocks.insert(I->getParent());
       }
-      V = ShuffleBuilder.finalize(V);
 
       E->VectorizedValue = V;
       ++NumVectorInstructions;

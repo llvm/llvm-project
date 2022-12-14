@@ -4099,6 +4099,11 @@ void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
 
   // Fill the buffer.
   unsigned precision = significand.getBitWidth();
+  if (precision < 4) {
+    // We need enough precision to store the value 10.
+    precision = 4;
+    significand = significand.zext(precision);
+  }
   APInt ten(precision, 10);
   APInt digit(precision, 0);
 

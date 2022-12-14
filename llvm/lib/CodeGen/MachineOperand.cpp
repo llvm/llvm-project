@@ -756,8 +756,9 @@ void MachineOperand::print(raw_ostream &OS, LLT TypeToPrint,
 }
 
 void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
-                           LLT TypeToPrint, Optional<unsigned> OpIdx, bool PrintDef,
-                           bool IsStandalone, bool ShouldPrintRegisterTies,
+                           LLT TypeToPrint, std::optional<unsigned> OpIdx,
+                           bool PrintDef, bool IsStandalone,
+                           bool ShouldPrintRegisterTies,
                            unsigned TiedOperandIdx,
                            const TargetRegisterInfo *TRI,
                            const TargetIntrinsicInfo *IntrinsicInfo) const {

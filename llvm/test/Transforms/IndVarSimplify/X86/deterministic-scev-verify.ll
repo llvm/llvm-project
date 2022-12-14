@@ -19,7 +19,7 @@ tmp0:
 
 tmp7:
   %tmp8 = add nuw nsw i32 %tmp13, 1
-  store i32 undef, i32* @b
+  store i32 undef, ptr @b
   br label %tmp12
 
 tmp12:

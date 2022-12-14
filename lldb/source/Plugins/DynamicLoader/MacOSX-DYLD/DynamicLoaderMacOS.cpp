@@ -79,7 +79,8 @@ DynamicLoaderMacOS::DynamicLoaderMacOS(Process *process)
     : DynamicLoaderDarwin(process), m_image_infos_stop_id(UINT32_MAX),
       m_break_id(LLDB_INVALID_BREAK_ID),
       m_dyld_handover_break_id(LLDB_INVALID_BREAK_ID), m_mutex(),
-      m_maybe_image_infos_address(LLDB_INVALID_ADDRESS) {}
+      m_maybe_image_infos_address(LLDB_INVALID_ADDRESS),
+      m_libsystem_fully_initalized(false) {}
 
 // Destructor
 DynamicLoaderMacOS::~DynamicLoaderMacOS() {
@@ -129,6 +130,7 @@ bool DynamicLoaderMacOS::ProcessDidExec() {
   if (did_exec) {
     m_libpthread_module_wp.reset();
     m_pthread_getspecific_addr.Clear();
+    m_libsystem_fully_initalized = false;
   }
   return did_exec;
 }
@@ -144,6 +146,33 @@ void DynamicLoaderMacOS::DoClear() {
 
   m_break_id = LLDB_INVALID_BREAK_ID;
   m_dyld_handover_break_id = LLDB_INVALID_BREAK_ID;
+  m_libsystem_fully_initalized = false;
+}
+
+bool DynamicLoaderMacOS::IsFullyInitialized() {
+  if (m_libsystem_fully_initalized)
+    return true;
+
+  StructuredData::ObjectSP process_state_sp(
+      m_process->GetDynamicLoaderProcessState());
+  if (!process_state_sp)
+    return true;
+  if (process_state_sp->GetAsDictionary()->HasKey("error"))
+    return true;
+  if (!process_state_sp->GetAsDictionary()->HasKey("process_state string"))
+    return true;
+  std::string proc_state = process_state_sp->GetAsDictionary()
+                               ->GetValueForKey("process_state string")
+                               ->GetAsString()
+                               ->GetValue()
+                               .str();
+  if (proc_state == "dyld_process_state_not_started" ||
+      proc_state == "dyld_process_state_dyld_initialized" ||
+      proc_state == "dyld_process_state_terminated_before_inits") {
+    return false;
+  }
+  m_libsystem_fully_initalized = true;
+  return true;
 }
 
 // Check if we have found DYLD yet

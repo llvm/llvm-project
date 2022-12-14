@@ -30,7 +30,7 @@ define %T2 @f(ptr %p) {
   unreachable
 }
 
-define %T2* @f.resolver(ptr %p) {
+define ptr @f.resolver(ptr %p) {
   alloca %T3
   getelementptr %T4, ptr %p, i64 1
   call void @f(ptr sret(%T5) %p)

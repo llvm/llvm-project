@@ -6,4 +6,4 @@
 
 ; CHECK: can only link appending global with another appending global
 
-@var = global i8* undef
+@var = global ptr undef

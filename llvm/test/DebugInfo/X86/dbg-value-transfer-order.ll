@@ -7,7 +7,7 @@
 ;   while (cell) {
 ;     unsigned bit_offset = cell_offset ? __builtin_ctz(cell) : 32;
 ;     unsigned bit_mask = 1U << bit_offset;
-;     unsigned slot = (cell_offset + bit_offset) << /*log2(sizeof(void*))*/ 3;
+;     unsigned slot = (cell_offset + bit_offset) << /*log2(sizeof(ptr))*/ 3;
 ;     cell ^= bit_mask + page_start_[slot];
 ;   }
 ; }
@@ -50,9 +50,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 declare i32 @if_then()
 
 ; Function Attrs: noinline nounwind readonly uwtable
-define void @f(i32 %cell_offset, i32* nocapture %page_start_) local_unnamed_addr #0 !dbg !31 {
+define void @f(i32 %cell_offset, ptr nocapture %page_start_) local_unnamed_addr #0 !dbg !31 {
 entry:
-  %0 = load i32, i32* %page_start_, align 4, !dbg !45
+  %0 = load i32, ptr %page_start_, align 4, !dbg !45
   %tobool14 = icmp eq i32 %0, 0, !dbg !47
   br i1 %tobool14, label %while.end, label %while.body, !dbg !47
 
@@ -72,8 +72,8 @@ if.end:
   %add = add i32 %cond, %cell_offset, !dbg !54
   %shl2 = shl i32 %add, 3, !dbg !55
   %idxprom = zext i32 %shl2 to i64, !dbg !57
-  %arrayidx3 = getelementptr inbounds i32, i32* %page_start_, i64 %idxprom, !dbg !57
-  %2 = load i32, i32* %arrayidx3, align 4, !dbg !57
+  %arrayidx3 = getelementptr inbounds i32, ptr %page_start_, i64 %idxprom, !dbg !57
+  %2 = load i32, ptr %arrayidx3, align 4, !dbg !57
   %add4 = add i32 %2, %shl, !dbg !58
   %xor = xor i32 %add4, %cell.015, !dbg !59
   tail call void @llvm.dbg.value(metadata i32 %xor, metadata !38, metadata !DIExpression()), !dbg !46

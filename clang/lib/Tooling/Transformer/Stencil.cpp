@@ -152,7 +152,7 @@ public:
     if (E == nullptr)
       return llvm::make_error<StringError>(errc::invalid_argument,
                                            "Id not bound or not Expr: " + Id);
-    llvm::Optional<std::string> Source;
+    std::optional<std::string> Source;
     switch (Op) {
     case UnaryNodeOperator::Parens:
       Source = tooling::buildParens(*E, *Match.Context);
@@ -277,7 +277,7 @@ public:
     if (E == nullptr)
       return llvm::make_error<StringError>(errc::invalid_argument,
                                            "Id not bound: " + BaseId);
-    llvm::Optional<std::string> S = tooling::buildAccess(*E, *Match.Context);
+    std::optional<std::string> S = tooling::buildAccess(*E, *Match.Context);
     if (!S)
       return llvm::make_error<StringError>(
           errc::invalid_argument,

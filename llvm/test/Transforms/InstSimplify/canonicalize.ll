@@ -238,7 +238,7 @@ define float @canonicalize_neg_denorm_preserve_sign_output_positive_zero_input()
 
 define float @canonicalize_neg_denorm_positive_zero_output_preserve_sign_input() "denormal-fp-math"="positive-zero,preserve-sign" {
 ; CHECK-LABEL: @canonicalize_neg_denorm_positive_zero_output_preserve_sign_input(
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    ret float -0.000000e+00
 ;
   %ret = call float @llvm.canonicalize.f32(float bitcast (i32 -2139095041 to float))
   ret float %ret
@@ -590,6 +590,30 @@ define ppc_fp128 @canonicalize_negzero_ppcf128() {
 ; CHECK-NEXT:    ret ppc_fp128 0xM80000000000000000000000000000000
 ;
   %ret = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 0xM80000000000000000000000000000000)
+  ret ppc_fp128 %ret
+}
+
+define ppc_fp128 @canonicalize_noncanonical_zero_0_ppcf128() {
+; CHECK-LABEL: @canonicalize_noncanonical_zero_0_ppcf128(
+; CHECK-NEXT:    ret ppc_fp128 0xM00000000000000000000000000000000
+;
+  %ret = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 0xM0000000000000000ffffffffffffffff)
+  ret ppc_fp128 %ret
+}
+
+define ppc_fp128 @canonicalize_noncanonical_zero_1_ppcf128() {
+; CHECK-LABEL: @canonicalize_noncanonical_zero_1_ppcf128(
+; CHECK-NEXT:    ret ppc_fp128 0xM00000000000000000000000000000000
+;
+  %ret = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 0xM00000000000000000000000000000001)
+  ret ppc_fp128 %ret
+}
+
+define ppc_fp128 @canonicalize_noncanonical_negzero_0_ppcf128() {
+; CHECK-LABEL: @canonicalize_noncanonical_negzero_0_ppcf128(
+; CHECK-NEXT:    ret ppc_fp128 0xM80000000000000000000000000000000
+;
+  %ret = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 0xM8000000000000000ffffffffffffffff)
   ret ppc_fp128 %ret
 }
 

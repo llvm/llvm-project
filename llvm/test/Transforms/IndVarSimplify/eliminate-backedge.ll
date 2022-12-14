@@ -2,11 +2,11 @@
 ; RUN: opt < %s -passes=indvars -S | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
-declare i1 @foo(i8*, i8*)
+declare i1 @foo(ptr, ptr)
 declare i1 @bar()
 declare i1 @baz()
 
-define i1 @kill_backedge_and_phis(i8* align 1 %lhs, i8* align 1 %rhs, i32 %len) {
+define i1 @kill_backedge_and_phis(ptr align 1 %lhs, ptr align 1 %rhs, i32 %len) {
 ; CHECK-LABEL: @kill_backedge_and_phis(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    %length_not_zero = icmp ne i32 %len, 0
@@ -14,7 +14,7 @@ define i1 @kill_backedge_and_phis(i8* align 1 %lhs, i8* align 1 %rhs, i32 %len) 
 ; CHECK:       loop_preheader:
 ; CHECK-NEXT:    br label %loop
 ; CHECK:       loop:
-; CHECK-NEXT:    %result = call i1 @foo(i8* %lhs, i8* %rhs)
+; CHECK-NEXT:    %result = call i1 @foo(ptr %lhs, ptr %rhs)
 ; CHECK-NEXT:    br i1 %result, label %exiting_1, label %exit.loopexit
 ; CHECK:       exiting_1:
 ; CHECK-NEXT:    br i1 false, label %exiting_2, label %exit.loopexit
@@ -45,9 +45,9 @@ loop:
   %iv.wide = phi i64 [ 0, %loop_preheader ], [ %iv.wide.next, %latch ]
   %iv.next = add i32 %iv, 1
   %iv.wide.next = add i64 %iv.wide, 1
-  %left_ptr = getelementptr inbounds i8, i8* %lhs, i32 %iv
-  %right_ptr = getelementptr inbounds i8, i8* %rhs, i32 %iv
-  %result = call i1 @foo(i8* %left_ptr, i8* %right_ptr)
+  %left_ptr = getelementptr inbounds i8, ptr %lhs, i32 %iv
+  %right_ptr = getelementptr inbounds i8, ptr %rhs, i32 %iv
+  %result = call i1 @foo(ptr %left_ptr, ptr %right_ptr)
   br i1 %result, label %exiting_1, label %exit
 
 exiting_1:
@@ -73,7 +73,7 @@ exit:
   ret i1 %val
 }
 
-define i1 @siblings(i8* align 1 %lhs, i8* align 1 %rhs, i32 %len) {
+define i1 @siblings(ptr align 1 %lhs, ptr align 1 %rhs, i32 %len) {
 ; CHECK-LABEL: @siblings(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    %length_not_zero = icmp ne i32 %len, 0
@@ -90,9 +90,9 @@ define i1 @siblings(i8* align 1 %lhs, i8* align 1 %rhs, i32 %len) {
 ; CHECK-NEXT:    br label %loop
 ; CHECK:       loop:
 ; CHECK-NEXT:    %iv.next = add i32 %weird.iv.lcssa, 1
-; CHECK-NEXT:    %left_ptr = getelementptr inbounds i8, i8* %lhs, i32 %weird.iv.lcssa
-; CHECK-NEXT:    %right_ptr = getelementptr inbounds i8, i8* %rhs, i32 %weird.iv.lcssa
-; CHECK-NEXT:    %result = call i1 @foo(i8* %left_ptr, i8* %right_ptr)
+; CHECK-NEXT:    %left_ptr = getelementptr inbounds i8, ptr %lhs, i32 %weird.iv.lcssa
+; CHECK-NEXT:    %right_ptr = getelementptr inbounds i8, ptr %rhs, i32 %weird.iv.lcssa
+; CHECK-NEXT:    %result = call i1 @foo(ptr %left_ptr, ptr %right_ptr)
 ; CHECK-NEXT:    br i1 %result, label %exiting_1, label %exit.loopexit
 ; CHECK:       exiting_1:
 ; CHECK-NEXT:    br i1 false, label %exiting_2, label %exit.loopexit
@@ -127,9 +127,9 @@ loop:
   %iv.wide = phi i64 [ %weird.iv.wide, %weird_loop ], [ %iv.wide.next, %latch ]
   %iv.next = add i32 %iv, 1
   %iv.wide.next = add i64 %iv.wide, 1
-  %left_ptr = getelementptr inbounds i8, i8* %lhs, i32 %iv
-  %right_ptr = getelementptr inbounds i8, i8* %rhs, i32 %iv
-  %result = call i1 @foo(i8* %left_ptr, i8* %right_ptr)
+  %left_ptr = getelementptr inbounds i8, ptr %lhs, i32 %iv
+  %right_ptr = getelementptr inbounds i8, ptr %rhs, i32 %iv
+  %result = call i1 @foo(ptr %left_ptr, ptr %right_ptr)
   br i1 %result, label %exiting_1, label %exit
 
 exiting_1:

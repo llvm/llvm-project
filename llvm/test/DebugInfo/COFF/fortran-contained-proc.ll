@@ -34,39 +34,39 @@ source_filename = "tr1.f90"
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc"
 
-@"IF_TEST$A" = internal global i32* null, align 8, !dbg !0
+@"IF_TEST$A" = internal global ptr null, align 8, !dbg !0
 @0 = internal unnamed_addr constant i32 65536
 @1 = internal unnamed_addr constant i32 2
 
 ; Function Attrs: nounwind uwtable
 define void @MAIN__() local_unnamed_addr #0 !dbg !2 {
 alloca_0:
-  %func_result = tail call i32 @for_set_fpe_(i32* nonnull @0) #4, !dbg !22
-  %func_result2 = tail call i32 @for_set_reentrancy(i32* nonnull @1) #4, !dbg !22
-  %func_result4 = tail call i32 @for_alloc_allocatable(i64 4, i8** bitcast (i32** @"IF_TEST$A" to i8**), i32 262144) #4, !dbg !23
-  %"IF_TEST$A_fetch.1" = load i32*, i32** @"IF_TEST$A", align 8, !dbg !24, !tbaa !25
-  call void @llvm.dbg.declare(metadata i32* %"IF_TEST$A_fetch.1", metadata !29, metadata !DIExpression()), !dbg !33
+  %func_result = tail call i32 @for_set_fpe_(ptr nonnull @0) #4, !dbg !22
+  %func_result2 = tail call i32 @for_set_reentrancy(ptr nonnull @1) #4, !dbg !22
+  %func_result4 = tail call i32 @for_alloc_allocatable(i64 4, ptr @"IF_TEST$A", i32 262144) #4, !dbg !23
+  %"IF_TEST$A_fetch.1" = load ptr, ptr @"IF_TEST$A", align 8, !dbg !24, !tbaa !25
+  call void @llvm.dbg.declare(metadata ptr %"IF_TEST$A_fetch.1", metadata !29, metadata !DIExpression()), !dbg !33
   call void @llvm.dbg.value(metadata i32 1, metadata !32, metadata !DIExpression()), !dbg !35
-  store i32 1, i32* %"IF_TEST$A_fetch.1", align 1, !dbg !36, !tbaa !37, !alias.scope !41
+  store i32 1, ptr %"IF_TEST$A_fetch.1", align 1, !dbg !36, !tbaa !37, !alias.scope !41
   ret void, !dbg !44
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind uwtable willreturn writeonly
-define void @IF_TEST_ip_SUB(i32* noalias nocapture dereferenceable(4) %AA) local_unnamed_addr #1 !dbg !30 {
+define void @IF_TEST_ip_SUB(ptr noalias nocapture dereferenceable(4) %AA) local_unnamed_addr #1 !dbg !30 {
 alloca_1:
-  call void @llvm.dbg.declare(metadata i32* %AA, metadata !29, metadata !DIExpression()), !dbg !45
+  call void @llvm.dbg.declare(metadata ptr %AA, metadata !29, metadata !DIExpression()), !dbg !45
   call void @llvm.dbg.value(metadata i32 1, metadata !32, metadata !DIExpression()), !dbg !46
-  store i32 1, i32* %AA, align 1, !dbg !47, !tbaa !37
+  store i32 1, ptr %AA, align 1, !dbg !47, !tbaa !37
   ret void, !dbg !48
 }
 
-declare i32 @for_set_fpe_(i32* nocapture readonly) local_unnamed_addr
+declare i32 @for_set_fpe_(ptr nocapture readonly) local_unnamed_addr
 
 ; Function Attrs: nofree
-declare i32 @for_set_reentrancy(i32* nocapture readonly) local_unnamed_addr #2
+declare i32 @for_set_reentrancy(ptr nocapture readonly) local_unnamed_addr #2
 
 ; Function Attrs: nofree
-declare i32 @for_alloc_allocatable(i64, i8** nocapture, i32) local_unnamed_addr #2
+declare i32 @for_alloc_allocatable(i64, ptr nocapture, i32) local_unnamed_addr #2
 
 ; Function Attrs: mustprogress nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #3

@@ -18,7 +18,7 @@
 
 source_filename = "test/DebugInfo/Generic/debuginfofinder-forward-declaration.ll"
 
-%struct.Y = type { %struct.X* }
+%struct.Y = type { ptr }
 %struct.X = type opaque
 
 @y = common global %struct.Y zeroinitializer, align 8, !dbg !0

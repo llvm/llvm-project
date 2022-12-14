@@ -14,6 +14,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/builtin_wrappers.h"
+#include "src/__support/common.h"
 #include "src/__support/integer_utils.h"
 #include "src/__support/number_pair.h"
 
@@ -93,6 +94,14 @@ template <size_t Bits> struct UInt {
     for (size_t i = 0; i < WordCount; ++i)
       val[i] = other.val[i];
     return *this;
+  }
+
+  constexpr bool is_zero() const {
+    for (size_t i = 0; i < WordCount; ++i) {
+      if (val[i] != 0)
+        return false;
+    }
+    return true;
   }
 
   // Add x to this number and store the result in this number.
@@ -356,6 +365,9 @@ template <size_t Bits> struct UInt {
       return;
     }
 #endif                           // __SIZEOF_INT128__
+    if (unlikely(s == 0))
+      return;
+
     const size_t drop = s / 64;  // Number of words to drop
     const size_t shift = s % 64; // Bits to shift in the remaining words.
     size_t i = WordCount;
@@ -402,6 +414,8 @@ template <size_t Bits> struct UInt {
     }
 #endif // __SIZEOF_INT128__
 
+    if (unlikely(s == 0))
+      return;
     const size_t drop = s / 64;  // Number of words to drop
     const size_t shift = s % 64; // Bit shift in the remaining words.
 

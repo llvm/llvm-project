@@ -2,7 +2,7 @@
 // annotations and are added to @llvm.used to prevent their elimination.
 // REQUIRES: nvptx-registered-target
 //
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple nvptx-unknown-unknown -fcuda-is-device -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple nvptx-unknown-unknown -fcuda-is-device -emit-llvm -o - | FileCheck %s
 
 #include "Inputs/cuda.h"
 
@@ -31,5 +31,5 @@ void host_function() {
   anonymous_ns_kernel<<<0,0>>>();
 }
 
-// CHECK: !{{[0-9]+}} = !{void ()* @global_function, !"kernel", i32 1}
-// CHECK: !{{[0-9]+}} = !{void (i32)* @_Z16templated_kernelIiEvT_, !"kernel", i32 1}
+// CHECK: !{{[0-9]+}} = !{ptr @global_function, !"kernel", i32 1}
+// CHECK: !{{[0-9]+}} = !{ptr @_Z16templated_kernelIiEvT_, !"kernel", i32 1}

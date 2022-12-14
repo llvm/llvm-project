@@ -3628,7 +3628,7 @@ public:
     // function operations in it. We have to run such conversions
     // as passes here.
     mlir::OpPassManager mathConvertionPM("builtin.module");
-    mathConvertionPM.addPass(mlir::createConvertMathToFuncsPass());
+    mathConvertionPM.addPass(mlir::createConvertMathToFuncs());
     mathConvertionPM.addPass(mlir::createConvertComplexToStandardPass());
     if (mlir::failed(runPipeline(mathConvertionPM, mod)))
       return signalPassFailure();

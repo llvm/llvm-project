@@ -2,29 +2,27 @@
 
 ; CHECK-NOT: @global
 
-@global = internal global i8* null
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @zot, i8* null }]
+@global = internal global ptr null
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @zot, ptr null }]
 
-declare i8* @_Znwm(i64)
+declare ptr @_Znwm(i64)
 
 define internal void @widget() {
-  %tmp = tail call i8* @_Znwm(i64 0)
-  %tmp2 = getelementptr inbounds i8, i8* %tmp, i64 0
-  store i8* %tmp, i8** @global, align 8
-  call void @baz(void ()* @spam)
+  %tmp = tail call ptr @_Znwm(i64 0)
+  store ptr %tmp, ptr @global, align 8
+  call void @baz(ptr @spam)
   ret void
 }
 
 define internal void @spam() {
-  %tmp = load i8*, i8** @global, align 8
-  %tmp2 = getelementptr inbounds i8, i8* %tmp, i64 0
+  %tmp = load ptr, ptr @global, align 8
   ret void
 }
 
 define internal void @zot() {
-  call void @baz(void ()* @widget)
+  call void @baz(ptr @widget)
   ret void
 }
 
-declare void @baz(void ()*)
+declare void @baz(ptr)
 

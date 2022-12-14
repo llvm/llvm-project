@@ -619,14 +619,14 @@ public:
 
   bool VisitCXXNewExpr(CXXNewExpr *E) {
     auto &Token = H.addToken(E->getBeginLoc(), HighlightingKind::Operator);
-    if (isa<CXXMethodDecl>(E->getOperatorNew()))
+    if (isa_and_present<CXXMethodDecl>(E->getOperatorNew()))
       Token.addModifier(HighlightingModifier::UserDefined);
     return true;
   }
 
   bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
     auto &Token = H.addToken(E->getBeginLoc(), HighlightingKind::Operator);
-    if (isa<CXXMethodDecl>(E->getOperatorDelete()))
+    if (isa_and_present<CXXMethodDecl>(E->getOperatorDelete()))
       Token.addModifier(HighlightingModifier::UserDefined);
     return true;
   }

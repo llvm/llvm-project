@@ -37,8 +37,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define void @callee() #0 {
 entry:
-  store i32 1, i32* @a, align 4
-  store i32 2, i32* @b, align 4, !dbg !11
+  store i32 1, ptr @a, align 4
+  store i32 2, ptr @b, align 4, !dbg !11
   ret void
 }
 

@@ -3,6 +3,7 @@ add_llvm_component_library(LLVMVEDisassembler
 
   LINK_COMPONENTS
   MCDisassembler
+  MC
   VEInfo
   Support
 

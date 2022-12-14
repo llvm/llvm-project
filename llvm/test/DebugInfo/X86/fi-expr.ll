@@ -6,11 +6,11 @@
 ; CHECK-NEXT: DW_AT_location {{.*}} (DW_OP_fbreg -8, DW_OP_deref)
 ; CHECK-NEXT: DW_AT_name {{.*}} "foo"
 
-define void @f(i8* %bar) !dbg !6 {
+define void @f(ptr %bar) !dbg !6 {
 entry:
-  %foo.addr = alloca i8*
-  store i8* %bar, i8** %foo.addr
-  call void @llvm.dbg.declare(metadata i8** %foo.addr, metadata !12, metadata !13), !dbg !14
+  %foo.addr = alloca ptr
+  store ptr %bar, ptr %foo.addr
+  call void @llvm.dbg.declare(metadata ptr %foo.addr, metadata !12, metadata !13), !dbg !14
   ret void, !dbg !15
 }
 

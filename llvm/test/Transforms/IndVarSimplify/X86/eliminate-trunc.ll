@@ -373,7 +373,7 @@ exit:
 }
 
 ; Do not eliminate trunc if it is used by something different from icmp.
-define void @test_07(i32* %p, i32 %n) {
+define void @test_07(ptr %p, i32 %n) {
 ; CHECK-LABEL: @test_07(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 0)
@@ -384,7 +384,7 @@ define void @test_07(i32* %p, i32 %n) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[NARROW_IV:%.*]] = trunc i64 [[IV]] to i32
-; CHECK-NEXT:    store i32 [[NARROW_IV]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[NARROW_IV]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -396,7 +396,7 @@ loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %iv.next = add i64 %iv, 1
   %narrow.iv = trunc i64 %iv to i32
-  store i32 %narrow.iv, i32* %p
+  store i32 %narrow.iv, ptr %p
   %cmp = icmp slt i32 %narrow.iv, %n
   br i1 %cmp, label %loop, label %exit
 exit:
@@ -540,10 +540,10 @@ bb7:                                             ; preds = %bb6
 
 ; Show that we can turn signed comparison to unsigned and use zext while
 ; comparing non-negative values.
-define void @test_12(i32* %p) {
+define void @test_12(ptr %p) {
 ; CHECK-LABEL: @test_12(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[N:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[N:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N]], i32 1)
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -556,7 +556,7 @@ define void @test_12(i32* %p) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %n = load i32, i32* %p, !range !0
+  %n = load i32, ptr %p, !range !0
   br label %loop
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]

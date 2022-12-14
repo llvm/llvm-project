@@ -27,56 +27,40 @@
 @.C330_sub_ = internal constant i32 0
 @.C332_sub_ = internal constant i32 1
 
-define void @sub_(i64* noalias %inode, i64* noalias %node) !dbg !2 {
+define void @sub_(ptr noalias %inode, ptr noalias %node) !dbg !2 {
 L.entry:
-  call void @llvm.dbg.declare(metadata i64* %inode, metadata !16, metadata !DIExpression()), !dbg !17
-  call void @llvm.dbg.declare(metadata i64* %node, metadata !18, metadata !DIExpression()), !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %inode, metadata !16, metadata !DIExpression()), !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %node, metadata !18, metadata !DIExpression()), !dbg !17
   br label %L.LB1_360
 
 L.LB1_360:                                        ; preds = %L.entry
-  %0 = bitcast i64* %inode to i32*, !dbg !19
-  %1 = load i32, i32* %0, align 4, !dbg !19
-  %2 = icmp ne i32 %1, 1, !dbg !19
-  br i1 %2, label %L.LB1_356, label %L.LB1_370, !dbg !19
+  %0 = load i32, ptr %inode, align 4, !dbg !19
+  %1 = icmp ne i32 %0, 1, !dbg !19
+  br i1 %1, label %L.LB1_356, label %L.LB1_370, !dbg !19
 
 L.LB1_370:                                        ; preds = %L.LB1_360
-  %3 = bitcast i64* %node to i32*, !dbg !20
-  %4 = load i32, i32* %3, align 4, !dbg !20
-  %5 = bitcast %struct.BSS1* @.BSS1 to i32*, !dbg !20
-  store i32 %4, i32* %5, align 4, !dbg !20
-  %6 = bitcast i64* %node to i32*, !dbg !21
-  %7 = load i32, i32* %6, align 4, !dbg !21
-  %8 = bitcast %struct.BSS1* @.BSS1 to i8*, !dbg !21
-  %9 = getelementptr i8, i8* %8, i64 4, !dbg !21
-  %10 = bitcast i8* %9 to i32*, !dbg !21
-  store i32 %7, i32* %10, align 4, !dbg !21
-  %11 = bitcast %struct.BSS1* @.BSS1 to i8*, !dbg !22
-  %12 = getelementptr i8, i8* %11, i64 8, !dbg !22
-  %13 = bitcast i8* %12 to i32*, !dbg !22
-  store i32 0, i32* %13, align 4, !dbg !22
+  %2 = load i32, ptr %node, align 4, !dbg !20
+  store i32 %2, ptr @.BSS1, align 4, !dbg !20
+  %3 = load i32, ptr %node, align 4, !dbg !21
+  %4 = getelementptr i8, ptr @.BSS1, i64 4, !dbg !21
+  store i32 %3, ptr %4, align 4, !dbg !21
+  %5 = getelementptr i8, ptr @.BSS1, i64 8, !dbg !22
+  store i32 0, ptr %5, align 4, !dbg !22
   br label %L.LB1_357, !dbg !23
 
 L.LB1_356:                                        ; preds = %L.LB1_360
-  %14 = bitcast i64* %node to i32*, !dbg !24
-  %15 = load i32, i32* %14, align 4, !dbg !24
-  %16 = add nsw i32 %15, 1, !dbg !24
-  %17 = bitcast %struct.BSS1* @.BSS1 to i32*, !dbg !24
-  %18 = load i32, i32* %17, align 4, !dbg !24
-  %19 = add nsw i32 %16, %18, !dbg !24
-  %20 = bitcast %struct.BSS1* @.BSS1 to i8*, !dbg !24
-  %21 = getelementptr i8, i8* %20, i64 4, !dbg !24
-  %22 = bitcast i8* %21 to i32*, !dbg !24
-  %23 = load i32, i32* %22, align 4, !dbg !24
-  %24 = add nsw i32 %19, %23, !dbg !24
-  %25 = bitcast %struct.BSS1* @.BSS1 to i8*, !dbg !24
-  %26 = getelementptr i8, i8* %25, i64 8, !dbg !24
-  %27 = bitcast i8* %26 to i32*, !dbg !24
-  %28 = load i32, i32* %27, align 4, !dbg !24
-  %29 = add nsw i32 %24, %28, !dbg !24
-  %30 = bitcast %struct.BSS1* @.BSS1 to i8*, !dbg !24
-  %31 = getelementptr i8, i8* %30, i64 8, !dbg !24
-  %32 = bitcast i8* %31 to i32*, !dbg !24
-  store i32 %29, i32* %32, align 4, !dbg !24
+  %6 = load i32, ptr %node, align 4, !dbg !24
+  %7 = add nsw i32 %6, 1, !dbg !24
+  %8 = load i32, ptr @.BSS1, align 4, !dbg !24
+  %9 = add nsw i32 %7, %8, !dbg !24
+  %10 = getelementptr i8, ptr @.BSS1, i64 4, !dbg !24
+  %11 = load i32, ptr %10, align 4, !dbg !24
+  %12 = add nsw i32 %9, %11, !dbg !24
+  %13 = getelementptr i8, ptr @.BSS1, i64 8, !dbg !24
+  %14 = load i32, ptr %13, align 4, !dbg !24
+  %15 = add nsw i32 %12, %14, !dbg !24
+  %16 = getelementptr i8, ptr @.BSS1, i64 8, !dbg !24
+  store i32 %15, ptr %16, align 4, !dbg !24
   br label %L.LB1_354, !dbg !25
 
 L.LB1_357:                                        ; preds = %L.LB1_370

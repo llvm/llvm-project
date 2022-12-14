@@ -20,7 +20,7 @@ target triple = "x86_64-apple-macosx10.7.0"
 ; Function Attrs: nounwind ssp uwtable
 define void @foo() #0 !dbg !8 {
 entry:
-  store i32 1, i32* @x, align 4, !dbg !11
+  store i32 1, ptr @x, align 4, !dbg !11
   ret void, !dbg !11
 }
 

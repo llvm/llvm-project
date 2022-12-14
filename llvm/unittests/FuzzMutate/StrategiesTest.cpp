@@ -505,14 +505,14 @@ static void VerifyBlockShuffle(StringRef Source) {
   std::unique_ptr<Module> M = parseAssembly(Source.data(), Ctx);
   Function *F = &*M->begin();
   DenseMap<BasicBlock *, int> PreShuffleInstCnt;
-  for (BasicBlock &BB : F->getBasicBlockList()) {
+  for (BasicBlock &BB : *F) {
     PreShuffleInstCnt.insert({&BB, BB.size()});
   }
   std::mt19937 mt(Seed);
   std::uniform_int_distribution<int> RandInt(INT_MIN, INT_MAX);
   for (int i = 0; i < 100; i++) {
     Mutator->mutateModule(*M, RandInt(mt), Source.size(), Source.size() + 1024);
-    for (BasicBlock &BB : F->getBasicBlockList()) {
+    for (BasicBlock &BB : *F) {
       int PostShuffleIntCnt = BB.size();
       EXPECT_EQ(PostShuffleIntCnt, PreShuffleInstCnt[&BB]);
     }

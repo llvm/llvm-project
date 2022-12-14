@@ -939,9 +939,10 @@ public:
         if (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) {
           KernArgPool = MemoryPool;
           KernArgPoolSet = true;
+        } else {
+          HostFineGrainedMemoryPool = MemoryPool;
+          FineGrainedMemoryPoolSet = true;
         }
-        HostFineGrainedMemoryPool = MemoryPool;
-        FineGrainedMemoryPoolSet = true;
       }
     }
 

@@ -5,8 +5,7 @@ define i32 @f(i32 %x) {
 ; CHECK-LABEL: f:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0: ! %entry
-; CHECK-NEXT:    mov %g0, %o1
-; CHECK-NEXT:    sub %o1, %o0, %o1
+; CHECK-NEXT:    sub %g0, %o0, %o1
 ; CHECK-NEXT:    and %o0, %o1, %o1
 ; CHECK-NEXT:    sethi 122669, %o2
 ; CHECK-NEXT:    or %o2, 305, %o2
@@ -32,30 +31,29 @@ define i64 @g(i64 %x) {
 ; CHECK-LABEL: g:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0: ! %entry
-; CHECK-NEXT:    mov %g0, %o2
-; CHECK-NEXT:    sub %o2, %o1, %o3
-; CHECK-NEXT:    and %o1, %o3, %o3
-; CHECK-NEXT:    sethi 122669, %o4
-; CHECK-NEXT:    or %o4, 305, %o4
-; CHECK-NEXT:    smul %o3, %o4, %o3
-; CHECK-NEXT:    sethi %hi(.LCPI1_0), %o5
-; CHECK-NEXT:    add %o5, %lo(.LCPI1_0), %o5
-; CHECK-NEXT:    sub %o2, %o0, %g2
-; CHECK-NEXT:    and %o0, %g2, %g2
-; CHECK-NEXT:    smul %g2, %o4, %o4
-; CHECK-NEXT:    srl %o4, 27, %o4
-; CHECK-NEXT:    ldub [%o5+%o4], %o4
+; CHECK-NEXT:    sub %g0, %o1, %o2
+; CHECK-NEXT:    and %o1, %o2, %o2
+; CHECK-NEXT:    sethi 122669, %o3
+; CHECK-NEXT:    or %o3, 305, %o3
+; CHECK-NEXT:    smul %o2, %o3, %o2
+; CHECK-NEXT:    sethi %hi(.LCPI1_0), %o4
+; CHECK-NEXT:    add %o4, %lo(.LCPI1_0), %o4
+; CHECK-NEXT:    sub %g0, %o0, %o5
+; CHECK-NEXT:    and %o0, %o5, %o5
+; CHECK-NEXT:    smul %o5, %o3, %o3
 ; CHECK-NEXT:    srl %o3, 27, %o3
-; CHECK-NEXT:    ldub [%o5+%o3], %o5
-; CHECK-NEXT:    add %o4, 32, %o3
+; CHECK-NEXT:    ldub [%o4+%o3], %o3
+; CHECK-NEXT:    srl %o2, 27, %o2
+; CHECK-NEXT:    ldub [%o4+%o2], %o4
+; CHECK-NEXT:    add %o3, 32, %o2
 ; CHECK-NEXT:    cmp %o1, 0
-; CHECK-NEXT:    movne %icc, %o5, %o3
+; CHECK-NEXT:    movne %icc, %o4, %o2
 ; CHECK-NEXT:    or %o1, %o0, %o0
 ; CHECK-NEXT:    cmp %o0, 0
-; CHECK-NEXT:    move %icc, 0, %o3
-; CHECK-NEXT:    mov %o2, %o0
+; CHECK-NEXT:    move %icc, 0, %o2
+; CHECK-NEXT:    mov %g0, %o0
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:    mov %o3, %o1
+; CHECK-NEXT:    mov %o2, %o1
 entry:
   %0 = call i64 @llvm.cttz.i64(i64 %x, i1 true)
   %1 = icmp eq i64 %x, 0

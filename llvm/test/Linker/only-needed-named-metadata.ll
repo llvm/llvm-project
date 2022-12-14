@@ -29,10 +29,10 @@
 define i32 @foo() { ret i32 7 }
 define i32 @unused() { ret i32 8 }
 define linkonce_odr hidden i32 @unused_linkonce() { ret i32 8 }
-@linkoncealias = alias void (...), bitcast (void ()* @linkoncefunc2 to void (...)*)
+@linkoncealias = alias void (...), ptr @linkoncefunc2
 
-@weakalias = weak alias void (...), bitcast (void ()* @globalfunc1 to void (...)*)
-@analias = alias void (...), bitcast (void ()* @globalfunc2 to void (...)*)
+@weakalias = weak alias void (...), ptr @globalfunc1
+@analias = alias void (...), ptr @globalfunc2
 
 define void @globalfunc1() #0 {
 entry:
@@ -51,10 +51,10 @@ entry:
 }
 
 !llvm.named = !{!0, !1, !2, !3, !4, !5, !6}
-!0 = !{i32 ()* @unused}
-!1 = !{i32* @U}
-!2 = !{i32 ()* @unused_linkonce}
-!3 = !{i32* @U_linkonce}
-!4 = !{void (...)* @weakalias}
-!5 = !{void (...)* @analias}
-!6 = !{void (...)* @linkoncealias}
+!0 = !{ptr @unused}
+!1 = !{ptr @U}
+!2 = !{ptr @unused_linkonce}
+!3 = !{ptr @U_linkonce}
+!4 = !{ptr @weakalias}
+!5 = !{ptr @analias}
+!6 = !{ptr @linkoncealias}

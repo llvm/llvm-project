@@ -2448,6 +2448,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i32,  2 }, // vpslld+vptestmd
     { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i32,  2 }, // vpslld+vptestmd
     { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i32,  2 }, // vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v16i1,   MVT::v8i32,  2 }, // vpslld+vptestmd
     { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i64,  2 }, // vpsllq+vptestmq
     { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i64,  2 }, // vpsllq+vptestmq
     { ISD::TRUNCATE,  MVT::v4i32,   MVT::v4i64,  1 }, // vpmovqd
@@ -2483,6 +2484,9 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v4i1,   2 }, // vpternlogd+psrld
     { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   1 }, // vpternlogd
     { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   2 }, // vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v16i1,  1 }, // vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v16i1,  2 }, // vpternlogd+psrld
+
     { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v2i1,   1 }, // vpternlogq
     { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v2i1,   2 }, // vpternlogq+psrlq
     { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   1 }, // vpternlogq
@@ -4588,11 +4592,8 @@ X86TTIImpl::getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
         PromEltTyBits = 16; // promote to i16, AVX512BW.
       break;
     }
-    if (ST->hasDQI()) {
-      PromEltTyBits = 32; // promote to i32, AVX512F.
-      break;
-    }
-    return bailout();
+    PromEltTyBits = 32; // promote to i32, AVX512F.
+    break;
   default:
     return bailout();
   }
