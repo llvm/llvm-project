@@ -13,6 +13,8 @@
 #ifndef liblldb_SwiftExpressionParser_h_
 #define liblldb_SwiftExpressionParser_h_
 
+#include "SwiftASTManipulator.h"
+
 #include "Plugins/ExpressionParser/Clang/IRForTarget.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Status.h"
@@ -28,7 +30,7 @@
 namespace lldb_private {
 
 class IRExecutionUnit;
-
+class SwiftLanguageRuntime;
 //----------------------------------------------------------------------
 /// @class SwiftExpressionParser SwiftExpressionParser.h
 /// "lldb/Expression/SwiftExpressionParser.h"
@@ -61,14 +63,17 @@ public:
   /// @param[in] expr
   ///     The expression to be parsed.
   ///
+  /// @param[in] local_variables
+  ///     The local variables that are in scope.
+  ///
   /// @param[in] options
   ///     Additional options for the parser.
   //------------------------------------------------------------------
-  SwiftExpressionParser(ExecutionContextScope *exe_scope,
-                        SwiftASTContextForExpressions &swift_ast_ctx,
-                        Expression &expr,
-                        const EvaluateExpressionOptions &options);
-
+  SwiftExpressionParser(
+       ExecutionContextScope *exe_scope,
+       SwiftASTContextForExpressions &swift_ast_ctx, Expression &expr,
+       llvm::SmallVector<SwiftASTManipulator::VariableInfo> &&local_variables,
+       const EvaluateExpressionOptions &options);
   //------------------------------------------------------------------
   /// Attempts to find possible command line completions for the given
   /// expression.
@@ -139,6 +144,11 @@ public:
 
   bool RewriteExpression(DiagnosticManager &diagnostic_manager) override;
 
+  static CompilerType ResolveVariable(
+      lldb::VariableSP variable_sp, lldb::StackFrameSP &stack_frame_sp,
+      SwiftLanguageRuntime *runtime, lldb::DynamicValueType use_dynamic,
+      lldb::BindGenericTypes bind_generic_types);
+
   //------------------------------------------------------------------
   /// Information about each variable provided to the expression, so
   /// that we can generate proper accesses in the SIL.
@@ -180,6 +190,10 @@ private:
   /// The stack frame to use (if possible) when determining dynamic
   /// types.
   lldb::StackFrameWP m_stack_frame_wp;
+
+  /// The variables in scope.
+  llvm::SmallVector<SwiftASTManipulator::VariableInfo> m_local_variables;
+
   /// If true, we are running in REPL mode
   EvaluateExpressionOptions m_options;
 };

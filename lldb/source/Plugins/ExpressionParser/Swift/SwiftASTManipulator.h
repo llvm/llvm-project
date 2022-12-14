@@ -59,6 +59,29 @@ public:
     unsigned GetType() override { return Type(); }
   };
 
+  class VariableMetadataPersistent
+      : public SwiftASTManipulatorBase::VariableMetadata {
+  public:
+    VariableMetadataPersistent(
+        lldb::ExpressionVariableSP &persistent_variable_sp)
+        : m_persistent_variable_sp(persistent_variable_sp) {}
+
+    static constexpr unsigned Type() { return 'Pers'; }
+    unsigned GetType() override { return Type(); }
+    lldb::ExpressionVariableSP m_persistent_variable_sp;
+  };
+
+  class VariableMetadataVariable
+      : public SwiftASTManipulatorBase::VariableMetadata {
+  public:
+    VariableMetadataVariable(lldb::VariableSP &variable_sp)
+        : m_variable_sp(variable_sp) {}
+
+    static constexpr unsigned Type() { return 'Vari'; }
+    unsigned GetType() override { return Type(); }
+    lldb::VariableSP m_variable_sp;
+  };
+
   typedef std::shared_ptr<VariableMetadata> VariableMetadataSP;
 
   struct VariableInfo {
@@ -75,8 +98,8 @@ public:
     VariableInfo() : m_type(), m_name(), m_metadata() {}
 
     VariableInfo(CompilerType &type, swift::Identifier name,
-                 VariableMetadataSP metadata, 
-                 swift::VarDecl::Introducer introducer, 
+                 VariableMetadataSP metadata,
+                 swift::VarDecl::Introducer introducer,
                  bool is_capture_list = false)
         : m_type(type), m_name(name), m_var_introducer(introducer),
           m_is_capture_list(is_capture_list), m_metadata(metadata) {}
@@ -132,8 +155,8 @@ protected:
 
   /// The function containing the expression's code.
   swift::FuncDecl *m_function_decl = nullptr;
-  /// The entrypoint function. Null if evaluating an expression outside a method,
-  /// $__lldb_expr otherswise.
+  /// The entrypoint function. Null if evaluating an expression outside a
+  /// method, $__lldb_expr otherswise.
   swift::FuncDecl *m_entrypoint_decl = nullptr;
   /// If evaluating in a generic context, the trampoline function that calls the
   /// method with the user's expression, null otherwise.
