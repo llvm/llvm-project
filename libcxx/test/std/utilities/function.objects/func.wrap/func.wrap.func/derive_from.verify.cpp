@@ -6,21 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-// XFAIL: c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <functional>
+//
+// Make sure we can't initialize a std::function using an allocator (http://wg21.link/p0302r1).
+// These constructors were removed in C++17.
 
 #include <functional>
-#include <type_traits>
-
-#include "test_macros.h"
+#include <memory>
 
 struct S : public std::function<void()> { using function::function; };
 
-int main(int, char**) {
-   S f1( [](){} );
-   S f2(std::allocator_arg, std::allocator<int>{}, f1);
-
-  return 0;
+void f() {
+  S f1( [](){} );
+  S f2(std::allocator_arg, std::allocator<int>{}, f1); // expected-error {{no matching constructor for initialization of 'S'}}
 }
