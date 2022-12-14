@@ -4,9 +4,9 @@
 
 declare void @foo()
 
-define void @cprop_test12(i32* %data) {
+define void @cprop_test12(ptr %data) {
 bb0:
-	%reg108 = load i32, i32* %data		; <i32> [#uses=2]
+	%reg108 = load i32, ptr %data		; <i32> [#uses=2]
 	%cond218 = icmp ne i32 %reg108, 5		; <i1> [#uses=1]
 	br i1 %cond218, label %bb3, label %bb2
 bb2:		; preds = %bb0
@@ -15,7 +15,7 @@ bb2:		; preds = %bb0
 	br label %bb3
 bb3:		; preds = %bb2, %bb0
 	%reg117 = phi i32 [ 110, %bb2 ], [ %reg108, %bb0 ]		; <i32> [#uses=1]
-	store i32 %reg117, i32* %data
+	store i32 %reg117, ptr %data
 	ret void
 }
 
