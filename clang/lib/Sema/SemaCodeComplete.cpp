@@ -5122,7 +5122,8 @@ static void AddRecordMembersCompletionResults(
 // Returns the RecordDecl inside the BaseType, falling back to primary template
 // in case of specializations. Since we might not have a decl for the
 // instantiation/specialization yet, e.g. dependent code.
-static RecordDecl *getAsRecordDecl(const QualType BaseType) {
+static RecordDecl *getAsRecordDecl(QualType BaseType) {
+  BaseType = BaseType.getNonReferenceType();
   if (auto *RD = BaseType->getAsRecordDecl()) {
     if (const auto *CTSD =
             llvm::dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
