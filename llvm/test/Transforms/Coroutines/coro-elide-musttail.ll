@@ -2,8 +2,8 @@
 ; Only run with new pass manager since old pass manager's alias analysis isn't
 ; powerful enough to tell that the tailcall's arguments don't alias the frame.
 ;
-; RUN: opt < %s -passes='coro-elide' -S | FileCheck %s
-; RUN: opt < %s -aa-pipeline= -passes='coro-elide' -S | FileCheck %s -check-prefix=NOAA
+; RUN: opt -opaque-pointers=0 < %s -passes='coro-elide' -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -aa-pipeline= -passes='coro-elide' -S | FileCheck %s -check-prefix=NOAA
 
 %"bar.Frame" = type { void (%"bar.Frame"*)*, void (%"bar.Frame"*)*, %"struct.coroutine<false, int>::promise_type", i1 }
 %"struct.coroutine<false, int>::promise_type" = type { i32 }

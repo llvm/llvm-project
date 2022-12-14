@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-invariant-load-hoisting -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=SCOP
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-invariant-load-hoisting -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=SCOP
 
-; RUN: opt %loadPolly -S -polly-codegen-ppcg \
+; RUN: opt -opaque-pointers=0 %loadPolly -S -polly-codegen-ppcg \
 ; RUN: -polly-invariant-load-hoisting < %s | FileCheck %s -check-prefix=HOST-IR
 
 ; REQUIRES: pollyacc

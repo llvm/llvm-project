@@ -1,5 +1,5 @@
-; RUN: mlir-translate -import-llvm %s | FileCheck %s
-; RUN: mlir-translate -import-llvm -mlir-print-debuginfo %s | FileCheck %s --check-prefix=CHECK-DBG
+; RUN: mlir-translate -opaque-pointers=0 -import-llvm %s | FileCheck %s
+; RUN: mlir-translate -opaque-pointers=0 -import-llvm -mlir-print-debuginfo %s | FileCheck %s --check-prefix=CHECK-DBG
 
 ; CHECK-DBG: #[[MODULELOC:.+]] = loc({{.*}}basic.ll{{.*}}:0:0)
 
