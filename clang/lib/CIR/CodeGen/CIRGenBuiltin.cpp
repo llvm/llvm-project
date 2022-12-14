@@ -106,6 +106,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto fnOp =
         CGM.GetOrCreateCIRFunction(ND->getName(), ty, gd, /*ForVTable=*/false,
                                    /*DontDefer=*/false);
+    fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
     return buildCall(E->getCallee()->getType(), CIRGenCallee::forDirect(fnOp),
                      E, ReturnValue);
   }

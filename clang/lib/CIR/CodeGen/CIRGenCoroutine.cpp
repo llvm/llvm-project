@@ -131,12 +131,42 @@ static mlir::LogicalResult buildBodyAndFallthrough(CIRGenFunction &CGF,
   return mlir::success();
 }
 
+mlir::cir::CallOp CIRGenFunction::buildCoroIDBuiltinCall(mlir::Location loc) {
+  auto int8PtrTy = builder.getInt8PtrTy();
+  auto int32Ty = mlir::IntegerType::get(builder.getContext(), 32);
+  auto nullPtrCst = builder.create<mlir::cir::ConstantOp>(
+      loc, int8PtrTy,
+      mlir::cir::NullAttr::get(builder.getContext(), int8PtrTy));
+
+  auto &TI = CGM.getASTContext().getTargetInfo();
+  unsigned NewAlign = TI.getNewAlign() / TI.getCharWidth();
+
+  mlir::Operation *builtin = CGM.getGlobalValue(builtinCoroId);
+  mlir::TypeRange argTypes{int32Ty, int8PtrTy, int8PtrTy, int8PtrTy};
+  mlir::TypeRange resTypes{int32Ty};
+
+  mlir::cir::FuncOp fnOp;
+  if (!builtin) {
+    fnOp = CGM.createCIRFunction(loc, builtinCoroId,
+                                 builder.getFunctionType(argTypes, resTypes),
+                                 /*FD=*/nullptr);
+    fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
+  } else
+    fnOp = cast<mlir::cir::FuncOp>(builtin);
+
+  mlir::ValueRange inputArgs{builder.getInt32(NewAlign, loc), nullPtrCst,
+                             nullPtrCst, nullPtrCst};
+  return builder.create<mlir::cir::CallOp>(loc, fnOp, inputArgs);
+}
+
 mlir::LogicalResult
 CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
   // This is very different from LLVM codegen as the current intent is to
   // not expand too much of it here and leave it to dialect codegen.
   // In the LLVM world, this is where we create calls to coro.id,
   // coro.alloc and coro.begin.
+  [[maybe_unused]] auto coroId =
+      buildCoroIDBuiltinCall(getLoc(S.getBeginLoc()));
   createCoroData(*this, CurCoro);
 
   // Handle allocation failure if 'ReturnStmtOnAllocFailure' was provided.
