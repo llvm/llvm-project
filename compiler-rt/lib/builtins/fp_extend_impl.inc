@@ -52,12 +52,12 @@ static __inline dst_t __extendXfYf2__(src_t a) {
   const src_rep_t srcQNaN = SRC_REP_C(1) << (srcSigBits - 1);
   const src_rep_t srcNaNCode = srcQNaN - 1;
 
-  const int dstBits = sizeof(dst_t) * CHAR_BIT;
   const int dstExpBits = dstBits - dstSigBits - 1;
   const int dstInfExp = (1 << dstExpBits) - 1;
   const int dstExpBias = dstInfExp >> 1;
 
   const dst_rep_t dstMinNormal = DST_REP_C(1) << dstSigBits;
+  const dst_rep_t dstSignificandMask = dstMinNormal - 1;
 
   // Break a into a sign and representation of the absolute value.
   const src_rep_t aRep = srcToRep(a);
@@ -72,6 +72,19 @@ static __inline dst_t __extendXfYf2__(src_t a) {
     // Extend to the destination type by shifting the significand and
     // exponent into the proper position and rebiasing the exponent.
     absResult = (dst_rep_t)aAbs << (dstSigBits - srcSigBits);
+
+    if (dstIntBits) {
+      // x86_fp80 has an explicit instead of implicit integer bit at the top of
+      // the significand. Canonical values (except denormals & zero) set it to
+      // 1.
+      dst_rep_t absSignificand = absResult & dstSignificandMask;
+      absSignificand >>= 1;
+      absSignificand |= (dst_rep_t)1 << (dstSigBits - 1);
+
+      absResult &= ~dstSignificandMask;
+      absResult |= absSignificand;
+    }
+
     absResult += (dst_rep_t)(dstExpBias - srcExpBias) << dstSigBits;
   }
 
@@ -81,8 +94,10 @@ static __inline dst_t __extendXfYf2__(src_t a) {
     // bit (if needed) and right-aligning the rest of the trailing NaN
     // payload field.
     absResult = (dst_rep_t)dstInfExp << dstSigBits;
-    absResult |= (dst_rep_t)(aAbs & srcQNaN) << (dstSigBits - srcSigBits);
-    absResult |= (dst_rep_t)(aAbs & srcNaNCode) << (dstSigBits - srcSigBits);
+    if (dstIntBits)
+      absResult |= (dst_rep_t)1 << (dstSigBits - 1);
+    absResult |= (dst_rep_t)(aAbs & srcQNaN) << (dstSigBits - dstIntBits - srcSigBits);
+    absResult |= (dst_rep_t)(aAbs & srcNaNCode) << (dstSigBits - dstIntBits - srcSigBits);
   }
 
   else if (aAbs) {
@@ -90,7 +105,7 @@ static __inline dst_t __extendXfYf2__(src_t a) {
     // renormalize the significand and clear the leading bit, then insert
     // the correct adjusted exponent in the destination type.
     const int scale = src_rep_t_clz(aAbs) - src_rep_t_clz(srcMinNormal);
-    absResult = (dst_rep_t)aAbs << (dstSigBits - srcSigBits + scale);
+    absResult = (dst_rep_t)aAbs << (dstSigBits - dstIntBits - srcSigBits + scale);
     absResult ^= dstMinNormal;
     const int resultExponent = dstExpBias - srcExpBias - scale + 1;
     absResult |= (dst_rep_t)resultExponent << dstSigBits;

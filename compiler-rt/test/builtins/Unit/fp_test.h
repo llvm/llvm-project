@@ -38,6 +38,16 @@ static inline double fromRep64(uint64_t x)
     return ret;
 }
 
+#if __LDBL_MANT_DIG__ == 64
+static inline long double fromRep80(uint64_t hi, uint64_t lo)
+{
+    __uint128_t x = ((__uint128_t)hi << 64) + lo;
+    long double ret;
+    memcpy(&ret, &x, 16);
+    return ret;
+}
+#endif
+
 #if __LDBL_MANT_DIG__ == 113
 static inline long double fromRep128(uint64_t hi, uint64_t lo)
 {
@@ -72,6 +82,15 @@ static inline uint64_t toRep64(double x)
     memcpy(&ret, &x, 8);
     return ret;
 }
+
+#if __LDBL_MANT_DIG__ == 64
+static inline __uint128_t toRep80(long double x)
+{
+    __uint128_t ret = 0;
+    memcpy(&ret, &x, sizeof(x));
+    return ret;
+}
+#endif
 
 #if __LDBL_MANT_DIG__ == 113
 static inline __uint128_t toRep128(long double x)
@@ -135,6 +154,30 @@ static inline int compareResultD(double result,
     }
     return 1;
 }
+
+#if __LDBL_MANT_DIG__ == 64
+// return 0 if equal
+// use two 64-bit integers instead of one 80-bit integer
+static inline int compareResultLD(long double result,
+                                  uint64_t expectedHi,
+                                  uint64_t expectedLo)
+{
+    __uint128_t rep = toRep80(result);
+    uint64_t hi = rep >> 64;
+    uint64_t lo = rep;
+
+    if (hi == expectedHi && lo == expectedLo) {
+        return 0;
+    }
+    // test other possible NaN representation(signal NaN)
+    else if (expectedHi == 0x7fffUL && expectedLo == 0x80000000UL) {
+        if ((hi & 0x7fffUL) == 0x7fffUL && lo > 0) {
+            return 0;
+        }
+    }
+    return 1;
+}
+#endif
 
 #if __LDBL_MANT_DIG__ == 113
 // return 0 if equal
@@ -232,6 +275,13 @@ static inline double makeQNaN64(void)
     return fromRep64(0x7ff8000000000000UL);
 }
 
+#if __LDBL_MANT_DIG__ == 64
+static inline long double makeQNaN80(void)
+{
+    return fromRep80(0x7fffUL, 0xc000000000000000UL);
+}
+#endif
+
 #if __LDBL_MANT_DIG__ == 113
 static inline long double makeQNaN128(void)
 {
@@ -253,6 +303,13 @@ static inline double makeNaN64(uint64_t rand)
 {
     return fromRep64(0x7ff0000000000000UL | (rand & 0xfffffffffffffUL));
 }
+
+#if __LDBL_MANT_DIG__ == 64
+static inline long double makeNaN80(uint64_t rand)
+{
+    return fromRep80(0x7fffUL, 0x8000000000000000 | (rand & 0x7fffffffffffffffUL));
+}
+#endif
 
 #if __LDBL_MANT_DIG__ == 113
 static inline long double makeNaN128(uint64_t rand)
@@ -285,6 +342,18 @@ static inline double makeNegativeInf64(void)
 {
     return fromRep64(0xfff0000000000000UL);
 }
+
+#if __LDBL_MANT_DIG__ == 64
+static inline long double makeInf80(void)
+{
+    return fromRep80(0x7fffUL, 0x0UL);
+}
+
+static inline long double makeNegativeInf80(void)
+{
+    return fromRep80(0xffffUL, 0x0UL);
+}
+#endif
 
 #if __LDBL_MANT_DIG__ == 113
 static inline long double makeInf128(void)

@@ -283,6 +283,7 @@ endif ()
 # long double is not 80 bits on Android or MSVC.
 set(x86_80_BIT_SOURCES
   divxc3.c
+  extendhfxf2.c
   fixxfdi.c
   fixxfti.c
   fixunsxfdi.c
@@ -294,6 +295,7 @@ set(x86_80_BIT_SOURCES
   floatuntixf.c
   mulxc3.c
   powixf2.c
+  truncxfhf2.c
 )
 
 if (NOT MSVC)
