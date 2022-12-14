@@ -2736,6 +2736,10 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
 ExprResult Sema::BuildQualifiedDeclarationNameExpr(
     CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo,
     bool IsAddressOfOperand, const Scope *S, TypeSourceInfo **RecoveryTSI) {
+  if (NameInfo.getName().isDependentName())
+    return BuildDependentDeclRefExpr(SS, /*TemplateKWLoc=*/SourceLocation(),
+                                     NameInfo, /*TemplateArgs=*/nullptr);
+
   DeclContext *DC = computeDeclContext(SS, false);
   if (!DC)
     return BuildDependentDeclRefExpr(SS, /*TemplateKWLoc=*/SourceLocation(),
