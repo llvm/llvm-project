@@ -189,11 +189,15 @@ def AArch64lsl_p  : SDNode<"AArch64ISD::SHL_PRED",  SDT_AArch64Arith>;
 def AArch64lsr_p  : SDNode<"AArch64ISD::SRL_PRED",  SDT_AArch64Arith>;
 def AArch64mul_p  : SDNode<"AArch64ISD::MUL_PRED",  SDT_AArch64Arith>;
 def AArch64sabd_p : SDNode<"AArch64ISD::ABDS_PRED", SDT_AArch64Arith>;
+def AArch64shadd_p : SDNode<"AArch64ISD::HADDS_PRED", SDT_AArch64Arith>;
+def AArch64srhadd_p : SDNode<"AArch64ISD::RHADDS_PRED", SDT_AArch64Arith>;
 def AArch64sdiv_p : SDNode<"AArch64ISD::SDIV_PRED", SDT_AArch64Arith>;
 def AArch64smax_p : SDNode<"AArch64ISD::SMAX_PRED", SDT_AArch64Arith>;
 def AArch64smin_p : SDNode<"AArch64ISD::SMIN_PRED", SDT_AArch64Arith>;
 def AArch64smulh_p : SDNode<"AArch64ISD::MULHS_PRED", SDT_AArch64Arith>;
 def AArch64uabd_p : SDNode<"AArch64ISD::ABDU_PRED", SDT_AArch64Arith>;
+def AArch64uhadd_p : SDNode<"AArch64ISD::HADDU_PRED", SDT_AArch64Arith>;
+def AArch64urhadd_p : SDNode<"AArch64ISD::RHADDU_PRED", SDT_AArch64Arith>;
 def AArch64udiv_p : SDNode<"AArch64ISD::UDIV_PRED", SDT_AArch64Arith>;
 def AArch64umax_p : SDNode<"AArch64ISD::UMAX_PRED", SDT_AArch64Arith>;
 def AArch64umin_p : SDNode<"AArch64ISD::UMIN_PRED", SDT_AArch64Arith>;
@@ -257,6 +261,19 @@ def AArch64fsub_m1 : PatFrags<(ops node:$pg, node:$op1, node:$op2), [
     (vselect node:$pg, (AArch64fsub_p (SVEAllActive), node:$op1, node:$op2), node:$op1),
     (AArch64fsub_p (SVEAllActive), node:$op1, (vselect node:$pg, node:$op2, (SVEDup0)))
 ]>;
+
+def AArch64shadd : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                            [(int_aarch64_sve_shadd node:$pg, node:$op1, node:$op2),
+                             (AArch64shadd_p node:$pg, node:$op1, node:$op2)]>;
+def AArch64uhadd : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                            [(int_aarch64_sve_uhadd node:$pg, node:$op1, node:$op2),
+                             (AArch64uhadd_p node:$pg, node:$op1, node:$op2)]>;
+def AArch64srhadd : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                            [(int_aarch64_sve_srhadd node:$pg, node:$op1, node:$op2),
+                             (AArch64srhadd_p node:$pg, node:$op1, node:$op2)]>;
+def AArch64urhadd : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                            [(int_aarch64_sve_urhadd node:$pg, node:$op1, node:$op2),
+                             (AArch64urhadd_p node:$pg, node:$op1, node:$op2)]>;
 
 def AArch64saba : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_saba node:$op1, node:$op2, node:$op3),
@@ -3288,12 +3305,12 @@ let Predicates = [HasSVE2orSME] in {
   defm SQDMLSLBT_ZZZ : sve2_int_mla_long<0b00011, "sqdmlslbt", int_aarch64_sve_sqdmlslbt>;
 
   // SVE2 integer halving add/subtract (predicated)
-  defm SHADD_ZPmZ  : sve2_int_arith_pred<0b100000, "shadd",  int_aarch64_sve_shadd>;
-  defm UHADD_ZPmZ  : sve2_int_arith_pred<0b100010, "uhadd",  int_aarch64_sve_uhadd>;
+  defm SHADD_ZPmZ  : sve2_int_arith_pred<0b100000, "shadd",  AArch64shadd>;
+  defm UHADD_ZPmZ  : sve2_int_arith_pred<0b100010, "uhadd",  AArch64uhadd>;
   defm SHSUB_ZPmZ  : sve2_int_arith_pred<0b100100, "shsub",  int_aarch64_sve_shsub>;
   defm UHSUB_ZPmZ  : sve2_int_arith_pred<0b100110, "uhsub",  int_aarch64_sve_uhsub>;
-  defm SRHADD_ZPmZ : sve2_int_arith_pred<0b101000, "srhadd", int_aarch64_sve_srhadd>;
-  defm URHADD_ZPmZ : sve2_int_arith_pred<0b101010, "urhadd", int_aarch64_sve_urhadd>;
+  defm SRHADD_ZPmZ : sve2_int_arith_pred<0b101000, "srhadd", AArch64srhadd>;
+  defm URHADD_ZPmZ : sve2_int_arith_pred<0b101010, "urhadd", AArch64urhadd>;
   defm SHSUBR_ZPmZ : sve2_int_arith_pred<0b101100, "shsubr", int_aarch64_sve_shsubr>;
   defm UHSUBR_ZPmZ : sve2_int_arith_pred<0b101110, "uhsubr", int_aarch64_sve_uhsubr>;
 
