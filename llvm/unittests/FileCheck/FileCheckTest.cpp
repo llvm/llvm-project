@@ -750,7 +750,7 @@ TEST_F(FileCheckTest, NumericVariable) {
 
   // Defined variable without string: only getValue and eval return value set.
   FooVar.setValue(ExpressionValue(42u));
-  Optional<ExpressionValue> Value = FooVar.getValue();
+  std::optional<ExpressionValue> Value = FooVar.getValue();
   ASSERT_TRUE(Value);
   EXPECT_EQ(42, cantFail(Value->getSignedValue()));
   EXPECT_FALSE(FooVar.getStringValue());
@@ -1014,7 +1014,7 @@ public:
   Expected<std::unique_ptr<Expression>>
   parseSubst(StringRef Expr, bool IsLegacyLineExpr = false) {
     StringRef ExprBufferRef = bufferize(SM, Expr);
-    Optional<NumericVariable *> DefinedNumericVariable;
+    std::optional<NumericVariable *> DefinedNumericVariable;
     return P.parseNumericSubstitutionBlock(
         ExprBufferRef, DefinedNumericVariable, IsLegacyLineExpr, LineNumber,
         &Context, SM);
@@ -1665,7 +1665,7 @@ TEST_F(FileCheckTest, FileCheckContext) {
   StringRef UnknownVarStr = "UnknownVar";
   Expected<StringRef> LocalVar = Cxt.getPatternVarValue(LocalVarStr);
   P = Pattern(Check::CheckPlain, &Cxt, ++LineNumber);
-  Optional<NumericVariable *> DefinedNumericVariable;
+  std::optional<NumericVariable *> DefinedNumericVariable;
   Expected<std::unique_ptr<Expression>> ExpressionPointer =
       P.parseNumericSubstitutionBlock(LocalNumVar1Ref, DefinedNumericVariable,
                                       /*IsLegacyLineExpr=*/false, LineNumber,
