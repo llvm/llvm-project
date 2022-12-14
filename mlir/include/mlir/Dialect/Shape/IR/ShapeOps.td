@@ -352,7 +352,7 @@ def Shape_DimOp : Shape_Op<"dim",
 
   let extraClassDeclaration = [{
     /// Get the `index` value as integer if it is constant.
-    Optional<int64_t> getConstantIndex();
+    std::optional<int64_t> getConstantIndex();
 
     /// Returns when two result types are compatible for this op; method used by
     /// InferTypeOpInterface
@@ -383,7 +383,7 @@ def Shape_GetExtentOp : Shape_Op<"get_extent",
 
   let extraClassDeclaration = [{
     /// Get the `dim` value as integer if it is constant.
-    Optional<int64_t> getConstantDim();
+    std::optional<int64_t> getConstantDim();
     /// Returns when two result types are compatible for this op; method used by
     /// InferTypeOpInterface
     static bool isCompatibleReturnTypes(TypeRange l, TypeRange r);

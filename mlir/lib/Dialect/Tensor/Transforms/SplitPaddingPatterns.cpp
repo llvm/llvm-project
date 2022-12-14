@@ -26,7 +26,7 @@ using namespace mlir;
 
 /// Returns true if the the given `attrOrValue` is a constant zero.
 static bool isZero(OpFoldResult attrOrValue) {
-  if (Optional<int64_t> val = getConstantIntValue(attrOrValue))
+  if (std::optional<int64_t> val = getConstantIntValue(attrOrValue))
     return *val == 0;
   return false;
 }

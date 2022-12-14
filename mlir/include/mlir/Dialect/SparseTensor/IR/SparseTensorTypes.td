@@ -67,8 +67,8 @@ def SparseTensor_StorageSpecifier : SparseTensor_Type<"StorageSpecifier"> {
   let extraClassDeclaration = [{
     // Get the integer type used to store memory and dimension sizes.
     IntegerType getSizesType() const;
-    Type getFieldType(StorageSpecifierKind kind, Optional<unsigned> dim) const;
-    Type getFieldType(StorageSpecifierKind kind, Optional<APInt> dim) const;
+    Type getFieldType(StorageSpecifierKind kind, std::optional<unsigned> dim) const;
+    Type getFieldType(StorageSpecifierKind kind, std::optional<APInt> dim) const;
   }];
 
   let assemblyFormat="`<` qualified($encoding) `>`";

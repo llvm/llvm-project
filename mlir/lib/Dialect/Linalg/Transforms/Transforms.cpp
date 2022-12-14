@@ -460,7 +460,7 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
 
   bool zeroSliceGuard = true;
   if (controlFn) {
-    if (Optional<bool> control = controlFn(sliceOp))
+    if (std::optional<bool> control = controlFn(sliceOp))
       zeroSliceGuard = *control;
     else
       return failure();
@@ -501,7 +501,7 @@ static Value getPackOpSourceOrPaddedSource(OpBuilder &builder,
     }
 
     // The size is less than or equal to tileSize because outer dims are all 1s.
-    Optional<int64_t> tileSize =
+    std::optional<int64_t> tileSize =
         getConstantIntValue(tileAndPosMapping.lookup(dim));
     assert(tileSize.has_value() && "dynamic inner tile size is not supported");
     paddedShape.push_back(tileSize.value());

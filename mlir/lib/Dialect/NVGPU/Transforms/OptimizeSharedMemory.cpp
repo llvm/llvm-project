@@ -149,7 +149,7 @@ getShmReadAndWriteOps(Operation *parentOp, Value shmMemRef,
     MemoryEffectOpInterface iface = dyn_cast<MemoryEffectOpInterface>(op);
     if (!iface)
       return;
-    Optional<MemoryEffects::EffectInstance> effect =
+    std::optional<MemoryEffects::EffectInstance> effect =
         iface.getEffectOnValue<MemoryEffects::Read>(shmMemRef);
     if (effect) {
       readOps.push_back(op);

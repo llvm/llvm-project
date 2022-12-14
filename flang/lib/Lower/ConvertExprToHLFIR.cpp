@@ -99,7 +99,7 @@ private:
     else
       resultType = fir::ReferenceType::get(resultValueType);
 
-    llvm::Optional<bool> complexPart;
+    std::optional<bool> complexPart;
     llvm::SmallVector<mlir::Value> substring;
     auto designate = getBuilder().create<hlfir::DesignateOp>(
         getLoc(), resultType, partInfo.base.getBase(), "",
