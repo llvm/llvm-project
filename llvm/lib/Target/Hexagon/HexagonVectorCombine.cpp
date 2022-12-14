@@ -1278,11 +1278,11 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
   // Check if there is rounding added.
   const APInt *C = nullptr;
   if (Value * T; Op.Frac > 0 && match(Exp, m_Add(m_Value(T), m_APInt(C)))) {
-    unsigned CV = C->getZExtValue();
-    if (CV != 0 && !isPowerOf2_32(CV))
+    uint64_t CV = C->getZExtValue();
+    if (CV != 0 && !isPowerOf2_64(CV))
       return std::nullopt;
     if (CV != 0)
-      Op.RoundAt = Log2_32(CV);
+      Op.RoundAt = Log2_64(CV);
     Exp = T;
   }
 

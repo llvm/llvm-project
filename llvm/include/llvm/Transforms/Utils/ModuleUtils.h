@@ -13,6 +13,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 #define LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Alignment.h"
@@ -85,6 +86,12 @@ void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
 /// Replaces llvm.used or llvm.compiler.used list with a new set of values.
 GlobalVariable *setUsedInitializer(GlobalVariable &V,
                                    const SmallPtrSetImpl<GlobalValue *> &Init);
+
+/// Removes global values from the llvm.used and llvm.compiler.used arrays. \p
+/// ShouldRemove should return true for any initializer field that should not be
+/// included in the replacement global.
+void removeFromUsedLists(Module &M,
+                         function_ref<bool(Constant *)> ShouldRemove);
 
 /// Filter out potentially dead comdat functions where other entries keep the
 /// entire comdat group alive.

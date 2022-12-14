@@ -368,6 +368,18 @@ void Function::eraseFromParent() {
   getParent()->getFunctionList().erase(getIterator());
 }
 
+void Function::splice(Function::iterator ToIt, Function *FromF,
+                      Function::iterator FromBeginIt,
+                      Function::iterator FromEndIt) {
+#ifdef EXPENSIVE_CHECKS
+  // Check that FromBeginIt is before FromEndIt.
+  auto FromFEnd = FromF->end();
+  for (auto It = FromBeginIt; It != FromEndIt; ++It)
+    assert(It != FromFEnd && "FromBeginIt not before FromEndIt!");
+#endif // EXPENSIVE_CHECKS
+  BasicBlocks.splice(ToIt, FromF->BasicBlocks, FromBeginIt, FromEndIt);
+}
+
 //===----------------------------------------------------------------------===//
 // Function Implementation
 //===----------------------------------------------------------------------===//
@@ -657,6 +669,19 @@ Attribute Function::getFnAttribute(Attribute::AttrKind Kind) const {
 
 Attribute Function::getFnAttribute(StringRef Kind) const {
   return AttributeSets.getFnAttr(Kind);
+}
+
+uint64_t Function::getFnAttributeAsParsedInteger(StringRef Name,
+                                                 uint64_t Default) const {
+  Attribute A = getFnAttribute(Name);
+  uint64_t Result = Default;
+  if (A.isStringAttribute()) {
+    StringRef Str = A.getValueAsString();
+    if (Str.getAsInteger(0, Result))
+      getContext().emitError("cannot parse integer attribute " + Name);
+  }
+
+  return Result;
 }
 
 /// gets the specified attribute from the list of attributes.

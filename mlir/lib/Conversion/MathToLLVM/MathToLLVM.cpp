@@ -50,6 +50,8 @@ using Log10OpLowering =
 using Log2OpLowering = ConvertFMFMathToLLVMPattern<math::Log2Op, LLVM::Log2Op>;
 using LogOpLowering = ConvertFMFMathToLLVMPattern<math::LogOp, LLVM::LogOp>;
 using PowFOpLowering = ConvertFMFMathToLLVMPattern<math::PowFOp, LLVM::PowOp>;
+using FPowIOpLowering =
+    ConvertFMFMathToLLVMPattern<math::FPowIOp, LLVM::PowIOp>;
 using RoundEvenOpLowering =
     ConvertFMFMathToLLVMPattern<math::RoundEvenOp, LLVM::RoundEvenOp>;
 using RoundOpLowering =
@@ -313,6 +315,7 @@ void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
     Exp2OpLowering,
     ExpM1OpLowering,
     ExpOpLowering,
+    FPowIOpLowering,
     FloorOpLowering,
     FmaOpLowering,
     Log10OpLowering,

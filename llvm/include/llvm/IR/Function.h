@@ -406,6 +406,15 @@ public:
   /// Return the attribute for the given attribute kind.
   Attribute getFnAttribute(StringRef Kind) const;
 
+  /// For a string attribute \p Kind, parse attribute as an integer.
+  ///
+  /// \returns \p Default if attribute is not present.
+  ///
+  /// \returns \p Default if there is an error parsing the attribute integer,
+  /// and error is emitted to the LLVMContext
+  uint64_t getFnAttributeAsParsedInteger(StringRef Kind,
+                                         uint64_t Default = 0) const;
+
   /// gets the specified attribute from the list of attributes.
   Attribute getParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
@@ -683,6 +692,28 @@ public:
   Function::iterator insertBasicBlockAt(Function::iterator Position, BasicBlock *BB) {
     return BasicBlocks.insert(Position, BB);
   }
+
+  /// Transfer all blocks from \p FromF to this function at \p ToIt.
+  void splice(Function::iterator ToIt, Function *FromF) {
+    splice(ToIt, FromF, FromF->begin(), FromF->end());
+  }
+
+  /// Transfer one BasicBlock from \p FromF at \p FromIt to this function
+  /// at \p ToIt.
+  void splice(Function::iterator ToIt, Function *FromF,
+              Function::iterator FromIt) {
+    auto FromItNext = std::next(FromIt);
+    // Single-element splice is a noop if destination == source.
+    if (ToIt == FromIt || ToIt == FromItNext)
+      return;
+    splice(ToIt, FromF, FromIt, FromItNext);
+  }
+
+  /// Transfer a range of basic blocks that belong to \p FromF from \p
+  /// FromBeginIt to \p FromEndIt, to this function at \p ToIt.
+  void splice(Function::iterator ToIt, Function *FromF,
+              Function::iterator FromBeginIt,
+              Function::iterator FromEndIt);
 
   /// Get the underlying elements of the Function... the basic block list is
   /// empty for external functions.
