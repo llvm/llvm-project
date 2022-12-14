@@ -1014,6 +1014,18 @@ def GlobalLinkageKind : I32EnumAttr<
   let cppNamespace = "::mlir::cir";
 }
 
+def SOB_Undefined : I32EnumAttrCase<"undefined", 1>;
+def SOB_Defined : I32EnumAttrCase<"defined", 2>;
+def SOB_Trapping : I32EnumAttrCase<"trapping", 3>;
+
+def SignedOverflowBehaviorEnum : I32EnumAttr<
+    "SignedOverflowBehavior",
+    "the behavior for signed overflow",
+    [SOB_Undefined, SOB_Defined, SOB_Trapping]> {
+  let cppNamespace = "::mlir::cir::sob";
+}
+
+
 def GlobalOp : CIR_Op<"global", [Symbol]> {
   let summary = "Declares or defines a global variable";
   let description = [{
