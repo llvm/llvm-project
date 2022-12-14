@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen -S < %s | FileCheck %s
 
 ; CHECK:      polly.stmt.if.then81:                             ; preds = %polly.stmt.if.end75
 ; CHECK-NEXT:   %scevgep = getelementptr [2 x %S], [2 x %S]* %tmp, i64 0, i64 %.147

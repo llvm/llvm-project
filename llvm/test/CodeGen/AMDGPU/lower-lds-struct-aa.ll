@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -O3 < %s | FileCheck -check-prefix=GCN %s
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds < %s | FileCheck %s
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds < %s | FileCheck %s
+; RUN: llc -opaque-pointers=0 -march=amdgcn -mcpu=gfx900 -O3 < %s | FileCheck -check-prefix=GCN %s
+; RUN: opt -opaque-pointers=0 -S -mtriple=amdgcn-- -amdgpu-lower-module-lds < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds < %s | FileCheck %s
 
 @a = internal unnamed_addr addrspace(3) global [64 x i32] undef, align 4
 @b = internal unnamed_addr addrspace(3) global [64 x i32] undef, align 4

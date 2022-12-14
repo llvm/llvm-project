@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=s390x-unknown-linux -mcpu=z13 -passes=loop-vectorize \
+; RUN: opt -opaque-pointers=0 -mtriple=s390x-unknown-linux -mcpu=z13 -passes=loop-vectorize \
 ; RUN:   -force-vector-width=2 -debug-only=loop-vectorize \
 ; RUN:   -disable-output < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts

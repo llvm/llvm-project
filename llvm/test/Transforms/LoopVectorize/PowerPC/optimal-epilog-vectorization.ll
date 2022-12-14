@@ -1,5 +1,5 @@
-; RUN: opt < %s -passes='loop-vectorize' -enable-epilogue-vectorization -epilogue-vectorization-force-VF=2 -S | FileCheck %s --check-prefix VF-TWO-CHECK
-; RUN: opt < %s -passes='loop-vectorize' -enable-epilogue-vectorization -epilogue-vectorization-force-VF=4 -S | FileCheck %s --check-prefix VF-FOUR-CHECK
+; RUN: opt -opaque-pointers=0 < %s -passes='loop-vectorize' -enable-epilogue-vectorization -epilogue-vectorization-force-VF=2 -S | FileCheck %s --check-prefix VF-TWO-CHECK
+; RUN: opt -opaque-pointers=0 < %s -passes='loop-vectorize' -enable-epilogue-vectorization -epilogue-vectorization-force-VF=4 -S | FileCheck %s --check-prefix VF-FOUR-CHECK
 
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"

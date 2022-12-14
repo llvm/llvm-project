@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -polly-vectorizer=polly \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen -polly-vectorizer=polly \
 ; RUN:                 < %s -S | FileCheck %s
 
 ; CHECK: store <4 x double> %val.s2a_p_splat, <4 x double>* %vector_ptr

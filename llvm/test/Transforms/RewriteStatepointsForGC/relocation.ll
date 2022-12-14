@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=rewrite-statepoints-for-gc -spp-rematerialization-threshold=0 -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes=rewrite-statepoints-for-gc -spp-rematerialization-threshold=0 -S | FileCheck %s
 
 
 declare void @foo()
