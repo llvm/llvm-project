@@ -264,7 +264,7 @@ static LValueOrRValue buildSuspendExpression(
   auto UnbindOnExit = llvm::make_scope_exit([&] { Binder.unbind(CGF); });
   auto &builder = CGF.getBuilder();
 
-  LLVM_ATTRIBUTE_UNUSED auto awaitOp = builder.create<mlir::cir::AwaitOp>(
+  [[maybe_unused]] auto awaitOp = builder.create<mlir::cir::AwaitOp>(
       CGF.getLoc(S.getSourceRange()),
       /*readyBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
