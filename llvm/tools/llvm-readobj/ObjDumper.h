@@ -85,7 +85,7 @@ public:
       printDynamicSymbols();
   }
   virtual void printSymbols(bool PrintSymbols, bool PrintDynamicSymbols,
-                            llvm::Optional<SymbolComparator> SymComp) {
+                            std::optional<SymbolComparator> SymComp) {
     if (SymComp) {
       if (PrintSymbols)
         printSymbols(SymComp);
@@ -189,9 +189,9 @@ protected:
 
 private:
   virtual void printSymbols() {}
-  virtual void printSymbols(llvm::Optional<SymbolComparator> Comp) {}
+  virtual void printSymbols(std::optional<SymbolComparator> Comp) {}
   virtual void printDynamicSymbols() {}
-  virtual void printDynamicSymbols(llvm::Optional<SymbolComparator> Comp) {}
+  virtual void printDynamicSymbols(std::optional<SymbolComparator> Comp) {}
   virtual void printProgramHeaders() {}
   virtual void printSectionMapping() {}
 

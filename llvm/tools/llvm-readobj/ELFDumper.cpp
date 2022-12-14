@@ -202,7 +202,7 @@ public:
   uint32_t Symbol;
   typename ELFT::uint Offset;
   typename ELFT::uint Info;
-  Optional<int64_t> Addend;
+  std::optional<int64_t> Addend;
 };
 
 template <class ELFT> class MipsGOTParser;
@@ -290,7 +290,7 @@ protected:
                                   bool NonVisibilityBitsUsed) const {};
   virtual void printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
                            DataRegion<Elf_Word> ShndxTable,
-                           Optional<StringRef> StrTable, bool IsDynamic,
+                           std::optional<StringRef> StrTable, bool IsDynamic,
                            bool NonVisibilityBitsUsed) const = 0;
 
   virtual void printMipsABIFlags() = 0;
@@ -308,11 +308,10 @@ protected:
   // symbol's section with FunctionSec when specified.
   // Returns std::nullopt if no function symbol can be found for the address or
   // in case it is not defined in the specified section.
-  SmallVector<uint32_t>
-  getSymbolIndexesForFunctionAddress(uint64_t SymValue,
-                                     Optional<const Elf_Shdr *> FunctionSec);
+  SmallVector<uint32_t> getSymbolIndexesForFunctionAddress(
+      uint64_t SymValue, std::optional<const Elf_Shdr *> FunctionSec);
   bool printFunctionStackSize(uint64_t SymValue,
-                              Optional<const Elf_Shdr *> FunctionSec,
+                              std::optional<const Elf_Shdr *> FunctionSec,
                               const Elf_Shdr &StackSizeSec, DataExtractor Data,
                               uint64_t *Offset);
   void printStackSize(const Relocation<ELFT> &R, const Elf_Shdr &RelocSec,
@@ -362,7 +361,7 @@ protected:
   DynRegionInfo DynRelaRegion;
   DynRegionInfo DynRelrRegion;
   DynRegionInfo DynPLTRelRegion;
-  Optional<DynRegionInfo> DynSymRegion;
+  std::optional<DynRegionInfo> DynSymRegion;
   DynRegionInfo DynSymTabShndxRegion;
   DynRegionInfo DynamicTable;
   StringRef DynamicStringTable;
@@ -381,7 +380,7 @@ protected:
 
   std::string getFullSymbolName(const Elf_Sym &Symbol, unsigned SymIndex,
                                 DataRegion<Elf_Word> ShndxTable,
-                                Optional<StringRef> StrTable,
+                                std::optional<StringRef> StrTable,
                                 bool IsDynamic) const;
   Expected<unsigned>
   getSymbolSectionIndex(const Elf_Sym &Symbol, unsigned SymIndex,
@@ -494,7 +493,7 @@ ELFDumper<ELFT>::getVersionTable(const Elf_Shdr &Sec, ArrayRef<Elf_Sym> *SymTab,
 
 template <class ELFT>
 void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
-  Optional<StringRef> StrTable;
+  std::optional<StringRef> StrTable;
   size_t Entries = 0;
   Elf_Sym_Range Syms(nullptr, nullptr);
   const Elf_Shdr *SymtabSec = IsDynamic ? DotDynsymSec : DotSymtabSec;
@@ -636,7 +635,7 @@ private:
                          const RelSymbol<ELFT> &RelSym) override;
   void printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
                    DataRegion<Elf_Word> ShndxTable,
-                   Optional<StringRef> StrTable, bool IsDynamic,
+                   std::optional<StringRef> StrTable, bool IsDynamic,
                    bool NonVisibilityBitsUsed) const override;
   void printDynamicRelocHeader(unsigned Type, StringRef Name,
                                const DynRegionInfo &Reg) override;
@@ -693,7 +692,7 @@ private:
                           DataRegion<Elf_Word> ShndxTable) const;
   void printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
                    DataRegion<Elf_Word> ShndxTable,
-                   Optional<StringRef> StrTable, bool IsDynamic,
+                   std::optional<StringRef> StrTable, bool IsDynamic,
                    bool /*NonVisibilityBitsUsed*/) const override;
   void printProgramHeaders() override;
   void printSectionMapping() override {}
@@ -882,11 +881,9 @@ std::string ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index) const {
 }
 
 template <typename ELFT>
-std::string ELFDumper<ELFT>::getFullSymbolName(const Elf_Sym &Symbol,
-                                               unsigned SymIndex,
-                                               DataRegion<Elf_Word> ShndxTable,
-                                               Optional<StringRef> StrTable,
-                                               bool IsDynamic) const {
+std::string ELFDumper<ELFT>::getFullSymbolName(
+    const Elf_Sym &Symbol, unsigned SymIndex, DataRegion<Elf_Word> ShndxTable,
+    std::optional<StringRef> StrTable, bool IsDynamic) const {
   if (!StrTable)
     return "<?>";
 
@@ -1948,7 +1945,7 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
 
   const char *StringTableBegin = nullptr;
   uint64_t StringTableSize = 0;
-  Optional<DynRegionInfo> DynSymFromTable;
+  std::optional<DynRegionInfo> DynSymFromTable;
   for (const Elf_Dyn &Dyn : dynamic_table()) {
     switch (Dyn.d_tag) {
     case ELF::DT_HASH:
@@ -2553,7 +2550,7 @@ template <typename ELFT> void ELFDumper<ELFT>::printHashTable() {
 
 template <class ELFT>
 static Expected<ArrayRef<typename ELFT::Word>>
-getGnuHashTableChains(Optional<DynRegionInfo> DynSymRegion,
+getGnuHashTableChains(std::optional<DynRegionInfo> DynSymRegion,
                       const typename ELFT::GnuHash *GnuHashTable) {
   if (!DynSymRegion)
     return createError("no dynamic symbol table found");
@@ -3540,7 +3537,7 @@ void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
     printField(F);
 
   std::string Addend;
-  if (Optional<int64_t> A = R.Addend) {
+  if (std::optional<int64_t> A = R.Addend) {
     int64_t RelAddend = *A;
     if (!RelSym.Name.empty()) {
       if (RelAddend < 0) {
@@ -3836,7 +3833,7 @@ GNUELFDumper<ELFT>::getSymbolSectionNdx(const Elf_Sym &Symbol,
 template <class ELFT>
 void GNUELFDumper<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
                                      DataRegion<Elf_Word> ShndxTable,
-                                     Optional<StringRef> StrTable,
+                                     std::optional<StringRef> StrTable,
                                      bool IsDynamic,
                                      bool NonVisibilityBitsUsed) const {
   unsigned Bias = ELFT::Is64Bits ? 8 : 0;
@@ -5230,7 +5227,7 @@ struct FreeBSDNote {
 };
 
 template <typename ELFT>
-static Optional<FreeBSDNote>
+static std::optional<FreeBSDNote>
 getFreeBSDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc, bool IsCore) {
   if (IsCore)
     return std::nullopt; // No pretty-printing yet.
@@ -5680,7 +5677,7 @@ StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
 template <class ELFT>
 static void printNotesHelper(
     const ELFDumper<ELFT> &Dumper,
-    llvm::function_ref<void(Optional<StringRef>, typename ELFT::Off,
+    llvm::function_ref<void(std::optional<StringRef>, typename ELFT::Off,
                             typename ELFT::Addr)>
         StartNotesFn,
     llvm::function_ref<Error(const typename ELFT::Note &, bool)> ProcessNoteFn,
@@ -5693,7 +5690,7 @@ static void printNotesHelper(
     for (const typename ELFT::Shdr &S : Sections) {
       if (S.sh_type != SHT_NOTE)
         continue;
-      StartNotesFn(expectedToOptional(Obj.getSectionName(S)), S.sh_offset,
+      StartNotesFn(expectedToStdOptional(Obj.getSectionName(S)), S.sh_offset,
                    S.sh_size);
       Error Err = Error::success();
       size_t I = 0;
@@ -5746,7 +5743,7 @@ static void printNotesHelper(
 
 template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
   bool IsFirstHeader = true;
-  auto PrintHeader = [&](Optional<StringRef> SecName,
+  auto PrintHeader = [&](std::optional<StringRef> SecName,
                          const typename ELFT::Off Offset,
                          const typename ELFT::Addr Size) {
     // Print a newline between notes sections to match GNU readelf.
@@ -5789,7 +5786,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
       if (printGNUNote<ELFT>(OS, Type, Descriptor))
         return Error::success();
     } else if (Name == "FreeBSD") {
-      if (Optional<FreeBSDNote> N =
+      if (std::optional<FreeBSDNote> N =
               getFreeBSDNote<ELFT>(Type, Descriptor, IsCore)) {
         OS << "    " << N->Type << ": " << N->Value << '\n';
         return Error::success();
@@ -6002,7 +5999,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printDependentLibs() {
 
 template <class ELFT>
 SmallVector<uint32_t> ELFDumper<ELFT>::getSymbolIndexesForFunctionAddress(
-    uint64_t SymValue, Optional<const Elf_Shdr *> FunctionSec) {
+    uint64_t SymValue, std::optional<const Elf_Shdr *> FunctionSec) {
   SmallVector<uint32_t> SymbolIndexes;
   if (!this->AddressToIndexMap) {
     // Populate the address to index map upon the first invocation of this
@@ -6068,7 +6065,7 @@ SmallVector<uint32_t> ELFDumper<ELFT>::getSymbolIndexesForFunctionAddress(
 
 template <class ELFT>
 bool ELFDumper<ELFT>::printFunctionStackSize(
-    uint64_t SymValue, Optional<const Elf_Shdr *> FunctionSec,
+    uint64_t SymValue, std::optional<const Elf_Shdr *> FunctionSec,
     const Elf_Shdr &StackSizeSec, DataExtractor Data, uint64_t *Offset) {
   SmallVector<uint32_t> FuncSymIndexes =
       this->getSymbolIndexesForFunctionAddress(SymValue, FunctionSec);
@@ -6729,7 +6726,7 @@ template <class ELFT>
 void LLVMELFDumper<ELFT>::printSymbolSection(
     const Elf_Sym &Symbol, unsigned SymIndex,
     DataRegion<Elf_Word> ShndxTable) const {
-  auto GetSectionSpecialType = [&]() -> Optional<StringRef> {
+  auto GetSectionSpecialType = [&]() -> std::optional<StringRef> {
     if (Symbol.isUndefined())
       return StringRef("Undefined");
     if (Symbol.isProcessorSpecific())
@@ -6745,7 +6742,7 @@ void LLVMELFDumper<ELFT>::printSymbolSection(
     return std::nullopt;
   };
 
-  if (Optional<StringRef> Type = GetSectionSpecialType()) {
+  if (std::optional<StringRef> Type = GetSectionSpecialType()) {
     W.printHex("Section", *Type, Symbol.st_shndx);
     return;
   }
@@ -6779,7 +6776,7 @@ void LLVMELFDumper<ELFT>::printSymbolSection(
 template <class ELFT>
 void LLVMELFDumper<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
                                       DataRegion<Elf_Word> ShndxTable,
-                                      Optional<StringRef> StrTable,
+                                      std::optional<StringRef> StrTable,
                                       bool IsDynamic,
                                       bool /*NonVisibilityBitsUsed*/) const {
   std::string FullSymbolName = this->getFullSymbolName(
@@ -7106,7 +7103,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
         Sec.sh_type != SHT_LLVM_BB_ADDR_MAP_V0) {
       continue;
     }
-    Optional<const Elf_Shdr *> FunctionSec;
+    std::optional<const Elf_Shdr *> FunctionSec;
     if (IsRelocatable)
       FunctionSec =
           unwrapOrError(this->FileName, this->Obj.getSection(Sec.sh_link));
@@ -7242,7 +7239,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
   ListScope L(W, "Notes");
 
   std::unique_ptr<DictScope> NoteScope;
-  auto StartNotes = [&](Optional<StringRef> SecName,
+  auto StartNotes = [&](std::optional<StringRef> SecName,
                         const typename ELFT::Off Offset,
                         const typename ELFT::Addr Size) {
     NoteScope = std::make_unique<DictScope>(W, "NoteSection");
@@ -7277,7 +7274,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
       if (printGNUNoteLLVMStyle<ELFT>(Type, Descriptor, W))
         return Error::success();
     } else if (Name == "FreeBSD") {
-      if (Optional<FreeBSDNote> N =
+      if (std::optional<FreeBSDNote> N =
               getFreeBSDNote<ELFT>(Type, Descriptor, IsCore)) {
         W.printString(N->Type, N->Value);
         return Error::success();
