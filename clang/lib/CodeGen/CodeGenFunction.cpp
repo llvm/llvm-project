@@ -320,7 +320,7 @@ llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
 static void EmitIfUsed(CodeGenFunction &CGF, llvm::BasicBlock *BB) {
   if (!BB) return;
   if (!BB->use_empty()) {
-    CGF.CurFn->insertBasicBlockAt(CGF.CurFn->end(), BB);
+    CGF.CurFn->insert(CGF.CurFn->end(), BB);
     return;
   }
   delete BB;
