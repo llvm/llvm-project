@@ -93,7 +93,8 @@ public:
     uint64_t getEndOffset() const { return EndOffset; }
     bool isError() const { return Error; }
     bool print(raw_ostream &OS, DIDumpOptions DumpOpts,
-               const DWARFExpression *Expr, DWARFUnit *U) const;
+               const DWARFExpression *Expr, const MCRegisterInfo *RegInfo,
+               DWARFUnit *U, bool isEH) const;
 
     /// Verify \p Op. Does not affect the return of \a isError().
     static bool verify(const Operation &Op, DWARFUnit *U);
@@ -146,16 +147,15 @@ public:
   iterator begin() const { return iterator(this, 0); }
   iterator end() const { return iterator(this, Data.getData().size()); }
 
-  void print(raw_ostream &OS, DIDumpOptions DumpOpts, DWARFUnit *U,
+  void print(raw_ostream &OS, DIDumpOptions DumpOpts,
+             const MCRegisterInfo *RegInfo, DWARFUnit *U,
              bool IsEH = false) const;
 
   /// Print the expression in a format intended to be compact and useful to a
   /// user, but not perfectly unambiguous, or capable of representing every
   /// valid DWARF expression. Returns true if the expression was sucessfully
   /// printed.
-  bool printCompact(raw_ostream &OS,
-                    std::function<StringRef(uint64_t RegNum, bool IsEH)>
-                        GetNameForDWARFReg = nullptr);
+  bool printCompact(raw_ostream &OS, const MCRegisterInfo &RegInfo);
 
   bool verify(DWARFUnit *U);
 
@@ -165,7 +165,8 @@ public:
 
   static bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
                                     DIDumpOptions DumpOpts, uint8_t Opcode,
-                                    const uint64_t Operands[2]);
+                                    const uint64_t Operands[2],
+                                    const MCRegisterInfo *MRI, bool isEH);
 
 private:
   DataExtractor Data;

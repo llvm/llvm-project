@@ -770,19 +770,9 @@ std::string LVELFReader::getRegisterName(LVSmall Opcode, uint64_t Operands[2]) {
   std::string string;
   raw_string_ostream Stream(string);
   DIDumpOptions DumpOpts;
-  auto *MCRegInfo = MRI.get();
-  auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
-    if (!MCRegInfo)
-      return {};
-    if (std::optional<unsigned> LLVMRegNum =
-            MCRegInfo->getLLVMRegNum(DwarfRegNum, IsEH))
-      if (const char *RegName = MCRegInfo->getName(*LLVMRegNum))
-        return StringRef(RegName);
-    return {};
-  };
-  DumpOpts.GetNameForDWARFReg = GetRegName;
   DWARFExpression::prettyPrintRegisterOp(/*U=*/nullptr, Stream, DumpOpts,
-                                         Opcode, Operands);
+                                         Opcode, Operands, MRI.get(),
+                                         /*isEH=*/false);
   return Stream.str();
 }
 
