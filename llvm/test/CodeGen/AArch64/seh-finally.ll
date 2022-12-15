@@ -42,7 +42,7 @@ entry:
 ; CHECK: ldur    w0, [x29, #-8]
 ; CHECK: bl      foo
 
-  %o = alloca %struct.S, align 4
+  %o = alloca %struct.S, align 8
   call void (...) @llvm.localescape(%struct.S* %o)
   %x = getelementptr inbounds %struct.S, %struct.S* %o, i32 0, i32 0
   %0 = load i32, i32* %x, align 4

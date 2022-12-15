@@ -41,7 +41,7 @@ define i32 @test() nounwind {
 ; RV32I-WITHFP-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 32
 ; RV32I-WITHFP-NEXT:    ret
-  %key = alloca %struct.key_t, align 4
+  %key = alloca %struct.key_t, align 8
   %1 = bitcast %struct.key_t* %key to i8*
   call void @llvm.memset.p0i8.i64(i8* align 4 %1, i8 0, i64 20, i1 false)
   %2 = getelementptr inbounds %struct.key_t, %struct.key_t* %key, i64 0, i32 1, i64 0

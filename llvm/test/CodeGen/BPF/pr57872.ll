@@ -180,7 +180,7 @@ define void @foo(ptr %g) {
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    exit
 entry:
-  %event = alloca %struct.event, align 1
+  %event = alloca %struct.event, align 8
   %hostname = getelementptr inbounds %struct.event, ptr %event, i64 0, i32 1
   %0 = load ptr, ptr %g, align 8
   call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(84) %hostname, ptr noundef nonnull align 1 dereferenceable(84) %0, i64 84, i1 false)
