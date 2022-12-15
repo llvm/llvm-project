@@ -29,21 +29,21 @@ public:
     T real() const; // constexpr in C++14
     T imag() const; // constexpr in C++14
 
-    void real(T);
-    void imag(T);
+    void real(T); // constexpr in C++20
+    void imag(T); // constexpr in C++20
 
-    complex<T>& operator= (const T&);
-    complex<T>& operator+=(const T&);
-    complex<T>& operator-=(const T&);
-    complex<T>& operator*=(const T&);
-    complex<T>& operator/=(const T&);
+    complex<T>& operator= (const T&); // constexpr in C++20
+    complex<T>& operator+=(const T&); // constexpr in C++20
+    complex<T>& operator-=(const T&); // constexpr in C++20
+    complex<T>& operator*=(const T&); // constexpr in C++20
+    complex<T>& operator/=(const T&); // constexpr in C++20
 
-    complex& operator=(const complex&);
-    template<class X> complex<T>& operator= (const complex<X>&);
-    template<class X> complex<T>& operator+=(const complex<X>&);
-    template<class X> complex<T>& operator-=(const complex<X>&);
-    template<class X> complex<T>& operator*=(const complex<X>&);
-    template<class X> complex<T>& operator/=(const complex<X>&);
+    complex& operator=(const complex&); // constexpr in C++20
+    template<class X> complex<T>& operator= (const complex<X>&); // constexpr in C++20
+    template<class X> complex<T>& operator+=(const complex<X>&); // constexpr in C++20
+    template<class X> complex<T>& operator-=(const complex<X>&); // constexpr in C++20
+    template<class X> complex<T>& operator*=(const complex<X>&); // constexpr in C++20
+    template<class X> complex<T>& operator/=(const complex<X>&); // constexpr in C++20
 };
 
 template<>
@@ -57,22 +57,22 @@ public:
     explicit constexpr complex(const complex<long double>&);
 
     constexpr float real() const;
-    void real(float);
+    void real(float); // constexpr in C++20
     constexpr float imag() const;
-    void imag(float);
+    void imag(float); // constexpr in C++20
 
-    complex<float>& operator= (float);
-    complex<float>& operator+=(float);
-    complex<float>& operator-=(float);
-    complex<float>& operator*=(float);
-    complex<float>& operator/=(float);
+    complex<float>& operator= (float); // constexpr in C++20
+    complex<float>& operator+=(float); // constexpr in C++20
+    complex<float>& operator-=(float); // constexpr in C++20
+    complex<float>& operator*=(float); // constexpr in C++20
+    complex<float>& operator/=(float); // constexpr in C++20
 
-    complex<float>& operator=(const complex<float>&);
-    template<class X> complex<float>& operator= (const complex<X>&);
-    template<class X> complex<float>& operator+=(const complex<X>&);
-    template<class X> complex<float>& operator-=(const complex<X>&);
-    template<class X> complex<float>& operator*=(const complex<X>&);
-    template<class X> complex<float>& operator/=(const complex<X>&);
+    complex<float>& operator=(const complex<float>&); // constexpr in C++20
+    template<class X> complex<float>& operator= (const complex<X>&); // constexpr in C++20
+    template<class X> complex<float>& operator+=(const complex<X>&); // constexpr in C++20
+    template<class X> complex<float>& operator-=(const complex<X>&); // constexpr in C++20
+    template<class X> complex<float>& operator*=(const complex<X>&); // constexpr in C++20
+    template<class X> complex<float>& operator/=(const complex<X>&); // constexpr in C++20
 };
 
 template<>
@@ -86,22 +86,22 @@ public:
     explicit constexpr complex(const complex<long double>&);
 
     constexpr double real() const;
-    void real(double);
+    void real(double); // constexpr in C++20
     constexpr double imag() const;
-    void imag(double);
+    void imag(double); // constexpr in C++20
 
-    complex<double>& operator= (double);
-    complex<double>& operator+=(double);
-    complex<double>& operator-=(double);
-    complex<double>& operator*=(double);
-    complex<double>& operator/=(double);
-    complex<double>& operator=(const complex<double>&);
+    complex<double>& operator= (double); // constexpr in C++20
+    complex<double>& operator+=(double); // constexpr in C++20
+    complex<double>& operator-=(double); // constexpr in C++20
+    complex<double>& operator*=(double); // constexpr in C++20
+    complex<double>& operator/=(double); // constexpr in C++20
+    complex<double>& operator=(const complex<double>&); // constexpr in C++20
 
-    template<class X> complex<double>& operator= (const complex<X>&);
-    template<class X> complex<double>& operator+=(const complex<X>&);
-    template<class X> complex<double>& operator-=(const complex<X>&);
-    template<class X> complex<double>& operator*=(const complex<X>&);
-    template<class X> complex<double>& operator/=(const complex<X>&);
+    template<class X> complex<double>& operator= (const complex<X>&); // constexpr in C++20
+    template<class X> complex<double>& operator+=(const complex<X>&); // constexpr in C++20
+    template<class X> complex<double>& operator-=(const complex<X>&); // constexpr in C++20
+    template<class X> complex<double>& operator*=(const complex<X>&); // constexpr in C++20
+    template<class X> complex<double>& operator/=(const complex<X>&); // constexpr in C++20
 };
 
 template<>
@@ -115,39 +115,39 @@ public:
     constexpr complex(const complex<double>&);
 
     constexpr long double real() const;
-    void real(long double);
+    void real(long double); // constexpr in C++20
     constexpr long double imag() const;
-    void imag(long double);
+    void imag(long double); // constexpr in C++20
 
-    complex<long double>& operator=(const complex<long double>&);
-    complex<long double>& operator= (long double);
-    complex<long double>& operator+=(long double);
-    complex<long double>& operator-=(long double);
-    complex<long double>& operator*=(long double);
-    complex<long double>& operator/=(long double);
+    complex<long double>& operator=(const complex<long double>&); // constexpr in C++20
+    complex<long double>& operator= (long double); // constexpr in C++20
+    complex<long double>& operator+=(long double); // constexpr in C++20
+    complex<long double>& operator-=(long double); // constexpr in C++20
+    complex<long double>& operator*=(long double); // constexpr in C++20
+    complex<long double>& operator/=(long double); // constexpr in C++20
 
-    template<class X> complex<long double>& operator= (const complex<X>&);
-    template<class X> complex<long double>& operator+=(const complex<X>&);
-    template<class X> complex<long double>& operator-=(const complex<X>&);
-    template<class X> complex<long double>& operator*=(const complex<X>&);
-    template<class X> complex<long double>& operator/=(const complex<X>&);
+    template<class X> complex<long double>& operator= (const complex<X>&); // constexpr in C++20
+    template<class X> complex<long double>& operator+=(const complex<X>&); // constexpr in C++20
+    template<class X> complex<long double>& operator-=(const complex<X>&); // constexpr in C++20
+    template<class X> complex<long double>& operator*=(const complex<X>&); // constexpr in C++20
+    template<class X> complex<long double>& operator/=(const complex<X>&); // constexpr in C++20
 };
 
 // 26.3.6 operators:
-template<class T> complex<T> operator+(const complex<T>&, const complex<T>&);
-template<class T> complex<T> operator+(const complex<T>&, const T&);
-template<class T> complex<T> operator+(const T&, const complex<T>&);
-template<class T> complex<T> operator-(const complex<T>&, const complex<T>&);
-template<class T> complex<T> operator-(const complex<T>&, const T&);
-template<class T> complex<T> operator-(const T&, const complex<T>&);
-template<class T> complex<T> operator*(const complex<T>&, const complex<T>&);
-template<class T> complex<T> operator*(const complex<T>&, const T&);
-template<class T> complex<T> operator*(const T&, const complex<T>&);
-template<class T> complex<T> operator/(const complex<T>&, const complex<T>&);
-template<class T> complex<T> operator/(const complex<T>&, const T&);
-template<class T> complex<T> operator/(const T&, const complex<T>&);
-template<class T> complex<T> operator+(const complex<T>&);
-template<class T> complex<T> operator-(const complex<T>&);
+template<class T> complex<T> operator+(const complex<T>&, const complex<T>&); // constexpr in C++20
+template<class T> complex<T> operator+(const complex<T>&, const T&);          // constexpr in C++20
+template<class T> complex<T> operator+(const T&, const complex<T>&);          // constexpr in C++20
+template<class T> complex<T> operator-(const complex<T>&, const complex<T>&); // constexpr in C++20
+template<class T> complex<T> operator-(const complex<T>&, const T&);          // constexpr in C++20
+template<class T> complex<T> operator-(const T&, const complex<T>&);          // constexpr in C++20
+template<class T> complex<T> operator*(const complex<T>&, const complex<T>&); // constexpr in C++20
+template<class T> complex<T> operator*(const complex<T>&, const T&);          // constexpr in C++20
+template<class T> complex<T> operator*(const T&, const complex<T>&);          // constexpr in C++20
+template<class T> complex<T> operator/(const complex<T>&, const complex<T>&); // constexpr in C++20
+template<class T> complex<T> operator/(const complex<T>&, const T&);          // constexpr in C++20
+template<class T> complex<T> operator/(const T&, const complex<T>&);          // constexpr in C++20
+template<class T> complex<T> operator+(const complex<T>&);                    // constexpr in C++20
+template<class T> complex<T> operator-(const complex<T>&);                    // constexpr in C++20
 template<class T> bool operator==(const complex<T>&, const complex<T>&); // constexpr in C++14
 template<class T> bool operator==(const complex<T>&, const T&); // constexpr in C++14
 template<class T> bool operator==(const T&, const complex<T>&); // constexpr in C++14
@@ -184,17 +184,17 @@ template<class T>              T arg(const complex<T>&);
 template<Integral T>      double arg(T);
                           float  arg(float);
 
-template<class T>              T norm(const complex<T>&);
-                     long double norm(long double);
-                          double norm(double);
-template<Integral T>      double norm(T);
-                          float  norm(float);
+template<class T>              T norm(const complex<T>&); // constexpr in C++20
+                     long double norm(long double);       // constexpr in C++20
+                          double norm(double);            // constexpr in C++20
+template<Integral T>      double norm(T);                 // constexpr in C++20
+                          float  norm(float);             // constexpr in C++20
 
-template<class T>      complex<T>           conj(const complex<T>&);
-                       complex<long double> conj(long double);
-                       complex<double>      conj(double);
-template<Integral T>   complex<double>      conj(T);
-                       complex<float>       conj(float);
+template<class T>      complex<T>           conj(const complex<T>&); // constexpr in C++20
+                       complex<long double> conj(long double);       // constexpr in C++20
+                       complex<double>      conj(double);            // constexpr in C++20
+template<Integral T>   complex<double>      conj(T);                 // constexpr in C++20
+                       complex<float>       conj(float);             // constexpr in C++20
 
 template<class T>    complex<T>           proj(const complex<T>&);
                      complex<long double> proj(long double);
@@ -251,8 +251,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template<class _Tp> class _LIBCPP_TEMPLATE_VIS complex;
 
-template<class _Tp> _LIBCPP_HIDE_FROM_ABI complex<_Tp> operator*(const complex<_Tp>& __z, const complex<_Tp>& __w);
-template<class _Tp> _LIBCPP_HIDE_FROM_ABI complex<_Tp> operator/(const complex<_Tp>& __x, const complex<_Tp>& __y);
+template<class _Tp> _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp> operator*(const complex<_Tp>& __z, const complex<_Tp>& __w);
+template<class _Tp> _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp> operator/(const complex<_Tp>& __x, const complex<_Tp>& __y);
 
 template<class _Tp>
 class _LIBCPP_TEMPLATE_VIS complex
@@ -273,40 +273,40 @@ public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14 value_type real() const {return __re_;}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14 value_type imag() const {return __im_;}
 
-    _LIBCPP_INLINE_VISIBILITY void real(value_type __re) {__re_ = __re;}
-    _LIBCPP_INLINE_VISIBILITY void imag(value_type __im) {__im_ = __im;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 void real(value_type __re) {__re_ = __re;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 void imag(value_type __im) {__im_ = __im;}
 
-    _LIBCPP_INLINE_VISIBILITY complex& operator= (const value_type& __re)
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator= (const value_type& __re)
         {__re_ = __re; __im_ = value_type(); return *this;}
-    _LIBCPP_INLINE_VISIBILITY complex& operator+=(const value_type& __re) {__re_ += __re; return *this;}
-    _LIBCPP_INLINE_VISIBILITY complex& operator-=(const value_type& __re) {__re_ -= __re; return *this;}
-    _LIBCPP_INLINE_VISIBILITY complex& operator*=(const value_type& __re) {__re_ *= __re; __im_ *= __re; return *this;}
-    _LIBCPP_INLINE_VISIBILITY complex& operator/=(const value_type& __re) {__re_ /= __re; __im_ /= __re; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator+=(const value_type& __re) {__re_ += __re; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator-=(const value_type& __re) {__re_ -= __re; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator*=(const value_type& __re) {__re_ *= __re; __im_ *= __re; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator/=(const value_type& __re) {__re_ /= __re; __im_ /= __re; return *this;}
 
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator= (const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator= (const complex<_Xp>& __c)
         {
             __re_ = __c.real();
             __im_ = __c.imag();
             return *this;
         }
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator+=(const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator+=(const complex<_Xp>& __c)
         {
             __re_ += __c.real();
             __im_ += __c.imag();
             return *this;
         }
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator-=(const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator-=(const complex<_Xp>& __c)
         {
             __re_ -= __c.real();
             __im_ -= __c.imag();
             return *this;
         }
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator*=(const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator*=(const complex<_Xp>& __c)
         {
             *this = *this * complex(__c.real(), __c.imag());
             return *this;
         }
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator/=(const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator/=(const complex<_Xp>& __c)
         {
             *this = *this / complex(__c.real(), __c.imag());
             return *this;
@@ -334,40 +334,40 @@ public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR float real() const {return __re_;}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR float imag() const {return __im_;}
 
-    _LIBCPP_INLINE_VISIBILITY void real(value_type __re) {__re_ = __re;}
-    _LIBCPP_INLINE_VISIBILITY void imag(value_type __im) {__im_ = __im;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 void real(value_type __re) {__re_ = __re;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 void imag(value_type __im) {__im_ = __im;}
 
-    _LIBCPP_INLINE_VISIBILITY complex& operator= (float __re)
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator= (float __re)
         {__re_ = __re; __im_ = value_type(); return *this;}
-    _LIBCPP_INLINE_VISIBILITY complex& operator+=(float __re) {__re_ += __re; return *this;}
-    _LIBCPP_INLINE_VISIBILITY complex& operator-=(float __re) {__re_ -= __re; return *this;}
-    _LIBCPP_INLINE_VISIBILITY complex& operator*=(float __re) {__re_ *= __re; __im_ *= __re; return *this;}
-    _LIBCPP_INLINE_VISIBILITY complex& operator/=(float __re) {__re_ /= __re; __im_ /= __re; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator+=(float __re) {__re_ += __re; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator-=(float __re) {__re_ -= __re; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator*=(float __re) {__re_ *= __re; __im_ *= __re; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator/=(float __re) {__re_ /= __re; __im_ /= __re; return *this;}
 
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator= (const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator= (const complex<_Xp>& __c)
         {
             __re_ = __c.real();
             __im_ = __c.imag();
             return *this;
         }
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator+=(const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator+=(const complex<_Xp>& __c)
         {
             __re_ += __c.real();
             __im_ += __c.imag();
             return *this;
         }
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator-=(const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator-=(const complex<_Xp>& __c)
         {
             __re_ -= __c.real();
             __im_ -= __c.imag();
             return *this;
         }
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator*=(const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator*=(const complex<_Xp>& __c)
         {
             *this = *this * complex(__c.real(), __c.imag());
             return *this;
         }
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator/=(const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator/=(const complex<_Xp>& __c)
         {
             *this = *this / complex(__c.real(), __c.imag());
             return *this;
@@ -392,40 +392,40 @@ public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR double real() const {return __re_;}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR double imag() const {return __im_;}
 
-    _LIBCPP_INLINE_VISIBILITY void real(value_type __re) {__re_ = __re;}
-    _LIBCPP_INLINE_VISIBILITY void imag(value_type __im) {__im_ = __im;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 void real(value_type __re) {__re_ = __re;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 void imag(value_type __im) {__im_ = __im;}
 
-    _LIBCPP_INLINE_VISIBILITY complex& operator= (double __re)
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator= (double __re)
         {__re_ = __re; __im_ = value_type(); return *this;}
-    _LIBCPP_INLINE_VISIBILITY complex& operator+=(double __re) {__re_ += __re; return *this;}
-    _LIBCPP_INLINE_VISIBILITY complex& operator-=(double __re) {__re_ -= __re; return *this;}
-    _LIBCPP_INLINE_VISIBILITY complex& operator*=(double __re) {__re_ *= __re; __im_ *= __re; return *this;}
-    _LIBCPP_INLINE_VISIBILITY complex& operator/=(double __re) {__re_ /= __re; __im_ /= __re; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator+=(double __re) {__re_ += __re; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator-=(double __re) {__re_ -= __re; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator*=(double __re) {__re_ *= __re; __im_ *= __re; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator/=(double __re) {__re_ /= __re; __im_ /= __re; return *this;}
 
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator= (const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator= (const complex<_Xp>& __c)
         {
             __re_ = __c.real();
             __im_ = __c.imag();
             return *this;
         }
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator+=(const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator+=(const complex<_Xp>& __c)
         {
             __re_ += __c.real();
             __im_ += __c.imag();
             return *this;
         }
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator-=(const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator-=(const complex<_Xp>& __c)
         {
             __re_ -= __c.real();
             __im_ -= __c.imag();
             return *this;
         }
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator*=(const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator*=(const complex<_Xp>& __c)
         {
             *this = *this * complex(__c.real(), __c.imag());
             return *this;
         }
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator/=(const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator/=(const complex<_Xp>& __c)
         {
             *this = *this / complex(__c.real(), __c.imag());
             return *this;
@@ -450,40 +450,40 @@ public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR long double real() const {return __re_;}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR long double imag() const {return __im_;}
 
-    _LIBCPP_INLINE_VISIBILITY void real(value_type __re) {__re_ = __re;}
-    _LIBCPP_INLINE_VISIBILITY void imag(value_type __im) {__im_ = __im;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 void real(value_type __re) {__re_ = __re;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 void imag(value_type __im) {__im_ = __im;}
 
-    _LIBCPP_INLINE_VISIBILITY complex& operator= (long double __re)
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator= (long double __re)
         {__re_ = __re; __im_ = value_type(); return *this;}
-    _LIBCPP_INLINE_VISIBILITY complex& operator+=(long double __re) {__re_ += __re; return *this;}
-    _LIBCPP_INLINE_VISIBILITY complex& operator-=(long double __re) {__re_ -= __re; return *this;}
-    _LIBCPP_INLINE_VISIBILITY complex& operator*=(long double __re) {__re_ *= __re; __im_ *= __re; return *this;}
-    _LIBCPP_INLINE_VISIBILITY complex& operator/=(long double __re) {__re_ /= __re; __im_ /= __re; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator+=(long double __re) {__re_ += __re; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator-=(long double __re) {__re_ -= __re; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator*=(long double __re) {__re_ *= __re; __im_ *= __re; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator/=(long double __re) {__re_ /= __re; __im_ /= __re; return *this;}
 
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator= (const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator= (const complex<_Xp>& __c)
         {
             __re_ = __c.real();
             __im_ = __c.imag();
             return *this;
         }
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator+=(const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator+=(const complex<_Xp>& __c)
         {
             __re_ += __c.real();
             __im_ += __c.imag();
             return *this;
         }
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator-=(const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator-=(const complex<_Xp>& __c)
         {
             __re_ -= __c.real();
             __im_ -= __c.imag();
             return *this;
         }
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator*=(const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator*=(const complex<_Xp>& __c)
         {
             *this = *this * complex(__c.real(), __c.imag());
             return *this;
         }
-    template<class _Xp> _LIBCPP_INLINE_VISIBILITY complex& operator/=(const complex<_Xp>& __c)
+    template<class _Xp> _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 complex& operator/=(const complex<_Xp>& __c)
         {
             *this = *this / complex(__c.real(), __c.imag());
             return *this;
@@ -523,7 +523,7 @@ complex<long double>::complex(const complex<double>& __c)
 // 26.3.6 operators:
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 complex<_Tp>
 operator+(const complex<_Tp>& __x, const complex<_Tp>& __y)
 {
@@ -533,7 +533,7 @@ operator+(const complex<_Tp>& __x, const complex<_Tp>& __y)
 }
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 complex<_Tp>
 operator+(const complex<_Tp>& __x, const _Tp& __y)
 {
@@ -543,7 +543,7 @@ operator+(const complex<_Tp>& __x, const _Tp& __y)
 }
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 complex<_Tp>
 operator+(const _Tp& __x, const complex<_Tp>& __y)
 {
@@ -553,7 +553,7 @@ operator+(const _Tp& __x, const complex<_Tp>& __y)
 }
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 complex<_Tp>
 operator-(const complex<_Tp>& __x, const complex<_Tp>& __y)
 {
@@ -563,7 +563,7 @@ operator-(const complex<_Tp>& __x, const complex<_Tp>& __y)
 }
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 complex<_Tp>
 operator-(const complex<_Tp>& __x, const _Tp& __y)
 {
@@ -573,7 +573,7 @@ operator-(const complex<_Tp>& __x, const _Tp& __y)
 }
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 complex<_Tp>
 operator-(const _Tp& __x, const complex<_Tp>& __y)
 {
@@ -583,13 +583,46 @@ operator-(const _Tp& __x, const complex<_Tp>& __y)
 }
 
 template<class _Tp>
-_LIBCPP_HIDE_FROM_ABI complex<_Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
 operator*(const complex<_Tp>& __z, const complex<_Tp>& __w)
 {
     _Tp __a = __z.real();
     _Tp __b = __z.imag();
     _Tp __c = __w.real();
     _Tp __d = __w.imag();
+
+    // Avoid floating point operations that are invalid during constant evaluation
+    if (__libcpp_is_constant_evaluated()) {
+        bool __z_zero = __a == _Tp(0) && __b == _Tp(0);
+        bool __w_zero = __c == _Tp(0) && __d == _Tp(0);
+        bool __z_inf = std::__constexpr_isinf(__a) || std::__constexpr_isinf(__b);
+        bool __w_inf = std::__constexpr_isinf(__c) || std::__constexpr_isinf(__d);
+        bool __z_nan = !__z_inf && (
+            (std::__constexpr_isnan(__a) && std::__constexpr_isnan(__b))
+            || (std::__constexpr_isnan(__a) && __b == _Tp(0))
+            || (__a == _Tp(0) && std::__constexpr_isnan(__b))
+        );
+        bool __w_nan = !__w_inf && (
+            (std::__constexpr_isnan(__c) && std::__constexpr_isnan(__d))
+            || (std::__constexpr_isnan(__c) && __d == _Tp(0))
+            || (__c == _Tp(0) && std::__constexpr_isnan(__d))
+        );
+        if (__z_nan || __w_nan) {
+            return complex<_Tp>(_Tp(numeric_limits<_Tp>::quiet_NaN()), _Tp(0));
+        }
+        if (__z_inf || __w_inf) {
+            if (__z_zero || __w_zero) {
+                return complex<_Tp>(_Tp(numeric_limits<_Tp>::quiet_NaN()), _Tp(0));
+            }
+            return complex<_Tp>(_Tp(numeric_limits<_Tp>::infinity()), _Tp(numeric_limits<_Tp>::infinity()));
+        }
+        bool __z_nonzero_nan = !__z_inf && !__z_nan && (std::__constexpr_isnan(__a) || std::__constexpr_isnan(__b));
+        bool __w_nonzero_nan = !__w_inf && !__w_nan && (std::__constexpr_isnan(__c) || std::__constexpr_isnan(__d));
+        if (__z_nonzero_nan || __w_nonzero_nan) {
+            return complex<_Tp>(_Tp(numeric_limits<_Tp>::quiet_NaN()), _Tp(0));
+        }
+    }
+
     _Tp __ac = __a * __c;
     _Tp __bd = __b * __d;
     _Tp __ad = __a * __d;
@@ -601,35 +634,35 @@ operator*(const complex<_Tp>& __z, const complex<_Tp>& __w)
         bool __recalc = false;
         if (std::__constexpr_isinf(__a) || std::__constexpr_isinf(__b))
         {
-            __a = std::copysign(std::__constexpr_isinf(__a) ? _Tp(1) : _Tp(0), __a);
-            __b = std::copysign(std::__constexpr_isinf(__b) ? _Tp(1) : _Tp(0), __b);
+            __a = std::__constexpr_copysign(std::__constexpr_isinf(__a) ? _Tp(1) : _Tp(0), __a);
+            __b = std::__constexpr_copysign(std::__constexpr_isinf(__b) ? _Tp(1) : _Tp(0), __b);
             if (std::__constexpr_isnan(__c))
-                __c = std::copysign(_Tp(0), __c);
+                __c = std::__constexpr_copysign(_Tp(0), __c);
             if (std::__constexpr_isnan(__d))
-                __d = std::copysign(_Tp(0), __d);
+                __d = std::__constexpr_copysign(_Tp(0), __d);
             __recalc = true;
         }
         if (std::__constexpr_isinf(__c) || std::__constexpr_isinf(__d))
         {
-            __c = std::copysign(std::__constexpr_isinf(__c) ? _Tp(1) : _Tp(0), __c);
-            __d = std::copysign(std::__constexpr_isinf(__d) ? _Tp(1) : _Tp(0), __d);
+            __c = std::__constexpr_copysign(std::__constexpr_isinf(__c) ? _Tp(1) : _Tp(0), __c);
+            __d = std::__constexpr_copysign(std::__constexpr_isinf(__d) ? _Tp(1) : _Tp(0), __d);
             if (std::__constexpr_isnan(__a))
-                __a = std::copysign(_Tp(0), __a);
+                __a = std::__constexpr_copysign(_Tp(0), __a);
             if (std::__constexpr_isnan(__b))
-                __b = std::copysign(_Tp(0), __b);
+                __b = std::__constexpr_copysign(_Tp(0), __b);
             __recalc = true;
         }
         if (!__recalc && (std::__constexpr_isinf(__ac) || std::__constexpr_isinf(__bd) ||
                           std::__constexpr_isinf(__ad) || std::__constexpr_isinf(__bc)))
         {
             if (std::__constexpr_isnan(__a))
-                __a = std::copysign(_Tp(0), __a);
+                __a = std::__constexpr_copysign(_Tp(0), __a);
             if (std::__constexpr_isnan(__b))
-                __b = std::copysign(_Tp(0), __b);
+                __b = std::__constexpr_copysign(_Tp(0), __b);
             if (std::__constexpr_isnan(__c))
-                __c = std::copysign(_Tp(0), __c);
+                __c = std::__constexpr_copysign(_Tp(0), __c);
             if (std::__constexpr_isnan(__d))
-                __d = std::copysign(_Tp(0), __d);
+                __d = std::__constexpr_copysign(_Tp(0), __d);
             __recalc = true;
         }
         if (__recalc)
@@ -642,7 +675,7 @@ operator*(const complex<_Tp>& __z, const complex<_Tp>& __w)
 }
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 complex<_Tp>
 operator*(const complex<_Tp>& __x, const _Tp& __y)
 {
@@ -652,7 +685,7 @@ operator*(const complex<_Tp>& __x, const _Tp& __y)
 }
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 complex<_Tp>
 operator*(const _Tp& __x, const complex<_Tp>& __y)
 {
@@ -662,7 +695,7 @@ operator*(const _Tp& __x, const complex<_Tp>& __y)
 }
 
 template<class _Tp>
-_LIBCPP_HIDE_FROM_ABI complex<_Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
 operator/(const complex<_Tp>& __z, const complex<_Tp>& __w)
 {
     int __ilogbw = 0;
@@ -670,34 +703,74 @@ operator/(const complex<_Tp>& __z, const complex<_Tp>& __w)
     _Tp __b = __z.imag();
     _Tp __c = __w.real();
     _Tp __d = __w.imag();
-    _Tp __logbw = std::logb(std::fmax(std::fabs(__c), std::fabs(__d)));
+    _Tp __logbw = std::__constexpr_logb(std::__constexpr_fmax(std::__constexpr_fabs(__c), std::__constexpr_fabs(__d)));
     if (std::__constexpr_isfinite(__logbw))
     {
         __ilogbw = static_cast<int>(__logbw);
-        __c = std::scalbn(__c, -__ilogbw);
-        __d = std::scalbn(__d, -__ilogbw);
+        __c = std::__constexpr_scalbn(__c, -__ilogbw);
+        __d = std::__constexpr_scalbn(__d, -__ilogbw);
     }
+
+    // Avoid floating point operations that are invalid during constant evaluation
+    if (__libcpp_is_constant_evaluated()) {
+        bool __z_zero = __a == _Tp(0) && __b == _Tp(0);
+        bool __w_zero = __c == _Tp(0) && __d == _Tp(0);
+        bool __z_inf = std::__constexpr_isinf(__a) || std::__constexpr_isinf(__b);
+        bool __w_inf = std::__constexpr_isinf(__c) || std::__constexpr_isinf(__d);
+        bool __z_nan = !__z_inf && (
+            (std::__constexpr_isnan(__a) && std::__constexpr_isnan(__b))
+            || (std::__constexpr_isnan(__a) && __b == _Tp(0))
+            || (__a == _Tp(0) && std::__constexpr_isnan(__b))
+        );
+        bool __w_nan = !__w_inf && (
+            (std::__constexpr_isnan(__c) && std::__constexpr_isnan(__d))
+            || (std::__constexpr_isnan(__c) && __d == _Tp(0))
+            || (__c == _Tp(0) && std::__constexpr_isnan(__d))
+        );
+        if ((__z_nan || __w_nan) || (__z_inf && __w_inf)) {
+            return complex<_Tp>(_Tp(numeric_limits<_Tp>::quiet_NaN()), _Tp(0));
+        }
+        bool __z_nonzero_nan = !__z_inf && !__z_nan && (std::__constexpr_isnan(__a) || std::__constexpr_isnan(__b));
+        bool __w_nonzero_nan = !__w_inf && !__w_nan && (std::__constexpr_isnan(__c) || std::__constexpr_isnan(__d));
+        if (__z_nonzero_nan || __w_nonzero_nan) {
+            if (__w_zero) {
+                return complex<_Tp>(_Tp(numeric_limits<_Tp>::infinity()), _Tp(numeric_limits<_Tp>::infinity()));
+            }
+            return complex<_Tp>(_Tp(numeric_limits<_Tp>::quiet_NaN()), _Tp(0));
+        }
+        if (__w_inf) {
+            return complex<_Tp>(_Tp(0), _Tp(0));
+        }
+        if (__z_inf) {
+            return complex<_Tp>(_Tp(numeric_limits<_Tp>::infinity()), _Tp(numeric_limits<_Tp>::infinity()));
+        }
+        if (__w_zero) {
+            if (__z_zero) {
+                return complex<_Tp>(_Tp(numeric_limits<_Tp>::quiet_NaN()), _Tp(0));
+            }
+            return complex<_Tp>(_Tp(numeric_limits<_Tp>::infinity()), _Tp(numeric_limits<_Tp>::infinity()));
+        }
+    }
+
     _Tp __denom = __c * __c + __d * __d;
-    _Tp __x = std::scalbn((__a * __c + __b * __d) / __denom, -__ilogbw);
-    _Tp __y = std::scalbn((__b * __c - __a * __d) / __denom, -__ilogbw);
+    _Tp __x = std::__constexpr_scalbn((__a * __c + __b * __d) / __denom, -__ilogbw);
+    _Tp __y = std::__constexpr_scalbn((__b * __c - __a * __d) / __denom, -__ilogbw);
     if (std::__constexpr_isnan(__x) && std::__constexpr_isnan(__y))
     {
         if ((__denom == _Tp(0)) && (!std::__constexpr_isnan(__a) || !std::__constexpr_isnan(__b)))
         {
-            __x = std::copysign(_Tp(INFINITY), __c) * __a;
-            __y = std::copysign(_Tp(INFINITY), __c) * __b;
-        }
-        else if ((std::__constexpr_isinf(__a) || std::__constexpr_isinf(__b)) && std::__constexpr_isfinite(__c) && std::__constexpr_isfinite(__d))
-        {
-            __a = std::copysign(std::__constexpr_isinf(__a) ? _Tp(1) : _Tp(0), __a);
-            __b = std::copysign(std::__constexpr_isinf(__b) ? _Tp(1) : _Tp(0), __b);
+            __x = std::__constexpr_copysign(_Tp(INFINITY), __c) * __a;
+            __y = std::__constexpr_copysign(_Tp(INFINITY), __c) * __b;
+        } else if ((std::__constexpr_isinf(__a) || std::__constexpr_isinf(__b)) && std::__constexpr_isfinite(__c) &&
+                   std::__constexpr_isfinite(__d)) {
+            __a = std::__constexpr_copysign(std::__constexpr_isinf(__a) ? _Tp(1) : _Tp(0), __a);
+            __b = std::__constexpr_copysign(std::__constexpr_isinf(__b) ? _Tp(1) : _Tp(0), __b);
             __x = _Tp(INFINITY) * (__a * __c + __b * __d);
             __y = _Tp(INFINITY) * (__b * __c - __a * __d);
-        }
-        else if (std::__constexpr_isinf(__logbw) && __logbw > _Tp(0) && std::__constexpr_isfinite(__a) && std::__constexpr_isfinite(__b))
-        {
-            __c = std::copysign(std::__constexpr_isinf(__c) ? _Tp(1) : _Tp(0), __c);
-            __d = std::copysign(std::__constexpr_isinf(__d) ? _Tp(1) : _Tp(0), __d);
+        } else if (std::__constexpr_isinf(__logbw) && __logbw > _Tp(0) && std::__constexpr_isfinite(__a) &&
+                   std::__constexpr_isfinite(__b)) {
+            __c = std::__constexpr_copysign(std::__constexpr_isinf(__c) ? _Tp(1) : _Tp(0), __c);
+            __d = std::__constexpr_copysign(std::__constexpr_isinf(__d) ? _Tp(1) : _Tp(0), __d);
             __x = _Tp(0) * (__a * __c + __b * __d);
             __y = _Tp(0) * (__b * __c - __a * __d);
         }
@@ -706,7 +779,7 @@ operator/(const complex<_Tp>& __z, const complex<_Tp>& __w)
 }
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 complex<_Tp>
 operator/(const complex<_Tp>& __x, const _Tp& __y)
 {
@@ -714,7 +787,7 @@ operator/(const complex<_Tp>& __x, const _Tp& __y)
 }
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 complex<_Tp>
 operator/(const _Tp& __x, const complex<_Tp>& __y)
 {
@@ -724,7 +797,7 @@ operator/(const _Tp& __x, const complex<_Tp>& __y)
 }
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 complex<_Tp>
 operator+(const complex<_Tp>& __x)
 {
@@ -732,7 +805,7 @@ operator+(const complex<_Tp>& __x)
 }
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 complex<_Tp>
 operator-(const complex<_Tp>& __x)
 {
@@ -903,7 +976,7 @@ arg(_Tp __re)
 // norm
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 _Tp
 norm(const complex<_Tp>& __c)
 {
@@ -915,7 +988,7 @@ norm(const complex<_Tp>& __c)
 }
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 typename __libcpp_complex_overload_traits<_Tp>::_ValueType
 norm(_Tp __re)
 {
@@ -926,7 +999,7 @@ norm(_Tp __re)
 // conj
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 complex<_Tp>
 conj(const complex<_Tp>& __c)
 {
@@ -934,7 +1007,7 @@ conj(const complex<_Tp>& __c)
 }
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 typename __libcpp_complex_overload_traits<_Tp>::_ComplexType
 conj(_Tp __re)
 {
