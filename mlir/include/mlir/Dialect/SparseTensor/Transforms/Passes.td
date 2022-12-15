@@ -301,4 +301,28 @@ def SparseVectorization : Pass<"sparse-vectorization", "ModuleOp"> {
   ];
 }
 
+def StorageSpecifierToLLVM : Pass<"sparse-storage-specifier-to-llvm", "ModuleOp"> {
+  let summary = "Lower sparse storage specifer to llvm structure";
+  let description = [{
+     This pass rewrites sparse tensor storage specifier-related operations into
+     LLVMDialect, and converts sparse tensor storage specifier into an llvm.struct.
+
+     Example of the conversion:
+     ```mlir
+     Before:
+       %0 = sparse_tensor.storage_specifier.get %arg0 dim_sz at 0
+       : !sparse_tensor.storage_specifier<#CSR> to i64
+
+     After:
+       %0 = llvm.extractvalue %arg0[0, 0] : !llvm.struct<(array<2 x i64>, array<3 x i64>)>
+     ```
+  }];
+  let constructor = "mlir::createStorageSpecifierToLLVMPass()";
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "LLVM::LLVMDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+}
+
 #endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_PASSES
