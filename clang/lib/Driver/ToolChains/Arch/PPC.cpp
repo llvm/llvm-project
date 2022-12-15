@@ -39,7 +39,12 @@ std::string ppc::getPPCTargetCPU(const ArgList &Args, const llvm::Triple &T) {
   if (Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ)) {
     StringRef CPUName = A->getValue();
 
-    if (CPUName == "generic")
+    // Clang/LLVM does not actually support code generation
+    // for the 405 CPU. However, there are uses of this CPU ID
+    // in projects that previously used GCC and rely on Clang
+    // accepting it. Clang has always ignored it and passed the
+    // generic CPU ID to the back end.
+    if (CPUName == "generic" || CPUName == "405")
       return getPPCGenericTargetCPU(T);
 
     if (CPUName == "native") {
