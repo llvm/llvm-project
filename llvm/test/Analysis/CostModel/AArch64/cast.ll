@@ -680,24 +680,24 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r3 = sext i16 %b to i32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r4 = sext i16 %b to i64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r5 = sext i32 %c to i64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r0, i16* undef, align 2
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r1, i32* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r2, i64* undef, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r3, i32* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r4, i64* undef, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r5, i64* undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r0, ptr undef, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r1, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r2, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r3, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r4, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r5, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r6 = zext i8 %a to i16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r7 = zext i8 %a to i32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r8 = zext i8 %a to i64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r9 = zext i16 %b to i32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r10 = zext i16 %b to i64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r11 = zext i32 %c to i64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r6, i16* undef, align 2
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r7, i32* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r8, i64* undef, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r9, i32* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r10, i64* undef, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r11, i64* undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r6, ptr undef, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r7, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r8, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r9, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r10, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r11, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r12 = trunc i64 %d to i32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r13 = trunc i64 %d to i16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r14 = trunc i64 %d to i8
@@ -721,14 +721,14 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r23 = zext i1 %e to i16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r24 = zext i1 %e to i32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r25 = zext i1 %e to i64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i8 %r18, i8* undef, align 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r19, i16* undef, align 2
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r20, i32* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r21, i64* undef, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i8 %r22, i8* undef, align 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r23, i16* undef, align 2
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r24, i32* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r25, i64* undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i8 %r18, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r19, ptr undef, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r20, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r21, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i8 %r22, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r23, ptr undef, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r24, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 %r25, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %r12
 ;
   %r0 = sext i8 %a to i16
@@ -737,12 +737,12 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
   %r3 = sext i16 %b to i32
   %r4 = sext i16 %b to i64
   %r5 = sext i32 %c to i64
-  store i16 %r0, i16* undef
-  store i32 %r1, i32* undef
-  store i64 %r2, i64* undef
-  store i32 %r3, i32* undef
-  store i64 %r4, i64* undef
-  store i64 %r5, i64* undef
+  store i16 %r0, ptr undef
+  store i32 %r1, ptr undef
+  store i64 %r2, ptr undef
+  store i32 %r3, ptr undef
+  store i64 %r4, ptr undef
+  store i64 %r5, ptr undef
 
   %r6 = zext i8 %a to i16
   %r7 = zext i8 %a to i32
@@ -750,12 +750,12 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
   %r9 = zext i16 %b to i32
   %r10 = zext i16 %b to i64
   %r11 = zext i32 %c to i64
-  store i16 %r6, i16* undef
-  store i32 %r7, i32* undef
-  store i64 %r8, i64* undef
-  store i32 %r9, i32* undef
-  store i64 %r10, i64* undef
-  store i64 %r11, i64* undef
+  store i16 %r6, ptr undef
+  store i32 %r7, ptr undef
+  store i64 %r8, ptr undef
+  store i32 %r9, ptr undef
+  store i64 %r10, ptr undef
+  store i64 %r11, ptr undef
 
   %r12 = trunc i64 %d to i32
   %r13 = trunc i64 %d to i16
@@ -782,14 +782,14 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
   %r23 = zext i1 %e to i16
   %r24 = zext i1 %e to i32
   %r25 = zext i1 %e to i64
-  store i8 %r18, i8* undef
-  store i16 %r19, i16* undef
-  store i32 %r20, i32* undef
-  store i64 %r21, i64* undef
-  store i8 %r22, i8* undef
-  store i16 %r23, i16* undef
-  store i32 %r24, i32* undef
-  store i64 %r25, i64* undef
+  store i8 %r18, ptr undef
+  store i16 %r19, ptr undef
+  store i32 %r20, ptr undef
+  store i64 %r21, ptr undef
+  store i8 %r22, ptr undef
+  store i16 %r23, ptr undef
+  store i32 %r24, ptr undef
+  store i64 %r25, ptr undef
   ret i32 %r12
 }
 
@@ -818,18 +818,18 @@ define i32 @bitcasts() {
 
 define i32 @load_extends() #0 {
 ; CHECK-LABEL: 'load_extends'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadi8 = load i8, i8* undef, align 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadi16 = load i16, i16* undef, align 2
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadi32 = load i32, i32* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %loadv2i8 = load <2 x i8>, <2 x i8>* undef, align 2
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv4i8 = load <4 x i8>, <4 x i8>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv8i8 = load <8 x i8>, <8 x i8>* undef, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %loadv2i16 = load <2 x i16>, <2 x i16>* undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv4i16 = load <4 x i16>, <4 x i16>* undef, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv2i32 = load <2 x i32>, <2 x i32>* undef, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv4i32 = load <4 x i32>, <4 x i32>* undef, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadnxv2i32 = load <vscale x 2 x i32>, <vscale x 2 x i32>* undef, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadnxv4i32 = load <vscale x 4 x i32>, <vscale x 4 x i32>* undef, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadi8 = load i8, ptr undef, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadi16 = load i16, ptr undef, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadi32 = load i32, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %loadv2i8 = load <2 x i8>, ptr undef, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv4i8 = load <4 x i8>, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv8i8 = load <8 x i8>, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %loadv2i16 = load <2 x i16>, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv4i16 = load <4 x i16>, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv2i32 = load <2 x i32>, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv4i32 = load <4 x i32>, ptr undef, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadnxv2i32 = load <vscale x 2 x i32>, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadnxv4i32 = load <vscale x 4 x i32>, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r0 = sext i8 %loadi8 to i16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r1 = zext i8 %loadi8 to i16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r2 = sext i8 %loadi8 to i32
@@ -862,18 +862,18 @@ define i32 @load_extends() #0 {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v17 = zext <vscale x 4 x i32> %loadnxv4i32 to <vscale x 4 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
-  %loadi8 = load i8, i8* undef
-  %loadi16 = load i16, i16* undef
-  %loadi32 = load i32, i32* undef
-  %loadv2i8 = load <2 x i8>, <2 x i8>* undef
-  %loadv4i8 = load <4 x i8>, <4 x i8>* undef
-  %loadv8i8 = load <8 x i8>, <8 x i8>* undef
-  %loadv2i16 = load <2 x i16>, <2 x i16>* undef
-  %loadv4i16 = load <4 x i16>, <4 x i16>* undef
-  %loadv2i32 = load <2 x i32>, <2 x i32>* undef
-  %loadv4i32 = load <4 x i32>, <4 x i32>* undef
-  %loadnxv2i32 = load <vscale x 2 x i32>, <vscale x 2 x i32>* undef
-  %loadnxv4i32 = load <vscale x 4 x i32>, <vscale x 4 x i32>* undef
+  %loadi8 = load i8, ptr undef
+  %loadi16 = load i16, ptr undef
+  %loadi32 = load i32, ptr undef
+  %loadv2i8 = load <2 x i8>, ptr undef
+  %loadv4i8 = load <4 x i8>, ptr undef
+  %loadv8i8 = load <8 x i8>, ptr undef
+  %loadv2i16 = load <2 x i16>, ptr undef
+  %loadv4i16 = load <4 x i16>, ptr undef
+  %loadv2i32 = load <2 x i32>, ptr undef
+  %loadv4i32 = load <4 x i32>, ptr undef
+  %loadnxv2i32 = load <vscale x 2 x i32>, ptr undef
+  %loadnxv4i32 = load <vscale x 4 x i32>, ptr undef
 
   %r0 = sext i8 %loadi8 to i16
   %r1 = zext i8 %loadi8 to i16
@@ -913,31 +913,31 @@ define i32 @load_extends() #0 {
 define i32 @store_truncs() {
 ; CHECK-LABEL: 'store_truncs'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r0 = trunc i64 undef to i8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i8 %r0, i8* undef, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i8 %r0, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r1 = trunc i64 undef to i16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r1, i16* undef, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r1, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r2 = trunc i64 undef to i32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r2, i32* undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %r2, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r3 = trunc i32 undef to i8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i8 %r3, i8* undef, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i8 %r3, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r4 = trunc i32 undef to i16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r4, i16* undef, align 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %r4, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r5 = trunc i16 undef to i8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i8 %r5, i8* undef, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i8 %r5, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %r0 = trunc i64 undef to i8
-  store i8 %r0, i8* undef
+  store i8 %r0, ptr undef
   %r1 = trunc i64 undef to i16
-  store i16 %r1, i16* undef
+  store i16 %r1, ptr undef
   %r2 = trunc i64 undef to i32
-  store i32 %r2, i32* undef
+  store i32 %r2, ptr undef
   %r3 = trunc i32 undef to i8
-  store i8 %r3, i8* undef
+  store i8 %r3, ptr undef
   %r4 = trunc i32 undef to i16
-  store i16 %r4, i16* undef
+  store i16 %r4, ptr undef
   %r5 = trunc i16 undef to i8
-  store i8 %r5, i8* undef
+  store i8 %r5, ptr undef
   ret i32 undef
 }
 
