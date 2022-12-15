@@ -2,7 +2,7 @@
 ; RUN:   -O0 -relocation-model=pic -code-model=small %s
 ; XFAIL: target={{(mips|mipsel)-.*}}, target={{(aarch64|arm).*}}, target={{(i686|i386).*}}
 ; XFAIL: target={{.*-windows-(gnu|msvc)}}
-; UNSUPPORTED: powerpc64-unknown-linux-gnu
+; UNSUPPORTED: target=powerpc64-unknown-linux-gnu
 ; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed
 
 @.str = private unnamed_addr constant [6 x i8] c"data1\00", align 1
