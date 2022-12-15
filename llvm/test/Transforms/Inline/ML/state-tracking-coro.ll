@@ -2,7 +2,7 @@
 ; Corosplit will keep f1 and add 3 more functions.
 ; RUN: opt -passes='default<O1>,print<inline-advisor>' -training-log=/dev/null \
 ; RUN:   -S -enable-ml-inliner=development -keep-inline-advisor-for-printing < %s 2>&1 | FileCheck %s
-; REQUIRES: have_tf_api
+; REQUIRES: have_tflite
 ;
 ; CHECK: [MLInlineAdvisor] Nodes: 4 Edges: 0
 
