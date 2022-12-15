@@ -169,6 +169,10 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     /// Returns the type for index storage based on indexBitWidth
     Type getIndexType() const;
+
+    /// Constructs a new encoding with the dimOrdering and higherOrdering
+    /// reset to the default/identity.
+    SparseTensorEncodingAttr withoutOrdering() const;
   }];
 
   let genVerifyDecl = 1;

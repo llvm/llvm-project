@@ -529,9 +529,7 @@ genSparse2SparseReshape(ReshapeOp op, typename ReshapeOp::Adaptor adaptor,
   assert(elemTp == dstTp.getElementType() &&
          "reshape should not change element type");
   // Start an iterator over the source tensor (in original index order).
-  auto noPerm = SparseTensorEncodingAttr::get(
-      op->getContext(), encSrc.getDimLevelType(), AffineMap(), AffineMap(),
-      encSrc.getPointerBitWidth(), encSrc.getIndexBitWidth());
+  const auto noPerm = encSrc.withoutOrdering();
   SmallVector<Value> srcDimSizes =
       getDimSizes(rewriter, loc, encSrc, srcTp, adaptor.getSrc());
   NewCallParams params(rewriter, loc);
@@ -596,9 +594,7 @@ static void genSparseCOOIterationLoop(
   Type elemTp = tensorTp.getElementType();
 
   // Start an iterator over the tensor (in original index order).
-  auto noPerm = SparseTensorEncodingAttr::get(
-      rewriter.getContext(), enc.getDimLevelType(), AffineMap(), AffineMap(),
-      enc.getPointerBitWidth(), enc.getIndexBitWidth());
+  const auto noPerm = enc.withoutOrdering();
   SmallVector<Value> dimSizes = getDimSizes(rewriter, loc, noPerm, tensorTp, t);
   Value iter = NewCallParams(rewriter, loc)
                    .genBuffers(noPerm, dimSizes, tensorTp)
@@ -1485,9 +1481,7 @@ public:
     auto encSrc = getSparseTensorEncoding(srcType);
     SmallVector<Value> dimSizes =
         getDimSizes(rewriter, loc, encSrc, srcType, src);
-    auto enc = SparseTensorEncodingAttr::get(
-        op->getContext(), encSrc.getDimLevelType(), AffineMap(), AffineMap(),
-        encSrc.getPointerBitWidth(), encSrc.getIndexBitWidth());
+    const auto enc = encSrc.withoutOrdering();
     Value coo = NewCallParams(rewriter, loc)
                     .genBuffers(enc, dimSizes, srcType)
                     .genNewCall(Action::kToCOO, src);
