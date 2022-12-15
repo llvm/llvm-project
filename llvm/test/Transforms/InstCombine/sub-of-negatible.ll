@@ -169,7 +169,7 @@ define i8 @t7(i8 %x, i1 %y, i8 %z) {
 }
 define i8 @n8(i8 %x, i1 %y, i8 %z) {
 ; CHECK-LABEL: @n8(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = select i1 [[Y:%.*]], i8 0, i8 [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = sub i8 [[X:%.*]], [[T1]]

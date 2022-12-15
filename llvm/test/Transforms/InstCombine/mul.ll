@@ -137,7 +137,7 @@ define i32 @shl1_nuw_commute(i32 %A, i32 %B) {
 
 define i32 @shl1_nsw(i32 %A) {
 ; CHECK-LABEL: @shl1_nsw(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[A:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[A:%.*]]
 ; CHECK-NEXT:    [[C1:%.*]] = shl i32 [[SHL]], [[A]]
 ; CHECK-NEXT:    ret i32 [[C1]]
 ;
@@ -214,9 +214,9 @@ define i5 @shl1_nsw_nsw_increment_commute(i5 %x, i5 %y) {
 
 define i32 @shl1_increment_use(i32 %x, i32 %y) {
 ; CHECK-LABEL: @shl1_increment_use(
-; CHECK-NEXT:    [[POW2X:%.*]] = shl i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[POW2X:%.*]] = shl nuw i32 1, [[X:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[POW2X]])
-; CHECK-NEXT:    [[X1:%.*]] = add i32 [[POW2X]], 1
+; CHECK-NEXT:    [[X1:%.*]] = add nuw i32 [[POW2X]], 1
 ; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;

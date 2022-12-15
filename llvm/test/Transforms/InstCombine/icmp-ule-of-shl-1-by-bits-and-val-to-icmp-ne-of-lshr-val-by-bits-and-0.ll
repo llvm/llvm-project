@@ -71,7 +71,7 @@ define i1 @c0(i8 %bits) {
 ; What if we have the same pattern on both sides?
 define i1 @both(i8 %bits0, i8 %bits1) {
 ; CHECK-LABEL: @both(
-; CHECK-NEXT:    [[T1:%.*]] = shl i8 1, [[BITS1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nuw i8 1, [[BITS1:%.*]]
 ; CHECK-NEXT:    [[T1_HIGHBITS:%.*]] = lshr i8 [[T1]], [[BITS0:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[T1_HIGHBITS]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -90,7 +90,7 @@ declare void @use8(i8)
 
 define i1 @oneuse0(i8 %val, i8 %bits) {
 ; CHECK-LABEL: @oneuse0(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 1, [[BITS:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw i8 1, [[BITS:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[T0]], [[VAL:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -129,7 +129,7 @@ define <2 x i1> @n1_vec_nonsplat(<2 x i8> %val, <2 x i8> %bits) {
 
 define i1 @n2(i8 %val, i8 %bits) {
 ; CHECK-LABEL: @n2(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 1, [[BITS:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw i8 1, [[BITS:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[T0]], [[VAL:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -140,7 +140,7 @@ define i1 @n2(i8 %val, i8 %bits) {
 
 define i1 @n3(i8 %bits) {
 ; CHECK-LABEL: @n3(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 1, [[BITS:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw i8 1, [[BITS:%.*]]
 ; CHECK-NEXT:    [[VAL:%.*]] = call i8 @gen8()
 ; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[VAL]], [[T0]]
 ; CHECK-NEXT:    ret i1 [[R]]
