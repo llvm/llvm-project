@@ -68,7 +68,7 @@ using namespace lld::elf;
 // 00001002       2 - bytes padding
 // 00001004 __CortexA8657417_00000FFE: B.w func
 
-class elf::Patch657417Section : public SyntheticSection {
+class elf::Patch657417Section final : public SyntheticSection {
 public:
   Patch657417Section(InputSection *p, uint64_t off, uint32_t instr, bool isARM);
 

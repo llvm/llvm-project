@@ -91,9 +91,9 @@ subroutine s7
   type(t2) :: x
   integer :: j
   j = x%i2
-  !ERROR: PRIVATE component 'i3' is only accessible within module 'm7'
+  !ERROR: PRIVATE name 'i3' is only accessible within module 'm7'
   j = x%i3
-  !ERROR: PRIVATE component 't1' is only accessible within module 'm7'
+  !ERROR: PRIVATE name 't1' is only accessible within module 'm7'
   j = x%t1%i1
 end
 
@@ -117,11 +117,11 @@ end
 subroutine s8
   use m8
   type(t) :: x
-  !ERROR: PRIVATE component 'i2' is only accessible within module 'm8'
+  !ERROR: PRIVATE name 'i2' is only accessible within module 'm8'
   x = t(2, 5)
-  !ERROR: PRIVATE component 'i2' is only accessible within module 'm8'
+  !ERROR: PRIVATE name 'i2' is only accessible within module 'm8'
   x = t(i1=2, i2=5)
-  !ERROR: PRIVATE component 'i2' is only accessible within module 'm8'
+  !ERROR: PRIVATE name 'i2' is only accessible within module 'm8'
   a = [y%i2]
 end
 
@@ -143,3 +143,24 @@ contains
     x = t(i1=2, i2=5)  !OK
   end
 end
+
+module m10
+  type t
+    integer n
+   contains
+    procedure :: f
+    generic, private :: operator(+) => f
+  end type
+ contains
+  type(t) function f(x,y)
+    class(t), intent(in) :: x, y
+    f = t(x%n + y%n)
+  end function
+end module
+subroutine s10
+  use m10
+  type(t) x
+  x = t(1)
+  !ERROR: PRIVATE name 'operator(+)' is only accessible within module 'm10'
+  x = x + x
+end subroutine
