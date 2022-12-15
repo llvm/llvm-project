@@ -12,4 +12,5 @@ add_llvm_component_library(LLVMRemoteCacheServer
 
   LINK_COMPONENTS
   Support
+  CAS
 )
