@@ -96,7 +96,7 @@ void BrainF::header(LLVMContext& C) {
   allocsize = ConstantExpr::getTruncOrBitCast(allocsize, IntPtrTy);
   ptr_arr = CallInst::CreateMalloc(BB, IntPtrTy, Int8Ty, allocsize, val_mem, 
                                    nullptr, "arr");
-  cast<Instruction>(ptr_arr)->insertAt(BB, BB->end());
+  cast<Instruction>(ptr_arr)->insertInto(BB, BB->end());
 
   //call void @llvm.memset.p0i8.i32(i8 *%arr, i8 0, i32 %d, i1 0)
   {
@@ -128,7 +128,7 @@ void BrainF::header(LLVMContext& C) {
   endbb = BasicBlock::Create(C, label, brainf_func);
 
   //call free(i8 *%arr)
-  CallInst::CreateFree(ptr_arr, endbb)->insertAt(endbb, endbb->end());
+  CallInst::CreateFree(ptr_arr, endbb)->insertInto(endbb, endbb->end());
 
   //ret void
   ReturnInst::Create(C, endbb);
