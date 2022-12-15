@@ -117,6 +117,7 @@ public:
   const Scope *GetDerivedTypeParent() const;
   const Scope &GetDerivedTypeBase() const;
   inline std::optional<SourceName> GetName() const;
+  // Returns true if this scope contains, or is, another scope.
   bool Contains(const Scope &) const;
   /// Make a scope nested in this one
   Scope &MakeScope(Kind kind, Symbol *symbol = nullptr);

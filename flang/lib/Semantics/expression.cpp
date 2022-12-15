@@ -155,8 +155,10 @@ public:
 
   // Find and return a user-defined operator or report an error.
   // The provided message is used if there is no such operator.
-  MaybeExpr TryDefinedOp(const char *, parser::MessageFixedText,
-      const Symbol **definedOpSymbolPtr = nullptr, bool isUserOp = false);
+  // If a definedOpSymbolPtr is provided, the caller must check
+  // for its accessibility.
+  MaybeExpr TryDefinedOp(
+      const char *, parser::MessageFixedText, bool isUserOp = false);
   template <typename E>
   MaybeExpr TryDefinedOp(E opr, parser::MessageFixedText msg) {
     return TryDefinedOp(
@@ -175,7 +177,7 @@ private:
   MaybeExpr AnalyzeExprOrWholeAssumedSizeArray(const parser::Expr &);
   bool AreConformable() const;
   const Symbol *FindBoundOp(parser::CharBlock, int passIndex,
-      const Symbol *&definedOp, bool isSubroutine);
+      const Symbol *&generic, bool isSubroutine);
   void AddAssignmentConversion(
       const DynamicType &lhsType, const DynamicType &rhsType);
   bool OkLogicalIntegerAssignment(TypeCategory lhs, TypeCategory rhs);
@@ -1778,10 +1780,9 @@ MaybeExpr ExpressionAnalyzer::Analyze(
       }
     }
     if (symbol) {
-      if (const auto *currScope{context_.globalScope().FindScope(source)}) {
-        if (auto msg{CheckAccessibleComponent(*currScope, *symbol)}) {
-          Say(source, *msg);
-        }
+      const semantics::Scope &innermost{context_.FindScope(expr.source)};
+      if (auto msg{CheckAccessibleSymbol(innermost, *symbol)}) {
+        Say(expr.source, std::move(*msg));
       }
       if (checkConflicts) {
         auto componentIter{
@@ -1809,7 +1810,6 @@ MaybeExpr ExpressionAnalyzer::Analyze(
       }
       unavailable.insert(symbol->name());
       if (value) {
-        const auto &innermost{context_.FindScope(expr.source)};
         if (symbol->has<semantics::ProcEntityDetails>()) {
           CHECK(IsPointer(*symbol));
         } else if (symbol->has<semantics::ObjectEntityDetails>()) {
@@ -2869,7 +2869,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::DefinedUnary &x) {
   ArgumentAnalyzer analyzer{*this, name.source};
   analyzer.Analyze(std::get<1>(x.t));
   return analyzer.TryDefinedOp(name.source.ToString().c_str(),
-      "No operator %s defined for %s"_err_en_US, nullptr, true);
+      "No operator %s defined for %s"_err_en_US, true);
 }
 
 // Binary (dyadic) operations
@@ -3053,7 +3053,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::DefinedBinary &x) {
   analyzer.Analyze(std::get<1>(x.t));
   analyzer.Analyze(std::get<2>(x.t));
   return analyzer.TryDefinedOp(name.source.ToString().c_str(),
-      "No operator %s defined for %s and %s"_err_en_US, nullptr, true);
+      "No operator %s defined for %s and %s"_err_en_US, true);
 }
 
 // Returns true if a parsed function reference should be converted
@@ -3635,63 +3635,100 @@ bool ArgumentAnalyzer::CheckForNullPointer(const char *where) {
   return true;
 }
 
-MaybeExpr ArgumentAnalyzer::TryDefinedOp(const char *opr,
-    parser::MessageFixedText error, const Symbol **definedOpSymbolPtr,
-    bool isUserOp) {
+MaybeExpr ArgumentAnalyzer::TryDefinedOp(
+    const char *opr, parser::MessageFixedText error, bool isUserOp) {
   if (AnyUntypedOrMissingOperand()) {
     context_.Say(error, ToUpperCase(opr), TypeAsFortran(0), TypeAsFortran(1));
     return std::nullopt;
   }
-  const Symbol *localDefinedOpSymbolPtr{nullptr};
-  if (!definedOpSymbolPtr) {
-    definedOpSymbolPtr = &localDefinedOpSymbolPtr;
-  }
+  MaybeExpr result;
+  bool anyPossibilities{false};
+  std::optional<parser::MessageFormattedText> inaccessible;
+  std::vector<const Symbol *> hit;
+  std::string oprNameString{
+      isUserOp ? std::string{opr} : "operator("s + opr + ')'};
+  parser::CharBlock oprName{oprNameString};
   {
     auto restorer{context_.GetContextualMessages().DiscardMessages()};
-    std::string oprNameString{
-        isUserOp ? std::string{opr} : "operator("s + opr + ')'};
-    parser::CharBlock oprName{oprNameString};
     const auto &scope{context_.context().FindScope(source_)};
     if (Symbol *symbol{scope.FindSymbol(oprName)}) {
-      *definedOpSymbolPtr = symbol;
+      anyPossibilities = true;
       parser::Name name{symbol->name(), symbol};
-      if (auto result{context_.AnalyzeDefinedOp(name, GetActuals())}) {
-        return result;
+      result = context_.AnalyzeDefinedOp(name, GetActuals());
+      if (result) {
+        inaccessible = CheckAccessibleSymbol(scope, *symbol);
+        if (inaccessible) {
+          result.reset();
+        } else {
+          hit.push_back(symbol);
+        }
       }
     }
     for (std::size_t passIndex{0}; passIndex < actuals_.size(); ++passIndex) {
-      if (const Symbol *
-          symbol{FindBoundOp(oprName, passIndex, *definedOpSymbolPtr, false)}) {
-        if (MaybeExpr result{TryBoundOp(*symbol, passIndex)}) {
-          return result;
+      const Symbol *generic{nullptr};
+      if (const Symbol *binding{
+              FindBoundOp(oprName, passIndex, generic, false)}) {
+        anyPossibilities = true;
+        if (MaybeExpr thisResult{TryBoundOp(*binding, passIndex)}) {
+          if (auto thisInaccessible{
+                  CheckAccessibleSymbol(scope, DEREF(generic))}) {
+            inaccessible = thisInaccessible;
+          } else {
+            result = std::move(thisResult);
+            hit.push_back(binding);
+          }
         }
       }
     }
   }
-  if (*definedOpSymbolPtr) {
-    SayNoMatch(ToUpperCase((*definedOpSymbolPtr)->name().ToString()));
-  } else if (actuals_.size() == 1 || AreConformable()) {
-    if (CheckForNullPointer()) {
-      context_.Say(error, ToUpperCase(opr), TypeAsFortran(0), TypeAsFortran(1));
+  if (result) {
+    if (hit.size() > 1) {
+      if (auto *msg{context_.Say(
+              "%zd matching accessible generic interfaces for %s were found"_err_en_US,
+              hit.size(), ToUpperCase(opr))}) {
+        for (const Symbol *symbol : hit) {
+          AttachDeclaration(*msg, *symbol);
+        }
+      }
     }
-  } else {
+  } else if (inaccessible) {
+    context_.Say(source_, std::move(*inaccessible));
+  } else if (anyPossibilities) {
+    SayNoMatch(ToUpperCase(oprNameString), false);
+  } else if (actuals_.size() == 2 && !AreConformable()) {
     context_.Say(
         "Operands of %s are not conformable; have rank %d and rank %d"_err_en_US,
         ToUpperCase(opr), actuals_[0]->Rank(), actuals_[1]->Rank());
+  } else if (CheckForNullPointer()) {
+    context_.Say(error, ToUpperCase(opr), TypeAsFortran(0), TypeAsFortran(1));
   }
-  return std::nullopt;
+  return result;
 }
 
 MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     std::vector<const char *> oprs, parser::MessageFixedText error) {
-  const Symbol *definedOpSymbolPtr{nullptr};
-  for (std::size_t i{1}; i < oprs.size(); ++i) {
+  if (oprs.size() == 1) {
+    return TryDefinedOp(oprs[0], error);
+  }
+  MaybeExpr result;
+  std::vector<const char *> hit;
+  {
     auto restorer{context_.GetContextualMessages().DiscardMessages()};
-    if (auto result{TryDefinedOp(oprs[i], error, &definedOpSymbolPtr)}) {
-      return result;
+    for (std::size_t i{0}; i < oprs.size(); ++i) {
+      if (MaybeExpr thisResult{TryDefinedOp(oprs[i], error)}) {
+        result = std::move(thisResult);
+        hit.push_back(oprs[i]);
+      }
     }
   }
-  return TryDefinedOp(oprs[0], error, &definedOpSymbolPtr);
+  if (hit.empty()) { // for the error
+    result = TryDefinedOp(oprs[0], error);
+  } else if (hit.size() > 1) {
+    context_.Say(
+        "Matching accessible definitions were found with %zd variant spellings of the generic operator ('%s', '%s')"_err_en_US,
+        hit.size(), ToUpperCase(hit[0]), ToUpperCase(hit[1]));
+  }
+  return result;
 }
 
 MaybeExpr ArgumentAnalyzer::TryBoundOp(const Symbol &symbol, int passIndex) {
@@ -3768,31 +3805,34 @@ bool ArgumentAnalyzer::OkLogicalIntegerAssignment(
 }
 
 std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
-  auto restorer{context_.GetContextualMessages().DiscardMessages()};
+  const Symbol *proc{nullptr};
+  int passedObjectIndex{-1};
   std::string oprNameString{"assignment(=)"};
   parser::CharBlock oprName{oprNameString};
-  const Symbol *proc{nullptr};
   const auto &scope{context_.context().FindScope(source_)};
-  if (const Symbol *symbol{scope.FindSymbol(oprName)}) {
-    ExpressionAnalyzer::AdjustActuals noAdjustment;
-    auto pair{context_.ResolveGeneric(*symbol, actuals_, noAdjustment, true)};
-    if (pair.first) {
-      proc = pair.first;
-    } else {
-      context_.EmitGenericResolutionError(*symbol, pair.second, true);
-    }
-  }
-  int passedObjectIndex{-1};
-  const Symbol *definedOpSymbol{nullptr};
-  for (std::size_t i{0}; i < actuals_.size(); ++i) {
-    if (const Symbol *
-        specific{FindBoundOp(oprName, i, definedOpSymbol, true)}) {
-      if (const Symbol *
-          resolution{GetBindingResolution(GetType(i), *specific)}) {
-        proc = resolution;
+  // If multiple resolutions were possible, they will have been already
+  // diagnosed.
+  {
+    auto restorer{context_.GetContextualMessages().DiscardMessages()};
+    if (const Symbol *symbol{scope.FindSymbol(oprName)}) {
+      ExpressionAnalyzer::AdjustActuals noAdjustment;
+      auto pair{context_.ResolveGeneric(*symbol, actuals_, noAdjustment, true)};
+      if (pair.first) {
+        proc = pair.first;
       } else {
-        proc = specific;
-        passedObjectIndex = i;
+        context_.EmitGenericResolutionError(*symbol, pair.second, true);
+      }
+    }
+    for (std::size_t i{0}; i < actuals_.size(); ++i) {
+      const Symbol *generic{nullptr};
+      if (const Symbol *specific{FindBoundOp(oprName, i, generic, true)}) {
+        if (const Symbol *resolution{
+                GetBindingResolution(GetType(i), *specific)}) {
+          proc = resolution;
+        } else {
+          proc = specific;
+          passedObjectIndex = i;
+        }
       }
     }
   }
@@ -3871,24 +3911,23 @@ bool ArgumentAnalyzer::AreConformable() const {
 
 // Look for a type-bound operator in the type of arg number passIndex.
 const Symbol *ArgumentAnalyzer::FindBoundOp(parser::CharBlock oprName,
-    int passIndex, const Symbol *&definedOp, bool isSubroutine) {
+    int passIndex, const Symbol *&generic, bool isSubroutine) {
   const auto *type{GetDerivedTypeSpec(GetType(passIndex))};
   if (!type || !type->scope()) {
     return nullptr;
   }
-  const Symbol *symbol{type->scope()->FindComponent(oprName)};
-  if (!symbol) {
+  generic = type->scope()->FindComponent(oprName);
+  if (!generic) {
     return nullptr;
   }
-  definedOp = symbol;
   ExpressionAnalyzer::AdjustActuals adjustment{
       [&](const Symbol &proc, ActualArguments &) {
         return passIndex == GetPassIndex(proc);
       }};
   auto pair{
-      context_.ResolveGeneric(*symbol, actuals_, adjustment, isSubroutine)};
+      context_.ResolveGeneric(*generic, actuals_, adjustment, isSubroutine)};
   if (!pair.first) {
-    context_.EmitGenericResolutionError(*symbol, pair.second, isSubroutine);
+    context_.EmitGenericResolutionError(*generic, pair.second, isSubroutine);
   }
   return pair.first;
 }

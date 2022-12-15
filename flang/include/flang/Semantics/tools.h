@@ -85,8 +85,13 @@ bool IsIntrinsicConcat(
 bool IsGenericDefinedOp(const Symbol &);
 bool IsDefinedOperator(SourceName);
 std::string MakeOpName(SourceName);
+
+// Returns true if maybeAncestor exists and is a proper ancestor of a
+// descendent scope (or symbol owner).  Will be false, unlike Scope::Contains(),
+// if maybeAncestor *is* the descendent.
 bool DoesScopeContain(const Scope *maybeAncestor, const Scope &maybeDescendent);
 bool DoesScopeContain(const Scope *, const Symbol &);
+
 bool IsUseAssociated(const Symbol &, const Scope &);
 bool IsHostAssociated(const Symbol &, const Scope &);
 bool IsHostAssociatedIntoSubprogram(const Symbol &, const Scope &);
@@ -182,8 +187,9 @@ bool HasCoarray(const parser::Expr &);
 bool IsAssumedType(const Symbol &);
 bool IsPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);
-// Return an error if component symbol is not accessible from scope (7.5.4.8(2))
-std::optional<parser::MessageFormattedText> CheckAccessibleComponent(
+
+// Return an error if a symbol is not accessible from a scope
+std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
     const semantics::Scope &, const Symbol &);
 
 // Analysis of image control statements

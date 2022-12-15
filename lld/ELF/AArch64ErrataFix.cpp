@@ -369,7 +369,7 @@ static uint64_t scanCortexA53Errata843419(InputSection *isec, uint64_t &off,
   return patchOff;
 }
 
-class elf::Patch843419Section : public SyntheticSection {
+class elf::Patch843419Section final : public SyntheticSection {
 public:
   Patch843419Section(InputSection *p, uint64_t off);
 
