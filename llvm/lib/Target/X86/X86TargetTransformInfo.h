@@ -92,6 +92,7 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
       // Perf-tuning flags.
       X86::TuningFastGather,
       X86::TuningSlowUAMem32,
+      X86::TuningAllowLight256Bit,
 
       // Based on whether user set the -mprefer-vector-width command line.
       X86::TuningPrefer128Bit,
