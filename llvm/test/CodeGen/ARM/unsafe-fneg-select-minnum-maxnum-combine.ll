@@ -6,12 +6,9 @@ define float @select_fneg_a_or_8_cmp_olt_a_neg8_f32(float %a, float %b) #0 {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.f32 s0, #-8.000000e+00
 ; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vmov.f32 s4, #8.000000e+00
-; CHECK-NEXT:    vneg.f32 s6, s2
-; CHECK-NEXT:    vcmp.f32 s0, s2
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselgt.f32 s0, s6, s4
+; CHECK-NEXT:    vminnm.f32 s0, s2, s0
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    eor r0, r0, #-2147483648
 ; CHECK-NEXT:    mov pc, lr
   %fneg.a = fneg nnan nsz float %a
   %cmp.a = fcmp nnan nsz olt float %a, -8.0
@@ -22,13 +19,10 @@ define float @select_fneg_a_or_8_cmp_olt_a_neg8_f32(float %a, float %b) #0 {
 define half @select_fneg_a_or_8_cmp_olt_a_neg8_f16(half %a, half %b) #0 {
 ; CHECK-LABEL: select_fneg_a_or_8_cmp_olt_a_neg8_f16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.f16 s4, r0
 ; CHECK-NEXT:    vmov.f16 s0, #-8.000000e+00
-; CHECK-NEXT:    vcmp.f16 s0, s4
-; CHECK-NEXT:    vmov.f16 s2, #8.000000e+00
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vneg.f16 s6, s4
-; CHECK-NEXT:    vselgt.f16 s0, s6, s2
+; CHECK-NEXT:    vmov.f16 s2, r0
+; CHECK-NEXT:    vminnm.f16 s0, s2, s0
+; CHECK-NEXT:    vneg.f16 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    mov pc, lr
   %fneg.a = fneg nnan nsz half %a
@@ -42,12 +36,9 @@ define float @select_fneg_a_or_8_cmp_ogt_a_neg8_f32(float %a, float %b) #0 {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.f32 s0, #-8.000000e+00
 ; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vmov.f32 s4, #8.000000e+00
-; CHECK-NEXT:    vneg.f32 s6, s2
-; CHECK-NEXT:    vcmp.f32 s2, s0
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselgt.f32 s0, s6, s4
+; CHECK-NEXT:    vmaxnm.f32 s0, s2, s0
 ; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    eor r0, r0, #-2147483648
 ; CHECK-NEXT:    mov pc, lr
   %fneg.a = fneg nnan nsz float %a
   %cmp.a = fcmp nnan nsz ogt float %a, -8.0
@@ -58,13 +49,10 @@ define float @select_fneg_a_or_8_cmp_ogt_a_neg8_f32(float %a, float %b) #0 {
 define half @select_fneg_a_or_8_cmp_ogt_a_neg8_f16(half %a, half %b) #0 {
 ; CHECK-LABEL: select_fneg_a_or_8_cmp_ogt_a_neg8_f16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.f16 s4, r0
 ; CHECK-NEXT:    vmov.f16 s0, #-8.000000e+00
-; CHECK-NEXT:    vcmp.f16 s4, s0
-; CHECK-NEXT:    vmov.f16 s2, #8.000000e+00
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vneg.f16 s6, s4
-; CHECK-NEXT:    vselgt.f16 s0, s6, s2
+; CHECK-NEXT:    vmov.f16 s2, r0
+; CHECK-NEXT:    vmaxnm.f16 s0, s2, s0
+; CHECK-NEXT:    vneg.f16 s0, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    mov pc, lr
   %fneg.a = fneg nnan nsz half %a
