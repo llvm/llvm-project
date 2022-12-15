@@ -53,6 +53,9 @@ class TestRerunExprDylib(TestBase):
                 ValueCheck(name='m_val', value='42')
             ])
 
+        # Delete the dylib to force make to rebuild it.
+        remove_file(self.getBuildArtifact(FULL_DYLIB_NAME))
+
         # Re-build libfoo.dylib
         self.build(dictionary={'DYLIB_CXX_SOURCES':'rebuild.cpp',
                                'DYLIB_ONLY':'YES',
