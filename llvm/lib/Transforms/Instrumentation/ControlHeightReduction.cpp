@@ -1837,7 +1837,7 @@ BranchInst *CHR::createMergedBranch(BasicBlock *PreEntryBlock,
   BranchInst *NewBR = BranchInst::Create(NewEntryBlock,
                                          cast<BasicBlock>(VMap[NewEntryBlock]),
                                          ConstantInt::getTrue(F.getContext()));
-  NewBR->insertAt(PreEntryBlock, PreEntryBlock->end());
+  NewBR->insertInto(PreEntryBlock, PreEntryBlock->end());
   assert(NewEntryBlock->getSinglePredecessor() == EntryBlock &&
          "NewEntryBlock's only pred must be EntryBlock");
   return NewBR;

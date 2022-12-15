@@ -2107,7 +2107,7 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
   for (; BI != BE; ++BI) {
     Instruction *New = BI->clone();
     New->setName(BI->getName());
-    New->insertAt(NewBB, NewBB->end());
+    New->insertInto(NewBB, NewBB->end());
     ValueMapping[&*BI] = New;
     adaptNoAliasScopes(New, ClonedScopes, Context);
 
@@ -2700,7 +2700,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
     if (New) {
       // Otherwise, insert the new instruction into the block.
       New->setName(BI->getName());
-      New->insertAt(PredBB, OldPredBranch->getIterator());
+      New->insertInto(PredBB, OldPredBranch->getIterator());
       // Update Dominance from simplified New instruction operands.
       for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)
         if (BasicBlock *SuccBB = dyn_cast<BasicBlock>(New->getOperand(i)))
@@ -2754,7 +2754,7 @@ void JumpThreadingPass::unfoldSelectInstr(BasicBlock *Pred, BasicBlock *BB,
                                          BB->getParent(), BB);
   // Move the unconditional branch to NewBB.
   PredTerm->removeFromParent();
-  PredTerm->insertAt(NewBB, NewBB->end());
+  PredTerm->insertInto(NewBB, NewBB->end());
   // Create a conditional branch and update PHI nodes.
   auto *BI = BranchInst::Create(NewBB, BB, SI->getCondition(), Pred);
   BI->applyMergedLocation(PredTerm->getDebugLoc(), SI->getDebugLoc());

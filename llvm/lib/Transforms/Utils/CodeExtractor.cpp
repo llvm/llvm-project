@@ -1208,7 +1208,7 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
         Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), i);
         GetElementPtrInst *GEP = GetElementPtrInst::Create(
             StructArgTy, Struct, Idx, "gep_" + StructValues[i]->getName());
-        GEP->insertAt(codeReplacer, codeReplacer->end());
+        GEP->insertInto(codeReplacer, codeReplacer->end());
         new StoreInst(StructValues[i], GEP, codeReplacer);
         NumAggregatedInputs++;
       }
@@ -1226,7 +1226,7 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
     if (auto DL = newFunction->getEntryBlock().getTerminator()->getDebugLoc())
       call->setDebugLoc(DL);
   }
-  call->insertAt(codeReplacer, codeReplacer->end());
+  call->insertInto(codeReplacer, codeReplacer->end());
 
   // Set swifterror parameter attributes.
   for (unsigned SwiftErrArgNo : SwiftErrorArgs) {
@@ -1246,7 +1246,7 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), aggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
-      GEP->insertAt(codeReplacer, codeReplacer->end());
+      GEP->insertInto(codeReplacer, codeReplacer->end());
       Output = GEP;
       ++aggIdx;
     } else {
@@ -1735,7 +1735,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
       });
     });
   }
-  BranchI->insertAt(newFuncRoot, newFuncRoot->end());
+  BranchI->insertInto(newFuncRoot, newFuncRoot->end());
 
   ValueSet SinkingCands, HoistingCands;
   BasicBlock *CommonExit = nullptr;
