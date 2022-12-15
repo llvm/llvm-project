@@ -1047,9 +1047,11 @@ StringRef Lexer::getImmediateMacroNameForDiagnostics(
   while (SM.isMacroArgExpansion(Loc))
     Loc = SM.getImmediateExpansionRange(Loc).getBegin();
 
-  // If the macro's spelling has no FileID, then it's actually a token paste
-  // or stringization (or similar) and not a macro at all.
-  if (!SM.getFileEntryForID(SM.getFileID(SM.getSpellingLoc(Loc))))
+  // If the macro's spelling isn't FileID or from scratch space, then it's
+  // actually a token paste or stringization (or similar) and not a macro at
+  // all.
+  SourceLocation SpellLoc = SM.getSpellingLoc(Loc);
+  if (!SpellLoc.isFileID() || SM.isWrittenInScratchSpace(SpellLoc))
     return {};
 
   // Find the spelling location of the start of the non-argument expansion
