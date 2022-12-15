@@ -28,24 +28,24 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
     else
       Offset = Op.getCImm()->getZExtValue();
 
-    return std::make_pair(Register(), Offset);
+    return std::pair(Register(), Offset);
   }
 
   int64_t Offset;
   if (Def->getOpcode() == TargetOpcode::G_ADD) {
     // TODO: Handle G_OR used for add case
     if (mi_match(Def->getOperand(2).getReg(), MRI, m_ICst(Offset)))
-      return std::make_pair(Def->getOperand(1).getReg(), Offset);
+      return std::pair(Def->getOperand(1).getReg(), Offset);
 
     // FIXME: matcher should ignore copies
     if (mi_match(Def->getOperand(2).getReg(), MRI, m_Copy(m_ICst(Offset))))
-      return std::make_pair(Def->getOperand(1).getReg(), Offset);
+      return std::pair(Def->getOperand(1).getReg(), Offset);
   }
 
   Register Base;
   if (KnownBits && mi_match(Reg, MRI, m_GOr(m_Reg(Base), m_ICst(Offset))) &&
       KnownBits->maskedValueIsZero(Base, APInt(32, Offset)))
-    return std::make_pair(Base, Offset);
+    return std::pair(Base, Offset);
 
   // Handle G_PTRTOINT (G_PTR_ADD base, const) case
   if (Def->getOpcode() == TargetOpcode::G_PTRTOINT) {
@@ -54,14 +54,14 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
                  m_GPtrAdd(m_MInstr(Base), m_ICst(Offset)))) {
       // If Base was int converted to pointer, simply return int and offset.
       if (Base->getOpcode() == TargetOpcode::G_INTTOPTR)
-        return std::make_pair(Base->getOperand(1).getReg(), Offset);
+        return std::pair(Base->getOperand(1).getReg(), Offset);
 
       // Register returned here will be of pointer type.
-      return std::make_pair(Base->getOperand(0).getReg(), Offset);
+      return std::pair(Base->getOperand(0).getReg(), Offset);
     }
   }
 
-  return std::make_pair(Reg, 0);
+  return std::pair(Reg, 0);
 }
 
 bool AMDGPU::hasAtomicFaddRtnForTy(const GCNSubtarget &Subtarget,

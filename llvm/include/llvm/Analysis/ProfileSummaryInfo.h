@@ -53,7 +53,7 @@ private:
   // percentile is above a large threshold.
   std::optional<bool> HasLargeWorkingSetSize;
   // Compute the threshold for a given cutoff.
-  Optional<uint64_t> computeThreshold(int PercentileCutoff) const;
+  std::optional<uint64_t> computeThreshold(int PercentileCutoff) const;
   // The map that caches the threshold values. The keys are the percentile
   // cutoff values and the values are the corresponding threshold values.
   mutable DenseMap<int, uint64_t> ThresholdCache;

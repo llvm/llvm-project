@@ -506,7 +506,7 @@ public:
     return I.first->second;
   }
 
-  Optional<SampleContextFrame> getInlineLeafFrameLoc(uint64_t Address) {
+  std::optional<SampleContextFrame> getInlineLeafFrameLoc(uint64_t Address) {
     const auto &Stack = getCachedFrameLocationStack(Address);
     if (Stack.empty())
       return {};

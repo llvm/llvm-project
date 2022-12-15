@@ -440,8 +440,8 @@ define void @call_fn_ptr(void (i16) *%fn) {
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define void @gep_static_idx(float* %ptr) {
   ; CHECK: %[[IDX:.+]] = llvm.mlir.constant(7 : i32)
-  ; CHECK: llvm.getelementptr %[[PTR]][%[[IDX]]] : (!llvm.ptr<f32>, i32) -> !llvm.ptr<f32>
-  %1 = getelementptr float, float* %ptr, i32 7
+  ; CHECK: llvm.getelementptr inbounds %[[PTR]][%[[IDX]]] : (!llvm.ptr<f32>, i32) -> !llvm.ptr<f32>
+  %1 = getelementptr inbounds float, float* %ptr, i32 7
   ret void
 }
 

@@ -3021,8 +3021,8 @@ computeIndirectRegIndex(MachineRegisterInfo &MRI, const SIRegisterInfo &TRI,
   // Skip out of bounds offsets, or else we would end up using an undefined
   // register.
   if (static_cast<unsigned>(Offset) >= SubRegs.size())
-    return std::make_pair(IdxReg, SubRegs[0]);
-  return std::make_pair(IdxBaseReg, SubRegs[Offset]);
+    return std::pair(IdxReg, SubRegs[0]);
+  return std::pair(IdxBaseReg, SubRegs[Offset]);
 }
 
 bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
@@ -3638,7 +3638,7 @@ std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3ModsImpl(
   if (OpSel)
     Mods |= SISrcMods::OP_SEL_0;
 
-  return std::make_pair(Src, Mods);
+  return std::pair(Src, Mods);
 }
 
 Register AMDGPUInstructionSelector::copyToVGPRIfSrcFolded(
@@ -3771,7 +3771,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(
   // Packed instructions do not have abs modifiers.
   Mods |= SISrcMods::OP_SEL_1;
 
-  return std::make_pair(Src, Mods);
+  return std::pair(Src, Mods);
 }
 
 InstructionSelector::ComplexRendererFns
@@ -4006,7 +4006,7 @@ AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root,
                                                 uint64_t FlatVariant) const {
   MachineInstr *MI = Root.getParent();
 
-  auto Default = std::make_pair(Root.getReg(), 0);
+  auto Default = std::pair(Root.getReg(), 0);
 
   if (!STI.hasFlatInstOffsets())
     return Default;
@@ -4022,7 +4022,7 @@ AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root,
   if (!TII.isLegalFLATOffset(ConstOffset, AddrSpace, FlatVariant))
     return Default;
 
-  return std::make_pair(PtrBase, ConstOffset);
+  return std::pair(PtrBase, ConstOffset);
 }
 
 InstructionSelector::ComplexRendererFns
@@ -4486,7 +4486,7 @@ std::pair<Register, unsigned>
 AMDGPUInstructionSelector::selectDS1Addr1OffsetImpl(MachineOperand &Root) const {
   const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
   if (!RootDef)
-    return std::make_pair(Root.getReg(), 0);
+    return std::pair(Root.getReg(), 0);
 
   int64_t ConstAddr = 0;
 
@@ -4498,7 +4498,7 @@ AMDGPUInstructionSelector::selectDS1Addr1OffsetImpl(MachineOperand &Root) const 
   if (Offset) {
     if (isDSOffsetLegal(PtrBase, Offset)) {
       // (add n0, c0)
-      return std::make_pair(PtrBase, Offset);
+      return std::pair(PtrBase, Offset);
     }
   } else if (RootDef->getOpcode() == AMDGPU::G_SUB) {
     // TODO
@@ -4509,7 +4509,7 @@ AMDGPUInstructionSelector::selectDS1Addr1OffsetImpl(MachineOperand &Root) const 
 
   }
 
-  return std::make_pair(Root.getReg(), 0);
+  return std::pair(Root.getReg(), 0);
 }
 
 InstructionSelector::ComplexRendererFns
@@ -4551,7 +4551,7 @@ AMDGPUInstructionSelector::selectDSReadWrite2Impl(MachineOperand &Root,
                                                   unsigned Size) const {
   const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
   if (!RootDef)
-    return std::make_pair(Root.getReg(), 0);
+    return std::pair(Root.getReg(), 0);
 
   int64_t ConstAddr = 0;
 
@@ -4565,7 +4565,7 @@ AMDGPUInstructionSelector::selectDSReadWrite2Impl(MachineOperand &Root,
     int64_t OffsetValue1 = Offset + Size;
     if (isDSOffset2Legal(PtrBase, OffsetValue0, OffsetValue1, Size)) {
       // (add n0, c0)
-      return std::make_pair(PtrBase, OffsetValue0 / Size);
+      return std::pair(PtrBase, OffsetValue0 / Size);
     }
   } else if (RootDef->getOpcode() == AMDGPU::G_SUB) {
     // TODO
@@ -4575,7 +4575,7 @@ AMDGPUInstructionSelector::selectDSReadWrite2Impl(MachineOperand &Root,
 
   }
 
-  return std::make_pair(Root.getReg(), 0);
+  return std::pair(Root.getReg(), 0);
 }
 
 /// If \p Root is a G_PTR_ADD with a G_CONSTANT on the right hand side, return

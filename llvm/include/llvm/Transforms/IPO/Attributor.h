@@ -1519,13 +1519,15 @@ struct Attributor {
     // Use the static create method.
     auto &AA = AAType::createForPosition(IRP, *this);
 
+    // Always register a new attribute to make sure we clean up the allocated
+    // memory properly.
+    registerAA(AA);
+
     // If we are currenty seeding attributes, enforce seeding rules.
     if (Phase == AttributorPhase::SEEDING && !shouldSeedAttribute(AA)) {
       AA.getState().indicatePessimisticFixpoint();
       return AA;
     }
-
-    registerAA(AA);
 
     // For now we ignore naked and optnone functions.
     bool Invalidate =

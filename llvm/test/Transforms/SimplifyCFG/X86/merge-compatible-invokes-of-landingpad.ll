@@ -6,7 +6,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Simple test, nothing interesting happens here.
-define void @t0_noop() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t0_noop() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t0_noop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
@@ -17,10 +17,10 @@ define void @t0_noop() personality i8* bitcast (i32 (...)* @__gxx_personality_v0
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    ret void
@@ -36,9 +36,9 @@ invoke.cont:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.end:
   call void @sideeffect()
@@ -46,16 +46,16 @@ if.end:
 }
 
 ; More interesting test, here we can merge the invokes.
-define void @t1_mergeable_invoke() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t1_mergeable_invoke() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t1_mergeable_invoke(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
@@ -79,9 +79,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -99,16 +99,16 @@ if.end:
 }
 
 ; normal block is shared, but it is unreachable, so we are fine.
-define void @t2_shared_normal_dest() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t2_shared_normal_dest() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t2_shared_normal_dest(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
@@ -132,9 +132,9 @@ invoke.cont:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -149,7 +149,7 @@ if.end:
 }
 
 ; shared normal destination is not unreachable.
-define void @t3_shared_identical_normal_dest() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t3_shared_identical_normal_dest() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t3_shared_identical_normal_dest(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -158,10 +158,10 @@ define void @t3_shared_identical_normal_dest() personality i8* bitcast (i32 (...
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
@@ -184,9 +184,9 @@ invoke.cont:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -201,7 +201,7 @@ if.end:
 }
 
 ; normal destinations are not unreachable and not shared and can not be merged.
-define void @t4_normal_dests() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t4_normal_dests() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t4_normal_dests(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -213,10 +213,10 @@ define void @t4_normal_dests() personality i8* bitcast (i32 (...)* @__gxx_person
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
@@ -242,9 +242,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -263,7 +263,7 @@ if.end:
 }
 
 ; Invokes lead to different landing pads.
-define void @t5_different_landingpads() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t5_different_landingpads() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t5_different_landingpads(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -274,10 +274,10 @@ define void @t5_different_landingpads() personality i8* bitcast (i32 (...)* @__g
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       common.resume:
-; CHECK-NEXT:    [[COMMON_RESUME_OP:%.*]] = phi { i8*, i32 } [ [[EH0:%.*]], [[LPAD0]] ], [ [[EH1:%.*]], [[LPAD1:%.*]] ]
-; CHECK-NEXT:    resume { i8*, i32 } [[COMMON_RESUME_OP]]
+; CHECK-NEXT:    [[COMMON_RESUME_OP:%.*]] = phi { ptr, i32 } [ [[EH0:%.*]], [[LPAD0]] ], [ [[EH1:%.*]], [[LPAD1:%.*]] ]
+; CHECK-NEXT:    resume { ptr, i32 } [[COMMON_RESUME_OP]]
 ; CHECK:       lpad0:
-; CHECK-NEXT:    [[EH0]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH0]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    br label [[COMMON_RESUME:%.*]]
@@ -290,7 +290,7 @@ define void @t5_different_landingpads() personality i8* bitcast (i32 (...)* @__g
 ; CHECK:       invoke.cont2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad1:
-; CHECK-NEXT:    [[EH1]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH1]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @another_destructor()
 ; CHECK-NEXT:    br label [[COMMON_RESUME]]
@@ -309,9 +309,9 @@ invoke.cont0:
   unreachable
 
 lpad0:
-  %eh0 = landingpad { i8*, i32 } cleanup
+  %eh0 = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh0
+  resume { ptr, i32 } %eh0
 
 if.else:
   %c1 = call i1 @cond()
@@ -324,9 +324,9 @@ invoke.cont2:
   unreachable
 
 lpad1:
-  %eh1 = landingpad { i8*, i32 } cleanup
+  %eh1 = landingpad { ptr, i32 } cleanup
   call void @another_destructor()
-  resume { i8*, i32 } %eh1
+  resume { ptr, i32 } %eh1
 
 if.end:
   call void @sideeffect()
@@ -334,7 +334,7 @@ if.end:
 }
 
 ; The invoked functions are different
-define void @t6_different_invokes() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t6_different_invokes() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t6_different_invokes(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -345,10 +345,10 @@ define void @t6_different_invokes() personality i8* bitcast (i32 (...)* @__gxx_p
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
@@ -372,9 +372,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -392,7 +392,7 @@ if.end:
 }
 
 ; Merging of this invoke is disallowed
-define void @t7_nomerge0() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t7_nomerge0() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t7_nomerge0(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -403,10 +403,10 @@ define void @t7_nomerge0() personality i8* bitcast (i32 (...)* @__gxx_personalit
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
@@ -430,9 +430,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -448,7 +448,7 @@ if.end:
   call void @sideeffect()
   ret void
 }
-define void @t8_nomerge1() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t8_nomerge1() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t8_nomerge1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -459,10 +459,10 @@ define void @t8_nomerge1() personality i8* bitcast (i32 (...)* @__gxx_personalit
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
@@ -486,9 +486,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -504,7 +504,7 @@ if.end:
   call void @sideeffect()
   ret void
 }
-define void @t9_nomerge2() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t9_nomerge2() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t9_nomerge2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -515,10 +515,10 @@ define void @t9_nomerge2() personality i8* bitcast (i32 (...)* @__gxx_personalit
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
@@ -542,9 +542,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -562,7 +562,7 @@ if.end:
 }
 
 ; Just don't deal with inlineasm.
-define void @t10_inlineasm() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t10_inlineasm() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t10_inlineasm(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -573,10 +573,10 @@ define void @t10_inlineasm() personality i8* bitcast (i32 (...)* @__gxx_personal
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
@@ -600,9 +600,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -620,7 +620,7 @@ if.end:
 }
 
 ; landingpad has PHI nodes, and the incoming values are incompatible.
-define void @t11_phi_in_landingpad_incompatible_incoming_values() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t11_phi_in_landingpad_incompatible_incoming_values() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t11_phi_in_landingpad_incompatible_incoming_values(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -632,11 +632,11 @@ define void @t11_phi_in_landingpad_incompatible_incoming_values() personality i8
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ 1, [[IF_THEN1:%.*]] ]
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @consume(i32 [[PHI]])
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_END:%.*]]
@@ -661,10 +661,10 @@ invoke.cont0:
 
 lpad:
   %phi = phi i32 [ 0, %if.then0 ], [ 1, %if.then1 ]
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @consume(i32 %phi)
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -682,16 +682,16 @@ if.end:
 }
 
 ; It is okay for the invoke to take arguments
-define void @t12_arguments_are_fine() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t12_arguments_are_fine() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t12_arguments_are_fine(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
@@ -715,9 +715,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -735,16 +735,16 @@ if.end:
 }
 
 ; It is okay for the invoke to take different arguments
-define void @t13_different_arguments_are_fine() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t13_different_arguments_are_fine() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t13_different_arguments_are_fine(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
@@ -769,9 +769,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -789,16 +789,16 @@ if.end:
 }
 
 ; There can be more than two invokes in a set
-define void @t14_three_invokes() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t14_three_invokes() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t14_three_invokes(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN2_INVOKE:%.*]], label [[IF_ELSE0:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else0:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN2_INVOKE]], label [[IF_ELSE1:%.*]]
@@ -825,9 +825,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else0:
   %c1 = call i1 @cond()
@@ -855,16 +855,16 @@ if.end:
 }
 
 ; If not all invokes of landingpad are compatible then we still merge compatible ones.
-define void @t15_three_invokes_only_two_compatible() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t15_three_invokes_only_two_compatible() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t15_three_invokes_only_two_compatible(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE0:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else0:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_ELSE1:%.*]]
@@ -896,9 +896,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else0:
   %c1 = call i1 @cond()
@@ -926,16 +926,16 @@ if.end:
 }
 
 ; We succeed in merging invokes into two sets
-define void @t16_four_invokes_forming_two_sets() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t16_four_invokes_forming_two_sets() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t16_four_invokes_forming_two_sets(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE0:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else0:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_ELSE1:%.*]]
@@ -970,9 +970,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else0:
   %c1 = call i1 @cond()
@@ -1010,7 +1010,7 @@ if.end:
 }
 
 ; Attributes must match
-define void @t17_mismatched_attrs_prevent_merge() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t17_mismatched_attrs_prevent_merge() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t17_mismatched_attrs_prevent_merge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -1021,10 +1021,10 @@ define void @t17_mismatched_attrs_prevent_merge() personality i8* bitcast (i32 (
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
@@ -1048,9 +1048,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -1068,16 +1068,16 @@ if.end:
 }
 
 ; Common attributes are preserved
-define void @t18_attributes_are_preserved() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t18_attributes_are_preserved() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t18_attributes_are_preserved(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
@@ -1101,9 +1101,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -1121,16 +1121,16 @@ if.end:
 }
 
 ; Fully identical operand bundles are good.
-define void @t19_compatible_operand_bundle() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t19_compatible_operand_bundle() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t19_compatible_operand_bundle(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
@@ -1154,9 +1154,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -1174,7 +1174,7 @@ if.end:
 }
 
 ; Operand bundles must be compatible, else we can't merge.
-define void @t20_incompatible_operand_bundle() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t20_incompatible_operand_bundle() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t20_incompatible_operand_bundle(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -1185,10 +1185,10 @@ define void @t20_incompatible_operand_bundle() personality i8* bitcast (i32 (...
 ; CHECK:       invoke.cont0:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
@@ -1212,9 +1212,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -1232,16 +1232,16 @@ if.end:
 }
 
 ; We need to PHI together the arguments of the operand bundles.
-define void @t21_semicompatible_operand_bundle() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t21_semicompatible_operand_bundle() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t21_semicompatible_operand_bundle(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
@@ -1266,9 +1266,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -1287,16 +1287,16 @@ if.end:
 
 ; Even though the normal destinations are unreachable,
 ; they may have (dead) PHI nodes, so we must cleanup them.
-define void @t22_dead_phi_in_normal_dest() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t22_dead_phi_in_normal_dest() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t22_dead_phi_in_normal_dest(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
@@ -1317,9 +1317,9 @@ if.then0:
   invoke void @maybe_throw() to label %invoke.cont0 unwind label %lpad
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -1342,18 +1342,18 @@ if.end:
 }
 
 ; landingpad has PHI nodes, and out of three invokes, only two have compatible incoming values.
-define void @t23_phi_in_landingpad_compatible_incoming_values() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t23_phi_in_landingpad_compatible_incoming_values() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t23_phi_in_landingpad_compatible_incoming_values(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE0:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ -1, [[IF_THEN2:%.*]] ], [ 0, [[IF_THEN1_INVOKE]] ]
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @consume(i32 [[PHI]])
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else0:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_ELSE1:%.*]]
@@ -1386,10 +1386,10 @@ invoke.cont0:
 
 lpad:
   %phi = phi i32 [ 0, %if.then0 ], [ 0, %if.then1 ], [ -1, %if.then2 ]
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @consume(i32 %phi)
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else0:
   %c1 = call i1 @cond()
@@ -1418,7 +1418,7 @@ if.end:
 
 ; landingpad has two PHI nodes, but depending on which PHI you look,
 ; the invoke sets would be different, so we can't merge invokes here.
-define void @t24_phi_in_landingpad_semi_compatible_incoming_values() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t24_phi_in_landingpad_semi_compatible_incoming_values() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t24_phi_in_landingpad_semi_compatible_incoming_values(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -1431,12 +1431,12 @@ define void @t24_phi_in_landingpad_semi_compatible_incoming_values() personality
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[PHI0:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ 0, [[IF_THEN1:%.*]] ], [ -1, [[IF_THEN2:%.*]] ]
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i32 [ 0, [[IF_THEN0]] ], [ 1, [[IF_THEN1]] ], [ 1, [[IF_THEN2]] ]
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @consume(i32 [[PHI0]])
 ; CHECK-NEXT:    call void @consume(i32 [[PHI1]])
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else0:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_ELSE1:%.*]]
@@ -1470,11 +1470,11 @@ invoke.cont0:
 lpad:
   %phi0 = phi i32 [ 0, %if.then0 ], [ 0, %if.then1 ], [ -1, %if.then2 ]
   %phi1= phi i32 [ 0, %if.then0 ], [ 1, %if.then1 ], [ 1, %if.then2 ]
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @consume(i32 %phi0)
   call void @consume(i32 %phi1)
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else0:
   %c1 = call i1 @cond()
@@ -1502,7 +1502,7 @@ if.end:
 }
 
 ; The normal destinations are shared, but the incoming values are incompatible.
-define void @t25_incompatible_phis_in_normal_destination() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t25_incompatible_phis_in_normal_destination() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t25_incompatible_phis_in_normal_destination(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -1516,10 +1516,10 @@ define void @t25_incompatible_phis_in_normal_destination() personality i8* bitca
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_END:%.*]]
@@ -1544,9 +1544,9 @@ invoke.cont:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -1561,7 +1561,7 @@ if.end:
 }
 
 ; shared normal destination has PHI nodes, and out of three invokes, only two have compatible incoming values.
-define void @t26_phi_in_normal_dest_compatible_incoming_values() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t26_phi_in_normal_dest_compatible_incoming_values() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t26_phi_in_normal_dest_compatible_incoming_values(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -1572,10 +1572,10 @@ define void @t26_phi_in_normal_dest_compatible_incoming_values() personality i8*
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else0:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_ELSE1:%.*]]
@@ -1606,9 +1606,9 @@ invoke.cont:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else0:
   %c1 = call i1 @cond()
@@ -1630,7 +1630,7 @@ if.end:
 }
 
 ; Invokes return values, but they are unused.
-define void @t27_invoke_ret_value_is_used() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t27_invoke_ret_value_is_used() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t27_invoke_ret_value_is_used(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -1639,10 +1639,10 @@ define void @t27_invoke_ret_value_is_used() personality i8* bitcast (i32 (...)* 
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
@@ -1665,9 +1665,9 @@ invoke.cont:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -1682,7 +1682,7 @@ if.end:
 }
 
 ; Invokes return values, and they are used in a phi node, making the incoming values incompatible.
-define void @t28_invoke_ret_value_is_used_in_phi_node() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t28_invoke_ret_value_is_used_in_phi_node() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t28_invoke_ret_value_is_used_in_phi_node(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -1692,10 +1692,10 @@ define void @t28_invoke_ret_value_is_used_in_phi_node() personality i8* bitcast 
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
@@ -1720,9 +1720,9 @@ invoke.cont:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -1737,7 +1737,7 @@ if.end:
 }
 
 ; out of three invokes, two share normal destination and another one has unreachable destination
-define void @t29_common_normal_destination_and_unreachable_normal_destination() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t29_common_normal_destination_and_unreachable_normal_destination() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t29_common_normal_destination_and_unreachable_normal_destination(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -1746,10 +1746,10 @@ define void @t29_common_normal_destination_and_unreachable_normal_destination() 
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else0:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_ELSE1:%.*]]
@@ -1780,9 +1780,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else0:
   %c1 = call i1 @cond()
@@ -1807,7 +1807,7 @@ if.end:
 }
 
 ; normal destinations are not unreachable and different but could be merged
-define void @t30_completely_different_normal_dests() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t30_completely_different_normal_dests() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t30_completely_different_normal_dests(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -1819,10 +1819,10 @@ define void @t30_completely_different_normal_dests() personality i8* bitcast (i3
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1:%.*]], label [[IF_END:%.*]]
@@ -1848,9 +1848,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -1871,16 +1871,16 @@ if.end:
 ; Even though the normal destinations are unreachable,
 ; they may have (dead) PHI nodes with incompatible incoming values,
 ; so we must cleanup them.
-define void @t31_incompatible_dead_phi_in_normal_dest() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t31_incompatible_dead_phi_in_normal_dest() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t31_incompatible_dead_phi_in_normal_dest(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
@@ -1901,9 +1901,9 @@ if.then0:
   invoke void @maybe_throw() to label %invoke.cont unwind label %lpad
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -1923,7 +1923,7 @@ if.end:
 
 ; Invokes return values, and they are used in a phi node, making the incoming values incompatible,
 ; second phi has compatible incoming values
-define void @t32_invoke_ret_value_is_used_in_phi_node_other_phi_is_fine() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t32_invoke_ret_value_is_used_in_phi_node_other_phi_is_fine() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t32_invoke_ret_value_is_used_in_phi_node_other_phi_is_fine(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -1934,10 +1934,10 @@ define void @t32_invoke_ret_value_is_used_in_phi_node_other_phi_is_fine() person
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
@@ -1964,9 +1964,9 @@ invoke.cont:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -1982,7 +1982,7 @@ if.end:
 
 ; Invokes return values, and they are used in a phi node, making the incoming values incompatible,
 ; second phi has incompatible incoming values.
-define void @t33_invoke_ret_value_is_used_in_phi_node_other_phi_is_bad() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t33_invoke_ret_value_is_used_in_phi_node_other_phi_is_bad() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t33_invoke_ret_value_is_used_in_phi_node_other_phi_is_bad(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -1998,10 +1998,10 @@ define void @t33_invoke_ret_value_is_used_in_phi_node_other_phi_is_bad() persona
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_END:%.*]]
@@ -2028,9 +2028,9 @@ invoke.cont:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -2046,7 +2046,7 @@ if.end:
 
 ; Invokes return values, and they are used in a phi node, but when coming from different invokes,
 ; the incoming value isn't always the invoke, which is not okay.
-define void @t34_invoke_ret_value_maybe_incompatibly_used_in_phi_node() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t34_invoke_ret_value_maybe_incompatibly_used_in_phi_node() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t34_invoke_ret_value_maybe_incompatibly_used_in_phi_node(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
@@ -2062,10 +2062,10 @@ define void @t34_invoke_ret_value_maybe_incompatibly_used_in_phi_node() personal
 ; CHECK-NEXT:    call void @sideeffect()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1]], label [[IF_END:%.*]]
@@ -2092,9 +2092,9 @@ invoke.cont:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -2109,16 +2109,16 @@ if.end:
 }
 
 ; Two mergeable indirect calls, with identical callees.
-define void @t35_identical_indirect_callees(void()* %callee) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t35_identical_indirect_callees(ptr %callee) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t35_identical_indirect_callees(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
@@ -2142,9 +2142,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -2162,21 +2162,21 @@ if.end:
 }
 
 ; Two mergeable indirect calls, with different callees.
-define void @t36_different_indirect_callees(void()* %callee0, void()* %callee1) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t36_different_indirect_callees(ptr %callee0, ptr %callee1) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t36_different_indirect_callees(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi void ()* [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi ptr [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    invoke void [[TMP0]]()
 ; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
@@ -2196,9 +2196,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -2216,16 +2216,16 @@ if.end:
 }
 
 ; Don't merge direct invoke with indirect ones.
-define void @t37_three_invokes_two_indirect_one_direct(void()* %callee) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t37_three_invokes_two_indirect_one_direct(ptr %callee) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t37_three_invokes_two_indirect_one_direct(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE0:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else0:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_ELSE1:%.*]]
@@ -2257,9 +2257,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else0:
   %c1 = call i1 @cond()
@@ -2287,22 +2287,22 @@ if.end:
 }
 
 ; For indirect invokes, different arguments are fine.
-define void @t38_different_arguments_and_operand_bundes_are_fine(void(i32)* %callee0, void(i32)* %callee1) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t38_different_arguments_and_operand_bundes_are_fine(ptr %callee0, ptr %callee1) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t38_different_arguments_and_operand_bundes_are_fine(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 42, [[IF_ELSE]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi void (i32)* [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    invoke void [[TMP1]](i32 [[TMP0]])
 ; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
@@ -2322,9 +2322,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -2342,22 +2342,22 @@ if.end:
 }
 
 ; For indirect invokes, different operand bundle arguments are fine.
-define void @t39_different_arguments_and_operand_bundes_are_fine(void()* %callee0, void()* %callee1) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t39_different_arguments_and_operand_bundes_are_fine(ptr %callee0, ptr %callee1) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t39_different_arguments_and_operand_bundes_are_fine(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, [[IF_ELSE]] ], [ 42, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi void ()* [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    invoke void [[TMP1]]() [ "abc"(i32 [[TMP0]]) ]
 ; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
@@ -2377,9 +2377,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()
@@ -2397,23 +2397,23 @@ if.end:
 }
 
 ; For indirect invokes, both different arguments and operand bundle arguments are fine.
-define void @t40_different_arguments_and_operand_bundes_are_fine(void(i32)* %callee0, void(i32)* %callee1) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @t40_different_arguments_and_operand_bundes_are_fine(ptr %callee0, ptr %callee1) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @t40_different_arguments_and_operand_bundes_are_fine(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label [[IF_THEN1_INVOKE:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EH:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @destructor()
-; CHECK-NEXT:    resume { i8*, i32 } [[EH]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[IF_THEN1_INVOKE]], label [[IF_END:%.*]]
 ; CHECK:       if.then1.invoke:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 42, [[IF_ELSE]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 0, [[IF_ELSE]] ], [ 42, [[ENTRY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi void (i32)* [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[CALLEE1:%.*]], [[IF_ELSE]] ], [ [[CALLEE0:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    invoke void [[TMP2]](i32 [[TMP0]]) [ "abc"(i32 [[TMP1]]) ]
 ; CHECK-NEXT:    to label [[IF_THEN1_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       if.then1.cont:
@@ -2433,9 +2433,9 @@ invoke.cont0:
   unreachable
 
 lpad:
-  %eh = landingpad { i8*, i32 } cleanup
+  %eh = landingpad { ptr, i32 } cleanup
   call void @destructor()
-  resume { i8*, i32 } %eh
+  resume { ptr, i32 } %eh
 
 if.else:
   %c1 = call i1 @cond()

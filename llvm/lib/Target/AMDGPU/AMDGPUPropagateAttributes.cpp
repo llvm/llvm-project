@@ -285,7 +285,7 @@ bool AMDGPUPropagateAttributes::process() {
           NewRoots.insert(NewF);
         }
 
-        ToReplace.push_back(std::make_pair(CI, NewF));
+        ToReplace.push_back(std::pair(CI, NewF));
         Replaced.insert(&F);
 
         Changed = true;

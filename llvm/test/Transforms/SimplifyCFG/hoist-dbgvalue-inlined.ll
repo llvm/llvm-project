@@ -1,23 +1,23 @@
 ; RUN: opt -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -hoist-common-insts=true -S < %s | FileCheck %s
 ; Verify that we don't crash due an invalid !dbg location on the hoisted llvm.dbg.value
 
-define i64 @caller(i64* %ptr, i64 %flag) !dbg !10 {
+define i64 @caller(ptr %ptr, i64 %flag) !dbg !10 {
 init:
   %v9 = icmp eq i64 %flag, 0
   br i1 %v9, label %a, label %b
 
-; CHECK:  %vala = load i64, i64* %ptr
+; CHECK:  %vala = load i64, ptr %ptr
 ; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %vala, metadata [[MD:![0-9]*]]
 ; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %vala, metadata [[MD]]
 ; CHECK-NEXT:  %valbmasked = and i64 %vala, 1
 
 a:                                              ; preds = %init
-  %vala = load i64, i64* %ptr, align 8
+  %vala = load i64, ptr %ptr, align 8
   call void @llvm.dbg.value(metadata i64 %vala, metadata !8, metadata !DIExpression()), !dbg !12
   br label %test.exit
 
 b:                                              ; preds = %init
-  %valb = load i64, i64* %ptr, align 8
+  %valb = load i64, ptr %ptr, align 8
   call void @llvm.dbg.value(metadata i64 %valb, metadata !8, metadata !DIExpression()), !dbg !13
   %valbmasked = and i64 %valb, 1
   br label %test.exit

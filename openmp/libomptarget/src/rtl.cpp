@@ -212,6 +212,8 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
       DynLibrary->getAddressOfSymbol("__tgt_rtl_run_target_team_region_async");
   *((void **)&RTL.synchronize) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_synchronize");
+  *((void **)&RTL.query_async) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_query_async");
   *((void **)&RTL.data_exchange) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_exchange");
   *((void **)&RTL.data_exchange_async) =

@@ -6,7 +6,7 @@
 
 ; Check that the addresses for a scalarized memory access is not extracted
 ; from a vector register.
-define i32 @foo(i32* nocapture %A) {
+define i32 @foo(ptr nocapture %A) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -17,10 +17,10 @@ define i32 @foo(i32* nocapture %A) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    store i32 4, i32* [[TMP3]], align 4
-; CHECK-NEXT:    store i32 4, i32* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    store i32 4, ptr [[TMP3]], align 4
+; CHECK-NEXT:    store i32 4, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -40,8 +40,8 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = shl nsw i64 %indvars.iv, 2
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %0
-  store i32 4, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %0
+  store i32 4, ptr %arrayidx, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, 10000
@@ -53,7 +53,7 @@ for.end:
 
 
 ; Check that a load of address is scalarized.
-define i32 @foo1(i32* nocapture noalias %A, i32** nocapture %PtrPtr) {
+define i32 @foo1(ptr nocapture noalias %A, ptr nocapture %PtrPtr) {
 ; CHECK-LABEL: @foo1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -62,17 +62,16 @@ define i32 @foo1(i32* nocapture noalias %A, i32** nocapture %PtrPtr) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32*, i32** [[PTRPTR:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32*, i32** [[PTRPTR]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32*, i32** [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[PTRPTR:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds ptr, ptr [[PTRPTR]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[TMP6]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32* [[TMP9]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> [[TMP8]], <2 x i32>* [[TMP10]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    store <2 x i32> [[TMP8]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -91,11 +90,11 @@ entry:
 
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %ptr = getelementptr inbounds i32*, i32** %PtrPtr, i64 %indvars.iv
-  %el = load i32*, i32** %ptr
-  %v = load i32, i32* %el
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %v, i32* %arrayidx, align 4
+  %ptr = getelementptr inbounds ptr, ptr %PtrPtr, i64 %indvars.iv
+  %el = load ptr, ptr %ptr
+  %v = load i32, ptr %el
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %v, ptr %arrayidx, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, 10000

@@ -367,9 +367,9 @@ AMDGPUSubtarget::getDefaultFlatWorkGroupSize(CallingConv::ID CC) const {
   case CallingConv::AMDGPU_ES:
   case CallingConv::AMDGPU_GS:
   case CallingConv::AMDGPU_PS:
-    return std::make_pair(1, getWavefrontSize());
+    return std::pair(1, getWavefrontSize());
   default:
-    return std::make_pair(1u, getMaxFlatWorkGroupSize());
+    return std::pair(1u, getMaxFlatWorkGroupSize());
   }
 }
 

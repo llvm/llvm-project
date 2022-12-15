@@ -234,51 +234,132 @@ void FunctionSpecializer::cleanUpSSA() {
     removeSSACopy(*F);
 }
 
+
+template <> struct llvm::DenseMapInfo<SpecSig> {
+  static inline SpecSig getEmptyKey() { return {~0U, {}}; }
+
+  static inline SpecSig getTombstoneKey() { return {~1U, {}}; }
+
+  static unsigned getHashValue(const SpecSig &S) {
+    return static_cast<unsigned>(hash_value(S));
+  }
+
+  static bool isEqual(const SpecSig &LHS, const SpecSig &RHS) {
+    return LHS == RHS;
+  }
+};
+
 /// Attempt to specialize functions in the module to enable constant
 /// propagation across function boundaries.
 ///
 /// \returns true if at least one function is specialized.
 bool FunctionSpecializer::run() {
-  bool Changed = false;
-
+  // Find possible specializations for each function.
+  SpecMap SM;
+  SmallVector<Spec, 32> AllSpecs;
+  unsigned NumCandidates = 0;
   for (Function &F : M) {
     if (!isCandidateFunction(&F))
       continue;
 
     auto Cost = getSpecializationCost(&F);
     if (!Cost.isValid()) {
-      LLVM_DEBUG(dbgs() << "FnSpecialization: Invalid specialization cost.\n");
+      LLVM_DEBUG(dbgs() << "FnSpecialization: Invalid specialization cost for "
+                        << F.getName() << "\n");
       continue;
     }
 
     LLVM_DEBUG(dbgs() << "FnSpecialization: Specialization cost for "
                       << F.getName() << " is " << Cost << "\n");
 
-    SmallVector<CallSpecBinding, 8> Specializations;
-    if (!findSpecializations(&F, Cost, Specializations)) {
+    if (!findSpecializations(&F, Cost, AllSpecs, SM)) {
       LLVM_DEBUG(
-          dbgs() << "FnSpecialization: No possible specializations found\n");
+          dbgs() << "FnSpecialization: No possible specializations found for "
+                 << F.getName() << "\n");
       continue;
     }
 
-    Changed = true;
+    ++NumCandidates;
+  }
 
-    SmallVector<Function *, 4> Clones;
-    for (CallSpecBinding &Specialization : Specializations)
-      Clones.push_back(createSpecialization(&F, Specialization));
+  if (!NumCandidates) {
+    LLVM_DEBUG(
+        dbgs()
+        << "FnSpecialization: No possible specializations found in module\n");
+    return false;
+  }
 
-    Solver.solveWhileResolvedUndefsIn(Clones);
-    updateCallSites(&F, Specializations);
+  // Choose the most profitable specialisations, which fit in the module
+  // specialization budget, which is derived from maximum number of
+  // specializations per specialization candidate function.
+  auto CompareGain = [&AllSpecs](unsigned I, unsigned J) {
+    return AllSpecs[I].Gain > AllSpecs[J].Gain;
+  };
+  const unsigned NSpecs =
+      std::min(NumCandidates * MaxClonesThreshold, unsigned(AllSpecs.size()));
+  SmallVector<unsigned> BestSpecs(NSpecs + 1);
+  std::iota(BestSpecs.begin(), BestSpecs.begin() + NSpecs, 0);
+  if (AllSpecs.size() > NSpecs) {
+    LLVM_DEBUG(dbgs() << "FnSpecialization: Number of candidates exceed "
+                      << "the maximum number of clones threshold.\n"
+                      << "FnSpecialization: Specializing the "
+                      << NSpecs
+                      << " most profitable candidates.\n");
+    std::make_heap(BestSpecs.begin(), BestSpecs.begin() + NSpecs, CompareGain);
+    for (unsigned I = NSpecs, N = AllSpecs.size(); I < N; ++I) {
+      BestSpecs[NSpecs] = I;
+      std::push_heap(BestSpecs.begin(), BestSpecs.end(), CompareGain);
+      std::pop_heap(BestSpecs.begin(), BestSpecs.end(), CompareGain);
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "FnSpecialization: List of specializations \n";
+             for (unsigned I = 0; I < NSpecs; ++I) {
+               const Spec &S = AllSpecs[BestSpecs[I]];
+               dbgs() << "FnSpecialization: Function " << S.F->getName()
+                      << " , gain " << S.Gain << "\n";
+               for (const ArgInfo &Arg : S.Sig.Args)
+                 dbgs() << "FnSpecialization:   FormalArg = "
+                        << Arg.Formal->getNameOrAsOperand()
+                        << ", ActualArg = " << Arg.Actual->getNameOrAsOperand()
+                        << "\n";
+             });
+
+  // Create the chosen specializations.
+  SmallPtrSet<Function *, 8> OriginalFuncs;
+  SmallVector<Function *> Clones;
+  for (unsigned I = 0; I < NSpecs; ++I) {
+    Spec &S = AllSpecs[BestSpecs[I]];
+    S.Clone = createSpecialization(S.F, S.Sig);
+
+    // Update the known call sites to call the clone.
+    for (CallBase *Call : S.CallSites) {
+      LLVM_DEBUG(dbgs() << "FnSpecialization: Redirecting " << *Call
+                        << " to call " << S.Clone->getName() << "\n");
+      Call->setCalledFunction(S.Clone);
+    }
+
+    Clones.push_back(S.Clone);
+    OriginalFuncs.insert(S.F);
+  }
+
+  Solver.solveWhileResolvedUndefsIn(Clones);
+
+  // Update the rest of the call sites - these are the recursive calls, calls
+  // to discarded specialisations and calls that may match a specialisation
+  // after the solver runs.
+  for (Function *F : OriginalFuncs) {
+    auto [Begin, End] = SM[F];
+    updateCallSites(F, AllSpecs.begin() + Begin, AllSpecs.begin() + End);
   }
 
   promoteConstantStackValues();
-
   LLVM_DEBUG(if (NbFunctionsSpecialized) dbgs()
              << "FnSpecialization: Specialized " << NbFunctionsSpecialized
              << " functions in module " << M.getName() << "\n");
 
   NumFuncSpecialized += NbFunctionsSpecialized;
-  return Changed;
+  return true;
 }
 
 void FunctionSpecializer::removeDeadFunctions() {
@@ -319,32 +400,30 @@ static Function *cloneCandidateFunction(Function *F) {
   return Clone;
 }
 
-/// This function decides whether it's worthwhile to specialize function
-/// \p F based on the known constant values its arguments can take on. It
-/// only discovers potential specialization opportunities without actually
-/// applying them.
-///
-/// \returns true if any specializations have been found.
-bool FunctionSpecializer::findSpecializations(
-    Function *F, InstructionCost Cost,
-    SmallVectorImpl<CallSpecBinding> &WorkList) {
+bool FunctionSpecializer::findSpecializations(Function *F, InstructionCost Cost,
+                                              SmallVectorImpl<Spec> &AllSpecs,
+                                              SpecMap &SM) {
+  // A mapping from a specialisation signature to the index of the respective
+  // entry in the all specialisation array. Used to ensure uniqueness of
+  // specialisations.
+  DenseMap<SpecSig, unsigned> UM;
+
   // Get a list of interesting arguments.
-  SmallVector<Argument *, 4> Args;
+  SmallVector<Argument *> Args;
   for (Argument &Arg : F->args())
     if (isArgumentInteresting(&Arg))
       Args.push_back(&Arg);
 
-  if (!Args.size())
+  if (Args.empty())
     return false;
 
-  // Find all the call sites for the function.
-  SpecializationMap Specializations;
+  bool Found = false;
   for (User *U : F->users()) {
     if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
       continue;
     auto &CS = *cast<CallBase>(U);
 
-    // Skip irrelevant users.
+    // The user instruction does not call our function.
     if (CS.getCalledFunction() != F)
       continue;
 
@@ -358,62 +437,58 @@ bool FunctionSpecializer::findSpecializations(
     if (!Solver.isBlockExecutable(CS.getParent()))
       continue;
 
-    // Examine arguments and create specialization candidates from call sites
-    // with constant arguments.
-    bool Added = false;
+    // Examine arguments and create a specialisation candidate from the
+    // constant operands of this call site.
+    SpecSig S;
     for (Argument *A : Args) {
       Constant *C = getCandidateConstant(CS.getArgOperand(A->getArgNo()));
       if (!C)
         continue;
-
-      if (!Added) {
-        Specializations[&CS] = {{}, 0 - Cost, nullptr};
-        Added = true;
-      }
-
-      SpecializationInfo &S = Specializations.back().second;
-      S.Gain += getSpecializationBonus(A, C, Solver.getLoopInfo(*F));
+      LLVM_DEBUG(dbgs() << "FnSpecialization: Found interesting argument "
+                        << A->getName() << " : " << C->getNameOrAsOperand()
+                        << "\n");
       S.Args.push_back({A, C});
     }
-    Added = false;
+
+    if (S.Args.empty())
+      continue;
+
+    // Check if we have encountered the same specialisation already.
+    if (auto It = UM.find(S); It != UM.end()) {
+      // Existing specialisation. Add the call to the list to rewrite, unless
+      // it's a recursive call. A specialisation, generated because of a
+      // recursive call may end up as not the best specialisation for all
+      // the cloned instances of this call, which result from specialising
+      // functions. Hence we don't rewrite the call directly, but match it with
+      // the best specialisation once all specialisations are known.
+      if (CS.getFunction() == F)
+        continue;
+      const unsigned Index = It->second;
+      AllSpecs[Index].CallSites.push_back(&CS);
+    } else {
+      // Calculate the specialisation gain.
+      InstructionCost Gain = 0 - Cost;
+      for (ArgInfo &A : S.Args)
+        Gain +=
+            getSpecializationBonus(A.Formal, A.Actual, Solver.getLoopInfo(*F));
+
+      // Discard unprofitable specialisations.
+      if (!ForceFunctionSpecialization && Gain <= 0)
+        continue;
+
+      // Create a new specialisation entry.
+      auto &Spec = AllSpecs.emplace_back(F, S, Gain);
+      if (CS.getFunction() != F)
+        Spec.CallSites.push_back(&CS);
+      const unsigned Index = AllSpecs.size() - 1;
+      UM[S] = Index;
+      if (auto [It, Inserted] = SM.try_emplace(F, Index, Index + 1); !Inserted)
+        It->second.second = Index + 1;
+      Found = true;
+    }
   }
 
-  // Remove unprofitable specializations.
-  if (!ForceFunctionSpecialization)
-    Specializations.remove_if(
-        [](const auto &Entry) { return Entry.second.Gain <= 0; });
-
-  // Clear the MapVector and return the underlying vector.
-  WorkList = Specializations.takeVector();
-
-  // Sort the candidates in descending order.
-  llvm::stable_sort(WorkList, [](const auto &L, const auto &R) {
-    return L.second.Gain > R.second.Gain;
-  });
-
-  // Truncate the worklist to 'MaxClonesThreshold' candidates if necessary.
-  if (WorkList.size() > MaxClonesThreshold) {
-    LLVM_DEBUG(dbgs() << "FnSpecialization: Number of candidates exceed "
-                      << "the maximum number of clones threshold.\n"
-                      << "FnSpecialization: Truncating worklist to "
-                      << MaxClonesThreshold << " candidates.\n");
-    WorkList.erase(WorkList.begin() + MaxClonesThreshold, WorkList.end());
-  }
-
-  LLVM_DEBUG(dbgs() << "FnSpecialization: Specializations for function "
-                    << F->getName() << "\n";
-             for (const auto &Entry
-                  : WorkList) {
-               dbgs() << "FnSpecialization:   Gain = " << Entry.second.Gain
-                      << "\n";
-               for (const ArgInfo &Arg : Entry.second.Args)
-                 dbgs() << "FnSpecialization:   FormalArg = "
-                        << Arg.Formal->getNameOrAsOperand()
-                        << ", ActualArg = " << Arg.Actual->getNameOrAsOperand()
-                        << "\n";
-             });
-
-  return !WorkList.empty();
+  return Found;
 }
 
 bool FunctionSpecializer::isCandidateFunction(Function *F) {
@@ -449,16 +524,13 @@ bool FunctionSpecializer::isCandidateFunction(Function *F) {
   return true;
 }
 
-Function *
-FunctionSpecializer::createSpecialization(Function *F,
-                                          CallSpecBinding &Specialization) {
+Function *FunctionSpecializer::createSpecialization(Function *F, const SpecSig &S) {
   Function *Clone = cloneCandidateFunction(F);
-  Specialization.second.Clone = Clone;
 
   // Initialize the lattice state of the arguments of the function clone,
   // marking the argument on which we specialized the function constant
   // with the given value.
-  Solver.markArgInFuncSpecialization(Clone, Specialization.second.Args);
+  Solver.markArgInFuncSpecialization(Clone, S.Args);
 
   Solver.addArgumentTrackedFunction(Clone);
   Solver.markBlockExecutable(&Clone->front());
@@ -484,9 +556,8 @@ InstructionCost FunctionSpecializer::getSpecializationCost(Function *F) {
     return InstructionCost::getInvalid();
 
   // Otherwise, set the specialization cost to be the cost of all the
-  // instructions in the function and penalty for specializing more functions.
-  unsigned Penalty = NbFunctionsSpecialized + 1;
-  return Metrics.NumInsts * InlineConstants::getInstrCost() * Penalty;
+  // instructions in the function.
+  return Metrics.NumInsts * InlineConstants::getInstrCost();
 }
 
 static InstructionCost getUserBonus(User *U, llvm::TargetTransformInfo &TTI,
@@ -611,10 +682,13 @@ bool FunctionSpecializer::isArgumentInteresting(Argument *A) {
   const ValueLatticeElement &LV = Solver.getLatticeValueFor(A);
   if (LV.isUnknownOrUndef() || LV.isConstant() ||
       (LV.isConstantRange() && LV.getConstantRange().isSingleElement())) {
-    LLVM_DEBUG(dbgs() << "FnSpecialization: Nothing to do, argument "
+    LLVM_DEBUG(dbgs() << "FnSpecialization: Nothing to do, parameter "
                       << A->getNameOrAsOperand() << " is already constant\n");
     return false;
   }
+
+  LLVM_DEBUG(dbgs() << "FnSpecialization: Found interesting parameter "
+                    << A->getNameOrAsOperand() << "\n");
 
   return true;
 }
@@ -651,44 +725,45 @@ Constant *FunctionSpecializer::getCandidateConstant(Value *V) {
       return nullptr;
   }
 
-  LLVM_DEBUG(dbgs() << "FnSpecialization: Found interesting argument "
-                    << V->getNameOrAsOperand() << "\n");
-
   return C;
 }
 
-/// Redirects callsites of function \p F to its specialized copies.
-void FunctionSpecializer::updateCallSites(
-    Function *F, SmallVectorImpl<CallSpecBinding> &Specializations) {
-  SmallVector<CallBase *, 8> ToUpdate;
-  for (User *U : F->users()) {
-    if (auto *CS = dyn_cast<CallBase>(U))
-      if (CS->getCalledFunction() == F &&
-          Solver.isBlockExecutable(CS->getParent()))
-        ToUpdate.push_back(CS);
-  }
+void FunctionSpecializer::updateCallSites(Function *F, const Spec *Begin,
+                                          const Spec *End) {
+  // Collect the call sites that need updating.
+  SmallVector<CallBase *> ToUpdate;
+  for (User *U : F->users())
+    if (auto *CS = dyn_cast<CallBase>(U);
+        CS && CS->getCalledFunction() == F &&
+        Solver.isBlockExecutable(CS->getParent()))
+      ToUpdate.push_back(CS);
 
   unsigned NCallsLeft = ToUpdate.size();
   for (CallBase *CS : ToUpdate) {
-    // Decrement the counter if the callsite is either recursive or updated.
     bool ShouldDecrementCount = CS->getFunction() == F;
-    for (CallSpecBinding &Specialization : Specializations) {
-      Function *Clone = Specialization.second.Clone;
-      SmallVectorImpl<ArgInfo> &Args = Specialization.second.Args;
 
-      if (any_of(Args, [CS, this](const ArgInfo &Arg) {
+    // Find the best matching specialisation.
+    const Spec *BestSpec = nullptr;
+    for (const Spec &S : make_range(Begin, End)) {
+      if (!S.Clone || (BestSpec && S.Gain <= BestSpec->Gain))
+        continue;
+
+      if (any_of(S.Sig.Args, [CS, this](const ArgInfo &Arg) {
             unsigned ArgNo = Arg.Formal->getArgNo();
             return getCandidateConstant(CS->getArgOperand(ArgNo)) != Arg.Actual;
           }))
         continue;
 
-      LLVM_DEBUG(dbgs() << "FnSpecialization: Replacing call site " << *CS
-                        << " with " << Clone->getName() << "\n");
-
-      CS->setCalledFunction(Clone);
-      ShouldDecrementCount = true;
-      break;
+      BestSpec = &S;
     }
+
+    if (BestSpec) {
+      LLVM_DEBUG(dbgs() << "FnSpecialization: Redirecting " << *CS
+                        << " to call " << BestSpec->Clone->getName() << "\n");
+      CS->setCalledFunction(BestSpec->Clone);
+      ShouldDecrementCount = true;
+    }
+
     if (ShouldDecrementCount)
       --NCallsLeft;
   }

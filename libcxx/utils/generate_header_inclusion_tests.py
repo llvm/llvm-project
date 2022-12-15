@@ -68,6 +68,7 @@ new_in_version = {
     "concepts": "20",
     "coroutine": "20",
     "cuchar": "11",
+    "expected": "23",
     "filesystem": "17",
     "initializer_list": "11",
     "optional": "17",

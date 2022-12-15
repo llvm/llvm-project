@@ -15,6 +15,8 @@
 #define OPENMP_LIBOMPTARGET_INCLUDE_UTILITIES_H
 
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 
 #include "Debug.h"
 
