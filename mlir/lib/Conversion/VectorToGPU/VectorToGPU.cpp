@@ -96,8 +96,12 @@ static bool contractSupportsMMAMatrixType(vector::ContractionOp contract,
 // i.e. (d0, d1, ...) -> (dn-1, dn-2).
 static bool isTransposeMatrixLoadMap(OpBuilder &b, AffineMap permutationMap) {
   auto nDim = permutationMap.getNumDims();
-  if (nDim < 2)
-    return false;
+  if (nDim < 2) {
+    // Support transposed+broadcasted cases: affine_map<(d0) -> (d0, 0)>.
+    AffineExpr dim0 = b.getAffineDimExpr(0);
+    AffineExpr zero = b.getAffineConstantExpr(0);
+    return permutationMap == AffineMap::get(1, 0, {dim0, zero}, b.getContext());
+  }
 
   AffineExpr innerDim = b.getAffineDimExpr(nDim - 1);
   AffineExpr outerDim = b.getAffineDimExpr(nDim - 2);
@@ -458,12 +462,18 @@ static void convertTransferReadOp(vector::TransferReadOp op,
                                   llvm::DenseMap<Value, Value> &valueMapping) {
   assert(op.getTransferRank() > 0 && "unexpected 0-d transfer");
   assert(transferReadSupportsMMAMatrixType(op, /*useNvGpu=*/false));
+
   std::optional<int64_t> stride =
       getMemrefConstantHorizontalStride(op.getShapedType());
+
   AffineMap map = op.getPermutationMap();
+  OpBuilder b(op);
+  bool isTranspose = isTransposeMatrixLoadMap(b, map);
+
   // Handle broadcast by setting the stride to 0.
-  if (map.getResult(0).isa<AffineConstantExpr>()) {
-    assert(map.getResult(0).cast<AffineConstantExpr>().getValue() == 0);
+  if (auto cstExpr =
+          map.getResult(isTranspose).dyn_cast<AffineConstantExpr>()) {
+    assert(cstExpr.getValue() == 0);
     stride = 0;
   }
   assert(stride);
@@ -471,8 +481,6 @@ static void convertTransferReadOp(vector::TransferReadOp op,
   gpu::MMAMatrixType type =
       gpu::MMAMatrixType::get(op.getVectorType().getShape(),
                               op.getVectorType().getElementType(), fragType);
-  OpBuilder b(op);
-  bool isTranspose = isTransposeMatrixLoadMap(b, map);
   Value load = b.create<gpu::SubgroupMmaLoadMatrixOp>(
       op.getLoc(), type, op.getSource(), op.getIndices(),
       b.getIndexAttr(*stride), isTranspose ? b.getUnitAttr() : UnitAttr());
