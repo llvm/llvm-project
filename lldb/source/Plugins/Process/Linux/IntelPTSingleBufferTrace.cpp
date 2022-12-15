@@ -251,7 +251,8 @@ Expected<IntelPTSingleBufferTrace> IntelPTSingleBufferTrace::Start(
       (request.ipt_trace_size + page_size - 1) / page_size));
 
   Expected<perf_event_attr> attr = CreateIntelPTPerfEventConfiguration(
-      request.enable_tsc, request.psb_period.transform([](int value) {
+      request.enable_tsc,
+      llvm::transformOptional(request.psb_period, [](int value) {
         return static_cast<uint64_t>(value);
       }));
   if (!attr)
