@@ -7672,7 +7672,12 @@ int CodeGenModule::getWorkGroupSizeSPMDHelper(const OMPExecutableDirective &D) {
 
 int CodeGenModule::computeXteamRedBlockSize(const OMPExecutableDirective &D) {
   int InitialBlockSize = getWorkGroupSizeSPMDHelper(D);
-  // We support block sizes 256, 512, and 1024 only for Xteam reduction.
+  // We support block sizes 64, 128, 256, 512, and 1024 only for Xteam
+  // reduction.
+  if (InitialBlockSize < 128)
+    return 64;
+  if (InitialBlockSize < 256)
+    return 128;
   if (InitialBlockSize < 512)
     return 256;
   if (InitialBlockSize < 1024)
@@ -7751,8 +7756,8 @@ CodeGenModule::getXteamRedCompatibleThreadLimitStatus(
   clang::Expr::EvalResult Result;
   if (ThreadLimitExpr->EvaluateAsInt(Result, getContext())) {
     int ThreadLimitEval = Result.Val.getInt().getExtValue();
-    // We support thread limit >= 256
-    if (ThreadLimitEval > 255)
+    // We support thread limit >= 64
+    if (ThreadLimitEval > 63)
       return NxSuccess;
   }
   return NxUnsupportedXteamRedThreadLimit;

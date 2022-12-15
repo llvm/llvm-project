@@ -4258,19 +4258,28 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
 
   if (SumType->isIntegerTy()) {
     if (SumType->getPrimitiveSizeInBits() == 32) {
-      if (BlockSize == 256) {
+      switch (BlockSize) {
+      case 64:
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                  OMPRTL___kmpc_xteamr_ui_1x64),
+            Args);
+      case 128:
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                  OMPRTL___kmpc_xteamr_ui_2x64),
+            Args);
+      case 256:
         return CGF.EmitRuntimeCall(
             OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                                   OMPRTL___kmpc_xteamr_ui_4x64),
             Args);
-      }
-      if (BlockSize == 512) {
+      case 512:
         return CGF.EmitRuntimeCall(
             OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                                   OMPRTL___kmpc_xteamr_ui_8x64),
             Args);
-      }
-      if (BlockSize == 1024) {
+      case 1024:
         return CGF.EmitRuntimeCall(
             OMPBuilder.getOrCreateRuntimeFunction(
                 CGM.getModule(), OMPRTL___kmpc_xteamr_ui_16x64),
@@ -4278,19 +4287,28 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
       }
     }
     if (SumType->getPrimitiveSizeInBits() == 64) {
-      if (BlockSize == 256) {
+      switch (BlockSize) {
+      case 64:
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                  OMPRTL___kmpc_xteamr_ul_1x64),
+            Args);
+      case 128:
+        return CGF.EmitRuntimeCall(
+            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                  OMPRTL___kmpc_xteamr_ul_2x64),
+            Args);
+      case 256:
         return CGF.EmitRuntimeCall(
             OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                                   OMPRTL___kmpc_xteamr_ul_4x64),
             Args);
-      }
-      if (BlockSize == 512) {
+      case 512:
         return CGF.EmitRuntimeCall(
             OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                                   OMPRTL___kmpc_xteamr_ul_8x64),
             Args);
-      }
-      if (BlockSize == 1024) {
+      case 1024:
         return CGF.EmitRuntimeCall(
             OMPBuilder.getOrCreateRuntimeFunction(
                 CGM.getModule(), OMPRTL___kmpc_xteamr_ul_16x64),
@@ -4299,19 +4317,28 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
     }
   }
   if (SumType->isFloatTy()) {
-    if (BlockSize == 256) {
+    switch (BlockSize) {
+    case 64:
+      return CGF.EmitRuntimeCall(
+          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                OMPRTL___kmpc_xteamr_f_1x64),
+          Args);
+    case 128:
+      return CGF.EmitRuntimeCall(
+          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                OMPRTL___kmpc_xteamr_f_2x64),
+          Args);
+    case 256:
       return CGF.EmitRuntimeCall(
           OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                                 OMPRTL___kmpc_xteamr_f_4x64),
           Args);
-    }
-    if (BlockSize == 512) {
+    case 512:
       return CGF.EmitRuntimeCall(
           OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                                 OMPRTL___kmpc_xteamr_f_8x64),
           Args);
-    }
-    if (BlockSize == 1024) {
+    case 1024:
       return CGF.EmitRuntimeCall(
           OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                                 OMPRTL___kmpc_xteamr_f_16x64),
@@ -4319,19 +4346,28 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
     }
   }
   if (SumType->isDoubleTy()) {
-    if (BlockSize == 256) {
+    switch (BlockSize) {
+    case 64:
+      return CGF.EmitRuntimeCall(
+          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                OMPRTL___kmpc_xteamr_d_1x64),
+          Args);
+    case 128:
+      return CGF.EmitRuntimeCall(
+          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                OMPRTL___kmpc_xteamr_d_2x64),
+          Args);
+    case 256:
       return CGF.EmitRuntimeCall(
           OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                                 OMPRTL___kmpc_xteamr_d_4x64),
           Args);
-    }
-    if (BlockSize == 512) {
+    case 512:
       return CGF.EmitRuntimeCall(
           OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                                 OMPRTL___kmpc_xteamr_d_8x64),
           Args);
-    }
-    if (BlockSize == 1024) {
+    case 1024:
       return CGF.EmitRuntimeCall(
           OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                                 OMPRTL___kmpc_xteamr_d_16x64),
