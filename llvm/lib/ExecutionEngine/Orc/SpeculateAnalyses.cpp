@@ -67,7 +67,7 @@ void SpeculateQuery::findCalles(const BasicBlock *BB,
 }
 
 bool SpeculateQuery::isStraightLine(const Function &F) {
-  return llvm::all_of(F.getBasicBlockList(), [](const BasicBlock &BB) {
+  return llvm::all_of(F, [](const BasicBlock &BB) {
     return BB.getSingleSuccessor() != nullptr;
   });
 }
