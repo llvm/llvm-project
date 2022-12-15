@@ -13,8 +13,8 @@ define void @test1(i1 %cmp) align 2 {
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq %rsp, %rcx
+; CHECK-NEXT:    movq %rsp, %rax
+; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    cmovneq %rax, %rcx
 ; CHECK-NEXT:    movups (%rcx), %xmm0
 ; CHECK-NEXT:    callq _sink
@@ -36,8 +36,8 @@ define void @test2(i1 %cmp) align 2 {
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq %rsp, %rcx
+; CHECK-NEXT:    movq %rsp, %rax
+; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    cmovneq %rax, %rcx
 ; CHECK-NEXT:    movaps (%rcx), %xmm0
 ; CHECK-NEXT:    callq _sink

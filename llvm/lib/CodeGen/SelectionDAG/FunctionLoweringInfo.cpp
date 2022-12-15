@@ -128,20 +128,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (const Instruction &I : BB) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
         Type *Ty = AI->getAllocatedType();
-        Align TyPrefAlign = MF->getDataLayout().getPrefTypeAlign(Ty);
-        // The "specified" alignment is the alignment written on the alloca,
-        // or the preferred alignment of the type if none is specified.
-        //
-        // (Unspecified alignment on allocas will be going away soon.)
-        Align SpecifiedAlign = AI->getAlign();
-
-        // If the preferred alignment of the type is higher than the specified
-        // alignment of the alloca, promote the alignment, as long as it doesn't
-        // require realigning the stack.
-        //
-        // FIXME: Do we really want to second-guess the IR in isel?
-        Align Alignment =
-            std::max(std::min(TyPrefAlign, StackAlign), SpecifiedAlign);
+        Align Alignment = AI->getAlign();
 
         // Static allocas can be folded into the initial stack frame
         // adjustment. For targets that don't realign the stack, don't

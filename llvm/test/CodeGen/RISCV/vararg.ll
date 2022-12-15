@@ -138,7 +138,7 @@ define i32 @va1(i8* %fmt, ...) {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi sp, sp, 96
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ret
-  %va = alloca i8*, align 4
+  %va = alloca i8*
   %1 = bitcast i8** %va to i8*
   call void @llvm.va_start(i8* %1)
   %argp.cur = load i8*, i8** %va, align 4
@@ -603,7 +603,7 @@ define i64 @va2(i8 *%fmt, ...) nounwind {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi sp, sp, 96
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ret
-  %va = alloca i8*, align 4
+  %va = alloca i8*
   %1 = bitcast i8** %va to i8*
   call void @llvm.va_start(i8* %1)
   %2 = bitcast i8** %va to i32*
@@ -725,7 +725,7 @@ define i64 @va2_va_arg(i8 *%fmt, ...) nounwind {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi sp, sp, 96
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ret
-  %va = alloca i8*, align 4
+  %va = alloca i8*
   %1 = bitcast i8** %va to i8*
   call void @llvm.va_start(i8* %1)
   %2 = va_arg i8** %va, double
@@ -923,7 +923,7 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi sp, sp, 80
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ret
-  %va = alloca i8*, align 4
+  %va = alloca i8*
   %1 = bitcast i8** %va to i8*
   call void @llvm.va_start(i8* %1)
   %2 = bitcast i8** %va to i32*
@@ -1050,7 +1050,7 @@ define i64 @va3_va_arg(i32 %a, i64 %b, ...) nounwind {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi sp, sp, 80
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ret
-  %va = alloca i8*, align 4
+  %va = alloca i8*
   %1 = bitcast i8** %va to i8*
   call void @llvm.va_start(i8* %1)
   %2 = va_arg i8** %va, double
@@ -1351,8 +1351,8 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi sp, sp, 112
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ret
-  %vargs = alloca i8*, align 4
-  %wargs = alloca i8*, align 4
+  %vargs = alloca i8*
+  %wargs = alloca i8*
   %1 = bitcast i8** %vargs to i8*
   %2 = bitcast i8** %wargs to i8*
   call void @llvm.va_start(i8* %1)
@@ -1672,7 +1672,7 @@ define i32 @va6_no_fixed_args(...) nounwind {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi sp, sp, 96
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ret
-  %va = alloca i8*, align 4
+  %va = alloca i8*
   %1 = bitcast i8** %va to i8*
   call void @llvm.va_start(i8* %1)
   %2 = va_arg i8** %va, i32
@@ -1862,7 +1862,7 @@ define i32 @va_large_stack(i8* %fmt, ...) {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi sp, sp, 2032
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ret
   %large = alloca [ 100000000 x i8 ]
-  %va = alloca i8*, align 4
+  %va = alloca i8*
   %1 = bitcast i8** %va to i8*
   call void @llvm.va_start(i8* %1)
   %argp.cur = load i8*, i8** %va, align 4
