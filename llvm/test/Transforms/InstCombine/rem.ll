@@ -335,7 +335,7 @@ define i32 @test13(i32 %i) {
 
 define i64 @test14(i64 %x, i32 %y) {
 ; CHECK-LABEL: @test14(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[SHL]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[ZEXT]], -1
 ; CHECK-NEXT:    [[UREM:%.*]] = and i64 [[TMP1]], [[X:%.*]]
@@ -404,8 +404,8 @@ define i32 @test18(i16 %x, i32 %y) {
 
 define i32 @test19(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test19(
-; CHECK-NEXT:    [[A:%.*]] = shl i32 1, [[X:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = shl i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = shl nuw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = and i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[D:%.*]] = add i32 [[C]], [[A]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[D]], -1
@@ -422,8 +422,8 @@ define i32 @test19(i32 %x, i32 %y) {
 
 define i32 @test19_commutative0(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test19_commutative0(
-; CHECK-NEXT:    [[A:%.*]] = shl i32 1, [[X:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = shl i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = shl nuw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = and i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[D:%.*]] = add i32 [[C]], [[A]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[D]], -1
@@ -440,8 +440,8 @@ define i32 @test19_commutative0(i32 %x, i32 %y) {
 
 define i32 @test19_commutative1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test19_commutative1(
-; CHECK-NEXT:    [[A:%.*]] = shl i32 1, [[X:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = shl i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = shl nuw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = and i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[D:%.*]] = add i32 [[A]], [[C]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[D]], -1
@@ -458,8 +458,8 @@ define i32 @test19_commutative1(i32 %x, i32 %y) {
 
 define i32 @test19_commutative2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test19_commutative2(
-; CHECK-NEXT:    [[A:%.*]] = shl i32 1, [[X:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = shl i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = shl nuw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = and i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[D:%.*]] = add i32 [[A]], [[C]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[D]], -1
@@ -490,10 +490,10 @@ define i32 @test21(i1 %c0, ptr %p) {
 ; CHECK-NEXT:    br i1 [[C0:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[PHI_BO:%.*]] = srem i32 [[V]], 5
+; CHECK-NEXT:    [[TMP0:%.*]] = srem i32 [[V]], 5
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[LHS:%.*]] = phi i32 [ [[PHI_BO]], [[IF_THEN]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LHS:%.*]] = phi i32 [ [[TMP0]], [[IF_THEN]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[LHS]]
 ;
 entry:
@@ -619,10 +619,10 @@ define i32 @pr27968_3(i1 %c0, i1 %always_false, ptr %p) {
 ; CHECK-NEXT:    br i1 [[C0:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[PHI_BO:%.*]] = and i32 [[V]], 2147483647
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[V]], 2147483647
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[LHS:%.*]] = phi i32 [ [[PHI_BO]], [[IF_THEN]] ], [ 5, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LHS:%.*]] = phi i32 [ [[TMP0]], [[IF_THEN]] ], [ 5, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br i1 [[ALWAYS_FALSE:%.*]], label [[REM_IS_SAFE:%.*]], label [[REM_IS_UNSAFE:%.*]]
 ; CHECK:       rem.is.safe:
 ; CHECK-NEXT:    ret i32 [[LHS]]

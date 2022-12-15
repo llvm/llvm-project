@@ -1763,7 +1763,7 @@ define <2 x i1> @icmp_sub57_sge_sub20_vec_nonsplat(<2 x i32> %x, <2 x i32> %y) {
 
 define i1 @icmp_and_shl_neg_ne_0(i32 %A, i32 %B) {
 ; CHECK-LABEL: @icmp_and_shl_neg_ne_0(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[SHL]], [[A:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -1777,7 +1777,7 @@ define i1 @icmp_and_shl_neg_ne_0(i32 %A, i32 %B) {
 
 define i1 @icmp_and_shl_neg_eq_0(i32 %A, i32 %B) {
 ; CHECK-LABEL: @icmp_and_shl_neg_eq_0(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[SHL]], [[A:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]

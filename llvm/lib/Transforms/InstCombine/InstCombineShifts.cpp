@@ -1059,11 +1059,19 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     }
   }
 
-  // (1 << (C - x)) -> ((1 << C) >> x) if C is bitwidth - 1
-  if (match(Op0, m_One()) &&
-      match(Op1, m_Sub(m_SpecificInt(BitWidth - 1), m_Value(X))))
-    return BinaryOperator::CreateLShr(
-        ConstantInt::get(Ty, APInt::getSignMask(BitWidth)), X);
+  if (match(Op0, m_One())) {
+    // (1 << (C - x)) -> ((1 << C) >> x) if C is bitwidth - 1
+    if (match(Op1, m_Sub(m_SpecificInt(BitWidth - 1), m_Value(X))))
+      return BinaryOperator::CreateLShr(
+          ConstantInt::get(Ty, APInt::getSignMask(BitWidth)), X);
+
+    // The only way to shift out the 1 is with an over-shift, and that would
+    // be poison either way.
+    if (!I.hasNoUnsignedWrap()) {
+      I.setHasNoUnsignedWrap();
+      return &I;
+    }
+  }
 
   return nullptr;
 }
