@@ -206,34 +206,34 @@ bar_bb2:
 
   // Insert foo_bb0 into bar() at the very top.
   FooBB0->removeFromParent();
-  auto It = BarF->insertBasicBlockAt(BarF->begin(), FooBB0);
+  auto It = BarF->insert(BarF->begin(), FooBB0);
   EXPECT_EQ(BarBB0->getPrevNode(), FooBB0);
   EXPECT_EQ(It, FooBB0->getIterator());
 
   // Insert foo_bb0 into bar() at the very end.
   FooBB0->removeFromParent();
-  It = BarF->insertBasicBlockAt(BarF->end(), FooBB0);
+  It = BarF->insert(BarF->end(), FooBB0);
   EXPECT_EQ(FooBB0->getPrevNode(), BarBB2);
   EXPECT_EQ(FooBB0->getNextNode(), nullptr);
   EXPECT_EQ(It, FooBB0->getIterator());
 
   // Insert foo_bb0 into bar() just before bar_bb0.
   FooBB0->removeFromParent();
-  It = BarF->insertBasicBlockAt(BarBB0->getIterator(), FooBB0);
+  It = BarF->insert(BarBB0->getIterator(), FooBB0);
   EXPECT_EQ(FooBB0->getPrevNode(), nullptr);
   EXPECT_EQ(FooBB0->getNextNode(), BarBB0);
   EXPECT_EQ(It, FooBB0->getIterator());
 
   // Insert foo_bb0 into bar() just before bar_bb1.
   FooBB0->removeFromParent();
-  It = BarF->insertBasicBlockAt(BarBB1->getIterator(), FooBB0);
+  It = BarF->insert(BarBB1->getIterator(), FooBB0);
   EXPECT_EQ(FooBB0->getPrevNode(), BarBB0);
   EXPECT_EQ(FooBB0->getNextNode(), BarBB1);
   EXPECT_EQ(It, FooBB0->getIterator());
 
   // Insert foo_bb0 into bar() just before bar_bb2.
   FooBB0->removeFromParent();
-  It = BarF->insertBasicBlockAt(BarBB2->getIterator(), FooBB0);
+  It = BarF->insert(BarBB2->getIterator(), FooBB0);
   EXPECT_EQ(FooBB0->getPrevNode(), BarBB1);
   EXPECT_EQ(FooBB0->getNextNode(), BarBB2);
   EXPECT_EQ(It, FooBB0->getIterator());
