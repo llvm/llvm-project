@@ -147,6 +147,7 @@ public:
       } else {
         pm.addPass(createSparseTensorCodegenPass(enableBufferInitialization));
         pm.addPass(createSparseBufferRewritePass(enableBufferInitialization));
+        pm.addPass(createStorageSpecifierToLLVMPass());
       }
       if (failed(runPipeline(pm, getOperation())))
         return signalPassFailure();
