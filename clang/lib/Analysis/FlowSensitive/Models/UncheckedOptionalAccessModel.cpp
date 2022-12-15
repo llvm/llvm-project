@@ -27,6 +27,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <memory>
 #include <utility>
@@ -835,7 +836,14 @@ ComparisonResult UncheckedOptionalAccessModel::compare(
     const Value &Val2, const Environment &Env2) {
   if (!isOptionalType(Type))
     return ComparisonResult::Unknown;
-  return isNonEmptyOptional(Val1, Env1) == isNonEmptyOptional(Val2, Env2)
+  bool MustNonEmpty1 = isNonEmptyOptional(Val1, Env1);
+  bool MustNonEmpty2 = isNonEmptyOptional(Val2, Env2);
+  if (MustNonEmpty1 && MustNonEmpty2) return ComparisonResult::Same;
+  // If exactly one is true, then they're different, no reason to check whether
+  // they're definitely empty.
+  if (MustNonEmpty1 || MustNonEmpty2) return ComparisonResult::Different;
+  // Check if they're both definitely empty.
+  return (isEmptyOptional(Val1, Env1) && isEmptyOptional(Val2, Env2))
              ? ComparisonResult::Same
              : ComparisonResult::Different;
 }
@@ -848,14 +856,46 @@ bool UncheckedOptionalAccessModel::merge(QualType Type, const Value &Val1,
                                          Environment &MergedEnv) {
   if (!isOptionalType(Type))
     return true;
-
+  // FIXME: uses same approach as join for `BoolValues`. Requires non-const
+  // values, though, so will require updating the interface.
   auto &HasValueVal = MergedEnv.makeAtomicBoolValue();
-  if (isNonEmptyOptional(Val1, Env1) && isNonEmptyOptional(Val2, Env2))
+  bool MustNonEmpty1 = isNonEmptyOptional(Val1, Env1);
+  bool MustNonEmpty2 = isNonEmptyOptional(Val2, Env2);
+  if (MustNonEmpty1 && MustNonEmpty2)
     MergedEnv.addToFlowCondition(HasValueVal);
-  else if (isEmptyOptional(Val1, Env1) && isEmptyOptional(Val2, Env2))
+  else if (
+      // Only make the costly calls to `isEmptyOptional` if we got "unknown"
+      // (false) for both calls to `isNonEmptyOptional`.
+      !MustNonEmpty1 && !MustNonEmpty2 && isEmptyOptional(Val1, Env1) &&
+      isEmptyOptional(Val2, Env2))
     MergedEnv.addToFlowCondition(MergedEnv.makeNot(HasValueVal));
   setHasValue(MergedVal, HasValueVal);
   return true;
+}
+
+Value *UncheckedOptionalAccessModel::widen(QualType Type, Value &Prev,
+                                           const Environment &PrevEnv,
+                                           Value &Current,
+                                           Environment &CurrentEnv) {
+  switch (compare(Type, Prev, PrevEnv, Current, CurrentEnv)) {
+  case ComparisonResult::Same:
+    return &Prev;
+  case ComparisonResult::Different:
+    if (auto *PrevHasVal =
+            cast_or_null<BoolValue>(Prev.getProperty("has_value"))) {
+      if (isa<TopBoolValue>(PrevHasVal))
+        return &Prev;
+    }
+    if (auto *CurrentHasVal =
+            cast_or_null<BoolValue>(Current.getProperty("has_value"))) {
+      if (isa<TopBoolValue>(CurrentHasVal))
+        return &Current;
+    }
+    return &createOptionalValue(CurrentEnv, CurrentEnv.makeTopBoolValue());
+  case ComparisonResult::Unknown:
+    return nullptr;
+  }
+  llvm_unreachable("all cases covered in switch");
 }
 
 UncheckedOptionalAccessDiagnoser::UncheckedOptionalAccessDiagnoser(
