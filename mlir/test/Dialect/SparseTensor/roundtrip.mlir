@@ -201,41 +201,41 @@ func.func @sparse_insert(%arg0: tensor<128xf64, #SparseVector>, %arg1: index, %a
 // -----
 
 // CHECK-LABEL: func @sparse_push_back(
-//  CHECK-SAME: %[[A:.*]]: memref<?xindex>,
+//  CHECK-SAME: %[[A:.*]]: index,
 //  CHECK-SAME: %[[B:.*]]: memref<?xf64>,
-//  CHECK-SAME: %[[C:.*]]: f64) -> memref<?xf64> {
-//       CHECK: %[[D:.*]] = sparse_tensor.push_back %[[A]], %[[B]], %[[C]] {idx = 2 : index} : memref<?xindex>, memref<?xf64>, f64
+//  CHECK-SAME: %[[C:.*]]: f64) -> (memref<?xf64>, index) {
+//       CHECK: %[[D:.*]] = sparse_tensor.push_back %[[A]], %[[B]], %[[C]] : index, memref<?xf64>, f64
 //       CHECK: return %[[D]]
-func.func @sparse_push_back(%arg0: memref<?xindex>, %arg1: memref<?xf64>, %arg2: f64) -> memref<?xf64> {
-  %0 = sparse_tensor.push_back %arg0, %arg1, %arg2 {idx = 2 : index} : memref<?xindex>, memref<?xf64>, f64
-  return %0 : memref<?xf64>
+func.func @sparse_push_back(%arg0: index, %arg1: memref<?xf64>, %arg2: f64) -> (memref<?xf64>, index) {
+  %0:2 = sparse_tensor.push_back %arg0, %arg1, %arg2 : index, memref<?xf64>, f64
+  return %0#0, %0#1 : memref<?xf64>, index
 }
 
 // -----
 
 // CHECK-LABEL: func @sparse_push_back_inbound(
-//  CHECK-SAME: %[[A:.*]]: memref<?xindex>,
+//  CHECK-SAME: %[[A:.*]]: index,
 //  CHECK-SAME: %[[B:.*]]: memref<?xf64>,
-//  CHECK-SAME: %[[C:.*]]: f64) -> memref<?xf64> {
-//       CHECK: %[[D:.*]] = sparse_tensor.push_back inbounds %[[A]], %[[B]], %[[C]] {idx = 2 : index} : memref<?xindex>, memref<?xf64>, f64
+//  CHECK-SAME: %[[C:.*]]: f64) -> (memref<?xf64>, index) {
+//       CHECK: %[[D:.*]] = sparse_tensor.push_back inbounds %[[A]], %[[B]], %[[C]] : index, memref<?xf64>, f64
 //       CHECK: return %[[D]]
-func.func @sparse_push_back_inbound(%arg0: memref<?xindex>, %arg1: memref<?xf64>, %arg2: f64) -> memref<?xf64> {
-  %0 = sparse_tensor.push_back inbounds %arg0, %arg1, %arg2 {idx = 2 : index} : memref<?xindex>, memref<?xf64>, f64
-  return %0 : memref<?xf64>
+func.func @sparse_push_back_inbound(%arg0: index, %arg1: memref<?xf64>, %arg2: f64) -> (memref<?xf64>, index) {
+  %0:2 = sparse_tensor.push_back inbounds %arg0, %arg1, %arg2 : index, memref<?xf64>, f64
+  return %0#0, %0#1 : memref<?xf64>, index
 }
 
 // -----
 
 // CHECK-LABEL: func @sparse_push_back_n(
-//  CHECK-SAME: %[[A:.*]]: memref<?xindex>,
+//  CHECK-SAME: %[[A:.*]]: index,
 //  CHECK-SAME: %[[B:.*]]: memref<?xf64>,
 //  CHECK-SAME: %[[C:.*]]: f64,
-//  CHECK-SAME: %[[D:.*]]: index) -> memref<?xf64> {
-//       CHECK: %[[E:.*]] = sparse_tensor.push_back %[[A]], %[[B]], %[[C]], %[[D]] {idx = 2 : index} : memref<?xindex>, memref<?xf64>, f64, index
+//  CHECK-SAME: %[[D:.*]]: index) -> (memref<?xf64>, index) {
+//       CHECK: %[[E:.*]] = sparse_tensor.push_back %[[A]], %[[B]], %[[C]], %[[D]] : index, memref<?xf64>, f64, index
 //       CHECK: return %[[E]]
-func.func @sparse_push_back_n(%arg0: memref<?xindex>, %arg1: memref<?xf64>, %arg2: f64, %arg3: index) -> memref<?xf64> {
-  %0 = sparse_tensor.push_back %arg0, %arg1, %arg2, %arg3 {idx = 2 : index} : memref<?xindex>, memref<?xf64>, f64, index
-  return %0 : memref<?xf64>
+func.func @sparse_push_back_n(%arg0: index, %arg1: memref<?xf64>, %arg2: f64, %arg3: index) -> (memref<?xf64>, index) {
+  %0:2 = sparse_tensor.push_back %arg0, %arg1, %arg2, %arg3 : index, memref<?xf64>, f64, index
+  return %0#0, %0#1 : memref<?xf64>, index
 }
 
 // -----
