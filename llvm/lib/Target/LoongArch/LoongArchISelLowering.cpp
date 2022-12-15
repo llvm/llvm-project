@@ -756,6 +756,7 @@ SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
     IOCSRWR_CASE(iocsrwr_b, IOCSRWR_B);
     IOCSRWR_CASE(iocsrwr_h, IOCSRWR_H);
     IOCSRWR_CASE(iocsrwr_w, IOCSRWR_W);
+#undef IOCSRWR_CASE
   case Intrinsic::loongarch_iocsrwr_d: {
     if (Subtarget.is64Bit())
       return DAG.getNode(
@@ -1063,6 +1064,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
       CRC_CASE_EXT_BINARYOP(crcc_w_b_w, CRCC_W_B_W)
       CRC_CASE_EXT_BINARYOP(crcc_w_h_w, CRCC_W_H_W)
       CRC_CASE_EXT_BINARYOP(crcc_w_w_w, CRCC_W_W_W)
+#undef CRC_CASE_EXT_BINARYOP
 
 #define CRC_CASE_EXT_UNARYOP(NAME, NODE)                                       \
   case Intrinsic::loongarch_##NAME: {                                          \
@@ -1076,6 +1078,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   }
       CRC_CASE_EXT_UNARYOP(crc_w_d_w, CRC_W_D_W)
       CRC_CASE_EXT_UNARYOP(crcc_w_d_w, CRCC_W_D_W)
+#undef CRC_CASE_EXT_UNARYOP
 #define CSR_CASE(ID)                                                           \
   case Intrinsic::loongarch_##ID: {                                            \
     if (!Subtarget.is64Bit()) {                                                \
@@ -1089,6 +1092,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
       CSR_CASE(csrwr_d);
       CSR_CASE(csrxchg_d);
       CSR_CASE(iocsrrd_d);
+#undef CSR_CASE
     case Intrinsic::loongarch_csrrd_w: {
       unsigned Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
       if (!isUInt<14>(Imm)) {
