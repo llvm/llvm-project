@@ -41,9 +41,11 @@ class WebAssemblyDAGToDAGISel final : public SelectionDAGISel {
   const WebAssemblySubtarget *Subtarget;
 
 public:
+  static char ID;
+
   WebAssemblyDAGToDAGISel(WebAssemblyTargetMachine &TM,
                           CodeGenOpt::Level OptLevel)
-      : SelectionDAGISel(TM, OptLevel), Subtarget(nullptr) {}
+      : SelectionDAGISel(ID, TM, OptLevel), Subtarget(nullptr) {}
 
   StringRef getPassName() const override {
     return "WebAssembly Instruction Selection";
@@ -81,6 +83,8 @@ private:
                              SDValue &Addr);
 };
 } // end anonymous namespace
+
+char WebAssemblyDAGToDAGISel::ID;
 
 void WebAssemblyDAGToDAGISel::PreprocessISelDAG() {
   // Stack objects that should be allocated to locals are hoisted to WebAssembly
