@@ -1,4 +1,4 @@
-; REQUIRES: have_tf_api
+; REQUIRES: have_tflite
 ; REQUIRES: x86_64-linux
 ;
 ; Check that we log correctly, both with a learned policy, and the default policy
