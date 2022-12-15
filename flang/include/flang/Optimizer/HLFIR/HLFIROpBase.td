@@ -67,6 +67,13 @@ def hlfir_ExprType : TypeDef<hlfir_Dialect, "Expr"> {
     bool isArray() const { return !isScalar(); }
     bool isPolymorphic() const { return getPolymorphic(); }
     unsigned getRank() const {return getShape().size();}
+    mlir::Type getElementExprType() const {
+      mlir::Type eleTy = getElementType();
+      if (fir::isa_trivial(eleTy))
+        return eleTy;
+      return hlfir::ExprType::get(eleTy.getContext(), Shape{}, eleTy,
+                isPolymorphic());
+    }
   }];
 
   let hasCustomAssemblyFormat = 1;

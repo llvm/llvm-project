@@ -403,4 +403,31 @@ def hlfir_YieldElementOp : hlfir_Op<"yield_element", [Terminator, HasParent<"Ele
   let assemblyFormat = "$element_value attr-dict `:` type($element_value)";
 }
 
+def hlfir_ApplyOp : hlfir_Op<"apply", [NoMemoryEffect, AttrSizedOperandSegments]> {
+  let summary = "get the element value of an expression";
+  let description = [{
+    Given an hlfir.expr array value, hlfir.apply allow retrieving
+    the value for an element given one based indices.
+    When hlfir.apply is used on an hlfir.elemental, and if the hlfir.elemental
+    operation evaluation can be moved to the location of the hlfir.apply, it is
+    as if the hlfir.elemental body was evaluated given the hlfir.apply indices.
+  }];
+
+  let arguments = (ins hlfir_ExprType:$expr,
+                   Variadic<Index>:$indices,
+                   Variadic<AnyIntegerType>:$typeparams
+                  );
+  let results = (outs AnyFortranValue:$element_value);
+
+  let assemblyFormat = [{
+    $expr `,` $indices (`typeparams` $typeparams^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$expr, "mlir::ValueRange":$indices,
+      "mlir::ValueRange":$typeparams)>
+  ];
+}
+
 #endif // FORTRAN_DIALECT_HLFIR_OPS
