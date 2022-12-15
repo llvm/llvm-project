@@ -546,6 +546,11 @@ Attribute Changes in Clang
   used ``201904L`` (the date the proposal was seen by the committee) by mistake.
   There were no other changes to the attribute behavior.
 
+- Introduced a new record declaration attribute ``__attribute__((enforce_read_only_placement))``
+  to support analysis of instances of a given type focused on read-only program
+  memory placement. It emits a warning if something in the code provably prevents
+  an instance from a read-only memory placement.
+
 Windows Support
 ---------------
 - For the MinGW driver, added the options ``-mguard=none``, ``-mguard=cf`` and
