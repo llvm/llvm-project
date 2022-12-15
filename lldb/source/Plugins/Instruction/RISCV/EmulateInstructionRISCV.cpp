@@ -1399,8 +1399,6 @@ public:
                  case FLE:
                    return inst.rd.Write(m_emu, rs1.compare(rs2) !=
                                                    APFloat::cmpGreaterThan);
-                 default:
-                   llvm_unreachable("Invalid F_CMP");
                  }
                })
         .value_or(false);
