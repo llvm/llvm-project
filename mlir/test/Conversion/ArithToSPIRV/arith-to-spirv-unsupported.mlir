@@ -130,3 +130,19 @@ func.func @unsupported_f64(%arg0: f64) {
 }
 
 } // end module
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
+} {
+
+// i64 is not a valid result type in this target env.
+func.func @type_conversion_failure(%arg0: i32) {
+  // expected-error@+1 {{failed to legalize operation 'arith.extsi'}}
+  %2 = arith.extsi %arg0 : i32 to i64
+  return
+}
+
+} // end module
