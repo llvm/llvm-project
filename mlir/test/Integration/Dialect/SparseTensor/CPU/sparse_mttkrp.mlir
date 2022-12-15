@@ -49,7 +49,7 @@ module {
                            %argc: tensor<?x?xf64>,
                            %argd: tensor<?x?xf64>,
                            %arga: tensor<?x?xf64>)
-		      -> tensor<?x?xf64> {
+                               -> tensor<?x?xf64> {
     %0 = linalg.generic #mttkrp
       ins(%argb, %argc, %argd:
             tensor<?x?x?xf64, #SparseTensor>, tensor<?x?xf64>, tensor<?x?xf64>)
