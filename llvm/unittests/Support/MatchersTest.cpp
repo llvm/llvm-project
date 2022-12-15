@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock-matchers.h"
 
