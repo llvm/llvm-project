@@ -329,24 +329,26 @@ public:
   mlir::Value buildIncDecConsiderOverflowBehavior(const UnaryOperator *E,
                                                   mlir::Value InVal,
                                                   bool IsInc) {
+    // NOTE(CIR): The SignedOverflowBehavior is attached to the global ModuleOp
+    // and the nsw behavior is handled during lowering.
+    auto Kind = E->isIncrementOp() ? mlir::cir::UnaryOpKind::Inc
+                                   : mlir::cir::UnaryOpKind::Dec;
     switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
-    case LangOptions::SOB_Defined: {
-      auto Kind = E->isIncrementOp() ? mlir::cir::UnaryOpKind::Inc
-                                     : mlir::cir::UnaryOpKind::Dec;
+    case LangOptions::SOB_Defined:
       return buildUnaryOp(E, Kind, InVal);
-    }
     case LangOptions::SOB_Undefined:
-      // if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
-      //   return Builder.CreateNSWAdd(InVal, Amount, Name);
+      if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+        return buildUnaryOp(E, Kind, InVal);
       llvm_unreachable(
           "inc/dec overflow behavior SOB_Undefined not implemented yet");
       break;
     case LangOptions::SOB_Trapping:
+      if (!E->canOverflow())
+        return buildUnaryOp(E, Kind, InVal);
       llvm_unreachable(
           "inc/dec overflow behavior SOB_Trapping not implemented yet");
       break;
     }
-    llvm_unreachable("Unknown SignedOverflowBehaviorTy");
   }
 
   mlir::Value VisitUnaryAddrOf(const UnaryOperator *E) {
