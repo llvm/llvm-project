@@ -16,24 +16,23 @@
 #include "llvm/ADT/Optional.h"
 
 namespace lldb_private {
-using namespace llvm;
 
 class EmulateInstructionRISCV;
 
 struct Rd {
   uint32_t rd;
   bool Write(EmulateInstructionRISCV &emulator, uint64_t value);
-  bool WriteAPFloat(EmulateInstructionRISCV &emulator, APFloat value);
+  bool WriteAPFloat(EmulateInstructionRISCV &emulator, llvm::APFloat value);
 };
 
 struct Rs {
   uint32_t rs;
-  Optional<uint64_t> Read(EmulateInstructionRISCV &emulator);
-  Optional<int32_t> ReadI32(EmulateInstructionRISCV &emulator);
-  Optional<int64_t> ReadI64(EmulateInstructionRISCV &emulator);
-  Optional<uint32_t> ReadU32(EmulateInstructionRISCV &emulator);
-  Optional<APFloat> ReadAPFloat(EmulateInstructionRISCV &emulator,
-                                bool isDouble);
+  llvm::Optional<uint64_t> Read(EmulateInstructionRISCV &emulator);
+  llvm::Optional<int32_t> ReadI32(EmulateInstructionRISCV &emulator);
+  llvm::Optional<int64_t> ReadI64(EmulateInstructionRISCV &emulator);
+  llvm::Optional<uint32_t> ReadU32(EmulateInstructionRISCV &emulator);
+  llvm::Optional<llvm::APFloat> ReadAPFloat(EmulateInstructionRISCV &emulator,
+                                            bool isDouble);
 };
 
 #define DERIVE_EQ(NAME)                                                        \
