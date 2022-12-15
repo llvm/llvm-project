@@ -1,6 +1,6 @@
 "Issue #","Issue Name","Meeting","Status","First released version","Labels"
 "`2839 <https://wg21.link/LWG2839>`__","Self-move-assignment of library types, again","November 2020","|Nothing To Do|",""
-"`3117 <https://wg21.link/LWG3117>`__","Missing ``packaged_task`` deduction guides","November 2020","",""
+"`3117 <https://wg21.link/LWG3117>`__","Missing ``packaged_task`` deduction guides","November 2020","|Complete|","16.0"
 "`3143 <https://wg21.link/LWG3143>`__","``monotonic_buffer_resource`` growth policy is unclear","November 2020","",""
 "`3195 <https://wg21.link/LWG3195>`__","What is the stored pointer value of an empty ``weak_ptr``?","November 2020","|Nothing To Do|",""
 "`3211 <https://wg21.link/LWG3211>`__","``std::tuple<>`` should be trivially constructible","November 2020","|Complete|","9.0"
