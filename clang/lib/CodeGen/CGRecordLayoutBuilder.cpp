@@ -379,9 +379,14 @@ void CGRecordLowering::accumulateFields() {
       for (++Field; Field != FieldEnd && Field->isBitField(); ++Field);
       accumulateBitFields(Start, Field);
     } else if (!Field->isZeroSize(Context)) {
+      // Use base subobject layout for the potentially-overlapping field,
+      // as it is done in RecordLayoutBuilder
       Members.push_back(MemberInfo(
           bitsToCharUnits(getFieldBitOffset(*Field)), MemberInfo::Field,
-          getStorageType(*Field), *Field));
+          Field->isPotentiallyOverlapping()
+              ? getStorageType(Field->getType()->getAsCXXRecordDecl())
+              : getStorageType(*Field),
+          *Field));
       ++Field;
     } else {
       ++Field;
