@@ -634,6 +634,13 @@ def OpWithOverrideInferTypeInterfaceOp : Op<...
     [DeclareOpInterfaceMethods<MyInterface, ["getNumWithDefault"]>]> { ... }
 ```
 
+Once the interfaces have been defined, the C++ header and source files can be
+generated using the `--gen-<attr|op|type>-interface-decls` and
+`--gen-<attr|op|type>-interface-defs` options with mlir-tblgen. Note that when
+generating interfaces, mlir-tblgen will only generate interfaces defined in
+the top-level input `.td` file. This means that any interfaces that are
+defined within include files will not be considered for generation.
+
 Note: Existing operation interfaces defined in C++ can be accessed in the ODS
 framework via the `OpInterfaceTrait` class.
 
