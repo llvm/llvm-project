@@ -160,39 +160,7 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
   // Print the struct-like storage in dictionary fashion.
   printer << "<{ dimLevelType = [ ";
   for (unsigned i = 0, e = getDimLevelType().size(); i < e; i++) {
-    switch (getDimLevelType()[i]) {
-    case DimLevelType::Undef:
-      // TODO: should probably raise an error instead of printing it...
-      printer << "\"undef\"";
-      break;
-    case DimLevelType::Dense:
-      printer << "\"dense\"";
-      break;
-    case DimLevelType::Compressed:
-      printer << "\"compressed\"";
-      break;
-    case DimLevelType::CompressedNu:
-      printer << "\"compressed-nu\"";
-      break;
-    case DimLevelType::CompressedNo:
-      printer << "\"compressed-no\"";
-      break;
-    case DimLevelType::CompressedNuNo:
-      printer << "\"compressed-nu-no\"";
-      break;
-    case DimLevelType::Singleton:
-      printer << "\"singleton\"";
-      break;
-    case DimLevelType::SingletonNu:
-      printer << "\"singleton-nu\"";
-      break;
-    case DimLevelType::SingletonNo:
-      printer << "\"singleton-no\"";
-      break;
-    case DimLevelType::SingletonNuNo:
-      printer << "\"singleton-nu-no\"";
-      break;
-    }
+    printer << toMLIRString(getDimLevelType()[i]);
     if (i != e - 1)
       printer << ", ";
   }

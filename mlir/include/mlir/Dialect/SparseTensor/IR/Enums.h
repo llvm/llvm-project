@@ -157,6 +157,34 @@ enum class DimLevelType : uint8_t {
   SingletonNuNo = 19,  // 0b100_11
 };
 
+/// Returns string representation of the given dimension level type.
+inline std::string toMLIRString(DimLevelType dlt) {
+  switch (dlt) {
+  // TODO: should probably raise an error instead of printing it...
+  case DimLevelType::Undef:
+    return "\"undef\"";
+  case DimLevelType::Dense:
+    return "\"dense\"";
+  case DimLevelType::Compressed:
+    return "\"compressed\"";
+  case DimLevelType::CompressedNu:
+    return "\"compressed-nu\"";
+  case DimLevelType::CompressedNo:
+    return "\"compressed-no\"";
+  case DimLevelType::CompressedNuNo:
+    return "\"compressed-nu-no\"";
+  case DimLevelType::Singleton:
+    return "\"singleton\"";
+  case DimLevelType::SingletonNu:
+    return "\"singleton-nu\"";
+  case DimLevelType::SingletonNo:
+    return "\"singleton-no\"";
+  case DimLevelType::SingletonNuNo:
+    return "\"singleton-nu-no\"";
+  }
+  return "";
+}
+
 /// Check that the `DimLevelType` contains a valid (possibly undefined) value.
 constexpr bool isValidDLT(DimLevelType dlt) {
   const uint8_t formatBits = static_cast<uint8_t>(dlt) >> 2;
