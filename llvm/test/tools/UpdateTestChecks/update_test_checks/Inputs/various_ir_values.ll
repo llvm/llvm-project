@@ -9,8 +9,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define dso_local void @foo(i32* %A) #0 !dbg !7 {
 entry:
-  %A.addr = alloca i32*, align 8
+  %A.addr = alloca i32*, align 8, !DIAssignID !62
   %i = alloca i32, align 4
+  call void @llvm.dbg.assign(metadata i1 undef, metadata !13, metadata !DIExpression(), metadata !62, metadata i32** %A.addr, metadata !DIExpression()), !dbg !20
   store i32* %A, i32** %A.addr, align 8, !tbaa !16
   call void @llvm.dbg.declare(metadata i32** %A.addr, metadata !13, metadata !DIExpression()), !dbg !20
   %0 = bitcast i32* %i to i8*, !dbg !21
@@ -101,6 +102,8 @@ for.end:                                          ; preds = %for.cond.cleanup
   ret void, !dbg !60
 }
 
+declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
+
 attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="ieee,ieee" "denormal-fp-math-f32"="ieee,ieee" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone speculatable willreturn }
 attributes #2 = { argmemonly nounwind willreturn }
@@ -172,3 +175,4 @@ attributes #3 = { nounwind }
 !59 = !DILocation(line: 10, column: 12, scope: !43)
 !60 = !DILocation(line: 11, column: 1, scope: !39)
 !61 = !{!"branch_weights", i32 1, i32 1048575}
+!62 = distinct !DIAssignID()
