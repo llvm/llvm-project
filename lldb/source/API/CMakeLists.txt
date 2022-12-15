@@ -122,10 +122,6 @@ add_lldb_library(liblldb SHARED ${option_framework}
   ${option_install_prefix}
 )
 
-# BEGIN Swift Mods
-add_properties_for_swift_modules(liblldb)
-# END Swift Mods
-
 # lib/pythonX.Y/dist-packages/lldb/_lldb.so is a symlink to lib/liblldb.so,
 # which depends on lib/libLLVM*.so (BUILD_SHARED_LIBS) or lib/libLLVM-10git.so
 # (LLVM_LINK_LLVM_DYLIB). Add an additional rpath $ORIGIN/../../../../lib so
@@ -152,7 +148,7 @@ endif()
 # BEGIN Swift Mods
 # Note that add_properties_for_swift_modules appends RPATHs so it's critical
 # that this is called after lldb_setup_rpaths.
-add_properties_for_swift_modules(liblldb "../../../../")
+add_properties_for_swift_modules(liblldb "../../../../../../usr/" "../../../../")
 # END Swift Mods
 
 if(LLDB_ENABLE_PYTHON)
