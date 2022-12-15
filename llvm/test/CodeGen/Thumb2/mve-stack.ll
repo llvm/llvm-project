@@ -15,7 +15,7 @@ define arm_aapcs_vfpcc void @vstrw32() {
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
-  %d = alloca [4 x i32], align 4
+  %d = alloca [4 x i32], align 2
   %g = getelementptr inbounds [4 x i32], [4 x i32]* %d, i32 0, i32 2
   %b = bitcast i32* %g to <4 x i32>*
   store <4 x i32> zeroinitializer, <4 x i32>* %b, align 2
@@ -153,7 +153,7 @@ define arm_aapcs_vfpcc <4 x i32> @vldrw32() {
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
-  %d = alloca [4 x i32], align 4
+  %d = alloca [4 x i32], align 2
   %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %d, i32 0, i32 0
   call arm_aapcs_vfpcc void bitcast (void (...)* @func to void (i32*)*)(i32* %arraydecay)
   %g = getelementptr inbounds [4 x i32], [4 x i32]* %d, i32 0, i32 2

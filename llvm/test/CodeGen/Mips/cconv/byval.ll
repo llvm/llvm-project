@@ -151,7 +151,7 @@ define dso_local void @g() #0 {
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    daddu $sp, $sp, $1
 entry:
-  %a = alloca %struct.S1, align 8
+  %a = alloca %struct.S1, align 4
   call void @f2(%struct.S1* byval(%struct.S1) align 4 %a)
   ret void
 }
@@ -340,8 +340,8 @@ define dso_local void @g2(%struct.S1* %a) {
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    daddu $sp, $sp, $1
 entry:
-  %a.addr = alloca %struct.S1*
-  %byval-temp = alloca %struct.S1, align 8
+  %a.addr = alloca %struct.S1*, align 4
+  %byval-temp = alloca %struct.S1, align 4
   store %struct.S1* %a, %struct.S1** %a.addr, align 4
   %0 = load %struct.S1*, %struct.S1** %a.addr, align 4
   %1 = bitcast %struct.S1* %byval-temp to i8*
@@ -412,8 +412,8 @@ define dso_local i32 @g3(%struct.S1* %a, %struct.S1* %b) #0 {
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %a.addr = alloca %struct.S1*
-  %b.addr = alloca %struct.S1*
+  %a.addr = alloca %struct.S1*, align 4
+  %b.addr = alloca %struct.S1*, align 4
   store %struct.S1* %a, %struct.S1** %a.addr, align 4
   store %struct.S1* %b, %struct.S1** %b.addr, align 4
   %0 = load %struct.S1*, %struct.S1** %a.addr, align 4
