@@ -3152,7 +3152,8 @@ TEST(APIntTest, TryExt) {
   ASSERT_EQ(negOne64.trySExtValue().value_or(42), -1);
   APInt negOne128(128, 0);
   negOne128.setAllBits();
-  ASSERT_EQ(negOne128.trySExtValue().value_or(42), 42);
+  ASSERT_EQ(negOne128.trySExtValue().value_or(42), -1);
+  ASSERT_EQ(42, APInt(128, -1).trySExtValue().value_or(42));
 }
 
 } // end anonymous namespace
