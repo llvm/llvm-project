@@ -218,15 +218,16 @@ runDataflowAnalysis(
       BlockStates;
   BlockStates.reserve(TypeErasedBlockStates->size());
 
-  llvm::transform(std::move(*TypeErasedBlockStates),
-                  std::back_inserter(BlockStates), [](auto &OptState) {
-                    return std::move(OptState).transform([](auto &&State) {
-                      return DataflowAnalysisState<typename AnalysisT::Lattice>{
-                          llvm::any_cast<typename AnalysisT::Lattice>(
-                              std::move(State.Lattice.Value)),
-                          std::move(State.Env)};
-                    });
-                  });
+  llvm::transform(
+      std::move(*TypeErasedBlockStates), std::back_inserter(BlockStates),
+      [](auto &OptState) {
+        return llvm::transformOptional(std::move(OptState), [](auto &&State) {
+          return DataflowAnalysisState<typename AnalysisT::Lattice>{
+              llvm::any_cast<typename AnalysisT::Lattice>(
+                  std::move(State.Lattice.Value)),
+              std::move(State.Env)};
+        });
+      });
   return BlockStates;
 }
 
