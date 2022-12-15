@@ -214,6 +214,7 @@ def SparseTensor_GetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.get"
   let assemblyFormat = "$specifier $specifierKind (`at` $dim^)? attr-dict `:` "
                        "qualified(type($specifier)) `to` type($result)";
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 def SparseTensor_SetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.set",
