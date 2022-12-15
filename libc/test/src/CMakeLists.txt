@@ -103,8 +103,8 @@ add_integration_test(
     libc-api-test
   SRCS
     ${public_test}
-  LOADER
-    libc.loader.linux.crt1
+  STARTUP
+    libc.startup.linux.crt1
   DEPENDS
     ${api-test-entrypoints}
 )
