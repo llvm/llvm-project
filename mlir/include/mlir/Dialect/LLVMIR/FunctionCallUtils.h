@@ -36,6 +36,7 @@ LLVM::LLVMFuncOp lookupOrCreatePrintI64Fn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintU64Fn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintF32Fn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintF64Fn(ModuleOp moduleOp);
+LLVM::LLVMFuncOp lookupOrCreatePrintStrFn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintOpenFn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintCloseFn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintCommaFn(ModuleOp moduleOp);
