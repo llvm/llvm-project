@@ -1,7 +1,7 @@
 ; REQUIRES: cxx-shared-library
 ; RUN: %lli -jit-kind=mcjit -remote-mcjit -mcjit-remote-process=lli-child-target%exeext %s
 ; XFAIL: target=arm{{.*}}, target={{.*-(cygwin|windows-msvc|windows-gnu)}}
-; UNSUPPORTED: powerpc64-unknown-linux-gnu
+; UNSUPPORTED: target=powerpc64-unknown-linux-gnu
 ; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed
 ; FIXME: Something hangs here.
 ; UNSUPPORTED: use_msan_with_origins
