@@ -117,15 +117,26 @@ VoidTask silly_task() {
 
 // CHECK: cir.func @_Z10silly_taskv() -> ![[VoidTask]] {
 
-// Allocate promise and call get_return_object() to retrieve the task.
-// Note there's no ctor call for the promisse given its a direct aggregate.
+// Allocate promise.
 
 // CHECK: %[[#VoidTaskAddr:]] = cir.alloca ![[VoidTask]], {{.*}}, ["__retval"]
 // CHECK: %[[#VoidPromisseAddr:]] = cir.alloca ![[VoidPromisse]], {{.*}}, ["__promise"]
 
+// Get coroutine id with __builtin_coro_id.
+
 // CHECK: %[[#NullPtr:]] = cir.cst(#cir.null : !cir.ptr<i8>) : !cir.ptr<i8>
 // CHECK: %[[#Align:]] = cir.cst(16 : i32) : i32
 // CHECK: %[[#CoroId:]] = cir.call @__builtin_coro_id(%[[#Align]], %[[#NullPtr]], %[[#NullPtr]], %[[#NullPtr]])
+
+// Maybe perform allocation calling operator new.
+
+// CHECK: %[[#ShouldAlloc:]] = cir.call @__builtin_coro_alloc(%[[#CoroId]]) : (i32) -> !cir.bool
+// CHECK: cir.if %[[#ShouldAlloc]] {
+// CHECK:   %[[#CoroSize:]] = cir.call @__builtin_coro_size() : () -> i64
+// CHECK:   %[[#CoroFrameAddr:]] = cir.call @_Znwm(%[[#CoroSize]]) : (i64) -> !cir.ptr<i8>
+// CHECK: }
+
+// Call promise.get_return_object() to retrieve the task object.
 
 // CHECK: %[[#RetObj:]] = cir.call @_ZN5folly4coro4TaskIvE12promise_type17get_return_objectEv(%[[#VoidPromisseAddr]]) : {{.*}} -> ![[VoidTask]]
 // CHECK: cir.store %[[#RetObj]], %[[#VoidTaskAddr]] : ![[VoidTask]]
