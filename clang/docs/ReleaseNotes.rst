@@ -199,6 +199,8 @@ Major New Features
 
 Bug Fixes
 ---------
+- ``stdatomic.h`` will use the internal declarations when targeting pre-C++-23
+  on Windows platforms as the MSVC support requires newer C++ standard.
 - Correct ``_Static_assert`` to accept the same set of extended integer
   constant expressions as is accpted in other contexts that accept them.
   This fixes `Issue 57687 <https://github.com/llvm/llvm-project/issues/57687>`_.
