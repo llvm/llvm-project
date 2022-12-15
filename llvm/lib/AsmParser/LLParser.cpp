@@ -3326,7 +3326,7 @@ BasicBlock *LLParser::PerFunctionState::defineBB(const std::string &Name,
 
   // Move the block to the end of the function.  Forward ref'd blocks are
   // inserted wherever they happen to be referenced.
-  F.getBasicBlockList().splice(F.end(), F.getBasicBlockList(), BB);
+  F.splice(F.end(), &F, BB->getIterator());
 
   // Remove the block from forward ref sets.
   if (Name.empty()) {

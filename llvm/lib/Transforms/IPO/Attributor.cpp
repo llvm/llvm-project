@@ -2686,8 +2686,7 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     // Since we have now created the new function, splice the body of the old
     // function right into the new function, leaving the old rotting hulk of the
     // function empty.
-    NewFn->getBasicBlockList().splice(NewFn->begin(),
-                                      OldFn->getBasicBlockList());
+    NewFn->splice(NewFn->begin(), OldFn);
 
     // Fixup block addresses to reference new function.
     SmallVector<BlockAddress *, 8u> BlockAddresses;
