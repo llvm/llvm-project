@@ -503,24 +503,6 @@ lldb::VariableSP SwiftExpressionParser::FindSelfVariable(Block *block) {
   return variable_list_sp->FindVariable(ConstString("self"));
 }
 
-struct BindGenericSelfParamsError : public llvm::ErrorInfo<BindGenericSelfParamsError> {
-  static char ID;
-  std::string msg;
-  bool is_new_dylib;
-
-  BindGenericSelfParamsError() = default;
-
-  void log(llvm::raw_ostream &OS) const override {
-    OS << "Couldn't realize Swift AST type of self. Hint: using `v` to "
-          "directly inspect variables and fields may still work.";
-  }
-  std::error_code convertToErrorCode() const override {
-    return inconvertibleErrorCode();
-  }
-};
-
-char BindGenericSelfParamsError::ID = 0;
-
 static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
                                SwiftASTContextForExpressions &swift_ast_context,
                                SwiftASTManipulator &manipulator,
@@ -1075,9 +1057,10 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
     DiagnosticManager &diagnostic_manager,
     SwiftExpressionParser &swift_expr_parser,
     lldb::StackFrameWP &stack_frame_wp, SymbolContext &sc,
-    ExecutionContextScope &exe_scope,
-    llvm::SmallVector<SwiftASTManipulator::VariableInfo> &local_variables,
-    const EvaluateExpressionOptions &options, bool repl, bool playground) {
+    ExecutionContextScope &exe_scope, 
+    llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables,
+    const EvaluateExpressionOptions &options,
+    bool repl, bool playground) {
   Log *log = GetLog(LLDBLog::Expressions);
   LLDB_SCOPED_TIMER();
 
@@ -1385,19 +1368,27 @@ RedirectCallFromSinkToTrampolineFunction(llvm::Module &module,
   }
 
   auto *trampoline_func_type = trampoline_func->getFunctionType();
-  auto num_params = trampoline_func_type->getNumParams();
-  // There should be 3 params, the raw pointer, the self type, and the pointer
-  // to metadata
-  if (num_params != 3) {
+  auto trampoline_num_params = trampoline_func_type->getNumParams();
+  // There should be at least 3 params, the raw pointer, the self type, and at
+  // least one pointer to metadata.
+  if (trampoline_num_params < 3) {
     log->Printf(
         "[RedirectCallFromSinkToTrampolineFunction] Could not set the call: "
         "trampoline function has %u parameters",
-        num_params);
+        trampoline_num_params);
     return false;
   }
 
-  llvm::Type *param1 = trampoline_func_type->getParamType(1);
-  llvm::Type *param2 = trampoline_func_type->getParamType(2);
+  auto *sink_func_type = sink_func->getFunctionType();
+  auto sink_num_params = sink_func_type->getNumParams();
+
+  if (trampoline_num_params != sink_num_params) {
+    log->Printf(
+        "[RedirectCallFromSinkToTrampolineFunction] Could not set the call: "
+        "trampoline function has %u parameters but sink has %u parameters.",
+        trampoline_num_params, sink_num_params);
+    return false;
+  }
 
   auto &basic_blocks = lldb_expr_func->getBasicBlockList();
   // The entrypoint function should only have one basic block whith
@@ -1436,18 +1427,22 @@ RedirectCallFromSinkToTrampolineFunction(llvm::Module &module,
     return false;
   }
 
-  if (sink_call->arg_size() != 3) {
+  if (sink_call->arg_size() != sink_num_params) {
     log->Printf(
         "[RedirectCallFromSinkToTrampolineFunction] Could not set the call: "
         "call to sink function has %u arguments.",
         sink_call->arg_size());
     return false;
   }
-  // The sink call should have three parameters, the pointer to lldb_arg, a
-  // pointer to self and a pointer to the trampoline metadata of self.
+
+  // The sink call should have at least three parameters, the pointer to
+  // lldb_arg, a pointer to self and a pointer to the trampoline metadata of
+  // self.
   llvm::Value *lldb_arg_ptr = sink_call->getArgOperand(0);
   llvm::Value *self_load = sink_call->getArgOperand(1);
-  llvm::Value *metadata_load = sink_call->getArgOperand(2);
+  llvm::SmallVector<llvm::Value *> metadata_loads;
+  for (size_t i = 2; i < sink_num_params; ++i)
+    metadata_loads.emplace_back(sink_call->getArgOperand(i));
 
   // Delete the sink since we fished out the values we needed.
   sink_call->eraseFromParent();
@@ -1469,14 +1464,23 @@ RedirectCallFromSinkToTrampolineFunction(llvm::Module &module,
   // new call there.
   llvm::IRBuilder<> builder(&it);
 
+  llvm::Type *lldb_arg_type = trampoline_func_type->getParamType(1);
+  llvm::Type *self_type = trampoline_func_type->getParamType(2);
+
   // Bitcast the operands to the expected types, since they were type-erased
   // in the call to the sink.
-  auto *self_ptr = builder.CreateBitCast(self_opaque_ptr, param1);
-  auto *metadata_ptr = builder.CreateBitCast(metadata_load, param2);
+  auto *self_ptr = builder.CreateBitCast(self_opaque_ptr, lldb_arg_type);
+
+  llvm::SmallVector<llvm::Value *> trampoline_call_params;
+  trampoline_call_params.push_back(lldb_arg_ptr);
+  trampoline_call_params.push_back(self_ptr);
+  for (auto &metadata_load : metadata_loads)
+    trampoline_call_params.push_back(
+        builder.CreateBitCast(metadata_load, self_type));
 
   // Finally, create the call.
   builder.CreateCall(trampoline_func_type, trampoline_func,
-                     {lldb_arg_ptr, self_ptr, metadata_ptr});
+                     trampoline_call_params);
   return true;
 }
 
@@ -1512,7 +1516,6 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
   if (!parsed_expr) {
     bool retry = false;
-    bool bind_gen_params_error = false;
     handleAllErrors(
         parsed_expr.takeError(),
         [&](const ModuleImportError &MIE) {
@@ -1538,14 +1541,8 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
           diagnostic_manager.PutString(eDiagnosticSeverityError,
                                        SE.getMessage());
         },
-        [&](const BindGenericSelfParamsError &E) {
-          diagnostic_manager.PutString(eDiagnosticSeverityError, E.message());
-          bind_gen_params_error = true;
-        },
         [](const PropagatedError &P) {});
 
-    if (bind_gen_params_error) 
-      return ParseResult::retry_no_bind_generic_params;
     // Signal that we want to retry the expression exactly once with a
     // fresh SwiftASTContext initialized with the flags from the
     // current lldb::Module / Swift dylib to avoid header search

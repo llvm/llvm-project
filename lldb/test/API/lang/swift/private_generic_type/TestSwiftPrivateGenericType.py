@@ -31,14 +31,14 @@ class TestSwiftPrivateGenericType(TestBase):
         # Test that not binding works.
         self.expect("e --bind-generic-types false -- self", 
                     substrs=["Public.StructWrapper<T>", 
-                             "The invisible man."])
+                             'name = "The invisible struct."'])
         # Test that the "auto" behavior also works.
         self.expect("e --bind-generic-types auto -- self", 
                     substrs=["Public.StructWrapper<T>", 
-                             "The invisible man."])
+                             'name = "The invisible struct."'])
         # Test that the default (should be the auto option) also works.
         self.expect("e -- self", substrs=["Public.StructWrapper<T>", 
-                                          "The invisible man."])
+                                          'name = "The invisible struct."'])
 
         breakpoint = target.BreakpointCreateBySourceRegex(
             'break here for class', lldb.SBFileSpec('Public.swift'), None)
@@ -48,13 +48,94 @@ class TestSwiftPrivateGenericType(TestBase):
                     error=True)
         self.expect("e --bind-generic-types false -- self", 
                     substrs=["Public.ClassWrapper<Private.InvisibleStruct>", 
-                             "The invisible man."])
+                             'name = "The invisible struct."'])
         self.expect("e --bind-generic-types auto -- self", 
                     substrs=["Public.ClassWrapper<Private.InvisibleStruct>", 
-                             "The invisible man."])
+                             'name = "The invisible struct."'])
         self.expect("e -- self", 
                     substrs=["Public.ClassWrapper<Private.InvisibleStruct>", 
-                             "The invisible man."])
+                             'name = "The invisible struct."'])
+
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here for two generic parameters', lldb.SBFileSpec('Public.swift'), None)
+        lldbutil.continue_to_breakpoint(process, breakpoint)
+        self.expect("e --bind-generic-types true -- self", 
+                    substrs=["Couldn't realize Swift AST type of self."], 
+                    error=True)
+        self.expect("e --bind-generic-types false -- self", 
+                    substrs=["Public.TwoGenericParameters",
+                             "<Private.InvisibleClass, Private.InvisibleStruct>", 
+                             'name = "The invisible class."',
+                             "someNumber = 42"])
+        self.expect("e --bind-generic-types auto -- self", 
+                    substrs=["Public.TwoGenericParameters",
+                             "<Private.InvisibleClass, Private.InvisibleStruct>", 
+                             'name = "The invisible class."',
+                             "someNumber = 42"])
+        self.expect("e -- self", 
+                    substrs=["Public.TwoGenericParameters",
+                             "<Private.InvisibleClass, Private.InvisibleStruct>", 
+                             'name = "The invisible class."',
+                             "someNumber = 42"])
+
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here for three generic parameters', lldb.SBFileSpec('Public.swift'), None)
+        lldbutil.continue_to_breakpoint(process, breakpoint)
+        self.expect("e --bind-generic-types true -- self", 
+                    substrs=["Couldn't realize Swift AST type of self."], 
+                    error=True)
+        self.expect("e --bind-generic-types false -- self", 
+                    substrs=["Public.ThreeGenericParameters",
+                             "<T, U, V>", 
+                             'name = "The invisible class."',
+                             "someNumber = 42",
+                             'name = "The invisible struct."',
+                             "v = true"])
+        self.expect("e --bind-generic-types auto -- self", 
+                    substrs=["Public.ThreeGenericParameters",
+                             "<T, U, V>", 
+                             'name = "The invisible class."',
+                             "someNumber = 42",
+                             'name = "The invisible struct."',
+                             "v = true"])
+        self.expect("e -- self", 
+                    substrs=["Public.ThreeGenericParameters",
+                             "<T, U, V>", 
+                             'name = "The invisible class."',
+                             "someNumber = 42",
+                             'name = "The invisible struct."',
+                             "v = true"])
+
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here for four generic parameters', lldb.SBFileSpec('Public.swift'), None)
+        lldbutil.continue_to_breakpoint(process, breakpoint)
+        self.expect("e --bind-generic-types true -- self", 
+                    substrs=["Couldn't realize Swift AST type of self."], 
+                    error=True)
+        self.expect("e --bind-generic-types false -- self", 
+                    substrs=["Public.FourGenericParameters",
+                             "<T, U, V, W>", 
+                             'name = "The invisible struct."',
+                             'name = "The invisible class."',
+                             "someNumber = 42",
+                             "v = 3 values", "One", "two", "three",
+                             "w = 482"])
+        self.expect("e --bind-generic-types auto -- self", 
+                    substrs=["Public.FourGenericParameters",
+                             "<T, U, V, W>", 
+                             'name = "The invisible struct."',
+                             'name = "The invisible class."',
+                             "someNumber = 42",
+                             "v = 3 values", "One", "two", "three",
+                             "w = 482"])
+        self.expect("e -- self", 
+                    substrs=["Public.FourGenericParameters",
+                             "<T, U, V, W>", 
+                             'name = "The invisible struct."',
+                             'name = "The invisible class."',
+                             "someNumber = 42",
+                             "v = 3 values", "One", "two", "three",
+                             "w = 482"])
 
         breakpoint = target.BreakpointCreateBySourceRegex(
             'break here for non-generic', lldb.SBFileSpec('Public.swift'), None)
@@ -64,7 +145,7 @@ class TestSwiftPrivateGenericType(TestBase):
                     error=True)
 
         breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here for two generic parameters', lldb.SBFileSpec('Public.swift'), None)
+            'break here for nested generic parameters', lldb.SBFileSpec('Public.swift'), None)
         lldbutil.continue_to_breakpoint(process, breakpoint)
         self.expect("e --bind-generic-types false -- self", 
                     substrs=["Could not evaluate the expression without binding generic types."], 
