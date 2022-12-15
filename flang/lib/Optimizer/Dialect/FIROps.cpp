@@ -3086,6 +3086,12 @@ mlir::LogicalResult fir::ShapeOp::verify() {
   return mlir::success();
 }
 
+void fir::ShapeOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                         mlir::ValueRange extents) {
+  auto type = fir::ShapeType::get(builder.getContext(), extents.size());
+  build(builder, result, type, extents);
+}
+
 //===----------------------------------------------------------------------===//
 // ShapeShiftOp
 //===----------------------------------------------------------------------===//
