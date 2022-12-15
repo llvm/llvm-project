@@ -44,8 +44,8 @@ b2:                                               ; preds = %b1
   %v5 = phi i16 [ %v2, %b1 ]
   %v6 = phi i16 [ %v3, %b1 ]
   %v7 = sext i16 %v5 to i32
-  store i32 %v7, i32* @g0, align 4
-  store i16 %v6, i16* @g1, align 2
+  store i32 %v7, ptr @g0, align 4
+  store i16 %v6, ptr @g1, align 2
   ret i32 0
 }
 

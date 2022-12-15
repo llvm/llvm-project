@@ -10,13 +10,13 @@
 ;
 ;    void f(int *A, int N) {
 ;      for (int i = 0; i < N; i++) {
-;        A[max(0, i - 3)] = A[min(N, i + 3)] * 2;
+;        A[max(0, i - 3)] = Aptr 2;
 ;      }
 ;    }
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A, i32 %N) {
+define void @f(ptr %A, i32 %N) {
 ; CHECK-LABEL: 'f'
 ; CHECK-NEXT:  Classifying expressions for: @f
 ; CHECK-NEXT:    %i.0 = phi i32 [ 0, %bb ], [ %tmp23, %bb2 ]
@@ -31,9 +31,9 @@ define void @f(i32* %A, i32 %N) {
 ; CHECK-NEXT:    --> (sext i32 %N to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: (sext i32 %N to i64) LoopDispositions: { %bb1: Invariant }
 ; CHECK-NEXT:    %tmp9 = select i1 %tmp4, i64 %tmp5, i64 %tmp6
 ; CHECK-NEXT:    --> ((sext i32 {3,+,1}<nuw><%bb1> to i64) smin (sext i32 %N to i64)) U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: ((sext i32 (3 + (0 smax %N))<nuw> to i64) smin (sext i32 %N to i64)) LoopDispositions: { %bb1: Computable }
-; CHECK-NEXT:    %tmp11 = getelementptr inbounds i32, i32* %A, i64 %tmp9
+; CHECK-NEXT:    %tmp11 = getelementptr inbounds i32, ptr %A, i64 %tmp9
 ; CHECK-NEXT:    --> ((4 * ((sext i32 {3,+,1}<nuw><%bb1> to i64) smin (sext i32 %N to i64)))<nsw> + %A) U: full-set S: full-set Exits: ((4 * ((sext i32 (3 + (0 smax %N))<nuw> to i64) smin (sext i32 %N to i64)))<nsw> + %A) LoopDispositions: { %bb1: Computable }
-; CHECK-NEXT:    %tmp12 = load i32, i32* %tmp11, align 4
+; CHECK-NEXT:    %tmp12 = load i32, ptr %tmp11, align 4
 ; CHECK-NEXT:    --> %tmp12 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb1: Variant }
 ; CHECK-NEXT:    %tmp13 = shl nsw i32 %tmp12, 1
 ; CHECK-NEXT:    --> (2 * %tmp12) U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb1: Variant }
@@ -41,7 +41,7 @@ define void @f(i32* %A, i32 %N) {
 ; CHECK-NEXT:    --> {-3,+,1}<nsw><%bb1> U: [-3,2147483645) S: [-3,2147483645) Exits: (-3 + (zext i32 (0 smax %N) to i64))<nsw> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp19 = select i1 %tmp14, i64 0, i64 %tmp17
 ; CHECK-NEXT:    --> (-3 + (3 smax {0,+,1}<nuw><nsw><%bb1>))<nsw> U: [0,2147483645) S: [0,2147483645) Exits: (-3 + (3 smax (zext i32 (0 smax %N) to i64)))<nsw> LoopDispositions: { %bb1: Computable }
-; CHECK-NEXT:    %tmp21 = getelementptr inbounds i32, i32* %A, i64 %tmp19
+; CHECK-NEXT:    %tmp21 = getelementptr inbounds i32, ptr %A, i64 %tmp19
 ; CHECK-NEXT:    --> (-12 + (4 * (3 smax {0,+,1}<nuw><nsw><%bb1>))<nuw><nsw> + %A) U: full-set S: full-set Exits: (-12 + (4 * (3 smax (zext i32 (0 smax %N) to i64)))<nuw><nsw> + %A) LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp23 = add nuw nsw i32 %i.0, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><%bb1> U: [1,-2147483647) S: [1,-2147483647) Exits: (1 + (0 smax %N))<nuw> LoopDispositions: { %bb1: Computable }
@@ -69,15 +69,15 @@ bb2:                                              ; preds = %bb1
   %tmp6 = sext i32 %N to i64
   %tmp9 = select i1 %tmp4, i64 %tmp5, i64 %tmp6
 ;                  min(N, i+3)
-  %tmp11 = getelementptr inbounds i32, i32* %A, i64 %tmp9
-  %tmp12 = load i32, i32* %tmp11, align 4
+  %tmp11 = getelementptr inbounds i32, ptr %A, i64 %tmp9
+  %tmp12 = load i32, ptr %tmp11, align 4
   %tmp13 = shl nsw i32 %tmp12, 1
   %tmp14 = icmp sge i32 3, %i.0
   %tmp17 = add nsw i64 %i.0.1, -3
   %tmp19 = select i1 %tmp14, i64 0, i64 %tmp17
 ;                  max(0, i - 3)
-  %tmp21 = getelementptr inbounds i32, i32* %A, i64 %tmp19
-  store i32 %tmp13, i32* %tmp21, align 4
+  %tmp21 = getelementptr inbounds i32, ptr %A, i64 %tmp19
+  store i32 %tmp13, ptr %tmp21, align 4
   %tmp23 = add nuw nsw i32 %i.0, 1
   br label %bb1
 
