@@ -4,8 +4,6 @@
 // RUN: %clang_cc1 -emit-llvm %std_cxx11-14 -dwarf-version=5 -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -o - | FileCheck %s --check-prefixes=CHECK,PRE17
 // RUN: %clang_cc1 -emit-llvm %std_cxx17- -dwarf-version=5 -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -o - | FileCheck %s --check-prefixes=CHECK,CXX17
 // RUN: %clang_cc1 -emit-llvm %std_cxx17- -dwarf-version=4 -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -o - | FileCheck %s --check-prefixes=CHECK,CXX17
-// RUN: %clang_cc1 %std_cxx17- -dwarf-version=4 -gstrict-dwarf -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -emit-obj -o - %s | llvm-dwarfdump --debug-info - | FileCheck %s --check-prefixes=DWARF-DUMP,STRICT
-// RUN: %clang_cc1 %std_cxx17- -dwarf-version=4 -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -emit-obj -o - %s | llvm-dwarfdump --debug-info - | FileCheck %s --check-prefixes=DWARF-DUMP,DWARFv4
 
 // CHECK: DILocalVariable(name: "f1", {{.*}}, type: ![[TEMPLATE_TYPE:[0-9]+]]
 // CHECK: [[TEMPLATE_TYPE]] = {{.*}}!DICompositeType({{.*}}, templateParams: ![[F1_TYPE:[0-9]+]]
@@ -22,25 +20,6 @@
 // CHECK: [[SECOND]] = !DITemplateValueParameter(name: "i", type: !{{[0-9]*}}, defaulted: true, value: i32 3)
 // PRE17: [[THIRD]] = !DITemplateValueParameter(name: "b", type: !{{[0-9]*}}, defaulted: true, value: i8 1)
 // CXX17: [[THIRD]] = !DITemplateValueParameter(name: "b", type: !{{[0-9]*}}, defaulted: true, value: i1 true)
-
-// DWARF-DUMP:       DW_TAG_class_type
-// DWARF-DUMP-LABEL:   DW_AT_name      ("foo<char, 3, true, 1>")
-// DWARF-DUMP:         DW_TAG_template_type_parameter
-// DWARF-DUMP-DAG:       DW_AT_type    ({{.*}} "char")
-// DWARF-DUMP-DAG:       DW_AT_name    ("T")
-// DWARFv4-DAG:          DW_AT_default_value   (true)
-// STRICT-NOT:           DW_AT_default_value
-// DWARF-DUMP:         DW_TAG_template_value_parameter
-// DWARF-DUMP-DAG:       DW_AT_type    ({{.*}} "int")
-// DWARF-DUMP-DAG:       DW_AT_name    ("i")
-// DWARFv4-DAG:          DW_AT_default_value   (true)
-// STRICT-NOT:           DW_AT_default_value   (true)
-// DWARF-DUMP:         DW_TAG_template_value_parameter
-// DWARF-DUMP-DAG:       DW_AT_type    ({{.*}} "bool")
-// DWARF-DUMP-DAG:       DW_AT_name    ("b")
-// DWARFv4-DAG:          DW_AT_default_value   (true)
-// STRICT-NOT:           DW_AT_default_value
-// DWARF-DUMP:           {{DW_TAG|NULL}}
 
 template <typename T = char, int i = 3, bool b = true, int x = sizeof(T)>
 class foo {
