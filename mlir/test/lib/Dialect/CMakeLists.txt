@@ -1,6 +1,7 @@
 add_subdirectory(Affine)
 add_subdirectory(Arith)
 add_subdirectory(Bufferization)
+add_subdirectory(ControlFlow)
 add_subdirectory(DLTI)
 add_subdirectory(Func)
 add_subdirectory(GPU)
