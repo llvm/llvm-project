@@ -139,7 +139,7 @@ define inreg {i16} @ret_struct_i16() nounwind {
 ; N64-LE-NEXT:    jr $ra
 ; N64-LE-NEXT:    daddiu $sp, $sp, 16
 entry:
-        %retval = alloca {i8,i8}, align 8
+        %retval = alloca {i8,i8}, align 1
         %0 = bitcast {i8,i8}* %retval to i8*
         call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* getelementptr inbounds ({i8,i8}, {i8,i8}* @struct_2byte, i32 0, i32 0), i64 2, i1 false)
         %1 = bitcast {i8,i8}* %retval to {i16}*

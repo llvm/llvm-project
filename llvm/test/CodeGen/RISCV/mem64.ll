@@ -368,7 +368,7 @@ define void @addi_fold_crash(i64 %arg) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 bb:
-  %tmp = alloca %struct.quux, align 8
+  %tmp = alloca %struct.quux, align 4
   %tmp1 = getelementptr inbounds %struct.quux, %struct.quux* %tmp, i64 0, i32 1
   %tmp2 = getelementptr inbounds %struct.quux, %struct.quux* %tmp, i64 0, i32 1, i64 %arg
   store i8 0, i8* %tmp2, align 1

@@ -17,7 +17,7 @@
 
 define void @test1() {
 entry:
-  %s = alloca %struct.S, align 8
+  %s = alloca %struct.S, align 4
   call void @foo(ptr sret(%struct.S) %s)
   ret void
 }
