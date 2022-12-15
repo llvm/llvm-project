@@ -174,7 +174,7 @@ public:
 private:
   int Cost = INT_MAX;
   int StaticBonusApplied = 0;
-  Optional<CostBenefitPair> CostBenefit;
+  std::optional<CostBenefitPair> CostBenefit;
 };
 
 class MLPriority {

@@ -39,8 +39,8 @@ struct StratifiedLink {
   /// This is a value used to signify "does not exist" where the
   /// StratifiedIndex type is used.
   ///
-  /// This is used instead of Optional<StratifiedIndex> because
-  /// Optional<StratifiedIndex> would eat up a considerable amount of extra
+  /// This is used instead of std::optional<StratifiedIndex> because
+  /// std::optional<StratifiedIndex> would eat up a considerable amount of extra
   /// memory, after struct padding/alignment is taken into account.
   static const StratifiedIndex SetSentinel;
 
@@ -91,7 +91,7 @@ public:
                  std::vector<StratifiedLink> Links)
       : Values(std::move(Map)), Links(std::move(Links)) {}
 
-  Optional<StratifiedInfo> find(const T &Elem) const {
+  std::optional<StratifiedInfo> find(const T &Elem) const {
     auto Iter = Values.find(Elem);
     if (Iter == Values.end())
       return std::nullopt;
@@ -544,21 +544,21 @@ private:
     return true;
   }
 
-  Optional<const StratifiedInfo *> get(const T &Val) const {
+  std::optional<const StratifiedInfo *> get(const T &Val) const {
     auto Result = Values.find(Val);
     if (Result == Values.end())
       return std::nullopt;
     return &Result->second;
   }
 
-  Optional<StratifiedInfo *> get(const T &Val) {
+  std::optional<StratifiedInfo *> get(const T &Val) {
     auto Result = Values.find(Val);
     if (Result == Values.end())
       return std::nullopt;
     return &Result->second;
   }
 
-  Optional<StratifiedIndex> indexOf(const T &Val) {
+  std::optional<StratifiedIndex> indexOf(const T &Val) {
     auto MaybeVal = get(Val);
     if (!MaybeVal)
       return std::nullopt;

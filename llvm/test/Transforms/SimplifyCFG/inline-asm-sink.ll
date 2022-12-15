@@ -23,15 +23,15 @@ entry:
 
 if.then:
   %tmp1 = call i32 asm "mov $0, #1", "=r"() nounwind readnone
-  store i32 %tmp1, i32* %y, align 4
+  store i32 %tmp1, ptr %y, align 4
   br label %if.end
 
 if.else:
   %tmp2 = call i32 asm "mov $0, #2", "=r"() nounwind readnone
-  store i32 %tmp2, i32* %y, align 4
+  store i32 %tmp2, ptr %y, align 4
   br label %if.end
 
 if.end:
-  %tmp3 = load i32, i32* %y, align 4
+  %tmp3 = load i32, ptr %y, align 4
   ret i32 %tmp3
 }

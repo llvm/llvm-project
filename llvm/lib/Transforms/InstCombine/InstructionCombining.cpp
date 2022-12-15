@@ -2420,8 +2420,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     }
 
     NewGEP->insertAt(GEP.getParent(), GEP.getParent()->getFirstInsertionPt());
-    replaceOperand(GEP, 0, NewGEP);
-    PtrOp = NewGEP;
+    return replaceOperand(GEP, 0, NewGEP);
   }
 
   if (auto *Src = dyn_cast<GEPOperator>(PtrOp))

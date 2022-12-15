@@ -208,3 +208,21 @@ define i32 @function_address_after_def() {
 ; CHECK:  %[[CHAIN1:.+]] = llvm.insertelement %[[NULL]], %[[CHAIN0]][%[[P1]] : i32] : !llvm.vec<2 x ptr<struct<"simple_agg_type", (i32, i8, i16, i32)>>>
 ; CHECK:  llvm.return %[[CHAIN1]] : !llvm.vec<2 x ptr<struct<"simple_agg_type", (i32, i8, i16, i32)>>>
 @vector_agg = global <2 x %simple_agg_type*> <%simple_agg_type* null, %simple_agg_type* null>
+
+; // -----
+
+; Verfiy the import of subsequent constant expressions with duplicates.
+
+@global = external global i32, align 8
+
+; CHECK-LABEL: @const_exprs_with_duplicate
+define i64 @const_exprs_with_duplicate() {
+  ; CHECK: %[[ADDR:.+]] = llvm.mlir.addressof @global : !llvm.ptr<i32>
+  ; CHECK: llvm.getelementptr %[[ADDR]][%{{.*}}] : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
+  %1 = add i64 1, ptrtoint (i32* getelementptr (i32, i32* @global, i32 7) to i64)
+
+  ; Verify the address value is reused.
+  ; CHECK: llvm.getelementptr %[[ADDR]][%{{.*}}] : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
+  %2 = add i64 %1, ptrtoint (i32* getelementptr (i32, i32* @global, i32 42) to i64)
+  ret i64 %2
+}

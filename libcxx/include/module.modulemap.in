@@ -785,6 +785,17 @@ module std [system] {
     header "execution"
     export *
   }
+  module expected {
+    header "expected"
+    export *
+
+    module __expected {
+      module bad_expected_access          { private header "__expected/bad_expected_access.h" }
+      module expected                     { private header "__expected/expected.h" }
+      module unexpect                     { private header "__expected/unexpect.h" }
+      module unexpected                   { private header "__expected/unexpected.h" }
+    }
+  }
   module filesystem {
     @requires_LIBCXX_ENABLE_FILESYSTEM@
     header "filesystem"

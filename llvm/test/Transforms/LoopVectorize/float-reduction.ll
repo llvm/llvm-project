@@ -4,15 +4,15 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK-LABEL: @foo(
 ;CHECK: fadd fast <4 x float>
 ;CHECK: ret
-define float @foo(float* nocapture %A, i32* nocapture %n) nounwind uwtable readonly ssp {
+define float @foo(ptr nocapture %A, ptr nocapture %n) nounwind uwtable readonly ssp {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %sum.04 = phi float [ 0.000000e+00, %entry ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
   %add = fadd fast float %sum.04, %0
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
@@ -26,15 +26,15 @@ for.end:                                          ; preds = %for.body
 ;CHECK-LABEL: @foosub(
 ;CHECK: fsub fast <4 x float>
 ;CHECK: ret
-define float @foosub(float* nocapture %A, i32* nocapture %n) nounwind uwtable readonly ssp {
+define float @foosub(ptr nocapture %A, ptr nocapture %n) nounwind uwtable readonly ssp {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %sum.04 = phi float [ 0.000000e+00, %entry ], [ %sub, %for.body ]
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
   %sub = fsub fast float %sum.04, %0
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
@@ -48,15 +48,15 @@ for.end:                                          ; preds = %for.body
 ;CHECK-LABEL: @foodiv(
 ;CHECK: fdiv fast <4 x float>
 ;CHECK: ret
-define float @foodiv(float* nocapture %A, i32* nocapture %n) nounwind uwtable readonly ssp {
+define float @foodiv(ptr nocapture %A, ptr nocapture %n) nounwind uwtable readonly ssp {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %sum.04 = phi float [ 1.000000e+00, %entry ], [ %sub, %for.body ]
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
   %sub = fdiv fast float %sum.04, %0
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
@@ -70,15 +70,15 @@ for.end:                                          ; preds = %for.body
 ;CHECK-LABEL: @foonodiv(
 ;CHECK-NOT: fdiv fast <4 x float>
 ;CHECK: ret
-define float @foonodiv(float* nocapture %A, i32* nocapture %n) nounwind uwtable readonly ssp {
+define float @foonodiv(ptr nocapture %A, ptr nocapture %n) nounwind uwtable readonly ssp {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %sum.04 = phi float [ 1.000000e+00, %entry ], [ %sub, %for.body ]
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
   %sub = fdiv fast float %0, %sum.04
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32

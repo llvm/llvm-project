@@ -1861,6 +1861,9 @@ enum StmtCode {
   /// A CXXBoolLiteralExpr record.
   EXPR_CXX_BOOL_LITERAL,
 
+  /// A CXXParenListInitExpr record.
+  EXPR_CXX_PAREN_LIST_INIT,
+
   EXPR_CXX_NULL_PTR_LITERAL, // CXXNullPtrLiteralExpr
   EXPR_CXX_TYPEID_EXPR,      // CXXTypeidExpr (of expr).
   EXPR_CXX_TYPEID_TYPE,      // CXXTypeidExpr (of type).

@@ -4,7 +4,10 @@
 // RUN: %run %t
 // RUN: %clang_hwasan -O1 -mllvm --aarch64-enable-global-isel-at-O=1 %s -o %t
 // RUN: %run %t
-// REQUIRES: aarch64-target-arch
+// REQUIRES: aarch64-target-arch || riscv64-target-arch
+
+// This test relies on aarch64 option thus it fails for risc-v
+// XFAIL: riscv64-target-arch
 
 static int global;
 

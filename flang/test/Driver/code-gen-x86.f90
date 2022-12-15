@@ -1,7 +1,6 @@
 ! Test -emit-obj (X86)
 
 ! REQUIRES: x86-registered-target, aarch64-registered-target
-! UNSUPPORTED: darwin, macos
 
 ! RUN: rm -f %t.o
 ! RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-obj %s -o %t.o

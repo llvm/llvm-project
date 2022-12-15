@@ -28,7 +28,7 @@
 /// into something like this:
 ///
 ///  std::pair<int, int> foo(int a, int b) {
-///     return std::make_pair(a + b, bar());
+///     return std::pair(a + b, bar());
 /// }
 ///
 /// Typically the incoming pointer is a simple alloca for a temporary variable

@@ -25,13 +25,13 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body, %for.body.preheader
   %i.09 = phi i64 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds [1000 x i32], [1000 x i32]* @b, i64 0, i64 %i.09
-  %tmp = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds [1000 x i32], [1000 x i32]* @c, i64 0, i64 %i.09
-  %tmp1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds [1000 x i32], ptr @b, i64 0, i64 %i.09
+  %tmp = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds [1000 x i32], ptr @c, i64 0, i64 %i.09
+  %tmp1 = load i32, ptr %arrayidx1, align 4
   %add = add nsw i32 %tmp1, %tmp
-  %arrayidx2 = getelementptr inbounds [1000 x i32], [1000 x i32]* @a, i64 0, i64 %i.09
-  store i32 %add, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds [1000 x i32], ptr @a, i64 0, i64 %i.09
+  store i32 %add, ptr %arrayidx2, align 4
   %inc = add nuw nsw i64 %i.09, 1
   %exitcond = icmp eq i64 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body

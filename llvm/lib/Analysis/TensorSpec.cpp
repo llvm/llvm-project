@@ -64,9 +64,10 @@ TensorSpec::TensorSpec(const std::string &Name, int Port, TensorType Type,
                                    std::multiplies<int64_t>())),
       ElementSize(ElementSize) {}
 
-Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
-                                           const json::Value &Value) {
-  auto EmitError = [&](const llvm::Twine &Message) -> Optional<TensorSpec> {
+std::optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
+                                                const json::Value &Value) {
+  auto EmitError =
+      [&](const llvm::Twine &Message) -> std::optional<TensorSpec> {
     std::string S;
     llvm::raw_string_ostream OS(S);
     OS << Value;

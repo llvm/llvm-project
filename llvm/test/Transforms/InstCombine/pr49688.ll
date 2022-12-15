@@ -5,10 +5,11 @@
 define i1 @f(i32 %i1) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 7, [[I1:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[SHR]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[TMP0]], [[I1]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I1:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 7, [[I1]]
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp slt i32 [[SHR]], [[I1]]
+; CHECK-NEXT:    [[I2:%.*]] = select i1 [[CMP]], i1 true, i1 [[CMP4]]
+; CHECK-NEXT:    ret i1 [[I2]]
 ;
 entry:
   %cmp = icmp slt i32 %i1, 0
@@ -21,10 +22,11 @@ entry:
 ; %cmp should not vanish
 define i32 @f2(i32 signext %g, i32 zeroext %h) {
 ; CHECK-LABEL: @f2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[G:%.*]], 0
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 7, [[H:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[SHR]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], [[G:%.*]]
-; CHECK-NEXT:    [[LOR_EXT:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[SHR]], [[G]]
+; CHECK-NEXT:    [[DOT0:%.*]] = select i1 [[CMP]], i1 true, i1 [[CMP1]]
+; CHECK-NEXT:    [[LOR_EXT:%.*]] = zext i1 [[DOT0]] to i32
 ; CHECK-NEXT:    ret i32 [[LOR_EXT]]
 ;
   %cmp = icmp slt i32 %g, 0

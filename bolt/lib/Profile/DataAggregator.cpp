@@ -199,10 +199,10 @@ void DataAggregator::abort() {
   std::string Error;
 
   // Kill subprocesses in case they are not finished
-  sys::Wait(TaskEventsPPI.PI, 1, false, &Error);
-  sys::Wait(MMapEventsPPI.PI, 1, false, &Error);
-  sys::Wait(MainEventsPPI.PI, 1, false, &Error);
-  sys::Wait(MemEventsPPI.PI, 1, false, &Error);
+  sys::Wait(TaskEventsPPI.PI, 1, &Error);
+  sys::Wait(MMapEventsPPI.PI, 1, &Error);
+  sys::Wait(MainEventsPPI.PI, 1, &Error);
+  sys::Wait(MemEventsPPI.PI, 1, &Error);
 
   deleteTempFiles();
 
@@ -487,7 +487,7 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     std::string Error;
     outs() << "PERF2BOLT: waiting for perf " << Name
            << " collection to finish...\n";
-    sys::ProcessInfo PI = sys::Wait(Process.PI, 0, true, &Error);
+    sys::ProcessInfo PI = sys::Wait(Process.PI, std::nullopt, &Error);
 
     if (!Error.empty()) {
       errs() << "PERF-ERROR: " << PerfPath << ": " << Error << "\n";
@@ -572,7 +572,7 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
 
   // Special handling for memory events
   std::string Error;
-  sys::ProcessInfo PI = sys::Wait(MemEventsPPI.PI, 0, true, &Error);
+  sys::ProcessInfo PI = sys::Wait(MemEventsPPI.PI, std::nullopt, &Error);
   if (PI.ReturnCode != 0) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
         MemoryBuffer::getFileOrSTDIN(MemEventsPPI.StderrPath.data());

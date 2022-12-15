@@ -5,6 +5,7 @@ import sys
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
 config.llvm_shlib_dir = lit_config.substitute(path(r"@SHLIBDIR@"))
 config.llvm_plugin_ext = "@LLVM_PLUGIN_EXT@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.llvm_target_triple_env = "@LLVM_TARGET_TRIPLE_ENV@"
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.errc_messages = "@LLVM_LIT_ERRC_MESSAGES@"

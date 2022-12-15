@@ -14,8 +14,8 @@ define void @f() nounwind uwtable ssp {
 ; DEBUGLOC:         %vec.ind.next = add {{.*}}, !dbg ![[DbgLoc]]
 
 scalar.ph:
-  store i8 0, i8* inttoptr (i64 1 to i8*), align 1
-  %0 = load i8, i8* @a, align 1
+  store i8 0, ptr inttoptr (i64 1 to ptr), align 1
+  %0 = load i8, ptr @a, align 1
   br label %for.body
 
 for.body:
@@ -32,7 +32,7 @@ for.body:
   br i1 %phitmp14, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.body
-  store i8 %mul, i8* @b, align 1
+  store i8 %mul, ptr @b, align 1
   ret void
 }
 

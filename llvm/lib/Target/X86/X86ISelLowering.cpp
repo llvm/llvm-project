@@ -12556,29 +12556,40 @@ static SDValue lowerShuffleAsVTRUNC(const SDLoc &DL, MVT VT, SDValue V1,
           UpperElts > 0 && isUndefInRange(Mask, NumSrcElts, UpperElts);
 
       // For offset truncations, ensure that the concat is cheap.
-      // TODO: Relax this?
-      if (Offset && (V1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-                     V2.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-                     V1.getOperand(0) != V2.getOperand(0)))
-        continue;
+      if (Offset) {
+        auto IsCheapConcat = [&](SDValue Lo, SDValue Hi) {
+          if (Lo.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+              Hi.getOpcode() == ISD::EXTRACT_SUBVECTOR)
+            return Lo.getOperand(0) == Hi.getOperand(0);
+          if (ISD::isNormalLoad(Lo.getNode()) &&
+              ISD::isNormalLoad(Hi.getNode())) {
+            auto *LDLo = cast<LoadSDNode>(Lo);
+            auto *LDHi = cast<LoadSDNode>(Hi);
+            return DAG.areNonVolatileConsecutiveLoads(
+                LDHi, LDLo, Lo.getValueType().getStoreSize(), 1);
+          }
+          return false;
+        };
+        if (!IsCheapConcat(V1, V2))
+          continue;
+      }
 
       // As we're using both sources then we need to concat them together
       // and truncate from the double-sized src.
       MVT ConcatVT = MVT::getVectorVT(VT.getScalarType(), NumElts * 2);
       SDValue Src = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, V1, V2);
 
-      // Move the offset'd elements into place for the truncation.
-      if (Offset) {
-        SmallVector<int, 32> OffsetMask(NumElts * 2, -1);
-        for (unsigned I = 0, E = NumElts * 2; I < E; I += Scale)
-          OffsetMask[I] = I + Offset;
-        Src = DAG.getVectorShuffle(ConcatVT, DL, Src, DAG.getUNDEF(ConcatVT),
-                                   OffsetMask);
-      }
-
       MVT SrcSVT = MVT::getIntegerVT(SrcEltBits);
       MVT SrcVT = MVT::getVectorVT(SrcSVT, NumSrcElts);
       Src = DAG.getBitcast(SrcVT, Src);
+
+      // Shift the offset'd elements into place for the truncation.
+      // TODO: Use getTargetVShiftByConstNode.
+      if (Offset)
+        Src = DAG.getNode(
+            X86ISD::VSRLI, DL, SrcVT, Src,
+            DAG.getTargetConstant(Offset * EltSizeInBits, DL, MVT::i8));
+
       return getAVX512TruncNode(DL, VT, Src, Subtarget, DAG, !UndefUppers);
     }
   }
@@ -55520,8 +55531,11 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
         if (Ld->getExtensionType() == Ext &&
             Ld->getMemoryVT().getScalarSizeInBits() <= 32)
           return Op;
-      if (IsZeroExt && DAG.MaskedValueIsZero(Op, APInt::getHighBitsSet(64, 32)))
-        return Op;
+      if (IsZeroExt) {
+        KnownBits Known = DAG.computeKnownBits(Op);
+        if (!Known.isConstant() && Known.countMinLeadingZeros() >= 32)
+          return Op;
+      }
       return SDValue();
     };
 
