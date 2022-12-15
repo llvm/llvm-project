@@ -24,7 +24,7 @@ entry:
 ; 64:  daddu   $[[R1]], $sp, $[[R1]]
 ; 64:  sd      $ra, 24($[[R1]])
 
-  %agg.tmp = alloca %struct.S1, align 8
+  %agg.tmp = alloca %struct.S1, align 1
   %tmp = getelementptr inbounds %struct.S1, %struct.S1* %agg.tmp, i32 0, i32 0, i32 0
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %tmp, i8* align 1 getelementptr inbounds (%struct.S1, %struct.S1* @s1, i32 0, i32 0, i32 0), i32 65536, i1 false)
   call void @f2(%struct.S1* byval(%struct.S1) %agg.tmp) nounwind

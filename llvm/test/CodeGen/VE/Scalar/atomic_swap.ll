@@ -768,7 +768,7 @@ define zeroext i1 @_Z26atomic_swap_relaxed_stk_i1b(i1 zeroext %0) {
 ; CHECK-NEXT:    and %s0, 1, %s0
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = alloca %"struct.std::__1::atomic", align 8
+  %2 = alloca %"struct.std::__1::atomic", align 1
   %3 = getelementptr inbounds %"struct.std::__1::atomic", %"struct.std::__1::atomic"* %2, i64 0, i32 0, i32 0, i32 0, i32 0
   call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %3)
   %4 = zext i1 %0 to i8
@@ -797,7 +797,7 @@ define signext i8 @_Z26atomic_swap_relaxed_stk_i8c(i8 signext %0) {
 ; CHECK-NEXT:    sra.l %s0, %s0, 56
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = alloca %"struct.std::__1::atomic.0", align 8
+  %2 = alloca %"struct.std::__1::atomic.0", align 1
   %3 = getelementptr inbounds %"struct.std::__1::atomic.0", %"struct.std::__1::atomic.0"* %2, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %3)
   %4 = atomicrmw volatile xchg i8* %3, i8 %0 monotonic
@@ -816,7 +816,7 @@ define zeroext i8 @_Z26atomic_swap_relaxed_stk_u8h(i8 zeroext %0) {
 ; CHECK-NEXT:    and %s0, %s0, (56)0
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = alloca %"struct.std::__1::atomic.5", align 8
+  %2 = alloca %"struct.std::__1::atomic.5", align 1
   %3 = getelementptr inbounds %"struct.std::__1::atomic.5", %"struct.std::__1::atomic.5"* %2, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %3)
   %4 = atomicrmw volatile xchg i8* %3, i8 %0 monotonic
@@ -836,7 +836,7 @@ define signext i16 @_Z27atomic_swap_relaxed_stk_i16s(i16 signext %0) {
 ; CHECK-NEXT:    sra.l %s0, %s0, 48
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = alloca %"struct.std::__1::atomic.10", align 8
+  %2 = alloca %"struct.std::__1::atomic.10", align 2
   %3 = bitcast %"struct.std::__1::atomic.10"* %2 to i8*
   call void @llvm.lifetime.start.p0i8(i64 2, i8* nonnull %3)
   %4 = getelementptr inbounds %"struct.std::__1::atomic.10", %"struct.std::__1::atomic.10"* %2, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
@@ -856,7 +856,7 @@ define zeroext i16 @_Z27atomic_swap_relaxed_stk_u16t(i16 zeroext %0) {
 ; CHECK-NEXT:    and %s0, %s0, (48)0
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = alloca %"struct.std::__1::atomic.15", align 8
+  %2 = alloca %"struct.std::__1::atomic.15", align 2
   %3 = bitcast %"struct.std::__1::atomic.15"* %2 to i8*
   call void @llvm.lifetime.start.p0i8(i64 2, i8* nonnull %3)
   %4 = getelementptr inbounds %"struct.std::__1::atomic.15", %"struct.std::__1::atomic.15"* %2, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
@@ -873,7 +873,7 @@ define signext i32 @_Z27atomic_swap_relaxed_stk_i32i(i32 signext %0) {
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = alloca %"struct.std::__1::atomic.20", align 8
+  %2 = alloca %"struct.std::__1::atomic.20", align 4
   %3 = bitcast %"struct.std::__1::atomic.20"* %2 to i8*
   call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %3)
   %4 = getelementptr inbounds %"struct.std::__1::atomic.20", %"struct.std::__1::atomic.20"* %2, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
@@ -890,7 +890,7 @@ define zeroext i32 @_Z27atomic_swap_relaxed_stk_u32j(i32 zeroext %0) {
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = alloca %"struct.std::__1::atomic.25", align 8
+  %2 = alloca %"struct.std::__1::atomic.25", align 4
   %3 = bitcast %"struct.std::__1::atomic.25"* %2 to i8*
   call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %3)
   %4 = getelementptr inbounds %"struct.std::__1::atomic.25", %"struct.std::__1::atomic.25"* %2, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
