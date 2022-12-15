@@ -138,18 +138,18 @@ llvm::Optional<uint64_t> Rs::Read(EmulateInstructionRISCV &emulator) {
 }
 
 llvm::Optional<int32_t> Rs::ReadI32(EmulateInstructionRISCV &emulator) {
-  return Read(emulator).transform(
-      [](uint64_t value) { return int32_t(uint32_t(value)); });
+  return llvm::transformOptional(
+      Read(emulator), [](uint64_t value) { return int32_t(uint32_t(value)); });
 }
 
 llvm::Optional<int64_t> Rs::ReadI64(EmulateInstructionRISCV &emulator) {
-  return Read(emulator).transform(
-      [](uint64_t value) { return int64_t(value); });
+  return llvm::transformOptional(Read(emulator),
+                                 [](uint64_t value) { return int64_t(value); });
 }
 
 llvm::Optional<uint32_t> Rs::ReadU32(EmulateInstructionRISCV &emulator) {
-  return Read(emulator).transform(
-      [](uint64_t value) { return uint32_t(value); });
+  return llvm::transformOptional(
+      Read(emulator), [](uint64_t value) { return uint32_t(value); });
 }
 
 llvm::Optional<llvm::APFloat> Rs::ReadAPFloat(EmulateInstructionRISCV &emulator,
@@ -217,8 +217,9 @@ constexpr bool is_amo_cmp =
 template <typename I>
 static std::enable_if_t<is_load<I> || is_store<I>, llvm::Optional<uint64_t>>
 LoadStoreAddr(EmulateInstructionRISCV &emulator, I inst) {
-  return inst.rs1.Read(emulator).transform(
-      [&](uint64_t rs1) { return rs1 + uint64_t(SignExt(inst.imm)); });
+  return llvm::transformOptional(inst.rs1.Read(emulator), [&](uint64_t rs1) {
+    return rs1 + uint64_t(SignExt(inst.imm));
+  });
 }
 
 // Read T from memory, then load its sign-extended value m_emu to register.
@@ -228,8 +229,9 @@ Load(EmulateInstructionRISCV &emulator, I inst, uint64_t (*extend)(E)) {
   auto addr = LoadStoreAddr(emulator, inst);
   if (!addr)
     return false;
-  return emulator.ReadMem<T>(*addr)
-      .transform([&](T t) { return inst.rd.Write(emulator, extend(E(t))); })
+  return llvm::transformOptional(
+             emulator.ReadMem<T>(*addr),
+             [&](T t) { return inst.rd.Write(emulator, extend(E(t))); })
       .value_or(false);
 }
 
@@ -239,8 +241,9 @@ Store(EmulateInstructionRISCV &emulator, I inst) {
   auto addr = LoadStoreAddr(emulator, inst);
   if (!addr)
     return false;
-  return inst.rs2.Read(emulator)
-      .transform([&](uint64_t rs2) { return emulator.WriteMem<T>(*addr, rs2); })
+  return llvm::transformOptional(
+             inst.rs2.Read(emulator),
+             [&](uint64_t rs2) { return emulator.WriteMem<T>(*addr, rs2); })
       .value_or(false);
 }
 
@@ -249,10 +252,12 @@ static std::enable_if_t<is_amo_add<I> || is_amo_bit_op<I> || is_amo_swap<I> ||
                             is_amo_cmp<I>,
                         llvm::Optional<uint64_t>>
 AtomicAddr(EmulateInstructionRISCV &emulator, I inst, unsigned int align) {
-  return inst.rs1.Read(emulator)
-      .transform([&](uint64_t rs1) {
-        return rs1 % align == 0 ? llvm::Optional<uint64_t>(rs1) : std::nullopt;
-      })
+  return llvm::transformOptional(inst.rs1.Read(emulator),
+                                 [&](uint64_t rs1) {
+                                   return rs1 % align == 0
+                                              ? llvm::Optional<uint64_t>(rs1)
+                                              : std::nullopt;
+                                 })
       .value_or(std::nullopt);
 }
 
@@ -263,12 +268,13 @@ AtomicSwap(EmulateInstructionRISCV &emulator, I inst, int align,
   auto addr = AtomicAddr(emulator, inst, align);
   if (!addr)
     return false;
-  return zipOpt(emulator.ReadMem<T>(*addr), inst.rs2.Read(emulator))
-      .transform([&](auto &&tup) {
-        auto [tmp, rs2] = tup;
-        return emulator.WriteMem<T>(*addr, T(rs2)) &&
-               inst.rd.Write(emulator, extend(tmp));
-      })
+  return llvm::transformOptional(
+             zipOpt(emulator.ReadMem<T>(*addr), inst.rs2.Read(emulator)),
+             [&](auto &&tup) {
+               auto [tmp, rs2] = tup;
+               return emulator.WriteMem<T>(*addr, T(rs2)) &&
+                      inst.rd.Write(emulator, extend(tmp));
+             })
       .value_or(false);
 }
 
@@ -279,12 +285,13 @@ AtomicADD(EmulateInstructionRISCV &emulator, I inst, int align,
   auto addr = AtomicAddr(emulator, inst, align);
   if (!addr)
     return false;
-  return zipOpt(emulator.ReadMem<T>(*addr), inst.rs2.Read(emulator))
-      .transform([&](auto &&tup) {
-        auto [tmp, rs2] = tup;
-        return emulator.WriteMem<T>(*addr, T(tmp + rs2)) &&
-               inst.rd.Write(emulator, extend(tmp));
-      })
+  return llvm::transformOptional(
+             zipOpt(emulator.ReadMem<T>(*addr), inst.rs2.Read(emulator)),
+             [&](auto &&tup) {
+               auto [tmp, rs2] = tup;
+               return emulator.WriteMem<T>(*addr, T(tmp + rs2)) &&
+                      inst.rd.Write(emulator, extend(tmp));
+             })
       .value_or(false);
 }
 
@@ -295,12 +302,13 @@ AtomicBitOperate(EmulateInstructionRISCV &emulator, I inst, int align,
   auto addr = AtomicAddr(emulator, inst, align);
   if (!addr)
     return false;
-  return zipOpt(emulator.ReadMem<T>(*addr), inst.rs2.Read(emulator))
-      .transform([&](auto &&tup) {
-        auto [value, rs2] = tup;
-        return emulator.WriteMem<T>(*addr, operate(value, T(rs2))) &&
-               inst.rd.Write(emulator, extend(value));
-      })
+  return llvm::transformOptional(
+             zipOpt(emulator.ReadMem<T>(*addr), inst.rs2.Read(emulator)),
+             [&](auto &&tup) {
+               auto [value, rs2] = tup;
+               return emulator.WriteMem<T>(*addr, operate(value, T(rs2))) &&
+                      inst.rd.Write(emulator, extend(value));
+             })
       .value_or(false);
 }
 
@@ -311,12 +319,13 @@ AtomicCmp(EmulateInstructionRISCV &emulator, I inst, int align,
   auto addr = AtomicAddr(emulator, inst, align);
   if (!addr)
     return false;
-  return zipOpt(emulator.ReadMem<T>(*addr), inst.rs2.Read(emulator))
-      .transform([&](auto &&tup) {
-        auto [value, rs2] = tup;
-        return emulator.WriteMem<T>(*addr, cmp(value, T(rs2))) &&
-               inst.rd.Write(emulator, extend(value));
-      })
+  return llvm::transformOptional(
+             zipOpt(emulator.ReadMem<T>(*addr), inst.rs2.Read(emulator)),
+             [&](auto &&tup) {
+               auto [value, rs2] = tup;
+               return emulator.WriteMem<T>(*addr, cmp(value, T(rs2))) &&
+                      inst.rd.Write(emulator, extend(value));
+             })
       .value_or(false);
 }
 
@@ -614,37 +623,42 @@ public:
 
   bool operator()(LUI inst) { return inst.rd.Write(m_emu, SignExt(inst.imm)); }
   bool operator()(AUIPC inst) {
-    return m_emu.ReadPC()
-        .transform([&](uint64_t pc) {
-          return inst.rd.Write(m_emu, SignExt(inst.imm) + pc);
-        })
+    return llvm::transformOptional(m_emu.ReadPC(),
+                                   [&](uint64_t pc) {
+                                     return inst.rd.Write(
+                                         m_emu, SignExt(inst.imm) + pc);
+                                   })
         .value_or(false);
   }
   bool operator()(JAL inst) {
-    return m_emu.ReadPC()
-        .transform([&](uint64_t pc) {
-          return inst.rd.Write(m_emu, pc + delta()) &&
-                 m_emu.WritePC(SignExt(inst.imm) + pc);
-        })
+    return llvm::transformOptional(
+               m_emu.ReadPC(),
+               [&](uint64_t pc) {
+                 return inst.rd.Write(m_emu, pc + delta()) &&
+                        m_emu.WritePC(SignExt(inst.imm) + pc);
+               })
         .value_or(false);
   }
   bool operator()(JALR inst) {
-    return zipOpt(m_emu.ReadPC(), inst.rs1.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [pc, rs1] = tup;
-          return inst.rd.Write(m_emu, pc + delta()) &&
-                 m_emu.WritePC((SignExt(inst.imm) + rs1) & ~1);
-        })
+    return llvm::transformOptional(
+               zipOpt(m_emu.ReadPC(), inst.rs1.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [pc, rs1] = tup;
+                 return inst.rd.Write(m_emu, pc + delta()) &&
+                        m_emu.WritePC((SignExt(inst.imm) + rs1) & ~1);
+               })
         .value_or(false);
   }
   bool operator()(B inst) {
-    return zipOpt(m_emu.ReadPC(), inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [pc, rs1, rs2] = tup;
-          if (m_ignore_cond || CompareB(rs1, rs2, inst.funct3))
-            return m_emu.WritePC(SignExt(inst.imm) + pc);
-          return true;
-        })
+    return llvm::transformOptional(
+               zipOpt(m_emu.ReadPC(), inst.rs1.Read(m_emu),
+                      inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [pc, rs1, rs2] = tup;
+                 if (m_ignore_cond || CompareB(rs1, rs2, inst.funct3))
+                   return m_emu.WritePC(SignExt(inst.imm) + pc);
+                 return true;
+               })
         .value_or(false);
   }
   bool operator()(LB inst) {
@@ -666,125 +680,141 @@ public:
   bool operator()(SH inst) { return Store<SH, uint16_t>(m_emu, inst); }
   bool operator()(SW inst) { return Store<SW, uint32_t>(m_emu, inst); }
   bool operator()(ADDI inst) {
-    return inst.rs1.ReadI64(m_emu)
-        .transform([&](int64_t rs1) {
-          return inst.rd.Write(m_emu, rs1 + int64_t(SignExt(inst.imm)));
-        })
+    return llvm::transformOptional(
+               inst.rs1.ReadI64(m_emu),
+               [&](int64_t rs1) {
+                 return inst.rd.Write(m_emu, rs1 + int64_t(SignExt(inst.imm)));
+               })
         .value_or(false);
   }
   bool operator()(SLTI inst) {
-    return inst.rs1.ReadI64(m_emu)
-        .transform([&](int64_t rs1) {
-          return inst.rd.Write(m_emu, rs1 < int64_t(SignExt(inst.imm)));
-        })
+    return llvm::transformOptional(
+               inst.rs1.ReadI64(m_emu),
+               [&](int64_t rs1) {
+                 return inst.rd.Write(m_emu, rs1 < int64_t(SignExt(inst.imm)));
+               })
         .value_or(false);
   }
   bool operator()(SLTIU inst) {
-    return inst.rs1.Read(m_emu)
-        .transform([&](uint64_t rs1) {
-          return inst.rd.Write(m_emu, rs1 < uint64_t(SignExt(inst.imm)));
-        })
+    return llvm::transformOptional(
+               inst.rs1.Read(m_emu),
+               [&](uint64_t rs1) {
+                 return inst.rd.Write(m_emu, rs1 < uint64_t(SignExt(inst.imm)));
+               })
         .value_or(false);
   }
   bool operator()(XORI inst) {
-    return inst.rs1.Read(m_emu)
-        .transform([&](uint64_t rs1) {
-          return inst.rd.Write(m_emu, rs1 ^ uint64_t(SignExt(inst.imm)));
-        })
+    return llvm::transformOptional(
+               inst.rs1.Read(m_emu),
+               [&](uint64_t rs1) {
+                 return inst.rd.Write(m_emu, rs1 ^ uint64_t(SignExt(inst.imm)));
+               })
         .value_or(false);
   }
   bool operator()(ORI inst) {
-    return inst.rs1.Read(m_emu)
-        .transform([&](uint64_t rs1) {
-          return inst.rd.Write(m_emu, rs1 | uint64_t(SignExt(inst.imm)));
-        })
+    return llvm::transformOptional(
+               inst.rs1.Read(m_emu),
+               [&](uint64_t rs1) {
+                 return inst.rd.Write(m_emu, rs1 | uint64_t(SignExt(inst.imm)));
+               })
         .value_or(false);
   }
   bool operator()(ANDI inst) {
-    return inst.rs1.Read(m_emu)
-        .transform([&](uint64_t rs1) {
-          return inst.rd.Write(m_emu, rs1 & uint64_t(SignExt(inst.imm)));
-        })
+    return llvm::transformOptional(
+               inst.rs1.Read(m_emu),
+               [&](uint64_t rs1) {
+                 return inst.rd.Write(m_emu, rs1 & uint64_t(SignExt(inst.imm)));
+               })
         .value_or(false);
   }
   bool operator()(ADD inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, rs1 + rs2);
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, rs1 + rs2);
+               })
         .value_or(false);
   }
   bool operator()(SUB inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, rs1 - rs2);
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, rs1 - rs2);
+               })
         .value_or(false);
   }
   bool operator()(SLL inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, rs1 << (rs2 & 0b111111));
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, rs1 << (rs2 & 0b111111));
+               })
         .value_or(false);
   }
   bool operator()(SLT inst) {
-    return zipOpt(inst.rs1.ReadI64(m_emu), inst.rs2.ReadI64(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, rs1 < rs2);
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadI64(m_emu), inst.rs2.ReadI64(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, rs1 < rs2);
+               })
         .value_or(false);
   }
   bool operator()(SLTU inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, rs1 < rs2);
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, rs1 < rs2);
+               })
         .value_or(false);
   }
   bool operator()(XOR inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, rs1 ^ rs2);
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, rs1 ^ rs2);
+               })
         .value_or(false);
   }
   bool operator()(SRL inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, rs1 >> (rs2 & 0b111111));
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, rs1 >> (rs2 & 0b111111));
+               })
         .value_or(false);
   }
   bool operator()(SRA inst) {
-    return zipOpt(inst.rs1.ReadI64(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, rs1 >> (rs2 & 0b111111));
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadI64(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, rs1 >> (rs2 & 0b111111));
+               })
         .value_or(false);
   }
   bool operator()(OR inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, rs1 | rs2);
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, rs1 | rs2);
+               })
         .value_or(false);
   }
   bool operator()(AND inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, rs1 & rs2);
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, rs1 & rs2);
+               })
         .value_or(false);
   }
   bool operator()(LWU inst) {
@@ -795,249 +825,278 @@ public:
   }
   bool operator()(SD inst) { return Store<SD, uint64_t>(m_emu, inst); }
   bool operator()(SLLI inst) {
-    return inst.rs1.Read(m_emu)
-        .transform([&](uint64_t rs1) {
-          return inst.rd.Write(m_emu, rs1 << inst.shamt);
-        })
+    return llvm::transformOptional(inst.rs1.Read(m_emu),
+                                   [&](uint64_t rs1) {
+                                     return inst.rd.Write(m_emu,
+                                                          rs1 << inst.shamt);
+                                   })
         .value_or(false);
   }
   bool operator()(SRLI inst) {
-    return inst.rs1.Read(m_emu)
-        .transform([&](uint64_t rs1) {
-          return inst.rd.Write(m_emu, rs1 >> inst.shamt);
-        })
+    return llvm::transformOptional(inst.rs1.Read(m_emu),
+                                   [&](uint64_t rs1) {
+                                     return inst.rd.Write(m_emu,
+                                                          rs1 >> inst.shamt);
+                                   })
         .value_or(false);
   }
   bool operator()(SRAI inst) {
-    return inst.rs1.ReadI64(m_emu)
-        .transform([&](int64_t rs1) {
-          return inst.rd.Write(m_emu, rs1 >> inst.shamt);
-        })
+    return llvm::transformOptional(inst.rs1.ReadI64(m_emu),
+                                   [&](int64_t rs1) {
+                                     return inst.rd.Write(m_emu,
+                                                          rs1 >> inst.shamt);
+                                   })
         .value_or(false);
   }
   bool operator()(ADDIW inst) {
-    return inst.rs1.ReadI32(m_emu)
-        .transform([&](int32_t rs1) {
-          return inst.rd.Write(m_emu, SextW(rs1 + SignExt(inst.imm)));
-        })
+    return llvm::transformOptional(inst.rs1.ReadI32(m_emu),
+                                   [&](int32_t rs1) {
+                                     return inst.rd.Write(
+                                         m_emu, SextW(rs1 + SignExt(inst.imm)));
+                                   })
         .value_or(false);
   }
   bool operator()(SLLIW inst) {
-    return inst.rs1.ReadU32(m_emu)
-        .transform([&](uint32_t rs1) {
-          return inst.rd.Write(m_emu, SextW(rs1 << inst.shamt));
-        })
+    return llvm::transformOptional(inst.rs1.ReadU32(m_emu),
+                                   [&](uint32_t rs1) {
+                                     return inst.rd.Write(
+                                         m_emu, SextW(rs1 << inst.shamt));
+                                   })
         .value_or(false);
   }
   bool operator()(SRLIW inst) {
-    return inst.rs1.ReadU32(m_emu)
-        .transform([&](uint32_t rs1) {
-          return inst.rd.Write(m_emu, SextW(rs1 >> inst.shamt));
-        })
+    return llvm::transformOptional(inst.rs1.ReadU32(m_emu),
+                                   [&](uint32_t rs1) {
+                                     return inst.rd.Write(
+                                         m_emu, SextW(rs1 >> inst.shamt));
+                                   })
         .value_or(false);
   }
   bool operator()(SRAIW inst) {
-    return inst.rs1.ReadI32(m_emu)
-        .transform([&](int32_t rs1) {
-          return inst.rd.Write(m_emu, SextW(rs1 >> inst.shamt));
-        })
+    return llvm::transformOptional(inst.rs1.ReadI32(m_emu),
+                                   [&](int32_t rs1) {
+                                     return inst.rd.Write(
+                                         m_emu, SextW(rs1 >> inst.shamt));
+                                   })
         .value_or(false);
   }
   bool operator()(ADDW inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, SextW(uint32_t(rs1 + rs2)));
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, SextW(uint32_t(rs1 + rs2)));
+               })
         .value_or(false);
   }
   bool operator()(SUBW inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, SextW(uint32_t(rs1 - rs2)));
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, SextW(uint32_t(rs1 - rs2)));
+               })
         .value_or(false);
   }
   bool operator()(SLLW inst) {
-    return zipOpt(inst.rs1.ReadU32(m_emu), inst.rs2.ReadU32(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, SextW(rs1 << (rs2 & 0b11111)));
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadU32(m_emu), inst.rs2.ReadU32(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, SextW(rs1 << (rs2 & 0b11111)));
+               })
         .value_or(false);
   }
   bool operator()(SRLW inst) {
-    return zipOpt(inst.rs1.ReadU32(m_emu), inst.rs2.ReadU32(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, SextW(rs1 >> (rs2 & 0b11111)));
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadU32(m_emu), inst.rs2.ReadU32(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, SextW(rs1 >> (rs2 & 0b11111)));
+               })
         .value_or(false);
   }
   bool operator()(SRAW inst) {
-    return zipOpt(inst.rs1.ReadI32(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, SextW(rs1 >> (rs2 & 0b11111)));
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadI32(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, SextW(rs1 >> (rs2 & 0b11111)));
+               })
         .value_or(false);
   }
   // RV32M & RV64M (Integer Multiplication and Division Extension) //
   bool operator()(MUL inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, rs1 * rs2);
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, rs1 * rs2);
+               })
         .value_or(false);
   }
   bool operator()(MULH inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          // signed * signed
-          auto mul = llvm::APInt(128, rs1, true) * llvm::APInt(128, rs2, true);
-          return inst.rd.Write(m_emu, mul.ashr(64).trunc(64).getZExtValue());
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 // signed * signed
+                 auto mul =
+                     llvm::APInt(128, rs1, true) * llvm::APInt(128, rs2, true);
+                 return inst.rd.Write(m_emu,
+                                      mul.ashr(64).trunc(64).getZExtValue());
+               })
         .value_or(false);
   }
   bool operator()(MULHSU inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          // signed * unsigned
-          auto mul = llvm::APInt(128, rs1, true).zext(128) *
-                     llvm::APInt(128, rs2, false);
-          return inst.rd.Write(m_emu, mul.lshr(64).trunc(64).getZExtValue());
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 // signed * unsigned
+                 auto mul = llvm::APInt(128, rs1, true).zext(128) *
+                            llvm::APInt(128, rs2, false);
+                 return inst.rd.Write(m_emu,
+                                      mul.lshr(64).trunc(64).getZExtValue());
+               })
         .value_or(false);
   }
   bool operator()(MULHU inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          // unsigned * unsigned
-          auto mul =
-              llvm::APInt(128, rs1, false) * llvm::APInt(128, rs2, false);
-          return inst.rd.Write(m_emu, mul.lshr(64).trunc(64).getZExtValue());
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 // unsigned * unsigned
+                 auto mul = llvm::APInt(128, rs1, false) *
+                            llvm::APInt(128, rs2, false);
+                 return inst.rd.Write(m_emu,
+                                      mul.lshr(64).trunc(64).getZExtValue());
+               })
         .value_or(false);
   }
   bool operator()(DIV inst) {
-    return zipOpt(inst.rs1.ReadI64(m_emu), inst.rs2.ReadI64(m_emu))
-        .transform([&](auto &&tup) {
-          auto [dividend, divisor] = tup;
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadI64(m_emu), inst.rs2.ReadI64(m_emu)),
+               [&](auto &&tup) {
+                 auto [dividend, divisor] = tup;
 
-          if (divisor == 0)
-            return inst.rd.Write(m_emu, UINT64_MAX);
+                 if (divisor == 0)
+                   return inst.rd.Write(m_emu, UINT64_MAX);
 
-          if (dividend == INT64_MIN && divisor == -1)
-            return inst.rd.Write(m_emu, dividend);
+                 if (dividend == INT64_MIN && divisor == -1)
+                   return inst.rd.Write(m_emu, dividend);
 
-          return inst.rd.Write(m_emu, dividend / divisor);
-        })
+                 return inst.rd.Write(m_emu, dividend / divisor);
+               })
         .value_or(false);
   }
   bool operator()(DIVU inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [dividend, divisor] = tup;
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [dividend, divisor] = tup;
 
-          if (divisor == 0)
-            return inst.rd.Write(m_emu, UINT64_MAX);
+                 if (divisor == 0)
+                   return inst.rd.Write(m_emu, UINT64_MAX);
 
-          return inst.rd.Write(m_emu, dividend / divisor);
-        })
+                 return inst.rd.Write(m_emu, dividend / divisor);
+               })
         .value_or(false);
   }
   bool operator()(REM inst) {
-    return zipOpt(inst.rs1.ReadI64(m_emu), inst.rs2.ReadI64(m_emu))
-        .transform([&](auto &&tup) {
-          auto [dividend, divisor] = tup;
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadI64(m_emu), inst.rs2.ReadI64(m_emu)),
+               [&](auto &&tup) {
+                 auto [dividend, divisor] = tup;
 
-          if (divisor == 0)
-            return inst.rd.Write(m_emu, dividend);
+                 if (divisor == 0)
+                   return inst.rd.Write(m_emu, dividend);
 
-          if (dividend == INT64_MIN && divisor == -1)
-            return inst.rd.Write(m_emu, 0);
+                 if (dividend == INT64_MIN && divisor == -1)
+                   return inst.rd.Write(m_emu, 0);
 
-          return inst.rd.Write(m_emu, dividend % divisor);
-        })
+                 return inst.rd.Write(m_emu, dividend % divisor);
+               })
         .value_or(false);
   }
   bool operator()(REMU inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
-        .transform([&](auto &&tup) {
-          auto [dividend, divisor] = tup;
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu)),
+               [&](auto &&tup) {
+                 auto [dividend, divisor] = tup;
 
-          if (divisor == 0)
-            return inst.rd.Write(m_emu, dividend);
+                 if (divisor == 0)
+                   return inst.rd.Write(m_emu, dividend);
 
-          return inst.rd.Write(m_emu, dividend % divisor);
-        })
+                 return inst.rd.Write(m_emu, dividend % divisor);
+               })
         .value_or(false);
   }
   bool operator()(MULW inst) {
-    return zipOpt(inst.rs1.ReadI32(m_emu), inst.rs2.ReadI32(m_emu))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          return inst.rd.Write(m_emu, SextW(rs1 * rs2));
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadI32(m_emu), inst.rs2.ReadI32(m_emu)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 return inst.rd.Write(m_emu, SextW(rs1 * rs2));
+               })
         .value_or(false);
   }
   bool operator()(DIVW inst) {
-    return zipOpt(inst.rs1.ReadI32(m_emu), inst.rs2.ReadI32(m_emu))
-        .transform([&](auto &&tup) {
-          auto [dividend, divisor] = tup;
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadI32(m_emu), inst.rs2.ReadI32(m_emu)),
+               [&](auto &&tup) {
+                 auto [dividend, divisor] = tup;
 
-          if (divisor == 0)
-            return inst.rd.Write(m_emu, UINT64_MAX);
+                 if (divisor == 0)
+                   return inst.rd.Write(m_emu, UINT64_MAX);
 
-          if (dividend == INT32_MIN && divisor == -1)
-            return inst.rd.Write(m_emu, SextW(dividend));
+                 if (dividend == INT32_MIN && divisor == -1)
+                   return inst.rd.Write(m_emu, SextW(dividend));
 
-          return inst.rd.Write(m_emu, SextW(dividend / divisor));
-        })
+                 return inst.rd.Write(m_emu, SextW(dividend / divisor));
+               })
         .value_or(false);
   }
   bool operator()(DIVUW inst) {
-    return zipOpt(inst.rs1.ReadU32(m_emu), inst.rs2.ReadU32(m_emu))
-        .transform([&](auto &&tup) {
-          auto [dividend, divisor] = tup;
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadU32(m_emu), inst.rs2.ReadU32(m_emu)),
+               [&](auto &&tup) {
+                 auto [dividend, divisor] = tup;
 
-          if (divisor == 0)
-            return inst.rd.Write(m_emu, UINT64_MAX);
+                 if (divisor == 0)
+                   return inst.rd.Write(m_emu, UINT64_MAX);
 
-          return inst.rd.Write(m_emu, SextW(dividend / divisor));
-        })
+                 return inst.rd.Write(m_emu, SextW(dividend / divisor));
+               })
         .value_or(false);
   }
   bool operator()(REMW inst) {
-    return zipOpt(inst.rs1.ReadI32(m_emu), inst.rs2.ReadI32(m_emu))
-        .transform([&](auto &&tup) {
-          auto [dividend, divisor] = tup;
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadI32(m_emu), inst.rs2.ReadI32(m_emu)),
+               [&](auto &&tup) {
+                 auto [dividend, divisor] = tup;
 
-          if (divisor == 0)
-            return inst.rd.Write(m_emu, SextW(dividend));
+                 if (divisor == 0)
+                   return inst.rd.Write(m_emu, SextW(dividend));
 
-          if (dividend == INT32_MIN && divisor == -1)
-            return inst.rd.Write(m_emu, 0);
+                 if (dividend == INT32_MIN && divisor == -1)
+                   return inst.rd.Write(m_emu, 0);
 
-          return inst.rd.Write(m_emu, SextW(dividend % divisor));
-        })
+                 return inst.rd.Write(m_emu, SextW(dividend % divisor));
+               })
         .value_or(false);
   }
   bool operator()(REMUW inst) {
-    return zipOpt(inst.rs1.ReadU32(m_emu), inst.rs2.ReadU32(m_emu))
-        .transform([&](auto &&tup) {
-          auto [dividend, divisor] = tup;
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadU32(m_emu), inst.rs2.ReadU32(m_emu)),
+               [&](auto &&tup) {
+                 auto [dividend, divisor] = tup;
 
-          if (divisor == 0)
-            return inst.rd.Write(m_emu, SextW(dividend));
+                 if (divisor == 0)
+                   return inst.rd.Write(m_emu, SextW(dividend));
 
-          return inst.rd.Write(m_emu, SextW(dividend % divisor));
-        })
+                 return inst.rd.Write(m_emu, SextW(dividend % divisor));
+               })
         .value_or(false);
   }
   // RV32A & RV64A (The standard atomic instruction extension) //
@@ -1130,115 +1189,126 @@ public:
         [](uint64_t a, uint64_t b) { return std::max(a, b); });
   }
   bool operator()(FLW inst) {
-    return inst.rs1.Read(m_emu)
-        .transform([&](auto &&rs1) {
-          uint64_t addr = rs1 + uint64_t(inst.imm);
-          uint64_t bits = m_emu.ReadMem<uint64_t>(addr).value();
-          llvm::APFloat f(llvm::APFloat::IEEEsingle(), llvm::APInt(32, bits));
-          return inst.rd.WriteAPFloat(m_emu, f);
-        })
+    return llvm::transformOptional(
+               inst.rs1.Read(m_emu),
+               [&](auto &&rs1) {
+                 uint64_t addr = rs1 + uint64_t(inst.imm);
+                 uint64_t bits = m_emu.ReadMem<uint64_t>(addr).value();
+                 llvm::APFloat f(llvm::APFloat::IEEEsingle(),
+                                 llvm::APInt(32, bits));
+                 return inst.rd.WriteAPFloat(m_emu, f);
+               })
         .value_or(false);
   }
   bool operator()(FSW inst) {
-    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          uint64_t addr = rs1 + uint64_t(inst.imm);
-          uint64_t bits = rs2.bitcastToAPInt().getZExtValue();
-          return m_emu.WriteMem<uint64_t>(addr, bits);
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.Read(m_emu), inst.rs2.ReadAPFloat(m_emu, false)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 uint64_t addr = rs1 + uint64_t(inst.imm);
+                 uint64_t bits = rs2.bitcastToAPInt().getZExtValue();
+                 return m_emu.WriteMem<uint64_t>(addr, bits);
+               })
         .value_or(false);
   }
   bool operator()(FMADD_S inst) {
-    return zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                  inst.rs2.ReadAPFloat(m_emu, false),
-                  inst.rs3.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2, rs3] = tup;
-          auto res = rs1.fusedMultiplyAdd(rs2, rs3, m_emu.GetRoundingMode());
-          inst.rd.WriteAPFloat(m_emu, rs1);
-          return m_emu.SetAccruedExceptions(res);
-        })
+    return llvm::transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
+                                          inst.rs2.ReadAPFloat(m_emu, false),
+                                          inst.rs3.ReadAPFloat(m_emu, false)),
+                                   [&](auto &&tup) {
+                                     auto [rs1, rs2, rs3] = tup;
+                                     auto res = rs1.fusedMultiplyAdd(
+                                         rs2, rs3, m_emu.GetRoundingMode());
+                                     inst.rd.WriteAPFloat(m_emu, rs1);
+                                     return m_emu.SetAccruedExceptions(res);
+                                   })
         .value_or(false);
   }
   bool operator()(FMSUB_S inst) {
-    return zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                  inst.rs2.ReadAPFloat(m_emu, false),
-                  inst.rs3.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2, rs3] = tup;
-          auto res = rs1.fusedMultiplyAdd(rs2, -rs3, m_emu.GetRoundingMode());
-          inst.rd.WriteAPFloat(m_emu, rs1);
-          return m_emu.SetAccruedExceptions(res);
-        })
+    return llvm::transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
+                                          inst.rs2.ReadAPFloat(m_emu, false),
+                                          inst.rs3.ReadAPFloat(m_emu, false)),
+                                   [&](auto &&tup) {
+                                     auto [rs1, rs2, rs3] = tup;
+                                     auto res = rs1.fusedMultiplyAdd(
+                                         rs2, -rs3, m_emu.GetRoundingMode());
+                                     inst.rd.WriteAPFloat(m_emu, rs1);
+                                     return m_emu.SetAccruedExceptions(res);
+                                   })
         .value_or(false);
   }
   bool operator()(FNMSUB_S inst) {
-    return zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                  inst.rs2.ReadAPFloat(m_emu, false),
-                  inst.rs3.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2, rs3] = tup;
-          auto res = rs1.fusedMultiplyAdd(-rs2, rs3, m_emu.GetRoundingMode());
-          inst.rd.WriteAPFloat(m_emu, rs1);
-          return m_emu.SetAccruedExceptions(res);
-        })
+    return llvm::transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
+                                          inst.rs2.ReadAPFloat(m_emu, false),
+                                          inst.rs3.ReadAPFloat(m_emu, false)),
+                                   [&](auto &&tup) {
+                                     auto [rs1, rs2, rs3] = tup;
+                                     auto res = rs1.fusedMultiplyAdd(
+                                         -rs2, rs3, m_emu.GetRoundingMode());
+                                     inst.rd.WriteAPFloat(m_emu, rs1);
+                                     return m_emu.SetAccruedExceptions(res);
+                                   })
         .value_or(false);
   }
   bool operator()(FNMADD_S inst) {
-    return zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                  inst.rs2.ReadAPFloat(m_emu, false),
-                  inst.rs3.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2, rs3] = tup;
-          auto res = rs1.fusedMultiplyAdd(-rs2, -rs3, m_emu.GetRoundingMode());
-          inst.rd.WriteAPFloat(m_emu, rs1);
-          return m_emu.SetAccruedExceptions(res);
-        })
+    return llvm::transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
+                                          inst.rs2.ReadAPFloat(m_emu, false),
+                                          inst.rs3.ReadAPFloat(m_emu, false)),
+                                   [&](auto &&tup) {
+                                     auto [rs1, rs2, rs3] = tup;
+                                     auto res = rs1.fusedMultiplyAdd(
+                                         -rs2, -rs3, m_emu.GetRoundingMode());
+                                     inst.rd.WriteAPFloat(m_emu, rs1);
+                                     return m_emu.SetAccruedExceptions(res);
+                                   })
         .value_or(false);
   }
   bool operator()(FADD_S inst) {
-    return zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                  inst.rs2.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          auto res = rs1.add(rs2, m_emu.GetRoundingMode());
-          inst.rd.WriteAPFloat(m_emu, rs1);
-          return m_emu.SetAccruedExceptions(res);
-        })
+    return llvm::transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
+                                          inst.rs2.ReadAPFloat(m_emu, false)),
+                                   [&](auto &&tup) {
+                                     auto [rs1, rs2] = tup;
+                                     auto res =
+                                         rs1.add(rs2, m_emu.GetRoundingMode());
+                                     inst.rd.WriteAPFloat(m_emu, rs1);
+                                     return m_emu.SetAccruedExceptions(res);
+                                   })
         .value_or(false);
   }
   bool operator()(FSUB_S inst) {
-    return zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                  inst.rs2.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          auto res = rs1.subtract(rs2, m_emu.GetRoundingMode());
-          inst.rd.WriteAPFloat(m_emu, rs1);
-          return m_emu.SetAccruedExceptions(res);
-        })
+    return llvm::transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
+                                          inst.rs2.ReadAPFloat(m_emu, false)),
+                                   [&](auto &&tup) {
+                                     auto [rs1, rs2] = tup;
+                                     auto res = rs1.subtract(
+                                         rs2, m_emu.GetRoundingMode());
+                                     inst.rd.WriteAPFloat(m_emu, rs1);
+                                     return m_emu.SetAccruedExceptions(res);
+                                   })
         .value_or(false);
   }
   bool operator()(FMUL_S inst) {
-    return zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                  inst.rs2.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          auto res = rs1.multiply(rs2, m_emu.GetRoundingMode());
-          inst.rd.WriteAPFloat(m_emu, rs1);
-          return m_emu.SetAccruedExceptions(res);
-        })
+    return llvm::transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
+                                          inst.rs2.ReadAPFloat(m_emu, false)),
+                                   [&](auto &&tup) {
+                                     auto [rs1, rs2] = tup;
+                                     auto res = rs1.multiply(
+                                         rs2, m_emu.GetRoundingMode());
+                                     inst.rd.WriteAPFloat(m_emu, rs1);
+                                     return m_emu.SetAccruedExceptions(res);
+                                   })
         .value_or(false);
   }
   bool operator()(FDIV_S inst) {
-    return zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                  inst.rs2.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          auto res = rs1.divide(rs2, m_emu.GetRoundingMode());
-          inst.rd.WriteAPFloat(m_emu, rs1);
-          return m_emu.SetAccruedExceptions(res);
-        })
+    return llvm::transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
+                                          inst.rs2.ReadAPFloat(m_emu, false)),
+                                   [&](auto &&tup) {
+                                     auto [rs1, rs2] = tup;
+                                     auto res = rs1.divide(
+                                         rs2, m_emu.GetRoundingMode());
+                                     inst.rd.WriteAPFloat(m_emu, rs1);
+                                     return m_emu.SetAccruedExceptions(res);
+                                   })
         .value_or(false);
   }
   bool operator()(FSQRT_S inst) {
@@ -1246,236 +1316,249 @@ public:
     return false;
   }
   bool operator()(FSGNJ_S inst) {
-    return zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                  inst.rs2.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          rs1.copySign(rs2);
-          return inst.rd.WriteAPFloat(m_emu, rs1);
-        })
+    return llvm::transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
+                                          inst.rs2.ReadAPFloat(m_emu, false)),
+                                   [&](auto &&tup) {
+                                     auto [rs1, rs2] = tup;
+                                     rs1.copySign(rs2);
+                                     return inst.rd.WriteAPFloat(m_emu, rs1);
+                                   })
         .value_or(false);
   }
   bool operator()(FSGNJN_S inst) {
-    return zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                  inst.rs2.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          rs1.copySign(-rs2);
-          return inst.rd.WriteAPFloat(m_emu, rs1);
-        })
+    return llvm::transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
+                                          inst.rs2.ReadAPFloat(m_emu, false)),
+                                   [&](auto &&tup) {
+                                     auto [rs1, rs2] = tup;
+                                     rs1.copySign(-rs2);
+                                     return inst.rd.WriteAPFloat(m_emu, rs1);
+                                   })
         .value_or(false);
   }
   bool operator()(FSGNJX_S inst) {
-    return zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                  inst.rs2.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          // spec: the sign bit is the XOR of the sign bits of rs1 and rs2.
-          // if rs1 and rs2 have the same signs
-          // set rs1 to positive
-          // else set rs1 to negative
-          if (rs1.isNegative() == rs2.isNegative()) {
-            rs1.clearSign();
-          } else {
-            rs1.clearSign();
-            rs1.changeSign();
-          }
-          return inst.rd.WriteAPFloat(m_emu, rs1);
-        })
+    return llvm::transformOptional(zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
+                                          inst.rs2.ReadAPFloat(m_emu, false)),
+                                   [&](auto &&tup) {
+                                     auto [rs1, rs2] = tup;
+                                     // spec: the sign bit is the XOR of the
+                                     // sign bits of rs1 and rs2. if rs1 and rs2
+                                     // have the same signs set rs1 to positive
+                                     // else set rs1 to negative
+                                     if (rs1.isNegative() == rs2.isNegative()) {
+                                       rs1.clearSign();
+                                     } else {
+                                       rs1.clearSign();
+                                       rs1.changeSign();
+                                     }
+                                     return inst.rd.WriteAPFloat(m_emu, rs1);
+                                   })
         .value_or(false);
   }
   bool operator()(FMIN_S inst) {
-    return zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                  inst.rs2.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          // If both inputs are NaNs, the result is the canonical NaN.
-          // If only one operand is a NaN, the result is the non-NaN operand.
-          // Signaling NaN inputs set the invalid operation exception flag, even
-          // when the result is not NaN.
-          if (rs1.isNaN() || rs2.isNaN())
-            m_emu.SetAccruedExceptions(llvm::APFloat::opInvalidOp);
-          if (rs1.isNaN() && rs2.isNaN()) {
-            auto canonicalNaN = llvm::APFloat::getQNaN(rs1.getSemantics());
-            return inst.rd.WriteAPFloat(m_emu, canonicalNaN);
-          }
-          return inst.rd.WriteAPFloat(m_emu, minnum(rs1, rs2));
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
+                      inst.rs2.ReadAPFloat(m_emu, false)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 // If both inputs are NaNs, the result is the canonical NaN.
+                 // If only one operand is a NaN, the result is the non-NaN
+                 // operand. Signaling NaN inputs set the invalid operation
+                 // exception flag, even when the result is not NaN.
+                 if (rs1.isNaN() || rs2.isNaN())
+                   m_emu.SetAccruedExceptions(llvm::APFloat::opInvalidOp);
+                 if (rs1.isNaN() && rs2.isNaN()) {
+                   auto canonicalNaN =
+                       llvm::APFloat::getQNaN(rs1.getSemantics());
+                   return inst.rd.WriteAPFloat(m_emu, canonicalNaN);
+                 }
+                 return inst.rd.WriteAPFloat(m_emu, minnum(rs1, rs2));
+               })
         .value_or(false);
   }
   bool operator()(FMAX_S inst) {
-    return zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                  inst.rs2.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          if (rs1.isNaN() || rs2.isNaN())
-            m_emu.SetAccruedExceptions(llvm::APFloat::opInvalidOp);
-          if (rs1.isNaN() && rs2.isNaN()) {
-            auto canonicalNaN = llvm::APFloat::getQNaN(rs1.getSemantics());
-            return inst.rd.WriteAPFloat(m_emu, canonicalNaN);
-          }
-          return inst.rd.WriteAPFloat(m_emu, maxnum(rs1, rs2));
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
+                      inst.rs2.ReadAPFloat(m_emu, false)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 if (rs1.isNaN() || rs2.isNaN())
+                   m_emu.SetAccruedExceptions(llvm::APFloat::opInvalidOp);
+                 if (rs1.isNaN() && rs2.isNaN()) {
+                   auto canonicalNaN =
+                       llvm::APFloat::getQNaN(rs1.getSemantics());
+                   return inst.rd.WriteAPFloat(m_emu, canonicalNaN);
+                 }
+                 return inst.rd.WriteAPFloat(m_emu, maxnum(rs1, rs2));
+               })
         .value_or(false);
   }
   bool operator()(FCVT_W_S inst) {
-    return inst.rs1.ReadAPFloat(m_emu, false)
-        .transform([&](auto &&rs1) {
-          int32_t res = rs1.convertToFloat();
-          return inst.rd.Write(m_emu, uint64_t(res));
-        })
+    return llvm::transformOptional(inst.rs1.ReadAPFloat(m_emu, false),
+                                   [&](auto &&rs1) {
+                                     int32_t res = rs1.convertToFloat();
+                                     return inst.rd.Write(m_emu, uint64_t(res));
+                                   })
         .value_or(false);
   }
   bool operator()(FCVT_WU_S inst) {
-    return inst.rs1.ReadAPFloat(m_emu, false)
-        .transform([&](auto &&rs1) {
-          uint32_t res = rs1.convertToFloat();
-          return inst.rd.Write(m_emu, uint64_t(res));
-        })
+    return llvm::transformOptional(inst.rs1.ReadAPFloat(m_emu, false),
+                                   [&](auto &&rs1) {
+                                     uint32_t res = rs1.convertToFloat();
+                                     return inst.rd.Write(m_emu, uint64_t(res));
+                                   })
         .value_or(false);
   }
   bool operator()(FMV_X_W inst) {
-    return inst.rs1.ReadAPFloat(m_emu, false)
-        .transform([&](auto &&rs1) {
-          if (rs1.isNaN())
-            return inst.rd.Write(m_emu, 0x7fc00000);
-          auto bits = rs1.bitcastToAPInt();
-          return inst.rd.Write(m_emu, NanBoxing(uint64_t(bits.getSExtValue())));
-        })
+    return llvm::transformOptional(
+               inst.rs1.ReadAPFloat(m_emu, false),
+               [&](auto &&rs1) {
+                 if (rs1.isNaN())
+                   return inst.rd.Write(m_emu, 0x7fc00000);
+                 auto bits = rs1.bitcastToAPInt();
+                 return inst.rd.Write(m_emu,
+                                      NanBoxing(uint64_t(bits.getSExtValue())));
+               })
         .value_or(false);
   }
   bool operator()(FEQ_S inst) {
-    return zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                  inst.rs2.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          if (rs1.isNaN() || rs2.isNaN()) {
-            if (rs1.isSignaling() || rs2.isSignaling())
-              m_emu.SetAccruedExceptions(llvm::APFloat::opInvalidOp);
-            return inst.rd.Write(m_emu, 0);
-          }
-          return inst.rd.Write(m_emu,
-                               rs1.compare(rs2) == llvm::APFloat::cmpEqual);
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
+                      inst.rs2.ReadAPFloat(m_emu, false)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 if (rs1.isNaN() || rs2.isNaN()) {
+                   if (rs1.isSignaling() || rs2.isSignaling())
+                     m_emu.SetAccruedExceptions(llvm::APFloat::opInvalidOp);
+                   return inst.rd.Write(m_emu, 0);
+                 }
+                 return inst.rd.Write(m_emu, rs1.compare(rs2) ==
+                                                 llvm::APFloat::cmpEqual);
+               })
         .value_or(false);
   }
   bool operator()(FLT_S inst) {
-    return zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                  inst.rs2.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          if (rs1.isNaN() || rs2.isNaN()) {
-            m_emu.SetAccruedExceptions(llvm::APFloat::opInvalidOp);
-            return inst.rd.Write(m_emu, 0);
-          }
-          return inst.rd.Write(m_emu,
-                               rs1.compare(rs2) == llvm::APFloat::cmpLessThan);
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
+                      inst.rs2.ReadAPFloat(m_emu, false)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 if (rs1.isNaN() || rs2.isNaN()) {
+                   m_emu.SetAccruedExceptions(llvm::APFloat::opInvalidOp);
+                   return inst.rd.Write(m_emu, 0);
+                 }
+                 return inst.rd.Write(m_emu, rs1.compare(rs2) ==
+                                                 llvm::APFloat::cmpLessThan);
+               })
         .value_or(false);
   }
   bool operator()(FLE_S inst) {
-    return zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
-                  inst.rs2.ReadAPFloat(m_emu, false))
-        .transform([&](auto &&tup) {
-          auto [rs1, rs2] = tup;
-          if (rs1.isNaN() || rs2.isNaN()) {
-            m_emu.SetAccruedExceptions(llvm::APFloat::opInvalidOp);
-            return inst.rd.Write(m_emu, 0);
-          }
-          return inst.rd.Write(m_emu, rs1.compare(rs2) !=
-                                          llvm::APFloat::cmpGreaterThan);
-        })
+    return llvm::transformOptional(
+               zipOpt(inst.rs1.ReadAPFloat(m_emu, false),
+                      inst.rs2.ReadAPFloat(m_emu, false)),
+               [&](auto &&tup) {
+                 auto [rs1, rs2] = tup;
+                 if (rs1.isNaN() || rs2.isNaN()) {
+                   m_emu.SetAccruedExceptions(llvm::APFloat::opInvalidOp);
+                   return inst.rd.Write(m_emu, 0);
+                 }
+                 return inst.rd.Write(m_emu, rs1.compare(rs2) !=
+                                                 llvm::APFloat::cmpGreaterThan);
+               })
         .value_or(false);
   }
   bool operator()(FCLASS_S inst) {
-    return inst.rs1.ReadAPFloat(m_emu, false)
-        .transform([&](auto &&rs1) {
-          uint64_t result = 0;
-          if (rs1.isInfinity() && rs1.isNegative())
-            result |= 1 << 0;
-          // neg normal
-          if (rs1.isNormal() && rs1.isNegative())
-            result |= 1 << 1;
-          // neg subnormal
-          if (rs1.isDenormal() && rs1.isNegative())
-            result |= 1 << 2;
-          if (rs1.isNegZero())
-            result |= 1 << 3;
-          if (rs1.isPosZero())
-            result |= 1 << 4;
-          // pos normal
-          if (rs1.isNormal() && !rs1.isNegative())
-            result |= 1 << 5;
-          // pos subnormal
-          if (rs1.isDenormal() && !rs1.isNegative())
-            result |= 1 << 6;
-          if (rs1.isInfinity() && !rs1.isNegative())
-            result |= 1 << 7;
-          if (rs1.isNaN()) {
-            if (rs1.isSignaling())
-              result |= 1 << 8;
-            else
-              result |= 1 << 9;
-          }
-          return inst.rd.Write(m_emu, result);
-        })
+    return llvm::transformOptional(inst.rs1.ReadAPFloat(m_emu, false),
+                                   [&](auto &&rs1) {
+                                     uint64_t result = 0;
+                                     if (rs1.isInfinity() && rs1.isNegative())
+                                       result |= 1 << 0;
+                                     // neg normal
+                                     if (rs1.isNormal() && rs1.isNegative())
+                                       result |= 1 << 1;
+                                     // neg subnormal
+                                     if (rs1.isDenormal() && rs1.isNegative())
+                                       result |= 1 << 2;
+                                     if (rs1.isNegZero())
+                                       result |= 1 << 3;
+                                     if (rs1.isPosZero())
+                                       result |= 1 << 4;
+                                     // pos normal
+                                     if (rs1.isNormal() && !rs1.isNegative())
+                                       result |= 1 << 5;
+                                     // pos subnormal
+                                     if (rs1.isDenormal() && !rs1.isNegative())
+                                       result |= 1 << 6;
+                                     if (rs1.isInfinity() && !rs1.isNegative())
+                                       result |= 1 << 7;
+                                     if (rs1.isNaN()) {
+                                       if (rs1.isSignaling())
+                                         result |= 1 << 8;
+                                       else
+                                         result |= 1 << 9;
+                                     }
+                                     return inst.rd.Write(m_emu, result);
+                                   })
         .value_or(false);
   }
   bool operator()(FCVT_S_W inst) {
-    return inst.rs1.ReadI32(m_emu)
-        .transform([&](auto &&rs1) {
-          llvm::APFloat apf(llvm::APFloat::IEEEsingle(), rs1);
-          return inst.rd.WriteAPFloat(m_emu, apf);
-        })
+    return llvm::transformOptional(inst.rs1.ReadI32(m_emu),
+                                   [&](auto &&rs1) {
+                                     llvm::APFloat apf(
+                                         llvm::APFloat::IEEEsingle(), rs1);
+                                     return inst.rd.WriteAPFloat(m_emu, apf);
+                                   })
         .value_or(false);
   }
   bool operator()(FCVT_S_WU inst) {
-    return inst.rs1.ReadU32(m_emu)
-        .transform([&](auto &&rs1) {
-          llvm::APFloat apf(llvm::APFloat::IEEEsingle(), rs1);
-          return inst.rd.WriteAPFloat(m_emu, apf);
-        })
+    return llvm::transformOptional(inst.rs1.ReadU32(m_emu),
+                                   [&](auto &&rs1) {
+                                     llvm::APFloat apf(
+                                         llvm::APFloat::IEEEsingle(), rs1);
+                                     return inst.rd.WriteAPFloat(m_emu, apf);
+                                   })
         .value_or(false);
   }
   bool operator()(FMV_W_X inst) {
-    return inst.rs1.Read(m_emu)
-        .transform([&](auto &&rs1) {
-          llvm::APInt apInt(32, NanUnBoxing(rs1));
-          llvm::APFloat apf(apInt.bitsToFloat());
-          return inst.rd.WriteAPFloat(m_emu, apf);
-        })
+    return llvm::transformOptional(inst.rs1.Read(m_emu),
+                                   [&](auto &&rs1) {
+                                     llvm::APInt apInt(32, NanUnBoxing(rs1));
+                                     llvm::APFloat apf(apInt.bitsToFloat());
+                                     return inst.rd.WriteAPFloat(m_emu, apf);
+                                   })
         .value_or(false);
   }
   bool operator()(FCVT_L_S inst) {
-    return inst.rs1.ReadAPFloat(m_emu, false)
-        .transform([&](auto &&rs1) {
-          int64_t res = rs1.convertToFloat();
-          return inst.rd.Write(m_emu, uint64_t(res));
-        })
+    return llvm::transformOptional(inst.rs1.ReadAPFloat(m_emu, false),
+                                   [&](auto &&rs1) {
+                                     int64_t res = rs1.convertToFloat();
+                                     return inst.rd.Write(m_emu, uint64_t(res));
+                                   })
         .value_or(false);
   }
   bool operator()(FCVT_LU_S inst) {
-    return inst.rs1.ReadAPFloat(m_emu, false)
-        .transform([&](auto &&rs1) {
-          uint64_t res = rs1.convertToFloat();
-          return inst.rd.Write(m_emu, res);
-        })
+    return llvm::transformOptional(inst.rs1.ReadAPFloat(m_emu, false),
+                                   [&](auto &&rs1) {
+                                     uint64_t res = rs1.convertToFloat();
+                                     return inst.rd.Write(m_emu, res);
+                                   })
         .value_or(false);
   }
   bool operator()(FCVT_S_L inst) {
-    return inst.rs1.ReadI64(m_emu)
-        .transform([&](auto &&rs1) {
-          llvm::APFloat apf(llvm::APFloat::IEEEsingle(), rs1);
-          return inst.rd.WriteAPFloat(m_emu, apf);
-        })
+    return llvm::transformOptional(inst.rs1.ReadI64(m_emu),
+                                   [&](auto &&rs1) {
+                                     llvm::APFloat apf(
+                                         llvm::APFloat::IEEEsingle(), rs1);
+                                     return inst.rd.WriteAPFloat(m_emu, apf);
+                                   })
         .value_or(false);
   }
   bool operator()(FCVT_S_LU inst) {
-    return inst.rs1.Read(m_emu)
-        .transform([&](auto &&rs1) {
-          llvm::APFloat apf(llvm::APFloat::IEEEsingle(), rs1);
-          return inst.rd.WriteAPFloat(m_emu, apf);
-        })
+    return llvm::transformOptional(inst.rs1.Read(m_emu),
+                                   [&](auto &&rs1) {
+                                     llvm::APFloat apf(
+                                         llvm::APFloat::IEEEsingle(), rs1);
+                                     return inst.rd.WriteAPFloat(m_emu, apf);
+                                   })
         .value_or(false);
   }
   bool operator()(INVALID inst) { return false; }
@@ -1515,8 +1598,8 @@ bool EmulateInstructionRISCV::EvaluateInstruction(uint32_t options) {
 
 llvm::Optional<DecodeResult>
 EmulateInstructionRISCV::ReadInstructionAt(lldb::addr_t addr) {
-  return ReadMem<uint32_t>(addr)
-      .transform([&](uint32_t inst) { return Decode(inst); })
+  return llvm::transformOptional(ReadMem<uint32_t>(addr),
+                                 [&](uint32_t inst) { return Decode(inst); })
       .value_or(std::nullopt);
 }
 
