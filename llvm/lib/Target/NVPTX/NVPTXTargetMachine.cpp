@@ -35,6 +35,7 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Vectorize.h"
 #include <cassert>
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -112,7 +113,7 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
                                        Optional<Reloc::Model> RM,
-                                       Optional<CodeModel::Model> CM,
+                                       std::optional<CodeModel::Model> CM,
                                        CodeGenOpt::Level OL, bool is64bit)
     // The pic relocation model is used regardless of what the client has
     // specified, as it is the only relocation model currently supported.
@@ -139,7 +140,7 @@ NVPTXTargetMachine32::NVPTXTargetMachine32(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
                                            Optional<Reloc::Model> RM,
-                                           Optional<CodeModel::Model> CM,
+                                           std::optional<CodeModel::Model> CM,
                                            CodeGenOpt::Level OL, bool JIT)
     : NVPTXTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
 
@@ -149,7 +150,7 @@ NVPTXTargetMachine64::NVPTXTargetMachine64(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
                                            Optional<Reloc::Model> RM,
-                                           Optional<CodeModel::Model> CM,
+                                           std::optional<CodeModel::Model> CM,
                                            CodeGenOpt::Level OL, bool JIT)
     : NVPTXTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true) {}
 

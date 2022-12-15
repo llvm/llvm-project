@@ -25,6 +25,7 @@
 #include "llvm/Target/TargetOptions.h"
 
 #include <functional>
+#include <optional>
 
 namespace llvm {
 
@@ -52,7 +53,7 @@ struct Config {
   /// For adding passes that run right before codegen.
   std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
   Optional<Reloc::Model> RelocModel = Reloc::PIC_;
-  Optional<CodeModel::Model> CodeModel = std::nullopt;
+  std::optional<CodeModel::Model> CodeModel = std::nullopt;
   CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
   CodeGenFileType CGFileType = CGFT_ObjectFile;
   unsigned OptLevel = 2;

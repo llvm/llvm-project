@@ -616,7 +616,7 @@ void Module::setPIELevel(PIELevel::Level PL) {
   addModuleFlag(ModFlagBehavior::Max, "PIE Level", PL);
 }
 
-Optional<CodeModel::Model> Module::getCodeModel() const {
+std::optional<CodeModel::Model> Module::getCodeModel() const {
   auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("Code Model"));
 
   if (!Val)

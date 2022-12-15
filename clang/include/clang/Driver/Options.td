@@ -2337,6 +2337,13 @@ def fno_modules_validate_textual_header_includes :
   HelpText<"Do not enforce -fmodules-decluse and private header restrictions for textual headers. "
            "This flag will be removed in a future Clang release.">;
 
+def fincremental_extensions :
+  Flag<["-"], "fincremental-extensions">,
+  Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Enable incremental processing extensions such as processing"
+           "statements on the global scope.">,
+  MarshallingInfoFlag<LangOpts<"IncrementalExtensions">>;
+
 def fvalidate_ast_input_files_content:
   Flag <["-"], "fvalidate-ast-input-files-content">,
   Group<f_Group>, Flags<[CC1Option]>,
@@ -7119,6 +7126,7 @@ def _SLASH_AI : CLJoinedOrSeparate<"AI">;
 def _SLASH_Bt : CLFlag<"Bt">;
 def _SLASH_Bt_plus : CLFlag<"Bt+">;
 def _SLASH_clr : CLJoined<"clr">;
+def _SLASH_d1 : CLJoined<"d1">;
 def _SLASH_d2 : CLJoined<"d2">;
 def _SLASH_doc : CLJoined<"doc">;
 def _SLASH_experimental : CLJoined<"experimental:">;

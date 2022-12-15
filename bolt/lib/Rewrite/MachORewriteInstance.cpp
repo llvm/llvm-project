@@ -229,7 +229,7 @@ Optional<uint64_t> readStartAddress(const MachOObjectFile &O) {
   }
   return (TextVMAddr && StartOffset)
              ? Optional<uint64_t>(*TextVMAddr + *StartOffset)
-             : llvm::None;
+             : std::nullopt;
 }
 
 } // anonymous namespace

@@ -66,6 +66,10 @@
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       TLS Variable Hoist
+; CHECK-NEXT:       Lazy Branch Probability Analysis
+; CHECK-NEXT:       Lazy Block Frequency Analysis
+; CHECK-NEXT:       Optimization Remark Emitter
+; CHECK-NEXT:       Optimize selects
 ; CHECK-NEXT:     Stack Safety Analysis
 ; CHECK-NEXT:       FunctionPass Manager
 ; CHECK-NEXT:         Dominator Tree Construction

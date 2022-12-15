@@ -388,6 +388,8 @@ public:
                                        int64_t BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) const;
   /// @}
+
+  bool enableSelectOptimize() { return ST->enableSelectOptimize(); }
 };
 
 } // end namespace llvm

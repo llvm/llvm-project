@@ -116,7 +116,7 @@ static lto::Config createConfig() {
   if (auto relocModel = getRelocModelFromCMModel())
     c.RelocModel = *relocModel;
   else if (config->relocatable)
-    c.RelocModel = None;
+    c.RelocModel = std::nullopt;
   else if (config->isPic)
     c.RelocModel = Reloc::PIC_;
   else

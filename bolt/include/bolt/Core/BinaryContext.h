@@ -323,7 +323,7 @@ public:
     if (FileBuildID)
       return StringRef(*FileBuildID);
 
-    return None;
+    return std::nullopt;
   }
   void setFileBuildID(StringRef ID) { FileBuildID = std::string(ID); }
 

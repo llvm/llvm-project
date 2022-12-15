@@ -44,6 +44,7 @@
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
+#include <optional>
 
 using namespace llvm;
 using namespace lto;
@@ -214,7 +215,7 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
     RelocModel =
         M.getPICLevel() == PICLevel::NotPIC ? Reloc::Static : Reloc::PIC_;
 
-  Optional<CodeModel::Model> CodeModel;
+  std::optional<CodeModel::Model> CodeModel;
   if (Conf.CodeModel)
     CodeModel = *Conf.CodeModel;
   else

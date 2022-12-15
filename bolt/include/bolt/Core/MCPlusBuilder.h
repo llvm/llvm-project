@@ -136,7 +136,7 @@ private:
                                          unsigned Index) const {
     const MCInst *AnnotationInst = getAnnotationInst(Inst);
     if (!AnnotationInst)
-      return None;
+      return std::nullopt;
 
     for (int I = AnnotationInst->getNumOperands() - 1; I >= 0; --I) {
       int64_t ImmValue = AnnotationInst->getOperand(I).getImm();
@@ -145,7 +145,7 @@ private:
       }
     }
 
-    return None;
+    return std::nullopt;
   }
 
 protected:
@@ -1670,7 +1670,7 @@ public:
     auto AI = AnnotationNameIndexMap.find(Name);
     if (AI != AnnotationNameIndexMap.end())
       return AI->second;
-    return None;
+    return std::nullopt;
   }
 
   /// Return annotation index matching the \p Name. Create a new index if the

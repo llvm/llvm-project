@@ -1287,7 +1287,7 @@ static std::optional<uint64_t> parseFlag(StringRef tok) {
       .Case(CASE_ENT(SHF_COMPRESSED))
       .Case(CASE_ENT(SHF_EXCLUDE))
       .Case(CASE_ENT(SHF_ARM_PURECODE))
-      .Default(None);
+      .Default(std::nullopt);
 #undef CASE_ENT
 }
 

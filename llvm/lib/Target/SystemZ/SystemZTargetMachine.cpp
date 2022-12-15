@@ -25,6 +25,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Transforms/Scalar.h"
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -122,8 +123,8 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
 //   of copy relocs, so locally-binding data symbols might not be in
 //   the range of LARL.  We need the Medium model in that case.
 static CodeModel::Model
-getEffectiveSystemZCodeModel(Optional<CodeModel::Model> CM, Reloc::Model RM,
-                             bool JIT) {
+getEffectiveSystemZCodeModel(std::optional<CodeModel::Model> CM,
+                             Reloc::Model RM, bool JIT) {
   if (CM) {
     if (*CM == CodeModel::Tiny)
       report_fatal_error("Target does not support the tiny CodeModel", false);
@@ -140,7 +141,7 @@ SystemZTargetMachine::SystemZTargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
                                            Optional<Reloc::Model> RM,
-                                           Optional<CodeModel::Model> CM,
+                                           std::optional<CodeModel::Model> CM,
                                            CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(
           T, computeDataLayout(TT), TT, CPU, FS, Options,

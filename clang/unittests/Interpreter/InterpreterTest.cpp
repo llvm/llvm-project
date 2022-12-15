@@ -124,14 +124,8 @@ TEST(InterpreterTest, DeclsAndStatements) {
   auto *PTU1 = R1->TUPart;
   EXPECT_EQ(2U, DeclsSize(PTU1));
 
-  // FIXME: Add support for wrapping and running statements.
   auto R2 = Interp->Parse("var1++; printf(\"var1 value %d\\n\", var1);");
-  EXPECT_FALSE(!!R2);
-  using ::testing::HasSubstr;
-  EXPECT_THAT(DiagnosticsOS.str(),
-              HasSubstr("error: unknown type name 'var1'"));
-  auto Err = R2.takeError();
-  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+  EXPECT_TRUE(!!R2);
 }
 
 TEST(InterpreterTest, UndoCommand) {

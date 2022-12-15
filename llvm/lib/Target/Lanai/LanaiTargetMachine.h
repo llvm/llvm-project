@@ -18,6 +18,7 @@
 #include "LanaiSelectionDAGInfo.h"
 #include "LanaiSubtarget.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
 
 namespace llvm {
 
@@ -30,7 +31,7 @@ public:
                      StringRef Cpu, StringRef FeatureString,
                      const TargetOptions &Options,
                      Optional<Reloc::Model> RelocationModel,
-                     Optional<CodeModel::Model> CodeModel,
+                     std::optional<CodeModel::Model> CodeModel,
                      CodeGenOpt::Level OptLevel, bool JIT);
 
   const LanaiSubtarget *

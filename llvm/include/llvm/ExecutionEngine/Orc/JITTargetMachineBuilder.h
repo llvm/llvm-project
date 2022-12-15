@@ -21,6 +21,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -92,13 +93,13 @@ public:
   const Optional<Reloc::Model> &getRelocationModel() const { return RM; }
 
   /// Set the code model.
-  JITTargetMachineBuilder &setCodeModel(Optional<CodeModel::Model> CM) {
+  JITTargetMachineBuilder &setCodeModel(std::optional<CodeModel::Model> CM) {
     this->CM = std::move(CM);
     return *this;
   }
 
   /// Get the code model.
-  const Optional<CodeModel::Model> &getCodeModel() const { return CM; }
+  const std::optional<CodeModel::Model> &getCodeModel() const { return CM; }
 
   /// Set the LLVM CodeGen optimization level.
   JITTargetMachineBuilder &setCodeGenOptLevel(CodeGenOpt::Level OptLevel) {
@@ -151,7 +152,7 @@ private:
   SubtargetFeatures Features;
   TargetOptions Options;
   Optional<Reloc::Model> RM;
-  Optional<CodeModel::Model> CM;
+  std::optional<CodeModel::Model> CM;
   CodeGenOpt::Level OptLevel = CodeGenOpt::Default;
 };
 

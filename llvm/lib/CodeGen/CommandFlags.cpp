@@ -23,6 +23,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -50,12 +51,23 @@ using namespace llvm;
     return None;                                                               \
   }
 
+// Temporary macro for incremental transition to std::optional.
+#define CGSTDOPT_EXP(TY, NAME)                                                 \
+  CGOPT(TY, NAME)                                                              \
+  std::optional<TY> codegen::getExplicit##NAME() {                             \
+    if (NAME##View->getNumOccurrences()) {                                     \
+      TY res = *NAME##View;                                                    \
+      return res;                                                              \
+    }                                                                          \
+    return std::nullopt;                                                       \
+  }
+
 CGOPT(std::string, MArch)
 CGOPT(std::string, MCPU)
 CGLIST(std::string, MAttrs)
 CGOPT_EXP(Reloc::Model, RelocModel)
 CGOPT(ThreadModel::Model, ThreadModel)
-CGOPT_EXP(CodeModel::Model, CodeModel)
+CGSTDOPT_EXP(CodeModel::Model, CodeModel)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)

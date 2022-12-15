@@ -52,7 +52,7 @@ findAttributeInfo(const DWARFDie DIE,
   Optional<DWARFFormValue> Value =
       AbbrevDecl->getAttributeValueFromOffset(Index, Offset, U);
   if (!Value)
-    return None;
+    return std::nullopt;
   // AttributeSpec
   const DWARFAbbreviationDeclaration::AttributeSpec *AttrVal =
       AbbrevDecl->attributes().begin() + Index;
@@ -76,14 +76,14 @@ findAttributeInfo(const DWARFDie DIE,
 Optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
                                      dwarf::Attribute Attr) {
   if (!DIE.isValid())
-    return None;
+    return std::nullopt;
   const DWARFAbbreviationDeclaration *AbbrevDecl =
       DIE.getAbbreviationDeclarationPtr();
   if (!AbbrevDecl)
-    return None;
+    return std::nullopt;
   Optional<uint32_t> Index = AbbrevDecl->findAttributeIndex(Attr);
   if (!Index)
-    return None;
+    return std::nullopt;
   return findAttributeInfo(DIE, AbbrevDecl, *Index);
 }
 
@@ -1585,7 +1585,7 @@ void DwarfLineTable::emit(BinaryContext &BC, MCStreamer &Streamer) {
   if (LineTables.empty())
     return;
   // In a v5 non-split line table, put the strings in a separate section.
-  Optional<MCDwarfLineStr> LineStr(None);
+  Optional<MCDwarfLineStr> LineStr(std::nullopt);
   ErrorOr<BinarySection &> LineStrSection =
       BC.getUniqueSectionByName(".debug_line_str");
   // Some versions of GCC output DWARF5 .debug_info, but DWARF4 or lower

@@ -164,7 +164,7 @@ static Optional<std::string> findFile(StringRef path1, const Twine &path2) {
   path::append(s, path1, path2);
   if (fs::exists(s))
     return std::string(s);
-  return None;
+  return std::nullopt;
 }
 
 opt::InputArgList WasmOptTable::parse(ArrayRef<const char *> argv) {
@@ -283,7 +283,7 @@ static Optional<std::string> findFromSearchPaths(StringRef path) {
   for (StringRef dir : config->searchPaths)
     if (Optional<std::string> s = findFile(dir, path))
       return s;
-  return None;
+  return std::nullopt;
 }
 
 // This is for -l<basename>. We'll look for lib<basename>.a from
@@ -298,7 +298,7 @@ static Optional<std::string> searchLibraryBaseName(StringRef name) {
     if (Optional<std::string> s = findFile(dir, "lib" + name + ".a"))
       return s;
   }
-  return None;
+  return std::nullopt;
 }
 
 // This is for -l<namespec>.
@@ -659,9 +659,9 @@ static void demoteLazySymbols() {
       if (s->signature) {
         LLVM_DEBUG(llvm::dbgs()
                    << "demoting lazy func: " << s->getName() << "\n");
-        replaceSymbol<UndefinedFunction>(s, s->getName(), None, None,
-                                         WASM_SYMBOL_BINDING_WEAK, s->getFile(),
-                                         s->signature);
+        replaceSymbol<UndefinedFunction>(s, s->getName(), std::nullopt,
+                                         std::nullopt, WASM_SYMBOL_BINDING_WEAK,
+                                         s->getFile(), s->signature);
       }
     }
   }
@@ -670,7 +670,7 @@ static void demoteLazySymbols() {
 static UndefinedGlobal *
 createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
   auto *sym = cast<UndefinedGlobal>(symtab->addUndefinedGlobal(
-      name, None, None, WASM_SYMBOL_UNDEFINED, nullptr, type));
+      name, std::nullopt, std::nullopt, WASM_SYMBOL_UNDEFINED, nullptr, type));
   config->allowUndefinedSymbols.insert(sym->getName());
   sym->isUsedInRegularObj = true;
   return sym;
@@ -844,8 +844,9 @@ struct WrappedSymbol {
 };
 
 static Symbol *addUndefined(StringRef name) {
-  return symtab->addUndefinedFunction(name, None, None, WASM_SYMBOL_UNDEFINED,
-                                      nullptr, nullptr, false);
+  return symtab->addUndefinedFunction(name, std::nullopt, std::nullopt,
+                                      WASM_SYMBOL_UNDEFINED, nullptr, nullptr,
+                                      false);
 }
 
 // Handles -wrap option.

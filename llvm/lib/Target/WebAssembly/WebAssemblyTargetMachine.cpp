@@ -32,6 +32,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LowerAtomicPass.h"
 #include "llvm/Transforms/Utils.h"
+#include <optional>
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm"
@@ -109,7 +110,7 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM,
 WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, Optional<Reloc::Model> RM,
-    Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
+    std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(
           T,
           TT.isArch64Bit()

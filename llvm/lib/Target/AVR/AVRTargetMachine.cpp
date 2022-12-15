@@ -23,6 +23,8 @@
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 #include "TargetInfo/AVRTargetInfo.h"
 
+#include <optional>
+
 namespace llvm {
 
 static const char *AVRDataLayout =
@@ -45,7 +47,7 @@ AVRTargetMachine::AVRTargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    const TargetOptions &Options,
                                    Optional<Reloc::Model> RM,
-                                   Optional<CodeModel::Model> CM,
+                                   std::optional<CodeModel::Model> CM,
                                    CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, AVRDataLayout, TT, getCPU(CPU), FS, Options,
                         getEffectiveRelocModel(RM),

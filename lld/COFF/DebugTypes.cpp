@@ -288,7 +288,7 @@ static std::optional<ArrayRef<uint8_t>> getDebugH(ObjFile *file) {
   SectionChunk *sec =
       SectionChunk::findByName(file->getDebugChunks(), ".debug$H");
   if (!sec)
-    return llvm::None;
+    return std::nullopt;
   ArrayRef<uint8_t> contents = sec->getContents();
   if (!canUseDebugH(contents))
     return std::nullopt;

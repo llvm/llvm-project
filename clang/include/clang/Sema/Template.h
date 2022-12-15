@@ -571,6 +571,7 @@ enum class TemplateSubstitutionKind : char {
 // Decls which never appear inside a class or function.
 #define OBJCCONTAINER(DERIVED, BASE)
 #define FILESCOPEASM(DERIVED, BASE)
+#define TOPLEVELSTMT(DERIVED, BASE)
 #define IMPORT(DERIVED, BASE)
 #define EXPORT(DERIVED, BASE)
 #define LINKAGESPEC(DERIVED, BASE)

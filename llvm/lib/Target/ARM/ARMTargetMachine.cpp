@@ -53,6 +53,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -217,7 +218,7 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
                                            Optional<Reloc::Model> RM,
-                                           Optional<CodeModel::Model> CM,
+                                           std::optional<CodeModel::Model> CM,
                                            CodeGenOpt::Level OL, bool isLittle)
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options, isLittle), TT,
                         CPU, FS, Options, getEffectiveRelocModel(TT, RM),
@@ -317,7 +318,7 @@ ARMLETargetMachine::ARMLETargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
                                        Optional<Reloc::Model> RM,
-                                       Optional<CodeModel::Model> CM,
+                                       std::optional<CodeModel::Model> CM,
                                        CodeGenOpt::Level OL, bool JIT)
     : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true) {}
 
@@ -325,7 +326,7 @@ ARMBETargetMachine::ARMBETargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
                                        Optional<Reloc::Model> RM,
-                                       Optional<CodeModel::Model> CM,
+                                       std::optional<CodeModel::Model> CM,
                                        CodeGenOpt::Level OL, bool JIT)
     : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
 

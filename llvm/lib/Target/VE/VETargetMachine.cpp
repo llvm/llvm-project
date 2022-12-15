@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/TargetRegistry.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -80,7 +81,7 @@ VETargetMachine::VETargetMachine(const Target &T, const Triple &TT,
                                  StringRef CPU, StringRef FS,
                                  const TargetOptions &Options,
                                  Optional<Reloc::Model> RM,
-                                 Optional<CodeModel::Model> CM,
+                                 std::optional<CodeModel::Model> CM,
                                  CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         getEffectiveRelocModel(RM),

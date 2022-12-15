@@ -59,6 +59,7 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
 #include "llvm/Transforms/Vectorize.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -534,7 +535,7 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                                          StringRef CPU, StringRef FS,
                                          TargetOptions Options,
                                          Optional<Reloc::Model> RM,
-                                         Optional<CodeModel::Model> CM,
+                                         std::optional<CodeModel::Model> CM,
                                          CodeGenOpt::Level OptLevel)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, getGPUOrDefault(TT, CPU),
                         FS, Options, getEffectiveRelocModel(RM),
@@ -818,7 +819,7 @@ GCNTargetMachine::GCNTargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    TargetOptions Options,
                                    Optional<Reloc::Model> RM,
-                                   Optional<CodeModel::Model> CM,
+                                   std::optional<CodeModel::Model> CM,
                                    CodeGenOpt::Level OL, bool JIT)
     : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
 

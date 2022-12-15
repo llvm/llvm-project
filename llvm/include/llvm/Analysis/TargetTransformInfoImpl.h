@@ -359,6 +359,8 @@ public:
     return {};
   }
 
+  bool enableSelectOptimize() const { return true; }
+
   bool enableInterleavedAccessVectorization() const { return false; }
 
   bool enableMaskedInterleavedAccessVectorization() const { return false; }

@@ -27,6 +27,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/PassRegistry.h"
 #include <memory>
+#include <optional>
 
 using namespace llvm;
 
@@ -78,7 +79,7 @@ Reloc::Model getEffectiveRelocModel(const Triple &TT,
   return *RM;
 }
 
-CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM,
+CodeModel::Model getEffectiveCodeModel(std::optional<CodeModel::Model> CM,
                                        bool JIT) {
   if (!CM) {
     return CodeModel::Small;
@@ -95,7 +96,7 @@ M68kTargetMachine::M68kTargetMachine(const Target &T, const Triple &TT,
                                      StringRef CPU, StringRef FS,
                                      const TargetOptions &Options,
                                      Optional<Reloc::Model> RM,
-                                     Optional<CodeModel::Model> CM,
+                                     std::optional<CodeModel::Model> CM,
                                      CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options), TT, CPU, FS,
                         Options, getEffectiveRelocModel(TT, RM),

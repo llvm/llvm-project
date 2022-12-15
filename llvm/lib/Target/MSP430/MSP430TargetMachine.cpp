@@ -19,6 +19,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include <optional>
 using namespace llvm;
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430Target() {
@@ -39,7 +40,7 @@ MSP430TargetMachine::MSP430TargetMachine(const Target &T, const Triple &TT,
                                          StringRef CPU, StringRef FS,
                                          const TargetOptions &Options,
                                          Optional<Reloc::Model> RM,
-                                         Optional<CodeModel::Model> CM,
+                                         std::optional<CodeModel::Model> CM,
                                          CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options), TT, CPU, FS,
                         Options, getEffectiveRelocModel(RM),
