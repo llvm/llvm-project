@@ -19,6 +19,7 @@
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
 #include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
 
+using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -69,7 +70,7 @@ struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
   }
 
   static size_t ReadMemoryCallback(EmulateInstruction *instruction, void *baton,
-                                   const Context &context, lldb::addr_t addr,
+                                   const Context &context, addr_t addr,
                                    void *dst, size_t length) {
     RISCVEmulatorTester *tester = (RISCVEmulatorTester *)instruction;
     assert(addr + length < sizeof(tester->memory));
@@ -79,7 +80,7 @@ struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
 
   static size_t WriteMemoryCallback(EmulateInstruction *instruction,
                                     void *baton, const Context &context,
-                                    lldb::addr_t addr, const void *dst,
+                                    addr_t addr, const void *dst,
                                     size_t length) {
     RISCVEmulatorTester *tester = (RISCVEmulatorTester *)instruction;
     assert(addr + length < sizeof(tester->memory));
@@ -102,7 +103,7 @@ struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
 };
 
 TEST_F(RISCVEmulatorTester, testJAL) {
-  lldb::addr_t old_pc = 0x114514;
+  addr_t old_pc = 0x114514;
   WritePC(old_pc);
   // jal x1, -6*4
   uint32_t inst = 0b11111110100111111111000011101111;
@@ -124,8 +125,8 @@ constexpr uint32_t EncodeJALR(uint32_t rd, uint32_t rs1, int32_t offset) {
 }
 
 TEST_F(RISCVEmulatorTester, testJALR) {
-  lldb::addr_t old_pc = 0x114514;
-  lldb::addr_t old_x2 = 0x1024;
+  addr_t old_pc = 0x114514;
+  addr_t old_x2 = 0x1024;
   WritePC(old_pc);
   gpr.gpr[2] = old_x2;
   // jalr x1, x2(-255)
@@ -176,7 +177,7 @@ using EncoderB = uint32_t (*)(uint32_t rs1, uint32_t rs2, int32_t offset);
 static void testBranch(RISCVEmulatorTester *tester, EncoderB encoder,
                        bool branched, uint64_t rs1, uint64_t rs2) {
   // prepare test registers
-  lldb::addr_t old_pc = 0x114514;
+  addr_t old_pc = 0x114514;
   tester->WritePC(old_pc);
   tester->gpr.gpr[1] = rs1;
   tester->gpr.gpr[2] = rs2;
@@ -216,7 +217,7 @@ using RDComputer = std::function<uint64_t(RS1, RS2, PC)>;
 static void TestInst(RISCVEmulatorTester *tester, DecodeResult inst,
                      bool has_rs2, RDComputer rd_val) {
 
-  lldb::addr_t old_pc = 0x114514;
+  addr_t old_pc = 0x114514;
   tester->WritePC(old_pc);
   uint32_t rd = DecodeRD(inst.inst);
   uint32_t rs1 = DecodeRS1(inst.inst);
@@ -504,9 +505,9 @@ static void TestFloatCalInst(RISCVEmulatorTester *tester, DecodeResult inst,
   uint32_t rs1 = DecodeRS1(inst.inst);
   uint32_t rs2 = DecodeRS2(inst.inst);
 
-  llvm::APFloat ap_rs1_val(rs1_val);
-  llvm::APFloat ap_rs2_val(rs2_val);
-  llvm::APFloat ap_rs3_val(0.5f);
+  APFloat ap_rs1_val(rs1_val);
+  APFloat ap_rs2_val(rs2_val);
+  APFloat ap_rs3_val(0.5f);
 
   if (rs1)
     tester->fpr.fpr[rs1] = ap_rs1_val.bitcastToAPInt().getZExtValue();
@@ -526,8 +527,8 @@ static void TestFloatCalInst(RISCVEmulatorTester *tester, DecodeResult inst,
     }
   }
 
-  llvm::APInt apInt(32, tester->fpr.fpr[rd]);
-  llvm::APFloat rd_val(apInt.bitsToFloat());
+  APInt apInt(32, tester->fpr.fpr[rd]);
+  APFloat rd_val(apInt.bitsToFloat());
   ASSERT_EQ(rd_val.convertToFloat(), rd_exp);
 }
 
@@ -578,7 +579,7 @@ static void TestFCVT(RISCVEmulatorTester *tester, DecodeResult inst) {
 
   for (auto i : FloatToInt) {
     if (inst.pattern.name == i) {
-      llvm::APFloat apf_rs1_val(12.0f);
+      APFloat apf_rs1_val(12.0f);
       tester->fpr.fpr[rs1] = apf_rs1_val.bitcastToAPInt().getZExtValue();
       ASSERT_TRUE(tester->Execute(inst, false));
       ASSERT_EQ(tester->gpr.gpr[rd], uint64_t(12));
@@ -590,8 +591,8 @@ static void TestFCVT(RISCVEmulatorTester *tester, DecodeResult inst) {
     if (inst.pattern.name == i) {
       tester->gpr.gpr[rs1] = 12;
       ASSERT_TRUE(tester->Execute(inst, false));
-      llvm::APInt apInt(32, tester->fpr.fpr[rd]);
-      llvm::APFloat rd_val(apInt.bitsToFloat());
+      APInt apInt(32, tester->fpr.fpr[rd]);
+      APFloat rd_val(apInt.bitsToFloat());
       ASSERT_EQ(rd_val.convertToFloat(), 12.0f);
       return;
     }
@@ -623,7 +624,7 @@ TEST_F(RISCVEmulatorTester, TestFloatLSInst) {
   uint32_t FLWInst = 0x1A207;  // imm = 0
   uint32_t FSWInst = 0x21A827; // imm = 16
 
-  llvm::APFloat apf(12.0f);
+  APFloat apf(12.0f);
   uint64_t bits = apf.bitcastToAPInt().getZExtValue();
 
   *(uint64_t *)this->memory = bits;
@@ -646,7 +647,7 @@ TEST_F(RISCVEmulatorTester, TestFloatLSInst) {
 TEST_F(RISCVEmulatorTester, TestFMV_X_WInst) {
   auto FMV_X_WInst = 0xE0018253;
 
-  llvm::APFloat apf(12.0f);
+  APFloat apf(12.0f);
   auto bits = NanBoxing(apf.bitcastToAPInt().getZExtValue());
   this->fpr.fpr[DecodeRS1(FMV_X_WInst)] = bits;
   auto decode = this->Decode(FMV_X_WInst);
@@ -660,7 +661,7 @@ TEST_F(RISCVEmulatorTester, TestFMV_X_WInst) {
 TEST_F(RISCVEmulatorTester, TestFMV_W_XInst) {
   auto FMV_W_XInst = 0xF0018253;
 
-  llvm::APFloat apf(12.0f);
+  APFloat apf(12.0f);
   uint64_t bits = NanUnBoxing(apf.bitcastToAPInt().getZExtValue());
   this->gpr.gpr[DecodeRS1(FMV_W_XInst)] = bits;
   auto decode = this->Decode(FMV_W_XInst);
