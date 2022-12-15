@@ -10,9 +10,15 @@ package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])
 
+cc_library(
+    name = "atoi_test_helper",
+    hdrs = ["AtoiTest.h"],
+)
+
 libc_test(
     name = "atoi_test",
     srcs = ["atoi_test.cpp"],
+    deps = [":atoi_test_helper"],
     libc_function_deps = [
         "//libc:atoi",
     ],
@@ -21,6 +27,7 @@ libc_test(
 libc_test(
     name = "atol_test",
     srcs = ["atol_test.cpp"],
+    deps = [":atoi_test_helper"],
     libc_function_deps = [
         "//libc:atol",
     ],
@@ -29,6 +36,7 @@ libc_test(
 libc_test(
     name = "atoll_test",
     srcs = ["atoll_test.cpp"],
+    deps = [":atoi_test_helper"],
     libc_function_deps = [
         "//libc:atoll",
     ],
