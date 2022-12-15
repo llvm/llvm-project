@@ -6898,6 +6898,7 @@ cc_binary(
         "//mlir/test:TestAnalysis",
         "//mlir/test:TestArith",
         "//mlir/test:TestBufferization",
+        "//mlir/test:TestControlFlow",
         "//mlir/test:TestDLTI",
         "//mlir/test:TestDialect",
         "//mlir/test:TestFunc",

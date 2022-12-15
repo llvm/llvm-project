@@ -716,6 +716,21 @@ cc_library(
 )
 
 cc_library(
+    name = "TestControlFlow",
+    srcs = glob(["lib/Dialect/ControlFlow/*.cpp"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//mlir:ControlFlowDialect",
+        "//mlir:ControlFlowToLLVM",
+        "//mlir:FuncDialect",
+        "//mlir:LLVMCommonConversion",
+        "//mlir:LLVMDialect",
+        "//mlir:Pass",
+        "//mlir:Transforms",
+    ],
+)
+
+cc_library(
     name = "TestShapeDialect",
     srcs = [
         "lib/Dialect/Shape/TestShapeFunctions.cpp",

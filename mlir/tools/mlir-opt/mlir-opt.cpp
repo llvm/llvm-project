@@ -68,6 +68,7 @@ void registerTestArithEmulateWideIntPass();
 void registerTestAliasAnalysisPass();
 void registerTestBuiltinAttributeInterfaces();
 void registerTestCallGraphPass();
+void registerTestCfAssertPass();
 void registerTestConstantFold();
 void registerTestControlFlowSink();
 void registerTestGpuSerializeToCubinPass();
@@ -172,6 +173,7 @@ void registerTestPasses() {
   mlir::test::registerTestArithEmulateWideIntPass();
   mlir::test::registerTestBuiltinAttributeInterfaces();
   mlir::test::registerTestCallGraphPass();
+  mlir::test::registerTestCfAssertPass();
   mlir::test::registerTestConstantFold();
   mlir::test::registerTestControlFlowSink();
   mlir::test::registerTestDiagnosticsPass();
