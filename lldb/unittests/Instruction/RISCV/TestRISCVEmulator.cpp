@@ -88,8 +88,9 @@ struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
   };
 
   bool DecodeAndExecute(uint32_t inst, bool ignore_cond) {
-    return Decode(inst)
-        .transform([&](DecodeResult res) { return Execute(res, ignore_cond); })
+    return llvm::transformOptional(
+               Decode(inst),
+               [&](DecodeResult res) { return Execute(res, ignore_cond); })
         .value_or(false);
   }
 
