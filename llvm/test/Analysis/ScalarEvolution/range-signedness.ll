@@ -1,6 +1,6 @@
 ; RUN: opt -disable-output "-passes=print<scalar-evolution>" < %s 2>&1 | FileCheck %s
 
-define void @x(i1* %cond) {
+define void @x(ptr %cond) {
 ; CHECK-LABEL: Classifying expressions for: @x
  entry:
   br label %loop
@@ -12,14 +12,14 @@ define void @x(i1* %cond) {
 
   %idx.inc = add nsw i8 %idx, 1
 
-  %c = load volatile i1, i1* %cond
+  %c = load volatile i1, ptr %cond
   br i1 %c, label %loop, label %exit
 
  exit:
   ret void
 }
 
-define void @y(i8* %addr) {
+define void @y(ptr %addr) {
 ; CHECK-LABEL: Classifying expressions for: @y
  entry:
   br label %loop

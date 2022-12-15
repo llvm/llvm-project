@@ -69,8 +69,8 @@ bb53:
   %tmp55 = trunc i64 %tmp54 to i32
   %tmp56 = shl nsw i32 %tmp55, 3
   %tmp57 = sext i32 %tmp56 to i64
-  %tmp58 = getelementptr inbounds i8, i8* null, i64 %tmp57
-  store i8 undef, i8* %tmp58, align 8
+  %tmp58 = getelementptr inbounds i8, ptr null, i64 %tmp57
+  store i8 undef, ptr %tmp58, align 8
   %tmp59 = add nsw i64 %tmp54, 1
   %tmp60 = icmp eq i64 %tmp59, %tmp52
   br i1 %tmp60, label %bb61, label %bb53
@@ -144,8 +144,8 @@ bb53:
   %tmp55 = trunc i64 %tmp54 to i32
   %tmp56 = shl nsw i32 %tmp55, 3
   %tmp57 = sext i32 %tmp56 to i64
-  %tmp58 = getelementptr inbounds i8, i8* null, i64 %tmp57
-  store i8 undef, i8* %tmp58, align 8
+  %tmp58 = getelementptr inbounds i8, ptr null, i64 %tmp57
+  store i8 undef, ptr %tmp58, align 8
   %tmp59 = add nsw i64 %tmp54, 1
   %tmp60 = icmp eq i64 %tmp59, %tmp52
   br i1 %tmp60, label %bb61, label %bb53

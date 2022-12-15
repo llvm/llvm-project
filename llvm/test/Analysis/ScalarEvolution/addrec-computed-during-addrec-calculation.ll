@@ -6,7 +6,7 @@
 ; inference, the exact SCEV calculated both times ends up being different,
 ; though both expressions are correct. Make sure we don't assert in this case.
 
-define void @test(i32* %p) {
+define void @test(ptr %p) {
 ; CHECK-LABEL: 'test'
 ; CHECK-NEXT:  Classifying expressions for: @test
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
@@ -15,7 +15,7 @@ define void @test(i32* %p) {
 ; CHECK-NEXT:    --> {%iv,+,1}<nsw><%loop2> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Computable, %loop.header: Variant }
 ; CHECK-NEXT:    %iv2.next = add i32 %iv2, 1
 ; CHECK-NEXT:    --> {(1 + %iv),+,1}<nw><%loop2> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Computable, %loop.header: Variant }
-; CHECK-NEXT:    %v = load i32, i32* %p, align 4
+; CHECK-NEXT:    %v = load i32, ptr %p, align 4
 ; CHECK-NEXT:    --> %v U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Variant, %loop.header: Variant }
 ; CHECK-NEXT:    %iv2.ext = sext i32 %iv2 to i64
 ; CHECK-NEXT:    --> (sext i32 {%iv,+,1}<nsw><%loop2> to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: <<Unknown>> LoopDispositions: { %loop.header: Variant, %loop2: Computable, %loop3: Invariant }
@@ -51,7 +51,7 @@ loop.header:
 loop2:
   %iv2 = phi i32 [ %iv, %loop.header ], [ %iv2.next, %loop2 ]
   %iv2.next = add i32 %iv2, 1
-  %v = load i32, i32* %p
+  %v = load i32, ptr %p
   %cmp = icmp slt i32 %iv2, %v
   br i1 %cmp, label %loop2, label %loop2.end
 
