@@ -14,10 +14,10 @@ define void @example() nounwind ssp uwtable {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1024 x x86_fp80], [1024 x x86_fp80]* @x, i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1024 x x86_fp80], [1024 x x86_fp80]* @x, i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, x86_fp80* [[TMP1]], align 16
-; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, x86_fp80* [[TMP2]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1024 x x86_fp80], ptr @x, i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1024 x x86_fp80], ptr @x, i64 0, i64 [[TMP0]]
+; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP1]], align 16
+; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP2]], align 16
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -30,8 +30,8 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %conv = sitofp i32 1 to x86_fp80
-  %arrayidx = getelementptr inbounds [1024 x x86_fp80], [1024 x x86_fp80]* @x, i64 0, i64 %indvars.iv
-  store x86_fp80 %conv, x86_fp80* %arrayidx, align 16
+  %arrayidx = getelementptr inbounds [1024 x x86_fp80], ptr @x, i64 0, i64 %indvars.iv
+  store x86_fp80 %conv, ptr %arrayidx, align 16
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, 1024

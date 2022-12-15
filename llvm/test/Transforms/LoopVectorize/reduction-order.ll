@@ -15,7 +15,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 ; CHECK-NEXT: select <4 x i1> {{.*}}, <4 x i32> [[ADD_3]], <4 x i32>
 ; CHECK: br i1 {{.*}}, label %middle.block, label %vector.body
 ;
-define internal i64 @foo(i32* %t0) !prof !1 {
+define internal i64 @foo(ptr %t0) !prof !1 {
 t16:
   br label %t20
 

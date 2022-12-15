@@ -18,7 +18,7 @@ target triple = "hexagon"
 ; CHECK-NOT: load <{{.*}} x i32>
 
 
-define void @test1(i32* %arg, i32 %N) #0 {
+define void @test1(ptr %arg, i32 %N) #0 {
 entry:
   %tmp = alloca i8
   br label %loop
@@ -27,27 +27,27 @@ loop:                                              ; preds = %bb2, %bb
   %iv = phi i32 [ %iv.next, %loop], [ 0, %entry ]
   %idx.mul = mul nuw nsw i32 %iv, 7
   %idx.start = add nuw nsw i32 %idx.mul, 1
-  %tmp6 = getelementptr inbounds i32, i32* %arg, i32 %idx.start
-  %tmp7 = load i32, i32* %tmp6, align 4
+  %tmp6 = getelementptr inbounds i32, ptr %arg, i32 %idx.start
+  %tmp7 = load i32, ptr %tmp6, align 4
   %tmp8 = add nuw nsw i32 %idx.start, 1
-  %tmp9 = getelementptr inbounds i32, i32* %arg, i32 %tmp8
-  %tmp10 = load i32, i32* %tmp9, align 4
+  %tmp9 = getelementptr inbounds i32, ptr %arg, i32 %tmp8
+  %tmp10 = load i32, ptr %tmp9, align 4
   %tmp11 = add nuw nsw i32 %idx.start, 2
-  %tmp12 = getelementptr inbounds i32, i32* %arg, i32 %tmp11
-  %tmp13 = load i32, i32* %tmp12, align 4
+  %tmp12 = getelementptr inbounds i32, ptr %arg, i32 %tmp11
+  %tmp13 = load i32, ptr %tmp12, align 4
   %tmp14 = add nuw nsw i32 %idx.start, 3
-  %tmp15 = getelementptr inbounds i32, i32* %arg, i32 %tmp14
-  %tmp16 = load i32, i32* %tmp15, align 4
+  %tmp15 = getelementptr inbounds i32, ptr %arg, i32 %tmp14
+  %tmp16 = load i32, ptr %tmp15, align 4
   %tmp18 = add nuw nsw i32 %idx.start, 4
-  %tmp19 = getelementptr inbounds i32, i32* %arg, i32 %tmp18
-  %tmp20 = load i32, i32* %tmp19, align 4
+  %tmp19 = getelementptr inbounds i32, ptr %arg, i32 %tmp18
+  %tmp20 = load i32, ptr %tmp19, align 4
   %tmp21 = add nuw nsw i32 %idx.start, 5
-  %tmp22 = getelementptr inbounds i32, i32* %arg, i32 %tmp21
-  %tmp23 = load i32, i32* %tmp22, align 4
+  %tmp22 = getelementptr inbounds i32, ptr %arg, i32 %tmp21
+  %tmp23 = load i32, ptr %tmp22, align 4
   %tmp25 = add nuw nsw i32 %idx.start, 6
-  %tmp26 = getelementptr inbounds i32, i32* %arg, i32 %tmp25
-  %tmp27 = load i32, i32* %tmp26, align 4
-  store i8 0, i8* %tmp, align 1
+  %tmp26 = getelementptr inbounds i32, ptr %arg, i32 %tmp25
+  %tmp27 = load i32, ptr %tmp26, align 4
+  store i8 0, ptr %tmp, align 1
   %iv.next= add nuw nsw i32 %iv, 1
   %exit.cond = icmp eq i32 %iv.next, %N
   br i1 %exit.cond, label %exit, label %loop
@@ -62,7 +62,7 @@ exit:                                             ; preds = %loop
 ; CHECK-LABEL: @test2
 ; CHECK: vector.body:
 ; CHECK-NOT: load <{{.*}} x i32>
-define void @test2(i32* %arg) #1 {
+define void @test2(ptr %arg) #1 {
 entry:
   %tmp = alloca i8
   br label %loop
@@ -70,18 +70,18 @@ entry:
 loop:                                              ; preds = %bb2, %bb
   %iv = phi i32 [ %iv.next, %loop], [ 0, %entry ]
   %idx.start = mul nuw nsw i32 %iv, 5
-  %tmp6 = getelementptr inbounds i32, i32* %arg, i32 %idx.start
-  %tmp7 = load i32, i32* %tmp6, align 4
+  %tmp6 = getelementptr inbounds i32, ptr %arg, i32 %idx.start
+  %tmp7 = load i32, ptr %tmp6, align 4
   %tmp8 = add nuw nsw i32 %idx.start, 1
-  %tmp9 = getelementptr inbounds i32, i32* %arg, i32 %tmp8
-  %tmp10 = load i32, i32* %tmp9, align 4
+  %tmp9 = getelementptr inbounds i32, ptr %arg, i32 %tmp8
+  %tmp10 = load i32, ptr %tmp9, align 4
   %tmp11 = add nuw nsw i32 %idx.start, 2
-  %tmp12 = getelementptr inbounds i32, i32* %arg, i32 %tmp11
-  %tmp13 = load i32, i32* %tmp12, align 4
+  %tmp12 = getelementptr inbounds i32, ptr %arg, i32 %tmp11
+  %tmp13 = load i32, ptr %tmp12, align 4
   %tmp14 = add nuw nsw i32 %idx.start, 3
-  %tmp15 = getelementptr inbounds i32, i32* %arg, i32 %tmp14
-  %tmp16 = load i32, i32* %tmp15, align 4
-  store i8 0, i8* %tmp, align 1
+  %tmp15 = getelementptr inbounds i32, ptr %arg, i32 %tmp14
+  %tmp16 = load i32, ptr %tmp15, align 4
+  store i8 0, ptr %tmp, align 1
   %iv.next= add nuw nsw i32 %iv, 1
   %exit.cond = icmp eq i32 %iv.next, 128
   br i1 %exit.cond, label %exit, label %loop

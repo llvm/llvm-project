@@ -314,8 +314,8 @@ ElementCount getECFromSignature(FunctionType *Signature) {
 
 // Format of the ABI name:
 // _ZGV<isa><mask><vlen><parameters>_<scalarname>[(<redirection>)]
-Optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
-                                            const Module &M) {
+std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
+                                                 const Module &M) {
   const StringRef OriginalName = MangledName;
   // Assume there is no custom name <redirection>, and therefore the
   // vector name consists of

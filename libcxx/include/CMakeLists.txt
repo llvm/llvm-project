@@ -269,6 +269,10 @@ set(files
   __debug
   __debug_utils/randomize_range.h
   __errc
+  __expected/bad_expected_access.h
+  __expected/expected.h
+  __expected/unexpect.h
+  __expected/unexpected.h
   __filesystem/copy_options.h
   __filesystem/directory_entry.h
   __filesystem/directory_iterator.h
@@ -740,6 +744,7 @@ set(files
   errno.h
   exception
   execution
+  expected
   experimental/__config
   experimental/__memory
   experimental/algorithm

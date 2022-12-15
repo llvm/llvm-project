@@ -9,12 +9,12 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 @a = common global i8 0, align 1
 
-define internal fastcc void @d(i8* %c) unnamed_addr #0 {
+define internal fastcc void @d(ptr %c) unnamed_addr #0 {
 ; ALWAYS-LABEL: @d(
 ; ALWAYS-NEXT:  entry:
-; ALWAYS-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[C:%.*]], i64 -65535
-; ALWAYS-NEXT:    [[TMP0:%.*]] = icmp ugt i8* [[C]], @a
-; ALWAYS-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i8* [[C]], i8* @a
+; ALWAYS-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[C:%.*]], i64 -65535
+; ALWAYS-NEXT:    [[TMP0:%.*]] = icmp ugt ptr [[C]], @a
+; ALWAYS-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], ptr [[C]], ptr @a
 ; ALWAYS-NEXT:    br label [[WHILE_COND:%.*]]
 ; ALWAYS:       while.cond:
 ; ALWAYS-NEXT:    br i1 false, label [[CONT:%.*]], label [[WHILE_END_LOOPEXIT:%.*]]
@@ -24,8 +24,8 @@ define internal fastcc void @d(i8* %c) unnamed_addr #0 {
 ; ALWAYS-NEXT:    i64 0, label [[HANDLER_POINTER_OVERFLOW_I]]
 ; ALWAYS-NEXT:    ]
 ; ALWAYS:       handler.pointer_overflow.i:
-; ALWAYS-NEXT:    [[A_MUX_LCSSA4:%.*]] = phi i8* [ [[UMAX]], [[CONT]] ], [ [[UMAX]], [[CONT]] ]
-; ALWAYS-NEXT:    [[X5:%.*]] = ptrtoint i8* [[A_MUX_LCSSA4]] to i64
+; ALWAYS-NEXT:    [[A_MUX_LCSSA4:%.*]] = phi ptr [ [[UMAX]], [[CONT]] ], [ [[UMAX]], [[CONT]] ]
+; ALWAYS-NEXT:    [[X5:%.*]] = ptrtoint ptr [[A_MUX_LCSSA4]] to i64
 ; ALWAYS-NEXT:    br label [[WHILE_END:%.*]]
 ; ALWAYS:       while.end.loopexit:
 ; ALWAYS-NEXT:    br label [[WHILE_END]]
@@ -34,20 +34,20 @@ define internal fastcc void @d(i8* %c) unnamed_addr #0 {
 ;
 ; NEVER-LABEL: @d(
 ; NEVER-NEXT:  entry:
-; NEVER-NEXT:    [[CMP:%.*]] = icmp ule i8* [[C:%.*]], @a
-; NEVER-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[C]], i64 -65535
+; NEVER-NEXT:    [[CMP:%.*]] = icmp ule ptr [[C:%.*]], @a
+; NEVER-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 -65535
 ; NEVER-NEXT:    br label [[WHILE_COND:%.*]]
 ; NEVER:       while.cond:
 ; NEVER-NEXT:    br i1 false, label [[CONT:%.*]], label [[WHILE_END_LOOPEXIT:%.*]]
 ; NEVER:       cont:
-; NEVER-NEXT:    [[A_MUX:%.*]] = select i1 [[CMP]], i8* @a, i8* [[C]]
+; NEVER-NEXT:    [[A_MUX:%.*]] = select i1 [[CMP]], ptr @a, ptr [[C]]
 ; NEVER-NEXT:    switch i64 0, label [[WHILE_COND]] [
 ; NEVER-NEXT:    i64 -1, label [[HANDLER_POINTER_OVERFLOW_I:%.*]]
 ; NEVER-NEXT:    i64 0, label [[HANDLER_POINTER_OVERFLOW_I]]
 ; NEVER-NEXT:    ]
 ; NEVER:       handler.pointer_overflow.i:
-; NEVER-NEXT:    [[A_MUX_LCSSA4:%.*]] = phi i8* [ [[A_MUX]], [[CONT]] ], [ [[A_MUX]], [[CONT]] ]
-; NEVER-NEXT:    [[X5:%.*]] = ptrtoint i8* [[A_MUX_LCSSA4]] to i64
+; NEVER-NEXT:    [[A_MUX_LCSSA4:%.*]] = phi ptr [ [[A_MUX]], [[CONT]] ], [ [[A_MUX]], [[CONT]] ]
+; NEVER-NEXT:    [[X5:%.*]] = ptrtoint ptr [[A_MUX_LCSSA4]] to i64
 ; NEVER-NEXT:    br label [[WHILE_END:%.*]]
 ; NEVER:       while.end.loopexit:
 ; NEVER-NEXT:    br label [[WHILE_END]]
@@ -56,20 +56,20 @@ define internal fastcc void @d(i8* %c) unnamed_addr #0 {
 ;
 ; CHEAP-LABEL: @d(
 ; CHEAP-NEXT:  entry:
-; CHEAP-NEXT:    [[CMP:%.*]] = icmp ule i8* [[C:%.*]], @a
-; CHEAP-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[C]], i64 -65535
+; CHEAP-NEXT:    [[CMP:%.*]] = icmp ule ptr [[C:%.*]], @a
+; CHEAP-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 -65535
 ; CHEAP-NEXT:    br label [[WHILE_COND:%.*]]
 ; CHEAP:       while.cond:
 ; CHEAP-NEXT:    br i1 false, label [[CONT:%.*]], label [[WHILE_END_LOOPEXIT:%.*]]
 ; CHEAP:       cont:
-; CHEAP-NEXT:    [[A_MUX:%.*]] = select i1 [[CMP]], i8* @a, i8* [[C]]
+; CHEAP-NEXT:    [[A_MUX:%.*]] = select i1 [[CMP]], ptr @a, ptr [[C]]
 ; CHEAP-NEXT:    switch i64 0, label [[WHILE_COND]] [
 ; CHEAP-NEXT:    i64 -1, label [[HANDLER_POINTER_OVERFLOW_I:%.*]]
 ; CHEAP-NEXT:    i64 0, label [[HANDLER_POINTER_OVERFLOW_I]]
 ; CHEAP-NEXT:    ]
 ; CHEAP:       handler.pointer_overflow.i:
-; CHEAP-NEXT:    [[A_MUX_LCSSA4:%.*]] = phi i8* [ [[A_MUX]], [[CONT]] ], [ [[A_MUX]], [[CONT]] ]
-; CHEAP-NEXT:    [[X5:%.*]] = ptrtoint i8* [[A_MUX_LCSSA4]] to i64
+; CHEAP-NEXT:    [[A_MUX_LCSSA4:%.*]] = phi ptr [ [[A_MUX]], [[CONT]] ], [ [[A_MUX]], [[CONT]] ]
+; CHEAP-NEXT:    [[X5:%.*]] = ptrtoint ptr [[A_MUX_LCSSA4]] to i64
 ; CHEAP-NEXT:    br label [[WHILE_END:%.*]]
 ; CHEAP:       while.end.loopexit:
 ; CHEAP-NEXT:    br label [[WHILE_END]]
@@ -77,23 +77,23 @@ define internal fastcc void @d(i8* %c) unnamed_addr #0 {
 ; CHEAP-NEXT:    ret void
 ;
 entry:
-  %cmp = icmp ule i8* %c, @a
-  %add.ptr = getelementptr inbounds i8, i8* %c, i64 -65535
+  %cmp = icmp ule ptr %c, @a
+  %add.ptr = getelementptr inbounds i8, ptr %c, i64 -65535
   br label %while.cond
 
 while.cond:
   br i1 icmp ne (i8 0, i8 0), label %cont, label %while.end
 
 cont:
-  %a.mux = select i1 %cmp, i8* @a, i8* %c
+  %a.mux = select i1 %cmp, ptr @a, ptr %c
   switch i64 0, label %while.cond [
   i64 -1, label %handler.pointer_overflow.i
   i64 0, label %handler.pointer_overflow.i
   ]
 
 handler.pointer_overflow.i:
-  %a.mux.lcssa4 = phi i8* [ %a.mux, %cont ], [ %a.mux, %cont ]
-  %x5 = ptrtoint i8* %a.mux.lcssa4 to i64
+  %a.mux.lcssa4 = phi ptr [ %a.mux, %cont ], [ %a.mux, %cont ]
+  %x5 = ptrtoint ptr %a.mux.lcssa4 to i64
   br label %while.end
 
 while.end:

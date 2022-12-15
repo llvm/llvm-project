@@ -275,7 +275,7 @@ public:
     return Range;
   }
 
-  Optional<APInt> asConstantInteger() const {
+  std::optional<APInt> asConstantInteger() const {
     if (isConstant() && isa<ConstantInt>(getConstant())) {
       return cast<ConstantInt>(getConstant())->getValue();
     } else if (isConstantRange() && getConstantRange().isSingleElement()) {

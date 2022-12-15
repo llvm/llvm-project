@@ -568,31 +568,31 @@ public:
 
   bool VisitFunctionDecl(FunctionDecl *D) {
     if (D->isOverloadedOperator()) {
-      const auto addOpDeclToken = [&](SourceLocation Loc) {
+      const auto AddOpDeclToken = [&](SourceLocation Loc) {
         auto &Token = H.addToken(Loc, HighlightingKind::Operator)
                           .addModifier(HighlightingModifier::Declaration);
         if (D->isThisDeclarationADefinition())
           Token.addModifier(HighlightingModifier::Definition);
       };
       const auto Range = D->getNameInfo().getCXXOperatorNameRange();
-      addOpDeclToken(Range.getBegin());
+      AddOpDeclToken(Range.getBegin());
       const auto Kind = D->getOverloadedOperator();
       if (Kind == OO_Call || Kind == OO_Subscript)
-        addOpDeclToken(Range.getEnd());
+        AddOpDeclToken(Range.getEnd());
     }
     return true;
   }
 
   bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
-    const auto addOpToken = [&](SourceLocation Loc) {
+    const auto AddOpToken = [&](SourceLocation Loc) {
       H.addToken(Loc, HighlightingKind::Operator)
           .addModifier(HighlightingModifier::UserDefined);
     };
-    addOpToken(E->getOperatorLoc());
+    AddOpToken(E->getOperatorLoc());
     const auto Kind = E->getOperator();
     if (Kind == OO_Call || Kind == OO_Subscript) {
       if (auto *Callee = E->getCallee())
-        addOpToken(Callee->getBeginLoc());
+        AddOpToken(Callee->getBeginLoc());
     }
     return true;
   }

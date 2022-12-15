@@ -25,19 +25,25 @@ endmacro()
 # C++ compiler flags
 function(libomp_get_cxxflags cxxflags)
   set(flags_local)
+
+  # GCC silently accepts any -Wno-<foo> option, but warns about those options
+  # being unrecognized only if the compilation triggers other warnings to be
+  # printed. Therefore, check for whether the compiler supports options in the
+  # form -W<foo>, and if supported, add the corresponding -Wno-<foo> option.
+
   libomp_append(flags_local -fno-exceptions LIBOMP_HAVE_FNO_EXCEPTIONS_FLAG)
   libomp_append(flags_local -fno-rtti LIBOMP_HAVE_FNO_RTTI_FLAG)
-  libomp_append(flags_local -Wno-class-memaccess LIBOMP_HAVE_WNO_CLASS_MEMACCESS_FLAG)
-  libomp_append(flags_local -Wno-covered-switch-default LIBOMP_HAVE_WNO_COVERED_SWITCH_DEFAULT_FLAG)
-  libomp_append(flags_local -Wno-frame-address LIBOMP_HAVE_WNO_FRAME_ADDRESS_FLAG)
-  libomp_append(flags_local -Wno-strict-aliasing LIBOMP_HAVE_WNO_STRICT_ALIASING_FLAG)
+  libomp_append(flags_local -Wno-class-memaccess LIBOMP_HAVE_WCLASS_MEMACCESS_FLAG)
+  libomp_append(flags_local -Wno-covered-switch-default LIBOMP_HAVE_WCOVERED_SWITCH_DEFAULT_FLAG)
+  libomp_append(flags_local -Wno-frame-address LIBOMP_HAVE_WFRAME_ADDRESS_FLAG)
+  libomp_append(flags_local -Wno-strict-aliasing LIBOMP_HAVE_WSTRICT_ALIASING_FLAG)
   libomp_append(flags_local -Wstringop-overflow=0 LIBOMP_HAVE_WSTRINGOP_OVERFLOW_FLAG)
-  libomp_append(flags_local -Wno-stringop-truncation LIBOMP_HAVE_WNO_STRINGOP_TRUNCATION_FLAG)
-  libomp_append(flags_local -Wno-switch LIBOMP_HAVE_WNO_SWITCH_FLAG)
-  libomp_append(flags_local -Wno-uninitialized LIBOMP_HAVE_WNO_UNINITIALIZED_FLAG)
-  libomp_append(flags_local -Wno-return-type-c-linkage LIBOMP_HAVE_WNO_RETURN_TYPE_C_LINKAGE_FLAG)
-  libomp_append(flags_local -Wno-cast-qual LIBOMP_HAVE_WNO_CAST_QUAL_FLAG)
-  libomp_append(flags_local -Wno-int-to-void-pointer-cast LIBOMP_HAVE_WNO_INT_TO_VOID_POINTER_CAST_FLAG)
+  libomp_append(flags_local -Wno-stringop-truncation LIBOMP_HAVE_WSTRINGOP_TRUNCATION_FLAG)
+  libomp_append(flags_local -Wno-switch LIBOMP_HAVE_WSWITCH_FLAG)
+  libomp_append(flags_local -Wno-uninitialized LIBOMP_HAVE_WUNINITIALIZED_FLAG)
+  libomp_append(flags_local -Wno-return-type-c-linkage LIBOMP_HAVE_WRETURN_TYPE_C_LINKAGE_FLAG)
+  libomp_append(flags_local -Wno-cast-qual LIBOMP_HAVE_WCAST_QUAL_FLAG)
+  libomp_append(flags_local -Wno-int-to-void-pointer-cast LIBOMP_HAVE_WINT_TO_VOID_POINTER_CAST_FLAG)
   # libomp_append(flags_local -Wconversion LIBOMP_HAVE_WCONVERSION_FLAG)
   libomp_append(flags_local /GS LIBOMP_HAVE_GS_FLAG)
   libomp_append(flags_local /EHsc LIBOMP_HAVE_EHSC_FLAG)
