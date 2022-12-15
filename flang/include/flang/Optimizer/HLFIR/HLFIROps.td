@@ -194,6 +194,7 @@ def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
   let extraClassDeclaration = [{
     using Triplet = std::tuple<mlir::Value, mlir::Value, mlir::Value>;
     using Subscript = std::variant<mlir::Value, Triplet>;
+    using Subscripts = llvm::SmallVector<Subscript, 8>;
   }];
 
   let builders = [
@@ -203,7 +204,13 @@ def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
       CArg<"mlir::ValueRange", "{}">:$substring,
       CArg<"llvm::Optional<bool>", "{}">:$complex_part,
       CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>];
+      CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>,
+
+    OpBuilder<(ins "mlir::Type":$result_type, "mlir::Value":$memref,
+      "mlir::ValueRange":$indices,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>
+    ];
 
   let hasVerifier = 1;
 }
