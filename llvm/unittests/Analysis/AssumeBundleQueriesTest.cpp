@@ -429,7 +429,7 @@ static void RunRandTest(uint64_t Seed, int Size, int MinCount, int MaxCount,
   BasicBlock *BB = BasicBlock::Create(C);
   BB->insertInto(F);
   Instruction *Ret = ReturnInst::Create(C);
-  Ret->insertAt(BB, BB->begin());
+  Ret->insertInto(BB, BB->begin());
   Function *FnAssume = Intrinsic::getDeclaration(Mod.get(), Intrinsic::assume);
 
   std::vector<Argument *> ShuffledArgs;

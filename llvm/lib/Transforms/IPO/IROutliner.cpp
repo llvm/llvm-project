@@ -1873,7 +1873,7 @@ replaceArgumentUses(OutlinableRegion &Region,
       StoreInst *NewI = cast<StoreInst>(I->clone());
       NewI->setDebugLoc(DebugLoc());
       BasicBlock *OutputBB = VBBIt->second;
-      NewI->insertAt(OutputBB, OutputBB->end());
+      NewI->insertInto(OutputBB, OutputBB->end());
       LLVM_DEBUG(dbgs() << "Move store for instruction " << *I << " to "
                         << *OutputBB << "\n");
 

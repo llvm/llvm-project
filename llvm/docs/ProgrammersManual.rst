@@ -2861,7 +2861,7 @@ sequence of instructions that form a ``BasicBlock``:
     BasicBlock *pb = ...;
     auto *newInst = new Instruction(...);
 
-    newInst->insertAt(pb, pb->end()); // Appends newInst to pb
+    newInst->insertInto(pb, pb->end()); // Appends newInst to pb
 
   becomes:
 
