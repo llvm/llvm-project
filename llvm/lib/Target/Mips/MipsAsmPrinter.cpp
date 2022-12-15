@@ -399,6 +399,14 @@ const char *MipsAsmPrinter::getCurrentABIString() const {
 
 void MipsAsmPrinter::emitFunctionEntryLabel() {
   MipsTargetStreamer &TS = getTargetStreamer();
+  bool IsO32 = (static_cast<const MipsTargetMachine &>(TM)).getABI().IsO32();
+
+  TS.updateABIInfo(*Subtarget);
+  if (Subtarget->isNaN2008())
+    TS.emitDirectiveNaN2008();
+  if ((IsO32 && (Subtarget->isABI_FPXX() || Subtarget->isFP64bit())) ||
+      Subtarget->useSoftFloat())
+    TS.emitDirectiveModuleFP();
 
   // NaCl sandboxing requires that indirect call instructions are masked.
   // This means that function entry points should be bundle-aligned.
