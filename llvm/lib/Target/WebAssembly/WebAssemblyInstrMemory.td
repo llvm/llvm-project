@@ -19,25 +19,19 @@
 // local types. These memory-only types instead zero- or sign-extend into local
 // types when loading, and truncate when storing.
 
-// WebAssembly constant offsets are performed as unsigned with infinite
-// precision, so we need to check for NoUnsignedWrap so that we don't fold an
-// offset for an add that needs wrapping.
-def regPlusImm : PatFrag<(ops node:$addr, node:$off),
-                         (add node:$addr, node:$off),
-                         [{ return N->getFlags().hasNoUnsignedWrap(); }]>;
+// Address Operands
 
-// Treat an 'or' node as an 'add' if the or'ed bits are known to be zero.
-def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
-  if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N->getOperand(1)))
-    return CurDAG->MaskedValueIsZero(N->getOperand(0), CN->getAPIntValue());
-
-  KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
-  KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
-  return (~Known0.Zero & ~Known1.Zero) == 0;
-}]>;
-
-// We don't need a regPlusES because external symbols never have constant
-// offsets folded into them, so we can just use add.
+// These patterns match the static (offset) and dynamic (address stack operand)
+// operands for loads and stores, based on a combination of target global
+// addresses and constants.
+// For example,
+// (load (add tga, x))   -> load offset=tga, addr=x
+// (store v, tga)        -> store v, offset=tga, addr=0
+// (load (add const, x)) -> load offset=const, addr=x
+// (store v, const)      -> store v, offset=const, addr=0
+// (load x)              -> load offset=0, addr=x
+def AddrOps32 : ComplexPattern<i32, 2, "SelectAddrOperands32">;
+def AddrOps64 : ComplexPattern<i64, 2, "SelectAddrOperands64">;
 
 // Defines atomic and non-atomic loads, regular and extending.
 multiclass WebAssemblyLoad<WebAssemblyRegClass rc, string Name, int Opcode,
@@ -80,32 +74,18 @@ defm LOAD32_U_I64 : WebAssemblyLoad<I64, "i64.load32_u", 0x35, []>;
 
 // Pattern matching
 
-// Patterns that match the static (offset) and dynamic (address stack operand)
-// operand) operands for loads, based on a combination of target global
-// addresses and constants.
-
-// For example,
-// (add tga x)   -> load tga(x)
-// tga           -> load tga(0)
-// (add const x) -> load const(x)
-// const         -> load const(0)
-// x             -> load 0(x)
-def LoadOps32 : ComplexPattern<i32, 2, "SelectLoadOperands32">;
-def LoadOps64 : ComplexPattern<i64, 2, "SelectLoadOperands64">;
-
 multiclass LoadPat<ValueType ty, SDPatternOperator kind, string Name> {
-      def : Pat<(ty (kind (LoadOps32 offset32_op:$offset, I32:$addr))),
+      def : Pat<(ty (kind (AddrOps32 offset32_op:$offset, I32:$addr))),
            (!cast<NI>(Name # "_A32") 0,
                                      offset32_op:$offset,
                                      I32:$addr)>,
                                      Requires<[HasAddr32]>;
 
-      def : Pat<(ty (kind (LoadOps64 offset64_op:$offset, I64:$addr))),
+      def : Pat<(ty (kind (AddrOps64 offset64_op:$offset, I64:$addr))),
            (!cast<NI>(Name # "_A64") 0,
                                      offset64_op:$offset,
                                      I64:$addr)>,
                                      Requires<[HasAddr64]>;
-
 }
 
 defm : LoadPat<i32, load, "LOAD_I32">;
@@ -159,69 +139,25 @@ defm STORE_I64  : WebAssemblyStore<I64, "i64.store", 0x37>;
 defm STORE_F32  : WebAssemblyStore<F32, "f32.store", 0x38>;
 defm STORE_F64  : WebAssemblyStore<F64, "f64.store", 0x39>;
 
-// Select stores with no constant offset.
-multiclass StorePatNoOffset<ValueType ty, PatFrag node, string inst> {
-  def : Pat<(node ty:$val, I32:$addr),
-            (!cast<NI>(inst # "_A32") 0, 0, I32:$addr, ty:$val)>,
-        Requires<[HasAddr32]>;
-  def : Pat<(node ty:$val, I64:$addr),
-            (!cast<NI>(inst # "_A64") 0, 0, I64:$addr, ty:$val)>,
-        Requires<[HasAddr64]>;
+multiclass StorePat<ValueType ty, SDPatternOperator kind, string Name> {
+  def : Pat<(kind ty:$val, (AddrOps32 offset32_op:$offset, I32:$addr)),
+            (!cast<NI>(Name # "_A32") 0,
+                                      offset32_op:$offset,
+                                      I32:$addr,
+                                      ty:$val)>,
+            Requires<[HasAddr32]>;
+  def : Pat<(kind ty:$val, (AddrOps64 offset64_op:$offset, I64:$addr)),
+            (!cast<NI>(Name # "_A64") 0,
+                                      offset64_op:$offset,
+                                      I64:$addr,
+                                      ty:$val)>,
+            Requires<[HasAddr64]>;
 }
 
-defm : StorePatNoOffset<i32, store, "STORE_I32">;
-defm : StorePatNoOffset<i64, store, "STORE_I64">;
-defm : StorePatNoOffset<f32, store, "STORE_F32">;
-defm : StorePatNoOffset<f64, store, "STORE_F64">;
-
-// Select stores with a constant offset.
-multiclass StorePatImmOff<ValueType ty, PatFrag kind, PatFrag operand,
-                          string inst> {
-  def : Pat<(kind ty:$val, (operand I32:$addr, imm:$off)),
-            (!cast<NI>(inst # "_A32") 0, imm:$off, I32:$addr, ty:$val)>,
-        Requires<[HasAddr32]>;
-  def : Pat<(kind ty:$val, (operand I64:$addr, imm:$off)),
-            (!cast<NI>(inst # "_A64") 0, imm:$off, I64:$addr, ty:$val)>,
-        Requires<[HasAddr64]>;
-}
-
-defm : StorePatImmOff<i32, store, regPlusImm, "STORE_I32">;
-defm : StorePatImmOff<i64, store, regPlusImm, "STORE_I64">;
-defm : StorePatImmOff<f32, store, regPlusImm, "STORE_F32">;
-defm : StorePatImmOff<f64, store, regPlusImm, "STORE_F64">;
-defm : StorePatImmOff<i32, store, or_is_add, "STORE_I32">;
-defm : StorePatImmOff<i64, store, or_is_add, "STORE_I64">;
-defm : StorePatImmOff<f32, store, or_is_add, "STORE_F32">;
-defm : StorePatImmOff<f64, store, or_is_add, "STORE_F64">;
-
-// Select stores with just a constant offset.
-multiclass StorePatOffsetOnly<ValueType ty, PatFrag kind, string inst> {
-  def : Pat<(kind ty:$val, imm:$off),
-            (!cast<NI>(inst # "_A32") 0, imm:$off, (CONST_I32 0), ty:$val)>,
-        Requires<[HasAddr32]>;
-  def : Pat<(kind ty:$val, imm:$off),
-            (!cast<NI>(inst # "_A64") 0, imm:$off, (CONST_I64 0), ty:$val)>,
-        Requires<[HasAddr64]>;
-}
-defm : StorePatOffsetOnly<i32, store, "STORE_I32">;
-defm : StorePatOffsetOnly<i64, store, "STORE_I64">;
-defm : StorePatOffsetOnly<f32, store, "STORE_F32">;
-defm : StorePatOffsetOnly<f64, store, "STORE_F64">;
-
-multiclass StorePatGlobalAddrOffOnly<ValueType ty, PatFrag kind, string inst> {
-  def : Pat<(kind ty:$val, (WebAssemblyWrapper tglobaladdr:$off)),
-            (!cast<NI>(inst # "_A32") 0, tglobaladdr:$off, (CONST_I32 0),
-             ty:$val)>,
-        Requires<[IsNotPIC, HasAddr32]>;
-  def : Pat<(kind ty:$val, (WebAssemblyWrapper tglobaladdr:$off)),
-            (!cast<NI>(inst # "_A64") 0, tglobaladdr:$off, (CONST_I64 0),
-             ty:$val)>,
-        Requires<[IsNotPIC, HasAddr64]>;
-}
-defm : StorePatGlobalAddrOffOnly<i32, store, "STORE_I32">;
-defm : StorePatGlobalAddrOffOnly<i64, store, "STORE_I64">;
-defm : StorePatGlobalAddrOffOnly<f32, store, "STORE_F32">;
-defm : StorePatGlobalAddrOffOnly<f64, store, "STORE_F64">;
+defm : StorePat<i32, store, "STORE_I32">;
+defm : StorePat<i64, store, "STORE_I64">;
+defm : StorePat<f32, store, "STORE_F32">;
+defm : StorePat<f64, store, "STORE_F64">;
 
 // Truncating store.
 defm STORE8_I32 : WebAssemblyStore<I32, "i32.store8", 0x3a>;
@@ -230,36 +166,11 @@ defm STORE8_I64 : WebAssemblyStore<I64, "i64.store8", 0x3c>;
 defm STORE16_I64 : WebAssemblyStore<I64, "i64.store16", 0x3d>;
 defm STORE32_I64 : WebAssemblyStore<I64, "i64.store32", 0x3e>;
 
-// Select truncating stores with no constant offset.
-defm : StorePatNoOffset<i32, truncstorei8, "STORE8_I32">;
-defm : StorePatNoOffset<i32, truncstorei16, "STORE16_I32">;
-defm : StorePatNoOffset<i64, truncstorei8, "STORE8_I64">;
-defm : StorePatNoOffset<i64, truncstorei16, "STORE16_I64">;
-defm : StorePatNoOffset<i64, truncstorei32, "STORE32_I64">;
-
-// Select truncating stores with a constant offset.
-defm : StorePatImmOff<i32, truncstorei8, regPlusImm, "STORE8_I32">;
-defm : StorePatImmOff<i32, truncstorei16, regPlusImm, "STORE16_I32">;
-defm : StorePatImmOff<i64, truncstorei8, regPlusImm, "STORE8_I64">;
-defm : StorePatImmOff<i64, truncstorei16, regPlusImm, "STORE16_I64">;
-defm : StorePatImmOff<i64, truncstorei32, regPlusImm, "STORE32_I64">;
-defm : StorePatImmOff<i32, truncstorei8, or_is_add, "STORE8_I32">;
-defm : StorePatImmOff<i32, truncstorei16, or_is_add, "STORE16_I32">;
-defm : StorePatImmOff<i64, truncstorei8, or_is_add, "STORE8_I64">;
-defm : StorePatImmOff<i64, truncstorei16, or_is_add, "STORE16_I64">;
-defm : StorePatImmOff<i64, truncstorei32, or_is_add, "STORE32_I64">;
-
-// Select truncating stores with just a constant offset.
-defm : StorePatOffsetOnly<i32, truncstorei8, "STORE8_I32">;
-defm : StorePatOffsetOnly<i32, truncstorei16, "STORE16_I32">;
-defm : StorePatOffsetOnly<i64, truncstorei8, "STORE8_I64">;
-defm : StorePatOffsetOnly<i64, truncstorei16, "STORE16_I64">;
-defm : StorePatOffsetOnly<i64, truncstorei32, "STORE32_I64">;
-defm : StorePatGlobalAddrOffOnly<i32, truncstorei8, "STORE8_I32">;
-defm : StorePatGlobalAddrOffOnly<i32, truncstorei16, "STORE16_I32">;
-defm : StorePatGlobalAddrOffOnly<i64, truncstorei8, "STORE8_I64">;
-defm : StorePatGlobalAddrOffOnly<i64, truncstorei16, "STORE16_I64">;
-defm : StorePatGlobalAddrOffOnly<i64, truncstorei32, "STORE32_I64">;
+defm : StorePat<i32, truncstorei8, "STORE8_I32">;
+defm : StorePat<i32, truncstorei16, "STORE16_I32">;
+defm : StorePat<i64, truncstorei8, "STORE8_I64">;
+defm : StorePat<i64, truncstorei16, "STORE16_I64">;
+defm : StorePat<i64, truncstorei32, "STORE32_I64">;
 
 multiclass MemoryOps<WebAssemblyRegClass rc, string B> {
 // Current memory size.
