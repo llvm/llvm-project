@@ -1773,6 +1773,8 @@ def fir_ShapeOp : fir_Op<"shape", [NoMemoryEffect]> {
   }];
 
   let hasVerifier = 1;
+
+  let builders = [OpBuilder<(ins "mlir::ValueRange":$extents)>];
 }
 
 def fir_ShapeShiftOp : fir_Op<"shape_shift", [NoMemoryEffect]> {
