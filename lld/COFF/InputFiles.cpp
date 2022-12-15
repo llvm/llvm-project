@@ -876,11 +876,13 @@ void PDBInputFile::parse() {
   ctx.pdbInputFileInstances[mb.getBufferIdentifier().str()] = this;
 
   std::unique_ptr<pdb::IPDBSession> thisSession;
-  loadErr.emplace(pdb::NativeSession::createFromPdb(
-      MemoryBuffer::getMemBuffer(mb, false), thisSession));
-  if (*loadErr)
+  Error E = pdb::NativeSession::createFromPdb(
+      MemoryBuffer::getMemBuffer(mb, false), thisSession);
+  if (E) {
+    loadErrorStr.emplace(toString(std::move(E)));
     return; // fail silently at this point - the error will be handled later,
             // when merging the debug type stream
+  }
 
   session.reset(static_cast<pdb::NativeSession *>(thisSession.release()));
 
@@ -888,7 +890,7 @@ void PDBInputFile::parse() {
   auto expectedInfo = pdbFile.getPDBInfoStream();
   // All PDB Files should have an Info stream.
   if (!expectedInfo) {
-    loadErr.emplace(expectedInfo.takeError());
+    loadErrorStr.emplace(toString(expectedInfo.takeError()));
     return;
   }
   debugTypesObj = makeTypeServerSource(ctx, this);
