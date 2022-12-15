@@ -10,8 +10,13 @@
 #define SPARSETENSOR_ATTRDEFS
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorBase.td"
 include "mlir/IR/TensorEncoding.td"
+
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Type Encoding Attribute
+//===----------------------------------------------------------------------===//
 
 // All of the Tensor attributes will extend this class.
 class SparseTensor_Attr<string name,
@@ -169,6 +174,33 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   let genVerifyDecl = 1;
   let hasCustomAssemblyFormat = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Storage Specifier Enum Attribute
+//===----------------------------------------------------------------------===//
+
+// The C++ enum for Storage Specifier kind.
+def SparseTensorStorageSpecifierKindEnum
+    : I32EnumAttr<"StorageSpecifierKind", "sparse tensor storage specifier kind", [
+        I32EnumAttrCase<"DimSize",    0, "dim_sz">,
+        I32EnumAttrCase<"PtrMemSize", 1, "ptr_mem_sz">,
+        I32EnumAttrCase<"IdxMemSize", 2, "idx_mem_sz">,
+        I32EnumAttrCase<"ValMemSize", 3, "val_mem_sz">,
+      ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = SparseTensor_Dialect.cppNamespace;
+}
+
+// Define the enum StorageSpecifier kind attribute.
+def SparseTensorStorageSpecifierKindAttr
+    : EnumAttr<SparseTensor_Dialect, SparseTensorStorageSpecifierKindEnum,
+               "SparseTensorStorageSpecifierKind"> {
+   let mnemonic = "kind";
+}
+
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Traits
+//===----------------------------------------------------------------------===//
 
 def IsSparseTensorPred
   : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self)">;
