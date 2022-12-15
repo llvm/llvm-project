@@ -322,3 +322,5 @@ SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
   }
   return true;
 }
+
+char MipsDAGToDAGISel::ID = 0;

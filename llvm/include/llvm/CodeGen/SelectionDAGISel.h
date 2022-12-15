@@ -62,9 +62,7 @@ public:
   /// Used to report things like combines and FastISel failures.
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
-  static char ID;
-
-  explicit SelectionDAGISel(TargetMachine &tm,
+  explicit SelectionDAGISel(char &ID, TargetMachine &tm,
                             CodeGenOpt::Level OL = CodeGenOpt::Default);
   ~SelectionDAGISel() override;
 
