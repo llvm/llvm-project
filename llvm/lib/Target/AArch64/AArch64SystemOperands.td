@@ -440,6 +440,9 @@ def : PStateImm0_15<"SSBS",    0b011, 0b001>;
 // v8.5a Memory Tagging Extension
 let Requires = [{ {AArch64::FeatureMTE} }] in
 def : PStateImm0_15<"TCO",     0b011, 0b100>;
+// v8.8a Non-Maskable Interrupts
+let Requires = [{ {AArch64::FeatureNMI} }] in
+def : PStateImm0_1<"ALLINT",   0b001, 0b000, 0b000>;
 // v9.4a Exception-based event profiling
 //                  Name,      Op1,   Op2,   Crm_high
 def : PStateImm0_1<"PM",       0b001, 0b000, 0b001>;
@@ -1750,6 +1753,13 @@ def : RWSysReg<"TPIDR2_EL0",       0b11, 0b011, 0b1101, 0b0000, 0b101>;
 let Requires = [{ {AArch64::FeatureMPAM, AArch64::FeatureSME} }] in {
 def : RWSysReg<"MPAMSM_EL1",    0b11, 0b000, 0b1010, 0b0101, 0b011>;
 } // HasMPAM, HasSME
+
+// v8.8a Non-Maskable Interrupts
+let Requires = [{ {AArch64::FeatureNMI} }] in {
+  //                               Op0   Op1    CRn     CRm     Op2
+  def : RWSysReg<"ALLINT",         0b11, 0b000, 0b0100, 0b0011, 0b000>;
+  def : ROSysReg<"ICC_NMIAR1_EL1", 0b11, 0b000, 0b1100, 0b1001, 0b101>; // FEAT_GICv3_NMI
+}
 
 // v8.9a/v9.4a Memory Attribute Index Enhancement (FEAT_AIE)
 //                            Op0   Op1    CRn     CRm     Op2
