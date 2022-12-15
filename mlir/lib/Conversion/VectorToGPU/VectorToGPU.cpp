@@ -95,18 +95,20 @@ static bool contractSupportsMMAMatrixType(vector::ContractionOp contract,
 // Return true if the given map represents a transposed matrix load,
 // i.e. (d0, d1, ...) -> (dn-1, dn-2).
 static bool isTransposeMatrixLoadMap(OpBuilder &b, AffineMap permutationMap) {
+  MLIRContext *ctx = b.getContext();
   auto nDim = permutationMap.getNumDims();
+  AffineExpr zero = b.getAffineConstantExpr(0);
   if (nDim < 2) {
     // Support transposed+broadcasted cases: affine_map<(d0) -> (d0, 0)>.
     AffineExpr dim0 = b.getAffineDimExpr(0);
-    AffineExpr zero = b.getAffineConstantExpr(0);
-    return permutationMap == AffineMap::get(1, 0, {dim0, zero}, b.getContext());
+    return permutationMap == AffineMap::get(1, 0, {dim0, zero}, ctx);
   }
 
   AffineExpr innerDim = b.getAffineDimExpr(nDim - 1);
   AffineExpr outerDim = b.getAffineDimExpr(nDim - 2);
-  return permutationMap ==
-         AffineMap::get(nDim, 0, {innerDim, outerDim}, b.getContext());
+  // Support both transposed and transposed+broadcasted cases.
+  return permutationMap == AffineMap::get(nDim, 0, {innerDim, outerDim}, ctx) ||
+         permutationMap == AffineMap::get(nDim, 0, {innerDim, zero}, ctx);
 }
 
 // Return the stide for the dimension 0 of |type| if it is a memref and has a
