@@ -777,8 +777,8 @@ public:
   mlir::LogicalResult buildCoroutineBody(const CoroutineBodyStmt &S);
   mlir::LogicalResult buildCoreturnStmt(const CoreturnStmt &S);
 
-  static constexpr const char *builtinCoroId = "__builtin_coro_id";
   mlir::cir::CallOp buildCoroIDBuiltinCall(mlir::Location loc);
+  mlir::cir::CallOp buildCoroAllocBuiltinCall(mlir::Location loc);
 
   RValue buildCoawaitExpr(const CoawaitExpr &E,
                           AggValueSlot aggSlot = AggValueSlot::ignored(),

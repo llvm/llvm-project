@@ -1548,6 +1548,17 @@ bool isDefaultedMethod(const clang::FunctionDecl *FD) {
   return false;
 }
 
+mlir::Location CIRGenModule::getLocForFunction(const clang::FunctionDecl *FD) {
+  assert(FD && "Not sure which location to use yet");
+  bool invalidLoc = (FD->getSourceRange().getBegin().isInvalid() ||
+                     FD->getSourceRange().getEnd().isInvalid());
+  if (!invalidLoc)
+    return getLoc(FD->getSourceRange());
+
+  // Use the module location
+  return theModule->getLoc();
+}
+
 /// If the specified mangled name is not in the module,
 /// create and return a CIR Function with the specified type. If there is
 /// something in the module with the specified name, return it potentially
@@ -1630,10 +1641,10 @@ mlir::cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
 
   auto *FD = llvm::cast<FunctionDecl>(D);
   assert(FD && "Only FunctionDecl supported so far.");
-  auto fnLoc = getLoc(FD->getSourceRange());
+
   // TODO: CodeGen includeds the linkage (ExternalLinkage) and only passes the
   // mangledname if Entry is nullptr
-  auto F = createCIRFunction(fnLoc, MangledName, FTy, FD);
+  auto F = createCIRFunction(getLocForFunction(FD), MangledName, FTy, FD);
 
   if (Entry) {
     llvm_unreachable("NYI");

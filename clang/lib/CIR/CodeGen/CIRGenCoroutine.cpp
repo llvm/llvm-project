@@ -27,6 +27,10 @@ struct cir::CGCoroData {
   // These are used to generate pretty labels for await expressions in LLVM IR.
   AwaitKind CurrentAwaitKind = AwaitKind::Init;
 
+  // Stores the __builtin_coro_id emitted in the function so that we can supply
+  // it as the first argument to other builtins.
+  mlir::cir::CallOp CoroId = nullptr;
+
   // How many co_return statements are in the coroutine. Used to decide whether
   // we need to add co_return; equivalent at the end of the user authored body.
   unsigned CoreturnCount = 0;
@@ -40,7 +44,8 @@ CIRGenFunction::CGCoroInfo::CGCoroInfo() {}
 CIRGenFunction::CGCoroInfo::~CGCoroInfo() {}
 
 static void createCoroData(CIRGenFunction &CGF,
-                           CIRGenFunction::CGCoroInfo &CurCoro) {
+                           CIRGenFunction::CGCoroInfo &CurCoro,
+                           mlir::cir::CallOp CoroId) {
   if (CurCoro.Data) {
     llvm_unreachable("EmitCoroutineBodyStatement called twice?");
 
@@ -48,6 +53,7 @@ static void createCoroData(CIRGenFunction &CGF,
   }
 
   CurCoro.Data = std::unique_ptr<CGCoroData>(new CGCoroData);
+  CurCoro.Data->CoroId = CoroId;
 }
 
 namespace {
@@ -141,33 +147,68 @@ mlir::cir::CallOp CIRGenFunction::buildCoroIDBuiltinCall(mlir::Location loc) {
   auto &TI = CGM.getASTContext().getTargetInfo();
   unsigned NewAlign = TI.getNewAlign() / TI.getCharWidth();
 
-  mlir::Operation *builtin = CGM.getGlobalValue(builtinCoroId);
-  mlir::TypeRange argTypes{int32Ty, int8PtrTy, int8PtrTy, int8PtrTy};
-  mlir::TypeRange resTypes{int32Ty};
+  mlir::Operation *builtin = CGM.getGlobalValue(CGM.builtinCoroId);
 
   mlir::cir::FuncOp fnOp;
   if (!builtin) {
-    fnOp = CGM.createCIRFunction(loc, builtinCoroId,
-                                 builder.getFunctionType(argTypes, resTypes),
-                                 /*FD=*/nullptr);
+    fnOp = CGM.createCIRFunction(
+        loc, CGM.builtinCoroId,
+        builder.getFunctionType(
+            mlir::TypeRange{int32Ty, int8PtrTy, int8PtrTy, int8PtrTy},
+            mlir::TypeRange{int32Ty}),
+        /*FD=*/nullptr);
+    assert(fnOp && "should always succeed");
     fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
   } else
     fnOp = cast<mlir::cir::FuncOp>(builtin);
 
-  mlir::ValueRange inputArgs{builder.getInt32(NewAlign, loc), nullPtrCst,
-                             nullPtrCst, nullPtrCst};
-  return builder.create<mlir::cir::CallOp>(loc, fnOp, inputArgs);
+  return builder.create<mlir::cir::CallOp>(
+      loc, fnOp,
+      mlir::ValueRange{builder.getInt32(NewAlign, loc), nullPtrCst, nullPtrCst,
+                       nullPtrCst});
+}
+
+mlir::cir::CallOp
+CIRGenFunction::buildCoroAllocBuiltinCall(mlir::Location loc) {
+  auto boolTy = builder.getBoolTy();
+  auto int32Ty = mlir::IntegerType::get(builder.getContext(), 32);
+
+  mlir::Operation *builtin = CGM.getGlobalValue(CGM.builtinCoroAlloc);
+
+  mlir::cir::FuncOp fnOp;
+  if (!builtin) {
+    fnOp =
+        CGM.createCIRFunction(loc, CGM.builtinCoroAlloc,
+                              builder.getFunctionType(mlir::TypeRange{int32Ty},
+                                                      mlir::TypeRange{boolTy}),
+                              /*FD=*/nullptr);
+    assert(fnOp && "should always succeed");
+    fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
+  } else
+    fnOp = cast<mlir::cir::FuncOp>(builtin);
+
+  return builder.create<mlir::cir::CallOp>(
+      loc, fnOp, mlir::ValueRange{CurCoro.Data->CoroId.getResult(0)});
 }
 
 mlir::LogicalResult
 CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
-  // This is very different from LLVM codegen as the current intent is to
-  // not expand too much of it here and leave it to dialect codegen.
-  // In the LLVM world, this is where we create calls to coro.id,
-  // coro.alloc and coro.begin.
-  [[maybe_unused]] auto coroId =
-      buildCoroIDBuiltinCall(getLoc(S.getBeginLoc()));
-  createCoroData(*this, CurCoro);
+  auto openCurlyLoc = getLoc(S.getBeginLoc());
+  auto coroId = buildCoroIDBuiltinCall(openCurlyLoc);
+  createCoroData(*this, CurCoro, coroId);
+
+  // Backend is allowed to elide memory allocations, to help it, emit
+  // auto mem = coro.alloc() ? 0 : ... allocation code ...;
+  auto coroAlloc = buildCoroAllocBuiltinCall(openCurlyLoc);
+
+  mlir::Value allocVal;
+  builder.create<mlir::cir::IfOp>(openCurlyLoc, coroAlloc.getResult(0),
+                                  /*withElseRegion=*/false,
+                                  /*thenBuilder=*/
+                                  [&](mlir::OpBuilder &b, mlir::Location loc) {
+                                    allocVal = buildScalarExpr(S.getAllocate());
+                                    builder.create<mlir::cir::YieldOp>(loc);
+                                  });
 
   // Handle allocation failure if 'ReturnStmtOnAllocFailure' was provided.
   if (auto *RetOnAllocFailure = S.getReturnStmtOnAllocFailure())

@@ -98,6 +98,10 @@ public:
                                          mlir::IntegerAttr::get(int32Ty, C));
   }
 
+  mlir::cir::BoolType getBoolTy() {
+    return ::mlir::cir::BoolType::get(getContext());
+  }
+
   //
   // Operation creation helpers
   // --------------------------

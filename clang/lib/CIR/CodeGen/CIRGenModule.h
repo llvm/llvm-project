@@ -390,6 +390,8 @@ public:
 
   void addReplacement(StringRef Name, mlir::Operation *Op);
 
+  mlir::Location getLocForFunction(const clang::FunctionDecl *FD);
+
   // TODO: CodeGen also passes an AttributeList here. We'll have to match that
   // in CIR
   mlir::cir::FuncOp
@@ -407,6 +409,9 @@ public:
   /// type. Also emit proper debug info for cast types.
   void buildExplicitCastExprType(const ExplicitCastExpr *E,
                                  CIRGenFunction *CGF = nullptr);
+
+  static constexpr const char *builtinCoroId = "__builtin_coro_id";
+  static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
 
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.
