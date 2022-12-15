@@ -247,6 +247,9 @@ end
   if a binding has renaming with "=> proc".
   The colons are not necessary for an unambiguous parse, C768
   notwithstanding.
+* A type-bound procedure binding can be passed as an actual
+  argument corresponding to a dummy procedure and can be used as
+  the target of a procedure pointer assignment statement.
 
 ### Extensions supported when enabled by options
 

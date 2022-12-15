@@ -701,7 +701,7 @@ BackendConsumer::getFunctionSourceLocation(const Function &F) const {
     if (Pair.first == Hash)
       return Pair.second;
   }
-  return None;
+  return std::nullopt;
 }
 
 void BackendConsumer::UnsupportedDiagHandler(

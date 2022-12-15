@@ -95,7 +95,7 @@ class LinkageComputer {
                                      LVComputationKind Kind) const {
     auto Iter = CachedLinkageInfo.find(makeCacheKey(ND, Kind));
     if (Iter == CachedLinkageInfo.end())
-      return None;
+      return std::nullopt;
     return Iter->second;
   }
 

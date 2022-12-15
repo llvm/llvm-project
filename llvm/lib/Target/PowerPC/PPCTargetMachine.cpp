@@ -246,7 +246,7 @@ static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
-                                           Optional<Reloc::Model> RM) {
+                                           std::optional<Reloc::Model> RM) {
   assert((!TT.isOSAIX() || !RM || *RM == Reloc::PIC_) &&
          "Invalid relocation model for AIX.");
 
@@ -325,7 +325,7 @@ static ScheduleDAGInstrs *createPPCPostMachineScheduler(
 PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    const TargetOptions &Options,
-                                   Optional<Reloc::Model> RM,
+                                   std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, getDataLayoutString(TT), TT, CPU,

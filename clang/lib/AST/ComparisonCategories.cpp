@@ -37,7 +37,7 @@ clang::getComparisonCategoryForBuiltinCmp(QualType T) {
     return CCT::StrongOrdering;
 
   // TODO: Extend support for operator<=> to ObjC types.
-  return llvm::None;
+  return std::nullopt;
 }
 
 bool ComparisonCategoryInfo::ValueInfo::hasValidIntValue() const {

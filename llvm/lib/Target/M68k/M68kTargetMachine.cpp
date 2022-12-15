@@ -71,7 +71,7 @@ std::string computeDataLayout(const Triple &TT, StringRef CPU,
 }
 
 Reloc::Model getEffectiveRelocModel(const Triple &TT,
-                                    Optional<Reloc::Model> RM) {
+                                    std::optional<Reloc::Model> RM) {
   // If not defined we default to static
   if (!RM.has_value())
     return Reloc::Static;
@@ -95,7 +95,7 @@ CodeModel::Model getEffectiveCodeModel(std::optional<CodeModel::Model> CM,
 M68kTargetMachine::M68kTargetMachine(const Target &T, const Triple &TT,
                                      StringRef CPU, StringRef FS,
                                      const TargetOptions &Options,
-                                     Optional<Reloc::Model> RM,
+                                     std::optional<Reloc::Model> RM,
                                      std::optional<CodeModel::Model> CM,
                                      CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options), TT, CPU, FS,

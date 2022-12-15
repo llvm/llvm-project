@@ -368,11 +368,11 @@ private:
 public:
   /// Construct a new code-completion context of the given kind.
   CodeCompletionContext(Kind CCKind)
-      : CCKind(CCKind), IsUsingDeclaration(false), SelIdents(None) {}
+      : CCKind(CCKind), IsUsingDeclaration(false), SelIdents(std::nullopt) {}
 
   /// Construct a new code-completion context of the given kind.
   CodeCompletionContext(Kind CCKind, QualType T,
-                        ArrayRef<IdentifierInfo *> SelIdents = None)
+                        ArrayRef<IdentifierInfo *> SelIdents = std::nullopt)
       : CCKind(CCKind), IsUsingDeclaration(false), SelIdents(SelIdents) {
     if (CCKind == CCC_DotMemberAccess || CCKind == CCC_ArrowMemberAccess ||
         CCKind == CCC_ObjCPropertyAccess || CCKind == CCC_ObjCClassMessage ||
@@ -425,7 +425,7 @@ public:
   llvm::Optional<const CXXScopeSpec *> getCXXScopeSpecifier() {
     if (ScopeSpecifier)
       return &*ScopeSpecifier;
-    return llvm::None;
+    return std::nullopt;
   }
 };
 

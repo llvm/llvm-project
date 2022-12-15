@@ -55,7 +55,7 @@ static std::string computeDataLayout(const Triple &T, bool is64Bit) {
   return Ret;
 }
 
-static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
@@ -91,7 +91,7 @@ getEffectiveSparcCodeModel(std::optional<CodeModel::Model> CM, Reloc::Model RM,
 SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
-                                       Optional<Reloc::Model> RM,
+                                       std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOpt::Level OL, bool JIT,
                                        bool is64bit)
@@ -191,7 +191,7 @@ void SparcV8TargetMachine::anchor() { }
 SparcV8TargetMachine::SparcV8TargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
-                                           Optional<Reloc::Model> RM,
+                                           std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOpt::Level OL, bool JIT)
     : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, false) {}
@@ -201,7 +201,7 @@ void SparcV9TargetMachine::anchor() { }
 SparcV9TargetMachine::SparcV9TargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
-                                           Optional<Reloc::Model> RM,
+                                           std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOpt::Level OL, bool JIT)
     : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
@@ -211,7 +211,7 @@ void SparcelTargetMachine::anchor() {}
 SparcelTargetMachine::SparcelTargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
-                                           Optional<Reloc::Model> RM,
+                                           std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOpt::Level OL, bool JIT)
     : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, false) {}

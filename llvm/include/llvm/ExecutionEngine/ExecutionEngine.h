@@ -541,7 +541,7 @@ private:
   std::shared_ptr<MCJITMemoryManager> MemMgr;
   std::shared_ptr<LegacyJITSymbolResolver> Resolver;
   TargetOptions Options;
-  Optional<Reloc::Model> RelocModel;
+  std::optional<Reloc::Model> RelocModel;
   std::optional<CodeModel::Model> CMModel;
   std::string MArch;
   std::string MCPU;

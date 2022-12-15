@@ -1245,14 +1245,11 @@ class TemplateTypeParmDecl final : public TypeDecl,
         NumExpanded(NumExpanded.value_or(0)) {}
 
 public:
-  static TemplateTypeParmDecl *Create(const ASTContext &C, DeclContext *DC,
-                                      SourceLocation KeyLoc,
-                                      SourceLocation NameLoc,
-                                      unsigned D, unsigned P,
-                                      IdentifierInfo *Id, bool Typename,
-                                      bool ParameterPack,
-                                      bool HasTypeConstraint = false,
-                                      Optional<unsigned> NumExpanded = None);
+  static TemplateTypeParmDecl *
+  Create(const ASTContext &C, DeclContext *DC, SourceLocation KeyLoc,
+         SourceLocation NameLoc, unsigned D, unsigned P, IdentifierInfo *Id,
+         bool Typename, bool ParameterPack, bool HasTypeConstraint = false,
+         Optional<unsigned> NumExpanded = std::nullopt);
   static TemplateTypeParmDecl *CreateDeserialized(const ASTContext &C,
                                                   unsigned ID);
   static TemplateTypeParmDecl *CreateDeserialized(const ASTContext &C,
@@ -3453,7 +3450,7 @@ inline Optional<unsigned> getExpandedPackSize(const NamedDecl *Param) {
       return TTP->getNumExpansionTemplateParameters();
   }
 
-  return None;
+  return std::nullopt;
 }
 
 /// Internal helper used by Subst* nodes to retrieve the parameter list

@@ -115,7 +115,7 @@ CodeGenTypes::arrangeFreeFunctionType(CanQual<FunctionNoProtoType> FTNP) {
   // variadic type.
   return arrangeLLVMFunctionInfo(FTNP->getReturnType().getUnqualifiedType(),
                                  /*instanceMethod=*/false,
-                                 /*chainCall=*/false, None,
+                                 /*chainCall=*/false, std::nullopt,
                                  FTNP->getExtInfo(), {}, RequiredArgs(0));
 }
 
@@ -462,7 +462,8 @@ CodeGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
   if (CanQual<FunctionNoProtoType> noProto = FTy.getAs<FunctionNoProtoType>()) {
     return arrangeLLVMFunctionInfo(
         noProto->getReturnType(), /*instanceMethod=*/false,
-        /*chainCall=*/false, None, noProto->getExtInfo(), {},RequiredArgs::All);
+        /*chainCall=*/false, std::nullopt, noProto->getExtInfo(), {},
+        RequiredArgs::All);
   }
 
   return arrangeFreeFunctionType(FTy.castAs<FunctionProtoType>());
@@ -713,7 +714,7 @@ CodeGenTypes::arrangeCXXMethodCall(const CallArgList &args,
 const CGFunctionInfo &CodeGenTypes::arrangeNullaryFunction() {
   return arrangeLLVMFunctionInfo(
       getContext().VoidTy, /*instanceMethod=*/false, /*chainCall=*/false,
-      None, FunctionType::ExtInfo(), {}, RequiredArgs::All);
+      std::nullopt, FunctionType::ExtInfo(), {}, RequiredArgs::All);
 }
 
 const CGFunctionInfo &
@@ -4156,7 +4157,7 @@ void CodeGenFunction::EmitNonNullArgCheck(RValue RV, QualType ArgType,
       EmitCheckSourceLocation(ArgLoc), EmitCheckSourceLocation(AttrLoc),
       llvm::ConstantInt::get(Int32Ty, ArgNo + 1),
   };
-  EmitCheck(std::make_pair(Cond, CheckKind), Handler, StaticData, None);
+  EmitCheck(std::make_pair(Cond, CheckKind), Handler, StaticData, std::nullopt);
 }
 
 // Check if the call is going to use the inalloca convention. This needs to
@@ -4499,7 +4500,7 @@ CodeGenFunction::AddObjCARCExceptionMetadata(llvm::Instruction *Inst) {
 llvm::CallInst *
 CodeGenFunction::EmitNounwindRuntimeCall(llvm::FunctionCallee callee,
                                          const llvm::Twine &name) {
-  return EmitNounwindRuntimeCall(callee, None, name);
+  return EmitNounwindRuntimeCall(callee, std::nullopt, name);
 }
 
 /// Emits a call to the given nounwind runtime function.
@@ -4516,7 +4517,7 @@ CodeGenFunction::EmitNounwindRuntimeCall(llvm::FunctionCallee callee,
 /// runtime function.
 llvm::CallInst *CodeGenFunction::EmitRuntimeCall(llvm::FunctionCallee callee,
                                                  const llvm::Twine &name) {
-  return EmitRuntimeCall(callee, None, name);
+  return EmitRuntimeCall(callee, std::nullopt, name);
 }
 
 // Calls which may throw must have operand bundles indicating which funclet
@@ -4580,7 +4581,7 @@ void CodeGenFunction::EmitNoreturnRuntimeCallOrInvoke(
 llvm::CallBase *
 CodeGenFunction::EmitRuntimeCallOrInvoke(llvm::FunctionCallee callee,
                                          const Twine &name) {
-  return EmitRuntimeCallOrInvoke(callee, None, name);
+  return EmitRuntimeCallOrInvoke(callee, std::nullopt, name);
 }
 
 /// Emits a call or invoke instruction to the given runtime function.

@@ -37,7 +37,7 @@ struct TargetMachineBuilder {
   std::string MCpu;
   std::string MAttr;
   TargetOptions Options;
-  Optional<Reloc::Model> RelocModel;
+  std::optional<Reloc::Model> RelocModel;
   CodeGenOpt::Level CGOptLevel = CodeGenOpt::Aggressive;
 
   std::unique_ptr<TargetMachine> create() const;
@@ -211,7 +211,7 @@ public:
   void setFreestanding(bool Enabled) { Freestanding = Enabled; }
 
   /// CodeModel
-  void setCodePICModel(Optional<Reloc::Model> Model) {
+  void setCodePICModel(std::optional<Reloc::Model> Model) {
     TMBuilder.RelocModel = Model;
   }
 

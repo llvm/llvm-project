@@ -41,18 +41,8 @@ using namespace llvm;
     return *NAME##View;                                                        \
   }
 
-#define CGOPT_EXP(TY, NAME)                                                    \
-  CGOPT(TY, NAME)                                                              \
-  Optional<TY> codegen::getExplicit##NAME() {                                  \
-    if (NAME##View->getNumOccurrences()) {                                     \
-      TY res = *NAME##View;                                                    \
-      return res;                                                              \
-    }                                                                          \
-    return None;                                                               \
-  }
-
 // Temporary macro for incremental transition to std::optional.
-#define CGSTDOPT_EXP(TY, NAME)                                                 \
+#define CGOPT_EXP(TY, NAME)                                                    \
   CGOPT(TY, NAME)                                                              \
   std::optional<TY> codegen::getExplicit##NAME() {                             \
     if (NAME##View->getNumOccurrences()) {                                     \
@@ -67,7 +57,7 @@ CGOPT(std::string, MCPU)
 CGLIST(std::string, MAttrs)
 CGOPT_EXP(Reloc::Model, RelocModel)
 CGOPT(ThreadModel::Model, ThreadModel)
-CGSTDOPT_EXP(CodeModel::Model, CodeModel)
+CGOPT_EXP(CodeModel::Model, CodeModel)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)

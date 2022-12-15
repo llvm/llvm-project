@@ -38,7 +38,7 @@ std::string getMCPU();
 std::vector<std::string> getMAttrs();
 
 Reloc::Model getRelocModel();
-Optional<Reloc::Model> getExplicitRelocModel();
+std::optional<Reloc::Model> getExplicitRelocModel();
 
 ThreadModel::Model getThreadModel();
 
@@ -47,7 +47,7 @@ std::optional<CodeModel::Model> getExplicitCodeModel();
 
 llvm::ExceptionHandling getExceptionModel();
 
-Optional<CodeGenFileType> getExplicitFileType();
+std::optional<CodeGenFileType> getExplicitFileType();
 
 CodeGenFileType getFileType();
 
@@ -99,10 +99,10 @@ bool getLowerGlobalDtorsViaCxaAtExit();
 bool getRelaxELFRelocations();
 
 bool getDataSections();
-Optional<bool> getExplicitDataSections();
+std::optional<bool> getExplicitDataSections();
 
 bool getFunctionSections();
-Optional<bool> getExplicitFunctionSections();
+std::optional<bool> getExplicitFunctionSections();
 
 bool getIgnoreXCOFFVisibility();
 

@@ -1182,7 +1182,7 @@ translateArmToMsvcIntrin(unsigned BuiltinID) {
   using MSVCIntrin = CodeGenFunction::MSVCIntrin;
   switch (BuiltinID) {
   default:
-    return None;
+    return std::nullopt;
   case clang::ARM::BI_BitScanForward:
   case clang::ARM::BI_BitScanForward64:
     return MSVCIntrin::_BitScanForward;
@@ -1328,7 +1328,7 @@ translateAarch64ToMsvcIntrin(unsigned BuiltinID) {
   using MSVCIntrin = CodeGenFunction::MSVCIntrin;
   switch (BuiltinID) {
   default:
-    return None;
+    return std::nullopt;
   case clang::AArch64::BI_BitScanForward:
   case clang::AArch64::BI_BitScanForward64:
     return MSVCIntrin::_BitScanForward;
@@ -1482,7 +1482,7 @@ translateX86ToMsvcIntrin(unsigned BuiltinID) {
   using MSVCIntrin = CodeGenFunction::MSVCIntrin;
   switch (BuiltinID) {
   default:
-    return None;
+    return std::nullopt;
   case clang::X86::BI_BitScanForward:
   case clang::X86::BI_BitScanForward64:
     return MSVCIntrin::_BitScanForward;
@@ -1717,7 +1717,7 @@ Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
             SanitizerHandler::InvalidBuiltin,
             {EmitCheckSourceLocation(E->getExprLoc()),
              llvm::ConstantInt::get(Builder.getInt8Ty(), Kind)},
-            None);
+            std::nullopt);
   return ArgValue;
 }
 
@@ -16789,7 +16789,7 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
       APInt(16, CGF.getTarget().getMaxOpenCLWorkGroupSize() + 1));
   LD->setMetadata(llvm::LLVMContext::MD_range, RNode);
   LD->setMetadata(llvm::LLVMContext::MD_invariant_load,
-      llvm::MDNode::get(CGF.getLLVMContext(), None));
+                  llvm::MDNode::get(CGF.getLLVMContext(), std::nullopt));
   return LD;
 }
 
@@ -16806,7 +16806,7 @@ Value *EmitAMDGPUGridSize(CodeGenFunction &CGF, unsigned Index) {
   auto *LD = CGF.Builder.CreateLoad(
       Address(Cast, CGF.Int32Ty, CharUnits::fromQuantity(4)));
   LD->setMetadata(llvm::LLVMContext::MD_invariant_load,
-                  llvm::MDNode::get(CGF.getLLVMContext(), None));
+                  llvm::MDNode::get(CGF.getLLVMContext(), std::nullopt));
   return LD;
 }
 } // namespace

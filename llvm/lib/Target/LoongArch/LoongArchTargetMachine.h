@@ -26,7 +26,7 @@ class LoongArchTargetMachine : public LLVMTargetMachine {
 public:
   LoongArchTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                          StringRef FS, const TargetOptions &Options,
-                         Optional<Reloc::Model> RM,
+                         std::optional<Reloc::Model> RM,
                          std::optional<CodeModel::Model> CM,
                          CodeGenOpt::Level OL, bool JIT);
   ~LoongArchTargetMachine() override;

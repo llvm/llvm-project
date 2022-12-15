@@ -3230,7 +3230,7 @@ public:
   /// This function may clear the current insertion point; callers should use
   /// EnsureInsertPoint if they wish to subsequently generate code without first
   /// calling EmitBlock, EmitBranch, or EmitStmt.
-  void EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs = None);
+  void EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs = std::nullopt);
 
   /// EmitNoLoopKernel - For an OpenMP target directive, emit the
   /// kernel code assuming that related runtime environment variables
@@ -3283,10 +3283,10 @@ public:
   void EmitIfStmt(const IfStmt &S);
 
   void EmitWhileStmt(const WhileStmt &S,
-                     ArrayRef<const Attr *> Attrs = None);
-  void EmitDoStmt(const DoStmt &S, ArrayRef<const Attr *> Attrs = None);
+                     ArrayRef<const Attr *> Attrs = std::nullopt);
+  void EmitDoStmt(const DoStmt &S, ArrayRef<const Attr *> Attrs = std::nullopt);
   void EmitForStmt(const ForStmt &S,
-                   ArrayRef<const Attr *> Attrs = None);
+                   ArrayRef<const Attr *> Attrs = std::nullopt);
   void EmitReturnStmt(const ReturnStmt &S);
   void EmitDeclStmt(const DeclStmt &S);
   void EmitBreakStmt(const BreakStmt &S);
@@ -3363,7 +3363,7 @@ public:
                                     llvm::Value *ParentFP);
 
   void EmitCXXForRangeStmt(const CXXForRangeStmt &S,
-                           ArrayRef<const Attr *> Attrs = None);
+                           ArrayRef<const Attr *> Attrs = std::nullopt);
 
   /// Controls insertion of cancellation exit blocks in worksharing constructs.
   class OMPCancelStackRAII {

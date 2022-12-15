@@ -656,9 +656,9 @@ TemplateTypeParmDecl::Create(const ASTContext &C, DeclContext *DC,
 
 TemplateTypeParmDecl *
 TemplateTypeParmDecl::CreateDeserialized(const ASTContext &C, unsigned ID) {
-  return new (C, ID) TemplateTypeParmDecl(nullptr, SourceLocation(),
-                                          SourceLocation(), nullptr, false,
-                                          false, None);
+  return new (C, ID)
+      TemplateTypeParmDecl(nullptr, SourceLocation(), SourceLocation(), nullptr,
+                           false, false, std::nullopt);
 }
 
 TemplateTypeParmDecl *
@@ -666,8 +666,8 @@ TemplateTypeParmDecl::CreateDeserialized(const ASTContext &C, unsigned ID,
                                          bool HasTypeConstraint) {
   return new (C, ID,
               additionalSizeToAlloc<TypeConstraint>(HasTypeConstraint ? 1 : 0))
-         TemplateTypeParmDecl(nullptr, SourceLocation(), SourceLocation(),
-                              nullptr, false, HasTypeConstraint, None);
+      TemplateTypeParmDecl(nullptr, SourceLocation(), SourceLocation(), nullptr,
+                           false, HasTypeConstraint, std::nullopt);
 }
 
 SourceLocation TemplateTypeParmDecl::getDefaultArgumentLoc() const {
@@ -781,12 +781,12 @@ NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, unsigned ID,
                                             unsigned NumExpandedTypes,
                                             bool HasTypeConstraint) {
   auto *NTTP =
-      new (C, ID, additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>,
-                                        Expr *>(
-                      NumExpandedTypes, HasTypeConstraint ? 1 : 0))
+      new (C, ID,
+           additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>, Expr *>(
+               NumExpandedTypes, HasTypeConstraint ? 1 : 0))
           NonTypeTemplateParmDecl(nullptr, SourceLocation(), SourceLocation(),
-                                  0, 0, nullptr, QualType(), nullptr, None,
-                                  None);
+                                  0, 0, nullptr, QualType(), nullptr,
+                                  std::nullopt, std::nullopt);
   NTTP->NumExpandedTypes = NumExpandedTypes;
   return NTTP;
 }
@@ -854,7 +854,7 @@ TemplateTemplateParmDecl::CreateDeserialized(ASTContext &C, unsigned ID,
   auto *TTP =
       new (C, ID, additionalSizeToAlloc<TemplateParameterList *>(NumExpansions))
           TemplateTemplateParmDecl(nullptr, SourceLocation(), 0, 0, nullptr,
-                                   nullptr, None);
+                                   nullptr, std::nullopt);
   TTP->NumExpandedParams = NumExpansions;
   return TTP;
 }

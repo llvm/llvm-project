@@ -21,7 +21,7 @@
 
 using namespace llvm;
 
-static Reloc::Model getRelocModel(Optional<Reloc::Model> RM) {
+static Reloc::Model getRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
@@ -29,7 +29,7 @@ static Reloc::Model getRelocModel(Optional<Reloc::Model> RM) {
 ARCTargetMachine::ARCTargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    const TargetOptions &Options,
-                                   Optional<Reloc::Model> RM,
+                                   std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T,

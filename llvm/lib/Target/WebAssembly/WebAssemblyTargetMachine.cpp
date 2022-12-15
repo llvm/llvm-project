@@ -86,7 +86,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
 // WebAssembly Lowering public interface.
 //===----------------------------------------------------------------------===//
 
-static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM,
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM,
                                            const Triple &TT) {
   if (!RM) {
     // Default to static relocation model.  This should always be more optimial
@@ -109,7 +109,7 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM,
 ///
 WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
-    const TargetOptions &Options, Optional<Reloc::Model> RM,
+    const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(
           T,

@@ -575,7 +575,7 @@ Sema::SetupConstraintCheckingTemplateArgumentsAndScope(
                                    /*Pattern=*/nullptr,
                                    /*ForConstraintInstantiation=*/true);
   if (SetupConstraintScope(FD, TemplateArgs, MLTAL, Scope))
-    return llvm::None;
+    return std::nullopt;
 
   return MLTAL;
 }
@@ -1154,11 +1154,11 @@ NormalizedConstraint::fromConstraintExprs(Sema &S, NamedDecl *D,
   assert(E.size() != 0);
   auto Conjunction = fromConstraintExpr(S, D, E[0]);
   if (!Conjunction)
-    return None;
+    return std::nullopt;
   for (unsigned I = 1; I < E.size(); ++I) {
     auto Next = fromConstraintExpr(S, D, E[I]);
     if (!Next)
-      return None;
+      return std::nullopt;
     *Conjunction = NormalizedConstraint(S.Context, std::move(*Conjunction),
                                         std::move(*Next), CCK_Conjunction);
   }
@@ -1183,10 +1183,10 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
   if (LogicalBinOp BO = E) {
     auto LHS = fromConstraintExpr(S, D, BO.getLHS());
     if (!LHS)
-      return None;
+      return std::nullopt;
     auto RHS = fromConstraintExpr(S, D, BO.getRHS());
     if (!RHS)
-      return None;
+      return std::nullopt;
 
     return NormalizedConstraint(S.Context, std::move(*LHS), std::move(*RHS),
                                 BO.isAnd() ? CCK_Conjunction : CCK_Disjunction);
@@ -1210,14 +1210,14 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
       SubNF = S.getNormalizedAssociatedConstraints(CD,
                                                    {CD->getConstraintExpr()});
       if (!SubNF)
-        return None;
+        return std::nullopt;
     }
 
     Optional<NormalizedConstraint> New;
     New.emplace(S.Context, *SubNF);
 
     if (substituteParameterMappings(S, *New, CSE))
-      return None;
+      return std::nullopt;
 
     return New;
   }

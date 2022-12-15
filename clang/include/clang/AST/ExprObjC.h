@@ -362,7 +362,8 @@ public:
   ObjCDictionaryElement getKeyValueElement(unsigned Index) const {
     assert((Index < NumElements) && "Arg access out of range!");
     const KeyValuePair &KV = getTrailingObjects<KeyValuePair>()[Index];
-    ObjCDictionaryElement Result = { KV.Key, KV.Value, SourceLocation(), None };
+    ObjCDictionaryElement Result = {KV.Key, KV.Value, SourceLocation(),
+                                    std::nullopt};
     if (HasPackExpansions) {
       const ExpansionData &Expansion =
           getTrailingObjects<ExpansionData>()[Index];
