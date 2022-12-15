@@ -3469,6 +3469,11 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
   else
     GenerateArg(Args, OPT_fno_openmp_target_ignore_env_vars, SA);
 
+  if (Opts.OpenMPTargetBigJumpLoop)
+    GenerateArg(Args, OPT_fopenmp_target_big_jump_loop, SA);
+  else
+    GenerateArg(Args, OPT_fno_openmp_target_big_jump_loop, SA);
+
   if (Opts.OpenMPThreadSubscription)
     GenerateArg(Args, OPT_fopenmp_assume_threads_oversubscription, SA);
 
@@ -3926,6 +3931,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Args.hasFlag(options::OPT_fopenmp_target_ignore_env_vars,
                    options::OPT_fno_openmp_target_ignore_env_vars,
                    getOptimizationLevel(Args, IK, Diags) > 2);
+
+  Opts.OpenMPTargetBigJumpLoop =
+      Args.hasFlag(options::OPT_fopenmp_target_big_jump_loop,
+                   options::OPT_fno_openmp_target_big_jump_loop, false);
 
   // Set the value of the debugging flag used in the new offloading device RTL.
   // Set either by a specific value or to a default if not specified.

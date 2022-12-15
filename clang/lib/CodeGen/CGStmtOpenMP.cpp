@@ -848,12 +848,15 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
 
   // Generate specialized kernels for device only
   if (CGM.getLangOpts().OpenMPIsDevice && D.hasAssociatedStmt() &&
-      CGM.isNoLoopKernel(D.getAssociatedStmt())) {
+      (CGM.isNoLoopKernel(D.getAssociatedStmt()) ||
+       (FStmt && CGM.isBigJumpLoopKernel(FStmt)))) {
     OMPPrivateScope PrivateScope(*this);
     EmitOMPPrivateClause(D, PrivateScope);
     (void)PrivateScope.Privatize();
-
-    EmitNoLoopKernel(D, Loc);
+    if (CGM.isNoLoopKernel(D.getAssociatedStmt()))
+      EmitNoLoopKernel(D, Loc);
+    else
+      EmitBigJumpLoopKernel(D, Loc);
   } else if (CGM.getLangOpts().OpenMPIsDevice && isXteamKernel) {
     OMPPrivateScope PrivateScope(*this);
     EmitOMPPrivateClause(D, PrivateScope);

@@ -3240,6 +3240,9 @@ public:
   /// conditions for a no-loop kernel are met.
   void EmitNoLoopKernel(const OMPExecutableDirective &D, SourceLocation Loc);
 
+  void EmitBigJumpLoopKernel(const OMPExecutableDirective &D,
+                             SourceLocation Loc);
+
   /// EmitXteamRedKernel - For an OpenMP target reduction directive, emit the
   /// kernel code assuming that related runtime environment variables can be
   /// ignored.
@@ -3255,7 +3258,9 @@ public:
   /// associated variables. Returns the loop iteration variable and its address.
   std::pair<const VarDecl *, Address> EmitNoLoopIV(const OMPLoopDirective &LD);
 
-  void EmitXteamRedUpdates(const ForStmt &FStmt);
+  /// Emit updates of the original loop indices. Used by both
+  /// BigJumpLoop and Xteam reduction kernel codegen.
+  void EmitBigJumpLoopUpdates(const ForStmt &FStmt);
 
   /// EmitSimpleStmt - Try to emit a "simple" statement which does not
   /// necessarily require an insertion point or debug information; typically
@@ -4905,10 +4910,14 @@ private:
 
   llvm::Value *applyNoLoopInc(const Expr *Inc, const VarDecl *IVDecl,
                               llvm::Value *CurrVal);
+  /// Emit the starting index of a BigJumpLoop which is used in
+  /// BigJumpLoop and Xteam reduction kernels.
   std::pair<const VarDecl *, Address>
-  EmitXteamRedStartingIndex(const ForStmt &FStmt);
-  void EmitXteamRedInc(const ForStmt &FStmt, const VarDecl *LoopVar,
-                       const Address &NoLoopIvAddr);
+  EmitBigJumpLoopStartingIndex(const ForStmt &FStmt);
+  /// Emit the increment of a BigJumpLoop which is used in BigJumpLoop
+  /// and Xteam reduction kernels.
+  void EmitBigJumpLoopInc(const ForStmt &FStmt, const VarDecl *LoopVar,
+                          const Address &NoLoopIvAddr);
   void EmitXteamLocalAggregator(const ForStmt *FStmt);
   void EmitXteamRedSum(const ForStmt *FStmt, const FunctionArgList &Args,
                        int BlockSize);

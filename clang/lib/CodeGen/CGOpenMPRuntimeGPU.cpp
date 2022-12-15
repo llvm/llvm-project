@@ -1200,6 +1200,22 @@ static void setPropertyExecutionMode(CodeGenModule &CGM, StringRef Name,
   CGM.addCompilerUsedGlobal(GVMode);
 }
 
+static OMPTgtExecModeFlags
+computeExecutionMode(bool Mode, const Stmt *DirectiveStmt, CodeGenModule &CGM) {
+  if (!Mode)
+    return OMP_TGT_EXEC_MODE_GENERIC;
+  if (DirectiveStmt) {
+    if (CGM.isNoLoopKernel(DirectiveStmt))
+      return OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+    if (CGM.isBigJumpLoopKernel(CGM.getSingleForStmt(DirectiveStmt)))
+      return OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP;
+    const Stmt *S = CGM.getSingleForStmt(DirectiveStmt);
+    if (S && CGM.isXteamRedKernel(S))
+      return OMP_TGT_EXEC_MODE_XTEAM_RED;
+  }
+  return OMP_TGT_EXEC_MODE_SPMD;
+}
+
 void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
     const OMPExecutableDirective &D, StringRef ParentName,
     llvm::Function *&OutlinedFn, llvm::Constant *&OutlinedFnID,
@@ -1239,25 +1255,24 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
         CGM.emitNxResult("[No-Loop/Xteam]", D, CodeGenModule::NxNonSPMD));
   }
 
-  setPropertyExecutionMode(
-      CGM, OutlinedFn->getName(),
-      Mode ? (DirectiveStmt && CGM.isNoLoopKernel(DirectiveStmt)
-                  ? OMP_TGT_EXEC_MODE_SPMD_NO_LOOP
-                  : (DirectiveStmt && CGM.isXteamRedKernel(
-                                          CGM.getSingleForStmt(DirectiveStmt))
-                         ? OMP_TGT_EXEC_MODE_XTEAM_RED
-                         : OMP_TGT_EXEC_MODE_SPMD))
-           : OMP_TGT_EXEC_MODE_GENERIC);
-  // Reset no-loop or xteam reduction kernel metadata if it exists
-  if (Mode && DirectiveStmt && CGM.isNoLoopKernel(DirectiveStmt))
-    CGM.resetNoLoopKernel(DirectiveStmt);
-  else if (Mode && DirectiveStmt &&
-           CGM.isXteamRedKernel(CGM.getSingleForStmt(DirectiveStmt)))
-    CGM.resetXteamRedKernel(CGM.getSingleForStmt(DirectiveStmt));
+  setPropertyExecutionMode(CGM, OutlinedFn->getName(),
+                           computeExecutionMode(Mode, DirectiveStmt, CGM));
+
+  // Reset specialized kernel metadata if it exists
+  if (Mode && DirectiveStmt) {
+    if (CGM.isNoLoopKernel(DirectiveStmt))
+      CGM.resetNoLoopKernel(DirectiveStmt);
+    else if (CGM.isBigJumpLoopKernel(CGM.getSingleForStmt(DirectiveStmt)))
+      CGM.resetBigJumpLoopKernel(CGM.getSingleForStmt(DirectiveStmt));
+    else if (CGM.isXteamRedKernel(CGM.getSingleForStmt(DirectiveStmt)))
+      CGM.resetXteamRedKernel(CGM.getSingleForStmt(DirectiveStmt));
+  }
   // Reset cached mode
   CGM.setIsSPMDExecutionMode(false);
   assert(!CGM.isNoLoopKernel(DirectiveStmt) &&
          "No-loop attribute not reset after emit");
+  assert(!CGM.isBigJumpLoopKernel(CGM.getSingleForStmt(DirectiveStmt)) &&
+         "Big jump loop attribute not reset after emit");
   assert(!CGM.isXteamRedKernel(CGM.getSingleForStmt(DirectiveStmt)) &&
          "Xteam reduction attribute not reset after emit");
 }

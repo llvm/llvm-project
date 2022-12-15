@@ -2644,6 +2644,14 @@ def fno_openmp_target_ignore_env_vars : Flag<["-"], "fno-openmp-target-ignore-en
   Flags<[CC1Option, NoArgumentUnused, HelpHidden]>, 
   HelpText<"Assert that device related environment variables cannot be ignored while generating code">,
   MarshallingInfoFlag<LangOpts<"OpenMPTargetIgnoreEnvVars">>;
+def fopenmp_target_big_jump_loop : Flag<["-"], "fopenmp-target-big-jump-loop">, Group<f_Group>, 
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>, 
+  HelpText<"Use the big-jump-loop code generation technique if possible">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetBigJumpLoop">>;
+def fno_openmp_target_big_jump_loop : Flag<["-"], "fno-openmp-target-big-jump-loop">, Group<f_Group>, 
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>, 
+  HelpText<"Do not use the big-jump-loop code generation technique">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetBigJumpLoop">>;
 def fopenmp_assume_teams_oversubscription : Flag<["-"], "fopenmp-assume-teams-oversubscription">,
   Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 def fopenmp_assume_threads_oversubscription : Flag<["-"], "fopenmp-assume-threads-oversubscription">,

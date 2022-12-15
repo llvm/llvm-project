@@ -7766,7 +7766,6 @@ CodeGenModule::getXteamRedCompatibleThreadLimitStatus(
 CodeGenModule::NoLoopXteamErr
 CodeGenModule::getNoLoopCombinedClausesStatus(const OMPExecutableDirective &D) {
   if (D.hasClausesOfKind<OMPInReductionClause>() ||
-      D.hasClausesOfKind<OMPNumTeamsClause>() ||
       D.hasClausesOfKind<OMPReductionClause>() ||
       D.hasClausesOfKind<OMPDistScheduleClause>() ||
       D.hasClausesOfKind<OMPLastprivateClause>() ||
@@ -7952,7 +7951,21 @@ CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
   NoLoopIntermediateStmts IntermediateStmts;
   // Push top-level directive
   IntermediateStmts.push_back(&D);
-  setNoLoopKernel(AssocStmt, IntermediateStmts);
+
+  // Now we should determine whether this qualifies as a NoLoop or a
+  // BigJumpLoop kernel. BigJumpLoop is enabled whenever NoLoop is
+  // enabled. If the num_teams clause is specified, BigJumpLoop is
+  // chosen. If the command line option to force BigJumpLoop is used,
+  // it is preferred over No-Loop.
+  if (D.hasClausesOfKind<OMPNumTeamsClause>() ||
+      getLangOpts().OpenMPTargetBigJumpLoop) {
+    const ForStmt *FStmt = getSingleForStmt(AssocStmt);
+    assert(FStmt && "For stmt cannot be null");
+    BigJumpLoopKernels.insert(std::make_pair(
+        FStmt, BigJumpLoopKernelInfo(getWorkGroupSizeSPMDHelper(D),
+                                     IntermediateStmts)));
+  } else
+    setNoLoopKernel(AssocStmt, IntermediateStmts);
 
   // All checks passed
   return NxSuccess;

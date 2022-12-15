@@ -69,9 +69,10 @@ llvm::Value *CodeGenFunction::applyNoLoopInc(const Expr *Inc,
 }
 
 std::pair<const VarDecl *, Address>
-CodeGenFunction::EmitXteamRedStartingIndex(const ForStmt &FStmt) {
+CodeGenFunction::EmitBigJumpLoopStartingIndex(const ForStmt &FStmt) {
   const CodeGenModule::NoLoopIntermediateStmts &Directives =
-      CGM.getXteamRedStmts(&FStmt);
+      CGM.isXteamRedKernel(&FStmt) ? CGM.getXteamRedStmts(&FStmt)
+                                   : CGM.getBigJumpLoopStmts(&FStmt);
   assert(Directives.size() > 0 && isa<OMPLoopDirective>(Directives.back()) &&
          "Appropriate directive not found");
   const OMPLoopDirective &LD = *(cast<OMPLoopDirective>(Directives.back()));
@@ -87,7 +88,9 @@ CodeGenFunction::EmitXteamRedStartingIndex(const ForStmt &FStmt) {
 
   // workgroup_size
   llvm::Value *WorkGroupSize =
-      RT.getXteamRedBlockSize(*this, CGM.getXteamRedBlockSize(&FStmt));
+      CGM.isXteamRedKernel(&FStmt)
+          ? RT.getXteamRedBlockSize(*this, CGM.getXteamRedBlockSize(&FStmt))
+          : RT.getXteamRedBlockSize(*this, CGM.getBigJumpLoopBlockSize(&FStmt));
 
   // workgroup_id
   llvm::Value *WorkGroupId = RT.getGPUBlockID(*this);
@@ -107,20 +110,22 @@ CodeGenFunction::EmitXteamRedStartingIndex(const ForStmt &FStmt) {
       Builder.CreateIntCast(GlobalGpuThreadId, IvAddr.getElementType(), false);
   llvm::Value *Iv = Builder.CreateAdd(Gtid, Builder.CreateLoad(IvAddr));
 
-  // Cache the thread specific initial loop iteration value and the number of
-  // teams
-  CGM.updateXteamRedKernel(&FStmt, Builder.CreateIntCast(Iv, Int64Ty, false),
-                           RT.getGPUNumBlocks(*this));
-
+  if (CGM.isXteamRedKernel(&FStmt)) {
+    // Cache the thread specific initial loop iteration value and the number of
+    // teams
+    CGM.updateXteamRedKernel(&FStmt, Builder.CreateIntCast(Iv, Int64Ty, false),
+                             RT.getGPUNumBlocks(*this));
+  }
   // Set the initial value of the loop iteration
   Builder.CreateStore(Iv, IvAddr);
 
   return std::make_pair(LoopVD, IvAddr);
 }
 
-void CodeGenFunction::EmitXteamRedUpdates(const ForStmt &FStmt) {
+void CodeGenFunction::EmitBigJumpLoopUpdates(const ForStmt &FStmt) {
   const CodeGenModule::NoLoopIntermediateStmts &Directives =
-      CGM.getXteamRedStmts(&FStmt);
+      CGM.isXteamRedKernel(&FStmt) ? CGM.getXteamRedStmts(&FStmt)
+                                   : CGM.getBigJumpLoopStmts(&FStmt);
   assert(Directives.size() > 0 && isa<OMPLoopDirective>(Directives.back()) &&
          "Appropriate directive not found");
   const OMPLoopDirective &LD = *(cast<OMPLoopDirective>(Directives.back()));
@@ -129,19 +134,25 @@ void CodeGenFunction::EmitXteamRedUpdates(const ForStmt &FStmt) {
     EmitIgnoredExpr(UE);
 }
 
-void CodeGenFunction::EmitXteamRedInc(const ForStmt &FStmt,
-                                      const VarDecl *LoopVD,
-                                      const Address &NoLoopIvAddr) {
+void CodeGenFunction::EmitBigJumpLoopInc(const ForStmt &FStmt,
+                                         const VarDecl *LoopVD,
+                                         const Address &NoLoopIvAddr) {
   const CodeGenModule::NoLoopIntermediateStmts &Directives =
-      CGM.getXteamRedStmts(&FStmt);
+      CGM.isXteamRedKernel(&FStmt) ? CGM.getXteamRedStmts(&FStmt)
+                                   : CGM.getBigJumpLoopStmts(&FStmt);
   assert(Directives.size() > 0 && isa<OMPLoopDirective>(Directives.back()) &&
          "Appropriate directive not found");
   const OMPLoopDirective &LD = *(cast<OMPLoopDirective>(Directives.back()));
 
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
   llvm::Value *BlockSize =
-      RT.getXteamRedBlockSize(*this, CGM.getXteamRedBlockSize(&FStmt));
-  llvm::Value *NumBlocks = CGM.getXteamRedNumTeams(&FStmt);
+      CGM.isXteamRedKernel(&FStmt)
+          ? RT.getXteamRedBlockSize(*this, CGM.getXteamRedBlockSize(&FStmt))
+          : RT.getXteamRedBlockSize(*this, CGM.getBigJumpLoopBlockSize(&FStmt));
+
+  llvm::Value *NumBlocks = CGM.isXteamRedKernel(&FStmt)
+                               ? CGM.getXteamRedNumTeams(&FStmt)
+                               : RT.getGPUNumBlocks(*this);
   assert(NumBlocks && "Number of blocks cannot be null");
   // prod = block_size * num_blocks
   llvm::Value *Prod = Builder.CreateMul(BlockSize, NumBlocks);
@@ -290,6 +301,19 @@ void CodeGenFunction::EmitNoLoopKernel(const OMPExecutableDirective &D,
     assert((IntermediateStmts.back() == &D) && "Cached directive not the same");
     emitNoLoopCodeForDirective(D);
   }
+}
+
+void CodeGenFunction::EmitBigJumpLoopKernel(const OMPExecutableDirective &D,
+                                            SourceLocation Loc) {
+  if (!HaveInsertPoint())
+    EnsureInsertPoint();
+
+  // We expect one FOR stmt for the OpenMP directive
+  const ForStmt *CapturedForStmt = CGM.getSingleForStmt(D.getAssociatedStmt());
+  assert(CapturedForStmt && "Cannot generate kernel for null captured stmt");
+
+  // The BigJump loop will be generated during the following statement emit.
+  EmitStmt(CapturedForStmt);
 }
 
 void CodeGenFunction::EmitXteamRedKernel(
@@ -1459,27 +1483,29 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
   LexicalScope ForScope(*this, S.getSourceRange());
 
-  Address XteamRedIvAddr = Address::invalid();
+  Address BigJumpLoopIvAddr = Address::invalid();
   const VarDecl *LoopVar = nullptr;
-  const OMPLoopDirective *XteamLD = nullptr;
-  if (CGM.getLangOpts().OpenMPIsDevice && CGM.isXteamRedKernel(&S)) {
+  const OMPLoopDirective *BigJumpLoopLD = nullptr;
+  if (CGM.getLangOpts().OpenMPIsDevice &&
+      (CGM.isXteamRedKernel(&S) || CGM.isBigJumpLoopKernel(&S))) {
     const CodeGenModule::NoLoopIntermediateStmts &Directives =
-        CGM.getXteamRedStmts(&S);
+        CGM.isXteamRedKernel(&S) ? CGM.getXteamRedStmts(&S)
+                                 : CGM.getBigJumpLoopStmts(&S);
     assert(Directives.size() > 0 && isa<OMPLoopDirective>(Directives.back()) &&
            "Appropriate directive not found");
-    XteamLD = cast<OMPLoopDirective>(Directives.back());
+    BigJumpLoopLD = cast<OMPLoopDirective>(Directives.back());
 
     std::pair<const VarDecl *, Address> LoopVarInfo =
-        EmitXteamRedStartingIndex(S);
+        EmitBigJumpLoopStartingIndex(S);
     LoopVar = LoopVarInfo.first;
-    XteamRedIvAddr = LoopVarInfo.second;
+    BigJumpLoopIvAddr = LoopVarInfo.second;
   } else {
     // Evaluate the first part before the loop.
     if (S.getInit())
       EmitStmt(S.getInit());
   }
 
-  const Expr *CondExpr = XteamLD ? XteamLD->getCond() : S.getCond();
+  const Expr *CondExpr = BigJumpLoopLD ? BigJumpLoopLD->getCond() : S.getCond();
 
   // Start the loop with a block that tests the condition.
   // If there's an increment, the continue scope will be overwritten
@@ -1564,18 +1590,21 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     // a compound statement.
     RunCleanupsScope BodyScope(*this);
 
-    if (CGM.getLangOpts().OpenMPIsDevice && CGM.isXteamRedKernel(&S)) {
-      EmitXteamRedUpdates(S);
-      EmitOMPNoLoopBody(*XteamLD);
+    if (CGM.getLangOpts().OpenMPIsDevice &&
+        (CGM.isXteamRedKernel(&S) || CGM.isBigJumpLoopKernel(&S))) {
+      EmitBigJumpLoopUpdates(S);
+      EmitOMPNoLoopBody(*BigJumpLoopLD);
     } else {
       EmitStmt(S.getBody());
     }
   }
 
-  if (CGM.getLangOpts().OpenMPIsDevice && CGM.isXteamRedKernel(&S)) {
+  if (CGM.getLangOpts().OpenMPIsDevice &&
+      (CGM.isXteamRedKernel(&S) || CGM.isBigJumpLoopKernel(&S))) {
     EmitBlock(Continue.getBlock());
-    EmitXteamRedInc(S, LoopVar,
-                    XteamRedIvAddr); // *iv = *iv + num_teams * num_threads
+    EmitBigJumpLoopInc(
+        S, LoopVar,
+        BigJumpLoopIvAddr); // *iv = *iv + num_teams * num_threads
   } else {
     // If there is an increment, emit it next.
     if (S.getInc()) {

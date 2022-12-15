@@ -338,6 +338,16 @@ public:
   /// Map construct statement to the intermediate ones for no-loop codegen
   using NoLoopKernelMap = llvm::DenseMap<const Stmt *, NoLoopIntermediateStmts>;
 
+  struct BigJumpLoopKernelInfo {
+    BigJumpLoopKernelInfo(int BlkSz, NoLoopIntermediateStmts Stmts)
+        : BlockSize{BlkSz}, BigJumpLoopIntStmts{Stmts} {}
+
+    int BlockSize;
+    NoLoopIntermediateStmts BigJumpLoopIntStmts;
+  };
+  using BigJumpLoopKernelMap =
+      llvm::DenseMap<const Stmt *, BigJumpLoopKernelInfo>;
+
   /// Map a reduction variable to the corresponding metadata. The metadata
   /// contains
   // the reduction expression, the coorresponding Xteam local aggregator var,
@@ -411,6 +421,7 @@ private:
   const Stmt *CurrentXteamRedStmt = nullptr;
 
   NoLoopKernelMap NoLoopKernels;
+  BigJumpLoopKernelMap BigJumpLoopKernels;
   XteamRedKernelMap XteamRedKernels;
 
   // A set of references that have only been seen via a weakref so far. This is
@@ -1670,6 +1681,26 @@ public:
   /// Are we generating no-loop kernel for the input statement
   bool isNoLoopKernel(const Stmt *S) {
     return NoLoopKernels.find(S) != NoLoopKernels.end();
+  }
+
+  /// Given a top-level target construct for BigJumpLoop codegen, get the
+  /// intermediate OpenMP constructs.
+  const NoLoopIntermediateStmts &getBigJumpLoopStmts(const Stmt *S) {
+    assert(isBigJumpLoopKernel(S));
+    return BigJumpLoopKernels.find(S)->second.BigJumpLoopIntStmts;
+  }
+
+  /// Get the cached blocksize to be used for this BigJumpLoop kernel.
+  int getBigJumpLoopBlockSize(const Stmt *S) {
+    assert(isBigJumpLoopKernel(S));
+    return BigJumpLoopKernels.find(S)->second.BlockSize;
+  }
+
+  /// Erase BigJumpLoop related metadata for the input statement.
+  void resetBigJumpLoopKernel(const Stmt *S) { BigJumpLoopKernels.erase(S); }
+  /// Is a BigJumpLoop kernel generated for the input statement?
+  bool isBigJumpLoopKernel(const Stmt *S) {
+    return BigJumpLoopKernels.find(S) != BigJumpLoopKernels.end();
   }
 
   /// If we are able to generate a Xteam reduction kernel for this directive,
