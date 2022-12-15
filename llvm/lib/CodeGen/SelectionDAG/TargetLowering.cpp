@@ -7005,6 +7005,41 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
                                             OptForSize, Cost, Depth))
       return DAG.getNode(ISD::FP_ROUND, DL, VT, NegV, Op.getOperand(1));
     break;
+  case ISD::SELECT:
+  case ISD::VSELECT: {
+    // fold (fneg (select C, LHS, RHS)) -> (select C, (fneg LHS), (fneg RHS))
+    // iff at least one cost is cheaper and the other is neutral/cheaper
+    SDValue LHS = Op.getOperand(1);
+    NegatibleCost CostLHS = NegatibleCost::Expensive;
+    SDValue NegLHS =
+        getNegatedExpression(LHS, DAG, LegalOps, OptForSize, CostLHS, Depth);
+    if (!NegLHS || CostLHS > NegatibleCost::Neutral) {
+      RemoveDeadNode(NegLHS);
+      break;
+    }
+
+    // Prevent this node from being deleted by the next call.
+    Handles.emplace_back(NegLHS);
+
+    SDValue RHS = Op.getOperand(2);
+    NegatibleCost CostRHS = NegatibleCost::Expensive;
+    SDValue NegRHS =
+        getNegatedExpression(RHS, DAG, LegalOps, OptForSize, CostRHS, Depth);
+
+    // We're done with the handles.
+    Handles.clear();
+
+    if (!NegRHS || CostRHS > NegatibleCost::Neutral ||
+        (CostLHS != NegatibleCost::Cheaper &&
+         CostRHS != NegatibleCost::Cheaper)) {
+      RemoveDeadNode(NegLHS);
+      RemoveDeadNode(NegRHS);
+      break;
+    }
+
+    Cost = std::min(CostLHS, CostRHS);
+    return DAG.getSelect(DL, VT, Op.getOperand(0), NegLHS, NegRHS);
+  }
   }
 
   return SDValue();
