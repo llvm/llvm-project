@@ -149,6 +149,15 @@ endfunction(add_lldb_library)
 
 # BEGIN Swift Mods
 function(add_properties_for_swift_modules target reldir)
+  # The relative directory for build can be passed as an optional
+  # extra argument. Retrieve it, or use reldir instead.
+  list(LENGTH ARGN num_optional_arguments)
+  if (${num_optional_arguments} GREATER 0)
+    list(GET ARGN 0 build_reldir)
+  else()
+    set(build_reldir ${reldir})
+  endif()
+
   if (NOT BOOTSTRAPPING_MODE)
     if (SWIFT_SWIFT_PARSER)
       set(APSM_BOOTSTRAPPING_MODE "HOSTTOOLS")
@@ -185,7 +194,7 @@ function(add_properties_for_swift_modules target reldir)
 
     if (SWIFT_SWIFT_PARSER)
       set_property(TARGET ${target}
-        APPEND PROPERTY BUILD_RPATH "@loader_path/${reldir}lib/swift/host")
+        APPEND PROPERTY BUILD_RPATH "@loader_path/${build_reldir}lib/swift/host")
       set_property(TARGET ${target}
         APPEND PROPERTY INSTALL_RPATH "@loader_path/${reldir}lib/swift/host")
     endif()
