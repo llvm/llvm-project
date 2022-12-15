@@ -9390,7 +9390,7 @@ static SDValue combineShiftToMULH(SDNode *N, SelectionDAG &DAG,
 
   // return true if U may use the lower bits of its operands
   auto UserOfLowerBits = [NarrowVTSize](SDNode *U) {
-    if (U->getOpcode() != ISD::SRL || U->getOpcode() != ISD::SRA) {
+    if (U->getOpcode() != ISD::SRL && U->getOpcode() != ISD::SRA) {
       return true;
     }
     ConstantSDNode *UShiftAmtSrc = isConstOrConstSplat(U->getOperand(1));
