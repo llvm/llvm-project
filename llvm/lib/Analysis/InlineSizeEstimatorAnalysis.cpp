@@ -191,8 +191,7 @@ IRToNativeSizeLearning::getFunctionFeatures(Function &F,
   FF[NamedFeatureIndex::IsLocal] = F.hasLocalLinkage();
   FF[NamedFeatureIndex::IsLinkOnceODR] = F.hasLinkOnceODRLinkage();
   FF[NamedFeatureIndex::IsLinkOnce] = F.hasLinkOnceLinkage();
-  FF[NamedFeatureIndex::Blocks] =
-      std::distance(F.getBasicBlockList().begin(), F.getBasicBlockList().end());
+  FF[NamedFeatureIndex::Blocks] = F.size();
   auto &LI = FAM.getResult<LoopAnalysis>(F);
   FF[NamedFeatureIndex::Loops] = std::distance(LI.begin(), LI.end());
   for (auto &L : LI)
