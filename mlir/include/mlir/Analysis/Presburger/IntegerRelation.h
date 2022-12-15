@@ -493,7 +493,7 @@ public:
       *ub = getInt64Vec(ubMPInt);
     if (boundFloorDivisor)
       *boundFloorDivisor = int64_t(boundFloorDivisorMPInt);
-    return result.transform(int64FromMPInt);
+    return llvm::transformOptional(result, int64FromMPInt);
   }
 
   /// Returns the constant bound for the pos^th variable if there is one;
@@ -502,7 +502,7 @@ public:
   /// The same, but casts to int64_t. This is unsafe and will assert-fail if the
   /// value does not fit in an int64_t.
   Optional<int64_t> getConstantBound64(BoundType type, unsigned pos) const {
-    return getConstantBound(type, pos).transform(int64FromMPInt);
+    return llvm::transformOptional(getConstantBound(type, pos), int64FromMPInt);
   }
 
   /// Removes constraints that are independent of (i.e., do not have a
