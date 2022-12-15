@@ -1216,6 +1216,13 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
     if (MI.getOperand(1).isReg() &&
         RISCV::X0 != MI.getOperand(1).getReg())
       return false;
+
+    // TODO: We need to change the result register to allow this rewrite
+    // without the result forming a vl preserving vsetvli which is not
+    // a correct state merge.
+    if (PrevMI.getOperand(0).getReg() == RISCV::X0 &&
+        MI.getOperand(1).isReg())
+      return false;
   }
 
   if (!PrevMI.getOperand(2).isImm() || !MI.getOperand(2).isImm())
