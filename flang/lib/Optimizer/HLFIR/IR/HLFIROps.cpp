@@ -454,5 +454,19 @@ void hlfir::ElementalOp::build(mlir::OpBuilder &builder,
   }
 }
 
+//===----------------------------------------------------------------------===//
+// ApplyOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::ApplyOp::build(mlir::OpBuilder &builder,
+                           mlir::OperationState &odsState, mlir::Value expr,
+                           mlir::ValueRange indices,
+                           mlir::ValueRange typeparams) {
+  mlir::Type resultType = expr.getType();
+  if (auto exprType = resultType.dyn_cast<hlfir::ExprType>())
+    resultType = exprType.getElementExprType();
+  build(builder, odsState, resultType, expr, indices, typeparams);
+}
+
 #define GET_OP_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"
