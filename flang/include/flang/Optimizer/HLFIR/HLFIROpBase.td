@@ -66,6 +66,7 @@ def hlfir_ExprType : TypeDef<hlfir_Dialect, "Expr"> {
     bool isScalar() const { return getShape().empty(); }
     bool isArray() const { return !isScalar(); }
     bool isPolymorphic() const { return getPolymorphic(); }
+    unsigned getRank() const {return getShape().size();}
   }];
 
   let hasCustomAssemblyFormat = 1;

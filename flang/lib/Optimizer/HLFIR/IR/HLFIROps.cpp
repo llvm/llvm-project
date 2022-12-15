@@ -433,5 +433,26 @@ void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
   return build(builder, result, resultType, var);
 }
 
+//===----------------------------------------------------------------------===//
+// ElementalOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::ElementalOp::build(mlir::OpBuilder &builder,
+                               mlir::OperationState &odsState,
+                               mlir::Type resultType, mlir::Value shape,
+                               mlir::ValueRange typeparams) {
+  odsState.addOperands(shape);
+  odsState.addOperands(typeparams);
+  odsState.addTypes(resultType);
+  mlir::Region *bodyRegion = odsState.addRegion();
+  bodyRegion->push_back(new mlir::Block{});
+  if (auto exprType = resultType.dyn_cast<hlfir::ExprType>()) {
+    unsigned dim = exprType.getRank();
+    mlir::Type indexType = builder.getIndexType();
+    for (unsigned d = 0; d < dim; ++d)
+      bodyRegion->front().addArgument(indexType, odsState.location);
+  }
+}
+
 #define GET_OP_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"
