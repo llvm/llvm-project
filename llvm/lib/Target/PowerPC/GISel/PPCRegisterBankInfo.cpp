@@ -210,10 +210,7 @@ static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
 /// \returns true if a given intrinsic \p ID only uses and defines FPRs.
 static bool isFPIntrinsic(unsigned ID) {
   // TODO: Add more intrinsics.
-  switch (ID) {
-  default:
-    return false;
-  }
+  return false;
 }
 
 /// FIXME: this is copied from target AArch64. Needs some code refactor here to
