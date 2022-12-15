@@ -31,3 +31,9 @@
 
 // RUN: %clang -### -c --target=powerpc64 %s -mcpu=generic -mtune=pwr9 2>&1 | FileCheck %s --check-prefix=TUNE
 // TUNE: "-target-cpu" "ppc64" "-tune-cpu" "pwr9"
+
+/// Test mcpu options that are equivalent to "generic"
+// RUN: %clang -### -c -target powerpc64 %s -mcpu=generic 2>&1 | FileCheck %s --check-prefix=GENERIC
+// RUN: %clang -### -c -target powerpc64 %s -mcpu=405     2>&1 | FileCheck %s --check-prefix=GENERIC
+//
+// GENERIC: "-target-cpu" "ppc64"
