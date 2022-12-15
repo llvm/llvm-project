@@ -289,3 +289,4 @@ def ZnVer3PfmCounters : ProcPfmCounters {
   ];
 }
 def : PfmCountersBinding<"znver3", ZnVer3PfmCounters>;
+def : PfmCountersBinding<"znver4", ZnVer3PfmCounters>;

@@ -129,6 +129,7 @@ enum CPUKind {
   CK_ZNVER1,
   CK_ZNVER2,
   CK_ZNVER3,
+  CK_ZNVER4,
   CK_x86_64,
   CK_x86_64_v2,
   CK_x86_64_v3,
