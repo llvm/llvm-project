@@ -1043,43 +1043,12 @@ cbrt(_A1 __x) _NOEXCEPT {return __builtin_cbrt((double)__x);}
 
 // copysign
 
-_LIBCPP_CONSTEXPR
-inline _LIBCPP_HIDE_FROM_ABI float __libcpp_copysign(float __x, float __y) _NOEXCEPT {
-  return __builtin_copysignf(__x, __y);
-}
-
-_LIBCPP_CONSTEXPR
-inline _LIBCPP_HIDE_FROM_ABI double __libcpp_copysign(double __x, double __y) _NOEXCEPT {
-  return __builtin_copysign(__x, __y);
-}
-
-_LIBCPP_CONSTEXPR
-inline _LIBCPP_HIDE_FROM_ABI long double __libcpp_copysign(long double __x, long double __y) _NOEXCEPT {
-  return __builtin_copysignl(__x, __y);
-}
-
-template <class _A1, class _A2>
-_LIBCPP_CONSTEXPR
-inline _LIBCPP_HIDE_FROM_ABI
-typename std::__enable_if_t
-<
-    std::is_arithmetic<_A1>::value &&
-    std::is_arithmetic<_A2>::value,
-    std::__promote<_A1, _A2>
->::type
-__libcpp_copysign(_A1 __x, _A2 __y) _NOEXCEPT {
-    typedef typename std::__promote<_A1, _A2>::type __result_type;
-    static_assert((!(std::_IsSame<_A1, __result_type>::value &&
-                     std::_IsSame<_A2, __result_type>::value)), "");
-    return __builtin_copysign((__result_type)__x, (__result_type)__y);
-}
-
 inline _LIBCPP_HIDE_FROM_ABI float copysign(float __x, float __y) _NOEXCEPT {
-  return ::__libcpp_copysign(__x, __y);
+  return ::__builtin_copysignf(__x, __y);
 }
 
 inline _LIBCPP_HIDE_FROM_ABI long double copysign(long double __x, long double __y) _NOEXCEPT {
-  return ::__libcpp_copysign(__x, __y);
+  return ::__builtin_copysignl(__x, __y);
 }
 
 template <class _A1, class _A2>
@@ -1091,7 +1060,7 @@ typename std::__enable_if_t
     std::__promote<_A1, _A2>
 >::type
     copysign(_A1 __x, _A2 __y) _NOEXCEPT {
-  return ::__libcpp_copysign(__x, __y);
+  return ::__builtin_copysign(__x, __y);
 }
 
 // erf
