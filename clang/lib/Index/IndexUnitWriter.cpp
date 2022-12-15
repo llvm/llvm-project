@@ -246,7 +246,7 @@ Optional<bool> IndexUnitWriter::isUnitUpToDateForOutputFile(StringRef FilePath,
       llvm::raw_string_ostream Err(Error);
       Err << "could not access path '" << UnitPath
           << "': " << EC.message();
-      return None;
+      return std::nullopt;
     }
     return false;
   }
@@ -260,7 +260,7 @@ Optional<bool> IndexUnitWriter::isUnitUpToDateForOutputFile(StringRef FilePath,
       llvm::raw_string_ostream Err(Error);
       Err << "could not access path '" << *TimeCompareFilePath
           << "': " << EC.message();
-      return None;
+      return std::nullopt;
     }
     return true;
   }

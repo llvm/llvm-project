@@ -688,7 +688,7 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
                     ArrayRef<std::string> DepTargets, std::string OutputPath,
                     Optional<std::string> CASPath,
                     Optional<std::string> CachePath,
-                    Optional<std::string> ModuleName = None) {
+                    Optional<std::string> ModuleName = std::nullopt) {
   CXDependencyScannerServiceOptions Opts =
       clang_experimental_DependencyScannerServiceOptions_create();
   auto CleanupOpts = llvm::make_scope_exit([&] {
@@ -1171,10 +1171,11 @@ int indextest_core_main(int argc, const char **argv) {
     return aggregateDataAsJSON(storePath, PathRemapper, OS);
   }
 
-  Optional<std::string> CASPath =
-      options::CASPath.empty() ? None : Optional<std::string>(options::CASPath);
+  Optional<std::string> CASPath = options::CASPath.empty()
+                                      ? std::nullopt
+                                      : Optional<std::string>(options::CASPath);
   Optional<std::string> CachePath =
-      options::CachePath.empty() ? None
+      options::CachePath.empty() ? std::nullopt
                                  : Optional<std::string>(options::CachePath);
 
   if (options::Action == ActionType::ScanDeps) {
