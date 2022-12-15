@@ -1853,8 +1853,9 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
 void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
                                              bool InsertExtraPadding) {
   auto *FieldClass = D->getType()->getAsCXXRecordDecl();
+  bool PotentiallyOverlapping = D->hasAttr<NoUniqueAddressAttr>() && FieldClass;
   bool IsOverlappingEmptyField =
-      D->isPotentiallyOverlapping() && FieldClass->isEmpty();
+      PotentiallyOverlapping && FieldClass->isEmpty();
 
   CharUnits FieldOffset =
       (IsUnion || IsOverlappingEmptyField) ? CharUnits::Zero() : getDataSize();
@@ -1915,7 +1916,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
 
     // A potentially-overlapping field occupies its dsize or nvsize, whichever
     // is larger.
-    if (D->isPotentiallyOverlapping()) {
+    if (PotentiallyOverlapping) {
       const ASTRecordLayout &Layout = Context.getASTRecordLayout(FieldClass);
       EffectiveFieldSize =
           std::max(Layout.getNonVirtualSize(), Layout.getDataSize());
