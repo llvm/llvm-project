@@ -690,7 +690,7 @@ def Shape_ValueAsShapeOp : Shape_Op<"value_as_shape", [Pure]> {
     %shape' = shape.const_shape [1, 2] : !shape.shape
     ```
 
-    This operation is the compliment of `shape_of` wrt ValueShape values.
+    This operation is the complement of `shape_of` wrt ValueShape values.
   }];
 
   let arguments = (ins AnyTypeOf<[1DTensorOf<[AnyInteger, Index]>, Shape_ValueShapeType]>:$arg);

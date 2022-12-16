@@ -222,7 +222,7 @@ evaluation error, than having to force an implementation to support potentially
 infinite precision offsets to allow it to correctly track a series of positive
 and negative offsets that may transiently overflow or underflow, but end up in
 range. This is simple for the arithmetic operations as they are defined in terms
-of two's compliment arithmetic on a base type of a fixed size. Therefore, the
+of two's complement arithmetic on a base type of a fixed size. Therefore, the
 offset operation define that integer overflow is ill-formed. This is in contrast
 to the ``DW_OP_plus``, ``DW_OP_plus_uconst``, and ``DW_OP_minus`` arithmetic
 operations which define that it causes wrap-around.
