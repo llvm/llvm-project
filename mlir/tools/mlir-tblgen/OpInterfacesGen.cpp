@@ -108,6 +108,8 @@ protected:
   StringRef interfaceBaseType;
   /// The name of the typename for the value template.
   StringRef valueTemplate;
+  /// The name of the substituion variable for the value.
+  StringRef substVar;
   /// The format context to use for methods.
   tblgen::FmtContext nonStaticMethodFmt;
   tblgen::FmtContext traitMethodFmt;
@@ -121,11 +123,12 @@ struct AttrInterfaceGenerator : public InterfaceGenerator {
     valueType = "::mlir::Attribute";
     interfaceBaseType = "AttributeInterface";
     valueTemplate = "ConcreteAttr";
+    substVar = "_attr";
     StringRef castCode = "(tablegen_opaque_val.cast<ConcreteAttr>())";
-    nonStaticMethodFmt.addSubst("_attr", castCode).withSelf(castCode);
-    traitMethodFmt.addSubst("_attr",
+    nonStaticMethodFmt.addSubst(substVar, castCode).withSelf(castCode);
+    traitMethodFmt.addSubst(substVar,
                             "(*static_cast<const ConcreteAttr *>(this))");
-    extraDeclsFmt.addSubst("_attr", "(*this)");
+    extraDeclsFmt.addSubst(substVar, "(*this)");
   }
 };
 /// A specialized generator for operation interfaces.
@@ -135,12 +138,13 @@ struct OpInterfaceGenerator : public InterfaceGenerator {
     valueType = "::mlir::Operation *";
     interfaceBaseType = "OpInterface";
     valueTemplate = "ConcreteOp";
+    substVar = "_op";
     StringRef castCode = "(llvm::cast<ConcreteOp>(tablegen_opaque_val))";
     nonStaticMethodFmt.addSubst("_this", "impl")
-        .withOp(castCode)
+        .addSubst(substVar, castCode)
         .withSelf(castCode);
-    traitMethodFmt.withOp("(*static_cast<ConcreteOp *>(this))");
-    extraDeclsFmt.withOp("(*this)");
+    traitMethodFmt.addSubst(substVar, "(*static_cast<ConcreteOp *>(this))");
+    extraDeclsFmt.addSubst(substVar, "(*this)");
   }
 };
 /// A specialized generator for type interfaces.
@@ -150,11 +154,12 @@ struct TypeInterfaceGenerator : public InterfaceGenerator {
     valueType = "::mlir::Type";
     interfaceBaseType = "TypeInterface";
     valueTemplate = "ConcreteType";
+    substVar = "_type";
     StringRef castCode = "(tablegen_opaque_val.cast<ConcreteType>())";
-    nonStaticMethodFmt.addSubst("_type", castCode).withSelf(castCode);
-    traitMethodFmt.addSubst("_type",
+    nonStaticMethodFmt.addSubst(substVar, castCode).withSelf(castCode);
+    traitMethodFmt.addSubst(substVar,
                             "(*static_cast<const ConcreteType *>(this))");
-    extraDeclsFmt.addSubst("_type", "(*this)");
+    extraDeclsFmt.addSubst(substVar, "(*this)");
   }
 };
 } // namespace
@@ -434,7 +439,7 @@ void InterfaceGenerator::emitTraitDecl(const Interface &interface,
     assert(isa<OpInterface>(interface) && "only OpInterface supports 'verify'");
 
     tblgen::FmtContext verifyCtx;
-    verifyCtx.withOp("op");
+    verifyCtx.addSubst("_op", "op");
     os << llvm::formatv(
               "    static ::mlir::LogicalResult {0}(::mlir::Operation *op) ",
               (interface.verifyWithRegions() ? "verifyRegionTrait"
@@ -505,6 +510,17 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
   if (std::optional<StringRef> extraDecls =
           interface.getExtraSharedClassDeclaration())
     os << tblgen::tgfmt(*extraDecls, &extraDeclsFmt);
+
+  // Emit classof code if necessary.
+  if (std::optional<StringRef> extraClassOf = interface.getExtraClassOf()) {
+    auto extraClassOfFmt = tblgen::FmtContext();
+    extraClassOfFmt.addSubst(substVar, "base");
+    os << "  static bool classof(" << valueType << " base) {\n"
+       << "    if (!getInterfaceFor(base))\n"
+          "      return false;\n"
+       << "    " << tblgen::tgfmt(extraClassOf->trim(), &extraClassOfFmt)
+       << "\n  }\n";
+  }
 
   os << "};\n";
 
