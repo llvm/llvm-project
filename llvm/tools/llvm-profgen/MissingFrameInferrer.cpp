@@ -194,8 +194,8 @@ uint64_t MissingFrameInferrer::computeUniqueTailCallPath(
     auto &LocalPath = UniquePaths[{From, To}];
     assert((LocalPath.size() <= MaximumSearchDepth + 1) &&
            "Path should not be longer than the maximum searching depth");
-    TailCallMaxTailCallPath =
-        std::max(LocalPath.size(), TailCallMaxTailCallPath.getValue());
+    TailCallMaxTailCallPath = std::max(uint64_t(LocalPath.size()),
+                                       TailCallMaxTailCallPath.getValue());
 #endif
   } else {
     NonUniquePaths[{From, To}] = NumPaths;
