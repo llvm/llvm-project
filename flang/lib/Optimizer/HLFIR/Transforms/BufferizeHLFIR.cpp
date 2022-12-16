@@ -95,26 +95,6 @@ static mlir::Value getBufferizedExprMustFreeFlag(mlir::Value bufferizedExpr) {
   TODO(bufferizedExpr.getLoc(), "general extract storage case");
 }
 
-static llvm::SmallVector<mlir::Value>
-getIndexExtents(mlir::Location loc, fir::FirOpBuilder &builder,
-                mlir::Value shape) {
-  llvm::SmallVector<mlir::Value> extents;
-  if (auto s = shape.getDefiningOp<fir::ShapeOp>()) {
-    auto e = s.getExtents();
-    extents.insert(extents.end(), e.begin(), e.end());
-  } else if (auto s = shape.getDefiningOp<fir::ShapeShiftOp>()) {
-    auto e = s.getExtents();
-    extents.insert(extents.end(), e.begin(), e.end());
-  } else {
-    // TODO: add fir.get_extent ops on fir.shape<> ops.
-    TODO(loc, "get extents from fir.shape without fir::ShapeOp parent op");
-  }
-  mlir::Type indexType = builder.getIndexType();
-  for (auto &extent : extents)
-    extent = builder.createConvert(loc, indexType, extent);
-  return extents;
-}
-
 static std::pair<hlfir::Entity, mlir::Value>
 createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
                    hlfir::Entity mold) {
@@ -128,7 +108,7 @@ createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
     mlir::Type sequenceType =
         hlfir::getFortranElementOrSequenceType(mold.getType());
     shape = hlfir::genShape(loc, builder, mold);
-    auto extents = getIndexExtents(loc, builder, shape);
+    auto extents = hlfir::getIndexExtents(loc, builder, shape);
     alloc = builder.createHeapTemporary(loc, sequenceType, tmpName, extents,
                                         lenParams);
     isHeapAlloc = builder.createBool(loc, true);
@@ -369,7 +349,7 @@ struct ElementalOpConversion
     builder.setListener(&listener);
 
     mlir::Value shape = adaptor.getShape();
-    auto extents = getIndexExtents(loc, builder, shape);
+    auto extents = hlfir::getIndexExtents(loc, builder, shape);
     auto [temp, cleanup] =
         createArrayTemp(loc, builder, elemental.getType(), shape, extents,
                         adaptor.getTypeparams());
