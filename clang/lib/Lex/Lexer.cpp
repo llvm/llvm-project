@@ -1548,6 +1548,8 @@ static void diagnoseExtensionInIdentifier(DiagnosticsEngine &Diags, uint32_t C,
   static const llvm::sys::UnicodeCharSet MathContinueChars(
       MathematicalNotationProfileIDContinueRanges);
 
+  (void)MathStartChars;
+  (void)MathContinueChars;
   assert((MathStartChars.contains(C) || MathContinueChars.contains(C)) &&
          "Unexpected mathematical notation codepoint");
   Diags.Report(Range.getBegin(), diag::ext_mathematical_notation)
