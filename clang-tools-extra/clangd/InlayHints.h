@@ -25,7 +25,7 @@ class ParsedAST;
 /// Compute and return inlay hints for a file.
 /// If RestrictRange is set, return only hints whose location is in that range.
 std::vector<InlayHint> inlayHints(ParsedAST &AST,
-                                  llvm::Optional<Range> RestrictRange);
+                                  std::optional<Range> RestrictRange);
 
 } // namespace clangd
 } // namespace clang

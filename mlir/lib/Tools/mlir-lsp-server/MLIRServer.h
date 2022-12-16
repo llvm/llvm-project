@@ -60,7 +60,8 @@ public:
 
   /// Find a hover description for the given hover position, or std::nullopt if
   /// one couldn't be found.
-  Optional<Hover> findHover(const URIForFile &uri, const Position &hoverPos);
+  std::optional<Hover> findHover(const URIForFile &uri,
+                                 const Position &hoverPos);
 
   /// Find all of the document symbols within the given file.
   void findDocumentSymbols(const URIForFile &uri,
