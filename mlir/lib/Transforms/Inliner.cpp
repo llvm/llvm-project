@@ -382,8 +382,8 @@ static std::string getNodeName(CallOpInterface op) {
 /// Return true if the specified `inlineHistoryID`  indicates an inline history
 /// that already includes `node`.
 static bool inlineHistoryIncludes(
-    CallGraphNode *node, Optional<size_t> inlineHistoryID,
-    MutableArrayRef<std::pair<CallGraphNode *, Optional<size_t>>>
+    CallGraphNode *node, std::optional<size_t> inlineHistoryID,
+    MutableArrayRef<std::pair<CallGraphNode *, std::optional<size_t>>>
         inlineHistory) {
   while (inlineHistoryID.has_value()) {
     assert(inlineHistoryID.value() < inlineHistory.size() &&
@@ -488,7 +488,7 @@ static LogicalResult inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
   // When inlining a callee produces new call sites, we want to keep track of
   // the fact that they were inlined from the callee. This allows us to avoid
   // infinite inlining.
-  using InlineHistoryT = Optional<size_t>;
+  using InlineHistoryT = std::optional<size_t>;
   SmallVector<std::pair<CallGraphNode *, InlineHistoryT>, 8> inlineHistory;
   std::vector<InlineHistoryT> callHistory(calls.size(), InlineHistoryT{});
 

@@ -327,7 +327,7 @@ static void printMemoryAccessAttribute(
       if (auto alignment = (alignmentAttrValue ? alignmentAttrValue
                                                : memoryOp.getAlignment())) {
         elidedAttrs.push_back(kAlignmentAttrName);
-        printer << ", " << alignment;
+        printer << ", " << *alignment;
       }
     }
     printer << "]";
@@ -360,7 +360,7 @@ static void printSourceMemoryAccessAttribute(
       if (auto alignment = (alignmentAttrValue ? alignmentAttrValue
                                                : memoryOp.getAlignment())) {
         elidedAttrs.push_back(kSourceAlignmentAttrName);
-        printer << ", " << alignment;
+        printer << ", " << *alignment;
       }
     }
     printer << "]";
