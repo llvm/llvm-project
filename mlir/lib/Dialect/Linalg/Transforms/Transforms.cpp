@@ -613,23 +613,39 @@ FailureOr<Conv1DOp> DownscaleSizeOneWindowed2DConvolution<Conv2DOp, Conv1DOp>::
   auto outputShape = outputType.getShape();
 
   // Get domain indices based on conv2D layout.
-  int khIndex, kwIndex, ohIndex, owIndex;
-
-  TypeSwitch<Operation *>(convOp)
+  auto [khIndex, kwIndex, ohIndex, owIndex] =
+      TypeSwitch<Operation *, std::tuple<int64_t, int64_t, int64_t,
+                                         int64_t>>(convOp)
       .Case([&](linalg::Conv2DNhwcHwcfOp op) {
-        khIndex = 0;
-        kwIndex = 1;
-        ohIndex = 1;
-        owIndex = 2;
+        return std::make_tuple(0, 1, 1, 2);
       })
       .Case([&](linalg::Conv2DNchwFchwOp op) {
-        khIndex = 2;
-        kwIndex = 3;
-        ohIndex = 2;
-        owIndex = 3;
+        return std::make_tuple(2, 3, 2, 3);
+      })
+      .Case([&](linalg::PoolingNhwcSumOp op) {
+        return std::make_tuple(0, 1, 1, 2);
+      })
+      .Case([&](linalg::PoolingNchwSumOp op) {
+        return std::make_tuple(0, 1, 2, 3);
+      })
+      .Case([&](linalg::PoolingNhwcMaxOp op) {
+        return std::make_tuple(0, 1, 1, 2);
+      })
+      .Case([&](linalg::PoolingNhwcMaxUnsignedOp op) {
+        return std::make_tuple(0, 1, 1, 2);
+      })
+      .Case([&](linalg::PoolingNhwcMinOp op) {
+        return std::make_tuple(0, 1, 1, 2);
+      })
+      .Case([&](linalg::PoolingNhwcMinUnsignedOp op) {
+        return std::make_tuple(0, 1, 1, 2);
+      })
+      .Case([&](linalg::PoolingNchwMaxOp op) {
+        return std::make_tuple(0, 1, 2, 3);
       })
       .Default([&](Operation *op) {
-        llvm_unreachable("unexpected conv2d operation.");
+        llvm_unreachable("unexpected conv2d/pool2d operation.");
+        return std::make_tuple(0, 0, 0, 0);
       });
 
   // Only handle the case where at least one of the window dimensions is
@@ -688,6 +704,20 @@ template struct linalg::DownscaleSizeOneWindowed2DConvolution<Conv2DNhwcHwcfOp,
                                                               Conv1DNwcWcfOp>;
 template struct linalg::DownscaleSizeOneWindowed2DConvolution<Conv2DNchwFchwOp,
                                                               Conv1DNcwFcwOp>;
+template struct linalg::DownscaleSizeOneWindowed2DConvolution<PoolingNhwcSumOp,
+                                                              PoolingNwcSumOp>;
+template struct linalg::DownscaleSizeOneWindowed2DConvolution<PoolingNchwSumOp,
+                                                              PoolingNcwSumOp>;
+template struct linalg::DownscaleSizeOneWindowed2DConvolution<PoolingNhwcMaxOp,
+                                                              PoolingNwcMaxOp>;
+template struct linalg::DownscaleSizeOneWindowed2DConvolution<
+    PoolingNhwcMaxUnsignedOp, PoolingNwcMaxUnsignedOp>;
+template struct linalg::DownscaleSizeOneWindowed2DConvolution<PoolingNhwcMinOp,
+                                                              PoolingNwcMinOp>;
+template struct linalg::DownscaleSizeOneWindowed2DConvolution<
+    PoolingNhwcMinUnsignedOp, PoolingNwcMinUnsignedOp>;
+template struct linalg::DownscaleSizeOneWindowed2DConvolution<PoolingNchwMaxOp,
+                                                              PoolingNcwMaxOp>;
 
 FailureOr<DepthwiseConv1DNwcWcOp>
 DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
@@ -765,4 +795,15 @@ void linalg::populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
                                                      Conv1DNcwFcwOp>,
                DownscaleDepthwiseConv2DNhwcHwcOp>(patterns.getContext(),
                                                   benefit);
+  patterns.add<
+      DownscaleSizeOneWindowed2DConvolution<PoolingNhwcSumOp, PoolingNwcSumOp>,
+      DownscaleSizeOneWindowed2DConvolution<PoolingNchwSumOp, PoolingNcwSumOp>,
+      DownscaleSizeOneWindowed2DConvolution<PoolingNhwcMaxOp, PoolingNwcMaxOp>,
+      DownscaleSizeOneWindowed2DConvolution<PoolingNhwcMaxUnsignedOp,
+                                            PoolingNwcMaxUnsignedOp>,
+      DownscaleSizeOneWindowed2DConvolution<PoolingNhwcMinOp, PoolingNwcMinOp>,
+      DownscaleSizeOneWindowed2DConvolution<PoolingNhwcMinUnsignedOp,
+                                            PoolingNwcMinUnsignedOp>,
+      DownscaleSizeOneWindowed2DConvolution<PoolingNchwMaxOp, PoolingNcwMaxOp>>(
+      patterns.getContext(), benefit);
 }
