@@ -102,6 +102,19 @@ public:
     return ::mlir::cir::BoolType::get(getContext());
   }
 
+  // Creates constant pointer for type ty.
+  mlir::cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
+    assert(ty.isa<mlir::cir::PointerType>() && "expected cir.ptr");
+    return create<mlir::cir::ConstantOp>(
+        loc, ty, mlir::cir::NullAttr::get(getContext(), ty));
+  }
+
+  mlir::Value getBitcast(mlir::Location loc, mlir::Value src,
+                         mlir::Type newTy) {
+    return create<mlir::cir::CastOp>(loc, newTy, mlir::cir::CastKind::bitcast,
+                                     src);
+  }
+
   //
   // Operation creation helpers
   // --------------------------
@@ -121,8 +134,7 @@ public:
       return addr;
 
     auto newPtrType = mlir::cir::PointerType::get(getContext(), destType);
-    auto cast = create<mlir::cir::CastOp>(
-        loc, newPtrType, mlir::cir::CastKind::bitcast, addr.getPointer());
+    auto cast = getBitcast(loc, addr.getPointer(), newPtrType);
     return Address(cast, addr.getElementType(), addr.getAlignment());
   }
 

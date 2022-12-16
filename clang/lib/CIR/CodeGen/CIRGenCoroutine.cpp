@@ -31,6 +31,9 @@ struct cir::CGCoroData {
   // it as the first argument to other builtins.
   mlir::cir::CallOp CoroId = nullptr;
 
+  // Stores the result of __builtin_coro_begin call.
+  mlir::Value CoroBegin = nullptr;
+
   // How many co_return statements are in the coroutine. Used to decide whether
   // we need to add co_return; equivalent at the end of the user authored body.
   unsigned CoreturnCount = 0;
@@ -137,12 +140,10 @@ static mlir::LogicalResult buildBodyAndFallthrough(CIRGenFunction &CGF,
   return mlir::success();
 }
 
-mlir::cir::CallOp CIRGenFunction::buildCoroIDBuiltinCall(mlir::Location loc) {
+mlir::cir::CallOp CIRGenFunction::buildCoroIDBuiltinCall(mlir::Location loc,
+                                                         mlir::Value nullPtr) {
   auto int8PtrTy = builder.getInt8PtrTy();
   auto int32Ty = mlir::IntegerType::get(builder.getContext(), 32);
-  auto nullPtrCst = builder.create<mlir::cir::ConstantOp>(
-      loc, int8PtrTy,
-      mlir::cir::NullAttr::get(builder.getContext(), int8PtrTy));
 
   auto &TI = CGM.getASTContext().getTargetInfo();
   unsigned NewAlign = TI.getNewAlign() / TI.getCharWidth();
@@ -164,8 +165,8 @@ mlir::cir::CallOp CIRGenFunction::buildCoroIDBuiltinCall(mlir::Location loc) {
 
   return builder.create<mlir::cir::CallOp>(
       loc, fnOp,
-      mlir::ValueRange{builder.getInt32(NewAlign, loc), nullPtrCst, nullPtrCst,
-                       nullPtrCst});
+      mlir::ValueRange{builder.getInt32(NewAlign, loc), nullPtr, nullPtr,
+                       nullPtr});
 }
 
 mlir::cir::CallOp
@@ -191,24 +192,67 @@ CIRGenFunction::buildCoroAllocBuiltinCall(mlir::Location loc) {
       loc, fnOp, mlir::ValueRange{CurCoro.Data->CoroId.getResult(0)});
 }
 
+mlir::cir::CallOp
+CIRGenFunction::buildCoroBeginBuiltinCall(mlir::Location loc,
+                                          mlir::Value coroframeAddr) {
+  auto int8PtrTy = builder.getInt8PtrTy();
+  auto int32Ty = mlir::IntegerType::get(builder.getContext(), 32);
+  mlir::Operation *builtin = CGM.getGlobalValue(CGM.builtinCoroBegin);
+
+  mlir::cir::FuncOp fnOp;
+  if (!builtin) {
+    fnOp = CGM.createCIRFunction(
+        loc, CGM.builtinCoroBegin,
+        builder.getFunctionType(mlir::TypeRange{int32Ty, int8PtrTy},
+                                mlir::TypeRange{int8PtrTy}),
+        /*FD=*/nullptr);
+    assert(fnOp && "should always succeed");
+    fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
+  } else
+    fnOp = cast<mlir::cir::FuncOp>(builtin);
+
+  return builder.create<mlir::cir::CallOp>(
+      loc, fnOp,
+      mlir::ValueRange{CurCoro.Data->CoroId.getResult(0), coroframeAddr});
+}
+
 mlir::LogicalResult
 CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
   auto openCurlyLoc = getLoc(S.getBeginLoc());
-  auto coroId = buildCoroIDBuiltinCall(openCurlyLoc);
+  auto nullPtrCst = builder.getNullPtr(builder.getInt8PtrTy(), openCurlyLoc);
+
+  auto coroId = buildCoroIDBuiltinCall(openCurlyLoc, nullPtrCst);
   createCoroData(*this, CurCoro, coroId);
 
   // Backend is allowed to elide memory allocations, to help it, emit
   // auto mem = coro.alloc() ? 0 : ... allocation code ...;
   auto coroAlloc = buildCoroAllocBuiltinCall(openCurlyLoc);
 
-  mlir::Value allocVal;
+  // Initialize address of coroutine frame to null
+  auto astVoidPtrTy = CGM.getASTContext().VoidPtrTy;
+  auto allocaTy = getTypes().convertTypeForMem(astVoidPtrTy);
+  Address coroFrame =
+      CreateTempAlloca(allocaTy, getContext().getTypeAlignInChars(astVoidPtrTy),
+                       openCurlyLoc, "__coro_frame_addr",
+                       /*ArraySize=*/nullptr);
+
+  auto storeAddr = coroFrame.getPointer();
+  builder.create<mlir::cir::StoreOp>(openCurlyLoc, nullPtrCst, storeAddr);
   builder.create<mlir::cir::IfOp>(openCurlyLoc, coroAlloc.getResult(0),
                                   /*withElseRegion=*/false,
                                   /*thenBuilder=*/
                                   [&](mlir::OpBuilder &b, mlir::Location loc) {
-                                    allocVal = buildScalarExpr(S.getAllocate());
+                                    builder.create<mlir::cir::StoreOp>(
+                                        loc, buildScalarExpr(S.getAllocate()),
+                                        storeAddr);
                                     builder.create<mlir::cir::YieldOp>(loc);
                                   });
+
+  CurCoro.Data->CoroBegin =
+      buildCoroBeginBuiltinCall(
+          openCurlyLoc,
+          builder.create<mlir::cir::LoadOp>(openCurlyLoc, allocaTy, storeAddr))
+          .getResult(0);
 
   // Handle allocation failure if 'ReturnStmtOnAllocFailure' was provided.
   if (auto *RetOnAllocFailure = S.getReturnStmtOnAllocFailure())
