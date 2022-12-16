@@ -4,6 +4,17 @@
 
 include "mlir/IR/OpBase.td"
 
+def ExtraClassOfInterface : OpInterface<"ExtraClassOfInterface"> {
+  let extraClassOf = "return $_op->someOtherMethod();";
+}
+
+// DECL: class ExtraClassOfInterface
+// DECL:   static bool classof(::mlir::Operation * base) {
+// DECL-NEXT:     if (!getInterfaceFor(base))
+// DECL-NEXT:       return false;
+// DECL-NEXT:     return base->someOtherMethod();
+// DECL-NEXT:   }
+
 def ExtraShardDeclsInterface : OpInterface<"ExtraShardDeclsInterface"> {
   let extraSharedClassDeclaration = [{
     bool sharedMethodDeclaration() {

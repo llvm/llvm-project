@@ -95,6 +95,9 @@ public:
   // trait classes.
   std::optional<StringRef> getExtraSharedClassDeclaration() const;
 
+  // Return the extra classof method code.
+  std::optional<StringRef> getExtraClassOf() const;
+
   // Return the verify method body if it has one.
   std::optional<StringRef> getVerify() const;
 
