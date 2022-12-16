@@ -45,7 +45,7 @@ struct HoverInfo {
     /// TemplateParameters), might be std::nullopt for macro parameters.
     llvm::Optional<PrintedType> Type;
     /// std::nullopt for unnamed parameters.
-    llvm::Optional<std::string> Name;
+    std::optional<std::string> Name;
     /// std::nullopt if no default is provided.
     llvm::Optional<std::string> Default;
   };
