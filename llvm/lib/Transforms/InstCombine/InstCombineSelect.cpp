@@ -2685,6 +2685,14 @@ foldRoundUpIntegerWithPow2Alignment(SelectInst &SI,
   return R;
 }
 
+namespace {
+struct DecomposedSelect {
+  Value *Cond = nullptr;
+  Value *TrueVal = nullptr;
+  Value *FalseVal = nullptr;
+};
+} // namespace
+
 /// Look for patterns like
 ///   %outer.cond = select i1 %inner.cond, i1 %alt.cond, i1 false
 ///   %inner.sel = select i1 %inner.cond, i8 %inner.sel.t, i8 %inner.sel.f
@@ -2692,71 +2700,72 @@ foldRoundUpIntegerWithPow2Alignment(SelectInst &SI,
 /// and rewrite it as
 ///   %inner.sel = select i1 %cond.alternative, i8 %sel.outer.t, i8 %sel.inner.t
 ///   %sel.outer = select i1 %cond.inner, i8 %inner.sel, i8 %sel.inner.f
-static Instruction *foldNestedSelects(SelectInst &OuterSel,
+static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
                                       InstCombiner::BuilderTy &Builder) {
   // We must start with a `select`.
-  Value *OuterCond, *InnerSel, *OuterSelFalseVal;
-  match(&OuterSel, m_Select(m_Value(OuterCond), m_Value(InnerSel),
-                            m_Value(OuterSelFalseVal)));
+  DecomposedSelect OuterSel;
+  match(&OuterSelVal,
+        m_Select(m_Value(OuterSel.Cond), m_Value(OuterSel.TrueVal),
+                 m_Value(OuterSel.FalseVal)));
 
   // Canonicalize inversion of the outermost `select`'s condition.
-  if (match(OuterCond, m_Not(m_Value(OuterCond))))
-    std::swap(InnerSel, OuterSelFalseVal);
+  if (match(OuterSel.Cond, m_Not(m_Value(OuterSel.Cond))))
+    std::swap(OuterSel.TrueVal, OuterSel.FalseVal);
 
   auto m_c_LogicalOp = [](auto L, auto R) {
     return m_CombineOr(m_c_LogicalAnd(L, R), m_c_LogicalOr(L, R));
   };
 
   // The condition of the outermost select must be an `and`/`or`.
-  if (!match(OuterCond, m_c_LogicalOp(m_Value(), m_Value())))
+  if (!match(OuterSel.Cond, m_c_LogicalOp(m_Value(), m_Value())))
     return nullptr;
 
-  // To simplify logic, prefer the pattern variant with an `or`.
-  bool IsAndVariant = match(OuterCond, m_LogicalAnd());
-  if (match(OuterCond, m_LogicalAnd()))
-    std::swap(InnerSel, OuterSelFalseVal);
+  // Depending on the logical op, inner select might be in different hand.
+  bool IsAndVariant = match(OuterSel.Cond, m_LogicalAnd());
+  Value *InnerSelVal = IsAndVariant ? OuterSel.FalseVal : OuterSel.TrueVal;
 
   // Profitability check - avoid increasing instruction count.
-  if (none_of(ArrayRef<Value *>({OuterSel.getCondition(), InnerSel}),
+  if (none_of(ArrayRef<Value *>({OuterSelVal.getCondition(), InnerSelVal}),
               [](Value *V) { return V->hasOneUse(); }))
     return nullptr;
 
   // The appropriate hand of the outermost `select` must be a select itself.
-  Value *InnerCond, *InnerSelTrueVal, *InnerSelFalseVal;
-  if (!match(InnerSel, m_Select(m_Value(InnerCond), m_Value(InnerSelTrueVal),
-                                m_Value(InnerSelFalseVal))))
+  DecomposedSelect InnerSel;
+  if (!match(InnerSelVal,
+             m_Select(m_Value(InnerSel.Cond), m_Value(InnerSel.TrueVal),
+                      m_Value(InnerSel.FalseVal))))
     return nullptr;
 
   // Canonicalize inversion of the innermost `select`'s condition.
-  if (match(InnerCond, m_Not(m_Value(InnerCond))))
-    std::swap(InnerSelTrueVal, InnerSelFalseVal);
+  if (match(InnerSel.Cond, m_Not(m_Value(InnerSel.Cond))))
+    std::swap(InnerSel.TrueVal, InnerSel.FalseVal);
 
   Value *AltCond = nullptr;
-  auto matchOuterCond = [OuterCond, m_c_LogicalOp, &AltCond](auto m_InnerCond) {
-    return match(OuterCond, m_c_LogicalOp(m_InnerCond, m_Value(AltCond)));
+  auto matchOuterCond = [OuterSel, m_c_LogicalOp, &AltCond](auto m_InnerCond) {
+    return match(OuterSel.Cond, m_c_LogicalOp(m_InnerCond, m_Value(AltCond)));
   };
 
   // Finally, match the condition that was driving the outermost `select`,
   // it should be a logical operation between the condition that was driving
   // the innermost `select` (after accounting for the possible inversions
   // of the condition), and some other condition.
-  if (matchOuterCond(m_Specific(InnerCond))) {
+  if (matchOuterCond(m_Specific(InnerSel.Cond))) {
     // Done!
   } else if (Value * NotInnerCond; matchOuterCond(m_CombineAnd(
-                 m_Not(m_Specific(InnerCond)), m_Value(NotInnerCond)))) {
+                 m_Not(m_Specific(InnerSel.Cond)), m_Value(NotInnerCond)))) {
     // Done!
-    std::swap(InnerSelTrueVal, InnerSelFalseVal);
-    InnerCond = NotInnerCond;
+    std::swap(InnerSel.TrueVal, InnerSel.FalseVal);
+    InnerSel.Cond = NotInnerCond;
   } else // Not the pattern we were looking for.
     return nullptr;
 
   Value *SelInner = Builder.CreateSelect(
-      AltCond, IsAndVariant ? OuterSelFalseVal : InnerSelFalseVal,
-      IsAndVariant ? InnerSelTrueVal : OuterSelFalseVal);
-  SelInner->takeName(InnerSel);
-  return SelectInst::Create(InnerCond,
-                            IsAndVariant ? SelInner : InnerSelTrueVal,
-                            IsAndVariant ? InnerSelFalseVal : SelInner);
+      AltCond, IsAndVariant ? OuterSel.TrueVal : InnerSel.FalseVal,
+      IsAndVariant ? InnerSel.TrueVal : OuterSel.FalseVal);
+  SelInner->takeName(InnerSelVal);
+  return SelectInst::Create(InnerSel.Cond,
+                            IsAndVariant ? SelInner : InnerSel.TrueVal,
+                            !IsAndVariant ? SelInner : InnerSel.FalseVal);
 }
 
 Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
