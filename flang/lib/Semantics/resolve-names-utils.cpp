@@ -798,34 +798,34 @@ void SymbolMapper::MapSymbolExprs(Symbol &symbol) {
       }
     }
   }
-  common::visit(common::visitors{[&](ObjectEntityDetails &object) {
-                                   for (ShapeSpec &spec : object.shape()) {
-                                     MapShapeSpec(spec);
-                                   }
-                                   for (ShapeSpec &spec : object.coshape()) {
-                                     MapShapeSpec(spec);
-                                   }
-                                 },
-                    [&](ProcEntityDetails &proc) {
-                      if (const Symbol *mappedSymbol{
-                              MapInterface(proc.interface().symbol())}) {
-                        proc.interface().set_symbol(*mappedSymbol);
-                      } else if (const DeclTypeSpec *mappedType{
-                                     MapType(proc.interface().type())}) {
-                        proc.interface().set_type(*mappedType);
-                      }
-                      if (proc.init()) {
-                        if (const Symbol *mapped{MapSymbol(*proc.init())}) {
-                          proc.set_init(*mapped);
-                        }
-                      }
-                    },
-                    [&](const HostAssocDetails &hostAssoc) {
-                      if (const Symbol *mapped{MapSymbol(hostAssoc.symbol())}) {
-                        symbol.set_details(HostAssocDetails{*mapped});
-                      }
-                    },
-                    [](const auto &) {}},
+  common::visit(
+      common::visitors{[&](ObjectEntityDetails &object) {
+                         for (ShapeSpec &spec : object.shape()) {
+                           MapShapeSpec(spec);
+                         }
+                         for (ShapeSpec &spec : object.coshape()) {
+                           MapShapeSpec(spec);
+                         }
+                       },
+          [&](ProcEntityDetails &proc) {
+            if (const Symbol *
+                mappedSymbol{MapInterface(proc.procInterface())}) {
+              proc.set_procInterface(*mappedSymbol);
+            } else if (const DeclTypeSpec * mappedType{MapType(proc.type())}) {
+              proc.set_type(*mappedType);
+            }
+            if (proc.init()) {
+              if (const Symbol * mapped{MapSymbol(*proc.init())}) {
+                proc.set_init(*mapped);
+              }
+            }
+          },
+          [&](const HostAssocDetails &hostAssoc) {
+            if (const Symbol * mapped{MapSymbol(hostAssoc.symbol())}) {
+              symbol.set_details(HostAssocDetails{*mapped});
+            }
+          },
+          [](const auto &) {}},
       symbol.details());
 }
 
