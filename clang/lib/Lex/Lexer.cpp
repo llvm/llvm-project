@@ -3355,9 +3355,9 @@ llvm::Optional<uint32_t> Lexer::tryReadNamedUCN(const char *&StartPtr,
   }
 
   StringRef Name(Buffer.data(), Buffer.size());
-  llvm::Optional<char32_t> Match =
+  std::optional<char32_t> Match =
       llvm::sys::unicode::nameToCodepointStrict(Name);
-  llvm::Optional<llvm::sys::unicode::LooseMatchingResult> LooseMatch;
+  std::optional<llvm::sys::unicode::LooseMatchingResult> LooseMatch;
   if (!Match) {
     LooseMatch = llvm::sys::unicode::nameToCodepointLooseMatching(Name);
     if (Diagnose) {

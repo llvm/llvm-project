@@ -59,9 +59,9 @@ struct use_double_formatter
 
 class HelperFunctions {
 protected:
-  static Optional<size_t> parseNumericPrecision(StringRef Str) {
+  static std::optional<size_t> parseNumericPrecision(StringRef Str) {
     size_t Prec;
-    Optional<size_t> Result;
+    std::optional<size_t> Result;
     if (Str.empty())
       Result = std::nullopt;
     else if (Str.getAsInteger(10, Prec)) {
@@ -312,7 +312,7 @@ struct format_provider<T,
     else
       S = FloatStyle::Fixed;
 
-    Optional<size_t> Precision = parseNumericPrecision(Style);
+    std::optional<size_t> Precision = parseNumericPrecision(Style);
     if (!Precision)
       Precision = getDefaultPrecision(S);
 

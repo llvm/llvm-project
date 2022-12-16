@@ -2103,9 +2103,9 @@ bool TargetLowering::SimplifyDemandedBits(
     KnownBits Known0 = TLO.DAG.computeKnownBits(Op0, DemandedElts, Depth + 1);
     KnownBits Known1 = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
     Known = KnownBits::umin(Known0, Known1);
-    if (Optional<bool> IsULE = KnownBits::ule(Known0, Known1))
+    if (std::optional<bool> IsULE = KnownBits::ule(Known0, Known1))
       return TLO.CombineTo(Op, IsULE.value() ? Op0 : Op1);
-    if (Optional<bool> IsULT = KnownBits::ult(Known0, Known1))
+    if (std::optional<bool> IsULT = KnownBits::ult(Known0, Known1))
       return TLO.CombineTo(Op, IsULT.value() ? Op0 : Op1);
     break;
   }
@@ -2116,9 +2116,9 @@ bool TargetLowering::SimplifyDemandedBits(
     KnownBits Known0 = TLO.DAG.computeKnownBits(Op0, DemandedElts, Depth + 1);
     KnownBits Known1 = TLO.DAG.computeKnownBits(Op1, DemandedElts, Depth + 1);
     Known = KnownBits::umax(Known0, Known1);
-    if (Optional<bool> IsUGE = KnownBits::uge(Known0, Known1))
+    if (std::optional<bool> IsUGE = KnownBits::uge(Known0, Known1))
       return TLO.CombineTo(Op, IsUGE.value() ? Op0 : Op1);
-    if (Optional<bool> IsUGT = KnownBits::ugt(Known0, Known1))
+    if (std::optional<bool> IsUGT = KnownBits::ugt(Known0, Known1))
       return TLO.CombineTo(Op, IsUGT.value() ? Op0 : Op1);
     break;
   }

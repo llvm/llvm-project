@@ -347,16 +347,16 @@ TEST(KnownBitsTest, ICmpExhaustive) {
         });
       });
 
-      Optional<bool> KnownEQ = KnownBits::eq(Known1, Known2);
-      Optional<bool> KnownNE = KnownBits::ne(Known1, Known2);
-      Optional<bool> KnownUGT = KnownBits::ugt(Known1, Known2);
-      Optional<bool> KnownUGE = KnownBits::uge(Known1, Known2);
-      Optional<bool> KnownULT = KnownBits::ult(Known1, Known2);
-      Optional<bool> KnownULE = KnownBits::ule(Known1, Known2);
-      Optional<bool> KnownSGT = KnownBits::sgt(Known1, Known2);
-      Optional<bool> KnownSGE = KnownBits::sge(Known1, Known2);
-      Optional<bool> KnownSLT = KnownBits::slt(Known1, Known2);
-      Optional<bool> KnownSLE = KnownBits::sle(Known1, Known2);
+      std::optional<bool> KnownEQ = KnownBits::eq(Known1, Known2);
+      std::optional<bool> KnownNE = KnownBits::ne(Known1, Known2);
+      std::optional<bool> KnownUGT = KnownBits::ugt(Known1, Known2);
+      std::optional<bool> KnownUGE = KnownBits::uge(Known1, Known2);
+      std::optional<bool> KnownULT = KnownBits::ult(Known1, Known2);
+      std::optional<bool> KnownULE = KnownBits::ule(Known1, Known2);
+      std::optional<bool> KnownSGT = KnownBits::sgt(Known1, Known2);
+      std::optional<bool> KnownSGE = KnownBits::sge(Known1, Known2);
+      std::optional<bool> KnownSLT = KnownBits::slt(Known1, Known2);
+      std::optional<bool> KnownSLE = KnownBits::sle(Known1, Known2);
 
       EXPECT_EQ(AllEQ || NoneEQ, KnownEQ.has_value());
       EXPECT_EQ(AllNE || NoneNE, KnownNE.has_value());
