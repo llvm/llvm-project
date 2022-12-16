@@ -2724,14 +2724,14 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
   OS << "{\n"
         "  'version': 0,\n";
   if (IsCaseSensitive)
-    OS << "  'case-sensitive': '"
-       << (IsCaseSensitive.value() ? "true" : "false") << "',\n";
+    OS << "  'case-sensitive': '" << (*IsCaseSensitive ? "true" : "false")
+       << "',\n";
   if (UseExternalNames)
-    OS << "  'use-external-names': '"
-       << (UseExternalNames.value() ? "true" : "false") << "',\n";
+    OS << "  'use-external-names': '" << (*UseExternalNames ? "true" : "false")
+       << "',\n";
   bool UseOverlayRelative = false;
   if (IsOverlayRelative) {
-    UseOverlayRelative = IsOverlayRelative.value();
+    UseOverlayRelative = *IsOverlayRelative;
     OS << "  'overlay-relative': '" << (UseOverlayRelative ? "true" : "false")
        << "',\n";
   }
