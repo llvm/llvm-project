@@ -147,6 +147,14 @@ ifeq "$(OS)" "Darwin"
 endif
 
 #----------------------------------------------------------------------
+# Handle CLANG_RT_DIR on Darwin
+#----------------------------------------------------------------------
+
+ifeq "$(OS)" "Darwin"
+	CLANG_RT_DIR := $(LLDB_LIBS_DIR)/lldb/clang/lib/darwin/
+endif
+
+#----------------------------------------------------------------------
 # SWIFTC defaults to swift.
 # TODO:
 # If you change the defaults of SWIFTC, be sure to also change it in the file

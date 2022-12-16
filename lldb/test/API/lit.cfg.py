@@ -166,6 +166,9 @@ if is_configured('dotest_common_args_str'):
 # Library path may be needed to locate just-built clang and libcxx.
 if is_configured('llvm_libs_dir'):
   dotest_cmd += ['--env', 'LLVM_LIBS_DIR=' + config.llvm_libs_dir]
+# Library path may be needed to locate just-built compiler-rt.
+if is_configured('lldb_libs_dir'):
+  dotest_cmd += ['--env', 'LLDB_LIBS_DIR=' + config.lldb_libs_dir]
 
 # Include path may be needed to locate just-built libcxx.
 if is_configured('llvm_include_dir'):
