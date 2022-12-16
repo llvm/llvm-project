@@ -1593,29 +1593,29 @@ define i32 @pr28932() {
 ; CHECK-NEXT:    --> %pre U: full-set S: full-set
 ; CHECK-NEXT:    %pre7 = load i32, i32* @b, align 4
 ; CHECK-NEXT:    --> %pre7 U: full-set S: full-set
-; CHECK-NEXT:    %0 = phi i32 [ %3, %cont6 ], [ %pre7, %entry ]
+; CHECK-NEXT:    %i = phi i32 [ %i3, %cont6 ], [ %pre7, %entry ]
 ; CHECK-NEXT:    --> {%pre7,+,-1}<%for.cond> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Computable }
-; CHECK-NEXT:    %1 = phi %struct.anon* [ %ph, %cont6 ], [ %pre, %entry ]
-; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
-; CHECK-NEXT:    %3 = extractvalue { i32, i1 } %2, 0
+; CHECK-NEXT:    %i1 = phi %struct.anon* [ %ph, %cont6 ], [ %pre, %entry ]
+; CHECK-NEXT:    --> %i1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    %i3 = extractvalue { i32, i1 } %i2, 0
 ; CHECK-NEXT:    --> {(-1 + %pre7),+,-1}<%for.cond> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Computable }
-; CHECK-NEXT:    %4 = extractvalue { i32, i1 } %2, 1
-; CHECK-NEXT:    --> %4 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
-; CHECK-NEXT:    %idxprom = sext i32 %3 to i64
+; CHECK-NEXT:    %i4 = extractvalue { i32, i1 } %i2, 1
+; CHECK-NEXT:    --> %i4 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    %idxprom = sext i32 %i3 to i64
 ; CHECK-NEXT:    --> (sext i32 {(-1 + %pre7),+,-1}<%for.cond> to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: <<Unknown>> LoopDispositions: { %for.cond: Computable }
-; CHECK-NEXT:    %5 = getelementptr inbounds %struct.anon, %struct.anon* %1, i64 0, i32 0
-; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
-; CHECK-NEXT:    %6 = load i8*, i8** %5, align 8
-; CHECK-NEXT:    --> %6 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
-; CHECK-NEXT:    %7 = getelementptr inbounds i8, i8* %6, i64 %idxprom
-; CHECK-NEXT:    --> ((sext i32 {(-1 + %pre7),+,-1}<%for.cond> to i64) + %6) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
-; CHECK-NEXT:    %8 = load i8, i8* %7, align 1
-; CHECK-NEXT:    --> %8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
-; CHECK-NEXT:    %conv5 = sext i8 %8 to i64
-; CHECK-NEXT:    --> (sext i8 %8 to i64) U: [-128,128) S: [-128,128) Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
-; CHECK-NEXT:    %9 = inttoptr i64 %conv5 to %struct.anon*
-; CHECK-NEXT:    --> %9 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
-; CHECK-NEXT:    %ph = phi %struct.anon* [ %9, %cont1 ], [ %1, %if.then ]
+; CHECK-NEXT:    %i5 = getelementptr inbounds %struct.anon, %struct.anon* %i1, i64 0, i32 0
+; CHECK-NEXT:    --> %i1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    %i6 = load i8*, i8** %i5, align 8
+; CHECK-NEXT:    --> %i6 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    %i7 = getelementptr inbounds i8, i8* %i6, i64 %idxprom
+; CHECK-NEXT:    --> ((sext i32 {(-1 + %pre7),+,-1}<%for.cond> to i64) + %i6) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    %i8 = load i8, i8* %i7, align 1
+; CHECK-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    %conv5 = sext i8 %i8 to i64
+; CHECK-NEXT:    --> (sext i8 %i8 to i64) U: [-128,128) S: [-128,128) Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    %i9 = inttoptr i64 %conv5 to %struct.anon*
+; CHECK-NEXT:    --> %i9 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    %ph = phi %struct.anon* [ %i9, %cont1 ], [ %i1, %if.then ]
 ; CHECK-NEXT:    --> %ph U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @pr28932
 ; CHECK-NEXT:  Loop %for.cond: <multiple exits> Unpredictable backedge-taken count.
@@ -1633,38 +1633,38 @@ entry:
   br label %for.cond
 
 for.cond:                                         ; preds = %cont6, %entry
-  %0 = phi i32 [ %3, %cont6 ], [ %pre7, %entry ]
-  %1 = phi %struct.anon* [ %ph, %cont6 ], [ %pre, %entry ]
-  %tobool = icmp eq %struct.anon* %1, null
-  %2 = tail call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %0, i32 1)
-  %3 = extractvalue { i32, i1 } %2, 0
-  %4 = extractvalue { i32, i1 } %2, 1
-  %idxprom = sext i32 %3 to i64
-  %5 = getelementptr inbounds %struct.anon, %struct.anon* %1, i64 0, i32 0
-  %6 = load i8*, i8** %5, align 8
-  %7 = getelementptr inbounds i8, i8* %6, i64 %idxprom
-  %8 = load i8, i8* %7, align 1
+  %i = phi i32 [ %i3, %cont6 ], [ %pre7, %entry ]
+  %i1 = phi %struct.anon* [ %ph, %cont6 ], [ %pre, %entry ]
+  %tobool = icmp eq %struct.anon* %i1, null
+  %i2 = tail call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %i, i32 1)
+  %i3 = extractvalue { i32, i1 } %i2, 0
+  %i4 = extractvalue { i32, i1 } %i2, 1
+  %idxprom = sext i32 %i3 to i64
+  %i5 = getelementptr inbounds %struct.anon, %struct.anon* %i1, i64 0, i32 0
+  %i6 = load i8*, i8** %i5, align 8
+  %i7 = getelementptr inbounds i8, i8* %i6, i64 %idxprom
+  %i8 = load i8, i8* %i7, align 1
   br i1 %tobool, label %if.else, label %if.then
 
 if.then:                                          ; preds = %for.cond
-  br i1 %4, label %trap, label %cont6
+  br i1 %i4, label %trap, label %cont6
 
 trap:                                             ; preds = %if.else, %if.then
   tail call void @llvm.trap()
   unreachable
 
 if.else:                                          ; preds = %for.cond
-  br i1 %4, label %trap, label %cont1
+  br i1 %i4, label %trap, label %cont1
 
 cont1:                                            ; preds = %if.else
-  %conv5 = sext i8 %8 to i64
-  %9 = inttoptr i64 %conv5 to %struct.anon*
-  store %struct.anon* %9, %struct.anon** @a, align 8
+  %conv5 = sext i8 %i8 to i64
+  %i9 = inttoptr i64 %conv5 to %struct.anon*
+  store %struct.anon* %i9, %struct.anon** @a, align 8
   br label %cont6
 
 cont6:                                            ; preds = %cont1, %if.then
-  %ph = phi %struct.anon* [ %9, %cont1 ], [ %1, %if.then ]
-  store i32 %3, i32* @b, align 4
+  %ph = phi %struct.anon* [ %i9, %cont1 ], [ %i1, %if.then ]
+  store i32 %i3, i32* @b, align 4
   br label %for.cond
 }
 
