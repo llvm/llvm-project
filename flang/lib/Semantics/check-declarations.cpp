@@ -823,7 +823,7 @@ void CheckHelper::CheckProcEntity(
           "An ELEMENTAL subprogram may not have a dummy procedure"_err_en_US);
     }
     const Symbol *interface {
-      details.interface().symbol()
+      details.procInterface()
     };
     if (!symbol.attrs().test(Attr::INTRINSIC) &&
         (IsElementalProcedure(symbol) ||
@@ -852,11 +852,11 @@ void CheckHelper::CheckProcEntity(
           "Procedure component '%s' must have POINTER attribute"_err_en_US,
           name);
     }
-    CheckPassArg(symbol, details.interface().symbol(), details);
+    CheckPassArg(symbol, details.procInterface(), details);
   }
   if (symbol.attrs().test(Attr::POINTER)) {
     CheckPointerInitialization(symbol);
-    if (const Symbol *interface{details.interface().symbol()}) {
+    if (const Symbol * interface{details.procInterface()}) {
       const Symbol &ultimate{interface->GetUltimate()};
       if (ultimate.attrs().test(Attr::INTRINSIC)) {
         if (const auto intrinsic{
@@ -2056,8 +2056,8 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
     }
   }
   if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
-    if (!proc->interface().symbol() ||
-        !proc->interface().symbol()->attrs().test(Attr::BIND_C)) {
+    if (!proc->procInterface() ||
+        !proc->procInterface()->attrs().test(Attr::BIND_C)) {
       messages_.Say(symbol.name(),
           "An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement"_err_en_US);
       context_.SetError(symbol);
