@@ -43,7 +43,7 @@ public:
   static llvm::Expected<std::unique_ptr<IntelPTMultiCoreTrace>>
   StartOnAllCores(const TraceIntelPTStartRequest &request,
                   NativeProcessProtocol &process,
-                  llvm::Optional<int> cgroup_fd = std::nullopt);
+                  std::optional<int> cgroup_fd = std::nullopt);
 
   /// Execute the provided callback on each core that is being traced.
   ///

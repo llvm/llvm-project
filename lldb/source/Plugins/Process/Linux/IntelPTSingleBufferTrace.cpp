@@ -228,9 +228,11 @@ Expected<std::vector<uint8_t>> IntelPTSingleBufferTrace::GetIptTrace() {
   return m_perf_event.GetReadOnlyAuxBuffer();
 }
 
-Expected<IntelPTSingleBufferTrace> IntelPTSingleBufferTrace::Start(
-    const TraceIntelPTStartRequest &request, Optional<lldb::tid_t> tid,
-    Optional<cpu_id_t> cpu_id, bool disabled, Optional<int> cgroup_fd) {
+Expected<IntelPTSingleBufferTrace>
+IntelPTSingleBufferTrace::Start(const TraceIntelPTStartRequest &request,
+                                std::optional<lldb::tid_t> tid,
+                                std::optional<cpu_id_t> cpu_id, bool disabled,
+                                std::optional<int> cgroup_fd) {
 #ifndef PERF_ATTR_SIZE_VER5
   return createStringError(inconvertibleErrorCode(),
                            "Intel PT Linux perf event not supported");
