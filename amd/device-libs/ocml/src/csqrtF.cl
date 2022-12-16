@@ -29,8 +29,8 @@ MATH_MANGLE(csqrt)(float2 z)
         bool i = BUILTIN_ISINF_F32(b);
         rr = i ? b : rr;
         ri = i ? b : ri;
-        ri = BUILTIN_CLASS_F32(z.x, CLASS_NINF) ? a : ri;
-        rr = BUILTIN_CLASS_F32(z.x, CLASS_PINF) ? a : rr;
+        ri = z.x == NINF_F32 ? a : ri;
+        rr = z.x == PINF_F32 ? a : rr;
     }
 
     return (float2)(rr, BUILTIN_COPYSIGN_F32(ri, z.y));

@@ -25,7 +25,7 @@ MATH_MANGLE(asinh)(double x)
     z = y < 0x1.0p-27 ? y : z;
 
     if (!FINITE_ONLY_OPT()) {
-        z = BUILTIN_CLASS_F64(y, CLASS_PINF) ? y : z;
+        z = y == PINF_F64 ? y : z;
     }
 
     return BUILTIN_COPYSIGN_F64(z, x);

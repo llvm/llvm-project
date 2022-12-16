@@ -19,8 +19,7 @@ MATH_MANGLE(hypot)(float x, float y)
     float ret = BUILTIN_FLDEXP_F32(MATH_FAST_SQRT(MATH_MAD(a, a, b*b)), e);
 
     if (!FINITE_ONLY_OPT()) {
-        ret = BUILTIN_ISINF_F32(t) ?
-              PINF_F32 : ret;
+        ret = BUILTIN_ISINF_F32(t) ? PINF_F32 : ret;
     }
 
     return ret;

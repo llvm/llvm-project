@@ -18,7 +18,7 @@ MATH_MANGLE(log1p)(float x)
     float z = MATH_PRIVATE(lnep)(add(1.0f, x), 0);
 
     if (!FINITE_ONLY_OPT()) {
-        z = BUILTIN_CLASS_F32(x, CLASS_PINF) ? x : z;
+        z = x == PINF_F32 ? x : z;
         z = x < -1.0f ? QNAN_F32 : z;
         z = x == -1.0f ? NINF_F32 : z;
     }

@@ -24,11 +24,11 @@ MATH_MANGLE(cexp)(double2 z)
 
     if (!FINITE_ONLY_OPT()) {
         bool isfinite = BUILTIN_ISFINITE_F64(y);
-        if (BUILTIN_CLASS_F64(x, CLASS_NINF)) {
+        if (x == NINF_F64) {
             rr = 0.0;
             ri = isfinite ? ri : 0.0;
         }
-        if (BUILTIN_CLASS_F64(x, CLASS_PINF)) {
+        if (x == PINF_F64) {
             rr = isfinite ? rr : PINF_F64;
             ri = isfinite ? ri : QNAN_F64;
             ri = y == 0.0 ? y : ri;

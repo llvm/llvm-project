@@ -85,7 +85,7 @@ MATH_MANGLE(j1)(double x)
         double r2 = r*r;
         double p = MATH_PRIVATE(bp1)(r2) * r;
         ret = 0x1.9884533d43651p-1 * MATH_FAST_SQRT(r) * MATH_PRIVATE(ba1)(r2) * MATH_PRIVATE(cosb)(ax, 1, p);
-        ret = BUILTIN_CLASS_F64(ax, CLASS_PINF) ? 0.0 : ret;
+        ret = ax == PINF_F64 ? 0.0 : ret;
     }
 
     if (x < 0.0)

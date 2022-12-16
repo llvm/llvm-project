@@ -22,8 +22,7 @@ MATH_MANGLE(hypot)(double x, double y)
         ret = (BUILTIN_ISNAN_F64(x) | BUILTIN_ISNAN_F64(y)) ?
               QNAN_F64 : ret;
 
-        ret = (BUILTIN_ISINF_F64(x) | BUILTIN_ISINF_F64(y)) ?
-              PINF_F64 : ret;
+        ret = (BUILTIN_ISINF_F64(x) | BUILTIN_ISINF_F64(y)) ? PINF_F64 : ret;
     }
 
     return ret;

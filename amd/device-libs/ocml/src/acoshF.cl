@@ -22,7 +22,7 @@ MATH_MANGLE(acosh)(float x)
     float z = MATH_PRIVATE(lnep)(a, b ? 64 : 0);
 
     if (!FINITE_ONLY_OPT()) {
-        z = BUILTIN_CLASS_F32(x, CLASS_PINF) ? x : z;
+        z = x == PINF_F32 ? x : z;
         z = x < 1.0f ? QNAN_F32 : z;
     }
 

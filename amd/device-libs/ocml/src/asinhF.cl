@@ -25,7 +25,7 @@ MATH_MANGLE(asinh)(float x)
     z = y < 0x1.0p-12f ? y : z;
 
     if (!FINITE_ONLY_OPT()) {
-        z = BUILTIN_CLASS_F32(y, CLASS_PINF) ? y : z;
+        z = y == PINF_F32 ? y : z;
     }
 
     return BUILTIN_COPYSIGN_F32(z, x);
