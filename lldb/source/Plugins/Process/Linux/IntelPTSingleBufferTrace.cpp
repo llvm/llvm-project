@@ -22,19 +22,19 @@ using namespace lldb_private;
 using namespace process_linux;
 using namespace llvm;
 
-const char *kOSEventIntelPTTypeFile =
+const char kOSEventIntelPTTypeFile[] =
     "/sys/bus/event_source/devices/intel_pt/type";
 
-const char *kPSBPeriodCapFile =
+const char kPSBPeriodCapFile[] =
     "/sys/bus/event_source/devices/intel_pt/caps/psb_cyc";
 
-const char *kPSBPeriodValidValuesFile =
+const char kPSBPeriodValidValuesFile[] =
     "/sys/bus/event_source/devices/intel_pt/caps/psb_periods";
 
-const char *kPSBPeriodBitOffsetFile =
+const char kPSBPeriodBitOffsetFile[] =
     "/sys/bus/event_source/devices/intel_pt/format/psb_period";
 
-const char *kTSCBitOffsetFile =
+const char kTSCBitOffsetFile[] =
     "/sys/bus/event_source/devices/intel_pt/format/tsc";
 
 enum IntelPTConfigFileType {
