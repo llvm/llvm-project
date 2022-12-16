@@ -1777,7 +1777,8 @@ Address CIRGenFunction::CreateMemTemp(QualType Ty, CharUnits Align,
   return Result;
 }
 
-/// This creates a alloca and inserts it into the entry block.
+/// This creates a alloca and inserts it into the entry block of the
+/// current region.
 Address CIRGenFunction::CreateTempAllocaWithoutCast(mlir::Type Ty,
                                                     CharUnits Align,
                                                     mlir::Location Loc,

@@ -105,6 +105,9 @@ co_invoke_fn co_invoke;
 // CHECK-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !ty_22struct2Efolly3A3Acoro3A3Aco_invoke_fn22
 
 // CHECK: cir.func builtin @__builtin_coro_id(i32, !cir.ptr<i8>, !cir.ptr<i8>, !cir.ptr<i8>) -> i32 attributes {builtin, sym_visibility = "private"}
+// CHECK: cir.func builtin @__builtin_coro_alloc(i32) -> !cir.bool attributes {builtin, sym_visibility = "private"}
+// CHECK: cir.func builtin @__builtin_coro_size() -> i64 attributes {builtin, sym_visibility = "private"}
+// CHECK: cir.func builtin @__builtin_coro_begin(i32, !cir.ptr<i8>) -> !cir.ptr<i8> attributes {builtin, sym_visibility = "private"}
 
 using VoidTask = folly::coro::Task<void>;
 
@@ -119,6 +122,7 @@ VoidTask silly_task() {
 // Allocate promise.
 
 // CHECK: %[[#VoidTaskAddr:]] = cir.alloca ![[VoidTask]], {{.*}}, ["__retval"]
+// CHECK: %[[#SavedFrameAddr:]] = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["__coro_frame_addr"] {alignment = 8 : i64}
 // CHECK: %[[#VoidPromisseAddr:]] = cir.alloca ![[VoidPromisse]], {{.*}}, ["__promise"]
 
 // Get coroutine id with __builtin_coro_id.
@@ -127,13 +131,18 @@ VoidTask silly_task() {
 // CHECK: %[[#Align:]] = cir.cst(16 : i32) : i32
 // CHECK: %[[#CoroId:]] = cir.call @__builtin_coro_id(%[[#Align]], %[[#NullPtr]], %[[#NullPtr]], %[[#NullPtr]])
 
-// Maybe perform allocation calling operator new.
+// Perform allocation calling operator 'new' depending on __builtin_coro_alloc and
+// call __builtin_coro_begin for the final coroutine frame address.
 
 // CHECK: %[[#ShouldAlloc:]] = cir.call @__builtin_coro_alloc(%[[#CoroId]]) : (i32) -> !cir.bool
+// CHECK: cir.store %[[#NullPtr]], %[[#SavedFrameAddr]] : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
 // CHECK: cir.if %[[#ShouldAlloc]] {
 // CHECK:   %[[#CoroSize:]] = cir.call @__builtin_coro_size() : () -> i64
-// CHECK:   %[[#CoroFrameAddr:]] = cir.call @_Znwm(%[[#CoroSize]]) : (i64) -> !cir.ptr<i8>
+// CHECK:   %[[#AllocAddr:]] = cir.call @_Znwm(%[[#CoroSize]]) : (i64) -> !cir.ptr<i8>
+// CHECK:   cir.store %[[#AllocAddr]], %[[#SavedFrameAddr]] : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
 // CHECK: }
+// CHECK: %[[#Load0:]] = cir.load %[[#SavedFrameAddr]] : cir.ptr <!cir.ptr<i8>>, !cir.ptr<i8>
+// CHECK: %[[#CoroFrameAddr:]] = cir.call @__builtin_coro_begin(%[[#CoroId]], %[[#Load0]])
 
 // Call promise.get_return_object() to retrieve the task object.
 
