@@ -1444,6 +1444,16 @@ public:
     return false;
   }
 
+  /// Returns true if MI is a far call.
+  ///
+  /// YKFIXME: x86 only.
+  virtual bool isFarCall(const MachineInstr &MI) const { return false; }
+
+  /// Returns true if MI is a far return.
+  ///
+  /// YKFIXME: x86 only.
+  virtual bool isFarRet(const MachineInstr &MI) const { return false; }
+
   /// Returns true if the tail call can be made conditional on BranchCond.
   virtual bool canMakeTailCallConditional(SmallVectorImpl<MachineOperand> &Cond,
                                           const MachineInstr &TailCall) const {

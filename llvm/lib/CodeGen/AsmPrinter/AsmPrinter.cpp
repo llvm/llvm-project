@@ -1508,10 +1508,11 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
         Unconditional = 0,
         // Choice of two successors.
         Conditional = 1,
-        // A control flow edge known only at runtime, e.g. a return or an
-        // indirect
+        // A return edge.
+        Return = 2,
+        // Any other control flow edge known only at runtime, e.g. an indirect
         // branch.
-        Dynamic = 2,
+        Dynamic = 3,
       };
 
       // Then depending of the `SuccessorKind` there is a payload describing the
@@ -1519,7 +1520,8 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       //
       // `Unconditional`: [target-address: u64]
       // `Conditional`:   [taken-address: u64, not-taken-address: u64]
-      // `Dynamic`:       [] (i.e. nothing, because nothing is statically known)
+      // `Return`:        []
+      // `Dynamic`:       []
 
       MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
       SmallVector<MachineOperand> Conds;
@@ -1573,7 +1575,12 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
         // Wasn't a branch or a fall-thru. Must be a different kind of
         // terminator.
         const MachineInstr *LastI = &*MBB.instr_rbegin();
-        if (LastI->isReturn() || LastI->isIndirectBranch()) {
+        if (LastI->isReturn()) {
+          // Ensure we are only working with near returns. See comment
+          // elsewhere about far calls for reasoning.
+          assert(!MF.getSubtarget().getInstrInfo()->isFarRet(*LastI));
+          OutStreamer->emitInt8(Return);
+        } else if (LastI->isIndirectBranch()) {
           OutStreamer->emitInt8(Dynamic);
         } else {
           std::string Msg = "unhandled block terminator in block: ";
@@ -1799,6 +1806,13 @@ void AsmPrinter::emitFunctionBody() {
             // Statically known function address.
             CallTargetSym = getSymbol(CallOpnd.getGlobal());
           }
+
+          // Ensure we are only working with near calls. This matters because
+          // Intel PT optimises near calls, and it simplifies our implementation
+          // if we can disregard far calls. Far calls are a hangover from
+          // 16-bit X86 that we are unlikley to encounter anyway.
+          assert(!MF->getSubtarget().getInstrInfo()->isFarCall(MI));
+
           assert(YkCallMarkerSyms.find(&MBB) != YkCallMarkerSyms.end());
           YkCallMarkerSyms[&MBB].push_back({YkPreCallSym, CallTargetSym});
         }
