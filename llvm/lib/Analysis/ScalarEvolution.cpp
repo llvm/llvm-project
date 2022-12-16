@@ -490,9 +490,7 @@ ScalarEvolution::getConstant(Type *Ty, uint64_t V, bool isSigned) {
 
 SCEVCastExpr::SCEVCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                            const SCEV *op, Type *ty)
-    : SCEV(ID, SCEVTy, computeExpressionSize(op)), Ty(ty) {
-  Operands[0] = op;
-}
+    : SCEV(ID, SCEVTy, computeExpressionSize(op)), Op(op), Ty(ty) {}
 
 SCEVPtrToIntExpr::SCEVPtrToIntExpr(const FoldingSetNodeIDRef ID, const SCEV *Op,
                                    Type *ITy)
@@ -1050,7 +1048,7 @@ static const SCEV *BinomialCoefficient(const SCEV *It, unsigned K,
 /// where BC(It, k) stands for binomial coefficient.
 const SCEV *SCEVAddRecExpr::evaluateAtIteration(const SCEV *It,
                                                 ScalarEvolution &SE) const {
-  return evaluateAtIteration(makeArrayRef(op_begin(), op_end()), It, SE);
+  return evaluateAtIteration(operands(), It, SE);
 }
 
 const SCEV *
@@ -2280,8 +2278,7 @@ static bool
 CollectAddOperandsWithScales(DenseMap<const SCEV *, APInt> &M,
                              SmallVectorImpl<const SCEV *> &NewOps,
                              APInt &AccumulatedConstant,
-                             const SCEV *const *Ops, size_t NumOperands,
-                             const APInt &Scale,
+                             ArrayRef<const SCEV *> Ops, const APInt &Scale,
                              ScalarEvolution &SE) {
   bool Interesting = false;
 
@@ -2297,7 +2294,7 @@ CollectAddOperandsWithScales(DenseMap<const SCEV *, APInt> &M,
 
   // Next comes everything else. We're especially interested in multiplies
   // here, but they're in the middle, so just visit the rest with one loop.
-  for (; i != NumOperands; ++i) {
+  for (; i != Ops.size(); ++i) {
     const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(Ops[i]);
     if (Mul && isa<SCEVConstant>(Mul->getOperand(0))) {
       APInt NewScale =
@@ -2307,8 +2304,7 @@ CollectAddOperandsWithScales(DenseMap<const SCEV *, APInt> &M,
         const SCEVAddExpr *Add = cast<SCEVAddExpr>(Mul->getOperand(1));
         Interesting |=
           CollectAddOperandsWithScales(M, NewOps, AccumulatedConstant,
-                                       Add->op_begin(), Add->getNumOperands(),
-                                       NewScale, SE);
+                                       Add->operands(), NewScale, SE);
       } else {
         // A multiplication of a constant with some other value. Update
         // the map.
@@ -2755,7 +2751,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
       // If we have an add, expand the add operands onto the end of the operands
       // list.
       Ops.erase(Ops.begin()+Idx);
-      Ops.append(Add->op_begin(), Add->op_end());
+      append_range(Ops, Add->operands());
       DeletedAdd = true;
       CommonFlags = maskFlags(CommonFlags, Add->getNoWrapFlags());
     }
@@ -2779,8 +2775,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
     SmallVector<const SCEV *, 8> NewOps;
     APInt AccumulatedConstant(BitWidth, 0);
     if (CollectAddOperandsWithScales(M, NewOps, AccumulatedConstant,
-                                     Ops.data(), Ops.size(),
-                                     APInt(BitWidth, 1), *this)) {
+                                     Ops, APInt(BitWidth, 1), *this)) {
       struct APIntCompare {
         bool operator()(const APInt &LHS, const APInt &RHS) const {
           return LHS.ult(RHS);
@@ -2831,9 +2826,9 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
           if (Mul->getNumOperands() != 2) {
             // If the multiply has more than two operands, we must get the
             // Y*Z term.
-            SmallVector<const SCEV *, 4> MulOps(Mul->op_begin(),
-                                                Mul->op_begin()+MulOp);
-            MulOps.append(Mul->op_begin()+MulOp+1, Mul->op_end());
+            SmallVector<const SCEV *, 4> MulOps(
+                Mul->operands().take_front(MulOp));
+            append_range(MulOps, Mul->operands().drop_front(MulOp + 1));
             InnerMul = getMulExpr(MulOps, SCEV::FlagAnyWrap, Depth + 1);
           }
           SmallVector<const SCEV *, 2> TwoOps = {getOne(Ty), InnerMul};
@@ -2865,16 +2860,16 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
             // Fold X + (A*B*C) + (A*D*E) --> X + (A*(B*C+D*E))
             const SCEV *InnerMul1 = Mul->getOperand(MulOp == 0);
             if (Mul->getNumOperands() != 2) {
-              SmallVector<const SCEV *, 4> MulOps(Mul->op_begin(),
-                                                  Mul->op_begin()+MulOp);
-              MulOps.append(Mul->op_begin()+MulOp+1, Mul->op_end());
+              SmallVector<const SCEV *, 4> MulOps(
+                  Mul->operands().take_front(MulOp));
+              append_range(MulOps, Mul->operands().drop_front(MulOp+1));
               InnerMul1 = getMulExpr(MulOps, SCEV::FlagAnyWrap, Depth + 1);
             }
             const SCEV *InnerMul2 = OtherMul->getOperand(OMulOp == 0);
             if (OtherMul->getNumOperands() != 2) {
-              SmallVector<const SCEV *, 4> MulOps(OtherMul->op_begin(),
-                                                  OtherMul->op_begin()+OMulOp);
-              MulOps.append(OtherMul->op_begin()+OMulOp+1, OtherMul->op_end());
+              SmallVector<const SCEV *, 4> MulOps(
+                  OtherMul->operands().take_front(OMulOp));
+              append_range(MulOps, OtherMul->operands().drop_front(OMulOp+1));
               InnerMul2 = getMulExpr(MulOps, SCEV::FlagAnyWrap, Depth + 1);
             }
             SmallVector<const SCEV *, 2> TwoOps = {InnerMul1, InnerMul2};
@@ -2985,8 +2980,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
             for (unsigned i = 0, e = OtherAddRec->getNumOperands();
                  i != e; ++i) {
               if (i >= AddRecOps.size()) {
-                AddRecOps.append(OtherAddRec->op_begin()+i,
-                                 OtherAddRec->op_end());
+                append_range(AddRecOps, OtherAddRec->operands().drop_front(i));
                 break;
               }
               SmallVector<const SCEV *, 2> TwoOps = {
@@ -3255,7 +3249,7 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
       // If we have an mul, expand the mul operands onto the end of the
       // operands list.
       Ops.erase(Ops.begin()+Idx);
-      Ops.append(Mul->op_begin(), Mul->op_end());
+      append_range(Ops, Mul->operands());
       DeletedMul = true;
     }
 
@@ -3631,7 +3625,7 @@ const SCEV *ScalarEvolution::getUDivExactExpr(const SCEV *LHS,
             cast<SCEVConstant>(getConstant(RHSCst->getAPInt().udiv(Factor)));
         SmallVector<const SCEV *, 2> Operands;
         Operands.push_back(LHSCst);
-        Operands.append(Mul->op_begin() + 1, Mul->op_end());
+        append_range(Operands, Mul->operands().drop_front());
         LHS = getMulExpr(Operands);
         RHS = RHSCst;
         Mul = dyn_cast<SCEVMulExpr>(LHS);
@@ -3644,8 +3638,8 @@ const SCEV *ScalarEvolution::getUDivExactExpr(const SCEV *LHS,
   for (int i = 0, e = Mul->getNumOperands(); i != e; ++i) {
     if (Mul->getOperand(i) == RHS) {
       SmallVector<const SCEV *, 2> Operands;
-      Operands.append(Mul->op_begin(), Mul->op_begin() + i);
-      Operands.append(Mul->op_begin() + i + 1, Mul->op_end());
+      append_range(Operands, Mul->operands().take_front(i));
+      append_range(Operands, Mul->operands().drop_front(i + 1));
       return getMulExpr(Operands);
     }
   }
@@ -3662,7 +3656,7 @@ const SCEV *ScalarEvolution::getAddRecExpr(const SCEV *Start, const SCEV *Step,
   Operands.push_back(Start);
   if (const SCEVAddRecExpr *StepChrec = dyn_cast<SCEVAddRecExpr>(Step))
     if (StepChrec->getLoop() == L) {
-      Operands.append(StepChrec->op_begin(), StepChrec->op_end());
+      append_range(Operands, StepChrec->operands());
       return getAddRecExpr(Operands, L, maskFlags(Flags, SCEV::FlagNW));
     }
 
@@ -3920,7 +3914,7 @@ const SCEV *ScalarEvolution::getMinMaxExpr(SCEVTypes Kind,
     while (Ops[Idx]->getSCEVType() == Kind) {
       const SCEVMinMaxExpr *SMME = cast<SCEVMinMaxExpr>(Ops[Idx]);
       Ops.erase(Ops.begin()+Idx);
-      Ops.append(SMME->op_begin(), SMME->op_end());
+      append_range(Ops, SMME->operands());
       DeletedAny = true;
     }
 
@@ -4007,8 +4001,7 @@ class SCEVSequentialMinMaxDeduplicatingVisitor final
 
     auto *NAry = cast<SCEVNAryExpr>(S);
     SmallVector<const SCEV *> NewOps;
-    bool Changed =
-        visit(Kind, makeArrayRef(NAry->op_begin(), NAry->op_end()), NewOps);
+    bool Changed = visit(Kind, NAry->operands(), NewOps);
 
     if (!Changed)
       return S;
@@ -4200,7 +4193,8 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
       }
       const auto *SMME = cast<SCEVSequentialMinMaxExpr>(Ops[Idx]);
       Ops.erase(Ops.begin() + Idx);
-      Ops.insert(Ops.begin() + Idx, SMME->op_begin(), SMME->op_end());
+      Ops.insert(Ops.begin() + Idx, SMME->operands().begin(),
+                 SMME->operands().end());
       DeletedAny = true;
     }
 
@@ -7743,7 +7737,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
               APInt DivAmt = APInt::getOneBitSet(BitWidth, TZ - GCD);
               SmallVector<const SCEV*, 4> MulOps;
               MulOps.push_back(getConstant(OpC->getAPInt().lshr(GCD)));
-              MulOps.append(LHSMul->op_begin() + 1, LHSMul->op_end());
+              append_range(MulOps, LHSMul->operands().drop_front());
               auto *NewMul = getMulExpr(MulOps, LHSMul->getNoWrapFlags());
               ShiftedLHS = getUDivExpr(NewMul, getConstant(DivAmt));
             }
@@ -9927,8 +9921,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
       if (OpAtScope != Comm->getOperand(i)) {
         // Okay, at least one of these operands is loop variant but might be
         // foldable.  Build a new instance of the folded commutative expression.
-        SmallVector<const SCEV *, 8> NewOps(Comm->op_begin(),
-                                            Comm->op_begin()+i);
+        SmallVector<const SCEV *, 8> NewOps(Comm->operands().take_front(i));
         NewOps.push_back(OpAtScope);
 
         for (++i; i != e; ++i) {
@@ -9971,8 +9964,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
 
       // Okay, at least one of these operands is loop variant but might be
       // foldable.  Build a new instance of the folded commutative expression.
-      SmallVector<const SCEV *, 8> NewOps(AddRec->op_begin(),
-                                          AddRec->op_begin()+i);
+      SmallVector<const SCEV *, 8> NewOps(AddRec->operands().take_front(i));
       NewOps.push_back(OpAtScope);
       for (++i; i != e; ++i)
         NewOps.push_back(getSCEVAtScope(AddRec->getOperand(i), L));
