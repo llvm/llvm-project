@@ -48,15 +48,15 @@ MATH_MANGLE(cdiv)(double2 zn, double2 zd)
     if (!FINITE_ONLY_OPT()) {
         if (BUILTIN_ISNAN_F64(rr) && BUILTIN_ISNAN_F64(ri)) {
             if (d2 == 0.0 && (!BUILTIN_ISNAN_F64(zn.x) || !BUILTIN_ISNAN_F64(zn.y))) {
-                double i = BUILTIN_COPYSIGN_F64(AS_DOUBLE(PINFBITPATT_DP64), zd.x);
+                double i = BUILTIN_COPYSIGN_F64(PINF_F64, zd.x);
                 rr = i * zn.x;
                 ri = i * zn.y;
             } else if ((BUILTIN_ISINF_F64(zn.x) || BUILTIN_ISINF_F64(zn.y)) &&
                        (BUILTIN_ISFINITE_F64(zd.x) && BUILTIN_ISFINITE_F64(zd.y))) {
                 double znx = BUILTIN_COPYSIGN_F64(BUILTIN_ISINF_F64(zn.x) ? 1.0 : 0.0, zn.x);
                 double zny = BUILTIN_COPYSIGN_F64(BUILTIN_ISINF_F64(zn.y) ? 1.0 : 0.0, zn.y);
-                rr = AS_DOUBLE(PINFBITPATT_DP64) * MATH_MAD(znx, zd.x,   zny * zd.y);
-                ri = AS_DOUBLE(PINFBITPATT_DP64) * MATH_MAD(zny, zd.x,  -znx * zd.y);
+                rr = PINF_F64 * MATH_MAD(znx, zd.x,   zny * zd.y);
+                ri = PINF_F64 * MATH_MAD(zny, zd.x,  -znx * zd.y);
             } else if ((BUILTIN_ISINF_F64(zd.x) || BUILTIN_ISINF_F64(zd.y)) &&
                        (BUILTIN_ISFINITE_F64(zn.x) && BUILTIN_ISFINITE_F64(zn.y))) {
                 zdx = BUILTIN_COPYSIGN_F64(BUILTIN_ISINF_F64(zd.x) ? 1.0 : 0.0, zd.x);

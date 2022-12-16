@@ -132,7 +132,7 @@ MATH_MANGLE(tgamma)(double x)
             double zpow = MATH_MANGLE(powr)(z, MATH_MAD(0.5, z, -0.25));
             if (x >= 0.0) {
                 ret = MATH_DIV(etonegz*zpow*zpow*poly, dterm);
-                ret = x > 0x1.573fae561f647p+7 ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
+                ret = x > 0x1.573fae561f647p+7 ? PINF_F64 : ret;
             } else if (x < 0.0) {
                 if (x >= -170.5) {
                     ret = MATH_DIV(pi*dterm, etonegz*zpow*zpow*poly*negadj);

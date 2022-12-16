@@ -29,8 +29,8 @@ MATH_MANGLE(csinh)(double2 z)
 
     if (!FINITE_ONLY_OPT()) {
         bool b = x >= 0x1.6395a2079b70cp+9;
-        cxhi = b ? AS_DOUBLE(PINFBITPATT_DP64) : cxhi;
-        sxhi = b ? AS_DOUBLE(PINFBITPATT_DP64) : sxhi;
+        cxhi = b ? PINF_F64 : cxhi;
+        sxhi = b ? PINF_F64 : sxhi;
     }
 
     bool s = x >= 0x1.0p-27;

@@ -20,7 +20,7 @@ MATH_MANGLE(log1p)(float x)
     if (!FINITE_ONLY_OPT()) {
         z = BUILTIN_CLASS_F32(x, CLASS_PINF) ? x : z;
         z = x < -1.0f ? QNAN_F32 : z;
-        z = x == -1.0f ? AS_FLOAT(NINFBITPATT_SP32) : z;
+        z = x == -1.0f ? NINF_F32 : z;
     }
 
     return BUILTIN_ABS_F32(x) < 0x1.0p-24f ? x : z;

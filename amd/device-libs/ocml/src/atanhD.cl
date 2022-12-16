@@ -22,7 +22,7 @@ MATH_MANGLE(atanh)(double x)
 
     if (!FINITE_ONLY_OPT()) {
         z = y > 1.0 ? QNAN_F64 : z;
-        z = y == 1.0 ? AS_DOUBLE(PINFBITPATT_DP64) : z;
+        z = y == 1.0 ? PINF_F64 : z;
     }
 
     return BUILTIN_COPYSIGN_F64(z, x);

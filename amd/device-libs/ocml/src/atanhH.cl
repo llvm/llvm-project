@@ -19,7 +19,7 @@ MATH_MANGLE(atanh)(half hx)
     ret = x < 0x1.0p-7f ? x : ret;
 
     if (!FINITE_ONLY_OPT()) {
-        ret = x == 1.0f ? AS_HALF((short)PINFBITPATT_HP16) : ret;
+        ret = x == 1.0f ? PINF_F16 : ret;
         ret = (x > 1.0f) | BUILTIN_ISNAN_F32(x) ? QNAN_F16 : ret;
     }
 

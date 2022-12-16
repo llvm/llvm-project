@@ -17,7 +17,7 @@ MATH_MANGLE(logb)(half x)
     if (!FINITE_ONLY_OPT()) {
         half ax = BUILTIN_ABS_F16(x);
         ret = BUILTIN_ISFINITE_F16(ax) ? ret : ax;
-        ret = x == 0.0h ? AS_HALF((short)NINFBITPATT_HP16) : ret;
+        ret = x == 0.0h ? NINF_F16 : ret;
     }
 
     return ret;

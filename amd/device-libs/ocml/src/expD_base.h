@@ -40,7 +40,7 @@ MATH_MANGLE(exp)(double x)
     double z = BUILTIN_FLDEXP_F64(p, (int)dn);
 
     if (!FINITE_ONLY_OPT()) {
-        z = x > 1024.0 ? AS_DOUBLE(PINFBITPATT_DP64) : z;
+        z = x > 1024.0 ? PINF_F64 : z;
     }
 
     z = x < -1075.0 ? 0.0 : z;

@@ -276,7 +276,7 @@ MATH_MANGLE(lgamma_r_impl)(double x)
             double negadj = MATH_MANGLE(log)(MATH_DIV(pi, BUILTIN_ABS_F64(t * x)));
             ret = negadj - ret;
             bool z = BUILTIN_FRACTION_F64(x) == 0.0;
-            ret = z ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
+            ret = z ? PINF_F64 : ret;
             s = t < 0.0 ? -1 : 1;
             s = z ? 0 : s;
         } else {
@@ -286,7 +286,7 @@ MATH_MANGLE(lgamma_r_impl)(double x)
 
     if (!FINITE_ONLY_OPT()) {
         // Handle negative integer, Inf, NaN
-        ret = BUILTIN_CLASS_F64(ax, CLASS_NZER|CLASS_PZER|CLASS_PINF) | (x < 0.0f & hax >= 0x43300000) ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
+        ret = BUILTIN_CLASS_F64(ax, CLASS_NZER|CLASS_PZER|CLASS_PINF) | (x < 0.0f & hax >= 0x43300000) ? PINF_F64 : ret;
         ret = BUILTIN_ISNAN_F64(x) ? x : ret;
     }
 

@@ -32,7 +32,7 @@ MATH_MANGLE(expm1)(float x)
 #endif
     
     if (!FINITE_ONLY_OPT()) {
-        z = x > 0x1.62e42ep+6f ? AS_FLOAT(PINFBITPATT_SP32) : z;
+        z = x > 0x1.62e42ep+6f ? PINF_F32 : z;
     }
 
     z = x < -17.0f ? -1.0f : z;

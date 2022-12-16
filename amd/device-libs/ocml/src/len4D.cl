@@ -44,7 +44,7 @@ MATH_MANGLE(len4)(double x, double y, double z, double w)
         ret = (BUILTIN_ISINF_F64(x) |
                BUILTIN_ISINF_F64(y) |
                BUILTIN_ISINF_F64(z) |
-               BUILTIN_ISINF_F64(w)) ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
+               BUILTIN_ISINF_F64(w)) ? PINF_F64 : ret;
     }
 
     return ret;

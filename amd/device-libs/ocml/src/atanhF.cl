@@ -22,7 +22,7 @@ MATH_MANGLE(atanh)(float x)
 
     if (!FINITE_ONLY_OPT()) {
         z = y > 1.0f ? QNAN_F32 : z;
-        z = y == 1.0f ? AS_FLOAT(PINFBITPATT_SP32) : z;
+        z = y == 1.0f ? PINF_F32 : z;
     }
 
     return BUILTIN_COPYSIGN_F32(z, x);

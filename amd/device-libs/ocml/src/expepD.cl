@@ -30,7 +30,7 @@ MATH_PRIVATE(expep)(double2 x)
 
     z = BUILTIN_FLDEXP_F64(z, (int)dn);
 
-    z = x.hi > 710.0 ? AS_DOUBLE(PINFBITPATT_DP64) : z;
+    z = x.hi > 710.0 ? PINF_F64 : z;
     z = x.hi < -745.0 ? 0.0 : z;
 #else
     double z = MATH_MANGLE(exp)(x.hi);

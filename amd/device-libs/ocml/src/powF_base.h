@@ -76,8 +76,8 @@ MATH_MANGLE(pow)(float x, float y)
 
     // Now all the edge cases
 #if defined COMPILING_POWR
-    float iz = y < 0.0f ? AS_FLOAT(PINFBITPATT_SP32) : 0.0f;
-    float zi = y < 0.0f ? 0.0f : AS_FLOAT(PINFBITPATT_SP32);
+    float iz = y < 0.0f ? PINF_F32 : 0.0f;
+    float zi = y < 0.0f ? 0.0f : PINF_F32;
 
     if (x == 0.0f)
         ret = iz;
@@ -98,7 +98,8 @@ MATH_MANGLE(pow)(float x, float y)
         ret = QNAN_F32;
 #elif defined COMPILING_POWN
     if (BUILTIN_ISINF_F32(ax) || x == 0.0f)
-        ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (ny < 0) ? 0.0f : AS_FLOAT(PINFBITPATT_SP32), inty == 1 ? x : 0.0f);
+        ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (ny < 0) ? 0.0f : PINF_F32,
+                                   inty == 1 ? x : 0.0f);
 
     if (BUILTIN_ISNAN_F32(x))
         ret = QNAN_F32;
@@ -107,7 +108,8 @@ MATH_MANGLE(pow)(float x, float y)
         ret = 1.0f;
 #elif defined COMPILING_ROOTN
     if (BUILTIN_ISINF_F32(ax) || x == 0.0f)
-        ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (ny < 0) ? 0.0f : AS_FLOAT(PINFBITPATT_SP32), inty == 1 ? x : 0.0f);
+        ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (ny < 0) ? 0.0f : PINF_F32,
+                                   inty == 1 ? x : 0.0f);
 
     if ((x < 0.0f && inty != 1) || ny == 0)
         ret = QNAN_F32;
@@ -119,7 +121,8 @@ MATH_MANGLE(pow)(float x, float y)
         ret = ax == 1.0f ? ax : (samesign(y, ax - 1.0f) ? ay : 0.0f);
 
     if (BUILTIN_ISINF_F32(ax) || x == 0.0f)
-        ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (y < 0.0f) ? 0.0f : AS_FLOAT(PINFBITPATT_SP32), inty == 1 ? x : 0.0f);
+        ret = BUILTIN_COPYSIGN_F32((x == 0.0f) ^ (y < 0.0f) ? 0.0f : PINF_F32,
+                                   inty == 1 ? x : 0.0f);
 
     if (BUILTIN_ISNAN_F32(x) || BUILTIN_ISNAN_F32(y))
         ret = QNAN_F32;

@@ -33,7 +33,7 @@ MATH_MANGLE(len3)(float x, float y, float z)
     if (!FINITE_ONLY_OPT()) {
         ret = (BUILTIN_ISINF_F32(x) |
                BUILTIN_ISINF_F32(y) |
-               BUILTIN_ISINF_F32(z)) ? AS_FLOAT(PINFBITPATT_SP32) : ret;
+               BUILTIN_ISINF_F32(z)) ? PINF_F32 : ret;
     }
 
     return ret;

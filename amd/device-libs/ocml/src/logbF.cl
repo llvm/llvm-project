@@ -15,7 +15,7 @@ MATH_MANGLE(logb)(float x)
     if (!FINITE_ONLY_OPT()) {
         float ax = BUILTIN_ABS_F32(x);
         ret = BUILTIN_ISFINITE_F32(ax) ? ret : ax;
-        ret = x == 0.0f ? AS_FLOAT(NINFBITPATT_SP32) : ret;
+        ret = x == 0.0f ? NINF_F32 : ret;
     }
 
     return ret;

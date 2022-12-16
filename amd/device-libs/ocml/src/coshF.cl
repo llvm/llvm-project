@@ -21,7 +21,7 @@ MATH_MANGLE(cosh)(float x)
     float z = c.hi;
     
     if (!FINITE_ONLY_OPT()) {
-        z = x > 0x1.65a9f8p+6f ? AS_FLOAT(PINFBITPATT_SP32) : z;
+        z = x > 0x1.65a9f8p+6f ? PINF_F32 : z;
     }
 
     return z;

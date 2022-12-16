@@ -21,7 +21,7 @@ MATH_MANGLE(sinh)(float x)
     float z = s.hi;
 
     if (!FINITE_ONLY_OPT()) {
-        z = y > 0x1.65a9f8p+6f ? AS_FLOAT(PINFBITPATT_SP32) : z;
+        z = y > 0x1.65a9f8p+6f ? PINF_F32 : z;
     }
 
     z = y < 0x1.0p-12f ? y : z;

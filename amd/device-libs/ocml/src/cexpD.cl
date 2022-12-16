@@ -29,7 +29,7 @@ MATH_MANGLE(cexp)(double2 z)
             ri = isfinite ? ri : 0.0;
         }
         if (BUILTIN_CLASS_F64(x, CLASS_PINF)) {
-            rr = isfinite ? rr : AS_DOUBLE(PINFBITPATT_DP64);
+            rr = isfinite ? rr : PINF_F64;
             ri = isfinite ? ri : QNAN_F64;
             ri = y == 0.0 ? y : ri;
         }

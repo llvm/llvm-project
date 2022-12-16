@@ -23,7 +23,7 @@ MATH_MANGLE(len4)(half x, half y, half z, half w)
         ret = (BUILTIN_ISINF_F16(x) |
                BUILTIN_ISINF_F16(y) |
                BUILTIN_ISINF_F16(z) |
-               BUILTIN_ISINF_F16(w)) ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
+               BUILTIN_ISINF_F16(w)) ? PINF_F16 : ret;
     }
 
     return ret;

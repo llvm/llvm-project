@@ -86,10 +86,10 @@ MATH_MANGLE(exp)(float x)
 
 #if defined COMPILING_EXP
             r = x < -0x1.5d58a0p+6f ? 0.0f : r;
-            r = x > 0x1.62e430p+6f ? AS_FLOAT(PINFBITPATT_SP32) : r;
+            r = x > 0x1.62e430p+6f ? PINF_F32 : r;
 #else
             r = x < -0x1.2f7030p+5f ? 0.0f : r;
-            r = x > 0x1.344136p+5f ? AS_FLOAT(PINFBITPATT_SP32): r;
+            r = x > 0x1.344136p+5f ? PINF_F32 : r;
 #endif
             return r;
 #endif
@@ -146,10 +146,10 @@ MATH_MANGLE(exp)(float x)
 
 #if defined COMPILING_EXP
             r = x < -0x1.9d1da0p+6f ? 0.0f : r;
-            r = x > 0x1.62e430p+6f ? AS_FLOAT(PINFBITPATT_SP32) : r;
+            r = x > 0x1.62e430p+6f ? PINF_F32 : r;
 #else
             r = x < -0x1.66d3e8p+5f ? 0.0f : r;
-            r = x > 0x1.344136p+5f ? AS_FLOAT(PINFBITPATT_SP32): r;
+            r = x > 0x1.344136p+5f ? PINF_F32 : r;
 #endif
             return r;
 #endif

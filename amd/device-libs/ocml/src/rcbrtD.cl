@@ -29,7 +29,7 @@ MATH_MANGLE(rcbrt)(double x)
 
     if (!FINITE_ONLY_OPT()) {
         c = BUILTIN_CLASS_F64(a, CLASS_PINF) ? 0.0 : c;
-        c = x == 0.0 ? AS_DOUBLE(PINFBITPATT_DP64) : c;
+        c = x == 0.0 ? PINF_F64 : c;
     }
 
     return BUILTIN_COPYSIGN_F64(c, x);

@@ -67,7 +67,7 @@ MATH_MANGLE(erfcx)(double x)
         double x2l = MATH_MAD(x, x, -x2h);
         double e = MATH_MANGLE(exp)(x2h);
         ret = MATH_MAD(2.0, MATH_MAD(e, x2l, e), -ret);
-        ret = x < -0x1.aa0f4d2e063cep+4 ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
+        ret = x < -0x1.aa0f4d2e063cep+4 ? PINF_F64 : ret;
     }
 
     return ret;
@@ -132,7 +132,7 @@ MATH_MANGLE(erfcx)(double x)
         double x2h = ax * ax;
         double x2l = BUILTIN_FMA_F64(ax, ax, -x2h);
         ret = MATH_MANGLE(exp)(x2h) * MATH_MANGLE(exp)(x2l) * 2.0 - ret;
-        ret = x < -27.0 ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
+        ret = x < -27.0 ? PINF_F64 : ret;
     }
 
     return ret;

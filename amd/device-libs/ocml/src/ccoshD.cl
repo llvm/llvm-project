@@ -30,8 +30,8 @@ MATH_MANGLE(ccosh)(double2 z)
         sxhi = sx.hi;
     } else {
         bool b = x >= 0x1.6395a2079b70cp+9;
-        cxhi = b ? AS_DOUBLE(PINFBITPATT_DP64) : cx.hi;
-        sxhi = b ? AS_DOUBLE(PINFBITPATT_DP64) : sx.hi;
+        cxhi = b ? PINF_F64 : cx.hi;
+        sxhi = b ? PINF_F64 : sx.hi;
     }
 
     double rr = BUILTIN_FLDEXP_F64(cxhi * cy, 1);

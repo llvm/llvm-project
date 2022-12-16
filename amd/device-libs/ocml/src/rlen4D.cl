@@ -43,7 +43,7 @@ MATH_MANGLE(rlen4)(double x, double y, double z, double w)
     double ret = BUILTIN_FLDEXP_F64(v, -e);
 
     if (!FINITE_ONLY_OPT()) {
-        ret = a == 0.0 ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
+        ret = a == 0.0 ? PINF_F64 : ret;
 
         ret = (BUILTIN_ISNAN_F64(x) |
                BUILTIN_ISNAN_F64(y) |

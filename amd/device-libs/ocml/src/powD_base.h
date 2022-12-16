@@ -58,8 +58,8 @@ MATH_MANGLE(pow)(double x, double y)
 
     // Now all the edge cases
 #if defined COMPILING_POWR
-    double iz = y < 0.0 ? AS_DOUBLE(PINFBITPATT_DP64) : 0.0;
-    double zi = y < 0.0 ? 0.0 : AS_DOUBLE(PINFBITPATT_DP64);
+    double iz = y < 0.0 ? PINF_F64 : 0.0;
+    double zi = y < 0.0 ? 0.0 : PINF_F64;
 
     if (x == 0.0)
         ret = iz;
@@ -80,7 +80,8 @@ MATH_MANGLE(pow)(double x, double y)
         ret = QNAN_F64;
 #elif defined COMPILING_POWN
     if (BUILTIN_ISINF_F64(ax) || x == 0.0)
-        ret = BUILTIN_COPYSIGN_F64((x == 0.0) ^ (ny < 0) ? 0.0 : AS_DOUBLE(PINFBITPATT_DP64), inty == 1 ? x : 0.0);
+        ret = BUILTIN_COPYSIGN_F64((x == 0.0) ^ (ny < 0) ? 0.0 : PINF_F64,
+                                   inty == 1 ? x : 0.0);
 
     if (BUILTIN_ISNAN_F64(x))
         ret = QNAN_F64;
@@ -89,7 +90,8 @@ MATH_MANGLE(pow)(double x, double y)
         ret = 1.0;
 #elif defined COMPILING_ROOTN
     if (BUILTIN_ISINF_F64(ax) || x == 0.0)
-        ret = BUILTIN_COPYSIGN_F64((x == 0.0) ^ (ny < 0) ? 0.0 : AS_DOUBLE(PINFBITPATT_DP64), inty == 1 ? x : 0.0);
+        ret = BUILTIN_COPYSIGN_F64((x == 0.0) ^ (ny < 0) ? 0.0 : PINF_F64,
+                                   inty == 1 ? x : 0.0);
 
     if ((x < 0.0 && inty != 1) || ny == 0)
         ret = QNAN_F64;
@@ -101,7 +103,8 @@ MATH_MANGLE(pow)(double x, double y)
         ret = ax == 1.0 ? ax : (samesign(y, ax - 1.0) ? ay : 0.0);
 
     if (BUILTIN_ISINF_F64(ax) || x == 0.0)
-        ret = BUILTIN_COPYSIGN_F64((x == 0.0) ^ (y < 0.0) ? 0.0 : AS_DOUBLE(PINFBITPATT_DP64), inty == 1 ? x : 0.0);
+        ret = BUILTIN_COPYSIGN_F64((x == 0.0) ^ (y < 0.0) ? 0.0 : PINF_F64,
+                                   inty == 1 ? x : 0.0);
 
     if (BUILTIN_ISNAN_F64(x) || BUILTIN_ISNAN_F64(y))
         ret = QNAN_F64;

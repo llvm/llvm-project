@@ -56,7 +56,7 @@ MATH_MANGLE(cacosh)(double2 z)
     double ri = MATH_MANGLE(atan2)(t.y, t.x);
 
     if (!FINITE_ONLY_OPT()) {
-        rr = (BUILTIN_ISINF_F64(z.x) | BUILTIN_ISINF_F64(z.y)) ? AS_DOUBLE(PINFBITPATT_DP64) : rr;
+        rr = (BUILTIN_ISINF_F64(z.x) | BUILTIN_ISINF_F64(z.y)) ? PINF_F64 : rr;
     }
 
     return (double2)(rr, ri);

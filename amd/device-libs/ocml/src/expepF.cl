@@ -27,7 +27,7 @@ MATH_PRIVATE(expep)(float2 x)
 
     z = BUILTIN_FLDEXP_F32(z, (int)fn);
 
-    z = x.hi > 89.0f ? AS_FLOAT(PINFBITPATT_SP32) : z;
+    z = x.hi > 89.0f ? PINF_F32 : z;
     z = x.hi < -104.0f ? 0.0f : z;
 #else
     float d = x.hi == 0x1.62e430p+6f ? 0x1.0p-17f : 0.0f;

@@ -21,7 +21,7 @@ MATH_MANGLE(cosh)(double x)
     double z = c.hi;
     
     if (!FINITE_ONLY_OPT()) {
-        z = x >= 0x1.633ce8fb9f87ep+9 ? AS_DOUBLE(PINFBITPATT_DP64) : z;
+        z = x >= 0x1.633ce8fb9f87ep+9 ? PINF_F64 : z;
     }
 
     return z;

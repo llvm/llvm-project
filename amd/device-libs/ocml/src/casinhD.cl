@@ -56,7 +56,7 @@ MATH_MANGLE(casinh)(double2 z)
     double ri = BUILTIN_COPYSIGN_F64(MATH_MANGLE(atan2)(t.y, t.x), z.y);
 
     if (!FINITE_ONLY_OPT()) {
-        double i = BUILTIN_COPYSIGN_F64(AS_DOUBLE(PINFBITPATT_DP64), z.x);
+        double i = BUILTIN_COPYSIGN_F64(PINF_F64, z.x);
         rr = (BUILTIN_ISINF_F64(z.x) | BUILTIN_ISINF_F64(z.y)) ? i : rr;
     }
 

@@ -56,7 +56,7 @@ MATH_MANGLE(cacosh)(float2 z)
     float ri = MATH_MANGLE(atan2)(t.y, t.x);
 
     if (!FINITE_ONLY_OPT()) {
-        rr = (BUILTIN_ISINF_F32(z.x) | BUILTIN_ISINF_F32(z.y)) ? AS_FLOAT(PINFBITPATT_SP32) : rr;
+        rr = (BUILTIN_ISINF_F32(z.x) | BUILTIN_ISINF_F32(z.y)) ? PINF_F32 : rr;
     }
 
     return (float2)(rr, ri);

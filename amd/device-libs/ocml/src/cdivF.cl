@@ -48,15 +48,15 @@ MATH_MANGLE(cdiv)(float2 zn, float2 zd)
     if (!FINITE_ONLY_OPT()) {
         if (BUILTIN_ISNAN_F32(rr) && BUILTIN_ISNAN_F32(ri)) {
             if (d2 == 0.0f && (!BUILTIN_ISNAN_F32(zn.x) || !BUILTIN_ISNAN_F32(zn.y))) {
-                float i = BUILTIN_COPYSIGN_F32(AS_FLOAT(PINFBITPATT_SP32), zd.x);
+                float i = BUILTIN_COPYSIGN_F32(PINF_F32, zd.x);
                 rr = i * zn.x;
                 ri = i * zn.y;
             } else if ((BUILTIN_ISINF_F32(zn.x) || BUILTIN_ISINF_F32(zn.y)) &&
                        (BUILTIN_ISFINITE_F32(zd.x) && BUILTIN_ISFINITE_F32(zd.y))) {
                 float znx = BUILTIN_COPYSIGN_F32(BUILTIN_ISINF_F32(zn.x) ? 1.0f : 0.0f, zn.x);
                 float zny = BUILTIN_COPYSIGN_F32(BUILTIN_ISINF_F32(zn.y) ? 1.0f : 0.0f, zn.y);
-                rr = AS_FLOAT(PINFBITPATT_SP32) * MATH_MAD(znx, zd.x,   zny * zd.y);
-                ri = AS_FLOAT(PINFBITPATT_SP32) * MATH_MAD(zny, zd.x,  -znx * zd.y);
+                rr = PINF_F32 * MATH_MAD(znx, zd.x,   zny * zd.y);
+                ri = PINF_F32 * MATH_MAD(zny, zd.x,  -znx * zd.y);
             } else if ((BUILTIN_ISINF_F32(zd.x) || BUILTIN_ISINF_F32(zd.y)) &&
                        (BUILTIN_ISFINITE_F32(zn.x) && BUILTIN_ISFINITE_F32(zn.y))) {
                 zdx = BUILTIN_COPYSIGN_F32(BUILTIN_ISINF_F32(zd.x) ? 1.0f : 0.0f, zd.x);

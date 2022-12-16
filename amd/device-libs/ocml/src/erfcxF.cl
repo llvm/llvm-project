@@ -51,7 +51,7 @@ MATH_MANGLE(erfcx)(float x)
         float x2l = BUILTIN_FMA_F32(x, x, -x2h);
         float e = MATH_MANGLE(exp)(x2h);
         ret = BUILTIN_FMA_F32(2.0f, BUILTIN_FMA_F32(e, x2l, e), -ret);
-        ret = x < -0x1.2d6abcp+3f ? AS_FLOAT(PINFBITPATT_SP32) : ret;
+        ret = x < -0x1.2d6abcp+3f ? PINF_F32 : ret;
     }
 
     return ret;
@@ -108,7 +108,7 @@ MATH_MANGLE(erfcx)(float x)
         }
 
         ret = MATH_MANGLE(exp)(x2h) * MATH_MANGLE(exp)(x2l) * 2.0f - ret;
-        ret = x < -10.0f ? AS_FLOAT(PINFBITPATT_SP32) : ret;
+        ret = x < -10.0f ? PINF_F32 : ret;
     }
 
     return ret;

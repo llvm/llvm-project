@@ -46,7 +46,7 @@ MATH_MANGLE(log)(double a)
     if (!FINITE_ONLY_OPT()) {
         ret = BUILTIN_ISINF_F64(a) ? a : ret;
         ret = a < 0.0 ? QNAN_F64 : ret;
-        ret = a == 0.0 ? AS_DOUBLE(NINFBITPATT_DP64) : ret;
+        ret = a == 0.0 ? NINF_F64 : ret;
     }
 
     return ret;

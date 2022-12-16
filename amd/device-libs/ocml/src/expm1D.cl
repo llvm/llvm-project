@@ -40,7 +40,7 @@ MATH_MANGLE(expm1)(double x)
 #endif
 
     if (!FINITE_ONLY_OPT()) {
-        z = x > 0x1.62e42fefa39efp+9 ? AS_DOUBLE(PINFBITPATT_DP64) : z;
+        z = x > 0x1.62e42fefa39efp+9 ? PINF_F64 : z;
     }
 
     z = x < -37.0 ? -1.0 : z;

@@ -42,7 +42,7 @@ MATH_MANGLE(len4)(float x, float y, float z, float w)
         ret = (BUILTIN_ISINF_F32(x) |
                BUILTIN_ISINF_F32(y) |
                BUILTIN_ISINF_F32(z) |
-               BUILTIN_ISINF_F32(w)) ? AS_FLOAT(PINFBITPATT_SP32) : ret;
+               BUILTIN_ISINF_F32(w)) ? PINF_F32 : ret;
     }
 
     return ret;

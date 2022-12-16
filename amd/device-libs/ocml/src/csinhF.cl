@@ -29,8 +29,8 @@ MATH_MANGLE(csinh)(float2 z)
 
     if (!FINITE_ONLY_OPT()) {
         bool b = x >= 0x1.686fc0p+6f;
-        cxhi = b ? AS_FLOAT(PINFBITPATT_SP32) : cxhi;
-        sxhi = b ? AS_FLOAT(PINFBITPATT_SP32) : sxhi;
+        cxhi = b ? PINF_F32 : cxhi;
+        sxhi = b ? PINF_F32 : sxhi;
     }
 
     bool s = x >= 0x1.0p-12f;

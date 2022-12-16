@@ -30,8 +30,8 @@ MATH_MANGLE(ccosh)(float2 z)
         sxhi = sx.hi;
     } else {
         bool b = x >= 0x1.686fc0p+6f;
-        cxhi = b ? AS_FLOAT(PINFBITPATT_SP32) : cx.hi;
-        sxhi = b ? AS_FLOAT(PINFBITPATT_SP32) : sx.hi;
+        cxhi = b ? PINF_F32 : cx.hi;
+        sxhi = b ? PINF_F32 : sx.hi;
     }
 
     float rr = BUILTIN_FLDEXP_F32(cxhi * cy, 1);

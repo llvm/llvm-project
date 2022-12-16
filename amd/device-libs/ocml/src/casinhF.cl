@@ -56,7 +56,7 @@ MATH_MANGLE(casinh)(float2 z)
     float ri = BUILTIN_COPYSIGN_F32(MATH_MANGLE(atan2)(t.y, t.x), z.y);
 
     if (!FINITE_ONLY_OPT()) {
-        float i = BUILTIN_COPYSIGN_F32(AS_FLOAT(PINFBITPATT_SP32), z.x);
+        float i = BUILTIN_COPYSIGN_F32(PINF_F32, z.x);
         rr = (BUILTIN_ISINF_F32(z.x) | BUILTIN_ISINF_F32(z.y)) ? i : rr;
     }
 

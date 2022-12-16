@@ -20,7 +20,7 @@ MATH_MANGLE(hypot)(half x, half y)
 
     if (!FINITE_ONLY_OPT()) {
         ret = (BUILTIN_ISINF_F16(x) | BUILTIN_ISINF_F16(y)) ?
-              AS_HALF((ushort)PINFBITPATT_HP16) : ret;
+              PINF_F16 : ret;
     }
 
     return ret;

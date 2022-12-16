@@ -20,7 +20,7 @@ MATH_MANGLE(hypot)(float x, float y)
 
     if (!FINITE_ONLY_OPT()) {
         ret = BUILTIN_ISINF_F32(t) ?
-              AS_FLOAT(PINFBITPATT_SP32) : ret;
+              PINF_F32 : ret;
     }
 
     return ret;

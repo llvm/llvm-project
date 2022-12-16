@@ -15,7 +15,7 @@ MATH_MANGLE(logb)(double x)
     if (!FINITE_ONLY_OPT()) {
         double ax = BUILTIN_ABS_F64(x);
         ret = BUILTIN_ISFINITE_F64(ax) ? ret : ax;
-        ret = x == 0.0 ? AS_DOUBLE(NINFBITPATT_DP64) : ret;
+        ret = x == 0.0 ? NINF_F64 : ret;
     }
 
     return ret;
