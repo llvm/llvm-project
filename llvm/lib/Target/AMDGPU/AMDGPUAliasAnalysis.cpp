@@ -73,8 +73,8 @@ static AliasResult getAliasResult(unsigned AS1, unsigned AS2) {
 }
 
 AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
-                                  const MemoryLocation &LocB,
-                                  AAQueryInfo &AAQI) {
+                                  const MemoryLocation &LocB, AAQueryInfo &AAQI,
+                                  const Instruction *) {
   unsigned asA = LocA.Ptr->getType()->getPointerAddressSpace();
   unsigned asB = LocB.Ptr->getType()->getPointerAddressSpace();
 
@@ -121,7 +121,7 @@ AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
   }
 
   // Forward the query to the next alias analysis.
-  return AAResultBase::alias(LocA, LocB, AAQI);
+  return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
 }
 
 ModRefInfo AMDGPUAAResult::getModRefInfoMask(const MemoryLocation &Loc,
