@@ -2,8 +2,8 @@
 
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
-  // expected-error@below {{expects iterator_interchange to be a permutation, found [1, 1]}}
-  transform.structured.interchange %arg0 {iterator_interchange = [1, 1]}
+  // expected-error@below {{'transform.structured.interchange' op expects iterator_interchange to be a permutation, found 1, 1}}
+  transform.structured.interchange %arg0 iterator_interchange = [1, 1] 
 }
 
 // -----
@@ -36,4 +36,12 @@ transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
   // expected-error@below {{expects transpose_paddings to be a permutation, found [1, 1]}}
   transform.structured.pad %arg0 {transpose_paddings=[[1, 1]]}
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+  // expected-error@below {{'transform.structured.interchange' op attribute 'iterator_interchange' failed to satisfy constraint: i64 dense array attribute whose value is non-negative}}
+  transform.structured.interchange %arg0 iterator_interchange = [-3, 1]
 }
