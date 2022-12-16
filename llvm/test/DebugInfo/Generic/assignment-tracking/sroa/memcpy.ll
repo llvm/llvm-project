@@ -25,22 +25,12 @@
 
 ;; Split alloca.
 ; CHECK: entry:
-; CHECK-NEXT: %To.sroa.0 = alloca { i32, i32, i32 }, align 8, !DIAssignID ![[ID_1:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata {{.+}} undef, metadata ![[TO:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 96), metadata ![[ID_1]], metadata ptr %To.sroa.0, metadata !DIExpression()), !dbg
-
-; CHECK-NEXT: %To.sroa.4 = alloca { i32, i32, i32 }, align 8, !DIAssignID ![[ID_3:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata {{.+}} undef, metadata ![[TO]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 96), metadata ![[ID_3]], metadata ptr %To.sroa.4, metadata !DIExpression()), !dbg
-
-;; Split memcpy.
-; CHECK: call void @llvm.memcpy{{.*}}(ptr align 8 %To.sroa.0, ptr align 4 @From, i64 12, i1 false),{{.*}}!DIAssignID ![[ID_4:[0-9]+]]
-;; This slice has been split and is promoted.
-; CHECK: %To.sroa.3.0.copyload = load i32, ptr getelementptr inbounds (i8, ptr @From, i64 12)
-; CHECK: call void @llvm.memcpy{{.*}}(ptr align 8 %To.sroa.4, ptr align 4 getelementptr inbounds (i8, ptr @From, i64 16), i64 12, i1 false){{.*}}!DIAssignID ![[ID_6:[0-9]+]]
-
-;; Intrinsics for the splits above.
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata {{.+}} undef, metadata ![[TO]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 96), metadata ![[ID_4]], metadata ptr %To.sroa.0, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %To.sroa.3.0.copyload, metadata ![[TO]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata {{.+}} undef, metadata ![[TO]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 96), metadata ![[ID_6]], metadata ptr %To.sroa.4, metadata !DIExpression()), !dbg
+; CHECK-NEXT: %To.sroa.0.sroa.0.0.copyload = load <12 x i8>, ptr @From, align 4, !dbg
+; CHECK-NEXT: %To.sroa.3.0.copyload = load i32, ptr getelementptr inbounds (i8, ptr @From, i64 12), align 4, !dbg
+; CHECK-NEXT: %To.sroa.4.sroa.0.0.copyload = load <12 x i8>, ptr getelementptr inbounds (i8, ptr @From, i64 16), align 4, !dbg
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata <12 x i8> %To.sroa.0.sroa.0.0.copyload, metadata ![[TO:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 96), metadata ![[ID_1:[0-9]+]], metadata ptr undef, metadata !DIExpression()), !dbg
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %To.sroa.3.0.copyload, metadata ![[TO]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata ![[ID_3:[0-9]+]], metadata ptr undef, metadata !DIExpression()), !dbg
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata <12 x i8> %To.sroa.4.sroa.0.0.copyload, metadata ![[TO]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 96), metadata ![[ID_6:[0-9]+]], metadata ptr undef, metadata !DIExpression()), !dbg
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 

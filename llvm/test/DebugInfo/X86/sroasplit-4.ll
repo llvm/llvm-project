@@ -1,12 +1,12 @@
 ; RUN: opt -passes='sroa' < %s -S -o - | FileCheck %s
 ;
 ; Test that recursively splitting an alloca updates the debug info correctly.
-; CHECK: %[[T:.*]] = load i64, ptr @t, align 8
-; CHECK: call void @llvm.dbg.value(metadata i64 %[[T]], metadata ![[Y:.*]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))
-; CHECK: %[[T1:.*]] = load i64, ptr @t, align 8
-; CHECK: call void @llvm.dbg.value(metadata i64 %[[T1]], metadata ![[Y]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64))
-; CHECK: call void @llvm.dbg.value(metadata i64 %[[T]], metadata ![[R:.*]], metadata !DIExpression(DW_OP_LLVM_fragment, 192, 64))
-; CHECK: call void @llvm.dbg.value(metadata i64 %[[T1]], metadata ![[R]], metadata !DIExpression(DW_OP_LLVM_fragment, 256, 64))
+; CHECK: call void @llvm.dbg.value(metadata <16 x i8> %[[Y_VEC:.*]], metadata ![[Y:.*]], metadata !DIExpression())
+; CHECK: call void @llvm.dbg.value(metadata <16 x i8> %[[Y_VEC1:.*]], metadata ![[Y]], metadata !DIExpression())
+; CHECK: call void @llvm.dbg.value(metadata i32 0, metadata ![[R:.*]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32))
+; CHECK: call void @llvm.dbg.value(metadata i64 0, metadata ![[R]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64))
+; CHECK: call void @llvm.dbg.value(metadata i64 0, metadata ![[R]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 64))
+; CHECK: call void @llvm.dbg.value(metadata <16 x i8> %[[Y_VEC1]], metadata ![[R]], metadata !DIExpression(DW_OP_LLVM_fragment, 192, 128))
 ;
 ; struct p {
 ;   __SIZE_TYPE__ s;

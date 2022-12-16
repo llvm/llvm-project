@@ -515,13 +515,17 @@ typedef struct {
   private char *p;
 } StructTy3;
 
-// CHECK-LABEL: test_memset_private
-// CHECK: call void @llvm.memset.p5i8.i64(i8 addrspace(5)* noundef align 8 {{.*}}, i8 0, i64 32, i1 false)
-// CHECK: [[GEP:%.*]] = getelementptr inbounds %struct.StructTy3, %struct.StructTy3 addrspace(5)* %ptr, i32 0, i32 4
-// CHECK: store i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(5)* addrspace(5)* [[GEP]]
-// CHECK: [[GEP1:%.*]] = getelementptr inbounds i8, i8 addrspace(5)* {{.*}}, i32 36
-// CHECK: [[GEP1_CAST:%.*]] = bitcast i8 addrspace(5)* [[GEP1]] to i32 addrspace(5)*
-// CHECK: store i32 0, i32 addrspace(5)* [[GEP1_CAST]], align 4
+// CHECK-LABEL: @test_memset_private(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast [[STRUCT_STRUCTTY3:%.*]] addrspace(5)* [[PTR:%.*]] to i8 addrspace(5)*
+// CHECK-NEXT:    [[S3_SROA_0_SROA_0_0_S3_SROA_0_0__SROA_CAST2_SROA_CAST:%.*]] = bitcast [[STRUCT_STRUCTTY3]] addrspace(5)* [[PTR]] to <32 x i8> addrspace(5)*
+// CHECK-NEXT:    store <32 x i8> zeroinitializer, <32 x i8> addrspace(5)* [[S3_SROA_0_SROA_0_0_S3_SROA_0_0__SROA_CAST2_SROA_CAST]], align 8, !tbaa.struct !9
+// CHECK-NEXT:    [[S3_SROA_4_0__SROA_IDX6:%.*]] = getelementptr inbounds [[STRUCT_STRUCTTY3]], [[STRUCT_STRUCTTY3]] addrspace(5)* [[PTR]], i32 0, i32 4
+// CHECK-NEXT:    store i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(5)* addrspace(5)* [[S3_SROA_4_0__SROA_IDX6]], align 8, !tbaa.struct !12
+// CHECK-NEXT:    [[S3_SROA_5_0__SROA_IDX:%.*]] = getelementptr inbounds i8, i8 addrspace(5)* [[TMP0]], i32 36
+// CHECK-NEXT:    [[S3_SROA_5_0__SROA_CAST8:%.*]] = bitcast i8 addrspace(5)* [[S3_SROA_5_0__SROA_IDX]] to i32 addrspace(5)*
+// CHECK-NEXT:    store i32 0, i32 addrspace(5)* [[S3_SROA_5_0__SROA_CAST8]], align 4, !tbaa.struct !13
+// CHECK-NEXT:    ret void
 void test_memset_private(private StructTy3 *ptr) {
   StructTy3 S3 = {0, 0, 0, 0, 0};
   *ptr = S3;
