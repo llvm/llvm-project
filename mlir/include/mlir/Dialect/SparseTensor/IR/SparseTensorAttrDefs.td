@@ -173,6 +173,12 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// Constructs a new encoding with the dimOrdering and higherOrdering
     /// reset to the default/identity.
     SparseTensorEncodingAttr withoutOrdering() const;
+
+    /// Return true if every level is dense in the encoding.
+    bool isAllDense() const;
+
+    /// Return true if the encoding has an identity dimension ordering.
+    bool hasIdDimOrdering() const;
   }];
 
   let genVerifyDecl = 1;
