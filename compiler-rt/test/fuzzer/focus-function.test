@@ -2,7 +2,7 @@
 #
 # TODO: don't require linux.
 # REQUIRES: linux
-UNSUPPORTED: aarch64
+UNSUPPORTED: target=aarch64{{.*}}
 
 RUN: %cpp_compiler %S/OnlySomeBytesTest.cpp -o %t-exe
 
