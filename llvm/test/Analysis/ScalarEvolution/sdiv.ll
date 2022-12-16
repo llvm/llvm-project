@@ -9,7 +9,7 @@ define dso_local void @_Z4loopi(i32 %width) local_unnamed_addr #0 {
 ; CHECK-NEXT:  Classifying expressions for: @_Z4loopi
 ; CHECK-NEXT:    %storage = alloca [2 x i32], align 4
 ; CHECK-NEXT:    --> %storage U: [0,-3) S: [-9223372036854775808,9223372036854775805)
-; CHECK-NEXT:    %0 = bitcast [2 x i32]* %storage to i8*
+; CHECK-NEXT:    %0 = bitcast ptr %storage to ptr
 ; CHECK-NEXT:    --> %storage U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.cond> U: [0,-2147483648) S: [0,-2147483648) Exits: %width LoopDispositions: { %for.cond: Computable }
@@ -17,13 +17,13 @@ define dso_local void @_Z4loopi(i32 %width) local_unnamed_addr #0 {
 ; CHECK-NEXT:    --> ({0,+,1}<nuw><nsw><%for.cond> /u 2) U: [0,1073741824) S: [0,1073741824) Exits: (%width /u 2) LoopDispositions: { %for.cond: Computable }
 ; CHECK-NEXT:    %idxprom = sext i32 %rem to i64
 ; CHECK-NEXT:    --> ({0,+,1}<nuw><nsw><%for.cond> /u 2) U: [0,2147483648) S: [0,2147483648) Exits: ((zext i32 %width to i64) /u 2) LoopDispositions: { %for.cond: Computable }
-; CHECK-NEXT:    %arrayidx = getelementptr inbounds [2 x i32], [2 x i32]* %storage, i64 0, i64 %idxprom
+; CHECK-NEXT:    %arrayidx = getelementptr inbounds [2 x i32], ptr %storage, i64 0, i64 %idxprom
 ; CHECK-NEXT:    --> ((4 * ({0,+,1}<nuw><nsw><%for.cond> /u 2))<nuw><nsw> + %storage) U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: ((4 * ((zext i32 %width to i64) /u 2))<nuw><nsw> + %storage) LoopDispositions: { %for.cond: Computable }
-; CHECK-NEXT:    %1 = load i32, i32* %arrayidx, align 4
+; CHECK-NEXT:    %1 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %call = call i32 @_Z3adji(i32 %1)
 ; CHECK-NEXT:    --> %call U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
-; CHECK-NEXT:    %2 = load i32, i32* %arrayidx, align 4
+; CHECK-NEXT:    %2 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    --> %2 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %add = add nsw i32 %2, %call
 ; CHECK-NEXT:    --> (%2 + %call) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
@@ -39,9 +39,9 @@ define dso_local void @_Z4loopi(i32 %width) local_unnamed_addr #0 {
 ;
 entry:
   %storage = alloca [2 x i32], align 4
-  %0 = bitcast [2 x i32]* %storage to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %0) #4
-  call void @llvm.memset.p0i8.i64(i8* align 4 %0, i8 0, i64 8, i1 false)
+  %0 = bitcast ptr %storage to ptr
+  call void @llvm.lifetime.start.p0(i64 8, ptr %0) #4
+  call void @llvm.memset.p0.i64(ptr align 4 %0, i8 0, i64 8, i1 false)
   br label %for.cond
 
 for.cond:
@@ -50,26 +50,26 @@ for.cond:
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %0) #4
+  call void @llvm.lifetime.end.p0(i64 8, ptr %0) #4
   ret void
 
 for.body:
   %rem = sdiv i32 %i.0, 2
   %idxprom = sext i32 %rem to i64
-  %arrayidx = getelementptr inbounds [2 x i32], [2 x i32]* %storage, i64 0, i64 %idxprom
-  %1 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [2 x i32], ptr %storage, i64 0, i64 %idxprom
+  %1 = load i32, ptr %arrayidx, align 4
   %call = call i32 @_Z3adji(i32 %1)
-  %2 = load i32, i32* %arrayidx, align 4
+  %2 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %2, %call
-  store i32 %add, i32* %arrayidx, align 4
+  store i32 %add, ptr %arrayidx, align 4
   %inc = add nsw i32 %i.0, 1
   br label %for.cond
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #2
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #2
 
 declare dso_local i32 @_Z3adji(i32) local_unnamed_addr #3
 
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
