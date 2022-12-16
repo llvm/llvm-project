@@ -1,4 +1,4 @@
-UNSUPPORTED: darwin, freebsd, windows
+UNSUPPORTED: darwin, target={{.*(freebsd|windows).*}}
 
 RUN: %cpp_compiler -fno-sanitize=address %S/StrstrTest.cpp -o %t-NoAsanStrstrTest
 RUN: not %run %t-NoAsanStrstrTest -seed=1 -runs=2000000   2>&1 | FileCheck %s
