@@ -139,9 +139,7 @@ OptTable::OptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase)
   }
 
   // Build prefix chars.
-  for (StringSet<>::const_iterator I = PrefixesUnion.begin(),
-                                   E = PrefixesUnion.end(); I != E; ++I) {
-    StringRef Prefix = I->getKey();
+  for (const StringRef &Prefix : PrefixesUnion.keys()) {
     for (char C : Prefix)
       if (!is_contained(PrefixChars, C))
         PrefixChars.push_back(C);
@@ -161,9 +159,8 @@ const Option OptTable::getOption(OptSpecifier Opt) const {
 static bool isInput(const StringSet<> &Prefixes, StringRef Arg) {
   if (Arg == "-")
     return true;
-  for (StringSet<>::const_iterator I = Prefixes.begin(),
-                                   E = Prefixes.end(); I != E; ++I)
-    if (Arg.startswith(I->getKey()))
+  for (const StringRef &Prefix : Prefixes.keys())
+    if (Arg.startswith(Prefix))
       return false;
   return true;
 }

@@ -10,6 +10,7 @@
 #define LLVM_OPTION_OPTTABLE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Option/OptSpecifier.h"
@@ -74,7 +75,7 @@ private:
   /// The union of all option prefixes. If an argument does not begin with
   /// one of these, it is an input.
   StringSet<> PrefixesUnion;
-  std::string PrefixChars;
+  SmallString<8> PrefixChars;
 
 private:
   const Info &getInfo(OptSpecifier Opt) const {
