@@ -26,11 +26,12 @@
 ;; dbg.assign/DIExpression. Ensure that only the value-expression gets fragment
 ;; info; that the address-expression remains untouched.
 
-; CHECK:  [[ADDR:%.*]] = getelementptr inbounds i8, ptr %i.sroa.0, i64 12, !dbg !64
-; CHECK-NEXT:  store float %2, ptr [[ADDR]], align 4, !dbg !64, !DIAssignID !66
-;; There's a dbg intrinsics we're not interested in testing wedged in here.
+; CHECK: %i.sroa.4.12.vec.insert = insertelement <2 x float> %i.sroa.4.0.vec.insert, float %2, i32 1, !dbg
+;; There's a few dbg intrinsics we're not interested in testing wedged in here.
+; CHECK-NEXT: dbg.value
 ; CHECK-NEXT: dbg.assign
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata float %2,{{.+}}, metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32),{{.+}}, metadata ptr %i.sroa.0.12..sroa_idx2, metadata !DIExpression()), !dbg
+; CHECK-NEXT: dbg.assign
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata float %2,{{.+}}, metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32),{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
 
 %class.d = type { %class.a }
 %class.a = type { [4 x float] }
