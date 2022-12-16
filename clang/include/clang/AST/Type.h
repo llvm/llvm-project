@@ -5606,6 +5606,13 @@ void printTemplateArgumentList(raw_ostream &OS,
                                const PrintingPolicy &Policy,
                                const TemplateParameterList *TPL = nullptr);
 
+/// Make a best-effort determination of whether the type T can be produced by
+/// substituting Args into the default argument of Param.
+bool isSubstitutedDefaultArgument(ASTContext &Ctx, TemplateArgument Arg,
+                                  const NamedDecl *Param,
+                                  ArrayRef<TemplateArgument> Args,
+                                  unsigned Depth);
+
 /// The injected class name of a C++ class template or class
 /// template partial specialization.  Used to record that a type was
 /// spelled with a bare identifier rather than as a template-id; the

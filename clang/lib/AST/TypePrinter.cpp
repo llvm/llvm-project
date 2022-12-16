@@ -2056,9 +2056,7 @@ static bool isSubstitutedTemplateArgument(ASTContext &Ctx, TemplateArgument Arg,
   return false;
 }
 
-/// Make a best-effort determination of whether the type T can be produced by
-/// substituting Args into the default argument of Param.
-static bool isSubstitutedDefaultArgument(ASTContext &Ctx, TemplateArgument Arg,
+bool clang::isSubstitutedDefaultArgument(ASTContext &Ctx, TemplateArgument Arg,
                                          const NamedDecl *Param,
                                          ArrayRef<TemplateArgument> Args,
                                          unsigned Depth) {
