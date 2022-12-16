@@ -16,7 +16,8 @@ MATH_MANGLE(cbrt)(double x)
     c = BUILTIN_FLDEXP_F64(c, e);
 
     if (!FINITE_ONLY_OPT()) {
-        c = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_PINF|CLASS_NINF|CLASS_PZER|CLASS_NZER) ? x : c;
+        // Is normal or subnormal.
+        c = ((x != 0.0) & BUILTIN_ISFINITE_F64(x)) ? c : x;
     }
 
     return BUILTIN_COPYSIGN_F64(c, x);

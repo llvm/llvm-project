@@ -29,7 +29,8 @@ MATH_MANGLE(cbrt)(float x)
             BUILTIN_FLDEXP_F32(z, -8) : z;
     }
 
-    z = BUILTIN_CLASS_F32(x, CLASS_QNAN|CLASS_SNAN|CLASS_PINF|CLASS_NINF|CLASS_PZER|CLASS_NZER) ? x : z;
+    // Is normal or subnormal.
+    z = ((x != 0.0f) & BUILTIN_ISFINITE_F32(x)) ? z : x;
     return BUILTIN_COPYSIGN_F32(z, x);
 }
 
