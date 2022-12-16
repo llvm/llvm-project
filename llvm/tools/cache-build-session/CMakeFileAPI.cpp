@@ -65,7 +65,7 @@ static Expected<StringRef> getStringFromPath(const json::Object &Root,
   auto Val = getValueFromPath(Root, KeyPath, ErrPrefix);
   if (!Val)
     return Val.takeError();
-  Optional<StringRef> Str = Val->getAsString();
+  std::optional<StringRef> Str = Val->getAsString();
   if (!Str)
     return createStringError(llvm::inconvertibleErrorCode(),
                              ErrPrefix + ": expected string '" + KeyPath +
@@ -82,7 +82,7 @@ cmake_file_api::Index::fromPath(StringRef CMakeBuildPath) {
   sys::path::append(ReplyPath, ".cmake", "api", "v1", "reply");
 
   std::error_code EC;
-  Optional<std::string> RecentIndexPath;
+  std::optional<std::string> RecentIndexPath;
   for (sys::fs::directory_iterator DirIt(ReplyPath, EC), DirE;
        !EC && DirIt != DirE; DirIt.increment(EC)) {
     StringRef Filename = sys::path::filename(DirIt->path());
@@ -183,7 +183,7 @@ Error cmake_file_api::CodeModel::getExtraTopLevelSourcePaths(
 
   struct DirInfoTy {
     StringRef SourcePath;
-    Optional<int64_t> ParentIndex;
+    std::optional<int64_t> ParentIndex;
   };
 
   auto getDirInfo = [Dirs](unsigned Index) -> Expected<DirInfoTy> {
@@ -192,7 +192,7 @@ Error cmake_file_api::CodeModel::getExtraTopLevelSourcePaths(
       return createStringError(
           llvm::inconvertibleErrorCode(),
           "codemodel: expected 'directories' as dictionary entries");
-    Optional<StringRef> SourcePath = DirObj->getString("source");
+    std::optional<StringRef> SourcePath = DirObj->getString("source");
     if (!SourcePath)
       return createStringError(
           llvm::inconvertibleErrorCode(),
