@@ -425,6 +425,7 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
 
     OtherUsedRegs.set(*NextSpillReg);
     SpillRegs.push_back(*NextSpillReg);
+    MRI.reserveReg(*NextSpillReg, TRI);
     Spill.Lanes[I] = *NextSpillReg++;
   }
 
