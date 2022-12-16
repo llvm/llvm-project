@@ -119,7 +119,15 @@ void RTLsTy::loadRTLs() {
     }
   }
 
-    DP("Loading RTLs...\n");
+  // Parse environement variable OMPX_APU_MAPS (if set)
+  if (auto *ApuMaps = getenv("OMPX_APU_MAPS")) {
+    auto Value{std::stoi(ApuMaps)};
+    if (Value > 0) {
+      DisableAllocationsForMapsOnApus = true;
+    }
+  }
+
+  DP("Loading RTLs...\n");
 
   // Attempt to open all the plugins and, if they exist, check if the interface
   // is correct and if they are supporting any devices.

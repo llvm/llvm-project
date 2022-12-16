@@ -165,9 +165,14 @@ struct RTLsTy {
   // When active (default value), maps are ignored by the runtime
   bool NoUSMMapChecks = true;
 
-  // Set by OMPX_DISABLE_USM_MAPS environemen variable.
-  // If set, fine graned memory is used for maps instead of coarse grained. 
+  // Set by OMPX_DISABLE_USM_MAPS environment variable.
+  // If set, fine graned memory is used for maps instead of coarse grained.
   bool EnableFineGrainedMemory = false;
+
+  // Set by OMPX_APU_MAPS environment variable.
+  // If set, maps cause no copy operations. USM is used instead. Allocated
+  // memory remains coarse grained.
+  bool DisableAllocationsForMapsOnApus = false;
 
   explicit RTLsTy() = default;
 

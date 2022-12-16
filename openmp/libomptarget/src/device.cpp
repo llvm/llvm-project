@@ -355,8 +355,9 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
       MESSAGE("device mapping required by 'present' map type modifier does not "
               "exist for host address " DPxMOD " (%" PRId64 " bytes)",
               DPxPTR(HstPtrBegin), Size);
-  } else if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
-             !HasCloseModifier) {
+  } else if (((PM->RTLs.DisableAllocationsForMapsOnApus) ||
+              (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)) &&
+             (!HasCloseModifier)) {
     // If unified shared memory is active, implicitly mapped variables that are
     // not privatized use host address. Any explicitly mapped variables also use
     // host address where correctness is not impeded. In all other cases maps
@@ -366,10 +367,13 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
     if (Size) {
       // When allocating under unified_shared_memory, amdgpu plugin
       // can optimize memory access latency by registering allocated
-      // memory as coarse_grain. The usage of coarse grained memory can be overriden 
-      // by setting the env-var OMPX_DISABLE_USM_MAPS=1
-      if (!PM->RTLs.EnableFineGrainedMemory &&
-          (HstPtrBegin && RTL->set_coarse_grain_mem_region)){
+      // memory as coarse_grain. The usage of coarse grained memory can be
+      // overriden by setting the env-var OMPX_DISABLE_USM_MAPS=1
+      // Setting OMPX_APU_MAPS to 1 prevents memory allocations/transfers for all
+      // mapped variables.
+      if (!PM->RTLs.DisableAllocationsForMapsOnApus &&
+          !PM->RTLs.EnableFineGrainedMemory && HstPtrBegin &&
+          RTL->set_coarse_grain_mem_region) {
         RTL->set_coarse_grain_mem_region(HstPtrBegin, Size);
       }
 
@@ -530,7 +534,8 @@ DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
          DPxPTR(HstPtrBegin), DPxPTR(TP), Size, HT.dynRefCountToStr().c_str(),
          DynRefCountAction, HT.holdRefCountToStr().c_str(), HoldRefCountAction);
     TargetPointer = (void *)TP;
-  } else if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+  } else if ((PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
+             (PM->RTLs.DisableAllocationsForMapsOnApus)) {
     // If the value isn't found in the mapping or if the value is found but it
     // is related to a USM mapping and unified shared memory is on then it means
     // we have stumbled upon a value which we need to use directly from the
