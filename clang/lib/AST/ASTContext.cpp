@@ -6975,7 +6975,7 @@ QualType ASTContext::getArrayDecayedType(QualType Ty) const {
                                      PrettyArrayType->getIndexTypeQualifiers());
 
   // int x[_Nullable] -> int * _Nullable
-  if (auto Nullability = Ty->getNullability(*this)) {
+  if (auto Nullability = Ty->getNullability()) {
     Result = const_cast<ASTContext *>(this)->getAttributedType(
         AttributedType::getNullabilityAttrKind(*Nullability), Result, Result);
   }

@@ -2547,7 +2547,9 @@ public:
   /// Note that nullability is only captured as sugar within the type
   /// system, not as part of the canonical type, so nullability will
   /// be lost by canonicalization and desugaring.
-  Optional<NullabilityKind> getNullability(const ASTContext &context) const;
+  Optional<NullabilityKind> getNullability() const;
+  // TODO: Remove overload.
+  Optional<NullabilityKind> getNullability(const ASTContext &) const;
 
   /// Determine whether the given type can have a nullability
   /// specifier applied to it, i.e., if it is any kind of pointer type.

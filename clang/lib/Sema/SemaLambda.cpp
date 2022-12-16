@@ -775,8 +775,8 @@ void Sema::deduceClosureReturnType(CapturingScopeInfo &CSI) {
     if (Context.getCanonicalFunctionResultType(ReturnType) ==
           Context.getCanonicalFunctionResultType(CSI.ReturnType)) {
       // Use the return type with the strictest possible nullability annotation.
-      auto RetTyNullability = ReturnType->getNullability(Ctx);
-      auto BlockNullability = CSI.ReturnType->getNullability(Ctx);
+      auto RetTyNullability = ReturnType->getNullability();
+      auto BlockNullability = CSI.ReturnType->getNullability();
       if (BlockNullability &&
           (!RetTyNullability ||
            hasWeakerNullability(*RetTyNullability, *BlockNullability)))
