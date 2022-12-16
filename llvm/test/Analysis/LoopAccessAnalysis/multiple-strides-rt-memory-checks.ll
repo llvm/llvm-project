@@ -34,13 +34,13 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %struct.s = type { [32 x i32], [32 x i32], [32 x [32 x i32]] }
 
-define void @Test(%struct.s* nocapture %obj, i64 %z) #0 {
+define void @Test(ptr nocapture %obj, i64 %z) #0 {
   br label %.outer.preheader
 
 
 .outer.preheader:
   %i = phi i64 [ 0, %0 ], [ %i.next, %.outer ]
-  %1 = getelementptr inbounds %struct.s, %struct.s* %obj, i64 0, i32 1, i64 %i
+  %1 = getelementptr inbounds %struct.s, ptr %obj, i64 0, i32 1, i64 %i
   br label %.inner
 
 .exit:
@@ -53,14 +53,14 @@ define void @Test(%struct.s* nocapture %obj, i64 %z) #0 {
 
 .inner:
   %j = phi i64 [ 0, %.outer.preheader ], [ %j.next, %.inner ]
-  %2 = getelementptr inbounds %struct.s, %struct.s* %obj, i64 0, i32 0, i64 %j
-  %3 = load i32, i32* %2
-  %4 = load i32, i32* %1
+  %2 = getelementptr inbounds %struct.s, ptr %obj, i64 0, i32 0, i64 %j
+  %3 = load i32, ptr %2
+  %4 = load i32, ptr %1
   %5 = add nsw i32 %4, %3
-  %6 = getelementptr inbounds %struct.s, %struct.s* %obj, i64 0, i32 2, i64 %i, i64 %j
-  %7 = load i32, i32* %6
+  %6 = getelementptr inbounds %struct.s, ptr %obj, i64 0, i32 2, i64 %i, i64 %j
+  %7 = load i32, ptr %6
   %8 = add nsw i32 %5, %7
-  store i32 %8, i32* %6  
+  store i32 %8, ptr %6  
   %j.next = add nuw nsw i64 %j, 1
   %exitcond.inner = icmp eq i64 %j.next, %z
   br i1 %exitcond.inner, label %.outer, label %.inner

@@ -9,8 +9,8 @@ target triple = "x86_64-apple-macosx10.10.0"
 
 ; No memory checks are required, because base pointers do not alias and we have
 ; a forward dependence for %a.
-define void @safe_forward_dependence(i16* noalias %a,
-                                     i16* noalias %b) {
+define void @safe_forward_dependence(ptr noalias %a,
+                                     ptr noalias %b) {
 ; CHECK-LABEL: safe_forward_dependence
 ; CHECK:       for.body:
 ; CHECK-NEXT:     Report: could not determine number of loop iterations
@@ -23,17 +23,17 @@ for.body:                                         ; preds = %for.body, %entry
 
   %iv.next = add nuw nsw i64 %iv, 1
 
-  %arrayidxA_plus_2 = getelementptr inbounds i16, i16* %a, i64 %iv.next
-  %loadA_plus_2 = load i16, i16* %arrayidxA_plus_2, align 2
+  %arrayidxA_plus_2 = getelementptr inbounds i16, ptr %a, i64 %iv.next
+  %loadA_plus_2 = load i16, ptr %arrayidxA_plus_2, align 2
 
-  %arrayidxB = getelementptr inbounds i16, i16* %b, i64 %iv
-  %loadB = load i16, i16* %arrayidxB, align 2
+  %arrayidxB = getelementptr inbounds i16, ptr %b, i64 %iv
+  %loadB = load i16, ptr %arrayidxB, align 2
 
 
   %mul = mul i16 %loadB, %loadA_plus_2
 
-  %arrayidxA = getelementptr inbounds i16, i16* %a, i64 %iv
-  store i16 %mul, i16* %arrayidxA, align 2
+  %arrayidxA = getelementptr inbounds i16, ptr %a, i64 %iv
+  store i16 %mul, ptr %arrayidxA, align 2
 
   %exitcond = icmp eq i16 %loadB, 20
   br i1 %exitcond, label %for.end, label %for.body
@@ -45,8 +45,8 @@ for.end:                                          ; preds = %for.body
 
 
 
-define void @unsafe_backwards_dependence(i16* noalias %a,
-                                         i16* noalias %b) {
+define void @unsafe_backwards_dependence(ptr noalias %a,
+                                         ptr noalias %b) {
 ; CHECK-LABEL: unsafe_backwards_dependence
 ; CHECK:       for.body:
 ; CHECK-NEXT:     Report: could not determine number of loop iterations
@@ -60,17 +60,17 @@ for.body:                                         ; preds = %for.body, %entry
   %idx = add nuw nsw i64 %iv, -1
   %iv.next = add nuw nsw i64 %iv, 1
 
-  %arrayidxA_plus_2 = getelementptr inbounds i16, i16* %a, i64 %idx
-  %loadA_plus_2 = load i16, i16* %arrayidxA_plus_2, align 2
+  %arrayidxA_plus_2 = getelementptr inbounds i16, ptr %a, i64 %idx
+  %loadA_plus_2 = load i16, ptr %arrayidxA_plus_2, align 2
 
-  %arrayidxB = getelementptr inbounds i16, i16* %b, i64 %iv
-  %loadB = load i16, i16* %arrayidxB, align 2
+  %arrayidxB = getelementptr inbounds i16, ptr %b, i64 %iv
+  %loadB = load i16, ptr %arrayidxB, align 2
 
 
   %mul = mul i16 %loadB, %loadA_plus_2
 
-  %arrayidxA = getelementptr inbounds i16, i16* %a, i64 %iv
-  store i16 %mul, i16* %arrayidxA, align 2
+  %arrayidxA = getelementptr inbounds i16, ptr %a, i64 %iv
+  store i16 %mul, ptr %arrayidxA, align 2
 
   %exitcond = icmp eq i16 %loadB, 20
   br i1 %exitcond, label %for.end, label %for.body
@@ -80,7 +80,7 @@ for.end:                                          ; preds = %for.body
 }
 
 
-define void @ptr_may_alias(i16* %a, i16* %b) {
+define void @ptr_may_alias(ptr %a, ptr %b) {
 ; CHECK-LABEL: ptr_may_alias
 ; CHECK:       for.body:
 ; CHECK-NEXT:     Report: could not determine number of loop iterations
@@ -94,15 +94,15 @@ for.body:                                         ; preds = %for.body, %entry
   %idx = add nuw nsw i64 %iv, -1
   %iv.next = add nuw nsw i64 %iv, 1
 
-  %arrayidxA = getelementptr inbounds i16, i16* %a, i64 %iv
-  %loadA = load i16, i16* %arrayidxA, align 2
+  %arrayidxA = getelementptr inbounds i16, ptr %a, i64 %iv
+  %loadA = load i16, ptr %arrayidxA, align 2
 
-  %arrayidxB = getelementptr inbounds i16, i16* %b, i64 %iv
-  %loadB = load i16, i16* %arrayidxB, align 2
+  %arrayidxB = getelementptr inbounds i16, ptr %b, i64 %iv
+  %loadB = load i16, ptr %arrayidxB, align 2
 
   %mul = mul i16 %loadB, %loadA
 
-  store i16 %mul, i16* %arrayidxA, align 2
+  store i16 %mul, ptr %arrayidxA, align 2
 
   %exitcond = icmp eq i16 %loadB, 20
   br i1 %exitcond, label %for.end, label %for.body
