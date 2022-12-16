@@ -10,33 +10,29 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
 
-%0 = type { i32 (...)**, %1 }
+%0 = type { ptr, %1 }
 %1 = type { %2 }
 %2 = type { %3 }
 %3 = type { %4, i64, %5 }
-%4 = type { i8* }
+%4 = type { ptr }
 %5 = type { i64, [8 x i8] }
 
-define void @fail(i1* noalias sret(i1) %arg, %0* %arg1, %1* %arg2, i8* %arg3) local_unnamed_addr #0 {
+define void @fail(ptr noalias sret(i1) %arg, ptr %arg1, ptr %arg2, ptr %arg3) local_unnamed_addr #0 {
 ; CHECK-LABEL: @fail(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = bitcast %0* [[ARG1:%.*]] to i64 (%0*)***
-; CHECK-NEXT:    [[I4:%.*]] = load i64 (%0*)**, i64 (%0*)*** [[I]], align 8, !invariant.group !6
-; CHECK-NEXT:    [[I5:%.*]] = getelementptr inbounds i64 (%0*)*, i64 (%0*)** [[I4]], i64 6
-; CHECK-NEXT:    [[I6:%.*]] = load i64 (%0*)*, i64 (%0*)** [[I5]], align 8, !invariant.load !6
-; CHECK-NEXT:    [[I7:%.*]] = tail call i64 [[I6]](%0* [[ARG1]]) #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    [[I8:%.*]] = getelementptr inbounds [[TMP1:%.*]], %1* [[ARG2:%.*]], i64 0, i32 0, i32 0, i32 0, i32 0
-; CHECK-NEXT:    [[I9:%.*]] = load i8*, i8** [[I8]], align 8
-; CHECK-NEXT:    store i8 0, i8* [[I9]], align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 (%0*)** [[I4]] to i64 (%0*, i8*, i64)**
+; CHECK-NEXT:    [[I4:%.*]] = load ptr, ptr [[ARG1:%.*]], align 8, !invariant.group !6
+; CHECK-NEXT:    [[I5:%.*]] = getelementptr inbounds ptr, ptr [[I4]], i64 6
+; CHECK-NEXT:    [[I6:%.*]] = load ptr, ptr [[I5]], align 8, !invariant.load !6
+; CHECK-NEXT:    [[I7:%.*]] = tail call i64 [[I6]](ptr [[ARG1]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[I9:%.*]] = load ptr, ptr [[ARG2:%.*]], align 8
+; CHECK-NEXT:    store i8 0, ptr [[I9]], align 1
 ; CHECK-NEXT:    br i1 undef, label [[BB10:%.*]], label [[BB29:%.*]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[I11:%.*]] = bitcast %0* [[ARG1]] to i64 (%0*, i8*, i64)***
-; CHECK-NEXT:    [[I14_PHI_TRANS_INSERT:%.*]] = getelementptr inbounds i64 (%0*, i8*, i64)*, i64 (%0*, i8*, i64)** [[TMP0]], i64 22
-; CHECK-NEXT:    [[I15_PRE:%.*]] = load i64 (%0*, i8*, i64)*, i64 (%0*, i8*, i64)** [[I14_PHI_TRANS_INSERT]], align 8, !invariant.load !6
+; CHECK-NEXT:    [[I14_PHI_TRANS_INSERT:%.*]] = getelementptr inbounds ptr, ptr [[I4]], i64 22
+; CHECK-NEXT:    [[I15_PRE:%.*]] = load ptr, ptr [[I14_PHI_TRANS_INSERT]], align 8, !invariant.load !6
 ; CHECK-NEXT:    br label [[BB12:%.*]]
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[I16:%.*]] = call i64 [[I15_PRE]](%0* nonnull [[ARG1]], i8* null, i64 0) #[[ATTR1]]
+; CHECK-NEXT:    [[I16:%.*]] = call i64 [[I15_PRE]](ptr nonnull [[ARG1]], ptr null, i64 0) #[[ATTR1]]
 ; CHECK-NEXT:    br i1 undef, label [[BB28:%.*]], label [[BB17:%.*]]
 ; CHECK:       bb17:
 ; CHECK-NEXT:    br i1 undef, label [[BB18:%.*]], label [[BB21:%.*]]
@@ -54,25 +50,22 @@ define void @fail(i1* noalias sret(i1) %arg, %0* %arg1, %1* %arg2, i8* %arg3) lo
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %i = bitcast %0* %arg1 to i64 (%0*)***
-  %i4 = load i64 (%0*)**, i64 (%0*)*** %i, align 8, !invariant.group !6
-  %i5 = getelementptr inbounds i64 (%0*)*, i64 (%0*)** %i4, i64 6
-  %i6 = load i64 (%0*)*, i64 (%0*)** %i5, align 8, !invariant.load !6
-  %i7 = tail call i64 %i6(%0* %arg1) #1
-  %i8 = getelementptr inbounds %1, %1* %arg2, i64 0, i32 0, i32 0, i32 0, i32 0
-  %i9 = load i8*, i8** %i8, align 8
-  store i8 0, i8* %i9, align 1
+  %i4 = load ptr, ptr %arg1, align 8, !invariant.group !6
+  %i5 = getelementptr inbounds ptr, ptr %i4, i64 6
+  %i6 = load ptr, ptr %i5, align 8, !invariant.load !6
+  %i7 = tail call i64 %i6(ptr %arg1) #1
+  %i9 = load ptr, ptr %arg2, align 8
+  store i8 0, ptr %i9, align 1
   br i1 undef, label %bb10, label %bb29
 
 bb10:                                             ; preds = %bb
-  %i11 = bitcast %0* %arg1 to i64 (%0*, i8*, i64)***
   br label %bb12
 
 bb12:                                             ; preds = %bb28, %bb10
-  %i13 = load i64 (%0*, i8*, i64)**, i64 (%0*, i8*, i64)*** %i11, align 8, !invariant.group !6
-  %i14 = getelementptr inbounds i64 (%0*, i8*, i64)*, i64 (%0*, i8*, i64)** %i13, i64 22
-  %i15 = load i64 (%0*, i8*, i64)*, i64 (%0*, i8*, i64)** %i14, align 8, !invariant.load !6
-  %i16 = call i64 %i15(%0* nonnull %arg1, i8* null, i64 0) #1
+  %i13 = load ptr, ptr %arg1, align 8, !invariant.group !6
+  %i14 = getelementptr inbounds ptr, ptr %i13, i64 22
+  %i15 = load ptr, ptr %i14, align 8, !invariant.load !6
+  %i16 = call i64 %i15(ptr nonnull %arg1, ptr null, i64 0) #1
   br i1 undef, label %bb28, label %bb17
 
 bb17:                                             ; preds = %bb12
