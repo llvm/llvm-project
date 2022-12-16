@@ -1103,7 +1103,7 @@ def Shape_FunctionLibraryOp : Shape_Op<"function_library",
 
 def Shape_FuncOp : Shape_Op<"func",
     [AffineScope, AutomaticAllocationScope, CallableOpInterface,
-     FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface, Symbol]> {
+     FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface]> {
   let summary = "Shape function";
   let description = [{
     An operation with a name containing a single `SSACFG` region which

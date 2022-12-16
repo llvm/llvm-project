@@ -631,7 +631,7 @@ def PDLInterp_ForEachOp
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_FuncOp : PDLInterp_Op<"func", [
-    FunctionOpInterface, IsolatedFromAbove, Symbol
+    FunctionOpInterface, IsolatedFromAbove
   ]> {
   let summary = "PDL Interpreter Function Operation";
   let description = [{
