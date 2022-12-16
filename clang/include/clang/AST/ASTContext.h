@@ -2561,8 +2561,8 @@ public:
 
   bool hasSameNullabilityTypeQualifier(QualType SubT, QualType SuperT,
                                        bool IsParam) const {
-    auto SubTnullability = SubT->getNullability(*this);
-    auto SuperTnullability = SuperT->getNullability(*this);
+    auto SubTnullability = SubT->getNullability();
+    auto SuperTnullability = SuperT->getNullability();
     if (SubTnullability.has_value() == SuperTnullability.has_value()) {
       // Neither has nullability; return true
       if (!SubTnullability)
