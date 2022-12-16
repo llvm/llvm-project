@@ -24,6 +24,30 @@
 using namespace clang;
 
 static const LangASMap DefaultAddrSpaceMap = {0};
+// The fake address space map must have a distinct entry for each
+// language-specific address space.
+static const LangASMap FakeAddrSpaceMap = {
+    0,  // Default
+    1,  // opencl_global
+    3,  // opencl_local
+    2,  // opencl_constant
+    0,  // opencl_private
+    4,  // opencl_generic
+    5,  // opencl_global_device
+    6,  // opencl_global_host
+    7,  // cuda_device
+    8,  // cuda_constant
+    9,  // cuda_shared
+    1,  // sycl_global
+    5,  // sycl_global_device
+    6,  // sycl_global_host
+    3,  // sycl_local
+    0,  // sycl_private
+    10, // ptr32_sptr
+    11, // ptr32_uptr
+    12, // ptr64
+    13, // hlsl_groupshared
+};
 
 // TargetInfo Constructor.
 TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
@@ -487,6 +511,9 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
 
   if (Opts.MaxBitIntWidth)
     MaxBitIntWidth = Opts.MaxBitIntWidth;
+
+  if (Opts.FakeAddressSpaceMap)
+    AddrSpaceMap = &FakeAddrSpaceMap;
 }
 
 bool TargetInfo::initFeatureMap(
