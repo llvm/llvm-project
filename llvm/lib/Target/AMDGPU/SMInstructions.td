@@ -959,10 +959,38 @@ multiclass SMLoad_Pattern <string Instr, ValueType vt> {
   }
 }
 
+multiclass SLoadPatternWithExtension <string Instr, SDPatternOperator node, ValueType vt> {
+   // 1. IMM offset
+   def : GCNPat <
+     (node (SMRDImm i64:$sbase, i32:$offset)),
+     (vt (!cast<SM_Pseudo>(Instr#"_IMM") $sbase, $offset, 0))>{
+       let OtherPredicates = [isGFX12Plus];
+   }
+
+   // 2. SGPR+IMM offset
+   def : GCNPat <
+     (node (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
+     (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, 0))>{
+       let OtherPredicates = [isGFX12Plus];
+   }
+
+   // 3. No offset
+   def : GCNPat <
+     (vt (node (i64 SReg_64:$sbase))),
+     (vt (!cast<SM_Pseudo>(Instr#"_IMM") i64:$sbase, 0, 0))>{
+       let OtherPredicates = [isGFX12Plus];
+  }
+}
+
 // Global and constant loads can be selected to either MUBUF or SMRD
 // instructions, but SMRD instructions are faster so we want the instruction
 // selector to prefer those.
 let AddedComplexity = 100 in {
+
+defm : SLoadPatternWithExtension <"S_LOAD_U8", zextloadi8_constant, i32>;
+defm : SLoadPatternWithExtension <"S_LOAD_I8", sextloadi8_constant, i32>;
+defm : SLoadPatternWithExtension <"S_LOAD_U16", zextloadi16_constant, i32>;
+defm : SLoadPatternWithExtension <"S_LOAD_I16", sextloadi16_constant, i32>;
 
 foreach vt = Reg32Types.types in {
 defm : SMRD_Pattern <"S_LOAD_DWORD", vt>;
