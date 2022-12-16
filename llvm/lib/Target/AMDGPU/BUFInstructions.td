@@ -337,7 +337,7 @@ class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
 
   // GFX90A+ only: instruction uses AccVGPR for data
   // Bit supersedes tfe.
-  bits<1> acc = !if(ps.has_vdata, vdata{9}, !if(ps.lds, ?, 0));
+  bits<1> acc = !if(ps.has_vdata, vdata{9}, 0);
 }
 
 // For cache invalidation instructions.
@@ -476,7 +476,7 @@ class MUBUF_Load_Pseudo <string opName,
 
   let Constraints = !if(HasTiedDest, "$vdata = $vdata_in", "");
   let LGKM_CNT = isLds;
-  let has_vdata = !not(isLdsOpc);
+  let has_vdata = !not(!or(isLds, isLdsOpc));
   let mayLoad = 1;
   let mayStore = isLds;
   let maybeAtomic = 1;
