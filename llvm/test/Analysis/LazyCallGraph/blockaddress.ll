@@ -6,8 +6,8 @@ define i32 @baz(i32 %y, i1 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[LAB:%.*]], label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[P_0:%.*]] = phi i8* [ null, [[FOR_COND]] ], [ blockaddress(@baz, [[LAB]]), [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i8, i8* [[P_0]], i64 1
+; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ null, [[FOR_COND]] ], [ blockaddress(@baz, [[LAB]]), [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i8, ptr [[P_0]], i64 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       lab:
 ; CHECK-NEXT:    ret i32 0
@@ -19,8 +19,8 @@ for.cond.preheader:
   br label %for.cond
 
 for.cond:
-  %p.0 = phi i8* [ null, %for.cond ], [ blockaddress(@baz, %lab), %for.cond.preheader ]
-  %incdec.ptr = getelementptr inbounds i8, i8* %p.0, i64 1
+  %p.0 = phi ptr [ null, %for.cond ], [ blockaddress(@baz, %lab), %for.cond.preheader ]
+  %incdec.ptr = getelementptr inbounds i8, ptr %p.0, i64 1
   br label %for.cond
 
 lab:
