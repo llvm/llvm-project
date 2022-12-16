@@ -177,6 +177,26 @@ struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
   }
 };
 
+struct ApplyOpConversion : public mlir::OpConversionPattern<hlfir::ApplyOp> {
+  using mlir::OpConversionPattern<hlfir::ApplyOp>::OpConversionPattern;
+  explicit ApplyOpConversion(mlir::MLIRContext *ctx)
+      : mlir::OpConversionPattern<hlfir::ApplyOp>{ctx} {}
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::ApplyOp apply, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = apply->getLoc();
+    hlfir::Entity bufferizedExpr{getBufferizedExprStorage(adaptor.getExpr())};
+    mlir::Type resultType = hlfir::getVariableElementType(bufferizedExpr);
+    mlir::Value result = rewriter.create<hlfir::DesignateOp>(
+        loc, resultType, bufferizedExpr, adaptor.getIndices(),
+        adaptor.getTypeparams());
+    if (fir::isa_trivial(apply.getType()))
+      result = rewriter.create<fir::LoadOp>(loc, result);
+    rewriter.replaceOp(apply, result);
+    return mlir::success();
+  }
+};
+
 struct AssignOpConversion : public mlir::OpConversionPattern<hlfir::AssignOp> {
   using mlir::OpConversionPattern<hlfir::AssignOp>::OpConversionPattern;
   explicit AssignOpConversion(mlir::MLIRContext *ctx)
@@ -398,12 +418,12 @@ public:
     auto module = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns
-        .insert<AsExprOpConversion, AssignOpConversion, AssociateOpConversion,
-                ConcatOpConversion, ElementalOpConversion,
-                EndAssociateOpConversion, NoReassocOpConversion>(context);
+    patterns.insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
+                    AssociateOpConversion, ConcatOpConversion,
+                    ElementalOpConversion, EndAssociateOpConversion,
+                    NoReassocOpConversion>(context);
     mlir::ConversionTarget target(*context);
-    target.addIllegalOp<hlfir::AssociateOp, hlfir::ElementalOp,
+    target.addIllegalOp<hlfir::ApplyOp, hlfir::AssociateOp, hlfir::ElementalOp,
                         hlfir::EndAssociateOp, hlfir::YieldElementOp>();
     target.markUnknownOpDynamicallyLegal([](mlir::Operation *op) {
       return llvm::all_of(
