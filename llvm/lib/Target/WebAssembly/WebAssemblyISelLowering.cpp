@@ -2245,11 +2245,16 @@ WebAssemblyTargetLowering::LowerAccessVectorElement(SDValue Op,
                                                     SelectionDAG &DAG) const {
   // Allow constant lane indices, expand variable lane indices
   SDNode *IdxNode = Op.getOperand(Op.getNumOperands() - 1).getNode();
-  if (isa<ConstantSDNode>(IdxNode) || IdxNode->isUndef())
-    return Op;
-  else
-    // Perform default expansion
-    return SDValue();
+  if (isa<ConstantSDNode>(IdxNode) || IdxNode->isUndef()) {
+    // Ensure the index type is i32 to match the tablegen patterns
+    uint64_t Idx = cast<ConstantSDNode>(IdxNode)->getZExtValue();
+    SmallVector<SDValue, 3> Ops(Op.getNode()->ops());
+    Ops[Op.getNumOperands() - 1] =
+        DAG.getConstant(Idx, SDLoc(IdxNode), MVT::i32);
+    return DAG.getNode(Op.getOpcode(), SDLoc(Op), Op.getValueType(), Ops);
+  }
+  // Perform default expansion
+  return SDValue();
 }
 
 static SDValue unrollVectorShift(SDValue Op, SelectionDAG &DAG) {
