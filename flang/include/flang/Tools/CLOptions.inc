@@ -200,6 +200,10 @@ inline void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
     pm.addPass(fir::createSimplifyIntrinsicsPass());
     pm.addPass(fir::createAlgebraicSimplificationPass(config));
   }
+
+  if (loopVersioning)
+    pm.addPass(fir::createLoopVersioningPass());
+
   pm.addPass(mlir::createCSEPass());
 
   if (stackArrays)

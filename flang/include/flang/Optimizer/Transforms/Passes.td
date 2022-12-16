@@ -294,4 +294,16 @@ def OpenACCDataOperandConversion : Pass<"fir-openacc-data-operand-conversion", "
   ];
 }
 
+def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
+  let summary = "Loop Versioning";
+  let description = [{
+    Loop Versioning pass adds a check and two variants of a loop when the input
+    array is an assumed shape array, to optimize for the (often common) case where
+    an array has element sized stride. The element sizes stride allows some
+    loops to be vectorized as well as other loop optimizations.
+  }];
+  let constructor = "::fir::createLoopVersioningPass()";
+  let dependentDialects = [ "fir::FIROpsDialect" ];
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES
