@@ -525,14 +525,35 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
     // %t = convert_to_dest_tensor(%tmp)
     SparseTensorEncodingAttr encDst = getSparseTensorEncoding(dstTp);
     Value dst; // Destination tensor for inserting source tensor values.
-    bool allDense = false;
+    bool needTmpCOO = true;
     if (encDst) {
-      allDense = llvm::all_of(encDst.getDimLevelType(),
-                              [](DimLevelType dlt) { return isDenseDLT(dlt); });
+      bool allDense = encDst.isAllDense();
+      bool allOrdered = false;
+      // When concatenating on dimension 0, and all inputs are sorted and have
+      // an identity dimOrdering, the concatenate will generate coords in
+      // lexOrder thus no need for the tmp COO buffer.
+      // TODO: When conDim != 0, as long as conDim is the first dimension
+      // in all input/output buffers, and all input/output buffers have the same
+      // dimOrdering, the tmp COO buffer is still unnecessary (e.g, concatenate
+      // CSC matrices along column).
+      if (!allDense && conDim == 0 && encDst.hasIdDimOrdering()) {
+        for (auto i : op.getInputs()) {
+          auto rtp = i.getType().cast<RankedTensorType>();
+          auto srcEnc = getSparseTensorEncoding(rtp);
+          if (isAllDimOrdered(rtp) && (!srcEnc || srcEnc.hasIdDimOrdering())) {
+            allOrdered = true;
+            continue;
+          }
+          allOrdered = false;
+          break;
+        }
+      }
+
+      needTmpCOO = !allDense && !allOrdered;
       SmallVector<Value> dynSizes;
       getDynamicSizes(dstTp, sizes, dynSizes);
       RankedTensorType tp = dstTp;
-      if (!allDense) {
+      if (needTmpCOO) {
         tp = getUnorderedCOOFromType(dstTp);
         encDst = getSparseTensorEncoding(tp);
       }
@@ -596,7 +617,7 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
 
     if (encDst) {
       dst = rewriter.create<LoadOp>(loc, dst, true);
-      if (!allDense) {
+      if (needTmpCOO) {
         Value tmpCoo = dst;
         dst = rewriter.create<ConvertOp>(loc, dstTp, tmpCoo).getResult();
         rewriter.create<DeallocTensorOp>(loc, tmpCoo);
