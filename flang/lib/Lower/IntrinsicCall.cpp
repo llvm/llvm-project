@@ -43,9 +43,6 @@
 
 #define DEBUG_TYPE "flang-lower-intrinsic"
 
-#define PGMATH_DECLARE
-#include "flang/Evaluate/pgmath.h.inc"
-
 /// This file implements lowering of Fortran intrinsic procedures and Fortran
 /// intrinsic module procedures.  A call may be inlined with a mix of FIR and
 /// MLIR operations, or as a call to a runtime function or LLVM intrinsic.
@@ -1128,24 +1125,6 @@ struct RuntimeFunction {
   fir::runtime::FuncTypeBuilderFunc typeGenerator;
 };
 
-#define RUNTIME_STATIC_DESCRIPTION(name, func)                                 \
-  {#name, #func, fir::runtime::RuntimeTableKey<decltype(func)>::getTypeModel()},
-static constexpr RuntimeFunction pgmathFast[] = {
-#define PGMATH_FAST
-#define PGMATH_USE_ALL_TYPES(name, func) RUNTIME_STATIC_DESCRIPTION(name, func)
-#include "flang/Evaluate/pgmath.h.inc"
-};
-static constexpr RuntimeFunction pgmathRelaxed[] = {
-#define PGMATH_RELAXED
-#define PGMATH_USE_ALL_TYPES(name, func) RUNTIME_STATIC_DESCRIPTION(name, func)
-#include "flang/Evaluate/pgmath.h.inc"
-};
-static constexpr RuntimeFunction pgmathPrecise[] = {
-#define PGMATH_PRECISE
-#define PGMATH_USE_ALL_TYPES(name, func) RUNTIME_STATIC_DESCRIPTION(name, func)
-#include "flang/Evaluate/pgmath.h.inc"
-};
-
 static mlir::FunctionType genF32F32FuncType(mlir::MLIRContext *context) {
   mlir::Type t = mlir::FloatType::getF32(context);
   return mlir::FunctionType::get(context, {t}, {t});
@@ -1816,40 +1795,6 @@ static void checkPrecisionLoss(llvm::StringRef name,
   mlir::emitError(loc, message);
 }
 
-/// Search runtime for the best runtime function given an intrinsic name
-/// and interface. The interface may not be a perfect match in which case
-/// the caller is responsible to insert argument and return value conversions.
-/// If nothing is found, the mlir::func::FuncOp will contain a nullptr.
-static mlir::func::FuncOp getRuntimeFunction(mlir::Location loc,
-                                             fir::FirOpBuilder &builder,
-                                             llvm::StringRef name,
-                                             mlir::FunctionType funcType) {
-  const RuntimeFunction *bestNearMatch = nullptr;
-  FunctionDistance bestMatchDistance;
-  mlir::func::FuncOp match;
-  using RtMap = Fortran::common::StaticMultimapView<RuntimeFunction>;
-  static constexpr RtMap pgmathF(pgmathFast);
-  static_assert(pgmathF.Verify() && "map must be sorted");
-  static constexpr RtMap pgmathR(pgmathRelaxed);
-  static_assert(pgmathR.Verify() && "map must be sorted");
-  static constexpr RtMap pgmathP(pgmathPrecise);
-  static_assert(pgmathP.Verify() && "map must be sorted");
-
-  if (mathRuntimeVersion == fastVersion)
-    match = searchFunctionInLibrary(loc, builder, pgmathF, name, funcType,
-                                    &bestNearMatch, bestMatchDistance);
-  else if (mathRuntimeVersion == relaxedVersion)
-    match = searchFunctionInLibrary(loc, builder, pgmathR, name, funcType,
-                                    &bestNearMatch, bestMatchDistance);
-  else if (mathRuntimeVersion == preciseVersion)
-    match = searchFunctionInLibrary(loc, builder, pgmathP, name, funcType,
-                                    &bestNearMatch, bestMatchDistance);
-  else
-    llvm_unreachable("unsupported mathRuntimeVersion");
-
-  return match;
-}
-
 /// Helpers to get function type from arguments and result type.
 static mlir::FunctionType getFunctionType(llvm::Optional<mlir::Type> resultType,
                                           llvm::ArrayRef<mlir::Value> arguments,
@@ -2234,14 +2179,12 @@ fir::ExtendedValue IntrinsicLibrary::outlineInExtendedWrapper(
 IntrinsicLibrary::RuntimeCallGenerator
 IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
                                           mlir::FunctionType soughtFuncType) {
-  mlir::func::FuncOp funcOp;
   mlir::FunctionType actualFuncType;
   const MathOperation *mathOp = nullptr;
 
   // Look for a dedicated math operation generator, which
   // normally produces a single MLIR operation implementing
   // the math operation.
-  // If not found fall back to a runtime function lookup.
   const MathOperation *bestNearMatch = nullptr;
   FunctionDistance bestMatchDistance;
   mathOp = searchMathOperation(builder, name, soughtFuncType, &bestNearMatch,
@@ -2249,54 +2192,31 @@ IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
   if (!mathOp && bestNearMatch) {
     // Use the best near match, optionally issuing an error,
     // if types conversions cause precision loss.
-    bool useBestNearMatch = true;
-    // TODO: temporary workaround to avoid using math::PowFOp
-    //       for pow(fp, i64) case and fall back to pgmath runtime.
-    //       When proper Math dialect operations are available
-    //       and added into mathOperations table, this can be removed.
-    //       This is WIP in D129812.
-    if (name == "pow" && soughtFuncType.getInput(0).isa<mlir::FloatType>())
-      if (auto exponentTy =
-              soughtFuncType.getInput(1).dyn_cast<mlir::IntegerType>())
-        useBestNearMatch = exponentTy.getWidth() != 64;
-
-    if (useBestNearMatch) {
-      checkPrecisionLoss(name, soughtFuncType, bestMatchDistance, loc);
-      mathOp = bestNearMatch;
-    }
+    checkPrecisionLoss(name, soughtFuncType, bestMatchDistance, loc);
+    mathOp = bestNearMatch;
   }
-  if (mathOp)
-    actualFuncType = mathOp->typeGenerator(builder.getContext());
 
-  if (!mathOp)
-    if ((funcOp = getRuntimeFunction(loc, builder, name, soughtFuncType)))
-      actualFuncType = funcOp.getFunctionType();
-
-  if (!mathOp && !funcOp) {
+  if (!mathOp) {
     std::string nameAndType;
     llvm::raw_string_ostream sstream(nameAndType);
     sstream << name << "\nrequested type: " << soughtFuncType;
     crashOnMissingIntrinsic(loc, nameAndType);
   }
 
+  actualFuncType = mathOp->typeGenerator(builder.getContext());
+
   assert(actualFuncType.getNumResults() == soughtFuncType.getNumResults() &&
          actualFuncType.getNumInputs() == soughtFuncType.getNumInputs() &&
          actualFuncType.getNumResults() == 1 && "Bad intrinsic match");
 
-  return [funcOp, actualFuncType, mathOp,
+  return [actualFuncType, mathOp,
           soughtFuncType](fir::FirOpBuilder &builder, mlir::Location loc,
                           llvm::ArrayRef<mlir::Value> args) {
     llvm::SmallVector<mlir::Value> convertedArguments;
     for (auto [fst, snd] : llvm::zip(actualFuncType.getInputs(), args))
       convertedArguments.push_back(builder.createConvert(loc, fst, snd));
-    mlir::Value result;
-    // Use math operation generator, if available.
-    if (mathOp)
-      result = mathOp->funcGenerator(builder, loc, mathOp->runtimeFunc,
-                                     actualFuncType, convertedArguments);
-    else
-      result = builder.create<fir::CallOp>(loc, funcOp, convertedArguments)
-                   .getResult(0);
+    mlir::Value result = mathOp->funcGenerator(
+        builder, loc, mathOp->runtimeFunc, actualFuncType, convertedArguments);
     mlir::Type soughtType = soughtFuncType.getResult(0);
     return builder.createConvert(loc, soughtType, result);
   };
