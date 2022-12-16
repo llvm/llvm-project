@@ -5,7 +5,7 @@
 ; as an operand to be analyzed. This would then cause
 ; infinite recursion and eventual crash.
 
-define void @PR36045(i1 %t, i32* %b) {
+define void @PR36045(i1 %t, ptr %b) {
 ; CHECK-LABEL: @PR36045(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[T:%.*]], true
@@ -36,7 +36,7 @@ for.end:
   br i1 %t, label %unreach2, label %then12
 
 then12:
-  store i32 0, i32* %b
+  store i32 0, ptr %b
   br label %unreach2
 
 unreach2:
