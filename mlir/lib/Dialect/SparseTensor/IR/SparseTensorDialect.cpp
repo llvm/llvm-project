@@ -493,6 +493,20 @@ LogicalResult GetStorageSpecifierOp::verify() {
   return success();
 }
 
+template <typename SpecifierOp>
+static SetStorageSpecifierOp getSpecifierSetDef(SpecifierOp op) {
+  return op.getSpecifier().template getDefiningOp<SetStorageSpecifierOp>();
+}
+
+OpFoldResult GetStorageSpecifierOp::fold(ArrayRef<Attribute> operands) {
+  StorageSpecifierKind kind = getSpecifierKind();
+  Optional<APInt> dim = getDim();
+  for (auto op = getSpecifierSetDef(*this); op; op = getSpecifierSetDef(op))
+    if (kind == op.getSpecifierKind() && dim == op.getDim())
+      return op.getValue();
+  return {};
+}
+
 LogicalResult SetStorageSpecifierOp::verify() {
   if (failed(verifySparsifierGetterSetter(getSpecifierKind(), getDim(),
                                           getSpecifier(), getOperation()))) {
