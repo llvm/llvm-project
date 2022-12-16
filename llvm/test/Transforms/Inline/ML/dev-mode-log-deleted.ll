@@ -1,4 +1,4 @@
-; REQUIRES: have_tf_api
+; REQUIRES: have_tflite
 ; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner \
 ; RUN:     -training-log=- -tfutils-text-log  -S < %s | FileCheck %s 
 
