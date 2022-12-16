@@ -1,8 +1,8 @@
 // RUN: %clang_builtins %s %librt -lm -o %t && %run %t
 // REQUIRES: librt_has_mulxc3
-// UNSUPPORTED: powerpc64
+// UNSUPPORTED: target=powerpc64{{.*}}
 // REQUIRES: x86-target-arch
-// UNSUPPORTED: mips
+// UNSUPPORTED: target=mips{{.*}}
 // REQUIRES: c99-complex
 
 #if !_ARCH_PPC
