@@ -345,8 +345,10 @@ class SystemZDAGToDAGISel : public SelectionDAGISel {
   SDValue expandSelectBoolean(SDNode *Node);
 
 public:
+  static char ID;
+
   SystemZDAGToDAGISel(SystemZTargetMachine &TM, CodeGenOpt::Level OptLevel)
-      : SelectionDAGISel(TM, OptLevel) {}
+      : SelectionDAGISel(ID, TM, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     const Function &F = MF.getFunction();
@@ -377,6 +379,8 @@ public:
   #include "SystemZGenDAGISel.inc"
 };
 } // end anonymous namespace
+
+char SystemZDAGToDAGISel::ID = 0;
 
 FunctionPass *llvm::createSystemZISelDag(SystemZTargetMachine &TM,
                                          CodeGenOpt::Level OptLevel) {
