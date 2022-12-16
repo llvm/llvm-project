@@ -227,6 +227,12 @@ genBounds(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
 mlir::Value genShape(mlir::Location loc, fir::FirOpBuilder &builder,
                      Entity entity);
 
+/// Generate a vector of extents with index type from a fir.shape
+/// of fir.shape_shift value.
+llvm::SmallVector<mlir::Value> getIndexExtents(mlir::Location loc,
+                                               fir::FirOpBuilder &builder,
+                                               mlir::Value shape);
+
 /// Read length parameters into result if this entity has any.
 void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
                          Entity entity,
@@ -260,6 +266,10 @@ hlfir::ElementalOp genElementalOp(mlir::Location loc,
 std::pair<fir::DoLoopOp, llvm::SmallVector<mlir::Value>>
 genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
             mlir::ValueRange extents);
+inline std::pair<fir::DoLoopOp, llvm::SmallVector<mlir::Value>>
+genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value shape) {
+  return genLoopNest(loc, builder, getIndexExtents(loc, builder, shape));
+}
 
 /// Inline the body of an hlfir.elemental at the current insertion point
 /// given a list of one based indices. This generates the computation
