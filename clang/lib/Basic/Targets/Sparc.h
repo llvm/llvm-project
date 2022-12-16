@@ -50,7 +50,7 @@ public:
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {
     // FIXME: Implement!
-    return None;
+    return std::nullopt;
   }
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;

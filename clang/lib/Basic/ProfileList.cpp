@@ -111,7 +111,7 @@ ProfileList::inSection(StringRef Section, StringRef Prefix,
     return Forbid;
   if (SCL->inSection(Section, Prefix, Query))
     return Allow;
-  return None;
+  return std::nullopt;
 }
 
 llvm::Optional<ProfileList::ExclusionType>
@@ -125,7 +125,7 @@ ProfileList::isFunctionExcluded(StringRef FunctionName,
     return Forbid;
   if (SCL->inSection(Section, "fun", FunctionName))
     return Allow;
-  return None;
+  return std::nullopt;
 }
 
 llvm::Optional<ProfileList::ExclusionType>
@@ -145,5 +145,5 @@ ProfileList::isFileExcluded(StringRef FileName,
     return Forbid;
   if (SCL->inSection(Section, "src", FileName))
     return Allow;
-  return None;
+  return std::nullopt;
 }

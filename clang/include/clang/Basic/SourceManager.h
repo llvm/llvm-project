@@ -179,8 +179,9 @@ public:
   mutable unsigned IsBufferInvalid : 1;
 
   ContentCache()
-      : OrigEntry(None), ContentsEntry(nullptr), BufferOverridden(false),
-        IsFileVolatile(false), IsTransient(false), IsBufferInvalid(false) {}
+      : OrigEntry(std::nullopt), ContentsEntry(nullptr),
+        BufferOverridden(false), IsFileVolatile(false), IsTransient(false),
+        IsBufferInvalid(false) {}
 
   ContentCache(FileEntryRef Ent) : ContentCache(Ent, Ent) {}
 
@@ -236,7 +237,7 @@ public:
   llvm::Optional<llvm::MemoryBufferRef> getBufferIfLoaded() const {
     if (Buffer)
       return Buffer->getMemBufferRef();
-    return None;
+    return std::nullopt;
   }
 
   /// Return a StringRef to the source buffer data, only if it has already
@@ -244,7 +245,7 @@ public:
   llvm::Optional<StringRef> getBufferDataIfLoaded() const {
     if (Buffer)
       return Buffer->getBuffer();
-    return None;
+    return std::nullopt;
   }
 
   /// Set the buffer.
@@ -1025,7 +1026,7 @@ public:
     if (auto *Entry = getSLocEntryForFile(FID))
       return Entry->getFile().getContentCache().getBufferOrNone(
           Diag, getFileManager(), Loc);
-    return None;
+    return std::nullopt;
   }
 
   /// Return the buffer for the specified FileID.
@@ -1050,7 +1051,7 @@ public:
   Optional<FileEntryRef> getFileEntryRefForID(FileID FID) const {
     if (auto *Entry = getSLocEntryForFile(FID))
       return Entry->getFile().getContentCache().OrigEntry;
-    return None;
+    return std::nullopt;
   }
 
   /// Returns the filename for the provided FileID, unless it's a built-in

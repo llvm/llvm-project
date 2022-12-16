@@ -315,7 +315,7 @@ public:
       : Optional<FileEntryRef>(MaybeRef) {}
 
   OptionalFileEntryRefDegradesToFileEntryPtr &operator=(std::nullopt_t) {
-    Optional<FileEntryRef>::operator=(None);
+    Optional<FileEntryRef>::operator=(std::nullopt);
     return *this;
   }
   OptionalFileEntryRefDegradesToFileEntryPtr &operator=(FileEntryRef Ref) {
