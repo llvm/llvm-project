@@ -522,3 +522,8 @@ end module
   or `BLOCK DATA` subprogram to also be the name of an local entity in its
   scope, with a portability warning, since that global name is not actually
   capable of being "used" in its scope.
+
+## De Facto Standard Features
+
+* `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
+  same type, a case that is technically implementation-defined.

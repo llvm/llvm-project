@@ -371,9 +371,23 @@ std::optional<bool> DynamicType::SameTypeAs(const DynamicType &that) const {
 std::optional<bool> DynamicType::ExtendsTypeOf(const DynamicType &that) const {
   if (IsUnlimitedPolymorphic() || that.IsUnlimitedPolymorphic()) {
     return std::nullopt; // unknown
-  } else if (!AreCompatibleDerivedTypes(evaluate::GetDerivedTypeSpec(that),
-                 evaluate::GetDerivedTypeSpec(*this), true)) {
-    return false;
+  }
+  const auto *thisDts{evaluate::GetDerivedTypeSpec(*this)};
+  const auto *thatDts{evaluate::GetDerivedTypeSpec(that)};
+  if (!thisDts || !thatDts) {
+    return std::nullopt;
+  } else if (!AreCompatibleDerivedTypes(thatDts, thisDts, true)) {
+    // Note that I check *thisDts, not its parent, so that EXTENDS_TYPE_OF()
+    // is .true. when they are the same type.  This is technically
+    // an implementation-defined case in the standard, but every other
+    // compiler works this way.
+    if (IsPolymorphic() && AreCompatibleDerivedTypes(thisDts, thatDts, true)) {
+      // 'that' is *this or an extension of *this, and so runtime *this
+      // could be an extension of 'that'
+      return std::nullopt;
+    } else {
+      return false;
+    }
   } else if (that.IsPolymorphic()) {
     return std::nullopt; // unknown
   } else {
