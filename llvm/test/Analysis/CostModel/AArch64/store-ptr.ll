@@ -5,9 +5,9 @@
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:32:64-v128:32:128-v256:32:256-a0:0:32-n32-S32"
 define void @getMemoryOpCost() {
 ; CHECK-LABEL: 'getMemoryOpCost'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <2 x ptr> undef, ptr undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <4 x ptr> undef, ptr undef, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <8 x ptr> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x ptr> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x ptr> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <8 x ptr> undef, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'getMemoryOpCost'
