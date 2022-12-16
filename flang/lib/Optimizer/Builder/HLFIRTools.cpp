@@ -358,6 +358,12 @@ mlir::Value hlfir::genShape(mlir::Location loc, fir::FirOpBuilder &builder,
   else
     entity = followEntitySource(entity);
 
+  if (entity.getType().isa<hlfir::ExprType>()) {
+    if (auto elemental = entity.getDefiningOp<hlfir::ElementalOp>())
+      return elemental.getShape();
+    TODO(loc, "get shape from HLFIR expr without producer holding the shape");
+  }
+  // Entity is an array variable.
   if (auto varIface = entity.getIfVariableInterface()) {
     if (auto shape = varIface.getShape()) {
       if (shape.getType().isa<fir::ShapeType>())
@@ -366,12 +372,28 @@ mlir::Value hlfir::genShape(mlir::Location loc, fir::FirOpBuilder &builder,
         if (auto s = shape.getDefiningOp<fir::ShapeShiftOp>())
           return builder.create<fir::ShapeOp>(loc, s.getExtents());
     }
-  } else if (entity.getType().isa<hlfir::ExprType>()) {
-    if (auto elemental = entity.getDefiningOp<hlfir::ElementalOp>())
-      return elemental.getShape();
-    TODO(loc, "get shape from HLFIR expr without producer holding the shape");
   }
-  TODO(loc, "get shape from HLFIR variable without interface");
+  // There is no shape lying around for this entity: build one using
+  // the type shape information, and/or the fir.box/fir.class shape
+  // information if any extents are not static.
+  fir::SequenceType seqTy =
+      hlfir::getFortranElementOrSequenceType(entity.getType())
+          .cast<fir::SequenceType>();
+  llvm::SmallVector<mlir::Value> extents;
+  mlir::Type idxTy = builder.getIndexType();
+  for (auto typeExtent : seqTy.getShape())
+    if (typeExtent != fir::SequenceType::getUnknownExtent()) {
+      extents.push_back(builder.createIntegerConstant(loc, idxTy, typeExtent));
+    } else {
+      assert(entity.getType().isa<fir::BaseBoxType>() &&
+             "array variable with dynamic extent must be boxes");
+      mlir::Value dim =
+          builder.createIntegerConstant(loc, idxTy, extents.size());
+      auto dimInfo =
+          builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, entity, dim);
+      extents.push_back(dimInfo.getExtent());
+    }
+  return builder.create<fir::ShapeOp>(loc, extents);
 }
 
 void hlfir::genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
