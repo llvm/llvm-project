@@ -26,13 +26,22 @@
 ;;   | opt -passes=declare-to-assign -S -o -
 
 ; CHECK: entry:
-; CHECK-NEXT:   %agg.tmp = alloca %struct.LargeStruct
-; CHECK-NEXT:   call void @llvm.dbg.assign(metadata <12 x i8> zeroinitializer, metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 96), metadata ![[ID_1:[0-9]+]], metadata ptr undef, metadata !DIExpression()), !dbg
+; CHECK-NEXT:   %S.sroa.0 = alloca { i32, i32, i32 }, align 8, !DIAssignID ![[ID_1:[0-9]+]]
+; CHECK-NEXT:   call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 96), metadata ![[ID_1]], metadata ptr %S.sroa.0, metadata !DIExpression()), !dbg
 
+; CHECK-NEXT:   %S.sroa.6 = alloca { i32, i32, i32 }, align 8, !DIAssignID ![[ID_3:[0-9]+]]
+; CHECK-NEXT:   call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 96), metadata ![[ID_3]], metadata ptr %S.sroa.6, metadata !DIExpression()), !dbg
+
+;; The memset has been split into [0, 96)[96, 128)[128, 224) bit slices. The
+;; memset for the middle slice has been removed.
+; CHECK: call void @llvm.memset{{.*}}(ptr align 8 %S.sroa.0, i8 0, i64 12, i1 false), !dbg !{{.+}}, !DIAssignID ![[ID_4:[0-9]+]]
+; CHECK-NEXT: call void @llvm.memset{{.*}}(ptr align 8 %S.sroa.6, i8 0, i64 12, i1 false), !dbg !{{.+}}, !DIAssignID ![[ID_5:[0-9]+]]
+
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 96), metadata ![[ID_4]], metadata ptr %S.sroa.0, metadata !DIExpression()), !dbg
 ;; This is the one we care about most in this test: check that a memset->store
 ;; gets a correct dbg.assign.
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata <12 x i8> zeroinitializer, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 96), metadata ![[ID_5:[0-9]+]], metadata ptr undef, metadata !DIExpression()), !dbg
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 96), metadata ![[ID_5]], metadata ptr %S.sroa.6, metadata !DIExpression()), !dbg
 
 ;; The load from global+store becomes a load.
 ;; FIXME: In reality it is actually stored again later on.

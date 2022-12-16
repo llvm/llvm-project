@@ -6,7 +6,7 @@
 ;; __attribute__((nodebug)) int Cond;
 ;; __attribute__((nodebug)) Blob *C;
 ;; __attribute__((nodebug)) void call(int);
-;;
+;; 
 ;; void f() {
 ;;   int A[16];
 ;;   __attribute__ ((nodebug)) int B[16];
@@ -14,7 +14,7 @@
 ;;   __builtin_memmove(&A[0], &Glob, sizeof(Blob));
 ;;   call(0);
 ;;   // B[8:14) <- Glob
-;;   __builtin_memmove(&B[8], &Glob, sizeof(Blob));
+;;   __builtin_memmove(&B[8], &Glob, sizeof(Blob));  
 ;;   call(A[0]);
 ;;   // A[8:14) <- A[0:6)
 ;;   __builtin_memmove(&A[8], &A[0], sizeof(Blob));
@@ -24,9 +24,9 @@
 ;;     __builtin_memmove(C, &A[8], sizeof(Blob));
 ;;   else
 ;;     // C <- B[8:14)
-;;     __builtin_memmove(C, &B[8], sizeof(Blob));
+;;     __builtin_memmove(C, &B[8], sizeof(Blob));    
 ;; }
-;;
+;; 
 ;; using:
 ;;   clang test.cpp -emit-llvm -S -g -O2 -Xclang -disable-llvm-passes -o - \
 ;;   | opt -passes=declare-to-assign -o test.ll - -S
@@ -38,12 +38,12 @@
 ;; memcpy. Check that the dbg.assign address and fragment are correct and
 ;; ensure the DIAssignID still links it to the memmove(/memcpy).
 
-; CHECK: %B = alloca [16 x i32]
-; CHECK: %A.sroa.0.sroa.5.0.copyload = load <20 x i8>, ptr getelementptr inbounds (i8, ptr @Glob, i64 4), align 4, !dbg
+; CHECK: %A.sroa.0.sroa.5 = alloca [5 x i32]
+; CHECK: llvm.memcpy{{.*}}(ptr align 4 %A.sroa.0.sroa.5, ptr align 4 getelementptr inbounds (i8, ptr @Glob, i64 4), i64 20, i1 false){{.*}}!DIAssignID ![[ID:[0-9]+]]
 ;; Here's the dbg.assign for element 0 - it's not important for the test.
 ; CHECK-NEXT: llvm.dbg.assign({{.*}}!DIExpression(DW_OP_LLVM_fragment, 0, 32){{.*}})
 ;; This is the dbg.assign we care about:
-; CHECK-NEXT: llvm.dbg.assign(metadata <20 x i8> %A.sroa.0.sroa.5.0.copyload, metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 160), metadata ![[ID:[0-9]+]], metadata ptr undef, metadata !DIExpression())
+; CHECK-NEXT: llvm.dbg.assign(metadata i1 undef, metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 160), metadata ![[ID]], metadata ptr %A.sroa.0.sroa.5, metadata !DIExpression())
 
 ; CHECK: ![[VAR]] = !DILocalVariable(name: "A"
 
