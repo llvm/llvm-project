@@ -1145,7 +1145,7 @@ if ({1}Iter != attrs.end()) {{
       Optional<std::string> cppValue = generateExpression(assignment->value);
       if (!cppValue)
         return failure();
-      stmts.push_back(llvm::formatv("yields.push_back({0});", cppValue));
+      stmts.push_back(llvm::formatv("yields.push_back({0});", *cppValue));
     }
 
     if (generatedAssignmentCount != assignments.size())
