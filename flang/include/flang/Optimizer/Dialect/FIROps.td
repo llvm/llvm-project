@@ -1029,6 +1029,9 @@ def fir_BoxDimsOp : fir_Op<"box_dims", [NoMemoryEffect]> {
 
   let extraClassDeclaration = [{
     mlir::Type getTupleType();
+    mlir::Value getLowerBound() {return getResult(0);};
+    mlir::Value getExtent() {return getResult(1);};
+    mlir::Value getByteStride() {return getResult(2);};
   }];
 }
 
