@@ -9,30 +9,30 @@
 ; invalid, as it's possible that this only happens after optimization on a
 ; code path which isn't ever executed.
 
-; CHECK: define void @test0_yes(i32* nocapture %p) #0 {
-define void @test0_yes(i32* %p) nounwind {
-  store i32 0, i32* %p, !tbaa !1
+; CHECK: define void @test0_yes(ptr nocapture %p) #0 {
+define void @test0_yes(ptr %p) nounwind {
+  store i32 0, ptr %p, !tbaa !1
   ret void
 }
 
-; CHECK: define void @test0_no(i32* nocapture writeonly %p) #1 {
-define void @test0_no(i32* %p) nounwind {
-  store i32 0, i32* %p, !tbaa !2
+; CHECK: define void @test0_no(ptr nocapture writeonly %p) #1 {
+define void @test0_no(ptr %p) nounwind {
+  store i32 0, ptr %p, !tbaa !2
   ret void
 }
 
 ; Add the readnone attribute, since there's just a call to a function which
 ; TBAA says only accesses constant memory.
 
-; CHECK: define void @test1_yes(i32* nocapture %p) #2 {
-define void @test1_yes(i32* %p) nounwind {
-  call void @callee(i32* %p), !tbaa !1
+; CHECK: define void @test1_yes(ptr nocapture %p) #2 {
+define void @test1_yes(ptr %p) nounwind {
+  call void @callee(ptr %p), !tbaa !1
   ret void
 }
 
-; CHECK: define void @test1_no(i32* %p) #3 {
-define void @test1_no(i32* %p) nounwind {
-  call void @callee(i32* %p), !tbaa !2
+; CHECK: define void @test1_no(ptr %p) #3 {
+define void @test1_no(ptr %p) nounwind {
+  call void @callee(ptr %p), !tbaa !2
   ret void
 }
 
@@ -43,34 +43,34 @@ define void @test1_no(i32* %p) nounwind {
 ; This is unusual, since the function is memcpy, but as above, this
 ; isn't necessarily invalid.
 
-; CHECK: define void @test2_yes(i8* nocapture %p, i8* nocapture %q, i64 %n) #4 {
-define void @test2_yes(i8* %p, i8* %q, i64 %n) nounwind {
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %p, i8* %q, i64 %n, i1 false), !tbaa !1
+; CHECK: define void @test2_yes(ptr nocapture %p, ptr nocapture %q, i64 %n) #4 {
+define void @test2_yes(ptr %p, ptr %q, i64 %n) nounwind {
+  call void @llvm.memcpy.p0.p0.i64(ptr %p, ptr %q, i64 %n, i1 false), !tbaa !1
   ret void
 }
 
-; CHECK: define void @test2_no(i8* nocapture writeonly %p, i8* nocapture readonly %q, i64 %n) #5 {
-define void @test2_no(i8* %p, i8* %q, i64 %n) nounwind {
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %p, i8* %q, i64 %n, i1 false), !tbaa !2
+; CHECK: define void @test2_no(ptr nocapture writeonly %p, ptr nocapture readonly %q, i64 %n) #5 {
+define void @test2_no(ptr %p, ptr %q, i64 %n) nounwind {
+  call void @llvm.memcpy.p0.p0.i64(ptr %p, ptr %q, i64 %n, i1 false), !tbaa !2
   ret void
 }
 
 ; Similar to the others, va_arg only accesses memory through its operand.
 
-; CHECK: define i32 @test3_yes(i8* nocapture %p) #0 {
-define i32 @test3_yes(i8* %p) nounwind {
-  %t = va_arg i8* %p, i32, !tbaa !1
+; CHECK: define i32 @test3_yes(ptr nocapture %p) #0 {
+define i32 @test3_yes(ptr %p) nounwind {
+  %t = va_arg ptr %p, i32, !tbaa !1
   ret i32 %t
 }
 
-; CHECK: define i32 @test3_no(i8* nocapture %p) #6 {
-define i32 @test3_no(i8* %p) nounwind {
-  %t = va_arg i8* %p, i32, !tbaa !2
+; CHECK: define i32 @test3_no(ptr nocapture %p) #6 {
+define i32 @test3_no(ptr %p) nounwind {
+  %t = va_arg ptr %p, i32, !tbaa !2
   ret i32 %t
 }
 
-declare void @callee(i32* %p) nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1) nounwind
+declare void @callee(ptr %p) nounwind
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1) nounwind
 
 ; CHECK: attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #1 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
