@@ -11,7 +11,7 @@ class Y : public X {
   int test() {
     []() {
 
-      // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:13:1 %s -o - \
+      // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):1 %s -o - \
       // RUN: | FileCheck %s
       // CHECK: priv (InBase,Inaccessible)
       // CHECK: prot (InBase)
