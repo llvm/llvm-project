@@ -154,7 +154,7 @@ static llvm::json::Object encodeError(llvm::Error error) {
 /// Decode the given JSON object into an error.
 llvm::Error decodeError(const llvm::json::Object &o) {
   StringRef msg = o.getString("message").value_or("Unspecified error");
-  if (Optional<int64_t> code = o.getInteger("code"))
+  if (std::optional<int64_t> code = o.getInteger("code"))
     return llvm::make_error<LSPError>(msg.str(), ErrorCode(*code));
   return llvm::make_error<llvm::StringError>(llvm::inconvertibleErrorCode(),
                                              msg.str());
@@ -235,7 +235,7 @@ bool JSONTransport::handleMessage(llvm::json::Value msg,
   llvm::Optional<llvm::json::Value> id;
   if (llvm::json::Value *i = object->get("id"))
     id = std::move(*i);
-  Optional<StringRef> method = object->getString("method");
+  std::optional<StringRef> method = object->getString("method");
 
   // This is a response.
   if (!method) {

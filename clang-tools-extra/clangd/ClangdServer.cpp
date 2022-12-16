@@ -737,7 +737,7 @@ void ClangdServer::findDocumentHighlights(
 }
 
 void ClangdServer::findHover(PathRef File, Position Pos,
-                             Callback<llvm::Optional<HoverInfo>> CB) {
+                             Callback<std::optional<HoverInfo>> CB) {
   auto Action = [File = File.str(), Pos, CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
@@ -766,7 +766,7 @@ void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
 
 void ClangdServer::superTypes(
     const TypeHierarchyItem &Item,
-    Callback<llvm::Optional<std::vector<TypeHierarchyItem>>> CB) {
+    Callback<std::optional<std::vector<TypeHierarchyItem>>> CB) {
   WorkScheduler->run("typeHierarchy/superTypes", /*Path=*/"",
                      [=, CB = std::move(CB)]() mutable {
                        CB(clangd::superTypes(Item, Index));
@@ -782,7 +782,7 @@ void ClangdServer::subTypes(const TypeHierarchyItem &Item,
 
 void ClangdServer::resolveTypeHierarchy(
     TypeHierarchyItem Item, int Resolve, TypeHierarchyDirection Direction,
-    Callback<llvm::Optional<TypeHierarchyItem>> CB) {
+    Callback<std::optional<TypeHierarchyItem>> CB) {
   WorkScheduler->run(
       "Resolve Type Hierarchy", "", [=, CB = std::move(CB)]() mutable {
         clangd::resolveTypeHierarchy(Item, Resolve, Direction, Index);
@@ -810,7 +810,7 @@ void ClangdServer::incomingCalls(
                      });
 }
 
-void ClangdServer::inlayHints(PathRef File, llvm::Optional<Range> RestrictRange,
+void ClangdServer::inlayHints(PathRef File, std::optional<Range> RestrictRange,
                               Callback<std::vector<InlayHint>> CB) {
   auto Action = [RestrictRange(std::move(RestrictRange)),
                  CB = std::move(CB)](Expected<InputsAndAST> InpAST) mutable {
@@ -955,8 +955,8 @@ void ClangdServer::semanticHighlights(
                             Transient);
 }
 
-void ClangdServer::getAST(PathRef File, llvm::Optional<Range> R,
-                          Callback<llvm::Optional<ASTNode>> CB) {
+void ClangdServer::getAST(PathRef File, std::optional<Range> R,
+                          Callback<std::optional<ASTNode>> CB) {
   auto Action =
       [R, CB(std::move(CB))](llvm::Expected<InputsAndAST> Inputs) mutable {
         if (!Inputs)

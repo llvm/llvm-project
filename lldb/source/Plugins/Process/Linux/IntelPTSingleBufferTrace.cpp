@@ -143,7 +143,8 @@ static Error CheckPsbPeriod(size_t psb_period) {
 
 #ifdef PERF_ATTR_SIZE_VER5
 static Expected<uint64_t>
-GeneratePerfEventConfigValue(bool enable_tsc, Optional<uint64_t> psb_period) {
+GeneratePerfEventConfigValue(bool enable_tsc,
+                             std::optional<uint64_t> psb_period) {
   uint64_t config = 0;
   // tsc is always supported
   if (enable_tsc) {
@@ -174,7 +175,7 @@ GeneratePerfEventConfigValue(bool enable_tsc, Optional<uint64_t> psb_period) {
 ///   or an \a llvm::Error otherwise.
 static Expected<perf_event_attr>
 CreateIntelPTPerfEventConfiguration(bool enable_tsc,
-                                    llvm::Optional<uint64_t> psb_period) {
+                                    std::optional<uint64_t> psb_period) {
   perf_event_attr attr;
   memset(&attr, 0, sizeof(attr));
   attr.size = sizeof(attr);
