@@ -814,10 +814,10 @@ std::string InMemoryFileSystem::toString() const {
 
 bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
                                  std::unique_ptr<llvm::MemoryBuffer> Buffer,
-                                 Optional<uint32_t> User,
-                                 Optional<uint32_t> Group,
-                                 Optional<llvm::sys::fs::file_type> Type,
-                                 Optional<llvm::sys::fs::perms> Perms,
+                                 std::optional<uint32_t> User,
+                                 std::optional<uint32_t> Group,
+                                 std::optional<llvm::sys::fs::file_type> Type,
+                                 std::optional<llvm::sys::fs::perms> Perms,
                                  MakeNodeFn MakeNode) {
   SmallString<128> Path;
   P.toVector(Path);
@@ -891,10 +891,10 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
 
 bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
                                  std::unique_ptr<llvm::MemoryBuffer> Buffer,
-                                 Optional<uint32_t> User,
-                                 Optional<uint32_t> Group,
-                                 Optional<llvm::sys::fs::file_type> Type,
-                                 Optional<llvm::sys::fs::perms> Perms) {
+                                 std::optional<uint32_t> User,
+                                 std::optional<uint32_t> Group,
+                                 std::optional<llvm::sys::fs::file_type> Type,
+                                 std::optional<llvm::sys::fs::perms> Perms) {
   return addFile(P, ModificationTime, std::move(Buffer), User, Group, Type,
                  Perms,
                  [](detail::NewInMemoryNodeInfo NNI)
@@ -907,12 +907,11 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
                  });
 }
 
-bool InMemoryFileSystem::addFileNoOwn(const Twine &P, time_t ModificationTime,
-                                      const llvm::MemoryBufferRef &Buffer,
-                                      Optional<uint32_t> User,
-                                      Optional<uint32_t> Group,
-                                      Optional<llvm::sys::fs::file_type> Type,
-                                      Optional<llvm::sys::fs::perms> Perms) {
+bool InMemoryFileSystem::addFileNoOwn(
+    const Twine &P, time_t ModificationTime,
+    const llvm::MemoryBufferRef &Buffer, std::optional<uint32_t> User,
+    std::optional<uint32_t> Group, std::optional<llvm::sys::fs::file_type> Type,
+    std::optional<llvm::sys::fs::perms> Perms) {
   return addFile(P, ModificationTime, llvm::MemoryBuffer::getMemBuffer(Buffer),
                  std::move(User), std::move(Group), std::move(Type),
                  std::move(Perms),
@@ -1020,12 +1019,10 @@ bool InMemoryFileSystem::addHardLink(const Twine &NewLink,
                  });
 }
 
-bool InMemoryFileSystem::addSymbolicLink(const Twine &NewLink,
-                                         const Twine &Target,
-                                         time_t ModificationTime,
-                                         Optional<uint32_t> User,
-                                         Optional<uint32_t> Group,
-                                         Optional<llvm::sys::fs::perms> Perms) {
+bool InMemoryFileSystem::addSymbolicLink(
+    const Twine &NewLink, const Twine &Target, time_t ModificationTime,
+    std::optional<uint32_t> User, std::optional<uint32_t> Group,
+    std::optional<llvm::sys::fs::perms> Perms) {
   auto NewLinkNode = lookupNode(NewLink, /*FollowFinalSymlink=*/false);
   if (NewLinkNode)
     return false;
@@ -2272,7 +2269,7 @@ static Status getRedirectedFileStatus(const Twine &OriginalPath,
 ErrorOr<Status> RedirectingFileSystem::status(
     const Twine &CanonicalPath, const Twine &OriginalPath,
     const RedirectingFileSystem::LookupResult &Result) {
-  if (Optional<StringRef> ExtRedirect = Result.getExternalRedirect()) {
+  if (std::optional<StringRef> ExtRedirect = Result.getExternalRedirect()) {
     SmallString<256> CanonicalRemappedPath((*ExtRedirect).str());
     if (std::error_code EC = makeCanonical(CanonicalRemappedPath))
       return EC;
@@ -2603,9 +2600,10 @@ class JSONWriter {
 public:
   JSONWriter(llvm::raw_ostream &OS) : OS(OS) {}
 
-  void write(ArrayRef<YAMLVFSEntry> Entries, Optional<bool> UseExternalNames,
-             Optional<bool> IsCaseSensitive, Optional<bool> IsOverlayRelative,
-             StringRef OverlayDir);
+  void write(ArrayRef<YAMLVFSEntry> Entries,
+             std::optional<bool> UseExternalNames,
+             std::optional<bool> IsCaseSensitive,
+             std::optional<bool> IsOverlayRelative, StringRef OverlayDir);
 };
 
 } // namespace
@@ -2660,9 +2658,9 @@ void JSONWriter::writeEntry(StringRef VPath, StringRef RPath) {
 }
 
 void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
-                       Optional<bool> UseExternalNames,
-                       Optional<bool> IsCaseSensitive,
-                       Optional<bool> IsOverlayRelative,
+                       std::optional<bool> UseExternalNames,
+                       std::optional<bool> IsCaseSensitive,
+                       std::optional<bool> IsOverlayRelative,
                        StringRef OverlayDir) {
   using namespace llvm::sys;
 

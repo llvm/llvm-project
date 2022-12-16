@@ -118,7 +118,7 @@ TEST(Triviality, ADT) {
   TrivialityTester<llvm::StringRef, true, true>();
   TrivialityTester<llvm::ArrayRef<int>, true, true>();
   TrivialityTester<llvm::PointerIntPair<int *, 2>, true, true>();
-  TrivialityTester<llvm::Optional<int>, true, true>();
+  TrivialityTester<std::optional<int>, true, true>();
 }
 
 } // namespace triviality

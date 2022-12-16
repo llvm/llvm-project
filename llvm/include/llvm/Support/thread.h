@@ -16,8 +16,8 @@
 #ifndef LLVM_SUPPORT_THREAD_H
 #define LLVM_SUPPORT_THREAD_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Config/llvm-config.h"
+#include <optional>
 
 #ifdef _WIN32
 typedef unsigned long DWORD;
@@ -72,7 +72,7 @@ public:
   }
 #endif
 
-  static const llvm::Optional<unsigned> DefaultStackSize;
+  static const std::optional<unsigned> DefaultStackSize;
 
   thread() : Thread(native_handle_type()) {}
   thread(thread &&Other) noexcept
@@ -83,7 +83,7 @@ public:
       : thread(DefaultStackSize, f, args...) {}
 
   template <class Function, class... Args>
-  explicit thread(llvm::Optional<unsigned> StackSizeInBytes, Function &&f,
+  explicit thread(std::optional<unsigned> StackSizeInBytes, Function &&f,
                   Args &&...args);
   thread(const thread &) = delete;
 
@@ -120,14 +120,14 @@ private:
 
 thread::native_handle_type
 llvm_execute_on_thread_impl(thread::start_routine_type ThreadFunc, void *Arg,
-                            llvm::Optional<unsigned> StackSizeInBytes);
+                            std::optional<unsigned> StackSizeInBytes);
 void llvm_thread_join_impl(thread::native_handle_type Thread);
 void llvm_thread_detach_impl(thread::native_handle_type Thread);
 thread::id llvm_thread_get_id_impl(thread::native_handle_type Thread);
 thread::id llvm_thread_get_current_id_impl();
 
 template <class Function, class... Args>
-thread::thread(llvm::Optional<unsigned> StackSizeInBytes, Function &&f,
+thread::thread(std::optional<unsigned> StackSizeInBytes, Function &&f,
                Args &&...args) {
   typedef std::tuple<std::decay_t<Function>, std::decay_t<Args>...> CalleeTuple;
   std::unique_ptr<CalleeTuple> Callee(
@@ -171,7 +171,7 @@ public:
       : Thread(std::exchange(Other.Thread, std::thread())) {}
 
   template <class Function, class... Args>
-  explicit thread(llvm::Optional<unsigned> StackSizeInBytes, Function &&f,
+  explicit thread(std::optional<unsigned> StackSizeInBytes, Function &&f,
                   Args &&...args)
       : Thread(std::forward<Function>(f), std::forward<Args>(args)...) {}
 
@@ -224,7 +224,7 @@ struct thread {
   thread() {}
   thread(thread &&other) {}
   template <class Function, class... Args>
-  explicit thread(llvm::Optional<unsigned> StackSizeInBytes, Function &&f,
+  explicit thread(std::optional<unsigned> StackSizeInBytes, Function &&f,
                   Args &&...args) {
     f(std::forward<Args>(args)...);
   }
