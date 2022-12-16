@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir %t && cp %s %t/main.cc && mkdir %t/a && mkdir %t/QtCore && mkdir %t/Headers %t/Some.framework %t/Some.framework/Headers
-// RUN: touch %t/foo.h && touch %t/foo.hxx touch %t/foo.cc && touch %t/a/foosys %t/a/foosys.h && touch %t/QtCore/foosys %t/QtCore/foo.h
+// RUN: touch %t/foo.h %t/foo.hxx %t/foo.cc %t/a/foosys %t/a/foosys.h %t/QtCore/foosys %t/QtCore/foo.h
 // RUN: touch %t/Headers/foosys %t/Headers/foo.h %t/Some.framework/Headers/foosys %t/Some.framework/Headers/foo.h
 
 // Quoted string shows header-ish files from CWD, and all from system.
