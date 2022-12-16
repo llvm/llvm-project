@@ -291,7 +291,7 @@ LoadCommands:
 
 # RUN: not yaml2obj --docnum=2 %s -o %t2.macho 2>&1 | FileCheck %s --check-prefix=OVERLAP
 
-# OVERLAP: yaml2obj: error: wrote too much data somewhere, section offsets don't line up
+# OVERLAP: yaml2obj: error: wrote too much data somewhere, section offsets in section __sec2 for segment __SEC don't line up: [cursor=0x121], [fileStart=0x0], [sectionOffset=0x1]
 
 --- !mach-o
 FileHeader:
