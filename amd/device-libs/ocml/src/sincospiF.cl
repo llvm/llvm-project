@@ -26,8 +26,8 @@ MATH_MANGLE(sincospi)(float x, __private float *cp)
 
     if (!FINITE_ONLY_OPT()) {
         bool finite = BUILTIN_ISFINITE_F32(ax);
-        c = finite ? c : AS_FLOAT(QNANBITPATT_SP32);
-        s = finite ? s : AS_FLOAT(QNANBITPATT_SP32);
+        c = finite ? c : QNAN_F32;
+        s = finite ? s : QNAN_F32;
     }
 
     *cp = c;

@@ -38,7 +38,7 @@ MATH_MANGLE(atan2pi)(double y, double x)
         a = (BUILTIN_ISINF_F64(x) & BUILTIN_ISINF_F64(y)) ? t : a;
 
         a = (BUILTIN_ISNAN_F64(x) | BUILTIN_ISNAN_F64(y)) ?
-              AS_DOUBLE(QNANBITPATT_DP64) : a;
+              QNAN_F64 : a;
     }
 
     return BUILTIN_COPYSIGN_F64(a, y);

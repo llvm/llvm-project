@@ -98,7 +98,7 @@ MATH_MANGLE(tgamma)(double x)
                 ret = etonegz * zpow * MATH_DIV(num,den);
             } else {
                 ret = MATH_DIV(den*pi, negadj*etonegz*zpow*num);
-                ret = BUILTIN_FRACTION_F64(x) == 0.0 ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
+                ret = BUILTIN_FRACTION_F64(x) == 0.0 ? QNAN_F64 : ret;
             }
         } else {
             const double c0  =  2.5066282746310007;
@@ -141,7 +141,7 @@ MATH_MANGLE(tgamma)(double x)
                 } else {
                     ret = BUILTIN_COPYSIGN_F64(0.0, negadj);
                 }
-                ret = BUILTIN_FRACTION_F64(x) == 0.0 ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
+                ret = BUILTIN_FRACTION_F64(x) == 0.0 ? QNAN_F64 : ret;
             } else {
                 ret = x;
             }

@@ -142,7 +142,7 @@ MATH_MANGLE(y1)(float x)
                 ret = MATH_DIV(-twobypi, BUILTIN_ABS_F32(x));
             else
                 ret = MATH_MAD(ret, x, twobypi*(MATH_MANGLE(j1)(x) * MATH_MANGLE(log)(x) - MATH_RCP(x)));
-            ret = x < 0.0f ? AS_FLOAT(QNANBITPATT_SP32) : ret;
+            ret = x < 0.0f ? QNAN_F32 : ret;
         }
     } else {
         float r = MATH_RCP(x);

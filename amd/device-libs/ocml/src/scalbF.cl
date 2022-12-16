@@ -14,9 +14,9 @@ MATH_MANGLE(scalb)(float x, float y)
     float ret = MATH_MANGLE(ldexp)(x, (int)BUILTIN_RINT_F32(t));
 
     if (!FINITE_ONLY_OPT()) {
-        ret = (BUILTIN_ISNAN_F32(x) | BUILTIN_ISNAN_F32(y)) ?  AS_FLOAT(QNANBITPATT_SP32) : ret;
-        ret = (BUILTIN_ISINF_F32(x) & BUILTIN_CLASS_F32(y, CLASS_PINF)) ? AS_FLOAT(QNANBITPATT_SP32) : ret;
-        ret = (BUILTIN_ISINF_F32(x) & BUILTIN_CLASS_F32(y, CLASS_NINF)) ? AS_FLOAT(QNANBITPATT_SP32) : ret;
+        ret = (BUILTIN_ISNAN_F32(x) | BUILTIN_ISNAN_F32(y)) ?  QNAN_F32 : ret;
+        ret = (BUILTIN_ISINF_F32(x) & BUILTIN_CLASS_F32(y, CLASS_PINF)) ? QNAN_F32 : ret;
+        ret = (BUILTIN_ISINF_F32(x) & BUILTIN_CLASS_F32(y, CLASS_NINF)) ? QNAN_F32 : ret;
     }
 
     return ret;

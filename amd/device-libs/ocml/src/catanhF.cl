@@ -47,7 +47,7 @@ MATH_MANGLE(catanh)(float2 z)
         rr = x == 0.0f ? 0.0f : rr;
         rr = BUILTIN_ISINF_F32(x) ? 0.0f : rr;
         rr = (BUILTIN_ISNAN_F32(x) & BUILTIN_ISINF_F32(y)) ? 0.0f : rr;
-        ri = (BUILTIN_ISNAN_F32(x) & BUILTIN_ISFINITE_F32(y)) ? AS_FLOAT(QNANBITPATT_SP32) : ri;
+        ri = (BUILTIN_ISNAN_F32(x) & BUILTIN_ISFINITE_F32(y)) ? QNAN_F32 : ri;
         ri = BUILTIN_ISNAN_F32(y) ? y : ri;
     }
 

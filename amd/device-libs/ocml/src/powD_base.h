@@ -71,20 +71,20 @@ MATH_MANGLE(pow)(double x, double y)
         ret = ax < 1.0 ? iz : zi;
 
     if (y == 0.0)
-        ret = x == 0.0 || BUILTIN_ISINF_F64(x) ? AS_DOUBLE(QNANBITPATT_DP64) : 1.0;
+        ret = x == 0.0 || BUILTIN_ISINF_F64(x) ? QNAN_F64 : 1.0;
 
     if (x == 1.0)
-        ret = BUILTIN_ISINF_F64(y) ? AS_DOUBLE(QNANBITPATT_DP64) : 1.0;
+        ret = BUILTIN_ISINF_F64(y) ? QNAN_F64 : 1.0;
 
     if (x < 0.0 || BUILTIN_ISNAN_F64(x) || BUILTIN_ISNAN_F64(y))
-        ret = AS_DOUBLE(QNANBITPATT_DP64);
+        ret = QNAN_F64;
 #elif defined COMPILING_POWN
     if (BUILTIN_ISINF_F64(ax) || x == 0.0)
         ret = BUILTIN_COPYSIGN_F64((x == 0.0) ^ (ny < 0) ? 0.0 : AS_DOUBLE(PINFBITPATT_DP64), inty == 1 ? x : 0.0);
 
     if (BUILTIN_ISNAN_F64(x))
-        ret = AS_DOUBLE(QNANBITPATT_DP64);
-    
+        ret = QNAN_F64;
+
     if (ny == 0)
         ret = 1.0;
 #elif defined COMPILING_ROOTN
@@ -92,10 +92,10 @@ MATH_MANGLE(pow)(double x, double y)
         ret = BUILTIN_COPYSIGN_F64((x == 0.0) ^ (ny < 0) ? 0.0 : AS_DOUBLE(PINFBITPATT_DP64), inty == 1 ? x : 0.0);
 
     if ((x < 0.0 && inty != 1) || ny == 0)
-        ret = AS_DOUBLE(QNANBITPATT_DP64);
+        ret = QNAN_F64;
 #else
     if (x < 0.0 && !inty)
-        ret = AS_DOUBLE(QNANBITPATT_DP64);
+        ret = QNAN_F64;
 
     if (BUILTIN_ISINF_F64(ay))
         ret = ax == 1.0 ? ax : (samesign(y, ax - 1.0) ? ay : 0.0);
@@ -104,7 +104,7 @@ MATH_MANGLE(pow)(double x, double y)
         ret = BUILTIN_COPYSIGN_F64((x == 0.0) ^ (y < 0.0) ? 0.0 : AS_DOUBLE(PINFBITPATT_DP64), inty == 1 ? x : 0.0);
 
     if (BUILTIN_ISNAN_F64(x) || BUILTIN_ISNAN_F64(y))
-        ret = AS_DOUBLE(QNANBITPATT_DP64);
+        ret = QNAN_F64;
 
     if (x == 1.0 || y == 0.0)
         ret = 1.0;

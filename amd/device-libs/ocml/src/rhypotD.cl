@@ -26,7 +26,7 @@ MATH_MANGLE(rhypot)(double x, double y)
         ret = t == 0.0 ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
 
         ret = (BUILTIN_ISNAN_F64(x) | BUILTIN_ISNAN_F64(y)) ?
-              AS_DOUBLE(QNANBITPATT_DP64) : ret;
+              QNAN_F64 : ret;
 
         ret = (BUILTIN_ISINF_F64(x) | BUILTIN_ISINF_F64(y)) ? 0.0 : ret;
     }

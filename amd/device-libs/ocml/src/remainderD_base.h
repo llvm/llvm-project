@@ -121,13 +121,13 @@ MATH_MANGLE(remainder)(double x, double y)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        ret = y == 0.0 ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
+        ret = y == 0.0 ? QNAN_F64 : ret;
 #if defined(COMPILING_REMQUO)
         q7 = y == 0.0 ? 0 : q7;
 #endif
 
         bool c = !BUILTIN_ISNAN_F64(y) && BUILTIN_ISFINITE_F64(x);
-        ret = c ? ret : AS_DOUBLE(QNANBITPATT_DP64);
+        ret = c ? ret : QNAN_F64;
 #if defined(COMPILING_REMQUO)
         q7 = c ? q7 : 0;
 #endif

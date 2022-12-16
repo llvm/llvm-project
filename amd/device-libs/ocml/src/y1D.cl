@@ -145,7 +145,7 @@ MATH_MANGLE(y1)(double x)
                 ret = MATH_DIV(-twobypi, BUILTIN_ABS_F64(x));
             else
                 ret = MATH_MAD(ret, x, twobypi*(MATH_MANGLE(j1)(x) * MATH_MANGLE(log)(x) - MATH_RCP(x)));
-            ret = x < 0.0 ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
+            ret = x < 0.0 ? QNAN_F64 : ret;
         }
     } else {
         double r = MATH_RCP(x);

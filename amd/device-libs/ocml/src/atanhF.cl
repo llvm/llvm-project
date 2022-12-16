@@ -21,7 +21,7 @@ MATH_MANGLE(atanh)(float x)
     z = y < 0x1.0p-12f ? y : z;
 
     if (!FINITE_ONLY_OPT()) {
-        z = y > 1.0f ? AS_FLOAT(QNANBITPATT_SP32) : z;
+        z = y > 1.0f ? QNAN_F32 : z;
         z = y == 1.0f ? AS_FLOAT(PINFBITPATT_SP32) : z;
     }
 

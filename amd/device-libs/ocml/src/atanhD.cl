@@ -21,7 +21,7 @@ MATH_MANGLE(atanh)(double x)
     z = y < 0x1.0p-27 ? y : z;
 
     if (!FINITE_ONLY_OPT()) {
-        z = y > 1.0 ? AS_DOUBLE(QNANBITPATT_DP64) : z;
+        z = y > 1.0 ? QNAN_F64 : z;
         z = y == 1.0 ? AS_DOUBLE(PINFBITPATT_DP64) : z;
     }
 

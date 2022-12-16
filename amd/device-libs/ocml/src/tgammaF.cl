@@ -45,7 +45,7 @@ MATH_MANGLE(tgamma)(float x)
             float p = s*x*t2*t1*t1;
             ret = MATH_DIV(-sqrtpiby2*d,  MATH_MAD(p, pt, p));
             ret = x < -42.0f ? 0.0f : ret;
-            ret = BUILTIN_FRACTION_F32(x) == 0.0f ? AS_FLOAT(QNANBITPATT_SP32) : ret;
+            ret = BUILTIN_FRACTION_F32(x) == 0.0f ? QNAN_F32 : ret;
         }
     } else {
         ret = MATH_MAD(x, MATH_MAD(x, MATH_MAD(x,

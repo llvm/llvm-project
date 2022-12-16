@@ -19,7 +19,7 @@ MATH_MANGLE(log1p)(double x)
 
     if (!FINITE_ONLY_OPT()) {
         z = BUILTIN_CLASS_F64(x, CLASS_PINF) ? x : z;
-        z = x < -1.0 ? AS_DOUBLE(QNANBITPATT_DP64) : z;
+        z = x < -1.0 ? QNAN_F64 : z;
         z = x == -1.0 ? AS_DOUBLE(NINFBITPATT_DP64) : z;
     }
 

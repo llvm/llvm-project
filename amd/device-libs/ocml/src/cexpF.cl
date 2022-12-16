@@ -30,7 +30,7 @@ MATH_MANGLE(cexp)(float2 z)
         }
         if (BUILTIN_CLASS_F32(x, CLASS_PINF)) {
             rr = finite ? rr : AS_FLOAT(PINFBITPATT_SP32);
-            ri = finite ? ri : AS_FLOAT(QNANBITPATT_SP32);
+            ri = finite ? ri : QNAN_F32;
             ri = y == 0.0f ? y : ri;
         }
         ri = (BUILTIN_ISNAN_F32(x) & (y == 0.0f)) ? y : ri;

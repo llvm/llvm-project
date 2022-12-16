@@ -41,7 +41,7 @@ MATH_MANGLE(atan2pi)(half y, half x)
 
         // x or y is NaN
         a = (BUILTIN_ISNAN_F16(x) | BUILTIN_ISNAN_F16(y)) ?
-            AS_HALF((short)QNANBITPATT_HP16) : a;
+            QNAN_F16 : a;
     }
 
     return BUILTIN_COPYSIGN_F16(a, y);

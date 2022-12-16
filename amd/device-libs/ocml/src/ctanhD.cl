@@ -43,8 +43,8 @@ MATH_MANGLE(ctanh)(double2 z)
         bool xn = BUILTIN_ISNAN_F64(x);
         bool yin = !BUILTIN_ISFINITE_F64(z.y);
         bool ni = BUILTIN_CLASS_F64(x, CLASS_PZER|CLASS_PSUB|CLASS_PNOR) & yin;
-        rr = (ni | xn) ? AS_DOUBLE(QNANBITPATT_DP64) : rr;
-        ri = ni ? AS_DOUBLE(QNANBITPATT_DP64) : ri;
+        rr = (ni | xn) ? QNAN_F64 : rr;
+        ri = ni ? QNAN_F64 : ri;
         ri = (BUILTIN_ISINF_F64(x) & yin) ? 0.0 : ri;
         ri = (xn & (z.y == 0.0)) ? z.y : ri;
     }

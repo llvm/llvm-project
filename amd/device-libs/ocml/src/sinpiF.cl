@@ -19,7 +19,7 @@ MATH_MANGLE(sinpi)(float x)
     s = AS_FLOAT(AS_INT(s) ^ (r.i > 1 ? 0x80000000 : 0) ^ (AS_INT(x) ^ AS_INT(ax)));
 
     if (!FINITE_ONLY_OPT()) {
-        s = BUILTIN_ISFINITE_F32(ax) ? s : AS_FLOAT(QNANBITPATT_SP32);
+        s = BUILTIN_ISFINITE_F32(ax) ? s : QNAN_F32;
     }
 
     return s;

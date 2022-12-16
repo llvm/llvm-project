@@ -15,7 +15,7 @@ MATH_MANGLE(csqrt)(double2 z)
     double t = BUILTIN_MAX_F64(a, b);
 
     if (!FINITE_ONLY_OPT()) {
-        t = (BUILTIN_ISNAN_F64(a) | BUILTIN_ISNAN_F64(b)) ? AS_DOUBLE(QNANBITPATT_DP64) : t;
+        t = (BUILTIN_ISNAN_F64(a) | BUILTIN_ISNAN_F64(b)) ? QNAN_F64 : t;
     }
 
     int e = BUILTIN_FREXP_EXP_F64(t);

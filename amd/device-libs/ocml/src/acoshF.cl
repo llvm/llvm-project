@@ -23,7 +23,7 @@ MATH_MANGLE(acosh)(float x)
 
     if (!FINITE_ONLY_OPT()) {
         z = BUILTIN_CLASS_F32(x, CLASS_PINF) ? x : z;
-        z = x < 1.0f ? AS_FLOAT(QNANBITPATT_SP32) : z;
+        z = x < 1.0f ? QNAN_F32 : z;
     }
 
     return z;

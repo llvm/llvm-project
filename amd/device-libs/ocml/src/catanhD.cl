@@ -47,7 +47,7 @@ MATH_MANGLE(catanh)(double2 z)
         rr = x == 0.0 ? 0.0 : rr;
         rr = BUILTIN_ISINF_F64(x) ? 0.0 : rr;
         rr = (BUILTIN_ISNAN_F64(x) & BUILTIN_ISINF_F64(y)) ? 0.0 : rr;
-        ri = (BUILTIN_ISNAN_F64(x) & BUILTIN_ISFINITE_F64(y)) ? AS_DOUBLE(QNANBITPATT_DP64) : ri;
+        ri = (BUILTIN_ISNAN_F64(x) & BUILTIN_ISFINITE_F64(y)) ? QNAN_F64 : ri;
         ri = BUILTIN_ISNAN_F64(y) ? y : ri;
     }
 

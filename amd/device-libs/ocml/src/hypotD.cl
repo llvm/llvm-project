@@ -20,7 +20,7 @@ MATH_MANGLE(hypot)(double x, double y)
 
     if (!FINITE_ONLY_OPT()) {
         ret = (BUILTIN_ISNAN_F64(x) | BUILTIN_ISNAN_F64(y)) ?
-              AS_DOUBLE(QNANBITPATT_DP64) : ret;
+              QNAN_F64 : ret;
 
         ret = (BUILTIN_ISINF_F64(x) | BUILTIN_ISINF_F64(y)) ?
               AS_DOUBLE(PINFBITPATT_DP64) : ret;

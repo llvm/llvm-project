@@ -123,13 +123,13 @@ MATH_MANGLE(remainder)(half x, half y)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        ret = y == 0.0h ? AS_HALF((short)QNANBITPATT_HP16) : ret;
+        ret = y == 0.0h ? QNAN_F16 : ret;
 #if defined(COMPILING_REMQUO)
         q7 = y == 0.0h ? 0 : q7;
 #endif
 
         bool c = !BUILTIN_ISNAN_F16(y) && BUILTIN_ISFINITE_F16(x);
-        ret = c ? ret : AS_HALF((short)QNANBITPATT_HP16);
+        ret = c ? ret : QNAN_F16;
 #if defined(COMPILING_REMQUO)
         q7 = c ? q7 : 0;
 #endif

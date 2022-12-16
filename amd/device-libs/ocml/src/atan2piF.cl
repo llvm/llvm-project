@@ -44,7 +44,7 @@ MATH_MANGLE(atan2pi)(float y, float x)
 
         // x or y is NaN
         a = (BUILTIN_ISNAN_F32(x) | BUILTIN_ISNAN_F32(y)) ?
-            AS_FLOAT(QNANBITPATT_SP32) : a;
+            QNAN_F32 : a;
     }
 
     return BUILTIN_COPYSIGN_F32(a, y);

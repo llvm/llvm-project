@@ -30,7 +30,7 @@ MATH_MANGLE(cexp)(double2 z)
         }
         if (BUILTIN_CLASS_F64(x, CLASS_PINF)) {
             rr = isfinite ? rr : AS_DOUBLE(PINFBITPATT_DP64);
-            ri = isfinite ? ri : AS_DOUBLE(QNANBITPATT_DP64);
+            ri = isfinite ? ri : QNAN_F64;
             ri = y == 0.0 ? y : ri;
         }
         ri = (BUILTIN_ISNAN_F64(x) & (y == 0.0)) ? y : ri;

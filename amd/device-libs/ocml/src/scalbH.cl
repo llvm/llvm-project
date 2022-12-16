@@ -16,9 +16,9 @@ MATH_MANGLE(scalb)(half x, half y)
     half ret = MATH_MANGLE(ldexp)(x, (int)BUILTIN_RINT_F16(t));
 
     if (!FINITE_ONLY_OPT()) {
-        ret = (BUILTIN_ISNAN_F16(x) | BUILTIN_ISNAN_F16(y)) ? AS_HALF((short)QNANBITPATT_HP16) : ret;
-        ret = (BUILTIN_ISZERO_F16(x) & BUILTIN_CLASS_F16(y, CLASS_PINF)) ? AS_HALF((short)QNANBITPATT_HP16) : ret;
-        ret = (BUILTIN_ISINF_F16(x) & BUILTIN_CLASS_F16(y, CLASS_NINF)) ? AS_HALF((short)QNANBITPATT_HP16) : ret;
+        ret = (BUILTIN_ISNAN_F16(x) | BUILTIN_ISNAN_F16(y)) ? QNAN_F16 : ret;
+        ret = (BUILTIN_ISZERO_F16(x) & BUILTIN_CLASS_F16(y, CLASS_PINF)) ? QNAN_F16 : ret;
+        ret = (BUILTIN_ISINF_F16(x) & BUILTIN_CLASS_F16(y, CLASS_NINF)) ? QNAN_F16 : ret;
     }
 
     return ret;
