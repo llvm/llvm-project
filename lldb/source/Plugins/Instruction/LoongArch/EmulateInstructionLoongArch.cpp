@@ -33,8 +33,30 @@ namespace lldb_private {
 
 EmulateInstructionLoongArch::Opcode *
 EmulateInstructionLoongArch::GetOpcodeForInstruction(uint32_t inst) {
-  // TODO: Add the mask of jump instruction.
+  // TODO: Add the mask for other instruction.
   static EmulateInstructionLoongArch::Opcode g_opcodes[] = {
+      {0xfc000000, 0x40000000, &EmulateInstructionLoongArch::EmulateBEQZ,
+       "beqz rj, offs21"},
+      {0xfc000000, 0x44000000, &EmulateInstructionLoongArch::EmulateBNEZ,
+       "bnez rj, offs21"},
+      {0xfc000000, 0x4c000000, &EmulateInstructionLoongArch::EmulateJIRL,
+       "jirl rd, rj, offs16"},
+      {0xfc000000, 0x50000000, &EmulateInstructionLoongArch::EmulateB,
+       " b  offs26"},
+      {0xfc000000, 0x54000000, &EmulateInstructionLoongArch::EmulateBL,
+       "bl  offs26"},
+      {0xfc000000, 0x58000000, &EmulateInstructionLoongArch::EmulateBEQ,
+       "beq  rj, rd, offs16"},
+      {0xfc000000, 0x5c000000, &EmulateInstructionLoongArch::EmulateBNE,
+       "bne  rj, rd, offs16"},
+      {0xfc000000, 0x60000000, &EmulateInstructionLoongArch::EmulateBLT,
+       "blt  rj, rd, offs16"},
+      {0xfc000000, 0x64000000, &EmulateInstructionLoongArch::EmulateBGE,
+       "bge  rj, rd, offs16"},
+      {0xfc000000, 0x68000000, &EmulateInstructionLoongArch::EmulateBLTU,
+       "bltu rj, rd, offs16"},
+      {0xfc000000, 0x6c000000, &EmulateInstructionLoongArch::EmulateBGEU,
+       "bgeu rj, rd, offs16"},
       {0x00000000, 0x00000000, &EmulateInstructionLoongArch::EmulateNonJMP,
        "NonJMP"}};
   static const size_t num_loongarch_opcodes = std::size(g_opcodes);
@@ -176,6 +198,339 @@ bool EmulateInstructionLoongArch::SupportsThisArch(const ArchSpec &arch) {
   return arch.GetTriple().isLoongArch();
 }
 
+bool EmulateInstructionLoongArch::EmulateBEQZ(uint32_t inst) {
+  if (IsLoongArch64())
+    return EmulateBEQZ64(inst);
+  else
+    return false;
+}
+
+bool EmulateInstructionLoongArch::EmulateBNEZ(uint32_t inst) {
+  if (IsLoongArch64())
+    return EmulateBNEZ64(inst);
+  else
+    return false;
+}
+
+bool EmulateInstructionLoongArch::EmulateJIRL(uint32_t inst) {
+  if (IsLoongArch64())
+    return EmulateJIRL64(inst);
+  else
+    return false;
+}
+
+bool EmulateInstructionLoongArch::EmulateB(uint32_t inst) {
+  if (IsLoongArch64())
+    return EmulateB64(inst);
+  else
+    return false;
+}
+
+bool EmulateInstructionLoongArch::EmulateBL(uint32_t inst) {
+  if (IsLoongArch64())
+    return EmulateBL64(inst);
+  else
+    return false;
+}
+
+bool EmulateInstructionLoongArch::EmulateBEQ(uint32_t inst) {
+  if (IsLoongArch64())
+    return EmulateBEQ64(inst);
+  else
+    return false;
+}
+
+bool EmulateInstructionLoongArch::EmulateBNE(uint32_t inst) {
+  if (IsLoongArch64())
+    return EmulateJIRL64(inst);
+  else
+    return false;
+}
+
+bool EmulateInstructionLoongArch::EmulateBLT(uint32_t inst) {
+  if (IsLoongArch64())
+    return EmulateBLT64(inst);
+  else
+    return false;
+}
+
+bool EmulateInstructionLoongArch::EmulateBGE(uint32_t inst) {
+  if (IsLoongArch64())
+    return EmulateBGE64(inst);
+  else
+    return false;
+}
+
+bool EmulateInstructionLoongArch::EmulateBLTU(uint32_t inst) {
+  if (IsLoongArch64())
+    return EmulateBLTU64(inst);
+  else
+    return false;
+}
+
+bool EmulateInstructionLoongArch::EmulateBGEU(uint32_t inst) {
+  if (IsLoongArch64())
+    return EmulateBGEU64(inst);
+  else
+    return false;
+}
+
 bool EmulateInstructionLoongArch::EmulateNonJMP(uint32_t inst) { return false; }
+
+// beqz rj, offs21
+// if GR[rj] == 0:
+//   PC = PC + SignExtend({offs21, 2'b0}, GRLEN)
+bool EmulateInstructionLoongArch::EmulateBEQZ64(uint32_t inst) {
+  uint64_t next_pc, imm_sign_extend;
+  bool success = false;
+  uint32_t rj = Bits32(inst, 9, 5);
+  uint64_t rj_val;
+  uint64_t pc = ReadPC(&success);
+  if (!success)
+    return false;
+  uint32_t offs21 = Bits32(inst, 25, 10) + (Bits32(inst, 4, 0) << 16);
+  rj_val = ReadRegisterUnsigned(eRegisterKindLLDB, rj, 0, &success);
+  if (!success)
+    return false;
+  if (rj_val == 0) {
+    imm_sign_extend = llvm::SignExtend64<23>(offs21 << 2);
+    next_pc = pc + imm_sign_extend;
+    return WritePC(next_pc);
+  } else
+    return WritePC(pc + 4);
+}
+
+// bnez rj, offs21
+// if GR[rj] != 0:
+//   PC = PC + SignExtend({offs21, 2'b0}, GRLEN)
+bool EmulateInstructionLoongArch::EmulateBNEZ64(uint32_t inst) {
+  uint64_t next_pc, imm_sign_extend;
+  bool success = false;
+  uint32_t rj = Bits32(inst, 9, 5);
+  uint64_t rj_val;
+  uint64_t pc = ReadPC(&success);
+  if (!success)
+    return false;
+  uint32_t offs21 = Bits32(inst, 25, 10) + (Bits32(inst, 4, 0) << 16);
+  rj_val = ReadRegisterUnsigned(eRegisterKindLLDB, rj, 0, &success);
+  if (!success)
+    return false;
+  if (rj_val != 0) {
+    imm_sign_extend = llvm::SignExtend64<23>(offs21 << 2);
+    next_pc = pc + imm_sign_extend;
+    return WritePC(next_pc);
+  } else
+    return WritePC(pc + 4);
+}
+
+// jirl rd, rj, offs16
+// GR[rd] = PC + 4
+// PC = GR[rj] + SignExtend({offs16, 2'b0}, GRLEN)
+bool EmulateInstructionLoongArch::EmulateJIRL64(uint32_t inst) {
+  uint64_t next_pc, imm_sign_extend;
+  RegisterValue value;
+  uint32_t rj = Bits32(inst, 9, 5);
+  uint32_t rd = Bits32(inst, 4, 0);
+  bool success = false;
+  uint64_t pc = ReadPC(&success);
+  if (!success)
+    return false;
+  EmulateInstruction::Context ctx;
+  if (!WriteRegisterUnsigned(ctx, eRegisterKindLLDB, rd, pc + 4))
+    return false;
+  if (!ReadRegister(eRegisterKindLLDB, rj, value))
+    return false;
+  imm_sign_extend = llvm::SignExtend64<18>(Bits32(inst, 25, 10) << 2);
+  next_pc = value.GetAsUInt64() + imm_sign_extend;
+  return WritePC(next_pc);
+}
+
+// b offs26
+// PC = PC + SignExtend({offs26, 2' b0}, GRLEN)
+bool EmulateInstructionLoongArch::EmulateB64(uint32_t inst) {
+  uint64_t next_pc, imm_sign_extend;
+  bool success = false;
+  uint64_t pc = ReadPC(&success);
+  if (!success)
+    return false;
+  uint32_t offs26 = Bits32(inst, 25, 10) + (Bits32(inst, 9, 0) << 16);
+  imm_sign_extend = llvm::SignExtend64<28>(offs26 << 2);
+  next_pc = pc + imm_sign_extend;
+  return WritePC(next_pc);
+}
+
+// bl offs26
+// GR[1] = PC + 4
+// PC = PC + SignExtend({offs26, 2'b0}, GRLEN)
+bool EmulateInstructionLoongArch::EmulateBL64(uint32_t inst) {
+  uint64_t next_pc, imm_sign_extend;
+  bool success = false;
+  uint64_t pc = ReadPC(&success);
+  if (!success)
+    return false;
+  EmulateInstruction::Context ctx;
+  if (!WriteRegisterUnsigned(ctx, eRegisterKindLLDB, gpr_r1_loongarch, pc + 4))
+    return false;
+  uint32_t offs26 = Bits32(inst, 25, 10) + (Bits32(inst, 9, 0) << 16);
+  imm_sign_extend = llvm::SignExtend64<28>(offs26 << 2);
+  next_pc = pc + imm_sign_extend;
+  return WritePC(next_pc);
+}
+
+// beq rj, rd, offs16
+// if GR[rj] == GR[rd]:
+//   PC = PC + SignExtend({offs16, 2'b0}, GRLEN)
+bool EmulateInstructionLoongArch::EmulateBEQ64(uint32_t inst) {
+  uint64_t next_pc, imm_sign_extend;
+  bool success = false;
+  uint32_t rj = Bits32(inst, 9, 5);
+  uint32_t rd = Bits32(inst, 4, 0);
+  uint64_t rj_val, rd_val;
+  uint64_t pc = ReadPC(&success);
+  if (!success)
+    return false;
+  rj_val = ReadRegisterUnsigned(eRegisterKindLLDB, rj, 0, &success);
+  if (!success)
+    return false;
+  rd_val = ReadRegisterUnsigned(eRegisterKindLLDB, rd, 0, &success);
+  if (!success)
+    return false;
+  if (rj_val == rd_val) {
+    imm_sign_extend = llvm::SignExtend64<18>(Bits32(inst, 25, 10) << 2);
+    next_pc = pc + imm_sign_extend;
+    return WritePC(next_pc);
+  } else
+    return WritePC(pc + 4);
+}
+
+// bne rj, rd, offs16
+// if GR[rj] != GR[rd]:
+//   PC = PC + SignExtend({offs16, 2'b0}, GRLEN)
+bool EmulateInstructionLoongArch::EmulateBNE64(uint32_t inst) {
+  uint64_t next_pc, imm_sign_extend;
+  bool success = false;
+  uint32_t rj = Bits32(inst, 9, 5);
+  uint32_t rd = Bits32(inst, 4, 0);
+  uint64_t rj_val, rd_val;
+  uint64_t pc = ReadPC(&success);
+  if (!success)
+    return false;
+  rj_val = ReadRegisterUnsigned(eRegisterKindLLDB, rj, 0, &success);
+  if (!success)
+    return false;
+  rd_val = ReadRegisterUnsigned(eRegisterKindLLDB, rd, 0, &success);
+  if (!success)
+    return false;
+  if (rj_val != rd_val) {
+    imm_sign_extend = llvm::SignExtend64<18>(Bits32(inst, 25, 10) << 2);
+    next_pc = pc + imm_sign_extend;
+    return WritePC(next_pc);
+  } else
+    return WritePC(pc + 4);
+}
+
+// blt rj, rd, offs16
+// if signed(GR[rj]) < signed(GR[rd]):
+//   PC = PC + SignExtend({offs16, 2'b0}, GRLEN)
+bool EmulateInstructionLoongArch::EmulateBLT64(uint32_t inst) {
+  uint64_t next_pc, imm_sign_extend;
+  bool success = false;
+  uint32_t rj = Bits32(inst, 9, 5);
+  uint32_t rd = Bits32(inst, 4, 0);
+  int64_t rj_val, rd_val;
+  uint64_t pc = ReadPC(&success);
+  if (!success)
+    return false;
+  rj_val = (int64_t)ReadRegisterUnsigned(eRegisterKindLLDB, rj, 0, &success);
+  if (!success)
+    return false;
+  rd_val = (int64_t)ReadRegisterUnsigned(eRegisterKindLLDB, rd, 0, &success);
+  if (!success)
+    return false;
+  if (rj_val < rd_val) {
+    imm_sign_extend = llvm::SignExtend64<18>(Bits32(inst, 25, 10) << 2);
+    next_pc = pc + imm_sign_extend;
+    return WritePC(next_pc);
+  } else
+    return WritePC(pc + 4);
+}
+
+// bge rj, rd, offs16
+// if signed(GR[rj]) >= signed(GR[rd]):
+//   PC = PC + SignExtend({offs16, 2'b0}, GRLEN)
+bool EmulateInstructionLoongArch::EmulateBGE64(uint32_t inst) {
+  uint64_t next_pc, imm_sign_extend;
+  bool success = false;
+  uint32_t rj = Bits32(inst, 9, 5);
+  uint32_t rd = Bits32(inst, 4, 0);
+  int64_t rj_val, rd_val;
+  uint64_t pc = ReadPC(&success);
+  if (!success)
+    return false;
+  rj_val = (int64_t)ReadRegisterUnsigned(eRegisterKindLLDB, rj, 0, &success);
+  if (!success)
+    return false;
+  rd_val = (int64_t)ReadRegisterUnsigned(eRegisterKindLLDB, rd, 0, &success);
+  if (!success)
+    return false;
+  if (rj_val >= rd_val) {
+    imm_sign_extend = llvm::SignExtend64<18>(Bits32(inst, 25, 10) << 2);
+    next_pc = pc + imm_sign_extend;
+    return WritePC(next_pc);
+  } else
+    return WritePC(pc + 4);
+}
+
+// bltu rj, rd, offs16
+// if unsigned(GR[rj]) < unsigned(GR[rd]):
+//   PC = PC + SignExtend({offs16, 2'b0}, GRLEN)
+bool EmulateInstructionLoongArch::EmulateBLTU64(uint32_t inst) {
+  uint64_t next_pc, imm_sign_extend;
+  bool success = false;
+  uint32_t rj = Bits32(inst, 9, 5);
+  uint32_t rd = Bits32(inst, 4, 0);
+  uint64_t rj_val, rd_val;
+  uint64_t pc = ReadPC(&success);
+  if (!success)
+    return false;
+  rj_val = ReadRegisterUnsigned(eRegisterKindLLDB, rj, 0, &success);
+  if (!success)
+    return false;
+  rd_val = ReadRegisterUnsigned(eRegisterKindLLDB, rd, 0, &success);
+  if (!success)
+    return false;
+  if (rj_val < rd_val) {
+    imm_sign_extend = llvm::SignExtend64<18>(Bits32(inst, 25, 10) << 2);
+    next_pc = pc + imm_sign_extend;
+    return WritePC(next_pc);
+  } else
+    return WritePC(pc + 4);
+}
+
+// bgeu rj, rd, offs16
+// if unsigned(GR[rj]) >= unsigned(GR[rd]):
+//   PC = PC + SignExtend({offs16, 2'b0}, GRLEN)
+bool EmulateInstructionLoongArch::EmulateBGEU64(uint32_t inst) {
+  uint64_t next_pc, imm_sign_extend;
+  bool success = false;
+  uint32_t rj = Bits32(inst, 9, 5);
+  uint32_t rd = Bits32(inst, 4, 0);
+  uint64_t rj_val, rd_val;
+  uint64_t pc = ReadPC(&success);
+  if (!success)
+    return false;
+  rj_val = ReadRegisterUnsigned(eRegisterKindLLDB, rj, 0, &success);
+  if (!success)
+    return false;
+  rd_val = ReadRegisterUnsigned(eRegisterKindLLDB, rd, 0, &success);
+  if (!success)
+    return false;
+  if (rj_val >= rd_val) {
+    imm_sign_extend = llvm::SignExtend64<18>(Bits32(inst, 25, 10) << 2);
+    next_pc = pc + imm_sign_extend;
+    return WritePC(next_pc);
+  } else
+    return WritePC(pc + 4);
+}
 
 } // namespace lldb_private
