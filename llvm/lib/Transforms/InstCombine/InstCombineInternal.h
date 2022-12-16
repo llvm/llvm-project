@@ -423,6 +423,10 @@ public:
     LLVM_DEBUG(dbgs() << "IC: Replacing " << I << "\n"
                       << "    with " << *V << '\n');
 
+    // If V is a new unnamed instruction, take the name from the old one.
+    if (V->use_empty() && isa<Instruction>(V) && !V->hasName() && I.hasName())
+      V->takeName(&I);
+
     I.replaceAllUsesWith(V);
     MadeIRChange = true;
     return &I;
