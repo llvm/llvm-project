@@ -23,13 +23,9 @@ define void @copy(ptr nocapture noundef writeonly %x, ptr nocapture noundef read
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[ARRAYIDX2]], align 8, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_NODE]], ptr [[Y]], i64 [[INDVARS_IV]], i32 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[C]], align 8, !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    [[C13:%.*]] = getelementptr inbounds [[STRUCT_NODE]], ptr [[X]], i64 [[INDVARS_IV]], i32 2
-; CHECK-NEXT:    store ptr [[TMP1]], ptr [[C13]], align 8, !tbaa [[TBAA4]]
-; CHECK-NEXT:    [[D:%.*]] = getelementptr inbounds [[STRUCT_NODE]], ptr [[Y]], i64 [[INDVARS_IV]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[D]], align 8, !tbaa [[TBAA7:![0-9]+]]
-; CHECK-NEXT:    [[D18:%.*]] = getelementptr inbounds [[STRUCT_NODE]], ptr [[X]], i64 [[INDVARS_IV]], i32 3
-; CHECK-NEXT:    store ptr [[TMP2]], ptr [[D18]], align 8, !tbaa [[TBAA7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x ptr>, ptr [[C]], align 8, !tbaa [[TBAA4:![0-9]+]]
+; CHECK-NEXT:    store <2 x ptr> [[TMP1]], ptr [[C13]], align 8, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
