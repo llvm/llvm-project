@@ -515,7 +515,7 @@ public:
   }
 
 protected:
-  FileSystem &getUnderlyingFS() { return *FS; }
+  FileSystem &getUnderlyingFS() const { return *FS; }
 
 private:
   IntrusiveRefCntPtr<FileSystem> FS;
