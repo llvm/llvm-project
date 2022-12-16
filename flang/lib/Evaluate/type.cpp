@@ -209,7 +209,11 @@ const semantics::DerivedTypeSpec *GetDerivedTypeSpec(const DynamicType &type) {
 static const semantics::Symbol *FindParentComponent(
     const semantics::DerivedTypeSpec &derived) {
   const semantics::Symbol &typeSymbol{derived.typeSymbol()};
-  if (const semantics::Scope * scope{typeSymbol.scope()}) {
+  const semantics::Scope *scope{derived.scope()};
+  if (!scope) {
+    scope = typeSymbol.scope();
+  }
+  if (scope) {
     const auto &dtDetails{typeSymbol.get<semantics::DerivedTypeDetails>()};
     if (auto extends{dtDetails.GetParentComponentName()}) {
       if (auto iter{scope->find(*extends)}; iter != scope->cend()) {
