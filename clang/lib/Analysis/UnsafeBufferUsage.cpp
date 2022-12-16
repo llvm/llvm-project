@@ -146,7 +146,7 @@ static GadgetList findGadgets(const Decl *D) {
 #if NDEBUG
 #define NEXT return
 #else
-      int numFound = 0;
+      [[maybe_unused]] int numFound = 0;
 #define NEXT ++numFound
 #endif
 
@@ -162,7 +162,6 @@ static GadgetList findGadgets(const Decl *D) {
 
       assert(numFound >= 1 && "Gadgets not found in match result!");
       assert(numFound <= 1 && "Conflicting bind tags in gadgets!");
-      (void)numFound;
     }
   };
 
