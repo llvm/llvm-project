@@ -56,7 +56,7 @@ auto hasOptionalType() { return hasType(optionalOrAliasType()); }
 
 auto isOptionalMemberCallWithName(
     llvm::StringRef MemberName,
-    llvm::Optional<StatementMatcher> Ignorable = llvm::None) {
+    llvm::Optional<StatementMatcher> Ignorable = std::nullopt) {
   auto Exception = unless(Ignorable ? expr(anyOf(*Ignorable, cxxThisExpr()))
                                     : cxxThisExpr());
   return cxxMemberCallExpr(
@@ -66,7 +66,7 @@ auto isOptionalMemberCallWithName(
 
 auto isOptionalOperatorCallWithName(
     llvm::StringRef operator_name,
-    llvm::Optional<StatementMatcher> Ignorable = llvm::None) {
+    llvm::Optional<StatementMatcher> Ignorable = std::nullopt) {
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName(operator_name),
       callee(cxxMethodDecl(ofClass(optionalClass()))),
@@ -540,7 +540,7 @@ ignorableOptional(const UncheckedOptionalAccessModelOptions &Options) {
         cxxOperatorCallExpr(anyOf(hasOverloadedOperatorName("->"),
                                   hasOverloadedOperatorName("*")),
                             unless(hasArgument(0, expr(hasOptionalType())))))));
-  return llvm::None;
+  return std::nullopt;
 }
 
 StatementMatcher

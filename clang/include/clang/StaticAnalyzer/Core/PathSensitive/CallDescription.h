@@ -65,13 +65,13 @@ public:
   /// name regardless the number of arguments.
   CallDescription(CallDescriptionFlags Flags,
                   ArrayRef<const char *> QualifiedName,
-                  MaybeCount RequiredArgs = None,
-                  MaybeCount RequiredParams = None);
+                  MaybeCount RequiredArgs = std::nullopt,
+                  MaybeCount RequiredParams = std::nullopt);
 
   /// Construct a CallDescription with default flags.
   CallDescription(ArrayRef<const char *> QualifiedName,
-                  MaybeCount RequiredArgs = None,
-                  MaybeCount RequiredParams = None);
+                  MaybeCount RequiredArgs = std::nullopt,
+                  MaybeCount RequiredParams = std::nullopt);
 
   CallDescription(std::nullptr_t) = delete;
 

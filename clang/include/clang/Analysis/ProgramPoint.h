@@ -149,7 +149,7 @@ public:
   template<typename T>
   Optional<T> getAs() const {
     if (!T::isKind(*this))
-      return None;
+      return std::nullopt;
     T t;
     ProgramPoint& PP = t;
     PP = *this;

@@ -123,7 +123,7 @@ public:
     } else if (const auto *CXCIE = dyn_cast<CXXInheritedCtorInitExpr>(E)) {
       return AnyCall(CXCIE);
     } else {
-      return None;
+      return std::nullopt;
     }
   }
 
@@ -136,13 +136,13 @@ public:
     } else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
       return AnyCall(MD);
     }
-    return None;
+    return std::nullopt;
   }
 
   /// \returns formal parameters for direct calls (including virtual calls)
   ArrayRef<ParmVarDecl *> parameters() const {
     if (!D)
-      return None;
+      return std::nullopt;
 
     if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
       return FD->parameters();
@@ -151,7 +151,7 @@ public:
     } else if (const auto *BD = dyn_cast<BlockDecl>(D)) {
       return BD->parameters();
     } else {
-      return None;
+      return std::nullopt;
     }
   }
 
