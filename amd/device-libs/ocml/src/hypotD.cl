@@ -19,8 +19,7 @@ MATH_MANGLE(hypot)(double x, double y)
     double ret = BUILTIN_FLDEXP_F64(MATH_FAST_SQRT(MATH_MAD(a, a, b*b)), e);
 
     if (!FINITE_ONLY_OPT()) {
-        ret = (BUILTIN_ISNAN_F64(x) | BUILTIN_ISNAN_F64(y)) ?
-              QNAN_F64 : ret;
+        ret = BUILTIN_ISUNORDERED_F64(x, y) ? QNAN_F64 : ret;
 
         ret = (BUILTIN_ISINF_F64(x) | BUILTIN_ISINF_F64(y)) ? PINF_F64 : ret;
     }

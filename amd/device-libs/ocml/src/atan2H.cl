@@ -43,8 +43,7 @@ MATH_MANGLE(atan2)(half y, half x)
         a = (BUILTIN_ISINF_F16(x) & BUILTIN_ISINF_F16(y)) ? t : a;
 
         // x or y is NaN
-        a = (BUILTIN_ISNAN_F16(x) | BUILTIN_ISNAN_F16(y)) ?
-            QNAN_F16 : a;
+        a = BUILTIN_ISUNORDERED_F16(x, y) ? QNAN_F16 : a;
     }
 
     return BUILTIN_COPYSIGN_F16(a, y);

@@ -16,7 +16,7 @@ MATH_MANGLE(scalb)(half x, half y)
     half ret = MATH_MANGLE(ldexp)(x, (int)BUILTIN_RINT_F16(t));
 
     if (!FINITE_ONLY_OPT()) {
-        ret = (BUILTIN_ISNAN_F16(x) | BUILTIN_ISNAN_F16(y)) ? QNAN_F16 : ret;
+        ret = BUILTIN_ISUNORDERED_F16(x, y) ? QNAN_F16 : ret;
         ret = (BUILTIN_ISZERO_F16(x) & (y == PINF_F16)) ? QNAN_F16 : ret;
         ret = (BUILTIN_ISINF_F16(x) & (y == NINF_F16)) ? QNAN_F16 : ret;
     }

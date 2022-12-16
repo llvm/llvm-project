@@ -25,8 +25,7 @@ MATH_MANGLE(rhypot)(double x, double y)
     if (!FINITE_ONLY_OPT()) {
         ret = t == 0.0 ? PINF_F64 : ret;
 
-        ret = (BUILTIN_ISNAN_F64(x) | BUILTIN_ISNAN_F64(y)) ?
-              QNAN_F64 : ret;
+        ret = BUILTIN_ISUNORDERED_F64(x, y) ? QNAN_F64 : ret;
 
         ret = (BUILTIN_ISINF_F64(x) | BUILTIN_ISINF_F64(y)) ? 0.0 : ret;
     }
