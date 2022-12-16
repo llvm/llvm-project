@@ -104,4 +104,4 @@ class SendSignalTestCase(TestBase):
         state = lldb.SBProcess.GetStateFromEvent(event)
         self.assertEquals(state, expected_state,
                         "It was the %s state." %
-                        lldb.SBDebugger_StateAsCString(expected_state))
+                        lldb.SBDebugger.StateAsCString(expected_state))
