@@ -11,7 +11,6 @@ add_lldb_library(lldbHostMacOSXObjCXX
   Host.mm
   HostInfoMacOSX.mm
   HostThreadMacOSX.mm
-  HostInfoMacOSXSwift.cpp
 
   ${SWIFT_SOURCES}
 
