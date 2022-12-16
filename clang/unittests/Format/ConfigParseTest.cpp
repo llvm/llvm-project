@@ -533,6 +533,21 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: true",
               AllowShortFunctionsOnASingleLine, FormatStyle::SFS_All);
 
+  Style.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
+  CHECK_PARSE("AllowShortLambdasOnASingleLine: None",
+              AllowShortLambdasOnASingleLine, FormatStyle::SLS_None);
+  CHECK_PARSE("AllowShortLambdasOnASingleLine: Empty",
+              AllowShortLambdasOnASingleLine, FormatStyle::SLS_Empty);
+  CHECK_PARSE("AllowShortLambdasOnASingleLine: Inline",
+              AllowShortLambdasOnASingleLine, FormatStyle::SLS_Inline);
+  CHECK_PARSE("AllowShortLambdasOnASingleLine: All",
+              AllowShortLambdasOnASingleLine, FormatStyle::SLS_All);
+  // For backward compatibility:
+  CHECK_PARSE("AllowShortLambdasOnASingleLine: false",
+              AllowShortLambdasOnASingleLine, FormatStyle::SLS_None);
+  CHECK_PARSE("AllowShortLambdasOnASingleLine: true",
+              AllowShortLambdasOnASingleLine, FormatStyle::SLS_All);
+
   Style.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Both;
   CHECK_PARSE("SpaceAroundPointerQualifiers: Default",
               SpaceAroundPointerQualifiers, FormatStyle::SAPQ_Default);
