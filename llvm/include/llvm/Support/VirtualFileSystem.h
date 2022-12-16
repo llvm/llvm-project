@@ -574,9 +574,9 @@ class InMemoryFileSystem : public FileSystem {
   /// Create node with \p MakeNode and add it into this filesystem at \p Path.
   bool addFile(const Twine &Path, time_t ModificationTime,
                std::unique_ptr<llvm::MemoryBuffer> Buffer,
-               Optional<uint32_t> User, Optional<uint32_t> Group,
-               Optional<llvm::sys::fs::file_type> Type,
-               Optional<llvm::sys::fs::perms> Perms, MakeNodeFn MakeNode);
+               std::optional<uint32_t> User, std::optional<uint32_t> Group,
+               std::optional<llvm::sys::fs::file_type> Type,
+               std::optional<llvm::sys::fs::perms> Perms, MakeNodeFn MakeNode);
 
   /// Looks up the in-memory node for the path \p P.
   /// If \p FollowFinalSymlink is true, the returned node is guaranteed to
@@ -598,10 +598,10 @@ public:
   /// different contents.
   bool addFile(const Twine &Path, time_t ModificationTime,
                std::unique_ptr<llvm::MemoryBuffer> Buffer,
-               Optional<uint32_t> User = std::nullopt,
-               Optional<uint32_t> Group = std::nullopt,
-               Optional<llvm::sys::fs::file_type> Type = std::nullopt,
-               Optional<llvm::sys::fs::perms> Perms = std::nullopt);
+               std::optional<uint32_t> User = std::nullopt,
+               std::optional<uint32_t> Group = std::nullopt,
+               std::optional<llvm::sys::fs::file_type> Type = std::nullopt,
+               std::optional<llvm::sys::fs::perms> Perms = std::nullopt);
 
   /// Add a hard link to a file.
   ///
@@ -626,11 +626,12 @@ public:
   /// Add a symbolic link. Unlike a HardLink, because \p Target doesn't need
   /// to refer to a file (or refer to anything, as it happens). Also, an
   /// in-memory directory for \p Target isn't automatically created.
-  bool addSymbolicLink(const Twine &NewLink, const Twine &Target,
-                       time_t ModificationTime,
-                       Optional<uint32_t> User = std::nullopt,
-                       Optional<uint32_t> Group = std::nullopt,
-                       Optional<llvm::sys::fs::perms> Perms = std::nullopt);
+  bool
+  addSymbolicLink(const Twine &NewLink, const Twine &Target,
+                  time_t ModificationTime,
+                  std::optional<uint32_t> User = std::nullopt,
+                  std::optional<uint32_t> Group = std::nullopt,
+                  std::optional<llvm::sys::fs::perms> Perms = std::nullopt);
 
   /// Add a buffer to the VFS with a path. The VFS does not own the buffer.
   /// If present, User, Group, Type and Perms apply to the newly-created file
@@ -640,10 +641,10 @@ public:
   /// different contents.
   bool addFileNoOwn(const Twine &Path, time_t ModificationTime,
                     const llvm::MemoryBufferRef &Buffer,
-                    Optional<uint32_t> User = std::nullopt,
-                    Optional<uint32_t> Group = std::nullopt,
-                    Optional<llvm::sys::fs::file_type> Type = std::nullopt,
-                    Optional<llvm::sys::fs::perms> Perms = std::nullopt);
+                    std::optional<uint32_t> User = std::nullopt,
+                    std::optional<uint32_t> Group = std::nullopt,
+                    std::optional<llvm::sys::fs::file_type> Type = std::nullopt,
+                    std::optional<llvm::sys::fs::perms> Perms = std::nullopt);
 
   std::string toString() const;
 
@@ -923,7 +924,7 @@ public:
     /// When the found Entry is a DirectoryRemapEntry, stores the path in the
     /// external file system that the looked-up path in the virtual file system
     //  corresponds to.
-    Optional<std::string> ExternalRedirect;
+    std::optional<std::string> ExternalRedirect;
 
   public:
     LookupResult(Entry *E, sys::path::const_iterator Start,
@@ -932,7 +933,7 @@ public:
     /// If the found Entry maps the the input path to a path in the external
     /// file system (i.e. it is a FileEntry or DirectoryRemapEntry), returns
     /// that path.
-    Optional<StringRef> getExternalRedirect() const {
+    std::optional<StringRef> getExternalRedirect() const {
       if (isa<DirectoryRemapEntry>(E))
         return StringRef(*ExternalRedirect);
       if (auto *FE = dyn_cast<FileEntry>(E))
@@ -1082,9 +1083,9 @@ void collectVFSFromYAML(
 
 class YAMLVFSWriter {
   std::vector<YAMLVFSEntry> Mappings;
-  Optional<bool> IsCaseSensitive;
-  Optional<bool> IsOverlayRelative;
-  Optional<bool> UseExternalNames;
+  std::optional<bool> IsCaseSensitive;
+  std::optional<bool> IsOverlayRelative;
+  std::optional<bool> UseExternalNames;
   std::string OverlayDir;
 
   void addEntry(StringRef VirtualPath, StringRef RealPath, bool IsDirectory);

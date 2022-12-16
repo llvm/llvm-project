@@ -55,7 +55,7 @@ bool formatv_object_base::consumeFieldLayout(StringRef &Spec, AlignStyle &Where,
   return !Failed;
 }
 
-Optional<ReplacementItem>
+std::optional<ReplacementItem>
 formatv_object_base::parseReplacementItem(StringRef Spec) {
   StringRef RepString = Spec.trim("{}");
 
