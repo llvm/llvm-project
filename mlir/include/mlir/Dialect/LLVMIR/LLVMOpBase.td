@@ -345,8 +345,13 @@ def LLVM_IntrPatterns {
 class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                       list<int> overloadedResults, list<int> overloadedOperands,
                       list<Trait> traits, int numResults,
-                      bit requiresAccessGroup = 0, bit requiresAliasScope = 0>
-    : LLVM_OpBase<dialect, opName, traits>,
+                      bit requiresAccessGroup = 0, bit requiresAliasScope = 0,
+                      bit requiresFastmath = 0>
+    : LLVM_OpBase<dialect, opName, !listconcat(
+        !if(!gt(requiresFastmath, 0),
+            [DeclareOpInterfaceMethods<FastmathFlagsInterface>],
+            []),
+        traits)>,
       Results<!if(!gt(numResults, 0), (outs LLVM_Type:$res), (outs))> {
   string resultPattern = !if(!gt(numResults, 1),
                              LLVM_IntrPatterns.structResult,
@@ -378,9 +383,11 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
       return failure();
     SmallVector<Type> resultTypes =
     }] # !if(!gt(numResults, 0), "{$_resultType};", "{};") # [{
-    Operation *op = $_builder.create<$_qualCppClassName>(
+    auto op = $_builder.create<$_qualCppClassName>(
       $_location, resultTypes, *mlirOperands);
-    }] # !if(!gt(numResults, 0), "$res = op->getResult(0);", "(void)op;");
+    }] # !if(!gt(requiresFastmath, 0),
+      "setFastmathFlagsAttr(inst, op);", "")
+    # !if(!gt(numResults, 0), "$res = op;", "(void)op;");
 }
 
 // Base class for LLVM intrinsic operations, should not be used directly. Places
@@ -388,10 +395,11 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
 class LLVM_IntrOp<string mnem, list<int> overloadedResults,
                   list<int> overloadedOperands, list<Trait> traits,
                   int numResults, bit requiresAccessGroup = 0,
-                  bit requiresAliasScope = 0>
+                  bit requiresAliasScope = 0, bit requiresFastmath = 0>
     : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
                       overloadedResults, overloadedOperands, traits,
-                      numResults, requiresAccessGroup, requiresAliasScope>;
+                      numResults, requiresAccessGroup, requiresAliasScope,
+                      requiresFastmath>;
 
 // Base class for LLVM intrinsic operations returning no results. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.".
@@ -419,8 +427,11 @@ class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
 // empty otherwise.
 class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
                            list<int> overloadedOperands = [],
-                           list<Trait> traits = []>
-    : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 1>;
+                           list<Trait> traits = [],
+                           bit requiresFastmath = 0>
+    : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 1,
+                  /*requiresAccessGroup=*/0, /*requiresAliasScope=*/0,
+                  requiresFastmath>;
 
 def LLVM_OneResultOpBuilder :
   OpBuilder<(ins "Type":$resultType, "ValueRange":$operands,
