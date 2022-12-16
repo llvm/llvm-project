@@ -10,7 +10,7 @@ target triple = "x86_64-apple-macosx10.6.0"
 ;;    A[0] = 1;
 ;;    A[i] = 2;
 
-define void @dstzero(i32* nocapture %A, i32 %N) {
+define void @dstzero(ptr nocapture %A, i32 %N) {
 entry:
   %cmp6 = icmp sgt i32 %N, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
@@ -21,9 +21,9 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.07 = phi i32 [ %add, %for.body ], [ 0, %entry ]
-  store i32 0, i32* %A, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %A, i32 %i.07
-  store i32 1, i32* %arrayidx1, align 4
+  store i32 0, ptr %A, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %A, i32 %i.07
+  store i32 1, ptr %arrayidx1, align 4
   %add = add nuw nsw i32 %i.07, 1
   %exitcond = icmp eq i32 %add, %N
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
@@ -37,7 +37,7 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 ;;    A[10] = i;
 ;;    *B++ = A[2*i + 10];
 
-define void @weakzerosrc0(i32* %A, i32* %B, i64 %n) nounwind uwtable ssp {
+define void @weakzerosrc0(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
@@ -50,16 +50,16 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.02 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
-  %B.addr.01 = phi i32* [ %B, %entry ], [ %incdec.ptr, %for.body ]
+  %B.addr.01 = phi ptr [ %B, %entry ], [ %incdec.ptr, %for.body ]
   %conv = trunc i64 %i.02 to i32
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 10
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 10
+  store i32 %conv, ptr %arrayidx, align 4
   %mul = shl i64 %i.02, 1
   %add = add i64 %mul, 10
-  %arrayidx1 = getelementptr inbounds i32, i32* %A, i64 %add
-  %0 = load i32, i32* %arrayidx1, align 4
-  %incdec.ptr = getelementptr inbounds i32, i32* %B.addr.01, i64 1
-  store i32 %0, i32* %B.addr.01, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %A, i64 %add
+  %0 = load i32, ptr %arrayidx1, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %B.addr.01, i64 1
+  store i32 %0, ptr %B.addr.01, align 4
   %inc = add i64 %i.02, 1
   %exitcond = icmp ne i64 %inc, 30
   br i1 %exitcond, label %for.body, label %for.end
@@ -73,7 +73,7 @@ for.end:                                          ; preds = %for.body
 ;;    A[10] = i;
 ;;    *B++ = A[n*i + 10];
 
-define void @weakzerosrc1(i32* %A, i32* %B, i64 %n) nounwind uwtable ssp {
+define void @weakzerosrc1(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 entry:
   %cmp1 = icmp eq i64 %n, 0
   br i1 %cmp1, label %for.end, label %for.body.preheader
@@ -90,16 +90,16 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %i.03 = phi i64 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %B.addr.02 = phi i32* [ %incdec.ptr, %for.body ], [ %B, %for.body.preheader ]
+  %B.addr.02 = phi ptr [ %incdec.ptr, %for.body ], [ %B, %for.body.preheader ]
   %conv = trunc i64 %i.03 to i32
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 10
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 10
+  store i32 %conv, ptr %arrayidx, align 4
   %mul = mul i64 %i.03, %n
   %add = add i64 %mul, 10
-  %arrayidx1 = getelementptr inbounds i32, i32* %A, i64 %add
-  %0 = load i32, i32* %arrayidx1, align 4
-  %incdec.ptr = getelementptr inbounds i32, i32* %B.addr.02, i64 1
-  store i32 %0, i32* %B.addr.02, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %A, i64 %add
+  %0 = load i32, ptr %arrayidx1, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %B.addr.02, i64 1
+  store i32 %0, ptr %B.addr.02, align 4
   %inc = add i64 %i.03, 1
   %exitcond = icmp ne i64 %inc, %n
   br i1 %exitcond, label %for.body, label %for.end.loopexit
@@ -116,7 +116,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ;;    A[10] = i;
 ;;    *B++ = A[2*i];
 
-define void @weakzerosrc2(i32* %A, i32* %B, i64 %n) nounwind uwtable ssp {
+define void @weakzerosrc2(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
@@ -129,15 +129,15 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.02 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
-  %B.addr.01 = phi i32* [ %B, %entry ], [ %incdec.ptr, %for.body ]
+  %B.addr.01 = phi ptr [ %B, %entry ], [ %incdec.ptr, %for.body ]
   %conv = trunc i64 %i.02 to i32
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 10
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 10
+  store i32 %conv, ptr %arrayidx, align 4
   %mul = shl i64 %i.02, 1
-  %arrayidx1 = getelementptr inbounds i32, i32* %A, i64 %mul
-  %0 = load i32, i32* %arrayidx1, align 4
-  %incdec.ptr = getelementptr inbounds i32, i32* %B.addr.01, i64 1
-  store i32 %0, i32* %B.addr.01, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %A, i64 %mul
+  %0 = load i32, ptr %arrayidx1, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %B.addr.01, i64 1
+  store i32 %0, ptr %B.addr.01, align 4
   %inc = add i64 %i.02, 1
   %exitcond = icmp ne i64 %inc, 5
   br i1 %exitcond, label %for.body, label %for.end
@@ -151,7 +151,7 @@ for.end:                                          ; preds = %for.body
 ;;    A[10] = i;
 ;;    *B++ = A[2*i];
 
-define void @weakzerosrc3(i32* %A, i32* %B, i64 %n) nounwind uwtable ssp {
+define void @weakzerosrc3(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
@@ -164,15 +164,15 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.02 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
-  %B.addr.01 = phi i32* [ %B, %entry ], [ %incdec.ptr, %for.body ]
+  %B.addr.01 = phi ptr [ %B, %entry ], [ %incdec.ptr, %for.body ]
   %conv = trunc i64 %i.02 to i32
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 10
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 10
+  store i32 %conv, ptr %arrayidx, align 4
   %mul = shl i64 %i.02, 1
-  %arrayidx1 = getelementptr inbounds i32, i32* %A, i64 %mul
-  %0 = load i32, i32* %arrayidx1, align 4
-  %incdec.ptr = getelementptr inbounds i32, i32* %B.addr.01, i64 1
-  store i32 %0, i32* %B.addr.01, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %A, i64 %mul
+  %0 = load i32, ptr %arrayidx1, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %B.addr.01, i64 1
+  store i32 %0, ptr %B.addr.01, align 4
   %inc = add i64 %i.02, 1
   %exitcond = icmp ne i64 %inc, 6
   br i1 %exitcond, label %for.body, label %for.end
@@ -186,7 +186,7 @@ for.end:                                          ; preds = %for.body
 ;;    A[10] = i;
 ;;    *B++ = A[2*i];
 
-define void @weakzerosrc4(i32* %A, i32* %B, i64 %n) nounwind uwtable ssp {
+define void @weakzerosrc4(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
@@ -199,15 +199,15 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.02 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
-  %B.addr.01 = phi i32* [ %B, %entry ], [ %incdec.ptr, %for.body ]
+  %B.addr.01 = phi ptr [ %B, %entry ], [ %incdec.ptr, %for.body ]
   %conv = trunc i64 %i.02 to i32
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 10
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 10
+  store i32 %conv, ptr %arrayidx, align 4
   %mul = shl i64 %i.02, 1
-  %arrayidx1 = getelementptr inbounds i32, i32* %A, i64 %mul
-  %0 = load i32, i32* %arrayidx1, align 4
-  %incdec.ptr = getelementptr inbounds i32, i32* %B.addr.01, i64 1
-  store i32 %0, i32* %B.addr.01, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %A, i64 %mul
+  %0 = load i32, ptr %arrayidx1, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %B.addr.01, i64 1
+  store i32 %0, ptr %B.addr.01, align 4
   %inc = add i64 %i.02, 1
   %exitcond = icmp ne i64 %inc, 7
   br i1 %exitcond, label %for.body, label %for.end
@@ -221,7 +221,7 @@ for.end:                                          ; preds = %for.body
 ;;    A[-10] = i;
 ;;    *B++ = A[2*i];
 
-define void @weakzerosrc5(i32* %A, i32* %B, i64 %n) nounwind uwtable ssp {
+define void @weakzerosrc5(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 entry:
   br label %for.body
 
@@ -234,15 +234,15 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.02 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
-  %B.addr.01 = phi i32* [ %B, %entry ], [ %incdec.ptr, %for.body ]
+  %B.addr.01 = phi ptr [ %B, %entry ], [ %incdec.ptr, %for.body ]
   %conv = trunc i64 %i.02 to i32
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 -10
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 -10
+  store i32 %conv, ptr %arrayidx, align 4
   %mul = shl i64 %i.02, 1
-  %arrayidx1 = getelementptr inbounds i32, i32* %A, i64 %mul
-  %0 = load i32, i32* %arrayidx1, align 4
-  %incdec.ptr = getelementptr inbounds i32, i32* %B.addr.01, i64 1
-  store i32 %0, i32* %B.addr.01, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %A, i64 %mul
+  %0 = load i32, ptr %arrayidx1, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %B.addr.01, i64 1
+  store i32 %0, ptr %B.addr.01, align 4
   %inc = add i64 %i.02, 1
   %exitcond = icmp ne i64 %inc, 7
   br i1 %exitcond, label %for.body, label %for.end
@@ -256,7 +256,7 @@ for.end:                                          ; preds = %for.body
 ;;    A[10] = i;
 ;;    *B++ = A[3*i];
 
-define void @weakzerosrc6(i32* %A, i32* %B, i64 %n) nounwind uwtable ssp {
+define void @weakzerosrc6(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 entry:
   %cmp1 = icmp eq i64 %n, 0
   br i1 %cmp1, label %for.end, label %for.body.preheader
@@ -273,15 +273,15 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %i.03 = phi i64 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %B.addr.02 = phi i32* [ %incdec.ptr, %for.body ], [ %B, %for.body.preheader ]
+  %B.addr.02 = phi ptr [ %incdec.ptr, %for.body ], [ %B, %for.body.preheader ]
   %conv = trunc i64 %i.03 to i32
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 10
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 10
+  store i32 %conv, ptr %arrayidx, align 4
   %mul = mul i64 %i.03, 3
-  %arrayidx1 = getelementptr inbounds i32, i32* %A, i64 %mul
-  %0 = load i32, i32* %arrayidx1, align 4
-  %incdec.ptr = getelementptr inbounds i32, i32* %B.addr.02, i64 1
-  store i32 %0, i32* %B.addr.02, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %A, i64 %mul
+  %0 = load i32, ptr %arrayidx1, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %B.addr.02, i64 1
+  store i32 %0, ptr %B.addr.02, align 4
   %inc = add i64 %i.03, 1
   %exitcond = icmp ne i64 %inc, %n
   br i1 %exitcond, label %for.body, label %for.end.loopexit

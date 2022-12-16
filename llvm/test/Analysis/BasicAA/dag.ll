@@ -6,39 +6,32 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; analyzing use-def dags.
 
 ; CHECK: MustAlias:  i8* %base, i8* %phi
-; CHECK: MustAlias: i8* %phi, i8* %wwa
-; CHECK: MustAlias: i8* %phi, i8* %wwb
-; CHECK: MustAlias: i16* %bigbase, i8* %phi
-define i8 @foo(i8* %base, i1 %x, i1 %w) {
+; CHECK: MustAlias: i16* %base, i8* %base
+; CHECK: MustAlias: i16* %base, i8* %phi
+define i8 @foo(ptr %base, i1 %x, i1 %w) {
 entry:
-  load i8, i8* %base
+  load i8, ptr %base
   br i1 %w, label %wa, label %wb
 wa:
-  %wwa = bitcast i8* %base to i8*
-  load i8, i8* %wwa
+  load i8, ptr %base
   br label %wc
 wb:
-  %wwb = bitcast i8* %base to i8*
-  load i8, i8* %wwb
+  load i8, ptr %base
   br label %wc
 wc:
-  %first = phi i8* [ %wwa, %wa ], [ %wwb, %wb ]
-  %fc = bitcast i8* %first to i8*
+  %first = phi ptr [ %base, %wa ], [ %base, %wb ]
   br i1 %x, label %xa, label %xb
 xa:
-  %xxa = bitcast i8* %fc to i8*
   br label %xc
 xb:
-  %xxb = bitcast i8* %fc to i8*
   br label %xc
 xc:
-  %phi = phi i8* [ %xxa, %xa ], [ %xxb, %xb ]
+  %phi = phi ptr [ %first, %xa ], [ %first, %xb ]
 
-  store i8 0, i8* %phi
+  store i8 0, ptr %phi
 
-  %bigbase = bitcast i8* %base to i16*
-  store i16 -1, i16* %bigbase
+  store i16 -1, ptr %base
 
-  %loaded = load i8, i8* %phi
+  %loaded = load i8, ptr %phi
   ret i8 %loaded
 }

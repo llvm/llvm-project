@@ -9,8 +9,8 @@
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
-define void @test_no_noalias(i32* %A, i32* %B) {
-  store i32 1, i32* %A
-  store i32 2, i32* %B
+define void @test_no_noalias(ptr %A, ptr %B) {
+  store i32 1, ptr %A
+  store i32 2, ptr %B
   ret void
 }
