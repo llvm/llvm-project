@@ -1449,7 +1449,7 @@ void MCAsmStreamer::emitAlignmentDirective(unsigned ByteAlignment,
     if (Value.has_value() || MaxBytesToEmit) {
       if (Value.has_value()) {
         OS << ", 0x";
-        OS.write_hex(truncateToSize(Value.value(), ValueSize));
+        OS.write_hex(truncateToSize(*Value, ValueSize));
       } else {
         OS << ", ";
       }
@@ -1473,7 +1473,7 @@ void MCAsmStreamer::emitAlignmentDirective(unsigned ByteAlignment,
 
   OS << ' ' << ByteAlignment;
   if (Value.has_value())
-    OS << ", " << truncateToSize(Value.value(), ValueSize);
+    OS << ", " << truncateToSize(*Value, ValueSize);
   else if (MaxBytesToEmit)
     OS << ", ";
   if (MaxBytesToEmit)
