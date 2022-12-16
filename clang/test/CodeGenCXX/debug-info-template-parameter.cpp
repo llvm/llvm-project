@@ -23,8 +23,22 @@
 // CXX17: [[THIRD]] = !DITemplateValueParameter(name: "b", type: !{{[0-9]*}}, defaulted: true, value: i1 true)
 // CHECK: [[FIFTH]] = !DITemplateTypeParameter(name: "d", type: !{{[0-9]*}}, defaulted: true)
 
+// CHECK: DILocalVariable(name: "b1", {{.*}}, type: ![[TEMPLATE_TYPE:[0-9]+]]
+// CHECK: [[TEMPLATE_TYPE]] = {{.*}}!DICompositeType({{.*}}, templateParams: ![[B1_TYPE:[0-9]+]]
+// CHECK: [[B1_TYPE]] = !{![[FIRST:[0-9]+]]}
+// CHECK: [[FIRST]] = !DITemplateValueParameter(tag: DW_TAG_GNU_template_template_param, name: "CT", value: !"qux")
+
+// CHECK: DILocalVariable(name: "b2", {{.*}}, type: ![[TEMPLATE_TYPE:[0-9]+]]
+// CHECK: [[TEMPLATE_TYPE]] = {{.*}}!DICompositeType({{.*}}, templateParams: ![[B2_TYPE:[0-9]+]]
+// CHECK: [[B2_TYPE]] = !{![[FIRST:[0-9]+]]}
+// CHECK: [[FIRST]] = !DITemplateValueParameter(tag: DW_TAG_GNU_template_template_param, name: "CT", defaulted: true, value: !"bar")
+
 template <typename T>
 class bar {
+};
+
+template <typename T>
+class qux {
 };
 
 template <typename T = char, int i = 3, bool b = true, int x = sizeof(T),
@@ -32,8 +46,14 @@ template <typename T = char, int i = 3, bool b = true, int x = sizeof(T),
 class foo {
 };
 
+template <template <typename T> class CT = bar>
+class baz {
+};
+
 int main() {
   foo<int, 6, false, 3, double> f1;
   foo<> f2;
+  baz<qux> b1;
+  baz<> b2;
   return 0;
 }
