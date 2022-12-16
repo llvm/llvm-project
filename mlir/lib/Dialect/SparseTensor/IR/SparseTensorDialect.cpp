@@ -57,6 +57,12 @@ Type SparseTensorEncodingAttr::getIndexType() const {
   return idxWidth ? IntegerType::get(getContext(), idxWidth) : indexType;
 }
 
+SparseTensorEncodingAttr SparseTensorEncodingAttr::withoutOrdering() const {
+  return SparseTensorEncodingAttr::get(
+      getContext(), getDimLevelType(), AffineMap(), AffineMap(),
+      getPointerBitWidth(), getIndexBitWidth());
+}
+
 Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
