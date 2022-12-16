@@ -2391,7 +2391,7 @@ bool RedirectingFileSystem::exists(const Twine &OriginalPath) {
     return false;
   }
 
-  Optional<StringRef> ExtRedirect = Result->getExternalRedirect();
+  std::optional<StringRef> ExtRedirect = Result->getExternalRedirect();
   if (!ExtRedirect) {
     assert(isa<RedirectingFileSystem::DirectoryEntry>(Result->E));
     return true;
