@@ -118,19 +118,28 @@ getIndexExtents(mlir::Location loc, fir::FirOpBuilder &builder,
 static std::pair<hlfir::Entity, mlir::Value>
 createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
                    hlfir::Entity mold) {
-  if (mold.isArray())
-    TODO(loc, "create temps from array mold");
   llvm::SmallVector<mlir::Value> lenParams;
   hlfir::genLengthParameters(loc, builder, mold, lenParams);
   llvm::StringRef tmpName{".tmp"};
-  mlir::Value alloca =
-      builder.createTemporary(loc, mold.getFortranElementType(), tmpName,
-                              /*shape*/ std::nullopt, lenParams);
+  mlir::Value alloc;
+  mlir::Value isHeapAlloc;
+  mlir::Value shape{};
+  if (mold.isArray()) {
+    mlir::Type sequenceType =
+        hlfir::getFortranElementOrSequenceType(mold.getType());
+    shape = hlfir::genShape(loc, builder, mold);
+    auto extents = getIndexExtents(loc, builder, shape);
+    alloc = builder.createHeapTemporary(loc, sequenceType, tmpName, extents,
+                                        lenParams);
+    isHeapAlloc = builder.createBool(loc, true);
+  } else {
+    alloc = builder.createTemporary(loc, mold.getFortranElementType(), tmpName,
+                                    /*shape*/ std::nullopt, lenParams);
+    isHeapAlloc = builder.createBool(loc, false);
+  }
   auto declareOp = builder.create<hlfir::DeclareOp>(
-      loc, alloca, tmpName, /*shapeOrShift*/ mlir::Value{}, lenParams,
-      fir::FortranVariableFlagsAttr{});
-  mlir::Value falseVal = builder.createBool(loc, false);
-  return {hlfir::Entity{declareOp.getBase()}, falseVal};
+      loc, alloc, tmpName, shape, lenParams, fir::FortranVariableFlagsAttr{});
+  return {hlfir::Entity{declareOp.getBase()}, isHeapAlloc};
 }
 
 static std::pair<hlfir::Entity, mlir::Value>
