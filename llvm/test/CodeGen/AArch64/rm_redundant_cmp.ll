@@ -49,16 +49,16 @@ define void @test_i16_2cmp_signed_2() {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, :got:cost_s_i8_i16
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:cost_s_i8_i16]
-; CHECK-NEXT:    ldrh w10, [x8, #2]
-; CHECK-NEXT:    ldrh w11, [x8, #4]
-; CHECK-NEXT:    sxth w9, w10
-; CHECK-NEXT:    cmp w9, w11, sxth
-; CHECK-NEXT:    csel w9, w10, w11, gt
-; CHECK-NEXT:    cmp w10, w11
-; CHECK-NEXT:    b.eq .LBB1_2
-; CHECK-NEXT:  // %bb.1: // %if.end8.sink.split
+; CHECK-NEXT:    ldrsh w9, [x8, #2]
+; CHECK-NEXT:    ldrsh w10, [x8, #4]
+; CHECK-NEXT:    cmp w9, w10
+; CHECK-NEXT:    b.gt .LBB1_2
+; CHECK-NEXT:  // %bb.1: // %if.else
+; CHECK-NEXT:    mov w9, w10
+; CHECK-NEXT:    b.ge .LBB1_3
+; CHECK-NEXT:  .LBB1_2: // %if.end8.sink.split
 ; CHECK-NEXT:    strh w9, [x8]
-; CHECK-NEXT:  .LBB1_2: // %if.end8
+; CHECK-NEXT:  .LBB1_3: // %if.end8
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i16, i16* getelementptr inbounds (%struct.s_signed_i16, %struct.s_signed_i16* @cost_s_i8_i16, i64 0, i32 1), align 2
@@ -125,11 +125,13 @@ define void @test_i16_2cmp_unsigned_2() {
 ; CHECK-NEXT:    ldrh w9, [x8, #2]
 ; CHECK-NEXT:    ldrh w10, [x8, #4]
 ; CHECK-NEXT:    cmp w9, w10
-; CHECK-NEXT:    csel w9, w9, w10, hi
-; CHECK-NEXT:    b.eq .LBB3_2
-; CHECK-NEXT:  // %bb.1: // %if.end8.sink.split
+; CHECK-NEXT:    b.hi .LBB3_2
+; CHECK-NEXT:  // %bb.1: // %if.else
+; CHECK-NEXT:    mov w9, w10
+; CHECK-NEXT:    b.hs .LBB3_3
+; CHECK-NEXT:  .LBB3_2: // %if.end8.sink.split
 ; CHECK-NEXT:    strh w9, [x8]
-; CHECK-NEXT:  .LBB3_2: // %if.end8
+; CHECK-NEXT:  .LBB3_3: // %if.end8
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i16, i16* getelementptr inbounds (%struct.s_unsigned_i16, %struct.s_unsigned_i16* @cost_u_i16, i64 0, i32 1), align 2
@@ -202,16 +204,16 @@ define void @test_i8_2cmp_signed_2() {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, :got:cost_s
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:cost_s]
-; CHECK-NEXT:    ldrb w10, [x8, #1]
-; CHECK-NEXT:    ldrb w11, [x8, #2]
-; CHECK-NEXT:    sxtb w9, w10
-; CHECK-NEXT:    cmp w9, w11, sxtb
-; CHECK-NEXT:    csel w9, w10, w11, gt
-; CHECK-NEXT:    cmp w10, w11
-; CHECK-NEXT:    b.eq .LBB5_2
-; CHECK-NEXT:  // %bb.1: // %if.end8.sink.split
+; CHECK-NEXT:    ldrsb w9, [x8, #1]
+; CHECK-NEXT:    ldrsb w10, [x8, #2]
+; CHECK-NEXT:    cmp w9, w10
+; CHECK-NEXT:    b.gt .LBB5_2
+; CHECK-NEXT:  // %bb.1: // %if.else
+; CHECK-NEXT:    mov w9, w10
+; CHECK-NEXT:    b.ge .LBB5_3
+; CHECK-NEXT:  .LBB5_2: // %if.end8.sink.split
 ; CHECK-NEXT:    strb w9, [x8]
-; CHECK-NEXT:  .LBB5_2: // %if.end8
+; CHECK-NEXT:  .LBB5_3: // %if.end8
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, i8* getelementptr inbounds (%struct.s_signed_i8, %struct.s_signed_i8* @cost_s, i64 0, i32 1), align 2
@@ -278,11 +280,13 @@ define void @test_i8_2cmp_unsigned_2() {
 ; CHECK-NEXT:    ldrb w9, [x8, #1]
 ; CHECK-NEXT:    ldrb w10, [x8, #2]
 ; CHECK-NEXT:    cmp w9, w10
-; CHECK-NEXT:    csel w9, w9, w10, hi
-; CHECK-NEXT:    b.eq .LBB7_2
-; CHECK-NEXT:  // %bb.1: // %if.end8.sink.split
+; CHECK-NEXT:    b.hi .LBB7_2
+; CHECK-NEXT:  // %bb.1: // %if.else
+; CHECK-NEXT:    mov w9, w10
+; CHECK-NEXT:    b.hs .LBB7_3
+; CHECK-NEXT:  .LBB7_2: // %if.end8.sink.split
 ; CHECK-NEXT:    strb w9, [x8]
-; CHECK-NEXT:  .LBB7_2: // %if.end8
+; CHECK-NEXT:  .LBB7_3: // %if.end8
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, i8* getelementptr inbounds (%struct.s_unsigned_i8, %struct.s_unsigned_i8* @cost_u_i8, i64 0, i32 1), align 2
