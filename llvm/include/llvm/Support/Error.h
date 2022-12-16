@@ -1277,7 +1277,7 @@ public:
     assert(Err && "Trying to log after takeError().");
     OS << "'" << FileName << "': ";
     if (Line)
-      OS << "line " << Line.value() << ": ";
+      OS << "line " << *Line << ": ";
     Err->log(OS);
   }
 
