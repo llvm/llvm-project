@@ -10,6 +10,7 @@
 #define LLVM_SUPPORT_SCOPEDDURATIONTIMER_H
 
 #include <chrono>
+#include <functional>
 #include <ratio>
 
 namespace llvm {
