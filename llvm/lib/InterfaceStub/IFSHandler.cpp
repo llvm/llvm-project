@@ -224,7 +224,7 @@ Error ifs::overrideIFSTarget(
     std::optional<std::string> OverrideTriple) {
   std::error_code OverrideEC(1, std::generic_category());
   if (OverrideArch) {
-    if (Stub.Target.Arch && *Stub.Target.Arch != OverrideArch.value()) {
+    if (Stub.Target.Arch && *Stub.Target.Arch != *OverrideArch) {
       return make_error<StringError>(
           "Supplied Arch conflicts with the text stub", OverrideEC);
     }
@@ -232,22 +232,21 @@ Error ifs::overrideIFSTarget(
   }
   if (OverrideEndianness) {
     if (Stub.Target.Endianness &&
-        *Stub.Target.Endianness != OverrideEndianness.value()) {
+        *Stub.Target.Endianness != *OverrideEndianness) {
       return make_error<StringError>(
           "Supplied Endianness conflicts with the text stub", OverrideEC);
     }
     Stub.Target.Endianness = *OverrideEndianness;
   }
   if (OverrideBitWidth) {
-    if (Stub.Target.BitWidth &&
-        *Stub.Target.BitWidth != OverrideBitWidth.value()) {
+    if (Stub.Target.BitWidth && *Stub.Target.BitWidth != *OverrideBitWidth) {
       return make_error<StringError>(
           "Supplied BitWidth conflicts with the text stub", OverrideEC);
     }
     Stub.Target.BitWidth = *OverrideBitWidth;
   }
   if (OverrideTriple) {
-    if (Stub.Target.Triple && *Stub.Target.Triple != OverrideTriple.value()) {
+    if (Stub.Target.Triple && *Stub.Target.Triple != *OverrideTriple) {
       return make_error<StringError>(
           "Supplied Triple conflicts with the text stub", OverrideEC);
     }
