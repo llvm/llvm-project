@@ -157,7 +157,7 @@ public:
   BinarySection(BinaryContext &BC, SectionRef Section)
       : BC(BC), Name(getName(Section)), Section(Section),
         Contents(getContents(Section)), Address(Section.getAddress()),
-        Size(Section.getSize()), Alignment(Section.getAlignment()),
+        Size(Section.getSize()), Alignment(Section.getAlignment().value()),
         OutputName(Name), SectionNumber(++Count) {
     if (isELF()) {
       ELFType = ELFSectionRef(Section).getType();
