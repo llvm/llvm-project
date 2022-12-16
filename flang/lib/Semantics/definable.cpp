@@ -205,11 +205,52 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags,
     const evaluate::Expr<evaluate::SomeType> &expr) {
   if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
-    if (!flags.test(DefinabilityFlag::VectorSubscriptIsOk) &&
-        evaluate::HasVectorSubscript(expr)) {
-      return parser::Message{at,
-          "Variable '%s' has a vector subscript"_because_en_US,
-          expr.AsFortran()};
+    if (evaluate::HasVectorSubscript(expr)) {
+      if (flags.test(DefinabilityFlag::VectorSubscriptIsOk)) {
+        if (auto type{expr.GetType()}) {
+          if (!type->IsUnlimitedPolymorphic() &&
+              type->category() == TypeCategory::Derived) {
+            // Seek the FINAL subroutine that should but cannot be called
+            // for this definition of an array with a vector-valued subscript.
+            // If there's an elemental FINAL subroutine, all is well; otherwise,
+            // if there is a FINAL subroutine with a matching or assumed rank
+            // dummy argument, there's no way to call it.
+            int rank{expr.Rank()};
+            const DerivedTypeSpec *spec{&type->GetDerivedTypeSpec()};
+            while (spec) {
+              bool anyElemental{false};
+              const Symbol *anyRankMatch{nullptr};
+              for (const auto &[_, ref] :
+                  spec->typeSymbol().get<DerivedTypeDetails>().finals()) {
+                const Symbol &ultimate{ref->GetUltimate()};
+                anyElemental |= ultimate.attrs().test(Attr::ELEMENTAL);
+                if (const auto *subp{ultimate.detailsIf<SubprogramDetails>()}) {
+                  if (!subp->dummyArgs().empty()) {
+                    if (const Symbol * arg{subp->dummyArgs()[0]}) {
+                      const auto *object{arg->detailsIf<ObjectEntityDetails>()};
+                      if (arg->Rank() == rank ||
+                          (object && object->IsAssumedRank())) {
+                        anyRankMatch = &*ref;
+                      }
+                    }
+                  }
+                }
+              }
+              if (anyRankMatch && !anyElemental) {
+                return parser::Message{at,
+                    "Variable '%s' has a vector subscript and cannot be finalized by non-elemental subroutine '%s'"_because_en_US,
+                    expr.AsFortran(), anyRankMatch->name()};
+              }
+              const auto *parent{FindParentTypeSpec(*spec)};
+              spec = parent ? parent->AsDerived() : nullptr;
+            }
+          }
+        }
+      } else {
+        return parser::Message{at,
+            "Variable '%s' has a vector subscript"_because_en_US,
+            expr.AsFortran()};
+      }
     }
     if (FindPureProcedureContaining(scope) &&
         evaluate::ExtractCoarrayRef(expr)) {
