@@ -8,6 +8,7 @@
 
 #include "ProfiledBinary.h"
 #include "ErrorHandling.h"
+#include "MissingFrameInferrer.h"
 #include "ProfileGenerator.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
@@ -15,6 +16,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/TargetSelect.h"
 #include <optional>
@@ -54,6 +56,7 @@ static cl::list<std::string> DisassembleFunctions(
              "names only. Only work with show-disassembly-only"));
 
 extern cl::opt<bool> ShowDetailedWarning;
+extern cl::opt<bool> InferMissingFrames;
 
 namespace llvm {
 namespace sampleprof {
@@ -158,6 +161,20 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
 
   ProbeContext.pop_back();
 }
+
+ProfiledBinary::ProfiledBinary(const StringRef ExeBinPath,
+                             const StringRef DebugBinPath)
+    : Path(ExeBinPath), DebugBinaryPath(DebugBinPath), ProEpilogTracker(this),
+      TrackFuncContextSize(EnableCSPreInliner && UseContextCostForPreInliner) {
+  // Point to executable binary if debug info binary is not specified.
+  SymbolizerPath = DebugBinPath.empty() ? ExeBinPath : DebugBinPath;
+  setupSymbolizer();
+  if (InferMissingFrames)
+    MissingContextInferrer = std::make_unique<MissingFrameInferrer>(this);
+  load();
+}
+
+ProfiledBinary::~ProfiledBinary() {}
 
 void ProfiledBinary::warnNoFuncEntry() {
   uint64_t NoFuncEntryNum = 0;
@@ -429,10 +446,8 @@ void ProfiledBinary::decodePseudoProbe() {
   decodePseudoProbe(Obj);
 }
 
-void ProfiledBinary::setIsFuncEntry(uint64_t Address, StringRef RangeSymName) {
-  // Note that the start address of each ELF section can be a non-function
-  // symbol, we need to binary search for the start of a real function range.
-  auto *FuncRange = findFuncRange(Address);
+void ProfiledBinary::setIsFuncEntry(FuncRange *FuncRange,
+                                    StringRef RangeSymName) {
   // Skip external function symbol.
   if (!FuncRange)
     return;
@@ -453,9 +468,8 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
   uint64_t StartAddress = Symbols[SI].Addr;
   uint64_t NextStartAddress =
       (SI + 1 < SE) ? Symbols[SI + 1].Addr : SectionAddress + SectSize;
-  setIsFuncEntry(StartAddress,
-                 FunctionSamples::getCanonicalFnName(Symbols[SI].Name));
-
+  FuncRange *FRange = findFuncRange(StartAddress);
+  setIsFuncEntry(FRange, FunctionSamples::getCanonicalFnName(Symbols[SI].Name));
   StringRef SymbolName =
       ShowCanonicalFnName
           ? FunctionSamples::getCanonicalFnName(Symbols[SI].Name)
@@ -524,6 +538,43 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
         if (MCDesc.isUnconditionalBranch())
           UncondBranchAddrSet.insert(Address);
         BranchAddressSet.insert(Address);
+      }
+
+      // Record potential call targets for tail frame inference later-on.
+      if (InferMissingFrames && FRange) {
+        uint64_t Target = 0;
+        MIA->evaluateBranch(Inst, Address, Size, Target);
+        if (MCDesc.isCall()) {
+          // Indirect call targets are unknown at this point. Recording the
+          // unknown target (zero) for further LBR-based refinement.
+          MissingContextInferrer->CallEdges[Address].insert(Target);
+        } else if (MCDesc.isUnconditionalBranch()) {
+          assert(Target &&
+                 "target should be known for unconditional direct branch");
+          // Any inter-function unconditional jump is considered tail call at
+          // this point. This is not 100% accurate and could further be
+          // optimized based on some source annotation.
+          FuncRange *ToFRange = findFuncRange(Target);
+          if (ToFRange && ToFRange->Func != FRange->Func)
+            MissingContextInferrer->TailCallEdges[Address].insert(Target);
+          LLVM_DEBUG({
+            dbgs() << "Direct Tail call: " << format("%8" PRIx64 ":", Address);
+            IPrinter->printInst(&Inst, Address + Size, "", *STI.get(), dbgs());
+            dbgs() << "\n";
+          });
+        } else if (MCDesc.isIndirectBranch() && MCDesc.isBarrier()) {
+          // This is an indirect branch but not necessarily an indirect tail
+          // call. The isBarrier check is to filter out conditional branch.
+          // Similar with indirect call targets, recording the unknown target
+          // (zero) for further LBR-based refinement.
+          MissingContextInferrer->TailCallEdges[Address].insert(Target);
+          LLVM_DEBUG({
+            dbgs() << "Indirect Tail call: "
+                   << format("%8" PRIx64 ":", Address);
+            IPrinter->printInst(&Inst, Address + Size, "", *STI.get(), dbgs());
+            dbgs() << "\n";
+          });
+        }
       }
 
       if (InvalidInstLength) {
@@ -874,6 +925,12 @@ void ProfiledBinary::computeInlinedContextSizeForFunc(
                                                  ProbeContext);
     }
   }
+}
+
+void ProfiledBinary::inferMissingFrames(
+    const SmallVectorImpl<uint64_t> &Context,
+    SmallVectorImpl<uint64_t> &NewContext) {
+  MissingContextInferrer->inferMissingFrames(Context, NewContext);
 }
 
 InstructionPointer::InstructionPointer(const ProfiledBinary *Binary,
